@@ -13,8 +13,8 @@ PLAYER_HEIGHT = 90
 PIPE_WIDTH = 300
 PIPE_GAP = 200
 GROUND_SEGMENT_WIDTH = 10
-GRAVITY = 0.4  # Reduced for smoother jumping
-FLAP_ACCEL = -0.9  # Adjusted for smoother lift
+GRAVITY = 0.4
+FLAP_ACCEL = -0.9
 MAX_FALL_SPEED = 10
 PIPE_SPEED = 3
 BATTERY_DRAIN = 0.05
@@ -37,7 +37,7 @@ BROWN = (139, 69, 19)
 
 # Initialize screen
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("RC Rally Bird")
+pygame.display.set_caption("RC Rally Jump")  # Updated name
 clock = pygame.time.Clock()
 
 # Load assets
@@ -51,8 +51,8 @@ try:
     BACKGROUND = pygame.transform.scale(BACKGROUND, (WIDTH, HEIGHT))
     FLAP_SOUND = pygame.mixer.Sound("flap.wav")
     CRASH_SOUND = pygame.mixer.Sound("crash.wav")
-    FLAP_SOUND.set_volume(0.2)  # 20%
-    CRASH_SOUND.set_volume(0.2)  # 20%
+    FLAP_SOUND.set_volume(0.2)
+    CRASH_SOUND.set_volume(0.2)
     pygame.mixer.music.load("bgm.ogg")
     pygame.mixer.music.set_volume(0.2)
     pygame.mixer.music.play(-1)
@@ -74,8 +74,8 @@ flap_sound_timer = 0
 flapping = False
 ground_heights = [HEIGHT - 50] * (WIDTH // GROUND_SEGMENT_WIDTH + 1)
 ground_offset = 0
-drones = []  # (x, y, speed, rotation, color, color_timer)
-trees = [(WIDTH + i * 200, HEIGHT - 150, random.randint(80, 120)) for i in range(4)]  # (x, y, height)
+drones = []
+trees = [(WIDTH + i * 200, HEIGHT - 150, random.randint(80, 120)) for i in range(4)]
 volume_slider = pygame.Rect(WIDTH - 110, 20, 100, 10)
 effects_slider = pygame.Rect(WIDTH - 110, 50, 100, 10)
 
@@ -109,7 +109,7 @@ def update_player():
 
     player_vel_y += player_accel_y + GRAVITY
     player_y += player_vel_y
-    player_accel_y *= 0.85  # Slightly more damping for smoother fall
+    player_accel_y *= 0.85
 
     if player_y + PLAYER_HEIGHT >= ground_y and player_vel_y > 0:
         player_y = ground_y - PLAYER_HEIGHT
@@ -118,12 +118,14 @@ def update_player():
         if battery < 1000:
             battery += BATTERY_RECHARGE
         slope = prev_ground_y - ground_y
-        if not (pygame.key.get_pressed()[pygame.K_LEFT] or pygame.key.get_pressed()[pygame.K_RIGHT]):
+        if not (pygame.mouse.get_pressed()[0] and pygame.mouse.get_pos()[0] < WIDTH // 2 or 
+                pygame.mouse.get_pressed()[0] and pygame.mouse.get_pos()[0] > WIDTH // 2):
             player_rotation = min(max(slope * 0.5, -15), 15)
         if slope > 5:
             player_vel_y = -5
     else:
-        if not (pygame.key.get_pressed()[pygame.K_LEFT] or pygame.key.get_pressed()[pygame.K_RIGHT]):
+        if not (pygame.mouse.get_pressed()[0] and pygame.mouse.get_pos()[0] < WIDTH // 2 or 
+                pygame.mouse.get_pressed()[0] and pygame.mouse.get_pos()[0] > WIDTH // 2):
             player_rotation *= 0.95
 
     player_vel_y = min(player_vel_y, MAX_FALL_SPEED)
@@ -154,7 +156,7 @@ def update_world():
                   1000 if timer <= 0 else timer - clock.get_time()) 
                  for x, y, speed, rot, color, timer in drones if x > -DRONE_WIDTH and random.random() > 0.01]
     
-    trees[:] = [(x - PIPE_SPEED * 0.5, y, h) for x, y, h in trees]  # Slower than pipes
+    trees[:] = [(x - PIPE_SPEED * 0.5, y, h) for x, y, h in trees]
     if trees and trees[0][0] < -TREE_WIDTH:
         trees.pop(0)
         trees.append((WIDTH, HEIGHT - 150, random.randint(80, 120)))
@@ -196,8 +198,8 @@ def draw_drones():
 
 def draw_trees():
     for x, y, h in trees:
-        pygame.draw.rect(screen, BROWN, (x - TREE_WIDTH // 4, y + h - TREE_HEIGHT, TREE_WIDTH // 2, TREE_HEIGHT // 2))  # Trunk
-        pygame.draw.polygon(screen, (0, 100, 0), [(x, y - h), (x - TREE_WIDTH // 2, y), (x + TREE_WIDTH // 2, y)])  # Foliage
+        pygame.draw.rect(screen, BROWN, (x - TREE_WIDTH // 4, y + h - TREE_HEIGHT, TREE_WIDTH // 2, TREE_HEIGHT // 2))
+        pygame.draw.polygon(screen, (0, 100, 0), [(x, y - h), (x - TREE_WIDTH // 2, y), (x + TREE_WIDTH // 2, y)])
 
 def draw_debug():
     if DEBUG_MODE:
@@ -215,7 +217,7 @@ def draw_debug():
 
 def check_collision():
     player_rect = pygame.Rect(player_x, player_y, PLAYER_WIDTH, PLAYER_HEIGHT)
-    top_pipe = pygame.Rect(pipe_x, 0, PIPE_WIDTH, pipe_height - 300)  # Adjusted to match sprite height
+    top_pipe = pygame.Rect(pipe_x, 0, PIPE_WIDTH, pipe_height - 300)
     bottom_pipe = pygame.Rect(pipe_x, pipe_height + PIPE_GAP, PIPE_WIDTH, HEIGHT - (pipe_height + PIPE_GAP))
     drone_rects = [pygame.Rect(x - DRONE_WIDTH // 2, y - DRONE_HEIGHT // 2, DRONE_WIDTH, DRONE_HEIGHT) for x, y, _, _, _, _ in drones]
     return (player_rect.colliderect(top_pipe) or 
@@ -224,14 +226,14 @@ def check_collision():
             player_rect.top <= 0)
 
 def draw_splash_screen():
-    screen.fill((50, 50, 100))  # Dark blue background
+    screen.fill((50, 50, 100))
     font = pygame.font.SysFont(None, 80)
-    title = font.render("RC Rally Bird", True, (255, 200, 0))
+    title = font.render("RC Rally Jump", True, (255, 200, 0))  # Updated name
     font = pygame.font.SysFont(None, 40)
-    subtitle = font.render("Get ready to race and soar!", True, WHITE)
-    start_prompt = font.render("Press SPACE to Start", True, (0, 255, 0))
+    subtitle = font.render("Race, Jump, Soar!", True, WHITE)
+    start_prompt = font.render("Tap Screen to Start", True, (0, 255, 0))  # Updated for mobile
     
-    title_y = HEIGHT // 4 + (pygame.time.get_ticks() // 500 % 2) * 10  # Bounce effect
+    title_y = HEIGHT // 4 + (pygame.time.get_ticks() // 500 % 2) * 10
     screen.blit(title, (WIDTH // 2 - title.get_width() // 2, title_y))
     screen.blit(subtitle, (WIDTH // 2 - subtitle.get_width() // 2, HEIGHT // 2))
     screen.blit(start_prompt, (WIDTH // 2 - start_prompt.get_width() // 2, HEIGHT * 3 // 4))
@@ -242,7 +244,7 @@ async def splash_screen():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return False
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+            if event.type == pygame.MOUSEBUTTONDOWN or (event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE):
                 return True
         draw_splash_screen()
         await asyncio.sleep(0)
@@ -270,7 +272,7 @@ def draw_scene():
     pygame.draw.rect(screen, BLACK, (effects_pos - 2, effects_slider.y - 2, 4, 14))
     if game_over:
         font = pygame.font.SysFont(None, 55)
-        text = font.render("Game Over! Press R to Restart", True, BLACK)
+        text = font.render("Game Over! Press R or Tap to Restart", True, BLACK)
         screen.blit(text, (WIDTH // 2 - text.get_width() // 2, HEIGHT // 2 - text.get_height() // 2))
     draw_debug()
 
@@ -305,6 +307,21 @@ async def main():
                 if event.key == pygame.K_SPACE:
                     flapping = False
             if event.type == pygame.MOUSEBUTTONDOWN:
+                if not game_over:
+                    # Tap anywhere to jump
+                    player_accel_y = FLAP_ACCEL
+                    battery -= 10
+                    if flap_sound_timer <= 0:
+                        FLAP_SOUND.play()
+                        flap_sound_timer = FLAP_SOUND_DURATION
+                    flapping = True
+                    # Tilt controls
+                    if event.pos[0] < WIDTH // 2:
+                        player_rotation = min(player_rotation + 5, 15)  # Lean forward
+                    else:
+                        player_rotation = max(player_rotation - 5, -15)  # Lean backward
+                elif game_over:
+                    reset_game()
                 if volume_slider.collidepoint(event.pos):
                     new_volume = (event.pos[0] - volume_slider.x) / volume_slider.width
                     pygame.mixer.music.set_volume(max(0, min(1, new_volume)))
@@ -312,6 +329,8 @@ async def main():
                     new_volume = (event.pos[0] - effects_slider.x) / effects_slider.width
                     FLAP_SOUND.set_volume(max(0, min(1, new_volume)))
                     CRASH_SOUND.set_volume(max(0, min(1, new_volume)))
+            if event.type == pygame.MOUSEBUTTONUP:
+                flapping = False
 
         if not game_over:
             update_player()
