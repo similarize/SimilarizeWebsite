@@ -9,38 +9,21 @@ HEIGHT = 600
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("RC Rally Bird")
 
-# Load assets with robust error handling
-try:
-    RC_CAR = pygame.image.load("rc_car.png").convert_alpha()
-    RC_CAR = pygame.transform.scale(RC_CAR, (40, 30))
-    PIPE = pygame.image.load("pipe.png").convert_alpha()
-    PIPE = pygame.transform.scale(PIPE, (60, 300))
-    BACKGROUND = pygame.image.load("background.png").convert_alpha()
-    BACKGROUND = pygame.transform.scale(BACKGROUND, (WIDTH, HEIGHT))
-except FileNotFoundError as e:
-    print(f"Image missing: {e}")
-    pygame.quit()
-    exit()
+# Load assets (replace with your file paths)
+RC_CAR = pygame.image.load("rc_car.png").convert_alpha()
+RC_CAR = pygame.transform.scale(RC_CAR, (40, 30))
+PIPE = pygame.image.load("pipe.png").convert_alpha()
+PIPE = pygame.transform.scale(PIPE, (60, 300))
+BACKGROUND = pygame.image.load("background.png").convert_alpha()
+BACKGROUND = pygame.transform.scale(BACKGROUND, (WIDTH, HEIGHT))
 
-try:
-    FLAP_SOUND = pygame.mixer.Sound("flap.wav")
-except (FileNotFoundError, pygame.error) as e:
-    print(f"Warning: flap.wav failed ({e}), sound disabled")
-    FLAP_SOUND = None
+# Load sounds
+FLAP_SOUND = pygame.mixer.Sound("flap.wav")
+CRASH_SOUND = pygame.mixer.Sound("crash.wav")
+pygame.mixer.music.load("bgm.ogg")
+pygame.mixer.music.play(-1)
 
-try:
-    CRASH_SOUND = pygame.mixer.Sound("crash.wav")
-except (FileNotFoundError, pygame.error) as e:
-    print(f"Warning: crash.wav failed ({e}), sound disabled")
-    CRASH_SOUND = None
-
-try:
-    pygame.mixer.music.load("bgm.ogg")
-    pygame.mixer.music.play(-1)
-except (FileNotFoundError, pygame.error) as e:
-    print(f"Warning: Failed to load bgm.ogg ({e}), music disabled")
-
-# Colors (for fallback)
+# Colors
 BLACK = (0, 0, 0)
 GREEN = (0, 255, 0)
 
@@ -51,7 +34,7 @@ player_x = 100
 player_y = HEIGHT - PLAYER_HEIGHT - 50
 player_vel_y = 0
 GRAVITY = 0.5
-FLAP_POWER = -10
+FLAP_POWER = -12  # Increased for better lift
 MAX_FALL_SPEED = 10
 
 # Obstacle settings
@@ -62,39 +45,47 @@ pipe_height = random.randint(100, HEIGHT - PIPE_GAP - 100)
 pipe_speed = 3
 
 # Ground settings
-GROUND_HEIGHT = 50
+GROUND_SEGMENT_WIDTH = 20
+ground_heights = [HEIGHT - 50] * (WIDTH // GROUND_SEGMENT_WIDTH + 1)  # Initial flat ground
+for i in range(1, len(ground_heights)):
+    ground_heights[i] = ground_heights[i-1] + random.randint(-10, 10)  # Random steps
+    ground_heights[i] = max(HEIGHT - 100, min(HEIGHT - 20, ground_heights[i]))  # Clamp heights
 
-# Battery settings
+# Battery and sound settings
 battery = 100
 BATTERY_DRAIN = 0.5
 BATTERY_RECHARGE = 0.2
+flap_sound_timer = 0
+FLAP_SOUND_DURATION = 1000  # 1 second in milliseconds
 
 def reset_game():
-    global player_y, player_vel_y, pipe_x, pipe_height, battery, game_over
+    global player_y, player_vel_y, pipe_x, pipe_height, battery, game_over, ground_heights
     player_y = HEIGHT - PLAYER_HEIGHT - 50
     player_vel_y = 0
     pipe_x = WIDTH
     pipe_height = random.randint(100, HEIGHT - PIPE_GAP - 100)
     battery = 100
     game_over = False
+    ground_heights = [HEIGHT - 50] * (WIDTH // GROUND_SEGMENT_WIDTH + 1)
+    for i in range(1, len(ground_heights)):
+        ground_heights[i] = ground_heights[i-1] + random.randint(-10, 10)
+        ground_heights[i] = max(HEIGHT - 100, min(HEIGHT - 20, ground_heights[i]))
 
 def draw_player(x, y, flapping=False):
-    # Rotate slightly when flapping for realism
     if flapping:
-        car = pygame.transform.rotate(RC_CAR, -15)  # Tilt up
+        car = pygame.transform.rotate(RC_CAR, -15)
     else:
         car = RC_CAR
     screen.blit(car, (x, y))
 
 def draw_pipe(x, height):
-    # Top pipe (flipped)
     top_pipe = pygame.transform.flip(PIPE, False, True)
     screen.blit(top_pipe, (x, height - 300))
-    # Bottom pipe
     screen.blit(PIPE, (x, height + PIPE_GAP))
 
 def draw_ground():
-    pygame.draw.rect(screen, BLACK, (0, HEIGHT - GROUND_HEIGHT, WIDTH, GROUND_HEIGHT))  # Fallback
+    for i in range(len(ground_heights)):
+        pygame.draw.rect(screen, BLACK, (i * GROUND_SEGMENT_WIDTH, ground_heights[i], GROUND_SEGMENT_WIDTH, HEIGHT - ground_heights[i]))
 
 def check_collision(player_rect, pipe_x, pipe_height):
     top_pipe = pygame.Rect(pipe_x, 0, PIPE_WIDTH, pipe_height)
@@ -104,7 +95,7 @@ def check_collision(player_rect, pipe_x, pipe_height):
             player_rect.top <= 0)
 
 async def main():
-    global player_y, player_vel_y, pipe_x, pipe_height, battery, game_over
+    global player_y, player_vel_y, pipe_x, pipe_height, battery, game_over, flap_sound_timer
     clock = pygame.time.Clock()
     reset_game()
     flapping = False
@@ -117,7 +108,9 @@ async def main():
                 if event.key == pygame.K_SPACE and battery > 0 and not game_over:
                     player_vel_y = FLAP_POWER
                     battery -= 10
-                    FLAP_SOUND.play()
+                    if flap_sound_timer <= 0:  # Only play if not already playing
+                        FLAP_SOUND.play()
+                        flap_sound_timer = FLAP_SOUND_DURATION
                     flapping = True
                 if event.key == pygame.K_r and game_over:
                     reset_game()
@@ -126,28 +119,53 @@ async def main():
                     flapping = False
 
         if not game_over:
+            # Update flap sound timer
+            if flap_sound_timer > 0:
+                flap_sound_timer -= clock.get_time()
+                if flap_sound_timer <= 0:
+                    FLAP_SOUND.stop()
+
+            # Ground interaction
+            ground_index = min(player_x // GROUND_SEGMENT_WIDTH, len(ground_heights) - 1)
+            ground_y = ground_heights[ground_index]
+            prev_ground_y = ground_heights[max(0, ground_index - 1)]
+
+            # Apply gravity
             player_vel_y += GRAVITY
-            if player_y >= HEIGHT - PLAYER_HEIGHT - GROUND_HEIGHT:
-                player_y = HEIGHT - PLAYER_HEIGHT - GROUND_HEIGHT
+            player_y += player_vel_y
+
+            # Check ground collision
+            if player_y + PLAYER_HEIGHT >= ground_y and player_vel_y > 0:
+                player_y = ground_y - PLAYER_HEIGHT
                 player_vel_y = 0
                 if battery < 100:
                     battery += BATTERY_RECHARGE
-            else:
-                player_vel_y = min(player_vel_y, MAX_FALL_SPEED)
-                player_y += player_vel_y
+                # Auto-jump on humps
+                height_diff = prev_ground_y - ground_y
+                if height_diff > 10:  # Detect steep rise
+                    player_vel_y = -5  # Small jump
 
+            player_vel_y = min(player_vel_y, MAX_FALL_SPEED)
+
+            # Move pipes and ground
             pipe_x -= pipe_speed
             if pipe_x < -PIPE_WIDTH:
                 pipe_x = WIDTH
                 pipe_height = random.randint(100, HEIGHT - PIPE_GAP - 100)
+                # Shift ground left and add new segment
+                ground_heights.pop(0)
+                last_height = ground_heights[-1]
+                new_height = last_height + random.randint(-10, 10)
+                ground_heights.append(max(HEIGHT - 100, min(HEIGHT - 20, new_height)))
 
+            # Collision detection
             player_rect = pygame.Rect(player_x, player_y, PLAYER_WIDTH, PLAYER_HEIGHT)
             if check_collision(player_rect, pipe_x, pipe_height):
                 game_over = True
                 CRASH_SOUND.play()
 
         screen.blit(BACKGROUND, (0, 0))
-        draw_ground()  # Only if background doesn’t cover ground
+        draw_ground()
         draw_player(player_x, player_y, flapping)
         draw_pipe(pipe_x, pipe_height)
 
