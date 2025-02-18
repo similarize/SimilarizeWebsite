@@ -37,7 +37,7 @@ BROWN = (139, 69, 19)
 
 # Initialize screen
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("RC Rally Jump")  # Updated name
+pygame.display.set_caption("RC Rally Jump")
 clock = pygame.time.Clock()
 
 # Load assets
@@ -103,7 +103,8 @@ def spawn_drone():
 
 def update_player():
     global player_y, player_vel_y, player_accel_y, player_rotation, battery, flap_sound_timer, flapping
-    ground_index = min(int((player_x + ground_offset) // GROUND_SEGMENT_WIDTH), len(ground_heights) - 1)
+    # Calculate ground position under car’s center
+    ground_index = min(int((player_x + PLAYER_WIDTH // 2 + ground_offset) // GROUND_SEGMENT_WIDTH), len(ground_heights) - 1)
     ground_y = ground_heights[ground_index]
     prev_ground_y = ground_heights[max(0, ground_index - 1)]
 
@@ -111,7 +112,8 @@ def update_player():
     player_y += player_vel_y
     player_accel_y *= 0.85
 
-    if player_y + PLAYER_HEIGHT >= ground_y and player_vel_y > 0:
+    # Snap to ground when not jumping
+    if player_y + PLAYER_HEIGHT >= ground_y and player_vel_y >= 0 and not flapping:
         player_y = ground_y - PLAYER_HEIGHT
         player_vel_y = 0
         player_accel_y = 0
@@ -122,7 +124,7 @@ def update_player():
                 pygame.mouse.get_pressed()[0] and pygame.mouse.get_pos()[0] > WIDTH // 2):
             player_rotation = min(max(slope * 0.5, -15), 15)
         if slope > 5:
-            player_vel_y = -5
+            player_vel_y = -5  # Small jump on steep rise
     else:
         if not (pygame.mouse.get_pressed()[0] and pygame.mouse.get_pos()[0] < WIDTH // 2 or 
                 pygame.mouse.get_pressed()[0] and pygame.mouse.get_pos()[0] > WIDTH // 2):
@@ -209,7 +211,7 @@ def draw_debug():
             f"Velocity: {player_vel_y:.1f}",
             f"Accel: {player_accel_y:.1f}",
             f"Battery: {battery:.1f}",
-            f"Drones: {len(drones)}"
+            f"Pipe X: {pipe_x:.1f}, Pipe Height: {pipe_height:.1f}"
         ]
         for i, line in enumerate(debug_info):
             text = font.render(line, True, WHITE)
@@ -217,8 +219,9 @@ def draw_debug():
 
 def check_collision():
     player_rect = pygame.Rect(player_x, player_y, PLAYER_WIDTH, PLAYER_HEIGHT)
-    top_pipe = pygame.Rect(pipe_x, 0, PIPE_WIDTH, pipe_height - 300)
-    bottom_pipe = pygame.Rect(pipe_x, pipe_height + PIPE_GAP, PIPE_WIDTH, HEIGHT - (pipe_height + PIPE_GAP))
+    # Match exact visual bounds of pipes
+    top_pipe = pygame.Rect(pipe_x, 0, PIPE_WIDTH, pipe_height)  # From top to bottom of top pipe
+    bottom_pipe = pygame.Rect(pipe_x, pipe_height + PIPE_GAP, PIPE_WIDTH, HEIGHT - (pipe_height + PIPE_GAP))  # From top of bottom pipe to screen bottom
     drone_rects = [pygame.Rect(x - DRONE_WIDTH // 2, y - DRONE_HEIGHT // 2, DRONE_WIDTH, DRONE_HEIGHT) for x, y, _, _, _, _ in drones]
     return (player_rect.colliderect(top_pipe) or 
             player_rect.colliderect(bottom_pipe) or 
@@ -228,10 +231,10 @@ def check_collision():
 def draw_splash_screen():
     screen.fill((50, 50, 100))
     font = pygame.font.SysFont(None, 80)
-    title = font.render("RC Rally Jump", True, (255, 200, 0))  # Updated name
+    title = font.render("RC Rally Jump", True, (255, 200, 0))
     font = pygame.font.SysFont(None, 40)
     subtitle = font.render("Race, Jump, Soar!", True, WHITE)
-    start_prompt = font.render("Tap Screen to Start", True, (0, 255, 0))  # Updated for mobile
+    start_prompt = font.render("Tap Screen to Start", True, (0, 255, 0))
     
     title_y = HEIGHT // 4 + (pygame.time.get_ticks() // 500 % 2) * 10
     screen.blit(title, (WIDTH // 2 - title.get_width() // 2, title_y))
@@ -308,18 +311,16 @@ async def main():
                     flapping = False
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if not game_over:
-                    # Tap anywhere to jump
                     player_accel_y = FLAP_ACCEL
                     battery -= 10
                     if flap_sound_timer <= 0:
                         FLAP_SOUND.play()
                         flap_sound_timer = FLAP_SOUND_DURATION
                     flapping = True
-                    # Tilt controls
                     if event.pos[0] < WIDTH // 2:
-                        player_rotation = min(player_rotation + 5, 15)  # Lean forward
+                        player_rotation = min(player_rotation + 5, 15)
                     else:
-                        player_rotation = max(player_rotation - 5, -15)  # Lean backward
+                        player_rotation = max(player_rotation - 5, -15)
                 elif game_over:
                     reset_game()
                 if volume_slider.collidepoint(event.pos):
