@@ -27,8 +27,8 @@ DRONE_SPEED_MAX = 5
 DEBUG_MODE = False
 TREE_WIDTH = 50
 TREE_HEIGHT = 100
-VERSION = "1.12"  # Updated version
-TAP_ZONE_Y = HEIGHT // 2  # Tap below y=300 for mobile
+VERSION = "1.13"  # Updated version
+TAP_ZONE_Y = HEIGHT // 2
 
 # Colors
 BLACK = (0, 0, 0)
@@ -116,11 +116,11 @@ def update_player():
     player_y += player_vel_y
     player_accel_y *= 0.85
 
-    if player_y + PLAYER_HEIGHT >= ground_y and player_vel_y >= 0:
-        if not flapping or player_vel_y > 0:
-            player_y = ground_y - PLAYER_HEIGHT
-            player_vel_y = 0
-            player_accel_y = 0
+    # Snap to ground when not jumping
+    if player_y + PLAYER_HEIGHT >= ground_y and not flapping and player_accel_y >= 0:
+        player_y = ground_y - PLAYER_HEIGHT
+        player_vel_y = 0
+        player_accel_y = 0
         if battery < 1000:
             battery += BATTERY_RECHARGE
         slope = prev_ground_y - ground_y
@@ -222,8 +222,9 @@ def draw_debug():
 
 def check_collision():
     player_rect = pygame.Rect(player_x, player_y, PLAYER_WIDTH, PLAYER_HEIGHT)
-    top_pipe = pygame.Rect(pipe_x, 0, PIPE_WIDTH, pipe_height)
-    bottom_pipe = pygame.Rect(pipe_x, pipe_height + PIPE_GAP, PIPE_WIDTH, HEIGHT - (pipe_height + PIPE_GAP))
+    # Match rendered sprite bounds
+    top_pipe = pygame.Rect(pipe_x, pipe_height - 300, PIPE_WIDTH, 300)
+    bottom_pipe = pygame.Rect(pipe_x, pipe_height + PIPE_GAP, PIPE_WIDTH, 300)
     drone_rects = [pygame.Rect(x - DRONE_WIDTH // 2, y - DRONE_HEIGHT // 2, DRONE_WIDTH, DRONE_HEIGHT) for x, y, _, _, _, _ in drones]
     if DEBUG_MODE:
         pygame.draw.rect(screen, RED, top_pipe, 2)
@@ -239,7 +240,7 @@ def draw_splash_screen():
     title = font.render(f"RC Rally Jump {VERSION}", True, (255, 200, 0))
     font = pygame.font.SysFont(None, 40)
     subtitle = font.render("Race, Jump, Soar!", True, WHITE)
-    start_prompt = font.render("Tap Screen Below to Start", True, (0, 255, 0))  # Updated prompt
+    start_prompt = font.render("Tap Screen Below to Start", True, (0, 255, 0))
     
     title_y = HEIGHT // 4 + (pygame.time.get_ticks() // 500 % 2) * 10
     screen.blit(title, (WIDTH // 2 - title.get_width() // 2, title_y))
@@ -269,6 +270,8 @@ def draw_scene():
     pygame.draw.rect(screen, GREEN, (10, 10, battery / 10, 10))
     pygame.draw.rect(screen, BLACK, (10, 10, 100, 10), 2)
     font = pygame.font.SysFont(None, 20)
+    version_text = font.render(f"Ver {VERSION}", True, BLACK)
+    screen.blit(version_text, (120, 5))  # Near battery
     volume_label = font.render("Music Volume", True, BLACK)
     screen.blit(volume_label, (WIDTH - 110, 5))
     pygame.draw.rect(screen, WHITE, volume_slider)
@@ -316,7 +319,7 @@ async def main():
                 if event.key == pygame.K_SPACE:
                     flapping = False
             if event.type == pygame.MOUSEBUTTONDOWN:
-                if event.pos[1] > TAP_ZONE_Y:  # Tap below game area
+                if event.pos[1] > TAP_ZONE_Y:
                     if not game_over:
                         player_accel_y = FLAP_ACCEL
                         battery -= 10
