@@ -9,19 +9,36 @@ HEIGHT = 600
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("RC Rally Bird")
 
-# Load assets
-RC_CAR = pygame.image.load("rc_car.png").convert_alpha()
-RC_CAR = pygame.transform.scale(RC_CAR, (40, 30))
-PIPE = pygame.image.load("pipe.png").convert_alpha()
-PIPE = pygame.transform.scale(PIPE, (60, 300))
-BACKGROUND = pygame.image.load("background.png").convert_alpha()
-BACKGROUND = pygame.transform.scale(BACKGROUND, (WIDTH, HEIGHT))
+# Load assets with robust error handling
+try:
+    RC_CAR = pygame.image.load("rc_car.png").convert_alpha()
+    RC_CAR = pygame.transform.scale(RC_CAR, (40, 30))
+    PIPE = pygame.image.load("pipe.png").convert_alpha()
+    PIPE = pygame.transform.scale(PIPE, (60, 300))
+    BACKGROUND = pygame.image.load("background.png").convert_alpha()
+    BACKGROUND = pygame.transform.scale(BACKGROUND, (WIDTH, HEIGHT))
+except FileNotFoundError as e:
+    print(f"Image missing: {e}")
+    pygame.quit()
+    exit()
 
-# Load sounds
-FLAP_SOUND = pygame.mixer.Sound("flap.wav")
-CRASH_SOUND = pygame.mixer.Sound("crash.wav")
-pygame.mixer.music.load("bgm.ogg")
-pygame.mixer.music.play(-1)  # Loop background music
+try:
+    FLAP_SOUND = pygame.mixer.Sound("flap.wav")
+except (FileNotFoundError, pygame.error) as e:
+    print(f"Warning: flap.wav failed ({e}), sound disabled")
+    FLAP_SOUND = None
+
+try:
+    CRASH_SOUND = pygame.mixer.Sound("crash.wav")
+except (FileNotFoundError, pygame.error) as e:
+    print(f"Warning: crash.wav failed ({e}), sound disabled")
+    CRASH_SOUND = None
+
+try:
+    pygame.mixer.music.load("bgm.ogg")
+    pygame.mixer.music.play(-1)
+except (FileNotFoundError, pygame.error) as e:
+    print(f"Warning: Failed to load bgm.ogg ({e}), music disabled")
 
 # Colors (for fallback)
 BLACK = (0, 0, 0)
