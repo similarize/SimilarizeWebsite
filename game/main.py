@@ -12,27 +12,32 @@ PLAYER_WIDTH = 40
 PLAYER_HEIGHT = 30
 PIPE_WIDTH = 60
 PIPE_GAP = 200
-GROUND_SEGMENT_WIDTH = 20
-GRAVITY = 0.5
-FLAP_POWER = -12
+GROUND_SEGMENT_WIDTH = 10  # Smaller for smoother ground
+GRAVITY = 0.6
+FLAP_ACCEL = -0.8  # Acceleration instead of instant velocity
 MAX_FALL_SPEED = 10
 PIPE_SPEED = 3
 BATTERY_DRAIN = 0.5
 BATTERY_RECHARGE = 0.2
-FLAP_SOUND_DURATION = 1000  # 1 second in milliseconds
-DEBUG_MODE = False  # Toggle for debugging info
+FLAP_SOUND_DURATION = 1000
+DRONE_WIDTH = 20
+DRONE_HEIGHT = 20
+DRONE_SPEED_MIN = 2
+DRONE_SPEED_MAX = 5
+DEBUG_MODE = False
 
 # Colors
 BLACK = (0, 0, 0)
 GREEN = (0, 255, 0)
 WHITE = (255, 255, 255)
+TAN = (245, 222, 179)  # Light tan ground
 
 # Initialize screen
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("RC Rally Bird")
 clock = pygame.time.Clock()
 
-# Load assets with error handling
+# Load assets
 try:
     RC_CAR = pygame.image.load("rc_car.png").convert_alpha()
     RC_CAR = pygame.transform.scale(RC_CAR, (PLAYER_WIDTH, PLAYER_HEIGHT))
@@ -43,6 +48,7 @@ try:
     FLAP_SOUND = pygame.mixer.Sound("flap.wav")
     CRASH_SOUND = pygame.mixer.Sound("crash.wav")
     pygame.mixer.music.load("bgm.ogg")
+    pygame.mixer.music.set_volume(0.2)  # 20% volume
     pygame.mixer.music.play(-1)
 except pygame.error as e:
     print(f"Error loading assets: {e}")
@@ -52,6 +58,8 @@ except pygame.error as e:
 player_x = 100
 player_y = HEIGHT - PLAYER_HEIGHT - 50
 player_vel_y = 0
+player_accel_y = 0
+player_rotation = 0  # For realistic tilting
 pipe_x = WIDTH
 pipe_height = random.randint(100, HEIGHT - PIPE_GAP - 100)
 battery = 100
@@ -59,46 +67,63 @@ game_over = False
 flap_sound_timer = 0
 flapping = False
 ground_heights = [HEIGHT - 50] * (WIDTH // GROUND_SEGMENT_WIDTH + 1)
-ground_offset = 0  # Tracks ground scroll
+ground_offset = 0
+drones = []  # List of (x, y, speed) tuples
+volume_slider = pygame.Rect(WIDTH - 110, 10, 100, 10)  # Volume control
 
 def reset_game():
-    global player_y, player_vel_y, pipe_x, pipe_height, battery, game_over, ground_heights, ground_offset
+    global player_y, player_vel_y, player_accel_y, player_rotation, pipe_x, pipe_height, battery, game_over, ground_heights, ground_offset, drones
     player_y = HEIGHT - PLAYER_HEIGHT - 50
     player_vel_y = 0
+    player_accel_y = 0
+    player_rotation = 0
     pipe_x = WIDTH
     pipe_height = random.randint(100, HEIGHT - PIPE_GAP - 100)
     battery = 100
     game_over = False
     ground_heights = [HEIGHT - 50] * (WIDTH // GROUND_SEGMENT_WIDTH + 1)
     ground_offset = 0
+    drones = []
+
+def spawn_drone():
+    if random.random() < 0.01 and not game_over:  # 1% chance per frame
+        y = random.randint(50, HEIGHT - PIPE_GAP - 50)
+        speed = random.uniform(DRONE_SPEED_MIN, DRONE_SPEED_MAX)
+        drones.append((WIDTH, y, speed))
 
 def update_player():
-    global player_y, player_vel_y, battery, flap_sound_timer, flapping
+    global player_y, player_vel_y, player_accel_y, player_rotation, battery, flap_sound_timer, flapping
     ground_index = min(int((player_x + ground_offset) // GROUND_SEGMENT_WIDTH), len(ground_heights) - 1)
     ground_y = ground_heights[ground_index]
     prev_ground_y = ground_heights[max(0, ground_index - 1)]
 
-    player_vel_y += GRAVITY
+    # Apply acceleration
+    player_vel_y += player_accel_y + GRAVITY
     player_y += player_vel_y
+    player_accel_y *= 0.9  # Dampen acceleration
 
+    # Ground collision and physics
     if player_y + PLAYER_HEIGHT >= ground_y and player_vel_y > 0:
         player_y = ground_y - PLAYER_HEIGHT
         player_vel_y = 0
+        player_accel_y = 0
         if battery < 100:
             battery += BATTERY_RECHARGE
-        height_diff = prev_ground_y - ground_y
-        if height_diff > 10:
-            player_vel_y = -5  # Small jump over humps
+        slope = prev_ground_y - ground_y
+        player_rotation = min(max(slope * 0.5, -15), 15)  # Tilt based on slope
+        if slope > 5:
+            player_vel_y = -5  # Jump off bumps
+    else:
+        player_rotation *= 0.95  # Smoothly return to neutral when airborne
 
     player_vel_y = min(player_vel_y, MAX_FALL_SPEED)
-
     if flap_sound_timer > 0:
         flap_sound_timer -= clock.get_time()
         if flap_sound_timer <= 0:
             FLAP_SOUND.stop()
 
 def update_world():
-    global pipe_x, pipe_height, ground_offset, ground_heights
+    global pipe_x, pipe_height, ground_offset, ground_heights, drones
     pipe_x -= PIPE_SPEED
     ground_offset += PIPE_SPEED
 
@@ -106,16 +131,18 @@ def update_world():
         pipe_x = WIDTH
         pipe_height = random.randint(100, HEIGHT - PIPE_GAP - 100)
 
-    # Shift ground
     while ground_offset >= GROUND_SEGMENT_WIDTH:
         ground_offset -= GROUND_SEGMENT_WIDTH
         ground_heights.pop(0)
         last_height = ground_heights[-1]
-        new_height = last_height + random.randint(-10, 10)
+        new_height = last_height + random.uniform(-3, 3)  # Smoother changes
         ground_heights.append(max(HEIGHT - 100, min(HEIGHT - 20, new_height)))
 
+    spawn_drone()
+    drones[:] = [(x - speed, y, speed) for x, y, speed in drones if x > -DRONE_WIDTH]
+
 def draw_player(x, y, flapping):
-    car = pygame.transform.rotate(RC_CAR, -15) if flapping else RC_CAR
+    car = pygame.transform.rotate(RC_CAR, player_rotation if not flapping else -15)
     screen.blit(car, (x, y))
 
 def draw_pipe(x, height):
@@ -127,7 +154,12 @@ def draw_ground():
     for i, height in enumerate(ground_heights):
         x = i * GROUND_SEGMENT_WIDTH - ground_offset
         if x < WIDTH:
-            pygame.draw.rect(screen, BLACK, (x, height, GROUND_SEGMENT_WIDTH, HEIGHT - height))
+            shade = max(100, min(255, 245 - (HEIGHT - height) // 2))  # Darker at lower heights
+            pygame.draw.rect(screen, (shade, shade - 43, shade - 66), (x, height, GROUND_SEGMENT_WIDTH, HEIGHT - height))
+
+def draw_drones():
+    for x, y, _ in drones:
+        pygame.draw.circle(screen, (150, 150, 150), (int(x), int(y)), DRONE_WIDTH // 2)  # Simple drone sprite
 
 def draw_debug():
     if DEBUG_MODE:
@@ -135,27 +167,35 @@ def draw_debug():
         debug_info = [
             f"Player Y: {player_y:.1f}",
             f"Velocity: {player_vel_y:.1f}",
+            f"Accel: {player_accel_y:.1f}",
             f"Battery: {battery:.1f}",
-            f"Pipe X: {pipe_x:.1f}",
-            f"Ground Offset: {ground_offset:.1f}"
+            f"Drones: {len(drones)}"
         ]
         for i, line in enumerate(debug_info):
-            text = font.render(line, True, WHITE)
             screen.blit(text, (10, 50 + i * 20))
 
 def check_collision():
     player_rect = pygame.Rect(player_x, player_y, PLAYER_WIDTH, PLAYER_HEIGHT)
     top_pipe = pygame.Rect(pipe_x, 0, PIPE_WIDTH, pipe_height)
     bottom_pipe = pygame.Rect(pipe_x, pipe_height + PIPE_GAP, PIPE_WIDTH, HEIGHT - pipe_height - PIPE_GAP)
-    return player_rect.colliderect(top_pipe) or player_rect.colliderect(bottom_pipe) or player_rect.top <= 0
+    drone_rects = [pygame.Rect(x - DRONE_WIDTH // 2, y - DRONE_HEIGHT // 2, DRONE_WIDTH, DRONE_HEIGHT) for x, y, _ in drones]
+    return (player_rect.colliderect(top_pipe) or 
+            player_rect.colliderect(bottom_pipe) or 
+            any(player_rect.colliderect(dr) for dr in drone_rects) or 
+            player_rect.top <= 0)
 
 def draw_scene():
     screen.blit(BACKGROUND, (0, 0))
     draw_ground()
     draw_player(player_x, player_y, flapping)
     draw_pipe(pipe_x, pipe_height)
+    draw_drones()
     pygame.draw.rect(screen, GREEN, (10, 10, battery, 10))
     pygame.draw.rect(screen, BLACK, (10, 10, 100, 10), 2)
+    # Volume slider
+    pygame.draw.rect(screen, WHITE, volume_slider)
+    volume_pos = volume_slider.x + int(pygame.mixer.music.get_volume() * volume_slider.width)
+    pygame.draw.rect(screen, BLACK, (volume_pos - 2, volume_slider.y - 2, 4, 14))
     if game_over:
         font = pygame.font.SysFont(None, 55)
         text = font.render("Game Over! Press R to Restart", True, BLACK)
@@ -163,7 +203,7 @@ def draw_scene():
     draw_debug()
 
 async def main():
-    global player_vel_y, battery, game_over, flap_sound_timer, flapping
+    global player_vel_y, player_accel_y, battery, game_over, flap_sound_timer, flapping
     reset_game()
 
     while True:
@@ -172,7 +212,7 @@ async def main():
                 return
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE and battery > 0 and not game_over:
-                    player_vel_y = FLAP_POWER
+                    player_accel_y = FLAP_ACCEL
                     battery -= 10
                     if flap_sound_timer <= 0:
                         FLAP_SOUND.play()
@@ -180,12 +220,16 @@ async def main():
                     flapping = True
                 if event.key == pygame.K_r and game_over:
                     reset_game()
-                if event.key == pygame.K_d:  # Toggle debug mode
+                if event.key == pygame.K_d:
                     global DEBUG_MODE
                     DEBUG_MODE = not DEBUG_MODE
             if event.type == pygame.KEYUP:
                 if event.key == pygame.K_SPACE:
                     flapping = False
+            if event.type == pygame.MOUSEBUTTONDOWN and not game_over:
+                if volume_slider.collidepoint(event.pos):
+                    new_volume = (event.pos[0] - volume_slider.x) / volume_slider.width
+                    pygame.mixer.music.set_volume(max(0, min(1, new_volume)))
 
         if not game_over:
             update_player()
