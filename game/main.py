@@ -27,7 +27,7 @@ DRONE_SPEED_MAX = 5
 DEBUG_MODE = False
 TREE_WIDTH = 50
 TREE_HEIGHT = 100
-VERSION = "1.16"  # Updated version
+VERSION = "1.17"  # Updated version
 TAP_ZONE_Y = HEIGHT // 2
 
 # Colors
@@ -40,7 +40,7 @@ RED = (255, 0, 0)
 
 # Initialize screen
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("RC Rally Jump")  # In-game title
+pygame.display.set_caption("RC Rally Jump")
 clock = pygame.time.Clock()
 
 # Load assets
@@ -75,7 +75,7 @@ battery = 1000
 game_over = False
 flap_sound_timer = 0
 flapping = False
-ground_heights = [HEIGHT - 50] * (WIDTH // GROUND_SEGMENT_WIDTH + 1)
+ground_heights = [HEIGHT - 50] * (WIDTH // GROUND SEGMENT_WIDTH + 1)
 ground_offset = 0
 drones = []
 trees = [(WIDTH + i * 200, HEIGHT - 150, random.randint(80, 120)) for i in range(4)]
