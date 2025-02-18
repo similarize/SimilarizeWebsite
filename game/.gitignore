@@ -1,0 +1,5 @@
+game.apk
+__pycache__/
+*.pyc
+build/
+*.wasm.pre
