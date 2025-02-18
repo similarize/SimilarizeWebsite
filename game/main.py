@@ -27,7 +27,7 @@ DRONE_SPEED_MAX = 5
 DEBUG_MODE = False
 TREE_WIDTH = 50
 TREE_HEIGHT = 100
-VERSION = "1.14"  # Updated version
+VERSION = "1.15"  # Updated version
 TAP_ZONE_Y = HEIGHT // 2
 
 # Colors
@@ -116,7 +116,6 @@ def update_player():
     player_y += player_vel_y
     player_accel_y *= 0.85
 
-    # Snap to ground when not flapping and at or below ground level
     if not flapping and player_y + PLAYER_HEIGHT >= ground_y:
         player_y = ground_y - PLAYER_HEIGHT
         player_vel_y = 0
