@@ -27,7 +27,7 @@ DRONE_SPEED_MAX = 5
 DEBUG_MODE = False
 TREE_WIDTH = 50
 TREE_HEIGHT = 100
-VERSION = "1.15"  # Updated version
+VERSION = "1.16"  # Updated version
 TAP_ZONE_Y = HEIGHT // 2
 
 # Colors
