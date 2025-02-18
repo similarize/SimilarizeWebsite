@@ -12,7 +12,7 @@ PLAYER_WIDTH = 120
 PLAYER_HEIGHT = 90
 PIPE_WIDTH = 300
 PIPE_GAP = 200
-GROUND_SEGMENT_WIDTH = 10
+GROUND_SEGMENT_WIDTH = 10  # Fixed typo
 GRAVITY = 0.4
 FLAP_ACCEL = -0.9
 MAX_FALL_SPEED = 10
@@ -27,7 +27,7 @@ DRONE_SPEED_MAX = 5
 DEBUG_MODE = False
 TREE_WIDTH = 50
 TREE_HEIGHT = 100
-VERSION = "1.17"  # Updated version
+VERSION = "1.18"  # Updated version
 TAP_ZONE_Y = HEIGHT // 2
 
 # Colors
@@ -75,7 +75,7 @@ battery = 1000
 game_over = False
 flap_sound_timer = 0
 flapping = False
-ground_heights = [HEIGHT - 50] * (WIDTH // GROUND SEGMENT_WIDTH + 1)
+ground_heights = [HEIGHT - 50] * (WIDTH // GROUND_SEGMENT_WIDTH + 1)
 ground_offset = 0
 drones = []
 trees = [(WIDTH + i * 200, HEIGHT - 150, random.randint(80, 120)) for i in range(4)]
