@@ -27,7 +27,7 @@ DRONE_SPEED_MAX = 5
 DEBUG_MODE = False
 TREE_WIDTH = 50
 TREE_HEIGHT = 100
-VERSION = "1.13"  # Updated version
+VERSION = "1.14"  # Updated version
 TAP_ZONE_Y = HEIGHT // 2
 
 # Colors
@@ -40,7 +40,7 @@ RED = (255, 0, 0)
 
 # Initialize screen
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("RC Rally Jump")
+pygame.display.set_caption("RC Rally Jump")  # In-game title
 clock = pygame.time.Clock()
 
 # Load assets
@@ -116,8 +116,8 @@ def update_player():
     player_y += player_vel_y
     player_accel_y *= 0.85
 
-    # Snap to ground when not jumping
-    if player_y + PLAYER_HEIGHT >= ground_y and not flapping and player_accel_y >= 0:
+    # Snap to ground when not flapping and at or below ground level
+    if not flapping and player_y + PLAYER_HEIGHT >= ground_y:
         player_y = ground_y - PLAYER_HEIGHT
         player_vel_y = 0
         player_accel_y = 0
@@ -222,7 +222,6 @@ def draw_debug():
 
 def check_collision():
     player_rect = pygame.Rect(player_x, player_y, PLAYER_WIDTH, PLAYER_HEIGHT)
-    # Match rendered sprite bounds
     top_pipe = pygame.Rect(pipe_x, pipe_height - 300, PIPE_WIDTH, 300)
     bottom_pipe = pygame.Rect(pipe_x, pipe_height + PIPE_GAP, PIPE_WIDTH, 300)
     drone_rects = [pygame.Rect(x - DRONE_WIDTH // 2, y - DRONE_HEIGHT // 2, DRONE_WIDTH, DRONE_HEIGHT) for x, y, _, _, _, _ in drones]
@@ -271,7 +270,7 @@ def draw_scene():
     pygame.draw.rect(screen, BLACK, (10, 10, 100, 10), 2)
     font = pygame.font.SysFont(None, 20)
     version_text = font.render(f"Ver {VERSION}", True, BLACK)
-    screen.blit(version_text, (120, 5))  # Near battery
+    screen.blit(version_text, (120, 5))
     volume_label = font.render("Music Volume", True, BLACK)
     screen.blit(volume_label, (WIDTH - 110, 5))
     pygame.draw.rect(screen, WHITE, volume_slider)
