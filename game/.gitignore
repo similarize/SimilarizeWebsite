@@ -1,4 +1,4 @@
-game.apk
+build/web/game.apk
 __pycache__/
 *.pyc
 build/
