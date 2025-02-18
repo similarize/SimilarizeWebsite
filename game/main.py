@@ -27,6 +27,7 @@ DRONE_SPEED_MAX = 5
 DEBUG_MODE = False
 TREE_WIDTH = 50
 TREE_HEIGHT = 100
+VERSION = "1.1"  # Starting version
 
 # Colors
 BLACK = (0, 0, 0)
@@ -103,7 +104,6 @@ def spawn_drone():
 
 def update_player():
     global player_y, player_vel_y, player_accel_y, player_rotation, battery, flap_sound_timer, flapping
-    # Calculate ground position under car’s center
     ground_index = min(int((player_x + PLAYER_WIDTH // 2 + ground_offset) // GROUND_SEGMENT_WIDTH), len(ground_heights) - 1)
     ground_y = ground_heights[ground_index]
     prev_ground_y = ground_heights[max(0, ground_index - 1)]
@@ -112,7 +112,6 @@ def update_player():
     player_y += player_vel_y
     player_accel_y *= 0.85
 
-    # Snap to ground when not jumping
     if player_y + PLAYER_HEIGHT >= ground_y and player_vel_y >= 0 and not flapping:
         player_y = ground_y - PLAYER_HEIGHT
         player_vel_y = 0
@@ -124,7 +123,7 @@ def update_player():
                 pygame.mouse.get_pressed()[0] and pygame.mouse.get_pos()[0] > WIDTH // 2):
             player_rotation = min(max(slope * 0.5, -15), 15)
         if slope > 5:
-            player_vel_y = -5  # Small jump on steep rise
+            player_vel_y = -5
     else:
         if not (pygame.mouse.get_pressed()[0] and pygame.mouse.get_pos()[0] < WIDTH // 2 or 
                 pygame.mouse.get_pressed()[0] and pygame.mouse.get_pos()[0] > WIDTH // 2):
@@ -219,9 +218,8 @@ def draw_debug():
 
 def check_collision():
     player_rect = pygame.Rect(player_x, player_y, PLAYER_WIDTH, PLAYER_HEIGHT)
-    # Match exact visual bounds of pipes
-    top_pipe = pygame.Rect(pipe_x, 0, PIPE_WIDTH, pipe_height)  # From top to bottom of top pipe
-    bottom_pipe = pygame.Rect(pipe_x, pipe_height + PIPE_GAP, PIPE_WIDTH, HEIGHT - (pipe_height + PIPE_GAP))  # From top of bottom pipe to screen bottom
+    top_pipe = pygame.Rect(pipe_x, 0, PIPE_WIDTH, pipe_height)
+    bottom_pipe = pygame.Rect(pipe_x, pipe_height + PIPE_GAP, PIPE_WIDTH, HEIGHT - (pipe_height + PIPE_GAP))
     drone_rects = [pygame.Rect(x - DRONE_WIDTH // 2, y - DRONE_HEIGHT // 2, DRONE_WIDTH, DRONE_HEIGHT) for x, y, _, _, _, _ in drones]
     return (player_rect.colliderect(top_pipe) or 
             player_rect.colliderect(bottom_pipe) or 
@@ -231,7 +229,7 @@ def check_collision():
 def draw_splash_screen():
     screen.fill((50, 50, 100))
     font = pygame.font.SysFont(None, 80)
-    title = font.render("RC Rally Jump", True, (255, 200, 0))
+    title = font.render(f"RC Rally Jump {VERSION}", True, (255, 200, 0))  # Version added
     font = pygame.font.SysFont(None, 40)
     subtitle = font.render("Race, Jump, Soar!", True, WHITE)
     start_prompt = font.render("Tap Screen to Start", True, (0, 255, 0))
