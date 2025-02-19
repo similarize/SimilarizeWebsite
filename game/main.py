@@ -12,7 +12,7 @@ PLAYER_WIDTH = 120
 PLAYER_HEIGHT = 90
 PIPE_WIDTH = 300
 PIPE_GAP = 200
-GROUND_SEGMENT_WIDTH = 10  # Fixed typo
+GROUND_SEGMENT_WIDTH = 10
 GRAVITY = 0.4
 FLAP_ACCEL = -0.9
 MAX_FALL_SPEED = 10
@@ -27,7 +27,7 @@ DRONE_SPEED_MAX = 5
 DEBUG_MODE = False
 TREE_WIDTH = 50
 TREE_HEIGHT = 100
-VERSION = "1.18"  # Updated version
+VERSION = "1.15"  # Updated version
 TAP_ZONE_Y = HEIGHT // 2
 
 # Colors
@@ -40,7 +40,7 @@ RED = (255, 0, 0)
 
 # Initialize screen
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("RC Rally Jump")
+pygame.display.set_caption("RC Rally Jump")  # In-game title
 clock = pygame.time.Clock()
 
 # Load assets
