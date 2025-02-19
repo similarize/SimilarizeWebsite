@@ -2,22 +2,25 @@
 <html>
 <head>
     <title>Asteroids Clone - Mobile</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
         body {
             margin: 0;
             padding: 0;
             overflow: hidden;
+            background: #000;
         }
         #gameContainer {
-            position: relative;
+            position: fixed;
             width: 100vw;
             height: 100vh;
+            top: 0;
+            left: 0;
         }
         canvas {
             width: 100%;
             height: 100%;
-            background: #000;
+            display: block;
         }
         .control-btn {
             position: absolute;
@@ -33,11 +36,12 @@
             font-family: Arial;
             font-size: 20px;
             touch-action: none;
+            z-index: 10;
         }
-        #leftBtn { bottom: 20px; left: 20px; }
-        #rightBtn { bottom: 20px; left: 100px; }
-        #thrustBtn { bottom: 20px; right: 100px; }
-        #shootBtn { bottom: 20px; right: 20px; }
+        #leftBtn { bottom: 80px; left: 20px; }
+        #rightBtn { bottom: 80px; left: 100px; }
+        #thrustBtn { bottom: 80px; right: 100px; }
+        #shootBtn { bottom: 80px; right: 20px; }
     </style>
 </head>
 <body>
@@ -53,8 +57,13 @@
         const ctx = canvas.getContext('2d');
 
         // Set canvas size
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            ship.x = canvas.width / 2;
+            ship.y = canvas.height / 2;
+        }
+        resizeCanvas();
 
         // Ship object
         const ship = {
@@ -250,12 +259,10 @@
         }
 
         // Handle resize
-        window.addEventListener('resize', () => {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            ship.x = canvas.width / 2;
-            ship.y = canvas.height / 2;
-        });
+        window.addEventListener('resize', resizeCanvas);
+
+        // Prevent default scrolling
+        document.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
 
         // Start game
         update();
