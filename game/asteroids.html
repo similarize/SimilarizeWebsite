@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Asteroids Clone - 2 Player RC Car Version</title>
+    <title>Basketball RC Car - 2 Player Version</title>
     <style>
         canvas {
             border: 1px solid black;
@@ -41,28 +41,42 @@
             isShooting: false
         };
 
+        // Basketball object
+        const ball = {
+            x: canvas.width / 2,
+            y: canvas.height - 20,
+            radius: 20,
+            dx: 0,
+            dy: 0,
+            friction: 0.98 // Slows down over time
+        };
+
+        // Basketball hoop
+        const hoop = {
+            x: canvas.width / 2,
+            y: 100, // Higher up on the screen
+            width: 60,
+            height: 10,
+            rimThickness: 5,
+            netHeight: 30
+        };
+
         // Game variables
-        let rocks = [];
         let projectiles = [];
-        let particles = [];
         let tracks = [];
-        const ROCK_COUNT = 5;
         const ROTATION_SPEED = 0.1;
         const PROJECTILE_SPEED = 5;
         const TRACK_LIFE = 120;
-        const PARTICLE_LIFE = 60;
 
         // Controls for both players
         const keys = {};
         document.addEventListener('keydown', (e) => {
             keys[e.key] = true;
-            // Player 1 shooting
             if (e.key === ' ') {
                 projectiles.push(createProjectile(car1));
                 car1.isShooting = true;
                 setTimeout(() => car1.isShooting = false, 100);
             }
-            // Player 2 shooting
             if (e.key === 'q' || e.key === 'Q') {
                 projectiles.push(createProjectile(car2));
                 car2.isShooting = true;
@@ -74,18 +88,6 @@
             keys[e.key] = false;
         });
 
-        // Rock creation (stationary)
-        function createRock() {
-            const size = 20 + Math.random() * 30;
-            return {
-                x: Math.random() * canvas.width,
-                y: canvas.height - size,
-                radius: size,
-                dx: 0,
-                dy: 0
-            };
-        }
-
         // Projectile (rock) creation
         function createProjectile(car) {
             return {
@@ -95,22 +97,8 @@
                 dy: Math.sin(car.angle) * PROJECTILE_SPEED,
                 life: 60,
                 radius: 4,
-                owner: car // Track which car shot it
+                owner: car
             };
-        }
-
-        // Particle creation for explosions
-        function createParticles(x, y, count = 10) {
-            for (let i = 0; i < count; i++) {
-                particles.push({
-                    x: x,
-                    y: y,
-                    dx: (Math.random() - 0.5) * 3,
-                    dy: (Math.random() - 0.5) * 3,
-                    life: PARTICLE_LIFE,
-                    size: Math.random() * 3 + 1
-                });
-            }
         }
 
         // Track creation
@@ -123,14 +111,8 @@
             };
         }
 
-        // Initialize rocks
-        for (let i = 0; i < ROCK_COUNT; i++) {
-            rocks.push(createRock());
-        }
-
         // Update car movement based on controls
         function updateCarControls(car) {
-            // Player 1 controls
             if (car === car1) {
                 if (keys['ArrowLeft']) car.rotation = -ROTATION_SPEED;
                 else if (keys['ArrowRight']) car.rotation = ROTATION_SPEED;
@@ -139,7 +121,6 @@
                 else if (keys['ArrowDown']) car.speed = -car.maxSpeed/2;
                 else car.speed = 0;
             }
-            // Player 2 controls
             if (car === car2) {
                 if (keys['a'] || keys['A']) car.rotation = -ROTATION_SPEED;
                 else if (keys['d'] || keys['D']) car.rotation = ROTATION_SPEED;
@@ -156,7 +137,6 @@
             ctx.translate(car.x, car.y);
             ctx.rotate(car.angle);
             
-            // Car body with spoiler
             ctx.beginPath();
             ctx.moveTo(-car.width/2, -car.height/2);
             ctx.lineTo(car.width/2, -car.height/2);
@@ -168,20 +148,17 @@
             ctx.strokeStyle = 'black';
             ctx.stroke();
 
-            // Spoiler
             ctx.beginPath();
             ctx.moveTo(car.width/2 - 10, -car.height/2 - 5);
             ctx.lineTo(car.width/2 - 10, -car.height/2);
             ctx.stroke();
 
-            // Wheels
             ctx.fillStyle = 'black';
             ctx.fillRect(-car.width/2 + 5, -car.height/2 - 4, 8, 4);
             ctx.fillRect(-car.width/2 + 5, car.height/2, 8, 4);
             ctx.fillRect(car.width/2 - 13, -car.height/2 - 4, 8, 4);
             ctx.fillRect(car.width/2 - 13, car.height/2, 8, 4);
 
-            // Forward lights (red)
             if (car.speed > 0) {
                 ctx.fillStyle = 'red';
                 ctx.beginPath();
@@ -192,7 +169,6 @@
                 ctx.fill();
             }
 
-            // Reverse lights (yellow)
             if (car.speed < 0) {
                 ctx.fillStyle = 'yellow';
                 ctx.beginPath();
@@ -208,7 +184,6 @@
 
         // Game loop
         function update() {
-            // Clear canvas with green background
             ctx.fillStyle = '#228B22';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -226,12 +201,52 @@
                 car.x = newX;
                 car.y = newY;
 
-                // Screen wrap for car
                 if (car.x < 0) car.x = canvas.width;
                 if (car.x > canvas.width) car.x = 0;
                 if (car.y < 0) car.y = canvas.height;
                 if (car.y > canvas.height) car.y = 0;
+
+                // Ball collision with car
+                const dist = Math.hypot(car.x - ball.x, car.y - ball.y);
+                if (dist < car.width/2 + ball.radius) {
+                    const angleToBall = Math.atan2(ball.y - car.y, ball.x - car.x);
+                    ball.dx += Math.cos(angleToBall) * car.speed * 0.5;
+                    ball.dy += Math.sin(angleToBall) * car.speed * 0.5;
+                }
             });
+
+            // Update ball
+            ball.x += ball.dx;
+            ball.y += ball.dy;
+            ball.dx *= ball.friction;
+            ball.dy *= ball.friction;
+
+            // Ball boundaries
+            if (ball.x - ball.radius < 0) {
+                ball.x = ball.radius;
+                ball.dx = -ball.dx * 0.8;
+            }
+            if (ball.x + ball.radius > canvas.width) {
+                ball.x = canvas.width - ball.radius;
+                ball.dx = -ball.dx * 0.8;
+            }
+            if (ball.y + ball.radius > canvas.height) {
+                ball.y = canvas.height - ball.radius;
+                ball.dy = -ball.dy * 0.8;
+            }
+
+            // Check if ball goes through hoop
+            if (ball.x > hoop.x - hoop.width/2 && 
+                ball.x < hoop.x + hoop.width/2 && 
+                Math.abs(ball.y - hoop.y) < ball.radius &&
+                ball.dy > 0) {
+                // Reset ball to center ground
+                ball.x = canvas.width / 2;
+                ball.y = canvas.height - ball.radius;
+                ball.dx = 0;
+                ball.dy = 0;
+                console.log('Score!');
+            }
 
             // Draw tire tracks
             tracks.forEach((track, index) => {
@@ -250,39 +265,27 @@
             });
 
             // Draw both cars
-            drawCar(car1, 'orange');  // Player 1
-            drawCar(car2, 'blue');    // Player 2
+            drawCar(car1, 'orange');
+            drawCar(car2, 'blue');
 
-            // Update and draw rocks
-            rocks.forEach((rock, index) => {
-                // Draw rock with rough edges
-                ctx.beginPath();
-                ctx.moveTo(rock.x + rock.radius, rock.y);
-                for (let i = 0; i < 8; i++) {
-                    const angle = (i / 8) * Math.PI * 2;
-                    const r = rock.radius * (0.8 + Math.random() * 0.4);
-                    ctx.lineTo(
-                        rock.x + Math.cos(angle) * r,
-                        rock.y + Math.sin(angle) * r
-                    );
-                }
-                ctx.closePath();
-                ctx.fillStyle = 'gray';
-                ctx.fill();
-                ctx.strokeStyle = 'white';
-                ctx.stroke();
+            // Draw basketball hoop
+            ctx.fillStyle = 'gray';
+            ctx.fillRect(hoop.x - hoop.width/2, hoop.y - hoop.rimThickness, hoop.width, hoop.rimThickness);
+            ctx.strokeStyle = 'white';
+            ctx.beginPath();
+            ctx.moveTo(hoop.x - hoop.width/2, hoop.y);
+            ctx.lineTo(hoop.x - hoop.width/2, hoop.y + hoop.netHeight);
+            ctx.moveTo(hoop.x + hoop.width/2, hoop.y);
+            ctx.lineTo(hoop.x + hoop.width/2, hoop.y + hoop.netHeight);
+            ctx.stroke();
 
-                // Collision with either car
-                [car1, car2].forEach(car => {
-                    const dist = Math.hypot(car.x - rock.x, car.y - rock.y);
-                    if (dist < car.width/2 + rock.radius) {
-                        createParticles(rock.x, rock.y);
-                        rocks.splice(index, 1);
-                        rocks.push(createRock());
-                        console.log('Rock smashed!');
-                    }
-                });
-            });
+            // Draw basketball
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            ctx.fillStyle = '#FF4500'; // Orange basketball color
+            ctx.fill();
+            ctx.strokeStyle = 'black';
+            ctx.stroke();
 
             // Update and draw projectiles
             projectiles.forEach((projectile, pIndex) => {
@@ -290,38 +293,21 @@
                 projectile.y += projectile.dy;
                 projectile.life--;
 
-                // Draw as small white rock
                 ctx.beginPath();
                 ctx.arc(projectile.x, projectile.y, projectile.radius, 0, Math.PI * 2);
                 ctx.fillStyle = 'white';
                 ctx.fill();
 
-                // Check projectile-rock collision
-                rocks.forEach((rock, rIndex) => {
-                    const dist = Math.hypot(projectile.x - rock.x, projectile.y - rock.y);
-                    if (dist < rock.radius + projectile.radius) {
-                        createParticles(rock.x, rock.y);
-                        rocks.splice(rIndex, 1);
-                        projectiles.splice(pIndex, 1);
-                        rocks.push(createRock());
-                    }
-                });
+                // Projectile hitting ball
+                const dist = Math.hypot(projectile.x - ball.x, projectile.y - ball.y);
+                if (dist < projectile.radius + ball.radius) {
+                    const angleToBall = Math.atan2(ball.y - projectile.y, ball.x - projectile.x);
+                    ball.dx += Math.cos(angleToBall) * PROJECTILE_SPEED * 0.3;
+                    ball.dy += Math.sin(angleToBall) * PROJECTILE_SPEED * 0.3;
+                    projectiles.splice(pIndex, 1);
+                }
 
                 if (projectile.life <= 0) projectiles.splice(pIndex, 1);
-            });
-
-            // Update and draw particles
-            particles.forEach((particle, index) => {
-                particle.x += particle.dx;
-                particle.y += particle.dy;
-                particle.life--;
-
-                ctx.beginPath();
-                ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-                ctx.fillStyle = `rgba(128, 128, 128, ${particle.life / PARTICLE_LIFE})`;
-                ctx.fill();
-
-                if (particle.life <= 0) particles.splice(index, 1);
             });
 
             requestAnimationFrame(update);
