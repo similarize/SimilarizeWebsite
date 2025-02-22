@@ -29,12 +29,11 @@
         };
 
         // Game variables
-        let rocks = [];       // Changed from asteroids
-        let projectiles = []; // Changed from bullets
-        let particles = [];   // New particle array for explosions
+        let rocks = [];
+        let projectiles = [];
+        let particles = [];
         let tracks = [];
         const ROCK_COUNT = 5;
-        const ROCK_SPEED = 1; // Reduced speed since they're heavy
         const ROTATION_SPEED = 0.1;
         const PROJECTILE_SPEED = 5;
         const TRACK_LIFE = 120;
@@ -64,15 +63,15 @@
             }
         });
 
-        // Rock creation
+        // Rock creation (stationary)
         function createRock() {
             const size = 20 + Math.random() * 30;
             return {
                 x: Math.random() * canvas.width,
-                y: canvas.height - size, // Start on ground
+                y: canvas.height - size, // On ground
                 radius: size,
-                dx: (Math.random() - 0.5) * ROCK_SPEED,
-                dy: 0 // No vertical movement since they're heavy
+                dx: 0, // No movement
+                dy: 0
             };
         }
 
@@ -84,7 +83,7 @@
                 dx: Math.cos(car.angle) * PROJECTILE_SPEED,
                 dy: Math.sin(car.angle) * PROJECTILE_SPEED,
                 life: 60,
-                radius: 4 // Larger than bullets for rock appearance
+                radius: 4
             };
         }
 
@@ -157,7 +156,7 @@
                 ctx.restore();
             });
 
-            // Draw RC car (now orange)
+            // Draw RC car (orange)
             ctx.save();
             ctx.translate(car.x, car.y);
             ctx.rotate(car.angle);
@@ -169,7 +168,7 @@
             ctx.lineTo(car.width/2, car.height/2);
             ctx.lineTo(-car.width/2, car.height/2);
             ctx.closePath();
-            ctx.fillStyle = 'orange'; // Changed to orange
+            ctx.fillStyle = 'orange';
             ctx.fill();
             ctx.strokeStyle = 'black';
             ctx.stroke();
@@ -187,9 +186,9 @@
             ctx.fillRect(car.width/2 - 13, -car.height/2 - 4, 8, 4);
             ctx.fillRect(car.width/2 - 13, car.height/2, 8, 4);
 
-            // Forward lights (yellow)
+            // Forward lights (red)
             if (car.speed > 0) {
-                ctx.fillStyle = 'yellow';
+                ctx.fillStyle = 'red'; // Changed to red
                 ctx.beginPath();
                 ctx.arc(car.width/2, -car.height/2 + 5, 3, 0, Math.PI * 2);
                 ctx.fill();
@@ -198,9 +197,9 @@
                 ctx.fill();
             }
 
-            // Reverse lights (red)
+            // Reverse lights (yellow)
             if (car.speed < 0) {
-                ctx.fillStyle = 'red';
+                ctx.fillStyle = 'yellow'; // Changed to yellow
                 ctx.beginPath();
                 ctx.arc(-car.width/2, -car.height/2 + 5, 3, 0, Math.PI * 2);
                 ctx.fill();
@@ -211,14 +210,9 @@
 
             ctx.restore();
 
-            // Update and draw rocks
+            // Update and draw rocks (stationary)
             rocks.forEach((rock, index) => {
-                rock.x += rock.dx;
-                // No vertical movement (dy = 0)
-
-                // Screen wrap for rocks
-                if (rock.x < 0) rock.x = canvas.width;
-                if (rock.x > canvas.width) rock.x = 0;
+                // No movement updates (dx = dy = 0)
 
                 // Draw rock with rough edges
                 ctx.beginPath();
@@ -247,16 +241,16 @@
                 }
             });
 
-            // Update and draw projectiles (small rocks)
+            // Update and draw projectiles (white rocks)
             projectiles.forEach((projectile, pIndex) => {
                 projectile.x += projectile.dx;
                 projectile.y += projectile.dy;
                 projectile.life--;
 
-                // Draw as small irregular rock
+                // Draw as small white rock
                 ctx.beginPath();
                 ctx.arc(projectile.x, projectile.y, projectile.radius, 0, Math.PI * 2);
-                ctx.fillStyle = 'gray';
+                ctx.fillStyle = 'white'; // Changed to white
                 ctx.fill();
 
                 // Check projectile-rock collision
