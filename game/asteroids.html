@@ -83,12 +83,12 @@
         const keys = {};
         document.addEventListener('keydown', (e) => {
             keys[e.key] = true;
-            if (e.key === ' ') {
+            if (e.key === ' ' && !car1.isShooting) {
                 projectiles.push(createProjectile(car1));
                 car1.isShooting = true;
                 setTimeout(() => car1.isShooting = false, 100);
             }
-            if (e.key === 'q' || e.key === 'Q') {
+            if ((e.key === 'q' || e.key === 'Q') && !car2.isShooting) {
                 projectiles.push(createProjectile(car2));
                 car2.isShooting = true;
                 setTimeout(() => car2.isShooting = false, 100);
@@ -99,15 +99,18 @@
             keys[e.key] = false;
         });
 
-        // Projectile (rock) creation
+        // Projectile creation (size and position based on direction)
         function createProjectile(car) {
+            const isReverse = car.speed < 0;
+            const radius = isReverse ? 4 : 10; // Small backwards, large forwards
+            const offset = isReverse ? -car.width/2 : car.width/2;
             return {
-                x: car.x + Math.cos(car.angle) * car.width/2,
-                y: car.y + Math.sin(car.angle) * car.width/2,
-                dx: Math.cos(car.angle) * PROJECTILE_SPEED,
-                dy: Math.sin(car.angle) * PROJECTILE_SPEED,
+                x: car.x + Math.cos(car.angle) * offset,
+                y: car.y + Math.sin(car.angle) * offset,
+                dx: Math.cos(car.angle) * PROJECTILE_SPEED * (isReverse ? -1 : 1),
+                dy: Math.sin(car.angle) * PROJECTILE_SPEED * (isReverse ? -1 : 1),
                 life: 60,
-                radius: 4,
+                radius: radius,
                 owner: car
             };
         }
@@ -218,19 +221,18 @@
                 if (car.y > canvas.height) car.y = 0;
 
                 // Ball collision with car
-                if (!ball.isStuck) {
-                    const dist = Math.hypot(car.x - ball.x, car.y - ball.y);
-                    if (dist < car.width/2 + ball.radius) {
-                        const angleToBall = Math.atan2(ball.y - car.y, ball.x - car.x);
+                const dist = Math.hypot(car.x - ball.x, car.y - ball.y);
+                if (dist < car.width/2 + ball.radius) {
+                    const angleToBall = Math.atan2(ball.y - car.y, ball.x - car.x);
+                    if (ball.isStuck && car.y < ball.y) {
+                        // Knock out from below
+                        ball.isStuck = false;
+                        ball.dy = 2;
+                        ball.dx += Math.cos(angleToBall) * car.speed * 0.5;
+                    } else if (!ball.isStuck) {
+                        // Push when not stuck
                         ball.dx += Math.cos(angleToBall) * car.speed * 0.5;
                         ball.dy += Math.sin(angleToBall) * car.speed * 0.5;
-                    }
-                } else {
-                    // Knock ball out of hoop
-                    const dist = Math.hypot(car.x - ball.x, car.y - ball.y);
-                    if (dist < car.width/2 + ball.radius && car.y < hoop.y) {
-                        ball.isStuck = false;
-                        ball.dy = 2; // Give it a downward push
                     }
                 }
             });
@@ -265,13 +267,12 @@
                     ball.x < hoop.x + hoop.width/2 && 
                     ball.y > hoop.y - ball.radius && 
                     ball.y < hoop.y + hoop.netHeight && 
-                    ball.dy > 0) {
+                    ball.dy > 0 && !ball.isStuck) {
                     ball.isStuck = true;
                     ball.x = hoop.x;
                     ball.y = hoop.y + hoop.netHeight/2;
                     ball.dx = 0;
                     ball.dy = 0;
-                    // Determine which car gets the point based on last touch
                     const lastTouch = projectiles.length > 0 && projectiles[projectiles.length-1].owner ? 
                         projectiles[projectiles.length-1].owner : 
                         (Math.hypot(car1.x - ball.x, car1.y - ball.y) < Math.hypot(car2.x - ball.x, car2.y - ball.y) ? car1 : car2);
@@ -334,14 +335,17 @@
                 ctx.fillStyle = 'white';
                 ctx.fill();
 
-                if (!ball.isStuck) {
-                    const dist = Math.hypot(projectile.x - ball.x, projectile.y - ball.y);
-                    if (dist < projectile.radius + ball.radius) {
-                        const angleToBall = Math.atan2(ball.y - projectile.y, ball.x - projectile.x);
-                        ball.dx += Math.cos(angleToBall) * PROJECTILE_SPEED * 0.3;
-                        ball.dy += Math.sin(angleToBall) * PROJECTILE_SPEED * 0.3;
-                        projectiles.splice(pIndex, 1);
+                const dist = Math.hypot(projectile.x - ball.x, projectile.y - ball.y);
+                if (dist < projectile.radius + ball.radius) {
+                    const angleToBall = Math.atan2(ball.y - projectile.y, ball.x - projectile.x);
+                    const impactFactor = projectile.radius / ball.radius; // Proportional to size
+                    if (!ball.isStuck) {
+                        ball.dx += Math.cos(angleToBall) * PROJECTILE_SPEED * impactFactor * 0.1;
+                        ball.dy += Math.sin(angleToBall) * PROJECTILE_SPEED * impactFactor * 0.1;
                     }
+                    // Bounce projectile back
+                    projectile.dx = -projectile.dx * 0.8;
+                    projectile.dy = -projectile.dy * 0.8;
                 }
 
                 if (projectile.life <= 0) projectiles.splice(pIndex, 1);
