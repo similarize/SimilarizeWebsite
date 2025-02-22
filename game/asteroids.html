@@ -29,14 +29,16 @@
         };
 
         // Game variables
-        let asteroids = [];
-        let bullets = [];
-        let tracks = []; // Array to store tire tracks
-        const ASTEROID_COUNT = 5;
-        const ASTEROID_SPEED = 2;
+        let rocks = [];       // Changed from asteroids
+        let projectiles = []; // Changed from bullets
+        let particles = [];   // New particle array for explosions
+        let tracks = [];
+        const ROCK_COUNT = 5;
+        const ROCK_SPEED = 1; // Reduced speed since they're heavy
         const ROTATION_SPEED = 0.1;
-        const BULLET_SPEED = 5;
-        const TRACK_LIFE = 120; // 2 seconds at 60fps
+        const PROJECTILE_SPEED = 5;
+        const TRACK_LIFE = 120;
+        const PARTICLE_LIFE = 60;
 
         // Controls
         document.addEventListener('keydown', (e) => {
@@ -46,7 +48,7 @@
                 case 'ArrowUp': car.speed = car.maxSpeed; break;
                 case 'ArrowDown': car.speed = -car.maxSpeed/2; break;
                 case ' ': 
-                    bullets.push(createBullet()); 
+                    projectiles.push(createProjectile()); 
                     car.isShooting = true;
                     setTimeout(() => car.isShooting = false, 100);
                     break;
@@ -62,27 +64,42 @@
             }
         });
 
-        // Asteroid creation
-        function createAsteroid() {
+        // Rock creation
+        function createRock() {
             const size = 20 + Math.random() * 30;
             return {
                 x: Math.random() * canvas.width,
-                y: Math.random() * canvas.height,
+                y: canvas.height - size, // Start on ground
                 radius: size,
-                dx: (Math.random() - 0.5) * ASTEROID_SPEED,
-                dy: (Math.random() - 0.5) * ASTEROID_SPEED
+                dx: (Math.random() - 0.5) * ROCK_SPEED,
+                dy: 0 // No vertical movement since they're heavy
             };
         }
 
-        // Bullet creation
-        function createBullet() {
+        // Projectile (rock) creation
+        function createProjectile() {
             return {
                 x: car.x + Math.cos(car.angle) * car.width/2,
                 y: car.y + Math.sin(car.angle) * car.width/2,
-                dx: Math.cos(car.angle) * BULLET_SPEED,
-                dy: Math.sin(car.angle) * BULLET_SPEED,
-                life: 60
+                dx: Math.cos(car.angle) * PROJECTILE_SPEED,
+                dy: Math.sin(car.angle) * PROJECTILE_SPEED,
+                life: 60,
+                radius: 4 // Larger than bullets for rock appearance
             };
+        }
+
+        // Particle creation for explosions
+        function createParticles(x, y, count = 10) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    dx: (Math.random() - 0.5) * 3,
+                    dy: (Math.random() - 0.5) * 3,
+                    life: PARTICLE_LIFE,
+                    size: Math.random() * 3 + 1
+                });
+            }
         }
 
         // Track creation
@@ -95,9 +112,9 @@
             };
         }
 
-        // Initialize asteroids
-        for (let i = 0; i < ASTEROID_COUNT; i++) {
-            asteroids.push(createAsteroid());
+        // Initialize rocks
+        for (let i = 0; i < ROCK_COUNT; i++) {
+            rocks.push(createRock());
         }
 
         // Game loop
@@ -111,7 +128,6 @@
             const newX = car.x + Math.cos(car.angle) * car.speed;
             const newY = car.y + Math.sin(car.angle) * car.speed;
 
-            // Add tire tracks when moving
             if (car.speed !== 0) {
                 tracks.push(createTrack(car.x, car.y, car.angle));
             }
@@ -132,17 +148,16 @@
                     tracks.splice(index, 1);
                     return;
                 }
-
                 ctx.save();
                 ctx.translate(track.x, track.y);
                 ctx.rotate(track.angle);
-                ctx.fillStyle = `rgba(0, 0, 0, ${track.life / TRACK_LIFE})`; // Fade out
-                ctx.fillRect(-car.width/2 + 5, -car.height/2 - 2, 8, 2);  // Left track
-                ctx.fillRect(-car.width/2 + 5, car.height/2, 8, 2);       // Right track
+                ctx.fillStyle = `rgba(0, 0, 0, ${track.life / TRACK_LIFE})`;
+                ctx.fillRect(-car.width/2 + 5, -car.height/2 - 2, 8, 2);
+                ctx.fillRect(-car.width/2 + 5, car.height/2, 8, 2);
                 ctx.restore();
             });
 
-            // Draw RC car
+            // Draw RC car (now orange)
             ctx.save();
             ctx.translate(car.x, car.y);
             ctx.rotate(car.angle);
@@ -154,7 +169,7 @@
             ctx.lineTo(car.width/2, car.height/2);
             ctx.lineTo(-car.width/2, car.height/2);
             ctx.closePath();
-            ctx.fillStyle = 'red';
+            ctx.fillStyle = 'orange'; // Changed to orange
             ctx.fill();
             ctx.strokeStyle = 'black';
             ctx.stroke();
@@ -172,7 +187,7 @@
             ctx.fillRect(car.width/2 - 13, -car.height/2 - 4, 8, 4);
             ctx.fillRect(car.width/2 - 13, car.height/2, 8, 4);
 
-            // Forward lights (yellow, front)
+            // Forward lights (yellow)
             if (car.speed > 0) {
                 ctx.fillStyle = 'yellow';
                 ctx.beginPath();
@@ -183,7 +198,7 @@
                 ctx.fill();
             }
 
-            // Reverse lights (red, rear)
+            // Reverse lights (red)
             if (car.speed < 0) {
                 ctx.fillStyle = 'red';
                 ctx.beginPath();
@@ -196,52 +211,80 @@
 
             ctx.restore();
 
-            // Update and draw asteroids
-            asteroids.forEach((asteroid, index) => {
-                asteroid.x += asteroid.dx;
-                asteroid.y += asteroid.dy;
+            // Update and draw rocks
+            rocks.forEach((rock, index) => {
+                rock.x += rock.dx;
+                // No vertical movement (dy = 0)
 
-                // Screen wrap for asteroids
-                if (asteroid.x < 0) asteroid.x = canvas.width;
-                if (asteroid.x > canvas.width) asteroid.x = 0;
-                if (asteroid.y < 0) asteroid.y = canvas.height;
-                if (asteroid.y > canvas.height) asteroid.y = 0;
+                // Screen wrap for rocks
+                if (rock.x < 0) rock.x = canvas.width;
+                if (rock.x > canvas.width) rock.x = 0;
 
-                // Draw asteroid
+                // Draw rock with rough edges
                 ctx.beginPath();
-                ctx.arc(asteroid.x, asteroid.y, asteroid.radius, 0, Math.PI * 2);
+                ctx.moveTo(rock.x + rock.radius, rock.y);
+                for (let i = 0; i < 8; i++) {
+                    const angle = (i / 8) * Math.PI * 2;
+                    const r = rock.radius * (0.8 + Math.random() * 0.4);
+                    ctx.lineTo(
+                        rock.x + Math.cos(angle) * r,
+                        rock.y + Math.sin(angle) * r
+                    );
+                }
+                ctx.closePath();
+                ctx.fillStyle = 'gray';
+                ctx.fill();
                 ctx.strokeStyle = 'white';
                 ctx.stroke();
 
                 // Collision with car
-                const dist = Math.hypot(car.x - asteroid.x, car.y - asteroid.y);
-                if (dist < car.width/2 + asteroid.radius) {
-                    console.log('Collision!');
+                const dist = Math.hypot(car.x - rock.x, car.y - rock.y);
+                if (dist < car.width/2 + rock.radius) {
+                    createParticles(rock.x, rock.y);
+                    rocks.splice(index, 1);
+                    rocks.push(createRock());
+                    console.log('Rock smashed!');
                 }
             });
 
-            // Update and draw bullets
-            bullets.forEach((bullet, bIndex) => {
-                bullet.x += bullet.dx;
-                bullet.y += bullet.dy;
-                bullet.life--;
+            // Update and draw projectiles (small rocks)
+            projectiles.forEach((projectile, pIndex) => {
+                projectile.x += projectile.dx;
+                projectile.y += projectile.dy;
+                projectile.life--;
 
+                // Draw as small irregular rock
                 ctx.beginPath();
-                ctx.arc(bullet.x, bullet.y, 2, 0, Math.PI * 2);
-                ctx.fillStyle = 'white';
+                ctx.arc(projectile.x, projectile.y, projectile.radius, 0, Math.PI * 2);
+                ctx.fillStyle = 'gray';
                 ctx.fill();
 
-                // Check bullet-asteroid collision
-                asteroids.forEach((asteroid, aIndex) => {
-                    const dist = Math.hypot(bullet.x - asteroid.x, bullet.y - asteroid.y);
-                    if (dist < asteroid.radius) {
-                        asteroids.splice(aIndex, 1);
-                        bullets.splice(bIndex, 1);
-                        asteroids.push(createAsteroid());
+                // Check projectile-rock collision
+                rocks.forEach((rock, rIndex) => {
+                    const dist = Math.hypot(projectile.x - rock.x, projectile.y - rock.y);
+                    if (dist < rock.radius + projectile.radius) {
+                        createParticles(rock.x, rock.y);
+                        rocks.splice(rIndex, 1);
+                        projectiles.splice(pIndex, 1);
+                        rocks.push(createRock());
                     }
                 });
 
-                if (bullet.life <= 0) bullets.splice(bIndex, 1);
+                if (projectile.life <= 0) projectiles.splice(pIndex, 1);
+            });
+
+            // Update and draw particles
+            particles.forEach((particle, index) => {
+                particle.x += particle.dx;
+                particle.y += particle.dy;
+                particle.life--;
+
+                ctx.beginPath();
+                ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(128, 128, 128, ${particle.life / PARTICLE_LIFE})`;
+                ctx.fill();
+
+                if (particle.life <= 0) particles.splice(index, 1);
             });
 
             requestAnimationFrame(update);
