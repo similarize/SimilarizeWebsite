@@ -7,13 +7,25 @@
             border: 1px solid black;
             background: #000;
         }
+        #controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
     </style>
 </head>
 <body>
     <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <div id="controls">
+        <label><input type="checkbox" id="soundToggle" checked> Sound Effects</label><br>
+        <label><input type="checkbox" id="musicToggle" checked> Background Music</label>
+    </div>
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
         // Player 1 RC car (orange)
         const car1 = {
@@ -26,7 +38,9 @@
             speed: 0,
             maxSpeed: 3,
             isShooting: false,
-            score: 0
+            score: 0,
+            wasDriving: false,
+            wasReverse: false
         };
 
         // Player 2 RC car (blue)
@@ -40,7 +54,9 @@
             speed: 0,
             maxSpeed: 3,
             isShooting: false,
-            score: 0
+            score: 0,
+            wasDriving: false,
+            wasReverse: false
         };
 
         // Basketball object
@@ -79,6 +95,62 @@
         const PROJECTILE_SPEED = 5;
         const TRACK_LIFE = 120;
 
+        // Sound toggle controls
+        const soundToggle = document.getElementById('soundToggle');
+        const musicToggle = document.getElementById('musicToggle');
+        let backgroundOscillator = null;
+
+        // Sound effects
+        function playSound(frequency, duration, type = 'sine', volume = 0.3) {
+            if (!soundToggle.checked) return;
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            oscillator.type = type;
+            oscillator.frequency.value = frequency;
+            gainNode.gain.value = volume;
+            oscillator.start();
+            oscillator.stop(audioCtx.currentTime + duration);
+        }
+
+        // Background music (simple melody)
+        function startBackgroundMusic() {
+            if (!musicToggle.checked || backgroundOscillator) return;
+            const notes = [261.63, 293.66, 329.63, 349.23, 392.00]; // C4, D4, E4, F4, G4
+            let noteIndex = 0;
+            backgroundOscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            backgroundOscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            backgroundOscillator.type = 'triangle';
+            gainNode.gain.value = 0.1; // Quiet volume
+            backgroundOscillator.frequency.value = notes[noteIndex];
+            backgroundOscillator.start();
+
+            setInterval(() => {
+                if (musicToggle.checked) {
+                    noteIndex = (noteIndex + 1) % notes.length;
+                    backgroundOscillator.frequency.value = notes[noteIndex];
+                }
+            }, 500);
+        }
+
+        function stopBackgroundMusic() {
+            if (backgroundOscillator) {
+                backgroundOscillator.stop();
+                backgroundOscillator = null;
+            }
+        }
+
+        musicToggle.addEventListener('change', () => {
+            if (musicToggle.checked) startBackgroundMusic();
+            else stopBackgroundMusic();
+        });
+
+        // Start music initially if checked
+        startBackgroundMusic();
+
         // Controls for both players
         const keys = {};
         document.addEventListener('keydown', (e) => {
@@ -86,11 +158,13 @@
             if (e.key === ' ' && !car1.isShooting) {
                 projectiles.push(createProjectile(car1));
                 car1.isShooting = true;
+                playSound(600, 0.1, 'square'); // Shoot sound
                 setTimeout(() => car1.isShooting = false, 100);
             }
             if ((e.key === 'q' || e.key === 'Q') && !car2.isShooting) {
                 projectiles.push(createProjectile(car2));
                 car2.isShooting = true;
+                playSound(600, 0.1, 'square'); // Shoot sound
                 setTimeout(() => car2.isShooting = false, 100);
             }
         });
@@ -99,10 +173,10 @@
             keys[e.key] = false;
         });
 
-        // Projectile creation (size and position based on direction)
+        // Projectile creation
         function createProjectile(car) {
             const isReverse = car.speed < 0;
-            const radius = isReverse ? 4 : 10; // Small backwards, large forwards
+            const radius = isReverse ? 4 : 10;
             const offset = isReverse ? -car.width/2 : car.width/2;
             return {
                 x: car.x + Math.cos(car.angle) * offset,
@@ -142,6 +216,20 @@
                 if (keys['w'] || keys['W']) car.speed = car.maxSpeed;
                 else if (keys['s'] || keys['S']) car.speed = -car.maxSpeed/2;
                 else car.speed = 0;
+            }
+
+            // Sound effects for driving and reverse
+            if (car.speed > 0 && !car.wasDriving) {
+                playSound(200, 0.2, 'sawtooth', 0.2); // Driving sound
+                car.wasDriving = true;
+                car.wasReverse = false;
+            } else if (car.speed < 0 && !car.wasReverse) {
+                playSound(150, 0.3, 'sawtooth', 0.2); // Reverse sound
+                car.wasReverse = true;
+                car.wasDriving = false;
+            } else if (car.speed === 0) {
+                car.wasDriving = false;
+                car.wasReverse = false;
             }
         }
 
@@ -225,14 +313,14 @@
                 if (dist < car.width/2 + ball.radius) {
                     const angleToBall = Math.atan2(ball.y - car.y, ball.x - car.x);
                     if (ball.isStuck && car.y < ball.y) {
-                        // Knock out from below
                         ball.isStuck = false;
                         ball.dy = 2;
                         ball.dx += Math.cos(angleToBall) * car.speed * 0.5;
+                        playSound(300, 0.15, 'square', 0.3); // Car hits ball
                     } else if (!ball.isStuck) {
-                        // Push when not stuck
                         ball.dx += Math.cos(angleToBall) * car.speed * 0.5;
                         ball.dy += Math.sin(angleToBall) * car.speed * 0.5;
+                        playSound(300, 0.15, 'square', 0.3); // Car hits ball
                     }
                 }
             });
@@ -244,7 +332,6 @@
                 ball.dx *= ball.friction;
                 ball.dy *= ball.friction;
 
-                // Ball boundaries
                 if (ball.x - ball.radius < 0) {
                     ball.x = ball.radius;
                     ball.dx = -ball.dx * 0.8;
@@ -262,7 +349,6 @@
                     ball.dy = -ball.dy * 0.8;
                 }
 
-                // Check if ball goes into hoop from above
                 if (ball.x > hoop.x - hoop.width/2 && 
                     ball.x < hoop.x + hoop.width/2 && 
                     ball.y > hoop.y - ball.radius && 
@@ -335,17 +421,27 @@
                 ctx.fillStyle = 'white';
                 ctx.fill();
 
-                const dist = Math.hypot(projectile.x - ball.x, projectile.y - ball.y);
-                if (dist < projectile.radius + ball.radius) {
+                // Projectile hitting ball
+                const distToBall = Math.hypot(projectile.x - ball.x, projectile.y - ball.y);
+                if (distToBall < projectile.radius + ball.radius) {
                     const angleToBall = Math.atan2(ball.y - projectile.y, ball.x - projectile.x);
-                    const impactFactor = projectile.radius / ball.radius; // Proportional to size
+                    const impactFactor = projectile.radius / ball.radius;
                     if (!ball.isStuck) {
                         ball.dx += Math.cos(angleToBall) * PROJECTILE_SPEED * impactFactor * 0.1;
                         ball.dy += Math.sin(angleToBall) * PROJECTILE_SPEED * impactFactor * 0.1;
                     }
-                    // Bounce projectile back
                     projectile.dx = -projectile.dx * 0.8;
                     projectile.dy = -projectile.dy * 0.8;
+                    playSound(400, 0.1, 'sine', 0.2); // Bullet hits ball
+                }
+
+                // Projectile hitting other car
+                const otherCar = projectile.owner === car1 ? car2 : car1;
+                const distToCar = Math.hypot(projectile.x - otherCar.x, projectile.y - otherCar.y);
+                if (distToCar < projectile.radius + otherCar.width/2) {
+                    playSound(500, 0.1, 'triangle', 0.3); // Bullet hits car
+                    projectiles.splice(pIndex, 1);
+                    return;
                 }
 
                 if (projectile.life <= 0) projectiles.splice(pIndex, 1);
