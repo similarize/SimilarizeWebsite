@@ -25,7 +25,8 @@
             rotation: 0,
             speed: 0,
             maxSpeed: 3,
-            isShooting: false
+            isShooting: false,
+            score: 0
         };
 
         // Player 2 RC car (blue)
@@ -38,7 +39,8 @@
             rotation: 0,
             speed: 0,
             maxSpeed: 3,
-            isShooting: false
+            isShooting: false,
+            score: 0
         };
 
         // Basketball object
@@ -48,17 +50,26 @@
             radius: 20,
             dx: 0,
             dy: 0,
-            friction: 0.98 // Slows down over time
+            friction: 0.98,
+            isStuck: false
         };
 
         // Basketball hoop
         const hoop = {
             x: canvas.width / 2,
-            y: 100, // Higher up on the screen
+            y: 100,
             width: 60,
             height: 10,
             rimThickness: 5,
             netHeight: 30
+        };
+
+        // Metal barrier
+        const barrier = {
+            x: 0,
+            y: 0,
+            width: canvas.width,
+            height: 20
         };
 
         // Game variables
@@ -207,46 +218,71 @@
                 if (car.y > canvas.height) car.y = 0;
 
                 // Ball collision with car
-                const dist = Math.hypot(car.x - ball.x, car.y - ball.y);
-                if (dist < car.width/2 + ball.radius) {
-                    const angleToBall = Math.atan2(ball.y - car.y, ball.x - car.x);
-                    ball.dx += Math.cos(angleToBall) * car.speed * 0.5;
-                    ball.dy += Math.sin(angleToBall) * car.speed * 0.5;
+                if (!ball.isStuck) {
+                    const dist = Math.hypot(car.x - ball.x, car.y - ball.y);
+                    if (dist < car.width/2 + ball.radius) {
+                        const angleToBall = Math.atan2(ball.y - car.y, ball.x - car.x);
+                        ball.dx += Math.cos(angleToBall) * car.speed * 0.5;
+                        ball.dy += Math.sin(angleToBall) * car.speed * 0.5;
+                    }
+                } else {
+                    // Knock ball out of hoop
+                    const dist = Math.hypot(car.x - ball.x, car.y - ball.y);
+                    if (dist < car.width/2 + ball.radius && car.y < hoop.y) {
+                        ball.isStuck = false;
+                        ball.dy = 2; // Give it a downward push
+                    }
                 }
             });
 
             // Update ball
-            ball.x += ball.dx;
-            ball.y += ball.dy;
-            ball.dx *= ball.friction;
-            ball.dy *= ball.friction;
+            if (!ball.isStuck) {
+                ball.x += ball.dx;
+                ball.y += ball.dy;
+                ball.dx *= ball.friction;
+                ball.dy *= ball.friction;
 
-            // Ball boundaries
-            if (ball.x - ball.radius < 0) {
-                ball.x = ball.radius;
-                ball.dx = -ball.dx * 0.8;
-            }
-            if (ball.x + ball.radius > canvas.width) {
-                ball.x = canvas.width - ball.radius;
-                ball.dx = -ball.dx * 0.8;
-            }
-            if (ball.y + ball.radius > canvas.height) {
-                ball.y = canvas.height - ball.radius;
-                ball.dy = -ball.dy * 0.8;
+                // Ball boundaries
+                if (ball.x - ball.radius < 0) {
+                    ball.x = ball.radius;
+                    ball.dx = -ball.dx * 0.8;
+                }
+                if (ball.x + ball.radius > canvas.width) {
+                    ball.x = canvas.width - ball.radius;
+                    ball.dx = -ball.dx * 0.8;
+                }
+                if (ball.y - ball.radius < barrier.height) {
+                    ball.y = barrier.height + ball.radius;
+                    ball.dy = -ball.dy * 0.8;
+                }
+                if (ball.y + ball.radius > canvas.height) {
+                    ball.y = canvas.height - ball.radius;
+                    ball.dy = -ball.dy * 0.8;
+                }
+
+                // Check if ball goes into hoop from above
+                if (ball.x > hoop.x - hoop.width/2 && 
+                    ball.x < hoop.x + hoop.width/2 && 
+                    ball.y > hoop.y - ball.radius && 
+                    ball.y < hoop.y + hoop.netHeight && 
+                    ball.dy > 0) {
+                    ball.isStuck = true;
+                    ball.x = hoop.x;
+                    ball.y = hoop.y + hoop.netHeight/2;
+                    ball.dx = 0;
+                    ball.dy = 0;
+                    // Determine which car gets the point based on last touch
+                    const lastTouch = projectiles.length > 0 && projectiles[projectiles.length-1].owner ? 
+                        projectiles[projectiles.length-1].owner : 
+                        (Math.hypot(car1.x - ball.x, car1.y - ball.y) < Math.hypot(car2.x - ball.x, car2.y - ball.y) ? car1 : car2);
+                    lastTouch.score++;
+                    console.log('Score!', lastTouch === car1 ? 'Player 1' : 'Player 2');
+                }
             }
 
-            // Check if ball goes through hoop
-            if (ball.x > hoop.x - hoop.width/2 && 
-                ball.x < hoop.x + hoop.width/2 && 
-                Math.abs(ball.y - hoop.y) < ball.radius &&
-                ball.dy > 0) {
-                // Reset ball to center ground
-                ball.x = canvas.width / 2;
-                ball.y = canvas.height - ball.radius;
-                ball.dx = 0;
-                ball.dy = 0;
-                console.log('Score!');
-            }
+            // Draw metal barrier
+            ctx.fillStyle = 'silver';
+            ctx.fillRect(barrier.x, barrier.y, barrier.width, barrier.height);
 
             // Draw tire tracks
             tracks.forEach((track, index) => {
@@ -282,7 +318,7 @@
             // Draw basketball
             ctx.beginPath();
             ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
-            ctx.fillStyle = '#FF4500'; // Orange basketball color
+            ctx.fillStyle = '#FF4500';
             ctx.fill();
             ctx.strokeStyle = 'black';
             ctx.stroke();
@@ -298,17 +334,24 @@
                 ctx.fillStyle = 'white';
                 ctx.fill();
 
-                // Projectile hitting ball
-                const dist = Math.hypot(projectile.x - ball.x, projectile.y - ball.y);
-                if (dist < projectile.radius + ball.radius) {
-                    const angleToBall = Math.atan2(ball.y - projectile.y, ball.x - projectile.x);
-                    ball.dx += Math.cos(angleToBall) * PROJECTILE_SPEED * 0.3;
-                    ball.dy += Math.sin(angleToBall) * PROJECTILE_SPEED * 0.3;
-                    projectiles.splice(pIndex, 1);
+                if (!ball.isStuck) {
+                    const dist = Math.hypot(projectile.x - ball.x, projectile.y - ball.y);
+                    if (dist < projectile.radius + ball.radius) {
+                        const angleToBall = Math.atan2(ball.y - projectile.y, ball.x - projectile.x);
+                        ball.dx += Math.cos(angleToBall) * PROJECTILE_SPEED * 0.3;
+                        ball.dy += Math.sin(angleToBall) * PROJECTILE_SPEED * 0.3;
+                        projectiles.splice(pIndex, 1);
+                    }
                 }
 
                 if (projectile.life <= 0) projectiles.splice(pIndex, 1);
             });
+
+            // Draw scores
+            ctx.fillStyle = 'white';
+            ctx.font = '20px Arial';
+            ctx.fillText(`P1 Score: ${car1.score}`, 10, 40);
+            ctx.fillText(`P2 Score: ${car2.score}`, canvas.width - 100, 40);
 
             requestAnimationFrame(update);
         }
