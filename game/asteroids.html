@@ -169,7 +169,7 @@
             backgroundOscillator2.type = 'triangle';
             backgroundOscillator1.frequency.value = notes[noteIndex];
             backgroundOscillator2.frequency.value = harmonicNotes[noteIndex];
-            musicGainNode.gain.value = musicVolume.value; // Starts at 0.25
+            musicGainNode.gain.value = musicVolume.value;
 
             backgroundOscillator1.start();
             backgroundOscillator2.start();
@@ -453,8 +453,8 @@
                 if (car.y > canvas.height) car.y = conveyor.y - car.height/2;
 
                 if (!car.isStuckInGoal && 
-                    car.x > (car === car1 ? hoop1.x : hoop2.x) - hoop.width/2 && 
-                    car.x < (car === car1 ? hoop1.x : hoop2.x) + hoop.width/2 && 
+                    car.x > (car === car1 ? hoop1.x : hoop2.x) - hoop1.width/2 && 
+                    car.x < (car === car1 ? hoop1.x : hoop2.x) + hoop1.width/2 && 
                     car.y > hoop1.y - car.height/2 && 
                     car.y < hoop1.y + hoop1.netHeight + car.height/2) {
                     car.isStuckInGoal = true;
@@ -516,7 +516,6 @@
                     basketball.dy = -basketball.dy * 0.8;
                 }
 
-                // Check scoring for Player 1's hoop (left)
                 if (basketball.x > hoop1.x - hoop1.width/2 && 
                     basketball.x < hoop1.x + hoop1.width/2 && 
                     basketball.y > hoop1.y - basketball.radius && 
@@ -536,7 +535,6 @@
                     }
                 }
 
-                // Check scoring for Player 2's hoop (right)
                 if (basketball.x > hoop2.x - hoop2.width/2 && 
                     basketball.x < hoop2.x + hoop2.width/2 && 
                     basketball.y > hoop2.y - basketball.radius && 
@@ -578,8 +576,8 @@
             drawCar(car1, 'orange');
             drawCar(car2, 'blue');
 
-            drawHoop(hoop1); // Player 1's hoop
-            drawHoop(hoop2); // Player 2's hoop
+            drawHoop(hoop1);
+            drawHoop(hoop2);
 
             ctx.beginPath();
             ctx.arc(basketball.x, basketball.y, basketball.radius, 0, Math.PI * 2);
@@ -633,12 +631,12 @@
 
             // Draw scores in top right
             ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-            ctx.fillRect(canvas.width - 105, 5, 100, 50); // Background for both scores
+            ctx.fillRect(canvas.width - 105, 5, 100, 50);
             ctx.fillStyle = 'white';
             ctx.font = '20px Arial';
             ctx.textAlign = 'right';
-            ctx.fillText(`P1 Score: ${car1.score}`, canvas.width - 10, 25); // P1 on top
-            ctx.fillText(`P2 Score: ${car2.score}`, canvas.width - 10, 50); // P2 below
+            ctx.fillText(`P1 Score: ${car1.score}`, canvas.width - 10, 25);
+            ctx.fillText(`P2 Score: ${car2.score}`, canvas.width - 10, 50);
             ctx.textAlign = 'left';
 
             if (car1.isDestroyed || car2.isDestroyed) {
