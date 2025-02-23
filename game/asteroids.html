@@ -14,14 +14,20 @@
             color: white;
             font-family: Arial, sans-serif;
         }
+        #controls label {
+            display: block;
+            margin-bottom: 5px;
+        }
     </style>
 </head>
 <body>
     <canvas id="gameCanvas" width="800" height="600"></canvas>
     <div id="controls">
-        <label><input type="checkbox" id="soundToggle" checked> Sound Effects</label><br>
-        <label><input type="checkbox" id="musicToggle" checked> Background Music</label><br>
-        <span>Press 'R' to reset ball</span>
+        <label><input type="checkbox" id="soundToggle" checked> Sound Effects</label>
+        <label>Sound Effects Volume: <input type="range" id="soundVolume" min="0" max="1" step="0.01" value="0.5"></label>
+        <label><input type="checkbox" id="musicToggle" checked> Background Music</label>
+        <label>Music Volume: <input type="range" id="musicVolume" min="0" max="1" step="0.01" value="0.3"></label>
+        <span>Press 'R' to reset basketball</span>
     </div>
     <script>
         const canvas = document.getElementById('gameCanvas');
@@ -67,9 +73,9 @@
         };
 
         // Basketball object
-        const ball = {
+        const basketball = {
             x: canvas.width / 2,
-            y: canvas.height - 20,
+            y: canvas.height / 2,
             radius: 20,
             dx: 0,
             dy: 0,
@@ -113,11 +119,15 @@
 
         // Sound toggle controls
         const soundToggle = document.getElementById('soundToggle');
+        const soundVolume = document.getElementById('soundVolume');
         const musicToggle = document.getElementById('musicToggle');
-        let backgroundOscillator = null;
+        const musicVolume = document.getElementById('musicVolume');
+        let backgroundOscillator1 = null;
+        let backgroundOscillator2 = null;
+        let musicGainNode = null;
 
         // Sound effects
-        function playSound(frequency, duration, type = 'sine', volume = 0.3) {
+        function playSound(frequency, duration, type = 'sine', baseVolume = 0.3) {
             if (!soundToggle.checked) return;
             const oscillator = audioCtx.createOscillator();
             const gainNode = audioCtx.createGain();
@@ -125,37 +135,51 @@
             gainNode.connect(audioCtx.destination);
             oscillator.type = type;
             oscillator.frequency.value = frequency;
-            gainNode.gain.value = volume;
+            gainNode.gain.value = baseVolume * soundVolume.value;
             oscillator.start();
             oscillator.stop(audioCtx.currentTime + duration);
         }
 
-        // Background music
+        // Background music with harmonic
         function startBackgroundMusic() {
-            if (!musicToggle.checked || backgroundOscillator) return;
+            if (!musicToggle.checked || backgroundOscillator1) return;
             const notes = [261.63, 293.66, 329.63, 349.23, 392.00];
+            const harmonicNotes = notes.map(note => note * 2);
             let noteIndex = 0;
-            backgroundOscillator = audioCtx.createOscillator();
-            const gainNode = audioCtx.createGain();
-            backgroundOscillator.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
-            backgroundOscillator.type = 'triangle';
-            gainNode.gain.value = 0.1;
-            backgroundOscillator.frequency.value = notes[noteIndex];
-            backgroundOscillator.start();
+
+            backgroundOscillator1 = audioCtx.createOscillator();
+            backgroundOscillator2 = audioCtx.createOscillator();
+            musicGainNode = audioCtx.createGain();
+
+            backgroundOscillator1.connect(musicGainNode);
+            backgroundOscillator2.connect(musicGainNode);
+            musicGainNode.connect(audioCtx.destination);
+
+            backgroundOscillator1.type = 'triangle';
+            backgroundOscillator2.type = 'triangle';
+            backgroundOscillator1.frequency.value = notes[noteIndex];
+            backgroundOscillator2.frequency.value = harmonicNotes[noteIndex];
+            musicGainNode.gain.value = musicVolume.value;
+
+            backgroundOscillator1.start();
+            backgroundOscillator2.start();
 
             setInterval(() => {
                 if (musicToggle.checked) {
                     noteIndex = (noteIndex + 1) % notes.length;
-                    backgroundOscillator.frequency.value = notes[noteIndex];
+                    backgroundOscillator1.frequency.value = notes[noteIndex];
+                    backgroundOscillator2.frequency.value = harmonicNotes[noteIndex];
                 }
             }, 500);
         }
 
         function stopBackgroundMusic() {
-            if (backgroundOscillator) {
-                backgroundOscillator.stop();
-                backgroundOscillator = null;
+            if (backgroundOscillator1) {
+                backgroundOscillator1.stop();
+                backgroundOscillator2.stop();
+                backgroundOscillator1 = null;
+                backgroundOscillator2 = null;
+                musicGainNode = null;
             }
         }
 
@@ -164,15 +188,21 @@
             else stopBackgroundMusic();
         });
 
+        musicVolume.addEventListener('input', () => {
+            if (musicGainNode) {
+                musicGainNode.gain.value = musicVolume.value;
+            }
+        });
+
         startBackgroundMusic();
 
-        // Reset ball function
-        function resetBall() {
-            ball.x = canvas.width / 2;
-            ball.y = canvas.height - ball.radius;
-            ball.dx = 0;
-            ball.dy = 0;
-            ball.isStuck = false;
+        // Reset basketball function
+        function resetBasketball() {
+            basketball.x = canvas.width / 2;
+            basketball.y = canvas.height / 2;
+            basketball.dx = 0;
+            basketball.dy = 0;
+            basketball.isStuck = false;
             playSound(700, 0.2, 'sine', 0.2);
         }
 
@@ -206,7 +236,7 @@
                 setTimeout(() => car2.isShooting = false, 100);
             }
             if (e.key === 'r' || e.key === 'R') {
-                resetBall();
+                resetBasketball();
             }
         });
 
@@ -246,7 +276,6 @@
             const isBothStuckOnConveyor = car1.onConveyor && car2.onConveyor && !car1.isDestroyed && !car2.isDestroyed;
             const isBothStuckInGoal = car1.isStuckInGoal && car2.isStuckInGoal;
 
-            // Allow blue car to move freely if both are stuck initially
             if (car.isStuckInGoal && !(car === car2 && isBothStuckInGoal)) return;
             if (car.onConveyor && !(car === car2 && isBothStuckOnConveyor)) return;
 
@@ -360,7 +389,6 @@
         function update() {
             drawBackground();
 
-            // Update both cars
             [car1, car2].forEach(car => {
                 updateCarControls(car);
                 if (car.isDestroyed) return;
@@ -369,7 +397,7 @@
 
                 if (car.y + car.height/2 > conveyor.y) {
                     car.onConveyor = true;
-                    if (!(car === car2 && isBothStuckOnConveyor)) { // Blue car skips conveyor movement if both stuck
+                    if (!(car === car2 && isBothStuckOnConveyor)) {
                         car.x += conveyor.speed;
                         if (car.x > canvas.width) car.x = 0;
                     }
@@ -393,7 +421,6 @@
                 if (car.y < 0) car.y = canvas.height;
                 if (car.y > canvas.height) car.y = conveyor.y - car.height/2;
 
-                // Check if car gets stuck in goal
                 if (!car.isStuckInGoal && 
                     car.x > hoop.x - hoop.width/2 && 
                     car.x < hoop.x + hoop.width/2 && 
@@ -407,17 +434,17 @@
                     playSound(250, 0.2, 'square', 0.3);
                 }
 
-                const dist = Math.hypot(car.x - ball.x, car.y - ball.y);
-                if (dist < car.width/2 + ball.radius) {
-                    const angleToBall = Math.atan2(ball.y - car.y, ball.x - car.x);
-                    if (ball.isStuck) {
-                        ball.isStuck = false;
-                        ball.dy = car.y < ball.y ? 2 : -2;
-                        ball.dx += Math.cos(angleToBall) * car.speed * 0.5;
+                const dist = Math.hypot(car.x - basketball.x, car.y - basketball.y);
+                if (dist < car.width/2 + basketball.radius) {
+                    const angleToBasketball = Math.atan2(basketball.y - car.y, basketball.x - car.x);
+                    if (basketball.isStuck) {
+                        basketball.isStuck = false;
+                        basketball.dy = car.y < basketball.y ? 2 : -2;
+                        basketball.dx += Math.cos(angleToBasketball) * car.speed * 0.5;
                         playSound(300, 0.15, 'square', 0.3);
                     } else {
-                        ball.dx += Math.cos(angleToBall) * car.speed * 0.5;
-                        ball.dy += Math.sin(angleToBall) * car.speed * 0.5;
+                        basketball.dx += Math.cos(angleToBasketball) * car.speed * 0.5;
+                        basketball.dy += Math.sin(angleToBasketball) * car.speed * 0.5;
                         playSound(300, 0.15, 'square', 0.3);
                         const otherCar = car === car1 ? car2 : car1;
                         if (otherCar.isDestroyed) {
@@ -427,61 +454,58 @@
                             otherCar.y = conveyor.y - car.height - 10;
                         } else if (otherCar.isStuckInGoal) {
                             otherCar.isStuckInGoal = false;
-                            otherCar.y = car.y < ball.y ? hoop.y + hoop.netHeight + car.height/2 : hoop.y - car.height/2;
-                            otherCar.dy = car.y < ball.y ? 2 : -2;
+                            otherCar.y = car.y < basketball.y ? hoop.y + hoop.netHeight + car.height/2 : hoop.y - car.height/2;
+                            otherCar.dy = car.y < basketball.y ? 2 : -2;
                             playSound(300, 0.15, 'square', 0.3);
                         }
                     }
                 }
             });
 
-            // Update ball
-            if (!ball.isStuck) {
-                ball.x += ball.dx;
-                ball.y += ball.dy;
-                ball.dx *= ball.friction;
-                ball.dy *= ball.friction;
+            if (!basketball.isStuck) {
+                basketball.x += basketball.dx;
+                basketball.y += basketball.dy;
+                basketball.dx *= basketball.friction;
+                basketball.dy *= basketball.friction;
 
-                if (ball.x - ball.radius < 0) {
-                    ball.x = ball.radius;
-                    ball.dx = -ball.dx * 0.8;
+                if (basketball.x - basketball.radius < 0) {
+                    basketball.x = basketball.radius;
+                    basketball.dx = -basketball.dx * 0.8;
                 }
-                if (ball.x + ball.radius > canvas.width) {
-                    ball.x = canvas.width - ball.radius;
-                    ball.dx = -ball.dx * 0.8;
+                if (basketball.x + basketball.radius > canvas.width) {
+                    basketball.x = canvas.width - basketball.radius;
+                    basketball.dx = -basketball.dx * 0.8;
                 }
-                if (ball.y - ball.radius < barrier.height) {
-                    ball.y = barrier.height + ball.radius;
-                    ball.dy = -ball.dy * 0.8;
+                if (basketball.y - basketball.radius < barrier.height) {
+                    basketball.y = barrier.height + basketball.radius;
+                    basketball.dy = -basketball.dy * 0.8;
                 }
-                if (ball.y + ball.radius > canvas.height) {
-                    ball.y = canvas.height - ball.radius;
-                    ball.dy = -ball.dy * 0.8;
+                if (basketball.y + basketball.radius > canvas.height) {
+                    basketball.y = canvas.height - basketball.radius;
+                    basketball.dy = -basketball.dy * 0.8;
                 }
 
-                if (ball.x > hoop.x - hoop.width/2 && 
-                    ball.x < hoop.x + hoop.width/2 && 
-                    ball.y > hoop.y - ball.radius && 
-                    ball.y < hoop.y + hoop.netHeight && 
-                    ball.dy > 0 && !ball.isStuck) {
-                    ball.isStuck = true;
-                    ball.x = hoop.x;
-                    ball.y = hoop.y + hoop.netHeight/2;
-                    ball.dx = 0;
-                    ball.dy = 0;
+                if (basketball.x > hoop.x - hoop.width/2 && 
+                    basketball.x < hoop.x + hoop.width/2 && 
+                    basketball.y > hoop.y - basketball.radius && 
+                    basketball.y < hoop.y + hoop.netHeight && 
+                    basketball.dy > 0 && !basketball.isStuck) {
+                    basketball.isStuck = true;
+                    basketball.x = hoop.x;
+                    basketball.y = hoop.y + hoop.netHeight/2;
+                    basketball.dx = 0;
+                    basketball.dy = 0;
                     const lastTouch = projectiles.length > 0 && projectiles[projectiles.length-1].owner ? 
                         projectiles[projectiles.length-1].owner : 
-                        (Math.hypot(car1.x - ball.x, car1.y - ball.y) < Math.hypot(car2.x - ball.x, car2.y - ball.y) ? car1 : car2);
+                        (Math.hypot(car1.x - basketball.x, car1.y - basketball.y) < Math.hypot(car2.x - basketball.x, car2.y - basketball.y) ? car1 : car2);
                     lastTouch.score++;
                     console.log('Score!', lastTouch === car1 ? 'Player 1' : 'Player 2');
                 }
             }
 
-            // Draw metal barrier
             ctx.fillStyle = 'silver';
             ctx.fillRect(barrier.x, barrier.y, barrier.width, barrier.height);
 
-            // Draw tire tracks
             tracks.forEach((track, index) => {
                 track.life--;
                 if (track.life <= 0) {
@@ -497,11 +521,9 @@
                 ctx.restore();
             });
 
-            // Draw both cars
             drawCar(car1, 'orange');
             drawCar(car2, 'blue');
 
-            // Draw basketball hoop
             ctx.fillStyle = 'gray';
             ctx.fillRect(hoop.x - hoop.width/2, hoop.y - hoop.rimThickness, hoop.width, hoop.rimThickness);
             ctx.fillStyle = 'white';
@@ -520,15 +542,13 @@
             }
             ctx.stroke();
 
-            // Draw basketball
             ctx.beginPath();
-            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            ctx.arc(basketball.x, basketball.y, basketball.radius, 0, Math.PI * 2);
             ctx.fillStyle = '#FF4500';
             ctx.fill();
             ctx.strokeStyle = 'black';
             ctx.stroke();
 
-            // Update and draw projectiles
             projectiles.forEach((projectile, pIndex) => {
                 projectile.x += projectile.dx;
                 projectile.y += projectile.dy;
@@ -539,13 +559,13 @@
                 ctx.fillStyle = 'white';
                 ctx.fill();
 
-                const distToBall = Math.hypot(projectile.x - ball.x, projectile.y - ball.y);
-                if (distToBall < projectile.radius + ball.radius) {
-                    const angleToBall = Math.atan2(ball.y - projectile.y, ball.x - projectile.x);
-                    const impactFactor = projectile.radius / ball.radius;
-                    if (!ball.isStuck) {
-                        ball.dx += Math.cos(angleToBall) * PROJECTILE_SPEED * impactFactor * 0.1;
-                        ball.dy += Math.sin(angleToBall) * PROJECTILE_SPEED * impactFactor * 0.1;
+                const distToBasketball = Math.hypot(projectile.x - basketball.x, projectile.y - basketball.y);
+                if (distToBasketball < projectile.radius + basketball.radius) {
+                    const angleToBasketball = Math.atan2(basketball.y - projectile.y, basketball.x - projectile.x);
+                    const impactFactor = projectile.radius / basketball.radius;
+                    if (!basketball.isStuck) {
+                        basketball.dx += Math.cos(angleToBasketball) * PROJECTILE_SPEED * impactFactor * 0.1;
+                        basketball.dy += Math.sin(angleToBasketball) * PROJECTILE_SPEED * impactFactor * 0.1;
                     }
                     projectile.dx = -projectile.dx * 0.8;
                     projectile.dy = -projectile.dy * 0.8;
@@ -558,6 +578,11 @@
                     if (projectile.radius === 10) {
                         otherCar.isDestroyed = true;
                         playSound(100, 0.5, 'sawtooth', 0.4);
+                        // If shooter is on conveyor, unstick them
+                        if (projectile.owner.onConveyor) {
+                            projectile.owner.onConveyor = false;
+                            projectile.owner.y = conveyor.y - projectile.owner.height - 10;
+                        }
                     } else {
                         playSound(500, 0.1, 'triangle', 0.3);
                     }
@@ -568,7 +593,6 @@
                 if (projectile.life <= 0) projectiles.splice(pIndex, 1);
             });
 
-            // Draw scores and text
             ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
             ctx.fillRect(5, 55, 100, 25);
             ctx.fillRect(canvas.width - 105, 55, 100, 25);
@@ -577,7 +601,6 @@
             ctx.fillText(`P1 Score: ${car1.score}`, 10, 75);
             ctx.fillText(`P2 Score: ${car2.score}`, canvas.width - 100, 75);
 
-            // Draw title reminder
             if (car1.isDestroyed || car2.isDestroyed) {
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
                 ctx.fillRect(canvas.width/2 - 150, 50, 300, 40);
