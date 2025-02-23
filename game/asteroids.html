@@ -246,8 +246,9 @@
             const isBothStuckOnConveyor = car1.onConveyor && car2.onConveyor && !car1.isDestroyed && !car2.isDestroyed;
             const isBothStuckInGoal = car1.isStuckInGoal && car2.isStuckInGoal;
 
-            // Allow blue car to move if both are stuck on conveyor or in goal
-            if ((car.isStuckInGoal || car.onConveyor) && !(car === car2 && (isBothStuckOnConveyor || isBothStuckInGoal))) return;
+            // Allow blue car to move freely if both are stuck initially
+            if (car.isStuckInGoal && !(car === car2 && isBothStuckInGoal)) return;
+            if (car.onConveyor && !(car === car2 && isBothStuckOnConveyor)) return;
 
             if (car === car1) {
                 if (keys['ArrowLeft']) car.rotation = -ROTATION_SPEED;
@@ -364,9 +365,11 @@
                 updateCarControls(car);
                 if (car.isDestroyed) return;
 
+                const isBothStuckOnConveyor = car1.onConveyor && car2.onConveyor && !car1.isDestroyed && !car2.isDestroyed;
+
                 if (car.y + car.height/2 > conveyor.y) {
                     car.onConveyor = true;
-                    if (!(car === car2 && car1.onConveyor && !car1.isDestroyed)) { // Blue car doesn't get conveyor movement if both stuck
+                    if (!(car === car2 && isBothStuckOnConveyor)) { // Blue car skips conveyor movement if both stuck
                         car.x += conveyor.speed;
                         if (car.x > canvas.width) car.x = 0;
                     }
@@ -375,7 +378,7 @@
                 }
 
                 car.angle += car.rotation;
-                const newX = car.onConveyor && !(car === car2 && car1.onConveyor && !car1.isDestroyed) ? car.x : car.x + Math.cos(car.angle) * car.speed;
+                const newX = (car.onConveyor && !(car === car2 && isBothStuckOnConveyor)) ? car.x : car.x + Math.cos(car.angle) * car.speed;
                 const newY = car.onConveyor ? car.y : car.y + Math.sin(car.angle) * car.speed;
 
                 if (car.speed !== 0 && !car.onConveyor) {
