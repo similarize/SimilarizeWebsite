@@ -171,7 +171,7 @@
             car.speed = 0;
             car.rotation = 0;
             car.isDestroyed = false;
-            playSound(800, 0.3, 'sine', 0.2); // Respawn sound
+            playSound(800, 0.3, 'sine', 0.2);
         }
 
         // Controls for both players
@@ -259,7 +259,7 @@
             }
         }
 
-        // Draw car function
+        // Draw car function with bigger wheels
         function drawCar(car, color) {
             if (car.isDestroyed) return;
             ctx.save();
@@ -282,11 +282,12 @@
             ctx.lineTo(car.width/2 - 10, -car.height/2);
             ctx.stroke();
 
+            // Bigger, taller wheels
             ctx.fillStyle = 'black';
-            ctx.fillRect(-car.width/2 + 5, -car.height/2 - 4, 8, 4);
-            ctx.fillRect(-car.width/2 + 5, car.height/2, 8, 4);
-            ctx.fillRect(car.width/2 - 13, -car.height/2 - 4, 8, 4);
-            ctx.fillRect(car.width/2 - 13, car.height/2, 8, 4);
+            ctx.fillRect(-car.width/2 + 5, -car.height/2 - 8, 10, 16); // Left front
+            ctx.fillRect(-car.width/2 + 5, car.height/2 - 8, 10, 16);  // Left rear
+            ctx.fillRect(car.width/2 - 15, -car.height/2 - 8, 10, 16); // Right front
+            ctx.fillRect(car.width/2 - 15, car.height/2 - 8, 10, 16);  // Right rear
 
             if (car.speed > 0) {
                 ctx.fillStyle = 'red';
@@ -311,10 +312,26 @@
             ctx.restore();
         }
 
-        // Game loop
-        function update() {
+        // Draw speckled background
+        function drawBackground() {
             ctx.fillStyle = '#228B22';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Add speckles
+            for (let i = 0; i < 100; i++) {
+                const x = Math.random() * canvas.width;
+                const y = Math.random() * canvas.height;
+                const size = Math.random() * 2 + 1;
+                ctx.fillStyle = `rgba(255, 255, 255, ${Math.random() * 0.5 + 0.2})`;
+                ctx.beginPath();
+                ctx.arc(x, y, size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // Game loop
+        function update() {
+            drawBackground();
 
             // Update both cars
             [car1, car2].forEach(car => {
@@ -336,7 +353,6 @@
                 if (car.y < 0) car.y = canvas.height;
                 if (car.y > canvas.height) car.y = 0;
 
-                // Ball collision with car
                 const dist = Math.hypot(car.x - ball.x, car.y - ball.y);
                 if (dist < car.width/2 + ball.radius) {
                     const angleToBall = Math.atan2(ball.y - car.y, ball.x - car.x);
@@ -349,7 +365,6 @@
                         ball.dx += Math.cos(angleToBall) * car.speed * 0.5;
                         ball.dy += Math.sin(angleToBall) * car.speed * 0.5;
                         playSound(300, 0.15, 'square', 0.3);
-                        // Respawn other car if destroyed
                         const otherCar = car === car1 ? car2 : car1;
                         if (otherCar.isDestroyed) {
                             respawnCar(otherCar);
@@ -470,11 +485,11 @@
                 const otherCar = projectile.owner === car1 ? car2 : car1;
                 const distToCar = Math.hypot(projectile.x - otherCar.x, projectile.y - otherCar.y);
                 if (distToCar < projectile.radius + otherCar.width/2 && !otherCar.isDestroyed) {
-                    if (projectile.radius === 10) { // Only big missiles explode the car
+                    if (projectile.radius === 10) {
                         otherCar.isDestroyed = true;
-                        playSound(100, 0.5, 'sawtooth', 0.4); // Explosion sound
+                        playSound(100, 0.5, 'sawtooth', 0.4);
                     } else {
-                        playSound(500, 0.1, 'triangle', 0.3); // Small bullet hit
+                        playSound(500, 0.1, 'triangle', 0.3);
                     }
                     projectiles.splice(pIndex, 1);
                     return;
@@ -483,14 +498,14 @@
                 if (projectile.life <= 0) projectiles.splice(pIndex, 1);
             });
 
-            // Draw scores and text with background to prevent overlap
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'; // Semi-transparent black background
-            ctx.fillRect(5, 25, 100, 25); // P1 score background
-            ctx.fillRect(canvas.width - 105, 25, 100, 25); // P2 score background
+            // Draw scores and text with adjusted positions
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.fillRect(5, 55, 100, 25); // P1 score background, moved down
+            ctx.fillRect(canvas.width - 105, 55, 100, 25); // P2 score background, moved down
             ctx.fillStyle = 'white';
             ctx.font = '20px Arial';
-            ctx.fillText(`P1 Score: ${car1.score}`, 10, 45);
-            ctx.fillText(`P2 Score: ${car2.score}`, canvas.width - 100, 45);
+            ctx.fillText(`P1 Score: ${car1.score}`, 10, 75); // Moved down to avoid controls
+            ctx.fillText(`P2 Score: ${car2.score}`, canvas.width - 100, 75); // Moved down and fits within green
 
             requestAnimationFrame(update);
         }
