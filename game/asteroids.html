@@ -245,8 +245,9 @@
             if (car.isDestroyed) return;
             const isBothStuckOnConveyor = car1.onConveyor && car2.onConveyor && !car1.isDestroyed && !car2.isDestroyed;
             const isBothStuckInGoal = car1.isStuckInGoal && car2.isStuckInGoal;
-            if (car.isStuckInGoal && !(car === car2 && isBothStuckInGoal)) return; // Blue can move if both in goal
-            if (car.onConveyor && !(car === car2 && isBothStuckOnConveyor)) return; // Blue can move if both on conveyor
+
+            // Allow blue car to move if both are stuck on conveyor or in goal
+            if ((car.isStuckInGoal || car.onConveyor) && !(car === car2 && (isBothStuckOnConveyor || isBothStuckInGoal))) return;
 
             if (car === car1) {
                 if (keys['ArrowLeft']) car.rotation = -ROTATION_SPEED;
@@ -365,14 +366,16 @@
 
                 if (car.y + car.height/2 > conveyor.y) {
                     car.onConveyor = true;
-                    car.x += conveyor.speed;
-                    if (car.x > canvas.width) car.x = 0;
+                    if (!(car === car2 && car1.onConveyor && !car1.isDestroyed)) { // Blue car doesn't get conveyor movement if both stuck
+                        car.x += conveyor.speed;
+                        if (car.x > canvas.width) car.x = 0;
+                    }
                 } else if (!car.isStuckInGoal) {
-                    car.onConveyor = false; // Allow car to leave conveyor if not stuck in goal
+                    car.onConveyor = false;
                 }
 
                 car.angle += car.rotation;
-                const newX = car.onConveyor ? car.x : car.x + Math.cos(car.angle) * car.speed;
+                const newX = car.onConveyor && !(car === car2 && car1.onConveyor && !car1.isDestroyed) ? car.x : car.x + Math.cos(car.angle) * car.speed;
                 const newY = car.onConveyor ? car.y : car.y + Math.sin(car.angle) * car.speed;
 
                 if (car.speed !== 0 && !car.onConveyor) {
