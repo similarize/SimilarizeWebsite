@@ -42,7 +42,8 @@
             score: 0,
             wasDriving: false,
             wasReverse: false,
-            isDestroyed: false
+            isDestroyed: false,
+            onConveyor: false
         };
 
         // Player 2 RC car (blue)
@@ -59,7 +60,8 @@
             score: 0,
             wasDriving: false,
             wasReverse: false,
-            isDestroyed: false
+            isDestroyed: false,
+            onConveyor: false
         };
 
         // Basketball object
@@ -77,10 +79,12 @@
         const hoop = {
             x: canvas.width / 2,
             y: 100,
-            width: 60,
+            width: 80, // Wider for realism
             height: 10,
             rimThickness: 5,
-            netHeight: 30
+            netHeight: 40, // Taller net
+            poleWidth: 10,
+            poleHeight: canvas.height - 100 // From hoop to ground
         };
 
         // Metal barrier
@@ -89,6 +93,15 @@
             y: 0,
             width: canvas.width,
             height: 20
+        };
+
+        // Conveyor belt
+        const conveyor = {
+            x: 0,
+            y: canvas.height - 40,
+            width: canvas.width,
+            height: 40,
+            speed: 2 // Moves right
         };
 
         // Game variables
@@ -171,6 +184,7 @@
             car.speed = 0;
             car.rotation = 0;
             car.isDestroyed = false;
+            car.onConveyor = false;
             playSound(800, 0.3, 'sine', 0.2);
         }
 
@@ -232,17 +246,17 @@
                 if (keys['ArrowLeft']) car.rotation = -ROTATION_SPEED;
                 else if (keys['ArrowRight']) car.rotation = ROTATION_SPEED;
                 else car.rotation = 0;
-                if (keys['ArrowUp']) car.speed = car.maxSpeed;
-                else if (keys['ArrowDown']) car.speed = -car.maxSpeed/2;
-                else car.speed = 0;
+                if (keys['ArrowUp'] && !car.onConveyor) car.speed = car.maxSpeed;
+                else if (keys['ArrowDown'] && !car.onConveyor) car.speed = -car.maxSpeed/2;
+                else if (!car.onConveyor) car.speed = 0;
             }
             if (car === car2) {
                 if (keys['a'] || keys['A']) car.rotation = -ROTATION_SPEED;
                 else if (keys['d'] || keys['D']) car.rotation = ROTATION_SPEED;
                 else car.rotation = 0;
-                if (keys['w'] || keys['W']) car.speed = car.maxSpeed;
-                else if (keys['s'] || keys['S']) car.speed = -car.maxSpeed/2;
-                else car.speed = 0;
+                if (keys['w'] || keys['W'] && !car.onConveyor) car.speed = car.maxSpeed;
+                else if (keys['s'] || keys['S'] && !car.onConveyor) car.speed = -car.maxSpeed/2;
+                else if (!car.onConveyor) car.speed = 0;
             }
 
             if (car.speed > 0 && !car.wasDriving) {
@@ -259,7 +273,7 @@
             }
         }
 
-        // Draw car function with bigger wheels
+        // Draw car function with wheels underneath
         function drawCar(car, color) {
             if (car.isDestroyed) return;
             ctx.save();
@@ -282,14 +296,14 @@
             ctx.lineTo(car.width/2 - 10, -car.height/2);
             ctx.stroke();
 
-            // Bigger, taller wheels
+            // Bigger, taller wheels underneath
             ctx.fillStyle = 'black';
-            ctx.fillRect(-car.width/2 + 5, -car.height/2 - 8, 10, 16); // Left front
-            ctx.fillRect(-car.width/2 + 5, car.height/2 - 8, 10, 16);  // Left rear
-            ctx.fillRect(car.width/2 - 15, -car.height/2 - 8, 10, 16); // Right front
-            ctx.fillRect(car.width/2 - 15, car.height/2 - 8, 10, 16);  // Right rear
+            ctx.fillRect(-car.width/2 + 5, -car.height/2, 10, 16); // Left front
+            ctx.fillRect(-car.width/2 + 5, car.height/2 - 16, 10, 16); // Left rear
+            ctx.fillRect(car.width/2 - 15, -car.height/2, 10, 16); // Right front
+            ctx.fillRect(car.width/2 - 15, car.height/2 - 16, 10, 16); // Right rear
 
-            if (car.speed > 0) {
+            if (car.speed > 0 || (car.onConveyor && !car.isDestroyed)) {
                 ctx.fillStyle = 'red';
                 ctx.beginPath();
                 ctx.arc(car.width/2, -car.height/2 + 5, 3, 0, Math.PI * 2);
@@ -317,7 +331,6 @@
             ctx.fillStyle = '#228B22';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Add speckles
             for (let i = 0; i < 100; i++) {
                 const x = Math.random() * canvas.width;
                 const y = Math.random() * canvas.height;
@@ -326,6 +339,15 @@
                 ctx.beginPath();
                 ctx.arc(x, y, size, 0, Math.PI * 2);
                 ctx.fill();
+            }
+
+            // Draw conveyor belt
+            ctx.fillStyle = '#555555'; // Gray color
+            ctx.fillRect(conveyor.x, conveyor.y, conveyor.width, conveyor.height);
+            // Add moving lines for effect
+            for (let i = 0; i < conveyor.width; i += 20) {
+                ctx.fillStyle = '#333333';
+                ctx.fillRect((i + Date.now() / 100 % 20), conveyor.y, 10, conveyor.height);
             }
         }
 
@@ -337,11 +359,19 @@
             [car1, car2].forEach(car => {
                 updateCarControls(car);
                 if (car.isDestroyed) return;
-                car.angle += car.rotation;
-                const newX = car.x + Math.cos(car.angle) * car.speed;
-                const newY = car.y + Math.sin(car.angle) * car.speed;
 
-                if (car.speed !== 0) {
+                // Check if car is on conveyor
+                if (car.y + car.height/2 > conveyor.y) {
+                    car.onConveyor = true;
+                    car.x += conveyor.speed; // Move right with conveyor
+                    if (car.x > canvas.width) car.x = 0; // Wrap around
+                }
+
+                car.angle += car.rotation;
+                const newX = car.onConveyor ? car.x : car.x + Math.cos(car.angle) * car.speed;
+                const newY = car.onConveyor ? car.y : car.y + Math.sin(car.angle) * car.speed;
+
+                if (car.speed !== 0 && !car.onConveyor) {
                     tracks.push(createTrack(car.x, car.y, car.angle));
                 }
 
@@ -351,7 +381,7 @@
                 if (car.x < 0) car.x = canvas.width;
                 if (car.x > canvas.width) car.x = 0;
                 if (car.y < 0) car.y = canvas.height;
-                if (car.y > canvas.height) car.y = 0;
+                if (car.y > canvas.height) car.y = conveyor.y - car.height/2; // Stop at conveyor
 
                 const dist = Math.hypot(car.x - ball.x, car.y - ball.y);
                 if (dist < car.width/2 + ball.radius) {
@@ -368,6 +398,9 @@
                         const otherCar = car === car1 ? car2 : car1;
                         if (otherCar.isDestroyed) {
                             respawnCar(otherCar);
+                        } else if (otherCar.onConveyor) {
+                            otherCar.onConveyor = false;
+                            otherCar.y = conveyor.y - car.height - 10; // Lift off conveyor
                         }
                     }
                 }
@@ -439,15 +472,25 @@
             drawCar(car1, 'orange');
             drawCar(car2, 'blue');
 
-            // Draw basketball hoop
+            // Draw more realistic basketball hoop
             ctx.fillStyle = 'gray';
-            ctx.fillRect(hoop.x - hoop.width/2, hoop.y - hoop.rimThickness, hoop.width, hoop.rimThickness);
+            ctx.fillRect(hoop.x - hoop.width/2, hoop.y - hoop.rimThickness, hoop.width, hoop.rimThickness); // Rim
+            ctx.fillRect(hoop.x - hoop.poleWidth/2, hoop.y, hoop.poleWidth, hoop.poleHeight); // Pole
+            ctx.fillStyle = 'white';
+            ctx.fillRect(hoop.x - hoop.width/2 + 5, hoop.y - hoop.rimThickness - 20, hoop.width - 10, 20); // Backboard
+            ctx.strokeStyle = 'black';
+            ctx.strokeRect(hoop.x - hoop.width/2 + 5, hoop.y - hoop.rimThickness - 20, hoop.width - 10, 20); // Backboard outline
             ctx.strokeStyle = 'white';
             ctx.beginPath();
             ctx.moveTo(hoop.x - hoop.width/2, hoop.y);
             ctx.lineTo(hoop.x - hoop.width/2, hoop.y + hoop.netHeight);
             ctx.moveTo(hoop.x + hoop.width/2, hoop.y);
             ctx.lineTo(hoop.x + hoop.width/2, hoop.y + hoop.netHeight);
+            // Add net lines
+            for (let i = 0; i < hoop.netHeight; i += 10) {
+                ctx.moveTo(hoop.x - hoop.width/2 + i/2, hoop.y + i);
+                ctx.lineTo(hoop.x + hoop.width/2 - i/2, hoop.y + i);
+            }
             ctx.stroke();
 
             // Draw basketball
@@ -498,14 +541,25 @@
                 if (projectile.life <= 0) projectiles.splice(pIndex, 1);
             });
 
-            // Draw scores and text with adjusted positions
+            // Draw scores and text
             ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-            ctx.fillRect(5, 55, 100, 25); // P1 score background, moved down
-            ctx.fillRect(canvas.width - 105, 55, 100, 25); // P2 score background, moved down
+            ctx.fillRect(5, 55, 100, 25);
+            ctx.fillRect(canvas.width - 105, 55, 100, 25);
             ctx.fillStyle = 'white';
             ctx.font = '20px Arial';
-            ctx.fillText(`P1 Score: ${car1.score}`, 10, 75); // Moved down to avoid controls
-            ctx.fillText(`P2 Score: ${car2.score}`, canvas.width - 100, 75); // Moved down and fits within green
+            ctx.fillText(`P1 Score: ${car1.score}`, 10, 75);
+            ctx.fillText(`P2 Score: ${car2.score}`, canvas.width - 100, 75);
+
+            // Draw title reminder
+            if (car1.isDestroyed || car2.isDestroyed) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.fillRect(canvas.width/2 - 150, 50, 300, 40);
+                ctx.fillStyle = 'white';
+                ctx.font = '20px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('Hit the ball to bring back the other car!', canvas.width/2, 75);
+                ctx.textAlign = 'left';
+            }
 
             requestAnimationFrame(update);
         }
