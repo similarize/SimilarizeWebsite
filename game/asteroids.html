@@ -43,7 +43,8 @@
             wasDriving: false,
             wasReverse: false,
             isDestroyed: false,
-            onConveyor: false
+            onConveyor: false,
+            isStuckInGoal: false
         };
 
         // Player 2 RC car (blue)
@@ -61,7 +62,8 @@
             wasDriving: false,
             wasReverse: false,
             isDestroyed: false,
-            onConveyor: false
+            onConveyor: false,
+            isStuckInGoal: false
         };
 
         // Basketball object
@@ -79,12 +81,12 @@
         const hoop = {
             x: canvas.width / 2,
             y: 100,
-            width: 80, // Wider for realism
+            width: 80,
             height: 10,
             rimThickness: 5,
-            netHeight: 40, // Taller net
+            netHeight: 40,
             poleWidth: 10,
-            poleHeight: canvas.height - 100 // From hoop to ground
+            poleHeight: canvas.height - 100
         };
 
         // Metal barrier
@@ -101,7 +103,7 @@
             y: canvas.height - 40,
             width: canvas.width,
             height: 40,
-            speed: 2 // Moves right
+            speed: 2
         };
 
         // Game variables
@@ -185,6 +187,7 @@
             car.rotation = 0;
             car.isDestroyed = false;
             car.onConveyor = false;
+            car.isStuckInGoal = false;
             playSound(800, 0.3, 'sine', 0.2);
         }
 
@@ -192,13 +195,13 @@
         const keys = {};
         document.addEventListener('keydown', (e) => {
             keys[e.key] = true;
-            if (e.key === ' ' && !car1.isShooting && !car1.isDestroyed) {
+            if (e.key === ' ' && !car1.isShooting && !car1.isDestroyed && !car1.isStuckInGoal) {
                 projectiles.push(createProjectile(car1));
                 car1.isShooting = true;
                 playSound(600, 0.1, 'square');
                 setTimeout(() => car1.isShooting = false, 100);
             }
-            if ((e.key === 'q' || e.key === 'Q') && !car2.isShooting && !car2.isDestroyed) {
+            if ((e.key === 'q' || e.key === 'Q') && !car2.isShooting && !car2.isDestroyed && !car2.isStuckInGoal) {
                 projectiles.push(createProjectile(car2));
                 car2.isShooting = true;
                 playSound(600, 0.1, 'square');
@@ -241,7 +244,7 @@
 
         // Update car movement based on controls
         function updateCarControls(car) {
-            if (car.isDestroyed) return;
+            if (car.isDestroyed || car.isStuckInGoal) return;
             if (car === car1) {
                 if (keys['ArrowLeft']) car.rotation = -ROTATION_SPEED;
                 else if (keys['ArrowRight']) car.rotation = ROTATION_SPEED;
@@ -296,12 +299,11 @@
             ctx.lineTo(car.width/2 - 10, -car.height/2);
             ctx.stroke();
 
-            // Bigger, taller wheels underneath
             ctx.fillStyle = 'black';
-            ctx.fillRect(-car.width/2 + 5, -car.height/2, 10, 16); // Left front
-            ctx.fillRect(-car.width/2 + 5, car.height/2 - 16, 10, 16); // Left rear
-            ctx.fillRect(car.width/2 - 15, -car.height/2, 10, 16); // Right front
-            ctx.fillRect(car.width/2 - 15, car.height/2 - 16, 10, 16); // Right rear
+            ctx.fillRect(-car.width/2 + 5, -car.height/2, 10, 16);
+            ctx.fillRect(-car.width/2 + 5, car.height/2 - 16, 10, 16);
+            ctx.fillRect(car.width/2 - 15, -car.height/2, 10, 16);
+            ctx.fillRect(car.width/2 - 15, car.height/2 - 16, 10, 16);
 
             if (car.speed > 0 || (car.onConveyor && !car.isDestroyed)) {
                 ctx.fillStyle = 'red';
@@ -341,10 +343,8 @@
                 ctx.fill();
             }
 
-            // Draw conveyor belt
-            ctx.fillStyle = '#555555'; // Gray color
+            ctx.fillStyle = '#555555';
             ctx.fillRect(conveyor.x, conveyor.y, conveyor.width, conveyor.height);
-            // Add moving lines for effect
             for (let i = 0; i < conveyor.width; i += 20) {
                 ctx.fillStyle = '#333333';
                 ctx.fillRect((i + Date.now() / 100 % 20), conveyor.y, 10, conveyor.height);
@@ -360,11 +360,10 @@
                 updateCarControls(car);
                 if (car.isDestroyed) return;
 
-                // Check if car is on conveyor
                 if (car.y + car.height/2 > conveyor.y) {
                     car.onConveyor = true;
-                    car.x += conveyor.speed; // Move right with conveyor
-                    if (car.x > canvas.width) car.x = 0; // Wrap around
+                    car.x += conveyor.speed;
+                    if (car.x > canvas.width) car.x = 0;
                 }
 
                 car.angle += car.rotation;
@@ -381,7 +380,21 @@
                 if (car.x < 0) car.x = canvas.width;
                 if (car.x > canvas.width) car.x = 0;
                 if (car.y < 0) car.y = canvas.height;
-                if (car.y > canvas.height) car.y = conveyor.y - car.height/2; // Stop at conveyor
+                if (car.y > canvas.height) car.y = conveyor.y - car.height/2;
+
+                // Check if car gets stuck in goal
+                if (!car.isStuckInGoal && 
+                    car.x > hoop.x - hoop.width/2 && 
+                    car.x < hoop.x + hoop.width/2 && 
+                    car.y > hoop.y - car.height/2 && 
+                    car.y < hoop.y + hoop.netHeight + car.height/2) {
+                    car.isStuckInGoal = true;
+                    car.x = hoop.x;
+                    car.y = hoop.y + hoop.netHeight/2;
+                    car.speed = 0;
+                    car.rotation = 0;
+                    playSound(250, 0.2, 'square', 0.3); // Stuck in goal sound
+                }
 
                 const dist = Math.hypot(car.x - ball.x, car.y - ball.y);
                 if (dist < car.width/2 + ball.radius) {
@@ -390,6 +403,11 @@
                         ball.isStuck = false;
                         ball.dy = car.y < ball.y ? 2 : -2;
                         ball.dx += Math.cos(angleToBall) * car.speed * 0.5;
+                        playSound(300, 0.15, 'square', 0.3);
+                    } else if (car.isStuckInGoal) {
+                        car.isStuckInGoal = false;
+                        car.y = car.y < ball.y ? hoop.y + hoop.netHeight + car.height/2 : hoop.y - car.height/2;
+                        car.dy = car.y < ball.y ? 2 : -2;
                         playSound(300, 0.15, 'square', 0.3);
                     } else {
                         ball.dx += Math.cos(angleToBall) * car.speed * 0.5;
@@ -400,7 +418,7 @@
                             respawnCar(otherCar);
                         } else if (otherCar.onConveyor) {
                             otherCar.onConveyor = false;
-                            otherCar.y = conveyor.y - car.height - 10; // Lift off conveyor
+                            otherCar.y = conveyor.y - car.height - 10;
                         }
                     }
                 }
@@ -472,21 +490,20 @@
             drawCar(car1, 'orange');
             drawCar(car2, 'blue');
 
-            // Draw more realistic basketball hoop
+            // Draw basketball hoop (fixed gray line issue)
             ctx.fillStyle = 'gray';
-            ctx.fillRect(hoop.x - hoop.width/2, hoop.y - hoop.rimThickness, hoop.width, hoop.rimThickness); // Rim
-            ctx.fillRect(hoop.x - hoop.poleWidth/2, hoop.y, hoop.poleWidth, hoop.poleHeight); // Pole
+            ctx.fillRect(hoop.x - hoop.width/2, hoop.y - hoop.rimThickness, hoop.width, hoop.rimThickness);
+            ctx.fillRect(hoop.x - hoop.poleWidth/2, hoop.y + hoop.netHeight, hoop.poleWidth, hoop.poleHeight - hoop.netHeight); // Pole moved below net
             ctx.fillStyle = 'white';
-            ctx.fillRect(hoop.x - hoop.width/2 + 5, hoop.y - hoop.rimThickness - 20, hoop.width - 10, 20); // Backboard
+            ctx.fillRect(hoop.x - hoop.width/2 + 5, hoop.y - hoop.rimThickness - 20, hoop.width - 10, 20);
             ctx.strokeStyle = 'black';
-            ctx.strokeRect(hoop.x - hoop.width/2 + 5, hoop.y - hoop.rimThickness - 20, hoop.width - 10, 20); // Backboard outline
+            ctx.strokeRect(hoop.x - hoop.width/2 + 5, hoop.y - hoop.rimThickness - 20, hoop.width - 10, 20);
             ctx.strokeStyle = 'white';
             ctx.beginPath();
             ctx.moveTo(hoop.x - hoop.width/2, hoop.y);
             ctx.lineTo(hoop.x - hoop.width/2, hoop.y + hoop.netHeight);
             ctx.moveTo(hoop.x + hoop.width/2, hoop.y);
             ctx.lineTo(hoop.x + hoop.width/2, hoop.y + hoop.netHeight);
-            // Add net lines
             for (let i = 0; i < hoop.netHeight; i += 10) {
                 ctx.moveTo(hoop.x - hoop.width/2 + i/2, hoop.y + i);
                 ctx.lineTo(hoop.x + hoop.width/2 - i/2, hoop.y + i);
