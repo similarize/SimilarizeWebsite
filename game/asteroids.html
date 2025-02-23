@@ -24,9 +24,9 @@
     <canvas id="gameCanvas" width="800" height="600"></canvas>
     <div id="controls">
         <label><input type="checkbox" id="soundToggle" checked> Sound Effects</label>
-        <label>Sound Effects Volume: <input type="range" id="soundVolume" min="0" max="1" step="0.01" value="0.5"></label>
+        <label>Sound Effects Volume: <input type="range" id="soundVolume" min="0" max="1" step="0.01" value="0.25"></label>
         <label><input type="checkbox" id="musicToggle" checked> Background Music</label>
-        <label>Music Volume: <input type="range" id="musicVolume" min="0" max="1" step="0.01" value="0.3"></label>
+        <label>Music Volume: <input type="range" id="musicVolume" min="0" max="1" step="0.01" value="0.25"></label>
         <span>Press 'R' to reset basketball</span>
     </div>
     <script>
@@ -83,9 +83,19 @@
             isStuck: false
         };
 
-        // Basketball hoop
-        const hoop = {
-            x: canvas.width / 2,
+        // Player 1's hoop (left side)
+        const hoop1 = {
+            x: canvas.width / 4,
+            y: 100,
+            width: 80,
+            height: 10,
+            rimThickness: 5,
+            netHeight: 40
+        };
+
+        // Player 2's hoop (right side)
+        const hoop2 = {
+            x: 3 * canvas.width / 4,
             y: 100,
             width: 80,
             height: 10,
@@ -159,7 +169,7 @@
             backgroundOscillator2.type = 'triangle';
             backgroundOscillator1.frequency.value = notes[noteIndex];
             backgroundOscillator2.frequency.value = harmonicNotes[noteIndex];
-            musicGainNode.gain.value = musicVolume.value;
+            musicGainNode.gain.value = musicVolume.value; // Starts at 0.25
 
             backgroundOscillator1.start();
             backgroundOscillator2.start();
@@ -385,6 +395,27 @@
             }
         }
 
+        // Draw hoop function
+        function drawHoop(hoop) {
+            ctx.fillStyle = 'gray';
+            ctx.fillRect(hoop.x - hoop.width/2, hoop.y - hoop.rimThickness, hoop.width, hoop.rimThickness);
+            ctx.fillStyle = 'white';
+            ctx.fillRect(hoop.x - hoop.width/2 + 5, hoop.y - hoop.rimThickness - 20, hoop.width - 10, 20);
+            ctx.strokeStyle = 'black';
+            ctx.strokeRect(hoop.x - hoop.width/2 + 5, hoop.y - hoop.rimThickness - 20, hoop.width - 10, 20);
+            ctx.strokeStyle = 'white';
+            ctx.beginPath();
+            ctx.moveTo(hoop.x - hoop.width/2, hoop.y);
+            ctx.lineTo(hoop.x - hoop.width/2, hoop.y + hoop.netHeight);
+            ctx.moveTo(hoop.x + hoop.width/2, hoop.y);
+            ctx.lineTo(hoop.x + hoop.width/2, hoop.y + hoop.netHeight);
+            for (let i = 0; i < hoop.netHeight; i += 10) {
+                ctx.moveTo(hoop.x - hoop.width/2 + i/2, hoop.y + i);
+                ctx.lineTo(hoop.x + hoop.width/2 - i/2, hoop.y + i);
+            }
+            ctx.stroke();
+        }
+
         // Game loop
         function update() {
             drawBackground();
@@ -422,13 +453,13 @@
                 if (car.y > canvas.height) car.y = conveyor.y - car.height/2;
 
                 if (!car.isStuckInGoal && 
-                    car.x > hoop.x - hoop.width/2 && 
-                    car.x < hoop.x + hoop.width/2 && 
-                    car.y > hoop.y - car.height/2 && 
-                    car.y < hoop.y + hoop.netHeight + car.height/2) {
+                    car.x > (car === car1 ? hoop1.x : hoop2.x) - hoop.width/2 && 
+                    car.x < (car === car1 ? hoop1.x : hoop2.x) + hoop.width/2 && 
+                    car.y > hoop1.y - car.height/2 && 
+                    car.y < hoop1.y + hoop1.netHeight + car.height/2) {
                     car.isStuckInGoal = true;
-                    car.x = hoop.x;
-                    car.y = hoop.y + hoop.netHeight/2;
+                    car.x = car === car1 ? hoop1.x : hoop2.x;
+                    car.y = hoop1.y + hoop1.netHeight/2;
                     car.speed = 0;
                     car.rotation = 0;
                     playSound(250, 0.2, 'square', 0.3);
@@ -454,7 +485,7 @@
                             otherCar.y = conveyor.y - car.height - 10;
                         } else if (otherCar.isStuckInGoal) {
                             otherCar.isStuckInGoal = false;
-                            otherCar.y = car.y < basketball.y ? hoop.y + hoop.netHeight + car.height/2 : hoop.y - car.height/2;
+                            otherCar.y = car.y < basketball.y ? (otherCar === car1 ? hoop1.y : hoop2.y) + hoop1.netHeight + car.height/2 : (otherCar === car1 ? hoop1.y : hoop2.y) - car.height/2;
                             otherCar.dy = car.y < basketball.y ? 2 : -2;
                             playSound(300, 0.15, 'square', 0.3);
                         }
@@ -485,21 +516,44 @@
                     basketball.dy = -basketball.dy * 0.8;
                 }
 
-                if (basketball.x > hoop.x - hoop.width/2 && 
-                    basketball.x < hoop.x + hoop.width/2 && 
-                    basketball.y > hoop.y - basketball.radius && 
-                    basketball.y < hoop.y + hoop.netHeight && 
+                // Check scoring for Player 1's hoop (left)
+                if (basketball.x > hoop1.x - hoop1.width/2 && 
+                    basketball.x < hoop1.x + hoop1.width/2 && 
+                    basketball.y > hoop1.y - basketball.radius && 
+                    basketball.y < hoop1.y + hoop1.netHeight && 
                     basketball.dy > 0 && !basketball.isStuck) {
                     basketball.isStuck = true;
-                    basketball.x = hoop.x;
-                    basketball.y = hoop.y + hoop.netHeight/2;
+                    basketball.x = hoop1.x;
+                    basketball.y = hoop1.y + hoop1.netHeight/2;
                     basketball.dx = 0;
                     basketball.dy = 0;
                     const lastTouch = projectiles.length > 0 && projectiles[projectiles.length-1].owner ? 
                         projectiles[projectiles.length-1].owner : 
                         (Math.hypot(car1.x - basketball.x, car1.y - basketball.y) < Math.hypot(car2.x - basketball.x, car2.y - basketball.y) ? car1 : car2);
-                    lastTouch.score++;
-                    console.log('Score!', lastTouch === car1 ? 'Player 1' : 'Player 2');
+                    if (lastTouch === car1) {
+                        car1.score++;
+                        console.log('Score for Player 1!');
+                    }
+                }
+
+                // Check scoring for Player 2's hoop (right)
+                if (basketball.x > hoop2.x - hoop2.width/2 && 
+                    basketball.x < hoop2.x + hoop2.width/2 && 
+                    basketball.y > hoop2.y - basketball.radius && 
+                    basketball.y < hoop2.y + hoop2.netHeight && 
+                    basketball.dy > 0 && !basketball.isStuck) {
+                    basketball.isStuck = true;
+                    basketball.x = hoop2.x;
+                    basketball.y = hoop2.y + hoop2.netHeight/2;
+                    basketball.dx = 0;
+                    basketball.dy = 0;
+                    const lastTouch = projectiles.length > 0 && projectiles[projectiles.length-1].owner ? 
+                        projectiles[projectiles.length-1].owner : 
+                        (Math.hypot(car1.x - basketball.x, car1.y - basketball.y) < Math.hypot(car2.x - basketball.x, car2.y - basketball.y) ? car1 : car2);
+                    if (lastTouch === car2) {
+                        car2.score++;
+                        console.log('Score for Player 2!');
+                    }
                 }
             }
 
@@ -524,23 +578,8 @@
             drawCar(car1, 'orange');
             drawCar(car2, 'blue');
 
-            ctx.fillStyle = 'gray';
-            ctx.fillRect(hoop.x - hoop.width/2, hoop.y - hoop.rimThickness, hoop.width, hoop.rimThickness);
-            ctx.fillStyle = 'white';
-            ctx.fillRect(hoop.x - hoop.width/2 + 5, hoop.y - hoop.rimThickness - 20, hoop.width - 10, 20);
-            ctx.strokeStyle = 'black';
-            ctx.strokeRect(hoop.x - hoop.width/2 + 5, hoop.y - hoop.rimThickness - 20, hoop.width - 10, 20);
-            ctx.strokeStyle = 'white';
-            ctx.beginPath();
-            ctx.moveTo(hoop.x - hoop.width/2, hoop.y);
-            ctx.lineTo(hoop.x - hoop.width/2, hoop.y + hoop.netHeight);
-            ctx.moveTo(hoop.x + hoop.width/2, hoop.y);
-            ctx.lineTo(hoop.x + hoop.width/2, hoop.y + hoop.netHeight);
-            for (let i = 0; i < hoop.netHeight; i += 10) {
-                ctx.moveTo(hoop.x - hoop.width/2 + i/2, hoop.y + i);
-                ctx.lineTo(hoop.x + hoop.width/2 - i/2, hoop.y + i);
-            }
-            ctx.stroke();
+            drawHoop(hoop1); // Player 1's hoop
+            drawHoop(hoop2); // Player 2's hoop
 
             ctx.beginPath();
             ctx.arc(basketball.x, basketball.y, basketball.radius, 0, Math.PI * 2);
@@ -578,7 +617,6 @@
                     if (projectile.radius === 10) {
                         otherCar.isDestroyed = true;
                         playSound(100, 0.5, 'sawtooth', 0.4);
-                        // If shooter is on conveyor, unstick them
                         if (projectile.owner.onConveyor) {
                             projectile.owner.onConveyor = false;
                             projectile.owner.y = conveyor.y - projectile.owner.height - 10;
@@ -593,13 +631,15 @@
                 if (projectile.life <= 0) projectiles.splice(pIndex, 1);
             });
 
+            // Draw scores in top right
             ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-            ctx.fillRect(5, 55, 100, 25);
-            ctx.fillRect(canvas.width - 105, 55, 100, 25);
+            ctx.fillRect(canvas.width - 105, 5, 100, 50); // Background for both scores
             ctx.fillStyle = 'white';
             ctx.font = '20px Arial';
-            ctx.fillText(`P1 Score: ${car1.score}`, 10, 75);
-            ctx.fillText(`P2 Score: ${car2.score}`, canvas.width - 100, 75);
+            ctx.textAlign = 'right';
+            ctx.fillText(`P1 Score: ${car1.score}`, canvas.width - 10, 25); // P1 on top
+            ctx.fillText(`P2 Score: ${car2.score}`, canvas.width - 10, 50); // P2 below
+            ctx.textAlign = 'left';
 
             if (car1.isDestroyed || car2.isDestroyed) {
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
