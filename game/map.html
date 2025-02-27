@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Ancient Map with Label Toggle</title>
+    <style>
+        /* Set map size */
+        #map {
+            height: 600px;
+            width: 100%;
+        }
+        /* Style the toggle button */
+        #toggleButton {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1;
+            padding: 10px 20px;
+            background-color: #fff;
+            border: 2px solid #ccc;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: Arial, sans-serif;
+            font-size: 16px;
+        }
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+    </style>
+</head>
+<body>
+    <button id="toggleButton">Show Modern Labels</button>
+    <div id="map"></div>
+
+    <script>
+        let map;
+        let labelsVisible = false;
+
+        // Ancient locations (latitude, longitude, ancient name)
+        const ancientPlaces = [
+            { lat: 31.3223, lng: 46.6803, name: "Uruk" },      // Near modern Warka, Iraq
+            { lat: 36.8463, lng: 10.3176, name: "Carthage" },  // Near Tunis, Tunisia
+            { lat: 39.9576, lng: 26.2384, name: "Troy" }       // Near Hisarlik, Turkey
+        ];
+
+        // Custom map style: hides all labels initially
+        const noLabelsStyle = [
+            { elementType: "labels", stylers: [{ visibility: "off" }] }, // Hide all labels
+            { featureType: "road", stylers: [{ visibility: "off" }] },   // Hide roads
+            { featureType: "administrative", stylers: [{ visibility: "off" }] } // Hide borders
+        ];
+
+        // Style with modern place labels visible
+        const withLabelsStyle = [
+            { featureType: "poi", stylers: [{ visibility: "off" }] },           // Hide points of interest
+            { featureType: "road", stylers: [{ visibility: "off" }] },          // Hide roads
+            { featureType: "administrative", stylers: [{ visibility: "off" }] },// Hide borders
+            { elementType: "labels.text", stylers: [{ visibility: "on" }] }     // Show only place name labels
+        ];
+
+        function initMap() {
+            // Initialize map with satellite view, centered on a broad ancient region (e.g., Mesopotamia)
+            map = new google.maps.Map(document.getElementById("map"), {
+                center: { lat: 35, lng: 40 }, // Rough center for Near East
+                zoom: 5,
+                mapTypeId: "satellite",
+                styles: noLabelsStyle, // Start with no labels
+                disableDefaultUI: true // Remove default controls for cleaner look
+            });
+
+            // Add ancient placemarks
+            ancientPlaces.forEach(place => {
+                new google.maps.Marker({
+                    position: { lat: place.lat, lng: place.lng },
+                    map: map,
+                    label: {
+                        text: place.name,
+                        color: "#ffffff",
+                        fontSize: "14px",
+                        fontWeight: "bold"
+                    },
+                    icon: {
+                        url: "http://maps.google.com/mapfiles/ms/icons/red-dot.png", // Red dot for visibility
+                        labelOrigin: new google.maps.Point(10, -10) // Position label above marker
+                    }
+                });
+            });
+
+            // Toggle button logic
+            const toggleButton = document.getElementById("toggleButton");
+            toggleButton.addEventListener("click", () => {
+                labelsVisible = !labelsVisible;
+                map.setOptions({ styles: labelsVisible ? withLabelsStyle : noLabelsStyle });
+                toggleButton.textContent = labelsVisible ? "Hide Modern Labels" : "Show Modern Labels";
+            });
+        }
+    </script>
+
+    <!-- Load Google Maps API with your key -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB0siFVrQptHx6CkBJKRmC37GobNP7TfKk&callback=initMap" async defer></script>
+</body>
+</html>
