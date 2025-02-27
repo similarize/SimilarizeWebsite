@@ -29,8 +29,8 @@
             font-size: 16px;
         }
     </style>
-    <!-- Load xml2js synchronously -->
-    <script src="https://unpkg.com/xml2js@0.4.23/dist/xml2js.min.js"></script>
+    <!-- Load xml2js from cdnjs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xml2js/0.4.23/xml2js.min.js" onload="console.log('xml2js loaded successfully')" onerror="console.error('Failed to load xml2js from CDN')"></script>
 </head>
 <body>
     <button id="toggleButton">Show Modern Labels</button>
