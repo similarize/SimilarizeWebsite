@@ -2,8 +2,8 @@
 <html>
 <head>
     <title>Book of Mormon Lands with Label Toggle</title>
-    <!-- Add CSP meta tag to allow unsafe-eval only for this page -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://maps.googleapis.com; connect-src 'self' https://www.similarize.com;">
+    <!-- Comprehensive CSP that addresses all issues -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com; style-src 'self' 'unsafe-inline'; img-src 'self' https://maps.google.com https://maps.googleapis.com https://maps.gstatic.com https://*.googleapis.com data:; connect-src 'self' https://www.similarize.com; font-src 'self'; frame-src 'self';">
     <style>
         html, body {
             height: 100%;
@@ -30,83 +30,95 @@
             font-family: Arial, sans-serif;
             font-size: 16px;
         }
+        #loadingMessage {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 20px;
+            border-radius: 5px;
+            z-index: 2;
+            font-family: Arial, sans-serif;
+        }
     </style>
-    <!-- Updated CDN path for xml2js -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xml2js/0.6.2/xml2js.min.js"></script>
 </head>
 <body>
     <button id="toggleButton">Show Modern Labels</button>
     <div id="map"></div>
+    <div id="loadingMessage">Loading map data...</div>
 
     <script>
+        // Avoid external XML parser dependencies entirely
+        // Use browser's built-in XML parsing capabilities
         let map;
         let labelsVisible = false;
 
-        // Alternative approach: Use a different XML parser
-        // This function will parse KML without using xml2js if it fails
-        function parseKML(kmlText) {
-            return new Promise((resolve, reject) => {
-                try {
-                    // Try to use xml2js if available
-                    if (typeof window.xml2js !== "undefined") {
-                        const parser = new window.xml2js.Parser();
-                        parser.parseString(kmlText, (err, result) => {
-                            if (err) throw err;
-                            resolve(result);
-                        });
-                    } else {
-                        // Fallback to DOM parser if xml2js is unavailable or blocked
-                        const parser = new DOMParser();
-                        const xmlDoc = parser.parseFromString(kmlText, "text/xml");
-                        const placemarks = xmlDoc.getElementsByTagName("Placemark");
-                        
-                        // Create a structure similar to what xml2js would produce
-                        const result = {
-                            kml: {
-                                Document: [{
-                                    Placemark: Array.from(placemarks).map(pm => {
-                                        const placemark = {
-                                            name: [pm.getElementsByTagName("name")[0]?.textContent || ""]
-                                        };
-                                        
-                                        if (pm.getElementsByTagName("Point").length > 0) {
-                                            placemark.Point = [{
-                                                coordinates: [pm.getElementsByTagName("Point")[0]
-                                                    .getElementsByTagName("coordinates")[0]?.textContent || ""]
-                                            }];
-                                        }
-                                        
-                                        if (pm.getElementsByTagName("Polygon").length > 0) {
-                                            placemark.Polygon = [{
-                                                outerBoundaryIs: [{
-                                                    LinearRing: [{
-                                                        coordinates: [pm.getElementsByTagName("Polygon")[0]
-                                                            .getElementsByTagName("outerBoundaryIs")[0]
-                                                            .getElementsByTagName("LinearRing")[0]
-                                                            .getElementsByTagName("coordinates")[0]?.textContent || ""]
-                                                    }]
-                                                }]
-                                            }];
-                                        }
-                                        
-                                        if (pm.getElementsByTagName("LineString").length > 0) {
-                                            placemark.LineString = [{
-                                                coordinates: [pm.getElementsByTagName("LineString")[0]
-                                                    .getElementsByTagName("coordinates")[0]?.textContent || ""]
-                                            }];
-                                        }
-                                        
-                                        return placemark;
-                                    })
-                                }]
-                            }
-                        };
-                        
-                        resolve(result);
-                    }
-                } catch (error) {
-                    reject(error);
+        // Native KML parser that doesn't rely on external libraries
+        function parseKMLWithDOM(kmlText) {
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(kmlText, "text/xml");
+            const placemarks = xmlDoc.getElementsByTagName("Placemark");
+            const result = [];
+            
+            for (let i = 0; i < placemarks.length; i++) {
+                const pm = placemarks[i];
+                const placemark = {
+                    name: pm.getElementsByTagName("name")[0]?.textContent || "",
+                    type: null,
+                    coordinates: null
+                };
+                
+                // Check for Point
+                if (pm.getElementsByTagName("Point").length > 0) {
+                    placemark.type = "Point";
+                    const coordText = pm.getElementsByTagName("Point")[0]
+                        .getElementsByTagName("coordinates")[0]?.textContent || "";
+                    placemark.coordinates = coordText;
                 }
+                
+                // Check for Polygon
+                if (pm.getElementsByTagName("Polygon").length > 0) {
+                    placemark.type = "Polygon";
+                    const coordText = pm.getElementsByTagName("Polygon")[0]
+                        .getElementsByTagName("outerBoundaryIs")[0]
+                        .getElementsByTagName("LinearRing")[0]
+                        .getElementsByTagName("coordinates")[0]?.textContent || "";
+                    placemark.coordinates = coordText;
+                }
+                
+                // Check for LineString
+                if (pm.getElementsByTagName("LineString").length > 0) {
+                    placemark.type = "LineString";
+                    const coordText = pm.getElementsByTagName("LineString")[0]
+                        .getElementsByTagName("coordinates")[0]?.textContent || "";
+                    placemark.coordinates = coordText;
+                }
+                
+                result.push(placemark);
+            }
+            
+            return result;
+        }
+        
+        function parsePointCoordinates(coordsString) {
+            const parts = coordsString.trim().split(",");
+            if (parts.length >= 2) {
+                return { 
+                    lng: parseFloat(parts[0]), 
+                    lat: parseFloat(parts[1])
+                };
+            }
+            return null;
+        }
+        
+        function parsePolylineCoordinates(coordsString) {
+            return coordsString.trim().split(/\s+/).map(coord => {
+                const [lng, lat] = coord.split(",");
+                return { 
+                    lat: parseFloat(lat), 
+                    lng: parseFloat(lng)
+                };
             });
         }
 
@@ -125,86 +137,86 @@
                     return response.text();
                 })
                 .then(kmlText => {
-                    return parseKML(kmlText);
-                })
-                .then(result => {
-                    console.log("KML parsed successfully");
-                    const placemarks = result.kml.Document[0].Placemark;
-
+                    const placemarks = parseKMLWithDOM(kmlText);
+                    console.log("KML parsed successfully", placemarks);
+                    
                     placemarks.forEach(placemark => {
-                        const name = placemark.name[0];
-
-                        if (placemark.Point) {
-                            const coords = placemark.Point[0].coordinates[0].split(",").map(Number);
-                            const position = { lng: coords[0], lat: coords[1] };
-                            new google.maps.Marker({
-                                position,
-                                map,
-                                label: { text: name, color: "#ffffff", fontSize: "14px", fontWeight: "bold" },
-                                icon: { url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png", labelOrigin: new google.maps.Point(10, -10) }
-                            });
-                        }
-
-                        if (placemark.Polygon) {
-                            const coords = placemark.Polygon[0].outerBoundaryIs[0].LinearRing[0].coordinates[0]
-                                .trim().split(/\s+/).map(coord => {
-                                    const [lng, lat] = coord.split(",").map(Number);
-                                    return { lat, lng };
+                        const name = placemark.name;
+                        
+                        if (placemark.type === "Point") {
+                            const position = parsePointCoordinates(placemark.coordinates);
+                            if (position) {
+                                new google.maps.Marker({
+                                    position,
+                                    map,
+                                    label: { text: name, color: "#ffffff", fontSize: "14px", fontWeight: "bold" },
+                                    icon: { url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png", labelOrigin: new google.maps.Point(10, -10) }
                                 });
-
-                            new google.maps.Polygon({
-                                paths: coords,
-                                strokeColor: "#FF0000",
-                                strokeOpacity: 0.8,
-                                strokeWeight: 2,
-                                fillColor: "#FF0000",
-                                fillOpacity: 0.35,
-                                map
-                            });
-
-                            const bounds = new google.maps.LatLngBounds();
-                            coords.forEach(coord => bounds.extend(coord));
-                            const center = bounds.getCenter();
-
-                            new google.maps.Marker({
-                                position: center,
-                                map,
-                                label: { text: name, color: "#ffffff", fontSize: "14px", fontWeight: "bold" },
-                                icon: { url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png", labelOrigin: new google.maps.Point(10, -10) }
-                            });
+                            }
                         }
-
-                        if (placemark.LineString) {
-                            const coords = placemark.LineString[0].coordinates[0]
-                                .trim().split(/\s+/).map(coord => {
-                                    const [lng, lat] = coord.split(",").map(Number);
-                                    return { lat, lng };
+                        
+                        if (placemark.type === "Polygon") {
+                            const coords = parsePolylineCoordinates(placemark.coordinates);
+                            
+                            if (coords.length > 2) {
+                                new google.maps.Polygon({
+                                    paths: coords,
+                                    strokeColor: "#FF0000",
+                                    strokeOpacity: 0.8,
+                                    strokeWeight: 2,
+                                    fillColor: "#FF0000",
+                                    fillOpacity: 0.35,
+                                    map
                                 });
-
-                            new google.maps.Polyline({
-                                path: coords,
-                                strokeColor: "#0000FF",
-                                strokeOpacity: 1.0,
-                                strokeWeight: 3,
-                                map
-                            });
-
-                            const midIndex = Math.floor(coords.length / 2);
-                            const midPoint = coords[midIndex];
-
-                            new google.maps.Marker({
-                                position: midPoint,
-                                map,
-                                label: { text: name, color: "#ffffff", fontSize: "14px", fontWeight: "bold" },
-                                icon: { url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png", labelOrigin: new google.maps.Point(10, -10) }
-                            });
+                                
+                                const bounds = new google.maps.LatLngBounds();
+                                coords.forEach(coord => bounds.extend(coord));
+                                const center = bounds.getCenter();
+                                
+                                new google.maps.Marker({
+                                    position: center,
+                                    map,
+                                    label: { text: name, color: "#ffffff", fontSize: "14px", fontWeight: "bold" },
+                                    icon: { url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png", labelOrigin: new google.maps.Point(10, -10) }
+                                });
+                            }
+                        }
+                        
+                        if (placemark.type === "LineString") {
+                            const coords = parsePolylineCoordinates(placemark.coordinates);
+                            
+                            if (coords.length > 1) {
+                                new google.maps.Polyline({
+                                    path: coords,
+                                    strokeColor: "#0000FF",
+                                    strokeOpacity: 1.0,
+                                    strokeWeight: 3,
+                                    map
+                                });
+                                
+                                const midIndex = Math.floor(coords.length / 2);
+                                const midPoint = coords[midIndex];
+                                
+                                new google.maps.Marker({
+                                    position: midPoint,
+                                    map,
+                                    label: { text: name, color: "#ffffff", fontSize: "14px", fontWeight: "bold" },
+                                    icon: { url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png", labelOrigin: new google.maps.Point(10, -10) }
+                                });
+                            }
                         }
                     });
+                    
+                    // Hide loading message
+                    document.getElementById("loadingMessage").style.display = "none";
                 })
-                .catch(error => console.error("Error loading or parsing KML:", error));
+                .catch(error => {
+                    console.error("Error loading or parsing KML:", error);
+                    document.getElementById("loadingMessage").textContent = "Error loading map data. Please try again.";
+                });
 
             const toggleButton = document.getElementById("toggleButton");
-            toggleButton.addEventListener("click", () => {
+            toggleButton.addEventListener("click", function() {
                 labelsVisible = !labelsVisible;
                 map.setMapTypeId(labelsVisible ? "hybrid" : "satellite");
                 toggleButton.textContent = labelsVisible ? "Hide Modern Labels" : "Show Modern Labels";
