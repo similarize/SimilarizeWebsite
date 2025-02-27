@@ -3,8 +3,16 @@
 <head>
     <title>Ancient Map with Label Toggle</title>
     <style>
+        /* Full-screen map */
+        html, body {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Prevent scrollbars */
+        }
         #map {
-            height: 600px;
+            height: 100%;
             width: 100%;
         }
         #toggleButton {
@@ -21,11 +29,6 @@
             font-family: Arial, sans-serif;
             font-size: 16px;
         }
-        html, body {
-            height: 100%;
-            margin: 0;
-            padding: 0;
-        }
     </style>
 </head>
 <body>
@@ -41,13 +44,6 @@
             { lat: 31.3223, lng: 46.6803, name: "Uruk" },
             { lat: 36.8463, lng: 10.3176, name: "Carthage" },
             { lat: 39.9576, lng: 26.2384, name: "Troy" }
-        ];
-
-        // Minimal style to clean up hybrid mode (hide roads, borders)
-        const minimalStyle = [
-            { featureType: "road", stylers: [{ visibility: "off" }] },
-            { featureType: "administrative", stylers: [{ visibility: "off" }] },
-            { featureType: "poi", stylers: [{ visibility: "off" }] }
         ];
 
         function initMap() {
@@ -70,7 +66,7 @@
                         fontWeight: "bold"
                     },
                     icon: {
-                        url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png", // HTTPS fix
+                        url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
                         labelOrigin: new google.maps.Point(10, -10)
                     }
                 });
@@ -81,11 +77,11 @@
             toggleButton.addEventListener("click", () => {
                 labelsVisible = !labelsVisible;
                 if (labelsVisible) {
-                    map.setMapTypeId("hybrid"); // Satellite + labels
-                    map.setOptions({ styles: minimalStyle }); // Clean up extras
+                    map.setMapTypeId("hybrid"); // Satellite + full modern labels
+                    map.setOptions({ styles: [] }); // No custom styles, full default hybrid
                 } else {
                     map.setMapTypeId("satellite"); // Pure satellite, no labels
-                    map.setOptions({ styles: [] }); // Clear styles
+                    map.setOptions({ styles: [] });
                 }
                 toggleButton.textContent = labelsVisible ? "Hide Modern Labels" : "Show Modern Labels";
                 console.log("Toggled to:", map.getMapTypeId()); // Debug
