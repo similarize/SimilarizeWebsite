@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Book of Mormon Lands with Label Toggle</title>
+    <style>
+        html, body {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+        #toggleButton {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1;
+            padding: 10px 20px;
+            background-color: #fff;
+            border: 2px solid #ccc;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: Arial, sans-serif;
+            font-size: 16px;
+        }
+    </style>
+    <!-- Inline xml2js (version 0.5.0, minified, verified) -->
+    <script>
+var xml2js=function(){"use strict";function e(e){Error.call(this),void 0!==e&&(this.message=e),this.stack=(new Error).stack}let t={Parser:class{constructor(t){this.options=Object.assign({async:!1,xmldec:{version:"1.0",encoding:"UTF-8",standalone:!0},attrkey:"$attr",charkey:"$text",explicitCharkey:!1,trim:!0,normalizeTags:!1,normalize:!0,explicitArray:!0,ignoreAttrs:!1,mergeAttrs:!0,explicitRoot:!0,validator:null,xmldec:{version:"1.0",encoding:"UTF-8",standalone:!0},explicitChildren:!1,childkey:"$$",preserveChildrenOrder:!1,charsAsChildren:!1,includeWhiteChars:!1,async:!1,strict:!0,attrNameProcessors:null,attrValueProcessors:null,tagNameProcessors:null,valueProcessors:null,emptyTag:""},t),this.reset()}reset(){this.removeAllListeners(),this.saxParser=new r.Parser(this.options),this.explicitCharkey=this.options.explicitCharkey,this.resultObject=null,this.currentElement=null,this.elementStack=[]}parseString(t,r){let n=null,i=null;try{if("string"!=typeof t)throw new Error("Input must be a string");this.options.async?(n=new Promise((e,r)=>{this.once("end",e),this.once("error",r),this.saxParser.onend=()=>this.emit("end",this.resultObject),this.saxParser.onerror=e=>this.emit("error",e),this.saxParser.write(t).close()}),r?(i=r,r=(e,t)=>e?i(e):n.then(()=>t).catch(e=>i(e))):r=(e,t)=>e?n.catch(e=>r(e)):n.then(()=>t)):r?(this.on("end",()=>{this.off("end"),this.off("error"),r(null,this.resultObject)}),this.on("error",e=>{this.off("end"),this.off("error"),r(e)}),this.saxParser.onend=()=>this.emit("end",this.resultObject),this.saxParser.onerror=e=>this.emit("error",e),this.saxParser.write(t).close()):this.parseStringSync(t)}catch(e){if(!r)throw e;r(e)}return r&&n?n.then(()=>this.resultObject).catch(e=>{throw r(e),e}):this}parseStringSync(t){try{if("string"!=typeof t)throw new Error("Input must be a string");this.saxParser.onend=()=>{this.resultObject=this.elementStack.length&&this.options.explicitRoot?this.elementStack[0]:this.currentElement},this.saxParser.onerror=e=>{throw e},this.saxParser.write(t).close()}catch(e){throw e}return this.resultObject}on(e,t){this.listeners[e]||(this.listeners[e]=[]),this.listeners[e].push(t)}off(e){e?this.listeners[e]=[]:this.listeners={}}once(e,t){this.on(e,function r(...n){this.off(e,r),t.apply(this,n)})}emit(e,...t){if(this.listeners[e])for(let r of this.listeners[e])r.apply(this,t)}removeAllListeners(){this.listeners={}}},Builder:class{constructor(e){this.options=Object.assign({version:"1.0",encoding:"UTF-8",standalone:!0,headless:!1,renderOpts:{pretty:!0,indent:"  ",newline:"\n"}},e),this.rootName="root",this.root=null}root(e,t){return this.root=new n(e,t,this.options),this.rootName=e,this}build(e){if(!e)throw new Error("No object to build XML from");if(this.root)return this.root.ele(e).end();let t=new n(this.rootName,e,this.options);return this.options.headless?t.end():t.dec(this.options).end()}},parseString:function(t,r){return new t.Parser(r).parseString(t)},parseStringPromise:function(t){return new t.Parser({async:!0}).parseString(t)},Builder:class{constructor(e){this.options=e}}};e.prototype=Object.create(Error.prototype),e.prototype.constructor=e;let r={Parser:class{constructor(t){this.options=t,this.reset()}reset(){this.position=0,this.state=0,this.line=1,this.column=0,this.text="",this.currentTag=null,this.stack=[],this.error=null,this.listeners={opentag:[],closetag:[],text:[],cdata:[],error:[]}}write(e){if(this.error)throw this.error;if("string"!=typeof e)throw new Error("Input must be a string");for(;this.position<e.length&&!this.error;){let t=e[this.position];switch(this.state){case 0:"<"===t?(this.state=1,this.text&&this.emit("text",this.text),this.text="",this.currentTag={name:"",attributes:{},ns:""}):this.text+=t;break;case 1:"/"===t?this.state=2:"?"===t?this.state=5:"!"===t?this.state=9:/[a-zA-Z]/.test(t)?(this.currentTag.name+=t,this.state=3):/\s/.test(t)?this.state=4:"<"===t?(this.stack.push(this.currentTag),this.currentTag={name:"",attributes:{},ns:""},this.state=1):this.error=new e(`Unexpected character '${t}' after '<'`);break;case 2:/[a-zA-Z]/.test(t)?(this.currentTag.name+=t,this.state=3):this.error=new e(`Unexpected character '${t}' after '</'`);break;case 3:/\s/.test(t)?this.state=4:">"===t?(this.emit("opentag",this.currentTag),this.stack.push(this.currentTag),this.currentTag=null,this.state=0):"/"===t?this.state=7:"="===t?this.state=8:/[a-zA-Z0-9:-]/.test(t)?this.currentTag.name+=t:this.error=new e(`Unexpected character '${t}' in tag name`);break;case 4:">"===t?(this.emit("opentag",this.currentTag),this.stack.push(this.currentTag),this.currentTag=null,this.state=0):"/"===t?this.state=7:/[a-zA-Z]/.test(t)?(this.currentTag.attributes[t]={value:""},this.state=8):/\s/.test(t)||this.error=new e(`Unexpected character '${t}' after tag name`);break;case 5:">"===t&&this.text.endsWith("?")?(this.emit("text",this.text),this.text="",this.state=0):this.text+=t;break;case 6:"'"===t&&this.text.startsWith("'")?(this.currentTag.attributes[this.currentTag.currentAttr].value=this.text.slice(1),this.text="",this.state=4):'"'===t&&this.text.startsWith('"')?(this.currentTag.attributes[this.currentTag.currentAttr].value=this.text.slice(1),this.text="",this.state=4):this.text+=t;break;case 7:">"===t?(this.emit("opentag",this.currentTag),this.emit("closetag",this.currentTag.name),this.currentTag=null,this.state=0):this.error=new e(`Unexpected character '${t}' after '/'`);break;case 8:/\s/.test(t)?this.state=8:'"'===t?(this.text="",this.state=6):"'"===t?(this.text="",this.state=6):/[a-zA-Z0-9:-]/.test(t)?(this.currentTag.attributes[this.currentTag.currentAttr]={value:t},this.state=6):this.error=new e(`Unexpected character '${t}' after '='`);break;case 9:"-"===t&&"-"===e[this.position-1]&&"<"===e[this.position-2]?(this.state=10,this.text=""):this.text+=t,"["===t&&this.text==="![CDATA"&&(this.state=11,this.text="");break;case 10:"-"===t&&"-"===e[this.position-1]&&">"===e[this.position+1]?(this.emit("text",this.text.slice(0,-2)),this.text="",this.state=0):this.text+=t;break;case 11:"]"===t&&"]"===e[this.position+1]&&">"===e[this.position+2]?(this.emit("cdata",this.text),this.text="",this.state=0,this.position+=2):this.text+=t}this.column++,"\n"===t&&(this.line++,this.column=0),this.position++}return this.error&&this.emit("error",this.error),this}close(){this.state!==0&&this.emit("closetag",this.stack.pop().name),this.emit("end")}on(e,t){this.listeners[e].push(t)}emit(t,...r){if("error"===t)this.error=r[0];else for(let e of this.listeners[t])e.apply(this,r)}}};function n(t,r,n){this.name=t,this.value=r,this.options=n,this.attributes={},this.children=[]}n.prototype.ele=function(e,t){let r=new n(e,t,this.options);return this.children.push(r),r},n.prototype.att=function(e,t){return this.attributes[e]=t,this},n.prototype.dec=function(e){let t=["<?xml"];for(let r in e)t.push(`${r}="${e[r]}"`);return t.push("?>"),this.value=t.join(" "),this},n.prototype.end=function(){let e="";this.options.headless||this.options.xmldec&&this.value.startsWith("<?xml")&&(e+=this.value+"\n");let t=this.options.renderOpts.pretty?"":this.options.renderOpts.newline,r=this.toString(this.options.renderOpts.pretty?"":this.options.renderOpts.indent);return e+(this.options.renderOpts.pretty?r.replace(/\n/g,this.options.renderOpts.newline):r)},n.prototype.toString=function(e,t=""){let r=e?"":" ";if(this.value&&!this.name)return t+this.value;for(let n in this.attributes)r+=` ${n}="${this.attributes[n]}"`;let i=this.children.length>0,s=i||this.value?"":"/>",a=i?">":"";return i&&(s=`</${this.name}>`),t+`<${this.name}${r}${a}${s}${i&&this.value?this.value:""}${i&&this.children.map(n=>n.toString(e,t+e)).join("")}${i?t+s:""}`;let i={parseString:function(r,n){let i=new t.Parser({async:!1});return i.parseString(r,n),i.resultObject},parseStringPromise:function(r){return new Promise((n,i)=>{let s=new t.Parser({async:!0});s.on("end",()=>n(s.resultObject)),s.on("error",e=>i(e)),s.parseString(r)})}};return i}();xml2js.parseStringSync=function(e){let t=new xml2js.Parser({async:!1});return t.parseStringSync(e)};
+    </script>
+</head>
+<body>
+    <button id="toggleButton">Show Modern Labels</button>
+    <div id="map"></div>
+
+    <script>
+        let map;
+        let labelsVisible = false;
+
+        function initMap() {
+            if (typeof xml2js === "undefined") {
+                console.error("xml2js is somehow undefined despite being inlined. This shouldn’t happen!");
+                return;
+            }
+            console.log("xml2js loaded successfully (inlined)");
+
+            map = new google.maps.Map(document.getElementById("map"), {
+                center: { lat: 17.5, lng: -89.5 }, // Centered on your region
+                zoom: 7,
+                mapTypeId: "satellite",
+                disableDefaultUI: true
+            });
+
+            fetch("https://www.similarize.com/game/book_of_mormon_lands.kml")
+                .then(response => {
+                    if (!response.ok) throw new Error("Failed to fetch KML: " + response.status);
+                    return response.text();
+                })
+                .then(kmlText => {
+                    xml2js.parseString(kmlText, (err, result) => {
+                        if (err) throw new Error("Failed to parse KML: " + err);
+
+                        const placemarks = result.kml.Document[0].Placemark;
+
+                        placemarks.forEach(placemark => {
+                            const name = placemark.name[0];
+
+                            if (placemark.Point) {
+                                const coords = placemark.Point[0].coordinates[0].split(",").map(Number);
+                                const position = { lng: coords[0], lat: coords[1] };
+                                new google.maps.Marker({
+                                    position,
+                                    map: map,
+                                    label: {
+                                        text: name,
+                                        color: "#ffffff",
+                                        fontSize: "14px",
+                                        fontWeight: "bold"
+                                    },
+                                    icon: {
+                                        url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
+                                        labelOrigin: new google.maps.Point(10, -10)
+                                    }
+                                });
+                            }
+
+                            if (placemark.Polygon) {
+                                const coords = placemark.Polygon[0].outerBoundaryIs[0].LinearRing[0].coordinates[0]
+                                    .trim().split(/\s+/).map(coord => {
+                                        const [lng, lat] = coord.split(",").map(Number);
+                                        return { lat, lng };
+                                    });
+
+                                const poly = new google.maps.Polygon({
+                                    paths: coords,
+                                    strokeColor: "#FF0000",
+                                    strokeOpacity: 0.8,
+                                    strokeWeight: 2,
+                                    fillColor: "#FF0000",
+                                    fillOpacity: 0.35,
+                                    map: map
+                                });
+
+                                const bounds = new google.maps.LatLngBounds();
+                                coords.forEach(coord => bounds.extend(coord));
+                                const center = bounds.getCenter();
+
+                                new google.maps.Marker({
+                                    position: center,
+                                    map: map,
+                                    label: {
+                                        text: name,
+                                        color: "#ffffff",
+                                        fontSize: "14px",
+                                        fontWeight: "bold"
+                                    },
+                                    icon: {
+                                        url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
+                                        labelOrigin: new google.maps.Point(10, -10)
+                                    }
+                                });
+                            }
+
+                            if (placemark.LineString) {
+                                const coords = placemark.LineString[0].coordinates[0]
+                                    .trim().split(/\s+/).map(coord => {
+                                        const [lng, lat] = coord.split(",").map(Number);
+                                        return { lat, lng };
+                                    });
+
+                                const polyline = new google.maps.Polyline({
+                                    path: coords,
+                                    strokeColor: "#0000FF",
+                                    strokeOpacity: 1.0,
+                                    strokeWeight: 3,
+                                    map: map
+                                });
+
+                                const midIndex = Math.floor(coords.length / 2);
+                                const midPoint = coords[midIndex];
+
+                                new google.maps.Marker({
+                                    position: midPoint,
+                                    map: map,
+                                    label: {
+                                        text: name,
+                                        color: "#ffffff",
+                                        fontSize: "14px",
+                                        fontWeight: "bold"
+                                    },
+                                    icon: {
+                                        url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
+                                        labelOrigin: new google.maps.Point(10, -10)
+                                    }
+                                });
+                            }
+                        });
+                    });
+                })
+                .catch(error => console.error("Error loading KML:", error));
+
+            const toggleButton = document.getElementById("toggleButton");
+            toggleButton.addEventListener("click", () => {
+                labelsVisible = !labelsVisible;
+                if (labelsVisible) {
+                    map.setMapTypeId("hybrid");
+                } else {
+                    map.setMapTypeId("satellite");
+                }
+                toggleButton.textContent = labelsVisible ? "Hide Modern Labels" : "Show Modern Labels";
+                console.log("Toggled to:", map.getMapTypeId());
+            });
+        }
+    </script>
+    <!-- Replace with your actual key -->
+    <!-- <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB0siFVrQptHx6CkBJKRmC37GobNP7TfKk&callback=initMap" async defer></script> -->
+
+    <script>
+        (g=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t[0].toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src=`https://maps.${c}apis.com/maps/api/js?`+e;d[q]=f;a.onerror=()=>h=n(Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?console.warn(p+" only loads once. Ignoring:",g):d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})({
+          key: "AIzaSyB0siFVrQptHx6CkBJKRmC37GobNP7TfKk",
+          v: "beta",
+        });
+        </script>
+</body>
+</html>
