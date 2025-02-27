@@ -43,26 +43,18 @@
             { lat: 39.9576, lng: 26.2384, name: "Troy" }
         ];
 
-        // Styles
-        const noLabelsStyle = [
-            { elementType: "labels", stylers: [{ visibility: "off" }] },
-            { featureType: "road", stylers: [{ visibility: "off" }] },
-            { featureType: "administrative", stylers: [{ visibility: "off" }] }
-        ];
-
-        const withLabelsStyle = [
-            { featureType: "poi", stylers: [{ visibility: "off" }] },
+        // Minimal style to clean up hybrid mode (hide roads, borders)
+        const minimalStyle = [
             { featureType: "road", stylers: [{ visibility: "off" }] },
             { featureType: "administrative", stylers: [{ visibility: "off" }] },
-            { elementType: "labels.text", stylers: [{ visibility: "on" }] }
+            { featureType: "poi", stylers: [{ visibility: "off" }] }
         ];
 
         function initMap() {
             map = new google.maps.Map(document.getElementById("map"), {
                 center: { lat: 35, lng: 40 },
                 zoom: 5,
-                mapTypeId: "satellite",
-                styles: noLabelsStyle,
+                mapTypeId: "satellite", // Start with pure satellite, no labels
                 disableDefaultUI: true
             });
 
@@ -78,7 +70,7 @@
                         fontWeight: "bold"
                     },
                     icon: {
-                        url: "http://maps.google.com/mapfiles/ms/icons/red-dot.png",
+                        url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png", // HTTPS fix
                         labelOrigin: new google.maps.Point(10, -10)
                     }
                 });
@@ -88,21 +80,20 @@
             const toggleButton = document.getElementById("toggleButton");
             toggleButton.addEventListener("click", () => {
                 labelsVisible = !labelsVisible;
-                console.log("Toggling labels:", labelsVisible); // Debug log
-                map.setOptions({ styles: labelsVisible ? withLabelsStyle : noLabelsStyle });
+                if (labelsVisible) {
+                    map.setMapTypeId("hybrid"); // Satellite + labels
+                    map.setOptions({ styles: minimalStyle }); // Clean up extras
+                } else {
+                    map.setMapTypeId("satellite"); // Pure satellite, no labels
+                    map.setOptions({ styles: [] }); // Clear styles
+                }
                 toggleButton.textContent = labelsVisible ? "Hide Modern Labels" : "Show Modern Labels";
+                console.log("Toggled to:", map.getMapTypeId()); // Debug
             });
         }
-
-        // Error handling for API load
-        window.onload = function() {
-            if (typeof google === 'undefined') {
-                console.error("Google Maps API failed to load. Check your API key or internet connection.");
-            }
-        };
     </script>
 
-    <!-- Replace YOUR_API_KEY with your actual key -->
+    <!-- Replace with your actual key -->
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB0siFVrQptHx6CkBJKRmC37GobNP7TfKk&callback=initMap" async defer></script>
 </body>
 </html>
