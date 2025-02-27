@@ -29,7 +29,7 @@
             font-size: 16px;
         }
     </style>
-    <!-- Include xml2js for parsing KML -->
+    <!-- Load xml2js synchronously -->
     <script src="https://unpkg.com/xml2js@0.4.23/dist/xml2js.min.js"></script>
 </head>
 <body>
@@ -41,6 +41,12 @@
         let labelsVisible = false;
 
         function initMap() {
+            // Check if xml2js loaded
+            if (typeof xml2js === "undefined") {
+                console.error("xml2js library failed to load. Please check the CDN or network.");
+                return;
+            }
+
             map = new google.maps.Map(document.getElementById("map"), {
                 center: { lat: 17.5, lng: -89.5 }, // Centered on your region
                 zoom: 7,
@@ -51,7 +57,7 @@
             // Fetch and parse KML file
             fetch("https://www.similarize.com/game/book_of_mormon_lands.kml") // Replace with your actual URL
                 .then(response => {
-                    if (!response.ok) throw new Error("Failed to fetch KML");
+                    if (!response.ok) throw new Error("Failed to fetch KML: " + response.status);
                     return response.text();
                 })
                 .then(kmlText => {
