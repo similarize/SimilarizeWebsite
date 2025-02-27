@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Book of Mormon Lands with Label Toggle</title>
+    <!-- Strict CSP that completely disallows eval -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://maps.googleapis.com; style-src 'self' 'unsafe-inline'; img-src 'self' https://maps.google.com https://maps.googleapis.com https://maps.gstatic.com https://*.googleapis.com data:; connect-src 'self' https://www.similarize.com; font-src 'self'; frame-src 'self';">
+    <style>
+        html, body {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+        #toggleButton {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            padding: 10px 20px;
+            background-color: #fff;
+            border: 2px solid #ccc;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: Arial, sans-serif;
+            font-size: 16px;
+        }
+        #loadingMessage {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 20px;
+            border-radius: 5px;
+            z-index: 1000;
+            font-family: Arial, sans-serif;
+        }
+        #errorMessage {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(255, 0, 0, 0.7);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            display: none;
+            z-index: 1000;
+            font-family: Arial, sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <button id="toggleButton">Show Modern Labels</button>
+    <div id="map"></div>
+    <div id="loadingMessage">Loading map data...</div>
+    <div id="errorMessage"></div>
+
+    <script>
+        // Strict no-eval approach to KML parsing
+        let map;
+        let labelsVisible = false;
+        
+        // Use try-catch to detect CSP issues
+        window.addEventListener('error', function(e) {
+            if (e.message.includes('Content Security Policy') || e.message.includes('eval')) {
+                showError("CSP Error: " + e.message);
+            }
+        });
+        
+        function showError(message) {
+            const errorDiv = document.getElementById("errorMessage");
+            errorDiv.textContent = message;
+            errorDiv.style.display = "block";
+            document.getElementById("loadingMessage").style.display = "none";
+            console.error(message);
+        }
+
+        // Native KML parser that doesn't rely on external libraries or eval
+        function parseKMLWithDOM(kmlText) {
+            try {
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(kmlText, "text/xml");
+                
+                // Check for parsing errors
+                const parseError = xmlDoc.getElementsByTagName("parsererror");
+                if (parseError.length > 0) {
+                    throw new Error("XML parsing error: " + parseError[0].textContent);
+                }
+                
+                const placemarks = xmlDoc.getElementsByTagName("Placemark");
+                const result = [];
+                
+                for (let i = 0; i < placemarks.length; i++) {
+                    const pm = placemarks[i];
+                    const placemark = {
+                        name: pm.getElementsByTagName("name")[0]?.textContent || "",
+                        type: null,
+                        coordinates: null
+                    };
+                    
+                    // Check for Point
+                    const points = pm.getElementsByTagName("Point");
+                    if (points.length > 0) {
+                        placemark.type = "Point";
+                        const coordsElements = points[0].getElementsByTagName("coordinates");
+                        if (coordsElements.length > 0) {
+                            placemark.coordinates = coordsElements[0].textContent;
+                        }
+                    }
+                    
+                    // Check for Polygon
+                    const polygons = pm.getElementsByTagName("Polygon");
+                    if (polygons.length > 0) {
+                        placemark.type = "Polygon";
+                        const outerBoundary = polygons[0].getElementsByTagName("outerBoundaryIs");
+                        if (outerBoundary.length > 0) {
+                            const linearRing = outerBoundary[0].getElementsByTagName("LinearRing");
+                            if (linearRing.length > 0) {
+                                const coordsElements = linearRing[0].getElementsByTagName("coordinates");
+                                if (coordsElements.length > 0) {
+                                    placemark.coordinates = coordsElements[0].textContent;
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Check for LineString
+                    const lineStrings = pm.getElementsByTagName("LineString");
+                    if (lineStrings.length > 0) {
+                        placemark.type = "LineString";
+                        const coordsElements = lineStrings[0].getElementsByTagName("coordinates");
+                        if (coordsElements.length > 0) {
+                            placemark.coordinates = coordsElements[0].textContent;
+                        }
+                    }
+                    
+                    if (placemark.coordinates) {
+                        result.push(placemark);
+                    }
+                }
+                
+                return result;
+            } catch (e) {
+                showError("Error parsing KML: " + e.message);
+                return [];
+            }
+        }
+        
+        function parsePointCoordinates(coordsString) {
+            try {
+                const parts = coordsString.trim().split(",");
+                if (parts.length >= 2) {
+                    return { 
+                        lng: parseFloat(parts[0]), 
+                        lat: parseFloat(parts[1])
+                    };
+                }
+                return null;
+            } catch (e) {
+                showError("Error parsing point coordinates: " + e.message);
+                return null;
+            }
+        }
+        
+        function parsePolylineCoordinates(coordsString) {
+            try {
+                return coordsString.trim().split(/\s+/).map(coord => {
+                    const parts = coord.split(",");
+                    if (parts.length >= 2) {
+                        return { 
+                            lat: parseFloat(parts[1]), 
+                            lng: parseFloat(parts[0])
+                        };
+                    }
+                    return null;
+                }).filter(coord => coord !== null); // Filter out invalid coordinates
+            } catch (e) {
+                showError("Error parsing polyline coordinates: " + e.message);
+                return [];
+            }
+        }
+
+        // Use nonce-based approach for Google Maps loading
+        function loadGoogleMaps() {
+            return new Promise((resolve, reject) => {
+                if (window.google && window.google.maps) {
+                    resolve();
+                    return;
+                }
+                
+                // Create a script element manually instead of using async defer
+                const script = document.createElement('script');
+                script.src = "https://maps.googleapis.com/maps/api/js?key=AIzaSyB0siFVrQptHx6CkBJKRmC37GobNP7TfKk";
+                script.async = true;
+                script.defer = true;
+                
+                script.onload = function() {
+                    resolve();
+                };
+                
+                script.onerror = function() {
+                    reject(new Error("Failed to load Google Maps API"));
+                };
+                
+                document.head.appendChild(script);
+            });
+        }
+
+        // Wait for DOM to be ready
+        document.addEventListener('DOMContentLoaded', function() {
+            loadGoogleMaps()
+                .then(() => {
+                    map = new google.maps.Map(document.getElementById("map"), {
+                        center: { lat: 17.5, lng: -89.5 },
+                        zoom: 7,
+                        mapTypeId: "satellite",
+                        disableDefaultUI: true
+                    });
+                    
+                    return fetch("https://www.similarize.com/game/book_of_mormon_lands.kml");
+                })
+                .then(response => {
+                    if (!response.ok) throw new Error("Failed to fetch KML: " + response.status);
+                    return response.text();
+                })
+                .then(kmlText => {
+                    const placemarks = parseKMLWithDOM(kmlText);
+                    console.log("KML parsed successfully, found " + placemarks.length + " placemarks");
+                    
+                    if (placemarks.length === 0) {
+                        throw new Error("No valid placemarks found in KML data");
+                    }
+                    
+                    placemarks.forEach(placemark => {
+                        const name = placemark.name;
+                        
+                        if (placemark.type === "Point") {
+                            const position = parsePointCoordinates(placemark.coordinates);
+                            if (position) {
+                                new google.maps.Marker({
+                                    position,
+                                    map,
+                                    label: { text: name, color: "#ffffff", fontSize: "14px", fontWeight: "bold" },
+                                    icon: { url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png", labelOrigin: new google.maps.Point(10, -10) }
+                                });
+                            }
+                        }
+                        
+                        if (placemark.type === "Polygon") {
+                            const coords = parsePolylineCoordinates(placemark.coordinates);
+                            
+                            if (coords.length > 2) {
+                                new google.maps.Polygon({
+                                    paths: coords,
+                                    strokeColor: "#FF0000",
+                                    strokeOpacity: 0.8,
+                                    strokeWeight: 2,
+                                    fillColor: "#FF0000",
+                                    fillOpacity: 0.35,
+                                    map
+                                });
+                                
+                                const bounds = new google.maps.LatLngBounds();
+                                coords.forEach(coord => bounds.extend(coord));
+                                const center = bounds.getCenter();
+                                
+                                new google.maps.Marker({
+                                    position: center,
+                                    map,
+                                    label: { text: name, color: "#ffffff", fontSize: "14px", fontWeight: "bold" },
+                                    icon: { url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png", labelOrigin: new google.maps.Point(10, -10) }
+                                });
+                            }
+                        }
+                        
+                        if (placemark.type === "LineString") {
+                            const coords = parsePolylineCoordinates(placemark.coordinates);
+                            
+                            if (coords.length > 1) {
+                                new google.maps.Polyline({
+                                    path: coords,
+                                    strokeColor: "#0000FF",
+                                    strokeOpacity: 1.0,
+                                    strokeWeight: 3,
+                                    map
+                                });
+                                
+                                const midIndex = Math.floor(coords.length / 2);
+                                const midPoint = coords[midIndex];
+                                
+                                new google.maps.Marker({
+                                    position: midPoint,
+                                    map,
+                                    label: { text: name, color: "#ffffff", fontSize: "14px", fontWeight: "bold" },
+                                    icon: { url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png", labelOrigin: new google.maps.Point(10, -10) }
+                                });
+                            }
+                        }
+                    });
+                    
+                    // Hide loading message
+                    document.getElementById("loadingMessage").style.display = "none";
+                    
+                    // Setup toggle button
+                    const toggleButton = document.getElementById("toggleButton");
+                    toggleButton.addEventListener("click", function() {
+                        labelsVisible = !labelsVisible;
+                        map.setMapTypeId(labelsVisible ? "hybrid" : "satellite");
+                        toggleButton.textContent = labelsVisible ? "Hide Modern Labels" : "Show Modern Labels";
+                    });
+                })
+                .catch(error => {
+                    showError("Error: " + error.message);
+                });
+        });
+    </script>
+</body>
+</html>
