@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Book of Mormon Lands with Label Toggle</title>
+    <style>
+        html, body {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+        #toggleButton {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1;
+            padding: 10px 20px;
+            background-color: #fff;
+            border: 2px solid #ccc;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: Arial, sans-serif;
+            font-size: 16px;
+        }
+    </style>
+    <!-- Include xml2js for parsing KML -->
+    <script src="https://unpkg.com/xml2js@0.4.23/dist/xml2js.min.js"></script>
+</head>
+<body>
+    <button id="toggleButton">Show Modern Labels</button>
+    <div id="map"></div>
+
+    <script>
+        let map;
+        let labelsVisible = false;
+
+        function initMap() {
+            map = new google.maps.Map(document.getElementById("map"), {
+                center: { lat: 17.5, lng: -89.5 }, // Centered on your region
+                zoom: 7,
+                mapTypeId: "satellite",
+                disableDefaultUI: true
+            });
+
+            // Fetch and parse KML file
+            fetch("https://www.similarize.com/game/book_of_mormon_lands.kml") // Replace with your actual URL
+                .then(response => {
+                    if (!response.ok) throw new Error("Failed to fetch KML");
+                    return response.text();
+                })
+                .then(kmlText => {
+                    xml2js.parseString(kmlText, (err, result) => {
+                        if (err) throw new Error("Failed to parse KML: " + err);
+
+                        const placemarks = result.kml.Document[0].Placemark;
+
+                        placemarks.forEach(placemark => {
+                            const name = placemark.name[0];
+
+                            // Handle Point
+                            if (placemark.Point) {
+                                const coords = placemark.Point[0].coordinates[0].split(",").map(Number);
+                                const position = { lng: coords[0], lat: coords[1] };
+                                new google.maps.Marker({
+                                    position,
+                                    map: map,
+                                    label: {
+                                        text: name,
+                                        color: "#ffffff",
+                                        fontSize: "14px",
+                                        fontWeight: "bold"
+                                    },
+                                    icon: {
+                                        url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
+                                        labelOrigin: new google.maps.Point(10, -10)
+                                    }
+                                });
+                            }
+
+                            // Handle Polygon
+                            if (placemark.Polygon) {
+                                const coords = placemark.Polygon[0].outerBoundaryIs[0].LinearRing[0].coordinates[0]
+                                    .trim().split(/\s+/).map(coord => {
+                                        const [lng, lat] = coord.split(",").map(Number);
+                                        return { lat, lng };
+                                    });
+
+                                const poly = new google.maps.Polygon({
+                                    paths: coords,
+                                    strokeColor: "#FF0000",
+                                    strokeOpacity: 0.8,
+                                    strokeWeight: 2,
+                                    fillColor: "#FF0000",
+                                    fillOpacity: 0.35,
+                                    map: map
+                                });
+
+                                // Center label
+                                const bounds = new google.maps.LatLngBounds();
+                                coords.forEach(coord => bounds.extend(coord));
+                                const center = bounds.getCenter();
+
+                                new google.maps.Marker({
+                                    position: center,
+                                    map: map,
+                                    label: {
+                                        text: name,
+                                        color: "#ffffff",
+                                        fontSize: "14px",
+                                        fontWeight: "bold"
+                                    },
+                                    icon: {
+                                        url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
+                                        labelOrigin: new google.maps.Point(10, -10)
+                                    }
+                                });
+                            }
+
+                            // Handle LineString
+                            if (placemark.LineString) {
+                                const coords = placemark.LineString[0].coordinates[0]
+                                    .trim().split(/\s+/).map(coord => {
+                                        const [lng, lat] = coord.split(",").map(Number);
+                                        return { lat, lng };
+                                    });
+
+                                const polyline = new google.maps.Polyline({
+                                    path: coords,
+                                    strokeColor: "#0000FF",
+                                    strokeOpacity: 1.0,
+                                    strokeWeight: 3,
+                                    map: map
+                                });
+
+                                // Midpoint label
+                                const midIndex = Math.floor(coords.length / 2);
+                                const midPoint = coords[midIndex];
+
+                                new google.maps.Marker({
+                                    position: midPoint,
+                                    map: map,
+                                    label: {
+                                        text: name,
+                                        color: "#ffffff",
+                                        fontSize: "14px",
+                                        fontWeight: "bold"
+                                    },
+                                    icon: {
+                                        url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
+                                        labelOrigin: new google.maps.Point(10, -10)
+                                    }
+                                });
+                            }
+                        });
+                    });
+                })
+                .catch(error => console.error("Error loading KML:", error));
+
+            // Toggle logic for modern labels
+            const toggleButton = document.getElementById("toggleButton");
+            toggleButton.addEventListener("click", () => {
+                labelsVisible = !labelsVisible;
+                if (labelsVisible) {
+                    map.setMapTypeId("hybrid"); // Show modern labels
+                } else {
+                    map.setMapTypeId("satellite"); // Hide modern labels, keep ancient
+                }
+                toggleButton.textContent = labelsVisible ? "Hide Modern Labels" : "Show Modern Labels";
+                console.log("Toggled to:", map.getMapTypeId());
+            });
+        }
+    </script>
+
+    <!-- Replace with your actual key -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB0siFVrQptHx6CkBJKRmC37GobNP7TfKk&callback=initMap" async defer></script>
+</body>
+</html>
