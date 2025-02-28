@@ -14,7 +14,7 @@ title: Games Index
                         {% if file.path contains '/' %}
                             {{ file.path | split: '/' | last }}
                         {% else %}
-                            {{ file.name }}
+                            {{ file.name | remove: '.html' }}
                         {% endif %}
                     </a>
                 </li>
@@ -24,9 +24,8 @@ title: Games Index
 </ul>
 
 <footer>
-    <p><a href="/">Back to Root Site</a></p>
+    <p><a href="/">Back to Similarize</a></p>
 </footer>
-
 
 <!-- <!DOCTYPE html>
 <html lang="en">
