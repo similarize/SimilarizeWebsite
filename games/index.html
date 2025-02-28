@@ -3,23 +3,17 @@ layout: default
 title: Games Index
 ---
 
+<head>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text x='0' y='14'>🚗</text></svg>">
+    <style>
+        .folder-link { color: #00008B; } /* Dark blue for folders */
+        .file-link { color: #0000FF; }   /* Default blue for files */
+    </style>
+</head>
+
 <h1>Index of Games</h1>
 <ul>
-    <!-- Direct HTML files in /games/ -->
-    {% for file in site.static_files %}
-        {% if file.path contains '/games/' %}
-            {% assign path = file.path | remove_first: '/games/' %}
-            {% if file.extname == '.html' and path == file.name %}
-                <li>
-                    <a href="{{ file.path | relative_url }}">
-                        {{ file.name | remove: '.html' | capitalize }}
-                    </a>
-                </li>
-            {% endif %}
-        {% endif %}
-    {% endfor %}
-    
-    <!-- Subdirectories under /games/ -->
+    <!-- Subdirectories under /games/ first -->
     {% assign subdirs = '' | split: '' %}
     {% for file in site.static_files %}
         {% if file.path contains '/games/' %}
@@ -29,7 +23,7 @@ title: Games Index
                 {% unless subdirs contains parts[0] %}
                     {% assign subdirs = subdirs | push: parts[0] %}
                     <li>
-                        <a href="/games/{{ parts[0] | relative_url }}/">
+                        <a href="/games/{{ parts[0] | relative_url }}/" class="folder-link">
                             {{ parts[0] | capitalize }}
                         </a>
                     </li>
@@ -37,7 +31,22 @@ title: Games Index
             {% endif %}
         {% endif %}
     {% endfor %}
+    
+    <!-- Direct HTML files in /games/ after -->
+    {% for file in site.static_files %}
+        {% if file.path contains '/games/' %}
+            {% assign path = file.path | remove_first: '/games/' %}
+            {% if file.extname == '.html' and path == file.name %}
+                <li>
+                    <a href="{{ file.path | relative_url }}" class="file-link">
+                        {{ file.name | remove: '.html' | capitalize }}
+                    </a>
+                </li>
+            {% endif %}
+        {% endif %}
+    {% endfor %}
 </ul>
+
 <footer>
     <p><a href="/">Back to Similarize</a></p>
 </footer>
