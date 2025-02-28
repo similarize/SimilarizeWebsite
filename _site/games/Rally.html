@@ -51,13 +51,13 @@ player_y = HEIGHT - PLAYER_HEIGHT - 50
 player_vel_y = 0
 game_over = False
 pipe_x = WIDTH
-pipe_height = 200  # Simplified for demo
+pipe_height = 200
 ground_y = HEIGHT - 50
 
 def draw_loading():
-    ctx.fillStyle = "#323264"  # Dark blue from your splash screen
+    ctx.fillStyle = "#323264"
     ctx.fillRect(0, 0, WIDTH, HEIGHT)
-    ctx.fillStyle = "#FFC107"  # Amber from your title
+    ctx.fillStyle = "#FFC107"
     ctx.font = "40px Arial"
     ctx.textAlign = "center"
     ctx.fillText(f"RC Rally Jump {VERSION}", WIDTH / 2, HEIGHT / 2 - 20)
@@ -66,23 +66,15 @@ def draw_loading():
     ctx.fillText("Tap Below to Start", WIDTH / 2, HEIGHT / 2 + 20)
 
 def draw_scene():
-    # Background
-    ctx.fillStyle = "#87CEEB"  # Sky blue
+    ctx.fillStyle = "#87CEEB"
     ctx.fillRect(0, 0, WIDTH, HEIGHT)
-    
-    # Ground
     ctx.fillStyle = "#00FF00"
     ctx.fillRect(0, ground_y, WIDTH, HEIGHT - ground_y)
-    
-    # Player (RC Car)
     ctx.fillStyle = "#FF0000"
     ctx.fillRect(player_x, player_y, PLAYER_WIDTH, PLAYER_HEIGHT)
-    
-    # Pipe (simplified)
     ctx.fillStyle = "#00C800"
-    ctx.fillRect(pipe_x, 0, 50, pipe_height)  # Top pipe
-    ctx.fillRect(pipe_x, pipe_height + 200, 50, HEIGHT - pipe_height - 200)  # Bottom pipe
-    
+    ctx.fillRect(pipe_x, 0, 50, pipe_height)
+    ctx.fillRect(pipe_x, pipe_height + 200, 50, HEIGHT - pipe_height - 200)
     if game_over:
         ctx.fillStyle = "black"
         ctx.font = "30px Arial"
@@ -93,31 +85,23 @@ def update_game():
     player_vel_y += GRAVITY
     player_y += player_vel_y
     player_vel_y = min(player_vel_y, MAX_FALL_SPEED)
-    
     if player_y + PLAYER_HEIGHT > ground_y:
         player_y = ground_y - PLAYER_HEIGHT
         player_vel_y = 0
-    
     pipe_x -= PIPE_SPEED
     if pipe_x < -50:
         pipe_x = WIDTH
-        pipe_height = 100 + (hash(str(window.performance.now())) % 200)  # Simple random
-    
-    # Basic collision
+        pipe_height = 100 + (hash(str(window.performance.now())) % 200)
     if (player_x + PLAYER_WIDTH > pipe_x and player_x < pipe_x + 50 and 
         (player_y < pipe_height or player_y + PLAYER_HEIGHT > pipe_height + 200)):
         game_over = True
 
 async def main():
     global player_vel_y, game_over, pipe_x, player_y
-    
-    # Show loading screen
     loading_div = document.getElementById("loading")
     canvas.style.display = "block"
     draw_loading()
-    await asyncio.sleep(2)  # Brief loading delay
-    
-    # Hide loading and start game
+    await asyncio.sleep(2)
     loading_div.style.display = "none"
     game_over = False
     
@@ -127,7 +111,6 @@ async def main():
             if not game_over:
                 player_vel_y = FLAP_ACCEL
             else:
-                # Reset game
                 player_y = HEIGHT - PLAYER_HEIGHT - 50
                 player_vel_y = 0
                 pipe_x = WIDTH
@@ -136,14 +119,12 @@ async def main():
     
     canvas.addEventListener("click", handle_click)
     
-    # Game loop
     while True:
         if not game_over:
             update_game()
         draw_scene()
-        await asyncio.sleep(0.016)  # ~60 FPS
+        await asyncio.sleep(0.016)
 
-# Start the game
 try:
     asyncio.ensure_future(main())
 except Exception as e:
