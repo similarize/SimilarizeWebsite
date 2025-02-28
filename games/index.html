@@ -5,11 +5,11 @@ title: Games Index
 
 <h1>Index of Games</h1>
 <ul>
+    <!-- Direct HTML files in /games/ -->
     {% for file in site.static_files %}
         {% if file.path contains '/games/' %}
             {% assign path = file.path | remove_first: '/games/' %}
             {% if file.extname == '.html' and path == file.name %}
-                <!-- Direct HTML files in /games/ -->
                 <li>
                     <a href="{{ file.path | relative_url }}">
                         {{ file.name | remove: '.html' | capitalize }}
@@ -19,20 +19,18 @@ title: Games Index
         {% endif %}
     {% endfor %}
     
-    <!-- Now handle subdirectories -->
-    {% assign subdirs = site.static_files | map: 'path' | where_exp: 'item', 'item contains "/games/"' | map: 'path' | join: ',' | split: ',' %}
-    {% assign unique_subdirs = '' | split: '' %}
-    {% for path in subdirs %}
-        {% assign parts = path | split: '/games/' %}
-        {% if parts.size > 1 %}
-            {% assign subpath = parts[1] | split: '/' %}
-            {% if subpath.size > 1 %}
-                {% assign dirname = subpath[0] %}
-                {% unless unique_subdirs contains dirname or dirname == '' %}
-                    {% assign unique_subdirs = unique_subdirs | push: dirname %}
+    <!-- Subdirectories under /games/ -->
+    {% assign subdirs = '' | split: '' %}
+    {% for file in site.static_files %}
+        {% if file.path contains '/games/' %}
+            {% assign path = file.path | remove_first: '/games/' %}
+            {% assign parts = path | split: '/' %}
+            {% if parts.size > 1 and parts[0] != '' %}
+                {% unless subdirs contains parts[0] %}
+                    {% assign subdirs = subdirs | push: parts[0] %}
                     <li>
-                        <a href="/games/{{ dirname | relative_url }}">
-                            {{ dirname | capitalize }}
+                        <a href="/games/{{ parts[0] | relative_url }}/">
+                            {{ parts[0] | capitalize }}
                         </a>
                     </li>
                 {% endunless %}
@@ -40,7 +38,6 @@ title: Games Index
         {% endif %}
     {% endfor %}
 </ul>
-
 <footer>
     <p><a href="/">Back to Similarize</a></p>
 </footer>
