@@ -5,21 +5,21 @@ title: Games Index
 
 <h1>Index of Games</h1>
 <ul>
-    {% for item in site.static_files %}
-        {% if item.path contains '/games/' %}
-            {% assign path = item.path | remove_first: '/games/' %}
-            {% unless path contains '/' %} <!-- Exclude files in subdirectories -->
+    {% for file in site.static_files %}
+        {% assign path = file.path | remove_first: '/games/' %}
+        {% unless path contains '/' %} <!-- Exclude files in subdirectories -->
+            {% if file.extname == '.html' or file.path contains '/' and file.path.count('/') == 2 %}
                 <li>
-                    <a href="{{ item.path }}">
-                        {% if item.extname == '.html' %}
-                            {{ item.basename }}
+                    <a href="{{ file.path }}">
+                        {% if file.path contains '/' %}
+                            {{ file.path | split: '/' | last }}
                         {% else %}
-                            {{ item.name }}
+                            {{ file.name | remove: '.html' }}
                         {% endif %}
                     </a>
                 </li>
-            {% endunless %}
-        {% endif %}
+            {% endif %}
+        {% endunless %}
     {% endfor %}
 </ul>
 
