@@ -12,7 +12,7 @@ title: Games Index
                 <li>
                     <a href="{{ file.path }}">
                         {% if file.path contains '/' %}
-                            {{ file.path | split: '/' | last }}/
+                            {{ file.path | split: '/' | last }}
                         {% else %}
                             {{ file.name }}
                         {% endif %}
