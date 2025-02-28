@@ -6,12 +6,22 @@ title: Games Index
 <h1>Index of Games</h1>
 <ul>
     {% for file in site.static_files %}
-        {% if file.path contains '/games/' %}
-            <li><a href="{{ file.path }}">{{ file.name }}</a></li>
-        {% endif %}
+        {% assign path = file.path | remove_first: '/games/' %}
+        {% unless path contains '/' %} <!-- Exclude files in subdirectories -->
+            {% if file.extname == '.html' or file.path contains '/' and file.path.count('/') == 2 %}
+                <li>
+                    <a href="{{ file.path }}">
+                        {% if file.path contains '/' %}
+                            {{ file.path | split: '/' | last }}/
+                        {% else %}
+                            {{ file.name }}
+                        {% endif %}
+                    </a>
+                </li>
+            {% endif %}
+        {% endunless %}
     {% endfor %}
 </ul>
-
 
 
 <!-- <!DOCTYPE html>
