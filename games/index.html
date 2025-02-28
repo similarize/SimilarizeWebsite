@@ -7,7 +7,9 @@ title: Games Index
 <ul>
     {% for file in site.static_files %}
         {% if file.path contains '/games/' %}
-            {% if file.extname == '.html' %}
+            {% assign path = file.path | remove_first: '/games/' %}
+            {% if file.extname == '.html' and path == file.name %}
+                <!-- Direct HTML files in /games/ -->
                 <li>
                     <a href="{{ file.path | relative_url }}">
                         {{ file.name | remove: '.html' | capitalize }}
@@ -16,7 +18,29 @@ title: Games Index
             {% endif %}
         {% endif %}
     {% endfor %}
+    
+    <!-- Now handle subdirectories -->
+    {% assign subdirs = site.static_files | map: 'path' | where_exp: 'item', 'item contains "/games/"' | map: 'path' | join: ',' | split: ',' %}
+    {% assign unique_subdirs = '' | split: '' %}
+    {% for path in subdirs %}
+        {% assign parts = path | split: '/games/' %}
+        {% if parts.size > 1 %}
+            {% assign subpath = parts[1] | split: '/' %}
+            {% if subpath.size > 1 %}
+                {% assign dirname = subpath[0] %}
+                {% unless unique_subdirs contains dirname or dirname == '' %}
+                    {% assign unique_subdirs = unique_subdirs | push: dirname %}
+                    <li>
+                        <a href="/games/{{ dirname | relative_url }}">
+                            {{ dirname | capitalize }}
+                        </a>
+                    </li>
+                {% endunless %}
+            {% endif %}
+        {% endif %}
+    {% endfor %}
 </ul>
+
 <footer>
     <p><a href="/">Back to Similarize</a></p>
 </footer>
