@@ -63,6 +63,35 @@
             polylines: []
         };
 
+        // Default styles based on Google Earth Web
+        const DEFAULT_STYLES = {
+            point: {
+                icon: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
+                iconScale: 1.0,
+                strokeColor: "#FF0000",  // Red
+                strokeOpacity: 1.0,
+                strokeWeight: 1,
+                labelColor: "#FFFFFF",
+                labelSize: "14px"
+            },
+            polygon: {
+                strokeColor: "#FFFF00",  // Yellow
+                strokeOpacity: 1.0,
+                strokeWeight: 2,
+                fillColor: "#FFFF00",   // Yellow
+                fillOpacity: 0.3,
+                labelColor: "#FFFFFF",
+                labelSize: "14px"
+            },
+            lineString: {
+                strokeColor: "#0000FF",  // Blue
+                strokeOpacity: 1.0,
+                strokeWeight: 4,
+                labelColor: "#FFFFFF",
+                labelSize: "14px"
+            }
+        };
+
         // Load the Maps JavaScript API using the new importLibrary method
         async function initMap() {
             // Show loading message
@@ -166,13 +195,22 @@
             
             // Parse placemarks
             const placemarks = kmlDoc.getElementsByTagName("Placemark");
+            console.log(`Found ${placemarks.length} placemarks`);
             
             for (let i = 0; i < placemarks.length; i++) {
                 const placemark = placemarks[i];
                 const name = placemark.getElementsByTagName("name")[0]?.textContent || "Unnamed";
                 
-                // Extract style information
-                const styleData = extractStyleData(placemark, kmlDoc);
+                // Determine the feature type first for default styling
+                let featureType = "point"; // Default
+                if (placemark.getElementsByTagName("Polygon")[0]) {
+                    featureType = "polygon";
+                } else if (placemark.getElementsByTagName("LineString")[0]) {
+                    featureType = "lineString";
+                }
+                
+                // Extract style information with proper defaults based on feature type
+                const styleData = extractStyleData(placemark, kmlDoc, featureType);
                 
                 // Check for Point
                 const point = placemark.getElementsByTagName("Point")[0];
@@ -236,189 +274,126 @@
                 }
             }
             
-            console.log("Parsed KML features:", kmlFeatures);
+            console.log("Parsed KML features:", 
+                `Points: ${kmlFeatures.points.length}`, 
+                `Polygons: ${kmlFeatures.polygons.length}`, 
+                `LineStrings: ${kmlFeatures.lineStrings.length}`
+            );
         }
 
-        function extractStyleData(placemark, kmlDoc) {
-            const styleData = {
-                icon: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
-                strokeColor: "#FF0000",
-                strokeOpacity: 0.8,
-                strokeWeight: 2,
-                fillColor: "#FF0000",
-                fillOpacity: 0.35,
-                labelColor: "#FFFFFF",
-                labelSize: "14px"
-            };
+        function extractStyleData(placemark, kmlDoc, featureType) {
+            // Start with appropriate default style based on feature type
+            const styleData = { ...DEFAULT_STYLES[featureType] };
             
             // Check for style URL reference
             const styleUrl = placemark.getElementsByTagName("styleUrl")[0]?.textContent;
             if (styleUrl) {
                 const styleId = styleUrl.replace('#', '');
-                const style = kmlDoc.getElementById(styleId) || findStyleBySelector(kmlDoc, styleId);
+                const style = findStyleBySelector(kmlDoc, styleId);
                 
                 if (style) {
-                    // Icon style for points
-                    const iconStyle = style.getElementsByTagName("IconStyle")[0];
-                    if (iconStyle) {
-                        const iconHref = iconStyle.getElementsByTagName("href")[0]?.textContent;
-                        if (iconHref) {
-                            styleData.icon = iconHref;
-                        }
-                        
-                        const iconScale = iconStyle.getElementsByTagName("scale")[0]?.textContent;
-                        if (iconScale) {
-                            const scale = parseFloat(iconScale);
-                            if (!isNaN(scale)) {
-                                styleData.iconScale = scale;
-                            }
-                        }
-                        
-                        const iconColor = iconStyle.getElementsByTagName("color")[0]?.textContent;
-                        if (iconColor) {
-                            // We can't directly color the built-in marker icons, but we can note this
-                            console.log(`Icon color ${kmlColorToHex(iconColor)} for ${styleId}`);
-                        }
-                    }
-                    
-                    // Line style for polygons and lines
-                    const lineStyle = style.getElementsByTagName("LineStyle")[0];
-                    if (lineStyle) {
-                        const color = lineStyle.getElementsByTagName("color")[0]?.textContent;
-                        if (color) {
-                            styleData.strokeColor = kmlColorToHex(color);
-                            styleData.strokeOpacity = kmlOpacityFromColor(color);
-                        }
-                        
-                        const width = lineStyle.getElementsByTagName("width")[0]?.textContent;
-                        if (width) {
-                            styleData.strokeWeight = parseFloat(width);
-                        }
-                    }
-                    
-                    // Poly style for polygons
-                    const polyStyle = style.getElementsByTagName("PolyStyle")[0];
-                    if (polyStyle) {
-                        const color = polyStyle.getElementsByTagName("color")[0]?.textContent;
-                        if (color) {
-                            styleData.fillColor = kmlColorToHex(color);
-                            styleData.fillOpacity = kmlOpacityFromColor(color);
-                        }
-                        
-                        // Check for fill element (false means no fill)
-                        const fill = polyStyle.getElementsByTagName("fill")[0]?.textContent;
-                        if (fill === "0") {
-                            styleData.fillOpacity = 0;
-                        }
-                        
-                        // Check for outline element (false means no outline)
-                        const outline = polyStyle.getElementsByTagName("outline")[0]?.textContent;
-                        if (outline === "0") {
-                            styleData.strokeOpacity = 0;
-                        }
-                    }
-                    
-                    // Label style
-                    const labelStyle = style.getElementsByTagName("LabelStyle")[0];
-                    if (labelStyle) {
-                        const color = labelStyle.getElementsByTagName("color")[0]?.textContent;
-                        if (color) {
-                            styleData.labelColor = kmlColorToHex(color);
-                        }
-                        
-                        const scale = labelStyle.getElementsByTagName("scale")[0]?.textContent;
-                        if (scale) {
-                            const scaleValue = parseFloat(scale);
-                            if (!isNaN(scaleValue)) {
-                                // Approximate size based on scale
-                                styleData.labelSize = `${Math.max(10, Math.round(14 * scaleValue))}px`;
-                            }
-                        }
-                    }
+                    applyStyleElement(style, styleData);
+                } else {
+                    console.warn(`Style not found for ID: ${styleId}`);
                 }
             }
             
             // Check for inline styles (these should override external styles)
             const inlineStyle = placemark.getElementsByTagName("Style")[0];
             if (inlineStyle) {
-                // Parse inline styles using the same logic as above
-                // Icon style
-                const iconStyle = inlineStyle.getElementsByTagName("IconStyle")[0];
-                if (iconStyle) {
-                    const iconHref = iconStyle.getElementsByTagName("href")[0]?.textContent;
-                    if (iconHref) {
-                        styleData.icon = iconHref;
-                    }
-                    
-                    const iconScale = iconStyle.getElementsByTagName("scale")[0]?.textContent;
-                    if (iconScale) {
-                        const scale = parseFloat(iconScale);
-                        if (!isNaN(scale)) {
-                            styleData.iconScale = scale;
-                        }
-                    }
-                }
-                
-                // Line style
-                const lineStyle = inlineStyle.getElementsByTagName("LineStyle")[0];
-                if (lineStyle) {
-                    const color = lineStyle.getElementsByTagName("color")[0]?.textContent;
-                    if (color) {
-                        styleData.strokeColor = kmlColorToHex(color);
-                        styleData.strokeOpacity = kmlOpacityFromColor(color);
-                    }
-                    
-                    const width = lineStyle.getElementsByTagName("width")[0]?.textContent;
-                    if (width) {
-                        styleData.strokeWeight = parseFloat(width);
-                    }
-                }
-                
-                // Poly style
-                const polyStyle = inlineStyle.getElementsByTagName("PolyStyle")[0];
-                if (polyStyle) {
-                    const color = polyStyle.getElementsByTagName("color")[0]?.textContent;
-                    if (color) {
-                        styleData.fillColor = kmlColorToHex(color);
-                        styleData.fillOpacity = kmlOpacityFromColor(color);
-                    }
-                    
-                    // Check for fill element
-                    const fill = polyStyle.getElementsByTagName("fill")[0]?.textContent;
-                    if (fill === "0") {
-                        styleData.fillOpacity = 0;
-                    }
-                    
-                    // Check for outline element
-                    const outline = polyStyle.getElementsByTagName("outline")[0]?.textContent;
-                    if (outline === "0") {
-                        styleData.strokeOpacity = 0;
-                    }
-                }
-                
-                // Label style
-                const labelStyle = inlineStyle.getElementsByTagName("LabelStyle")[0];
-                if (labelStyle) {
-                    const color = labelStyle.getElementsByTagName("color")[0]?.textContent;
-                    if (color) {
-                        styleData.labelColor = kmlColorToHex(color);
-                    }
-                    
-                    const scale = labelStyle.getElementsByTagName("scale")[0]?.textContent;
-                    if (scale) {
-                        const scaleValue = parseFloat(scale);
-                        if (!isNaN(scaleValue)) {
-                            styleData.labelSize = `${Math.max(10, Math.round(14 * scaleValue))}px`;
-                        }
-                    }
-                }
+                applyStyleElement(inlineStyle, styleData);
             }
             
             return styleData;
         }
 
+        function applyStyleElement(styleElement, styleData) {
+            // Icon style for points
+            const iconStyle = styleElement.getElementsByTagName("IconStyle")[0];
+            if (iconStyle) {
+                const iconHref = iconStyle.getElementsByTagName("href")[0]?.textContent;
+                if (iconHref) {
+                    styleData.icon = iconHref;
+                }
+                
+                const iconScale = iconStyle.getElementsByTagName("scale")[0]?.textContent;
+                if (iconScale) {
+                    const scale = parseFloat(iconScale);
+                    if (!isNaN(scale)) {
+                        styleData.iconScale = scale;
+                    }
+                }
+                
+                const iconColor = iconStyle.getElementsByTagName("color")[0]?.textContent;
+                if (iconColor) {
+                    // We can't directly color the built-in marker icons, but we can note this
+                    console.log(`Icon color ${kmlColorToHex(iconColor)}`);
+                }
+            }
+            
+            // Line style for polygons and lines
+            const lineStyle = styleElement.getElementsByTagName("LineStyle")[0];
+            if (lineStyle) {
+                const color = lineStyle.getElementsByTagName("color")[0]?.textContent;
+                if (color) {
+                    styleData.strokeColor = kmlColorToHex(color);
+                    styleData.strokeOpacity = kmlOpacityFromColor(color);
+                }
+                
+                const width = lineStyle.getElementsByTagName("width")[0]?.textContent;
+                if (width) {
+                    styleData.strokeWeight = parseFloat(width);
+                }
+            }
+            
+            // Poly style for polygons
+            const polyStyle = styleElement.getElementsByTagName("PolyStyle")[0];
+            if (polyStyle) {
+                const color = polyStyle.getElementsByTagName("color")[0]?.textContent;
+                if (color) {
+                    styleData.fillColor = kmlColorToHex(color);
+                    styleData.fillOpacity = kmlOpacityFromColor(color);
+                }
+                
+                // Check for fill element (false means no fill)
+                const fill = polyStyle.getElementsByTagName("fill")[0]?.textContent;
+                if (fill === "0") {
+                    styleData.fillOpacity = 0;
+                }
+                
+                // Check for outline element (false means no outline)
+                const outline = polyStyle.getElementsByTagName("outline")[0]?.textContent;
+                if (outline === "0") {
+                    styleData.strokeOpacity = 0;
+                }
+            }
+            
+            // Label style
+            const labelStyle = styleElement.getElementsByTagName("LabelStyle")[0];
+            if (labelStyle) {
+                const color = labelStyle.getElementsByTagName("color")[0]?.textContent;
+                if (color) {
+                    styleData.labelColor = kmlColorToHex(color);
+                }
+                
+                const scale = labelStyle.getElementsByTagName("scale")[0]?.textContent;
+                if (scale) {
+                    const scaleValue = parseFloat(scale);
+                    if (!isNaN(scaleValue)) {
+                        // Approximate size based on scale
+                        styleData.labelSize = `${Math.max(10, Math.round(14 * scaleValue))}px`;
+                    }
+                }
+            }
+        }
+
         // Find a style by ID selector (needed because getElementById may not work with KML namespace)
         function findStyleBySelector(kmlDoc, styleId) {
+            // First try to get the style directly
+            const style = kmlDoc.getElementById(styleId);
+            if (style) return style;
+            
+            // If that fails, try a more thorough search
             const styles = kmlDoc.getElementsByTagName("Style");
             for (let i = 0; i < styles.length; i++) {
                 const style = styles[i];
@@ -426,13 +401,35 @@
                     return style;
                 }
             }
+            
+            // Also check StyleMap elements
+            const styleMaps = kmlDoc.getElementsByTagName("StyleMap");
+            for (let i = 0; i < styleMaps.length; i++) {
+                const styleMap = styleMaps[i];
+                if (styleMap.getAttribute("id") === styleId) {
+                    // Get the normal style from the StyleMap
+                    const pairs = styleMap.getElementsByTagName("Pair");
+                    for (let j = 0; j < pairs.length; j++) {
+                        const pair = pairs[j];
+                        const key = pair.getElementsByTagName("key")[0]?.textContent;
+                        if (key === "normal") {
+                            const styleUrl = pair.getElementsByTagName("styleUrl")[0]?.textContent;
+                            if (styleUrl) {
+                                const normalStyleId = styleUrl.replace('#', '');
+                                return findStyleBySelector(kmlDoc, normalStyleId);
+                            }
+                        }
+                    }
+                }
+            }
+            
             return null;
         }
 
         // Convert KML color format (aabbggrr) to hex format (#rrggbb)
         function kmlColorToHex(kmlColor) {
             if (!kmlColor || kmlColor.length !== 8) {
-                return "#FF0000"; // Default red if invalid
+                return null; // Return null to use defaults
             }
             
             // KML format is aabbggrr, we need #rrggbb
@@ -446,7 +443,7 @@
         // Extract opacity from KML color (first 2 chars represent alpha)
         function kmlOpacityFromColor(kmlColor) {
             if (!kmlColor || kmlColor.length !== 8) {
-                return 1.0; // Default fully opaque if invalid
+                return null; // Return null to use defaults
             }
             
             // Alpha value (first 2 chars) as hex
