@@ -253,6 +253,7 @@ async def splash_screen():
                 return False
             if (event.type == pygame.MOUSEBUTTONDOWN and event.pos[1] > TAP_ZONE_Y) or \
                (event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE):
+                print("Splash screen input detected")  # Debugging
                 return True
         draw_splash_screen()
         await asyncio.sleep(0)
@@ -288,14 +289,17 @@ def draw_scene():
 
 async def main():
     global player_vel_y, player_accel_y, player_rotation, battery, game_over, flap_sound_timer, flapping
+    loop = asyncio.get_event_loop()
     if not await splash_screen():
         return
     reset_game()
 
-    while True:
+    running = True
+    while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                return
+                running = False
+                break  # Exit the event loop
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE and battery > 0 and not game_over:
                     player_accel_y = FLAP_ACCEL
@@ -353,6 +357,9 @@ async def main():
         pygame.display.flip()
         clock.tick(60)
         await asyncio.sleep(0)
+
+    pygame.quit() #Ensure that pygame quits properly
+    sys.exit()
 
 if __name__ == "__main__":
     asyncio.run(main())
