@@ -2,23 +2,23 @@
 <kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2" xmlns:kml="http://www.opengis.net/kml/2.2" xmlns:atom="http://www.w3.org/2005/Atom">
 <Document id="1SPxe22yY4XR4yqvSbcOAc2h-J4W3X9Hl">
 	<name>Book of Mormon Lands</name>
-	<gx:CascadingStyle kml:id="__managed_style_7B6C2FDA92367E0E30CE">
-		<styleUrl>https://earth.google.com/balloon_components/base/1.0.26.0/card_template.kml#main</styleUrl>
+	<gx:CascadingStyle kml:id="__managed_style_0C3D4204BE3680982DE0">
 		<Style>
 			<IconStyle>
-				<scale>1.5</scale>
+				<scale>1.2</scale>
 				<Icon>
-					<href>data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAC1JREFUWEft0EERAAAAAUH6lxbDZxU4s815PffjAAECBAgQIECAAAECBAgQIDAaPwAh6O5R/QAAAABJRU5ErkJggg==</href>
+					<href>https://earth.google.com/earth/document/icon?color=1976d2&amp;id=2000&amp;scale=4</href>
 				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
 			</IconStyle>
 			<LabelStyle>
 			</LabelStyle>
 			<LineStyle>
 				<color>ff2dc0fb</color>
-				<width>4</width>
+				<width>6</width>
 			</LineStyle>
 			<PolyStyle>
-				<color>40ffffff</color>
+				<color>402f2fd3</color>
 			</PolyStyle>
 			<BalloonStyle>
 			</BalloonStyle>
@@ -69,16 +69,39 @@
 			</BalloonStyle>
 		</Style>
 	</gx:CascadingStyle>
-	<StyleMap id="__managed_style_62935D9401367E0E30CE">
+	<StyleMap id="__managed_style_0D48AA513736809851B8">
 		<Pair>
 			<key>normal</key>
-			<styleUrl>#__managed_style_7B6C2FDA92367E0E30CE</styleUrl>
+			<styleUrl>#__managed_style_139096CF9F36809851B8</styleUrl>
 		</Pair>
 		<Pair>
 			<key>highlight</key>
-			<styleUrl>#__managed_style_017E4C6C45367E0E30CF</styleUrl>
+			<styleUrl>#__managed_style_0EFC7AF79036809851B9</styleUrl>
 		</Pair>
 	</StyleMap>
+	<gx:CascadingStyle kml:id="__managed_style_0EFC7AF79036809851B9">
+		<styleUrl>https://earth.google.com/balloon_components/base/1.0.26.0/card_template.kml#main</styleUrl>
+		<Style>
+			<IconStyle>
+				<scale>1.2</scale>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=1976d2&amp;id=2000&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+			</LabelStyle>
+			<LineStyle>
+				<color>ff2dc0fb</color>
+				<width>1.5</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>40ffffff</color>
+			</PolyStyle>
+			<BalloonStyle>
+			</BalloonStyle>
+		</Style>
+	</gx:CascadingStyle>
 	<StyleMap id="__managed_style_363F0DD6F9367E0E30CE">
 		<Pair>
 			<key>normal</key>
@@ -156,11 +179,9 @@
 			</BalloonStyle>
 		</Style>
 	</gx:CascadingStyle>
-	<gx:CascadingStyle kml:id="__managed_style_383383407E367E0E30CF">
-		<styleUrl>https://earth.google.com/balloon_components/base/1.0.26.0/card_template.kml#main</styleUrl>
+	<gx:CascadingStyle kml:id="__managed_style_18E1DC7C283680982DDF">
 		<Style>
 			<IconStyle>
-				<scale>1.2</scale>
 				<Icon>
 					<href>https://earth.google.com/earth/document/icon?color=1976d2&amp;id=2000&amp;scale=4</href>
 				</Icon>
@@ -170,32 +191,10 @@
 			</LabelStyle>
 			<LineStyle>
 				<color>ff2dc0fb</color>
-				<width>1.5</width>
+				<width>4</width>
 			</LineStyle>
 			<PolyStyle>
-				<color>40000000</color>
-			</PolyStyle>
-			<BalloonStyle>
-			</BalloonStyle>
-		</Style>
-	</gx:CascadingStyle>
-	<gx:CascadingStyle kml:id="__managed_style_017E4C6C45367E0E30CF">
-		<styleUrl>https://earth.google.com/balloon_components/base/1.0.26.0/card_template.kml#main</styleUrl>
-		<Style>
-			<IconStyle>
-				<scale>1.8</scale>
-				<Icon>
-					<href>data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAC1JREFUWEft0EERAAAAAUH6lxbDZxU4s815PffjAAECBAgQIECAAAECBAgQIDAaPwAh6O5R/QAAAABJRU5ErkJggg==</href>
-				</Icon>
-			</IconStyle>
-			<LabelStyle>
-			</LabelStyle>
-			<LineStyle>
-				<color>ff2dc0fb</color>
-				<width>6</width>
-			</LineStyle>
-			<PolyStyle>
-				<color>40ffffff</color>
+				<color>402f2fd3</color>
 			</PolyStyle>
 			<BalloonStyle>
 			</BalloonStyle>
@@ -224,6 +223,27 @@
 			<LineStyle>
 				<color>ffd27619</color>
 				<width>4</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>40ffffff</color>
+			</PolyStyle>
+			<BalloonStyle>
+			</BalloonStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<gx:CascadingStyle kml:id="__managed_style_139096CF9F36809851B8">
+		<styleUrl>https://earth.google.com/balloon_components/base/1.0.26.0/card_template.kml#main</styleUrl>
+		<Style>
+			<IconStyle>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=1976d2&amp;id=2000&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+			</LabelStyle>
+			<LineStyle>
+				<color>ff2dc0fb</color>
 			</LineStyle>
 			<PolyStyle>
 				<color>40ffffff</color>
@@ -265,6 +285,16 @@
 			</BalloonStyle>
 		</Style>
 	</gx:CascadingStyle>
+	<StyleMap id="__managed_style_0183D8716C3680982DDF">
+		<Pair>
+			<key>normal</key>
+			<styleUrl>#__managed_style_18E1DC7C283680982DDF</styleUrl>
+		</Pair>
+		<Pair>
+			<key>highlight</key>
+			<styleUrl>#__managed_style_0C3D4204BE3680982DE0</styleUrl>
+		</Pair>
+	</StyleMap>
 	<StyleMap id="__managed_style_31936AB869367E0E30CD">
 		<Pair>
 			<key>normal</key>
@@ -273,16 +303,6 @@
 		<Pair>
 			<key>highlight</key>
 			<styleUrl>#__managed_style_5E33DFB920367E0E30CD</styleUrl>
-		</Pair>
-	</StyleMap>
-	<StyleMap id="__managed_style_15C4A156D5367E0E30CF">
-		<Pair>
-			<key>normal</key>
-			<styleUrl>#__managed_style_28934A4B69367E0E30CF</styleUrl>
-		</Pair>
-		<Pair>
-			<key>highlight</key>
-			<styleUrl>#__managed_style_383383407E367E0E30CF</styleUrl>
 		</Pair>
 	</StyleMap>
 	<gx:CascadingStyle kml:id="__managed_style_2280594C26367E0E30CD">
@@ -335,27 +355,6 @@
 			</LineStyle>
 			<PolyStyle>
 				<color>40ffffff</color>
-			</PolyStyle>
-			<BalloonStyle>
-			</BalloonStyle>
-		</Style>
-	</gx:CascadingStyle>
-	<gx:CascadingStyle kml:id="__managed_style_28934A4B69367E0E30CF">
-		<styleUrl>https://earth.google.com/balloon_components/base/1.0.26.0/card_template.kml#main</styleUrl>
-		<Style>
-			<IconStyle>
-				<Icon>
-					<href>https://earth.google.com/earth/document/icon?color=1976d2&amp;id=2000&amp;scale=4</href>
-				</Icon>
-				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
-			</IconStyle>
-			<LabelStyle>
-			</LabelStyle>
-			<LineStyle>
-				<color>ff2dc0fb</color>
-			</LineStyle>
-			<PolyStyle>
-				<color>40000000</color>
 			</PolyStyle>
 			<BalloonStyle>
 			</BalloonStyle>
@@ -489,14 +488,15 @@
 			<outerBoundaryIs>
 				<LinearRing>
 					<coordinates>
-						-88.25706272989318,15.70274960370909,0 -88.24918594555017,16.06315854189067,0 -88.16124463592041,16.19940691715697,0 -87.98143260102781,16.46764036716383,0 -88.07906964981871,16.58006851618227,0 -88.09692069078677,16.63951735022915,0 -88.07043055457447,16.85503162879101,0 -88.00693144961868,17.01185477466116,0 -88.06378142153086,17.19162157180174,0 -88.02600901381687,17.33937121254573,0 -88.02054377645045,17.45623186599176,0 -88.04439839906189,17.51640870973618,0 -88.03760461815975,17.568490871224,0 -87.99921744970337,17.80530077095058,0 -87.8452645022016,18.09810440526299,0 -87.80941738255038,18.13633918235404,0 -87.82779405632668,18.19632198274128,0 -87.69926452262732,18.70703371321337,0 -87.58851508113037,18.90174035669993,0 -87.45999371575195,19.32071896234832,0 -87.40668036894265,19.57584640769347,0 -87.44490834323139,19.85681090994521,0 -87.45840018326341,20.131387199945,0 -87.23855689781971,20.43359675112688,0 -86.89998845265583,20.76482610150553,0 -86.76853442876042,21.02846614328333,0 -86.73223210622183,21.16620241578592,0 -86.8170971867857,21.22948370051741,0 -86.77075438338436,21.3915400855414,0 -86.89148334351349,21.49488248537731,0 -86.98957142621344,21.60422814962675,0 -87.11658257144225,21.6102562228476,0 -87.20815185210559,21.55644165795556,0 -87.2874483437736,21.56687477377981,0 -87.42577608809182,21.54780971702288,0 -87.53880972410819,21.47896862612075,0 -87.73272453824083,21.54899150114728,0 -88.12648127189667,21.6636950858737,0 -88.62747500405682,21.48875412406204,0 -88.70129588349063,21.43012986882536,0 -88.91634156854653,21.38663602326599,0 -89.44525313819338,21.32336663866019,0 -89.89475218822659,21.22444812759617,0 -90.34322608695955,21.02293196164478,0 -90.41922264291384,20.75842807846676,0 -90.50030976910483,20.49484300564058,0 -90.50375153153624,20.19040629860715,0 -90.53814907991546,20.04824505235748,0 -90.50884940443912,19.9837835554653,0 -90.53015694009122,19.90800560736967,0 -90.55191147252201,19.84816933623452,0 -90.65411565915842,19.77930644596103,0 -90.72286839882474,19.67549596791488,0 -90.69126041259273,19.62279078354386,0 -90.72229514470959,19.56124720704057,0 -90.72456164447927,19.46607738661023,0 -90.73434773413095,19.4198729869673,0 -90.7459356202752,19.40540023402421,0 -90.74236023290317,19.33117683856124,0 -90.81755062118984,19.25616565470145,0 -90.90901227740687,19.17844628865846,0 -91.03390544546461,19.10400460924475,0 -91.17047891209602,19.00371617163418,0 -91.40340237338847,18.89384762622904,0 -91.47549645934049,18.80779673421405,0 -91.53505324200752,18.77706660507799,0 -91.67603382758318,18.71500563416959,0 -91.76677996496196,18.67291804308037,0 -91.84862147980762,18.66660649517521,0 -91.88519550173331,18.62206962003307,0 -91.96373093046643,18.7022982103841,0 -92.18020192844804,18.66692384290927,0 -92.55873665318173,17.94357342920548,0 -93.23691444326155,17.10104465871971,0 -93.93164144550802,15.97241350070039,0 -93.48508301410121,15.71608987369255,0 -93.00657757354742,15.26125740522381,0 -92.43932567706099,14.70705388578312,0 -91.45825740703452,13.94936052655551,0 -90.29869125145105,13.82166591259434,0 -89.68379367179857,14.73861107261123,0 -88.25706272989318,15.70274960370909,0 
+						-87.59318032144226,15.89650167079438,0 -87.70610987089189,15.95003951997832,0 -87.92532065612433,15.91189023466167,0 -88.03716612007335,15.75569528331891,0 -88.24918594555017,16.06315854189067,0 -88.16124463592041,16.19940691715697,0 -87.98143260102781,16.46764036716383,0 -88.07906964981871,16.58006851618227,0 -88.09692069078677,16.63951735022915,0 -88.07043055457447,16.85503162879101,0 -88.00693144961868,17.01185477466116,0 -88.06378142153086,17.19162157180174,0 -88.02600901381687,17.33937121254573,0 -88.02054377645045,17.45623186599176,0 -88.04439839906189,17.51640870973618,0 -88.03760461815975,17.568490871224,0 -87.99921744970337,17.80530077095058,0 -87.8452645022016,18.09810440526299,0 -87.80941738255038,18.13633918235404,0 -87.82779405632668,18.19632198274128,0 -87.69926452262732,18.70703371321337,0 -87.58851508113037,18.90174035669993,0 -87.45999371575195,19.32071896234832,0 -87.40668036894265,19.57584640769347,0 -87.44490834323139,19.85681090994521,0 -87.45840018326341,20.131387199945,0 -87.23855689781971,20.43359675112688,0 -86.89998845265583,20.76482610150553,0 -86.76853442876042,21.02846614328333,0 -86.73223210622183,21.16620241578592,0 -86.8170971867857,21.22948370051741,0 -86.77075438338436,21.3915400855414,0 -86.89148334351349,21.49488248537731,0 -86.98957142621344,21.60422814962675,0 -87.11658257144225,21.6102562228476,0 -87.20815185210559,21.55644165795556,0 -87.2874483437736,21.56687477377981,0 -87.42577608809182,21.54780971702288,0 -87.53880972410819,21.47896862612075,0 -87.73272453824083,21.54899150114728,0 -88.12648127189667,21.6636950858737,0 -88.62747500405682,21.48875412406204,0 -88.70129588349063,21.43012986882536,0 -88.91634156854653,21.38663602326599,0 -89.44525313819338,21.32336663866019,0 -89.89475218822659,21.22444812759617,0 -90.34322608695955,21.02293196164478,0 -90.41922264291384,20.75842807846676,0 -90.50030976910483,20.49484300564058,0 -90.50375153153624,20.19040629860715,0 -90.53814907991546,20.04824505235748,0 -90.50884940443912,19.9837835554653,0 -90.53015694009122,19.90800560736967,0 -90.55191147252201,19.84816933623452,0 -90.65411565915842,19.77930644596103,0 -90.72286839882474,19.67549596791488,0 -90.69126041259273,19.62279078354386,0 -90.72229514470959,19.56124720704057,0 -90.72456164447927,19.46607738661023,0 -90.73434773413095,19.4198729869673,0 -90.7459356202752,19.40540023402421,0 -90.74236023290317,19.33117683856124,0 -90.81755062118984,19.25616565470145,0 -90.90901227740687,19.17844628865846,0 -91.03390544546461,19.10400460924475,0 -91.17047891209602,19.00371617163418,0 -91.40340237338847,18.89384762622904,0 -91.47549645934049,18.80779673421405,0 -91.53505324200752,18.77706660507799,0 -91.67603382758318,18.71500563416959,0 -91.76677996496196,18.67291804308037,0 -91.84862147980762,18.66660649517521,0 -91.88519550173331,18.62206962003307,0 -91.96373093046643,18.7022982103841,0 -92.18020192844804,18.66692384290927,0 -92.55873665318173,17.94357342920548,0 -93.23691444326155,17.10104465871971,0 -93.93164144550802,15.97241350070039,0 -93.48508301410121,15.71608987369255,0 -93.00657757354742,15.26125740522381,0 -92.43932567706099,14.70705388578312,0 -91.45825740703452,13.94936052655551,0 -90.64575733286858,13.91533391063162,0 -90.29869125145105,13.82166591259434,0 -89.92178411776106,13.64225119503249,0 -89.83130577931601,13.52516410205458,0 -89.33264855464768,13.48816907645994,0 -88.93188163207587,13.28176475506781,0 -87.59318032144226,15.89650167079438,0 
 					</coordinates>
 				</LinearRing>
 			</outerBoundaryIs>
 		</Polygon>
 	</Placemark>
 	<Placemark id="082293074033D816A119">
-		<name>Rio De La Pasion</name>
+		<name>River Sidon</name>
+		<description><![CDATA[<div>Rio De La Pasion<br></div>]]></description>
 		<gx:mid>/m/027gm7k</gx:mid>
 		<gx:fid>0x858ad3197cb0d3d9:0xd47b827dd858cdcb</gx:fid>
 		<LookAt>
@@ -598,23 +598,6 @@
 			</outerBoundaryIs>
 		</Polygon>
 	</Placemark>
-	<Placemark id="07A0FA37A4367B50D8F1">
-		<name>Land Northward</name>
-		<LookAt>
-			<longitude>-90.56840736315174</longitude>
-			<latitude>17.44875547606651</latitude>
-			<altitude>-24.02432102387341</altitude>
-			<heading>-3.056582507847295e-05</heading>
-			<tilt>0.4162799447942154</tilt>
-			<gx:fovy>35</gx:fovy>
-			<range>705614.9247550964</range>
-			<altitudeMode>absolute</altitudeMode>
-		</LookAt>
-		<styleUrl>#__managed_style_62935D9401367E0E30CE</styleUrl>
-		<Point>
-			<coordinates>-89.71815602250292,17.6226936571998,464.834966158605</coordinates>
-		</Point>
-	</Placemark>
 	<Placemark id="051BF8E8D2367B69C1D0">
 		<name>Land Northward</name>
 		<description><![CDATA[<h2>Land of Mulek<br></h2>]]></description>
@@ -628,7 +611,7 @@
 			<range>957704.9916923048</range>
 			<altitudeMode>absolute</altitudeMode>
 		</LookAt>
-		<styleUrl>#__managed_style_15C4A156D5367E0E30CF</styleUrl>
+		<styleUrl>#__managed_style_0D48AA513736809851B8</styleUrl>
 		<Polygon>
 			<outerBoundaryIs>
 				<LinearRing>
@@ -653,8 +636,74 @@
 		</LookAt>
 		<styleUrl>#__managed_style_363F0DD6F9367E0E30CE</styleUrl>
 		<Point>
-			<coordinates>-88.84507207212641,17.93936043443505,14.71114237218717</coordinates>
+			<coordinates>-89.52377574309833,18.48580271824336,14.71114237218717</coordinates>
 		</Point>
+	</Placemark>
+	<Placemark id="057A34957F368093753F">
+		<name>Narrow Strip of Wilderness</name>
+		<LookAt>
+			<longitude>-89.13096850457585</longitude>
+			<latitude>15.48575148124307</latitude>
+			<altitude>49.54297526760076</altitude>
+			<heading>0.265740435629032</heading>
+			<tilt>0.4538829909584581</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>1988699.388967753</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_363F0DD6F9367E0E30CE</styleUrl>
+		<LineString>
+			<coordinates>
+				-88.77793907486785,15.8202281325327,0 -89.51236754703541,15.49616208061157,0 -89.79331625910379,15.34988335673374,0 -90.15578249926,15.31290092285735,0 -90.95240590730825,15.26818070552766,0 
+			</coordinates>
+		</LineString>
+	</Placemark>
+	<Placemark id="02306B96E3368095E511">
+		<name>Land of Zarahemla</name>
+		<LookAt>
+			<longitude>-87.88255109023135</longitude>
+			<latitude>17.2037432546081</latitude>
+			<altitude>-70.46849790015267</altitude>
+			<heading>0.2657306424157153</heading>
+			<tilt>0.4257907650673023</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>1471254.589635283</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0183D8716C3680982DDF</styleUrl>
+		<Polygon>
+			<outerBoundaryIs>
+				<LinearRing>
+					<coordinates>
+						-91.74913469939351,17.18484761029282,0 -91.51333542624317,15.80731830599301,0 -90.27356341376985,15.52608498417508,0 -89.12842299898949,15.84492037829353,0 -88.45450291822071,16.48541496084073,0 -88.57294210702473,17.27294923064945,0 -89.19314389512219,17.05053643645753,0 -90.45570796498058,17.13164531580786,0 -91.74913469939351,17.18484761029282,0 
+					</coordinates>
+				</LinearRing>
+			</outerBoundaryIs>
+		</Polygon>
+	</Placemark>
+	<Placemark id="05332DD26136809710BD">
+		<name>Land Southward</name>
+		<description><![CDATA[<div>Land of Lehi-Nephi</div>]]></description>
+		<LookAt>
+			<longitude>-89.64396386527115</longitude>
+			<latitude>16.25331382195919</latitude>
+			<altitude>422.3890587337925</altitude>
+			<heading>0.2657441668006042</heading>
+			<tilt>0.4446487671533967</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>1818717.091412544</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_049B62BD94367E0E30CC</styleUrl>
+		<Polygon>
+			<outerBoundaryIs>
+				<LinearRing>
+					<coordinates>
+						-90.53024639774353,14.12293946985011,0 -88.3695131701718,14.6533599428394,0 -87.61770903516071,15.85925778058101,0 -87.7291880783784,15.94414948148858,0 -87.9385782995781,15.9220115814806,0 -87.99306441832327,15.76450673730373,0 -88.38485087040235,15.5858692380003,0 -88.67254002203029,15.405978125555,0 -89.77819140501485,15.19808488281107,0 -91.20013052923431,15.13190653442984,0 -91.25620426895918,14.85194182229528,0 -90.53024639774353,14.12293946985011,0 
+					</coordinates>
+				</LinearRing>
+			</outerBoundaryIs>
+		</Polygon>
 	</Placemark>
 </Document>
 </kml>
