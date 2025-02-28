@@ -28,6 +28,18 @@
             font-family: Arial, sans-serif;
             font-size: 16px;
         }
+        #fileInput {
+            position: absolute;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1;
+            padding: 10px;
+            background-color: #fff;
+            border: 2px solid #ccc;
+            border-radius: 5px;
+            font-family: Arial, sans-serif;
+        }
         #loadingMessage {
             position: absolute;
             top: 50%;
@@ -44,6 +56,7 @@
 </head>
 <body>
     <button id="toggleButton">Show Modern Labels</button>
+    <input type="file" id="fileInput" accept=".kml" />
     <div id="loadingMessage">Loading KML file...</div>
     <div id="map"></div>
 
@@ -71,6 +84,9 @@
                 disableDefaultUI: true
             });
 
+            // Setup file input listener
+            document.getElementById("fileInput").addEventListener("change", handleFileSelect);
+
             // Toggle logic
             const toggleButton = document.getElementById("toggleButton");
             toggleButton.addEventListener("click", () => {
@@ -85,39 +101,28 @@
                 toggleButton.textContent = labelsVisible ? "Hide Modern Labels" : "Show Modern Labels";
                 console.log("Toggled to:", map.getMapTypeId());
             });
-            
-            // Automatically load the KML file
-            loadKmlFile("book_of_mormon_lands.kml");
         }
 
-        function loadKmlFile(filename) {
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
             // Show loading message
             document.getElementById("loadingMessage").style.display = "block";
             
-            // Fetch the KML file
-            fetch(filename)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`Failed to load KML file: ${response.status} ${response.statusText}`);
-                    }
-                    return response.text();
-                })
-                .then(kmlContent => {
-                    // Clear existing elements from the map
-                    clearMapElements();
-                    
-                    // Parse and render KML
-                    parseKML(kmlContent);
-                    renderKMLFeatures();
-                    
-                    // Hide loading message
-                    document.getElementById("loadingMessage").style.display = "none";
-                })
-                .catch(error => {
-                    console.error("Error loading KML file:", error);
-                    alert("Failed to load KML file. Please ensure 'book_of_mormon_lands.kml' exists in the same directory.");
-                    document.getElementById("loadingMessage").style.display = "none";
-                });
+            // Clear existing elements from the map
+            clearMapElements();
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const kmlContent = e.target.result;
+                parseKML(kmlContent);
+                renderKMLFeatures();
+                
+                // Hide loading message
+                document.getElementById("loadingMessage").style.display = "none";
+            };
+            reader.readAsText(file);
         }
 
         function clearMapElements() {
@@ -152,21 +157,13 @@
                 const placemark = placemarks[i];
                 const name = placemark.getElementsByTagName("name")[0]?.textContent || "Unnamed";
                 
-                // Extract style information
-                const styleData = extractStyleData(placemark, kmlDoc);
-                
                 // Check for Point
                 const point = placemark.getElementsByTagName("Point")[0];
                 if (point) {
                     const coordinates = point.getElementsByTagName("coordinates")[0]?.textContent;
                     if (coordinates) {
-                        const [lng, lat, alt] = coordinates.trim().split(",").map(parseFloat);
-                        kmlFeatures.points.push({ 
-                            lat, 
-                            lng, 
-                            name,
-                            style: styleData
-                        });
+                        const [lng, lat] = coordinates.trim().split(",").map(parseFloat);
+                        kmlFeatures.points.push({ lat, lng, name });
                     }
                 }
                 
@@ -180,17 +177,13 @@
                             const coordinates = linearRing.getElementsByTagName("coordinates")[0]?.textContent;
                             if (coordinates) {
                                 const paths = coordinates.trim()
-                                    .split(/\s+/)
+                                    .split(" ")
                                     .filter(coord => coord.trim() !== "")
                                     .map(coord => {
                                         const [lng, lat] = coord.split(",").map(parseFloat);
                                         return [lng, lat];
                                     });
-                                kmlFeatures.polygons.push({ 
-                                    name, 
-                                    paths,
-                                    style: styleData
-                                });
+                                kmlFeatures.polygons.push({ name, paths });
                             }
                         }
                     }
@@ -202,140 +195,18 @@
                     const coordinates = lineString.getElementsByTagName("coordinates")[0]?.textContent;
                     if (coordinates) {
                         const paths = coordinates.trim()
-                            .split(/\s+/)
+                            .split(" ")
                             .filter(coord => coord.trim() !== "")
                             .map(coord => {
                                 const [lng, lat] = coord.split(",").map(parseFloat);
                                 return [lng, lat];
                             });
-                        kmlFeatures.lineStrings.push({ 
-                            name, 
-                            paths,
-                            style: styleData
-                        });
+                        kmlFeatures.lineStrings.push({ name, paths });
                     }
                 }
             }
             
             console.log("Parsed KML features:", kmlFeatures);
-        }
-
-        function extractStyleData(placemark, kmlDoc) {
-            const styleData = {
-                icon: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
-                strokeColor: "#FF0000",
-                strokeOpacity: 0.8,
-                strokeWeight: 2,
-                fillColor: "#FF0000",
-                fillOpacity: 0.35,
-                labelColor: "#FFFFFF",
-                labelSize: "14px"
-            };
-            
-            // Check for style URL reference
-            const styleUrl = placemark.getElementsByTagName("styleUrl")[0]?.textContent;
-            if (styleUrl) {
-                const styleId = styleUrl.replace('#', '');
-                const style = kmlDoc.getElementById(styleId);
-                
-                if (style) {
-                    // Icon style for points
-                    const iconStyle = style.getElementsByTagName("IconStyle")[0];
-                    if (iconStyle) {
-                        const iconHref = iconStyle.getElementsByTagName("href")[0]?.textContent;
-                        if (iconHref) {
-                            styleData.icon = iconHref;
-                        }
-                        
-                        const iconScale = iconStyle.getElementsByTagName("scale")[0]?.textContent;
-                        if (iconScale) {
-                            const scale = parseFloat(iconScale);
-                            if (!isNaN(scale)) {
-                                styleData.iconScale = scale;
-                            }
-                        }
-                    }
-                    
-                    // Line style for polygons and lines
-                    const lineStyle = style.getElementsByTagName("LineStyle")[0];
-                    if (lineStyle) {
-                        const color = lineStyle.getElementsByTagName("color")[0]?.textContent;
-                        if (color) {
-                            styleData.strokeColor = kmlColorToHex(color);
-                            styleData.strokeOpacity = kmlOpacityFromColor(color);
-                        }
-                        
-                        const width = lineStyle.getElementsByTagName("width")[0]?.textContent;
-                        if (width) {
-                            styleData.strokeWeight = parseFloat(width);
-                        }
-                    }
-                    
-                    // Poly style for polygons
-                    const polyStyle = style.getElementsByTagName("PolyStyle")[0];
-                    if (polyStyle) {
-                        const color = polyStyle.getElementsByTagName("color")[0]?.textContent;
-                        if (color) {
-                            styleData.fillColor = kmlColorToHex(color);
-                            styleData.fillOpacity = kmlOpacityFromColor(color);
-                        }
-                    }
-                    
-                    // Label style
-                    const labelStyle = style.getElementsByTagName("LabelStyle")[0];
-                    if (labelStyle) {
-                        const color = labelStyle.getElementsByTagName("color")[0]?.textContent;
-                        if (color) {
-                            styleData.labelColor = kmlColorToHex(color);
-                        }
-                        
-                        const scale = labelStyle.getElementsByTagName("scale")[0]?.textContent;
-                        if (scale) {
-                            const scaleValue = parseFloat(scale);
-                            if (!isNaN(scaleValue)) {
-                                // Approximate size based on scale
-                                styleData.labelSize = `${Math.max(10, Math.round(14 * scaleValue))}px`;
-                            }
-                        }
-                    }
-                }
-            }
-            
-            // Check for inline styles
-            const style = placemark.getElementsByTagName("Style")[0];
-            if (style) {
-                // Same style parsing as above for inline styles
-                // (Code omitted for brevity but would be the same logic as above)
-            }
-            
-            return styleData;
-        }
-
-        // Convert KML color format (aabbggrr) to hex format (#rrggbb)
-        function kmlColorToHex(kmlColor) {
-            if (!kmlColor || kmlColor.length !== 8) {
-                return "#FF0000"; // Default red if invalid
-            }
-            
-            // KML format is aabbggrr, we need #rrggbb
-            const r = kmlColor.substr(6, 2);
-            const g = kmlColor.substr(4, 2);
-            const b = kmlColor.substr(2, 2);
-            
-            return `#${r}${g}${b}`;
-        }
-
-        // Extract opacity from KML color (first 2 chars represent alpha)
-        function kmlOpacityFromColor(kmlColor) {
-            if (!kmlColor || kmlColor.length !== 8) {
-                return 1.0; // Default fully opaque if invalid
-            }
-            
-            // Alpha value (first 2 chars) as hex
-            const alpha = kmlColor.substr(0, 2);
-            
-            // Convert hex alpha to decimal opacity (0-1)
-            return parseInt(alpha, 16) / 255;
         }
 
         function renderKMLFeatures() {
@@ -346,18 +217,13 @@
                     map: map,
                     label: {
                         text: place.name,
-                        color: place.style.labelColor,
-                        fontSize: place.style.labelSize,
+                        color: "#ffffff",
+                        fontSize: "14px",
                         fontWeight: "bold"
                     },
                     icon: {
-                        url: place.style.icon,
-                        labelOrigin: new google.maps.Point(10, -10),
-                        scaledSize: place.style.iconScale ? 
-                            new google.maps.Size(
-                                24 * place.style.iconScale, 
-                                24 * place.style.iconScale
-                            ) : undefined
+                        url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
+                        labelOrigin: new google.maps.Point(10, -10)
                     }
                 });
                 mapElements.markers.push(marker);
@@ -367,16 +233,16 @@
             kmlFeatures.polygons.forEach(polygon => {
                 const poly = new google.maps.Polygon({
                     paths: polygon.paths.map(coord => ({ lat: coord[1], lng: coord[0] })),
-                    strokeColor: polygon.style.strokeColor,
-                    strokeOpacity: polygon.style.strokeOpacity,
-                    strokeWeight: polygon.style.strokeWeight,
-                    fillColor: polygon.style.fillColor,
-                    fillOpacity: polygon.style.fillOpacity,
+                    strokeColor: "#FF0000",
+                    strokeOpacity: 0.8,
+                    strokeWeight: 2,
+                    fillColor: "#FF0000",
+                    fillOpacity: 0.35,
                     map: map
                 });
                 mapElements.polygons.push(poly);
 
-                // Approximate center for label (using bounds)
+                // Approximate center for label (average of coords)
                 const bounds = new google.maps.LatLngBounds();
                 polygon.paths.forEach(coord => bounds.extend({ lat: coord[1], lng: coord[0] }));
                 const center = bounds.getCenter();
@@ -386,13 +252,13 @@
                     map: map,
                     label: {
                         text: polygon.name,
-                        color: polygon.style.labelColor,
-                        fontSize: polygon.style.labelSize,
+                        color: "#ffffff",
+                        fontSize: "14px",
                         fontWeight: "bold"
                     },
                     icon: {
-                        url: "https://maps.google.com/mapfiles/transparent.png", // Transparent icon for label only
-                        labelOrigin: new google.maps.Point(0, 0)
+                        url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
+                        labelOrigin: new google.maps.Point(10, -10)
                     }
                 });
                 mapElements.markers.push(marker);
@@ -402,9 +268,9 @@
             kmlFeatures.lineStrings.forEach(line => {
                 const polyline = new google.maps.Polyline({
                     path: line.paths.map(coord => ({ lat: coord[1], lng: coord[0] })),
-                    strokeColor: line.style.strokeColor,
-                    strokeOpacity: line.style.strokeOpacity,
-                    strokeWeight: line.style.strokeWeight,
+                    strokeColor: "#0000FF",
+                    strokeOpacity: 1.0,
+                    strokeWeight: 3,
                     map: map
                 });
                 mapElements.polylines.push(polyline);
@@ -418,13 +284,13 @@
                     map: map,
                     label: {
                         text: line.name,
-                        color: line.style.labelColor,
-                        fontSize: line.style.labelSize,
+                        color: "#ffffff",
+                        fontSize: "14px",
                         fontWeight: "bold"
                     },
                     icon: {
-                        url: "https://maps.google.com/mapfiles/transparent.png", // Transparent icon for label only
-                        labelOrigin: new google.maps.Point(0, 0)
+                        url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
+                        labelOrigin: new google.maps.Point(10, -10)
                     }
                 });
                 mapElements.markers.push(marker);
