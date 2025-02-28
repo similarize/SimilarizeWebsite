@@ -28,82 +28,53 @@
             font-family: Arial, sans-serif;
             font-size: 16px;
         }
+        #fileInput {
+            position: absolute;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1;
+            padding: 10px;
+            background-color: #fff;
+            border: 2px solid #ccc;
+            border-radius: 5px;
+            font-family: Arial, sans-serif;
+        }
+        #loadingMessage {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 20px;
+            border-radius: 5px;
+            z-index: 2;
+            display: none;
+            font-family: Arial, sans-serif;
+        }
     </style>
 </head>
 <body>
     <button id="toggleButton">Show Modern Labels</button>
+    <input type="file" id="fileInput" accept=".kml" />
+    <div id="loadingMessage">Loading KML file...</div>
     <div id="map"></div>
 
     <script>
         let map;
         let labelsVisible = false;
-
-        // Point placemarks from KML
-        const ancientPoints = [
-            { lat: 16.51884654893103, lng: -90.06107768821231, name: "Zarahemla" },
-            { lat: 16.2509345, lng: -90.1041985, name: "Rio De La Pasion" },
-            { lat: 18.4111397499165, lng: -88.2261596306673, name: "First Landing" },
-            { lat: 17.6226936571998, lng: -89.71815602250292, name: "Land Northward" },
-            { lat: 17.93936043443505, lng: -88.84507207212641, name: "Hill Cumorah, Ramah" }
-        ];
-
-        // Polygons from KML
-        const ancientPolygons = [
-            {
-                name: "Nephi and the Land of Zarahemla were nearly surrounded by water",
-                paths: [
-                    [-88.25706272989318, 15.70274960370909], [-88.11400113746703, 17.40754942135985],
-                    [-88.00213739978079, 18.56850683812079], [-88.58322964712229, 18.59307437896043],
-                    [-89.59594428700714, 17.81035101929407], [-90.14816209753177, 17.77400931321205],
-                    [-92.03752551377752, 18.01691484658062], [-92.14371524511333, 17.3636242373624],
-                    [-90.95562120391563, 16.41448871966768], [-91.25032771949203, 16.12799816189935],
-                    [-91.03491840267976, 15.43148987746594], [-92.07946844000924, 15.21121431888191],
-                    [-91.86818183019774, 14.68640069551288], [-89.68379367179857, 14.73861107261123],
-                    [-88.25706272989318, 15.70274960370909]
-                ]
-            },
-            {
-                name: "Hill Achotal, Cumorah - Ramah",
-                paths: [
-                    [-88.86156423994483, 17.93934724259089], [-88.86128952617804, 17.9394887289804],
-                    [-88.88280536162465, 17.91154742015275], [-88.87920757062555, 17.89488969139576],
-                    [-88.86168112846379, 17.89582315836186], [-88.85262335147085, 17.90898500493479],
-                    [-88.83680086609415, 17.9338394358041], [-88.82011968939625, 17.94936670805847],
-                    [-88.80397727344561, 17.96327526788708], [-88.82283932555966, 17.97913528526696],
-                    [-88.8505276345908, 17.96750839258931], [-88.86172967803277, 17.94984758454246],
-                    [-88.86138769168818, 17.93963467963814], [-88.86156423994483, 17.93934724259089]
-                ]
-            },
-            {
-                name: "Land Northward (Mulek)",
-                paths: [
-                    [-90.52254480409789, 17.73697773775524], [-90.44174228623147, 17.17162126070654],
-                    [-89.22593148174805, 17.08627969244163], [-88.37464738303422, 17.37572912485121],
-                    [-88.38572756186812, 17.99995037807802], [-88.93743726305098, 18.03533440527162],
-                    [-89.56980070832884, 17.8274799326303], [-90.52254480409789, 17.73697773775524]
-                ]
-            }
-        ];
-
-        // LineStrings from KML (simplified for brevity, full coords added)
-        const ancientLineStrings = [
-            {
-                name: "Pasion River",
-                paths: [
-                    [-90.05461325819262, 16.23708888145447], [-90.06162533719872, 16.23458204702126],
-                    // ... (adding all coords from your KML)
-                    [-90.65556310157429, 16.60378660308047]
-                ]
-            },
-            {
-                name: "Pasion River 2",
-                paths: [
-                    [-90.05478615110412, 16.23695968328062], [-90.05215666839649, 16.23113588301992],
-                    // ... (adding all coords from your KML)
-                    [-89.93383593987811, 15.84973717916063]
-                ]
-            }
-        ];
+        let kmlFeatures = {
+            points: [],
+            polygons: [],
+            lineStrings: []
+        };
+        
+        // Store markers, polygons, and polylines for later removal
+        let mapElements = {
+            markers: [],
+            polygons: [],
+            polylines: []
+        };
 
         function initMap() {
             map = new google.maps.Map(document.getElementById("map"), {
@@ -113,86 +84,8 @@
                 disableDefaultUI: true
             });
 
-            // Add Point placemarks
-            ancientPoints.forEach(place => {
-                new google.maps.Marker({
-                    position: { lat: place.lat, lng: place.lng },
-                    map: map,
-                    label: {
-                        text: place.name,
-                        color: "#ffffff",
-                        fontSize: "14px",
-                        fontWeight: "bold"
-                    },
-                    icon: {
-                        url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
-                        labelOrigin: new google.maps.Point(10, -10)
-                    }
-                });
-            });
-
-            // Add Polygons with labels inside
-            ancientPolygons.forEach(polygon => {
-                const poly = new google.maps.Polygon({
-                    paths: polygon.paths.map(coord => ({ lat: coord[1], lng: coord[0] })),
-                    strokeColor: "#FF0000",
-                    strokeOpacity: 0.8,
-                    strokeWeight: 2,
-                    fillColor: "#FF0000",
-                    fillOpacity: 0.35,
-                    map: map
-                });
-
-                // Approximate center for label (average of coords)
-                const bounds = new google.maps.LatLngBounds();
-                polygon.paths.forEach(coord => bounds.extend({ lat: coord[1], lng: coord[0] }));
-                const center = bounds.getCenter();
-
-                new google.maps.Marker({
-                    position: center,
-                    map: map,
-                    label: {
-                        text: polygon.name,
-                        color: "#ffffff",
-                        fontSize: "14px",
-                        fontWeight: "bold"
-                    },
-                    icon: {
-                        url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
-                        labelOrigin: new google.maps.Point(10, -10)
-                    }
-                });
-            });
-
-            // Add LineStrings with labels beside (at midpoint)
-            ancientLineStrings.forEach(line => {
-                const polyline = new google.maps.Polyline({
-                    path: line.paths.map(coord => ({ lat: coord[1], lng: coord[0] })),
-                    strokeColor: "#0000FF",
-                    strokeOpacity: 1.0,
-                    strokeWeight: 3,
-                    map: map
-                });
-
-                // Midpoint for label
-                const midIndex = Math.floor(line.paths.length / 2);
-                const midPoint = { lat: line.paths[midIndex][1], lng: line.paths[midIndex][0] };
-
-                new google.maps.Marker({
-                    position: midPoint,
-                    map: map,
-                    label: {
-                        text: line.name,
-                        color: "#ffffff",
-                        fontSize: "14px",
-                        fontWeight: "bold"
-                    },
-                    icon: {
-                        url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
-                        labelOrigin: new google.maps.Point(10, -10)
-                    }
-                });
-            });
+            // Setup file input listener
+            document.getElementById("fileInput").addEventListener("change", handleFileSelect);
 
             // Toggle logic
             const toggleButton = document.getElementById("toggleButton");
@@ -208,6 +101,226 @@
                 toggleButton.textContent = labelsVisible ? "Hide Modern Labels" : "Show Modern Labels";
                 console.log("Toggled to:", map.getMapTypeId());
             });
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Show loading message
+            document.getElementById("loadingMessage").style.display = "block";
+            
+            // Clear existing elements from the map
+            clearMapElements();
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const kmlContent = e.target.result;
+                parseKML(kmlContent);
+                renderKMLFeatures();
+                
+                // Hide loading message
+                document.getElementById("loadingMessage").style.display = "none";
+            };
+            reader.readAsText(file);
+        }
+
+        function clearMapElements() {
+            // Remove all markers
+            mapElements.markers.forEach(marker => marker.setMap(null));
+            mapElements.markers = [];
+            
+            // Remove all polygons
+            mapElements.polygons.forEach(polygon => polygon.setMap(null));
+            mapElements.polygons = [];
+            
+            // Remove all polylines
+            mapElements.polylines.forEach(polyline => polyline.setMap(null));
+            mapElements.polylines = [];
+            
+            // Clear stored KML features
+            kmlFeatures = {
+                points: [],
+                polygons: [],
+                lineStrings: []
+            };
+        }
+
+        function parseKML(kmlContent) {
+            const parser = new DOMParser();
+            const kmlDoc = parser.parseFromString(kmlContent, "text/xml");
+            
+            // Parse placemarks
+            const placemarks = kmlDoc.getElementsByTagName("Placemark");
+            
+            for (let i = 0; i < placemarks.length; i++) {
+                const placemark = placemarks[i];
+                const name = placemark.getElementsByTagName("name")[0]?.textContent || "Unnamed";
+                
+                // Check for Point
+                const point = placemark.getElementsByTagName("Point")[0];
+                if (point) {
+                    const coordinates = point.getElementsByTagName("coordinates")[0]?.textContent;
+                    if (coordinates) {
+                        const [lng, lat] = coordinates.trim().split(",").map(parseFloat);
+                        kmlFeatures.points.push({ lat, lng, name });
+                    }
+                }
+                
+                // Check for Polygon
+                const polygon = placemark.getElementsByTagName("Polygon")[0];
+                if (polygon) {
+                    const outerBoundary = polygon.getElementsByTagName("outerBoundaryIs")[0];
+                    if (outerBoundary) {
+                        const linearRing = outerBoundary.getElementsByTagName("LinearRing")[0];
+                        if (linearRing) {
+                            const coordinates = linearRing.getElementsByTagName("coordinates")[0]?.textContent;
+                            if (coordinates) {
+                                const paths = coordinates.trim()
+                                    .split(" ")
+                                    .filter(coord => coord.trim() !== "")
+                                    .map(coord => {
+                                        const [lng, lat] = coord.split(",").map(parseFloat);
+                                        return [lng, lat];
+                                    });
+                                kmlFeatures.polygons.push({ name, paths });
+                            }
+                        }
+                    }
+                }
+                
+                // Check for LineString
+                const lineString = placemark.getElementsByTagName("LineString")[0];
+                if (lineString) {
+                    const coordinates = lineString.getElementsByTagName("coordinates")[0]?.textContent;
+                    if (coordinates) {
+                        const paths = coordinates.trim()
+                            .split(" ")
+                            .filter(coord => coord.trim() !== "")
+                            .map(coord => {
+                                const [lng, lat] = coord.split(",").map(parseFloat);
+                                return [lng, lat];
+                            });
+                        kmlFeatures.lineStrings.push({ name, paths });
+                    }
+                }
+            }
+            
+            console.log("Parsed KML features:", kmlFeatures);
+        }
+
+        function renderKMLFeatures() {
+            // Add Point placemarks
+            kmlFeatures.points.forEach(place => {
+                const marker = new google.maps.Marker({
+                    position: { lat: place.lat, lng: place.lng },
+                    map: map,
+                    label: {
+                        text: place.name,
+                        color: "#ffffff",
+                        fontSize: "14px",
+                        fontWeight: "bold"
+                    },
+                    icon: {
+                        url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
+                        labelOrigin: new google.maps.Point(10, -10)
+                    }
+                });
+                mapElements.markers.push(marker);
+            });
+
+            // Add Polygons with labels inside
+            kmlFeatures.polygons.forEach(polygon => {
+                const poly = new google.maps.Polygon({
+                    paths: polygon.paths.map(coord => ({ lat: coord[1], lng: coord[0] })),
+                    strokeColor: "#FF0000",
+                    strokeOpacity: 0.8,
+                    strokeWeight: 2,
+                    fillColor: "#FF0000",
+                    fillOpacity: 0.35,
+                    map: map
+                });
+                mapElements.polygons.push(poly);
+
+                // Approximate center for label (average of coords)
+                const bounds = new google.maps.LatLngBounds();
+                polygon.paths.forEach(coord => bounds.extend({ lat: coord[1], lng: coord[0] }));
+                const center = bounds.getCenter();
+
+                const marker = new google.maps.Marker({
+                    position: center,
+                    map: map,
+                    label: {
+                        text: polygon.name,
+                        color: "#ffffff",
+                        fontSize: "14px",
+                        fontWeight: "bold"
+                    },
+                    icon: {
+                        url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
+                        labelOrigin: new google.maps.Point(10, -10)
+                    }
+                });
+                mapElements.markers.push(marker);
+            });
+
+            // Add LineStrings with labels beside (at midpoint)
+            kmlFeatures.lineStrings.forEach(line => {
+                const polyline = new google.maps.Polyline({
+                    path: line.paths.map(coord => ({ lat: coord[1], lng: coord[0] })),
+                    strokeColor: "#0000FF",
+                    strokeOpacity: 1.0,
+                    strokeWeight: 3,
+                    map: map
+                });
+                mapElements.polylines.push(polyline);
+
+                // Midpoint for label
+                const midIndex = Math.floor(line.paths.length / 2);
+                const midPoint = { lat: line.paths[midIndex][1], lng: line.paths[midIndex][0] };
+
+                const marker = new google.maps.Marker({
+                    position: midPoint,
+                    map: map,
+                    label: {
+                        text: line.name,
+                        color: "#ffffff",
+                        fontSize: "14px",
+                        fontWeight: "bold"
+                    },
+                    icon: {
+                        url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
+                        labelOrigin: new google.maps.Point(10, -10)
+                    }
+                });
+                mapElements.markers.push(marker);
+            });
+
+            // If features were loaded, fit map to them
+            if (kmlFeatures.points.length > 0 || kmlFeatures.polygons.length > 0 || kmlFeatures.lineStrings.length > 0) {
+                const bounds = new google.maps.LatLngBounds();
+                
+                // Add points to bounds
+                kmlFeatures.points.forEach(point => {
+                    bounds.extend(new google.maps.LatLng(point.lat, point.lng));
+                });
+                
+                // Add polygon paths to bounds
+                kmlFeatures.polygons.forEach(polygon => {
+                    polygon.paths.forEach(coord => {
+                        bounds.extend(new google.maps.LatLng(coord[1], coord[0]));
+                    });
+                });
+                
+                // Add linestring paths to bounds
+                kmlFeatures.lineStrings.forEach(line => {
+                    line.paths.forEach(coord => {
+                        bounds.extend(new google.maps.LatLng(coord[1], coord[0]));
+                    });
+                });
+                
+                map.fitBounds(bounds);
+            }
         }
     </script>
 
