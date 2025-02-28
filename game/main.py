@@ -43,25 +43,64 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("RC Rally Jump")  # In-game title
 clock = pygame.time.Clock()
 
-# Load assets
+# Default asset placeholders to use if loading fails
+RC_CAR = pygame.Surface((PLAYER_WIDTH, PLAYER_HEIGHT), pygame.SRCALPHA)
+pygame.draw.rect(RC_CAR, (255, 0, 0), (0, 0, PLAYER_WIDTH, PLAYER_HEIGHT))
+PIPE = pygame.Surface((PIPE_WIDTH, 300), pygame.SRCALPHA)
+pygame.draw.rect(PIPE, (0, 200, 0), (0, 0, PIPE_WIDTH, 300))
+BACKGROUND = pygame.Surface((WIDTH, HEIGHT))
+BACKGROUND.fill((135, 206, 235))  # Sky blue
+
+# Load assets with error handling
 try:
     RC_CAR = pygame.image.load("rc_car.png").convert_alpha()
     RC_CAR = pygame.transform.scale(RC_CAR, (PLAYER_WIDTH, PLAYER_HEIGHT))
+except:
+    print("Failed to load RC car image, using placeholder")
+
+try:
     PIPE = pygame.image.load("pipe.png").convert_alpha()
     PIPE = pygame.transform.scale(PIPE, (PIPE_WIDTH, 300))
+except:
+    print("Failed to load pipe image, using placeholder")
+
+try:
     bg_files = ["background.png", "background2.png", "background3.png", "background4.png"]
-    BACKGROUND = pygame.image.load(random.choice(bg_files)).convert_alpha()
-    BACKGROUND = pygame.transform.scale(BACKGROUND, (WIDTH, HEIGHT))
+    bg_loaded = False
+    for bg_file in bg_files:
+        try:
+            BACKGROUND = pygame.image.load(bg_file).convert_alpha()
+            BACKGROUND = pygame.transform.scale(BACKGROUND, (WIDTH, HEIGHT))
+            bg_loaded = True
+            break
+        except:
+            pass
+    if not bg_loaded:
+        print("Failed to load any background images, using placeholder")
+except:
+    print("Error in background loading, using placeholder")
+
+# Load sounds with error handling
+try:
     FLAP_SOUND = pygame.mixer.Sound("flap.wav")
-    CRASH_SOUND = pygame.mixer.Sound("crash.wav")
     FLAP_SOUND.set_volume(0.2)
+except:
+    print("Failed to load flap sound")
+    FLAP_SOUND = pygame.mixer.Sound(buffer=b'')  # Empty sound
+
+try:
+    CRASH_SOUND = pygame.mixer.Sound("crash.wav")
     CRASH_SOUND.set_volume(0.2)
+except:
+    print("Failed to load crash sound")
+    CRASH_SOUND = pygame.mixer.Sound(buffer=b'')  # Empty sound
+
+try:
     pygame.mixer.music.load("bgm.ogg")
     pygame.mixer.music.set_volume(0.2)
     pygame.mixer.music.play(-1)
-except pygame.error as e:
-    print(f"Error loading assets: {e}")
-    sys.exit(1)
+except:
+    print("Failed to load background music")
 
 # Game state
 player_x = 100
@@ -92,7 +131,6 @@ def reset_game():
     pipe_height = random.randint(100, HEIGHT - PIPE_GAP - 100)
     battery = 1000
     game_over = False
-    flap_sound_timer = 0
     flapping = False
     ground_heights = [HEIGHT - 50] * (WIDTH // GROUND_SEGMENT_WIDTH + 1)
     ground_offset = 0
@@ -247,16 +285,26 @@ def draw_splash_screen():
     pygame.display.flip()
 
 async def splash_screen():
+    start_time = pygame.time.get_ticks()
     while True:
+        # Process events one by one
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                return False
+                pygame.quit()
+                sys.exit()
             if (event.type == pygame.MOUSEBUTTONDOWN and event.pos[1] > TAP_ZONE_Y) or \
                (event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE):
-                print("Splash screen input detected")  # Debugging
+                print("Splash screen input detected")
                 return True
+            
+        # Add a timeout mechanism (10 seconds)
+        current_time = pygame.time.get_ticks()
+        if current_time - start_time > 10000:  # 10 seconds timeout
+            print("Splash screen timeout - proceeding automatically")
+            return True
+            
         draw_splash_screen()
-        await asyncio.sleep(0)
+        await asyncio.sleep(0.01)  # Give control back to the event loop more reliably
         clock.tick(60)
 
 def draw_scene():
@@ -289,77 +337,91 @@ def draw_scene():
 
 async def main():
     global player_vel_y, player_accel_y, player_rotation, battery, game_over, flap_sound_timer, flapping
-    loop = asyncio.get_event_loop()
-    if not await splash_screen():
-        return
-    reset_game()
+    
+    try:
+        if not await splash_screen():
+            pygame.quit()
+            sys.exit()
+        
+        reset_game()
 
-    running = True
-    while running:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-                break  # Exit the event loop
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE and battery > 0 and not game_over:
-                    player_accel_y = FLAP_ACCEL
-                    battery -= 10
-                    if flap_sound_timer <= 0:
-                        FLAP_SOUND.play()
-                        flap_sound_timer = FLAP_SOUND_DURATION
-                    flapping = True
-                if event.key == pygame.K_r and game_over:
-                    reset_game()
-                if event.key == pygame.K_d:
-                    global DEBUG_MODE
-                    DEBUG_MODE = not DEBUG_MODE
-                if event.key == pygame.K_LEFT and not game_over:
-                    player_rotation = min(player_rotation + 5, 15)
-                if event.key == pygame.K_RIGHT and not game_over:
-                    player_rotation = max(player_rotation - 5, -15)
-            if event.type == pygame.KEYUP:
-                if event.key == pygame.K_SPACE:
-                    flapping = False
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                if event.pos[1] > TAP_ZONE_Y:
-                    if not game_over:
+        running = True
+        while running:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+                    break
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_SPACE and battery > 0 and not game_over:
                         player_accel_y = FLAP_ACCEL
                         battery -= 10
                         if flap_sound_timer <= 0:
                             FLAP_SOUND.play()
                             flap_sound_timer = FLAP_SOUND_DURATION
                         flapping = True
-                        if event.pos[0] < WIDTH // 2:
-                            player_rotation = min(player_rotation + 5, 15)
-                        else:
-                            player_rotation = max(player_rotation - 5, -15)
-                    elif game_over:
+                    if event.key == pygame.K_r and game_over:
                         reset_game()
-                if volume_slider.collidepoint(event.pos):
-                    new_volume = (event.pos[0] - volume_slider.x) / volume_slider.width
-                    pygame.mixer.music.set_volume(max(0, min(1, new_volume)))
-                if effects_slider.collidepoint(event.pos):
-                    new_volume = (event.pos[0] - effects_slider.x) / effects_slider.width
-                    FLAP_SOUND.set_volume(max(0, min(1, new_volume)))
-                    CRASH_SOUND.set_volume(max(0, min(1, new_volume)))
-            if event.type == pygame.MOUSEBUTTONUP:
-                if event.pos[1] > TAP_ZONE_Y:
-                    flapping = False
+                    if event.key == pygame.K_d:
+                        global DEBUG_MODE
+                        DEBUG_MODE = not DEBUG_MODE
+                    if event.key == pygame.K_LEFT and not game_over:
+                        player_rotation = min(player_rotation + 5, 15)
+                    if event.key == pygame.K_RIGHT and not game_over:
+                        player_rotation = max(player_rotation - 5, -15)
+                    # Emergency exit
+                    if event.key == pygame.K_ESCAPE:
+                        running = False
+                if event.type == pygame.KEYUP:
+                    if event.key == pygame.K_SPACE:
+                        flapping = False
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    if event.pos[1] > TAP_ZONE_Y:
+                        if not game_over:
+                            player_accel_y = FLAP_ACCEL
+                            battery -= 10
+                            if flap_sound_timer <= 0:
+                                FLAP_SOUND.play()
+                                flap_sound_timer = FLAP_SOUND_DURATION
+                            flapping = True
+                            if event.pos[0] < WIDTH // 2:
+                                player_rotation = min(player_rotation + 5, 15)
+                            else:
+                                player_rotation = max(player_rotation - 5, -15)
+                        elif game_over:
+                            reset_game()
+                    if volume_slider.collidepoint(event.pos):
+                        new_volume = (event.pos[0] - volume_slider.x) / volume_slider.width
+                        pygame.mixer.music.set_volume(max(0, min(1, new_volume)))
+                    if effects_slider.collidepoint(event.pos):
+                        new_volume = (event.pos[0] - effects_slider.x) / effects_slider.width
+                        FLAP_SOUND.set_volume(max(0, min(1, new_volume)))
+                        CRASH_SOUND.set_volume(max(0, min(1, new_volume)))
+                if event.type == pygame.MOUSEBUTTONUP:
+                    if event.pos[1] > TAP_ZONE_Y:
+                        flapping = False
 
-        if not game_over:
-            update_player()
-            update_world()
-            if check_collision():
-                game_over = True
-                CRASH_SOUND.play()
+            if not game_over:
+                update_player()
+                update_world()
+                if check_collision():
+                    game_over = True
+                    CRASH_SOUND.play()
 
-        draw_scene()
-        pygame.display.flip()
-        clock.tick(60)
-        await asyncio.sleep(0)
-
-    pygame.quit() #Ensure that pygame quits properly
-    sys.exit()
+            draw_scene()
+            pygame.display.flip()
+            clock.tick(60)
+            await asyncio.sleep(0.01)  # More reliable yielding
+    
+    except Exception as e:
+        print(f"Game crashed with error: {e}")
+    finally:
+        pygame.quit()
+        sys.exit()
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except Exception as e:
+        print(f"Fatal error: {e}")
+        pygame.quit()
+        sys.exit(1)
