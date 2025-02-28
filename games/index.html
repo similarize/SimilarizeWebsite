@@ -5,16 +5,16 @@ title: Games Index
 
 <h1>Index of Games</h1>
 <ul>
-    {% for item in site.pages %}
-        {% if item.path contains 'games/' %}
-            {% assign path = item.path | remove_first: 'games/' %}
+    {% for item in site.static_files %}
+        {% if item.path contains '/games/' %}
+            {% assign path = item.path | remove_first: '/games/' %}
             {% unless path contains '/' %} <!-- Exclude files in subdirectories -->
                 <li>
-                    <a href="{{ item.url }}">
-                        {% if item.path contains '.html' %}
-                            {{ item.path | remove: '.html' | split: '/' | last }}
+                    <a href="{{ item.path }}">
+                        {% if item.extname == '.html' %}
+                            {{ item.basename }}
                         {% else %}
-                            {{ item.path | split: '/' | last }}
+                            {{ item.name }}
                         {% endif %}
                     </a>
                 </li>
