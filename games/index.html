@@ -9,17 +9,15 @@ title: Games Index
         {% if item.path contains 'games/' %}
             {% assign path = item.path | remove_first: 'games/' %}
             {% unless path contains '/' %} <!-- Exclude files in subdirectories -->
-                {% if item.path contains '.html' or item.path contains '/' and item.path.count('/') == 2 %}
-                    <li>
-                        <a href="{{ item.url }}">
-                            {% if item.path contains '/' %}
-                                {{ item.path | split: '/' | last }}
-                            {% else %}
-                                {{ item.path | remove: '.html' }}
-                            {% endif %}
-                        </a>
-                    </li>
-                {% endif %}
+                <li>
+                    <a href="{{ item.url }}">
+                        {% if item.path contains '.html' %}
+                            {{ item.path | remove: '.html' | split: '/' | last }}
+                        {% else %}
+                            {{ item.path | split: '/' | last }}
+                        {% endif %}
+                    </a>
+                </li>
             {% endunless %}
         {% endif %}
     {% endfor %}
