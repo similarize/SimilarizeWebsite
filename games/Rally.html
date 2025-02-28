@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RC Rally Jump</title>
-    <link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css" />
-    <script defer src="https://pyscript.net/latest/pyscript.js"></script>
+    <!-- Use a specific, stable PyScript version instead of 'latest' -->
+    <link rel="stylesheet" href="https://pyscript.net/releases/2024.10.1/core.css" />
+    <script defer src="https://pyscript.net/releases/2024.10.1/core.js"></script>
     <style>
         body { margin: 0; background: #87CEEB; }
         #gameCanvas { display: none; }
@@ -55,6 +56,7 @@ pipe_height = 200
 ground_y = HEIGHT - 50
 
 def draw_loading():
+    console.log("Drawing loading screen")
     ctx.fillStyle = "#323264"
     ctx.fillRect(0, 0, WIDTH, HEIGHT)
     ctx.fillStyle = "#FFC107"
@@ -98,10 +100,12 @@ def update_game():
 
 async def main():
     global player_vel_y, game_over, pipe_x, player_y
+    console.log("Main function started")
     loading_div = document.getElementById("loading")
     canvas.style.display = "block"
     draw_loading()
-    await asyncio.sleep(2)
+    await asyncio.sleep(2)  # Wait 2 seconds
+    console.log("Hiding loading screen")
     loading_div.style.display = "none"
     game_over = False
     
@@ -110,12 +114,14 @@ async def main():
         if event.offsetY > TAP_ZONE_Y:
             if not game_over:
                 player_vel_y = FLAP_ACCEL
+                console.log("Player jumped")
             else:
                 player_y = HEIGHT - PLAYER_HEIGHT - 50
                 player_vel_y = 0
                 pipe_x = WIDTH
                 pipe_height = 200
                 game_over = False
+                console.log("Game restarted")
     
     canvas.addEventListener("click", handle_click)
     
@@ -123,12 +129,14 @@ async def main():
         if not game_over:
             update_game()
         draw_scene()
-        await asyncio.sleep(0.016)
+        await asyncio.sleep(0.016)  # ~60 FPS
 
+# Start the game with error handling
 try:
+    console.log("Starting game")
     asyncio.ensure_future(main())
 except Exception as e:
-    console.log(f"Error: {str(e)}")
+    console.log(f"Error in game startup: {str(e)}")
     </py-script>
 </body>
 </html>
