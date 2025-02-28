@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Asteroids PWA</title>
+    <link rel="manifest" href="/manifest.json">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: #000;
+        }
+        #gameContainer {
+            position: fixed;
+            width: 100vw;
+            height: 100vh;
+            top: 0;
+            left: 0;
+        }
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        .control-btn {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.3);
+            border: 1px solid white;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-family: Arial;
+            font-size: 20px;
+            touch-action: none;
+            z-index: 10;
+        }
+        #leftBtn { bottom: 80px; left: 20px; }
+        #rightBtn { bottom: 80px; left: 100px; }
+        #thrustBtn { bottom: 80px; right: 100px; }
+        #shootBtn { bottom: 80px; right: 20px; }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+        <div id="leftBtn" class="control-btn">◄</div>
+        <div id="rightBtn" class="control-btn">►</div>
+        <div id="thrustBtn" class="control-btn">▲</div>
+        <div id="shootBtn" class="control-btn">●</div>
+    </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            ship.x = canvas.width / 2;
+            ship.y = canvas.height / 2;
+        }
+        resizeCanvas();
+
+        const ship = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            radius: 15,
+            angle: 0,
+            rotation: 0,
+            thrust: false,
+            dx: 0,
+            dy: 0
+        };
+
+        let asteroids = [];
+        let bullets = [];
+        const ASTEROID_COUNT = 5;
+        const ASTEROID_SPEED = 2;
+        const SHIP_SPEED = 0.1;
+        const ROTATION_SPEED = 0.1;
+        const BULLET_SPEED = 5;
+
+        const controls = {
+            left: false,
+            right: false,
+            thrust: false,
+            shoot: false
+        };
+
+        const buttons = {
+            left: document.getElementById('leftBtn'),
+            right: document.getElementById('rightBtn'),
+            thrust: document.getElementById('thrustBtn'),
+            shoot: document.getElementById('shootBtn')
+        };
+
+        function setupTouchEvents(btn, control) {
+            btn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                controls[control] = true;
+            });
+            btn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                controls[control] = false;
+            });
+        }
+
+        setupTouchEvents(buttons.left, 'left');
+        setupTouchEvents(buttons.right, 'right');
+        setupTouchEvents(buttons.thrust, 'thrust');
+        buttons.shoot.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            bullets.push(createBullet());
+        });
+
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case 'ArrowLeft': controls.left = true; break;
+                case 'ArrowRight': controls.right = true; break;
+                case 'ArrowUp': controls.thrust = true; break;
+                case ' ': bullets.push(createBullet()); break;
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            switch(e.key) {
+                case 'ArrowLeft': controls.left = false; break;
+                case 'ArrowRight': controls.right = false; break;
+                case 'ArrowUp': controls.thrust = false; break;
+            }
+        });
+
+        function createAsteroid() {
+            const size = 20 + Math.random() * 30;
+            return {
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                radius: size,
+                dx: (Math.random() - 0.5) * ASTEROID_SPEED,
+                dy: (Math.random() - 0.5) * ASTEROID_SPEED
+            };
+        }
+
+        function createBullet() {
+            return {
+                x: ship.x,
+                y: ship.y,
+                dx: Math.cos(ship.angle) * BULLET_SPEED,
+                dy: Math.sin(ship.angle) * BULLET_SPEED,
+                life: 60
+            };
+        }
+
+        for (let i = 0; i < ASTEROID_COUNT; i++) {
+            asteroids.push(createAsteroid());
+        }
+
+        function update() {
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ship.rotation = 0;
+            if (controls.left) ship.rotation = -ROTATION_SPEED;
+            if (controls.right) ship.rotation = ROTATION_SPEED;
+            ship.thrust = controls.thrust;
+
+            ship.angle += ship.rotation;
+            if (ship.thrust) {
+                ship.dx += Math.cos(ship.angle) * SHIP_SPEED;
+                ship.dy += Math.sin(ship.angle) * SHIP_SPEED;
+            }
+            ship.x += ship.dx;
+            ship.y += ship.dy;
+
+            if (ship.x < 0) ship.x = canvas.width;
+            if (ship.x > canvas.width) ship.x = 0;
+            if (ship.y < 0) ship.y = canvas.height;
+            if (ship.y > canvas.height) ship.y = 0;
+
+            ctx.save();
+            ctx.translate(ship.x, ship.y);
+            ctx.rotate(ship.angle);
+            ctx.beginPath();
+            ctx.moveTo(ship.radius, 0);
+            ctx.lineTo(-ship.radius, ship.radius);
+            ctx.lineTo(-ship.radius, -ship.radius);
+            ctx.closePath();
+            ctx.strokeStyle = 'white';
+            ctx.stroke();
+            ctx.restore();
+
+            asteroids.forEach((asteroid, index) => {
+                asteroid.x += asteroid.dx;
+                asteroid.y += asteroid.dy;
+
+                if (asteroid.x < 0) asteroid.x = canvas.width;
+                if (asteroid.x > canvas.width) asteroid.x = 0;
+                if (asteroid.y < 0) asteroid.y = canvas.height;
+                if (asteroid.y > canvas.height) asteroid.y = 0;
+
+                ctx.beginPath();
+                ctx.arc(asteroid.x, asteroid.y, asteroid.radius, 0, Math.PI * 2);
+                ctx.strokeStyle = 'white';
+                ctx.stroke();
+
+                const dist = Math.hypot(ship.x - asteroid.x, ship.y - asteroid.y);
+                if (dist < ship.radius + asteroid.radius) {
+                    console.log('Collision!');
+                }
+            });
+
+            bullets.forEach((bullet, bIndex) => {
+                bullet.x += bullet.dx;
+                bullet.y += bullet.dy;
+                bullet.life--;
+
+                ctx.beginPath();
+                ctx.arc(bullet.x, bullet.y, 2, 0, Math.PI * 2);
+                ctx.fillStyle = 'white';
+                ctx.fill();
+
+                asteroids.forEach((asteroid, aIndex) => {
+                    const dist = Math.hypot(bullet.x - asteroid.x, bullet.y - asteroid.y);
+                    if (dist < asteroid.radius) {
+                        asteroids.splice(aIndex, 1);
+                        bullets.splice(bIndex, 1);
+                        asteroids.push(createAsteroid());
+                    }
+                });
+
+                if (bullet.life <= 0) bullets.splice(bIndex, 1);
+            });
+
+            requestAnimationFrame(update);
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        document.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then(reg => console.log('Service Worker registered'))
+                    .catch(err => console.log('Service Worker registration failed:', err));
+            });
+        }
+
+        update();
+    </script>
+</body>
+</html>

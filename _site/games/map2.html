@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Book of Mormon Lands with Label Toggle</title>
+    <style>
+        html, body {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+        #toggleButton {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1;
+            padding: 10px 20px;
+            background-color: #fff;
+            border: 2px solid #ccc;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: Arial, sans-serif;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <button id="toggleButton">Show Modern Labels</button>
+    <div id="map"></div>
+
+    <script>
+        let map;
+        let labelsVisible = false;
+        let kmlLayer;
+
+        function initMap() {
+            map = new google.maps.Map(document.getElementById("map"), {
+                center: { lat: 17.5, lng: -89.5 }, // Centered on your region
+                zoom: 7,
+                mapTypeId: "satellite",
+                disableDefaultUI: true
+            });
+
+            // Load KML file from a publicly accessible URL
+            kmlLayer = new google.maps.KmlLayer({
+                url: "https://www.similarize.com/game/book_of_mormon_lands.kml", // Replace with your actual URL
+                map: map,
+                preserveViewport: false // Zoom to fit KML content
+            });
+
+            // Check if KML loads successfully
+            google.maps.event.addListener(kmlLayer, "status_changed", function () {
+                if (kmlLayer.getStatus() === google.maps.KmlLayerStatus.OK) {
+                    console.log("KML loaded successfully");
+                } else {
+                    console.error("KML load failed: " + kmlLayer.getStatus());
+                }
+            });
+
+            // Toggle logic for modern labels
+            const toggleButton = document.getElementById("toggleButton");
+            toggleButton.addEventListener("click", () => {
+                labelsVisible = !labelsVisible;
+                if (labelsVisible) {
+                    map.setMapTypeId("hybrid"); // Show modern labels
+                } else {
+                    map.setMapTypeId("satellite"); // Hide modern labels, keep KML
+                }
+                toggleButton.textContent = labelsVisible ? "Hide Modern Labels" : "Show Modern Labels";
+                console.log("Toggled to:", map.getMapTypeId());
+            });
+        }
+    </script>
+
+    <!-- Replace with your actual key -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB0siFVrQptHx6CkBJKRmC37GobNP7TfKk&callback=initMap" async defer></script>
+</body>
+</html>

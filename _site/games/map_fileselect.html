@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Book of Mormon Lands with Label Toggle</title>
+    <style>
+        html, body {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+        #toggleButton {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1;
+            padding: 10px 20px;
+            background-color: #fff;
+            border: 2px solid #ccc;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: Arial, sans-serif;
+            font-size: 16px;
+        }
+        #fileInput {
+            position: absolute;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1;
+            padding: 10px;
+            background-color: #fff;
+            border: 2px solid #ccc;
+            border-radius: 5px;
+            font-family: Arial, sans-serif;
+        }
+        #loadingMessage {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 20px;
+            border-radius: 5px;
+            z-index: 2;
+            display: none;
+            font-family: Arial, sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <button id="toggleButton">Show Modern Labels</button>
+    <input type="file" id="fileInput" accept=".kml" />
+    <div id="loadingMessage">Loading KML file...</div>
+    <div id="map"></div>
+
+    <script>
+        let map;
+        let labelsVisible = false;
+        let kmlFeatures = {
+            points: [],
+            polygons: [],
+            lineStrings: []
+        };
+        
+        // Store markers, polygons, and polylines for later removal
+        let mapElements = {
+            markers: [],
+            polygons: [],
+            polylines: []
+        };
+
+        function initMap() {
+            map = new google.maps.Map(document.getElementById("map"), {
+                center: { lat: 17.5, lng: -89.5 }, // Centered on your region
+                zoom: 7,
+                mapTypeId: "satellite",
+                disableDefaultUI: true
+            });
+
+            // Setup file input listener
+            document.getElementById("fileInput").addEventListener("change", handleFileSelect);
+
+            // Toggle logic
+            const toggleButton = document.getElementById("toggleButton");
+            toggleButton.addEventListener("click", () => {
+                labelsVisible = !labelsVisible;
+                if (labelsVisible) {
+                    map.setMapTypeId("hybrid"); // Full modern labels
+                    map.setOptions({ styles: [] });
+                } else {
+                    map.setMapTypeId("satellite"); // Only ancient labels
+                    map.setOptions({ styles: [] });
+                }
+                toggleButton.textContent = labelsVisible ? "Hide Modern Labels" : "Show Modern Labels";
+                console.log("Toggled to:", map.getMapTypeId());
+            });
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Show loading message
+            document.getElementById("loadingMessage").style.display = "block";
+            
+            // Clear existing elements from the map
+            clearMapElements();
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const kmlContent = e.target.result;
+                parseKML(kmlContent);
+                renderKMLFeatures();
+                
+                // Hide loading message
+                document.getElementById("loadingMessage").style.display = "none";
+            };
+            reader.readAsText(file);
+        }
+
+        function clearMapElements() {
+            // Remove all markers
+            mapElements.markers.forEach(marker => marker.setMap(null));
+            mapElements.markers = [];
+            
+            // Remove all polygons
+            mapElements.polygons.forEach(polygon => polygon.setMap(null));
+            mapElements.polygons = [];
+            
+            // Remove all polylines
+            mapElements.polylines.forEach(polyline => polyline.setMap(null));
+            mapElements.polylines = [];
+            
+            // Clear stored KML features
+            kmlFeatures = {
+                points: [],
+                polygons: [],
+                lineStrings: []
+            };
+        }
+
+        function parseKML(kmlContent) {
+            const parser = new DOMParser();
+            const kmlDoc = parser.parseFromString(kmlContent, "text/xml");
+            
+            // Parse placemarks
+            const placemarks = kmlDoc.getElementsByTagName("Placemark");
+            
+            for (let i = 0; i < placemarks.length; i++) {
+                const placemark = placemarks[i];
+                const name = placemark.getElementsByTagName("name")[0]?.textContent || "Unnamed";
+                
+                // Check for Point
+                const point = placemark.getElementsByTagName("Point")[0];
+                if (point) {
+                    const coordinates = point.getElementsByTagName("coordinates")[0]?.textContent;
+                    if (coordinates) {
+                        const [lng, lat] = coordinates.trim().split(",").map(parseFloat);
+                        kmlFeatures.points.push({ lat, lng, name });
+                    }
+                }
+                
+                // Check for Polygon
+                const polygon = placemark.getElementsByTagName("Polygon")[0];
+                if (polygon) {
+                    const outerBoundary = polygon.getElementsByTagName("outerBoundaryIs")[0];
+                    if (outerBoundary) {
+                        const linearRing = outerBoundary.getElementsByTagName("LinearRing")[0];
+                        if (linearRing) {
+                            const coordinates = linearRing.getElementsByTagName("coordinates")[0]?.textContent;
+                            if (coordinates) {
+                                const paths = coordinates.trim()
+                                    .split(" ")
+                                    .filter(coord => coord.trim() !== "")
+                                    .map(coord => {
+                                        const [lng, lat] = coord.split(",").map(parseFloat);
+                                        return [lng, lat];
+                                    });
+                                kmlFeatures.polygons.push({ name, paths });
+                            }
+                        }
+                    }
+                }
+                
+                // Check for LineString
+                const lineString = placemark.getElementsByTagName("LineString")[0];
+                if (lineString) {
+                    const coordinates = lineString.getElementsByTagName("coordinates")[0]?.textContent;
+                    if (coordinates) {
+                        const paths = coordinates.trim()
+                            .split(" ")
+                            .filter(coord => coord.trim() !== "")
+                            .map(coord => {
+                                const [lng, lat] = coord.split(",").map(parseFloat);
+                                return [lng, lat];
+                            });
+                        kmlFeatures.lineStrings.push({ name, paths });
+                    }
+                }
+            }
+            
+            console.log("Parsed KML features:", kmlFeatures);
+        }
+
+        function renderKMLFeatures() {
+            // Add Point placemarks
+            kmlFeatures.points.forEach(place => {
+                const marker = new google.maps.Marker({
+                    position: { lat: place.lat, lng: place.lng },
+                    map: map,
+                    label: {
+                        text: place.name,
+                        color: "#ffffff",
+                        fontSize: "14px",
+                        fontWeight: "bold"
+                    },
+                    icon: {
+                        url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
+                        labelOrigin: new google.maps.Point(10, -10)
+                    }
+                });
+                mapElements.markers.push(marker);
+            });
+
+            // Add Polygons with labels inside
+            kmlFeatures.polygons.forEach(polygon => {
+                const poly = new google.maps.Polygon({
+                    paths: polygon.paths.map(coord => ({ lat: coord[1], lng: coord[0] })),
+                    strokeColor: "#FF0000",
+                    strokeOpacity: 0.8,
+                    strokeWeight: 2,
+                    fillColor: "#FF0000",
+                    fillOpacity: 0.35,
+                    map: map
+                });
+                mapElements.polygons.push(poly);
+
+                // Approximate center for label (average of coords)
+                const bounds = new google.maps.LatLngBounds();
+                polygon.paths.forEach(coord => bounds.extend({ lat: coord[1], lng: coord[0] }));
+                const center = bounds.getCenter();
+
+                const marker = new google.maps.Marker({
+                    position: center,
+                    map: map,
+                    label: {
+                        text: polygon.name,
+                        color: "#ffffff",
+                        fontSize: "14px",
+                        fontWeight: "bold"
+                    },
+                    icon: {
+                        url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
+                        labelOrigin: new google.maps.Point(10, -10)
+                    }
+                });
+                mapElements.markers.push(marker);
+            });
+
+            // Add LineStrings with labels beside (at midpoint)
+            kmlFeatures.lineStrings.forEach(line => {
+                const polyline = new google.maps.Polyline({
+                    path: line.paths.map(coord => ({ lat: coord[1], lng: coord[0] })),
+                    strokeColor: "#0000FF",
+                    strokeOpacity: 1.0,
+                    strokeWeight: 3,
+                    map: map
+                });
+                mapElements.polylines.push(polyline);
+
+                // Midpoint for label
+                const midIndex = Math.floor(line.paths.length / 2);
+                const midPoint = { lat: line.paths[midIndex][1], lng: line.paths[midIndex][0] };
+
+                const marker = new google.maps.Marker({
+                    position: midPoint,
+                    map: map,
+                    label: {
+                        text: line.name,
+                        color: "#ffffff",
+                        fontSize: "14px",
+                        fontWeight: "bold"
+                    },
+                    icon: {
+                        url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
+                        labelOrigin: new google.maps.Point(10, -10)
+                    }
+                });
+                mapElements.markers.push(marker);
+            });
+
+            // If features were loaded, fit map to them
+            if (kmlFeatures.points.length > 0 || kmlFeatures.polygons.length > 0 || kmlFeatures.lineStrings.length > 0) {
+                const bounds = new google.maps.LatLngBounds();
+                
+                // Add points to bounds
+                kmlFeatures.points.forEach(point => {
+                    bounds.extend(new google.maps.LatLng(point.lat, point.lng));
+                });
+                
+                // Add polygon paths to bounds
+                kmlFeatures.polygons.forEach(polygon => {
+                    polygon.paths.forEach(coord => {
+                        bounds.extend(new google.maps.LatLng(coord[1], coord[0]));
+                    });
+                });
+                
+                // Add linestring paths to bounds
+                kmlFeatures.lineStrings.forEach(line => {
+                    line.paths.forEach(coord => {
+                        bounds.extend(new google.maps.LatLng(coord[1], coord[0]));
+                    });
+                });
+                
+                map.fitBounds(bounds);
+            }
+        }
+    </script>
+
+    <!-- Replace with your actual key -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB0siFVrQptHx6CkBJKRmC37GobNP7TfKk&callback=initMap" async defer></script>
+</body>
+</html>

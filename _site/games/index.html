@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Games Index</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Games Index" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="http://localhost:4000/games/" />
+<meta property="og:url" content="http://localhost:4000/games/" />
+<meta property="og:site_name" content="Games Index" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Games Index" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Games Index","url":"http://localhost:4000/games/"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/assets/css/style.css?v=22adc7d6c1d361fe28dba098fa31320026355aec">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+
+      <h1>Index of Games</h1>
+<ul>
+    
+        
+            
+             <!-- Exclude files in subdirectories -->
+                <li>
+                    <a href="/games/">
+                        
+                            index
+                        
+                    </a>
+                </li>
+            
+        
+    
+        
+    
+</ul>
+
+<footer>
+    <p><a href="/">Back to Similarize</a></p>
+</footer>
+
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Games Index</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        ul { list-style-type: none; padding: 0; }
+        li { margin: 5px 0; }
+        a { text-decoration: none; color: #0366d6; }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <h1>Index of Games</h1>
+    <ul id="file-list"></ul>
+
+    <script>
+        // Replace with your GitHub username and repository name
+        const username = 'similarize'; // Your GitHub username
+        const repo = 'SimilarizeWebsite'; // The repository name
+        const branch = 'gh-pages'; // The branch name
+        const directory = 'games'; // The subdirectory you want to list
+        const apiUrl = `https://api.github.com/repos/${username}/${repo}/contents/${directory}?ref=${branch}`;
+
+        // Optional: Use a GitHub Personal Access Token to avoid rate limits
+        const token = 'Personal access token'; // Replace with your token
+
+        // Fetch the contents of the /games/ directory
+        fetch(apiUrl, {
+            headers: token ? { Authorization: `token ${token}` } : {}
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log(data); // Log the API response
+                if (!Array.isArray(data)) {
+                    throw new Error(`Unexpected API response: ${JSON.stringify(data)}`);
+                }
+                const fileList = document.getElementById('file-list');
+                data.forEach(item => {
+                    const listItem = document.createElement('li');
+                    const link = document.createElement('a');
+                    // Adjust the link to point to the correct path
+                    link.href = `${item.path}`;
+                    link.textContent = item.name + (item.type === 'dir' ? '/' : '');
+                    listItem.appendChild(link);
+                    fileList.appendChild(listItem);
+                });
+            })
+            .catch(error => {
+                console.error('Error fetching repository contents:', error);
+                document.getElementById('file-list').innerHTML = '<li>Unable to load files.</li>';
+            });
+    </script>
+</body>
+</html> -->
+
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>

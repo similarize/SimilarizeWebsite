@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Book of Mormon Lands with Label Toggle</title>
+    <style>
+        html, body {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+        #toggleButton {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1;
+            padding: 10px 20px;
+            background-color: #fff;
+            border: 2px solid #ccc;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: Arial, sans-serif;
+            font-size: 16px;
+        }
+        #loadingMessage {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 20px;
+            border-radius: 5px;
+            z-index: 2;
+            display: none;
+            font-family: Arial, sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <button id="toggleButton">Show Modern Labels</button>
+    <div id="loadingMessage">Loading KML file...</div>
+    <div id="map"></div>
+
+    <script>
+        let map;
+        let labelsVisible = false;
+        let kmlFeatures = {
+            points: [],
+            polygons: [],
+            lineStrings: []
+        };
+        
+        // Store markers, polygons, and polylines for later removal
+        let mapElements = {
+            markers: [],
+            polygons: [],
+            polylines: []
+        };
+
+        // Default styles based on Google Earth Web
+        const DEFAULT_STYLES = {
+            point: {
+                icon: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
+                iconScale: 1.0,
+                strokeColor: "#FF0000",  // Red
+                strokeOpacity: 1.0,
+                strokeWeight: 1,
+                labelColor: "#FFFFFF",
+                labelSize: "14px"
+            },
+            polygon: {
+                strokeColor: "#FFFF00",  // Yellow
+                strokeOpacity: 1.0,
+                strokeWeight: 2,
+                fillColor: "#FFFF00",   // Yellow
+                fillOpacity: 0.3,
+                labelColor: "#FFFFFF",
+                labelSize: "14px"
+            },
+            lineString: {
+                strokeColor: "#0000FF",  // Blue
+                strokeOpacity: 1.0,
+                strokeWeight: 4,
+                labelColor: "#FFFFFF",
+                labelSize: "14px"
+            }
+        };
+
+        // Load the Maps JavaScript API using the new importLibrary method
+        async function initMap() {
+            // Show loading message
+            document.getElementById("loadingMessage").style.display = "block";
+            
+            try {
+                // Load the Maps JavaScript API
+                const { Map } = await google.maps.importLibrary("maps");
+                
+                // Create the map instance
+                map = new Map(document.getElementById("map"), {
+                    center: { lat: 17.5, lng: -89.5 }, // Centered on your region
+                    zoom: 7,
+                    mapTypeId: "satellite",
+                    disableDefaultUI: true
+                });
+
+                // Toggle logic
+                const toggleButton = document.getElementById("toggleButton");
+                toggleButton.addEventListener("click", () => {
+                    labelsVisible = !labelsVisible;
+                    if (labelsVisible) {
+                        map.setMapTypeId("hybrid"); // Full modern labels
+                        map.setOptions({ styles: [] });
+                    } else {
+                        map.setMapTypeId("satellite"); // Only ancient labels
+                        map.setOptions({ styles: [] });
+                    }
+                    toggleButton.textContent = labelsVisible ? "Hide Modern Labels" : "Show Modern Labels";
+                    console.log("Toggled to:", map.getMapTypeId());
+                });
+                
+                // Load the KML file with cache-busting parameter
+                await loadKmlFile(`book_of_mormon_lands.kml?t=${new Date().getTime()}`);
+                
+            } catch (error) {
+                console.error("Error initializing map:", error);
+                alert("Failed to initialize Google Maps API.");
+                document.getElementById("loadingMessage").style.display = "none";
+            }
+        }
+
+        async function loadKmlFile(filename) {
+            try {
+                // Fetch the KML file with cache control
+                const response = await fetch(filename, {
+                    cache: 'no-store', // Don't cache the KML file
+                    headers: {
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache',
+                        'Expires': '0'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Failed to load KML file: ${response.status} ${response.statusText}`);
+                }
+                
+                const kmlContent = await response.text();
+                
+                // Clear existing elements from the map
+                clearMapElements();
+                
+                // Parse and render KML
+                parseKML(kmlContent);
+                renderKMLFeatures();
+                
+                // Hide loading message
+                document.getElementById("loadingMessage").style.display = "none";
+            } catch (error) {
+                console.error("Error loading KML file:", error);
+                alert("Failed to load KML file. Please ensure 'book_of_mormon_lands.kml' exists in the same directory.");
+                document.getElementById("loadingMessage").style.display = "none";
+            }
+        }
+
+        function clearMapElements() {
+            // Remove all markers
+            mapElements.markers.forEach(marker => marker.setMap(null));
+            mapElements.markers = [];
+            
+            // Remove all polygons
+            mapElements.polygons.forEach(polygon => polygon.setMap(null));
+            mapElements.polygons = [];
+            
+            // Remove all polylines
+            mapElements.polylines.forEach(polyline => polyline.setMap(null));
+            mapElements.polylines = [];
+            
+            // Clear stored KML features
+            kmlFeatures = {
+                points: [],
+                polygons: [],
+                lineStrings: []
+            };
+        }
+
+        function parseKML(kmlContent) {
+            const parser = new DOMParser();
+            const kmlDoc = parser.parseFromString(kmlContent, "text/xml");
+            
+            // Parse placemarks
+            const placemarks = kmlDoc.getElementsByTagName("Placemark");
+            console.log(`Found ${placemarks.length} placemarks`);
+            
+            for (let i = 0; i < placemarks.length; i++) {
+                const placemark = placemarks[i];
+                const name = placemark.getElementsByTagName("name")[0]?.textContent || "Unnamed";
+                
+                // Determine the feature type first for default styling
+                let featureType = "point"; // Default
+                if (placemark.getElementsByTagName("Polygon")[0]) {
+                    featureType = "polygon";
+                } else if (placemark.getElementsByTagName("LineString")[0]) {
+                    featureType = "lineString";
+                }
+                
+                // Extract style information with proper defaults based on feature type
+                const styleData = extractStyleData(placemark, kmlDoc, featureType);
+                
+                // Check for Point
+                const point = placemark.getElementsByTagName("Point")[0];
+                if (point) {
+                    const coordinates = point.getElementsByTagName("coordinates")[0]?.textContent;
+                    if (coordinates) {
+                        const [lng, lat, alt] = coordinates.trim().split(",").map(parseFloat);
+                        kmlFeatures.points.push({ 
+                            lat, 
+                            lng, 
+                            name,
+                            style: styleData
+                        });
+                    }
+                }
+                
+                // Check for Polygon
+                const polygon = placemark.getElementsByTagName("Polygon")[0];
+                if (polygon) {
+                    const outerBoundary = polygon.getElementsByTagName("outerBoundaryIs")[0];
+                    if (outerBoundary) {
+                        const linearRing = outerBoundary.getElementsByTagName("LinearRing")[0];
+                        if (linearRing) {
+                            const coordinates = linearRing.getElementsByTagName("coordinates")[0]?.textContent;
+                            if (coordinates) {
+                                const paths = coordinates.trim()
+                                    .split(/\s+/)
+                                    .filter(coord => coord.trim() !== "")
+                                    .map(coord => {
+                                        const [lng, lat] = coord.split(",").map(parseFloat);
+                                        return [lng, lat];
+                                    });
+                                kmlFeatures.polygons.push({ 
+                                    name, 
+                                    paths,
+                                    style: styleData
+                                });
+                            }
+                        }
+                    }
+                }
+                
+                // Check for LineString
+                const lineString = placemark.getElementsByTagName("LineString")[0];
+                if (lineString) {
+                    const coordinates = lineString.getElementsByTagName("coordinates")[0]?.textContent;
+                    if (coordinates) {
+                        const paths = coordinates.trim()
+                            .split(/\s+/)
+                            .filter(coord => coord.trim() !== "")
+                            .map(coord => {
+                                const [lng, lat] = coord.split(",").map(parseFloat);
+                                return [lng, lat];
+                            });
+                        kmlFeatures.lineStrings.push({ 
+                            name, 
+                            paths,
+                            style: styleData
+                        });
+                    }
+                }
+            }
+            
+            console.log("Parsed KML features:", 
+                `Points: ${kmlFeatures.points.length}`, 
+                `Polygons: ${kmlFeatures.polygons.length}`, 
+                `LineStrings: ${kmlFeatures.lineStrings.length}`
+            );
+        }
+
+        function extractStyleData(placemark, kmlDoc, featureType) {
+            // Start with appropriate default style based on feature type
+            const styleData = { ...DEFAULT_STYLES[featureType] };
+            
+            // Check for style URL reference
+            const styleUrl = placemark.getElementsByTagName("styleUrl")[0]?.textContent;
+            if (styleUrl) {
+                const styleId = styleUrl.replace('#', '');
+                const style = findStyleBySelector(kmlDoc, styleId);
+                
+                if (style) {
+                    applyStyleElement(style, styleData);
+                } else {
+                    console.warn(`Style not found for ID: ${styleId}`);
+                }
+            }
+            
+            // Check for inline styles (these should override external styles)
+            const inlineStyle = placemark.getElementsByTagName("Style")[0];
+            if (inlineStyle) {
+                applyStyleElement(inlineStyle, styleData);
+            }
+            
+            return styleData;
+        }
+
+        function applyStyleElement(styleElement, styleData) {
+            // Icon style for points
+            const iconStyle = styleElement.getElementsByTagName("IconStyle")[0];
+            if (iconStyle) {
+                const iconHref = iconStyle.getElementsByTagName("href")[0]?.textContent;
+                if (iconHref) {
+                    styleData.icon = iconHref;
+                }
+                
+                const iconScale = iconStyle.getElementsByTagName("scale")[0]?.textContent;
+                if (iconScale) {
+                    const scale = parseFloat(iconScale);
+                    if (!isNaN(scale)) {
+                        styleData.iconScale = scale;
+                    }
+                }
+                
+                const iconColor = iconStyle.getElementsByTagName("color")[0]?.textContent;
+                if (iconColor) {
+                    // We can't directly color the built-in marker icons, but we can note this
+                    console.log(`Icon color ${kmlColorToHex(iconColor)}`);
+                }
+            }
+            
+            // Line style for polygons and lines
+            const lineStyle = styleElement.getElementsByTagName("LineStyle")[0];
+            if (lineStyle) {
+                const color = lineStyle.getElementsByTagName("color")[0]?.textContent;
+                if (color) {
+                    styleData.strokeColor = kmlColorToHex(color);
+                    styleData.strokeOpacity = kmlOpacityFromColor(color);
+                }
+                
+                const width = lineStyle.getElementsByTagName("width")[0]?.textContent;
+                if (width) {
+                    styleData.strokeWeight = parseFloat(width);
+                }
+            }
+            
+            // Poly style for polygons
+            const polyStyle = styleElement.getElementsByTagName("PolyStyle")[0];
+            if (polyStyle) {
+                const color = polyStyle.getElementsByTagName("color")[0]?.textContent;
+                if (color) {
+                    styleData.fillColor = kmlColorToHex(color);
+                    styleData.fillOpacity = kmlOpacityFromColor(color);
+                }
+                
+                // Check for fill element (false means no fill)
+                const fill = polyStyle.getElementsByTagName("fill")[0]?.textContent;
+                if (fill === "0") {
+                    styleData.fillOpacity = 0;
+                }
+                
+                // Check for outline element (false means no outline)
+                const outline = polyStyle.getElementsByTagName("outline")[0]?.textContent;
+                if (outline === "0") {
+                    styleData.strokeOpacity = 0;
+                }
+            }
+            
+            // Label style
+            const labelStyle = styleElement.getElementsByTagName("LabelStyle")[0];
+            if (labelStyle) {
+                const color = labelStyle.getElementsByTagName("color")[0]?.textContent;
+                if (color) {
+                    styleData.labelColor = kmlColorToHex(color);
+                }
+                
+                const scale = labelStyle.getElementsByTagName("scale")[0]?.textContent;
+                if (scale) {
+                    const scaleValue = parseFloat(scale);
+                    if (!isNaN(scaleValue)) {
+                        // Approximate size based on scale
+                        styleData.labelSize = `${Math.max(10, Math.round(14 * scaleValue))}px`;
+                    }
+                }
+            }
+        }
+
+        // Find a style by ID selector (needed because getElementById may not work with KML namespace)
+        function findStyleBySelector(kmlDoc, styleId) {
+            // First try to get the style directly
+            const style = kmlDoc.getElementById(styleId);
+            if (style) return style;
+            
+            // If that fails, try a more thorough search
+            const styles = kmlDoc.getElementsByTagName("Style");
+            for (let i = 0; i < styles.length; i++) {
+                const style = styles[i];
+                if (style.getAttribute("id") === styleId) {
+                    return style;
+                }
+            }
+            
+            // Also check StyleMap elements
+            const styleMaps = kmlDoc.getElementsByTagName("StyleMap");
+            for (let i = 0; i < styleMaps.length; i++) {
+                const styleMap = styleMaps[i];
+                if (styleMap.getAttribute("id") === styleId) {
+                    // Get the normal style from the StyleMap
+                    const pairs = styleMap.getElementsByTagName("Pair");
+                    for (let j = 0; j < pairs.length; j++) {
+                        const pair = pairs[j];
+                        const key = pair.getElementsByTagName("key")[0]?.textContent;
+                        if (key === "normal") {
+                            const styleUrl = pair.getElementsByTagName("styleUrl")[0]?.textContent;
+                            if (styleUrl) {
+                                const normalStyleId = styleUrl.replace('#', '');
+                                return findStyleBySelector(kmlDoc, normalStyleId);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            return null;
+        }
+
+        // Convert KML color format (aabbggrr) to hex format (#rrggbb)
+        function kmlColorToHex(kmlColor) {
+            if (!kmlColor || kmlColor.length !== 8) {
+                return null; // Return null to use defaults
+            }
+            
+            // KML format is aabbggrr, we need #rrggbb
+            const r = kmlColor.substr(6, 2);
+            const g = kmlColor.substr(4, 2);
+            const b = kmlColor.substr(2, 2);
+            
+            return `#${r}${g}${b}`;
+        }
+
+        // Extract opacity from KML color (first 2 chars represent alpha)
+        function kmlOpacityFromColor(kmlColor) {
+            if (!kmlColor || kmlColor.length !== 8) {
+                return null; // Return null to use defaults
+            }
+            
+            // Alpha value (first 2 chars) as hex
+            const alpha = kmlColor.substr(0, 2);
+            
+            // Convert hex alpha to decimal opacity (0-1)
+            return parseInt(alpha, 16) / 255;
+        }
+
+        async function renderKMLFeatures() {
+            // Load marker library
+            const { AdvancedMarkerElement, PinElement } = await google.maps.importLibrary("marker");
+            
+            // Add Point placemarks
+            kmlFeatures.points.forEach(place => {
+                const marker = new google.maps.Marker({
+                    position: { lat: place.lat, lng: place.lng },
+                    map: map,
+                    label: {
+                        text: place.name,
+                        color: place.style.labelColor,
+                        fontSize: place.style.labelSize,
+                        fontWeight: "bold"
+                    },
+                    icon: {
+                        url: place.style.icon,
+                        labelOrigin: new google.maps.Point(16, -10),
+                        scaledSize: place.style.iconScale ? 
+                            new google.maps.Size(
+                                24 * place.style.iconScale, 
+                                24 * place.style.iconScale
+                            ) : undefined
+                    }
+                });
+                mapElements.markers.push(marker);
+            });
+
+            // Add Polygons with labels inside
+            kmlFeatures.polygons.forEach(polygon => {
+                const poly = new google.maps.Polygon({
+                    paths: polygon.paths.map(coord => ({ lat: coord[1], lng: coord[0] })),
+                    strokeColor: polygon.style.strokeColor,
+                    strokeOpacity: polygon.style.strokeOpacity,
+                    strokeWeight: polygon.style.strokeWeight,
+                    fillColor: polygon.style.fillColor,
+                    fillOpacity: polygon.style.fillOpacity,
+                    map: map
+                });
+                mapElements.polygons.push(poly);
+
+                // Approximate center for label (using bounds)
+                const bounds = new google.maps.LatLngBounds();
+                polygon.paths.forEach(coord => bounds.extend({ lat: coord[1], lng: coord[0] }));
+                const center = bounds.getCenter();
+
+                const marker = new google.maps.Marker({
+                    position: center,
+                    map: map,
+                    label: {
+                        text: polygon.name,
+                        color: polygon.style.labelColor,
+                        fontSize: polygon.style.labelSize,
+                        fontWeight: "bold"
+                    },
+                    icon: {
+                        url: "https://maps.google.com/mapfiles/transparent.png", // Transparent icon for label only
+                        labelOrigin: new google.maps.Point(0, 0)
+                    }
+                });
+                mapElements.markers.push(marker);
+            });
+
+            // Add LineStrings with labels beside (at midpoint)
+            kmlFeatures.lineStrings.forEach(line => {
+                const polyline = new google.maps.Polyline({
+                    path: line.paths.map(coord => ({ lat: coord[1], lng: coord[0] })),
+                    strokeColor: line.style.strokeColor,
+                    strokeOpacity: line.style.strokeOpacity,
+                    strokeWeight: line.style.strokeWeight,
+                    map: map
+                });
+                mapElements.polylines.push(polyline);
+
+                // Midpoint for label
+                const midIndex = Math.floor(line.paths.length / 2);
+                const midPoint = { lat: line.paths[midIndex][1], lng: line.paths[midIndex][0] };
+
+                const marker = new google.maps.Marker({
+                    position: midPoint,
+                    map: map,
+                    label: {
+                        text: line.name,
+                        color: line.style.labelColor,
+                        fontSize: line.style.labelSize,
+                        fontWeight: "bold"
+                    },
+                    icon: {
+                        url: "https://maps.google.com/mapfiles/transparent.png", // Transparent icon for label only
+                        labelOrigin: new google.maps.Point(0, 0)
+                    }
+                });
+                mapElements.markers.push(marker);
+            });
+
+            // If features were loaded, fit map to them
+            if (kmlFeatures.points.length > 0 || kmlFeatures.polygons.length > 0 || kmlFeatures.lineStrings.length > 0) {
+                const bounds = new google.maps.LatLngBounds();
+                
+                // Add points to bounds
+                kmlFeatures.points.forEach(point => {
+                    bounds.extend(new google.maps.LatLng(point.lat, point.lng));
+                });
+                
+                // Add polygon paths to bounds
+                kmlFeatures.polygons.forEach(polygon => {
+                    polygon.paths.forEach(coord => {
+                        bounds.extend(new google.maps.LatLng(coord[1], coord[0]));
+                    });
+                });
+                
+                // Add linestring paths to bounds
+                kmlFeatures.lineStrings.forEach(line => {
+                    line.paths.forEach(coord => {
+                        bounds.extend(new google.maps.LatLng(coord[1], coord[0]));
+                    });
+                });
+                
+                map.fitBounds(bounds);
+            }
+        }
+    </script>
+
+    <!-- Load Maps JavaScript API using the new approach -->
+    <script>
+    (g=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t[0].toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src=`https://maps.${c}apis.com/maps/api/js?`+e;d[q]=f;a.onerror=()=>h=n(Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?console.warn(p+" only loads once. Ignoring:",g):d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})({
+      key: "AIzaSyB0siFVrQptHx6CkBJKRmC37GobNP7TfKk",
+      v: "beta",
+    });
+    </script>
+    
+    <!-- Initialize map after API is loaded -->
+    <script>
+        window.onload = initMap;
+    </script>
+</body>
+</html>
