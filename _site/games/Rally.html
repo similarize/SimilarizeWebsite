@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RC Rally Jump</title>
     <!-- Use a specific, stable PyScript version instead of 'latest' -->
-    <link rel="stylesheet" href="https://pyscript.net/releases/2024.10.1/core.css" />
-    <script defer src="https://pyscript.net/releases/2024.10.1/core.js"></script>
+    <link rel="stylesheet" href="https://pyscript.net/releases/2022.12.1/pyscript.css" />
+    <script defer src="https://pyscript.net/releases/2022.12.1/pyscript.js"></script>
     <style>
         body { margin: 0; background: #87CEEB; }
         #gameCanvas { display: none; }
@@ -31,6 +31,7 @@
     <py-script>
 from js import document, window, console
 import asyncio
+import random
 
 # Constants
 WIDTH = 800
@@ -68,62 +69,64 @@ def draw_loading():
     ctx.fillText("Tap Below to Start", WIDTH / 2, HEIGHT / 2 + 20)
 
 def draw_scene():
+    # Clear canvas
+    ctx.clearRect(0, 0, WIDTH, HEIGHT)
+    
+    # Draw sky
     ctx.fillStyle = "#87CEEB"
     ctx.fillRect(0, 0, WIDTH, HEIGHT)
+    
+    # Draw ground
     ctx.fillStyle = "#00FF00"
     ctx.fillRect(0, ground_y, WIDTH, HEIGHT - ground_y)
+    
+    # Draw player (RC car)
     ctx.fillStyle = "#FF0000"
     ctx.fillRect(player_x, player_y, PLAYER_WIDTH, PLAYER_HEIGHT)
+    
+    # Draw obstacles
     ctx.fillStyle = "#00C800"
     ctx.fillRect(pipe_x, 0, 50, pipe_height)
     ctx.fillRect(pipe_x, pipe_height + 200, 50, HEIGHT - pipe_height - 200)
+    
+    # Game over text
     if game_over:
-        ctx.fillStyle = "black"
+        ctx.fillStyle = "rgba(0, 0, 0, 0.7)"
+        ctx.fillRect(WIDTH/2 - 250, HEIGHT/2 - 50, 500, 100)
+        ctx.fillStyle = "white"
         ctx.font = "30px Arial"
+        ctx.textAlign = "center"
         ctx.fillText("Game Over! Tap Below to Restart", WIDTH / 2, HEIGHT / 2)
 
 def update_game():
-    global player_y, player_vel_y, pipe_x, game_over
+    global player_y, player_vel_y, pipe_x, game_over, pipe_height
+    
+    # Update player position
     player_vel_y += GRAVITY
     player_y += player_vel_y
     player_vel_y = min(player_vel_y, MAX_FALL_SPEED)
+    
+    # Check ground collision
     if player_y + PLAYER_HEIGHT > ground_y:
         player_y = ground_y - PLAYER_HEIGHT
         player_vel_y = 0
+    
+    # Update pipe position
     pipe_x -= PIPE_SPEED
+    
+    # Reset pipe when off screen
     if pipe_x < -50:
         pipe_x = WIDTH
-        pipe_height = 100 + (hash(str(window.performance.now())) % 200)
+        pipe_height = 100 + random.randint(0, 200)
+    
+    # Check pipe collision
     if (player_x + PLAYER_WIDTH > pipe_x and player_x < pipe_x + 50 and 
         (player_y < pipe_height or player_y + PLAYER_HEIGHT > pipe_height + 200)):
         game_over = True
 
-async def main():
+# Game loop
+async def game_loop():
     global player_vel_y, game_over, pipe_x, player_y
-    console.log("Main function started")
-    loading_div = document.getElementById("loading")
-    canvas.style.display = "block"
-    draw_loading()
-    await asyncio.sleep(2)  # Wait 2 seconds
-    console.log("Hiding loading screen")
-    loading_div.style.display = "none"
-    game_over = False
-    
-    def handle_click(event):
-        global player_vel_y, game_over, pipe_x, player_y
-        if event.offsetY > TAP_ZONE_Y:
-            if not game_over:
-                player_vel_y = FLAP_ACCEL
-                console.log("Player jumped")
-            else:
-                player_y = HEIGHT - PLAYER_HEIGHT - 50
-                player_vel_y = 0
-                pipe_x = WIDTH
-                pipe_height = 200
-                game_over = False
-                console.log("Game restarted")
-    
-    canvas.addEventListener("click", handle_click)
     
     while True:
         if not game_over:
@@ -131,12 +134,42 @@ async def main():
         draw_scene()
         await asyncio.sleep(0.016)  # ~60 FPS
 
-# Start the game with error handling
-try:
-    console.log("Starting game")
-    asyncio.ensure_future(main())
-except Exception as e:
-    console.log(f"Error in game startup: {str(e)}")
+# Handle clicks
+def handle_click(event):
+    global player_vel_y, game_over, pipe_x, player_y
+    
+    if event.offsetY > TAP_ZONE_Y:
+        if not game_over:
+            player_vel_y = FLAP_ACCEL
+            console.log("Player jumped")
+        else:
+            player_y = HEIGHT - PLAYER_HEIGHT - 50
+            player_vel_y = 0
+            pipe_x = WIDTH
+            pipe_height = 200
+            game_over = False
+            console.log("Game restarted")
+
+# Initialize game
+async def init_game():
+    loading_div = document.getElementById("loading")
+    canvas.style.display = "block"
+    
+    # Show loading screen
+    draw_loading()
+    await asyncio.sleep(1)  # Reduced loading time
+    
+    # Hide loading element and start game
+    loading_div.style.display = "none"
+    
+    # Add click event listener
+    canvas.addEventListener("click", handle_click)
+    
+    # Start game loop
+    asyncio.create_task(game_loop())
+
+# Start the game
+asyncio.create_task(init_game())
     </py-script>
 </body>
 </html>
