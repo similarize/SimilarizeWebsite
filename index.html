@@ -1,82 +1,1209 @@
+---
+layout: null
+---
 <!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="chrome=1">
-    <title>Similarize</title>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Similarize — Word it so more people can agree</title>
+  <meta name="description" content="Type a question or fact in 300 characters. Similarize writes calmer, clearer versions so more people could agree — then vote. A Flight Enabled company.">
+  <meta name="theme-color" content="#15803d">
+  <link rel="canonical" href="https://www.similarize.com/">
+  <link rel="icon" type="image/png" href="images/favicon.png">
+  <link rel="shortcut icon" href="favicon.ico">
+  <meta property="og:title" content="Similarize — Word it so more people can agree">
+  <meta property="og:description" content="Unfold a hard idea until more people can agree with it. A Flight Enabled company.">
+  <meta property="og:url" content="https://www.similarize.com/">
+  <meta property="og:image" content="https://www.similarize.com/images/simlogo.png">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,650&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+:root {
+  --green: #15803d;
+  --green-dark: #14532d;
+  --green-ink: #052e16;
+  --green-soft: #dcfce7;
+  --green-mid: #16a34a;
+  --paper: #f4f1ea;
+  --paper-2: #ebe6db;
+  --card: #fffdf8;
+  --ink: #1c1917;
+  --muted: #57534e;
+  --line: #e7e0d4;
+  --danger: #9f1239;
+  --danger-soft: #ffe4e6;
+  --shadow: 0 18px 40px -24px rgba(28, 25, 23, 0.35);
+  --radius: 18px;
+  --max: 40rem;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: "Outfit", "Segoe UI", sans-serif;
+  color: var(--ink);
+  background:
+    radial-gradient(1200px 400px at 10% -10%, rgba(21, 128, 61, 0.08), transparent 50%),
+    linear-gradient(180deg, #f7f4ee 0%, var(--paper) 40%, #efebe3 100%);
+  min-height: 100vh;
+  line-height: 1.5;
+}
+a { color: var(--green-dark); }
+.skip {
+  position: absolute; left: -999px; top: 0;
+  background: var(--green); color: white; padding: 0.5rem 1rem; z-index: 20;
+}
+.skip:focus { left: 1rem; top: 1rem; }
+.topbar {
+  height: 4px;
+  background: linear-gradient(90deg, var(--green-dark), var(--green-mid), #84cc16);
+}
+.wrap { width: min(var(--max), calc(100% - 2rem)); margin: 0 auto; }
+header.site {
+  display: flex; align-items: center; gap: 0.9rem;
+  padding: 1.15rem 0 0.4rem;
+}
+header.site img {
+  width: 52px; height: 52px; object-fit: contain;
+  background: white; border-radius: 12px; padding: 4px;
+  border: 1px solid var(--line);
+}
+.brand h1 {
+  font-family: "Fraunces", Georgia, serif;
+  font-size: 1.55rem; margin: 0; letter-spacing: -0.02em;
+  font-weight: 650; line-height: 1.1;
+}
+.brand h1 a { color: inherit; text-decoration: none; }
+.fe {
+  margin: 0.15rem 0 0;
+  font-size: 0.82rem; color: var(--muted);
+}
+.fe a {
+  color: var(--green); font-weight: 600; text-decoration: none;
+  border-bottom: 1px solid rgba(21,128,61,0.35);
+}
+.fe a:hover { border-bottom-color: var(--green); }
+.hero { padding: 1.4rem 0 0.6rem; }
+.hero h2 {
+  font-family: "Fraunces", Georgia, serif;
+  font-weight: 500; font-size: clamp(1.35rem, 4.2vw, 1.85rem);
+  line-height: 1.28; margin: 0 0 0.75rem; letter-spacing: -0.02em;
+}
+.hero h2 + h2 { color: var(--green-dark); margin-bottom: 1rem; }
+.lede { color: var(--muted); margin: 0 0 1.2rem; font-size: 1.02rem; }
+.composer {
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 1rem;
+  box-shadow: var(--shadow);
+}
+.composer label {
+  display: block; font-weight: 600; font-size: 0.92rem; margin-bottom: 0.45rem;
+}
+textarea {
+  width: 100%; min-height: 7.5rem; resize: vertical;
+  border: 1px solid var(--line); border-radius: 12px;
+  padding: 0.85rem 0.95rem; font: inherit; color: inherit;
+  background: #fff; line-height: 1.45;
+}
+textarea:focus {
+  outline: 3px solid rgba(21,128,61,0.28);
+  border-color: var(--green);
+}
+.row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 0.75rem; margin-top: 0.7rem; flex-wrap: wrap;
+}
+.count { font-size: 0.85rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.count.warn { color: var(--danger); font-weight: 600; }
+.actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+button, .btn {
+  font: inherit; cursor: pointer; border: 0;
+  border-radius: 999px; padding: 0.62rem 1.1rem; font-weight: 600;
+}
+.primary {
+  background: var(--green); color: white;
+}
+.primary:hover { background: var(--green-dark); }
+.primary:disabled { opacity: 0.45; cursor: not-allowed; }
+.ghost {
+  background: transparent; color: var(--green-dark);
+  border: 1px solid var(--line);
+}
+.ghost:hover { background: var(--green-soft); }
+.examples { margin: 0.85rem 0 0; display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.chip {
+  border: 1px solid var(--line); background: var(--paper);
+  color: var(--ink); border-radius: 999px; padding: 0.32rem 0.7rem;
+  font-size: 0.78rem; cursor: pointer;
+}
+.chip:hover { border-color: var(--green); color: var(--green-dark); }
+.results { margin: 1.4rem 0 0.4rem; display: grid; gap: 0.85rem; }
+.toolbar {
+  display: flex; justify-content: space-between; align-items: baseline;
+  gap: 0.75rem; flex-wrap: wrap;
+}
+.toolbar h3 {
+  font-family: "Fraunces", Georgia, serif; font-size: 1.2rem; margin: 0;
+}
+.share-status { font-size: 0.8rem; color: var(--green); min-height: 1.1em; }
+.card {
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: 16px; padding: 1rem 1.05rem 0.9rem;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.8) inset;
+  border-left: 4px solid var(--green);
+}
+.card.original { border-left-color: var(--ink); }
+.card .kicker {
+  display: flex; justify-content: space-between; gap: 0.5rem; align-items: baseline;
+  font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase;
+  font-weight: 700; color: var(--green-dark); margin-bottom: 0.35rem;
+}
+.card.original .kicker { color: var(--muted); }
+.hint { font-size: 0.78rem; color: var(--muted); margin: 0 0 0.45rem; letter-spacing: 0; text-transform: none; font-weight: 400; }
+.wording {
+  font-size: 1.05rem; margin: 0 0 0.85rem; line-height: 1.45;
+}
+.votes { display: flex; gap: 0.45rem; flex-wrap: wrap; align-items: center; }
+.vote {
+  border: 1px solid var(--line); background: white; color: var(--ink);
+  padding: 0.42rem 0.8rem; font-size: 0.88rem;
+}
+.vote[aria-pressed="true"][data-side="agree"] {
+  background: var(--green); color: white; border-color: var(--green);
+}
+.vote[aria-pressed="true"][data-side="no"] {
+  background: var(--danger); color: white; border-color: var(--danger);
+}
+.copy-mini {
+  margin-left: auto; background: none; border: 0; color: var(--muted);
+  font-size: 0.78rem; padding: 0.3rem 0.4rem; font-weight: 500;
+}
+.copy-mini:hover { color: var(--green-dark); }
+.quote {
+  margin: 2.2rem 0 1.4rem; padding: 1.1rem 0 0;
+  border-top: 1px solid var(--line);
+}
+blockquote {
+  margin: 0; font-family: "Fraunces", Georgia, serif;
+  font-size: 1.05rem; font-weight: 500; line-height: 1.45;
+  color: var(--green-ink);
+}
+blockquote footer { margin-top: 0.55rem; font-family: "Outfit", sans-serif; font-size: 0.88rem; color: var(--muted); }
+footer.site {
+  padding: 0.4rem 0 2.2rem; color: var(--muted); font-size: 0.88rem;
+}
+.game-link {
+  display: inline-block; color: var(--muted); text-decoration: none; margin-top: 0.3rem;
+}
+.game-link:hover { color: var(--ink); text-decoration: underline; }
+.game-sub { font-size: 0.75rem; font-style: italic; color: #8a847b; }
+.hidden { display: none; }
+@media (max-width: 520px) {
+  header.site img { width: 44px; height: 44px; }
+  .card { padding: 0.9rem; }
+}
+</style>
+</head>
+<body>
+  <a class="skip" href="#statement">Skip to writer</a>
+  <div class="topbar"></div>
+  <div class="wrap">
+    <header class="site">
+      <a href="https://www.similarize.com/"><img src="images/simlogo.png" width="52" height="52" alt="Similarize"></a>
+      <div class="brand">
+        <h1><a href="https://www.similarize.com/">Similarize</a></h1>
+        <p class="fe">A <a href="https://flightenabled.com">Flight Enabled</a> company</p>
+      </div>
+    </header>
 
-    <link rel="stylesheet" href="stylesheets/styles.css">
-    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
-    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-    <link rel="icon" type="image/png" href="images/favicon.png">
+    <section class="hero">
+      <h2>Ever wonder how many people agree with you?</h2>
+      <h2>Ever wonder how many more would, if you just worded things differently?</h2>
+      <p class="lede">Type a question or a fact. Similarize writes several calmer versions whose point is the same: more people could agree with this one. Honor the idea that a hard thought is not finished until a child could follow it.</p>
+    </section>
 
-    <!--[if lt IE 9]>
-    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
-    <![endif]-->
-    <style>
-      .game-link-container {
-        text-align: center;
-        padding: 20px 0 10px;
-        margin-top: 20px;
-      }
-      .game-link {
-        color: #666;
-        text-decoration: none;
-        font-size: 14px;
-        font-family: Arial, Helvetica, sans-serif;
-        transition: color 0.3s ease;
-      }
-      .game-link:hover {
-        color: #333;
-        text-decoration: underline;
-      }
-      .game-subtext {
-        color: #888;
-        font-size: 11px;
-        margin-top: 4px;
-        font-style: italic;
-      }
-      @media (max-width: 767px) {
-        .game-link {
-          font-size: 12px;
-        }
-        .game-subtext {
-          font-size: 10px;
-        }
-      }
-    </style>
-  </head>
-  <body>
-    <div class="wrapper">
-      <header>
-        <a href="http://similarize.com"><img src = "images/simlogo.png" width="250"  alt="simlarize"></a>
-      <h2 class="project-tagline"></h2>
-        <p></p>
-
-        <h2>Ever wonder how many people agree with you?</h2>
-        <br>
-        <h2>Ever wonder how many more people would agree with you if you just worded things differently?</h2>
-        <br>
-        <p>Submit your question or fact in 300 characters or less: (link forthcoming)</p>
-      </header>
-      <section>
-        <h3>
-<br>
-<br>
-<br>
-<br>
-<br>
-          <p>"It is true intelligence for a man to take a subject that is mysterious and great in itself, and to unfold and simplify it so that a child can understand it." <div align="right">-John Taylor<div></p>
-      </section>
-      <footer>
-        <!-- <p>This project is maintained by <a href="https://github.com/similarize">similarize</a></p> -->
-        <!-- <p><small>Hosted on GitHub Pages — Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p> -->
-        <div class="game-link-container">
-          <a href="/games/RCRallyJump" class="game-link">RC Rally Jump</a>
-          <div class="game-subtext">improving every week</div>
+    <form class="composer" id="composer">
+      <label for="statement">Your question or fact (300 characters or less)</label>
+      <textarea id="statement" name="statement" maxlength="300" required placeholder="Write the thing you wish more people could agree with…"></textarea>
+      <div class="row">
+        <span class="count" id="count">0/300</span>
+        <div class="actions">
+          <button type="submit" class="primary" id="go" disabled>Similarize it</button>
         </div>
-      </footer>
-    </div>
-    <script src="javascripts/scale.fix.js"></script>
-  </body>
+      </div>
+      <div class="examples" aria-label="Examples">
+        <button type="button" class="chip" data-fill="Politicians are always lying to us and destroying this country.">Try a loaded claim</button>
+        <button type="button" class="chip" data-fill="We should tax the rich until they have nothing left.">Try a hard policy</button>
+        <button type="button" class="chip" data-fill="It is true intelligence to unfold a mysterious subject so a child can understand it.">Try John Taylor’s idea</button>
+      </div>
+    </form>
+
+    <section class="results hidden" id="results">
+      <div class="toolbar">
+        <h3>Wordings people could agree with</h3>
+        <div>
+          <button type="button" class="ghost" id="share">Copy share link</button>
+          <div class="share-status" id="share-status"></div>
+        </div>
+      </div>
+      <div id="cards"></div>
+    </section>
+
+    <section class="quote">
+      <blockquote>
+        “It is true intelligence for a man to take a subject that is mysterious and great in itself, and to unfold and simplify it so that a child can understand it.”
+        <footer>— John Taylor</footer>
+      </blockquote>
+    </section>
+
+    <footer class="site">
+      <div>Votes stay on this device. Share a link to open the same statement again.</div>
+      <a class="game-link" href="/games/RCRallyJump">RC Rally Jump</a>
+      <div class="game-sub">improving every week</div>
+    </footer>
+  </div>
+  <script>
+(function (root) {
+// Similarize v1 in-browser rewriter. Deterministic. No APIs.
+
+const PHRASE_SIMPLE = [
+  ["due to the fact that", "because"],
+  ["owing to the fact that", "because"],
+  ["in spite of the fact that", "although"],
+  ["despite the fact that", "although"],
+  ["in order to", "to"],
+  ["for the purpose of", "to"],
+  ["with regard to", "about"],
+  ["with respect to", "about"],
+  ["in relation to", "about"],
+  ["as a result of", "because of"],
+  ["as a matter of fact", ""],
+  ["it is important to note that", ""],
+  ["it should be noted that", ""],
+  ["it is worth noting that", ""],
+  ["needless to say", ""],
+  ["at this point in time", "now"],
+  ["at the present time", "now"],
+  ["in the event that", "if"],
+  ["in the near future", "soon"],
+  ["a large number of", "many"],
+  ["a small number of", "few"],
+  ["a lot of", "many"],
+  ["lots of", "many"],
+  ["the vast majority of", "most"],
+  ["the majority of", "most"],
+  ["a number of", "some"],
+  ["the fact that", "that"],
+  ["in my personal opinion", ""],
+  ["in my opinion", ""],
+  ["from my perspective", ""],
+  ["if you ask me", ""],
+  ["i believe that", ""],
+  ["i think that", ""],
+  ["i feel that", ""],
+  ["the reality is that", ""],
+  ["the truth is that", ""],
+  ["the bottom line is that", ""],
+  ["at the end of the day", "in the end"],
+  ["to be honest", ""],
+  ["if i'm being honest", ""],
+  ["quite frankly", ""],
+  ["first and foremost", "first"],
+  ["each and every", "every"],
+  ["by means of", "by"],
+  ["on a daily basis", "daily"],
+  ["on a regular basis", "regularly"],
+  ["in a timely manner", "on time"],
+  ["make a decision", "decide"],
+  ["make an attempt", "try"],
+  ["has the ability to", "can"],
+  ["have the ability to", "can"],
+  ["is able to", "can"],
+  ["are able to", "can"],
+  ["in excess of", "more than"],
+  ["prior to", "before"],
+  ["subsequent to", "after"],
+  ["in accordance with", "by"],
+  ["with the exception of", "except"],
+  ["for all intents and purposes", ""],
+  ["it goes without saying that", ""],
+  ["there is no doubt that", ""],
+  ["it is clear that", ""],
+  ["is going to", "will"],
+  ["are going to", "will"],
+  ["was going to", "would"],
+  ["were going to", "would"],
+  ["have to", "must"],
+  ["has to", "must"],
+  ["need to", "should"],
+  ["needs to", "should"],
+  ["in the process of", ""],
+  ["a huge amount of", "much"],
+  ["a great deal of", "much"],
+];
+
+const WORD_SIMPLE = {
+  utilize: "use", utilization: "use", utilise: "use",
+  approximately: "about",
+  individuals: "people", individual: "person",
+  commence: "start", commenced: "started", commencing: "starting",
+  terminate: "end", terminated: "ended",
+  subsequent: "next", previously: "before", currently: "now", presently: "now",
+  regarding: "about", concerning: "about",
+  assistance: "help",
+  obtain: "get", obtained: "got",
+  purchasing: "buying", purchase: "buy", purchased: "bought",
+  demonstrate: "show", demonstrated: "showed",
+  indicates: "shows", indicate: "show", indicated: "showed",
+  sufficient: "enough", insufficient: "not enough",
+  numerous: "many",
+  attempting: "trying", attempted: "tried", attempt: "try",
+  requires: "needs", required: "needed", require: "need",
+  additional: "more",
+  therefore: "so", however: "but", nevertheless: "still",
+  furthermore: "also", moreover: "also", consequently: "so", thus: "so", hence: "so",
+  facilitate: "help", facilitating: "helping",
+  implement: "put in place", implementation: "putting this into practice",
+  methodology: "method",
+  leverage: "use", leveraging: "using",
+  optimize: "improve", optimized: "improved",
+  maximize: "increase", minimize: "reduce",
+  initiate: "start", initiated: "started",
+  finalize: "finish",
+  ascertain: "find out",
+  endeavor: "try", endeavour: "try",
+  disseminate: "share", expedite: "speed up",
+  paramount: "most important", plethora: "plenty", myriad: "many",
+  aforementioned: "this",
+  ameliorate: "improve", exacerbate: "make worse", exacerbates: "makes worse",
+  mitigate: "ease", mitigating: "easing",
+  advocate: "support", advocating: "supporting",
+  prohibit: "ban", prohibited: "banned", permit: "allow",
+  legislation: "the law", regulations: "rules", regulation: "rule",
+  constituents: "voters",
+  administration: "the people in charge",
+  inequality: "uneven treatment",
+  narrative: "story", discourse: "talk", rhetoric: "wording",
+  ideology: "set of beliefs", paradigm: "way of seeing things",
+  algorithm: "computer rule", algorithms: "computer rules",
+  sustainability: "lasting without using things up",
+  accountability: "owning what you do", transparency: "openness",
+  corruption: "cheating for gain", injustice: "unfairness",
+  oppression: "keeping people down",
+  establishment: "people already in power",
+  controversial: "argued over", problematic: "troubling",
+  inappropriate: "not fitting", unacceptable: "not okay",
+  catastrophic: "very harmful", devastating: "very damaging",
+  unprecedented: "not seen before",
+  essential: "needed", crucial: "needed", vital: "needed",
+  fundamental: "basic", significant: "big", substantial: "large",
+  considerable: "large", enormous: "huge", minuscule: "tiny",
+  adequate: "enough", inadequate: "not enough", comprehensive: "complete",
+  innovative: "new", portion: "part", segment: "part", component: "part",
+  objective: "goal", objectives: "goals",
+  strategies: "plans", strategy: "plan",
+  solutions: "answers", solution: "answer",
+  challenges: "hard problems", challenge: "hard problem",
+  issues: "problems", issue: "problem",
+  concerns: "worries", concern: "worry",
+  implications: "effects", implication: "effect",
+  consequences: "results",
+  residents: "people who live there",
+  citizens: "people", citizen: "person",
+  employees: "workers", employee: "worker",
+  consumers: "buyers", consumer: "buyer",
+  taxpayers: "people who pay taxes",
+  manufacturer: "maker", manufacturers: "makers",
+  opportunity: "chance", opportunities: "chances",
+  immediately: "now",
+  corporations: "big companies", corporation: "big company",
+  invented: "made up", invent: "make up",
+  greedy: "self-interested",
+};
+
+const FILLER_WORDS = new Set([
+  "actually", "basically", "literally", "really", "extremely",
+  "incredibly", "absolutely", "totally", "completely", "utterly",
+  "quite", "rather", "somewhat", "simply", "honestly",
+  "frankly", "obviously", "definitely", "certainly",
+  "undoubtedly", "arguably", "kinda", "sorta",
+]);
+
+const LOADED_PHRASES = [
+  ["illegal immigrants", "people who entered without authorization"],
+  ["illegal immigrant", "a person who entered without authorization"],
+  ["illegal aliens", "people without legal status"],
+  ["illegal alien", "a person without legal status"],
+  ["fake news", "unreliable reporting"],
+  ["the lamestream media", "mainstream news outlets"],
+  ["lamestream media", "mainstream news outlets"],
+  ["the liberal media", "news outlets"],
+  ["the corporate media", "large news outlets"],
+  ["the elites", "people with unusual money or power"],
+  ["coastal elites", "people with unusual money or power"],
+  ["sheeple", "people who follow others"],
+  ["snowflakes", "people who take offense easily"],
+  ["snowflake", "a person who takes offense easily"],
+  ["libtards", "liberals"],
+  ["libtard", "a liberal"],
+  ["conservatards", "conservatives"],
+  ["conservatard", "a conservative"],
+  ["the radical left", "the left"],
+  ["the radical right", "the right"],
+  ["far-left", "left-leaning"],
+  ["far-right", "right-leaning"],
+  ["everyone knows that", "many people think"],
+  ["everybody knows that", "many people think"],
+  ["nobody in their right mind", "few people"],
+  ["any idiot can see", "it is easy to see"],
+  ["destroy this country", "harm this country"],
+  ["destroying this country", "harming this country"],
+  ["destroying america", "harming the country"],
+  ["destroy america", "harm the country"],
+  ["kill the economy", "hurt jobs and prices"],
+  ["killing the economy", "hurting jobs and prices"],
+  ["steal the election", "unfairly change the election"],
+  ["stolen election", "disputed election"],
+  ["must never", "should not"],
+  ["must not", "should not"],
+  ["can never", "often cannot"],
+  ["will never", "is unlikely to"],
+  ["nothing left", "much less"],
+  ["until they have nothing", "until they have much less"],
+];
+
+const LOADED_WORDS = {
+  idiots: "people I disagree with",
+  idiot: "a person I disagree with",
+  morons: "people I disagree with",
+  moron: "a person I disagree with",
+  stupid: "unwise",
+  dumb: "unwise",
+  brainwashed: "strongly influenced",
+  thugs: "people accused of violent crime",
+  thug: "a person accused of violent crime",
+  criminals: "people who broke the law",
+  illegals: "people without legal status",
+  invaders: "newcomers",
+  invasion: "large influx",
+  traitors: "people accused of betrayal",
+  traitor: "a person accused of betrayal",
+  fascists: "authoritarians",
+  fascist: "authoritarian",
+  nazis: "extreme authoritarians",
+  nazi: "an extreme authoritarian",
+  communists: "people favoring collective ownership",
+  communist: "a person favoring collective ownership",
+  destroy: "harm",
+  destroyed: "harmed",
+  destroying: "harming",
+  destruction: "harm",
+  always: "often",
+  never: "rarely",
+  everyone: "many people",
+  everybody: "many people",
+  nobody: "few people",
+  nothing: "little",
+  everything: "many things",
+  must: "should",
+  hate: "strongly dislike",
+  hates: "strongly dislikes",
+  hated: "strongly disliked",
+  hating: "strongly disliking",
+  evil: "harmful",
+  wicked: "harmful",
+  corrupt: "self-dealing",
+  rigged: "unevenly set up",
+  scam: "misleading scheme",
+  scams: "misleading schemes",
+  hoax: "false claim",
+  hoaxes: "false claims",
+  woke: "focused on social justice",
+  cancel: "publicly shun",
+  cancelled: "publicly shunned",
+  canceled: "publicly shunned",
+  propaganda: "one-sided messaging",
+  lying: "saying untrue things",
+  liars: "people who said untrue things",
+  liar: "a person who said untrue things",
+  lies: "untrue claims",
+  steal: "take",
+  stealing: "taking",
+  stole: "took",
+  greedy: "self-interested",
+};
+
+const CONCRETE = [
+  ["climate change", "the earth getting warmer and weather getting wilder"],
+  ["global warming", "the earth getting warmer"],
+  ["the economy", "jobs, prices, and trade"],
+  ["national security", "keeping the country safe from attack"],
+  ["the second amendment", "the right to keep firearms"],
+  ["gun control", "rules about who can own firearms"],
+  ["mental health", "how well a person's mind is doing"],
+  ["social media", "apps where people post and argue"],
+  ["artificial intelligence", "computer programs that write, see, and decide"],
+  ["human rights", "basic protections every person should have"],
+  ["the constitution", "the country's highest written rules"],
+  ["the government", "the people elected and hired to run public things"],
+  ["the system", "the rules and offices we live under"],
+  ["the media", "news outlets and social platforms"],
+  ["the science", "what careful studies have found"],
+  ["the environment", "air, water, land, and living things"],
+  ["health care", "doctors, hospitals, and medicine"],
+  ["healthcare", "doctors, hospitals, and medicine"],
+  ["immigration", "people moving here from other countries"],
+  ["inflation", "prices rising faster than pay"],
+  ["recession", "a stretch when jobs and spending shrink"],
+  ["homelessness", "people living without a home"],
+  ["education", "schools and learning"],
+  ["poverty", "not having enough money for food, housing, and care"],
+  ["democracy", "a system where people vote for leaders and laws"],
+  ["capitalism", "an economy where private people own businesses"],
+  ["socialism", "more public programs and shared ownership"],
+  ["communism", "shared ownership of production"],
+  ["infrastructure", "roads, bridges, power, water, and networks"],
+  ["society", "the people around us"],
+  ["freedom", "being able to choose"],
+  ["liberty", "being free to choose"],
+  ["justice", "fair treatment"],
+  ["equality", "the same chance for each person"],
+  ["privacy", "control over who sees your information"],
+  ["racism", "treating people worse because of race"],
+  ["sexism", "treating people worse because of sex"],
+  ["crime", "breaking the law in ways that hurt others"],
+  ["taxes", "money people pay to fund public things"],
+  ["politicians", "elected officials"],
+  ["the rich", "people with the most money"],
+  ["guns", "firearms"],
+  ["gun", "firearm"],
+  ["jobs", "paid work"],
+  ["corporations", "big companies"],
+  ["corporation", "a big company"],
+  ["ai", "computer programs that write and decide"],
+];
+
+const KID = [
+  ["elected officials", "grown-ups we pick to be in charge"],
+  ["people with the most money", "people who have the most money"],
+  ["computer programs that write, see, and decide", "computers that can write and choose"],
+  ["computer programs that write and decide", "computers that can write and choose"],
+  ["apps where people post and argue", "apps where people talk"],
+  ["news outlets and social platforms", "places that tell us news"],
+  ["people moving here from other countries", "people coming here to live"],
+  ["prices rising faster than pay", "things costing more while pay stays behind"],
+  ["people living without a home", "people with no house to sleep in"],
+  ["schools and learning", "school"],
+  ["not having enough money for food, housing, and care", "not having enough money for food and a home"],
+  ["a system where people vote for leaders and laws", "picking leaders by voting"],
+  ["roads, bridges, power, water, and networks", "roads, power, and water"],
+  ["doctors, hospitals, and medicine", "doctors and hospitals"],
+  ["keeping the country safe from attack", "keeping our country safe"],
+  ["the country's highest written rules", "the country's most important rules"],
+  ["the people elected and hired to run public things", "the people in charge"],
+  ["the rules and offices we live under", "the rules we live by"],
+  ["being able to choose", "getting to choose"],
+  ["fair treatment", "treating people fairly"],
+  ["the same chance for each person", "the same chance for everyone"],
+  ["control over who sees your information", "being in charge of your own secrets"],
+  ["treating people worse because of race", "being unkind because of how someone looks"],
+  ["breaking the law in ways that hurt others", "hurting people and breaking rules"],
+  ["money people pay to fund public things", "money people pay so we can share roads and schools"],
+  ["the earth getting warmer and weather getting wilder", "the earth getting warmer and storms getting wilder"],
+  ["false claim", "made-up story"],
+  ["untrue claims", "things that are not true"],
+  ["saying untrue things", "not telling the truth"],
+  ["firearms", "guns"],
+  ["paid work", "jobs"],
+  ["although", "even if"],
+  ["however", "but"],
+  ["therefore", "so"],
+  ["consequences", "what happens next"],
+  ["consequence", "what happens next"],
+  ["responsibility", "your job to take care of"],
+  ["opportunity", "a chance"],
+  ["opportunities", "chances"],
+  ["challenges", "hard problems"],
+  ["challenge", "a hard problem"],
+  ["policies", "rules"],
+  ["policy", "a rule"],
+  ["citizens", "people in a country"],
+  ["community", "people who live near each other"],
+  ["benefits", "help"],
+  ["benefit", "help"],
+  ["reduce", "make smaller"],
+  ["increase", "make bigger"],
+  ["prevent", "stop ahead of time"],
+  ["protect", "keep safe"],
+  ["evidence", "proof"],
+  ["majority", "more than half"],
+  ["minority", "less than half"],
+  ["expensive", "costs a lot"],
+  ["necessary", "needed"],
+  ["illegal", "against the rules"],
+  ["legal", "allowed by the rules"],
+  ["election", "the time we pick who is in charge"],
+  ["elections", "times we pick who is in charge"],
+  ["laws", "rules for everyone"],
+  ["law", "a rule for everyone"],
+  ["adults", "grown-ups"],
+  ["children", "kids"],
+  ["invented by", "from"],
+  ["made up by", "from"],
+  ["self-interested", "selfish"],
+];
+
+const ING_BASE = {
+  lying: "lie", dying: "die", making: "make", taking: "take", coming: "come",
+  going: "go", using: "use", arguing: "argue", having: "have", saying: "say",
+  telling: "tell", stealing: "steal", destroying: "destroy", harming: "harm",
+  trying: "try", stopping: "stop", getting: "get", putting: "put",
+  running: "run", winning: "win", sitting: "sit", cutting: "cut",
+  beginning: "begin", giving: "give", leaving: "leave", keeping: "keep",
+  feeling: "feel", thinking: "think", becoming: "become", seeing: "see",
+  being: "be", doing: "do", working: "work", helping: "help",
+  hurting: "hurt", paying: "pay", living: "live", moving: "move",
+  changing: "change", creating: "create", causing: "cause",
+};
+
+function escapeRe(s) {
+  return s.replace(/[.*+?^$()|[\]\\]/g, "\\$&");
+}
+
+function matchCase(original, replacement) {
+  if (!replacement) return "";
+  if (original.length > 1 && original === original.toUpperCase()) {
+    if (/\s/.test(replacement) || replacement.length > original.length + 6) {
+      return replacement;
+    }
+    return replacement.toUpperCase();
+  }
+  if (original[0] === original[0].toUpperCase()) {
+    return replacement.charAt(0).toUpperCase() + replacement.slice(1);
+  }
+  return replacement;
+}
+
+function applyPhrases(text, pairs) {
+  let out = text;
+  const sorted = pairs.slice().sort((a, b) => b[0].length - a[0].length);
+  for (const [from, to] of sorted) {
+    const re = new RegExp("\\b" + escapeRe(from) + "\\b", "gi");
+    out = out.replace(re, (m) => matchCase(m, to));
+  }
+  return out;
+}
+
+function applyWords(text, map) {
+  return text.replace(/\b[\w']+\b/g, (word) => {
+    const key = word.toLowerCase();
+    if (!Object.prototype.hasOwnProperty.call(map, key)) return word;
+    return matchCase(word, map[key]);
+  });
+}
+
+function stripFillers(text) {
+  return text.replace(/\b[\w']+\b/g, (word, offset) => {
+    const key = word.toLowerCase();
+    if (!FILLER_WORDS.has(key)) return word;
+    if (offset === 0) return word;
+    return "";
+  });
+}
+
+function collapse(text) {
+  return String(text || "")
+    .replace(/\s+/g, " ")
+    .replace(/\s+([,.;:!?])/g, "$1")
+    .replace(/([,;:])(\S)/g, "$1 $2")
+    .replace(/\(\s+/g, "(")
+    .replace(/\s+\)/g, ")")
+    .replace(/\s+'/g, "'")
+    .replace(/\b(\w+)\s+\1\b/gi, "$1")
+    .replace(/\s+,\s+,/g, ",")
+    .replace(/^[,;\s:]+/, "")
+    .trim();
+}
+
+function fixArticles(s) {
+  return s.replace(/\b(a|an)\s+([A-Za-z][\w'-]*)/g, (_, art, word) => {
+    const w = word.toLowerCase();
+    const useAn = /^[aeiou]/i.test(w) && !/^(uni|eu|one|once|u[bcfghkqrst])/i.test(w);
+    const capped = art[0] === art[0].toUpperCase();
+    const out = useAn ? "an" : "a";
+    return (capped ? out.charAt(0).toUpperCase() + out.slice(1) : out) + " " + word;
+  });
+}
+
+function isAcronymToken(s) {
+  return /^[A-Z]{2,}\b/.test(s);
+}
+
+function lowerFirst(s) {
+  if (!s) return s;
+  if (isAcronymToken(s)) return s;
+  return s.charAt(0).toLowerCase() + s.slice(1);
+}
+
+function capFirst(s) {
+  if (!s) return s;
+  if (isAcronymToken(s)) return s;
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function capWord(s) {
+  return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+}
+
+function endsQuestionShape(s) {
+  const t = s.replace(/[?!.]+$/, "").trim();
+  return /^(who|what|when|where|why|how|is|are|was|were|do|does|did|can|could|should|would|will|may|might|am|shall|has|have|had|could)\b/i.test(t);
+}
+
+function polish(s, asQuestion) {
+  s = collapse(s);
+  s = s.replace(/^[,;:\-\s]+/, "");
+  s = s.replace(/\s+that that\b/gi, " that");
+  s = s.replace(/\bto to\b/gi, "to");
+  s = s.replace(/\s+—\s+—/g, " — ");
+  s = fixArticles(s);
+  if (!s) return s;
+  s = capFirst(s);
+  const wantQ = asQuestion || endsQuestionShape(s) || /\?$/.test(s);
+  s = s.replace(/[?.!]+$/, "");
+  s += wantQ ? "?" : ".";
+  return s;
+}
+
+function splitSentences(text) {
+  const parts = String(text)
+    .split(/(?<=[.!?])\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return parts.length ? parts : [String(text).trim()];
+}
+
+function wordCount(s) {
+  return (String(s).trim().match(/[\w']+/g) || []).length;
+}
+
+function ingToBase(ing) {
+  const w = ing.toLowerCase();
+  if (ING_BASE[w]) return matchCase(ing, ING_BASE[w]);
+  if (/ying$/i.test(ing) && ing.length > 4) return matchCase(ing, w.slice(0, -3) + "y");
+  if (/ing$/i.test(ing) && w.length > 5) {
+    const stem = w.slice(0, -3);
+    if (stem.length >= 3 && stem.slice(-1) === stem.slice(-2, -1)) {
+      return matchCase(ing, stem.slice(0, -1));
+    }
+    return matchCase(ing, stem);
+  }
+  return ing;
+}
+
+function simplifyVerbs(t) {
+  t = t.replace(/\b(am|is|are|was|were)\s+always\s+(\w+ing)\b/gi, (_, _be, ing) => "often " + ingToBase(ing));
+  t = t.replace(/\b(am|is|are)\s+(\w+ing)\b/gi, (_, _be, ing) => {
+    if (/^(going|being|doing|having)$/i.test(ing)) return _;
+    return ingToBase(ing);
+  });
+  t = t.replace(/\band\s+(\w+ing)\b/gi, (_, ing) => "and " + ingToBase(ing));
+  t = t.replace(/\bjust\s+/gi, "");
+  t = t.replace(/\bvery\s+/gi, "");
+  t = t.replace(/\bright now\b/gi, "now");
+  return t;
+}
+
+function shorten(text) {
+  let t = applyPhrases(text, PHRASE_SIMPLE);
+  t = applyPhrases(t, [["must never", "should not"], ["must not", "should not"]]);
+  t = t.replace(/^it is (?:true |real )?(?:intelligence|important|essential|vital|wise) to\s+/i, "");
+  t = simplifyVerbs(t);
+  t = applyWords(t, WORD_SIMPLE);
+  t = stripFillers(t);
+  t = t.replace(/\bimmediately\b/gi, "");
+  t = t.replace(/\buntil they have (nothing|little|much less) left\b/gi, "more");
+  t = collapse(t);
+  if (wordCount(t) > 20) {
+    const first = splitSentences(t)[0];
+    const clause = first.split(/;(?![^(]*\))/)[0];
+    t = clause.split(/\s+[—–]\s+/)[0];
+  }
+  return polish(t, /\?/.test(text) && endsQuestionShape(t));
+}
+
+function makeConcrete(text) {
+  let t = applyPhrases(text, PHRASE_SIMPLE);
+  t = applyPhrases(t, CONCRETE);
+  t = simplifyVerbs(t);
+  t = applyWords(t, WORD_SIMPLE);
+  t = stripFillers(t);
+  t = collapse(t);
+  return polish(t, /\?/.test(text));
+}
+
+function firstClauseForQuestion(text) {
+  let t = collapse(text).replace(/[?.!]+$/, "");
+  t = t.split(/,?\s+and\s+(?=(?:we|they|i|you|people)\s)/i)[0].trim();
+  return t;
+}
+
+function splitSubjectAux(text) {
+  const tokens = collapse(text).replace(/[?.!]+$/, "").split(/\s+/);
+  const auxRe = /^(is|are|was|were|isn'?t|aren'?t|wasn'?t|weren'?t|should|must|can|could|would|will|might|may|has|have|had)$/i;
+  for (let i = 1; i < Math.min(tokens.length, 8); i++) {
+    const tok = tokens[i].replace(/[,:;]+$/g, "");
+    if (auxRe.test(tok)) {
+      return {
+        subject: tokens.slice(0, i).join(" "),
+        aux: tok,
+        rest: tokens.slice(i + 1).join(" "),
+      };
+    }
+  }
+  return null;
+}
+
+function invertToQuestion(text) {
+  if (/\?/.test(text) || endsQuestionShape(text)) {
+    let t = shorten(text);
+    t = t.replace(/^(why the hell|why on earth|how dare|who the hell)\b/i, "Why");
+    t = t.replace(/^ever\s+/i, "");
+    return polish(t, true);
+  }
+
+  const raw = firstClauseForQuestion(steelmanLight(text));
+  const parts = splitSubjectAux(raw);
+  if (parts && parts.rest) {
+    let aux = parts.aux;
+    if (/^must$/i.test(aux)) aux = "Should";
+    else if (/^ought$/i.test(aux)) aux = "Should";
+    else aux = capWord(aux);
+    return polish(aux + " " + lowerFirst(parts.subject) + " " + parts.rest, true);
+  }
+
+  const m = raw.match(/^(we|people|they|you|i)\s+(.+)$/i);
+  if (m) {
+    return polish("Do " + m[1].toLowerCase() + " " + m[2], true);
+  }
+
+  return polish("What if " + lowerFirst(raw), true);
+}
+
+function steelmanLight(text) {
+  let t = text.replace(/!{2,}/g, ".");
+  if (t === t.toUpperCase() && /[A-Z]/.test(t) && t.length > 8 && !/^[A-Z]{2,5}$/.test(t)) {
+    t = t.toLowerCase();
+  }
+  t = applyPhrases(t, LOADED_PHRASES);
+  t = applyWords(t, LOADED_WORDS);
+  t = applyPhrases(t, PHRASE_SIMPLE);
+  return collapse(t);
+}
+
+function steelman(text) {
+  let t = steelmanLight(text);
+  t = t.replace(/\byou (people|guys|all)\b/gi, "we");
+  t = t.replace(/\byou need to\b/gi, "we should");
+  t = t.replace(/\byou should\b/gi, "we should");
+  t = t.replace(/\ball\s+(\w+)/gi, "many $1");
+  t = t.replace(/\bevery\s+single\b/gi, "many a");
+  t = collapse(t);
+  return polish(t, /\?/.test(text));
+}
+
+function splitKidSentences(text) {
+  let t = String(text);
+  t = t.replace(/[;:–—]/g, ".");
+  t = t.replace(/\s+because\s+/gi, ". That is because ");
+  t = t.replace(/\s+so that\s+/gi, ". That way ");
+  t = t.replace(/,?\s+and\s+(?=(?:that|this|it|they|we|he|she|people|grown-ups)\s)/gi, ". ");
+  t = t.replace(/\s+and\s+(\w+)\s+(this|our|the|a|an)\s+/gi, (_, verb, det) => {
+    if (/ing$/i.test(verb) || /^(harm|hurt|ruin|help|fix|save|stop)/i.test(verb)) {
+      return ". That can also " + ingToBase(verb) + " " + det + " ";
+    }
+    return " and " + verb + " " + det + " ";
+  });
+  const sentences = t
+    .split(/(?<=[.!?])\s+/)
+    .map((s) => collapse(s))
+    .filter(Boolean);
+  return sentences.map((s) => polish(s, false)).join(" ");
+}
+
+function kidVersion(text) {
+  let t = steelmanLight(text);
+  t = applyPhrases(t, CONCRETE);
+  t = applyPhrases(t, KID);
+  t = applyWords(t, WORD_SIMPLE);
+  t = stripFillers(t);
+  t = splitKidSentences(t);
+  t = collapse(t);
+  if (wordCount(t) > 48) {
+    t = splitSentences(t).slice(0, 3).join(" ");
+  }
+  return polish(t.replace(/[?]+$/g, "."), false);
+}
+
+function normalizeKey(s) {
+  return collapse(s).toLowerCase().replace(/[?.!]+$/g, "");
+}
+
+function glossFirstNoun(text) {
+  const pair = CONCRETE.find(([from]) => new RegExp("\\b" + escapeRe(from) + "\\b", "i").test(text));
+  if (!pair) return null;
+  const [from, to] = pair;
+  return polish(
+    String(text).replace(new RegExp("\\b" + escapeRe(from) + "\\b", "i"), (m) => m + " (" + to + ")"),
+    /\?/.test(text)
+  );
+}
+
+function ensureDistinct(original, variants) {
+  const seen = new Set([normalizeKey(original)]);
+  return variants.map((v) => {
+    let t = v.text;
+    if (!t) t = original;
+    if (seen.has(normalizeKey(t))) {
+      if (v.id === "plain") {
+        const fewer = polish(String(t).replace(/\b(often|rarely|very|now)\b/gi, ""), /\?/.test(t));
+        t = seen.has(normalizeKey(fewer)) ? polish("In fewer words: " + lowerFirst(t), false) : fewer;
+      } else if (v.id === "concrete") {
+        t = glossFirstNoun(original) || polish("In practice: " + lowerFirst(original), /\?/.test(original));
+      } else if (v.id === "question") {
+        t = polish("Could we ask whether " + lowerFirst(String(original).replace(/[?.!]+$/, "")), true);
+      } else if (v.id === "steelman") {
+        t = polish("A fair reading: " + lowerFirst(t), false);
+      } else if (v.id === "kid") {
+        t = polish("Imagine explaining it to a child: " + lowerFirst(t), false);
+      }
+    }
+    seen.add(normalizeKey(t));
+    return { ...v, text: t };
+  });
+}
+
+function hashText(s) {
+  const str = String(s).normalize("NFC").trim();
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h >>> 0).toString(16).padStart(8, "0");
+}
+
+function rewrite(original) {
+  const src = collapse(String(original || ""));
+  if (!src) return [];
+  const variants = [
+    { id: "plain", label: "Plain and short", hint: "Fewer words. Everyday language.", text: shorten(src) },
+    { id: "concrete", label: "Concrete", hint: "Swap abstractions for things you can point to.", text: makeConcrete(src) },
+    { id: "question", label: "As a question", hint: "Invite an answer instead of starting a fight.", text: invertToQuestion(src) },
+    { id: "steelman", label: "Steelmanned", hint: "Less loaded language. The strongest fair reading.", text: steelman(src) },
+    { id: "kid", label: "So a kid could get it", hint: "Unfold the idea until a child could follow it.", text: kidVersion(src) },
+  ];
+  return ensureDistinct(src, variants);
+}
+
+
+  root.Similarize = { rewrite: rewrite, hashText: hashText };
+})(window);
+
+  </script>
+  <script>
+
+(function () {
+  var MAX = 300;
+  var STORE = "similarize.votes.v1";
+  var originalText = "";
+
+  var $ = function (id) { return document.getElementById(id); };
+  var input = $("statement");
+  var count = $("count");
+  var form = $("composer");
+  var go = $("go");
+  var results = $("results");
+  var cards = $("cards");
+  var shareBtn = $("share");
+  var shareStatus = $("share-status");
+  var copyNote = $("copy-note");
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c];
+    });
+  }
+
+  function loadStore() {
+    try { return JSON.parse(localStorage.getItem(STORE) || "{}"); }
+    catch (e) { return {}; }
+  }
+  function saveStore(db) {
+    localStorage.setItem(STORE, JSON.stringify(db));
+  }
+  function recFor(hash) {
+    var db = loadStore();
+    return db[hash] || { agree: 0, no: 0, mine: null };
+  }
+  function applyVote(hash, side) {
+    var db = loadStore();
+    var rec = db[hash] || { agree: 0, no: 0, mine: null };
+    if (rec.mine === side) {
+      if (side === "agree") rec.agree = Math.max(0, rec.agree - 1);
+      else rec.no = Math.max(0, rec.no - 1);
+      rec.mine = null;
+    } else {
+      if (rec.mine === "agree") rec.agree = Math.max(0, rec.agree - 1);
+      if (rec.mine === "no") rec.no = Math.max(0, rec.no - 1);
+      if (side === "agree") rec.agree += 1;
+      else rec.no += 1;
+      rec.mine = side;
+    }
+    db[hash] = rec;
+    saveStore(db);
+    return rec;
+  }
+
+  function updateCount() {
+    var n = Array.from(input.value).length;
+    if (n > MAX) {
+      input.value = Array.from(input.value).slice(0, MAX).join("");
+      n = MAX;
+    }
+    count.textContent = n + "/" + MAX;
+    count.classList.toggle("warn", n >= MAX - 15);
+    go.disabled = n === 0;
+  }
+
+  function readShared() {
+    var href = location.href;
+    var hashIdx = href.indexOf("#s=");
+    if (hashIdx >= 0) {
+      var part = href.slice(hashIdx + 3);
+      var cut = part.indexOf("&");
+      if (cut >= 0) part = part.slice(0, cut);
+      try { return decodeURIComponent(part); } catch (e) { return part; }
+    }
+    try {
+      var u = new URL(href);
+      return u.searchParams.get("s") || "";
+    } catch (e2) { return ""; }
+  }
+
+  function writeShare(text) {
+    var path = location.pathname + location.search;
+    var next = path + "#s=" + encodeURIComponent(text);
+    if (location.hash !== "#s=" + encodeURIComponent(text)) {
+      history.replaceState(null, "", next);
+    }
+  }
+
+  function shareUrl(text) {
+    return location.origin + location.pathname + "#s=" + encodeURIComponent(text);
+  }
+
+  function voteButtons(hash, rec) {
+    rec = rec || recFor(hash);
+    return (
+      '<div class="votes" data-hash="' + hash + '">' +
+        '<button type="button" class="vote" data-side="agree" aria-pressed="' + (rec.mine === "agree") + '">Agree <strong>' + rec.agree + "</strong></button>" +
+        '<button type="button" class="vote" data-side="no" aria-pressed="' + (rec.mine === "no") + '">I don’t <strong>' + rec.no + "</strong></button>" +
+        '<button type="button" class="copy-mini" data-copy>Copy</button>' +
+      "</div>"
+    );
+  }
+
+  function cardHtml(item, isOriginal) {
+    var hash = Similarize.hashText(item.text);
+    return (
+      '<article class="card' + (isOriginal ? " original" : "") + '" data-text="' + esc(item.text) + '">' +
+        '<div class="kicker"><span>' + esc(item.label) + "</span></div>" +
+        (item.hint ? '<p class="hint">' + esc(item.hint) + "</p>" : "") +
+        '<p class="wording">' + esc(item.text) + "</p>" +
+        voteButtons(hash) +
+      "</article>"
+    );
+  }
+
+  function render(text) {
+    originalText = text.trim();
+    if (!originalText) return;
+    var variants = Similarize.rewrite(originalText);
+    var html = cardHtml({
+      id: "original",
+      label: "Original",
+      hint: "Your wording, unchanged.",
+      text: originalText
+    }, true);
+    for (var i = 0; i < variants.length; i++) html += cardHtml(variants[i], false);
+    cards.innerHTML = html;
+    results.classList.remove("hidden");
+    writeShare(originalText);
+    shareStatus.textContent = "";
+    results.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    if (!input.value.trim()) return;
+    render(input.value);
+  });
+
+  input.addEventListener("input", updateCount);
+
+  document.querySelectorAll(".chip").forEach(function (chip) {
+    chip.addEventListener("click", function () {
+      input.value = chip.getAttribute("data-fill");
+      updateCount();
+      input.focus();
+    });
+  });
+
+  cards.addEventListener("click", function (e) {
+    var copyBtn = e.target.closest("[data-copy]");
+    if (copyBtn) {
+      var article = copyBtn.closest(".card");
+      var text = article.getAttribute("data-text");
+      navigator.clipboard.writeText(text).then(function () {
+        copyBtn.textContent = "Copied";
+        setTimeout(function () { copyBtn.textContent = "Copy"; }, 1200);
+      });
+      return;
+    }
+    var btn = e.target.closest(".vote");
+    if (!btn) return;
+    var wrap = btn.parentElement;
+    var hash = wrap.getAttribute("data-hash");
+    var rec = applyVote(hash, btn.getAttribute("data-side"));
+    wrap.outerHTML = voteButtons(hash, rec);
+  });
+
+  shareBtn.addEventListener("click", function () {
+    if (!originalText) return;
+    var url = shareUrl(originalText);
+    navigator.clipboard.writeText(url).then(function () {
+      shareStatus.textContent = "Link copied";
+    }).catch(function () {
+      shareStatus.textContent = url;
+    });
+  });
+
+  var shared = readShared();
+  if (shared) {
+    if (Array.from(shared).length > MAX) shared = Array.from(shared).slice(0, MAX).join("");
+    input.value = shared;
+    updateCount();
+    render(shared);
+  } else {
+    updateCount();
+  }
+})();
+
+  </script>
+</body>
 </html>
