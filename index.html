@@ -14,10 +14,10 @@ layout: null
   <meta name="description" content="Type a question or fact in 300 characters. Similarize writes calmer, clearer versions so more people could agree — then vote. A Flight Enabled company.">
   <meta name="theme-color" content="#15803d">
   <link rel="canonical" href="https://www.similarize.com/">
-  <link rel="icon" href="icon.svg?v=20260901c" type="image/svg+xml">
-  <link rel="icon" href="icon-32.png?v=20260901c" type="image/png" sizes="32x32">
-  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260901c">
-  <link rel="manifest" href="manifest.webmanifest?v=20260901c">
+  <link rel="icon" href="icon.svg?v=20260902a" type="image/svg+xml">
+  <link rel="icon" href="icon-32.png?v=20260902a" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260902a">
+  <link rel="manifest" href="manifest.webmanifest?v=20260902a">
   <meta property="og:title" content="Similarize — Word it so more people can agree">
   <meta property="og:description" content="Unfold a hard idea until more people can agree with it. A Flight Enabled company.">
   <meta property="og:url" content="https://www.similarize.com/">
@@ -50,12 +50,11 @@ layout: null
 input, textarea, select, [contenteditable], [contenteditable="true"] {
   -webkit-user-select: text !important;
   user-select: text;
+  cursor: text;
   touch-action: manipulation;
 }
-@media (display-mode: standalone), (display-mode: fullscreen) {
-  input, textarea, select, [contenteditable], [contenteditable="true"] {
-    font-size: 16px;
-  }
+input, textarea, select, [contenteditable], [contenteditable="true"] {
+  font-size: 16px;
 }
 html { scroll-behavior: smooth; }
 html, body {
@@ -77,11 +76,6 @@ body {
   padding-bottom: env(safe-area-inset-bottom);
   padding-left: env(safe-area-inset-left);
   line-height: 1.5;
-}
-@media (max-width: 520px) {
-  input, textarea, select, [contenteditable], [contenteditable="true"] {
-    font-size: 16px;
-  }
 }
 @media (display-mode: standalone), (display-mode: fullscreen) {
   html, body {
@@ -142,8 +136,14 @@ header.site img {
 textarea {
   width: 100%; min-height: 7.5rem; resize: vertical;
   border: 1px solid var(--line); border-radius: 12px;
-  padding: 0.85rem 0.95rem; font: inherit; color: inherit;
+  padding: 0.85rem 0.95rem;
+  font-family: inherit;
+  font-size: 16px;
+  color: inherit;
   background: #fff; line-height: 1.45;
+  cursor: text;
+  -webkit-user-select: text;
+  user-select: text;
 }
 textarea:focus {
   outline: 3px solid rgba(21,128,61,0.28);
@@ -302,24 +302,6 @@ footer.site {
       <div class="game-sub">improving every week</div>
     </footer>
   </div>
-  <script>
-(function () {
-  function fieldFromEvent(e) {
-    var n = e.target;
-    if (!n) return null;
-    if (n.nodeType === 3) n = n.parentNode;
-    if (!n || !n.closest) return null;
-    return n.closest("input, textarea, select, [contenteditable], [contenteditable=true]");
-  }
-  function focusField(e) {
-    var el = fieldFromEvent(e);
-    if (!el) return;
-    if (document.activeElement !== el) el.focus();
-  }
-  document.addEventListener("touchstart", focusField, true);
-  document.addEventListener("mousedown", focusField, true);
-})();
-</script>
   <script>
 (function (root) {
 // Similarize v1 in-browser rewriter. Deterministic. No APIs.
@@ -1214,7 +1196,6 @@ function rewrite(original) {
     chip.addEventListener("click", function () {
       input.value = chip.getAttribute("data-fill");
       updateCount();
-      input.focus();
     });
   });
 
