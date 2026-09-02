@@ -5,7 +5,11 @@ layout: null
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Similarize">
+  <meta name="mobile-web-app-capable" content="yes">
   <title>Similarize — Word it so more people can agree</title>
   <meta name="description" content="Type a question or fact in 300 characters. Similarize writes calmer, clearer versions so more people could agree — then vote. A Flight Enabled company.">
   <meta name="theme-color" content="#15803d">
@@ -54,7 +58,12 @@ input, textarea, select, [contenteditable], [contenteditable="true"] {
   }
 }
 html { scroll-behavior: smooth; }
-html, body { margin: 0; padding: 0; }
+html, body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
 body {
   font-family: "Outfit", "Segoe UI", sans-serif;
   color: var(--ink);
@@ -62,7 +71,22 @@ body {
     radial-gradient(1200px 400px at 10% -10%, rgba(21, 128, 61, 0.08), transparent 50%),
     linear-gradient(180deg, #f7f4ee 0%, var(--paper) 40%, #efebe3 100%);
   min-height: 100vh;
+  min-height: 100dvh;
+  padding-top: env(safe-area-inset-top);
+  padding-right: env(safe-area-inset-right);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
   line-height: 1.5;
+}
+@media (max-width: 520px) {
+  input, textarea, select, [contenteditable], [contenteditable="true"] {
+    font-size: 16px;
+  }
+}
+@media (display-mode: standalone), (display-mode: fullscreen) {
+  html, body {
+    overscroll-behavior: none;
+  }
 }
 a { color: var(--green-dark); }
 .skip {
@@ -292,8 +316,8 @@ footer.site {
     if (!el) return;
     if (document.activeElement !== el) el.focus();
   }
-  document.addEventListener("touchend", focusField, true);
-  document.addEventListener("mouseup", focusField, true);
+  document.addEventListener("touchstart", focusField, true);
+  document.addEventListener("mousedown", focusField, true);
 })();
 </script>
   <script>
