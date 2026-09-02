@@ -43,6 +43,16 @@ layout: null
   --max: 40rem;
 }
 * { box-sizing: border-box; }
+input, textarea, select, [contenteditable], [contenteditable="true"] {
+  -webkit-user-select: text !important;
+  user-select: text;
+  touch-action: manipulation;
+}
+@media (display-mode: standalone), (display-mode: fullscreen) {
+  input, textarea, select, [contenteditable], [contenteditable="true"] {
+    font-size: 16px;
+  }
+}
 html { scroll-behavior: smooth; }
 html, body { margin: 0; padding: 0; }
 body {
@@ -268,6 +278,24 @@ footer.site {
       <div class="game-sub">improving every week</div>
     </footer>
   </div>
+  <script>
+(function () {
+  function fieldFromEvent(e) {
+    var n = e.target;
+    if (!n) return null;
+    if (n.nodeType === 3) n = n.parentNode;
+    if (!n || !n.closest) return null;
+    return n.closest("input, textarea, select, [contenteditable], [contenteditable=true]");
+  }
+  function focusField(e) {
+    var el = fieldFromEvent(e);
+    if (!el) return;
+    if (document.activeElement !== el) el.focus();
+  }
+  document.addEventListener("touchend", focusField, true);
+  document.addEventListener("mouseup", focusField, true);
+})();
+</script>
   <script>
 (function (root) {
 // Similarize v1 in-browser rewriter. Deterministic. No APIs.
