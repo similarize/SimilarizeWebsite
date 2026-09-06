@@ -11,15 +11,15 @@ layout: null
   <meta name="apple-mobile-web-app-title" content="Similarize">
   <meta name="mobile-web-app-capable" content="yes">
   <title>Similarize — Word it so more people can agree</title>
-  <meta name="description" content="Type a question or fact in 300 characters. Similarize writes calmer, clearer versions so more people could agree — then vote. A Flight Enabled company.">
+  <meta name="description" content="Say it in your own words. Similarize shows how a general audience may hear it, then clearer ways to keep your point with fewer detours. A Flight Enabled company.">
   <meta name="theme-color" content="#15803d">
   <link rel="canonical" href="https://www.similarize.com/">
-  <link rel="icon" href="icon.svg?v=20260902a" type="image/svg+xml">
-  <link rel="icon" href="icon-32.png?v=20260902a" type="image/png" sizes="32x32">
-  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260902a">
-  <link rel="manifest" href="manifest.webmanifest?v=20260902a">
+  <link rel="icon" href="icon.svg?v=20260905a" type="image/svg+xml">
+  <link rel="icon" href="icon-32.png?v=20260905a" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260905a">
+  <link rel="manifest" href="manifest.webmanifest?v=20260905a">
   <meta property="og:title" content="Similarize — Word it so more people can agree">
-  <meta property="og:description" content="Unfold a hard idea until more people can agree with it. A Flight Enabled company.">
+  <meta property="og:description" content="Write your statement. See how it lands. Say it more clearly.">
   <meta property="og:url" content="https://www.similarize.com/">
   <meta property="og:image" content="https://www.similarize.com/images/simlogo.png">
   <meta property="og:type" content="website">
@@ -34,26 +34,21 @@ layout: null
   --green-ink: #052e16;
   --green-soft: #dcfce7;
   --green-mid: #16a34a;
-  --paper: #f4f1ea;
-  --paper-2: #ebe6db;
-  --card: #fffdf8;
+  --bg: #faf9f7;
+  --card: #ffffff;
   --ink: #1c1917;
-  --muted: #57534e;
-  --line: #e7e0d4;
-  --danger: #9f1239;
-  --danger-soft: #ffe4e6;
-  --shadow: 0 18px 40px -24px rgba(28, 25, 23, 0.35);
-  --radius: 18px;
-  --max: 40rem;
+  --muted: #78716c;
+  --line: #e7e5e4;
+  --shadow: 0 1px 2px rgba(28,25,23,0.04), 0 12px 32px -18px rgba(28,25,23,0.28);
+  --radius: 28px;
+  --max: 36rem;
 }
 * { box-sizing: border-box; }
-input, textarea, select, [contenteditable], [contenteditable="true"] {
+input, textarea {
   -webkit-user-select: text !important;
   user-select: text;
   cursor: text;
   touch-action: manipulation;
-}
-input, textarea, select, [contenteditable], [contenteditable="true"] {
   font-size: 16px;
 }
 html { scroll-behavior: smooth; }
@@ -66,21 +61,16 @@ html, body {
 body {
   font-family: "Outfit", "Segoe UI", sans-serif;
   color: var(--ink);
-  background:
-    radial-gradient(1200px 400px at 10% -10%, rgba(21, 128, 61, 0.08), transparent 50%),
-    linear-gradient(180deg, #f7f4ee 0%, var(--paper) 40%, #efebe3 100%);
-  min-height: 100vh;
-  min-height: 100dvh;
-  padding-top: env(safe-area-inset-top);
-  padding-right: env(safe-area-inset-right);
-  padding-bottom: env(safe-area-inset-bottom);
-  padding-left: env(safe-area-inset-left);
+  background: var(--bg);
+  padding:
+    env(safe-area-inset-top)
+    env(safe-area-inset-right)
+    env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
   line-height: 1.5;
 }
 @media (display-mode: standalone), (display-mode: fullscreen) {
-  html, body {
-    overscroll-behavior: none;
-  }
+  html, body { overscroll-behavior: none; }
 }
 a { color: var(--green-dark); }
 .skip {
@@ -88,221 +78,255 @@ a { color: var(--green-dark); }
   background: var(--green); color: white; padding: 0.5rem 1rem; z-index: 20;
 }
 .skip:focus { left: 1rem; top: 1rem; }
-.topbar {
-  height: 4px;
-  background: linear-gradient(90deg, var(--green-dark), var(--green-mid), #84cc16);
+.shell {
+  width: min(var(--max), calc(100% - 2rem));
+  margin: 0 auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
 }
-.wrap { width: min(var(--max), calc(100% - 2rem)); margin: 0 auto; }
-header.site {
-  display: flex; align-items: center; gap: 0.9rem;
-  padding: 1.15rem 0 0.4rem;
+.home {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 2.5rem 0 1.5rem;
+  transition: padding 0.2s ease;
 }
-header.site img {
-  width: 52px; height: 52px; object-fit: contain;
-  background: white; border-radius: 12px; padding: 4px;
-  border: 1px solid var(--line);
+.shell.has-results .home {
+  justify-content: flex-start;
+  padding-top: 1.25rem;
+  padding-bottom: 0.75rem;
 }
-.brand h1 {
-  font-family: "Fraunces", Georgia, serif;
-  font-size: 1.55rem; margin: 0; letter-spacing: -0.02em;
-  font-weight: 650; line-height: 1.1;
+.brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 1.35rem;
+  text-align: center;
 }
-.brand h1 a { color: inherit; text-decoration: none; }
-.fe {
-  margin: 0.15rem 0 0;
-  font-size: 0.82rem; color: var(--muted);
+.brand .logo {
+  display: block;
+  line-height: 0;
 }
-.fe a {
-  color: var(--green); font-weight: 600; text-decoration: none;
-  border-bottom: 1px solid rgba(21,128,61,0.35);
+.brand img {
+  width: clamp(132px, 32vw, 180px);
+  height: auto;
+  aspect-ratio: 1;
+  object-fit: cover;
+  display: block;
+  border-radius: 50%;
+  background: #b91c1c;
 }
-.fe a:hover { border-bottom-color: var(--green); }
-.hero { padding: 1.4rem 0 0.6rem; }
-.hero h2 {
-  font-family: "Fraunces", Georgia, serif;
-  font-weight: 500; font-size: clamp(1.35rem, 4.2vw, 1.85rem);
-  line-height: 1.28; margin: 0 0 0.75rem; letter-spacing: -0.02em;
-}
-.hero h2 + h2 { color: var(--green-dark); margin-bottom: 1rem; }
-.lede { color: var(--muted); margin: 0 0 1.2rem; font-size: 1.02rem; }
 .composer {
-  background: var(--card); border: 1px solid var(--line);
-  border-radius: var(--radius); padding: 1rem;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
   box-shadow: var(--shadow);
+  padding: 0.55rem;
+  display: grid;
+  gap: 0.45rem;
 }
 .composer label {
-  display: block; font-weight: 600; font-size: 0.92rem; margin-bottom: 0.45rem;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
 }
 textarea {
-  width: 100%; min-height: 7.5rem; resize: vertical;
-  border: 1px solid var(--line); border-radius: 12px;
-  padding: 0.85rem 0.95rem;
+  width: 100%;
+  min-height: 5.5rem;
+  resize: vertical;
+  border: 0;
+  border-radius: calc(var(--radius) - 8px);
+  padding: 0.85rem 1rem 0.35rem;
   font-family: inherit;
-  font-size: 16px;
   color: inherit;
-  background: #fff; line-height: 1.45;
-  cursor: text;
-  -webkit-user-select: text;
-  user-select: text;
+  background: transparent;
+  line-height: 1.45;
 }
-textarea:focus {
-  outline: 3px solid rgba(21,128,61,0.28);
-  border-color: var(--green);
+textarea:focus { outline: none; }
+.composer:focus-within {
+  border-color: rgba(21,128,61,0.45);
+  box-shadow: var(--shadow), 0 0 0 3px rgba(21,128,61,0.12);
 }
 .row {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 0.75rem; margin-top: 0.7rem; flex-wrap: wrap;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0 0.35rem 0.2rem 0.55rem;
 }
-.count { font-size: 0.85rem; color: var(--muted); font-variant-numeric: tabular-nums; }
-.count.warn { color: var(--danger); font-weight: 600; }
-.actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.count {
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.count.show { opacity: 1; }
+.count.warn { color: #9f1239; font-weight: 600; }
 button, .btn {
-  font: inherit; cursor: pointer; border: 0;
-  border-radius: 999px; padding: 0.62rem 1.1rem; font-weight: 600;
+  font: inherit;
+  cursor: pointer;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.62rem 1.15rem;
+  font-weight: 600;
 }
 .primary {
-  background: var(--green); color: white;
+  background: var(--green);
+  color: white;
 }
 .primary:hover { background: var(--green-dark); }
-.primary:disabled { opacity: 0.45; cursor: not-allowed; }
+.primary:disabled { opacity: 0.4; cursor: not-allowed; }
 .ghost {
-  background: transparent; color: var(--green-dark);
-  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid transparent;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.85rem;
+  font-weight: 500;
 }
-.ghost:hover { background: var(--green-soft); }
-.examples { margin: 0.85rem 0 0; display: flex; flex-wrap: wrap; gap: 0.4rem; }
-.chip {
-  border: 1px solid var(--line); background: var(--paper);
-  color: var(--ink); border-radius: 999px; padding: 0.32rem 0.7rem;
-  font-size: 0.78rem; cursor: pointer;
+.ghost:hover { color: var(--ink); }
+.results {
+  padding: 0.5rem 0 2rem;
+  display: grid;
+  gap: 1rem;
 }
-.chip:hover { border-color: var(--green); color: var(--green-dark); }
-.results { margin: 1.4rem 0 0.4rem; display: grid; gap: 0.85rem; }
+.results.hidden { display: none; }
+.reception {
+  background: var(--green-soft);
+  border: 1px solid rgba(21,128,61,0.18);
+  border-radius: 18px;
+  padding: 1rem 1.1rem;
+}
+.reception h2 {
+  font-family: "Fraunces", Georgia, serif;
+  font-size: 1.05rem;
+  font-weight: 650;
+  margin: 0 0 0.35rem;
+  letter-spacing: -0.02em;
+}
+.reception .summary {
+  margin: 0 0 0.55rem;
+  color: var(--green-ink);
+  font-size: 0.98rem;
+}
+.reception ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--green-dark);
+  font-size: 0.92rem;
+}
+.reception li { margin: 0.2rem 0; }
 .toolbar {
-  display: flex; justify-content: space-between; align-items: baseline;
-  gap: 0.75rem; flex-wrap: wrap;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  flex-wrap: wrap;
 }
-.toolbar h3 {
-  font-family: "Fraunces", Georgia, serif; font-size: 1.2rem; margin: 0;
+.toolbar h2 {
+  font-family: "Fraunces", Georgia, serif;
+  font-size: 1.15rem;
+  margin: 0;
+  letter-spacing: -0.02em;
 }
 .share-status { font-size: 0.8rem; color: var(--green); min-height: 1.1em; }
+.cards { display: grid; gap: 0.75rem; }
 .card {
-  background: var(--card); border: 1px solid var(--line);
-  border-radius: 16px; padding: 1rem 1.05rem 0.9rem;
-  box-shadow: 0 1px 0 rgba(255,255,255,0.8) inset;
-  border-left: 4px solid var(--green);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 0.95rem 1rem;
 }
-.card.original { border-left-color: var(--ink); }
 .card .kicker {
-  display: flex; justify-content: space-between; gap: 0.5rem; align-items: baseline;
-  font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase;
-  font-weight: 700; color: var(--green-dark); margin-bottom: 0.35rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--green-dark);
+  margin-bottom: 0.35rem;
 }
-.card.original .kicker { color: var(--muted); }
-.hint { font-size: 0.78rem; color: var(--muted); margin: 0 0 0.45rem; letter-spacing: 0; text-transform: none; font-weight: 400; }
-.wording {
-  font-size: 1.05rem; margin: 0 0 0.85rem; line-height: 1.45;
+.card .wording {
+  font-size: 1.05rem;
+  margin: 0 0 0.75rem;
+  line-height: 1.45;
 }
-.votes { display: flex; gap: 0.45rem; flex-wrap: wrap; align-items: center; }
-.vote {
-  border: 1px solid var(--line); background: white; color: var(--ink);
-  padding: 0.42rem 0.8rem; font-size: 0.88rem;
+.card .actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
 }
-.vote[aria-pressed="true"][data-side="agree"] {
-  background: var(--green); color: white; border-color: var(--green);
+.copy-btn {
+  background: var(--green-soft);
+  color: var(--green-dark);
+  border: 1px solid rgba(21,128,61,0.2);
+  font-size: 0.85rem;
+  padding: 0.4rem 0.85rem;
 }
-.vote[aria-pressed="true"][data-side="no"] {
-  background: var(--danger); color: white; border-color: var(--danger);
-}
-.copy-mini {
-  margin-left: auto; background: none; border: 0; color: var(--muted);
-  font-size: 0.78rem; padding: 0.3rem 0.4rem; font-weight: 500;
-}
-.copy-mini:hover { color: var(--green-dark); }
-.quote {
-  margin: 2.2rem 0 1.4rem; padding: 1.1rem 0 0;
-  border-top: 1px solid var(--line);
-}
-blockquote {
-  margin: 0; font-family: "Fraunces", Georgia, serif;
-  font-size: 1.05rem; font-weight: 500; line-height: 1.45;
-  color: var(--green-ink);
-}
-blockquote footer { margin-top: 0.55rem; font-family: "Outfit", sans-serif; font-size: 0.88rem; color: var(--muted); }
+.copy-btn:hover { background: #bbf7d0; }
 footer.site {
-  padding: 0.4rem 0 2.2rem; color: var(--muted); font-size: 0.88rem;
+  padding: 0.5rem 0 1.5rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-align: center;
 }
-.game-link {
-  display: inline-block; color: var(--muted); text-decoration: none; margin-top: 0.3rem;
+footer.site a {
+  color: var(--muted);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
 }
-.game-link:hover { color: var(--ink); text-decoration: underline; }
-.game-sub { font-size: 0.75rem; font-style: italic; color: #8a847b; }
-.hidden { display: none; }
-@media (max-width: 520px) {
-  header.site img { width: 44px; height: 44px; }
-  .card { padding: 0.9rem; }
+footer.site a:hover {
+  color: var(--ink);
+  border-bottom-color: var(--line);
 }
-</style>
+.sep { margin: 0 0.45rem; opacity: 0.5; }
+  </style>
 </head>
 <body>
   <a class="skip" href="#statement">Skip to writer</a>
-  <div class="topbar"></div>
-  <div class="wrap">
-    <header class="site">
-      <a href="https://www.similarize.com/"><img src="images/simlogo.png" width="52" height="52" alt="Similarize"></a>
+  <div class="shell" id="shell">
+    <main class="home">
       <div class="brand">
-        <h1><a href="https://www.similarize.com/">Similarize</a></h1>
-        <p class="fe">A <a href="https://flightenabled.com">Flight Enabled</a> company</p>
+        <a class="logo" href="https://www.similarize.com/" aria-label="Similarize">
+          <img src="images/imi-mark-lg.png" width="168" height="168" alt="Similarize">
+        </a>
       </div>
-    </header>
-
-    <section class="hero">
-      <h2>Ever wonder how many people agree with you?</h2>
-      <h2>Ever wonder how many more would, if you just worded things differently?</h2>
-      <p class="lede">Type a question or a fact. Similarize writes several calmer versions whose point is the same: more people could agree with this one. Honor the idea that a hard thought is not finished until a child could follow it.</p>
-    </section>
-
-    <form class="composer" id="composer">
-      <label for="statement">Your question or fact (300 characters or less)</label>
-      <textarea id="statement" name="statement" maxlength="300" required placeholder="Write the thing you wish more people could agree with…"></textarea>
-      <div class="row">
-        <span class="count" id="count">0/300</span>
-        <div class="actions">
-          <button type="submit" class="primary" id="go" disabled>Similarize it</button>
+      <form class="composer" id="composer" autocomplete="off">
+        <label for="statement">Your statement</label>
+        <textarea id="statement" name="statement" maxlength="800" rows="3" placeholder="Say what you mean…" autofocus></textarea>
+        <div class="row">
+          <span class="count" id="count" aria-live="polite">0/800</span>
+          <button type="submit" class="primary" id="go" disabled>Similarize</button>
         </div>
-      </div>
-      <div class="examples" aria-label="Examples">
-        <button type="button" class="chip" data-fill="Politicians are always lying to us and destroying this country.">Try a loaded claim</button>
-        <button type="button" class="chip" data-fill="We should tax the rich until they have nothing left.">Try a hard policy</button>
-        <button type="button" class="chip" data-fill="It is true intelligence to unfold a mysterious subject so a child can understand it.">Try John Taylor’s idea</button>
-      </div>
-    </form>
+      </form>
+    </main>
 
-    <section class="results hidden" id="results">
+    <section class="results hidden" id="results" aria-live="polite">
+      <div class="reception" id="reception"></div>
       <div class="toolbar">
-        <h3>Wordings people could agree with</h3>
+        <h2>Clearer ways to say it</h2>
         <div>
-          <button type="button" class="ghost" id="share">Copy share link</button>
-          <div class="share-status" id="share-status"></div>
+          <button type="button" class="ghost" id="share">Copy link</button>
+          <span class="share-status" id="share-status"></span>
         </div>
       </div>
-      <div id="cards"></div>
-    </section>
-
-    <section class="quote">
-      <blockquote>
-        “It is true intelligence for a man to take a subject that is mysterious and great in itself, and to unfold and simplify it so that a child can understand it.”
-        <footer>— John Taylor</footer>
-      </blockquote>
+      <div class="cards" id="cards"></div>
     </section>
 
     <footer class="site">
-      <div>Votes stay on this device. Share a link to open the same statement again.</div>
-      <a class="game-link" href="/games/RCRallyJump">RC Rally Jump</a>
-      <div class="game-sub">improving every week</div>
+      <a href="https://www.flightenabled.com/">A Flight Enabled company</a>
+      <span class="sep">·</span>
+      <a href="/games/RCRallyJump">Games</a>
     </footer>
   </div>
-  <script>
+
+<script>
 (function (root) {
 // Similarize v1 in-browser rewriter. Deterministic. No APIs.
 
@@ -1047,17 +1071,66 @@ function rewrite(original) {
 }
 
 
-  root.Similarize = { rewrite: rewrite, hashText: hashText };
+
+function reception(original) {
+  const src = collapse(String(original || ""));
+  if (!src) return { summary: "", notes: [] };
+  const notes = [];
+  const lower = src.toLowerCase();
+  let loadedHits = 0;
+  for (const [from] of LOADED_PHRASES) {
+    if (new RegExp("\\b" + escapeRe(from) + "\\b", "i").test(src)) loadedHits++;
+  }
+  for (const key of Object.keys(LOADED_WORDS)) {
+    if (new RegExp("\\b" + escapeRe(key) + "\\b", "i").test(src)) loadedHits++;
+  }
+  if (loadedHits > 0) {
+    notes.push(loadedHits === 1
+      ? "A loaded word or phrase may pull people into a side fight before they hear your point."
+      : "Several loaded words may pull people into a side fight before they hear your point.");
+  }
+  let fillers = 0;
+  for (const w of (src.match(/\\b[\\w']+\\b/g) || [])) {
+    if (FILLER_WORDS.has(w.toLowerCase())) fillers++;
+  }
+  if (fillers >= 2) {
+    notes.push("Filler words add length without adding the idea.");
+  }
+  if (src === src.toUpperCase() && /[A-Z]/.test(src) && src.length > 8) {
+    notes.push("All caps reads as shouting and can close people off.");
+  }
+  if ((src.match(/!/g) || []).length >= 2) {
+    notes.push("Extra exclamation marks raise heat more than clarity.");
+  }
+  if (/\\b(always|never|everyone|everybody|nobody|everything|nothing)\\b/i.test(src)) {
+    notes.push("Absolute words (always, never, everyone) invite exceptions instead of agreement.");
+  }
+  const plain = shorten(src);
+  const plainWords = wordCount(plain);
+  const srcWords = wordCount(src);
+  if (srcWords >= 18 && plainWords > 0 && plainWords <= Math.floor(srcWords * 0.75)) {
+    notes.push("A shorter cut can keep the same point with fewer detours.");
+  }
+  if (notes.length === 0) {
+    notes.push("A general audience can likely follow this; small wording tweaks may still widen agreement.");
+  }
+  const summary = loadedHits > 0
+    ? "Some readers may react to the wording before they consider the idea."
+    : (srcWords >= 18
+      ? "The idea is reachable; tightening the wording may keep more people on your purpose."
+      : "The idea is mostly clear; calmer options below may help more people stay with it.");
+  return { summary, notes: notes.slice(0, 3) };
+}
+
+  root.Similarize = { rewrite: rewrite, hashText: hashText, reception: reception };
 })(window);
 
   </script>
+
   <script>
-
 (function () {
-  var MAX = 300;
-  var STORE = "similarize.votes.v1";
+  var MAX = 800;
   var originalText = "";
-
   var $ = function (id) { return document.getElementById(id); };
   var input = $("statement");
   var count = $("count");
@@ -1065,44 +1138,16 @@ function rewrite(original) {
   var go = $("go");
   var results = $("results");
   var cards = $("cards");
+  var receptionEl = $("reception");
   var shareBtn = $("share");
   var shareStatus = $("share-status");
-  var copyNote = $("copy-note");
+  var shell = $("shell");
+  var PREFERRED = ["plain", "steelman", "kid"];
 
   function esc(s) {
     return String(s).replace(/[&<>"']/g, function (c) {
       return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c];
     });
-  }
-
-  function loadStore() {
-    try { return JSON.parse(localStorage.getItem(STORE) || "{}"); }
-    catch (e) { return {}; }
-  }
-  function saveStore(db) {
-    localStorage.setItem(STORE, JSON.stringify(db));
-  }
-  function recFor(hash) {
-    var db = loadStore();
-    return db[hash] || { agree: 0, no: 0, mine: null };
-  }
-  function applyVote(hash, side) {
-    var db = loadStore();
-    var rec = db[hash] || { agree: 0, no: 0, mine: null };
-    if (rec.mine === side) {
-      if (side === "agree") rec.agree = Math.max(0, rec.agree - 1);
-      else rec.no = Math.max(0, rec.no - 1);
-      rec.mine = null;
-    } else {
-      if (rec.mine === "agree") rec.agree = Math.max(0, rec.agree - 1);
-      if (rec.mine === "no") rec.no = Math.max(0, rec.no - 1);
-      if (side === "agree") rec.agree += 1;
-      else rec.no += 1;
-      rec.mine = side;
-    }
-    db[hash] = rec;
-    saveStore(db);
-    return rec;
   }
 
   function updateCount() {
@@ -1112,7 +1157,8 @@ function rewrite(original) {
       n = MAX;
     }
     count.textContent = n + "/" + MAX;
-    count.classList.toggle("warn", n >= MAX - 15);
+    count.classList.toggle("warn", n >= MAX - 40);
+    count.classList.toggle("show", n > 0);
     go.disabled = n === 0;
   }
 
@@ -1143,42 +1189,48 @@ function rewrite(original) {
     return location.origin + location.pathname + "#s=" + encodeURIComponent(text);
   }
 
-  function voteButtons(hash, rec) {
-    rec = rec || recFor(hash);
+  function receptionHtml(rec) {
+    var items = (rec.notes || []).map(function (n) {
+      return "<li>" + esc(n) + "</li>";
+    }).join("");
     return (
-      '<div class="votes" data-hash="' + hash + '">' +
-        '<button type="button" class="vote" data-side="agree" aria-pressed="' + (rec.mine === "agree") + '">Agree <strong>' + rec.agree + "</strong></button>" +
-        '<button type="button" class="vote" data-side="no" aria-pressed="' + (rec.mine === "no") + '">I don’t <strong>' + rec.no + "</strong></button>" +
-        '<button type="button" class="copy-mini" data-copy>Copy</button>' +
-      "</div>"
+      "<h2>How this may land</h2>" +
+      '<p class="summary">' + esc(rec.summary || "") + "</p>" +
+      (items ? "<ul>" + items + "</ul>" : "")
     );
   }
 
-  function cardHtml(item, isOriginal) {
-    var hash = Similarize.hashText(item.text);
+  function cardHtml(item) {
     return (
-      '<article class="card' + (isOriginal ? " original" : "") + '" data-text="' + esc(item.text) + '">' +
-        '<div class="kicker"><span>' + esc(item.label) + "</span></div>" +
-        (item.hint ? '<p class="hint">' + esc(item.hint) + "</p>" : "") +
+      '<article class="card" data-text="' + esc(item.text) + '">' +
+        '<div class="kicker">' + esc(item.label) + "</div>" +
         '<p class="wording">' + esc(item.text) + "</p>" +
-        voteButtons(hash) +
+        '<div class="actions"><button type="button" class="copy-btn" data-copy>Copy</button></div>' +
       "</article>"
     );
+  }
+
+  function pickVariants(all) {
+    var byId = {};
+    for (var i = 0; i < all.length; i++) byId[all[i].id] = all[i];
+    var out = [];
+    for (var j = 0; j < PREFERRED.length; j++) {
+      if (byId[PREFERRED[j]]) out.push(byId[PREFERRED[j]]);
+    }
+    return out.length ? out : all.slice(0, 3);
   }
 
   function render(text) {
     originalText = text.trim();
     if (!originalText) return;
-    var variants = Similarize.rewrite(originalText);
-    var html = cardHtml({
-      id: "original",
-      label: "Original",
-      hint: "Your wording, unchanged.",
-      text: originalText
-    }, true);
-    for (var i = 0; i < variants.length; i++) html += cardHtml(variants[i], false);
+    var rec = Similarize.reception(originalText);
+    var variants = pickVariants(Similarize.rewrite(originalText));
+    receptionEl.innerHTML = receptionHtml(rec);
+    var html = "";
+    for (var i = 0; i < variants.length; i++) html += cardHtml(variants[i]);
     cards.innerHTML = html;
     results.classList.remove("hidden");
+    shell.classList.add("has-results");
     writeShare(originalText);
     shareStatus.textContent = "";
     results.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1192,37 +1244,22 @@ function rewrite(original) {
 
   input.addEventListener("input", updateCount);
 
-  document.querySelectorAll(".chip").forEach(function (chip) {
-    chip.addEventListener("click", function () {
-      input.value = chip.getAttribute("data-fill");
-      updateCount();
-    });
-  });
-
   cards.addEventListener("click", function (e) {
     var copyBtn = e.target.closest("[data-copy]");
-    if (copyBtn) {
-      var article = copyBtn.closest(".card");
-      var text = article.getAttribute("data-text");
-      navigator.clipboard.writeText(text).then(function () {
-        copyBtn.textContent = "Copied";
-        setTimeout(function () { copyBtn.textContent = "Copy"; }, 1200);
-      });
-      return;
-    }
-    var btn = e.target.closest(".vote");
-    if (!btn) return;
-    var wrap = btn.parentElement;
-    var hash = wrap.getAttribute("data-hash");
-    var rec = applyVote(hash, btn.getAttribute("data-side"));
-    wrap.outerHTML = voteButtons(hash, rec);
+    if (!copyBtn) return;
+    var article = copyBtn.closest(".card");
+    var text = article.getAttribute("data-text");
+    navigator.clipboard.writeText(text).then(function () {
+      copyBtn.textContent = "Copied";
+      setTimeout(function () { copyBtn.textContent = "Copy"; }, 1200);
+    });
   });
 
   shareBtn.addEventListener("click", function () {
     if (!originalText) return;
     var url = shareUrl(originalText);
     navigator.clipboard.writeText(url).then(function () {
-      shareStatus.textContent = "Link copied";
+      shareStatus.textContent = "Copied";
     }).catch(function () {
       shareStatus.textContent = url;
     });
@@ -1238,7 +1275,6 @@ function rewrite(original) {
     updateCount();
   }
 })();
-
   </script>
 </body>
 </html>
