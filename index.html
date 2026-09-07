@@ -286,6 +286,62 @@ footer.site a:hover {
   border-bottom-color: var(--line);
 }
 .sep { margin: 0 0.45rem; opacity: 0.5; }
+
+.row-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+.icon-btn {
+  width: 2.55rem;
+  height: 2.55rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--green-soft);
+  color: var(--green-dark);
+  border: 1px solid rgba(21,128,61,0.22);
+  flex-shrink: 0;
+}
+.icon-btn:hover { background: #bbf7d0; }
+.icon-btn:focus-visible {
+  outline: 2px solid rgba(21,128,61,0.45);
+  outline-offset: 2px;
+}
+.icon-btn.listening {
+  background: var(--green);
+  color: #fff;
+  border-color: var(--green-dark);
+  box-shadow: 0 0 0 3px rgba(21,128,61,0.22);
+  animation: talk-pulse 1.4s ease-in-out infinite;
+}
+.icon-btn svg { width: 1.15rem; height: 1.15rem; display: block; }
+@keyframes talk-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(21,128,61,0.18); }
+  50% { box-shadow: 0 0 0 6px rgba(21,128,61,0.08); }
+}
+.voice-hint {
+  margin: 0.55rem 0.35rem 0;
+  min-height: 1.2em;
+  font-size: 0.84rem;
+  color: var(--muted);
+}
+.voice-hint.warn { color: #9f1239; font-weight: 500; }
+.paywall-card {
+  display: none;
+  margin-top: 0.75rem;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 16px;
+  padding: 0.85rem 1rem;
+  color: #9a3412;
+  font-size: 0.92rem;
+}
+.paywall-card.show { display: block; }
+.paywall-card strong { display: block; margin-bottom: 0.25rem; color: #7c2d12; }
+.paywall-card p { margin: 0; color: #9a3412; }
   </style>
 </head>
 <body>
@@ -302,9 +358,23 @@ footer.site a:hover {
         <textarea id="statement" name="statement" maxlength="800" rows="3" placeholder="Say what you mean…" autofocus></textarea>
         <div class="row">
           <span class="count" id="count" aria-live="polite">0/800</span>
-          <button type="submit" class="primary" id="go" disabled>Similarize</button>
+          <div class="row-actions">
+            <button type="button" class="icon-btn" id="talk" aria-label="Talk" title="Talk with Grok Voice">
+              <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z"></path>
+                <path d="M19 11a7 7 0 0 1-14 0"></path>
+                <path d="M12 18v3"></path>
+              </svg>
+            </button>
+            <button type="submit" class="primary" id="go" disabled>Similarize</button>
+          </div>
         </div>
       </form>
+      <p class="voice-hint" id="voice-hint" aria-live="polite"></p>
+      <div class="paywall-card" id="paywall" hidden>
+        <strong>Talk is $<span id="talk-price">0.25</span></strong>
+        <p>Venmo checkout coming. Typed Similarize stays free.</p>
+      </div>
     </main>
 
     <section class="results hidden" id="results" aria-live="polite">
@@ -1127,6 +1197,7 @@ function reception(original) {
 
   </script>
 
+  <script src="voice-talk.js"></script>
   <script>
 (function () {
   var MAX = 800;
@@ -1136,6 +1207,10 @@ function reception(original) {
   var count = $("count");
   var form = $("composer");
   var go = $("go");
+  var talkBtn = $("talk");
+  var voiceHint = $("voice-hint");
+  var paywall = $("paywall");
+  var talkPrice = $("talk-price");
   var results = $("results");
   var cards = $("cards");
   var receptionEl = $("reception");
@@ -1264,6 +1339,57 @@ function reception(original) {
       shareStatus.textContent = url;
     });
   });
+
+  function showPaywall(info) {
+    var cents = (info && info.session_price_cents) || 25;
+    if (talkPrice) talkPrice.textContent = (cents / 100).toFixed(2);
+    if (paywall) {
+      paywall.hidden = false;
+      paywall.classList.add("show");
+    }
+  }
+
+  function setVoiceHint(msg, warn) {
+    if (!voiceHint) return;
+    voiceHint.textContent = msg || "";
+    voiceHint.classList.toggle("warn", !!warn);
+  }
+
+  var talk = null;
+  if (window.SimilarizeTalk && SimilarizeTalk.TalkController && talkBtn) {
+    talk = new SimilarizeTalk.TalkController({
+      onStatus: function (msg, warn) {
+        setVoiceHint(msg, warn);
+        talkBtn.classList.toggle("listening", !!(talk && talk.listening));
+        talkBtn.setAttribute("aria-pressed", talk && talk.listening ? "true" : "false");
+      },
+      onTranscript: function (text) {
+        if (!text) return;
+        input.value = text;
+        updateCount();
+      },
+      onPackaged: function (text) {
+        if (!text) return;
+        input.value = text;
+        updateCount();
+        render(text);
+      },
+      onPaymentRequired: function (info) {
+        showPaywall(info);
+        setVoiceHint("Talk is $" + (((info && info.session_price_cents) || 25) / 100).toFixed(2) + " — typed Similarize stays free.", true);
+        talkBtn.classList.remove("listening");
+        talkBtn.setAttribute("aria-pressed", "false");
+      }
+    });
+
+    talkBtn.addEventListener("click", function () {
+      if (paywall) {
+        paywall.hidden = true;
+        paywall.classList.remove("show");
+      }
+      talk.toggle().catch(function () {});
+    });
+  }
 
   var shared = readShared();
   if (shared) {
