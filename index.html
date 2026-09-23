@@ -10,16 +10,16 @@ layout: null
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Similarize">
   <meta name="mobile-web-app-capable" content="yes">
-  <title>Similarize — Word it so more people can agree</title>
-  <meta name="description" content="Say it in your own words. Similarize shows how a general audience may hear it, then clearer ways to keep your point with fewer detours. A Flight Enabled company.">
+  <title>Similarize — Clearer rewrites that keep your point</title>
+  <meta name="description" content="Get clearer rewrites that keep your honest point, plus where perspectives overlap or clash — without watering down the truth or forcing one opinion. A Flight Enabled company.">
   <meta name="theme-color" content="#15803d">
   <link rel="canonical" href="https://www.similarize.com/">
   <link rel="icon" href="icon.svg?v=20260905a" type="image/svg+xml">
   <link rel="icon" href="icon-32.png?v=20260905a" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20260905a">
   <link rel="manifest" href="manifest.webmanifest?v=20260905a">
-  <meta property="og:title" content="Similarize — Word it so more people can agree">
-  <meta property="og:description" content="Write your statement. See how it lands. Say it more clearly.">
+  <meta property="og:title" content="Similarize — Clearer rewrites that keep your point">
+  <meta property="og:description" content="Clearer rewrites that keep your honest point — plus where perspectives overlap or clash.">
   <meta property="og:url" content="https://www.similarize.com/">
   <meta property="og:image" content="https://www.similarize.com/images/simlogo.png">
   <meta property="og:type" content="website">
@@ -356,6 +356,15 @@ footer.site a:hover {
   color: #6b7280;
   line-height: 1.35;
 }
+.promise {
+  margin: 0.85rem auto 0;
+  max-width: 28rem;
+  text-align: center;
+  font-size: 1.02rem;
+  color: var(--ink);
+  line-height: 1.45;
+  font-weight: 500;
+}
 .helper {
   margin: 0.55rem 0.35rem 0;
   font-size: 0.84rem;
@@ -373,10 +382,11 @@ footer.site a:hover {
           <img src="images/imi-mark-lg.png" width="168" height="168" alt="Similarize">
         </a>
         <p class="dev-note"><strong>Early preview</strong> — still in development, not a finished product.</p>
+        <p class="promise">You get clearer rewrites that keep your honest point, plus where perspectives overlap or clash — without watering down the truth or forcing one opinion.</p>
       </div>
       <form class="composer" id="composer" autocomplete="off">
         <label for="statement">Your statement</label>
-        <textarea id="statement" name="statement" maxlength="800" rows="3" placeholder="Say what you mean…" autofocus></textarea>
+        <textarea id="statement" name="statement" maxlength="800" rows="3" placeholder="Type something to reword…" autofocus></textarea>
         <div class="row">
           <span class="count" id="count" aria-live="polite">0/800</span>
           <div class="row-actions">
@@ -390,7 +400,7 @@ footer.site a:hover {
             <button type="submit" class="primary" id="go" disabled>Similarize</button>
           </div>
         </div>
-        <p class="helper">Type it blunt, messy, or from your corner. You'll get clearer ways to keep your honest point, and where perspectives overlap or clash — without watering down the truth or forcing one opinion.</p>
+        <p class="helper">Paste or type any line — blunt, messy, or from your corner — then hit Similarize.</p>
       </form>
       <p class="voice-hint" id="voice-hint" aria-live="polite"></p>
       <div class="paywall-card" id="paywall" hidden>
