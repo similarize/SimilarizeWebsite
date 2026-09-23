@@ -906,7 +906,10 @@ function capWord(s) {
 
 function endsQuestionShape(s) {
   const t = s.replace(/[?!.]+$/, "").trim();
-  return /^(who|what|when|where|why|how|is|are|was|were|do|does|did|can|could|should|would|will|may|might|am|shall|has|have|had|could)\b/i.test(t);
+  // "When you X, I Y" is a statement, not a question.
+  if (/^when.+,/i.test(t)) return false;
+  if (/^(if|after|before|while|although|because).+,/i.test(t)) return false;
+  return /^(who|what|when|where|why|how|is|are|was|were|do|does|did|can|could|should|would|will|may|might|am|shall|has|have|had)/i.test(t);
 }
 
 function polish(s, asQuestion) {
@@ -1150,9 +1153,261 @@ function hashText(s) {
   return (h >>> 0).toString(16).padStart(8, "0");
 }
 
+
+// --- Reframe: same honest signal, receivable wording (not synonym swap) ---
+const HARSH_CUES = [
+  /\b(ugly|hideous|gross|disgusting|repulsive|fat|skinny|hideous)\b/i,
+  /\b(stupid|idiot|idiots|moron|morons|dumb|retarded|braindead|brainless)\b/i,
+  /\b(hate|hates|hated|hating|despise|loathe)\b/i,
+  /\b(shut up|fuck you|screw you|go to hell|kill yourself|drop dead)\b/i,
+  /\b(loser|worthless|pathetic|trash|garbage|piece of shit|asshole|bitch|bastard|cunt)\b/i,
+  /\b(you (always|never) )\b/i,
+  /\b(you('re| are) (so |such a? )?(annoying|awful|terrible|horrible|useless|lazy|crazy|insane|psycho))\b/i,
+  /\b(i (can't|cannot) stand (you|this|that|it))\b/i,
+];
+
+const REFRAME_RULES = [
+  {
+    id: "looks",
+    test: (s) => /\b(ugly|hideous|gross|disgusting|repulsive|fat|skinny)\b/i.test(s) && /\b(you|your)\b/i.test(s),
+    meaning: "speaker finds the other person's appearance unappealing",
+    options: [
+      { id: "rf-prefer", label: "Honest preference", hint: "Own the feeling without attacking their worth.", text: "I'm not attracted to you." },
+      { id: "rf-fit", label: "Fit, not insult", hint: "Same signal as a mismatch, not a character attack.", text: "We don't match on looks." },
+      { id: "rf-bound", label: "Clear boundary", hint: "Short stop without piling on.", text: "I'd rather not go further." },
+    ],
+  },
+  {
+    id: "smarts",
+    test: (s) => /\b(stupid|idiot|idiots|moron|morons|dumb|retarded|braindead|brainless|dumbass)\b/i.test(s),
+    meaning: "speaker thinks the idea or person is wrong or unclear",
+    fill: (s) => {
+      const m = s.match(/\b(?:this|that|the)\s+([\w][\w\s'-]{0,40}?)\s+(?:is|are|seems|looks)\s+(?:so\s+)?(?:stupid|dumb|idiotic|moronic)\b/i);
+      if (m) {
+        const topic = collapse(m[1]).split(/\s+/).slice(0, 5).join(" ");
+        return [
+          { id: "rf-prefer", label: "Honest disagreement", hint: "Reject the idea, keep the topic.", text: polish("I don't support this " + topic, false) },
+          { id: "rf-clear", label: "Clarity ask", hint: "Invite a better case.", text: polish("Can you make a stronger case for this " + topic, true) },
+          { id: "rf-bound", label: "Specific objection", hint: "Name the problem without a slur.", text: polish("This " + topic + " doesn't hold up for me", false) },
+        ];
+      }
+      return [
+        { id: "rf-prefer", label: "Honest disagreement", hint: "Reject the idea, not the person's worth.", text: "I don't buy that." },
+        { id: "rf-clear", label: "Clarity ask", hint: "Same doubt, aimed at understanding.", text: "I'm not following your point." },
+        { id: "rf-bound", label: "Specific objection", hint: "Point at the claim, keep it short.", text: "That reasoning doesn't hold for me." },
+      ];
+    },
+  },
+  {
+    id: "hate-you",
+    test: (s) => /\bi\s+(hate|despise|loathe)\s+you\b/i.test(s) || /\b(fuck you|screw you)\b/i.test(s),
+    meaning: "speaker wants distance or is furious at the person",
+    options: [
+      { id: "rf-prefer", label: "Honest distance", hint: "Name the need without a slur.", text: "I don't want to be around you right now." },
+      { id: "rf-fit", label: "Break the pattern", hint: "Same rupture, stated as a relationship fact.", text: "This isn't working between us." },
+      { id: "rf-bound", label: "Clear ask", hint: "One short request.", text: "Please give me space." },
+    ],
+  },
+  {
+    id: "hate-thing",
+    test: (s) => /\bi\s+(hate|despise|loathe)\s+(this|that|it|your)\b/i.test(s) || /\bi\s+(can't|cannot)\s+stand\s+(this|that|it)\b/i.test(s),
+    meaning: "speaker strongly rejects a thing or behavior",
+    options: [
+      { id: "rf-prefer", label: "Honest preference", hint: "Own the dislike without heat.", text: null }, // filled dynamically
+      { id: "rf-ask", label: "Clear ask", hint: "Turn heat into a short request.", text: null },
+      { id: "rf-alt", label: "Offer a lane", hint: "Same rejection plus a next step.", text: null },
+    ],
+    fill: (s) => {
+      let topic = "this";
+      const m = s.match(/\b(?:hate|despise|loathe|stand)\s+(?:this|that|it|your)\s+(.+?)(?:[.!?]|$)/i);
+      if (m) topic = collapse(m[1]).replace(/^(the|a|an)\s+/i, "") || "this";
+      else {
+        const m2 = s.match(/\byour\s+([a-z][\w'-]*)/i);
+        if (m2) topic = m2[1];
+      }
+      topic = topic.split(/\s+/).slice(0, 4).join(" ");
+      return [
+        { id: "rf-prefer", label: "Honest preference", hint: "Own the dislike without heat.", text: polish("This " + topic + " isn't working for me", false) },
+        { id: "rf-ask", label: "Clear ask", hint: "Turn heat into a short request.", text: polish("Can we change how we handle " + topic, true) },
+        { id: "rf-alt", label: "Offer a lane", hint: "Same rejection plus a next step.", text: polish("I'd rather try a different approach to " + topic, false) },
+      ];
+    },
+  },
+  {
+    id: "shut-up",
+    test: (s) => /\b(shut up|be quiet|nobody asked)\b/i.test(s),
+    meaning: "speaker wants the other person to stop talking",
+    options: [
+      { id: "rf-prefer", label: "Honest pause", hint: "Ask for quiet without insult.", text: "I need a minute of quiet." },
+      { id: "rf-ask", label: "Clear ask", hint: "One short request.", text: "Please pause so I can finish." },
+      { id: "rf-bound", label: "Turn-taking", hint: "Same need as a process ask.", text: "Can we take turns speaking?" },
+    ],
+  },
+  {
+    id: "you-always",
+    test: (s) => /\byou\s+(always|never)\b/i.test(s),
+    meaning: "speaker is frustrated by a repeated pattern",
+    options: [
+      { id: "rf-prefer", label: "Name the pattern", hint: "Drop the absolute; keep the pattern.", text: null },
+      { id: "rf-ask", label: "Clear ask", hint: "One change request.", text: null },
+      { id: "rf-impact", label: "Impact, not attack", hint: "What it does to you.", text: null },
+    ],
+    fill: (s) => {
+      let rest = s.replace(/^.*?\byou\s+(always|never)\s+/i, "").replace(/[?.!]+$/, "");
+      rest = collapse(rest);
+      if (!rest) rest = "this";
+      const freq = /\byou\s+always\b/i.test(s) ? "often" : "rarely";
+      return [
+        { id: "rf-prefer", label: "Name the pattern", hint: "Drop the absolute; keep the pattern.", text: polish("I've noticed you " + freq + " " + rest, false) },
+        { id: "rf-ask", label: "Clear ask", hint: "One change request.", text: polish("Could you " + (freq === "often" ? "do this less: " : "do this more: ") + rest, true) },
+        { id: "rf-impact", label: "Impact, not attack", hint: "What it does to you.", text: polish("When you " + rest + ", I shut down", false) },
+      ];
+    },
+  },
+  {
+    id: "you-are-insult",
+    test: (s) => /\byou('re|\s+are)\s+(so\s+|such\s+a\s+)?(annoying|awful|terrible|horrible|useless|lazy|crazy|insane|psycho|pathetic|worthless|loser|trash|garbage)\b/i.test(s),
+    meaning: "speaker is attacking the listener's character",
+    options: [
+      { id: "rf-prefer", label: "Honest friction", hint: "Name the clash without a slur.", text: "This isn't working for me." },
+      { id: "rf-ask", label: "Clear ask", hint: "Ask for a change.", text: "I need a different approach from you." },
+      { id: "rf-bound", label: "Boundary", hint: "Short stop.", text: "I'm stepping back from this." },
+    ],
+  },
+  {
+    id: "worthless",
+    test: (s) => /\b(loser|worthless|pathetic|trash|garbage|piece of shit|asshole|bitch|bastard)\b/i.test(s),
+    meaning: "speaker is using a slur or put-down",
+    options: [
+      { id: "rf-prefer", label: "Honest friction", hint: "Keep the rupture; drop the slur.", text: "I'm done with how this is going." },
+      { id: "rf-ask", label: "Clear ask", hint: "Say what you want instead.", text: "I need this to change." },
+      { id: "rf-bound", label: "Boundary", hint: "Exit without escalation.", text: "I'm walking away from this." },
+    ],
+  },
+];
+
+function looksHarsh(src) {
+  return HARSH_CUES.some((re) => re.test(src));
+}
+
+function checklist(original, candidate, meaning) {
+  const notes = [];
+  const c = collapse(String(candidate || ""));
+  const o = collapse(String(original || ""));
+  if (!c) return { ok: false, notes: ["empty"] };
+  // Still offensive?
+  if (looksHarsh(c) && !/^i('m| am) not\b/i.test(c)) {
+    // allow mild residual in pattern text we wrote; block raw insults
+    if (/\b(ugly|stupid|idiot|moron|hate you|fuck|shit|asshole|bitch|cunt|retard)\b/i.test(c)) {
+      notes.push("offends");
+    }
+  }
+  // Synonym-swap smell: mostly same tokens with one adjective swapped
+  const oTokens = o.toLowerCase().replace(/[^\w\s']/g, "").split(/\s+/).filter(Boolean);
+  const cTokens = c.toLowerCase().replace(/[^\w\s']/g, "").split(/\s+/).filter(Boolean);
+  if (oTokens.length >= 3 && cTokens.length >= 3) {
+    const oSet = new Set(oTokens);
+    const shared = cTokens.filter((t) => oSet.has(t)).length;
+    const ratio = shared / Math.max(oTokens.length, cTokens.length);
+    if (ratio >= 0.7 && Math.abs(oTokens.length - cTokens.length) <= 1) {
+      notes.push("synonym-swap");
+    }
+  }
+  // Passive-aggressive / bloated therapy-speak
+  if (wordCount(c) > 18) notes.push("bloated");
+  if (/\bi notice i have a hard time\b/i.test(c)) notes.push("therapy-speak");
+  if (/\bi('d| would) like to understand that better\b/i.test(c)) notes.push("therapy-speak");
+  // Too indirect vs meaning
+  if (meaning && /\bconnecting with how you look\b/i.test(c)) notes.push("indirect");
+  const ok = notes.length === 0;
+  return { ok, notes };
+}
+
+function buildReframes(src) {
+  const meaningGuess = "speaker has a blunt or harsh point that still needs to land";
+  let picked = null;
+  for (const rule of REFRAME_RULES) {
+    if (rule.test(src)) {
+      picked = rule;
+      break;
+    }
+  }
+  let options;
+  if (picked && typeof picked.fill === "function") {
+    options = picked.fill(src);
+  } else if (picked) {
+    options = picked.options.map((o) => ({ ...o }));
+  } else {
+    // Generic structural reframes — still not synonym swaps
+    const core = collapse(src)
+      .replace(/^(hey|ok|okay|look|listen)[, ]+/i, "")
+      .replace(/[!.?]+$/g, "");
+    options = [
+      {
+        id: "rf-prefer",
+        label: "Honest preference",
+        hint: "Own the stance without attacking the person.",
+        text: polish("This doesn't work for me: " + lowerFirst(core), false),
+      },
+      {
+        id: "rf-ask",
+        label: "Clear ask",
+        hint: "Turn the heat into one short request.",
+        text: polish("Can we handle this differently", true),
+      },
+      {
+        id: "rf-bound",
+        label: "Boundary",
+        hint: "Same stop, fewer sparks.",
+        text: polish("I need to step back from this", false),
+      },
+    ];
+  }
+  const meaning = (picked && picked.meaning) || meaningGuess;
+  // Checklist filter; keep 2–3 distinct angles
+  const kept = [];
+  const seen = new Set([normalizeKey(src)]);
+  for (const opt of options) {
+    const check = checklist(src, opt.text, meaning);
+    if (!check.ok) continue;
+    const key = normalizeKey(opt.text);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    kept.push({ ...opt, meaning, checklist: "pass" });
+    if (kept.length >= 3) break;
+  }
+  // If checklist wiped too many, fall back to short structural set
+  if (kept.length < 2) {
+    const fallback = [
+      { id: "rf-prefer", label: "Honest preference", hint: "Own the stance without attacking.", text: "This isn't working for me." },
+      { id: "rf-ask", label: "Clear ask", hint: "One short request.", text: "Can we try a different approach?" },
+      { id: "rf-bound", label: "Boundary", hint: "Same stop, fewer sparks.", text: "I need to step back." },
+    ];
+    for (const opt of fallback) {
+      if (kept.length >= 3) break;
+      const key = normalizeKey(opt.text);
+      if (seen.has(key)) continue;
+      if (!checklist(src, opt.text, meaning).ok) continue;
+      seen.add(key);
+      kept.push({ ...opt, meaning, checklist: "pass" });
+    }
+  }
+  return kept.slice(0, 3);
+}
+
+function needsReframe(src) {
+  return looksHarsh(src);
+}
+
 function rewrite(original) {
+
   const src = collapse(String(original || ""));
   if (!src) return [];
+  // Harsh / blunt / offensive → genuine reframes (2–3 angles), not synonym swaps
+  if (needsReframe(src)) {
+    const reframes = buildReframes(src);
+    if (reframes.length >= 2) return reframes;
+  }
   const variants = [
     { id: "plain", label: "Fewer detours", hint: "Same point in fewer words and everyday language.", text: shorten(src) },
     { id: "concrete", label: "Concrete", hint: "Swap abstractions for things you can point to.", text: makeConcrete(src) },
@@ -1176,6 +1431,9 @@ function reception(original) {
   }
   for (const key of Object.keys(LOADED_WORDS)) {
     if (new RegExp("\\b" + escapeRe(key) + "\\b", "i").test(src)) loadedHits++;
+  }
+  if (needsReframe(src)) {
+    notes.push("Blunt wording may close the other person before they hear your real point — reframes below keep the signal, change the angle.");
   }
   if (loadedHits > 0) {
     notes.push(loadedHits === 1
@@ -1215,7 +1473,7 @@ function reception(original) {
   return { summary, notes: notes.slice(0, 3) };
 }
 
-  root.Similarize = { rewrite: rewrite, hashText: hashText, reception: reception };
+  root.Similarize = { rewrite: rewrite, hashText: hashText, reception: reception, needsReframe: needsReframe, buildReframes: buildReframes };
 })(window);
 
   </script>
@@ -1241,6 +1499,7 @@ function reception(original) {
   var shareStatus = $("share-status");
   var shell = $("shell");
   var PREFERRED = ["plain", "steelman", "kid"];
+  var REFRAME_IDS = ["rf-prefer", "rf-fit", "rf-clear", "rf-ask", "rf-alt", "rf-bound", "rf-impact"];
 
   function esc(s) {
     return String(s).replace(/[&<>"']/g, function (c) {
@@ -1313,6 +1572,12 @@ function reception(original) {
     var byId = {};
     for (var i = 0; i < all.length; i++) byId[all[i].id] = all[i];
     var out = [];
+    // If rewrite returned reframes, show those (2–3 distinct angles)
+    var reframes = [];
+    for (var i = 0; i < all.length; i++) {
+      if (String(all[i].id || "").indexOf("rf-") === 0) reframes.push(all[i]);
+    }
+    if (reframes.length) return reframes.slice(0, 3);
     for (var j = 0; j < PREFERRED.length; j++) {
       if (byId[PREFERRED[j]]) out.push(byId[PREFERRED[j]]);
     }
@@ -1325,6 +1590,11 @@ function reception(original) {
     if (!originalText) return;
     var rec = Similarize.reception(originalText);
     var variants = pickVariants(Similarize.rewrite(originalText));
+    var heading = document.querySelector(".toolbar h2");
+    if (heading) {
+      var isReframe = variants.length && String(variants[0].id || "").indexOf("rf-") === 0;
+      heading.textContent = isReframe ? "Receivable ways to say it" : "Up to three clearer ways";
+    }
     receptionEl.innerHTML = receptionHtml(rec);
     var html = "";
     for (var i = 0; i < variants.length; i++) html += cardHtml(variants[i]);
