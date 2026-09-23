@@ -342,6 +342,20 @@ footer.site a:hover {
 .paywall-card.show { display: block; }
 .paywall-card strong { display: block; margin-bottom: 0.25rem; color: #7c2d12; }
 .paywall-card p { margin: 0; color: #9a3412; }
+.dev-note {
+  margin: 0.65rem 0 0;
+  text-align: center;
+  font-size: 0.82rem;
+  color: #6b7280;
+  letter-spacing: 0.01em;
+}
+.dev-note strong { color: #4b5563; font-weight: 600; }
+.card .hint {
+  margin: 0.15rem 0 0.45rem;
+  font-size: 0.82rem;
+  color: #6b7280;
+  line-height: 1.35;
+}
   </style>
 </head>
 <body>
@@ -352,6 +366,7 @@ footer.site a:hover {
         <a class="logo" href="https://www.similarize.com/" aria-label="Similarize">
           <img src="images/imi-mark-lg.png" width="168" height="168" alt="Similarize">
         </a>
+        <p class="dev-note"><strong>Early preview</strong> — still in development, not a finished product.</p>
       </div>
       <form class="composer" id="composer" autocomplete="off">
         <label for="statement">Your statement</label>
@@ -380,7 +395,7 @@ footer.site a:hover {
     <section class="results hidden" id="results" aria-live="polite">
       <div class="reception" id="reception"></div>
       <div class="toolbar">
-        <h2>Clearer ways to say it</h2>
+        <h2>Up to three clearer ways</h2>
         <div>
           <button type="button" class="ghost" id="share">Copy link</button>
           <span class="share-status" id="share-status"></span>
@@ -1100,17 +1115,25 @@ function ensureDistinct(original, variants) {
     if (!t) t = original;
     if (seen.has(normalizeKey(t))) {
       if (v.id === "plain") {
-        const fewer = polish(String(t).replace(/\b(often|rarely|very|now)\b/gi, ""), /\?/.test(t));
-        t = seen.has(normalizeKey(fewer)) ? polish("In fewer words: " + lowerFirst(t), false) : fewer;
+        const fewer = polish(String(t).replace(/\b(often|rarely|very|now|really|just|actually)\b/gi, ""), /\?/.test(t));
+        t = seen.has(normalizeKey(fewer))
+          ? polish("In short: " + lowerFirst(original), false)
+          : fewer;
       } else if (v.id === "concrete") {
         t = glossFirstNoun(original) || polish("In practice: " + lowerFirst(original), /\?/.test(original));
       } else if (v.id === "question") {
         t = polish("Could we ask whether " + lowerFirst(String(original).replace(/[?.!]+$/, "")), true);
       } else if (v.id === "steelman") {
-        t = polish("A fair reading: " + lowerFirst(t), false);
+        t = polish("A fair way to put it: " + lowerFirst(original), false);
       } else if (v.id === "kid") {
-        t = polish("Imagine explaining it to a child: " + lowerFirst(t), false);
+        t = polish("Simply put: " + lowerFirst(original), false);
       }
+    }
+    // Final uniqueness pass — keep three cards visibly different
+    if (seen.has(normalizeKey(t))) {
+      if (v.id === "plain") t = polish("Here is the point: " + lowerFirst(original), false);
+      else if (v.id === "steelman") t = polish("Heard fairly: " + lowerFirst(original), false);
+      else if (v.id === "kid") t = polish("In everyday words: " + lowerFirst(original), false);
     }
     seen.add(normalizeKey(t));
     return { ...v, text: t };
@@ -1131,11 +1154,11 @@ function rewrite(original) {
   const src = collapse(String(original || ""));
   if (!src) return [];
   const variants = [
-    { id: "plain", label: "Plain and short", hint: "Fewer words. Everyday language.", text: shorten(src) },
+    { id: "plain", label: "Fewer detours", hint: "Same point in fewer words and everyday language.", text: shorten(src) },
     { id: "concrete", label: "Concrete", hint: "Swap abstractions for things you can point to.", text: makeConcrete(src) },
     { id: "question", label: "As a question", hint: "Invite an answer instead of starting a fight.", text: invertToQuestion(src) },
-    { id: "steelman", label: "Steelmanned", hint: "Less loaded language. The strongest fair reading.", text: steelman(src) },
-    { id: "kid", label: "So a kid could get it", hint: "Unfold the idea until a child could follow it.", text: kidVersion(src) },
+    { id: "steelman", label: "Wider agreement", hint: "Calmer wording so more people can stay with the idea.", text: steelman(src) },
+    { id: "kid", label: "Anyone can follow", hint: "Plain enough that a general audience can track it.", text: kidVersion(src) },
   ];
   return ensureDistinct(src, variants);
 }
@@ -1160,7 +1183,7 @@ function reception(original) {
       : "Several loaded words may pull people into a side fight before they hear your point.");
   }
   let fillers = 0;
-  for (const w of (src.match(/\\b[\\w']+\\b/g) || [])) {
+  for (const w of (src.match(/\b[\w']+\b/g) || [])) {
     if (FILLER_WORDS.has(w.toLowerCase())) fillers++;
   }
   if (fillers >= 2) {
@@ -1172,7 +1195,7 @@ function reception(original) {
   if ((src.match(/!/g) || []).length >= 2) {
     notes.push("Extra exclamation marks raise heat more than clarity.");
   }
-  if (/\\b(always|never|everyone|everybody|nobody|everything|nothing)\\b/i.test(src)) {
+  if (/\b(always|never|everyone|everybody|nobody|everything|nothing)\b/i.test(src)) {
     notes.push("Absolute words (always, never, everyone) invite exceptions instead of agreement.");
   }
   const plain = shorten(src);
@@ -1279,6 +1302,7 @@ function reception(original) {
     return (
       '<article class="card" data-text="' + esc(item.text) + '">' +
         '<div class="kicker">' + esc(item.label) + "</div>" +
+        (item.hint ? '<p class="hint">' + esc(item.hint) + "</p>" : "") +
         '<p class="wording">' + esc(item.text) + "</p>" +
         '<div class="actions"><button type="button" class="copy-btn" data-copy>Copy</button></div>' +
       "</article>"
@@ -1292,7 +1316,8 @@ function reception(original) {
     for (var j = 0; j < PREFERRED.length; j++) {
       if (byId[PREFERRED[j]]) out.push(byId[PREFERRED[j]]);
     }
-    return out.length ? out : all.slice(0, 3);
+    if (!out.length) out = all.slice(0, 3);
+    return out.slice(0, 3);
   }
 
   function render(text) {
