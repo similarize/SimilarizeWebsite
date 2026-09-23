@@ -1399,23 +1399,10 @@ function needsReframe(src) {
   return looksHarsh(src);
 }
 
-function rewrite(original) {
-
-  const src = collapse(String(original || ""));
-  if (!src) return [];
-  // Harsh / blunt / offensive → genuine reframes (2–3 angles), not synonym swaps
-  if (needsReframe(src)) {
-    const reframes = buildReframes(src);
-    if (reframes.length >= 2) return reframes;
-  }
-  const variants = [
-    { id: "plain", label: "Fewer detours", hint: "Same point in fewer words and everyday language.", text: shorten(src) },
-    { id: "concrete", label: "Concrete", hint: "Swap abstractions for things you can point to.", text: makeConcrete(src) },
-    { id: "question", label: "As a question", hint: "Invite an answer instead of starting a fight.", text: invertToQuestion(src) },
-    { id: "steelman", label: "Wider agreement", hint: "Calmer wording so more people can stay with the idea.", text: steelman(src) },
-    { id: "kid", label: "Anyone can follow", hint: "Plain enough that a general audience can track it.", text: kidVersion(src) },
-  ];
-  return ensureDistinct(src, variants);
+function rewrite(_original) {
+  // Disabled: live submit uses POST /v1/reframe on fe-voice-mint.
+  // Local prefix/synonym path removed from submit to prevent regression.
+  return [];
 }
 
 
@@ -1498,9 +1485,6 @@ function reception(original) {
   var shareBtn = $("share");
   var shareStatus = $("share-status");
   var shell = $("shell");
-  var PREFERRED = ["plain", "steelman", "kid"];
-  var REFRAME_IDS = ["rf-prefer", "rf-fit", "rf-clear", "rf-ask", "rf-alt", "rf-bound", "rf-impact"];
-
   function esc(s) {
     return String(s).replace(/[&<>"']/g, function (c) {
       return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c];
@@ -1568,42 +1552,74 @@ function reception(original) {
     );
   }
 
-  function pickVariants(all) {
-    var byId = {};
-    for (var i = 0; i < all.length; i++) byId[all[i].id] = all[i];
-    var out = [];
-    // If rewrite returned reframes, show those (2–3 distinct angles)
-    var reframes = [];
-    for (var i = 0; i < all.length; i++) {
-      if (String(all[i].id || "").indexOf("rf-") === 0) reframes.push(all[i]);
-    }
-    if (reframes.length) return reframes.slice(0, 3);
-    for (var j = 0; j < PREFERRED.length; j++) {
-      if (byId[PREFERRED[j]]) out.push(byId[PREFERRED[j]]);
-    }
-    if (!out.length) out = all.slice(0, 3);
-    return out.slice(0, 3);
+  var REFRAME_URL = "https://fe-voice-mint.ben-e22.workers.dev/v1/reframe";
+
+  function showResultsShell(headingText) {
+    var heading = document.querySelector(".toolbar h2");
+    if (heading) heading.textContent = headingText || "Clearer ways to say it";
+    results.classList.remove("hidden");
+    shell.classList.add("has-results");
   }
 
-  function render(text) {
+  function setLoading(on) {
+    go.disabled = on || !input.value.trim();
+    go.textContent = on ? "Similarizing…" : "Similarize";
+  }
+
+  function renderError(msg) {
+    receptionEl.innerHTML = "";
+    cards.innerHTML = '<p class="summary" style="color:#9a3412;margin:0.5rem 0 0;">' + esc(msg) + "</p>";
+    showResultsShell("Clearer ways to say it");
+    results.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function renderOptions(text, options) {
     originalText = text.trim();
     if (!originalText) return;
     var rec = Similarize.reception(originalText);
-    var variants = pickVariants(Similarize.rewrite(originalText));
-    var heading = document.querySelector(".toolbar h2");
-    if (heading) {
-      var isReframe = variants.length && String(variants[0].id || "").indexOf("rf-") === 0;
-      heading.textContent = isReframe ? "Receivable ways to say it" : "Up to three clearer ways";
-    }
     receptionEl.innerHTML = receptionHtml(rec);
     var html = "";
-    for (var i = 0; i < variants.length; i++) html += cardHtml(variants[i]);
+    for (var i = 0; i < options.length; i++) html += cardHtml(options[i]);
     cards.innerHTML = html;
-    results.classList.remove("hidden");
-    shell.classList.add("has-results");
+    showResultsShell("Receivable ways to say it");
     writeShare(originalText);
     shareStatus.textContent = "";
     results.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function reframe(text) {
+    return fetch(REFRAME_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ product: "similarize", text: text }),
+    }).then(function (res) {
+      return res.json().then(function (data) {
+        if (!res.ok) throw new Error((data && data.error) || "reframe_failed");
+        var opts = (data && data.options) || [];
+        if (!opts.length) throw new Error("empty_options");
+        return opts.slice(0, 3);
+      });
+    });
+  }
+
+  function render(text) {
+    text = String(text || "").trim();
+    if (!text) return;
+    setLoading(true);
+    showResultsShell("Clearer ways to say it");
+    receptionEl.innerHTML = "";
+    cards.innerHTML = '<p class="summary" style="margin:0.5rem 0 0;color:var(--muted,#64748b);">Working on clearer wording…</p>';
+    results.classList.remove("hidden");
+    reframe(text)
+      .then(function (options) {
+        renderOptions(text, options);
+      })
+      .catch(function () {
+        renderError("Couldn't reframe right now — try again");
+      })
+      .then(function () {
+        setLoading(false);
+      });
   }
 
   form.addEventListener("submit", function (e) {
