@@ -70,8 +70,8 @@
       img.onerror = () => { console.warn("Art failed:", src); };
       img.src = src;
     }
-    loadOne("splash", "assets/splash-forest-roof.png");
-    loadOne("backdrop", "assets/backdrop-overhead.png");
+    loadOne("splash", "assets/splash-forest-roof.png?v=20260925-names2");
+    loadOne("backdrop", "assets/backdrop-overhead.png?v=20260925-names2");
   }
 
   /** Cover-draw an image into a screen rect (center crop). */
@@ -137,7 +137,7 @@
   }
 
   function makeFrog(id, human, slot) {
-    const def = FROG_DEFS[id];
+    const def = FROG_DEFS[id] || FROG_DEFS.james || FROG_DEFS[FROG_ORDER[0]];
     return {
       ...def,
       human,
@@ -168,9 +168,9 @@
   function spawnStripThreats() {
     hazards = [];
     invaders = [];
-    // Hazards: rocks / mud / toys clutter on lanes
-    for (let i = 0; i < 22; i++) {
-      const x = 450 + i * 160 + Math.random() * 80;
+    // Hazards: rocks / mud / toys clutter on lanes (first ~3–4s clear)
+    for (let i = 0; i < 18; i++) {
+      const x = 920 + i * 175 + Math.random() * 80;
       if (x > STRIP_LEN - 200) continue;
       hazards.push({
         x,
@@ -181,8 +181,8 @@
       });
     }
     // Invaders: one type — purple saucers
-    for (let i = 0; i < 10; i++) {
-      const x = 700 + i * 320 + Math.random() * 100;
+    for (let i = 0; i < 9; i++) {
+      const x = 1100 + i * 340 + Math.random() * 100;
       if (x > STRIP_LEN - 250) continue;
       invaders.push({
         x,
@@ -205,11 +205,12 @@
       makeFrog(others[1], false, 2),
       makeFrog(others[2], false, 3),
     ];
-    // Stagger starting lanes
+    // Stagger starting lanes + brief convoy invuln so first seconds are playable
     frogs.forEach((f, i) => {
       f.lane = i % LANE_COUNT;
       f.targetLane = f.lane;
       f.x = 90 + i * 55;
+      f.invuln = 2;
     });
     lives = SHARED_LIVES;
     scrap = 0;
@@ -490,6 +491,8 @@
   function collide(dt) {
     for (const f of frogs) {
       if (f.invuln > 0 || f.dashing > 0) continue;
+      // AI frogs dodge for flavor but do not drain shared lives
+      if (!f.human) continue;
       for (const hz of hazards) {
         if (hz.hit) continue;
         if (hz.lane !== f.lane) continue;
@@ -502,7 +505,7 @@
       for (const inv of invaders) {
         if (inv.lane !== f.lane) continue;
         if (Math.abs(inv.x - f.x) < inv.r + 24) {
-          // bump — remove invader and hurt
+          // bump — remove invader and hurt (human only)
           burst(inv.x, laneY(inv.lane), 10, "#a78bfa");
           invaders.splice(invaders.indexOf(inv), 1);
           loseLife(f.x, f.y || laneY(f.lane));
@@ -1098,7 +1101,8 @@
   window.addEventListener("resize", resize);
   resize();
   loadArt();
-  document.querySelector('.frog-btn[data-id="james"]').classList.add("selected");
+  const selectedBtn = document.querySelector('.frog-btn[data-id="james"]');
+  if (selectedBtn) selectedBtn.classList.add("selected");
   showOverlay(
     "Froggies Cybertruck Odyssey",
     "Steer left/right · tap ability · keep the convoy alive past the ranch house, track, and pond.",
