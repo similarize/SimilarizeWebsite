@@ -14,7 +14,7 @@ import {
   wheelPace,
   MISSILE_MAX,
   MISSILE_RELOAD
-} from "./engine.js?v=20260925level";
+} from "./engine.js?v=20260925aim";
 var BEST_KEY = "rc-rally-jump-best";
 var RIG_KEY = "rc-rally-rig";
 var TUNE_KEY = "rc-rally-tune";
@@ -291,9 +291,38 @@ function boot() {
     prevGates = 0;
   };
   let noseDown = false;
+  let pointerXY = null;
   const boostHeld = () => pointer || keys.has("Space") || keys.has("ArrowUp") || keys.has("KeyW");
-  const leanHeld = () => noseDown || keys.has("ArrowRight") || keys.has("ArrowDown") || keys.has("KeyD") || keys.has("KeyS");
-  const noseUpHeld = () => keys.has("ArrowLeft") || keys.has("KeyA");
+  const camera = () => {
+    const portrait = canvas.height > canvas.width * 1.05;
+    const scale = portrait ? Math.min(canvas.width / 700, canvas.height / VIEW_H) : Math.min(canvas.width / VIEW_W, canvas.height / VIEW_H);
+    const visW = canvas.width / scale;
+    const windowStart = portrait ? Math.max(0, Math.min(72, VIEW_W - visW)) : 0;
+    const worldH = VIEW_H * scale;
+    const oy = (canvas.height - worldH) / 2;
+    const ox = portrait ? 0 : (canvas.width - VIEW_W * scale) / 2;
+    return { scale, windowStart, ox, oy };
+  };
+  const viewFromClient = (clientX, clientY) => {
+    const rect = canvas.getBoundingClientRect();
+    const px = (clientX - rect.left) * (canvas.width / rect.width);
+    const py = (clientY - rect.top) * (canvas.height / rect.height);
+    const cam = camera();
+    return {
+      x: (px - (cam.ox - cam.windowStart * cam.scale)) / cam.scale,
+      y: (py - cam.oy) / cam.scale
+    };
+  };
+  const controlAim = () => {
+    const tx = 168 + 59;
+    const ty = sim.y + 26;
+    if (pointer && pointerXY) return { aim: null, aimPoint: viewFromClient(pointerXY.x, pointerXY.y) };
+    if (noseDown || keys.has("ArrowRight") || keys.has("KeyD")) return { aim: 0, aimPoint: { x: tx + 150, y: ty } };
+    if (keys.has("ArrowLeft") || keys.has("KeyA")) return { aim: -150, aimPoint: { x: tx - 100, y: ty - 40 } };
+    if (keys.has("ArrowDown") || keys.has("KeyS")) return { aim: 75, aimPoint: { x: tx + 16, y: ty + 120 } };
+    if (keys.has("ArrowUp") || keys.has("KeyW")) return { aim: -75, aimPoint: { x: tx + 16, y: ty - 120 } };
+    return { aim: null, aimPoint: null };
+  };
   const resize = () => {
     const parent = canvas.parentElement;
     if (!parent) return;
@@ -349,10 +378,20 @@ function boot() {
     audio.unlock();
     if (sim.phase === "title") begin(true);
     else if (sim.phase === "over" && sim.sinceOver > 0.4) begin(true);
-    else if (sim.phase === "play") pointer = true;
+    else if (sim.phase === "play") {
+      pointer = true;
+      pointerXY = { x: e.clientX, y: e.clientY };
+    }
   });
+  const move = (e) => {
+    if (!pointer) return;
+    pointerXY = { x: e.clientX, y: e.clientY };
+  };
+  shell.addEventListener("pointermove", move);
+  window.addEventListener("pointermove", move);
   const release = () => {
     pointer = false;
+    pointerXY = null;
   };
   window.addEventListener("pointerup", release);
   window.addEventListener("pointercancel", release);
@@ -442,11 +481,12 @@ function boot() {
     const fire = fireEdge;
     fireEdge = false;
     const before = sim.missiles;
+    const aim = sim.phase === "play" ? controlAim() : { aim: null, aimPoint: null };
     step(sim, dt, {
       boost: boostHeld() && sim.phase === "play",
       fire,
-      lean: leanHeld() && sim.phase === "play",
-      noseUp: noseUpHeld() && sim.phase === "play"
+      aim: aim.aim,
+      aimPoint: aim.aimPoint
     });
     const phaseChanged = sim.phase !== prevPhase;
     if (sim.phase === "over" && phaseChanged) {

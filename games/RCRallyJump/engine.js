@@ -1,4 +1,4 @@
-const VERSION = "3.6";
+const VERSION = "3.7";
 const VIEW_W = 960;
 const VIEW_H = 540;
 const PLAYER_X = 168;
@@ -433,26 +433,30 @@ function wrapDeg(a) {
   return x;
 }
 function stepChassis(sim, dt, input) {
-  const noseDown = !!(input && input.lean);
-  const noseUp = !!(input && input.noseUp);
-  const boosting = !!sim.boosting;
+  if (input && input.aimPoint && !Number.isFinite(input.aim)) {
+    const tx = PLAYER_X + CAR_W / 2;
+    const ty = sim.y + CAR_H / 2;
+    const dx = input.aimPoint.x - tx;
+    const dy = input.aimPoint.y - ty;
+    if (dx * dx + dy * dy > 28 * 28) {
+      input.aim = dx < -24 && Math.abs(dy) < Math.abs(dx) * 0.55 ? -150 : Math.atan2(dy, dx) * 180 / Math.PI;
+    } else {
+      input.aimPoint = null;
+      sim.aimPoint = null;
+    }
+  }
+  const aiming = input && Number.isFinite(input.aim);
   const rot = sim.rot * Math.PI / 180;
   const c = Math.cos(rot);
   const s = Math.sin(rot);
   let contacts = 0;
-  let rear = false;
-  let front = false;
   let lift = 0;
   const sinks = [0, 0];
   for (let i = 0; i < 2; i++) {
     const g = wheelGeom(sim, i);
     const p = wheelWorld(sim, g);
     sinks[i] = p.y + g.r - surfaceY(sim, p.x);
-    if (sinks[i] > -1.2) {
-      contacts += 1;
-      if (i === 0) rear = true;
-      else front = true;
-    }
+    if (sinks[i] > -1.2) contacts += 1;
     if (sinks[i] > 0) {
       lift = Math.max(lift, sinks[i]);
       const rx = c * g.lx - s * g.ly;
@@ -465,16 +469,15 @@ function stepChassis(sim, dt, input) {
     if (sim.vy > 0) sim.vy = Math.min(sim.vy * 0.2, 80);
     sim.vy -= Math.min(lift, 6) * 22;
   }
-  if (contacts === 0) {
+  if (aiming) {
+    const err = wrapDeg(input.aim - sim.rot);
+    sim.av += clamp(err * 14 - sim.av * 5, -520, 520) * dt;
+    if (contacts > 0) sim.av *= Math.exp(-dt * 1.6);
+  } else if (contacts === 0) {
     const ang = wrapDeg(sim.rot);
-    if (noseDown) sim.av += 340 * dt;
-    else if (noseUp) sim.av -= 240 * dt;
-    else if (Math.abs(ang) < 85) sim.av += (-ang * 48 - sim.av * 13) * dt;
+    if (Math.abs(ang) < 85) sim.av += (-ang * 48 - sim.av * 13) * dt;
     else sim.av *= Math.exp(-dt * 1.4);
   } else {
-    if (noseDown) sim.av += 300 * dt;
-    else if (noseUp && rear) sim.av -= 170 * dt;
-    else if (boosting && rear && !front) sim.av -= 40 * dt;
     sim.av *= Math.exp(-dt * (contacts === 2 ? 8 : 2.4));
   }
   sim.av = clamp(sim.av, -360, 360);
@@ -555,6 +558,7 @@ function kickRamp(sim, footX, dt) {
 }
 function tick(sim, dt, input) {
   sim.time += dt;
+  sim.aimPoint = input && input.aimPoint ? input.aimPoint : null;
   const want = input.boost && sim.phase === "play";
   const can = want && sim.battery > 0.4;
   if (can) {
@@ -867,7 +871,7 @@ function step(sim, dt, input) {
   let shot = !!input.fire;
   while (acc >= h && guard < 8) {
     if (sim.phase !== "play") break;
-    tick(sim, h, { boost: input.boost, fire: shot, lean: input.lean, noseUp: input.noseUp });
+    tick(sim, h, { boost: input.boost, fire: shot, aim: input.aim, aimPoint: input.aimPoint });
     shot = false;
     acc -= h;
     guard += 1;
@@ -913,6 +917,7 @@ function draw(ctx, sim, art) {
   drawDust(ctx, sim);
   drawTrailer(ctx, sim);
   drawCar(ctx, sim, art);
+  drawAim(ctx, sim);
   drawPopups(ctx, sim);
   if (sim.phase === "over") {
     ctx.fillStyle = "rgba(120, 24, 12, 0.22)";
@@ -1241,6 +1246,27 @@ function drawTrailer(ctx, sim) {
   ctx.fillStyle = "#d5dbe3";
   ctx.fill();
   ctx.restore();
+  ctx.restore();
+}
+function drawAim(ctx, sim) {
+  const p = sim.aimPoint;
+  if (!p || sim.phase !== "play") return;
+  const tx = PLAYER_X + CAR_W / 2;
+  const ty = sim.y + CAR_H / 2;
+  ctx.save();
+  ctx.strokeStyle = "rgba(240, 180, 41, 0.95)";
+  ctx.fillStyle = "rgba(240, 180, 41, 0.9)";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(tx, ty);
+  ctx.lineTo(p.x, p.y);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, 11, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+  ctx.fill();
   ctx.restore();
 }
 function drawPopups(ctx, sim) {
