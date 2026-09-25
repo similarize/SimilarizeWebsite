@@ -1,4 +1,4 @@
-const VERSION = "2.5";
+const VERSION = "2.6";
 const VIEW_W = 960;
 const VIEW_H = 540;
 const PLAYER_X = 168;
@@ -30,6 +30,24 @@ function wheelSpec(ix, iy, imgR) {
 const REAR = wheelSpec(100, 232, 82);
 const FRONT = wheelSpec(600, 234, 80);
 const WHEELS = [REAR, FRONT];
+const CRAWLER_W = 1440;
+const CRAWLER_H = 630;
+function wheelSpecBox(ix, iy, imgR, imgW, imgH) {
+  const sx = CAR_W / imgW;
+  const sy = CAR_H / imgH;
+  return {
+    lx: (ix - imgW / 2) * sx,
+    ly: (iy - imgH / 2) * sy,
+    r: imgR * sy,
+    imgR,
+    sx,
+    sy
+  };
+}
+const CRAWLER_WHEELS = [
+  wheelSpecBox(322.6, 464.4, 147.8, CRAWLER_W, CRAWLER_H),
+  wheelSpecBox(1119.5, 460.5, 151, CRAWLER_W, CRAWLER_H)
+];
 function groundY(worldX) {
   const n = Math.sin(worldX * 41e-4) * 26 + Math.sin(worldX * 0.0105 + 1.4) * 12 + Math.sin(worldX * 22e-4 + 0.6) * 34;
   return clamp(VIEW_H * 0.78 + n, VIEW_H * 0.64, VIEW_H * 0.9);
@@ -773,9 +791,10 @@ function drawCar(ctx, sim, art) {
   const wheelFront = crawler && ready(art.crawlerWheel) ? art.crawlerWheel : art.wheelFront;
   const body = crawler ? art.crawler : art.body;
   const wheelsReady = ready(wheelRear) && ready(wheelFront) && ready(body);
+  const specs = crawler ? CRAWLER_WHEELS : null;
   if (wheelsReady) {
-    spinWheel(ctx, sim, 0, wheelRear);
-    spinWheel(ctx, sim, 1, wheelFront);
+    spinWheel(ctx, sim, 0, wheelRear, specs && specs[0]);
+    spinWheel(ctx, sim, 1, wheelFront, specs && specs[1]);
   }
   const img = wheelsReady ? body : art.buggy;
   if (img && ready(img)) {
@@ -789,13 +808,16 @@ function drawCar(ctx, sim, art) {
 function ready(img) {
   return !!img && img.complete && img.naturalWidth > 0;
 }
-function spinWheel(ctx, sim, index, img) {
-  const w = WHEELS[index];
-  const sideW = w.imgR * 2 * SX;
-  const sideH = w.imgR * 2 * SY;
+function spinWheel(ctx, sim, index, img, spec) {
+  const w = spec || WHEELS[index];
+  const sx = spec ? spec.sx : SX;
+  const sy = spec ? spec.sy : SY;
+  const sideW = w.imgR * 2 * sx;
+  const sideH = w.imgR * 2 * sy;
+  const ang = spec ? sim.wheelAng[index] * (WHEELS[index].r / w.r) : sim.wheelAng[index];
   ctx.save();
   ctx.translate(w.lx, w.ly);
-  ctx.rotate(sim.wheelAng[index]);
+  ctx.rotate(ang);
   ctx.drawImage(img, -sideW / 2, -sideH / 2, sideW, sideH);
   ctx.restore();
 }

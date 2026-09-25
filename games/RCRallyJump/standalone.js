@@ -13,7 +13,7 @@ import {
   wheelPace,
   MISSILE_MAX,
   MISSILE_RELOAD
-} from "./engine.js?v=20260925controls";
+} from "./engine.js?v=20260925render";
 var BEST_KEY = "rc-rally-jump-best";
 var RIG_KEY = "rc-rally-rig";
 function loadBest() {
@@ -149,8 +149,8 @@ function boot() {
   art.wheelFront.src = artUrl("wheel-front.png");
   art.drone.src = artUrl("drone.png");
   art.sky.src = artUrl("sky.jpg");
-  art.crawler.src = artUrl("crawler-body.png");
-  art.crawlerWheel.src = artUrl("crawler-wheel.png");
+  art.crawler.src = artUrl("crawler-body.png") + "?v=20260925render";
+  art.crawlerWheel.src = artUrl("crawler-wheel.png") + "?v=20260925render";
   const rigBtns = [...document.querySelectorAll("#rigs .rig")];
   const picked = el("picked");
   const paintRigs = () => {
