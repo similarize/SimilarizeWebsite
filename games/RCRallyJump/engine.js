@@ -1,4 +1,4 @@
-const VERSION = "3.7";
+const VERSION = "3.8";
 const VIEW_W = 960;
 const VIEW_H = 540;
 const PLAYER_X = 168;
@@ -200,7 +200,7 @@ function createSim(best = 0) {
     rig: "rally",
     booms: 0,
     nextGate: 780,
-    nextDrone: 1800,
+    nextDrone: 9800,
     stage: "calm",
     gatesCleared: 0,
     best,
@@ -250,11 +250,20 @@ function wheelPace(sim) {
   for (let i = 0; i < 2; i++) sum += sim.wheelOmega[i] * wheelGeom(sim, i).r;
   return sum * 0.5;
 }
-function stageOf(scroll) {
-  if (scroll < 2800) return "calm";
-  if (scroll < 7200) return "pattern";
-  if (scroll < 12000) return "hunt";
+function stageAt(t) {
+  if (t < 90) return "calm";
+  if (t < 180) return "pattern";
+  if (t < 300) return "hunt";
   return "lock";
+}
+function eta(sim, worldX) {
+  return sim.time + Math.max(0, worldX - sim.scroll) / Math.max(160, cruiseOf(sim));
+}
+function stageOf(sim) {
+  return stageAt(sim.time || 0);
+}
+function heat(sim, worldX) {
+  return clamp(eta(sim, worldX) / 300, 0, 1.8);
 }
 function dronePos(sim, d) {
   if (d.kind === "pattern") {
@@ -273,18 +282,19 @@ function stepDrones(sim, dt) {
     if (d.kind === "drift") d.x -= sim.speed * 0.12 * dt;
     else if (d.kind === "pattern") d.x -= sim.speed * 0.03 * dt;
     else if (d.kind === "seek") {
-      d.x += (playerX + 230 - d.x) * Math.min(1, dt * 1.5);
-      d.y += clamp(playerY - d.y, -160, 160) * dt * 1.05;
+      const chase = sim.time < 180 ? 0.35 : sim.time < 300 ? 0.35 + (sim.time - 180) / 120 * 0.75 : 1.35;
+      d.x += (playerX + 260 - d.x) * Math.min(1, dt * (0.7 + chase));
+      d.y += clamp(playerY - d.y, -140, 140) * dt * chase;
       d.y = clamp(d.y, 40, surfaceY(sim, d.x) - 56);
     }
     d.spin += dt * (d.kind === "seek" ? 26 : 16);
   }
 }
 function announceStage(sim) {
-  const stage = stageOf(sim.scroll);
+  const stage = stageOf(sim);
   if (stage === sim.stage) return;
   sim.stage = stage;
-  const text = stage === "pattern" ? "WEAVE" : stage === "hunt" ? "HUNT" : stage === "lock" ? "LOCK ON" : "";
+  const text = stage === "pattern" ? "WEAVE" : stage === "hunt" ? "THEY CHASE" : stage === "lock" ? "SHOOT THE BEAM" : "";
   if (!text) return;
   sim.popups.push({ x: sim.scroll + 480, y: 78, text, life: 1.5, max: 1.5 });
 }
@@ -293,33 +303,35 @@ function spawnDrones(sim) {
   while (sim.nextDrone < sim.scroll + VIEW_W + 60 && guard < 6) {
     guard += 1;
     const x = sim.nextDrone;
-    const stage = stageOf(x);
+    const stage = stageAt(eta(sim, x));
     const gyD = groundY(x);
     const nearGate = sim.gates.some((g) => Math.abs(g.x - x) < 200);
     if (stage === "calm") {
-      if (!nearGate && gyD > 180) {
+      if (!nearGate && gyD > 180 && eta(sim, x) > 40) {
         sim.drones.push({
           kind: "drift",
           x,
-          y: 64 + hash(x + 11) * Math.max(20, gyD - 200),
+          y: 58 + hash(x + 11) * 90,
           bob: hash(x) * Math.PI * 2,
           spin: 0,
           dead: false
         });
       }
-      sim.nextDrone += 1200 + hash(x + 3) * 500;
+      sim.nextDrone += 2400 + hash(x + 3) * 800;
     } else if (stage === "pattern") {
       if (!nearGate) {
-        const amp = 84 + hash(x + 2) * 28;
-        const freq = 1.55 + hash(x + 4) * 0.45;
-        const y = clamp(gyD * 0.46, 120, 230);
+        const late = clamp((eta(sim, x) - 90) / 120, 0, 1.4);
+        const amp = 64 + late * 36;
+        const freq = 0.8 + late * 0.85;
+        const y = clamp(gyD * 0.42, 130, 240);
         sim.drones.push({ kind: "pattern", x, y, bob: 0, amp, freq, spin: 0, dead: false });
         sim.drones.push({ kind: "pattern", x, y, bob: Math.PI, amp, freq, spin: 0, dead: false });
       }
-      sim.nextDrone += 1040;
+      sim.nextDrone += 1900 - Math.min(700, Math.max(0, eta(sim, x) - 90));
     } else if (stage === "hunt") {
+      const cap = sim.time < 240 ? 1 : sim.time < 300 ? 2 : 3;
       const hunting = sim.drones.filter((d) => d.kind === "seek" && !d.dead).length;
-      if (hunting < 2 && !nearGate) {
+      if (hunting < cap && !nearGate) {
         sim.drones.push({
           kind: "seek",
           x: x + 60,
@@ -329,7 +341,7 @@ function spawnDrones(sim) {
           dead: false
         });
       }
-      sim.nextDrone += 880;
+      sim.nextDrone += sim.time < 300 ? 1400 : 900;
     } else {
       const blocking = sim.drones.some((d) => d.kind === "lock" && !d.dead && d.x > sim.scroll + 40);
       if (!blocking && !nearGate) {
@@ -342,10 +354,11 @@ function spawnDrones(sim) {
           dead: false,
           bumped: false
         });
-        sim.nextDrone += 1680;
+        sim.nextDrone += sim.time < 420 ? 2200 : 1500;
       } else {
+        const cap = sim.time < 420 ? 2 : 3;
         const hunting = sim.drones.filter((d) => d.kind === "seek" && !d.dead).length;
-        if (hunting < 2) {
+        if (hunting < cap) {
           sim.drones.push({
             kind: "seek",
             x: x + 40,
@@ -355,7 +368,7 @@ function spawnDrones(sim) {
             dead: false
           });
         }
-        sim.nextDrone += 920;
+        sim.nextDrone += 980;
       }
     }
   }
@@ -364,13 +377,22 @@ function plant(sim) {
   sim.y = groundY(PLAYER_X + CAR_W * 0.5) - CAR_H;
 }
 function cruiseOf(sim) {
-  return Math.min(390, 230 + sim.scroll * 0.01 + sim.gatesCleared * 3);
+  const t = sim.time || 0;
+  if (t < 300) return 210 + t * 0.22;
+  return Math.min(420, 276 + (t - 300) * 0.6);
 }
-function randKind(worldX) {
-  if (worldX < 1700) return hash(worldX) < 0.5 ? "drive" : "hop";
+function randKind(sim, worldX) {
+  const t = eta(sim, worldX);
   const r = hash(worldX);
-  if (r < 0.34) return "drive";
-  if (r < 0.7) return "hop";
+  if (t < 55) return "drive";
+  if (t < 140) return r < 0.42 ? "drive" : "hop";
+  if (t < 300) {
+    if (r < 0.28) return "drive";
+    if (r < 0.72) return "hop";
+    return "climb";
+  }
+  if (r < 0.16) return "drive";
+  if (r < 0.5) return "hop";
   return "climb";
 }
 function groundSpan(worldX) {
@@ -386,7 +408,9 @@ function groundSpan(worldX) {
 function spawnGate(sim, worldX) {
   const { hi, lo } = groundSpan(worldX);
   const kicker = wantKicker(sim, worldX);
-  const kind = kicker ? "hop" : randKind(worldX);
+  const kind = kicker ? "hop" : randKind(sim, worldX);
+  const t = eta(sim, worldX);
+  const opening = t < 300 ? 210 - t * 0.13 : Math.max(112, 171 - (t - 300) * 0.18);
   let gapTop;
   let gapBot;
   if (kicker) {
@@ -404,13 +428,13 @@ function spawnGate(sim, worldX) {
     gapBot = hi + 48;
     gapTop = lo - CAR_H - 156;
   } else if (kind === "hop") {
-    const lift = 40 + hash(worldX + 3) * 18;
+    const lift = 16 + heat(sim, worldX) * 42;
     gapBot = hi - lift;
-    gapTop = gapBot - OPENING;
+    gapTop = gapBot - opening;
   } else {
-    const lift = 96 + hash(worldX + 7) * 36;
+    const lift = 70 + heat(sim, worldX) * 48;
     gapBot = hi - lift;
-    gapTop = gapBot - (42 + 130);
+    gapTop = gapBot - opening;
   }
   if (gapTop < 22) {
     const shift = 22 - gapTop;
@@ -420,10 +444,11 @@ function spawnGate(sim, worldX) {
   sim.gates.push({ x: worldX, gapTop, gapBot, w: GATE_W, scored: false, kind, kicker, marks: [], bumped: false });
 }
 function wantKicker(sim, worldX) {
-  if (worldX < 1500) return false;
-  if (hash(worldX + 8.5) > 0.4) return false;
+  const t = eta(sim, worldX);
+  if (t < 40) return false;
+  if (hash(worldX + 8.5) > (t < 300 ? 0.34 : 0.22)) return false;
   const last = sim.ramps[sim.ramps.length - 1];
-  if (last && worldX - last.lip < 780) return false;
+  if (last && worldX - last.lip < (t < 180 ? 980 : 720)) return false;
   return true;
 }
 function wrapDeg(a) {
@@ -688,7 +713,8 @@ function tick(sim, dt, input) {
   }
   while (sim.nextGate < sim.scroll + VIEW_W + 80) {
     spawnGate(sim, sim.nextGate);
-    const spacing = cruiseOf(sim) * 1.85 + 150;
+    const pace = sim.time < 300 ? 2.4 - sim.time * 0.0014 : Math.max(1.25, 1.95 - (sim.time - 300) * 0.002);
+    const spacing = cruiseOf(sim) * pace;
     sim.nextGate += spacing;
   }
   announceStage(sim);
