@@ -13,9 +13,10 @@ import {
   wheelPace,
   MISSILE_MAX,
   MISSILE_RELOAD
-} from "./engine.js?v=20260925pixel";
+} from "./engine.js?v=20260925tune";
 var BEST_KEY = "rc-rally-jump-best";
 var RIG_KEY = "rc-rally-rig";
+var TUNE_KEY = "rc-rally-tune";
 function loadBest() {
   try {
     return Number(localStorage.getItem(BEST_KEY)) || 0;
@@ -34,6 +35,25 @@ function loadRig() {
 function saveRig(rig) {
   try {
     localStorage.setItem(RIG_KEY, rig);
+  } catch {
+  }
+}
+function loadTune() {
+  const tune = { wheel: 1, chassis: 1, squish: 0, gravity: 1, trailer: 0 };
+  try {
+    const raw = JSON.parse(localStorage.getItem(TUNE_KEY) || "null");
+    if (!raw) return tune;
+    for (const key of Object.keys(tune)) {
+      const n = Number(raw[key]);
+      if (Number.isFinite(n)) tune[key] = n;
+    }
+  } catch {
+  }
+  return tune;
+}
+function saveTune(tune) {
+  try {
+    localStorage.setItem(TUNE_KEY, JSON.stringify(tune));
   } catch {
   }
 }
@@ -133,6 +153,7 @@ function boot() {
   const sim = createSim(loadBest());
   sim.reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   sim.rig = loadRig();
+  sim.tune = loadTune();
   const audio = new AudioBus();
   const art = {
     buggy: new Image(),
@@ -348,6 +369,45 @@ function boot() {
   };
   fireBtn.addEventListener("pointerdown", shoot);
   el("pips").addEventListener("pointerdown", shoot);
+  const tunePanel = el("tune");
+  const tuneFields = ["wheel", "chassis", "squish", "gravity", "trailer"];
+  const tuneLabel = (key, value) => {
+    if (key === "squish") return `${Math.round(value * 100)}%`;
+    if (key === "trailer") {
+      if (value < 0.04) return "off";
+      if (value < 0.75) return "light";
+      if (value < 1.45) return "loaded";
+      return "heavy";
+    }
+    return `${value.toFixed(2)}\u00d7`;
+  };
+  const paintTune = () => {
+    for (const key of tuneFields) {
+      const value = sim.tune[key];
+      el(`tune-${key}`).value = String(value);
+      el(`lbl-${key}`).textContent = tuneLabel(key, value);
+    }
+  };
+  paintTune();
+  for (const key of tuneFields) {
+    el(`tune-${key}`).addEventListener("input", (e) => {
+      sim.tune[key] = Number(e.target.value);
+      el(`lbl-${key}`).textContent = tuneLabel(key, sim.tune[key]);
+      saveTune(sim.tune);
+    });
+  }
+  el("tune-btn").addEventListener("click", () => {
+    tunePanel.hidden = !tunePanel.hidden;
+  });
+  el("tune-close").addEventListener("click", () => {
+    tunePanel.hidden = true;
+  });
+  el("tune-reset").addEventListener("click", () => {
+    sim.tune = { wheel: 1, chassis: 1, squish: 0, gravity: 1, trailer: 0 };
+    saveTune(sim.tune);
+    paintTune();
+  });
+  tunePanel.addEventListener("pointerdown", (e) => e.stopPropagation());
   let last = performance.now();
   let prevBooms = 0;
   const frame = (now) => {

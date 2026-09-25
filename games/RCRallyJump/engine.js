@@ -1,4 +1,4 @@
-const VERSION = "2.7";
+const VERSION = "2.8";
 const VIEW_W = 960;
 const VIEW_H = 540;
 const PLAYER_X = 168;
@@ -56,6 +56,95 @@ const PIXEL_WHEELS = [
 ];
 function keepRig(rig) {
   return rig === "crawler" || rig === "pixel" ? rig : "rally";
+}
+function defaultTune() {
+  return { wheel: 1, chassis: 1, squish: 0, gravity: 1, trailer: 0 };
+}
+function rigWheels(sim) {
+  if (sim.rig === "pixel") return PIXEL_WHEELS;
+  if (sim.rig === "crawler") return CRAWLER_WHEELS;
+  return WHEELS;
+}
+function wheelGeom(sim, i) {
+  const w = rigWheels(sim)[i];
+  const chassis = sim.tune.chassis;
+  const drawR = w.r * sim.tune.wheel;
+  const squash = sim.squash ? sim.squash[i] : 0;
+  return {
+    lx: w.lx * chassis,
+    ly: w.ly * chassis,
+    r: Math.max(3.5, drawR),
+    drawR,
+    squash,
+    imgR: w.imgR,
+    sx: w.sx || SX,
+    sy: w.sy || SY
+  };
+}
+function rideLow(sim) {
+  let low = CAR_H * 0.5 * sim.tune.chassis;
+  for (let i = 0; i < 2; i++) {
+    const g = wheelGeom(sim, i);
+    const bottom = g.ly + g.r;
+    if (bottom > low) low = bottom;
+  }
+  return low;
+}
+function plantY(sim, worldX) {
+  return surfaceY(sim, worldX) - CAR_H * 0.5 - rideLow(sim);
+}
+function hitchOf(sim) {
+  const chassis = sim.tune.chassis;
+  const rot = sim.rot * Math.PI / 180;
+  const c = Math.cos(rot);
+  const s = Math.sin(rot);
+  const lx = -CAR_W * 0.48 * chassis;
+  const ly = CAR_H * 0.1 * chassis;
+  const sx = PLAYER_X + CAR_W / 2 + c * lx - s * ly;
+  const sy = sim.y + CAR_H / 2 + s * lx + c * ly;
+  return { sx, sy, x: sim.scroll + sx };
+}
+function stepSquash(sim, dt) {
+  for (let i = 0; i < 2; i++) {
+    const g = wheelGeom(sim, i);
+    const p = wheelWorld(sim, g);
+    const sink = p.y + g.r - surfaceY(sim, p.x);
+    const pressed = sim.grounded && sink > -6;
+    const target = pressed ? clamp(sim.tune.squish * (0.4 + Math.max(0, sink) / 20), 0, 0.9) : 0;
+    sim.squash[i] += (target - sim.squash[i]) * Math.min(1, dt * (pressed ? 16 : 9));
+  }
+}
+function stepTrailer(sim, dt) {
+  const weight = sim.tune.trailer;
+  if (weight < 0.04) {
+    sim.trailAng += (0 - sim.trailAng) * Math.min(1, dt * 3);
+    sim.trailW *= Math.exp(-dt * 4);
+    return;
+  }
+  const hitch = hitchOf(sim);
+  const L = 102;
+  const mass = 0.45 + weight * 1.7;
+  const axleR = 9 * sim.tune.wheel;
+  const ang = sim.trailAng;
+  const axleX = hitch.x - Math.cos(ang) * L;
+  const gy = surfaceY(sim, axleX) - axleR;
+  const want = clamp((gy - hitch.sy) / L, -0.82, 0.92);
+  const target = Math.asin(want);
+  const ay = dt > 0 ? (sim.vy - sim.prevVy) / dt : 0;
+  const omega = 8.2 / Math.sqrt(mass);
+  const damp = 0.22 + 0.12 / mass;
+  let w = sim.trailW + clamp(-ay / 900, -7, 7) * dt * (1.4 + mass);
+  const acc = omega * omega * (target - ang) - 2 * damp * omega * w;
+  w = clamp(w + acc * dt, -7.5, 7.5);
+  sim.trailW = w;
+  sim.trailAng = clamp(ang + w * dt, -1.05, 1.2);
+  const slam = clamp(sim.trailAng - target, 0, 0.7);
+  if (slam > 0.08 && sim.trailW > 0.35) {
+    sim.vy -= slam * mass * 22;
+    sim.rot -= slam * mass * dt * 40;
+  } else if (!sim.grounded) {
+    sim.vy += weight * 70 * sim.tune.gravity * dt;
+  }
 }
 function groundY(worldX) {
   const n = Math.sin(worldX * 41e-4) * 26 + Math.sin(worldX * 0.0105 + 1.4) * 12 + Math.sin(worldX * 22e-4 + 0.6) * 34;
@@ -117,7 +206,12 @@ function createSim(best = 0) {
     sinceOver: 0,
     time: 0,
     muted: false,
-    reduced: false
+    reduced: false,
+    squash: [0, 0],
+    trailAng: 0.15,
+    trailW: 0,
+    prevVy: 0,
+    tune: defaultTune()
   };
   plant(sim);
   return sim;
@@ -127,11 +221,13 @@ function startRun(sim) {
   const muted = sim.muted;
   const reduced = sim.reduced;
   const rig = keepRig(sim.rig);
+  const tune = sim.tune || defaultTune();
   const fresh = createSim(best);
   fresh.phase = "play";
   fresh.muted = muted;
   fresh.reduced = reduced;
   fresh.rig = rig;
+  fresh.tune = tune;
   Object.assign(sim, fresh);
 }
 function metersOf(sim) {
@@ -223,16 +319,16 @@ function wheelWorld(sim, w) {
 function coupleWheels(sim, dt) {
   const cruise = cruiseOf(sim);
   for (let i = 0; i < 2; i++) {
-    const w = WHEELS[i];
-    const p = wheelWorld(sim, w);
-    const sink = p.y + w.r - surfaceY(sim, p.x);
+    const g = wheelGeom(sim, i);
+    const p = wheelWorld(sim, g);
+    const sink = p.y + g.r - surfaceY(sim, p.x);
     if (sink <= -1.25) {
       sim.wheelOmega[i] *= Math.exp(-dt / SPIN_AIR);
       sim.wheelAng[i] += sim.wheelOmega[i] * dt;
       continue;
     }
     const load = clamp((sink + 2.4) / 2.4, 0.22, 1);
-    const R = w.r;
+    const R = g.r;
     const I = 0.05 * R * R;
     const slip = sim.speed - sim.wheelOmega[i] * R;
     const inv = 1 + R * R / I;
@@ -285,7 +381,7 @@ function tick(sim, dt, input) {
       sim.vy = Math.min(sim.vy, IMPULSE);
       sim.battery -= TAP_COST;
     }
-    sim.vy += HOLD_NET * dt;
+    sim.vy += HOLD_NET / (1 + sim.tune.trailer * 0.28) * dt;
     sim.battery -= HOLD_DRAIN * dt;
     sim.boosting = true;
   } else if (sim.grounded) {
@@ -293,7 +389,7 @@ function tick(sim, dt, input) {
     sim.battery = Math.min(100, sim.battery + RECHARGE * dt);
     sim.boosting = false;
   } else {
-    sim.vy += GRAVITY * dt;
+    sim.vy += GRAVITY * sim.tune.gravity * dt;
     sim.boosting = false;
   }
   sim.vy = clamp(sim.vy, sim.loft > 0 ? -780 : MAX_UP, MAX_DOWN);
@@ -304,12 +400,18 @@ function tick(sim, dt, input) {
   const footX = sim.scroll + PLAYER_X + CAR_W * 0.55;
   const gy = surfaceY(sim, footX);
   const launched = kickRamp(sim, footX, dt);
+  const floor = plantY(sim, footX);
   if (launched) {
     sim.grounded = false;
-  } else if (sim.y + CAR_H >= gy && sim.vy >= 0) {
+  } else if (sim.y >= floor && sim.vy >= 0) {
     const impact = sim.vy;
-    sim.y = gy - CAR_H;
-    sim.vy = 0;
+    sim.y = floor;
+    const bounce = sim.tune.squish * clamp(impact / 640, 0, 1);
+    sim.vy = impact > 90 ? -impact * bounce * 0.62 : 0;
+    if (bounce > 0.08) {
+      sim.squash[0] = Math.min(0.92, sim.squash[0] + bounce);
+      sim.squash[1] = Math.min(0.92, sim.squash[1] + bounce * 0.75);
+    }
     if (!sim.grounded && impact > 180) burst(sim, footX, gy, 8);
     sim.grounded = true;
   } else {
@@ -325,6 +427,9 @@ function tick(sim, dt, input) {
   const target = sim.grounded ? clamp(slope * 0.55, -14, 14) : clamp(-sim.vy * 0.045, -26, 34);
   sim.rot += (target - sim.rot) * Math.min(1, dt * 10);
   coupleWheels(sim, dt);
+  stepSquash(sim, dt);
+  stepTrailer(sim, dt);
+  sim.prevVy = sim.vy;
   sim.scroll += sim.speed * dt;
   if (input.fire) {
     if (sim.missiles > 0) {
@@ -428,10 +533,11 @@ function tick(sim, dt, input) {
     }
     sim.nextDrone += 820 + hash(x + 9) * 520;
   }
-  const hx = PLAYER_X + 16;
-  const hy = sim.y + 10;
-  const hw = CAR_W - 32;
-  const hh = CAR_H - 14;
+  const s = sim.tune.chassis;
+  const hw = (CAR_W - 28) * s;
+  const hh = (CAR_H - 12) * s;
+  const hx = PLAYER_X + CAR_W / 2 - hw / 2;
+  const hy = sim.y + CAR_H / 2 - hh / 2;
   for (const g of sim.gates) {
     const sx = g.x - sim.scroll;
     if (!g.blown) {
@@ -512,15 +618,19 @@ function step(sim, dt, input) {
     sim.speed = 48;
     sim.scroll += sim.speed * capped;
     sim.time += capped;
-    sim.y = groundY(sim.scroll + PLAYER_X + CAR_W * 0.55) - CAR_H;
+    sim.y = plantY(sim, sim.scroll + PLAYER_X + CAR_W * 0.55);
     sim.vy = 0;
     sim.grounded = true;
     sim.boosting = false;
     sim.rot += (0 - sim.rot) * Math.min(1, capped * 4);
     for (let i = 0; i < 2; i++) {
-      sim.wheelOmega[i] = sim.speed / WHEELS[i].r;
+      const rad = Math.max(4, wheelGeom(sim, i).drawR);
+      sim.wheelOmega[i] = sim.speed / rad;
       sim.wheelAng[i] += sim.wheelOmega[i] * capped;
     }
+    stepSquash(sim, capped);
+    stepTrailer(sim, capped);
+    sim.prevVy = 0;
     ageBits(sim, capped);
     return;
   }
@@ -584,6 +694,7 @@ function draw(ctx, sim, art) {
   for (const d of sim.drones) drawDrone(ctx, sim, d, art);
   drawShots(ctx, sim);
   drawDust(ctx, sim);
+  drawTrailer(ctx, sim);
   drawCar(ctx, sim, art);
   drawPopups(ctx, sim);
   if (sim.phase === "over") {
@@ -783,53 +894,97 @@ function drawCar(ctx, sim, art) {
   ctx.save();
   ctx.translate(PLAYER_X + CAR_W / 2, sim.y + CAR_H / 2);
   ctx.rotate(sim.rot * Math.PI / 180);
+  const s = sim.tune.chassis;
   if (pixel) ctx.imageSmoothingEnabled = false;
   if (sim.boosting) {
+    const tail = -CAR_W * 0.42 * s;
     ctx.fillStyle = "rgba(228, 87, 46, 0.9)";
     ctx.beginPath();
-    ctx.moveTo(-CAR_W * 0.42, 4);
-    ctx.lineTo(-CAR_W * 0.42 - 16 - hash(sim.time * 40) * 14, 10);
-    ctx.lineTo(-CAR_W * 0.42, 16);
+    ctx.moveTo(tail, 4);
+    ctx.lineTo(tail - 16 - hash(sim.time * 40) * 14, 10);
+    ctx.lineTo(tail, 16);
     ctx.fill();
     ctx.fillStyle = "rgba(240, 180, 41, 0.85)";
     ctx.beginPath();
-    ctx.moveTo(-CAR_W * 0.4, 7);
-    ctx.lineTo(-CAR_W * 0.4 - 10, 11);
-    ctx.lineTo(-CAR_W * 0.4, 14);
+    ctx.moveTo(tail + 2, 7);
+    ctx.lineTo(tail - 8, 11);
+    ctx.lineTo(tail + 2, 14);
     ctx.fill();
   }
   const wheelRear = pixel && ready(art.pixelWheel) ? art.pixelWheel : crawler && ready(art.crawlerWheel) ? art.crawlerWheel : art.wheelRear;
   const wheelFront = pixel && ready(art.pixelWheel) ? art.pixelWheel : crawler && ready(art.crawlerWheel) ? art.crawlerWheel : art.wheelFront;
   const body = pixel ? art.pixel : crawler ? art.crawler : art.body;
   const wheelsReady = ready(wheelRear) && ready(wheelFront) && ready(body);
-  const specs = pixel ? PIXEL_WHEELS : crawler ? CRAWLER_WHEELS : null;
   if (wheelsReady) {
-    spinWheel(ctx, sim, 0, wheelRear, specs && specs[0]);
-    spinWheel(ctx, sim, 1, wheelFront, specs && specs[1]);
+    spinWheel(ctx, sim, 0, wheelRear);
+    spinWheel(ctx, sim, 1, wheelFront);
   }
   const img = wheelsReady ? body : art.buggy;
   if (img && ready(img)) {
-    ctx.drawImage(img, -CAR_W / 2, -CAR_H / 2, CAR_W, CAR_H);
+    ctx.drawImage(img, -CAR_W / 2 * s, -CAR_H / 2 * s, CAR_W * s, CAR_H * s);
   } else {
     ctx.fillStyle = pixel ? "#d42828" : crawler ? "#9a1b24" : "#e4572e";
-    ctx.fillRect(-CAR_W / 2, -CAR_H / 2, CAR_W, CAR_H);
+    ctx.fillRect(-CAR_W / 2 * s, -CAR_H / 2 * s, CAR_W * s, CAR_H * s);
   }
   ctx.restore();
 }
 function ready(img) {
   return !!img && img.complete && img.naturalWidth > 0;
 }
-function spinWheel(ctx, sim, index, img, spec) {
-  const w = spec || WHEELS[index];
-  const sx = spec ? spec.sx : SX;
-  const sy = spec ? spec.sy : SY;
-  const sideW = w.imgR * 2 * sx;
-  const sideH = w.imgR * 2 * sy;
-  const ang = spec ? sim.wheelAng[index] * (WHEELS[index].r / w.r) : sim.wheelAng[index];
+function spinWheel(ctx, sim, index, img) {
+  const g = wheelGeom(sim, index);
+  const bulge = 1 + g.squash * 0.32;
+  const flat = Math.max(0.42, 1 - g.squash * 0.5);
+  const ang = sim.wheelAng[index] * (WHEELS[index].r / g.drawR);
   ctx.save();
-  ctx.translate(w.lx, w.ly);
+  ctx.translate(g.lx, g.ly + g.squash * g.drawR * 0.28);
   ctx.rotate(ang);
-  ctx.drawImage(img, -sideW / 2, -sideH / 2, sideW, sideH);
+  ctx.scale(bulge, flat);
+  ctx.drawImage(img, -g.drawR, -g.drawR, g.drawR * 2, g.drawR * 2);
+  ctx.restore();
+}
+function drawTrailer(ctx, sim) {
+  if (sim.tune.trailer < 0.04) return;
+  const hitch = hitchOf(sim);
+  const L = 102;
+  const ang = sim.trailAng;
+  const wheelR = 8.5 * sim.tune.wheel;
+  const squash = clamp(Math.max(0, Math.sin(ang)) * sim.tune.squish, 0, 0.55);
+  ctx.save();
+  ctx.translate(hitch.sx, hitch.sy);
+  ctx.rotate(-ang);
+  ctx.fillStyle = "#2c241c";
+  ctx.fillRect(-28, -3, 26, 5);
+  const nose = -34;
+  const tail = -L + 6;
+  const top = -40;
+  const bot = 6;
+  ctx.fillStyle = "#e4d2b0";
+  ctx.fillRect(tail, top + 7, nose - tail, bot - top - 7);
+  ctx.fillStyle = "#3d3228";
+  ctx.fillRect(tail - 2, top, nose - tail + 6, 9);
+  ctx.fillStyle = "#c4572e";
+  ctx.fillRect(tail, top + 16, nose - tail, 4);
+  ctx.fillStyle = "#9fd0de";
+  ctx.fillRect(tail + 10, top + 14, 16, 11);
+  ctx.fillRect(tail + 32, top + 14, 16, 11);
+  ctx.fillStyle = "#7a4a2c";
+  ctx.fillRect(nose - 16, top + 18, 12, bot - top - 18);
+  ctx.fillStyle = "#1a120c";
+  ctx.fillRect(nose - 12, top + 28, 3, 8);
+  ctx.save();
+  ctx.translate(tail + 16, 8);
+  ctx.rotate(sim.wheelAng[0]);
+  ctx.scale(1 + squash * 0.25, Math.max(0.45, 1 - squash * 0.5));
+  ctx.beginPath();
+  ctx.arc(0, 0, wheelR, 0, Math.PI * 2);
+  ctx.fillStyle = "#16110e";
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(0, 0, wheelR * 0.42, 0, Math.PI * 2);
+  ctx.fillStyle = "#d5dbe3";
+  ctx.fill();
+  ctx.restore();
   ctx.restore();
 }
 function drawPopups(ctx, sim) {

@@ -80,6 +80,7 @@
       top: calc(12px + env(safe-area-inset-top));
       display: flex;
       gap: 8px;
+      z-index: 5;
     }
     .icon {
       height: 44px;
@@ -135,7 +136,9 @@
       padding: 16px;
       overflow: auto;
       touch-action: manipulation;
+      pointer-events: none;
     }
+    .veil .card { pointer-events: auto; }
     .veil[hidden] { display: none; }
     #pause, #over { background: rgba(20, 24, 32, 0.55); }
     .card {
@@ -276,6 +279,64 @@
       font-size: 22px;
     }
     .fire[hidden] { display: none; }
+    .tune {
+      pointer-events: auto;
+      position: absolute;
+      top: calc(64px + env(safe-area-inset-top));
+      right: 12px;
+      z-index: 4;
+      width: min(232px, calc(100vw - 24px));
+      max-height: min(62vh, 440px);
+      overflow: auto;
+      padding: 12px 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(35, 28, 22, 0.94);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+    }
+    .tune[hidden] { display: none; }
+    .tune-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-family: var(--display);
+      letter-spacing: 0.16em;
+      font-size: 14px;
+    }
+    .tune-head button {
+      height: 32px;
+      padding: 0 10px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: transparent;
+      font-family: var(--display);
+      letter-spacing: 0.06em;
+    }
+    .tune label {
+      display: flex;
+      justify-content: space-between;
+      margin: 12px 0 4px;
+      font-family: var(--display);
+      letter-spacing: 0.08em;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .tune label b { color: var(--sand); font-weight: 600; }
+    .tune input[type="range"] {
+      width: 100%;
+      accent-color: var(--amber);
+      touch-action: manipulation;
+    }
+    .tune .reset {
+      width: 100%;
+      margin-top: 12px;
+      height: 36px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: transparent;
+      font-family: var(--display);
+      letter-spacing: 0.08em;
+    }
     @media (max-width: 640px) {
       .rigs { flex-direction: column; align-items: stretch; }
       .rig { width: 100%; }
@@ -302,6 +363,7 @@
         </div>
       </div>
       <div class="tools">
+        <button type="button" class="icon" id="tune-btn" data-ui>Tune</button>
         <button type="button" class="icon" id="mute" data-ui>Mute</button>
         <button type="button" class="icon" id="pause-btn" data-ui hidden>Pause</button>
       </div>
@@ -340,7 +402,7 @@
           <li>FIRE, the F key, or a right-click shoots. You hold three. A hit opens that gate, then they reload slowly.</li>
         </ul>
         <button type="button" class="go" id="start" data-ui>Start run</button>
-        <p class="hint">Hold to drive. FIRE, F, or right-click for a missile. M mute · P pause · R restart</p>
+        <p class="hint">Hold to drive. Tune changes wheels, squish, and the camper live. FIRE or F shoots.</p>
         <a class="home" href="https://www.similarize.com/">Similarize</a>
       </div>
     </div>
@@ -364,7 +426,24 @@
         <p class="hint">Tap, Space, or R</p>
       </div>
     </div>
+    <div class="tune" id="tune" data-ui hidden>
+      <div class="tune-head">
+        <span>TUNE</span>
+        <button type="button" id="tune-close" data-ui>Close</button>
+      </div>
+      <label>Wheels <b id="lbl-wheel">1.00×</b></label>
+      <input id="tune-wheel" type="range" min="0.45" max="2.6" step="0.05" value="1" data-ui>
+      <label>Chassis <b id="lbl-chassis">1.00×</b></label>
+      <input id="tune-chassis" type="range" min="0.55" max="1.85" step="0.05" value="1" data-ui>
+      <label>Squish <b id="lbl-squish">0%</b></label>
+      <input id="tune-squish" type="range" min="0" max="1" step="0.05" value="0" data-ui>
+      <label>Gravity <b id="lbl-gravity">1.00×</b></label>
+      <input id="tune-gravity" type="range" min="0.45" max="2.2" step="0.05" value="1" data-ui>
+      <label>Camper <b id="lbl-trailer">off</b></label>
+      <input id="tune-trailer" type="range" min="0" max="2.2" step="0.05" value="0" data-ui>
+      <button type="button" class="reset" id="tune-reset" data-ui>Reset</button>
+    </div>
   </div>
-  <script type="module" src="./standalone.js?v=20260925pixel"></script>
+  <script type="module" src="./standalone.js?v=20260925tune"></script>
 </body>
 </html>
