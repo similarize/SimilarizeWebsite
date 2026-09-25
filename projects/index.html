@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Projects — Similarize</title>
+  <meta name="description" content="In-progress projects from Similarize: IOTransition, and a small bathroom vacuum still in research.">
+  <link rel="canonical" href="https://www.similarize.com/projects/">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560;9..144,650&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --green: #15803d;
+      --green-dark: #14532d;
+      --bg: #faf9f7;
+      --card: #ffffff;
+      --ink: #1c1917;
+      --muted: #78716c;
+      --line: #e7e5e4;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; }
+    body {
+      min-height: 100dvh;
+      background:
+        radial-gradient(ellipse at 0% 0%, rgba(21, 128, 61, 0.06), transparent 42%),
+        var(--bg);
+      color: var(--ink);
+      font-family: Outfit, "Segoe UI", system-ui, sans-serif;
+      line-height: 1.5;
+    }
+    a { color: var(--green-dark); }
+    header, main, footer { width: min(920px, calc(100% - 2rem)); margin-inline: auto; }
+    header { padding: max(1.4rem, env(safe-area-inset-top)) 0 0.4rem; }
+    .nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      font-size: 0.92rem;
+    }
+    .nav a { color: var(--muted); text-decoration: none; }
+    .nav a:hover { color: var(--ink); }
+    .brand { font-weight: 600; color: var(--ink) !important; letter-spacing: -0.01em; }
+    h1 {
+      font-family: Fraunces, Georgia, serif;
+      font-weight: 560;
+      font-size: clamp(2.4rem, 6vw, 3.6rem);
+      letter-spacing: -0.03em;
+      line-height: 1;
+      margin: 1.6rem 0 0.55rem;
+    }
+    .lead { max-width: 36rem; color: var(--muted); margin: 0 0 1.8rem; }
+    .list { display: grid; gap: 1rem; padding-bottom: 2rem; }
+    article {
+      display: grid;
+      grid-template-columns: 7.5rem 1fr;
+      gap: 1.25rem;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 1.15rem 1.2rem 1.2rem;
+      box-shadow: 0 1px 2px rgba(28,25,23,0.04), 0 16px 32px -24px rgba(28,25,23,0.35);
+    }
+    .mark {
+      width: 7.5rem;
+      height: 7.5rem;
+      border-radius: 16px;
+      background: #f5f5f4;
+      border: 1px solid var(--line);
+      display: grid;
+      place-items: center;
+    }
+    .mark svg { width: 4.4rem; height: 4.4rem; }
+    .status {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--green-dark);
+      margin: 0 0 0.25rem;
+    }
+    h2 {
+      font-family: Fraunces, Georgia, serif;
+      font-weight: 560;
+      font-size: 1.7rem;
+      letter-spacing: -0.02em;
+      margin: 0 0 0.35rem;
+    }
+    p { margin: 0 0 0.7rem; }
+    ul { margin: 0 0 0.85rem; padding-left: 1.1rem; color: #44403c; }
+    li { margin: 0.2rem 0; }
+    .go {
+      display: inline-flex;
+      align-items: center;
+      text-decoration: none;
+      font-weight: 600;
+      border-bottom: 1px solid rgba(20, 83, 45, 0.35);
+    }
+    .go:hover { border-bottom-color: var(--green-dark); }
+    .quiet { color: var(--muted); font-size: 0.92rem; }
+    footer {
+      padding: 0.2rem 0 max(1.4rem, env(safe-area-inset-bottom));
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+    footer a { color: var(--muted); text-decoration: none; }
+    footer a:hover { color: var(--ink); }
+    @media (max-width: 640px) {
+      article { grid-template-columns: 1fr; }
+      .mark { width: 4.5rem; height: 4.5rem; }
+      .mark svg { width: 2.6rem; height: 2.6rem; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <nav class="nav">
+      <a class="brand" href="/">Similarize</a>
+      <a href="/games/">Games</a>
+    </nav>
+    <h1>Projects</h1>
+    <p class="lead">Work on the bench. Not products you can buy — things worth looking at while they are still unfinished.</p>
+  </header>
+  <main class="list">
+    <article>
+      <div class="mark" aria-hidden="true">
+        <svg viewBox="0 0 64 64" fill="none">
+          <rect x="18" y="8" width="28" height="48" rx="4" stroke="#14532d" stroke-width="2.4"/>
+          <rect x="24" y="16" width="16" height="22" rx="2" fill="#dcfce7" stroke="#15803d" stroke-width="2"/>
+          <path d="M32 16v22" stroke="#15803d" stroke-width="2"/>
+          <circle cx="32" cy="48" r="2.2" fill="#14532d"/>
+          <path d="M46 22h8M46 32h8M46 42h6" stroke="#a8a29e" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div>
+        <p class="status">Prototype</p>
+        <h2>IOTransition</h2>
+        <p>A bet that connected things only become ordinary after the awkward middle is cheap. The first product puts a normal household light switch on Wi-Fi, without turning the wall into a renovation.</p>
+        <ul>
+          <li>Ordinary toggle, not a new smart plate you have to learn.</li>
+          <li>Meant to be inexpensive and almost effortless to install.</li>
+          <li>Prototype 1 is up, with a short video of the switch.</li>
+        </ul>
+        <a class="go" href="https://www.iotransition.com/">iotransition.com</a>
+      </div>
+    </article>
+    <article>
+      <div class="mark" aria-hidden="true">
+        <svg viewBox="0 0 64 64" fill="none">
+          <rect x="10" y="28" width="44" height="18" rx="9" stroke="#14532d" stroke-width="2.4"/>
+          <circle cx="22" cy="48" r="4" stroke="#15803d" stroke-width="2"/>
+          <circle cx="42" cy="48" r="4" stroke="#15803d" stroke-width="2"/>
+          <path d="M18 28c2-8 8-12 14-12s12 4 14 12" stroke="#14532d" stroke-width="2.2"/>
+          <path d="M30 16h4M32 12v8" stroke="#15803d" stroke-width="2" stroke-linecap="round"/>
+          <rect x="6" y="8" width="10" height="22" rx="1.5" stroke="#a8a29e" stroke-width="1.6"/>
+        </svg>
+      </div>
+      <div>
+        <p class="status">Research</p>
+        <h2>Small bathroom vacuum</h2>
+        <p>A Grok researcher is on this one. The room is the constraint: a vacuum that can work the strip beside the toilet, slide under the vanity toe-kick, and not panic because the floor is wet.</p>
+        <ul>
+          <li>Small on purpose. A hallway robot does not fit this job.</li>
+          <li>The hard parts are clearance, the pedestal, and water on the floor.</li>
+          <li>Still in the reading, not a machine with a price.</li>
+        </ul>
+        <p class="quiet">The research bot is still working. Nothing public to open yet.</p>
+      </div>
+    </article>
+  </main>
+  <footer><a href="/">Similarize</a> · <a href="/games/">Games</a></footer>
+</body>
+</html>
