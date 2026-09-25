@@ -1,4 +1,4 @@
-const VERSION = "3.4";
+const VERSION = "3.5";
 const VIEW_W = 960;
 const VIEW_H = 540;
 const PLAYER_X = 168;
@@ -180,6 +180,7 @@ function createSim(best = 0) {
     y: 0,
     vy: 0,
     rot: 0,
+    av: 0,
     speed: 230,
     wheelAng: [0.4, 1.7],
     wheelOmega: [230 / REAR.r, 230 / FRONT.r],
@@ -425,6 +426,62 @@ function wantKicker(sim, worldX) {
   if (last && worldX - last.lip < 780) return false;
   return true;
 }
+function wrapDeg(a) {
+  let x = a % 360;
+  if (x > 180) x -= 360;
+  if (x < -180) x += 360;
+  return x;
+}
+function stepChassis(sim, dt, input) {
+  const lean = !!(input && input.lean);
+  const boosting = !!sim.boosting;
+  const rot = sim.rot * Math.PI / 180;
+  const c = Math.cos(rot);
+  const s = Math.sin(rot);
+  let contacts = 0;
+  let rear = false;
+  let front = false;
+  let lift = 0;
+  const sinks = [0, 0];
+  for (let i = 0; i < 2; i++) {
+    const g = wheelGeom(sim, i);
+    const p = wheelWorld(sim, g);
+    sinks[i] = p.y + g.r - surfaceY(sim, p.x);
+    if (sinks[i] > -1.2) {
+      contacts += 1;
+      if (i === 0) rear = true;
+      else front = true;
+    }
+    if (sinks[i] > 0) {
+      lift = Math.max(lift, sinks[i]);
+      const rx = c * g.lx - s * g.ly;
+      sim.av -= rx * Math.min(sinks[i], 10) * 0.05;
+      sim.squash[i] = Math.max(sim.squash[i] * 0.45, clamp(sinks[i] / 28, 0, 0.4) * (0.25 + sim.tune.squish));
+    }
+  }
+  if (lift > 0) {
+    sim.y -= Math.min(lift * 0.8, 9);
+    if (sim.vy > 0) sim.vy = Math.min(sim.vy * 0.2, 80);
+    sim.vy -= Math.min(lift, 6) * 22;
+  }
+  if (contacts === 0) {
+    if (lean) sim.av += 240 * dt;
+    else if (boosting) sim.av -= 190 * dt;
+    sim.av *= Math.exp(-dt * 0.25);
+  } else {
+    if (boosting && rear) sim.av -= 150 * dt;
+    if (lean) sim.av += 210 * dt;
+    sim.av *= Math.exp(-dt * (contacts === 2 ? 6.5 : 1.8));
+  }
+  sim.av = clamp(sim.av, -360, 360);
+  sim.rot = wrapDeg(sim.rot + sim.av * dt);
+  if (sim.phase === "play" && contacts > 0 && Math.abs(sim.rot) > 100) {
+    crash(sim, "flip");
+    return true;
+  }
+  sim.grounded = contacts > 0;
+  return false;
+}
 function wheelWorld(sim, w) {
   const rot = sim.rot * Math.PI / 180;
   const c = Math.cos(rot);
@@ -504,12 +561,9 @@ function tick(sim, dt, input) {
     sim.vy += HOLD_NET / (1 + sim.tune.trailer * 0.28) * dt;
     sim.battery -= HOLD_DRAIN * dt;
     sim.boosting = true;
-  } else if (sim.grounded) {
-    sim.vy = 0;
-    sim.battery = Math.min(100, sim.battery + RECHARGE * dt);
-    sim.boosting = false;
   } else {
-    sim.vy += GRAVITY * sim.tune.gravity * dt;
+    if (sim.grounded) sim.battery = Math.min(100, sim.battery + RECHARGE * dt);
+    else sim.vy += GRAVITY * sim.tune.gravity * dt;
     sim.boosting = false;
   }
   sim.vy = clamp(sim.vy, sim.loft > 0 ? -780 : MAX_UP, MAX_DOWN);
@@ -519,33 +573,13 @@ function tick(sim, dt, input) {
   sim.wasBoost = want;
   const footX = sim.scroll + PLAYER_X + CAR_W * 0.55;
   const gy = surfaceY(sim, footX);
+  if (stepChassis(sim, dt, input)) return;
   const launched = kickRamp(sim, footX, dt);
-  const floor = plantY(sim, footX);
-  if (launched) {
-    sim.grounded = false;
-  } else if (sim.y >= floor && sim.vy >= 0) {
-    const impact = sim.vy;
-    sim.y = floor;
-    const bounce = sim.tune.squish * clamp(impact / 1100, 0, 1);
-    sim.vy = impact > 160 ? -impact * bounce * 0.22 : 0;
-    if (bounce > 0.04) {
-      sim.squash[0] = Math.min(0.55, sim.squash[0] + bounce * 0.4);
-      sim.squash[1] = Math.min(0.55, sim.squash[1] + bounce * 0.3);
-    }
-    if (!sim.grounded && impact > 180) burst(sim, footX, gy, 8);
-    sim.grounded = true;
-  } else {
-    sim.grounded = false;
-  }
+  if (launched) sim.grounded = false;
   if (sim.y < 14) {
     sim.y = 14;
     if (sim.vy < 0) sim.vy = 0;
   }
-  const ahead = surfaceY(sim, footX + 26);
-  const behind = surfaceY(sim, footX - 26);
-  const slope = behind - ahead;
-  const target = sim.grounded ? clamp(slope * 0.55, -14, 14) : clamp(-sim.vy * 0.045, -26, 34);
-  sim.rot += (target - sim.rot) * Math.min(1, dt * 10);
   coupleWheels(sim, dt);
   stepSquash(sim, dt);
   stepTrailer(sim, dt);
@@ -801,6 +835,7 @@ function step(sim, dt, input) {
     sim.grounded = true;
     sim.boosting = false;
     sim.rot += (0 - sim.rot) * Math.min(1, capped * 4);
+    sim.av = 0;
     for (let i = 0; i < 2; i++) {
       const rad = Math.max(4, wheelGeom(sim, i).drawR);
       sim.wheelOmega[i] = sim.speed / rad;
@@ -828,7 +863,7 @@ function step(sim, dt, input) {
   let shot = !!input.fire;
   while (acc >= h && guard < 8) {
     if (sim.phase !== "play") break;
-    tick(sim, h, { boost: input.boost, fire: shot });
+    tick(sim, h, { boost: input.boost, fire: shot, lean: input.lean });
     shot = false;
     acc -= h;
     guard += 1;

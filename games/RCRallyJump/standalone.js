@@ -14,7 +14,7 @@ import {
   wheelPace,
   MISSILE_MAX,
   MISSILE_RELOAD
-} from "./engine.js?v=20260925drones";
+} from "./engine.js?v=20260925ragdoll";
 var BEST_KEY = "rc-rally-jump-best";
 var RIG_KEY = "rc-rally-rig";
 var TUNE_KEY = "rc-rally-tune";
@@ -229,6 +229,7 @@ function boot() {
   const muteBtn = el("mute");
   const pauseBtn = el("pause-btn");
   const fireBtn = el("fire");
+  const noseBtn = el("nose");
   const pips = [...el("pips").children];
   version.textContent = `DESERT CIRCUIT \xB7 ${VERSION}`;
   let pointer = false;
@@ -258,6 +259,7 @@ function boot() {
     bodyRow.hidden = !(sim.phase === "play" && sim.damage > 0);
     bodyDmg.textContent = sim.damage < 34 ? "scuffed" : sim.damage < 68 ? "dented" : "beat up";
     fireBtn.hidden = sim.phase !== "play";
+    noseBtn.hidden = sim.phase !== "play";
     pips.forEach((pip, i) => {
       const on = i < sim.missiles;
       const charging = !on && i === sim.missiles && sim.missiles < MISSILE_MAX;
@@ -276,7 +278,7 @@ function boot() {
     pauseBtn.textContent = sim.phase === "pause" ? "Resume" : "Pause";
     pauseBtn.setAttribute("aria-label", sim.phase === "pause" ? "Resume" : "Pause");
     if (sim.phase === "over") {
-      reason.textContent = sim.crash === "drone" ? "DRONE HIT" : "CLIPPED A GATE";
+      reason.textContent = sim.crash === "flip" ? "UPSIDE DOWN" : sim.crash === "drone" ? "DRONE HIT" : "CLIPPED A GATE";
       overScore.textContent = score.toLocaleString();
       overMeta.textContent = `${sim.gatesCleared} gates \xB7 ${metersOf(sim)} m \xB7 best ${sim.best.toLocaleString()}`;
     }
@@ -288,7 +290,9 @@ function boot() {
     fireEdge = false;
     prevGates = 0;
   };
+  let noseDown = false;
   const boostHeld = () => pointer || keys.has("Space") || keys.has("ArrowUp") || keys.has("KeyW");
+  const leanHeld = () => noseDown || keys.has("ArrowDown") || keys.has("KeyS");
   const resize = () => {
     const parent = canvas.parentElement;
     if (!parent) return;
@@ -376,6 +380,18 @@ function boot() {
     if (sim.phase === "play") fireEdge = true;
   };
   fireBtn.addEventListener("pointerdown", shoot);
+  const noseOn = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    noseDown = true;
+  };
+  const noseOff = () => {
+    noseDown = false;
+  };
+  noseBtn.addEventListener("pointerdown", noseOn);
+  noseBtn.addEventListener("pointerup", noseOff);
+  noseBtn.addEventListener("pointercancel", noseOff);
+  noseBtn.addEventListener("pointerleave", noseOff);
   el("pips").addEventListener("pointerdown", shoot);
   const tunePanel = el("tune");
   const tuneFields = ["wheel", "chassis", "squish", "gravity", "trailer"];
@@ -425,7 +441,7 @@ function boot() {
     const fire = fireEdge;
     fireEdge = false;
     const before = sim.missiles;
-    step(sim, dt, { boost: boostHeld() && sim.phase === "play", fire });
+    step(sim, dt, { boost: boostHeld() && sim.phase === "play", fire, lean: leanHeld() && sim.phase === "play" });
     const phaseChanged = sim.phase !== prevPhase;
     if (sim.phase === "over" && phaseChanged) {
       audio.crash(sim.muted);
