@@ -1,4 +1,4 @@
-const VERSION = "3.2";
+const VERSION = "3.3";
 const VIEW_W = 960;
 const VIEW_H = 540;
 const PLAYER_X = 168;
@@ -549,10 +549,10 @@ function tick(sim, dt, input) {
   const hy = sim.y + CAR_H / 2 - hh / 2;
   for (const g of sim.gates) {
     const sx = g.x - sim.scroll;
-    if (!g.blown && !(g.notch && hy + hh * 0.5 > g.notch.top && hy + hh * 0.5 < g.notch.bot)) {
-      const topHit = g.gapTop > 4 && aabb(hx, hy, hw, hh, sx, 0, g.w, g.gapTop);
-      const botHit = g.gapBot < VIEW_H && aabb(hx, hy, hw, hh, sx, g.gapBot, g.w, VIEW_H - g.gapBot);
-      if ((topHit || botHit) && !g.bumped) bumpGate(sim, g, hx, hy, hw, hh, sx, topHit);
+    if (!g.blown && hx + hw > sx && hx < sx + g.w && gateBlocks(g, hy, hh)) {
+      const overlap = hx + hw - sx;
+      if (overlap > 0) sim.scroll -= overlap;
+      if (!g.bumped) bumpGate(sim, g, hy, hh, g.gapTop > 4 && hy < g.gapTop);
     }
     if (!g.scored && hx > sx + g.w) {
       g.scored = true;
@@ -591,48 +591,47 @@ function tick(sim, dt, input) {
   const score = scoreOf(sim);
   if (score > sim.best) sim.best = score;
 }
-function bumpGate(sim, g, hx, hy, hw, hh, sx, topHit) {
+function gateBlocks(g, hy, hh) {
+  const hitsCeiling = g.gapTop > 4 && hy < g.gapTop;
+  const hitsFloor = g.gapBot < VIEW_H && hy + hh > g.gapBot;
+  return hitsCeiling || hitsFloor;
+}
+function bumpGate(sim, g, hy, hh, topHit) {
   const impact = Math.max(0, sim.speed);
-  const overlap = hx + hw - sx;
-  if (!g.bumped) {
-    g.bumped = true;
-    if (overlap > 0) sim.scroll -= Math.min(overlap, 8);
-    if (g.marks.length < 5) {
-      const y = topHit
-        ? clamp(hy + hh * 0.35, 6, Math.max(10, g.gapTop - 6))
-        : clamp(hy + hh * 0.6, g.gapBot + 2, VIEW_H - 8);
-      g.marks.push({
-        y,
-        h: 3 + hash(sim.time * 9 + g.marks.length) * 6,
-        w: 6 + hash(sim.time * 4) * 12
-      });
-    }
-    sim.damage = Math.min(100, sim.damage + 7 + impact * 0.045);
-    if (sim.dents.length < 8) {
-      sim.dents.push({
-        x: (hash(sim.time * 17 + sim.dents.length) - 0.25) * CAR_W * 0.42,
-        y: (hash(sim.time * 29 + sim.dents.length) - 0.5) * CAR_H * 0.32,
-        n: 0.55 + hash(sim.time * 5) * 0.7
-      });
-    }
-    sim.speed = Math.min(sim.speed, 48);
-    const notchPad = 8;
-    g.notch = { top: hy - notchPad, bot: hy + hh + notchPad };
-    if (topHit) sim.vy = Math.max(sim.vy, 70);
-    else sim.vy = Math.min(sim.vy, -90);
-    sim.rot += topHit ? 2 : -2;
-    sim.recover = 0.18;
-    sim.shake = Math.min(0.45, 0.12 + impact / 1400);
-    sim.scrapes += 1;
-    burst(sim, g.x + 6, hy + hh * 0.5, 7);
-    sim.popups.push({
-      x: g.x + g.w * 0.5,
-      y: hy,
-      text: impact > 200 ? "CRUNCH" : "BUMP",
-      life: 0.5,
-      max: 0.5
+  g.bumped = true;
+  if (g.marks.length < 5) {
+    const y = topHit
+      ? clamp(hy + hh * 0.35, 6, Math.max(10, g.gapTop - 6))
+      : clamp(hy + hh * 0.55, g.gapBot + 2, VIEW_H - 8);
+    g.marks.push({
+      y,
+      h: 3 + hash(sim.time * 9 + g.marks.length) * 6,
+      w: 6 + hash(sim.time * 4) * 12
     });
   }
+  sim.damage = Math.min(100, sim.damage + 7 + impact * 0.045);
+  if (sim.dents.length < 8) {
+    sim.dents.push({
+      x: (hash(sim.time * 17 + sim.dents.length) - 0.25) * CAR_W * 0.42,
+      y: (hash(sim.time * 29 + sim.dents.length) - 0.5) * CAR_H * 0.32,
+      n: 0.55 + hash(sim.time * 5) * 0.7
+    });
+  }
+  sim.speed = Math.min(sim.speed, 70);
+  if (topHit) sim.vy = Math.max(sim.vy, 80);
+  else sim.vy = Math.min(sim.vy, -110);
+  sim.rot += topHit ? 2 : -2;
+  sim.recover = 0.16;
+  sim.shake = Math.min(0.45, 0.12 + impact / 1400);
+  sim.scrapes += 1;
+  burst(sim, g.x + 6, hy + hh * 0.5, 7);
+  sim.popups.push({
+    x: g.x + g.w * 0.5,
+    y: hy,
+    text: "BUMP",
+    life: 0.5,
+    max: 0.5
+  });
 }
 function crash(sim, kind) {
   sim.phase = "over";
@@ -856,13 +855,8 @@ function drawGate(ctx, sim, gate) {
   const sx = gate.x - sim.scroll;
   if (sx > VIEW_W + 20 || sx + gate.w < -20) return;
   if (gate.blown) return;
-  paintSlab(ctx, sx, 0, gate.w, Math.max(0, gate.gapTop), gate.notch);
-  if (!gate.kicker && gate.gapBot < VIEW_H) paintSlab(ctx, sx, gate.gapBot, gate.w, VIEW_H - gate.gapBot, gate.notch);
-  if (gate.notch) {
-    ctx.strokeStyle = "rgba(243, 226, 196, 0.7)";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(sx + 3, gate.notch.top, gate.w - 6, Math.max(4, gate.notch.bot - gate.notch.top));
-  }
+  hazard(ctx, sx, 0, gate.w, Math.max(0, gate.gapTop));
+  if (!gate.kicker && gate.gapBot < VIEW_H) hazard(ctx, sx, gate.gapBot, gate.w, VIEW_H - gate.gapBot);
   if (gate.marks) {
     for (const m of gate.marks) {
       ctx.fillStyle = "rgba(28, 14, 10, 0.82)";
@@ -881,17 +875,6 @@ function drawGate(ctx, sim, gate) {
   ctx.fillStyle = "rgba(240, 180, 41, 0.85)";
   const bob = Math.sin(sim.time * 6) * 3;
   chevron(ctx, sx + gate.w * 0.5, mid + bob);
-}
-function paintSlab(ctx, x, y, w, h, notch) {
-  if (h <= 0 || w <= 0) return;
-  if (!notch || notch.bot <= y || notch.top >= y + h) {
-    hazard(ctx, x, y, w, h);
-    return;
-  }
-  const topH = Math.max(0, notch.top - y);
-  const botY = Math.min(y + h, notch.bot);
-  if (topH > 0) hazard(ctx, x, y, w, topH);
-  if (botY < y + h) hazard(ctx, x, botY, w, y + h - botY);
 }
 function hazard(ctx, x, y, w, h) {
   if (h <= 0 || w <= 0) return;
