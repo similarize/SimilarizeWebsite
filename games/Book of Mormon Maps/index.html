@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Book of Mormon Maps</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <style>
+    html, body { height: 100%; margin: 0; }
+    body { font-family: "Segoe UI", sans-serif; color: #1c1917; }
+    #map { position: absolute; inset: 0; }
+    .bar {
+      position: absolute;
+      z-index: 500;
+      top: max(10px, env(safe-area-inset-top));
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+      width: min(640px, calc(100% - 16px));
+    }
+    .bar button, .bar select, .bar label.file {
+      background: #fff;
+      border: 1px solid #d6d3d1;
+      border-radius: 999px;
+      padding: 8px 14px;
+      font: inherit;
+      font-size: 14px;
+      cursor: pointer;
+      box-shadow: 0 1px 4px rgba(0,0,0,.2);
+    }
+    .bar label.file input { display: none; }
+    .leaflet-tooltip.bom-label {
+      background: transparent;
+      border: 0;
+      box-shadow: none;
+      color: #fff;
+      font-weight: 700;
+      font-size: 13px;
+      text-align: center;
+      white-space: normal;
+      width: max-content;
+      max-width: 200px;
+      text-shadow: 0 0 3px #000, 0 0 3px #000, 0 1px 2px #000;
+    }
+    .leaflet-tooltip.bom-label::before { display: none; }
+    .back {
+      position: absolute;
+      z-index: 500;
+      left: 10px;
+      bottom: max(10px, env(safe-area-inset-bottom));
+      background: rgba(255,255,255,.92);
+      color: #1c1917;
+      text-decoration: none;
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 13px;
+    }
+    #status {
+      position: absolute;
+      z-index: 500;
+      top: 64px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #fff7ed;
+      color: #9a3412;
+      border-radius: 8px;
+      padding: 8px 12px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div class="bar">
+    <select id="which" aria-label="Which map">
+      <option value="book_of_mormon_lands.kml">Lands</option>
+      <option value="book_of_mormon_lands_arc1.kml">Rivers and places</option>
+    </select>
+    <button type="button" id="labels">Show modern labels</button>
+    <label class="file">Open a KML<input id="file" type="file" accept=".kml,.xml,text/xml"></label>
+  </div>
+  <div id="status"></div>
+  <a class="back" href="/games/">All games</a>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script>
+    const KMLNS = "http://www.opengis.net/kml/2.2";
+    const map = L.map("map", { zoomControl: true }).setView([17.5, -89.5], 6);
+    const satellite = L.tileLayer(
+      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+      { attribution: "Tiles &copy; Esri", maxZoom: 18 }
+    ).addTo(map);
+    const modern = L.tileLayer(
+      "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
+      { attribution: "Labels &copy; Esri", maxZoom: 18, pane: "overlayPane" }
+    );
+    const drawn = L.layerGroup().addTo(map);
+    let labelsOn = false;
+
+    function kids(el, name) {
+      return [...el.getElementsByTagNameNS(KMLNS, name)];
+    }
+    function direct(el, name) {
+      return [...el.children].filter((n) => n.localName === name);
+    }
+    function kmlColor(styleEl, part) {
+      if (!styleEl) return null;
+      const node = direct(styleEl, part)[0];
+      if (!node) return null;
+      const raw = (direct(node, "color")[0]?.textContent || "").trim();
+      if (raw.length !== 8) return null;
+      const a = parseInt(raw.slice(0, 2), 16) / 255;
+      const b = raw.slice(2, 4);
+      const g = raw.slice(4, 6);
+      const r = raw.slice(6, 8);
+      return { color: "#" + r + g + b, opacity: a };
+    }
+    function widthOf(styleEl) {
+      const node = styleEl && direct(styleEl, "LineStyle")[0];
+      const n = parseFloat(direct(node || document.createElement("x"), "width")[0]?.textContent || "");
+      return Number.isFinite(n) ? Math.max(1, Math.min(n, 8)) : 3;
+    }
+    function coordsOf(el) {
+      const raw = direct(el, "coordinates")[0]?.textContent || "";
+      const pts = [];
+      for (const tok of raw.trim().split(/\s+/)) {
+        const [lng, lat] = tok.split(",").map(Number);
+        if (Number.isFinite(lng) && Number.isFinite(lat)) pts.push([lat, lng]);
+      }
+      return pts;
+    }
+    function parseKml(text) {
+      const doc = new DOMParser().parseFromString(text, "text/xml");
+      if (doc.querySelector("parsererror")) throw new Error("This KML file is not valid XML.");
+      const features = [];
+      for (const pm of kids(doc, "Placemark")) {
+        const name = (direct(pm, "name")[0]?.textContent || "Untitled").trim();
+        const description = (direct(pm, "description")[0]?.textContent || "").trim();
+        const style = direct(pm, "Style")[0] || null;
+        const line = kmlColor(style, "LineStyle");
+        const fill = kmlColor(style, "PolyStyle");
+        const icon = kmlColor(style, "IconStyle");
+        const weight = widthOf(style);
+        for (const pt of kids(pm, "Point")) {
+          const c = coordsOf(pt);
+          if (c.length) features.push({ kind: "point", name, description, at: c[0], color: (icon || line || {}).color || "#e11d48" });
+        }
+        for (const lineEl of kids(pm, "LineString")) {
+          const path = coordsOf(lineEl);
+          if (path.length >= 2) features.push({ kind: "line", name, description, path, color: (line || {}).color || "#38bdf8", opacity: (line || {}).opacity ?? 1, weight });
+        }
+        for (const poly of kids(pm, "Polygon")) {
+          const ring = kids(poly, "coordinates")[0];
+          const path = ring ? coordsOf(ring.parentElement) : [];
+          if (path.length >= 3) features.push({
+            kind: "poly", name, description, path,
+            color: (line || {}).color || "#facc15",
+            opacity: (line || {}).opacity ?? 1,
+            fill: (fill || {}).color || "#facc15",
+            fillOpacity: (fill || {}).opacity ?? 0.25,
+            weight
+          });
+        }
+      }
+      return features;
+    }
+    function show(features) {
+      drawn.clearLayers();
+      const bounds = [];
+      for (const f of features) {
+        let layer;
+        if (f.kind === "point") {
+          layer = L.circleMarker(f.at, { radius: 7, color: "#fff", weight: 1, fillColor: f.color, fillOpacity: 1 });
+          bounds.push(f.at);
+        } else if (f.kind === "line") {
+          layer = L.polyline(f.path, { color: f.color, weight: f.weight, opacity: f.opacity });
+          bounds.push(...f.path);
+        } else {
+          layer = L.polygon(f.path, { color: f.color, weight: f.weight, opacity: f.opacity, fillColor: f.fill, fillOpacity: f.fillOpacity });
+          bounds.push(...f.path);
+        }
+        layer.bindTooltip(f.name, { permanent: true, direction: "center", className: "bom-label" });
+        if (f.description) layer.bindPopup("<strong>" + escapeHtml(f.name) + "</strong><br>" + escapeHtml(f.description));
+        layer.addTo(drawn);
+      }
+      if (bounds.length) map.fitBounds(bounds, { padding: [28, 28], maxZoom: 9 });
+    }
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&", "<": "<", ">": ">", '"': """, "'": "&#39;" }[c]));
+    }
+    function fail(msg) {
+      const el = document.getElementById("status");
+      el.style.display = "block";
+      el.textContent = msg;
+    }
+    async function loadUrl(url) {
+      document.getElementById("status").style.display = "none";
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Could not load " + url);
+      const features = parseKml(await res.text());
+      if (!features.length) throw new Error("No places found in that file.");
+      show(features);
+    }
+    document.getElementById("which").addEventListener("change", (e) => {
+      loadUrl(e.target.value).catch((err) => fail(err.message));
+    });
+    document.getElementById("labels").addEventListener("click", (e) => {
+      labelsOn = !labelsOn;
+      if (labelsOn) modern.addTo(map);
+      else map.removeLayer(modern);
+      e.target.textContent = labelsOn ? "Hide modern labels" : "Show modern labels";
+    });
+    document.getElementById("file").addEventListener("change", async (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      try {
+        show(parseKml(await file.text()));
+        document.getElementById("status").style.display = "none";
+      } catch (err) {
+        fail(err.message || "Could not read that KML.");
+      }
+    });
+    loadUrl("book_of_mormon_lands.kml").catch((err) => fail(err.message));
+  </script>
+</body>
+</html>

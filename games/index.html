@@ -1,121 +1,14 @@
 ---
 layout: default
-title: Games Index
+title: Games
 ---
 
-<head>
-    <link rel="icon" type="image/x-icon" href="/favicon.ico">
-    <link rel="shortcut icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text x='0' y='14'>🚗</text></svg>">
-    <style>
-        .folder-link { 
-            color: #00008B; 
-            font-weight: bold; 
-        }
-        .file-link { 
-            color: #0000FF; 
-        }
-    </style>
-</head>
-
-<h1>Index of Games</h1>
+<h1>Games</h1>
 <ul>
-    <!-- Subdirectories under /games/ first -->
-    {% assign subdirs = '' | split: '' %}
-    {% for file in site.static_files %}
-        {% if file.path contains '/games/' %}
-            {% assign path = file.path | remove_first: '/games/' %}
-            {% assign parts = path | split: '/' %}
-            {% if parts.size > 1 and parts[0] != '' %}
-                {% unless subdirs contains parts[0] %}
-                    {% assign subdirs = subdirs | push: parts[0] %}
-                    <li>
-                        <a href="/games/{{ parts[0] | relative_url }}/" class="folder-link">
-                            {{ parts[0] }}
-                        </a>
-                    </li>
-                {% endunless %}
-            {% endif %}
-        {% endif %}
-    {% endfor %}
-    
-    <!-- Direct HTML files in /games/ after -->
-    {% for file in site.static_files %}
-        {% if file.path contains '/games/' %}
-            {% assign path = file.path | remove_first: '/games/' %}
-            {% if file.extname == '.html' and path == file.name %}
-                <li>
-                    <a href="{{ file.path | relative_url }}" class="file-link">
-                        {{ file.name | remove: '.html' }}
-                    </a>
-                </li>
-            {% endif %}
-        {% endif %}
-    {% endfor %}
+  <li><a href="/games/RCRallyJump/">RC Rally Jump</a> — hold to boost, land to recharge</li>
+  <li><a href="/games/asteroids.html">Asteroids</a> — keyboard or the on-screen buttons</li>
+  <li><a href="/games/asteroids-phone.html">Asteroids for a phone</a> — same game, larger controls</li>
+  <li><a href="/games/basketball.html">Basketball RC</a> — two cars, one ball</li>
+  <li><a href="/games/Book%20of%20Mormon%20Maps/">Book of Mormon Maps</a></li>
 </ul>
-
-<footer>
-    <p><a href="/">Back to Similarize</a></p>
-</footer>
-
-<!-- <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Games Index</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        ul { list-style-type: none; padding: 0; }
-        li { margin: 5px 0; }
-        a { text-decoration: none; color: #0366d6; }
-        a:hover { text-decoration: underline; }
-    </style>
-</head>
-<body>
-    <h1>Index of Games</h1>
-    <ul id="file-list"></ul>
-
-    <script>
-        // Replace with your GitHub username and repository name
-        const username = 'similarize'; // Your GitHub username
-        const repo = 'SimilarizeWebsite'; // The repository name
-        const branch = 'gh-pages'; // The branch name
-        const directory = 'games'; // The subdirectory you want to list
-        const apiUrl = `https://api.github.com/repos/${username}/${repo}/contents/${directory}?ref=${branch}`;
-
-        // Optional: Use a GitHub Personal Access Token to avoid rate limits
-        const token = 'Personal access token'; // Replace with your token
-
-        // Fetch the contents of the /games/ directory
-        fetch(apiUrl, {
-            headers: token ? { Authorization: `token ${token}` } : {}
-        })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! Status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                console.log(data); // Log the API response
-                if (!Array.isArray(data)) {
-                    throw new Error(`Unexpected API response: ${JSON.stringify(data)}`);
-                }
-                const fileList = document.getElementById('file-list');
-                data.forEach(item => {
-                    const listItem = document.createElement('li');
-                    const link = document.createElement('a');
-                    // Adjust the link to point to the correct path
-                    link.href = `${item.path}`;
-                    link.textContent = item.name + (item.type === 'dir' ? '/' : '');
-                    listItem.appendChild(link);
-                    fileList.appendChild(listItem);
-                });
-            })
-            .catch(error => {
-                console.error('Error fetching repository contents:', error);
-                document.getElementById('file-list').innerHTML = '<li>Unable to load files.</li>';
-            });
-    </script>
-</body>
-</html> -->
+<p><a href="/">Back to Similarize</a></p>

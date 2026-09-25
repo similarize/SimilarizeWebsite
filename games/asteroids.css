@@ -1,0 +1,69 @@
+html, body {
+  margin: 0;
+  height: 100%;
+  background: #000;
+  color: #fff;
+  font-family: "Segoe UI", sans-serif;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+#view { display: block; }
+#hud {
+  position: absolute;
+  top: max(10px, env(safe-area-inset-top));
+  left: 12px;
+  right: 72px;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+  text-shadow: 0 1px 2px #000;
+}
+#back {
+  position: absolute;
+  top: max(8px, env(safe-area-inset-top));
+  right: 10px;
+  color: #fff;
+  font-size: 13px;
+  text-decoration: none;
+  border: 1px solid rgba(255,255,255,.4);
+  border-radius: 999px;
+  padding: 4px 10px;
+}
+#controls { position: absolute; inset: 0; pointer-events: none; }
+#controls button {
+  pointer-events: auto;
+  position: absolute;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,.75);
+  background: rgba(255,255,255,.16);
+  color: #fff;
+  font-size: 22px;
+  bottom: max(18px, env(safe-area-inset-bottom));
+  touch-action: none;
+}
+body.phone #controls button { width: 76px; height: 76px; font-size: 26px; }
+#left { left: max(16px, env(safe-area-inset-left)); }
+#right { left: calc(max(16px, env(safe-area-inset-left)) + 78px); }
+body.phone #right { left: calc(max(16px, env(safe-area-inset-left)) + 92px); }
+#shoot { right: max(16px, env(safe-area-inset-right)); }
+#thrust { right: calc(max(16px, env(safe-area-inset-right)) + 78px); }
+body.phone #thrust { right: calc(max(16px, env(safe-area-inset-right)) + 92px); }
+#overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 24px;
+  background: rgba(0,0,0,.45);
+}
+#overlay[hidden] { display: none; }
+#overlay h1 { font-weight: 600; letter-spacing: 0.08em; margin: 0 0 8px; font-size: 40px; }
+#overlay p { margin: 4px 0; max-width: 28rem; color: #e5e5e5; }
+#overlay .go { color: #fbbf24; }
