@@ -10,10 +10,11 @@ import {
   shakeOffset,
   startRun,
   step,
+  stageOf,
   wheelPace,
   MISSILE_MAX,
   MISSILE_RELOAD
-} from "./engine.js?v=20260925solid";
+} from "./engine.js?v=20260925drones";
 var BEST_KEY = "rc-rally-jump-best";
 var RIG_KEY = "rc-rally-rig";
 var TUNE_KEY = "rc-rally-tune";
@@ -210,6 +211,7 @@ function boot() {
   const bestEl = el("best");
   const gatesEl = el("gates");
   const metersEl = el("meters");
+  const threatEl = el("threat");
   const packEl = el("pack");
   const packFill = el("pack-fill");
   const packLow = el("pack-low");
@@ -246,6 +248,8 @@ function boot() {
     bestEl.textContent = `Best ${sim.best.toLocaleString()}`;
     gatesEl.textContent = String(sim.gatesCleared);
     metersEl.textContent = String(metersOf(sim));
+    const stageName = { calm: "GATES", pattern: "WEAVE", hunt: "HUNT", lock: "LOCK" };
+    threatEl.textContent = stageName[stageOf(sim.scroll)] || "GATES";
     packEl.textContent = `${Math.round(sim.battery)}%`;
     packEl.classList.toggle("low", low);
     packFill.style.width = `${Math.max(0, Math.min(100, sim.battery))}%`;

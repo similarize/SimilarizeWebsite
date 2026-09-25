@@ -1,4 +1,4 @@
-const VERSION = "3.3";
+const VERSION = "3.4";
 const VIEW_W = 960;
 const VIEW_H = 540;
 const PLAYER_X = 168;
@@ -199,7 +199,8 @@ function createSim(best = 0) {
     rig: "rally",
     booms: 0,
     nextGate: 780,
-    nextDrone: 2600,
+    nextDrone: 1800,
+    stage: "calm",
     gatesCleared: 0,
     best,
     shake: 0,
@@ -247,6 +248,116 @@ function wheelPace(sim) {
   let sum = 0;
   for (let i = 0; i < 2; i++) sum += sim.wheelOmega[i] * wheelGeom(sim, i).r;
   return sum * 0.5;
+}
+function stageOf(scroll) {
+  if (scroll < 2800) return "calm";
+  if (scroll < 7200) return "pattern";
+  if (scroll < 12000) return "hunt";
+  return "lock";
+}
+function dronePos(sim, d) {
+  if (d.kind === "pattern") {
+    const y = d.y + Math.sin(sim.time * d.freq + d.bob) * d.amp;
+    return { x: d.x, y: clamp(y, 42, surfaceY(sim, d.x) - 40) };
+  }
+  if (d.kind === "lock") return { x: d.x, y: d.y };
+  const bob = d.kind === "seek" ? 0 : Math.sin(sim.time * 3 + d.bob) * 10;
+  return { x: d.x, y: d.y + bob };
+}
+function stepDrones(sim, dt) {
+  const playerX = sim.scroll + PLAYER_X + CAR_W * 0.45;
+  const playerY = sim.y + CAR_H * 0.45;
+  for (const d of sim.drones) {
+    if (d.dead) continue;
+    if (d.kind === "drift") d.x -= sim.speed * 0.12 * dt;
+    else if (d.kind === "pattern") d.x -= sim.speed * 0.03 * dt;
+    else if (d.kind === "seek") {
+      d.x += (playerX + 230 - d.x) * Math.min(1, dt * 1.5);
+      d.y += clamp(playerY - d.y, -160, 160) * dt * 1.05;
+      d.y = clamp(d.y, 40, surfaceY(sim, d.x) - 56);
+    }
+    d.spin += dt * (d.kind === "seek" ? 26 : 16);
+  }
+}
+function announceStage(sim) {
+  const stage = stageOf(sim.scroll);
+  if (stage === sim.stage) return;
+  sim.stage = stage;
+  const text = stage === "pattern" ? "WEAVE" : stage === "hunt" ? "HUNT" : stage === "lock" ? "LOCK ON" : "";
+  if (!text) return;
+  sim.popups.push({ x: sim.scroll + 480, y: 78, text, life: 1.5, max: 1.5 });
+}
+function spawnDrones(sim) {
+  let guard = 0;
+  while (sim.nextDrone < sim.scroll + VIEW_W + 60 && guard < 6) {
+    guard += 1;
+    const x = sim.nextDrone;
+    const stage = stageOf(x);
+    const gyD = groundY(x);
+    const nearGate = sim.gates.some((g) => Math.abs(g.x - x) < 200);
+    if (stage === "calm") {
+      if (!nearGate && gyD > 180) {
+        sim.drones.push({
+          kind: "drift",
+          x,
+          y: 64 + hash(x + 11) * Math.max(20, gyD - 200),
+          bob: hash(x) * Math.PI * 2,
+          spin: 0,
+          dead: false
+        });
+      }
+      sim.nextDrone += 1200 + hash(x + 3) * 500;
+    } else if (stage === "pattern") {
+      if (!nearGate) {
+        const amp = 84 + hash(x + 2) * 28;
+        const freq = 1.55 + hash(x + 4) * 0.45;
+        const y = clamp(gyD * 0.46, 120, 230);
+        sim.drones.push({ kind: "pattern", x, y, bob: 0, amp, freq, spin: 0, dead: false });
+        sim.drones.push({ kind: "pattern", x, y, bob: Math.PI, amp, freq, spin: 0, dead: false });
+      }
+      sim.nextDrone += 1040;
+    } else if (stage === "hunt") {
+      const hunting = sim.drones.filter((d) => d.kind === "seek" && !d.dead).length;
+      if (hunting < 2 && !nearGate) {
+        sim.drones.push({
+          kind: "seek",
+          x: x + 60,
+          y: 90 + hash(x) * 150,
+          bob: 0,
+          spin: 0,
+          dead: false
+        });
+      }
+      sim.nextDrone += 880;
+    } else {
+      const blocking = sim.drones.some((d) => d.kind === "lock" && !d.dead && d.x > sim.scroll + 40);
+      if (!blocking && !nearGate) {
+        sim.drones.push({
+          kind: "lock",
+          x,
+          y: VIEW_H * 0.4,
+          bob: 0,
+          spin: 0,
+          dead: false,
+          bumped: false
+        });
+        sim.nextDrone += 1680;
+      } else {
+        const hunting = sim.drones.filter((d) => d.kind === "seek" && !d.dead).length;
+        if (hunting < 2) {
+          sim.drones.push({
+            kind: "seek",
+            x: x + 40,
+            y: 80 + hash(x + 6) * 140,
+            bob: 0,
+            spin: 0,
+            dead: false
+          });
+        }
+        sim.nextDrone += 920;
+      }
+    }
+  }
 }
 function plant(sim) {
   sim.y = groundY(PLAYER_X + CAR_W * 0.5) - CAR_H;
@@ -489,12 +600,23 @@ function tick(sim, dt, input) {
     if (shot.life <= 0) continue;
     for (const d of sim.drones) {
       if (d.dead) continue;
-      const dy = d.y + Math.sin(sim.time * 3 + d.bob) * 10;
-      if (Math.hypot(shot.x - d.x, shot.y - dy) < 24) {
+      if (d.kind === "lock") {
+        if (Math.abs(shot.x - d.x) < 22) {
+          d.dead = true;
+          shot.life = 0;
+          sim.booms += 1;
+          burst(sim, d.x, shot.y, 16);
+          sim.popups.push({ x: d.x, y: shot.y, text: "DOWN", life: 0.7, max: 0.7 });
+          break;
+        }
+        continue;
+      }
+      const p = dronePos(sim, d);
+      if (Math.hypot(shot.x - p.x, shot.y - p.y) < 26) {
         d.dead = true;
         shot.life = 0;
         sim.booms += 1;
-        burst(sim, d.x, dy, 12);
+        burst(sim, p.x, p.y, 12);
         break;
       }
     }
@@ -527,21 +649,9 @@ function tick(sim, dt, input) {
     const spacing = cruiseOf(sim) * 1.85 + 150;
     sim.nextGate += spacing;
   }
-  while (sim.nextDrone < sim.scroll + VIEW_W + 40) {
-    const x = sim.nextDrone;
-    const nearGate = sim.gates.some((g) => Math.abs(g.x - x) < 160);
-    const gyD = groundY(x);
-    const onRamp = sim.ramps.some((r) => x > r.x0 - 30 && x < r.lip + 120);
-    if (!nearGate && !onRamp && gyD > 180) {
-      sim.drones.push({
-        x,
-        y: 56 + hash(x + 11) * Math.max(24, Math.max(150, gyD - 120) - 56),
-        bob: hash(x) * Math.PI * 2,
-        spin: hash(x + 5) * Math.PI * 2
-      });
-    }
-    sim.nextDrone += 820 + hash(x + 9) * 520;
-  }
+  announceStage(sim);
+  spawnDrones(sim);
+  stepDrones(sim, dt);
   const s = sim.tune.chassis;
   const hw = (CAR_W - 28) * s;
   const hh = (CAR_H - 12) * s;
@@ -569,14 +679,27 @@ function tick(sim, dt, input) {
     }
   }
   for (const d of sim.drones) {
-    if (d.dead) continue;
-    d.x -= sim.speed * 0.12 * dt;
-    d.spin += dt * 18;
-    const sx = d.x - sim.scroll;
-    const sy = d.y + Math.sin(sim.time * 3 + d.bob) * 10;
-    if (aabb(hx, hy, hw, hh, sx - 16, sy - 10, 32, 20)) {
+    if (d.dead || d.kind === "lock") continue;
+    const p = dronePos(sim, d);
+    const sx = p.x - sim.scroll;
+    if (aabb(hx, hy, hw, hh, sx - 16, p.y - 10, 32, 20)) {
       crash(sim, "drone");
       return;
+    }
+  }
+  for (const d of sim.drones) {
+    if (d.dead || d.kind !== "lock") continue;
+    const sx = d.x - sim.scroll;
+    if (hx + hw > sx - 10 && hx < sx + 16) {
+      const overlap = hx + hw - (sx - 10);
+      if (overlap > 0) sim.scroll -= overlap;
+      if (!d.bumped) {
+        d.bumped = true;
+        sim.speed = Math.min(sim.speed, 64);
+        sim.recover = 0.14;
+        sim.shake = 0.28;
+        sim.popups.push({ x: d.x, y: hy, text: "SHOOT", life: 0.7, max: 0.7 });
+      }
     }
   }
   if (sim.grounded && sim.speed < cruiseOf(sim) - 6) {
@@ -586,7 +709,7 @@ function tick(sim, dt, input) {
   if (sim.recover > 0) sim.recover = Math.max(0, sim.recover - dt);
   sim.gates = sim.gates.filter((g) => g.x - sim.scroll > -200);
   sim.ramps = sim.ramps.filter((r) => r.lip - sim.scroll > -240);
-  sim.drones = sim.drones.filter((d) => !d.dead && d.x - sim.scroll > -80);
+  sim.drones = sim.drones.filter((d) => !d.dead && d.x - sim.scroll > -120);
   ageBits(sim, dt);
   const score = scoreOf(sim);
   if (score > sim.best) sim.best = score;
@@ -908,17 +1031,32 @@ function chevron(ctx, x, y) {
 }
 function drawDrone(ctx, sim, d, art) {
   if (d.dead) return;
-  const sx = d.x - sim.scroll;
-  const sy = d.y + Math.sin(sim.time * 3 + d.bob) * 10;
-  if (sx < -60 || sx > VIEW_W + 60) return;
-  const img = art.drone;
+  const p = dronePos(sim, d);
+  const sx = p.x - sim.scroll;
+  if (sx < -80 || sx > VIEW_W + 80) return;
+  if (d.kind === "lock") {
+    ctx.fillStyle = "rgba(120, 24, 16, 0.35)";
+    ctx.fillRect(sx - 8, 0, 16, VIEW_H);
+    ctx.fillStyle = `rgba(240, 180, 41, ${0.45 + Math.sin(sim.time * 8) * 0.35})`;
+    ctx.fillRect(sx - 2, 0, 4, VIEW_H);
+  }
   ctx.save();
-  ctx.translate(sx, sy);
+  ctx.translate(sx, p.y);
   ctx.rotate(Math.sin(d.spin) * 0.05);
+  if (d.kind === "seek") {
+    ctx.strokeStyle = "#e4572e";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(-24, -14, 48, 28);
+  } else if (d.kind === "pattern") {
+    ctx.strokeStyle = "#f0b429";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(-24, -14, 48, 28);
+  }
+  const img = art.drone;
   if (img && img.complete && img.naturalWidth > 0) {
     ctx.drawImage(img, -28, -12, 56, 22);
   } else {
-    ctx.fillStyle = "#1a120c";
+    ctx.fillStyle = d.kind === "seek" ? "#e4572e" : d.kind === "lock" ? "#f0b429" : "#1a120c";
     ctx.fillRect(-16, -6, 32, 12);
   }
   ctx.restore();
@@ -1104,6 +1242,7 @@ export {
   shakeOffset,
   startRun,
   step,
+  stageOf,
   wheelPace,
   MISSILE_MAX,
   MISSILE_RELOAD
