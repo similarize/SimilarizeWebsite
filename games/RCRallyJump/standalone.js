@@ -13,7 +13,7 @@ import {
   wheelPace,
   MISSILE_MAX,
   MISSILE_RELOAD
-} from "./engine.js?v=20260925tune";
+} from "./engine.js?v=20260925bump";
 var BEST_KEY = "rc-rally-jump-best";
 var RIG_KEY = "rc-rally-rig";
 var TUNE_KEY = "rc-rally-tune";
@@ -213,6 +213,8 @@ function boot() {
   const packEl = el("pack");
   const packFill = el("pack-fill");
   const packLow = el("pack-low");
+  const bodyRow = el("body-row");
+  const bodyDmg = el("body-dmg");
   const hudScore = el("hud-score");
   const hudPack = el("hud-pack");
   const title = el("title");
@@ -249,6 +251,8 @@ function boot() {
     packFill.style.width = `${Math.max(0, Math.min(100, sim.battery))}%`;
     packFill.classList.toggle("low", low);
     packLow.hidden = !(sim.phase === "play" && low);
+    bodyRow.hidden = !(sim.phase === "play" && sim.damage > 0);
+    bodyDmg.textContent = sim.damage < 34 ? "scuffed" : sim.damage < 68 ? "dented" : "beat up";
     fireBtn.hidden = sim.phase !== "play";
     pips.forEach((pip, i) => {
       const on = i < sim.missiles;
@@ -410,6 +414,7 @@ function boot() {
   tunePanel.addEventListener("pointerdown", (e) => e.stopPropagation());
   let last = performance.now();
   let prevBooms = 0;
+  let prevScrapes = 0;
   const frame = (now) => {
     const dt = Math.min(0.05, (now - last) / 1e3);
     last = now;
@@ -431,7 +436,11 @@ function boot() {
     if (sim.booms > prevBooms) {
       audio.tone(160, 0.16, "sawtooth", 0.1, sim.muted);
     }
+    if (sim.scrapes > prevScrapes) {
+      audio.tone(110, 0.12, "square", 0.06, sim.muted);
+    }
     prevBooms = sim.booms;
+    prevScrapes = sim.scrapes;
     prevGates = sim.gatesCleared;
     audio.motorDrive(sim.phase === "play", sim.muted, sim.boosting, wheelPace(sim));
     const portrait = canvas.height > canvas.width * 1.05;

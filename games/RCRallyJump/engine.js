@@ -1,4 +1,4 @@
-const VERSION = "2.8";
+const VERSION = "2.9";
 const VIEW_W = 960;
 const VIEW_H = 540;
 const PLAYER_X = 168;
@@ -211,6 +211,10 @@ function createSim(best = 0) {
     trailAng: 0.15,
     trailW: 0,
     prevVy: 0,
+    damage: 0,
+    recover: 0,
+    dents: [],
+    scrapes: 0,
     tune: defaultTune()
   };
   plant(sim);
@@ -298,7 +302,7 @@ function spawnGate(sim, worldX) {
     gapTop += shift;
     gapBot += shift;
   }
-  sim.gates.push({ x: worldX, gapTop, gapBot, w: GATE_W, scored: false, kind, kicker });
+  sim.gates.push({ x: worldX, gapTop, gapBot, w: GATE_W, scored: false, kind, kicker, marks: [], touching: false });
 }
 function wantKicker(sim, worldX) {
   if (worldX < 1500) return false;
@@ -318,6 +322,7 @@ function wheelWorld(sim, w) {
 }
 function coupleWheels(sim, dt) {
   const cruise = cruiseOf(sim);
+  let loaded = false;
   for (let i = 0; i < 2; i++) {
     const g = wheelGeom(sim, i);
     const p = wheelWorld(sim, g);
@@ -328,6 +333,7 @@ function coupleWheels(sim, dt) {
       continue;
     }
     const load = clamp((sink + 2.4) / 2.4, 0.22, 1);
+    loaded = true;
     const R = g.r;
     const I = 0.05 * R * R;
     const slip = sim.speed - sim.wheelOmega[i] * R;
@@ -335,7 +341,12 @@ function coupleWheels(sim, dt) {
     const force = clamp(slip / (0.12 * inv) * load, -420, 420);
     sim.speed -= force * dt;
     sim.wheelOmega[i] += force * R / I * dt;
-    if (i === 0) sim.speed += (cruise - sim.speed) * dt * 1.35 * load;
+    if (i === 0) {
+      const slowed = sim.recover > 0;
+      const target = slowed ? Math.min(cruise, 58) : cruise;
+      const rate = slowed ? 0.38 : 1.35;
+      sim.speed += (target - sim.speed) * dt * rate * load;
+    }
     sim.wheelAng[i] += sim.wheelOmega[i] * dt;
     if (Math.abs(slip) > 130 && load > 0.3 && sim.dust.length < 80 && hash(sim.time * 900 + i * 19) > 0.72) {
       sim.dust.push({
@@ -349,7 +360,8 @@ function coupleWheels(sim, dt) {
       });
     }
   }
-  sim.speed = clamp(sim.speed, 36, 420);
+  if (!loaded && sim.recover > 0) sim.speed += (42 - sim.speed) * dt * 1.15;
+  sim.speed = clamp(sim.speed, sim.recover > 0 ? -130 : 36, 420);
 }
 function kickRamp(sim, footX, dt) {
   let launched = false;
@@ -543,10 +555,7 @@ function tick(sim, dt, input) {
     if (!g.blown) {
       const topHit = g.gapTop > 4 && aabb(hx, hy, hw, hh, sx, 0, g.w, g.gapTop);
       const botHit = g.gapBot < VIEW_H && aabb(hx, hy, hw, hh, sx, g.gapBot, g.w, VIEW_H - g.gapBot);
-      if (topHit || botHit) {
-        crash(sim, "gate");
-        return;
-      }
+      if (topHit || botHit) bumpGate(sim, g, hx, hy, hw, hh, sx, topHit);
     }
     if (!g.scored && hx > sx + g.w) {
       g.scored = true;
@@ -571,12 +580,70 @@ function tick(sim, dt, input) {
       return;
     }
   }
+  const blocked = sim.gates.some((g) => g.touching);
+  if (sim.grounded && !blocked) {
+    const cruise = cruiseOf(sim);
+    const slowed = sim.recover > 0;
+    const target = slowed ? Math.min(cruise, 64) : cruise;
+    if (sim.speed < target - 6) {
+      sim.speed += (target - sim.speed) * dt * (slowed ? 0.55 : 0.7);
+    }
+  }
+  if (sim.recover > 0) sim.recover = Math.max(0, sim.recover - dt);
   sim.gates = sim.gates.filter((g) => g.x - sim.scroll > -200);
   sim.ramps = sim.ramps.filter((r) => r.lip - sim.scroll > -240);
   sim.drones = sim.drones.filter((d) => !d.dead && d.x - sim.scroll > -80);
   ageBits(sim, dt);
   const score = scoreOf(sim);
   if (score > sim.best) sim.best = score;
+}
+function bumpGate(sim, g, hx, hy, hw, hh, sx, topHit) {
+  const impact = Math.max(0, sim.speed);
+  const overlap = hx + hw - sx;
+  if (overlap > 0) sim.scroll -= overlap;
+  if (!g.touching) {
+    g.touching = true;
+    if (g.marks.length < 5) {
+      const y = topHit
+        ? clamp(hy + hh * 0.35, 6, Math.max(10, g.gapTop - 6))
+        : clamp(hy + hh * 0.6, g.gapBot + 2, VIEW_H - 8);
+      g.marks.push({
+        y,
+        h: 3 + hash(sim.time * 9 + g.marks.length) * 6,
+        w: 6 + hash(sim.time * 4) * 12
+      });
+    }
+    sim.damage = Math.min(100, sim.damage + 7 + impact * 0.045);
+    if (sim.dents.length < 8) {
+      sim.dents.push({
+        x: (hash(sim.time * 17 + sim.dents.length) - 0.25) * CAR_W * 0.42,
+        y: (hash(sim.time * 29 + sim.dents.length) - 0.5) * CAR_H * 0.32,
+        n: 0.55 + hash(sim.time * 5) * 0.7
+      });
+    }
+    sim.speed = -clamp(22 + impact * 0.4, 26, 96);
+    if (topHit) {
+      sim.vy = Math.max(sim.vy, 50 + Math.min(impact, 240) * 0.12);
+      sim.rot += 5;
+    } else {
+      sim.vy = Math.min(sim.vy, -70 - Math.min(impact, 240) * 0.1);
+      sim.rot -= 4;
+    }
+    sim.recover = Math.max(sim.recover, 1 + Math.min(impact, 320) / 260);
+    sim.shake = Math.min(1, 0.18 + impact / 900);
+    sim.scrapes += 1;
+    burst(sim, g.x + 6, hy + hh * 0.5, 7);
+    sim.popups.push({
+      x: g.x + g.w * 0.5,
+      y: hy,
+      text: impact > 200 ? "CRUNCH" : "BUMP",
+      life: 0.5,
+      max: 0.5
+    });
+  } else {
+    sim.speed = Math.min(sim.speed, 0);
+    sim.recover = Math.max(sim.recover, 0.3);
+  }
 }
 function crash(sim, kind) {
   sim.phase = "over";
@@ -802,6 +869,14 @@ function drawGate(ctx, sim, gate) {
   if (gate.blown) return;
   hazard(ctx, sx, 0, gate.w, Math.max(0, gate.gapTop));
   if (!gate.kicker && gate.gapBot < VIEW_H) hazard(ctx, sx, gate.gapBot, gate.w, VIEW_H - gate.gapBot);
+  if (gate.marks) {
+    for (const m of gate.marks) {
+      ctx.fillStyle = "rgba(28, 14, 10, 0.82)";
+      ctx.fillRect(sx + 5, m.y, gate.w - 10, m.h);
+      ctx.fillStyle = "rgba(243, 226, 196, 0.55)";
+      ctx.fillRect(sx + 7, m.y + 1, Math.min(m.w, gate.w - 14), 2);
+    }
+  }
   ctx.strokeStyle = "#f0b429";
   ctx.lineWidth = 3;
   ctx.strokeRect(sx + 1.5, Math.max(0, gate.gapTop - 2), gate.w - 3, 4);
@@ -925,6 +1000,22 @@ function drawCar(ctx, sim, art) {
   } else {
     ctx.fillStyle = pixel ? "#d42828" : crawler ? "#9a1b24" : "#e4572e";
     ctx.fillRect(-CAR_W / 2 * s, -CAR_H / 2 * s, CAR_W * s, CAR_H * s);
+  }
+  if (sim.damage > 6) {
+    ctx.fillStyle = `rgba(70, 18, 10, ${Math.min(0.28, sim.damage / 360)})`;
+    ctx.fillRect(-CAR_W / 2 * s, -CAR_H / 2 * s, CAR_W * s * 0.45, CAR_H * s);
+  }
+  if (sim.dents.length) {
+    ctx.strokeStyle = "rgba(48, 22, 14, 0.9)";
+    ctx.lineWidth = 1.4;
+    ctx.lineCap = "round";
+    for (const d of sim.dents) {
+      ctx.beginPath();
+      ctx.moveTo(d.x - 5 * d.n, d.y);
+      ctx.lineTo(d.x + 3 * d.n, d.y + 1.5);
+      ctx.lineTo(d.x + 7 * d.n, d.y - 1);
+      ctx.stroke();
+    }
   }
   ctx.restore();
 }
