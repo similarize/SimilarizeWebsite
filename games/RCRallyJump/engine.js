@@ -1,4 +1,4 @@
-const VERSION = "3.5";
+const VERSION = "3.6";
 const VIEW_W = 960;
 const VIEW_H = 540;
 const PLAYER_X = 168;
@@ -433,7 +433,8 @@ function wrapDeg(a) {
   return x;
 }
 function stepChassis(sim, dt, input) {
-  const lean = !!(input && input.lean);
+  const noseDown = !!(input && input.lean);
+  const noseUp = !!(input && input.noseUp);
   const boosting = !!sim.boosting;
   const rot = sim.rot * Math.PI / 180;
   const c = Math.cos(rot);
@@ -465,13 +466,16 @@ function stepChassis(sim, dt, input) {
     sim.vy -= Math.min(lift, 6) * 22;
   }
   if (contacts === 0) {
-    if (lean) sim.av += 240 * dt;
-    else if (boosting) sim.av -= 190 * dt;
-    sim.av *= Math.exp(-dt * 0.25);
+    const ang = wrapDeg(sim.rot);
+    if (noseDown) sim.av += 340 * dt;
+    else if (noseUp) sim.av -= 240 * dt;
+    else if (Math.abs(ang) < 85) sim.av += (-ang * 48 - sim.av * 13) * dt;
+    else sim.av *= Math.exp(-dt * 1.4);
   } else {
-    if (boosting && rear) sim.av -= 150 * dt;
-    if (lean) sim.av += 210 * dt;
-    sim.av *= Math.exp(-dt * (contacts === 2 ? 6.5 : 1.8));
+    if (noseDown) sim.av += 300 * dt;
+    else if (noseUp && rear) sim.av -= 170 * dt;
+    else if (boosting && rear && !front) sim.av -= 40 * dt;
+    sim.av *= Math.exp(-dt * (contacts === 2 ? 8 : 2.4));
   }
   sim.av = clamp(sim.av, -360, 360);
   sim.rot = wrapDeg(sim.rot + sim.av * dt);
@@ -863,7 +867,7 @@ function step(sim, dt, input) {
   let shot = !!input.fire;
   while (acc >= h && guard < 8) {
     if (sim.phase !== "play") break;
-    tick(sim, h, { boost: input.boost, fire: shot, lean: input.lean });
+    tick(sim, h, { boost: input.boost, fire: shot, lean: input.lean, noseUp: input.noseUp });
     shot = false;
     acc -= h;
     guard += 1;

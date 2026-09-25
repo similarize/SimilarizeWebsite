@@ -14,7 +14,7 @@ import {
   wheelPace,
   MISSILE_MAX,
   MISSILE_RELOAD
-} from "./engine.js?v=20260925ragdoll";
+} from "./engine.js?v=20260925level";
 var BEST_KEY = "rc-rally-jump-best";
 var RIG_KEY = "rc-rally-rig";
 var TUNE_KEY = "rc-rally-tune";
@@ -292,7 +292,8 @@ function boot() {
   };
   let noseDown = false;
   const boostHeld = () => pointer || keys.has("Space") || keys.has("ArrowUp") || keys.has("KeyW");
-  const leanHeld = () => noseDown || keys.has("ArrowDown") || keys.has("KeyS");
+  const leanHeld = () => noseDown || keys.has("ArrowRight") || keys.has("ArrowDown") || keys.has("KeyD") || keys.has("KeyS");
+  const noseUpHeld = () => keys.has("ArrowLeft") || keys.has("KeyA");
   const resize = () => {
     const parent = canvas.parentElement;
     if (!parent) return;
@@ -305,7 +306,7 @@ function boot() {
   window.addEventListener("resize", resize);
   window.addEventListener("keydown", (e) => {
     if (e.repeat) return;
-    if (["Space", "ArrowUp", "ArrowDown", "KeyW"].includes(e.code)) e.preventDefault();
+    if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "KeyW", "KeyA", "KeyS", "KeyD"].includes(e.code)) e.preventDefault();
     keys.add(e.code);
     if (e.code === "KeyF" && sim.phase === "play") {
       e.preventDefault();
@@ -441,7 +442,12 @@ function boot() {
     const fire = fireEdge;
     fireEdge = false;
     const before = sim.missiles;
-    step(sim, dt, { boost: boostHeld() && sim.phase === "play", fire, lean: leanHeld() && sim.phase === "play" });
+    step(sim, dt, {
+      boost: boostHeld() && sim.phase === "play",
+      fire,
+      lean: leanHeld() && sim.phase === "play",
+      noseUp: noseUpHeld() && sim.phase === "play"
+    });
     const phaseChanged = sim.phase !== prevPhase;
     if (sim.phase === "over" && phaseChanged) {
       audio.crash(sim.muted);
