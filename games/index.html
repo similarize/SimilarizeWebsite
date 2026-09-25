@@ -1,14 +1,328 @@
----
-layout: default
-title: Games
----
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Similarize Arcade</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&family=Russo+One&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --night: #100e0c;
+      --wood: #3a2a1c;
+      --wood-dark: #24180f;
+      --cream: #f3e2c4;
+      --amber: #f0b429;
+      --ember: #e4572e;
+      --mute: #b5a48e;
+      --display: "Russo One", "Arial Narrow", sans-serif;
+      --sans: "Outfit", system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    body {
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      color: var(--cream);
+      font-family: var(--sans);
+      background:
+        radial-gradient(ellipse at 50% 110%, rgba(240, 180, 41, 0.16), transparent 46%),
+        linear-gradient(#1a1612, var(--night) 42%);
+    }
+    a { color: inherit; }
+    header {
+      text-align: center;
+      padding: max(22px, env(safe-area-inset-top)) 16px 8px;
+    }
+    .kicker {
+      margin: 0;
+      letter-spacing: 0.28em;
+      font-size: 12px;
+      color: var(--amber);
+    }
+    h1 {
+      margin: 4px 0 0;
+      font-family: var(--display);
+      font-size: clamp(40px, 8vw, 72px);
+      font-weight: 400;
+      letter-spacing: 0.04em;
+      line-height: 0.95;
+      text-shadow: 0 0 18px rgba(240, 180, 41, 0.35);
+    }
+    .lead { margin: 8px 0 0; color: var(--mute); }
+    .floor {
+      flex: 1;
+      width: min(1100px, calc(100% - 24px));
+      margin: 0 auto;
+      padding: 18px 0 max(22px, env(safe-area-inset-bottom));
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      align-items: end;
+    }
+    .cab {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      background: linear-gradient(#4a3424, var(--wood) 18%, var(--wood-dark));
+      border-radius: 16px 16px 8px 8px;
+      padding: 8px 8px 12px;
+      box-shadow: 0 16px 0 #120c08, 0 22px 30px rgba(0, 0, 0, 0.45);
+      text-decoration: none;
+      transform: translateY(0);
+      transition: transform 160ms ease;
+    }
+    .cab:hover, .cab:focus-visible { transform: translateY(-6px); outline: none; }
+    .cab:focus-visible { box-shadow: 0 0 0 3px var(--amber), 0 16px 0 #120c08; }
+    .marquee {
+      display: block;
+      margin: 0 4px 8px;
+      padding: 10px 8px 8px;
+      border-radius: 8px;
+      text-align: center;
+      font-family: var(--display);
+      font-size: clamp(14px, 1.5vw, 18px);
+      letter-spacing: 0.04em;
+      line-height: 1.15;
+      color: #2a100c;
+      background:
+        radial-gradient(circle at 10px 50%, #fff6d0 1.5px, var(--amber) 2.5px, transparent 3.5px) left center / 18px 100% repeat-x,
+        linear-gradient(#ffd56a, var(--amber) 40%, #c4841a);
+    }
+    .screen-wrap {
+      position: relative;
+      margin: 0 4px;
+      border-radius: 6px;
+      overflow: hidden;
+      background: #070605;
+      box-shadow: inset 0 0 0 3px #1a120c, inset 0 0 24px rgba(0, 0, 0, 0.65);
+      aspect-ratio: 4 / 3;
+    }
+    canvas { display: block; width: 100%; height: 100%; }
+    .glass {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(115deg, rgba(255,255,255,0.16), transparent 36%);
+      pointer-events: none;
+    }
+    .panel {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin: 10px 6px 0;
+      min-height: 44px;
+    }
+    .plate { font-size: 13px; color: var(--mute); }
+    .buttons { display: flex; gap: 6px; }
+    .buttons i {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--ember);
+      box-shadow: inset 0 -2px 0 rgba(0,0,0,.35);
+    }
+    .buttons i.alt { background: var(--amber); }
+    .cab-slot { position: relative; min-width: 0; display: flex; flex-direction: column; }
+    .phone {
+      margin: 8px auto 0;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--cream);
+      background: rgba(16, 14, 12, 0.82);
+      border: 1px solid rgba(243, 226, 196, 0.35);
+      border-radius: 999px;
+      padding: 8px 12px;
+      text-decoration: none;
+    }
+    .phone:hover, .phone:focus-visible { border-color: var(--amber); color: var(--amber); }
+    .maps { padding-top: 18px; }
+    .tab {
+      position: absolute;
+      top: -12px;
+      left: 18px;
+      background: var(--cream);
+      color: #2a2118;
+      font-family: var(--display);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      padding: 6px 12px 4px;
+      border-radius: 8px 8px 0 0;
+    }
+    footer {
+      text-align: center;
+      padding: 4px 16px 18px;
+      font-size: 14px;
+    }
+    footer a { color: var(--mute); text-decoration: none; }
+    footer a:hover { color: var(--cream); }
+    @media (max-width: 900px) {
+      .floor { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 560px) {
+      .floor { grid-template-columns: 1fr; width: min(420px, calc(100% - 28px)); }
+      .cab { box-shadow: 0 10px 0 #120c08; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .cab { transition: none; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <p class="kicker">SIMILARIZE</p>
+    <h1>ARCADE</h1>
+    <p class="lead">Pick a machine. The last one opens the map folder.</p>
+  </header>
+  <main class="floor">
+    <a class="cab" href="/games/RCRallyJump/">
+      <span class="marquee">RC Rally Jump</span>
+      <span class="screen-wrap"><canvas data-demo="rally"></canvas><span class="glass"></span></span>
+      <span class="panel"><span class="plate">Hold to boost</span><span class="buttons" aria-hidden="true"><i></i><i class="alt"></i></span></span>
+    </a>
+    <div class="cab-slot">
+      <a class="cab" href="/games/asteroids.html">
+        <span class="marquee">Asteroids</span>
+        <span class="screen-wrap"><canvas data-demo="rocks"></canvas><span class="glass"></span></span>
+        <span class="panel"><span class="plate">Turn and fire</span><span class="buttons" aria-hidden="true"><i></i><i class="alt"></i></span></span>
+      </a>
+      <a class="phone" href="/games/asteroids-phone.html">Bigger buttons</a>
+    </div>
+    <a class="cab" href="/games/basketball.html">
+      <span class="marquee">Basketball RC</span>
+      <span class="screen-wrap"><canvas data-demo="ball"></canvas><span class="glass"></span></span>
+      <span class="panel"><span class="plate">Two cars, one ball</span><span class="buttons" aria-hidden="true"><i></i><i class="alt"></i></span></span>
+    </a>
+    <a class="cab maps" href="/games/Book%20of%20Mormon%20Maps/">
+      <span class="tab">FOLDER</span>
+      <span class="marquee">Book of Mormon Maps</span>
+      <span class="screen-wrap"><canvas data-demo="map"></canvas><span class="glass"></span></span>
+      <span class="panel"><span class="plate">Open the folder</span><span class="buttons" aria-hidden="true"><i class="alt"></i><i></i></span></span>
+    </a>
+  </main>
+  <footer><a href="/">Back to Similarize</a></footer>
+  <script>
+    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const screens = [...document.querySelectorAll("canvas")].map((canvas) => {
+      const ctx = canvas.getContext("2d");
+      return { canvas, ctx, kind: canvas.dataset.demo, t: Math.random() * 8 };
+    });
 
-<h1>Games</h1>
-<ul>
-  <li><a href="/games/RCRallyJump/">RC Rally Jump</a> — hold to boost, land to recharge</li>
-  <li><a href="/games/asteroids.html">Asteroids</a> — keyboard or the on-screen buttons</li>
-  <li><a href="/games/asteroids-phone.html">Asteroids for a phone</a> — same game, larger controls</li>
-  <li><a href="/games/basketball.html">Basketball RC</a> — two cars, one ball</li>
-  <li><a href="/games/Book%20of%20Mormon%20Maps/">Book of Mormon Maps</a></li>
-</ul>
-<p><a href="/">Back to Similarize</a></p>
+    function fit(s) {
+      const r = s.canvas.getBoundingClientRect();
+      const dpr = Math.min(2, devicePixelRatio || 1);
+      const w = Math.max(1, Math.floor(r.width * dpr));
+      const h = Math.max(1, Math.floor(r.height * dpr));
+      if (s.canvas.width !== w || s.canvas.height !== h) {
+        s.canvas.width = w;
+        s.canvas.height = h;
+      }
+      s.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      return { ctx: s.ctx, w: r.width, h: r.height, t: s.t };
+    }
+
+    function rally(v) {
+      const { ctx, w, h, t } = v;
+      const g = ctx.createLinearGradient(0, 0, 0, h);
+      g.addColorStop(0, "#1c2438");
+      g.addColorStop(0.55, "#e39a62");
+      g.addColorStop(1, "#6a3a22");
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, w, h);
+      ctx.beginPath();
+      ctx.moveTo(0, h);
+      for (let x = 0; x <= w; x += 8) {
+        ctx.lineTo(x, h * 0.72 + Math.sin(x * 0.05 + t) * 8);
+      }
+      ctx.lineTo(w, h);
+      ctx.fillStyle = "#c4844a";
+      ctx.fill();
+      const jump = Math.abs(Math.sin(t * 1.4));
+      const y = h * 0.62 - jump * h * 0.28;
+      ctx.fillStyle = "#e4572e";
+      ctx.fillRect(w * 0.22, y, w * 0.22, h * 0.12);
+      ctx.fillStyle = "#f0b429";
+      ctx.fillRect(w * 0.62, h * 0.28, 8, h * 0.44);
+    }
+
+    function rocks(v) {
+      const { ctx, w, h, t } = v;
+      ctx.fillStyle = "#07080c";
+      ctx.fillRect(0, 0, w, h);
+      ctx.save();
+      ctx.translate(w * 0.38, h * 0.55);
+      ctx.rotate(t * 0.8);
+      ctx.strokeStyle = "#f3e2c4";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(16, 0);
+      ctx.lineTo(-12, 10);
+      ctx.lineTo(-12, -10);
+      ctx.closePath();
+      ctx.stroke();
+      ctx.restore();
+      [[0.72, 0.3, 18], [0.78, 0.7, 12], [0.2, 0.28, 14]].forEach(([x, y, r], i) => {
+        ctx.beginPath();
+        ctx.arc(w * x + Math.sin(t + i) * 6, h * y, r, 0, Math.PI * 2);
+        ctx.stroke();
+      });
+    }
+
+    function ball(v) {
+      const { ctx, w, h, t } = v;
+      ctx.fillStyle = "#245536";
+      ctx.fillRect(0, 0, w, h);
+      ctx.strokeStyle = "rgba(243,226,196,0.7)";
+      ctx.strokeRect(8, 8, w - 16, h - 16);
+      ctx.fillStyle = "#e4572e";
+      ctx.fillRect(w * 0.18, h * 0.62, 28, 14);
+      ctx.fillStyle = "#7eb6ff";
+      ctx.fillRect(w * 0.62, h * 0.42, 28, 14);
+      const bx = w * 0.5 + Math.sin(t * 1.3) * w * 0.22;
+      const by = h * 0.35 + Math.abs(Math.sin(t * 2.1)) * h * 0.28;
+      ctx.fillStyle = "#f0b429";
+      ctx.beginPath();
+      ctx.arc(bx, by, 8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function map(v) {
+      const { ctx, w, h, t } = v;
+      ctx.fillStyle = "#1c3d34";
+      ctx.fillRect(0, 0, w, h);
+      ctx.fillStyle = "#c4844a";
+      ctx.beginPath();
+      ctx.moveTo(0, h * 0.7);
+      ctx.lineTo(w * 0.25, h * 0.42);
+      ctx.lineTo(w * 0.55, h * 0.5);
+      ctx.lineTo(w * 0.7, h * 0.28);
+      ctx.lineTo(w, h * 0.46);
+      ctx.lineTo(w, h);
+      ctx.lineTo(0, h);
+      ctx.fill();
+      ctx.strokeStyle = "#f3e2c4";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(w * 0.12, h * 0.16, w * 0.34, h * 0.22);
+      ctx.strokeRect(w * 0.5, h * 0.22 + Math.sin(t) * 2, w * 0.28, h * 0.18);
+      ctx.fillStyle = "#e4572e";
+      ctx.beginPath();
+      ctx.arc(w * 0.62, h * 0.58, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    const draw = { rally, rocks, ball, map };
+    function frame() {
+      for (const s of screens) {
+        if (!reduced) s.t += 0.016;
+        draw[s.kind](fit(s));
+      }
+      if (!reduced) requestAnimationFrame(frame);
+    }
+    addEventListener("resize", () => { if (reduced) frame(); });
+    frame();
+  </script>
+</body>
+</html>
