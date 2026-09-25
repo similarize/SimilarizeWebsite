@@ -94,8 +94,14 @@
     .pack {
       position: absolute;
       left: 12px;
-      right: 12px;
-      bottom: calc(12px + env(safe-area-inset-bottom));
+      right: auto;
+      bottom: auto;
+      top: calc(76px + env(safe-area-inset-top));
+      width: min(16rem, calc(100% - 24px));
+      padding: 8px 10px;
+      border-radius: 12px;
+      background: rgba(35, 28, 22, 0.8);
+      backdrop-filter: blur(6px);
     }
     .pack-row {
       display: flex;
@@ -344,7 +350,7 @@
     @media (min-width: 640px) {
       .score { left: 16px; top: calc(16px + env(safe-area-inset-top)); }
       .tools { right: 16px; top: calc(16px + env(safe-area-inset-top)); }
-      .pack { left: 16px; right: auto; bottom: calc(16px + env(safe-area-inset-bottom)); width: 22rem; }
+      .pack { left: 16px; right: auto; top: calc(84px + env(safe-area-inset-top)); bottom: auto; width: 16rem; }
     }
   </style>
 </head>
@@ -398,7 +404,7 @@
         <p class="picked" id="picked">Selected: rally buggy</p>
         <ul>
           <li>A tap hops. Holding climbs.</li>
-          <li>Hitting a gate bumps you for a split second, scuffs the wall, and dents the truck. Then you are back up to speed.</li>
+          <li>Hitting a gate bumps you, opens a hole, and scores less. A clean gap is worth more. Then you are back up to speed.</li>
           <li>Amber kickers throw you through if you ride them with speed. Too late, and you take the gate on the dirt.</li>
           <li>FIRE, the F key, or a right-click shoots. You hold three. A hit opens that gate, then they reload slowly.</li>
         </ul>
@@ -445,6 +451,6 @@
       <button type="button" class="reset" id="tune-reset" data-ui>Reset</button>
     </div>
   </div>
-  <script type="module" src="./standalone.js?v=20260925spin"></script>
+  <script type="module" src="./standalone.js?v=20260925play"></script>
 </body>
 </html>

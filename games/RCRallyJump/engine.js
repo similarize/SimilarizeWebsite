@@ -1,4 +1,4 @@
-const VERSION = "3.1";
+const VERSION = "3.2";
 const VIEW_W = 960;
 const VIEW_H = 540;
 const PLAYER_X = 168;
@@ -216,6 +216,7 @@ function createSim(best = 0) {
     recover: 0,
     dents: [],
     scrapes: 0,
+    scraped: 0,
     tune: defaultTune()
   };
   plant(sim);
@@ -237,10 +238,10 @@ function startRun(sim) {
 }
 function metersOf(sim) {
   if (sim.phase === "title") return 0;
-  return Math.floor(sim.scroll / 20);
+  return Math.max(0, Math.floor(sim.scroll / 20));
 }
 function scoreOf(sim) {
-  return metersOf(sim) + sim.gatesCleared * 100;
+  return metersOf(sim) + sim.gatesCleared * 100 + sim.scraped * 25;
 }
 function wheelPace(sim) {
   let sum = 0;
@@ -534,7 +535,7 @@ function tick(sim, dt, input) {
     if (!nearGate && !onRamp && gyD > 180) {
       sim.drones.push({
         x,
-        y: 70 + hash(x + 11) * (gyD - 190),
+        y: 56 + hash(x + 11) * Math.max(24, Math.max(150, gyD - 120) - 56),
         bob: hash(x) * Math.PI * 2,
         spin: hash(x + 5) * Math.PI * 2
       });
@@ -548,18 +549,20 @@ function tick(sim, dt, input) {
   const hy = sim.y + CAR_H / 2 - hh / 2;
   for (const g of sim.gates) {
     const sx = g.x - sim.scroll;
-    if (!g.blown) {
+    if (!g.blown && !(g.notch && hy + hh * 0.5 > g.notch.top && hy + hh * 0.5 < g.notch.bot)) {
       const topHit = g.gapTop > 4 && aabb(hx, hy, hw, hh, sx, 0, g.w, g.gapTop);
       const botHit = g.gapBot < VIEW_H && aabb(hx, hy, hw, hh, sx, g.gapBot, g.w, VIEW_H - g.gapBot);
       if ((topHit || botHit) && !g.bumped) bumpGate(sim, g, hx, hy, hw, hh, sx, topHit);
     }
     if (!g.scored && hx > sx + g.w) {
       g.scored = true;
-      sim.gatesCleared += 1;
+      const scraped = g.bumped && !g.blown;
+      if (scraped) sim.scraped += 1;
+      else sim.gatesCleared += 1;
       sim.popups.push({
         x: g.x + g.w,
         y: (g.gapTop + Math.min(g.gapBot, VIEW_H - 20)) * 0.5,
-        text: g.blown ? "CLEAR" : g.kicker && !sim.grounded ? "CLEAN" : "+100",
+        text: g.blown ? "CLEAR" : scraped ? "SCRAPE" : g.kicker && !sim.grounded ? "CLEAN" : "+100",
         life: 0.8,
         max: 0.8
       });
@@ -613,8 +616,10 @@ function bumpGate(sim, g, hx, hy, hw, hh, sx, topHit) {
       });
     }
     sim.speed = Math.min(sim.speed, 48);
-    if (topHit) sim.vy = Math.max(sim.vy, 36);
-    else sim.vy = Math.min(sim.vy, -28);
+    const notchPad = 8;
+    g.notch = { top: hy - notchPad, bot: hy + hh + notchPad };
+    if (topHit) sim.vy = Math.max(sim.vy, 70);
+    else sim.vy = Math.min(sim.vy, -90);
     sim.rot += topHit ? 2 : -2;
     sim.recover = 0.18;
     sim.shake = Math.min(0.45, 0.12 + impact / 1400);
@@ -851,8 +856,13 @@ function drawGate(ctx, sim, gate) {
   const sx = gate.x - sim.scroll;
   if (sx > VIEW_W + 20 || sx + gate.w < -20) return;
   if (gate.blown) return;
-  hazard(ctx, sx, 0, gate.w, Math.max(0, gate.gapTop));
-  if (!gate.kicker && gate.gapBot < VIEW_H) hazard(ctx, sx, gate.gapBot, gate.w, VIEW_H - gate.gapBot);
+  paintSlab(ctx, sx, 0, gate.w, Math.max(0, gate.gapTop), gate.notch);
+  if (!gate.kicker && gate.gapBot < VIEW_H) paintSlab(ctx, sx, gate.gapBot, gate.w, VIEW_H - gate.gapBot, gate.notch);
+  if (gate.notch) {
+    ctx.strokeStyle = "rgba(243, 226, 196, 0.7)";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(sx + 3, gate.notch.top, gate.w - 6, Math.max(4, gate.notch.bot - gate.notch.top));
+  }
   if (gate.marks) {
     for (const m of gate.marks) {
       ctx.fillStyle = "rgba(28, 14, 10, 0.82)";
@@ -871,6 +881,17 @@ function drawGate(ctx, sim, gate) {
   ctx.fillStyle = "rgba(240, 180, 41, 0.85)";
   const bob = Math.sin(sim.time * 6) * 3;
   chevron(ctx, sx + gate.w * 0.5, mid + bob);
+}
+function paintSlab(ctx, x, y, w, h, notch) {
+  if (h <= 0 || w <= 0) return;
+  if (!notch || notch.bot <= y || notch.top >= y + h) {
+    hazard(ctx, x, y, w, h);
+    return;
+  }
+  const topH = Math.max(0, notch.top - y);
+  const botY = Math.min(y + h, notch.bot);
+  if (topH > 0) hazard(ctx, x, y, w, topH);
+  if (botY < y + h) hazard(ctx, x, botY, w, y + h - botY);
 }
 function hazard(ctx, x, y, w, h) {
   if (h <= 0 || w <= 0) return;
