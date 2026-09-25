@@ -1,316 +1,310 @@
-import { VERSION, VIEW_H, VIEW_W, createSim, draw, metersOf, scoreOf, shakeOffset, startRun, step, } from "./engine.js";
-const BEST_KEY = "rc-rally-jump-best";
+// src/game/standalone.ts
+import {
+  VERSION,
+  VIEW_H,
+  VIEW_W,
+  createSim,
+  draw,
+  metersOf,
+  scoreOf,
+  shakeOffset,
+  startRun,
+  step,
+  wheelPace
+} from "./engine.js";
+var BEST_KEY = "rc-rally-jump-best";
 function loadBest() {
-    try {
-        return Number(localStorage.getItem(BEST_KEY)) || 0;
-    }
-    catch {
-        return 0;
-    }
+  try {
+    return Number(localStorage.getItem(BEST_KEY)) || 0;
+  } catch {
+    return 0;
+  }
 }
 function saveBest(n) {
+  try {
+    localStorage.setItem(BEST_KEY, String(n));
+  } catch {
+  }
+}
+var AudioBus = class {
+  ctx = null;
+  motor = null;
+  motorGain = null;
+  filter = null;
+  unlock() {
     try {
-        localStorage.setItem(BEST_KEY, String(n));
-    }
-    catch {
-        /* ignore quota */
-    }
-}
-class AudioBus {
-    ctx = null;
-    motor = null;
-    motorGain = null;
-    filter = null;
-    unlock() {
-        try {
-            if (!this.ctx) {
-                const ctx = new AudioContext();
-                const osc = ctx.createOscillator();
-                const filter = ctx.createBiquadFilter();
-                const gain = ctx.createGain();
-                osc.type = "sawtooth";
-                osc.frequency.value = 72;
-                filter.type = "lowpass";
-                filter.frequency.value = 280;
-                gain.gain.value = 0;
-                osc.connect(filter);
-                filter.connect(gain);
-                gain.connect(ctx.destination);
-                osc.start();
-                this.ctx = ctx;
-                this.motor = osc;
-                this.filter = filter;
-                this.motorGain = gain;
-            }
-            if (this.ctx.state === "suspended")
-                void this.ctx.resume();
-        }
-        catch {
-            this.ctx = null;
-        }
-    }
-    motorDrive(playing, muted, boosting, speed) {
-        if (!this.ctx || !this.motorGain || !this.motor || !this.filter)
-            return;
-        const now = this.ctx.currentTime;
-        const vol = !playing || muted ? 0 : boosting ? 0.04 : 0.018;
-        this.motorGain.gain.setTargetAtTime(vol, now, 0.05);
-        this.motor.frequency.setTargetAtTime(64 + speed * 0.08 + (boosting ? 36 : 0), now, 0.08);
-        this.filter.frequency.setTargetAtTime(boosting ? 520 : 240, now, 0.08);
-    }
-    tone(freq, dur, type, vol, muted) {
-        if (!this.ctx || muted)
-            return;
-        const now = this.ctx.currentTime;
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.type = type;
-        osc.frequency.setValueAtTime(freq, now);
-        osc.frequency.exponentialRampToValueAtTime(Math.max(40, freq * 0.6), now + dur);
-        gain.gain.setValueAtTime(vol, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
-        osc.connect(gain);
-        gain.connect(this.ctx.destination);
-        osc.start(now);
-        osc.stop(now + dur + 0.02);
-    }
-    crash(muted) {
-        if (!this.ctx || muted)
-            return;
-        const now = this.ctx.currentTime;
-        const frames = Math.floor(this.ctx.sampleRate * 0.28);
-        const buffer = this.ctx.createBuffer(1, frames, this.ctx.sampleRate);
-        const data = buffer.getChannelData(0);
-        for (let i = 0; i < frames; i++)
-            data[i] = (Math.random() * 2 - 1) * (1 - i / frames);
-        const src = this.ctx.createBufferSource();
-        src.buffer = buffer;
-        const filter = this.ctx.createBiquadFilter();
+      if (!this.ctx) {
+        const ctx = new AudioContext();
+        const osc = ctx.createOscillator();
+        const filter = ctx.createBiquadFilter();
+        const gain = ctx.createGain();
+        osc.type = "sawtooth";
+        osc.frequency.value = 72;
         filter.type = "lowpass";
-        filter.frequency.value = 700;
-        const gain = this.ctx.createGain();
-        gain.gain.setValueAtTime(0.35, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
-        src.connect(filter);
+        filter.frequency.value = 280;
+        gain.gain.value = 0;
+        osc.connect(filter);
         filter.connect(gain);
-        gain.connect(this.ctx.destination);
-        src.start(now);
+        gain.connect(ctx.destination);
+        osc.start();
+        this.ctx = ctx;
+        this.motor = osc;
+        this.filter = filter;
+        this.motorGain = gain;
+      }
+      if (this.ctx.state === "suspended") void this.ctx.resume();
+    } catch {
+      this.ctx = null;
     }
-}
+  }
+  motorDrive(playing, muted, boosting, speed) {
+    if (!this.ctx || !this.motorGain || !this.motor || !this.filter) return;
+    const now = this.ctx.currentTime;
+    const vol = !playing || muted ? 0 : boosting ? 0.04 : 0.018;
+    this.motorGain.gain.setTargetAtTime(vol, now, 0.05);
+    this.motor.frequency.setTargetAtTime(64 + speed * 0.08 + (boosting ? 36 : 0), now, 0.08);
+    this.filter.frequency.setTargetAtTime(boosting ? 520 : 240, now, 0.08);
+  }
+  tone(freq, dur, type, vol, muted) {
+    if (!this.ctx || muted) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, now);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(40, freq * 0.6), now + dur);
+    gain.gain.setValueAtTime(vol, now);
+    gain.gain.exponentialRampToValueAtTime(1e-3, now + dur);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + dur + 0.02);
+  }
+  crash(muted) {
+    if (!this.ctx || muted) return;
+    const now = this.ctx.currentTime;
+    const frames = Math.floor(this.ctx.sampleRate * 0.28);
+    const buffer = this.ctx.createBuffer(1, frames, this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < frames; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / frames);
+    const src = this.ctx.createBufferSource();
+    src.buffer = buffer;
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.value = 700;
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(0.35, now);
+    gain.gain.exponentialRampToValueAtTime(1e-3, now + 0.28);
+    src.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.ctx.destination);
+    src.start(now);
+  }
+};
 function el(id) {
-    const node = document.getElementById(id);
-    if (!node)
-        throw new Error(`missing #${id}`);
-    return node;
+  const node = document.getElementById(id);
+  if (!node) throw new Error(`missing #${id}`);
+  return node;
 }
 function artUrl(file) {
-    return new URL(`./${file}`, import.meta.url).href;
+  return new URL(`./${file}`, import.meta.url).href;
 }
 function boot() {
-    const canvas = el("view");
-    const ctx = canvas.getContext("2d");
-    if (!ctx)
-        return;
-    const sim = createSim(loadBest());
-    sim.reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const audio = new AudioBus();
-    const art = { buggy: new Image(), drone: new Image(), sky: new Image() };
-    art.buggy.src = artUrl("buggy.png");
-    art.drone.src = artUrl("drone.png");
-    art.sky.src = artUrl("sky.jpg");
-    const scoreEl = el("score");
-    const bestEl = el("best");
-    const gatesEl = el("gates");
-    const metersEl = el("meters");
-    const packEl = el("pack");
-    const packFill = el("pack-fill");
-    const packLow = el("pack-low");
-    const hudScore = el("hud-score");
-    const hudPack = el("hud-pack");
-    const title = el("title");
-    const version = el("version");
-    const pause = el("pause");
-    const over = el("over");
-    const reason = el("reason");
-    const overScore = el("over-score");
-    const overMeta = el("over-meta");
-    const muteBtn = el("mute");
-    const pauseBtn = el("pause-btn");
-    version.textContent = `DESERT CIRCUIT · ${VERSION}`;
-    let pointer = false;
-    const keys = new Set();
-    let prevPhase = "title";
-    let prevGates = 0;
-    let bestSaved = sim.best;
-    let hudAcc = 0;
-    const paintHud = (force = false) => {
-        const phaseChanged = sim.phase !== prevPhase;
-        if (!force && !phaseChanged && hudAcc < 0.08)
-            return;
-        hudAcc = 0;
-        const score = scoreOf(sim);
-        const low = sim.battery < 25;
-        scoreEl.textContent = score.toLocaleString();
-        bestEl.textContent = `Best ${sim.best.toLocaleString()}`;
-        gatesEl.textContent = String(sim.gatesCleared);
-        metersEl.textContent = String(metersOf(sim));
-        packEl.textContent = `${Math.round(sim.battery)}%`;
-        packEl.classList.toggle("low", low);
-        packFill.style.width = `${Math.max(0, Math.min(100, sim.battery))}%`;
-        packFill.classList.toggle("low", low);
-        packLow.hidden = !(sim.phase === "play" && low);
-        hudScore.hidden = sim.phase === "title";
-        hudPack.hidden = sim.phase === "title";
-        pauseBtn.hidden = sim.phase === "title";
-        title.hidden = sim.phase !== "title";
-        pause.hidden = sim.phase !== "pause";
-        over.hidden = sim.phase !== "over";
-        muteBtn.textContent = sim.muted ? "Unmute" : "Mute";
-        muteBtn.setAttribute("aria-label", sim.muted ? "Unmute" : "Mute");
-        pauseBtn.textContent = sim.phase === "pause" ? "Resume" : "Pause";
-        pauseBtn.setAttribute("aria-label", sim.phase === "pause" ? "Resume" : "Pause");
-        if (sim.phase === "over") {
-            reason.textContent = sim.crash === "drone" ? "DRONE HIT" : "CLIPPED A GATE";
-            overScore.textContent = score.toLocaleString();
-            overMeta.textContent = `${sim.gatesCleared} gates · ${metersOf(sim)} m · best ${sim.best.toLocaleString()}`;
-        }
-    };
-    const begin = (hold) => {
-        audio.unlock();
-        startRun(sim);
-        pointer = hold;
-        prevGates = 0;
-    };
-    const boostHeld = () => pointer || keys.has("Space") || keys.has("ArrowUp") || keys.has("KeyW");
-    const resize = () => {
-        const parent = canvas.parentElement;
-        if (!parent)
-            return;
-        const rect = parent.getBoundingClientRect();
-        const dpr = Math.min(2, window.devicePixelRatio || 1);
-        canvas.width = Math.max(1, Math.floor(rect.width * dpr));
-        canvas.height = Math.max(1, Math.floor(rect.height * dpr));
-    };
-    resize();
-    window.addEventListener("resize", resize);
-    window.addEventListener("keydown", (e) => {
-        if (e.repeat)
-            return;
-        if (["Space", "ArrowUp", "ArrowDown", "KeyW"].includes(e.code))
-            e.preventDefault();
-        keys.add(e.code);
-        if (e.code === "KeyM") {
-            sim.muted = !sim.muted;
-            paintHud(true);
-            return;
-        }
-        if (e.code === "KeyP" || e.code === "Escape") {
-            if (sim.phase === "play")
-                sim.phase = "pause";
-            else if (sim.phase === "pause")
-                sim.phase = "play";
-            return;
-        }
-        if (e.code === "KeyR" && (sim.phase === "play" || sim.phase === "over" || sim.phase === "pause")) {
-            audio.unlock();
-            begin(false);
-            return;
-        }
-        if ((e.code === "Space" || e.code === "ArrowUp" || e.code === "KeyW") && sim.phase === "title") {
-            begin(true);
-        }
-        if ((e.code === "Space" || e.code === "KeyR") && sim.phase === "over" && sim.sinceOver > 0.35) {
-            begin(false);
-        }
-    });
-    window.addEventListener("keyup", (e) => {
-        keys.delete(e.code);
-    });
-    const shell = el("shell");
-    shell.addEventListener("pointerdown", (e) => {
-        if (e.target.closest("[data-ui]"))
-            return;
-        audio.unlock();
-        if (sim.phase === "title")
-            begin(true);
-        else if (sim.phase === "over" && sim.sinceOver > 0.4)
-            begin(true);
-        else if (sim.phase === "play")
-            pointer = true;
-    });
-    const release = () => {
-        pointer = false;
-    };
-    window.addEventListener("pointerup", release);
-    window.addEventListener("pointercancel", release);
-    document.addEventListener("visibilitychange", () => {
-        if (document.hidden && sim.phase === "play")
-            sim.phase = "pause";
-    });
-    shell.addEventListener("contextmenu", (e) => e.preventDefault());
-    muteBtn.addEventListener("click", () => {
-        sim.muted = !sim.muted;
-        paintHud(true);
-    });
-    pauseBtn.addEventListener("click", () => {
-        if (sim.phase === "play")
-            sim.phase = "pause";
-        else if (sim.phase === "pause")
-            sim.phase = "play";
-    });
-    for (const id of ["start", "retry", "again"]) {
-        el(id).addEventListener("click", () => begin(false));
+  const canvas = el("view");
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  const sim = createSim(loadBest());
+  sim.reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const audio = new AudioBus();
+  const art = {
+    buggy: new Image(),
+    body: new Image(),
+    wheelRear: new Image(),
+    wheelFront: new Image(),
+    drone: new Image(),
+    sky: new Image()
+  };
+  art.buggy.src = artUrl("buggy.png");
+  art.body.src = artUrl("buggy-body.png");
+  art.wheelRear.src = artUrl("wheel-rear.png");
+  art.wheelFront.src = artUrl("wheel-front.png");
+  art.drone.src = artUrl("drone.png");
+  art.sky.src = artUrl("sky.jpg");
+  const scoreEl = el("score");
+  const bestEl = el("best");
+  const gatesEl = el("gates");
+  const metersEl = el("meters");
+  const packEl = el("pack");
+  const packFill = el("pack-fill");
+  const packLow = el("pack-low");
+  const hudScore = el("hud-score");
+  const hudPack = el("hud-pack");
+  const title = el("title");
+  const version = el("version");
+  const pause = el("pause");
+  const over = el("over");
+  const reason = el("reason");
+  const overScore = el("over-score");
+  const overMeta = el("over-meta");
+  const muteBtn = el("mute");
+  const pauseBtn = el("pause-btn");
+  version.textContent = `DESERT CIRCUIT \xB7 ${VERSION}`;
+  let pointer = false;
+  const keys = /* @__PURE__ */ new Set();
+  let prevPhase = "title";
+  let prevGates = 0;
+  let bestSaved = sim.best;
+  let hudAcc = 0;
+  const paintHud = (force = false) => {
+    const phaseChanged = sim.phase !== prevPhase;
+    if (!force && !phaseChanged && hudAcc < 0.08) return;
+    hudAcc = 0;
+    const score = scoreOf(sim);
+    const low = sim.battery < 25;
+    scoreEl.textContent = score.toLocaleString();
+    bestEl.textContent = `Best ${sim.best.toLocaleString()}`;
+    gatesEl.textContent = String(sim.gatesCleared);
+    metersEl.textContent = String(metersOf(sim));
+    packEl.textContent = `${Math.round(sim.battery)}%`;
+    packEl.classList.toggle("low", low);
+    packFill.style.width = `${Math.max(0, Math.min(100, sim.battery))}%`;
+    packFill.classList.toggle("low", low);
+    packLow.hidden = !(sim.phase === "play" && low);
+    hudScore.hidden = sim.phase === "title";
+    hudPack.hidden = sim.phase === "title";
+    pauseBtn.hidden = sim.phase === "title";
+    title.hidden = sim.phase !== "title";
+    pause.hidden = sim.phase !== "pause";
+    over.hidden = sim.phase !== "over";
+    muteBtn.textContent = sim.muted ? "Unmute" : "Mute";
+    muteBtn.setAttribute("aria-label", sim.muted ? "Unmute" : "Mute");
+    pauseBtn.textContent = sim.phase === "pause" ? "Resume" : "Pause";
+    pauseBtn.setAttribute("aria-label", sim.phase === "pause" ? "Resume" : "Pause");
+    if (sim.phase === "over") {
+      reason.textContent = sim.crash === "drone" ? "DRONE HIT" : "CLIPPED A GATE";
+      overScore.textContent = score.toLocaleString();
+      overMeta.textContent = `${sim.gatesCleared} gates \xB7 ${metersOf(sim)} m \xB7 best ${sim.best.toLocaleString()}`;
     }
-    el("resume").addEventListener("click", () => {
-        if (sim.phase === "pause")
-            sim.phase = "play";
-    });
-    let last = performance.now();
-    const frame = (now) => {
-        const dt = Math.min(0.05, (now - last) / 1000);
-        last = now;
-        step(sim, dt, { boost: boostHeld() && sim.phase === "play" });
-        const phaseChanged = sim.phase !== prevPhase;
-        if (sim.phase === "over" && phaseChanged) {
-            audio.crash(sim.muted);
-            saveBest(sim.best);
-        }
-        if (sim.gatesCleared > prevGates && sim.phase === "play") {
-            audio.tone(620, 0.12, "triangle", 0.08, sim.muted);
-        }
-        prevGates = sim.gatesCleared;
-        const spd = Math.min(380, 240 + sim.scroll * 0.01);
-        audio.motorDrive(sim.phase === "play", sim.muted, sim.boosting, spd);
-        const portrait = canvas.height > canvas.width * 1.05;
-        const scale = portrait
-            ? Math.min(canvas.width / 700, canvas.height / VIEW_H)
-            : Math.min(canvas.width / VIEW_W, canvas.height / VIEW_H);
-        const visW = canvas.width / scale;
-        const windowStart = portrait ? Math.max(0, Math.min(72, VIEW_W - visW)) : 0;
-        const shake = shakeOffset(sim);
-        const worldH = VIEW_H * scale;
-        const oy = (canvas.height - worldH) / 2 + shake.y * scale;
-        const ox = (portrait ? 0 : (canvas.width - VIEW_W * scale) / 2) + shake.x * scale;
-        ctx.setTransform(1, 0, 0, 1, 0, 0);
-        if (art.sky && art.sky.complete && art.sky.naturalWidth > 0) {
-            ctx.drawImage(art.sky, 0, 0, canvas.width, canvas.height);
-        }
-        else {
-            ctx.fillStyle = "#1c2438";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-        }
-        ctx.setTransform(scale, 0, 0, scale, ox - windowStart * scale, oy);
-        draw(ctx, sim, art);
-        if (sim.best > bestSaved) {
-            bestSaved = sim.best;
-            saveBest(sim.best);
-        }
-        hudAcc += dt;
-        paintHud(phaseChanged);
-        prevPhase = sim.phase;
-        requestAnimationFrame(frame);
-    };
+  };
+  const begin = (hold) => {
+    audio.unlock();
+    startRun(sim);
+    pointer = hold;
+    prevGates = 0;
+  };
+  const boostHeld = () => pointer || keys.has("Space") || keys.has("ArrowUp") || keys.has("KeyW");
+  const resize = () => {
+    const parent = canvas.parentElement;
+    if (!parent) return;
+    const rect = parent.getBoundingClientRect();
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    canvas.width = Math.max(1, Math.floor(rect.width * dpr));
+    canvas.height = Math.max(1, Math.floor(rect.height * dpr));
+  };
+  resize();
+  window.addEventListener("resize", resize);
+  window.addEventListener("keydown", (e) => {
+    if (e.repeat) return;
+    if (["Space", "ArrowUp", "ArrowDown", "KeyW"].includes(e.code)) e.preventDefault();
+    keys.add(e.code);
+    if (e.code === "KeyM") {
+      sim.muted = !sim.muted;
+      paintHud(true);
+      return;
+    }
+    if (e.code === "KeyP" || e.code === "Escape") {
+      if (sim.phase === "play") sim.phase = "pause";
+      else if (sim.phase === "pause") sim.phase = "play";
+      return;
+    }
+    if (e.code === "KeyR" && (sim.phase === "play" || sim.phase === "over" || sim.phase === "pause")) {
+      audio.unlock();
+      begin(false);
+      return;
+    }
+    if ((e.code === "Space" || e.code === "ArrowUp" || e.code === "KeyW") && sim.phase === "title") {
+      begin(true);
+    }
+    if ((e.code === "Space" || e.code === "KeyR") && sim.phase === "over" && sim.sinceOver > 0.35) {
+      begin(false);
+    }
+  });
+  window.addEventListener("keyup", (e) => {
+    keys.delete(e.code);
+  });
+  const shell = el("shell");
+  shell.addEventListener("pointerdown", (e) => {
+    if (e.target.closest("[data-ui]")) return;
+    audio.unlock();
+    if (sim.phase === "title") begin(true);
+    else if (sim.phase === "over" && sim.sinceOver > 0.4) begin(true);
+    else if (sim.phase === "play") pointer = true;
+  });
+  const release = () => {
+    pointer = false;
+  };
+  window.addEventListener("pointerup", release);
+  window.addEventListener("pointercancel", release);
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden && sim.phase === "play") sim.phase = "pause";
+  });
+  shell.addEventListener("contextmenu", (e) => e.preventDefault());
+  muteBtn.addEventListener("click", () => {
+    sim.muted = !sim.muted;
     paintHud(true);
+  });
+  pauseBtn.addEventListener("click", () => {
+    if (sim.phase === "play") sim.phase = "pause";
+    else if (sim.phase === "pause") sim.phase = "play";
+  });
+  for (const id of ["start", "retry", "again"]) {
+    el(id).addEventListener("click", () => begin(false));
+  }
+  el("resume").addEventListener("click", () => {
+    if (sim.phase === "pause") sim.phase = "play";
+  });
+  let last = performance.now();
+  const frame = (now) => {
+    const dt = Math.min(0.05, (now - last) / 1e3);
+    last = now;
+    step(sim, dt, { boost: boostHeld() && sim.phase === "play" });
+    const phaseChanged = sim.phase !== prevPhase;
+    if (sim.phase === "over" && phaseChanged) {
+      audio.crash(sim.muted);
+      saveBest(sim.best);
+    }
+    if (sim.gatesCleared > prevGates && sim.phase === "play") {
+      audio.tone(620, 0.12, "triangle", 0.08, sim.muted);
+    }
+    prevGates = sim.gatesCleared;
+    audio.motorDrive(sim.phase === "play", sim.muted, sim.boosting, wheelPace(sim));
+    const portrait = canvas.height > canvas.width * 1.05;
+    const scale = portrait ? Math.min(canvas.width / 700, canvas.height / VIEW_H) : Math.min(canvas.width / VIEW_W, canvas.height / VIEW_H);
+    const visW = canvas.width / scale;
+    const windowStart = portrait ? Math.max(0, Math.min(72, VIEW_W - visW)) : 0;
+    const shake = shakeOffset(sim);
+    const worldH = VIEW_H * scale;
+    const oy = (canvas.height - worldH) / 2 + shake.y * scale;
+    const ox = (portrait ? 0 : (canvas.width - VIEW_W * scale) / 2) + shake.x * scale;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    if (art.sky && art.sky.complete && art.sky.naturalWidth > 0) {
+      ctx.drawImage(art.sky, 0, 0, canvas.width, canvas.height);
+    } else {
+      ctx.fillStyle = "#1c2438";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+    ctx.setTransform(scale, 0, 0, scale, ox - windowStart * scale, oy);
+    draw(ctx, sim, art);
+    if (sim.best > bestSaved) {
+      bestSaved = sim.best;
+      saveBest(sim.best);
+    }
+    hudAcc += dt;
+    paintHud(phaseChanged);
+    prevPhase = sim.phase;
     requestAnimationFrame(frame);
+  };
+  paintHud(true);
+  requestAnimationFrame(frame);
 }
 boot();
