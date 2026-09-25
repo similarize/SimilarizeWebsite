@@ -175,6 +175,11 @@
       <span class="screen-wrap"><canvas data-demo="rocks"></canvas><span class="glass"></span></span>
       <span class="panel"><span class="plate">Turn and fire</span><span class="buttons" aria-hidden="true"><i></i><i class="alt"></i></span></span>
     </a>
+    <a class="cab" href="/games/froggies-cybertruck/">
+      <span class="marquee">Froggies Cybertruck</span>
+      <span class="screen-wrap"><canvas data-demo="froggies"></canvas><span class="glass"></span></span>
+      <span class="panel"><span class="plate">Ranch Grounds · Solo+AI</span><span class="buttons" aria-hidden="true"><i></i><i class="alt"></i></span></span>
+    </a>
     <a class="cab" href="/games/basketball.html">
       <span class="marquee">Basketball RC</span>
       <span class="screen-wrap"><canvas data-demo="ball"></canvas><span class="glass"></span></span>
@@ -273,6 +278,49 @@
       ctx.fill();
     }
 
+
+    function froggies(v) {
+      const { ctx, w, h, t } = v;
+      const g = ctx.createLinearGradient(0, 0, 0, h);
+      g.addColorStop(0, "#6aa86a");
+      g.addColorStop(0.55, "#3d6b3d");
+      g.addColorStop(1, "#2a4020");
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, w, h);
+      // road
+      ctx.fillStyle = "#2a2a2e";
+      ctx.fillRect(0, h * 0.62, w, h * 0.22);
+      ctx.fillStyle = "#f0b429";
+      for (let x = ((t * 40) % 28) - 14; x < w; x += 28) {
+        ctx.fillRect(x, h * 0.72, 14, 3);
+      }
+      // cybertruck body
+      const bx = w * 0.28 + Math.sin(t * 1.2) * 4;
+      const by = h * 0.48;
+      ctx.fillStyle = "#c8ccd2";
+      ctx.beginPath();
+      ctx.moveTo(bx, by + h * 0.16);
+      ctx.lineTo(bx + w * 0.08, by);
+      ctx.lineTo(bx + w * 0.46, by + h * 0.02);
+      ctx.lineTo(bx + w * 0.52, by + h * 0.16);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = "#1a1a1c";
+      ctx.beginPath();
+      ctx.arc(bx + w * 0.14, by + h * 0.17, 7, 0, Math.PI * 2);
+      ctx.arc(bx + w * 0.4, by + h * 0.17, 7, 0, Math.PI * 2);
+      ctx.fill();
+      // frogs on roof
+      [[0.12, "#4caf50"], [0.22, "#81c784"], [0.32, "#66bb6a"], [0.4, "#43a047"]].forEach(([ox, color], i) => {
+        ctx.fillStyle = color;
+        const fx = bx + w * ox;
+        const fy = by - 4 - Math.abs(Math.sin(t * 3 + i)) * 3;
+        ctx.beginPath();
+        ctx.arc(fx, fy, 5, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
     function map(v) {
       const { ctx, w, h, t } = v;
       ctx.fillStyle = "#1c3d34";
@@ -297,7 +345,7 @@
       ctx.fill();
     }
 
-    const draw = { rally, rocks, ball, map };
+    const draw = { rally, rocks, ball, froggies, map };
     function frame() {
       for (const s of screens) {
         if (!reduced) s.t += 0.016;
