@@ -13,7 +13,7 @@ import {
   wheelPace,
   MISSILE_MAX,
   MISSILE_RELOAD
-} from "./engine.js";
+} from "./engine.js?v=20260925controls";
 var BEST_KEY = "rc-rally-jump-best";
 var RIG_KEY = "rc-rally-rig";
 function loadBest() {
@@ -152,19 +152,31 @@ function boot() {
   art.crawler.src = artUrl("crawler-body.png");
   art.crawlerWheel.src = artUrl("crawler-wheel.png");
   const rigBtns = [...document.querySelectorAll("#rigs .rig")];
+  const picked = el("picked");
   const paintRigs = () => {
     rigBtns.forEach((btn) => {
       const on = btn.dataset.rig === sim.rig;
       btn.classList.toggle("on", on);
       btn.setAttribute("aria-pressed", on ? "true" : "false");
     });
+    picked.textContent = sim.rig === "crawler" ? "Selected: red crawler" : "Selected: rally buggy";
   };
   paintRigs();
+  const chooseRig = (btn) => {
+    sim.rig = btn.dataset.rig === "crawler" ? "crawler" : "rally";
+    saveRig(sim.rig);
+    paintRigs();
+  };
   rigBtns.forEach((btn) => {
-    btn.addEventListener("click", () => {
-      sim.rig = btn.dataset.rig === "crawler" ? "crawler" : "rally";
-      saveRig(sim.rig);
-      paintRigs();
+    btn.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      chooseRig(btn);
+    });
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      chooseRig(btn);
     });
   });
   const scoreEl = el("score");
@@ -256,6 +268,11 @@ function boot() {
     if (e.repeat) return;
     if (["Space", "ArrowUp", "ArrowDown", "KeyW"].includes(e.code)) e.preventDefault();
     keys.add(e.code);
+    if (e.code === "KeyF" && sim.phase === "play") {
+      e.preventDefault();
+      fireEdge = true;
+      return;
+    }
     if (e.code === "KeyM") {
       sim.muted = !sim.muted;
       paintHud(true);
@@ -317,12 +334,14 @@ function boot() {
   el("resume").addEventListener("click", () => {
     if (sim.phase === "pause") sim.phase = "play";
   });
-  fireBtn.addEventListener("pointerdown", (e) => {
+  const shoot = (e) => {
     e.preventDefault();
     e.stopPropagation();
     audio.unlock();
     if (sim.phase === "play") fireEdge = true;
-  });
+  };
+  fireBtn.addEventListener("pointerdown", shoot);
+  el("pips").addEventListener("pointerdown", shoot);
   let last = performance.now();
   let prevBooms = 0;
   const frame = (now) => {

@@ -39,16 +39,16 @@
       width: 100%;
       overflow: hidden;
       background: var(--night);
-      touch-action: none;
+      touch-action: manipulation;
       user-select: none;
       -webkit-user-select: none;
     }
-    canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+    canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; }
     .hud { pointer-events: none; position: absolute; inset: 0; }
     .score {
       position: absolute;
       left: 12px;
-      top: 12px;
+      top: calc(12px + env(safe-area-inset-top));
       display: flex;
       align-items: flex-end;
       gap: 16px;
@@ -77,7 +77,7 @@
       pointer-events: auto;
       position: absolute;
       right: 12px;
-      top: 12px;
+      top: calc(12px + env(safe-area-inset-top));
       display: flex;
       gap: 8px;
     }
@@ -94,7 +94,7 @@
       position: absolute;
       left: 12px;
       right: 12px;
-      bottom: 12px;
+      bottom: calc(12px + env(safe-area-inset-bottom));
     }
     .pack-row {
       display: flex;
@@ -130,9 +130,11 @@
       position: absolute;
       inset: 0;
       display: flex;
-      align-items: center;
+      align-items: safe center;
       justify-content: center;
       padding: 16px;
+      overflow: auto;
+      touch-action: manipulation;
     }
     .veil[hidden] { display: none; }
     #pause, #over { background: rgba(20, 24, 32, 0.55); }
@@ -194,18 +196,20 @@
       margin-top: 16px;
     }
     .rig {
-      height: 44px;
-      padding: 0 14px;
+      height: 48px;
+      padding: 0 16px;
       border-radius: 12px;
       border: 1px solid var(--line);
       background: transparent;
       font-family: var(--display);
       letter-spacing: 0.04em;
-      font-size: 18px;
+      font-size: 20px;
+      touch-action: manipulation;
     }
     .rig.on {
       border-color: var(--amber);
-      background: rgba(240, 180, 41, 0.16);
+      background: var(--amber);
+      color: #1a1208;
     }
     .rig .swatch {
       display: inline-block;
@@ -215,8 +219,17 @@
       border-radius: 3px;
       vertical-align: -1px;
     }
+    .rig.on .swatch.buggy { background: #9a3412; }
     .rig .swatch.buggy { background: #e4572e; }
     .rig .swatch.truck { background: #9a1b24; }
+    .rig.on .swatch.truck { background: #1a1208; }
+    .picked {
+      margin: 8px 0 0;
+      font-family: var(--display);
+      letter-spacing: 0.08em;
+      font-size: 14px;
+      color: var(--amber);
+    }
     .go { border: 0; background: var(--ember); color: var(--sand); }
     .ghost { border: 1px solid var(--line); background: transparent; margin-left: 8px; }
     .hint { margin: 12px 0 0; font-size: 12px; color: var(--muted); }
@@ -227,39 +240,48 @@
       font-size: 12px;
     }
     .row { display: flex; justify-content: center; gap: 12px; }
-    .pips { display: flex; gap: 6px; margin-top: 8px; }
+    .pips { display: flex; gap: 6px; margin: 0; pointer-events: auto; touch-action: manipulation; cursor: pointer; }
     .pips i {
-      width: 18px;
-      height: 8px;
+      width: 28px;
+      height: 16px;
       border-radius: 999px;
       background: #3a2e24;
-      box-shadow: inset 0 0 0 1px rgba(240, 180, 41, 0.35);
+      box-shadow: inset 0 0 0 1px rgba(240, 180, 41, 0.45);
       overflow: hidden;
     }
     .pips i.on { background: var(--amber); }
     .pips i.charge { background: linear-gradient(90deg, var(--amber) var(--fill, 0%), #3a2e24 var(--fill, 0%)); }
+    .missiles { margin-top: 10px; pointer-events: auto; }
+    .missile-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 6px;
+    }
     .fire {
       pointer-events: auto;
-      position: absolute;
-      right: 12px;
-      bottom: 12px;
-      height: 52px;
-      min-width: 52px;
+      touch-action: manipulation;
+      flex: 1;
+      height: 48px;
+      min-width: 72px;
       padding: 0 14px;
-      border-radius: 14px;
+      border-radius: 12px;
       border: 1px solid var(--amber);
-      background: rgba(228, 87, 46, 0.9);
+      background: var(--ember);
       color: var(--sand);
       font-family: var(--display);
-      letter-spacing: 0.08em;
-      font-size: 18px;
+      letter-spacing: 0.12em;
+      font-size: 22px;
     }
     .fire[hidden] { display: none; }
+    @media (max-width: 640px) {
+      .rigs { flex-direction: column; align-items: stretch; }
+      .rig { width: 100%; }
+    }
     @media (min-width: 640px) {
-      .score { left: 16px; top: 16px; }
-      .tools { right: 16px; top: 16px; }
-      .pack { left: 16px; right: auto; bottom: 16px; width: 16rem; }
-      .fire { right: 16px; bottom: 16px; }
+      .score { left: 16px; top: calc(16px + env(safe-area-inset-top)); }
+      .tools { right: 16px; top: calc(16px + env(safe-area-inset-top)); }
+      .pack { left: 16px; right: auto; bottom: calc(16px + env(safe-area-inset-bottom)); width: 22rem; }
     }
   </style>
 </head>
@@ -288,13 +310,17 @@
         </div>
         <div class="bar"><i id="pack-fill"></i></div>
         <p class="warn" id="pack-low" hidden>Land to recharge</p>
-        <div class="pack-row" style="margin-top:10px"><span>MISSILES</span></div>
-        <div class="pips" id="pips"><i></i><i></i><i></i></div>
+        <div class="missiles">
+          <div class="pack-row"><span>MISSILES</span></div>
+          <div class="missile-actions">
+            <div class="pips" id="pips" title="Fire a missile"><i></i><i></i><i></i></div>
+            <button type="button" class="fire" id="fire" data-ui hidden>Fire</button>
+          </div>
+        </div>
       </div>
-      <button type="button" class="fire" id="fire" data-ui hidden>Fire</button>
     </div>
 
-    <div class="veil" id="title">
+    <div class="veil" id="title" data-ui>
       <div class="card">
         <p class="eyebrow" id="version">DESERT CIRCUIT</p>
         <h1>RC RALLY JUMP</h1>
@@ -303,14 +329,15 @@
           <button type="button" class="rig on" data-rig="rally" data-ui><i class="swatch buggy"></i>Rally buggy</button>
           <button type="button" class="rig" data-rig="crawler" data-ui><i class="swatch truck"></i>Red crawler</button>
         </div>
+        <p class="picked" id="picked">Selected: rally buggy</p>
         <ul>
           <li>A tap hops. Holding climbs.</li>
           <li>Drive-through gates punish a big jump.</li>
           <li>Amber kickers throw you through if you ride them with speed. Too late, and you take the gate on the dirt.</li>
-          <li>Right-click fires a missile and opens that gate. You hold three, and they come back slowly.</li>
+          <li>FIRE, the F key, or a right-click shoots. You hold three. A hit opens that gate, then they reload slowly.</li>
         </ul>
         <button type="button" class="go" id="start" data-ui>Start run</button>
-        <p class="hint">Hold to drive. Right-click or Fire for a missile. M mute · P pause · R restart</p>
+        <p class="hint">Hold to drive. FIRE, F, or right-click for a missile. M mute · P pause · R restart</p>
         <a class="home" href="https://www.similarize.com/">Similarize</a>
       </div>
     </div>
@@ -335,6 +362,6 @@
       </div>
     </div>
   </div>
-  <script type="module" src="./standalone.js"></script>
+  <script type="module" src="./standalone.js?v=20260925controls"></script>
 </body>
 </html>

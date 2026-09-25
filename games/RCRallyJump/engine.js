@@ -1,4 +1,4 @@
-const VERSION = "2.4";
+const VERSION = "2.5";
 const VIEW_W = 960;
 const VIEW_H = 540;
 const PLAYER_X = 168;
