@@ -13,7 +13,7 @@ import {
   wheelPace,
   MISSILE_MAX,
   MISSILE_RELOAD
-} from "./engine.js?v=20260925render";
+} from "./engine.js?v=20260925pixel";
 var BEST_KEY = "rc-rally-jump-best";
 var RIG_KEY = "rc-rally-rig";
 function loadBest() {
@@ -25,7 +25,8 @@ function loadBest() {
 }
 function loadRig() {
   try {
-    return localStorage.getItem(RIG_KEY) === "crawler" ? "crawler" : "rally";
+    const v = localStorage.getItem(RIG_KEY);
+    return v === "crawler" || v === "pixel" ? v : "rally";
   } catch {
     return "rally";
   }
@@ -141,7 +142,9 @@ function boot() {
     drone: new Image(),
     sky: new Image(),
     crawler: new Image(),
-    crawlerWheel: new Image()
+    crawlerWheel: new Image(),
+    pixel: new Image(),
+    pixelWheel: new Image()
   };
   art.buggy.src = artUrl("buggy.png");
   art.body.src = artUrl("buggy-body.png");
@@ -151,6 +154,8 @@ function boot() {
   art.sky.src = artUrl("sky.jpg");
   art.crawler.src = artUrl("crawler-body.png") + "?v=20260925render";
   art.crawlerWheel.src = artUrl("crawler-wheel.png") + "?v=20260925render";
+  art.pixel.src = artUrl("pixel-body.png") + "?v=20260925pixel";
+  art.pixelWheel.src = artUrl("pixel-wheel.png") + "?v=20260925pixel";
   const rigBtns = [...document.querySelectorAll("#rigs .rig")];
   const picked = el("picked");
   const paintRigs = () => {
@@ -159,11 +164,12 @@ function boot() {
       btn.classList.toggle("on", on);
       btn.setAttribute("aria-pressed", on ? "true" : "false");
     });
-    picked.textContent = sim.rig === "crawler" ? "Selected: red crawler" : "Selected: rally buggy";
+    const label = sim.rig === "crawler" ? "Selected: red crawler" : sim.rig === "pixel" ? "Selected: pixel crawler" : "Selected: rally buggy";
+    picked.textContent = label;
   };
   paintRigs();
   const chooseRig = (btn) => {
-    sim.rig = btn.dataset.rig === "crawler" ? "crawler" : "rally";
+    sim.rig = btn.dataset.rig === "crawler" || btn.dataset.rig === "pixel" ? btn.dataset.rig : "rally";
     saveRig(sim.rig);
     paintRigs();
   };

@@ -223,6 +223,8 @@
     .rig .swatch.buggy { background: #e4572e; }
     .rig .swatch.truck { background: #9a1b24; }
     .rig.on .swatch.truck { background: #1a1208; }
+    .rig .swatch.pixel { background: #e23b2f; }
+    .rig.on .swatch.pixel { background: #1a1208; }
     .picked {
       margin: 8px 0 0;
       font-family: var(--display);
@@ -328,6 +330,7 @@
         <div class="rigs" id="rigs">
           <button type="button" class="rig on" data-rig="rally" data-ui><i class="swatch buggy"></i>Rally buggy</button>
           <button type="button" class="rig" data-rig="crawler" data-ui><i class="swatch truck"></i>Red crawler</button>
+          <button type="button" class="rig" data-rig="pixel" data-ui><i class="swatch pixel"></i>Pixel crawler</button>
         </div>
         <p class="picked" id="picked">Selected: rally buggy</p>
         <ul>
@@ -362,6 +365,6 @@
       </div>
     </div>
   </div>
-  <script type="module" src="./standalone.js?v=20260925render"></script>
+  <script type="module" src="./standalone.js?v=20260925pixel"></script>
 </body>
 </html>

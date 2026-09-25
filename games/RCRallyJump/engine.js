@@ -1,4 +1,4 @@
-const VERSION = "2.6";
+const VERSION = "2.7";
 const VIEW_W = 960;
 const VIEW_H = 540;
 const PLAYER_X = 168;
@@ -48,6 +48,15 @@ const CRAWLER_WHEELS = [
   wheelSpecBox(322.6, 464.4, 147.8, CRAWLER_W, CRAWLER_H),
   wheelSpecBox(1119.5, 460.5, 151, CRAWLER_W, CRAWLER_H)
 ];
+const PIXEL_W = 1440;
+const PIXEL_H = 630;
+const PIXEL_WHEELS = [
+  wheelSpecBox(329.1, 460.5, 158.2, PIXEL_W, PIXEL_H),
+  wheelSpecBox(1070.2, 469.6, 154.9, PIXEL_W, PIXEL_H)
+];
+function keepRig(rig) {
+  return rig === "crawler" || rig === "pixel" ? rig : "rally";
+}
 function groundY(worldX) {
   const n = Math.sin(worldX * 41e-4) * 26 + Math.sin(worldX * 0.0105 + 1.4) * 12 + Math.sin(worldX * 22e-4 + 0.6) * 34;
   return clamp(VIEW_H * 0.78 + n, VIEW_H * 0.64, VIEW_H * 0.9);
@@ -117,7 +126,7 @@ function startRun(sim) {
   const best = sim.best;
   const muted = sim.muted;
   const reduced = sim.reduced;
-  const rig = sim.rig === "crawler" ? "crawler" : "rally";
+  const rig = keepRig(sim.rig);
   const fresh = createSim(best);
   fresh.phase = "play";
   fresh.muted = muted;
@@ -770,9 +779,11 @@ function drawDust(ctx, sim) {
 }
 function drawCar(ctx, sim, art) {
   const crawler = sim.rig === "crawler" && ready(art.crawler);
+  const pixel = sim.rig === "pixel" && ready(art.pixel);
   ctx.save();
   ctx.translate(PLAYER_X + CAR_W / 2, sim.y + CAR_H / 2);
   ctx.rotate(sim.rot * Math.PI / 180);
+  if (pixel) ctx.imageSmoothingEnabled = false;
   if (sim.boosting) {
     ctx.fillStyle = "rgba(228, 87, 46, 0.9)";
     ctx.beginPath();
@@ -787,11 +798,11 @@ function drawCar(ctx, sim, art) {
     ctx.lineTo(-CAR_W * 0.4, 14);
     ctx.fill();
   }
-  const wheelRear = crawler && ready(art.crawlerWheel) ? art.crawlerWheel : art.wheelRear;
-  const wheelFront = crawler && ready(art.crawlerWheel) ? art.crawlerWheel : art.wheelFront;
-  const body = crawler ? art.crawler : art.body;
+  const wheelRear = pixel && ready(art.pixelWheel) ? art.pixelWheel : crawler && ready(art.crawlerWheel) ? art.crawlerWheel : art.wheelRear;
+  const wheelFront = pixel && ready(art.pixelWheel) ? art.pixelWheel : crawler && ready(art.crawlerWheel) ? art.crawlerWheel : art.wheelFront;
+  const body = pixel ? art.pixel : crawler ? art.crawler : art.body;
   const wheelsReady = ready(wheelRear) && ready(wheelFront) && ready(body);
-  const specs = crawler ? CRAWLER_WHEELS : null;
+  const specs = pixel ? PIXEL_WHEELS : crawler ? CRAWLER_WHEELS : null;
   if (wheelsReady) {
     spinWheel(ctx, sim, 0, wheelRear, specs && specs[0]);
     spinWheel(ctx, sim, 1, wheelFront, specs && specs[1]);
@@ -800,7 +811,7 @@ function drawCar(ctx, sim, art) {
   if (img && ready(img)) {
     ctx.drawImage(img, -CAR_W / 2, -CAR_H / 2, CAR_W, CAR_H);
   } else {
-    ctx.fillStyle = crawler ? "#9a1b24" : "#e4572e";
+    ctx.fillStyle = pixel ? "#d42828" : crawler ? "#9a1b24" : "#e4572e";
     ctx.fillRect(-CAR_W / 2, -CAR_H / 2, CAR_W, CAR_H);
   }
   ctx.restore();
