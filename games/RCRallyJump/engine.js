@@ -1,4 +1,4 @@
-const VERSION = "2.1";
+const VERSION = "2.2";
 const VIEW_W = 960;
 const VIEW_H = 540;
 const PLAYER_X = 168;
@@ -34,6 +34,26 @@ function groundY(worldX) {
   const n = Math.sin(worldX * 41e-4) * 26 + Math.sin(worldX * 0.0105 + 1.4) * 12 + Math.sin(worldX * 22e-4 + 0.6) * 34;
   return clamp(VIEW_H * 0.78 + n, VIEW_H * 0.64, VIEW_H * 0.9);
 }
+const RAMP_RUN = 168;
+const RAMP_RISE = 84;
+const LIP_LEAD = 142;
+const PACE = 255;
+function rampAt(sim, worldX) {
+  for (let i = sim.ramps.length - 1; i >= 0; i--) {
+    const r = sim.ramps[i];
+    if (worldX >= r.x0 && worldX <= r.lip) return r;
+  }
+  return null;
+}
+function rampLift(sim, worldX) {
+  const r = rampAt(sim, worldX);
+  if (!r) return 0;
+  const t = (worldX - r.x0) / (r.lip - r.x0);
+  return r.rise * t * t;
+}
+function surfaceY(sim, worldX) {
+  return groundY(worldX) - rampLift(sim, worldX);
+}
 function createSim(best = 0) {
   const sim = {
     phase: "title",
@@ -49,6 +69,8 @@ function createSim(best = 0) {
     boosting: false,
     wasBoost: false,
     gates: [],
+    ramps: [],
+    loft: 0,
     drones: [],
     dust: [],
     popups: [],
@@ -112,10 +134,22 @@ function groundSpan(worldX) {
 }
 function spawnGate(sim, worldX) {
   const { hi, lo } = groundSpan(worldX);
-  const kind = randKind(worldX);
+  const kicker = wantKicker(sim, worldX);
+  const kind = kicker ? "hop" : randKind(worldX);
   let gapTop;
   let gapBot;
-  if (kind === "drive") {
+  if (kicker) {
+    const base = groundY(worldX);
+    gapBot = VIEW_H + 40;
+    gapTop = Math.max(64, base - 308);
+    sim.ramps.push({
+      x0: worldX - LIP_LEAD - RAMP_RUN,
+      lip: worldX - LIP_LEAD,
+      rise: RAMP_RISE,
+      grip: 0,
+      taken: false
+    });
+  } else if (kind === "drive") {
     gapBot = hi + 48;
     gapTop = lo - CAR_H - 156;
   } else if (kind === "hop") {
@@ -132,7 +166,14 @@ function spawnGate(sim, worldX) {
     gapTop += shift;
     gapBot += shift;
   }
-  sim.gates.push({ x: worldX, gapTop, gapBot, w: GATE_W, scored: false, kind });
+  sim.gates.push({ x: worldX, gapTop, gapBot, w: GATE_W, scored: false, kind, kicker });
+}
+function wantKicker(sim, worldX) {
+  if (worldX < 1500) return false;
+  if (hash(worldX + 8.5) > 0.4) return false;
+  const last = sim.ramps[sim.ramps.length - 1];
+  if (last && worldX - last.lip < 780) return false;
+  return true;
 }
 function wheelWorld(sim, w) {
   const rot = sim.rot * Math.PI / 180;
@@ -148,7 +189,7 @@ function coupleWheels(sim, dt) {
   for (let i = 0; i < 2; i++) {
     const w = WHEELS[i];
     const p = wheelWorld(sim, w);
-    const sink = p.y + w.r - groundY(p.x);
+    const sink = p.y + w.r - surfaceY(sim, p.x);
     if (sink <= -1.25) {
       sim.wheelOmega[i] *= Math.exp(-dt / SPIN_AIR);
       sim.wheelAng[i] += sim.wheelOmega[i] * dt;
@@ -167,7 +208,7 @@ function coupleWheels(sim, dt) {
     if (Math.abs(slip) > 130 && load > 0.3 && sim.dust.length < 80 && hash(sim.time * 900 + i * 19) > 0.72) {
       sim.dust.push({
         x: p.x,
-        y: groundY(p.x) - 1,
+        y: surfaceY(sim, p.x) - 1,
         vx: -50 - Math.abs(slip) * 0.12,
         vy: -24 - hash(sim.time * 13 + i) * 36,
         life: 0.28,
@@ -177,6 +218,27 @@ function coupleWheels(sim, dt) {
     }
   }
   sim.speed = clamp(sim.speed, 36, 420);
+}
+function kickRamp(sim, footX, dt) {
+  let launched = false;
+  for (const r of sim.ramps) {
+    if (r.taken) continue;
+    if (sim.grounded && footX >= r.x0 && footX <= r.lip) r.grip += sim.speed * dt;
+    const prev = footX - sim.speed * dt;
+    if (sim.grounded && prev < r.lip && footX >= r.lip) {
+      r.taken = true;
+      const coverage = clamp(r.grip / (RAMP_RUN * 0.85), 0, 1);
+      const juice = coverage * clamp(sim.speed / PACE, 0, 1.2);
+      sim.vy = juice >= 0.8 ? -720 * clamp(sim.speed / PACE, 0.96, 1.05) : -150 * clamp(juice / 0.8, 0.3, 1);
+      sim.loft = 1.15;
+      sim.y -= 4;
+      launched = true;
+      burst(sim, r.lip, surfaceY(sim, r.lip - 2), 12);
+    } else if (footX > r.lip + 36) {
+      r.taken = true;
+    }
+  }
+  return launched;
 }
 function tick(sim, dt, input) {
   sim.time += dt;
@@ -198,13 +260,17 @@ function tick(sim, dt, input) {
     sim.vy += GRAVITY * dt;
     sim.boosting = false;
   }
-  sim.vy = clamp(sim.vy, MAX_UP, MAX_DOWN);
+  sim.vy = clamp(sim.vy, sim.loft > 0 ? -780 : MAX_UP, MAX_DOWN);
+  if (sim.loft > 0) sim.loft = Math.max(0, sim.loft - dt);
   sim.y += sim.vy * dt;
   sim.battery = clamp(sim.battery, 0, 100);
   sim.wasBoost = want;
   const footX = sim.scroll + PLAYER_X + CAR_W * 0.55;
-  const gy = groundY(footX);
-  if (sim.y + CAR_H >= gy && sim.vy >= 0) {
+  const gy = surfaceY(sim, footX);
+  const launched = kickRamp(sim, footX, dt);
+  if (launched) {
+    sim.grounded = false;
+  } else if (sim.y + CAR_H >= gy && sim.vy >= 0) {
     const impact = sim.vy;
     sim.y = gy - CAR_H;
     sim.vy = 0;
@@ -217,8 +283,8 @@ function tick(sim, dt, input) {
     sim.y = 14;
     if (sim.vy < 0) sim.vy = 0;
   }
-  const ahead = groundY(footX + 26);
-  const behind = groundY(footX - 26);
+  const ahead = surfaceY(sim, footX + 26);
+  const behind = surfaceY(sim, footX - 26);
   const slope = behind - ahead;
   const target = sim.grounded ? clamp(slope * 0.55, -14, 14) : clamp(-sim.vy * 0.045, -26, 34);
   sim.rot += (target - sim.rot) * Math.min(1, dt * 10);
@@ -255,7 +321,8 @@ function tick(sim, dt, input) {
     const x = sim.nextDrone;
     const nearGate = sim.gates.some((g) => Math.abs(g.x - x) < 160);
     const gyD = groundY(x);
-    if (!nearGate && gyD > 180) {
+    const onRamp = sim.ramps.some((r) => x > r.x0 - 30 && x < r.lip + 120);
+    if (!nearGate && !onRamp && gyD > 180) {
       sim.drones.push({
         x,
         y: 70 + hash(x + 11) * (gyD - 190),
@@ -283,7 +350,7 @@ function tick(sim, dt, input) {
       sim.popups.push({
         x: g.x + g.w,
         y: (g.gapTop + Math.min(g.gapBot, VIEW_H - 20)) * 0.5,
-        text: "+100",
+        text: g.kicker && !sim.grounded ? "CLEAN" : "+100",
         life: 0.8,
         max: 0.8
       });
@@ -300,6 +367,7 @@ function tick(sim, dt, input) {
     }
   }
   sim.gates = sim.gates.filter((g) => g.x - sim.scroll > -200);
+  sim.ramps = sim.ramps.filter((r) => r.lip - sim.scroll > -240);
   sim.drones = sim.drones.filter((d) => d.x - sim.scroll > -80);
   ageBits(sim, dt);
   const score = scoreOf(sim);
@@ -433,6 +501,7 @@ function drawTrees(ctx, sim) {
     const wx = i * 180 + hash(i + 2) * 40;
     const sx = wx - sim.scroll;
     if (sx < -40 || sx > VIEW_W + 40) continue;
+    if (rampLift(sim, wx) > 8) continue;
     const gy = groundY(wx);
     ctx.fillStyle = "#5a3828";
     ctx.fillRect(sx - 3, gy - 26, 6, 26);
@@ -454,7 +523,7 @@ function drawGround(ctx, sim) {
   ctx.beginPath();
   ctx.moveTo(0, VIEW_H);
   for (let x = 0; x <= VIEW_W; x += 8) {
-    ctx.lineTo(x, groundY(sim.scroll + x));
+    ctx.lineTo(x, surfaceY(sim, sim.scroll + x));
   }
   ctx.lineTo(VIEW_W, VIEW_H);
   ctx.closePath();
@@ -466,33 +535,66 @@ function drawGround(ctx, sim) {
   ctx.fill();
   ctx.beginPath();
   for (let x = 0; x <= VIEW_W; x += 8) {
-    const y = groundY(sim.scroll + x);
+    const y = surfaceY(sim, sim.scroll + x);
     if (x === 0) ctx.moveTo(x, y);
     else ctx.lineTo(x, y);
   }
   ctx.strokeStyle = "rgba(74, 40, 22, 0.65)";
   ctx.lineWidth = 3;
   ctx.stroke();
+  drawKickers(ctx, sim);
   const i0 = Math.floor(sim.scroll / 28);
   for (let i = i0; i < i0 + 40; i++) {
     if (hash(i) < 0.72) continue;
     const wx = i * 28;
     const sx = wx - sim.scroll;
-    const gy = groundY(wx);
+    const gy = surfaceY(sim, wx);
     ctx.fillStyle = hash(i + 1) > 0.5 ? "#8a5a32" : "#d7b48a";
     ctx.fillRect(sx, gy + 6 + hash(i + 2) * 18, 3 + hash(i + 3) * 5, 2);
+  }
+}
+function drawKickers(ctx, sim) {
+  for (const r of sim.ramps) {
+    const x0 = r.x0 - sim.scroll;
+    const lip = r.lip - sim.scroll;
+    if (lip < -40 || x0 > VIEW_W + 40) continue;
+    ctx.beginPath();
+    ctx.moveTo(x0, groundY(r.x0));
+    for (let x = r.x0; x <= r.lip; x += 8) ctx.lineTo(x - sim.scroll, surfaceY(sim, x));
+    ctx.lineTo(lip, groundY(r.lip));
+    ctx.closePath();
+    ctx.fillStyle = "rgba(228, 87, 46, 0.35)";
+    ctx.fill();
+    ctx.strokeStyle = "#f0b429";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(lip, surfaceY(sim, r.lip));
+    ctx.lineTo(lip + 16, groundY(r.lip + 12));
+    ctx.stroke();
+    for (let k = 1; k <= 3; k++) {
+      const wx = r.x0 + (r.lip - r.x0) * k / 4;
+      const sx = wx - sim.scroll;
+      const y = surfaceY(sim, wx) - 10;
+      ctx.beginPath();
+      ctx.moveTo(sx - 9, y + 7);
+      ctx.lineTo(sx + 5, y);
+      ctx.lineTo(sx - 9, y - 7);
+      ctx.stroke();
+    }
   }
 }
 function drawGate(ctx, sim, gate) {
   const sx = gate.x - sim.scroll;
   if (sx > VIEW_W + 20 || sx + gate.w < -20) return;
   hazard(ctx, sx, 0, gate.w, Math.max(0, gate.gapTop));
-  if (gate.gapBot < VIEW_H) hazard(ctx, sx, gate.gapBot, gate.w, VIEW_H - gate.gapBot);
+  if (!gate.kicker && gate.gapBot < VIEW_H) hazard(ctx, sx, gate.gapBot, gate.w, VIEW_H - gate.gapBot);
   ctx.strokeStyle = "#f0b429";
   ctx.lineWidth = 3;
   ctx.strokeRect(sx + 1.5, Math.max(0, gate.gapTop - 2), gate.w - 3, 4);
-  if (gate.gapBot < VIEW_H) ctx.strokeRect(sx + 1.5, gate.gapBot - 2, gate.w - 3, 4);
-  const mid = (gate.gapTop + Math.min(gate.gapBot, VIEW_H - 8)) / 2;
+  if (gate.gapBot < groundY(gate.x) - 10) {
+    ctx.strokeRect(sx + 1.5, gate.gapBot - 2, gate.w - 3, 4);
+  }
+  const mid = gate.kicker ? gate.gapTop + 110 : (gate.gapTop + Math.min(gate.gapBot, VIEW_H - 8)) / 2;
   ctx.fillStyle = "rgba(240, 180, 41, 0.85)";
   const bob = Math.sin(sim.time * 6) * 3;
   chevron(ctx, sx + gate.w * 0.5, mid + bob);
