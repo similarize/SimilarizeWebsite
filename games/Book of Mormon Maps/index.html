@@ -188,7 +188,17 @@
       if (bounds.length) map.fitBounds(bounds, { padding: [28, 28], maxZoom: 9 });
     }
     function escapeHtml(s) {
-      return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&", "<": "<", ">": ">", '"': """, "'": "&#39;" }[c]));
+      const amp = "&" + "amp;";
+      const lt = "&" + "lt;";
+      const gt = "&" + "gt;";
+      const quot = "&" + "quot;";
+      const apos = "&" + "#39;";
+      return String(s)
+        .replace(/&/g, amp)
+        .replace(/</g, lt)
+        .replace(/>/g, gt)
+        .replace(/"/g, quot)
+        .replace(/'/g, apos);
     }
     function fail(msg) {
       const el = document.getElementById("status");

@@ -17,7 +17,9 @@
         body {
             display: flex;
             flex-direction: column;
+            height: 100svh;
             height: 100dvh;
+            max-height: 100dvh;
         }
         .stage { flex: 1; min-height: 0; position: relative; }
         canvas {
@@ -63,11 +65,13 @@
             z-index: 2;
             display: flex;
             justify-content: space-between;
-            gap: 12px;
+            align-items: end;
+            gap: 8px;
+            min-width: 0;
             padding: 8px max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
             background: #071207;
         }
-        .cluster { display: grid; grid-template-columns: 54px 54px 54px 62px; grid-template-rows: 22px 54px 54px; gap: 6px; }
+        .cluster { display: grid; grid-template-columns: 54px 54px 54px 62px; grid-template-rows: 22px 54px 54px; gap: 6px; min-width: 0; }
         .cluster.p2 { grid-template-columns: 62px 54px 54px 54px; }
         .cluster span { grid-column: 1 / -1; font: 700 12px "Segoe UI", system-ui, sans-serif; letter-spacing: 0.08em; text-align: center; }
         .cluster.p1 span { color: #fb923c; }
@@ -75,6 +79,8 @@
         .cluster button {
             width: 54px;
             height: 54px;
+            padding: 0;
+            box-sizing: border-box;
             border-radius: 14px;
             border: 1px solid rgba(255,255,255,.55);
             background: rgba(0,0,0,.38);
@@ -93,12 +99,48 @@
         .cluster.p2 button.left { grid-column: 2; grid-row: 3; }
         .cluster.p2 button.down { grid-column: 3; grid-row: 3; }
         .cluster.p2 button.right { grid-column: 4; grid-row: 3; }
-        @media (max-width: 720px) {
+        @media (max-width: 900px) {
             .hint { display: none; }
-            .cluster { grid-template-columns: 46px 46px 46px 54px; grid-template-rows: 18px 46px 46px; gap: 5px; }
-            .cluster.p2 { grid-template-columns: 54px 46px 46px 46px; }
-            .cluster button { width: 46px; height: 46px; }
-            .cluster button.fire { width: 54px; }
+            .top { font-size: 13px; gap: 6px; }
+            .pads { gap: 8px; padding-top: 4px; }
+            .cluster, .cluster.p2 {
+                box-sizing: border-box;
+                width: calc(50% - 4px);
+                max-width: 236px;
+                aspect-ratio: 1 / 1.12;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                grid-template-rows: 16px repeat(3, minmax(0, 1fr));
+                gap: 5px;
+            }
+            .cluster span { grid-row: 1; align-self: center; }
+            .cluster button {
+                width: 100%;
+                height: 100%;
+                min-width: 0;
+                min-height: 0;
+                font-size: clamp(20px, 6vw, 30px);
+                font-weight: 800;
+                border: 2px solid #fff;
+                box-shadow: 0 2px 0 rgba(0,0,0,.5);
+            }
+            .cluster.p1 button { background: #c2410c; }
+            .cluster.p2 button { background: #1d4ed8; }
+            .cluster.p1 button.up, .cluster.p2 button.up { grid-column: 2; grid-row: 2; }
+            .cluster.p1 button.left, .cluster.p2 button.left { grid-column: 1; grid-row: 3; }
+            .cluster.p1 button.down, .cluster.p2 button.down { grid-column: 2; grid-row: 4; }
+            .cluster.p1 button.right, .cluster.p2 button.right { grid-column: 3; grid-row: 3; }
+            .cluster.p1 button.fire, .cluster.p2 button.fire {
+                grid-column: 2;
+                grid-row: 3;
+                width: 100%;
+                height: 100%;
+                min-height: 0;
+                border-radius: 14px;
+                font-size: clamp(12px, 3.4vw, 16px);
+                letter-spacing: 0.04em;
+            }
+            .cluster.p1 button.fire { background: #fdba74; color: #431407; }
+            .cluster.p2 button.fire { background: #bfdbfe; color: #1e3a8a; }
         }
         @media (min-width: 1100px) and (pointer: fine) {
             .pads { opacity: 0.82; }
