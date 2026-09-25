@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 480" width="480" height="480" role="img" aria-label="Similarize">
+  <defs>
+    <style><![CDATA[
+      .circle { fill: #d00808; }
+      .fg { fill: #fff; }
+      .shade { fill: #ffc9c9; }
+      .ridge { fill: none; stroke: #fff; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; opacity: 0.55; }
+      .letter {
+        fill: #fff;
+        font-family: Outfit, "Segoe UI", system-ui, sans-serif;
+        font-weight: 700;
+        font-size: 26px;
+        text-anchor: middle;
+        dominant-baseline: central;
+      }
+      .mountain, .person, .letter { opacity: 1; }
+      .letter { transform: none; }
+
+      .logo-root.is-animating .mountain {
+        animation: mountainIn 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
+      }
+      .logo-root.is-animating .person-l {
+        animation: personInL 0.65s cubic-bezier(0.22, 1, 0.36, 1) 0.5s both;
+      }
+      .logo-root.is-animating .person-r {
+        animation: personInR 0.65s cubic-bezier(0.22, 1, 0.36, 1) 0.5s both;
+      }
+      .logo-root.is-animating .letter {
+        animation: peel 0.8s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+      }
+      .logo-root.is-animating .l0 { animation-delay: 1.45s; }
+      .logo-root.is-animating .l1 { animation-delay: 1.60s; }
+      .logo-root.is-animating .l2 { animation-delay: 1.75s; }
+      .logo-root.is-animating .l3 { animation-delay: 1.90s; }
+      .logo-root.is-animating .l4 { animation-delay: 2.05s; }
+      .logo-root.is-animating .l5 { animation-delay: 2.20s; }
+      .logo-root.is-animating .l6 { animation-delay: 2.35s; }
+      .logo-root.is-animating .l7 { animation-delay: 2.50s; }
+      .logo-root.is-animating .l8 { animation-delay: 2.65s; }
+      .logo-root.is-animating .l9 { animation-delay: 2.80s; }
+
+      @keyframes mountainIn {
+        from { opacity: 0; transform: translateY(40px) scale(0.7); transform-origin: 240px 318px; }
+        to   { opacity: 1; transform: none; }
+      }
+      @keyframes personInL {
+        from { opacity: 0; transform: translateX(-30px); }
+        to   { opacity: 1; transform: none; }
+      }
+      @keyframes personInR {
+        from { opacity: 0; transform: translateX(30px); }
+        to   { opacity: 1; transform: none; }
+      }
+      @keyframes peel {
+        0% {
+          opacity: 0;
+          transform: translate(var(--fx), var(--fy)) rotate(var(--fr)) scale(0.3);
+        }
+        22% {
+          opacity: 1;
+          transform: translate(calc(var(--fx) * 0.55), calc(var(--fy) * 0.55 - 10px)) rotate(calc(var(--fr) * 0.4)) scale(0.9);
+        }
+        100% {
+          opacity: 1;
+          transform: none;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .logo-root.is-animating .mountain,
+        .logo-root.is-animating .person-l,
+        .logo-root.is-animating .person-r,
+        .logo-root.is-animating .letter {
+          animation: none !important;
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      }
+    ]]></style>
+  </defs>
+
+  <g class="logo-root is-animating" id="logo-root">
+    <circle class="circle" cx="240" cy="240" r="220"/>
+
+    <g id="word" aria-hidden="true">
+      <text class="letter l0" style="--fx:148px; --fy:92px; --fr:22deg;" x="92"  y="80">S</text>
+      <text class="letter l1" style="--fx:118px; --fy:112px; --fr:16deg;" x="122" y="60">I</text>
+      <text class="letter l2" style="--fx:86px;  --fy:126px; --fr:10deg;" x="154" y="46">M</text>
+      <text class="letter l3" style="--fx:52px;  --fy:136px; --fr:6deg;"  x="188" y="38">I</text>
+      <text class="letter l4" style="--fx:18px;  --fy:140px; --fr:2deg;"  x="222" y="34">L</text>
+      <text class="letter l5" style="--fx:-18px; --fy:140px; --fr:-2deg;" x="258" y="34">A</text>
+      <text class="letter l6" style="--fx:-52px; --fy:136px; --fr:-6deg;" x="292" y="38">R</text>
+      <text class="letter l7" style="--fx:-86px; --fy:126px; --fr:-10deg;" x="326" y="46">I</text>
+      <text class="letter l8" style="--fx:-118px; --fy:112px; --fr:-16deg;" x="358" y="60">Z</text>
+      <text class="letter l9" style="--fx:-148px; --fy:92px; --fr:-22deg;" x="388" y="80">E</text>
+    </g>
+
+    <g id="mark">
+      <g class="person person-l fg">
+        <path d="M 128 205 L 148 194 A 23 23 0 1 0 148 216 Z"/>
+        <rect x="116" y="232" width="32" height="92" rx="14"/>
+      </g>
+
+      <g class="mountain">
+        <ellipse cx="240" cy="326" rx="82" ry="9" fill="#000" opacity="0.12"/>
+        <path class="fg" d="M 158 322 L 196 236 L 216 274 L 240 158 L 264 274 L 284 236 L 322 322 Z"/>
+        <path class="shade" d="M 240 158 L 264 274 L 284 236 L 322 322 L 240 322 Z"/>
+        <path class="ridge" d="M 176 300 L 196 236 L 216 274 L 240 158"/>
+        <path class="fg" d="M 232 186 L 240 158 L 248 186 Q 240 178 232 186 Z"/>
+      </g>
+
+      <g class="person person-r fg">
+        <path d="M 352 205 L 332 194 A 23 23 0 1 1 332 216 Z"/>
+        <rect x="332" y="232" width="32" height="92" rx="14"/>
+      </g>
+    </g>
+  </g>
+</svg>
