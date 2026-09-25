@@ -1,20 +1,272 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Loading RC Rally Jump</title>
-    <script type="text/javascript">
-        document.title = "Loading RC Rally Jump";
-    </script>
-    <style>
-        body { margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background: #000; }
-        canvas { display: block; }
-        #loading { position: absolute; color: white; font-family: Arial, sans-serif; font-size: 24px; }
-    </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#141820">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>RC Rally Jump</title>
+  <link rel="icon" href="favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --night: #141820;
+      --panel: #231c16;
+      --sand: #f3e2c4;
+      --muted: #b5a48e;
+      --ember: #e4572e;
+      --amber: #f0b429;
+      --line: #4a3b2e;
+      --battery: #9dce6a;
+      --display: "Barlow Condensed", "Arial Narrow", sans-serif;
+      --sans: "Outfit", system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: var(--night);
+      color: var(--sand);
+      font-family: var(--sans);
+      overflow: hidden;
+    }
+    button { font: inherit; cursor: pointer; color: inherit; }
+    #shell {
+      position: relative;
+      height: 100dvh;
+      width: 100%;
+      overflow: hidden;
+      background: var(--night);
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+    .hud { pointer-events: none; position: absolute; inset: 0; }
+    .score {
+      position: absolute;
+      left: 12px;
+      top: 12px;
+      display: flex;
+      align-items: flex-end;
+      gap: 16px;
+      border-radius: 12px;
+      background: rgba(35, 28, 22, 0.8);
+      padding: 8px 12px;
+      backdrop-filter: blur(6px);
+    }
+    .kicker {
+      font-family: var(--display);
+      font-size: 12px;
+      letter-spacing: 0.18em;
+      color: var(--muted);
+      margin: 0;
+    }
+    .score strong {
+      display: block;
+      font-family: var(--display);
+      font-size: 32px;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .meta { padding-bottom: 2px; font-size: 14px; color: var(--muted); }
+    .meta p { margin: 0; }
+    .tools {
+      pointer-events: auto;
+      position: absolute;
+      right: 12px;
+      top: 12px;
+      display: flex;
+      gap: 8px;
+    }
+    .icon {
+      height: 44px;
+      min-width: 44px;
+      padding: 0 12px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: rgba(35, 28, 22, 0.85);
+      color: var(--sand);
+    }
+    .pack {
+      position: absolute;
+      left: 12px;
+      right: 12px;
+      bottom: 12px;
+    }
+    .pack-row {
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--display);
+      font-size: 12px;
+      letter-spacing: 0.16em;
+    }
+    .pack-row span.low { color: var(--ember); }
+    .bar {
+      margin-top: 4px;
+      height: 8px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: var(--panel);
+    }
+    .bar i {
+      display: block;
+      height: 100%;
+      width: 100%;
+      border-radius: 999px;
+      background: var(--battery);
+    }
+    .bar i.low { background: var(--ember); }
+    .warn {
+      margin: 4px 0 0;
+      font-family: var(--display);
+      font-size: 14px;
+      letter-spacing: 0.04em;
+      color: var(--amber);
+    }
+    .veil {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .veil[hidden] { display: none; }
+    #pause, #over { background: rgba(20, 24, 32, 0.55); }
+    .card {
+      width: 100%;
+      max-width: 28rem;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: rgba(35, 28, 22, 0.92);
+      padding: 28px 24px;
+      text-align: center;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+      backdrop-filter: blur(6px);
+    }
+    .card.narrow { max-width: 24rem; }
+    .eyebrow {
+      margin: 0;
+      font-family: var(--display);
+      letter-spacing: 0.28em;
+      font-size: 14px;
+      color: var(--amber);
+    }
+    h1, h2 {
+      margin: 4px 0 0;
+      font-family: var(--display);
+      font-weight: 700;
+      line-height: 0.9;
+      color: var(--sand);
+    }
+    h1 { font-size: clamp(48px, 10vw, 72px); }
+    h2 { font-size: 48px; }
+    .lead { margin: 12px 0 0; color: var(--muted); }
+    ul {
+      margin: 16px auto 0;
+      max-width: 20rem;
+      padding: 0;
+      list-style: none;
+      text-align: left;
+      font-size: 14px;
+    }
+    li { margin: 4px 0; }
+    .go, .ghost {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 48px;
+      margin-top: 20px;
+      border-radius: 12px;
+      padding: 0 24px;
+      font-family: var(--display);
+      font-size: 24px;
+      letter-spacing: 0.04em;
+    }
+    .go { border: 0; background: var(--ember); color: var(--sand); }
+    .ghost { border: 1px solid var(--line); background: transparent; margin-left: 8px; }
+    .hint { margin: 12px 0 0; font-size: 12px; color: var(--muted); }
+    .home {
+      display: inline-block;
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .row { display: flex; justify-content: center; gap: 12px; }
+    @media (min-width: 640px) {
+      .score { left: 16px; top: 16px; }
+      .tools { right: 16px; top: 16px; }
+      .pack { left: 16px; right: auto; bottom: 16px; width: 16rem; }
+    }
+  </style>
 </head>
 <body>
-    <div id="loading">Loading RC Rally Jump...</div>
-    <script type="module" src="./main.py.js"></script>
+  <div id="shell">
+    <canvas id="view"></canvas>
+    <div class="hud">
+      <div class="score" id="hud-score">
+        <div>
+          <p class="kicker">SCORE</p>
+          <strong id="score">0</strong>
+        </div>
+        <div class="meta">
+          <p id="best">Best 0</p>
+          <p><span id="gates">0</span> gates · <span id="meters">0</span> m</p>
+        </div>
+      </div>
+      <div class="tools">
+        <button type="button" class="icon" id="mute" data-ui>Mute</button>
+        <button type="button" class="icon" id="pause-btn" data-ui hidden>Pause</button>
+      </div>
+      <div class="pack" id="hud-pack">
+        <div class="pack-row">
+          <span>PACK</span>
+          <span id="pack">100%</span>
+        </div>
+        <div class="bar"><i id="pack-fill"></i></div>
+        <p class="warn" id="pack-low" hidden>Land to recharge</p>
+      </div>
+    </div>
+
+    <div class="veil" id="title">
+      <div class="card">
+        <p class="eyebrow" id="version">DESERT CIRCUIT</p>
+        <h1>RC RALLY JUMP</h1>
+        <p class="lead">Hold to boost. Land on the dirt to recharge. Thread the amber gates.</p>
+        <ul>
+          <li>A tap hops. Holding climbs.</li>
+          <li>Drive-through gates punish a big jump.</li>
+          <li>Drones come at you — don’t trade the pack for air.</li>
+        </ul>
+        <button type="button" class="go" id="start" data-ui>Start run</button>
+        <p class="hint">Space, tap, or hold anywhere. M mute · P pause · R restart</p>
+        <a class="home" href="https://www.similarize.com/">Similarize</a>
+      </div>
+    </div>
+
+    <div class="veil" id="pause" hidden>
+      <div class="card narrow" data-ui>
+        <h2>Paused</h2>
+        <div class="row">
+          <button type="button" class="go" id="resume" data-ui>Resume</button>
+          <button type="button" class="ghost" id="retry" data-ui>Retry</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="veil" id="over" hidden>
+      <div class="card narrow" data-ui>
+        <p class="eyebrow" id="reason">CLIPPED A GATE</p>
+        <h2 id="over-score">0</h2>
+        <p class="lead" id="over-meta"></p>
+        <button type="button" class="go" id="again" data-ui>Run it back</button>
+        <p class="hint">Tap, Space, or R</p>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="./standalone.js"></script>
 </body>
 </html>
