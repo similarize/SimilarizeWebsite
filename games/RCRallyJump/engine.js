@@ -1,4 +1,4 @@
-const VERSION = "3.0";
+const VERSION = "3.1";
 const VIEW_W = 960;
 const VIEW_H = 540;
 const PLAYER_X = 168;
@@ -243,8 +243,9 @@ function scoreOf(sim) {
   return metersOf(sim) + sim.gatesCleared * 100;
 }
 function wheelPace(sim) {
-  const r = (REAR.r + FRONT.r) * 0.5;
-  return (sim.wheelOmega[0] + sim.wheelOmega[1]) * 0.5 * r;
+  let sum = 0;
+  for (let i = 0; i < 2; i++) sum += sim.wheelOmega[i] * wheelGeom(sim, i).r;
+  return sum * 0.5;
 }
 function plant(sim) {
   sim.y = groundY(PLAYER_X + CAR_W * 0.5) - CAR_H;
@@ -335,16 +336,15 @@ function coupleWheels(sim, dt) {
     }
     const load = clamp((sink + 2.4) / 2.4, 0.22, 1);
     loaded = true;
-    const R = g.r;
-    const I = 0.05 * R * R;
+    const R = Math.max(4, g.r);
+    const I = 0.28 * R * R;
     const slip = sim.speed - sim.wheelOmega[i] * R;
-    const inv = 1 + R * R / I;
-    const force = clamp(slip / (0.12 * inv) * load, -420, 420);
-    sim.speed -= force * dt;
+    const force = clamp(slip * load / 0.72, -260, 260);
+    sim.speed -= force * dt * 0.2;
     sim.wheelOmega[i] += force * R / I * dt;
     if (i === 0) sim.speed += (cruise - sim.speed) * dt * (sim.recover > 0 ? 6.5 : 1.35) * load;
     sim.wheelAng[i] += sim.wheelOmega[i] * dt;
-    if (Math.abs(slip) > 130 && load > 0.3 && sim.dust.length < 80 && hash(sim.time * 900 + i * 19) > 0.72) {
+    if (Math.abs(slip) > 55 && load > 0.3 && sim.dust.length < 80 && hash(sim.time * 900 + i * 19) > 0.62) {
       sim.dust.push({
         x: p.x,
         y: surfaceY(sim, p.x) - 1,
@@ -1010,7 +1010,7 @@ function spinWheel(ctx, sim, index, img) {
   const g = wheelGeom(sim, index);
   const bulge = 1 + g.squash * 0.1;
   const flat = 1 - g.squash * 0.18;
-  const ang = sim.wheelAng[index] * (WHEELS[index].r / g.drawR);
+  const ang = sim.wheelAng[index];
   ctx.save();
   ctx.translate(g.lx, g.ly + g.squash * g.drawR * 0.05);
   ctx.rotate(ang);
