@@ -110,15 +110,16 @@ a { color: var(--green-dark); }
 .brand .logo {
   display: block;
   line-height: 0;
+  cursor: pointer;
 }
+.brand video,
 .brand img {
-  width: clamp(132px, 32vw, 180px);
+  width: clamp(168px, 42vw, 228px);
   height: auto;
   aspect-ratio: 1;
-  object-fit: cover;
+  object-fit: contain;
   display: block;
-  border-radius: 50%;
-  background: #b91c1c;
+  background: transparent;
 }
 .composer {
   background: var(--card);
@@ -385,8 +386,10 @@ footer.site a:hover {
   <div class="shell" id="shell">
     <main class="home">
       <div class="brand">
-        <a class="logo" href="https://www.similarize.com/" aria-label="Similarize">
-          <img src="images/imi-mark-lg.png" width="168" height="168" alt="Similarize">
+        <a class="logo" id="brand-logo" href="https://www.similarize.com/" aria-label="Similarize. Click to play the mark.">
+          <video id="logo-anim" poster="images/logo-still.jpg" width="480" height="480" muted playsinline preload="auto" aria-hidden="true">
+            <source src="images/similarize-logo.mp4?v=20260925" type="video/mp4">
+          </video>
         </a>
         <p class="dev-note"><strong>Early preview</strong></p>
         <h1 class="promise">Clearer ways to say it</h1>
@@ -436,6 +439,37 @@ footer.site a:hover {
     </footer>
   </div>
 
+<script>
+(function () {
+  var logo = document.getElementById("brand-logo");
+  var vid = document.getElementById("logo-anim");
+  if (!logo || !vid) return;
+  var reduce = false;
+  try { reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) {}
+  function replay() {
+    var play = function () { vid.play().catch(function () {}); };
+    if (vid.currentTime < 0.04) { play(); return; }
+    var once = function () {
+      vid.removeEventListener("seeked", once);
+      play();
+    };
+    vid.addEventListener("seeked", once);
+    vid.currentTime = 0;
+  }
+  logo.addEventListener("click", function (e) {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    replay();
+  });
+  if (!reduce) {
+    if (vid.readyState >= 2) replay();
+    else vid.addEventListener("canplay", function on() {
+      vid.removeEventListener("canplay", on);
+      replay();
+    });
+  }
+})();
+</script>
 <script>
 (function (root) {
 // Similarize v1 in-browser rewriter. Deterministic. No APIs.
