@@ -145,6 +145,29 @@
         @media (min-width: 1100px) and (pointer: fine) {
             .pads { opacity: 0.82; }
         }
+
+        .online {
+            display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+        }
+        .online input {
+            width: 4.6em; text-transform: uppercase; letter-spacing: 0.12em;
+            font: 700 14px "Segoe UI", system-ui, sans-serif;
+            text-align: center; border-radius: 999px;
+            border: 1px solid rgba(255,255,255,.35);
+            background: rgba(0,0,0,.45); color: #fff; padding: 6px 10px;
+        }
+        .online .status { font-size: 12px; opacity: 0.85; min-height: 1em; }
+        .online .status.err { color: #fca5a5; }
+        .online .status.ok { color: #86efac; }
+        .pads.solo-p1 { justify-content: center; }
+        .pads.solo-p1 .cluster.p2 { display: none; }
+        .pads.solo-p2 { justify-content: center; }
+        .pads.solo-p2 .cluster.p1 { display: none; }
+        .pads.solo-p1 .cluster.p1,
+        .pads.solo-p2 .cluster.p2 {
+            width: min(280px, 70vw);
+            max-width: 280px;
+        }
     </style>
 </head>
 <body>
@@ -154,6 +177,14 @@
         <span class="hint">P1 arrows + space · P2 WASD + Q · R resets the ball</span>
         <button type="button" id="soundBtn">Sound on</button>
         <button type="button" id="resetBtn">Reset ball</button>
+
+        <span class="online" id="onlineBar">
+            <button type="button" id="createRoomBtn">Create</button>
+            <input id="roomCodeInput" maxlength="4" placeholder="CODE" autocomplete="off" spellcheck="false" aria-label="Room code">
+            <button type="button" id="joinRoomBtn">Join</button>
+            <button type="button" id="leaveRoomBtn" hidden>Leave</button>
+            <span class="status" id="onlineStatus"></span>
+        </span>
     </div>
     <div class="stage"><canvas id="gameCanvas" width="800" height="600"></canvas></div>
     <div class="pads">
@@ -341,7 +372,7 @@
             if (soundOn.music) startBackgroundMusic();
             else stopBackgroundMusic();
         });
-        document.getElementById('resetBtn').addEventListener('click', resetBasketball);
+        document.getElementById('resetBtn').addEventListener('click', () => { resetBasketball(); if (netRole === 'host') netSend({ type: 'reset' }); });
 
         document.addEventListener('pointerdown', () => { if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); startBackgroundMusic(); }, { once: true });
 
@@ -370,6 +401,220 @@
 
         // Controls for both players
         const keys = {};
+
+        // --- Online two-phone multiplayer (CF Worker + Durable Object rooms) ---
+        // Change this after redeploying the Worker.
+        const ROOM_WS_BASE = 'wss://similarize-bball-rooms.ben-e22.workers.dev/ws';
+        const ROOM_HTTP_BASE = 'https://similarize-bball-rooms.ben-e22.workers.dev';
+        let netRole = null; // null | 'host' | 'guest'
+        let netWs = null;
+        let netCode = '';
+        let netReady = false;
+        let netRemoteInput = { u:0, d:0, l:0, r:0, fire:0 };
+        let netFireArmed = false;
+        let lastStateSent = 0;
+        let guestPendingState = null;
+        let guestInputTimer = 0;
+        let netLeaveIntent = false;
+        const onlineStatus = document.getElementById('onlineStatus');
+        const roomCodeInput = document.getElementById('roomCodeInput');
+        const padsEl = document.querySelector('.pads');
+
+        function setOnlineStatus(msg, kind) {
+            onlineStatus.textContent = msg || '';
+            onlineStatus.className = 'status' + (kind ? ' ' + kind : '');
+        }
+
+        function applyPadMode() {
+            padsEl.classList.remove('solo-p1', 'solo-p2');
+            if (netRole === 'host') padsEl.classList.add('solo-p1');
+            else if (netRole === 'guest') padsEl.classList.add('solo-p2');
+        }
+
+        function packCar(c) {
+            let f = 0;
+            if (c.isDestroyed) f |= 1;
+            if (c.onConveyor) f |= 2;
+            if (c.isStuckInGoal) f |= 4;
+            return [round4(c.x), round4(c.y), round4(c.angle), round4(c.speed), f, c.score|0];
+        }
+        function unpackCar(c, a) {
+            c.x = a[0]; c.y = a[1]; c.angle = a[2]; c.speed = a[3];
+            c.isDestroyed = !!(a[4] & 1);
+            c.onConveyor = !!(a[4] & 2);
+            c.isStuckInGoal = !!(a[4] & 4);
+            c.score = a[5]|0;
+            c.rotation = 0;
+        }
+        function round4(n) { return Math.round(n * 1000) / 1000; }
+
+        function buildStateMsg() {
+            return {
+                type: 'state',
+                c1: packCar(car1),
+                c2: packCar(car2),
+                b: [round4(basketball.x), round4(basketball.y), round4(basketball.dx), round4(basketball.dy), basketball.isStuck ? 1 : 0],
+                p: projectiles.slice(0, 12).map(p => [round4(p.x), round4(p.y), round4(p.radius), p.owner === car1 ? 1 : 2]),
+                vw: viewW, vh: viewH
+            };
+        }
+
+        function applyStateMsg(msg) {
+            if (!msg || !msg.c1) return;
+            // Scale if host court size differs slightly
+            const sx = msg.vw ? viewW / msg.vw : 1;
+            const sy = msg.vh ? viewH / msg.vh : 1;
+            unpackCar(car1, msg.c1);
+            unpackCar(car2, msg.c2);
+            car1.x *= sx; car1.y *= sy;
+            car2.x *= sx; car2.y *= sy;
+            basketball.x = msg.b[0] * sx;
+            basketball.y = msg.b[1] * sy;
+            basketball.dx = msg.b[2] * sx;
+            basketball.dy = msg.b[3] * sy;
+            basketball.isStuck = !!msg.b[4];
+            projectiles = (msg.p || []).map(p => ({
+                x: p[0] * sx, y: p[1] * sy, radius: p[2] * ((sx+sy)/2),
+                dx: 0, dy: 0, life: 30, owner: p[3] === 1 ? car1 : car2
+            }));
+            document.getElementById('s1').textContent = car1.score;
+            document.getElementById('s2').textContent = car2.score;
+        }
+
+        function netSend(obj) {
+            if (netWs && netWs.readyState === 1) netWs.send(JSON.stringify(obj));
+        }
+
+        function readLocalGuestBits() {
+            return {
+                type: 'input',
+                u: (keys['w'] || keys['W'] || keys['ArrowUp']) ? 1 : 0,
+                d: (keys['s'] || keys['S'] || keys['ArrowDown']) ? 1 : 0,
+                l: (keys['a'] || keys['A'] || keys['ArrowLeft']) ? 1 : 0,
+                r: (keys['d'] || keys['D'] || keys['ArrowRight']) ? 1 : 0,
+                fire: netFireArmed ? 1 : 0
+            };
+        }
+
+        function applyHostRemoteKeys() {
+            // Map guest bits onto WASD keys used by car2
+            keys['w'] = keys['W'] = !!netRemoteInput.u;
+            keys['s'] = keys['S'] = !!netRemoteInput.d;
+            keys['a'] = keys['A'] = !!netRemoteInput.l;
+            keys['d'] = keys['D'] = !!netRemoteInput.r;
+            if (netRemoteInput.fire) {
+                shoot(car2);
+                netRemoteInput.fire = 0;
+            }
+        }
+
+        function disconnectRoom(reason) {
+            netLeaveIntent = true;
+            const ws = netWs;
+            netWs = null;
+            if (ws) {
+                try { ws.close(); } catch (_) {}
+            }
+            netRole = null;
+            netReady = false;
+            netCode = '';
+            netRemoteInput = { u:0, d:0, l:0, r:0, fire:0 };
+            guestPendingState = null;
+            applyPadMode();
+            document.getElementById('leaveRoomBtn').hidden = true;
+            document.getElementById('createRoomBtn').disabled = false;
+            document.getElementById('joinRoomBtn').disabled = false;
+            roomCodeInput.disabled = false;
+            if (reason) setOnlineStatus(reason, 'err');
+            else setOnlineStatus('');
+            netLeaveIntent = false;
+        }
+
+        function connectRoom(code, asCreator) {
+            code = String(code || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4);
+            if (code.length !== 4) {
+                setOnlineStatus('Enter a 4-character code', 'err');
+                return;
+            }
+            netLeaveIntent = false;
+            if (netWs) disconnectRoom();
+            netLeaveIntent = false;
+            setOnlineStatus(asCreator ? 'Creating…' : 'Joining…');
+            roomCodeInput.value = code;
+            const ws = new WebSocket(`${ROOM_WS_BASE}?room=${encodeURIComponent(code)}`);
+            netWs = ws;
+            ws.onopen = () => {
+                netCode = code;
+                document.getElementById('leaveRoomBtn').hidden = false;
+                document.getElementById('createRoomBtn').disabled = true;
+                document.getElementById('joinRoomBtn').disabled = true;
+                roomCodeInput.disabled = true;
+            };
+            ws.onmessage = (ev) => {
+                let msg;
+                try { msg = JSON.parse(ev.data); } catch { return; }
+                if (msg.type === 'welcome') {
+                    netRole = msg.seat; // host | guest
+                    netReady = !!msg.ready;
+                    tracks = [];
+                    projectiles = [];
+                    applyPadMode();
+                    const label = netRole === 'host' ? 'Orange (host)' : 'Blue (guest)';
+                    setOnlineStatus(netReady ? `${label} · ${msg.code} · ready` : `${label} · ${msg.code} · waiting…`, 'ok');
+                    if (netRole === 'host') {
+                        // Clear local P2 keys so only remote drives blue
+                        ['w','W','a','A','s','S','d','D'].forEach(k => { keys[k] = false; });
+                    }
+                    if (netRole === 'guest') {
+                        // Guest uses blue pad (WASD) / arrows also accepted via readLocalGuestBits
+                        ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].forEach(k => { keys[k] = false; });
+                    }
+                } else if (msg.type === 'peer') {
+                    netReady = !!msg.ready;
+                    const label = netRole === 'host' ? 'Orange (host)' : 'Blue (guest)';
+                    setOnlineStatus(netReady ? `${label} · ${netCode} · ready` : `${label} · ${netCode} · waiting…`, 'ok');
+                } else if (msg.type === 'peer_left') {
+                    setOnlineStatus('Other phone left', 'err');
+                    netReady = false;
+                } else if (msg.type === 'input' && netRole === 'host') {
+                    netRemoteInput.u = msg.u|0;
+                    netRemoteInput.d = msg.d|0;
+                    netRemoteInput.l = msg.l|0;
+                    netRemoteInput.r = msg.r|0;
+                    if (msg.fire) netRemoteInput.fire = 1;
+                } else if (msg.type === 'state' && netRole === 'guest') {
+                    guestPendingState = msg;
+                } else if (msg.type === 'reset' && netRole === 'guest') {
+                    resetBasketball();
+                }
+            };
+            ws.onclose = () => {
+                if (netLeaveIntent) return;
+                if (netWs === ws) disconnectRoom('Disconnected');
+            };
+            ws.onerror = () => setOnlineStatus('Connection failed', 'err');
+        }
+
+        async function createRoom() {
+            try {
+                setOnlineStatus('Creating…');
+                const res = await fetch(ROOM_HTTP_BASE + '/create', { method: 'POST' });
+                const data = await res.json();
+                if (!data.code) throw new Error('no code');
+                connectRoom(data.code, true);
+            } catch (e) {
+                setOnlineStatus('Could not create room', 'err');
+            }
+        }
+
+        document.getElementById('createRoomBtn').addEventListener('click', createRoom);
+        document.getElementById('joinRoomBtn').addEventListener('click', () => connectRoom(roomCodeInput.value, false));
+        document.getElementById('leaveRoomBtn').addEventListener('click', () => disconnectRoom(''));
+        roomCodeInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') connectRoom(roomCodeInput.value, false);
+        });
+
+
         function shoot(car) {
             if (!car || car.isShooting || car.isDestroyed || car.isStuckInGoal) return;
             projectiles.push(createProjectile(car));
@@ -377,17 +622,27 @@
             playSound(600, 0.1, 'square');
             setTimeout(() => { car.isShooting = false; }, 120);
         }
-        document.addEventListener('keydown', (e) => {
+                document.addEventListener('keydown', (e) => {
             if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) e.preventDefault();
             if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
             keys[e.key] = true;
+            if (netRole === 'guest') {
+                if (e.key === ' ' || e.key === 'q' || e.key === 'Q') { netFireArmed = true; }
+                return;
+            }
+            if (netRole === 'host') {
+                if (e.key === ' ') shoot(car1);
+                if (e.key === 'r' || e.key === 'R') { resetBasketball(); netSend({ type: 'reset' }); }
+                return;
+            }
             if (e.key === ' ') shoot(car1);
             if (e.key === 'q' || e.key === 'Q') shoot(car2);
             if (e.key === 'r' || e.key === 'R') resetBasketball();
         });
 
-        document.addEventListener('keyup', (e) => {
+                document.addEventListener('keyup', (e) => {
             keys[e.key] = false;
+            if (netRole === 'guest' && (e.key === ' ' || e.key === 'q' || e.key === 'Q')) netFireArmed = false;
         });
 
         // Projectile creation
@@ -551,8 +806,26 @@
 
         // Game loop
         function update() {
+            if (netRole === 'guest') {
+                // Send inputs ~30Hz; render from host snapshots only
+                const now = performance.now();
+                if (now - guestInputTimer > 33) {
+                    guestInputTimer = now;
+                    const bits = readLocalGuestBits();
+                    netSend(bits);
+                    netFireArmed = false;
+                }
+                if (guestPendingState) {
+                    applyStateMsg(guestPendingState);
+                    guestPendingState = null;
+                }
+            } else if (netRole === 'host') {
+                applyHostRemoteKeys();
+            }
+
             drawBackground();
 
+            if (netRole !== 'guest') {
             [car1, car2].forEach(car => {
                 updateCarControls(car);
                 if (car.isDestroyed) return;
@@ -688,6 +961,8 @@
                 }
             }
 
+            }
+
             ctx.fillStyle = 'silver';
             ctx.fillRect(barrier.x, barrier.y, barrier.width, barrier.height);
 
@@ -720,6 +995,13 @@
             ctx.stroke();
 
             projectiles.forEach((projectile, pIndex) => {
+                if (netRole === 'guest') {
+                    ctx.beginPath();
+                    ctx.arc(projectile.x, projectile.y, projectile.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = 'white';
+                    ctx.fill();
+                    return;
+                }
                 projectile.x += projectile.dx;
                 projectile.y += projectile.dy;
                 projectile.life--;
@@ -774,6 +1056,14 @@
                 ctx.textAlign = 'center';
                 ctx.fillText('Hit the ball to bring the other car back', viewW / 2, 36);
                 ctx.textAlign = 'left';
+            }
+
+            if (netRole === 'host' && netReady) {
+                const now = performance.now();
+                if (now - lastStateSent > 40) {
+                    lastStateSent = now;
+                    netSend(buildStateMsg());
+                }
             }
 
             requestAnimationFrame(update);
@@ -867,13 +1157,27 @@
             btn.addEventListener('pointercancel', up);
             btn.addEventListener('lostpointercapture', up);
         });
-        document.querySelectorAll('[data-fire]').forEach((btn) => {
-            btn.addEventListener('pointerdown', (e) => {
+                document.querySelectorAll('[data-fire]').forEach((btn) => {
+            const arm = (e) => {
                 e.preventDefault();
                 if (audioCtx.state === 'suspended') audioCtx.resume();
                 startBackgroundMusic();
-                shoot(btn.dataset.fire === '1' ? car1 : car2);
-            });
+                const which = btn.dataset.fire;
+                if (netRole === 'guest') {
+                    if (which === '2') netFireArmed = true;
+                    return;
+                }
+                if (netRole === 'host') {
+                    if (which === '1') shoot(car1);
+                    return;
+                }
+                shoot(which === '1' ? car1 : car2);
+            };
+            const disarm = () => { if (netRole === 'guest') netFireArmed = false; };
+            btn.addEventListener('pointerdown', arm);
+            btn.addEventListener('pointerup', disarm);
+            btn.addEventListener('pointercancel', disarm);
+            btn.addEventListener('lostpointercapture', disarm);
         });
         window.addEventListener('resize', fit);
         fit();
