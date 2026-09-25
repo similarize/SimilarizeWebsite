@@ -5,7 +5,7 @@
   const overlay = document.getElementById("overlay");
   const overlayTitle = document.getElementById("overlay-title");
   const overlayText = document.getElementById("overlay-text");
-  const phone = document.body.dataset.mode === "phone";
+  const phone = window.matchMedia("(pointer: coarse), (max-width: 800px)").matches;
 
   const keys = new Set();
   const held = { left: false, right: false, thrust: false, shoot: false };

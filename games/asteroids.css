@@ -45,13 +45,15 @@ html, body {
   bottom: max(18px, env(safe-area-inset-bottom));
   touch-action: none;
 }
-body.phone #controls button { width: 76px; height: 76px; font-size: 26px; }
 #left { left: max(16px, env(safe-area-inset-left)); }
 #right { left: calc(max(16px, env(safe-area-inset-left)) + 78px); }
-body.phone #right { left: calc(max(16px, env(safe-area-inset-left)) + 92px); }
 #shoot { right: max(16px, env(safe-area-inset-right)); }
 #thrust { right: calc(max(16px, env(safe-area-inset-right)) + 78px); }
-body.phone #thrust { right: calc(max(16px, env(safe-area-inset-right)) + 92px); }
+@media (max-width: 800px), (pointer: coarse) {
+  #controls button { width: 76px; height: 76px; font-size: 26px; }
+  #right { left: calc(max(16px, env(safe-area-inset-left)) + 92px); }
+  #thrust { right: calc(max(16px, env(safe-area-inset-right)) + 92px); }
+}
 #overlay {
   position: absolute;
   inset: 0;

@@ -1,50 +1,150 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Basketball RC Car - 2 Player Version</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Basketball RC</title>
     <style>
-        html, body { margin: 0; background: #111; }
+        html, body {
+            margin: 0;
+            height: 100%;
+            background: #071207;
+            overflow: hidden;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        body {
+            display: flex;
+            flex-direction: column;
+            height: 100dvh;
+        }
+        .stage { flex: 1; min-height: 0; position: relative; }
         canvas {
             display: block;
-            width: min(800px, 100vw);
-            height: auto;
-            max-height: 100dvh;
-            background: #000;
+            width: 100%;
+            height: 100%;
+            background: #228B22;
             touch-action: none;
         }
-        #controls {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            color: white;
-            font-family: Arial, sans-serif;
+        .top {
+            flex: none;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            padding: max(8px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) 8px max(10px, env(safe-area-inset-left));
+            background: #071207;
+            color: #fff;
+            font-family: "Segoe UI", system-ui, sans-serif;
+            font-size: 14px;
         }
-        #controls label {
-            display: block;
-            margin-bottom: 5px;
+        .top a, .top button {
+            color: #fff;
+            background: rgba(0,0,0,.45);
+            border: 1px solid rgba(255,255,255,.35);
+            border-radius: 999px;
+            padding: 6px 12px;
+            font: inherit;
+            text-decoration: none;
+        }
+        .scores { font-weight: 700; letter-spacing: 0.02em; }
+        .scores b.o { color: #fb923c; }
+        .scores b.b { color: #60a5fa; }
+        .hint {
+            margin-left: auto;
+            opacity: 0.8;
+            font-size: 12px;
+            pointer-events: none;
+        }
+        .pads {
+            flex: none;
+            z-index: 2;
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 8px max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+            background: #071207;
+        }
+        .cluster { display: grid; grid-template-columns: 54px 54px 54px 62px; grid-template-rows: 22px 54px 54px; gap: 6px; }
+        .cluster.p2 { grid-template-columns: 62px 54px 54px 54px; }
+        .cluster span { grid-column: 1 / -1; font: 700 12px "Segoe UI", system-ui, sans-serif; letter-spacing: 0.08em; text-align: center; }
+        .cluster.p1 span { color: #fb923c; }
+        .cluster.p2 span { color: #60a5fa; }
+        .cluster button {
+            width: 54px;
+            height: 54px;
+            border-radius: 14px;
+            border: 1px solid rgba(255,255,255,.55);
+            background: rgba(0,0,0,.38);
+            color: #fff;
+            font-size: 18px;
+            touch-action: none;
+        }
+        .cluster button.fire { width: 62px; border-radius: 18px; font-size: 13px; font-weight: 700; height: auto; }
+        .cluster.p1 button.fire { grid-column: 4; grid-row: 2 / span 2; background: rgba(234, 88, 12, .55); }
+        .cluster.p2 button.fire { grid-column: 1; grid-row: 2 / span 2; background: rgba(37, 99, 235, .55); }
+        .cluster.p1 button.up { grid-column: 2; grid-row: 2; }
+        .cluster.p1 button.left { grid-column: 1; grid-row: 3; }
+        .cluster.p1 button.down { grid-column: 2; grid-row: 3; }
+        .cluster.p1 button.right { grid-column: 3; grid-row: 3; }
+        .cluster.p2 button.up { grid-column: 3; grid-row: 2; }
+        .cluster.p2 button.left { grid-column: 2; grid-row: 3; }
+        .cluster.p2 button.down { grid-column: 3; grid-row: 3; }
+        .cluster.p2 button.right { grid-column: 4; grid-row: 3; }
+        @media (max-width: 720px) {
+            .hint { display: none; }
+            .cluster { grid-template-columns: 46px 46px 46px 54px; grid-template-rows: 18px 46px 46px; gap: 5px; }
+            .cluster.p2 { grid-template-columns: 54px 46px 46px 46px; }
+            .cluster button { width: 46px; height: 46px; }
+            .cluster button.fire { width: 54px; }
+        }
+        @media (min-width: 1100px) and (pointer: fine) {
+            .pads { opacity: 0.82; }
         }
     </style>
 </head>
 <body>
-    <canvas id="gameCanvas" width="800" height="600"></canvas>
-    <div id="controls">
-        <label><input type="checkbox" id="soundToggle" checked> Sound Effects</label>
-        <label>Sound Effects Volume: <input type="range" id="soundVolume" min="0" max="1" step="0.01" value="0.25"></label>
-        <label><input type="checkbox" id="musicToggle" checked> Background Music</label>
-        <label>Music Volume: <input type="range" id="musicVolume" min="0" max="1" step="0.01" value="0.25"></label>
-        <span>Press 'R' to reset basketball</span>
+    <div class="top">
+        <a href="/games/">Games</a>
+        <span class="scores"><b class="o">P1 <span id="s1">0</span></b> · <b class="b">P2 <span id="s2">0</span></b></span>
+        <span class="hint">P1 arrows + space · P2 WASD + Q · R resets the ball</span>
+        <button type="button" id="soundBtn">Sound on</button>
+        <button type="button" id="resetBtn">Reset ball</button>
+    </div>
+    <div class="stage"><canvas id="gameCanvas" width="800" height="600"></canvas></div>
+    <div class="pads">
+        <div class="cluster p1">
+            <span>ORANGE</span>
+            <button type="button" class="up" data-key="ArrowUp" aria-label="P1 forward">▲</button>
+            <button type="button" class="left" data-key="ArrowLeft" aria-label="P1 left">◀</button>
+            <button type="button" class="down" data-key="ArrowDown" aria-label="P1 back">▼</button>
+            <button type="button" class="right" data-key="ArrowRight" aria-label="P1 right">▶</button>
+            <button type="button" class="fire" data-fire="1">FIRE</button>
+        </div>
+        <div class="cluster p2">
+            <span>BLUE</span>
+            <button type="button" class="up" data-key="w" aria-label="P2 forward">▲</button>
+            <button type="button" class="left" data-key="a" aria-label="P2 left">◀</button>
+            <button type="button" class="down" data-key="s" aria-label="P2 back">▼</button>
+            <button type="button" class="right" data-key="d" aria-label="P2 right">▶</button>
+            <button type="button" class="fire" data-fire="2">FIRE</button>
+        </div>
     </div>
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let viewW = 800, viewH = 600, S = 1;
+        let projectileSpeed = 5;
+        let specks = [];
+        const soundOn = { fx: true, music: true, fxVol: 0.25, musicVol: 0.18 };
 
         // Player 1 RC car (orange)
         const car1 = {
-            x: canvas.width / 4,
-            y: canvas.height / 2,
+            x: viewW / 4,
+            y: viewH / 2,
             width: 40,
             height: 20,
             angle: 0,
@@ -62,8 +162,8 @@
 
         // Player 2 RC car (blue)
         const car2 = {
-            x: 3 * canvas.width / 4,
-            y: canvas.height / 2,
+            x: 3 * viewW / 4,
+            y: viewH / 2,
             width: 40,
             height: 20,
             angle: 0,
@@ -81,8 +181,8 @@
 
         // Basketball object
         const basketball = {
-            x: canvas.width / 2,
-            y: canvas.height / 2,
+            x: viewW / 2,
+            y: viewH / 2,
             radius: 20,
             dx: 0,
             dy: 0,
@@ -92,7 +192,7 @@
 
         // Player 1's hoop (left side)
         const hoop1 = {
-            x: canvas.width / 4,
+            x: viewW / 4,
             y: 100,
             width: 80,
             height: 10,
@@ -102,7 +202,7 @@
 
         // Player 2's hoop (right side)
         const hoop2 = {
-            x: 3 * canvas.width / 4,
+            x: 3 * viewW / 4,
             y: 100,
             width: 80,
             height: 10,
@@ -114,15 +214,15 @@
         const barrier = {
             x: 0,
             y: 0,
-            width: canvas.width,
+            width: viewW,
             height: 20
         };
 
         // Conveyor belt
         const conveyor = {
             x: 0,
-            y: canvas.height - 40,
-            width: canvas.width,
+            y: viewH - 40,
+            width: viewW,
             height: 40,
             speed: 2
         };
@@ -131,35 +231,27 @@
         let projectiles = [];
         let tracks = [];
         const ROTATION_SPEED = 0.1;
-        const PROJECTILE_SPEED = 5;
         const TRACK_LIFE = 120;
 
-        // Sound toggle controls
-        const soundToggle = document.getElementById('soundToggle');
-        const soundVolume = document.getElementById('soundVolume');
-        const musicToggle = document.getElementById('musicToggle');
-        const musicVolume = document.getElementById('musicVolume');
         let backgroundOscillator1 = null;
         let backgroundOscillator2 = null;
         let musicGainNode = null;
 
-        // Sound effects
         function playSound(frequency, duration, type = 'sine', baseVolume = 0.3) {
-            if (!soundToggle.checked) return;
+            if (!soundOn.fx) return;
             const oscillator = audioCtx.createOscillator();
             const gainNode = audioCtx.createGain();
             oscillator.connect(gainNode);
             gainNode.connect(audioCtx.destination);
             oscillator.type = type;
             oscillator.frequency.value = frequency;
-            gainNode.gain.value = baseVolume * soundVolume.value;
+            gainNode.gain.value = baseVolume * soundOn.fxVol;
             oscillator.start();
             oscillator.stop(audioCtx.currentTime + duration);
         }
 
-        // Background music with harmonic
         function startBackgroundMusic() {
-            if (!musicToggle.checked || backgroundOscillator1) return;
+            if (!soundOn.music || backgroundOscillator1) return;
             const notes = [261.63, 293.66, 329.63, 349.23, 392.00];
             const harmonicNotes = notes.map(note => note * 2);
             let noteIndex = 0;
@@ -176,13 +268,13 @@
             backgroundOscillator2.type = 'triangle';
             backgroundOscillator1.frequency.value = notes[noteIndex];
             backgroundOscillator2.frequency.value = harmonicNotes[noteIndex];
-            musicGainNode.gain.value = musicVolume.value;
+            musicGainNode.gain.value = soundOn.musicVol;
 
             backgroundOscillator1.start();
             backgroundOscillator2.start();
 
             setInterval(() => {
-                if (musicToggle.checked) {
+                if (soundOn.music && backgroundOscillator1) {
                     noteIndex = (noteIndex + 1) % notes.length;
                     backgroundOscillator1.frequency.value = notes[noteIndex];
                     backgroundOscillator2.frequency.value = harmonicNotes[noteIndex];
@@ -200,23 +292,21 @@
             }
         }
 
-        musicToggle.addEventListener('change', () => {
-            if (musicToggle.checked) startBackgroundMusic();
+        document.getElementById('soundBtn').addEventListener('click', () => {
+            soundOn.fx = !soundOn.fx;
+            soundOn.music = soundOn.fx;
+            document.getElementById('soundBtn').textContent = soundOn.fx ? 'Sound on' : 'Sound off';
+            if (soundOn.music) startBackgroundMusic();
             else stopBackgroundMusic();
         });
-
-        musicVolume.addEventListener('input', () => {
-            if (musicGainNode) {
-                musicGainNode.gain.value = musicVolume.value;
-            }
-        });
+        document.getElementById('resetBtn').addEventListener('click', resetBasketball);
 
         document.addEventListener('pointerdown', () => { if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); startBackgroundMusic(); }, { once: true });
 
         // Reset basketball function
         function resetBasketball() {
-            basketball.x = canvas.width / 2;
-            basketball.y = canvas.height / 2;
+            basketball.x = viewW / 2;
+            basketball.y = viewH / 2;
             basketball.dx = 0;
             basketball.dy = 0;
             basketball.isStuck = false;
@@ -225,8 +315,8 @@
 
         // Respawn car function
         function respawnCar(car) {
-            car.x = car === car1 ? canvas.width / 4 : 3 * canvas.width / 4;
-            car.y = canvas.height / 2;
+            car.x = car === car1 ? viewW / 4 : 3 * viewW / 4;
+            car.y = viewH / 2;
             car.angle = 0;
             car.speed = 0;
             car.rotation = 0;
@@ -238,25 +328,20 @@
 
         // Controls for both players
         const keys = {};
+        function shoot(car) {
+            if (!car || car.isShooting || car.isDestroyed || car.isStuckInGoal) return;
+            projectiles.push(createProjectile(car));
+            car.isShooting = true;
+            playSound(600, 0.1, 'square');
+            setTimeout(() => { car.isShooting = false; }, 120);
+        }
         document.addEventListener('keydown', (e) => {
             if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) e.preventDefault();
             if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
             keys[e.key] = true;
-            if (e.key === ' ' && !car1.isShooting && !car1.isDestroyed && !car1.isStuckInGoal) {
-                projectiles.push(createProjectile(car1));
-                car1.isShooting = true;
-                playSound(600, 0.1, 'square');
-                setTimeout(() => car1.isShooting = false, 100);
-            }
-            if ((e.key === 'q' || e.key === 'Q') && !car2.isShooting && !car2.isDestroyed && !car2.isStuckInGoal) {
-                projectiles.push(createProjectile(car2));
-                car2.isShooting = true;
-                playSound(600, 0.1, 'square');
-                setTimeout(() => car2.isShooting = false, 100);
-            }
-            if (e.key === 'r' || e.key === 'R') {
-                resetBasketball();
-            }
+            if (e.key === ' ') shoot(car1);
+            if (e.key === 'q' || e.key === 'Q') shoot(car2);
+            if (e.key === 'r' || e.key === 'R') resetBasketball();
         });
 
         document.addEventListener('keyup', (e) => {
@@ -271,8 +356,8 @@
             return {
                 x: car.x + Math.cos(car.angle) * offset,
                 y: car.y + Math.sin(car.angle) * offset,
-                dx: Math.cos(car.angle) * PROJECTILE_SPEED * (isReverse ? -1 : 1),
-                dy: Math.sin(car.angle) * PROJECTILE_SPEED * (isReverse ? -1 : 1),
+                dx: Math.cos(car.angle) * projectileSpeed * (isReverse ? -1 : 1),
+                dy: Math.sin(car.angle) * projectileSpeed * (isReverse ? -1 : 1),
                 life: 60,
                 radius: radius,
                 owner: car
@@ -384,15 +469,12 @@
         // Draw speckled background
         function drawBackground() {
             ctx.fillStyle = '#228B22';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillRect(0, 0, viewW, viewH);
 
-            for (let i = 0; i < 100; i++) {
-                const x = Math.random() * canvas.width;
-                const y = Math.random() * canvas.height;
-                const size = Math.random() * 2 + 1;
-                ctx.fillStyle = `rgba(255, 255, 255, ${Math.random() * 0.5 + 0.2})`;
+            for (const speck of specks) {
+                ctx.fillStyle = `rgba(255, 255, 255, ${speck.a})`;
                 ctx.beginPath();
-                ctx.arc(x, y, size, 0, Math.PI * 2);
+                ctx.arc(speck.x, speck.y, speck.r, 0, Math.PI * 2);
                 ctx.fill();
             }
 
@@ -439,7 +521,7 @@
                     car.onConveyor = true;
                     if (!(car === car2 && isBothStuckOnConveyor)) {
                         car.x += conveyor.speed;
-                        if (car.x > canvas.width) car.x = 0;
+                        if (car.x > viewW) car.x = 0;
                     }
                 } else if (!car.isStuckInGoal) {
                     car.onConveyor = false;
@@ -456,10 +538,10 @@
                 car.x = newX;
                 car.y = newY;
 
-                if (car.x < 0) car.x = canvas.width;
-                if (car.x > canvas.width) car.x = 0;
-                if (car.y < 0) car.y = canvas.height;
-                if (car.y > canvas.height) car.y = conveyor.y - car.height/2;
+                if (car.x < 0) car.x = viewW;
+                if (car.x > viewW) car.x = 0;
+                if (car.y < 0) car.y = viewH;
+                if (car.y > viewH) car.y = conveyor.y - car.height/2;
 
                 if (!car.isStuckInGoal && 
                     car.x > (car === car1 ? hoop1.x : hoop2.x) - hoop1.width/2 && 
@@ -512,16 +594,16 @@
                     basketball.x = basketball.radius;
                     basketball.dx = -basketball.dx * 0.8;
                 }
-                if (basketball.x + basketball.radius > canvas.width) {
-                    basketball.x = canvas.width - basketball.radius;
+                if (basketball.x + basketball.radius > viewW) {
+                    basketball.x = viewW - basketball.radius;
                     basketball.dx = -basketball.dx * 0.8;
                 }
                 if (basketball.y - basketball.radius < barrier.height) {
                     basketball.y = barrier.height + basketball.radius;
                     basketball.dy = -basketball.dy * 0.8;
                 }
-                if (basketball.y + basketball.radius > canvas.height) {
-                    basketball.y = canvas.height - basketball.radius;
+                if (basketball.y + basketball.radius > viewH) {
+                    basketball.y = viewH - basketball.radius;
                     basketball.dy = -basketball.dy * 0.8;
                 }
 
@@ -610,8 +692,8 @@
                     const angleToBasketball = Math.atan2(basketball.y - projectile.y, basketball.x - projectile.x);
                     const impactFactor = projectile.radius / basketball.radius;
                     if (!basketball.isStuck) {
-                        basketball.dx += Math.cos(angleToBasketball) * PROJECTILE_SPEED * impactFactor * 0.1;
-                        basketball.dy += Math.sin(angleToBasketball) * PROJECTILE_SPEED * impactFactor * 0.1;
+                        basketball.dx += Math.cos(angleToBasketball) * projectileSpeed * impactFactor * 0.1;
+                        basketball.dy += Math.sin(angleToBasketball) * projectileSpeed * impactFactor * 0.1;
                     }
                     projectile.dx = -projectile.dx * 0.8;
                     projectile.dy = -projectile.dy * 0.8;
@@ -638,30 +720,121 @@
                 if (projectile.life <= 0) projectiles.splice(pIndex, 1);
             });
 
-            // Draw scores in top right
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-            ctx.fillRect(canvas.width - 105, 5, 100, 50);
-            ctx.fillStyle = 'white';
-            ctx.font = '20px Arial';
-            ctx.textAlign = 'right';
-            ctx.fillText(`P1 Score: ${car1.score}`, canvas.width - 10, 25);
-            ctx.fillText(`P2 Score: ${car2.score}`, canvas.width - 10, 50);
-            ctx.textAlign = 'left';
+            document.getElementById('s1').textContent = car1.score;
+            document.getElementById('s2').textContent = car2.score;
 
             if (car1.isDestroyed || car2.isDestroyed) {
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-                ctx.fillRect(canvas.width/2 - 150, 50, 300, 40);
+                const bw = Math.min(viewW - 24, 420);
+                ctx.fillRect((viewW - bw) / 2, 12, bw, 36);
                 ctx.fillStyle = 'white';
-                ctx.font = '20px Arial';
+                ctx.font = `${Math.max(14, 16 * S)}px Arial`;
                 ctx.textAlign = 'center';
-                ctx.fillText('Hit the ball to bring back the other car!', canvas.width/2, 75);
+                ctx.fillText('Hit the ball to bring the other car back', viewW / 2, 36);
                 ctx.textAlign = 'left';
             }
 
             requestAnimationFrame(update);
         }
 
-        // Start game
+        const stage = document.querySelector('.stage');
+        let laidOut = false;
+        function applyCourt() {
+            S = Math.max(0.55, Math.min(viewW / 800, viewH / 600));
+            projectileSpeed = 5.4 * S;
+            car1.width = car2.width = 44 * S;
+            car1.height = car2.height = 22 * S;
+            car1.maxSpeed = car2.maxSpeed = 3.6 * S;
+            basketball.radius = 18 * S;
+            hoop1.width = hoop2.width = 86 * S;
+            hoop1.rimThickness = hoop2.rimThickness = Math.max(3, 5 * S);
+            hoop1.netHeight = hoop2.netHeight = 42 * S;
+            hoop1.x = viewW * 0.24;
+            hoop2.x = viewW * 0.76;
+            hoop1.y = hoop2.y = Math.max(52 * S, viewH * 0.16);
+            barrier.x = 0;
+            barrier.y = 0;
+            barrier.width = viewW;
+            barrier.height = Math.max(8, 12 * S);
+            conveyor.height = Math.max(22, 34 * S);
+            conveyor.y = viewH - conveyor.height;
+            conveyor.width = viewW;
+            conveyor.x = 0;
+            conveyor.speed = 2.2 * S;
+        }
+        function placeFresh() {
+            car1.x = viewW * 0.28;
+            car1.y = viewH * 0.58;
+            car1.angle = -Math.PI / 2;
+            car2.x = viewW * 0.72;
+            car2.y = viewH * 0.58;
+            car2.angle = -Math.PI / 2;
+            basketball.x = viewW / 2;
+            basketball.y = viewH * 0.62;
+            basketball.dx = 0;
+            basketball.dy = 0;
+            basketball.isStuck = false;
+        }
+        function makeSpecks() {
+            specks = [];
+            const n = Math.round(70 * (viewW * viewH) / (800 * 600));
+            for (let i = 0; i < n; i++) {
+                specks.push({
+                    x: Math.random() * viewW,
+                    y: Math.random() * viewH,
+                    r: (Math.random() * 1.6 + 0.8) * S,
+                    a: Math.random() * 0.28 + 0.08
+                });
+            }
+        }
+        function fit() {
+            const prevW = viewW, prevH = viewH;
+            viewW = Math.max(280, stage.clientWidth);
+            viewH = Math.max(180, stage.clientHeight);
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            canvas.width = Math.round(viewW * dpr);
+            canvas.height = Math.round(viewH * dpr);
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            if (laidOut && prevW > 0 && prevH > 0) {
+                const sx = viewW / prevW, sy = viewH / prevH;
+                [car1, car2].forEach((c) => { c.x *= sx; c.y *= sy; });
+                basketball.x *= sx;
+                basketball.y *= sy;
+                basketball.dx *= sx;
+                basketball.dy *= sy;
+                projectiles.forEach((p) => { p.x *= sx; p.y *= sy; p.dx *= sx; p.dy *= sy; });
+                tracks.forEach((t) => { t.x *= sx; t.y *= sy; });
+            }
+            applyCourt();
+            if (!laidOut) placeFresh();
+            laidOut = true;
+            makeSpecks();
+        }
+        document.querySelectorAll('.cluster button[data-key]').forEach((btn) => {
+            const k = btn.dataset.key;
+            const down = (e) => {
+                e.preventDefault();
+                btn.setPointerCapture?.(e.pointerId);
+                keys[k] = true;
+                keys[k.toUpperCase()] = true;
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+            };
+            const up = () => { keys[k] = false; keys[k.toUpperCase()] = false; };
+            btn.addEventListener('pointerdown', down);
+            btn.addEventListener('pointerup', up);
+            btn.addEventListener('pointercancel', up);
+            btn.addEventListener('lostpointercapture', up);
+        });
+        document.querySelectorAll('[data-fire]').forEach((btn) => {
+            btn.addEventListener('pointerdown', (e) => {
+                e.preventDefault();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                startBackgroundMusic();
+                shoot(btn.dataset.fire === '1' ? car1 : car2);
+            });
+        });
+        window.addEventListener('resize', fit);
+        fit();
         update();
     </script>
 </body>

@@ -126,19 +126,6 @@
       box-shadow: inset 0 -2px 0 rgba(0,0,0,.35);
     }
     .buttons i.alt { background: var(--amber); }
-    .cab-slot { position: relative; min-width: 0; display: flex; flex-direction: column; }
-    .phone {
-      margin: 8px auto 0;
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--cream);
-      background: rgba(16, 14, 12, 0.82);
-      border: 1px solid rgba(243, 226, 196, 0.35);
-      border-radius: 999px;
-      padding: 8px 12px;
-      text-decoration: none;
-    }
-    .phone:hover, .phone:focus-visible { border-color: var(--amber); color: var(--amber); }
     .maps { padding-top: 18px; }
     .tab {
       position: absolute;
@@ -183,14 +170,11 @@
       <span class="screen-wrap"><canvas data-demo="rally"></canvas><span class="glass"></span></span>
       <span class="panel"><span class="plate">Hold to boost</span><span class="buttons" aria-hidden="true"><i></i><i class="alt"></i></span></span>
     </a>
-    <div class="cab-slot">
-      <a class="cab" href="/games/asteroids.html">
-        <span class="marquee">Asteroids</span>
-        <span class="screen-wrap"><canvas data-demo="rocks"></canvas><span class="glass"></span></span>
-        <span class="panel"><span class="plate">Turn and fire</span><span class="buttons" aria-hidden="true"><i></i><i class="alt"></i></span></span>
-      </a>
-      <a class="phone" href="/games/asteroids-phone.html">Bigger buttons</a>
-    </div>
+    <a class="cab" href="/games/asteroids.html">
+      <span class="marquee">Asteroids</span>
+      <span class="screen-wrap"><canvas data-demo="rocks"></canvas><span class="glass"></span></span>
+      <span class="panel"><span class="plate">Turn and fire</span><span class="buttons" aria-hidden="true"><i></i><i class="alt"></i></span></span>
+    </a>
     <a class="cab" href="/games/basketball.html">
       <span class="marquee">Basketball RC</span>
       <span class="screen-wrap"><canvas data-demo="ball"></canvas><span class="glass"></span></span>
