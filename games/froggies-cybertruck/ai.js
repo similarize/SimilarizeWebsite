@@ -43,13 +43,13 @@
     const convoyHurtSoon = state.lives <= 2;
 
     switch (frog.id) {
-      case "moss":
+      case "james":
         return nearThreat && frog.lane !== desiredLane(frog, state.hazards, state.invaders, state.laneCount);
-      case "ember":
+      case "jimmy":
         return (nearThreat || nearInv) && (convoyHurtSoon || Math.random() < 0.35);
-      case "bolt":
+      case "bubbles":
         return nearInv;
-      case "gear":
+      case "rexy":
         return nearThreat || nearInv;
       default:
         return false;

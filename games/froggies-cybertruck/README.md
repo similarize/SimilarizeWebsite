@@ -17,17 +17,17 @@ You can also open `index.html` directly via `file://` in most browsers (no modul
 
 ## How to play
 
-1. Pick a froggy (or tap **GO** for default **Moss**).
+1. Pick a froggy (or tap **GO** for default **James**). Role assignments are temporary and pending Ben confirmation.
 2. **Steer:** left/right buttons, swipe on the canvas, or ←/→ / A/D.
 3. **Ability:** big button (or Space / Enter).
 4. Keep shared lives above 0 until the finish line. Wipe → tap for **instant retry**.
 
 | Froggy | Ability |
 |--------|---------|
-| Moss (Wheel) | **DASH** — lane swap + short invuln |
-| Ember (Shield) | **SHIELD** — convoy bubble (blocks one hit) |
-| Bolt (Zap) | **ZAP** — clear nearest invader cluster |
-| Gear (Bot) | **BOT** — brief Optimus assist clears path |
+| James (Wheel) | **DASH** — lane swap + short invuln |
+| Jimmy (Shield) | **SHIELD** — convoy bubble (blocks one hit) |
+| Bubbles (Zap) | **ZAP** — clear nearest invader cluster |
+| Rexy (Bot) | **BOT** — brief Optimus assist clears path |
 
 ## Files
 
@@ -51,6 +51,8 @@ Other numbered Imagine stills stay in `../imagine/` for later stages.
 ## Similarize handoff (later)
 
 Do **not** copy into `SimilarizeWebsite` until Ben says go. Stub note:
+
+<!-- Arcade deploy is SME-owned; re-copy this game into SimilarizeWebsite to deploy the corrected froggy names. -->
 
 - Target path when ready: `SimilarizeWebsite/games/froggies-cybertruck/` (or a single `froggies.html` cab card).
 - See sibling file `../SIMILARIZE_LINK_STUB.md`.

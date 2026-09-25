@@ -20,12 +20,12 @@
   const btnStart = document.getElementById("btn-start");
 
   const FROG_DEFS = {
-    moss:  { id: "moss",  name: "Moss",  role: "Wheel", color: "#4ade80", accent: "#166534", ability: "DASH",  cdMax: 6.5 },
-    ember: { id: "ember", name: "Ember", role: "Shield", color: "#fb923c", accent: "#9a3412", ability: "SHIELD", cdMax: 7.5 },
-    bolt:  { id: "bolt",  name: "Bolt",  role: "Zap", color: "#60a5fa", accent: "#1e3a8a", ability: "ZAP", cdMax: 6.5 },
-    gear:  { id: "gear",  name: "Gear",  role: "Bot", color: "#c084fc", accent: "#6b21a8", ability: "BOT", cdMax: 8 },
+    james:  { id: "james",  name: "James",  role: "Wheel", color: "#4ade80", accent: "#166534", ability: "DASH",  cdMax: 6.5 },
+    jimmy: { id: "jimmy", name: "Jimmy", role: "Shield", color: "#fb923c", accent: "#9a3412", ability: "SHIELD", cdMax: 7.5 },
+    bubbles:  { id: "bubbles",  name: "Bubbles",  role: "Zap", color: "#60a5fa", accent: "#1e3a8a", ability: "ZAP", cdMax: 6.5 },
+    rexy:  { id: "rexy",  name: "Rexy",  role: "Bot", color: "#c084fc", accent: "#6b21a8", ability: "BOT", cdMax: 8 },
   };
-  const FROG_ORDER = ["moss", "ember", "bolt", "gear"];
+  const FROG_ORDER = ["james", "jimmy", "bubbles", "rexy"];
 
   const LANE_COUNT = 4;
   const STRIP_LEN = 4200; // world units to clear
@@ -39,7 +39,7 @@
   let lives = SHARED_LIVES;
   let scrap = 0;
   let invadersCleared = 0;
-  let selectedId = "moss";
+  let selectedId = "james";
   let frogs = [];
   let hazards = [];
   let invaders = [];
@@ -197,7 +197,7 @@
 
   function startRun(playerId) {
     unlockAudio();
-    selectedId = playerId || selectedId || "moss";
+    selectedId = playerId || selectedId || "james";
     const others = FROG_ORDER.filter((id) => id !== selectedId);
     frogs = [
       makeFrog(selectedId, true, 1),
@@ -347,7 +347,7 @@
     const wx = frog.x;
     const wy = laneY(frog.lane);
 
-    if (frog.id === "moss") {
+    if (frog.id === "james") {
       // Lane-swap dash + short invuln
       const dest = (frog.lane + (Math.random() < 0.5 ? 1 : -1) + LANE_COUNT) % LANE_COUNT;
       // Prefer empty-ish lane
@@ -368,11 +368,11 @@
       burst(wx, wy, 10, frog.color);
       fx.push({ kind: "text", text: "DASH!", x: wx, y: wy - 28, life: 0.6, color: frog.color });
       beep(700, 0.08, "square", 0.05);
-    } else if (frog.id === "ember") {
+    } else if (frog.id === "jimmy") {
       shieldTimer = 2.8;
       fx.push({ kind: "text", text: "SHIELD!", x: cameraX + w * 0.4, y: h * 0.28, life: 0.9, color: frog.color });
       beep(240, 0.15, "sine", 0.06);
-    } else if (frog.id === "bolt") {
+    } else if (frog.id === "bubbles") {
       // Clear nearest invader cluster
       const sorted = invaders
         .map((inv, i) => ({ inv, i, d: Math.abs(inv.x - frog.x) }))
@@ -392,7 +392,7 @@
       fx.push({ kind: "text", text: "ZAP!", x: wx, y: wy - 28, life: 0.6, color: frog.color });
       beep(880, 0.1, "sawtooth", 0.05);
       paintHud();
-    } else if (frog.id === "gear") {
+    } else if (frog.id === "rexy") {
       botAssist = {
         x: frog.x + 40,
         y: laneY(frog.lane),
@@ -1098,11 +1098,11 @@
   window.addEventListener("resize", resize);
   resize();
   loadArt();
-  document.querySelector('.frog-btn[data-id="moss"]').classList.add("selected");
+  document.querySelector('.frog-btn[data-id="james"]').classList.add("selected");
   showOverlay(
     "Froggies Cybertruck Odyssey",
     "Steer left/right · tap ability · keep the convoy alive past the ranch house, track, and pond.",
-    "Tap a froggy to start · or tap GO for Moss",
+    "Tap a froggy to start · or tap GO for James",
     true
   );
   requestAnimationFrame(tick);
