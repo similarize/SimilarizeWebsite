@@ -15,11 +15,25 @@ import {
   MISSILE_RELOAD
 } from "./engine.js";
 var BEST_KEY = "rc-rally-jump-best";
+var RIG_KEY = "rc-rally-rig";
 function loadBest() {
   try {
     return Number(localStorage.getItem(BEST_KEY)) || 0;
   } catch {
     return 0;
+  }
+}
+function loadRig() {
+  try {
+    return localStorage.getItem(RIG_KEY) === "crawler" ? "crawler" : "rally";
+  } catch {
+    return "rally";
+  }
+}
+function saveRig(rig) {
+  try {
+    localStorage.setItem(RIG_KEY, rig);
+  } catch {
   }
 }
 function saveBest(n) {
@@ -117,6 +131,7 @@ function boot() {
   if (!ctx) return;
   const sim = createSim(loadBest());
   sim.reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  sim.rig = loadRig();
   const audio = new AudioBus();
   const art = {
     buggy: new Image(),
@@ -124,7 +139,9 @@ function boot() {
     wheelRear: new Image(),
     wheelFront: new Image(),
     drone: new Image(),
-    sky: new Image()
+    sky: new Image(),
+    crawler: new Image(),
+    crawlerWheel: new Image()
   };
   art.buggy.src = artUrl("buggy.png");
   art.body.src = artUrl("buggy-body.png");
@@ -132,6 +149,24 @@ function boot() {
   art.wheelFront.src = artUrl("wheel-front.png");
   art.drone.src = artUrl("drone.png");
   art.sky.src = artUrl("sky.jpg");
+  art.crawler.src = artUrl("crawler-body.png");
+  art.crawlerWheel.src = artUrl("crawler-wheel.png");
+  const rigBtns = [...document.querySelectorAll("#rigs .rig")];
+  const paintRigs = () => {
+    rigBtns.forEach((btn) => {
+      const on = btn.dataset.rig === sim.rig;
+      btn.classList.toggle("on", on);
+      btn.setAttribute("aria-pressed", on ? "true" : "false");
+    });
+  };
+  paintRigs();
+  rigBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      sim.rig = btn.dataset.rig === "crawler" ? "crawler" : "rally";
+      saveRig(sim.rig);
+      paintRigs();
+    });
+  });
   const scoreEl = el("score");
   const bestEl = el("best");
   const gatesEl = el("gates");

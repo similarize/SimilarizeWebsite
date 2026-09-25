@@ -1,4 +1,4 @@
-const VERSION = "2.3";
+const VERSION = "2.4";
 const VIEW_W = 960;
 const VIEW_H = 540;
 const PLAYER_X = 168;
@@ -79,6 +79,7 @@ function createSim(best = 0) {
     shots: [],
     missiles: MISSILE_MAX,
     missileT: 0,
+    rig: "rally",
     booms: 0,
     nextGate: 780,
     nextDrone: 2600,
@@ -98,10 +99,12 @@ function startRun(sim) {
   const best = sim.best;
   const muted = sim.muted;
   const reduced = sim.reduced;
+  const rig = sim.rig === "crawler" ? "crawler" : "rally";
   const fresh = createSim(best);
   fresh.phase = "play";
   fresh.muted = muted;
   fresh.reduced = reduced;
+  fresh.rig = rig;
   Object.assign(sim, fresh);
 }
 function metersOf(sim) {
@@ -748,6 +751,7 @@ function drawDust(ctx, sim) {
   }
 }
 function drawCar(ctx, sim, art) {
+  const crawler = sim.rig === "crawler" && ready(art.crawler);
   ctx.save();
   ctx.translate(PLAYER_X + CAR_W / 2, sim.y + CAR_H / 2);
   ctx.rotate(sim.rot * Math.PI / 180);
@@ -765,16 +769,19 @@ function drawCar(ctx, sim, art) {
     ctx.lineTo(-CAR_W * 0.4, 14);
     ctx.fill();
   }
-  const wheelsReady = ready(art.wheelRear) && ready(art.wheelFront) && ready(art.body);
+  const wheelRear = crawler && ready(art.crawlerWheel) ? art.crawlerWheel : art.wheelRear;
+  const wheelFront = crawler && ready(art.crawlerWheel) ? art.crawlerWheel : art.wheelFront;
+  const body = crawler ? art.crawler : art.body;
+  const wheelsReady = ready(wheelRear) && ready(wheelFront) && ready(body);
   if (wheelsReady) {
-    spinWheel(ctx, sim, 0, art.wheelRear);
-    spinWheel(ctx, sim, 1, art.wheelFront);
+    spinWheel(ctx, sim, 0, wheelRear);
+    spinWheel(ctx, sim, 1, wheelFront);
   }
-  const img = wheelsReady ? art.body : art.buggy;
+  const img = wheelsReady ? body : art.buggy;
   if (img && ready(img)) {
     ctx.drawImage(img, -CAR_W / 2, -CAR_H / 2, CAR_W, CAR_H);
   } else {
-    ctx.fillStyle = "#e4572e";
+    ctx.fillStyle = crawler ? "#9a1b24" : "#e4572e";
     ctx.fillRect(-CAR_W / 2, -CAR_H / 2, CAR_W, CAR_H);
   }
   ctx.restore();
