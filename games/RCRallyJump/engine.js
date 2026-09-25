@@ -1,4 +1,4 @@
-const VERSION = "2.2";
+const VERSION = "2.3";
 const VIEW_W = 960;
 const VIEW_H = 540;
 const PLAYER_X = 168;
@@ -38,6 +38,8 @@ const RAMP_RUN = 168;
 const RAMP_RISE = 84;
 const LIP_LEAD = 142;
 const PACE = 255;
+const MISSILE_MAX = 3;
+const MISSILE_RELOAD = 9;
 function rampAt(sim, worldX) {
   for (let i = sim.ramps.length - 1; i >= 0; i--) {
     const r = sim.ramps[i];
@@ -74,6 +76,10 @@ function createSim(best = 0) {
     drones: [],
     dust: [],
     popups: [],
+    shots: [],
+    missiles: MISSILE_MAX,
+    missileT: 0,
+    booms: 0,
     nextGate: 780,
     nextDrone: 2600,
     gatesCleared: 0,
@@ -290,6 +296,66 @@ function tick(sim, dt, input) {
   sim.rot += (target - sim.rot) * Math.min(1, dt * 10);
   coupleWheels(sim, dt);
   sim.scroll += sim.speed * dt;
+  if (input.fire) {
+    if (sim.missiles > 0) {
+      sim.missiles -= 1;
+      sim.shots.push({
+        x: sim.scroll + PLAYER_X + CAR_W * 0.78,
+        y: sim.y + CAR_H * 0.42,
+        vx: sim.speed + 560,
+        life: 1.25
+      });
+    } else {
+      sim.popups.push({
+        x: sim.scroll + PLAYER_X + CAR_W * 0.5,
+        y: sim.y - 8,
+        text: "EMPTY",
+        life: 0.45,
+        max: 0.45
+      });
+    }
+  }
+  if (sim.missiles < MISSILE_MAX) {
+    sim.missileT += dt;
+    if (sim.missileT >= MISSILE_RELOAD) {
+      sim.missileT -= MISSILE_RELOAD;
+      sim.missiles += 1;
+    }
+  } else {
+    sim.missileT = 0;
+  }
+  for (const shot of sim.shots) {
+    shot.x += shot.vx * dt;
+    shot.life -= dt;
+    if (shot.life <= 0) continue;
+    for (const g of sim.gates) {
+      if (g.blown) continue;
+      if (shot.x < g.x - 10 || shot.x > g.x + g.w + 10) continue;
+      const hitTop = g.gapTop > 4 && shot.y <= g.gapTop + 8;
+      const hitBot = g.gapBot < VIEW_H && shot.y >= g.gapBot - 8;
+      if (hitTop || hitBot) {
+        g.blown = true;
+        shot.life = 0;
+        sim.booms += 1;
+        burst(sim, shot.x, shot.y, 16);
+        sim.popups.push({ x: g.x + g.w * 0.5, y: shot.y, text: "BOOM", life: 0.55, max: 0.55 });
+        break;
+      }
+    }
+    if (shot.life <= 0) continue;
+    for (const d of sim.drones) {
+      if (d.dead) continue;
+      const dy = d.y + Math.sin(sim.time * 3 + d.bob) * 10;
+      if (Math.hypot(shot.x - d.x, shot.y - dy) < 24) {
+        d.dead = true;
+        shot.life = 0;
+        sim.booms += 1;
+        burst(sim, d.x, dy, 12);
+        break;
+      }
+    }
+  }
+  sim.shots = sim.shots.filter((s) => s.life > 0 && s.x - sim.scroll < VIEW_W + 120);
   if (sim.grounded && sim.phase === "play" && sim.dust.length < 70 && hash(sim.time * 1e3) > 0.35) {
     sim.dust.push({
       x: footX - 10,
@@ -338,11 +404,13 @@ function tick(sim, dt, input) {
   const hh = CAR_H - 14;
   for (const g of sim.gates) {
     const sx = g.x - sim.scroll;
-    const topHit = g.gapTop > 4 && aabb(hx, hy, hw, hh, sx, 0, g.w, g.gapTop);
-    const botHit = g.gapBot < VIEW_H && aabb(hx, hy, hw, hh, sx, g.gapBot, g.w, VIEW_H - g.gapBot);
-    if (topHit || botHit) {
-      crash(sim, "gate");
-      return;
+    if (!g.blown) {
+      const topHit = g.gapTop > 4 && aabb(hx, hy, hw, hh, sx, 0, g.w, g.gapTop);
+      const botHit = g.gapBot < VIEW_H && aabb(hx, hy, hw, hh, sx, g.gapBot, g.w, VIEW_H - g.gapBot);
+      if (topHit || botHit) {
+        crash(sim, "gate");
+        return;
+      }
     }
     if (!g.scored && hx > sx + g.w) {
       g.scored = true;
@@ -350,13 +418,14 @@ function tick(sim, dt, input) {
       sim.popups.push({
         x: g.x + g.w,
         y: (g.gapTop + Math.min(g.gapBot, VIEW_H - 20)) * 0.5,
-        text: g.kicker && !sim.grounded ? "CLEAN" : "+100",
+        text: g.blown ? "CLEAR" : g.kicker && !sim.grounded ? "CLEAN" : "+100",
         life: 0.8,
         max: 0.8
       });
     }
   }
   for (const d of sim.drones) {
+    if (d.dead) continue;
     d.x -= sim.speed * 0.12 * dt;
     d.spin += dt * 18;
     const sx = d.x - sim.scroll;
@@ -368,7 +437,7 @@ function tick(sim, dt, input) {
   }
   sim.gates = sim.gates.filter((g) => g.x - sim.scroll > -200);
   sim.ramps = sim.ramps.filter((r) => r.lip - sim.scroll > -240);
-  sim.drones = sim.drones.filter((d) => d.x - sim.scroll > -80);
+  sim.drones = sim.drones.filter((d) => !d.dead && d.x - sim.scroll > -80);
   ageBits(sim, dt);
   const score = scoreOf(sim);
   if (score > sim.best) sim.best = score;
@@ -438,9 +507,11 @@ function step(sim, dt, input) {
   let acc = capped;
   const h = 1 / 120;
   let guard = 0;
+  let shot = !!input.fire;
   while (acc >= h && guard < 8) {
     if (sim.phase !== "play") break;
-    tick(sim, h, input);
+    tick(sim, h, { boost: input.boost, fire: shot });
+    shot = false;
     acc -= h;
     guard += 1;
   }
@@ -481,6 +552,7 @@ function draw(ctx, sim, art) {
   drawGround(ctx, sim);
   for (const gate of sim.gates) drawGate(ctx, sim, gate);
   for (const d of sim.drones) drawDrone(ctx, sim, d, art);
+  drawShots(ctx, sim);
   drawDust(ctx, sim);
   drawCar(ctx, sim, art);
   drawPopups(ctx, sim);
@@ -586,6 +658,7 @@ function drawKickers(ctx, sim) {
 function drawGate(ctx, sim, gate) {
   const sx = gate.x - sim.scroll;
   if (sx > VIEW_W + 20 || sx + gate.w < -20) return;
+  if (gate.blown) return;
   hazard(ctx, sx, 0, gate.w, Math.max(0, gate.gapTop));
   if (!gate.kicker && gate.gapBot < VIEW_H) hazard(ctx, sx, gate.gapBot, gate.w, VIEW_H - gate.gapBot);
   ctx.strokeStyle = "#f0b429";
@@ -630,6 +703,7 @@ function chevron(ctx, x, y) {
   ctx.stroke();
 }
 function drawDrone(ctx, sim, d, art) {
+  if (d.dead) return;
   const sx = d.x - sim.scroll;
   const sy = d.y + Math.sin(sim.time * 3 + d.bob) * 10;
   if (sx < -60 || sx > VIEW_W + 60) return;
@@ -644,6 +718,25 @@ function drawDrone(ctx, sim, d, art) {
     ctx.fillRect(-16, -6, 32, 12);
   }
   ctx.restore();
+}
+function drawShots(ctx, sim) {
+  for (const s of sim.shots) {
+    const sx = s.x - sim.scroll;
+    if (sx < -30 || sx > VIEW_W + 30) continue;
+    ctx.save();
+    ctx.translate(sx, s.y);
+    ctx.fillStyle = "rgba(228, 87, 46, 0.85)";
+    ctx.fillRect(-16, -2, 8, 4);
+    ctx.fillStyle = "#f3e2c4";
+    ctx.beginPath();
+    ctx.moveTo(14, 0);
+    ctx.lineTo(-8, -4.5);
+    ctx.lineTo(-4, 0);
+    ctx.lineTo(-8, 4.5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
 }
 function drawDust(ctx, sim) {
   for (const d of sim.dust) {
@@ -737,5 +830,7 @@ export {
   shakeOffset,
   startRun,
   step,
-  wheelPace
+  wheelPace,
+  MISSILE_MAX,
+  MISSILE_RELOAD
 };

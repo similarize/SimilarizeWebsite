@@ -196,10 +196,39 @@
       font-size: 12px;
     }
     .row { display: flex; justify-content: center; gap: 12px; }
+    .pips { display: flex; gap: 6px; margin-top: 8px; }
+    .pips i {
+      width: 18px;
+      height: 8px;
+      border-radius: 999px;
+      background: #3a2e24;
+      box-shadow: inset 0 0 0 1px rgba(240, 180, 41, 0.35);
+      overflow: hidden;
+    }
+    .pips i.on { background: var(--amber); }
+    .pips i.charge { background: linear-gradient(90deg, var(--amber) var(--fill, 0%), #3a2e24 var(--fill, 0%)); }
+    .fire {
+      pointer-events: auto;
+      position: absolute;
+      right: 12px;
+      bottom: 12px;
+      height: 52px;
+      min-width: 52px;
+      padding: 0 14px;
+      border-radius: 14px;
+      border: 1px solid var(--amber);
+      background: rgba(228, 87, 46, 0.9);
+      color: var(--sand);
+      font-family: var(--display);
+      letter-spacing: 0.08em;
+      font-size: 18px;
+    }
+    .fire[hidden] { display: none; }
     @media (min-width: 640px) {
       .score { left: 16px; top: 16px; }
       .tools { right: 16px; top: 16px; }
       .pack { left: 16px; right: auto; bottom: 16px; width: 16rem; }
+      .fire { right: 16px; bottom: 16px; }
     }
   </style>
 </head>
@@ -228,7 +257,10 @@
         </div>
         <div class="bar"><i id="pack-fill"></i></div>
         <p class="warn" id="pack-low" hidden>Land to recharge</p>
+        <div class="pack-row" style="margin-top:10px"><span>MISSILES</span></div>
+        <div class="pips" id="pips"><i></i><i></i><i></i></div>
       </div>
+      <button type="button" class="fire" id="fire" data-ui hidden>Fire</button>
     </div>
 
     <div class="veil" id="title">
@@ -240,10 +272,10 @@
           <li>A tap hops. Holding climbs.</li>
           <li>Drive-through gates punish a big jump.</li>
           <li>Amber kickers throw you through if you ride them with speed. Too late, and you take the gate on the dirt.</li>
-          <li>Drones come at you — don’t trade the pack for air.</li>
+          <li>Right-click fires a missile and opens that gate. You hold three, and they come back slowly.</li>
         </ul>
         <button type="button" class="go" id="start" data-ui>Start run</button>
-        <p class="hint">Space, tap, or hold anywhere. M mute · P pause · R restart</p>
+        <p class="hint">Hold to drive. Right-click or Fire for a missile. M mute · P pause · R restart</p>
         <a class="home" href="https://www.similarize.com/">Similarize</a>
       </div>
     </div>

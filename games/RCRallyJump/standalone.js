@@ -10,7 +10,9 @@ import {
   shakeOffset,
   startRun,
   step,
-  wheelPace
+  wheelPace,
+  MISSILE_MAX,
+  MISSILE_RELOAD
 } from "./engine.js";
 var BEST_KEY = "rc-rally-jump-best";
 function loadBest() {
@@ -148,8 +150,11 @@ function boot() {
   const overMeta = el("over-meta");
   const muteBtn = el("mute");
   const pauseBtn = el("pause-btn");
+  const fireBtn = el("fire");
+  const pips = [...el("pips").children];
   version.textContent = `DESERT CIRCUIT \xB7 ${VERSION}`;
   let pointer = false;
+  let fireEdge = false;
   const keys = /* @__PURE__ */ new Set();
   let prevPhase = "title";
   let prevGates = 0;
@@ -170,6 +175,14 @@ function boot() {
     packFill.style.width = `${Math.max(0, Math.min(100, sim.battery))}%`;
     packFill.classList.toggle("low", low);
     packLow.hidden = !(sim.phase === "play" && low);
+    fireBtn.hidden = sim.phase !== "play";
+    pips.forEach((pip, i) => {
+      const on = i < sim.missiles;
+      const charging = !on && i === sim.missiles && sim.missiles < MISSILE_MAX;
+      pip.classList.toggle("on", on);
+      pip.classList.toggle("charge", charging);
+      pip.style.setProperty("--fill", charging ? `${Math.round(sim.missileT / MISSILE_RELOAD * 100)}%` : "0%");
+    });
     hudScore.hidden = sim.phase === "title";
     hudPack.hidden = sim.phase === "title";
     pauseBtn.hidden = sim.phase === "title";
@@ -190,6 +203,7 @@ function boot() {
     audio.unlock();
     startRun(sim);
     pointer = hold;
+    fireEdge = false;
     prevGates = 0;
   };
   const boostHeld = () => pointer || keys.has("Space") || keys.has("ArrowUp") || keys.has("KeyW");
@@ -234,6 +248,11 @@ function boot() {
   });
   const shell = el("shell");
   shell.addEventListener("pointerdown", (e) => {
+    if (e.button === 2) {
+      e.preventDefault();
+      if (sim.phase === "play") fireEdge = true;
+      return;
+    }
     if (e.target.closest("[data-ui]")) return;
     audio.unlock();
     if (sim.phase === "title") begin(true);
@@ -263,11 +282,21 @@ function boot() {
   el("resume").addEventListener("click", () => {
     if (sim.phase === "pause") sim.phase = "play";
   });
+  fireBtn.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    audio.unlock();
+    if (sim.phase === "play") fireEdge = true;
+  });
   let last = performance.now();
+  let prevBooms = 0;
   const frame = (now) => {
     const dt = Math.min(0.05, (now - last) / 1e3);
     last = now;
-    step(sim, dt, { boost: boostHeld() && sim.phase === "play" });
+    const fire = fireEdge;
+    fireEdge = false;
+    const before = sim.missiles;
+    step(sim, dt, { boost: boostHeld() && sim.phase === "play", fire });
     const phaseChanged = sim.phase !== prevPhase;
     if (sim.phase === "over" && phaseChanged) {
       audio.crash(sim.muted);
@@ -276,6 +305,13 @@ function boot() {
     if (sim.gatesCleared > prevGates && sim.phase === "play") {
       audio.tone(620, 0.12, "triangle", 0.08, sim.muted);
     }
+    if (sim.phase === "play" && sim.missiles < before) {
+      audio.tone(880, 0.08, "square", 0.05, sim.muted);
+    }
+    if (sim.booms > prevBooms) {
+      audio.tone(160, 0.16, "sawtooth", 0.1, sim.muted);
+    }
+    prevBooms = sim.booms;
     prevGates = sim.gatesCleared;
     audio.motorDrive(sim.phase === "play", sim.muted, sim.boosting, wheelPace(sim));
     const portrait = canvas.height > canvas.width * 1.05;
