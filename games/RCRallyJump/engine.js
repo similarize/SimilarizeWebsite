@@ -1,4 +1,4 @@
-const VERSION = "2.9";
+const VERSION = "3.0";
 const VIEW_W = 960;
 const VIEW_H = 540;
 const PLAYER_X = 168;
@@ -110,7 +110,8 @@ function stepSquash(sim, dt) {
     const p = wheelWorld(sim, g);
     const sink = p.y + g.r - surfaceY(sim, p.x);
     const pressed = sim.grounded && sink > -6;
-    const target = pressed ? clamp(sim.tune.squish * (0.4 + Math.max(0, sink) / 20), 0, 0.9) : 0;
+    const give = sim.tune.squish;
+    const target = pressed ? clamp(give * (0.28 + Math.min(Math.max(0, sink), 6) / 24), 0, 0.55) : 0;
     sim.squash[i] += (target - sim.squash[i]) * Math.min(1, dt * (pressed ? 16 : 9));
   }
 }
@@ -302,7 +303,7 @@ function spawnGate(sim, worldX) {
     gapTop += shift;
     gapBot += shift;
   }
-  sim.gates.push({ x: worldX, gapTop, gapBot, w: GATE_W, scored: false, kind, kicker, marks: [], touching: false });
+  sim.gates.push({ x: worldX, gapTop, gapBot, w: GATE_W, scored: false, kind, kicker, marks: [], bumped: false });
 }
 function wantKicker(sim, worldX) {
   if (worldX < 1500) return false;
@@ -341,12 +342,7 @@ function coupleWheels(sim, dt) {
     const force = clamp(slip / (0.12 * inv) * load, -420, 420);
     sim.speed -= force * dt;
     sim.wheelOmega[i] += force * R / I * dt;
-    if (i === 0) {
-      const slowed = sim.recover > 0;
-      const target = slowed ? Math.min(cruise, 58) : cruise;
-      const rate = slowed ? 0.38 : 1.35;
-      sim.speed += (target - sim.speed) * dt * rate * load;
-    }
+    if (i === 0) sim.speed += (cruise - sim.speed) * dt * (sim.recover > 0 ? 6.5 : 1.35) * load;
     sim.wheelAng[i] += sim.wheelOmega[i] * dt;
     if (Math.abs(slip) > 130 && load > 0.3 && sim.dust.length < 80 && hash(sim.time * 900 + i * 19) > 0.72) {
       sim.dust.push({
@@ -360,8 +356,8 @@ function coupleWheels(sim, dt) {
       });
     }
   }
-  if (!loaded && sim.recover > 0) sim.speed += (42 - sim.speed) * dt * 1.15;
-  sim.speed = clamp(sim.speed, sim.recover > 0 ? -130 : 36, 420);
+  if (!loaded && sim.recover > 0) sim.speed += (cruise - sim.speed) * dt * 6;
+  sim.speed = clamp(sim.speed, sim.recover > 0 ? -40 : 36, 420);
 }
 function kickRamp(sim, footX, dt) {
   let launched = false;
@@ -418,11 +414,11 @@ function tick(sim, dt, input) {
   } else if (sim.y >= floor && sim.vy >= 0) {
     const impact = sim.vy;
     sim.y = floor;
-    const bounce = sim.tune.squish * clamp(impact / 640, 0, 1);
-    sim.vy = impact > 90 ? -impact * bounce * 0.62 : 0;
-    if (bounce > 0.08) {
-      sim.squash[0] = Math.min(0.92, sim.squash[0] + bounce);
-      sim.squash[1] = Math.min(0.92, sim.squash[1] + bounce * 0.75);
+    const bounce = sim.tune.squish * clamp(impact / 1100, 0, 1);
+    sim.vy = impact > 160 ? -impact * bounce * 0.22 : 0;
+    if (bounce > 0.04) {
+      sim.squash[0] = Math.min(0.55, sim.squash[0] + bounce * 0.4);
+      sim.squash[1] = Math.min(0.55, sim.squash[1] + bounce * 0.3);
     }
     if (!sim.grounded && impact > 180) burst(sim, footX, gy, 8);
     sim.grounded = true;
@@ -555,7 +551,7 @@ function tick(sim, dt, input) {
     if (!g.blown) {
       const topHit = g.gapTop > 4 && aabb(hx, hy, hw, hh, sx, 0, g.w, g.gapTop);
       const botHit = g.gapBot < VIEW_H && aabb(hx, hy, hw, hh, sx, g.gapBot, g.w, VIEW_H - g.gapBot);
-      if (topHit || botHit) bumpGate(sim, g, hx, hy, hw, hh, sx, topHit);
+      if ((topHit || botHit) && !g.bumped) bumpGate(sim, g, hx, hy, hw, hh, sx, topHit);
     }
     if (!g.scored && hx > sx + g.w) {
       g.scored = true;
@@ -580,14 +576,9 @@ function tick(sim, dt, input) {
       return;
     }
   }
-  const blocked = sim.gates.some((g) => g.touching);
-  if (sim.grounded && !blocked) {
+  if (sim.grounded && sim.speed < cruiseOf(sim) - 6) {
     const cruise = cruiseOf(sim);
-    const slowed = sim.recover > 0;
-    const target = slowed ? Math.min(cruise, 64) : cruise;
-    if (sim.speed < target - 6) {
-      sim.speed += (target - sim.speed) * dt * (slowed ? 0.55 : 0.7);
-    }
+    sim.speed += (cruise - sim.speed) * dt * (sim.recover > 0 ? 8 : 0.7);
   }
   if (sim.recover > 0) sim.recover = Math.max(0, sim.recover - dt);
   sim.gates = sim.gates.filter((g) => g.x - sim.scroll > -200);
@@ -600,9 +591,9 @@ function tick(sim, dt, input) {
 function bumpGate(sim, g, hx, hy, hw, hh, sx, topHit) {
   const impact = Math.max(0, sim.speed);
   const overlap = hx + hw - sx;
-  if (overlap > 0) sim.scroll -= overlap;
-  if (!g.touching) {
-    g.touching = true;
+  if (!g.bumped) {
+    g.bumped = true;
+    if (overlap > 0) sim.scroll -= Math.min(overlap, 8);
     if (g.marks.length < 5) {
       const y = topHit
         ? clamp(hy + hh * 0.35, 6, Math.max(10, g.gapTop - 6))
@@ -621,16 +612,12 @@ function bumpGate(sim, g, hx, hy, hw, hh, sx, topHit) {
         n: 0.55 + hash(sim.time * 5) * 0.7
       });
     }
-    sim.speed = -clamp(22 + impact * 0.4, 26, 96);
-    if (topHit) {
-      sim.vy = Math.max(sim.vy, 50 + Math.min(impact, 240) * 0.12);
-      sim.rot += 5;
-    } else {
-      sim.vy = Math.min(sim.vy, -70 - Math.min(impact, 240) * 0.1);
-      sim.rot -= 4;
-    }
-    sim.recover = Math.max(sim.recover, 1 + Math.min(impact, 320) / 260);
-    sim.shake = Math.min(1, 0.18 + impact / 900);
+    sim.speed = Math.min(sim.speed, 48);
+    if (topHit) sim.vy = Math.max(sim.vy, 36);
+    else sim.vy = Math.min(sim.vy, -28);
+    sim.rot += topHit ? 2 : -2;
+    sim.recover = 0.18;
+    sim.shake = Math.min(0.45, 0.12 + impact / 1400);
     sim.scrapes += 1;
     burst(sim, g.x + 6, hy + hh * 0.5, 7);
     sim.popups.push({
@@ -640,9 +627,6 @@ function bumpGate(sim, g, hx, hy, hw, hh, sx, topHit) {
       life: 0.5,
       max: 0.5
     });
-  } else {
-    sim.speed = Math.min(sim.speed, 0);
-    sim.recover = Math.max(sim.recover, 0.3);
   }
 }
 function crash(sim, kind) {
@@ -1024,11 +1008,11 @@ function ready(img) {
 }
 function spinWheel(ctx, sim, index, img) {
   const g = wheelGeom(sim, index);
-  const bulge = 1 + g.squash * 0.32;
-  const flat = Math.max(0.42, 1 - g.squash * 0.5);
+  const bulge = 1 + g.squash * 0.1;
+  const flat = 1 - g.squash * 0.18;
   const ang = sim.wheelAng[index] * (WHEELS[index].r / g.drawR);
   ctx.save();
-  ctx.translate(g.lx, g.ly + g.squash * g.drawR * 0.28);
+  ctx.translate(g.lx, g.ly + g.squash * g.drawR * 0.05);
   ctx.rotate(ang);
   ctx.scale(bulge, flat);
   ctx.drawImage(img, -g.drawR, -g.drawR, g.drawR * 2, g.drawR * 2);
@@ -1040,7 +1024,7 @@ function drawTrailer(ctx, sim) {
   const L = 102;
   const ang = sim.trailAng;
   const wheelR = 8.5 * sim.tune.wheel;
-  const squash = clamp(Math.max(0, Math.sin(ang)) * sim.tune.squish, 0, 0.55);
+  const squash = clamp(Math.max(0, Math.sin(ang)) * sim.tune.squish * 0.4, 0, 0.2);
   ctx.save();
   ctx.translate(hitch.sx, hitch.sy);
   ctx.rotate(-ang);
@@ -1066,7 +1050,7 @@ function drawTrailer(ctx, sim) {
   ctx.save();
   ctx.translate(tail + 16, 8);
   ctx.rotate(sim.wheelAng[0]);
-  ctx.scale(1 + squash * 0.25, Math.max(0.45, 1 - squash * 0.5));
+  ctx.scale(1 + squash * 0.05, 1 - squash * 0.08);
   ctx.beginPath();
   ctx.arc(0, 0, wheelR, 0, Math.PI * 2);
   ctx.fillStyle = "#16110e";
