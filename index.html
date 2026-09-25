@@ -113,8 +113,7 @@ a { color: var(--green-dark); }
   cursor: pointer;
 }
 .brand video,
-.brand img,
-.brand svg.logo-anim {
+.brand img {
   width: clamp(168px, 42vw, 228px);
   height: auto;
   aspect-ratio: 1;
@@ -123,6 +122,11 @@ a { color: var(--green-dark); }
   background: transparent;
 }
 .brand svg.logo-anim {
+  width: clamp(200px, 72vw, 320px);
+  height: auto;
+  max-height: 120px;
+  display: block;
+  background: transparent;
   overflow: visible;
 }
 .composer {
@@ -391,55 +395,159 @@ footer.site a:hover {
     <main class="home">
       <div class="brand">
         <a class="logo" id="brand-logo" href="https://www.similarize.com/" aria-label="Similarize. Click to play the mark.">
-          <svg class="logo-anim" id="logo-anim" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 400 400" width="400" height="400" role="img" aria-hidden="true" focusable="false">
-  <defs>
-    <style><![CDATA[
-      .logo-root .word { opacity: 0; }
-      .logo-root .mark { opacity: 1; }
+          <svg class="logo-anim" id="logo-anim" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 128" width="400" height="128" role="img" aria-hidden="true" focusable="false">
+            <defs>
+              <style><![CDATA[
+                .disc { fill: #d00808; }
+                .fg { fill: #fff; }
+                .shade { fill: #ffc9c9; }
+                .ridge { fill: none; stroke: #fff; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; opacity: 0.55; }
+                .word {
+                  fill: #d00808;
+                  font-family: Outfit, "Segoe UI", system-ui, sans-serif;
+                  font-weight: 700;
+                  font-size: 42px;
+                  text-anchor: middle;
+                  dominant-baseline: central;
+                }
+                .person { opacity: 1; }
+                .center-mtn { opacity: 0; }
+                .center-m { opacity: 1; }
+                .word { opacity: 1; transform: none; }
 
-      .logo-root.is-animating .word {
-        animation: wordPhase 3.2s cubic-bezier(0.22, 1, 0.36, 1) both;
-        transform-origin: 200px 200px;
-      }
-      .logo-root.is-animating .mark {
-        animation: markPhase 3.2s cubic-bezier(0.22, 1, 0.36, 1) both;
-        transform-origin: 200px 200px;
-      }
+                .logo-root.is-animating .person-l {
+                  animation: fadeSlide 0.5s cubic-bezier(0.22,1,0.36,1) 0.1s both;
+                  --sx: -10px;
+                }
+                .logo-root.is-animating .person-r {
+                  animation: fadeSlide 0.5s cubic-bezier(0.22,1,0.36,1) 0.1s both;
+                  --sx: 10px;
+                }
+                .logo-root.is-animating .center-mtn {
+                  animation: mtnLife 3.2s cubic-bezier(0.22,1,0.36,1) both;
+                }
+                .logo-root.is-animating .center-m {
+                  animation: mReveal 3.2s cubic-bezier(0.22,1,0.36,1) both;
+                }
+                .logo-root.is-animating .word {
+                  animation: peelIn 0.7s cubic-bezier(0.2,0.9,0.3,1) both;
+                }
+                .logo-root.is-animating .wl { animation-delay: 1.35s; }
+                .logo-root.is-animating .w0 { animation-delay: 1.55s; }
+                .logo-root.is-animating .w1 { animation-delay: 1.68s; }
+                .logo-root.is-animating .w2 { animation-delay: 1.81s; }
+                .logo-root.is-animating .w3 { animation-delay: 1.94s; }
+                .logo-root.is-animating .w4 { animation-delay: 2.07s; }
+                .logo-root.is-animating .w5 { animation-delay: 2.20s; }
 
-      @keyframes wordPhase {
-        0%, 28% { opacity: 1; transform: scale(1); }
-        58% { opacity: 0; transform: scale(0.72); }
-        100% { opacity: 0; transform: scale(0.62); }
-      }
-      @keyframes markPhase {
-        0%, 32% { opacity: 0; transform: scale(0.55); }
-        58% { opacity: 1; transform: scale(1.03); }
-        78%, 100% { opacity: 1; transform: none; }
-      }
+                @keyframes fadeSlide {
+                  from { opacity: 0; transform: translateX(var(--sx, 0)); }
+                  to   { opacity: 1; transform: none; }
+                }
+                @keyframes mtnLife {
+                  0%   { opacity: 0; transform: translateY(14px) scale(0.75); transform-origin: 118px 90px; }
+                  14%  { opacity: 1; transform: none; }
+                  40%  { opacity: 1; transform: none; }
+                  58%  { opacity: 0; transform: scale(0.94); transform-origin: 118px 78px; }
+                  100% { opacity: 0; transform: scale(0.94); transform-origin: 118px 78px; }
+                }
+                @keyframes mReveal {
+                  0%, 40% { opacity: 0; transform: scale(0.9); transform-origin: 118px 78px; }
+                  58%     { opacity: 1; transform: none; }
+                  100%    { opacity: 1; transform: none; }
+                }
+                @keyframes peelIn {
+                  0% {
+                    opacity: 0;
+                    transform: translate(var(--fx), var(--fy)) scale(0.35);
+                  }
+                  30% {
+                    opacity: 1;
+                    transform: translate(calc(var(--fx) * 0.4), calc(var(--fy) * 0.4)) scale(0.95);
+                  }
+                  100% {
+                    opacity: 1;
+                    transform: none;
+                  }
+                }
 
-      @media (prefers-reduced-motion: reduce) {
-        .logo-root.is-animating .word,
-        .logo-root.is-animating .mark { animation: none !important; }
-        .logo-root.is-animating .word { opacity: 0 !important; }
-        .logo-root.is-animating .mark { opacity: 1 !important; transform: none !important; }
-      }
-    ]]></style>
-  </defs>
+                @media (prefers-reduced-motion: reduce) {
+                  .logo-root.is-animating .person-l,
+                  .logo-root.is-animating .person-r,
+                  .logo-root.is-animating .center-mtn,
+                  .logo-root.is-animating .center-m,
+                  .logo-root.is-animating .word {
+                    animation: none !important;
+                  }
+                  .logo-root.is-animating .person-l,
+                  .logo-root.is-animating .person-r,
+                  .logo-root.is-animating .center-m,
+                  .logo-root.is-animating .word {
+                    opacity: 1 !important;
+                    transform: none !important;
+                  }
+                  .logo-root.is-animating .center-mtn { opacity: 0 !important; }
+                }
+              ]]></style>
+            </defs>
 
-  <g class="logo-root" id="logo-root">
-    <image class="word" id="word"
-      href="images/logo-word.png?v=20260925g"
-      xlink:href="images/logo-word.png?v=20260925g"
-      x="20" y="120" width="360" height="160"
-      preserveAspectRatio="xMidYMid meet"/>
-    <image class="mark" id="mark"
-      href="images/imi-mark-clean.png?v=20260925g"
-      xlink:href="images/imi-mark-clean.png?v=20260925g"
-      x="16" y="16" width="368" height="368"
-      preserveAspectRatio="xMidYMid meet"/>
-  </g>
-</svg>
-          <noscript><img src="images/logo-mark-still.png?v=20260925g" width="228" height="228" alt="Similarize"></noscript>
+            <g class="logo-root is-animating" id="logo-root">
+              <text class="word wl" style="--fx:70px; --fy:0px;" x="28" y="64">S</text>
+
+              <g id="imi-mark" transform="translate(58 4)">
+                <circle class="disc" cx="60" cy="60" r="58"/>
+
+                <g class="person person-l fg">
+                  <path d="M 22 42 L 34 36 A 13 13 0 1 0 34 48 Z"/>
+                  <rect x="16" y="54" width="18" height="48" rx="8"/>
+                </g>
+
+                <g class="center-mtn">
+                  <ellipse cx="60" cy="104" rx="38" ry="4" fill="#000" opacity="0.14"/>
+                  <path class="fg" d="M 28 102 L 42 68 L 50 82 L 60 32 L 70 82 L 78 68 L 92 102 Z"/>
+                  <path class="shade" d="M 60 32 L 70 82 L 78 68 L 92 102 L 60 102 Z"/>
+                  <path class="ridge" d="M 34 94 L 42 68 L 50 82 L 60 32"/>
+                  <path class="fg" d="M 56 44 L 60 32 L 64 44 Q 60 40 56 44 Z"/>
+                </g>
+
+                <g class="center-m fg">
+                  <path d="M 32 102
+                           v -28
+                           c 0 -1 0.5 -22 18 -22
+                           c 16 0 18 15 18 22
+                           c 0 -7 2 -22 18 -22
+                           c 17.5 0 18 21 18 22
+                           v 28
+                           h -13
+                           v -26
+                           c 0 -6 -1.5 -11 -8 -11
+                           c -7 0 -8.5 6 -8.5 11
+                           v 26
+                           h -13
+                           v -26
+                           c 0 -6 -1.5 -11 -8 -11
+                           c -7 0 -8.5 6 -8.5 11
+                           v 26
+                           z"/>
+                </g>
+
+                <g class="person person-r fg">
+                  <path d="M 98 42 L 86 36 A 13 13 0 1 1 86 48 Z"/>
+                  <rect x="86" y="54" width="18" height="48" rx="8"/>
+                </g>
+              </g>
+
+              <g id="suffix" aria-hidden="true">
+                <text class="word w0" style="--fx:-90px; --fy:0px;" x="214" y="64">L</text>
+                <text class="word w1" style="--fx:-118px; --fy:0px;" x="246" y="64">A</text>
+                <text class="word w2" style="--fx:-146px; --fy:0px;" x="278" y="64">R</text>
+                <text class="word w3" style="--fx:-174px; --fy:0px;" x="308" y="64">I</text>
+                <text class="word w4" style="--fx:-200px; --fy:0px;" x="336" y="64">Z</text>
+                <text class="word w5" style="--fx:-228px; --fy:0px;" x="366" y="64">E</text>
+              </g>
+            </g>
+          </svg>
+          <noscript><img src="images/logo-still.jpg?v=20260925d" width="400" height="128" alt="Similarize"></noscript>
         </a>
         <p class="dev-note"><strong>Early preview</strong></p>
         <h1 class="promise">Clearer ways to say it</h1>
@@ -505,6 +613,7 @@ footer.site a:hover {
       return;
     }
     root.classList.remove("is-animating");
+    // Force reflow so CSS animations restart cleanly
     void root.getBoundingClientRect();
     root.classList.add("is-animating");
   }
@@ -515,11 +624,10 @@ footer.site a:hover {
     replay();
   });
 
-  if (!reduce) {
-    // Kick after images can paint
-    if (document.readyState === "complete") setTimeout(replay, 40);
-    else window.addEventListener("load", function () { setTimeout(replay, 40); });
+  if (reduce) {
+    root.classList.remove("is-animating");
   }
+  // Non-reduced: markup already has is-animating for first paint
 })();
 </script>
 <script>
