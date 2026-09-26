@@ -227,3 +227,108 @@ html, body {
 @media (max-height: 640px) {
   .splash-art { max-height: 20vh; width: min(36vw, 140px); margin-bottom: 8px; }
 }
+
+/* ——— Party lobby seats ——— */
+.frog-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  position: relative;
+}
+.frog-btn .frog-name { font-weight: 800; }
+.frog-btn .seat-state {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.12);
+  color: #e5e5e5;
+}
+.frog-btn.seat-open .seat-state { background: rgba(255,255,255,.1); color: #d4d4d4; }
+.frog-btn.seat-you .seat-state { background: rgba(34,197,94,.45); color: #ecfdf5; }
+.frog-btn.seat-human .seat-state { background: rgba(96,165,250,.45); color: #eff6ff; }
+.frog-btn.seat-ai .seat-state { background: rgba(168,85,247,.35); color: #f3e8ff; }
+.frog-btn.seat-taken:not(.seat-you) {
+  opacity: 0.72;
+  cursor: not-allowed;
+}
+.frog-btn.seat-you { background: rgba(255,255,255,.18); box-shadow: 0 0 0 2px #fff; }
+
+.invite-cta {
+  margin: 8px 0 6px;
+  max-width: 26rem;
+  font-size: 12px;
+  line-height: 1.35;
+  color: #fde68a;
+  opacity: 0.95;
+}
+
+.party-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  margin: 4px 0 6px;
+  width: min(100%, 360px);
+}
+
+.party-btn {
+  border: 2px solid rgba(255,255,255,.45);
+  border-radius: 999px;
+  padding: 8px 14px;
+  background: rgba(0,0,0,.4);
+  color: #fff;
+  font: 700 13px "Segoe UI", system-ui, sans-serif;
+  touch-action: manipulation;
+}
+.party-btn:active { transform: translateY(1px); }
+#btn-host { border-color: #a3e635; color: #ecfccb; }
+
+.room-code {
+  font: 800 18px ui-monospace, "Cascadia Code", monospace;
+  letter-spacing: 0.18em;
+  color: #fbbf24;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: rgba(0,0,0,.45);
+  border: 1px solid rgba(251,191,36,.4);
+}
+
+.invite-qr {
+  display: block;
+  width: 112px;
+  height: 112px;
+  margin: 4px auto 6px;
+  border-radius: 10px;
+  border: 2px solid rgba(255,255,255,.35);
+  background: #fff;
+}
+.invite-qr[hidden] { display: none; }
+
+.party-status {
+  margin: 0 0 4px;
+  min-height: 1.1em;
+  font-size: 12px;
+  color: #bbf7d0;
+  max-width: 26rem;
+}
+.party-status.is-error { color: #fca5a5; }
+
+.start-btn[disabled],
+.start-btn.is-disabled {
+  opacity: 0.45;
+  pointer-events: none;
+  box-shadow: none;
+}
+
+@media (max-height: 700px) {
+  .invite-cta { font-size: 11px; margin: 4px 0; }
+  .invite-qr { width: 88px; height: 88px; }
+  .splash-art { max-height: 16vh; }
+}

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>Four Froggies — Ranch Grounds (sandbox)</title>
+  <link rel="stylesheet" href="style.css?v=20260925-party1">
+</head>
+<body>
+  <canvas id="view"></canvas>
+
+  <div id="hud">
+    <div id="hud-top">
+      <span id="lives">♥♥♥</span>
+      <span id="scrap">Scrap 0</span>
+      <span id="progress-label">Ranch Grounds</span>
+    </div>
+    <div id="progress-wrap"><div id="progress-bar"></div></div>
+    <div id="convoy-row"></div>
+  </div>
+
+  <div id="controls">
+    <button type="button" id="btn-left" aria-label="Steer left">◀</button>
+    <button type="button" id="btn-right" aria-label="Steer right">▶</button>
+    <button type="button" id="btn-ability" aria-label="Ability">DASH</button>
+  </div>
+
+  <div id="overlay">
+    <img id="splash-art" class="splash-art" src="assets/splash-forest-roof.png?v=20260925-party1" alt="Four froggies on a Cybertruck roof in the forest" width="832" height="1248" decoding="async">
+    <h1 id="overlay-title">Four Froggies</h1>
+    <p id="overlay-sub">Party lobby sandbox · Up to 4 players · AI fills empty seats · not a second product</p>
+    <div id="frog-pick" class="frog-pick">
+      <p class="pick-label">Claim a froggy seat</p>
+      <div class="frog-btns">
+        <button type="button" class="frog-btn" data-id="james">
+          <span class="frog-name">James</span>
+          <small>Wheel</small>
+          <span class="seat-state" data-seat="james">Open</span>
+        </button>
+        <button type="button" class="frog-btn" data-id="jimmy">
+          <span class="frog-name">Jimmy</span>
+          <small>Shield</small>
+          <span class="seat-state" data-seat="jimmy">Open</span>
+        </button>
+        <button type="button" class="frog-btn" data-id="bubbles">
+          <span class="frog-name">Bubbles</span>
+          <small>Zap</small>
+          <span class="seat-state" data-seat="bubbles">Open</span>
+        </button>
+        <button type="button" class="frog-btn" data-id="rexy">
+          <span class="frog-name">Rexy</span>
+          <small>Bot</small>
+          <span class="seat-state" data-seat="rexy">Open</span>
+        </button>
+      </div>
+    </div>
+    <p id="invite-cta" class="invite-cta">Invite friends — open seats stay open until someone joins (AI fills the rest when you GO).</p>
+    <div id="party-bar" class="party-bar">
+      <button type="button" id="btn-host" class="party-btn">Host room</button>
+      <button type="button" id="btn-copy" class="party-btn" hidden>Copy invite link</button>
+      <span id="room-code" class="room-code" hidden></span>
+    </div>
+    <img id="invite-qr" class="invite-qr" hidden alt="QR code to join this room" width="112" height="112">
+    <p id="party-status" class="party-status"></p>
+    <p id="overlay-text">Steer left/right · tap ability · keep the convoy alive past the ranch house, track, and pond.</p>
+    <p class="go" id="overlay-go">Claim a seat · Host to invite · or GO solo (AI fills)</p>
+    <button type="button" id="btn-start" class="start-btn">GO · Ranch Run</button>
+  </div>
+
+  <script src="ai.js?v=20260925-party1"></script>
+  <script src="party.js?v=20260925-party1"></script>
+  <script src="main.js?v=20260925-party1"></script>
+</body>
+</html>

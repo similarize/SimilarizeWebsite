@@ -18,6 +18,12 @@
   const btnRight = document.getElementById("btn-right");
   const btnAbility = document.getElementById("btn-ability");
   const btnStart = document.getElementById("btn-start");
+  const btnHost = document.getElementById("btn-host");
+  const btnCopy = document.getElementById("btn-copy");
+  const roomCodeEl = document.getElementById("room-code");
+  const inviteCta = document.getElementById("invite-cta");
+  const partyStatus = document.getElementById("party-status");
+  const inviteQr = document.getElementById("invite-qr");
 
   const FROG_DEFS = {
     james:  { id: "james",  name: "James",  role: "Wheel", color: "#4ade80", accent: "#166534", ability: "DASH",  cdMax: 6.5 },
@@ -54,6 +60,13 @@
   let steerHeld = 0; // -1 left, 1 right
   let steerRepeat = 0;
   let swipeStartX = null;
+  let party = null;
+  let partyMeta = { role: "solo", room: null, status: "idle", error: null, invite: null };
+  let lobbySeats = typeof FroggiesParty !== "undefined" ? FroggiesParty.emptySeats() : {};
+  let isHostSim = true; // false on guest during a shared run
+  let remoteInputs = {}; // frogId -> { steer, abilityQueued, targetLane }
+  let stateSendAcc = 0;
+  let pendingSeatMap = null;
 
   // Grok Imagine art (only 2 images — phone-friendly)
   const art = {
@@ -70,8 +83,8 @@
       img.onerror = () => { console.warn("Art failed:", src); };
       img.src = src;
     }
-    loadOne("splash", "assets/splash-forest-roof.png?v=20260925-names2");
-    loadOne("backdrop", "assets/backdrop-overhead.png?v=20260925-names2");
+    loadOne("splash", "assets/splash-forest-roof.png?v=20260925-four1");
+    loadOne("backdrop", "assets/backdrop-overhead.png?v=20260925-four1");
   }
 
   /** Cover-draw an image into a screen rect (center crop). */
@@ -136,11 +149,13 @@
     return { top: h * 0.32, height: h * 0.48, bottom: h * 0.32 + h * 0.48 };
   }
 
-  function makeFrog(id, human, slot) {
+  function makeFrog(id, human, slot, local) {
     const def = FROG_DEFS[id] || FROG_DEFS.james || FROG_DEFS[FROG_ORDER[0]];
     return {
       ...def,
-      human,
+      human: !!human,
+      local: !!human && !!local,
+      remote: !!human && !local,
       slot,
       lane: slot % LANE_COUNT,
       targetLane: slot % LANE_COUNT,
@@ -153,6 +168,10 @@
       aiTimer: Math.random() * 0.3,
       alive: true,
     };
+  }
+
+  function localPlayer() {
+    return frogs.find((f) => f.human && f.local) || null;
   }
 
   function buildLandmarks() {
@@ -195,16 +214,31 @@
     }
   }
 
-  function startRun(playerId) {
+  function normalizeSeatMap(seatMapOrPlayerId) {
+    // Accept legacy playerId string OR full seat map from party
+    if (seatMapOrPlayerId && typeof seatMapOrPlayerId === "object") {
+      return seatMapOrPlayerId;
+    }
+    const pid = seatMapOrPlayerId || selectedId || "james";
+    selectedId = pid;
+    const map = {};
+    for (const id of FROG_ORDER) {
+      map[id] = { human: id === pid, local: id === pid, peerId: null };
+    }
+    return map;
+  }
+
+  function startRun(seatMapOrPlayerId) {
     unlockAudio();
-    selectedId = playerId || selectedId || "james";
-    const others = FROG_ORDER.filter((id) => id !== selectedId);
-    frogs = [
-      makeFrog(selectedId, true, 1),
-      makeFrog(others[0], false, 0),
-      makeFrog(others[1], false, 2),
-      makeFrog(others[2], false, 3),
-    ];
+    const seatMap = normalizeSeatMap(seatMapOrPlayerId || pendingSeatMap);
+    pendingSeatMap = seatMap;
+    const localId = FROG_ORDER.find((id) => seatMap[id] && seatMap[id].human && seatMap[id].local);
+    if (localId) selectedId = localId;
+
+    frogs = FROG_ORDER.map((id, i) => {
+      const seat = seatMap[id] || { human: false, local: false };
+      return makeFrog(id, !!seat.human, i, !!seat.local);
+    });
     // Stagger starting lanes + brief convoy invuln so first seconds are playable
     frogs.forEach((f, i) => {
       f.lane = i % LANE_COUNT;
@@ -223,11 +257,19 @@
     shieldTimer = 0;
     hitFlash = 0;
     cheerTimer = 0;
+    remoteInputs = {};
+    stateSendAcc = 0;
+    const role = party ? party.getRole() : "solo";
+    isHostSim = role !== "guest";
     buildLandmarks();
     spawnStripThreats();
     phase = "play";
     overlay.hidden = true;
     frogPick.hidden = true;
+    if (inviteCta) inviteCta.hidden = true;
+    const partyBar = document.getElementById("party-bar");
+    if (partyBar) partyBar.hidden = true;
+    if (inviteQr) inviteQr.hidden = true;
     updateAbilityButton();
     paintHud();
     beep(420, 0.08, "triangle", 0.05);
@@ -238,12 +280,26 @@
     overlayTitle.textContent = title;
     overlayText.textContent = text;
     overlayGo.textContent = go;
-    overlaySub.textContent = "Ranch Grounds · Solo with AI buddies";
+    overlaySub.textContent = "Ranch Grounds · Up to 4 players · AI fills empty seats";
     frogPick.hidden = !showPick;
+    if (inviteCta) inviteCta.hidden = !showPick;
+    const partyBar = document.getElementById("party-bar");
+    if (partyBar) partyBar.hidden = !showPick;
     const splashEl = document.getElementById("splash-art");
     if (splashEl) splashEl.hidden = !showPick; // title only — keep retry overlay light
     overlay.hidden = false;
-    btnStart.textContent = showPick ? "GO · Ranch Run" : "RETRY · Instant";
+    const role = party ? party.getRole() : "solo";
+    if (!showPick) {
+      btnStart.textContent = "RETRY · Instant";
+      btnStart.disabled = role === "guest";
+      btnStart.classList.toggle("is-disabled", role === "guest");
+      if (inviteQr) inviteQr.hidden = true;
+    } else {
+      btnStart.textContent = role === "guest" ? "Waiting for host…" : "GO · Ranch Run";
+      btnStart.disabled = role === "guest";
+      btnStart.classList.toggle("is-disabled", role === "guest");
+      paintLobbySeats();
+    }
   }
 
   function paintHud() {
@@ -277,7 +333,7 @@
   }
 
   function updateAbilityButton() {
-    const player = frogs.find((f) => f.human);
+    const player = localPlayer();
     if (!player) return;
     btnAbility.textContent = player.ability + (player.cd > 0 ? "\n" + Math.ceil(player.cd) + "s" : "");
     btnAbility.classList.toggle("ready", player.cd <= 0);
@@ -315,12 +371,18 @@
     paintHud();
     if (lives <= 0) {
       phase = "wipe";
+      const wipeGo = (party && party.getRole() === "guest")
+        ? "Waiting for host to retry…"
+        : "Instant retry — no long menus";
       showOverlay(
         "Convoy wipe!",
         "Scrap " + scrap + " · invaders " + invadersCleared + ". Funny crash — tap to retry.",
-        "Instant retry — no long menus",
+        wipeGo,
         false
       );
+      if (party && party.getRole() === "host") {
+        party.sendEnd({ kind: "wipe", scrap: scrap, invadersCleared: invadersCleared });
+      }
       beep(70, 0.4, "sawtooth", 0.09);
     }
   }
@@ -330,12 +392,18 @@
     cheerTimer = 2.5;
     const bonus = frogs.every((f) => f.alive) ? 50 : 0;
     scrap += bonus;
+    const clearGo = (party && party.getRole() === "guest")
+      ? "Waiting for host to run again…"
+      : "Tap to run the strip again";
     showOverlay(
       "Ranch clear! GO!",
       "Scrap " + scrap + " · invaders " + invadersCleared + (bonus ? " · no frog left behind +50" : ""),
-      "Tap to run the strip again",
+      clearGo,
       false
     );
+    if (party && party.getRole() === "host") {
+      party.sendEnd({ kind: "clear", scrap: scrap, invadersCleared: invadersCleared, bonus: bonus });
+    }
     beep(520, 0.1, "triangle", 0.06);
     beep(660, 0.12, "triangle", 0.06);
     beep(880, 0.18, "triangle", 0.07);
@@ -429,7 +497,7 @@
       if (f.invuln > 0) f.invuln = Math.max(0, f.invuln - dt);
       if (f.dashing > 0) f.dashing = Math.max(0, f.dashing - dt);
 
-      if (f.human) {
+      if (f.human && f.local) {
         f.steer = steerHeld;
         // Lane change only when settled on a lane (tap or hold-repeat)
         if (f.lane === f.targetLane && Math.abs((f.y || laneY(f.lane)) - laneY(f.lane)) < 5) {
@@ -440,6 +508,30 @@
             }
           } else {
             steerRepeat = 0;
+          }
+        }
+      } else if (f.human && f.remote) {
+        const ri = remoteInputs[f.id];
+        if (ri) {
+          f.steer = ri.steer || 0;
+          if (typeof ri.targetLane === "number") {
+            f.targetLane = Math.max(0, Math.min(LANE_COUNT - 1, ri.targetLane));
+            ri.targetLane = null; // consume one-shot lane tap
+          } else if (f.lane === f.targetLane && Math.abs((f.y || laneY(f.lane)) - laneY(f.lane)) < 5) {
+            ri._repeat = ri._repeat || 0;
+            if (ri.steer) {
+              if (ri._repeat <= 0) {
+                f.targetLane = Math.max(0, Math.min(LANE_COUNT - 1, f.lane + ri.steer));
+                ri._repeat = 0.28;
+              }
+            } else {
+              ri._repeat = 0;
+            }
+            if (ri._repeat > 0) ri._repeat -= dt;
+          }
+          if (ri.abilityQueued) {
+            ri.abilityQueued = false;
+            requestAbility(f);
           }
         }
       }
@@ -980,27 +1072,236 @@
     last = now;
 
     if (phase === "play") {
-      if (typeof FroggiesAI !== "undefined") {
-        FroggiesAI.tickAI(frogs, getAIState(), dt);
+      if (isHostSim) {
+        if (typeof FroggiesAI !== "undefined") {
+          FroggiesAI.tickAI(frogs, getAIState(), dt);
+        }
+        moveFrogs(dt);
+        collide(dt);
+        // Bob invaders slightly in world
+        for (const inv of invaders) inv.bob += dt;
+
+        if (party && party.getRole() === "host") {
+          stateSendAcc += dt;
+          if (stateSendAcc >= 0.08) {
+            stateSendAcc = 0;
+            party.sendState(packState());
+          }
+          // Also stream local human input isn't needed on host — host reads steerHeld directly
+        }
+
+        if (worldScroll >= STRIP_LEN && phase === "play") {
+          clearStage();
+        }
+      } else {
+        // Guest: display-only; host drives sim. Keep sending held steer.
+        pushGuestInput(null);
       }
-      moveFrogs(dt);
-      collide(dt);
       updateParticles(dt);
       updateAbilityButton();
       paintHud();
-
-      // Bob invaders slightly in world
-      for (const inv of invaders) inv.bob += dt;
-
-      if (worldScroll >= STRIP_LEN && phase === "play") {
-        clearStage();
-      }
     } else {
       updateParticles(dt);
     }
 
     render(now / 1000);
     requestAnimationFrame(tick);
+  }
+
+
+  // ——— Party lobby UI + net sync ———
+
+  function paintLobbySeats() {
+    const seats = lobbySeats || {};
+    const role = partyMeta.role || "solo";
+    document.querySelectorAll(".frog-btn").forEach((btn) => {
+      const id = btn.dataset.id;
+      const seat = seats[id] || { status: "open" };
+      let status = seat.status || "open";
+      // Preview AI on open seats so the fill rule is obvious
+      const showAiPreview = status === "open";
+      btn.classList.remove("seat-open", "seat-you", "seat-human", "seat-ai", "seat-taken", "selected");
+      const stateEl = btn.querySelector(".seat-state");
+      if (status === "you") {
+        btn.classList.add("seat-you", "selected");
+        if (stateEl) stateEl.textContent = "You";
+      } else if (status === "human") {
+        btn.classList.add("seat-human", "seat-taken");
+        if (stateEl) stateEl.textContent = "Joined";
+      } else {
+        btn.classList.add("seat-open");
+        if (showAiPreview) {
+          btn.classList.add("seat-ai");
+          if (stateEl) stateEl.textContent = "Open · AI";
+        } else if (stateEl) {
+          stateEl.textContent = "Open";
+        }
+      }
+    });
+
+    if (partyStatus) {
+      partyStatus.classList.toggle("is-error", !!partyMeta.error);
+      if (partyMeta.error) {
+        partyStatus.textContent = partyMeta.error;
+      } else if (role === "host" && partyMeta.room) {
+        partyStatus.textContent = "Hosting · code " + partyMeta.room + " · friends open the invite link";
+      } else if (role === "guest" && partyMeta.status === "connecting") {
+        partyStatus.textContent = "Joining room " + (partyMeta.room || "") + "…";
+      } else if (role === "guest" && partyMeta.status === "ready") {
+        partyStatus.textContent = "Joined · claim an Open seat · wait for host GO";
+      } else if (role === "solo") {
+        partyStatus.textContent = "Solo · claim a seat or GO (AI fills the rest)";
+      } else {
+        partyStatus.textContent = "";
+      }
+    }
+
+    if (roomCodeEl) {
+      if (role === "host" && partyMeta.room) {
+        roomCodeEl.hidden = false;
+        roomCodeEl.textContent = partyMeta.room;
+      } else if (role === "guest" && partyMeta.room) {
+        roomCodeEl.hidden = false;
+        roomCodeEl.textContent = partyMeta.room;
+      } else {
+        roomCodeEl.hidden = true;
+      }
+    }
+    if (btnCopy) {
+      btnCopy.hidden = !(role === "host" && partyMeta.invite);
+    }
+    if (btnHost) {
+      btnHost.hidden = role === "guest";
+      btnHost.textContent = role === "host" ? "Hosting…" : "Host room";
+      btnHost.disabled = role === "host" && partyMeta.status === "ready";
+    }
+    if (inviteQr) {
+      if (role === "host" && partyMeta.invite) {
+        inviteQr.hidden = false;
+        inviteQr.src =
+          "https://api.qrserver.com/v1/create-qr-code/?size=112x112&margin=8&data=" +
+          encodeURIComponent(partyMeta.invite);
+      } else {
+        inviteQr.hidden = true;
+        inviteQr.removeAttribute("src");
+      }
+    }
+    const canGo = role !== "guest";
+    btnStart.disabled = !canGo;
+    btnStart.classList.toggle("is-disabled", !canGo);
+    btnStart.textContent = role === "guest" ? "Waiting for host…" : "GO · Ranch Run";
+    if (overlayGo && phase === "title") {
+      if (role === "guest") {
+        overlayGo.textContent = "Claim an Open froggy · host starts the run";
+      } else if (role === "host") {
+        overlayGo.textContent = "Friends join via link · claim seats · you press GO";
+      } else {
+        overlayGo.textContent = "Claim a seat · Host to invite · or GO solo (AI fills)";
+      }
+    }
+  }
+
+  function packState() {
+    return {
+      ws: worldScroll,
+      lives: lives,
+      scrap: scrap,
+      invC: invadersCleared,
+      shield: shieldTimer,
+      hit: hitFlash,
+      frogs: frogs.map((f) => ({
+        id: f.id,
+        lane: f.lane,
+        targetLane: f.targetLane,
+        x: f.x,
+        y: f.y,
+        cd: f.cd,
+        invuln: f.invuln,
+        dashing: f.dashing,
+        alive: f.alive,
+        human: f.human,
+        local: false,
+      })),
+      haz: hazards.map((h) => ({ x: h.x, lane: h.lane, kind: h.kind, r: h.r, hit: !!h.hit })),
+      inv: invaders.map((inv) => ({
+        x: inv.x,
+        lane: inv.lane,
+        yOff: inv.yOff,
+        bob: inv.bob,
+        r: inv.r,
+      })),
+      bot: botAssist
+        ? { x: botAssist.x, y: botAssist.y, life: botAssist.life, lane: botAssist.lane }
+        : null,
+      phase: phase,
+    };
+  }
+
+  function applyState(msg) {
+    if (!msg) return;
+    worldScroll = msg.ws || 0;
+    cameraX = worldScroll;
+    lives = msg.lives;
+    scrap = msg.scrap;
+    invadersCleared = msg.invC || 0;
+    shieldTimer = msg.shield || 0;
+    hitFlash = msg.hit || 0;
+    if (Array.isArray(msg.frogs)) {
+      const byId = {};
+      for (const f of frogs) byId[f.id] = f;
+      for (const sf of msg.frogs) {
+        let f = byId[sf.id];
+        if (!f) continue;
+        f.lane = sf.lane;
+        f.targetLane = sf.targetLane;
+        f.x = sf.x;
+        f.y = sf.y;
+        f.cd = sf.cd;
+        f.invuln = sf.invuln;
+        f.dashing = sf.dashing;
+        f.alive = sf.alive;
+      }
+    }
+    if (Array.isArray(msg.haz)) {
+      hazards = msg.haz.map((h) => ({
+        x: h.x,
+        lane: h.lane,
+        kind: h.kind,
+        r: h.r,
+        hit: !!h.hit,
+      }));
+    }
+    if (Array.isArray(msg.inv)) {
+      invaders = msg.inv.map((inv) => ({
+        x: inv.x,
+        lane: inv.lane,
+        yOff: inv.yOff,
+        bob: inv.bob,
+        hp: 1,
+        r: inv.r,
+      }));
+    }
+    botAssist = msg.bot
+      ? { x: msg.bot.x, y: msg.bot.y, life: msg.bot.life, lane: msg.bot.lane }
+      : null;
+    if (msg.phase && msg.phase !== "play" && phase === "play") {
+      // Host will also send end; applyState phase is a safety net
+      phase = msg.phase;
+    }
+    updateAbilityButton();
+    paintHud();
+  }
+
+  function pushGuestInput(extra) {
+    if (!party || party.getRole() !== "guest") return;
+    const me = localPlayer();
+    if (!me) return;
+    const payload = {
+      steer: steerHeld,
+      ability: !!(extra && extra.ability),
+      targetLane: extra && typeof extra.targetLane === "number" ? extra.targetLane : null,
+    };
+    party.sendInput(me.id, payload);
   }
 
   // ——— Input ———
@@ -1027,8 +1328,13 @@
   btnAbility.addEventListener("pointerdown", (e) => {
     e.preventDefault();
     unlockAudio();
-    const player = frogs.find((f) => f.human);
-    if (player) requestAbility(player);
+    const player = localPlayer();
+    if (!player) return;
+    if (party && party.getRole() === "guest") {
+      pushGuestInput({ ability: true });
+      return;
+    }
+    requestAbility(player);
   });
 
   // Swipe on canvas
@@ -1041,72 +1347,232 @@
     const dx = e.clientX - swipeStartX;
     swipeStartX = null;
     if (phase !== "play") return;
-    const player = frogs.find((f) => f.human);
+    const player = localPlayer();
     if (!player) return;
-    if (dx < -40) player.targetLane = Math.max(0, player.lane - 1);
-    if (dx > 40) player.targetLane = Math.min(LANE_COUNT - 1, player.lane + 1);
+    let next = null;
+    if (dx < -40) next = Math.max(0, player.lane - 1);
+    if (dx > 40) next = Math.min(LANE_COUNT - 1, player.lane + 1);
+    if (next == null) return;
+    if (party && party.getRole() === "guest") {
+      pushGuestInput({ targetLane: next });
+      return;
+    }
+    player.targetLane = next;
   });
 
   window.addEventListener("keydown", (e) => {
     if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") {
       steerHeld = -1;
       e.preventDefault();
+      pushGuestInput(null);
     }
     if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") {
       steerHeld = 1;
       e.preventDefault();
+      pushGuestInput(null);
     }
     if (e.key === " " || e.key === "Enter") {
       e.preventDefault();
       if (phase === "play") {
-        const player = frogs.find((f) => f.human);
-        if (player) requestAbility(player);
+        const player = localPlayer();
+        if (!player) return;
+        if (party && party.getRole() === "guest") {
+          pushGuestInput({ ability: true });
+        } else {
+          requestAbility(player);
+        }
       } else if (phase === "wipe" || phase === "clear") {
-        startRun(selectedId);
+        tryStartFromUi();
       } else if (phase === "title") {
-        startRun(selectedId);
+        tryStartFromUi();
       }
     }
   });
   window.addEventListener("keyup", (e) => {
     if (["ArrowLeft", "a", "A", "ArrowRight", "d", "D"].includes(e.key)) {
       steerHeld = 0;
+      pushGuestInput(null);
     }
   });
 
+  function tryStartFromUi() {
+    const role = party ? party.getRole() : "solo";
+    if (role === "guest") return; // host starts
+    if (phase === "wipe" || phase === "clear") {
+      // Retry: rebuild from last seat map (AI fill again for open)
+      if (party && role === "host") {
+        const map = party.startParty();
+        if (map) startRun(map);
+        else startRun(pendingSeatMap || selectedId);
+      } else {
+        startRun(pendingSeatMap || selectedId);
+      }
+      return;
+    }
+    // Title / lobby
+    if (party) {
+      const map = party.startParty();
+      if (map) {
+        startRun(map);
+        return;
+      }
+    }
+    startRun(selectedId);
+  }
+
   document.querySelectorAll(".frog-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
-      selectedId = btn.dataset.id;
-      document.querySelectorAll(".frog-btn").forEach((b) => b.classList.toggle("selected", b.dataset.id === selectedId));
       unlockAudio();
-      startRun(selectedId);
+      const id = btn.dataset.id;
+      const seat = lobbySeats[id];
+      if (seat && seat.status === "human" && seat.peerId && party && seat.peerId !== party.getLocalId()) {
+        if (partyStatus) {
+          partyStatus.textContent = "That seat is taken";
+          partyStatus.classList.add("is-error");
+        }
+        return;
+      }
+      selectedId = id;
+      if (party) {
+        party.claimSeat(id);
+      } else {
+        // Offline claim paint
+        lobbySeats = typeof FroggiesParty !== "undefined" ? FroggiesParty.emptySeats() : lobbySeats;
+        for (const fid of FROG_ORDER) {
+          lobbySeats[fid] = { status: "open", peerId: null, label: null };
+        }
+        lobbySeats[id] = { status: "you", peerId: "local", label: "You" };
+        paintLobbySeats();
+      }
     });
   });
 
   btnStart.addEventListener("click", () => {
     unlockAudio();
     if (phase === "title" || phase === "wipe" || phase === "clear") {
-      startRun(selectedId);
+      tryStartFromUi();
     }
   });
 
+  if (btnHost) {
+    btnHost.addEventListener("click", () => {
+      unlockAudio();
+      if (!party) return;
+      party.hostRoom();
+    });
+  }
+  if (btnCopy) {
+    btnCopy.addEventListener("click", async () => {
+      unlockAudio();
+      const url = party && party.inviteUrl();
+      if (!url) return;
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(url);
+        } else {
+          const ta = document.createElement("textarea");
+          ta.value = url;
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand("copy");
+          ta.remove();
+        }
+        if (partyStatus) {
+          partyStatus.classList.remove("is-error");
+          partyStatus.textContent = "Invite link copied!";
+        }
+      } catch (err) {
+        if (partyStatus) {
+          partyStatus.textContent = url;
+          partyStatus.classList.remove("is-error");
+        }
+      }
+    });
+  }
+
   overlay.addEventListener("pointerdown", (e) => {
-    if (e.target.closest(".frog-btn") || e.target.closest(".start-btn")) return;
+    if (e.target.closest(".frog-btn") || e.target.closest(".start-btn") || e.target.closest(".party-btn")) return;
+    if (e.target.closest("#invite-qr") || e.target.closest("#party-bar")) return;
     if (phase === "wipe" || phase === "clear") {
       unlockAudio();
-      startRun(selectedId);
+      tryStartFromUi();
     }
   });
+
+  function initParty() {
+    if (typeof FroggiesParty === "undefined") {
+      lobbySeats = {};
+      for (const id of FROG_ORDER) lobbySeats[id] = { status: "open", peerId: null, label: null };
+      paintLobbySeats();
+      return;
+    }
+    party = FroggiesParty.createParty({
+      onLobby(seats, meta) {
+        lobbySeats = seats;
+        partyMeta = meta || partyMeta;
+        if (phase === "title") paintLobbySeats();
+      },
+      onStart(seatMap) {
+        startRun(seatMap);
+      },
+      onInput(frogId, payload) {
+        if (!isHostSim) return;
+        const cur = remoteInputs[frogId] || { steer: 0, abilityQueued: false, targetLane: null };
+        cur.steer = payload.steer || 0;
+        if (payload.ability) cur.abilityQueued = true;
+        if (typeof payload.targetLane === "number") cur.targetLane = payload.targetLane;
+        remoteInputs[frogId] = cur;
+      },
+      onState(msg) {
+        if (isHostSim) return;
+        applyState(msg);
+      },
+      onEnd(msg) {
+        if (isHostSim) return;
+        if (msg.kind === "wipe") {
+          phase = "wipe";
+          scrap = msg.scrap || scrap;
+          invadersCleared = msg.invadersCleared || invadersCleared;
+          showOverlay(
+            "Convoy wipe!",
+            "Scrap " + scrap + " · invaders " + invadersCleared + ". Funny crash — host retries.",
+            "Waiting for host to retry…",
+            false
+          );
+        } else if (msg.kind === "clear") {
+          phase = "clear";
+          scrap = msg.scrap || scrap;
+          invadersCleared = msg.invadersCleared || invadersCleared;
+          showOverlay(
+            "Ranch clear! GO!",
+            "Scrap " + scrap + " · invaders " + invadersCleared,
+            "Waiting for host to run again…",
+            false
+          );
+        }
+      },
+      onPeerGone(peerId) {
+        // Seat already cleared in party.js; if in play, that frog becomes AI on next run
+        if (phase === "title") paintLobbySeats();
+      },
+    });
+    party.resetSoloLobby();
+    const room = FroggiesParty.parseRoomFromUrl();
+    if (room) {
+      party.joinRoom(room);
+    } else {
+      paintLobbySeats();
+    }
+  }
 
   window.addEventListener("resize", resize);
   resize();
   loadArt();
-  const selectedBtn = document.querySelector('.frog-btn[data-id="james"]');
-  if (selectedBtn) selectedBtn.classList.add("selected");
+  initParty();
   showOverlay(
-    "Froggies Cybertruck Odyssey",
+    "Four Froggies",
     "Steer left/right · tap ability · keep the convoy alive past the ranch house, track, and pond.",
-    "Tap a froggy to start · or tap GO for James",
+    "Claim a seat · Host to invite · or GO solo (AI fills)",
     true
   );
   requestAnimationFrame(tick);
