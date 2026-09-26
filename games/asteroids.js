@@ -7,6 +7,9 @@
   const overlayText = document.getElementById("overlay-text");
   const phone = window.matchMedia("(pointer: coarse), (max-width: 800px)").matches;
 
+  const JOIN_SECS = 10;
+  const FADE_SECS = 1.2;
+
   const keys = new Set();
   // Touch cluster drives P1 only
   const held = { left: false, right: false, thrust: false, shoot: false };
@@ -22,6 +25,8 @@
   let phase = "title";
   let audio = null;
   let best = Number(localStorage.getItem("asteroids-best") || 0) || 0;
+  let matchTime = 0;
+  let joinClosed = false;
 
   const COLORS = ["#fff", "#60a5fa", "#fbbf24", "#34d399"];
   const ships = [0, 1, 2, 3].map((i) => ({
@@ -36,6 +41,9 @@
     shootCd: 0,
     color: COLORS[i],
     thrusting: false,
+    everMoved: false,
+    active: true,
+    alpha: 1,
   }));
 
   // Bindings: left, right, thrust, fire (codes). P4: numpad preferred; T/G/Y/R if no numpad.
@@ -74,6 +82,16 @@
     };
   }
 
+  function ctrlActive(ctrl) {
+    return !!(ctrl.left || ctrl.right || ctrl.thrust || ctrl.shoot);
+  }
+
+  function activeCount() {
+    let n = 0;
+    for (const s of ships) if (s.active) n++;
+    return n;
+  }
+
   function resize() {
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     w = Math.max(1, window.innerWidth);
@@ -86,6 +104,7 @@
     if (phase === "title") placeShipsTitle();
     else {
       for (const ship of ships) {
+        if (!ship.active && ship.alpha <= 0) continue;
         ship.x = Math.max(ship.r, Math.min(w - ship.r, ship.x));
         ship.y = Math.max(ship.r, Math.min(h - ship.r, ship.y));
       }
@@ -110,6 +129,9 @@
       ship.invuln = 0;
       ship.shootCd = 0;
       ship.thrusting = false;
+      ship.everMoved = false;
+      ship.active = true;
+      ship.alpha = 1;
     });
   }
 
@@ -186,6 +208,7 @@
 
   function farFromShips(x, y, minD) {
     for (const s of ships) {
+      if (!s.active) continue;
       if (Math.hypot(x - s.x, y - s.y) < minD) return false;
     }
     return true;
@@ -212,10 +235,15 @@
     lives = 3;
     shots = [];
     particles = [];
+    matchTime = 0;
+    joinClosed = false;
     placeShipsTitle();
     for (const s of ships) {
       s.invuln = 2;
       s.shootCd = 0;
+      s.everMoved = false;
+      s.active = true;
+      s.alpha = 1;
     }
     phase = "play";
     spawnField();
@@ -232,7 +260,7 @@
   }
 
   function shoot(ship) {
-    if (phase !== "play" || ship.shootCd > 0) return;
+    if (phase !== "play" || !ship.active || ship.shootCd > 0) return;
     ship.shootCd = 0.18;
     shots.push({
       x: ship.x + Math.cos(ship.a) * (ship.r + 4),
@@ -246,7 +274,7 @@
   }
 
   function hitShip(ship) {
-    if (ship.invuln > 0 || phase !== "play") return;
+    if (!ship.active || ship.invuln > 0 || phase !== "play") return;
     lives -= 1;
     burst(ship.x, ship.y, 16, ship.color);
     beep(90, 0.3, "sawtooth", 0.08);
@@ -276,14 +304,35 @@
       rocks.push(makeRock(rock.x, rock.y, rock.tier - 1));
     }
     if (!rocks.length) {
-      for (const s of ships) s.invuln = Math.max(s.invuln, 1.2);
+      for (const s of ships) {
+        if (s.active) s.invuln = Math.max(s.invuln, 1.2);
+      }
       spawnField();
     }
     paintHud();
   }
 
   function paintHud() {
-    hud.textContent = "Score " + score + "    Lives " + lives + "    Best " + best + "    4P";
+    const n = activeCount();
+    const joinHint = phase === "play" && !joinClosed
+      ? "    Join " + Math.max(0, Math.ceil(JOIN_SECS - matchTime)) + "s"
+      : "";
+    hud.textContent = "Score " + score + "    Lives " + lives + "    Best " + best + "    " + n + "P" + joinHint;
+  }
+
+  function closeJoinWindow() {
+    if (joinClosed) return;
+    joinClosed = true;
+    for (const ship of ships) {
+      if (!ship.everMoved) {
+        // Idle: drop from collision/lives immediately; fade visually. Not a death.
+        ship.active = false;
+        ship.thrusting = false;
+        ship.vx = 0;
+        ship.vy = 0;
+      }
+    }
+    paintHud();
   }
 
   function stepShip(ship, ctrl, dt) {
@@ -322,7 +371,21 @@
       particles = particles.filter((p) => p.life > 0);
       return;
     }
-    for (const ship of ships) stepShip(ship, readCtrl(ship.id), dt);
+
+    matchTime += dt;
+    if (!joinClosed && matchTime >= JOIN_SECS) closeJoinWindow();
+
+    for (const ship of ships) {
+      if (!ship.active) {
+        if (ship.alpha > 0) ship.alpha = Math.max(0, ship.alpha - dt / FADE_SECS);
+        continue;
+      }
+      const ctrl = readCtrl(ship.id);
+      if (!joinClosed && ctrlActive(ctrl)) ship.everMoved = true;
+      stepShip(ship, ctrl, dt);
+    }
+
+    if (phase === "play" && !joinClosed) paintHud();
 
     for (const r of rocks) {
       r.x += r.vx * dt;
@@ -330,6 +393,7 @@
       r.rot += r.spin * dt;
       wrap(r);
       for (const ship of ships) {
+        if (!ship.active) continue;
         if (ship.invuln <= 0 && Math.hypot(r.x - ship.x, r.y - ship.y) < r.radius + ship.r * 0.7) {
           hitShip(ship);
           if (phase !== "play") return;
@@ -360,10 +424,11 @@
   }
 
   function drawShip(ship) {
+    if (ship.alpha <= 0) return;
     ctx.save();
+    ctx.globalAlpha = ship.alpha * (ship.invuln > 0 && Math.floor(ship.invuln * 10) % 2 === 0 ? 0.35 : 1);
     ctx.translate(ship.x, ship.y);
     ctx.rotate(ship.a);
-    if (ship.invuln > 0 && Math.floor(ship.invuln * 10) % 2 === 0) ctx.globalAlpha = 0.35;
     ctx.beginPath();
     ctx.moveTo(18, 0);
     ctx.lineTo(-12, 10);
@@ -373,7 +438,7 @@
     ctx.strokeStyle = ship.color;
     ctx.lineWidth = 2;
     ctx.stroke();
-    if (ship.thrusting) {
+    if (ship.thrusting && ship.active) {
       ctx.beginPath();
       ctx.moveTo(-8, 4);
       ctx.lineTo(-18 - Math.random() * 8, 0);
@@ -482,8 +547,9 @@
   resize();
   paintHud();
   overlayTitle.textContent = "Asteroids · 4P local";
-  overlayText.textContent = phone
-    ? "Touch = P1. Pads 0–3 = P1–P4. Idle ships OK."
-    : "P1 arrows+Space · P2 WASD+F · P3 IJKL+H · P4 numpad 8460 (or T/G/Y/R). Pads 0–3 → P1–P4. Shared score/lives; each ship respawns.";
+  overlayText.textContent = (phone
+    ? "Touch = P1. Pads 0–3 = P1–P4. "
+    : "P1 arrows+Space · P2 WASD+F · P3 IJKL+H · P4 numpad 8460 (or T/G/Y/R). Pads 0–3 → P1–P4. Shared score/lives; each ship respawns. ")
+    + "Move in first 10s to join · idle ships fade";
   requestAnimationFrame(frame);
 })();
