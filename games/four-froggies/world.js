@@ -489,19 +489,60 @@
     };
   }
 
-  function nearestHotspot(world, x, y, maxR) {
+  /** True if another frog already occupies this boardable (solo mech / solo truck). Shared truck OK. */
+  function hotspotTakenByOther(world, frogs, hot, me) {
+    if (!hot || !frogs || !me) return false;
+    var C = global.FroggiesCanon;
+    var hid = hot.id ? String(hot.id) : "";
+    var isMech = hot.kind === "mech" || (C && C.isMechHotspot && C.isMechHotspot(hot)) || hid.indexOf("mech") === 0;
+    var isTruck = hot.kind === "truck" || (C && C.isTruckHotspot && C.isTruckHotspot(hot)) || hid.indexOf("truck") === 0;
+    if (!isMech && !isTruck) return false;
+    if (hot.mode === "shared") return false;
+    var sid = C && C.mechSolidId ? C.mechSolidId(hid) : null;
+    for (var i = 0; i < frogs.length; i++) {
+      var f = frogs[i];
+      if (!f || f === me) continue;
+      if (isMech && f.inMech && f.mechId) {
+        var fsid = C && C.mechSolidId ? C.mechSolidId(f.mechId) : String(f.mechId).replace(/^mech-/, "mech");
+        if (f.mechId === hid || f.mechId === hot.solidId || (sid && fsid === sid) || (hot.solidId && fsid === hot.solidId))
+          return true;
+      }
+      if (isTruck && f.inTruck && f.truckMode !== "shared" && f.truckId === hid) return true;
+    }
+    return false;
+  }
+
+  /**
+   * Nearest hotspot. opts.frogs + opts.frog → skip boardables already taken by others
+   * so each local can target a DIFFERENT free mech (boardall1).
+   */
+  function nearestHotspot(world, x, y, maxR, opts) {
+    opts = opts || {};
+    var frogs = opts.frogs || null;
+    var me = opts.frog || null;
+    var preferFree = !!(frogs && me);
     var best = null;
     var bestD = maxR || 80;
+    var bestFree = null;
+    var bestFreeD = maxR || 80;
     for (var i = 0; i < world.hotspots.length; i++) {
       var h = world.hotspots[i];
       var d = Math.hypot(h.x - x, h.y - y);
       var reach = Math.max(bestD, (h.r || 60) + 12);
-      if (d < reach && (!best || d < Math.hypot(best.x - x, best.y - y))) {
+      if (d >= reach) continue;
+      if (!best || d < Math.hypot(best.x - x, best.y - y)) {
         best = h;
         bestD = d;
       }
+      if (preferFree && !hotspotTakenByOther(world, frogs, h, me)) {
+        var freeReach = Math.max(bestFreeD, (h.r || 60) + 12);
+        if (d < freeReach && (!bestFree || d < Math.hypot(bestFree.x - x, bestFree.y - y))) {
+          bestFree = h;
+          bestFreeD = d;
+        }
+      }
     }
-    return best;
+    return preferFree && bestFree ? bestFree : best;
   }
 
   function spawnDust(world, x, y, n) {
@@ -3992,6 +4033,7 @@
     inPond: inPond,
     rampAt: rampAt,
     nearestHotspot: nearestHotspot,
+    hotspotTakenByOther: hotspotTakenByOther,
     updateFish: updateFish,
     updatePushables: updatePushables,
     updateFx: updateFx,

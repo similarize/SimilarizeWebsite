@@ -9,7 +9,8 @@
    polish6: distant invader mech silhouettes when near Mars (visual tease only).
    polish7: Mars cave entrance tease (3-level + back-door labeled hooks); Jimmy jetpack escape visual on ability.
    polish8: clearer Moon / Mars moons / Neptune moons labels; soft destination beacon when heading toward a body.
-   polish9: Germy / Daisy / King Germy presence markers; soft hundreds-of-dogs silhouette flock near Mars cave. */
+   polish9: Germy / Daisy / King Germy presence markers; soft hundreds-of-dogs silhouette flock near Mars cave.
+   earth1: space scenes show procedural Earth (home planet) — ranch grounds stay on Earth, not floating in vacuum. */
 (function (global) {
   "use strict";
 
@@ -344,7 +345,7 @@
     if (s === "starship") {
       list.push({ id: "spotty", label: "Spotty", x: ep.spotty.x, y: ep.spotty.y, r: 55, tip: "Talk to Spotty · launch" });
       list.push({ id: "launch", label: "Launch", x: 450, y: 320, r: 60, tip: "Launch into space" });
-      list.push({ id: "to_ranch", label: "Ranch", x: 80, y: 820, r: 55, tip: "Return to ranch hub" });
+      list.push({ id: "to_ranch", label: "Earth · ranch", x: 80, y: 820, r: 55, tip: "Return home · ranch hub" });
     } else if (s === "space") {
       list.push({ id: "jimmy", label: "Jimmy", x: ep.jimmy.x, y: ep.jimmy.y, r: 48, tip: "Catch Jimmy · jetpack!" });
       list.push({ id: "germy", label: "Germy", x: ep.germy.x, y: ep.germy.y, r: 40, tip: "Germy the doggy" });
@@ -707,6 +708,66 @@
     }
   }
 
+  /** earth1: lightweight procedural Earth (no assets). Ranch lives here — do not draw yard in vacuum. */
+  function drawEarth(ctx, w, h, t, opts) {
+    opts = opts || {};
+    var cx = opts.cx != null ? opts.cx : w * 0.18;
+    var cy = opts.cy != null ? opts.cy : h * 0.72;
+    var R = opts.r != null ? opts.r : Math.min(w, h) * 0.22;
+    /* Atmosphere glow */
+    var glow = ctx.createRadialGradient(cx, cy, R * 0.7, cx, cy, R * 1.35);
+    glow.addColorStop(0, "rgba(56,189,248,0.0)");
+    glow.addColorStop(0.55, "rgba(56,189,248,0.18)");
+    glow.addColorStop(1, "rgba(14,165,233,0)");
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(cx, cy, R * 1.35, 0, Math.PI * 2);
+    ctx.fill();
+    /* Ocean */
+    var ocean = ctx.createRadialGradient(cx - R * 0.25, cy - R * 0.2, R * 0.1, cx, cy, R);
+    ocean.addColorStop(0, "#38bdf8");
+    ocean.addColorStop(0.55, "#0369a1");
+    ocean.addColorStop(1, "#0c4a6e");
+    ctx.fillStyle = ocean;
+    ctx.beginPath();
+    ctx.arc(cx, cy, R, 0, Math.PI * 2);
+    ctx.fill();
+    /* Continents (cheap blobs — not real geography) */
+    ctx.fillStyle = "rgba(74, 222, 128, 0.88)";
+    function land(lx, ly, rx, ry) {
+      ctx.beginPath();
+      ctx.ellipse(cx + lx * R, cy + ly * R, rx * R, ry * R, (lx + ly) * 0.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    land(-0.25, -0.15, 0.28, 0.18);
+    land(0.2, 0.05, 0.22, 0.16);
+    land(-0.05, 0.35, 0.18, 0.1);
+    land(0.35, -0.3, 0.12, 0.08);
+    /* Cloud wisps */
+    ctx.fillStyle = "rgba(255,255,255," + (0.22 + 0.08 * Math.sin(t * 0.4)) + ")";
+    land(-0.1, -0.4, 0.2, 0.05);
+    land(0.15, 0.2, 0.16, 0.04);
+    /* Terminator shade */
+    var shade = ctx.createLinearGradient(cx - R, cy, cx + R, cy);
+    shade.addColorStop(0, "rgba(15,23,42,0.45)");
+    shade.addColorStop(0.45, "rgba(15,23,42,0)");
+    shade.addColorStop(1, "rgba(15,23,42,0.15)");
+    ctx.fillStyle = shade;
+    ctx.beginPath();
+    ctx.arc(cx, cy, R, 0, Math.PI * 2);
+    ctx.fill();
+    /* Label */
+    ctx.font = "bold " + Math.max(11, Math.round(R * 0.14)) + "px system-ui,sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillStyle = "rgba(0,0,0,0.55)";
+    ctx.fillText("Earth · home", cx + 1, cy + R + 16);
+    ctx.fillStyle = "#bbf7d0";
+    ctx.fillText("Earth · home", cx, cy + R + 15);
+    ctx.font = "10px system-ui,sans-serif";
+    ctx.fillStyle = "#86efac";
+    ctx.fillText("ranch is here", cx, cy + R + 28);
+  }
+
   function drawStars(ctx, ep, w, h, t) {
     var g = ctx.createLinearGradient(0, 0, 0, h);
     g.addColorStop(0, "#020617");
@@ -1045,7 +1106,15 @@
       ctx.translate((Math.random() - 0.5) * ep.shake * 14, (Math.random() - 0.5) * ep.shake * 14);
     }
 
-    if (bg === "space") drawStars(ctx, ep, w, h, t);
+    if (bg === "space") {
+      drawStars(ctx, ep, w, h, t);
+      /* earth1: home planet in vacuum — not ranch yard/grounds */
+      drawEarth(ctx, w, h, t, {
+        cx: w * (ep.scene === "starship" ? 0.78 : 0.16),
+        cy: h * (ep.scene === "starship" ? 0.28 : 0.74),
+        r: Math.min(w, h) * (ep.scene === "mech" ? 0.14 : 0.2),
+      });
+    }
     else if (bg === "station") {
       var g = ctx.createLinearGradient(0, 0, 0, h);
       g.addColorStop(0, "#0f172a");
@@ -1169,7 +1238,7 @@
       ctx.arc(moon.x + 18, moon.y + 10, 8 * moon.d, 0, Math.PI * 2);
       ctx.fill();
       /* polish8: clearer destination label + soft beacon when heading toward Moon */
-      drawLabel(ctx, "☾ Moon · Earth", moon.x, moon.y + 70 * moon.d, "#e2e8f0");
+      drawLabel(ctx, "☾ Moon", moon.x, moon.y + 70 * moon.d, "#e2e8f0");
       drawLabel(ctx, "destination", moon.x, moon.y + 86 * moon.d, "#94a3b8");
       var headingMoon = false;
       if (!ep.inOrbit) {

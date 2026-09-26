@@ -237,16 +237,24 @@
     return me;
   }
 
-  /** True if another local already occupies this vehicle (don't steal). Shared truck OK. */
+  /** True if another local already occupies this vehicle (don't steal). Shared truck OK.
+   *  boardall1: compare via mechSolidId so mech-10 / mech10 match; different mechs stay free. */
   function vehicleTakenByOtherLocal(hot, me) {
     if (!hot || !me || !isBoardableHot(hot)) return false;
     if (hot.mode === "shared") return false;
+    if (W && W.hotspotTakenByOther) return W.hotspotTakenByOther(world, frogs, hot, me);
+    const C = globalThis.FroggiesCanon;
     const hid = hot.id ? String(hot.id) : "";
     const isMech = hot.kind === "mech" || hid.indexOf("mech") === 0;
     const isTruck = hot.kind === "truck" || hid.indexOf("truck") === 0;
+    const sid = C && C.mechSolidId ? C.mechSolidId(hid) : null;
     for (const f of frogs) {
       if (!f || f === me || !f.local) continue;
-      if (isMech && f.inMech && f.mechId && (f.mechId === hid || f.mechId === hot.solidId)) return true;
+      if (isMech && f.inMech && f.mechId) {
+        const fsid = C && C.mechSolidId ? C.mechSolidId(f.mechId) : String(f.mechId).replace(/^mech-/, "mech");
+        if (f.mechId === hid || f.mechId === hot.solidId || (sid && fsid === sid) || (hot.solidId && fsid === hot.solidId))
+          return true;
+      }
       if (isTruck && f.inTruck && f.truckMode !== "shared" && f.truckId === hid) return true;
     }
     return false;
@@ -271,7 +279,7 @@
       /* Shared HUD near-check: primary + padless only (not other pads' positions for EXIT/BOARD label) */
       if (f.padIndex != null && f.padIndex !== undefined && f !== me) continue;
       if (f.inTruck || f.inMech) continue;
-      const hot = W.nearestHotspot(world, f.x, f.y, 70);
+      const hot = W.nearestHotspot(world, f.x, f.y, 70, { frogs, frog: f });
       if (!hot) continue;
       const d = Math.hypot(f.x - hot.x, f.y - hot.y);
       const score = d - (isBoardableHot(hot) ? 8 : 0);
@@ -704,12 +712,13 @@
       if (me.padIndex != null && me.padIndex !== undefined && me !== localPlayer()) return;
     }
     let hot = null;
+    const nearOpts = { frogs, frog: me };
     if (optFrog || (opts.source === "pad")) {
-      hot = W && W.nearestHotspot ? W.nearestHotspot(world, me.x, me.y, 70) : null;
+      hot = W && W.nearestHotspot ? W.nearestHotspot(world, me.x, me.y, 70, nearOpts) : null;
     } else {
       hot = nearHot;
       if (!hot && !(me.inTruck || me.inMech) && W && W.nearestHotspot) {
-        hot = W.nearestHotspot(world, me.x, me.y, 70);
+        hot = W.nearestHotspot(world, me.x, me.y, 70, nearOpts);
       }
     }
     /* EXIT only for this frog — caller ownership already enforced */
@@ -814,6 +823,9 @@
         inTruck: f.inTruck,
         truckMode: f.truckMode || null,
         truckId: f.truckId || null,
+        inMech: !!f.inMech,
+        mechId: f.mechId || null,
+        mechStories: f.mechStories || 0,
         waterSub: f.waterSub || 0,
         wakePhase: f.wakePhase || 0,
         z: f.z || 0,
@@ -839,6 +851,9 @@
       f.inTruck = sf.inTruck;
       f.truckMode = sf.truckMode || null;
       f.truckId = sf.truckId || null;
+      f.inMech = !!sf.inMech;
+      f.mechId = sf.mechId || null;
+      f.mechStories = sf.mechStories || 0;
       f.waterSub = sf.waterSub || 0;
       f.wakePhase = sf.wakePhase || 0;
       f.z = sf.z || 0;

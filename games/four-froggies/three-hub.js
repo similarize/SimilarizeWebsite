@@ -25,7 +25,9 @@
    hop4: snappier always-hop; humanoid frogs (torso+head, spring legs).
    joy2: shared virtual joystick via engine-boot setSteer; touch playfield aim disabled.
    WASD camera-relative — do not invert.
-   mechwalk1: boarded mech lumber walk (steer+solid ignore+mesh sync); pad pilot drives. */
+   mechwalk1: boarded mech lumber walk (steer+solid ignore+mesh sync); pad pilot drives.
+   boardall1: each couch pad/companion can board a DIFFERENT free mech at once.
+   earth1: space shows procedural Earth (home) — not ranch grounds in vacuum. */
 (function (global) {
   "use strict";
 
@@ -45,7 +47,13 @@
 
   function refreshNearFromLocals() {
     if (!state || !C || state.mode !== "ranch") return;
-    if (state.inTruck || state.inMech) {
+    var companion = (interactPadIndex != null) ? companionForPad(interactPadIndex) : null;
+    /* boardall1: only clear near when THIS input is already boarded (EXIT mode) */
+    if (companion && companion.userData.inMech) {
+      state.near = null;
+      return;
+    }
+    if (!companion && (state.inTruck || state.inMech) && inputOwnsBoarded()) {
       state.near = null;
       return;
     }
@@ -54,6 +62,21 @@
     function consider(wx, wy) {
       var h = C.nearestHotspot(wx, wy, 70);
       if (!h) return;
+      /* Prefer free mechs when occupied */
+      if (C.isMechHotspot && C.isMechHotspot(h) && whoPilotsMechId(h.id)) {
+        /* try nearby free mechs from HOTSPOTS */
+        var alts = C.HOTSPOTS || [];
+        var freeBest = null; var freeD = 1e9;
+        for (var ai = 0; ai < alts.length; ai++) {
+          var ah = alts[ai];
+          if (!(C.isMechHotspot && C.isMechHotspot(ah))) continue;
+          if (whoPilotsMechId(ah.id)) continue;
+          var ad = Math.hypot(wx - ah.x, wy - ah.y);
+          if (ad < (ah.r || 70) + 12 && ad < freeD) { freeD = ad; freeBest = ah; }
+        }
+        if (freeBest) h = freeBest;
+        else return; /* only occupied nearby */
+      }
       var d = Math.hypot(wx - h.x, wy - h.y);
       var board = (C.isTruckHotspot && C.isTruckHotspot(h)) || (C.isMechHotspot && C.isMechHotspot(h));
       var score = d - (board ? 8 : 0);
@@ -97,6 +120,64 @@
           (c.userData.padIndex | 0) === (padIndex | 0)) return c;
     }
     return null;
+  }
+
+  /** boardall1: solidId for a mech hotspot id */
+  function mechSidOf(id) {
+    if (!id) return null;
+    if (C && C.mechSolidId) return C.mechSolidId(id);
+    return String(id).replace(/^mech-/, "mech");
+  }
+
+  /** Who already pilots this mech? Returns "primary" | companion mesh | null */
+  function whoPilotsMechId(hotId) {
+    if (!state || !hotId) return null;
+    var sid = mechSidOf(hotId);
+    if (state.inMech && mechSidOf(state.mechId) === sid) return "primary";
+    if (state.companions) {
+      for (var i = 0; i < state.companions.length; i++) {
+        var c = state.companions[i];
+        if (c.userData.inMech && mechSidOf(c.userData.mechId) === sid) return c;
+      }
+    }
+    return null;
+  }
+
+  function exitCompanionMech(c) {
+    if (!c || !c.userData.inMech) return;
+    var parkW = threeToWorld(c.position.x, c.position.z);
+    var parkMid = c.userData.mechId || "mech";
+    if (C.setVehiclePark) C.setVehiclePark(parkMid, parkW.x, parkW.y);
+    c.userData.inMech = false;
+    c.userData.mechId = null;
+    c.userData.mechStories = 0;
+    c.visible = true;
+    state.toast = "Mech parked · walking"; state.toastT = 1.8; state.exitTipT = 0;
+    if (hooks.onToast) hooks.onToast(state.toast);
+  }
+
+  function boardCompanionMech(c, hot) {
+    if (!c || !hot) return false;
+    var id = hot.id;
+    if (whoPilotsMechId(id)) {
+      state.toast = "Already boarded · pick another"; state.toastT = 1.6;
+      if (hooks.onToast) hooks.onToast(state.toast);
+      return false;
+    }
+    var mp = worldToThree(hot.x, hot.y);
+    c.position.x = mp.x; c.position.z = mp.z;
+    c.userData.inMech = true;
+    c.userData.mechId = id;
+    c.userData.mechStories = hot.stories || 10;
+    c.userData.vx = 0; c.userData.vz = 0;
+    c.userData.zLift = 0; c.userData.zVel = 0;
+    c.userData.walkPhase = 0;
+    c.visible = false;
+    state.scrap += 1;
+    state.toast = "Boarding " + (C.mechStoriesLabel ? C.mechStoriesLabel(c.userData.mechStories) : (c.userData.mechStories + "-story mech")) + " · lumber walk!";
+    state.exitTipT = 2.4; state.toastT = 2.5;
+    if (hooks.onToast) hooks.onToast(state.toast);
+    return true;
   }
 
   function setInteractFromPad(padIndex, wx, wy) {
@@ -1341,6 +1422,9 @@
           cm.userData.vx = 0;
           cm.userData.vz = 0;
           cm.userData.ai = false;
+          cm.userData.inMech = false;
+          cm.userData.mechId = null;
+          cm.userData.mechStories = 0;
           if (cm.userData.ring) cm.userData.ring.material.opacity = 0.75;
         }
       }
@@ -1458,7 +1542,38 @@
     starGeo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
     scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.12 })));
 
-    // Moon platform
+    /* earth1: distant Earth (home) — ranch is ON Earth, not a floating yard here */
+    var earthGeo = new THREE.SphereGeometry(3.2, 32, 24);
+    var earthMat = new THREE.MeshStandardMaterial({
+      color: 0x0369a1, emissive: 0x0ea5e9, emissiveIntensity: 0.12, roughness: 0.55, metalness: 0.1
+    });
+    var earth = new THREE.Mesh(earthGeo, earthMat);
+    earth.position.set(-14, 4.5, -18);
+    scene.add(earth);
+    /* green land blobs as child meshes */
+    function earthLand(ox, oy, oz, sx, sy, col) {
+      var lm = new THREE.Mesh(
+        new THREE.SphereGeometry(1, 12, 10),
+        new THREE.MeshStandardMaterial({ color: col || 0x4ade80, roughness: 0.85 })
+      );
+      lm.scale.set(sx, sy, sx * 0.7);
+      lm.position.set(ox, oy, oz);
+      earth.add(lm);
+    }
+    earthLand(-0.6, 0.4, 2.6, 1.1, 0.7, 0x4ade80);
+    earthLand(0.8, -0.3, 2.5, 0.9, 0.55, 0x22c55e);
+    earthLand(-0.2, -0.9, 2.4, 0.7, 0.4, 0x86efac);
+    /* atmosphere shell */
+    var atmo = new THREE.Mesh(
+      new THREE.SphereGeometry(3.45, 28, 20),
+      new THREE.MeshBasicMaterial({ color: 0x7dd3fc, transparent: true, opacity: 0.18, side: THREE.BackSide })
+    );
+    earth.add(atmo);
+    state.earth = earth;
+    addLabel("Earth · home", "#bbf7d0", -14, 8.2, -18);
+    addLabel("ranch is here", "#86efac", -14, 7.4, -18);
+
+    // Moon platform (walkable) — lunar grey, not ranch grass
     var moon = new THREE.Mesh(
       new THREE.CircleGeometry(10, 48),
       new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 1 })
@@ -1528,7 +1643,7 @@
     state.jimmyVx = 2.2;
     state.jimmyVz = -1.4;
     state.planet = { id: "moon", name: "Moon", x: 5, z: -5, r: 1.2 };
-    addLabel("☾ Moon · Earth", "#e2e8f0", 5, 1.6, -5);
+    addLabel("☾ Moon", "#e2e8f0", 5, 1.6, -5);
     /* polish8: soft destination beacon */
     state.destBeacon = new THREE.Mesh(
       new THREE.RingGeometry(2.6, 2.85, 48),
@@ -1606,14 +1721,16 @@
     fred.position.set(-1, 0.35, 3.6); scene.add(fred);
     addLabel("Fred", "#e2e8f0", -1, 1.3, 3.6);
 
+    /* earth1: return pad → ranch hub, but labeled as Earth home (no yard mesh in vacuum) */
     var pad = new THREE.Mesh(
       new THREE.CircleGeometry(1.2, 24),
-      new THREE.MeshStandardMaterial({ color: 0x22c55e, emissive: 0x14532d, emissiveIntensity: 0.4 })
+      new THREE.MeshStandardMaterial({ color: 0x0284c7, emissive: 0x0c4a6e, emissiveIntensity: 0.45 })
     );
     pad.rotation.x = -Math.PI / 2;
     pad.position.set(-7, 0.05, 5);
     scene.add(pad);
-    addLabel("Ranch", "#bbf7d0", -7, 1.2, 5);
+    addLabel("Earth · home", "#bbf7d0", -7, 1.2, 5);
+    addLabel("→ ranch hub", "#86efac", -7, 0.85, 5);
     state.returnPad = { x: -7, z: 5 };
 
     state.vx = 0;
@@ -1666,10 +1783,16 @@
     interactConsumed = true;
     /* Prefer hotspot at the pad/frog that pressed A; else primary near */
     refreshNearFromLocals();
-    /* interact2: EXIT only if this input owns the boarded vehicle */
-    if (state.mode === "ranch" && (state.inMech || state.inTruck)) {
+    var companion = (interactPadIndex != null) ? companionForPad(interactPadIndex) : null;
+    /* boardall1: companion EXIT their own mech (never eject primary) */
+    if (state.mode === "ranch" && companion && companion.userData.inMech) {
+      exitCompanionMech(companion);
+      interactOrigin = null; interactPadIndex = null;
+      return;
+    }
+    /* interact2: primary EXIT only if this input owns the boarded vehicle */
+    if (state.mode === "ranch" && (state.inMech || state.inTruck) && !companion) {
       if (!inputOwnsBoarded()) {
-        /* Other pad/HUD tried to eject someone else's ride — ignore exit */
         interactOrigin = null; interactPadIndex = null;
         return;
       }
@@ -1696,11 +1819,15 @@
       if (hooks.onToast) hooks.onToast(state.toast);
       return;
     }
+    /* Companion pad while primary is boarded: fall through to board a free mech */
     if (!state.near) { interactOrigin = null; interactPadIndex = null; return; }
     var id = state.near.id;
     if (state.mode === "ranch") {
       if (C.isTruckHotspot && C.isTruckHotspot(state.near)) {
-        /* Don't steal if somehow already boarded (owned path already exited above) */
+        if (companion) {
+          /* Companions use mechs for multi-board; trucks stay primary for now */
+          interactOrigin = null; interactPadIndex = null; return;
+        }
         if (state.inMech || state.inTruck) {
           interactOrigin = null; interactPadIndex = null; return;
         }
@@ -1715,15 +1842,26 @@
           : "Driving Cybertruck · hit the jumps!";
         state.exitTipT = 2.4;
       } else if (C.isMechHotspot && C.isMechHotspot(state.near)) {
+        /* boardall1: companion boards their own mech; primary uses state.inMech */
+        if (companion) {
+          boardCompanionMech(companion, state.near);
+          interactOrigin = null; interactPadIndex = null;
+          return;
+        }
         if (state.inMech || state.inTruck) {
           interactOrigin = null; interactPadIndex = null; return;
+        }
+        if (whoPilotsMechId(id)) {
+          state.toast = "Already boarded · pick another"; state.toastT = 1.6;
+          interactOrigin = null; interactPadIndex = null;
+          if (hooks.onToast) hooks.onToast(state.toast);
+          return;
         }
         var mp = worldToThree(state.near.x, state.near.y);
         state.player.position.x = mp.x; state.player.position.z = mp.z;
         state.inMech = true;
         state.mechId = id;
         state.mechStories = state.near.stories || 10;
-        /* Pad that pressed A pilots; else primary pad / keyboard */
         state.mechPilotPadIndex = (interactPadIndex != null) ? interactPadIndex
           : (state.primaryPadIndex != null ? state.primaryPadIndex : null);
         state.zLift = 0; state.zVel = 0; state.groundLift = 0;
@@ -1908,6 +2046,9 @@
     state.exitTipT = Math.max(0, (state.exitTipT || 0) - dt);
     state.bob += dt * 10;
 
+    if (state.earth && state.mode === "space") {
+      state.earth.rotation.y += dt * 0.08;
+    }
     if (state.mode === "space" && state.planet) {
       var cfg = state.orbitCfg || {};
       var capR = (cfg.captureRadius || 120) * 0.03;
@@ -2327,23 +2468,36 @@
       }
       /* mechwalk1: sync story-height mech mesh to pilot; bob/stride while lumbering */
       if (state.mechs && state.mechs.length) {
-        var pilotSid = null;
-        if (state.inMech && C.mechSolidId) pilotSid = C.mechSolidId(state.mechId);
-        else if (state.inMech && state.mechId) pilotSid = String(state.mechId).replace(/^mech-/, "mech");
-        var wpM = (state.walkPhase || 0);
-        var lumber = state.inMech && Math.hypot(state.vx || 0, state.vz || 0) > 0.6;
         for (var mi = 0; mi < state.mechs.length; mi++) {
           var ment = state.mechs[mi];
-          var piloting = !!(pilotSid && ment.solidId === pilotSid);
+          var pilotPos = null; var wpM = 0; var faceY = 0; var lumber = false;
+          if (state.inMech && mechSidOf(state.mechId) === ment.solidId) {
+            pilotPos = state.player.position;
+            wpM = state.walkPhase || 0;
+            faceY = state.faceYaw != null ? state.faceYaw : 0;
+            lumber = Math.hypot(state.vx || 0, state.vz || 0) > 0.6;
+          } else if (state.companions) {
+            for (var pci = 0; pci < state.companions.length; pci++) {
+              var pc = state.companions[pci];
+              if (pc.userData.inMech && mechSidOf(pc.userData.mechId) === ment.solidId) {
+                pilotPos = pc.position;
+                wpM = pc.userData.walkPhase || 0;
+                faceY = pc.userData.faceYaw != null ? pc.userData.faceYaw : 0;
+                lumber = Math.hypot(pc.userData.vx || 0, pc.userData.vz || 0) > 0.6;
+                break;
+              }
+            }
+          }
+          var piloting = !!pilotPos;
           ment.group.visible = true;
           if (ment.label) ment.label.visible = !piloting;
           if (piloting) {
             var bobAmp = (C.mechBand && C.mechBand(ment.stories) === "trillion") ? 0.32 : ment.stories >= 1000 ? 0.22 : ment.stories >= 100 ? 0.12 : 0.07;
             var bobY = lumber ? Math.abs(Math.sin(wpM)) * bobAmp : 0;
-            ment.group.position.x = state.player.position.x;
-            ment.group.position.z = state.player.position.z;
+            ment.group.position.x = pilotPos.x;
+            ment.group.position.z = pilotPos.z;
             ment.group.position.y = bobY;
-            ment.group.rotation.y = (state.faceYaw != null) ? state.faceYaw : 0;
+            ment.group.rotation.y = faceY;
             ment.group.rotation.z = lumber ? Math.sin(wpM) * 0.04 : 0;
             var stride = lumber ? Math.sin(wpM) * (ment.h * 0.04) : 0;
             function offsetLimbs(arr, zOff, yOff) {
@@ -2675,8 +2829,6 @@
           /* Couch local: steer this froggy from its claimed pad */
           var lgp = global.SimilarizeGamepad.pollPad(c.userData.padIndex);
           var lsx = 0, lsy = 0;
-          var padPilotsMech = !!(state.inMech && state.mechPilotPadIndex != null &&
-            c.userData.padIndex === state.mechPilotPadIndex);
           if (lgp && lgp.connected) {
             lsx = lgp.lx || 0; lsy = lgp.ly || 0;
             if (lgp.dpad) {
@@ -2695,15 +2847,10 @@
               abilityPadIndex = c.userData.padIndex;
             }
           }
-          if (padPilotsMech) {
-            /* Pad drives the mech via mergedSteer — park companion on mech */
-            c.visible = false;
-            c.position.x = state.player.position.x;
-            c.position.z = state.player.position.z;
-            c.userData.vx = 0; c.userData.vz = 0;
-            continue;
-          }
-          var lmax = 11.5, lacc = 28, lfric = 7.5;
+          /* boardall1: companion lumber-walks their own boarded mech */
+          var lmax = c.userData.inMech ? 6.8 : 11.5;
+          var lacc = c.userData.inMech ? 16 : 28;
+          var lfric = c.userData.inMech ? 5.2 : 7.5;
           if (lsx || lsy) {
             var llen = Math.hypot(lsx, lsy) || 1;
             var lix = lsx / llen, liy = lsy / llen;
@@ -2734,8 +2881,14 @@
             c.userData.zVel = czv;
             c.userData.zLift = czl;
           }
-          c.visible = true;
-          c.position.y = (c.userData.zLift || 0) + Math.abs(Math.sin(c.userData.idleBounce)) * (lsp > 0.8 ? 0.12 : 0.05);
+          if (c.userData.inMech) {
+            c.visible = false;
+            c.userData.walkPhase = (c.userData.walkPhase || 0) + dt * (5.5 + lsp * 0.04);
+            c.position.y = 0;
+          } else {
+            c.visible = true;
+            c.position.y = (c.userData.zLift || 0) + Math.abs(Math.sin(c.userData.idleBounce)) * (lsp > 0.8 ? 0.12 : 0.05);
+          }
         } else if (state.inTruck && state.truckMode === "shared") {
           var ox = (ci - 1) * 0.45, oz = -0.35 - (ci % 2) * 0.25;
           c.position.x += (state.player.position.x + ox - c.position.x) * Math.min(1, 8 * dt);
