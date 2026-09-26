@@ -9,7 +9,8 @@
    polish8: truck silhouette + house porch + whale breach + destination beacon (cheap Canvas ports).
    polish9: color nameplates; aboard icons; track start/finish gate; Optimus visual punch lite.
    polish10: quieter UI; exit truck anytime; friction/cam tighten; particle caps; dusk sky shift.
-   tapsteer1: faster walk/drive; hold-to-aim tap/click steer + marker. */
+   tapsteer1: faster walk/drive; hold-to-aim tap/click steer + marker.
+   eyes1: rotate frog sprite toward walk dir; idle keeps last; AI companions too. */
 (function (global) {
   "use strict";
   var C = global.FroggiesCanon;
@@ -165,6 +166,7 @@
           companion.frogId = cid;
           companion.followLag = 0.35 + ci * 0.12;
           companion.idleBounce = Math.random() * 6;
+          companion.faceAngle = 0;
           companion.chatT = 0;
           companion.nameTag = this.add.text(companion.x, companion.y - 26, cdef.name, {
             fontFamily: "Segoe UI, system-ui, sans-serif", fontSize: "11px", fontStyle: "bold",
@@ -275,7 +277,7 @@
           amb.vx = (Math.random() - 0.5) * 18; amb.vy = (Math.random() - 0.5) * 12;
           this.ambient.push(amb);
         }
-        this.facing = 1; this.bob = 0; this.zLift = 0; this.zVel = 0;
+        this.facing = 1; this.faceAngle = 0; /* eyes1: texture faces up */ this.bob = 0; this.zLift = 0; this.zVel = 0;
         this.toast = "Phaser ranch · compound · squiggle track · pond whales · Cybertrucks · Starship";
         if (hooks.onReady) hooks.onReady({ engine: "phaser", frogId: frogId });
         if (hooks.onToast) hooks.onToast(this.toast);
@@ -587,6 +589,8 @@
           var len = Math.hypot(steer.x, steer.y) || 1;
           body.velocity.x += (steer.x / len) * accel * dt;
           body.velocity.y += (steer.y / len) * accel * dt;
+          /* eyes1: face walk direction; idle keeps last faceAngle */
+          this.faceAngle = Math.atan2(steer.y / len, steer.x / len) + Math.PI / 2;
           if (steer.x) this.facing = steer.x > 0 ? 1 : -1;
         }
         tickTapMarker(dt);
@@ -642,7 +646,7 @@
           this.waterSub = Math.min(1.15, 0.45 + plunge / 400);
           body.velocity.x *= Math.max(0, 1 - 1.8 * dt); body.velocity.y *= Math.max(0, 1 - 1.8 * dt);
         } else this.waterSub = Math.max(0, this.waterSub - dt * 1.6);
-        this.player.setFlipX(this.facing < 0).setVisible(!this.inTruck);
+        this.player.setFlipX(false).setRotation(this.faceAngle || 0).setVisible(!this.inTruck);
         this.nameTag.setPosition(this.player.x, this.player.y - 28 - this.zLift * 0.08);
         this.nameTag.setVisible(true);
         /* polish9: aboard frog icons when shared truck */
@@ -871,6 +875,7 @@
             c.x += (this.player.x + ox - c.x) * Math.min(1, 8 * dt);
             c.y += (this.player.y + oy - this.zLift * 0.06 - c.y) * Math.min(1, 8 * dt);
             c.idleBounce = (c.idleBounce || 0) + dt * 5;
+            c.faceAngle = this.faceAngle || 0;
           } else {
             c.timer -= dt;
             if (c.timer <= 0) {
@@ -880,11 +885,15 @@
               c.timer = 0.9 + lag + Math.random() * (1.3 + lag);
             }
             var followK = Math.min(1, (1.05 / (0.7 + lag)) * dt);
-            c.x += (c.tx - c.x) * followK; c.y += (c.ty - c.y) * followK;
+            var cdx = c.tx - c.x, cdy = c.ty - c.y;
+            c.x += cdx * followK; c.y += cdy * followK;
+            /* eyes1: companions face where they're moving */
+            if (Math.hypot(cdx, cdy) > 4) c.faceAngle = Math.atan2(cdy, cdx) + Math.PI / 2;
             c.idleBounce = (c.idleBounce || 0) + dt * 4.2;
           }
           var bobY = Math.abs(Math.sin(c.idleBounce)) * 3.2;
           c.setY(c.y); /* position already includes follow; visual bob via nameTag offset */
+          c.setFlipX(false).setRotation(c.faceAngle || 0);
           if (c.nameTag) c.nameTag.setPosition(c.x, c.y - 28 - bobY).setVisible(true);
           if (c.chatT > 0) c.chatT -= dt;
           else if (Math.random() < dt * 0.08) {

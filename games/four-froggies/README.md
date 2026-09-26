@@ -1,7 +1,12 @@
+## What's new (eyes1) — frog eyes face walk direction + hide D-pad
+- **Eyes / face:** Canvas, Three, Phaser — frog (or face) rotates toward walk direction; idle keeps last facing. Includes AI companions.
+- **D-pad:** bottom-left btn-up/down/left/right hidden via CSS (`display:none`) on phone and desktop. Tap/finger steer primary; INTERACT + ability stay on the right; WASD remains for desktop. No empty gaps (absolute controls).
+- Cache-bust: `?v=20260926-eyes1`. Cast unchanged. No SPS arcade republish.
+
 ## What's new (tapsteer1) — floor pad stable + faster + tap-to-steer
 - **Floor flicker:** 1000-story mech pad was a thick cylinder coplanar with backyard box → z-fight while walking past. Now flat raised CircleGeometry pad + ring (`depthWrite: false`, polygonOffset); backyard is a PlaneGeometry.
 - **Speed:** walk + drive raised noticeably (Canvas world.js, three-hub, phaser-hub).
-- **Tap / click steer:** hold on playfield aims **direction** from player toward pointer (not go-to destination). D-pad/WASD still win when held. Gold ring+arrow marker at tap. Release stops (brief coast). Wired Canvas + Three + Phaser.
+- **Tap / click steer:** hold on playfield aims **direction** from player toward pointer (not go-to destination). WASD still wins when held (D-pad hidden as of eyes1). Gold ring+arrow marker at tap. Release stops (brief coast). Wired Canvas + Three + Phaser.
 - Cache-bust: `?v=20260926-tapsteer1`. Cast unchanged. No SPS arcade republish.
 
 ## What's new (solid1) — Three floor stable + cast-only names + solid walls
@@ -56,7 +61,7 @@ Phaser and three.js load their CDNs on first GO (no paid APIs). Party sync is in
 
 1. Claim a froggy (or GO defaults to **James**).
 2. **GO · Ranch Hub** → you + **3 AI** companions.
-3. **WASD / arrows** or on-screen D-pad to walk. Near the Cybertruck → **INTERACT** to drive.
+3. **WASD / arrows** or tap/hold on playfield to walk (D-pad hidden). Near the Cybertruck → **INTERACT** to drive.
 4. On the **monster truck track**, hit the **jumps** for scrap / stunt combo.
 5. Near **Pond / Fishies** → INTERACT for splash.
 6. Near **Phone** (ranch house) → INTERACT → dial **Purple Bear** → **Open SPS**.

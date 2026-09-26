@@ -14,6 +14,7 @@
    polish10: UI declutter (mini-map / zone signs / quieter nameplates); tighter friction; truck EXIT anytime;
    solid1: shared solid walls/mechs/trucks via FroggiesCanon.resolveSolid;
    tapsteer1: faster walk/drive;
+   eyes1: faceAngle — rotate frog face toward walk dir (idle keeps last); AI too;
    particle caps; sunset sky shift over play time.
    mobile1: phone+desktop shared UI — smaller/toggle-friendly mini-map + harder particle caps on narrow.
    ~10× map: real roam between ranch house / track / pond / Starship.
@@ -404,6 +405,7 @@
       vx: 0,
       vy: 0,
       facing: 1,
+      faceAngle: -Math.PI / 2, /* eyes1: screen-up default; updated while moving */
       inTruck: false,
       truckMode: null,
       truckId: null,
@@ -917,6 +919,8 @@
     if (mag > 0.05) {
       ent.vx += (tvx - ent.vx) * Math.min(1, accel * dt / Math.max(60, maxSp));
       ent.vy += (tvy - ent.vy) * Math.min(1, accel * dt / Math.max(60, maxSp));
+      /* eyes1: face walk direction; idle keeps last faceAngle */
+      ent.faceAngle = Math.atan2(my, mx);
       if (Math.abs(mx) > 0.08) ent.facing = mx >= 0 ? 1 : -1;
     } else {
       var damp = Math.exp(-friction * dt);
@@ -1025,6 +1029,7 @@
         f.vx = localFrog.vx;
         f.vy = localFrog.vy;
         f.facing = localFrog.facing;
+        f.faceAngle = localFrog.faceAngle;
         f.z = localFrog.z;
         f.waterSub = localFrog.waterSub || 0;
         f.wakePhase = localFrog.wakePhase || 0;
@@ -2503,53 +2508,59 @@
 
     /* polish3: charming readable frog — blush, smile, thick rim, big eyes */
     /* polish6: softer drop shadow under character */
+    /* eyes1: rotate body/face toward faceAngle (walk dir); idle keeps last */
     var shA = 0.4 - Math.min(0.24, (frog.z || 0) * 0.005);
     var shW = s * (1.18 - Math.min(0.4, (frog.z || 0) * 0.009));
     drawSoftShadow(ctx, p.x, p.y + 5, shW, s * 0.36, shA);
     var by = p.y - s * 0.42 - lift;
     var legKick = (!frog.inTruck && (frog.walkPhase || 0) > 0.05)
       ? Math.sin(frog.walkPhase * 2) * 3.2 * p.depth : 0;
+    var faceA = (frog.faceAngle != null && isFinite(frog.faceAngle)) ? frog.faceAngle : -Math.PI / 2;
+    var groundY = (p.y - by) + 2 - lift * 0.2; /* legs toward feet in local space */
+    ctx.save();
+    ctx.translate(p.x, by);
+    ctx.rotate(faceA + Math.PI / 2); /* canonical face points screen-up */
     ctx.strokeStyle = frog.accent;
     ctx.lineWidth = 3.2 * p.depth;
     ctx.lineCap = "round";
     ctx.beginPath();
-    ctx.moveTo(p.x - 6 * p.depth, by + s * 0.5);
-    ctx.lineTo(p.x - 12 * p.depth, p.y + 2 - lift * 0.2 + legKick);
-    ctx.moveTo(p.x + 6 * p.depth, by + s * 0.5);
-    ctx.lineTo(p.x + 12 * p.depth, p.y + 2 - lift * 0.2 - legKick);
+    ctx.moveTo(-6 * p.depth, s * 0.5);
+    ctx.lineTo(-12 * p.depth, groundY + legKick);
+    ctx.moveTo(6 * p.depth, s * 0.5);
+    ctx.lineTo(12 * p.depth, groundY - legKick);
     ctx.stroke();
-    var bg = ctx.createRadialGradient(p.x - 4, by - 5, 2, p.x, by, s * 1.05);
+    var bg = ctx.createRadialGradient(-4, -5, 2, 0, 0, s * 1.05);
     bg.addColorStop(0, frog.color);
     bg.addColorStop(0.7, frog.color);
     bg.addColorStop(1, frog.accent);
     ctx.fillStyle = bg;
-    ctx.beginPath(); ctx.arc(p.x, by, s, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(0, 0, s, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = "#0b1220"; ctx.lineWidth = 2.6; ctx.stroke();
     ctx.strokeStyle = frog.accent; ctx.lineWidth = 1.6; ctx.stroke();
     /* Belly */
     ctx.fillStyle = "rgba(254, 243, 199, 0.85)";
     ctx.beginPath();
-    ctx.ellipse(p.x, by + s * 0.18, s * 0.42, s * 0.32, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, s * 0.18, s * 0.42, s * 0.32, 0, 0, Math.PI * 2);
     ctx.fill();
-    /* Blush */
+    /* Blush — canonical (no facing flip; rotation handles look dir) */
     ctx.fillStyle = "rgba(251, 113, 133, 0.45)";
     ctx.beginPath();
-    ctx.ellipse(p.x - 7 * p.depth * frog.facing, by + s * 0.12, 3.2 * p.depth, 2.2 * p.depth, 0, 0, Math.PI * 2);
-    ctx.ellipse(p.x + 8 * p.depth * frog.facing, by + s * 0.12, 3.2 * p.depth, 2.2 * p.depth, 0, 0, Math.PI * 2);
+    ctx.ellipse(-7 * p.depth, s * 0.12, 3.2 * p.depth, 2.2 * p.depth, 0, 0, Math.PI * 2);
+    ctx.ellipse(8 * p.depth, s * 0.12, 3.2 * p.depth, 2.2 * p.depth, 0, 0, Math.PI * 2);
     ctx.fill();
     /* Hat */
     ctx.fillStyle = frog.hat || "#facc15";
     ctx.beginPath();
-    ctx.ellipse(p.x, by - s * 0.85, s * 0.82, s * 0.3, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, -s * 0.85, s * 0.82, s * 0.3, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillRect(p.x - s * 0.38, by - s * 1.4, s * 0.76, s * 0.55);
+    ctx.fillRect(-s * 0.38, -s * 1.4, s * 0.76, s * 0.55);
     ctx.strokeStyle = "#0b1220";
     ctx.lineWidth = 1.4;
-    ctx.strokeRect(p.x - s * 0.38, by - s * 1.4, s * 0.76, s * 0.55);
-    /* Eyes */
-    var eL = p.x - 5 * p.depth * frog.facing;
-    var eR = p.x + 6.2 * p.depth * frog.facing;
-    var eY = by - s * 0.28;
+    ctx.strokeRect(-s * 0.38, -s * 1.4, s * 0.76, s * 0.55);
+    /* Eyes — pupils bias "forward" (local -Y = walk dir after rotate) */
+    var eL = -5 * p.depth;
+    var eR = 6.2 * p.depth;
+    var eY = -s * 0.28;
     ctx.fillStyle = "#fff";
     ctx.beginPath();
     ctx.arc(eL, eY, 4.2 * p.depth, 0, Math.PI * 2);
@@ -2563,20 +2574,21 @@
     ctx.stroke();
     ctx.fillStyle = "#111";
     ctx.beginPath();
-    ctx.arc(eL + 0.8 * p.depth * frog.facing, eY, 1.9 * p.depth, 0, Math.PI * 2);
-    ctx.arc(eR + 0.8 * p.depth * frog.facing, eY, 1.9 * p.depth, 0, Math.PI * 2);
+    ctx.arc(eL, eY - 0.9 * p.depth, 1.9 * p.depth, 0, Math.PI * 2);
+    ctx.arc(eR, eY - 0.9 * p.depth, 1.9 * p.depth, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = "#fff";
     ctx.beginPath();
-    ctx.arc(eL + 0.2 * p.depth, eY - 1.1 * p.depth, 0.7 * p.depth, 0, Math.PI * 2);
-    ctx.arc(eR + 0.2 * p.depth, eY - 1.1 * p.depth, 0.7 * p.depth, 0, Math.PI * 2);
+    ctx.arc(eL - 0.2 * p.depth, eY - 1.6 * p.depth, 0.7 * p.depth, 0, Math.PI * 2);
+    ctx.arc(eR - 0.2 * p.depth, eY - 1.6 * p.depth, 0.7 * p.depth, 0, Math.PI * 2);
     ctx.fill();
     /* Smile */
     ctx.strokeStyle = "#0b1220";
     ctx.lineWidth = 1.6 * p.depth;
     ctx.beginPath();
-    ctx.arc(p.x + 1 * p.depth * frog.facing, by + s * 0.22, 4.5 * p.depth, 0.15, Math.PI - 0.15);
+    ctx.arc(0, s * 0.22, 4.5 * p.depth, 0.15, Math.PI - 0.15);
     ctx.stroke();
+    ctx.restore();
     /* polish9/10: quieter nameplates — name only; local ring; no · AI clutter */
     if (frog.local) {
       ctx.strokeStyle = "rgba(255,255,255,0.75)";

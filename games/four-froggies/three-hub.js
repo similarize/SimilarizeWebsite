@@ -12,6 +12,7 @@
    polish10: quieter UI; exit truck anytime; friction/cam; particle caps; dusk sky. Hollow house + frogs + WASD kept.
    solid1: floor z-fight fix; solid walls/mechs/trucks; cast names only on plates.
    tapsteer1: mech pad z-fight fix; faster walk/drive; hold-to-aim tap/click steer + marker.
+   eyes1: yaw frog (eyes on +Z) toward walk dir; idle keeps last; AI companions too.
    WASD camera-relative — do not invert. */
 (function (global) {
   "use strict";
@@ -988,6 +989,7 @@
     state.cd = 0;
     state.near = null;
     state.facing = 1;
+    state.faceYaw = 0; /* eyes1: local +Z is face front */
     state.mode = "ranch";
     state.bob = 0;
   }
@@ -1405,7 +1407,11 @@
       var mz = rz * ix + fz * (-iy);
       state.vx += mx * accel * dt;
       state.vz += mz * accel * dt;
-      if (Math.abs(mx) + Math.abs(mz) > 0.01) state.facing = mx >= 0 ? 1 : -1;
+      if (Math.abs(mx) + Math.abs(mz) > 0.01) {
+        state.facing = mx >= 0 ? 1 : -1;
+        /* eyes1: rotate so eyes (+Z) face walk direction; idle keeps last yaw */
+        state.faceYaw = Math.atan2(mx, mz);
+      }
     }
     state.vx *= Math.max(0, 1 - fric * dt);
     state.vz *= Math.max(0, 1 - fric * dt);
@@ -1420,7 +1426,8 @@
       var sp = 0;
     }
     state.player.position.y = Math.abs(Math.sin(state.bob)) * (sp > 0.5 ? 0.06 : 0.02);
-    state.player.scale.x = state.facing >= 0 ? 1 : -1;
+    state.player.scale.x = 1; /* eyes1: yaw instead of flip */
+    state.player.rotation.y = (state.faceYaw != null) ? state.faceYaw : 0;
 
     /* Ranch truck water / ramp / shared pile-in (parity) — after steer, before clamp */
     if (state.mode === "ranch") {
@@ -1803,6 +1810,7 @@
           c.position.z += (state.player.position.z + oz - c.position.z) * Math.min(1, 8 * dt);
           c.position.y = 0.7 + (state.zLift || 0) * 0.08 + Math.abs(Math.sin(c.userData.idleBounce)) * 0.05;
           c.visible = true;
+          c.userData.faceYaw = state.faceYaw || 0;
         } else {
           c.visible = true;
           c.position.y = Math.abs(Math.sin(c.userData.idleBounce)) * 0.14;
@@ -1814,9 +1822,15 @@
             c.userData.timer = 0.9 + lag + Math.random() * (1.3 + lag);
           }
           var fk = Math.min(1, (1.05 / (0.7 + lag)) * dt);
-          c.position.x += (c.userData.tx - c.position.x) * fk;
-          c.position.z += (c.userData.tz - c.position.z) * fk;
+          var cdx = c.userData.tx - c.position.x;
+          var cdz = c.userData.tz - c.position.z;
+          c.position.x += cdx * fk;
+          c.position.z += cdz * fk;
+          /* eyes1: companions face where they're moving */
+          if (Math.hypot(cdx, cdz) > 0.05) c.userData.faceYaw = Math.atan2(cdx, cdz);
         }
+        c.scale.x = 1;
+        c.rotation.y = (c.userData.faceYaw != null) ? c.userData.faceYaw : 0;
         if (c.userData.nameTag) {
           c.userData.nameTag.position.set(c.position.x, c.position.y + 2.2, c.position.z);
           c.userData.nameTag.visible = c.visible;

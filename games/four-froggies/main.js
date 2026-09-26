@@ -574,6 +574,7 @@
         x: f.x,
         y: f.y,
         facing: f.facing,
+        faceAngle: f.faceAngle,
         inTruck: f.inTruck,
         truckMode: f.truckMode || null,
         truckId: f.truckId || null,
@@ -598,6 +599,7 @@
       f.x = sf.x;
       f.y = sf.y;
       f.facing = sf.facing;
+      if (sf.faceAngle != null) f.faceAngle = sf.faceAngle;
       f.inTruck = sf.inTruck;
       f.truckMode = sf.truckMode || null;
       f.truckId = sf.truckId || null;

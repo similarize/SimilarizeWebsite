@@ -340,6 +340,11 @@ html, body {
   .splash-art { max-height: 16vh; }
 }
 
+/* eyes1: hide bottom-left D-pad — tap/finger steer primary; WASD stays; keep INTERACT + ability */
+#btn-up, #btn-down, #btn-left, #btn-right {
+  display: none !important;
+}
+
 /* ——— 2.5D hub controls + story ——— */
 .in-title #controls,
 .in-title #hud { visibility: hidden; pointer-events: none; }
