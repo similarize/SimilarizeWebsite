@@ -5,7 +5,7 @@
   "use strict";
 
   var C = global.FroggiesCanon;
-  var CACHE = "20260926-mech1";
+  var CACHE = "20260926-interact1";
   var CDN = {
     phaser: "https://cdn.jsdelivr.net/npm/phaser@3.87.0/dist/phaser.min.js",
     three: "https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js",
@@ -354,7 +354,21 @@
     var x = 0;
     var y = 0;
     /* Gamepad poll only while alt engines run — canvas main.js owns the pad otherwise */
-    var gPad = (engineRunning && global.SimilarizeGamepad) ? global.SimilarizeGamepad.poll() : null;
+    /* interact1: poll pads 0–3 so secondary locals can A-board on Three/Phaser */
+    var gPad = null;
+    if (engineRunning && global.SimilarizeGamepad) {
+      var apiBtn = altApi();
+      for (var pi = 0; pi < 4; pi++) {
+        var gpN = global.SimilarizeGamepad.pollPad(pi);
+        if (!gpN || !gpN.connected) continue;
+        if (!gPad) gPad = gpN; /* first connected pad steers shared primary when no joy/keys */
+        if (apiBtn) {
+          var aEdge = gpN.buttonsPressed || {};
+          if (aEdge.a && apiBtn.pulseInteract) apiBtn.pulseInteract();
+          if ((aEdge.b || aEdge.x) && apiBtn.pulseAbility) apiBtn.pulseAbility();
+        }
+      }
+    }
     if (joyActive) {
       x = joyX;
       y = joyY;
@@ -372,14 +386,6 @@
         if (gPad.dpad.d) y = 1;
         var mag = Math.hypot(x, y);
         if (mag > 1) { x /= mag; y /= mag; }
-      }
-    }
-    if (gPad && gPad.connected) {
-      var aEdge = gPad.buttonsPressed || {};
-      var apiBtn = altApi();
-      if (apiBtn) {
-        if (aEdge.a && apiBtn.pulseInteract) apiBtn.pulseInteract();
-        if ((aEdge.b || aEdge.x) && apiBtn.pulseAbility) apiBtn.pulseAbility();
       }
     }
     var a = engineRunning ? altApi() : null;

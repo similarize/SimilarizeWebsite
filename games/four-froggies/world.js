@@ -2963,21 +2963,24 @@
     }
 
     if (frog.inMech) {
-      /* Rider-on-mech cue: tall robot silhouette walks with frog; hide tiny frog body */
+      /* interact1/mech-huge: keep full 10/100/1000-story silhouette while piloting (do NOT clamp) */
       var stories = frog.mechStories || 10;
       var tint = stories >= 1000 ? "#fcd34d" : stories >= 100 ? "#67e8f9" : "#a5b4fc";
-      var bobM = Math.abs(Math.sin(frog.walkPhase || 0)) * 2.2 * p.depth;
-      drawMech(ctx, frog.x, frog.y, Math.min(stories, 40), camX, camY, vw, vh, tint);
-      /* Pilot hat bobbing in torso */
+      var bobM = Math.abs(Math.sin(frog.walkPhase || 0)) * (stories >= 1000 ? 4.5 : stories >= 100 ? 3.2 : 2.2) * p.depth;
+      drawMech(ctx, frog.x, frog.y, stories, camX, camY, vw, vh, tint);
+      /* Pilot hat / nameplate scaled to mech torso height (same hScale bands as drawMech) */
+      var hatH = stories >= 1000 ? 168 : stories >= 100 ? 78 : 36;
+      var hatR = stories >= 1000 ? 9 : stories >= 100 ? 7 : 5.5;
       ctx.fillStyle = frog.color || "#4ade80";
       ctx.beginPath();
-      ctx.arc(p.x, p.y - (stories >= 100 ? 48 : 36) * p.depth - bobM, 5.5 * p.depth, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y - hatH * p.depth - bobM, hatR * p.depth, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = frog.hat || "#facc15";
       ctx.beginPath();
-      ctx.arc(p.x, p.y - (stories >= 100 ? 54 : 42) * p.depth - bobM, 3.2 * p.depth, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y - (hatH + 8) * p.depth - bobM, hatR * 0.58 * p.depth, 0, Math.PI * 2);
       ctx.fill();
-      drawNameplate(ctx, (frog.name || "Frog") + " · MECH", p.x, p.y - (stories >= 100 ? 72 : 58) * p.depth - bobM, frog.color || "#fff", p.depth, !frog.local);
+      var plateH = stories >= 1000 ? 210 : stories >= 100 ? 100 : 58;
+      drawNameplate(ctx, (frog.name || "Frog") + " · MECH", p.x, p.y - plateH * p.depth - bobM, frog.color || "#fff", p.depth, !frog.local);
       return p;
     }
 

@@ -35,6 +35,38 @@
   var tapMarker = null; /* { sx, sy, life, ang } screen px in canvas */
   var wantInteract = false;
   var wantAbility = false;
+  var interactOrigin = null; /* world {x,y} from pad that pressed A (multi-local) */
+  var interactConsumed = false;
+
+  function refreshNearFromLocals() {
+    if (!state || !C || state.mode !== "ranch") return;
+    if (state.inTruck || state.inMech) {
+      state.near = null;
+      return;
+    }
+    var best = null;
+    var bestScore = Infinity;
+    function consider(wx, wy) {
+      var h = C.nearestHotspot(wx, wy, 70);
+      if (!h) return;
+      var d = Math.hypot(wx - h.x, wy - h.y);
+      var board = (C.isTruckHotspot && C.isTruckHotspot(h)) || (C.isMechHotspot && C.isMechHotspot(h));
+      var score = d - (board ? 8 : 0);
+      if (score < bestScore) { bestScore = score; best = h; }
+    }
+    if (interactOrigin) {
+      consider(interactOrigin.x, interactOrigin.y);
+    }
+    var wp = threeToWorld(state.player.position.x, state.player.position.z);
+    consider(wp.x, wp.y);
+    for (var i = 0; i < (state.companions || []).length; i++) {
+      var c = state.companions[i];
+      if (!c.userData.local) continue;
+      var cw = threeToWorld(c.position.x, c.position.z);
+      consider(cw.x, cw.y);
+    }
+    state.near = best;
+  }
 
   function mergedSteer() {
     /* Primary local pad (if claimed) OR keyboard/joy OR tap */
@@ -51,7 +83,13 @@
         if (px || py) return { x: px, y: py };
         /* edge buttons for primary pad */
         if (gp.buttonsPressed) {
-          if (gp.buttonsPressed.a) wantInteract = true;
+          if (gp.buttonsPressed.a) {
+            wantInteract = true;
+            if (state && state.player) {
+              var ow = threeToWorld(state.player.position.x, state.player.position.z);
+              interactOrigin = { x: ow.x, y: ow.y };
+            }
+          }
           if (gp.buttonsPressed.b || gp.buttonsPressed.x) wantAbility = true;
         }
       }
@@ -1173,6 +1211,9 @@
     state.inTruck = false;
     state.truckMode = null;
     state.truckId = null;
+    state.inMech = false;
+    state.mechId = null;
+    state.mechStories = 0;
     state.waterSub = 0;
     state.zLift = 0;
     state.zVel = 0;
@@ -1442,24 +1483,51 @@
 
   function doInteract() {
     if (!state) return;
-    /* polish10: EXIT truck anytime while driving */
+    if (interactConsumed) return;
+    interactConsumed = true;
+    /* Prefer hotspot at the pad/frog that pressed A; else any near local */
+    refreshNearFromLocals();
+    /* polish10: EXIT truck/mech anytime while boarded */
+    if (state.mode === "ranch" && state.inMech) {
+      state.inMech = false; state.mechId = null; state.mechStories = 0;
+      state.zLift = 0; state.zVel = 0; state.groundLift = 0;
+      state.toast = "Mech parked · walking"; state.toastT = 1.8; state.exitTipT = 0;
+      interactOrigin = null;
+      if (hooks.onToast) hooks.onToast(state.toast);
+      return;
+    }
     if (state.mode === "ranch" && state.inTruck) {
       state.inTruck = false; state.truckMode = null; state.truckId = null;
       state.zLift = 0; state.zVel = 0; state.groundLift = 0;
       state.toast = "Parked · walking"; state.toastT = 1.8; state.exitTipT = 0;
+      interactOrigin = null;
       if (hooks.onToast) hooks.onToast(state.toast);
       return;
     }
-    if (!state.near) return;
+    if (!state.near) { interactOrigin = null; return; }
     var id = state.near.id;
     if (state.mode === "ranch") {
       if (C.isTruckHotspot && C.isTruckHotspot(state.near)) {
+        /* Snap camera frog to hotspot so secondary-pad board works */
+        var tp = worldToThree(state.near.x, state.near.y);
+        state.player.position.x = tp.x; state.player.position.z = tp.z;
         state.inTruck = true; state.truckMode = state.near.mode || "solo"; state.truckId = id;
+        if (state.inMech) { state.inMech = false; state.mechId = null; state.mechStories = 0; }
         state.scrap += 1;
         state.toast = state.truckMode === "shared"
           ? "All aboard! Four froggies · one Cybertruck · hit the jumps!"
           : "Driving Cybertruck · hit the jumps!";
-        state.exitTipT = 2.4; /* polish11: brief EXIT tip */
+        state.exitTipT = 2.4;
+      } else if (C.isMechHotspot && C.isMechHotspot(state.near)) {
+        var mp = worldToThree(state.near.x, state.near.y);
+        state.player.position.x = mp.x; state.player.position.z = mp.z;
+        if (state.inTruck) { state.inTruck = false; state.truckMode = null; state.truckId = null; }
+        state.inMech = true;
+        state.mechId = id;
+        state.mechStories = state.near.stories || 10;
+        state.scrap += 1;
+        state.toast = "Boarding " + state.mechStories + "-story mech · walk like a robot!";
+        state.exitTipT = 2.4;
       } else if (id === "fishies") {
         state.toast = "Splash! Fishies & whales scatter";
         state.scrap += 2;
@@ -1493,6 +1561,7 @@
         state.toastT = 2;
       }
     }
+    interactOrigin = null;
     if (hooks.onToast) hooks.onToast(state.toast);
   }
 
@@ -1634,9 +1703,9 @@
 
     /* polish3: snappier locomotion (Canvas feel port) */
     /* tapsteer1: noticeably snappier walk + drive */
-    var maxSp = state.mode === "space" ? 7.5 : state.inTruck ? 15.8 : 13.6;
-    var accel = state.mode === "space" ? 16 : state.inTruck ? 38 : 34;
-    var fric = state.mode === "space" ? 3.0 : state.inTruck ? 4.8 : 7.8;
+    var maxSp = state.mode === "space" ? 7.5 : state.inTruck ? 15.8 : state.inMech ? 9.5 : 13.6;
+    var accel = state.mode === "space" ? 16 : state.inTruck ? 38 : state.inMech ? 22 : 34;
+    var fric = state.mode === "space" ? 3.0 : state.inTruck ? 4.8 : state.inMech ? 6.5 : 7.8;
 
     // Map screen WASD/D-pad → ground plane relative to locked camera
     // Canvas convention: steer.y < 0 = Up/W (screen up). Camera sits at +X+Z offset.
@@ -1823,6 +1892,13 @@
         state.waterSub = Math.max(0, (state.waterSub || 0) - dt * 1.5);
       }
       state.player.visible = !state.inTruck;
+      if (state.inMech) {
+        var ms = state.mechStories || 10;
+        var sc = ms >= 1000 ? 6.5 : ms >= 100 ? 2.8 : 1.7;
+        state.player.scale.set(sc, sc, sc);
+      } else if (!state.inTruck) {
+        state.player.scale.set(1, 1, 1);
+      }
       /* polish4: bounce + spray / bubbles / walk dust */
       state.bouncePhase = (state.bouncePhase || 0) + dt * (3 + sp * 0.4);
       var airNow = (state.zLift || 0) - (state.groundLift || 0);
@@ -2254,6 +2330,15 @@
               if (lgp.dpad.u) lsy = -1;
               if (lgp.dpad.d) lsy = 1;
             }
+            /* interact1: secondary pad A boards/exits when THAT frog is near */
+            if (lgp.buttonsPressed && lgp.buttonsPressed.a) {
+              wantInteract = true;
+              var cow = threeToWorld(c.position.x, c.position.z);
+              interactOrigin = { x: cow.x, y: cow.y };
+            }
+            if (lgp.buttonsPressed && (lgp.buttonsPressed.b || lgp.buttonsPressed.x)) {
+              wantAbility = true;
+            }
           }
           var lmax = 11.5, lacc = 28, lfric = 7.5;
           if (lsx || lsy) {
@@ -2351,7 +2436,7 @@
         mctx.fillText("MAP", 6, 11);
       }
       var wpos = threeToWorld(state.player.position.x, state.player.position.z);
-      state.near = C.nearestHotspot(wpos.x, wpos.y, 70);
+      refreshNearFromLocals();
       if (state.mode === "ranch" && state.near && state.near.id !== state.prevNearId) {
         for (var spi = 0; spi < 10; spi++) {
           var ang = Math.random() * Math.PI * 2, ssp = 0.8 + Math.random() * 1.6;
@@ -2409,6 +2494,7 @@
       }
     }
 
+    interactConsumed = false;
     if (wantInteract) {
       wantInteract = false;
       doInteract();
@@ -2417,6 +2503,7 @@
       wantAbility = false;
       doAbility();
     }
+    interactOrigin = null;
 
     updateTapMarkerVisual(dt);
     renderer.render(scene, camera);
@@ -2433,16 +2520,18 @@
         mode: state.mode,
         label: label,
         scrap: state.mode === "space" ? state.catches : state.scrap,
-        tip: state.inTruck
+        tip: (state.inTruck || state.inMech)
           ? (state.toastT > 0 ? state.toast : ((state.exitTipT || 0) > 0 ? "EXIT · INTERACT / E" : ""))
-          : (state.toastT > 0 ? state.toast : state.inOrbit ? "Orbit locked · Escape or hard thruster" : state.near ? (((C.isTruckHotspot && C.isTruckHotspot(state.near)) ? "BOARD · " : "⚡ ") + state.near.tip + " · INTERACT / E") : (state.invLabel && state.invLabel.visible ? "Mars · invader silhouettes" : "")),
+          : (state.toastT > 0 ? state.toast : state.inOrbit ? "Orbit locked · Escape or hard thruster" : state.near ? ((((C.isTruckHotspot && C.isTruckHotspot(state.near)) || (C.isMechHotspot && C.isMechHotspot(state.near))) ? "BOARD · " : "⚡ ") + state.near.tip + " · INTERACT / E") : (state.invLabel && state.invLabel.visible ? "Mars · invader silhouettes" : "")),
         inOrbit: !!state.inOrbit,
         inTruck: !!state.inTruck,
-        near: state.inTruck ? true : state.near,
+        inMech: !!state.inMech,
+        near: (state.inTruck || state.inMech) ? true : state.near,
         ability: "HOP",
         cd: state.cd,
         walk: (function () {
           if (state.mode === "space") return state.inOrbit ? "🌍 Orbit" : "🚀 Space";
+          if (state.inMech) return "🤖 Mech · " + (state.mechStories || "?") + "-story";
           if (!state.inTruck) return "🐸 Walk";
           var wp2 = threeToWorld(state.player.position.x, state.player.position.z);
           var wet2 = C.inPond && C.inPond(wp2.x, wp2.y);
