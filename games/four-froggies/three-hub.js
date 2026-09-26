@@ -849,13 +849,18 @@
       state.zoneSigns.push(zlab);
     }
     state.miniMapCanvas = document.createElement("canvas");
-    state.miniMapCanvas.width = 108;
-    state.miniMapCanvas.height = 82;
+    var vw3 = window.innerWidth || 800, vh3 = window.innerHeight || 600;
+    var narrow3 = vw3 <= 520 || (vw3 <= 900 && vh3 <= 480);
+    var land3 = vw3 <= 900 && vh3 <= 480;
+    var mmW = narrow3 ? 72 : 108, mmH = narrow3 ? 54 : 82;
+    var mmL = narrow3 ? 8 : 12, mmT = narrow3 ? 56 : 88;
+    state.miniMapCanvas.width = mmW;
+    state.miniMapCanvas.height = mmH;
     state.miniMapCanvas.dataset.ffMinimap = "1";
-    state.miniMapCanvas.style.cssText = "position:absolute;left:12px;top:88px;width:108px;height:82px;pointer-events:none;z-index:5;border-radius:8px;opacity:0.72;";
+    state.miniMapCanvas.style.cssText = "position:absolute;left:" + mmL + "px;top:" + mmT + "px;width:" + mmW + "px;height:" + mmH + "px;pointer-events:none;z-index:5;border-radius:8px;opacity:" + (narrow3 ? "0.58" : "0.72") + ";";
     var hostEl = document.getElementById("engine-host");
     if (hostEl) hostEl.appendChild(state.miniMapCanvas);
-    state.miniMapCanvas.style.display = "";
+    state.miniMapCanvas.style.display = land3 ? "none" : "";
     state.miniMapCtx = state.miniMapCanvas.getContext("2d");
 
     state.vx = 0;
@@ -873,8 +878,9 @@
     state.shakeT = 0;
     state.rippleT = 0;
     state.ambient = [];
-    /* polish5: ambient pollen / fireflies */
-    for (var ai = 0; ai < 22; ai++) {
+    /* polish5 + mobile1: ambient pollen / fireflies (fewer on phone) */
+    var ambN3 = (window.innerWidth || 800) <= 520 ? 10 : 22;
+    for (var ai = 0; ai < ambN3; ai++) {
       var kind = Math.random() < 0.55 ? "pollen" : "firefly";
       var amb = new THREE.Mesh(
         new THREE.SphereGeometry(kind === "firefly" ? 0.07 : 0.05, 6, 5),
@@ -1110,8 +1116,22 @@
     var w = Math.max((hostEl && hostEl.clientWidth) || 0, window.innerWidth || 320);
     var h = Math.max((hostEl && hostEl.clientHeight) || 0, window.innerHeight || 480);
     renderer.setSize(w, h, false);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     camera.aspect = w / Math.max(1, h);
     camera.updateProjectionMatrix();
+    if (state && state.miniMapCanvas) {
+      var land = w <= 900 && h <= 480;
+      var narrow = w <= 520 || land;
+      var mmW = narrow ? 72 : 108, mmH = narrow ? 54 : 82;
+      state.miniMapCanvas.width = mmW;
+      state.miniMapCanvas.height = mmH;
+      state.miniMapCanvas.style.width = mmW + "px";
+      state.miniMapCanvas.style.height = mmH + "px";
+      state.miniMapCanvas.style.left = (narrow ? 8 : 12) + "px";
+      state.miniMapCanvas.style.top = (narrow ? 56 : 88) + "px";
+      state.miniMapCanvas.style.opacity = narrow ? "0.58" : "0.72";
+      state.miniMapCanvas.style.display = land ? "none" : "";
+    }
   }
 
   function doInteract() {
@@ -1868,6 +1888,7 @@
     buildRanch();
     active = true;
     window.addEventListener("resize", resize);
+    window.addEventListener("orientationchange", function () { setTimeout(resize, 60); });
     if (hooks.onReady) hooks.onReady({ engine: "three", frogId: state.frogId });
     if (hooks.onToast) hooks.onToast(state.toast);
     tick();

@@ -87,6 +87,14 @@ Same PeerJS lobby: **Host room** → QR / invite `?room=CODE` → claim seats �
 
 
 
+## What's new (mobile1) — phone + desktop both playable
+- Phone lobby scrolls; verbose invite wall hidden on ≤520px; Host/engine/GO thumb-sized.
+- D-pad/ability no longer balloon on coarse/≤800 (that crushed the playfield); compact on phone, desktop sizes unchanged.
+- `100dvh` + safe-area; ESCAPE button actually positioned; DPR/visualViewport resize + orientation.
+- Mini-map smaller on narrow / hidden in landscape phone; harder particle caps on narrow.
+- Phaser closer zoom on phone; Three minimap/ambient match.
+- Cache-bust: `?v=20260926-mobile1`. Cast unchanged. No SPS arcade republish.
+
 ## What's new (polish10) — feel / bug polish for playtest
 
 Ben: LOTS more improvement but may playtest soon — prioritize feel/bug polish over garnish. Canvas lead; Phaser/Three cheap ports. Three frogs + hollow house + camera-relative WASD kept. No SPS arcade republish.

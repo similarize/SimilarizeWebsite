@@ -162,7 +162,14 @@
         this.waterClip = this.add.rectangle(0, 10, 84, 22, 0x0e7490, 0.55).setDepth(19).setVisible(false);
         this.cameras.main.startFollow(this.player, true, 0.28, 0.28); /* polish3/10 less lag fight */
         this.cameras.main.setBounds(0, 0, C.MAP_W, C.MAP_H);
-        this.cameras.main.setZoom(Math.min(0.95, Math.max(0.42, window.innerWidth / 1400)));
+        /* mobile1: phone gets closer zoom so frogs aren't mush; desktop unchanged formula */
+        (function () {
+          var iw = window.innerWidth || 800;
+          var z = iw <= 520
+            ? Math.min(0.88, Math.max(0.62, iw / 600))
+            : Math.min(0.95, Math.max(0.42, iw / 1400));
+          this.cameras.main.setZoom(z);
+        }).call(this);
         /* polish6: soft depth shadow under player / truck */
         this.playerShadow = this.add.ellipse(spawn.x, spawn.y + 14, 40, 16, 0x000000, 0.32).setDepth(18);
         this.playerShadowSoft = this.add.ellipse(spawn.x, spawn.y + 15, 56, 22, 0x000000, 0.14).setDepth(17);
@@ -186,8 +193,9 @@
           this.zoneSignTexts.push(zt);
         }
         this.miniMapGfx = this.add.graphics().setScrollFactor(0).setDepth(60);
-        /* polish5: ambient pollen / fireflies */
-        for (var ai = 0; ai < 22; ai++) {
+        /* polish5 + mobile1: ambient pollen / fireflies (fewer on phone) */
+        var ambN = (window.innerWidth || 800) <= 520 ? 10 : 22;
+        for (var ai = 0; ai < ambN; ai++) {
           var kind = Math.random() < 0.55 ? "pollen" : "firefly";
           var amb = this.add.circle(
             80 + Math.random() * (C.MAP_W - 160),
@@ -809,10 +817,15 @@
           var za = C.zoneSignAlpha ? C.zoneSignAlpha(zt.zone, this.player.x, this.player.y) : 0;
           zt.setAlpha(za);
         }
-        /* polish7: mini-map lite */
+        /* polish7 + mobile1: mini-map lite — shrink/hide on phone */
         if (this.miniMapGfx) {
           var g = this.miniMapGfx; g.clear();
-          var mw = 108, mh = 82, ox = 12, oy = 88; /* polish10: top-left clear of right controls */
+          var vwP = window.innerWidth || 800, vhP = window.innerHeight || 600;
+          var narrowP = vwP <= 520 || (vwP <= 900 && vhP <= 480);
+          if (vwP <= 900 && vhP <= 480) { /* landscape phone: hide */ }
+          else {
+          var mw = narrowP ? 72 : 108, mh = narrowP ? 54 : 82;
+          var ox = narrowP ? 8 : 12, oy = narrowP ? 56 : 88; /* polish10/mobile1 */
           g.fillStyle(0x0f172a, 0.72); g.fillRect(ox, oy, mw, mh);
           g.lineStyle(1.5, 0xfbbf24, 0.55); g.strokeRect(ox, oy, mw, mh);
           function mmx(x) { return ox + (x / C.MAP_W) * mw; }
@@ -828,6 +841,7 @@
             g.fillStyle(hx(cdef2.color || "#fff"), 1);
             g.fillCircle(mmx(cm.x), mmy(cm.y), 2.6);
           }
+          } /* end narrow/landscape gate */
         }
         for (var pi = 0; pi < this.parkedTrucks.length; pi++) {
           var pt = this.parkedTrucks[pi];

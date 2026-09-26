@@ -124,15 +124,26 @@
     } else beep(560, 0.07, "triangle", 0.04);
   }
 
+  function viewportSize() {
+    const vv = window.visualViewport;
+    const w = Math.max(1, Math.floor((vv && vv.width) || window.innerWidth || 320));
+    const h = Math.max(1, Math.floor((vv && vv.height) || window.innerHeight || 480));
+    return { w, h };
+  }
+
   function resize() {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const w = window.innerWidth;
-    const h = window.innerHeight;
+    const { w, h } = viewportSize();
+    /* mobile1: clamp DPR — sharp on phone retina, capped for mid-tier perf; desktop unchanged (≤2) */
+    const raw = window.devicePixelRatio || 1;
+    const dpr = w <= 520 ? Math.min(raw, 2) : Math.min(raw, 2);
     canvas.width = Math.floor(w * dpr);
     canvas.height = Math.floor(h * dpr);
     canvas.style.width = w + "px";
     canvas.style.height = h + "px";
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const narrow = w <= 520 || (w <= 900 && h <= 480);
+    document.documentElement.dataset.ffNarrow = narrow ? "1" : "0";
+    document.documentElement.dataset.ffLandscapePhone = (w <= 900 && h <= 480) ? "1" : "0";
   }
 
   function localPlayer() {
@@ -777,8 +788,7 @@
   }
 
   function render(t) {
-    const w = window.innerWidth;
-    const h = window.innerHeight;
+    const { w, h } = viewportSize();
     ctx.clearRect(0, 0, w, h);
     if (phase === "space" && spaceEp && Space) {
       Space.render(ctx, spaceEp, w, h, t);
@@ -1250,6 +1260,10 @@
   }
 
   window.addEventListener("resize", resize);
+  window.addEventListener("orientationchange", () => setTimeout(resize, 60));
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", resize);
+  }
   resize();
   initParty();
   ensurePartyBroadcast();
@@ -1262,4 +1276,13 @@
     true
   );
   requestAnimationFrame(tick);
+
+  /* mobile1 QA: ?autogo=1 auto-starts solo hub (for headless shots) */
+  try {
+    if (/[?&]autogo=1(?:&|$)/.test(location.search || "")) {
+      setTimeout(() => {
+        if (phase === "title" && btnStart && !btnStart.disabled) btnStart.click();
+      }, 280);
+    }
+  } catch (e) { /* ignore */ }
 })();

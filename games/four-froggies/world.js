@@ -13,6 +13,7 @@
    brief jump air hang; Optimus kit visual punch on ranch. Canvas lead.
    polish10: UI declutter (mini-map / zone signs / quieter nameplates); tighter friction; truck EXIT anytime;
    particle caps; sunset sky shift over play time.
+   mobile1: phone+desktop shared UI — smaller/toggle-friendly mini-map + harder particle caps on narrow.
    ~10× map: real roam between ranch house / track / pond / Starship.
    James ranch house: big house, backyard (animals), huge garage (toys + 10/100-story mechs);
    1000-story mech sits out back (won't fit). Four Cybertrucks + shared pile-in.
@@ -23,6 +24,17 @@
 
   var MAP_W = 4200;
   var MAP_H = 3150;
+
+  /* mobile1: density helpers — desktop keeps polish10 caps; narrow phones get harder caps */
+  function isNarrowView(vw, vh) {
+    vw = vw || (typeof window !== "undefined" ? window.innerWidth : 800);
+    vh = vh || (typeof window !== "undefined" ? window.innerHeight : 600);
+    return vw <= 520 || (vw <= 900 && vh <= 480);
+  }
+  function particleCaps(vw, vh) {
+    if (isNarrowView(vw, vh)) return { dust: 22, sparks: 18, ambient: 12, splash: 6 };
+    return { dust: 48, sparks: 40, ambient: 28, splash: 10 };
+  }
 
   var AREAS = [
     { id: "house", name: "Ranch house", x: 60, y: 1320, w: 1180, h: 1180, color: "#8b5a2b" },
@@ -359,8 +371,9 @@
     world.lapSide = 0;
     world.lapCooldown = 0;
     world.ambientT = 0;
-    /* polish5/polish10: capped ambient pollen / fireflies (perf) */
-    for (var ai = 0; ai < 28; ai++) {
+    /* polish5/polish10/mobile1: capped ambient pollen / fireflies (perf; fewer on phone) */
+    var ambCap = particleCaps().ambient;
+    for (var ai = 0; ai < ambCap; ai++) {
       world.ambient.push({
         x: 80 + Math.random() * (MAP_W - 160),
         y: 80 + Math.random() * (MAP_H - 160),
@@ -438,9 +451,10 @@
   }
 
   function spawnDust(world, x, y, n) {
-    /* polish10: hard cap dust so race plumes cannot tank frames */
+    /* polish10 + mobile1: hard cap dust; tighter on narrow */
     if (!world.dust) world.dust = [];
-    var room = Math.max(0, 48 - world.dust.length);
+    var caps = particleCaps();
+    var room = Math.max(0, caps.dust - world.dust.length);
     var count = Math.min(n || 4, room);
     for (var i = 0; i < count; i++) {
       world.dust.push({
@@ -455,7 +469,9 @@
   }
 
   function spawnSplash(world, x, y, n) {
-    for (var i = 0; i < (n || 10); i++) {
+    var caps = particleCaps();
+    var maxN = Math.min(n || caps.splash, caps.splash);
+    for (var i = 0; i < maxN; i++) {
       world.splashes.push({
         x: x + (Math.random() - 0.5) * 30,
         y: y + (Math.random() - 0.5) * 20,
@@ -640,9 +656,11 @@
       if (k.life <= 0) world.sparks.splice(i, 1);
     }
     /* polish10: hard caps if arrays ballooned */
-    if (world.dust && world.dust.length > 48) world.dust.length = 48;
-    if (world.sparks && world.sparks.length > 40) world.sparks.length = 40;
-    if (world.ambient && world.ambient.length > 28) world.ambient.length = 28;
+    var capsFx = particleCaps();
+    if (world.dust && world.dust.length > capsFx.dust) world.dust.length = capsFx.dust;
+    if (world.sparks && world.sparks.length > capsFx.sparks) world.sparks.length = capsFx.sparks;
+    if (world.ambient && world.ambient.length > capsFx.ambient) world.ambient.length = capsFx.ambient;
+    if (world.ambient && world.ambient.length > particleCaps().ambient) world.ambient.length = particleCaps().ambient;
     if (world.ripples && world.ripples.length > 16) world.ripples.length = 16;
     world.ambientT = (world.ambientT || 0) + dt;
     /* polish5: ambient pollen / fireflies drift */
@@ -3016,14 +3034,19 @@
   }
 
   function drawMiniMap(ctx, frogs, vw, vh) {
-    /* polish10: smaller map, top-left under HUD — clear of right INTERACT/ability */
-    var mw = Math.min(118, Math.max(96, vw * 0.12));
+    /* polish10 + mobile1: smaller map on narrow; peek-sized on phone so D-pad/HUD stay clear */
+    var narrow = isNarrowView(vw, vh);
+    var landscapePhone = vw <= 900 && vh <= 480;
+    if (landscapePhone) return; /* vertical space too precious — hide */
+    var mw = narrow
+      ? Math.min(78, Math.max(64, vw * 0.18))
+      : Math.min(118, Math.max(96, vw * 0.12));
     var mh = mw * (MAP_H / MAP_W);
-    var pad = 10;
-    var ox = pad + 6;
-    var oy = pad + 86;
+    var pad = narrow ? 6 : 10;
+    var ox = pad + (narrow ? 4 : 6);
+    var oy = pad + (narrow ? 58 : 86);
     ctx.save();
-    ctx.globalAlpha = 0.72;
+    ctx.globalAlpha = narrow ? 0.58 : 0.72;
     ctx.fillStyle = "rgba(15, 23, 42, 0.72)";
     ctx.strokeStyle = "rgba(251, 191, 36, 0.55)";
     ctx.lineWidth = 1.5;
@@ -3062,9 +3085,9 @@
       }
     }
     ctx.fillStyle = "rgba(254,243,199,0.9)";
-    ctx.font = "bold 9px Segoe UI, system-ui, sans-serif";
+    ctx.font = "bold " + (narrow ? 8 : 9) + "px Segoe UI, system-ui, sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText("MAP", ox + 6, oy + 11);
+    ctx.fillText("MAP", ox + 5, oy + (narrow ? 10 : 11));
     ctx.restore();
   }
 
