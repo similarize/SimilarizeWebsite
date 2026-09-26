@@ -9,11 +9,15 @@
  *   axes:    0/1 left stick X/Y, 2/3 right stick X/Y
  * Deadzone ~0.25 on sticks; LT/RT treat value>0.45 as pressed.
  * Poll every frame — Chrome needs a button press after connect before getGamepads is live.
+ * Bind by slot index once claimed; never feed one pad into two players.
  *
  * API (window.SimilarizeGamepad):
  *   start()                 — optional; auto-runs on load
  *   poll() / pollPad(i)     — snapshot { connected, lx,ly,rx,ry, a,b,x,y, lb,rb,lt,rt,
  *                             start,back, dpad:{u,d,l,r}, buttonsPressed:{…edges} }
+ *   pollAll(max?)           — poll slots 0..max-1 once (avoids double-poll eating edges)
+ *   connectedIndices(max?)  — indices where getGamepads()[i] is present
+ *   connectedCount(max?)    — length of connectedIndices
  *   pressed(name, i?)       — held (uses last pollPad cache, or polls once)
  *   justPressed(name, i?)   — rising edge (uses last pollPad cache, or polls once)
  * Typical frame: const gp = SimilarizeGamepad.poll(); then read gp.* / buttonsPressed.
@@ -44,6 +48,7 @@
   function snap(gp, idx) {
     var out = {
       connected: !!gp,
+      index: idx,
       lx: 0, ly: 0, rx: 0, ry: 0,
       a: false, b: false, x: false, y: false,
       lb: false, rb: false, lt: false, rt: false,
@@ -95,6 +100,28 @@
     return snap(gp || null, idx);
   }
   function poll() { return pollPad(0); }
+  function pollAll(max) {
+    var n = typeof max === "number" ? max : 4;
+    if (n < 1) n = 1;
+    if (n > 8) n = 8;
+    var out = [];
+    for (var i = 0; i < n; i++) out.push(pollPad(i));
+    return out;
+  }
+  function connectedIndices(max) {
+    var n = typeof max === "number" ? max : 4;
+    if (n < 1) n = 1;
+    if (n > 8) n = 8;
+    var list = pads();
+    var idxs = [];
+    for (var i = 0; i < n; i++) {
+      if (list && list[i]) idxs.push(i);
+    }
+    return idxs;
+  }
+  function connectedCount(max) {
+    return connectedIndices(max).length;
+  }
   function cached(i) {
     var idx = i | 0;
     return last[idx] || pollPad(idx);
@@ -116,7 +143,7 @@
     hinted = true;
     var el = document.createElement("div");
     el.setAttribute("aria-live", "polite");
-    el.textContent = "Controller connected · Xbox / standard layout";
+    el.textContent = "Controller connected · press a button · Xbox / standard layout";
     el.style.cssText = "position:fixed;left:50%;bottom:12px;transform:translateX(-50%);z-index:9999;padding:6px 12px;border-radius:8px;background:rgba(0,0,0,.72);color:#f3e2c4;font:12px/1.3 system-ui,sans-serif;pointer-events:none;opacity:1;transition:opacity .4s";
     document.body.appendChild(el);
     setTimeout(function () { el.style.opacity = "0"; setTimeout(function () { el.remove(); }, 500); }, 2800);
@@ -131,6 +158,9 @@
     start: start,
     poll: poll,
     pollPad: pollPad,
+    pollAll: pollAll,
+    connectedIndices: connectedIndices,
+    connectedCount: connectedCount,
     pressed: pressed,
     justPressed: justPressed,
     DEADZONE: DZ

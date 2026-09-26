@@ -863,17 +863,32 @@
   }
 
 
+  function claimedPadIndices() {
+    const set = new Set();
+    for (const f of frogs) {
+      if (f && f.local && f.padIndex != null && f.padIndex !== undefined) set.add(f.padIndex | 0);
+    }
+    return set;
+  }
+
   function effectiveSteer() {
-    /* WASD > gamepad > virtual joystick (joy2) > mouse playfield aim */
+    /* WASD > unclaimed gamepad > virtual joystick (joy2) > mouse playfield aim.
+       Never use a pad already bound to another frog (one pad → one seat). */
     if (steerX || steerY) return { x: steerX, y: steerY };
-    const g = _pad;
+    const claimed = claimedPadIndices();
+    let g = _pad;
+    if (g && g.connected && g.index != null && claimed.has(g.index | 0)) g = null;
+    /* Hub tick already polls unclaimed pads into _pad; only poll here if still empty */
+    if ((!g || !g.connected) && window.SimilarizeGamepad && claimed.size === 0) {
+      g = window.SimilarizeGamepad.pollPad(0);
+    }
     if (g && g.connected) {
       let x = g.lx || 0;
       let y = g.ly || 0;
-      if (g.dpad.l) x = -1;
-      if (g.dpad.r) x = 1;
-      if (g.dpad.u) y = -1;
-      if (g.dpad.d) y = 1;
+      if (g.dpad && g.dpad.l) x = -1;
+      if (g.dpad && g.dpad.r) x = 1;
+      if (g.dpad && g.dpad.u) y = -1;
+      if (g.dpad && g.dpad.d) y = 1;
       const mag = Math.hypot(x, y);
       if (mag > 1) { x /= mag; y /= mag; }
       if (x || y) return { x, y };
@@ -1203,11 +1218,16 @@
   function tick(now) {
     const dt = Math.min(0.05, (now - (lastTs || now)) / 1000);
     lastTs = now;
-    /* Couch lobby: poll pads 0–3 for seat claim; in-hub per-pad steer below */
+    /* Couch lobby: poll pads 0–3 once per frame (avoid double-poll eating edges) */
     if (phase === "title" && window.SimilarizeGamepad) {
+      const snaps = window.SimilarizeGamepad.pollAll
+        ? window.SimilarizeGamepad.pollAll(4)
+        : [0, 1, 2, 3].map((i) => window.SimilarizeGamepad.pollPad(i));
+      let yStart = false;
       for (let pi = 0; pi < 4; pi++) {
-        const gp = window.SimilarizeGamepad.pollPad(pi);
+        const gp = snaps[pi];
         if (!gp || !gp.connected) continue;
+        if (pi === 0) _pad = gp;
         const bp = gp.buttonsPressed || {};
         if (bp.a || bp.start) {
           if (party && party.claimLocalPad) {
@@ -1221,12 +1241,9 @@
         } else if (bp.b) {
           if (party && party.releaseLocalPad) party.releaseLocalPad(pi);
         }
+        if (bp.y) yStart = true;
       }
-      /* Start on pad0 when already seated → GO (engine-aware) */
-      _pad = window.SimilarizeGamepad.pollPad(0);
-      if (_pad && _pad.connected && _pad.buttonsPressed && _pad.buttonsPressed.y) {
-        tryStartFromUi();
-      }
+      if (yStart) tryStartFromUi();
     } else if (phase === "space") {
       /* Space: single local — pad0 / primary poll OK */
       _pad = window.SimilarizeGamepad ? window.SimilarizeGamepad.poll() : null;
@@ -1245,16 +1262,15 @@
         }
       }
     } else if (phase === "hub") {
-      /* Hub: per-frog pollPad in updateHub. Unclaimed pads → primary/padless only (never other locals). */
+      /* Hub: per-frog pollPad in updateHub. Unclaimed pads → padless primary only (never other locals). */
       if (window.SimilarizeGamepad) {
-        const claimed = new Set();
-        for (const f of frogs) {
-          if (f.local && f.padIndex != null) claimed.add(f.padIndex | 0);
-        }
+        const claimed = claimedPadIndices();
+        _pad = null;
         for (let pi = 0; pi < 4; pi++) {
           if (claimed.has(pi)) continue;
           const gp = window.SimilarizeGamepad.pollPad(pi);
           if (!gp || !gp.connected) continue;
+          if (!_pad) _pad = gp;
           const bp = gp.buttonsPressed || {};
           if (bp.a) {
             const player = localPlayer();
@@ -1330,7 +1346,7 @@
         partyStatus.textContent = "JOINED · claim an Open froggy seat · wait for Host to press GO";
       else if (role === "solo")
         partyStatus.textContent =
-          "SOLO · click a froggy or pads: A/Start claim next open · B release · GO (AI fills rest)";
+          "SOLO · pads: A/Start claim · B release · click seat = next free pad · GO (AI fills rest)";
       else partyStatus.textContent = "";
     }
     if (roomCodeEl) {
@@ -1363,7 +1379,7 @@
     if (overlayGo && phase === "title") {
       if (role === "guest") overlayGo.textContent = "JOIN · claim an Open froggy · Host starts with GO";
       else if (role === "host") overlayGo.textContent = "HOST · Copy invite / scan QR · friends claim seats · you press GO";
-      else overlayGo.textContent = "Pads: A/Start claim · B release · Y or GO to start · click seats OK";
+      else overlayGo.textContent = "Pads: A/Start claim · B release · click picks frog for free pad · Y/GO starts";
     }
   }
 

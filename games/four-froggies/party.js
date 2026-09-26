@@ -10,7 +10,7 @@
   function emptySeats() {
     var s = {};
     for (var i = 0; i < FROG_ORDER.length; i++) {
-      s[FROG_ORDER[i]] = { status: "open", peerId: null, label: null };
+      s[FROG_ORDER[i]] = { status: "open", peerId: null, label: null, padIndex: null };
     }
     return s;
   }
@@ -92,7 +92,12 @@
       for (var i = 0; i < FROG_ORDER.length; i++) {
         var id = FROG_ORDER[i];
         var s = seats[id];
-        out[id] = { status: s.status, peerId: s.peerId, label: s.label };
+        out[id] = {
+          status: s.status,
+          peerId: s.peerId,
+          label: s.label,
+          padIndex: s.padIndex != null ? s.padIndex : null,
+        };
       }
       return out;
     }
@@ -130,7 +135,7 @@
       for (var i = 0; i < FROG_ORDER.length; i++) {
         var id = FROG_ORDER[i];
         if (seats[id].peerId === peerId) {
-          seats[id] = { status: "open", peerId: null, label: null };
+          seats[id] = { status: "open", peerId: null, label: null, padIndex: null };
         }
       }
     }
@@ -203,6 +208,47 @@
       return map;
     }
 
+    function connectedPadIndices() {
+      try {
+        if (global.SimilarizeGamepad && typeof global.SimilarizeGamepad.connectedIndices === "function") {
+          return global.SimilarizeGamepad.connectedIndices(4) || [];
+        }
+      } catch (e) { /* ignore */ }
+      return [];
+    }
+
+    function padAlreadyBound(padIndex) {
+      var peerId = "local-pad-" + (padIndex | 0);
+      return !!seatClaimedBy(peerId);
+    }
+
+    function firstUnboundConnectedPad() {
+      var idxs = connectedPadIndices();
+      for (var i = 0; i < idxs.length; i++) {
+        if (!padAlreadyBound(idxs[i])) return idxs[i] | 0;
+      }
+      return null;
+    }
+
+    /** Couch: bind pad N onto a specific frog (click pick). One pad → one seat. */
+    function claimPadOntoFrog(padIndex, frogId) {
+      if (role === "guest") return null;
+      var idx = padIndex | 0;
+      if (idx < 0 || idx > 3) return null;
+      if (FROG_ORDER.indexOf(frogId) < 0) return null;
+      if (!localId) localId = "local-" + makeCode(6);
+      var peerId = "local-pad-" + idx;
+      var cur = seats[frogId];
+      if (cur && cur.peerId && cur.peerId !== peerId && (cur.status === "human" || cur.status === "you")) {
+        return null;
+      }
+      var res = applyClaim(frogId, peerId, "Pad " + (idx + 1), true, idx);
+      if (!res.ok) return null;
+      if (role === "host") broadcast(lobbyPayload());
+      emitLobby(role === "solo" ? "idle" : "ready");
+      return frogId;
+    }
+
     /** Couch: pad N claims next open froggy (does not steal). Returns frogId or null. */
     function claimLocalPad(padIndex) {
       if (role === "guest") return null;
@@ -233,6 +279,19 @@
       if (role === "host") broadcast(lobbyPayload());
       emitLobby(role === "solo" ? "idle" : "ready");
       return true;
+    }
+
+    /** Drop keyboard-only locals so pads cannot share a seat with a padless "You". */
+    function clearKeyboardOnlyLocals() {
+      for (var i = 0; i < FROG_ORDER.length; i++) {
+        var id = FROG_ORDER[i];
+        var s = seats[id];
+        if (!s || !s.peerId) continue;
+        if (String(s.peerId).indexOf("local-pad-") === 0) continue;
+        if (isLocalPeerId(s.peerId) || s.peerId === localId || s.peerId === "local") {
+          seats[id] = { status: "open", peerId: null, label: null, padIndex: null };
+        }
+      }
     }
 
     function ensurePeerScript(cb) {
@@ -524,10 +583,23 @@
         send(hostConn, { t: "claim", frogId: frogId, label: "Joined" });
         return true;
       }
-      // solo or host: claim locally
+      // solo or host: prefer binding a free connected pad (one pad → one frog)
       if (!localId) localId = "local-" + makeCode(6);
       var target = seats[frogId];
-      if (target && target.status === "human" && target.peerId && target.peerId !== localId) {
+      var freePad = firstUnboundConnectedPad();
+      if (freePad != null) {
+        if (target && target.peerId && String(target.peerId).indexOf("local-pad-") === 0 &&
+            target.peerId !== ("local-pad-" + freePad)) {
+          lastError = "Seat taken";
+          emitLobby();
+          lastError = null;
+          return false;
+        }
+        var got = claimPadOntoFrog(freePad, frogId);
+        return !!got;
+      }
+      if (target && target.peerId && target.peerId !== localId &&
+          (target.status === "human" || target.status === "you")) {
         lastError = "Seat taken";
         emitLobby();
         lastError = null;
@@ -545,13 +617,21 @@
 
     function startParty() {
       if (!canStart()) return null;
-      // Ensure at least one local seat: keyboard localId only if no couch pad claimed yet
+      // Seat every live pad (Web API may only show them after a button press).
+      // humans = min(connectedPads, 4); remainder AI. One pad → one frog.
+      var livePads = connectedPadIndices();
       var anyPad = false;
-      for (var pi = 0; pi < FROG_ORDER.length; pi++) {
-        var ps = seats[FROG_ORDER[pi]];
+      var pi, ps;
+      for (pi = 0; pi < FROG_ORDER.length; pi++) {
+        ps = seats[FROG_ORDER[pi]];
         if (ps && ps.peerId && String(ps.peerId).indexOf("local-pad-") === 0) { anyPad = true; break; }
       }
-      if (!anyPad && !seatClaimedBy(localId || "local")) {
+      if (livePads.length > 0 || anyPad) {
+        clearKeyboardOnlyLocals();
+        for (pi = 0; pi < livePads.length && pi < 4; pi++) {
+          claimLocalPad(livePads[pi]);
+        }
+      } else if (!seatClaimedBy(localId || "local")) {
         if (!localId) localId = "local-" + makeCode(6);
         if (seats.james.status === "open") {
           applyClaim("james", localId, "You", true);
@@ -638,7 +718,9 @@
       joinRoom: joinRoom,
       claimSeat: claimSeat,
       claimLocalPad: claimLocalPad,
+      claimPadOntoFrog: claimPadOntoFrog,
       releaseLocalPad: releaseLocalPad,
+      connectedPadIndices: connectedPadIndices,
       startParty: startParty,
       canStart: canStart,
       sendInput: sendInput,

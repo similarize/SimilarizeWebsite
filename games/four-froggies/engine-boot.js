@@ -13,6 +13,10 @@
   var loading = null;
   var currentEngine = "canvas";
   var engineRunning = false;
+  /** Pads claimed by couch locals — never feed these into shared primary setSteer. */
+  var claimedPadSet = {};
+  var primaryPadIndex = null;
+  var lastSeatMap = null;
 
   function $(id) {
     return document.getElementById(id);
@@ -94,6 +98,9 @@
 
   function stopAltEngines() {
     engineRunning = false;
+    claimedPadSet = {};
+    primaryPadIndex = null;
+    lastSeatMap = null;
     if (global.FroggiesPhaser && global.FroggiesPhaser.isActive()) {
       global.FroggiesPhaser.destroy();
     }
@@ -203,6 +210,28 @@
     return "james";
   }
 
+  function ingestSeatMapPads(seatMap, primaryFrogId) {
+    claimedPadSet = {};
+    primaryPadIndex = null;
+    lastSeatMap = seatMap || null;
+    if (!seatMap) return;
+    var order = (C && C.FROG_ORDER) || ["james", "jimmy", "bubbles", "rexy"];
+    for (var i = 0; i < order.length; i++) {
+      var id = order[i];
+      var s = seatMap[id];
+      if (!s || !s.local || s.padIndex == null || s.padIndex === undefined) continue;
+      var pi = s.padIndex | 0;
+      claimedPadSet[pi] = id;
+      if (primaryPadIndex == null && (id === primaryFrogId || (s.human && s.local))) {
+        if (id === primaryFrogId) primaryPadIndex = pi;
+      }
+    }
+    if (primaryPadIndex == null && primaryFrogId && seatMap[primaryFrogId] &&
+        seatMap[primaryFrogId].padIndex != null) {
+      primaryPadIndex = seatMap[primaryFrogId].padIndex | 0;
+    }
+  }
+
   function resolveSeatMap(preferredFrogId) {
     var map = null;
     try {
@@ -275,6 +304,7 @@
       var s = seatMap[order[si]];
       if (s && s.human && s.local) { primary = order[si]; break; }
     }
+    ingestSeatMapPads(seatMap, primary);
     var hud = wireHud();
     var opts = {
       frogId: primary,
@@ -354,14 +384,25 @@
     var x = 0;
     var y = 0;
     /* Gamepad poll only while alt engines run — canvas main.js owns the pad otherwise */
-    /* interact2: each pad A/B tagged with padIndex — never anonymous shared pulse */
+    /* interact2: each pad A/B tagged with padIndex — never anonymous shared pulse.
+       Critical: a pad claimed by a non-primary frog must NOT drive shared setSteer
+       (that was one-pad-controls-two-frogs). */
     var gPad = null;
     if (engineRunning && global.SimilarizeGamepad) {
       var apiBtn = altApi();
+      var snaps = typeof global.SimilarizeGamepad.pollAll === "function"
+        ? global.SimilarizeGamepad.pollAll(4)
+        : null;
       for (var pi = 0; pi < 4; pi++) {
-        var gpN = global.SimilarizeGamepad.pollPad(pi);
+        var gpN = snaps ? snaps[pi] : global.SimilarizeGamepad.pollPad(pi);
         if (!gpN || !gpN.connected) continue;
-        if (!gPad) gPad = gpN; /* first connected pad steers shared primary when no joy/keys */
+        var claimedBy = claimedPadSet[pi];
+        var isPrimaryPad = primaryPadIndex != null && (primaryPadIndex | 0) === (pi | 0);
+        var padOwnsOtherFrog = !!claimedBy && !isPrimaryPad;
+        /* Shared primary steer: only primary's pad, or an unclaimed pad when primary is padless */
+        if (!gPad && !padOwnsOtherFrog) {
+          if (isPrimaryPad || primaryPadIndex == null) gPad = gpN;
+        }
         if (apiBtn) {
           var aEdge = gpN.buttonsPressed || {};
           if (aEdge.a && apiBtn.pulseInteract) apiBtn.pulseInteract(pi);
@@ -377,7 +418,9 @@
       if (keys.right) x += 1;
       if (keys.up) y -= 1;
       if (keys.down) y += 1;
-      if (gPad && gPad.connected && !x && !y) {
+      /* When primary has its own pad, three/phaser mergedSteer polls that pad —
+         avoid also stuffing the same stick into keySteer (double accel). Keyboard still OK. */
+      if (gPad && gPad.connected && !x && !y && primaryPadIndex == null) {
         x = gPad.lx || 0;
         y = gPad.ly || 0;
         if (gPad.dpad.l) x = -1;
