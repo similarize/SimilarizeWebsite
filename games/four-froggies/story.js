@@ -1,6 +1,7 @@
 /* Four Froggies — in-world story: phone → Purple Bear → SPS → Optimus → bring Jimmy home.
    Folded from game-sps reference HUD. Not a separate product.
    polish6: playful Purple Bear phone UI; SPS map flash on Map ping (dish);
+   polish8: warmer Purple Bear call panel; Blue Bear pet-bounce class (place-bound);
    Jimmy rogue hint when Optimus kits active; hang TBD hooks (no new systems). */
 (function (global) {
   "use strict";
@@ -230,7 +231,7 @@
       if (typeof hooks.onPhonePlayful === "function") hooks.onPhonePlayful(true);
       setTimeout(function () {
         if (!state.open || state.mode !== "phone") return;
-        if (statusEl) statusEl.textContent = "Connected · Purple Bear · ʕ·ᴥ·ʔ";
+        if (statusEl) statusEl.textContent = "Connected · Purple Bear · warm line · ʕ·ᴥ·ʔ";
         if (speechEl) {
           speechEl.hidden = false;
           speechEl.textContent =
@@ -257,11 +258,21 @@
     }
 
     function peekBlue() {
-      if (statusEl) statusEl.textContent = "Blue Bear (nearby, place-bound)";
+      if (statusEl) statusEl.textContent = "Blue Bear (nearby, place-bound) · pet!";
       if (speechEl) {
         speechEl.hidden = false;
         speechEl.textContent = "…meow.";
+        speechEl.classList.add("speech-bounce");
       }
+      /* polish8: Blue Bear pet bounce on place-bound contact */
+      var blueBtn = panel && panel.querySelector('[data-story-dial="blue"]');
+      if (blueBtn) {
+        blueBtn.classList.add("blue-pet-bounce");
+        setTimeout(function () {
+          if (blueBtn) blueBtn.classList.remove("blue-pet-bounce");
+        }, 2800);
+      }
+      if (typeof hooks.onBluePetBounce === "function") hooks.onBluePetBounce(true);
       if (btnHangup) btnHangup.hidden = true;
       if (btnOpenSps) btnOpenSps.hidden = true;
     }

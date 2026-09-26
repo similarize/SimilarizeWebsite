@@ -1,7 +1,8 @@
 /* Four Froggies — shared Ben-canon constants for all engines.
    WORLD_BIBLE only. No invented cast/zone/toy names. Physics/look engines compare.
    parity1: landmark layout (compound / track / pond / trucks) shared for Canvas + Phaser + three.
-   polish7: zone signs (HOUSE/TRACK/POND/GARAGE/STARSHIP) + AI chat one-liners from existing canon only. */
+   polish7: zone signs (HOUSE/TRACK/POND/GARAGE/STARSHIP) + AI chat one-liners from existing canon only.
+   polish8: shared landmarks unchanged; art punch lives in engine renderers. */
 (function (global) {
   "use strict";
 

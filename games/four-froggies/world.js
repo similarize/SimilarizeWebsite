@@ -7,6 +7,8 @@
    polish6: FF-like depth — stronger hill parallax, soft drop shadows, scale-with-depth props,
    walk cam tilt/bob (via main); 1000-story mech wow tip; story/combat visual teases.
    polish7: zone signs fade-in; mini-map; AI idle bounce + follow lag + chat bubbles (existing lines);
+   polish8: Cybertruck angular stainless + light bar + arches; ranch 2.5D porch/chimney smoke/path;
+   pond whale breach arcs + fish schools; Blue Bear pet bounce near house (place-bound).
    ability FX hang TBD. Canvas lead.
    ~10× map: real roam between ranch house / track / pond / Starship.
    James ranch house: big house, backyard (animals), huge garage (toys + 10/100-story mechs);
@@ -253,17 +255,31 @@
   function seedDecor(world) {
     var pond = AREAS[2];
     world.fish = [];
-    for (var i = 0; i < 28; i++) {
-      world.fish.push({
-        x: pond.x + 40 + Math.random() * (pond.w - 80),
-        y: pond.y + 40 + Math.random() * (pond.h - 80),
+    /* polish8: fish schools — clustered leaders + followers */
+    var schoolCenters = [];
+    for (var sc = 0; sc < 5; sc++) {
+      schoolCenters.push({
+        x: pond.x + 80 + Math.random() * (pond.w - 160),
+        y: pond.y + 80 + Math.random() * (pond.h - 160),
         phase: Math.random() * Math.PI * 2,
-        speed: 0.45 + Math.random() * 0.9,
-        scare: 0,
-        size: 2.2 + Math.random() * 2.8,
-        kind: "fish",
       });
     }
+    for (var i = 0; i < 36; i++) {
+      var sch = schoolCenters[i % schoolCenters.length];
+      world.fish.push({
+        x: sch.x + (Math.random() - 0.5) * 70,
+        y: sch.y + (Math.random() - 0.5) * 50,
+        phase: sch.phase + (Math.random() - 0.5) * 0.8,
+        speed: 0.5 + Math.random() * 0.85,
+        scare: 0,
+        size: 2.0 + Math.random() * 2.6,
+        kind: "fish",
+        school: i % schoolCenters.length,
+        ox: (Math.random() - 0.5) * 55,
+        oy: (Math.random() - 0.5) * 40,
+      });
+    }
+    world.schools = schoolCenters;
     world.whales = [];
     for (var w = 0; w < 5; w++) {
       world.whales.push({
@@ -272,8 +288,10 @@
         phase: Math.random() * Math.PI * 2,
         speed: 0.25 + Math.random() * 0.35,
         scare: 0,
-        size: 9 + Math.random() * 6,
+        size: 10 + Math.random() * 7,
         kind: "whale",
+        breach: Math.random() * Math.PI * 2,
+        breachAmp: 38 + Math.random() * 28,
       });
     }
     /* Big backyard animals — anonymous density only (polish4: larger / more present) */
@@ -504,21 +522,47 @@
 
   function updateFish(world, dt) {
     var pond = AREAS[2];
-    function moveSwim(list, baseSp) {
-      for (var i = 0; i < list.length; i++) {
-        var f = list[i];
-        f.phase += dt * f.speed * (f.scare > 0 ? 3.5 : 1);
-        if (f.scare > 0) f.scare -= dt;
-        var sp = f.scare > 0 ? baseSp * 2.6 : baseSp;
-        f.x += Math.cos(f.phase) * sp * dt;
-        f.y += Math.sin(f.phase * 0.7) * (sp * 0.7) * dt;
-        var pad = f.kind === "whale" ? 80 : 28;
-        f.x = clamp(f.x, pond.x + pad, pond.x + pond.w - pad);
-        f.y = clamp(f.y, pond.y + pad, pond.y + pond.h - pad);
+    /* polish8: school centers drift; fish keep pack offset */
+    if (world.schools) {
+      for (var si = 0; si < world.schools.length; si++) {
+        var sc = world.schools[si];
+        sc.phase += dt * (0.35 + (si % 3) * 0.08);
+        sc.x += Math.cos(sc.phase) * 18 * dt;
+        sc.y += Math.sin(sc.phase * 0.7) * 12 * dt;
+        sc.x = clamp(sc.x, pond.x + 100, pond.x + pond.w - 100);
+        sc.y = clamp(sc.y, pond.y + 100, pond.y + pond.h - 100);
       }
     }
-    moveSwim(world.fish, 22);
-    moveSwim(world.whales, 12);
+    for (var i = 0; i < world.fish.length; i++) {
+      var f = world.fish[i];
+      f.phase += dt * f.speed * (f.scare > 0 ? 3.5 : 1);
+      if (f.scare > 0) f.scare -= dt;
+      var sch = world.schools && world.schools[f.school];
+      if (sch && f.scare <= 0) {
+        var tx = sch.x + (f.ox || 0) + Math.cos(f.phase) * 8;
+        var ty = sch.y + (f.oy || 0) + Math.sin(f.phase * 0.7) * 6;
+        f.x += (tx - f.x) * Math.min(1, 2.4 * dt);
+        f.y += (ty - f.y) * Math.min(1, 2.4 * dt);
+      } else {
+        var sp = f.scare > 0 ? 22 * 2.6 : 22;
+        f.x += Math.cos(f.phase) * sp * dt;
+        f.y += Math.sin(f.phase * 0.7) * (sp * 0.7) * dt;
+      }
+      f.x = clamp(f.x, pond.x + 28, pond.x + pond.w - 28);
+      f.y = clamp(f.y, pond.y + 28, pond.y + pond.h - 28);
+    }
+    for (var wi = 0; wi < world.whales.length; wi++) {
+      var wh = world.whales[wi];
+      wh.phase += dt * wh.speed * (wh.scare > 0 ? 3.5 : 1);
+      if (wh.scare > 0) wh.scare -= dt;
+      var wsp = wh.scare > 0 ? 12 * 2.6 : 12;
+      wh.x += Math.cos(wh.phase) * wsp * dt;
+      wh.y += Math.sin(wh.phase * 0.7) * (wsp * 0.7) * dt;
+      /* polish8: bigger breach arcs */
+      wh.breach = (wh.breach || 0) + dt * (0.55 + wh.speed * 0.4);
+      wh.x = clamp(wh.x, pond.x + 80, pond.x + pond.w - 80);
+      wh.y = clamp(wh.y, pond.y + 80, pond.y + pond.h - 80);
+    }
     for (var a = 0; a < world.animals.length; a++) {
       var an = world.animals[a];
       an.phase += dt * an.speed;
@@ -552,6 +596,7 @@
       k.life -= dt; k.x += k.vx * dt; k.y += k.vy * dt; k.vy += 220 * dt;
       if (k.life <= 0) world.sparks.splice(i, 1);
     }
+    world.ambientT = (world.ambientT || 0) + dt;
     /* polish5: ambient pollen / fireflies drift */
     if (!world.ambient) world.ambient = [];
     for (i = 0; i < world.ambient.length; i++) {
@@ -1293,22 +1338,69 @@
     drawMech(ctx, gar.x + 120, gar.y + 280, 10, camX, camY, vw, vh, "#a5b4fc");
     drawMech(ctx, gar.x + 280, gar.y + 300, 100, camX, camY, vw, vh, "#67e8f9");
 
-    /* Main house — big 2.5D with depth walls, roof planes, porch */
+    /* Main house — polish8 stronger 2.5D: porch depth layers, path to door, chimney smoke */
     var hx = a.x + 60, hy = a.y + 100, hw = 520, hh = 420;
-    var porch = [
-      project(hx + 60, hy + hh - 90, camX, camY, vw, vh),
-      project(hx + hw - 60, hy + hh - 90, camX, camY, vw, vh),
-      project(hx + hw - 40, hy + hh - 20, camX, camY, vw, vh),
-      project(hx + 40, hy + hh - 20, camX, camY, vw, vh),
+    /* Path to door (walkway) */
+    var pathPts = [
+      project(hx + hw * 0.42, hy + hh + 40, camX, camY, vw, vh),
+      project(hx + hw * 0.58, hy + hh + 40, camX, camY, vw, vh),
+      project(hx + hw * 0.55, hy + hh - 25, camX, camY, vw, vh),
+      project(hx + hw * 0.45, hy + hh - 25, camX, camY, vw, vh),
     ];
-    drawGroundPoly(ctx, porch, "rgba(170, 140, 95, 0.78)", "rgba(80,50,20,0.55)");
-    /* Porch posts */
+    drawGroundPoly(ctx, pathPts, "rgba(160, 140, 110, 0.72)", "rgba(70,50,30,0.5)");
+    /* Path edge stones */
+    for (var sti = 0; sti < 5; sti++) {
+      var stx = hx + hw * 0.48 + (sti - 2) * 8;
+      var sty = hy + hh + 10 - sti * 12;
+      var stp = project(stx, sty, camX, camY, vw, vh);
+      ctx.fillStyle = "rgba(120,100,80,0.75)";
+      ctx.beginPath();
+      ctx.ellipse(stp.x, stp.y, 5 * stp.depth, 2.5 * stp.depth, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    /* Porch — back deck (depth) then front step */
+    var porchBack = [
+      project(hx + 70, hy + hh - 110, camX, camY, vw, vh),
+      project(hx + hw - 70, hy + hh - 110, camX, camY, vw, vh),
+      project(hx + hw - 55, hy + hh - 55, camX, camY, vw, vh),
+      project(hx + 55, hy + hh - 55, camX, camY, vw, vh),
+    ];
+    drawGroundPoly(ctx, porchBack, "rgba(150, 118, 78, 0.88)", "rgba(70,40,15,0.6)");
+    var porch = [
+      project(hx + 50, hy + hh - 70, camX, camY, vw, vh),
+      project(hx + hw - 50, hy + hh - 70, camX, camY, vw, vh),
+      project(hx + hw - 30, hy + hh - 8, camX, camY, vw, vh),
+      project(hx + 30, hy + hh - 8, camX, camY, vw, vh),
+    ];
+    drawGroundPoly(ctx, porch, "rgba(185, 155, 105, 0.9)", "rgba(80,50,20,0.55)");
+    /* Porch side walls (depth lips) */
+    var pl0 = porch[0], pl3 = porch[3];
+    ctx.fillStyle = "rgba(110, 80, 50, 0.75)";
+    ctx.beginPath();
+    ctx.moveTo(pl0.x, pl0.y);
+    ctx.lineTo(pl0.x - 10 * pl0.depth, pl0.y - 8 * pl0.depth);
+    ctx.lineTo(pl3.x - 10 * pl3.depth, pl3.y - 6 * pl3.depth);
+    ctx.lineTo(pl3.x, pl3.y);
+    ctx.closePath();
+    ctx.fill();
+    /* Porch posts + rail */
     for (var pi = 0; pi < 5; pi++) {
       var px = hx + 80 + pi * ((hw - 160) / 4);
-      var pp = project(px, hy + hh - 55, camX, camY, vw, vh);
+      var pp = project(px, hy + hh - 45, camX, camY, vw, vh);
       ctx.fillStyle = "#5d4037";
-      ctx.fillRect(pp.x - 3, pp.y - 38 * pp.depth, 6, 38 * pp.depth);
+      ctx.fillRect(pp.x - 3.5, pp.y - 44 * pp.depth, 7, 44 * pp.depth);
+      ctx.fillStyle = "#8d6e63";
+      ctx.fillRect(pp.x - 4.5, pp.y - 46 * pp.depth, 9, 4 * pp.depth);
     }
+    /* Rail connecting posts */
+    var railL = project(hx + 80, hy + hh - 50, camX, camY, vw, vh);
+    var railR = project(hx + hw - 80, hy + hh - 50, camX, camY, vw, vh);
+    ctx.strokeStyle = "#6d4c41";
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.moveTo(railL.x, railL.y - 28 * railL.depth);
+    ctx.lineTo(railR.x, railR.y - 28 * railR.depth);
+    ctx.stroke();
     var p0 = project(hx + 50, hy + 50, camX, camY, vw, vh);
     var p1 = project(hx + hw - 50, hy + 50, camX, camY, vw, vh);
     var p2 = project(hx + hw - 50, hy + hh - 70, camX, camY, vw, vh);
@@ -1436,10 +1528,22 @@
     ctx.lineTo(ridge.x, ridge.y - ridgeH);
     ctx.lineTo(p1.x + 18, p1.y - wallH);
     ctx.stroke();
-    /* Chimney */
+    /* Chimney + polish8 smoke puffs */
     var ch = project(hx + hw * 0.72, hy + 70, camX, camY, vw, vh);
     ctx.fillStyle = "#795548";
     ctx.fillRect(ch.x - 8, ch.y - wallH - 70, 16 * ch.depth, 36 * ch.depth);
+    ctx.fillStyle = "#5d4037";
+    ctx.fillRect(ch.x - 10, ch.y - wallH - 74, 20 * ch.depth, 5 * ch.depth);
+    var smokeT = (world && world.ambientT) ? world.ambientT : (Date.now() / 1000);
+    for (var sm = 0; sm < 4; sm++) {
+      var sy = ch.y - wallH - 78 - sm * 12 - Math.sin(smokeT * 1.4 + sm) * 3;
+      var sx = ch.x + Math.sin(smokeT * 0.9 + sm * 0.7) * 6 * ch.depth;
+      var sr = (5 + sm * 2.2) * ch.depth;
+      ctx.fillStyle = "rgba(200, 200, 205," + (0.42 - sm * 0.08) + ")";
+      ctx.beginPath();
+      ctx.ellipse(sx, sy, sr, sr * 0.7, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
     /* Front door — polish4: ajar doorway shows hallway / rooms inside */
     var fr = project(hx + hw * 0.48, hy + hh - 80, camX, camY, vw, vh);
     var dw = 26 * fr.depth, dh = 52 * fr.depth;
@@ -1487,6 +1591,43 @@
     ctx.strokeText("James · Ranch house", ridge.x, ridge.y - ridgeH - 14);
     ctx.fillStyle = "#fff7ed";
     ctx.fillText("James · Ranch house", ridge.x, ridge.y - ridgeH - 14);
+
+    /* polish8: Blue Bear place-bound pet bounce near porch / phone */
+    var blueX = 320, blueY = 1920;
+    var bp = project(blueX, blueY, camX, camY, vw, vh);
+    if (bp.x > -40 && bp.x < vw + 40 && bp.y > -40 && bp.y < vh + 40) {
+      var bobT = (world && world.ambientT) ? world.ambientT : (Date.now() / 1000);
+      var bounce = Math.abs(Math.sin(bobT * 3.2)) * 7 * bp.depth;
+      var bs = 11 * bp.depth;
+      drawSoftShadow(ctx, bp.x, bp.y + 4, bs * 1.1, bs * 0.35, 0.3);
+      ctx.fillStyle = "#3b82f6";
+      ctx.beginPath();
+      ctx.ellipse(bp.x, bp.y - bounce - bs * 0.35, bs, bs * 0.85, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#1e3a8a";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      /* Ears */
+      ctx.fillStyle = "#60a5fa";
+      ctx.beginPath(); ctx.ellipse(bp.x - bs * 0.55, bp.y - bounce - bs * 0.95, bs * 0.28, bs * 0.32, -0.3, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(bp.x + bs * 0.55, bp.y - bounce - bs * 0.95, bs * 0.28, bs * 0.32, 0.3, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#fff";
+      ctx.beginPath(); ctx.arc(bp.x - bs * 0.28, bp.y - bounce - bs * 0.4, 2.2 * bp.depth, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(bp.x + bs * 0.28, bp.y - bounce - bs * 0.4, 2.2 * bp.depth, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#0f172a";
+      ctx.beginPath(); ctx.arc(bp.x - bs * 0.24, bp.y - bounce - bs * 0.4, 1.1 * bp.depth, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(bp.x + bs * 0.32, bp.y - bounce - bs * 0.4, 1.1 * bp.depth, 0, Math.PI * 2); ctx.fill();
+      ctx.font = "bold " + Math.round(10 * bp.depth) + "px Segoe UI, system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.strokeStyle = "rgba(0,0,0,0.65)";
+      ctx.lineWidth = 3;
+      ctx.strokeText("Blue Bear", bp.x, bp.y - bounce - bs * 1.55);
+      ctx.fillStyle = "#bfdbfe";
+      ctx.fillText("Blue Bear", bp.x, bp.y - bounce - bs * 1.55);
+      ctx.fillStyle = "rgba(147, 197, 253, 0.9)";
+      ctx.font = Math.round(8 * bp.depth) + "px Segoe UI, system-ui, sans-serif";
+      ctx.fillText("place-bound", bp.x, bp.y + 14 * bp.depth);
+    }
 
     /* 1000-story mech — does NOT fit in garage; sits out back */
     drawMech(ctx, a.x + 280, a.y + a.h - 80, 1000, camX, camY, vw, vh, "#fcd34d");
@@ -1720,30 +1861,52 @@
       ctx.stroke();
     }
     function drawSwimmer(f, isWhale) {
-      /* polish3: readable silhouettes — eyes, fins, whale spout */
+      /* polish8: whale breach arcs; fish stay school-readable */
+      var breachLift = 0;
+      if (isWhale) {
+        var br = Math.sin(f.breach || 0);
+        breachLift = Math.max(0, br) * (f.breachAmp || 48) * 0.55;
+      }
       var fp = project(f.x, f.y, camX, camY, vw, vh);
       if (fp.x < -80 || fp.x > vw + 80 || fp.y < -80 || fp.y > vh + 80) return;
-      var fs = (isWhale ? 12 : 6) + f.size * (isWhale ? 2.5 : 2.6);
+      var fs = (isWhale ? 13 : 6) + f.size * (isWhale ? 2.7 : 2.6);
       fs *= fp.depth * (f.scare > 0 ? 1.14 : 1);
       var ang = f.phase;
+      var drawY = fp.y - breachLift * fp.depth;
+      /* Breach splash ring when rising */
+      if (isWhale && breachLift > 8) {
+        var ba = Math.min(0.55, breachLift / 50);
+        ctx.strokeStyle = "rgba(186, 230, 253," + ba + ")";
+        ctx.lineWidth = 2.4;
+        ctx.beginPath();
+        ctx.ellipse(fp.x, fp.y + 2, fs * (1.1 + breachLift * 0.02), fs * 0.35, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        /* Arc trail */
+        ctx.strokeStyle = "rgba(125, 211, 252," + (0.25 + ba * 0.4) + ")";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(fp.x - fs * 0.9, fp.y + 4);
+        ctx.quadraticCurveTo(fp.x - fs * 0.2, drawY - fs * 0.4, fp.x + fs * 0.3, drawY);
+        ctx.stroke();
+      }
       ctx.fillStyle = "rgba(0,0,0,0.28)";
       ctx.beginPath();
       ctx.ellipse(fp.x, fp.y + 4, fs * 1.05, fs * 0.26, ang, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = f.scare > 0 ? "#fef08a" : (isWhale ? "#7dd3fc" : "#fde68a");
       ctx.beginPath();
-      ctx.ellipse(fp.x, fp.y, fs * (isWhale ? 1.15 : 1), fs * (isWhale ? 0.42 : 0.48), ang, 0, Math.PI * 2);
+      ctx.ellipse(fp.x, drawY, fs * (isWhale ? 1.2 : 1), fs * (isWhale ? 0.44 : 0.48), ang, 0, Math.PI * 2);
       ctx.fill();
       ctx.strokeStyle = isWhale ? "#0c4a6e" : "#78350f";
-      ctx.lineWidth = isWhale ? 2.4 : 1.8;
+      ctx.lineWidth = isWhale ? 2.6 : 1.8;
       ctx.stroke();
       /* Tail */
       var tx = fp.x - Math.cos(ang) * fs;
-      var ty = fp.y - Math.sin(ang) * fs * 0.35;
+      var ty = drawY - Math.sin(ang) * fs * 0.35;
       ctx.beginPath();
       ctx.moveTo(tx, ty);
-      ctx.lineTo(fp.x - Math.cos(ang) * fs * 1.7, fp.y);
-      ctx.lineTo(fp.x - Math.cos(ang) * fs, fp.y + Math.sin(ang) * fs * 0.4);
+      ctx.lineTo(fp.x - Math.cos(ang) * fs * 1.7, drawY);
+      ctx.lineTo(fp.x - Math.cos(ang) * fs, drawY + Math.sin(ang) * fs * 0.4);
       ctx.closePath();
       ctx.fillStyle = isWhale ? "#38bdf8" : "#fbbf24";
       ctx.fill();
@@ -1752,39 +1915,40 @@
       ctx.stroke();
       /* Eye */
       var ex = fp.x + Math.cos(ang) * fs * 0.45;
-      var ey = fp.y + Math.sin(ang) * fs * 0.15 - fs * 0.12;
+      var ey = drawY + Math.sin(ang) * fs * 0.15 - fs * 0.12;
       ctx.fillStyle = "#fff";
       ctx.beginPath();
-      ctx.arc(ex, ey, (isWhale ? 3.2 : 2.1) * fp.depth, 0, Math.PI * 2);
+      ctx.arc(ex, ey, (isWhale ? 3.4 : 2.1) * fp.depth, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = "#0f172a";
       ctx.beginPath();
-      ctx.arc(ex + 0.6 * fp.depth, ey, (isWhale ? 1.6 : 1.05) * fp.depth, 0, Math.PI * 2);
+      ctx.arc(ex + 0.6 * fp.depth, ey, (isWhale ? 1.7 : 1.05) * fp.depth, 0, Math.PI * 2);
       ctx.fill();
       if (isWhale) {
         ctx.fillStyle = "rgba(255,255,255,0.55)";
         ctx.beginPath();
-        ctx.ellipse(fp.x + fs * 0.1, fp.y - fs * 0.18, fs * 0.4, fs * 0.14, ang, 0, Math.PI * 2);
+        ctx.ellipse(fp.x + fs * 0.1, drawY - fs * 0.18, fs * 0.4, fs * 0.14, ang, 0, Math.PI * 2);
         ctx.fill();
-        /* Spout */
-        ctx.strokeStyle = "rgba(186, 230, 253, 0.85)";
-        ctx.lineWidth = 2;
+        /* Spout taller on breach */
+        var spoutH = fs * (0.95 + Math.min(0.8, breachLift / 40));
+        ctx.strokeStyle = "rgba(186, 230, 253, 0.9)";
+        ctx.lineWidth = 2.4;
         ctx.beginPath();
-        ctx.moveTo(fp.x, fp.y - fs * 0.35);
-        ctx.lineTo(fp.x + 2, fp.y - fs * 0.95);
-        ctx.lineTo(fp.x + 8 * fp.depth, fp.y - fs * 1.05);
+        ctx.moveTo(fp.x, drawY - fs * 0.35);
+        ctx.lineTo(fp.x + 2, drawY - spoutH);
+        ctx.lineTo(fp.x + 10 * fp.depth, drawY - spoutH - 4);
         ctx.stroke();
-        ctx.fillStyle = "rgba(224, 242, 254, 0.7)";
+        ctx.fillStyle = "rgba(224, 242, 254, 0.75)";
         ctx.beginPath();
-        ctx.arc(fp.x + 8 * fp.depth, fp.y - fs * 1.05, 3.5 * fp.depth, 0, Math.PI * 2);
+        ctx.arc(fp.x + 10 * fp.depth, drawY - spoutH - 4, 4.2 * fp.depth, 0, Math.PI * 2);
         ctx.fill();
       } else {
         /* Dorsal fin */
         ctx.fillStyle = "#f59e0b";
         ctx.beginPath();
-        ctx.moveTo(fp.x - fs * 0.1, fp.y - fs * 0.35);
-        ctx.lineTo(fp.x + fs * 0.15, fp.y - fs * 0.85);
-        ctx.lineTo(fp.x + fs * 0.25, fp.y - fs * 0.2);
+        ctx.moveTo(fp.x - fs * 0.1, drawY - fs * 0.35);
+        ctx.lineTo(fp.x + fs * 0.15, drawY - fs * 0.85);
+        ctx.lineTo(fp.x + fs * 0.25, drawY - fs * 0.2);
         ctx.closePath();
         ctx.fill();
       }
@@ -1869,86 +2033,107 @@
     var shA = wet ? 0.14 : (0.38 - Math.min(0.22, (z || 0) * 0.005));
     drawSoftShadow(ctx, 0, 10 * s + lift * 0.35, 34 * s, 9 * s, shA);
 
-    /* polish3: angular stainless Cybertruck — wedge nose, bed, mirrors, dual axles */
-    var bodyGrad = ctx.createLinearGradient(-36 * s, -22 * s, 42 * s, 12 * s);
-    bodyGrad.addColorStop(0, driving ? "#f8fafc" : "#e5e7eb");
-    bodyGrad.addColorStop(0.4, driving ? "#cbd5e1" : "#9ca3af");
-    bodyGrad.addColorStop(1, driving ? "#64748b" : "#4b5563");
+    /* polish8: more Cybertruck-like — angular stainless, light bar, wheel arches */
+    var bodyGrad = ctx.createLinearGradient(-40 * s, -26 * s, 48 * s, 14 * s);
+    bodyGrad.addColorStop(0, driving ? "#f8fafc" : "#e8edf2");
+    bodyGrad.addColorStop(0.28, driving ? "#d4dce6" : "#b8c0cc");
+    bodyGrad.addColorStop(0.55, driving ? "#9aa7b8" : "#8b95a3");
+    bodyGrad.addColorStop(1, driving ? "#5b6778" : "#4a5564");
     ctx.fillStyle = bodyGrad;
     ctx.beginPath();
-    ctx.moveTo(-34 * s, 2 * s);       /* rear bumper */
-    ctx.lineTo(-30 * s, -6 * s);      /* bed rear */
-    ctx.lineTo(-8 * s, -10 * s);      /* bed → cab */
-    ctx.lineTo(6 * s, -22 * s);       /* roof peak */
-    ctx.lineTo(36 * s, -10 * s);      /* nose slope */
-    ctx.lineTo(42 * s, 4 * s);        /* front bumper */
-    ctx.lineTo(-36 * s, 8 * s);
+    ctx.moveTo(-38 * s, 4 * s);        /* rear bumper sharp */
+    ctx.lineTo(-36 * s, -4 * s);       /* bed rear upright */
+    ctx.lineTo(-14 * s, -8 * s);       /* bed flat */
+    ctx.lineTo(-6 * s, -12 * s);       /* cab break */
+    ctx.lineTo(4 * s, -26 * s);        /* roof peak (steep) */
+    ctx.lineTo(40 * s, -8 * s);        /* long nose slope */
+    ctx.lineTo(48 * s, 2 * s);         /* front tip */
+    ctx.lineTo(44 * s, 8 * s);         /* front bumper */
+    ctx.lineTo(-40 * s, 10 * s);
     ctx.closePath();
     ctx.fill();
     ctx.strokeStyle = "#020617";
-    ctx.lineWidth = 2.8;
-    ctx.lineJoin = "round";
+    ctx.lineWidth = 3;
+    ctx.lineJoin = "miter";
     ctx.stroke();
-    /* Bed rail + stainless crease */
-    ctx.strokeStyle = "rgba(255,255,255,0.65)";
-    ctx.lineWidth = 1.5;
+    /* Stainless panel creases */
+    ctx.strokeStyle = "rgba(255,255,255,0.72)";
+    ctx.lineWidth = 1.6;
     ctx.beginPath();
-    ctx.moveTo(-28 * s, -4 * s);
-    ctx.lineTo(-10 * s, -8 * s);
-    ctx.lineTo(4 * s, -18 * s);
-    ctx.lineTo(34 * s, -8 * s);
+    ctx.moveTo(-34 * s, -2 * s);
+    ctx.lineTo(-12 * s, -6 * s);
+    ctx.lineTo(-2 * s, -10 * s);
+    ctx.lineTo(6 * s, -22 * s);
+    ctx.lineTo(38 * s, -6 * s);
     ctx.stroke();
-    ctx.strokeStyle = "rgba(15,23,42,0.6)";
-    ctx.lineWidth = 1.3;
+    ctx.strokeStyle = "rgba(15,23,42,0.55)";
+    ctx.lineWidth = 1.4;
     ctx.beginPath();
-    ctx.moveTo(-32 * s, 4 * s);
-    ctx.lineTo(38 * s, 2 * s);
+    ctx.moveTo(-36 * s, 6 * s);
+    ctx.lineTo(42 * s, 4 * s);
     ctx.stroke();
     /* Side mirror */
     ctx.fillStyle = "#94a3b8";
-    ctx.fillRect(-4 * s, -14 * s, 5 * s, 3 * s);
+    ctx.fillRect(-6 * s, -16 * s, 6 * s, 3.5 * s);
     ctx.strokeStyle = "#0f172a";
     ctx.lineWidth = 1;
-    ctx.strokeRect(-4 * s, -14 * s, 5 * s, 3 * s);
+    ctx.strokeRect(-6 * s, -16 * s, 6 * s, 3.5 * s);
     if (accent) {
       ctx.strokeStyle = accent;
-      ctx.lineWidth = 3.6;
+      ctx.lineWidth = 3.8;
       ctx.beginPath();
-      ctx.moveTo(-30 * s, 2 * s);
-      ctx.lineTo(34 * s, 0);
+      ctx.moveTo(-34 * s, 3 * s);
+      ctx.lineTo(38 * s, 1 * s);
       ctx.stroke();
     }
-    /* Cabin glass wedge */
-    ctx.fillStyle = "rgba(15, 23, 42, 0.96)";
+    /* Cabin glass — steep wedge */
+    ctx.fillStyle = "rgba(15, 23, 42, 0.97)";
     ctx.beginPath();
-    ctx.moveTo(-4 * s, -8 * s);
-    ctx.lineTo(8 * s, -20 * s);
-    ctx.lineTo(26 * s, -10 * s);
-    ctx.lineTo(2 * s, -5 * s);
+    ctx.moveTo(-4 * s, -10 * s);
+    ctx.lineTo(6 * s, -24 * s);
+    ctx.lineTo(30 * s, -9 * s);
+    ctx.lineTo(2 * s, -6 * s);
     ctx.closePath();
     ctx.fill();
     ctx.strokeStyle = "#020617";
     ctx.lineWidth = 1.8;
     ctx.stroke();
-    ctx.fillStyle = "rgba(125, 211, 252, 0.42)";
+    ctx.fillStyle = "rgba(125, 211, 252, 0.45)";
     ctx.beginPath();
-    ctx.moveTo(0, -9 * s);
-    ctx.lineTo(9 * s, -17 * s);
-    ctx.lineTo(20 * s, -11 * s);
-    ctx.lineTo(4 * s, -7 * s);
+    ctx.moveTo(-1 * s, -11 * s);
+    ctx.lineTo(8 * s, -20 * s);
+    ctx.lineTo(24 * s, -10 * s);
+    ctx.lineTo(4 * s, -8 * s);
     ctx.closePath();
     ctx.fill();
-    /* Headlight bar */
-    ctx.fillStyle = driving ? "#fef08a" : "#cbd5e1";
-    ctx.fillRect(34 * s, -8 * s, 7 * s, 4 * s);
+    /* Full-width light bar across nose */
+    var lbY = -7 * s;
+    var lbG = ctx.createLinearGradient(32 * s, lbY, 48 * s, lbY + 5 * s);
+    lbG.addColorStop(0, driving ? "#fef9c3" : "#e2e8f0");
+    lbG.addColorStop(0.5, driving ? "#fde047" : "#cbd5e1");
+    lbG.addColorStop(1, driving ? "#fef08a" : "#94a3b8");
+    ctx.fillStyle = lbG;
+    ctx.fillRect(34 * s, lbY, 13 * s, 5 * s);
     ctx.strokeStyle = "#0f172a";
-    ctx.lineWidth = 1;
-    ctx.strokeRect(34 * s, -8 * s, 7 * s, 4 * s);
-    /* Tail light */
+    ctx.lineWidth = 1.2;
+    ctx.strokeRect(34 * s, lbY, 13 * s, 5 * s);
+    if (driving) {
+      ctx.fillStyle = "rgba(253, 224, 71, 0.35)";
+      ctx.beginPath();
+      ctx.ellipse(42 * s, lbY + 2.5 * s, 18 * s, 6 * s, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    /* Tail light bar */
     ctx.fillStyle = driving ? "#f87171" : "#7f1d1d";
-    ctx.fillRect(-34 * s, -2 * s, 5 * s, 3.5 * s);
+    ctx.fillRect(-38 * s, -1 * s, 7 * s, 4 * s);
     function wheel(wx, wy, r) {
       r = r || 8.5;
+      /* Wheel arch flare */
+      ctx.strokeStyle = "rgba(148,163,184,0.85)";
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.arc(wx, wy - 1 * s, (r + 3.2) * s, Math.PI * 1.05, Math.PI * 1.95);
+      ctx.stroke();
       ctx.fillStyle = "#020617";
       ctx.beginPath(); ctx.arc(wx, wy, r * s, 0, Math.PI * 2); ctx.fill();
       ctx.strokeStyle = "#94a3b8"; ctx.lineWidth = 2.4;
@@ -1958,9 +2143,9 @@
     }
     var wheelY = (z || 0) < 8 ? 10 : 5;
     if (!(wet && sub > 0.75)) {
-      wheel(-20 * s, wheelY * s, 8.8);
-      wheel(-8 * s, wheelY * s, 8.2);   /* dual rear feel */
-      wheel(20 * s, (wheelY - 1) * s, 8.6);
+      wheel(-22 * s, wheelY * s, 9.2);
+      wheel(-8 * s, wheelY * s, 8.4);   /* dual rear */
+      wheel(22 * s, (wheelY - 1) * s, 9.0);
     }
 
     /* Waterline clip + submerged tint — truck reads as ON / under surface */
@@ -1994,11 +2179,11 @@
       if (sub > 0.7) {
         ctx.fillStyle = "rgba(4, 50, 80, " + clamp((sub - 0.7) * 0.85, 0, 0.45) + ")";
         ctx.beginPath();
-        ctx.moveTo(-34 * s, 2 * s);
-        ctx.lineTo(-30 * s, -6 * s);
-        ctx.lineTo(6 * s, -22 * s);
-        ctx.lineTo(42 * s, 4 * s);
-        ctx.lineTo(-36 * s, 8 * s);
+        ctx.moveTo(-38 * s, 4 * s);
+        ctx.lineTo(-36 * s, -4 * s);
+        ctx.lineTo(4 * s, -26 * s);
+        ctx.lineTo(48 * s, 2 * s);
+        ctx.lineTo(-40 * s, 10 * s);
         ctx.closePath();
         ctx.fill();
         /* Inline bubble hints on hull */

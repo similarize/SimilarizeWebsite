@@ -7,6 +7,7 @@
    shared ALL ABOARD; land shake; hotspot sparkle; orbit pull rings + Escape banner.
    polish6: depth shadows + parallax-lite hills + Mars invader silhouette tease + mech wow tip.
    polish7: zone signs + mini-map lite + companion idle bounce / follow lag. Hollow house + frogs kept.
+   polish8: truck silhouette + house porch + whale breach + destination beacon. Hollow house + frogs kept.
    WASD camera-relative — do not invert. */
 (function (global) {
   "use strict";
@@ -173,43 +174,50 @@
   }
 
   function makeTruckMesh(accentHex) {
-    /* polish3: more truck-like wedge + bed + wheels (Canvas clarity port) */
+    /* polish8: angular stainless Cybertruck — light bar + wheel arches */
     var g = new THREE.Group();
-    var bodyMat = new THREE.MeshStandardMaterial({ color: 0xb0b8c4, metalness: 0.65, roughness: 0.28 });
-    var body = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.38, 0.78), bodyMat);
-    body.position.set(0.05, 0.32, 0); body.castShadow = true; g.add(body);
-    /* Wedge nose */
+    var bodyMat = new THREE.MeshStandardMaterial({ color: 0xc5ced8, metalness: 0.78, roughness: 0.22 });
+    var body = new THREE.Mesh(new THREE.BoxGeometry(1.85, 0.36, 0.82), bodyMat);
+    body.position.set(0.02, 0.34, 0); body.castShadow = true; g.add(body);
+    /* Steep wedge nose */
     var nose = new THREE.Mesh(
-      new THREE.BoxGeometry(0.55, 0.22, 0.74),
-      new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.7, roughness: 0.25 })
+      new THREE.BoxGeometry(0.72, 0.2, 0.78),
+      new THREE.MeshStandardMaterial({ color: 0xa8b4c4, metalness: 0.8, roughness: 0.2 })
     );
-    nose.position.set(0.85, 0.28, 0); nose.rotation.z = -0.22; g.add(nose);
+    nose.position.set(0.95, 0.3, 0); nose.rotation.z = -0.32; g.add(nose);
     /* Cabin glass tint via accent */
     var cab = new THREE.Mesh(
-      new THREE.BoxGeometry(0.62, 0.34, 0.66),
-      new THREE.MeshStandardMaterial({ color: accentHex, metalness: 0.45, roughness: 0.35, emissive: accentHex, emissiveIntensity: 0.12 })
+      new THREE.BoxGeometry(0.58, 0.38, 0.68),
+      new THREE.MeshStandardMaterial({ color: accentHex, metalness: 0.45, roughness: 0.3, emissive: accentHex, emissiveIntensity: 0.14 })
     );
-    cab.position.set(0.18, 0.58, 0); g.add(cab);
+    cab.position.set(0.12, 0.62, 0); cab.rotation.z = -0.08; g.add(cab);
     /* Bed rails */
-    var railM = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.5, roughness: 0.4 });
-    var railL = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.12, 0.06), railM);
-    railL.position.set(-0.45, 0.48, 0.34); g.add(railL);
-    var railR = railL.clone(); railR.position.z = -0.34; g.add(railR);
-    /* Headlight bar */
+    var railM = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.55, roughness: 0.35 });
+    var railL = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.1, 0.05), railM);
+    railL.position.set(-0.5, 0.5, 0.36); g.add(railL);
+    var railR = railL.clone(); railR.position.z = -0.36; g.add(railR);
+    /* Full-width light bar */
     var hl = new THREE.Mesh(
-      new THREE.BoxGeometry(0.08, 0.08, 0.55),
-      new THREE.MeshStandardMaterial({ color: 0xfef08a, emissive: 0xfbbf24, emissiveIntensity: 0.45 })
+      new THREE.BoxGeometry(0.1, 0.1, 0.7),
+      new THREE.MeshStandardMaterial({ color: 0xfef08a, emissive: 0xfbbf24, emissiveIntensity: 0.65 })
     );
-    hl.position.set(1.12, 0.3, 0); g.add(hl);
+    hl.position.set(1.28, 0.32, 0); g.add(hl);
+    /* Wheel arches (half-torus flares) */
+    var archM = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.6, roughness: 0.35 });
+    function arch(x, z) {
+      var a = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.03, 6, 10, Math.PI), archM);
+      a.rotation.y = Math.PI / 2; a.rotation.z = Math.PI; a.position.set(x, 0.22, z); g.add(a);
+    }
+    arch(-0.5, 0.42); arch(-0.5, -0.42); arch(0.55, 0.42); arch(0.55, -0.42);
     /* Wheels */
     var wheelM = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.8 });
     function wheel(x, z) {
-      var w = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.12, 10), wheelM);
+      var w = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.14, 10), wheelM);
       w.rotation.z = Math.PI / 2; w.position.set(x, 0.16, z); g.add(w);
     }
-    wheel(-0.45, 0.4); wheel(-0.45, -0.4); wheel(0.55, 0.4); wheel(0.55, -0.4);
+    wheel(-0.5, 0.42); wheel(-0.5, -0.42); wheel(0.55, 0.42); wheel(0.55, -0.42);
     var edge = new THREE.LineSegments(
-      new THREE.EdgesGeometry(new THREE.BoxGeometry(1.7, 0.38, 0.78)),
+      new THREE.EdgesGeometry(new THREE.BoxGeometry(1.85, 0.36, 0.82)),
       new THREE.LineBasicMaterial({ color: 0x111827 })
     );
     edge.position.copy(body.position); g.add(edge);
@@ -387,6 +395,49 @@
       new THREE.MeshStandardMaterial({ color: 0x78716c })
     );
     chimney.position.set(hp.x + 1.4, wallH + 1.1, hp.z - 0.8); scene.add(chimney);
+    /* polish8: porch depth + path + chimney smoke + Blue Bear (hollow house kept) */
+    var porch = new THREE.Mesh(
+      new THREE.BoxGeometry(hw * 0.9, 0.14, 1.1),
+      new THREE.MeshStandardMaterial({ color: 0xb8956a, roughness: 0.85 })
+    );
+    porch.position.set(hp.x, 0.12, hp.z + hd * 0.5 + 0.4); porch.receiveShadow = true; scene.add(porch);
+    var path = new THREE.Mesh(
+      new THREE.BoxGeometry(0.9, 0.06, 1.6),
+      new THREE.MeshStandardMaterial({ color: 0xa09070, roughness: 0.9 })
+    );
+    path.position.set(hp.x, 0.05, hp.z + hd * 0.5 + 1.4); scene.add(path);
+    for (var pi = 0; pi < 5; pi++) {
+      var post = new THREE.Mesh(
+        new THREE.BoxGeometry(0.1, 0.9, 0.1),
+        new THREE.MeshStandardMaterial({ color: 0x5d4037 })
+      );
+      post.position.set(hp.x - hw * 0.35 + pi * (hw * 0.175), 0.55, hp.z + hd * 0.5 + 0.35);
+      scene.add(post);
+    }
+    state.chimneySmoke = [];
+    for (var sm = 0; sm < 4; sm++) {
+      var puff = new THREE.Mesh(
+        new THREE.SphereGeometry(0.12 + sm * 0.04, 6, 6),
+        new THREE.MeshBasicMaterial({ color: 0xc8c8d0, transparent: true, opacity: 0.4 })
+      );
+      puff.position.set(hp.x + 1.4, wallH + 1.7 + sm * 0.25, hp.z - 0.8);
+      puff.userData.phase = sm * 0.8; puff.userData.baseY = puff.position.y;
+      scene.add(puff); state.chimneySmoke.push(puff);
+    }
+    var blueG = new THREE.Group();
+    var blueBody = new THREE.Mesh(
+      new THREE.SphereGeometry(0.28, 10, 8),
+      new THREE.MeshStandardMaterial({ color: 0x3b82f6 })
+    );
+    blueBody.position.y = 0.28; blueG.add(blueBody);
+    var earL = new THREE.Mesh(new THREE.SphereGeometry(0.1, 6, 6), new THREE.MeshStandardMaterial({ color: 0x60a5fa }));
+    earL.position.set(-0.16, 0.48, 0); blueG.add(earL);
+    var earR = earL.clone(); earR.position.x = 0.16; blueG.add(earR);
+    var bp = worldToThree(320, 1920);
+    blueG.position.set(bp.x, 0, bp.z);
+    blueG.userData.bob = 0;
+    scene.add(blueG); state.blueBear = blueG;
+    addLabel("Blue Bear", "#bfdbfe", bp.x, 1.1, bp.z);
     addLabel("James · Ranch house", "#fff7ed", hp.x, wallH + 2.0, hp.z);
     addMech(cp.mech10 || { x: 820, y: 1680, stories: 10 }, 0xa5b4fc, 1.9);
     addMech(cp.mech100 || { x: 980, y: 1700, stories: 100 }, 0x67e8f9, 3.2);
@@ -423,9 +474,15 @@
 
   function buildPondLife() {
     var pond = C.AREAS[2];
-    state.fish = []; state.whales = [];
-    for (var f = 0; f < 20; f++) {
-      var fp = worldToThree(pond.x + 60 + Math.random() * (pond.w - 120), pond.y + 60 + Math.random() * (pond.h - 120));
+    state.fish = []; state.whales = []; state.schools = [];
+    /* polish8: fish school centers */
+    for (var sc = 0; sc < 4; sc++) {
+      var scp = worldToThree(pond.x + 120 + Math.random() * (pond.w - 240), pond.y + 120 + Math.random() * (pond.h - 240));
+      state.schools.push({ x: scp.x, z: scp.z, phase: Math.random() * Math.PI * 2 });
+    }
+    for (var f = 0; f < 28; f++) {
+      var sch = state.schools[f % 4];
+      var fp = { x: sch.x + (Math.random() - 0.5) * 1.2, z: sch.z + (Math.random() - 0.5) * 1.0 };
       var fishG = new THREE.Group();
       var fish = new THREE.Mesh(
         new THREE.SphereGeometry(0.18 + Math.random() * 0.08, 8, 6),
@@ -440,6 +497,7 @@
       fin.position.set(-0.22, 0.02, 0); fin.rotation.z = Math.PI / 2; fishG.add(fin);
       fishG.position.set(fp.x, 0.14, fp.z);
       fishG.userData.phase = Math.random() * Math.PI * 2; fishG.userData.bx = fp.x; fishG.userData.bz = fp.z;
+      fishG.userData.school = f % 4; fishG.userData.ox = fp.x - sch.x; fishG.userData.oz = fp.z - sch.z;
       scene.add(fishG); state.fish.push(fishG);
     }
     for (var w = 0; w < 5; w++) {
@@ -457,6 +515,7 @@
       spout.position.set(0.15, 0.45, 0); whaleG.add(spout);
       whaleG.position.set(wp.x, 0.22, wp.z);
       whaleG.userData.phase = Math.random() * Math.PI * 2; whaleG.userData.bx = wp.x; whaleG.userData.bz = wp.z;
+      whaleG.userData.breach = Math.random() * Math.PI * 2; whaleG.userData.breachAmp = 0.55 + Math.random() * 0.45;
       scene.add(whaleG); state.whales.push(whaleG);
       addLabel("whale", "#e0f2fe", wp.x, 1.15, wp.z);
     }
@@ -897,6 +956,18 @@
     state.jimmyVx = 2.2;
     state.jimmyVz = -1.4;
     state.planet = { id: "moon", name: "Moon", x: 5, z: -5, r: 1.2 };
+    addLabel("☾ Moon · Earth", "#e2e8f0", 5, 1.6, -5);
+    /* polish8: soft destination beacon */
+    state.destBeacon = new THREE.Mesh(
+      new THREE.RingGeometry(2.6, 2.85, 48),
+      new THREE.MeshBasicMaterial({ color: 0x7dd3fc, transparent: true, opacity: 0.45, side: THREE.DoubleSide })
+    );
+    state.destBeacon.rotation.x = -Math.PI / 2;
+    state.destBeacon.position.set(5, 0.12, -5); scene.add(state.destBeacon);
+    state.destBeaconLabel = labelSprite("✦ heading · Moon", "#7dd3fc");
+    state.destBeaconLabel.scale.set(3.5, 0.5, 1);
+    state.destBeaconLabel.position.set(5, 2.4, -5);
+    state.destBeaconLabel.visible = false; scene.add(state.destBeaconLabel);
     state.inOrbit = false;
     state.orbitAngle = 0;
     state.orbitRadius = 2.2;
@@ -1116,6 +1187,21 @@
       var dz = state.player.position.z - state.planet.z;
       var dP = Math.hypot(dx, dz);
       if (state.orbitRing) state.orbitRing.visible = !!state.inOrbit;
+      /* polish8: destination beacon when heading toward Moon */
+      if (state.destBeacon) {
+        var spdB = Math.hypot(state.vx || 0, state.vz || 0);
+        var heading = !!state.inOrbit;
+        if (!state.inOrbit && dP < softR * 1.6 && spdB > 0.8) {
+          var hx = state.planet.x - state.player.position.x;
+          var hz = state.planet.z - state.player.position.z;
+          var dot = ((state.vx || 0) * hx + (state.vz || 0) * hz) / (spdB * (dP || 1));
+          heading = dot > 0.35;
+        }
+        var pulse = 0.3 + 0.4 * Math.sin(state.bob * 2.5);
+        state.destBeacon.material.opacity = heading ? pulse : (dP < softR ? 0.25 : 0.12);
+        state.destBeacon.scale.setScalar(1 + Math.sin(state.bob * 2) * 0.04);
+        if (state.destBeaconLabel) state.destBeaconLabel.visible = heading;
+      }
       if (state.escapeBanner) {
         state.escapeBanner.visible = !!state.inOrbit;
         if (state.inOrbit) {
@@ -1427,17 +1513,42 @@
     }
 
     if (state.mode === "ranch") {
+      for (var sci = 0; sci < (state.schools || []).length; sci++) {
+        var scc = state.schools[sci]; scc.phase += dt * 0.4;
+        scc.x += Math.cos(scc.phase) * 0.35 * dt; scc.z += Math.sin(scc.phase * 0.7) * 0.28 * dt;
+      }
       for (var fi = 0; fi < (state.fish || []).length; fi++) {
         var fish = state.fish[fi];
         fish.userData.phase += dt * 2;
-        fish.position.x = fish.userData.bx + Math.sin(fish.userData.phase) * 0.4;
-        fish.position.z = fish.userData.bz + Math.cos(fish.userData.phase * 0.7) * 0.28;
+        var sch2 = state.schools && state.schools[fish.userData.school];
+        if (sch2) {
+          fish.position.x = sch2.x + (fish.userData.ox || 0) + Math.sin(fish.userData.phase) * 0.15;
+          fish.position.z = sch2.z + (fish.userData.oz || 0) + Math.cos(fish.userData.phase * 0.7) * 0.12;
+        } else {
+          fish.position.x = fish.userData.bx + Math.sin(fish.userData.phase) * 0.4;
+          fish.position.z = fish.userData.bz + Math.cos(fish.userData.phase * 0.7) * 0.28;
+        }
       }
       for (var wj = 0; wj < (state.whales || []).length; wj++) {
         var wh = state.whales[wj];
         wh.userData.phase += dt * 0.7;
+        wh.userData.breach = (wh.userData.breach || 0) + dt * 0.7;
+        var bl = Math.max(0, Math.sin(wh.userData.breach)) * (wh.userData.breachAmp || 0.7);
         wh.position.x = wh.userData.bx + Math.sin(wh.userData.phase) * 0.9;
         wh.position.z = wh.userData.bz + Math.cos(wh.userData.phase * 0.55) * 0.55;
+        wh.position.y = 0.22 + bl; /* polish8 breach arc */
+      }
+      /* polish8: Blue Bear pet bounce + chimney smoke */
+      if (state.blueBear) {
+        state.blueBear.userData.bob = (state.blueBear.userData.bob || 0) + dt * 3.2;
+        state.blueBear.position.y = Math.abs(Math.sin(state.blueBear.userData.bob)) * 0.18;
+      }
+      for (var smi = 0; smi < (state.chimneySmoke || []).length; smi++) {
+        var puff = state.chimneySmoke[smi];
+        puff.userData.phase += dt * 1.2;
+        puff.position.y = puff.userData.baseY + (puff.userData.phase % 2.5) * 0.35;
+        puff.position.x += Math.sin(puff.userData.phase) * 0.01;
+        puff.material.opacity = 0.45 - (puff.userData.phase % 2.5) * 0.12;
       }
       for (var ci = 0; ci < state.companions.length; ci++) {
         var c = state.companions[ci];

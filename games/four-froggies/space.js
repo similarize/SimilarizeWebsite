@@ -7,7 +7,8 @@
    polish5: clearer moons picker, readable orbit pull rings, Escape/thruster leave banner,
    Spotty/Alex/Fred presence pulse (cast already stubbed).
    polish6: distant invader mech silhouettes when near Mars (visual tease only).
-   polish7: Mars cave entrance tease (3-level + back-door labeled hooks); Jimmy jetpack escape visual on ability. */
+   polish7: Mars cave entrance tease (3-level + back-door labeled hooks); Jimmy jetpack escape visual on ability.
+   polish8: clearer Moon / Mars moons / Neptune moons labels; soft destination beacon when heading toward a body. */
 (function (global) {
   "use strict";
 
@@ -1141,7 +1142,33 @@
       ctx.arc(moon.x - 15, moon.y - 8, 12 * moon.d, 0, Math.PI * 2);
       ctx.arc(moon.x + 18, moon.y + 10, 8 * moon.d, 0, Math.PI * 2);
       ctx.fill();
-      drawLabel(ctx, "Moon", moon.x, moon.y + 70 * moon.d, "#cbd5e1");
+      /* polish8: clearer destination label + soft beacon when heading toward Moon */
+      drawLabel(ctx, "☾ Moon · Earth", moon.x, moon.y + 70 * moon.d, "#e2e8f0");
+      drawLabel(ctx, "destination", moon.x, moon.y + 86 * moon.d, "#94a3b8");
+      var headingMoon = false;
+      if (!ep.inOrbit) {
+        var mdx = 700 - ep.px, mdy = 140 - ep.py;
+        var md = Math.hypot(mdx, mdy) || 1;
+        var vx = ep.vx || 0, vy = ep.vy || 0;
+        var spd = Math.hypot(vx, vy);
+        if (spd > 8) {
+          var dot = (vx * mdx + vy * mdy) / (spd * md);
+          headingMoon = dot > 0.35 && md < 520;
+        } else if (ep.orbitPull) headingMoon = true;
+      }
+      if (headingMoon || ep.orbitPull) {
+        var pulse = 0.45 + 0.35 * Math.sin(t * 3.5);
+        ctx.strokeStyle = "rgba(125, 211, 252," + pulse + ")";
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(moon.x, moon.y, 68 * moon.d + Math.sin(t * 2.2) * 4, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = "rgba(186, 230, 253," + (0.25 + pulse * 0.25) + ")";
+        ctx.beginPath();
+        ctx.arc(moon.x, moon.y - 72 * moon.d, 5, 0, Math.PI * 2);
+        ctx.fill();
+        drawLabel(ctx, "✦ heading · Moon", moon.x, moon.y - 88 * moon.d, "#7dd3fc");
+      }
 
       var jp = worldToScreen(ep.jimmy.x, ep.jimmy.y, w, h);
       drawHot(ctx, { x: ep.jimmy.x, y: ep.jimmy.y }, jp, near && near.id === "jimmy");
@@ -1237,15 +1264,31 @@
         ctx.fillStyle = sel ? "#fffbeb" : "#e2e8f0";
         ctx.font = (sel ? "bold 14px" : "bold 12px") + " system-ui,sans-serif";
         ctx.textAlign = "left";
-        ctx.fillText(moons[mi].name, mx - cardW * 0.18, my + 5);
+        ctx.fillText(moons[mi].name, mx - cardW * 0.18, my + 1);
+        /* polish8: clearer destination tags */
+        ctx.fillStyle = sel ? "#fde68a" : "#94a3b8";
+        ctx.font = "10px system-ui,sans-serif";
+        var tag = ep.solarTab === "mars" ? "Mars moon" : "Neptune moon";
+        ctx.fillText(tag, mx - cardW * 0.18, my + 14);
       }
       var pick = moons[clamp(ep.solarPick, 0, moons.length - 1)];
       ctx.fillStyle = "rgba(15,23,42,0.85)";
-      ctx.fillRect(w * 0.18, h * 0.68, w * 0.64, 36);
+      ctx.fillRect(w * 0.18, h * 0.66, w * 0.64, 48);
       ctx.strokeStyle = "#facc15";
       ctx.lineWidth = 2;
-      ctx.strokeRect(w * 0.18, h * 0.68, w * 0.64, 36);
-      drawLabel(ctx, "Selected · " + pick.name + (ep.solarTab === "mars" ? " → Mars cave" : " · Neptune stub stop"), w * 0.5, h * 0.705, "#fde68a");
+      ctx.strokeRect(w * 0.18, h * 0.66, w * 0.64, 48);
+      var destLine = ep.solarTab === "mars"
+        ? ("☾ " + pick.name + " · Mars moon → Mars cave")
+        : ("♆ " + pick.name + " · Neptune moon · stub stop");
+      drawLabel(ctx, "Selected destination", w * 0.5, h * 0.682, "#94a3b8");
+      drawLabel(ctx, destLine, w * 0.5, h * 0.712, "#fde68a");
+      /* Soft beacon above selected card row */
+      var pulse = 0.4 + 0.35 * Math.sin(t * 3.2);
+      ctx.strokeStyle = "rgba(250, 204, 21," + pulse + ")";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(w * 0.5, h * 0.3, 18 + Math.sin(t * 2) * 3, 0, Math.PI * 2);
+      ctx.stroke();
     }
 
     if (ep.scene === "mars") {
@@ -1269,7 +1312,17 @@
         drawLabel(ctx, "back-door · hook", cave.x, cave.y + 48 * cave.d, "#93c5fd");
         drawLabel(ctx, "Lv1 · Lv2 · Dog chamber", cave.x, cave.y + 62 * cave.d, "#d6d3d1");
       }
-      drawLabel(ctx, "Phobos · Deimos overhead", w * 0.5, h * 0.14, "#fed7aa");
+      drawLabel(ctx, "☾ Phobos · Deimos · Mars moons overhead", w * 0.5, h * 0.14, "#fed7aa");
+      /* polish8: soft destination beacons for Mars moons */
+      var phx = w * 0.28, phy = h * 0.2;
+      var dex = w * 0.72, dey = h * 0.18;
+      var bp = 0.4 + 0.3 * Math.sin(t * 2.8);
+      ctx.strokeStyle = "rgba(253, 186, 116," + bp + ")";
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(phx, phy, 22 + Math.sin(t * 2) * 3, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(dex, dey, 16 + Math.cos(t * 2.2) * 2, 0, Math.PI * 2); ctx.stroke();
+      drawLabel(ctx, "Phobos", phx, phy + 32, "#fdba74");
+      drawLabel(ctx, "Deimos", dex, dey + 28, "#fdba74");
     }
 
     if (ep.scene === "solar" && ep.solarTab === "mars") {

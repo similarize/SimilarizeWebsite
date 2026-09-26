@@ -843,3 +843,42 @@ body.in-space {
   50% { transform: scale(1.06) rotate(4deg); }
   100% { transform: scale(1) rotate(0); }
 }
+
+
+/* ——— polish8: warmer Purple Bear call panel + Blue Bear pet bounce ——— */
+.story-panel.playful-phone {
+  background: linear-gradient(165deg, rgba(88, 28, 135, 0.82), rgba(124, 45, 18, 0.55), rgba(40, 12, 64, 0.78));
+}
+.story-panel.playful-phone .story-card {
+  border-color: rgba(251, 191, 36, 0.55);
+  box-shadow:
+    0 0 0 3px rgba(251, 191, 36, 0.22),
+    0 0 28px rgba(167, 139, 250, 0.35),
+    0 16px 48px rgba(88, 28, 135, 0.45);
+  background: linear-gradient(180deg, rgba(76, 29, 149, 0.55), rgba(30, 10, 48, 0.92));
+}
+.story-panel.playful-phone .story-status {
+  color: #fde68a;
+  text-shadow: 0 0 12px rgba(251, 191, 36, 0.45);
+}
+.story-panel.playful-phone .story-speech {
+  background: rgba(251, 191, 36, 0.14);
+  border-color: rgba(251, 191, 36, 0.45);
+  color: #fff7ed;
+}
+.contact-btn.blue-pet-bounce .av.blue {
+  animation: blue-pet-bounce 0.55s ease-in-out infinite;
+  box-shadow: 0 0 14px rgba(96, 165, 250, 0.85);
+}
+.contact-btn.blue-pet-bounce {
+  border-color: #93c5fd;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.45), rgba(0,0,0,0.3));
+}
+@keyframes blue-pet-bounce {
+  0%, 100% { transform: translateY(0) scale(1); }
+  40% { transform: translateY(-6px) scale(1.12); }
+  70% { transform: translateY(-2px) scale(1.05); }
+}
+#story-phone.playful-phone .contact-btn[data-story-dial="purple"] {
+  border-color: #fbbf24;
+}

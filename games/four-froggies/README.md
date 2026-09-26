@@ -87,6 +87,24 @@ Same PeerJS lobby: **Host room** → QR / invite `?room=CODE` → claim seats �
 
 
 
+## What's new (polish8) — art punch + destination clarity
+
+Ben: LOTS more improvement. Canvas lead; Phaser/Three cheap ports of truck silhouette + house porch + whale breach + destination beacon. Three frogs + hollow house kept.
+
+**Canvas ranch (`world.js` + `story.js` + `style.css`):**
+- Cybertrucks: more Cybertruck-like angular stainless silhouette, full-width light bar, wheel arches (on-water / underwater modes kept)
+- Ranch house: stronger 2.5D porch depth layers, chimney smoke, path to door
+- Pond: bigger whale breach arcs; fish schools
+- Purple Bear phone: warmer call panel; Blue Bear place-bound pet bounce near house
+
+**Space (`space.js`):**
+- Clearer labels for Moon / Mars moons / Neptune moons in picker + overhead
+- Soft destination beacon when heading toward a body
+
+**Phaser / three.js:** truck silhouette + house porch + whale breach + destination beacon. Three frogs + hollow house kept.
+
+- Cache-bust: `?v=20260925-polish8`.
+
 ## What's new (polish7) — play feel + readability
 
 Ben: LOTS more improvement. Canvas lead; Phaser/Three parity on zone signs, mini-map lite, companion bounce.
@@ -107,7 +125,7 @@ Ben: LOTS more improvement. Canvas lead; Phaser/Three parity on zone signs, mini
 
 **Phaser / three.js:** zone signs + mini-map lite + companion bounce/follow lag. Three frogs + hollow house kept.
 
-- Cache-bust: `?v=20260925-polish7`.
+- Cache-bust: `?v=20260925-polish8`.
 
 ## What's new (polish6) — FF-like depth + story/combat teases
 
@@ -217,4 +235,4 @@ Ben: keep pouring polish into Canvas, **and** remember everything done on Canvas
 
 ## Publish
 
-Game Creator → **Webmaster** only. Product path: `games/four-froggies/`. Do not republish SPS as arcade. Cache-bust: `?v=20260925-polish7`.
+Game Creator → **Webmaster** only. Product path: `games/four-froggies/`. Do not republish SPS as arcade. Cache-bust: `?v=20260925-polish8`.

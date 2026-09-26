@@ -5,7 +5,8 @@
    polish5: ambient pollen/fireflies; pond ripples; track race dust; garage door open-near;
    shared ALL ABOARD; land shake; hotspot sparkle; orbit pull rings + Escape banner.
    polish6: depth shadows + parallax-lite hills + Mars invader silhouette tease + mech wow tip.
-   polish7: zone signs + mini-map lite + companion idle bounce / follow lag. */
+   polish7: zone signs + mini-map lite + companion idle bounce / follow lag.
+   polish8: truck silhouette + house porch + whale breach + destination beacon (cheap Canvas ports). */
 (function (global) {
   "use strict";
   var C = global.FroggiesCanon;
@@ -270,6 +271,28 @@
         /* Open doorway glow */
         this.add.rectangle(house.x + house.w * 0.48, house.y + house.h - 36, 36, 52, 0xfbbf24, 0.55)
           .setStrokeStyle(2, 0xfef3c7, 1);
+        /* polish8: porch depth + path to door + chimney smoke */
+        this.add.rectangle(house.x + house.w / 2, house.y + house.h - 8, house.w - 60, 28, 0xb8956a, 0.9)
+          .setStrokeStyle(2, 0x5d4037, 0.8);
+        this.add.rectangle(house.x + house.w / 2, house.y + house.h + 18, 70, 50, 0xa09070, 0.75)
+          .setStrokeStyle(1, 0x5d4037, 0.6);
+        for (var pi = 0; pi < 5; pi++) {
+          this.add.rectangle(house.x + 70 + pi * ((house.w - 140) / 4), house.y + house.h - 20, 8, 36, 0x5d4037, 1);
+        }
+        this.add.rectangle(house.x + house.w * 0.72, house.y - 20, 18, 40, 0x78716c, 1);
+        this.chimneySmoke = [];
+        for (var sm = 0; sm < 3; sm++) {
+          var puff = this.add.circle(house.x + house.w * 0.72, house.y - 40 - sm * 14, 6 + sm * 2, 0xc8c8d0, 0.4);
+          puff.smPhase = sm * 0.9; this.chimneySmoke.push(puff);
+        }
+        /* Blue Bear place-bound pet bounce near porch */
+        this.blueBear = this.add.ellipse(house.x + 80, house.y + house.h + 50, 28, 24, 0x3b82f6, 1)
+          .setStrokeStyle(2, 0x1e3a8a, 1);
+        this.blueBear.baseY = house.y + house.h + 50;
+        this.blueBearLabel = this.add.text(house.x + 80, house.y + house.h + 28, "Blue Bear", {
+          fontSize: "11px", fontStyle: "bold", color: "#bfdbfe", stroke: "#000", strokeThickness: 3,
+        }).setOrigin(0.5, 1);
+        this.blueBearBob = 0;
         var roofG = this.add.graphics();
         roofG.fillStyle(0x6d4c41, 1); roofG.lineStyle(3, 0x3e2723, 1);
         roofG.beginPath();
@@ -342,21 +365,34 @@
         }).setOrigin(0.5, 0);
       },
       drawPondLife: function () {
-        var pond = C.AREAS[2]; this.fish = []; this.whales = [];
-        for (var f = 0; f < 22; f++) {
-          var fx = pond.x + 50 + Math.random() * (pond.w - 100);
-          var fy = pond.y + 50 + Math.random() * (pond.h - 100);
-          var fish = this.add.ellipse(fx, fy, 20 + Math.random() * 12, 9 + Math.random() * 5, 0xfde68a, 0.95)
+        var pond = C.AREAS[2]; this.fish = []; this.whales = []; this.schools = [];
+        /* polish8: fish schools */
+        for (var sc = 0; sc < 5; sc++) {
+          this.schools.push({
+            x: pond.x + 100 + Math.random() * (pond.w - 200),
+            y: pond.y + 100 + Math.random() * (pond.h - 200),
+            phase: Math.random() * Math.PI * 2,
+          });
+        }
+        for (var f = 0; f < 30; f++) {
+          var sch = this.schools[f % 5];
+          var fx = sch.x + (Math.random() - 0.5) * 60;
+          var fy = sch.y + (Math.random() - 0.5) * 40;
+          var fish = this.add.ellipse(fx, fy, 18 + Math.random() * 10, 8 + Math.random() * 4, 0xfde68a, 0.95)
             .setStrokeStyle(2, 0x92400e, 1);
-          fish.phase = Math.random() * Math.PI * 2; fish.bx = fx; fish.by = fy; this.fish.push(fish);
+          fish.phase = Math.random() * Math.PI * 2; fish.bx = fx; fish.by = fy;
+          fish.school = f % 5; fish.ox = fx - sch.x; fish.oy = fy - sch.y;
+          this.fish.push(fish);
         }
         for (var w = 0; w < 5; w++) {
           var wx = pond.x + 140 + Math.random() * (pond.w - 280);
           var wy = pond.y + 120 + Math.random() * (pond.h - 240);
-          var whale = this.add.ellipse(wx, wy, 78 + Math.random() * 42, 30 + Math.random() * 14, 0x7dd3fc, 0.95)
+          var whale = this.add.ellipse(wx, wy, 96 + Math.random() * 48, 36 + Math.random() * 16, 0x7dd3fc, 0.95)
             .setStrokeStyle(3.5, 0x0c4a6e, 1);
-          whale.phase = Math.random() * Math.PI * 2; whale.bx = wx; whale.by = wy; this.whales.push(whale);
-          this.add.text(wx, wy - 22, "whale", { fontSize: "10px", color: "#e0f2fe", stroke: "#000", strokeThickness: 2 }).setOrigin(0.5);
+          whale.phase = Math.random() * Math.PI * 2; whale.bx = wx; whale.by = wy;
+          whale.breach = Math.random() * Math.PI * 2; whale.breachAmp = 42 + Math.random() * 30;
+          this.whales.push(whale);
+          this.add.text(wx, wy - 28, "whale", { fontSize: "10px", color: "#e0f2fe", stroke: "#000", strokeThickness: 2 }).setOrigin(0.5);
         }
         this.add.text(pond.x + pond.w * 0.5, pond.y + 16, "Pond · fishies & whales", {
           fontSize: "16px", fontStyle: "bold", color: "#ecfeff", stroke: "#000", strokeThickness: 4,
@@ -378,23 +414,31 @@
           var s = spots[i];
           var accent = s.id === "shared" ? 0xfbbf24 : hx((C.FROG_DEFS[s.id] || def).color);
           var g = this.add.graphics();
-          g.fillStyle(0xb0b8c4, 1); g.lineStyle(3, 0x111827, 1);
+          /* polish8: angular stainless + light bar + wheel arches */
+          g.fillStyle(0xc5ced8, 1); g.lineStyle(3, 0x111827, 1);
           g.beginPath();
-          g.moveTo(s.x - 42, s.y + 10);
-          g.lineTo(s.x - 38, s.y - 6);
-          g.lineTo(s.x - 8, s.y - 10);
-          g.lineTo(s.x + 10, s.y - 22);
-          g.lineTo(s.x + 44, s.y - 8);
-          g.lineTo(s.x + 48, s.y + 8);
+          g.moveTo(s.x - 46, s.y + 10);
+          g.lineTo(s.x - 44, s.y - 4);
+          g.lineTo(s.x - 16, s.y - 8);
+          g.lineTo(s.x - 4, s.y - 14);
+          g.lineTo(s.x + 8, s.y - 28);
+          g.lineTo(s.x + 48, s.y - 8);
+          g.lineTo(s.x + 54, s.y + 4);
+          g.lineTo(s.x + 50, s.y + 12);
           g.closePath(); g.fillPath(); g.strokePath();
+          g.lineStyle(1.5, 0xffffff, 0.55);
+          g.beginPath(); g.moveTo(s.x - 40, s.y); g.lineTo(s.x + 6, s.y - 22); g.lineTo(s.x + 44, s.y - 6); g.strokePath();
           g.fillStyle(accent, 0.95);
-          g.fillRect(s.x - 2, s.y - 18, 28, 14);
-          g.lineStyle(2, 0x0b1220, 0.9); g.strokeRect(s.x - 2, s.y - 18, 28, 14);
-          g.fillStyle(0xfef08a, 1); g.fillRect(s.x + 40, s.y - 6, 8, 5);
+          g.fillRect(s.x - 2, s.y - 20, 30, 14);
+          g.lineStyle(2, 0x0b1220, 0.9); g.strokeRect(s.x - 2, s.y - 20, 30, 14);
+          g.fillStyle(0xfef08a, 1); g.fillRect(s.x + 42, s.y - 8, 14, 6); /* light bar */
+          g.lineStyle(2, 0x94a3b8, 0.8);
+          g.beginPath(); g.arc(s.x - 24, s.y + 10, 12, Math.PI * 1.1, Math.PI * 1.9); g.strokePath();
+          g.beginPath(); g.arc(s.x + 26, s.y + 9, 12, Math.PI * 1.1, Math.PI * 1.9); g.strokePath();
           g.fillStyle(0x0f172a, 1);
-          g.fillCircle(s.x - 22, s.y + 12, 8);
+          g.fillCircle(s.x - 24, s.y + 12, 9);
           g.fillCircle(s.x - 8, s.y + 12, 7);
-          g.fillCircle(s.x + 24, s.y + 11, 8);
+          g.fillCircle(s.x + 26, s.y + 11, 9);
           var body = this.add.rectangle(s.x, s.y, 78, 34, 0x9ca3af, 0.01); // hit proxy for pulse
           var cab = this.add.rectangle(s.x + 8, s.y - 4, 36, 16, accent, 0.01);
           var label = s.id === "shared" ? "★ ALL ABOARD · 4" : ("Cybertruck · " + (C.FROG_DEFS[s.id] || {}).name);
@@ -594,13 +638,39 @@
           this.waterClip.setVisible(wet);
           if (wet) { this.waterClip.setPosition(this.player.x, this.player.y + 8 + this.waterSub * 6); this.waterClip.setAlpha(0.35 + this.waterSub * 0.4); }
         } else { this.truckBody.setVisible(false); this.truckAccent.setVisible(false); this.waterClip.setVisible(false); }
+        /* polish8: school drift + whale breach arcs */
+        for (var sci = 0; sci < (this.schools || []).length; sci++) {
+          var scc = this.schools[sci]; scc.phase += dt * 0.4;
+          scc.x += Math.cos(scc.phase) * 18 * dt; scc.y += Math.sin(scc.phase * 0.7) * 12 * dt;
+        }
         for (var fi = 0; fi < this.fish.length; fi++) {
           var fish = this.fish[fi]; fish.phase += dt * 2;
-          fish.x = fish.bx + Math.sin(fish.phase) * 18; fish.y = fish.by + Math.cos(fish.phase * 0.7) * 10;
+          var sch2 = this.schools && this.schools[fish.school];
+          if (sch2) {
+            fish.x = sch2.x + (fish.ox || 0) + Math.sin(fish.phase) * 8;
+            fish.y = sch2.y + (fish.oy || 0) + Math.cos(fish.phase * 0.7) * 6;
+          } else {
+            fish.x = fish.bx + Math.sin(fish.phase) * 18; fish.y = fish.by + Math.cos(fish.phase * 0.7) * 10;
+          }
         }
         for (var wi = 0; wi < this.whales.length; wi++) {
-          var wh = this.whales[wi]; wh.phase += dt * 0.7;
-          wh.x = wh.bx + Math.sin(wh.phase) * 40; wh.y = wh.by + Math.cos(wh.phase * 0.55) * 22;
+          var wh = this.whales[wi]; wh.phase += dt * 0.7; wh.breach = (wh.breach || 0) + dt * 0.7;
+          var bl = Math.max(0, Math.sin(wh.breach)) * (wh.breachAmp || 48);
+          wh.x = wh.bx + Math.sin(wh.phase) * 40;
+          wh.y = wh.by + Math.cos(wh.phase * 0.55) * 22 - bl * 0.55;
+        }
+        if (this.blueBear) {
+          this.blueBearBob = (this.blueBearBob || 0) + dt * 3.2;
+          var bb = Math.abs(Math.sin(this.blueBearBob)) * 8;
+          this.blueBear.y = this.blueBear.baseY - bb;
+          if (this.blueBearLabel) this.blueBearLabel.y = this.blueBear.baseY - bb - 22;
+        }
+        for (var smi = 0; smi < (this.chimneySmoke || []).length; smi++) {
+          var puff = this.chimneySmoke[smi];
+          puff.smPhase = (puff.smPhase || 0) + dt * 1.2;
+          puff.y -= dt * 12; puff.x += Math.sin(puff.smPhase) * 8 * dt;
+          puff.setAlpha(0.35 + 0.15 * Math.sin(puff.smPhase));
+          if (puff.y < (puff.resetY || puff.y) - 50) { if (puff.resetY == null) puff.resetY = puff.y + 50; puff.y = puff.resetY; }
         }
         for (var ci = 0; ci < this.companions.length; ci++) {
           var c = this.companions[ci];
@@ -778,7 +848,9 @@
         this.toast = "Catch Jimmy · near Moon → orbit · Escape / hard thruster to leave";
         this.planet = { id: "moon", name: "Moon", x: 820, y: 160, r: 54 };
         this.add.circle(820, 160, 54, 0xcbd5e1, 0.95).setStrokeStyle(3, 0x64748b, 1);
-        this.add.text(820, 160, "Moon", { fontSize: "13px", color: "#0f172a", fontStyle: "bold" }).setOrigin(0.5);
+        this.add.text(820, 220, "☾ Moon · Earth", { fontSize: "14px", color: "#e2e8f0", fontStyle: "bold", stroke: "#000", strokeThickness: 3 }).setOrigin(0.5);
+        this.destBeacon = this.add.circle(820, 160, 70, 0x7dd3fc, 0.01).setStrokeStyle(2, 0x7dd3fc, 0.45);
+        this.destBeaconLabel = this.add.text(820, 90, "", { fontSize: "12px", color: "#7dd3fc", fontStyle: "bold", stroke: "#000", strokeThickness: 3 }).setOrigin(0.5);
         this.orbitCfg = (C && C.ORBIT_PHYSICS) || {};
         var softR = (this.orbitCfg.softPullRadius || 220);
         var capR = (this.orbitCfg.captureRadius || 120);
@@ -818,6 +890,26 @@
         var alt = cfg.orbitAltitude || 78, pullA = cfg.pullAccel || 420;
         if (this.orbitEscapeCool > 0) this.orbitEscapeCool -= dt;
         if (this.pullLine) this.pullLine.clear();
+        /* polish8: soft destination beacon when heading toward Moon */
+        if (this.destBeacon) {
+          var dB = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.planet.x, this.planet.y);
+          var spdB = Math.hypot(body.velocity.x, body.velocity.y);
+          var heading = false;
+          if (!this.inOrbit && dB < 520 && spdB > 20) {
+            var hx = this.planet.x - this.player.x, hy = this.planet.y - this.player.y;
+            var dot = (body.velocity.x * hx + body.velocity.y * hy) / (spdB * (dB || 1));
+            heading = dot > 0.35;
+          }
+          if (this.inOrbit) heading = true;
+          var pulse = 0.35 + 0.4 * Math.sin(time / 280);
+          this.destBeacon.setVisible(heading || dB < softR);
+          this.destBeacon.setStrokeStyle(2.5, 0x7dd3fc, heading ? pulse : 0.25);
+          this.destBeacon.setRadius(68 + Math.sin(time / 400) * 4);
+          if (this.destBeaconLabel) {
+            this.destBeaconLabel.setText(heading ? "✦ heading · Moon" : "");
+            this.destBeaconLabel.setAlpha(heading ? pulse : 0);
+          }
+        }
         if (this.inOrbit) {
           this.orbitRadius = Phaser.Math.Clamp(this.orbitRadius + (steer.y || 0) * 40 * dt, 55, softR * 0.85);
           this.orbitAngle += (0.85 + (steer.x || 0) * 0.35) * dt;
