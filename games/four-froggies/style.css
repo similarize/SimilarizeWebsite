@@ -17,6 +17,8 @@ html, body {
   width: 100%;
   height: 100%;
   touch-action: none;
+  /* ranchfeel2: keep edges sharp on hi-DPI */
+  image-rendering: auto;
 }
 
 #hud {
@@ -689,6 +691,7 @@ body.in-space {
 }
 
 
+/* ranchfeel2: Canvas polish (water / track / definition) — logic in world.js */
 /* ranchbig1: Escape orbit (space) */
 #btn-escape.escape-btn {
   grid-column: 1 / -1;

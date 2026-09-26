@@ -1,4 +1,5 @@
 /* Four Froggies — 2.5D ranch hub (fixed-angle / y-sorted layers).
+   ranchfeel2: Cybertruck water surface/under visuals; varied track (mountains/valleys/squiggles/branches); crisper silhouettes.
    ~10× map: real roam between ranch house / track / pond / Starship.
    James ranch house: big house, backyard (animals), huge garage (toys + 10/100-story mechs);
    1000-story mech sits out back (won't fit). Four Cybertrucks + shared pile-in.
@@ -16,28 +17,96 @@
     { id: "pond", name: "Pond", x: 2320, y: 80, w: 1680, h: 1180, color: "#0e7490" },
   ];
 
-  /* Many ramps / jumps across the big track */
+  /* Varied circuit (not oval): mountain highs, valley lows, squiggles, branch loops.
+     Points: [x, y, elev] — elev >0 high berm / mountain, <0 valley dip (visual only). */
+  var TRACK_MAIN = [
+    [1780, 2220, 0],
+    [1850, 2080, 0.15],
+    [1940, 1920, 0.45],
+    [2060, 1780, 0.85],
+    [2180, 1700, 1.15],
+    [2320, 1660, 1.25],
+    [2480, 1700, 1.05],
+    [2600, 1820, 0.55],
+    [2680, 1960, 0.25],
+    [2780, 2040, 0.2],
+    [2920, 1980, 0.35],
+    [3080, 1860, 0.7],
+    [3220, 1760, 1.0],
+    [3380, 1800, 0.95],
+    [3520, 1940, 0.55],
+    [3620, 2120, 0.2],
+    [3660, 2300, 0],
+    [3600, 2480, -0.15],
+    [3480, 2620, -0.35],
+    [3300, 2740, -0.4],
+    [3100, 2820, -0.3],
+    [2880, 2840, -0.15],
+    [2680, 2760, 0.05],
+    [2500, 2620, 0.25],
+    [2340, 2520, 0.45],
+    [2180, 2480, 0.35],
+    [2020, 2420, 0.2],
+    [1900, 2340, 0.1],
+    [1820, 2280, 0],
+  ];
+  /* Inner squiggle branch */
+  var TRACK_BRANCH_A = [
+    [2200, 2100, 0.3],
+    [2360, 2180, 0.15],
+    [2540, 2280, 0],
+    [2720, 2360, -0.1],
+    [2900, 2420, 0],
+    [3080, 2360, 0.2],
+    [3200, 2200, 0.45],
+    [3180, 2040, 0.55],
+    [3020, 1960, 0.4],
+    [2820, 2000, 0.25],
+    [2620, 2080, 0.2],
+    [2420, 2120, 0.25],
+    [2260, 2100, 0.3],
+  ];
+  /* South figure / loop-de-loop cue */
+  var TRACK_BRANCH_B = [
+    [2400, 2400, 0.1],
+    [2560, 2520, -0.1],
+    [2760, 2580, -0.2],
+    [2960, 2520, -0.1],
+    [3080, 2380, 0.15],
+    [3000, 2260, 0.35],
+    [2800, 2220, 0.4],
+    [2600, 2280, 0.25],
+    [2460, 2360, 0.15],
+  ];
+  /* Mountain mound centers inside track apron */
+  var TRACK_MOUNDS = [
+    { x: 2260, y: 1740, r: 160, h: 1.2 },
+    { x: 3280, y: 1820, r: 140, h: 1.05 },
+    { x: 2460, y: 2480, r: 110, h: 0.55 },
+    { x: 3180, y: 2680, r: 130, h: -0.35 },
+  ];
+  /* Ramps sit on highs, valley lips, and branch junctions */
   var RAMPS = [
-    { x: 1980, y: 1880, w: 70, h: 34, boost: 1.35 },
-    { x: 2280, y: 1980, w: 74, h: 36, boost: 1.45 },
-    { x: 2580, y: 2100, w: 68, h: 32, boost: 1.3 },
-    { x: 2880, y: 1920, w: 72, h: 34, boost: 1.4 },
-    { x: 3180, y: 2050, w: 70, h: 34, boost: 1.5 },
-    { x: 3480, y: 2200, w: 76, h: 36, boost: 1.55 },
-    { x: 2100, y: 2300, w: 68, h: 32, boost: 1.28 },
-    { x: 2400, y: 2450, w: 72, h: 34, boost: 1.42 },
-    { x: 2700, y: 2550, w: 70, h: 34, boost: 1.38 },
-    { x: 3000, y: 2400, w: 74, h: 36, boost: 1.48 },
-    { x: 3300, y: 2500, w: 68, h: 32, boost: 1.33 },
-    { x: 3600, y: 2350, w: 72, h: 34, boost: 1.52 },
-    { x: 1900, y: 2100, w: 64, h: 30, boost: 1.25 },
-    { x: 2500, y: 1800, w: 66, h: 30, boost: 1.36 },
-    { x: 3100, y: 2700, w: 70, h: 34, boost: 1.44 },
-    { x: 3400, y: 1850, w: 68, h: 32, boost: 1.4 },
-    { x: 2200, y: 2650, w: 72, h: 34, boost: 1.46 },
-    { x: 2800, y: 2750, w: 70, h: 34, boost: 1.5 },
-    { x: 2050, y: 2500, w: 64, h: 30, boost: 1.22 },
-    { x: 3550, y: 2600, w: 74, h: 36, boost: 1.58 },
+    { x: 2060, y: 1780, w: 72, h: 36, boost: 1.45 },
+    { x: 2320, y: 1660, w: 76, h: 38, boost: 1.6 },
+    { x: 2480, y: 1700, w: 70, h: 34, boost: 1.4 },
+    { x: 3080, y: 1860, w: 72, h: 36, boost: 1.48 },
+    { x: 3220, y: 1760, w: 74, h: 36, boost: 1.55 },
+    { x: 3380, y: 1800, w: 70, h: 34, boost: 1.42 },
+    { x: 3480, y: 2620, w: 72, h: 34, boost: 1.35 },
+    { x: 3300, y: 2740, w: 74, h: 36, boost: 1.5 },
+    { x: 2340, y: 2520, w: 68, h: 32, boost: 1.32 },
+    { x: 2680, y: 1960, w: 66, h: 30, boost: 1.28 },
+    { x: 2540, y: 2280, w: 70, h: 34, boost: 1.38 },
+    { x: 2900, y: 2420, w: 68, h: 32, boost: 1.36 },
+    { x: 3200, y: 2200, w: 72, h: 34, boost: 1.44 },
+    { x: 2760, y: 2580, w: 70, h: 34, boost: 1.4 },
+    { x: 3000, y: 2260, w: 68, h: 32, boost: 1.33 },
+    { x: 1940, y: 1920, w: 64, h: 30, boost: 1.25 },
+    { x: 3620, y: 2120, w: 70, h: 34, boost: 1.46 },
+    { x: 2180, y: 2480, w: 66, h: 30, boost: 1.3 },
+    { x: 3100, y: 2820, w: 72, h: 34, boost: 1.52 },
+    { x: 2800, y: 2220, w: 68, h: 32, boost: 1.37 },
   ];
 
   var FROG_COLORS = {
@@ -78,6 +147,13 @@
   function onTrack(x, y) {
     var a = AREAS[1];
     return x >= a.x && x <= a.x + a.w && y >= a.y && y <= a.y + a.h;
+  }
+
+  function inPond(x, y) {
+    var a = AREAS[2];
+    var pad = 40;
+    return x >= a.x + pad && x <= a.x + a.w - pad &&
+           y >= a.y + pad && y <= a.y + a.h - pad;
   }
 
   function rampAt(x, y) {
@@ -236,6 +312,8 @@
       truckId: null,
       z: 0,
       zVel: 0,
+      waterSub: 0,
+      wakePhase: 0,
       color: colors.body,
       accent: colors.accent,
       hat: colors.hat,
@@ -371,9 +449,10 @@
   }
 
   function tickDrive(world, ent, dt) {
-    var result = { jumped: false, landed: false, scrapGain: 0 };
+    var result = { jumped: false, landed: false, scrapGain: 0, splashed: false, onWater: false };
     var gWalk = 520;
     var gTruck = 560;
+    var wet = inPond(ent.x, ent.y);
     if (!ent.inTruck) {
       if (ent.z > 0 || ent.zVel !== 0) {
         ent.zVel -= gWalk * dt;
@@ -382,12 +461,23 @@
           ent.z = 0;
           if (ent.zVel < -40) result.landed = true;
           ent.zVel = 0;
+          if (wet) {
+            spawnSplash(world, ent.x, ent.y, 6);
+            ent.waterSub = Math.max(ent.waterSub || 0, 0.35);
+            result.splashed = true;
+          }
         }
+      }
+      if (wet && (ent.z || 0) <= 0) {
+        ent.waterSub = Math.max(0.12, (ent.waterSub || 0) * Math.exp(-1.8 * dt));
+      } else {
+        ent.waterSub = Math.max(0, (ent.waterSub || 0) - dt * 1.6);
       }
       ent.speedBoost = 1;
       return result;
     }
     var speed = Math.hypot(ent.vx, ent.vy);
+    result.onWater = wet && (ent.z || 0) < 4;
     var ramp = rampAt(ent.x, ent.y);
     if (ramp && ent.z <= 0.5 && speed > 72) {
       var boost = ramp.boost * clamp(speed / 210, 0.55, 1.45);
@@ -398,12 +488,17 @@
       var gain = 10 + world.stuntCombo * 5;
       world.scrap += gain;
       result.scrapGain = gain;
-      spawnDust(world, ent.x, ent.y, 6);
-      spawnSparks(world, ent.x, ent.y, 6);
+      if (wet) spawnSplash(world, ent.x, ent.y, 4);
+      else {
+        spawnDust(world, ent.x, ent.y, 6);
+        spawnSparks(world, ent.x, ent.y, 6);
+      }
     }
     if (ent.z > 0 || ent.zVel !== 0) {
       var g = gTruck;
       if (Math.abs(ent.zVel) < 60) g *= 0.78;
+      /* Water drag while airborne over pond softens plunge */
+      if (wet) g *= 0.92;
       ent.zVel -= g * dt;
       ent.z += ent.zVel * dt;
       world.airTime += dt;
@@ -415,13 +510,45 @@
           world.scrap += airBonus;
           result.scrapGain += airBonus;
         }
+        var plunge = Math.max(0, -ent.zVel) + world.airTime * 90;
+        var airSnap = world.airTime;
         world.airTime = 0;
         ent.zVel = 0;
-        spawnDust(world, ent.x, ent.y, 5);
+        if (wet) {
+          /* Visual: surface drive default; hard plunge / long air reads as going under */
+          var sub = clamp(0.42 + plunge / 320 + airSnap * 0.35, 0.48, 1.2);
+          ent.waterSub = Math.max(ent.waterSub || 0, sub);
+          spawnSplash(world, ent.x, ent.y, 10 + Math.floor(plunge / 40));
+          scareFishies(world, ent.x, ent.y);
+          result.splashed = true;
+        } else {
+          spawnDust(world, ent.x, ent.y, 5);
+          ent.waterSub = Math.max(0, (ent.waterSub || 0) - 0.5);
+        }
       }
     } else if (speed < 40) {
       world.stuntCombo = 0;
     }
+
+    if (wet && (ent.z || 0) <= 0.5) {
+      /* On the water surface — settle toward shallow waterline; expire dive tint */
+      if ((ent.waterSub || 0) > 0.4) {
+        ent.waterSub = Math.max(0.26, ent.waterSub - dt * 0.75);
+      } else {
+        ent.waterSub = 0.22 + Math.min(0.12, speed / 2000);
+      }
+      ent.wakePhase = (ent.wakePhase || 0) + dt * (2.2 + speed * 0.012);
+      if (speed > 35 && Math.random() < dt * (2.5 + speed * 0.01)) {
+        spawnSplash(world, ent.x - ent.facing * 14, ent.y + 4, 2);
+      }
+      if (speed > 90 && Math.random() < dt * 1.2) {
+        world.scrap += 1;
+        result.scrapGain += 1;
+      }
+    } else if (!wet) {
+      ent.waterSub = Math.max(0, (ent.waterSub || 0) - dt * 2.2);
+    }
+
     if (onTrack(ent.x, ent.y) && speed > 140 && Math.abs(ent.steerX) > 0.6) {
       if (Math.random() < dt * 4) {
         world.scrap += 1;
@@ -442,8 +569,17 @@
     var my = ent.steerY;
     var mag = Math.hypot(mx, my);
     if (mag > 1) { mx /= mag; my /= mag; }
+    var wetMove = inPond(ent.x, ent.y) && (ent.z || 0) < 3;
     var accel = ent.inTruck ? 920 : 780;
     var friction = ent.inTruck ? 3.4 : 6.2;
+    if (wetMove && ent.inTruck) {
+      accel *= 0.82;
+      friction *= 1.15;
+      maxSp *= 0.88;
+    } else if (wetMove) {
+      accel *= 0.75;
+      maxSp *= 0.8;
+    }
     var tvx = mx * maxSp;
     var tvy = my * maxSp;
     if (mag > 0.05) {
@@ -533,6 +669,8 @@
         f.vy = localFrog.vy;
         f.facing = localFrog.facing;
         f.z = localFrog.z;
+        f.waterSub = localFrog.waterSub || 0;
+        f.wakePhase = localFrog.wakePhase || 0;
         continue;
       }
       if (f.truckMode === "shared" && !(localFrog && localFrog.inTruck && localFrog.truckMode === "shared")) {
@@ -622,7 +760,12 @@
     ctx.closePath();
     ctx.fillStyle = fill;
     ctx.fill();
-    if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 2; ctx.stroke(); }
+    if (stroke) {
+      ctx.strokeStyle = stroke;
+      ctx.lineWidth = 2.4;
+      ctx.lineJoin = "round";
+      ctx.stroke();
+    }
   }
 
   function areaCorners(area, camX, camY, vw, vh) {
@@ -652,6 +795,9 @@
     grad.addColorStop(1, "#334155");
     ctx.fillStyle = grad;
     ctx.fillRect(p.x - bw * 0.5, p.y - lift, bw, lift);
+    ctx.strokeStyle = "#0f172a";
+    ctx.lineWidth = 2.2;
+    ctx.strokeRect(p.x - bw * 0.5, p.y - lift, bw, lift);
     /* Side depth plane */
     ctx.fillStyle = "rgba(30,41,59,0.75)";
     ctx.beginPath();
@@ -736,8 +882,9 @@
     ctx.lineTo(g3.x, g3.y - gH * 0.6);
     ctx.closePath();
     ctx.fill();
-    ctx.strokeStyle = "#1f2937";
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = "#0b1220";
+    ctx.lineWidth = 2.8;
+    ctx.lineJoin = "round";
     ctx.stroke();
     /* Garage door bay */
     var door = project(gar.x + gar.w * 0.5, gar.y + gar.h - 50, camX, camY, vw, vh);
@@ -817,17 +964,26 @@
     ctx.lineTo(p3.x, p3.y - wallH * 0.7);
     ctx.closePath();
     ctx.fill();
-    ctx.strokeStyle = "#5d4037";
-    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = "#3e2723";
+    ctx.lineWidth = 3.2;
+    ctx.lineJoin = "round";
     ctx.stroke();
     /* Windows rows */
     function windowAt(wx, wy, ww, wh) {
       var wp = project(wx, wy, camX, camY, vw, vh);
-      ctx.fillStyle = "rgba(120, 200, 255, 0.55)";
+      ctx.fillStyle = "rgba(120, 200, 255, 0.62)";
       ctx.fillRect(wp.x - ww * 0.5 * wp.depth, wp.y - wh * wp.depth - 10, ww * wp.depth, wh * wp.depth);
-      ctx.strokeStyle = "#5d4037";
-      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = "#1c1210";
+      ctx.lineWidth = 2;
       ctx.strokeRect(wp.x - ww * 0.5 * wp.depth, wp.y - wh * wp.depth - 10, ww * wp.depth, wh * wp.depth);
+      ctx.strokeStyle = "rgba(255,255,255,0.35)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(wp.x, wp.y - wh * wp.depth - 10);
+      ctx.lineTo(wp.x, wp.y - 10);
+      ctx.moveTo(wp.x - ww * 0.5 * wp.depth, wp.y - wh * 0.5 * wp.depth - 10);
+      ctx.lineTo(wp.x + ww * 0.5 * wp.depth, wp.y - wh * 0.5 * wp.depth - 10);
+      ctx.stroke();
     }
     windowAt(hx + 120, hy + 160, 28, 22);
     windowAt(hx + 220, hy + 160, 28, 22);
@@ -867,106 +1023,211 @@
     ctx.fillRect(ch.x - 8, ch.y - wallH - 70, 16 * ch.depth, 36 * ch.depth);
     /* Front door */
     var fr = project(hx + hw * 0.48, hy + hh - 80, camX, camY, vw, vh);
-    ctx.fillStyle = "#4e342e";
+    ctx.fillStyle = "#3e2723";
     ctx.fillRect(fr.x - 16, fr.y - 42, 32, 44);
+    ctx.strokeStyle = "#1a100c";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(fr.x - 16, fr.y - 42, 32, 44);
     ctx.fillStyle = "#fbbf24";
     ctx.beginPath();
     ctx.arc(fr.x + 8, fr.y - 20, 3, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = "rgba(255,255,255,0.95)";
     ctx.font = "bold 14px Segoe UI, system-ui, sans-serif";
     ctx.textAlign = "center";
+    ctx.strokeStyle = "rgba(0,0,0,0.7)";
+    ctx.lineWidth = 3;
+    ctx.strokeText("James · Ranch house", ridge.x, ridge.y - ridgeH - 14);
+    ctx.fillStyle = "#fff7ed";
     ctx.fillText("James · Ranch house", ridge.x, ridge.y - ridgeH - 14);
 
     /* 1000-story mech — does NOT fit in garage; sits out back */
     drawMech(ctx, a.x + 280, a.y + a.h - 80, 1000, camX, camY, vw, vh, "#fcd34d");
   }
 
-  function drawTrackLane(ctx, cx, cy, rx, ry, camX, camY, vw, vh, steps, stroke, width, dash) {
+  function pathPoint(pt, camX, camY, vw, vh) {
+    var elev = (pt[2] || 0) * 32;
+    var p = project(pt[0], pt[1], camX, camY, vw, vh);
+    return { x: p.x, y: p.y - elev * p.depth, depth: p.depth, elev: elev, wx: pt[0], wy: pt[1] };
+  }
+
+  function drawPathRibbon(ctx, pts, camX, camY, vw, vh, stroke, width, dash, close) {
+    if (!pts || pts.length < 2) return;
     ctx.beginPath();
-    for (var i = 0; i <= steps; i++) {
-      var ang = (i / steps) * Math.PI * 2;
-      var p = project(cx + Math.cos(ang) * rx, cy + Math.sin(ang) * ry, camX, camY, vw, vh);
+    for (var i = 0; i < pts.length; i++) {
+      var p = pathPoint(pts[i], camX, camY, vw, vh);
       if (i === 0) ctx.moveTo(p.x, p.y);
       else ctx.lineTo(p.x, p.y);
     }
+    if (close) ctx.closePath();
     ctx.strokeStyle = stroke;
     ctx.lineWidth = width;
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
     if (dash) ctx.setLineDash(dash);
     ctx.stroke();
     ctx.setLineDash([]);
   }
 
+  function drawTrackMound(ctx, m, camX, camY, vw, vh) {
+    var p = project(m.x, m.y, camX, camY, vw, vh);
+    var h = Math.abs(m.h) * 48 * p.depth;
+    var rw = m.r * 0.42 * p.depth;
+    var rh = m.r * 0.18 * p.depth;
+    if (m.h >= 0) {
+      /* Mountain / berm */
+      ctx.fillStyle = "rgba(0,0,0,0.22)";
+      ctx.beginPath();
+      ctx.ellipse(p.x + 4, p.y + 6, rw * 1.05, rh * 1.1, -0.35, 0, Math.PI * 2);
+      ctx.fill();
+      var mg = ctx.createLinearGradient(p.x - rw, p.y, p.x + rw, p.y - h);
+      mg.addColorStop(0, "#5a4634");
+      mg.addColorStop(0.45, "#7a6248");
+      mg.addColorStop(1, "#c4b59a");
+      ctx.fillStyle = mg;
+      ctx.beginPath();
+      ctx.moveTo(p.x - rw, p.y);
+      ctx.quadraticCurveTo(p.x - rw * 0.3, p.y - h * 0.55, p.x, p.y - h);
+      ctx.quadraticCurveTo(p.x + rw * 0.35, p.y - h * 0.5, p.x + rw, p.y);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = "#1c1410";
+      ctx.lineWidth = 2.2;
+      ctx.stroke();
+      /* Crisp ridgeline */
+      ctx.strokeStyle = "rgba(255,255,255,0.22)";
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(p.x - rw * 0.55, p.y - h * 0.15);
+      ctx.quadraticCurveTo(p.x, p.y - h * 0.92, p.x + rw * 0.5, p.y - h * 0.2);
+      ctx.stroke();
+    } else {
+      /* Valley bowl */
+      ctx.fillStyle = "rgba(40, 32, 24, 0.55)";
+      ctx.beginPath();
+      ctx.ellipse(p.x, p.y, rw, rh * 1.15, -0.35, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#0f0c08";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.strokeStyle = "rgba(251, 191, 36, 0.35)";
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([6, 5]);
+      ctx.beginPath();
+      ctx.ellipse(p.x, p.y, rw * 0.7, rh * 0.8, -0.35, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
+
   function drawTrack(ctx, camX, camY, vw, vh, t) {
     var a = AREAS[1];
-    drawGroundPoly(ctx, areaCorners(a, camX, camY, vw, vh), "rgba(55, 52, 48, 0.85)", "rgba(25,25,25,0.7)");
-    var apron = {
-      x: a.x + 30, y: a.y + 30, w: a.w - 60, h: a.h - 60,
-    };
-    drawGroundPoly(ctx, areaCorners(apron, camX, camY, vw, vh), "rgba(90, 70, 45, 0.35)", null);
-    var cx = a.x + a.w * 0.5;
-    var cy = a.y + a.h * 0.5;
-    var steps = 64;
-    /* Outer / mid / inner lanes + figure-8 loops */
-    drawTrackLane(ctx, cx, cy, a.w * 0.44, a.h * 0.4, camX, camY, vw, vh, steps, "rgba(25,25,25,0.95)", 18, null);
-    drawTrackLane(ctx, cx, cy, a.w * 0.38, a.h * 0.34, camX, camY, vw, vh, steps, "#fbbf24", 3, [14, 12]);
-    drawTrackLane(ctx, cx, cy, a.w * 0.32, a.h * 0.28, camX, camY, vw, vh, steps, "rgba(30,30,30,0.85)", 12, null);
-    drawTrackLane(ctx, cx, cy, a.w * 0.26, a.h * 0.22, camX, camY, vw, vh, steps, "#e5e7eb", 2, [8, 10]);
-    drawTrackLane(ctx, cx, cy, a.w * 0.18, a.h * 0.15, camX, camY, vw, vh, steps, "rgba(40,40,40,0.75)", 9, null);
-    /* Secondary loop offset */
-    drawTrackLane(ctx, cx - 180, cy + 40, a.w * 0.22, a.h * 0.2, camX, camY, vw, vh, 48, "rgba(35,35,35,0.8)", 10, null);
-    drawTrackLane(ctx, cx + 200, cy - 30, a.w * 0.2, a.h * 0.18, camX, camY, vw, vh, 48, "rgba(35,35,35,0.8)", 10, null);
-    /* Checkered start markings */
-    for (var ci = 0; ci < 12; ci++) {
-      var sx = a.x + 80 + ci * 28;
-      var sy = a.y + a.h * 0.5;
-      var sp = project(sx, sy, camX, camY, vw, vh);
-      ctx.fillStyle = ci % 2 === 0 ? "#111" : "#f8fafc";
-      ctx.fillRect(sp.x - 6, sp.y - 8, 12, 16);
+    drawGroundPoly(ctx, areaCorners(a, camX, camY, vw, vh), "rgba(48, 44, 40, 0.9)", "rgba(12,10,8,0.95)");
+    var apron = { x: a.x + 36, y: a.y + 36, w: a.w - 72, h: a.h - 72 };
+    drawGroundPoly(ctx, areaCorners(apron, camX, camY, vw, vh), "rgba(92, 72, 48, 0.42)", "rgba(30,22,14,0.7)");
+
+    /* Terrain mounds — high mountain regions + low valley */
+    for (var mi = 0; mi < TRACK_MOUNDS.length; mi++) {
+      drawTrackMound(ctx, TRACK_MOUNDS[mi], camX, camY, vw, vh);
     }
-    /* Ramps */
+
+    /* Dirt ribbons: outer squiggle circuit, then branches */
+    drawPathRibbon(ctx, TRACK_MAIN, camX, camY, vw, vh, "rgba(18,16,14,0.96)", 22, null, true);
+    drawPathRibbon(ctx, TRACK_MAIN, camX, camY, vw, vh, "#a16207", 4, [16, 12], true);
+    drawPathRibbon(ctx, TRACK_MAIN, camX, camY, vw, vh, "rgba(28,24,20,0.9)", 12, null, true);
+    drawPathRibbon(ctx, TRACK_MAIN, camX, camY, vw, vh, "#e7e5e4", 2.2, [7, 11], true);
+
+    drawPathRibbon(ctx, TRACK_BRANCH_A, camX, camY, vw, vh, "rgba(22,20,18,0.92)", 14, null, true);
+    drawPathRibbon(ctx, TRACK_BRANCH_A, camX, camY, vw, vh, "#fbbf24", 2.5, [10, 9], true);
+
+    drawPathRibbon(ctx, TRACK_BRANCH_B, camX, camY, vw, vh, "rgba(24,22,20,0.9)", 12, null, true);
+    drawPathRibbon(ctx, TRACK_BRANCH_B, camX, camY, vw, vh, "#fde68a", 2, [8, 10], true);
+
+    /* Checkered start on west straight */
+    for (var ci = 0; ci < 10; ci++) {
+      var sx = 1780 + ci * 18;
+      var sy = 2220 + (ci % 2) * 10;
+      var sp = project(sx, sy, camX, camY, vw, vh);
+      ctx.fillStyle = ci % 2 === 0 ? "#0a0a0a" : "#f8fafc";
+      ctx.strokeStyle = "#111";
+      ctx.lineWidth = 1;
+      ctx.fillRect(sp.x - 5, sp.y - 7, 10, 14);
+      ctx.strokeRect(sp.x - 5, sp.y - 7, 10, 14);
+    }
+
+    /* Ramps — crisper wedge + edge */
     for (var ri = 0; ri < RAMPS.length; ri++) {
       var r = RAMPS[ri];
       var rp0 = project(r.x - r.w * 0.5, r.y, camX, camY, vw, vh);
       var rp1 = project(r.x + r.w * 0.5, r.y, camX, camY, vw, vh);
       var rp2 = project(r.x, r.y - r.h * 0.4, camX, camY, vw, vh);
-      ctx.fillStyle = "#78716c";
+      var rg = ctx.createLinearGradient(rp0.x, rp0.y, rp2.x, rp2.y - 18);
+      rg.addColorStop(0, "#57534e");
+      rg.addColorStop(1, "#a8a29e");
+      ctx.fillStyle = rg;
       ctx.beginPath();
       ctx.moveTo(rp0.x, rp0.y);
-      ctx.lineTo(rp2.x, rp2.y - 16 * rp2.depth);
+      ctx.lineTo(rp2.x, rp2.y - 18 * rp2.depth);
       ctx.lineTo(rp1.x, rp1.y);
       ctx.closePath();
       ctx.fill();
+      ctx.strokeStyle = "#0c0a09";
+      ctx.lineWidth = 2.4;
+      ctx.stroke();
       ctx.strokeStyle = "#f59e0b";
       ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(rp0.x, rp0.y);
+      ctx.lineTo(rp2.x, rp2.y - 18 * rp2.depth);
+      ctx.lineTo(rp1.x, rp1.y);
       ctx.stroke();
-      ctx.fillStyle = "#fbbf24";
-      ctx.font = "bold 10px Segoe UI, system-ui, sans-serif";
+      ctx.fillStyle = "#fef3c7";
+      ctx.font = "bold 11px Segoe UI, system-ui, sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText("▲", rp2.x, rp2.y - 20 * rp2.depth);
+      ctx.fillText("▲", rp2.x, rp2.y - 22 * rp2.depth);
     }
-    var label = project(cx, a.y + 36, camX, camY, vw, vh);
-    ctx.fillStyle = "rgba(255,255,255,0.92)";
+
+    var label = project(a.x + a.w * 0.5, a.y + 40, camX, camY, vw, vh);
+    ctx.fillStyle = "#fffbeb";
+    ctx.strokeStyle = "rgba(0,0,0,0.65)";
+    ctx.lineWidth = 3;
     ctx.font = "bold 14px Segoe UI, system-ui, sans-serif";
     ctx.textAlign = "center";
+    ctx.strokeText("Monster truck track", label.x, label.y - 8);
     ctx.fillText("Monster truck track", label.x, label.y - 8);
   }
 
   function drawPond(ctx, camX, camY, vw, vh, world, t) {
     var a = AREAS[2];
-    drawGroundPoly(ctx, areaCorners(a, camX, camY, vw, vh), "rgba(90, 140, 70, 0.45)", "rgba(50, 90, 40, 0.5)");
-    var inset = { x: a.x + 36, y: a.y + 36, w: a.w - 72, h: a.h - 72 };
+    /* Bank / reeds apron — crisp shore ring */
+    drawGroundPoly(ctx, areaCorners(a, camX, camY, vw, vh), "rgba(72, 120, 52, 0.55)", "rgba(28, 55, 22, 0.85)");
+    var bank = { x: a.x + 18, y: a.y + 18, w: a.w - 36, h: a.h - 36 };
+    drawGroundPoly(ctx, areaCorners(bank, camX, camY, vw, vh), "rgba(110, 95, 55, 0.5)", "rgba(40, 30, 12, 0.75)");
+    var inset = { x: a.x + 42, y: a.y + 42, w: a.w - 84, h: a.h - 84 };
     var water = areaCorners(inset, camX, camY, vw, vh);
     var wg = ctx.createLinearGradient(water[0].x, water[0].y, water[2].x, water[2].y);
-    wg.addColorStop(0, "rgba(12, 90, 120, 0.88)");
-    wg.addColorStop(0.45, "rgba(14, 130, 160, 0.85)");
-    wg.addColorStop(1, "rgba(8, 70, 100, 0.9)");
-    drawGroundPoly(ctx, water, wg, "rgba(6, 50, 70, 0.8)");
-    for (var s = 0; s < 8; s++) {
-      var sy = a.y + 60 + s * 110 + Math.sin(t * 1.8 + s) * 8;
-      var sp0 = project(a.x + 80, sy, camX, camY, vw, vh);
-      var sp1 = project(a.x + a.w - 80, sy + 10, camX, camY, vw, vh);
-      ctx.strokeStyle = "rgba(180, 230, 255, " + (0.08 + 0.08 * Math.sin(t * 2 + s)) + ")";
+    wg.addColorStop(0, "rgba(8, 70, 100, 0.94)");
+    wg.addColorStop(0.4, "rgba(12, 120, 150, 0.9)");
+    wg.addColorStop(0.7, "rgba(14, 145, 170, 0.88)");
+    wg.addColorStop(1, "rgba(6, 55, 85, 0.95)");
+    drawGroundPoly(ctx, water, wg, "rgba(4, 30, 45, 0.95)");
+    /* Foam waterline — high-contrast shore edge */
+    ctx.beginPath();
+    for (var wi = 0; wi < water.length; wi++) {
+      if (wi === 0) ctx.moveTo(water[wi].x, water[wi].y);
+      else ctx.lineTo(water[wi].x, water[wi].y);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = "rgba(220, 245, 255, 0.75)";
+    ctx.lineWidth = 3.2;
+    ctx.stroke();
+    ctx.strokeStyle = "rgba(6, 40, 60, 0.9)";
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+    for (var s = 0; s < 10; s++) {
+      var sy = a.y + 70 + s * 95 + Math.sin(t * 1.8 + s) * 8;
+      var sp0 = project(a.x + 90, sy, camX, camY, vw, vh);
+      var sp1 = project(a.x + a.w - 90, sy + 10, camX, camY, vw, vh);
+      ctx.strokeStyle = "rgba(190, 240, 255, " + (0.1 + 0.1 * Math.sin(t * 2 + s)) + ")";
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(sp0.x, sp0.y);
@@ -978,29 +1239,42 @@
       if (fp.x < -80 || fp.x > vw + 80 || fp.y < -80 || fp.y > vh + 80) return;
       var fs = (isWhale ? 10 : 5) + f.size * (isWhale ? 2.2 : 2.4);
       fs *= fp.depth * (f.scare > 0 ? 1.12 : 1);
+      ctx.fillStyle = "rgba(0,0,0,0.25)";
+      ctx.beginPath();
+      ctx.ellipse(fp.x, fp.y + 3, fs * 0.9, fs * 0.22, f.phase, 0, Math.PI * 2);
+      ctx.fill();
       ctx.fillStyle = f.scare > 0 ? "#fef08a" : (isWhale ? "#7dd3fc" : "#fde68a");
       ctx.beginPath();
       ctx.ellipse(fp.x, fp.y, fs, fs * (isWhale ? 0.38 : 0.45), f.phase, 0, Math.PI * 2);
       ctx.fill();
+      ctx.strokeStyle = isWhale ? "#0c4a6e" : "#92400e";
+      ctx.lineWidth = 1.6;
+      ctx.stroke();
       ctx.beginPath();
       ctx.moveTo(fp.x - Math.cos(f.phase) * fs, fp.y - Math.sin(f.phase) * fs * 0.35);
       ctx.lineTo(fp.x - Math.cos(f.phase) * fs * 1.55, fp.y);
       ctx.lineTo(fp.x - Math.cos(f.phase) * fs, fp.y + Math.sin(f.phase) * fs * 0.35);
       ctx.fillStyle = isWhale ? "#38bdf8" : "#fcd34d";
       ctx.fill();
+      ctx.strokeStyle = isWhale ? "#075985" : "#78350f";
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
       if (isWhale) {
-        ctx.fillStyle = "rgba(255,255,255,0.35)";
+        ctx.fillStyle = "rgba(255,255,255,0.4)";
         ctx.beginPath();
         ctx.ellipse(fp.x + fs * 0.15, fp.y - fs * 0.15, fs * 0.35, fs * 0.12, f.phase, 0, Math.PI * 2);
         ctx.fill();
       }
     }
     for (var i = 0; i < world.fish.length; i++) drawSwimmer(world.fish[i], false);
-    for (var wi = 0; wi < world.whales.length; wi++) drawSwimmer(world.whales[wi], true);
+    for (var wj = 0; wj < world.whales.length; wj++) drawSwimmer(world.whales[wj], true);
     var label = project(a.x + a.w * 0.5, a.y + 28, camX, camY, vw, vh);
-    ctx.fillStyle = "rgba(255,255,255,0.92)";
     ctx.font = "bold 14px Segoe UI, system-ui, sans-serif";
     ctx.textAlign = "center";
+    ctx.strokeStyle = "rgba(0,0,0,0.7)";
+    ctx.lineWidth = 3;
+    ctx.strokeText("Pond · fishies & whales", label.x, label.y);
+    ctx.fillStyle = "#ecfeff";
     ctx.fillText("Pond · fishies & whales", label.x, label.y);
   }
 
@@ -1029,20 +1303,55 @@
     }
   }
 
-  function drawCybertruck(ctx, x, y, facing, depth, driving, z, accent) {
+  function drawCybertruck(ctx, x, y, facing, depth, driving, z, accent, water) {
     var s = 1.2 * depth;
     var lift = (z || 0) * 0.55 * depth;
+    var wet = water && water.inWater;
+    var sub = wet ? clamp(water.sub || 0, 0, 1.2) : 0;
+    /* Surface drive sits ON the water — tiny lift; dive sinks visually */
+    var waterSit = wet && (z || 0) < 5 ? (2.5 - sub * 10) * depth : 0;
+    var drawY = y - lift + (wet ? Math.max(-2, -waterSit * 0.15) : 0);
+    /* When diving (high sub), truck sits lower through the waterline */
+    if (wet && sub > 0.5) drawY += (sub - 0.5) * 14 * depth;
+
     ctx.save();
-    ctx.translate(x, y - lift);
+    ctx.translate(x, drawY);
     ctx.scale(facing < 0 ? -1 : 1, 1);
-    ctx.fillStyle = "rgba(0,0,0," + (0.28 - Math.min(0.18, (z || 0) * 0.004)) + ")";
+
+    /* Wake / ripples under tires when on surface */
+    if (wet && (z || 0) < 6) {
+      var wp = water.wakePhase || 0;
+      var wakeA = 0.35 + 0.2 * Math.sin(wp * 3);
+      for (var wk = 0; wk < 3; wk++) {
+        var wr = (18 + wk * 12 + (wp * 20 + wk * 8) % 14) * s;
+        ctx.strokeStyle = "rgba(200, 240, 255, " + (wakeA * (1 - wk * 0.28)) + ")";
+        ctx.lineWidth = 2.2 - wk * 0.4;
+        ctx.beginPath();
+        ctx.ellipse(-6 * s, 12 * s + lift * 0.15, wr, wr * 0.28, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      /* V-wake behind */
+      ctx.strokeStyle = "rgba(180, 230, 255, 0.55)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-8 * s, 10 * s);
+      ctx.lineTo(-42 * s, 6 * s + Math.sin(wp * 4) * 3 * s);
+      ctx.moveTo(-8 * s, 10 * s);
+      ctx.lineTo(-42 * s, 16 * s + Math.cos(wp * 4) * 3 * s);
+      ctx.stroke();
+    }
+
+    /* Ground / water contact shadow */
+    var shA = wet ? 0.12 : (0.3 - Math.min(0.18, (z || 0) * 0.004));
+    ctx.fillStyle = "rgba(0,0,0," + shA + ")";
     ctx.beginPath();
     ctx.ellipse(0, 10 * s + lift * 0.3, 32 * s, 8 * s, 0, 0, Math.PI * 2);
     ctx.fill();
+
     var bodyGrad = ctx.createLinearGradient(-30 * s, -18 * s, 36 * s, 10 * s);
-    bodyGrad.addColorStop(0, driving ? "#f3f4f6" : "#d1d5db");
-    bodyGrad.addColorStop(0.45, driving ? "#e5e7eb" : "#9ca3af");
-    bodyGrad.addColorStop(1, driving ? "#cbd5e1" : "#6b7280");
+    bodyGrad.addColorStop(0, driving ? "#f8fafc" : "#d1d5db");
+    bodyGrad.addColorStop(0.45, driving ? "#e2e8f0" : "#9ca3af");
+    bodyGrad.addColorStop(1, driving ? "#94a3b8" : "#6b7280");
     ctx.fillStyle = bodyGrad;
     ctx.beginPath();
     ctx.moveTo(-30 * s, -4 * s);
@@ -1052,18 +1361,38 @@
     ctx.lineTo(-32 * s, 8 * s);
     ctx.closePath();
     ctx.fill();
-    ctx.strokeStyle = "#111827";
-    ctx.lineWidth = 1.8;
+    /* Crisp silhouette */
+    ctx.strokeStyle = "#020617";
+    ctx.lineWidth = 2.4;
+    ctx.lineJoin = "round";
+    ctx.stroke();
+    /* Panel crease / stainless edge */
+    ctx.strokeStyle = "rgba(255,255,255,0.55)";
+    ctx.lineWidth = 1.3;
+    ctx.beginPath();
+    ctx.moveTo(-28 * s, -2 * s);
+    ctx.lineTo(6 * s, -13 * s);
+    ctx.lineTo(32 * s, -6 * s);
+    ctx.stroke();
+    ctx.strokeStyle = "rgba(15,23,42,0.55)";
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(-30 * s, 4 * s);
+    ctx.lineTo(36 * s, 2 * s);
     ctx.stroke();
     if (accent) {
       ctx.strokeStyle = accent;
-      ctx.lineWidth = 3;
+      ctx.lineWidth = 3.2;
       ctx.beginPath();
       ctx.moveTo(-28 * s, 2 * s);
       ctx.lineTo(30 * s, 0);
       ctx.stroke();
+      ctx.strokeStyle = "rgba(0,0,0,0.35)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
     }
-    ctx.fillStyle = "rgba(30, 41, 59, 0.92)";
+    /* Cabin glass — sharper */
+    ctx.fillStyle = "rgba(15, 23, 42, 0.95)";
     ctx.beginPath();
     ctx.moveTo(-6 * s, -5 * s);
     ctx.lineTo(12 * s, -20 * s);
@@ -1071,16 +1400,77 @@
     ctx.lineTo(-2 * s, -3 * s);
     ctx.closePath();
     ctx.fill();
+    ctx.strokeStyle = "#020617";
+    ctx.lineWidth = 1.8;
+    ctx.stroke();
+    ctx.fillStyle = "rgba(125, 211, 252, 0.35)";
+    ctx.beginPath();
+    ctx.moveTo(-2 * s, -6 * s);
+    ctx.lineTo(11 * s, -17 * s);
+    ctx.lineTo(18 * s, -10 * s);
+    ctx.lineTo(2 * s, -5 * s);
+    ctx.closePath();
+    ctx.fill();
     ctx.fillStyle = driving ? "#fef08a" : "#94a3b8";
-    ctx.fillRect(28 * s, -6 * s, 6 * s, 3 * s);
+    ctx.fillRect(28 * s, -6 * s, 6 * s, 3.5 * s);
+    ctx.strokeStyle = "#0f172a";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(28 * s, -6 * s, 6 * s, 3.5 * s);
     function wheel(wx, wy) {
-      ctx.fillStyle = "#111";
-      ctx.beginPath(); ctx.arc(wx, wy, 8 * s, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = "#4b5563"; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.arc(wx, wy, 5 * s, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = "#020617";
+      ctx.beginPath(); ctx.arc(wx, wy, 8.2 * s, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = "#64748b"; ctx.lineWidth = 2.2;
+      ctx.beginPath(); ctx.arc(wx, wy, 5.2 * s, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = "#94a3b8"; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(wx, wy, 2.5 * s, 0, Math.PI * 2); ctx.stroke();
     }
-    if ((z || 0) < 8) { wheel(-16 * s, 9 * s); wheel(18 * s, 8 * s); }
-    else { wheel(-16 * s, 4 * s); wheel(18 * s, 3 * s); }
+    var wheelY = (z || 0) < 8 ? 9 : 4;
+    if (!(wet && sub > 0.75)) {
+      wheel(-16 * s, wheelY * s);
+      wheel(18 * s, (wheelY - 1) * s);
+    }
+
+    /* Waterline clip + submerged tint — truck reads as ON / under surface */
+    if (wet && (z || 0) < 8) {
+      var waterlineY = 4 * s + sub * 10 * s;
+      /* Foam line across hull */
+      ctx.strokeStyle = "rgba(240, 250, 255, 0.85)";
+      ctx.lineWidth = 2.4;
+      ctx.beginPath();
+      ctx.moveTo(-34 * s, waterlineY);
+      ctx.lineTo(40 * s, waterlineY - 1 * s);
+      ctx.stroke();
+      ctx.strokeStyle = "rgba(8, 60, 90, 0.7)";
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(-34 * s, waterlineY + 2);
+      ctx.lineTo(40 * s, waterlineY + 1);
+      ctx.stroke();
+      /* Submerged band — clips lower body into water */
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(-42 * s, waterlineY, 88 * s, 36 * s);
+      ctx.clip();
+      var tint = sub > 0.55 ? 0.55 + (sub - 0.55) * 0.35 : 0.32;
+      ctx.fillStyle = "rgba(6, 70, 100, " + tint + ")";
+      ctx.fillRect(-42 * s, waterlineY, 88 * s, 36 * s);
+      ctx.fillStyle = "rgba(34, 180, 200, " + (0.12 + sub * 0.12) + ")";
+      ctx.fillRect(-42 * s, waterlineY, 88 * s, 10 * s);
+      ctx.restore();
+      /* Full-body dive wash when deep */
+      if (sub > 0.7) {
+        ctx.fillStyle = "rgba(4, 50, 80, " + clamp((sub - 0.7) * 0.85, 0, 0.45) + ")";
+        ctx.beginPath();
+        ctx.moveTo(-30 * s, -4 * s);
+        ctx.lineTo(8 * s, -16 * s);
+        ctx.lineTo(34 * s, -8 * s);
+        ctx.lineTo(38 * s, 6 * s);
+        ctx.lineTo(-32 * s, 8 * s);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+
     ctx.restore();
   }
 
@@ -1096,7 +1486,7 @@
     }
 
     if (frog.inTruck && frog.local) {
-      drawCybertruck(ctx, p.x, p.y, frog.facing, p.depth, true, frog.z || 0, frog.color);
+      drawCybertruck(ctx, p.x, p.y, frog.facing, p.depth, true, frog.z || 0, frog.color, { inWater: inPond(frog.x, frog.y), sub: frog.waterSub || 0, wakePhase: frog.wakePhase || 0 });
       if (frog.truckMode === "shared" && frogs) {
         var riders = frogs.slice().sort(function (a, b) { return a.id.localeCompare(b.id); });
         for (var ri = 0; ri < riders.length; ri++) {
@@ -1133,7 +1523,7 @@
     }
 
     if (frog.inTruck && !frog.local && frog.truckMode === "solo") {
-      drawCybertruck(ctx, p.x, p.y, frog.facing, p.depth, true, frog.z || 0, frog.color);
+      drawCybertruck(ctx, p.x, p.y, frog.facing, p.depth, true, frog.z || 0, frog.color, { inWater: inPond(frog.x, frog.y), sub: frog.waterSub || 0, wakePhase: frog.wakePhase || 0 });
       ctx.fillStyle = frog.color;
       ctx.beginPath();
       ctx.arc(p.x, p.y - 22 * p.depth - lift, 6 * p.depth, 0, Math.PI * 2);
@@ -1224,7 +1614,7 @@
       if (soloTaken) continue;
       var p = project(spot.x, spot.y, camX, camY, vw, vh);
       var accent = spot.id === "shared" ? "#fbbf24" : (FROG_COLORS[spot.id] || {}).body;
-      drawCybertruck(ctx, p.x, p.y, 1, p.depth, false, 0, accent);
+      drawCybertruck(ctx, p.x, p.y, 1, p.depth, false, 0, accent, { inWater: inPond(spot.x, spot.y), sub: 0, wakePhase: 0 });
     }
   }
 
@@ -1370,6 +1760,7 @@
     areaAt: areaAt,
     areaNameAt: areaNameAt,
     onTrack: onTrack,
+    inPond: inPond,
     rampAt: rampAt,
     nearestHotspot: nearestHotspot,
     updateFish: updateFish,

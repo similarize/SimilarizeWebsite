@@ -499,6 +499,8 @@
         inTruck: f.inTruck,
         truckMode: f.truckMode || null,
         truckId: f.truckId || null,
+        waterSub: f.waterSub || 0,
+        wakePhase: f.wakePhase || 0,
         z: f.z || 0,
         cd: f.cd,
         human: f.human,
@@ -521,6 +523,8 @@
       f.inTruck = sf.inTruck;
       f.truckMode = sf.truckMode || null;
       f.truckId = sf.truckId || null;
+      f.waterSub = sf.waterSub || 0;
+      f.wakePhase = sf.wakePhase || 0;
       f.z = sf.z || 0;
       f.cd = sf.cd;
     }
@@ -570,10 +574,17 @@
           shakeT = 0.15;
         } else if (drive.landed) {
           sfxLand();
-          if (drive.scrapGain > 0) {
+          if (drive.splashed) {
+            storyToast = (me.waterSub || 0) > 0.7 ? "Under the water!" : "Splash · on the water!";
+            storyToastT = 1.1;
+            shakeT = 0.12;
+          } else if (drive.scrapGain > 0) {
             storyToast = "Landing +" + drive.scrapGain;
             storyToastT = 1;
           }
+        } else if (drive.onWater && me.inTruck && Math.hypot(me.vx, me.vy) > 60 && Math.random() < dt * 0.35) {
+          storyToast = "Cybertruck · on the water";
+          storyToastT = 0.7;
         }
         if (me.speedBoost > 1) me.speedBoost = Math.max(1, me.speedBoost - dt * 0.5);
         easeCam(dt);
@@ -620,10 +631,17 @@
               shakeT = 0.16;
             } else if (drive.landed) {
               sfxLand();
-              if (drive.scrapGain > 0) {
+              if (drive.splashed) {
+                storyToast = (f.waterSub || 0) > 0.7 ? "Under the water!" : "Splash · on the water!";
+                storyToastT = 1.15;
+                shakeT = 0.14;
+              } else if (drive.scrapGain > 0) {
                 storyToast = "Nice air! +" + drive.scrapGain;
                 storyToastT = 1.1;
               }
+            } else if (drive.onWater && Math.hypot(f.vx, f.vy) > 70 && Math.random() < 0.08) {
+              storyToast = "Cybertruck · on the water";
+              storyToastT = 0.75;
             } else if (drive.scrapGain > 0 && Math.random() < 0.3) {
               beep(150, 0.03, "sawtooth", 0.025);
             }
