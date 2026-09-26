@@ -4,7 +4,8 @@
    polish4: compound presence + track hills + inviting hotspots + drive bob/spray.
    polish5: ambient pollen/fireflies; pond ripples; track race dust; garage door open-near;
    shared ALL ABOARD; land shake; hotspot sparkle; orbit pull rings + Escape banner.
-   polish6: depth shadows + parallax-lite hills + Mars invader silhouette tease + mech wow tip. */
+   polish6: depth shadows + parallax-lite hills + Mars invader silhouette tease + mech wow tip.
+   polish7: zone signs + mini-map lite + companion idle bounce / follow lag. */
 (function (global) {
   "use strict";
   var C = global.FroggiesCanon;
@@ -118,10 +119,17 @@
           companion.setAlpha(0.95).setDepth(19).setScale(1.05);
           companion.tx = companion.x; companion.ty = companion.y; companion.timer = 1 + Math.random() * 2;
           companion.frogId = cid;
+          companion.followLag = 0.35 + ci * 0.12;
+          companion.idleBounce = Math.random() * 6;
+          companion.chatT = 0;
           companion.nameTag = this.add.text(companion.x, companion.y - 26, cdef.name + " · AI", {
             fontFamily: "Segoe UI, system-ui, sans-serif", fontSize: "11px", fontStyle: "bold",
             color: cdef.color || "#fff", stroke: "#000", strokeThickness: 3,
           }).setOrigin(0.5, 1).setDepth(21);
+          companion.chatBubble = this.add.text(companion.x, companion.y - 44, "", {
+            fontFamily: "Segoe UI, system-ui, sans-serif", fontSize: "10px", fontStyle: "bold",
+            color: "#0f172a", backgroundColor: "#f8fafc", padding: { x: 6, y: 3 },
+          }).setOrigin(0.5, 1).setDepth(22).setVisible(false);
           this.companions.push(companion);
         }
         this.nameTag = this.add.text(0, 0, def.name, {
@@ -143,6 +151,20 @@
         this.waterSub = 0; this.scrap = 0; this.toastT = 3.5; this.cd = 0; this.near = null; this.bouncePhase = 0; this.dustT = 0; this.fx = [];
         this.prevNearId = null; this.shakeT = 0; this.rippleT = 0; this.ambient = [];
         this.mechWowT = 0; this.walkBobT = 0;
+        /* polish7: zone signs + mini-map lite (screen-space) */
+        this.zoneSignTexts = [];
+        var zlist = (C.ZONE_SIGNS || []);
+        for (var zi = 0; zi < zlist.length; zi++) {
+          var zs = zlist[zi];
+          var zt = this.add.text(zs.x, zs.y - 40, zs.label, {
+            fontFamily: "Segoe UI, system-ui, sans-serif", fontSize: "16px", fontStyle: "bold",
+            color: zs.color || "#fef3c7", backgroundColor: "#0f172acc",
+            padding: { x: 10, y: 5 }, stroke: "#000", strokeThickness: 2,
+          }).setOrigin(0.5).setDepth(50).setAlpha(0);
+          zt.zone = zs;
+          this.zoneSignTexts.push(zt);
+        }
+        this.miniMapGfx = this.add.graphics().setScrollFactor(0).setDepth(60);
         /* polish5: ambient pollen / fireflies */
         for (var ai = 0; ai < 40; ai++) {
           var kind = Math.random() < 0.55 ? "pollen" : "firefly";
@@ -582,20 +604,64 @@
         }
         for (var ci = 0; ci < this.companions.length; ci++) {
           var c = this.companions[ci];
+          var lag = c.followLag || 0.4;
           if (this.inTruck && this.truckMode === "shared") {
             var ox = (ci - 1) * 14, oy = -10 - (ci % 2) * 8;
             c.x += (this.player.x + ox - c.x) * Math.min(1, 8 * dt);
             c.y += (this.player.y + oy - this.zLift * 0.06 - c.y) * Math.min(1, 8 * dt);
+            c.idleBounce = (c.idleBounce || 0) + dt * 5;
           } else {
             c.timer -= dt;
             if (c.timer <= 0) {
-              c.tx = Phaser.Math.Clamp(this.player.x + (Math.random() - 0.5) * 140, 80, C.MAP_W - 80);
-              c.ty = Phaser.Math.Clamp(this.player.y + (Math.random() - 0.5) * 140, 80, C.MAP_H - 80);
-              c.timer = 1.2 + Math.random() * 1.8;
+              var behind = -this.facing * (36 + lag * 70);
+              c.tx = Phaser.Math.Clamp(this.player.x + behind + (Math.random() - 0.5) * (80 + lag * 50), 80, C.MAP_W - 80);
+              c.ty = Phaser.Math.Clamp(this.player.y + (Math.random() - 0.5) * (80 + lag * 40), 80, C.MAP_H - 80);
+              c.timer = 0.9 + lag + Math.random() * (1.3 + lag);
             }
-            c.x += (c.tx - c.x) * Math.min(1, 1.6 * dt); c.y += (c.ty - c.y) * Math.min(1, 1.6 * dt);
+            var followK = Math.min(1, (1.05 / (0.7 + lag)) * dt);
+            c.x += (c.tx - c.x) * followK; c.y += (c.ty - c.y) * followK;
+            c.idleBounce = (c.idleBounce || 0) + dt * 4.2;
           }
-          if (c.nameTag) c.nameTag.setPosition(c.x, c.y - 28).setVisible(true);
+          var bobY = Math.abs(Math.sin(c.idleBounce)) * 3.2;
+          c.setY(c.y); /* position already includes follow; visual bob via nameTag offset */
+          if (c.nameTag) c.nameTag.setPosition(c.x, c.y - 28 - bobY).setVisible(true);
+          if (c.chatT > 0) c.chatT -= dt;
+          else if (Math.random() < dt * 0.08) {
+            var lines = (C.AI_CHAT && C.AI_CHAT[c.frogId]) || [];
+            if (lines.length) { c.chatLine = lines[Math.floor(Math.random() * lines.length)]; c.chatT = 2.1; }
+          }
+          if (c.chatBubble) {
+            if (c.chatT > 0 && c.chatLine) {
+              c.chatBubble.setText(c.chatLine).setPosition(c.x, c.y - 44 - bobY).setVisible(true).setAlpha(Math.min(1, c.chatT));
+            } else c.chatBubble.setVisible(false);
+          }
+          c.setScale(1.05, 1.05 + Math.abs(Math.sin(c.idleBounce)) * 0.04);
+        }
+        /* polish7: zone signs fade */
+        for (var zsi = 0; zsi < (this.zoneSignTexts || []).length; zsi++) {
+          var zt = this.zoneSignTexts[zsi];
+          var za = C.zoneSignAlpha ? C.zoneSignAlpha(zt.zone, this.player.x, this.player.y) : 0;
+          zt.setAlpha(za);
+        }
+        /* polish7: mini-map lite */
+        if (this.miniMapGfx) {
+          var g = this.miniMapGfx; g.clear();
+          var mw = 130, mh = 98, ox = this.cameras.main.width - mw - 12, oy = 56;
+          g.fillStyle(0x0f172a, 0.72); g.fillRect(ox, oy, mw, mh);
+          g.lineStyle(1.5, 0xfbbf24, 0.55); g.strokeRect(ox, oy, mw, mh);
+          function mmx(x) { return ox + (x / C.MAP_W) * mw; }
+          function mmy(y) { return oy + (y / C.MAP_H) * mh; }
+          var marks = [[380,1630,0xfbbf24],[2780,2270,0xa8a29e],[3160,670,0x67e8f9],[940,1660,0xfdba74],[360,320,0xfde68a]];
+          for (var mi = 0; mi < marks.length; mi++) {
+            g.fillStyle(marks[mi][2], 1); g.fillCircle(mmx(marks[mi][0]), mmy(marks[mi][1]), 2.8);
+          }
+          g.fillStyle(hx(def.color), 1); g.fillCircle(mmx(this.player.x), mmy(this.player.y), 4);
+          for (var cmi = 0; cmi < this.companions.length; cmi++) {
+            var cm = this.companions[cmi];
+            var cdef2 = C.FROG_DEFS[cm.frogId] || def;
+            g.fillStyle(hx(cdef2.color || "#fff"), 1);
+            g.fillCircle(mmx(cm.x), mmy(cm.y), 2.6);
+          }
         }
         for (var pi = 0; pi < this.parkedTrucks.length; pi++) {
           var pt = this.parkedTrucks[pi];
@@ -672,8 +738,9 @@
         if (frogId === "james") { body.velocity.x += this.facing * 300; this.toast = this.inTruck ? "DASH · truck boost!" : "DASH!"; }
         else if (frogId === "jimmy") this.toast = "SHIELD up!";
         else if (frogId === "bubbles") { this.toast = "ZAP!"; this.scrap += 1; }
-        else { this.toast = "BOT · nudge toward SPS"; this.player.x += (520 - this.player.x) * 0.12; this.player.y += (1940 - this.player.y) * 0.12; }
+        else { this.toast = "BOT · open SPS for Optimus kits"; this.player.x += (520 - this.player.x) * 0.12; this.player.y += (1940 - this.player.y) * 0.12; }
         this.toastT = 1.8; if (hooks.onToast) hooks.onToast(this.toast);
+        if (hooks.onAbilityFire) hooks.onAbilityFire(frogId, def.ability);
       },
     });
 
@@ -696,6 +763,8 @@
         if (!this.textures.exists("frog_" + frogId)) this.player.setTint(hx(def.color));
         this.player.setCollideWorldBounds(true);
         this.jimmy = this.add.circle(720, 300, 16, 0xfb923c, 1);
+        this.jimmyFlame = this.add.triangle(720, 330, 0, 0, 8, 28, -8, 28, 0x38bdf8, 0.9).setVisible(false);
+        this.jimmyJetT = 0;
         this.jimmyLabel = this.add.text(720, 270, "Jimmy", { fontSize: "12px", color: "#fb923c", stroke: "#000", strokeThickness: 3 }).setOrigin(0.5);
         this.add.circle(560, 380, 12, 0xb45309, 1);
         this.add.text(560, 358, "Germy", { fontSize: "11px", color: "#fbbf24", stroke: "#000", strokeThickness: 3 }).setOrigin(0.5);
@@ -812,10 +881,29 @@
               body.velocity.x = Math.cos(this.orbitAngle) * kick * 0.55;
               body.velocity.y = Math.sin(this.orbitAngle) * kick * 0.55;
               this.toast = "Hard thruster · left Moon orbit";
-            } else { body.velocity.x += 200; body.velocity.y -= 120; this.toast = def.ability + " · hard thruster"; }
+            } else {
+              body.velocity.x += frogId === "jimmy" ? 280 : 200;
+              body.velocity.y -= frogId === "jimmy" ? 180 : 120;
+              this.toast = frogId === "jimmy" ? "SHIELD up!" : (def.ability + " · hard thruster");
+              /* polish7: Jimmy jetpack escape visual */
+              if (frogId === "jimmy" && this.jimmy) {
+                this.jimmyVx = (Math.random() > 0.5 ? 1 : -1) * 140;
+                this.jimmyVy = -110;
+                this.jimmyJetT = 0.9;
+              }
+            }
             this.toastT = 1.5;
+            if (hooks.onAbilityFire) hooks.onAbilityFire(frogId, def.ability);
           }
         }
+        if (this.jimmyJetT > 0) {
+          this.jimmyJetT -= dt;
+          if (this.jimmyFlame) {
+            this.jimmyFlame.setVisible(true);
+            this.jimmyFlame.setPosition(this.jimmy.x, this.jimmy.y + 18);
+            this.jimmyFlame.setAlpha(Math.min(1, this.jimmyJetT * 2));
+          }
+        } else if (this.jimmyFlame) this.jimmyFlame.setVisible(false);
         /* polish6: show invader silhouettes when near Mars marker */
         var nearMars = Phaser.Math.Distance.Between(this.player.x, this.player.y, 980, 620) < 160;
         for (var isi2 = 0; isi2 < (this.invSil || []).length; isi2++) {

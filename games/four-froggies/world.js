@@ -6,6 +6,8 @@
    shared pile-in truck obvious; tiny land shake hook; sparkle on hotspot enter.
    polish6: FF-like depth — stronger hill parallax, soft drop shadows, scale-with-depth props,
    walk cam tilt/bob (via main); 1000-story mech wow tip; story/combat visual teases.
+   polish7: zone signs fade-in; mini-map; AI idle bounce + follow lag + chat bubbles (existing lines);
+   ability FX hang TBD. Canvas lead.
    ~10× map: real roam between ranch house / track / pond / Starship.
    James ranch house: big house, backyard (animals), huge garage (toys + 10/100-story mechs);
    1000-story mech sits out back (won't fit). Four Cybertrucks + shared pile-in.
@@ -343,8 +345,11 @@
     var colors = FROG_COLORS[id] || FROG_COLORS.james;
     var ox = 420 + (laneIndex % 2) * 48;
     var oy = 1960 + Math.floor(laneIndex / 2) * 48;
+    var C = global.FroggiesCanon;
+    var def = (C && C.FROG_DEFS && C.FROG_DEFS[id]) || null;
     return {
       id: id,
+      name: def ? def.name : id,
       human: !!human,
       local: !!local,
       x: ox,
@@ -376,6 +381,12 @@
       steerY: 0,
       speedBoost: 1,
       walkPhase: 0,
+      /* polish7 */
+      idleBounce: 0,
+      followLag: 0.35 + (laneIndex % 3) * 0.12,
+      chatT: 0,
+      chatLine: "",
+      chatCd: 2 + Math.random() * 4,
     };
   }
 
@@ -835,6 +846,13 @@
     return true;
   }
 
+  function pickAiChat(frogId) {
+    var C = global.FroggiesCanon;
+    var lines = (C && C.AI_CHAT && C.AI_CHAT[frogId]) || null;
+    if (!lines || !lines.length) return "";
+    return lines[Math.floor(Math.random() * lines.length)];
+  }
+
   function tickHubAI(frogs, localFrog, dt, world) {
     for (var i = 0; i < frogs.length; i++) {
       var f = frogs[i];
@@ -853,6 +871,8 @@
         f.z = localFrog.z;
         f.waterSub = localFrog.waterSub || 0;
         f.wakePhase = localFrog.wakePhase || 0;
+        f.idleBounce = (f.idleBounce || 0) + dt * 5;
+        if (f.chatT > 0) f.chatT -= dt;
         continue;
       }
       if (f.truckMode === "shared" && !(localFrog && localFrog.inTruck && localFrog.truckMode === "shared")) {
@@ -861,12 +881,15 @@
         f.truckId = null;
         f.z = 0;
       }
+      /* polish7: follow lag — stagger retarget so AI trail behind, not snap */
       f.aiTimer -= dt;
+      var lag = f.followLag || 0.45;
       if (f.aiTimer <= 0) {
-        f.aiTimer = 1.2 + Math.random() * 1.8;
-        if (localFrog && Math.random() < 0.55) {
-          f.targetX = localFrog.x + (Math.random() - 0.5) * 160;
-          f.targetY = localFrog.y + (Math.random() - 0.5) * 160;
+        f.aiTimer = 0.9 + lag + Math.random() * (1.4 + lag);
+        if (localFrog && Math.random() < 0.72) {
+          var behind = -localFrog.facing * (40 + lag * 80);
+          f.targetX = localFrog.x + behind + (Math.random() - 0.5) * (90 + lag * 60);
+          f.targetY = localFrog.y + (Math.random() - 0.5) * (90 + lag * 50);
         } else {
           var a = AREAS[Math.floor(Math.random() * AREAS.length)];
           f.targetX = a.x + a.w * (0.3 + Math.random() * 0.4);
@@ -876,9 +899,31 @@
       var dx = f.targetX - f.x;
       var dy = f.targetY - f.y;
       var d = Math.hypot(dx, dy) || 1;
-      if (d < 28) { f.steerX = 0; f.steerY = 0; }
-      else { f.steerX = dx / d; f.steerY = dy / d; }
+      if (d < 32) { f.steerX = 0; f.steerY = 0; }
+      else {
+        /* soft follow — damp steer by lag so they trail */
+        var soft = 0.55 + (1 - Math.min(1, lag)) * 0.35;
+        f.steerX = (dx / d) * soft;
+        f.steerY = (dy / d) * soft;
+      }
       moveEntity(f, dt);
+      var spd = Math.hypot(f.vx || 0, f.vy || 0);
+      /* polish7: idle bounce when settled */
+      if (spd < 18 && !f.inTruck) {
+        f.idleBounce = (f.idleBounce || 0) + dt * 4.2;
+      } else {
+        f.idleBounce = (f.idleBounce || 0) + dt * (2 + Math.min(4, spd * 0.02));
+      }
+      if (f.chatT > 0) f.chatT -= dt;
+      f.chatCd = (f.chatCd || 3) - dt;
+      if (f.chatCd <= 0 && f.chatT <= 0 && Math.random() < 0.55) {
+        var line = pickAiChat(f.id);
+        if (line) {
+          f.chatLine = line;
+          f.chatT = 2.2;
+        }
+        f.chatCd = 5.5 + Math.random() * 7;
+      }
     }
   }
 
@@ -1975,6 +2020,10 @@
     var s = 16.4 * p.depth * (0.92 + 0.08 * p.depth); /* polish3 readable */
     var bob = (!frog.inTruck && (frog.walkPhase || 0) > 0.05)
       ? Math.abs(Math.sin(frog.walkPhase)) * 2.4 * p.depth : 0;
+    /* polish7: idle bounce for AI companions when standing */
+    if (!frog.inTruck && bob < 0.4 && (frog.idleBounce || 0) > 0) {
+      bob += Math.abs(Math.sin(frog.idleBounce)) * (frog.human ? 0.6 : 2.8) * p.depth;
+    }
     var lift = (frog.z || 0) * 0.58 * p.depth + bob;
 
     if (frog.inTruck && frog.truckMode === "shared" && !frog.local) {
@@ -2125,6 +2174,27 @@
       ctx.lineWidth = 3;
       ctx.strokeText(frog.name || "You", p.x, by - s - 8);
       ctx.fillText(frog.name || "You", p.x, by - s - 8);
+    }
+    /* polish7: chat bubble one-liner (existing canon strings only) */
+    if (frog.chatT > 0 && frog.chatLine) {
+      var alpha = Math.min(1, frog.chatT * 1.4);
+      var msg = frog.chatLine;
+      ctx.font = "bold 10px Segoe UI, system-ui, sans-serif";
+      var tw = Math.min(160, ctx.measureText(msg).width + 14);
+      var bx = p.x;
+      var byb = by - s - 22;
+      ctx.fillStyle = "rgba(255,255,255," + (0.92 * alpha) + ")";
+      ctx.strokeStyle = "rgba(15,23,42," + (0.85 * alpha) + ")";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.roundRect ? ctx.roundRect(bx - tw * 0.5, byb - 14, tw, 20, 6) : ctx.rect(bx - tw * 0.5, byb - 14, tw, 20);
+      ctx.fill(); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(bx - 4, byb + 6); ctx.lineTo(bx, byb + 12); ctx.lineTo(bx + 4, byb + 6);
+      ctx.fill();
+      ctx.fillStyle = "rgba(15,23,42," + alpha + ")";
+      ctx.textAlign = "center";
+      ctx.fillText(msg, bx, byb);
     }
     return p;
   }
@@ -2484,6 +2554,104 @@
     return null;
   }
 
+  function zoneSignsList() {
+    var C = global.FroggiesCanon;
+    if (C && C.ZONE_SIGNS) return C.ZONE_SIGNS;
+    return [
+      { id: "house", label: "HOUSE", x: 380, y: 1630, approach: 460, color: "#fbbf24" },
+      { id: "track", label: "TRACK", x: 2780, y: 2270, approach: 560, color: "#a8a29e" },
+      { id: "pond", label: "POND", x: 3160, y: 670, approach: 500, color: "#67e8f9" },
+      { id: "garage", label: "GARAGE", x: 940, y: 1660, approach: 300, color: "#fdba74" },
+      { id: "starship", label: "STARSHIP", x: 360, y: 320, approach: 340, color: "#fde68a" },
+    ];
+  }
+
+  function drawZoneSigns(ctx, frogs, camX, camY, vw, vh) {
+    var me = null;
+    for (var i = 0; i < (frogs || []).length; i++) {
+      if (frogs[i].local) { me = frogs[i]; break; }
+    }
+    if (!me) return;
+    var C = global.FroggiesCanon;
+    var signs = zoneSignsList();
+    for (var si = 0; si < signs.length; si++) {
+      var z = signs[si];
+      var a = C && C.zoneSignAlpha ? C.zoneSignAlpha(z, me.x, me.y) : 0;
+      if (a <= 0.02) continue;
+      var p = project(z.x, z.y, camX, camY, vw, vh);
+      var pulse = 0.9 + 0.1 * Math.sin(Date.now() / 320 + si);
+      var bw = Math.min(220, 110 + a * 70) * Math.min(1.3, p.depth + 0.15);
+      var bh = 28 + a * 6;
+      var bx = p.x;
+      var by = p.y - 56 * p.depth;
+      ctx.save();
+      ctx.globalAlpha = a * pulse;
+      ctx.fillStyle = "rgba(15, 23, 42, 0.78)";
+      ctx.fillRect(bx - bw * 0.5, by - bh * 0.5, bw, bh);
+      ctx.strokeStyle = z.color || "#fbbf24";
+      ctx.lineWidth = 2.2;
+      ctx.strokeRect(bx - bw * 0.5, by - bh * 0.5, bw, bh);
+      ctx.fillStyle = z.color || "#fef3c7";
+      ctx.font = "bold " + Math.round(13 + a * 3) + "px Segoe UI, system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(z.label, bx, by);
+      ctx.restore();
+    }
+  }
+
+  function drawMiniMap(ctx, frogs, vw, vh) {
+    var mw = Math.min(168, Math.max(120, vw * 0.18));
+    var mh = mw * (MAP_H / MAP_W);
+    var pad = 10;
+    var ox = vw - mw - pad - 8;
+    var oy = pad + 52;
+    ctx.save();
+    ctx.globalAlpha = 0.88;
+    ctx.fillStyle = "rgba(15, 23, 42, 0.72)";
+    ctx.strokeStyle = "rgba(251, 191, 36, 0.55)";
+    ctx.lineWidth = 1.5;
+    ctx.fillRect(ox, oy, mw, mh);
+    ctx.strokeRect(ox, oy, mw, mh);
+    function mx(x) { return ox + (x / MAP_W) * mw; }
+    function my(y) { return oy + (y / MAP_H) * mh; }
+    /* landmarks */
+    var marks = [
+      { x: 380, y: 1630, c: "#fbbf24", r: 3.2 }, /* HOUSE */
+      { x: 2780, y: 2270, c: "#a8a29e", r: 3.2 }, /* TRACK */
+      { x: 3160, y: 670, c: "#67e8f9", r: 3.2 }, /* POND */
+      { x: 940, y: 1660, c: "#fdba74", r: 2.6 }, /* GARAGE */
+      { x: 360, y: 320, c: "#fde68a", r: 3.5 }, /* STARSHIP */
+    ];
+    for (var i = 0; i < marks.length; i++) {
+      var m = marks[i];
+      ctx.fillStyle = m.c;
+      ctx.beginPath();
+      ctx.arc(mx(m.x), my(m.y), m.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    for (var fi = 0; fi < (frogs || []).length; fi++) {
+      var f = frogs[fi];
+      if (!f || !f.alive) continue;
+      ctx.fillStyle = f.color || "#fff";
+      ctx.beginPath();
+      ctx.arc(mx(f.x), my(f.y), f.local ? 4.2 : 3, 0, Math.PI * 2);
+      ctx.fill();
+      if (f.local) {
+        ctx.strokeStyle = "#fff";
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.arc(mx(f.x), my(f.y), 6, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+    ctx.fillStyle = "rgba(254,243,199,0.9)";
+    ctx.font = "bold 9px Segoe UI, system-ui, sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText("MAP", ox + 6, oy + 11);
+    ctx.restore();
+  }
+
   function drawMechWowTip(ctx, frogs, camX, camY, vw, vh) {
     var hit = nearMech1000(frogs, 170);
     if (!hit) return;
@@ -2553,6 +2721,9 @@
 
     /* polish6: James 1000-story mech wow-scale tip when approached */
     drawMechWowTip(ctx, frogs, camX, camY, vw, vh);
+    /* polish7: zone signs + mini-map */
+    drawZoneSigns(ctx, frogs, camX, camY, vw, vh);
+    drawMiniMap(ctx, frogs, vw, vh);
 
     var rim = ctx.createRadialGradient(vw * 0.55, vh * 0.35, vw * 0.1, vw * 0.5, vh * 0.5, vw * 0.85);
     rim.addColorStop(0, "rgba(255, 230, 170, 0.05)");
@@ -2595,6 +2766,9 @@
     project: project,
     nearMech1000: nearMech1000,
     mech1000Pos: mech1000Pos,
+    drawZoneSigns: drawZoneSigns,
+    drawMiniMap: drawMiniMap,
+    zoneSignsList: zoneSignsList,
     render: render,
   };
 })(typeof window !== "undefined" ? window : globalThis);

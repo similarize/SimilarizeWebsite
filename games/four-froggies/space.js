@@ -6,7 +6,8 @@
    Ben orbit physics: near planet → gravity pull into orbit; leave via Escape OR hard thruster.
    polish5: clearer moons picker, readable orbit pull rings, Escape/thruster leave banner,
    Spotty/Alex/Fred presence pulse (cast already stubbed).
-   polish6: distant invader mech silhouettes when near Mars (visual tease only). */
+   polish6: distant invader mech silhouettes when near Mars (visual tease only).
+   polish7: Mars cave entrance tease (3-level + back-door labeled hooks); Jimmy jetpack escape visual on ability. */
 (function (global) {
   "use strict";
 
@@ -580,13 +581,28 @@
       return tryHardThrustEscape(ep);
     }
     if (ep.scene === "space" || ep.scene === "mars") {
-      ep.jet = 0.45;
+      /* polish7: stronger jetpack visual; Jimmy ability = jetpack escape punch */
+      var jimmyPack = frogId === "jimmy";
+      ep.jet = jimmyPack ? 0.85 : 0.55;
+      ep.jetPackWho = frogId;
+      if (ep.jimmy) {
+        ep.jimmy.jet = Math.max(ep.jimmy.jet || 0, jimmyPack ? 1.1 : 0.55);
+        if (jimmyPack) {
+          ep.jimmy.vx = (ep.jimmy.vx || 0) + (Math.random() > 0.5 ? 90 : -90);
+          ep.jimmy.vy = (ep.jimmy.vy || 0) - 70;
+        }
+      }
       var cfg = orbitCfg();
-      var impulse = (cfg.hardThrustImpulse || 320) * 0.35;
+      var impulse = (cfg.hardThrustImpulse || 320) * (jimmyPack ? 0.5 : 0.35);
       ep.vx = (ep.vx || 0) + ep.facing * impulse * 0.4;
-      ep.vy = (ep.vy || 0) - impulse * 0.25;
-      ep.px += ep.facing * 40;
-      toast(ep, (frogId === "james" ? "DASH" : "Boost") + " · hard thruster!");
+      ep.vy = (ep.vy || 0) - impulse * (jimmyPack ? 0.4 : 0.25);
+      ep.px += ep.facing * (jimmyPack ? 55 : 40);
+      if (jimmyPack) {
+        /* existing canon line — no new dialogue */
+        toast(ep, "SHIELD up!");
+      } else {
+        toast(ep, (frogId === "james" ? "DASH" : "Boost") + " · hard thruster!");
+      }
       return { ok: true, toast: ep.toast, sfx: "jet" };
     }
     if (ep.scene === "solar") {
@@ -752,11 +768,18 @@
     ctx.translate(x, y);
     ctx.scale(facing < 0 ? -d : d, d);
     if (jet > 0) {
-      ctx.fillStyle = "rgba(56,189,248,0.7)";
+      /* polish7: louder thruster / jetpack plume */
+      ctx.fillStyle = "rgba(56,189,248,0.85)";
       ctx.beginPath();
-      ctx.moveTo(-6, 10);
-      ctx.lineTo(0, 28 + jet * 20);
-      ctx.lineTo(6, 10);
+      ctx.moveTo(-7, 10);
+      ctx.lineTo(0, 28 + jet * 34);
+      ctx.lineTo(7, 10);
+      ctx.fill();
+      ctx.fillStyle = "rgba(251,191,36,0.8)";
+      ctx.beginPath();
+      ctx.moveTo(-3.5, 12);
+      ctx.lineTo(0, 24 + jet * 22);
+      ctx.lineTo(3.5, 12);
       ctx.fill();
     }
     ctx.fillStyle = "#4ade80";
@@ -870,12 +893,21 @@
     ctx.save();
     ctx.translate(x, y);
     ctx.scale(d, d);
-    if (jet > 0 || true) {
-      ctx.fillStyle = "rgba(251,146,60,0.85)";
+    /* polish7: bigger jetpack plume when escaping / ability-fired */
+    var jetOn = jet > 0;
+    var plume = jetOn ? 22 + jet * 28 : 8;
+    ctx.fillStyle = jetOn ? "rgba(56,189,248,0.9)" : "rgba(251,146,60,0.55)";
+    ctx.beginPath();
+    ctx.moveTo(-6, 12);
+    ctx.lineTo(0, 30 + plume);
+    ctx.lineTo(6, 12);
+    ctx.fill();
+    if (jetOn) {
+      ctx.fillStyle = "rgba(251,191,36,0.85)";
       ctx.beginPath();
-      ctx.moveTo(-5, 12);
-      ctx.lineTo(0, 30 + (jet > 0 ? 18 : 8));
-      ctx.lineTo(5, 12);
+      ctx.moveTo(-3, 14);
+      ctx.lineTo(0, 26 + plume * 0.65);
+      ctx.lineTo(3, 14);
       ctx.fill();
     }
     ctx.fillStyle = "#fb923c";
@@ -1223,7 +1255,20 @@
       ctx.beginPath();
       ctx.ellipse(cave.x, cave.y, 50 * cave.d, 38 * cave.d, 0, 0, Math.PI * 2);
       ctx.fill();
-      drawLabel(ctx, "Mars cave", cave.x, cave.y - 50 * cave.d, "#fdba74");
+      /* polish7: cave mouth glow + labeled hooks (3-level secret + back-door) — tease only */
+      var nearCave = Math.hypot((ep.px || 450) - 450, (ep.py || 500) - 360) < 220;
+      var pulse = 0.55 + 0.45 * Math.sin(t * 3.2);
+      ctx.strokeStyle = "rgba(251, 146, 60," + (nearCave ? 0.55 + pulse * 0.35 : 0.25) + ")";
+      ctx.lineWidth = nearCave ? 3 : 1.5;
+      ctx.beginPath();
+      ctx.ellipse(cave.x, cave.y, 54 * cave.d, 42 * cave.d, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      drawLabel(ctx, "Mars cave", cave.x, cave.y - 58 * cave.d, "#fdba74");
+      if (nearCave) {
+        drawLabel(ctx, "3-level secret · hook", cave.x, cave.y - 40 * cave.d, "#fde68a");
+        drawLabel(ctx, "back-door · hook", cave.x, cave.y + 48 * cave.d, "#93c5fd");
+        drawLabel(ctx, "Lv1 · Lv2 · Dog chamber", cave.x, cave.y + 62 * cave.d, "#d6d3d1");
+      }
       drawLabel(ctx, "Phobos · Deimos overhead", w * 0.5, h * 0.14, "#fed7aa");
     }
 

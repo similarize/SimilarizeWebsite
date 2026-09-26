@@ -1,6 +1,7 @@
 /* Four Froggies — shared Ben-canon constants for all engines.
    WORLD_BIBLE only. No invented cast/zone/toy names. Physics/look engines compare.
-   parity1: landmark layout (compound / track / pond / trucks) shared for Canvas + Phaser + three. */
+   parity1: landmark layout (compound / track / pond / trucks) shared for Canvas + Phaser + three.
+   polish7: zone signs (HOUSE/TRACK/POND/GARAGE/STARSHIP) + AI chat one-liners from existing canon only. */
 (function (global) {
   "use strict";
 
@@ -95,6 +96,23 @@
   var STARSHIP_APPROACH = [
     [520, 1480], [480, 1200], [430, 900], [390, 620], [360, 400],
   ];
+
+  /* polish7: big zone signs — fade in when approaching (shared labels) */
+  var ZONE_SIGNS = [
+    { id: "house", label: "HOUSE", x: 380, y: 1630, approach: 460, color: "#fbbf24" },
+    { id: "track", label: "TRACK", x: 2780, y: 2270, approach: 560, color: "#a8a29e" },
+    { id: "pond", label: "POND", x: 3160, y: 670, approach: 500, color: "#67e8f9" },
+    { id: "garage", label: "GARAGE", x: 940, y: 1660, approach: 300, color: "#fdba74" },
+    { id: "starship", label: "STARSHIP", x: 360, y: 320, approach: 340, color: "#fde68a" },
+  ];
+
+  /* polish7: companion chat one-liners — ONLY existing toast/tip strings (no new scripts) */
+  var AI_CHAT = {
+    james: ["DASH!", "DASH · truck boost!"],
+    jimmy: ["SHIELD up!", "Catch Jimmy · jetpack!"],
+    bubbles: ["ZAP!", "Splash the pond"],
+    rexy: ["BOT · open SPS for Optimus kits"],
+  };
 
   var HOTSPOTS = [
     { id: "phone", label: "Phone", x: 380, y: 1880, r: 52, tip: "Call Purple Bear" },
@@ -193,6 +211,16 @@
     return null;
   }
 
+
+  function zoneSignAlpha(sign, x, y) {
+    if (!sign) return 0;
+    var d = Math.hypot((sign.x || 0) - x, (sign.y || 0) - y);
+    var R = sign.approach || 400;
+    if (d >= R) return 0;
+    if (d <= R * 0.35) return 1;
+    return 1 - (d - R * 0.35) / (R * 0.65);
+  }
+
   global.FroggiesCanon = {
     FROG_ORDER: FROG_ORDER,
     FROG_DEFS: FROG_DEFS,
@@ -208,6 +236,8 @@
     TRUCK_SPOTS: TRUCK_SPOTS,
     STARSHIP: STARSHIP,
     STARSHIP_APPROACH: STARSHIP_APPROACH,
+    ZONE_SIGNS: ZONE_SIGNS,
+    AI_CHAT: AI_CHAT,
     HOTSPOTS: HOTSPOTS,
     SPACE_CAST: SPACE_CAST,
     ORBIT_PHYSICS: ORBIT_PHYSICS,
@@ -221,5 +251,6 @@
     onTrack: onTrack,
     isTruckHotspot: isTruckHotspot,
     rampAt: rampAt,
+    zoneSignAlpha: zoneSignAlpha,
   };
 })(typeof window !== "undefined" ? window : globalThis);

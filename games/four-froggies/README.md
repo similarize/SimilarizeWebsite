@@ -86,6 +86,29 @@ Same PeerJS lobby: **Host room** → QR / invite `?room=CODE` → claim seats �
 **Collision rule:** Shared landmark layout lives in `canon.js`. Canvas `world.js` remains the richest renderer; Phaser/Three hubs consume the same canon landmarks for parity. Do not invent cast/zone names. Preserve three.js camera-relative WASD.
 
 
+
+## What's new (polish7) — play feel + readability
+
+Ben: LOTS more improvement. Canvas lead; Phaser/Three parity on zone signs, mini-map lite, companion bounce.
+
+**Canvas ranch (`world.js` + `main.js` + `style.css`):**
+- Clearer zone signs **HOUSE / TRACK / POND / GARAGE / STARSHIP** that fade in when approaching
+- Corner mini-map: player + landmarks + frogs
+- Ability button feedback flash for **DASH / SHIELD / ZAP / BOT** (roles hang as TBD — not locked)
+
+**Party / solo AI (`world.js`):**
+- Idle bounce when settled
+- Follow lag so companions trail (not snap)
+- Chat bubble one-liners from **existing** toast/tip strings only (no new dialogue scripts)
+
+**Space (`space.js`):**
+- Mars cave entrance tease — **3-level secret** + **back-door** labeled hooks only
+- Jimmy jetpack escape visual when ability used in space (stronger plume / NPC punch)
+
+**Phaser / three.js:** zone signs + mini-map lite + companion bounce/follow lag. Three frogs + hollow house kept.
+
+- Cache-bust: `?v=20260925-polish7`.
+
 ## What's new (polish6) — FF-like depth + story/combat teases
 
 Ben: LOTS more improvement. Canvas lead; Phaser/Three parity on depth shadows, parallax-lite, space silhouette tease. Three frogs + hollow house kept.
@@ -194,4 +217,4 @@ Ben: keep pouring polish into Canvas, **and** remember everything done on Canvas
 
 ## Publish
 
-Game Creator → **Webmaster** only. Product path: `games/four-froggies/`. Do not republish SPS as arcade. Cache-bust: `?v=20260925-polish6`.
+Game Creator → **Webmaster** only. Product path: `games/four-froggies/`. Do not republish SPS as arcade. Cache-bust: `?v=20260925-polish7`.

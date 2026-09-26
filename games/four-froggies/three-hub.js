@@ -6,7 +6,8 @@
    polish5: ambient pollen/fireflies; pond ripples; track race dust; garage door open-near;
    shared ALL ABOARD; land shake; hotspot sparkle; orbit pull rings + Escape banner.
    polish6: depth shadows + parallax-lite hills + Mars invader silhouette tease + mech wow tip.
-   Hollow house + frogs kept. WASD camera-relative — do not invert. */
+   polish7: zone signs + mini-map lite + companion idle bounce / follow lag. Hollow house + frogs kept.
+   WASD camera-relative — do not invert. */
 (function (global) {
   "use strict";
 
@@ -713,6 +714,9 @@
       cmesh.userData.tz = cp.z;
       cmesh.userData.timer = 1 + Math.random();
       cmesh.userData.frogId = cid;
+      cmesh.userData.followLag = 0.35 + ci * 0.12;
+      cmesh.userData.idleBounce = Math.random() * 6;
+      cmesh.userData.chatT = 0;
       scene.add(cmesh);
       var ctag = labelSprite(cdef.name + " · AI", cdef.color || "#fff");
       ctag.scale.set(2.0, 0.5, 1);
@@ -721,6 +725,39 @@
       cmesh.userData.nameTag = ctag;
       state.companions.push(cmesh);
     }
+
+    /* polish7: zone signs (world labels) + mini-map overlay canvas */
+    var hostEl0 = document.getElementById("engine-host");
+    if (hostEl0) {
+      var oldMaps = hostEl0.querySelectorAll("canvas");
+      /* keep three renderer canvas; drop prior mini-map canvases we tagged */
+      for (var omi = 0; omi < oldMaps.length; omi++) {
+        if (oldMaps[omi].dataset && oldMaps[omi].dataset.ffMinimap === "1") oldMaps[omi].remove();
+      }
+    }
+    state.zoneSigns = [];
+    var zlist = C.ZONE_SIGNS || [];
+    for (var zi = 0; zi < zlist.length; zi++) {
+      var zs = zlist[zi];
+      var zp = worldToThree(zs.x, zs.y);
+      var zlab = labelSprite(zs.label, zs.color || "#fef3c7");
+      zlab.scale.set(3.2, 0.85, 1);
+      zlab.position.set(zp.x, 3.2, zp.z);
+      zlab.material.opacity = 0;
+      zlab.material.transparent = true;
+      zlab.userData.zone = zs;
+      scene.add(zlab);
+      state.zoneSigns.push(zlab);
+    }
+    state.miniMapCanvas = document.createElement("canvas");
+    state.miniMapCanvas.width = 140;
+    state.miniMapCanvas.height = 105;
+    state.miniMapCanvas.dataset.ffMinimap = "1";
+    state.miniMapCanvas.style.cssText = "position:absolute;right:12px;top:56px;width:140px;height:105px;pointer-events:none;z-index:5;border-radius:8px;opacity:0.9;";
+    var hostEl = document.getElementById("engine-host");
+    if (hostEl) hostEl.appendChild(state.miniMapCanvas);
+    state.miniMapCanvas.style.display = "";
+    state.miniMapCtx = state.miniMapCanvas.getContext("2d");
 
     state.vx = 0;
     state.vz = 0;
@@ -848,6 +885,15 @@
     scene.add(state.jimmy);
     state.jimmyLabel = labelSprite("Jimmy", "#fb923c");
     scene.add(state.jimmyLabel);
+    /* polish7: Jimmy jetpack flame (escape visual) */
+    state.jimmyFlame = new THREE.Mesh(
+      new THREE.ConeGeometry(0.18, 0.7, 8),
+      new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.9 })
+    );
+    state.jimmyFlame.rotation.x = Math.PI;
+    state.jimmyFlame.visible = false;
+    scene.add(state.jimmyFlame);
+    state.jimmyJetT = 0;
     state.jimmyVx = 2.2;
     state.jimmyVz = -1.4;
     state.planet = { id: "moon", name: "Moon", x: 5, z: -5, r: 1.2 };
@@ -933,6 +979,7 @@
     state.toast = "Space · near Moon → orbit · Escape / hard thruster to leave";
     state.toastT = 3;
     state.mode = "space";
+    if (state.miniMapCanvas) state.miniMapCanvas.style.display = "none";
     state.near = null;
     state.inTruck = false;
     state.driveTruck = null;
@@ -1019,7 +1066,7 @@
       state.toast = "ZAP!";
       state.scrap += 1;
     } else {
-      state.toast = "BOT · nudge toward SPS";
+      state.toast = "BOT · open SPS for Optimus kits";
       var target = worldToThree(280, 400);
       state.player.position.x += (target.x - state.player.position.x) * 0.2;
       state.player.position.z += (target.z - state.player.position.z) * 0.2;
@@ -1033,13 +1080,21 @@
         state.vz = Math.sin(state.orbitAngle || 0) * kick;
         state.toast = "Hard thruster · left Moon orbit";
       } else {
-        state.vx += 3;
-        state.vz -= 2;
-        state.toast = def.ability + " · hard thruster";
+        var jimmyPack = state.frogId === "jimmy";
+        state.vx += jimmyPack ? 4.2 : 3;
+        state.vz -= jimmyPack ? 3.2 : 2;
+        state.toast = jimmyPack ? "SHIELD up!" : (def.ability + " · hard thruster");
+        /* polish7: Jimmy jetpack escape visual */
+        if (jimmyPack && state.jimmy) {
+          state.jimmyVx = (Math.random() > 0.5 ? 1 : -1) * 5;
+          state.jimmyVz = -4;
+          state.jimmyJetT = 0.9;
+        }
       }
     }
     state.toastT = 1.8;
     if (hooks.onToast) hooks.onToast(state.toast);
+    if (hooks.onAbilityFire) hooks.onAbilityFire(state.frogId, def.ability);
   }
 
   function tick() {
@@ -1386,29 +1441,70 @@
       }
       for (var ci = 0; ci < state.companions.length; ci++) {
         var c = state.companions[ci];
+        var lag = c.userData.followLag || 0.4;
+        c.userData.idleBounce = (c.userData.idleBounce || 0) + dt * 4.2;
         if (state.inTruck && state.truckMode === "shared") {
           var ox = (ci - 1) * 0.45, oz = -0.35 - (ci % 2) * 0.25;
           c.position.x += (state.player.position.x + ox - c.position.x) * Math.min(1, 8 * dt);
           c.position.z += (state.player.position.z + oz - c.position.z) * Math.min(1, 8 * dt);
-          c.position.y = 0.7 + (state.zLift || 0) * 0.08;
+          c.position.y = 0.7 + (state.zLift || 0) * 0.08 + Math.abs(Math.sin(c.userData.idleBounce)) * 0.05;
           c.visible = true;
         } else {
           c.visible = true;
-          c.position.y = Math.abs(Math.sin(state.bob + ci)) * 0.06;
+          c.position.y = Math.abs(Math.sin(c.userData.idleBounce)) * 0.14;
           c.userData.timer -= dt;
           if (c.userData.timer <= 0) {
-            // Wander near the player so AI stay on-screen
-            c.userData.tx = state.player.position.x + (Math.random() - 0.5) * 5;
-            c.userData.tz = state.player.position.z + (Math.random() - 0.5) * 5;
-            c.userData.timer = 1.2 + Math.random() * 1.8;
+            var behind = -(state.facing || 1) * (1.2 + lag * 2.2);
+            c.userData.tx = state.player.position.x + behind + (Math.random() - 0.5) * (3 + lag * 2);
+            c.userData.tz = state.player.position.z + (Math.random() - 0.5) * (3 + lag * 2);
+            c.userData.timer = 0.9 + lag + Math.random() * (1.3 + lag);
           }
-          c.position.x += (c.userData.tx - c.position.x) * Math.min(1, 1.6 * dt);
-          c.position.z += (c.userData.tz - c.position.z) * Math.min(1, 1.6 * dt);
+          var fk = Math.min(1, (1.05 / (0.7 + lag)) * dt);
+          c.position.x += (c.userData.tx - c.position.x) * fk;
+          c.position.z += (c.userData.tz - c.position.z) * fk;
         }
         if (c.userData.nameTag) {
           c.userData.nameTag.position.set(c.position.x, c.position.y + 2.2, c.position.z);
           c.userData.nameTag.visible = c.visible;
         }
+      }
+      /* polish7: zone signs fade when approaching */
+      var wpos2 = threeToWorld(state.player.position.x, state.player.position.z);
+      for (var zsi = 0; zsi < (state.zoneSigns || []).length; zsi++) {
+        var zl = state.zoneSigns[zsi];
+        var za = C.zoneSignAlpha ? C.zoneSignAlpha(zl.userData.zone, wpos2.x, wpos2.y) : 0;
+        zl.material.opacity = za;
+        zl.visible = za > 0.02;
+      }
+      /* polish7: mini-map lite */
+      if (state.miniMapCtx && state.miniMapCanvas) {
+        var mctx = state.miniMapCtx, mc = state.miniMapCanvas;
+        var mw = mc.width, mh = mc.height;
+        mctx.clearRect(0, 0, mw, mh);
+        mctx.fillStyle = "rgba(15,23,42,0.78)";
+        mctx.fillRect(0, 0, mw, mh);
+        mctx.strokeStyle = "rgba(251,191,36,0.55)";
+        mctx.strokeRect(0.5, 0.5, mw - 1, mh - 1);
+        function mmx(x) { return (x / C.MAP_W) * mw; }
+        function mmy(y) { return (y / C.MAP_H) * mh; }
+        var marks = [[380,1630,"#fbbf24"],[2780,2270,"#a8a29e"],[3160,670,"#67e8f9"],[940,1660,"#fdba74"],[360,320,"#fde68a"]];
+        for (var mi = 0; mi < marks.length; mi++) {
+          mctx.fillStyle = marks[mi][2];
+          mctx.beginPath(); mctx.arc(mmx(marks[mi][0]), mmy(marks[mi][1]), 2.8, 0, Math.PI * 2); mctx.fill();
+        }
+        var meW = threeToWorld(state.player.position.x, state.player.position.z);
+        mctx.fillStyle = (C.FROG_DEFS[state.frogId] || {}).color || "#fff";
+        mctx.beginPath(); mctx.arc(mmx(meW.x), mmy(meW.y), 4, 0, Math.PI * 2); mctx.fill();
+        for (var cmi = 0; cmi < state.companions.length; cmi++) {
+          var cm = state.companions[cmi];
+          var cw = threeToWorld(cm.position.x, cm.position.z);
+          var cdef2 = C.FROG_DEFS[cm.userData.frogId] || {};
+          mctx.fillStyle = cdef2.color || "#fff";
+          mctx.beginPath(); mctx.arc(mmx(cw.x), mmy(cw.y), 2.6, 0, Math.PI * 2); mctx.fill();
+        }
+        mctx.fillStyle = "#fef3c7";
+        mctx.font = "bold 9px system-ui,sans-serif";
+        mctx.fillText("MAP", 6, 11);
       }
       var wpos = threeToWorld(state.player.position.x, state.player.position.z);
       state.near = C.nearestHotspot(wpos.x, wpos.y, 70);
@@ -1435,9 +1531,18 @@
       state.jimmy.position.z += state.jimmyVz * dt;
       if (Math.abs(state.jimmy.position.x) > 8) state.jimmyVx *= -1;
       if (Math.abs(state.jimmy.position.z) > 8) state.jimmyVz *= -1;
-      state.jimmy.position.y = 0.15 + Math.abs(Math.sin(state.bob * 1.4)) * 0.35;
+      if (state.jimmyJetT > 0) state.jimmyJetT -= dt;
+      var jetBoost = state.jimmyJetT > 0 ? 0.55 + state.jimmyJetT * 0.8 : 0;
+      state.jimmy.position.y = 0.15 + Math.abs(Math.sin(state.bob * 1.4)) * 0.35 + jetBoost;
       if (state.jimmyLabel) {
-        state.jimmyLabel.position.set(state.jimmy.position.x, 1.8, state.jimmy.position.z);
+        state.jimmyLabel.position.set(state.jimmy.position.x, 1.8 + jetBoost, state.jimmy.position.z);
+      }
+      if (state.jimmyFlame) {
+        state.jimmyFlame.visible = state.jimmyJetT > 0;
+        if (state.jimmyFlame.visible) {
+          state.jimmyFlame.position.set(state.jimmy.position.x, state.jimmy.position.y - 0.4, state.jimmy.position.z);
+          state.jimmyFlame.material.opacity = Math.min(1, state.jimmyJetT * 2);
+        }
       }
       var dJ = state.player.position.distanceTo(state.jimmy.position);
       var dR = Math.hypot(state.player.position.x - state.returnPad.x, state.player.position.z - state.returnPad.z);

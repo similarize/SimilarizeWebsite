@@ -5,7 +5,7 @@
   "use strict";
 
   var C = global.FroggiesCanon;
-  var CACHE = "20260925-polish6";
+  var CACHE = "20260925-polish7";
   var CDN = {
     phaser: "https://cdn.jsdelivr.net/npm/phaser@3.87.0/dist/phaser.min.js",
     three: "https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js",
@@ -109,6 +109,16 @@
     var btnInteract = $("btn-interact");
     var btnEscape = $("btn-escape");
 
+    function flashAbility(abilityName) {
+      if (!btnAbility) return;
+      var kind = String(abilityName || "DASH").toLowerCase();
+      btnAbility.classList.remove("fire-dash", "fire-shield", "fire-zap", "fire-bot", "ability-fired");
+      void btnAbility.offsetWidth;
+      btnAbility.classList.add("fire-" + kind, "ability-fired");
+      setTimeout(function () {
+        btnAbility.classList.remove("fire-" + kind, "ability-fired");
+      }, 480);
+    }
     return {
       onHud: function (h) {
         if (livesEl) livesEl.textContent = h.walk || "🐸 Walk";
@@ -125,6 +135,7 @@
           btnAbility.textContent = cd > 0 ? h.ability + " " + Math.ceil(cd) + "s" : h.ability;
           btnAbility.classList.toggle("ready", cd <= 0);
           btnAbility.classList.toggle("cd", cd > 0);
+          if (h.ability) btnAbility.dataset.roleTbd = h.ability;
         }
         if (btnEscape) {
           var showEsc = !!(h.mode === "space" && h.inOrbit);
@@ -134,6 +145,9 @@
       },
       onToast: function (t) {
         if (tipEl) tipEl.textContent = t || "";
+      },
+      onAbilityFire: function (frogId, abilityName) {
+        flashAbility(abilityName);
       },
       onReady: function () {
         /* ok */
@@ -182,6 +196,7 @@
       frogId: frogId,
       onHud: hud.onHud,
       onToast: hud.onToast,
+      onAbilityFire: hud.onAbilityFire,
       onReady: hud.onReady,
     };
 

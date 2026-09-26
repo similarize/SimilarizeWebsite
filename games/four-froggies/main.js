@@ -330,12 +330,29 @@
     btnAbility.textContent = me.cd > 0 ? def.ability + " " + Math.ceil(me.cd) + "s" : def.ability;
     btnAbility.classList.toggle("ready", me.cd <= 0);
     btnAbility.classList.toggle("cd", me.cd > 0);
+    /* polish7: role temp labels hang as TBD — do not lock roles */
+    btnAbility.dataset.roleTbd = def.ability;
+  }
+
+  /* polish7: ability button feedback flash (DASH/SHIELD/ZAP/BOT — hang TBD) */
+  function flashAbilityButton(frogId) {
+    if (!btnAbility) return;
+    const def = FROG_DEFS[frogId] || FROG_DEFS.james;
+    const kind = (def.ability || "DASH").toLowerCase();
+    btnAbility.classList.remove("fire-dash", "fire-shield", "fire-zap", "fire-bot");
+    void btnAbility.offsetWidth;
+    btnAbility.classList.add("fire-" + kind);
+    btnAbility.classList.add("ability-fired");
+    setTimeout(function () {
+      btnAbility.classList.remove("fire-" + kind, "ability-fired");
+    }, 480);
   }
 
   function requestAbility(frog) {
     if (!frog || frog.cd > 0) return;
     if (phase === "space" && spaceEp && Space) {
       frog.cd = FROG_DEFS[frog.id].cdMax;
+      flashAbilityButton(frog.id);
       const res = Space.ability(spaceEp, frog.id);
       beep(660, 0.06, "square", 0.05);
       if (res && res.toast) {
@@ -352,6 +369,7 @@
     }
     const def = FROG_DEFS[frog.id];
     frog.cd = def.cdMax;
+    flashAbilityButton(frog.id);
     beep(660, 0.06, "square", 0.05);
     if (frog.id === "james") {
       frog.invuln = 1.2;
@@ -1149,6 +1167,7 @@
       },
       onHangTbd() {
         /* polish6: hang TBD hook reserved — no hang system invented */
+        /* polish7: ability roles DASH/SHIELD/ZAP/BOT hang as TBD — not locked */
       },
       onPhonePlayful() {},
       onWin(planet) {
