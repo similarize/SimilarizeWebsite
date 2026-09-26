@@ -15,6 +15,7 @@
    eyes1: yaw frog (eyes on +Z) toward walk dir; idle keeps last; AI companions too.
    truck1: kid-toy truck scale; smooth yaw drive toward aim; track elev / crest / land bounce.
    truck2: EXIT anytime (HUD); full elev contact (no zLift damp); ribbon/ramp ride-up; crest launch.
+   polish11: truck yaw follows travel; brief EXIT tip; shared ZOOM ability.
    joy2: shared virtual joystick via engine-boot setSteer; touch playfield aim disabled.
    WASD camera-relative — do not invert. */
 (function (global) {
@@ -646,7 +647,9 @@
       var accent = s.id === "shared" ? 0xfbbf24 : hex((C.FROG_DEFS[s.id] || C.FROG_DEFS.james).color);
       var truck = makeTruckMesh(accent);
       var p = worldToThree(s.x, s.y);
-      truck.position.set(p.x, 0, p.z); scene.add(truck);
+      truck.position.set(p.x, 0, p.z);
+      truck.rotation.y = -Math.PI / 2; /* polish11: nose +Z like idle frogs, not sideways +X */
+      scene.add(truck);
       var label = s.id === "shared" ? "★ ALL ABOARD · 4" : ("Cybertruck · " + (C.FROG_DEFS[s.id] || {}).name);
       var lab = labelSprite(label, s.id === "shared" ? "#fef3c7" : "#fde68a");
       lab.position.set(p.x, s.id === "shared" ? 1.85 : 1.5, p.z); scene.add(lab);
@@ -1245,7 +1248,7 @@
     if (state.mode === "ranch" && state.inTruck) {
       state.inTruck = false; state.truckMode = null; state.truckId = null;
       state.zLift = 0; state.zVel = 0; state.groundLift = 0;
-      state.toast = "Parked · walking"; state.toastT = 1.8;
+      state.toast = "Parked · walking"; state.toastT = 1.8; state.exitTipT = 0;
       if (hooks.onToast) hooks.onToast(state.toast);
       return;
     }
@@ -1258,6 +1261,7 @@
         state.toast = state.truckMode === "shared"
           ? "All aboard! Four froggies · one Cybertruck · hit the jumps!"
           : "Driving Cybertruck · hit the jumps!";
+        state.exitTipT = 2.4; /* polish11: brief EXIT tip */
       } else if (id === "fishies") {
         state.toast = "Splash! Fishies & whales scatter";
         state.scrap += 2;
@@ -1295,24 +1299,14 @@
   }
 
   function doAbility() {
+    /* polish11: shared ZOOM — speed burst along face + spark juice */
     if (!state || state.cd > 0) return;
-    state.cd = 5;
+    state.cd = 5.5;
     var def = C.FROG_DEFS[state.frogId];
-    if (state.frogId === "james") {
-      state.vx += state.facing * (state.inTruck ? 8 : 5);
-      state.toast = state.inTruck ? "DASH · truck boost!" : "DASH!";
-    } else if (state.frogId === "jimmy") {
-      state.toast = "SHIELD up!";
-    } else if (state.frogId === "bubbles") {
-      state.toast = "ZAP!";
-      state.scrap += 1;
-    } else {
-      state.toast = "BOT · open SPS for Optimus kits";
-      state.kitFxKind = "map"; state.kitFxT = 0.55;
-      var target = worldToThree(280, 400);
-      state.player.position.x += (target.x - state.player.position.x) * 0.2;
-      state.player.position.z += (target.z - state.player.position.z) * 0.2;
-    }
+    var yaw = (state.faceYaw != null) ? state.faceYaw : 0;
+    var spA = Math.hypot(state.vx || 0, state.vz || 0);
+    if (spA > 1.0) yaw = Math.atan2(state.vx, state.vz);
+    var fx = Math.sin(yaw), fz = Math.cos(yaw);
     if (state.mode === "space") {
       if (state.inOrbit) {
         state.inOrbit = false;
@@ -1320,23 +1314,42 @@
         var kick = ((state.orbitCfg && state.orbitCfg.hardThrustImpulse) || 320) * 0.02;
         state.vx = Math.cos(state.orbitAngle || 0) * kick;
         state.vz = Math.sin(state.orbitAngle || 0) * kick;
-        state.toast = "Hard thruster · left Moon orbit";
+        state.toast = "ZOOM · left Moon orbit";
       } else {
-        var jimmyPack = state.frogId === "jimmy";
-        state.vx += jimmyPack ? 4.2 : 3;
-        state.vz -= jimmyPack ? 3.2 : 2;
-        state.toast = jimmyPack ? "SHIELD up!" : (def.ability + " · hard thruster");
-        /* polish7: Jimmy jetpack escape visual */
-        if (jimmyPack && state.jimmy) {
-          state.jimmyVx = (Math.random() > 0.5 ? 1 : -1) * 5;
-          state.jimmyVz = -4;
-          state.jimmyJetT = 0.9;
+        var impulseS = 5.5;
+        state.vx += fx * impulseS;
+        state.vz += fz * impulseS;
+        state.toast = "ZOOM · thruster!";
+        if (state.jimmy) {
+          state.jimmyVx = (Math.random() > 0.5 ? 1 : -1) * 4;
+          state.jimmyVz = -3;
+          state.jimmyJetT = 0.7;
         }
+      }
+    } else {
+      var impulse = state.inTruck ? 9.5 : 7.2;
+      state.vx += fx * impulse;
+      state.vz += fz * impulse;
+      state.toast = state.inTruck ? "ZOOM · truck boost!" : "ZOOM!";
+      /* spark trail juice */
+      if (!state.fx) state.fx = [];
+      for (var zi = 0; zi < 10; zi++) {
+        var spark = new THREE.Mesh(
+          new THREE.SphereGeometry(0.05 + (zi % 3) * 0.02, 5, 4),
+          new THREE.MeshBasicMaterial({ color: zi % 2 ? 0xfbbf24 : 0x7dd3fc, transparent: true, opacity: 0.9 })
+        );
+        spark.position.set(
+          state.player.position.x - fx * (0.2 + zi * 0.12),
+          0.35 + Math.random() * 0.2,
+          state.player.position.z - fz * (0.2 + zi * 0.12)
+        );
+        scene.add(spark);
+        state.fx.push({ mesh: spark, life: 0.4 + zi * 0.02, rise: 0.6, vx: -fx * (1.5 + zi * 0.2), vz: -fz * (1.5 + zi * 0.2) });
       }
     }
     state.toastT = 1.8;
     if (hooks.onToast) hooks.onToast(state.toast);
-    if (hooks.onAbilityFire) hooks.onAbilityFire(state.frogId, def.ability);
+    if (hooks.onAbilityFire) hooks.onAbilityFire(state.frogId, "ZOOM");
   }
 
   function tick() {
@@ -1345,6 +1358,7 @@
     var dt = Math.min(0.05, clock.getDelta());
     state.cd = Math.max(0, state.cd - dt);
     state.toastT = Math.max(0, state.toastT - dt);
+    state.exitTipT = Math.max(0, (state.exitTipT || 0) - dt);
     state.bob += dt * 10;
 
     if (state.mode === "space" && state.planet) {
@@ -1681,11 +1695,13 @@
         if (state.inTruck) {
           /* truck2: zLift already three-Y — was *0.08 (invisible hills) */
           state.driveTruck.position.set(state.player.position.x, 0.08 + state.zLift + bounceY, state.player.position.z);
-          /* truck1: yaw to faceYaw (mesh nose +X → yaw so +X aligns with travel) */
+          /* polish11: yaw follows travel so nose matches steer (mesh nose +X → -PI/2 vs frog +Z) */
           var ts0 = state.driveTruck.userData.truckScale || 2.05;
           state.driveTruck.scale.set(ts0, ts0, ts0);
-          /* mesh long axis +X; faceYaw is atan2(vx,vz) with +Z front for frogs — truck nose +X needs -PI/2 */
-          state.driveTruck.rotation.y = ((state.faceYaw != null) ? state.faceYaw : 0) - Math.PI / 2;
+          var yawT = (state.faceYaw != null) ? state.faceYaw : 0;
+          var spT = Math.hypot(state.vx || 0, state.vz || 0);
+          if (spT > 1.2) yawT = Math.atan2(state.vx, state.vz);
+          state.driveTruck.rotation.y = yawT - Math.PI / 2;
           var dive = state.waterSub > 0.7;
           if (state.driveTruck.userData.bodyMat) {
             state.driveTruck.userData.bodyMat.color.setHex(dive ? 0x64748b : 0x9ca3af);
@@ -2047,12 +2063,12 @@
         label: label,
         scrap: state.mode === "space" ? state.catches : state.scrap,
         tip: state.inTruck
-          ? ((state.toastT > 0 ? state.toast + " · " : "") + "EXIT TRUCK · INTERACT / E")
+          ? (state.toastT > 0 ? state.toast : ((state.exitTipT || 0) > 0 ? "EXIT · INTERACT / E" : ""))
           : (state.toastT > 0 ? state.toast : state.inOrbit ? "Orbit locked · Escape or hard thruster" : state.near ? (((C.isTruckHotspot && C.isTruckHotspot(state.near)) ? "BOARD · " : "⚡ ") + state.near.tip + " · INTERACT / E") : (state.invLabel && state.invLabel.visible ? "Mars · invader silhouettes" : "")),
         inOrbit: !!state.inOrbit,
         inTruck: !!state.inTruck,
         near: state.inTruck ? true : state.near,
-        ability: def.ability,
+        ability: "ZOOM",
         cd: state.cd,
         walk: (function () {
           if (state.mode === "space") return state.inOrbit ? "🌍 Orbit" : "🚀 Space";

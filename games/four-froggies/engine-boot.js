@@ -5,7 +5,7 @@
   "use strict";
 
   var C = global.FroggiesCanon;
-  var CACHE = "20260926-garage1";
+  var CACHE = "20260926-polish11";
   var CDN = {
     phaser: "https://cdn.jsdelivr.net/npm/phaser@3.87.0/dist/phaser.min.js",
     three: "https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js",
@@ -111,8 +111,8 @@
 
     function flashAbility(abilityName) {
       if (!btnAbility) return;
-      var kind = String(abilityName || "DASH").toLowerCase();
-      btnAbility.classList.remove("fire-dash", "fire-shield", "fire-zap", "fire-bot", "ability-fired");
+      var kind = String(abilityName || "ZOOM").toLowerCase();
+      btnAbility.classList.remove("fire-dash", "fire-shield", "fire-zap", "fire-bot", "fire-zoom", "ability-fired");
       void btnAbility.offsetWidth;
       btnAbility.classList.add("fire-" + kind, "ability-fired");
       setTimeout(function () {

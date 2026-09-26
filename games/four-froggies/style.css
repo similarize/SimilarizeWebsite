@@ -844,6 +844,11 @@ body.in-space {
 }
 @keyframes abil-fire-dash {
   0% { filter: brightness(1.6); transform: scale(1.14) translateX(0); }
+@keyframes abil-fire-zoom {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(125, 211, 252, 0.7); filter: brightness(1); }
+  40% { transform: scale(1.12); box-shadow: 0 0 22px 6px rgba(251, 191, 36, 0.55); filter: brightness(1.25); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(125, 211, 252, 0); filter: brightness(1); }
+}
   40% { transform: scale(1.1) translateX(6px); }
   100% { filter: brightness(1); transform: scale(1); }
 }
@@ -1363,4 +1368,20 @@ body.in-space .vjoy.vjoy-hint {
   .vjoy.is-active { opacity: 1; }
   .vjoy-knob { width: 42px; height: 42px; margin: -21px 0 0 -21px; }
   .vjoy-ring { inset: 10px; }
+}
+
+
+/* ——— polish11: discreet hub tip (no giant EXIT billboard) ——— */
+.hub-tip:not(:empty) {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  max-width: min(92vw, 420px);
+  margin-left: auto;
+  margin-right: auto;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.55);
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.12);
+  letter-spacing: 0.01em;
 }

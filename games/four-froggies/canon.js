@@ -14,10 +14,10 @@
   var FROG_ORDER = ["james", "jimmy", "bubbles", "rexy"];
 
   var FROG_DEFS = {
-    james: { id: "james", name: "James", role: "Wheel", color: "#4ade80", accent: "#166534", hat: "#facc15", ability: "DASH" },
-    jimmy: { id: "jimmy", name: "Jimmy", role: "Shield", color: "#fb923c", accent: "#9a3412", hat: "#ef4444", ability: "SHIELD" },
-    bubbles: { id: "bubbles", name: "Bubbles", role: "Zap", color: "#60a5fa", accent: "#1e3a8a", hat: "#38bdf8", ability: "ZAP" },
-    rexy: { id: "rexy", name: "Rexy", role: "Bot", color: "#c084fc", accent: "#6b21a8", hat: "#e879f9", ability: "BOT" },
+    james: { id: "james", name: "James", role: "Wheel", color: "#4ade80", accent: "#166534", hat: "#facc15", ability: "ZOOM" },
+    jimmy: { id: "jimmy", name: "Jimmy", role: "Shield", color: "#fb923c", accent: "#9a3412", hat: "#ef4444", ability: "ZOOM" },
+    bubbles: { id: "bubbles", name: "Bubbles", role: "Zap", color: "#60a5fa", accent: "#1e3a8a", hat: "#38bdf8", ability: "ZOOM" },
+    rexy: { id: "rexy", name: "Rexy", role: "Bot", color: "#c084fc", accent: "#6b21a8", hat: "#e879f9", ability: "ZOOM" },
   };
 
   /* ~10× area vs old 1200×900 — real roam between house / track / pond / Starship */
@@ -114,10 +114,10 @@
 
   /* polish7: companion chat one-liners — ONLY existing toast/tip strings (no new scripts) */
   var AI_CHAT = {
-    james: ["DASH!", "DASH · truck boost!"],
-    jimmy: ["SHIELD up!", "Catch Jimmy · jetpack!"],
-    bubbles: ["ZAP!", "Splash the pond"],
-    rexy: ["BOT · open SPS for Optimus kits"],
+    james: ["ZOOM!", "ZOOM · truck boost!"],
+    jimmy: ["ZOOM!", "Catch Jimmy · jetpack!"],
+    bubbles: ["ZOOM!", "Splash the pond"],
+    rexy: ["ZOOM!", "Open SPS for Optimus kits"],
   };
 
   var HOTSPOTS = [

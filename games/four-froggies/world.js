@@ -18,6 +18,7 @@
    truck1: kid-toy Cybertruck scale; smooth yaw steer (face+drive toward aim);
    track elev follow / crest launch / land bounce via trackElevAt;
    truck2: stronger elev follow / crest / ramp ride-up; EXIT tip always while driving;
+   polish11: truck yaw follows travel; brief EXIT tip (no sticky billboard); ZOOM ability;
    particle caps; sunset sky shift over play time.
    mobile1: phone+desktop shared UI — smaller/toggle-friendly mini-map + harder particle caps on narrow.
    ~10× map: real roam between ranch house / track / pond / Starship.
@@ -2541,7 +2542,11 @@
     }
 
     if (frog.inTruck && frog.local) {
-      drawCybertruck(ctx, p.x, p.y, frog.faceAngle != null ? frog.faceAngle : 0, p.depth, true, frog.z || 0, frog.color, { inWater: inPond(frog.x, frog.y), sub: frog.waterSub || 0, wakePhase: frog.wakePhase || 0, bounce: frog.truckBounce || 0 });
+      /* polish11: yaw from travel velocity when moving so nose matches drive */
+      var yawDrive = frog.faceAngle != null ? frog.faceAngle : -Math.PI / 2;
+      var spDrive = Math.hypot(frog.vx || 0, frog.vy || 0);
+      if (spDrive > 35) yawDrive = Math.atan2(frog.vy, frog.vx);
+      drawCybertruck(ctx, p.x, p.y, yawDrive, p.depth, true, frog.z || 0, frog.color, { inWater: inPond(frog.x, frog.y), sub: frog.waterSub || 0, wakePhase: frog.wakePhase || 0, bounce: frog.truckBounce || 0 });
       if (frog.truckMode === "shared" && frogs) {
         drawAboardIcons(ctx, frogs, p.x, p.y, p.depth, lift);
       } else {
@@ -2555,37 +2560,34 @@
         ctx.fill();
       }
       if (frog.dashTrail > 0) {
-        ctx.fillStyle = "rgba(251, 191, 36, 0.45)";
+        /* polish11: ZOOM spark trail behind travel nose */
+        var tAng = (frog.faceAngle != null) ? frog.faceAngle : (frog.facing >= 0 ? 0 : Math.PI);
+        var tx = Math.cos(tAng), ty = Math.sin(tAng);
+        ctx.fillStyle = "rgba(251, 191, 36, 0.5)";
         ctx.beginPath();
-        ctx.moveTo(p.x - frog.facing * 36 * p.depth, p.y);
-        ctx.lineTo(p.x - frog.facing * 18 * p.depth, p.y - 8 * p.depth);
-        ctx.lineTo(p.x - frog.facing * 18 * p.depth, p.y + 6 * p.depth);
+        ctx.moveTo(p.x - tx * 40 * p.depth, p.y - ty * 40 * p.depth);
+        ctx.lineTo(p.x - tx * 14 * p.depth - ty * 10 * p.depth, p.y - ty * 14 * p.depth + tx * 10 * p.depth);
+        ctx.lineTo(p.x - tx * 14 * p.depth + ty * 10 * p.depth, p.y - ty * 14 * p.depth - tx * 10 * p.depth);
+        ctx.fill();
+        ctx.fillStyle = "rgba(125, 211, 252, 0.4)";
+        ctx.beginPath();
+        ctx.moveTo(p.x - tx * 28 * p.depth, p.y - ty * 28 * p.depth);
+        ctx.lineTo(p.x - tx * 8 * p.depth - ty * 6 * p.depth, p.y - ty * 8 * p.depth + tx * 6 * p.depth);
+        ctx.lineTo(p.x - tx * 8 * p.depth + ty * 6 * p.depth, p.y - ty * 8 * p.depth - tx * 6 * p.depth);
         ctx.fill();
       }
       if (frog.truckMode !== "shared") {
         drawNameplate(ctx, frog.name || "You", p.x, p.y - 40 * p.depth - lift, frog.color || "#fff", p.depth, !frog.local);
       }
-      /* polish10: exit prompt while driving */
-      if (frog.local) {
-        ctx.save();
-        ctx.globalAlpha = 0.9;
-        ctx.fillStyle = "rgba(15,23,42,0.78)";
-        ctx.strokeStyle = "#fbbf24";
-        ctx.lineWidth = 1.8;
-        var exW = 118, exY = p.y - 58 * p.depth - lift;
-        if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(p.x - exW * 0.5, exY - 10, exW, 20, 6); ctx.fill(); ctx.stroke(); }
-        else { ctx.fillRect(p.x - exW * 0.5, exY - 10, exW, 20); ctx.strokeRect(p.x - exW * 0.5, exY - 10, exW, 20); }
-        ctx.fillStyle = "#fde68a";
-        ctx.font = "bold 11px Segoe UI, system-ui, sans-serif";
-        ctx.textAlign = "center";
-        ctx.fillText("EXIT · INTERACT / E", p.x, exY + 1);
-        ctx.restore();
-      }
+      /* polish11: EXIT tip is brief HUD chip (main.js) — not a world billboard that tracks the truck */
       return p;
     }
 
     if (frog.inTruck && !frog.local && frog.truckMode === "solo") {
-      drawCybertruck(ctx, p.x, p.y, frog.faceAngle != null ? frog.faceAngle : 0, p.depth, true, frog.z || 0, frog.color, { inWater: inPond(frog.x, frog.y), sub: frog.waterSub || 0, wakePhase: frog.wakePhase || 0, bounce: frog.truckBounce || 0 });
+      var yawSolo = frog.faceAngle != null ? frog.faceAngle : -Math.PI / 2;
+      var spSolo = Math.hypot(frog.vx || 0, frog.vy || 0);
+      if (spSolo > 35) yawSolo = Math.atan2(frog.vy, frog.vx);
+      drawCybertruck(ctx, p.x, p.y, yawSolo, p.depth, true, frog.z || 0, frog.color, { inWater: inPond(frog.x, frog.y), sub: frog.waterSub || 0, wakePhase: frog.wakePhase || 0, bounce: frog.truckBounce || 0 });
       ctx.fillStyle = frog.color;
       ctx.beginPath();
       ctx.arc(p.x, p.y - 22 * p.depth - lift, 6 * p.depth, 0, Math.PI * 2);
@@ -2829,7 +2831,7 @@
         ctx.stroke();
         ctx.setLineDash([]);
       }
-      drawCybertruck(ctx, p.x, p.y, 0, p.depth, false, 0, accent, { inWater: inPond(spot.x, spot.y), sub: 0, wakePhase: 0 });
+      drawCybertruck(ctx, p.x, p.y, -Math.PI / 2, p.depth, false, 0, accent, { inWater: inPond(spot.x, spot.y), sub: 0, wakePhase: 0 });
       if (spot.id === "shared") {
         var ids = ["james", "jimmy", "bubbles", "rexy"];
         for (var si = 0; si < 4; si++) {

@@ -33,10 +33,10 @@
   const tipEl = document.getElementById("hub-tip");
 
   const FROG_DEFS = {
-    james: { id: "james", name: "James", role: "Wheel", color: "#4ade80", ability: "DASH", cdMax: 6.5 },
-    jimmy: { id: "jimmy", name: "Jimmy", role: "Shield", color: "#fb923c", ability: "SHIELD", cdMax: 7.5 },
-    bubbles: { id: "bubbles", name: "Bubbles", role: "Zap", color: "#60a5fa", ability: "ZAP", cdMax: 6.5 },
-    rexy: { id: "rexy", name: "Rexy", role: "Bot", color: "#c084fc", ability: "BOT", cdMax: 8 },
+    james: { id: "james", name: "James", role: "Wheel", color: "#4ade80", ability: "ZOOM", cdMax: 5.5 },
+    jimmy: { id: "jimmy", name: "Jimmy", role: "Shield", color: "#fb923c", ability: "ZOOM", cdMax: 5.5 },
+    bubbles: { id: "bubbles", name: "Bubbles", role: "Zap", color: "#60a5fa", ability: "ZOOM", cdMax: 5.5 },
+    rexy: { id: "rexy", name: "Rexy", role: "Bot", color: "#c084fc", ability: "ZOOM", cdMax: 5.5 },
   };
   const FROG_ORDER = ["james", "jimmy", "bubbles", "rexy"];
 
@@ -71,6 +71,7 @@
   let prevNearId = null;
   let storyToast = "";
   let storyToastT = 0;
+  let exitTipT = 0; /* polish11: brief EXIT tip after board */
   let lastTs = 0;
   let audioCtx = null;
   let shakeT = 0;
@@ -324,9 +325,12 @@
         const hud = Space.getHud(spaceEp);
         tipEl.textContent = hud ? hud.tip : "";
         nearHot = hud && hud.near ? hud.near : null;
-      } else if (me && me.inTruck)
-        tipEl.textContent = (storyToastT > 0 && storyToast ? storyToast + " · " : "") + "EXIT TRUCK · INTERACT / E" + (W.onTrack(me.x, me.y) ? " · jumps = scrap" : "");
-      else if (storyToastT > 0) tipEl.textContent = storyToast;
+      } else if (me && me.inTruck) {
+        /* polish11: no sticky EXIT billboard — brief toast / exitTip only; INTERACT button shows EXIT */
+        if (storyToastT > 0 && storyToast) tipEl.textContent = storyToast;
+        else if (exitTipT > 0) tipEl.textContent = "EXIT · INTERACT / E";
+        else tipEl.textContent = "";
+      } else if (storyToastT > 0) tipEl.textContent = storyToast;
       else if (nearHot && (nearHot.kind === "truck" || (nearHot.id && nearHot.id.indexOf("truck") === 0)))
         tipEl.textContent = "BOARD · " + nearHot.tip + " · INTERACT / E";
       else if (nearHot) tipEl.textContent = "⚡ " + nearHot.tip + " · INTERACT / E";
@@ -370,12 +374,12 @@
     btnAbility.dataset.roleTbd = def.ability;
   }
 
-  /* polish7: ability button feedback flash (DASH/SHIELD/ZAP/BOT — hang TBD) */
+  /* polish11: shared ZOOM ability feedback */
   function flashAbilityButton(frogId) {
     if (!btnAbility) return;
     const def = FROG_DEFS[frogId] || FROG_DEFS.james;
-    const kind = (def.ability || "DASH").toLowerCase();
-    btnAbility.classList.remove("fire-dash", "fire-shield", "fire-zap", "fire-bot");
+    const kind = (def.ability || "ZOOM").toLowerCase();
+    btnAbility.classList.remove("fire-dash", "fire-shield", "fire-zap", "fire-bot", "fire-zoom");
     void btnAbility.offsetWidth;
     btnAbility.classList.add("fire-" + kind);
     btnAbility.classList.add("ability-fired");
@@ -407,32 +411,29 @@
     frog.cd = def.cdMax;
     flashAbilityButton(frog.id);
     beep(660, 0.06, "square", 0.05);
-    if (frog.id === "james") {
-      frog.invuln = 1.2;
-      frog.dashTrail = 0.45;
-      const boost = frog.inTruck ? 70 : 48;
-      frog.x += frog.facing * boost;
-      if (frog.inTruck) frog.speedBoost = 1.4;
+    /* polish11: shared ZOOM — speed burst along face + dust/spark juice (all frogs) */
+    {
+      const ang = (frog.faceAngle != null && isFinite(frog.faceAngle))
+        ? frog.faceAngle
+        : (frog.facing >= 0 ? 0 : Math.PI);
+      const cx = Math.cos(ang), cy = Math.sin(ang);
+      frog.invuln = Math.max(frog.invuln || 0, 0.4);
+      frog.dashTrail = 0.55;
+      frog.speedBoost = frog.inTruck ? 1.55 : 1.48;
+      const impulse = frog.inTruck ? 300 : 240;
+      frog.vx = (frog.vx || 0) + cx * impulse;
+      frog.vy = (frog.vy || 0) + cy * impulse;
+      frog.x += cx * (frog.inTruck ? 26 : 20);
+      frog.y += cy * (frog.inTruck ? 26 : 20);
       if (world) {
-        W.spawnDust(world, frog.x, frog.y, 8);
-        W.spawnSparks(world, frog.x, frog.y, 6);
+        W.spawnDust(world, frog.x - cx * 18, frog.y - cy * 18, 10);
+        W.spawnSparks(world, frog.x, frog.y, 8);
+        if (W.spawnDust) W.spawnDust(world, frog.x - cx * 8, frog.y - cy * 8, 4);
       }
-      shakeT = 0.18;
-      storyToast = frog.inTruck ? "DASH · truck boost!" : "DASH!";
+      shakeT = 0.16;
+      storyToast = frog.inTruck ? "ZOOM · truck boost!" : "ZOOM!";
       beep(880, 0.05, "sawtooth", 0.035);
-    } else if (frog.id === "jimmy") {
-      frog.invuln = 2.2;
-      storyToast = "SHIELD up!";
-      beep(300, 0.12, "triangle", 0.05);
-    } else if (frog.id === "bubbles") {
-      if (world) W.spawnSparks(world, frog.x, frog.y, 12);
-      storyToast = "ZAP!";
-      beep(920, 0.04, "square", 0.04);
-      beep(1200, 0.05, "square", 0.03);
-    } else if (frog.id === "rexy") {
-      storyToast = "BOT · open SPS for Optimus kits";
-      beep(400, 0.06, "sine", 0.04);
-      beep(500, 0.08, "sine", 0.04);
+      beep(1100, 0.04, "square", 0.025);
     }
     storyToastT = 1.5;
     updateAbilityButton();
@@ -523,6 +524,7 @@
       }
       storyToast = "Parked · walking";
       storyToastT = 1.8;
+      exitTipT = 0;
       paintHud();
       return;
     }
@@ -551,8 +553,10 @@
           ? "All aboard! Four froggies · one Cybertruck · hit the jumps!"
           : "Driving Cybertruck · hit the jumps!";
         beep(200, 0.1, "sawtooth", 0.04);
+        exitTipT = 2.4; /* polish11: brief EXIT tip, then dismiss */
       } else if (!me.inTruck) {
         storyToast = "Parked · walking";
+        exitTipT = 0;
       }
       storyToastT = 2.5;
     } else if (nearHot.id === "fishies") {
@@ -759,6 +763,7 @@
         }
       }
       if (storyToastT > 0) storyToastT -= dt;
+      if (exitTipT > 0) exitTipT = Math.max(0, exitTipT - dt);
       if (shakeT > 0) shakeT -= dt;
       W.updateFx(world, dt);
       return;
@@ -841,6 +846,7 @@
     }
 
     if (storyToastT > 0) storyToastT -= dt;
+    if (exitTipT > 0) exitTipT = Math.max(0, exitTipT - dt);
     if (shakeT > 0) shakeT -= dt;
 
     if (party && party.getRole() === "host") {
@@ -855,6 +861,7 @@
   function updateSpace(dt) {
     if (!spaceEp || !Space) return;
     if (storyToastT > 0) storyToastT -= dt;
+    if (exitTipT > 0) exitTipT = Math.max(0, exitTipT - dt);
     if (shakeT > 0) shakeT -= dt;
     const me = localPlayer();
     const es = effectiveSteer();

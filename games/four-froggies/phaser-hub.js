@@ -13,7 +13,8 @@
    eyes1: rotate frog sprite toward walk dir; idle keeps last; AI companions too.
    truck1: kid-toy truck scale; smooth yaw toward aim; track elev / crest / land bounce.
    truck2: EXIT anytime (HUD); full elev lift (no *0.06 damp); stronger crest / ramp ride-up.
-   joy2: shared virtual joystick via engine-boot setSteer; touch playfield aim disabled. */
+   joy2: shared virtual joystick via engine-boot setSteer; touch playfield aim disabled.
+   polish11: truck yaw follows travel; brief EXIT tip; shared ZOOM ability. */
 (function (global) {
   "use strict";
   var C = global.FroggiesCanon;
@@ -256,7 +257,7 @@
         /* polish6: parallax-lite hill bands (screen-space, scrollFactor 0) */
         this.paraGfx = this.add.graphics().setScrollFactor(0).setDepth(-20);
         this.inTruck = false; this.truckMode = null; this.truckId = null;
-        this.waterSub = 0; this.scrap = 0; this.toastT = 3.5; this.cd = 0; this.near = null; this.bouncePhase = 0; this.dustT = 0; this.fx = [];
+        this.waterSub = 0; this.scrap = 0; this.toastT = 3.5; this.exitTipT = 0; this.cd = 0; this.near = null; this.bouncePhase = 0; this.dustT = 0; this.fx = [];
         this.prevNearId = null; this.shakeT = 0; this.rippleT = 0; this.ambient = [];
         this.mechWowT = 0; this.walkBobT = 0;
         /* polish7: zone signs + mini-map lite (screen-space) */
@@ -538,32 +539,36 @@
           var accent = s.id === "shared" ? 0xfbbf24 : hx((C.FROG_DEFS[s.id] || def).color);
           var g = this.add.graphics();
           /* truck1 + polish8: kid-toy angular stainless */
-          var ox = function (dx) { return s.x + dx * pvs; };
-          var oy = function (dy) { return s.y + dy * pvs; };
+          /* polish11: parked nose screen-up (match frog default), not sideways +X */
+          var ox = function (dx, dy) { var rx = dy, ry = -dx; return s.x + rx * pvs; };
+          var oy = function (dx, dy) { var rx = dy, ry = -dx; return s.y + ry * pvs; };
           g.fillStyle(0xc5ced8, 1); g.lineStyle(3, 0x111827, 1);
           g.beginPath();
-          g.moveTo(ox(-36), oy(8));
-          g.lineTo(ox(-34), oy(-3));
-          g.lineTo(ox(-12), oy(-6));
-          g.lineTo(ox(-3), oy(-11));
-          g.lineTo(ox(6), oy(-22));
-          g.lineTo(ox(38), oy(-6));
-          g.lineTo(ox(42), oy(3));
-          g.lineTo(ox(39), oy(9));
+          g.moveTo(ox(-36, 8), oy(-36, 8));
+          g.lineTo(ox(-34, -3), oy(-34, -3));
+          g.lineTo(ox(-12, -6), oy(-12, -6));
+          g.lineTo(ox(-3, -11), oy(-3, -11));
+          g.lineTo(ox(6, -22), oy(6, -22));
+          g.lineTo(ox(38, -6), oy(38, -6));
+          g.lineTo(ox(42, 3), oy(42, 3));
+          g.lineTo(ox(39, 9), oy(39, 9));
           g.closePath(); g.fillPath(); g.strokePath();
           g.lineStyle(1.5, 0xffffff, 0.55);
-          g.beginPath(); g.moveTo(ox(-30), oy(0)); g.lineTo(ox(5), oy(-17)); g.lineTo(ox(34), oy(-5)); g.strokePath();
+          g.beginPath(); g.moveTo(ox(-30, 0), oy(-30, 0)); g.lineTo(ox(5, -17), oy(5, -17)); g.lineTo(ox(34, -5), oy(34, -5)); g.strokePath();
           g.fillStyle(accent, 0.95);
-          g.fillRect(ox(-2), oy(-16), 24 * pvs, 11 * pvs);
-          g.lineStyle(2, 0x0b1220, 0.9); g.strokeRect(ox(-2), oy(-16), 24 * pvs, 11 * pvs);
-          g.fillStyle(0xfef08a, 1); g.fillRect(ox(32), oy(-6), 11 * pvs, 5 * pvs); /* light bar */
+          var cabX = ox(-2, -16), cabY = oy(-2, -16);
+          g.fillRect(cabX - 5.5 * pvs, cabY - 12 * pvs, 11 * pvs, 24 * pvs);
+          g.lineStyle(2, 0x0b1220, 0.9); g.strokeRect(cabX - 5.5 * pvs, cabY - 12 * pvs, 11 * pvs, 24 * pvs);
+          g.fillStyle(0xfef08a, 1); /* light bar at nose */
+          var lbX = ox(32, -6), lbY = oy(32, -6);
+          g.fillRect(lbX - 2.5 * pvs, lbY - 5.5 * pvs, 5 * pvs, 11 * pvs);
           g.lineStyle(2, 0x94a3b8, 0.8);
-          g.beginPath(); g.arc(ox(-18), oy(8), 9 * pvs, Math.PI * 1.1, Math.PI * 1.9); g.strokePath();
-          g.beginPath(); g.arc(ox(20), oy(7), 9 * pvs, Math.PI * 1.1, Math.PI * 1.9); g.strokePath();
+          g.beginPath(); g.arc(ox(-18, 8), oy(-18, 8), 9 * pvs, Math.PI * 1.1, Math.PI * 1.9); g.strokePath();
+          g.beginPath(); g.arc(ox(20, 7), oy(20, 7), 9 * pvs, Math.PI * 1.1, Math.PI * 1.9); g.strokePath();
           g.fillStyle(0x0f172a, 1);
-          g.fillCircle(ox(-18), oy(9), 7 * pvs);
-          g.fillCircle(ox(-6), oy(9), 5.5 * pvs);
-          g.fillCircle(ox(20), oy(8), 7 * pvs);
+          g.fillCircle(ox(-18, 9), oy(-18, 9), 7 * pvs);
+          g.fillCircle(ox(-6, 9), oy(-6, 9), 5.5 * pvs);
+          g.fillCircle(ox(20, 8), oy(20, 8), 7 * pvs);
           var body = this.add.rectangle(s.x, s.y, Math.round(58 * pvs), Math.round(26 * pvs), 0x9ca3af, 0.01); // hit proxy for pulse
           var cab = this.add.rectangle(s.x + 6 * pvs, s.y - 3 * pvs, Math.round(28 * pvs), Math.round(12 * pvs), accent, 0.01);
           var label = s.id === "shared" ? "★ ALL ABOARD · 4" : ("Cybertruck · " + (C.FROG_DEFS[s.id] || {}).name);
@@ -586,7 +591,7 @@
       },
       update: function (time, delta) {
         var dt = Math.min(0.05, delta / 1000);
-        this.cd = Math.max(0, this.cd - dt); this.toastT = Math.max(0, this.toastT - dt);
+        this.cd = Math.max(0, this.cd - dt); this.toastT = Math.max(0, this.toastT - dt); this.exitTipT = Math.max(0, (this.exitTipT || 0) - dt);
         this.bob += dt * (this.inTruck ? 14 : 10);
         /* polish10: soft dusk sky shift over play time */
         this.dayT = (this.dayT || 0) + dt;
@@ -916,7 +921,9 @@
              Rotate so long axis points along thrust = faceAngle - PI/2 + 0 = faceAngle - PI/2... 
              Actually: faceAngle is sprite rot with 0=up. Truck nose should match travel which is faceAngle-PI/2 in atan2 space,
              so rectangle rotation = faceAngle - PI/2 (horizontal nose → travel dir). */
+          /* polish11: nose follows travel (velocity) so truck matches steer */
           var truckRot = (this.faceAngle || 0) - Math.PI / 2;
+          if (sp > 40) truckRot = Math.atan2(body.velocity.y, body.velocity.x);
           this.truckBody.setRotation(truckRot).setScale(1, 1);
           var noseX = Math.cos(truckRot) * 10;
           var noseY = Math.sin(truckRot) * 10;
@@ -1076,10 +1083,10 @@
             mode: "ranch", label: C.areaNameAt(this.player.x, this.player.y) + " · Phaser",
             scrap: Math.floor(this.scrap),
             tip: this.inTruck
-              ? ((this.toastT > 0 ? this.toast + " · " : "") + "EXIT TRUCK · INTERACT / E")
+              ? (this.toastT > 0 ? this.toast : (this.exitTipT > 0 ? "EXIT · INTERACT / E" : ""))
               : (this.toastT > 0 ? this.toast : (this.near ? ((C.isTruckHotspot(this.near) ? "BOARD · " : "⚡ ") + this.near.tip + " · INTERACT / E") : "")),
             inTruck: !!this.inTruck,
-            near: this.inTruck ? true : this.near, ability: def.ability, cd: this.cd, walk: walk,
+            near: this.inTruck ? true : this.near, ability: "ZOOM", cd: this.cd, walk: walk,
           });
         }
       },
@@ -1088,7 +1095,7 @@
         if (this.inTruck) {
           this.inTruck = false; this.truckMode = null; this.truckId = null;
           this.zLift = 0; this.zVel = 0; this.groundZ = 0;
-          this.toast = "Parked · walking"; this.toastT = 1.8;
+          this.toast = "Parked · walking"; this.toastT = 1.8; this.exitTipT = 0;
           if (hooks.onToast) hooks.onToast(this.toast);
           return;
         }
@@ -1100,6 +1107,7 @@
             ? "All aboard! Four froggies · one Cybertruck · hit the jumps!"
             : "Driving Cybertruck · hit the jumps!";
           this.toastT = 2.4;
+          this.exitTipT = 2.4; /* polish11: brief EXIT tip */
         } else if (id === "fishies") {
           this.toast = "Splash! Fishies & whales scatter"; this.toastT = 2; this.scrap += 2;
           for (var i = 0; i < this.fish.length; i++) { this.fish[i].bx += (Math.random() - 0.5) * 100; this.fish[i].by += (Math.random() - 0.5) * 60; }
@@ -1113,18 +1121,22 @@
         if (hooks.onToast) hooks.onToast(this.toast);
       },
       doAbility: function () {
-        if (this.cd > 0) return; this.cd = 5;
+        /* polish11: shared ZOOM — speed burst along face + juice */
+        if (this.cd > 0) return; this.cd = 5.5;
         var body = this.player.body;
-        if (frogId === "james") { body.velocity.x += this.facing * 300; this.toast = this.inTruck ? "DASH · truck boost!" : "DASH!"; }
-        else if (frogId === "jimmy") this.toast = "SHIELD up!";
-        else if (frogId === "bubbles") { this.toast = "ZAP!"; this.scrap += 1; }
-        else {
-          this.toast = "BOT · open SPS for Optimus kits";
-          this.player.x += (520 - this.player.x) * 0.12; this.player.y += (1940 - this.player.y) * 0.12;
-          this.kitFxKind = "map"; this.kitFxT = 0.55; /* polish9 Optimus punch lite */
+        var ang = (this.faceAngle != null) ? (this.faceAngle - Math.PI / 2) : (this.facing >= 0 ? 0 : Math.PI);
+        if (Math.hypot(body.velocity.x, body.velocity.y) > 40) ang = Math.atan2(body.velocity.y, body.velocity.x);
+        var impulse = this.inTruck ? 420 : 340;
+        body.velocity.x += Math.cos(ang) * impulse;
+        body.velocity.y += Math.sin(ang) * impulse;
+        this.toast = this.inTruck ? "ZOOM · truck boost!" : "ZOOM!";
+        this.toastT = 1.8;
+        for (var zi = 0; zi < 8; zi++) {
+          var dg = this.add.circle(this.player.x - Math.cos(ang) * (12 + zi * 6), this.player.y - Math.sin(ang) * (12 + zi * 6), 3 + (zi % 3), 0xfbbf24, 0.7).setDepth(30);
+          this.fx.push({ g: dg, life: 0.35 + zi * 0.03, vx: -Math.cos(ang) * (40 + zi * 8), vy: -Math.sin(ang) * (40 + zi * 8) });
         }
-        this.toastT = 1.8; if (hooks.onToast) hooks.onToast(this.toast);
-        if (hooks.onAbilityFire) hooks.onAbilityFire(frogId, def.ability);
+        if (hooks.onToast) hooks.onToast(this.toast);
+        if (hooks.onAbilityFire) hooks.onAbilityFire(frogId, "ZOOM");
       },
     });
 
@@ -1321,20 +1333,21 @@
               var kick = (cfg.hardThrustImpulse || 320);
               body.velocity.x = Math.cos(this.orbitAngle) * kick * 0.55;
               body.velocity.y = Math.sin(this.orbitAngle) * kick * 0.55;
-              this.toast = "Hard thruster · left Moon orbit";
+              this.toast = "ZOOM · left Moon orbit";
             } else {
-              body.velocity.x += frogId === "jimmy" ? 280 : 200;
-              body.velocity.y -= frogId === "jimmy" ? 180 : 120;
-              this.toast = frogId === "jimmy" ? "SHIELD up!" : (def.ability + " · hard thruster");
-              /* polish7: Jimmy jetpack escape visual */
-              if (frogId === "jimmy" && this.jimmy) {
-                this.jimmyVx = (Math.random() > 0.5 ? 1 : -1) * 140;
-                this.jimmyVy = -110;
-                this.jimmyJetT = 0.9;
+              /* polish11: shared ZOOM thruster */
+              var fang = (this.faceAngle != null) ? (this.faceAngle - Math.PI / 2) : 0;
+              body.velocity.x += Math.cos(fang) * 260;
+              body.velocity.y += Math.sin(fang) * 260 - 80;
+              this.toast = "ZOOM · thruster!";
+              if (this.jimmy) {
+                this.jimmyVx = (Math.random() > 0.5 ? 1 : -1) * 120;
+                this.jimmyVy = -90;
+                this.jimmyJetT = 0.7;
               }
             }
             this.toastT = 1.5;
-            if (hooks.onAbilityFire) hooks.onAbilityFire(frogId, def.ability);
+            if (hooks.onAbilityFire) hooks.onAbilityFire(frogId, "ZOOM");
           }
         }
         if (this.jimmyJetT > 0) {
@@ -1360,7 +1373,7 @@
           hooks.onHud({
             mode: "space", label: "Space · Moon · Phaser", scrap: this.catches,
             tip: this.toastT > 0 ? this.toast : this.inOrbit ? "Orbit locked · Escape or hard thruster" : this.near ? this.near.tip + " · INTERACT" : nearMars ? "Mars · invader silhouettes" : "Chase Jimmy · Spotty / Germy / Daisy nearby",
-            inOrbit: !!this.inOrbit, near: this.near, ability: def.ability, cd: this.cd,
+            inOrbit: !!this.inOrbit, near: this.near, ability: "ZOOM", cd: this.cd,
             walk: this.inOrbit ? "🌍 Orbit" : "🚀 Space",
           });
         }

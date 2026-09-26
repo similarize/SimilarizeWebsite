@@ -1,3 +1,10 @@
+## What's new (polish11) — truck yaw + brief EXIT tip + ZOOM
+- **Cybertruck orientation:** Canvas / Phaser / Three — truck nose follows travel (velocity when moving; face yaw when slow). Parked trucks face the same default as idle frogs (screen-up / +Z), not sideways vs the cast.
+- **EXIT tip:** Removed sticky world-space "EXIT · INTERACT / E" billboard that tracked the truck. Brief tip (~2.4s) after board via hub tip; INTERACT button stays labeled EXIT while driving. No giant HUD that follows you across the ranch.
+- **ZOOM ability (shared):** Replaces per-frog DASH/SHIELD/ZAP/BOT on the ranch ability button. Short speed burst along face/travel with dust/spark juice (Canvas + Phaser + Three); space = thruster nudge. INTERACT still boards/exits/phone/etc.
+- Joystick (joy2), garage1 full-width door, names-only plates, Canvas party path kept.
+- Cache-bust: `?v=20260926-polish11`. Cast unchanged. No SPS arcade republish.
+
 ## What's new (garage1) — garage door wall-to-wall
 - **Three.js:** South bay door + lintel span between side walls (was a ~2.2-unit floating slab in a ~9.6-wide bay); left/right jambs frame the entrance. Open/close lift unchanged.
 - **Collision / Canvas / Phaser:** Closed door blocks nearly the full garage front (`GARAGE_DOOR_W` ~440); Canvas + Phaser door draw match.
