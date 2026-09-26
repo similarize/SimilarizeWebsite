@@ -56,26 +56,72 @@
   }
 
   function makeFrogMesh(def, scale) {
+    var s = (scale == null ? 1.55 : scale); // default bigger — readable from isometric cam
     var g = new THREE.Group();
+    var bodyCol = hex(def.color);
     var body = new THREE.Mesh(
-      new THREE.SphereGeometry(0.45 * (scale || 1), 12, 10),
-      new THREE.MeshStandardMaterial({ color: hex(def.color), roughness: 0.55, metalness: 0.1 })
+      new THREE.SphereGeometry(0.55 * s, 16, 12),
+      new THREE.MeshStandardMaterial({
+        color: bodyCol, roughness: 0.45, metalness: 0.08,
+        emissive: bodyCol, emissiveIntensity: 0.35,
+      })
     );
-    body.position.y = 0.45 * (scale || 1);
+    body.position.y = 0.55 * s;
+    body.castShadow = true;
     g.add(body);
-    var hat = new THREE.Mesh(
-      new THREE.ConeGeometry(0.28 * (scale || 1), 0.35 * (scale || 1), 8),
-      new THREE.MeshStandardMaterial({ color: hex(def.hat), roughness: 0.6 })
+    // Belly highlight
+    var belly = new THREE.Mesh(
+      new THREE.SphereGeometry(0.32 * s, 10, 8),
+      new THREE.MeshStandardMaterial({ color: 0xfef3c7, roughness: 0.7 })
     );
-    hat.position.y = 0.95 * (scale || 1);
+    belly.position.set(0, 0.42 * s, 0.28 * s);
+    belly.scale.set(1, 0.85, 0.55);
+    g.add(belly);
+    // Hat (distinct per frog)
+    var hat = new THREE.Mesh(
+      new THREE.ConeGeometry(0.34 * s, 0.42 * s, 8),
+      new THREE.MeshStandardMaterial({
+        color: hex(def.hat), roughness: 0.55,
+        emissive: hex(def.hat), emissiveIntensity: 0.15,
+      })
+    );
+    hat.position.y = 1.15 * s;
+    hat.castShadow = true;
     g.add(hat);
-    var eyeM = new THREE.MeshStandardMaterial({ color: hex(def.accent) });
-    var e1 = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 6), eyeM);
-    var e2 = e1.clone();
-    e1.position.set(-0.15, 0.55, 0.35);
-    e2.position.set(0.15, 0.55, 0.35);
-    g.add(e1);
-    g.add(e2);
+    // Eyes (white + accent pupil)
+    var eyeWhite = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.1 });
+    var eyePupil = new THREE.MeshStandardMaterial({ color: hex(def.accent) });
+    function eye(ox) {
+      var ew = new THREE.Mesh(new THREE.SphereGeometry(0.12 * s, 8, 8), eyeWhite);
+      ew.position.set(ox, 0.68 * s, 0.42 * s);
+      g.add(ew);
+      var ep = new THREE.Mesh(new THREE.SphereGeometry(0.055 * s, 6, 6), eyePupil);
+      ep.position.set(ox, 0.68 * s, 0.52 * s);
+      g.add(ep);
+    }
+    eye(-0.18 * s); eye(0.18 * s);
+    // Legs
+    var legM = new THREE.MeshStandardMaterial({ color: bodyCol, roughness: 0.55 });
+    for (var li = 0; li < 4; li++) {
+      var leg = new THREE.Mesh(new THREE.CylinderGeometry(0.07 * s, 0.09 * s, 0.28 * s, 6), legM);
+      var side = li < 2 ? -1 : 1;
+      var fore = li % 2 === 0 ? 1 : -1;
+      leg.position.set(side * 0.28 * s, 0.18 * s, fore * 0.22 * s);
+      leg.rotation.z = side * 0.35;
+      g.add(leg);
+    }
+    // Ground selection ring (player/AI readable)
+    var ring = new THREE.Mesh(
+      new THREE.RingGeometry(0.55 * s, 0.72 * s, 28),
+      new THREE.MeshBasicMaterial({
+        color: bodyCol, transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false,
+      })
+    );
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = 0.04;
+    g.add(ring);
+    g.userData.ring = ring;
+    g.userData.frogId = def.id;
     g.castShadow = true;
     return g;
   }
@@ -97,6 +143,15 @@
     var mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
     var spr = new THREE.Sprite(mat);
     spr.scale.set(2.2, 0.55, 1);
+    return spr;
+  }
+
+  /* NEVER chain .position on scene.add() — Object3D.add returns the scene, which
+     silently moved scene.position and desynced the camera from all meshes. */
+  function addLabel(text, color, x, y, z) {
+    var spr = labelSprite(text, color);
+    spr.position.set(x, y, z);
+    scene.add(spr);
     return spr;
   }
 
@@ -159,7 +214,7 @@
       new THREE.LineBasicMaterial({ color: 0x0f172a })
     );
     edge.position.copy(body.position); scene.add(edge);
-    scene.add(labelSprite(m.stories + "-story mech", "#fff")).position.set(p.x, h + 0.55, p.z);
+    addLabel(m.stories + "-story mech", "#fff", p.x, h + 0.55, p.z);
   }
 
   function buildCompound() {
@@ -171,7 +226,7 @@
       new THREE.MeshStandardMaterial({ color: 0x468232, roughness: 0.95 })
     );
     yardM.position.set(yp.x, 0.1, yp.z); scene.add(yardM);
-    scene.add(labelSprite("Backyard", "#ecfccb")).position.set(yp.x, 1.2, yp.z);
+    addLabel("Backyard", "#ecfccb", yp.x, 1.2, yp.z);
     for (var ai = 0; ai < 22; ai++) {
       var ap = worldToThree(yard.x + 30 + Math.random() * (yard.w - 60), yard.y + 40 + Math.random() * (yard.h - 80));
       var animal = new THREE.Mesh(
@@ -182,14 +237,24 @@
     }
     var gar = cp.garage || { x: 700, y: 1400, w: 480, h: 520 };
     var gp = worldToThree(gar.x + gar.w / 2, gar.y + gar.h / 2);
-    var garage = new THREE.Mesh(
-      new THREE.BoxGeometry(gar.w * 0.02, 2.4, gar.h * 0.02),
-      new THREE.MeshStandardMaterial({ color: 0x6b7280, roughness: 0.75, metalness: 0.15 })
+    var gw = gar.w * 0.02, gd = gar.h * 0.02;
+    var gFloor = new THREE.Mesh(
+      new THREE.BoxGeometry(gw, 0.1, gd),
+      new THREE.MeshStandardMaterial({ color: 0x57534e, roughness: 0.9 })
     );
-    garage.position.set(gp.x, 1.2, gp.z); garage.castShadow = true; scene.add(garage);
-    var door = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.4, 0.12), new THREE.MeshStandardMaterial({ color: 0x111827 }));
-    door.position.set(gp.x, 0.7, gp.z + gar.h * 0.01 - 0.2); scene.add(door);
-    scene.add(labelSprite("Garage · James toys", "#fff")).position.set(gp.x, 2.9, gp.z);
+    gFloor.position.set(gp.x, 0.05, gp.z); scene.add(gFloor);
+    var gMat = new THREE.MeshStandardMaterial({ color: 0x6b7280, roughness: 0.75, metalness: 0.15 });
+    function gWall(wx, wz, ww, wd, wh) {
+      var m = new THREE.Mesh(new THREE.BoxGeometry(ww, wh || 2.0, wd), gMat);
+      m.position.set(wx, (wh || 2.0) * 0.5, wz); m.castShadow = true; scene.add(m);
+    }
+    gWall(gp.x, gp.z - gd * 0.5 + 0.1, gw, 0.2);
+    gWall(gp.x - gw * 0.5 + 0.1, gp.z, 0.2, gd);
+    gWall(gp.x + gw * 0.5 - 0.1, gp.z, 0.2, gd);
+    // Open south (door) — dark lintel only
+    var lintel = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.35, 0.2), new THREE.MeshStandardMaterial({ color: 0x111827 }));
+    lintel.position.set(gp.x, 1.85, gp.z + gd * 0.5 - 0.1); scene.add(lintel);
+    addLabel("Garage · James toys", "#fff", gp.x, 2.9, gp.z);
     for (var t = 0; t < 32; t++) {
       var tp = worldToThree(gar.x + 40 + (t % 8) * 48, gar.y + 70 + Math.floor(t / 8) * 50);
       var toy = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.22, 0.22), new THREE.MeshStandardMaterial({ color: 0xfbbf24 }));
@@ -197,17 +262,36 @@
     }
     var house = cp.house || { x: 120, y: 1420, w: 520, h: 420 };
     var hp = worldToThree(house.x + house.w / 2, house.y + house.h / 2);
-    var houseM = new THREE.Mesh(
-      new THREE.BoxGeometry(house.w * 0.02, 2.8, house.h * 0.02),
-      new THREE.MeshStandardMaterial({ color: 0xd4b896, roughness: 0.7 })
+    var hw = house.w * 0.02, hd = house.h * 0.02;
+    // Floor only + perimeter walls (HOLLOW) — spawn is inside house rect; solid box buried frogs
+    var floor = new THREE.Mesh(
+      new THREE.BoxGeometry(hw, 0.12, hd),
+      new THREE.MeshStandardMaterial({ color: 0xc4a574, roughness: 0.85 })
     );
-    houseM.position.set(hp.x, 1.4, hp.z); houseM.castShadow = true; scene.add(houseM);
+    floor.position.set(hp.x, 0.06, hp.z); floor.receiveShadow = true; scene.add(floor);
+    var wallMat = new THREE.MeshStandardMaterial({ color: 0xd4b896, roughness: 0.7, side: THREE.DoubleSide });
+    var wallH = 2.2, thick = 0.18;
+    function wall(wx, wz, ww, wd) {
+      var m = new THREE.Mesh(new THREE.BoxGeometry(ww, wallH, wd), wallMat);
+      m.position.set(wx, wallH * 0.5, wz); m.castShadow = true; scene.add(m);
+    }
+    // North/South (along X), East/West (along Z) — leave south gap as doorway
+    wall(hp.x, hp.z - hd * 0.5 + thick * 0.5, hw, thick); // north
+    wall(hp.x - hw * 0.28, hp.z + hd * 0.5 - thick * 0.5, hw * 0.4, thick); // south left
+    wall(hp.x + hw * 0.28, hp.z + hd * 0.5 - thick * 0.5, hw * 0.4, thick); // south right (door gap)
+    wall(hp.x - hw * 0.5 + thick * 0.5, hp.z, thick, hd); // west
+    wall(hp.x + hw * 0.5 - thick * 0.5, hp.z, thick, hd); // east
     var roof = new THREE.Mesh(
-      new THREE.ConeGeometry(Math.max(house.w, house.h) * 0.012, 1.6, 4),
-      new THREE.MeshStandardMaterial({ color: 0x6d4c41 })
+      new THREE.ConeGeometry(Math.max(hw, hd) * 0.62, 1.5, 4),
+      new THREE.MeshStandardMaterial({ color: 0x6d4c41, transparent: true, opacity: 0.55 })
     );
-    roof.position.set(hp.x, 3.4, hp.z); roof.rotation.y = Math.PI / 4; scene.add(roof);
-    scene.add(labelSprite("James · Ranch house", "#fff7ed")).position.set(hp.x, 4.2, hp.z);
+    roof.position.set(hp.x, wallH + 0.85, hp.z); roof.rotation.y = Math.PI / 4; scene.add(roof);
+    var chimney = new THREE.Mesh(
+      new THREE.BoxGeometry(0.35, 1.1, 0.35),
+      new THREE.MeshStandardMaterial({ color: 0x78716c })
+    );
+    chimney.position.set(hp.x + 1.4, wallH + 1.1, hp.z - 0.8); scene.add(chimney);
+    addLabel("James · Ranch house", "#fff7ed", hp.x, wallH + 2.0, hp.z);
     addMech(cp.mech10 || { x: 820, y: 1680, stories: 10 }, 0xa5b4fc, 1.4);
     addMech(cp.mech100 || { x: 980, y: 1700, stories: 100 }, 0x67e8f9, 2.4);
     addMech(cp.mech1000 || { x: 340, y: 2420, stories: 1000 }, 0xfcd34d, 5.5);
@@ -261,10 +345,19 @@
       whale.scale.set(1.6, 0.55, 1); whale.position.set(wp.x, 0.2, wp.z);
       whale.userData.phase = Math.random() * Math.PI * 2; whale.userData.bx = wp.x; whale.userData.bz = wp.z;
       scene.add(whale); state.whales.push(whale);
-      scene.add(labelSprite("whale", "#e0f2fe")).position.set(wp.x, 1.0, wp.z);
+      addLabel("whale", "#e0f2fe", wp.x, 1.0, wp.z);
     }
     var pl = worldToThree(pond.x + pond.w * 0.5, pond.y + 40);
-    scene.add(labelSprite("Pond · fishies & whales", "#ecfeff")).position.set(pl.x, 1.5, pl.z);
+    var pc = worldToThree(pond.x + pond.w / 2, pond.y + pond.h / 2);
+    var shore = new THREE.Mesh(
+      new THREE.RingGeometry(Math.min(pond.w, pond.h) * 0.0088, Math.min(pond.w, pond.h) * 0.0105, 64),
+      new THREE.MeshBasicMaterial({ color: 0x67e8f9, transparent: true, opacity: 0.5, side: THREE.DoubleSide })
+    );
+    shore.rotation.x = -Math.PI / 2;
+    shore.position.set(pc.x, 0.16, pc.z);
+    shore.scale.set(pond.w / Math.min(pond.w, pond.h), 1, pond.h / Math.min(pond.w, pond.h));
+    scene.add(shore);
+    addLabel("Pond · fishies & whales", "#ecfeff", pl.x, 1.5, pl.z);
   }
 
   function buildStarshipApproach() {
@@ -296,12 +389,13 @@
 
   function buildRanch() {
     scene = new THREE.Scene();
+    scene.position.set(0, 0, 0);
     scene.background = new THREE.Color(0x87b5d9);
-    scene.fog = new THREE.Fog(0x87b5d9, 40, 110);
+    scene.fog = new THREE.Fog(0x87b5d9, 55, 160);
 
     // Fixed-angle isometric-ish camera — orbit LOCKED (no free-fly)
     var aspect = window.innerWidth / Math.max(1, window.innerHeight);
-    camera = new THREE.PerspectiveCamera(42, aspect, 0.1, 200);
+    camera = new THREE.PerspectiveCamera(46, aspect, 0.1, 400);
     camera.position.set(18, 22, 18);
     camera.lookAt(0, 0, 0);
     camera.userData.lockTarget = new THREE.Vector3(0, 0, 0);
@@ -335,20 +429,23 @@
       var a = C.AREAS[i];
       var p = worldToThree(a.x + a.w / 2, a.y + a.h / 2);
       var mesh = new THREE.Mesh(
-        new THREE.BoxGeometry(a.w * 0.02, 0.15, a.h * 0.02),
+        new THREE.BoxGeometry(a.w * 0.02, 0.18, a.h * 0.02),
         new THREE.MeshStandardMaterial({
           color: hex(a.color),
           roughness: 0.85,
           transparent: true,
-          opacity: 0.92,
+          opacity: 0.94,
         })
       );
-      mesh.position.set(p.x, 0.08, p.z);
+      mesh.position.set(p.x, 0.1, p.z);
       mesh.receiveShadow = true;
       scene.add(mesh);
-      var lab = labelSprite(a.name, "#ffffff");
-      lab.position.set(p.x, 1.2, p.z);
-      scene.add(lab);
+      var edgeA = new THREE.LineSegments(
+        new THREE.EdgesGeometry(new THREE.BoxGeometry(a.w * 0.02, 0.18, a.h * 0.02)),
+        new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.45 })
+      );
+      edgeA.position.copy(mesh.position); scene.add(edgeA);
+      addLabel(a.name, "#ffffff", p.x, 3.2, p.z);
     }
 
     buildCompound();
@@ -384,17 +481,23 @@
     );
     spotty.position.set(sp.x, 0.35, sp.z);
     scene.add(spotty);
-    scene.add(labelSprite("Spotty", "#fdba74")).position.set(sp.x, 1.35, sp.z);
+    addLabel("Spotty", "#fdba74", sp.x, 1.35, sp.z);
 
     var def = C.FROG_DEFS[state.frogId];
     var spawnW = (C.COMPOUND && C.COMPOUND.spawn) || { x: 280, y: 1750 };
-    state.player = makeFrogMesh(def, 1);
+    state.player = makeFrogMesh(def, 1.7);
     var spawn = worldToThree(spawnW.x, spawnW.y);
-    state.player.position.set(spawn.x, 0, spawn.z);
+    state.player.position.set(spawn.x, 0.02, spawn.z);
+    if (state.player.userData.ring) state.player.userData.ring.material.opacity = 0.85;
     scene.add(state.player);
     state.nameTag = labelSprite(def.name, "#fff");
-    state.nameTag.position.set(spawn.x, 1.85, spawn.z);
+    state.nameTag.position.set(spawn.x, 2.6, spawn.z);
+    state.nameTag.scale.set(2.8, 0.7, 1);
     scene.add(state.nameTag);
+    // Snap locked camera onto spawn immediately (no multi-second lerp from origin)
+    camera.userData.lockTarget.set(spawn.x, 0, spawn.z);
+    camera.position.set(spawn.x + 17, 22, spawn.z + 17);
+    camera.lookAt(spawn.x, 0.6, spawn.z);
 
     state.driveTruck = makeTruckMesh(hex(def.color));
     state.driveTruck.visible = false;
@@ -410,13 +513,21 @@
     for (var ci = 0; ci < C.FROG_ORDER.length; ci++) {
       var cid = C.FROG_ORDER[ci];
       if (cid === state.frogId) continue;
-      var cmesh = makeFrogMesh(C.FROG_DEFS[cid], 0.85);
+      var cdef = C.FROG_DEFS[cid];
+      var cmesh = makeFrogMesh(cdef, 1.35);
+      if (cmesh.userData.ring) cmesh.userData.ring.material.opacity = 0.35;
       var cp = worldToThree(spawnW.x + 40 + ci * 36, spawnW.y + 20 + (ci % 2) * 16);
       cmesh.position.set(cp.x, 0, cp.z);
       cmesh.userData.tx = cp.x;
       cmesh.userData.tz = cp.z;
       cmesh.userData.timer = 1 + Math.random();
+      cmesh.userData.frogId = cid;
       scene.add(cmesh);
+      var ctag = labelSprite(cdef.name + " · AI", cdef.color || "#fff");
+      ctag.scale.set(2.0, 0.5, 1);
+      ctag.position.set(cp.x, 2.2, cp.z);
+      scene.add(ctag);
+      cmesh.userData.nameTag = ctag;
       state.companions.push(cmesh);
     }
 
@@ -441,6 +552,7 @@
   function buildSpace() {
     // Clear ranch meshes by rebuilding scene
     while (scene.children.length) scene.remove(scene.children[0]);
+    scene.position.set(0, 0, 0);
     scene.background = new THREE.Color(0x030712);
     scene.fog = new THREE.FogExp2(0x030712, 0.012);
 
@@ -470,13 +582,17 @@
     scene.add(moon);
 
     var def = C.FROG_DEFS[state.frogId];
-    state.player = makeFrogMesh(def, 1);
+    state.player = makeFrogMesh(def, 1.5);
     state.player.position.set(-4, 0, 2);
     scene.add(state.player);
     state.nameTag = labelSprite(def.name, "#fff");
+    state.nameTag.scale.set(2.6, 0.65, 1);
     scene.add(state.nameTag);
+    camera.userData.lockTarget.set(-4, 0, 2);
+    camera.position.set(-4 + 10, 14, 2 + 10);
+    camera.lookAt(-4, 0.5, 2);
 
-    state.jimmy = makeFrogMesh(C.FROG_DEFS.jimmy, 0.9);
+    state.jimmy = makeFrogMesh(C.FROG_DEFS.jimmy, 1.35);
     state.jimmy.position.set(4, 0, -2);
     scene.add(state.jimmy);
     state.jimmyLabel = labelSprite("Jimmy", "#fb923c");
@@ -497,7 +613,7 @@
     );
     germy.position.set(1, 0.28, 1.5);
     scene.add(germy);
-    scene.add(labelSprite("Germy", "#fbbf24")).position.set(1, 1.1, 1.5);
+    addLabel("Germy", "#fbbf24", 1, 1.1, 1.5);
 
     var daisy = new THREE.Mesh(
       new THREE.SphereGeometry(0.26, 10, 8),
@@ -505,7 +621,7 @@
     );
     daisy.position.set(2, 0.26, 2);
     scene.add(daisy);
-    scene.add(labelSprite("Daisy", "#e7e5e4")).position.set(2, 1.05, 2);
+    addLabel("Daisy", "#e7e5e4", 2, 1.05, 2);
 
     var spotty = new THREE.Mesh(
       new THREE.SphereGeometry(0.3, 10, 8),
@@ -513,7 +629,7 @@
     );
     spotty.position.set(-6, 0.3, -4);
     scene.add(spotty);
-    scene.add(labelSprite("Spotty", "#fdba74")).position.set(-6, 1.2, -4);
+    addLabel("Spotty", "#fdba74", -6, 1.2, -4);
 
     var pad = new THREE.Mesh(
       new THREE.CircleGeometry(1.2, 24),
@@ -522,7 +638,7 @@
     pad.rotation.x = -Math.PI / 2;
     pad.position.set(-7, 0.05, 5);
     scene.add(pad);
-    scene.add(labelSprite("Ranch", "#bbf7d0")).position.set(-7, 1.2, 5);
+    addLabel("Ranch", "#bbf7d0", -7, 1.2, 5);
     state.returnPad = { x: -7, z: 5 };
 
     state.vx = 0;
@@ -546,8 +662,9 @@
 
   function resize() {
     if (!renderer || !camera) return;
-    var w = window.innerWidth;
-    var h = window.innerHeight;
+    var hostEl = document.getElementById("engine-host");
+    var w = Math.max((hostEl && hostEl.clientWidth) || 0, window.innerWidth || 320);
+    var h = Math.max((hostEl && hostEl.clientHeight) || 0, window.innerHeight || 480);
     renderer.setSize(w, h, false);
     camera.aspect = w / Math.max(1, h);
     camera.updateProjectionMatrix();
@@ -767,6 +884,12 @@
         var taken = state.inTruck && (state.truckId === hid || (state.truckMode === "shared" && pt.spot.id === "shared"));
         pt.mesh.visible = !taken;
         if (pt.label) pt.label.visible = !taken;
+        if (!taken) {
+          var dTruck = Math.hypot(state.player.position.x - pt.mesh.position.x, state.player.position.z - pt.mesh.position.z);
+          var nearT = dTruck < 2.4;
+          pt.mesh.position.y = nearT ? 0.06 + Math.abs(Math.sin(state.bob * 1.5)) * 0.08 : 0;
+          pt.mesh.scale.setScalar(nearT ? 1.08 : 1);
+        }
       }
       state.player.position.y = (state.zLift || 0) * 0.08 + Math.abs(Math.sin(state.bob)) * (sp > 0.5 ? 0.06 : 0.02);
     }
@@ -783,18 +906,19 @@
     }
 
     if (state.nameTag) {
-      state.nameTag.position.set(state.player.position.x, 1.85, state.player.position.z);
+      state.nameTag.position.set(state.player.position.x, 2.6 + (state.player.position.y || 0), state.player.position.z);
     }
 
     // Locked orbit follow — camera offset fixed, no orbit controls / no FPS look
     var target = camera.userData.lockTarget;
-    target.x += (state.player.position.x - target.x) * Math.min(1, 3 * dt);
-    target.z += (state.player.position.z - target.z) * Math.min(1, 3 * dt);
+    var followK = Math.min(1, 8 * dt); // snappy so WASD motion is obvious on screen
+    target.x += (state.player.position.x - target.x) * followK;
+    target.z += (state.player.position.z - target.z) * followK;
     target.y = 0;
-    var camDist = state.mode === "ranch" ? 20 : 14;
-    var camH = state.mode === "ranch" ? 24 : 16;
+    var camDist = state.mode === "ranch" ? 16 : 12;
+    var camH = state.mode === "ranch" ? 18 : 14;
     camera.position.set(target.x + camDist * 0.85, camH, target.z + camDist * 0.85);
-    camera.lookAt(target);
+    camera.lookAt(target.x, 0.5, target.z);
 
     if (state.mode === "ranch") {
       for (var fi = 0; fi < (state.fish || []).length; fi++) {
@@ -812,20 +936,27 @@
       for (var ci = 0; ci < state.companions.length; ci++) {
         var c = state.companions[ci];
         if (state.inTruck && state.truckMode === "shared") {
-          var ox = (ci - 1) * 0.35, oz = -0.25 - (ci % 2) * 0.2;
+          var ox = (ci - 1) * 0.45, oz = -0.35 - (ci % 2) * 0.25;
           c.position.x += (state.player.position.x + ox - c.position.x) * Math.min(1, 8 * dt);
           c.position.z += (state.player.position.z + oz - c.position.z) * Math.min(1, 8 * dt);
-          c.position.y = 0.55 + (state.zLift || 0) * 0.08;
+          c.position.y = 0.7 + (state.zLift || 0) * 0.08;
+          c.visible = true;
         } else {
-          c.position.y = Math.abs(Math.sin(state.bob + ci)) * 0.04;
+          c.visible = true;
+          c.position.y = Math.abs(Math.sin(state.bob + ci)) * 0.06;
           c.userData.timer -= dt;
           if (c.userData.timer <= 0) {
-            c.userData.tx = c.position.x + (Math.random() - 0.5) * 4;
-            c.userData.tz = c.position.z + (Math.random() - 0.5) * 4;
-            c.userData.timer = 1.5 + Math.random() * 2;
+            // Wander near the player so AI stay on-screen
+            c.userData.tx = state.player.position.x + (Math.random() - 0.5) * 5;
+            c.userData.tz = state.player.position.z + (Math.random() - 0.5) * 5;
+            c.userData.timer = 1.2 + Math.random() * 1.8;
           }
-          c.position.x += (c.userData.tx - c.position.x) * Math.min(1, 1.2 * dt);
-          c.position.z += (c.userData.tz - c.position.z) * Math.min(1, 1.2 * dt);
+          c.position.x += (c.userData.tx - c.position.x) * Math.min(1, 1.6 * dt);
+          c.position.z += (c.userData.tz - c.position.z) * Math.min(1, 1.6 * dt);
+        }
+        if (c.userData.nameTag) {
+          c.userData.nameTag.position.set(c.position.x, c.position.y + 2.2, c.position.z);
+          c.userData.nameTag.visible = c.visible;
         }
       }
       var wpos = threeToWorld(state.player.position.x, state.player.position.z);
@@ -914,15 +1045,22 @@
       frogId: (opts && opts.frogId) || "james",
     };
 
+    host.style.display = "block";
+    host.removeAttribute("hidden");
+    host.hidden = false;
+    var hostW = Math.max(host.clientWidth || 0, window.innerWidth || 320);
+    var hostH = Math.max(host.clientHeight || 0, window.innerHeight || 480);
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    renderer.setSize(window.innerWidth, window.innerHeight, false);
+    renderer.setSize(hostW, hostH, false);
     renderer.shadowMap.enabled = true;
+    renderer.setClearColor(0x87b5d9, 1);
     host.appendChild(renderer.domElement);
     renderer.domElement.style.display = "block";
     renderer.domElement.style.width = "100%";
     renderer.domElement.style.height = "100%";
     renderer.domElement.style.touchAction = "none";
+    renderer.domElement.setAttribute("aria-label", "Four Froggies three.js ranch");
 
     clock = new THREE.Clock();
     buildRanch();

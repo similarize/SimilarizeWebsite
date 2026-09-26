@@ -86,7 +86,17 @@ Same PeerJS lobby: **Host room** → QR / invite `?room=CODE` → claim seats �
 **Collision rule:** Shared landmark layout lives in `canon.js`. Canvas `world.js` remains the richest renderer; Phaser/Three hubs consume the same canon landmarks for parity. Do not invent cast/zone names. Preserve three.js camera-relative WASD.
 
 
-## What's new (parity1) — Phaser/Three toward Canvas landmarks
+## What's new (threefix2) — three.js frogs + move visible
+
+**Root cause (Three blank frogs / “move does nothing”):**
+1. `scene.add(labelSprite(...)).position.set(...)` — `Object3D.add` returns the **scene**, so every label call silently moved `scene.position`. Camera tracked local player coords while meshes rendered offset → froggies off-camera / “input does nothing.”
+2. Ranch house (and garage) were **solid boxes**; `COMPOUND.spawn` is inside the house rect, so frog meshes were buried inside opaque geometry (labels still showed — sprites use `depthTest: false`).
+
+**Fixes:** `addLabel()` helper (never chain `.position` on `scene.add`); hollow house/garage (floor + walls); larger colored frog meshes (James/Jimmy/Bubbles/Rexy) + AI name tags; camera snap to spawn + snappier follow; host sizing; truck near-pulse; Phaser/Canvas frog clarity polish.
+
+- Cache-bust: `?v=20260925-threefix2`.
+
+## Prior (parity1) — Phaser/Three toward Canvas landmarks
 
 Ben: keep pouring polish into Canvas, **and** remember everything done on Canvas for Phaser + three.js.
 
@@ -94,7 +104,6 @@ Ben: keep pouring polish into Canvas, **and** remember everything done on Canvas
 - **Phaser / three.js** hubs: big map, compound, varied track (not oval), big pond with fish+whales, Cybertruck on-water / underwater look, 4 trucks + shared pile-in, Starship → space with planet orbit pull + Escape / hard thruster leave. Solo-first PeerJS OK.
 - **three.js WASD** camera-relative (Canvas `steer.y < 0` = screen up) — do not invert (`three-dir1` fix kept).
 - **Canvas** not regressed; small polish: Starship approach uses shared gold guide from canon.
-- Cache-bust: `?v=20260925-parity1`.
 
 ## Still stubbed / next
 
@@ -114,4 +123,4 @@ Ben: keep pouring polish into Canvas, **and** remember everything done on Canvas
 
 ## Publish
 
-Game Creator → **Webmaster** only. Product path: `games/four-froggies/`. Do not republish SPS as arcade. Cache-bust: `?v=20260925-parity1`.
+Game Creator → **Webmaster** only. Product path: `games/four-froggies/`. Do not republish SPS as arcade. Cache-bust: `?v=20260925-threefix2`.

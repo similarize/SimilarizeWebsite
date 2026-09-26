@@ -81,22 +81,28 @@
           fontFamily: "Segoe UI, system-ui, sans-serif", fontSize: "11px", color: "#fdba74",
           stroke: "#000", strokeThickness: 3,
         }).setOrigin(0.5);
-        this.ensureFrogTexture(frogId, def, 40);
+        this.ensureFrogTexture(frogId, def, 56);
         this.player = this.physics.add.image(spawn.x, spawn.y, "frog_" + frogId);
-        this.player.setCollideWorldBounds(true).setDepth(20);
-        this.player.body.setSize(28, 28);
+        this.player.setCollideWorldBounds(true).setDepth(20).setScale(1.15);
+        this.player.body.setSize(34, 34);
         this.companions = [];
         for (var ci = 0; ci < C.FROG_ORDER.length; ci++) {
           var cid = C.FROG_ORDER[ci]; if (cid === frogId) continue;
-          this.ensureFrogTexture(cid, C.FROG_DEFS[cid], 32);
+          var cdef = C.FROG_DEFS[cid];
+          this.ensureFrogTexture(cid, cdef, 48);
           var companion = this.add.image(spawn.x + 40 + ci * 36, spawn.y + 20 + (ci % 2) * 16, "frog_" + cid);
-          companion.setAlpha(0.9).setDepth(19);
+          companion.setAlpha(0.95).setDepth(19).setScale(1.05);
           companion.tx = companion.x; companion.ty = companion.y; companion.timer = 1 + Math.random() * 2;
+          companion.frogId = cid;
+          companion.nameTag = this.add.text(companion.x, companion.y - 26, cdef.name + " · AI", {
+            fontFamily: "Segoe UI, system-ui, sans-serif", fontSize: "11px", fontStyle: "bold",
+            color: cdef.color || "#fff", stroke: "#000", strokeThickness: 3,
+          }).setOrigin(0.5, 1).setDepth(21);
           this.companions.push(companion);
         }
         this.nameTag = this.add.text(0, 0, def.name, {
-          fontFamily: "Segoe UI, system-ui, sans-serif", fontSize: "12px", fontStyle: "bold",
-          color: "#fff", stroke: "#000", strokeThickness: 3,
+          fontFamily: "Segoe UI, system-ui, sans-serif", fontSize: "14px", fontStyle: "bold",
+          color: "#fff", stroke: "#000", strokeThickness: 4,
         }).setOrigin(0.5, 1).setDepth(21);
         this.truckBody = this.add.rectangle(0, 0, 78, 36, 0x9ca3af, 1).setDepth(18).setVisible(false).setStrokeStyle(3, 0x111827, 1);
         this.truckAccent = this.add.rectangle(0, -2, 50, 14, hx(def.color), 0.85).setDepth(18).setVisible(false);
@@ -114,14 +120,19 @@
       ensureFrogTexture: function (id, d, size) {
         var key = "frog_" + id; if (this.textures.exists(key)) return;
         var rt = this.make.graphics({ x: 0, y: 0, add: false });
-        var s = size || 40, cx = s * 0.5, cy = s * 0.55, r = s * 0.4;
+        var s = size || 48, cx = s * 0.5, cy = s * 0.55, r = s * 0.4;
+        rt.fillStyle(hx(d.color), 0.35); rt.fillCircle(cx, cy + 2, r * 1.15); // soft glow
         rt.fillStyle(hx(d.color), 1); rt.fillCircle(cx, cy, r);
-        rt.lineStyle(2, 0x0b1220, 0.85); rt.strokeCircle(cx, cy, r);
+        rt.lineStyle(3, 0x0b1220, 0.9); rt.strokeCircle(cx, cy, r);
+        rt.fillStyle(0xfef3c7, 0.95); rt.fillCircle(cx, cy + r * 0.12, r * 0.32);
+        rt.fillStyle(0xffffff, 1);
+        rt.fillCircle(cx - r * 0.32, cy - r * 0.18, r * 0.2);
+        rt.fillCircle(cx + r * 0.32, cy - r * 0.18, r * 0.2);
         rt.fillStyle(hx(d.accent), 1);
-        rt.fillCircle(cx - r * 0.35, cy - r * 0.2, r * 0.22);
-        rt.fillCircle(cx + r * 0.35, cy - r * 0.2, r * 0.22);
+        rt.fillCircle(cx - r * 0.28, cy - r * 0.18, r * 0.1);
+        rt.fillCircle(cx + r * 0.36, cy - r * 0.18, r * 0.1);
         rt.fillStyle(hx(d.hat), 1);
-        rt.fillTriangle(cx, cy - r * 1.1, cx - r * 0.65, cy - r * 0.15, cx + r * 0.65, cy - r * 0.15);
+        rt.fillTriangle(cx, cy - r * 1.15, cx - r * 0.7, cy - r * 0.2, cx + r * 0.7, cy - r * 0.2);
         rt.generateTexture(key, s, s); rt.destroy();
       },
       drawCompound: function () {
@@ -306,18 +317,27 @@
           } else {
             c.timer -= dt;
             if (c.timer <= 0) {
-              c.tx = Phaser.Math.Clamp(c.x + (Math.random() - 0.5) * 160, 80, C.MAP_W - 80);
-              c.ty = Phaser.Math.Clamp(c.y + (Math.random() - 0.5) * 160, 80, C.MAP_H - 80);
-              c.timer = 1.5 + Math.random() * 2.5;
+              c.tx = Phaser.Math.Clamp(this.player.x + (Math.random() - 0.5) * 140, 80, C.MAP_W - 80);
+              c.ty = Phaser.Math.Clamp(this.player.y + (Math.random() - 0.5) * 140, 80, C.MAP_H - 80);
+              c.timer = 1.2 + Math.random() * 1.8;
             }
-            c.x += (c.tx - c.x) * Math.min(1, 1.35 * dt); c.y += (c.ty - c.y) * Math.min(1, 1.35 * dt);
+            c.x += (c.tx - c.x) * Math.min(1, 1.6 * dt); c.y += (c.ty - c.y) * Math.min(1, 1.6 * dt);
           }
+          if (c.nameTag) c.nameTag.setPosition(c.x, c.y - 28).setVisible(true);
         }
         for (var pi = 0; pi < this.parkedTrucks.length; pi++) {
           var pt = this.parkedTrucks[pi];
           var hid = pt.spot.id === "shared" ? "truck-shared" : "truck-" + pt.spot.id;
           var taken = this.inTruck && (this.truckId === hid || (this.truckMode === "shared" && pt.spot.id === "shared"));
           pt.body.setVisible(!taken); pt.cab.setVisible(!taken);
+          if (!taken) {
+            var dT = Phaser.Math.Distance.Between(this.player.x, this.player.y, pt.spot.x, pt.spot.y);
+            var nearT = dT < 90;
+            var pulse = nearT ? 1 + Math.abs(Math.sin(this.bob * 1.4)) * 0.06 : 1;
+            pt.body.setScale(pulse); pt.cab.setScale(pulse);
+            if (nearT) pt.body.setStrokeStyle(3, 0xfbbf24, 1);
+            else pt.body.setStrokeStyle(3, 0x111827, 1);
+          }
         }
         this.near = C.nearestHotspot(this.player.x, this.player.y, 80);
         for (var hi = 0; hi < this.hotGfx.length; hi++) {

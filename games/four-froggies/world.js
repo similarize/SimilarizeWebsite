@@ -1476,7 +1476,7 @@
 
   function drawFroggy(ctx, frog, camX, camY, vw, vh, frogs) {
     var p = project(frog.x, frog.y, camX, camY, vw, vh);
-    var s = 13.5 * p.depth * (0.92 + 0.08 * p.depth);
+    var s = 15.2 * p.depth * (0.92 + 0.08 * p.depth);
     var bob = (!frog.inTruck && (frog.walkPhase || 0) > 0.05)
       ? Math.abs(Math.sin(frog.walkPhase)) * 2.4 * p.depth : 0;
     var lift = (frog.z || 0) * 0.58 * p.depth + bob;
@@ -1568,15 +1568,27 @@
     ctx.arc(p.x + 5.6 * p.depth * frog.facing, by - s * 0.25, 1.5 * p.depth, 0, Math.PI * 2);
     ctx.fill();
     if (!frog.human) {
-      ctx.fillStyle = "rgba(0,0,0,0.55)";
-      ctx.font = "bold 9px Segoe UI, system-ui, sans-serif";
+      ctx.fillStyle = "rgba(0,0,0,0.65)";
+      ctx.strokeStyle = "#000";
+      ctx.lineWidth = 3;
+      ctx.font = "bold 10px Segoe UI, system-ui, sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText("AI", p.x, p.y + s + 10);
+      var aiLabel = (frog.name || "AI") + " · AI";
+      ctx.strokeText(aiLabel, p.x, p.y + s + 12);
+      ctx.fillStyle = frog.color || "#fff";
+      ctx.fillText(aiLabel, p.x, p.y + s + 12);
     }
     if (frog.local) {
-      ctx.strokeStyle = "rgba(255,255,255,0.75)";
-      ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.arc(p.x, by, s + 5, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = "rgba(255,255,255,0.9)";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.arc(p.x, by, s + 6, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = "#fff";
+      ctx.font = "bold 11px Segoe UI, system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.strokeStyle = "#000";
+      ctx.lineWidth = 3;
+      ctx.strokeText(frog.name || "You", p.x, by - s - 8);
+      ctx.fillText(frog.name || "You", p.x, by - s - 8);
     }
     return p;
   }
