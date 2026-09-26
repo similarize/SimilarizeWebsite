@@ -15,6 +15,7 @@
    eyes1: yaw frog (eyes on +Z) toward walk dir; idle keeps last; AI companions too.
    truck1: kid-toy truck scale; smooth yaw drive toward aim; track elev / crest / land bounce.
    truck2: EXIT anytime (HUD); full elev contact (no zLift damp); ribbon/ramp ride-up; crest launch.
+   joy1: shared virtual joystick via engine-boot setSteer; touch playfield aim disabled.
    WASD camera-relative — do not invert. */
 (function (global) {
   "use strict";
@@ -2137,6 +2138,8 @@
     el.dataset.ffTapSteer = "1";
     el.addEventListener("pointerdown", function (e) {
       if (!active) return;
+      /* joy1: stick is primary on touch; mouse playfield aim optional on desktop */
+      if (e.pointerType === "touch") return;
       if (e.button != null && e.button !== 0) return;
       e.preventDefault();
       try { el.setPointerCapture(e.pointerId); } catch (err) {}
@@ -2144,6 +2147,7 @@
     });
     el.addEventListener("pointermove", function (e) {
       if (!active || !tapHeld) return;
+      if (e.pointerType === "touch") return;
       applyTapAim(e);
     });
     function up(e) {

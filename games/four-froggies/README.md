@@ -1,3 +1,9 @@
+## What's new (joy1) — universal virtual joystick (Canvas / Phaser / Three)
+- **Stick:** Bottom-left glass-neon virtual joystick (base + knob, thumb-sized, safe-area, low opacity). Drag → `setSteer(x,y)` via **engine-boot**; release → center + stop. Walk + truck.
+- **Shared path:** Same HUD stick for Canvas, Phaser, and Three (`FroggiesEngines.onJoySteer` / `applySharedSteer`). INTERACT + ability stay on the right.
+- **Touch:** Full-screen playfield hold-to-aim no longer primary on touch (mouse aim still optional on desktop). Desktop **WASD** unchanged.
+- Cache-bust: `?v=20260926-joy1`. Cast unchanged. No SPS arcade republish.
+
 ## What's new (truck2) — EXIT anytime + real track hills/jumps
 - **EXIT:** Root cause — Three/Phaser HUD set `btnInteract.disabled = !near`, so once you drove off the parked pad INTERACT was dead (mobile trapped; tip lied). Fix: `inTruck` keeps button ready + labeled EXIT; E/INTERACT exits Canvas + Three + Phaser anytime. Tip always shows EXIT while driving.
 - **Track 3D:** Root cause — `trackElevAt` too soft; Three applied elev then `* 0.08` on truck Y (invisible); Phaser drew `zLift * 0.06` (~3px). Ramps were jump triggers only (no ride-up). Fix: stronger `trackElevAt` (path + mounds + **ramp wedges**); snappy ground follow; crest/ramp launch; Three ribbon elev + taller ramps; full Y lift (no damp); air/land vs ground plane.
@@ -72,7 +78,7 @@ Phaser and three.js load their CDNs on first GO (no paid APIs). Party sync is in
 
 1. Claim a froggy (or GO defaults to **James**).
 2. **GO · Ranch Hub** → you + **3 AI** companions.
-3. **WASD / arrows** or tap/hold on playfield to walk (D-pad hidden). Near the Cybertruck → **INTERACT** to drive.
+3. **WASD / arrows** (desktop) or **bottom-left joystick** (touch) to walk — D-pad hidden. Near the Cybertruck → **INTERACT** to drive.
 4. On the **monster truck track**, hit the **jumps** for scrap / stunt combo.
 5. Near **Pond / Fishies** → INTERACT for splash.
 6. Near **Phone** (ranch house) → INTERACT → dial **Purple Bear** → **Open SPS**.

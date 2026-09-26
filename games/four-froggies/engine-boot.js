@@ -5,7 +5,7 @@
   "use strict";
 
   var C = global.FroggiesCanon;
-  var CACHE = "20260926-truck2";
+  var CACHE = "20260926-joy1";
   var CDN = {
     phaser: "https://cdn.jsdelivr.net/npm/phaser@3.87.0/dist/phaser.min.js",
     three: "https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js",
@@ -244,34 +244,144 @@
     return loading;
   }
 
+  /* joy1: shared steer — virtual joystick + WASD/D-pad fan-out to Canvas / Phaser / Three */
   var controlsBound = false;
-  function bindAltControls(mode) {
-    if (controlsBound) return;
-    controlsBound = true;
+  var joyBound = false;
+  var keys = { left: false, right: false, up: false, down: false };
+  var joyActive = false;
+  var joyX = 0;
+  var joyY = 0;
+  var canvasJoyListeners = [];
 
-    function api() {
-      if (currentEngine === "phaser" && global.FroggiesPhaser && global.FroggiesPhaser.isActive()) {
-        return global.FroggiesPhaser;
-      }
-      if (currentEngine === "three" && global.FroggiesThree && global.FroggiesThree.isActive()) {
-        return global.FroggiesThree;
-      }
-      return null;
+  function altApi() {
+    if (currentEngine === "phaser" && global.FroggiesPhaser && global.FroggiesPhaser.isActive()) {
+      return global.FroggiesPhaser;
     }
+    if (currentEngine === "three" && global.FroggiesThree && global.FroggiesThree.isActive()) {
+      return global.FroggiesThree;
+    }
+    return null;
+  }
 
-    function setAxis() {
-      var a = api();
-      if (!a) return;
-      var x = 0;
-      var y = 0;
+  function notifyCanvasJoy(x, y) {
+    for (var i = 0; i < canvasJoyListeners.length; i++) {
+      try { canvasJoyListeners[i](x, y); } catch (err) { /* ignore */ }
+    }
+  }
+
+  /** Push combined steer: joy wins while held; else WASD/D-pad keys. Canvas gets joy channel. */
+  function applySharedSteer() {
+    var x = 0;
+    var y = 0;
+    if (joyActive) {
+      x = joyX;
+      y = joyY;
+    } else {
       if (keys.left) x -= 1;
       if (keys.right) x += 1;
       if (keys.up) y -= 1;
       if (keys.down) y += 1;
-      a.setSteer(x, y);
+    }
+    var a = engineRunning ? altApi() : null;
+    if (a && typeof a.setSteer === "function") a.setSteer(x, y);
+    notifyCanvasJoy(joyActive ? joyX : 0, joyActive ? joyY : 0);
+  }
+
+  function setJoySteer(nx, ny, active) {
+    joyActive = !!active;
+    if (joyActive) {
+      joyX = nx;
+      joyY = ny;
+    } else {
+      joyX = 0;
+      joyY = 0;
+    }
+    applySharedSteer();
+  }
+
+  function bindVirtualJoystick() {
+    if (joyBound) return;
+    var root = $("vjoy");
+    var knob = $("vjoy-knob");
+    if (!root || !knob) return;
+    joyBound = true;
+    var ptrId = null;
+    var maxR = 36;
+    var dead = 0.14;
+
+    function playing() {
+      return document.body.classList.contains("in-hub") || document.body.classList.contains("in-space");
     }
 
-    var keys = { left: false, right: false, up: false, down: false };
+    function setKnob(dx, dy) {
+      knob.style.transform = "translate(" + dx + "px," + dy + "px)";
+    }
+
+    function fromEvent(e) {
+      var rect = root.getBoundingClientRect();
+      maxR = Math.max(28, Math.min(rect.width, rect.height) * 0.38);
+      var cx = rect.left + rect.width * 0.5;
+      var cy = rect.top + rect.height * 0.5;
+      var dx = e.clientX - cx;
+      var dy = e.clientY - cy;
+      var len = Math.hypot(dx, dy);
+      if (len > maxR && len > 0) {
+        dx = (dx / len) * maxR;
+        dy = (dy / len) * maxR;
+        len = maxR;
+      }
+      setKnob(dx, dy);
+      var nx = maxR > 0 ? dx / maxR : 0;
+      var ny = maxR > 0 ? dy / maxR : 0;
+      var mag = Math.hypot(nx, ny);
+      if (mag < dead) {
+        setJoySteer(0, 0, true);
+        return;
+      }
+      /* normalize past deadzone so full throw still reaches 1 */
+      var scale = (mag - dead) / (1 - dead);
+      if (scale > 1) scale = 1;
+      setJoySteer((nx / mag) * scale, (ny / mag) * scale, true);
+    }
+
+    function endJoy() {
+      ptrId = null;
+      root.classList.remove("is-active");
+      setKnob(0, 0);
+      setJoySteer(0, 0, false);
+    }
+
+    root.addEventListener("pointerdown", function (e) {
+      if (!playing()) return;
+      if (e.button != null && e.button !== 0) return;
+      e.preventDefault();
+      e.stopPropagation();
+      ptrId = e.pointerId;
+      root.classList.add("is-active");
+      try { root.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+      fromEvent(e);
+    });
+    root.addEventListener("pointermove", function (e) {
+      if (ptrId == null || e.pointerId !== ptrId) return;
+      e.preventDefault();
+      fromEvent(e);
+    });
+    function up(e) {
+      if (ptrId == null || (e && e.pointerId != null && e.pointerId !== ptrId)) return;
+      e && e.preventDefault && e.preventDefault();
+      endJoy();
+    }
+    root.addEventListener("pointerup", up);
+    root.addEventListener("pointercancel", up);
+    root.addEventListener("lostpointercapture", function () {
+      if (ptrId != null) endJoy();
+    });
+  }
+
+  function bindAltControls(mode) {
+    if (controlsBound) return;
+    controlsBound = true;
+    bindVirtualJoystick();
 
     function hold(btn, key, val) {
       if (!btn) return;
@@ -279,12 +389,12 @@
         e.preventDefault();
         if (!engineRunning) return;
         keys[key] = val;
-        setAxis();
+        applySharedSteer();
       };
       var off = function (e) {
         e.preventDefault();
         keys[key] = false;
-        setAxis();
+        applySharedSteer();
       };
       btn.addEventListener("pointerdown", function (e) { on(e); try { btn.setPointerCapture(e.pointerId); } catch (err) {} });
       btn.addEventListener("pointerup", off);
@@ -300,13 +410,13 @@
     // Overlay key tracking for alt engines (canvas main.js also listens — both OK)
     window.addEventListener("keydown", function (e) {
       if (!engineRunning) return;
-      var a = api();
+      var a = altApi();
       if (!a) return;
       var k = e.key.toLowerCase();
-      if (k === "arrowleft" || k === "a") { keys.left = true; setAxis(); e.preventDefault(); }
-      if (k === "arrowright" || k === "d") { keys.right = true; setAxis(); e.preventDefault(); }
-      if (k === "arrowup" || k === "w") { keys.up = true; setAxis(); e.preventDefault(); }
-      if (k === "arrowdown" || k === "s") { keys.down = true; setAxis(); e.preventDefault(); }
+      if (k === "arrowleft" || k === "a") { keys.left = true; applySharedSteer(); e.preventDefault(); }
+      if (k === "arrowright" || k === "d") { keys.right = true; applySharedSteer(); e.preventDefault(); }
+      if (k === "arrowup" || k === "w") { keys.up = true; applySharedSteer(); e.preventDefault(); }
+      if (k === "arrowdown" || k === "s") { keys.down = true; applySharedSteer(); e.preventDefault(); }
       if (k === "e" || k === "f" || k === " ") {
         a.pulseInteract();
         e.preventDefault();
@@ -323,7 +433,7 @@
       if (k === "arrowright" || k === "d") keys.right = false;
       if (k === "arrowup" || k === "w") keys.up = false;
       if (k === "arrowdown" || k === "s") keys.down = false;
-      setAxis();
+      applySharedSteer();
     });
 
     var btnInteract = $("btn-interact");
@@ -331,14 +441,14 @@
     if (btnInteract) {
       btnInteract.addEventListener("click", function () {
         if (!engineRunning) return;
-        var a = api();
+        var a = altApi();
         if (a) a.pulseInteract();
       });
     }
     if (btnAbility) {
       btnAbility.addEventListener("click", function () {
         if (!engineRunning) return;
-        var a = api();
+        var a = altApi();
         if (a) a.pulseAbility();
       });
     }
@@ -358,6 +468,7 @@
       btnMenu.addEventListener("click", function () {
         if (!engineRunning) return;
         // Return to lobby from alt engine
+        setJoySteer(0, 0, false);
         stopAltEngines();
         document.body.classList.add("in-title");
         document.body.classList.remove("in-hub");
@@ -460,11 +571,22 @@
     paintPicker: paintPicker,
     getMode: function () { return C ? C.getEngine() : "canvas"; },
     isAltRunning: function () { return engineRunning; },
+    /** Canvas (and others) register for joy1 stick values — same HUD path for all engines. */
+    onJoySteer: function (fn) {
+      if (typeof fn === "function") canvasJoyListeners.push(fn);
+    },
+    setJoySteer: setJoySteer,
+    applySharedSteer: applySharedSteer,
   };
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initPicker);
-  } else {
+  function bootControls() {
     initPicker();
+    bindVirtualJoystick();
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", bootControls);
+  } else {
+    bootControls();
   }
 })(typeof window !== "undefined" ? window : globalThis);

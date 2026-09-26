@@ -12,7 +12,8 @@
    tapsteer1: faster walk/drive; hold-to-aim tap/click steer + marker.
    eyes1: rotate frog sprite toward walk dir; idle keeps last; AI companions too.
    truck1: kid-toy truck scale; smooth yaw toward aim; track elev / crest / land bounce.
-   truck2: EXIT anytime (HUD); full elev lift (no *0.06 damp); stronger crest / ramp ride-up. */
+   truck2: EXIT anytime (HUD); full elev lift (no *0.06 damp); stronger crest / ramp ride-up.
+   joy1: shared virtual joystick via engine-boot setSteer; touch playfield aim disabled. */
 (function (global) {
   "use strict";
   var C = global.FroggiesCanon;
@@ -227,10 +228,15 @@
           showTapMarker(pointer.event ? pointer.event.clientX : pointer.x, pointer.event ? pointer.event.clientY : pointer.y, Math.atan2(dy, dx));
         }
         this.input.on("pointerdown", function (pointer) {
+          /* joy1: stick primary on touch; mouse playfield aim optional */
+          if (pointer.wasTouch) return;
+          if (pointer.event && pointer.event.pointerType === "touch") return;
           aimFromPointer(pointer);
         });
         this.input.on("pointermove", function (pointer) {
           if (!tapHeld || !pointer.isDown) return;
+          if (pointer.wasTouch) return;
+          if (pointer.event && pointer.event.pointerType === "touch") return;
           aimFromPointer(pointer);
         });
         this.input.on("pointerup", function () { clearTapAim(); });
@@ -1207,9 +1213,16 @@
           var cy = pointer.event ? pointer.event.clientY : pointer.y;
           showTapMarker(cx, cy, Math.atan2(dy, dx));
         }
-        this.input.on("pointerdown", function (pointer) { aimFromPointer(pointer); });
+        this.input.on("pointerdown", function (pointer) {
+          /* joy1: stick primary on touch; mouse playfield aim optional */
+          if (pointer.wasTouch) return;
+          if (pointer.event && pointer.event.pointerType === "touch") return;
+          aimFromPointer(pointer);
+        });
         this.input.on("pointermove", function (pointer) {
           if (!tapHeld || !pointer.isDown) return;
+          if (pointer.wasTouch) return;
+          if (pointer.event && pointer.event.pointerType === "touch") return;
           aimFromPointer(pointer);
         });
         this.input.on("pointerup", function () { clearTapAim(); });

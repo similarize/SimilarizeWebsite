@@ -61,6 +61,8 @@
   let camTY = 450;
   let steerX = 0;
   let steerY = 0;
+  let joySteerX = 0;
+  let joySteerY = 0;
   let tapSteerX = 0;
   let tapSteerY = 0;
   let tapHeld = false;
@@ -613,7 +615,9 @@
 
 
   function effectiveSteer() {
+    /* WASD > virtual joystick (joy1) > mouse playfield aim */
     if (steerX || steerY) return { x: steerX, y: steerY };
+    if (joySteerX || joySteerY) return { x: joySteerX, y: joySteerY };
     return { x: tapSteerX, y: tapSteerY };
   }
 
@@ -1024,11 +1028,10 @@
   bindAxis(btnUp, "y", -1);
   bindAxis(btnDown, "y", 1);
 
-  if (btnAbility) {
-  
-  // tapsteer1: hold-to-aim on playfield (direction relative to player, not go-to)
+  // joy1: joystick is primary touch steer; playfield hold-to-aim only for mouse (desktop)
   canvas.addEventListener("pointerdown", (e) => {
     if (e.target !== canvas) return;
+    if (e.pointerType === "touch") return;
     if (e.button != null && e.button !== 0) return;
     e.preventDefault();
     try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
@@ -1037,13 +1040,24 @@
   });
   canvas.addEventListener("pointermove", (e) => {
     if (!tapHeld) return;
+    if (e.pointerType === "touch") return;
     applyCanvasTapAim(e);
   });
   const endTap = () => { if (tapHeld) { clearTapAim(); pushGuestInput(null); } };
   canvas.addEventListener("pointerup", endTap);
   canvas.addEventListener("pointercancel", endTap);
 
-  btnAbility.addEventListener("pointerdown", (e) => {
+  /* joy1: shared stick from engine-boot — same path Canvas / Phaser / Three */
+  if (globalThis.FroggiesEngines && typeof globalThis.FroggiesEngines.onJoySteer === "function") {
+    globalThis.FroggiesEngines.onJoySteer((x, y) => {
+      joySteerX = x || 0;
+      joySteerY = y || 0;
+      pushGuestInput(null);
+    });
+  }
+
+  if (btnAbility) {
+    btnAbility.addEventListener("pointerdown", (e) => {
       e.preventDefault();
       unlockAudio();
       const player = localPlayer();
