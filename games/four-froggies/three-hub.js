@@ -14,6 +14,7 @@
    tapsteer1: mech pad z-fight fix; faster walk/drive; hold-to-aim tap/click steer + marker.
    eyes1: yaw frog (eyes on +Z) toward walk dir; idle keeps last; AI companions too.
    truck1: kid-toy truck scale; smooth yaw drive toward aim; track elev / crest / land bounce.
+   truck2: EXIT anytime (HUD); full elev contact (no zLift damp); ribbon/ramp ride-up; crest launch.
    WASD camera-relative — do not invert. */
 (function (global) {
   "use strict";
@@ -257,7 +258,9 @@
     var curvePts = [];
     for (var i = 0; i < pts.length; i++) {
       var p = worldToThree(pts[i][0], pts[i][1]);
-      curvePts.push(new THREE.Vector3(p.x, y, p.z));
+      /* truck2: ribbon follows path elev so track is not a flat tube through hills */
+      var ey = y + (pts[i][2] || 0) * 0.95;
+      curvePts.push(new THREE.Vector3(p.x, ey, p.z));
     }
     var tube = new THREE.Mesh(
       new THREE.TubeGeometry(new THREE.CatmullRomCurve3(curvePts, false), Math.max(24, pts.length * 3), width, 6, false),
@@ -532,10 +535,11 @@
     for (var r = 0; r < ramps.length; r++) {
       var rp = ramps[r], tp = worldToThree(rp.x, rp.y);
       var ramp = new THREE.Mesh(
-        new THREE.BoxGeometry(rp.w * 0.02, 0.25, rp.h * 0.02),
+        new THREE.BoxGeometry(rp.w * 0.02, 0.55, rp.h * 0.02),
         new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.2 })
       );
-      ramp.position.set(tp.x, 0.2, tp.z); ramp.rotation.z = -0.25; scene.add(ramp);
+      /* truck2: taller wedge — truck rides up via elev, mesh matches contact */
+      ramp.position.set(tp.x, 0.42, tp.z); ramp.rotation.x = -0.42; scene.add(ramp);
     }
     /* polish9: start/finish gate */
     var gp = worldToThree(1870, 2225);
@@ -1230,6 +1234,7 @@
     /* polish10: EXIT truck anytime while driving */
     if (state.mode === "ranch" && state.inTruck) {
       state.inTruck = false; state.truckMode = null; state.truckId = null;
+      state.zLift = 0; state.zVel = 0; state.groundLift = 0;
       state.toast = "Parked · walking"; state.toastT = 1.8;
       if (hooks.onToast) hooks.onToast(state.toast);
       return;
@@ -1461,14 +1466,15 @@
     /* Ranch truck water / ramp / shared pile-in (parity) — after steer, before clamp */
     if (state.mode === "ranch") {
       var wpos0 = threeToWorld(state.player.position.x, state.player.position.z);
-      /* truck1: track elev ground plane (world z units → three lift) */
+      /* truck2: track elev ground plane — same XY scale (0.02); no extra damp */
       var elevZ = 0;
       if (state.inTruck && C.onTrack && C.onTrack(wpos0.x, wpos0.y) && C.trackElevAt) {
-        elevZ = (C.trackElevAt(wpos0.x, wpos0.y) || 0) * 0.018; /* canvas z → three y */
+        elevZ = (C.trackElevAt(wpos0.x, wpos0.y) || 0) * 0.02;
       }
       var prevG = state.groundLift != null ? state.groundLift : elevZ;
       if (state.inTruck && C.onTrack && C.onTrack(wpos0.x, wpos0.y)) {
-        state.groundLift = prevG + (elevZ - prevG) * Math.min(1, 12 * dt);
+        /* Snappy follow so hills/ramps are felt, not lerped flat */
+        state.groundLift = prevG + (elevZ - prevG) * Math.min(1, 22 * dt);
       } else {
         state.groundLift = (state.groundLift || 0) * Math.exp(-7 * dt);
         if (Math.abs(state.groundLift) < 0.01) state.groundLift = 0;
@@ -1477,18 +1483,19 @@
       var airL = (state.zLift || 0) - groundLift;
       if (state.inTruck && C.rampAt) {
         var ramp = C.rampAt(wpos0.x, wpos0.y);
-        if (ramp && sp > 1.2 && airL < 0.15) {
-          state.zVel = Math.max(state.zVel || 0, 4.5 * (ramp.boost || 1.3));
-          state.zLift = Math.max(state.zLift || 0, groundLift + 0.12);
+        if (ramp && sp > 1.0 && airL < 0.35) {
+          state.zVel = Math.max(state.zVel || 0, 6.2 * (ramp.boost || 1.3));
+          state.zLift = Math.max(state.zLift || 0, groundLift + 0.22);
           state.scrap += 0.02;
         }
       }
       var dG = groundLift - prevG;
-      if (state.inTruck && airL < 0.12 && sp > 3.2 && dG < -0.02) {
-        var crest = Math.min(6.5, sp * 0.55 + (-dG) * 18);
-        if (crest > 1.6) {
+      if (state.inTruck && airL < 0.28 && sp > 2.4 && dG < -0.035) {
+        var crest = Math.min(9.5, sp * 0.85 + (-dG) * 28);
+        if (crest > 1.2) {
           state.zVel = Math.max(state.zVel || 0, crest);
-          state.zLift = Math.max(state.zLift || 0, groundLift + 0.08);
+          state.zLift = Math.max(state.zLift || 0, groundLift + 0.18);
+          state.toast = "AIR!"; state.toastT = Math.max(state.toastT || 0, 0.9);
         }
       }
       /* polish9 + truck1: air hang + land bounce vs groundLift */
@@ -1509,7 +1516,7 @@
         state.zVel = 0;
       }
       /* polish9: lap sparkle at gate */
-      if (state.inTruck && C.onTrack && C.onTrack(wpos0.x, wpos0.y) && (state.zLift || 0) < 0.4) {
+      if (state.inTruck && C.onTrack && C.onTrack(wpos0.x, wpos0.y) && ((state.zLift || 0) - (state.groundLift || 0)) < 0.45) {
         state.lapCd = Math.max(0, (state.lapCd || 0) - dt);
         var side = (wpos0.x - 1870) * 0.55 + (wpos0.y - 2225) * (-0.85);
         var nearG = Math.abs(wpos0.x - 1870) < 110 && Math.abs(wpos0.y - 2225) < 60;
@@ -1532,7 +1539,7 @@
       }
       var wet = C.inPond && C.inPond(wpos0.x, wpos0.y);
       if (state.inTruck && wet) {
-        var plunge = Math.max(0, -state.zVel) + (state.zLift > 0.4 ? 1 : 0);
+        var plunge = Math.max(0, -state.zVel) + (((state.zLift || 0) - (state.groundLift || 0)) > 0.4 ? 1 : 0);
         state.waterSub = Math.min(1.15, 0.45 + plunge * 0.2);
         state.vx *= Math.max(0, 1 - 1.5 * dt);
         state.vz *= Math.max(0, 1 - 1.5 * dt);
@@ -1542,7 +1549,8 @@
       state.player.visible = !state.inTruck;
       /* polish4: bounce + spray / bubbles / walk dust */
       state.bouncePhase = (state.bouncePhase || 0) + dt * (3 + sp * 0.4);
-      var bounceY = state.inTruck && state.zLift < 0.5
+      var airNow = (state.zLift || 0) - (state.groundLift || 0);
+      var bounceY = state.inTruck && airNow < 0.35
         ? Math.sin(state.bouncePhase * 2.4) * Math.min(1.2, sp / 8) * 0.08 : 0;
       if (!state.fx) state.fx = [];
       if (!state.inTruck && !wet && sp > 1.2) {
@@ -1559,7 +1567,7 @@
         }
       }
       /* polish5: track race dust */
-      if (state.inTruck && !wet && sp > 3.5 && state.zLift < 0.4 && C.onTrack && C.onTrack(wpos0.x, wpos0.y)) {
+      if (state.inTruck && !wet && sp > 3.5 && airNow < 0.35 && C.onTrack && C.onTrack(wpos0.x, wpos0.y)) {
         if (Math.random() < dt * 3) {
           var td = new THREE.Mesh(
             new THREE.SphereGeometry(0.1 + Math.random() * 0.06, 6, 5),
@@ -1638,8 +1646,9 @@
       }
       /* polish5: tiny land shake */
       var wasAir = state._wasAir;
-      state._wasAir = state.zLift > 0.4;
-      if (wasAir && state.zLift <= 0 && state.inTruck) {
+      var airLand = (state.zLift || 0) - (state.groundLift || 0);
+      state._wasAir = airLand > 0.45;
+      if (wasAir && airLand <= 0.08 && state.inTruck) {
         state.shakeT = Math.max(state.shakeT || 0, 0.1);
       }
       if ((state.shakeT || 0) > 0) {
@@ -1660,7 +1669,8 @@
       if (state.driveTruck) {
         state.driveTruck.visible = !!state.inTruck;
         if (state.inTruck) {
-          state.driveTruck.position.set(state.player.position.x, 0.05 + state.zLift * 0.08 + bounceY, state.player.position.z);
+          /* truck2: zLift already three-Y — was *0.08 (invisible hills) */
+          state.driveTruck.position.set(state.player.position.x, 0.08 + state.zLift + bounceY, state.player.position.z);
           /* truck1: yaw to faceYaw (mesh nose +X → yaw so +X aligns with travel) */
           var ts0 = state.driveTruck.userData.truckScale || 2.05;
           state.driveTruck.scale.set(ts0, ts0, ts0);
@@ -1695,7 +1705,8 @@
           pt.mesh.scale.setScalar(pts * (nearT ? 1.06 : 1));
         }
       }
-      state.player.position.y = (state.zLift || 0) * 0.08 + Math.abs(Math.sin(state.bob)) * (sp > 0.5 ? 0.06 : 0.02);
+      /* truck2: player Y tracks full elev (hidden while driving; cam/companions use it) */
+      state.player.position.y = (state.zLift || 0) + Math.abs(Math.sin(state.bob)) * (sp > 0.5 ? 0.06 : 0.02);
     }
 
     // solid1: solid walls / mech pads / parked trucks (doorways stay walkable)
@@ -1739,7 +1750,7 @@
     }
 
     if (state.nameTag) {
-      state.nameTag.position.set(state.player.position.x, 2.6 + (state.player.position.y || 0) + (state.zLift || 0) * 0.15, state.player.position.z);
+      state.nameTag.position.set(state.player.position.x, 2.6 + (state.player.position.y || 0), state.player.position.z);
       state.nameTag.visible = true;
     }
     /* polish9: aboard icons when shared */
@@ -1747,11 +1758,11 @@
       var sharedOn = !!(state.inTruck && state.truckMode === "shared");
       state.aboardGroup.visible = sharedOn;
       if (sharedOn) {
-        state.aboardGroup.position.set(state.player.position.x, (state.zLift || 0) * 0.15, state.player.position.z);
+        state.aboardGroup.position.set(state.player.position.x, (state.zLift || 0) + 0.35, state.player.position.z);
       }
       if (state.aboardLabel) {
         state.aboardLabel.visible = sharedOn;
-        state.aboardLabel.position.set(state.player.position.x, 1.55 + (state.zLift || 0) * 0.15, state.player.position.z);
+        state.aboardLabel.position.set(state.player.position.x, 1.55 + (state.zLift || 0), state.player.position.z);
       }
     }
     if ((state.kitFxT || 0) > 0) {
@@ -1800,7 +1811,7 @@
     /* polish6: depth shadow under player */
     if (state.playerShadow) {
       var shS = state.inTruck ? 1.7 : 1;
-      var shA = (state.zLift || 0) > 0.5 ? 0.12 : 0.32;
+      var shA = ((state.zLift || 0) - (state.groundLift || 0)) > 0.45 ? 0.12 : 0.32;
       state.playerShadow.position.set(state.player.position.x, 0.07, state.player.position.z);
       state.playerShadow.scale.set(shS, shS, shS);
       state.playerShadow.material.opacity = shA;
@@ -1876,7 +1887,7 @@
           var ox = (ci - 1) * 0.45, oz = -0.35 - (ci % 2) * 0.25;
           c.position.x += (state.player.position.x + ox - c.position.x) * Math.min(1, 8 * dt);
           c.position.z += (state.player.position.z + oz - c.position.z) * Math.min(1, 8 * dt);
-          c.position.y = 0.7 + (state.zLift || 0) * 0.08 + Math.abs(Math.sin(c.userData.idleBounce)) * 0.05;
+          c.position.y = 0.7 + (state.zLift || 0) + Math.abs(Math.sin(c.userData.idleBounce)) * 0.05;
           c.visible = true;
           c.userData.faceYaw = state.faceYaw || 0;
         } else {
@@ -2025,9 +2036,12 @@
         mode: state.mode,
         label: label,
         scrap: state.mode === "space" ? state.catches : state.scrap,
-        tip: state.toastT > 0 ? state.toast : state.inOrbit ? "Orbit locked · Escape or hard thruster" : state.inTruck ? "EXIT TRUCK · INTERACT / E" : state.near ? (((C.isTruckHotspot && C.isTruckHotspot(state.near)) ? "BOARD · " : "⚡ ") + state.near.tip + " · INTERACT / E") : (state.invLabel && state.invLabel.visible ? "Mars · invader silhouettes" : ""),
-            inOrbit: !!state.inOrbit,
-        near: state.near,
+        tip: state.inTruck
+          ? ((state.toastT > 0 ? state.toast + " · " : "") + "EXIT TRUCK · INTERACT / E")
+          : (state.toastT > 0 ? state.toast : state.inOrbit ? "Orbit locked · Escape or hard thruster" : state.near ? (((C.isTruckHotspot && C.isTruckHotspot(state.near)) ? "BOARD · " : "⚡ ") + state.near.tip + " · INTERACT / E") : (state.invLabel && state.invLabel.visible ? "Mars · invader silhouettes" : "")),
+        inOrbit: !!state.inOrbit,
+        inTruck: !!state.inTruck,
+        near: state.inTruck ? true : state.near,
         ability: def.ability,
         cd: state.cd,
         walk: (function () {
@@ -2035,7 +2049,7 @@
           if (!state.inTruck) return "🐸 Walk";
           var wp2 = threeToWorld(state.player.position.x, state.player.position.z);
           var wet2 = C.inPond && C.inPond(wp2.x, wp2.y);
-          if ((state.zLift || 0) > 0.5) return "🚚 AIR!";
+          if (((state.zLift || 0) - (state.groundLift || 0)) > 0.45) return "🚚 AIR!";
           if (wet2 && state.waterSub > 0.75) return "🚚 Under";
           if (wet2) return "🚚 On water";
           return state.truckMode === "shared" ? "🚚 All aboard" : "🚚 Drive";

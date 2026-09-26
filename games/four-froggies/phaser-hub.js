@@ -11,7 +11,8 @@
    polish10: quieter UI; exit truck anytime; friction/cam tighten; particle caps; dusk sky shift.
    tapsteer1: faster walk/drive; hold-to-aim tap/click steer + marker.
    eyes1: rotate frog sprite toward walk dir; idle keeps last; AI companions too.
-   truck1: kid-toy truck scale; smooth yaw toward aim; track elev / crest / land bounce. */
+   truck1: kid-toy truck scale; smooth yaw toward aim; track elev / crest / land bounce.
+   truck2: EXIT anytime (HUD); full elev lift (no *0.06 damp); stronger crest / ramp ride-up. */
 (function (global) {
   "use strict";
   var C = global.FroggiesCanon;
@@ -650,14 +651,14 @@
             this.player.setPosition(solid.x, solid.y);
           }
         }
-        /* truck1: track elevation ground plane */
+        /* truck2: track elevation ground plane — snappy follow + stronger launch */
         var elevZ = 0;
         if (this.inTruck && C.onTrack && C.onTrack(this.player.x, this.player.y) && C.trackElevAt) {
           elevZ = C.trackElevAt(this.player.x, this.player.y) || 0;
         }
         var prevG = this.groundZ != null ? this.groundZ : elevZ;
         if (this.inTruck && C.onTrack && C.onTrack(this.player.x, this.player.y)) {
-          this.groundZ = prevG + (elevZ - prevG) * Math.min(1, 14 * dt);
+          this.groundZ = prevG + (elevZ - prevG) * Math.min(1, 22 * dt);
         } else {
           this.groundZ = (this.groundZ || 0) * Math.exp(-7 * dt);
           if (Math.abs(this.groundZ) < 0.4) this.groundZ = 0;
@@ -666,18 +667,19 @@
         var airA = (this.zLift || 0) - groundZ;
         if (this.inTruck && C.rampAt) {
           var ramp = C.rampAt(this.player.x, this.player.y);
-          if (ramp && sp > 40 && airA < 4) {
-            this.zVel = Math.max(this.zVel, 180 * (ramp.boost || 1.3));
-            this.zLift = Math.max(this.zLift, groundZ + 3);
+          if (ramp && sp > 35 && airA < 10) {
+            this.zVel = Math.max(this.zVel, 260 * (ramp.boost || 1.3));
+            this.zLift = Math.max(this.zLift, groundZ + 8);
             this.scrap += 0.02;
           }
         }
         var dG = groundZ - prevG;
-        if (this.inTruck && airA < 4 && sp > 90 && dG < -1.0) {
-          var crest = Math.min(260, sp * 0.4 + (-dG) * 9);
-          if (crest > 70) {
+        if (this.inTruck && airA < 8 && sp > 70 && dG < -1.2) {
+          var crest = Math.min(340, sp * 0.55 + (-dG) * 12);
+          if (crest > 55) {
             this.zVel = Math.max(this.zVel, crest);
-            this.zLift = Math.max(this.zLift, groundZ + 2);
+            this.zLift = Math.max(this.zLift, groundZ + 6);
+            this.toast = "AIR!"; this.toastT = Math.max(this.toastT || 0, 0.9);
           }
         }
         /* polish9 + truck1: air hang + land bounce */
@@ -698,7 +700,7 @@
           this.zVel = 0;
         }
         /* polish9: lap sparkle at gate */
-        if (this.inTruck && C.onTrack && C.onTrack(this.player.x, this.player.y) && this.zLift < 8) {
+        if (this.inTruck && C.onTrack && C.onTrack(this.player.x, this.player.y) && ((this.zLift || 0) - (this.groundZ || 0)) < 10) {
           this.lapCd = Math.max(0, (this.lapCd || 0) - dt);
           var side = (this.player.x - 1870) * 0.55 + (this.player.y - 2225) * (-0.85);
           var nearG = Math.abs(this.player.x - 1870) < 110 && Math.abs(this.player.y - 2225) < 60;
@@ -715,12 +717,12 @@
         }
         var wet = C.inPond && C.inPond(this.player.x, this.player.y);
         if (this.inTruck && wet) {
-          var plunge = Math.max(0, -this.zVel) + (this.zLift > 2 ? 40 : 0);
+          var plunge = Math.max(0, -this.zVel) + (((this.zLift || 0) - (this.groundZ || 0)) > 6 ? 40 : 0);
           this.waterSub = Math.min(1.15, 0.45 + plunge / 400);
           body.velocity.x *= Math.max(0, 1 - 1.8 * dt); body.velocity.y *= Math.max(0, 1 - 1.8 * dt);
         } else this.waterSub = Math.max(0, this.waterSub - dt * 1.6);
         this.player.setFlipX(false).setRotation(this.faceAngle || 0).setVisible(!this.inTruck);
-        this.nameTag.setPosition(this.player.x, this.player.y - 28 - this.zLift * 0.08);
+        this.nameTag.setPosition(this.player.x, this.player.y - 28 - this.zLift * 0.55);
         this.nameTag.setVisible(true);
         /* polish9: aboard frog icons when shared truck */
         var sharedOn = this.inTruck && this.truckMode === "shared";
@@ -734,7 +736,7 @@
             ab.dot.setVisible(show); ab.letter.setVisible(show);
             if (show) {
               var ax = this.player.x + (abi - 1.5) * 16;
-              var ay = this.player.y - 22 - this.zLift * 0.08;
+              var ay = this.player.y - 22 - this.zLift * 0.55;
               ab.dot.setPosition(ax, ay); ab.letter.setPosition(ax, ay);
             }
           }
@@ -761,7 +763,8 @@
         }
         /* polish4: bounce + spray / bubbles / walk dust */
         this.bouncePhase = (this.bouncePhase || 0) + dt * (3 + sp * 0.02);
-        var bounce = this.inTruck && this.zLift < 2 ? Math.sin(this.bouncePhase * 2.4) * Math.min(1.2, sp / 260) * 3.2 : 0;
+        var airNow = (this.zLift || 0) - (this.groundZ || 0);
+        var bounce = this.inTruck && airNow < 6 ? Math.sin(this.bouncePhase * 2.4) * Math.min(1.2, sp / 260) * 3.2 : 0;
         if (!this.inTruck && !wet && sp > 45) {
           this.dustT = (this.dustT || 0) - dt;
           if (this.dustT <= 0) {
@@ -771,7 +774,7 @@
           }
         }
         /* polish5: track race dust */
-        if (this.inTruck && !wet && sp > 110 && this.zLift < 2 && C.onTrack && C.onTrack(this.player.x, this.player.y)) {
+        if (this.inTruck && !wet && sp > 110 && airNow < 6 && C.onTrack && C.onTrack(this.player.x, this.player.y)) {
           if (Math.random() < dt * (2.5 + sp * 0.01)) {
             var td = this.add.circle(this.player.x - this.facing * 20, this.player.y + 10, 5 + Math.random() * 4, 0xb8a070, 0.5).setDepth(15);
             this.fx.push({ g: td, life: 0.4 });
@@ -828,8 +831,9 @@
         }
         /* polish5: tiny land shake */
         var wasAir = this._wasAir;
-        this._wasAir = this.zLift > 2;
-        if (wasAir && this.zLift <= 0 && this.inTruck) {
+        var airLand = (this.zLift || 0) - (this.groundZ || 0);
+        this._wasAir = airLand > 8;
+        if (wasAir && airLand <= 1 && this.inTruck) {
           this.shakeT = Math.max(this.shakeT || 0, 0.1);
           this.cameras.main.shake(90, 0.0035);
         }
@@ -898,7 +902,8 @@
         }
         if (this.inTruck) {
           this.truckBody.setVisible(true); this.truckAccent.setVisible(true);
-          var ty = this.player.y - this.zLift * 0.06 - bounce;
+          /* truck2: full elev lift (was *0.06 → flat). Match canvas ~0.55 */
+          var ty = this.player.y - this.zLift * 0.55 - bounce;
           this.truckBody.setPosition(this.player.x, ty);
           /* truck1: rotate body to faceAngle (rect long axis = +X; faceAngle 0 = up → rot = faceAngle - PI/2 for nose-along-travel... 
              Phaser faceAngle 0 = texture-up. Rectangle default long axis is horizontal (+X). 
@@ -955,7 +960,7 @@
           if (this.inTruck && this.truckMode === "shared") {
             var ox = (ci - 1) * 14, oy = -10 - (ci % 2) * 8;
             c.x += (this.player.x + ox - c.x) * Math.min(1, 8 * dt);
-            c.y += (this.player.y + oy - this.zLift * 0.06 - c.y) * Math.min(1, 8 * dt);
+            c.y += (this.player.y + oy - this.zLift * 0.55 - c.y) * Math.min(1, 8 * dt);
             c.idleBounce = (c.idleBounce || 0) + dt * 5;
             c.faceAngle = this.faceAngle || 0;
           } else {
@@ -1056,7 +1061,7 @@
         if (hooks.onHud) {
           var walk = "🐸 Walk";
           if (this.inTruck) {
-            if (this.zLift > 8) walk = "🚚 AIR!";
+            if (((this.zLift || 0) - (this.groundZ || 0)) > 10) walk = "🚚 AIR!";
             else if (wet && this.waterSub > 0.75) walk = "🚚 Under";
             else if (wet) walk = "🚚 On water";
             else walk = this.truckMode === "shared" ? "🚚 All aboard" : "🚚 Drive";
@@ -1064,8 +1069,11 @@
           hooks.onHud({
             mode: "ranch", label: C.areaNameAt(this.player.x, this.player.y) + " · Phaser",
             scrap: Math.floor(this.scrap),
-            tip: this.toastT > 0 ? this.toast : (this.inTruck ? "EXIT TRUCK · INTERACT / E" : (this.near ? ((C.isTruckHotspot(this.near) ? "BOARD · " : "⚡ ") + this.near.tip + " · INTERACT / E") : "")),
-            near: this.near, ability: def.ability, cd: this.cd, walk: walk,
+            tip: this.inTruck
+              ? ((this.toastT > 0 ? this.toast + " · " : "") + "EXIT TRUCK · INTERACT / E")
+              : (this.toastT > 0 ? this.toast : (this.near ? ((C.isTruckHotspot(this.near) ? "BOARD · " : "⚡ ") + this.near.tip + " · INTERACT / E") : "")),
+            inTruck: !!this.inTruck,
+            near: this.inTruck ? true : this.near, ability: def.ability, cd: this.cd, walk: walk,
           });
         }
       },
@@ -1073,6 +1081,7 @@
         /* polish10: EXIT truck anytime */
         if (this.inTruck) {
           this.inTruck = false; this.truckMode = null; this.truckId = null;
+          this.zLift = 0; this.zVel = 0; this.groundZ = 0;
           this.toast = "Parked · walking"; this.toastT = 1.8;
           if (hooks.onToast) hooks.onToast(this.toast);
           return;

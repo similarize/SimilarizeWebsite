@@ -17,6 +17,7 @@
    eyes1: faceAngle — rotate frog face toward walk dir (idle keeps last); AI too;
    truck1: kid-toy Cybertruck scale; smooth yaw steer (face+drive toward aim);
    track elev follow / crest launch / land bounce via trackElevAt;
+   truck2: stronger elev follow / crest / ramp ride-up; EXIT tip always while driving;
    particle caps; sunset sky shift over play time.
    mobile1: phone+desktop shared UI — smaller/toggle-friendly mini-map + harder particle caps on narrow.
    ~10× map: real roam between ranch house / track / pond / Starship.
@@ -764,7 +765,7 @@
       return result;
     }
     var speed = Math.hypot(ent.vx, ent.vy);
-    /* truck1: follow track ribbon/mound elevation as ground plane */
+    /* truck2: follow track ribbon/mound/ramp elevation as ground plane */
     var canonH = global.FroggiesCanon;
     var targetGround = 0;
     if (onTrack(ent.x, ent.y) && canonH && canonH.trackElevAt) {
@@ -772,7 +773,8 @@
     }
     var prevGround = ent.groundZ != null ? ent.groundZ : targetGround;
     if (onTrack(ent.x, ent.y)) {
-      ent.groundZ = prevGround + (targetGround - prevGround) * Math.min(1, 14 * dt);
+      /* Snappy contact so hills/ramps read — not smoothed flat */
+      ent.groundZ = prevGround + (targetGround - prevGround) * Math.min(1, 22 * dt);
     } else {
       ent.groundZ = (ent.groundZ || 0) * Math.exp(-7 * dt);
       if (Math.abs(ent.groundZ) < 0.4) ent.groundZ = 0;
@@ -781,10 +783,10 @@
     var airAbove = (ent.z || 0) - groundZ;
     result.onWater = wet && airAbove < 4;
     var ramp = rampAt(ent.x, ent.y);
-    if (ramp && airAbove <= 2.5 && speed > 72) {
-      var boost = ramp.boost * clamp(speed / 210, 0.55, 1.45);
-      ent.zVel = 235 * boost;
-      ent.z = Math.max(ent.z, groundZ + 3);
+    if (ramp && airAbove <= 6 && speed > 55) {
+      var boost = ramp.boost * clamp(speed / 190, 0.6, 1.55);
+      ent.zVel = 280 * boost;
+      ent.z = Math.max(ent.z, groundZ + 8);
       result.jumped = true;
       world.stuntCombo += 1;
       var gain = 10 + world.stuntCombo * 5;
@@ -796,13 +798,13 @@
         spawnSparks(world, ent.x, ent.y, 6);
       }
     }
-    /* truck1: crest launch — fast over downhill lip after a rise */
+    /* truck2: crest launch — fast over downhill lip after a rise */
     var dGround = groundZ - prevGround;
-    if (airAbove <= 3 && speed > 95 && dGround < -0.9) {
-      var crest = Math.min(280, speed * 0.42 + (-dGround) * 10);
-      if (crest > 75) {
+    if (airAbove <= 6 && speed > 75 && dGround < -1.4) {
+      var crest = Math.min(360, speed * 0.55 + (-dGround) * 14);
+      if (crest > 60) {
         ent.zVel = Math.max(ent.zVel || 0, crest);
-        ent.z = Math.max(ent.z || 0, groundZ + 2);
+        ent.z = Math.max(ent.z || 0, groundZ + 6);
         result.jumped = true;
         if (!result.scrapGain) {
           world.stuntCombo += 1;
@@ -1051,6 +1053,7 @@
       frog.truckId = null;
       frog.z = 0;
       frog.zVel = 0;
+      frog.groundZ = 0;
       if (world.sharedDriverId === frog.id) {
         world.sharedDriverId = null;
         for (var i = 0; i < frogs.length; i++) {
@@ -1061,6 +1064,7 @@
             f.truckId = null;
             f.z = 0;
             f.zVel = 0;
+            f.groundZ = 0;
           }
         }
       }
@@ -2239,7 +2243,8 @@
     var vis = (global.FroggiesCanon && global.FroggiesCanon.TRUCK_VIS) || {};
     var s = (vis.canvasScale != null ? vis.canvasScale : 0.86) * depth;
     var bounce = (water && water.bounce) ? water.bounce : 0;
-    var lift = (z || 0) * 0.55 * depth + (driving ? bounce * depth * 0.55 : 0);
+    /* truck2: taller elev draw so hills/jumps read clearly */
+    var lift = (z || 0) * 0.72 * depth + (driving ? bounce * depth * 0.55 : 0);
     var wet = water && water.inWater;
     var sub = wet ? clamp(water.sub || 0, 0, 1.2) : 0;
     /* Surface drive sits ON the water — tiny lift; dive sinks visually */

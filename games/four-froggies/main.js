@@ -322,9 +322,9 @@
         const hud = Space.getHud(spaceEp);
         tipEl.textContent = hud ? hud.tip : "";
         nearHot = hud && hud.near ? hud.near : null;
-      } else if (storyToastT > 0) tipEl.textContent = storyToast;
-      else if (me && me.inTruck)
-        tipEl.textContent = "EXIT TRUCK · INTERACT / E" + (W.onTrack(me.x, me.y) ? " · jumps = scrap" : "");
+      } else if (me && me.inTruck)
+        tipEl.textContent = (storyToastT > 0 && storyToast ? storyToast + " · " : "") + "EXIT TRUCK · INTERACT / E" + (W.onTrack(me.x, me.y) ? " · jumps = scrap" : "");
+      else if (storyToastT > 0) tipEl.textContent = storyToast;
       else if (nearHot && (nearHot.kind === "truck" || (nearHot.id && nearHot.id.indexOf("truck") === 0)))
         tipEl.textContent = "BOARD · " + nearHot.tip + " · INTERACT / E";
       else if (nearHot) tipEl.textContent = "⚡ " + nearHot.tip + " · INTERACT / E";

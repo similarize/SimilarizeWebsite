@@ -1,3 +1,8 @@
+## What's new (truck2) — EXIT anytime + real track hills/jumps
+- **EXIT:** Root cause — Three/Phaser HUD set `btnInteract.disabled = !near`, so once you drove off the parked pad INTERACT was dead (mobile trapped; tip lied). Fix: `inTruck` keeps button ready + labeled EXIT; E/INTERACT exits Canvas + Three + Phaser anytime. Tip always shows EXIT while driving.
+- **Track 3D:** Root cause — `trackElevAt` too soft; Three applied elev then `* 0.08` on truck Y (invisible); Phaser drew `zLift * 0.06` (~3px). Ramps were jump triggers only (no ride-up). Fix: stronger `trackElevAt` (path + mounds + **ramp wedges**); snappy ground follow; crest/ramp launch; Three ribbon elev + taller ramps; full Y lift (no damp); air/land vs ground plane.
+- Cache-bust: `?v=20260926-truck2`. Cast unchanged. No SPS arcade republish.
+
 ## What's new (truck1) — Cybertruck proportion + steer yaw + track reaction
 - **Proportion:** Kid-toy Cybertruck vs frogs (bigger than a frog, not a building). `FroggiesCanon.TRUCK_VIS` — Canvas scale 0.86 (was 1.2), Three mesh ×2.05, Phaser ×1.28. Parked + driven.
 - **Steering:** Was facing flip only (180° left/right). Now smooth yaw toward tap-steer / WASD aim; thrust along facing with light aim blend (Canvas `moveEntity`, Three, Phaser).

@@ -6,7 +6,8 @@
    polish9: landmarks unchanged; party/nameplate/gate/kit punch in engines.
    polish10: zone signs fade when close (frogs readable).
    solid1: shared solid walls / mech pads / parked trucks; house doorway open.
-   truck1: kid-toy truck scale constants; trackElevAt for path/mound undulation. */
+   truck1: kid-toy truck scale constants; trackElevAt for path/mound undulation.
+   truck2: stronger trackElevAt + ramp wedges; exit anytime HUD. */
 (function (global) {
   "use strict";
 
@@ -224,8 +225,9 @@
     phaserScale: 1.28,
   };
 
-  /* truck1: sample ribbon elev (pt[2]) + mound bells → frog.z units (~pathPoint * 48). */
-  var TRACK_ELEV_Z = 48;
+  /* truck2: sample ribbon elev (pt[2]) + mound bells + ramp wedges → frog.z units.
+     Stronger contact so crest → airtime → land bounce is obvious on all engines. */
+  var TRACK_ELEV_Z = 72;
 
   function samplePathElev(pts, x, y) {
     var bestD = 1e12, bestE = 0;
@@ -247,6 +249,26 @@
     return { elev: bestE, dist: bestD };
   }
 
+  /* Ramp wedge height in elev units (0..~1.4) — ride up geometry, not clip through. */
+  function rampElevAt(x, y) {
+    var best = 0;
+    for (var i = 0; i < RAMPS.length; i++) {
+      var r = RAMPS[i];
+      var hw = r.w * 0.55, hh = r.h * 0.55;
+      var dx = Math.abs(x - r.x), dy = Math.abs(y - r.y);
+      if (dx > hw || dy > hh) continue;
+      var nx = 1 - dx / hw, ny = 1 - dy / hh;
+      /* Wedge: low at south edge, crest at north — matches track jump lips */
+      var along = (r.y + hh - y) / (hh * 2);
+      if (along < 0) along = 0; else if (along > 1) along = 1;
+      var tent = nx * ny;
+      var peak = 0.75 + (r.boost || 1.3) * 0.45;
+      var h = tent * (0.25 + along * peak);
+      if (h > best) best = h;
+    }
+    return best;
+  }
+
   function trackElevAt(x, y) {
     if (!onTrack(x, y)) return 0;
     var a = samplePathElev(TRACK_MAIN, x, y);
@@ -256,9 +278,10 @@
     if (b.dist < best.dist) best = b;
     if (c.dist < best.dist) best = c;
     var pathE = 0;
-    if (best.dist < 130) {
+    /* Wider ribbon influence so truck stays on hills across apron */
+    if (best.dist < 200) {
       pathE = best.elev;
-      if (best.dist > 36) pathE *= Math.max(0, 1 - (best.dist - 36) / 94);
+      if (best.dist > 28) pathE *= Math.max(0, 1 - (best.dist - 28) / 172);
     }
     var moundE = 0;
     for (var i = 0; i < TRACK_MOUNDS.length; i++) {
@@ -266,10 +289,12 @@
       var d = Math.hypot(x - m.x, y - m.y);
       if (d < m.r) {
         var w = 1 - d / m.r;
-        moundE += m.h * w * w;
+        /* Bell + soft skirt — obvious rise approaching the hill */
+        moundE += m.h * (0.25 * w + 0.75 * w * w);
       }
     }
-    return (pathE * 0.9 + moundE * 0.55) * TRACK_ELEV_Z;
+    var rampE = rampElevAt(x, y);
+    return (pathE * 1.05 + moundE * 0.95 + rampE * 1.15) * TRACK_ELEV_Z;
   }
 
   function wrapAngle(a) {
@@ -449,6 +474,7 @@
     onTrack: onTrack,
     isTruckHotspot: isTruckHotspot,
     rampAt: rampAt,
+    rampElevAt: rampElevAt,
     trackElevAt: trackElevAt,
     TRUCK_VIS: TRUCK_VIS,
     wrapAngle: wrapAngle,

@@ -5,7 +5,7 @@
   "use strict";
 
   var C = global.FroggiesCanon;
-  var CACHE = "20260926-truck1";
+  var CACHE = "20260926-truck2";
   var CDN = {
     phaser: "https://cdn.jsdelivr.net/npm/phaser@3.87.0/dist/phaser.min.js",
     three: "https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js",
@@ -127,8 +127,14 @@
         if (progressLabel) progressLabel.textContent = h.label || "";
         if (tipEl) tipEl.textContent = h.tip || "";
         if (btnInteract) {
-          btnInteract.classList.toggle("ready", !!h.near);
-          btnInteract.disabled = !h.near;
+          /* truck2: EXIT anytime while driving — don't require near parked pad */
+          var canAct = !!(h.near) || !!(h.inTruck);
+          btnInteract.classList.toggle("ready", canAct);
+          btnInteract.disabled = !canAct;
+          if (h.inTruck) btnInteract.textContent = "EXIT";
+          else if (h.near && C && C.isTruckHotspot && C.isTruckHotspot(h.near))
+            btnInteract.textContent = "BOARD";
+          else btnInteract.textContent = "INTERACT";
         }
         if (btnAbility) {
           var cd = h.cd || 0;
