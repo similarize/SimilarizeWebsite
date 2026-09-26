@@ -1,4 +1,4 @@
-const VERSION = "3.10";
+const VERSION = "3.11";
 const VIEW_W = 960;
 const VIEW_H = 540;
 const PLAYER_X = 168;
@@ -520,9 +520,10 @@ function stepChassis(sim, dt, input) {
     const err = wrapDeg(input.aim - sim.rot);
     sim.av += clamp(err * 16 - sim.av * 4.2, -560, 560) * dt;
     if (contacts > 0) {
-      // Blend a little track camber in so aiming on dirt still feels planted.
+      // Keep dirt lean alive while aiming (boost-hold aimPoint used to starve pitch follow).
       const camber = wrapDeg(pitch - sim.rot);
-      sim.av += clamp(camber * 6 - sim.av * 0.8, -180, 180) * dt;
+      sim.av += clamp(camber * 14 - sim.av * 1.1, -280, 280) * dt;
+      sim.rot += camber * Math.min(1, dt * 6);
       sim.av *= Math.exp(-dt * 1.1);
     }
   } else if (contacts === 0) {
@@ -530,12 +531,13 @@ function stepChassis(sim, dt, input) {
     if (Math.abs(ang) < 85) sim.av += (-ang * 48 - sim.av * 13) * dt;
     else sim.av *= Math.exp(-dt * 1.4);
   } else {
-    // Follow the dirt curve / off-camber instead of freezing flat.
+    // Follow the dirt curve / off-camber (Line Rider) — spring + direct blend so slopes show lean.
     const err = wrapDeg(pitch - sim.rot);
     const grip = contacts === 2 ? 1 : 0.55;
-    sim.av += clamp(err * (22 * grip) - sim.av * (3.2 * grip), -420, 420) * dt;
-    // Soft settle — keep some lean authority (was exp*8 which killed tilt).
-    sim.av *= Math.exp(-dt * (contacts === 2 ? 3.2 : 1.6));
+    sim.av += clamp(err * (26 * grip) - sim.av * (2.6 * grip), -480, 480) * dt;
+    sim.rot += err * Math.min(1, dt * (10 * grip));
+    // Soft settle — keep lean authority (was exp*8 which killed tilt).
+    sim.av *= Math.exp(-dt * (contacts === 2 ? 2.4 : 1.4));
   }
   sim.av = clamp(sim.av, -360, 360);
   sim.rot = wrapDeg(sim.rot + sim.av * dt);
@@ -919,12 +921,24 @@ function step(sim, dt, input) {
     sim.speed = 48;
     sim.scroll += sim.speed * capped;
     sim.time += capped;
-    sim.y = plantY(sim, sim.scroll + PLAYER_X + CAR_W * 0.55);
-    sim.vy = 0;
     sim.grounded = true;
     sim.boosting = false;
-    sim.rot += (0 - sim.rot) * Math.min(1, capped * 4);
+    // Title parade: lean with dirt (Line Rider pitch) — do not flatten to 0.
+    const pitchTitle = surfacePitchDeg(sim);
+    sim.rot += wrapDeg(pitchTitle - sim.rot) * Math.min(1, capped * 10);
     sim.av = 0;
+    // Plant both contact patches after pitch so wheels kiss the slope.
+    {
+      const g0 = wheelGeom(sim, 0);
+      const g1 = wheelGeom(sim, 1);
+      const p0 = wheelWorld(sim, g0);
+      const p1 = wheelWorld(sim, g1);
+      const want0 = surfaceY(sim, p0.x) - g0.r;
+      const want1 = surfaceY(sim, p1.x) - g1.r;
+      const wantY = (want0 + want1) * 0.5 - CAR_H / 2;
+      sim.y = wantY;
+    }
+    sim.vy = 0;
     for (let i = 0; i < 2; i++) {
       const rad = Math.max(4, wheelGeom(sim, i).drawR);
       sim.wheelOmega[i] = sim.speed / rad;
