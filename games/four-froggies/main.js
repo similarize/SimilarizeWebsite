@@ -1,5 +1,6 @@
 /* Four Froggies — lobby + 2.5D ranch hub (flagship).
    Party: PeerJS via party.js. Solo+AI offline. Strip kept in strip.js as sandbox activity. */
+/* interact2: per-player interact/exit + HOP; shared HUD/E = primary only. */
 (() => {
   "use strict";
 
@@ -161,6 +162,11 @@
   }
 
   function localPlayer() {
+    /* Primary local: selected seat, else padless keyboard local, else first local */
+    let me = frogs.find((f) => f.id === selectedId && f.local);
+    if (me) return me;
+    me = frogs.find((f) => f.local && (f.padIndex == null || f.padIndex === undefined));
+    if (me) return me;
     return frogs.find((f) => f.local) || frogs.find((f) => f.human) || null;
   }
 
@@ -175,48 +181,81 @@
     return id.indexOf("truck") === 0 || id.indexOf("mech") === 0;
   }
 
-  /** Local frog currently boarded (EXIT target), if any */
-  function boardedLocalFrog() {
+  /** Frog owned by this input (pad N → that frog; keyboard/HUD → primary only). */
+  function frogOwnedByInput(f, opts) {
+    if (!f || !f.local) return false;
+    opts = opts || {};
+    if (opts.source === "pad" && opts.padIndex != null) {
+      return f.padIndex != null && (f.padIndex | 0) === (opts.padIndex | 0);
+    }
+    /* keyboard / hud: primary local only — never another pad-claimed frog */
+    const me = localPlayer();
+    return !!(me && f === me);
+  }
+
+  /** Boarded local this input is allowed to EXIT (strict ownership). */
+  function boardedFrogForInput(opts) {
+    opts = opts || {};
+    if (opts.source === "pad" && opts.padIndex != null) {
+      for (const f of frogs) {
+        if (f.local && f.padIndex != null && (f.padIndex | 0) === (opts.padIndex | 0) &&
+            (f.inTruck || f.inMech)) return f;
+      }
+      return null;
+    }
     for (const f of frogs) {
-      if (f.local && (f.inTruck || f.inMech)) return f;
+      if ((f.inTruck || f.inMech) && frogOwnedByInput(f, opts)) return f;
     }
     return null;
   }
 
-  /**
-   * Prefer a local frog near a boardable hotspot; else any near hotspot; else primary.
-   * Used by keyboard E / on-screen INTERACT so P2/P3 can board too.
-   */
-  function interactTargetFrog() {
-    const boarded = boardedLocalFrog();
-    if (boarded) return boarded;
-    if (!world || !W || !W.nearestHotspot) return localPlayer();
-    let bestBoard = null;
-    let bestBoardD = Infinity;
-    let bestAny = null;
-    let bestAnyD = Infinity;
-    for (const f of frogs) {
-      if (!f.local) continue;
-      const hot = W.nearestHotspot(world, f.x, f.y, 70);
-      if (!hot) continue;
-      const d = Math.hypot(f.x - hot.x, f.y - hot.y);
-      if (isBoardableHot(hot) && d < bestBoardD) {
-        bestBoardD = d;
-        bestBoard = f;
-      }
-      if (d < bestAnyD) {
-        bestAnyD = d;
-        bestAny = f;
-      }
-    }
-    return bestBoard || bestAny || localPlayer();
+  /** HUD EXIT target: primary/padless boarded only — never another pad's vehicle. */
+  function hudBoardedFrog() {
+    return boardedFrogForInput({ source: "hud" });
   }
 
-  /** Nearest hotspot among all local frogs (for HUD tip / BOARD button). */
+  /**
+   * interact2: resolve interact target strictly per input source.
+   * Pad N → only frog with padIndex N.
+   * Keyboard/HUD → primary/padless boarded, else nearest owned local near a hotspot
+   * (never eject a different frog who is already boarded elsewhere).
+   */
+  function interactTargetFrog(opts) {
+    opts = opts || { source: "hud" };
+    if (opts.source === "pad" && opts.padIndex != null) {
+      for (const f of frogs) {
+        if (f.local && f.padIndex != null && (f.padIndex | 0) === (opts.padIndex | 0)) return f;
+      }
+      return null;
+    }
+    const boarded = boardedFrogForInput(opts);
+    if (boarded) return boarded;
+    if (!world || !W || !W.nearestHotspot) return localPlayer();
+    /* Shared HUD/keyboard: act on primary only (nearest hotspot at primary) */
+    const me = localPlayer();
+    if (!me || me.inTruck || me.inMech) return me;
+    return me;
+  }
+
+  /** True if another local already occupies this vehicle (don't steal). Shared truck OK. */
+  function vehicleTakenByOtherLocal(hot, me) {
+    if (!hot || !me || !isBoardableHot(hot)) return false;
+    if (hot.mode === "shared") return false;
+    const hid = hot.id ? String(hot.id) : "";
+    const isMech = hot.kind === "mech" || hid.indexOf("mech") === 0;
+    const isTruck = hot.kind === "truck" || hid.indexOf("truck") === 0;
+    for (const f of frogs) {
+      if (!f || f === me || !f.local) continue;
+      if (isMech && f.inMech && f.mechId && (f.mechId === hid || f.mechId === hot.solidId)) return true;
+      if (isTruck && f.inTruck && f.truckMode !== "shared" && f.truckId === hid) return true;
+    }
+    return false;
+  }
+
+  /** Nearest hotspot for HUD: primary/owned locals only; EXIT state via hudBoardedFrog. */
   function refreshNearHotFromLocals() {
     if (phase === "space") return nearHot;
-    const boarded = boardedLocalFrog();
-    if (boarded) {
+    if (hudBoardedFrog()) {
       nearHot = null;
       return null;
     }
@@ -226,8 +265,12 @@
     }
     let best = null;
     let bestScore = Infinity;
+    const me = localPlayer();
     for (const f of frogs) {
       if (!f.local) continue;
+      /* Shared HUD near-check: primary + padless only (not other pads' positions for EXIT/BOARD label) */
+      if (f.padIndex != null && f.padIndex !== undefined && f !== me) continue;
+      if (f.inTruck || f.inMech) continue;
       const hot = W.nearestHotspot(world, f.x, f.y, 70);
       if (!hot) continue;
       const d = Math.hypot(f.x - hot.x, f.y - hot.y);
@@ -338,7 +381,7 @@
 
   function paintHud() {
     const me = localPlayer();
-    const hudBoarded = boardedLocalFrog() || (me && (me.inTruck || me.inMech) ? me : null);
+    const hudBoarded = hudBoardedFrog() || (me && (me.inTruck || me.inMech) && frogOwnedByInput(me, { source: "hud" }) ? me : null);
     if (livesEl) {
       if (phase === "space" && spaceEp && spaceEp.inOrbit) {
         livesEl.textContent = "🌍 Orbit";
@@ -492,7 +535,7 @@
     btnAbility.dataset.roleTbd = def.ability;
   }
 
-  /* hop1: shared HOP ability feedback */
+  /* hop1/interact2: HOP feedback on shared HUD (fires for the frog that hopped) */
   function flashAbilityButton(frogId) {
     if (!btnAbility) return;
     const def = FROG_DEFS[frogId] || FROG_DEFS.james;
@@ -529,7 +572,7 @@
     frog.cd = def.cdMax;
     flashAbilityButton(frog.id);
     beep(660, 0.06, "square", 0.05);
-    /* hop1: shared HOP — vertical arc + forward carry; squash handled on land */
+    /* hop1/interact2: HOP only this frog — never fan-out to other locals */
     {
       const C = globalThis.FroggiesCanon;
       let hop = null;
@@ -639,16 +682,29 @@
     paintHud();
   }
 
-  function doInteract(optFrog) {
+  function doInteract(optFrog, opts) {
     if (phase === "space") {
       doSpaceInteract();
       return;
     }
-    /* interact1: per-local frog — pad A uses THAT frog; E/INTERACT prefer nearest boardable */
-    const me = optFrog || interactTargetFrog();
+    opts = opts || {};
+    /* interact2: pad A → THAT frog only; E/INTERACT → owned primary/padless only */
+    let me = optFrog || null;
+    if (!me) me = interactTargetFrog(opts);
     if (!me) return;
+    /* Remote host-sim may act on non-local humans; local inputs require local frog */
+    if (opts.source !== "remote" && !me.local) return;
+    /* Pad-sourced must match frog.padIndex — never exit/board for another frog */
+    if (opts.source === "pad" && opts.padIndex != null) {
+      if (me.padIndex == null || (me.padIndex | 0) !== (opts.padIndex | 0)) return;
+    } else if (opts.source === "pad") {
+      return;
+    } else if (opts.source === "hud" || opts.source === "keyboard") {
+      /* Shared HUD/keyboard: never operate a pad-claimed other frog */
+      if (me.padIndex != null && me.padIndex !== undefined && me !== localPlayer()) return;
+    }
     let hot = null;
-    if (optFrog) {
+    if (optFrog || (opts.source === "pad")) {
       hot = W && W.nearestHotspot ? W.nearestHotspot(world, me.x, me.y, 70) : null;
     } else {
       hot = nearHot;
@@ -656,7 +712,7 @@
         hot = W.nearestHotspot(world, me.x, me.y, 70);
       }
     }
-    /* polish10: EXIT truck/mech anytime while boarded */
+    /* EXIT only for this frog — caller ownership already enforced */
     if (me.inMech) {
       if (W.boardMech) W.boardMech(world, frogs, me, { kind: "mech", id: me.mechId || "mech" });
       else { me.inMech = false; me.mechId = null; me.mechStories = 0; me.z = 0; me.zVel = 0; }
@@ -678,6 +734,12 @@
       return;
     }
     if (!hot) return;
+    if (vehicleTakenByOtherLocal(hot, me)) {
+      storyToast = "Already boarded · pick another";
+      storyToastT = 1.6;
+      paintHud();
+      return;
+    }
     nearHot = hot;
     unlockAudio();
     beep(520, 0.07, "triangle", 0.05);
@@ -972,10 +1034,11 @@
             if (mag > 1) { x /= mag; y /= mag; }
             es = { x, y };
             if (gp.buttonsPressed && gp.buttonsPressed.a) {
-              /* interact1: each pad's A boards/exits for THAT frog */
-              doInteract(f);
+              /* interact2: each pad's A boards/exits for THAT frog only */
+              doInteract(f, { source: "pad", padIndex: f.padIndex });
             }
             if (gp.buttonsPressed && (gp.buttonsPressed.b || gp.buttonsPressed.x)) {
+              /* interact2: each pad's B/X hops THAT frog only */
               requestAbility(f);
             }
           } else {
@@ -997,7 +1060,7 @@
           }
           if (ri.interactQueued) {
             ri.interactQueued = false;
-            doInteract(f);
+            doInteract(f, { source: "remote" });
           }
         }
       }
@@ -1155,19 +1218,19 @@
       if (_pad && _pad.connected) {
         const bp = _pad.buttonsPressed || {};
         if (bp.a) {
-          if (party && party.getRole() === "guest") { pushGuestInput({ interact: true }); doInteract(); }
-          else doInteract();
+          if (party && party.getRole() === "guest") { pushGuestInput({ interact: true }); doInteract(null, { source: "hud" }); }
+          else doInteract(null, { source: "hud" });
         }
         if (bp.b || bp.x) {
           const player = localPlayer();
           if (player) {
             if (party && party.getRole() === "guest") pushGuestInput({ ability: true });
-            else requestAbility(player);
+            else requestAbility(player); /* space: primary only */
           }
         }
       }
     } else if (phase === "hub") {
-      /* Hub: per-frog pollPad in updateHub. Only unclaimed pads here (spare pad / keyboard). */
+      /* Hub: per-frog pollPad in updateHub. Unclaimed pads → primary/padless only (never other locals). */
       if (window.SimilarizeGamepad) {
         const claimed = new Set();
         for (const f of frogs) {
@@ -1179,14 +1242,15 @@
           if (!gp || !gp.connected) continue;
           const bp = gp.buttonsPressed || {};
           if (bp.a) {
-            if (party && party.getRole() === "guest") { pushGuestInput({ interact: true }); doInteract(); }
-            else doInteract();
+            const player = localPlayer();
+            if (party && party.getRole() === "guest") { pushGuestInput({ interact: true }); doInteract(player, { source: "hud" }); }
+            else doInteract(player, { source: "hud" });
           }
           if (bp.b || bp.x) {
             const player = localPlayer();
             if (player) {
               if (party && party.getRole() === "guest") pushGuestInput({ ability: true });
-              else requestAbility(player);
+              else requestAbility(player); /* interact2: spare pad hops primary only */
             }
           }
         }
@@ -1362,10 +1426,10 @@
       if (phase !== "hub" && phase !== "space") return;
       if (party && party.getRole() === "guest") {
         pushGuestInput({ interact: true });
-        doInteract();
+        doInteract(null, { source: "hud" });
         return;
       }
-      doInteract();
+      doInteract(null, { source: "hud" });
     });
   }
 
@@ -1416,7 +1480,7 @@
       } else if (phase === "title") tryStartFromUi();
     }
     if ((e.key === "e" || e.key === "E" || e.key === "f" || e.key === "F") && (phase === "hub" || phase === "space")) {
-      doInteract();
+      doInteract(null, { source: "keyboard" });
     }
     /* track3: monster-truck wheels — [ ] or - = (hold grows/shrinks) */
     if (e.key === "[" || e.key === "-" || e.key === "_") {

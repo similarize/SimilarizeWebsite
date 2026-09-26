@@ -5,7 +5,7 @@
   "use strict";
 
   var C = global.FroggiesCanon;
-  var CACHE = "20260926-mechwalk1";
+  var CACHE = "20260926-interact2";
   var CDN = {
     phaser: "https://cdn.jsdelivr.net/npm/phaser@3.87.0/dist/phaser.min.js",
     three: "https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js",
@@ -354,7 +354,7 @@
     var x = 0;
     var y = 0;
     /* Gamepad poll only while alt engines run — canvas main.js owns the pad otherwise */
-    /* interact1: poll pads 0–3 so secondary locals can A-board on Three/Phaser */
+    /* interact2: each pad A/B tagged with padIndex — never anonymous shared pulse */
     var gPad = null;
     if (engineRunning && global.SimilarizeGamepad) {
       var apiBtn = altApi();
@@ -364,8 +364,8 @@
         if (!gPad) gPad = gpN; /* first connected pad steers shared primary when no joy/keys */
         if (apiBtn) {
           var aEdge = gpN.buttonsPressed || {};
-          if (aEdge.a && apiBtn.pulseInteract) apiBtn.pulseInteract();
-          if ((aEdge.b || aEdge.x) && apiBtn.pulseAbility) apiBtn.pulseAbility();
+          if (aEdge.a && apiBtn.pulseInteract) apiBtn.pulseInteract(pi);
+          if ((aEdge.b || aEdge.x) && apiBtn.pulseAbility) apiBtn.pulseAbility(pi);
         }
       }
     }
@@ -555,12 +555,12 @@
       if (k === "arrowright" || k === "d") { keys.right = true; applySharedSteer(); e.preventDefault(); }
       if (k === "arrowup" || k === "w") { keys.up = true; applySharedSteer(); e.preventDefault(); }
       if (k === "arrowdown" || k === "s") { keys.down = true; applySharedSteer(); e.preventDefault(); }
-      if (k === "e" || k === "f" || k === " ") {
-        a.pulseInteract();
+      if (k === "e" || k === "f") {
+        a.pulseInteract(); /* keyboard/HUD → primary only */
         e.preventDefault();
       }
-      if (k === "q" || k === "shift") {
-        a.pulseAbility();
+      if (k === " " || k === "q" || k === "shift") {
+        a.pulseAbility(); /* keyboard HOP → primary only */
         e.preventDefault();
       }
       /* track3: wheel size while driving — [ ] / - = */

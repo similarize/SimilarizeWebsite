@@ -18,6 +18,7 @@
    polish11: truck yaw follows travel; brief EXIT tip; shared ZOOM ability.
    hop1: HOP ability (Y arc + squash); shove toys/animals/pollen.
    hop2: ranch foot ALWAYS hops (continuous arc); ability HOP = bigger jump.
+   interact2: interact/exit + HOP strictly per pad/player; shared HUD = primary only.
    hop3: faster loco + spam HOP + stack; articulated mechs.
    track3: banks + rocks + live monster wheels (preserved).
    hop4: snappier always-hop; humanoid frogs (torso+head, spring legs).
@@ -37,7 +38,8 @@
   var wantInteract = false;
   var wantAbility = false;
   var interactOrigin = null; /* world {x,y} from pad that pressed A (multi-local) */
-  var interactPadIndex = null; /* pad that pressed A (null = keyboard/primary) */
+  var interactPadIndex = null; /* pad that pressed A (null = keyboard/HUD/primary) */
+  var abilityPadIndex = null; /* pad that pressed B/X (null = keyboard/HUD/primary) */
   var interactConsumed = false;
 
   function refreshNearFromLocals() {
@@ -56,18 +58,50 @@
       var score = d - (board ? 8 : 0);
       if (score < bestScore) { bestScore = score; best = h; }
     }
+    /* interact2: pad-sourced interact only uses that frog's origin — never another local */
+    if (interactPadIndex != null && interactOrigin) {
+      consider(interactOrigin.x, interactOrigin.y);
+      state.near = best;
+      return;
+    }
     if (interactOrigin) {
       consider(interactOrigin.x, interactOrigin.y);
     }
     var wp = threeToWorld(state.player.position.x, state.player.position.z);
     consider(wp.x, wp.y);
-    for (var i = 0; i < (state.companions || []).length; i++) {
-      var c = state.companions[i];
-      if (!c.userData.local) continue;
-      var cw = threeToWorld(c.position.x, c.position.z);
-      consider(cw.x, cw.y);
-    }
+    /* HUD/keyboard near: primary only (not other pad frogs) for shared button label */
     state.near = best;
+  }
+
+
+  /** interact2: does current interactPadIndex own the boarded vehicle? */
+  function inputOwnsBoarded() {
+    if (!state) return false;
+    if (!state.inMech && !state.inTruck) return false;
+    var pilot = null;
+    if (state.inMech) pilot = state.mechPilotPadIndex;
+    else if (state.inTruck) pilot = state.truckPilotPadIndex;
+    /* null interactPad = keyboard/HUD — owns if pilot is null (keyboard boarded) or primary pad */
+    if (interactPadIndex == null) {
+      return pilot == null || pilot === state.primaryPadIndex;
+    }
+    return pilot != null && (interactPadIndex | 0) === (pilot | 0);
+  }
+
+  function companionForPad(padIndex) {
+    if (padIndex == null || !state || !state.companions) return null;
+    for (var i = 0; i < state.companions.length; i++) {
+      var c = state.companions[i];
+      if (c.userData.local && c.userData.padIndex != null &&
+          (c.userData.padIndex | 0) === (padIndex | 0)) return c;
+    }
+    return null;
+  }
+
+  function setInteractFromPad(padIndex, wx, wy) {
+    wantInteract = true;
+    interactPadIndex = padIndex != null ? (padIndex | 0) : null;
+    if (wx != null && wy != null) interactOrigin = { x: wx, y: wy };
   }
 
   function mergedSteer() {
@@ -90,14 +124,17 @@
         /* edge buttons for primary pad */
         if (gp.buttonsPressed) {
           if (gp.buttonsPressed.a) {
-            wantInteract = true;
-            interactPadIndex = steerPad;
             if (state && state.player) {
               var ow = threeToWorld(state.player.position.x, state.player.position.z);
-              interactOrigin = { x: ow.x, y: ow.y };
+              setInteractFromPad(steerPad, ow.x, ow.y);
+            } else {
+              setInteractFromPad(steerPad, null, null);
             }
           }
-          if (gp.buttonsPressed.b || gp.buttonsPressed.x) wantAbility = true;
+          if (gp.buttonsPressed.b || gp.buttonsPressed.x) {
+            wantAbility = true;
+            abilityPadIndex = steerPad;
+          }
         }
       }
     }
@@ -116,6 +153,8 @@
     active = false;
     keySteer.x = keySteer.y = 0; tapSteer.x = tapSteer.y = 0; tapHeld = false; tapMarker = null;
     wantInteract = wantAbility = false;
+    interactPadIndex = abilityPadIndex = null;
+    interactOrigin = null;
     var mel = document.getElementById("tap-steer-marker");
     if (mel) mel.classList.remove("is-on");
     if (raf) {
@@ -141,8 +180,33 @@
     keySteer.x = x;
     keySteer.y = y;
   }
-  function pulseInteract() { wantInteract = true; interactPadIndex = null; }
-  function pulseAbility() { wantAbility = true; }
+  function pulseInteract(padIndex) {
+    /* interact2: optional padIndex from engine-boot; null = HUD/keyboard → primary only */
+    wantInteract = true;
+    if (padIndex != null && padIndex !== undefined && padIndex !== "") {
+      interactPadIndex = padIndex | 0;
+      var comp = companionForPad(interactPadIndex);
+      if (comp) {
+        var cow = threeToWorld(comp.position.x, comp.position.z);
+        interactOrigin = { x: cow.x, y: cow.y };
+      } else if (state && state.player &&
+          (state.primaryPadIndex == null || state.primaryPadIndex === interactPadIndex)) {
+        var ow = threeToWorld(state.player.position.x, state.player.position.z);
+        interactOrigin = { x: ow.x, y: ow.y };
+      }
+    } else {
+      interactPadIndex = null;
+      interactOrigin = null;
+    }
+  }
+  function pulseAbility(padIndex) {
+    wantAbility = true;
+    if (padIndex != null && padIndex !== undefined && padIndex !== "") {
+      abilityPadIndex = padIndex | 0;
+    } else {
+      abilityPadIndex = null;
+    }
+  }
   function isActive() { return active; }
 
   function hex(c) {
@@ -1522,20 +1586,26 @@
     if (!state) return;
     if (interactConsumed) return;
     interactConsumed = true;
-    /* Prefer hotspot at the pad/frog that pressed A; else any near local */
+    /* Prefer hotspot at the pad/frog that pressed A; else primary near */
     refreshNearFromLocals();
-    /* polish10: EXIT truck/mech anytime while boarded */
-    if (state.mode === "ranch" && state.inMech) {
-      state.inMech = false; state.mechId = null; state.mechStories = 0;
-      state.mechPilotPadIndex = null;
-      state.zLift = 0; state.zVel = 0; state.groundLift = 0;
-      state.toast = "Mech parked · walking"; state.toastT = 1.8; state.exitTipT = 0;
-      interactOrigin = null; interactPadIndex = null;
-      if (hooks.onToast) hooks.onToast(state.toast);
-      return;
-    }
-    if (state.mode === "ranch" && state.inTruck) {
+    /* interact2: EXIT only if this input owns the boarded vehicle */
+    if (state.mode === "ranch" && (state.inMech || state.inTruck)) {
+      if (!inputOwnsBoarded()) {
+        /* Other pad/HUD tried to eject someone else's ride — ignore exit */
+        interactOrigin = null; interactPadIndex = null;
+        return;
+      }
+      if (state.inMech) {
+        state.inMech = false; state.mechId = null; state.mechStories = 0;
+        state.mechPilotPadIndex = null;
+        state.zLift = 0; state.zVel = 0; state.groundLift = 0;
+        state.toast = "Mech parked · walking"; state.toastT = 1.8; state.exitTipT = 0;
+        interactOrigin = null; interactPadIndex = null;
+        if (hooks.onToast) hooks.onToast(state.toast);
+        return;
+      }
       state.inTruck = false; state.truckMode = null; state.truckId = null;
+      state.truckPilotPadIndex = null;
       state.zLift = 0; state.zVel = 0; state.groundLift = 0;
       state.toast = "Parked · walking"; state.toastT = 1.8; state.exitTipT = 0;
       interactOrigin = null; interactPadIndex = null;
@@ -1546,20 +1616,26 @@
     var id = state.near.id;
     if (state.mode === "ranch") {
       if (C.isTruckHotspot && C.isTruckHotspot(state.near)) {
-        /* Snap camera frog to hotspot so secondary-pad board works */
+        /* Don't steal if somehow already boarded (owned path already exited above) */
+        if (state.inMech || state.inTruck) {
+          interactOrigin = null; interactPadIndex = null; return;
+        }
         var tp = worldToThree(state.near.x, state.near.y);
         state.player.position.x = tp.x; state.player.position.z = tp.z;
         state.inTruck = true; state.truckMode = state.near.mode || "solo"; state.truckId = id;
-        if (state.inMech) { state.inMech = false; state.mechId = null; state.mechStories = 0; state.mechPilotPadIndex = null; }
+        state.truckPilotPadIndex = (interactPadIndex != null) ? interactPadIndex
+          : (state.primaryPadIndex != null ? state.primaryPadIndex : null);
         state.scrap += 1;
         state.toast = state.truckMode === "shared"
           ? "All aboard! Four froggies · one Cybertruck · hit the jumps!"
           : "Driving Cybertruck · hit the jumps!";
         state.exitTipT = 2.4;
       } else if (C.isMechHotspot && C.isMechHotspot(state.near)) {
+        if (state.inMech || state.inTruck) {
+          interactOrigin = null; interactPadIndex = null; return;
+        }
         var mp = worldToThree(state.near.x, state.near.y);
         state.player.position.x = mp.x; state.player.position.z = mp.z;
-        if (state.inTruck) { state.inTruck = false; state.truckMode = null; state.truckId = null; }
         state.inMech = true;
         state.mechId = id;
         state.mechStories = state.near.stories || 10;
@@ -1610,15 +1686,65 @@
     if (hooks.onToast) hooks.onToast(state.toast);
   }
 
+  function hopCompanionPad(padIndex) {
+    var c = companionForPad(padIndex);
+    if (!c || !c.userData.local) return false;
+    if (state.inTruck && state.truckMode === "shared") return false; /* seated — no solo hop */
+    var cd = c.userData.cd || 0;
+    if (cd > 0) return false;
+    c.userData.cd = 0.1;
+    var yaw = c.userData.faceYaw != null ? c.userData.faceYaw : 0;
+    var fx = Math.sin(yaw), fz = Math.cos(yaw);
+    var zLift = c.userData.zLift || 0;
+    var zVel = c.userData.zVel || 0;
+    var air = zLift > 0.12;
+    var combo = air ? Math.min(10, (c.userData.hopCombo || 0) + 1) : 1;
+    c.userData.hopCombo = combo;
+    var up = 9.8 + (combo - 1) * 1.2;
+    c.userData.vx = (c.userData.vx || 0) + fx * 5.6;
+    c.userData.vz = (c.userData.vz || 0) + fz * 5.6;
+    if (air) c.userData.zVel = Math.max(0, zVel) + up * 0.7;
+    else {
+      c.userData.zVel = Math.max(zVel, up);
+      c.userData.zLift = Math.max(zLift, 0.25);
+    }
+    state.toast = combo > 1 ? ("HOP ×" + combo + "!") : "HOP!";
+    state.toastT = 1.2;
+    if (hooks.onToast) hooks.onToast(state.toast);
+    if (hooks.onAbilityFire) hooks.onAbilityFire(c.userData.frogId || "james", "HOP");
+    return true;
+  }
+
   function doAbility() {
-    /* hop1: shared HOP — vertical arc + forward carry */
-    if (!state || state.cd > 0) return;
+    /* interact2: HOP only the frog whose pad/HUD pressed — never all locals */
+    if (!state) return;
+    /* Secondary pad → hop that companion only */
+    if (abilityPadIndex != null &&
+        (state.primaryPadIndex == null || abilityPadIndex !== state.primaryPadIndex) &&
+        companionForPad(abilityPadIndex)) {
+      hopCompanionPad(abilityPadIndex);
+      abilityPadIndex = null;
+      return;
+    }
+    /* Primary / keyboard / HUD → camera frog only */
+    if (state.cd > 0) return;
     if (state.inMech) {
+      /* Only pilot / primary HUD may stomp */
+      var pilot = state.mechPilotPadIndex;
+      if (abilityPadIndex != null && pilot != null && abilityPadIndex !== pilot) {
+        abilityPadIndex = null;
+        return;
+      }
+      if (abilityPadIndex == null && pilot != null && pilot !== state.primaryPadIndex) {
+        abilityPadIndex = null;
+        return;
+      }
       state.cd = 0.2;
       state.toast = "Mech stomp · keep lumbering";
       state.toastT = 1.0;
       state.shakeT = Math.max(state.shakeT || 0, 0.12);
       if (hooks.onToast) hooks.onToast(state.toast);
+      abilityPadIndex = null;
       return;
     }
     state.cd = 0.1;
@@ -1686,6 +1812,7 @@
     state.toastT = 1.8;
     if (hooks.onToast) hooks.onToast(state.toast);
     if (hooks.onAbilityFire) hooks.onAbilityFire(state.frogId, "HOP");
+    abilityPadIndex = null;
   }
 
   function tick() {
@@ -2460,15 +2587,14 @@
               if (lgp.dpad.u) lsy = -1;
               if (lgp.dpad.d) lsy = 1;
             }
-            /* interact1: secondary pad A boards/exits when THAT frog is near */
+            /* interact2: secondary pad A/B only for THAT companion frog */
             if (lgp.buttonsPressed && lgp.buttonsPressed.a) {
-              wantInteract = true;
-              interactPadIndex = c.userData.padIndex;
               var cow = threeToWorld(c.position.x, c.position.z);
-              interactOrigin = { x: cow.x, y: cow.y };
+              setInteractFromPad(c.userData.padIndex, cow.x, cow.y);
             }
             if (lgp.buttonsPressed && (lgp.buttonsPressed.b || lgp.buttonsPressed.x)) {
               wantAbility = true;
+              abilityPadIndex = c.userData.padIndex;
             }
           }
           if (padPilotsMech) {
@@ -2499,8 +2625,19 @@
           }
           c.position.x += (c.userData.vx || 0) * dt;
           c.position.z += (c.userData.vz || 0) * dt;
+          /* interact2: per-companion hop arc */
+          c.userData.cd = Math.max(0, (c.userData.cd || 0) - dt);
+          var czv = c.userData.zVel || 0;
+          var czl = c.userData.zLift || 0;
+          if (czl > 0 || czv > 0) {
+            czv -= 28 * dt;
+            czl += czv * dt;
+            if (czl <= 0) { czl = 0; czv = 0; c.userData.hopCombo = 0; }
+            c.userData.zVel = czv;
+            c.userData.zLift = czl;
+          }
           c.visible = true;
-          c.position.y = Math.abs(Math.sin(c.userData.idleBounce)) * (lsp > 0.8 ? 0.12 : 0.05);
+          c.position.y = (c.userData.zLift || 0) + Math.abs(Math.sin(c.userData.idleBounce)) * (lsp > 0.8 ? 0.12 : 0.05);
         } else if (state.inTruck && state.truckMode === "shared") {
           var ox = (ci - 1) * 0.45, oz = -0.35 - (ci % 2) * 0.25;
           c.position.x += (state.player.position.x + ox - c.position.x) * Math.min(1, 8 * dt);
@@ -2644,6 +2781,7 @@
     }
     interactOrigin = null;
     interactPadIndex = null;
+    abilityPadIndex = null;
 
     updateTapMarkerVisual(dt);
     renderer.render(scene, camera);
@@ -2808,6 +2946,8 @@
       frogId: (opts && opts.frogId) || "james",
       seatMap: (opts && opts.seatMap) || null,
       primaryPadIndex: null,
+      truckPilotPadIndex: null,
+      mechPilotPadIndex: null,
     };
 
     host.style.display = "block";
