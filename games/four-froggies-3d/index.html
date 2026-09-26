@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Four Froggies 3D</title>
+  <style>
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #100e0c; color: #f3e2c4; font-family: system-ui, sans-serif; }
+  </style>
+</head>
+<body>
+  <p>Opening Four Froggies 3D…</p>
+  <script>
+    try { localStorage.setItem("ff-engine", "three"); } catch (e) {}
+    location.replace("/games/four-froggies/?engine=three&go=1");
+  </script>
+</body>
+</html>

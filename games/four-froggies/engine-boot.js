@@ -661,8 +661,22 @@
     applySharedSteer: applySharedSteer,
   };
 
+  function applyDirectPlay() {
+    var q;
+    try { q = new URLSearchParams(location.search); } catch (err) { return; }
+    var eng = q.get("engine");
+    if ((eng === "three" || eng === "phaser" || eng === "canvas") && C && C.setEngine) {
+      C.setEngine(eng);
+      paintPicker();
+    }
+    if (q.get("go") === "1" && C && C.getEngine && C.getEngine() !== "canvas") {
+      setTimeout(function () { startAlt(C.getEngine()); }, 80);
+    }
+  }
+
   function bootControls() {
     initPicker();
+    applyDirectPlay();
     bindVirtualJoystick();
     bindSharedWheelUi();
     /* joy2: notice pulse once when player first enters hub/space */
