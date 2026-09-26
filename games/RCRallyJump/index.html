@@ -273,9 +273,9 @@
       pointer-events: auto;
       touch-action: manipulation;
       flex: 1;
-      height: 48px;
-      min-width: 72px;
-      padding: 0 14px;
+      height: 52px;
+      min-width: 88px;
+      padding: 0 16px;
       border-radius: 12px;
       border: 1px solid var(--amber);
       background: var(--ember);
@@ -283,8 +283,22 @@
       font-family: var(--display);
       letter-spacing: 0.12em;
       font-size: 22px;
+      box-shadow: 0 6px 0 rgba(0, 0, 0, 0.28);
+    }
+    .fire#fire {
+      flex: 1.35;
+      min-width: 110px;
+      font-size: 24px;
+      background: linear-gradient(180deg, #e4572e 0%, #b33a1c 100%);
     }
     .fire[hidden] { display: none; }
+    @media (max-width: 720px) {
+      .fire#fire {
+        height: 58px;
+        min-width: 120px;
+        font-size: 26px;
+      }
+    }
     .tune {
       pointer-events: auto;
       position: absolute;
@@ -384,9 +398,9 @@
         <div class="missiles">
           <div class="pack-row"><span>MISSILES</span></div>
           <div class="missile-actions">
-            <div class="pips" id="pips" title="Fire a missile"><i></i><i></i><i></i></div>
+            <div class="pips" id="pips" title="Space or tap to fire a missile"><i></i><i></i><i></i></div>
             <button type="button" class="fire" id="nose" data-ui hidden>Front</button>
-            <button type="button" class="fire" id="fire" data-ui hidden>Fire</button>
+            <button type="button" class="fire" id="fire" data-ui hidden>Missile</button>
           </div>
         </div>
       </div>
@@ -404,13 +418,13 @@
         </div>
         <p class="picked" id="picked">Selected: rally buggy</p>
         <ul>
-          <li>Press the spot you want the front to point. In front, behind, above, or below. Hold to jump. Let go and it lands flat. Upside down ends the run.</li>
+          <li>Press the spot you want the front to point. In front, behind, above, or below. Hold Up / W (or press and hold on the track) to jump. Space fires a missile. Let go and it lands flat. Upside down ends the run.</li>
           <li>The striped walls are solid. A hit bumps you and leaves a mark. Climb or drop into the gap to get through. A clean gap scores more than a scrape.</li>
           <li>Amber kickers throw you through if you ride them with speed. Too late, and you take the gate on the dirt.</li>
-          <li>It stays friendly for about five minutes, then the drones get serious. Shoot a beam to get past it.</li>
+          <li>Drones pick up after the first minute and get serious by a few minutes in. Shoot a beam to get past it.</li>
         </ul>
         <button type="button" class="go" id="start" data-ui>Start run</button>
-        <p class="hint">Press where the front should point. Hold to jump. Front points the nose forward.</p>
+        <p class="hint">Aim where the front should point. Up / W or hold to jump. Space or Missile for missiles. Arrows / WASD steer.</p>
         <a class="home" href="https://www.similarize.com/">Similarize</a>
       </div>
     </div>
@@ -431,7 +445,7 @@
         <h2 id="over-score">0</h2>
         <p class="lead" id="over-meta"></p>
         <button type="button" class="go" id="again" data-ui>Run it back</button>
-        <p class="hint">Tap, Space, or R</p>
+        <p class="hint">Tap, Space, or R to run it back</p>
       </div>
     </div>
     <div class="tune" id="tune" data-ui hidden>
@@ -452,6 +466,6 @@
       <button type="button" class="reset" id="tune-reset" data-ui>Reset</button>
     </div>
   </div>
-  <script type="module" src="./standalone.js?v=20260925wheels4"></script>
+  <script type="module" src="./standalone.js?v=20260925diff2"></script>
 </body>
 </html>

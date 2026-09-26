@@ -1,4 +1,4 @@
-const VERSION = "3.11";
+const VERSION = "3.13";
 const VIEW_W = 960;
 const VIEW_H = 540;
 const PLAYER_X = 168;
@@ -217,8 +217,8 @@ function createSim(best = 0) {
     missileT: 0,
     rig: "rally",
     booms: 0,
-    nextGate: 780,
-    nextDrone: 9800,
+    nextGate: 520,
+    nextDrone: 5200,
     stage: "calm",
     gatesCleared: 0,
     best,
@@ -269,9 +269,10 @@ function wheelPace(sim) {
   return sum * 0.5;
 }
 function stageAt(t) {
-  if (t < 90) return "calm";
-  if (t < 180) return "pattern";
-  if (t < 300) return "hunt";
+  // Retuned 3.12: calm short, weave by ~45s, chase by ~90s, lock/serious by ~180s (~3 min).
+  if (t < 45) return "calm";
+  if (t < 90) return "pattern";
+  if (t < 180) return "hunt";
   return "lock";
 }
 function eta(sim, worldX) {
@@ -281,7 +282,7 @@ function stageOf(sim) {
   return stageAt(sim.time || 0);
 }
 function heat(sim, worldX) {
-  return clamp(eta(sim, worldX) / 300, 0, 1.8);
+  return clamp(eta(sim, worldX) / 180, 0, 1.8);
 }
 function dronePos(sim, d) {
   if (d.kind === "pattern") {
@@ -300,7 +301,7 @@ function stepDrones(sim, dt) {
     if (d.kind === "drift") d.x -= sim.speed * 0.12 * dt;
     else if (d.kind === "pattern") d.x -= sim.speed * 0.03 * dt;
     else if (d.kind === "seek") {
-      const chase = sim.time < 180 ? 0.35 : sim.time < 300 ? 0.35 + (sim.time - 180) / 120 * 0.75 : 1.35;
+      const chase = sim.time < 90 ? 0.35 : sim.time < 180 ? 0.35 + (sim.time - 90) / 90 * 0.75 : 1.35;
       d.x += (playerX + 260 - d.x) * Math.min(1, dt * (0.7 + chase));
       d.y += clamp(playerY - d.y, -140, 140) * dt * chase;
       d.y = clamp(d.y, 40, surfaceY(sim, d.x) - 56);
@@ -325,7 +326,7 @@ function spawnDrones(sim) {
     const gyD = groundY(x);
     const nearGate = sim.gates.some((g) => Math.abs(g.x - x) < 200);
     if (stage === "calm") {
-      if (!nearGate && gyD > 180 && eta(sim, x) > 40) {
+      if (!nearGate && gyD > 180 && eta(sim, x) > 22) {
         sim.drones.push({
           kind: "drift",
           x,
@@ -335,19 +336,19 @@ function spawnDrones(sim) {
           dead: false
         });
       }
-      sim.nextDrone += 2400 + hash(x + 3) * 800;
+      sim.nextDrone += 1700 + hash(x + 3) * 650;
     } else if (stage === "pattern") {
       if (!nearGate) {
-        const late = clamp((eta(sim, x) - 90) / 120, 0, 1.4);
+        const late = clamp((eta(sim, x) - 45) / 60, 0, 1.4);
         const amp = 64 + late * 36;
         const freq = 0.8 + late * 0.85;
         const y = clamp(gyD * 0.42, 130, 240);
         sim.drones.push({ kind: "pattern", x, y, bob: 0, amp, freq, spin: 0, dead: false });
         sim.drones.push({ kind: "pattern", x, y, bob: Math.PI, amp, freq, spin: 0, dead: false });
       }
-      sim.nextDrone += 1900 - Math.min(700, Math.max(0, eta(sim, x) - 90));
+      sim.nextDrone += 1550 - Math.min(650, Math.max(0, eta(sim, x) - 45));
     } else if (stage === "hunt") {
-      const cap = sim.time < 240 ? 1 : sim.time < 300 ? 2 : 3;
+      const cap = sim.time < 120 ? 1 : sim.time < 180 ? 2 : 3;
       const hunting = sim.drones.filter((d) => d.kind === "seek" && !d.dead).length;
       if (hunting < cap && !nearGate) {
         sim.drones.push({
@@ -359,7 +360,7 @@ function spawnDrones(sim) {
           dead: false
         });
       }
-      sim.nextDrone += sim.time < 300 ? 1400 : 900;
+      sim.nextDrone += sim.time < 180 ? 1180 : 820;
     } else {
       const blocking = sim.drones.some((d) => d.kind === "lock" && !d.dead && d.x > sim.scroll + 40);
       if (!blocking && !nearGate) {
@@ -372,9 +373,9 @@ function spawnDrones(sim) {
           dead: false,
           bumped: false
         });
-        sim.nextDrone += sim.time < 420 ? 2200 : 1500;
+        sim.nextDrone += sim.time < 240 ? 1850 : 1350;
       } else {
-        const cap = sim.time < 420 ? 2 : 3;
+        const cap = sim.time < 240 ? 2 : 3;
         const hunting = sim.drones.filter((d) => d.kind === "seek" && !d.dead).length;
         if (hunting < cap) {
           sim.drones.push({
@@ -386,7 +387,7 @@ function spawnDrones(sim) {
             dead: false
           });
         }
-        sim.nextDrone += 980;
+        sim.nextDrone += 900;
       }
     }
   }
@@ -396,21 +397,22 @@ function plant(sim) {
 }
 function cruiseOf(sim) {
   const t = sim.time || 0;
-  if (t < 300) return 210 + t * 0.22;
-  return Math.min(420, 276 + (t - 300) * 0.6);
+  if (t < 180) return 215 + t * 0.38;
+  return Math.min(430, 283 + (t - 180) * 0.72);
 }
 function randKind(sim, worldX) {
   const t = eta(sim, worldX);
   const r = hash(worldX);
-  if (t < 55) return "drive";
-  if (t < 140) return r < 0.42 ? "drive" : "hop";
-  if (t < 300) {
-    if (r < 0.28) return "drive";
-    if (r < 0.72) return "hop";
+  // Brief flat spawn, then hops in the first minute; climbs meaningfully by ~1–2 min.
+  if (t < 14) return "drive";
+  if (t < 45) return r < 0.26 ? "drive" : "hop";
+  if (t < 110) {
+    if (r < 0.16) return "drive";
+    if (r < 0.66) return "hop";
     return "climb";
   }
-  if (r < 0.16) return "drive";
-  if (r < 0.5) return "hop";
+  if (r < 0.1) return "drive";
+  if (r < 0.46) return "hop";
   return "climb";
 }
 function groundSpan(worldX) {
@@ -428,7 +430,7 @@ function spawnGate(sim, worldX) {
   const kicker = wantKicker(sim, worldX);
   const kind = kicker ? "hop" : randKind(sim, worldX);
   const t = eta(sim, worldX);
-  const opening = t < 300 ? 210 - t * 0.13 : Math.max(112, 171 - (t - 300) * 0.18);
+  const opening = t < 180 ? 208 - t * 0.3 : Math.max(108, 154 - (t - 180) * 0.24);
   let gapTop;
   let gapBot;
   if (kicker) {
@@ -463,10 +465,11 @@ function spawnGate(sim, worldX) {
 }
 function wantKicker(sim, worldX) {
   const t = eta(sim, worldX);
-  if (t < 40) return false;
-  if (hash(worldX + 8.5) > (t < 300 ? 0.34 : 0.22)) return false;
+  // Fun amber ramps in the opening minute; still off for the first ~12s so spawn stays fair.
+  if (t < 12) return false;
+  if (hash(worldX + 8.5) > (t < 90 ? 0.5 : t < 180 ? 0.38 : 0.24)) return false;
   const last = sim.ramps[sim.ramps.length - 1];
-  if (last && worldX - last.lip < (t < 180 ? 980 : 720)) return false;
+  if (last && worldX - last.lip < (t < 60 ? 700 : t < 120 ? 560 : 440)) return false;
   return true;
 }
 function wrapDeg(a) {
@@ -770,7 +773,7 @@ function tick(sim, dt, input) {
   }
   while (sim.nextGate < sim.scroll + VIEW_W + 80) {
     spawnGate(sim, sim.nextGate);
-    const pace = sim.time < 300 ? 2.4 - sim.time * 0.0014 : Math.max(1.25, 1.95 - (sim.time - 300) * 0.002);
+    const pace = sim.time < 180 ? 2.05 - sim.time * 0.0032 : Math.max(1.18, 1.55 - (sim.time - 180) * 0.0024);
     const spacing = cruiseOf(sim) * pace;
     sim.nextGate += spacing;
   }
@@ -1242,10 +1245,8 @@ function drawCar(ctx, sim, art) {
   const wheelFront = pixel && ready(art.pixelWheel) ? art.pixelWheel : crawler && ready(art.crawlerWheel) ? art.crawlerWheel : art.wheelFront;
   const body = pixel ? art.pixel : crawler ? art.crawler : art.body;
   const wheelsReady = ready(wheelRear) && ready(wheelFront) && ready(body);
-  if (wheelsReady) {
-    spinWheel(ctx, sim, 0, wheelRear);
-    spinWheel(ctx, sim, 1, wheelFront);
-  }
+  // Body first, then wells+tires on top. Body PNGs bake full-size wheel arches; drawing tires
+  // underneath left a full-size arch halo when tune.wheel shrunk the live tire.
   const img = wheelsReady ? body : art.buggy;
   if (img && ready(img)) {
     ctx.drawImage(img, -CAR_W / 2 * s, -CAR_H / 2 * s, CAR_W * s, CAR_H * s);
@@ -1253,10 +1254,14 @@ function drawCar(ctx, sim, art) {
     ctx.fillStyle = pixel ? "#d42828" : crawler ? "#9a1b24" : "#e4572e";
     ctx.fillRect(-CAR_W / 2 * s, -CAR_H / 2 * s, CAR_W * s, CAR_H * s);
   }
-  if (sim.damage > 6) {
-    ctx.fillStyle = `rgba(70, 18, 10, ${Math.min(0.28, sim.damage / 360)})`;
-    ctx.fillRect(-CAR_W / 2 * s, -CAR_H / 2 * s, CAR_W * s * 0.45, CAR_H * s);
+  if (wheelsReady) {
+    // Body-colored well fill (not tire-black) so shrink cannot leave a full-size black silhouette.
+    const wellFill = pixel ? "#6a2430" : crawler ? "#7a1c24" : "#5c2218";
+    spinWheel(ctx, sim, 0, wheelRear, wellFill);
+    spinWheel(ctx, sim, 1, wheelFront, wellFill);
   }
+  // Damage used to paint a translucent rear fillRect (read as a see-through square that followed
+  // every skin). Dents alone carry the beat-up look without a rogue panel.
   if (sim.dents.length) {
     ctx.strokeStyle = "rgba(48, 22, 14, 0.9)";
     ctx.lineWidth = 1.4;
@@ -1274,23 +1279,33 @@ function drawCar(ctx, sim, art) {
 function ready(img) {
   return !!img && img.complete && img.naturalWidth > 0;
 }
-function spinWheel(ctx, sim, index, img) {
+function spinWheel(ctx, sim, index, img, wellFill = "#5c2218") {
   const g = wheelGeom(sim, index);
-  // Squash in chassis space (before spin) so tires expand sideways / shrink vertically against dirt,
-  // instead of the oval orbiting with the tread (scale-after-rotate looked like broken expand/shrink).
+  // Cover the body PNG's baked full-size well with chassis paint, then draw the live tire at
+  // tune.wheel. Collision uses the same radius (g.r === max(3.5, drawR)). Tire-black fill was
+  // reading as a full-size silhouette when the slider shrank the sprite.
+  const wellR = Math.max(g.drawR, rigWheels(sim)[index].r * sim.tune.chassis * 1.04);
   const bulge = 1 + g.squash * 0.28;
   const flat = Math.max(0.52, 1 - g.squash * 0.42);
   const ang = sim.wheelAng[index];
   ctx.save();
   ctx.translate(g.lx, g.ly + g.squash * g.drawR * 0.2);
+  ctx.beginPath();
+  ctx.arc(0, 0, wellR, 0, Math.PI * 2);
+  ctx.fillStyle = wellFill;
+  ctx.fill();
+  ctx.save();
   ctx.scale(bulge, flat);
   ctx.rotate(ang);
-  // Opaque disc under the sprite so spoke/tread cutouts stay solid (no sky/dirt through the hub).
+  ctx.beginPath();
+  ctx.arc(0, 0, Math.max(0.5, g.drawR), 0, Math.PI * 2);
+  ctx.clip();
   ctx.beginPath();
   ctx.arc(0, 0, g.drawR * 0.98, 0, Math.PI * 2);
   ctx.fillStyle = "#14110f";
   ctx.fill();
   ctx.drawImage(img, -g.drawR, -g.drawR, g.drawR * 2, g.drawR * 2);
+  ctx.restore();
   ctx.restore();
 }
 function drawTrailer(ctx, sim) {

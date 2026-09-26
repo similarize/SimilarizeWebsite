@@ -14,7 +14,7 @@ import {
   wheelPace,
   MISSILE_MAX,
   MISSILE_RELOAD
-} from "./engine.js?v=20260925wheels4";
+} from "./engine.js?v=20260925diff2";
 var BEST_KEY = "rc-rally-jump-best";
 var RIG_KEY = "rc-rally-rig";
 var TUNE_KEY = "rc-rally-tune";
@@ -174,9 +174,9 @@ function boot() {
   art.wheelFront.src = artUrl("wheel-front.png") + "?v=20260925wheels4";
   art.drone.src = artUrl("drone.png");
   art.sky.src = artUrl("sky.jpg");
-  art.crawler.src = artUrl("crawler-body.png") + "?v=20260925render";
+  art.crawler.src = artUrl("crawler-body.png") + "?v=20260925diff2";
   art.crawlerWheel.src = artUrl("crawler-wheel.png") + "?v=20260925wheels4";
-  art.pixel.src = artUrl("pixel-body.png") + "?v=20260925pixel";
+  art.pixel.src = artUrl("pixel-body.png") + "?v=20260925diff2";
   art.pixelWheel.src = artUrl("pixel-wheel.png") + "?v=20260925wheels4";
   const rigBtns = [...document.querySelectorAll("#rigs .rig")];
   const picked = el("picked");
@@ -292,7 +292,7 @@ function boot() {
   };
   let noseDown = false;
   let pointerXY = null;
-  const boostHeld = () => pointer || keys.has("Space") || keys.has("ArrowUp") || keys.has("KeyW");
+  const boostHeld = () => pointer || keys.has("ArrowUp") || keys.has("KeyW");
   const camera = () => {
     const portrait = canvas.height > canvas.width * 1.05;
     const scale = portrait ? Math.min(canvas.width / 700, canvas.height / VIEW_H) : Math.min(canvas.width / VIEW_W, canvas.height / VIEW_H);
@@ -337,7 +337,8 @@ function boot() {
     if (e.repeat) return;
     if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "KeyW", "KeyA", "KeyS", "KeyD"].includes(e.code)) e.preventDefault();
     keys.add(e.code);
-    if (e.code === "KeyF" && sim.phase === "play") {
+    // Conventional: Space / F fire missiles. Jump is Up / W (and touch hold) — not Space.
+    if ((e.code === "Space" || e.code === "KeyF") && sim.phase === "play") {
       e.preventDefault();
       fireEdge = true;
       return;
@@ -357,8 +358,11 @@ function boot() {
       begin(false);
       return;
     }
-    if ((e.code === "Space" || e.code === "ArrowUp" || e.code === "KeyW") && sim.phase === "title") {
+    if ((e.code === "ArrowUp" || e.code === "KeyW") && sim.phase === "title") {
       begin(true);
+    }
+    if (e.code === "Space" && sim.phase === "title") {
+      begin(false);
     }
     if ((e.code === "Space" || e.code === "KeyR") && sim.phase === "over" && sim.sinceOver > 0.35) {
       begin(false);
