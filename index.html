@@ -122,219 +122,108 @@ a { color: var(--green-dark); }
   display: block;
   background: transparent;
 }
-/* Drive-imi mountain story (drivecollapse6b) — continuous vivid red circle */
+/* Drive-imi collapse (drivecollapse5) — matches staged preview */
 .brand .logo-stage {
   position: relative;
   width: 100%;
-  aspect-ratio: 1 / 1.15;
-  max-width: 280px;
-  margin: 0 auto;
+  aspect-ratio: 1250 / 560;
+  --cx: 25.5%;
+  --cy: 37.3%;
 }
-.brand .logo {
-  width: min(100%, 280px);
-}
-.brand .logo-stage .lockup {
+.brand .logo-stage .word-box {
   position: absolute;
-  left: 50%;
-  top: 4%;
-  width: 86%;
-  aspect-ratio: 1;
-  transform: translateX(-50%) scale(0.92);
-  transform-origin: 50% 50%;
+  left: 0; top: 0; width: 100%; height: 70%;
+  transform-origin: var(--cx) var(--cy);
   will-change: transform;
 }
-.brand .logo-stage .disc {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background: #d5090a;
-  /* NEVER fade — continuous vivid Drive red */
-  opacity: 1 !important;
-  pointer-events: none;
-}
 .brand .logo-stage .layer {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  position: absolute; inset: 0; width: 100%; height: 100%;
   object-fit: fill;
-  pointer-events: none;
-  user-select: none;
+  transform-origin: var(--cx) var(--cy);
   will-change: transform, opacity;
-}
-.brand .logo-stage .person-left,
-.brand .logo-stage .person-right {
-  transform-origin: 50% 70%;
-}
-.brand .logo-stage .m-letter,
-.brand .logo-stage .m-mountain {
-  transform-origin: 50% 85%;
-}
-.brand .logo-stage .reach-left,
-.brand .logo-stage .reach-right {
-  position: absolute;
-  top: 52%;
-  width: 14%;
-  height: 3.2%;
-  background: #fff;
-  border-radius: 999px;
-  opacity: 0;
-  pointer-events: none;
-  will-change: transform, opacity;
-}
-.brand .logo-stage .reach-left {
-  left: 22%;
-  transform-origin: left center;
-}
-.brand .logo-stage .reach-right {
-  right: 22%;
-  transform-origin: right center;
+  pointer-events: none; user-select: none;
 }
 .brand .logo-stage .mark-end {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
+  position: absolute; left: 50%; top: 8%;
+  width: auto; height: 58%;
+  transform: translateX(-50%) scale(0.9);
   opacity: 0;
+  object-fit: contain;
   pointer-events: none;
 }
 .brand .logo-stage .tag {
-  position: absolute;
-  left: 0; right: 0; bottom: 0;
+  position: absolute; left: 0; right: 0; bottom: 4%;
   text-align: center;
   color: var(--muted);
-  font-size: clamp(0.68rem, 2.4vw, 0.88rem);
+  font-size: clamp(0.7rem, 2.1vw, 0.95rem);
   letter-spacing: 0.035em;
-  line-height: 1.35;
-  padding: 0 0.4rem;
+  line-height: 1.4;
+  padding: 0 0.5rem;
   opacity: 0;
   pointer-events: none;
   font-weight: 500;
 }
-
-/* Resting: exact Drive mark, slightly larger than anim start */
-.brand .logo-root:not(.is-animating) .disc,
-.brand .logo-root:not(.is-animating) .layer,
-.brand .logo-root:not(.is-animating) .reach-left,
-.brand .logo-root:not(.is-animating) .reach-right { opacity: 0 !important; }
+.brand .logo-root:not(.is-animating) .layer { opacity: 0; }
 .brand .logo-root:not(.is-animating) .mark-end { opacity: 1; }
 .brand .logo-root:not(.is-animating) .tag { opacity: 0; }
-.brand .logo-root:not(.is-animating) .lockup {
-  transform: translateX(-50%) scale(1);
+.brand .logo-root.is-animating .word-box {
+  animation: panCenter 6.4s cubic-bezier(0.33, 0.1, 0.25, 1) both;
 }
-
-.brand .logo-root.is-animating .lockup {
-  animation: lockupGrow 7s cubic-bezier(0.33, 0.1, 0.25, 1) both;
+.brand .logo-root.is-animating .layer.disc {
+  animation: discPhase 6.4s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
-.brand .logo-root.is-animating .disc {
-  /* stay vivid full opacity entire time */
-  opacity: 1 !important;
-  animation: none;
-}
-.brand .logo-root.is-animating .person-left {
-  animation: personLeft 7s cubic-bezier(0.4, 0.05, 0.2, 1) both;
-}
-.brand .logo-root.is-animating .person-right {
-  animation: personRight 7s cubic-bezier(0.4, 0.05, 0.2, 1) both;
-}
-.brand .logo-root.is-animating .m-letter {
-  animation: mLetter 7s cubic-bezier(0.4, 0.05, 0.2, 1) both;
-}
-.brand .logo-root.is-animating .m-mountain {
-  animation: mMountain 7s cubic-bezier(0.4, 0.05, 0.2, 1) both;
-}
-.brand .logo-root.is-animating .reach-left {
-  animation: reachLeft 7s cubic-bezier(0.33, 1, 0.4, 1) both;
-}
-.brand .logo-root.is-animating .reach-right {
-  animation: reachRight 7s cubic-bezier(0.33, 1, 0.4, 1) both;
+.brand .logo-root.is-animating .layer.out {
+  animation: collapseIn 6.4s cubic-bezier(0.4, 0.05, 0.2, 1) both;
+  animation-delay: var(--delay, 0s);
 }
 .brand .logo-root.is-animating .mark-end {
-  animation: markEnd 7s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: markPhase 6.4s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 .brand .logo-root.is-animating .tag {
-  animation: tagPhase 7s cubic-bezier(0.33, 1, 0.4, 1) both;
+  animation: tagPhase 6.4s cubic-bezier(0.33, 1, 0.4, 1) both;
 }
-
-/* Whole lockup grows; end a touch larger than start */
-@keyframes lockupGrow {
-  0% { transform: translateX(-50%) scale(0.86); }
-  18% { transform: translateX(-50%) scale(0.95); }
-  42% { transform: translateX(-50%) scale(1.06); }
-  72% { transform: translateX(-50%) scale(1.02); }
-  100% { transform: translateX(-50%) scale(1); }
+@keyframes panCenter {
+  0%, 46% { transform: translateX(0); }
+  70% { transform: translateX(calc(50% - var(--cx))); }
+  100% { transform: translateX(calc(50% - var(--cx))); }
 }
-/* People stay same size; only slide apart then return; slight lean toward center when reaching */
-@keyframes personLeft {
-  0%, 12% { transform: translateX(0) rotate(0deg); opacity: 1; }
-  38%, 48% { transform: translateX(-18%) rotate(8deg); opacity: 1; }
-  72% { transform: translateX(-2%) rotate(0deg); opacity: 1; }
-  86%, 100% { transform: translateX(0) rotate(0deg); opacity: 0; }
+@keyframes discPhase {
+  0%, 6% { opacity: 0; transform: scale(0.94); }
+  12% { opacity: 1; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1); }
+  68% { opacity: 0; transform: scale(1.15); }
+  100% { opacity: 0; transform: scale(1.15); }
 }
-@keyframes personRight {
-  0%, 12% { transform: translateX(0) rotate(0deg); opacity: 1; }
-  38%, 48% { transform: translateX(18%) rotate(-8deg); opacity: 1; }
-  72% { transform: translateX(2%) rotate(0deg); opacity: 1; }
-  86%, 100% { transform: translateX(0) rotate(0deg); opacity: 0; }
+@keyframes collapseIn {
+  0%, 6% { opacity: 0; transform: scale(1); }
+  12% { opacity: 1; transform: scale(1); }
+  46% { opacity: 1; transform: scale(1); }
+  66% { opacity: 0.15; transform: scale(0.22); }
+  74% { opacity: 0; transform: scale(0.05); }
+  100% { opacity: 0; transform: scale(0); }
 }
-/* Letter M: visible start, fades as mountain takes over, returns on shrink */
-@keyframes mLetter {
-  0%, 14% { transform: scale(1); opacity: 1; }
-  28% { transform: scale(1.15, 1.35); opacity: 0.35; }
-  38%, 50% { transform: scale(1.35, 1.85); opacity: 0; }
-  62% { transform: scale(1.1, 1.2); opacity: 0.55; }
-  74% { transform: scale(1); opacity: 1; }
-  86%, 100% { transform: scale(1); opacity: 0; }
+@keyframes markPhase {
+  0%, 52% { opacity: 0; transform: translateX(-50%) scale(0.55); }
+  68% { opacity: 1; transform: translateX(-50%) scale(0.95); }
+  100% { opacity: 1; transform: translateX(-50%) scale(0.9); }
 }
-/* Mountain silhouette: brief real-peak beat while expanded */
-@keyframes mMountain {
-  0%, 16% { transform: scale(0.55, 0.45); opacity: 0; }
-  28% { transform: scale(0.95, 1.05); opacity: 0.85; }
-  38%, 48% { transform: scale(1.25, 1.55); opacity: 1; }
-  62% { transform: scale(0.85, 0.9); opacity: 0.4; }
-  72%, 100% { transform: scale(0.55, 0.45); opacity: 0; }
-}
-@keyframes reachLeft {
-  0%, 30% { opacity: 0; transform: scaleX(0.2) rotate(-18deg); }
-  38%, 48% { opacity: 1; transform: scaleX(1.15) rotate(-28deg); }
-  58% { opacity: 0.4; transform: scaleX(0.6) rotate(-12deg); }
-  68%, 100% { opacity: 0; transform: scaleX(0.2) rotate(0deg); }
-}
-@keyframes reachRight {
-  0%, 30% { opacity: 0; transform: scaleX(0.2) rotate(18deg); }
-  38%, 48% { opacity: 1; transform: scaleX(1.15) rotate(28deg); }
-  58% { opacity: 0.4; transform: scaleX(0.6) rotate(12deg); }
-  68%, 100% { opacity: 0; transform: scaleX(0.2) rotate(0deg); }
-}
-/* Exact Drive mark resolves in at end — same red, no pale fade */
-@keyframes markEnd {
-  0%, 70% { opacity: 0; }
-  82% { opacity: 1; }
-  100% { opacity: 1; }
-}
-/* Tagline supports the shrink / reconnect beat */
 @keyframes tagPhase {
-  0%, 48% { opacity: 0; transform: translateY(10px); }
-  58% { opacity: 1; transform: none; }
-  78% { opacity: 1; transform: none; }
-  90%, 100% { opacity: 0; transform: translateY(-4px); }
+  0%, 14% { opacity: 0; transform: translateY(8px); }
+  22% { opacity: 1; transform: none; }
+  48% { opacity: 1; transform: none; }
+  62% { opacity: 0; transform: translateY(-6px); }
+  100% { opacity: 0; }
 }
-
 @media (prefers-reduced-motion: reduce) {
-  .brand .logo-root.is-animating .lockup,
   .brand .logo-root.is-animating .layer,
-  .brand .logo-root.is-animating .reach-left,
-  .brand .logo-root.is-animating .reach-right,
   .brand .logo-root.is-animating .mark-end,
   .brand .logo-root.is-animating .tag { animation: none !important; }
   .brand .logo-root.is-animating .layer,
-  .brand .logo-root.is-animating .reach-left,
-  .brand .logo-root.is-animating .reach-right,
-  .brand .logo-root.is-animating .tag,
-  .brand .logo-root.is-animating .disc { opacity: 0 !important; }
-  .brand .logo-root.is-animating .mark-end { opacity: 1 !important; }
-  .brand .logo-root.is-animating .lockup { transform: translateX(-50%) scale(1) !important; }
+  .brand .logo-root.is-animating .tag { opacity: 0 !important; }
+  .brand .logo-root.is-animating .mark-end {
+    opacity: 1 !important;
+    transform: translateX(-50%) scale(0.9) !important;
+  }
 }
 .composer {
   background: var(--card);
@@ -559,30 +448,30 @@ footer.site a:hover {
 .paywall-card strong { display: block; margin-bottom: 0.25rem; color: #7c2d12; }
 .paywall-card p { margin: 0; color: #9a3412; }
 .dev-note {
-  margin: 0.55rem 0 0;
+  margin: 0.65rem 0 0;
   text-align: center;
-  font-size: 0.78rem;
+  font-size: 0.82rem;
   color: #6b7280;
   letter-spacing: 0.01em;
-  opacity: 1;
-  transform: none;
-  pointer-events: auto;
 }
 .dev-note strong { color: #4b5563; font-weight: 600; }
-.composer {
-  /* Always visible — logo anim plays above; must never hide the field */
-  opacity: 1;
-  transform: none;
-  pointer-events: auto;
-}
 .card .hint {
   margin: 0.15rem 0 0.45rem;
   font-size: 0.82rem;
   color: #6b7280;
   line-height: 1.35;
 }
+.promise {
+  margin: 0.75rem auto 0;
+  max-width: 22rem;
+  text-align: center;
+  font-size: 1.15rem;
+  color: var(--ink);
+  line-height: 1.3;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
 .helper { display: none; }
-/* results stay hidden until submit (.results.hidden) — not gated on logo anim */
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -604,27 +493,28 @@ footer.site a:hover {
         <a class="logo" id="brand-logo" href="https://www.similarize.com/" aria-label="Similarize. Click to play the mark.">
           <div class="logo-stage" id="logo-stage">
             <div class="logo-root is-animating" id="logo-root">
-              <div class="lockup" id="logo-lockup">
-                <div class="disc" aria-hidden="true"></div>
-                <img class="layer m-mountain" src="images/drive-collapse/layers/m-mountain.png?v=drivecollapse6b" alt="">
-                <img class="layer m-letter" src="images/drive-collapse/layers/m-letter.png?v=drivecollapse6b" alt="">
-                <img class="layer person-left" src="images/drive-collapse/layers/person-left.png?v=drivecollapse6b" alt="">
-                <img class="layer person-right" src="images/drive-collapse/layers/person-right.png?v=drivecollapse6b" alt="">
-                <div class="reach-left" aria-hidden="true"></div>
-                <div class="reach-right" aria-hidden="true"></div>
-                <img class="mark-end" src="images/drive-collapse/mark-end.png?v=drivecollapse6b" alt="Similarize">
+              <div class="word-box" id="word-box">
+                <img class="layer disc" src="images/drive-collapse/anim-center.png?v=drivecollapse5b" alt="">
+                <img class="layer out" style="--delay:0.00s" src="images/drive-collapse/letters/letter-S.png?v=drivecollapse5b" alt="">
+                <img class="layer out" style="--delay:0.03s" src="images/drive-collapse/letters/l.png?v=drivecollapse5b" alt="">
+                <img class="layer out" style="--delay:0.05s" src="images/drive-collapse/letters/a.png?v=drivecollapse5b" alt="">
+                <img class="layer out" style="--delay:0.07s" src="images/drive-collapse/letters/r.png?v=drivecollapse5b" alt="">
+                <img class="layer out" style="--delay:0.09s" src="images/drive-collapse/letters/i3.png?v=drivecollapse5b" alt="">
+                <img class="layer out" style="--delay:0.11s" src="images/drive-collapse/letters/z.png?v=drivecollapse5b" alt="">
+                <img class="layer out" style="--delay:0.13s" src="images/drive-collapse/letters/e.png?v=drivecollapse5b" alt="">
               </div>
+              <img class="mark-end" src="images/drive-collapse/mark-end.png?v=drivecollapse5b" alt="Similarize">
               <div class="tag">removing the mountains between us</div>
             </div>
           </div>
-          <noscript><img src="images/drive-collapse/mark-end.png?v=drivecollapse6b" width="200" height="200" alt="Similarize"></noscript>
+          <noscript><img src="images/drive-collapse/mark-end.png?v=drivecollapse5b" width="200" height="200" alt="Similarize"></noscript>
         </a>
-        <h1 class="visually-hidden">Clearer ways to say it</h1>
-        <p class="dev-note" id="early-preview"><strong>Early preview</strong></p>
+        <p class="dev-note"><strong>Early preview</strong></p>
+        <h1 class="promise">Clearer ways to say it</h1>
       </div>
       <form class="composer" id="composer" autocomplete="off">
         <label for="statement" class="visually-hidden">Your phrase</label>
-        <textarea id="statement" name="statement" maxlength="800" rows="3" placeholder="Clearer ways to say it — type a phrase" autofocus></textarea>
+        <textarea id="statement" name="statement" maxlength="800" rows="3" placeholder="Type a phrase — we’ll make it clearer" autofocus></textarea>
         <div class="row">
           <span class="count" id="count" aria-live="polite">0/800</span>
           <div class="row-actions">
@@ -671,34 +561,30 @@ footer.site a:hover {
 (function () {
   var logo = document.getElementById("brand-logo");
   var root = document.getElementById("logo-root");
-  var shell = document.getElementById("shell");
   if (!logo || !root) return;
   var reduce = false;
   try { reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) {}
-  var ANIM_MS = 7000;
-  var readyTimer = null;
 
-  function setReady(on) {
-    if (!shell) return;
-    if (on) shell.classList.add("logo-ready");
-    else shell.classList.remove("logo-ready");
+  function applyMeta() {
+    return fetch("images/drive-collapse/anim-meta.json?v=drivecollapse5b")
+      .then(function (r) { return r.json(); })
+      .then(function (meta) {
+        var stage = document.getElementById("logo-stage");
+        if (!stage) return;
+        stage.style.setProperty("--cx", (meta.cx / meta.W * 100).toFixed(2) + "%");
+        stage.style.setProperty("--cy", (meta.cy / meta.H * 100).toFixed(2) + "%");
+      })
+      .catch(function () {});
   }
 
   function replay() {
     if (reduce) {
       root.classList.remove("is-animating");
-      setReady(true);
       return;
     }
-    /* Replay anim only — never hide composer / early preview */
-    setReady(true);
     root.classList.remove("is-animating");
     void root.getBoundingClientRect();
     root.classList.add("is-animating");
-    if (readyTimer) clearTimeout(readyTimer);
-    readyTimer = setTimeout(function () {
-      root.classList.remove("is-animating");
-    }, ANIM_MS);
   }
 
   logo.addEventListener("click", function (e) {
@@ -707,18 +593,14 @@ footer.site a:hover {
     replay();
   });
 
-  /* Field visible immediately; anim can still play above */
-  setReady(true);
   if (reduce) {
     root.classList.remove("is-animating");
-  } else if (readyTimer) {
-    clearTimeout(readyTimer);
   }
-  readyTimer = setTimeout(function () {
-    if (root.classList.contains("is-animating")) root.classList.remove("is-animating");
-  }, ANIM_MS);
+  applyMeta();
 })();
-
+</script>
+<script>
+(function (root) {
 // Similarize v1 in-browser rewriter. Deterministic. No APIs.
 
 const PHRASE_SIMPLE = [
