@@ -346,7 +346,7 @@
         this.add.rectangle(gar.x + gar.w / 2, gar.y + gar.h / 2, gar.w, gar.h, 0x6b7280, 0.92)
           .setStrokeStyle(4, 0x0b1220, 1);
         this.garageBay = this.add.rectangle(gar.x + gar.w / 2, gar.y + gar.h - 40, 140, 70, 0x38bdf8, 0.25);
-        this.garageDoor = this.add.rectangle(gar.x + gar.w / 2, gar.y + gar.h - 40, 140, 70, 0x111827, 1)
+        this.garageDoor = this.add.rectangle(gar.x + gar.w / 2, gar.y + gar.h - 40, Math.max(140, gar.w * 0.92), 70, 0x111827, 1)
           .setStrokeStyle(2, 0xfbbf24, 1);
         this.garageOpenLabel = this.add.text(gar.x + gar.w / 2, gar.y + gar.h - 90, "", {
           fontSize: "12px", fontStyle: "bold", color: "#bbf7d0", stroke: "#000", strokeThickness: 3,
@@ -815,7 +815,7 @@
           var want = dGar < 260 ? 1 : 0;
           this.garageOpen = Phaser.Math.Clamp(this.garageOpen + (want ? 2.2 : -1.4) * dt, 0, 1);
           var lift = this.garageOpen * 52;
-          this.garageDoor.setDisplaySize(140, Math.max(4, this.garageDoorH0 - lift));
+          this.garageDoor.setDisplaySize(Math.max(140, (this.canonGarageW || 480) * 0.92), Math.max(4, this.garageDoorH0 - lift));
           this.garageDoor.y = this.garageDoorY0 - lift * 0.5;
           this.garageDoor.setStrokeStyle(2, this.garageOpen > 0.4 ? 0x86efac : 0xfbbf24, 1);
           if (this.garageOpenLabel) {

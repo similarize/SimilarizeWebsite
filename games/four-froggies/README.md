@@ -1,3 +1,8 @@
+## What's new (garage1) — garage door wall-to-wall
+- **Three.js:** South bay door + lintel span between side walls (was a ~2.2-unit floating slab in a ~9.6-wide bay); left/right jambs frame the entrance. Open/close lift unchanged.
+- **Collision / Canvas / Phaser:** Closed door blocks nearly the full garage front (`GARAGE_DOOR_W` ~440); Canvas + Phaser door draw match.
+- Cache-bust: `?v=20260926-garage1`. Cast unchanged. No SPS arcade republish.
+
 ## What's new (joy2) — joystick visible + touchable on phone
 - **Visibility:** Idle opacity ~0.92 (was 0.48 glass-ghost on ranch); stronger border / knob / cyan glow; still stylish glass-neon, not a solid blob.
 - **Touch target:** Phone stick ~118px; z-index 32 above engine-host/canvas.

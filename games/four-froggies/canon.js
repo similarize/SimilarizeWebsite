@@ -313,7 +313,7 @@
   /* solid1: cheap walk blockers (world XY). Doorways stay open. Trucks block unless boarding/in-truck. */
   var WALL_THICK = 20;
   var HOUSE_DOOR_W = 96;
-  var GARAGE_DOOR_W = 120;
+  var GARAGE_DOOR_W = 440; /* garage1: nearly full bay (gar.w=480) */
 
   function solidRects(opts) {
     opts = opts || {};
@@ -336,9 +336,9 @@
     out.push({ id: "gar-e", x: gar.x + gar.w - t * 0.5, y: gar.y, w: t, h: gar.h });
     /* Rolling door blocks south bay until open enough to walk under */
     if (garageOpen < 0.45) {
-      var gmid = gar.x + gar.w * 0.5;
-      var gd = GARAGE_DOOR_W * 0.5;
-      out.push({ id: "gar-door", x: gmid - gd, y: gar.y + gar.h - t * 0.5, w: GARAGE_DOOR_W, h: t });
+      /* garage1: door fills south bay wall-to-wall (tiny side margins for jambs) */
+      var margin = Math.max(8, (gar.w - GARAGE_DOOR_W) * 0.5);
+      out.push({ id: "gar-door", x: gar.x + margin, y: gar.y + gar.h - t * 0.5, w: gar.w - margin * 2, h: t });
     }
     return out;
   }

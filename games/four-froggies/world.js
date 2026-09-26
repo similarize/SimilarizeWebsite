@@ -2,7 +2,7 @@
    ranchfeel2 + parity1: Cybertruck water; varied track; crisper silhouettes; Starship approach uses shared canon gold guide.
    polish4: house interiors readable; backyard animals present; dramatic mechs; track hills; Starship destination;
    inviting story hotspots; truck bounce + water spray/bubbles; walk dust.
-   polish5: day ambient pollen/fireflies; pond ripple rings; track race dust; garage door open-near;
+   garage1: garage door spans full front bay; polish5: day ambient pollen/fireflies; pond ripple rings; track race dust; garage door open-near;
    shared pile-in truck obvious; tiny land shake hook; sparkle on hotspot enter.
    polish6: FF-like depth — stronger hill parallax, soft drop shadows, scale-with-depth props,
    walk cam tilt/bob (via main); 1000-story mech wow tip; story/combat visual teases.
@@ -1493,7 +1493,8 @@
     ctx.stroke();
     /* Garage door bay — polish5 opens when frogs near */
     var door = project(gar.x + gar.w * 0.5, gar.y + gar.h - 50, camX, camY, vw, vh);
-    var ddw = 118 * door.depth, ddh = 56 * door.depth;
+    /* garage1: door spans nearly full garage front (wall-to-wall) */
+    var ddw = Math.max(118, gar.w * 0.88) * door.depth, ddh = 56 * door.depth;
     var openAmt = clamp(world && world.garageOpen ? world.garageOpen : 0, 0, 1);
     var lift = ddh * openAmt * 0.82;
     /* Dark bay always visible */

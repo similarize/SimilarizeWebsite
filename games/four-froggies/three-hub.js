@@ -3,7 +3,7 @@
    Big map · compound · squiggle track · pond whales · 4 trucks+shared ·
    on-water/under · Starship → Escape/hard thruster.
    polish4: compound presence + hills + inviting hotspots + truck bob/spray.
-   polish5: ambient pollen/fireflies; pond ripples; track race dust; garage door open-near;
+   garage1: garage door spans full south bay wall-to-wall; polish5: ambient pollen/fireflies; pond ripples; track race dust; garage door open-near;
    shared ALL ABOARD; land shake; hotspot sparkle; orbit pull rings + Escape banner.
    polish6: depth shadows + parallax-lite hills + Mars invader silhouette tease + mech wow tip.
    polish7: zone signs + mini-map lite + companion idle bounce / follow lag. Hollow house + frogs kept.
@@ -378,16 +378,25 @@
     gWall(gp.x, gp.z - gd * 0.5 + 0.1, gw, 0.2);
     gWall(gp.x - gw * 0.5 + 0.1, gp.z, 0.2, gd);
     gWall(gp.x + gw * 0.5 - 0.1, gp.z, 0.2, gd);
-    // Open south (door) — dark lintel + polish5 rolling door
-    var lintel = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.35, 0.2), new THREE.MeshStandardMaterial({ color: 0x111827 }));
-    lintel.position.set(gp.x, 1.85, gp.z + gd * 0.5 - 0.1); scene.add(lintel);
+    // garage1: south bay = full wall-to-wall entrance (not a floating center slab)
+    var doorW = Math.max(1.2, gw - 0.36); // spans between side walls
+    var jambT = 0.18;
+    var southZ = gp.z + gd * 0.5 - 0.08;
+    var jambMat = new THREE.MeshStandardMaterial({ color: 0x374151, roughness: 0.7, metalness: 0.1 });
+    // Left / right jambs flush with side walls
+    var jambL = new THREE.Mesh(new THREE.BoxGeometry(jambT, 2.0, 0.22), jambMat);
+    jambL.position.set(gp.x - doorW * 0.5 - jambT * 0.5, 1.0, southZ); jambL.castShadow = true; scene.add(jambL);
+    var jambR = new THREE.Mesh(new THREE.BoxGeometry(jambT, 2.0, 0.22), jambMat);
+    jambR.position.set(gp.x + doorW * 0.5 + jambT * 0.5, 1.0, southZ); jambR.castShadow = true; scene.add(jambR);
+    var lintel = new THREE.Mesh(new THREE.BoxGeometry(doorW + jambT * 2, 0.35, 0.24), new THREE.MeshStandardMaterial({ color: 0x111827 }));
+    lintel.position.set(gp.x, 1.95, southZ); scene.add(lintel);
     state.garageDoor = new THREE.Mesh(
-      new THREE.BoxGeometry(2.2, 1.6, 0.12),
-      new THREE.MeshStandardMaterial({ color: 0x1f2937, metalness: 0.3, roughness: 0.6 })
+      new THREE.BoxGeometry(doorW, 1.7, 0.12),
+      new THREE.MeshStandardMaterial({ color: 0x1f2937, metalness: 0.3, roughness: 0.55 })
     );
-    state.garageDoor.position.set(gp.x, 0.9, gp.z + gd * 0.5 - 0.05);
-    state.garageDoor.userData.y0 = 0.9;
-    state.garageDoor.userData.h0 = 1.6;
+    state.garageDoor.position.set(gp.x, 0.95, southZ + 0.02);
+    state.garageDoor.userData.y0 = 0.95;
+    state.garageDoor.userData.h0 = 1.7;
     state.garageDoor.userData.cx = gp.x;
     state.garageDoor.userData.cz = gp.z + gd * 0.5;
     scene.add(state.garageDoor);

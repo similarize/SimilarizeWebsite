@@ -5,7 +5,7 @@
   "use strict";
 
   var C = global.FroggiesCanon;
-  var CACHE = "20260926-joy2";
+  var CACHE = "20260926-garage1";
   var CDN = {
     phaser: "https://cdn.jsdelivr.net/npm/phaser@3.87.0/dist/phaser.min.js",
     three: "https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js",
