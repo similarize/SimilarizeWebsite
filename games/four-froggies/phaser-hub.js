@@ -10,7 +10,8 @@
    polish9: color nameplates; aboard icons; track start/finish gate; Optimus visual punch lite.
    polish10: quieter UI; exit truck anytime; friction/cam tighten; particle caps; dusk sky shift.
    tapsteer1: faster walk/drive; hold-to-aim tap/click steer + marker.
-   eyes1: rotate frog sprite toward walk dir; idle keeps last; AI companions too. */
+   eyes1: rotate frog sprite toward walk dir; idle keeps last; AI companions too.
+   truck1: kid-toy truck scale; smooth yaw toward aim; track elev / crest / land bounce. */
 (function (global) {
   "use strict";
   var C = global.FroggiesCanon;
@@ -200,8 +201,11 @@
           backgroundColor: "#0f172acc", padding: { x: 6, y: 2 },
         }).setOrigin(0.5).setDepth(22).setVisible(false);
         this.kitFxT = 0; this.kitFxKind = ""; this.lapSide = 0; this.lapCd = 0; this.lapCount = 0;
-        this.truckBody = this.add.rectangle(0, 0, 78, 36, 0x9ca3af, 1).setDepth(18).setVisible(false).setStrokeStyle(3, 0x111827, 1);
-        this.truckAccent = this.add.rectangle(0, -2, 50, 14, hx(def.color), 0.85).setDepth(18).setVisible(false);
+        /* truck1: kid-toy vs frog (~64px) — bigger than frog, not a building */
+        var tvs = (C.TRUCK_VIS && C.TRUCK_VIS.phaserScale != null) ? C.TRUCK_VIS.phaserScale : 1.28;
+        this.truckVisScale = tvs;
+        this.truckBody = this.add.rectangle(0, 0, Math.round(58 * tvs), Math.round(26 * tvs), 0x9ca3af, 1).setDepth(18).setVisible(false).setStrokeStyle(3, 0x111827, 1);
+        this.truckAccent = this.add.rectangle(0, -2, Math.round(36 * tvs), Math.round(11 * tvs), hx(def.color), 0.85).setDepth(18).setVisible(false);
         this.waterClip = this.add.rectangle(0, 10, 84, 22, 0x0e7490, 0.55).setDepth(19).setVisible(false);
         this.cameras.main.startFollow(this.player, true, 0.28, 0.28); /* polish3/10 less lag fight */
 
@@ -521,46 +525,49 @@
         /* polish3: wedge Cybertruck silhouette + wheels */
         this.parkedTrucks = [];
         var spots = C.TRUCK_SPOTS || [];
+        var pvs = (C.TRUCK_VIS && C.TRUCK_VIS.phaserScale != null) ? C.TRUCK_VIS.phaserScale : 1.28;
         for (var i = 0; i < spots.length; i++) {
           var s = spots[i];
           var accent = s.id === "shared" ? 0xfbbf24 : hx((C.FROG_DEFS[s.id] || def).color);
           var g = this.add.graphics();
-          /* polish8: angular stainless + light bar + wheel arches */
+          /* truck1 + polish8: kid-toy angular stainless */
+          var ox = function (dx) { return s.x + dx * pvs; };
+          var oy = function (dy) { return s.y + dy * pvs; };
           g.fillStyle(0xc5ced8, 1); g.lineStyle(3, 0x111827, 1);
           g.beginPath();
-          g.moveTo(s.x - 46, s.y + 10);
-          g.lineTo(s.x - 44, s.y - 4);
-          g.lineTo(s.x - 16, s.y - 8);
-          g.lineTo(s.x - 4, s.y - 14);
-          g.lineTo(s.x + 8, s.y - 28);
-          g.lineTo(s.x + 48, s.y - 8);
-          g.lineTo(s.x + 54, s.y + 4);
-          g.lineTo(s.x + 50, s.y + 12);
+          g.moveTo(ox(-36), oy(8));
+          g.lineTo(ox(-34), oy(-3));
+          g.lineTo(ox(-12), oy(-6));
+          g.lineTo(ox(-3), oy(-11));
+          g.lineTo(ox(6), oy(-22));
+          g.lineTo(ox(38), oy(-6));
+          g.lineTo(ox(42), oy(3));
+          g.lineTo(ox(39), oy(9));
           g.closePath(); g.fillPath(); g.strokePath();
           g.lineStyle(1.5, 0xffffff, 0.55);
-          g.beginPath(); g.moveTo(s.x - 40, s.y); g.lineTo(s.x + 6, s.y - 22); g.lineTo(s.x + 44, s.y - 6); g.strokePath();
+          g.beginPath(); g.moveTo(ox(-30), oy(0)); g.lineTo(ox(5), oy(-17)); g.lineTo(ox(34), oy(-5)); g.strokePath();
           g.fillStyle(accent, 0.95);
-          g.fillRect(s.x - 2, s.y - 20, 30, 14);
-          g.lineStyle(2, 0x0b1220, 0.9); g.strokeRect(s.x - 2, s.y - 20, 30, 14);
-          g.fillStyle(0xfef08a, 1); g.fillRect(s.x + 42, s.y - 8, 14, 6); /* light bar */
+          g.fillRect(ox(-2), oy(-16), 24 * pvs, 11 * pvs);
+          g.lineStyle(2, 0x0b1220, 0.9); g.strokeRect(ox(-2), oy(-16), 24 * pvs, 11 * pvs);
+          g.fillStyle(0xfef08a, 1); g.fillRect(ox(32), oy(-6), 11 * pvs, 5 * pvs); /* light bar */
           g.lineStyle(2, 0x94a3b8, 0.8);
-          g.beginPath(); g.arc(s.x - 24, s.y + 10, 12, Math.PI * 1.1, Math.PI * 1.9); g.strokePath();
-          g.beginPath(); g.arc(s.x + 26, s.y + 9, 12, Math.PI * 1.1, Math.PI * 1.9); g.strokePath();
+          g.beginPath(); g.arc(ox(-18), oy(8), 9 * pvs, Math.PI * 1.1, Math.PI * 1.9); g.strokePath();
+          g.beginPath(); g.arc(ox(20), oy(7), 9 * pvs, Math.PI * 1.1, Math.PI * 1.9); g.strokePath();
           g.fillStyle(0x0f172a, 1);
-          g.fillCircle(s.x - 24, s.y + 12, 9);
-          g.fillCircle(s.x - 8, s.y + 12, 7);
-          g.fillCircle(s.x + 26, s.y + 11, 9);
-          var body = this.add.rectangle(s.x, s.y, 78, 34, 0x9ca3af, 0.01); // hit proxy for pulse
-          var cab = this.add.rectangle(s.x + 8, s.y - 4, 36, 16, accent, 0.01);
+          g.fillCircle(ox(-18), oy(9), 7 * pvs);
+          g.fillCircle(ox(-6), oy(9), 5.5 * pvs);
+          g.fillCircle(ox(20), oy(8), 7 * pvs);
+          var body = this.add.rectangle(s.x, s.y, Math.round(58 * pvs), Math.round(26 * pvs), 0x9ca3af, 0.01); // hit proxy for pulse
+          var cab = this.add.rectangle(s.x + 6 * pvs, s.y - 3 * pvs, Math.round(28 * pvs), Math.round(12 * pvs), accent, 0.01);
           var label = s.id === "shared" ? "★ ALL ABOARD · 4" : ("Cybertruck · " + (C.FROG_DEFS[s.id] || {}).name);
           if (s.id === "shared") {
             g.lineStyle(3, 0xfbbf24, 0.85);
-            g.strokeEllipse(s.x, s.y + 8, 100, 36);
+            g.strokeEllipse(s.x, s.y + 8 * pvs, 78 * pvs, 28 * pvs);
             var ids = ["james", "jimmy", "bubbles", "rexy"];
             for (var si = 0; si < 4; si++) {
               var col = hx((C.FROG_DEFS[ids[si]] || def).color);
               g.fillStyle(col, 1);
-              g.fillCircle(s.x + (si - 1.5) * 14, s.y - 26, 6);
+              g.fillCircle(s.x + (si - 1.5) * 12 * pvs, s.y - 22 * pvs, 5 * pvs);
             }
           }
           var lbl = this.add.text(s.x, s.y - 32, label, {
@@ -584,14 +591,42 @@
         /* tapsteer1: faster walk + drive */
         var maxSp = this.inTruck ? 440 : 290, accel = this.inTruck ? 1050 : 920, fric = this.inTruck ? 5.2 : 8.8;
         var body = this.player.body;
+        var spPrev = Math.hypot(body.velocity.x, body.velocity.y);
         var steer = mergedSteer();
         if (steer.x || steer.y) {
           var len = Math.hypot(steer.x, steer.y) || 1;
-          body.velocity.x += (steer.x / len) * accel * dt;
-          body.velocity.y += (steer.y / len) * accel * dt;
-          /* eyes1: face walk direction; idle keeps last faceAngle */
-          this.faceAngle = Math.atan2(steer.y / len, steer.x / len) + Math.PI / 2;
-          if (steer.x) this.facing = steer.x > 0 ? 1 : -1;
+          var sx = steer.x / len, sy = steer.y / len;
+          var aimFace = Math.atan2(sy, sx) + Math.PI / 2; /* sprite texture faces up */
+          if (this.inTruck) {
+            /* truck1: smooth yaw; thrust along facing (faceAngle 0 = screen-up) */
+            var curF = (this.faceAngle != null) ? this.faceAngle : aimFace;
+            var turnRate = 3.8 + Math.min(2.2, spPrev / 160);
+            if (C.approachAngle) this.faceAngle = C.approachAngle(curF, aimFace, turnRate * dt);
+            else {
+              var dA = aimFace - curF;
+              while (dA > Math.PI) dA -= Math.PI * 2;
+              while (dA < -Math.PI) dA += Math.PI * 2;
+              var stA = turnRate * dt;
+              if (dA > stA) dA = stA; if (dA < -stA) dA = -stA;
+              this.faceAngle = curF + dA;
+            }
+            /* Convert faceAngle (0=up) to world thrust dir */
+            var thrustAng = this.faceAngle - Math.PI / 2; /* back to atan2(y,x) space */
+            var fx = Math.cos(thrustAng), fy = Math.sin(thrustAng);
+            var blend = 0.2;
+            var ax = fx * (1 - blend) + sx * blend;
+            var ay = fy * (1 - blend) + sy * blend;
+            var al = Math.hypot(ax, ay) || 1;
+            body.velocity.x += (ax / al) * accel * dt;
+            body.velocity.y += (ay / al) * accel * dt;
+            this.facing = fx >= 0 ? 1 : -1;
+          } else {
+            body.velocity.x += sx * accel * dt;
+            body.velocity.y += sy * accel * dt;
+            /* eyes1: face walk direction; idle keeps last faceAngle */
+            this.faceAngle = aimFace;
+            if (steer.x) this.facing = steer.x > 0 ? 1 : -1;
+          }
         }
         tickTapMarker(dt);
         body.velocity.x *= Math.max(0, 1 - fric * dt);
@@ -615,15 +650,53 @@
             this.player.setPosition(solid.x, solid.y);
           }
         }
+        /* truck1: track elevation ground plane */
+        var elevZ = 0;
+        if (this.inTruck && C.onTrack && C.onTrack(this.player.x, this.player.y) && C.trackElevAt) {
+          elevZ = C.trackElevAt(this.player.x, this.player.y) || 0;
+        }
+        var prevG = this.groundZ != null ? this.groundZ : elevZ;
+        if (this.inTruck && C.onTrack && C.onTrack(this.player.x, this.player.y)) {
+          this.groundZ = prevG + (elevZ - prevG) * Math.min(1, 14 * dt);
+        } else {
+          this.groundZ = (this.groundZ || 0) * Math.exp(-7 * dt);
+          if (Math.abs(this.groundZ) < 0.4) this.groundZ = 0;
+        }
+        var groundZ = this.groundZ || 0;
+        var airA = (this.zLift || 0) - groundZ;
         if (this.inTruck && C.rampAt) {
           var ramp = C.rampAt(this.player.x, this.player.y);
-          if (ramp && sp > 40) { this.zVel = Math.max(this.zVel, 180 * (ramp.boost || 1.3)); this.scrap += 0.02; }
+          if (ramp && sp > 40 && airA < 4) {
+            this.zVel = Math.max(this.zVel, 180 * (ramp.boost || 1.3));
+            this.zLift = Math.max(this.zLift, groundZ + 3);
+            this.scrap += 0.02;
+          }
         }
-        /* polish9: brief air hang at apex */
+        var dG = groundZ - prevG;
+        if (this.inTruck && airA < 4 && sp > 90 && dG < -1.0) {
+          var crest = Math.min(260, sp * 0.4 + (-dG) * 9);
+          if (crest > 70) {
+            this.zVel = Math.max(this.zVel, crest);
+            this.zLift = Math.max(this.zLift, groundZ + 2);
+          }
+        }
+        /* polish9 + truck1: air hang + land bounce */
+        airA = (this.zLift || 0) - groundZ;
         var gFall = 420;
-        if (this.zLift > 18 && Math.abs(this.zVel) < 80) gFall *= 0.38;
-        this.zVel -= gFall * dt; this.zLift = Math.max(0, this.zLift + this.zVel * dt);
-        if (this.zLift <= 0) { this.zLift = 0; this.zVel = 0; }
+        if (airA > 18 && Math.abs(this.zVel) < 80) gFall *= 0.38;
+        if (airA > 0.2 || this.zVel !== 0) {
+          this.zVel -= gFall * dt;
+          this.zLift = this.zLift + this.zVel * dt;
+          if (this.zLift <= groundZ) {
+            var impact = Math.max(0, -this.zVel);
+            this.zLift = groundZ;
+            if (impact > 70) this.zVel = Math.min(140, impact * 0.28);
+            else this.zVel = 0;
+          }
+        } else {
+          this.zLift = groundZ;
+          this.zVel = 0;
+        }
         /* polish9: lap sparkle at gate */
         if (this.inTruck && C.onTrack && C.onTrack(this.player.x, this.player.y) && this.zLift < 8) {
           this.lapCd = Math.max(0, (this.lapCd || 0) - dt);
@@ -825,9 +898,18 @@
         }
         if (this.inTruck) {
           this.truckBody.setVisible(true); this.truckAccent.setVisible(true);
-          this.truckBody.setPosition(this.player.x, this.player.y - this.zLift * 0.06 - bounce);
-          this.truckAccent.setPosition(this.player.x + 6 * this.facing, this.player.y - 4 - this.zLift * 0.06 - bounce);
-          this.truckBody.setScale(this.facing < 0 ? -1 : 1, 1);
+          var ty = this.player.y - this.zLift * 0.06 - bounce;
+          this.truckBody.setPosition(this.player.x, ty);
+          /* truck1: rotate body to faceAngle (rect long axis = +X; faceAngle 0 = up → rot = faceAngle - PI/2 for nose-along-travel... 
+             Phaser faceAngle 0 = texture-up. Rectangle default long axis is horizontal (+X). 
+             Rotate so long axis points along thrust = faceAngle - PI/2 + 0 = faceAngle - PI/2... 
+             Actually: faceAngle is sprite rot with 0=up. Truck nose should match travel which is faceAngle-PI/2 in atan2 space,
+             so rectangle rotation = faceAngle - PI/2 (horizontal nose → travel dir). */
+          var truckRot = (this.faceAngle || 0) - Math.PI / 2;
+          this.truckBody.setRotation(truckRot).setScale(1, 1);
+          var noseX = Math.cos(truckRot) * 10;
+          var noseY = Math.sin(truckRot) * 10;
+          this.truckAccent.setPosition(this.player.x + noseX, ty - 2 + noseY * 0.15).setRotation(truckRot);
           var dive = this.waterSub > 0.7;
           this.truckBody.setFillStyle(dive ? 0x64748b : 0x9ca3af, dive ? 0.7 : 1);
           this.waterClip.setVisible(wet);

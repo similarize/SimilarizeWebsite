@@ -15,6 +15,8 @@
    solid1: shared solid walls/mechs/trucks via FroggiesCanon.resolveSolid;
    tapsteer1: faster walk/drive;
    eyes1: faceAngle — rotate frog face toward walk dir (idle keeps last); AI too;
+   truck1: kid-toy Cybertruck scale; smooth yaw steer (face+drive toward aim);
+   track elev follow / crest launch / land bounce via trackElevAt;
    particle caps; sunset sky shift over play time.
    mobile1: phone+desktop shared UI — smaller/toggle-friendly mini-map + harder particle caps on narrow.
    ~10× map: real roam between ranch house / track / pond / Starship.
@@ -411,6 +413,7 @@
       truckId: null,
       z: 0,
       zVel: 0,
+      groundZ: 0,
       waterSub: 0,
       wakePhase: 0,
       truckBounce: 0,
@@ -761,12 +764,27 @@
       return result;
     }
     var speed = Math.hypot(ent.vx, ent.vy);
-    result.onWater = wet && (ent.z || 0) < 4;
+    /* truck1: follow track ribbon/mound elevation as ground plane */
+    var canonH = global.FroggiesCanon;
+    var targetGround = 0;
+    if (onTrack(ent.x, ent.y) && canonH && canonH.trackElevAt) {
+      targetGround = canonH.trackElevAt(ent.x, ent.y) || 0;
+    }
+    var prevGround = ent.groundZ != null ? ent.groundZ : targetGround;
+    if (onTrack(ent.x, ent.y)) {
+      ent.groundZ = prevGround + (targetGround - prevGround) * Math.min(1, 14 * dt);
+    } else {
+      ent.groundZ = (ent.groundZ || 0) * Math.exp(-7 * dt);
+      if (Math.abs(ent.groundZ) < 0.4) ent.groundZ = 0;
+    }
+    var groundZ = ent.groundZ || 0;
+    var airAbove = (ent.z || 0) - groundZ;
+    result.onWater = wet && airAbove < 4;
     var ramp = rampAt(ent.x, ent.y);
-    if (ramp && ent.z <= 0.5 && speed > 72) {
+    if (ramp && airAbove <= 2.5 && speed > 72) {
       var boost = ramp.boost * clamp(speed / 210, 0.55, 1.45);
       ent.zVel = 235 * boost;
-      ent.z = Math.max(ent.z, 3);
+      ent.z = Math.max(ent.z, groundZ + 3);
       result.jumped = true;
       world.stuntCombo += 1;
       var gain = 10 + world.stuntCombo * 5;
@@ -778,28 +796,52 @@
         spawnSparks(world, ent.x, ent.y, 6);
       }
     }
-    if (ent.z > 0 || ent.zVel !== 0) {
+    /* truck1: crest launch — fast over downhill lip after a rise */
+    var dGround = groundZ - prevGround;
+    if (airAbove <= 3 && speed > 95 && dGround < -0.9) {
+      var crest = Math.min(280, speed * 0.42 + (-dGround) * 10);
+      if (crest > 75) {
+        ent.zVel = Math.max(ent.zVel || 0, crest);
+        ent.z = Math.max(ent.z || 0, groundZ + 2);
+        result.jumped = true;
+        if (!result.scrapGain) {
+          world.stuntCombo += 1;
+          var cg = 6 + world.stuntCombo * 3;
+          world.scrap += cg;
+          result.scrapGain = cg;
+        }
+      }
+    }
+    airAbove = (ent.z || 0) - groundZ;
+    if (airAbove > 0.15 || ent.zVel !== 0) {
       var g = gTruck;
       /* polish9: brief air hang at jump apex so elevation jumps feel */
-      if (ent.z > 22 && Math.abs(ent.zVel) < 95) g *= 0.38;
+      if (airAbove > 22 && Math.abs(ent.zVel) < 95) g *= 0.38;
       else if (Math.abs(ent.zVel) < 60) g *= 0.78;
       /* Water drag while airborne over pond softens plunge */
       if (wet) g *= 0.92;
       ent.zVel -= g * dt;
       ent.z += ent.zVel * dt;
       world.airTime += dt;
-      if (ent.z <= 0) {
-        ent.z = 0;
+      if (ent.z <= groundZ) {
+        var impact = Math.max(0, -(ent.zVel || 0));
+        ent.z = groundZ;
         result.landed = true;
         if (world.airTime > 0.35) {
           var airBonus = Math.floor(world.airTime * 25);
           world.scrap += airBonus;
-          result.scrapGain += airBonus;
+          result.scrapGain = (result.scrapGain || 0) + airBonus;
         }
-        var plunge = Math.max(0, -ent.zVel) + world.airTime * 90;
+        var plunge = impact + world.airTime * 90;
         var airSnap = world.airTime;
         world.airTime = 0;
-        ent.zVel = 0;
+        /* truck1: land bounce from impact */
+        if (impact > 70 && !wet) {
+          ent.zVel = Math.min(155, impact * 0.3);
+          ent.truckBounce = Math.max(ent.truckBounce || 0, 7 + impact * 0.045);
+        } else {
+          ent.zVel = 0;
+        }
         if (wet) {
           /* Visual: surface drive default; hard plunge / long air reads as going under */
           var sub = clamp(0.42 + plunge / 320 + airSnap * 0.35, 0.48, 1.2);
@@ -815,11 +857,15 @@
         }
         result.landShake = true; /* polish5: tiny screen shake on truck land */
       }
-    } else if (speed < 40) {
-      world.stuntCombo = 0;
+    } else {
+      /* truck1: stick to track undulation while rolling */
+      ent.z = groundZ;
+      ent.zVel = 0;
+      if (speed < 40) world.stuntCombo = 0;
     }
 
-    if (wet && (ent.z || 0) <= 0.5) {
+    airAbove = (ent.z || 0) - groundZ;
+    if (wet && airAbove <= 0.5) {
       /* On the water surface — settle toward shallow waterline; expire dive tint */
       if ((ent.waterSub || 0) > 0.4) {
         ent.waterSub = Math.max(0.26, ent.waterSub - dt * 0.75);
@@ -845,12 +891,16 @@
 
     /* polish4: truck bounce — suspension hop while rolling */
     ent.bouncePhase = (ent.bouncePhase || 0) + dt * (3.2 + speed * 0.018);
-    if ((ent.z || 0) <= 0.5) {
+    airAbove = (ent.z || 0) - (ent.groundZ || 0);
+    if (airAbove <= 2.5) {
       var bounceAmp = clamp(speed / 280, 0, 1.35);
-      if (onTrack(ent.x, ent.y)) bounceAmp *= 1.35;
+      if (onTrack(ent.x, ent.y)) bounceAmp *= 1.45;
       if (wet) bounceAmp *= 0.55;
-      ent.truckBounce = Math.sin(ent.bouncePhase * 2.4) * bounceAmp * 3.4
+      var baseBounce = Math.sin(ent.bouncePhase * 2.4) * bounceAmp * 3.4
         + Math.sin(ent.bouncePhase * 5.1) * bounceAmp * 1.2;
+      /* Add hill chatter from elevation deltas */
+      if (onTrack(ent.x, ent.y)) baseBounce += clamp(dGround * 0.35, -4, 4);
+      ent.truckBounce = baseBounce;
       if (!wet && speed > 60 && Math.random() < dt * (1.2 + speed * 0.008)) {
         spawnDust(world, ent.x - ent.facing * 18, ent.y + 8, 1);
       }
@@ -866,7 +916,7 @@
       }
     }
     /* polish9: lap sparkle when crossing start/finish gate */
-    if (ent.inTruck && onTrack(ent.x, ent.y) && (ent.z || 0) < 8) {
+    if (ent.inTruck && onTrack(ent.x, ent.y) && ((ent.z || 0) - (ent.groundZ || 0)) < 8) {
       world.lapCooldown = Math.max(0, (world.lapCooldown || 0) - dt);
       var side = gateSide(ent.x, ent.y);
       if (nearGate(ent.x, ent.y) && world.lapSide !== 0 && side * world.lapSide < 0 && world.lapCooldown <= 0) {
@@ -882,7 +932,7 @@
     }
 
     /* polish5: track dust plume when trucks race */
-    if (ent.inTruck && onTrack(ent.x, ent.y) && speed > 110 && (ent.z || 0) <= 0.5) {
+    if (ent.inTruck && onTrack(ent.x, ent.y) && speed > 110 && ((ent.z || 0) - (ent.groundZ || 0)) <= 2.5) {
       if (Math.random() < dt * (2.8 + speed * 0.012)) {
         spawnDust(world, ent.x - ent.facing * 22, ent.y + 10, 2 + (speed > 200 ? 2 : 0));
         spawnDust(world, ent.x - ent.facing * 10, ent.y - 6, 1);
@@ -914,14 +964,43 @@
       accel *= 0.75;
       maxSp *= 0.8;
     }
-    var tvx = mx * maxSp;
-    var tvy = my * maxSp;
+    var canon = global.FroggiesCanon;
     if (mag > 0.05) {
-      ent.vx += (tvx - ent.vx) * Math.min(1, accel * dt / Math.max(60, maxSp));
-      ent.vy += (tvy - ent.vy) * Math.min(1, accel * dt / Math.max(60, maxSp));
-      /* eyes1: face walk direction; idle keeps last faceAngle */
-      ent.faceAngle = Math.atan2(my, mx);
-      if (Math.abs(mx) > 0.08) ent.facing = mx >= 0 ? 1 : -1;
+      var aim = Math.atan2(my, mx);
+      if (ent.inTruck) {
+        /* truck1: smooth yaw toward aim, then thrust along facing (traction) */
+        var cur = (ent.faceAngle != null && isFinite(ent.faceAngle)) ? ent.faceAngle : aim;
+        var turnRate = 3.6 + Math.min(2.4, Math.hypot(ent.vx, ent.vy) / 160);
+        if (canon && canon.approachAngle) ent.faceAngle = canon.approachAngle(cur, aim, turnRate * dt);
+        else {
+          var da = aim - cur;
+          while (da > Math.PI) da -= Math.PI * 2;
+          while (da < -Math.PI) da += Math.PI * 2;
+          var step = turnRate * dt;
+          if (da > step) da = step; if (da < -step) da = -step;
+          ent.faceAngle = cur + da;
+        }
+        ent.facing = Math.cos(ent.faceAngle) >= 0 ? 1 : -1;
+        var fx = Math.cos(ent.faceAngle), fy = Math.sin(ent.faceAngle);
+        /* Steer into aim a little so turns feel responsive without flip-flip */
+        var blend = 0.18;
+        var ax = fx * (1 - blend) + mx * blend;
+        var ay = fy * (1 - blend) + my * blend;
+        var al = Math.hypot(ax, ay) || 1;
+        ax /= al; ay /= al;
+        var tvx = ax * maxSp;
+        var tvy = ay * maxSp;
+        ent.vx += (tvx - ent.vx) * Math.min(1, accel * dt / Math.max(60, maxSp));
+        ent.vy += (tvy - ent.vy) * Math.min(1, accel * dt / Math.max(60, maxSp));
+      } else {
+        var tvx = mx * maxSp;
+        var tvy = my * maxSp;
+        ent.vx += (tvx - ent.vx) * Math.min(1, accel * dt / Math.max(60, maxSp));
+        ent.vy += (tvy - ent.vy) * Math.min(1, accel * dt / Math.max(60, maxSp));
+        /* eyes1: face walk direction; idle keeps last faceAngle */
+        ent.faceAngle = aim;
+        if (Math.abs(mx) > 0.08) ent.facing = mx >= 0 ? 1 : -1;
+      }
     } else {
       var damp = Math.exp(-friction * dt);
       ent.vx *= damp;
@@ -936,7 +1015,6 @@
     ent.x += ent.vx * dt;
     ent.y += ent.vy * dt;
     /* solid1: house/garage walls, mech pads, parked trucks — doorway gaps stay walkable */
-    var canon = global.FroggiesCanon;
     if (canon && canon.resolveSolid) {
       var solid = canon.resolveSolid(ent.x, ent.y, ent.inTruck ? 38 : 22, {
         garageOpen: (world && world.garageOpen) || 0,
@@ -2156,8 +2234,10 @@
     }
   }
 
-  function drawCybertruck(ctx, x, y, facing, depth, driving, z, accent, water) {
-    var s = 1.2 * depth;
+  function drawCybertruck(ctx, x, y, faceAngle, depth, driving, z, accent, water) {
+    /* truck1: kid-toy scale vs frog (~16px radius) — bigger than frog, not a building */
+    var vis = (global.FroggiesCanon && global.FroggiesCanon.TRUCK_VIS) || {};
+    var s = (vis.canvasScale != null ? vis.canvasScale : 0.86) * depth;
     var bounce = (water && water.bounce) ? water.bounce : 0;
     var lift = (z || 0) * 0.55 * depth + (driving ? bounce * depth * 0.55 : 0);
     var wet = water && water.inWater;
@@ -2170,7 +2250,9 @@
 
     ctx.save();
     ctx.translate(x, drawY);
-    ctx.scale(facing < 0 ? -1 : 1, 1);
+    /* truck1: yaw to faceAngle (nose = local +X); was facing flip only */
+    var ang = (faceAngle != null && isFinite(faceAngle)) ? faceAngle : 0;
+    ctx.rotate(ang);
 
     /* Wake / ripples under tires when on surface */
     if (wet && (z || 0) < 6) {
@@ -2453,7 +2535,7 @@
     }
 
     if (frog.inTruck && frog.local) {
-      drawCybertruck(ctx, p.x, p.y, frog.facing, p.depth, true, frog.z || 0, frog.color, { inWater: inPond(frog.x, frog.y), sub: frog.waterSub || 0, wakePhase: frog.wakePhase || 0, bounce: frog.truckBounce || 0 });
+      drawCybertruck(ctx, p.x, p.y, frog.faceAngle != null ? frog.faceAngle : 0, p.depth, true, frog.z || 0, frog.color, { inWater: inPond(frog.x, frog.y), sub: frog.waterSub || 0, wakePhase: frog.wakePhase || 0, bounce: frog.truckBounce || 0 });
       if (frog.truckMode === "shared" && frogs) {
         drawAboardIcons(ctx, frogs, p.x, p.y, p.depth, lift);
       } else {
@@ -2497,7 +2579,7 @@
     }
 
     if (frog.inTruck && !frog.local && frog.truckMode === "solo") {
-      drawCybertruck(ctx, p.x, p.y, frog.facing, p.depth, true, frog.z || 0, frog.color, { inWater: inPond(frog.x, frog.y), sub: frog.waterSub || 0, wakePhase: frog.wakePhase || 0, bounce: frog.truckBounce || 0 });
+      drawCybertruck(ctx, p.x, p.y, frog.faceAngle != null ? frog.faceAngle : 0, p.depth, true, frog.z || 0, frog.color, { inWater: inPond(frog.x, frog.y), sub: frog.waterSub || 0, wakePhase: frog.wakePhase || 0, bounce: frog.truckBounce || 0 });
       ctx.fillStyle = frog.color;
       ctx.beginPath();
       ctx.arc(p.x, p.y - 22 * p.depth - lift, 6 * p.depth, 0, Math.PI * 2);
@@ -2741,7 +2823,7 @@
         ctx.stroke();
         ctx.setLineDash([]);
       }
-      drawCybertruck(ctx, p.x, p.y, 1, p.depth, false, 0, accent, { inWater: inPond(spot.x, spot.y), sub: 0, wakePhase: 0 });
+      drawCybertruck(ctx, p.x, p.y, 0, p.depth, false, 0, accent, { inWater: inPond(spot.x, spot.y), sub: 0, wakePhase: 0 });
       if (spot.id === "shared") {
         var ids = ["james", "jimmy", "bubbles", "rexy"];
         for (var si = 0; si < 4; si++) {

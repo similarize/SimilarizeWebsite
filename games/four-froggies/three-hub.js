@@ -13,6 +13,7 @@
    solid1: floor z-fight fix; solid walls/mechs/trucks; cast names only on plates.
    tapsteer1: mech pad z-fight fix; faster walk/drive; hold-to-aim tap/click steer + marker.
    eyes1: yaw frog (eyes on +Z) toward walk dir; idle keeps last; AI companions too.
+   truck1: kid-toy truck scale; smooth yaw drive toward aim; track elev / crest / land bounce.
    WASD camera-relative — do not invert. */
 (function (global) {
   "use strict";
@@ -244,6 +245,10 @@
     );
     edge.position.copy(body.position); g.add(edge);
     g.userData.bodyMat = bodyMat;
+    /* truck1: kid-toy scale vs frog (~1.7 diam) — bigger than frog, not a building */
+    var ts = (C.TRUCK_VIS && C.TRUCK_VIS.threeScale != null) ? C.TRUCK_VIS.threeScale : 2.05;
+    g.scale.setScalar(ts);
+    g.userData.truckScale = ts;
     return g;
   }
 
@@ -1405,12 +1410,36 @@
       var rx = inv, rz = -inv;  // screen right
       var mx = rx * ix + fx * (-iy);
       var mz = rz * ix + fz * (-iy);
-      state.vx += mx * accel * dt;
-      state.vz += mz * accel * dt;
       if (Math.abs(mx) + Math.abs(mz) > 0.01) {
-        state.facing = mx >= 0 ? 1 : -1;
-        /* eyes1: rotate so eyes (+Z) face walk direction; idle keeps last yaw */
-        state.faceYaw = Math.atan2(mx, mz);
+        var aimYaw = Math.atan2(mx, mz);
+        if (state.inTruck) {
+          /* truck1: smooth yaw toward aim; thrust along facing */
+          var curY = (state.faceYaw != null) ? state.faceYaw : aimYaw;
+          var turnRate = 3.8 + Math.min(2.2, Math.hypot(state.vx, state.vz) / 6);
+          if (C.approachAngle) state.faceYaw = C.approachAngle(curY, aimYaw, turnRate * dt);
+          else {
+            var dY = aimYaw - curY;
+            while (dY > Math.PI) dY -= Math.PI * 2;
+            while (dY < -Math.PI) dY += Math.PI * 2;
+            var st = turnRate * dt;
+            if (dY > st) dY = st; if (dY < -st) dY = -st;
+            state.faceYaw = curY + dY;
+          }
+          state.facing = Math.sin(state.faceYaw) >= 0 ? 1 : -1;
+          var fxx = Math.sin(state.faceYaw), fzz = Math.cos(state.faceYaw);
+          var blend = 0.2;
+          var ax = fxx * (1 - blend) + mx * blend;
+          var az = fzz * (1 - blend) + mz * blend;
+          var al = Math.hypot(ax, az) || 1;
+          state.vx += (ax / al) * accel * dt;
+          state.vz += (az / al) * accel * dt;
+        } else {
+          state.vx += mx * accel * dt;
+          state.vz += mz * accel * dt;
+          state.facing = mx >= 0 ? 1 : -1;
+          /* eyes1: rotate so eyes (+Z) face walk direction; idle keeps last yaw */
+          state.faceYaw = aimYaw;
+        }
       }
     }
     state.vx *= Math.max(0, 1 - fric * dt);
@@ -1432,19 +1461,53 @@
     /* Ranch truck water / ramp / shared pile-in (parity) — after steer, before clamp */
     if (state.mode === "ranch") {
       var wpos0 = threeToWorld(state.player.position.x, state.player.position.z);
+      /* truck1: track elev ground plane (world z units → three lift) */
+      var elevZ = 0;
+      if (state.inTruck && C.onTrack && C.onTrack(wpos0.x, wpos0.y) && C.trackElevAt) {
+        elevZ = (C.trackElevAt(wpos0.x, wpos0.y) || 0) * 0.018; /* canvas z → three y */
+      }
+      var prevG = state.groundLift != null ? state.groundLift : elevZ;
+      if (state.inTruck && C.onTrack && C.onTrack(wpos0.x, wpos0.y)) {
+        state.groundLift = prevG + (elevZ - prevG) * Math.min(1, 12 * dt);
+      } else {
+        state.groundLift = (state.groundLift || 0) * Math.exp(-7 * dt);
+        if (Math.abs(state.groundLift) < 0.01) state.groundLift = 0;
+      }
+      var groundLift = state.groundLift || 0;
+      var airL = (state.zLift || 0) - groundLift;
       if (state.inTruck && C.rampAt) {
         var ramp = C.rampAt(wpos0.x, wpos0.y);
-        if (ramp && sp > 1.2) {
+        if (ramp && sp > 1.2 && airL < 0.15) {
           state.zVel = Math.max(state.zVel || 0, 4.5 * (ramp.boost || 1.3));
+          state.zLift = Math.max(state.zLift || 0, groundLift + 0.12);
           state.scrap += 0.02;
         }
       }
-      /* polish9: brief air hang at apex */
+      var dG = groundLift - prevG;
+      if (state.inTruck && airL < 0.12 && sp > 3.2 && dG < -0.02) {
+        var crest = Math.min(6.5, sp * 0.55 + (-dG) * 18);
+        if (crest > 1.6) {
+          state.zVel = Math.max(state.zVel || 0, crest);
+          state.zLift = Math.max(state.zLift || 0, groundLift + 0.08);
+        }
+      }
+      /* polish9 + truck1: air hang + land bounce vs groundLift */
+      airL = (state.zLift || 0) - groundLift;
       var gFall = 14;
-      if ((state.zLift || 0) > 0.55 && Math.abs(state.zVel || 0) < 2.2) gFall *= 0.38;
-      state.zVel = (state.zVel || 0) - gFall * dt;
-      state.zLift = Math.max(0, (state.zLift || 0) + state.zVel * dt);
-      if (state.zLift <= 0) { state.zLift = 0; state.zVel = 0; }
+      if (airL > 0.55 && Math.abs(state.zVel || 0) < 2.2) gFall *= 0.38;
+      if (airL > 0.02 || (state.zVel || 0) !== 0) {
+        state.zVel = (state.zVel || 0) - gFall * dt;
+        state.zLift = (state.zLift || 0) + state.zVel * dt;
+        if (state.zLift <= groundLift) {
+          var impact = Math.max(0, -(state.zVel || 0));
+          state.zLift = groundLift;
+          if (impact > 1.4) state.zVel = Math.min(3.2, impact * 0.28);
+          else state.zVel = 0;
+        }
+      } else {
+        state.zLift = groundLift;
+        state.zVel = 0;
+      }
       /* polish9: lap sparkle at gate */
       if (state.inTruck && C.onTrack && C.onTrack(wpos0.x, wpos0.y) && (state.zLift || 0) < 0.4) {
         state.lapCd = Math.max(0, (state.lapCd || 0) - dt);
@@ -1598,7 +1661,11 @@
         state.driveTruck.visible = !!state.inTruck;
         if (state.inTruck) {
           state.driveTruck.position.set(state.player.position.x, 0.05 + state.zLift * 0.08 + bounceY, state.player.position.z);
-          state.driveTruck.scale.x = state.facing >= 0 ? 1 : -1;
+          /* truck1: yaw to faceYaw (mesh nose +X → yaw so +X aligns with travel) */
+          var ts0 = state.driveTruck.userData.truckScale || 2.05;
+          state.driveTruck.scale.set(ts0, ts0, ts0);
+          /* mesh long axis +X; faceYaw is atan2(vx,vz) with +Z front for frogs — truck nose +X needs -PI/2 */
+          state.driveTruck.rotation.y = ((state.faceYaw != null) ? state.faceYaw : 0) - Math.PI / 2;
           var dive = state.waterSub > 0.7;
           if (state.driveTruck.userData.bodyMat) {
             state.driveTruck.userData.bodyMat.color.setHex(dive ? 0x64748b : 0x9ca3af);
@@ -1624,7 +1691,8 @@
           var dTruck = Math.hypot(state.player.position.x - pt.mesh.position.x, state.player.position.z - pt.mesh.position.z);
           var nearT = dTruck < 2.4;
           pt.mesh.position.y = nearT ? 0.06 + Math.abs(Math.sin(state.bob * 1.5)) * 0.08 : 0;
-          pt.mesh.scale.setScalar(nearT ? 1.08 : 1);
+          var pts = pt.mesh.userData.truckScale || ((C.TRUCK_VIS && C.TRUCK_VIS.threeScale) || 2.05);
+          pt.mesh.scale.setScalar(pts * (nearT ? 1.06 : 1));
         }
       }
       state.player.position.y = (state.zLift || 0) * 0.08 + Math.abs(Math.sin(state.bob)) * (sp > 0.5 ? 0.06 : 0.02);

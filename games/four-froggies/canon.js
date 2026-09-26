@@ -5,7 +5,8 @@
    polish8: shared landmarks unchanged; art punch lives in engine renderers.
    polish9: landmarks unchanged; party/nameplate/gate/kit punch in engines.
    polish10: zone signs fade when close (frogs readable).
-   solid1: shared solid walls / mech pads / parked trucks; house doorway open. */
+   solid1: shared solid walls / mech pads / parked trucks; house doorway open.
+   truck1: kid-toy truck scale constants; trackElevAt for path/mound undulation. */
 (function (global) {
   "use strict";
 
@@ -215,6 +216,74 @@
     return null;
   }
 
+  /* truck1: kid-toy Cybertruck vs frog — bigger than a frog, not a building.
+     Applied by each engine renderer (parked + driven). */
+  var TRUCK_VIS = {
+    canvasScale: 0.86,
+    threeScale: 2.05,
+    phaserScale: 1.28,
+  };
+
+  /* truck1: sample ribbon elev (pt[2]) + mound bells → frog.z units (~pathPoint * 48). */
+  var TRACK_ELEV_Z = 48;
+
+  function samplePathElev(pts, x, y) {
+    var bestD = 1e12, bestE = 0;
+    if (!pts || pts.length < 2) return { elev: 0, dist: bestD };
+    for (var i = 0; i < pts.length - 1; i++) {
+      var ax = pts[i][0], ay = pts[i][1], ae = pts[i][2] || 0;
+      var bx = pts[i + 1][0], by = pts[i + 1][1], be = pts[i + 1][2] || 0;
+      var abx = bx - ax, aby = by - ay;
+      var len2 = abx * abx + aby * aby || 1;
+      var u = ((x - ax) * abx + (y - ay) * aby) / len2;
+      if (u < 0) u = 0; else if (u > 1) u = 1;
+      var px = ax + abx * u, py = ay + aby * u;
+      var d = Math.hypot(x - px, y - py);
+      if (d < bestD) {
+        bestD = d;
+        bestE = ae + (be - ae) * u;
+      }
+    }
+    return { elev: bestE, dist: bestD };
+  }
+
+  function trackElevAt(x, y) {
+    if (!onTrack(x, y)) return 0;
+    var a = samplePathElev(TRACK_MAIN, x, y);
+    var b = samplePathElev(TRACK_BRANCH_A, x, y);
+    var c = samplePathElev(TRACK_BRANCH_B, x, y);
+    var best = a;
+    if (b.dist < best.dist) best = b;
+    if (c.dist < best.dist) best = c;
+    var pathE = 0;
+    if (best.dist < 130) {
+      pathE = best.elev;
+      if (best.dist > 36) pathE *= Math.max(0, 1 - (best.dist - 36) / 94);
+    }
+    var moundE = 0;
+    for (var i = 0; i < TRACK_MOUNDS.length; i++) {
+      var m = TRACK_MOUNDS[i];
+      var d = Math.hypot(x - m.x, y - m.y);
+      if (d < m.r) {
+        var w = 1 - d / m.r;
+        moundE += m.h * w * w;
+      }
+    }
+    return (pathE * 0.9 + moundE * 0.55) * TRACK_ELEV_Z;
+  }
+
+  function wrapAngle(a) {
+    while (a > Math.PI) a -= Math.PI * 2;
+    while (a < -Math.PI) a += Math.PI * 2;
+    return a;
+  }
+
+  function approachAngle(cur, aim, maxStep) {
+    var d = wrapAngle(aim - cur);
+    if (d > maxStep) d = maxStep;
+    if (d < -maxStep) d = -maxStep;
+    return cur + d;
+  }
 
   /* solid1: cheap walk blockers (world XY). Doorways stay open. Trucks block unless boarding/in-truck. */
   var WALL_THICK = 20;
@@ -380,6 +449,10 @@
     onTrack: onTrack,
     isTruckHotspot: isTruckHotspot,
     rampAt: rampAt,
+    trackElevAt: trackElevAt,
+    TRUCK_VIS: TRUCK_VIS,
+    wrapAngle: wrapAngle,
+    approachAngle: approachAngle,
     zoneSignAlpha: zoneSignAlpha,
     solidRects: solidRects,
     solidCircles: solidCircles,

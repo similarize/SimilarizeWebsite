@@ -1,3 +1,9 @@
+## What's new (truck1) — Cybertruck proportion + steer yaw + track reaction
+- **Proportion:** Kid-toy Cybertruck vs frogs (bigger than a frog, not a building). `FroggiesCanon.TRUCK_VIS` — Canvas scale 0.86 (was 1.2), Three mesh ×2.05, Phaser ×1.28. Parked + driven.
+- **Steering:** Was facing flip only (180° left/right). Now smooth yaw toward tap-steer / WASD aim; thrust along facing with light aim blend (Canvas `moveEntity`, Three, Phaser).
+- **Track:** `trackElevAt` samples ribbon elev + mounds. Trucks follow undulation, crest-launch over downhill lips, keep hang, land bounce. Uses existing ramps/TRACK_MAIN/MOUNDS.
+- Cache-bust: `?v=20260926-truck1`. Cast unchanged. No SPS arcade republish.
+
 ## What's new (eyes1) — frog eyes face walk direction + hide D-pad
 - **Eyes / face:** Canvas, Three, Phaser — frog (or face) rotates toward walk direction; idle keeps last facing. Includes AI companions.
 - **D-pad:** bottom-left btn-up/down/left/right hidden via CSS (`display:none`) on phone and desktop. Tap/finger steer primary; INTERACT + ability stay on the right; WASD remains for desktop. No empty gaps (absolute controls).
