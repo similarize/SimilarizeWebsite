@@ -93,7 +93,7 @@ Ben: “let’s do all three” = keep Canvas **and** add Phaser 3 **and** three
 - Canvas path unchanged as **default** (PeerJS intact); switcher does not patch `main.js` / `world.js`.
 - Phaser 3 via jsDelivr CDN — `phaser-hub.js` ranch + space stub.
 - three.js (r134 UMD CDN) — `three-hub.js`, **locked** isometric-ish camera (no orbit drag / no FPS free-look).
-- Cache-bust: `?v=20260925-engines1`.
+- Cache-bust: `?v=20260925-ranchbig1`.
 
 ## Still stubbed / next
 
@@ -113,4 +113,4 @@ Ben: “let’s do all three” = keep Canvas **and** add Phaser 3 **and** three
 
 ## Publish
 
-Game Creator → **Webmaster** only. Product path: `games/four-froggies/`. Do not republish SPS as arcade. Cache-bust: `?v=20260925-engines1`.
+Game Creator → **Webmaster** only. Product path: `games/four-froggies/`. Do not republish SPS as arcade. Cache-bust: `?v=20260925-ranchbig1`.

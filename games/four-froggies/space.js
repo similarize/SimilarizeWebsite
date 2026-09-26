@@ -2,11 +2,125 @@
    Presentation polish: depth-scaled sprites, parallax stars, vignette (original).
    Ben cast only: Spotty, Alex, Fred, Germy, Daisy Dachshund, King Germy;
    ~20 people + hundreds of dogs as anonymous crowds.
-   Real moons: Mars Phobos/Deimos; Neptune's 14 named moons (picker stub). */
+   Real moons: Mars Phobos/Deimos; Neptune's 14 named moons (picker stub).
+   Ben orbit physics: near planet → gravity pull into orbit; leave via Escape OR hard thruster. */
 (function (global) {
   "use strict";
 
   var MAP = 900;
+
+  function orbitCfg() {
+    var C = global.FroggiesCanon;
+    return (C && C.ORBIT_PHYSICS) || {
+      captureRadius: 120,
+      softPullRadius: 220,
+      orbitAltitude: 78,
+      pullAccel: 420,
+      hardThrustSpeed: 210,
+      hardThrustImpulse: 320,
+    };
+  }
+
+  /** Scene planets/moons that can capture into orbit (Ben-named bodies only). */
+  function planetsFor(ep) {
+    if (!ep) return [];
+    if (ep.scene === "space") {
+      return [{ id: "moon", name: "Moon", x: 700, y: 140, r: 55 }];
+    }
+    if (ep.scene === "mars") {
+      return [{ id: "mars", name: "Mars", x: 450, y: 280, r: 90 }];
+    }
+    return [];
+  }
+
+  function resetOrbit(ep) {
+    ep.inOrbit = false;
+    ep.orbitPlanet = null;
+    ep.orbitAngle = 0;
+    ep.orbitRadius = 0;
+    ep.orbitEscapeCool = 0;
+  }
+
+  function tryCaptureOrbit(ep, dt) {
+    var cfg = orbitCfg();
+    var planets = planetsFor(ep);
+    if (!planets.length) return;
+    if (ep.inOrbit) return;
+    if (ep.orbitEscapeCool > 0) {
+      ep.orbitEscapeCool -= dt;
+      return;
+    }
+    var best = null;
+    var bestD = 1e9;
+    for (var i = 0; i < planets.length; i++) {
+      var pl = planets[i];
+      var d = Math.hypot(ep.px - pl.x, ep.py - pl.y);
+      if (d < bestD) { bestD = d; best = pl; }
+    }
+    if (!best) return;
+    var cfgR = cfg.softPullRadius || 220;
+    if (bestD < cfgR && bestD > 8) {
+      var ang = Math.atan2(ep.py - best.y, ep.px - best.x);
+      var pull = (cfg.pullAccel || 420) * (1 - bestD / cfgR) * dt;
+      ep.vx = (ep.vx || 0) - Math.cos(ang) * pull;
+      ep.vy = (ep.vy || 0) - Math.sin(ang) * pull;
+    }
+    if (bestD < (cfg.captureRadius || 120)) {
+      ep.inOrbit = true;
+      ep.orbitPlanet = best;
+      ep.orbitAngle = Math.atan2(ep.py - best.y, ep.px - best.x);
+      ep.orbitRadius = cfg.orbitAltitude || 78;
+      ep.vx = 0;
+      ep.vy = 0;
+      toast(ep, "Orbit locked · " + best.name + " · Escape or hard thruster to leave", 3.2);
+    }
+  }
+
+  function tickOrbit(ep, dt, steerX, steerY) {
+    if (!ep.inOrbit || !ep.orbitPlanet) return false;
+    var pl = ep.orbitPlanet;
+    var cfg = orbitCfg();
+    // Steer adjusts altitude a little; cannot leave by steering alone
+    ep.orbitRadius = clamp(
+      (ep.orbitRadius || cfg.orbitAltitude) + (steerY || 0) * 40 * dt,
+      (pl.r || 40) + 28,
+      (cfg.softPullRadius || 220) * 0.85
+    );
+    ep.orbitAngle += (0.85 + (steerX || 0) * 0.35) * dt;
+    ep.px = pl.x + Math.cos(ep.orbitAngle) * ep.orbitRadius;
+    ep.py = pl.y + Math.sin(ep.orbitAngle) * ep.orbitRadius;
+    ep.vx = 0;
+    ep.vy = 0;
+    return true;
+  }
+
+  /** Leave orbit: Escape button/key OR hard thruster (speed/impulse threshold). */
+  function leaveOrbit(ep, reason) {
+    if (!ep || !ep.inOrbit) return { ok: false };
+    var cfg = orbitCfg();
+    var pl = ep.orbitPlanet;
+    var ang = ep.orbitAngle || 0;
+    ep.inOrbit = false;
+    ep.orbitPlanet = null;
+    ep.orbitEscapeCool = 1.4;
+    // Kick outward
+    var kick = cfg.hardThrustImpulse || 320;
+    ep.vx = Math.cos(ang) * kick * 0.55;
+    ep.vy = Math.sin(ang) * kick * 0.55;
+    var name = pl ? pl.name : "planet";
+    var how = reason === "escape" ? "Escape" : "Hard thruster";
+    toast(ep, how + " · left " + name + " orbit", 2.4);
+    return { ok: true, toast: ep.toast, sfx: "jet" };
+  }
+
+  function tryHardThrustEscape(ep) {
+    if (!ep || !ep.inOrbit) return { ok: false };
+    var cfg = orbitCfg();
+    // Ability = hard thruster push while orbit-locked
+    ep.jet = 0.55;
+    return leaveOrbit(ep, "hard_thrust");
+  }
+
 
   /** Real moons — design truth, not invented fiction. */
   var MARS_MOONS = [
@@ -114,6 +228,11 @@
       shake: 0,
       pickCool: 0,
       returnPad: { x: 80, y: 820, r: 50, tip: "Return to ranch" },
+      inOrbit: false,
+      orbitPlanet: null,
+      orbitAngle: 0,
+      orbitRadius: 0,
+      orbitEscapeCool: 0,
     };
   }
 
@@ -449,10 +568,17 @@
 
   function ability(ep, frogId) {
     if (ep.scene === "mech") return blastMech(ep);
-    if (ep.scene === "space") {
+    if (ep.inOrbit) {
+      return tryHardThrustEscape(ep);
+    }
+    if (ep.scene === "space" || ep.scene === "mars") {
       ep.jet = 0.45;
+      var cfg = orbitCfg();
+      var impulse = (cfg.hardThrustImpulse || 320) * 0.35;
+      ep.vx = (ep.vx || 0) + ep.facing * impulse * 0.4;
+      ep.vy = (ep.vy || 0) - impulse * 0.25;
       ep.px += ep.facing * 40;
-      toast(ep, (frogId === "james" ? "DASH" : "Boost") + " · jet!");
+      toast(ep, (frogId === "james" ? "DASH" : "Boost") + " · hard thruster!");
       return { ok: true, toast: ep.toast, sfx: "jet" };
     }
     if (ep.scene === "solar") {
@@ -470,24 +596,33 @@
     if (ep.shake > 0) ep.shake -= dt;
     if (ep.jet > 0) ep.jet -= dt;
 
-    var maxSp = ep.scene === "space" ? 170 : 150;
     if (ep.vx == null) ep.vx = 0;
     if (ep.vy == null) ep.vy = 0;
-    var accel = 880;
-    var friction = 5.5;
-    var tvx = steerX * maxSp;
-    var tvy = steerY * maxSp;
-    if (Math.abs(steerX) + Math.abs(steerY) > 0.05) {
-      ep.vx += (tvx - ep.vx) * Math.min(1, accel * dt / maxSp);
-      ep.vy += (tvy - ep.vy) * Math.min(1, accel * dt / maxSp);
+    if (tickOrbit(ep, dt, steerX, steerY)) {
+      if (steerX !== 0) ep.facing = steerX > 0 ? 1 : -1;
     } else {
-      var damp = Math.exp(-friction * dt);
-      ep.vx *= damp;
-      ep.vy *= damp;
+      tryCaptureOrbit(ep, dt);
+      if (ep.inOrbit) {
+        /* captured this frame — orbit tick next */
+      } else {
+        var maxSp = ep.scene === "space" || ep.scene === "mars" ? 170 : 150;
+        var accel = 880;
+        var friction = 5.5;
+        var tvx = steerX * maxSp;
+        var tvy = steerY * maxSp;
+        if (Math.abs(steerX) + Math.abs(steerY) > 0.05) {
+          ep.vx += (tvx - ep.vx) * Math.min(1, accel * dt / maxSp);
+          ep.vy += (tvy - ep.vy) * Math.min(1, accel * dt / maxSp);
+        } else {
+          var damp = Math.exp(-friction * dt);
+          ep.vx *= damp;
+          ep.vy *= damp;
+        }
+        ep.px = clamp(ep.px + ep.vx * dt, 40, MAP - 40);
+        ep.py = clamp(ep.py + ep.vy * dt, 60, MAP - 40);
+        if (steerX !== 0) ep.facing = steerX > 0 ? 1 : -1;
+      }
     }
-    ep.px = clamp(ep.px + ep.vx * dt, 40, MAP - 40);
-    ep.py = clamp(ep.py + ep.vy * dt, 60, MAP - 40);
-    if (steerX !== 0) ep.facing = steerX > 0 ? 1 : -1;
 
     // Jimmy constantly getting away
     if (ep.scene === "space") {
@@ -1022,6 +1157,7 @@
     var near = nearestHotspot(ep, 75);
     var tip = "";
     if (ep.toastT > 0) tip = ep.toast;
+    else if (ep.inOrbit) tip = "Orbit locked · Escape or hard thruster (ability) to leave";
     else if (near) tip = near.tip + " · INTERACT / E";
     else tip = "Steer · find hotspots · Lobby returns to title";
     return {
@@ -1031,6 +1167,8 @@
       catches: ep.jimmyCatches,
       cave: ep.caveProgress,
       mechWon: ep.mechWon,
+      inOrbit: !!ep.inOrbit,
+      orbitName: ep.orbitPlanet ? ep.orbitPlanet.name : null,
     };
   }
 
@@ -1063,6 +1201,9 @@
     render: render,
     interact: interact,
     ability: ability,
+    leaveOrbit: leaveOrbit,
+    tryHardThrustEscape: tryHardThrustEscape,
+    planetsFor: planetsFor,
     nearestHotspot: nearestHotspot,
     hotspotsFor: hotspotsFor,
     getHud: getHud,

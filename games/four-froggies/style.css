@@ -687,3 +687,22 @@ body.in-space {
   .engine-btn { padding: 6px 12px; min-width: 76px; font-size: 12px; }
   .engine-note { font-size: 10px; }
 }
+
+
+/* ranchbig1: Escape orbit (space) */
+#btn-escape.escape-btn {
+  grid-column: 1 / -1;
+  background: linear-gradient(180deg, #38bdf8, #0284c7);
+  color: #0f172a;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  border: 2px solid #e0f2fe;
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.45);
+}
+#btn-escape.escape-btn.ready {
+  animation: esc-pulse 1.1s ease-in-out infinite;
+}
+@keyframes esc-pulse {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.15); }
+}

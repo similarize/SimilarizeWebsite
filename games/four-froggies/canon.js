@@ -17,14 +17,15 @@
   var MAP_H = 3150;
 
   var AREAS = [
-    { id: "house", name: "Ranch house", x: 220, y: 1680, w: 560, h: 420, color: "#8b5a2b" },
+    /* James ranch compound: big house + backyard + huge garage (one Ben-named area) */
+    { id: "house", name: "Ranch house", x: 60, y: 1320, w: 1180, h: 1180, color: "#8b5a2b" },
     { id: "track", name: "Monster truck track", x: 1680, y: 1580, w: 2200, h: 1380, color: "#57534e" },
     { id: "pond", name: "Pond", x: 2320, y: 80, w: 1680, h: 1180, color: "#0e7490" },
   ];
 
   var HOTSPOTS = [
-    { id: "phone", label: "Phone", x: 420, y: 1980, r: 52, tip: "Call Purple Bear" },
-    { id: "sps", label: "SPS", x: 560, y: 2040, r: 48, tip: "Solar Positioning System" },
+    { id: "phone", label: "Phone", x: 380, y: 1880, r: 52, tip: "Call Purple Bear" },
+    { id: "sps", label: "SPS", x: 520, y: 1940, r: 48, tip: "Solar Positioning System" },
     { id: "truck-james", label: "Cybertruck · James", x: 1880, y: 1720, r: 54, tip: "James Cybertruck · solo drive", kind: "truck", frogId: "james", mode: "solo" },
     { id: "truck-jimmy", label: "Cybertruck · Jimmy", x: 2080, y: 1720, r: 54, tip: "Jimmy Cybertruck · solo drive", kind: "truck", frogId: "jimmy", mode: "solo" },
     { id: "truck-bubbles", label: "Cybertruck · Bubbles", x: 2280, y: 1720, r: 54, tip: "Bubbles Cybertruck · solo drive", kind: "truck", frogId: "bubbles", mode: "solo" },
@@ -43,7 +44,20 @@
     fred: { name: "Fred", tip: "Fred · astronaut" },
   };
 
+  /* Ben physics (ALL engines): near a planet → gravity pull into orbit.
+     Leave only via Escape key/button OR hard thruster push (ability jet). */
+  var ORBIT_PHYSICS = {
+    captureRadius: 120,
+    softPullRadius: 220,
+    orbitAltitude: 78,
+    pullAccel: 420,
+    hardThrustSpeed: 210,
+    hardThrustImpulse: 320,
+    leaveModes: ["escape", "hard_thrust"],
+  };
+
   var ENGINE_KEY = "ff-engine";
+
   var ENGINES = ["canvas", "phaser", "three"];
 
   function getEngine() {
@@ -94,6 +108,7 @@
     AREAS: AREAS,
     HOTSPOTS: HOTSPOTS,
     SPACE_CAST: SPACE_CAST,
+    ORBIT_PHYSICS: ORBIT_PHYSICS,
     ENGINE_KEY: ENGINE_KEY,
     ENGINES: ENGINES,
     getEngine: getEngine,

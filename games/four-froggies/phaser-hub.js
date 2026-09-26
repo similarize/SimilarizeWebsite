@@ -383,9 +383,19 @@
         this.jimmyVx = 70;
         this.jimmyVy = -40;
         this.catches = 0;
-        this.toast = "Catch Jimmy · INTERACT near return pad for ranch";
+        this.toast = "Catch Jimmy · near Moon → orbit · Escape / hard thruster to leave";
         this.toastT = 3;
         this.cd = 0;
+        /* Ben orbit: Moon body */
+        this.planet = { id: "moon", name: "Moon", x: 700, y: 140, r: 50 };
+        this.add.circle(700, 140, 50, 0xcbd5e1, 0.9);
+        this.add.text(700, 140, "Moon", { fontSize: "12px", color: "#0f172a", fontStyle: "bold" }).setOrigin(0.5);
+        this.inOrbit = false;
+        this.orbitAngle = 0;
+        this.orbitRadius = 78;
+        this.orbitEscapeCool = 0;
+        var OP = (C && C.ORBIT_PHYSICS) || {};
+        this.orbitCfg = OP;
         this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
       },
       update: function (time, delta) {
@@ -393,18 +403,49 @@
         this.cd = Math.max(0, this.cd - dt);
         this.toastT = Math.max(0, this.toastT - dt);
         var body = this.player.body;
-        var maxSp = 200;
-        if (steer.x || steer.y) {
-          var len = Math.hypot(steer.x, steer.y) || 1;
-          body.velocity.x += (steer.x / len) * 400 * dt;
-          body.velocity.y += (steer.y / len) * 400 * dt;
-        }
-        body.velocity.x *= Math.max(0, 1 - 3.5 * dt);
-        body.velocity.y *= Math.max(0, 1 - 3.5 * dt);
-        var sp = Math.hypot(body.velocity.x, body.velocity.y);
-        if (sp > maxSp) {
-          body.velocity.x = (body.velocity.x / sp) * maxSp;
-          body.velocity.y = (body.velocity.y / sp) * maxSp;
+        var cfg = this.orbitCfg || {};
+        var capR = cfg.captureRadius || 120;
+        var softR = cfg.softPullRadius || 220;
+        var alt = cfg.orbitAltitude || 78;
+        var pullA = cfg.pullAccel || 420;
+        if (this.orbitEscapeCool > 0) this.orbitEscapeCool -= dt;
+        if (this.inOrbit) {
+          this.orbitRadius = Phaser.Math.Clamp(this.orbitRadius + (steer.y || 0) * 40 * dt, 55, softR * 0.85);
+          this.orbitAngle += (0.85 + (steer.x || 0) * 0.35) * dt;
+          this.player.x = this.planet.x + Math.cos(this.orbitAngle) * this.orbitRadius;
+          this.player.y = this.planet.y + Math.sin(this.orbitAngle) * this.orbitRadius;
+          body.velocity.x = 0;
+          body.velocity.y = 0;
+        } else {
+          var dP = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.planet.x, this.planet.y);
+          if (this.orbitEscapeCool <= 0 && dP < softR && dP > 8) {
+            var ang = Math.atan2(this.player.y - this.planet.y, this.player.x - this.planet.x);
+            var pull = pullA * (1 - dP / softR) * dt;
+            body.velocity.x -= Math.cos(ang) * pull;
+            body.velocity.y -= Math.sin(ang) * pull;
+          }
+          if (this.orbitEscapeCool <= 0 && dP < capR) {
+            this.inOrbit = true;
+            this.orbitAngle = Math.atan2(this.player.y - this.planet.y, this.player.x - this.planet.x);
+            this.orbitRadius = alt;
+            body.velocity.x = 0;
+            body.velocity.y = 0;
+            this.toast = "Orbit locked · Moon · Escape or hard thruster to leave";
+            this.toastT = 3;
+          }
+          var maxSp = 200;
+          if (steer.x || steer.y) {
+            var len = Math.hypot(steer.x, steer.y) || 1;
+            body.velocity.x += (steer.x / len) * 400 * dt;
+            body.velocity.y += (steer.y / len) * 400 * dt;
+          }
+          body.velocity.x *= Math.max(0, 1 - 3.5 * dt);
+          body.velocity.y *= Math.max(0, 1 - 3.5 * dt);
+          var sp = Math.hypot(body.velocity.x, body.velocity.y);
+          if (sp > maxSp) {
+            body.velocity.x = (body.velocity.x / sp) * maxSp;
+            body.velocity.y = (body.velocity.y / sp) * maxSp;
+          }
         }
 
         this.jimmy.x += this.jimmyVx * dt;
@@ -436,9 +477,18 @@
           wantAbility = false;
           if (this.cd <= 0) {
             this.cd = 4;
-            body.velocity.x += 200;
-            body.velocity.y -= 120;
-            this.toast = def.ability + " · jet boost";
+            if (this.inOrbit) {
+              this.inOrbit = false;
+              this.orbitEscapeCool = 1.4;
+              var kick = (cfg.hardThrustImpulse || 320);
+              body.velocity.x = Math.cos(this.orbitAngle) * kick * 0.55;
+              body.velocity.y = Math.sin(this.orbitAngle) * kick * 0.55;
+              this.toast = "Hard thruster · left Moon orbit";
+            } else {
+              body.velocity.x += 200;
+              body.velocity.y -= 120;
+              this.toast = def.ability + " · hard thruster";
+            }
             this.toastT = 1.5;
           }
         }
@@ -448,7 +498,8 @@
             mode: "space",
             label: "Space · Moon · Phaser",
             scrap: this.catches,
-            tip: this.toastT > 0 ? this.toast : this.near ? this.near.tip + " · INTERACT" : "Chase Jimmy · Spotty / Germy / Daisy nearby",
+            tip: this.toastT > 0 ? this.toast : this.inOrbit ? "Orbit locked · Escape or hard thruster" : this.near ? this.near.tip + " · INTERACT" : "Chase Jimmy · Spotty / Germy / Daisy nearby",
+            inOrbit: !!this.inOrbit,
             near: this.near,
             ability: def.ability,
             cd: this.cd,
@@ -476,6 +527,22 @@
       audio: { noAudio: true },
     });
     active = true;
+  }
+
+  function leaveOrbitPhaser() {
+    if (!game) return false;
+    var sc = game.scene.getScene("space");
+    if (!sc || !sc.inOrbit) return false;
+    sc.inOrbit = false;
+    sc.orbitEscapeCool = 1.4;
+    var kick = ((sc.orbitCfg && sc.orbitCfg.hardThrustImpulse) || 320);
+    if (sc.player && sc.player.body) {
+      sc.player.body.velocity.x = Math.cos(sc.orbitAngle || 0) * kick * 0.55;
+      sc.player.body.velocity.y = Math.sin(sc.orbitAngle || 0) * kick * 0.55;
+    }
+    sc.toast = "Escape · left Moon orbit";
+    sc.toastT = 2.2;
+    return true;
   }
 
   global.FroggiesPhaser = {

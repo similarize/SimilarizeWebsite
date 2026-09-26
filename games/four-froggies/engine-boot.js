@@ -5,7 +5,7 @@
   "use strict";
 
   var C = global.FroggiesCanon;
-  var CACHE = "20260925-engines1";
+  var CACHE = "20260925-ranchbig1";
   var CDN = {
     phaser: "https://cdn.jsdelivr.net/npm/phaser@3.87.0/dist/phaser.min.js",
     three: "https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js",
@@ -411,6 +411,15 @@
   global.FroggiesEngines = {
     tryStart: tryStart,
     stopAltEngines: stopAltEngines,
+    leaveOrbit: function () {
+      if (currentEngine === "phaser" && global.FroggiesPhaser && global.FroggiesPhaser.leaveOrbit) {
+        return !!global.FroggiesPhaser.leaveOrbit();
+      }
+      if (currentEngine === "three" && global.FroggiesThree && global.FroggiesThree.leaveOrbit) {
+        return !!global.FroggiesThree.leaveOrbit();
+      }
+      return false;
+    },
     paintPicker: paintPicker,
     getMode: function () { return C ? C.getEngine() : "canvas"; },
     isAltRunning: function () { return engineRunning; },

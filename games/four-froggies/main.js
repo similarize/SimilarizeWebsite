@@ -22,6 +22,7 @@
   const btnDown = document.getElementById("btn-down");
   const btnAbility = document.getElementById("btn-ability");
   const btnInteract = document.getElementById("btn-interact");
+  const btnEscape = document.getElementById("btn-escape");
   const btnStart = document.getElementById("btn-start");
   const btnHost = document.getElementById("btn-host");
   const btnCopy = document.getElementById("btn-copy");
@@ -171,7 +172,7 @@
     remoteInputs = {};
     stateSendAcc = 0;
     nearHot = null;
-    storyToast = "Drive the track · splash pond · call Purple Bear";
+    storyToast = "Big ranch · Cybertrucks · pond whales · Starship · call Purple Bear";
     storyToastT = 4.5;
     shakeT = 0;
     if (story) story.reset();
@@ -231,11 +232,20 @@
   function paintHud() {
     const me = localPlayer();
     if (livesEl) {
-      if (me && me.inTruck) {
-        livesEl.textContent = (me.z || 0) > 4 ? "🚚 AIR!" : "🚚 Drive";
+      if (phase === "space" && spaceEp && spaceEp.inOrbit) {
+        livesEl.textContent = "🌍 Orbit";
+      } else if (me && me.inTruck) {
+        const mode = me.truckMode === "shared" ? "All aboard" : "Drive";
+        livesEl.textContent = (me.z || 0) > 4 ? "🚚 AIR!" : "🚚 " + mode;
       } else {
         livesEl.textContent = "🐸 Walk";
       }
+    }
+    const btnEsc = document.getElementById("btn-escape");
+    if (btnEsc) {
+      const showEsc = phase === "space" && spaceEp && spaceEp.inOrbit;
+      btnEsc.hidden = !showEsc;
+      btnEsc.classList.toggle("ready", !!showEsc);
     }
     if (scrapEl) {
       const scrap = world ? world.scrap | 0 : 0;
@@ -367,7 +377,11 @@
     }
     if (!spaceEp) spaceEp = Space.create();
     const me = localPlayer();
-    if (me) me.inTruck = false;
+    if (me) {
+      me.inTruck = false;
+      me.truckMode = null;
+      me.truckId = null;
+    }
     Space.enter(spaceEp, {});
     phase = "space";
     document.body.classList.add("in-space");
@@ -443,16 +457,21 @@
       if (story) story.openSps();
       storyToast = "SPS open";
       storyToastT = 2;
-    } else if (nearHot.id === "truck") {
-      me.inTruck = !me.inTruck;
-      if (me.inTruck) {
-        me.x = 700;
-        me.y = 620;
-        storyToast = "Driving Cybertruck · hit the jumps!";
+    } else if (nearHot.kind === "truck" || (nearHot.id && nearHot.id.indexOf("truck") === 0)) {
+      const wasIn = !!me.inTruck;
+      if (W.boardTruck) W.boardTruck(world, frogs, me, nearHot);
+      else {
+        me.inTruck = !me.inTruck;
+        me.truckMode = me.inTruck ? (nearHot.mode || "solo") : null;
+        me.truckId = me.inTruck ? nearHot.id : null;
+        if (me.inTruck) { me.x = nearHot.x; me.y = nearHot.y; }
+      }
+      if (me.inTruck && !wasIn) {
+        storyToast = nearHot.mode === "shared"
+          ? "All aboard! Four froggies · one Cybertruck · hit the jumps!"
+          : "Driving Cybertruck · hit the jumps!";
         beep(200, 0.1, "sawtooth", 0.04);
-      } else {
-        me.z = 0;
-        me.zVel = 0;
+      } else if (!me.inTruck) {
         storyToast = "Parked · walking";
       }
       storyToastT = 2.5;
@@ -478,6 +497,8 @@
         y: f.y,
         facing: f.facing,
         inTruck: f.inTruck,
+        truckMode: f.truckMode || null,
+        truckId: f.truckId || null,
         z: f.z || 0,
         cd: f.cd,
         human: f.human,
@@ -498,6 +519,8 @@
       f.y = sf.y;
       f.facing = sf.facing;
       f.inTruck = sf.inTruck;
+      f.truckMode = sf.truckMode || null;
+      f.truckId = sf.truckId || null;
       f.z = sf.z || 0;
       f.cd = sf.cd;
     }
@@ -609,7 +632,7 @@
         if (f.speedBoost > 1) f.speedBoost = Math.max(1, f.speedBoost - dt * 0.5);
       }
     }
-    W.tickHubAI(frogs, me, dt);
+    W.tickHubAI(frogs, me, dt, world);
     W.updateFish(world, dt);
     W.updateFx(world, dt);
 
@@ -802,7 +825,23 @@
     });
   }
 
-  window.addEventListener("keydown", (e) => {
+  if (btnEscape) {
+    btnEscape.addEventListener("click", () => {
+      if (phase === "space" && spaceEp && Space && spaceEp.inOrbit) {
+        const res = Space.leaveOrbit(spaceEp, "escape");
+        if (res && res.ok) {
+          storyToast = res.toast || "Left orbit";
+          storyToastT = 2.2;
+          beep(280, 0.08, "sawtooth", 0.04);
+          paintHud();
+        }
+      } else if (globalThis.FroggiesEngines && typeof globalThis.FroggiesEngines.leaveOrbit === "function") {
+        globalThis.FroggiesEngines.leaveOrbit();
+      }
+    });
+  }
+
+    window.addEventListener("keydown", (e) => {
     if (["ArrowLeft", "a", "A"].includes(e.key)) {
       steerX = -1;
       e.preventDefault();
@@ -835,7 +874,21 @@
     if ((e.key === "e" || e.key === "E" || e.key === "f" || e.key === "F") && (phase === "hub" || phase === "space")) {
       doInteract();
     }
-    if (e.key === "Escape" && story && story.isOpen()) story.hide();
+    if (e.key === "Escape") {
+      if (story && story.isOpen()) {
+        story.hide();
+      } else if (phase === "space" && spaceEp && Space && spaceEp.inOrbit) {
+        const res = Space.leaveOrbit(spaceEp, "escape");
+        if (res && res.ok) {
+          storyToast = res.toast || "Left orbit";
+          storyToastT = 2.2;
+          beep(280, 0.08, "sawtooth", 0.04);
+          paintHud();
+        }
+      } else if (globalThis.FroggiesEngines && typeof globalThis.FroggiesEngines.leaveOrbit === "function") {
+        globalThis.FroggiesEngines.leaveOrbit();
+      }
+    }
   });
   window.addEventListener("keyup", (e) => {
     if (["ArrowLeft", "a", "A"].includes(e.key) && steerX < 0) steerX = 0;

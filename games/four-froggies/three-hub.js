@@ -305,6 +305,13 @@
     scene.add(state.jimmyLabel);
     state.jimmyVx = 2.2;
     state.jimmyVz = -1.4;
+    state.planet = { id: "moon", name: "Moon", x: 5, z: -5, r: 1.2 };
+    state.inOrbit = false;
+    state.orbitAngle = 0;
+    state.orbitRadius = 2.2;
+    state.orbitEscapeCool = 0;
+    state.orbitCfg = (C && C.ORBIT_PHYSICS) || {};
+    state.toast = "Space · near Moon → orbit · Escape / hard thruster to leave";
 
     var germy = new THREE.Mesh(
       new THREE.SphereGeometry(0.28, 10, 8),
@@ -418,9 +425,18 @@
       state.player.position.z += (target.z - state.player.position.z) * 0.2;
     }
     if (state.mode === "space") {
-      state.vx += 3;
-      state.vz -= 2;
-      state.toast = def.ability + " · jet boost";
+      if (state.inOrbit) {
+        state.inOrbit = false;
+        state.orbitEscapeCool = 1.4;
+        var kick = ((state.orbitCfg && state.orbitCfg.hardThrustImpulse) || 320) * 0.02;
+        state.vx = Math.cos(state.orbitAngle || 0) * kick;
+        state.vz = Math.sin(state.orbitAngle || 0) * kick;
+        state.toast = "Hard thruster · left Moon orbit";
+      } else {
+        state.vx += 3;
+        state.vz -= 2;
+        state.toast = def.ability + " · hard thruster";
+      }
     }
     state.toastT = 1.8;
     if (hooks.onToast) hooks.onToast(state.toast);
@@ -434,17 +450,51 @@
     state.toastT = Math.max(0, state.toastT - dt);
     state.bob += dt * 10;
 
+    if (state.mode === "space" && state.planet) {
+      var cfg = state.orbitCfg || {};
+      var capR = (cfg.captureRadius || 120) * 0.03;
+      var softR = (cfg.softPullRadius || 220) * 0.03;
+      var alt = state.orbitRadius || 2.2;
+      var pullA = (cfg.pullAccel || 420) * 0.02;
+      if (state.orbitEscapeCool > 0) state.orbitEscapeCool -= dt;
+      var dx = state.player.position.x - state.planet.x;
+      var dz = state.player.position.z - state.planet.z;
+      var dP = Math.hypot(dx, dz);
+      if (state.inOrbit) {
+        state.orbitRadius = Math.max(1.4, Math.min(softR * 0.9, state.orbitRadius + (steer.y || 0) * 1.2 * dt));
+        state.orbitAngle += (0.85 + (steer.x || 0) * 0.35) * dt;
+        state.player.position.x = state.planet.x + Math.cos(state.orbitAngle) * state.orbitRadius;
+        state.player.position.z = state.planet.z + Math.sin(state.orbitAngle) * state.orbitRadius;
+        state.vx = 0; state.vz = 0;
+      } else if (state.orbitEscapeCool <= 0) {
+        if (dP < softR && dP > 0.2) {
+          var ang = Math.atan2(dz, dx);
+          var pull = pullA * (1 - dP / softR) * dt;
+          state.vx -= Math.cos(ang) * pull;
+          state.vz -= Math.sin(ang) * pull;
+        }
+        if (dP < capR) {
+          state.inOrbit = true;
+          state.orbitAngle = Math.atan2(dz, dx);
+          state.orbitRadius = 2.2;
+          state.vx = 0; state.vz = 0;
+          state.toast = "Orbit locked · Moon · Escape or hard thruster to leave";
+          state.toastT = 3;
+        }
+      }
+    }
+
     var maxSp = state.mode === "space" ? 7 : state.inTruck ? 9 : 5.5;
     var accel = state.mode === "space" ? 14 : state.inTruck ? 18 : 14;
     var fric = state.mode === "space" ? 2.8 : state.inTruck ? 2.6 : 4.5;
 
     // Map screen WASD → ground plane relative to locked camera forward
+    // Ben orbit: when locked, position is owned by orbit tick above
+    if (!(state.mode === "space" && state.inOrbit)) {
     if (steer.x || steer.y) {
       var len = Math.hypot(steer.x, steer.y) || 1;
-      // Camera looks from (+x,+z); move along ground axes
       var ix = steer.x / len;
       var iy = steer.y / len;
-      // Isometric: up = -z -x blend toward camera-facing
       var mx = (ix - iy) * 0.707;
       var mz = (ix + iy) * 0.707;
       state.vx += mx * accel * dt;
@@ -460,6 +510,9 @@
     }
     state.player.position.x += state.vx * dt;
     state.player.position.z += state.vz * dt;
+    } else {
+      var sp = 0;
+    }
     state.player.position.y = Math.abs(Math.sin(state.bob)) * (sp > 0.5 ? 0.06 : 0.02);
     state.player.scale.x = state.facing >= 0 ? 1 : -1;
 
@@ -549,7 +602,8 @@
         mode: state.mode,
         label: label,
         scrap: state.mode === "space" ? state.catches : state.scrap,
-        tip: state.toastT > 0 ? state.toast : state.near ? state.near.tip + " · INTERACT" : "",
+        tip: state.toastT > 0 ? state.toast : state.inOrbit ? "Orbit locked · Escape or hard thruster" : state.near ? state.near.tip + " · INTERACT" : "",
+            inOrbit: !!state.inOrbit,
         near: state.near,
         ability: def.ability,
         cd: state.cd,
@@ -605,6 +659,18 @@
     window.removeEventListener("resize", resize);
     _destroy();
   };
+
+  function leaveOrbitThree() {
+    if (!state || state.mode !== "space" || !state.inOrbit) return false;
+    state.inOrbit = false;
+    state.orbitEscapeCool = 1.4;
+    var kick = ((state.orbitCfg && state.orbitCfg.hardThrustImpulse) || 320) * 0.02;
+    state.vx = Math.cos(state.orbitAngle || 0) * kick;
+    state.vz = Math.sin(state.orbitAngle || 0) * kick;
+    state.toast = "Escape · left Moon orbit";
+    state.toastT = 2.2;
+    return true;
+  }
 
   global.FroggiesThree = {
     boot: boot,
