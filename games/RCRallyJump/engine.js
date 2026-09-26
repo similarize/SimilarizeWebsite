@@ -1,4 +1,4 @@
-const VERSION = "3.9";
+const VERSION = "3.10";
 const VIEW_W = 960;
 const VIEW_H = 540;
 const PLAYER_X = 168;
@@ -105,14 +105,22 @@ function hitchOf(sim) {
   return { sx, sy, x: sim.scroll + sx };
 }
 function stepSquash(sim, dt) {
+  // Visual tire plant / bounce. Chassis settle zeroes sink every frame, so we must NOT
+  // key target squash only on residual penetration (that killed expand/shrink after v3.9).
   for (let i = 0; i < 2; i++) {
     const g = wheelGeom(sim, i);
     const p = wheelWorld(sim, g);
     const sink = p.y + g.r - surfaceY(sim, p.x);
-    const pressed = sim.grounded && sink > -6;
+    const planted = !!sim.grounded && sink > -5;
     const give = sim.tune.squish;
-    const target = pressed ? clamp(give * (0.28 + Math.min(Math.max(0, sink), 6) / 24), 0, 0.55) : 0;
-    sim.squash[i] += (target - sim.squash[i]) * Math.min(1, dt * (pressed ? 16 : 9));
+    // Slight always-on plant when rolling; squish slider fattens it.
+    const calm = planted ? clamp(0.11 + give * 0.42 + Math.max(0, sink) / 20, 0, 0.62) : 0;
+    const rate = planted ? (sim.vy > 90 ? 4 : 11) : 8;
+    sim.squash[i] += (calm - sim.squash[i]) * Math.min(1, dt * rate);
+    if (planted) {
+      const punch = clamp(Math.max(sink / 16, (sim.vy - 40) / 650), 0, 0.55) * (0.5 + give * 0.7);
+      if (punch > sim.squash[i]) sim.squash[i] = Math.min(0.78, punch);
+    }
   }
 }
 function stepTrailer(sim, dt) {
@@ -496,7 +504,9 @@ function stepChassis(sim, dt, input) {
       lift = Math.max(lift, sinks[i]);
       const rx = c * g.lx - s * g.ly;
       sim.av -= rx * Math.min(sinks[i], 10) * 0.05;
-      sim.squash[i] = Math.max(sim.squash[i] * 0.45, clamp(sinks[i] / 28, 0, 0.4) * (0.25 + sim.tune.squish));
+      // Pre-settle compression snapshot — stepSquash carries the visible plant/bounce after lift.
+      const hit = clamp(sinks[i] / 18, 0, 0.55) * (0.4 + sim.tune.squish * 0.65);
+      sim.squash[i] = Math.max(sim.squash[i], hit);
     }
   }
   if (lift > 0) {
@@ -559,27 +569,35 @@ function wheelWorld(sim, w) {
 }
 function coupleWheels(sim, dt) {
   const cruise = cruiseOf(sim);
+  const loads = [0, 0];
   let loaded = false;
   for (let i = 0; i < 2; i++) {
     const g = wheelGeom(sim, i);
     const p = wheelWorld(sim, g);
     const sink = p.y + g.r - surfaceY(sim, p.x);
-    if (sink <= -1.25) {
+    // Soft contact band — brief lifts should not freefall-spin one tire while the other rolls.
+    loads[i] = sink <= -2.4 ? 0 : clamp((sink + 2.4) / 2.4, 0.18, 1);
+    if (loads[i] > 0) loaded = true;
+  }
+  const shared = loaded ? Math.max(loads[0], loads[1], 0.4) : 0;
+  for (let i = 0; i < 2; i++) {
+    const g = wheelGeom(sim, i);
+    const p = wheelWorld(sim, g);
+    const R = Math.max(4, g.r);
+    const targetOmega = sim.speed / R;
+    if (!loaded) {
       sim.wheelOmega[i] *= Math.exp(-dt / SPIN_AIR);
       sim.wheelAng[i] += sim.wheelOmega[i] * dt;
       continue;
     }
-    const load = clamp((sink + 2.4) / 2.4, 0.22, 1);
-    loaded = true;
-    const R = Math.max(4, g.r);
+    const load = loads[i] > 0 ? loads[i] : shared * 0.85;
     const I = 0.28 * R * R;
-    const targetOmega = sim.speed / R;
     const slip = sim.speed - sim.wheelOmega[i] * R;
     const force = clamp(slip * load / 0.72, -260, 260);
     sim.speed -= force * dt * 0.2;
-    // Pull toward rolling contact so both wheels spin in sync with road speed (symmetric animation).
+    // Strong rolling sync so front/rear track road speed together (no stuck / reverse look).
     sim.wheelOmega[i] += force * R / I * dt;
-    sim.wheelOmega[i] += (targetOmega - sim.wheelOmega[i]) * Math.min(1, dt * (9 * load));
+    sim.wheelOmega[i] += (targetOmega - sim.wheelOmega[i]) * Math.min(1, dt * (16 * load));
     if (i === 0) sim.speed += (cruise - sim.speed) * dt * (sim.recover > 0 ? 6.5 : 1.35) * load;
     sim.wheelAng[i] += sim.wheelOmega[i] * dt;
     if (Math.abs(slip) > 55 && load > 0.3 && sim.dust.length < 80 && hash(sim.time * 900 + i * 19) > 0.62) {
@@ -1244,13 +1262,15 @@ function ready(img) {
 }
 function spinWheel(ctx, sim, index, img) {
   const g = wheelGeom(sim, index);
-  const bulge = 1 + g.squash * 0.1;
-  const flat = 1 - g.squash * 0.18;
+  // Squash in chassis space (before spin) so tires expand sideways / shrink vertically against dirt,
+  // instead of the oval orbiting with the tread (scale-after-rotate looked like broken expand/shrink).
+  const bulge = 1 + g.squash * 0.28;
+  const flat = Math.max(0.52, 1 - g.squash * 0.42);
   const ang = sim.wheelAng[index];
   ctx.save();
-  ctx.translate(g.lx, g.ly + g.squash * g.drawR * 0.05);
-  ctx.rotate(ang);
+  ctx.translate(g.lx, g.ly + g.squash * g.drawR * 0.2);
   ctx.scale(bulge, flat);
+  ctx.rotate(ang);
   // Opaque disc under the sprite so spoke/tread cutouts stay solid (no sky/dirt through the hub).
   ctx.beginPath();
   ctx.arc(0, 0, g.drawR * 0.98, 0, Math.PI * 2);

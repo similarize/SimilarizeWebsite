@@ -14,7 +14,7 @@ import {
   wheelPace,
   MISSILE_MAX,
   MISSILE_RELOAD
-} from "./engine.js?v=20260925wheels2";
+} from "./engine.js?v=20260925wheels3";
 var BEST_KEY = "rc-rally-jump-best";
 var RIG_KEY = "rc-rally-rig";
 var TUNE_KEY = "rc-rally-tune";
@@ -168,16 +168,16 @@ function boot() {
     pixel: new Image(),
     pixelWheel: new Image()
   };
-  art.buggy.src = artUrl("buggy.png") + "?v=20260925wheels2";
-  art.body.src = artUrl("buggy-body.png") + "?v=20260925wheels2";
-  art.wheelRear.src = artUrl("wheel-rear.png") + "?v=20260925wheels2";
-  art.wheelFront.src = artUrl("wheel-front.png") + "?v=20260925wheels2";
+  art.buggy.src = artUrl("buggy.png") + "?v=20260925wheels3";
+  art.body.src = artUrl("buggy-body.png") + "?v=20260925wheels3";
+  art.wheelRear.src = artUrl("wheel-rear.png") + "?v=20260925wheels3";
+  art.wheelFront.src = artUrl("wheel-front.png") + "?v=20260925wheels3";
   art.drone.src = artUrl("drone.png");
   art.sky.src = artUrl("sky.jpg");
   art.crawler.src = artUrl("crawler-body.png") + "?v=20260925render";
-  art.crawlerWheel.src = artUrl("crawler-wheel.png") + "?v=20260925wheels2";
+  art.crawlerWheel.src = artUrl("crawler-wheel.png") + "?v=20260925wheels3";
   art.pixel.src = artUrl("pixel-body.png") + "?v=20260925pixel";
-  art.pixelWheel.src = artUrl("pixel-wheel.png") + "?v=20260925wheels2";
+  art.pixelWheel.src = artUrl("pixel-wheel.png") + "?v=20260925wheels3";
   const rigBtns = [...document.querySelectorAll("#rigs .rig")];
   const picked = el("picked");
   const paintRigs = () => {
