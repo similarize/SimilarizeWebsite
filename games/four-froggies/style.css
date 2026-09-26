@@ -332,3 +332,186 @@ html, body {
   .invite-qr { width: 88px; height: 88px; }
   .splash-art { max-height: 16vh; }
 }
+
+/* ——— 2.5D hub controls + story ——— */
+.in-title #controls,
+.in-title #hud { visibility: hidden; pointer-events: none; }
+.in-hub #controls,
+.in-hub #hud { visibility: visible; }
+
+#btn-up, #btn-down {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  font-size: 20px;
+  left: calc(max(14px, env(safe-area-inset-left)) + 43px);
+}
+#btn-up { bottom: calc(max(20px, env(safe-area-inset-bottom)) + 86px); }
+#btn-down { bottom: max(12px, env(safe-area-inset-bottom)); }
+#btn-left, #btn-right {
+  bottom: calc(max(20px, env(safe-area-inset-bottom)) + 36px);
+}
+
+#btn-interact {
+  right: max(14px, env(safe-area-inset-right));
+  bottom: calc(max(20px, env(safe-area-inset-bottom)) + 112px);
+  min-width: 96px;
+  height: 56px;
+  border-radius: 16px;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  font-weight: 800;
+  opacity: 0.55;
+}
+#btn-interact.ready {
+  opacity: 1;
+  background: rgba(251, 191, 36, 0.55);
+  border-color: #fbbf24;
+}
+
+.menu-btn {
+  pointer-events: auto;
+  margin-left: auto;
+  border: 1px solid rgba(255,255,255,.4);
+  background: rgba(0,0,0,.4);
+  color: #fff;
+  font: 700 11px "Segoe UI", system-ui, sans-serif;
+  border-radius: 999px;
+  padding: 4px 10px;
+  touch-action: manipulation;
+}
+
+.hub-tip {
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fde68a;
+  min-height: 1.2em;
+  text-shadow: 0 1px 3px #000;
+}
+
+#progress-wrap { opacity: 0.35; }
+
+.story-panel {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(6, 16, 28, 0.72);
+  pointer-events: auto;
+}
+.story-panel[hidden] { display: none; }
+.story-card {
+  width: min(100%, 340px);
+  max-height: min(88vh, 560px);
+  overflow: auto;
+  background: linear-gradient(180deg, #0f2744, #0a1628);
+  border: 2px solid rgba(148, 163, 184, 0.45);
+  border-radius: 18px;
+  padding: 14px 14px 16px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.5);
+  color: #e2e8f0;
+}
+.story-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  font-size: 15px;
+}
+.story-x {
+  border: none;
+  background: rgba(255,255,255,.1);
+  color: #fff;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 16px;
+  touch-action: manipulation;
+}
+.story-status { margin: 0 0 8px; font-size: 13px; color: #93c5fd; }
+.contact-list { display: flex; flex-direction: column; gap: 8px; }
+.contact-btn {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 10px;
+  align-items: center;
+  text-align: left;
+  border: 1px solid rgba(255,255,255,.25);
+  border-radius: 12px;
+  padding: 10px;
+  background: rgba(0,0,0,.35);
+  color: #fff;
+  font: 700 14px "Segoe UI", system-ui, sans-serif;
+  touch-action: manipulation;
+}
+.contact-btn small {
+  grid-column: 2;
+  font-weight: 600;
+  opacity: 0.7;
+  font-size: 11px;
+}
+.contact-btn .av {
+  grid-row: 1 / span 2;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+.contact-btn .av.purple { background: #7c3aed; }
+.contact-btn .av.blue { background: #2563eb; }
+.story-speech {
+  margin: 12px 0 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(196, 181, 253, 0.4);
+  font-size: 14px;
+  line-height: 1.4;
+  color: #f5f3ff;
+}
+.story-speech[hidden] { display: none; }
+.story-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.story-btn {
+  border: 1px solid rgba(255,255,255,.35);
+  border-radius: 999px;
+  padding: 10px 16px;
+  background: rgba(0,0,0,.35);
+  color: #fff;
+  font: 700 13px "Segoe UI", system-ui, sans-serif;
+  touch-action: manipulation;
+}
+.story-btn.primary {
+  background: linear-gradient(180deg, #86efac, #22c55e);
+  color: #052e16;
+  border: none;
+}
+.story-btn[hidden] { display: none; }
+#sps-mini {
+  display: block;
+  width: 100%;
+  max-width: 280px;
+  margin: 0 auto 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(148,163,184,.4);
+  background: #0a1628;
+}
+.sps-meta {
+  margin: 0;
+  font-size: 12px;
+  text-align: center;
+  color: #94a3b8;
+  line-height: 1.35;
+}
+
+@media (max-width: 800px), (pointer: coarse) {
+  #btn-up, #btn-down { width: 64px; height: 64px; }
+  #btn-interact { min-width: 108px; height: 64px; font-size: 13px; }
+}

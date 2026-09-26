@@ -5,32 +5,71 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
-  <title>Four Froggies — Ranch Grounds (sandbox)</title>
-  <link rel="stylesheet" href="style.css?v=20260925-party1">
+  <title>Four Froggies — Ranch Hub</title>
+  <link rel="stylesheet" href="style.css?v=20260925-hub1">
 </head>
-<body>
+<body class="in-title">
   <canvas id="view"></canvas>
 
   <div id="hud">
     <div id="hud-top">
-      <span id="lives">♥♥♥</span>
-      <span id="scrap">Scrap 0</span>
-      <span id="progress-label">Ranch Grounds</span>
+      <span id="lives">🐸 Walk</span>
+      <span id="scrap">Explore</span>
+      <span id="progress-label">Ranch hub</span>
+      <button type="button" id="btn-menu" class="menu-btn" aria-label="Lobby">Lobby</button>
     </div>
     <div id="progress-wrap"><div id="progress-bar"></div></div>
     <div id="convoy-row"></div>
+    <div id="hub-tip" class="hub-tip"></div>
   </div>
 
   <div id="controls">
-    <button type="button" id="btn-left" aria-label="Steer left">◀</button>
-    <button type="button" id="btn-right" aria-label="Steer right">▶</button>
+    <button type="button" id="btn-left" aria-label="Left">◀</button>
+    <button type="button" id="btn-right" aria-label="Right">▶</button>
+    <button type="button" id="btn-up" aria-label="Up">▲</button>
+    <button type="button" id="btn-down" aria-label="Down">▼</button>
+    <button type="button" id="btn-interact" aria-label="Interact">INTERACT</button>
     <button type="button" id="btn-ability" aria-label="Ability">DASH</button>
   </div>
 
+  <!-- In-world story: phone + SPS -->
+  <div id="story-panel" class="story-panel" hidden>
+    <div class="story-card">
+      <header class="story-head">
+        <strong id="story-title">Phone</strong>
+        <button type="button" id="story-close" class="story-x" aria-label="Close">✕</button>
+      </header>
+      <div id="story-phone">
+        <p id="story-status" class="story-status">Contacts</p>
+        <div class="contact-list">
+          <button type="button" class="contact-btn" data-story-dial="purple">
+            <span class="av purple">🐻</span>
+            <span>Purple Bear</span>
+            <small>tap to dial</small>
+          </button>
+          <button type="button" class="contact-btn" data-story-dial="blue">
+            <span class="av blue">🐻</span>
+            <span>Blue Bear</span>
+            <small>place-bound</small>
+          </button>
+        </div>
+        <p id="story-speech" class="story-speech" hidden></p>
+        <div class="story-actions">
+          <button type="button" id="story-hangup" class="story-btn" hidden>Got it</button>
+          <button type="button" id="story-open-sps" class="story-btn primary" hidden>Open SPS</button>
+        </div>
+      </div>
+      <div id="story-sps" hidden>
+        <canvas id="sps-mini" width="280" height="280" aria-label="SPS solar map"></canvas>
+        <p id="sps-meta" class="sps-meta">Solar Positioning System</p>
+      </div>
+    </div>
+  </div>
+
   <div id="overlay">
-    <img id="splash-art" class="splash-art" src="assets/splash-forest-roof.png?v=20260925-party1" alt="Four froggies on a Cybertruck roof in the forest" width="832" height="1248" decoding="async">
+    <img id="splash-art" class="splash-art" src="assets/splash-forest-roof.png?v=20260925-hub1" alt="Four froggies on a Cybertruck roof" width="832" height="1248" decoding="async">
     <h1 id="overlay-title">Four Froggies</h1>
-    <p id="overlay-sub">Party lobby sandbox · Up to 4 players · AI fills empty seats · not a second product</p>
+    <p id="overlay-sub">2.5D ranch hub · Up to 4 players · AI fills empty seats</p>
     <div id="frog-pick" class="frog-pick">
       <p class="pick-label">Claim a froggy seat</p>
       <div class="frog-btns">
@@ -64,13 +103,15 @@
     </div>
     <img id="invite-qr" class="invite-qr" hidden alt="QR code to join this room" width="112" height="112">
     <p id="party-status" class="party-status"></p>
-    <p id="overlay-text">Steer left/right · tap ability · keep the convoy alive past the ranch house, track, and pond.</p>
+    <p id="overlay-text">Walk / drive James's ranch · house, monster truck track, pond. Call Purple Bear · check SPS.</p>
     <p class="go" id="overlay-go">Claim a seat · Host to invite · or GO solo (AI fills)</p>
-    <button type="button" id="btn-start" class="start-btn">GO · Ranch Run</button>
+    <button type="button" id="btn-start" class="start-btn">GO · Ranch Hub</button>
   </div>
 
-  <script src="ai.js?v=20260925-party1"></script>
-  <script src="party.js?v=20260925-party1"></script>
-  <script src="main.js?v=20260925-party1"></script>
+  <script src="ai.js?v=20260925-hub1"></script>
+  <script src="party.js?v=20260925-hub1"></script>
+  <script src="world.js?v=20260925-hub1"></script>
+  <script src="story.js?v=20260925-hub1"></script>
+  <script src="main.js?v=20260925-hub1"></script>
 </body>
 </html>

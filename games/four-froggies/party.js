@@ -241,7 +241,10 @@
         if (typeof hooks.onInput === "function") {
           hooks.onInput(msg.frogId, {
             steer: msg.steer || 0,
+            steerX: typeof msg.steerX === "number" ? msg.steerX : 0,
+            steerY: typeof msg.steerY === "number" ? msg.steerY : 0,
             ability: !!msg.ability,
+            interact: !!msg.interact,
             targetLane: typeof msg.targetLane === "number" ? msg.targetLane : null,
             peerId: fromId,
           });
@@ -289,7 +292,7 @@
         }
         return;
       }
-      if (msg.t === "state") {
+      if (msg.t === "state" || msg.t === "hub") {
         if (typeof hooks.onState === "function") hooks.onState(msg);
         return;
       }
@@ -510,11 +513,15 @@
 
     function sendInput(frogId, payload) {
       if (role !== "guest" || !hostConn) return;
+      payload = payload || {};
       send(hostConn, {
         t: "input",
         frogId: frogId,
         steer: payload.steer || 0,
+        steerX: typeof payload.steerX === "number" ? payload.steerX : 0,
+        steerY: typeof payload.steerY === "number" ? payload.steerY : 0,
         ability: !!payload.ability,
+        interact: !!payload.interact,
         targetLane: typeof payload.targetLane === "number" ? payload.targetLane : null,
       });
     }
@@ -522,7 +529,9 @@
     function sendState(stateObj) {
       if (role !== "host") return;
       var msg = stateObj || {};
-      msg.t = "state";
+      if (!msg.t || msg.t === "state") {
+        msg.t = msg.mode === "hub" ? "hub" : "state";
+      }
       broadcast(msg);
     }
 
