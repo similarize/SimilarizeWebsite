@@ -195,7 +195,8 @@ html, body {
   font: 700 15px "Segoe UI", system-ui, sans-serif;
   touch-action: manipulation;
 }
-.frog-btn small { font-weight: 600; opacity: 0.8; }
+/* solid1: roles TBD — no Wheel/Shield/Zap/Bot under cast names */
+.frog-btn small { display: none; }
 .frog-btn[data-id="james"] { border-color: #4ade80; }
 .frog-btn[data-id="jimmy"] { border-color: #fb923c; }
 .frog-btn[data-id="bubbles"] { border-color: #60a5fa; }

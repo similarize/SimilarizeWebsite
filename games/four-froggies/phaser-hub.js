@@ -136,7 +136,7 @@
           }).setOrigin(0.5, 1).setDepth(22).setVisible(false);
           this.companions.push(companion);
         }
-        this.nameTag = this.add.text(0, 0, def.name + " · you", {
+        this.nameTag = this.add.text(0, 0, def.name, {
           fontFamily: "Segoe UI, system-ui, sans-serif", fontSize: "13px", fontStyle: "bold",
           color: def.color || "#fff", stroke: "#000", strokeThickness: 4,
           backgroundColor: "#0f172ae6", padding: { x: 7, y: 3 },
@@ -524,6 +524,23 @@
         body.velocity.y *= Math.max(0, 1 - fric * dt);
         var sp = Math.hypot(body.velocity.x, body.velocity.y);
         if (sp > maxSp) { body.velocity.x = (body.velocity.x / sp) * maxSp; body.velocity.y = (body.velocity.y / sp) * maxSp; }
+        /* solid1: solid walls / mechs / parked trucks (doorway open) */
+        if (C.resolveSolid) {
+          var solid = C.resolveSolid(this.player.x, this.player.y, this.inTruck ? 38 : 22, {
+            garageOpen: this.garageOpen || 0,
+            inTruck: !!this.inTruck,
+            softPond: !this.inTruck,
+          });
+          if (solid.hit) {
+            var pdx = solid.x - this.player.x, pdy = solid.y - this.player.y;
+            var plen = Math.hypot(pdx, pdy) || 1;
+            var nx = pdx / plen, ny = pdy / plen;
+            var into = body.velocity.x * nx + body.velocity.y * ny;
+            if (into < 0) { body.velocity.x -= nx * into; body.velocity.y -= ny * into; }
+            else { body.velocity.x *= 0.55; body.velocity.y *= 0.55; }
+            this.player.setPosition(solid.x, solid.y);
+          }
+        }
         if (this.inTruck && C.rampAt) {
           var ramp = C.rampAt(this.player.x, this.player.y);
           if (ramp && sp > 40) { this.zVel = Math.max(this.zVel, 180 * (ramp.boost || 1.3)); this.scrap += 0.02; }

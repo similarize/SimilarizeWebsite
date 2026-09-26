@@ -639,7 +639,7 @@
       if (me) {
         me.steerX = steerX;
         me.steerY = steerY;
-        W.moveEntity(me, dt);
+        W.moveEntity(me, dt, undefined, world);
         const drive = W.tickDrive(world, me, dt);
         if (drive.jumped) {
           sfxJump();
@@ -710,7 +710,7 @@
     }
     for (const f of frogs) {
       if (f.human) {
-        W.moveEntity(f, dt);
+        W.moveEntity(f, dt, undefined, world);
         if (f.local || f.inTruck) {
           const drive = W.tickDrive(world, f, dt);
           if (f.local) {

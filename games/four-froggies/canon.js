@@ -4,7 +4,8 @@
    polish7: zone signs (HOUSE/TRACK/POND/GARAGE/STARSHIP) + AI chat one-liners from existing canon only.
    polish8: shared landmarks unchanged; art punch lives in engine renderers.
    polish9: landmarks unchanged; party/nameplate/gate/kit punch in engines.
-   polish10: zone signs fade when close (frogs readable). */
+   polish10: zone signs fade when close (frogs readable).
+   solid1: shared solid walls / mech pads / parked trucks; house doorway open. */
 (function (global) {
   "use strict";
 
@@ -215,6 +216,129 @@
   }
 
 
+  /* solid1: cheap walk blockers (world XY). Doorways stay open. Trucks block unless boarding/in-truck. */
+  var WALL_THICK = 20;
+  var HOUSE_DOOR_W = 96;
+  var GARAGE_DOOR_W = 120;
+
+  function solidRects(opts) {
+    opts = opts || {};
+    var garageOpen = opts.garageOpen || 0;
+    var out = [];
+    var house = COMPOUND.house;
+    var t = WALL_THICK;
+    var midX = house.x + house.w * 0.5;
+    var gap = HOUSE_DOOR_W * 0.5;
+    /* North / West / East full; South split around doorway (walkable gap) */
+    out.push({ id: "house-n", x: house.x, y: house.y - t * 0.5, w: house.w, h: t });
+    out.push({ id: "house-w", x: house.x - t * 0.5, y: house.y, w: t, h: house.h });
+    out.push({ id: "house-e", x: house.x + house.w - t * 0.5, y: house.y, w: t, h: house.h });
+    out.push({ id: "house-sl", x: house.x, y: house.y + house.h - t * 0.5, w: Math.max(8, midX - gap - house.x), h: t });
+    out.push({ id: "house-sr", x: midX + gap, y: house.y + house.h - t * 0.5, w: Math.max(8, house.x + house.w - (midX + gap)), h: t });
+
+    var gar = COMPOUND.garage;
+    out.push({ id: "gar-n", x: gar.x, y: gar.y - t * 0.5, w: gar.w, h: t });
+    out.push({ id: "gar-w", x: gar.x - t * 0.5, y: gar.y, w: t, h: gar.h });
+    out.push({ id: "gar-e", x: gar.x + gar.w - t * 0.5, y: gar.y, w: t, h: gar.h });
+    /* Rolling door blocks south bay until open enough to walk under */
+    if (garageOpen < 0.45) {
+      var gmid = gar.x + gar.w * 0.5;
+      var gd = GARAGE_DOOR_W * 0.5;
+      out.push({ id: "gar-door", x: gmid - gd, y: gar.y + gar.h - t * 0.5, w: GARAGE_DOOR_W, h: t });
+    }
+    return out;
+  }
+
+  function solidCircles(opts) {
+    opts = opts || {};
+    var out = [];
+    out.push({ id: "mech10", x: COMPOUND.mech10.x, y: COMPOUND.mech10.y, r: 38 });
+    out.push({ id: "mech100", x: COMPOUND.mech100.x, y: COMPOUND.mech100.y, r: 52 });
+    out.push({ id: "mech1000", x: COMPOUND.mech1000.x, y: COMPOUND.mech1000.y, r: 95 });
+    if (!opts.inTruck && !opts.ignoreTrucks) {
+      for (var i = 0; i < TRUCK_SPOTS.length; i++) {
+        var s = TRUCK_SPOTS[i];
+        /* r under hotspot radius so BOARD shell stays reachable (solo ~54, shared ~78) */
+        out.push({ id: "truck-" + s.id, x: s.x, y: s.y, r: s.id === "shared" ? 40 : 28 });
+      }
+    }
+    return out;
+  }
+
+  function _pushCircleOut(pos, cx, cy, minDist) {
+    var dx = pos.x - cx, dy = pos.y - cy;
+    var d = Math.hypot(dx, dy);
+    if (d < 1e-4) { pos.x = cx + minDist; return true; }
+    if (d < minDist) {
+      var s = minDist / d;
+      pos.x = cx + dx * s;
+      pos.y = cy + dy * s;
+      return true;
+    }
+    return false;
+  }
+
+  function _pushRectOut(pos, r, rad) {
+    var cx = Math.max(r.x, Math.min(r.x + r.w, pos.x));
+    var cy = Math.max(r.y, Math.min(r.y + r.h, pos.y));
+    var dx = pos.x - cx, dy = pos.y - cy;
+    var d2 = dx * dx + dy * dy;
+    if (d2 >= rad * rad) return false;
+    if (d2 < 1e-6) {
+      /* Deep inside: push via nearest edge */
+      var left = pos.x - r.x, right = r.x + r.w - pos.x;
+      var top = pos.y - r.y, bot = r.y + r.h - pos.y;
+      var m = Math.min(left, right, top, bot);
+      if (m === left) pos.x = r.x - rad;
+      else if (m === right) pos.x = r.x + r.w + rad;
+      else if (m === top) pos.y = r.y - rad;
+      else pos.y = r.y + r.h + rad;
+      return true;
+    }
+    var d = Math.sqrt(d2);
+    var s = rad / d;
+    pos.x = cx + dx * s;
+    pos.y = cy + dy * s;
+    return true;
+  }
+
+  function resolveSolid(x, y, radius, opts) {
+    opts = opts || {};
+    var rad = radius || 22;
+    var pos = { x: x, y: y };
+    var hit = false;
+    var rects = solidRects(opts);
+    for (var i = 0; i < rects.length; i++) {
+      if (_pushRectOut(pos, rects[i], rad)) hit = true;
+    }
+    var circs = solidCircles(opts);
+    for (var j = 0; j < circs.length; j++) {
+      if (_pushCircleOut(pos, circs[j].x, circs[j].y, circs[j].r + rad)) hit = true;
+    }
+    /* Optional soft pond rim — gentle slide, not a hard wall */
+    if (opts.softPond && !opts.inTruck) {
+      var pond = AREAS[2];
+      var margin = 36;
+      var inside =
+        pos.x > pond.x + margin && pos.x < pond.x + pond.w - margin &&
+        pos.y > pond.y + margin && pos.y < pond.y + pond.h - margin;
+      if (inside) {
+        var dl = pos.x - (pond.x + margin);
+        var dr = (pond.x + pond.w - margin) - pos.x;
+        var dt = pos.y - (pond.y + margin);
+        var db = (pond.y + pond.h - margin) - pos.y;
+        var m = Math.min(dl, dr, dt, db);
+        var push = 28 * (opts.softPondStrength || 0.35);
+        if (m === dl) pos.x -= push;
+        else if (m === dr) pos.x += push;
+        else if (m === dt) pos.y -= push;
+        else pos.y += push;
+        hit = true;
+      }
+    }
+    return { x: pos.x, y: pos.y, hit: hit };
+  }
+
   /* polish10: peak mid-approach; fade when standing on the sign so frogs stay visible */
   function zoneSignAlpha(sign, x, y) {
     if (!sign) return 0;
@@ -257,5 +381,8 @@
     isTruckHotspot: isTruckHotspot,
     rampAt: rampAt,
     zoneSignAlpha: zoneSignAlpha,
+    solidRects: solidRects,
+    solidCircles: solidCircles,
+    resolveSolid: resolveSolid,
   };
 })(typeof window !== "undefined" ? window : globalThis);

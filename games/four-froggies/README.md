@@ -1,3 +1,9 @@
+## What's new (solid1) — Three floor stable + cast-only names + solid walls
+- **Floor artifact:** z-fighting — GridHelper + thick AREA boxes + soft shadow discs coplanar with ground; fixed by flat zone pads, lifted grid (`depthWrite: false`), lifted shadow discs (`depthWrite: false`), shadow bias.
+- **Role tags:** removed Wheel/Shield/Zap/Bot under frog seat names (cast names only; roles TBD).
+- **Collision:** `FroggiesCanon.resolveSolid` — house/garage walls (south doorway open), mech pads, parked trucks; soft pond rim optional. Wired in three-hub + world.js + phaser-hub.
+- Cache-bust: `?v=20260926-solid1`. No SPS arcade republish.
+
 ## What's new (mapfix1) — Three mini-map not fullscreen
 - Root cause: `#engine-host canvas { width/height: 100% !important }` stretched the Three mini-map overlay canvas to the whole screen → giant blurry "MAP" box on phone.
 - Fix: only the renderer canvas fills the host; `canvas[data-ff-minimap]` keeps its corner size.

@@ -10,6 +10,7 @@
    polish8: truck silhouette + house porch + whale breach + destination beacon. Hollow house + frogs kept.
    polish9: color nameplates; aboard icons; track gate; Optimus punch lite. Hollow house + frogs kept.
    polish10: quieter UI; exit truck anytime; friction/cam; particle caps; dusk sky. Hollow house + frogs + WASD kept.
+   solid1: floor z-fight fix; solid walls/mechs/trucks; cast names only on plates.
    WASD camera-relative — do not invert. */
 (function (global) {
   "use strict";
@@ -126,7 +127,8 @@
       })
     );
     ring.rotation.x = -Math.PI / 2;
-    ring.position.y = 0.04;
+    ring.position.y = 0.09;
+    ring.renderOrder = 2;
     g.add(ring);
     g.userData.ring = ring;
     g.userData.frogId = def.id;
@@ -260,7 +262,7 @@
       new THREE.CylinderGeometry(h * 0.28, h * 0.32, 0.08, 20),
       new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.4 })
     );
-    pad.position.set(p.x, 0.05, p.z); scene.add(pad);
+    pad.position.set(p.x, 0.08, p.z); pad.receiveShadow = true; scene.add(pad);
     var body = new THREE.Mesh(
       new THREE.BoxGeometry(h * 0.28, h, h * 0.22),
       new THREE.MeshStandardMaterial({ color: color, metalness: 0.35, roughness: 0.45 })
@@ -286,10 +288,13 @@
     var yard = cp.yard || { x: 100, y: 2100, w: 600, h: 360 };
     var yp = worldToThree(yard.x + yard.w / 2, yard.y + yard.h / 2);
     var yardM = new THREE.Mesh(
-      new THREE.BoxGeometry(yard.w * 0.02, 0.08, yard.h * 0.02),
-      new THREE.MeshStandardMaterial({ color: 0x468232, roughness: 0.95 })
+      new THREE.BoxGeometry(yard.w * 0.02, 0.06, yard.h * 0.02),
+      new THREE.MeshStandardMaterial({
+        color: 0x468232, roughness: 0.95,
+        polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1,
+      })
     );
-    yardM.position.set(yp.x, 0.1, yp.z); scene.add(yardM);
+    yardM.position.set(yp.x, 0.08, yp.z); scene.add(yardM);
     addLabel("Backyard", "#ecfccb", yp.x, 1.2, yp.z);
     for (var ai = 0; ai < 40; ai++) {
       var ap = worldToThree(yard.x + 30 + Math.random() * (yard.w - 60), yard.y + 40 + Math.random() * (yard.h - 80));
@@ -309,10 +314,13 @@
     var gp = worldToThree(gar.x + gar.w / 2, gar.y + gar.h / 2);
     var gw = gar.w * 0.02, gd = gar.h * 0.02;
     var gFloor = new THREE.Mesh(
-      new THREE.BoxGeometry(gw, 0.1, gd),
-      new THREE.MeshStandardMaterial({ color: 0x57534e, roughness: 0.9 })
+      new THREE.BoxGeometry(gw, 0.08, gd),
+      new THREE.MeshStandardMaterial({
+        color: 0x57534e, roughness: 0.9,
+        polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1,
+      })
     );
-    gFloor.position.set(gp.x, 0.05, gp.z); scene.add(gFloor);
+    gFloor.position.set(gp.x, 0.09, gp.z); gFloor.receiveShadow = true; scene.add(gFloor);
     var gMat = new THREE.MeshStandardMaterial({ color: 0x6b7280, roughness: 0.75, metalness: 0.15 });
     function gWall(wx, wz, ww, wd, wh) {
       var m = new THREE.Mesh(new THREE.BoxGeometry(ww, wh || 2.0, wd), gMat);
@@ -350,10 +358,13 @@
     var hw = house.w * 0.02, hd = house.h * 0.02;
     // Floor only + perimeter walls (HOLLOW) — spawn is inside house rect; solid box buried frogs
     var floor = new THREE.Mesh(
-      new THREE.BoxGeometry(hw, 0.12, hd),
-      new THREE.MeshStandardMaterial({ color: 0xc4a574, roughness: 0.85 })
+      new THREE.BoxGeometry(hw, 0.1, hd),
+      new THREE.MeshStandardMaterial({
+        color: 0xc4a574, roughness: 0.85,
+        polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1,
+      })
     );
-    floor.position.set(hp.x, 0.06, hp.z); floor.receiveShadow = true; scene.add(floor);
+    floor.position.set(hp.x, 0.1, hp.z); floor.receiveShadow = true; scene.add(floor);
     var wallMat = new THREE.MeshStandardMaterial({ color: 0xd4b896, roughness: 0.7, side: THREE.DoubleSide });
     var wallH = 2.2, thick = 0.18;
     function wall(wx, wz, ww, wd) {
@@ -411,9 +422,12 @@
     porch.position.set(hp.x, 0.12, hp.z + hd * 0.5 + 0.4); porch.receiveShadow = true; scene.add(porch);
     var path = new THREE.Mesh(
       new THREE.BoxGeometry(0.9, 0.06, 1.6),
-      new THREE.MeshStandardMaterial({ color: 0xa09070, roughness: 0.9 })
+      new THREE.MeshStandardMaterial({
+        color: 0xa09070, roughness: 0.9,
+        polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1,
+      })
     );
-    path.position.set(hp.x, 0.05, hp.z + hd * 0.5 + 1.4); scene.add(path);
+    path.position.set(hp.x, 0.09, hp.z + hd * 0.5 + 1.4); scene.add(path);
     for (var pi = 0; pi < 5; pi++) {
       var post = new THREE.Mesh(
         new THREE.BoxGeometry(0.1, 0.9, 0.1),
@@ -613,15 +627,23 @@
     sun.position.set(12, 22, 8);
     sun.castShadow = true;
     sun.shadow.mapSize.set(2048, 2048);
+    /* solid1: reduce shadow acne flicker on ranch floor while walking */
+    sun.shadow.bias = -0.00035;
+    sun.shadow.normalBias = 0.035;
     scene.add(sun);
 
-    // Ground
+    // Ground — flat (no subdiv) + polygonOffset so overlays don't z-fight
     var ground = new THREE.Mesh(
-      new THREE.PlaneGeometry(C.MAP_W * 0.02, C.MAP_H * 0.02, 24, 18),
-      new THREE.MeshStandardMaterial({ color: 0x3d7a35, roughness: 0.9 })
+      new THREE.PlaneGeometry(C.MAP_W * 0.02, C.MAP_H * 0.02),
+      new THREE.MeshStandardMaterial({
+        color: 0x3d7a35, roughness: 0.9,
+        polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1,
+      })
     );
     ground.rotation.x = -Math.PI / 2;
+    ground.position.y = 0;
     ground.receiveShadow = true;
+    ground.renderOrder = -2;
     scene.add(ground);
 
     /* polish6: parallax-lite distant ranch hills (cheap depth bands) */
@@ -640,34 +662,49 @@
       state.paraHills.push(hill);
     }
 
-    // Soft grid
+    // Soft grid — lifted + no depth write (was z-fighting ground → floor shudder)
     var grid = new THREE.GridHelper(Math.max(C.MAP_W, C.MAP_H) * 0.02, 30, 0x2f5e2a, 0x2f5e2a);
-    grid.position.y = 0.02;
-    grid.material.opacity = 0.35;
-    grid.material.transparent = true;
+    grid.position.y = 0.14;
+    if (Array.isArray(grid.material)) {
+      for (var gi = 0; gi < grid.material.length; gi++) {
+        grid.material[gi].opacity = 0.22;
+        grid.material[gi].transparent = true;
+        grid.material[gi].depthWrite = false;
+      }
+    } else {
+      grid.material.opacity = 0.22;
+      grid.material.transparent = true;
+      grid.material.depthWrite = false;
+    }
+    grid.renderOrder = -1;
     scene.add(grid);
 
     state.areaMeshes = [];
     for (var i = 0; i < C.AREAS.length; i++) {
       var a = C.AREAS[i];
       var p = worldToThree(a.x + a.w / 2, a.y + a.h / 2);
+      /* solid1: flat zone pads (not thick boxes) — thick boxes z-fought the ground plane */
       var mesh = new THREE.Mesh(
-        new THREE.BoxGeometry(a.w * 0.02, 0.18, a.h * 0.02),
+        new THREE.PlaneGeometry(a.w * 0.02, a.h * 0.02),
         new THREE.MeshStandardMaterial({
           color: hex(a.color),
           roughness: 0.85,
           transparent: true,
-          opacity: 0.94,
+          opacity: 0.92,
+          polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2,
         })
       );
-      mesh.position.set(p.x, 0.1, p.z);
+      mesh.rotation.x = -Math.PI / 2;
+      mesh.position.set(p.x, 0.04, p.z);
       mesh.receiveShadow = true;
       scene.add(mesh);
       var edgeA = new THREE.LineSegments(
-        new THREE.EdgesGeometry(new THREE.BoxGeometry(a.w * 0.02, 0.18, a.h * 0.02)),
-        new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.45 })
+        new THREE.EdgesGeometry(new THREE.PlaneGeometry(a.w * 0.02, a.h * 0.02)),
+        new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.4, depthWrite: false })
       );
-      edgeA.position.copy(mesh.position); scene.add(edgeA);
+      edgeA.rotation.x = -Math.PI / 2;
+      edgeA.position.set(p.x, 0.05, p.z);
+      scene.add(edgeA);
       addLabel(a.name, "#ffffff", p.x, 3.2, p.z);
     }
 
@@ -747,20 +784,28 @@
     state.player.position.set(spawn.x, 0.02, spawn.z);
     if (state.player.userData.ring) state.player.userData.ring.material.opacity = 0.85;
     scene.add(state.player);
-    /* polish6: soft depth shadow under frog / truck */
+    /* polish6 + solid1: soft depth shadow — depthWrite off + lifted so they don't fight the floor */
     state.playerShadow = new THREE.Mesh(
       new THREE.CircleGeometry(0.55, 20),
-      new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.32, side: THREE.DoubleSide })
+      new THREE.MeshBasicMaterial({
+        color: 0x000000, transparent: true, opacity: 0.32, side: THREE.DoubleSide,
+        depthWrite: false,
+      })
     );
     state.playerShadow.rotation.x = -Math.PI / 2;
-    state.playerShadow.position.set(spawn.x, 0.04, spawn.z);
+    state.playerShadow.position.set(spawn.x, 0.07, spawn.z);
+    state.playerShadow.renderOrder = 1;
     scene.add(state.playerShadow);
     state.playerShadowSoft = new THREE.Mesh(
       new THREE.CircleGeometry(0.85, 20),
-      new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.14, side: THREE.DoubleSide })
+      new THREE.MeshBasicMaterial({
+        color: 0x000000, transparent: true, opacity: 0.14, side: THREE.DoubleSide,
+        depthWrite: false,
+      })
     );
     state.playerShadowSoft.rotation.x = -Math.PI / 2;
-    state.playerShadowSoft.position.set(spawn.x, 0.03, spawn.z);
+    state.playerShadowSoft.position.set(spawn.x, 0.065, spawn.z);
+    state.playerShadowSoft.renderOrder = 1;
     scene.add(state.playerShadowSoft);
     state.nameTag = labelSprite(def.name, def.color || "#fff");
     state.nameTag.position.set(spawn.x, 2.6, spawn.z);
@@ -1536,6 +1581,35 @@
       state.player.position.y = (state.zLift || 0) * 0.08 + Math.abs(Math.sin(state.bob)) * (sp > 0.5 ? 0.06 : 0.02);
     }
 
+    // solid1: solid walls / mech pads / parked trucks (doorways stay walkable)
+    if (state.mode === "ranch" && C.resolveSolid) {
+      var wHit = threeToWorld(state.player.position.x, state.player.position.z);
+      var radW = state.inTruck ? 38 : 22;
+      var solidOpts = {
+        garageOpen: state.garageOpen || 0,
+        inTruck: !!state.inTruck,
+        softPond: !state.inTruck,
+      };
+      var resolved = C.resolveSolid(wHit.x, wHit.y, radW, solidOpts);
+      if (resolved.hit) {
+        var tHit = worldToThree(resolved.x, resolved.y);
+        /* Kill velocity into the blocker so we don't shudder into the wall */
+        var pdx = tHit.x - state.player.position.x;
+        var pdz = tHit.z - state.player.position.z;
+        if (pdx * state.vx + pdz * state.vz < 0) {
+          /* incoming — zero component along push */
+          var plen = Math.hypot(pdx, pdz) || 1;
+          var nx = pdx / plen, nz = pdz / plen;
+          var into = state.vx * nx + state.vz * nz;
+          if (into < 0) { state.vx -= nx * into; state.vz -= nz * into; }
+        } else {
+          state.vx *= 0.55; state.vz *= 0.55;
+        }
+        state.player.position.x = tHit.x;
+        state.player.position.z = tHit.z;
+      }
+    }
+
     // Clamp ranch bounds
     if (state.mode === "ranch") {
       var halfW = C.MAP_W * 0.01;
@@ -1610,11 +1684,11 @@
     if (state.playerShadow) {
       var shS = state.inTruck ? 1.7 : 1;
       var shA = (state.zLift || 0) > 0.5 ? 0.12 : 0.32;
-      state.playerShadow.position.set(state.player.position.x, 0.04, state.player.position.z);
+      state.playerShadow.position.set(state.player.position.x, 0.07, state.player.position.z);
       state.playerShadow.scale.set(shS, shS, shS);
       state.playerShadow.material.opacity = shA;
       if (state.playerShadowSoft) {
-        state.playerShadowSoft.position.set(state.player.position.x, 0.03, state.player.position.z);
+        state.playerShadowSoft.position.set(state.player.position.x, 0.065, state.player.position.z);
         state.playerShadowSoft.scale.set(shS * 1.2, shS * 1.2, shS * 1.2);
         state.playerShadowSoft.material.opacity = shA * 0.45;
       }

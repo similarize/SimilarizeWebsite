@@ -12,6 +12,7 @@
    polish9: frog color nameplates; shared truck aboard frog icons; start/finish gate + lap sparkle;
    brief jump air hang; Optimus kit visual punch on ranch. Canvas lead.
    polish10: UI declutter (mini-map / zone signs / quieter nameplates); tighter friction; truck EXIT anytime;
+   solid1: shared solid walls/mechs/trucks via FroggiesCanon.resolveSolid;
    particle caps; sunset sky shift over play time.
    mobile1: phone+desktop shared UI — smaller/toggle-friendly mini-map + harder particle caps on narrow.
    ~10× map: real roam between ranch house / track / pond / Starship.
@@ -887,7 +888,7 @@
     return result;
   }
 
-  function moveEntity(ent, dt, speed) {
+  function moveEntity(ent, dt, speed, world) {
     /* polish3 + polish10: snappier walk/drive — quicker ramp + firmer stop */
     var walkMax = 188;
     var truckMax = 328;
@@ -928,6 +929,24 @@
     }
     ent.x += ent.vx * dt;
     ent.y += ent.vy * dt;
+    /* solid1: house/garage walls, mech pads, parked trucks — doorway gaps stay walkable */
+    var canon = global.FroggiesCanon;
+    if (canon && canon.resolveSolid) {
+      var solid = canon.resolveSolid(ent.x, ent.y, ent.inTruck ? 38 : 22, {
+        garageOpen: (world && world.garageOpen) || 0,
+        inTruck: !!ent.inTruck,
+        softPond: !ent.inTruck,
+      });
+      if (solid.hit) {
+        var pdx = solid.x - ent.x, pdy = solid.y - ent.y;
+        var plen = Math.hypot(pdx, pdy) || 1;
+        var nx = pdx / plen, ny = pdy / plen;
+        var into = ent.vx * nx + ent.vy * ny;
+        if (into < 0) { ent.vx -= nx * into; ent.vy -= ny * into; }
+        else { ent.vx *= 0.55; ent.vy *= 0.55; }
+        ent.x = solid.x; ent.y = solid.y;
+      }
+    }
     ent.x = clamp(ent.x, 40, MAP_W - 40);
     ent.y = clamp(ent.y, 40, MAP_H - 40);
     if (!ent.inTruck && spd > 18) {
@@ -1042,7 +1061,7 @@
         f.steerX = (dx / d) * soft;
         f.steerY = (dy / d) * soft;
       }
-      moveEntity(f, dt);
+      moveEntity(f, dt, undefined, world);
       var spd = Math.hypot(f.vx || 0, f.vy || 0);
       /* polish7: idle bounce when settled */
       if (spd < 18 && !f.inTruck) {
