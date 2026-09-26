@@ -178,7 +178,7 @@
     <a class="cab" href="/games/four-froggies/">
       <span class="marquee">Four Froggies</span>
       <span class="screen-wrap"><canvas data-demo="froggies"></canvas><span class="glass"></span></span>
-      <span class="panel"><span class="plate">Ranch · Host+invite · up to 4</span><span class="buttons" aria-hidden="true"><i></i><i class="alt"></i></span></span>
+      <span class="panel"><span class="plate">Ranch · Jimmy · Bear · SPS · Optimus</span><span class="buttons" aria-hidden="true"><i></i><i class="alt"></i></span></span>
     </a>
     <a class="cab" href="/games/basketball.html">
       <span class="marquee">Basketball RC</span>
@@ -215,26 +215,93 @@
 
     function rally(v) {
       const { ctx, w, h, t } = v;
+      const pulse = (Math.sin(t * 2.6) + 1) / 2;
+      const jump = Math.abs(Math.sin(t * 1.35));
+      const air = Math.sin(t * 1.35) > 0;
       const g = ctx.createLinearGradient(0, 0, 0, h);
-      g.addColorStop(0, "#1c2438");
-      g.addColorStop(0.55, "#e39a62");
-      g.addColorStop(1, "#6a3a22");
+      g.addColorStop(0, "#202d4b");
+      g.addColorStop(0.54, "#e38d59");
+      g.addColorStop(1, "#c96d42");
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, w, h);
+
+      // Layered hills and a winding dirt course.
+      ctx.fillStyle = "#39465b";
       ctx.beginPath();
-      ctx.moveTo(0, h);
-      for (let x = 0; x <= w; x += 8) {
-        ctx.lineTo(x, h * 0.72 + Math.sin(x * 0.05 + t) * 8);
+      ctx.moveTo(0, h * 0.58);
+      for (let x = 0; x <= w; x += 18) ctx.lineTo(x, h * 0.48 + Math.sin(x * 0.035) * 13);
+      ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.fill();
+      ctx.fillStyle = "#7a4934";
+      ctx.beginPath();
+      ctx.moveTo(0, h * 0.71);
+      ctx.lineTo(w * 0.16, h * 0.62);
+      ctx.lineTo(w * 0.31, h * 0.72);
+      ctx.lineTo(w * 0.45, h * 0.57);
+      ctx.lineTo(w * 0.63, h * 0.69);
+      ctx.lineTo(w * 0.81, h * 0.55);
+      ctx.lineTo(w, h * 0.67);
+      ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.fill();
+      ctx.fillStyle = "#b5653d";
+      ctx.beginPath();
+      ctx.moveTo(0, h * 0.77);
+      ctx.lineTo(w * 0.16, h * 0.69);
+      ctx.lineTo(w * 0.3, h * 0.8);
+      ctx.lineTo(w * 0.46, h * 0.64);
+      ctx.lineTo(w * 0.64, h * 0.76);
+      ctx.lineTo(w * 0.81, h * 0.63);
+      ctx.lineTo(w, h * 0.73);
+      ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.fill();
+      ctx.strokeStyle = "#e5a052";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, h * 0.77);
+      ctx.lineTo(w * 0.16, h * 0.69);
+      ctx.lineTo(w * 0.3, h * 0.8);
+      ctx.lineTo(w * 0.46, h * 0.64);
+      ctx.lineTo(w * 0.64, h * 0.76);
+      ctx.lineTo(w * 0.81, h * 0.63);
+      ctx.lineTo(w, h * 0.73);
+      ctx.stroke();
+
+      // Amber gate and speed streaks sell the boost loop.
+      const gateX = w * 0.73;
+      const gateY = h * 0.48;
+      ctx.strokeStyle = "#f0b429";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(gateX, gateY + h * 0.22);
+      ctx.lineTo(gateX, gateY);
+      ctx.quadraticCurveTo(gateX + w * 0.07, gateY - h * 0.03, gateX + w * 0.13, gateY + h * 0.02);
+      ctx.lineTo(gateX + w * 0.13, gateY + h * 0.2);
+      ctx.stroke();
+      ctx.fillStyle = "#f7d36b";
+      for (let i = 0; i < 4; i++) ctx.fillRect(gateX + w * 0.02 + i * 8, gateY + 3, 5, 3);
+
+      const bx = w * 0.28 + Math.sin(t * 1.35) * w * 0.06;
+      const by = h * 0.53 - jump * h * 0.25;
+      ctx.save();
+      ctx.translate(bx, by);
+      ctx.rotate((air ? -0.11 : 0.04) + Math.sin(t * 2) * 0.04);
+      if (air) {
+        ctx.fillStyle = `rgba(245, 190, 70, ${0.18 + pulse * 0.2})`;
+        ctx.beginPath(); ctx.ellipse(-w * 0.13, h * 0.12, w * 0.15, h * 0.06, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = "#ffd46b";
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.moveTo(-w * 0.18 - i * 7, h * 0.04 + i * 4); ctx.lineTo(-w * 0.29 - i * 7, h * 0.04 + i * 4); ctx.stroke(); }
       }
-      ctx.lineTo(w, h);
-      ctx.fillStyle = "#c4844a";
-      ctx.fill();
-      const jump = Math.abs(Math.sin(t * 1.4));
-      const y = h * 0.62 - jump * h * 0.28;
-      ctx.fillStyle = "#e4572e";
-      ctx.fillRect(w * 0.22, y, w * 0.22, h * 0.12);
-      ctx.fillStyle = "#f0b429";
-      ctx.fillRect(w * 0.62, h * 0.28, 8, h * 0.44);
+      // Chunky rally buggy with bright roll cage, two wheels, and headlights.
+      ctx.fillStyle = "#202932";
+      ctx.beginPath();
+      ctx.moveTo(-w * 0.16, h * 0.03); ctx.lineTo(-w * 0.08, -h * 0.07);
+      ctx.lineTo(w * 0.11, -h * 0.07); ctx.lineTo(w * 0.19, h * 0.04);
+      ctx.lineTo(w * 0.17, h * 0.13); ctx.lineTo(-w * 0.16, h * 0.13); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "#e4572e"; ctx.fillRect(-w * 0.1, -h * 0.02, w * 0.22, h * 0.09);
+      ctx.strokeStyle = "#f0b429"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(-w * 0.08, -h * 0.07); ctx.lineTo(-w * 0.04, -h * 0.14); ctx.lineTo(w * 0.1, -h * 0.14); ctx.lineTo(w * 0.15, -h * 0.02); ctx.stroke();
+      ctx.fillStyle = "#11151a";
+      ctx.beginPath(); ctx.arc(-w * 0.09, h * 0.13, h * 0.065, 0, Math.PI * 2); ctx.arc(w * 0.12, h * 0.13, h * 0.065, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#f8df8b"; ctx.fillRect(w * 0.15, h * 0.01, 4, 4);
+      ctx.restore();
     }
 
     function rocks(v) {
@@ -281,68 +348,110 @@
 
     function froggies(v) {
       const { ctx, w, h, t } = v;
-      const g = ctx.createLinearGradient(0, 0, 0, h);
-      g.addColorStop(0, "#6aa86a");
-      g.addColorStop(0.55, "#3d6b3d");
-      g.addColorStop(1, "#2a4020");
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, w, h);
-      // road
-      ctx.fillStyle = "#2a2a2e";
-      ctx.fillRect(0, h * 0.62, w, h * 0.22);
-      ctx.fillStyle = "#f0b429";
-      for (let x = ((t * 40) % 28) - 14; x < w; x += 28) {
-        ctx.fillRect(x, h * 0.72, 14, 3);
-      }
-      // cybertruck body
-      const bx = w * 0.28 + Math.sin(t * 1.2) * 4;
-      const by = h * 0.48;
-      ctx.fillStyle = "#c8ccd2";
-      ctx.beginPath();
-      ctx.moveTo(bx, by + h * 0.16);
-      ctx.lineTo(bx + w * 0.08, by);
-      ctx.lineTo(bx + w * 0.46, by + h * 0.02);
-      ctx.lineTo(bx + w * 0.52, by + h * 0.16);
-      ctx.closePath();
-      ctx.fill();
-      ctx.fillStyle = "#1a1a1c";
-      ctx.beginPath();
-      ctx.arc(bx + w * 0.14, by + h * 0.17, 7, 0, Math.PI * 2);
-      ctx.arc(bx + w * 0.4, by + h * 0.17, 7, 0, Math.PI * 2);
-      ctx.fill();
-      // frogs on roof
-      [[0.12, "#4caf50"], [0.22, "#81c784"], [0.32, "#66bb6a"], [0.4, "#43a047"]].forEach(([ox, color], i) => {
+      const period = 10;
+      const phase = Math.floor((t % period) / (period / 4));
+      const beat = (t % (period / 4)) / (period / 4);
+      const sky = ctx.createLinearGradient(0, 0, 0, h);
+      const frogColors = ["#65c466", "#d5d65a", "#e9aa49", "#79d1a0"];
+      ctx.fillStyle = "#09131b"; ctx.fillRect(0, 0, w, h);
+
+      function frog(x, y, color, scale = 1) {
+        ctx.save(); ctx.translate(x, y); ctx.scale(scale, scale);
         ctx.fillStyle = color;
-        const fx = bx + w * ox;
-        const fy = by - 4 - Math.abs(Math.sin(t * 3 + i)) * 3;
-        ctx.beginPath();
-        ctx.arc(fx, fy, 5, 0, Math.PI * 2);
-        ctx.fill();
-      });
+        ctx.beginPath(); ctx.ellipse(0, 4, 8, 6, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(-5, -2, 3.8, 0, Math.PI * 2); ctx.arc(5, -2, 3.8, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "#17221b";
+        ctx.beginPath(); ctx.arc(-5, -2, 1.2, 0, Math.PI * 2); ctx.arc(5, -2, 1.2, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      }
+      function planet(x, y, r, color) {
+        ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+      }
+
+      if (phase === 0) {
+        // Green dusk ranch hub: house, pond, Cybertruck, and four frogs.
+        sky.addColorStop(0, "#314d54"); sky.addColorStop(0.58, "#76965e"); sky.addColorStop(1, "#254732");
+        ctx.fillStyle = sky; ctx.fillRect(0, 0, w, h);
+        ctx.fillStyle = "#f3b66d"; ctx.beginPath(); ctx.arc(w * 0.8, h * 0.2, 12, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "#315638";
+        ctx.beginPath(); ctx.moveTo(0, h * 0.62); ctx.lineTo(w * 0.16, h * 0.42); ctx.lineTo(w * 0.31, h * 0.61); ctx.lineTo(w * 0.5, h * 0.39); ctx.lineTo(w * 0.72, h * 0.6); ctx.lineTo(w, h * 0.44); ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.fill();
+        ctx.fillStyle = "#78654f"; ctx.fillRect(w * 0.58, h * 0.34, w * 0.22, h * 0.19);
+        ctx.fillStyle = "#443b35"; ctx.beginPath(); ctx.moveTo(w * 0.54, h * 0.35); ctx.lineTo(w * 0.69, h * 0.22); ctx.lineTo(w * 0.85, h * 0.35); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = "#f0c16b"; ctx.fillRect(w * 0.67, h * 0.41, 9, 12);
+        ctx.fillStyle = "#31718a"; ctx.beginPath(); ctx.ellipse(w * 0.18, h * 0.8, w * 0.15, h * 0.07, 0, 0, Math.PI * 2); ctx.fill();
+        // Cybertruck.
+        const bx = w * 0.23 + Math.sin(t * 1.4) * 3, by = h * 0.61;
+        ctx.fillStyle = "#bec8c9"; ctx.beginPath(); ctx.moveTo(bx, by + 18); ctx.lineTo(bx + 12, by + 2); ctx.lineTo(bx + 62, by + 4); ctx.lineTo(bx + 75, by + 18); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = "#27333a"; ctx.fillRect(bx + 22, by + 5, 28, 9);
+        ctx.fillStyle = "#161b1e"; ctx.beginPath(); ctx.arc(bx + 17, by + 20, 7, 0, Math.PI * 2); ctx.arc(bx + 61, by + 20, 7, 0, Math.PI * 2); ctx.fill();
+        [[0.18, frogColors[0]], [0.31, frogColors[1]], [0.44, frogColors[2]], [0.7, frogColors[3]]].forEach(([ox, color], i) => frog(bx + w * ox, by - 2 - Math.abs(Math.sin(t * 3 + i)) * 2, color, 0.82));
+        frog(w * 0.47, h * 0.79, frogColors[2], 0.8);
+      } else if (phase === 1) {
+        // Phone / Purple Bear story beat.
+        sky.addColorStop(0, "#201d3a"); sky.addColorStop(1, "#562f63"); ctx.fillStyle = sky; ctx.fillRect(0, 0, w, h);
+        ctx.fillStyle = "rgba(255,214,126,.2)"; ctx.beginPath(); ctx.arc(w * 0.22, h * 0.25, 22, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "#20232d"; ctx.fillRect(w * 0.1, h * 0.3, w * 0.27, h * 0.5);
+        ctx.strokeStyle = "#e8d7bf"; ctx.lineWidth = 2; ctx.strokeRect(w * 0.13, h * 0.34, w * 0.21, h * 0.38);
+        ctx.fillStyle = "#72d0aa"; ctx.fillRect(w * 0.16, h * 0.39, w * 0.15, h * 0.25);
+        ctx.fillStyle = "#d9dce0"; ctx.beginPath(); ctx.arc(w * 0.235, h * 0.7, 3, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = "#e9bc62"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(w * 0.47, h * 0.5, 15 + beat * 4, -1.2, 1.2); ctx.stroke();
+        // Cute purple bear blob with ears and a tiny answering paw.
+        const bearX = w * 0.72, bearY = h * 0.57 + Math.sin(t * 2) * 2;
+        ctx.fillStyle = "#9a63c5"; ctx.beginPath(); ctx.arc(bearX - 14, bearY - 20, 8, 0, Math.PI * 2); ctx.arc(bearX + 14, bearY - 20, 8, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(bearX, bearY, 27, 30, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "#e0a5dd"; ctx.beginPath(); ctx.ellipse(bearX, bearY + 5, 13, 12, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "#261b35"; ctx.beginPath(); ctx.arc(bearX - 8, bearY - 5, 2, 0, Math.PI * 2); ctx.arc(bearX + 8, bearY - 5, 2, 0, Math.PI * 2); ctx.arc(bearX, bearY + 4, 2, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = "#9a63c5"; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(bearX - 20, bearY + 9); ctx.quadraticCurveTo(bearX - 42, bearY - 4, bearX - 33, bearY - 18); ctx.stroke();
+      } else if (phase === 2) {
+        // SPS solar map: eight orbit dots from Mercury through Neptune, plus a moving frog blip.
+        ctx.fillStyle = "#080c1c"; ctx.fillRect(0, 0, w, h);
+        ctx.fillStyle = "#f4b942"; ctx.beginPath(); ctx.arc(w * 0.18, h * 0.52, 15, 0, Math.PI * 2); ctx.fill();
+        const planets = [[0.32, 0.52, 3, "#a9a69b"], [0.39, 0.52, 4, "#d9905e"], [0.47, 0.52, 5, "#5ba5d8"], [0.56, 0.52, 4, "#c16b51"], [0.67, 0.52, 9, "#d4ae72"], [0.78, 0.52, 7, "#d8c28d"], [0.87, 0.52, 6, "#78b7c9"], [0.94, 0.52, 5, "#6086bd"]];
+        ctx.strokeStyle = "rgba(166,185,220,.35)"; ctx.lineWidth = 1;
+        planets.forEach(([x, y, r, color], i) => { ctx.beginPath(); ctx.arc(w * 0.18, h * 0.52, (x - 0.18) * w, 0, Math.PI * 2); ctx.stroke(); planet(w * x, h * y + Math.sin(t + i) * 2, r, color); });
+        const route = planets[Math.floor(beat * planets.length) % planets.length];
+        const next = planets[(Math.floor(beat * planets.length) + 1) % planets.length];
+        const u = (beat * planets.length) % 1;
+        const fx = w * (route[0] + (next[0] - route[0]) * u), fy = h * 0.52 - 12 - Math.sin(u * Math.PI) * 10;
+        ctx.strokeStyle = "#8ee48c"; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(w * route[0], h * route[1]); ctx.lineTo(fx, fy); ctx.stroke(); ctx.setLineDash([]);
+        frog(fx, fy, frogColors[1], 0.58);
+      } else {
+        // Optimus hover beat: tall robot, blue thruster glow, and nearby frog.
+        sky.addColorStop(0, "#101a2b"); sky.addColorStop(1, "#243d4b"); ctx.fillStyle = sky; ctx.fillRect(0, 0, w, h);
+        ctx.fillStyle = "#1c2a35"; ctx.fillRect(0, h * 0.8, w, h * 0.2);
+        const rx = w * 0.55, ry = h * 0.3 + Math.sin(t * 2) * 3;
+        ctx.fillStyle = "rgba(86,214,255,.25)"; ctx.beginPath(); ctx.ellipse(rx, ry + 57, 28, 12 + beat * 5, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "#a8b8c0"; ctx.fillRect(rx - 13, ry + 7, 26, 47);
+        ctx.fillStyle = "#d64d43"; ctx.fillRect(rx - 20, ry + 13, 7, 31); ctx.fillRect(rx + 13, ry + 13, 7, 31);
+        ctx.fillStyle = "#26343d"; ctx.beginPath(); ctx.moveTo(rx - 16, ry + 2); ctx.lineTo(rx - 11, ry - 14); ctx.lineTo(rx + 11, ry - 14); ctx.lineTo(rx + 16, ry + 2); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = "#83dded"; ctx.fillRect(rx - 7, ry - 8, 14, 5);
+        ctx.strokeStyle = "#b7c6ca"; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(rx - 14, ry + 18); ctx.lineTo(rx - 32, ry + 43); ctx.moveTo(rx + 14, ry + 18); ctx.lineTo(rx + 32, ry + 43); ctx.stroke();
+        ctx.fillStyle = "#48bfe8"; ctx.beginPath(); ctx.arc(rx - 13, ry + 57, 5 + beat * 3, 0, Math.PI * 2); ctx.arc(rx + 13, ry + 57, 5 + beat * 3, 0, Math.PI * 2); ctx.fill();
+        frog(rx - 58, ry + 57, frogColors[0], 0.85);
+      }
     }
 
     function map(v) {
       const { ctx, w, h, t } = v;
-      ctx.fillStyle = "#1c3d34";
-      ctx.fillRect(0, 0, w, h);
-      ctx.fillStyle = "#c4844a";
-      ctx.beginPath();
-      ctx.moveTo(0, h * 0.7);
-      ctx.lineTo(w * 0.25, h * 0.42);
-      ctx.lineTo(w * 0.55, h * 0.5);
-      ctx.lineTo(w * 0.7, h * 0.28);
-      ctx.lineTo(w, h * 0.46);
-      ctx.lineTo(w, h);
-      ctx.lineTo(0, h);
-      ctx.fill();
-      ctx.strokeStyle = "#f3e2c4";
-      ctx.lineWidth = 2;
-      ctx.strokeRect(w * 0.12, h * 0.16, w * 0.34, h * 0.22);
-      ctx.strokeRect(w * 0.5, h * 0.22 + Math.sin(t) * 2, w * 0.28, h * 0.18);
-      ctx.fillStyle = "#e4572e";
-      ctx.beginPath();
-      ctx.arc(w * 0.62, h * 0.58, 4, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.fillStyle = "#183c37"; ctx.fillRect(0, 0, w, h);
+      // Hand-drawn terrain blocks and a winding route make this read as a map.
+      ctx.fillStyle = "#2d654b";
+      ctx.beginPath(); ctx.moveTo(0, h * 0.15); ctx.lineTo(w * 0.2, h * 0.05); ctx.lineTo(w * 0.42, h * 0.2); ctx.lineTo(w * 0.33, h * 0.42); ctx.lineTo(w * 0.1, h * 0.38); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "#4c7b4c";
+      ctx.beginPath(); ctx.moveTo(w * 0.58, 0); ctx.lineTo(w, 0); ctx.lineTo(w, h * 0.38); ctx.lineTo(w * 0.77, h * 0.45); ctx.lineTo(w * 0.52, h * 0.27); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "#6d7544";
+      ctx.beginPath(); ctx.moveTo(0, h * 0.72); ctx.lineTo(w * 0.2, h * 0.51); ctx.lineTo(w * 0.44, h * 0.6); ctx.lineTo(w * 0.57, h * 0.43); ctx.lineTo(w, h * 0.59); ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "#4c91a0"; ctx.beginPath(); ctx.ellipse(w * 0.77, h * 0.76, w * 0.13, h * 0.09, -0.2, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = "#e4bb76"; ctx.lineWidth = 4; ctx.lineCap = "round"; ctx.beginPath();
+      ctx.moveTo(w * 0.08, h * 0.78); ctx.bezierCurveTo(w * 0.25, h * 0.59, w * 0.32, h * 0.79, w * 0.48, h * 0.63); ctx.bezierCurveTo(w * 0.63, h * 0.47, w * 0.69, h * 0.31, w * 0.87, h * 0.2); ctx.stroke();
+      ctx.lineCap = "butt";
+      ctx.strokeStyle = "rgba(243,226,196,.55)"; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(w * 0.14, h * 0.19); ctx.lineTo(w * 0.29, h * 0.14); ctx.moveTo(w * 0.65, h * 0.12); ctx.lineTo(w * 0.87, h * 0.09); ctx.stroke();
+      const mx = w * 0.48 + Math.sin(t * 1.2) * 3, my = h * 0.63;
+      ctx.fillStyle = "#e4572e"; ctx.beginPath(); ctx.arc(mx, my, 7, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#f7d36b"; ctx.beginPath(); ctx.arc(mx, my, 2, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = "#f3e2c4"; ctx.lineWidth = 1; ctx.strokeRect(w * 0.1, h * 0.1, 20, 20);
+      ctx.beginPath(); ctx.moveTo(w * 0.2, h * 0.2); ctx.lineTo(w * 0.2, h * 0.12); ctx.moveTo(w * 0.16, h * 0.16); ctx.lineTo(w * 0.24, h * 0.16); ctx.stroke();
     }
 
     const draw = { rally, rocks, ball, froggies, map };
