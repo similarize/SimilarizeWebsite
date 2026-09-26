@@ -1,7 +1,9 @@
 /* Four Froggies — Phaser 3 hub (CDN). Canvas-parity ranch + thin space stub.
    Solo-first. Big map · compound · squiggle track · pond whales · 4 trucks+shared ·
    on-water/under tint · Starship → orbit Escape/hard thruster.
-   polish4: compound presence + track hills + inviting hotspots + drive bob/spray. */
+   polish4: compound presence + track hills + inviting hotspots + drive bob/spray.
+   polish5: ambient pollen/fireflies; pond ripples; track race dust; garage door open-near;
+   shared ALL ABOARD; land shake; hotspot sparkle; orbit pull rings + Escape banner. */
 (function (global) {
   "use strict";
   var C = global.FroggiesCanon;
@@ -133,6 +135,21 @@
         this.cameras.main.setZoom(Math.min(0.95, Math.max(0.42, window.innerWidth / 1400)));
         this.inTruck = false; this.truckMode = null; this.truckId = null;
         this.waterSub = 0; this.scrap = 0; this.toastT = 3.5; this.cd = 0; this.near = null; this.bouncePhase = 0; this.dustT = 0; this.fx = [];
+        this.prevNearId = null; this.shakeT = 0; this.rippleT = 0; this.ambient = [];
+        /* polish5: ambient pollen / fireflies */
+        for (var ai = 0; ai < 40; ai++) {
+          var kind = Math.random() < 0.55 ? "pollen" : "firefly";
+          var amb = this.add.circle(
+            80 + Math.random() * (C.MAP_W - 160),
+            80 + Math.random() * (C.MAP_H - 160),
+            kind === "firefly" ? 3 : 2,
+            kind === "firefly" ? 0xfacc15 : 0xfef9c3,
+            kind === "firefly" ? 0.8 : 0.45
+          ).setDepth(30);
+          amb.kind = kind; amb.phase = Math.random() * Math.PI * 2;
+          amb.vx = (Math.random() - 0.5) * 18; amb.vy = (Math.random() - 0.5) * 12;
+          this.ambient.push(amb);
+        }
         this.facing = 1; this.bob = 0; this.zLift = 0; this.zVel = 0;
         this.toast = "Phaser ranch · compound · squiggle track · pond whales · Cybertrucks · Starship";
         if (hooks.onReady) hooks.onReady({ engine: "phaser", frogId: frogId });
@@ -190,8 +207,17 @@
         }
         this.add.rectangle(gar.x + gar.w / 2, gar.y + gar.h / 2, gar.w, gar.h, 0x6b7280, 0.92)
           .setStrokeStyle(4, 0x0b1220, 1);
-        this.add.rectangle(gar.x + gar.w / 2, gar.y + gar.h - 40, 140, 70, 0x111827, 1)
+        this.garageBay = this.add.rectangle(gar.x + gar.w / 2, gar.y + gar.h - 40, 140, 70, 0x38bdf8, 0.25);
+        this.garageDoor = this.add.rectangle(gar.x + gar.w / 2, gar.y + gar.h - 40, 140, 70, 0x111827, 1)
           .setStrokeStyle(2, 0xfbbf24, 1);
+        this.garageOpenLabel = this.add.text(gar.x + gar.w / 2, gar.y + gar.h - 90, "", {
+          fontSize: "12px", fontStyle: "bold", color: "#bbf7d0", stroke: "#000", strokeThickness: 3,
+        }).setOrigin(0.5).setAlpha(0);
+        this.garageOpen = 0;
+        this.garageDoorY0 = gar.y + gar.h - 40;
+        this.garageDoorH0 = 70;
+        this.garageCx = gar.x + gar.w / 2;
+        this.garageCy = gar.y + gar.h - 40;
         this.add.text(gar.x + gar.w / 2, gar.y + 16, "Garage · James toys", {
           fontSize: "14px", fontStyle: "bold", color: "#fff", stroke: "#000", strokeThickness: 3,
         }).setOrigin(0.5, 0);
@@ -342,11 +368,22 @@
           g.fillCircle(s.x + 24, s.y + 11, 8);
           var body = this.add.rectangle(s.x, s.y, 78, 34, 0x9ca3af, 0.01); // hit proxy for pulse
           var cab = this.add.rectangle(s.x + 8, s.y - 4, 36, 16, accent, 0.01);
-          var label = s.id === "shared" ? "All aboard" : ("Cybertruck · " + (C.FROG_DEFS[s.id] || {}).name);
-          this.add.text(s.x, s.y - 32, label, {
-            fontSize: "11px", fontStyle: "bold", color: "#fde68a", stroke: "#000", strokeThickness: 3,
+          var label = s.id === "shared" ? "★ ALL ABOARD · 4" : ("Cybertruck · " + (C.FROG_DEFS[s.id] || {}).name);
+          if (s.id === "shared") {
+            g.lineStyle(3, 0xfbbf24, 0.85);
+            g.strokeEllipse(s.x, s.y + 8, 100, 36);
+            var ids = ["james", "jimmy", "bubbles", "rexy"];
+            for (var si = 0; si < 4; si++) {
+              var col = hx((C.FROG_DEFS[ids[si]] || def).color);
+              g.fillStyle(col, 1);
+              g.fillCircle(s.x + (si - 1.5) * 14, s.y - 26, 6);
+            }
+          }
+          var lbl = this.add.text(s.x, s.y - 32, label, {
+            fontSize: s.id === "shared" ? "13px" : "11px", fontStyle: "bold",
+            color: s.id === "shared" ? "#fef3c7" : "#fde68a", stroke: "#000", strokeThickness: 3,
           }).setOrigin(0.5, 1);
-          this.parkedTrucks.push({ spot: s, body: body, cab: cab, gfx: g });
+          this.parkedTrucks.push({ spot: s, body: body, cab: cab, gfx: g, label: lbl });
         }
       },
       update: function (time, delta) {
@@ -392,6 +429,13 @@
             this.fx.push({ g: d, life: 0.35 });
           }
         }
+        /* polish5: track race dust */
+        if (this.inTruck && !wet && sp > 110 && this.zLift < 2 && C.onTrack && C.onTrack(this.player.x, this.player.y)) {
+          if (Math.random() < dt * (2.5 + sp * 0.01)) {
+            var td = this.add.circle(this.player.x - this.facing * 20, this.player.y + 10, 5 + Math.random() * 4, 0xb8a070, 0.5).setDepth(15);
+            this.fx.push({ g: td, life: 0.4 });
+          }
+        }
         if (this.inTruck && wet) {
           if (this.waterSub > 0.7 && Math.random() < dt * 5) {
             var bub = this.add.circle(this.player.x + (Math.random() - 0.5) * 24, this.player.y, 3 + Math.random() * 3, 0xbae6fd, 0.55).setDepth(21);
@@ -399,12 +443,66 @@
           } else if (this.waterSub <= 0.7 && sp > 30 && Math.random() < dt * 4) {
             var spr = this.add.circle(this.player.x - this.facing * 14, this.player.y + 4, 3, 0xe0f2fe, 0.7).setDepth(21);
             this.fx.push({ g: spr, life: 0.4, rise: true });
+            var rip = this.add.ellipse(this.player.x, this.player.y + 4, 12, 5, 0xbae6fd, 0.01).setStrokeStyle(2, 0xbae6fd, 0.7).setDepth(14);
+            this.fx.push({ g: rip, life: 0.7, ripple: true });
           }
         }
+        /* polish5: ambient pond ripples */
+        this.rippleT = (this.rippleT || 0) - dt;
+        if (this.rippleT <= 0 && C.AREAS) {
+          this.rippleT = 0.7 + Math.random() * 0.8;
+          var pondA = (C.AREAS && C.AREAS[2]) || null;
+          if (pondA) {
+            var rx = pondA.x + 80 + Math.random() * (pondA.w - 160);
+            var ry = pondA.y + 80 + Math.random() * (pondA.h - 160);
+            var rip2 = this.add.ellipse(rx, ry, 10, 4, 0xbae6fd, 0.01).setStrokeStyle(2, 0xe0f2fe, 0.65).setDepth(8);
+            this.fx.push({ g: rip2, life: 1.0, ripple: true });
+          }
+        }
+        /* polish5: garage door open when near */
+        if (this.garageDoor) {
+          var dGar = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.garageCx, this.garageCy);
+          var want = dGar < 260 ? 1 : 0;
+          this.garageOpen = Phaser.Math.Clamp(this.garageOpen + (want ? 2.2 : -1.4) * dt, 0, 1);
+          var lift = this.garageOpen * 52;
+          this.garageDoor.setDisplaySize(140, Math.max(4, this.garageDoorH0 - lift));
+          this.garageDoor.y = this.garageDoorY0 - lift * 0.5;
+          this.garageDoor.setStrokeStyle(2, this.garageOpen > 0.4 ? 0x86efac : 0xfbbf24, 1);
+          if (this.garageOpenLabel) {
+            this.garageOpenLabel.setAlpha(this.garageOpen > 0.35 ? this.garageOpen : 0);
+            this.garageOpenLabel.setText(this.garageOpen > 0.35 ? "OPEN" : "");
+          }
+        }
+        /* polish5: ambient drift */
+        for (var ami = 0; ami < (this.ambient || []).length; ami++) {
+          var am = this.ambient[ami];
+          am.phase += dt * (am.kind === "firefly" ? 3.2 : 1.4);
+          am.x += (am.vx + Math.sin(am.phase) * 8) * dt;
+          am.y += (am.vy + Math.cos(am.phase * 0.7) * 6) * dt;
+          if (am.kind === "firefly") am.setAlpha(0.35 + 0.65 * Math.abs(Math.sin(am.phase)));
+          if (am.x < 40) am.x = C.MAP_W - 40;
+          if (am.x > C.MAP_W - 40) am.x = 40;
+          if (am.y < 40) am.y = C.MAP_H - 40;
+          if (am.y > C.MAP_H - 40) am.y = 40;
+        }
+        /* polish5: tiny land shake */
+        var wasAir = this._wasAir;
+        this._wasAir = this.zLift > 2;
+        if (wasAir && this.zLift <= 0 && this.inTruck) {
+          this.shakeT = Math.max(this.shakeT || 0, 0.1);
+          this.cameras.main.shake(90, 0.0035);
+        }
+        if (this.shakeT > 0) this.shakeT -= dt;
         for (var fi = this.fx.length - 1; fi >= 0; fi--) {
           var fx = this.fx[fi];
           fx.life -= dt;
           if (fx.rise) fx.g.y -= 40 * dt;
+          if (fx.vx) { fx.g.x += fx.vx * dt; fx.vx *= 0.96; }
+          if (fx.vy) { fx.g.y += fx.vy * dt; fx.vy += 40 * dt; }
+          if (fx.ripple && fx.g.scaleX !== undefined) {
+            fx.g.scaleX = (fx.g.scaleX || 1) + dt * 2.2;
+            fx.g.scaleY = (fx.g.scaleY || 1) + dt * 2.2;
+          }
           fx.g.setAlpha(Math.max(0, fx.life * 1.5));
           if (fx.life <= 0) { fx.g.destroy(); this.fx.splice(fi, 1); }
         }
@@ -460,6 +558,14 @@
           }
         }
         this.near = C.nearestHotspot(this.player.x, this.player.y, 80);
+        if (this.near && this.near.id !== this.prevNearId) {
+          for (var spi = 0; spi < 10; spi++) {
+            var ang = Math.random() * Math.PI * 2, ssp = 30 + Math.random() * 70;
+            var spk = this.add.circle(this.near.x, this.near.y, 2 + Math.random() * 2, 0xfde68a, 0.95).setDepth(40);
+            this.fx.push({ g: spk, life: 0.45, vx: Math.cos(ang) * ssp, vy: Math.sin(ang) * ssp });
+          }
+          this.prevNearId = this.near.id;
+        } else if (!this.near) this.prevNearId = null;
         for (var hi = 0; hi < this.hotGfx.length; hi++) {
           var hg = this.hotGfx[hi];
           hg.ring.setAlpha(this.near && this.near.id === hg.data.id ? 0.65 : 0.14);
@@ -548,8 +654,23 @@
         this.planet = { id: "moon", name: "Moon", x: 820, y: 160, r: 54 };
         this.add.circle(820, 160, 54, 0xcbd5e1, 0.95).setStrokeStyle(3, 0x64748b, 1);
         this.add.text(820, 160, "Moon", { fontSize: "13px", color: "#0f172a", fontStyle: "bold" }).setOrigin(0.5);
-        this.inOrbit = false; this.orbitAngle = 0; this.orbitRadius = 78; this.orbitEscapeCool = 0;
         this.orbitCfg = (C && C.ORBIT_PHYSICS) || {};
+        var softR = (this.orbitCfg.softPullRadius || 220);
+        var capR = (this.orbitCfg.captureRadius || 120);
+        this.pullRing = this.add.circle(820, 160, softR, 0x7dd3fc, 0.01).setStrokeStyle(1.5, 0x7dd3fc, 0.35);
+        this.capRing = this.add.circle(820, 160, capR, 0x38bdf8, 0.01).setStrokeStyle(2, 0x38bdf8, 0.55);
+        this.orbitRing = this.add.circle(820, 160, 78, 0xfacc15, 0.01).setStrokeStyle(3, 0xfacc15, 0.95).setVisible(false);
+        this.pullLine = this.add.graphics();
+        this.escapeBanner = this.add.text(550, 720, "", {
+          fontFamily: "Segoe UI, system-ui, sans-serif", fontSize: "14px", fontStyle: "bold",
+          color: "#fde68a", stroke: "#000", strokeThickness: 4, align: "center",
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(50);
+        /* Alex + Fred presence (Ben cast) */
+        this.add.circle(300, 520, 14, 0x64748b, 1).setStrokeStyle(2, 0x38bdf8, 0.8);
+        this.add.text(300, 496, "Alex", { fontSize: "11px", color: "#e2e8f0", stroke: "#000", strokeThickness: 3 }).setOrigin(0.5);
+        this.add.circle(380, 540, 14, 0x475569, 1).setStrokeStyle(2, 0x94a3b8, 0.8);
+        this.add.text(380, 516, "Fred", { fontSize: "11px", color: "#e2e8f0", stroke: "#000", strokeThickness: 3 }).setOrigin(0.5);
+        this.inOrbit = false; this.orbitAngle = 0; this.orbitRadius = 78; this.orbitEscapeCool = 0;
         this.cameras.main.startFollow(this.player, true, 0.18, 0.18); /* polish3 less lag */
         this.cameras.main.setBounds(0, 0, 1100, 800);
       },
@@ -560,19 +681,31 @@
         var capR = cfg.captureRadius || 120, softR = cfg.softPullRadius || 220;
         var alt = cfg.orbitAltitude || 78, pullA = cfg.pullAccel || 420;
         if (this.orbitEscapeCool > 0) this.orbitEscapeCool -= dt;
+        if (this.pullLine) this.pullLine.clear();
         if (this.inOrbit) {
           this.orbitRadius = Phaser.Math.Clamp(this.orbitRadius + (steer.y || 0) * 40 * dt, 55, softR * 0.85);
           this.orbitAngle += (0.85 + (steer.x || 0) * 0.35) * dt;
           this.player.x = this.planet.x + Math.cos(this.orbitAngle) * this.orbitRadius;
           this.player.y = this.planet.y + Math.sin(this.orbitAngle) * this.orbitRadius;
           body.velocity.x = 0; body.velocity.y = 0;
+          if (this.orbitRing) { this.orbitRing.setVisible(true); this.orbitRing.setRadius(this.orbitRadius); }
+          if (this.escapeBanner) this.escapeBanner.setText("ORBIT · Moon · ESCAPE / Esc  ·  Ability = hard thruster");
+          if (this.capRing) this.capRing.setStrokeStyle(2, 0xfacc15, 0.9);
         } else {
+          if (this.orbitRing) this.orbitRing.setVisible(false);
+          if (this.escapeBanner) this.escapeBanner.setText("");
+          if (this.capRing) this.capRing.setStrokeStyle(2, 0x38bdf8, 0.55);
           var dP = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.planet.x, this.planet.y);
           if (this.orbitEscapeCool <= 0 && dP < softR && dP > 8) {
             var ang = Math.atan2(this.player.y - this.planet.y, this.player.x - this.planet.x);
             var pull = pullA * (1 - dP / softR) * dt;
             body.velocity.x -= Math.cos(ang) * pull; body.velocity.y -= Math.sin(ang) * pull;
-          }
+            if (this.pullLine) {
+              this.pullLine.lineStyle(2, 0x7dd3fc, 0.35 + (1 - dP / softR) * 0.5);
+              this.pullLine.lineBetween(this.planet.x, this.planet.y, this.player.x, this.player.y);
+            }
+            if (this.pullRing) this.pullRing.setStrokeStyle(2, 0x7dd3fc, 0.55);
+          } else if (this.pullRing) this.pullRing.setStrokeStyle(1.5, 0x7dd3fc, 0.25);
           if (this.orbitEscapeCool <= 0 && dP < capR) {
             this.inOrbit = true; this.orbitAngle = Math.atan2(this.player.y - this.planet.y, this.player.x - this.planet.x);
             this.orbitRadius = alt; body.velocity.x = 0; body.velocity.y = 0;

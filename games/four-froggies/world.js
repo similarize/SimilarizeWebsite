@@ -2,6 +2,8 @@
    ranchfeel2 + parity1: Cybertruck water; varied track; crisper silhouettes; Starship approach uses shared canon gold guide.
    polish4: house interiors readable; backyard animals present; dramatic mechs; track hills; Starship destination;
    inviting story hotspots; truck bounce + water spray/bubbles; walk dust.
+   polish5: day ambient pollen/fireflies; pond ripple rings; track race dust; garage door open-near;
+   shared pile-in truck obvious; tiny land shake hook; sparkle on hotspot enter.
    ~10× map: real roam between ranch house / track / pond / Starship.
    James ranch house: big house, backyard (animals), huge garage (toys + 10/100-story mechs);
    1000-story mech sits out back (won't fit). Four Cybertrucks + shared pile-in.
@@ -193,7 +195,7 @@
       { id: "truck-jimmy", label: "Cybertruck · Jimmy", x: 2080, y: 1720, r: 54, tip: "Jimmy Cybertruck · solo drive", kind: "truck", frogId: "jimmy", mode: "solo" },
       { id: "truck-bubbles", label: "Cybertruck · Bubbles", x: 2280, y: 1720, r: 54, tip: "Bubbles Cybertruck · solo drive", kind: "truck", frogId: "bubbles", mode: "solo" },
       { id: "truck-rexy", label: "Cybertruck · Rexy", x: 2480, y: 1720, r: 54, tip: "Rexy Cybertruck · solo drive", kind: "truck", frogId: "rexy", mode: "solo" },
-      { id: "truck-shared", label: "Cybertruck · all aboard", x: 2180, y: 1880, r: 62, tip: "All four pile into one Cybertruck", kind: "truck", frogId: null, mode: "shared" },
+      { id: "truck-shared", label: "★ ALL ABOARD · 4 frogs", x: 2180, y: 1880, r: 78, tip: "Shared Cybertruck · all four pile in", kind: "truck", frogId: null, mode: "shared" },
       { id: "fishies", label: "Fishies", x: 3160, y: 620, r: 70, tip: "Splash the pond" },
       { id: "starship", label: "Starship", x: STARSHIP.x, y: STARSHIP.y, r: 72, tip: "Starship · Spotty · space episode" },
     ];
@@ -217,11 +219,16 @@
       splashes: [],
       bubbles: [],
       sparks: [],
+      ambient: [],
+      ripples: [],
+      sparkles: [],
       scrap: 0,
       stuntCombo: 0,
       airTime: 0,
       lastJumpT: 0,
       sharedDriverId: null,
+      garageOpen: 0,
+      ambientT: 0,
     };
   }
 
@@ -293,10 +300,27 @@
     world.splashes = [];
     world.bubbles = [];
     world.sparks = [];
+    world.ambient = [];
+    world.ripples = [];
+    world.sparkles = [];
     world.scrap = 0;
     world.stuntCombo = 0;
     world.airTime = 0;
     world.sharedDriverId = null;
+    world.garageOpen = 0;
+    world.ambientT = 0;
+    /* polish5: seed day ambient pollen / dusk fireflies across yard + track apron */
+    for (var ai = 0; ai < 64; ai++) {
+      world.ambient.push({
+        x: 80 + Math.random() * (MAP_W - 160),
+        y: 80 + Math.random() * (MAP_H - 160),
+        vx: (Math.random() - 0.5) * 18,
+        vy: (Math.random() - 0.5) * 12,
+        phase: Math.random() * Math.PI * 2,
+        kind: Math.random() < 0.55 ? "pollen" : "firefly",
+        r: 1.2 + Math.random() * 2.4,
+      });
+    }
   }
 
   function makeFrogEntity(id, human, local, laneIndex) {
@@ -405,6 +429,32 @@
     }
   }
 
+  function spawnRipple(world, x, y, maxR) {
+    if (!world.ripples) world.ripples = [];
+    world.ripples.push({
+      x: x, y: y,
+      life: 1,
+      r: 6 + Math.random() * 4,
+      maxR: maxR || 48,
+    });
+  }
+
+  function spawnSparkle(world, x, y, n) {
+    if (!world.sparkles) world.sparkles = [];
+    for (var i = 0; i < (n || 10); i++) {
+      var ang = Math.random() * Math.PI * 2;
+      var sp = 40 + Math.random() * 90;
+      world.sparkles.push({
+        x: x, y: y,
+        life: 0.45 + Math.random() * 0.35,
+        vx: Math.cos(ang) * sp,
+        vy: Math.sin(ang) * sp * 0.7 - 30,
+        r: 2 + Math.random() * 3,
+        hue: 45 + Math.random() * 30,
+      });
+    }
+  }
+
   function scareFishies(world, x, y) {
     function scareList(list, radius) {
       for (var i = 0; i < list.length; i++) {
@@ -421,6 +471,8 @@
     scareList(world.fish, 180);
     scareList(world.whales, 260);
     spawnSplash(world, x, y, 18);
+    spawnRipple(world, x, y, 70);
+    spawnRipple(world, x + 18, y - 10, 42);
   }
 
   function updateFish(world, dt) {
@@ -473,10 +525,49 @@
       k.life -= dt; k.x += k.vx * dt; k.y += k.vy * dt; k.vy += 220 * dt;
       if (k.life <= 0) world.sparks.splice(i, 1);
     }
+    /* polish5: ambient pollen / fireflies drift */
+    if (!world.ambient) world.ambient = [];
+    for (i = 0; i < world.ambient.length; i++) {
+      var a = world.ambient[i];
+      a.phase += dt * (a.kind === "firefly" ? 3.2 : 1.4);
+      a.x += (a.vx + Math.sin(a.phase) * 8) * dt;
+      a.y += (a.vy + Math.cos(a.phase * 0.7) * 6) * dt;
+      if (a.x < 40) a.x = MAP_W - 40;
+      if (a.x > MAP_W - 40) a.x = 40;
+      if (a.y < 40) a.y = MAP_H - 40;
+      if (a.y > MAP_H - 40) a.y = 40;
+    }
+    if (!world.ripples) world.ripples = [];
+    for (i = world.ripples.length - 1; i >= 0; i--) {
+      var rp = world.ripples[i];
+      rp.life -= dt * 0.55;
+      rp.r += (rp.maxR || 48) * dt * 0.9;
+      if (rp.life <= 0) world.ripples.splice(i, 1);
+    }
+    if (!world.sparkles) world.sparkles = [];
+    for (i = world.sparkles.length - 1; i >= 0; i--) {
+      var sk = world.sparkles[i];
+      sk.life -= dt;
+      sk.x += sk.vx * dt;
+      sk.y += sk.vy * dt;
+      sk.vy += 60 * dt;
+      sk.vx *= 0.96;
+      if (sk.life <= 0) world.sparkles.splice(i, 1);
+    }
+    world.ambientT = (world.ambientT || 0) - dt;
+    if (world.ambientT <= 0) {
+      world.ambientT = 0.55 + Math.random() * 0.85;
+      var pond = AREAS[2];
+      spawnRipple(world,
+        pond.x + 60 + Math.random() * (pond.w - 120),
+        pond.y + 60 + Math.random() * (pond.h - 120),
+        36 + Math.random() * 28);
+    }
+    if ((world.garageOpen || 0) > 0) world.garageOpen = Math.max(0, world.garageOpen - dt * 0.15);
   }
 
   function tickDrive(world, ent, dt) {
-    var result = { jumped: false, landed: false, scrapGain: 0, splashed: false, onWater: false };
+    var result = { jumped: false, landed: false, scrapGain: 0, splashed: false, onWater: false, landShake: false };
     var gWalk = 520;
     var gTruck = 560;
     var wet = inPond(ent.x, ent.y);
@@ -565,11 +656,13 @@
           spawnSplash(world, ent.x, ent.y, 10 + Math.floor(plunge / 40));
           if (sub > 0.7) spawnBubbles(world, ent.x, ent.y, 6 + Math.floor(plunge / 50));
           scareFishies(world, ent.x, ent.y);
+          spawnRipple(world, ent.x, ent.y, 55 + plunge * 0.08);
           result.splashed = true;
         } else {
           spawnDust(world, ent.x, ent.y, 5);
           ent.waterSub = Math.max(0, (ent.waterSub || 0) - 0.5);
         }
+        result.landShake = true; /* polish5: tiny screen shake on truck land */
       }
     } else if (speed < 40) {
       world.stuntCombo = 0;
@@ -619,6 +712,13 @@
         world.scrap += 1;
         result.scrapGain += 1;
         spawnSparks(world, ent.x - ent.facing * 18, ent.y + 6, 2);
+      }
+    }
+    /* polish5: track dust plume when trucks race */
+    if (ent.inTruck && onTrack(ent.x, ent.y) && speed > 110 && (ent.z || 0) <= 0.5) {
+      if (Math.random() < dt * (2.8 + speed * 0.012)) {
+        spawnDust(world, ent.x - ent.facing * 22, ent.y + 10, 2 + (speed > 200 ? 2 : 0));
+        spawnDust(world, ent.x - ent.facing * 10, ent.y - 6, 1);
       }
     }
     return result;
@@ -950,7 +1050,22 @@
     ctx.fillText(label, p.x, p.y - lift - (stories >= 1000 ? 28 : 18) * s);
   }
 
-  function drawRanchHouse(ctx, camX, camY, vw, vh, world) {
+  function drawRanchHouse(ctx, camX, camY, vw, vh, world, frogs) {
+    /* polish5: raise garage door when any frog near bay */
+    var garNear = { x: 700 + 240, y: 1400 + 480, r: 220 };
+    var wantOpen = 0;
+    if (frogs) {
+      for (var gi = 0; gi < frogs.length; gi++) {
+        var gf = frogs[gi];
+        if (Math.hypot(gf.x - (700 + 240), gf.y - (1400 + 460)) < 260) wantOpen = 1;
+      }
+    }
+    if (world) {
+      world.garageOpen = clamp((world.garageOpen || 0) + (wantOpen ? 0.08 : -0.04), 0, 1);
+      /* note: render-time lerp uses fixed step; updateFx also decays slowly */
+      if (wantOpen) world.garageOpen = Math.min(1, (world.garageOpen || 0) + 0.12);
+    }
+
     var a = AREAS[0];
     /* Compound ground */
     drawGroundPoly(ctx, areaCorners(a, camX, camY, vw, vh), "rgba(100, 70, 40, 0.28)", "rgba(60,30,10,0.3)");
@@ -1053,22 +1168,47 @@
     ctx.lineWidth = 2.8;
     ctx.lineJoin = "round";
     ctx.stroke();
-    /* Garage door bay — polish3 roll-up panels + amber trim */
+    /* Garage door bay — polish5 opens when frogs near */
     var door = project(gar.x + gar.w * 0.5, gar.y + gar.h - 50, camX, camY, vw, vh);
     var ddw = 118 * door.depth, ddh = 56 * door.depth;
+    var openAmt = clamp(world && world.garageOpen ? world.garageOpen : 0, 0, 1);
+    var lift = ddh * openAmt * 0.82;
+    /* Dark bay always visible */
     ctx.fillStyle = "#0b1220";
     ctx.fillRect(door.x - ddw * 0.5, door.y - ddh, ddw, ddh);
-    for (var gd = 0; gd < 6; gd++) {
-      ctx.fillStyle = gd % 2 ? "#374151" : "#1f2937";
-      ctx.fillRect(door.x - ddw * 0.46, door.y - ddh + 3 + gd * (ddh / 6.2), ddw * 0.92, ddh / 7);
+    if (openAmt > 0.15) {
+      /* peek mechs / toys glow from inside */
+      ctx.fillStyle = "rgba(103, 232, 249, " + (0.18 + openAmt * 0.35) + ")";
+      ctx.fillRect(door.x - ddw * 0.42, door.y - ddh * 0.85, ddw * 0.84, ddh * 0.7);
+      ctx.fillStyle = "rgba(253, 224, 71, " + (0.15 * openAmt) + ")";
+      ctx.beginPath();
+      ctx.ellipse(door.x, door.y - ddh * 0.35, ddw * 0.3, 8 * door.depth, 0, 0, Math.PI * 2);
+      ctx.fill();
     }
-    ctx.strokeStyle = "#fbbf24";
+    /* Roll-up door panel rises with openAmt */
+    var panelTop = door.y - ddh + lift;
+    var panelH = ddh - lift;
+    if (panelH > 2) {
+      for (var gd = 0; gd < 6; gd++) {
+        var gy = panelTop + 3 + gd * (panelH / 6.2);
+        if (gy > door.y - 2) break;
+        ctx.fillStyle = gd % 2 ? "#374151" : "#1f2937";
+        ctx.fillRect(door.x - ddw * 0.46, gy, ddw * 0.92, Math.min(panelH / 7, door.y - gy));
+      }
+    }
+    ctx.strokeStyle = openAmt > 0.4 ? "#86efac" : "#fbbf24";
     ctx.lineWidth = 2.6;
     ctx.strokeRect(door.x - ddw * 0.5, door.y - ddh, ddw, ddh);
-    ctx.fillStyle = "#fde68a";
+    ctx.fillStyle = openAmt > 0.4 ? "#bbf7d0" : "#fde68a";
     ctx.beginPath();
     ctx.arc(door.x + ddw * 0.38, door.y - ddh * 0.55, 3.2 * door.depth, 0, Math.PI * 2);
     ctx.fill();
+    if (openAmt > 0.35) {
+      ctx.fillStyle = "#bbf7d0";
+      ctx.font = "bold " + Math.round(11 * door.depth) + "px system-ui,sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("OPEN", door.x, door.y - ddh - 8 * door.depth);
+    }
     /* Flat roof */
     ctx.fillStyle = "#374151";
     ctx.beginPath();
@@ -2078,7 +2218,45 @@
       if (soloTaken) continue;
       var p = project(spot.x, spot.y, camX, camY, vw, vh);
       var accent = spot.id === "shared" ? "#fbbf24" : (FROG_COLORS[spot.id] || {}).body;
+      if (spot.id === "shared") {
+        /* polish5: shared pile-in truck obvious — pad, frog slots, ALL ABOARD */
+        var pulse = 1 + Math.sin(Date.now() / 220) * 0.06;
+        ctx.fillStyle = "rgba(251, 191, 36, 0.22)";
+        ctx.beginPath();
+        ctx.ellipse(p.x, p.y + 8 * p.depth, 58 * p.depth * pulse, 22 * p.depth * pulse, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(253, 224, 71, 0.85)";
+        ctx.lineWidth = 3;
+        ctx.setLineDash([8, 6]);
+        ctx.beginPath();
+        ctx.ellipse(p.x, p.y + 8 * p.depth, 52 * p.depth, 18 * p.depth, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
       drawCybertruck(ctx, p.x, p.y, 1, p.depth, false, 0, accent, { inWater: inPond(spot.x, spot.y), sub: 0, wakePhase: 0 });
+      if (spot.id === "shared") {
+        var ids = ["james", "jimmy", "bubbles", "rexy"];
+        for (var si = 0; si < 4; si++) {
+          var sx = p.x + (si - 1.5) * 12 * p.depth;
+          var sy = p.y - 26 * p.depth;
+          ctx.fillStyle = (FROG_COLORS[ids[si]] || {}).body || "#4ade80";
+          ctx.beginPath();
+          ctx.arc(sx, sy, 5.5 * p.depth, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "#0f172a";
+          ctx.lineWidth = 1.2;
+          ctx.stroke();
+        }
+        ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
+        ctx.fillRect(p.x - 58 * p.depth, p.y + 22 * p.depth, 116 * p.depth, 22 * p.depth);
+        ctx.strokeStyle = "#fbbf24";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(p.x - 58 * p.depth, p.y + 22 * p.depth, 116 * p.depth, 22 * p.depth);
+        ctx.fillStyle = "#fef3c7";
+        ctx.font = "bold " + Math.round(12 * p.depth) + "px system-ui,sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("★ ALL ABOARD · 4", p.x, p.y + 37 * p.depth);
+      }
     }
   }
 
@@ -2113,6 +2291,53 @@
       var kp = project(k.x, k.y, camX, camY, vw, vh);
       ctx.fillStyle = "hsla(" + k.hue + ", 90%, 60%, " + clamp(k.life * 2, 0, 1) + ")";
       ctx.fillRect(kp.x, kp.y - (0.4 - k.life) * 20, 3, 3);
+    }
+    /* polish5: pond ripple rings */
+    for (i = 0; i < (world.ripples || []).length; i++) {
+      var rp = world.ripples[i];
+      var rpp = project(rp.x, rp.y, camX, camY, vw, vh);
+      var ra = clamp(rp.life * 0.7, 0, 0.55);
+      ctx.beginPath();
+      ctx.ellipse(rpp.x, rpp.y, rp.r * rpp.depth, rp.r * 0.38 * rpp.depth, 0, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(186, 230, 253, " + ra + ")";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.ellipse(rpp.x, rpp.y, rp.r * 0.65 * rpp.depth, rp.r * 0.24 * rpp.depth, 0, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(224, 242, 254, " + (ra * 0.7) + ")";
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+    }
+    /* polish5: ambient pollen / fireflies */
+    for (i = 0; i < (world.ambient || []).length; i++) {
+      var am = world.ambient[i];
+      var amp = project(am.x, am.y, camX, camY, vw, vh);
+      if (amp.x < -20 || amp.x > vw + 20 || amp.y < -20 || amp.y > vh + 20) continue;
+      if (am.kind === "firefly") {
+        var glow = 0.35 + 0.65 * Math.abs(Math.sin(am.phase));
+        ctx.fillStyle = "rgba(250, 204, 21, " + (glow * 0.85) + ")";
+        ctx.beginPath();
+        ctx.arc(amp.x, amp.y, (am.r + glow) * amp.depth, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "rgba(254, 243, 199, " + (glow * 0.5) + ")";
+        ctx.beginPath();
+        ctx.arc(amp.x, amp.y, (am.r * 0.5) * amp.depth, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.fillStyle = "rgba(254, 249, 195, 0.55)";
+        ctx.beginPath();
+        ctx.ellipse(amp.x, amp.y, am.r * amp.depth, am.r * 0.55 * amp.depth, am.phase, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    /* polish5: hotspot enter sparkles */
+    for (i = 0; i < (world.sparkles || []).length; i++) {
+      var sk = world.sparkles[i];
+      var skp = project(sk.x, sk.y, camX, camY, vw, vh);
+      ctx.fillStyle = "hsla(" + sk.hue + ", 95%, 70%, " + clamp(sk.life * 2.2, 0, 1) + ")";
+      ctx.beginPath();
+      ctx.arc(skp.x, skp.y, sk.r * skp.depth, 0, Math.PI * 2);
+      ctx.fill();
     }
   }
 
@@ -2249,7 +2474,7 @@
     }
 
     drawPond(ctx, camX, camY, vw, vh, world, t);
-    drawRanchHouse(ctx, camX, camY, vw, vh, world);
+    drawRanchHouse(ctx, camX, camY, vw, vh, world, frogs);
     drawTrack(ctx, camX, camY, vw, vh, t);
     drawToys(ctx, world, camX, camY, vw, vh);
     drawStarshipPad(ctx, camX, camY, vw, vh, nearHot && nearHot.id === "starship");
@@ -2303,6 +2528,8 @@
     spawnBubbles: spawnBubbles,
     spawnSplash: spawnSplash,
     spawnSparks: spawnSparks,
+    spawnRipple: spawnRipple,
+    spawnSparkle: spawnSparkle,
     moveEntity: moveEntity,
     tickHubAI: tickHubAI,
     boardTruck: boardTruck,

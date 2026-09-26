@@ -3,7 +3,9 @@
    Ben cast only: Spotty, Alex, Fred, Germy, Daisy Dachshund, King Germy;
    ~20 people + hundreds of dogs as anonymous crowds.
    Real moons: Mars Phobos/Deimos; Neptune's 14 named moons (picker stub).
-   Ben orbit physics: near planet → gravity pull into orbit; leave via Escape OR hard thruster. */
+   Ben orbit physics: near planet → gravity pull into orbit; leave via Escape OR hard thruster.
+   polish5: clearer moons picker, readable orbit pull rings, Escape/thruster leave banner,
+   Spotty/Alex/Fred presence pulse (cast already stubbed). */
 (function (global) {
   "use strict";
 
@@ -59,11 +61,14 @@
     }
     if (!best) return;
     var cfgR = cfg.softPullRadius || 220;
+    ep.orbitPull = null;
     if (bestD < cfgR && bestD > 8) {
       var ang = Math.atan2(ep.py - best.y, ep.px - best.x);
       var pull = (cfg.pullAccel || 420) * (1 - bestD / cfgR) * dt;
       ep.vx = (ep.vx || 0) - Math.cos(ang) * pull;
       ep.vy = (ep.vy || 0) - Math.sin(ang) * pull;
+      /* polish5: expose pull strength for readable rings */
+      ep.orbitPull = { planet: best, dist: bestD, soft: cfgR, cap: cfg.captureRadius || 120, strength: 1 - bestD / cfgR };
     }
     if (bestD < (cfg.captureRadius || 120)) {
       ep.inOrbit = true;
@@ -72,7 +77,8 @@
       ep.orbitRadius = cfg.orbitAltitude || 78;
       ep.vx = 0;
       ep.vy = 0;
-      toast(ep, "Orbit locked · " + best.name + " · Escape or hard thruster to leave", 3.2);
+      ep.orbitPull = null;
+      toast(ep, "Orbit locked · " + best.name + " · ESCAPE or Ability thruster to leave", 3.4);
     }
   }
 
@@ -233,6 +239,7 @@
       orbitAngle: 0,
       orbitRadius: 0,
       orbitEscapeCool: 0,
+      orbitPull: null,
     };
   }
 
@@ -990,12 +997,61 @@
       ctx.stroke();
       drawLabel(ctx, "STARSHIP", pad.x, pad.y - 36 * pad.d, "#7dd3fc");
       var sp = worldToScreen(ep.spotty.x, ep.spotty.y, w, h);
+      ctx.beginPath();
+      ctx.arc(sp.x, sp.y, 34 * sp.d * (1 + 0.1 * Math.sin(t * 2.6)), 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(251,146,60,0.65)";
+      ctx.lineWidth = 2.4;
+      ctx.stroke();
       drawSpotty(ctx, sp.x, sp.y, sp.d);
+      drawLabel(ctx, "Commander on deck", sp.x, sp.y + 28 * sp.d, "#fdba74");
     }
 
     if (ep.scene === "space") {
-      // moon
+      // moon + polish5 readable pull / orbit rings
       var moon = worldToScreen(700, 140, w, h);
+      var cfgVis = orbitCfg();
+      var softScr = (cfgVis.softPullRadius || 220) * moon.d * 0.95;
+      var capScr = (cfgVis.captureRadius || 120) * moon.d * 0.95;
+      var orbScr = (ep.inOrbit ? (ep.orbitRadius || cfgVis.orbitAltitude || 78) : (cfgVis.orbitAltitude || 78)) * moon.d;
+      /* Soft pull halo */
+      ctx.beginPath();
+      ctx.arc(moon.x, moon.y, softScr, 0, Math.PI * 2);
+      ctx.strokeStyle = ep.orbitPull ? "rgba(125,211,252,0.55)" : "rgba(125,211,252,0.2)";
+      ctx.lineWidth = ep.orbitPull ? 2.4 : 1.2;
+      ctx.setLineDash([10, 8]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      /* Capture ring */
+      ctx.beginPath();
+      ctx.arc(moon.x, moon.y, capScr, 0, Math.PI * 2);
+      ctx.strokeStyle = ep.inOrbit ? "rgba(250,204,21,0.85)" : "rgba(56,189,248,0.45)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      if (ep.inOrbit) {
+        ctx.beginPath();
+        ctx.arc(moon.x, moon.y, orbScr, 0, Math.PI * 2);
+        ctx.strokeStyle = "rgba(250,204,21,0.95)";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        /* orbit chevron at player angle */
+        var oa = ep.orbitAngle || 0;
+        var ox = moon.x + Math.cos(oa) * orbScr;
+        var oy = moon.y + Math.sin(oa) * orbScr;
+        ctx.fillStyle = "#fde68a";
+        ctx.beginPath();
+        ctx.arc(ox, oy, 5, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (ep.orbitPull) {
+        var str = ep.orbitPull.strength || 0;
+        ctx.strokeStyle = "rgba(125,211,252," + (0.35 + str * 0.5) + ")";
+        ctx.lineWidth = 2 + str * 2;
+        ctx.beginPath();
+        ctx.moveTo(moon.x, moon.y);
+        var pp = worldToScreen(ep.px, ep.py, w, h);
+        ctx.lineTo(pp.x, pp.y);
+        ctx.stroke();
+        drawLabel(ctx, "Gravity pull · " + Math.round(str * 100) + "%", moon.x, moon.y + softScr + 14, "#7dd3fc");
+      }
       ctx.fillStyle = "#e2e8f0";
       ctx.beginPath();
       ctx.arc(moon.x, moon.y, 55 * moon.d, 0, Math.PI * 2);
@@ -1025,31 +1081,91 @@
       }
       drawLabel(ctx, "~20 people", w * 0.5, h * 0.52, "rgba(226,232,240,0.7)");
       var ap = worldToScreen(ep.alex.x, ep.alex.y, w, h);
+      /* polish5: Alex / Fred presence pulse rings */
+      ctx.beginPath();
+      ctx.arc(ap.x, ap.y, 28 * ap.d * (1 + 0.08 * Math.sin(t * 3)), 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(56,189,248,0.55)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
       drawAstronaut(ctx, ap.x, ap.y, ap.d, "#64748b", "Alex");
       var fp = worldToScreen(ep.fred.x, ep.fred.y, w, h);
+      ctx.beginPath();
+      ctx.arc(fp.x, fp.y, 28 * fp.d * (1 + 0.08 * Math.sin(t * 3 + 1)), 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(148,163,184,0.55)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
       drawAstronaut(ctx, fp.x, fp.y, fp.d, "#475569", "Fred");
     }
 
     if (ep.scene === "solar") {
-      ctx.fillStyle = "rgba(15,23,42,0.72)";
-      ctx.fillRect(w * 0.08, h * 0.18, w * 0.84, h * 0.55);
+      /* polish5: clearer planet moons picker — big tabs, selected card, planet discs */
+      var panelX = w * 0.06, panelY = h * 0.14, panelW = w * 0.88, panelH = h * 0.62;
+      ctx.fillStyle = "rgba(8, 15, 32, 0.88)";
+      ctx.fillRect(panelX, panelY, panelW, panelH);
       ctx.strokeStyle = "#38bdf8";
-      ctx.lineWidth = 2;
-      ctx.strokeRect(w * 0.08, h * 0.18, w * 0.84, h * 0.55);
-      drawLabel(ctx, ep.solarTab === "mars" ? "Mars · 2 moons" : "Neptune · 14 moons", w * 0.5, h * 0.22, "#7dd3fc");
+      ctx.lineWidth = 3;
+      ctx.strokeRect(panelX, panelY, panelW, panelH);
+      /* Planet tab pills */
+      var tabMars = { x: w * 0.22, y: h * 0.2, w: 150, h: 36 };
+      var tabNep = { x: w * 0.58, y: h * 0.2, w: 170, h: 36 };
+      function drawTab(tab, label, on, planetColor) {
+        ctx.fillStyle = on ? "rgba(250,204,21,0.28)" : "rgba(30,41,59,0.9)";
+        ctx.strokeStyle = on ? "#facc15" : "#64748b";
+        ctx.lineWidth = on ? 3 : 1.5;
+        ctx.beginPath();
+        ctx.rect(tab.x, tab.y, tab.w, tab.h);
+        ctx.fill(); ctx.stroke();
+        ctx.fillStyle = planetColor;
+        ctx.beginPath();
+        ctx.arc(tab.x + 22, tab.y + tab.h * 0.5, 10, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = on ? "#fef3c7" : "#e2e8f0";
+        ctx.font = "bold 13px system-ui,sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText(label, tab.x + 40, tab.y + tab.h * 0.62);
+      }
+      drawTab(tabMars, "Mars · 2 moons", ep.solarTab === "mars", "#ef4444");
+      drawTab(tabNep, "Neptune · 14 moons", ep.solarTab === "neptune", "#3b82f6");
+      drawLabel(ctx, "◀ tabs · Ability cycles moon · INTERACT Go ▶", w * 0.5, h * 0.265, "#94a3b8");
       var moons = ep.solarTab === "mars" ? MARS_MOONS : NEPTUNE_MOONS;
       var cols = ep.solarTab === "mars" ? 2 : 4;
+      var cardW = ep.solarTab === "mars" ? 150 : 110;
+      var cardH = 44;
       for (var mi = 0; mi < moons.length; mi++) {
         var col = mi % cols;
         var row = Math.floor(mi / cols);
-        var mx = w * 0.18 + col * (w * 0.7 / cols);
-        var my = h * 0.3 + row * 28;
+        var mx = w * 0.14 + col * ((panelW - w * 0.1) / cols);
+        var my = h * 0.32 + row * (cardH + 10);
         var sel = mi === ep.solarPick;
-        ctx.fillStyle = sel ? "rgba(250,204,21,0.35)" : "rgba(51,65,85,0.6)";
-        ctx.fillRect(mx - 50, my - 12, 100, 22);
-        drawLabel(ctx, moons[mi].name, mx, my + 4, sel ? "#fde68a" : "#e2e8f0");
+        ctx.fillStyle = sel ? "rgba(250,204,21,0.42)" : "rgba(51,65,85,0.75)";
+        ctx.fillRect(mx - cardW * 0.5, my - cardH * 0.5, cardW, cardH);
+        ctx.strokeStyle = sel ? "#fde68a" : "rgba(148,163,184,0.45)";
+        ctx.lineWidth = sel ? 3 : 1.2;
+        ctx.strokeRect(mx - cardW * 0.5, my - cardH * 0.5, cardW, cardH);
+        /* Moon disc */
+        ctx.fillStyle = sel ? "#fef3c7" : "#cbd5e1";
+        ctx.beginPath();
+        ctx.arc(mx - cardW * 0.32, my, sel ? 11 : 8, 0, Math.PI * 2);
+        ctx.fill();
+        if (sel) {
+          ctx.fillStyle = "#fbbf24";
+          ctx.font = "bold 14px system-ui,sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText("▶", mx - cardW * 0.5 + 12, my + 5);
+          ctx.fillText("◀", mx + cardW * 0.5 - 12, my + 5);
+        }
+        ctx.fillStyle = sel ? "#fffbeb" : "#e2e8f0";
+        ctx.font = (sel ? "bold 14px" : "bold 12px") + " system-ui,sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText(moons[mi].name, mx - cardW * 0.18, my + 5);
       }
-      drawLabel(ctx, "Ability cycles pick · INTERACT Go / tabs", w * 0.5, h * 0.7, "#94a3b8");
+      var pick = moons[clamp(ep.solarPick, 0, moons.length - 1)];
+      ctx.fillStyle = "rgba(15,23,42,0.85)";
+      ctx.fillRect(w * 0.18, h * 0.68, w * 0.64, 36);
+      ctx.strokeStyle = "#facc15";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(w * 0.18, h * 0.68, w * 0.64, 36);
+      drawLabel(ctx, "Selected · " + pick.name + (ep.solarTab === "mars" ? " → Mars cave" : " · Neptune stub stop"), w * 0.5, h * 0.705, "#fde68a");
     }
 
     if (ep.scene === "mars") {
@@ -1134,6 +1250,25 @@
     var pp2 = worldToScreen(ep.px, ep.py, w, h);
     drawFrog(ctx, pp2.x, pp2.y, pp2.d, ep.facing, ep.jet);
 
+    /* polish5: Escape / thruster leave hint when orbit-locked */
+    if (ep.inOrbit) {
+      var banW = Math.min(w * 0.86, 420);
+      var banX = (w - banW) * 0.5;
+      var banY = h * 0.78;
+      ctx.fillStyle = "rgba(8, 20, 40, 0.88)";
+      ctx.fillRect(banX, banY, banW, 52);
+      ctx.strokeStyle = "#38bdf8";
+      ctx.lineWidth = 2.5;
+      ctx.strokeRect(banX, banY, banW, 52);
+      ctx.fillStyle = "#e0f2fe";
+      ctx.font = "bold 14px system-ui,sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("ORBIT · " + (ep.orbitPlanet ? ep.orbitPlanet.name : "planet"), w * 0.5, banY + 20);
+      ctx.fillStyle = "#fde68a";
+      ctx.font = "bold 12px system-ui,sans-serif";
+      ctx.fillText("ESCAPE button / Esc key  ·  or Ability = hard thruster", w * 0.5, banY + 40);
+    }
+
     // Soft vignette (presentation)
     var vig = ctx.createRadialGradient(w * 0.5, h * 0.5, h * 0.2, w * 0.5, h * 0.5, h * 0.75);
     vig.addColorStop(0, "rgba(0,0,0,0)");
@@ -1157,7 +1292,8 @@
     var near = nearestHotspot(ep, 75);
     var tip = "";
     if (ep.toastT > 0) tip = ep.toast;
-    else if (ep.inOrbit) tip = "Orbit locked · Escape or hard thruster (ability) to leave";
+    else if (ep.inOrbit) tip = "ORBIT · ESCAPE / Esc  ·  Ability = hard thruster leave";
+    else if (ep.orbitPull) tip = "Gravity pull · " + (ep.orbitPull.planet ? ep.orbitPull.planet.name : "planet") + " · drift in to lock";
     else if (near) tip = near.tip + " · INTERACT / E";
     else tip = "Steer · find hotspots · Lobby returns to title";
     return {

@@ -62,6 +62,7 @@
   let steerX = 0;
   let steerY = 0;
   let nearHot = null;
+  let prevNearId = null;
   let storyToast = "";
   let storyToastT = 0;
   let lastTs = 0;
@@ -172,6 +173,7 @@
     remoteInputs = {};
     stateSendAcc = 0;
     nearHot = null;
+    prevNearId = null;
     storyToast = "Big ranch · Cybertrucks · pond whales · Starship · call Purple Bear";
     storyToastT = 4.5;
     shakeT = 0;
@@ -574,10 +576,10 @@
           shakeT = 0.15;
         } else if (drive.landed) {
           sfxLand();
+          if (drive.landShake || drive.splashed) shakeT = Math.max(shakeT, drive.splashed ? 0.12 : 0.08);
           if (drive.splashed) {
             storyToast = (me.waterSub || 0) > 0.7 ? "Under the water!" : "Splash · on the water!";
             storyToastT = 1.1;
-            shakeT = 0.12;
           } else if (drive.scrapGain > 0) {
             storyToast = "Landing +" + drive.scrapGain;
             storyToastT = 1;
@@ -589,6 +591,13 @@
         if (me.speedBoost > 1) me.speedBoost = Math.max(1, me.speedBoost - dt * 0.5);
         easeCam(dt);
         nearHot = W.nearestHotspot(world, me.x, me.y, 70);
+        /* polish5: sparkle when entering a hotspot */
+        if (nearHot && nearHot.id !== prevNearId) {
+          if (W.spawnSparkle) W.spawnSparkle(world, nearHot.x, nearHot.y, 12);
+          prevNearId = nearHot.id;
+        } else if (!nearHot) {
+          prevNearId = null;
+        }
       }
       if (storyToastT > 0) storyToastT -= dt;
       if (shakeT > 0) shakeT -= dt;
@@ -631,10 +640,10 @@
               shakeT = 0.16;
             } else if (drive.landed) {
               sfxLand();
+              if (drive.landShake || drive.splashed) shakeT = Math.max(shakeT, drive.splashed ? 0.14 : 0.09);
               if (drive.splashed) {
                 storyToast = (f.waterSub || 0) > 0.7 ? "Under the water!" : "Splash · on the water!";
                 storyToastT = 1.15;
-                shakeT = 0.14;
               } else if (drive.scrapGain > 0) {
                 storyToast = "Nice air! +" + drive.scrapGain;
                 storyToastT = 1.1;
@@ -656,6 +665,12 @@
 
     easeCam(dt);
     if (me) nearHot = W.nearestHotspot(world, me.x, me.y, 70);
+    if (nearHot && nearHot.id !== prevNearId) {
+      if (W.spawnSparkle) W.spawnSparkle(world, nearHot.x, nearHot.y, 12);
+      prevNearId = nearHot.id;
+    } else if (!nearHot) {
+      prevNearId = null;
+    }
 
     if (storyToastT > 0) storyToastT -= dt;
     if (shakeT > 0) shakeT -= dt;

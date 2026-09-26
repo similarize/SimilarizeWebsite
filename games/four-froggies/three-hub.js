@@ -3,7 +3,9 @@
    Big map · compound · squiggle track · pond whales · 4 trucks+shared ·
    on-water/under · Starship → Escape/hard thruster.
    polish4: compound presence + hills + inviting hotspots + truck bob/spray.
-   WASD: camera-relative (Canvas steer.y<0 = screen up) — do not invert. */
+   polish5: ambient pollen/fireflies; pond ripples; track race dust; garage door open-near;
+   shared ALL ABOARD; land shake; hotspot sparkle; orbit pull rings + Escape banner.
+   Hollow house + frogs kept. WASD camera-relative — do not invert. */
 (function (global) {
   "use strict";
 
@@ -301,9 +303,24 @@
     gWall(gp.x, gp.z - gd * 0.5 + 0.1, gw, 0.2);
     gWall(gp.x - gw * 0.5 + 0.1, gp.z, 0.2, gd);
     gWall(gp.x + gw * 0.5 - 0.1, gp.z, 0.2, gd);
-    // Open south (door) — dark lintel only
+    // Open south (door) — dark lintel + polish5 rolling door
     var lintel = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.35, 0.2), new THREE.MeshStandardMaterial({ color: 0x111827 }));
     lintel.position.set(gp.x, 1.85, gp.z + gd * 0.5 - 0.1); scene.add(lintel);
+    state.garageDoor = new THREE.Mesh(
+      new THREE.BoxGeometry(2.2, 1.6, 0.12),
+      new THREE.MeshStandardMaterial({ color: 0x1f2937, metalness: 0.3, roughness: 0.6 })
+    );
+    state.garageDoor.position.set(gp.x, 0.9, gp.z + gd * 0.5 - 0.05);
+    state.garageDoor.userData.y0 = 0.9;
+    state.garageDoor.userData.h0 = 1.6;
+    state.garageDoor.userData.cx = gp.x;
+    state.garageDoor.userData.cz = gp.z + gd * 0.5;
+    scene.add(state.garageDoor);
+    state.garageOpen = 0;
+    state.garageOpenLabel = labelSprite("OPEN", "#bbf7d0");
+    state.garageOpenLabel.position.set(gp.x, 2.2, gp.z + gd * 0.5);
+    state.garageOpenLabel.visible = false;
+    scene.add(state.garageOpenLabel);
     addLabel("Garage · James toys", "#fff", gp.x, 2.9, gp.z);
     for (var t = 0; t < 32; t++) {
       var tp = worldToThree(gar.x + 40 + (t % 8) * 48, gar.y + 70 + Math.floor(t / 8) * 50);
@@ -475,8 +492,22 @@
       var truck = makeTruckMesh(accent);
       var p = worldToThree(s.x, s.y);
       truck.position.set(p.x, 0, p.z); scene.add(truck);
-      var label = s.id === "shared" ? "All aboard" : ("Cybertruck · " + (C.FROG_DEFS[s.id] || {}).name);
-      var lab = labelSprite(label, "#fde68a"); lab.position.set(p.x, 1.5, p.z); scene.add(lab);
+      var label = s.id === "shared" ? "★ ALL ABOARD · 4" : ("Cybertruck · " + (C.FROG_DEFS[s.id] || {}).name);
+      var lab = labelSprite(label, s.id === "shared" ? "#fef3c7" : "#fde68a");
+      lab.position.set(p.x, s.id === "shared" ? 1.85 : 1.5, p.z); scene.add(lab);
+      if (s.id === "shared") {
+        var pad = new THREE.Mesh(
+          new THREE.RingGeometry(1.1, 1.45, 32),
+          new THREE.MeshBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.55, side: THREE.DoubleSide })
+        );
+        pad.rotation.x = -Math.PI / 2; pad.position.set(p.x, 0.06, p.z); scene.add(pad);
+        var ids = ["james", "jimmy", "bubbles", "rexy"];
+        for (var si = 0; si < 4; si++) {
+          var col = hex((C.FROG_DEFS[ids[si]] || C.FROG_DEFS.james).color);
+          var slot = new THREE.Mesh(new THREE.SphereGeometry(0.14, 8, 6), new THREE.MeshStandardMaterial({ color: col }));
+          slot.position.set(p.x + (si - 1.5) * 0.35, 0.85, p.z); scene.add(slot);
+        }
+      }
       state.parkedTrucks.push({ spot: s, mesh: truck, label: lab });
     }
   }
@@ -670,6 +701,29 @@
     state.scrap = 0;
     state.bouncePhase = 0;
     state.dustT = 0;
+    state.prevNearId = null;
+    state.shakeT = 0;
+    state.rippleT = 0;
+    state.ambient = [];
+    /* polish5: ambient pollen / fireflies */
+    for (var ai = 0; ai < 48; ai++) {
+      var kind = Math.random() < 0.55 ? "pollen" : "firefly";
+      var amb = new THREE.Mesh(
+        new THREE.SphereGeometry(kind === "firefly" ? 0.07 : 0.05, 6, 5),
+        new THREE.MeshBasicMaterial({
+          color: kind === "firefly" ? 0xfacc15 : 0xfef9c3,
+          transparent: true,
+          opacity: kind === "firefly" ? 0.85 : 0.5,
+        })
+      );
+      amb.position.set((Math.random() - 0.5) * C.MAP_W * 0.018, 0.4 + Math.random() * 1.2, (Math.random() - 0.5) * C.MAP_H * 0.018);
+      amb.userData.kind = kind;
+      amb.userData.phase = Math.random() * Math.PI * 2;
+      amb.userData.vx = (Math.random() - 0.5) * 0.6;
+      amb.userData.vz = (Math.random() - 0.5) * 0.6;
+      scene.add(amb);
+      state.ambient.push(amb);
+    }
     state.fx = [];
     state.toast = "three.js ranch · compound · squiggle track · whales · Cybertrucks · Starship";
     state.toastT = 3.5;
@@ -736,6 +790,28 @@
     state.orbitRadius = 2.2;
     state.orbitEscapeCool = 0;
     state.orbitCfg = (C && C.ORBIT_PHYSICS) || {};
+    /* polish5: readable pull / orbit rings */
+    state.pullRing = new THREE.Mesh(
+      new THREE.RingGeometry(3.2, 3.45, 48),
+      new THREE.MeshBasicMaterial({ color: 0x7dd3fc, transparent: true, opacity: 0.35, side: THREE.DoubleSide })
+    );
+    state.pullRing.rotation.x = -Math.PI / 2;
+    state.pullRing.position.set(5, 0.08, -5); scene.add(state.pullRing);
+    state.capRing = new THREE.Mesh(
+      new THREE.RingGeometry(1.9, 2.1, 48),
+      new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.55, side: THREE.DoubleSide })
+    );
+    state.capRing.rotation.x = -Math.PI / 2;
+    state.capRing.position.set(5, 0.09, -5); scene.add(state.capRing);
+    state.orbitRing = new THREE.Mesh(
+      new THREE.RingGeometry(2.1, 2.25, 48),
+      new THREE.MeshBasicMaterial({ color: 0xfacc15, transparent: true, opacity: 0.9, side: THREE.DoubleSide })
+    );
+    state.orbitRing.rotation.x = -Math.PI / 2;
+    state.orbitRing.position.set(5, 0.1, -5); state.orbitRing.visible = false; scene.add(state.orbitRing);
+    state.escapeBanner = labelSprite("ORBIT · ESCAPE / Esc · Ability thruster", "#fde68a");
+    state.escapeBanner.scale.set(5.5, 0.7, 1);
+    state.escapeBanner.visible = false; scene.add(state.escapeBanner);
     state.toast = "Space · near Moon → orbit · Escape / hard thruster to leave";
 
     var germy = new THREE.Mesh(
@@ -761,6 +837,19 @@
     spotty.position.set(-6, 0.3, -4);
     scene.add(spotty);
     addLabel("Spotty", "#fdba74", -6, 1.2, -4);
+
+    var alex = new THREE.Mesh(
+      new THREE.SphereGeometry(0.28, 10, 8),
+      new THREE.MeshStandardMaterial({ color: 0x64748b })
+    );
+    alex.position.set(-2, 0.35, 3); scene.add(alex);
+    addLabel("Alex", "#e2e8f0", -2, 1.3, 3);
+    var fred = new THREE.Mesh(
+      new THREE.SphereGeometry(0.28, 10, 8),
+      new THREE.MeshStandardMaterial({ color: 0x475569 })
+    );
+    fred.position.set(-1, 0.35, 3.6); scene.add(fred);
+    addLabel("Fred", "#e2e8f0", -1, 1.3, 3.6);
 
     var pad = new THREE.Mesh(
       new THREE.CircleGeometry(1.2, 24),
@@ -905,6 +994,13 @@
       var dx = state.player.position.x - state.planet.x;
       var dz = state.player.position.z - state.planet.z;
       var dP = Math.hypot(dx, dz);
+      if (state.orbitRing) state.orbitRing.visible = !!state.inOrbit;
+      if (state.escapeBanner) {
+        state.escapeBanner.visible = !!state.inOrbit;
+        if (state.inOrbit) {
+          state.escapeBanner.position.set(state.player.position.x, 2.2, state.player.position.z);
+        }
+      }
       if (state.inOrbit) {
         state.orbitRadius = Math.max(1.4, Math.min(softR * 0.9, state.orbitRadius + (steer.y || 0) * 1.2 * dt));
         state.orbitAngle += (0.85 + (steer.x || 0) * 0.35) * dt;
@@ -1008,6 +1104,18 @@
           state.fx.push({ mesh: dust, life: 0.35, rise: 0.2 });
         }
       }
+      /* polish5: track race dust */
+      if (state.inTruck && !wet && sp > 3.5 && state.zLift < 0.4 && C.onTrack && C.onTrack(wpos0.x, wpos0.y)) {
+        if (Math.random() < dt * 3) {
+          var td = new THREE.Mesh(
+            new THREE.SphereGeometry(0.1 + Math.random() * 0.06, 6, 5),
+            new THREE.MeshBasicMaterial({ color: 0xb8a070, transparent: true, opacity: 0.55 })
+          );
+          td.position.set(state.player.position.x - state.facing * 0.5, 0.1, state.player.position.z);
+          scene.add(td);
+          state.fx.push({ mesh: td, life: 0.4, rise: 0.25 });
+        }
+      }
       if (state.inTruck && wet) {
         if (state.waterSub > 0.7 && Math.random() < dt * 5) {
           var bub = new THREE.Mesh(
@@ -1025,12 +1133,73 @@
           spr.position.set(state.player.position.x - state.facing * 0.4, 0.15, state.player.position.z);
           scene.add(spr);
           state.fx.push({ mesh: spr, life: 0.4, rise: 0.9 });
+          var rip = new THREE.Mesh(
+            new THREE.RingGeometry(0.15, 0.22, 16),
+            new THREE.MeshBasicMaterial({ color: 0xbae6fd, transparent: true, opacity: 0.6, side: THREE.DoubleSide })
+          );
+          rip.rotation.x = -Math.PI / 2;
+          rip.position.set(state.player.position.x, 0.06, state.player.position.z);
+          scene.add(rip);
+          state.fx.push({ mesh: rip, life: 0.8, rise: 0, grow: 1.8 });
         }
+      }
+      /* polish5: ambient pond ripples */
+      state.rippleT = (state.rippleT || 0) - dt;
+      if (state.rippleT <= 0) {
+        state.rippleT = 0.7 + Math.random() * 0.9;
+        var pondA = (C.AREAS && C.AREAS[2]) || null;
+        if (pondA) {
+          var rpx = pondA.x + 80 + Math.random() * (pondA.w - 160);
+          var rpy = pondA.y + 80 + Math.random() * (pondA.h - 160);
+          var rp3 = worldToThree(rpx, rpy);
+          var rip2 = new THREE.Mesh(
+            new THREE.RingGeometry(0.12, 0.18, 16),
+            new THREE.MeshBasicMaterial({ color: 0xe0f2fe, transparent: true, opacity: 0.55, side: THREE.DoubleSide })
+          );
+          rip2.rotation.x = -Math.PI / 2;
+          rip2.position.set(rp3.x, 0.07, rp3.z);
+          scene.add(rip2);
+          state.fx.push({ mesh: rip2, life: 1.0, rise: 0, grow: 2.0 });
+        }
+      }
+      /* polish5: garage door open-near */
+      if (state.garageDoor) {
+        var gdx = state.player.position.x - state.garageDoor.userData.cx;
+        var gdz = state.player.position.z - state.garageDoor.userData.cz;
+        var wantG = Math.hypot(gdx, gdz) < 5.5 ? 1 : 0;
+        state.garageOpen = Math.max(0, Math.min(1, (state.garageOpen || 0) + (wantG ? 2.2 : -1.4) * dt));
+        var lift = state.garageOpen * 1.35;
+        state.garageDoor.position.y = state.garageDoor.userData.y0 + lift * 0.5;
+        state.garageDoor.scale.y = Math.max(0.08, 1 - state.garageOpen * 0.9);
+        if (state.garageOpenLabel) state.garageOpenLabel.visible = state.garageOpen > 0.35;
+      }
+      /* polish5: ambient drift */
+      for (var ami = 0; ami < (state.ambient || []).length; ami++) {
+        var am = state.ambient[ami];
+        am.userData.phase += dt * (am.userData.kind === "firefly" ? 3.2 : 1.4);
+        am.position.x += (am.userData.vx + Math.sin(am.userData.phase) * 0.25) * dt;
+        am.position.z += (am.userData.vz + Math.cos(am.userData.phase * 0.7) * 0.2) * dt;
+        am.position.y = 0.35 + Math.abs(Math.sin(am.userData.phase)) * 0.5;
+        if (am.userData.kind === "firefly") am.material.opacity = 0.35 + 0.65 * Math.abs(Math.sin(am.userData.phase));
+      }
+      /* polish5: tiny land shake */
+      var wasAir = state._wasAir;
+      state._wasAir = state.zLift > 0.4;
+      if (wasAir && state.zLift <= 0 && state.inTruck) {
+        state.shakeT = Math.max(state.shakeT || 0, 0.1);
+      }
+      if ((state.shakeT || 0) > 0) {
+        state.shakeT -= dt;
+        camera.position.x += (Math.random() - 0.5) * 0.08;
+        camera.position.y += (Math.random() - 0.5) * 0.05;
       }
       for (var fxi = state.fx.length - 1; fxi >= 0; fxi--) {
         var fx = state.fx[fxi];
         fx.life -= dt;
         fx.mesh.position.y += (fx.rise || 0.3) * dt;
+        if (fx.grow) fx.mesh.scale.multiplyScalar(1 + fx.grow * dt);
+        if (fx.vx) { fx.mesh.position.x += fx.vx * dt; fx.vx *= 0.96; }
+        if (fx.vz) { fx.mesh.position.z += fx.vz * dt; }
         fx.mesh.material.opacity = Math.max(0, fx.life * 1.4);
         if (fx.life <= 0) { scene.remove(fx.mesh); state.fx.splice(fxi, 1); }
       }
@@ -1138,6 +1307,20 @@
       }
       var wpos = threeToWorld(state.player.position.x, state.player.position.z);
       state.near = C.nearestHotspot(wpos.x, wpos.y, 70);
+      if (state.mode === "ranch" && state.near && state.near.id !== state.prevNearId) {
+        for (var spi = 0; spi < 10; spi++) {
+          var ang = Math.random() * Math.PI * 2, ssp = 0.8 + Math.random() * 1.6;
+          var spk = new THREE.Mesh(
+            new THREE.SphereGeometry(0.06, 6, 5),
+            new THREE.MeshBasicMaterial({ color: 0xfde68a, transparent: true, opacity: 0.95 })
+          );
+          var np = worldToThree(state.near.x, state.near.y);
+          spk.position.set(np.x, 0.6, np.z);
+          scene.add(spk);
+          state.fx.push({ mesh: spk, life: 0.45, rise: 0.6, vx: Math.cos(ang) * ssp, vz: Math.sin(ang) * ssp });
+        }
+        state.prevNearId = state.near.id;
+      } else if (!state.near) state.prevNearId = null;
       for (var hi = 0; hi < state.hotMeshes.length; hi++) {
         var hg = state.hotMeshes[hi];
         hg.ring.material.opacity = state.near && state.near.id === hg.data.id ? 0.85 : 0.35;
