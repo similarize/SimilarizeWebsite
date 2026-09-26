@@ -18,7 +18,8 @@
    hop1: HOP ability (Y arc + squash); shove toys/animals/pollen.
    hop2: ranch foot ALWAYS hops (continuous arc); ability HOP = bigger jump.
    hop3: faster loco + spam HOP + stack; articulated mechs.
-   track3: banks + rocks (hard bounce) + live monster-truck wheels; more cam zoom-out. */
+   track3: banks + rocks (hard bounce) + live monster-truck wheels; more cam zoom-out.
+   hop4: snappier always-hop; humanoid frog textures (torso+head, spring legs). */
 (function (global) {
   "use strict";
   var C = global.FroggiesCanon;
@@ -300,34 +301,62 @@
         if (hooks.onToast) hooks.onToast(this.toast);
       },
       ensureFrogTexture: function (id, d, size) {
-        /* polish3: charming readable frog (Canvas clarity port) */
+        /* hop4: humanoid frog silhouette (torso+head, spring legs mid-pose) — Canvas parity */
         var key = "frog_" + id; if (this.textures.exists(key)) return;
         var rt = this.make.graphics({ x: 0, y: 0, add: false });
-        var s = size || 56, cx = s * 0.5, cy = s * 0.55, r = s * 0.42;
-        rt.fillStyle(hx(d.color), 0.4); rt.fillCircle(cx, cy + 3, r * 1.2);
-        rt.fillStyle(hx(d.color), 1); rt.fillCircle(cx, cy, r);
-        rt.lineStyle(3.5, 0x0b1220, 1); rt.strokeCircle(cx, cy, r);
-        rt.fillStyle(0xfef3c7, 0.95); rt.fillEllipse(cx, cy + r * 0.18, r * 0.7, r * 0.55);
-        rt.fillStyle(0xfb7185, 0.45);
-        rt.fillEllipse(cx - r * 0.55, cy + r * 0.15, r * 0.28, r * 0.18);
-        rt.fillEllipse(cx + r * 0.55, cy + r * 0.15, r * 0.28, r * 0.18);
+        var s = size || 64, cx = s * 0.5, cy = s * 0.52;
+        var torsoW = s * 0.34, torsoH = s * 0.38, headR = s * 0.2;
+        var headY = cy - s * 0.28;
+        var hipY = cy + s * 0.08;
+        /* Spring legs mid-hop silhouette (readable at distance) */
+        function springLeg(side) {
+          var hx = cx + side * torsoW * 0.55;
+          var kx = cx + side * s * 0.32;
+          var ky = hipY + s * 0.18;
+          var fx = cx + side * s * 0.22;
+          var fy = hipY + s * 0.38;
+          rt.lineStyle(Math.max(4, s * 0.1), hx(d.accent), 1);
+          rt.beginPath(); rt.moveTo(hx, hipY); rt.lineTo(kx, ky); rt.lineTo(fx, fy); rt.strokePath();
+          rt.lineStyle(Math.max(2.5, s * 0.06), hx(d.color), 1);
+          rt.beginPath(); rt.moveTo(hx, hipY); rt.lineTo(kx, ky); rt.lineTo(fx, fy); rt.strokePath();
+          rt.fillStyle(hx(d.accent), 1);
+          rt.fillEllipse(fx, fy + 1, s * 0.1, s * 0.05);
+        }
+        springLeg(-1); springLeg(1);
+        /* Arms */
+        rt.lineStyle(Math.max(2.5, s * 0.055), hx(d.accent), 1);
+        rt.beginPath();
+        rt.moveTo(cx - torsoW * 0.7, cy - s * 0.05);
+        rt.lineTo(cx - s * 0.38, cy + s * 0.12);
+        rt.moveTo(cx + torsoW * 0.7, cy - s * 0.05);
+        rt.lineTo(cx + s * 0.38, cy + s * 0.12);
+        rt.strokePath();
+        /* Torso */
+        rt.fillStyle(hx(d.color), 1);
+        rt.fillEllipse(cx, cy, torsoW * 2, torsoH * 2);
+        rt.lineStyle(2.5, 0x0b1220, 1); rt.strokeEllipse(cx, cy, torsoW * 2, torsoH * 2);
+        rt.fillStyle(0xfef3c7, 0.92);
+        rt.fillEllipse(cx, cy + s * 0.04, torsoW * 1.1, torsoH * 1.15);
+        /* Head */
+        rt.fillStyle(hx(d.color), 1);
+        rt.fillCircle(cx, headY, headR);
+        rt.lineStyle(2.2, 0x0b1220, 1); rt.strokeCircle(cx, headY, headR);
+        rt.fillStyle(0xfb7185, 0.4);
+        rt.fillEllipse(cx - headR * 0.55, headY + headR * 0.2, headR * 0.35, headR * 0.22);
+        rt.fillEllipse(cx + headR * 0.55, headY + headR * 0.2, headR * 0.35, headR * 0.22);
+        /* Eyes */
         rt.fillStyle(0xffffff, 1);
-        rt.fillCircle(cx - r * 0.34, cy - r * 0.2, r * 0.24);
-        rt.fillCircle(cx + r * 0.34, cy - r * 0.2, r * 0.24);
-        rt.lineStyle(1.5, 0x0b1220, 0.9);
-        rt.strokeCircle(cx - r * 0.34, cy - r * 0.2, r * 0.24);
-        rt.strokeCircle(cx + r * 0.34, cy - r * 0.2, r * 0.24);
+        rt.fillCircle(cx - headR * 0.32, headY - headR * 0.05, headR * 0.28);
+        rt.fillCircle(cx + headR * 0.32, headY - headR * 0.05, headR * 0.28);
+        rt.lineStyle(1.2, 0x0b1220, 0.9);
+        rt.strokeCircle(cx - headR * 0.32, headY - headR * 0.05, headR * 0.28);
+        rt.strokeCircle(cx + headR * 0.32, headY - headR * 0.05, headR * 0.28);
         rt.fillStyle(hx(d.accent), 1);
-        rt.fillCircle(cx - r * 0.28, cy - r * 0.2, r * 0.12);
-        rt.fillCircle(cx + r * 0.4, cy - r * 0.2, r * 0.12);
-        rt.fillStyle(0xffffff, 1);
-        rt.fillCircle(cx - r * 0.34, cy - r * 0.28, r * 0.06);
-        rt.fillCircle(cx + r * 0.34, cy - r * 0.28, r * 0.06);
-        rt.lineStyle(2.5, 0x0b1220, 1);
-        rt.strokeEllipse(cx, cy + r * 0.35, r * 0.55, r * 0.28);
-        rt.fillStyle(hx(d.color), 1); rt.fillEllipse(cx, cy + r * 0.28, r * 0.55, r * 0.22);
+        rt.fillCircle(cx - headR * 0.28, headY - headR * 0.08, headR * 0.12);
+        rt.fillCircle(cx + headR * 0.36, headY - headR * 0.08, headR * 0.12);
+        /* Hat */
         rt.fillStyle(hx(d.hat), 1);
-        rt.fillTriangle(cx, cy - r * 1.2, cx - r * 0.75, cy - r * 0.15, cx + r * 0.75, cy - r * 0.15);
+        rt.fillTriangle(cx, headY - headR * 1.35, cx - headR * 0.85, headY - headR * 0.15, cx + headR * 0.85, headY - headR * 0.15);
         rt.generateTexture(key, s, s); rt.destroy();
       },
       drawCompound: function () {
@@ -674,7 +703,7 @@
         this.cameras.main.setBackgroundColor(Phaser.Display.Color.GetColor(bgR, bgG, bgB));
         /* polish3: snappier locomotion */
         /* tapsteer1: faster walk + drive */
-        var maxSp = this.inTruck ? 440 : 290, accel = this.inTruck ? 1050 : 920, fric = this.inTruck ? 5.2 : 8.8;
+        var maxSp = this.inTruck ? 440 : 345, accel = this.inTruck ? 1050 : 980, fric = this.inTruck ? 5.2 : 8.8;
         var body = this.player.body;
         var spPrev = Math.hypot(body.velocity.x, body.velocity.y);
         var steer = mergedSteer();
@@ -854,13 +883,13 @@
             zKey: "zLift",
             zvKey: "zVel",
             gndKey: "groundZ",
-            up: 230,
-            lift: 8,
-            groundHold: 0.022,
+            up: 280,
+            lift: 11,
+            groundHold: 0.011,
             groundEps: 2,
           });
           if (launchedP && wantMove) {
-            var hopSpP = Math.min(maxSp * 0.98, 320);
+            var hopSpP = Math.min(maxSp * 0.98, 410);
             body.velocity.x = sx * hopSpP;
             body.velocity.y = sy * hopSpP;
           }

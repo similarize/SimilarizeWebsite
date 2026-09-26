@@ -18,6 +18,9 @@
    polish11: truck yaw follows travel; brief EXIT tip; shared ZOOM ability.
    hop1: HOP ability (Y arc + squash); shove toys/animals/pollen.
    hop2: ranch foot ALWAYS hops (continuous arc); ability HOP = bigger jump.
+   hop3: faster loco + spam HOP + stack; articulated mechs.
+   track3: banks + rocks + live monster wheels (preserved).
+   hop4: snappier always-hop; humanoid frogs (torso+head, spring legs).
    joy2: shared virtual joystick via engine-boot setSteer; touch playfield aim disabled.
    WASD camera-relative — do not invert. */
 (function (global) {
@@ -82,64 +85,93 @@
     return parseInt(String(c).replace("#", ""), 16);
   }
 
+  /* hop4: humanoid frog — torso + head + big springy hind legs (animate via setFrogSpring) */
   function makeFrogMesh(def, scale) {
-    var s = (scale == null ? 1.55 : scale); // default bigger — readable from isometric cam
+    var s = (scale == null ? 1.55 : scale);
     var g = new THREE.Group();
     var bodyCol = hex(def.color);
-    var body = new THREE.Mesh(
-      new THREE.SphereGeometry(0.55 * s, 16, 12),
-      new THREE.MeshStandardMaterial({
-        color: bodyCol, roughness: 0.45, metalness: 0.08,
-        emissive: bodyCol, emissiveIntensity: 0.35,
-      })
-    );
-    body.position.y = 0.55 * s;
-    body.castShadow = true;
-    g.add(body);
-    // Belly highlight
+    var accentCol = hex(def.accent);
+    var bodyMat = new THREE.MeshStandardMaterial({
+      color: bodyCol, roughness: 0.45, metalness: 0.08,
+      emissive: bodyCol, emissiveIntensity: 0.32,
+    });
+    var accentMat = new THREE.MeshStandardMaterial({ color: accentCol, roughness: 0.5 });
+    /* Torso (ellipse-ish) */
+    var torso = new THREE.Mesh(new THREE.SphereGeometry(0.42 * s, 14, 12), bodyMat);
+    torso.scale.set(0.95, 1.15, 0.75);
+    torso.position.y = 0.72 * s;
+    torso.castShadow = true;
+    g.add(torso);
     var belly = new THREE.Mesh(
-      new THREE.SphereGeometry(0.32 * s, 10, 8),
+      new THREE.SphereGeometry(0.22 * s, 10, 8),
       new THREE.MeshStandardMaterial({ color: 0xfef3c7, roughness: 0.7 })
     );
-    belly.position.set(0, 0.42 * s, 0.28 * s);
-    belly.scale.set(1, 0.85, 0.55);
+    belly.position.set(0, 0.68 * s, 0.22 * s);
+    belly.scale.set(0.9, 1.1, 0.55);
     g.add(belly);
-    // Hat (distinct per frog)
+    /* Head */
+    var head = new THREE.Mesh(new THREE.SphereGeometry(0.32 * s, 12, 10), bodyMat);
+    head.position.y = 1.28 * s;
+    head.castShadow = true;
+    g.add(head);
+    /* Hat */
     var hat = new THREE.Mesh(
-      new THREE.ConeGeometry(0.34 * s, 0.42 * s, 8),
+      new THREE.ConeGeometry(0.26 * s, 0.34 * s, 8),
       new THREE.MeshStandardMaterial({
         color: hex(def.hat), roughness: 0.55,
         emissive: hex(def.hat), emissiveIntensity: 0.15,
       })
     );
-    hat.position.y = 1.15 * s;
+    hat.position.y = 1.62 * s;
     hat.castShadow = true;
     g.add(hat);
-    // Eyes (white + accent pupil)
+    /* Eyes on head (+Z = face) */
     var eyeWhite = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.1 });
-    var eyePupil = new THREE.MeshStandardMaterial({ color: hex(def.accent) });
+    var eyePupil = new THREE.MeshStandardMaterial({ color: accentCol });
     function eye(ox) {
-      var ew = new THREE.Mesh(new THREE.SphereGeometry(0.14 * s, 8, 8), eyeWhite);
-      ew.position.set(ox, 0.68 * s, 0.42 * s);
+      var ew = new THREE.Mesh(new THREE.SphereGeometry(0.1 * s, 8, 8), eyeWhite);
+      ew.position.set(ox, 1.32 * s, 0.26 * s);
       g.add(ew);
-      var ep = new THREE.Mesh(new THREE.SphereGeometry(0.065 * s, 6, 6), eyePupil);
-      ep.position.set(ox, 0.68 * s, 0.52 * s);
+      var ep = new THREE.Mesh(new THREE.SphereGeometry(0.045 * s, 6, 6), eyePupil);
+      ep.position.set(ox, 1.32 * s, 0.34 * s);
       g.add(ep);
     }
-    eye(-0.18 * s); eye(0.18 * s);
-    // Legs
-    var legM = new THREE.MeshStandardMaterial({ color: bodyCol, roughness: 0.55 });
-    for (var li = 0; li < 4; li++) {
-      var leg = new THREE.Mesh(new THREE.CylinderGeometry(0.07 * s, 0.09 * s, 0.28 * s, 6), legM);
-      var side = li < 2 ? -1 : 1;
-      var fore = li % 2 === 0 ? 1 : -1;
-      leg.position.set(side * 0.28 * s, 0.18 * s, fore * 0.22 * s);
-      leg.rotation.z = side * 0.35;
-      g.add(leg);
+    eye(-0.12 * s); eye(0.12 * s);
+    /* Arms */
+    for (var ai = 0; ai < 2; ai++) {
+      var aside = ai === 0 ? -1 : 1;
+      var arm = new THREE.Mesh(new THREE.CylinderGeometry(0.05 * s, 0.06 * s, 0.32 * s, 6), bodyMat);
+      arm.position.set(aside * 0.38 * s, 0.78 * s, 0.05 * s);
+      arm.rotation.z = aside * 0.55;
+      g.add(arm);
     }
-    // Ground selection ring (player/AI readable)
+    /* Big springy hind legs — thigh + shin + foot; refs for hop spring */
+    var legRoots = [];
+    for (var li = 0; li < 2; li++) {
+      var side = li === 0 ? -1 : 1;
+      var root = new THREE.Group();
+      root.position.set(side * 0.22 * s, 0.48 * s, -0.06 * s);
+      var thigh = new THREE.Mesh(new THREE.CylinderGeometry(0.09 * s, 0.11 * s, 0.45 * s, 7), accentMat);
+      thigh.position.y = -0.2 * s;
+      thigh.castShadow = true;
+      root.add(thigh);
+      var knee = new THREE.Group();
+      knee.position.y = -0.42 * s;
+      var shin = new THREE.Mesh(new THREE.CylinderGeometry(0.07 * s, 0.09 * s, 0.4 * s, 7), bodyMat);
+      shin.position.y = -0.18 * s;
+      shin.castShadow = true;
+      knee.add(shin);
+      var foot = new THREE.Mesh(new THREE.SphereGeometry(0.11 * s, 8, 6), accentMat);
+      foot.scale.set(1.4, 0.45, 1.1);
+      foot.position.set(0, -0.38 * s, 0.06 * s);
+      knee.add(foot);
+      root.add(knee);
+      g.add(root);
+      legRoots.push({ root: root, knee: knee, side: side, s: s });
+    }
+    /* Ground selection ring */
     var ring = new THREE.Mesh(
-      new THREE.RingGeometry(0.55 * s, 0.72 * s, 28),
+      new THREE.RingGeometry(0.5 * s, 0.68 * s, 28),
       new THREE.MeshBasicMaterial({
         color: bodyCol, transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false,
       })
@@ -150,8 +182,26 @@
     g.add(ring);
     g.userData.ring = ring;
     g.userData.frogId = def.id;
+    g.userData.legRoots = legRoots;
+    g.userData.frogScale = s;
     g.castShadow = true;
+    setFrogSpring(g, 0);
     return g;
+  }
+
+  /* hop4: spring=0 tuck on land; spring=1 legs kick out mid-hop */
+  function setFrogSpring(mesh, spring) {
+    if (!mesh || !mesh.userData.legRoots) return;
+    var sp = Math.max(0, Math.min(1.2, spring || 0));
+    var legs = mesh.userData.legRoots;
+    for (var i = 0; i < legs.length; i++) {
+      var L = legs[i];
+      var side = L.side;
+      /* Tuck: thighs under body; spring: thighs kick back/out, shin unfolds */
+      L.root.rotation.x = -0.55 + sp * 1.15;
+      L.root.rotation.z = side * (0.35 - sp * 0.15);
+      L.knee.rotation.x = 1.35 - sp * 1.55;
+    }
   }
 
   function labelSprite(text, color) {
@@ -975,7 +1025,7 @@
     state.playerShadowSoft.renderOrder = 1;
     scene.add(state.playerShadowSoft);
     state.nameTag = labelSprite(def.name, def.color || "#fff");
-    state.nameTag.position.set(spawn.x, 2.6, spawn.z);
+    state.nameTag.position.set(spawn.x, 2.95, spawn.z);
     state.nameTag.scale.set(2.8, 0.7, 1);
     scene.add(state.nameTag);
     /* polish9: aboard frog icons (shared truck) */
@@ -1031,7 +1081,7 @@
       scene.add(cmesh);
       var ctag = labelSprite(cdef.name, cdef.color || "#fff");
       ctag.scale.set(2.0, 0.5, 1);
-      ctag.position.set(cp.x, 2.2, cp.z);
+      ctag.position.set(cp.x, 2.55, cp.z);
       scene.add(ctag);
       cmesh.userData.nameTag = ctag;
       state.companions.push(cmesh);
@@ -1541,7 +1591,7 @@
 
     /* polish3: snappier locomotion (Canvas feel port) */
     /* tapsteer1: noticeably snappier walk + drive */
-    var maxSp = state.mode === "space" ? 7.5 : state.inTruck ? 15.8 : 11.2;
+    var maxSp = state.mode === "space" ? 7.5 : state.inTruck ? 15.8 : 13.6;
     var accel = state.mode === "space" ? 16 : state.inTruck ? 38 : 34;
     var fric = state.mode === "space" ? 3.0 : state.inTruck ? 4.8 : 7.8;
 
@@ -1912,6 +1962,8 @@
         var sy = 1 + Math.min(0.4, airH * 0.4) + st3 * 0.18 - sq * 0.3;
         var sx = 1 - Math.min(0.26, airH * 0.26) - st3 * 0.12 + sq * 0.34;
         state.player.scale.set(sx, sy, sx);
+        /* hop4: legs spring out mid-air, tuck on land */
+        setFrogSpring(state.player, Math.min(1.15, airH * 1.1 + st3 * 0.5 - sq * 0.7));
         if (C.tickLocoHop) {
           state.groundLift = state.groundLift || 0;
           var launched3 = C.tickLocoHop(state, dt, {
@@ -1919,13 +1971,13 @@
             zKey: "zLift",
             zvKey: "zVel",
             gndKey: "groundLift",
-            up: 5.6,
-            lift: 0.22,
-            groundHold: 0.022,
+            up: 7.0,
+            lift: 0.30,
+            groundHold: 0.011,
             groundEps: 0.08,
           });
           if (launched3 && wantMove3) {
-            var hopSp3 = Math.min(maxSp * 0.98, 13.2);
+            var hopSp3 = Math.min(maxSp * 0.98, 16.8);
             state.vx = hopMx * hopSp3;
             state.vz = hopMz * hopSp3;
           }
@@ -2013,7 +2065,7 @@
     }
 
     if (state.nameTag) {
-      state.nameTag.position.set(state.player.position.x, 2.6 + (state.player.position.y || 0), state.player.position.z);
+      state.nameTag.position.set(state.player.position.x, 2.95 + (state.player.position.y || 0), state.player.position.z);
       state.nameTag.visible = true;
     }
     /* polish9: aboard icons when shared */
@@ -2172,9 +2224,10 @@
           if (Math.hypot(cdx, cdz) > 0.05) c.userData.faceYaw = Math.atan2(cdx, cdz);
         }
         c.scale.x = 1;
+        setFrogSpring(c, Math.abs(Math.sin(c.userData.idleBounce || 0)) * 0.35);
         c.rotation.y = (c.userData.faceYaw != null) ? c.userData.faceYaw : 0;
         if (c.userData.nameTag) {
-          c.userData.nameTag.position.set(c.position.x, c.position.y + 2.2, c.position.z);
+          c.userData.nameTag.position.set(c.position.x, c.position.y + 2.55, c.position.z);
           c.userData.nameTag.visible = c.visible;
         }
       }

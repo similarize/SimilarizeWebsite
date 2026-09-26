@@ -23,6 +23,7 @@
    hop2: ranch foot ALWAYS hops (continuous arc cycle); ability HOP = bigger jump;
    hop3: faster loco hop + spam HOP + stack height; mech robots;
    track3: banked turns + rock obstacles (hard bounce) + live monster-truck wheels; more cam zoom-out;
+   hop4: faster always-hop carry/plant/launch; humanoid frogs (torso+head, spring legs);
    particle caps; sunset sky shift over play time.
    mobile1: phone+desktop shared UI — smaller/toggle-friendly mini-map + harder particle caps on narrow.
    ~10× map: real roam between ranch house / track / pond / Starship.
@@ -1076,7 +1077,7 @@
   function moveEntity(ent, dt, speed, world) {
     /* polish3 + polish10: snappier walk/drive — quicker ramp + firmer stop */
     /* tapsteer1: noticeably faster walk + drive */
-    var walkMax = 310;
+    var walkMax = 345;
     var truckMax = 420;
     var maxSp = (ent.inTruck ? truckMax : walkMax) * (ent.speedBoost || 1);
     if (ent.inTruck && ent.dashTrail > 0) maxSp *= 1.28;
@@ -1185,13 +1186,13 @@
       var wantHop = mag > 0.05;
       var launched = canon.tickLocoHop(ent, dt, {
         moving: wantHop,
-        up: 215,
-        lift: 7,
-        groundHold: 0.022,
+        up: 265,
+        lift: 10,
+        groundHold: 0.011,
         groundEps: 1.2,
       });
       if (launched && mag > 0.05) {
-        var hopSp = Math.min(maxSp * 0.98, 305);
+        var hopSp = Math.min(maxSp * 0.98, 400);
         ent.vx = mx * hopSp;
         ent.vy = my * hopSp;
       }
@@ -2880,103 +2881,155 @@
       return p;
     }
 
-    /* polish3: charming readable frog — blush, smile, thick rim, big eyes */
+    /* hop4: humanoid frog — torso + head, big springy legs (extend mid-hop, tuck on land) */
     /* polish6: softer drop shadow under character */
     /* eyes1: rotate body/face toward faceAngle (walk dir); idle keeps last */
     var shA = 0.4 - Math.min(0.24, (frog.z || 0) * 0.005);
-    var shW = s * (1.18 - Math.min(0.4, (frog.z || 0) * 0.009));
-    drawSoftShadow(ctx, p.x, p.y + 5, shW, s * 0.36, shA);
-    var by = p.y - s * 0.42 - lift;
-    var legKick = (!frog.inTruck && (frog.walkPhase || 0) > 0.05 && (frog.z || 0) < 4)
-      ? Math.sin(frog.walkPhase * 2) * 3.2 * p.depth : 0;
+    var shW = s * (1.05 - Math.min(0.35, (frog.z || 0) * 0.009));
+    drawSoftShadow(ctx, p.x, p.y + 6, shW, s * 0.32, shA);
+    var by = p.y - s * 0.55 - lift;
     var faceA = (frog.faceAngle != null && isFinite(frog.faceAngle)) ? frog.faceAngle : -Math.PI / 2;
-    var groundY = (p.y - by) + 2 - lift * 0.2; /* legs toward feet in local space */
-    /* hop2: stretch mid-air (+ hopStretch punch), squash on land */
+    /* hop2/hop4: stretch mid-air (+ hopStretch), squash on land; spring = leg extend amount */
     var airZ = frog.z || 0;
     var sq = frog.hopSquash || 0;
     var st = frog.hopStretch || 0;
-    var stretchY = 1 + Math.min(0.42, airZ * 0.012) + st * 0.2 - sq * 0.32;
-    var stretchX = 1 - Math.min(0.28, airZ * 0.008) - st * 0.14 + sq * 0.36;
+    var spring = Math.max(0, Math.min(1.15, airZ * 0.028 + st * 0.55 - sq * 0.85));
+    var stretchY = 1 + Math.min(0.28, airZ * 0.008) + st * 0.12 - sq * 0.22;
+    var stretchX = 1 - Math.min(0.18, airZ * 0.005) - st * 0.08 + sq * 0.22;
+    var d = p.depth;
+    var hipY = s * 0.22;
+    var thighLen = s * (0.55 + spring * 0.55);
+    var shinLen = s * (0.48 + spring * 0.62);
+    var outX = s * (0.22 + spring * 0.55);
+    var kick = (!frog.inTruck && spring < 0.15 && (frog.walkPhase || 0) > 0.05)
+      ? Math.sin(frog.walkPhase * 2) * 2.4 * d : 0;
     ctx.save();
     ctx.translate(p.x, by);
     ctx.rotate(faceA + Math.PI / 2); /* canonical face points screen-up */
     ctx.scale(stretchX, stretchY);
+    /* Big springy hind legs — Z-fold: hip → knee out → foot; spring out mid-hop, tuck on land */
+    function drawSpringLeg(side) {
+      var hx = side * s * 0.28;
+      var hy = hipY;
+      var kx = side * outX + kick * side * 0.15;
+      var ky = hy + thighLen * (0.55 + spring * 0.15);
+      var fx = side * (outX * 0.55 + s * 0.08) + kick * side;
+      var fy = hy + thighLen + shinLen * (0.75 - spring * 0.12);
+      ctx.strokeStyle = frog.accent;
+      ctx.lineWidth = Math.max(3.4, s * 0.22);
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.beginPath();
+      ctx.moveTo(hx, hy);
+      ctx.lineTo(kx, ky);
+      ctx.lineTo(fx, fy);
+      ctx.stroke();
+      ctx.strokeStyle = frog.color;
+      ctx.lineWidth = Math.max(2.2, s * 0.14);
+      ctx.beginPath();
+      ctx.moveTo(hx, hy);
+      ctx.lineTo(kx, ky);
+      ctx.lineTo(fx, fy);
+      ctx.stroke();
+      /* Foot pad */
+      ctx.fillStyle = frog.accent;
+      ctx.beginPath();
+      ctx.ellipse(fx, fy + 1.5 * d, s * (0.22 + spring * 0.06), s * 0.1, side * 0.25, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    drawSpringLeg(-1);
+    drawSpringLeg(1);
+    /* Small arms */
     ctx.strokeStyle = frog.accent;
-    ctx.lineWidth = 3.2 * p.depth;
+    ctx.lineWidth = Math.max(2.2, s * 0.12);
     ctx.lineCap = "round";
     ctx.beginPath();
-    ctx.moveTo(-6 * p.depth, s * 0.5);
-    ctx.lineTo(-12 * p.depth, groundY + legKick);
-    ctx.moveTo(6 * p.depth, s * 0.5);
-    ctx.lineTo(12 * p.depth, groundY - legKick);
+    ctx.moveTo(-s * 0.38, -s * 0.05);
+    ctx.lineTo(-s * (0.55 + spring * 0.08), s * 0.28);
+    ctx.moveTo(s * 0.38, -s * 0.05);
+    ctx.lineTo(s * (0.55 + spring * 0.08), s * 0.28);
     ctx.stroke();
-    var bg = ctx.createRadialGradient(-4, -5, 2, 0, 0, s * 1.05);
-    bg.addColorStop(0, frog.color);
-    bg.addColorStop(0.7, frog.color);
-    bg.addColorStop(1, frog.accent);
-    ctx.fillStyle = bg;
-    ctx.beginPath(); ctx.arc(0, 0, s, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = "#0b1220"; ctx.lineWidth = 2.6; ctx.stroke();
-    ctx.strokeStyle = frog.accent; ctx.lineWidth = 1.6; ctx.stroke();
-    /* Belly */
-    ctx.fillStyle = "rgba(254, 243, 199, 0.85)";
+    /* Torso */
+    var torsoGrad = ctx.createRadialGradient(-3, -s * 0.15, 2, 0, 0, s * 0.7);
+    torsoGrad.addColorStop(0, frog.color);
+    torsoGrad.addColorStop(0.75, frog.color);
+    torsoGrad.addColorStop(1, frog.accent);
+    ctx.fillStyle = torsoGrad;
     ctx.beginPath();
-    ctx.ellipse(0, s * 0.18, s * 0.42, s * 0.32, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, s * 0.02, s * 0.52, s * 0.58, 0, 0, Math.PI * 2);
     ctx.fill();
-    /* Blush — canonical (no facing flip; rotation handles look dir) */
+    ctx.strokeStyle = "#0b1220"; ctx.lineWidth = 2.4; ctx.stroke();
+    ctx.strokeStyle = frog.accent; ctx.lineWidth = 1.4; ctx.stroke();
+    /* Belly */
+    ctx.fillStyle = "rgba(254, 243, 199, 0.88)";
+    ctx.beginPath();
+    ctx.ellipse(0, s * 0.12, s * 0.28, s * 0.34, 0, 0, Math.PI * 2);
+    ctx.fill();
+    /* Head */
+    var headR = s * 0.42;
+    var headY = -s * 0.72;
+    var hg = ctx.createRadialGradient(-2, headY - 3, 1, 0, headY, headR);
+    hg.addColorStop(0, frog.color);
+    hg.addColorStop(1, frog.accent);
+    ctx.fillStyle = hg;
+    ctx.beginPath(); ctx.arc(0, headY, headR, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = "#0b1220"; ctx.lineWidth = 2.2; ctx.stroke();
+    /* Blush on cheeks */
     ctx.fillStyle = "rgba(251, 113, 133, 0.45)";
     ctx.beginPath();
-    ctx.ellipse(-7 * p.depth, s * 0.12, 3.2 * p.depth, 2.2 * p.depth, 0, 0, Math.PI * 2);
-    ctx.ellipse(8 * p.depth, s * 0.12, 3.2 * p.depth, 2.2 * p.depth, 0, 0, Math.PI * 2);
+    ctx.ellipse(-headR * 0.55, headY + headR * 0.2, 2.8 * d, 1.9 * d, 0, 0, Math.PI * 2);
+    ctx.ellipse(headR * 0.55, headY + headR * 0.2, 2.8 * d, 1.9 * d, 0, 0, Math.PI * 2);
     ctx.fill();
-    /* Hat */
+    /* Hat on head */
     ctx.fillStyle = frog.hat || "#facc15";
     ctx.beginPath();
-    ctx.ellipse(0, -s * 0.85, s * 0.82, s * 0.3, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, headY - headR * 0.55, headR * 0.95, headR * 0.28, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillRect(-s * 0.38, -s * 1.4, s * 0.76, s * 0.55);
+    ctx.fillRect(-headR * 0.42, headY - headR * 1.35, headR * 0.84, headR * 0.7);
     ctx.strokeStyle = "#0b1220";
-    ctx.lineWidth = 1.4;
-    ctx.strokeRect(-s * 0.38, -s * 1.4, s * 0.76, s * 0.55);
-    /* Eyes — pupils bias "forward" (local -Y = walk dir after rotate) */
-    var eL = -5 * p.depth;
-    var eR = 6.2 * p.depth;
-    var eY = -s * 0.28;
+    ctx.lineWidth = 1.3;
+    ctx.strokeRect(-headR * 0.42, headY - headR * 1.35, headR * 0.84, headR * 0.7);
+    /* Eyes — pupils bias forward (local -Y) */
+    var eL = -headR * 0.32;
+    var eR = headR * 0.36;
+    var eY = headY - headR * 0.08;
+    var eRsz = headR * 0.28;
     ctx.fillStyle = "#fff";
     ctx.beginPath();
-    ctx.arc(eL, eY, 4.2 * p.depth, 0, Math.PI * 2);
-    ctx.arc(eR, eY, 4.2 * p.depth, 0, Math.PI * 2);
+    ctx.arc(eL, eY, eRsz, 0, Math.PI * 2);
+    ctx.arc(eR, eY, eRsz, 0, Math.PI * 2);
     ctx.fill();
     ctx.strokeStyle = "#0b1220";
-    ctx.lineWidth = 1.2;
+    ctx.lineWidth = 1.15;
     ctx.beginPath();
-    ctx.arc(eL, eY, 4.2 * p.depth, 0, Math.PI * 2);
-    ctx.arc(eR, eY, 4.2 * p.depth, 0, Math.PI * 2);
+    ctx.arc(eL, eY, eRsz, 0, Math.PI * 2);
+    ctx.arc(eR, eY, eRsz, 0, Math.PI * 2);
     ctx.stroke();
     ctx.fillStyle = "#111";
     ctx.beginPath();
-    ctx.arc(eL, eY - 0.9 * p.depth, 1.9 * p.depth, 0, Math.PI * 2);
-    ctx.arc(eR, eY - 0.9 * p.depth, 1.9 * p.depth, 0, Math.PI * 2);
+    ctx.arc(eL, eY - 0.7 * d, eRsz * 0.45, 0, Math.PI * 2);
+    ctx.arc(eR, eY - 0.7 * d, eRsz * 0.45, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = "#fff";
     ctx.beginPath();
-    ctx.arc(eL - 0.2 * p.depth, eY - 1.6 * p.depth, 0.7 * p.depth, 0, Math.PI * 2);
-    ctx.arc(eR - 0.2 * p.depth, eY - 1.6 * p.depth, 0.7 * p.depth, 0, Math.PI * 2);
+    ctx.arc(eL - 0.15 * d, eY - 1.3 * d, eRsz * 0.18, 0, Math.PI * 2);
+    ctx.arc(eR - 0.15 * d, eY - 1.3 * d, eRsz * 0.18, 0, Math.PI * 2);
     ctx.fill();
-    /* Smile */
+    /* Smile on head */
     ctx.strokeStyle = "#0b1220";
-    ctx.lineWidth = 1.6 * p.depth;
+    ctx.lineWidth = 1.5 * d;
     ctx.beginPath();
-    ctx.arc(0, s * 0.22, 4.5 * p.depth, 0.15, Math.PI - 0.15);
+    ctx.arc(0, headY + headR * 0.28, headR * 0.32, 0.15, Math.PI - 0.15);
     ctx.stroke();
     ctx.restore();
+    var plateTop = by - s * 1.35;
     /* polish9/10: quieter nameplates — name only; local ring; no · AI clutter */
     if (frog.local) {
       ctx.strokeStyle = "rgba(255,255,255,0.75)";
       ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.arc(p.x, by, s + 5, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(p.x, by + s * 0.1, s * 0.7, s * 0.95, 0, 0, Math.PI * 2); ctx.stroke();
     }
-    drawNameplate(ctx, frog.name || "Frog", p.x, by - s - 12, frog.color || "#fff", p.depth, !frog.local);
+    drawNameplate(ctx, frog.name || "Frog", p.x, plateTop, frog.color || "#fff", p.depth, !frog.local);
     /* polish7: chat bubble one-liner (existing canon strings only) */
     if (frog.chatT > 0 && frog.chatLine) {
       var alpha = Math.min(1, frog.chatT * 1.4);
@@ -2984,7 +3037,7 @@
       ctx.font = "bold 10px Segoe UI, system-ui, sans-serif";
       var tw = Math.min(160, ctx.measureText(msg).width + 14);
       var bx = p.x;
-      var byb = by - s - 22;
+      var byb = plateTop - 10;
       ctx.fillStyle = "rgba(255,255,255," + (0.92 * alpha) + ")";
       ctx.strokeStyle = "rgba(15,23,42," + (0.85 * alpha) + ")";
       ctx.lineWidth = 1.5;

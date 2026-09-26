@@ -1,3 +1,9 @@
+## What's new (hop4) — faster hop + humanoid spring-leg frogs
+- **Faster always-hop loco:** Higher launch + shorter ground plant (~0.011s) + stronger hop carry. Walk max nudged up. Snappier than hop3 — frogs cover ground faster while still always-hopping.
+- **Humanoid frogs (not squish spheres):** Torso + head silhouette; **big springy legs** fold/extend on hop (spring out mid-air, tuck on land). Canvas lead draw; Three articulated thigh/shin; Phaser texture matches silhouette. Colors + hats per frog kept. Names-only plates.
+- Keep: hop3 combo/cooldown (~0.1s spam HOP + stack height), robot mechs, shove props, joystick, garage1 door, polish11 truck yaw / EXIT tip, **track3 banks/rocks/monster wheels**. Cast: James, Jimmy, Bubbles, Rexy.
+- Cache-bust: `?v=20260926-hop4`. Cast unchanged. No SPS arcade republish. (Parent may merge after track3 publish.)
+
 ## What's new (track3) — real Cybertruck track + monster wheels
 - **Monster track:** Banked turn berms + jump ramps/mounds + **big rock obstacles** that bounce the truck hard (jolt ∝ wheel size × speed). Canvas lead visual + physics; Three + Phaser parity (banks/rocks elev + rock hit).
 - **Live wheel size:** While driving, HUD **WHEELS** slider / **− +** (or hold **[ ]** / **- =**). Scale from stock Cybertruck (~1×) up to huge monster-truck wheels (~2.65×). Bigger wheels = more clearance, stronger suspension bounce, better ramp/rock jump physics.
