@@ -16,6 +16,7 @@
    truck1: kid-toy truck scale; smooth yaw drive toward aim; track elev / crest / land bounce.
    truck2: EXIT anytime (HUD); full elev contact (no zLift damp); ribbon/ramp ride-up; crest launch.
    polish11: truck yaw follows travel; brief EXIT tip; shared ZOOM ability.
+   hop1: HOP ability (Y arc + squash); shove toys/animals/pollen.
    joy2: shared virtual joystick via engine-boot setSteer; touch playfield aim disabled.
    WASD camera-relative — do not invert. */
 (function (global) {
@@ -346,8 +347,11 @@
     yardM.renderOrder = -1;
     scene.add(yardM);
     addLabel("Backyard", "#ecfccb", yp.x, 1.2, yp.z);
+    state.pushables = state.pushables || [];
     for (var ai = 0; ai < 40; ai++) {
-      var ap = worldToThree(yard.x + 30 + Math.random() * (yard.w - 60), yard.y + 40 + Math.random() * (yard.h - 80));
+      var awx = yard.x + 30 + Math.random() * (yard.w - 60);
+      var awy = yard.y + 40 + Math.random() * (yard.h - 80);
+      var ap = worldToThree(awx, awy);
       var ar = 0.22 + Math.random() * 0.16;
       var animal = new THREE.Mesh(
         new THREE.SphereGeometry(ar, 8, 6),
@@ -359,6 +363,10 @@
         new THREE.MeshStandardMaterial({ color: ai % 2 ? 0xc4a574 : 0x8b6914 })
       );
       head.position.set(ap.x + ar * 0.7, ar * 1.1, ap.z); scene.add(head);
+      state.pushables.push({
+        mesh: animal, head: head, x: awx, y: awy, vx: 0, vy: 0, r: 12 + ar * 20, kind: "animal", ar: ar,
+        headOx: ar * 0.7, bounds: { x0: yard.x + 20, y0: yard.y + 30, x1: yard.x + yard.w - 20, y1: yard.y + yard.h - 20 },
+      });
     }
     var gar = cp.garage || { x: 700, y: 1400, w: 480, h: 520 };
     var gp = worldToThree(gar.x + gar.w / 2, gar.y + gar.h / 2);
@@ -407,10 +415,16 @@
     state.garageOpenLabel.visible = false;
     scene.add(state.garageOpenLabel);
     addLabel("Garage · James toys", "#fff", gp.x, 2.9, gp.z);
+    state.pushables = state.pushables || [];
     for (var t = 0; t < 32; t++) {
-      var tp = worldToThree(gar.x + 40 + (t % 8) * 48, gar.y + 70 + Math.floor(t / 8) * 50);
+      var twx = gar.x + 40 + (t % 8) * 48, twy = gar.y + 70 + Math.floor(t / 8) * 50;
+      var tp = worldToThree(twx, twy);
       var toy = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.22, 0.22), new THREE.MeshStandardMaterial({ color: 0xfbbf24 }));
       toy.position.set(tp.x, 0.2, tp.z); scene.add(toy);
+      state.pushables.push({
+        mesh: toy, x: twx, y: twy, vx: 0, vy: 0, r: 10, kind: "toy",
+        bounds: { x0: gar.x + 20, y0: gar.y + 50, x1: gar.x + gar.w - 20, y1: gar.y + gar.h - 40 },
+      });
     }
     var house = cp.house || { x: 120, y: 1420, w: 520, h: 420 };
     var hp = worldToThree(house.x + house.w / 2, house.y + house.h / 2);
@@ -1299,10 +1313,9 @@
   }
 
   function doAbility() {
-    /* polish11: shared ZOOM — speed burst along face + spark juice */
+    /* hop1: shared HOP — vertical arc + forward carry */
     if (!state || state.cd > 0) return;
     state.cd = 5.5;
-    var def = C.FROG_DEFS[state.frogId];
     var yaw = (state.faceYaw != null) ? state.faceYaw : 0;
     var spA = Math.hypot(state.vx || 0, state.vz || 0);
     if (spA > 1.0) yaw = Math.atan2(state.vx, state.vz);
@@ -1314,12 +1327,12 @@
         var kick = ((state.orbitCfg && state.orbitCfg.hardThrustImpulse) || 320) * 0.02;
         state.vx = Math.cos(state.orbitAngle || 0) * kick;
         state.vz = Math.sin(state.orbitAngle || 0) * kick;
-        state.toast = "ZOOM · left Moon orbit";
+        state.toast = "HOP · left Moon orbit";
       } else {
         var impulseS = 5.5;
         state.vx += fx * impulseS;
         state.vz += fz * impulseS;
-        state.toast = "ZOOM · thruster!";
+        state.toast = "HOP · thruster!";
         if (state.jimmy) {
           state.jimmyVx = (Math.random() > 0.5 ? 1 : -1) * 4;
           state.jimmyVz = -3;
@@ -1327,29 +1340,32 @@
         }
       }
     } else {
-      var impulse = state.inTruck ? 9.5 : 7.2;
-      state.vx += fx * impulse;
-      state.vz += fz * impulse;
-      state.toast = state.inTruck ? "ZOOM · truck boost!" : "ZOOM!";
-      /* spark trail juice */
+      var fwd = state.inTruck ? 6.5 : 4.8;
+      var up = state.inTruck ? 7.2 : 8.5;
+      state.vx += fx * fwd;
+      state.vz += fz * fwd;
+      state.zVel = Math.max(state.zVel || 0, up);
+      state.zLift = Math.max(state.zLift || 0, (state.groundLift || 0) + 0.25);
+      state.hopSquash = 0; state.hopStretch = 1;
+      state.toast = state.inTruck ? "HOP · truck jump!" : "HOP!";
       if (!state.fx) state.fx = [];
-      for (var zi = 0; zi < 10; zi++) {
+      for (var zi = 0; zi < 8; zi++) {
         var spark = new THREE.Mesh(
           new THREE.SphereGeometry(0.05 + (zi % 3) * 0.02, 5, 4),
-          new THREE.MeshBasicMaterial({ color: zi % 2 ? 0xfbbf24 : 0x7dd3fc, transparent: true, opacity: 0.9 })
+          new THREE.MeshBasicMaterial({ color: zi % 2 ? 0x86efac : 0x4ade80, transparent: true, opacity: 0.9 })
         );
         spark.position.set(
-          state.player.position.x - fx * (0.2 + zi * 0.12),
-          0.35 + Math.random() * 0.2,
-          state.player.position.z - fz * (0.2 + zi * 0.12)
+          state.player.position.x - fx * (0.15 + zi * 0.1),
+          0.25 + Math.random() * 0.15,
+          state.player.position.z - fz * (0.15 + zi * 0.1)
         );
         scene.add(spark);
-        state.fx.push({ mesh: spark, life: 0.4 + zi * 0.02, rise: 0.6, vx: -fx * (1.5 + zi * 0.2), vz: -fz * (1.5 + zi * 0.2) });
+        state.fx.push({ mesh: spark, life: 0.35 + zi * 0.02, rise: 0.8, vx: -fx * (1.2 + zi * 0.15), vz: -fz * (1.2 + zi * 0.15) });
       }
     }
     state.toastT = 1.8;
     if (hooks.onToast) hooks.onToast(state.toast);
-    if (hooks.onAbilityFire) hooks.onAbilityFire(state.frogId, "ZOOM");
+    if (hooks.onAbilityFire) hooks.onAbilityFire(state.frogId, "HOP");
   }
 
   function tick() {
@@ -1732,7 +1748,68 @@
         }
       }
       /* truck2: player Y tracks full elev (hidden while driving; cam/companions use it) */
-      state.player.position.y = (state.zLift || 0) + Math.abs(Math.sin(state.bob)) * (sp > 0.5 ? 0.06 : 0.02);
+      /* hop1: Y lift + squash/stretch */
+      var airH = Math.max(0, (state.zLift || 0) - (state.groundLift || 0));
+      if (state._wasHopAir && airH < 0.04) state.hopSquash = 1;
+      state._wasHopAir = airH > 0.2;
+      if (state.hopSquash > 0) state.hopSquash = Math.max(0, state.hopSquash - dt * 4);
+      if (state.hopStretch > 0) state.hopStretch = Math.max(0, state.hopStretch - dt * 2.5);
+      var bobY = Math.abs(Math.sin(state.bob)) * (sp > 0.5 ? 0.06 : 0.02);
+      state.player.position.y = (state.zLift || 0) + bobY;
+      if (!state.inTruck) {
+        var sq = state.hopSquash || 0;
+        var sy = 1 + Math.min(0.35, airH * 0.35) - sq * 0.28;
+        var sx = 1 - Math.min(0.22, airH * 0.22) + sq * 0.32;
+        state.player.scale.set(sx, sy, sx);
+        if (airH < 0.08 && sp > 5.5) {
+          state.autoHopCd = (state.autoHopCd || 0) - dt;
+          if (state.autoHopCd <= 0) {
+            state.autoHopCd = 0.3;
+            state.zVel = Math.max(state.zVel || 0, 5.2);
+            state.zLift = Math.max(state.zLift || 0, (state.groundLift || 0) + 0.15);
+            state.hopStretch = 0.7;
+          }
+        }
+      } else {
+        state.player.scale.set(1, 1, 1);
+      }
+      /* hop1: shove small props + sync meshes */
+      if (C.shoveSmallProp && C.tickPushable && state.pushables) {
+        var wFrog = threeToWorld(state.player.position.x, state.player.position.z);
+        var fvx = (state.vx || 0) / 0.02, fvy = (state.vz || 0) / 0.02;
+        for (var pui = 0; pui < state.pushables.length; pui++) {
+          var pu = state.pushables[pui];
+          if (!state.inTruck) C.shoveSmallProp(pu, wFrog.x, wFrog.y, 20, fvx, fvy, { propR: pu.r, strength: pu.kind === "animal" ? 0.85 : 1 });
+          C.tickPushable(pu, dt, { friction: 4.6, bounce: 0.4, bounds: pu.bounds });
+          var pt3 = worldToThree(pu.x, pu.y);
+          if (pu.mesh) {
+            pu.mesh.position.x = pt3.x;
+            pu.mesh.position.z = pt3.z;
+            if (pu.ar != null) pu.mesh.position.y = pu.ar;
+          }
+          if (pu.head) {
+            pu.head.position.x = pt3.x + (pu.headOx || 0);
+            pu.head.position.z = pt3.z;
+            if (pu.ar != null) pu.head.position.y = pu.ar * 1.1;
+          }
+        }
+      }
+      if (C.shoveSmallProp && state.ambient && !state.inTruck) {
+        var wF2 = threeToWorld(state.player.position.x, state.player.position.z);
+        var fvx = (state.vx || 0) / 0.02, fvy = (state.vz || 0) / 0.02;
+        for (var ami3 = 0; ami3 < state.ambient.length; ami3++) {
+          var am3 = state.ambient[ami3];
+          var ww = threeToWorld(am3.position.x, am3.position.z);
+          var prop = { x: ww.x, y: ww.y, vx: 0, vy: 0, r: 6 };
+          if (C.shoveSmallProp(prop, wF2.x, wF2.y, 18, fvx, fvy, { propR: 6, strength: 0.55 })) {
+            var at3 = worldToThree(prop.x, prop.y);
+            am3.position.x = at3.x;
+            am3.position.z = at3.z;
+            am3.userData.vx = (am3.userData.vx || 0) + prop.vx * 0.012;
+            am3.userData.vz = (am3.userData.vz || 0) + prop.vy * 0.012;
+          }
+        }
+      }
     }
 
     // solid1: solid walls / mech pads / parked trucks (doorways stay walkable)
@@ -2068,7 +2145,7 @@
         inOrbit: !!state.inOrbit,
         inTruck: !!state.inTruck,
         near: state.inTruck ? true : state.near,
-        ability: "ZOOM",
+        ability: "HOP",
         cd: state.cd,
         walk: (function () {
           if (state.mode === "space") return state.inOrbit ? "🌍 Orbit" : "🚀 Space";

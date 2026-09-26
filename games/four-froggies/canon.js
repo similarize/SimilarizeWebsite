@@ -7,17 +7,18 @@
    polish10: zone signs fade when close (frogs readable).
    solid1: shared solid walls / mech pads / parked trucks; house doorway open.
    truck1: kid-toy truck scale constants; trackElevAt for path/mound undulation.
-   truck2: stronger trackElevAt + ramp wedges; exit anytime HUD. */
+   truck2: stronger trackElevAt + ramp wedges; exit anytime HUD.
+   hop1: HOP ability (replaces ZOOM); shoveSmallProp for toys/animals/pollen. */
 (function (global) {
   "use strict";
 
   var FROG_ORDER = ["james", "jimmy", "bubbles", "rexy"];
 
   var FROG_DEFS = {
-    james: { id: "james", name: "James", role: "Wheel", color: "#4ade80", accent: "#166534", hat: "#facc15", ability: "ZOOM" },
-    jimmy: { id: "jimmy", name: "Jimmy", role: "Shield", color: "#fb923c", accent: "#9a3412", hat: "#ef4444", ability: "ZOOM" },
-    bubbles: { id: "bubbles", name: "Bubbles", role: "Zap", color: "#60a5fa", accent: "#1e3a8a", hat: "#38bdf8", ability: "ZOOM" },
-    rexy: { id: "rexy", name: "Rexy", role: "Bot", color: "#c084fc", accent: "#6b21a8", hat: "#e879f9", ability: "ZOOM" },
+    james: { id: "james", name: "James", role: "Wheel", color: "#4ade80", accent: "#166534", hat: "#facc15", ability: "HOP" },
+    jimmy: { id: "jimmy", name: "Jimmy", role: "Shield", color: "#fb923c", accent: "#9a3412", hat: "#ef4444", ability: "HOP" },
+    bubbles: { id: "bubbles", name: "Bubbles", role: "Zap", color: "#60a5fa", accent: "#1e3a8a", hat: "#38bdf8", ability: "HOP" },
+    rexy: { id: "rexy", name: "Rexy", role: "Bot", color: "#c084fc", accent: "#6b21a8", hat: "#e879f9", ability: "HOP" },
   };
 
   /* ~10× area vs old 1200×900 — real roam between house / track / pond / Starship */
@@ -114,10 +115,10 @@
 
   /* polish7: companion chat one-liners — ONLY existing toast/tip strings (no new scripts) */
   var AI_CHAT = {
-    james: ["ZOOM!", "ZOOM · truck boost!"],
-    jimmy: ["ZOOM!", "Catch Jimmy · jetpack!"],
-    bubbles: ["ZOOM!", "Splash the pond"],
-    rexy: ["ZOOM!", "Open SPS for Optimus kits"],
+    james: ["HOP!", "HOP · truck jump!"],
+    jimmy: ["HOP!", "Catch Jimmy · jetpack!"],
+    bubbles: ["HOP!", "Splash the pond"],
+    rexy: ["HOP!", "Open SPS for Optimus kits"],
   };
 
   var HOTSPOTS = [
@@ -444,6 +445,89 @@
     return 0.75 * (1 - (d - R * 0.42) / (R * 0.58));
   }
 
+
+  /* hop1: vertical hop + forward carry along face (shared Canvas / Phaser / Three) */
+  function applyHop(ent, opts) {
+    opts = opts || {};
+    var ang = (ent.faceAngle != null && isFinite(ent.faceAngle))
+      ? ent.faceAngle
+      : (ent.facing >= 0 ? 0 : Math.PI);
+    if (opts.ang != null && isFinite(opts.ang)) ang = opts.ang;
+    var cx = Math.cos(ang), cy = Math.sin(ang);
+    var inTruck = !!ent.inTruck;
+    var up = inTruck ? (opts.truckUp != null ? opts.truckUp : 240) : (opts.up != null ? opts.up : 290);
+    var fwd = inTruck ? (opts.truckFwd != null ? opts.truckFwd : 200) : (opts.fwd != null ? opts.fwd : 155);
+    var gnd = ent.groundZ != null ? ent.groundZ : 0;
+    var zKey = opts.zKey || "z";
+    var zvKey = opts.zvKey || "zVel";
+    var z = ent[zKey] || 0;
+    var zv = ent[zvKey] || 0;
+    if (z <= gnd + 3) {
+      ent[zvKey] = Math.max(zv, up);
+      ent[zKey] = Math.max(z, gnd + 5);
+    } else {
+      ent[zvKey] = Math.max(zv, up * 0.42);
+    }
+    ent.vx = (ent.vx || 0) + cx * fwd;
+    ent.vy = (ent.vy || 0) + cy * fwd;
+    ent.hopStretch = 1;
+    ent.dashTrail = Math.max(ent.dashTrail || 0, 0.4);
+    ent.invuln = Math.max(ent.invuln || 0, 0.25);
+    return { ang: ang, cx: cx, cy: cy, up: up, fwd: fwd };
+  }
+
+  /* hop1: shove small movable props (toys / little animals / pollen) — not walls/trucks/mechs */
+  function shoveSmallProp(prop, frogX, frogY, frogR, frogVx, frogVy, opts) {
+    if (!prop) return false;
+    opts = opts || {};
+    var pr = prop.r != null ? prop.r : (opts.propR != null ? opts.propR : 10);
+    var fr = frogR != null ? frogR : 22;
+    var dx = (prop.x || 0) - frogX;
+    var dy = (prop.y || 0) - frogY;
+    var dist = Math.hypot(dx, dy);
+    var minD = pr + fr;
+    if (dist >= minD) return false;
+    if (dist < 1e-4) {
+      var a = Math.random() * Math.PI * 2;
+      dx = Math.cos(a); dy = Math.sin(a); dist = 1;
+    }
+    var nx = dx / dist, ny = dy / dist;
+    var overlap = minD - dist;
+    prop.x = (prop.x || 0) + nx * overlap * 0.9;
+    prop.y = (prop.y || 0) + ny * overlap * 0.9;
+    var strength = opts.strength != null ? opts.strength : 1;
+    var base = 95 + Math.hypot(frogVx || 0, frogVy || 0) * 0.6;
+    var impulse = base * strength;
+    prop.vx = (prop.vx || 0) + nx * impulse + (frogVx || 0) * 0.38;
+    prop.vy = (prop.vy || 0) + ny * impulse + (frogVy || 0) * 0.38;
+    var maxV = opts.maxV != null ? opts.maxV : 340;
+    var sp = Math.hypot(prop.vx, prop.vy);
+    if (sp > maxV) { prop.vx = (prop.vx / sp) * maxV; prop.vy = (prop.vy / sp) * maxV; }
+    return true;
+  }
+
+  function tickPushable(prop, dt, opts) {
+    if (!prop) return;
+    opts = opts || {};
+    var fric = opts.friction != null ? opts.friction : 4.8;
+    prop.vx = prop.vx || 0;
+    prop.vy = prop.vy || 0;
+    prop.x = (prop.x || 0) + prop.vx * dt;
+    prop.y = (prop.y || 0) + prop.vy * dt;
+    var damp = Math.exp(-fric * dt);
+    prop.vx *= damp;
+    prop.vy *= damp;
+    var bounce = opts.bounce != null ? opts.bounce : 0.38;
+    if (opts.bounds) {
+      var b = opts.bounds;
+      if (prop.x < b.x0) { prop.x = b.x0; prop.vx = Math.abs(prop.vx) * bounce; }
+      if (prop.x > b.x1) { prop.x = b.x1; prop.vx = -Math.abs(prop.vx) * bounce; }
+      if (prop.y < b.y0) { prop.y = b.y0; prop.vy = Math.abs(prop.vy) * bounce; }
+      if (prop.y > b.y1) { prop.y = b.y1; prop.vy = -Math.abs(prop.vy) * bounce; }
+    }
+    if (Math.hypot(prop.vx, prop.vy) < 5) { prop.vx = 0; prop.vy = 0; }
+  }
+
   global.FroggiesCanon = {
     FROG_ORDER: FROG_ORDER,
     FROG_DEFS: FROG_DEFS,
@@ -483,5 +567,8 @@
     solidRects: solidRects,
     solidCircles: solidCircles,
     resolveSolid: resolveSolid,
+    applyHop: applyHop,
+    shoveSmallProp: shoveSmallProp,
+    tickPushable: tickPushable,
   };
 })(typeof window !== "undefined" ? window : globalThis);

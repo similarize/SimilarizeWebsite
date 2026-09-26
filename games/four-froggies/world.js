@@ -19,6 +19,7 @@
    track elev follow / crest launch / land bounce via trackElevAt;
    truck2: stronger elev follow / crest / ramp ride-up; EXIT tip always while driving;
    polish11: truck yaw follows travel; brief EXIT tip (no sticky billboard); ZOOM ability;
+   hop1: HOP ability (Y arc + squash); shove toys/animals/pollen; walk bob / fast auto-hop;
    particle caps; sunset sky shift over play time.
    mobile1: phone+desktop shared UI — smaller/toggle-friendly mini-map + harder particle caps on narrow.
    ~10× map: real roam between ranch house / track / pond / Starship.
@@ -336,6 +337,7 @@
         tone: a % 3 === 0 ? "#c4a574" : a % 3 === 1 ? "#8b6914" : "#d6d3d1",
         size: 1.05 + Math.random() * 1.15,
         bob: Math.random() * Math.PI * 2,
+        vx: 0, vy: 0, r: 12, pushable: true,
       });
     }
     world.toys = [];
@@ -348,6 +350,7 @@
         kind: t % 4,
         hue: (t * 47) % 360,
         inGarage: true,
+        vx: 0, vy: 0, r: 9, pushable: true,
       });
     }
     /* Yard / porch scatter */
@@ -359,6 +362,7 @@
     for (var s = 0; s < spots.length; s++) {
       world.toys.push({
         x: spots[s][0], y: spots[s][1], kind: s % 3, hue: (s * 61) % 360, inGarage: false,
+        vx: 0, vy: 0, r: 10, pushable: true,
       });
     }
     world.dust = [];
@@ -389,6 +393,7 @@
         phase: Math.random() * Math.PI * 2,
         kind: Math.random() < 0.55 ? "pollen" : "firefly",
         r: 1.2 + Math.random() * 2.4,
+        pushable: true,
       });
     }
   }
@@ -435,6 +440,8 @@
       steerY: 0,
       speedBoost: 1,
       walkPhase: 0,
+      hopSquash: 0,
+      autoHopCd: 0,
       /* polish7 */
       idleBounce: 0,
       followLag: 0.35 + (laneIndex % 3) * 0.12,
@@ -642,6 +649,52 @@
     }
   }
 
+
+  function updatePushables(world, frogs, dt) {
+    if (!world) return;
+    var C = global.FroggiesCanon;
+    var shove = C && C.shoveSmallProp;
+    var tick = C && C.tickPushable;
+    var yardB = { x0: 110, y0: 2080, x1: 670, y1: 2450 };
+    var garB = { x0: 710, y0: 1430, x1: 1160, y1: 1900 };
+    var mapB = { x0: 40, y0: 40, x1: MAP_W - 40, y1: MAP_H - 40 };
+    var list = [];
+    var i, p, f;
+    if (world.toys) for (i = 0; i < world.toys.length; i++) list.push({ prop: world.toys[i], bounds: world.toys[i].inGarage ? garB : mapB, r: world.toys[i].r || 9, strength: 1 });
+    if (world.animals) for (i = 0; i < world.animals.length; i++) list.push({ prop: world.animals[i], bounds: yardB, r: 10 + (world.animals[i].size || 1) * 4, strength: 0.85 });
+    if (world.ambient) for (i = 0; i < world.ambient.length; i++) {
+      if (world.ambient[i].kind === "pollen" || world.ambient[i].pushable)
+        list.push({ prop: world.ambient[i], bounds: mapB, r: Math.max(4, (world.ambient[i].r || 2) * 2.2), strength: 0.55, ambient: true });
+    }
+    for (i = 0; i < list.length; i++) {
+      p = list[i].prop;
+      p.r = list[i].r;
+      if (frogs && shove) {
+        for (var fi = 0; fi < frogs.length; fi++) {
+          f = frogs[fi];
+          if (!f || !f.alive) continue;
+          if (f.inTruck) continue; /* truck uses resolveSolid; don't bat props with cab */
+          shove(p, f.x, f.y, 20, f.vx || 0, f.vy || 0, { propR: list[i].r, strength: list[i].strength });
+        }
+      }
+      if (list[i].ambient) {
+        /* hop1: ambient keeps updateFx drift; just decay shove impulse */
+        var asp = Math.hypot(p.vx || 0, p.vy || 0);
+        if (asp > 28) { p.vx *= Math.exp(-1.8 * dt); p.vy *= Math.exp(-1.8 * dt); }
+      } else if (tick) {
+        tick(p, dt, { friction: 4.6, bounce: 0.4, bounds: list[i].bounds });
+      }
+    }
+    /* Keep backyard animals in yard after shove */
+    if (world.animals) {
+      for (i = 0; i < world.animals.length; i++) {
+        var an = world.animals[i];
+        an.x = clamp(an.x, 110, 670);
+        an.y = clamp(an.y, 2080, 2450);
+      }
+    }
+  }
+
   function updateFx(world, dt) {
     var i;
     for (i = world.dust.length - 1; i >= 0; i--) {
@@ -733,6 +786,7 @@
           ent.z = 0;
           if (ent.zVel < -40) result.landed = true;
           ent.zVel = 0;
+          if (result.landed) ent.hopSquash = 1;
           if (wet) {
             spawnSplash(world, ent.x, ent.y, 6);
             ent.waterSub = Math.max(ent.waterSub || 0, 0.35);
@@ -763,6 +817,8 @@
       }
       ent.truckBounce = 0;
       ent.speedBoost = 1;
+      if (ent.hopSquash > 0) ent.hopSquash = Math.max(0, ent.hopSquash - dt * 4.2);
+      if (ent.hopStretch > 0) ent.hopStretch = Math.max(0, ent.hopStretch - dt * 2.8);
       return result;
     }
     var speed = Math.hypot(ent.vx, ent.vy);
@@ -1040,6 +1096,20 @@
       ent.walkPhase = (ent.walkPhase || 0) + dt * (8 + spd * 0.04);
     } else {
       ent.walkPhase = (ent.walkPhase || 0) * 0.9;
+    }
+    /* hop1: low-speed walk bob; fast move auto-hops so frogs don't hover-glide */
+    if (!ent.inTruck && (ent.z || 0) <= 0.5) {
+      if (spd > 175) {
+        ent.autoHopCd = (ent.autoHopCd || 0) - dt;
+        if (ent.autoHopCd <= 0) {
+          ent.autoHopCd = 0.3;
+          ent.zVel = Math.max(ent.zVel || 0, 168);
+          ent.z = Math.max(ent.z || 0, 3);
+          ent.hopStretch = 0.7;
+        }
+      } else {
+        ent.autoHopCd = Math.min(0.12, ent.autoHopCd || 0);
+      }
     }
     if (ent.cd > 0) ent.cd -= dt;
     if (ent.invuln > 0) ent.invuln -= dt;
@@ -2603,13 +2673,19 @@
     var shW = s * (1.18 - Math.min(0.4, (frog.z || 0) * 0.009));
     drawSoftShadow(ctx, p.x, p.y + 5, shW, s * 0.36, shA);
     var by = p.y - s * 0.42 - lift;
-    var legKick = (!frog.inTruck && (frog.walkPhase || 0) > 0.05)
+    var legKick = (!frog.inTruck && (frog.walkPhase || 0) > 0.05 && (frog.z || 0) < 4)
       ? Math.sin(frog.walkPhase * 2) * 3.2 * p.depth : 0;
     var faceA = (frog.faceAngle != null && isFinite(frog.faceAngle)) ? frog.faceAngle : -Math.PI / 2;
     var groundY = (p.y - by) + 2 - lift * 0.2; /* legs toward feet in local space */
+    /* hop1: stretch mid-air, squash on land */
+    var airZ = frog.z || 0;
+    var sq = frog.hopSquash || 0;
+    var stretchY = 1 + Math.min(0.38, airZ * 0.009) - sq * 0.3;
+    var stretchX = 1 - Math.min(0.24, airZ * 0.006) + sq * 0.34;
     ctx.save();
     ctx.translate(p.x, by);
     ctx.rotate(faceA + Math.PI / 2); /* canonical face points screen-up */
+    ctx.scale(stretchX, stretchY);
     ctx.strokeStyle = frog.accent;
     ctx.lineWidth = 3.2 * p.depth;
     ctx.lineCap = "round";
@@ -3313,6 +3389,7 @@
     rampAt: rampAt,
     nearestHotspot: nearestHotspot,
     updateFish: updateFish,
+    updatePushables: updatePushables,
     updateFx: updateFx,
     tickDrive: tickDrive,
     scareFishies: scareFishies,

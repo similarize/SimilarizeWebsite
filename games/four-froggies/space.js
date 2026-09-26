@@ -599,8 +599,8 @@
       ep.vx = (ep.vx || 0) + ep.facing * impulse * 0.4;
       ep.vy = (ep.vy || 0) - impulse * (jimmyPack ? 0.4 : 0.25);
       ep.px += ep.facing * (jimmyPack ? 55 : 40);
-      /* polish11: shared ZOOM thruster nudge in space */
-      toast(ep, "ZOOM · thruster!");
+      /* hop1: shared HOP thruster nudge in space */
+      toast(ep, "HOP · thruster!");
       return { ok: true, toast: ep.toast, sfx: "jet" };
     }
     if (ep.scene === "solar") {

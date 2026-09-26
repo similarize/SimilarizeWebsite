@@ -33,10 +33,10 @@
   const tipEl = document.getElementById("hub-tip");
 
   const FROG_DEFS = {
-    james: { id: "james", name: "James", role: "Wheel", color: "#4ade80", ability: "ZOOM", cdMax: 5.5 },
-    jimmy: { id: "jimmy", name: "Jimmy", role: "Shield", color: "#fb923c", ability: "ZOOM", cdMax: 5.5 },
-    bubbles: { id: "bubbles", name: "Bubbles", role: "Zap", color: "#60a5fa", ability: "ZOOM", cdMax: 5.5 },
-    rexy: { id: "rexy", name: "Rexy", role: "Bot", color: "#c084fc", ability: "ZOOM", cdMax: 5.5 },
+    james: { id: "james", name: "James", role: "Wheel", color: "#4ade80", ability: "HOP", cdMax: 5.5 },
+    jimmy: { id: "jimmy", name: "Jimmy", role: "Shield", color: "#fb923c", ability: "HOP", cdMax: 5.5 },
+    bubbles: { id: "bubbles", name: "Bubbles", role: "Zap", color: "#60a5fa", ability: "HOP", cdMax: 5.5 },
+    rexy: { id: "rexy", name: "Rexy", role: "Bot", color: "#c084fc", ability: "HOP", cdMax: 5.5 },
   };
   const FROG_ORDER = ["james", "jimmy", "bubbles", "rexy"];
 
@@ -374,12 +374,12 @@
     btnAbility.dataset.roleTbd = def.ability;
   }
 
-  /* polish11: shared ZOOM ability feedback */
+  /* hop1: shared HOP ability feedback */
   function flashAbilityButton(frogId) {
     if (!btnAbility) return;
     const def = FROG_DEFS[frogId] || FROG_DEFS.james;
-    const kind = (def.ability || "ZOOM").toLowerCase();
-    btnAbility.classList.remove("fire-dash", "fire-shield", "fire-zap", "fire-bot", "fire-zoom");
+    const kind = (def.ability || "HOP").toLowerCase();
+    btnAbility.classList.remove("fire-dash", "fire-shield", "fire-zap", "fire-bot", "fire-zoom", "fire-hop");
     void btnAbility.offsetWidth;
     btnAbility.classList.add("fire-" + kind);
     btnAbility.classList.add("ability-fired");
@@ -411,29 +411,34 @@
     frog.cd = def.cdMax;
     flashAbilityButton(frog.id);
     beep(660, 0.06, "square", 0.05);
-    /* polish11: shared ZOOM — speed burst along face + dust/spark juice (all frogs) */
+    /* hop1: shared HOP — vertical arc + forward carry; squash handled on land */
     {
-      const ang = (frog.faceAngle != null && isFinite(frog.faceAngle))
-        ? frog.faceAngle
-        : (frog.facing >= 0 ? 0 : Math.PI);
-      const cx = Math.cos(ang), cy = Math.sin(ang);
-      frog.invuln = Math.max(frog.invuln || 0, 0.4);
-      frog.dashTrail = 0.55;
-      frog.speedBoost = frog.inTruck ? 1.55 : 1.48;
-      const impulse = frog.inTruck ? 300 : 240;
-      frog.vx = (frog.vx || 0) + cx * impulse;
-      frog.vy = (frog.vy || 0) + cy * impulse;
-      frog.x += cx * (frog.inTruck ? 26 : 20);
-      frog.y += cy * (frog.inTruck ? 26 : 20);
-      if (world) {
-        W.spawnDust(world, frog.x - cx * 18, frog.y - cy * 18, 10);
-        W.spawnSparks(world, frog.x, frog.y, 8);
-        if (W.spawnDust) W.spawnDust(world, frog.x - cx * 8, frog.y - cy * 8, 4);
+      const C = globalThis.FroggiesCanon;
+      let hop = null;
+      if (C && C.applyHop) {
+        hop = C.applyHop(frog, frog.inTruck
+          ? { up: 260, truckUp: 260, fwd: 170, truckFwd: 210 }
+          : { up: 300, fwd: 150 });
+      } else {
+        const ang = (frog.faceAngle != null && isFinite(frog.faceAngle))
+          ? frog.faceAngle
+          : (frog.facing >= 0 ? 0 : Math.PI);
+        const cx = Math.cos(ang), cy = Math.sin(ang);
+        frog.zVel = Math.max(frog.zVel || 0, frog.inTruck ? 240 : 300);
+        frog.z = Math.max(frog.z || 0, 6);
+        frog.vx = (frog.vx || 0) + cx * (frog.inTruck ? 200 : 150);
+        frog.vy = (frog.vy || 0) + cy * (frog.inTruck ? 200 : 150);
+        hop = { cx: cx, cy: cy };
       }
-      shakeT = 0.16;
-      storyToast = frog.inTruck ? "ZOOM · truck boost!" : "ZOOM!";
-      beep(880, 0.05, "sawtooth", 0.035);
-      beep(1100, 0.04, "square", 0.025);
+      const cx = hop.cx, cy = hop.cy;
+      if (world) {
+        W.spawnDust(world, frog.x - cx * 12, frog.y - cy * 12, 8);
+        W.spawnSparks(world, frog.x, frog.y, 5);
+      }
+      shakeT = 0.12;
+      storyToast = frog.inTruck ? "HOP · truck jump!" : "HOP!";
+      beep(520, 0.05, "triangle", 0.04);
+      beep(780, 0.06, "square", 0.03);
     }
     storyToastT = 1.5;
     updateAbilityButton();
@@ -765,6 +770,7 @@
       if (storyToastT > 0) storyToastT -= dt;
       if (exitTipT > 0) exitTipT = Math.max(0, exitTipT - dt);
       if (shakeT > 0) shakeT -= dt;
+      if (W.updatePushables) W.updatePushables(world, frogs, dt);
       W.updateFx(world, dt);
       return;
     }
@@ -830,6 +836,7 @@
     }
     W.tickHubAI(frogs, me, dt, world);
     W.updateFish(world, dt);
+    if (W.updatePushables) W.updatePushables(world, frogs, dt);
     W.updateFx(world, dt);
 
     easeCam(dt);

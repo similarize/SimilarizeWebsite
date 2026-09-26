@@ -1,3 +1,9 @@
+## What's new (hop1) — HOP frogs + shove small props
+- **HOP ability (shared):** Replaces ZOOM on the ranch ability button. Vertical jump arc + forward carry (Space / ability button). Landing squash + mid-air stretch on Canvas; Phaser + Three show Y lift + scale squash/stretch. Fast walk auto-hops so frogs don't hover-glide; low speed keeps leg-bob walk. Truck = hop jump; space = thruster nudge ("HOP · thruster!").
+- **Push small things:** Toys, backyard animals, pollen blobs get physics-ish knockback via `FroggiesCanon.shoveSmallProp` / `tickPushable` (Canvas world + Phaser/Three mesh sync). Walls / trucks / mechs stay solid via `resolveSolid`.
+- Joystick (joy2), garage1 full-width door, polish11 truck yaw + brief EXIT tip kept. Names-only plates. Cast: James, Jimmy, Bubbles, Rexy.
+- Cache-bust: `?v=20260926-hop1`. Cast unchanged. No SPS arcade republish.
+
 ## What's new (polish11) — truck yaw + brief EXIT tip + ZOOM
 - **Cybertruck orientation:** Canvas / Phaser / Three — truck nose follows travel (velocity when moving; face yaw when slow). Parked trucks face the same default as idle frogs (screen-up / +Z), not sideways vs the cast.
 - **EXIT tip:** Removed sticky world-space "EXIT · INTERACT / E" billboard that tracked the truck. Brief tip (~2.4s) after board via hub tip; INTERACT button stays labeled EXIT while driving. No giant HUD that follows you across the ranch.

@@ -14,7 +14,8 @@
    truck1: kid-toy truck scale; smooth yaw toward aim; track elev / crest / land bounce.
    truck2: EXIT anytime (HUD); full elev lift (no *0.06 damp); stronger crest / ramp ride-up.
    joy2: shared virtual joystick via engine-boot setSteer; touch playfield aim disabled.
-   polish11: truck yaw follows travel; brief EXIT tip; shared ZOOM ability. */
+   polish11: truck yaw follows travel; brief EXIT tip; shared ZOOM ability.
+   hop1: HOP ability (Y arc + squash); shove toys/animals/pollen. */
 (function (global) {
   "use strict";
   var C = global.FroggiesCanon;
@@ -335,14 +336,17 @@
         this.add.text(yard.x + yard.w / 2, yard.y + 14, "Backyard", {
           fontSize: "14px", fontStyle: "bold", color: "#ecfccb", stroke: "#000", strokeThickness: 3,
         }).setOrigin(0.5, 0);
+        this.pushables = this.pushables || [];
         for (var ai = 0; ai < 44; ai++) {
           var ax = yard.x + 20 + Math.random() * (yard.w - 40);
           var ay = yard.y + 40 + Math.random() * (yard.h - 60);
           var aw = 14 + (ai % 5) * 2, ah = 10 + (ai % 4);
-          this.add.ellipse(ax, ay, aw, ah,
+          var bodyA = this.add.ellipse(ax, ay, aw, ah,
             ai % 3 === 0 ? 0xc4a574 : ai % 3 === 1 ? 0x8b6914 : 0xd6d3d1, 0.95
-          ).setStrokeStyle(1, 0x292016, 0.6);
-          this.add.circle(ax + aw * 0.45, ay - 4, 5 + (ai % 3), ai % 3 === 0 ? 0xc4a574 : 0x8b6914, 0.95);
+          ).setStrokeStyle(1, 0x292016, 0.6).setDepth(8);
+          var headA = this.add.circle(ax + aw * 0.45, ay - 4, 5 + (ai % 3), ai % 3 === 0 ? 0xc4a574 : 0x8b6914, 0.95).setDepth(8);
+          this.pushables.push({ g: bodyA, head: headA, x: ax, y: ay, vx: 0, vy: 0, r: Math.max(aw, ah) * 0.55, kind: "animal",
+            bounds: { x0: yard.x + 10, y0: yard.y + 20, x1: yard.x + yard.w - 10, y1: yard.y + yard.h - 10 }, headOx: aw * 0.45, headOy: -4 });
         }
         this.add.rectangle(gar.x + gar.w / 2, gar.y + gar.h / 2, gar.w, gar.h, 0x6b7280, 0.92)
           .setStrokeStyle(4, 0x0b1220, 1);
@@ -360,9 +364,13 @@
         this.add.text(gar.x + gar.w / 2, gar.y + 16, "Garage · James toys", {
           fontSize: "14px", fontStyle: "bold", color: "#fff", stroke: "#000", strokeThickness: 3,
         }).setOrigin(0.5, 0);
+        this.pushables = this.pushables || [];
         for (var t = 0; t < 40; t++) {
-          this.add.rectangle(gar.x + 30 + (t % 8) * 48, gar.y + 60 + Math.floor(t / 8) * 42, 14, 14, 0xfbbf24, 0.85)
-            .setStrokeStyle(1, 0x78350f, 0.8);
+          var tx = gar.x + 30 + (t % 8) * 48, ty = gar.y + 60 + Math.floor(t / 8) * 42;
+          var tg = this.add.rectangle(tx, ty, 14, 14, 0xfbbf24, 0.85)
+            .setStrokeStyle(1, 0x78350f, 0.8).setDepth(9);
+          this.pushables.push({ g: tg, x: tx, y: ty, vx: 0, vy: 0, r: 10, kind: "toy",
+            bounds: { x0: gar.x + 16, y0: gar.y + 40, x1: gar.x + gar.w - 16, y1: gar.y + gar.h - 50 } });
         }
         this.add.rectangle(house.x + house.w / 2, house.y + house.h / 2, house.w, house.h, 0xd4b896, 0.95)
           .setStrokeStyle(4, 0x3e2723, 1);
@@ -591,6 +599,8 @@
       },
       update: function (time, delta) {
         var dt = Math.min(0.05, delta / 1000);
+        /* hop1: undo display lift so physics runs on ground plane */
+        if (this._visLift) { this.player.y += this._visLift; this._visLift = 0; }
         this.cd = Math.max(0, this.cd - dt); this.toastT = Math.max(0, this.toastT - dt); this.exitTipT = Math.max(0, (this.exitTipT || 0) - dt);
         this.bob += dt * (this.inTruck ? 14 : 10);
         /* polish10: soft dusk sky shift over play time */
@@ -726,14 +736,59 @@
           }
           if (nearG || Math.abs(side) > 40) this.lapSide = side >= 0 ? 1 : -1;
         }
-        var wet = C.inPond && C.inPond(this.player.x, this.player.y);
+        /* hop1: land squash + walking Y lift + shove small props */
+        var airNowHop = (this.zLift || 0) - (this.groundZ || 0);
+        if (this._wasHopAir && airNowHop <= 1) this.hopSquash = 1;
+        this._wasHopAir = airNowHop > 6;
+        if (this.hopSquash > 0) this.hopSquash = Math.max(0, this.hopSquash - dt * 4);
+        if (this.hopStretch > 0) this.hopStretch = Math.max(0, this.hopStretch - dt * 2.5);
+        if (!this.inTruck) {
+          this._visLift = (this.zLift || 0) * 0.55;
+          this.player.y -= this._visLift;
+          var sx = 1.15 * (1 - Math.min(0.22, airNowHop * 0.006) + (this.hopSquash || 0) * 0.3);
+          var sy = 1.15 * (1 + Math.min(0.32, airNowHop * 0.01) - (this.hopSquash || 0) * 0.26);
+          this.player.setScale(sx, sy);
+        } else {
+          this.player.setScale(1.15, 1.15);
+        }
+        /* hop1: fast walk auto-hop */
+        if (!this.inTruck && airNowHop < 2 && sp > 180) {
+          this.autoHopCd = (this.autoHopCd || 0) - dt;
+          if (this.autoHopCd <= 0) {
+            this.autoHopCd = 0.3;
+            this.zVel = Math.max(this.zVel || 0, 200);
+            this.zLift = Math.max(this.zLift || 0, (this.groundZ || 0) + 5);
+            this.hopStretch = 0.7;
+          }
+        }
+        if (C.shoveSmallProp && C.tickPushable && this.pushables) {
+          for (var pi = 0; pi < this.pushables.length; pi++) {
+            var pp = this.pushables[pi];
+            if (!this.inTruck) C.shoveSmallProp(pp, this.player.x, this.player.y + (this._visLift || 0), 20, body.velocity.x, body.velocity.y, { propR: pp.r, strength: pp.kind === "animal" ? 0.85 : 1 });
+            C.tickPushable(pp, dt, { friction: 4.6, bounce: 0.4, bounds: pp.bounds });
+            if (pp.g) pp.g.setPosition(pp.x, pp.y);
+            if (pp.head) pp.head.setPosition(pp.x + (pp.headOx || 0), pp.y + (pp.headOy || 0));
+          }
+        }
+        if (C.shoveSmallProp && this.ambient) {
+          for (var ami2 = 0; ami2 < this.ambient.length; ami2++) {
+            var ambP = this.ambient[ami2];
+            if (!ambP.vx) ambP.vx = 0; if (!ambP.vy) ambP.vy = 0;
+            if (!this.inTruck) C.shoveSmallProp(ambP, this.player.x, this.player.y + (this._visLift || 0), 18, body.velocity.x, body.velocity.y, { propR: 6, strength: 0.5 });
+            var asp = Math.hypot(ambP.vx, ambP.vy);
+            if (asp > 30) { ambP.vx *= Math.exp(-1.6 * dt); ambP.vy *= Math.exp(-1.6 * dt); }
+          }
+        }
+        var wet = C.inPond && C.inPond(this.player.x, this.player.y + (this._visLift || 0));
         if (this.inTruck && wet) {
           var plunge = Math.max(0, -this.zVel) + (((this.zLift || 0) - (this.groundZ || 0)) > 6 ? 40 : 0);
           this.waterSub = Math.min(1.15, 0.45 + plunge / 400);
           body.velocity.x *= Math.max(0, 1 - 1.8 * dt); body.velocity.y *= Math.max(0, 1 - 1.8 * dt);
         } else this.waterSub = Math.max(0, this.waterSub - dt * 1.6);
         this.player.setFlipX(false).setRotation(this.faceAngle || 0).setVisible(!this.inTruck);
-        this.nameTag.setPosition(this.player.x, this.player.y - 28 - this.zLift * 0.55);
+        /* hop1: walking sprite already Y-lifted via _visLift — don't double-subtract zLift */
+        var nameLift = this.inTruck ? (this.zLift * 0.55) : 0;
+        this.nameTag.setPosition(this.player.x, this.player.y - 28 - nameLift);
         this.nameTag.setVisible(true);
         /* polish9: aboard frog icons when shared truck */
         var sharedOn = this.inTruck && this.truckMode === "shared";
@@ -851,7 +906,7 @@
         if (this.shakeT > 0) this.shakeT -= dt;
         /* polish6: depth shadows under frog / truck */
         if (this.playerShadow) {
-          var shY = this.player.y + 12 + (this.inTruck ? 4 : 0);
+          var shY = this.player.y + (this._visLift || 0) + 12 + (this.inTruck ? 4 : 0);
           var shScale = 1 + Math.min(0.35, this.zLift * 0.004);
           this.playerShadow.setPosition(this.player.x, shY);
           this.playerShadow.setDisplaySize(40 * shScale * (this.inTruck ? 1.6 : 1), 14 * shScale);
@@ -1086,7 +1141,7 @@
               ? (this.toastT > 0 ? this.toast : (this.exitTipT > 0 ? "EXIT · INTERACT / E" : ""))
               : (this.toastT > 0 ? this.toast : (this.near ? ((C.isTruckHotspot(this.near) ? "BOARD · " : "⚡ ") + this.near.tip + " · INTERACT / E") : "")),
             inTruck: !!this.inTruck,
-            near: this.inTruck ? true : this.near, ability: "ZOOM", cd: this.cd, walk: walk,
+            near: this.inTruck ? true : this.near, ability: "HOP", cd: this.cd, walk: walk,
           });
         }
       },
@@ -1121,22 +1176,26 @@
         if (hooks.onToast) hooks.onToast(this.toast);
       },
       doAbility: function () {
-        /* polish11: shared ZOOM — speed burst along face + juice */
+        /* hop1: shared HOP — vertical arc + forward carry */
         if (this.cd > 0) return; this.cd = 5.5;
         var body = this.player.body;
         var ang = (this.faceAngle != null) ? (this.faceAngle - Math.PI / 2) : (this.facing >= 0 ? 0 : Math.PI);
         if (Math.hypot(body.velocity.x, body.velocity.y) > 40) ang = Math.atan2(body.velocity.y, body.velocity.x);
-        var impulse = this.inTruck ? 420 : 340;
-        body.velocity.x += Math.cos(ang) * impulse;
-        body.velocity.y += Math.sin(ang) * impulse;
-        this.toast = this.inTruck ? "ZOOM · truck boost!" : "ZOOM!";
+        var fwd = this.inTruck ? 280 : 200;
+        var up = this.inTruck ? 280 : 320;
+        body.velocity.x += Math.cos(ang) * fwd;
+        body.velocity.y += Math.sin(ang) * fwd;
+        this.zVel = Math.max(this.zVel || 0, up);
+        this.zLift = Math.max(this.zLift || 0, (this.groundZ || 0) + 8);
+        this.hopSquash = 0; this.hopStretch = 1;
+        this.toast = this.inTruck ? "HOP · truck jump!" : "HOP!";
         this.toastT = 1.8;
-        for (var zi = 0; zi < 8; zi++) {
-          var dg = this.add.circle(this.player.x - Math.cos(ang) * (12 + zi * 6), this.player.y - Math.sin(ang) * (12 + zi * 6), 3 + (zi % 3), 0xfbbf24, 0.7).setDepth(30);
-          this.fx.push({ g: dg, life: 0.35 + zi * 0.03, vx: -Math.cos(ang) * (40 + zi * 8), vy: -Math.sin(ang) * (40 + zi * 8) });
+        for (var zi = 0; zi < 6; zi++) {
+          var dg = this.add.circle(this.player.x - Math.cos(ang) * (10 + zi * 5), this.player.y - Math.sin(ang) * (10 + zi * 5), 3 + (zi % 3), 0x86efac, 0.7).setDepth(30);
+          this.fx.push({ g: dg, life: 0.3 + zi * 0.03, vx: -Math.cos(ang) * (30 + zi * 6), vy: -Math.sin(ang) * (30 + zi * 6) });
         }
         if (hooks.onToast) hooks.onToast(this.toast);
-        if (hooks.onAbilityFire) hooks.onAbilityFire(frogId, "ZOOM");
+        if (hooks.onAbilityFire) hooks.onAbilityFire(frogId, "HOP");
       },
     });
 
@@ -1333,13 +1392,13 @@
               var kick = (cfg.hardThrustImpulse || 320);
               body.velocity.x = Math.cos(this.orbitAngle) * kick * 0.55;
               body.velocity.y = Math.sin(this.orbitAngle) * kick * 0.55;
-              this.toast = "ZOOM · left Moon orbit";
+              this.toast = "HOP · left Moon orbit";
             } else {
-              /* polish11: shared ZOOM thruster */
+              /* hop1: shared HOP thruster */
               var fang = (this.faceAngle != null) ? (this.faceAngle - Math.PI / 2) : 0;
               body.velocity.x += Math.cos(fang) * 260;
               body.velocity.y += Math.sin(fang) * 260 - 80;
-              this.toast = "ZOOM · thruster!";
+              this.toast = "HOP · thruster!";
               if (this.jimmy) {
                 this.jimmyVx = (Math.random() > 0.5 ? 1 : -1) * 120;
                 this.jimmyVy = -90;
@@ -1347,7 +1406,7 @@
               }
             }
             this.toastT = 1.5;
-            if (hooks.onAbilityFire) hooks.onAbilityFire(frogId, "ZOOM");
+            if (hooks.onAbilityFire) hooks.onAbilityFire(frogId, "HOP");
           }
         }
         if (this.jimmyJetT > 0) {
@@ -1373,7 +1432,7 @@
           hooks.onHud({
             mode: "space", label: "Space · Moon · Phaser", scrap: this.catches,
             tip: this.toastT > 0 ? this.toast : this.inOrbit ? "Orbit locked · Escape or hard thruster" : this.near ? this.near.tip + " · INTERACT" : nearMars ? "Mars · invader silhouettes" : "Chase Jimmy · Spotty / Germy / Daisy nearby",
-            inOrbit: !!this.inOrbit, near: this.near, ability: "ZOOM", cd: this.cd,
+            inOrbit: !!this.inOrbit, near: this.near, ability: "HOP", cd: this.cd,
             walk: this.inOrbit ? "🌍 Orbit" : "🚀 Space",
           });
         }

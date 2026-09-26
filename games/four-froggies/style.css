@@ -842,15 +842,23 @@ body.in-space {
   animation: abil-fire-bot 0.45s ease-out;
   background: rgba(192, 132, 252, 0.9) !important;
 }
+#btn-ability.fire-hop {
+  animation: abil-fire-hop 0.45s ease-out;
+  background: rgba(74, 222, 128, 0.9) !important;
+}
+#btn-ability.fire-zoom {
+  animation: abil-fire-zoom 0.45s ease-out;
+  background: rgba(125, 211, 252, 0.85) !important;
+}
 @keyframes abil-fire-dash {
   0% { filter: brightness(1.6); transform: scale(1.14) translateX(0); }
+  40% { transform: scale(1.1) translateX(6px); }
+  100% { filter: brightness(1); transform: scale(1); }
+}
 @keyframes abil-fire-zoom {
   0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(125, 211, 252, 0.7); filter: brightness(1); }
   40% { transform: scale(1.12); box-shadow: 0 0 22px 6px rgba(251, 191, 36, 0.55); filter: brightness(1.25); }
   100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(125, 211, 252, 0); filter: brightness(1); }
-}
-  40% { transform: scale(1.1) translateX(6px); }
-  100% { filter: brightness(1); transform: scale(1); }
 }
 @keyframes abil-fire-shield {
   0% { box-shadow: 0 0 0 0 rgba(251,146,60,0.8); transform: scale(1.12); }
@@ -864,6 +872,11 @@ body.in-space {
   0% { transform: scale(1.1) rotate(-4deg); }
   50% { transform: scale(1.06) rotate(4deg); }
   100% { transform: scale(1) rotate(0); }
+}
+@keyframes abil-fire-hop {
+  0% { transform: scale(1.05, 0.9); box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7); filter: brightness(1.1); }
+  35% { transform: scale(0.92, 1.18); box-shadow: 0 0 20px 5px rgba(167, 243, 208, 0.55); filter: brightness(1.3); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(74, 222, 128, 0); filter: brightness(1); }
 }
 
 
