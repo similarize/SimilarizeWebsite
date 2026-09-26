@@ -1,4 +1,4 @@
-const VERSION = "3.8";
+const VERSION = "3.9";
 const VIEW_W = 960;
 const VIEW_H = 540;
 const PLAYER_X = 168;
@@ -28,7 +28,7 @@ function wheelSpec(ix, iy, imgR) {
   };
 }
 const REAR = wheelSpec(100, 232, 82);
-const FRONT = wheelSpec(600, 234, 80);
+const FRONT = wheelSpec(600, 234, 82);
 const WHEELS = [REAR, FRONT];
 const CRAWLER_W = 1440;
 const CRAWLER_H = 630;
@@ -172,6 +172,16 @@ function rampLift(sim, worldX) {
 }
 function surfaceY(sim, worldX) {
   return groundY(worldX) - rampLift(sim, worldX);
+}
+function surfacePitchDeg(sim) {
+  // Line Rider-style: pitch of dirt under the two contact patches (degrees, nose-up negative in canvas Y-down).
+  const g0 = wheelGeom(sim, 0);
+  const g1 = wheelGeom(sim, 1);
+  const x0 = sim.scroll + PLAYER_X + CAR_W / 2 + g0.lx;
+  const x1 = sim.scroll + PLAYER_X + CAR_W / 2 + g1.lx;
+  const y0 = surfaceY(sim, x0);
+  const y1 = surfaceY(sim, x1);
+  return Math.atan2(y1 - y0, Math.max(8, x1 - x0)) * 180 / Math.PI;
 }
 function createSim(best = 0) {
   const sim = {
@@ -494,16 +504,28 @@ function stepChassis(sim, dt, input) {
     if (sim.vy > 0) sim.vy = Math.min(sim.vy * 0.2, 80);
     sim.vy -= Math.min(lift, 6) * 22;
   }
+  // Terrain pitch (Line Rider): when wheels kiss dirt, lean with the surface; aim still steers in air / on dirt.
+  const pitch = contacts > 0 ? surfacePitchDeg(sim) : 0;
   if (aiming) {
     const err = wrapDeg(input.aim - sim.rot);
-    sim.av += clamp(err * 14 - sim.av * 5, -520, 520) * dt;
-    if (contacts > 0) sim.av *= Math.exp(-dt * 1.6);
+    sim.av += clamp(err * 16 - sim.av * 4.2, -560, 560) * dt;
+    if (contacts > 0) {
+      // Blend a little track camber in so aiming on dirt still feels planted.
+      const camber = wrapDeg(pitch - sim.rot);
+      sim.av += clamp(camber * 6 - sim.av * 0.8, -180, 180) * dt;
+      sim.av *= Math.exp(-dt * 1.1);
+    }
   } else if (contacts === 0) {
     const ang = wrapDeg(sim.rot);
     if (Math.abs(ang) < 85) sim.av += (-ang * 48 - sim.av * 13) * dt;
     else sim.av *= Math.exp(-dt * 1.4);
   } else {
-    sim.av *= Math.exp(-dt * (contacts === 2 ? 8 : 2.4));
+    // Follow the dirt curve / off-camber instead of freezing flat.
+    const err = wrapDeg(pitch - sim.rot);
+    const grip = contacts === 2 ? 1 : 0.55;
+    sim.av += clamp(err * (22 * grip) - sim.av * (3.2 * grip), -420, 420) * dt;
+    // Soft settle — keep some lean authority (was exp*8 which killed tilt).
+    sim.av *= Math.exp(-dt * (contacts === 2 ? 3.2 : 1.6));
   }
   sim.av = clamp(sim.av, -360, 360);
   sim.rot = wrapDeg(sim.rot + sim.av * dt);
@@ -512,6 +534,18 @@ function stepChassis(sim, dt, input) {
     return true;
   }
   sim.grounded = contacts > 0;
+  if (contacts === 2 && !aiming) {
+    // Settle chassis onto both contact patches so it rides the dirt instead of skating flat.
+    const g0 = wheelGeom(sim, 0);
+    const g1 = wheelGeom(sim, 1);
+    const p0 = wheelWorld(sim, g0);
+    const p1 = wheelWorld(sim, g1);
+    const want0 = surfaceY(sim, p0.x) - g0.r;
+    const want1 = surfaceY(sim, p1.x) - g1.r;
+    const wantY = (want0 + want1) * 0.5 - CAR_H / 2;
+    sim.y += (wantY - sim.y) * Math.min(1, dt * 14);
+    if (sim.vy > 0) sim.vy *= 0.35;
+  }
   return false;
 }
 function wheelWorld(sim, w) {
@@ -539,10 +573,13 @@ function coupleWheels(sim, dt) {
     loaded = true;
     const R = Math.max(4, g.r);
     const I = 0.28 * R * R;
+    const targetOmega = sim.speed / R;
     const slip = sim.speed - sim.wheelOmega[i] * R;
     const force = clamp(slip * load / 0.72, -260, 260);
     sim.speed -= force * dt * 0.2;
+    // Pull toward rolling contact so both wheels spin in sync with road speed (symmetric animation).
     sim.wheelOmega[i] += force * R / I * dt;
+    sim.wheelOmega[i] += (targetOmega - sim.wheelOmega[i]) * Math.min(1, dt * (9 * load));
     if (i === 0) sim.speed += (cruise - sim.speed) * dt * (sim.recover > 0 ? 6.5 : 1.35) * load;
     sim.wheelAng[i] += sim.wheelOmega[i] * dt;
     if (Math.abs(slip) > 55 && load > 0.3 && sim.dust.length < 80 && hash(sim.time * 900 + i * 19) > 0.62) {
@@ -1104,24 +1141,11 @@ function drawDrone(ctx, sim, d, art) {
   const p = dronePos(sim, d);
   const sx = p.x - sim.scroll;
   if (sx < -80 || sx > VIEW_W + 80) return;
-  if (d.kind === "lock") {
-    ctx.fillStyle = "rgba(120, 24, 16, 0.35)";
-    ctx.fillRect(sx - 8, 0, 16, VIEW_H);
-    ctx.fillStyle = `rgba(240, 180, 41, ${0.45 + Math.sin(sim.time * 8) * 0.35})`;
-    ctx.fillRect(sx - 2, 0, 4, VIEW_H);
-  }
+  // Lock drones used to paint a full-height red/amber beam (looked like a rogue floating rectangle).
+  // Keep the drone body only; aiming stays via drone position / shots.
   ctx.save();
   ctx.translate(sx, p.y);
   ctx.rotate(Math.sin(d.spin) * 0.05);
-  if (d.kind === "seek") {
-    ctx.strokeStyle = "#e4572e";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(-24, -14, 48, 28);
-  } else if (d.kind === "pattern") {
-    ctx.strokeStyle = "#f0b429";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(-24, -14, 48, 28);
-  }
   const img = art.drone;
   if (img && img.complete && img.naturalWidth > 0) {
     ctx.drawImage(img, -28, -12, 56, 22);
@@ -1227,6 +1251,11 @@ function spinWheel(ctx, sim, index, img) {
   ctx.translate(g.lx, g.ly + g.squash * g.drawR * 0.05);
   ctx.rotate(ang);
   ctx.scale(bulge, flat);
+  // Opaque disc under the sprite so spoke/tread cutouts stay solid (no sky/dirt through the hub).
+  ctx.beginPath();
+  ctx.arc(0, 0, g.drawR * 0.98, 0, Math.PI * 2);
+  ctx.fillStyle = "#14110f";
+  ctx.fill();
   ctx.drawImage(img, -g.drawR, -g.drawR, g.drawR * 2, g.drawR * 2);
   ctx.restore();
 }
