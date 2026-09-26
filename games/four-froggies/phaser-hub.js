@@ -13,7 +13,7 @@
    eyes1: rotate frog sprite toward walk dir; idle keeps last; AI companions too.
    truck1: kid-toy truck scale; smooth yaw toward aim; track elev / crest / land bounce.
    truck2: EXIT anytime (HUD); full elev lift (no *0.06 damp); stronger crest / ramp ride-up.
-   joy1: shared virtual joystick via engine-boot setSteer; touch playfield aim disabled. */
+   joy2: shared virtual joystick via engine-boot setSteer; touch playfield aim disabled. */
 (function (global) {
   "use strict";
   var C = global.FroggiesCanon;
@@ -228,7 +228,7 @@
           showTapMarker(pointer.event ? pointer.event.clientX : pointer.x, pointer.event ? pointer.event.clientY : pointer.y, Math.atan2(dy, dx));
         }
         this.input.on("pointerdown", function (pointer) {
-          /* joy1: stick primary on touch; mouse playfield aim optional */
+          /* joy2: stick primary on touch; mouse playfield aim optional */
           if (pointer.wasTouch) return;
           if (pointer.event && pointer.event.pointerType === "touch") return;
           aimFromPointer(pointer);
@@ -1214,7 +1214,7 @@
           showTapMarker(cx, cy, Math.atan2(dy, dx));
         }
         this.input.on("pointerdown", function (pointer) {
-          /* joy1: stick primary on touch; mouse playfield aim optional */
+          /* joy2: stick primary on touch; mouse playfield aim optional */
           if (pointer.wasTouch) return;
           if (pointer.event && pointer.event.pointerType === "touch") return;
           aimFromPointer(pointer);

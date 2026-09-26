@@ -5,7 +5,7 @@
   "use strict";
 
   var C = global.FroggiesCanon;
-  var CACHE = "20260926-joy1";
+  var CACHE = "20260926-joy2";
   var CDN = {
     phaser: "https://cdn.jsdelivr.net/npm/phaser@3.87.0/dist/phaser.min.js",
     three: "https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js",
@@ -244,7 +244,7 @@
     return loading;
   }
 
-  /* joy1: shared steer — virtual joystick + WASD/D-pad fan-out to Canvas / Phaser / Three */
+  /* joy2: shared steer — virtual joystick + WASD/D-pad fan-out to Canvas / Phaser / Three */
   var controlsBound = false;
   var joyBound = false;
   var keys = { left: false, right: false, up: false, down: false };
@@ -299,9 +299,30 @@
     applySharedSteer();
   }
 
+  function ensureVjoyBodyMount(root) {
+    /* joy2: keep stick a body sibling — never trapped under #controls pointer-events:none */
+    if (!root || !document.body) return root;
+    if (root.parentElement === document.body) return root;
+    try {
+      document.body.appendChild(root);
+    } catch (err) { /* ignore */ }
+    return root;
+  }
+
+  var joyHintShown = false;
+  function pulseVjoyHint() {
+    var root = $("vjoy");
+    if (!root || joyHintShown) return;
+    joyHintShown = true;
+    root.classList.add("vjoy-hint");
+    setTimeout(function () {
+      root.classList.remove("vjoy-hint");
+    }, 1700);
+  }
+
   function bindVirtualJoystick() {
     if (joyBound) return;
-    var root = $("vjoy");
+    var root = ensureVjoyBodyMount($("vjoy"));
     var knob = $("vjoy-knob");
     if (!root || !knob) return;
     joyBound = true;
@@ -571,7 +592,7 @@
     paintPicker: paintPicker,
     getMode: function () { return C ? C.getEngine() : "canvas"; },
     isAltRunning: function () { return engineRunning; },
-    /** Canvas (and others) register for joy1 stick values — same HUD path for all engines. */
+    /** Canvas (and others) register for joy2 stick values — same HUD path for all engines. */
     onJoySteer: function (fn) {
       if (typeof fn === "function") canvasJoyListeners.push(fn);
     },
@@ -582,6 +603,15 @@
   function bootControls() {
     initPicker();
     bindVirtualJoystick();
+    /* joy2: notice pulse once when player first enters hub/space */
+    try {
+      var mo = new MutationObserver(function () {
+        if (document.body.classList.contains("in-hub") || document.body.classList.contains("in-space")) {
+          pulseVjoyHint();
+        }
+      });
+      mo.observe(document.body, { attributes: true, attributeFilter: ["class"] });
+    } catch (err) { /* ignore */ }
   }
 
   if (document.readyState === "loading") {

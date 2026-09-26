@@ -615,7 +615,7 @@
 
 
   function effectiveSteer() {
-    /* WASD > virtual joystick (joy1) > mouse playfield aim */
+    /* WASD > virtual joystick (joy2) > mouse playfield aim */
     if (steerX || steerY) return { x: steerX, y: steerY };
     if (joySteerX || joySteerY) return { x: joySteerX, y: joySteerY };
     return { x: tapSteerX, y: tapSteerY };
@@ -1028,7 +1028,7 @@
   bindAxis(btnUp, "y", -1);
   bindAxis(btnDown, "y", 1);
 
-  // joy1: joystick is primary touch steer; playfield hold-to-aim only for mouse (desktop)
+  // joy2: joystick is primary touch steer; playfield hold-to-aim only for mouse (desktop)
   canvas.addEventListener("pointerdown", (e) => {
     if (e.target !== canvas) return;
     if (e.pointerType === "touch") return;
@@ -1047,7 +1047,7 @@
   canvas.addEventListener("pointerup", endTap);
   canvas.addEventListener("pointercancel", endTap);
 
-  /* joy1: shared stick from engine-boot — same path Canvas / Phaser / Three */
+  /* joy2: shared stick from engine-boot — same path Canvas / Phaser / Three */
   if (globalThis.FroggiesEngines && typeof globalThis.FroggiesEngines.onJoySteer === "function") {
     globalThis.FroggiesEngines.onJoySteer((x, y) => {
       joySteerX = x || 0;

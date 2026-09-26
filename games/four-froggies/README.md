@@ -1,3 +1,11 @@
+## What's new (joy2) — joystick visible + touchable on phone
+- **Visibility:** Idle opacity ~0.92 (was 0.48 glass-ghost on ranch); stronger border / knob / cyan glow; still stylish glass-neon, not a solid blob.
+- **Touch target:** Phone stick ~118px; z-index 32 above engine-host/canvas.
+- **Pointer events:** `#vjoy` moved to **body sibling** (not under `#controls` `pointer-events:none`); `#controls .vjoy { pointer-events: auto !important; }` kept as defense.
+- **Bind:** `bindVirtualJoystick` still runs on boot for Canvas + Phaser + Three; `setSteer` / `onJoySteer` unchanged.
+- **Hint:** Brief scale/glow pulse once on first hub/space enter.
+- Cache-bust: `?v=20260926-joy2`. Cast unchanged. No SPS arcade republish.
+
 ## What's new (joy1) — universal virtual joystick (Canvas / Phaser / Three)
 - **Stick:** Bottom-left glass-neon virtual joystick (base + knob, thumb-sized, safe-area, low opacity). Drag → `setSteer(x,y)` via **engine-boot**; release → center + stop. Walk + truck.
 - **Shared path:** Same HUD stick for Canvas, Phaser, and Three (`FroggiesEngines.onJoySteer` / `applySharedSteer`). INTERACT + ability stay on the right.
