@@ -27,7 +27,9 @@
    WASD camera-relative — do not invert.
    mechwalk1: boarded mech lumber walk (steer+solid ignore+mesh sync); pad pilot drives.
    boardall1: each couch pad/companion can board a DIFFERENT free mech at once.
-   earth1: space shows procedural Earth (home) — not ranch grounds in vacuum. */
+   earth1: space shows procedural Earth (home) — not ranch grounds in vacuum.
+   solarsys1: Solar System layout — Sun center; Moon+station orbit Earth; planet gravity wells;
+   asteroid belt; Pluto included; scale compressed (labeled). */
 (function (global) {
   "use strict";
 
@@ -1519,119 +1521,230 @@
   }
 
   function buildSpace() {
-    // Clear ranch meshes by rebuilding scene
     while (scene.children.length) scene.remove(scene.children[0]);
     scene.position.set(0, 0, 0);
-    scene.background = new THREE.Color(0x030712);
-    scene.fog = new THREE.FogExp2(0x030712, 0.012);
+    scene.background = new THREE.Color(0x020617);
+    scene.fog = new THREE.FogExp2(0x020617, 0.008);
 
-    var hemi = new THREE.HemisphereLight(0x93c5fd, 0x1e1b4b, 0.7);
+    var hemi = new THREE.HemisphereLight(0x93c5fd, 0x1e1b4b, 0.55);
     scene.add(hemi);
-    var sun = new THREE.DirectionalLight(0xffffff, 0.6);
-    sun.position.set(5, 10, 2);
-    scene.add(sun);
+    var sunLight = new THREE.PointLight(0xfff7ed, 1.35, 120, 2);
+    sunLight.position.set(0, 2, 0);
+    scene.add(sunLight);
+    var fill = new THREE.DirectionalLight(0xcbd5e1, 0.25);
+    fill.position.set(8, 12, -6);
+    scene.add(fill);
 
-    // Stars
+    /* Stars */
     var starGeo = new THREE.BufferGeometry();
-    var positions = new Float32Array(240);
-    for (var i = 0; i < 80; i++) {
-      positions[i * 3] = (Math.random() - 0.5) * 60;
-      positions[i * 3 + 1] = (Math.random() - 0.5) * 40;
-      positions[i * 3 + 2] = (Math.random() - 0.5) * 60;
+    var positions = new Float32Array(600);
+    for (var i = 0; i < 200; i++) {
+      positions[i * 3] = (Math.random() - 0.5) * 140;
+      positions[i * 3 + 1] = (Math.random() - 0.5) * 60;
+      positions[i * 3 + 2] = (Math.random() - 0.5) * 140;
     }
     starGeo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-    scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.12 })));
+    scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.14 })));
 
-    /* earth1: distant Earth (home) — ranch is ON Earth, not a floating yard here */
-    var earthGeo = new THREE.SphereGeometry(3.2, 32, 24);
-    var earthMat = new THREE.MeshStandardMaterial({
-      color: 0x0369a1, emissive: 0x0ea5e9, emissiveIntensity: 0.12, roughness: 0.55, metalness: 0.1
-    });
-    var earth = new THREE.Mesh(earthGeo, earthMat);
-    earth.position.set(-14, 4.5, -18);
-    scene.add(earth);
-    /* green land blobs as child meshes */
-    function earthLand(ox, oy, oz, sx, sy, col) {
-      var lm = new THREE.Mesh(
-        new THREE.SphereGeometry(1, 12, 10),
-        new THREE.MeshStandardMaterial({ color: col || 0x4ade80, roughness: 0.85 })
-      );
-      lm.scale.set(sx, sy, sx * 0.7);
-      lm.position.set(ox, oy, oz);
-      earth.add(lm);
+    /* Compressed Solar System (not to scale) — distances in Three units from Sun at origin */
+    var SOLAR = [
+      { id: "sun", name: "☉ Sun", dist: 0, base: 0, period: 0, r: 4.2, color: 0xfbbf24, emissive: 0xf59e0b, ei: 0.85, capture: false },
+      { id: "mercury", name: "Mercury", dist: 8, base: 0.5, period: 22, r: 0.35, color: 0xa8a29e, capture: true, soft: 2.4, cap: 1.2 },
+      { id: "venus", name: "Venus", dist: 11, base: 2.1, period: 34, r: 0.55, color: 0xeab308, capture: true, soft: 2.8, cap: 1.4 },
+      { id: "earth", name: "Earth · home", dist: 15, base: 0.15, period: 48, r: 0.95, color: 0x0369a1, emissive: 0x0ea5e9, ei: 0.12, capture: true, soft: 3.6, cap: 1.9, home: true },
+      { id: "mars", name: "Mars", dist: 20, base: 2.7, period: 68, r: 0.6, color: 0xb45309, emissive: 0x7c2d12, ei: 0.2, capture: true, soft: 3.1, cap: 1.6 },
+      { id: "jupiter", name: "Jupiter", dist: 30, base: 4.1, period: 110, r: 1.8, color: 0xd97706, capture: true, soft: 5.0, cap: 2.6 },
+      { id: "saturn", name: "Saturn", dist: 37, base: 5.3, period: 140, r: 1.45, color: 0xf59e0b, capture: true, soft: 4.5, cap: 2.3, rings: true },
+      { id: "uranus", name: "Uranus", dist: 44, base: 1.0, period: 170, r: 0.95, color: 0x67e8f9, capture: true, soft: 3.5, cap: 1.8 },
+      { id: "neptune", name: "Neptune", dist: 50, base: 3.4, period: 200, r: 0.9, color: 0x3b82f6, capture: true, soft: 3.4, cap: 1.7 },
+      { id: "pluto", name: "Pluto · dwarf", dist: 56, base: 5.9, period: 240, r: 0.28, color: 0xcbd5e1, capture: true, soft: 2.0, cap: 1.0 },
+    ];
+
+    state.spaceTime = 0;
+    state.solarBodies = [];
+    state.planetMeshes = {};
+    state.orbitPaths = [];
+
+    for (var pi = 0; pi < SOLAR.length; pi++) {
+      var def = SOLAR[pi];
+      var ang = def.base;
+      var x = Math.cos(ang) * def.dist;
+      var z = Math.sin(ang) * def.dist;
+      var mat = new THREE.MeshStandardMaterial({
+        color: def.color,
+        emissive: def.emissive || 0x000000,
+        emissiveIntensity: def.ei || 0,
+        roughness: def.id === "sun" ? 0.35 : 0.7,
+        metalness: 0.05,
+      });
+      var mesh = new THREE.Mesh(new THREE.SphereGeometry(def.r, def.id === "sun" ? 32 : 20, def.id === "sun" ? 24 : 16), mat);
+      mesh.position.set(x, def.r * 0.15, z);
+      scene.add(mesh);
+      if (def.rings) {
+        var ring = new THREE.Mesh(
+          new THREE.RingGeometry(def.r * 1.35, def.r * 2.1, 48),
+          new THREE.MeshBasicMaterial({ color: 0xfde68a, transparent: true, opacity: 0.45, side: THREE.DoubleSide })
+        );
+        ring.rotation.x = -Math.PI / 2.4;
+        mesh.add(ring);
+      }
+      if (def.id === "earth") {
+        var atmo = new THREE.Mesh(
+          new THREE.SphereGeometry(def.r * 1.08, 20, 16),
+          new THREE.MeshBasicMaterial({ color: 0x7dd3fc, transparent: true, opacity: 0.18, side: THREE.BackSide })
+        );
+        mesh.add(atmo);
+        function earthLand(ox, oy, oz, sx, sy, col) {
+          var lm = new THREE.Mesh(
+            new THREE.SphereGeometry(1, 10, 8),
+            new THREE.MeshStandardMaterial({ color: col || 0x4ade80, roughness: 0.85 })
+          );
+          lm.scale.set(sx, sy, sx * 0.7);
+          lm.position.set(ox, oy, oz);
+          mesh.add(lm);
+        }
+        earthLand(-0.25, 0.15, 0.85, 0.35, 0.22, 0x4ade80);
+        earthLand(0.3, -0.1, 0.8, 0.28, 0.18, 0x22c55e);
+        state.earth = mesh;
+      }
+      if (def.id === "sun") {
+        var sunGlow = new THREE.Mesh(
+          new THREE.SphereGeometry(def.r * 1.25, 24, 18),
+          new THREE.MeshBasicMaterial({ color: 0xfde68a, transparent: true, opacity: 0.22 })
+        );
+        mesh.add(sunGlow);
+      }
+      addLabel(def.name, def.home ? "#bbf7d0" : (def.id === "sun" ? "#fde68a" : "#e2e8f0"), x, def.r + 1.1, z);
+      if (def.home) addLabel("ranch is here", "#86efac", x, def.r + 0.7, z);
+      if (def.dist > 0) {
+        var path = new THREE.Mesh(
+          new THREE.RingGeometry(def.dist - 0.04, def.dist + 0.04, 96),
+          new THREE.MeshBasicMaterial({ color: 0x64748b, transparent: true, opacity: 0.18, side: THREE.DoubleSide })
+        );
+        path.rotation.x = -Math.PI / 2;
+        path.position.y = 0.02;
+        scene.add(path);
+        state.orbitPaths.push(path);
+      }
+      var body = {
+        id: def.id,
+        name: def.name.replace(" · home", "").replace(" · dwarf", ""),
+        mesh: mesh,
+        dist: def.dist,
+        base: def.base,
+        period: def.period,
+        r: def.r,
+        capture: !!def.capture,
+        soft: def.soft || 0,
+        cap: def.cap || 0,
+        x: x,
+        z: z,
+      };
+      state.solarBodies.push(body);
+      state.planetMeshes[def.id] = body;
     }
-    earthLand(-0.6, 0.4, 2.6, 1.1, 0.7, 0x4ade80);
-    earthLand(0.8, -0.3, 2.5, 0.9, 0.55, 0x22c55e);
-    earthLand(-0.2, -0.9, 2.4, 0.7, 0.4, 0x86efac);
-    /* atmosphere shell */
-    var atmo = new THREE.Mesh(
-      new THREE.SphereGeometry(3.45, 28, 20),
-      new THREE.MeshBasicMaterial({ color: 0x7dd3fc, transparent: true, opacity: 0.18, side: THREE.BackSide })
-    );
-    earth.add(atmo);
-    state.earth = earth;
-    addLabel("Earth · home", "#bbf7d0", -14, 8.2, -18);
-    addLabel("ranch is here", "#86efac", -14, 7.4, -18);
 
-    // Moon platform (walkable) — lunar grey, not ranch grass
-    var moon = new THREE.Mesh(
-      new THREE.CircleGeometry(10, 48),
-      new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 1 })
-    );
-    moon.rotation.x = -Math.PI / 2;
-    scene.add(moon);
+    /* Asteroid belt beyond Mars */
+    var beltGeo = new THREE.BufferGeometry();
+    var beltPos = new Float32Array(180);
+    for (var bi = 0; bi < 60; bi++) {
+      var bang = Math.random() * Math.PI * 2;
+      var bd = 24 + Math.random() * 4;
+      beltPos[bi * 3] = Math.cos(bang) * bd;
+      beltPos[bi * 3 + 1] = (Math.random() - 0.5) * 0.6;
+      beltPos[bi * 3 + 2] = Math.sin(bang) * bd;
+    }
+    beltGeo.setAttribute("position", new THREE.BufferAttribute(beltPos, 3));
+    state.asteroidBelt = new THREE.Points(beltGeo, new THREE.PointsMaterial({ color: 0xd6d3d1, size: 0.18 }));
+    scene.add(state.asteroidBelt);
+    addLabel("Asteroid belt", "#a8a29e", 26, 1.2, 0);
+    addLabel("Scale compressed · not to scale", "#fde68a", 0, 6.5, 0);
 
-    /* polish6: Mars marker + distant invader mech silhouettes (visual tease) */
-    var mars = new THREE.Mesh(
-      new THREE.SphereGeometry(0.9, 16, 12),
-      new THREE.MeshStandardMaterial({ color: 0xb45309, emissive: 0x7c2d12, emissiveIntensity: 0.25 })
+    /* Moon + station orbit Earth */
+    var earthBody = state.planetMeshes.earth;
+    state.moonOrbitR = 2.4;
+    state.stationOrbitR = 3.4;
+    var moonMesh = new THREE.Mesh(
+      new THREE.SphereGeometry(0.35, 14, 12),
+      new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 1 })
     );
-    mars.position.set(6.5, 0.9, 5.5); scene.add(mars);
-    addLabel("Mars", "#fed7aa", 6.5, 2.2, 5.5);
-    state.marsPos = { x: 6.5, z: 5.5 };
+    moonMesh.position.set(earthBody.x + state.moonOrbitR, 0.4, earthBody.z);
+    scene.add(moonMesh);
+    addLabel("☾ Moon", "#e2e8f0", earthBody.x + state.moonOrbitR, 1.2, earthBody.z);
+    state.moonMesh = moonMesh;
+    state.moonBody = {
+      id: "moon", name: "Moon", mesh: moonMesh, r: 0.35, capture: true, soft: 2.6, cap: 1.35,
+      x: moonMesh.position.x, z: moonMesh.position.z, parent: "earth",
+    };
+    state.solarBodies.push(state.moonBody);
+
+    var stGroup = new THREE.Group();
+    var stCore = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.18, 0.18, 0.7, 8),
+      new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.4, roughness: 0.4 })
+    );
+    stCore.rotation.z = Math.PI / 2;
+    stGroup.add(stCore);
+    var panelL = new THREE.Mesh(
+      new THREE.BoxGeometry(0.08, 0.5, 0.9),
+      new THREE.MeshStandardMaterial({ color: 0x0384c7, emissive: 0x0ea5e9, emissiveIntensity: 0.35 })
+    );
+    panelL.position.set(0, 0, 0.55); stGroup.add(panelL);
+    var panelR = panelL.clone(); panelR.position.z = -0.55; stGroup.add(panelR);
+    stGroup.position.set(earthBody.x + state.stationOrbitR, 0.55, earthBody.z);
+    scene.add(stGroup);
+    state.stationMesh = stGroup;
+    state.stationLabel = labelSprite("🛰 Station · orbits Earth", "#7dd3fc");
+    state.stationLabel.scale.set(4.2, 0.55, 1);
+    scene.add(state.stationLabel);
+    state.stationHot = { id: "station", x: stGroup.position.x, z: stGroup.position.z, r: 1.2 };
+
+    /* Mars invader tease (kept) */
+    state.marsPos = { x: state.planetMeshes.mars.x, z: state.planetMeshes.mars.z };
     state.invSil = [];
     for (var isi = 0; isi < 4; isi++) {
       var inv = new THREE.Mesh(
-        new THREE.BoxGeometry(0.35, 0.9, 0.25),
+        new THREE.BoxGeometry(0.25, 0.7, 0.18),
         new THREE.MeshBasicMaterial({ color: 0x7f1d1d, transparent: true, opacity: 0.55 })
       );
-      inv.position.set(5.2 + isi * 0.7, 0.5, 4.2 + (isi % 2) * 0.4);
+      inv.position.set(state.marsPos.x - 1.2 + isi * 0.55, 0.4, state.marsPos.z - 1.0);
       inv.visible = false;
       scene.add(inv);
       state.invSil.push(inv);
     }
     state.invLabel = labelSprite("Invader mechs · silhouette tease", "#fca5a5");
     state.invLabel.scale.set(4.2, 0.55, 1);
-    state.invLabel.position.set(6.5, 2.8, 5.5);
+    state.invLabel.position.set(state.marsPos.x, 2.4, state.marsPos.z);
     state.invLabel.visible = false;
     scene.add(state.invLabel);
 
-    var def = C.FROG_DEFS[state.frogId];
-    state.player = makeFrogMesh(def, 1.5);
-    state.player.position.set(-4, 0, 2);
+    var defFrog = C.FROG_DEFS[state.frogId];
+    state.player = makeFrogMesh(defFrog, 1.5);
+    /* Spawn near Earth (home) */
+    state.player.position.set(earthBody.x - 3.2, 0, earthBody.z + 2.2);
     scene.add(state.player);
     state.playerShadow = new THREE.Mesh(
       new THREE.CircleGeometry(0.5, 16),
       new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.28, side: THREE.DoubleSide })
     );
     state.playerShadow.rotation.x = -Math.PI / 2;
-    state.playerShadow.position.set(-4, 0.05, 2);
+    state.playerShadow.position.copy(state.player.position);
+    state.playerShadow.position.y = 0.05;
     scene.add(state.playerShadow);
     state.playerShadowSoft = null;
     state.paraHills = [];
-    state.nameTag = labelSprite(def.name, "#fff");
+    state.nameTag = labelSprite(defFrog.name, "#fff");
     state.nameTag.scale.set(2.6, 0.65, 1);
     scene.add(state.nameTag);
-    camera.userData.lockTarget.set(-4, 0, 2);
-    camera.position.set(-4 + 10, 14, 2 + 10);
-    camera.lookAt(-4, 0.5, 2);
+    camera.userData.lockTarget.set(state.player.position.x, 0, state.player.position.z);
+    camera.position.set(state.player.position.x + 12, 16, state.player.position.z + 12);
+    camera.lookAt(state.player.position.x, 0.5, state.player.position.z);
 
     state.jimmy = makeFrogMesh(C.FROG_DEFS.jimmy, 1.35);
-    state.jimmy.position.set(4, 0, -2);
+    state.jimmy.position.set(earthBody.x + 1.5, 0, earthBody.z - 2.2);
     scene.add(state.jimmy);
     state.jimmyLabel = labelSprite("Jimmy", "#fb923c");
     scene.add(state.jimmyLabel);
-    /* polish7: Jimmy jetpack flame (escape visual) */
     state.jimmyFlame = new THREE.Mesh(
       new THREE.ConeGeometry(0.18, 0.7, 8),
       new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.9 })
@@ -1642,102 +1755,85 @@
     state.jimmyJetT = 0;
     state.jimmyVx = 2.2;
     state.jimmyVz = -1.4;
-    state.planet = { id: "moon", name: "Moon", x: 5, z: -5, r: 1.2 };
-    addLabel("☾ Moon", "#e2e8f0", 5, 1.6, -5);
-    /* polish8: soft destination beacon */
+
+    /* Multi-planet gravity — active target refreshed in tick */
+    state.planets = state.solarBodies.filter(function (b) { return b.capture; });
+    state.planet = state.moonBody;
     state.destBeacon = new THREE.Mesh(
-      new THREE.RingGeometry(2.6, 2.85, 48),
-      new THREE.MeshBasicMaterial({ color: 0x7dd3fc, transparent: true, opacity: 0.45, side: THREE.DoubleSide })
+      new THREE.RingGeometry(2.0, 2.2, 48),
+      new THREE.MeshBasicMaterial({ color: 0x7dd3fc, transparent: true, opacity: 0.4, side: THREE.DoubleSide })
     );
     state.destBeacon.rotation.x = -Math.PI / 2;
-    state.destBeacon.position.set(5, 0.12, -5); scene.add(state.destBeacon);
-    state.destBeaconLabel = labelSprite("✦ heading · Moon", "#7dd3fc");
-    state.destBeaconLabel.scale.set(3.5, 0.5, 1);
-    state.destBeaconLabel.position.set(5, 2.4, -5);
-    state.destBeaconLabel.visible = false; scene.add(state.destBeaconLabel);
+    state.destBeacon.position.set(state.moonBody.x, 0.12, state.moonBody.z);
+    scene.add(state.destBeacon);
+    state.destBeaconLabel = labelSprite("✦ heading", "#7dd3fc");
+    state.destBeaconLabel.scale.set(3.2, 0.5, 1);
+    state.destBeaconLabel.visible = false;
+    scene.add(state.destBeaconLabel);
     state.inOrbit = false;
     state.orbitAngle = 0;
     state.orbitRadius = 2.2;
     state.orbitEscapeCool = 0;
     state.orbitCfg = (C && C.ORBIT_PHYSICS) || {};
-    /* polish5: readable pull / orbit rings */
     state.pullRing = new THREE.Mesh(
-      new THREE.RingGeometry(3.2, 3.45, 48),
-      new THREE.MeshBasicMaterial({ color: 0x7dd3fc, transparent: true, opacity: 0.35, side: THREE.DoubleSide })
+      new THREE.RingGeometry(3.0, 3.2, 48),
+      new THREE.MeshBasicMaterial({ color: 0x7dd3fc, transparent: true, opacity: 0.3, side: THREE.DoubleSide })
     );
     state.pullRing.rotation.x = -Math.PI / 2;
-    state.pullRing.position.set(5, 0.08, -5); scene.add(state.pullRing);
+    scene.add(state.pullRing);
     state.capRing = new THREE.Mesh(
-      new THREE.RingGeometry(1.9, 2.1, 48),
-      new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.55, side: THREE.DoubleSide })
+      new THREE.RingGeometry(1.7, 1.9, 48),
+      new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.5, side: THREE.DoubleSide })
     );
     state.capRing.rotation.x = -Math.PI / 2;
-    state.capRing.position.set(5, 0.09, -5); scene.add(state.capRing);
+    scene.add(state.capRing);
     state.orbitRing = new THREE.Mesh(
-      new THREE.RingGeometry(2.1, 2.25, 48),
+      new THREE.RingGeometry(2.0, 2.15, 48),
       new THREE.MeshBasicMaterial({ color: 0xfacc15, transparent: true, opacity: 0.9, side: THREE.DoubleSide })
     );
     state.orbitRing.rotation.x = -Math.PI / 2;
-    state.orbitRing.position.set(5, 0.1, -5); state.orbitRing.visible = false; scene.add(state.orbitRing);
+    state.orbitRing.visible = false;
+    scene.add(state.orbitRing);
     state.escapeBanner = labelSprite("ORBIT · ESCAPE / Esc · Ability thruster", "#fde68a");
     state.escapeBanner.scale.set(5.5, 0.7, 1);
-    state.escapeBanner.visible = false; scene.add(state.escapeBanner);
-    state.toast = "Space · near Moon → orbit · Escape / hard thruster to leave";
+    state.escapeBanner.visible = false;
+    scene.add(state.escapeBanner);
 
-    var germy = new THREE.Mesh(
-      new THREE.SphereGeometry(0.28, 10, 8),
-      new THREE.MeshStandardMaterial({ color: 0xb45309 })
-    );
-    germy.position.set(1, 0.28, 1.5);
-    scene.add(germy);
-    addLabel("Germy", "#fbbf24", 1, 1.1, 1.5);
+    var germy = new THREE.Mesh(new THREE.SphereGeometry(0.28, 10, 8), new THREE.MeshStandardMaterial({ color: 0xb45309 }));
+    germy.position.set(earthBody.x - 1.2, 0.28, earthBody.z + 1.0); scene.add(germy);
+    addLabel("Germy", "#fbbf24", earthBody.x - 1.2, 1.1, earthBody.z + 1.0);
+    var daisy = new THREE.Mesh(new THREE.SphereGeometry(0.26, 10, 8), new THREE.MeshStandardMaterial({ color: 0xd6d3d1 }));
+    daisy.position.set(earthBody.x - 0.4, 0.26, earthBody.z + 1.6); scene.add(daisy);
+    addLabel("Daisy", "#e7e5e4", earthBody.x - 0.4, 1.05, earthBody.z + 1.6);
+    var spotty = new THREE.Mesh(new THREE.SphereGeometry(0.3, 10, 8), new THREE.MeshStandardMaterial({ color: 0xfdba74 }));
+    spotty.position.set(earthBody.x - 4.5, 0.3, earthBody.z - 1.5); scene.add(spotty);
+    addLabel("Spotty", "#fdba74", earthBody.x - 4.5, 1.2, earthBody.z - 1.5);
+    var alex = new THREE.Mesh(new THREE.SphereGeometry(0.28, 10, 8), new THREE.MeshStandardMaterial({ color: 0x64748b }));
+    alex.position.set(stGroup.position.x - 0.6, 0.35, stGroup.position.z + 0.4); scene.add(alex);
+    state.alexMesh = alex;
+    addLabel("Alex", "#e2e8f0", stGroup.position.x - 0.6, 1.2, stGroup.position.z + 0.4);
+    var fred = new THREE.Mesh(new THREE.SphereGeometry(0.28, 10, 8), new THREE.MeshStandardMaterial({ color: 0x475569 }));
+    fred.position.set(stGroup.position.x + 0.5, 0.35, stGroup.position.z + 0.5); scene.add(fred);
+    state.fredMesh = fred;
+    addLabel("Fred", "#e2e8f0", stGroup.position.x + 0.5, 1.2, stGroup.position.z + 0.5);
 
-    var daisy = new THREE.Mesh(
-      new THREE.SphereGeometry(0.26, 10, 8),
-      new THREE.MeshStandardMaterial({ color: 0xd6d3d1 })
-    );
-    daisy.position.set(2, 0.26, 2);
-    scene.add(daisy);
-    addLabel("Daisy", "#e7e5e4", 2, 1.05, 2);
-
-    var spotty = new THREE.Mesh(
-      new THREE.SphereGeometry(0.3, 10, 8),
-      new THREE.MeshStandardMaterial({ color: 0xfdba74 })
-    );
-    spotty.position.set(-6, 0.3, -4);
-    scene.add(spotty);
-    addLabel("Spotty", "#fdba74", -6, 1.2, -4);
-
-    var alex = new THREE.Mesh(
-      new THREE.SphereGeometry(0.28, 10, 8),
-      new THREE.MeshStandardMaterial({ color: 0x64748b })
-    );
-    alex.position.set(-2, 0.35, 3); scene.add(alex);
-    addLabel("Alex", "#e2e8f0", -2, 1.3, 3);
-    var fred = new THREE.Mesh(
-      new THREE.SphereGeometry(0.28, 10, 8),
-      new THREE.MeshStandardMaterial({ color: 0x475569 })
-    );
-    fred.position.set(-1, 0.35, 3.6); scene.add(fred);
-    addLabel("Fred", "#e2e8f0", -1, 1.3, 3.6);
-
-    /* earth1: return pad → ranch hub, but labeled as Earth home (no yard mesh in vacuum) */
+    /* Return pad → ranch (Earth home) */
     var pad = new THREE.Mesh(
-      new THREE.CircleGeometry(1.2, 24),
+      new THREE.CircleGeometry(1.1, 24),
       new THREE.MeshStandardMaterial({ color: 0x0284c7, emissive: 0x0c4a6e, emissiveIntensity: 0.45 })
     );
     pad.rotation.x = -Math.PI / 2;
-    pad.position.set(-7, 0.05, 5);
+    pad.position.set(earthBody.x - 4.5, 0.05, earthBody.z + 3.2);
     scene.add(pad);
-    addLabel("Earth · home", "#bbf7d0", -7, 1.2, 5);
-    addLabel("→ ranch hub", "#86efac", -7, 0.85, 5);
-    state.returnPad = { x: -7, z: 5 };
+    addLabel("Earth · home", "#bbf7d0", earthBody.x - 4.5, 1.2, earthBody.z + 3.2);
+    addLabel("→ ranch hub", "#86efac", earthBody.x - 4.5, 0.85, earthBody.z + 3.2);
+    state.returnPad = { x: earthBody.x - 4.5, z: earthBody.z + 3.2 };
 
     state.vx = 0;
     state.vz = 0;
     state.catches = 0;
-    state.toast = "Space · near Moon → orbit · Escape / hard thruster to leave";
-    state.toastT = 3;
+    state.toast = "Solar System · near planets → orbit · Escape / thruster to leave";
+    state.toastT = 3.5;
     state.mode = "space";
     if (state.miniMapCanvas) state.miniMapCanvas.style.display = "none";
     state.near = null;
@@ -1749,8 +1845,7 @@
     state.whales = [];
     state.hotMeshes = [];
     state.companions = [];
-    // Keep same locked isometric angle
-    camera.position.set(12, 14, 12);
+    camera.position.set(state.player.position.x + 14, 18, state.player.position.z + 14);
   }
 
   function resize() {
@@ -1894,12 +1989,21 @@
     } else {
       if (id === "jimmy") {
         state.catches++;
-        state.jimmy.position.set((Math.random() - 0.5) * 8, 0, (Math.random() - 0.5) * 8);
-        state.toast = "Caught Jimmy! ×" + state.catches;
+        var eCatch = (state.planetMeshes && state.planetMeshes.earth) || { x: 15, z: 0 };
+        var ca = Math.random() * Math.PI * 2;
+        state.jimmy.position.set(eCatch.x + Math.cos(ca) * 3.5, 0, eCatch.z + Math.sin(ca) * 3.5);
+        state.jimmyVx = (Math.random() > 0.5 ? 1 : -1) * (2 + Math.random() * 2);
+        state.jimmyVz = (Math.random() > 0.5 ? 1 : -1) * (1.5 + Math.random() * 2);
+        state.toast = state.catches >= 2
+          ? ("Almost! ×" + state.catches + " — station orbits Earth →")
+          : ("Caught Jimmy! ×" + state.catches);
+        state.toastT = 2.5;
+      } else if (id === "station") {
+        state.toast = "Space station · Alex & Fred aboard · orbits Earth";
         state.toastT = 2.5;
       } else if (id === "return") {
         buildRanch();
-        state.toast = "Back at ranch";
+        state.toast = "Back at ranch · Earth home";
         state.toastT = 2;
       }
     }
@@ -1981,7 +2085,7 @@
         var kick = ((state.orbitCfg && state.orbitCfg.hardThrustImpulse) || 320) * 0.02;
         state.vx = Math.cos(state.orbitAngle || 0) * kick;
         state.vz = Math.sin(state.orbitAngle || 0) * kick;
-        state.toast = "HOP · left Moon orbit";
+        state.toast = "HOP · left " + ((state.planet && state.planet.name) || "planet") + " orbit";
       } else {
         var impulseS = 5.5;
         state.vx += fx * impulseS;
@@ -2046,49 +2150,117 @@
     state.exitTipT = Math.max(0, (state.exitTipT || 0) - dt);
     state.bob += dt * 10;
 
-    if (state.earth && state.mode === "space") {
-      state.earth.rotation.y += dt * 0.08;
-    }
-    if (state.mode === "space" && state.planet) {
+    if (state.mode === "space" && state.solarBodies) {
+      state.spaceTime = (state.spaceTime || 0) + dt;
+      var tSp = state.spaceTime;
+      /* Advance planet positions (slow orbits) */
+      for (var sbi = 0; sbi < state.solarBodies.length; sbi++) {
+        var sb = state.solarBodies[sbi];
+        if (sb.parent) continue;
+        if (sb.period > 0 && sb.mesh) {
+          var sang = sb.base + tSp / sb.period;
+          sb.x = Math.cos(sang) * sb.dist;
+          sb.z = Math.sin(sang) * sb.dist;
+          sb.mesh.position.x = sb.x;
+          sb.mesh.position.z = sb.z;
+        }
+      }
+      var earthB = state.planetMeshes && state.planetMeshes.earth;
+      if (earthB) {
+        if (state.earth) state.earth.rotation.y += dt * 0.08;
+        var moonAng = tSp * 0.55 + 0.8;
+        if (state.moonMesh && state.moonBody) {
+          state.moonBody.x = earthB.x + Math.cos(moonAng) * state.moonOrbitR;
+          state.moonBody.z = earthB.z + Math.sin(moonAng) * state.moonOrbitR;
+          state.moonMesh.position.set(state.moonBody.x, 0.4, state.moonBody.z);
+        }
+        var stAng = tSp * 0.32 + 2.4;
+        if (state.stationMesh) {
+          var sx = earthB.x + Math.cos(stAng) * state.stationOrbitR;
+          var sz = earthB.z + Math.sin(stAng) * state.stationOrbitR;
+          state.stationMesh.position.set(sx, 0.55, sz);
+          state.stationHot = { id: "station", x: sx, z: sz, r: 1.2 };
+          if (state.stationLabel) state.stationLabel.position.set(sx, 1.6, sz);
+          if (state.alexMesh) state.alexMesh.position.set(sx - 0.6, 0.35, sz + 0.4);
+          if (state.fredMesh) state.fredMesh.position.set(sx + 0.5, 0.35, sz + 0.5);
+        }
+        if (state.planetMeshes.mars) {
+          state.marsPos = { x: state.planetMeshes.mars.x, z: state.planetMeshes.mars.z };
+          if (state.invLabel) state.invLabel.position.set(state.marsPos.x, 2.4, state.marsPos.z);
+        }
+      }
+      if (state.asteroidBelt) state.asteroidBelt.rotation.y += dt * 0.02;
+
+      /* Multi-planet gravity wells */
       var cfg = state.orbitCfg || {};
-      var capR = (cfg.captureRadius || 120) * 0.03;
-      var softR = (cfg.softPullRadius || 220) * 0.03;
-      var alt = state.orbitRadius || 2.2;
       var pullA = (cfg.pullAccel || 420) * 0.02;
       if (state.orbitEscapeCool > 0) state.orbitEscapeCool -= dt;
-      var dx = state.player.position.x - state.planet.x;
-      var dz = state.player.position.z - state.planet.z;
-      var dP = Math.hypot(dx, dz);
-      if (state.orbitRing) state.orbitRing.visible = !!state.inOrbit;
-      /* polish8: destination beacon when heading toward Moon */
-      if (state.destBeacon) {
+
+      var best = null, bestD = 1e9;
+      var plist = state.planets || [];
+      for (var pii = 0; pii < plist.length; pii++) {
+        var pl = plist[pii];
+        var ddd = Math.hypot(state.player.position.x - pl.x, state.player.position.z - pl.z);
+        if (ddd < bestD) { bestD = ddd; best = pl; }
+      }
+      if (best) state.planet = best;
+      var softR = best ? (best.soft || 3.2) : 3.2;
+      var capR = best ? (best.cap || 1.6) : 1.6;
+      var dx = best ? state.player.position.x - best.x : 0;
+      var dz = best ? state.player.position.z - best.z : 0;
+      var dP = bestD;
+
+      if (state.pullRing && best) {
+        state.pullRing.visible = !state.inOrbit && dP < softR * 1.3;
+        state.pullRing.position.set(best.x, 0.08, best.z);
+        var ps = softR / 3.1;
+        state.pullRing.scale.set(ps, ps, ps);
+      }
+      if (state.capRing && best) {
+        state.capRing.visible = !state.inOrbit && dP < softR * 1.3;
+        state.capRing.position.set(best.x, 0.09, best.z);
+        var cs = capR / 1.8;
+        state.capRing.scale.set(cs, cs, cs);
+      }
+      if (state.orbitRing) {
+        state.orbitRing.visible = !!state.inOrbit;
+        if (state.inOrbit && state.planet) {
+          state.orbitRing.position.set(state.planet.x, 0.1, state.planet.z);
+          var os = (state.orbitRadius || 2.2) / 2.1;
+          state.orbitRing.scale.set(os, os, os);
+        }
+      }
+      if (state.destBeacon && best) {
         var spdB = Math.hypot(state.vx || 0, state.vz || 0);
         var heading = !!state.inOrbit;
         if (!state.inOrbit && dP < softR * 1.6 && spdB > 0.8) {
-          var hx = state.planet.x - state.player.position.x;
-          var hz = state.planet.z - state.player.position.z;
+          var hx = best.x - state.player.position.x;
+          var hz = best.z - state.player.position.z;
           var dot = ((state.vx || 0) * hx + (state.vz || 0) * hz) / (spdB * (dP || 1));
           heading = dot > 0.35;
         }
         var pulse = 0.3 + 0.4 * Math.sin(state.bob * 2.5);
-        state.destBeacon.material.opacity = heading ? pulse : (dP < softR ? 0.25 : 0.12);
-        state.destBeacon.scale.setScalar(1 + Math.sin(state.bob * 2) * 0.04);
-        if (state.destBeaconLabel) state.destBeaconLabel.visible = heading;
+        state.destBeacon.position.set(best.x, 0.12, best.z);
+        state.destBeacon.material.opacity = heading ? pulse : (dP < softR ? 0.25 : 0.1);
+        state.destBeacon.scale.setScalar((softR / 3.2) * (1 + Math.sin(state.bob * 2) * 0.04));
+        if (state.destBeaconLabel) {
+          state.destBeaconLabel.visible = heading;
+          state.destBeaconLabel.position.set(best.x, 2.2, best.z);
+        }
       }
       if (state.escapeBanner) {
         state.escapeBanner.visible = !!state.inOrbit;
-        if (state.inOrbit) {
-          state.escapeBanner.position.set(state.player.position.x, 2.2, state.player.position.z);
-        }
+        if (state.inOrbit) state.escapeBanner.position.set(state.player.position.x, 2.2, state.player.position.z);
       }
-      if (state.inOrbit) {
+      if (state.inOrbit && state.planet) {
+        /* Keep orbit centered on moving body */
         var oSteer = mergedSteer();
-        state.orbitRadius = Math.max(1.4, Math.min(softR * 0.9, state.orbitRadius + (oSteer.y || 0) * 1.2 * dt));
+        state.orbitRadius = Math.max(state.planet.r + 0.9, Math.min(softR * 0.9, state.orbitRadius + (oSteer.y || 0) * 1.2 * dt));
         state.orbitAngle += (0.85 + (oSteer.x || 0) * 0.35) * dt;
         state.player.position.x = state.planet.x + Math.cos(state.orbitAngle) * state.orbitRadius;
         state.player.position.z = state.planet.z + Math.sin(state.orbitAngle) * state.orbitRadius;
         state.vx = 0; state.vz = 0;
-      } else if (state.orbitEscapeCool <= 0) {
+      } else if (state.orbitEscapeCool <= 0 && best) {
         if (dP < softR && dP > 0.2) {
           var ang = Math.atan2(dz, dx);
           var pull = pullA * (1 - dP / softR) * dt;
@@ -2098,19 +2270,21 @@
         if (dP < capR) {
           state.inOrbit = true;
           state.orbitAngle = Math.atan2(dz, dx);
-          state.orbitRadius = 2.2;
+          state.orbitRadius = Math.max(best.r + 1.1, Math.min(2.4, softR * 0.55));
           state.vx = 0; state.vz = 0;
-          state.toast = "Orbit locked · Moon · Escape or hard thruster to leave";
+          state.toast = "Orbit locked · " + best.name + " · Escape or hard thruster to leave";
           state.toastT = 3;
         }
       }
+    } else if (state.earth && state.mode === "space") {
+      state.earth.rotation.y += dt * 0.08;
     }
 
     /* polish3: snappier locomotion (Canvas feel port) */
     /* tapsteer1: noticeably snappier walk + drive */
     /* mechwalk1: lumber slower/heavier than frog hop; continuous thrust while piloted */
-    var maxSp = state.mode === "space" ? 7.5 : state.inTruck ? 15.8 : state.inMech ? 6.8 : 13.6;
-    var accel = state.mode === "space" ? 16 : state.inTruck ? 38 : state.inMech ? 16 : 34;
+    var maxSp = state.mode === "space" ? 11.5 : state.inTruck ? 15.8 : state.inMech ? 6.8 : 13.6;
+    var accel = state.mode === "space" ? 22 : state.inTruck ? 38 : state.inMech ? 16 : 34;
     var fric = state.mode === "space" ? 3.0 : state.inTruck ? 4.8 : state.inMech ? 5.2 : 7.8;
 
     // Map screen WASD/D-pad → ground plane relative to locked camera
@@ -2685,8 +2859,9 @@
       state.player.position.x = Math.max(-halfW + 0.5, Math.min(halfW - 0.5, state.player.position.x));
       state.player.position.z = Math.max(-halfH + 0.5, Math.min(halfH - 0.5, state.player.position.z));
     } else {
-      state.player.position.x = Math.max(-9, Math.min(9, state.player.position.x));
-      state.player.position.z = Math.max(-9, Math.min(9, state.player.position.z));
+      /* solarsys1: full compressed solar system reach (Pluto ~56) */
+      state.player.position.x = Math.max(-62, Math.min(62, state.player.position.x));
+      state.player.position.z = Math.max(-62, Math.min(62, state.player.position.z));
     }
 
     if (state.nameTag) {
@@ -2983,10 +3158,18 @@
         hg.ring.material.opacity = state.near && state.near.id === hg.data.id ? 0.85 : 0.35;
       }
     } else {
+      var earthChase = (state.planetMeshes && state.planetMeshes.earth) || { x: 15, z: 0 };
       state.jimmy.position.x += state.jimmyVx * dt;
       state.jimmy.position.z += state.jimmyVz * dt;
-      if (Math.abs(state.jimmy.position.x) > 8) state.jimmyVx *= -1;
-      if (Math.abs(state.jimmy.position.z) > 8) state.jimmyVz *= -1;
+      var jdx2 = state.jimmy.position.x - earthChase.x;
+      var jdz2 = state.jimmy.position.z - earthChase.z;
+      if (Math.hypot(jdx2, jdz2) > 5.5) {
+        state.jimmyVx *= -1;
+        state.jimmyVz *= -1;
+        var jang = Math.atan2(jdz2, jdx2);
+        state.jimmy.position.x = earthChase.x + Math.cos(jang) * 5.2;
+        state.jimmy.position.z = earthChase.z + Math.sin(jang) * 5.2;
+      }
       if (state.jimmyJetT > 0) state.jimmyJetT -= dt;
       var jetBoost = state.jimmyJetT > 0 ? 0.55 + state.jimmyJetT * 0.8 : 0;
       state.jimmy.position.y = 0.15 + Math.abs(Math.sin(state.bob * 1.4)) * 0.35 + jetBoost;
@@ -3002,9 +3185,13 @@
       }
       var dJ = state.player.position.distanceTo(state.jimmy.position);
       var dR = Math.hypot(state.player.position.x - state.returnPad.x, state.player.position.z - state.returnPad.z);
+      var dSt = state.stationHot
+        ? Math.hypot(state.player.position.x - state.stationHot.x, state.player.position.z - state.stationHot.z)
+        : 99;
       state.near = null;
       if (dJ < 1.1) state.near = { id: "jimmy", tip: "Catch Jimmy!" };
-      else if (dR < 1.6) state.near = { id: "return", tip: "Return to ranch" };
+      else if (dSt < 1.5) state.near = { id: "station", tip: "Space station · orbits Earth" };
+      else if (dR < 1.6) state.near = { id: "return", tip: "Return to ranch · Earth home" };
       /* polish6: invader silhouettes when near Mars */
       if (state.marsPos) {
         var dMars = Math.hypot(state.player.position.x - state.marsPos.x, state.player.position.z - state.marsPos.z);
@@ -3040,7 +3227,7 @@
     if (hooks.onHud) {
       var def = C.FROG_DEFS[state.frogId];
       var label;
-      if (state.mode === "space") label = "Space · Moon · three.js";
+      if (state.mode === "space") label = "Space · Solar System · three.js";
       else {
         var wp = threeToWorld(state.player.position.x, state.player.position.z);
         label = C.areaNameAt(wp.x, wp.y) + " · three.js";
@@ -3243,7 +3430,7 @@
     var kick = ((state.orbitCfg && state.orbitCfg.hardThrustImpulse) || 320) * 0.02;
     state.vx = Math.cos(state.orbitAngle || 0) * kick;
     state.vz = Math.sin(state.orbitAngle || 0) * kick;
-    state.toast = "Escape · left Moon orbit";
+    state.toast = "Escape · left " + ((state.planet && state.planet.name) || "planet") + " orbit";
     state.toastT = 2.2;
     return true;
   }

@@ -146,7 +146,7 @@ Phaser and three.js load their CDNs on first GO (no paid APIs). Party sync is in
 
 ### Space episode (Canvas — full path)
 
-Starship (Spotty) → Space/Moon (Jimmy jetpack chase; Germy + Daisy) → station (Alex + Fred + ~20 people) → solar map (Mars moons + Neptune’s 14) → Mars cave / King Germy → mech set-piece. Soft stubs as before.
+Starship (Spotty) → Solar System free-fly (Sun center; Earth home; Moon + station orbit Earth; all planets gravity wells; asteroid belt; Pluto) → Jimmy chase near Earth → station (Alex + Fred + ~20 people) → solar map (Mars moons + Neptune’s 14) → Mars cave / King Germy → mech set-piece. Scale compressed (labeled). Soft stubs as before.
 
 ### Phaser / three.js (solo — landmark parity)
 
