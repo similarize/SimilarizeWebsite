@@ -14,7 +14,7 @@ import {
   wheelPace,
   MISSILE_MAX,
   MISSILE_RELOAD
-} from "./engine.js?v=20260926drone1";
+} from "./engine.js?v=20260926-vfs1";
 var BEST_KEY = "rc-rally-jump-best";
 var RIG_KEY = "rc-rally-rig";
 var TUNE_KEY = "rc-rally-tune";
@@ -284,6 +284,7 @@ function boot() {
     }
   };
   const begin = (hold) => {
+    try { if (window.SimilarizeViewportFS) window.SimilarizeViewportFS.enter(); } catch (_) {}
     audio.unlock();
     startRun(sim);
     pointer = hold;
@@ -300,14 +301,10 @@ function boot() {
     return pointer || keys.has("ArrowUp") || keys.has("KeyW") || gpBoost;
   };
   const camera = () => {
-    const portrait = canvas.height > canvas.width * 1.05;
-    const scale = portrait ? Math.min(canvas.width / 700, canvas.height / VIEW_H) : Math.min(canvas.width / VIEW_W, canvas.height / VIEW_H);
-    const visW = canvas.width / scale;
-    const windowStart = portrait ? Math.max(0, Math.min(72, VIEW_W - visW)) : 0;
-    const worldH = VIEW_H * scale;
-    const oy = (canvas.height - worldH) / 2;
-    const ox = portrait ? 0 : (canvas.width - VIEW_W * scale) / 2;
-    return { scale, windowStart, ox, oy };
+    /* Fill entire canvas (no letterbox). Stretch world VIEW_W×VIEW_H to viewport. */
+    const scaleX = canvas.width / VIEW_W;
+    const scaleY = canvas.height / VIEW_H;
+    return { scaleX, scaleY, scale: scaleX, windowStart: 0, ox: 0, oy: 0 };
   };
   const viewFromClient = (clientX, clientY) => {
     const rect = canvas.getBoundingClientRect();
@@ -315,8 +312,8 @@ function boot() {
     const py = (clientY - rect.top) * (canvas.height / rect.height);
     const cam = camera();
     return {
-      x: (px - (cam.ox - cam.windowStart * cam.scale)) / cam.scale,
-      y: (py - cam.oy) / cam.scale
+      x: (px - cam.ox) / cam.scaleX + cam.windowStart,
+      y: (py - cam.oy) / cam.scaleY
     };
   };
   const controlAim = () => {
@@ -537,14 +534,11 @@ function boot() {
     prevScrapes = sim.scrapes;
     prevGates = sim.gatesCleared;
     audio.motorDrive(sim.phase === "play", sim.muted, sim.boosting, wheelPace(sim));
-    const portrait = canvas.height > canvas.width * 1.05;
-    const scale = portrait ? Math.min(canvas.width / 700, canvas.height / VIEW_H) : Math.min(canvas.width / VIEW_W, canvas.height / VIEW_H);
-    const visW = canvas.width / scale;
-    const windowStart = portrait ? Math.max(0, Math.min(72, VIEW_W - visW)) : 0;
+    const scaleX = canvas.width / VIEW_W;
+    const scaleY = canvas.height / VIEW_H;
     const shake = shakeOffset(sim);
-    const worldH = VIEW_H * scale;
-    const oy = (canvas.height - worldH) / 2 + shake.y * scale;
-    const ox = (portrait ? 0 : (canvas.width - VIEW_W * scale) / 2) + shake.x * scale;
+    const ox = shake.x * scaleX;
+    const oy = shake.y * scaleY;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     if (art.sky && art.sky.complete && art.sky.naturalWidth > 0) {
       ctx.drawImage(art.sky, 0, 0, canvas.width, canvas.height);
@@ -552,7 +546,7 @@ function boot() {
       ctx.fillStyle = "#1c2438";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
-    ctx.setTransform(scale, 0, 0, scale, ox - windowStart * scale, oy);
+    ctx.setTransform(scaleX, 0, 0, scaleY, ox, oy);
     draw(ctx, sim, art);
     if (sim.best > bestSaved) {
       bestSaved = sim.best;

@@ -1633,6 +1633,7 @@
   });
 
   btnStart.addEventListener("click", () => {
+    try { if (window.SimilarizeViewportFS) window.SimilarizeViewportFS.enter(); } catch (_) {}
     unlockAudio();
     if (phase === "title") tryStartFromUi();
   });

@@ -6,9 +6,10 @@
   <title>Book of Mormon Maps</title>
   <!-- Tesla Cybertruck chromeless FS — see games/shared/TESLA_FULLSCREEN.md -->
   <script src="../shared/tesla-fullscreen.js?v=tfs1"></script>
+  <script src="../shared/viewport-fill.js?v=vfs1"></script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
   <style>
-    html, body { height: 100%; margin: 0; }
+    html, body { height: 100%; height: 100dvh; max-height: 100dvh; margin: 0; padding: 0; overflow: hidden; width: 100%; }
     body { font-family: "Segoe UI", sans-serif; color: #1c1917; }
     #map { position: absolute; inset: 0; }
     .bar {
@@ -91,6 +92,11 @@
   <script>
     const KMLNS = "http://www.opengis.net/kml/2.2";
     const map = L.map("map", { zoomControl: true }).setView([17.5, -89.5], 6);
+    function enterViewportFS() {
+      try { if (window.SimilarizeViewportFS) window.SimilarizeViewportFS.enter(); } catch (_) {}
+    }
+    document.querySelector(".bar")?.addEventListener("pointerdown", enterViewportFS);
+    map.on("click", enterViewportFS);
     const satellite = L.tileLayer(
       "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
       { attribution: "Tiles &copy; Esri", maxZoom: 18 }

@@ -86,3 +86,7 @@ Pure redirect stubs (`Rally.html`, `froggies-cybertruck/`, `map*.html`) do **not
 | `games/basketball.html` | `shared/tesla-fullscreen.js?v=tfs1` |
 | `games/four-froggies/index.html` | `../shared/tesla-fullscreen.js?v=tfs1` |
 | `games/Book of Mormon Maps/index.html` | `../shared/tesla-fullscreen.js?v=tfs1` |
+
+## Related: desktop viewport fill
+
+See `VIEWPORT_FILL.md` — `viewport-fill.js` handles desktop/browser true viewport fill + Fullscreen API. Tesla helper remains Tesla-only.

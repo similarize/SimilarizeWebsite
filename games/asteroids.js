@@ -230,6 +230,7 @@
   }
 
   function start() {
+    try { if (window.SimilarizeViewportFS) window.SimilarizeViewportFS.enter(); } catch (_) {}
     unlock();
     score = 0;
     lives = 3;

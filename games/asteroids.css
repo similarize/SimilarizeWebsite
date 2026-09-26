@@ -1,6 +1,10 @@
 html, body {
   margin: 0;
+  padding: 0;
+  width: 100%;
   height: 100%;
+  height: 100dvh;
+  max-height: 100dvh;
   background: #000;
   color: #fff;
   font-family: "Segoe UI", sans-serif;
@@ -9,7 +13,15 @@ html, body {
   user-select: none;
   -webkit-user-select: none;
 }
-#view { display: block; }
+#view {
+  display: block;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+}
 #hud {
   position: absolute;
   top: max(10px, env(safe-area-inset-top));

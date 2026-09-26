@@ -8,6 +8,7 @@
   <title>RC Rally Jump</title>
   <!-- Tesla Cybertruck chromeless FS — see games/shared/TESLA_FULLSCREEN.md -->
   <script src="../shared/tesla-fullscreen.js?v=tfs1"></script>
+  <script src="../shared/viewport-fill.js?v=vfs1"></script>
   <link rel="icon" href="favicon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -28,7 +29,11 @@
     * { box-sizing: border-box; }
     html, body {
       margin: 0;
+      padding: 0;
+      width: 100%;
       height: 100%;
+      height: 100dvh;
+      max-height: 100dvh;
       background: var(--night);
       color: var(--sand);
       font-family: var(--sans);
@@ -469,6 +474,6 @@
     </div>
   </div>
   <script src="../shared/gamepad.js?v=gp1"></script>
-  <script type="module" src="./standalone.js?v=20260926drone1"></script>
+  <script type="module" src="./standalone.js?v=20260926-vfs1"></script>
 </body>
 </html>
