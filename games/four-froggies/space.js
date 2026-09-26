@@ -1,4 +1,5 @@
 /* Four Froggies — space episode (story path INSIDE the ranch cab).
+   Presentation polish: depth-scaled sprites, parallax stars, vignette (original).
    Ben cast only: Spotty, Alex, Fred, Germy, Daisy Dachshund, King Germy;
    ~20 people + hundreds of dogs as anonymous crowds.
    Real moons: Mars Phobos/Deimos; Neptune's 14 named moons (picker stub). */
@@ -84,6 +85,8 @@
       scene: "starship",
       px: 450,
       py: 520,
+      vx: 0,
+      vy: 0,
       facing: 1,
       toast: "",
       toastT: 0,
@@ -467,9 +470,23 @@
     if (ep.shake > 0) ep.shake -= dt;
     if (ep.jet > 0) ep.jet -= dt;
 
-    var speed = ep.scene === "space" ? 160 : 140;
-    ep.px = clamp(ep.px + steerX * speed * dt, 40, MAP - 40);
-    ep.py = clamp(ep.py + steerY * speed * dt, 60, MAP - 40);
+    var maxSp = ep.scene === "space" ? 170 : 150;
+    if (ep.vx == null) ep.vx = 0;
+    if (ep.vy == null) ep.vy = 0;
+    var accel = 880;
+    var friction = 5.5;
+    var tvx = steerX * maxSp;
+    var tvy = steerY * maxSp;
+    if (Math.abs(steerX) + Math.abs(steerY) > 0.05) {
+      ep.vx += (tvx - ep.vx) * Math.min(1, accel * dt / maxSp);
+      ep.vy += (tvy - ep.vy) * Math.min(1, accel * dt / maxSp);
+    } else {
+      var damp = Math.exp(-friction * dt);
+      ep.vx *= damp;
+      ep.vy *= damp;
+    }
+    ep.px = clamp(ep.px + ep.vx * dt, 40, MAP - 40);
+    ep.py = clamp(ep.py + ep.vy * dt, 60, MAP - 40);
     if (steerX !== 0) ep.facing = steerX > 0 ? 1 : -1;
 
     // Jimmy constantly getting away
@@ -534,25 +551,47 @@
   }
 
   function drawStars(ctx, ep, w, h, t) {
-    ctx.fillStyle = "#030712";
+    var g = ctx.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, "#020617");
+    g.addColorStop(0.55, "#0b1224");
+    g.addColorStop(1, "#111827");
+    ctx.fillStyle = g;
     ctx.fillRect(0, 0, w, h);
+
+    // Parallax star layers vs player (overworld depth feel)
+    var camOffX = (ep.px - MAP * 0.5) * 0.04;
+    var camOffY = (ep.py - MAP * 0.5) * 0.03;
     for (var i = 0; i < ep.stars.length; i++) {
       var s = ep.stars[i];
-      var a = 0.4 + 0.6 * Math.abs(Math.sin(t * 2 + s.tw));
+      var layer = (i % 3) + 1;
+      var a = 0.35 + 0.65 * Math.abs(Math.sin(t * (1.2 + layer * 0.3) + s.tw));
       ctx.fillStyle = "rgba(255,255,255," + a + ")";
-      var sx = (s.x / MAP) * w;
-      var sy = (s.y / MAP) * h;
+      var sx = (s.x / MAP) * w - camOffX * layer;
+      var sy = (s.y / MAP) * h - camOffY * layer;
       ctx.beginPath();
-      ctx.arc(sx, sy, s.r, 0, Math.PI * 2);
+      ctx.arc(sx, sy, s.r * (0.7 + layer * 0.15), 0, Math.PI * 2);
       ctx.fill();
     }
+    // Soft nebula wash (original procedural color — not licensed art)
+    var neb = ctx.createRadialGradient(w * 0.7, h * 0.25, 10, w * 0.65, h * 0.3, w * 0.45);
+    neb.addColorStop(0, "rgba(88, 80, 180, 0.12)");
+    neb.addColorStop(0.5, "rgba(30, 64, 120, 0.06)");
+    neb.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = neb;
+    ctx.fillRect(0, 0, w, h);
   }
 
-  function worldToScreen(x, y, w, h) {
-    // Fixed-angle 2.5D-ish: foreshorten Y a bit for phone
-    var sx = (x / MAP) * w;
-    var sy = h * 0.12 + (y / MAP) * h * 0.78;
-    var depth = clamp(0.75 + y / MAP * 0.4, 0.6, 1.2);
+  var spaceCam = { x: MAP * 0.5, y: MAP * 0.55 };
+
+  function worldToScreen(x, y, w, h, camX, camY) {
+    // Fixed-angle 2.5D: isometric-ish foreshorten + depth scale (presentation)
+    camX = camX == null ? spaceCam.x : camX;
+    camY = camY == null ? spaceCam.y : camY;
+    var dx = x - camX;
+    var dy = y - camY;
+    var sx = w * 0.5 + dx * 0.95 - dy * 0.22;
+    var sy = h * 0.42 + dx * 0.18 + dy * 0.62;
+    var depth = clamp(0.62 + y / MAP * 0.5 + dy * 0.0002, 0.48, 1.35);
     return { x: sx, y: sy, d: depth };
   }
 
@@ -748,6 +787,8 @@
   }
 
   function render(ctx, ep, w, h, t) {
+    spaceCam.x = ep.px;
+    spaceCam.y = ep.py;
     if (!ep.active) return;
     var bg = SCENES[ep.scene].bg;
     if (ep.shake > 0) {
@@ -957,6 +998,13 @@
     // Player
     var pp2 = worldToScreen(ep.px, ep.py, w, h);
     drawFrog(ctx, pp2.x, pp2.y, pp2.d, ep.facing, ep.jet);
+
+    // Soft vignette (presentation)
+    var vig = ctx.createRadialGradient(w * 0.5, h * 0.5, h * 0.2, w * 0.5, h * 0.5, h * 0.75);
+    vig.addColorStop(0, "rgba(0,0,0,0)");
+    vig.addColorStop(1, "rgba(2, 6, 18, 0.32)");
+    ctx.fillStyle = vig;
+    ctx.fillRect(0, 0, w, h);
 
     // Scene title strip
     ctx.fillStyle = "rgba(0,0,0,0.45)";

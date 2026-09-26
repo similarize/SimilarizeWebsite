@@ -1,4 +1,6 @@
 /* Four Froggies — 2.5D ranch hub (fixed-angle / y-sorted layers).
+   Presentation: isometric-ish town-hub camera, depth-scaled sprites, accel/friction,
+   jump arcs, layered parallax — original look (no Square Enix IP/assets).
    Areas (Ben-named only): ranch house, monster truck track, pond (+ toys prop density).
    Hub hotspot: Starship (Spotty) → space episode path.
    No invented cast/zone/toy names. */
@@ -61,14 +63,15 @@
     return null;
   }
 
-  /** Fixed-angle 2.5D: world (x,y) → screen with depth foreshortening. */
+  /** Fixed-angle 2.5D (classic town-hub camera feel): isometric-ish, depth scale. */
   function project(wx, wy, camX, camY, vw, vh) {
     var dx = wx - camX;
     var dy = wy - camY;
-    var sx = vw * 0.5 + dx * 1.05 - dy * 0.35;
-    var sy = vh * 0.42 + dx * 0.22 + dy * 0.72;
-    var depth = clamp(0.72 + (wy - camY) / MAP_H * 0.35, 0.55, 1.15);
-    return { x: sx, y: sy, depth: depth, sortY: wy };
+    // Stronger diamond foreshortening — original math, not a licensed camera
+    var sx = vw * 0.5 + dx * 0.98 - dy * 0.52;
+    var sy = vh * 0.46 + dx * 0.30 + dy * 0.58;
+    var depth = clamp(0.58 + (wy - camY) / MAP_H * 0.55 + dy * 0.00015, 0.42, 1.38);
+    return { x: sx, y: sy, depth: depth, sortY: wy, scale: depth };
   }
 
   function createWorld() {
@@ -159,6 +162,7 @@
       steerX: 0,
       steerY: 0,
       speedBoost: 1,
+      walkPhase: 0,
     };
   }
 
@@ -276,14 +280,18 @@
    */
   function tickDrive(world, ent, dt) {
     var result = { jumped: false, landed: false, scrapGain: 0 };
+    // Shared vertical arc (walk hop leftover or truck jump)
+    var gWalk = 520;
+    var gTruck = 560;
     if (!ent.inTruck) {
-      if (ent.z > 0) {
-        ent.zVel -= 420 * dt;
+      if (ent.z > 0 || ent.zVel !== 0) {
+        ent.zVel -= gWalk * dt;
         ent.z += ent.zVel * dt;
         if (ent.z <= 0) {
           ent.z = 0;
+          // Soft landing squash — kill rebound
+          if (ent.zVel < -40) result.landed = true;
           ent.zVel = 0;
-          result.landed = true;
         }
       }
       ent.speedBoost = 1;
@@ -292,9 +300,11 @@
 
     var speed = Math.hypot(ent.vx, ent.vy);
     var ramp = rampAt(ent.x, ent.y);
-    if (ramp && ent.z <= 0 && speed > 80) {
-      ent.zVel = 220 * ramp.boost * clamp(speed / 200, 0.6, 1.4);
-      ent.z = 2;
+    if (ramp && ent.z <= 0.5 && speed > 72) {
+      // Launch impulse scales with approach speed — readable parabolic arc
+      var boost = ramp.boost * clamp(speed / 210, 0.55, 1.45);
+      ent.zVel = 235 * boost;
+      ent.z = Math.max(ent.z, 3);
       result.jumped = true;
       world.stuntCombo += 1;
       var gain = 10 + world.stuntCombo * 5;
@@ -304,13 +314,15 @@
       spawnSparks(world, ent.x, ent.y, 6);
     }
 
-    if (ent.z > 0) {
-      ent.zVel -= 480 * dt;
+    if (ent.z > 0 || ent.zVel !== 0) {
+      // Slightly heavier apex hang (sin-ish via lower g near peak)
+      var g = gTruck;
+      if (Math.abs(ent.zVel) < 60) g *= 0.78;
+      ent.zVel -= g * dt;
       ent.z += ent.zVel * dt;
       world.airTime += dt;
       if (ent.z <= 0) {
         ent.z = 0;
-        ent.zVel = 0;
         result.landed = true;
         if (world.airTime > 0.35) {
           var airBonus = Math.floor(world.airTime * 25);
@@ -318,6 +330,7 @@
           result.scrapGain += airBonus;
         }
         world.airTime = 0;
+        ent.zVel = 0;
         spawnDust(world, ent.x, ent.y, 5);
       }
     } else if (speed < 40) {
@@ -337,9 +350,12 @@
   }
 
   function moveEntity(ent, dt, speed) {
-    var base = ent.inTruck ? 260 : 140;
-    if (ent.inTruck && ent.dashTrail > 0) base *= 1.35;
-    var sp = (speed || base) * (ent.speedBoost || 1);
+    var walkMax = 148;
+    var truckMax = 275;
+    var maxSp = (ent.inTruck ? truckMax : walkMax) * (ent.speedBoost || 1);
+    if (ent.inTruck && ent.dashTrail > 0) maxSp *= 1.28;
+    if (typeof speed === "number") maxSp = speed * (ent.speedBoost || 1);
+
     var mx = ent.steerX;
     var my = ent.steerY;
     var mag = Math.hypot(mx, my);
@@ -347,18 +363,45 @@
       mx /= mag;
       my /= mag;
     }
-    ent.vx = mx * sp;
-    ent.vy = my * sp;
+
+    // Acceleration toward target velocity (kid-readable, smooth)
+    var accel = ent.inTruck ? 920 : 780;
+    var friction = ent.inTruck ? 3.4 : 6.2; // higher = snappier stop when walking
+    var tvx = mx * maxSp;
+    var tvy = my * maxSp;
     if (mag > 0.05) {
-      ent.facing = mx >= 0 ? 1 : -1;
-      ent.x += ent.vx * dt;
-      ent.y += ent.vy * dt;
+      ent.vx += (tvx - ent.vx) * Math.min(1, accel * dt / Math.max(60, maxSp));
+      ent.vy += (tvy - ent.vy) * Math.min(1, accel * dt / Math.max(60, maxSp));
+      if (Math.abs(mx) > 0.08) ent.facing = mx >= 0 ? 1 : -1;
     } else {
-      ent.vx *= 0.82;
-      ent.vy *= 0.82;
+      var damp = Math.exp(-friction * dt);
+      ent.vx *= damp;
+      ent.vy *= damp;
+      if (Math.hypot(ent.vx, ent.vy) < 6) {
+        ent.vx = 0;
+        ent.vy = 0;
+      }
     }
+
+    // Soft speed clamp
+    var spd = Math.hypot(ent.vx, ent.vy);
+    if (spd > maxSp) {
+      ent.vx = (ent.vx / spd) * maxSp;
+      ent.vy = (ent.vy / spd) * maxSp;
+    }
+
+    ent.x += ent.vx * dt;
+    ent.y += ent.vy * dt;
     ent.x = clamp(ent.x, 40, MAP_W - 40);
     ent.y = clamp(ent.y, 40, MAP_H - 40);
+
+    // Walk bob phase for sprite polish
+    if (!ent.inTruck && spd > 18) {
+      ent.walkPhase = (ent.walkPhase || 0) + dt * (8 + spd * 0.04);
+    } else {
+      ent.walkPhase = (ent.walkPhase || 0) * 0.9;
+    }
+
     if (ent.cd > 0) ent.cd -= dt;
     if (ent.invuln > 0) ent.invuln -= dt;
     if (ent.dashTrail > 0) ent.dashTrail -= dt;
@@ -397,62 +440,91 @@
 
   function drawSky(ctx, w, h, t, camX, camY) {
     var g = ctx.createLinearGradient(0, 0, 0, h);
-    g.addColorStop(0, "#1a3a6e");
-    g.addColorStop(0.35, "#4a90b8");
-    g.addColorStop(0.62, "#87ce6a");
-    g.addColorStop(1, "#3d6b28");
+    g.addColorStop(0, "#152a52");
+    g.addColorStop(0.22, "#2f6a9e");
+    g.addColorStop(0.48, "#6fb3c9");
+    g.addColorStop(0.68, "#8ecf6e");
+    g.addColorStop(1, "#3a6826");
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, w, h);
 
-    // Parallax distant hills (slow vs cam)
-    var px = -camX * 0.12;
-    var py = -camY * 0.06;
-    ctx.fillStyle = "rgba(40, 80, 50, 0.55)";
+    // Far / mid / near parallax ridges (town-hub depth stack)
+    var pxFar = -camX * 0.06;
+    var pyFar = -camY * 0.03;
+    var pxMid = -camX * 0.14;
+    var pyMid = -camY * 0.07;
+    var pxNear = -camX * 0.22;
+    var pyNear = -camY * 0.1;
+
+    ctx.fillStyle = "rgba(32, 58, 90, 0.45)";
     ctx.beginPath();
-    ctx.moveTo(0, h * 0.38 + py);
-    for (var i = 0; i <= 8; i++) {
-      var hx = (i / 8) * w + px * 0.5;
-      var hy = h * 0.32 + Math.sin(i * 1.1 + t * 0.05) * 18 + py;
+    ctx.moveTo(0, h * 0.34 + pyFar);
+    for (var i = 0; i <= 10; i++) {
+      var hx = (i / 10) * w + pxFar;
+      var hy = h * 0.28 + Math.sin(i * 0.85 + t * 0.04) * 22 + pyFar;
       ctx.lineTo(hx, hy);
     }
-    ctx.lineTo(w, h * 0.55);
-    ctx.lineTo(0, h * 0.55);
+    ctx.lineTo(w, h * 0.5);
+    ctx.lineTo(0, h * 0.5);
     ctx.closePath();
     ctx.fill();
 
-    ctx.fillStyle = "rgba(55, 110, 60, 0.5)";
+    ctx.fillStyle = "rgba(40, 80, 50, 0.55)";
     ctx.beginPath();
-    ctx.moveTo(0, h * 0.44 + py * 0.7);
+    ctx.moveTo(0, h * 0.4 + pyMid);
     for (var j = 0; j <= 10; j++) {
-      var hx2 = (j / 10) * w + px;
-      var hy2 = h * 0.4 + Math.sin(j * 0.9 + 2) * 14 + py * 0.7;
+      var hx2 = (j / 10) * w + pxMid * 0.7;
+      var hy2 = h * 0.34 + Math.sin(j * 1.05 + 1.2) * 16 + pyMid;
       ctx.lineTo(hx2, hy2);
     }
-    ctx.lineTo(w, h * 0.58);
-    ctx.lineTo(0, h * 0.58);
+    ctx.lineTo(w, h * 0.56);
+    ctx.lineTo(0, h * 0.56);
     ctx.closePath();
     ctx.fill();
 
-    // Soft sun
-    var sunX = w * 0.82 - camX * 0.02;
-    var sunY = h * 0.1 - camY * 0.015;
-    var sg = ctx.createRadialGradient(sunX, sunY, 4, sunX, sunY, 55);
-    sg.addColorStop(0, "rgba(255, 245, 180, 0.95)");
-    sg.addColorStop(0.4, "rgba(255, 220, 120, 0.45)");
-    sg.addColorStop(1, "rgba(255, 200, 80, 0)");
-    ctx.fillStyle = sg;
+    ctx.fillStyle = "rgba(55, 115, 58, 0.52)";
     ctx.beginPath();
-    ctx.arc(sunX, sunY, 55, 0, Math.PI * 2);
+    ctx.moveTo(0, h * 0.46 + pyNear * 0.7);
+    for (var k = 0; k <= 12; k++) {
+      var hx3 = (k / 12) * w + pxNear;
+      var hy3 = h * 0.42 + Math.sin(k * 0.95 + 2.1) * 12 + pyNear * 0.7;
+      ctx.lineTo(hx3, hy3);
+    }
+    ctx.lineTo(w, h * 0.6);
+    ctx.lineTo(0, h * 0.6);
+    ctx.closePath();
     ctx.fill();
 
-    // Soft clouds (parallax)
-    ctx.fillStyle = "rgba(255,255,255,0.18)";
-    for (var c = 0; c < 4; c++) {
-      var cx = ((c * 180 + t * 8 + px * 0.4) % (w + 120)) - 60;
-      var cy = h * 0.1 + c * 18 + py * 0.3;
+    // Warm sun + bloom
+    var sunX = w * 0.8 - camX * 0.02;
+    var sunY = h * 0.09 - camY * 0.012;
+    var sg = ctx.createRadialGradient(sunX, sunY, 3, sunX, sunY, 70);
+    sg.addColorStop(0, "rgba(255, 250, 210, 1)");
+    sg.addColorStop(0.25, "rgba(255, 230, 140, 0.55)");
+    sg.addColorStop(0.55, "rgba(255, 200, 100, 0.2)");
+    sg.addColorStop(1, "rgba(255, 180, 80, 0)");
+    ctx.fillStyle = sg;
+    ctx.beginPath();
+    ctx.arc(sunX, sunY, 70, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Soft god-ray wash (original procedural)
+    var wash = ctx.createLinearGradient(sunX, sunY, w * 0.35, h * 0.7);
+    wash.addColorStop(0, "rgba(255, 236, 180, 0.12)");
+    wash.addColorStop(1, "rgba(255, 236, 180, 0)");
+    ctx.fillStyle = wash;
+    ctx.fillRect(0, 0, w, h * 0.72);
+
+    // Soft clouds (multi-layer parallax)
+    for (var c = 0; c < 6; c++) {
+      var layer = c < 3 ? 0.35 : 0.55;
+      var cx = ((c * 160 + t * (6 + c) + pxMid * layer) % (w + 140)) - 70;
+      var cy = h * (0.07 + (c % 3) * 0.035) + pyFar * 0.4;
+      ctx.fillStyle = "rgba(255,255,255," + (0.12 + (c % 3) * 0.04) + ")";
       ctx.beginPath();
-      ctx.ellipse(cx, cy, 48, 14, 0, 0, Math.PI * 2);
-      ctx.ellipse(cx + 28, cy + 4, 36, 12, 0, 0, Math.PI * 2);
+      ctx.ellipse(cx, cy, 52 - c * 2, 13, 0, 0, Math.PI * 2);
+      ctx.ellipse(cx + 30, cy + 3, 38, 11, 0, 0, Math.PI * 2);
+      ctx.ellipse(cx - 22, cy + 2, 28, 9, 0, 0, Math.PI * 2);
       ctx.fill();
     }
   }
@@ -851,8 +923,12 @@
 
   function drawFroggy(ctx, frog, camX, camY, vw, vh) {
     var p = project(frog.x, frog.y, camX, camY, vw, vh);
-    var s = 14 * p.depth;
-    var lift = (frog.z || 0) * 0.55 * p.depth;
+    // Sprite scale tracks depth strongly (far = small, near = large)
+    var s = 13.5 * p.depth * (0.92 + 0.08 * p.depth);
+    var bob = (!frog.inTruck && (frog.walkPhase || 0) > 0.05)
+      ? Math.abs(Math.sin(frog.walkPhase)) * 2.4 * p.depth
+      : 0;
+    var lift = (frog.z || 0) * 0.58 * p.depth + bob;
 
     if (frog.inTruck && frog.local) {
       drawCybertruck(ctx, p.x, p.y, frog.facing, p.depth, true, frog.z || 0);
@@ -876,10 +952,12 @@
       return p;
     }
 
-    // Shadow
-    ctx.fillStyle = "rgba(0,0,0," + (0.28 - Math.min(0.15, (frog.z || 0) * 0.003)) + ")";
+    // Ground shadow (shrinks / softens in air for jump-arc readability)
+    var shA = 0.32 - Math.min(0.2, (frog.z || 0) * 0.004);
+    var shW = s * (1.05 - Math.min(0.35, (frog.z || 0) * 0.008));
+    ctx.fillStyle = "rgba(0,0,0," + shA + ")";
     ctx.beginPath();
-    ctx.ellipse(p.x, p.y + 4, s * 0.95, s * 0.35, 0, 0, Math.PI * 2);
+    ctx.ellipse(p.x, p.y + 5, shW, s * 0.32, -0.15, 0, Math.PI * 2);
     ctx.fill();
 
     var by = p.y - s * 0.4 - lift;
@@ -1048,17 +1126,31 @@
     var g1 = project(MAP_W, 0, camX, camY, vw, vh);
     var g2 = project(MAP_W, MAP_H, camX, camY, vw, vh);
     var g3 = project(0, MAP_H, camX, camY, vw, vh);
-    drawGroundPoly(ctx, [g0, g1, g2, g3], "rgba(90, 150, 55, 0.6)", null);
+    drawGroundPoly(ctx, [g0, g1, g2, g3], "rgba(88, 148, 52, 0.72)", null);
+
+    // Subtle diamond tile hints (town-hub readable floor, original)
+    for (var ty = 40; ty < MAP_H; ty += 70) {
+      for (var tx = 40; tx < MAP_W; tx += 70) {
+        if (areaAt(tx + 20, ty + 20)) continue;
+        var tp = project(tx, ty, camX, camY, vw, vh);
+        if (tp.x < -40 || tp.x > vw + 40 || tp.y < -40 || tp.y > vh + 40) continue;
+        var checker = ((tx / 70) + (ty / 70)) % 2 === 0;
+        ctx.fillStyle = checker ? "rgba(70, 130, 45, 0.14)" : "rgba(110, 170, 70, 0.1)";
+        ctx.beginPath();
+        ctx.ellipse(tp.x, tp.y, 22 * tp.depth, 10 * tp.depth, -0.4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
 
     // Soft grass patches
-    for (var gi = 0; gi < 12; gi++) {
+    for (var gi = 0; gi < 16; gi++) {
       var gx = 80 + (gi * 97) % (MAP_W - 100);
       var gy = 80 + (gi * 131) % (MAP_H - 100);
       if (areaAt(gx, gy)) continue;
       var gp = project(gx, gy, camX, camY, vw, vh);
-      ctx.fillStyle = "rgba(60, 120, 40, 0.25)";
+      ctx.fillStyle = "rgba(55, 115, 38, 0.28)";
       ctx.beginPath();
-      ctx.ellipse(gp.x, gp.y, 28 * gp.depth, 12 * gp.depth, 0, 0, Math.PI * 2);
+      ctx.ellipse(gp.x, gp.y, 30 * gp.depth, 13 * gp.depth, -0.2, 0, Math.PI * 2);
       ctx.fill();
     }
 
@@ -1080,13 +1172,21 @@
       drawHotspot(ctx, h, camX, camY, vw, vh, nearHot && nearHot.id === h.id);
     }
 
-    // Y-sort froggies
+    // Y-sort froggies (painter's algorithm for 2.5D layers)
     var sorted = frogs.slice().sort(function (a, b) {
       return a.y - b.y;
     });
     for (var fi = 0; fi < sorted.length; fi++) {
       drawFroggy(ctx, sorted[fi], camX, camY, vw, vh);
     }
+
+    // Warm rim light + soft vignette (presentation only)
+    var rim = ctx.createRadialGradient(vw * 0.55, vh * 0.35, vw * 0.1, vw * 0.5, vh * 0.5, vw * 0.85);
+    rim.addColorStop(0, "rgba(255, 230, 170, 0.05)");
+    rim.addColorStop(0.55, "rgba(0,0,0,0)");
+    rim.addColorStop(1, "rgba(6, 18, 8, 0.28)");
+    ctx.fillStyle = rim;
+    ctx.fillRect(0, 0, vw, vh);
   }
 
   global.FroggiesWorld = {

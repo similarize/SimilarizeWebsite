@@ -2,7 +2,7 @@
 
 **Product:** **Four Froggies** (one shared world). Publish: `games/four-froggies/`.
 
-Flagship experience: walkable / drivable **lightweight 2.5D ranch hub** (fixed-angle, y-sorted layers). Areas: **ranch house**, **monster truck track**, **pond** (fishies) + toy prop density. Story paths in-world: **phone → Purple Bear → SPS → Optimus kits → bring Jimmy home**, and **Starship (Spotty) → space episode**.
+Flagship experience: walkable / drivable **lightweight 2.5D ranch hub** (fixed-angle isometric-ish, depth-scaled sprites, y-sorted layers). Areas: **ranch house**, **monster truck track**, **pond** (fishies) + toy prop density. Story paths in-world: **phone → Purple Bear → SPS → Optimus kits → bring Jimmy home**, and **Starship (Spotty) → space episode**.
 
 The old Canvas 2D strip lives in `strip.js` as a party/sandbox leftover — **not** a second product. Not loaded by default. Space is **not** a second arcade cab — it is a story path inside this build.
 
@@ -70,18 +70,24 @@ Same PeerJS lobby: **Host room** → QR / invite `?room=CODE` → friends claim 
 | `strip.js` | Legacy 2D ranch-run sandbox (not default entry) |
 | `assets/` | Imagine splash / backdrop |
 
-## What’s new (space1)
+## What's new (fflook1) — physics & look only
 
-- Starship hotspot on ranch grounds (Spotty pad) → enter space episode without leaving the cab.
-- Space scenes: Jimmy jetpack chase, station crowd (~20), solar Mars/Neptune moon picker, Mars 3-level cave + King Germy + dog pack, escape door, James 1000-story mech vs invaders stub.
-- Ranch hub phone/SPS/Optimus/track/pond loops intact.
+Ben ask: Final Fantasy–**like makeup** = **physics + presentation**, not story/party systems.
+**No Square Enix engine, assets, music, names, or IP.** Original 2.5D canvas only.
+
+- **Ranch hub camera:** stronger fixed-angle isometric-ish projection, depth-scaled sprites, y-sorted layers, soft ground tiles, warm rim light + vignette.
+- **Walk / drive physics:** acceleration + friction (not instant velocity), walk bob, smoother truck jump arcs (parabolic hang near apex).
+- **Parallax / lighting:** multi-layer hills + clouds; space parallax starfield + nebula wash + vignette.
+- **Camera follow:** critically-damped-ish town-hub settle in `main.js`.
+- Narrative ranch + space episode content **unchanged** (no party HP menus, encounters, quest saves, or cast rewrites).
+
+Prior space1 path still there: Starship → Jimmy chase → station → solar → Mars cave → mech.
 
 ## Still stubbed / next
 
-- Deeper role abilities beyond juice stubs (Shield/Zap/Bot combat)
 - Neptune moon landings as unique playable stops (picker lists all 14)
 - Party sync for space positions (hub sync remains; space is local path for now)
-- Strip “Ranch Run” as optional track activity wire-up
+- Strip "Ranch Run" as optional track activity wire-up
 - Richer Imagine bitmap sprites (procedural OK for now)
 - Role↔froggy mapping confirmation (Ben)
 - Confirm King Germy ↔ Germy relation (Ben)
@@ -96,4 +102,4 @@ Same PeerJS lobby: **Host room** → QR / invite `?room=CODE` → friends claim 
 
 ## Publish
 
-Game Creator → **Webmaster** only. Product path: `games/four-froggies/`. Do not republish SPS as arcade. Cache-bust: `?v=20260925-space1`.
+Game Creator → **Webmaster** only. Product path: `games/four-froggies/`. Do not republish SPS as arcade. Cache-bust: `?v=20260925-fflook1`.

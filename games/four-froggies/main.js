@@ -519,11 +519,13 @@
   function easeCam(dt) {
     const me = localPlayer();
     if (!me) return;
-    // Look-ahead based on velocity + air
-    const look = me.inTruck ? 0.18 : 0.1;
+    // Town-hub camera: gentle look-ahead + soft settle (presentation)
+    const look = me.inTruck ? 0.22 : 0.14;
     camTX = me.x + me.vx * look;
-    camTY = me.y + me.vy * look - (me.z || 0) * 0.15;
-    const k = Math.min(1, dt * (me.inTruck ? 5.5 : 4.2));
+    camTY = me.y + me.vy * look - (me.z || 0) * 0.18;
+    // Critically-damped-ish follow — smoother than linear lerp
+    const follow = me.inTruck ? 4.8 : 3.6;
+    const k = 1 - Math.exp(-follow * dt);
     camX += (camTX - camX) * k;
     camY += (camTY - camY) * k;
   }
