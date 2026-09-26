@@ -1,6 +1,7 @@
 /* Four Froggies — Phaser 3 hub (CDN). Canvas-parity ranch + thin space stub.
    Solo-first. Big map · compound · squiggle track · pond whales · 4 trucks+shared ·
-   on-water/under tint · Starship → orbit Escape/hard thruster. */
+   on-water/under tint · Starship → orbit Escape/hard thruster.
+   polish4: compound presence + track hills + inviting hotspots + drive bob/spray. */
 (function (global) {
   "use strict";
   var C = global.FroggiesCanon;
@@ -68,16 +69,36 @@
         for (var h = 0; h < C.HOTSPOTS.length; h++) {
           var hs = C.HOTSPOTS[h];
           if (C.isTruckHotspot && C.isTruckHotspot(hs)) continue;
-          var ring = this.add.circle(hs.x, hs.y, hs.r, 0xfbbf24, 0.12).setStrokeStyle(2, 0xfbbf24, 0.75);
-          this.add.text(hs.x, hs.y - hs.r - 8, hs.label, {
-            fontFamily: "Segoe UI, system-ui, sans-serif", fontSize: "12px", fontStyle: "bold",
-            color: "#fde68a", stroke: "#000", strokeThickness: 3,
+          var ring = this.add.circle(hs.x, hs.y, hs.r + 6, 0xfbbf24, 0.16).setStrokeStyle(3, 0xfbbf24, 0.85);
+          var sub = hs.id === "phone" ? "→ Purple Bear" : hs.id === "sps" ? "→ Optimus · Jimmy" : hs.label;
+          this.add.ellipse(hs.x, hs.y + 6, hs.r * 1.4, hs.r * 0.45, 0xfbbf24, 0.18);
+          if (hs.id === "phone") {
+            this.add.rectangle(hs.x, hs.y - 8, 22, 32, 0x7c3aed, 1).setStrokeStyle(2, 0xfbbf24, 1);
+          } else if (hs.id === "sps") {
+            this.add.ellipse(hs.x, hs.y - 10, 28, 14, 0x0284c7, 0.35).setStrokeStyle(2, 0x38bdf8, 1);
+            this.add.circle(hs.x, hs.y - 10, 5, 0xfbbf24, 1);
+          }
+          this.add.text(hs.x, hs.y - hs.r - 18, hs.label, {
+            fontFamily: "Segoe UI, system-ui, sans-serif", fontSize: "13px", fontStyle: "bold",
+            color: "#fef3c7", stroke: "#000", strokeThickness: 3,
+          }).setOrigin(0.5, 1);
+          this.add.text(hs.x, hs.y - hs.r - 4, sub, {
+            fontFamily: "Segoe UI, system-ui, sans-serif", fontSize: "10px", fontStyle: "bold",
+            color: "#c4b5fd", stroke: "#000", strokeThickness: 2,
           }).setOrigin(0.5, 1);
           this.hotGfx.push({ data: hs, ring: ring });
         }
         var ss = C.STARSHIP || { x: 360, y: 320 };
-        this.add.circle(ss.x, ss.y, 14, 0xfdba74, 1);
-        this.add.text(ss.x, ss.y - 22, "Spotty", {
+        this.add.ellipse(ss.x, ss.y + 8, 150, 56, 0x38bdf8, 0.28).setStrokeStyle(3, 0xfbbf24, 0.9);
+        this.add.ellipse(ss.x, ss.y + 8, 90, 34, 0x7dd3fc, 0.2).setStrokeStyle(2, 0xe0f2fe, 0.8);
+        this.add.triangle(ss.x, ss.y - 26, 0, -22, -16, 22, 16, 22, 0xe2e8f0, 1);
+        this.add.rectangle(ss.x, ss.y + 6, 20, 22, 0x64748b, 1);
+        this.add.circle(ss.x + 26, ss.y - 20, 10, 0xf97316, 1);
+        this.add.text(ss.x, ss.y + 44, "★ STARSHIP · SPACE", {
+          fontFamily: "Segoe UI, system-ui, sans-serif", fontSize: "13px", fontStyle: "bold",
+          color: "#fef3c7", stroke: "#000", strokeThickness: 4,
+        }).setOrigin(0.5);
+        this.add.text(ss.x + 26, ss.y - 34, "Spotty", {
           fontFamily: "Segoe UI, system-ui, sans-serif", fontSize: "11px", color: "#fdba74",
           stroke: "#000", strokeThickness: 3,
         }).setOrigin(0.5);
@@ -111,7 +132,7 @@
         this.cameras.main.setBounds(0, 0, C.MAP_W, C.MAP_H);
         this.cameras.main.setZoom(Math.min(0.95, Math.max(0.42, window.innerWidth / 1400)));
         this.inTruck = false; this.truckMode = null; this.truckId = null;
-        this.waterSub = 0; this.scrap = 0; this.toastT = 3.5; this.cd = 0; this.near = null;
+        this.waterSub = 0; this.scrap = 0; this.toastT = 3.5; this.cd = 0; this.near = null; this.bouncePhase = 0; this.dustT = 0; this.fx = [];
         this.facing = 1; this.bob = 0; this.zLift = 0; this.zVel = 0;
         this.toast = "Phaser ranch · compound · squiggle track · pond whales · Cybertrucks · Starship";
         if (hooks.onReady) hooks.onReady({ engine: "phaser", frogId: frogId });
@@ -158,13 +179,14 @@
         this.add.text(yard.x + yard.w / 2, yard.y + 14, "Backyard", {
           fontSize: "14px", fontStyle: "bold", color: "#ecfccb", stroke: "#000", strokeThickness: 3,
         }).setOrigin(0.5, 0);
-        for (var ai = 0; ai < 28; ai++) {
-          this.add.ellipse(
-            yard.x + 20 + Math.random() * (yard.w - 40),
-            yard.y + 40 + Math.random() * (yard.h - 60),
-            10 + (ai % 4), 7 + (ai % 3),
+        for (var ai = 0; ai < 44; ai++) {
+          var ax = yard.x + 20 + Math.random() * (yard.w - 40);
+          var ay = yard.y + 40 + Math.random() * (yard.h - 60);
+          var aw = 14 + (ai % 5) * 2, ah = 10 + (ai % 4);
+          this.add.ellipse(ax, ay, aw, ah,
             ai % 3 === 0 ? 0xc4a574 : ai % 3 === 1 ? 0x8b6914 : 0xd6d3d1, 0.95
-          );
+          ).setStrokeStyle(1, 0x292016, 0.6);
+          this.add.circle(ax + aw * 0.45, ay - 4, 5 + (ai % 3), ai % 3 === 0 ? 0xc4a574 : 0x8b6914, 0.95);
         }
         this.add.rectangle(gar.x + gar.w / 2, gar.y + gar.h / 2, gar.w, gar.h, 0x6b7280, 0.92)
           .setStrokeStyle(4, 0x0b1220, 1);
@@ -179,6 +201,20 @@
         }
         this.add.rectangle(house.x + house.w / 2, house.y + house.h / 2, house.w, house.h, 0xd4b896, 0.95)
           .setStrokeStyle(4, 0x3e2723, 1);
+        /* polish4: warm windows with room hints */
+        var winCols = [0xfef3c7, 0xfde68a, 0xfbbf24, 0xfef9c3];
+        for (var wi = 0; wi < 4; wi++) {
+          this.add.rectangle(house.x + 80 + wi * 110, house.y + 120, 36, 28, winCols[wi], 0.95)
+            .setStrokeStyle(2, 0x1c1210, 1);
+          this.add.rectangle(house.x + 80 + wi * 110, house.y + 132, 22, 8, 0x78350f, 0.8);
+        }
+        for (var wj = 0; wj < 3; wj++) {
+          this.add.rectangle(house.x + 110 + wj * 140, house.y + 220, 32, 24, 0xfde68a, 0.9)
+            .setStrokeStyle(2, 0x1c1210, 1);
+        }
+        /* Open doorway glow */
+        this.add.rectangle(house.x + house.w * 0.48, house.y + house.h - 36, 36, 52, 0xfbbf24, 0.55)
+          .setStrokeStyle(2, 0xfef3c7, 1);
         var roofG = this.add.graphics();
         roofG.fillStyle(0x6d4c41, 1); roofG.lineStyle(3, 0x3e2723, 1);
         roofG.beginPath();
@@ -189,16 +225,26 @@
         this.add.text(house.x + house.w / 2, house.y + 20, "James · Ranch house", {
           fontSize: "15px", fontStyle: "bold", color: "#fff7ed", stroke: "#000", strokeThickness: 4,
         }).setOrigin(0.5, 0);
-        this.drawMech(cp.mech10 || { x: 820, y: 1680, stories: 10 }, 0xa5b4fc, 56);
-        this.drawMech(cp.mech100 || { x: 980, y: 1700, stories: 100 }, 0x67e8f9, 90);
-        this.drawMech(cp.mech1000 || { x: 340, y: 2420, stories: 1000 }, 0xfcd34d, 160);
+        this.drawMech(cp.mech10 || { x: 820, y: 1680, stories: 10 }, 0xa5b4fc, 68);
+        this.drawMech(cp.mech100 || { x: 980, y: 1700, stories: 100 }, 0x67e8f9, 110);
+        this.drawMech(cp.mech1000 || { x: 340, y: 2420, stories: 1000 }, 0xfcd34d, 220);
       },
       drawMech: function (m, color, h) {
-        this.add.rectangle(m.x, m.y - h * 0.45, Math.max(28, h * 0.28), h, color, 0.95)
+        if (m.stories >= 1000) {
+          this.add.ellipse(m.x, m.y - h * 0.5, h * 0.9, h * 0.7, 0xfbbf24, 0.12);
+        }
+        this.add.ellipse(m.x, m.y + 6, Math.max(36, h * 0.4), 16, 0x0f172a, 0.45);
+        this.add.rectangle(m.x, m.y - h * 0.45, Math.max(30, h * 0.3), h, color, 0.95)
           .setStrokeStyle(3, 0x0f172a, 1);
-        this.add.rectangle(m.x, m.y - h * 0.78, Math.max(16, h * 0.16), h * 0.08, 0xfbbf24, 1);
-        this.add.text(m.x, m.y - h - 8, m.stories + "-story mech", {
-          fontSize: m.stories >= 1000 ? "13px" : "11px", fontStyle: "bold", color: "#fff",
+        if (m.stories < 1000) {
+          this.add.rectangle(m.x - h * 0.28, m.y - h * 0.65, h * 0.16, h * 0.18, color, 0.9)
+            .setStrokeStyle(2, 0x0f172a, 1);
+          this.add.rectangle(m.x + h * 0.28, m.y - h * 0.65, h * 0.16, h * 0.18, color, 0.9)
+            .setStrokeStyle(2, 0x0f172a, 1);
+        }
+        this.add.rectangle(m.x, m.y - h * 0.82, Math.max(18, h * 0.18), h * 0.08, 0xfbbf24, 1);
+        this.add.text(m.x, m.y - h - 10, m.stories + "-story mech", {
+          fontSize: m.stories >= 1000 ? "14px" : "11px", fontStyle: "bold", color: "#fff",
           stroke: "#000", strokeThickness: 3,
         }).setOrigin(0.5, 1);
       },
@@ -207,10 +253,21 @@
         var mounds = C.TRACK_MOUNDS || [];
         for (var mi = 0; mi < mounds.length; mi++) {
           var m = mounds[mi];
-          tg.fillStyle(m.h >= 0 ? 0x78716c : 0x44403c, 0.85);
-          tg.fillEllipse(m.x, m.y, m.r * 1.1, m.r * 0.55);
-          tg.lineStyle(3, 0x1c1917, 0.7);
-          tg.strokeEllipse(m.x, m.y, m.r * 1.1, m.r * 0.55);
+          var mh = Math.abs(m.h) * 40 + 18;
+          tg.fillStyle(0x000000, 0.25);
+          tg.fillEllipse(m.x + 4, m.y + 6, m.r * 1.15, m.r * 0.5);
+          tg.fillStyle(m.h >= 0 ? 0x78716c : 0x44403c, 0.9);
+          tg.fillEllipse(m.x, m.y - (m.h >= 0 ? mh * 0.15 : 0), m.r * 1.2, m.r * 0.6);
+          tg.lineStyle(3, 0x1c1917, 0.8);
+          tg.strokeEllipse(m.x, m.y - (m.h >= 0 ? mh * 0.15 : 0), m.r * 1.2, m.r * 0.6);
+          if (m.h >= 0) {
+            tg.lineStyle(2, 0xfbbf24, 0.45);
+            tg.strokeEllipse(m.x, m.y - mh * 0.25, m.r * 0.7, m.r * 0.35);
+            tg.strokeEllipse(m.x, m.y - mh * 0.4, m.r * 0.45, m.r * 0.22);
+            this.add.text(m.x, m.y - mh * 0.55 - 8, "HILL", {
+              fontSize: "10px", fontStyle: "bold", color: "#fef3c7", stroke: "#000", strokeThickness: 2,
+            }).setOrigin(0.5);
+          }
         }
         polyLine(tg, C.TRACK_MAIN, 0x292524, 46, 0.95, true);
         polyLine(tg, C.TRACK_MAIN, 0xfbbf24, 14, 0.85, true);
@@ -324,10 +381,37 @@
         this.player.setFlipX(this.facing < 0).setVisible(!this.inTruck);
         this.nameTag.setPosition(this.player.x, this.player.y - 28 - this.zLift * 0.08);
         this.nameTag.setVisible(!this.inTruck || this.truckMode === "solo");
+        /* polish4: bounce + spray / bubbles / walk dust */
+        this.bouncePhase = (this.bouncePhase || 0) + dt * (3 + sp * 0.02);
+        var bounce = this.inTruck && this.zLift < 2 ? Math.sin(this.bouncePhase * 2.4) * Math.min(1.2, sp / 260) * 3.2 : 0;
+        if (!this.inTruck && !wet && sp > 45) {
+          this.dustT = (this.dustT || 0) - dt;
+          if (this.dustT <= 0) {
+            this.dustT = 0.16;
+            var d = this.add.circle(this.player.x - this.facing * 6, this.player.y + 10, 4, 0xb8a070, 0.45).setDepth(15);
+            this.fx.push({ g: d, life: 0.35 });
+          }
+        }
+        if (this.inTruck && wet) {
+          if (this.waterSub > 0.7 && Math.random() < dt * 5) {
+            var bub = this.add.circle(this.player.x + (Math.random() - 0.5) * 24, this.player.y, 3 + Math.random() * 3, 0xbae6fd, 0.55).setDepth(21);
+            this.fx.push({ g: bub, life: 0.55, rise: true });
+          } else if (this.waterSub <= 0.7 && sp > 30 && Math.random() < dt * 4) {
+            var spr = this.add.circle(this.player.x - this.facing * 14, this.player.y + 4, 3, 0xe0f2fe, 0.7).setDepth(21);
+            this.fx.push({ g: spr, life: 0.4, rise: true });
+          }
+        }
+        for (var fi = this.fx.length - 1; fi >= 0; fi--) {
+          var fx = this.fx[fi];
+          fx.life -= dt;
+          if (fx.rise) fx.g.y -= 40 * dt;
+          fx.g.setAlpha(Math.max(0, fx.life * 1.5));
+          if (fx.life <= 0) { fx.g.destroy(); this.fx.splice(fi, 1); }
+        }
         if (this.inTruck) {
           this.truckBody.setVisible(true); this.truckAccent.setVisible(true);
-          this.truckBody.setPosition(this.player.x, this.player.y - this.zLift * 0.06);
-          this.truckAccent.setPosition(this.player.x + 6 * this.facing, this.player.y - 4 - this.zLift * 0.06);
+          this.truckBody.setPosition(this.player.x, this.player.y - this.zLift * 0.06 - bounce);
+          this.truckAccent.setPosition(this.player.x + 6 * this.facing, this.player.y - 4 - this.zLift * 0.06 - bounce);
           this.truckBody.setScale(this.facing < 0 ? -1 : 1, 1);
           var dive = this.waterSub > 0.7;
           this.truckBody.setFillStyle(dive ? 0x64748b : 0x9ca3af, dive ? 0.7 : 1);

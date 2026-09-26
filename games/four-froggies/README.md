@@ -86,18 +86,25 @@ Same PeerJS lobby: **Host room** → QR / invite `?room=CODE` → claim seats �
 **Collision rule:** Shared landmark layout lives in `canon.js`. Canvas `world.js` remains the richest renderer; Phaser/Three hubs consume the same canon landmarks for parity. Do not invent cast/zone names. Preserve three.js camera-relative WASD.
 
 
-## What's new (polish3) — Canvas ranch clarity + Phaser/Three parity
+## What's new (polish4) — ranch presence + drive feel
 
-Ben: lots more polish. Canvas lead; cheap clarity wins ported to Phaser + three.js. threefix2 frog move kept (hollow house, addLabel, visible frogs).
+Ben: LOTS more improvement. Canvas lead; Phaser/Three get the most visible cheap ports. threefix2 hollow house + frogs kept.
 
-**Canvas (world.js / main.js):**
-- Sharper house (glow windows, lit door), garage roll-up door, mechs with window bands + antenna/pad
-- Track lanes higher contrast (dirt / amber / chalk); pond foam + fish eyes/fins + whale spout
-- Cybertrucks more truck-like (wedge nose, bed, dual rear, mirrors, lights)
-- Froggies charming (blush, smile, belly, kick legs) + clearer INTERACT hotspot badges
-- Snappier walk/drive; camera sticks without fighting look-ahead
+**Canvas (world.js):**
+- Ranch house: rooms readable through windows (sofa/table/lamp/bed) + ajar doorway shows hallway
+- Backyard animals denser/larger with legs + heads; 10/100 mechs punchier in garage; 1000-story silhouette dramatic out back
+- Monster-truck track elevation/hills more readable (stronger ribbon lift, contour rings, HILL labels)
+- Starship pad clearer destination (lights, chevrons, ★ STARSHIP · SPACE); phone → Purple Bear / SPS → Optimus · Jimmy inviting
+- Drive feel: truck bounce, spray on water, bubbles underwater, footstep dust on walk
 
-**Phaser / three.js:** truck wedge meshes, brighter fish/whales, snappier move + camera follow, clearer INTERACT tips. Three house stays hollow; frogs stay visible/moving.
+**Phaser / three.js:** bigger animals/mechs, warm house windows + doorway, taller hills, clearer Starship + story hotspot props, bounce/spray/dust FX. Three house stays hollow with interior props frogs can walk through.
+
+- Cache-bust: `?v=20260925-polish4`.
+
+## Prior (polish3) — Canvas ranch clarity + Phaser/Three parity
+
+**Canvas:** sharper house/garage/mechs, track contrast, pond foam, truck wedge, charming frogs, snappier move/camera.
+**Phaser / three.js:** truck wedge, brighter fish/whales, snappier move + follow. Three hollow house kept.
 
 - Cache-bust: `?v=20260925-polish3`.
 
@@ -138,4 +145,4 @@ Ben: keep pouring polish into Canvas, **and** remember everything done on Canvas
 
 ## Publish
 
-Game Creator → **Webmaster** only. Product path: `games/four-froggies/`. Do not republish SPS as arcade. Cache-bust: `?v=20260925-threefix2`.
+Game Creator → **Webmaster** only. Product path: `games/four-froggies/`. Do not republish SPS as arcade. Cache-bust: `?v=20260925-polish4`.

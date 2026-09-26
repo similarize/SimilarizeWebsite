@@ -2,6 +2,7 @@
    NOT free-fly FPS. Canvas-parity landmarks · solo-first.
    Big map · compound · squiggle track · pond whales · 4 trucks+shared ·
    on-water/under · Starship → Escape/hard thruster.
+   polish4: compound presence + hills + inviting hotspots + truck bob/spray.
    WASD: camera-relative (Canvas steer.y<0 = screen up) — do not invert. */
 (function (global) {
   "use strict";
@@ -228,11 +229,30 @@
 
   function addMech(m, color, h) {
     var p = worldToThree(m.x, m.y);
+    if (m.stories >= 1000) {
+      var haze = new THREE.Mesh(
+        new THREE.SphereGeometry(h * 0.55, 12, 10),
+        new THREE.MeshBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.12 })
+      );
+      haze.position.set(p.x, h * 0.55, p.z); scene.add(haze);
+    }
+    var pad = new THREE.Mesh(
+      new THREE.CylinderGeometry(h * 0.28, h * 0.32, 0.08, 20),
+      new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.4 })
+    );
+    pad.position.set(p.x, 0.05, p.z); scene.add(pad);
     var body = new THREE.Mesh(
       new THREE.BoxGeometry(h * 0.28, h, h * 0.22),
       new THREE.MeshStandardMaterial({ color: color, metalness: 0.35, roughness: 0.45 })
     );
     body.position.set(p.x, h * 0.5, p.z); body.castShadow = true; scene.add(body);
+    if (m.stories < 1000) {
+      var shoulderMat = new THREE.MeshStandardMaterial({ color: color, metalness: 0.3, roughness: 0.5 });
+      var sL = new THREE.Mesh(new THREE.BoxGeometry(h * 0.16, h * 0.18, h * 0.14), shoulderMat);
+      sL.position.set(p.x - h * 0.28, h * 0.7, p.z); scene.add(sL);
+      var sR = new THREE.Mesh(new THREE.BoxGeometry(h * 0.16, h * 0.18, h * 0.14), shoulderMat);
+      sR.position.set(p.x + h * 0.28, h * 0.7, p.z); scene.add(sR);
+    }
     var edge = new THREE.LineSegments(
       new THREE.EdgesGeometry(new THREE.BoxGeometry(h * 0.28, h, h * 0.22)),
       new THREE.LineBasicMaterial({ color: 0x0f172a })
@@ -251,13 +271,19 @@
     );
     yardM.position.set(yp.x, 0.1, yp.z); scene.add(yardM);
     addLabel("Backyard", "#ecfccb", yp.x, 1.2, yp.z);
-    for (var ai = 0; ai < 22; ai++) {
+    for (var ai = 0; ai < 40; ai++) {
       var ap = worldToThree(yard.x + 30 + Math.random() * (yard.w - 60), yard.y + 40 + Math.random() * (yard.h - 80));
+      var ar = 0.22 + Math.random() * 0.16;
       var animal = new THREE.Mesh(
-        new THREE.SphereGeometry(0.14 + Math.random() * 0.08, 8, 6),
+        new THREE.SphereGeometry(ar, 8, 6),
+        new THREE.MeshStandardMaterial({ color: ai % 3 === 0 ? 0xc4a574 : ai % 3 === 1 ? 0x8b6914 : 0xd6d3d1 })
+      );
+      animal.position.set(ap.x, ar, ap.z); animal.castShadow = true; scene.add(animal);
+      var head = new THREE.Mesh(
+        new THREE.SphereGeometry(ar * 0.45, 6, 5),
         new THREE.MeshStandardMaterial({ color: ai % 2 ? 0xc4a574 : 0x8b6914 })
       );
-      animal.position.set(ap.x, 0.18, ap.z); scene.add(animal);
+      head.position.set(ap.x + ar * 0.7, ar * 1.1, ap.z); scene.add(head);
     }
     var gar = cp.garage || { x: 700, y: 1400, w: 480, h: 520 };
     var gp = worldToThree(gar.x + gar.w / 2, gar.y + gar.h / 2);
@@ -305,6 +331,33 @@
     wall(hp.x + hw * 0.28, hp.z + hd * 0.5 - thick * 0.5, hw * 0.4, thick); // south right (door gap)
     wall(hp.x - hw * 0.5 + thick * 0.5, hp.z, thick, hd); // west
     wall(hp.x + hw * 0.5 - thick * 0.5, hp.z, thick, hd); // east
+    /* polish4: interior room props (still hollow — frogs walk through) */
+    var sofa = new THREE.Mesh(
+      new THREE.BoxGeometry(1.4, 0.45, 0.55),
+      new THREE.MeshStandardMaterial({ color: 0x7c4a3a, roughness: 0.9 })
+    );
+    sofa.position.set(hp.x - 1.2, 0.35, hp.z - 0.8); scene.add(sofa);
+    var table = new THREE.Mesh(
+      new THREE.BoxGeometry(0.9, 0.35, 0.9),
+      new THREE.MeshStandardMaterial({ color: 0x5c4030 })
+    );
+    table.position.set(hp.x + 1.1, 0.28, hp.z + 0.4); scene.add(table);
+    var lamp = new THREE.Mesh(
+      new THREE.SphereGeometry(0.22, 8, 6),
+      new THREE.MeshStandardMaterial({ color: 0xfbbf24, emissive: 0xf59e0b, emissiveIntensity: 0.6 })
+    );
+    lamp.position.set(hp.x, 1.1, hp.z - 1.2); scene.add(lamp);
+    /* Warm window panes on exterior walls */
+    function windowPane(wx, wz, ww, wd) {
+      var pane = new THREE.Mesh(
+        new THREE.BoxGeometry(ww, 0.55, wd),
+        new THREE.MeshStandardMaterial({ color: 0xfde68a, emissive: 0xfbbf24, emissiveIntensity: 0.35, transparent: true, opacity: 0.85 })
+      );
+      pane.position.set(wx, 1.15, wz); scene.add(pane);
+    }
+    windowPane(hp.x - 1.6, hp.z - hd * 0.5 + 0.05, 0.7, 0.08);
+    windowPane(hp.x + 0.2, hp.z - hd * 0.5 + 0.05, 0.7, 0.08);
+    windowPane(hp.x + 1.8, hp.z - hd * 0.5 + 0.05, 0.7, 0.08);
     var roof = new THREE.Mesh(
       new THREE.ConeGeometry(Math.max(hw, hd) * 0.62, 1.5, 4),
       new THREE.MeshStandardMaterial({ color: 0x6d4c41, transparent: true, opacity: 0.55 })
@@ -316,19 +369,20 @@
     );
     chimney.position.set(hp.x + 1.4, wallH + 1.1, hp.z - 0.8); scene.add(chimney);
     addLabel("James · Ranch house", "#fff7ed", hp.x, wallH + 2.0, hp.z);
-    addMech(cp.mech10 || { x: 820, y: 1680, stories: 10 }, 0xa5b4fc, 1.4);
-    addMech(cp.mech100 || { x: 980, y: 1700, stories: 100 }, 0x67e8f9, 2.4);
-    addMech(cp.mech1000 || { x: 340, y: 2420, stories: 1000 }, 0xfcd34d, 5.5);
+    addMech(cp.mech10 || { x: 820, y: 1680, stories: 10 }, 0xa5b4fc, 1.9);
+    addMech(cp.mech100 || { x: 980, y: 1700, stories: 100 }, 0x67e8f9, 3.2);
+    addMech(cp.mech1000 || { x: 340, y: 2420, stories: 1000 }, 0xfcd34d, 8.2);
   }
 
   function buildTrack() {
     var mounds = C.TRACK_MOUNDS || [];
     for (var i = 0; i < mounds.length; i++) {
       var m = mounds[i], p = worldToThree(m.x, m.y);
-      var geo = new THREE.SphereGeometry(m.r * 0.02, 16, 12);
-      geo.scale(1, Math.abs(m.h) * 0.55 + 0.15, 0.55);
+      var geo = new THREE.SphereGeometry(m.r * 0.022, 16, 12);
+      geo.scale(1, Math.abs(m.h) * 0.85 + 0.25, 0.55);
       var mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: m.h >= 0 ? 0x78716c : 0x44403c, roughness: 0.95 }));
-      mesh.position.set(p.x, Math.abs(m.h) * 0.35, p.z); scene.add(mesh);
+      mesh.position.set(p.x, Math.abs(m.h) * 0.55 + 0.15, p.z); scene.add(mesh);
+      if (m.h >= 0) addLabel("HILL", "#fef3c7", p.x, Math.abs(m.h) * 0.9 + 0.6, p.z);
     }
     addPathRibbon(C.TRACK_MAIN, 0.12, 0x1c1917, 0.62);
     addPathRibbon(C.TRACK_MAIN, 0.18, 0xfbbf24, 0.18);
@@ -494,34 +548,68 @@
     buildStarshipApproach();
     buildTrucks();
 
-    // Hotspots (non-truck rings — trucks drawn as Cybertrucks)
+    // Hotspots (non-truck rings — trucks drawn as Cybertrucks) — polish4 inviting
     state.hotMeshes = [];
     for (var h = 0; h < C.HOTSPOTS.length; h++) {
       var hs = C.HOTSPOTS[h];
       if (C.isTruckHotspot && C.isTruckHotspot(hs)) continue;
       var hp = worldToThree(hs.x, hs.y);
       var ring = new THREE.Mesh(
-        new THREE.RingGeometry(0.7, 0.95, 28),
-        new THREE.MeshBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.45, side: THREE.DoubleSide })
+        new THREE.RingGeometry(0.85, 1.2, 28),
+        new THREE.MeshBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.55, side: THREE.DoubleSide })
       );
       ring.rotation.x = -Math.PI / 2;
       ring.position.set(hp.x, 0.06, hp.z);
       scene.add(ring);
-      var hl = labelSprite(hs.label, "#fde68a");
-      hl.position.set(hp.x, 1.7, hp.z);
-      scene.add(hl);
+      var glow = new THREE.Mesh(
+        new THREE.CircleGeometry(1.15, 20),
+        new THREE.MeshBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.15, side: THREE.DoubleSide })
+      );
+      glow.rotation.x = -Math.PI / 2; glow.position.set(hp.x, 0.04, hp.z); scene.add(glow);
+      if (hs.id === "phone") {
+        var booth = new THREE.Mesh(
+          new THREE.BoxGeometry(0.45, 0.9, 0.4),
+          new THREE.MeshStandardMaterial({ color: 0x7c3aed, metalness: 0.2 })
+        );
+        booth.position.set(hp.x, 0.5, hp.z); scene.add(booth);
+        addLabel("Phone → Purple Bear", "#e9d5ff", hp.x, 1.9, hp.z);
+      } else if (hs.id === "sps") {
+        var dish = new THREE.Mesh(
+          new THREE.SphereGeometry(0.35, 10, 8, 0, Math.PI * 2, 0, Math.PI * 0.5),
+          new THREE.MeshStandardMaterial({ color: 0x38bdf8, metalness: 0.4, side: THREE.DoubleSide })
+        );
+        dish.position.set(hp.x, 0.35, hp.z); dish.rotation.x = -0.5; scene.add(dish);
+        addLabel("SPS → Optimus · Jimmy", "#bae6fd", hp.x, 1.9, hp.z);
+      } else {
+        addLabel(hs.label, "#fde68a", hp.x, 1.7, hp.z);
+      }
       state.hotMeshes.push({ data: hs, ring: ring });
     }
 
     var ss = C.STARSHIP || { x: 360, y: 320 };
     var sp = worldToThree(ss.x, ss.y);
+    var pad = new THREE.Mesh(
+      new THREE.CylinderGeometry(2.4, 2.6, 0.12, 32),
+      new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.5, roughness: 0.4 })
+    );
+    pad.position.set(sp.x, 0.06, sp.z); scene.add(pad);
+    var padRing = new THREE.Mesh(
+      new THREE.RingGeometry(1.6, 2.2, 32),
+      new THREE.MeshBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.7, side: THREE.DoubleSide })
+    );
+    padRing.rotation.x = -Math.PI / 2; padRing.position.set(sp.x, 0.14, sp.z); scene.add(padRing);
+    var rocket = new THREE.Mesh(
+      new THREE.ConeGeometry(0.45, 2.2, 10),
+      new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.5 })
+    );
+    rocket.position.set(sp.x, 1.3, sp.z); scene.add(rocket);
     var spotty = new THREE.Mesh(
-      new THREE.SphereGeometry(0.3, 12, 10),
+      new THREE.SphereGeometry(0.35, 12, 10),
       new THREE.MeshStandardMaterial({ color: 0xfdba74 })
     );
-    spotty.position.set(sp.x, 0.35, sp.z);
-    scene.add(spotty);
-    addLabel("Spotty", "#fdba74", sp.x, 1.35, sp.z);
+    spotty.position.set(sp.x + 1.1, 0.45, sp.z); scene.add(spotty);
+    addLabel("★ STARSHIP · SPACE", "#fef3c7", sp.x, 3.0, sp.z);
+    addLabel("Spotty", "#fdba74", sp.x + 1.1, 1.3, sp.z);
 
     var def = C.FROG_DEFS[state.frogId];
     var spawnW = (C.COMPOUND && C.COMPOUND.spawn) || { x: 280, y: 1750 };
@@ -580,6 +668,9 @@
     state.zLift = 0;
     state.zVel = 0;
     state.scrap = 0;
+    state.bouncePhase = 0;
+    state.dustT = 0;
+    state.fx = [];
     state.toast = "three.js ranch · compound · squiggle track · whales · Cybertrucks · Starship";
     state.toastT = 3.5;
     state.cd = 0;
@@ -899,10 +990,54 @@
         state.waterSub = Math.max(0, (state.waterSub || 0) - dt * 1.5);
       }
       state.player.visible = !state.inTruck;
+      /* polish4: bounce + spray / bubbles / walk dust */
+      state.bouncePhase = (state.bouncePhase || 0) + dt * (3 + sp * 0.4);
+      var bounceY = state.inTruck && state.zLift < 0.5
+        ? Math.sin(state.bouncePhase * 2.4) * Math.min(1.2, sp / 8) * 0.08 : 0;
+      if (!state.fx) state.fx = [];
+      if (!state.inTruck && !wet && sp > 1.2) {
+        state.dustT = (state.dustT || 0) - dt;
+        if (state.dustT <= 0) {
+          state.dustT = 0.16;
+          var dust = new THREE.Mesh(
+            new THREE.SphereGeometry(0.08, 6, 5),
+            new THREE.MeshBasicMaterial({ color: 0xb8a070, transparent: true, opacity: 0.5 })
+          );
+          dust.position.set(state.player.position.x - state.facing * 0.2, 0.08, state.player.position.z);
+          scene.add(dust);
+          state.fx.push({ mesh: dust, life: 0.35, rise: 0.2 });
+        }
+      }
+      if (state.inTruck && wet) {
+        if (state.waterSub > 0.7 && Math.random() < dt * 5) {
+          var bub = new THREE.Mesh(
+            new THREE.SphereGeometry(0.06 + Math.random() * 0.05, 6, 5),
+            new THREE.MeshBasicMaterial({ color: 0xbae6fd, transparent: true, opacity: 0.65 })
+          );
+          bub.position.set(state.player.position.x + (Math.random() - 0.5) * 0.6, 0.2, state.player.position.z + (Math.random() - 0.5) * 0.4);
+          scene.add(bub);
+          state.fx.push({ mesh: bub, life: 0.55, rise: 1.2 });
+        } else if (state.waterSub <= 0.7 && sp > 1 && Math.random() < dt * 4) {
+          var spr = new THREE.Mesh(
+            new THREE.SphereGeometry(0.07, 6, 5),
+            new THREE.MeshBasicMaterial({ color: 0xe0f2fe, transparent: true, opacity: 0.7 })
+          );
+          spr.position.set(state.player.position.x - state.facing * 0.4, 0.15, state.player.position.z);
+          scene.add(spr);
+          state.fx.push({ mesh: spr, life: 0.4, rise: 0.9 });
+        }
+      }
+      for (var fxi = state.fx.length - 1; fxi >= 0; fxi--) {
+        var fx = state.fx[fxi];
+        fx.life -= dt;
+        fx.mesh.position.y += (fx.rise || 0.3) * dt;
+        fx.mesh.material.opacity = Math.max(0, fx.life * 1.4);
+        if (fx.life <= 0) { scene.remove(fx.mesh); state.fx.splice(fxi, 1); }
+      }
       if (state.driveTruck) {
         state.driveTruck.visible = !!state.inTruck;
         if (state.inTruck) {
-          state.driveTruck.position.set(state.player.position.x, 0.05 + state.zLift * 0.08, state.player.position.z);
+          state.driveTruck.position.set(state.player.position.x, 0.05 + state.zLift * 0.08 + bounceY, state.player.position.z);
           state.driveTruck.scale.x = state.facing >= 0 ? 1 : -1;
           var dive = state.waterSub > 0.7;
           if (state.driveTruck.userData.bodyMat) {
