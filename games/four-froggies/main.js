@@ -294,7 +294,7 @@
         tipEl.textContent = hud ? hud.tip : "";
         nearHot = hud && hud.near ? hud.near : null;
       } else if (storyToastT > 0) tipEl.textContent = storyToast;
-      else if (nearHot) tipEl.textContent = nearHot.tip + " · tap INTERACT / E";
+      else if (nearHot) tipEl.textContent = "⚡ " + nearHot.tip + " · INTERACT / E";
       else if (me && me.inTruck && W.onTrack(me.x, me.y))
         tipEl.textContent = "Hit the jumps · scrape for scrap!";
       else tipEl.textContent = "";
@@ -546,12 +546,12 @@
   function easeCam(dt) {
     const me = localPlayer();
     if (!me) return;
-    // Town-hub camera: gentle look-ahead + soft settle (presentation)
-    const look = me.inTruck ? 0.22 : 0.14;
+    // polish3: snappy follow that does not fight — short look-ahead, deadzone settle
+    const spd = Math.hypot(me.vx || 0, me.vy || 0);
+    const look = spd < 40 ? 0.04 : me.inTruck ? 0.14 : 0.09;
     camTX = me.x + me.vx * look;
-    camTY = me.y + me.vy * look - (me.z || 0) * 0.18;
-    // Critically-damped-ish follow — smoother than linear lerp
-    const follow = me.inTruck ? 4.8 : 3.6;
+    camTY = me.y + me.vy * look - (me.z || 0) * 0.14;
+    const follow = me.inTruck ? 7.2 : 6.4;
     const k = 1 - Math.exp(-follow * dt);
     camX += (camTX - camX) * k;
     camY += (camTY - camY) * k;

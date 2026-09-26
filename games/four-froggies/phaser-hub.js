@@ -81,7 +81,7 @@
           fontFamily: "Segoe UI, system-ui, sans-serif", fontSize: "11px", color: "#fdba74",
           stroke: "#000", strokeThickness: 3,
         }).setOrigin(0.5);
-        this.ensureFrogTexture(frogId, def, 56);
+        this.ensureFrogTexture(frogId, def, 64);
         this.player = this.physics.add.image(spawn.x, spawn.y, "frog_" + frogId);
         this.player.setCollideWorldBounds(true).setDepth(20).setScale(1.15);
         this.player.body.setSize(34, 34);
@@ -107,7 +107,7 @@
         this.truckBody = this.add.rectangle(0, 0, 78, 36, 0x9ca3af, 1).setDepth(18).setVisible(false).setStrokeStyle(3, 0x111827, 1);
         this.truckAccent = this.add.rectangle(0, -2, 50, 14, hx(def.color), 0.85).setDepth(18).setVisible(false);
         this.waterClip = this.add.rectangle(0, 10, 84, 22, 0x0e7490, 0.55).setDepth(19).setVisible(false);
-        this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+        this.cameras.main.startFollow(this.player, true, 0.18, 0.18); /* polish3 less lag */
         this.cameras.main.setBounds(0, 0, C.MAP_W, C.MAP_H);
         this.cameras.main.setZoom(Math.min(0.95, Math.max(0.42, window.innerWidth / 1400)));
         this.inTruck = false; this.truckMode = null; this.truckId = null;
@@ -118,21 +118,34 @@
         if (hooks.onToast) hooks.onToast(this.toast);
       },
       ensureFrogTexture: function (id, d, size) {
+        /* polish3: charming readable frog (Canvas clarity port) */
         var key = "frog_" + id; if (this.textures.exists(key)) return;
         var rt = this.make.graphics({ x: 0, y: 0, add: false });
-        var s = size || 48, cx = s * 0.5, cy = s * 0.55, r = s * 0.4;
-        rt.fillStyle(hx(d.color), 0.35); rt.fillCircle(cx, cy + 2, r * 1.15); // soft glow
+        var s = size || 56, cx = s * 0.5, cy = s * 0.55, r = s * 0.42;
+        rt.fillStyle(hx(d.color), 0.4); rt.fillCircle(cx, cy + 3, r * 1.2);
         rt.fillStyle(hx(d.color), 1); rt.fillCircle(cx, cy, r);
-        rt.lineStyle(3, 0x0b1220, 0.9); rt.strokeCircle(cx, cy, r);
-        rt.fillStyle(0xfef3c7, 0.95); rt.fillCircle(cx, cy + r * 0.12, r * 0.32);
+        rt.lineStyle(3.5, 0x0b1220, 1); rt.strokeCircle(cx, cy, r);
+        rt.fillStyle(0xfef3c7, 0.95); rt.fillEllipse(cx, cy + r * 0.18, r * 0.7, r * 0.55);
+        rt.fillStyle(0xfb7185, 0.45);
+        rt.fillEllipse(cx - r * 0.55, cy + r * 0.15, r * 0.28, r * 0.18);
+        rt.fillEllipse(cx + r * 0.55, cy + r * 0.15, r * 0.28, r * 0.18);
         rt.fillStyle(0xffffff, 1);
-        rt.fillCircle(cx - r * 0.32, cy - r * 0.18, r * 0.2);
-        rt.fillCircle(cx + r * 0.32, cy - r * 0.18, r * 0.2);
+        rt.fillCircle(cx - r * 0.34, cy - r * 0.2, r * 0.24);
+        rt.fillCircle(cx + r * 0.34, cy - r * 0.2, r * 0.24);
+        rt.lineStyle(1.5, 0x0b1220, 0.9);
+        rt.strokeCircle(cx - r * 0.34, cy - r * 0.2, r * 0.24);
+        rt.strokeCircle(cx + r * 0.34, cy - r * 0.2, r * 0.24);
         rt.fillStyle(hx(d.accent), 1);
-        rt.fillCircle(cx - r * 0.28, cy - r * 0.18, r * 0.1);
-        rt.fillCircle(cx + r * 0.36, cy - r * 0.18, r * 0.1);
+        rt.fillCircle(cx - r * 0.28, cy - r * 0.2, r * 0.12);
+        rt.fillCircle(cx + r * 0.4, cy - r * 0.2, r * 0.12);
+        rt.fillStyle(0xffffff, 1);
+        rt.fillCircle(cx - r * 0.34, cy - r * 0.28, r * 0.06);
+        rt.fillCircle(cx + r * 0.34, cy - r * 0.28, r * 0.06);
+        rt.lineStyle(2.5, 0x0b1220, 1);
+        rt.strokeEllipse(cx, cy + r * 0.35, r * 0.55, r * 0.28);
+        rt.fillStyle(hx(d.color), 1); rt.fillEllipse(cx, cy + r * 0.28, r * 0.55, r * 0.22);
         rt.fillStyle(hx(d.hat), 1);
-        rt.fillTriangle(cx, cy - r * 1.15, cx - r * 0.7, cy - r * 0.2, cx + r * 0.7, cy - r * 0.2);
+        rt.fillTriangle(cx, cy - r * 1.2, cx - r * 0.75, cy - r * 0.15, cx + r * 0.75, cy - r * 0.15);
         rt.generateTexture(key, s, s); rt.destroy();
       },
       drawCompound: function () {
@@ -200,7 +213,8 @@
           tg.strokeEllipse(m.x, m.y, m.r * 1.1, m.r * 0.55);
         }
         polyLine(tg, C.TRACK_MAIN, 0x292524, 46, 0.95, true);
-        polyLine(tg, C.TRACK_MAIN, 0xa8a29e, 18, 0.9, true);
+        polyLine(tg, C.TRACK_MAIN, 0xfbbf24, 14, 0.85, true);
+        polyLine(tg, C.TRACK_MAIN, 0xfafaf9, 5, 0.9, true);
         polyLine(tg, C.TRACK_BRANCH_A, 0x292524, 28, 0.9, true);
         polyLine(tg, C.TRACK_BRANCH_A, 0xa8a29e, 12, 0.85, true);
         polyLine(tg, C.TRACK_BRANCH_B, 0x292524, 26, 0.88, true);
@@ -220,15 +234,15 @@
         for (var f = 0; f < 22; f++) {
           var fx = pond.x + 50 + Math.random() * (pond.w - 100);
           var fy = pond.y + 50 + Math.random() * (pond.h - 100);
-          var fish = this.add.ellipse(fx, fy, 16 + Math.random() * 10, 8 + Math.random() * 5, 0x67e8f9, 0.92)
-            .setStrokeStyle(1, 0x0e7490, 0.8);
+          var fish = this.add.ellipse(fx, fy, 20 + Math.random() * 12, 9 + Math.random() * 5, 0xfde68a, 0.95)
+            .setStrokeStyle(2, 0x92400e, 1);
           fish.phase = Math.random() * Math.PI * 2; fish.bx = fx; fish.by = fy; this.fish.push(fish);
         }
         for (var w = 0; w < 5; w++) {
           var wx = pond.x + 140 + Math.random() * (pond.w - 280);
           var wy = pond.y + 120 + Math.random() * (pond.h - 240);
-          var whale = this.add.ellipse(wx, wy, 70 + Math.random() * 40, 28 + Math.random() * 14, 0x38bdf8, 0.9)
-            .setStrokeStyle(3, 0x0c4a6e, 1);
+          var whale = this.add.ellipse(wx, wy, 78 + Math.random() * 42, 30 + Math.random() * 14, 0x7dd3fc, 0.95)
+            .setStrokeStyle(3.5, 0x0c4a6e, 1);
           whale.phase = Math.random() * Math.PI * 2; whale.bx = wx; whale.by = wy; this.whales.push(whale);
           this.add.text(wx, wy - 22, "whale", { fontSize: "10px", color: "#e0f2fe", stroke: "#000", strokeThickness: 2 }).setOrigin(0.5);
         }
@@ -245,25 +259,45 @@
         for (var j = 1; j < path.length; j++) g.lineTo(path[j][0], path[j][1]); g.strokePath();
       },
       drawTrucks: function () {
+        /* polish3: wedge Cybertruck silhouette + wheels */
         this.parkedTrucks = [];
         var spots = C.TRUCK_SPOTS || [];
         for (var i = 0; i < spots.length; i++) {
           var s = spots[i];
           var accent = s.id === "shared" ? 0xfbbf24 : hx((C.FROG_DEFS[s.id] || def).color);
-          var body = this.add.rectangle(s.x, s.y, 78, 34, 0x9ca3af, 1).setStrokeStyle(3, 0x111827, 1);
-          var cab = this.add.rectangle(s.x + 8, s.y - 4, 36, 16, accent, 0.9).setStrokeStyle(2, 0x0b1220, 0.9);
+          var g = this.add.graphics();
+          g.fillStyle(0xb0b8c4, 1); g.lineStyle(3, 0x111827, 1);
+          g.beginPath();
+          g.moveTo(s.x - 42, s.y + 10);
+          g.lineTo(s.x - 38, s.y - 6);
+          g.lineTo(s.x - 8, s.y - 10);
+          g.lineTo(s.x + 10, s.y - 22);
+          g.lineTo(s.x + 44, s.y - 8);
+          g.lineTo(s.x + 48, s.y + 8);
+          g.closePath(); g.fillPath(); g.strokePath();
+          g.fillStyle(accent, 0.95);
+          g.fillRect(s.x - 2, s.y - 18, 28, 14);
+          g.lineStyle(2, 0x0b1220, 0.9); g.strokeRect(s.x - 2, s.y - 18, 28, 14);
+          g.fillStyle(0xfef08a, 1); g.fillRect(s.x + 40, s.y - 6, 8, 5);
+          g.fillStyle(0x0f172a, 1);
+          g.fillCircle(s.x - 22, s.y + 12, 8);
+          g.fillCircle(s.x - 8, s.y + 12, 7);
+          g.fillCircle(s.x + 24, s.y + 11, 8);
+          var body = this.add.rectangle(s.x, s.y, 78, 34, 0x9ca3af, 0.01); // hit proxy for pulse
+          var cab = this.add.rectangle(s.x + 8, s.y - 4, 36, 16, accent, 0.01);
           var label = s.id === "shared" ? "All aboard" : ("Cybertruck · " + (C.FROG_DEFS[s.id] || {}).name);
-          this.add.text(s.x, s.y - 28, label, {
+          this.add.text(s.x, s.y - 32, label, {
             fontSize: "11px", fontStyle: "bold", color: "#fde68a", stroke: "#000", strokeThickness: 3,
           }).setOrigin(0.5, 1);
-          this.parkedTrucks.push({ spot: s, body: body, cab: cab });
+          this.parkedTrucks.push({ spot: s, body: body, cab: cab, gfx: g });
         }
       },
       update: function (time, delta) {
         var dt = Math.min(0.05, delta / 1000);
         this.cd = Math.max(0, this.cd - dt); this.toastT = Math.max(0, this.toastT - dt);
         this.bob += dt * (this.inTruck ? 14 : 10);
-        var maxSp = this.inTruck ? 280 : 165, accel = this.inTruck ? 560 : 390, fric = this.inTruck ? 3.0 : 5.4;
+        /* polish3: snappier locomotion */
+        var maxSp = this.inTruck ? 330 : 195, accel = this.inTruck ? 720 : 560, fric = this.inTruck ? 3.8 : 6.6;
         var body = this.player.body;
         if (steer.x || steer.y) {
           var len = Math.hypot(steer.x, steer.y) || 1;
@@ -330,11 +364,13 @@
           var hid = pt.spot.id === "shared" ? "truck-shared" : "truck-" + pt.spot.id;
           var taken = this.inTruck && (this.truckId === hid || (this.truckMode === "shared" && pt.spot.id === "shared"));
           pt.body.setVisible(!taken); pt.cab.setVisible(!taken);
+          if (pt.gfx) pt.gfx.setVisible(!taken);
           if (!taken) {
             var dT = Phaser.Math.Distance.Between(this.player.x, this.player.y, pt.spot.x, pt.spot.y);
             var nearT = dT < 90;
             var pulse = nearT ? 1 + Math.abs(Math.sin(this.bob * 1.4)) * 0.06 : 1;
             pt.body.setScale(pulse); pt.cab.setScale(pulse);
+            if (pt.gfx) { pt.gfx.setScale(pulse); pt.gfx.setAlpha(nearT ? 1 : 0.92); }
             if (nearT) pt.body.setStrokeStyle(3, 0xfbbf24, 1);
             else pt.body.setStrokeStyle(3, 0x111827, 1);
           }
@@ -342,7 +378,8 @@
         this.near = C.nearestHotspot(this.player.x, this.player.y, 80);
         for (var hi = 0; hi < this.hotGfx.length; hi++) {
           var hg = this.hotGfx[hi];
-          hg.ring.setAlpha(this.near && this.near.id === hg.data.id ? 0.4 : 0.12);
+          hg.ring.setAlpha(this.near && this.near.id === hg.data.id ? 0.65 : 0.14);
+          if (hg.ring.setScale) hg.ring.setScale(this.near && this.near.id === hg.data.id ? 1.25 : 1);
         }
         if (wantInteract) { wantInteract = false; this.doInteract(); }
         if (wantAbility) { wantAbility = false; this.doAbility(); }
@@ -357,7 +394,7 @@
           hooks.onHud({
             mode: "ranch", label: C.areaNameAt(this.player.x, this.player.y) + " · Phaser",
             scrap: Math.floor(this.scrap),
-            tip: this.toastT > 0 ? this.toast : this.near ? this.near.tip + " · INTERACT" : "",
+            tip: this.toastT > 0 ? this.toast : this.near ? ("⚡ " + this.near.tip + " · INTERACT / E") : "",
             near: this.near, ability: def.ability, cd: this.cd, walk: walk,
           });
         }
@@ -429,7 +466,7 @@
         this.add.text(820, 160, "Moon", { fontSize: "13px", color: "#0f172a", fontStyle: "bold" }).setOrigin(0.5);
         this.inOrbit = false; this.orbitAngle = 0; this.orbitRadius = 78; this.orbitEscapeCool = 0;
         this.orbitCfg = (C && C.ORBIT_PHYSICS) || {};
-        this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+        this.cameras.main.startFollow(this.player, true, 0.18, 0.18); /* polish3 less lag */
         this.cameras.main.setBounds(0, 0, 1100, 800);
       },
       update: function (time, delta) {

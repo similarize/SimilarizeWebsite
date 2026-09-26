@@ -86,6 +86,21 @@ Same PeerJS lobby: **Host room** → QR / invite `?room=CODE` → claim seats �
 **Collision rule:** Shared landmark layout lives in `canon.js`. Canvas `world.js` remains the richest renderer; Phaser/Three hubs consume the same canon landmarks for parity. Do not invent cast/zone names. Preserve three.js camera-relative WASD.
 
 
+## What's new (polish3) — Canvas ranch clarity + Phaser/Three parity
+
+Ben: lots more polish. Canvas lead; cheap clarity wins ported to Phaser + three.js. threefix2 frog move kept (hollow house, addLabel, visible frogs).
+
+**Canvas (world.js / main.js):**
+- Sharper house (glow windows, lit door), garage roll-up door, mechs with window bands + antenna/pad
+- Track lanes higher contrast (dirt / amber / chalk); pond foam + fish eyes/fins + whale spout
+- Cybertrucks more truck-like (wedge nose, bed, dual rear, mirrors, lights)
+- Froggies charming (blush, smile, belly, kick legs) + clearer INTERACT hotspot badges
+- Snappier walk/drive; camera sticks without fighting look-ahead
+
+**Phaser / three.js:** truck wedge meshes, brighter fish/whales, snappier move + camera follow, clearer INTERACT tips. Three house stays hollow; frogs stay visible/moving.
+
+- Cache-bust: `?v=20260925-polish3`.
+
 ## What's new (threefix2) — three.js frogs + move visible
 
 **Root cause (Three blank frogs / “move does nothing”):**

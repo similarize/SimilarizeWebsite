@@ -92,10 +92,10 @@
     var eyeWhite = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.1 });
     var eyePupil = new THREE.MeshStandardMaterial({ color: hex(def.accent) });
     function eye(ox) {
-      var ew = new THREE.Mesh(new THREE.SphereGeometry(0.12 * s, 8, 8), eyeWhite);
+      var ew = new THREE.Mesh(new THREE.SphereGeometry(0.14 * s, 8, 8), eyeWhite);
       ew.position.set(ox, 0.68 * s, 0.42 * s);
       g.add(ew);
-      var ep = new THREE.Mesh(new THREE.SphereGeometry(0.055 * s, 6, 6), eyePupil);
+      var ep = new THREE.Mesh(new THREE.SphereGeometry(0.065 * s, 6, 6), eyePupil);
       ep.position.set(ox, 0.68 * s, 0.52 * s);
       g.add(ep);
     }
@@ -168,23 +168,47 @@
   }
 
   function makeTruckMesh(accentHex) {
+    /* polish3: more truck-like wedge + bed + wheels (Canvas clarity port) */
     var g = new THREE.Group();
-    var body = new THREE.Mesh(
-      new THREE.BoxGeometry(1.55, 0.42, 0.72),
-      new THREE.MeshStandardMaterial({ color: 0x9ca3af, metalness: 0.55, roughness: 0.35 })
+    var bodyMat = new THREE.MeshStandardMaterial({ color: 0xb0b8c4, metalness: 0.65, roughness: 0.28 });
+    var body = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.38, 0.78), bodyMat);
+    body.position.set(0.05, 0.32, 0); body.castShadow = true; g.add(body);
+    /* Wedge nose */
+    var nose = new THREE.Mesh(
+      new THREE.BoxGeometry(0.55, 0.22, 0.74),
+      new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.7, roughness: 0.25 })
     );
-    body.position.y = 0.28; body.castShadow = true; g.add(body);
+    nose.position.set(0.85, 0.28, 0); nose.rotation.z = -0.22; g.add(nose);
+    /* Cabin glass tint via accent */
     var cab = new THREE.Mesh(
-      new THREE.BoxGeometry(0.7, 0.28, 0.62),
-      new THREE.MeshStandardMaterial({ color: accentHex, metalness: 0.4, roughness: 0.4 })
+      new THREE.BoxGeometry(0.62, 0.34, 0.66),
+      new THREE.MeshStandardMaterial({ color: accentHex, metalness: 0.45, roughness: 0.35, emissive: accentHex, emissiveIntensity: 0.12 })
     );
-    cab.position.set(0.22, 0.52, 0); g.add(cab);
+    cab.position.set(0.18, 0.58, 0); g.add(cab);
+    /* Bed rails */
+    var railM = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.5, roughness: 0.4 });
+    var railL = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.12, 0.06), railM);
+    railL.position.set(-0.45, 0.48, 0.34); g.add(railL);
+    var railR = railL.clone(); railR.position.z = -0.34; g.add(railR);
+    /* Headlight bar */
+    var hl = new THREE.Mesh(
+      new THREE.BoxGeometry(0.08, 0.08, 0.55),
+      new THREE.MeshStandardMaterial({ color: 0xfef08a, emissive: 0xfbbf24, emissiveIntensity: 0.45 })
+    );
+    hl.position.set(1.12, 0.3, 0); g.add(hl);
+    /* Wheels */
+    var wheelM = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.8 });
+    function wheel(x, z) {
+      var w = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.12, 10), wheelM);
+      w.rotation.z = Math.PI / 2; w.position.set(x, 0.16, z); g.add(w);
+    }
+    wheel(-0.45, 0.4); wheel(-0.45, -0.4); wheel(0.55, 0.4); wheel(0.55, -0.4);
     var edge = new THREE.LineSegments(
-      new THREE.EdgesGeometry(new THREE.BoxGeometry(1.55, 0.42, 0.72)),
+      new THREE.EdgesGeometry(new THREE.BoxGeometry(1.7, 0.38, 0.78)),
       new THREE.LineBasicMaterial({ color: 0x111827 })
     );
-    edge.position.y = 0.28; g.add(edge);
-    g.userData.bodyMat = body.material;
+    edge.position.copy(body.position); g.add(edge);
+    g.userData.bodyMat = bodyMat;
     return g;
   }
 
@@ -306,8 +330,9 @@
       var mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: m.h >= 0 ? 0x78716c : 0x44403c, roughness: 0.95 }));
       mesh.position.set(p.x, Math.abs(m.h) * 0.35, p.z); scene.add(mesh);
     }
-    addPathRibbon(C.TRACK_MAIN, 0.12, 0x292524, 0.55);
-    addPathRibbon(C.TRACK_MAIN, 0.18, 0xa8a29e, 0.22);
+    addPathRibbon(C.TRACK_MAIN, 0.12, 0x1c1917, 0.62);
+    addPathRibbon(C.TRACK_MAIN, 0.18, 0xfbbf24, 0.18);
+    addPathRibbon(C.TRACK_MAIN, 0.22, 0xfafaf9, 0.08);
     addPathRibbon(C.TRACK_BRANCH_A, 0.12, 0x292524, 0.35);
     addPathRibbon(C.TRACK_BRANCH_A, 0.17, 0xa8a29e, 0.14);
     addPathRibbon(C.TRACK_BRANCH_B, 0.12, 0x292524, 0.32);
@@ -328,30 +353,45 @@
     state.fish = []; state.whales = [];
     for (var f = 0; f < 20; f++) {
       var fp = worldToThree(pond.x + 60 + Math.random() * (pond.w - 120), pond.y + 60 + Math.random() * (pond.h - 120));
+      var fishG = new THREE.Group();
       var fish = new THREE.Mesh(
-        new THREE.SphereGeometry(0.16 + Math.random() * 0.08, 8, 6),
-        new THREE.MeshStandardMaterial({ color: 0x67e8f9, emissive: 0x164e63, emissiveIntensity: 0.25 })
+        new THREE.SphereGeometry(0.18 + Math.random() * 0.08, 8, 6),
+        new THREE.MeshStandardMaterial({ color: 0xfde68a, emissive: 0xb45309, emissiveIntensity: 0.3 })
       );
-      fish.position.set(fp.x, 0.12, fp.z);
-      fish.userData.phase = Math.random() * Math.PI * 2; fish.userData.bx = fp.x; fish.userData.bz = fp.z;
-      scene.add(fish); state.fish.push(fish);
+      fish.scale.set(1.5, 0.55, 0.7);
+      fishG.add(fish);
+      var fin = new THREE.Mesh(
+        new THREE.ConeGeometry(0.08, 0.18, 5),
+        new THREE.MeshStandardMaterial({ color: 0xf59e0b })
+      );
+      fin.position.set(-0.22, 0.02, 0); fin.rotation.z = Math.PI / 2; fishG.add(fin);
+      fishG.position.set(fp.x, 0.14, fp.z);
+      fishG.userData.phase = Math.random() * Math.PI * 2; fishG.userData.bx = fp.x; fishG.userData.bz = fp.z;
+      scene.add(fishG); state.fish.push(fishG);
     }
     for (var w = 0; w < 5; w++) {
       var wp = worldToThree(pond.x + 160 + Math.random() * (pond.w - 320), pond.y + 140 + Math.random() * (pond.h - 280));
+      var whaleG = new THREE.Group();
       var whale = new THREE.Mesh(
-        new THREE.SphereGeometry(0.55 + Math.random() * 0.25, 12, 8),
-        new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.45, metalness: 0.15 })
+        new THREE.SphereGeometry(0.6 + Math.random() * 0.22, 12, 8),
+        new THREE.MeshStandardMaterial({ color: 0x7dd3fc, roughness: 0.4, metalness: 0.18, emissive: 0x0c4a6e, emissiveIntensity: 0.2 })
       );
-      whale.scale.set(1.6, 0.55, 1); whale.position.set(wp.x, 0.2, wp.z);
-      whale.userData.phase = Math.random() * Math.PI * 2; whale.userData.bx = wp.x; whale.userData.bz = wp.z;
-      scene.add(whale); state.whales.push(whale);
-      addLabel("whale", "#e0f2fe", wp.x, 1.0, wp.z);
+      whale.scale.set(1.85, 0.5, 1); whaleG.add(whale);
+      var spout = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.04, 0.08, 0.55, 6),
+        new THREE.MeshStandardMaterial({ color: 0xe0f2fe, transparent: true, opacity: 0.7 })
+      );
+      spout.position.set(0.15, 0.45, 0); whaleG.add(spout);
+      whaleG.position.set(wp.x, 0.22, wp.z);
+      whaleG.userData.phase = Math.random() * Math.PI * 2; whaleG.userData.bx = wp.x; whaleG.userData.bz = wp.z;
+      scene.add(whaleG); state.whales.push(whaleG);
+      addLabel("whale", "#e0f2fe", wp.x, 1.15, wp.z);
     }
     var pl = worldToThree(pond.x + pond.w * 0.5, pond.y + 40);
     var pc = worldToThree(pond.x + pond.w / 2, pond.y + pond.h / 2);
     var shore = new THREE.Mesh(
-      new THREE.RingGeometry(Math.min(pond.w, pond.h) * 0.0088, Math.min(pond.w, pond.h) * 0.0105, 64),
-      new THREE.MeshBasicMaterial({ color: 0x67e8f9, transparent: true, opacity: 0.5, side: THREE.DoubleSide })
+      new THREE.RingGeometry(Math.min(pond.w, pond.h) * 0.0085, Math.min(pond.w, pond.h) * 0.0112, 64),
+      new THREE.MeshBasicMaterial({ color: 0xe0f2fe, transparent: true, opacity: 0.72, side: THREE.DoubleSide })
     );
     shore.rotation.x = -Math.PI / 2;
     shore.position.set(pc.x, 0.16, pc.z);
@@ -798,9 +838,10 @@
       }
     }
 
-    var maxSp = state.mode === "space" ? 7 : state.inTruck ? 9 : 5.5;
-    var accel = state.mode === "space" ? 14 : state.inTruck ? 18 : 14;
-    var fric = state.mode === "space" ? 2.8 : state.inTruck ? 2.6 : 4.5;
+    /* polish3: snappier locomotion (Canvas feel port) */
+    var maxSp = state.mode === "space" ? 7.5 : state.inTruck ? 11 : 7.2;
+    var accel = state.mode === "space" ? 16 : state.inTruck ? 24 : 20;
+    var fric = state.mode === "space" ? 3.0 : state.inTruck ? 3.4 : 5.8;
 
     // Map screen WASD/D-pad → ground plane relative to locked camera
     // Canvas convention: steer.y < 0 = Up/W (screen up). Camera sits at +X+Z offset.
@@ -911,7 +952,8 @@
 
     // Locked orbit follow — camera offset fixed, no orbit controls / no FPS look
     var target = camera.userData.lockTarget;
-    var followK = Math.min(1, 8 * dt); // snappy so WASD motion is obvious on screen
+    /* polish3: stick to player — no lag fight */
+    var followK = Math.min(1, 11 * dt);
     target.x += (state.player.position.x - target.x) * followK;
     target.z += (state.player.position.z - target.z) * followK;
     target.y = 0;
@@ -1004,7 +1046,7 @@
         mode: state.mode,
         label: label,
         scrap: state.mode === "space" ? state.catches : state.scrap,
-        tip: state.toastT > 0 ? state.toast : state.inOrbit ? "Orbit locked · Escape or hard thruster" : state.near ? state.near.tip + " · INTERACT" : "",
+        tip: state.toastT > 0 ? state.toast : state.inOrbit ? "Orbit locked · Escape or hard thruster" : state.near ? ("⚡ " + state.near.tip + " · INTERACT / E") : "",
             inOrbit: !!state.inOrbit,
         near: state.near,
         ability: def.ability,

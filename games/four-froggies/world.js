@@ -560,8 +560,9 @@
   }
 
   function moveEntity(ent, dt, speed) {
-    var walkMax = 148;
-    var truckMax = 275;
+    /* polish3: snappier walk/drive — quicker ramp + firmer stop */
+    var walkMax = 178;
+    var truckMax = 318;
     var maxSp = (ent.inTruck ? truckMax : walkMax) * (ent.speedBoost || 1);
     if (ent.inTruck && ent.dashTrail > 0) maxSp *= 1.28;
     if (typeof speed === "number") maxSp = speed * (ent.speedBoost || 1);
@@ -570,8 +571,8 @@
     var mag = Math.hypot(mx, my);
     if (mag > 1) { mx /= mag; my /= mag; }
     var wetMove = inPond(ent.x, ent.y) && (ent.z || 0) < 3;
-    var accel = ent.inTruck ? 920 : 780;
-    var friction = ent.inTruck ? 3.4 : 6.2;
+    var accel = ent.inTruck ? 1180 : 1040;
+    var friction = ent.inTruck ? 4.2 : 7.4;
     if (wetMove && ent.inTruck) {
       accel *= 0.82;
       friction *= 1.15;
@@ -779,41 +780,74 @@
 
   function drawMech(ctx, wx, wy, stories, camX, camY, vw, vh, tint) {
     var p = project(wx, wy, camX, camY, vw, vh);
-    /* Visual height scales with stories but capped for screen — 1000-story reads as towering */
-    var hScale = stories >= 1000 ? 220 : stories >= 100 ? 110 : 48;
-    var wScale = stories >= 1000 ? 48 : stories >= 100 ? 28 : 16;
+    /* polish3: sharper tower — pad, window bands, antenna, crisp edges */
+    var hScale = stories >= 1000 ? 230 : stories >= 100 ? 118 : 52;
+    var wScale = stories >= 1000 ? 50 : stories >= 100 ? 30 : 17;
     var s = p.depth;
     var lift = hScale * s;
     var bw = wScale * s;
-    ctx.fillStyle = "rgba(0,0,0,0.25)";
+    ctx.fillStyle = "rgba(0,0,0,0.28)";
     ctx.beginPath();
-    ctx.ellipse(p.x, p.y + 4, bw * 1.1, bw * 0.35, 0, 0, Math.PI * 2);
+    ctx.ellipse(p.x, p.y + 5, bw * 1.25, bw * 0.38, 0, 0, Math.PI * 2);
     ctx.fill();
+    /* Landing pad */
+    ctx.fillStyle = "rgba(30,41,59,0.7)";
+    ctx.beginPath();
+    ctx.ellipse(p.x, p.y + 2, bw * 1.05, bw * 0.32, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#fbbf24";
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.ellipse(p.x, p.y + 2, bw * 0.85, bw * 0.24, 0, 0, Math.PI * 2);
+    ctx.stroke();
     var grad = ctx.createLinearGradient(p.x - bw, p.y - lift, p.x + bw, p.y);
     grad.addColorStop(0, tint || "#94a3b8");
-    grad.addColorStop(0.5, "#64748b");
-    grad.addColorStop(1, "#334155");
+    grad.addColorStop(0.45, "#64748b");
+    grad.addColorStop(1, "#1e293b");
     ctx.fillStyle = grad;
     ctx.fillRect(p.x - bw * 0.5, p.y - lift, bw, lift);
-    ctx.strokeStyle = "#0f172a";
-    ctx.lineWidth = 2.2;
+    ctx.strokeStyle = "#020617";
+    ctx.lineWidth = 2.6;
     ctx.strokeRect(p.x - bw * 0.5, p.y - lift, bw, lift);
+    /* Window bands */
+    var bands = stories >= 1000 ? 10 : stories >= 100 ? 7 : 4;
+    for (var bi = 0; bi < bands; bi++) {
+      var by = p.y - lift * (0.12 + bi * (0.78 / bands));
+      ctx.fillStyle = bi % 2 === 0 ? "rgba(56,189,248,0.55)" : "rgba(251,191,36,0.35)";
+      ctx.fillRect(p.x - bw * 0.38, by, bw * 0.76, Math.max(2, lift * 0.035));
+    }
     /* Side depth plane */
-    ctx.fillStyle = "rgba(30,41,59,0.75)";
+    ctx.fillStyle = "rgba(15,23,42,0.82)";
     ctx.beginPath();
     ctx.moveTo(p.x + bw * 0.5, p.y - lift);
-    ctx.lineTo(p.x + bw * 0.5 + 10 * s, p.y - lift - 6 * s);
-    ctx.lineTo(p.x + bw * 0.5 + 10 * s, p.y - 4 * s);
+    ctx.lineTo(p.x + bw * 0.5 + 12 * s, p.y - lift - 7 * s);
+    ctx.lineTo(p.x + bw * 0.5 + 12 * s, p.y - 4 * s);
     ctx.lineTo(p.x + bw * 0.5, p.y);
     ctx.closePath();
     ctx.fill();
-    /* Cockpit glow */
+    ctx.strokeStyle = "#020617";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    /* Cockpit + antenna */
     ctx.fillStyle = stories >= 1000 ? "#fbbf24" : "#38bdf8";
-    ctx.fillRect(p.x - bw * 0.2, p.y - lift * 0.85, bw * 0.4, lift * 0.08);
-    ctx.fillStyle = "rgba(255,255,255,0.9)";
-    ctx.font = "bold " + Math.round(10 * s) + "px Segoe UI, system-ui, sans-serif";
+    ctx.fillRect(p.x - bw * 0.22, p.y - lift * 0.92, bw * 0.44, lift * 0.07);
+    ctx.strokeStyle = "#f8fafc";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y - lift);
+    ctx.lineTo(p.x, p.y - lift - 14 * s);
+    ctx.stroke();
+    ctx.fillStyle = "#f87171";
+    ctx.beginPath();
+    ctx.arc(p.x, p.y - lift - 14 * s, 2.4 * s, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#fff";
+    ctx.strokeStyle = "rgba(0,0,0,0.75)";
+    ctx.lineWidth = 3;
+    ctx.font = "bold " + Math.round(11 * s) + "px Segoe UI, system-ui, sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText(stories + "-story mech", p.x, p.y - lift - 8 * s);
+    ctx.strokeText(stories + "-story mech", p.x, p.y - lift - 18 * s);
+    ctx.fillText(stories + "-story mech", p.x, p.y - lift - 18 * s);
   }
 
   function drawRanchHouse(ctx, camX, camY, vw, vh, world) {
@@ -886,13 +920,22 @@
     ctx.lineWidth = 2.8;
     ctx.lineJoin = "round";
     ctx.stroke();
-    /* Garage door bay */
+    /* Garage door bay — polish3 roll-up panels + amber trim */
     var door = project(gar.x + gar.w * 0.5, gar.y + gar.h - 50, camX, camY, vw, vh);
-    ctx.fillStyle = "#111827";
-    ctx.fillRect(door.x - 55 * door.depth, door.y - 50 * door.depth, 110 * door.depth, 52 * door.depth);
+    var ddw = 118 * door.depth, ddh = 56 * door.depth;
+    ctx.fillStyle = "#0b1220";
+    ctx.fillRect(door.x - ddw * 0.5, door.y - ddh, ddw, ddh);
+    for (var gd = 0; gd < 6; gd++) {
+      ctx.fillStyle = gd % 2 ? "#374151" : "#1f2937";
+      ctx.fillRect(door.x - ddw * 0.46, door.y - ddh + 3 + gd * (ddh / 6.2), ddw * 0.92, ddh / 7);
+    }
     ctx.strokeStyle = "#fbbf24";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(door.x - 55 * door.depth, door.y - 50 * door.depth, 110 * door.depth, 52 * door.depth);
+    ctx.lineWidth = 2.6;
+    ctx.strokeRect(door.x - ddw * 0.5, door.y - ddh, ddw, ddh);
+    ctx.fillStyle = "#fde68a";
+    ctx.beginPath();
+    ctx.arc(door.x + ddw * 0.38, door.y - ddh * 0.55, 3.2 * door.depth, 0, Math.PI * 2);
+    ctx.fill();
     /* Flat roof */
     ctx.fillStyle = "#374151";
     ctx.beginPath();
@@ -971,19 +1014,29 @@
     /* Windows rows */
     function windowAt(wx, wy, ww, wh) {
       var wp = project(wx, wy, camX, camY, vw, vh);
-      ctx.fillStyle = "rgba(120, 200, 255, 0.62)";
-      ctx.fillRect(wp.x - ww * 0.5 * wp.depth, wp.y - wh * wp.depth - 10, ww * wp.depth, wh * wp.depth);
+      var wx0 = wp.x - ww * 0.5 * wp.depth, wy0 = wp.y - wh * wp.depth - 10;
+      var ww0 = ww * wp.depth, wh0 = wh * wp.depth;
+      /* Warm interior glow + sill */
+      ctx.fillStyle = "rgba(15, 23, 42, 0.55)";
+      ctx.fillRect(wx0 - 2, wy0 - 2, ww0 + 4, wh0 + 5);
+      var wg2 = ctx.createLinearGradient(wx0, wy0, wx0, wy0 + wh0);
+      wg2.addColorStop(0, "rgba(186, 230, 253, 0.95)");
+      wg2.addColorStop(1, "rgba(56, 189, 248, 0.55)");
+      ctx.fillStyle = wg2;
+      ctx.fillRect(wx0, wy0, ww0, wh0);
       ctx.strokeStyle = "#1c1210";
-      ctx.lineWidth = 2;
-      ctx.strokeRect(wp.x - ww * 0.5 * wp.depth, wp.y - wh * wp.depth - 10, ww * wp.depth, wh * wp.depth);
-      ctx.strokeStyle = "rgba(255,255,255,0.35)";
-      ctx.lineWidth = 1;
+      ctx.lineWidth = 2.2;
+      ctx.strokeRect(wx0, wy0, ww0, wh0);
+      ctx.strokeStyle = "rgba(255,255,255,0.55)";
+      ctx.lineWidth = 1.2;
       ctx.beginPath();
-      ctx.moveTo(wp.x, wp.y - wh * wp.depth - 10);
-      ctx.lineTo(wp.x, wp.y - 10);
-      ctx.moveTo(wp.x - ww * 0.5 * wp.depth, wp.y - wh * 0.5 * wp.depth - 10);
-      ctx.lineTo(wp.x + ww * 0.5 * wp.depth, wp.y - wh * 0.5 * wp.depth - 10);
+      ctx.moveTo(wp.x, wy0);
+      ctx.lineTo(wp.x, wy0 + wh0);
+      ctx.moveTo(wx0, wy0 + wh0 * 0.5);
+      ctx.lineTo(wx0 + ww0, wy0 + wh0 * 0.5);
       ctx.stroke();
+      ctx.fillStyle = "#78350f";
+      ctx.fillRect(wx0 - 1, wy0 + wh0, ww0 + 2, 3);
     }
     windowAt(hx + 120, hy + 160, 28, 22);
     windowAt(hx + 220, hy + 160, 28, 22);
@@ -1021,16 +1074,29 @@
     var ch = project(hx + hw * 0.72, hy + 70, camX, camY, vw, vh);
     ctx.fillStyle = "#795548";
     ctx.fillRect(ch.x - 8, ch.y - wallH - 70, 16 * ch.depth, 36 * ch.depth);
-    /* Front door */
+    /* Front door — polish3 framed + lit */
     var fr = project(hx + hw * 0.48, hy + hh - 80, camX, camY, vw, vh);
-    ctx.fillStyle = "#3e2723";
-    ctx.fillRect(fr.x - 16, fr.y - 42, 32, 44);
-    ctx.strokeStyle = "#1a100c";
+    ctx.fillStyle = "#1c1410";
+    ctx.fillRect(fr.x - 20, fr.y - 48, 40, 50);
+    ctx.fillStyle = "#5d4037";
+    ctx.fillRect(fr.x - 16, fr.y - 44, 32, 46);
+    ctx.strokeStyle = "#fbbf24";
     ctx.lineWidth = 2;
-    ctx.strokeRect(fr.x - 16, fr.y - 42, 32, 44);
-    ctx.fillStyle = "#fbbf24";
+    ctx.strokeRect(fr.x - 16, fr.y - 44, 32, 46);
+    ctx.strokeStyle = "#1a100c";
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.arc(fr.x + 8, fr.y - 20, 3, 0, Math.PI * 2);
+    ctx.moveTo(fr.x, fr.y - 44);
+    ctx.lineTo(fr.x, fr.y + 2);
+    ctx.stroke();
+    ctx.fillStyle = "#fde68a";
+    ctx.beginPath();
+    ctx.arc(fr.x + 10, fr.y - 20, 3.2, 0, Math.PI * 2);
+    ctx.fill();
+    /* Porch light */
+    ctx.fillStyle = "rgba(253, 224, 71, 0.55)";
+    ctx.beginPath();
+    ctx.arc(fr.x, fr.y - 52, 6, 0, Math.PI * 2);
     ctx.fill();
     ctx.font = "bold 14px Segoe UI, system-ui, sans-serif";
     ctx.textAlign = "center";
@@ -1131,16 +1197,17 @@
     }
 
     /* Dirt ribbons: outer squiggle circuit, then branches */
-    drawPathRibbon(ctx, TRACK_MAIN, camX, camY, vw, vh, "rgba(18,16,14,0.96)", 22, null, true);
-    drawPathRibbon(ctx, TRACK_MAIN, camX, camY, vw, vh, "#a16207", 4, [16, 12], true);
-    drawPathRibbon(ctx, TRACK_MAIN, camX, camY, vw, vh, "rgba(28,24,20,0.9)", 12, null, true);
-    drawPathRibbon(ctx, TRACK_MAIN, camX, camY, vw, vh, "#e7e5e4", 2.2, [7, 11], true);
+    /* polish3: stronger lane contrast — dirt / amber / chalk */
+    drawPathRibbon(ctx, TRACK_MAIN, camX, camY, vw, vh, "rgba(12,10,8,0.98)", 26, null, true);
+    drawPathRibbon(ctx, TRACK_MAIN, camX, camY, vw, vh, "#92400e", 5.5, [18, 10], true);
+    drawPathRibbon(ctx, TRACK_MAIN, camX, camY, vw, vh, "rgba(41,37,36,0.92)", 14, null, true);
+    drawPathRibbon(ctx, TRACK_MAIN, camX, camY, vw, vh, "#fafaf9", 2.6, [8, 10], true);
 
-    drawPathRibbon(ctx, TRACK_BRANCH_A, camX, camY, vw, vh, "rgba(22,20,18,0.92)", 14, null, true);
-    drawPathRibbon(ctx, TRACK_BRANCH_A, camX, camY, vw, vh, "#fbbf24", 2.5, [10, 9], true);
+    drawPathRibbon(ctx, TRACK_BRANCH_A, camX, camY, vw, vh, "rgba(20,16,12,0.94)", 16, null, true);
+    drawPathRibbon(ctx, TRACK_BRANCH_A, camX, camY, vw, vh, "#f59e0b", 3.2, [12, 8], true);
 
-    drawPathRibbon(ctx, TRACK_BRANCH_B, camX, camY, vw, vh, "rgba(24,22,20,0.9)", 12, null, true);
-    drawPathRibbon(ctx, TRACK_BRANCH_B, camX, camY, vw, vh, "#fde68a", 2, [8, 10], true);
+    drawPathRibbon(ctx, TRACK_BRANCH_B, camX, camY, vw, vh, "rgba(28,22,16,0.92)", 14, null, true);
+    drawPathRibbon(ctx, TRACK_BRANCH_B, camX, camY, vw, vh, "#fde68a", 2.6, [9, 9], true);
 
     /* Checkered start on west straight */
     for (var ci = 0; ci < 10; ci++) {
@@ -1217,12 +1284,18 @@
       else ctx.lineTo(water[wi].x, water[wi].y);
     }
     ctx.closePath();
-    ctx.strokeStyle = "rgba(220, 245, 255, 0.75)";
-    ctx.lineWidth = 3.2;
+    ctx.strokeStyle = "rgba(240, 252, 255, 0.92)";
+    ctx.lineWidth = 4.2;
     ctx.stroke();
-    ctx.strokeStyle = "rgba(6, 40, 60, 0.9)";
-    ctx.lineWidth = 1.4;
+    ctx.strokeStyle = "rgba(4, 28, 48, 0.95)";
+    ctx.lineWidth = 1.8;
     ctx.stroke();
+    /* Inner sparkle ring */
+    ctx.strokeStyle = "rgba(125, 211, 252, 0.35)";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([8, 6]);
+    ctx.stroke();
+    ctx.setLineDash([]);
     for (var s = 0; s < 10; s++) {
       var sy = a.y + 70 + s * 95 + Math.sin(t * 1.8 + s) * 8;
       var sp0 = project(a.x + 90, sy, camX, camY, vw, vh);
@@ -1235,34 +1308,72 @@
       ctx.stroke();
     }
     function drawSwimmer(f, isWhale) {
+      /* polish3: readable silhouettes — eyes, fins, whale spout */
       var fp = project(f.x, f.y, camX, camY, vw, vh);
       if (fp.x < -80 || fp.x > vw + 80 || fp.y < -80 || fp.y > vh + 80) return;
-      var fs = (isWhale ? 10 : 5) + f.size * (isWhale ? 2.2 : 2.4);
-      fs *= fp.depth * (f.scare > 0 ? 1.12 : 1);
-      ctx.fillStyle = "rgba(0,0,0,0.25)";
+      var fs = (isWhale ? 12 : 6) + f.size * (isWhale ? 2.5 : 2.6);
+      fs *= fp.depth * (f.scare > 0 ? 1.14 : 1);
+      var ang = f.phase;
+      ctx.fillStyle = "rgba(0,0,0,0.28)";
       ctx.beginPath();
-      ctx.ellipse(fp.x, fp.y + 3, fs * 0.9, fs * 0.22, f.phase, 0, Math.PI * 2);
+      ctx.ellipse(fp.x, fp.y + 4, fs * 1.05, fs * 0.26, ang, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = f.scare > 0 ? "#fef08a" : (isWhale ? "#7dd3fc" : "#fde68a");
       ctx.beginPath();
-      ctx.ellipse(fp.x, fp.y, fs, fs * (isWhale ? 0.38 : 0.45), f.phase, 0, Math.PI * 2);
+      ctx.ellipse(fp.x, fp.y, fs * (isWhale ? 1.15 : 1), fs * (isWhale ? 0.42 : 0.48), ang, 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = isWhale ? "#0c4a6e" : "#92400e";
-      ctx.lineWidth = 1.6;
+      ctx.strokeStyle = isWhale ? "#0c4a6e" : "#78350f";
+      ctx.lineWidth = isWhale ? 2.4 : 1.8;
       ctx.stroke();
+      /* Tail */
+      var tx = fp.x - Math.cos(ang) * fs;
+      var ty = fp.y - Math.sin(ang) * fs * 0.35;
       ctx.beginPath();
-      ctx.moveTo(fp.x - Math.cos(f.phase) * fs, fp.y - Math.sin(f.phase) * fs * 0.35);
-      ctx.lineTo(fp.x - Math.cos(f.phase) * fs * 1.55, fp.y);
-      ctx.lineTo(fp.x - Math.cos(f.phase) * fs, fp.y + Math.sin(f.phase) * fs * 0.35);
-      ctx.fillStyle = isWhale ? "#38bdf8" : "#fcd34d";
+      ctx.moveTo(tx, ty);
+      ctx.lineTo(fp.x - Math.cos(ang) * fs * 1.7, fp.y);
+      ctx.lineTo(fp.x - Math.cos(ang) * fs, fp.y + Math.sin(ang) * fs * 0.4);
+      ctx.closePath();
+      ctx.fillStyle = isWhale ? "#38bdf8" : "#fbbf24";
       ctx.fill();
       ctx.strokeStyle = isWhale ? "#075985" : "#78350f";
-      ctx.lineWidth = 1.2;
+      ctx.lineWidth = 1.4;
       ctx.stroke();
+      /* Eye */
+      var ex = fp.x + Math.cos(ang) * fs * 0.45;
+      var ey = fp.y + Math.sin(ang) * fs * 0.15 - fs * 0.12;
+      ctx.fillStyle = "#fff";
+      ctx.beginPath();
+      ctx.arc(ex, ey, (isWhale ? 3.2 : 2.1) * fp.depth, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#0f172a";
+      ctx.beginPath();
+      ctx.arc(ex + 0.6 * fp.depth, ey, (isWhale ? 1.6 : 1.05) * fp.depth, 0, Math.PI * 2);
+      ctx.fill();
       if (isWhale) {
-        ctx.fillStyle = "rgba(255,255,255,0.4)";
+        ctx.fillStyle = "rgba(255,255,255,0.55)";
         ctx.beginPath();
-        ctx.ellipse(fp.x + fs * 0.15, fp.y - fs * 0.15, fs * 0.35, fs * 0.12, f.phase, 0, Math.PI * 2);
+        ctx.ellipse(fp.x + fs * 0.1, fp.y - fs * 0.18, fs * 0.4, fs * 0.14, ang, 0, Math.PI * 2);
+        ctx.fill();
+        /* Spout */
+        ctx.strokeStyle = "rgba(186, 230, 253, 0.85)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(fp.x, fp.y - fs * 0.35);
+        ctx.lineTo(fp.x + 2, fp.y - fs * 0.95);
+        ctx.lineTo(fp.x + 8 * fp.depth, fp.y - fs * 1.05);
+        ctx.stroke();
+        ctx.fillStyle = "rgba(224, 242, 254, 0.7)";
+        ctx.beginPath();
+        ctx.arc(fp.x + 8 * fp.depth, fp.y - fs * 1.05, 3.5 * fp.depth, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        /* Dorsal fin */
+        ctx.fillStyle = "#f59e0b";
+        ctx.beginPath();
+        ctx.moveTo(fp.x - fs * 0.1, fp.y - fs * 0.35);
+        ctx.lineTo(fp.x + fs * 0.15, fp.y - fs * 0.85);
+        ctx.lineTo(fp.x + fs * 0.25, fp.y - fs * 0.2);
+        ctx.closePath();
         ctx.fill();
       }
     }
@@ -1348,86 +1459,98 @@
     ctx.ellipse(0, 10 * s + lift * 0.3, 32 * s, 8 * s, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    var bodyGrad = ctx.createLinearGradient(-30 * s, -18 * s, 36 * s, 10 * s);
-    bodyGrad.addColorStop(0, driving ? "#f8fafc" : "#d1d5db");
-    bodyGrad.addColorStop(0.45, driving ? "#e2e8f0" : "#9ca3af");
-    bodyGrad.addColorStop(1, driving ? "#94a3b8" : "#6b7280");
+    /* polish3: angular stainless Cybertruck — wedge nose, bed, mirrors, dual axles */
+    var bodyGrad = ctx.createLinearGradient(-36 * s, -22 * s, 42 * s, 12 * s);
+    bodyGrad.addColorStop(0, driving ? "#f8fafc" : "#e5e7eb");
+    bodyGrad.addColorStop(0.4, driving ? "#cbd5e1" : "#9ca3af");
+    bodyGrad.addColorStop(1, driving ? "#64748b" : "#4b5563");
     ctx.fillStyle = bodyGrad;
     ctx.beginPath();
-    ctx.moveTo(-30 * s, -4 * s);
-    ctx.lineTo(8 * s, -16 * s);
-    ctx.lineTo(34 * s, -8 * s);
-    ctx.lineTo(38 * s, 6 * s);
-    ctx.lineTo(-32 * s, 8 * s);
+    ctx.moveTo(-34 * s, 2 * s);       /* rear bumper */
+    ctx.lineTo(-30 * s, -6 * s);      /* bed rear */
+    ctx.lineTo(-8 * s, -10 * s);      /* bed → cab */
+    ctx.lineTo(6 * s, -22 * s);       /* roof peak */
+    ctx.lineTo(36 * s, -10 * s);      /* nose slope */
+    ctx.lineTo(42 * s, 4 * s);        /* front bumper */
+    ctx.lineTo(-36 * s, 8 * s);
     ctx.closePath();
     ctx.fill();
-    /* Crisp silhouette */
     ctx.strokeStyle = "#020617";
-    ctx.lineWidth = 2.4;
+    ctx.lineWidth = 2.8;
     ctx.lineJoin = "round";
     ctx.stroke();
-    /* Panel crease / stainless edge */
-    ctx.strokeStyle = "rgba(255,255,255,0.55)";
+    /* Bed rail + stainless crease */
+    ctx.strokeStyle = "rgba(255,255,255,0.65)";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(-28 * s, -4 * s);
+    ctx.lineTo(-10 * s, -8 * s);
+    ctx.lineTo(4 * s, -18 * s);
+    ctx.lineTo(34 * s, -8 * s);
+    ctx.stroke();
+    ctx.strokeStyle = "rgba(15,23,42,0.6)";
     ctx.lineWidth = 1.3;
     ctx.beginPath();
-    ctx.moveTo(-28 * s, -2 * s);
-    ctx.lineTo(6 * s, -13 * s);
-    ctx.lineTo(32 * s, -6 * s);
+    ctx.moveTo(-32 * s, 4 * s);
+    ctx.lineTo(38 * s, 2 * s);
     ctx.stroke();
-    ctx.strokeStyle = "rgba(15,23,42,0.55)";
-    ctx.lineWidth = 1.2;
-    ctx.beginPath();
-    ctx.moveTo(-30 * s, 4 * s);
-    ctx.lineTo(36 * s, 2 * s);
-    ctx.stroke();
+    /* Side mirror */
+    ctx.fillStyle = "#94a3b8";
+    ctx.fillRect(-4 * s, -14 * s, 5 * s, 3 * s);
+    ctx.strokeStyle = "#0f172a";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(-4 * s, -14 * s, 5 * s, 3 * s);
     if (accent) {
       ctx.strokeStyle = accent;
-      ctx.lineWidth = 3.2;
+      ctx.lineWidth = 3.6;
       ctx.beginPath();
-      ctx.moveTo(-28 * s, 2 * s);
-      ctx.lineTo(30 * s, 0);
-      ctx.stroke();
-      ctx.strokeStyle = "rgba(0,0,0,0.35)";
-      ctx.lineWidth = 1;
+      ctx.moveTo(-30 * s, 2 * s);
+      ctx.lineTo(34 * s, 0);
       ctx.stroke();
     }
-    /* Cabin glass — sharper */
-    ctx.fillStyle = "rgba(15, 23, 42, 0.95)";
+    /* Cabin glass wedge */
+    ctx.fillStyle = "rgba(15, 23, 42, 0.96)";
     ctx.beginPath();
-    ctx.moveTo(-6 * s, -5 * s);
-    ctx.lineTo(12 * s, -20 * s);
-    ctx.lineTo(24 * s, -9 * s);
-    ctx.lineTo(-2 * s, -3 * s);
+    ctx.moveTo(-4 * s, -8 * s);
+    ctx.lineTo(8 * s, -20 * s);
+    ctx.lineTo(26 * s, -10 * s);
+    ctx.lineTo(2 * s, -5 * s);
     ctx.closePath();
     ctx.fill();
     ctx.strokeStyle = "#020617";
     ctx.lineWidth = 1.8;
     ctx.stroke();
-    ctx.fillStyle = "rgba(125, 211, 252, 0.35)";
+    ctx.fillStyle = "rgba(125, 211, 252, 0.42)";
     ctx.beginPath();
-    ctx.moveTo(-2 * s, -6 * s);
-    ctx.lineTo(11 * s, -17 * s);
-    ctx.lineTo(18 * s, -10 * s);
-    ctx.lineTo(2 * s, -5 * s);
+    ctx.moveTo(0, -9 * s);
+    ctx.lineTo(9 * s, -17 * s);
+    ctx.lineTo(20 * s, -11 * s);
+    ctx.lineTo(4 * s, -7 * s);
     ctx.closePath();
     ctx.fill();
-    ctx.fillStyle = driving ? "#fef08a" : "#94a3b8";
-    ctx.fillRect(28 * s, -6 * s, 6 * s, 3.5 * s);
+    /* Headlight bar */
+    ctx.fillStyle = driving ? "#fef08a" : "#cbd5e1";
+    ctx.fillRect(34 * s, -8 * s, 7 * s, 4 * s);
     ctx.strokeStyle = "#0f172a";
     ctx.lineWidth = 1;
-    ctx.strokeRect(28 * s, -6 * s, 6 * s, 3.5 * s);
-    function wheel(wx, wy) {
+    ctx.strokeRect(34 * s, -8 * s, 7 * s, 4 * s);
+    /* Tail light */
+    ctx.fillStyle = driving ? "#f87171" : "#7f1d1d";
+    ctx.fillRect(-34 * s, -2 * s, 5 * s, 3.5 * s);
+    function wheel(wx, wy, r) {
+      r = r || 8.5;
       ctx.fillStyle = "#020617";
-      ctx.beginPath(); ctx.arc(wx, wy, 8.2 * s, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = "#64748b"; ctx.lineWidth = 2.2;
-      ctx.beginPath(); ctx.arc(wx, wy, 5.2 * s, 0, Math.PI * 2); ctx.stroke();
-      ctx.strokeStyle = "#94a3b8"; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.arc(wx, wy, 2.5 * s, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(wx, wy, r * s, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = "#94a3b8"; ctx.lineWidth = 2.4;
+      ctx.beginPath(); ctx.arc(wx, wy, (r - 2.6) * s, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = "#334155";
+      ctx.beginPath(); ctx.arc(wx, wy, (r - 5) * s, 0, Math.PI * 2); ctx.fill();
     }
-    var wheelY = (z || 0) < 8 ? 9 : 4;
+    var wheelY = (z || 0) < 8 ? 10 : 5;
     if (!(wet && sub > 0.75)) {
-      wheel(-16 * s, wheelY * s);
-      wheel(18 * s, (wheelY - 1) * s);
+      wheel(-20 * s, wheelY * s, 8.8);
+      wheel(-8 * s, wheelY * s, 8.2);   /* dual rear feel */
+      wheel(20 * s, (wheelY - 1) * s, 8.6);
     }
 
     /* Waterline clip + submerged tint — truck reads as ON / under surface */
@@ -1461,11 +1584,11 @@
       if (sub > 0.7) {
         ctx.fillStyle = "rgba(4, 50, 80, " + clamp((sub - 0.7) * 0.85, 0, 0.45) + ")";
         ctx.beginPath();
-        ctx.moveTo(-30 * s, -4 * s);
-        ctx.lineTo(8 * s, -16 * s);
-        ctx.lineTo(34 * s, -8 * s);
-        ctx.lineTo(38 * s, 6 * s);
-        ctx.lineTo(-32 * s, 8 * s);
+        ctx.moveTo(-34 * s, 2 * s);
+        ctx.lineTo(-30 * s, -6 * s);
+        ctx.lineTo(6 * s, -22 * s);
+        ctx.lineTo(42 * s, 4 * s);
+        ctx.lineTo(-36 * s, 8 * s);
         ctx.closePath();
         ctx.fill();
       }
@@ -1476,7 +1599,7 @@
 
   function drawFroggy(ctx, frog, camX, camY, vw, vh, frogs) {
     var p = project(frog.x, frog.y, camX, camY, vw, vh);
-    var s = 15.2 * p.depth * (0.92 + 0.08 * p.depth);
+    var s = 16.4 * p.depth * (0.92 + 0.08 * p.depth); /* polish3 readable */
     var bob = (!frog.inTruck && (frog.walkPhase || 0) > 0.05)
       ? Math.abs(Math.sin(frog.walkPhase)) * 2.4 * p.depth : 0;
     var lift = (frog.z || 0) * 0.58 * p.depth + bob;
@@ -1531,42 +1654,84 @@
       return p;
     }
 
-    var shA = 0.32 - Math.min(0.2, (frog.z || 0) * 0.004);
-    var shW = s * (1.05 - Math.min(0.35, (frog.z || 0) * 0.008));
+    /* polish3: charming readable frog — blush, smile, thick rim, big eyes */
+    var shA = 0.34 - Math.min(0.2, (frog.z || 0) * 0.004);
+    var shW = s * (1.1 - Math.min(0.35, (frog.z || 0) * 0.008));
     ctx.fillStyle = "rgba(0,0,0," + shA + ")";
     ctx.beginPath();
-    ctx.ellipse(p.x, p.y + 5, shW, s * 0.32, -0.15, 0, Math.PI * 2);
+    ctx.ellipse(p.x, p.y + 5, shW, s * 0.34, -0.15, 0, Math.PI * 2);
     ctx.fill();
-    var by = p.y - s * 0.4 - lift;
+    var by = p.y - s * 0.42 - lift;
+    var legKick = (!frog.inTruck && (frog.walkPhase || 0) > 0.05)
+      ? Math.sin(frog.walkPhase * 2) * 3.2 * p.depth : 0;
     ctx.strokeStyle = frog.accent;
-    ctx.lineWidth = 2.5 * p.depth;
+    ctx.lineWidth = 3.2 * p.depth;
+    ctx.lineCap = "round";
     ctx.beginPath();
     ctx.moveTo(p.x - 6 * p.depth, by + s * 0.5);
-    ctx.lineTo(p.x - 10 * p.depth, p.y + 2 - lift * 0.2);
+    ctx.lineTo(p.x - 12 * p.depth, p.y + 2 - lift * 0.2 + legKick);
     ctx.moveTo(p.x + 6 * p.depth, by + s * 0.5);
-    ctx.lineTo(p.x + 10 * p.depth, p.y + 2 - lift * 0.2);
+    ctx.lineTo(p.x + 12 * p.depth, p.y + 2 - lift * 0.2 - legKick);
     ctx.stroke();
-    var bg = ctx.createRadialGradient(p.x - 3, by - 4, 2, p.x, by, s);
+    var bg = ctx.createRadialGradient(p.x - 4, by - 5, 2, p.x, by, s * 1.05);
     bg.addColorStop(0, frog.color);
+    bg.addColorStop(0.7, frog.color);
     bg.addColorStop(1, frog.accent);
     ctx.fillStyle = bg;
     ctx.beginPath(); ctx.arc(p.x, by, s, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = frog.accent; ctx.lineWidth = 2; ctx.stroke();
+    ctx.strokeStyle = "#0b1220"; ctx.lineWidth = 2.6; ctx.stroke();
+    ctx.strokeStyle = frog.accent; ctx.lineWidth = 1.6; ctx.stroke();
+    /* Belly */
+    ctx.fillStyle = "rgba(254, 243, 199, 0.85)";
+    ctx.beginPath();
+    ctx.ellipse(p.x, by + s * 0.18, s * 0.42, s * 0.32, 0, 0, Math.PI * 2);
+    ctx.fill();
+    /* Blush */
+    ctx.fillStyle = "rgba(251, 113, 133, 0.45)";
+    ctx.beginPath();
+    ctx.ellipse(p.x - 7 * p.depth * frog.facing, by + s * 0.12, 3.2 * p.depth, 2.2 * p.depth, 0, 0, Math.PI * 2);
+    ctx.ellipse(p.x + 8 * p.depth * frog.facing, by + s * 0.12, 3.2 * p.depth, 2.2 * p.depth, 0, 0, Math.PI * 2);
+    ctx.fill();
+    /* Hat */
     ctx.fillStyle = frog.hat || "#facc15";
     ctx.beginPath();
-    ctx.ellipse(p.x, by - s * 0.85, s * 0.75, s * 0.28, 0, 0, Math.PI * 2);
+    ctx.ellipse(p.x, by - s * 0.85, s * 0.82, s * 0.3, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillRect(p.x - s * 0.35, by - s * 1.35, s * 0.7, s * 0.5);
+    ctx.fillRect(p.x - s * 0.38, by - s * 1.4, s * 0.76, s * 0.55);
+    ctx.strokeStyle = "#0b1220";
+    ctx.lineWidth = 1.4;
+    ctx.strokeRect(p.x - s * 0.38, by - s * 1.4, s * 0.76, s * 0.55);
+    /* Eyes */
+    var eL = p.x - 5 * p.depth * frog.facing;
+    var eR = p.x + 6.2 * p.depth * frog.facing;
+    var eY = by - s * 0.28;
     ctx.fillStyle = "#fff";
     ctx.beginPath();
-    ctx.arc(p.x - 4 * p.depth * frog.facing, by - s * 0.25, 3.4 * p.depth, 0, Math.PI * 2);
-    ctx.arc(p.x + 5 * p.depth * frog.facing, by - s * 0.25, 3.4 * p.depth, 0, Math.PI * 2);
+    ctx.arc(eL, eY, 4.2 * p.depth, 0, Math.PI * 2);
+    ctx.arc(eR, eY, 4.2 * p.depth, 0, Math.PI * 2);
     ctx.fill();
+    ctx.strokeStyle = "#0b1220";
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.arc(eL, eY, 4.2 * p.depth, 0, Math.PI * 2);
+    ctx.arc(eR, eY, 4.2 * p.depth, 0, Math.PI * 2);
+    ctx.stroke();
     ctx.fillStyle = "#111";
     ctx.beginPath();
-    ctx.arc(p.x - 3.2 * p.depth * frog.facing, by - s * 0.25, 1.5 * p.depth, 0, Math.PI * 2);
-    ctx.arc(p.x + 5.6 * p.depth * frog.facing, by - s * 0.25, 1.5 * p.depth, 0, Math.PI * 2);
+    ctx.arc(eL + 0.8 * p.depth * frog.facing, eY, 1.9 * p.depth, 0, Math.PI * 2);
+    ctx.arc(eR + 0.8 * p.depth * frog.facing, eY, 1.9 * p.depth, 0, Math.PI * 2);
     ctx.fill();
+    ctx.fillStyle = "#fff";
+    ctx.beginPath();
+    ctx.arc(eL + 0.2 * p.depth, eY - 1.1 * p.depth, 0.7 * p.depth, 0, Math.PI * 2);
+    ctx.arc(eR + 0.2 * p.depth, eY - 1.1 * p.depth, 0.7 * p.depth, 0, Math.PI * 2);
+    ctx.fill();
+    /* Smile */
+    ctx.strokeStyle = "#0b1220";
+    ctx.lineWidth = 1.6 * p.depth;
+    ctx.beginPath();
+    ctx.arc(p.x + 1 * p.depth * frog.facing, by + s * 0.22, 4.5 * p.depth, 0.15, Math.PI - 0.15);
+    ctx.stroke();
     if (!frog.human) {
       ctx.fillStyle = "rgba(0,0,0,0.65)";
       ctx.strokeStyle = "#000";
@@ -1594,19 +1759,44 @@
   }
 
   function drawHotspot(ctx, h, camX, camY, vw, vh, near) {
+    /* polish3: clearer prompts — double ring + INTERACT badge */
     var p = project(h.x, h.y, camX, camY, vw, vh);
-    var pulse = near ? 1 + Math.sin(Date.now() / 200) * 0.08 : 1;
+    var pulse = near ? 1 + Math.sin(Date.now() / 180) * 0.12 : 1;
+    var r = (near ? 26 : 13) * p.depth * pulse;
+    if (near) {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, r * 1.35, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(251, 191, 36, 0.35)";
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    }
     ctx.beginPath();
-    ctx.arc(p.x, p.y, (near ? 20 : 12) * p.depth * pulse, 0, Math.PI * 2);
-    ctx.fillStyle = near ? "rgba(251, 191, 36, 0.5)" : "rgba(255,255,255,0.14)";
+    ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+    ctx.fillStyle = near ? "rgba(251, 191, 36, 0.55)" : "rgba(255,255,255,0.14)";
     ctx.fill();
-    ctx.strokeStyle = near ? "#fbbf24" : "rgba(255,255,255,0.35)";
-    ctx.lineWidth = near ? 2.5 : 1;
+    ctx.strokeStyle = near ? "#fde68a" : "rgba(255,255,255,0.4)";
+    ctx.lineWidth = near ? 3.2 : 1.2;
     ctx.stroke();
-    ctx.fillStyle = near ? "#fef3c7" : "rgba(255,255,255,0.65)";
-    ctx.font = "bold " + (near ? 12 : 11) + "px Segoe UI, system-ui, sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText(near ? h.label + " · E" : h.label, p.x, p.y - (near ? 24 : 18) * p.depth);
+    if (near) {
+      var badgeY = p.y - 36 * p.depth;
+      var bw = Math.max(72, (h.label.length * 7 + 28)) * Math.min(1.15, p.depth + 0.2);
+      ctx.fillStyle = "rgba(15, 23, 42, 0.82)";
+      ctx.fillRect(p.x - bw * 0.5, badgeY - 22, bw, 34);
+      ctx.strokeStyle = "#fbbf24";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(p.x - bw * 0.5, badgeY - 22, bw, 34);
+      ctx.fillStyle = "#fef3c7";
+      ctx.font = "bold 12px Segoe UI, system-ui, sans-serif";
+      ctx.fillText(h.label, p.x, badgeY - 6);
+      ctx.fillStyle = "#fbbf24";
+      ctx.font = "bold 11px Segoe UI, system-ui, sans-serif";
+      ctx.fillText("INTERACT · E", p.x, badgeY + 8);
+    } else {
+      ctx.fillStyle = "rgba(255,255,255,0.7)";
+      ctx.font = "bold 11px Segoe UI, system-ui, sans-serif";
+      ctx.fillText(h.label, p.x, p.y - 18 * p.depth);
+    }
   }
 
   function drawParkedTrucks(ctx, world, frogs, camX, camY, vw, vh) {

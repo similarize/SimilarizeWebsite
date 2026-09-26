@@ -713,3 +713,18 @@ body.in-space {
   0%, 100% { filter: brightness(1); }
   50% { filter: brightness(1.15); }
 }
+
+/* polish3: Canvas ranch clarity + feel — logic in world.js / hubs */
+
+/* polish3: clearer hotspot prompt strip */
+.hub-tip:not(:empty) {
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid rgba(251, 191, 36, 0.55);
+  box-shadow: 0 0 14px rgba(251, 191, 36, 0.25);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+#btn-interact.ready {
+  box-shadow: 0 0 18px rgba(251, 191, 36, 0.65);
+  transform: scale(1.04);
+}
