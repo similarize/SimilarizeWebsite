@@ -1,4 +1,4 @@
-const VERSION = "3.14";
+const VERSION = "3.15";
 const VIEW_W = 960;
 const VIEW_H = 540;
 const PLAYER_X = 168;
@@ -817,17 +817,19 @@ function tick(sim, dt, input) {
   }
   for (const d of sim.drones) {
     if (d.dead || d.kind !== "lock") continue;
-    const sx = d.x - sim.scroll;
-    if (hx + hw > sx - 10 && hx < sx + 16) {
-      const overlap = hx + hw - (sx - 10);
-      if (overlap > 0) sim.scroll -= overlap;
-      if (!d.bumped) {
-        d.bumped = true;
-        sim.speed = Math.min(sim.speed, 64);
-        sim.recover = 0.14;
-        sim.shake = 0.28;
-        sim.popups.push({ x: d.x, y: hy, text: "SHOOT", life: 0.7, max: 0.7 });
-      }
+    // Body-only (elevated): old X-only test was a ground-to-sky pillar and trapped the truck underneath.
+    // Missiles still use X-proximity so lock drones remain shootable without a precision Y hit.
+    const p = dronePos(sim, d);
+    const sx = p.x - sim.scroll;
+    if (!aabb(hx, hy, hw, hh, sx - 16, p.y - 10, 32, 20)) continue;
+    const overlap = hx + hw - (sx - 16);
+    if (overlap > 0) sim.scroll -= overlap;
+    if (!d.bumped) {
+      d.bumped = true;
+      sim.speed = Math.min(sim.speed, 64);
+      sim.recover = 0.14;
+      sim.shake = 0.28;
+      sim.popups.push({ x: d.x, y: hy, text: "SHOOT", life: 0.7, max: 0.7 });
     }
   }
   if (sim.grounded && sim.speed < cruiseOf(sim) - 6) {

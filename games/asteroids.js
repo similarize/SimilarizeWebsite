@@ -8,8 +8,9 @@
   const phone = window.matchMedia("(pointer: coarse), (max-width: 800px)").matches;
 
   const keys = new Set();
+  // Touch cluster drives P1 only
   const held = { left: false, right: false, thrust: false, shoot: false };
-  let pad = null; // last SimilarizeGamepad.poll() this frame
+  let pads = [null, null, null, null];
   let w = 1;
   let h = 1;
   let last = performance.now();
@@ -19,12 +20,59 @@
   let shots = [];
   let particles = [];
   let phase = "title";
-  let invuln = 0;
-  let shootCd = 0;
   let audio = null;
   let best = Number(localStorage.getItem("asteroids-best") || 0) || 0;
 
-  const ship = { x: 0, y: 0, a: -Math.PI / 2, vx: 0, vy: 0, r: 14 };
+  const COLORS = ["#fff", "#60a5fa", "#fbbf24", "#34d399"];
+  const ships = [0, 1, 2, 3].map((i) => ({
+    id: i,
+    x: 0,
+    y: 0,
+    a: -Math.PI / 2,
+    vx: 0,
+    vy: 0,
+    r: 14,
+    invuln: 0,
+    shootCd: 0,
+    color: COLORS[i],
+    thrusting: false,
+  }));
+
+  // Bindings: left, right, thrust, fire (codes). P4: numpad preferred; T/G/Y/R if no numpad.
+  const BINDS = [
+    { left: ["ArrowLeft"], right: ["ArrowRight"], thrust: ["ArrowUp"], fire: ["Space"] },
+    { left: ["KeyA"], right: ["KeyD"], thrust: ["KeyW"], fire: ["KeyF"] },
+    { left: ["KeyJ"], right: ["KeyL"], thrust: ["KeyI"], fire: ["KeyH"] },
+    { left: ["Numpad4", "KeyG"], right: ["Numpad6", "KeyY"], thrust: ["Numpad8", "KeyT"], fire: ["Numpad0", "KeyR"] },
+  ];
+
+  function anyHeld(codes) {
+    for (const c of codes) if (keys.has(c)) return true;
+    return false;
+  }
+
+  function padInput(i) {
+    const GP = window.SimilarizeGamepad;
+    if (!GP) return null;
+    if (typeof GP.pollPad === "function") return GP.pollPad(i);
+    return i === 0 ? GP.poll() : null;
+  }
+
+  function readCtrl(i) {
+    const b = BINDS[i];
+    const pad = pads[i];
+    const gpLeft = !!(pad && pad.connected && (pad.lx < -0.25 || pad.dpad.l));
+    const gpRight = !!(pad && pad.connected && (pad.lx > 0.25 || pad.dpad.r));
+    const gpThrust = !!(pad && pad.connected && (pad.ly < -0.25 || pad.a || pad.lt));
+    const gpShoot = !!(pad && pad.connected && (pad.b || pad.rb || pad.rt || pad.x));
+    const touch = i === 0;
+    return {
+      left: (touch && held.left) || anyHeld(b.left) || gpLeft,
+      right: (touch && held.right) || anyHeld(b.right) || gpRight,
+      thrust: (touch && held.thrust) || anyHeld(b.thrust) || gpThrust,
+      shoot: (touch && held.shoot) || anyHeld(b.fire) || gpShoot,
+    };
+  }
 
   function resize() {
     const dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -35,19 +83,47 @@
     canvas.style.width = w + "px";
     canvas.style.height = h + "px";
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    if (phase === "title") centerShip();
+    if (phase === "title") placeShipsTitle();
     else {
-      ship.x = Math.max(ship.r, Math.min(w - ship.r, ship.x));
-      ship.y = Math.max(ship.r, Math.min(h - ship.r, ship.y));
+      for (const ship of ships) {
+        ship.x = Math.max(ship.r, Math.min(w - ship.r, ship.x));
+        ship.y = Math.max(ship.r, Math.min(h - ship.r, ship.y));
+      }
     }
   }
 
-  function centerShip() {
-    ship.x = w / 2;
-    ship.y = h / 2;
+  function placeShipsTitle() {
+    const cx = w / 2;
+    const cy = h / 2;
+    const offsets = [
+      [-28, -20],
+      [28, -20],
+      [-28, 28],
+      [28, 28],
+    ];
+    ships.forEach((ship, i) => {
+      ship.x = cx + offsets[i][0];
+      ship.y = cy + offsets[i][1];
+      ship.vx = 0;
+      ship.vy = 0;
+      ship.a = -Math.PI / 2;
+      ship.invuln = 0;
+      ship.shootCd = 0;
+      ship.thrusting = false;
+    });
+  }
+
+  function respawnShip(ship) {
+    const cx = w / 2;
+    const cy = h / 2;
+    const ang = (ship.id / 4) * Math.PI * 2 - Math.PI / 2;
+    ship.x = cx + Math.cos(ang) * 50;
+    ship.y = cy + Math.sin(ang) * 50;
     ship.vx = 0;
     ship.vy = 0;
     ship.a = -Math.PI / 2;
+    ship.invuln = 2;
+    ship.shootCd = 0;
   }
 
   function unlock() {
@@ -108,6 +184,13 @@
     };
   }
 
+  function farFromShips(x, y, minD) {
+    for (const s of ships) {
+      if (Math.hypot(x - s.x, y - s.y) < minD) return false;
+    }
+    return true;
+  }
+
   function spawnField() {
     rocks = [];
     const count = Math.max(4, Math.min(8, Math.round((w * h) / 140000)));
@@ -117,7 +200,7 @@
       for (let t = 0; t < 12; t++) {
         x = Math.random() * w;
         y = Math.random() * h;
-        if (Math.hypot(x - ship.x, y - ship.y) > 180) break;
+        if (farFromShips(x, y, 180)) break;
       }
       rocks.push(makeRock(x, y, 3));
     }
@@ -129,8 +212,11 @@
     lives = 3;
     shots = [];
     particles = [];
-    centerShip();
-    invuln = 2;
+    placeShipsTitle();
+    for (const s of ships) {
+      s.invuln = 2;
+      s.shootCd = 0;
+    }
     phase = "play";
     spawnField();
     overlay.hidden = true;
@@ -145,23 +231,24 @@
     }
   }
 
-  function shoot() {
-    if (phase !== "play" || shootCd > 0) return;
-    shootCd = 0.18;
+  function shoot(ship) {
+    if (phase !== "play" || ship.shootCd > 0) return;
+    ship.shootCd = 0.18;
     shots.push({
       x: ship.x + Math.cos(ship.a) * (ship.r + 4),
       y: ship.y + Math.sin(ship.a) * (ship.r + 4),
       vx: Math.cos(ship.a) * 460 + ship.vx,
       vy: Math.sin(ship.a) * 460 + ship.vy,
       life: 0.85,
+      color: ship.color,
     });
     beep(640, 0.06, "square", 0.04);
   }
 
-  function hitShip() {
-    if (invuln > 0 || phase !== "play") return;
+  function hitShip(ship) {
+    if (ship.invuln > 0 || phase !== "play") return;
     lives -= 1;
-    burst(ship.x, ship.y, 16, "#fff");
+    burst(ship.x, ship.y, 16, ship.color);
     beep(90, 0.3, "sawtooth", 0.08);
     if (lives <= 0) {
       phase = "over";
@@ -169,14 +256,13 @@
         best = score;
         try { localStorage.setItem("asteroids-best", String(best)); } catch (e) {}
       }
-      overlayTitle.textContent = "Ship lost";
+      overlayTitle.textContent = "Ships lost";
       overlayText.textContent = "Score " + score + " · best " + best;
       overlay.hidden = false;
       paintHud();
       return;
     }
-    centerShip();
-    invuln = 2;
+    respawnShip(ship);
     paintHud();
   }
 
@@ -190,42 +276,27 @@
       rocks.push(makeRock(rock.x, rock.y, rock.tier - 1));
     }
     if (!rocks.length) {
-      centerShip();
-      invuln = 1.2;
+      for (const s of ships) s.invuln = Math.max(s.invuln, 1.2);
       spawnField();
     }
     paintHud();
   }
 
   function paintHud() {
-    hud.textContent = "Score " + score + "    Lives " + lives + "    Best " + best;
+    hud.textContent = "Score " + score + "    Lives " + lives + "    Best " + best + "    4P";
   }
 
-  function step(dt) {
-    dt = Math.min(dt, 0.05);
-    pad = window.SimilarizeGamepad ? window.SimilarizeGamepad.poll() : null;
-    const gpLeft = !!(pad && pad.connected && (pad.lx < -0.25 || pad.dpad.l));
-    const gpRight = !!(pad && pad.connected && (pad.lx > 0.25 || pad.dpad.r));
-    const gpThrust = !!(pad && pad.connected && (pad.ly < -0.25 || pad.a || pad.lt));
-    const gpShoot = !!(pad && pad.connected && (pad.b || pad.rb || pad.rt || pad.x));
-    if (pad && pad.connected && phase !== "play" && (pad.buttonsPressed.a || pad.buttonsPressed.start || pad.buttonsPressed.b)) start();
-    const left = held.left || keys.has("ArrowLeft") || keys.has("KeyA") || gpLeft;
-    const right = held.right || keys.has("ArrowRight") || keys.has("KeyD") || gpRight;
-    const thrust = held.thrust || keys.has("ArrowUp") || keys.has("KeyW") || gpThrust;
-    if (held.shoot || keys.has("Space") || gpShoot) shoot();
-    shootCd = Math.max(0, shootCd - dt);
-    if (phase !== "play") {
-      particles.forEach((p) => { p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt; });
-      particles = particles.filter((p) => p.life > 0);
-      return;
-    }
-    invuln = Math.max(0, invuln - dt);
-    if (left) ship.a -= 3.1 * dt;
-    if (right) ship.a += 3.1 * dt;
-    if (thrust) {
+  function stepShip(ship, ctrl, dt) {
+    ship.invuln = Math.max(0, ship.invuln - dt);
+    ship.shootCd = Math.max(0, ship.shootCd - dt);
+    ship.thrusting = !!ctrl.thrust;
+    if (ctrl.left) ship.a -= 3.1 * dt;
+    if (ctrl.right) ship.a += 3.1 * dt;
+    if (ctrl.thrust) {
       ship.vx += Math.cos(ship.a) * 170 * dt;
       ship.vy += Math.sin(ship.a) * 170 * dt;
     }
+    if (ctrl.shoot) shoot(ship);
     const sp = Math.hypot(ship.vx, ship.vy);
     if (sp > 280) {
       ship.vx = (ship.vx / sp) * 280;
@@ -234,13 +305,36 @@
     ship.x += ship.vx * dt;
     ship.y += ship.vy * dt;
     wrap(ship);
+  }
+
+  function step(dt) {
+    dt = Math.min(dt, 0.05);
+    for (let i = 0; i < 4; i++) pads[i] = padInput(i);
+    for (let i = 0; i < 4; i++) {
+      const pad = pads[i];
+      if (pad && pad.connected && phase !== "play" && (pad.buttonsPressed.a || pad.buttonsPressed.start || pad.buttonsPressed.b)) {
+        start();
+        break;
+      }
+    }
+    if (phase !== "play") {
+      particles.forEach((p) => { p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt; });
+      particles = particles.filter((p) => p.life > 0);
+      return;
+    }
+    for (const ship of ships) stepShip(ship, readCtrl(ship.id), dt);
 
     for (const r of rocks) {
       r.x += r.vx * dt;
       r.y += r.vy * dt;
       r.rot += r.spin * dt;
       wrap(r);
-      if (invuln <= 0 && Math.hypot(r.x - ship.x, r.y - ship.y) < r.radius + ship.r * 0.7) hitShip();
+      for (const ship of ships) {
+        if (ship.invuln <= 0 && Math.hypot(r.x - ship.x, r.y - ship.y) < r.radius + ship.r * 0.7) {
+          hitShip(ship);
+          if (phase !== "play") return;
+        }
+      }
     }
     for (let i = shots.length - 1; i >= 0; i--) {
       const s = shots[i];
@@ -265,21 +359,21 @@
     particles = particles.filter((p) => p.life > 0);
   }
 
-  function drawShip() {
+  function drawShip(ship) {
     ctx.save();
     ctx.translate(ship.x, ship.y);
     ctx.rotate(ship.a);
-    if (invuln > 0 && Math.floor(invuln * 10) % 2 === 0) ctx.globalAlpha = 0.35;
+    if (ship.invuln > 0 && Math.floor(ship.invuln * 10) % 2 === 0) ctx.globalAlpha = 0.35;
     ctx.beginPath();
     ctx.moveTo(18, 0);
     ctx.lineTo(-12, 10);
     ctx.lineTo(-7, 0);
     ctx.lineTo(-12, -10);
     ctx.closePath();
-    ctx.strokeStyle = "#fff";
+    ctx.strokeStyle = ship.color;
     ctx.lineWidth = 2;
     ctx.stroke();
-    if (held.thrust || keys.has("ArrowUp") || keys.has("KeyW") || (pad && pad.connected && (pad.ly < -0.25 || pad.a || pad.lt))) {
+    if (ship.thrusting) {
       ctx.beginPath();
       ctx.moveTo(-8, 4);
       ctx.lineTo(-18 - Math.random() * 8, 0);
@@ -311,7 +405,7 @@
       ctx.restore();
     }
     for (const s of shots) {
-      ctx.fillStyle = "#fff";
+      ctx.fillStyle = s.color || "#fff";
       ctx.fillRect(s.x - 1.5, s.y - 1.5, 3, 3);
     }
     for (const p of particles) {
@@ -320,8 +414,7 @@
       ctx.fillRect(p.x, p.y, 2, 2);
       ctx.globalAlpha = 1;
     }
-    if (phase !== "title") drawShip();
-    else drawShip();
+    for (const ship of ships) drawShip(ship);
   }
 
   function frame(now) {
@@ -339,7 +432,7 @@
       unlock();
       held[name] = true;
       if (phase !== "play") start();
-      if (name === "shoot") shoot();
+      if (name === "shoot") shoot(ships[0]);
       el.setPointerCapture?.(e.pointerId);
     };
     const up = (e) => {
@@ -352,9 +445,17 @@
     el.addEventListener("lostpointercapture", () => { held[name] = false; });
   }
 
+  const PREVENT = new Set([
+    "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Space",
+    "KeyW", "KeyA", "KeyS", "KeyD", "KeyF",
+    "KeyI", "KeyJ", "KeyK", "KeyL", "KeyH",
+    "KeyT", "KeyG", "KeyY", "KeyR",
+    "Numpad4", "Numpad6", "Numpad8", "Numpad0", "Numpad5",
+  ]);
+
   window.addEventListener("keydown", (e) => {
-    if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Space", "KeyW", "KeyA", "KeyD"].includes(e.code)) e.preventDefault();
-    if (e.repeat && e.code !== "Space" && e.code !== "ArrowUp" && e.code !== "KeyW") return;
+    if (PREVENT.has(e.code)) e.preventDefault();
+    if (e.repeat && e.code !== "Space" && !BINDS.some((b) => b.thrust.includes(e.code) || b.fire.includes(e.code))) return;
     keys.add(e.code);
     unlock();
     if (phase !== "play" && (e.code === "Enter" || e.code === "Space" || e.code === "ArrowUp")) start();
@@ -380,9 +481,9 @@
   document.body.classList.toggle("phone", phone);
   resize();
   paintHud();
-  overlayTitle.textContent = "Asteroids";
+  overlayTitle.textContent = "Asteroids · 4P local";
   overlayText.textContent = phone
-    ? "Turn, thrust, and fire with the buttons. Xbox pad: stick/D-pad turn, A thrust, B fire."
-    : "Arrows or A D to turn, W or up to thrust, space to fire. Xbox: stick turn, A thrust, B/RT fire.";
+    ? "Touch = P1. Pads 0–3 = P1–P4. Idle ships OK."
+    : "P1 arrows+Space · P2 WASD+F · P3 IJKL+H · P4 numpad 8460 (or T/G/Y/R). Pads 0–3 → P1–P4. Shared score/lives; each ship respawns.";
   requestAnimationFrame(frame);
 })();
