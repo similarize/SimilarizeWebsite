@@ -1003,26 +1003,50 @@ body {
 }
 #btn-escape.escape-btn[hidden] { display: none !important; }
 
-/* Lobby: allow scroll when content exceeds viewport (phone + short desktop) */
+/* Lobby: ALWAYS scrollable so frog seats + GO stay reachable (mobile + desktop).
+   GO sticks to the bottom of the overlay viewport while content above scrolls. */
 body.in-title {
   touch-action: manipulation;
   overflow: hidden;
 }
 body.in-title #overlay {
+  justify-content: flex-start;
+  align-items: center;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
   overscroll-behavior: contain;
+  padding-top: max(12px, env(safe-area-inset-top));
+  /* room under sticky GO */
+  padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
 }
-
-/* Scroll/flex-start only when phone-narrow or genuinely short — keep desktop tall centered */
-@media (max-width: 560px), ((max-height: 700px) and (max-width: 900px)) {
-  #overlay {
-    justify-content: flex-start;
-    overflow-x: hidden;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    padding-top: max(12px, env(safe-area-inset-top));
-    padding-bottom: max(28px, env(safe-area-inset-bottom));
+body.in-title #overlay .start-btn {
+  position: sticky;
+  bottom: max(12px, env(safe-area-inset-bottom));
+  z-index: 12;
+  margin-top: 12px;
+  width: min(100%, 300px);
+  flex-shrink: 0;
+  box-shadow: 0 3px 0 #166534, 0 10px 28px rgba(0, 0, 0, 0.55);
+}
+/* Compact splash when viewport is short so GO isn't below the fold by default */
+@media (max-height: 820px) {
+  body.in-title .splash-art {
+    max-height: 14vh;
+    width: min(32vw, 120px);
+    margin-bottom: 6px;
   }
+  body.in-title #overlay-text,
+  body.in-title .invite-cta,
+  body.in-title .party-help {
+    display: none;
+  }
+}
+@media (max-height: 640px) {
+  body.in-title .splash-art { max-height: 10vh; width: min(28vw, 96px); }
+  body.in-title #overlay h1 { font-size: clamp(18px, 5vw, 24px); margin-bottom: 2px; }
+  body.in-title #overlay-sub { margin-bottom: 6px; font-size: 11px; }
 }
 
 /* —— Phone / narrow portrait: compact chrome, keep center playfield clear —— */

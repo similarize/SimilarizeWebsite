@@ -37,6 +37,25 @@
   var wantAbility = false;
 
   function mergedSteer() {
+    /* Primary local pad (if claimed) OR keyboard/joy OR tap */
+    if (state && state.primaryPadIndex != null && global.SimilarizeGamepad) {
+      var gp = global.SimilarizeGamepad.pollPad(state.primaryPadIndex);
+      if (gp && gp.connected) {
+        var px = gp.lx || 0, py = gp.ly || 0;
+        if (gp.dpad) {
+          if (gp.dpad.l) px = -1;
+          if (gp.dpad.r) px = 1;
+          if (gp.dpad.u) py = -1;
+          if (gp.dpad.d) py = 1;
+        }
+        if (px || py) return { x: px, y: py };
+        /* edge buttons for primary pad */
+        if (gp.buttonsPressed) {
+          if (gp.buttonsPressed.a) wantInteract = true;
+          if (gp.buttonsPressed.b || gp.buttonsPressed.x) wantAbility = true;
+        }
+      }
+    }
     if (keySteer.x || keySteer.y) return keySteer;
     return tapSteer;
   }
@@ -1085,6 +1104,30 @@
       scene.add(ctag);
       cmesh.userData.nameTag = ctag;
       state.companions.push(cmesh);
+    }
+
+    /* Couch multi-local: claim pads from seatMap — extras steerable, primary = camera */
+    state.seatMap = (hooks && hooks.seatMap) || state.seatMap || null;
+    state.primaryPadIndex = null;
+    if (state.seatMap) {
+      var sm = state.seatMap;
+      var primarySeat = sm[state.frogId];
+      if (primarySeat && primarySeat.local && primarySeat.padIndex != null) {
+        state.primaryPadIndex = primarySeat.padIndex;
+      }
+      for (var li = 0; li < state.companions.length; li++) {
+        var cm = state.companions[li];
+        var cid2 = cm.userData.frogId;
+        var seat = sm[cid2];
+        if (seat && seat.human && seat.local) {
+          cm.userData.local = true;
+          cm.userData.padIndex = seat.padIndex != null ? seat.padIndex : null;
+          cm.userData.vx = 0;
+          cm.userData.vz = 0;
+          cm.userData.ai = false;
+          if (cm.userData.ring) cm.userData.ring.material.opacity = 0.75;
+        }
+      }
     }
 
     /* polish7: zone signs (world labels) + mini-map overlay canvas */
@@ -2198,14 +2241,50 @@
         var c = state.companions[ci];
         var lag = c.userData.followLag || 0.4;
         c.userData.idleBounce = (c.userData.idleBounce || 0) + dt * 4.2;
-        if (state.inTruck && state.truckMode === "shared") {
+        if (c.userData.local && c.userData.padIndex != null && global.SimilarizeGamepad &&
+            !(state.inTruck && state.truckMode === "shared")) {
+          /* Couch local: steer this froggy from its claimed pad */
+          var lgp = global.SimilarizeGamepad.pollPad(c.userData.padIndex);
+          var lsx = 0, lsy = 0;
+          if (lgp && lgp.connected) {
+            lsx = lgp.lx || 0; lsy = lgp.ly || 0;
+            if (lgp.dpad) {
+              if (lgp.dpad.l) lsx = -1;
+              if (lgp.dpad.r) lsx = 1;
+              if (lgp.dpad.u) lsy = -1;
+              if (lgp.dpad.d) lsy = 1;
+            }
+          }
+          var lmax = 11.5, lacc = 28, lfric = 7.5;
+          if (lsx || lsy) {
+            var llen = Math.hypot(lsx, lsy) || 1;
+            var lix = lsx / llen, liy = lsy / llen;
+            var inv2 = 0.70710678;
+            var lmx = inv2 * lix + (-inv2) * (-liy);
+            var lmz = (-inv2) * lix + (-inv2) * (-liy);
+            c.userData.vx = (c.userData.vx || 0) + lmx * lacc * dt;
+            c.userData.vz = (c.userData.vz || 0) + lmz * lacc * dt;
+            c.userData.faceYaw = Math.atan2(lmx, lmz);
+          }
+          c.userData.vx = (c.userData.vx || 0) * Math.max(0, 1 - lfric * dt);
+          c.userData.vz = (c.userData.vz || 0) * Math.max(0, 1 - lfric * dt);
+          var lsp = Math.hypot(c.userData.vx, c.userData.vz);
+          if (lsp > lmax) {
+            c.userData.vx = (c.userData.vx / lsp) * lmax;
+            c.userData.vz = (c.userData.vz / lsp) * lmax;
+          }
+          c.position.x += (c.userData.vx || 0) * dt;
+          c.position.z += (c.userData.vz || 0) * dt;
+          c.visible = true;
+          c.position.y = Math.abs(Math.sin(c.userData.idleBounce)) * (lsp > 0.8 ? 0.12 : 0.05);
+        } else if (state.inTruck && state.truckMode === "shared") {
           var ox = (ci - 1) * 0.45, oz = -0.35 - (ci % 2) * 0.25;
           c.position.x += (state.player.position.x + ox - c.position.x) * Math.min(1, 8 * dt);
           c.position.z += (state.player.position.z + oz - c.position.z) * Math.min(1, 8 * dt);
           c.position.y = 0.7 + (state.zLift || 0) + Math.abs(Math.sin(c.userData.idleBounce)) * 0.05;
           c.visible = true;
           c.userData.faceYaw = state.faceYaw || 0;
-        } else {
+        } else if (!c.userData.local) {
           c.visible = true;
           c.position.y = Math.abs(Math.sin(c.userData.idleBounce)) * 0.14;
           c.userData.timer -= dt;
@@ -2220,8 +2299,10 @@
           var cdz = c.userData.tz - c.position.z;
           c.position.x += cdx * fk;
           c.position.z += cdz * fk;
-          /* eyes1: companions face where they're moving */
           if (Math.hypot(cdx, cdz) > 0.05) c.userData.faceYaw = Math.atan2(cdx, cdz);
+        } else {
+          c.visible = true;
+          c.position.y = Math.abs(Math.sin(c.userData.idleBounce)) * 0.08;
         }
         c.scale.x = 1;
         setFrogSpring(c, Math.abs(Math.sin(c.userData.idleBounce || 0)) * 0.35);
@@ -2482,12 +2563,12 @@
     if (typeof THREE === "undefined") {
       console.error("three.js CDN not loaded");
       if (hooks.onToast) hooks.onToast("three.js failed to load");
-      return;
+      throw new Error("three.js CDN not loaded");
     }
     var host = document.getElementById("engine-host");
     if (!host) {
       console.error("engine-host missing");
-      return;
+      throw new Error("engine-host missing");
     }
     host.hidden = false;
     host.innerHTML = "";
@@ -2496,6 +2577,8 @@
 
     state = {
       frogId: (opts && opts.frogId) || "james",
+      seatMap: (opts && opts.seatMap) || null,
+      primaryPadIndex: null,
     };
 
     host.style.display = "block";

@@ -263,6 +263,7 @@
         /* polish6: parallax-lite hill bands (screen-space, scrollFactor 0) */
         this.paraGfx = this.add.graphics().setScrollFactor(0).setDepth(-20);
         this.inTruck = false; this.truckMode = null; this.truckId = null;
+        this.inMech = false; this.mechId = null; this.mechStories = 0;
         this.waterSub = 0; this.scrap = 0; this.toastT = 3.5; this.exitTipT = 0; this.cd = 0; this.near = null; this.bouncePhase = 0; this.dustT = 0; this.fx = [];
         this.prevNearId = null; this.shakeT = 0; this.rippleT = 0; this.ambient = [];
         this.mechWowT = 0; this.walkBobT = 0;
@@ -703,11 +704,11 @@
         this.cameras.main.setBackgroundColor(Phaser.Display.Color.GetColor(bgR, bgG, bgB));
         /* polish3: snappier locomotion */
         /* tapsteer1: faster walk + drive */
-        var maxSp = this.inTruck ? 440 : 345, accel = this.inTruck ? 1050 : 980, fric = this.inTruck ? 5.2 : 8.8;
+        var maxSp = this.inMech ? 195 : this.inTruck ? 440 : 345, accel = this.inMech ? 620 : this.inTruck ? 1050 : 980, fric = this.inMech ? 7.0 : this.inTruck ? 5.2 : 8.8;
         var body = this.player.body;
         var spPrev = Math.hypot(body.velocity.x, body.velocity.y);
         var steer = mergedSteer();
-        var airFootP = !this.inTruck && ((this.zLift || 0) - (this.groundZ || 0)) > 2;
+        var airFootP = !this.inTruck && !this.inMech && ((this.zLift || 0) - (this.groundZ || 0)) > 2;
         var sx = 0, sy = 0, wantMove = !!(steer.x || steer.y);
         if (wantMove) {
           var len = Math.hypot(steer.x, steer.y) || 1;
@@ -756,10 +757,12 @@
         if (sp > maxSp) { body.velocity.x = (body.velocity.x / sp) * maxSp; body.velocity.y = (body.velocity.y / sp) * maxSp; }
         /* solid1: solid walls / mechs / parked trucks (doorway open) */
         if (C.resolveSolid) {
-          var solid = C.resolveSolid(this.player.x, this.player.y, this.inTruck ? 38 : 22, {
+          var solid = C.resolveSolid(this.player.x, this.player.y, this.inTruck ? 38 : this.inMech ? 30 : 22, {
             garageOpen: this.garageOpen || 0,
             inTruck: !!this.inTruck,
-            softPond: !this.inTruck,
+            inMech: !!this.inMech,
+            ignoreMechId: this.inMech && C.mechSolidId ? C.mechSolidId(this.mechId) : null,
+            softPond: !this.inTruck && !this.inMech,
           });
           if (solid.hit) {
             var pdx = solid.x - this.player.x, pdy = solid.y - this.player.y;
@@ -876,7 +879,7 @@
           this.player.setScale(1.15, 1.15);
         }
         /* hop2: ANY move input drives continuous hop cycle */
-        if (!this.inTruck && C.tickLocoHop) {
+        if (!this.inTruck && !this.inMech && C.tickLocoHop) {
           this.groundZ = this.groundZ || 0;
           var launchedP = C.tickLocoHop(this, dt, {
             moving: wantMove,
@@ -919,6 +922,7 @@
           body.velocity.x *= Math.max(0, 1 - 1.8 * dt); body.velocity.y *= Math.max(0, 1 - 1.8 * dt);
         } else this.waterSub = Math.max(0, this.waterSub - dt * 1.6);
         this.player.setFlipX(false).setRotation(this.faceAngle || 0).setVisible(!this.inTruck);
+        if (this.player.setScale) this.player.setScale(this.inMech ? 1.55 : 1);
         /* hop1: walking sprite already Y-lifted via _visLift — don't double-subtract zLift */
         var nameLift = this.inTruck ? (this.zLift * 0.55) : 0;
         this.nameTag.setPosition(this.player.x, this.player.y - 28 - nameLift);
@@ -1267,25 +1271,35 @@
         if (wantAbility) { wantAbility = false; this.doAbility(); }
         if (hooks.onHud) {
           var walk = "🐸 Walk";
-          if (this.inTruck) {
+          if (this.inMech) walk = "🤖 Mech · " + (this.mechStories || "?") + "-story";
+          else if (this.inTruck) {
             if (((this.zLift || 0) - (this.groundZ || 0)) > 10) walk = "🚚 AIR!";
             else if (wet && this.waterSub > 0.75) walk = "🚚 Under";
             else if (wet) walk = "🚚 On water";
             else walk = this.truckMode === "shared" ? "🚚 All aboard" : "🚚 Drive";
           }
+          var boardish = this.near && ((C.isTruckHotspot && C.isTruckHotspot(this.near)) || (C.isMechHotspot && C.isMechHotspot(this.near)));
           hooks.onHud({
             mode: "ranch", label: C.areaNameAt(this.player.x, this.player.y) + " · Phaser",
             scrap: Math.floor(this.scrap),
-            tip: this.inTruck
+            tip: (this.inTruck || this.inMech)
               ? (this.toastT > 0 ? this.toast : (this.exitTipT > 0 ? "EXIT · INTERACT / E" : ""))
-              : (this.toastT > 0 ? this.toast : (this.near ? ((C.isTruckHotspot(this.near) ? "BOARD · " : "⚡ ") + this.near.tip + " · INTERACT / E") : "")),
+              : (this.toastT > 0 ? this.toast : (this.near ? ((boardish ? "BOARD · " : "⚡ ") + this.near.tip + " · INTERACT / E") : "")),
             inTruck: !!this.inTruck,
-            near: this.inTruck ? true : this.near, ability: "HOP", cd: this.cd, walk: walk,
+            inMech: !!this.inMech,
+            near: (this.inTruck || this.inMech) ? true : this.near, ability: "HOP", cd: this.cd, walk: walk,
           });
         }
       },
       doInteract: function () {
-        /* polish10: EXIT truck anytime */
+        /* polish10: EXIT truck/mech anytime */
+        if (this.inMech) {
+          this.inMech = false; this.mechId = null; this.mechStories = 0;
+          this.zLift = 0; this.zVel = 0; this.groundZ = 0;
+          this.toast = "Mech parked · walking"; this.toastT = 1.8; this.exitTipT = 0;
+          if (hooks.onToast) hooks.onToast(this.toast);
+          return;
+        }
         if (this.inTruck) {
           this.inTruck = false; this.truckMode = null; this.truckId = null;
           this.zLift = 0; this.zVel = 0; this.groundZ = 0;
@@ -1302,6 +1316,11 @@
             : "Driving Cybertruck · hit the jumps!";
           this.toastT = 2.4;
           this.exitTipT = 2.4; /* polish11: brief EXIT tip */
+        } else if (C.isMechHotspot && C.isMechHotspot(this.near)) {
+          this.inMech = true; this.mechId = id; this.mechStories = this.near.stories || 10; this.scrap += 1;
+          this.player.x = this.near.x; this.player.y = this.near.y;
+          this.toast = "Boarding " + this.mechStories + "-story mech · walk like a robot!";
+          this.toastT = 2.4; this.exitTipT = 2.4;
         } else if (id === "fishies") {
           this.toast = "Splash! Fishies & whales scatter"; this.toastT = 2; this.scrap += 2;
           for (var i = 0; i < this.fish.length; i++) { this.fish[i].bx += (Math.random() - 0.5) * 100; this.fish[i].by += (Math.random() - 0.5) * 60; }

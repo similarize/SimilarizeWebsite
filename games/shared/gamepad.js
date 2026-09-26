@@ -22,8 +22,8 @@
   "use strict";
   var DZ = 0.25;
   var NAMES = ["a", "b", "x", "y", "lb", "rb", "lt", "rt", "back", "start", "du", "dd", "dl", "dr"];
-  var prev = [{}, {}];
-  var last = [null, null];
+  var prev = [{}, {}, {}, {}];
+  var last = [null, null, null, null];
   var hinted = false;
 
   function axis(v) {
@@ -87,6 +87,9 @@
   }
   function pollPad(i) {
     var idx = i | 0;
+    if (idx < 0) idx = 0;
+    while (prev.length <= idx) prev.push({});
+    while (last.length <= idx) last.push(null);
     var list = pads();
     var gp = list && list[idx];
     return snap(gp || null, idx);

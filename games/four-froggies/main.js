@@ -190,7 +190,10 @@
     W.seedDecor(world);
     frogs = FROG_ORDER.map((id, i) => {
       const seat = seatMap[id] || { human: false, local: false };
-      return W.makeFrogEntity(id, !!seat.human, !!seat.local, i);
+      const ent = W.makeFrogEntity(id, !!seat.human, !!seat.local, i);
+      if (seat.padIndex != null && seat.padIndex !== undefined) ent.padIndex = seat.padIndex;
+      else ent.padIndex = null;
+      return ent;
     });
 
     const role = party ? party.getRole() : "solo";
@@ -261,6 +264,8 @@
     if (livesEl) {
       if (phase === "space" && spaceEp && spaceEp.inOrbit) {
         livesEl.textContent = "🌍 Orbit";
+      } else if (me && me.inMech) {
+        livesEl.textContent = "🤖 Mech · " + (me.mechStories || "?") + "-story";
       } else if (me && me.inTruck) {
         const mode = me.truckMode === "shared" ? "All aboard" : "Drive";
         livesEl.textContent = (me.z || 0) > 4 ? "🚚 AIR!" : "🚚 " + mode;
@@ -332,13 +337,13 @@
         const hud = Space.getHud(spaceEp);
         tipEl.textContent = hud ? hud.tip : "";
         nearHot = hud && hud.near ? hud.near : null;
-      } else if (me && me.inTruck) {
+      } else if (me && (me.inTruck || me.inMech)) {
         /* polish11: no sticky EXIT billboard — brief toast / exitTip only; INTERACT button shows EXIT */
         if (storyToastT > 0 && storyToast) tipEl.textContent = storyToast;
         else if (exitTipT > 0) tipEl.textContent = "EXIT · INTERACT / E";
         else tipEl.textContent = "";
       } else if (storyToastT > 0) tipEl.textContent = storyToast;
-      else if (nearHot && (nearHot.kind === "truck" || (nearHot.id && nearHot.id.indexOf("truck") === 0)))
+      else if (nearHot && (nearHot.kind === "truck" || (nearHot.id && nearHot.id.indexOf("truck") === 0) || nearHot.kind === "mech" || (nearHot.id && String(nearHot.id).indexOf("mech") === 0)))
         tipEl.textContent = "BOARD · " + nearHot.tip + " · INTERACT / E";
       else if (nearHot) tipEl.textContent = "⚡ " + nearHot.tip + " · INTERACT / E";
       else if (me && W.nearMech1000 && W.nearMech1000(frogs, 170))
@@ -358,11 +363,11 @@
     }
     syncWheelUi();
     if (btnInteract) {
-      const canAct = !!nearHot || !!(me && me.inTruck && phase === "hub");
+      const canAct = !!nearHot || !!(me && (me.inTruck || me.inMech) && phase === "hub");
       btnInteract.classList.toggle("ready", canAct);
       btnInteract.disabled = !canAct && (phase === "hub" || phase === "space");
-      if (phase === "hub" && me && me.inTruck) btnInteract.textContent = "EXIT";
-      else if (nearHot && (nearHot.kind === "truck" || (nearHot.id && String(nearHot.id).indexOf("truck") === 0)))
+      if (phase === "hub" && me && (me.inTruck || me.inMech)) btnInteract.textContent = "EXIT";
+      else if (nearHot && (nearHot.kind === "truck" || (nearHot.id && String(nearHot.id).indexOf("truck") === 0) || nearHot.kind === "mech" || (nearHot.id && String(nearHot.id).indexOf("mech") === 0)))
         btnInteract.textContent = "BOARD";
       else btnInteract.textContent = "INTERACT";
     }
@@ -562,7 +567,16 @@
       return;
     }
     const me = localPlayer();
-    /* polish10: EXIT truck anytime while driving (not only near parked pad) */
+    /* polish10: EXIT truck/mech anytime while boarded */
+    if (me && me.inMech) {
+      if (W.boardMech) W.boardMech(world, frogs, me, { kind: "mech", id: me.mechId || "mech" });
+      else { me.inMech = false; me.mechId = null; me.mechStories = 0; me.z = 0; me.zVel = 0; }
+      storyToast = "Mech parked · walking";
+      storyToastT = 1.8;
+      exitTipT = 0;
+      paintHud();
+      return;
+    }
     if (me && me.inTruck) {
       if (W.boardTruck) W.boardTruck(world, frogs, me, { kind: "truck", id: me.truckId || "truck" });
       else {
@@ -602,6 +616,24 @@
         exitTipT = 2.4; /* polish11: brief EXIT tip, then dismiss */
       } else if (!me.inTruck) {
         storyToast = "Parked · walking";
+        exitTipT = 0;
+      }
+      storyToastT = 2.5;
+    } else if (nearHot.kind === "mech" || (nearHot.id && String(nearHot.id).indexOf("mech") === 0)) {
+      const wasMech = !!me.inMech;
+      if (W.boardMech) W.boardMech(world, frogs, me, nearHot);
+      else {
+        me.inMech = true;
+        me.mechId = nearHot.id;
+        me.mechStories = nearHot.stories || 10;
+        me.x = nearHot.x; me.y = nearHot.y;
+      }
+      if (me.inMech && !wasMech) {
+        storyToast = "Boarding " + (me.mechStories || "") + "-story mech · walk like a robot!";
+        beep(160, 0.1, "sawtooth", 0.04);
+        exitTipT = 2.4;
+      } else if (!me.inMech) {
+        storyToast = "Mech parked · walking";
         exitTipT = 0;
       }
       storyToastT = 2.5;
@@ -837,7 +869,32 @@
     const me = localPlayer();
     for (const f of frogs) {
       if (f.local) {
-        const es = effectiveSteer();
+        let es;
+        if (f.padIndex != null && window.SimilarizeGamepad) {
+          const gp = window.SimilarizeGamepad.pollPad(f.padIndex);
+          if (gp && gp.connected) {
+            let x = gp.lx || 0, y = gp.ly || 0;
+            if (gp.dpad && gp.dpad.l) x = -1;
+            if (gp.dpad && gp.dpad.r) x = 1;
+            if (gp.dpad && gp.dpad.u) y = -1;
+            if (gp.dpad && gp.dpad.d) y = 1;
+            const mag = Math.hypot(x, y);
+            if (mag > 1) { x /= mag; y /= mag; }
+            es = { x, y };
+            if (gp.buttonsPressed && gp.buttonsPressed.a) {
+              nearHot = W.nearestHotspot(world, f.x, f.y, 70);
+              /* interact for that frog if primary local or any local near hot */
+              if (f === me) doInteract();
+            }
+            if (gp.buttonsPressed && (gp.buttonsPressed.b || gp.buttonsPressed.x)) {
+              requestAbility(f);
+            }
+          } else {
+            es = { x: 0, y: 0 };
+          }
+        } else {
+          es = effectiveSteer();
+        }
         f.steerX = es.x;
         f.steerY = es.y;
       } else if (f.human) {
@@ -979,19 +1036,44 @@
   function tick(now) {
     const dt = Math.min(0.05, (now - (lastTs || now)) / 1000);
     lastTs = now;
-    _pad = window.SimilarizeGamepad ? window.SimilarizeGamepad.poll() : null;
-    if (_pad && _pad.connected) {
-      const bp = _pad.buttonsPressed || {};
-      if (phase === "title" && (bp.a || bp.start)) tryStartFromUi();
-      if ((phase === "hub" || phase === "space") && bp.a) {
-        if (party && party.getRole() === "guest") { pushGuestInput({ interact: true }); doInteract(); }
-        else doInteract();
+    /* Couch lobby: poll pads 0–3 for seat claim; in-hub per-pad steer below */
+    if (phase === "title" && window.SimilarizeGamepad) {
+      for (let pi = 0; pi < 4; pi++) {
+        const gp = window.SimilarizeGamepad.pollPad(pi);
+        if (!gp || !gp.connected) continue;
+        const bp = gp.buttonsPressed || {};
+        if (bp.a || bp.start) {
+          if (party && party.claimLocalPad) {
+            const claimed = party.claimLocalPad(pi);
+            if (claimed) {
+              selectedId = claimed;
+              unlockAudio();
+              beep(440 + pi * 40, 0.05, "triangle", 0.03);
+            }
+          }
+        } else if (bp.b) {
+          if (party && party.releaseLocalPad) party.releaseLocalPad(pi);
+        }
       }
-      if ((phase === "hub" || phase === "space") && (bp.b || bp.x)) {
-        const player = localPlayer();
-        if (player) {
-          if (party && party.getRole() === "guest") pushGuestInput({ ability: true });
-          else requestAbility(player);
+      /* Start on pad0 when already seated → GO (engine-aware) */
+      _pad = window.SimilarizeGamepad.pollPad(0);
+      if (_pad && _pad.connected && _pad.buttonsPressed && _pad.buttonsPressed.y) {
+        tryStartFromUi();
+      }
+    } else {
+      _pad = window.SimilarizeGamepad ? window.SimilarizeGamepad.poll() : null;
+      if (_pad && _pad.connected) {
+        const bp = _pad.buttonsPressed || {};
+        if ((phase === "hub" || phase === "space") && bp.a) {
+          if (party && party.getRole() === "guest") { pushGuestInput({ interact: true }); doInteract(); }
+          else doInteract();
+        }
+        if ((phase === "hub" || phase === "space") && (bp.b || bp.x)) {
+          const player = localPlayer();
+          if (player) {
+            if (party && party.getRole() === "guest") pushGuestInput({ ability: true });
+            else requestAbility(player);
+          }
         }
       }
     }
@@ -1032,10 +1114,10 @@
       const stateEl = btn.querySelector(".seat-state");
       if (status === "you") {
         btn.classList.add("seat-you", "selected");
-        if (stateEl) stateEl.textContent = "You";
+        if (stateEl) stateEl.textContent = seat.label || "You";
       } else if (status === "human") {
         btn.classList.add("seat-human", "seat-taken");
-        if (stateEl) stateEl.textContent = "Joined";
+        if (stateEl) stateEl.textContent = seat.label || "Joined";
       } else {
         btn.classList.add("seat-open", "seat-ai");
         if (stateEl) stateEl.textContent = "Open · AI";
@@ -1054,7 +1136,7 @@
         partyStatus.textContent = "JOINED · claim an Open froggy seat · wait for Host to press GO";
       else if (role === "solo")
         partyStatus.textContent =
-          "SOLO · claim a froggy · or Host room (invite link + QR) · GO fills open seats with AI";
+          "SOLO · click a froggy or pads: A/Start claim next open · B release · GO (AI fills rest)";
       else partyStatus.textContent = "";
     }
     if (roomCodeEl) {
@@ -1087,7 +1169,7 @@
     if (overlayGo && phase === "title") {
       if (role === "guest") overlayGo.textContent = "JOIN · claim an Open froggy · Host starts with GO";
       else if (role === "host") overlayGo.textContent = "HOST · Copy invite / scan QR · friends claim seats · you press GO";
-      else overlayGo.textContent = "Claim a seat · Host (link + QR) to invite · or GO solo (AI fills)";
+      else overlayGo.textContent = "Pads: A/Start claim · B release · Y or GO to start · click seats OK";
     }
   }
 
@@ -1304,6 +1386,25 @@
   function tryStartFromUi() {
     const role = party ? party.getRole() : "solo";
     if (role === "guest") return;
+    /* Critical: never silently start Canvas when Three/Phaser is selected */
+    const Eng = globalThis.FroggiesEngines;
+    const C = globalThis.FroggiesCanon;
+    const mode = (C && C.getEngine && C.getEngine()) || (Eng && Eng.getMode && Eng.getMode()) || "canvas";
+    if (mode === "phaser" || mode === "three") {
+      if (Eng && typeof Eng.tryStart === "function") {
+        const handled = Eng.tryStart();
+        if (handled) return;
+      }
+      if (Eng && typeof Eng.startAlt === "function") {
+        Eng.startAlt(mode);
+        return;
+      }
+      if (partyStatus) {
+        partyStatus.classList.add("is-error");
+        partyStatus.textContent = "Engine " + mode + " selected but alt boot missing — not starting Canvas.";
+      }
+      return;
+    }
     if (party) {
       const map = party.startParty();
       if (map) {
@@ -1535,7 +1636,7 @@
   showOverlay(
     "Four Froggies",
     "Drive the track · splash the pond · call Purple Bear · SPS + Optimus · bring Jimmy home · Starship → space episode. Xbox: stick steer, A interact, B/X ability.",
-    "Claim a seat · Host to invite · or GO solo (AI fills)",
+    "Pads: A/Start claim next froggy · B release · Y/GO starts · scroll to GO if needed",
     true
   );
   requestAnimationFrame(tick);

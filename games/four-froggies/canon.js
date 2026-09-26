@@ -159,6 +159,9 @@
     { id: "truck-bubbles", label: "Cybertruck · Bubbles", x: 2280, y: 1720, r: 54, tip: "Bubbles Cybertruck · solo drive", kind: "truck", frogId: "bubbles", mode: "solo" },
     { id: "truck-rexy", label: "Cybertruck · Rexy", x: 2480, y: 1720, r: 54, tip: "Rexy Cybertruck · solo drive", kind: "truck", frogId: "rexy", mode: "solo" },
     { id: "truck-shared", label: "★ ALL ABOARD · 4 frogs", x: 2180, y: 1880, r: 78, tip: "Shared Cybertruck · all four pile in", kind: "truck", frogId: null, mode: "shared" },
+    { id: "mech-10", label: "Board 10-story mech", x: COMPOUND.mech10.x, y: COMPOUND.mech10.y, r: 64, tip: "10-story mech · INTERACT / BOARD", kind: "mech", stories: 10, solidId: "mech10" },
+    { id: "mech-100", label: "Board 100-story mech", x: COMPOUND.mech100.x, y: COMPOUND.mech100.y, r: 78, tip: "100-story mech · INTERACT / BOARD", kind: "mech", stories: 100, solidId: "mech100" },
+    { id: "mech-1000", label: "Board 1000-story mech", x: COMPOUND.mech1000.x, y: COMPOUND.mech1000.y, r: 120, tip: "1000-story mech · INTERACT / BOARD", kind: "mech", stories: 1000, solidId: "mech1000" },
     { id: "fishies", label: "Fishies", x: 3160, y: 620, r: 70, tip: "Splash the pond" },
     { id: "starship", label: "Starship", x: 360, y: 320, r: 72, tip: "Starship · Spotty · space episode" },
   ];
@@ -237,6 +240,20 @@
 
   function isTruckHotspot(h) {
     return !!(h && (h.kind === "truck" || (h.id && String(h.id).indexOf("truck") === 0)));
+  }
+
+  function isMechHotspot(h) {
+    return !!(h && (h.kind === "mech" || (h.id && String(h.id).indexOf("mech") === 0)));
+  }
+
+  function mechSolidId(idOrHot) {
+    var id = idOrHot && typeof idOrHot === "object" ? idOrHot.solidId || idOrHot.id : idOrHot;
+    if (!id) return null;
+    id = String(id);
+    if (id === "mech-10" || id === "mech10") return "mech10";
+    if (id === "mech-100" || id === "mech100") return "mech100";
+    if (id === "mech-1000" || id === "mech1000") return "mech1000";
+    return id.indexOf("mech") === 0 ? id.replace(/^mech-/, "mech") : null;
   }
 
   function rampAt(x, y) {
@@ -457,9 +474,16 @@
   function solidCircles(opts) {
     opts = opts || {};
     var out = [];
-    out.push({ id: "mech10", x: COMPOUND.mech10.x, y: COMPOUND.mech10.y, r: 38 });
-    out.push({ id: "mech100", x: COMPOUND.mech100.x, y: COMPOUND.mech100.y, r: 52 });
-    out.push({ id: "mech1000", x: COMPOUND.mech1000.x, y: COMPOUND.mech1000.y, r: 95 });
+    var ignoreMech = opts.ignoreMechId || null;
+    var mechs = [
+      { id: "mech10", x: COMPOUND.mech10.x, y: COMPOUND.mech10.y, r: 38 },
+      { id: "mech100", x: COMPOUND.mech100.x, y: COMPOUND.mech100.y, r: 52 },
+      { id: "mech1000", x: COMPOUND.mech1000.x, y: COMPOUND.mech1000.y, r: 95 },
+    ];
+    for (var mi = 0; mi < mechs.length; mi++) {
+      if (ignoreMech && mechs[mi].id === ignoreMech) continue;
+      out.push(mechs[mi]);
+    }
     if (!opts.inTruck && !opts.ignoreTrucks) {
       for (var i = 0; i < TRUCK_SPOTS.length; i++) {
         var s = TRUCK_SPOTS[i];
@@ -521,7 +545,7 @@
       if (_pushCircleOut(pos, circs[j].x, circs[j].y, circs[j].r + rad)) hit = true;
     }
     /* Optional soft pond rim — gentle slide, not a hard wall */
-    if (opts.softPond && !opts.inTruck) {
+    if (opts.softPond && !opts.inTruck && !opts.inMech) {
       var pond = AREAS[2];
       var margin = 36;
       var inside =
@@ -560,7 +584,7 @@
      opts: moving, zKey, zvKey, gndKey|ground, up, lift, groundHold, groundEps */
   function tickLocoHop(ent, dt, opts) {
     opts = opts || {};
-    if (!ent || ent.inTruck) return false;
+    if (!ent || ent.inTruck || ent.inMech) return false;
     var moving = !!opts.moving;
     var zKey = opts.zKey || "z";
     var zvKey = opts.zvKey || "zVel";
@@ -737,6 +761,8 @@
     inPond: inPond,
     onTrack: onTrack,
     isTruckHotspot: isTruckHotspot,
+    isMechHotspot: isMechHotspot,
+    mechSolidId: mechSolidId,
     rampAt: rampAt,
     rampElevAt: rampElevAt,
     bankElevAt: bankElevAt,

@@ -9,10 +9,11 @@
   </style>
 </head>
 <body>
-  <p>Opening Four Froggies 3D…</p>
+  <p>Opening Four Froggies 3D lobby…</p>
   <script>
     try { localStorage.setItem("ff-engine", "three"); } catch (e) {}
-    location.replace("/games/four-froggies/?engine=three&go=1");
+    /* No go=1 — keep froggy seat lobby visible for couch multi-pad claim */
+    location.replace("/games/four-froggies/?engine=three&v=20260926-mech1");
   </script>
 </body>
 </html>

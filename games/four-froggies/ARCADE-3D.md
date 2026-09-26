@@ -1,10 +1,6 @@
-# Arcade — Four Froggies 3D (keep this)
+# Four Froggies 3D entry
 
-The Similarize Arcade has a **separate** cabinet from Canvas Four Froggies.
-
-- Name: **Four Froggies 3D**
-- Cabinet: `games/index.html` (do not drop this cab; maps folder stays last)
-- Launcher: `games/four-froggies-3d/` sets `ff-engine=three` and opens this hub with `?engine=three&go=1`
-- Autostart lives in `engine-boot.js` (`applyDirectPlay`). Keep it when you republish the hub.
-
-This is the 3D ranch (three.js), not a rename of the canvas game.
+- Launcher: `games/four-froggies-3d/` sets `ff-engine=three` and opens hub with `?engine=three` (**no `go=1`**).
+- Lobby stays visible so couch pads can claim froggy seats before GO.
+- If Three fails to boot, UI hard-fails with toast and **keeps Three selected** (never silent Canvas fallback).
+- GO with Three selected starts `three-hub` with the multi-local seat map.

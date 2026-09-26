@@ -135,31 +135,51 @@
       }
     }
 
-    function applyClaim(frogId, peerId, label, isLocal) {
+    function isLocalPeerId(peerId) {
+      if (!peerId) return false;
+      if (peerId === localId) return true;
+      return String(peerId).indexOf("local-pad-") === 0;
+    }
+
+    function padIndexFromPeer(peerId) {
+      if (!peerId) return null;
+      var m = String(peerId).match(/^local-pad-(\d+)$/);
+      return m ? (parseInt(m[1], 10)) : null;
+    }
+
+    function applyClaim(frogId, peerId, label, isLocal, padIndex) {
       if (FROG_ORDER.indexOf(frogId) < 0) return { ok: false, reason: "bad-frog" };
       var cur = seats[frogId];
-      if (cur.status === "human" && cur.peerId && cur.peerId !== peerId) {
+      if (cur.status === "human" && cur.peerId && cur.peerId !== peerId && cur.status !== "you") {
+        /* taken by another human (remote or other pad) */
+      }
+      if (cur.peerId && cur.peerId !== peerId && (cur.status === "human" || cur.status === "you")) {
         return { ok: false, reason: "taken" };
       }
       // Release previous seat for this peer
       clearPeerSeat(peerId);
+      var pIdx = typeof padIndex === "number" ? padIndex : padIndexFromPeer(peerId);
       seats[frogId] = {
-        status: isLocal ? "you" : "human",
+        status: isLocalPeerId(peerId) ? "you" : (isLocal ? "you" : "human"),
         peerId: peerId,
-        label: label || (isLocal ? "You" : "Joined"),
+        label: label || (pIdx != null ? ("Pad " + (pIdx + 1)) : (isLocal ? "You" : "Joined")),
+        padIndex: pIdx,
       };
-      // Normalize: host view shows local as "you", remotes as "human"
+      // Normalize: keyboard localId + local-pad-* are couch locals; remotes are human
       for (var i = 0; i < FROG_ORDER.length; i++) {
         var id = FROG_ORDER[i];
         var s = seats[id];
         if (!s.peerId) {
-          seats[id] = { status: "open", peerId: null, label: null };
-        } else if (s.peerId === localId) {
+          seats[id] = { status: "open", peerId: null, label: null, padIndex: null };
+        } else if (isLocalPeerId(s.peerId)) {
           seats[id].status = "you";
-          seats[id].label = "You";
+          var pi = s.padIndex != null ? s.padIndex : padIndexFromPeer(s.peerId);
+          seats[id].padIndex = pi;
+          seats[id].label = pi != null ? ("Pad " + (pi + 1)) : (s.peerId === localId ? "You" : (s.label || "You"));
         } else {
           seats[id].status = "human";
           seats[id].label = s.label || "Joined";
+          seats[id].padIndex = null;
         }
       }
       return { ok: true };
@@ -171,13 +191,48 @@
         var id = FROG_ORDER[i];
         var s = seats[id];
         var isHuman = !!(s.peerId && (s.status === "you" || s.status === "human"));
+        var local = isHuman && isLocalPeerId(s.peerId);
+        var pIdx = s.padIndex != null ? s.padIndex : padIndexFromPeer(s.peerId);
         map[id] = {
           human: isHuman,
-          local: isHuman && s.peerId === localId,
+          local: local,
           peerId: isHuman ? s.peerId : null,
+          padIndex: local ? (pIdx != null ? pIdx : null) : null,
         };
       }
       return map;
+    }
+
+    /** Couch: pad N claims next open froggy (does not steal). Returns frogId or null. */
+    function claimLocalPad(padIndex) {
+      if (role === "guest") return null;
+      var idx = padIndex | 0;
+      if (idx < 0 || idx > 3) return null;
+      if (!localId) localId = "local-" + makeCode(6);
+      var peerId = "local-pad-" + idx;
+      var existing = seatClaimedBy(peerId);
+      if (existing) return existing;
+      for (var i = 0; i < FROG_ORDER.length; i++) {
+        var fid = FROG_ORDER[i];
+        if (!seats[fid].peerId || seats[fid].status === "open") {
+          var res = applyClaim(fid, peerId, "Pad " + (idx + 1), true, idx);
+          if (res.ok) {
+            if (role === "host") broadcast(lobbyPayload());
+            emitLobby(role === "solo" ? "idle" : "ready");
+            return fid;
+          }
+        }
+      }
+      return null;
+    }
+
+    function releaseLocalPad(padIndex) {
+      var peerId = "local-pad-" + (padIndex | 0);
+      if (!seatClaimedBy(peerId)) return false;
+      clearPeerSeat(peerId);
+      if (role === "host") broadcast(lobbyPayload());
+      emitLobby(role === "solo" ? "idle" : "ready");
+      return true;
     }
 
     function ensurePeerScript(cb) {
@@ -490,8 +545,13 @@
 
     function startParty() {
       if (!canStart()) return null;
-      // Ensure local has a seat if they haven't claimed — default James if open
-      if (!seatClaimedBy(localId || "local")) {
+      // Ensure at least one local seat: keyboard localId only if no couch pad claimed yet
+      var anyPad = false;
+      for (var pi = 0; pi < FROG_ORDER.length; pi++) {
+        var ps = seats[FROG_ORDER[pi]];
+        if (ps && ps.peerId && String(ps.peerId).indexOf("local-pad-") === 0) { anyPad = true; break; }
+      }
+      if (!anyPad && !seatClaimedBy(localId || "local")) {
         if (!localId) localId = "local-" + makeCode(6);
         if (seats.james.status === "open") {
           applyClaim("james", localId, "You", true);
@@ -564,16 +624,21 @@
       peer = null;
       conns = {};
       hostConn = null;
+      if (global.FroggiesParty && global.FroggiesParty.active === api) {
+        global.FroggiesParty.active = null;
+      }
     }
 
     // Bootstrap local id for solo claims
     localId = "local-" + makeCode(6);
 
-    return {
+    var api = {
       FROG_ORDER: FROG_ORDER,
       hostRoom: hostRoom,
       joinRoom: joinRoom,
       claimSeat: claimSeat,
+      claimLocalPad: claimLocalPad,
+      releaseLocalPad: releaseLocalPad,
       startParty: startParty,
       canStart: canStart,
       sendInput: sendInput,
@@ -593,9 +658,12 @@
       emptySeats: emptySeats,
       emitLobby: emitLobby,
     };
+    global.FroggiesParty.active = api;
+    return api;
   }
 
   global.FroggiesParty = {
+    active: null,
     createParty: createParty,
     parseRoomFromUrl: parseRoomFromUrl,
     inviteUrl: inviteUrl,

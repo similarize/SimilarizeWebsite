@@ -254,6 +254,7 @@
         return {
           id: h.id, label: h.label, x: h.x, y: h.y, r: h.r, tip: h.tip,
           kind: h.kind || null, frogId: h.frogId || null, mode: h.mode || null,
+          stories: h.stories || null, solidId: h.solidId || null,
         };
       });
     }
@@ -265,6 +266,9 @@
       { id: "truck-bubbles", label: "Cybertruck · Bubbles", x: 2280, y: 1720, r: 54, tip: "Bubbles Cybertruck · solo drive", kind: "truck", frogId: "bubbles", mode: "solo" },
       { id: "truck-rexy", label: "Cybertruck · Rexy", x: 2480, y: 1720, r: 54, tip: "Rexy Cybertruck · solo drive", kind: "truck", frogId: "rexy", mode: "solo" },
       { id: "truck-shared", label: "★ ALL ABOARD · 4 frogs", x: 2180, y: 1880, r: 78, tip: "Shared Cybertruck · all four pile in", kind: "truck", frogId: null, mode: "shared" },
+      { id: "mech-10", label: "Board 10-story mech", x: 820, y: 1680, r: 64, tip: "10-story mech · INTERACT / BOARD", kind: "mech", stories: 10, solidId: "mech10" },
+      { id: "mech-100", label: "Board 100-story mech", x: 980, y: 1700, r: 78, tip: "100-story mech · INTERACT / BOARD", kind: "mech", stories: 100, solidId: "mech100" },
+      { id: "mech-1000", label: "Board 1000-story mech", x: 340, y: 2420, r: 120, tip: "1000-story mech · INTERACT / BOARD", kind: "mech", stories: 1000, solidId: "mech1000" },
       { id: "fishies", label: "Fishies", x: 3160, y: 620, r: 70, tip: "Splash the pond" },
       { id: "starship", label: "Starship", x: STARSHIP.x, y: STARSHIP.y, r: 72, tip: "Starship · Spotty · space episode" },
     ];
@@ -441,6 +445,10 @@
       inTruck: false,
       truckMode: null,
       truckId: null,
+      inMech: false,
+      mechId: null,
+      mechStories: 0,
+      padIndex: null,
       z: 0,
       zVel: 0,
       groundZ: 0,
@@ -1079,7 +1087,8 @@
     /* tapsteer1: noticeably faster walk + drive */
     var walkMax = 345;
     var truckMax = 420;
-    var maxSp = (ent.inTruck ? truckMax : walkMax) * (ent.speedBoost || 1);
+    var mechMax = 195;
+    var maxSp = (ent.inMech ? mechMax : ent.inTruck ? truckMax : walkMax) * (ent.speedBoost || 1);
     if (ent.inTruck && ent.dashTrail > 0) maxSp *= 1.28;
     if (typeof speed === "number") maxSp = speed * (ent.speedBoost || 1);
     var mx = ent.steerX;
@@ -1087,8 +1096,8 @@
     var mag = Math.hypot(mx, my);
     if (mag > 1) { mx /= mag; my /= mag; }
     var wetMove = inPond(ent.x, ent.y) && (ent.z || 0) < 3;
-    var accel = ent.inTruck ? 1680 : 1520;
-    var friction = ent.inTruck ? 5.6 : 9.6;
+    var accel = ent.inMech ? 780 : ent.inTruck ? 1680 : 1520;
+    var friction = ent.inMech ? 7.2 : ent.inTruck ? 5.6 : 9.6;
     if (wetMove && ent.inTruck) {
       accel *= 0.82;
       friction *= 1.15;
@@ -1098,10 +1107,27 @@
       maxSp *= 0.8;
     }
     var canon = global.FroggiesCanon;
-    var airFoot = !ent.inTruck && (ent.z || 0) > 1.5;
+    var airFoot = !ent.inTruck && !ent.inMech && (ent.z || 0) > 1.5;
     if (mag > 0.05) {
       var aim = Math.atan2(my, mx);
-      if (ent.inTruck) {
+      if (ent.inMech) {
+        /* Pilot as walking robot — face follows steer, heavier turn */
+        var curM = (ent.faceAngle != null && isFinite(ent.faceAngle)) ? ent.faceAngle : aim;
+        var turnM = 2.4;
+        if (canon && canon.approachAngle) ent.faceAngle = canon.approachAngle(curM, aim, turnM * dt);
+        else {
+          var daM = aim - curM;
+          while (daM > Math.PI) daM -= Math.PI * 2;
+          while (daM < -Math.PI) daM += Math.PI * 2;
+          var stepM = turnM * dt;
+          if (daM > stepM) daM = stepM; if (daM < -stepM) daM = -stepM;
+          ent.faceAngle = curM + daM;
+        }
+        ent.facing = Math.cos(ent.faceAngle) >= 0 ? 1 : -1;
+        var mfx = Math.cos(ent.faceAngle), mfy = Math.sin(ent.faceAngle);
+        ent.vx += (mfx * 0.72 + mx * 0.28) * accel * dt;
+        ent.vy += (mfy * 0.72 + my * 0.28) * accel * dt;
+      } else if (ent.inTruck) {
         /* truck1: smooth yaw toward aim, then thrust along facing (traction) */
         var cur = (ent.faceAngle != null && isFinite(ent.faceAngle)) ? ent.faceAngle : aim;
         var turnRate = 3.6 + Math.min(2.4, Math.hypot(ent.vx, ent.vy) / 160);
@@ -1159,10 +1185,15 @@
     ent.y += ent.vy * dt;
     /* solid1: house/garage walls, mech pads, parked trucks — doorway gaps stay walkable */
     if (canon && canon.resolveSolid) {
-      var solid = canon.resolveSolid(ent.x, ent.y, ent.inTruck ? 38 : 22, {
+      var ignoreMech = null;
+      if (ent.inMech && canon.mechSolidId) ignoreMech = canon.mechSolidId(ent.mechId);
+      else if (ent.inMech && ent.mechId) ignoreMech = String(ent.mechId).replace(/^mech-/, "mech");
+      var solid = canon.resolveSolid(ent.x, ent.y, ent.inTruck ? 38 : ent.inMech ? 30 : 22, {
         garageOpen: (world && world.garageOpen) || 0,
         inTruck: !!ent.inTruck,
-        softPond: !ent.inTruck,
+        inMech: !!ent.inMech,
+        ignoreMechId: ignoreMech,
+        softPond: !ent.inTruck && !ent.inMech,
       });
       if (solid.hit) {
         var pdx = solid.x - ent.x, pdy = solid.y - ent.y;
@@ -1176,13 +1207,14 @@
     }
     ent.x = clamp(ent.x, 40, MAP_W - 40);
     ent.y = clamp(ent.y, 40, MAP_H - 40);
-    if (!ent.inTruck && spd > 18) {
-      ent.walkPhase = (ent.walkPhase || 0) + dt * (8 + spd * 0.04);
+    if ((!ent.inTruck || ent.inMech) && spd > 18) {
+      ent.walkPhase = (ent.walkPhase || 0) + dt * ((ent.inMech ? 5.5 : 8) + spd * 0.04);
     } else {
       ent.walkPhase = (ent.walkPhase || 0) * 0.9;
     }
     /* hop2: ANY move input → continuous hop cycle (launch → land → brief ground → next) */
-    if (!ent.inTruck && canon && canon.tickLocoHop) {
+    /* Mechs: no loco hop — piloting a robot feels like a heavy walk */
+    if (!ent.inTruck && !ent.inMech && canon && canon.tickLocoHop) {
       var wantHop = mag > 0.05;
       var launched = canon.tickLocoHop(ent, dt, {
         moving: wantHop,
@@ -1243,6 +1275,39 @@
         g.y = hotspot.y + (j % 2) * 8;
       }
     }
+    return true;
+  }
+
+  function boardMech(world, frogs, frog, hotspot) {
+    if (!frog) return false;
+    var C = global.FroggiesCanon;
+    /* EXIT anytime while piloting */
+    if (frog.inMech) {
+      frog.inMech = false;
+      frog.mechId = null;
+      frog.mechStories = 0;
+      frog.z = 0;
+      frog.zVel = 0;
+      frog.groundZ = 0;
+      return true;
+    }
+    if (!hotspot || (hotspot.kind !== "mech" && !(C && C.isMechHotspot && C.isMechHotspot(hotspot)))) {
+      return false;
+    }
+    /* Leave truck if somehow boarding from truck */
+    if (frog.inTruck) {
+      frog.inTruck = false;
+      frog.truckMode = null;
+      frog.truckId = null;
+    }
+    frog.x = hotspot.x;
+    frog.y = hotspot.y;
+    frog.inMech = true;
+    frog.mechId = hotspot.id || hotspot.solidId || "mech";
+    frog.mechStories = hotspot.stories || 10;
+    frog.z = 0;
+    frog.zVel = 0;
+    frog.groundZ = 0;
     return true;
   }
 
@@ -1424,6 +1489,18 @@
       [area.x + area.w, area.y + area.h],
       [area.x, area.y + area.h],
     ].map(function (p) { return project(p[0], p[1], camX, camY, vw, vh); });
+  }
+
+  function frogPilotsMech(frogs, solidId) {
+    if (!frogs || !solidId) return false;
+    var C = global.FroggiesCanon;
+    for (var i = 0; i < frogs.length; i++) {
+      var f = frogs[i];
+      if (!f || !f.inMech) continue;
+      var sid = C && C.mechSolidId ? C.mechSolidId(f.mechId) : String(f.mechId || "").replace(/^mech-/, "mech");
+      if (sid === solidId) return true;
+    }
+    return false;
   }
 
   function drawMech(ctx, wx, wy, stories, camX, camY, vw, vh, tint) {
@@ -1737,9 +1814,12 @@
     ctx.textAlign = "center";
     ctx.fillText("Garage · James toys", gl.x, gl.y - gH - 18);
 
-    /* 10-story + 100-story mechs reside in garage */
-    drawMech(ctx, gar.x + 120, gar.y + 280, 10, camX, camY, vw, vh, "#a5b4fc");
-    drawMech(ctx, gar.x + 280, gar.y + 300, 100, camX, camY, vw, vh, "#67e8f9");
+    /* 10-story + 100-story mechs reside in garage (hidden while piloted) */
+    var Cmech = global.FroggiesCanon;
+    var m10 = (Cmech && Cmech.COMPOUND && Cmech.COMPOUND.mech10) || { x: gar.x + 120, y: gar.y + 280 };
+    var m100 = (Cmech && Cmech.COMPOUND && Cmech.COMPOUND.mech100) || { x: gar.x + 280, y: gar.y + 300 };
+    if (!frogPilotsMech(frogs, "mech10")) drawMech(ctx, m10.x, m10.y, 10, camX, camY, vw, vh, "#a5b4fc");
+    if (!frogPilotsMech(frogs, "mech100")) drawMech(ctx, m100.x, m100.y, 100, camX, camY, vw, vh, "#67e8f9");
 
     /* Main house — polish8 stronger 2.5D: porch depth layers, path to door, chimney smoke */
     var hx = a.x + 60, hy = a.y + 100, hw = 520, hh = 420;
@@ -2032,8 +2112,9 @@
       ctx.fillText("place-bound", bp.x, bp.y + 14 * bp.depth);
     }
 
-    /* 1000-story mech — does NOT fit in garage; sits out back */
-    drawMech(ctx, a.x + 280, a.y + a.h - 80, 1000, camX, camY, vw, vh, "#fcd34d");
+    /* 1000-story mech — does NOT fit in garage; sits out back (hidden while piloted) */
+    var m1000 = (Cmech && Cmech.COMPOUND && Cmech.COMPOUND.mech1000) || { x: a.x + 280, y: a.y + a.h - 80 };
+    if (!frogPilotsMech(frogs, "mech1000")) drawMech(ctx, m1000.x, m1000.y, 1000, camX, camY, vw, vh, "#fcd34d");
   }
 
   function pathPoint(pt, camX, camY, vw, vh) {
@@ -2881,6 +2962,25 @@
       return p;
     }
 
+    if (frog.inMech) {
+      /* Rider-on-mech cue: tall robot silhouette walks with frog; hide tiny frog body */
+      var stories = frog.mechStories || 10;
+      var tint = stories >= 1000 ? "#fcd34d" : stories >= 100 ? "#67e8f9" : "#a5b4fc";
+      var bobM = Math.abs(Math.sin(frog.walkPhase || 0)) * 2.2 * p.depth;
+      drawMech(ctx, frog.x, frog.y, Math.min(stories, 40), camX, camY, vw, vh, tint);
+      /* Pilot hat bobbing in torso */
+      ctx.fillStyle = frog.color || "#4ade80";
+      ctx.beginPath();
+      ctx.arc(p.x, p.y - (stories >= 100 ? 48 : 36) * p.depth - bobM, 5.5 * p.depth, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = frog.hat || "#facc15";
+      ctx.beginPath();
+      ctx.arc(p.x, p.y - (stories >= 100 ? 54 : 42) * p.depth - bobM, 3.2 * p.depth, 0, Math.PI * 2);
+      ctx.fill();
+      drawNameplate(ctx, (frog.name || "Frog") + " · MECH", p.x, p.y - (stories >= 100 ? 72 : 58) * p.depth - bobM, frog.color || "#fff", p.depth, !frog.local);
+      return p;
+    }
+
     /* hop4: humanoid frog — torso + head, big springy legs (extend mid-hop, tuck on land) */
     /* polish6: softer drop shadow under character */
     /* eyes1: rotate body/face toward faceAngle (walk dir); idle keeps last */
@@ -3672,6 +3772,7 @@
     moveEntity: moveEntity,
     tickHubAI: tickHubAI,
     boardTruck: boardTruck,
+    boardMech: boardMech,
     project: project,
     getViewScale: getViewScale,
     setViewScaleUser: setViewScaleUser,

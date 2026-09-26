@@ -5,7 +5,7 @@
   "use strict";
 
   var C = global.FroggiesCanon;
-  var CACHE = "20260926-hop4";
+  var CACHE = "20260926-mech1";
   var CDN = {
     phaser: "https://cdn.jsdelivr.net/npm/phaser@3.87.0/dist/phaser.min.js",
     three: "https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js",
@@ -35,8 +35,13 @@
       chain = chain.then(function () { return loadScript(CDN.phaser); });
     }
     return chain.then(function () {
+      if (!global.Phaser) throw new Error("Phaser CDN failed to load");
       if (global.FroggiesPhaser) return;
       return loadScript("phaser-hub.js?v=" + CACHE);
+    }).then(function () {
+      if (!global.FroggiesPhaser || typeof global.FroggiesPhaser.boot !== "function") {
+        throw new Error("phaser-hub failed to boot (FroggiesPhaser missing)");
+      }
     });
   }
 
@@ -46,8 +51,13 @@
       chain = chain.then(function () { return loadScript(CDN.three); });
     }
     return chain.then(function () {
+      if (!global.THREE) throw new Error("three.js CDN failed to load");
       if (global.FroggiesThree) return;
       return loadScript("three-hub.js?v=" + CACHE);
+    }).then(function () {
+      if (!global.FroggiesThree || typeof global.FroggiesThree.boot !== "function") {
+        throw new Error("three-hub failed to boot (FroggiesThree missing)");
+      }
     });
   }
 
@@ -128,11 +138,11 @@
         if (tipEl) tipEl.textContent = h.tip || "";
         if (btnInteract) {
           /* truck2: EXIT anytime while driving — don't require near parked pad */
-          var canAct = !!(h.near) || !!(h.inTruck);
+          var canAct = !!(h.near) || !!(h.inTruck) || !!(h.inMech);
           btnInteract.classList.toggle("ready", canAct);
           btnInteract.disabled = !canAct;
-          if (h.inTruck) btnInteract.textContent = "EXIT";
-          else if (h.near && C && C.isTruckHotspot && C.isTruckHotspot(h.near))
+          if (h.inTruck || h.inMech) btnInteract.textContent = "EXIT";
+          else if (h.near && C && ((C.isTruckHotspot && C.isTruckHotspot(h.near)) || (C.isMechHotspot && C.isMechHotspot(h.near))))
             btnInteract.textContent = "BOARD";
           else btnInteract.textContent = "INTERACT";
         }
@@ -193,13 +203,82 @@
     return "james";
   }
 
+  function resolveSeatMap(preferredFrogId) {
+    var map = null;
+    try {
+      var P = global.FroggiesParty;
+      /* Prefer startParty so couch pads + default seat are finalized (no peer start for three/phaser guests) */
+      if (P && P.active && typeof P.active.startParty === "function" && P.active.canStart && P.active.canStart()) {
+        map = P.active.startParty();
+      } else if (P && P.active && typeof P.active.buildSeatMap === "function") {
+        map = P.active.buildSeatMap();
+      }
+    } catch (e) { /* ignore */ }
+    if (!map) {
+      var fid = preferredFrogId || selectedFrogId() || "james";
+      map = {};
+      var order = (C && C.FROG_ORDER) || ["james", "jimmy", "bubbles", "rexy"];
+      for (var i = 0; i < order.length; i++) {
+        var id = order[i];
+        map[id] = { human: id === fid, local: id === fid, peerId: null, padIndex: id === fid ? null : undefined };
+      }
+    }
+    return map;
+  }
+
+  function hardFailAlt(mode, err) {
+    console.error(err);
+    /* Never silently fall back to Canvas — keep selected engine + toast hard fail */
+    if (C && C.setEngine) C.setEngine(mode === "phaser" ? "phaser" : "three");
+    currentEngine = mode;
+    paintPicker();
+    stopAltEngines();
+    document.body.classList.add("in-title");
+    document.body.classList.remove("in-hub");
+    document.body.classList.remove("in-space");
+    var overlay = $("overlay");
+    if (overlay) overlay.hidden = false;
+    var frogPick = $("frog-pick");
+    if (frogPick) frogPick.hidden = false;
+    var inviteCta = $("invite-cta");
+    if (inviteCta) inviteCta.hidden = false;
+    var partyBar = $("party-bar");
+    if (partyBar) partyBar.hidden = false;
+    var msg = (mode === "three" ? "Three.js failed" : "Phaser failed") + ": " + (err && err.message ? err.message : String(err || "boot error"));
+    var tipEl = $("hub-tip");
+    if (tipEl) tipEl.textContent = msg;
+    var partyStatus = $("party-status");
+    if (partyStatus) {
+      partyStatus.classList.add("is-error");
+      partyStatus.textContent = msg + " · Engine stays " + mode + " (not Canvas). Retry GO or pick Canvas.";
+    }
+    var overlayGo = $("overlay-go");
+    if (overlayGo) overlayGo.textContent = msg;
+  }
+
   function startAlt(mode) {
     if (loading) return loading;
+    if (mode !== "phaser" && mode !== "three") {
+      hardFailAlt("three", new Error("Invalid alt engine: " + mode));
+      return Promise.reject(new Error("Invalid alt engine"));
+    }
+    /* Keep localStorage on the chosen alt engine for the whole attempt */
+    if (C && C.setEngine) C.setEngine(mode);
+    currentEngine = mode;
+    paintPicker();
     showPlayingChrome();
     var frogId = selectedFrogId();
+    var seatMap = resolveSeatMap(frogId);
+    var primary = frogId;
+    var order = (C && C.FROG_ORDER) || ["james", "jimmy", "bubbles", "rexy"];
+    for (var si = 0; si < order.length; si++) {
+      var s = seatMap[order[si]];
+      if (s && s.human && s.local) { primary = order[si]; break; }
+    }
     var hud = wireHud();
     var opts = {
-      frogId: frogId,
+      frogId: primary,
+      seatMap: seatMap,
       onHud: hud.onHud,
       onToast: hud.onToast,
       onAbilityFire: hud.onAbilityFire,
@@ -213,7 +292,6 @@
       })
       .then(function () {
         stopAltEngines();
-        // stopAlt cleared host — re-show
         var host = $("engine-host");
         if (host) host.hidden = false;
         var view = $("view");
@@ -224,20 +302,20 @@
         } else {
           global.FroggiesThree.boot(opts);
         }
+        if (mode === "three" && (!global.FroggiesThree || !global.FroggiesThree.isActive || !global.FroggiesThree.isActive())) {
+          throw new Error("Three boot did not become active");
+        }
+        if (mode === "phaser" && (!global.FroggiesPhaser || !global.FroggiesPhaser.isActive || !global.FroggiesPhaser.isActive())) {
+          throw new Error("Phaser boot did not become active");
+        }
         engineRunning = true;
         currentEngine = mode;
+        if (C && C.setEngine) C.setEngine(mode);
         bindAltControls(mode);
         ensurePadLoop();
       })
       .catch(function (err) {
-        console.error(err);
-        var tipEl = $("hub-tip");
-        if (tipEl) tipEl.textContent = String(err.message || err);
-        stopAltEngines();
-        document.body.classList.add("in-title");
-        document.body.classList.remove("in-hub");
-        var overlay = $("overlay");
-        if (overlay) overlay.hidden = false;
+        hardFailAlt(mode, err);
       })
       .finally(function () {
         loading = null;
@@ -667,6 +745,11 @@
 
   global.FroggiesEngines = {
     tryStart: tryStart,
+    startAlt: startAlt,
+    isAltEngine: function (mode) {
+      var m = mode || (C ? C.getEngine() : "canvas");
+      return m === "phaser" || m === "three";
+    },
     syncWheelHud: syncWheelHud,
     setWheelPanelVisible: function (on) {
       var panel = $("wheel-size");
