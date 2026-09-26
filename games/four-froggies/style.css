@@ -338,6 +338,14 @@ html, body {
 .in-title #hud { visibility: hidden; pointer-events: none; }
 .in-hub #controls,
 .in-hub #hud { visibility: visible; }
+.in-space #controls,
+.in-space #hud { visibility: visible; }
+.in-space #progress-bar {
+  background: linear-gradient(90deg, #38bdf8, #a78bfa);
+}
+body.in-space {
+  background: #030712;
+}
 
 #btn-up, #btn-down {
   width: 56px;

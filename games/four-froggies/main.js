@@ -40,9 +40,10 @@
   const FROG_ORDER = ["james", "jimmy", "bubbles", "rexy"];
 
   const W = globalThis.FroggiesWorld;
+  const Space = globalThis.FroggiesSpace;
 
   let selectedId = "james";
-  let phase = "title"; // title | hub
+  let phase = "title"; // title | hub | space
   let party = null;
   let partyMeta = { role: "solo", room: null, status: "idle", error: null };
   let lobbySeats = typeof FroggiesParty !== "undefined" ? FroggiesParty.emptySeats() : {};
@@ -67,6 +68,7 @@
   let shakeT = 0;
 
   let story = null;
+  let spaceEp = Space ? Space.create() : null;
 
   function unlockAudio() {
     if (!audioCtx) {
@@ -173,6 +175,10 @@
     storyToastT = 4.5;
     shakeT = 0;
     if (story) story.reset();
+    if (spaceEp && Space) {
+      Space.exit(spaceEp);
+      spaceEp = Space.create();
+    }
 
     const me = frogs.find((f) => f.local);
     if (me) {
@@ -213,6 +219,8 @@
     overlay.hidden = false;
     document.body.classList.add("in-title");
     document.body.classList.remove("in-hub");
+    document.body.classList.remove("in-space");
+    if (spaceEp && Space && Space.isActive(spaceEp)) Space.exit(spaceEp);
     const role = party ? party.getRole() : "solo";
     btnStart.textContent = role === "guest" ? "Waiting for host…" : "GO · Ranch Hub";
     btnStart.disabled = role === "guest";
@@ -249,7 +257,12 @@
       progressBar.style.width = pct + "%";
     }
     if (progressLabel) {
-      progressLabel.textContent = me ? W.areaNameAt(me.x, me.y) : "Ranch hub";
+      if (phase === "space" && spaceEp && Space) {
+        const hud = Space.getHud(spaceEp);
+        progressLabel.textContent = hud ? hud.label : "Space";
+      } else {
+        progressLabel.textContent = me ? W.areaNameAt(me.x, me.y) : "Ranch hub";
+      }
     }
     if (convoyRow) {
       convoyRow.innerHTML = "";
@@ -266,7 +279,11 @@
       }
     }
     if (tipEl) {
-      if (storyToastT > 0) tipEl.textContent = storyToast;
+      if (phase === "space" && spaceEp && Space) {
+        const hud = Space.getHud(spaceEp);
+        tipEl.textContent = hud ? hud.tip : "";
+        nearHot = hud && hud.near ? hud.near : null;
+      } else if (storyToastT > 0) tipEl.textContent = storyToast;
       else if (nearHot) tipEl.textContent = nearHot.tip + " · tap INTERACT / E";
       else if (me && me.inTruck && W.onTrack(me.x, me.y))
         tipEl.textContent = "Hit the jumps · scrape for scrap!";
@@ -274,7 +291,10 @@
     }
     if (btnInteract) {
       btnInteract.classList.toggle("ready", !!nearHot);
-      btnInteract.disabled = !nearHot && phase === "hub";
+      btnInteract.disabled = !nearHot && (phase === "hub" || phase === "space");
+    }
+    if (livesEl && phase === "space") {
+      livesEl.textContent = "🚀 Space";
     }
   }
 
@@ -289,6 +309,22 @@
 
   function requestAbility(frog) {
     if (!frog || frog.cd > 0) return;
+    if (phase === "space" && spaceEp && Space) {
+      frog.cd = FROG_DEFS[frog.id].cdMax;
+      const res = Space.ability(spaceEp, frog.id);
+      beep(660, 0.06, "square", 0.05);
+      if (res && res.toast) {
+        storyToast = res.toast;
+        storyToastT = 2;
+      }
+      if (res && res.sfx === "blast") shakeT = 0.2;
+      if (res && res.sfx === "win") {
+        beep(523, 0.1, "triangle", 0.05);
+        beep(784, 0.15, "triangle", 0.05);
+      }
+      updateAbilityButton();
+      return;
+    }
     const def = FROG_DEFS[frog.id];
     frog.cd = def.cdMax;
     beep(660, 0.06, "square", 0.05);
@@ -323,7 +359,78 @@
     updateAbilityButton();
   }
 
+  function enterSpaceEpisode() {
+    if (!Space) {
+      storyToast = "Space module missing";
+      storyToastT = 2;
+      return;
+    }
+    if (!spaceEp) spaceEp = Space.create();
+    const me = localPlayer();
+    if (me) me.inTruck = false;
+    Space.enter(spaceEp, {});
+    phase = "space";
+    document.body.classList.add("in-space");
+    document.body.classList.add("in-hub");
+    storyToast = "Spotty welcomes you aboard!";
+    storyToastT = 3;
+    beep(180, 0.08, "sawtooth", 0.05);
+    beep(360, 0.12, "triangle", 0.05);
+    beep(540, 0.1, "sine", 0.04);
+  }
+
+  function leaveSpaceEpisode(msg) {
+    if (spaceEp && Space) Space.exit(spaceEp);
+    phase = "hub";
+    document.body.classList.remove("in-space");
+    const me = localPlayer();
+    if (me) {
+      me.x = 160;
+      me.y = 180;
+      camX = camTX = me.x;
+      camY = camTY = me.y;
+    }
+    storyToast = msg || "Back at the ranch hub";
+    storyToastT = 3;
+    beep(420, 0.08, "triangle", 0.05);
+  }
+
+  function doSpaceInteract() {
+    if (!spaceEp || !Space) return;
+    unlockAudio();
+    const res = Space.interact(spaceEp);
+    if (!res || !res.ok) return;
+    beep(520, 0.07, "triangle", 0.05);
+    if (res.exitRanch) {
+      leaveSpaceEpisode(res.toast);
+      return;
+    }
+    if (res.sfx === "catch") {
+      beep(660, 0.05, "square", 0.04);
+      beep(880, 0.06, "square", 0.03);
+    } else if (res.sfx === "blast") {
+      beep(120, 0.1, "sawtooth", 0.05);
+      shakeT = 0.2;
+    } else if (res.sfx === "win") {
+      beep(523, 0.1, "triangle", 0.05);
+      beep(659, 0.12, "triangle", 0.05);
+      beep(784, 0.15, "triangle", 0.05);
+      shakeT = 0.3;
+    } else if (res.sfx === "jet") {
+      beep(300, 0.08, "sawtooth", 0.04);
+    }
+    if (res.toast) {
+      storyToast = res.toast;
+      storyToastT = 2.5;
+    }
+    paintHud();
+  }
+
   function doInteract() {
+    if (phase === "space") {
+      doSpaceInteract();
+      return;
+    }
     const me = localPlayer();
     if (!me || !nearHot) return;
     unlockAudio();
@@ -356,6 +463,8 @@
       storyToast = "Splash! Fishies scatter!";
       storyToastT = 2;
       if (world) world.scrap += 3;
+    } else if (nearHot.id === "starship") {
+      enterSpaceEpisode();
     }
     paintHud();
   }
@@ -517,11 +626,26 @@
     }
   }
 
+  function updateSpace(dt) {
+    if (!spaceEp || !Space) return;
+    if (storyToastT > 0) storyToastT -= dt;
+    if (shakeT > 0) shakeT -= dt;
+    const me = localPlayer();
+    let sx = steerX;
+    let sy = steerY;
+    if (me && me.cd > 0) me.cd = Math.max(0, me.cd - dt);
+    // companion froggies stay on ranch; space is local story path
+    Space.update(spaceEp, dt, sx, sy);
+    nearHot = Space.nearestHotspot(spaceEp, 75);
+  }
+
   function render(t) {
     const w = window.innerWidth;
     const h = window.innerHeight;
     ctx.clearRect(0, 0, w, h);
-    if (phase === "hub" && world) {
+    if (phase === "space" && spaceEp && Space) {
+      Space.render(ctx, spaceEp, w, h, t);
+    } else if (phase === "hub" && world) {
       ctx.save();
       if (shakeT > 0) {
         const mag = shakeT * 10;
@@ -543,6 +667,10 @@
     lastTs = now;
     if (phase === "hub") {
       updateHub(dt);
+      updateAbilityButton();
+      paintHud();
+    } else if (phase === "space") {
+      updateSpace(dt);
       updateAbilityButton();
       paintHud();
     }
@@ -650,7 +778,7 @@
       e.preventDefault();
       unlockAudio();
       const player = localPlayer();
-      if (!player || phase !== "hub") return;
+      if (!player || (phase !== "hub" && phase !== "space")) return;
       if (party && party.getRole() === "guest") {
         pushGuestInput({ ability: true });
         return;
@@ -662,7 +790,7 @@
   if (btnInteract) {
     btnInteract.addEventListener("pointerdown", (e) => {
       e.preventDefault();
-      if (phase !== "hub") return;
+      if (phase !== "hub" && phase !== "space") return;
       if (party && party.getRole() === "guest") {
         pushGuestInput({ interact: true });
         doInteract();
@@ -695,14 +823,14 @@
     }
     if (e.key === " " || e.key === "Enter") {
       e.preventDefault();
-      if (phase === "hub") {
+      if (phase === "hub" || phase === "space") {
         const player = localPlayer();
         if (!player) return;
         if (party && party.getRole() === "guest") pushGuestInput({ ability: true });
         else requestAbility(player);
       } else if (phase === "title") tryStartFromUi();
     }
-    if ((e.key === "e" || e.key === "E" || e.key === "f" || e.key === "F") && phase === "hub") {
+    if ((e.key === "e" || e.key === "E" || e.key === "f" || e.key === "F") && (phase === "hub" || phase === "space")) {
       doInteract();
     }
     if (e.key === "Escape" && story && story.isOpen()) story.hide();
@@ -793,12 +921,13 @@
   const btnMenu = document.getElementById("btn-menu");
   if (btnMenu) {
     btnMenu.addEventListener("click", () => {
-      if (phase !== "hub") return;
+      if (phase !== "hub" && phase !== "space") return;
+      if (spaceEp && Space && phase === "space") Space.exit(spaceEp);
       phase = "title";
       if (story) story.hide();
       showOverlay(
         "Four Froggies",
-        "Drive the track · splash the pond · call Purple Bear · SPS + Optimus · bring Jimmy home.",
+        "Drive the track · splash the pond · call Purple Bear · SPS + Optimus · Starship → space.",
         "Claim a seat · Host to invite · or GO solo (AI fills)",
         true
       );
@@ -910,7 +1039,7 @@
 
   showOverlay(
     "Four Froggies",
-    "Drive the track · splash the pond · call Purple Bear · SPS + Optimus kits · bring Jimmy home.",
+    "Drive the track · splash the pond · call Purple Bear · SPS + Optimus · bring Jimmy home · Starship → space episode.",
     "Claim a seat · Host to invite · or GO solo (AI fills)",
     true
   );

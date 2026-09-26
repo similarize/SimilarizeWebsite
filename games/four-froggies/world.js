@@ -1,5 +1,6 @@
 /* Four Froggies — 2.5D ranch hub (fixed-angle / y-sorted layers).
    Areas (Ben-named only): ranch house, monster truck track, pond (+ toys prop density).
+   Hub hotspot: Starship (Spotty) → space episode path.
    No invented cast/zone/toy names. */
 (function (global) {
   "use strict";
@@ -81,6 +82,7 @@
         { id: "sps", label: "SPS", x: 280, y: 400, r: 44, tip: "Solar Positioning System" },
         { id: "truck", label: "Cybertruck", x: 700, y: 620, r: 56, tip: "Drive the track · jumps!" },
         { id: "fishies", label: "Fishies", x: 760, y: 180, r: 50, tip: "Splash the pond" },
+        { id: "starship", label: "Starship", x: 140, y: 140, r: 58, tip: "Starship · Spotty · space episode" },
       ],
       fish: [],
       toys: [],
@@ -1009,6 +1011,35 @@
     }
   }
 
+  function drawStarshipPad(ctx, camX, camY, vw, vh, near) {
+    var p = project(140, 140, camX, camY, vw, vh);
+    ctx.save();
+    ctx.fillStyle = near ? "rgba(56,189,248,0.45)" : "rgba(100,116,139,0.55)";
+    ctx.beginPath();
+    ctx.ellipse(p.x, p.y, 42 * p.depth, 16 * p.depth, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#38bdf8";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    // simple rocket silhouette
+    ctx.fillStyle = "#e2e8f0";
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y - 38 * p.depth);
+    ctx.lineTo(p.x + 12 * p.depth, p.y - 8 * p.depth);
+    ctx.lineTo(p.x - 12 * p.depth, p.y - 8 * p.depth);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "#f97316";
+    ctx.beginPath();
+    ctx.ellipse(p.x + 18 * p.depth, p.y - 18 * p.depth, 7 * p.depth, 6 * p.depth, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.font = "bold " + Math.round(11 * p.depth) + "px system-ui,sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#7dd3fc";
+    ctx.fillText("Starship · Spotty", p.x, p.y + 28 * p.depth);
+    ctx.restore();
+  }
+
   function render(ctx, world, frogs, camX, camY, vw, vh, t, nearHot) {
     drawSky(ctx, vw, vh, t, camX, camY);
 
@@ -1035,6 +1066,7 @@
     drawRanchHouse(ctx, camX, camY, vw, vh);
     drawTrack(ctx, camX, camY, vw, vh, t);
     drawToys(ctx, world, camX, camY, vw, vh);
+    drawStarshipPad(ctx, camX, camY, vw, vh, nearHot && nearHot.id === "starship");
     drawFx(ctx, world, camX, camY, vw, vh);
 
     var localInTruck = frogs.some(function (f) {
