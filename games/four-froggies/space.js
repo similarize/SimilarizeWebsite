@@ -5,7 +5,8 @@
    Real moons: Mars Phobos/Deimos; Neptune's 14 named moons (picker stub).
    Ben orbit physics: near planet → gravity pull into orbit; leave via Escape OR hard thruster.
    polish5: clearer moons picker, readable orbit pull rings, Escape/thruster leave banner,
-   Spotty/Alex/Fred presence pulse (cast already stubbed). */
+   Spotty/Alex/Fred presence pulse (cast already stubbed).
+   polish6: distant invader mech silhouettes when near Mars (visual tease only). */
 (function (global) {
   "use strict";
 
@@ -928,6 +929,53 @@
     ctx.restore();
   }
 
+  /* polish6: distant invader mech silhouettes (visual tease — no combat system) */
+  function drawDistantInvaderSilhouettes(ctx, ep, w, h, t) {
+    var nearMars = false;
+    if (ep.scene === "mars") nearMars = true;
+    else if (ep.scene === "solar" && ep.solarTab === "mars") nearMars = true;
+    else if (ep.scene === "space") {
+      /* approach Mars marker if present in solar path — soft tease from station→mars */
+      nearMars = false;
+    } else if (ep.scene === "station") {
+      /* when player near to_mech / Mars-side of station */
+      var dMech = Math.hypot((ep.px || 0) - 780, (ep.py || 0) - 500);
+      nearMars = dMech < 220;
+    }
+    if (ep.scene === "mars") {
+      var dCave = Math.hypot((ep.px || 450) - 450, (ep.py || 500) - 360);
+      nearMars = true;
+    }
+    if (!nearMars && ep.scene !== "mars" && !(ep.scene === "solar" && ep.solarTab === "mars")) return;
+    var alpha = ep.scene === "mars" ? 0.55 : 0.38;
+    var n = 5;
+    for (var i = 0; i < n; i++) {
+      var sx = w * (0.08 + i * 0.2) + Math.sin(t * 0.15 + i) * 8;
+      var sy = h * (0.12 + (i % 3) * 0.05) + Math.cos(t * 0.12 + i * 0.7) * 4;
+      var sc = 0.45 + (i % 3) * 0.12;
+      ctx.save();
+      ctx.globalAlpha = alpha * (0.7 + 0.3 * Math.sin(t * 0.4 + i));
+      ctx.fillStyle = "#3f0a0a";
+      ctx.beginPath();
+      ctx.moveTo(sx - 10 * sc, sy + 18 * sc);
+      ctx.lineTo(sx - 6 * sc, sy - 28 * sc);
+      ctx.lineTo(sx + 6 * sc, sy - 28 * sc);
+      ctx.lineTo(sx + 10 * sc, sy + 18 * sc);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillRect(sx - 16 * sc, sy - 10 * sc, 8 * sc, 14 * sc);
+      ctx.fillRect(sx + 8 * sc, sy - 10 * sc, 8 * sc, 14 * sc);
+      ctx.fillStyle = "#7f1d1d";
+      ctx.fillRect(sx - 4 * sc, sy - 34 * sc, 8 * sc, 6 * sc);
+      ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = "rgba(254, 202, 202, " + (alpha * 0.85) + ")";
+    ctx.font = "bold 11px system-ui,sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("Invader mechs · distant silhouette tease", w * 0.5, h * 0.08);
+  }
+
   function render(ctx, ep, w, h, t) {
     spaceCam.x = ep.px;
     spaceCam.y = ep.py;
@@ -1169,6 +1217,7 @@
     }
 
     if (ep.scene === "mars") {
+      drawDistantInvaderSilhouettes(ctx, ep, w, h, t);
       var cave = worldToScreen(450, 360, w, h);
       ctx.fillStyle = "#1c1917";
       ctx.beginPath();
@@ -1176,6 +1225,15 @@
       ctx.fill();
       drawLabel(ctx, "Mars cave", cave.x, cave.y - 50 * cave.d, "#fdba74");
       drawLabel(ctx, "Phobos · Deimos overhead", w * 0.5, h * 0.14, "#fed7aa");
+    }
+
+    if (ep.scene === "solar" && ep.solarTab === "mars") {
+      drawDistantInvaderSilhouettes(ctx, ep, w, h, t);
+    }
+
+    if (ep.scene === "station") {
+      var dMechPad = Math.hypot(ep.px - 780, ep.py - 500);
+      if (dMechPad < 240) drawDistantInvaderSilhouettes(ctx, ep, w, h, t);
     }
 
     if (ep.scene === "cave1" || ep.scene === "cave2") {

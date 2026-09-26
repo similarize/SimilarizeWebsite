@@ -86,6 +86,30 @@ Same PeerJS lobby: **Host room** → QR / invite `?room=CODE` → claim seats �
 **Collision rule:** Shared landmark layout lives in `canon.js`. Canvas `world.js` remains the richest renderer; Phaser/Three hubs consume the same canon landmarks for parity. Do not invent cast/zone names. Preserve three.js camera-relative WASD.
 
 
+## What's new (polish6) — FF-like depth + story/combat teases
+
+Ben: LOTS more improvement. Canvas lead; Phaser/Three parity on depth shadows, parallax-lite, space silhouette tease. Three frogs + hollow house kept.
+
+**Canvas depth feel (`world.js` + `main.js`):**
+- Stronger layered ranch-hill parallax (far/mid/near/FG bands)
+- Soft layered drop shadows under frogs, trucks, backyard animals
+- Wider scale-with-depth so distant props shrink / near punch
+- Slight camera tilt/bob when walking (truck bounce lite when driving)
+
+**Story loop juice (`story.js` + `style.css`):**
+- Playful Purple Bear phone UI (pulse, wiggle, speech bounce)
+- SPS map flash when Map ping / dish used
+- Jimmy rogue hint when Optimus kits active
+- Hang TBD hooks reserved (`onHangTbd`) — no new hang system invented
+
+**Combat fantasy tease (visual only):**
+- Distant invader mech silhouettes when near Mars (Canvas space + Phaser/Three stubs)
+- James 1000-story mech approach → ★ WOW scale tip on ranch
+
+**Phaser / three.js:** depth shadows under player, parallax-lite hills, Mars silhouette tease, mech wow tip. Three hollow house + frogs unchanged.
+
+- Cache-bust: `?v=20260925-polish6`.
+
 ## What's new (polish5) — space clarity + ranch juice
 
 Ben: LOTS more improvement. Canvas lead; Phaser/Three cheap ports of most visible juice. Three frogs + hollow house kept.
@@ -170,4 +194,4 @@ Ben: keep pouring polish into Canvas, **and** remember everything done on Canvas
 
 ## Publish
 
-Game Creator → **Webmaster** only. Product path: `games/four-froggies/`. Do not republish SPS as arcade. Cache-bust: `?v=20260925-polish5`.
+Game Creator → **Webmaster** only. Product path: `games/four-froggies/`. Do not republish SPS as arcade. Cache-bust: `?v=20260925-polish6`.

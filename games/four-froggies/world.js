@@ -4,6 +4,8 @@
    inviting story hotspots; truck bounce + water spray/bubbles; walk dust.
    polish5: day ambient pollen/fireflies; pond ripple rings; track race dust; garage door open-near;
    shared pile-in truck obvious; tiny land shake hook; sparkle on hotspot enter.
+   polish6: FF-like depth — stronger hill parallax, soft drop shadows, scale-with-depth props,
+   walk cam tilt/bob (via main); 1000-story mech wow tip; story/combat visual teases.
    ~10× map: real roam between ranch house / track / pond / Starship.
    James ranch house: big house, backyard (animals), huge garage (toys + 10/100-story mechs);
    1000-story mech sits out back (won't fit). Four Cybertrucks + shared pile-in.
@@ -174,8 +176,22 @@
     var dy = wy - camY;
     var sx = vw * 0.5 + dx * 0.98 - dy * 0.52;
     var sy = vh * 0.46 + dx * 0.30 + dy * 0.58;
-    var depth = clamp(0.58 + (wy - camY) / MAP_H * 0.55 + dy * 0.00015, 0.42, 1.38);
+    /* polish6: wider scale-with-depth so distant props shrink, near ones punch */
+    var depth = clamp(0.48 + (wy - camY) / MAP_H * 0.78 + dy * 0.00022, 0.28, 1.52);
     return { x: sx, y: sy, depth: depth, sortY: wy, scale: depth };
+  }
+
+  /* polish6: soft layered drop shadow (FF-like ground contact) */
+  function drawSoftShadow(ctx, x, y, rx, ry, alpha) {
+    alpha = alpha == null ? 0.34 : alpha;
+    ctx.fillStyle = "rgba(0,0,0," + (alpha * 0.45) + ")";
+    ctx.beginPath();
+    ctx.ellipse(x, y + 1, rx * 1.35, ry * 1.25, -0.12, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "rgba(0,0,0," + alpha + ")";
+    ctx.beginPath();
+    ctx.ellipse(x, y, rx, ry, -0.12, 0, Math.PI * 2);
+    ctx.fill();
   }
 
   function defaultHotspots() {
@@ -868,52 +884,59 @@
 
   function drawSky(ctx, w, h, t, camX, camY) {
     var g = ctx.createLinearGradient(0, 0, 0, h);
-    g.addColorStop(0, "#152a52");
-    g.addColorStop(0.22, "#2f6a9e");
-    g.addColorStop(0.48, "#6fb3c9");
-    g.addColorStop(0.68, "#8ecf6e");
+    g.addColorStop(0, "#122448");
+    g.addColorStop(0.2, "#2a628f");
+    g.addColorStop(0.45, "#6fb3c9");
+    g.addColorStop(0.66, "#8ecf6e");
     g.addColorStop(1, "#3a6826");
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, w, h);
-    var pxFar = -camX * 0.06, pyFar = -camY * 0.03;
-    var pxMid = -camX * 0.14, pyMid = -camY * 0.07;
-    var pxNear = -camX * 0.22, pyNear = -camY * 0.1;
-    ctx.fillStyle = "rgba(32, 58, 90, 0.45)";
-    ctx.beginPath();
-    ctx.moveTo(0, h * 0.34 + pyFar);
-    for (var i = 0; i <= 10; i++) {
-      ctx.lineTo((i / 10) * w + pxFar, h * 0.28 + Math.sin(i * 0.85 + t * 0.04) * 22 + pyFar);
+    /* polish6: stronger layered ranch-hill parallax (FF depth feel) */
+    var pxFar = -camX * 0.12, pyFar = -camY * 0.055;
+    var pxMid = -camX * 0.24, pyMid = -camY * 0.11;
+    var pxNear = -camX * 0.38, pyNear = -camY * 0.17;
+    var pxFG = -camX * 0.52, pyFG = -camY * 0.22;
+    function hillBand(fill, y0, amp, freq, phase, px, py, steps, yBot) {
+      ctx.fillStyle = fill;
+      ctx.beginPath();
+      ctx.moveTo(0, y0 + py);
+      for (var i = 0; i <= steps; i++) {
+        var nx = (i / steps) * w + px;
+        var ny = y0 + Math.sin(i * freq + phase + t * 0.035) * amp + py;
+        ctx.lineTo(nx, ny);
+      }
+      ctx.lineTo(w, yBot); ctx.lineTo(0, yBot); ctx.closePath(); ctx.fill();
     }
-    ctx.lineTo(w, h * 0.5); ctx.lineTo(0, h * 0.5); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = "rgba(40, 80, 50, 0.55)";
+    hillBand("rgba(22, 42, 72, 0.5)", h * 0.3, 28, 0.7, 0.2, pxFar, pyFar, 14, h * 0.52);
+    hillBand("rgba(28, 58, 88, 0.42)", h * 0.33, 20, 0.95, 1.1, pxFar * 1.15, pyFar * 1.1, 16, h * 0.54);
+    hillBand("rgba(36, 78, 48, 0.58)", h * 0.38, 18, 1.05, 1.4, pxMid, pyMid, 14, h * 0.58);
+    hillBand("rgba(48, 108, 52, 0.55)", h * 0.43, 14, 1.15, 2.0, pxNear, pyNear * 0.85, 16, h * 0.62);
+    hillBand("rgba(62, 128, 58, 0.42)", h * 0.48, 10, 1.35, 2.6, pxFG, pyFG * 0.7, 18, h * 0.66);
+    /* soft ridge highlights */
+    ctx.strokeStyle = "rgba(255,255,255,0.08)";
+    ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(0, h * 0.4 + pyMid);
-    for (var j = 0; j <= 10; j++) {
-      ctx.lineTo((j / 10) * w + pxMid * 0.7, h * 0.34 + Math.sin(j * 1.05 + 1.2) * 16 + pyMid);
+    for (var r = 0; r <= 16; r++) {
+      var rx = (r / 16) * w + pxMid * 0.5;
+      var ry = h * 0.38 + Math.sin(r * 1.05 + 1.4) * 16 + pyMid;
+      if (r === 0) ctx.moveTo(rx, ry); else ctx.lineTo(rx, ry);
     }
-    ctx.lineTo(w, h * 0.56); ctx.lineTo(0, h * 0.56); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = "rgba(55, 115, 58, 0.52)";
-    ctx.beginPath();
-    ctx.moveTo(0, h * 0.46 + pyNear * 0.7);
-    for (var k = 0; k <= 12; k++) {
-      ctx.lineTo((k / 12) * w + pxNear, h * 0.42 + Math.sin(k * 0.95 + 2.1) * 12 + pyNear * 0.7);
-    }
-    ctx.lineTo(w, h * 0.6); ctx.lineTo(0, h * 0.6); ctx.closePath(); ctx.fill();
-    var sunX = w * 0.8 - camX * 0.02, sunY = h * 0.09 - camY * 0.012;
-    var sg = ctx.createRadialGradient(sunX, sunY, 3, sunX, sunY, 70);
+    ctx.stroke();
+    var sunX = w * 0.8 - camX * 0.035, sunY = h * 0.09 - camY * 0.018;
+    var sg = ctx.createRadialGradient(sunX, sunY, 3, sunX, sunY, 78);
     sg.addColorStop(0, "rgba(255, 250, 210, 1)");
     sg.addColorStop(0.25, "rgba(255, 230, 140, 0.55)");
     sg.addColorStop(1, "rgba(255, 180, 80, 0)");
     ctx.fillStyle = sg;
-    ctx.beginPath(); ctx.arc(sunX, sunY, 70, 0, Math.PI * 2); ctx.fill();
-    for (var c = 0; c < 6; c++) {
-      var layer = c < 3 ? 0.35 : 0.55;
-      var cx = ((c * 160 + t * (6 + c) + pxMid * layer) % (w + 140)) - 70;
-      var cy = h * (0.07 + (c % 3) * 0.035) + pyFar * 0.4;
-      ctx.fillStyle = "rgba(255,255,255," + (0.12 + (c % 3) * 0.04) + ")";
+    ctx.beginPath(); ctx.arc(sunX, sunY, 78, 0, Math.PI * 2); ctx.fill();
+    for (var c = 0; c < 7; c++) {
+      var layer = c < 3 ? 0.28 : 0.55;
+      var cx = ((c * 150 + t * (5 + c) + pxMid * layer) % (w + 160)) - 80;
+      var cy = h * (0.06 + (c % 3) * 0.032) + pyFar * 0.55;
+      ctx.fillStyle = "rgba(255,255,255," + (0.1 + (c % 3) * 0.035) + ")";
       ctx.beginPath();
-      ctx.ellipse(cx, cy, 52 - c * 2, 13, 0, 0, Math.PI * 2);
-      ctx.ellipse(cx + 30, cy + 3, 38, 11, 0, 0, Math.PI * 2);
+      ctx.ellipse(cx, cy, 54 - c * 2, 13, 0, 0, Math.PI * 2);
+      ctx.ellipse(cx + 30, cy + 3, 40, 11, 0, 0, Math.PI * 2);
       ctx.fill();
     }
   }
@@ -1088,10 +1111,7 @@
         var asz = 8.5 * an.size * ap.depth;
         var bobY = Math.sin(an.bob || 0) * 1.6 * ap.depth;
         var ay = ap.y - bobY;
-        ctx.fillStyle = "rgba(0,0,0,0.28)";
-        ctx.beginPath();
-        ctx.ellipse(ap.x, ap.y + 3, asz * 1.05, asz * 0.34, 0, 0, Math.PI * 2);
-        ctx.fill();
+        drawSoftShadow(ctx, ap.x, ap.y + 3, asz * 1.1, asz * 0.36, 0.32);
         /* Legs */
         ctx.strokeStyle = "rgba(40, 28, 14, 0.85)";
         ctx.lineWidth = Math.max(1.4, asz * 0.18);
@@ -1800,12 +1820,9 @@
       ctx.stroke();
     }
 
-    /* Ground / water contact shadow */
-    var shA = wet ? 0.12 : (0.3 - Math.min(0.18, (z || 0) * 0.004));
-    ctx.fillStyle = "rgba(0,0,0," + shA + ")";
-    ctx.beginPath();
-    ctx.ellipse(0, 10 * s + lift * 0.3, 32 * s, 8 * s, 0, 0, Math.PI * 2);
-    ctx.fill();
+    /* polish6: soft layered drop shadow under Cybertruck */
+    var shA = wet ? 0.14 : (0.38 - Math.min(0.22, (z || 0) * 0.005));
+    drawSoftShadow(ctx, 0, 10 * s + lift * 0.35, 34 * s, 9 * s, shA);
 
     /* polish3: angular stainless Cybertruck — wedge nose, bed, mirrors, dual axles */
     var bodyGrad = ctx.createLinearGradient(-36 * s, -22 * s, 42 * s, 12 * s);
@@ -2011,12 +2028,10 @@
     }
 
     /* polish3: charming readable frog — blush, smile, thick rim, big eyes */
-    var shA = 0.34 - Math.min(0.2, (frog.z || 0) * 0.004);
-    var shW = s * (1.1 - Math.min(0.35, (frog.z || 0) * 0.008));
-    ctx.fillStyle = "rgba(0,0,0," + shA + ")";
-    ctx.beginPath();
-    ctx.ellipse(p.x, p.y + 5, shW, s * 0.34, -0.15, 0, Math.PI * 2);
-    ctx.fill();
+    /* polish6: softer drop shadow under character */
+    var shA = 0.4 - Math.min(0.24, (frog.z || 0) * 0.005);
+    var shW = s * (1.18 - Math.min(0.4, (frog.z || 0) * 0.009));
+    drawSoftShadow(ctx, p.x, p.y + 5, shW, s * 0.36, shA);
     var by = p.y - s * 0.42 - lift;
     var legKick = (!frog.inTruck && (frog.walkPhase || 0) > 0.05)
       ? Math.sin(frog.walkPhase * 2) * 3.2 * p.depth : 0;
@@ -2451,6 +2466,47 @@
     ctx.fillText("★ STARSHIP · SPACE", p.x, destY + 4);
   }
 
+  function mech1000Pos() {
+    var C = global.FroggiesCanon;
+    if (C && C.COMPOUND && C.COMPOUND.mech1000) return C.COMPOUND.mech1000;
+    return { x: 340, y: 2420, stories: 1000 };
+  }
+
+  function nearMech1000(frogs, r) {
+    var m = mech1000Pos();
+    r = r || 160;
+    if (!frogs) return null;
+    for (var i = 0; i < frogs.length; i++) {
+      var f = frogs[i];
+      if (!f.local) continue;
+      if (Math.hypot(f.x - m.x, f.y - m.y) < r) return { frog: f, mech: m, d: Math.hypot(f.x - m.x, f.y - m.y) };
+    }
+    return null;
+  }
+
+  function drawMechWowTip(ctx, frogs, camX, camY, vw, vh) {
+    var hit = nearMech1000(frogs, 170);
+    if (!hit) return;
+    var m = hit.mech;
+    var p = project(m.x, m.y, camX, camY, vw, vh);
+    var pulse = 0.85 + 0.15 * Math.sin(Date.now() / 280);
+    var bw = Math.min(280, 160 + (1 - hit.d / 170) * 80) * Math.min(1.25, p.depth + 0.2);
+    var bx = p.x;
+    var by = p.y - 200 * p.depth;
+    ctx.fillStyle = "rgba(15, 23, 42, " + (0.82 * pulse) + ")";
+    ctx.fillRect(bx - bw * 0.5, by - 28, bw, 44);
+    ctx.strokeStyle = "#fbbf24";
+    ctx.lineWidth = 2.4;
+    ctx.strokeRect(bx - bw * 0.5, by - 28, bw, 44);
+    ctx.fillStyle = "#fef3c7";
+    ctx.font = "bold " + Math.round(13 * Math.min(1.2, p.depth + 0.25)) + "px Segoe UI, system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("★ WOW · James 1000-story mech", bx, by - 6);
+    ctx.fillStyle = "#fde68a";
+    ctx.font = "bold " + Math.round(11 * Math.min(1.15, p.depth + 0.2)) + "px Segoe UI, system-ui, sans-serif";
+    ctx.fillText("scale tease · won't fit in the garage", bx, by + 12);
+  }
+
   function render(ctx, world, frogs, camX, camY, vw, vh, t, nearHot) {
     drawSky(ctx, vw, vh, t, camX, camY);
     var g0 = project(0, 0, camX, camY, vw, vh);
@@ -2495,6 +2551,9 @@
       drawFroggy(ctx, sorted[fi], camX, camY, vw, vh, frogs);
     }
 
+    /* polish6: James 1000-story mech wow-scale tip when approached */
+    drawMechWowTip(ctx, frogs, camX, camY, vw, vh);
+
     var rim = ctx.createRadialGradient(vw * 0.55, vh * 0.35, vw * 0.1, vw * 0.5, vh * 0.5, vw * 0.85);
     rim.addColorStop(0, "rgba(255, 230, 170, 0.05)");
     rim.addColorStop(0.55, "rgba(0,0,0,0)");
@@ -2534,6 +2593,8 @@
     tickHubAI: tickHubAI,
     boardTruck: boardTruck,
     project: project,
+    nearMech1000: nearMech1000,
+    mech1000Pos: mech1000Pos,
     render: render,
   };
 })(typeof window !== "undefined" ? window : globalThis);

@@ -3,7 +3,8 @@
    on-water/under tint · Starship → orbit Escape/hard thruster.
    polish4: compound presence + track hills + inviting hotspots + drive bob/spray.
    polish5: ambient pollen/fireflies; pond ripples; track race dust; garage door open-near;
-   shared ALL ABOARD; land shake; hotspot sparkle; orbit pull rings + Escape banner. */
+   shared ALL ABOARD; land shake; hotspot sparkle; orbit pull rings + Escape banner.
+   polish6: depth shadows + parallax-lite hills + Mars invader silhouette tease + mech wow tip. */
 (function (global) {
   "use strict";
   var C = global.FroggiesCanon;
@@ -133,9 +134,15 @@
         this.cameras.main.startFollow(this.player, true, 0.18, 0.18); /* polish3 less lag */
         this.cameras.main.setBounds(0, 0, C.MAP_W, C.MAP_H);
         this.cameras.main.setZoom(Math.min(0.95, Math.max(0.42, window.innerWidth / 1400)));
+        /* polish6: soft depth shadow under player / truck */
+        this.playerShadow = this.add.ellipse(spawn.x, spawn.y + 14, 40, 16, 0x000000, 0.32).setDepth(18);
+        this.playerShadowSoft = this.add.ellipse(spawn.x, spawn.y + 15, 56, 22, 0x000000, 0.14).setDepth(17);
+        /* polish6: parallax-lite hill bands (screen-space, scrollFactor 0) */
+        this.paraGfx = this.add.graphics().setScrollFactor(0).setDepth(-20);
         this.inTruck = false; this.truckMode = null; this.truckId = null;
         this.waterSub = 0; this.scrap = 0; this.toastT = 3.5; this.cd = 0; this.near = null; this.bouncePhase = 0; this.dustT = 0; this.fx = [];
         this.prevNearId = null; this.shakeT = 0; this.rippleT = 0; this.ambient = [];
+        this.mechWowT = 0; this.walkBobT = 0;
         /* polish5: ambient pollen / fireflies */
         for (var ai = 0; ai < 40; ai++) {
           var kind = Math.random() < 0.55 ? "pollen" : "firefly";
@@ -493,6 +500,55 @@
           this.cameras.main.shake(90, 0.0035);
         }
         if (this.shakeT > 0) this.shakeT -= dt;
+        /* polish6: depth shadows under frog / truck */
+        if (this.playerShadow) {
+          var shY = this.player.y + 12 + (this.inTruck ? 4 : 0);
+          var shScale = 1 + Math.min(0.35, this.zLift * 0.004);
+          this.playerShadow.setPosition(this.player.x, shY);
+          this.playerShadow.setDisplaySize(40 * shScale * (this.inTruck ? 1.6 : 1), 14 * shScale);
+          this.playerShadow.setAlpha(this.zLift > 4 ? 0.14 : 0.32);
+          if (this.playerShadowSoft) {
+            this.playerShadowSoft.setPosition(this.player.x, shY + 1);
+            this.playerShadowSoft.setDisplaySize(56 * shScale * (this.inTruck ? 1.5 : 1), 20 * shScale);
+            this.playerShadowSoft.setAlpha(this.zLift > 4 ? 0.06 : 0.14);
+          }
+        }
+        /* polish6: walk cam bob (tilt-lite) */
+        if (!this.inTruck && sp > 40) {
+          this.walkBobT = (this.walkBobT || 0) + dt * 10;
+          this.cameras.main.setAngle(Math.sin(this.walkBobT) * 0.35);
+        } else {
+          this.cameras.main.setAngle(0);
+        }
+        /* polish6: parallax-lite hills */
+        if (this.paraGfx) {
+          var cam = this.cameras.main;
+          var vw = cam.width, vh = cam.height;
+          var ox = -cam.scrollX * 0.08, oy = -cam.scrollY * 0.04;
+          this.paraGfx.clear();
+          this.paraGfx.fillStyle(0x1e3a5f, 0.35);
+          this.paraGfx.beginPath();
+          this.paraGfx.moveTo(0, vh * 0.18 + oy);
+          for (var pi = 0; pi <= 12; pi++) {
+            this.paraGfx.lineTo((pi / 12) * vw + ox, vh * 0.14 + Math.sin(pi * 0.9 + time * 0.0004) * 18 + oy);
+          }
+          this.paraGfx.lineTo(vw, vh * 0.32); this.paraGfx.lineTo(0, vh * 0.32); this.paraGfx.closePath(); this.paraGfx.fillPath();
+          this.paraGfx.fillStyle(0x2f6a3a, 0.4);
+          this.paraGfx.beginPath();
+          this.paraGfx.moveTo(0, vh * 0.24 + oy * 1.4);
+          for (var pj = 0; pj <= 12; pj++) {
+            this.paraGfx.lineTo((pj / 12) * vw + ox * 1.6, vh * 0.2 + Math.sin(pj * 1.1 + 1.2) * 12 + oy * 1.4);
+          }
+          this.paraGfx.lineTo(vw, vh * 0.38); this.paraGfx.lineTo(0, vh * 0.38); this.paraGfx.closePath(); this.paraGfx.fillPath();
+        }
+        /* polish6: James 1000-story mech wow tip */
+        var m1000 = (C.COMPOUND && C.COMPOUND.mech1000) || { x: 340, y: 2420 };
+        var dMech = Phaser.Math.Distance.Between(this.player.x, this.player.y, m1000.x, m1000.y);
+        if (dMech < 170 && this.toastT <= 0.3) {
+          this.toast = "★ WOW · James 1000-story mech · scale tease";
+          this.toastT = 1.8;
+          if (hooks.onToast) hooks.onToast(this.toast);
+        }
         for (var fi = this.fx.length - 1; fi >= 0; fi--) {
           var fx = this.fx[fi];
           fx.life -= dt;
@@ -671,6 +727,17 @@
         this.add.circle(380, 540, 14, 0x475569, 1).setStrokeStyle(2, 0x94a3b8, 0.8);
         this.add.text(380, 516, "Fred", { fontSize: "11px", color: "#e2e8f0", stroke: "#000", strokeThickness: 3 }).setOrigin(0.5);
         this.inOrbit = false; this.orbitAngle = 0; this.orbitRadius = 78; this.orbitEscapeCool = 0;
+        /* polish6: distant Mars + invader mech silhouette tease */
+        this.marsMark = this.add.circle(980, 620, 36, 0xb45309, 0.85).setStrokeStyle(2, 0xfed7aa, 0.8);
+        this.add.text(980, 660, "Mars", { fontSize: "12px", color: "#fed7aa", stroke: "#000", strokeThickness: 3 }).setOrigin(0.5);
+        this.invSil = [];
+        for (var isi = 0; isi < 4; isi++) {
+          var inv = this.add.rectangle(920 + isi * 28, 560 - (isi % 2) * 16, 14, 28, 0x7f1d1d, 0.55).setVisible(false);
+          this.invSil.push(inv);
+        }
+        this.invLabel = this.add.text(980, 520, "Invader mechs · silhouette tease", {
+          fontSize: "11px", color: "#fca5a5", stroke: "#000", strokeThickness: 3,
+        }).setOrigin(0.5).setVisible(false);
         this.cameras.main.startFollow(this.player, true, 0.18, 0.18); /* polish3 less lag */
         this.cameras.main.setBounds(0, 0, 1100, 800);
       },
@@ -749,10 +816,21 @@
             this.toastT = 1.5;
           }
         }
+        /* polish6: show invader silhouettes when near Mars marker */
+        var nearMars = Phaser.Math.Distance.Between(this.player.x, this.player.y, 980, 620) < 160;
+        for (var isi2 = 0; isi2 < (this.invSil || []).length; isi2++) {
+          this.invSil[isi2].setVisible(nearMars);
+          if (nearMars) this.invSil[isi2].setAlpha(0.4 + 0.2 * Math.sin(time * 0.004 + isi2));
+        }
+        if (this.invLabel) this.invLabel.setVisible(nearMars);
+        if (nearMars && this.toastT <= 0.2) {
+          this.toast = "Invader mechs · distant silhouette tease";
+          this.toastT = 1.6;
+        }
         if (hooks.onHud) {
           hooks.onHud({
             mode: "space", label: "Space · Moon · Phaser", scrap: this.catches,
-            tip: this.toastT > 0 ? this.toast : this.inOrbit ? "Orbit locked · Escape or hard thruster" : this.near ? this.near.tip + " · INTERACT" : "Chase Jimmy · Spotty / Germy / Daisy nearby",
+            tip: this.toastT > 0 ? this.toast : this.inOrbit ? "Orbit locked · Escape or hard thruster" : this.near ? this.near.tip + " · INTERACT" : nearMars ? "Mars · invader silhouettes" : "Chase Jimmy · Spotty / Germy / Daisy nearby",
             inOrbit: !!this.inOrbit, near: this.near, ability: def.ability, cd: this.cd,
             walk: this.inOrbit ? "🌍 Orbit" : "🚀 Space",
           });

@@ -1,5 +1,7 @@
 /* Four Froggies — in-world story: phone → Purple Bear → SPS → Optimus → bring Jimmy home.
-   Folded from game-sps reference HUD. Not a separate product. */
+   Folded from game-sps reference HUD. Not a separate product.
+   polish6: playful Purple Bear phone UI; SPS map flash on Map ping (dish);
+   Jimmy rogue hint when Optimus kits active; hang TBD hooks (no new systems). */
 (function (global) {
   "use strict";
 
@@ -57,6 +59,9 @@
       lastAbility: "",
       raf: 0,
       lastTs: 0,
+      mapFlash: 0,
+      rogueHintShown: false,
+      hangTbd: null, /* polish6: TBD hang hook slot — do not invent hang systems */
     };
 
     function pickPlanet() {
@@ -103,14 +108,21 @@
         titleEl.textContent = mode === "phone" ? "Phone" : "SPS · Solar Positioning";
       }
       if (mode === "phone") {
-        if (statusEl) statusEl.textContent = "Contacts";
+        if (statusEl) statusEl.textContent = "Contacts · tap Purple Bear!";
         if (speechEl) {
           speechEl.hidden = true;
           speechEl.textContent = "";
+          speechEl.classList.remove("speech-bounce");
         }
-        if (btnHangup) btnHangup.hidden = true;
+        if (btnHangup) {
+          btnHangup.hidden = true;
+          btnHangup.textContent = "Got it";
+        }
         if (btnOpenSps) btnOpenSps.hidden = true;
+        setPhonePlayful(true); /* playful while phone open near Purple Bear path */
         stopLoop();
+      } else {
+        setPhonePlayful(false);
       }
       if (mode === "sps") {
         if (state.calledPurple && !state.won && !state.failed) {
@@ -130,6 +142,8 @@
       state.running = false;
       stopLoop();
       if (panel) panel.hidden = true;
+      setPhonePlayful(false);
+      if (speechEl) speechEl.classList.remove("speech-bounce");
       if (typeof hooks.onClose === "function") hooks.onClose();
     }
 
@@ -157,6 +171,7 @@
     }
 
     function tick(dt) {
+      if (state.mapFlash > 0) state.mapFlash = Math.max(0, state.mapFlash - dt * 1.6);
       if (!state.running || state.won || state.failed) return;
       state.jimmyAngle += dt * 0.55;
       var keys = Object.keys(state.cds);
@@ -198,28 +213,46 @@
       if (typeof hooks.onWin === "function") hooks.onWin(state.planet);
     }
 
+    function setPhonePlayful(on) {
+      if (panel) panel.classList.toggle("playful-phone", !!on);
+      if (phoneView) phoneView.classList.toggle("playful-phone", !!on);
+      var purpleBtn = document.querySelector('[data-story-dial="purple"]');
+      if (purpleBtn) purpleBtn.classList.toggle("purple-pulse", !!on);
+    }
+
     function dialPurple() {
       if (!state.planet) pickPlanet();
-      if (statusEl) statusEl.textContent = "Calling Purple Bear…";
+      if (statusEl) statusEl.textContent = "Calling Purple Bear… ✦";
       if (speechEl) speechEl.hidden = true;
       if (btnHangup) btnHangup.hidden = true;
       if (btnOpenSps) btnOpenSps.hidden = true;
+      setPhonePlayful(true);
+      if (typeof hooks.onPhonePlayful === "function") hooks.onPhonePlayful(true);
       setTimeout(function () {
         if (!state.open || state.mode !== "phone") return;
-        if (statusEl) statusEl.textContent = "Connected · Purple Bear";
+        if (statusEl) statusEl.textContent = "Connected · Purple Bear · ʕ·ᴥ·ʔ";
         if (speechEl) {
           speechEl.hidden = false;
           speechEl.textContent =
-            "Hey James — he's near " + state.planet + ". Check SPS. Call Optimus kits!";
+            "Hey James — he's near " + state.planet + "! Check SPS. Call Optimus kits! ✨";
+          speechEl.classList.add("speech-bounce");
         }
         state.calledPurple = true;
         state.jimmyVisible = true;
         state.confidence = Math.max(state.confidence, 0.32);
-        if (btnHangup) btnHangup.hidden = false;
+        if (btnHangup) {
+          btnHangup.hidden = false;
+          btnHangup.textContent = "Got it · hang (TBD)";
+        }
         if (btnOpenSps) btnOpenSps.hidden = false;
         if (typeof hooks.onCalledPurple === "function") {
           hooks.onCalledPurple(state.planet);
         }
+        /* polish6: hang TBD hook — reserved, no new hang system */
+        if (typeof hooks.onHangTbd === "function") {
+          hooks.onHangTbd({ ready: true, who: "purple", planet: state.planet });
+        }
+        state.hangTbd = { ready: true, who: "purple", planet: state.planet };
       }, 650);
     }
 
@@ -276,7 +309,15 @@
         state.jimmyVisible = true;
         state.confidence = Math.min(1, state.confidence + 0.28);
         if (state.confidence >= 0.45) state.jimmyRevealed = true;
-        if (feedbackEl) feedbackEl.textContent = "Map ping — SPS lock rising!";
+        if (feedbackEl) feedbackEl.textContent = "Map ping · dish flash — SPS lock rising!";
+        /* polish6: SPS map flash when dish / Map ping used */
+        state.mapFlash = 0.55;
+        if (spsCanvas) {
+          spsCanvas.classList.remove("map-flash");
+          void spsCanvas.offsetWidth;
+          spsCanvas.classList.add("map-flash");
+        }
+        if (typeof hooks.onMapFlash === "function") hooks.onMapFlash(state.confidence);
       }
 
       if (typeof hooks.onKit === "function") hooks.onKit(name, state.confidence);
@@ -323,9 +364,31 @@
       if (!kitRow) return;
       var show = state.calledPurple && state.mode === "sps";
       kitRow.hidden = !show;
+      kitRow.classList.toggle("kits-active", !!show);
       if (btnBring) btnBring.hidden = !(show && !state.won && !state.failed);
       if (btnRetry) {
         btnRetry.hidden = !(state.won || state.failed);
+      }
+      /* polish6: Jimmy rogue hint when Optimus kit area active */
+      if (show && !state.won && !state.failed) {
+        var hint = document.getElementById("jimmy-rogue-hint");
+        if (!hint) {
+          hint = document.createElement("p");
+          hint.id = "jimmy-rogue-hint";
+          hint.className = "jimmy-rogue-hint";
+          kitRow.insertBefore(hint, kitRow.firstChild);
+        }
+        hint.hidden = false;
+        hint.textContent = "Jimmy's gone rogue near " + (state.planet || "…") + " — Optimus kits ready!";
+        if (!state.rogueHintShown) {
+          state.rogueHintShown = true;
+          if (typeof hooks.onRogueHint === "function") {
+            hooks.onRogueHint(state.planet);
+          }
+        }
+      } else {
+        var hintOff = document.getElementById("jimmy-rogue-hint");
+        if (hintOff) hintOff.hidden = true;
       }
       kitRow.querySelectorAll("[data-kit]").forEach(function (btn) {
         var name = btn.getAttribute("data-kit");
@@ -352,6 +415,14 @@
       bg.addColorStop(1, "#060d18");
       ctx.fillStyle = bg;
       ctx.fillRect(0, 0, w, h);
+      /* polish6: dish / map-ping flash wash */
+      if (state.mapFlash > 0) {
+        ctx.fillStyle = "rgba(251, 191, 36, " + (state.mapFlash * 0.55) + ")";
+        ctx.fillRect(0, 0, w, h);
+        ctx.strokeStyle = "rgba(254, 243, 199, " + (state.mapFlash * 0.9) + ")";
+        ctx.lineWidth = 4;
+        ctx.strokeRect(4, 4, w - 8, h - 8);
+      }
 
       // Stars
       ctx.fillStyle = "rgba(255,255,255,0.5)";
@@ -538,6 +609,8 @@
           won: state.won,
           failed: state.failed,
           timeLeft: state.timeLeft,
+          mapFlash: state.mapFlash,
+          hangTbd: state.hangTbd,
         };
       },
       ensurePlanet: function () {

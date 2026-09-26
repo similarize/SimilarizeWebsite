@@ -728,3 +728,77 @@ body.in-space {
   box-shadow: 0 0 18px rgba(251, 191, 36, 0.65);
   transform: scale(1.04);
 }
+
+
+/* ——— polish6: playful Purple Bear phone + SPS map flash + rogue hint ——— */
+.story-panel.playful-phone {
+  background: rgba(40, 12, 64, 0.78);
+}
+.story-panel.playful-phone .story-card {
+  border-color: rgba(196, 181, 253, 0.75);
+  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.25), 0 16px 48px rgba(88, 28, 135, 0.45);
+  animation: phone-wiggle 1.8s ease-in-out infinite;
+}
+@keyframes phone-wiggle {
+  0%, 100% { transform: rotate(-0.4deg) translateY(0); }
+  50% { transform: rotate(0.5deg) translateY(-2px); }
+}
+.contact-btn.purple-pulse {
+  border-color: #c4b5fd;
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.55), rgba(0,0,0,0.35));
+  box-shadow: 0 0 0 0 rgba(167, 139, 250, 0.55);
+  animation: purple-ring 1.2s ease-out infinite;
+}
+.contact-btn.purple-pulse .av.purple {
+  animation: bear-bounce 0.7s ease-in-out infinite;
+  box-shadow: 0 0 12px rgba(196, 181, 253, 0.8);
+}
+@keyframes purple-ring {
+  0% { box-shadow: 0 0 0 0 rgba(167, 139, 250, 0.55); }
+  70% { box-shadow: 0 0 0 10px rgba(167, 139, 250, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(167, 139, 250, 0); }
+}
+@keyframes bear-bounce {
+  0%, 100% { transform: scale(1) rotate(-4deg); }
+  50% { transform: scale(1.12) rotate(4deg); }
+}
+.story-speech.speech-bounce {
+  animation: speech-pop 0.55s ease-out;
+  border-color: rgba(251, 191, 36, 0.65);
+  background: rgba(124, 58, 237, 0.22);
+}
+@keyframes speech-pop {
+  0% { transform: scale(0.92); opacity: 0.4; }
+  60% { transform: scale(1.03); }
+  100% { transform: scale(1); opacity: 1; }
+}
+#sps-mini.map-flash {
+  animation: sps-map-flash 0.55s ease-out;
+  box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.85), 0 0 28px rgba(250, 204, 21, 0.55);
+}
+@keyframes sps-map-flash {
+  0% { filter: brightness(2.2) saturate(1.4); transform: scale(1.02); }
+  100% { filter: brightness(1) saturate(1); transform: scale(1); }
+}
+.jimmy-rogue-hint {
+  margin: 0 0 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: linear-gradient(90deg, rgba(251, 146, 60, 0.35), rgba(124, 58, 237, 0.25));
+  border: 1px solid rgba(251, 191, 36, 0.55);
+  color: #fef3c7;
+  font: 700 12px "Segoe UI", system-ui, sans-serif;
+  text-align: center;
+  animation: rogue-pulse 1.4s ease-in-out infinite;
+}
+.jimmy-rogue-hint[hidden] { display: none; }
+@keyframes rogue-pulse {
+  0%, 100% { opacity: 0.85; }
+  50% { opacity: 1; }
+}
+.optimus-kits.kits-active .kit-label {
+  color: #fde68a;
+  letter-spacing: 0.1em;
+}
+
+.story-panel.near-phone-glow { /* reserved when panel closed — glow is on world phone prop */ }

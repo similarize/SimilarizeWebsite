@@ -297,9 +297,22 @@
         nearHot = hud && hud.near ? hud.near : null;
       } else if (storyToastT > 0) tipEl.textContent = storyToast;
       else if (nearHot) tipEl.textContent = "⚡ " + nearHot.tip + " · INTERACT / E";
+      else if (me && W.nearMech1000 && W.nearMech1000(frogs, 170))
+        tipEl.textContent = "★ WOW · James 1000-story mech · scale tease";
       else if (me && me.inTruck && W.onTrack(me.x, me.y))
         tipEl.textContent = "Hit the jumps · scrape for scrap!";
       else tipEl.textContent = "";
+    }
+    /* polish6: playful phone chrome when near Purple Bear phone hotspot */
+    const storyPanel = document.getElementById("story-panel");
+    if (storyPanel && phase === "hub") {
+      const nearPhone = !!(nearHot && nearHot.id === "phone");
+      const openPhone = story && story.isOpen && story.isOpen() && (story.getState && true);
+      if (!storyPanel.hidden) {
+        /* panel open — story.js owns playful class */
+      } else {
+        storyPanel.classList.toggle("near-phone-glow", nearPhone);
+      }
     }
     if (btnInteract) {
       btnInteract.classList.toggle("ready", !!nearHot);
@@ -598,6 +611,11 @@
         } else if (!nearHot) {
           prevNearId = null;
         }
+        /* polish6: wow tip when approaching James 1000-story mech */
+        if (W.nearMech1000 && W.nearMech1000(frogs, 170) && storyToastT <= 0.2) {
+          storyToast = "★ WOW · James 1000-story mech";
+          storyToastT = 1.8;
+        }
       }
       if (storyToastT > 0) storyToastT -= dt;
       if (shakeT > 0) shakeT -= dt;
@@ -671,6 +689,10 @@
     } else if (!nearHot) {
       prevNearId = null;
     }
+    if (W.nearMech1000 && W.nearMech1000(frogs, 170) && storyToastT <= 0.2) {
+      storyToast = "★ WOW · James 1000-story mech";
+      storyToastT = 1.8;
+    }
 
     if (storyToastT > 0) storyToastT -= dt;
     if (shakeT > 0) shakeT -= dt;
@@ -708,6 +730,21 @@
       if (shakeT > 0) {
         const mag = shakeT * 10;
         ctx.translate((Math.random() - 0.5) * mag, (Math.random() - 0.5) * mag);
+      }
+      /* polish6: slight camera tilt / bob when walking (FF depth juice) */
+      const meCam = localPlayer();
+      const spdCam = meCam ? Math.hypot(meCam.vx || 0, meCam.vy || 0) : 0;
+      const walking = meCam && !meCam.inTruck && spdCam > 28;
+      if (walking) {
+        const phaseW = meCam.walkPhase || t * 8;
+        const bob = Math.sin(phaseW) * 2.4;
+        const tilt = Math.sin(phaseW * 0.5) * 0.012;
+        ctx.translate(w * 0.5, h * 0.5 + bob);
+        ctx.rotate(tilt);
+        ctx.translate(-w * 0.5, -h * 0.5);
+      } else if (meCam && meCam.inTruck && spdCam > 60) {
+        const bounce = Math.sin((meCam.bouncePhase || t * 6) * 2) * 1.2;
+        ctx.translate(0, bounce);
       }
       W.render(ctx, world, frogs, camX, camY, w, h, t, nearHot);
       ctx.restore();
@@ -1091,11 +1128,29 @@
       onKit(name) {
         unlockAudio();
         sfxKit(name);
+        if (name === "map") {
+          storyToast = "SPS dish · map flash!";
+          storyToastT = 1.6;
+        }
       },
       onBeep(name) {
         unlockAudio();
         sfxKit(name);
       },
+      onMapFlash() {
+        storyToast = "Map ping · SPS dish flash!";
+        storyToastT = 1.4;
+        paintHud();
+      },
+      onRogueHint(planet) {
+        storyToast = "Jimmy rogue · Optimus kits · near " + planet;
+        storyToastT = 3.2;
+        paintHud();
+      },
+      onHangTbd() {
+        /* polish6: hang TBD hook reserved — no hang system invented */
+      },
+      onPhonePlayful() {},
       onWin(planet) {
         storyToast = "Jimmy home from " + planet + "!";
         storyToastT = 5;

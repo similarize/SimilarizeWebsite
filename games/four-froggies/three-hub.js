@@ -5,6 +5,7 @@
    polish4: compound presence + hills + inviting hotspots + truck bob/spray.
    polish5: ambient pollen/fireflies; pond ripples; track race dust; garage door open-near;
    shared ALL ABOARD; land shake; hotspot sparkle; orbit pull rings + Escape banner.
+   polish6: depth shadows + parallax-lite hills + Mars invader silhouette tease + mech wow tip.
    Hollow house + frogs kept. WASD camera-relative — do not invert. */
 (function (global) {
   "use strict";
@@ -542,6 +543,22 @@
     ground.receiveShadow = true;
     scene.add(ground);
 
+    /* polish6: parallax-lite distant ranch hills (cheap depth bands) */
+    state.paraHills = [];
+    for (var hi = 0; hi < 3; hi++) {
+      var hill = new THREE.Mesh(
+        new THREE.BoxGeometry(28 + hi * 6, 2.2 + hi * 0.8, 4 + hi),
+        new THREE.MeshStandardMaterial({
+          color: hi === 0 ? 0x1e3a5f : hi === 1 ? 0x2f5a3a : 0x3d7a35,
+          transparent: true, opacity: 0.55 - hi * 0.08, roughness: 1,
+        })
+      );
+      hill.position.set(-8 + hi * 10, 1.2 + hi * 0.4, -C.MAP_H * 0.009 - hi * 2);
+      hill.userData.para = 0.12 + hi * 0.08;
+      scene.add(hill);
+      state.paraHills.push(hill);
+    }
+
     // Soft grid
     var grid = new THREE.GridHelper(Math.max(C.MAP_W, C.MAP_H) * 0.02, 30, 0x2f5e2a, 0x2f5e2a);
     grid.position.y = 0.02;
@@ -649,6 +666,21 @@
     state.player.position.set(spawn.x, 0.02, spawn.z);
     if (state.player.userData.ring) state.player.userData.ring.material.opacity = 0.85;
     scene.add(state.player);
+    /* polish6: soft depth shadow under frog / truck */
+    state.playerShadow = new THREE.Mesh(
+      new THREE.CircleGeometry(0.55, 20),
+      new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.32, side: THREE.DoubleSide })
+    );
+    state.playerShadow.rotation.x = -Math.PI / 2;
+    state.playerShadow.position.set(spawn.x, 0.04, spawn.z);
+    scene.add(state.playerShadow);
+    state.playerShadowSoft = new THREE.Mesh(
+      new THREE.CircleGeometry(0.85, 20),
+      new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.14, side: THREE.DoubleSide })
+    );
+    state.playerShadowSoft.rotation.x = -Math.PI / 2;
+    state.playerShadowSoft.position.set(spawn.x, 0.03, spawn.z);
+    scene.add(state.playerShadowSoft);
     state.nameTag = labelSprite(def.name, "#fff");
     state.nameTag.position.set(spawn.x, 2.6, spawn.z);
     state.nameTag.scale.set(2.8, 0.7, 1);
@@ -766,10 +798,44 @@
     moon.rotation.x = -Math.PI / 2;
     scene.add(moon);
 
+    /* polish6: Mars marker + distant invader mech silhouettes (visual tease) */
+    var mars = new THREE.Mesh(
+      new THREE.SphereGeometry(0.9, 16, 12),
+      new THREE.MeshStandardMaterial({ color: 0xb45309, emissive: 0x7c2d12, emissiveIntensity: 0.25 })
+    );
+    mars.position.set(6.5, 0.9, 5.5); scene.add(mars);
+    addLabel("Mars", "#fed7aa", 6.5, 2.2, 5.5);
+    state.marsPos = { x: 6.5, z: 5.5 };
+    state.invSil = [];
+    for (var isi = 0; isi < 4; isi++) {
+      var inv = new THREE.Mesh(
+        new THREE.BoxGeometry(0.35, 0.9, 0.25),
+        new THREE.MeshBasicMaterial({ color: 0x7f1d1d, transparent: true, opacity: 0.55 })
+      );
+      inv.position.set(5.2 + isi * 0.7, 0.5, 4.2 + (isi % 2) * 0.4);
+      inv.visible = false;
+      scene.add(inv);
+      state.invSil.push(inv);
+    }
+    state.invLabel = labelSprite("Invader mechs · silhouette tease", "#fca5a5");
+    state.invLabel.scale.set(4.2, 0.55, 1);
+    state.invLabel.position.set(6.5, 2.8, 5.5);
+    state.invLabel.visible = false;
+    scene.add(state.invLabel);
+
     var def = C.FROG_DEFS[state.frogId];
     state.player = makeFrogMesh(def, 1.5);
     state.player.position.set(-4, 0, 2);
     scene.add(state.player);
+    state.playerShadow = new THREE.Mesh(
+      new THREE.CircleGeometry(0.5, 16),
+      new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.28, side: THREE.DoubleSide })
+    );
+    state.playerShadow.rotation.x = -Math.PI / 2;
+    state.playerShadow.position.set(-4, 0.05, 2);
+    scene.add(state.playerShadow);
+    state.playerShadowSoft = null;
+    state.paraHills = [];
     state.nameTag = labelSprite(def.name, "#fff");
     state.nameTag.scale.set(2.6, 0.65, 1);
     scene.add(state.nameTag);
@@ -1263,8 +1329,47 @@
     target.y = 0;
     var camDist = state.mode === "ranch" ? 16 : 12;
     var camH = state.mode === "ranch" ? 18 : 14;
-    camera.position.set(target.x + camDist * 0.85, camH, target.z + camDist * 0.85);
-    camera.lookAt(target.x, 0.5, target.z);
+    /* polish6: slight walk bob / tilt */
+    var walkBob = 0, walkTilt = 0;
+    if (state.mode === "ranch" && !state.inTruck && Math.hypot(state.vx || 0, state.vz || 0) > 1.2) {
+      state.walkBobT = (state.walkBobT || 0) + dt * 10;
+      walkBob = Math.sin(state.walkBobT) * 0.12;
+      walkTilt = Math.sin(state.walkBobT * 0.5) * 0.015;
+    }
+    camera.position.set(target.x + camDist * 0.85, camH + walkBob, target.z + camDist * 0.85);
+    camera.lookAt(target.x, 0.5 + walkTilt, target.z);
+    /* polish6: depth shadow under player */
+    if (state.playerShadow) {
+      var shS = state.inTruck ? 1.7 : 1;
+      var shA = (state.zLift || 0) > 0.5 ? 0.12 : 0.32;
+      state.playerShadow.position.set(state.player.position.x, 0.04, state.player.position.z);
+      state.playerShadow.scale.set(shS, shS, shS);
+      state.playerShadow.material.opacity = shA;
+      if (state.playerShadowSoft) {
+        state.playerShadowSoft.position.set(state.player.position.x, 0.03, state.player.position.z);
+        state.playerShadowSoft.scale.set(shS * 1.2, shS * 1.2, shS * 1.2);
+        state.playerShadowSoft.material.opacity = shA * 0.45;
+      }
+    }
+    /* polish6: parallax-lite — hills drift slower than camera target */
+    if (state.paraHills && state.mode === "ranch") {
+      for (var phi = 0; phi < state.paraHills.length; phi++) {
+        var ph = state.paraHills[phi];
+        var para = ph.userData.para || 0.15;
+        ph.position.x = -8 + phi * 10 + target.x * para * 0.15;
+      }
+    }
+    /* polish6: James 1000-story mech wow tip */
+    if (state.mode === "ranch") {
+      var m1000 = (C.COMPOUND && C.COMPOUND.mech1000) || { x: 340, y: 2420 };
+      var mp = worldToThree(m1000.x, m1000.y);
+      var dM = Math.hypot(state.player.position.x - mp.x, state.player.position.z - mp.z);
+      if (dM < 3.4 && state.toastT <= 0.3) {
+        state.toast = "★ WOW · James 1000-story mech · scale tease";
+        state.toastT = 1.8;
+        if (hooks.onToast) hooks.onToast(state.toast);
+      }
+    }
 
     if (state.mode === "ranch") {
       for (var fi = 0; fi < (state.fish || []).length; fi++) {
@@ -1339,6 +1444,20 @@
       state.near = null;
       if (dJ < 1.1) state.near = { id: "jimmy", tip: "Catch Jimmy!" };
       else if (dR < 1.6) state.near = { id: "return", tip: "Return to ranch" };
+      /* polish6: invader silhouettes when near Mars */
+      if (state.marsPos) {
+        var dMars = Math.hypot(state.player.position.x - state.marsPos.x, state.player.position.z - state.marsPos.z);
+        var nearMars = dMars < 3.2;
+        for (var isi2 = 0; isi2 < (state.invSil || []).length; isi2++) {
+          state.invSil[isi2].visible = nearMars;
+          if (nearMars) state.invSil[isi2].material.opacity = 0.4 + 0.2 * Math.sin(state.bob * 2 + isi2);
+        }
+        if (state.invLabel) state.invLabel.visible = nearMars;
+        if (nearMars && state.toastT <= 0.2) {
+          state.toast = "Invader mechs · distant silhouette tease";
+          state.toastT = 1.6;
+        }
+      }
     }
 
     if (wantInteract) {
@@ -1364,7 +1483,7 @@
         mode: state.mode,
         label: label,
         scrap: state.mode === "space" ? state.catches : state.scrap,
-        tip: state.toastT > 0 ? state.toast : state.inOrbit ? "Orbit locked · Escape or hard thruster" : state.near ? ("⚡ " + state.near.tip + " · INTERACT / E") : "",
+        tip: state.toastT > 0 ? state.toast : state.inOrbit ? "Orbit locked · Escape or hard thruster" : state.near ? ("⚡ " + state.near.tip + " · INTERACT / E") : (state.invLabel && state.invLabel.visible ? "Mars · invader silhouettes" : ""),
             inOrbit: !!state.inOrbit,
         near: state.near,
         ability: def.ability,
