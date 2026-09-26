@@ -515,3 +515,93 @@ html, body {
   #btn-up, #btn-down { width: 64px; height: 64px; }
   #btn-interact { min-width: 108px; height: 64px; font-size: 13px; }
 }
+
+/* ——— hub2: Optimus kits + SPS juice ——— */
+#progress-wrap { opacity: 0.85; }
+
+.sps-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.sps-timer {
+  font: 800 14px ui-monospace, monospace;
+  color: #fbbf24;
+  min-width: 2.5rem;
+}
+.sps-conf-wrap {
+  flex: 1;
+  height: 18px;
+  border-radius: 999px;
+  background: rgba(0,0,0,.45);
+  border: 1px solid rgba(148,163,184,.35);
+  overflow: hidden;
+}
+.sps-conf-bar {
+  height: 100%;
+  min-width: 8%;
+  width: 8%;
+  background: linear-gradient(90deg, #22c55e, #a3e635);
+  color: #052e16;
+  font: 700 10px "Segoe UI", system-ui, sans-serif;
+  line-height: 18px;
+  padding: 0 8px;
+  white-space: nowrap;
+  transition: width 0.15s ease;
+}
+.sps-feedback {
+  margin: 4px 0 8px;
+  min-height: 1.2em;
+  font-size: 12px;
+  color: #bbf7d0;
+  text-align: center;
+}
+.optimus-kits {
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(148,163,184,.25);
+}
+.kit-label {
+  margin: 0 0 8px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #93c5fd;
+  text-align: center;
+}
+.kit-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.kit-btn {
+  border: 1px solid rgba(148,163,184,.45);
+  border-radius: 12px;
+  padding: 10px 8px;
+  background: rgba(15, 40, 70, 0.75);
+  color: #e2e8f0;
+  font: 700 12px "Segoe UI", system-ui, sans-serif;
+  touch-action: manipulation;
+}
+.kit-btn.ready {
+  background: rgba(34, 197, 94, 0.35);
+  border-color: #4ade80;
+}
+.kit-btn:disabled {
+  opacity: 0.45;
+}
+.kit-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.sps-actions {
+  margin-top: 10px;
+  justify-content: center;
+}
+#btn-interact.ready {
+  animation: pulse-interact 1.1s ease-in-out infinite;
+}
+@keyframes pulse-interact {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.45); }
+  50% { box-shadow: 0 0 0 6px rgba(251, 191, 36, 0); }
+}

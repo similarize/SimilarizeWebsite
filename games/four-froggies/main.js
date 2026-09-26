@@ -55,6 +55,8 @@
   let frogs = [];
   let camX = 400;
   let camY = 450;
+  let camTX = 400;
+  let camTY = 450;
   let steerX = 0;
   let steerY = 0;
   let nearHot = null;
@@ -62,6 +64,7 @@
   let storyToastT = 0;
   let lastTs = 0;
   let audioCtx = null;
+  let shakeT = 0;
 
   let story = null;
 
@@ -92,6 +95,29 @@
     } catch (e) {
       /* ignore */
     }
+  }
+
+  function sfxJump() {
+    beep(180, 0.06, "sawtooth", 0.04);
+    beep(320, 0.1, "square", 0.035);
+  }
+  function sfxLand() {
+    beep(90, 0.08, "triangle", 0.05);
+  }
+  function sfxSplash() {
+    beep(520, 0.04, "sine", 0.04);
+    beep(280, 0.1, "triangle", 0.045);
+    beep(700, 0.05, "sine", 0.03);
+  }
+  function sfxKit(name) {
+    if (name === "rocket" || name === "afterburners") {
+      beep(120, 0.08, "sawtooth", 0.05);
+      beep(240, 0.12, "sawtooth", 0.04);
+    } else if (name === "hover") beep(440, 0.1, "sine", 0.04);
+    else if (name === "drone") {
+      beep(880, 0.05, "square", 0.03);
+      beep(660, 0.08, "square", 0.03);
+    } else beep(560, 0.07, "triangle", 0.04);
   }
 
   function resize() {
@@ -143,9 +169,16 @@
     remoteInputs = {};
     stateSendAcc = 0;
     nearHot = null;
-    storyToast = "Walk the ranch · find Phone near the house";
-    storyToastT = 4;
+    storyToast = "Drive the track · splash pond · call Purple Bear";
+    storyToastT = 4.5;
+    shakeT = 0;
     if (story) story.reset();
+
+    const me = frogs.find((f) => f.local);
+    if (me) {
+      camX = camTX = me.x;
+      camY = camTY = me.y;
+    }
 
     phase = "hub";
     overlay.hidden = true;
@@ -162,7 +195,6 @@
     beep(560, 0.1, "triangle", 0.05);
   }
 
-  // Party onStart / GO still call this name
   function startRun(seatMapOrPlayerId) {
     startHub(seatMapOrPlayerId);
   }
@@ -190,12 +222,32 @@
 
   function paintHud() {
     const me = localPlayer();
-    if (livesEl) livesEl.textContent = me && me.inTruck ? "🚚 Drive" : "🐸 Walk";
-    if (scrapEl) {
-      const st = story ? story.getState() : {};
-      scrapEl.textContent = st.calledPurple ? "SPS: " + (st.planet || "?") : "Explore";
+    if (livesEl) {
+      if (me && me.inTruck) {
+        livesEl.textContent = (me.z || 0) > 4 ? "🚚 AIR!" : "🚚 Drive";
+      } else {
+        livesEl.textContent = "🐸 Walk";
+      }
     }
-    if (progressBar) progressBar.style.width = me ? "100%" : "0%";
+    if (scrapEl) {
+      const scrap = world ? world.scrap | 0 : 0;
+      const st = story ? story.getState() : {};
+      if (st.calledPurple && !st.won) {
+        scrapEl.textContent =
+          "Scrap " + scrap + " · SPS " + Math.round((st.confidence || 0) * 100) + "%";
+      } else if (st.won) {
+        scrapEl.textContent = "Scrap " + scrap + " · Jimmy home!";
+      } else {
+        scrapEl.textContent = "Scrap " + scrap;
+      }
+    }
+    if (progressBar) {
+      const scrap = world ? world.scrap : 0;
+      const st = story ? story.getState() : {};
+      let pct = Math.min(100, scrap);
+      if (st.calledPurple) pct = Math.max(pct, (st.confidence || 0) * 100);
+      progressBar.style.width = pct + "%";
+    }
     if (progressLabel) {
       progressLabel.textContent = me ? W.areaNameAt(me.x, me.y) : "Ranch hub";
     }
@@ -215,7 +267,9 @@
     }
     if (tipEl) {
       if (storyToastT > 0) tipEl.textContent = storyToast;
-      else if (nearHot) tipEl.textContent = nearHot.tip + " · tap INTERACT";
+      else if (nearHot) tipEl.textContent = nearHot.tip + " · tap INTERACT / E";
+      else if (me && me.inTruck && W.onTrack(me.x, me.y))
+        tipEl.textContent = "Hit the jumps · scrape for scrap!";
       else tipEl.textContent = "";
     }
     if (btnInteract) {
@@ -240,14 +294,30 @@
     beep(660, 0.06, "square", 0.05);
     if (frog.id === "james") {
       frog.invuln = 1.2;
-      frog.x += frog.facing * 40;
-      storyToast = "DASH!";
+      frog.dashTrail = 0.45;
+      const boost = frog.inTruck ? 70 : 48;
+      frog.x += frog.facing * boost;
+      if (frog.inTruck) frog.speedBoost = 1.4;
+      if (world) {
+        W.spawnDust(world, frog.x, frog.y, 8);
+        W.spawnSparks(world, frog.x, frog.y, 6);
+      }
+      shakeT = 0.18;
+      storyToast = frog.inTruck ? "DASH · truck boost!" : "DASH!";
+      beep(880, 0.05, "sawtooth", 0.035);
     } else if (frog.id === "jimmy") {
-      storyToast = "SHIELD up (hub stub)";
+      frog.invuln = 2.2;
+      storyToast = "SHIELD up!";
+      beep(300, 0.12, "triangle", 0.05);
     } else if (frog.id === "bubbles") {
-      storyToast = "ZAP! (hub stub)";
+      if (world) W.spawnSparks(world, frog.x, frog.y, 12);
+      storyToast = "ZAP!";
+      beep(920, 0.04, "square", 0.04);
+      beep(1200, 0.05, "square", 0.03);
     } else if (frog.id === "rexy") {
-      storyToast = "BOT · Optimus assist (hub stub)";
+      storyToast = "BOT · open SPS for Optimus kits";
+      beep(400, 0.06, "sine", 0.04);
+      beep(500, 0.08, "sine", 0.04);
     }
     storyToastT = 1.5;
     updateAbilityButton();
@@ -268,12 +338,24 @@
       storyToastT = 2;
     } else if (nearHot.id === "truck") {
       me.inTruck = !me.inTruck;
-      storyToast = me.inTruck ? "Driving Cybertruck" : "Parked · walking";
-      storyToastT = 2;
+      if (me.inTruck) {
+        me.x = 700;
+        me.y = 620;
+        storyToast = "Driving Cybertruck · hit the jumps!";
+        beep(200, 0.1, "sawtooth", 0.04);
+      } else {
+        me.z = 0;
+        me.zVel = 0;
+        storyToast = "Parked · walking";
+      }
+      storyToastT = 2.5;
     } else if (nearHot.id === "fishies") {
-      storyToast = "Fishies splash! (pond play TBD)";
+      if (world) W.scareFishies(world, me.x, me.y);
+      sfxSplash();
+      shakeT = 0.12;
+      storyToast = "Splash! Fishies scatter!";
       storyToastT = 2;
-      beep(880, 0.05, "sine", 0.04);
+      if (world) world.scrap += 3;
     }
     paintHud();
   }
@@ -287,9 +369,11 @@
         y: f.y,
         facing: f.facing,
         inTruck: f.inTruck,
+        z: f.z || 0,
         cd: f.cd,
         human: f.human,
       })),
+      scrap: world ? world.scrap : 0,
       phase: phase,
     };
   }
@@ -305,8 +389,10 @@
       f.y = sf.y;
       f.facing = sf.facing;
       f.inTruck = sf.inTruck;
+      f.z = sf.z || 0;
       f.cd = sf.cd;
     }
+    if (world && typeof msg.scrap === "number") world.scrap = msg.scrap;
   }
 
   function pushGuestInput(extra) {
@@ -321,20 +407,47 @@
     });
   }
 
+  function easeCam(dt) {
+    const me = localPlayer();
+    if (!me) return;
+    // Look-ahead based on velocity + air
+    const look = me.inTruck ? 0.18 : 0.1;
+    camTX = me.x + me.vx * look;
+    camTY = me.y + me.vy * look - (me.z || 0) * 0.15;
+    const k = Math.min(1, dt * (me.inTruck ? 5.5 : 4.2));
+    camX += (camTX - camX) * k;
+    camY += (camTY - camY) * k;
+  }
+
   function updateHub(dt) {
-    if (!world || !isHostSim) {
-      // Guests still move local frog predictively; host corrects via state
-      if (!isHostSim) {
-        const me = localPlayer();
-        if (me) {
-          me.steerX = steerX;
-          me.steerY = steerY;
-          W.moveEntity(me, dt);
-          camX += (me.x - camX) * Math.min(1, dt * 4);
-          camY += (me.y - camY) * Math.min(1, dt * 4);
-          nearHot = W.nearestHotspot(world, me.x, me.y, 70);
+    if (!world) return;
+
+    if (!isHostSim) {
+      const me = localPlayer();
+      if (me) {
+        me.steerX = steerX;
+        me.steerY = steerY;
+        W.moveEntity(me, dt);
+        const drive = W.tickDrive(world, me, dt);
+        if (drive.jumped) {
+          sfxJump();
+          storyToast = "JUMP! +" + drive.scrapGain + " scrap";
+          storyToastT = 1.2;
+          shakeT = 0.15;
+        } else if (drive.landed) {
+          sfxLand();
+          if (drive.scrapGain > 0) {
+            storyToast = "Landing +" + drive.scrapGain;
+            storyToastT = 1;
+          }
         }
+        if (me.speedBoost > 1) me.speedBoost = Math.max(1, me.speedBoost - dt * 0.5);
+        easeCam(dt);
+        nearHot = W.nearestHotspot(world, me.x, me.y, 70);
       }
+      if (storyToastT > 0) storyToastT -= dt;
+      if (shakeT > 0) shakeT -= dt;
+      W.updateFx(world, dt);
       return;
     }
 
@@ -354,25 +467,46 @@
           }
           if (ri.interactQueued) {
             nearHot = W.nearestHotspot(world, f.x, f.y, 70);
-            // Only local opens story UI; remote interact is movement-adjacent for now
             ri.interactQueued = false;
           }
         }
       }
     }
     for (const f of frogs) {
-      if (f.human) W.moveEntity(f, dt);
+      if (f.human) {
+        W.moveEntity(f, dt);
+        if (f.local || f.inTruck) {
+          const drive = W.tickDrive(world, f, dt);
+          if (f.local) {
+            if (drive.jumped) {
+              sfxJump();
+              storyToast =
+                "JUMP ×" + world.stuntCombo + " · +" + drive.scrapGain + " scrap";
+              storyToastT = 1.3;
+              shakeT = 0.16;
+            } else if (drive.landed) {
+              sfxLand();
+              if (drive.scrapGain > 0) {
+                storyToast = "Nice air! +" + drive.scrapGain;
+                storyToastT = 1.1;
+              }
+            } else if (drive.scrapGain > 0 && Math.random() < 0.3) {
+              beep(150, 0.03, "sawtooth", 0.025);
+            }
+          }
+        }
+        if (f.speedBoost > 1) f.speedBoost = Math.max(1, f.speedBoost - dt * 0.5);
+      }
     }
     W.tickHubAI(frogs, me, dt);
     W.updateFish(world, dt);
+    W.updateFx(world, dt);
 
-    if (me) {
-      camX += (me.x - camX) * Math.min(1, dt * 4);
-      camY += (me.y - camY) * Math.min(1, dt * 4);
-      nearHot = W.nearestHotspot(world, me.x, me.y, 70);
-    }
+    easeCam(dt);
+    if (me) nearHot = W.nearestHotspot(world, me.x, me.y, 70);
 
     if (storyToastT > 0) storyToastT -= dt;
+    if (shakeT > 0) shakeT -= dt;
 
     if (party && party.getRole() === "host") {
       stateSendAcc += dt;
@@ -388,9 +522,14 @@
     const h = window.innerHeight;
     ctx.clearRect(0, 0, w, h);
     if (phase === "hub" && world) {
+      ctx.save();
+      if (shakeT > 0) {
+        const mag = shakeT * 10;
+        ctx.translate((Math.random() - 0.5) * mag, (Math.random() - 0.5) * mag);
+      }
       W.render(ctx, world, frogs, camX, camY, w, h, t, nearHot);
+      ctx.restore();
     } else {
-      // Soft title backdrop
       const g = ctx.createLinearGradient(0, 0, 0, h);
       g.addColorStop(0, "#0c1a0c");
       g.addColorStop(1, "#14532d");
@@ -526,7 +665,7 @@
       if (phase !== "hub") return;
       if (party && party.getRole() === "guest") {
         pushGuestInput({ interact: true });
-        doInteract(); // local UI for guest phone/sps is OK
+        doInteract();
         return;
       }
       doInteract();
@@ -651,7 +790,6 @@
     });
   }
 
-  // Menu / leave hub
   const btnMenu = document.getElementById("btn-menu");
   if (btnMenu) {
     btnMenu.addEventListener("click", () => {
@@ -660,7 +798,7 @@
       if (story) story.hide();
       showOverlay(
         "Four Froggies",
-        "Walk / drive the ranch hub · call Purple Bear · open SPS. Party Host QR still works from this lobby.",
+        "Drive the track · splash the pond · call Purple Bear · SPS + Optimus · bring Jimmy home.",
         "Claim a seat · Host to invite · or GO solo (AI fills)",
         true
       );
@@ -694,7 +832,6 @@
         };
         cur.steerX = payload.steerX || 0;
         cur.steerY = payload.steerY || 0;
-        // Back-compat if strip-style steer sent
         if (payload.steer && !payload.steerX) cur.steerX = payload.steer;
         if (payload.ability) cur.abilityQueued = true;
         if (payload.interact) cur.interactQueued = true;
@@ -717,7 +854,6 @@
     else paintLobbySeats();
   }
 
-  // Check party.broadcastState exists
   function ensurePartyBroadcast() {
     if (!party) return;
     if (typeof party.broadcastState !== "function" && typeof party.sendState === "function") {
@@ -733,6 +869,35 @@
         storyToast = "Purple Bear: Jimmy near " + planet;
         storyToastT = 4;
         paintHud();
+        beep(480, 0.08, "sine", 0.05);
+      },
+      onKit(name) {
+        unlockAudio();
+        sfxKit(name);
+      },
+      onBeep(name) {
+        unlockAudio();
+        sfxKit(name);
+      },
+      onWin(planet) {
+        storyToast = "Jimmy home from " + planet + "!";
+        storyToastT = 5;
+        if (world) world.scrap += 50;
+        beep(523, 0.1, "triangle", 0.05);
+        beep(659, 0.12, "triangle", 0.05);
+        beep(784, 0.16, "triangle", 0.05);
+        paintHud();
+      },
+      onSoftFail(planet) {
+        storyToast = "Jimmy's on " + planet + " again…";
+        storyToastT = 4;
+        beep(200, 0.15, "sawtooth", 0.04);
+        paintHud();
+      },
+      onRetry(planet) {
+        storyToast = "Retry — Jimmy near " + planet;
+        storyToastT = 3;
+        paintHud();
       },
     });
   }
@@ -741,12 +906,11 @@
   resize();
   initParty();
   ensurePartyBroadcast();
-  // Re-hook after party ready
   setTimeout(ensurePartyBroadcast, 100);
 
   showOverlay(
     "Four Froggies",
-    "Walk / drive James's ranch · house, monster truck track, pond. Call Purple Bear · check SPS.",
+    "Drive the track · splash the pond · call Purple Bear · SPS + Optimus kits · bring Jimmy home.",
     "Claim a seat · Host to invite · or GO solo (AI fills)",
     true
   );

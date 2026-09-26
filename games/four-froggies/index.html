@@ -6,7 +6,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <title>Four Froggies — Ranch Hub</title>
-  <link rel="stylesheet" href="style.css?v=20260925-hub1">
+  <link rel="stylesheet" href="style.css?v=20260925-hub2">
 </head>
 <body class="in-title">
   <canvas id="view"></canvas>
@@ -14,7 +14,7 @@
   <div id="hud">
     <div id="hud-top">
       <span id="lives">🐸 Walk</span>
-      <span id="scrap">Explore</span>
+      <span id="scrap">Scrap 0</span>
       <span id="progress-label">Ranch hub</span>
       <button type="button" id="btn-menu" class="menu-btn" aria-label="Lobby">Lobby</button>
     </div>
@@ -32,7 +32,7 @@
     <button type="button" id="btn-ability" aria-label="Ability">DASH</button>
   </div>
 
-  <!-- In-world story: phone + SPS -->
+  <!-- In-world story: phone + SPS + Optimus kits -->
   <div id="story-panel" class="story-panel" hidden>
     <div class="story-card">
       <header class="story-head">
@@ -60,14 +60,35 @@
         </div>
       </div>
       <div id="story-sps" hidden>
+        <div class="sps-top">
+          <span id="sps-timer" class="sps-timer"></span>
+          <div class="sps-conf-wrap" aria-label="SPS confidence">
+            <div id="sps-confidence" class="sps-conf-bar">No lock</div>
+          </div>
+        </div>
         <canvas id="sps-mini" width="280" height="280" aria-label="SPS solar map"></canvas>
         <p id="sps-meta" class="sps-meta">Solar Positioning System</p>
+        <p id="sps-feedback" class="sps-feedback"></p>
+        <div id="optimus-kits" class="optimus-kits" hidden>
+          <p class="kit-label">Optimus · usable ranch · space · planets</p>
+          <div class="kit-grid">
+            <button type="button" class="kit-btn" data-kit="hover" data-label="Hover">Hover</button>
+            <button type="button" class="kit-btn" data-kit="rocket" data-label="Rocket">Rocket</button>
+            <button type="button" class="kit-btn" data-kit="afterburners" data-label="Afterburners">Afterburners</button>
+            <button type="button" class="kit-btn" data-kit="drone" data-label="Drone">Drone</button>
+            <button type="button" class="kit-btn" data-kit="map" data-label="Map ping">Map ping</button>
+          </div>
+        </div>
+        <div class="story-actions sps-actions">
+          <button type="button" id="story-bring-home" class="story-btn primary" hidden>Bring Jimmy home</button>
+          <button type="button" id="story-retry" class="story-btn" hidden>Retry · find Jimmy</button>
+        </div>
       </div>
     </div>
   </div>
 
   <div id="overlay">
-    <img id="splash-art" class="splash-art" src="assets/splash-forest-roof.png?v=20260925-hub1" alt="Four froggies on a Cybertruck roof" width="832" height="1248" decoding="async">
+    <img id="splash-art" class="splash-art" src="assets/splash-forest-roof.png?v=20260925-hub2" alt="Four froggies on a Cybertruck roof" width="832" height="1248" decoding="async">
     <h1 id="overlay-title">Four Froggies</h1>
     <p id="overlay-sub">2.5D ranch hub · Up to 4 players · AI fills empty seats</p>
     <div id="frog-pick" class="frog-pick">
@@ -103,15 +124,15 @@
     </div>
     <img id="invite-qr" class="invite-qr" hidden alt="QR code to join this room" width="112" height="112">
     <p id="party-status" class="party-status"></p>
-    <p id="overlay-text">Walk / drive James's ranch · house, monster truck track, pond. Call Purple Bear · check SPS.</p>
+    <p id="overlay-text">Drive the track · splash the pond · call Purple Bear · SPS + Optimus kits · bring Jimmy home.</p>
     <p class="go" id="overlay-go">Claim a seat · Host to invite · or GO solo (AI fills)</p>
     <button type="button" id="btn-start" class="start-btn">GO · Ranch Hub</button>
   </div>
 
-  <script src="ai.js?v=20260925-hub1"></script>
-  <script src="party.js?v=20260925-hub1"></script>
-  <script src="world.js?v=20260925-hub1"></script>
-  <script src="story.js?v=20260925-hub1"></script>
-  <script src="main.js?v=20260925-hub1"></script>
+  <script src="ai.js?v=20260925-hub2"></script>
+  <script src="party.js?v=20260925-hub2"></script>
+  <script src="world.js?v=20260925-hub2"></script>
+  <script src="story.js?v=20260925-hub2"></script>
+  <script src="main.js?v=20260925-hub2"></script>
 </body>
 </html>
