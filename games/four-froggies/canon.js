@@ -10,7 +10,9 @@
    truck2: stronger trackElevAt + ramp wedges; exit anytime HUD.
    hop1: HOP ability (replaces ZOOM); shoveSmallProp for toys/animals/pollen.
    hop2: tickLocoHop — continuous ranch foot hop cycle (any move input).
-   hop3: faster loco hop; near-zero ability CD; airborne stack height (combo hops). */
+   hop3: faster loco hop; near-zero ability CD; airborne stack height (combo hops).
+   track3: banked turns + rock obstacles + live monster-truck wheel scale.
+   hop4: snappier always-hop (higher carry / shorter plant / higher launch); humanoid frog silhouette. */
 (function (global) {
   "use strict";
 
@@ -65,10 +67,36 @@
     [2460, 2360, 0.15],
   ];
   var TRACK_MOUNDS = [
-    { x: 2260, y: 1740, r: 160, h: 1.2 },
-    { x: 3280, y: 1820, r: 140, h: 1.05 },
-    { x: 2460, y: 2480, r: 110, h: 0.55 },
-    { x: 3180, y: 2680, r: 130, h: -0.35 },
+    { x: 2260, y: 1740, r: 160, h: 1.35 },
+    { x: 3280, y: 1820, r: 150, h: 1.2 },
+    { x: 2460, y: 2480, r: 120, h: 0.7 },
+    { x: 3180, y: 2680, r: 130, h: -0.4 },
+    { x: 2800, y: 2100, r: 100, h: 0.85 },
+  ];
+  /* track3: banked turn berms — outer lip elev for monster-track feel */
+  var TRACK_BANKS = [
+    { x: 2180, y: 1700, r: 200, tilt: 1.05, label: "BANK" },
+    { x: 3380, y: 1800, r: 180, tilt: 0.95, label: "BANK" },
+    { x: 3600, y: 2300, r: 190, tilt: 1.0, label: "BANK" },
+    { x: 3300, y: 2740, r: 175, tilt: 0.9, label: "BANK" },
+    { x: 2340, y: 2520, r: 165, tilt: 0.85, label: "BANK" },
+    { x: 1900, y: 2200, r: 150, tilt: 0.75, label: "BANK" },
+    { x: 2780, y: 2040, r: 140, tilt: 0.7, label: "BANK" },
+  ];
+  /* track3: big rock obstacles — hard bounce when hit at speed */
+  var TRACK_ROCKS = [
+    { x: 2080, y: 1980, r: 52, h: 1.05, bounce: 1.85 },
+    { x: 2420, y: 1820, r: 60, h: 1.2, bounce: 2.1 },
+    { x: 2720, y: 1920, r: 48, h: 0.95, bounce: 1.7 },
+    { x: 3140, y: 1980, r: 58, h: 1.15, bounce: 2.0 },
+    { x: 3500, y: 2200, r: 54, h: 1.05, bounce: 1.9 },
+    { x: 3400, y: 2560, r: 62, h: 1.25, bounce: 2.2 },
+    { x: 2920, y: 2680, r: 50, h: 0.9, bounce: 1.65 },
+    { x: 2520, y: 2580, r: 56, h: 1.1, bounce: 1.95 },
+    { x: 2200, y: 2360, r: 46, h: 0.85, bounce: 1.55 },
+    { x: 2680, y: 2240, r: 64, h: 1.3, bounce: 2.25 },
+    { x: 3000, y: 2140, r: 44, h: 0.8, bounce: 1.5 },
+    { x: 1980, y: 2280, r: 50, h: 0.95, bounce: 1.75 },
   ];
   var RAMPS = [
     { x: 2060, y: 1780, w: 72, h: 36, boost: 1.45 },
@@ -228,9 +256,41 @@
     phaserScale: 1.28,
   };
 
+  /* track3: live monster-truck wheel scale (1 = stock Cybertruck, max = huge). */
+  var WHEEL_SCALE = { min: 1, max: 2.65, default: 1, step: 0.08 };
+  var wheelScaleLive = WHEEL_SCALE.default;
+
+  function clampWheel(v) {
+    if (v < WHEEL_SCALE.min) return WHEEL_SCALE.min;
+    if (v > WHEEL_SCALE.max) return WHEEL_SCALE.max;
+    return v;
+  }
+  function getWheelScale() { return wheelScaleLive; }
+  function setWheelScale(v) {
+    wheelScaleLive = clampWheel(typeof v === "number" ? v : WHEEL_SCALE.default);
+    return wheelScaleLive;
+  }
+  function adjustWheelScale(delta) {
+    return setWheelScale(wheelScaleLive + (delta || 0));
+  }
+  /* Clearance / bounce helpers for engines */
+  function wheelClearanceZ(ws) {
+    ws = ws != null ? ws : wheelScaleLive;
+    return (ws - 1) * 18;
+  }
+  function wheelBounceMul(ws) {
+    ws = ws != null ? ws : wheelScaleLive;
+    return 0.85 + ws * 0.55;
+  }
+  function wheelJumpMul(ws) {
+    ws = ws != null ? ws : wheelScaleLive;
+    return 0.9 + (ws - 1) * 0.55;
+  }
+
   /* truck2: sample ribbon elev (pt[2]) + mound bells + ramp wedges → frog.z units.
-     Stronger contact so crest → airtime → land bounce is obvious on all engines. */
-  var TRACK_ELEV_Z = 72;
+     Stronger contact so crest → airtime → land bounce is obvious on all engines.
+     track3: + bank berms + rock bumps. */
+  var TRACK_ELEV_Z = 78;
 
   function samplePathElev(pts, x, y) {
     var bestD = 1e12, bestE = 0;
@@ -272,6 +332,52 @@
     return best;
   }
 
+  /* track3: bank berm elev — crown toward center of bank pad */
+  function bankElevAt(x, y) {
+    var best = 0;
+    for (var i = 0; i < TRACK_BANKS.length; i++) {
+      var b = TRACK_BANKS[i];
+      var d = Math.hypot(x - b.x, y - b.y);
+      if (d >= b.r) continue;
+      var w = 1 - d / b.r;
+      /* Outer lip higher — ring-ish berm (peak ~0.55–0.85 radius) */
+      var ring = Math.sin(Math.min(1, d / b.r) * Math.PI);
+      var h = (b.tilt || 0.8) * (0.35 * w + 0.75 * ring * w);
+      if (h > best) best = h;
+    }
+    return best;
+  }
+
+  function rockElevAt(x, y) {
+    var best = 0;
+    for (var i = 0; i < TRACK_ROCKS.length; i++) {
+      var rk = TRACK_ROCKS[i];
+      var d = Math.hypot(x - rk.x, y - rk.y);
+      var rr = rk.r * 1.15;
+      if (d >= rr) continue;
+      var w = 1 - d / rr;
+      var h = (rk.h || 1) * (0.2 * w + 0.95 * w * w * w);
+      if (h > best) best = h;
+    }
+    return best;
+  }
+
+  /* Nearest rock under truck footprint — for hard bounce jolts */
+  function rockHitAt(x, y, reach) {
+    reach = reach != null ? reach : 8;
+    var best = null, bestD = 1e12;
+    for (var i = 0; i < TRACK_ROCKS.length; i++) {
+      var rk = TRACK_ROCKS[i];
+      var d = Math.hypot(x - rk.x, y - rk.y);
+      var hitR = rk.r + reach;
+      if (d < hitR && d < bestD) {
+        bestD = d;
+        best = rk;
+      }
+    }
+    return best;
+  }
+
   function trackElevAt(x, y) {
     if (!onTrack(x, y)) return 0;
     var a = samplePathElev(TRACK_MAIN, x, y);
@@ -282,9 +388,9 @@
     if (c.dist < best.dist) best = c;
     var pathE = 0;
     /* Wider ribbon influence so truck stays on hills across apron */
-    if (best.dist < 200) {
+    if (best.dist < 210) {
       pathE = best.elev;
-      if (best.dist > 28) pathE *= Math.max(0, 1 - (best.dist - 28) / 172);
+      if (best.dist > 28) pathE *= Math.max(0, 1 - (best.dist - 28) / 182);
     }
     var moundE = 0;
     for (var i = 0; i < TRACK_MOUNDS.length; i++) {
@@ -297,7 +403,9 @@
       }
     }
     var rampE = rampElevAt(x, y);
-    return (pathE * 1.05 + moundE * 0.95 + rampE * 1.15) * TRACK_ELEV_Z;
+    var bankE = bankElevAt(x, y);
+    var rockE = rockElevAt(x, y);
+    return (pathE * 1.05 + moundE * 0.95 + rampE * 1.15 + bankE * 1.05 + rockE * 1.25) * TRACK_ELEV_Z;
   }
 
   function wrapAngle(a) {
@@ -448,7 +556,7 @@
   }
 
 
-  /* hop3: continuous ranch foot hop — snappier plant + higher launch.
+  /* hop4: continuous ranch foot hop — higher launch + shorter plant (engines pass carry).
      opts: moving, zKey, zvKey, gndKey|ground, up, lift, groundHold, groundEps */
   function tickLocoHop(ent, dt, opts) {
     opts = opts || {};
@@ -459,9 +567,9 @@
     var gnd = opts.ground != null ? opts.ground
       : (opts.gndKey && ent[opts.gndKey] != null ? ent[opts.gndKey]
         : (ent.groundZ != null ? ent.groundZ : 0));
-    var up = opts.up != null ? opts.up : 210;
-    var lift = opts.lift != null ? opts.lift : 6;
-    var hold = opts.groundHold != null ? opts.groundHold : 0.025;
+    var up = opts.up != null ? opts.up : 250;
+    var lift = opts.lift != null ? opts.lift : 8;
+    var hold = opts.groundHold != null ? opts.groundHold : 0.012;
     var eps = opts.groundEps != null ? opts.groundEps : 1.2;
     var z = ent[zKey] || 0;
     var zv = ent[zvKey] || 0;
@@ -609,6 +717,8 @@
     TRACK_BRANCH_A: TRACK_BRANCH_A,
     TRACK_BRANCH_B: TRACK_BRANCH_B,
     TRACK_MOUNDS: TRACK_MOUNDS,
+    TRACK_BANKS: TRACK_BANKS,
+    TRACK_ROCKS: TRACK_ROCKS,
     RAMPS: RAMPS,
     TRUCK_SPOTS: TRUCK_SPOTS,
     STARSHIP: STARSHIP,
@@ -629,8 +739,18 @@
     isTruckHotspot: isTruckHotspot,
     rampAt: rampAt,
     rampElevAt: rampElevAt,
+    bankElevAt: bankElevAt,
+    rockElevAt: rockElevAt,
+    rockHitAt: rockHitAt,
     trackElevAt: trackElevAt,
     TRUCK_VIS: TRUCK_VIS,
+    WHEEL_SCALE: WHEEL_SCALE,
+    getWheelScale: getWheelScale,
+    setWheelScale: setWheelScale,
+    adjustWheelScale: adjustWheelScale,
+    wheelClearanceZ: wheelClearanceZ,
+    wheelBounceMul: wheelBounceMul,
+    wheelJumpMul: wheelJumpMul,
     wrapAngle: wrapAngle,
     approachAngle: approachAngle,
     zoneSignAlpha: zoneSignAlpha,

@@ -1398,3 +1398,57 @@ body.in-space .vjoy.vjoy-hint {
   box-shadow: 0 0 8px rgba(251, 191, 36, 0.12);
   letter-spacing: 0.01em;
 }
+
+
+/* track3: monster-truck wheel size HUD */
+.wheel-size {
+  position: absolute;
+  left: 50%;
+  bottom: max(18px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 28;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.78);
+  border: 2px solid rgba(251, 191, 36, 0.65);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.45), 0 0 18px rgba(251, 191, 36, 0.18);
+  pointer-events: auto;
+  color: #fef3c7;
+  font-weight: 800;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+.wheel-size[hidden] { display: none !important; }
+.wheel-size-label { opacity: 0.9; }
+.wheel-size-val { min-width: 36px; text-align: right; color: #fde68a; }
+.wheel-size button {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 2px solid rgba(255,255,255,0.55);
+  background: rgba(0,0,0,0.4);
+  color: #fff;
+  font-size: 20px;
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.wheel-size button:active { background: rgba(251, 191, 36, 0.35); }
+.wheel-size input[type="range"] {
+  width: min(140px, 28vw);
+  accent-color: #fbbf24;
+  cursor: pointer;
+}
+@media (max-width: 520px) {
+  .wheel-size {
+    bottom: max(108px, calc(env(safe-area-inset-bottom) + 96px));
+    padding: 6px 10px;
+    gap: 6px;
+  }
+  .wheel-size input[type="range"] { width: min(110px, 32vw); }
+  .wheel-size button { width: 32px; height: 32px; font-size: 18px; }
+}

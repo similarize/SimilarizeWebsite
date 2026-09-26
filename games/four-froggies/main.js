@@ -72,6 +72,12 @@
   let storyToast = "";
   let storyToastT = 0;
   let exitTipT = 0; /* polish11: brief EXIT tip after board */
+  let wheelHoldDir = 0; /* track3: hold [ ] or −/= to grow/shrink wheels */
+  const wheelSizeEl = document.getElementById("wheel-size");
+  const wheelSlider = document.getElementById("wheel-slider");
+  const wheelValEl = document.getElementById("wheel-size-val");
+  const btnWheelDown = document.getElementById("btn-wheel-down");
+  const btnWheelUp = document.getElementById("btn-wheel-up");
   let lastTs = 0;
   let audioCtx = null;
   let shakeT = 0;
@@ -349,6 +355,7 @@
         storyPanel.classList.toggle("near-phone-glow", nearPhone);
       }
     }
+    syncWheelUi();
     if (btnInteract) {
       const canAct = !!nearHot || !!(me && me.inTruck && phase === "hub");
       btnInteract.classList.toggle("ready", canAct);
@@ -361,6 +368,32 @@
     if (livesEl && phase === "space") {
       livesEl.textContent = "🚀 Space";
     }
+  }
+
+  function syncWheelUi(forceShow) {
+    const C = globalThis.FroggiesCanon;
+    const me = localPlayer();
+    const show = !!(forceShow || (phase === "hub" && me && me.inTruck));
+    if (wheelSizeEl) wheelSizeEl.hidden = !show;
+    if (!C || !C.getWheelScale) return;
+    const ws = C.getWheelScale();
+    if (wheelSlider && document.activeElement !== wheelSlider) {
+      wheelSlider.value = String(Math.round(ws * 100));
+    }
+    if (wheelValEl) wheelValEl.textContent = ws.toFixed(1) + "×";
+    if (me) me.wheelScale = ws;
+  }
+
+  function nudgeWheel(delta) {
+    const C = globalThis.FroggiesCanon;
+    if (!C || !C.adjustWheelScale) return;
+    const step = (C.WHEEL_SCALE && C.WHEEL_SCALE.step) || 0.08;
+    const ws = C.adjustWheelScale(delta * step);
+    const me = localPlayer();
+    if (me) me.wheelScale = ws;
+    syncWheelUi(true);
+    storyToast = "Wheels " + ws.toFixed(1) + "×";
+    storyToastT = 0.9;
   }
 
   function updateAbilityButton() {
@@ -734,7 +767,12 @@
         me.steerY = es.y;
         W.moveEntity(me, dt, undefined, world);
         const drive = W.tickDrive(world, me, dt);
-        if (drive.jumped) {
+        if (drive.rockHit) {
+          sfxJump();
+          storyToast = "ROCK HIT! +" + (drive.scrapGain || 0);
+          storyToastT = 1.3;
+          shakeT = 0.22;
+        } else if (drive.jumped) {
           sfxJump();
           storyToast = "JUMP! +" + drive.scrapGain + " scrap";
           storyToastT = 1.2;
@@ -759,6 +797,7 @@
           beep(660, 0.08, "triangle", 0.05);
         }
         if (me.speedBoost > 1) me.speedBoost = Math.max(1, me.speedBoost - dt * 0.5);
+        if (me.inTruck && wheelHoldDir) nudgeWheel(wheelHoldDir * dt * 4.5);
         easeCam(dt);
         nearHot = W.nearestHotspot(world, me.x, me.y, 70);
         /* polish5: sparkle when entering a hotspot */
@@ -1153,6 +1192,23 @@
     if ((e.key === "e" || e.key === "E" || e.key === "f" || e.key === "F") && (phase === "hub" || phase === "space")) {
       doInteract();
     }
+    /* track3: monster-truck wheels — [ ] or - = (hold grows/shrinks) */
+    if (e.key === "[" || e.key === "-" || e.key === "_") {
+      const me = localPlayer();
+      if (me && me.inTruck && phase === "hub") {
+        wheelHoldDir = -1;
+        nudgeWheel(-1);
+        e.preventDefault();
+      }
+    }
+    if (e.key === "]" || e.key === "=" || e.key === "+") {
+      const me = localPlayer();
+      if (me && me.inTruck && phase === "hub") {
+        wheelHoldDir = 1;
+        nudgeWheel(1);
+        e.preventDefault();
+      }
+    }
     if (e.key === "Escape") {
       if (story && story.isOpen()) {
         story.hide();
@@ -1174,8 +1230,47 @@
     if (["ArrowRight", "d", "D"].includes(e.key) && steerX > 0) steerX = 0;
     if (["ArrowUp", "w", "W"].includes(e.key) && steerY < 0) steerY = 0;
     if (["ArrowDown", "s", "S"].includes(e.key) && steerY > 0) steerY = 0;
+    if (e.key === "[" || e.key === "-" || e.key === "_" || e.key === "]" || e.key === "=" || e.key === "+") {
+      wheelHoldDir = 0;
+    }
     pushGuestInput(null);
   });
+
+
+  /* track3: wheel size UI + cam zoom-out range */
+  function bindWheelSizeUi() {
+    if (btnWheelDown) {
+      btnWheelDown.addEventListener("pointerdown", (e) => { e.preventDefault(); wheelHoldDir = -1; nudgeWheel(-1); });
+      btnWheelDown.addEventListener("pointerup", () => { wheelHoldDir = 0; });
+      btnWheelDown.addEventListener("pointerleave", () => { wheelHoldDir = 0; });
+      btnWheelDown.addEventListener("pointercancel", () => { wheelHoldDir = 0; });
+    }
+    if (btnWheelUp) {
+      btnWheelUp.addEventListener("pointerdown", (e) => { e.preventDefault(); wheelHoldDir = 1; nudgeWheel(1); });
+      btnWheelUp.addEventListener("pointerup", () => { wheelHoldDir = 0; });
+      btnWheelUp.addEventListener("pointerleave", () => { wheelHoldDir = 0; });
+      btnWheelUp.addEventListener("pointercancel", () => { wheelHoldDir = 0; });
+    }
+    if (wheelSlider) {
+      wheelSlider.addEventListener("input", () => {
+        const C = globalThis.FroggiesCanon;
+        if (!C || !C.setWheelScale) return;
+        const ws = C.setWheelScale(Number(wheelSlider.value) / 100);
+        const me = localPlayer();
+        if (me) me.wheelScale = ws;
+        if (wheelValEl) wheelValEl.textContent = ws.toFixed(1) + "×";
+      });
+    }
+    window.addEventListener("wheel", (e) => {
+      if (phase !== "hub" || !W || !W.adjustViewScale) return;
+      if (document.body.classList.contains("in-title")) return;
+      if (e.target && (e.target.closest && e.target.closest("#wheel-size, #story-panel, #lobby-panel"))) return;
+      e.preventDefault();
+      const dir = e.deltaY > 0 ? -0.04 : 0.04;
+      W.adjustViewScale(dir);
+    }, { passive: false });
+  }
+  bindWheelSizeUi();
 
   function tryStartFromUi() {
     const role = party ? party.getRole() : "solo";

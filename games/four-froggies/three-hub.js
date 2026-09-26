@@ -232,16 +232,22 @@
     hl.position.set(1.28, 0.32, 0); g.add(hl);
     /* Wheel arches (half-torus flares) */
     var archM = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.6, roughness: 0.35 });
+    g.userData.arches = [];
     function arch(x, z) {
       var a = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.03, 6, 10, Math.PI), archM);
       a.rotation.y = Math.PI / 2; a.rotation.z = Math.PI; a.position.set(x, 0.22, z); g.add(a);
+      a.userData.baseY = 0.22;
+      g.userData.arches.push(a);
     }
     arch(-0.5, 0.42); arch(-0.5, -0.42); arch(0.55, 0.42); arch(0.55, -0.42);
-    /* Wheels */
+    /* Wheels — track3: refs for live monster scale */
     var wheelM = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.8 });
+    g.userData.wheels = [];
     function wheel(x, z) {
       var w = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.14, 10), wheelM);
       w.rotation.z = Math.PI / 2; w.position.set(x, 0.16, z); g.add(w);
+      w.userData.baseY = 0.16; w.userData.baseX = x; w.userData.baseZ = z;
+      g.userData.wheels.push(w);
     }
     wheel(-0.5, 0.42); wheel(-0.5, -0.42); wheel(0.55, 0.42); wheel(0.55, -0.42);
     var edge = new THREE.LineSegments(
@@ -255,6 +261,32 @@
     g.scale.setScalar(ts);
     g.userData.truckScale = ts;
     return g;
+  }
+
+  function applyTruckWheelScale(g, ws) {
+    if (!g || !g.userData) return;
+    ws = ws != null ? ws : (C.getWheelScale ? C.getWheelScale() : 1);
+    if (ws < 1) ws = 1;
+    if (ws > 2.8) ws = 2.8;
+    var wheels = g.userData.wheels || [];
+    for (var i = 0; i < wheels.length; i++) {
+      var w = wheels[i];
+      w.scale.set(ws, ws, ws);
+      w.position.y = (w.userData.baseY || 0.16) * ws;
+    }
+    var arches = g.userData.arches || [];
+    for (var j = 0; j < arches.length; j++) {
+      var a = arches[j];
+      a.scale.set(ws, ws, ws);
+      a.position.y = (a.userData.baseY || 0.22) * ws;
+    }
+    /* Body rides up with clearance */
+    var lift = (ws - 1) * 0.22;
+    if (g.userData.bodyMat && g.children) {
+      /* keep mesh group y offset via userData */
+    }
+    g.userData.wheelScale = ws;
+    g.userData.wheelLift = lift;
   }
 
   function addPathRibbon(pts, y, color, width) {
@@ -595,6 +627,36 @@
       /* truck2: taller wedge — truck rides up via elev, mesh matches contact */
       ramp.position.set(tp.x, 0.42, tp.z); ramp.rotation.x = -0.42; scene.add(ramp);
     }
+    /* track3: bank berms */
+    var banks = C.TRACK_BANKS || [];
+    for (var bi = 0; bi < banks.length; bi++) {
+      var bk = banks[bi], bp = worldToThree(bk.x, bk.y);
+      var berm = new THREE.Mesh(
+        new THREE.TorusGeometry(Math.max(0.6, bk.r * 0.012), 0.22 + (bk.tilt || 0.8) * 0.12, 8, 24, Math.PI * 1.4),
+        new THREE.MeshStandardMaterial({ color: 0x78716c, roughness: 0.92 })
+      );
+      berm.rotation.x = -Math.PI / 2;
+      berm.position.set(bp.x, 0.2 + (bk.tilt || 0.8) * 0.25, bp.z);
+      scene.add(berm);
+      addLabel(bk.label || "BANK", "#fef3c7", bp.x, 0.9 + (bk.tilt || 0.8) * 0.35, bp.z);
+    }
+    /* track3: big rocks */
+    var rocks = C.TRACK_ROCKS || [];
+    state.trackRocks = [];
+    for (var rk = 0; rk < rocks.length; rk++) {
+      var rko = rocks[rk], rp = worldToThree(rko.x, rko.y);
+      var rock = new THREE.Mesh(
+        new THREE.DodecahedronGeometry(rko.r * 0.018, 0),
+        new THREE.MeshStandardMaterial({ color: 0x57534e, roughness: 0.88, flatShading: true })
+      );
+      rock.position.set(rp.x, (rko.h || 1) * 0.35 + 0.15, rp.z);
+      rock.scale.set(1, 0.85 + (rko.h || 1) * 0.25, 1);
+      rock.castShadow = true;
+      scene.add(rock);
+      addLabel("ROCK", "#e7e5e4", rp.x, rock.position.y + 0.55, rp.z);
+      state.trackRocks.push({ data: rko, mesh: rock });
+    }
+
     /* polish9: start/finish gate */
     var gp = worldToThree(1870, 2225);
     var postMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.4 });
@@ -1577,18 +1639,41 @@
         if (Math.abs(state.groundLift) < 0.01) state.groundLift = 0;
       }
       var groundLift = state.groundLift || 0;
+      var ws3 = C.getWheelScale ? C.getWheelScale() : 1;
+      var jumpMul3 = C.wheelJumpMul ? C.wheelJumpMul(ws3) : (0.9 + (ws3 - 1) * 0.55);
+      var bounceMul3 = C.wheelBounceMul ? C.wheelBounceMul(ws3) : (0.85 + ws3 * 0.55);
+      var clear3 = (ws3 - 1) * 0.12;
+      groundLift = groundLift + clear3;
       var airL = (state.zLift || 0) - groundLift;
       if (state.inTruck && C.rampAt) {
         var ramp = C.rampAt(wpos0.x, wpos0.y);
-        if (ramp && sp > 1.0 && airL < 0.35) {
-          state.zVel = Math.max(state.zVel || 0, 6.2 * (ramp.boost || 1.3));
+        if (ramp && sp > 1.0 && airL < 0.35 + clear3 * 0.5) {
+          state.zVel = Math.max(state.zVel || 0, 6.2 * (ramp.boost || 1.3) * jumpMul3);
           state.zLift = Math.max(state.zLift || 0, groundLift + 0.22);
           state.scrap += 0.02;
         }
       }
-      var dG = groundLift - prevG;
-      if (state.inTruck && airL < 0.28 && sp > 2.4 && dG < -0.035) {
-        var crest = Math.min(9.5, sp * 0.85 + (-dG) * 28);
+      state.rockCool = Math.max(0, (state.rockCool || 0) - dt);
+      if (state.inTruck && state.rockCool <= 0 && airL < 0.5 && C.rockHitAt && sp > 1.2) {
+        var rock = C.rockHitAt(wpos0.x, wpos0.y, 10 + ws3 * 6);
+        if (rock) {
+          var into = Math.hypot(wpos0.x - rock.x, wpos0.y - rock.y) || 1;
+          var nx = (wpos0.x - rock.x) / into;
+          var ny = (wpos0.y - rock.y) / into;
+          var rb = (rock.bounce || 1.8) * bounceMul3 * Math.min(1.9, Math.max(0.55, sp / 5));
+          state.zVel = Math.max(state.zVel || 0, 5.5 * rb);
+          state.zLift = Math.max(state.zLift || 0, groundLift + 0.28);
+          state.vx += nx * (2.8 + sp * 0.35) * rb;
+          state.vz += ny * (2.8 + sp * 0.35) * rb;
+          state.rockCool = 0.28;
+          state.scrap += 0.05;
+          state.toast = "ROCK HIT!"; state.toastT = 1.2;
+          state.shakeT = Math.max(state.shakeT || 0, 0.18);
+        }
+      }
+      var dG = (state.groundLift || 0) - prevG;
+      if (state.inTruck && airL < 0.28 + clear3 * 0.4 && sp > 2.4 && dG < -0.035) {
+        var crest = Math.min(10.5, (sp * 0.85 + (-dG) * 28) * jumpMul3);
         if (crest > 1.2) {
           state.zVel = Math.max(state.zVel || 0, crest);
           state.zLift = Math.max(state.zLift || 0, groundLift + 0.18);
@@ -1606,7 +1691,7 @@
           var impact = Math.max(0, -(state.zVel || 0));
           state.zLift = groundLift;
           state.hopLandT = 0;
-          if (impact > 1.4) state.zVel = Math.min(3.2, impact * 0.28);
+          if (impact > 1.2) state.zVel = Math.min(3.2 + ws3 * 0.9, impact * 0.28 * bounceMul3);
           else state.zVel = 0;
         }
       } else {
@@ -1649,7 +1734,7 @@
       state.bouncePhase = (state.bouncePhase || 0) + dt * (3 + sp * 0.4);
       var airNow = (state.zLift || 0) - (state.groundLift || 0);
       var bounceY = state.inTruck && airNow < 0.35
-        ? Math.sin(state.bouncePhase * 2.4) * Math.min(1.2, sp / 8) * 0.08 : 0;
+        ? Math.sin(state.bouncePhase * 2.4) * Math.min(1.2, sp / 8) * 0.08 * (0.85 + ws3 * 0.55) : 0;
       if (!state.fx) state.fx = [];
       if (!state.inTruck && !wet && sp > 1.2) {
         state.dustT = (state.dustT || 0) - dt;
@@ -1768,7 +1853,10 @@
         state.driveTruck.visible = !!state.inTruck;
         if (state.inTruck) {
           /* truck2: zLift already three-Y — was *0.08 (invisible hills) */
-          state.driveTruck.position.set(state.player.position.x, 0.08 + state.zLift + bounceY, state.player.position.z);
+          var wsVis = C.getWheelScale ? C.getWheelScale() : 1;
+          if (typeof applyTruckWheelScale === "function") applyTruckWheelScale(state.driveTruck, wsVis);
+          var wLift = state.driveTruck.userData.wheelLift || 0;
+          state.driveTruck.position.set(state.player.position.x, 0.08 + state.zLift + bounceY + wLift, state.player.position.z);
           /* polish11: yaw follows travel so nose matches steer (mesh nose +X → -PI/2 vs frog +Z) */
           var ts0 = state.driveTruck.userData.truckScale || 2.05;
           state.driveTruck.scale.set(ts0, ts0, ts0);
@@ -1804,6 +1892,9 @@
           var pts = pt.mesh.userData.truckScale || ((C.TRUCK_VIS && C.TRUCK_VIS.threeScale) || 2.05);
           pt.mesh.scale.setScalar(pts * (nearT ? 1.06 : 1));
         }
+      }
+      if (global.FroggiesEngines && global.FroggiesEngines.setWheelPanelVisible) {
+        global.FroggiesEngines.setWheelPanelVisible(!!state.inTruck);
       }
       /* truck2: player Y tracks full elev (hidden while driving; cam/companions use it) */
       /* hop2: Y lift + squash/stretch + always-hop cycle */
@@ -1960,8 +2051,8 @@
     target.x += (state.player.position.x - target.x) * followK;
     target.z += (state.player.position.z - target.z) * followK;
     target.y = 0;
-    var camDist = state.mode === "ranch" ? 16 : 12;
-    var camH = state.mode === "ranch" ? 18 : 14;
+    var camDist = state.mode === "ranch" ? 18.5 : 12;
+    var camH = state.mode === "ranch" ? 20.5 : 14;
     /* polish6: slight walk bob / tilt */
     var walkBob = 0, walkTilt = 0;
     if (state.mode === "ranch" && !state.inTruck && Math.hypot(state.vx || 0, state.vz || 0) > 1.2) {

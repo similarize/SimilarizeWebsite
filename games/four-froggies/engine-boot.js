@@ -5,7 +5,7 @@
   "use strict";
 
   var C = global.FroggiesCanon;
-  var CACHE = "20260926-hop3";
+  var CACHE = "20260926-track3";
   var CDN = {
     phaser: "https://cdn.jsdelivr.net/npm/phaser@3.87.0/dist/phaser.min.js",
     three: "https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js",
@@ -446,6 +446,24 @@
         a.pulseAbility();
         e.preventDefault();
       }
+      /* track3: wheel size while driving — [ ] / - = */
+      if (k === "[" || k === "-" || k === "]") {
+        var C = global.FroggiesCanon;
+        if (C && C.adjustWheelScale) {
+          var dir = (k === "]") ? 1 : -1;
+          var ws = C.adjustWheelScale(dir * ((C.WHEEL_SCALE && C.WHEEL_SCALE.step) || 0.08));
+          syncWheelHud(ws);
+          e.preventDefault();
+        }
+      }
+      if (k === "=" || k === "+") {
+        var C2 = global.FroggiesCanon;
+        if (C2 && C2.adjustWheelScale) {
+          var ws2 = C2.adjustWheelScale((C2.WHEEL_SCALE && C2.WHEEL_SCALE.step) || 0.08);
+          syncWheelHud(ws2);
+          e.preventDefault();
+        }
+      }
     });
     window.addEventListener("keyup", function (e) {
       if (!engineRunning) return;
@@ -577,8 +595,51 @@
     );
   }
 
+  function syncWheelHud(ws) {
+    var panel = $("wheel-size");
+    var slider = $("wheel-slider");
+    var val = $("wheel-size-val");
+    if (ws == null && global.FroggiesCanon && global.FroggiesCanon.getWheelScale) {
+      ws = global.FroggiesCanon.getWheelScale();
+    }
+    if (slider && ws != null && document.activeElement !== slider) slider.value = String(Math.round(ws * 100));
+    if (val && ws != null) val.textContent = Number(ws).toFixed(1) + "×";
+    if (panel) {
+      /* Show when alt engine reports in-truck via toast/hooks — toggled by hubs too */
+    }
+  }
+
+  function bindSharedWheelUi() {
+    if (bindSharedWheelUi._done) return;
+    bindSharedWheelUi._done = true;
+    var down = $("btn-wheel-down");
+    var up = $("btn-wheel-up");
+    var slider = $("wheel-slider");
+    function nudge(dir) {
+      var C = global.FroggiesCanon;
+      if (!C || !C.adjustWheelScale) return;
+      var ws = C.adjustWheelScale(dir * ((C.WHEEL_SCALE && C.WHEEL_SCALE.step) || 0.08));
+      syncWheelHud(ws);
+    }
+    if (down) down.addEventListener("click", function () { nudge(-1); });
+    if (up) up.addEventListener("click", function () { nudge(1); });
+    if (slider) {
+      slider.addEventListener("input", function () {
+        var C = global.FroggiesCanon;
+        if (!C || !C.setWheelScale) return;
+        syncWheelHud(C.setWheelScale(Number(slider.value) / 100));
+      });
+    }
+  }
+
   global.FroggiesEngines = {
     tryStart: tryStart,
+    syncWheelHud: syncWheelHud,
+    setWheelPanelVisible: function (on) {
+      var panel = $("wheel-size");
+      if (panel) panel.hidden = !on;
+      if (on) syncWheelHud();
+    },
     stopAltEngines: stopAltEngines,
     leaveOrbit: function () {
       if (currentEngine === "phaser" && global.FroggiesPhaser && global.FroggiesPhaser.leaveOrbit) {
@@ -603,6 +664,7 @@
   function bootControls() {
     initPicker();
     bindVirtualJoystick();
+    bindSharedWheelUi();
     /* joy2: notice pulse once when player first enters hub/space */
     try {
       var mo = new MutationObserver(function () {

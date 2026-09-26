@@ -21,6 +21,8 @@
    polish11: truck yaw follows travel; brief EXIT tip (no sticky billboard); ZOOM ability;
    hop1: HOP ability (Y arc + squash); shove toys/animals/pollen;
    hop2: ranch foot ALWAYS hops (continuous arc cycle); ability HOP = bigger jump;
+   hop3: faster loco hop + spam HOP + stack height; mech robots;
+   track3: banked turns + rock obstacles (hard bounce) + live monster-truck wheels; more cam zoom-out;
    particle caps; sunset sky shift over play time.
    mobile1: phone+desktop shared UI — smaller/toggle-friendly mini-map + harder particle caps on narrow.
    ~10× map: real roam between ranch house / track / pond / Starship.
@@ -114,10 +116,11 @@
   ];
   /* Mountain mound centers inside track apron */
   var TRACK_MOUNDS = [
-    { x: 2260, y: 1740, r: 160, h: 1.2 },
-    { x: 3280, y: 1820, r: 140, h: 1.05 },
-    { x: 2460, y: 2480, r: 110, h: 0.55 },
-    { x: 3180, y: 2680, r: 130, h: -0.35 },
+    { x: 2260, y: 1740, r: 160, h: 1.35 },
+    { x: 3280, y: 1820, r: 150, h: 1.2 },
+    { x: 2460, y: 2480, r: 120, h: 0.7 },
+    { x: 3180, y: 2680, r: 130, h: -0.4 },
+    { x: 2800, y: 2100, r: 100, h: 0.85 },
   ];
   /* polish9: start/finish gate on west straight (TRACK_MAIN[0] region) */
   var TRACK_GATE = { x: 1870, y: 2225, halfW: 70, halfH: 28 };
@@ -202,13 +205,31 @@
     return null;
   }
 
+  /* track3: cam view scale — lower = more world visible (zoom out). Mouse wheel / setViewScale. */
+  var VIEW_SCALE_BASE = 0.88;
+  var VIEW_SCALE_MIN = 0.66;
+  var VIEW_SCALE_MAX = 1.08;
+  var viewScaleUser = 1;
+
+  function getViewScale() {
+    return clamp(VIEW_SCALE_BASE * viewScaleUser, VIEW_SCALE_MIN, VIEW_SCALE_MAX);
+  }
+  function setViewScaleUser(u) {
+    viewScaleUser = clamp(u, VIEW_SCALE_MIN / VIEW_SCALE_BASE, VIEW_SCALE_MAX / VIEW_SCALE_BASE);
+    return getViewScale();
+  }
+  function adjustViewScale(delta) {
+    return setViewScaleUser(viewScaleUser + (delta || 0));
+  }
+
   function project(wx, wy, camX, camY, vw, vh) {
     var dx = wx - camX;
     var dy = wy - camY;
-    var sx = vw * 0.5 + dx * 0.98 - dy * 0.52;
-    var sy = vh * 0.46 + dx * 0.30 + dy * 0.58;
+    var vs = getViewScale();
+    var sx = vw * 0.5 + (dx * 0.98 - dy * 0.52) * vs;
+    var sy = vh * 0.46 + (dx * 0.30 + dy * 0.58) * vs;
     /* polish6: wider scale-with-depth so distant props shrink, near ones punch */
-    var depth = clamp(0.48 + (wy - camY) / MAP_H * 0.78 + dy * 0.00022, 0.28, 1.52);
+    var depth = clamp(0.48 + (wy - camY) / MAP_H * 0.78 + dy * 0.00022, 0.28, 1.52) * (0.92 + vs * 0.08);
     return { x: sx, y: sy, depth: depth, sortY: wy, scale: depth };
   }
 
@@ -426,6 +447,8 @@
       wakePhase: 0,
       truckBounce: 0,
       bouncePhase: 0,
+      wheelScale: 1,
+      rockCool: 0,
       dustTimer: 0,
       color: colors.body,
       accent: colors.accent,
@@ -843,11 +866,25 @@
     var groundZ = ent.groundZ || 0;
     var airAbove = (ent.z || 0) - groundZ;
     result.onWater = wet && airAbove < 4;
+    /* track3: wheel scale from entity or shared canon live value */
+    var canonW = global.FroggiesCanon;
+    var ws = ent.wheelScale != null ? ent.wheelScale : (canonW && canonW.getWheelScale ? canonW.getWheelScale() : 1);
+    if (canonW && canonW.getWheelScale) {
+      ws = canonW.getWheelScale();
+      ent.wheelScale = ws;
+    }
+    var jumpMul = canonW && canonW.wheelJumpMul ? canonW.wheelJumpMul(ws) : (0.9 + (ws - 1) * 0.55);
+    var bounceMul = canonW && canonW.wheelBounceMul ? canonW.wheelBounceMul(ws) : (0.85 + ws * 0.55);
+    var clearZ = canonW && canonW.wheelClearanceZ ? canonW.wheelClearanceZ(ws) : (ws - 1) * 18;
+    /* Bigger wheels ride a bit higher on contact */
+    groundZ = groundZ + clearZ * 0.35;
+    airAbove = (ent.z || 0) - groundZ;
+
     var ramp = rampAt(ent.x, ent.y);
-    if (ramp && airAbove <= 6 && speed > 55) {
-      var boost = ramp.boost * clamp(speed / 190, 0.6, 1.55);
+    if (ramp && airAbove <= 6 + clearZ * 0.2 && speed > 55) {
+      var boost = ramp.boost * clamp(speed / 190, 0.6, 1.55) * jumpMul;
       ent.zVel = 280 * boost;
-      ent.z = Math.max(ent.z, groundZ + 8);
+      ent.z = Math.max(ent.z, groundZ + 8 + clearZ * 0.15);
       result.jumped = true;
       world.stuntCombo += 1;
       var gain = 10 + world.stuntCombo * 5;
@@ -859,10 +896,40 @@
         spawnSparks(world, ent.x, ent.y, 6);
       }
     }
+
+    /* track3: big rock hit — hard bounce proportional to wheel size + speed */
+    ent.rockCool = Math.max(0, (ent.rockCool || 0) - dt);
+    if (ent.rockCool <= 0 && airAbove <= 10 + clearZ * 0.25 && canonW && canonW.rockHitAt) {
+      var rock = canonW.rockHitAt(ent.x, ent.y, 10 + ws * 6);
+      if (rock && speed > 40) {
+        var into = Math.hypot(ent.x - rock.x, ent.y - rock.y);
+        var nx = (ent.x - rock.x) / Math.max(1, into);
+        var ny = (ent.y - rock.y) / Math.max(1, into);
+        var rb = (rock.bounce || 1.8) * bounceMul * clamp(speed / 160, 0.55, 1.85);
+        ent.zVel = Math.max(ent.zVel || 0, 220 * rb);
+        ent.z = Math.max(ent.z || 0, groundZ + 10 + clearZ * 0.2);
+        /* Shove off the rock hard */
+        var shove = (140 + speed * 0.55) * rb * 0.55;
+        ent.vx += nx * shove;
+        ent.vy += ny * shove;
+        ent.truckBounce = Math.max(ent.truckBounce || 0, 10 + rb * 6 + ws * 3);
+        ent.rockCool = 0.28;
+        result.jumped = true;
+        result.rockHit = true;
+        world.stuntCombo += 1;
+        var rg = 8 + world.stuntCombo * 4;
+        world.scrap += rg;
+        result.scrapGain = (result.scrapGain || 0) + rg;
+        spawnDust(world, rock.x, rock.y, 8);
+        spawnSparks(world, rock.x, rock.y, 8);
+        result.landShake = true;
+      }
+    }
     /* truck2: crest launch — fast over downhill lip after a rise */
-    var dGround = groundZ - prevGround;
-    if (airAbove <= 6 && speed > 75 && dGround < -1.4) {
-      var crest = Math.min(360, speed * 0.55 + (-dGround) * 14);
+    /* dGround from raw track elev (ignore wheel clearance offset) */
+    var dGround = (ent.groundZ || 0) - prevGround;
+    if (airAbove <= 6 + clearZ * 0.15 && speed > 75 && dGround < -1.4) {
+      var crest = Math.min(400, (speed * 0.55 + (-dGround) * 14) * jumpMul);
       if (crest > 60) {
         ent.zVel = Math.max(ent.zVel || 0, crest);
         ent.z = Math.max(ent.z || 0, groundZ + 6);
@@ -900,10 +967,10 @@
         var plunge = impact + world.airTime * 90;
         var airSnap = world.airTime;
         world.airTime = 0;
-        /* truck1: land bounce from impact */
-        if (impact > 70 && !wet) {
-          ent.zVel = Math.min(155, impact * 0.3);
-          ent.truckBounce = Math.max(ent.truckBounce || 0, 7 + impact * 0.045);
+        /* truck1 + track3: land bounce from impact — bigger wheels rebound more */
+        if (impact > 55 && !wet) {
+          ent.zVel = Math.min(155 + ws * 40, impact * 0.3 * bounceMul);
+          ent.truckBounce = Math.max(ent.truckBounce || 0, 7 + impact * 0.045 * bounceMul + ws * 2);
         } else {
           ent.zVel = 0;
         }
@@ -956,15 +1023,15 @@
 
     /* polish4: truck bounce — suspension hop while rolling */
     ent.bouncePhase = (ent.bouncePhase || 0) + dt * (3.2 + speed * 0.018);
-    airAbove = (ent.z || 0) - (ent.groundZ || 0);
-    if (airAbove <= 2.5) {
-      var bounceAmp = clamp(speed / 280, 0, 1.35);
+    airAbove = (ent.z || 0) - groundZ;
+    if (airAbove <= 2.5 + clearZ * 0.1) {
+      var bounceAmp = clamp(speed / 280, 0, 1.35) * bounceMul;
       if (onTrack(ent.x, ent.y)) bounceAmp *= 1.45;
       if (wet) bounceAmp *= 0.55;
       var baseBounce = Math.sin(ent.bouncePhase * 2.4) * bounceAmp * 3.4
         + Math.sin(ent.bouncePhase * 5.1) * bounceAmp * 1.2;
       /* Add hill chatter from elevation deltas */
-      if (onTrack(ent.x, ent.y)) baseBounce += clamp(dGround * 0.35, -4, 4);
+      if (onTrack(ent.x, ent.y)) baseBounce += clamp(dGround * 0.35 * bounceMul, -5, 6);
       ent.truckBounce = baseBounce;
       if (!wet && speed > 60 && Math.random() < dt * (1.2 + speed * 0.008)) {
         spawnDust(world, ent.x - ent.facing * 18, ent.y + 8, 1);
@@ -2144,6 +2211,82 @@
       ctx.strokeRect(sp.x - 5, sp.y - 7, 10, 14);
     }
 
+    /* track3: banked turn berms */
+    (function drawBanks() {
+      var banks = (global.FroggiesCanon && global.FroggiesCanon.TRACK_BANKS) || [];
+      for (var bi = 0; bi < banks.length; bi++) {
+        var bk = banks[bi];
+        var bp = project(bk.x, bk.y, camX, camY, vw, vh);
+        var brx = bk.r * 0.55 * bp.depth;
+        var bry = bk.r * 0.28 * bp.depth;
+        var bh = (bk.tilt || 0.8) * 28 * bp.depth;
+        /* Outer berm arc */
+        ctx.fillStyle = "rgba(90, 70, 48, 0.72)";
+        ctx.beginPath();
+        ctx.ellipse(bp.x, bp.y - bh * 0.15, brx, bry, -0.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(251, 191, 36, 0.55)";
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.ellipse(bp.x, bp.y - bh * 0.35, brx * 0.82, bry * 0.75, -0.4, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.strokeStyle = "rgba(254, 243, 199, 0.4)";
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.ellipse(bp.x, bp.y - bh * 0.55, brx * 0.55, bry * 0.5, -0.4, 0, Math.PI * 2);
+        ctx.stroke();
+        /* Raised outer lip cue */
+        ctx.strokeStyle = "#f59e0b";
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.ellipse(bp.x, bp.y - bh * 0.2, brx * 0.95, bry * 0.9, -0.4, -0.2, Math.PI * 1.1);
+        ctx.stroke();
+        ctx.fillStyle = "#fef3c7";
+        ctx.font = "bold " + Math.round(10 * bp.depth) + "px Segoe UI, system-ui, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(bk.label || "BANK", bp.x, bp.y - bh - 4 * bp.depth);
+      }
+    })();
+
+    /* track3: big rock obstacles */
+    (function drawRocks() {
+      var rocks = (global.FroggiesCanon && global.FroggiesCanon.TRACK_ROCKS) || [];
+      for (var ri = 0; ri < rocks.length; ri++) {
+        var rk = rocks[ri];
+        var rp = project(rk.x, rk.y, camX, camY, vw, vh);
+        var rr = rk.r * 0.42 * rp.depth;
+        var rh = (rk.h || 1) * 22 * rp.depth;
+        drawSoftShadow(ctx, rp.x, rp.y + 4 * rp.depth, rr * 1.1, rr * 0.35, 0.4);
+        var rg = ctx.createRadialGradient(rp.x - rr * 0.25, rp.y - rh * 0.6, rr * 0.1, rp.x, rp.y - rh * 0.2, rr * 1.2);
+        rg.addColorStop(0, "#a8a29e");
+        rg.addColorStop(0.45, "#57534e");
+        rg.addColorStop(1, "#1c1917");
+        ctx.fillStyle = rg;
+        ctx.beginPath();
+        ctx.moveTo(rp.x - rr * 0.95, rp.y);
+        ctx.quadraticCurveTo(rp.x - rr * 1.05, rp.y - rh * 0.55, rp.x - rr * 0.35, rp.y - rh);
+        ctx.quadraticCurveTo(rp.x + rr * 0.15, rp.y - rh * 1.15, rp.x + rr * 0.55, rp.y - rh * 0.7);
+        ctx.quadraticCurveTo(rp.x + rr * 1.05, rp.y - rh * 0.25, rp.x + rr * 0.9, rp.y);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = "#0c0a09";
+        ctx.lineWidth = 2.4;
+        ctx.stroke();
+        /* Crack / facet */
+        ctx.strokeStyle = "rgba(214, 211, 209, 0.45)";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(rp.x - rr * 0.3, rp.y - rh * 0.2);
+        ctx.lineTo(rp.x + rr * 0.1, rp.y - rh * 0.75);
+        ctx.lineTo(rp.x + rr * 0.45, rp.y - rh * 0.35);
+        ctx.stroke();
+        ctx.fillStyle = "#fef3c7";
+        ctx.font = "bold " + Math.round(9 * rp.depth) + "px Segoe UI, system-ui, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("ROCK", rp.x, rp.y - rh - 6 * rp.depth);
+      }
+    })();
+
     /* Ramps — crisper wedge + edge */
     for (var ri = 0; ri < RAMPS.length; ri++) {
       var r = RAMPS[ri];
@@ -2182,8 +2325,8 @@
     ctx.lineWidth = 3;
     ctx.font = "bold 14px Segoe UI, system-ui, sans-serif";
     ctx.textAlign = "center";
-    ctx.strokeText("Monster truck track", label.x, label.y - 8);
-    ctx.fillText("Monster truck track", label.x, label.y - 8);
+    ctx.strokeText("Monster truck track · banks · rocks", label.x, label.y - 8);
+    ctx.fillText("Monster truck track · banks · rocks", label.x, label.y - 8);
   }
 
   function drawPond(ctx, camX, camY, vw, vh, world, t) {
@@ -2365,8 +2508,13 @@
     var vis = (global.FroggiesCanon && global.FroggiesCanon.TRUCK_VIS) || {};
     var s = (vis.canvasScale != null ? vis.canvasScale : 0.86) * depth;
     var bounce = (water && water.bounce) ? water.bounce : 0;
-    /* truck2: taller elev draw so hills/jumps read clearly */
-    var lift = (z || 0) * 0.72 * depth + (driving ? bounce * depth * 0.55 : 0);
+    var wsEarly = 1;
+    if (water && water.wheelScale != null) wsEarly = water.wheelScale;
+    else if (global.FroggiesCanon && global.FroggiesCanon.getWheelScale) wsEarly = global.FroggiesCanon.getWheelScale();
+    if (wsEarly < 1) wsEarly = 1;
+    if (wsEarly > 2.8) wsEarly = 2.8;
+    /* truck2: taller elev draw so hills/jumps read clearly; track3: wheel clearance */
+    var lift = (z || 0) * 0.72 * depth + (driving ? bounce * depth * 0.55 : 0) + (wsEarly - 1) * 7 * depth;
     var wet = water && water.inWater;
     var sub = wet ? clamp(water.sub || 0, 0, 1.2) : 0;
     /* Surface drive sits ON the water — tiny lift; dive sinks visually */
@@ -2501,22 +2649,38 @@
     /* Tail light bar */
     ctx.fillStyle = driving ? "#f87171" : "#7f1d1d";
     ctx.fillRect(-38 * s, -1 * s, 7 * s, 4 * s);
+    /* track3: live monster-truck wheel scale (body already lifted via drawY) */
+    var ws = wsEarly;
+
     function wheel(wx, wy, r) {
-      r = r || 8.5;
-      /* Wheel arch flare */
+      r = (r || 8.5) * ws;
+      /* Wheel arch flare — grows with monster wheels */
       ctx.strokeStyle = "rgba(148,163,184,0.85)";
-      ctx.lineWidth = 2.2;
+      ctx.lineWidth = 2.2 + (ws - 1) * 1.2;
       ctx.beginPath();
-      ctx.arc(wx, wy - 1 * s, (r + 3.2) * s, Math.PI * 1.05, Math.PI * 1.95);
+      ctx.arc(wx, wy - 1 * s, (r + 3.2 * ws) * s, Math.PI * 1.05, Math.PI * 1.95);
       ctx.stroke();
       ctx.fillStyle = "#020617";
       ctx.beginPath(); ctx.arc(wx, wy, r * s, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = "#94a3b8"; ctx.lineWidth = 2.4;
-      ctx.beginPath(); ctx.arc(wx, wy, (r - 2.6) * s, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = ws > 1.4 ? "#64748b" : "#94a3b8";
+      ctx.lineWidth = 2.4 + (ws - 1) * 0.8;
+      ctx.beginPath(); ctx.arc(wx, wy, Math.max(2, r - 2.6 * ws) * s, 0, Math.PI * 2); ctx.stroke();
       ctx.fillStyle = "#334155";
-      ctx.beginPath(); ctx.arc(wx, wy, (r - 5) * s, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(wx, wy, Math.max(1.2, r - 5 * ws) * s, 0, Math.PI * 2); ctx.fill();
+      /* Monster tread nubs */
+      if (ws > 1.35) {
+        ctx.strokeStyle = "rgba(148,163,184,0.55)";
+        ctx.lineWidth = 1.5;
+        for (var ti = 0; ti < 6; ti++) {
+          var ta = (ti / 6) * Math.PI * 2;
+          ctx.beginPath();
+          ctx.moveTo(wx + Math.cos(ta) * (r - 1.2) * s, wy + Math.sin(ta) * (r - 1.2) * s);
+          ctx.lineTo(wx + Math.cos(ta) * r * s, wy + Math.sin(ta) * r * s);
+          ctx.stroke();
+        }
+      }
     }
-    var wheelY = (z || 0) < 8 ? 10 : 5;
+    var wheelY = (z || 0) < 8 ? 10 + (ws - 1) * 2 : 5 + (ws - 1);
     if (!(wet && sub > 0.75)) {
       wheel(-22 * s, wheelY * s, 9.2);
       wheel(-8 * s, wheelY * s, 8.4);   /* dual rear */
@@ -2666,7 +2830,7 @@
       var yawDrive = frog.faceAngle != null ? frog.faceAngle : -Math.PI / 2;
       var spDrive = Math.hypot(frog.vx || 0, frog.vy || 0);
       if (spDrive > 35) yawDrive = Math.atan2(frog.vy, frog.vx);
-      drawCybertruck(ctx, p.x, p.y, yawDrive, p.depth, true, frog.z || 0, frog.color, { inWater: inPond(frog.x, frog.y), sub: frog.waterSub || 0, wakePhase: frog.wakePhase || 0, bounce: frog.truckBounce || 0 });
+      drawCybertruck(ctx, p.x, p.y, yawDrive, p.depth, true, frog.z || 0, frog.color, { inWater: inPond(frog.x, frog.y), sub: frog.waterSub || 0, wakePhase: frog.wakePhase || 0, bounce: frog.truckBounce || 0, wheelScale: frog.wheelScale || (global.FroggiesCanon && global.FroggiesCanon.getWheelScale ? global.FroggiesCanon.getWheelScale() : 1) });
       if (frog.truckMode === "shared" && frogs) {
         drawAboardIcons(ctx, frogs, p.x, p.y, p.depth, lift);
       } else {
@@ -2707,7 +2871,7 @@
       var yawSolo = frog.faceAngle != null ? frog.faceAngle : -Math.PI / 2;
       var spSolo = Math.hypot(frog.vx || 0, frog.vy || 0);
       if (spSolo > 35) yawSolo = Math.atan2(frog.vy, frog.vx);
-      drawCybertruck(ctx, p.x, p.y, yawSolo, p.depth, true, frog.z || 0, frog.color, { inWater: inPond(frog.x, frog.y), sub: frog.waterSub || 0, wakePhase: frog.wakePhase || 0, bounce: frog.truckBounce || 0 });
+      drawCybertruck(ctx, p.x, p.y, yawSolo, p.depth, true, frog.z || 0, frog.color, { inWater: inPond(frog.x, frog.y), sub: frog.waterSub || 0, wakePhase: frog.wakePhase || 0, bounce: frog.truckBounce || 0, wheelScale: frog.wheelScale || (global.FroggiesCanon && global.FroggiesCanon.getWheelScale ? global.FroggiesCanon.getWheelScale() : 1) });
       ctx.fillStyle = frog.color;
       ctx.beginPath();
       ctx.arc(p.x, p.y - 22 * p.depth - lift, 6 * p.depth, 0, Math.PI * 2);
@@ -2958,7 +3122,7 @@
         ctx.stroke();
         ctx.setLineDash([]);
       }
-      drawCybertruck(ctx, p.x, p.y, -Math.PI / 2, p.depth, false, 0, accent, { inWater: inPond(spot.x, spot.y), sub: 0, wakePhase: 0 });
+      drawCybertruck(ctx, p.x, p.y, -Math.PI / 2, p.depth, false, 0, accent, { inWater: inPond(spot.x, spot.y), sub: 0, wakePhase: 0, wheelScale: 1 });
       if (spot.id === "shared") {
         var ids = ["james", "jimmy", "bubbles", "rexy"];
         for (var si = 0; si < 4; si++) {
@@ -3456,6 +3620,9 @@
     tickHubAI: tickHubAI,
     boardTruck: boardTruck,
     project: project,
+    getViewScale: getViewScale,
+    setViewScaleUser: setViewScaleUser,
+    adjustViewScale: adjustViewScale,
     nearMech1000: nearMech1000,
     mech1000Pos: mech1000Pos,
     drawZoneSigns: drawZoneSigns,

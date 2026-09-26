@@ -16,7 +16,9 @@
    joy2: shared virtual joystick via engine-boot setSteer; touch playfield aim disabled.
    polish11: truck yaw follows travel; brief EXIT tip; shared ZOOM ability.
    hop1: HOP ability (Y arc + squash); shove toys/animals/pollen.
-   hop2: ranch foot ALWAYS hops (continuous arc); ability HOP = bigger jump. */
+   hop2: ranch foot ALWAYS hops (continuous arc); ability HOP = bigger jump.
+   hop3: faster loco + spam HOP + stack; articulated mechs.
+   track3: banks + rocks (hard bounce) + live monster-truck wheels; more cam zoom-out. */
 (function (global) {
   "use strict";
   var C = global.FroggiesCanon;
@@ -248,9 +250,10 @@
         /* mobile1: phone gets closer zoom so frogs aren't mush; desktop unchanged formula */
         (function () {
           var iw = window.innerWidth || 800;
+          /* track3: slightly more zoom-out range */
           var z = iw <= 520
-            ? Math.min(0.88, Math.max(0.62, iw / 600))
-            : Math.min(0.95, Math.max(0.42, iw / 1400));
+            ? Math.min(0.84, Math.max(0.52, iw / 650))
+            : Math.min(0.88, Math.max(0.36, iw / 1500));
           this.cameras.main.setZoom(z);
         }).call(this);
         /* polish6: soft depth shadow under player / truck */
@@ -504,8 +507,40 @@
           var r = ramps[ri];
           this.add.rectangle(r.x, r.y, r.w, r.h, 0xf59e0b, 0.85).setStrokeStyle(2, 0x78350f, 1).setAngle(-18);
         }
+        /* track3: bank berms */
+        var banks = C.TRACK_BANKS || [];
+        for (var bi = 0; bi < banks.length; bi++) {
+          var bk = banks[bi];
+          var bg = this.add.graphics();
+          bg.fillStyle(0x78716c, 0.75);
+          bg.fillEllipse(bk.x, bk.y, bk.r * 1.1, bk.r * 0.55);
+          bg.lineStyle(3, 0xf59e0b, 0.7);
+          bg.strokeEllipse(bk.x, bk.y - 8, bk.r * 0.85, bk.r * 0.4);
+          bg.lineStyle(2, 0xfef3c7, 0.45);
+          bg.strokeEllipse(bk.x, bk.y - 16, bk.r * 0.55, bk.r * 0.28);
+          this.add.text(bk.x, bk.y - (bk.tilt || 0.8) * 36 - 10, bk.label || "BANK", {
+            fontSize: "10px", fontStyle: "bold", color: "#fef3c7", stroke: "#000", strokeThickness: 2,
+          }).setOrigin(0.5);
+        }
+        /* track3: big rocks */
+        var rocks = C.TRACK_ROCKS || [];
+        for (var rki = 0; rki < rocks.length; rki++) {
+          var rk = rocks[rki];
+          var rg = this.add.graphics();
+          rg.fillStyle(0x000000, 0.28);
+          rg.fillEllipse(rk.x + 4, rk.y + 6, rk.r * 1.1, rk.r * 0.45);
+          rg.fillStyle(0x57534e, 1);
+          rg.fillCircle(rk.x, rk.y - rk.h * 10, rk.r * 0.55);
+          rg.fillStyle(0x44403c, 1);
+          rg.fillCircle(rk.x + rk.r * 0.2, rk.y - rk.h * 6, rk.r * 0.4);
+          rg.lineStyle(2, 0x1c1917, 1);
+          rg.strokeCircle(rk.x, rk.y - rk.h * 10, rk.r * 0.55);
+          this.add.text(rk.x, rk.y - rk.h * 22 - 8, "ROCK", {
+            fontSize: "9px", fontStyle: "bold", color: "#e7e5e4", stroke: "#000", strokeThickness: 2,
+          }).setOrigin(0.5);
+        }
         var track = C.AREAS[1];
-        this.add.text(track.x + track.w * 0.5, track.y + 18, "Monster truck track", {
+        this.add.text(track.x + track.w * 0.5, track.y + 18, "Monster truck track · banks · rocks", {
           fontSize: "16px", fontStyle: "bold", color: "#f5f5f4", stroke: "#000", strokeThickness: 4,
         }).setOrigin(0.5, 0);
         /* polish9: start/finish gate */
@@ -720,18 +755,41 @@
           if (Math.abs(this.groundZ) < 0.4) this.groundZ = 0;
         }
         var groundZ = this.groundZ || 0;
+        var wsP = C.getWheelScale ? C.getWheelScale() : 1;
+        var jumpMulP = C.wheelJumpMul ? C.wheelJumpMul(wsP) : (0.9 + (wsP - 1) * 0.55);
+        var bounceMulP = C.wheelBounceMul ? C.wheelBounceMul(wsP) : (0.85 + wsP * 0.55);
+        var clearP = C.wheelClearanceZ ? C.wheelClearanceZ(wsP) * 0.35 : (wsP - 1) * 6;
+        groundZ = groundZ + clearP;
         var airA = (this.zLift || 0) - groundZ;
         if (this.inTruck && C.rampAt) {
           var ramp = C.rampAt(this.player.x, this.player.y);
-          if (ramp && sp > 35 && airA < 10) {
-            this.zVel = Math.max(this.zVel, 260 * (ramp.boost || 1.3));
+          if (ramp && sp > 35 && airA < 10 + clearP * 0.2) {
+            this.zVel = Math.max(this.zVel, 260 * (ramp.boost || 1.3) * jumpMulP);
             this.zLift = Math.max(this.zLift, groundZ + 8);
             this.scrap += 0.02;
           }
         }
-        var dG = groundZ - prevG;
-        if (this.inTruck && airA < 8 && sp > 70 && dG < -1.2) {
-          var crest = Math.min(340, sp * 0.55 + (-dG) * 12);
+        this.rockCool = Math.max(0, (this.rockCool || 0) - dt);
+        if (this.inTruck && this.rockCool <= 0 && airA < 12 && C.rockHitAt && sp > 40) {
+          var rock = C.rockHitAt(this.player.x, this.player.y, 10 + wsP * 6);
+          if (rock) {
+            var intoR = Math.hypot(this.player.x - rock.x, this.player.y - rock.y) || 1;
+            var nxR = (this.player.x - rock.x) / intoR;
+            var nyR = (this.player.y - rock.y) / intoR;
+            var rb = (rock.bounce || 1.8) * bounceMulP * Math.min(1.85, Math.max(0.55, sp / 160));
+            this.zVel = Math.max(this.zVel, 220 * rb);
+            this.zLift = Math.max(this.zLift, groundZ + 10);
+            body.velocity.x += nxR * (140 + sp * 0.55) * rb * 0.55;
+            body.velocity.y += nyR * (140 + sp * 0.55) * rb * 0.55;
+            this.rockCool = 0.28;
+            this.scrap += 0.05;
+            this.toast = "ROCK HIT!"; this.toastT = 1.2;
+            this.shakeT = Math.max(this.shakeT || 0, 0.18);
+          }
+        }
+        var dG = (this.groundZ || 0) - prevG;
+        if (this.inTruck && airA < 8 + clearP * 0.15 && sp > 70 && dG < -1.2) {
+          var crest = Math.min(380, (sp * 0.55 + (-dG) * 12) * jumpMulP);
           if (crest > 55) {
             this.zVel = Math.max(this.zVel, crest);
             this.zLift = Math.max(this.zLift, groundZ + 6);
@@ -749,7 +807,7 @@
             var impact = Math.max(0, -this.zVel);
             this.zLift = groundZ;
             this.hopLandT = 0;
-            if (impact > 70) this.zVel = Math.min(140, impact * 0.28);
+            if (impact > 55) this.zVel = Math.min(140 + wsP * 35, impact * 0.28 * bounceMulP);
             else this.zVel = 0;
           }
         } else {
@@ -1012,10 +1070,15 @@
           fx.g.setAlpha(Math.max(0, fx.life * 1.5));
           if (fx.life <= 0) { fx.g.destroy(); this.fx.splice(fi, 1); }
         }
+        if (global.FroggiesEngines && global.FroggiesEngines.setWheelPanelVisible) {
+          global.FroggiesEngines.setWheelPanelVisible(!!this.inTruck);
+        }
         if (this.inTruck) {
           this.truckBody.setVisible(true); this.truckAccent.setVisible(true);
           /* truck2: full elev lift (was *0.06 → flat). Match canvas ~0.55 */
-          var ty = this.player.y - this.zLift * 0.55 - bounce;
+          var wsDraw = C.getWheelScale ? C.getWheelScale() : 1;
+          var bounceW = bounce * (0.85 + wsDraw * 0.55);
+          var ty = this.player.y - this.zLift * 0.55 - bounceW - (wsDraw - 1) * 6;
           this.truckBody.setPosition(this.player.x, ty);
           /* truck1: rotate body to faceAngle (rect long axis = +X; faceAngle 0 = up → rot = faceAngle - PI/2 for nose-along-travel... 
              Phaser faceAngle 0 = texture-up. Rectangle default long axis is horizontal (+X). 
@@ -1025,7 +1088,8 @@
           /* polish11: nose follows travel (velocity) so truck matches steer */
           var truckRot = (this.faceAngle || 0) - Math.PI / 2;
           if (sp > 40) truckRot = Math.atan2(body.velocity.y, body.velocity.x);
-          this.truckBody.setRotation(truckRot).setScale(1, 1);
+          var pvs = (C.TRUCK_VIS && C.TRUCK_VIS.phaserScale != null) ? C.TRUCK_VIS.phaserScale : 1.28;
+          this.truckBody.setRotation(truckRot).setScale(pvs * (0.72 + wsDraw * 0.12), pvs * (0.75 + (wsDraw - 1) * 0.4));
           var noseX = Math.cos(truckRot) * 10;
           var noseY = Math.sin(truckRot) * 10;
           this.truckAccent.setPosition(this.player.x + noseX, ty - 2 + noseY * 0.15).setRotation(truckRot);

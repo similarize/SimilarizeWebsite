@@ -1,3 +1,11 @@
+## What's new (track3) — real Cybertruck track + monster wheels
+- **Monster track:** Banked turn berms + jump ramps/mounds + **big rock obstacles** that bounce the truck hard (jolt ∝ wheel size × speed). Canvas lead visual + physics; Three + Phaser parity (banks/rocks elev + rock hit).
+- **Live wheel size:** While driving, HUD **WHEELS** slider / **− +** (or hold **[ ]** / **- =**). Scale from stock Cybertruck (~1×) up to huge monster-truck wheels (~2.65×). Bigger wheels = more clearance, stronger suspension bounce, better ramp/rock jump physics.
+- **Cam zoom-out:** Slightly more world visible by default; Canvas mouse-wheel zoom range widened; Three ranch cam farther; Phaser zoom min lowered.
+- Keep: hop3 always-hop + combo HOP + robot mechs, shove props, joystick, garage1 door, polish11 truck yaw / brief EXIT tip, names-only plates. Cast: James, Jimmy, Bubbles, Rexy.
+- Note: frog torso / spring-leg silhouette (hop4) left for parallel pass — this build is truck/track/wheels only.
+- Cache-bust: `?v=20260926-track3`. Cast unchanged. No SPS arcade republish.
+
 ## What's new (hop3) — faster hop + spam HOP + stack height + mech robots
 - **Faster always-hop loco:** Quicker cadence (shorter ground plant ~0.022s) + higher launch + longer hop carry. Walk max nudged up. Same always-hop-when-moving from hop2 — just snappier.
 - **HOP ability cooldown ~0.1s:** Near-zero anti-double-tap only (was ~5.5–6s). Spam Space / HOP button immediately.
