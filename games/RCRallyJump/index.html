@@ -6,6 +6,8 @@
   <meta name="theme-color" content="#141820">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <title>RC Rally Jump</title>
+  <!-- Tesla Cybertruck chromeless FS — see games/shared/TESLA_FULLSCREEN.md -->
+  <script src="../shared/tesla-fullscreen.js?v=tfs1"></script>
   <link rel="icon" href="favicon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -424,7 +426,7 @@
           <li>Drones pick up after the first minute and get serious by a few minutes in. Shoot a beam to get past it.</li>
         </ul>
         <button type="button" class="go" id="start" data-ui>Start run</button>
-        <p class="hint">Aim where the front should point. Up / W or hold to jump. Space or Missile for missiles. Arrows / WASD steer.</p>
+        <p class="hint">Aim where the front should point. Up / W or hold to jump. Space or Missile for missiles. Arrows / WASD steer. Xbox: A/RT jump, stick aim, B/X fire, Start pause.</p>
         <a class="home" href="https://www.similarize.com/">Similarize</a>
       </div>
     </div>
@@ -466,6 +468,7 @@
       <button type="button" class="reset" id="tune-reset" data-ui>Reset</button>
     </div>
   </div>
-  <script type="module" src="./standalone.js?v=20260925diff2"></script>
+  <script src="../shared/gamepad.js?v=gp1"></script>
+  <script type="module" src="./standalone.js?v=20260926gp1"></script>
 </body>
 </html>

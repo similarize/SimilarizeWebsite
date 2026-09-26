@@ -9,6 +9,7 @@
 
   const keys = new Set();
   const held = { left: false, right: false, thrust: false, shoot: false };
+  let pad = null; // last SimilarizeGamepad.poll() this frame
   let w = 1;
   let h = 1;
   let last = performance.now();
@@ -202,10 +203,16 @@
 
   function step(dt) {
     dt = Math.min(dt, 0.05);
-    const left = held.left || keys.has("ArrowLeft") || keys.has("KeyA");
-    const right = held.right || keys.has("ArrowRight") || keys.has("KeyD");
-    const thrust = held.thrust || keys.has("ArrowUp") || keys.has("KeyW");
-    if (held.shoot || keys.has("Space")) shoot();
+    pad = window.SimilarizeGamepad ? window.SimilarizeGamepad.poll() : null;
+    const gpLeft = !!(pad && pad.connected && (pad.lx < -0.25 || pad.dpad.l));
+    const gpRight = !!(pad && pad.connected && (pad.lx > 0.25 || pad.dpad.r));
+    const gpThrust = !!(pad && pad.connected && (pad.ly < -0.25 || pad.a || pad.lt));
+    const gpShoot = !!(pad && pad.connected && (pad.b || pad.rb || pad.rt || pad.x));
+    if (pad && pad.connected && phase !== "play" && (pad.buttonsPressed.a || pad.buttonsPressed.start || pad.buttonsPressed.b)) start();
+    const left = held.left || keys.has("ArrowLeft") || keys.has("KeyA") || gpLeft;
+    const right = held.right || keys.has("ArrowRight") || keys.has("KeyD") || gpRight;
+    const thrust = held.thrust || keys.has("ArrowUp") || keys.has("KeyW") || gpThrust;
+    if (held.shoot || keys.has("Space") || gpShoot) shoot();
     shootCd = Math.max(0, shootCd - dt);
     if (phase !== "play") {
       particles.forEach((p) => { p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt; });
@@ -272,7 +279,7 @@
     ctx.strokeStyle = "#fff";
     ctx.lineWidth = 2;
     ctx.stroke();
-    if (held.thrust || keys.has("ArrowUp") || keys.has("KeyW")) {
+    if (held.thrust || keys.has("ArrowUp") || keys.has("KeyW") || (pad && pad.connected && (pad.ly < -0.25 || pad.a || pad.lt))) {
       ctx.beginPath();
       ctx.moveTo(-8, 4);
       ctx.lineTo(-18 - Math.random() * 8, 0);
@@ -375,7 +382,7 @@
   paintHud();
   overlayTitle.textContent = "Asteroids";
   overlayText.textContent = phone
-    ? "Turn, thrust, and fire with the buttons. They also work with a mouse."
-    : "Arrows or A D to turn, W or up to thrust, space to fire. Buttons work too.";
+    ? "Turn, thrust, and fire with the buttons. Xbox pad: stick/D-pad turn, A thrust, B fire."
+    : "Arrows or A D to turn, W or up to thrust, space to fire. Xbox: stick turn, A thrust, B/RT fire.";
   requestAnimationFrame(frame);
 })();

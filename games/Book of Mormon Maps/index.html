@@ -4,6 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Book of Mormon Maps</title>
+  <!-- Tesla Cybertruck chromeless FS — see games/shared/TESLA_FULLSCREEN.md -->
+  <script src="../shared/tesla-fullscreen.js?v=tfs1"></script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
   <style>
     html, body { height: 100%; margin: 0; }
@@ -85,6 +87,7 @@
   <div id="status"></div>
   <a class="back" href="/games/">All games</a>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="../shared/gamepad.js?v=gp1"></script>
   <script>
     const KMLNS = "http://www.opengis.net/kml/2.2";
     const map = L.map("map", { zoomControl: true }).setView([17.5, -89.5], 6);
@@ -233,6 +236,49 @@
       }
     });
     loadUrl("book_of_mormon_lands.kml").catch((err) => fail(err.message));
+
+    /* Light Xbox / standard gamepad: pan, zoom, labels, cycle map */
+    (function gamepadMap() {
+      let zoomCool = 0;
+      let cycleCool = 0;
+      let labelCool = 0;
+      const which = document.getElementById("which");
+      const labelsBtn = document.getElementById("labels");
+      function loop(now) {
+        const GP = window.SimilarizeGamepad;
+        if (GP) {
+          const g = GP.poll();
+          if (g && g.connected) {
+            let px = g.lx || 0;
+            let py = g.ly || 0;
+            if (g.dpad.l) px = -1;
+            if (g.dpad.r) px = 1;
+            if (g.dpad.u) py = -1;
+            if (g.dpad.d) py = 1;
+            if (px || py) map.panBy([px * 14, py * 14], { animate: false });
+            const bp = g.buttonsPressed || {};
+            if (now > zoomCool) {
+              if (g.rt || g.a) { map.zoomIn(); zoomCool = now + 280; }
+              else if (g.lt || g.b) { map.zoomOut(); zoomCool = now + 280; }
+            }
+            if ((bp.y || bp.x) && now > labelCool) {
+              labelsBtn.click();
+              labelCool = now + 400;
+            }
+            if ((bp.lb || bp.rb) && now > cycleCool && which) {
+              const n = which.options.length;
+              if (n) {
+                which.selectedIndex = (which.selectedIndex + (bp.rb ? 1 : n - 1)) % n;
+                which.dispatchEvent(new Event("change"));
+              }
+              cycleCool = now + 450;
+            }
+          }
+        }
+        requestAnimationFrame(loop);
+      }
+      requestAnimationFrame(loop);
+    })();
   </script>
 </body>
 </html>

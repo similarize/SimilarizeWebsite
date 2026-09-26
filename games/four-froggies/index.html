@@ -6,6 +6,8 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <title>Four Froggies — Ranch Hub · Big Ranch</title>
+  <!-- Tesla Cybertruck chromeless FS — see games/shared/TESLA_FULLSCREEN.md -->
+  <script src="../shared/tesla-fullscreen.js?v=tfs1"></script>
   <link rel="stylesheet" href="style.css?v=20260926-hop4">
 </head>
 <body class="in-title">
@@ -109,7 +111,7 @@
   <div id="overlay">
     <img id="splash-art" class="splash-art" src="assets/splash-forest-roof.png?v=20260926-hop4" alt="Four froggies on a Cybertruck roof" width="832" height="1248" decoding="async">
     <h1 id="overlay-title">Four Froggies</h1>
-    <p id="overlay-sub">Ranch hub · Canvas / Phaser / three.js · Up to 4 on Canvas</p>
+    <p id="overlay-sub">Ranch hub · Canvas / Phaser / three.js · Up to 4 on Canvas · Xbox pad OK</p>
     <div id="frog-pick" class="frog-pick">
       <p class="pick-label">Claim a froggy seat</p>
       <div class="frog-btns">
@@ -154,13 +156,14 @@
     <button type="button" id="btn-start" class="start-btn">GO · Ranch Hub</button>
   </div>
 
+  <script src="../shared/gamepad.js?v=gp1"></script>
   <script src="canon.js?v=20260926-hop4"></script>
   <script src="ai.js?v=20260926-hop4"></script>
   <script src="party.js?v=20260926-hop4"></script>
   <script src="world.js?v=20260926-hop4"></script>
   <script src="story.js?v=20260926-hop4"></script>
   <script src="space.js?v=20260926-hop4"></script>
-  <script src="engine-boot.js?v=20260926-ff3d"></script>
-  <script src="main.js?v=20260926-hop4"></script>
+  <script src="engine-boot.js?v=20260926-gp1"></script>
+  <script src="main.js?v=20260926-gp1"></script>
 </body>
 </html>

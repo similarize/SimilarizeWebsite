@@ -4,6 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>Basketball RC</title>
+    <!-- Tesla Cybertruck chromeless FS — see games/shared/TESLA_FULLSCREEN.md -->
+    <script src="shared/tesla-fullscreen.js?v=tfs1"></script>
     <style>
         html, body {
             margin: 0;
@@ -174,7 +176,7 @@
     <div class="top">
         <a href="/games/">Games</a>
         <span class="scores"><b class="o">P1 <span id="s1">0</span></b> · <b class="b">P2 <span id="s2">0</span></b></span>
-        <span class="hint">P1 arrows + space · P2 WASD + Q · R resets the ball</span>
+        <span class="hint">P1 arrows + space · P2 WASD + Q · R resets · Xbox pad0=P1 pad1=P2</span>
         <button type="button" id="soundBtn">Sound on</button>
         <button type="button" id="resetBtn">Reset ball</button>
 
@@ -205,6 +207,7 @@
             <button type="button" class="fire" data-fire="2">FIRE</button>
         </div>
     </div>
+    <script src="shared/gamepad.js?v=gp1"></script>
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
@@ -672,6 +675,21 @@
         }
 
         // Update car movement based on controls
+        let _gp0 = null, _gp1 = null;
+        function refreshGamepads() {
+            const GP = window.SimilarizeGamepad;
+            _gp0 = GP ? GP.pollPad(0) : null;
+            _gp1 = GP ? GP.pollPad(1) : null;
+        }
+        function padDir(g) {
+            if (!g || !g.connected) return { l:0, r:0, u:0, d:0 };
+            return {
+                l: (g.lx < -0.25 || g.dpad.l) ? 1 : 0,
+                r: (g.lx > 0.25 || g.dpad.r) ? 1 : 0,
+                u: (g.ly < -0.25 || g.dpad.u) ? 1 : 0,
+                d: (g.ly > 0.25 || g.dpad.d) ? 1 : 0
+            };
+        }
         function updateCarControls(car) {
             if (car.isDestroyed) return;
             const isBothStuckOnConveyor = car1.onConveyor && car2.onConveyor && !car1.isDestroyed && !car2.isDestroyed;
@@ -680,20 +698,24 @@
             if (car.isStuckInGoal && !(car === car2 && isBothStuckInGoal)) return;
             if (car.onConveyor && !(car === car2 && isBothStuckOnConveyor)) return;
 
+            const d0 = padDir(_gp0);
+            const d1 = padDir(_gp1);
+
             if (car === car1) {
-                if (keys['ArrowLeft']) car.rotation = -ROTATION_SPEED;
-                else if (keys['ArrowRight']) car.rotation = ROTATION_SPEED;
+                if (keys['ArrowLeft'] || d0.l) car.rotation = -ROTATION_SPEED;
+                else if (keys['ArrowRight'] || d0.r) car.rotation = ROTATION_SPEED;
                 else car.rotation = 0;
-                if (keys['ArrowUp']) car.speed = car.maxSpeed;
-                else if (keys['ArrowDown']) car.speed = -car.maxSpeed/2;
+                if (keys['ArrowUp'] || d0.u) car.speed = car.maxSpeed;
+                else if (keys['ArrowDown'] || d0.d) car.speed = -car.maxSpeed/2;
                 else car.speed = 0;
             }
             if (car === car2) {
-                if (keys['a'] || keys['A']) car.rotation = -ROTATION_SPEED;
-                else if (keys['d'] || keys['D']) car.rotation = ROTATION_SPEED;
+                // pad1 only — single pad must not steal car2
+                if (keys['a'] || keys['A'] || d1.l) car.rotation = -ROTATION_SPEED;
+                else if (keys['d'] || keys['D'] || d1.r) car.rotation = ROTATION_SPEED;
                 else car.rotation = 0;
-                if (keys['w'] || keys['W']) car.speed = car.maxSpeed;
-                else if (keys['s'] || keys['S']) car.speed = -car.maxSpeed/2;
+                if (keys['w'] || keys['W'] || d1.u) car.speed = car.maxSpeed;
+                else if (keys['s'] || keys['S'] || d1.d) car.speed = -car.maxSpeed/2;
                 else car.speed = 0;
             }
 
@@ -805,7 +827,26 @@
         }
 
         // Game loop
+        function applyGamepadActions() {
+            const g0 = _gp0, g1 = _gp1;
+            if (netRole === 'guest') {
+                if (g0 && g0.connected && (g0.buttonsPressed.a || g0.buttonsPressed.rt)) netFireArmed = true;
+                return;
+            }
+            if (netRole === 'host') {
+                if (g0 && g0.connected && (g0.buttonsPressed.a || g0.buttonsPressed.rt)) shoot(car1);
+                if (g0 && g0.connected && (g0.buttonsPressed.start || g0.buttonsPressed.back)) {
+                    resetBasketball(); netSend({ type: 'reset' });
+                }
+                return;
+            }
+            if (g0 && g0.connected && (g0.buttonsPressed.a || g0.buttonsPressed.rt)) shoot(car1);
+            if (g1 && g1.connected && (g1.buttonsPressed.a || g1.buttonsPressed.rt)) shoot(car2);
+            if (g0 && g0.connected && (g0.buttonsPressed.start || g0.buttonsPressed.back)) resetBasketball();
+        }
         function update() {
+            refreshGamepads();
+            applyGamepadActions();
             if (netRole === 'guest') {
                 // Send inputs ~30Hz; render from host snapshots only
                 const now = performance.now();

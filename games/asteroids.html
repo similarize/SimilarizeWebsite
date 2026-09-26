@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>Asteroids</title>
   <link rel="stylesheet" href="asteroids.css">
+  <!-- Tesla Cybertruck chromeless FS — see games/shared/TESLA_FULLSCREEN.md -->
+  <script src="shared/tesla-fullscreen.js?v=tfs1"></script>
 </head>
 <body>
   <canvas id="view"></canvas>
@@ -19,8 +21,9 @@
   <div id="overlay">
     <h1 id="overlay-title">Asteroids</h1>
     <p id="overlay-text"></p>
-    <p class="go">Tap, click, or press space</p>
+    <p class="go">Tap, click, space, or controller Start/A</p>
   </div>
-  <script src="asteroids.js"></script>
+  <script src="shared/gamepad.js?v=gp1"></script>
+  <script src="asteroids.js?v=gp1"></script>
 </body>
 </html>

@@ -227,6 +227,7 @@
         engineRunning = true;
         currentEngine = mode;
         bindAltControls(mode);
+        ensurePadLoop();
       })
       .catch(function (err) {
         console.error(err);
@@ -269,10 +270,13 @@
     }
   }
 
-  /** Push combined steer: joy wins while held; else WASD/D-pad keys. Canvas gets joy channel. */
+  /** Push combined steer: joy wins while held; else WASD/D-pad/gamepad. Canvas gets joy channel. */
+  var _padRaf = 0;
   function applySharedSteer() {
     var x = 0;
     var y = 0;
+    /* Gamepad poll only while alt engines run — canvas main.js owns the pad otherwise */
+    var gPad = (engineRunning && global.SimilarizeGamepad) ? global.SimilarizeGamepad.poll() : null;
     if (joyActive) {
       x = joyX;
       y = joyY;
@@ -281,10 +285,38 @@
       if (keys.right) x += 1;
       if (keys.up) y -= 1;
       if (keys.down) y += 1;
+      if (gPad && gPad.connected && !x && !y) {
+        x = gPad.lx || 0;
+        y = gPad.ly || 0;
+        if (gPad.dpad.l) x = -1;
+        if (gPad.dpad.r) x = 1;
+        if (gPad.dpad.u) y = -1;
+        if (gPad.dpad.d) y = 1;
+        var mag = Math.hypot(x, y);
+        if (mag > 1) { x /= mag; y /= mag; }
+      }
+    }
+    if (gPad && gPad.connected) {
+      var aEdge = gPad.buttonsPressed || {};
+      var apiBtn = altApi();
+      if (apiBtn) {
+        if (aEdge.a && apiBtn.pulseInteract) apiBtn.pulseInteract();
+        if ((aEdge.b || aEdge.x) && apiBtn.pulseAbility) apiBtn.pulseAbility();
+      }
     }
     var a = engineRunning ? altApi() : null;
     if (a && typeof a.setSteer === "function") a.setSteer(x, y);
     notifyCanvasJoy(joyActive ? joyX : 0, joyActive ? joyY : 0);
+  }
+  function ensurePadLoop() {
+    if (_padRaf) return;
+    function loop() {
+      _padRaf = 0;
+      if (!engineRunning) return;
+      applySharedSteer();
+      _padRaf = requestAnimationFrame(loop);
+    }
+    _padRaf = requestAnimationFrame(loop);
   }
 
   function setJoySteer(nx, ny, active) {
@@ -423,6 +455,7 @@
       btn.addEventListener("pointerleave", off);
     }
 
+    ensurePadLoop();
     hold($("btn-left"), "left", true);
     hold($("btn-right"), "right", true);
     hold($("btn-up"), "up", true);

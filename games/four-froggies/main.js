@@ -61,6 +61,7 @@
   let camTY = 450;
   let steerX = 0;
   let steerY = 0;
+  let _pad = null;
   let joySteerX = 0;
   let joySteerY = 0;
   let tapSteerX = 0;
@@ -664,8 +665,20 @@
 
 
   function effectiveSteer() {
-    /* WASD > virtual joystick (joy2) > mouse playfield aim */
+    /* WASD > gamepad > virtual joystick (joy2) > mouse playfield aim */
     if (steerX || steerY) return { x: steerX, y: steerY };
+    const g = _pad;
+    if (g && g.connected) {
+      let x = g.lx || 0;
+      let y = g.ly || 0;
+      if (g.dpad.l) x = -1;
+      if (g.dpad.r) x = 1;
+      if (g.dpad.u) y = -1;
+      if (g.dpad.d) y = 1;
+      const mag = Math.hypot(x, y);
+      if (mag > 1) { x /= mag; y /= mag; }
+      if (x || y) return { x, y };
+    }
     if (joySteerX || joySteerY) return { x: joySteerX, y: joySteerY };
     return { x: tapSteerX, y: tapSteerY };
   }
@@ -966,6 +979,22 @@
   function tick(now) {
     const dt = Math.min(0.05, (now - (lastTs || now)) / 1000);
     lastTs = now;
+    _pad = window.SimilarizeGamepad ? window.SimilarizeGamepad.poll() : null;
+    if (_pad && _pad.connected) {
+      const bp = _pad.buttonsPressed || {};
+      if (phase === "title" && (bp.a || bp.start)) tryStartFromUi();
+      if ((phase === "hub" || phase === "space") && bp.a) {
+        if (party && party.getRole() === "guest") { pushGuestInput({ interact: true }); doInteract(); }
+        else doInteract();
+      }
+      if ((phase === "hub" || phase === "space") && (bp.b || bp.x)) {
+        const player = localPlayer();
+        if (player) {
+          if (party && party.getRole() === "guest") pushGuestInput({ ability: true });
+          else requestAbility(player);
+        }
+      }
+    }
     if (phase === "hub") {
       updateHub(dt);
       updateAbilityButton();
@@ -1505,7 +1534,7 @@
 
   showOverlay(
     "Four Froggies",
-    "Drive the track · splash the pond · call Purple Bear · SPS + Optimus · bring Jimmy home · Starship → space episode.",
+    "Drive the track · splash the pond · call Purple Bear · SPS + Optimus · bring Jimmy home · Starship → space episode. Xbox: stick steer, A interact, B/X ability.",
     "Claim a seat · Host to invite · or GO solo (AI fills)",
     true
   );

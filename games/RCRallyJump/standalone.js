@@ -14,7 +14,7 @@ import {
   wheelPace,
   MISSILE_MAX,
   MISSILE_RELOAD
-} from "./engine.js?v=20260925diff2";
+} from "./engine.js?v=20260926gp1";
 var BEST_KEY = "rc-rally-jump-best";
 var RIG_KEY = "rc-rally-rig";
 var TUNE_KEY = "rc-rally-tune";
@@ -292,7 +292,13 @@ function boot() {
   };
   let noseDown = false;
   let pointerXY = null;
-  const boostHeld = () => pointer || keys.has("ArrowUp") || keys.has("KeyW");
+  const padSnap = () => (window.SimilarizeGamepad ? window.SimilarizeGamepad.poll() : null);
+  let _pad = null;
+  const boostHeld = () => {
+    const g = _pad;
+    const gpBoost = !!(g && g.connected && (g.a || g.rt || g.ly < -0.25));
+    return pointer || keys.has("ArrowUp") || keys.has("KeyW") || gpBoost;
+  };
   const camera = () => {
     const portrait = canvas.height > canvas.width * 1.05;
     const scale = portrait ? Math.min(canvas.width / 700, canvas.height / VIEW_H) : Math.min(canvas.width / VIEW_W, canvas.height / VIEW_H);
@@ -316,11 +322,16 @@ function boot() {
   const controlAim = () => {
     const tx = 168 + 59;
     const ty = sim.y + 26;
+    const g = _pad;
+    const gpR = !!(g && g.connected && (g.lx > 0.25 || g.dpad.r));
+    const gpL = !!(g && g.connected && (g.lx < -0.25 || g.dpad.l));
+    const gpD = !!(g && g.connected && (g.ly > 0.25 || g.dpad.d));
+    const gpU = !!(g && g.connected && (g.ly < -0.25 || g.dpad.u));
     if (pointer && pointerXY) return { aim: null, aimPoint: viewFromClient(pointerXY.x, pointerXY.y) };
-    if (noseDown || keys.has("ArrowRight") || keys.has("KeyD")) return { aim: 0, aimPoint: { x: tx + 150, y: ty } };
-    if (keys.has("ArrowLeft") || keys.has("KeyA")) return { aim: -150, aimPoint: { x: tx - 100, y: ty - 40 } };
-    if (keys.has("ArrowDown") || keys.has("KeyS")) return { aim: 75, aimPoint: { x: tx + 16, y: ty + 120 } };
-    if (keys.has("ArrowUp") || keys.has("KeyW")) return { aim: -75, aimPoint: { x: tx + 16, y: ty - 120 } };
+    if (noseDown || keys.has("ArrowRight") || keys.has("KeyD") || gpR) return { aim: 0, aimPoint: { x: tx + 150, y: ty } };
+    if (keys.has("ArrowLeft") || keys.has("KeyA") || gpL) return { aim: -150, aimPoint: { x: tx - 100, y: ty - 40 } };
+    if (keys.has("ArrowDown") || keys.has("KeyS") || gpD) return { aim: 75, aimPoint: { x: tx + 16, y: ty + 120 } };
+    if (keys.has("ArrowUp") || keys.has("KeyW") || gpU) return { aim: -75, aimPoint: { x: tx + 16, y: ty - 120 } };
     return { aim: null, aimPoint: null };
   };
   const resize = () => {
@@ -482,6 +493,19 @@ function boot() {
   const frame = (now) => {
     const dt = Math.min(0.05, (now - last) / 1e3);
     last = now;
+    _pad = padSnap();
+    if (_pad && _pad.connected) {
+      const bp = _pad.buttonsPressed || {};
+      if ((bp.b || bp.x || bp.rb) && sim.phase === "play") fireEdge = true;
+      if (bp.start) {
+        if (sim.phase === "play") sim.phase = "pause";
+        else if (sim.phase === "pause") sim.phase = "play";
+        else if (sim.phase === "title") begin(false);
+        else if (sim.phase === "over" && sim.sinceOver > 0.35) begin(false);
+      }
+      if ((bp.a || bp.rt) && sim.phase === "title") begin(true);
+      if (bp.a && sim.phase === "over" && sim.sinceOver > 0.35) begin(false);
+    }
     const fire = fireEdge;
     fireEdge = false;
     const before = sim.missiles;

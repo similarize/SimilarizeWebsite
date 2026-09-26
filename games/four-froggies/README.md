@@ -1,3 +1,6 @@
+## Tesla Cybertruck fullscreen
+Live entry includes `../shared/tesla-fullscreen.js` (YouTube-redirect chromeless trick). Desktop no-op; party `room=` query preserved. Full notes: [`games/shared/TESLA_FULLSCREEN.md`](../shared/TESLA_FULLSCREEN.md).
+
 ## What's new (hop4) — faster hop + humanoid spring-leg frogs
 - **Faster always-hop loco:** Higher launch + shorter ground plant (~0.011s) + stronger hop carry. Walk max nudged up. Snappier than hop3 — frogs cover ground faster while still always-hopping.
 - **Humanoid frogs (not squish spheres):** Torso + head silhouette; **big springy legs** fold/extend on hop (spring out mid-air, tuck on land). Canvas lead draw; Three articulated thigh/shin; Phaser texture matches silhouette. Colors + hats per frog kept. Names-only plates.
