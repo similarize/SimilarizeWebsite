@@ -278,12 +278,24 @@
     }
     if (convoyRow) {
       convoyRow.innerHTML = "";
+      const sharedOn = !!(me && me.inTruck && me.truckMode === "shared");
+      if (sharedOn) {
+        const aboard = document.createElement("span");
+        aboard.className = "aboard-strip";
+        aboard.textContent = "Aboard ";
+        convoyRow.appendChild(aboard);
+      }
       for (const f of frogs) {
         const def = FROG_DEFS[f.id];
         const el = document.createElement("span");
-        el.className = "badge";
+        el.className = "badge" + (sharedOn && f.inTruck && f.truckMode === "shared" ? " aboard-frog" : "");
         el.style.borderColor = def.color;
+        if (sharedOn && f.inTruck && f.truckMode === "shared") {
+          el.style.background = def.color;
+          el.style.color = "#0f172a";
+        }
         el.innerHTML =
+          (sharedOn ? '<span class="frog-dot" style="background:' + def.color + '"></span>' : "") +
           def.name +
           (f.human ? "" : '<span class="bot-tag">AI</span>') +
           (f.local ? " · you" : "");
@@ -619,6 +631,11 @@
           storyToast = "Cybertruck · on the water";
           storyToastT = 0.7;
         }
+        if (drive.lap) {
+          storyToast = "LAP " + drive.lap + " · sparkle finish!";
+          storyToastT = 1.6;
+          beep(660, 0.08, "triangle", 0.05);
+        }
         if (me.speedBoost > 1) me.speedBoost = Math.max(1, me.speedBoost - dt * 0.5);
         easeCam(dt);
         nearHot = W.nearestHotspot(world, me.x, me.y, 70);
@@ -687,6 +704,10 @@
             } else if (drive.onWater && Math.hypot(f.vx, f.vy) > 70 && Math.random() < 0.08) {
               storyToast = "Cybertruck · on the water";
               storyToastT = 0.75;
+            } else if (drive.lap) {
+              storyToast = "LAP " + drive.lap + " · sparkle finish!";
+              storyToastT = 1.6;
+              beep(660, 0.08, "triangle", 0.05);
             } else if (drive.scrapGain > 0 && Math.random() < 0.3) {
               beep(150, 0.03, "sawtooth", 0.025);
             }
@@ -818,12 +839,15 @@
       partyStatus.classList.toggle("is-error", !!partyMeta.error);
       if (partyMeta.error) partyStatus.textContent = partyMeta.error;
       else if (role === "host" && partyMeta.room)
-        partyStatus.textContent = "Hosting · code " + partyMeta.room + " · friends open the invite link";
+        partyStatus.textContent =
+          "HOST · room " + partyMeta.room + " · share Copy invite link or scan QR · friends Join · you press GO";
       else if (role === "guest" && partyMeta.status === "connecting")
-        partyStatus.textContent = "Joining room " + (partyMeta.room || "") + "…";
+        partyStatus.textContent = "JOIN · connecting to room " + (partyMeta.room || "") + "…";
       else if (role === "guest" && partyMeta.status === "ready")
-        partyStatus.textContent = "Joined · claim an Open seat · wait for host GO";
-      else if (role === "solo") partyStatus.textContent = "Solo · claim a seat or GO (AI fills the rest)";
+        partyStatus.textContent = "JOINED · claim an Open froggy seat · wait for Host to press GO";
+      else if (role === "solo")
+        partyStatus.textContent =
+          "SOLO · claim a froggy · or Host room (invite link + QR) · GO fills open seats with AI";
       else partyStatus.textContent = "";
     }
     if (roomCodeEl) {
@@ -854,9 +878,9 @@
     btnStart.classList.toggle("is-disabled", !canGo);
     btnStart.textContent = role === "guest" ? "Waiting for host…" : "GO · Ranch Hub";
     if (overlayGo && phase === "title") {
-      if (role === "guest") overlayGo.textContent = "Claim an Open froggy · host starts the hub";
-      else if (role === "host") overlayGo.textContent = "Friends join via link · claim seats · you press GO";
-      else overlayGo.textContent = "Claim a seat · Host to invite · or GO solo (AI fills)";
+      if (role === "guest") overlayGo.textContent = "JOIN · claim an Open froggy · Host starts with GO";
+      else if (role === "host") overlayGo.textContent = "HOST · Copy invite / scan QR · friends claim seats · you press GO";
+      else overlayGo.textContent = "Claim a seat · Host (link + QR) to invite · or GO solo (AI fills)";
     }
   }
 
@@ -1146,10 +1170,24 @@
       onKit(name) {
         unlockAudio();
         sfxKit(name);
+        const me2 = localPlayer();
+        if (world && W.spawnKitFx && me2) {
+          W.spawnKitFx(world, me2.x, me2.y, name);
+        } else if (world && W.spawnKitFx) {
+          const sps = world.hotspots && world.hotspots.find((h) => h.id === "sps");
+          if (sps) W.spawnKitFx(world, sps.x, sps.y, name);
+        }
         if (name === "map") {
           storyToast = "SPS dish · map flash!";
           storyToastT = 1.6;
+        } else if (name === "rocket" || name === "afterburners") {
+          storyToast = "Optimus · " + name + "!";
+          storyToastT = 1.2;
+        } else if (name === "hover" || name === "drone") {
+          storyToast = "Optimus · " + name + "!";
+          storyToastT = 1.2;
         }
+        paintHud();
       },
       onBeep(name) {
         unlockAudio();

@@ -8,6 +8,7 @@
    polish6: depth shadows + parallax-lite hills + Mars invader silhouette tease + mech wow tip.
    polish7: zone signs + mini-map lite + companion idle bounce / follow lag. Hollow house + frogs kept.
    polish8: truck silhouette + house porch + whale breach + destination beacon. Hollow house + frogs kept.
+   polish9: color nameplates; aboard icons; track gate; Optimus punch lite. Hollow house + frogs kept.
    WASD camera-relative — do not invert. */
 (function (global) {
   "use strict";
@@ -133,22 +134,31 @@
   }
 
   function labelSprite(text, color) {
+    /* polish9: readable plate nameplates */
     var canvas = document.createElement("canvas");
     canvas.width = 256;
     canvas.height = 64;
     var ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, 256, 64);
-    ctx.font = "bold 28px Segoe UI, system-ui, sans-serif";
+    ctx.font = "bold 26px Segoe UI, system-ui, sans-serif";
     ctx.textAlign = "center";
+    var tw = Math.min(240, ctx.measureText(text).width + 28);
+    ctx.fillStyle = "rgba(15, 23, 42, 0.88)";
+    ctx.strokeStyle = color || "#fef3c7";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(128 - tw * 0.5, 14, tw, 36, 10);
+    else ctx.rect(128 - tw * 0.5, 14, tw, 36);
+    ctx.fill(); ctx.stroke();
     ctx.strokeStyle = "#000";
-    ctx.lineWidth = 6;
+    ctx.lineWidth = 5;
     ctx.strokeText(text, 128, 40);
     ctx.fillStyle = color || "#fff";
     ctx.fillText(text, 128, 40);
     var tex = new THREE.CanvasTexture(canvas);
     var mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
     var spr = new THREE.Sprite(mat);
-    spr.scale.set(2.2, 0.55, 1);
+    spr.scale.set(2.4, 0.6, 1);
     return spr;
   }
 
@@ -470,6 +480,19 @@
       );
       ramp.position.set(tp.x, 0.2, tp.z); ramp.rotation.z = -0.25; scene.add(ramp);
     }
+    /* polish9: start/finish gate */
+    var gp = worldToThree(1870, 2225);
+    var postMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.4 });
+    var leftPost = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.4, 0.12), postMat);
+    leftPost.position.set(gp.x - 1.4, 0.7, gp.z); scene.add(leftPost);
+    var rightPost = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.4, 0.12), postMat);
+    rightPost.position.set(gp.x + 1.4, 0.7, gp.z); scene.add(rightPost);
+    var banner = new THREE.Mesh(
+      new THREE.BoxGeometry(2.8, 0.28, 0.06),
+      new THREE.MeshStandardMaterial({ color: 0x0f172a, emissive: 0xfbbf24, emissiveIntensity: 0.25 })
+    );
+    banner.position.set(gp.x, 1.35, gp.z); scene.add(banner);
+    addLabel("START / FINISH", "#fef3c7", gp.x, 1.7, gp.z);
   }
 
   function buildPondLife() {
@@ -741,10 +764,29 @@
     state.playerShadowSoft.rotation.x = -Math.PI / 2;
     state.playerShadowSoft.position.set(spawn.x, 0.03, spawn.z);
     scene.add(state.playerShadowSoft);
-    state.nameTag = labelSprite(def.name, "#fff");
+    state.nameTag = labelSprite(def.name + " · you", def.color || "#fff");
     state.nameTag.position.set(spawn.x, 2.6, spawn.z);
     state.nameTag.scale.set(2.8, 0.7, 1);
     scene.add(state.nameTag);
+    /* polish9: aboard frog icons (shared truck) */
+    state.aboardGroup = new THREE.Group();
+    state.aboardGroup.visible = false;
+    for (var abi = 0; abi < C.FROG_ORDER.length; abi++) {
+      var aid = C.FROG_ORDER[abi];
+      var adef = C.FROG_DEFS[aid];
+      var dot = new THREE.Mesh(
+        new THREE.SphereGeometry(0.16, 10, 8),
+        new THREE.MeshStandardMaterial({ color: hex(adef.color), emissive: hex(adef.color), emissiveIntensity: 0.25 })
+      );
+      dot.position.set((abi - 1.5) * 0.38, 0.95, 0);
+      state.aboardGroup.add(dot);
+    }
+    scene.add(state.aboardGroup);
+    state.aboardLabel = labelSprite("Aboard", "#fef3c7");
+    state.aboardLabel.scale.set(1.6, 0.4, 1);
+    state.aboardLabel.visible = false;
+    scene.add(state.aboardLabel);
+    state.kitFxT = 0; state.kitFxKind = ""; state.lapSide = 0; state.lapCd = 0; state.lapCount = 0;
     // Snap locked camera onto spawn immediately (no multi-second lerp from origin)
     camera.userData.lockTarget.set(spawn.x, 0, spawn.z);
     camera.position.set(spawn.x + 17, 22, spawn.z + 17);
@@ -1103,7 +1145,8 @@
       } else if (id === "phone") {
         state.toast = "Purple Bear: Check SPS · find Jimmy!";
       } else if (id === "sps") {
-        state.toast = "SPS · Solar Positioning System (stub on three.js)";
+        state.toast = "SPS · Optimus kits (stub on three.js)";
+        state.kitFxKind = "rocket"; state.kitFxT = 0.55;
       } else if (id === "starship") {
         state.toast = "Spotty: Launch!";
         buildSpace();
@@ -1138,6 +1181,7 @@
       state.scrap += 1;
     } else {
       state.toast = "BOT · open SPS for Optimus kits";
+      state.kitFxKind = "map"; state.kitFxT = 0.55;
       var target = worldToThree(280, 400);
       state.player.position.x += (target.x - state.player.position.x) * 0.2;
       state.player.position.z += (target.z - state.player.position.z) * 0.2;
@@ -1280,9 +1324,34 @@
           state.scrap += 0.02;
         }
       }
-      state.zVel = (state.zVel || 0) - 14 * dt;
+      /* polish9: brief air hang at apex */
+      var gFall = 14;
+      if ((state.zLift || 0) > 0.55 && Math.abs(state.zVel || 0) < 2.2) gFall *= 0.38;
+      state.zVel = (state.zVel || 0) - gFall * dt;
       state.zLift = Math.max(0, (state.zLift || 0) + state.zVel * dt);
       if (state.zLift <= 0) { state.zLift = 0; state.zVel = 0; }
+      /* polish9: lap sparkle at gate */
+      if (state.inTruck && C.onTrack && C.onTrack(wpos0.x, wpos0.y) && (state.zLift || 0) < 0.4) {
+        state.lapCd = Math.max(0, (state.lapCd || 0) - dt);
+        var side = (wpos0.x - 1870) * 0.55 + (wpos0.y - 2225) * (-0.85);
+        var nearG = Math.abs(wpos0.x - 1870) < 110 && Math.abs(wpos0.y - 2225) < 60;
+        if (nearG && state.lapSide && side * state.lapSide < 0 && state.lapCd <= 0) {
+          state.lapCount = (state.lapCount || 0) + 1; state.lapCd = 2.4; state.scrap += 8;
+          state.toast = "LAP " + state.lapCount + " · sparkle finish!"; state.toastT = 1.6;
+          var gp2 = worldToThree(1870, 2225);
+          for (var lpi = 0; lpi < 12; lpi++) {
+            var spark = new THREE.Mesh(
+              new THREE.SphereGeometry(0.06, 6, 5),
+              new THREE.MeshBasicMaterial({ color: 0xfde68a, transparent: true, opacity: 0.95 })
+            );
+            spark.position.set(gp2.x + (Math.random() - 0.5) * 0.8, 0.4 + Math.random() * 0.8, gp2.z + (Math.random() - 0.5) * 0.8);
+            scene.add(spark);
+            if (!state.fx) state.fx = [];
+            state.fx.push({ mesh: spark, life: 0.55, rise: 1.2 });
+          }
+        }
+        if (nearG || Math.abs(side) > 40) state.lapSide = side >= 0 ? 1 : -1;
+      }
       var wet = C.inPond && C.inPond(wpos0.x, wpos0.y);
       if (state.inTruck && wet) {
         var plunge = Math.max(0, -state.zVel) + (state.zLift > 0.4 ? 1 : 0);
@@ -1458,7 +1527,35 @@
     }
 
     if (state.nameTag) {
-      state.nameTag.position.set(state.player.position.x, 2.6 + (state.player.position.y || 0), state.player.position.z);
+      state.nameTag.position.set(state.player.position.x, 2.6 + (state.player.position.y || 0) + (state.zLift || 0) * 0.15, state.player.position.z);
+      state.nameTag.visible = true;
+    }
+    /* polish9: aboard icons when shared */
+    if (state.aboardGroup) {
+      var sharedOn = !!(state.inTruck && state.truckMode === "shared");
+      state.aboardGroup.visible = sharedOn;
+      if (sharedOn) {
+        state.aboardGroup.position.set(state.player.position.x, (state.zLift || 0) * 0.15, state.player.position.z);
+      }
+      if (state.aboardLabel) {
+        state.aboardLabel.visible = sharedOn;
+        state.aboardLabel.position.set(state.player.position.x, 1.55 + (state.zLift || 0) * 0.15, state.player.position.z);
+      }
+    }
+    if ((state.kitFxT || 0) > 0) {
+      state.kitFxT -= dt;
+      if (!state.kitFxMesh) {
+        state.kitFxMesh = new THREE.Mesh(
+          new THREE.SphereGeometry(0.35, 10, 8),
+          new THREE.MeshBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.55 })
+        );
+        scene.add(state.kitFxMesh);
+      }
+      state.kitFxMesh.visible = state.kitFxT > 0;
+      state.kitFxMesh.position.set(state.player.position.x, 1.2 + (0.55 - state.kitFxT) * 1.5, state.player.position.z);
+      state.kitFxMesh.scale.setScalar(1 + (0.55 - state.kitFxT) * 2);
+      state.kitFxMesh.material.opacity = Math.min(1, state.kitFxT * 2) * 0.55;
+      if (state.kitFxT <= 0) state.kitFxMesh.visible = false;
     }
 
     // Locked orbit follow — camera offset fixed, no orbit controls / no FPS look

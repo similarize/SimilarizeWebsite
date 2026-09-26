@@ -9,7 +9,8 @@
    polish7: zone signs fade-in; mini-map; AI idle bounce + follow lag + chat bubbles (existing lines);
    polish8: Cybertruck angular stainless + light bar + arches; ranch 2.5D porch/chimney smoke/path;
    pond whale breach arcs + fish schools; Blue Bear pet bounce near house (place-bound).
-   ability FX hang TBD. Canvas lead.
+   polish9: frog color nameplates; shared truck aboard frog icons; start/finish gate + lap sparkle;
+   brief jump air hang; Optimus kit visual punch on ranch. Canvas lead.
    ~10× map: real roam between ranch house / track / pond / Starship.
    James ranch house: big house, backyard (animals), huge garage (toys + 10/100-story mechs);
    1000-story mech sits out back (won't fit). Four Cybertrucks + shared pile-in.
@@ -95,6 +96,9 @@
     { x: 2460, y: 2480, r: 110, h: 0.55 },
     { x: 3180, y: 2680, r: 130, h: -0.35 },
   ];
+  /* polish9: start/finish gate on west straight (TRACK_MAIN[0] region) */
+  var TRACK_GATE = { x: 1870, y: 2225, halfW: 70, halfH: 28 };
+
   /* Ramps sit on highs, valley lips, and branch junctions */
   var RAMPS = [
     { x: 2060, y: 1780, w: 72, h: 36, boost: 1.45 },
@@ -242,6 +246,7 @@
       ambient: [],
       ripples: [],
       sparkles: [],
+      kitFx: [],
       scrap: 0,
       stuntCombo: 0,
       airTime: 0,
@@ -249,6 +254,9 @@
       sharedDriverId: null,
       garageOpen: 0,
       ambientT: 0,
+      lapCount: 0,
+      lapSide: 0,
+      lapCooldown: 0,
     };
   }
 
@@ -339,11 +347,15 @@
     world.ambient = [];
     world.ripples = [];
     world.sparkles = [];
+    world.kitFx = [];
     world.scrap = 0;
     world.stuntCombo = 0;
     world.airTime = 0;
     world.sharedDriverId = null;
     world.garageOpen = 0;
+    world.lapCount = 0;
+    world.lapSide = 0;
+    world.lapCooldown = 0;
     world.ambientT = 0;
     /* polish5: seed day ambient pollen / dusk fireflies across yard + track apron */
     for (var ai = 0; ai < 64; ai++) {
@@ -500,6 +512,31 @@
     }
   }
 
+  /* polish9: Optimus kit visual punch on ranch (visual only) */
+  function spawnKitFx(world, x, y, kind) {
+    if (!world.kitFx) world.kitFx = [];
+    world.kitFx.push({
+      x: x, y: y, kind: kind || "rocket",
+      life: kind === "map" ? 0.7 : kind === "hover" ? 0.85 : 0.55,
+      age: 0,
+    });
+    if (kind === "rocket" || kind === "afterburners") spawnSparks(world, x, y, 14);
+    else if (kind === "drone" || kind === "map") spawnSparkle(world, x, y, 16);
+    else spawnSparkle(world, x, y, 8);
+  }
+
+  function gateSide(x, y) {
+    /* West-straight finish line: positive when "past" toward NE circuit */
+    var dx = x - TRACK_GATE.x;
+    var dy = y - TRACK_GATE.y;
+    return dx * 0.55 + dy * (-0.85);
+  }
+
+  function nearGate(x, y) {
+    return Math.abs(x - TRACK_GATE.x) < TRACK_GATE.halfW * 1.6 &&
+      Math.abs(y - TRACK_GATE.y) < TRACK_GATE.halfH * 2.2;
+  }
+
   function scareFishies(world, x, y) {
     function scareList(list, radius) {
       for (var i = 0; i < list.length; i++) {
@@ -626,6 +663,13 @@
       sk.vx *= 0.96;
       if (sk.life <= 0) world.sparkles.splice(i, 1);
     }
+    if (!world.kitFx) world.kitFx = [];
+    for (i = world.kitFx.length - 1; i >= 0; i--) {
+      var kx = world.kitFx[i];
+      kx.age = (kx.age || 0) + dt;
+      kx.life -= dt;
+      if (kx.life <= 0) world.kitFx.splice(i, 1);
+    }
     world.ambientT = (world.ambientT || 0) - dt;
     if (world.ambientT <= 0) {
       world.ambientT = 0.55 + Math.random() * 0.85;
@@ -703,7 +747,9 @@
     }
     if (ent.z > 0 || ent.zVel !== 0) {
       var g = gTruck;
-      if (Math.abs(ent.zVel) < 60) g *= 0.78;
+      /* polish9: brief air hang at jump apex so elevation jumps feel */
+      if (ent.z > 22 && Math.abs(ent.zVel) < 95) g *= 0.38;
+      else if (Math.abs(ent.zVel) < 60) g *= 0.78;
       /* Water drag while airborne over pond softens plunge */
       if (wet) g *= 0.92;
       ent.zVel -= g * dt;
@@ -786,6 +832,22 @@
         spawnSparks(world, ent.x - ent.facing * 18, ent.y + 6, 2);
       }
     }
+    /* polish9: lap sparkle when crossing start/finish gate */
+    if (ent.inTruck && onTrack(ent.x, ent.y) && (ent.z || 0) < 8) {
+      world.lapCooldown = Math.max(0, (world.lapCooldown || 0) - dt);
+      var side = gateSide(ent.x, ent.y);
+      if (nearGate(ent.x, ent.y) && world.lapSide !== 0 && side * world.lapSide < 0 && world.lapCooldown <= 0) {
+        world.lapCount = (world.lapCount || 0) + 1;
+        world.lapCooldown = 2.4;
+        result.scrapGain = (result.scrapGain || 0) + 8;
+        world.scrap += 8;
+        spawnSparkle(world, TRACK_GATE.x, TRACK_GATE.y, 22);
+        spawnSparks(world, TRACK_GATE.x, TRACK_GATE.y, 10);
+        result.lap = world.lapCount;
+      }
+      if (nearGate(ent.x, ent.y) || Math.abs(side) > 40) world.lapSide = side >= 0 ? 1 : -1;
+    }
+
     /* polish5: track dust plume when trucks race */
     if (ent.inTruck && onTrack(ent.x, ent.y) && speed > 110 && (ent.z || 0) <= 0.5) {
       if (Math.random() < dt * (2.8 + speed * 0.012)) {
@@ -1762,6 +1824,41 @@
     drawPathRibbon(ctx, TRACK_BRANCH_B, camX, camY, vw, vh, "rgba(28,22,16,0.92)", 14, null, true);
     drawPathRibbon(ctx, TRACK_BRANCH_B, camX, camY, vw, vh, "#fde68a", 2.6, [9, 9], true);
 
+    /* polish9: start/finish gate + checkered line */
+    (function drawGate() {
+      var gx = TRACK_GATE.x, gy = TRACK_GATE.y;
+      var gl = project(gx - TRACK_GATE.halfW, gy, camX, camY, vw, vh);
+      var gr = project(gx + TRACK_GATE.halfW, gy, camX, camY, vw, vh);
+      var gh = 52 * ((gl.depth + gr.depth) * 0.5);
+      /* Posts */
+      ctx.fillStyle = "#f8fafc";
+      ctx.strokeStyle = "#0f172a";
+      ctx.lineWidth = 2;
+      ctx.fillRect(gl.x - 4, gl.y - gh, 8, gh);
+      ctx.strokeRect(gl.x - 4, gl.y - gh, 8, gh);
+      ctx.fillRect(gr.x - 4, gr.y - gh, 8, gh);
+      ctx.strokeRect(gr.x - 4, gr.y - gh, 8, gh);
+      /* Banner */
+      var mid = project(gx, gy, camX, camY, vw, vh);
+      ctx.fillStyle = "rgba(15, 23, 42, 0.9)";
+      ctx.fillRect(gl.x, Math.min(gl.y, gr.y) - gh - 4, gr.x - gl.x, 18);
+      for (var bi = 0; bi < 8; bi++) {
+        ctx.fillStyle = bi % 2 === 0 ? "#0a0a0a" : "#f8fafc";
+        var bx0 = gl.x + (gr.x - gl.x) * (bi / 8);
+        var bx1 = gl.x + (gr.x - gl.x) * ((bi + 1) / 8);
+        ctx.fillRect(bx0, Math.min(gl.y, gr.y) - gh - 4, bx1 - bx0, 18);
+      }
+      ctx.strokeStyle = "#fbbf24";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(gl.x, Math.min(gl.y, gr.y) - gh - 4, gr.x - gl.x, 18);
+      ctx.fillStyle = "#fef3c7";
+      ctx.font = "bold " + Math.round(11 * mid.depth) + "px Segoe UI, system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.strokeStyle = "#000";
+      ctx.lineWidth = 3;
+      ctx.strokeText("START / FINISH", mid.x, Math.min(gl.y, gr.y) - gh + 9);
+      ctx.fillText("START / FINISH", mid.x, Math.min(gl.y, gr.y) - gh + 9);
+    })();
     /* Checkered start on west straight */
     for (var ci = 0; ci < 10; ci++) {
       var sx = 1780 + ci * 18;
@@ -2200,6 +2297,78 @@
     ctx.restore();
   }
 
+  /* polish9: frog-color nameplates that stay readable */
+  function drawNameplate(ctx, text, x, y, color, depth) {
+    var d = depth || 1;
+    ctx.save();
+    ctx.font = "bold " + Math.round(11 * Math.min(1.35, 0.85 + d * 0.35)) + "px Segoe UI, system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    var tw = Math.min(130, ctx.measureText(text).width + 14);
+    var th = 16;
+    ctx.fillStyle = "rgba(15, 23, 42, 0.88)";
+    ctx.strokeStyle = color || "#fef3c7";
+    ctx.lineWidth = 2;
+    if (ctx.roundRect) {
+      ctx.beginPath();
+      ctx.roundRect(x - tw * 0.5, y - th * 0.5, tw, th, 6);
+      ctx.fill(); ctx.stroke();
+    } else {
+      ctx.fillRect(x - tw * 0.5, y - th * 0.5, tw, th);
+      ctx.strokeRect(x - tw * 0.5, y - th * 0.5, tw, th);
+    }
+    ctx.strokeStyle = "#000";
+    ctx.lineWidth = 3;
+    ctx.strokeText(text, x, y + 0.5);
+    ctx.fillStyle = color || "#fff";
+    ctx.fillText(text, x, y + 0.5);
+    ctx.restore();
+  }
+
+  function drawAboardIcons(ctx, frogs, cx, cy, depth, lift) {
+    if (!frogs || !frogs.length) return;
+    var riders = frogs.slice().sort(function (a, b) { return a.id.localeCompare(b.id); });
+    var n = riders.length;
+    for (var ri = 0; ri < n; ri++) {
+      var rf = riders[ri];
+      var ox = (ri - (n - 1) * 0.5) * 14 * depth;
+      var iy = cy - 24 * depth - lift;
+      ctx.fillStyle = "rgba(15,23,42,0.75)";
+      ctx.beginPath();
+      ctx.arc(cx + ox, iy, 8.2 * depth, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rf.color;
+      ctx.beginPath();
+      ctx.arc(cx + ox, iy, 6.6 * depth, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#0f172a";
+      ctx.lineWidth = 1.4;
+      ctx.stroke();
+      ctx.fillStyle = rf.hat || "#facc15";
+      ctx.beginPath();
+      ctx.arc(cx + ox, iy - 5.5 * depth, 3.2 * depth, 0, Math.PI * 2);
+      ctx.fill();
+      /* tiny readable initial under icon */
+      ctx.font = "bold " + Math.round(8 * depth) + "px Segoe UI, system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillStyle = "#fef3c7";
+      ctx.strokeStyle = "#000";
+      ctx.lineWidth = 2.5;
+      var initial = (rf.name || rf.id || "?").charAt(0);
+      ctx.strokeText(initial, cx + ox, iy + 14 * depth);
+      ctx.fillText(initial, cx + ox, iy + 14 * depth);
+    }
+    ctx.fillStyle = "rgba(15,23,42,0.82)";
+    ctx.fillRect(cx - 52 * depth, cy + 18 * depth, 104 * depth, 16 * depth);
+    ctx.strokeStyle = "#fbbf24";
+    ctx.lineWidth = 1.6;
+    ctx.strokeRect(cx - 52 * depth, cy + 18 * depth, 104 * depth, 16 * depth);
+    ctx.fillStyle = "#fef3c7";
+    ctx.font = "bold " + Math.round(10 * depth) + "px Segoe UI, system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("Aboard · " + n, cx, cy + 29 * depth);
+  }
+
   function drawFroggy(ctx, frog, camX, camY, vw, vh, frogs) {
     var p = project(frog.x, frog.y, camX, camY, vw, vh);
     var s = 16.4 * p.depth * (0.92 + 0.08 * p.depth); /* polish3 readable */
@@ -2218,19 +2387,7 @@
     if (frog.inTruck && frog.local) {
       drawCybertruck(ctx, p.x, p.y, frog.facing, p.depth, true, frog.z || 0, frog.color, { inWater: inPond(frog.x, frog.y), sub: frog.waterSub || 0, wakePhase: frog.wakePhase || 0, bounce: frog.truckBounce || 0 });
       if (frog.truckMode === "shared" && frogs) {
-        var riders = frogs.slice().sort(function (a, b) { return a.id.localeCompare(b.id); });
-        for (var ri = 0; ri < riders.length; ri++) {
-          var rf = riders[ri];
-          var ox = (ri - 1.5) * 10 * p.depth;
-          ctx.fillStyle = rf.color;
-          ctx.beginPath();
-          ctx.arc(p.x + ox, p.y - 24 * p.depth - lift, 6.5 * p.depth, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.fillStyle = rf.hat || "#facc15";
-          ctx.beginPath();
-          ctx.arc(p.x + ox, p.y - 30 * p.depth - lift, 3.5 * p.depth, 0, Math.PI * 2);
-          ctx.fill();
-        }
+        drawAboardIcons(ctx, frogs, p.x, p.y, p.depth, lift);
       } else {
         ctx.fillStyle = frog.color;
         ctx.beginPath();
@@ -2249,6 +2406,9 @@
         ctx.lineTo(p.x - frog.facing * 18 * p.depth, p.y + 6 * p.depth);
         ctx.fill();
       }
+      if (frog.truckMode !== "shared") {
+        drawNameplate(ctx, (frog.name || "You") + (frog.local ? " · you" : ""), p.x, p.y - 40 * p.depth - lift, frog.color || "#fff", p.depth);
+      }
       return p;
     }
 
@@ -2258,6 +2418,7 @@
       ctx.beginPath();
       ctx.arc(p.x, p.y - 22 * p.depth - lift, 6 * p.depth, 0, Math.PI * 2);
       ctx.fill();
+      drawNameplate(ctx, frog.name || "Frog", p.x, p.y - 38 * p.depth - lift, frog.color || "#fff", p.depth);
       return p;
     }
 
@@ -2337,29 +2498,16 @@
     ctx.beginPath();
     ctx.arc(p.x + 1 * p.depth * frog.facing, by + s * 0.22, 4.5 * p.depth, 0.15, Math.PI - 0.15);
     ctx.stroke();
-    if (!frog.human) {
-      ctx.fillStyle = "rgba(0,0,0,0.65)";
-      ctx.strokeStyle = "#000";
-      ctx.lineWidth = 3;
-      ctx.font = "bold 10px Segoe UI, system-ui, sans-serif";
-      ctx.textAlign = "center";
-      var aiLabel = (frog.name || "AI") + " · AI";
-      ctx.strokeText(aiLabel, p.x, p.y + s + 12);
-      ctx.fillStyle = frog.color || "#fff";
-      ctx.fillText(aiLabel, p.x, p.y + s + 12);
-    }
+    /* polish9: color nameplates for every frog — stay readable */
     if (frog.local) {
       ctx.strokeStyle = "rgba(255,255,255,0.9)";
       ctx.lineWidth = 2.5;
       ctx.beginPath(); ctx.arc(p.x, by, s + 6, 0, Math.PI * 2); ctx.stroke();
-      ctx.fillStyle = "#fff";
-      ctx.font = "bold 11px Segoe UI, system-ui, sans-serif";
-      ctx.textAlign = "center";
-      ctx.strokeStyle = "#000";
-      ctx.lineWidth = 3;
-      ctx.strokeText(frog.name || "You", p.x, by - s - 8);
-      ctx.fillText(frog.name || "You", p.x, by - s - 8);
     }
+    var plate = frog.name || "Frog";
+    if (frog.local) plate = (frog.name || "You") + " · you";
+    else if (!frog.human) plate = (frog.name || "AI") + " · AI";
+    drawNameplate(ctx, plate, p.x, by - s - 14, frog.color || "#fff", p.depth);
     /* polish7: chat bubble one-liner (existing canon strings only) */
     if (frog.chatT > 0 && frog.chatLine) {
       var alpha = Math.min(1, frog.chatT * 1.4);
@@ -2608,6 +2756,49 @@
       ctx.beginPath();
       ctx.arc(skp.x, skp.y, sk.r * skp.depth, 0, Math.PI * 2);
       ctx.fill();
+    }
+    /* polish9: Optimus kit visual punch */
+    for (i = 0; i < (world.kitFx || []).length; i++) {
+      var kf = world.kitFx[i];
+      var kfp = project(kf.x, kf.y, camX, camY, vw, vh);
+      var ka = clamp(kf.life * 1.6, 0, 1);
+      var grow = 1 + (kf.age || 0) * 2.2;
+      if (kf.kind === "rocket" || kf.kind === "afterburners") {
+        ctx.fillStyle = "rgba(251, 146, 60, " + (ka * 0.55) + ")";
+        ctx.beginPath();
+        ctx.moveTo(kfp.x, kfp.y - 8 * kfp.depth);
+        ctx.lineTo(kfp.x - 10 * kfp.depth * grow, kfp.y + 22 * kfp.depth * grow);
+        ctx.lineTo(kfp.x + 10 * kfp.depth * grow, kfp.y + 22 * kfp.depth * grow);
+        ctx.closePath(); ctx.fill();
+        ctx.fillStyle = "rgba(254, 243, 199, " + (ka * 0.8) + ")";
+        ctx.beginPath();
+        ctx.arc(kfp.x, kfp.y - 4 * kfp.depth, 6 * kfp.depth, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (kf.kind === "hover") {
+        ctx.strokeStyle = "rgba(125, 211, 252, " + ka + ")";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.ellipse(kfp.x, kfp.y + 6, 28 * kfp.depth * grow, 10 * kfp.depth, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      } else if (kf.kind === "drone") {
+        ctx.fillStyle = "rgba(148, 163, 184, " + ka + ")";
+        ctx.fillRect(kfp.x - 8 * kfp.depth, kfp.y - 28 * kfp.depth * grow, 16 * kfp.depth, 8 * kfp.depth);
+        ctx.strokeStyle = "rgba(226, 232, 240, " + ka + ")";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(kfp.x - 14 * kfp.depth, kfp.y - 24 * kfp.depth * grow);
+        ctx.lineTo(kfp.x + 14 * kfp.depth, kfp.y - 24 * kfp.depth * grow);
+        ctx.stroke();
+      } else { /* map ping */
+        ctx.strokeStyle = "rgba(251, 191, 36, " + ka + ")";
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(kfp.x, kfp.y, (18 + grow * 22) * kfp.depth, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(kfp.x, kfp.y, (8 + grow * 10) * kfp.depth, 0, Math.PI * 2);
+        ctx.stroke();
+      }
     }
   }
 
@@ -2945,6 +3136,8 @@
     spawnSparks: spawnSparks,
     spawnRipple: spawnRipple,
     spawnSparkle: spawnSparkle,
+    spawnKitFx: spawnKitFx,
+    TRACK_GATE: TRACK_GATE,
     moveEntity: moveEntity,
     tickHubAI: tickHubAI,
     boardTruck: boardTruck,

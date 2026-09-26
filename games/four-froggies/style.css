@@ -882,3 +882,46 @@ body.in-space {
 #story-phone.playful-phone .contact-btn[data-story-dial="purple"] {
   border-color: #fbbf24;
 }
+
+
+/* ——— polish9: party clarity + aboard + kit punch ——— */
+.party-help {
+  margin: 2px 0 4px;
+  max-width: 26rem;
+  font-size: 11px;
+  line-height: 1.35;
+  color: #93c5fd;
+  opacity: 0.95;
+}
+.invite-cta strong { color: #fef3c7; font-weight: 800; }
+.aboard-strip {
+  font: 800 11px "Segoe UI", system-ui, sans-serif;
+  color: #fde68a;
+  letter-spacing: 0.04em;
+  margin-right: 4px;
+  align-self: center;
+}
+.badge.aboard-frog {
+  font-weight: 800;
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.35);
+}
+.frog-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 4px;
+  border: 1px solid rgba(15, 23, 42, 0.5);
+  vertical-align: middle;
+}
+.kit-btn.kit-punch {
+  animation: kit-punch-flash 0.55s ease-out;
+  box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.65), 0 0 18px rgba(251, 146, 60, 0.55);
+}
+@keyframes kit-punch-flash {
+  0% { transform: scale(1.08); filter: brightness(1.35); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+.optimus-kits.kits-active .kit-btn.ready {
+  border-color: #fbbf24;
+}

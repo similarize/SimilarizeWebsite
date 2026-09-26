@@ -6,7 +6,8 @@
    shared ALL ABOARD; land shake; hotspot sparkle; orbit pull rings + Escape banner.
    polish6: depth shadows + parallax-lite hills + Mars invader silhouette tease + mech wow tip.
    polish7: zone signs + mini-map lite + companion idle bounce / follow lag.
-   polish8: truck silhouette + house porch + whale breach + destination beacon (cheap Canvas ports). */
+   polish8: truck silhouette + house porch + whale breach + destination beacon (cheap Canvas ports).
+   polish9: color nameplates; aboard icons; track start/finish gate; Optimus visual punch lite. */
 (function (global) {
   "use strict";
   var C = global.FroggiesCanon;
@@ -126,6 +127,7 @@
           companion.nameTag = this.add.text(companion.x, companion.y - 26, cdef.name + " · AI", {
             fontFamily: "Segoe UI, system-ui, sans-serif", fontSize: "11px", fontStyle: "bold",
             color: cdef.color || "#fff", stroke: "#000", strokeThickness: 3,
+            backgroundColor: "#0f172ae6", padding: { x: 6, y: 2 },
           }).setOrigin(0.5, 1).setDepth(21);
           companion.chatBubble = this.add.text(companion.x, companion.y - 44, "", {
             fontFamily: "Segoe UI, system-ui, sans-serif", fontSize: "10px", fontStyle: "bold",
@@ -133,10 +135,27 @@
           }).setOrigin(0.5, 1).setDepth(22).setVisible(false);
           this.companions.push(companion);
         }
-        this.nameTag = this.add.text(0, 0, def.name, {
-          fontFamily: "Segoe UI, system-ui, sans-serif", fontSize: "14px", fontStyle: "bold",
-          color: "#fff", stroke: "#000", strokeThickness: 4,
+        this.nameTag = this.add.text(0, 0, def.name + " · you", {
+          fontFamily: "Segoe UI, system-ui, sans-serif", fontSize: "13px", fontStyle: "bold",
+          color: def.color || "#fff", stroke: "#000", strokeThickness: 4,
+          backgroundColor: "#0f172ae6", padding: { x: 7, y: 3 },
         }).setOrigin(0.5, 1).setDepth(21);
+        /* polish9: shared truck aboard frog icons */
+        this.aboardIcons = [];
+        for (var ai = 0; ai < C.FROG_ORDER.length; ai++) {
+          var aid = C.FROG_ORDER[ai];
+          var adef = C.FROG_DEFS[aid];
+          var ic = this.add.circle(0, 0, 7, hx(adef.color), 1).setDepth(22).setVisible(false).setStrokeStyle(1.5, 0x0f172a, 1);
+          var il = this.add.text(0, 0, adef.name.charAt(0), {
+            fontSize: "9px", fontStyle: "bold", color: "#0f172a",
+          }).setOrigin(0.5).setDepth(23).setVisible(false);
+          this.aboardIcons.push({ id: aid, dot: ic, letter: il });
+        }
+        this.aboardLabel = this.add.text(0, 0, "Aboard", {
+          fontSize: "11px", fontStyle: "bold", color: "#fef3c7", stroke: "#000", strokeThickness: 3,
+          backgroundColor: "#0f172acc", padding: { x: 6, y: 2 },
+        }).setOrigin(0.5).setDepth(22).setVisible(false);
+        this.kitFxT = 0; this.kitFxKind = ""; this.lapSide = 0; this.lapCd = 0; this.lapCount = 0;
         this.truckBody = this.add.rectangle(0, 0, 78, 36, 0x9ca3af, 1).setDepth(18).setVisible(false).setStrokeStyle(3, 0x111827, 1);
         this.truckAccent = this.add.rectangle(0, -2, 50, 14, hx(def.color), 0.85).setDepth(18).setVisible(false);
         this.waterClip = this.add.rectangle(0, 10, 84, 22, 0x0e7490, 0.55).setDepth(19).setVisible(false);
@@ -363,6 +382,20 @@
         this.add.text(track.x + track.w * 0.5, track.y + 18, "Monster truck track", {
           fontSize: "16px", fontStyle: "bold", color: "#f5f5f4", stroke: "#000", strokeThickness: 4,
         }).setOrigin(0.5, 0);
+        /* polish9: start/finish gate */
+        var gx = 1870, gy = 2225;
+        var gateG = this.add.graphics();
+        gateG.fillStyle(0xf8fafc, 1); gateG.lineStyle(2, 0x0f172a, 1);
+        gateG.fillRect(gx - 74, gy - 56, 10, 56); gateG.strokeRect(gx - 74, gy - 56, 10, 56);
+        gateG.fillRect(gx + 64, gy - 56, 10, 56); gateG.strokeRect(gx + 64, gy - 56, 10, 56);
+        for (var gi = 0; gi < 8; gi++) {
+          gateG.fillStyle(gi % 2 === 0 ? 0x0a0a0a : 0xf8fafc, 1);
+          gateG.fillRect(gx - 64 + gi * 16, gy - 56, 16, 16);
+        }
+        gateG.lineStyle(2, 0xfbbf24, 1); gateG.strokeRect(gx - 64, gy - 56, 128, 16);
+        this.add.text(gx, gy - 48, "START / FINISH", {
+          fontSize: "11px", fontStyle: "bold", color: "#fef3c7", stroke: "#000", strokeThickness: 3,
+        }).setOrigin(0.5);
       },
       drawPondLife: function () {
         var pond = C.AREAS[2]; this.fish = []; this.whales = []; this.schools = [];
@@ -480,8 +513,27 @@
           var ramp = C.rampAt(this.player.x, this.player.y);
           if (ramp && sp > 40) { this.zVel = Math.max(this.zVel, 180 * (ramp.boost || 1.3)); this.scrap += 0.02; }
         }
-        this.zVel -= 420 * dt; this.zLift = Math.max(0, this.zLift + this.zVel * dt);
+        /* polish9: brief air hang at apex */
+        var gFall = 420;
+        if (this.zLift > 18 && Math.abs(this.zVel) < 80) gFall *= 0.38;
+        this.zVel -= gFall * dt; this.zLift = Math.max(0, this.zLift + this.zVel * dt);
         if (this.zLift <= 0) { this.zLift = 0; this.zVel = 0; }
+        /* polish9: lap sparkle at gate */
+        if (this.inTruck && C.onTrack && C.onTrack(this.player.x, this.player.y) && this.zLift < 8) {
+          this.lapCd = Math.max(0, (this.lapCd || 0) - dt);
+          var side = (this.player.x - 1870) * 0.55 + (this.player.y - 2225) * (-0.85);
+          var nearG = Math.abs(this.player.x - 1870) < 110 && Math.abs(this.player.y - 2225) < 60;
+          if (nearG && this.lapSide && side * this.lapSide < 0 && this.lapCd <= 0) {
+            this.lapCount = (this.lapCount || 0) + 1; this.lapCd = 2.4; this.scrap += 8;
+            this.toast = "LAP " + this.lapCount + " · sparkle finish!"; this.toastT = 1.6;
+            for (var lpi = 0; lpi < 16; lpi++) {
+              var lang = Math.random() * Math.PI * 2, lsp = 40 + Math.random() * 80;
+              var lp = this.add.circle(1870, 2225, 2 + Math.random() * 3, 0xfde68a, 0.95).setDepth(40);
+              this.fx.push({ g: lp, life: 0.5, vx: Math.cos(lang) * lsp, vy: Math.sin(lang) * lsp });
+            }
+          }
+          if (nearG || Math.abs(side) > 40) this.lapSide = side >= 0 ? 1 : -1;
+        }
         var wet = C.inPond && C.inPond(this.player.x, this.player.y);
         if (this.inTruck && wet) {
           var plunge = Math.max(0, -this.zVel) + (this.zLift > 2 ? 40 : 0);
@@ -490,7 +542,44 @@
         } else this.waterSub = Math.max(0, this.waterSub - dt * 1.6);
         this.player.setFlipX(this.facing < 0).setVisible(!this.inTruck);
         this.nameTag.setPosition(this.player.x, this.player.y - 28 - this.zLift * 0.08);
-        this.nameTag.setVisible(!this.inTruck || this.truckMode === "solo");
+        this.nameTag.setVisible(true);
+        /* polish9: aboard frog icons when shared truck */
+        var sharedOn = this.inTruck && this.truckMode === "shared";
+        if (this.aboardLabel) {
+          this.aboardLabel.setVisible(!!sharedOn).setPosition(this.player.x, this.player.y + 28);
+        }
+        if (this.aboardIcons) {
+          for (var abi = 0; abi < this.aboardIcons.length; abi++) {
+            var ab = this.aboardIcons[abi];
+            var show = !!sharedOn;
+            ab.dot.setVisible(show); ab.letter.setVisible(show);
+            if (show) {
+              var ax = this.player.x + (abi - 1.5) * 16;
+              var ay = this.player.y - 22 - this.zLift * 0.08;
+              ab.dot.setPosition(ax, ay); ab.letter.setPosition(ax, ay);
+            }
+          }
+        }
+        if (this.kitFxT > 0) {
+          this.kitFxT -= dt;
+          var kfg = this.kitFxGfx;
+          if (!kfg) {
+            kfg = this.add.graphics().setDepth(35); this.kitFxGfx = kfg;
+          }
+          kfg.clear();
+          var ka = Math.min(1, this.kitFxT * 2);
+          if (this.kitFxKind === "rocket" || this.kitFxKind === "afterburners") {
+            kfg.fillStyle(0xfb923c, ka * 0.7);
+            kfg.fillTriangle(this.player.x, this.player.y - 6, this.player.x - 12, this.player.y + 28, this.player.x + 12, this.player.y + 28);
+          } else if (this.kitFxKind === "hover") {
+            kfg.lineStyle(3, 0x7dd3fc, ka); kfg.strokeEllipse(this.player.x, this.player.y + 10, 56, 18);
+          } else if (this.kitFxKind === "drone") {
+            kfg.fillStyle(0xe2e8f0, ka); kfg.fillRect(this.player.x - 10, this.player.y - 36, 20, 8);
+          } else {
+            kfg.lineStyle(2, 0xfbbf24, ka); kfg.strokeCircle(this.player.x, this.player.y, 28 + (0.55 - this.kitFxT) * 40);
+          }
+          if (this.kitFxT <= 0) kfg.clear();
+        }
         /* polish4: bounce + spray / bubbles / walk dust */
         this.bouncePhase = (this.bouncePhase || 0) + dt * (3 + sp * 0.02);
         var bounce = this.inTruck && this.zLift < 2 ? Math.sin(this.bouncePhase * 2.4) * Math.min(1.2, sp / 260) * 3.2 : 0;
@@ -798,7 +887,10 @@
           for (var i = 0; i < this.fish.length; i++) { this.fish[i].bx += (Math.random() - 0.5) * 100; this.fish[i].by += (Math.random() - 0.5) * 60; }
           for (var w = 0; w < this.whales.length; w++) { this.whales[w].bx += (Math.random() - 0.5) * 140; this.whales[w].by += (Math.random() - 0.5) * 80; }
         } else if (id === "phone") { this.toast = "Purple Bear: Check SPS · find Jimmy!"; this.toastT = 3; this.scrap += 1; }
-        else if (id === "sps") { this.toast = "SPS · Solar Positioning System (stub on Phaser)"; this.toastT = 2.5; }
+        else if (id === "sps") {
+          this.toast = "SPS · Optimus kits (stub on Phaser)"; this.toastT = 2.5;
+          this.kitFxKind = "rocket"; this.kitFxT = 0.55;
+        }
         else if (id === "starship") { this.toast = "Spotty: Welcome aboard!"; this.toastT = 1.5; this.scene.start("space"); }
         if (hooks.onToast) hooks.onToast(this.toast);
       },
@@ -808,7 +900,11 @@
         if (frogId === "james") { body.velocity.x += this.facing * 300; this.toast = this.inTruck ? "DASH · truck boost!" : "DASH!"; }
         else if (frogId === "jimmy") this.toast = "SHIELD up!";
         else if (frogId === "bubbles") { this.toast = "ZAP!"; this.scrap += 1; }
-        else { this.toast = "BOT · open SPS for Optimus kits"; this.player.x += (520 - this.player.x) * 0.12; this.player.y += (1940 - this.player.y) * 0.12; }
+        else {
+          this.toast = "BOT · open SPS for Optimus kits";
+          this.player.x += (520 - this.player.x) * 0.12; this.player.y += (1940 - this.player.y) * 0.12;
+          this.kitFxKind = "map"; this.kitFxT = 0.55; /* polish9 Optimus punch lite */
+        }
         this.toastT = 1.8; if (hooks.onToast) hooks.onToast(this.toast);
         if (hooks.onAbilityFire) hooks.onAbilityFire(frogId, def.ability);
       },

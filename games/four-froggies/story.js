@@ -2,7 +2,8 @@
    Folded from game-sps reference HUD. Not a separate product.
    polish6: playful Purple Bear phone UI; SPS map flash on Map ping (dish);
    polish8: warmer Purple Bear call panel; Blue Bear pet-bounce class (place-bound);
-   Jimmy rogue hint when Optimus kits active; hang TBD hooks (no new systems). */
+   Jimmy rogue hint when Optimus kits active; hang TBD hooks (no new systems).
+   polish9: Optimus kits visual punch (rocket/afterburners/drone/hover/map) on SPS seeker. */
 (function (global) {
   "use strict";
 
@@ -408,6 +409,7 @@
         var label = btn.getAttribute("data-label") || name;
         btn.textContent = cd > 0 ? label + " " + Math.ceil(cd) + "s" : label;
         btn.classList.toggle("ready", cd <= 0 && !state.won && !state.failed);
+        btn.classList.toggle("kit-punch", state.lastAbility === name && cd > (KIT_CD[name] || 3) - 0.6);
       });
     }
 
@@ -472,8 +474,11 @@
         ctx.fill();
       }
 
-      // Seeker (Optimus)
+      // Seeker (Optimus) — polish9 visual punch from last kit
       if (state.calledPurple) {
+        var kit = state.lastAbility || "";
+        var kitCd = kit ? (state.cds[kit] || 0) : 0;
+        var punch = kit && kitCd > (KIT_CD[kit] || 3) - 0.55;
         ctx.beginPath();
         ctx.arc(
           state.seeker.x,
@@ -486,14 +491,54 @@
           "rgba(61,255,154," + (0.15 + state.confidence * 0.5) + ")";
         ctx.lineWidth = 2;
         ctx.stroke();
+        if (punch && (kit === "rocket" || kit === "afterburners")) {
+          ctx.fillStyle = "rgba(251,146,60,0.55)";
+          ctx.beginPath();
+          ctx.moveTo(state.seeker.x, state.seeker.y + 4);
+          ctx.lineTo(state.seeker.x - 10, state.seeker.y + 28);
+          ctx.lineTo(state.seeker.x + 10, state.seeker.y + 28);
+          ctx.closePath(); ctx.fill();
+          ctx.fillStyle = "rgba(254,243,199,0.9)";
+          ctx.beginPath();
+          ctx.arc(state.seeker.x, state.seeker.y + 8, 5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        if (punch && kit === "hover") {
+          ctx.strokeStyle = "rgba(125,211,252,0.85)";
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.ellipse(state.seeker.x, state.seeker.y + 14, 22, 7, 0, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        if (punch && kit === "drone") {
+          ctx.fillStyle = "rgba(226,232,240,0.95)";
+          ctx.fillRect(state.seeker.x - 9, state.seeker.y - 28, 18, 8);
+          ctx.strokeStyle = "#94a3b8";
+          ctx.beginPath();
+          ctx.moveTo(state.seeker.x - 16, state.seeker.y - 24);
+          ctx.lineTo(state.seeker.x + 16, state.seeker.y - 24);
+          ctx.stroke();
+        }
+        if (punch && kit === "map") {
+          ctx.strokeStyle = "rgba(251,191,36,0.9)";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(state.seeker.x, state.seeker.y, 20, 0, Math.PI * 2);
+          ctx.stroke();
+        }
         ctx.beginPath();
         ctx.arc(state.seeker.x, state.seeker.y, 7, 0, Math.PI * 2);
-        ctx.fillStyle = "#94a3b8";
+        ctx.fillStyle = punch ? "#e2e8f0" : "#94a3b8";
         ctx.fill();
         ctx.fillStyle = "#e2e8f0";
         ctx.font = "9px Segoe UI, system-ui, sans-serif";
         ctx.textAlign = "center";
         ctx.fillText("Optimus", state.seeker.x, state.seeker.y - 12);
+        if (punch) {
+          ctx.fillStyle = "#fde68a";
+          ctx.font = "bold 9px Segoe UI, system-ui, sans-serif";
+          ctx.fillText(kit, state.seeker.x, state.seeker.y - 22);
+        }
       }
 
       // Jimmy blip

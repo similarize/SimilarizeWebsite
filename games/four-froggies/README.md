@@ -87,6 +87,30 @@ Same PeerJS lobby: **Host room** → QR / invite `?room=CODE` → claim seats �
 
 
 
+## What's new (polish9) — party clarity + track gate + Optimus punch
+
+Ben: LOTS more improvement. Canvas lead; Phaser/Three parity on nameplates, aboard icons, track gate, Optimus visual punch lite. Three frogs + hollow house kept.
+
+**Canvas party / solo (`world.js` + `main.js` + `index.html` + `style.css`):**
+- Frog **color nameplates** that stay readable (every frog: you / AI / joined)
+- Clearer **Host / Join / QR** lobby instructions (no new party systems)
+- Shared Cybertruck: **aboard frog icons** on the truck + HUD convoy strip
+
+**Optimus kits (`story.js` + ranch FX):**
+- Visual punch for rocket / afterburners / drone / hover / map ping (SPS seeker + ranch burst)
+
+**Monster truck track (`world.js`):**
+- **START / FINISH** gate on the west straight
+- Lap sparkle + scrap when crossing; brief **air hang** at jump apex
+
+**Space (`space.js`):**
+- Germy / Daisy / King Germy **presence markers** (glow rings)
+- Soft **hundreds of dogs** silhouette flock tease near Mars cave only (ambient dots)
+
+**Phaser / three.js:** nameplates + aboard icons + track gate + Optimus punch lite. Three frogs + hollow house kept.
+
+- Cache-bust: `?v=20260925-polish9`.
+
 ## What's new (polish8) — art punch + destination clarity
 
 Ben: LOTS more improvement. Canvas lead; Phaser/Three cheap ports of truck silhouette + house porch + whale breach + destination beacon. Three frogs + hollow house kept.
@@ -103,7 +127,7 @@ Ben: LOTS more improvement. Canvas lead; Phaser/Three cheap ports of truck silho
 
 **Phaser / three.js:** truck silhouette + house porch + whale breach + destination beacon. Three frogs + hollow house kept.
 
-- Cache-bust: `?v=20260925-polish8`.
+- Cache-bust: `?v=20260925-polish9`.
 
 ## What's new (polish7) — play feel + readability
 
@@ -235,4 +259,4 @@ Ben: keep pouring polish into Canvas, **and** remember everything done on Canvas
 
 ## Publish
 
-Game Creator → **Webmaster** only. Product path: `games/four-froggies/`. Do not republish SPS as arcade. Cache-bust: `?v=20260925-polish8`.
+Game Creator → **Webmaster** only. Product path: `games/four-froggies/`. Do not republish SPS as arcade. Cache-bust: `?v=20260925-polish9`.

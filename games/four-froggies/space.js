@@ -8,7 +8,8 @@
    Spotty/Alex/Fred presence pulse (cast already stubbed).
    polish6: distant invader mech silhouettes when near Mars (visual tease only).
    polish7: Mars cave entrance tease (3-level + back-door labeled hooks); Jimmy jetpack escape visual on ability.
-   polish8: clearer Moon / Mars moons / Neptune moons labels; soft destination beacon when heading toward a body. */
+   polish8: clearer Moon / Mars moons / Neptune moons labels; soft destination beacon when heading toward a body.
+   polish9: Germy / Daisy / King Germy presence markers; soft hundreds-of-dogs silhouette flock near Mars cave. */
 (function (global) {
   "use strict";
 
@@ -829,6 +830,19 @@
   }
 
   function drawDog(ctx, x, y, d, color, label) {
+    /* polish9: presence marker ring for named cast */
+    if (label) {
+      var pulse = 0.45 + 0.35 * Math.sin(performance.now() / 420);
+      ctx.strokeStyle = "rgba(253, 224, 71, " + pulse + ")";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.ellipse(x, y + 4 * d, 18 * d, 8 * d, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = "rgba(251, 191, 36, " + (pulse * 0.18) + ")";
+      ctx.beginPath();
+      ctx.ellipse(x, y + 4 * d, 16 * d, 7 * d, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
     ctx.save();
     ctx.translate(x, y);
     ctx.scale(d, d);
@@ -843,6 +857,22 @@
     ctx.fillRect(-2, -1, 16, 3);
     ctx.restore();
     if (label) drawLabel(ctx, label, x, y - 14 * d, "#fde68a");
+  }
+
+  /* polish9: soft hundreds-of-dogs silhouette flock (ambient dots) near Mars cave only */
+  function drawDogFlockTease(ctx, caveX, caveY, caveD, t) {
+    for (var i = 0; i < 48; i++) {
+      var ang = (i / 48) * Math.PI * 2 + t * 0.15;
+      var rad = 70 + (i % 7) * 9 + Math.sin(t * 0.8 + i) * 6;
+      var fx = caveX + Math.cos(ang) * rad * 0.55 * caveD;
+      var fy = caveY + Math.sin(ang * 1.1) * rad * 0.28 * caveD + 10;
+      var a = 0.12 + 0.1 * Math.sin(t * 2 + i * 0.4);
+      ctx.fillStyle = "rgba(28, 25, 23, " + a + ")";
+      ctx.beginPath();
+      ctx.ellipse(fx, fy, 3.2 * caveD, 1.6 * caveD, ang * 0.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    drawLabel(ctx, "hundreds of dogs · tease", caveX, caveY + 78 * caveD, "rgba(214, 211, 209, 0.55)");
   }
 
   function drawAstronaut(ctx, x, y, d, suit, name) {
@@ -1307,6 +1337,7 @@
       ctx.ellipse(cave.x, cave.y, 54 * cave.d, 42 * cave.d, 0, 0, Math.PI * 2);
       ctx.stroke();
       drawLabel(ctx, "Mars cave", cave.x, cave.y - 58 * cave.d, "#fdba74");
+      drawDogFlockTease(ctx, cave.x, cave.y, cave.d, t);
       if (nearCave) {
         drawLabel(ctx, "3-level secret · hook", cave.x, cave.y - 40 * cave.d, "#fde68a");
         drawLabel(ctx, "back-door · hook", cave.x, cave.y + 48 * cave.d, "#93c5fd");
