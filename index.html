@@ -111,9 +111,10 @@ a { color: var(--green-dark); }
   display: block;
   line-height: 0;
   cursor: pointer;
+  width: min(100%, 420px);
 }
 .brand video,
-.brand img {
+.brand > img {
   width: clamp(168px, 42vw, 228px);
   height: auto;
   aspect-ratio: 1;
@@ -121,13 +122,108 @@ a { color: var(--green-dark); }
   display: block;
   background: transparent;
 }
-.brand svg.logo-anim {
-  width: clamp(200px, 72vw, 320px);
-  height: auto;
-  max-height: 120px;
-  display: block;
-  background: transparent;
-  overflow: visible;
+/* Drive-imi collapse (drivecollapse5) — matches staged preview */
+.brand .logo-stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1250 / 560;
+  --cx: 25.5%;
+  --cy: 37.3%;
+}
+.brand .logo-stage .word-box {
+  position: absolute;
+  left: 0; top: 0; width: 100%; height: 70%;
+  transform-origin: var(--cx) var(--cy);
+  will-change: transform;
+}
+.brand .logo-stage .layer {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: fill;
+  transform-origin: var(--cx) var(--cy);
+  will-change: transform, opacity;
+  pointer-events: none; user-select: none;
+}
+.brand .logo-stage .mark-end {
+  position: absolute; left: 50%; top: 8%;
+  width: auto; height: 58%;
+  transform: translateX(-50%) scale(0.9);
+  opacity: 0;
+  object-fit: contain;
+  pointer-events: none;
+}
+.brand .logo-stage .tag {
+  position: absolute; left: 0; right: 0; bottom: 4%;
+  text-align: center;
+  color: var(--muted);
+  font-size: clamp(0.7rem, 2.1vw, 0.95rem);
+  letter-spacing: 0.035em;
+  line-height: 1.4;
+  padding: 0 0.5rem;
+  opacity: 0;
+  pointer-events: none;
+  font-weight: 500;
+}
+.brand .logo-root:not(.is-animating) .layer { opacity: 0; }
+.brand .logo-root:not(.is-animating) .mark-end { opacity: 1; }
+.brand .logo-root:not(.is-animating) .tag { opacity: 0; }
+.brand .logo-root.is-animating .word-box {
+  animation: panCenter 6.4s cubic-bezier(0.33, 0.1, 0.25, 1) both;
+}
+.brand .logo-root.is-animating .layer.disc {
+  animation: discPhase 6.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.brand .logo-root.is-animating .layer.out {
+  animation: collapseIn 6.4s cubic-bezier(0.4, 0.05, 0.2, 1) both;
+  animation-delay: var(--delay, 0s);
+}
+.brand .logo-root.is-animating .mark-end {
+  animation: markPhase 6.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.brand .logo-root.is-animating .tag {
+  animation: tagPhase 6.4s cubic-bezier(0.33, 1, 0.4, 1) both;
+}
+@keyframes panCenter {
+  0%, 46% { transform: translateX(0); }
+  70% { transform: translateX(calc(50% - var(--cx))); }
+  100% { transform: translateX(calc(50% - var(--cx))); }
+}
+@keyframes discPhase {
+  0%, 6% { opacity: 0; transform: scale(0.94); }
+  12% { opacity: 1; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1); }
+  68% { opacity: 0; transform: scale(1.15); }
+  100% { opacity: 0; transform: scale(1.15); }
+}
+@keyframes collapseIn {
+  0%, 6% { opacity: 0; transform: scale(1); }
+  12% { opacity: 1; transform: scale(1); }
+  46% { opacity: 1; transform: scale(1); }
+  66% { opacity: 0.15; transform: scale(0.22); }
+  74% { opacity: 0; transform: scale(0.05); }
+  100% { opacity: 0; transform: scale(0); }
+}
+@keyframes markPhase {
+  0%, 52% { opacity: 0; transform: translateX(-50%) scale(0.55); }
+  68% { opacity: 1; transform: translateX(-50%) scale(0.95); }
+  100% { opacity: 1; transform: translateX(-50%) scale(0.9); }
+}
+@keyframes tagPhase {
+  0%, 14% { opacity: 0; transform: translateY(8px); }
+  22% { opacity: 1; transform: none; }
+  48% { opacity: 1; transform: none; }
+  62% { opacity: 0; transform: translateY(-6px); }
+  100% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .brand .logo-root.is-animating .layer,
+  .brand .logo-root.is-animating .mark-end,
+  .brand .logo-root.is-animating .tag { animation: none !important; }
+  .brand .logo-root.is-animating .layer,
+  .brand .logo-root.is-animating .tag { opacity: 0 !important; }
+  .brand .logo-root.is-animating .mark-end {
+    opacity: 1 !important;
+    transform: translateX(-50%) scale(0.9) !important;
+  }
 }
 .composer {
   background: var(--card);
@@ -395,159 +491,23 @@ footer.site a:hover {
     <main class="home">
       <div class="brand">
         <a class="logo" id="brand-logo" href="https://www.similarize.com/" aria-label="Similarize. Click to play the mark.">
-          <svg class="logo-anim" id="logo-anim" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 128" width="400" height="128" role="img" aria-hidden="true" focusable="false">
-            <defs>
-              <style><![CDATA[
-                .disc { fill: #d00808; }
-                .fg { fill: #fff; }
-                .shade { fill: #ffc9c9; }
-                .ridge { fill: none; stroke: #fff; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; opacity: 0.55; }
-                .word {
-                  fill: #d00808;
-                  font-family: Outfit, "Segoe UI", system-ui, sans-serif;
-                  font-weight: 700;
-                  font-size: 42px;
-                  text-anchor: middle;
-                  dominant-baseline: central;
-                }
-                .person { opacity: 1; }
-                .center-mtn { opacity: 0; }
-                .center-m { opacity: 1; }
-                .word { opacity: 1; transform: none; }
-
-                .logo-root.is-animating .person-l {
-                  animation: fadeSlide 0.5s cubic-bezier(0.22,1,0.36,1) 0.1s both;
-                  --sx: -10px;
-                }
-                .logo-root.is-animating .person-r {
-                  animation: fadeSlide 0.5s cubic-bezier(0.22,1,0.36,1) 0.1s both;
-                  --sx: 10px;
-                }
-                .logo-root.is-animating .center-mtn {
-                  animation: mtnLife 3.2s cubic-bezier(0.22,1,0.36,1) both;
-                }
-                .logo-root.is-animating .center-m {
-                  animation: mReveal 3.2s cubic-bezier(0.22,1,0.36,1) both;
-                }
-                .logo-root.is-animating .word {
-                  animation: peelIn 0.7s cubic-bezier(0.2,0.9,0.3,1) both;
-                }
-                .logo-root.is-animating .wl { animation-delay: 1.35s; }
-                .logo-root.is-animating .w0 { animation-delay: 1.55s; }
-                .logo-root.is-animating .w1 { animation-delay: 1.68s; }
-                .logo-root.is-animating .w2 { animation-delay: 1.81s; }
-                .logo-root.is-animating .w3 { animation-delay: 1.94s; }
-                .logo-root.is-animating .w4 { animation-delay: 2.07s; }
-                .logo-root.is-animating .w5 { animation-delay: 2.20s; }
-
-                @keyframes fadeSlide {
-                  from { opacity: 0; transform: translateX(var(--sx, 0)); }
-                  to   { opacity: 1; transform: none; }
-                }
-                @keyframes mtnLife {
-                  0%   { opacity: 0; transform: translateY(14px) scale(0.75); transform-origin: 118px 90px; }
-                  14%  { opacity: 1; transform: none; }
-                  40%  { opacity: 1; transform: none; }
-                  58%  { opacity: 0; transform: scale(0.94); transform-origin: 118px 78px; }
-                  100% { opacity: 0; transform: scale(0.94); transform-origin: 118px 78px; }
-                }
-                @keyframes mReveal {
-                  0%, 40% { opacity: 0; transform: scale(0.9); transform-origin: 118px 78px; }
-                  58%     { opacity: 1; transform: none; }
-                  100%    { opacity: 1; transform: none; }
-                }
-                @keyframes peelIn {
-                  0% {
-                    opacity: 0;
-                    transform: translate(var(--fx), var(--fy)) scale(0.35);
-                  }
-                  30% {
-                    opacity: 1;
-                    transform: translate(calc(var(--fx) * 0.4), calc(var(--fy) * 0.4)) scale(0.95);
-                  }
-                  100% {
-                    opacity: 1;
-                    transform: none;
-                  }
-                }
-
-                @media (prefers-reduced-motion: reduce) {
-                  .logo-root.is-animating .person-l,
-                  .logo-root.is-animating .person-r,
-                  .logo-root.is-animating .center-mtn,
-                  .logo-root.is-animating .center-m,
-                  .logo-root.is-animating .word {
-                    animation: none !important;
-                  }
-                  .logo-root.is-animating .person-l,
-                  .logo-root.is-animating .person-r,
-                  .logo-root.is-animating .center-m,
-                  .logo-root.is-animating .word {
-                    opacity: 1 !important;
-                    transform: none !important;
-                  }
-                  .logo-root.is-animating .center-mtn { opacity: 0 !important; }
-                }
-              ]]></style>
-            </defs>
-
-            <g class="logo-root is-animating" id="logo-root">
-              <text class="word wl" style="--fx:70px; --fy:0px;" x="28" y="64">S</text>
-
-              <g id="imi-mark" transform="translate(58 4)">
-                <circle class="disc" cx="60" cy="60" r="58"/>
-
-                <g class="person person-l fg">
-                  <path d="M 22 42 L 34 36 A 13 13 0 1 0 34 48 Z"/>
-                  <rect x="16" y="54" width="18" height="48" rx="8"/>
-                </g>
-
-                <g class="center-mtn">
-                  <ellipse cx="60" cy="104" rx="38" ry="4" fill="#000" opacity="0.14"/>
-                  <path class="fg" d="M 28 102 L 42 68 L 50 82 L 60 32 L 70 82 L 78 68 L 92 102 Z"/>
-                  <path class="shade" d="M 60 32 L 70 82 L 78 68 L 92 102 L 60 102 Z"/>
-                  <path class="ridge" d="M 34 94 L 42 68 L 50 82 L 60 32"/>
-                  <path class="fg" d="M 56 44 L 60 32 L 64 44 Q 60 40 56 44 Z"/>
-                </g>
-
-                <g class="center-m fg">
-                  <path d="M 32 102
-                           v -28
-                           c 0 -1 0.5 -22 18 -22
-                           c 16 0 18 15 18 22
-                           c 0 -7 2 -22 18 -22
-                           c 17.5 0 18 21 18 22
-                           v 28
-                           h -13
-                           v -26
-                           c 0 -6 -1.5 -11 -8 -11
-                           c -7 0 -8.5 6 -8.5 11
-                           v 26
-                           h -13
-                           v -26
-                           c 0 -6 -1.5 -11 -8 -11
-                           c -7 0 -8.5 6 -8.5 11
-                           v 26
-                           z"/>
-                </g>
-
-                <g class="person person-r fg">
-                  <path d="M 98 42 L 86 36 A 13 13 0 1 1 86 48 Z"/>
-                  <rect x="86" y="54" width="18" height="48" rx="8"/>
-                </g>
-              </g>
-
-              <g id="suffix" aria-hidden="true">
-                <text class="word w0" style="--fx:-90px; --fy:0px;" x="214" y="64">L</text>
-                <text class="word w1" style="--fx:-118px; --fy:0px;" x="246" y="64">A</text>
-                <text class="word w2" style="--fx:-146px; --fy:0px;" x="278" y="64">R</text>
-                <text class="word w3" style="--fx:-174px; --fy:0px;" x="308" y="64">I</text>
-                <text class="word w4" style="--fx:-200px; --fy:0px;" x="336" y="64">Z</text>
-                <text class="word w5" style="--fx:-228px; --fy:0px;" x="366" y="64">E</text>
-              </g>
-            </g>
-          </svg>
-          <noscript><img src="images/logo-still.jpg?v=20260925d" width="400" height="128" alt="Similarize"></noscript>
+          <div class="logo-stage" id="logo-stage">
+            <div class="logo-root is-animating" id="logo-root">
+              <div class="word-box" id="word-box">
+                <img class="layer disc" src="images/drive-collapse/anim-center.png?v=drivecollapse5" alt="">
+                <img class="layer out" style="--delay:0.00s" src="images/drive-collapse/letters/S.png?v=drivecollapse5" alt="">
+                <img class="layer out" style="--delay:0.03s" src="images/drive-collapse/letters/l.png?v=drivecollapse5" alt="">
+                <img class="layer out" style="--delay:0.05s" src="images/drive-collapse/letters/a.png?v=drivecollapse5" alt="">
+                <img class="layer out" style="--delay:0.07s" src="images/drive-collapse/letters/r.png?v=drivecollapse5" alt="">
+                <img class="layer out" style="--delay:0.09s" src="images/drive-collapse/letters/i3.png?v=drivecollapse5" alt="">
+                <img class="layer out" style="--delay:0.11s" src="images/drive-collapse/letters/z.png?v=drivecollapse5" alt="">
+                <img class="layer out" style="--delay:0.13s" src="images/drive-collapse/letters/e.png?v=drivecollapse5" alt="">
+              </div>
+              <img class="mark-end" src="images/drive-collapse/drive-imi-end.png?v=drivecollapse5" alt="Similarize">
+              <div class="tag">removing the mountains between us</div>
+            </div>
+          </div>
+          <noscript><img src="images/drive-collapse/drive-imi-end.png?v=drivecollapse5" width="200" height="200" alt="Similarize"></noscript>
         </a>
         <p class="dev-note"><strong>Early preview</strong></p>
         <h1 class="promise">Clearer ways to say it</h1>
@@ -600,12 +560,22 @@ footer.site a:hover {
 <script>
 (function () {
   var logo = document.getElementById("brand-logo");
-  var svg = document.getElementById("logo-anim");
-  if (!logo || !svg) return;
-  var root = document.getElementById("logo-root") || svg.querySelector(".logo-root");
-  if (!root) return;
+  var root = document.getElementById("logo-root");
+  if (!logo || !root) return;
   var reduce = false;
   try { reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) {}
+
+  function applyMeta() {
+    return fetch("images/drive-collapse/anim-meta.json?v=drivecollapse5")
+      .then(function (r) { return r.json(); })
+      .then(function (meta) {
+        var stage = document.getElementById("logo-stage");
+        if (!stage) return;
+        stage.style.setProperty("--cx", (meta.cx / meta.W * 100).toFixed(2) + "%");
+        stage.style.setProperty("--cy", (meta.cy / meta.H * 100).toFixed(2) + "%");
+      })
+      .catch(function () {});
+  }
 
   function replay() {
     if (reduce) {
@@ -613,7 +583,6 @@ footer.site a:hover {
       return;
     }
     root.classList.remove("is-animating");
-    // Force reflow so CSS animations restart cleanly
     void root.getBoundingClientRect();
     root.classList.add("is-animating");
   }
@@ -627,7 +596,7 @@ footer.site a:hover {
   if (reduce) {
     root.classList.remove("is-animating");
   }
-  // Non-reduced: markup already has is-animating for first paint
+  applyMeta();
 })();
 </script>
 <script>
