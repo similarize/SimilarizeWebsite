@@ -3,7 +3,8 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>Basketball RC</title>
+    <title>Soccer RC</title>
+    <!-- Soccer RC (was Basketball RC). Paths stay basketball.html. Cache-bust: ?v=soccer1 -->
     <!-- Tesla Cybertruck chromeless FS — see games/shared/TESLA_FULLSCREEN.md -->
     <script src="shared/tesla-fullscreen.js?v=tfs1"></script>
     <style>
@@ -176,7 +177,7 @@
     <div class="top">
         <a href="/games/">Games</a>
         <span class="scores"><b class="o">P1 <span id="s1">0</span></b> · <b class="b">P2 <span id="s2">0</span></b></span>
-        <span class="hint">P1 arrows + space · P2 WASD + Q · R resets · Xbox pad0=P1 pad1=P2</span>
+        <span class="hint">P1 arrows + space · P2 WASD + Q · R resets · Pad: RT fwd · LT back · stick steer · A kick</span>
         <button type="button" id="soundBtn">Sound on</button>
         <button type="button" id="resetBtn">Reset ball</button>
 
@@ -196,7 +197,7 @@
             <button type="button" class="left" data-key="ArrowLeft" aria-label="P1 left">◀</button>
             <button type="button" class="down" data-key="ArrowDown" aria-label="P1 back">▼</button>
             <button type="button" class="right" data-key="ArrowRight" aria-label="P1 right">▶</button>
-            <button type="button" class="fire" data-fire="1">FIRE</button>
+            <button type="button" class="fire" data-fire="1">KICK</button>
         </div>
         <div class="cluster p2">
             <span>BLUE</span>
@@ -204,7 +205,7 @@
             <button type="button" class="left" data-key="a" aria-label="P2 left">◀</button>
             <button type="button" class="down" data-key="s" aria-label="P2 back">▼</button>
             <button type="button" class="right" data-key="d" aria-label="P2 right">▶</button>
-            <button type="button" class="fire" data-fire="2">FIRE</button>
+            <button type="button" class="fire" data-fire="2">KICK</button>
         </div>
     </div>
     <script src="shared/gamepad.js?v=gp1"></script>
@@ -489,12 +490,14 @@
         }
 
         function readLocalGuestBits() {
+            // Guest pad0 uses same RT/LT + stick-while-thrust map (from refreshGamepads).
+            const d = padDrive(_gp0);
             return {
                 type: 'input',
-                u: (keys['w'] || keys['W'] || keys['ArrowUp']) ? 1 : 0,
-                d: (keys['s'] || keys['S'] || keys['ArrowDown']) ? 1 : 0,
-                l: (keys['a'] || keys['A'] || keys['ArrowLeft']) ? 1 : 0,
-                r: (keys['d'] || keys['D'] || keys['ArrowRight']) ? 1 : 0,
+                u: (keys['w'] || keys['W'] || keys['ArrowUp'] || d.fwd) ? 1 : 0,
+                d: (keys['s'] || keys['S'] || keys['ArrowDown'] || d.rev) ? 1 : 0,
+                l: (keys['a'] || keys['A'] || keys['ArrowLeft'] || d.steerL) ? 1 : 0,
+                r: (keys['d'] || keys['D'] || keys['ArrowRight'] || d.steerR) ? 1 : 0,
                 fire: netFireArmed ? 1 : 0
             };
         }
@@ -681,14 +684,16 @@
             _gp0 = GP ? GP.pollPad(0) : null;
             _gp1 = GP ? GP.pollPad(1) : null;
         }
-        function padDir(g) {
-            if (!g || !g.connected) return { l:0, r:0, u:0, d:0 };
-            return {
-                l: (g.lx < -0.25 || g.dpad.l) ? 1 : 0,
-                r: (g.lx > 0.25 || g.dpad.r) ? 1 : 0,
-                u: (g.ly < -0.25 || g.dpad.u) ? 1 : 0,
-                d: (g.ly > 0.25 || g.dpad.d) ? 1 : 0
-            };
+        // Soccer RC drive: RT=forward, LT=reverse; stick/dpad steer only while thrusting.
+        // Stick Y never auto-drives. Keyboard Up/W / Down/S still thrust/reverse.
+        function padDrive(g) {
+            if (!g || !g.connected) return { steerL:0, steerR:0, fwd:0, rev:0, thrusting:0 };
+            const fwd = g.rt ? 1 : 0;
+            const rev = g.lt ? 1 : 0;
+            const thrusting = (fwd || rev) ? 1 : 0;
+            const steerL = thrusting && (g.lx < -0.25 || g.dpad.l) ? 1 : 0;
+            const steerR = thrusting && (g.lx > 0.25 || g.dpad.r) ? 1 : 0;
+            return { steerL, steerR, fwd, rev, thrusting };
         }
         function updateCarControls(car) {
             if (car.isDestroyed) return;
@@ -698,24 +703,24 @@
             if (car.isStuckInGoal && !(car === car2 && isBothStuckInGoal)) return;
             if (car.onConveyor && !(car === car2 && isBothStuckOnConveyor)) return;
 
-            const d0 = padDir(_gp0);
-            const d1 = padDir(_gp1);
+            const d0 = padDrive(_gp0);
+            const d1 = padDrive(_gp1);
 
             if (car === car1) {
-                if (keys['ArrowLeft'] || d0.l) car.rotation = -ROTATION_SPEED;
-                else if (keys['ArrowRight'] || d0.r) car.rotation = ROTATION_SPEED;
+                if (keys['ArrowLeft'] || d0.steerL) car.rotation = -ROTATION_SPEED;
+                else if (keys['ArrowRight'] || d0.steerR) car.rotation = ROTATION_SPEED;
                 else car.rotation = 0;
-                if (keys['ArrowUp'] || d0.u) car.speed = car.maxSpeed;
-                else if (keys['ArrowDown'] || d0.d) car.speed = -car.maxSpeed/2;
+                if (keys['ArrowUp'] || d0.fwd) car.speed = car.maxSpeed;
+                else if (keys['ArrowDown'] || d0.rev) car.speed = -car.maxSpeed/2;
                 else car.speed = 0;
             }
             if (car === car2) {
                 // pad1 only — single pad must not steal car2
-                if (keys['a'] || keys['A'] || d1.l) car.rotation = -ROTATION_SPEED;
-                else if (keys['d'] || keys['D'] || d1.r) car.rotation = ROTATION_SPEED;
+                if (keys['a'] || keys['A'] || d1.steerL) car.rotation = -ROTATION_SPEED;
+                else if (keys['d'] || keys['D'] || d1.steerR) car.rotation = ROTATION_SPEED;
                 else car.rotation = 0;
-                if (keys['w'] || keys['W'] || d1.u) car.speed = car.maxSpeed;
-                else if (keys['s'] || keys['S'] || d1.d) car.speed = -car.maxSpeed/2;
+                if (keys['w'] || keys['W'] || d1.fwd) car.speed = car.maxSpeed;
+                else if (keys['s'] || keys['S'] || d1.rev) car.speed = -car.maxSpeed/2;
                 else car.speed = 0;
             }
 
@@ -828,20 +833,21 @@
 
         // Game loop
         function applyGamepadActions() {
+            // A = kick/shoot only. RT/LT are drive (handled in updateCarControls).
             const g0 = _gp0, g1 = _gp1;
             if (netRole === 'guest') {
-                if (g0 && g0.connected && (g0.buttonsPressed.a || g0.buttonsPressed.rt)) netFireArmed = true;
+                if (g0 && g0.connected && g0.buttonsPressed.a) netFireArmed = true;
                 return;
             }
             if (netRole === 'host') {
-                if (g0 && g0.connected && (g0.buttonsPressed.a || g0.buttonsPressed.rt)) shoot(car1);
+                if (g0 && g0.connected && g0.buttonsPressed.a) shoot(car1);
                 if (g0 && g0.connected && (g0.buttonsPressed.start || g0.buttonsPressed.back)) {
                     resetBasketball(); netSend({ type: 'reset' });
                 }
                 return;
             }
-            if (g0 && g0.connected && (g0.buttonsPressed.a || g0.buttonsPressed.rt)) shoot(car1);
-            if (g1 && g1.connected && (g1.buttonsPressed.a || g1.buttonsPressed.rt)) shoot(car2);
+            if (g0 && g0.connected && g0.buttonsPressed.a) shoot(car1);
+            if (g1 && g1.connected && g1.buttonsPressed.a) shoot(car2);
             if (g0 && g0.connected && (g0.buttonsPressed.start || g0.buttonsPressed.back)) resetBasketball();
         }
         function update() {
