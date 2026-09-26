@@ -308,11 +308,13 @@
         tipEl.textContent = hud ? hud.tip : "";
         nearHot = hud && hud.near ? hud.near : null;
       } else if (storyToastT > 0) tipEl.textContent = storyToast;
+      else if (me && me.inTruck)
+        tipEl.textContent = "EXIT TRUCK · INTERACT / E" + (W.onTrack(me.x, me.y) ? " · jumps = scrap" : "");
+      else if (nearHot && (nearHot.kind === "truck" || (nearHot.id && nearHot.id.indexOf("truck") === 0)))
+        tipEl.textContent = "BOARD · " + nearHot.tip + " · INTERACT / E";
       else if (nearHot) tipEl.textContent = "⚡ " + nearHot.tip + " · INTERACT / E";
       else if (me && W.nearMech1000 && W.nearMech1000(frogs, 170))
         tipEl.textContent = "★ WOW · James 1000-story mech · scale tease";
-      else if (me && me.inTruck && W.onTrack(me.x, me.y))
-        tipEl.textContent = "Hit the jumps · scrape for scrap!";
       else tipEl.textContent = "";
     }
     /* polish6: playful phone chrome when near Purple Bear phone hotspot */
@@ -327,8 +329,13 @@
       }
     }
     if (btnInteract) {
-      btnInteract.classList.toggle("ready", !!nearHot);
-      btnInteract.disabled = !nearHot && (phase === "hub" || phase === "space");
+      const canAct = !!nearHot || !!(me && me.inTruck && phase === "hub");
+      btnInteract.classList.toggle("ready", canAct);
+      btnInteract.disabled = !canAct && (phase === "hub" || phase === "space");
+      if (phase === "hub" && me && me.inTruck) btnInteract.textContent = "EXIT";
+      else if (nearHot && (nearHot.kind === "truck" || (nearHot.id && String(nearHot.id).indexOf("truck") === 0)))
+        btnInteract.textContent = "BOARD";
+      else btnInteract.textContent = "INTERACT";
     }
     if (livesEl && phase === "space") {
       livesEl.textContent = "🚀 Space";
@@ -491,6 +498,17 @@
       return;
     }
     const me = localPlayer();
+    /* polish10: EXIT truck anytime while driving (not only near parked pad) */
+    if (me && me.inTruck) {
+      if (W.boardTruck) W.boardTruck(world, frogs, me, { kind: "truck", id: me.truckId || "truck" });
+      else {
+        me.inTruck = false; me.truckMode = null; me.truckId = null; me.z = 0; me.zVel = 0;
+      }
+      storyToast = "Parked · walking";
+      storyToastT = 1.8;
+      paintHud();
+      return;
+    }
     if (!me || !nearHot) return;
     unlockAudio();
     beep(520, 0.07, "triangle", 0.05);
@@ -591,12 +609,12 @@
   function easeCam(dt) {
     const me = localPlayer();
     if (!me) return;
-    // polish3: snappy follow that does not fight — short look-ahead, deadzone settle
+    // polish3/10: snappy follow — shorter look-ahead so cam stops fighting steer
     const spd = Math.hypot(me.vx || 0, me.vy || 0);
-    const look = spd < 40 ? 0.04 : me.inTruck ? 0.14 : 0.09;
+    const look = spd < 40 ? 0.02 : me.inTruck ? 0.07 : 0.045;
     camTX = me.x + me.vx * look;
-    camTY = me.y + me.vy * look - (me.z || 0) * 0.14;
-    const follow = me.inTruck ? 7.2 : 6.4;
+    camTY = me.y + me.vy * look - (me.z || 0) * 0.1;
+    const follow = me.inTruck ? 9.5 : 8.6;
     const k = 1 - Math.exp(-follow * dt);
     camX += (camTX - camX) * k;
     camY += (camTY - camY) * k;
@@ -776,13 +794,13 @@
       const walking = meCam && !meCam.inTruck && spdCam > 28;
       if (walking) {
         const phaseW = meCam.walkPhase || t * 8;
-        const bob = Math.sin(phaseW) * 2.4;
-        const tilt = Math.sin(phaseW * 0.5) * 0.012;
+        const bob = Math.sin(phaseW) * 1.2;
+        const tilt = Math.sin(phaseW * 0.5) * 0.005;
         ctx.translate(w * 0.5, h * 0.5 + bob);
         ctx.rotate(tilt);
         ctx.translate(-w * 0.5, -h * 0.5);
       } else if (meCam && meCam.inTruck && spdCam > 60) {
-        const bounce = Math.sin((meCam.bouncePhase || t * 6) * 2) * 1.2;
+        const bounce = Math.sin((meCam.bouncePhase || t * 6) * 2) * 0.7;
         ctx.translate(0, bounce);
       }
       W.render(ctx, world, frogs, camX, camY, w, h, t, nearHot);

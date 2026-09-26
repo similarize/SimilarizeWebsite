@@ -9,6 +9,7 @@
    polish7: zone signs + mini-map lite + companion idle bounce / follow lag. Hollow house + frogs kept.
    polish8: truck silhouette + house porch + whale breach + destination beacon. Hollow house + frogs kept.
    polish9: color nameplates; aboard icons; track gate; Optimus punch lite. Hollow house + frogs kept.
+   polish10: quieter UI; exit truck anytime; friction/cam; particle caps; dusk sky. Hollow house + frogs + WASD kept.
    WASD camera-relative — do not invert. */
 (function (global) {
   "use strict";
@@ -134,31 +135,28 @@
   }
 
   function labelSprite(text, color) {
-    /* polish9: readable plate nameplates */
+    /* polish9/10: quieter plate nameplates */
     var canvas = document.createElement("canvas");
     canvas.width = 256;
     canvas.height = 64;
     var ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, 256, 64);
-    ctx.font = "bold 26px Segoe UI, system-ui, sans-serif";
+    ctx.font = "bold 22px Segoe UI, system-ui, sans-serif";
     ctx.textAlign = "center";
-    var tw = Math.min(240, ctx.measureText(text).width + 28);
-    ctx.fillStyle = "rgba(15, 23, 42, 0.88)";
+    var tw = Math.min(200, ctx.measureText(text).width + 22);
+    ctx.fillStyle = "rgba(15, 23, 42, 0.62)";
     ctx.strokeStyle = color || "#fef3c7";
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 2;
     ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(128 - tw * 0.5, 14, tw, 36, 10);
-    else ctx.rect(128 - tw * 0.5, 14, tw, 36);
+    if (ctx.roundRect) ctx.roundRect(128 - tw * 0.5, 18, tw, 28, 8);
+    else ctx.rect(128 - tw * 0.5, 18, tw, 28);
     ctx.fill(); ctx.stroke();
-    ctx.strokeStyle = "#000";
-    ctx.lineWidth = 5;
-    ctx.strokeText(text, 128, 40);
     ctx.fillStyle = color || "#fff";
-    ctx.fillText(text, 128, 40);
+    ctx.fillText(text, 128, 38);
     var tex = new THREE.CanvasTexture(canvas);
-    var mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
+    var mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, opacity: 0.85 });
     var spr = new THREE.Sprite(mat);
-    spr.scale.set(2.4, 0.6, 1);
+    spr.scale.set(1.9, 0.48, 1);
     return spr;
   }
 
@@ -764,7 +762,7 @@
     state.playerShadowSoft.rotation.x = -Math.PI / 2;
     state.playerShadowSoft.position.set(spawn.x, 0.03, spawn.z);
     scene.add(state.playerShadowSoft);
-    state.nameTag = labelSprite(def.name + " · you", def.color || "#fff");
+    state.nameTag = labelSprite(def.name, def.color || "#fff");
     state.nameTag.position.set(spawn.x, 2.6, spawn.z);
     state.nameTag.scale.set(2.8, 0.7, 1);
     scene.add(state.nameTag);
@@ -819,7 +817,7 @@
       cmesh.userData.idleBounce = Math.random() * 6;
       cmesh.userData.chatT = 0;
       scene.add(cmesh);
-      var ctag = labelSprite(cdef.name + " · AI", cdef.color || "#fff");
+      var ctag = labelSprite(cdef.name, cdef.color || "#fff");
       ctag.scale.set(2.0, 0.5, 1);
       ctag.position.set(cp.x, 2.2, cp.z);
       scene.add(ctag);
@@ -851,10 +849,10 @@
       state.zoneSigns.push(zlab);
     }
     state.miniMapCanvas = document.createElement("canvas");
-    state.miniMapCanvas.width = 140;
-    state.miniMapCanvas.height = 105;
+    state.miniMapCanvas.width = 108;
+    state.miniMapCanvas.height = 82;
     state.miniMapCanvas.dataset.ffMinimap = "1";
-    state.miniMapCanvas.style.cssText = "position:absolute;right:12px;top:56px;width:140px;height:105px;pointer-events:none;z-index:5;border-radius:8px;opacity:0.9;";
+    state.miniMapCanvas.style.cssText = "position:absolute;left:12px;top:88px;width:108px;height:82px;pointer-events:none;z-index:5;border-radius:8px;opacity:0.72;";
     var hostEl = document.getElementById("engine-host");
     if (hostEl) hostEl.appendChild(state.miniMapCanvas);
     state.miniMapCanvas.style.display = "";
@@ -876,7 +874,7 @@
     state.rippleT = 0;
     state.ambient = [];
     /* polish5: ambient pollen / fireflies */
-    for (var ai = 0; ai < 48; ai++) {
+    for (var ai = 0; ai < 22; ai++) {
       var kind = Math.random() < 0.55 ? "pollen" : "firefly";
       var amb = new THREE.Mesh(
         new THREE.SphereGeometry(kind === "firefly" ? 0.07 : 0.05, 6, 5),
@@ -1117,20 +1115,23 @@
   }
 
   function doInteract() {
-    if (!state || !state.near) return;
+    if (!state) return;
+    /* polish10: EXIT truck anytime while driving */
+    if (state.mode === "ranch" && state.inTruck) {
+      state.inTruck = false; state.truckMode = null; state.truckId = null;
+      state.toast = "Parked · walking"; state.toastT = 1.8;
+      if (hooks.onToast) hooks.onToast(state.toast);
+      return;
+    }
+    if (!state.near) return;
     var id = state.near.id;
     if (state.mode === "ranch") {
       if (C.isTruckHotspot && C.isTruckHotspot(state.near)) {
-        if (state.inTruck) {
-          state.inTruck = false; state.truckMode = null; state.truckId = null;
-          state.toast = "Hopped out";
-        } else {
-          state.inTruck = true; state.truckMode = state.near.mode || "solo"; state.truckId = id;
-          state.scrap += 1;
-          state.toast = state.truckMode === "shared"
-            ? "All aboard! Four froggies · one Cybertruck · hit the jumps!"
-            : "Driving Cybertruck · hit the jumps!";
-        }
+        state.inTruck = true; state.truckMode = state.near.mode || "solo"; state.truckId = id;
+        state.scrap += 1;
+        state.toast = state.truckMode === "shared"
+          ? "All aboard! Four froggies · one Cybertruck · hit the jumps!"
+          : "Driving Cybertruck · hit the jumps!";
       } else if (id === "fishies") {
         state.toast = "Splash! Fishies & whales scatter";
         state.scrap += 2;
@@ -1277,9 +1278,9 @@
     }
 
     /* polish3: snappier locomotion (Canvas feel port) */
-    var maxSp = state.mode === "space" ? 7.5 : state.inTruck ? 11 : 7.2;
-    var accel = state.mode === "space" ? 16 : state.inTruck ? 24 : 20;
-    var fric = state.mode === "space" ? 3.0 : state.inTruck ? 3.4 : 5.8;
+    var maxSp = state.mode === "space" ? 7.5 : state.inTruck ? 11.5 : 7.6;
+    var accel = state.mode === "space" ? 16 : state.inTruck ? 28 : 24;
+    var fric = state.mode === "space" ? 3.0 : state.inTruck ? 4.8 : 7.8;
 
     // Map screen WASD/D-pad → ground plane relative to locked camera
     // Canvas convention: steer.y < 0 = Up/W (screen up). Camera sits at +X+Z offset.
@@ -1370,7 +1371,7 @@
       if (!state.inTruck && !wet && sp > 1.2) {
         state.dustT = (state.dustT || 0) - dt;
         if (state.dustT <= 0) {
-          state.dustT = 0.16;
+          state.dustT = 0.22;
           var dust = new THREE.Mesh(
             new THREE.SphereGeometry(0.08, 6, 5),
             new THREE.MeshBasicMaterial({ color: 0xb8a070, transparent: true, opacity: 0.5 })
@@ -1561,7 +1562,7 @@
     // Locked orbit follow — camera offset fixed, no orbit controls / no FPS look
     var target = camera.userData.lockTarget;
     /* polish3: stick to player — no lag fight */
-    var followK = Math.min(1, 11 * dt);
+    var followK = Math.min(1, 14 * dt);
     target.x += (state.player.position.x - target.x) * followK;
     target.z += (state.player.position.z - target.z) * followK;
     target.y = 0;
@@ -1571,10 +1572,19 @@
     var walkBob = 0, walkTilt = 0;
     if (state.mode === "ranch" && !state.inTruck && Math.hypot(state.vx || 0, state.vz || 0) > 1.2) {
       state.walkBobT = (state.walkBobT || 0) + dt * 10;
-      walkBob = Math.sin(state.walkBobT) * 0.12;
-      walkTilt = Math.sin(state.walkBobT * 0.5) * 0.015;
+      walkBob = Math.sin(state.walkBobT) * 0.05;
+      walkTilt = Math.sin(state.walkBobT * 0.5) * 0.006;
     }
     camera.position.set(target.x + camDist * 0.85, camH + walkBob, target.z + camDist * 0.85);
+    /* polish10: soft dusk sky shift over play time */
+    if (state.mode === "ranch" && scene) {
+      state.dayT = (state.dayT || 0) + dt;
+      var day = (state.dayT % 420) / 420;
+      var dusk = day < 0.45 ? 0 : (day < 0.7 ? (day - 0.45) / 0.25 : (day < 0.9 ? 1 : Math.max(0, 1 - (day - 0.9) / 0.1)));
+      var col = scene.background && scene.background.isColor ? scene.background : new THREE.Color();
+      col.setRGB(0.10 + dusk * 0.18, 0.22 - dusk * 0.06, 0.14 + dusk * 0.04);
+      scene.background = col;
+    }
     camera.lookAt(target.x, 0.5 + walkTilt, target.z);
     /* polish6: depth shadow under player */
     if (state.playerShadow) {
@@ -1796,7 +1806,7 @@
         mode: state.mode,
         label: label,
         scrap: state.mode === "space" ? state.catches : state.scrap,
-        tip: state.toastT > 0 ? state.toast : state.inOrbit ? "Orbit locked · Escape or hard thruster" : state.near ? ("⚡ " + state.near.tip + " · INTERACT / E") : (state.invLabel && state.invLabel.visible ? "Mars · invader silhouettes" : ""),
+        tip: state.toastT > 0 ? state.toast : state.inOrbit ? "Orbit locked · Escape or hard thruster" : state.inTruck ? "EXIT TRUCK · INTERACT / E" : state.near ? (((C.isTruckHotspot && C.isTruckHotspot(state.near)) ? "BOARD · " : "⚡ ") + state.near.tip + " · INTERACT / E") : (state.invLabel && state.invLabel.visible ? "Mars · invader silhouettes" : ""),
             inOrbit: !!state.inOrbit,
         near: state.near,
         ability: def.ability,

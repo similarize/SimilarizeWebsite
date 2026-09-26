@@ -87,6 +87,25 @@ Same PeerJS lobby: **Host room** → QR / invite `?room=CODE` → claim seats �
 
 
 
+## What's new (polish10) — feel / bug polish for playtest
+
+Ben: LOTS more improvement but may playtest soon — prioritize feel/bug polish over garnish. Canvas lead; Phaser/Three cheap ports. Three frogs + hollow house + camera-relative WASD kept. No SPS arcade republish.
+
+**UI declutter (all engines):**
+- Mini-map moved **top-left**, smaller, lower opacity — clear of right INTERACT / ability
+- Zone signs fade when standing on them, lifted higher, quieter — frogs stay visible
+- Nameplates toned down (name only, no · you / · AI clutter)
+
+**Movement / truck:**
+- Tighter friction + snappier accel; less camera look-ahead / walk-tilt fight
+- **EXIT truck anytime** while driving (was stuck until back at pad) — BOARD / EXIT prompts + button label
+
+**Perf + delight:**
+- Cap fireflies / pollen / dust plumes
+- Soft **sunset / dusk sky shift** over play time (~7 min cycle)
+
+- Cache-bust: `?v=20260925-polish10`.
+
 ## What's new (polish9) — party clarity + track gate + Optimus punch
 
 Ben: LOTS more improvement. Canvas lead; Phaser/Three parity on nameplates, aboard icons, track gate, Optimus visual punch lite. Three frogs + hollow house kept.

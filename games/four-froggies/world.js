@@ -11,6 +11,8 @@
    pond whale breach arcs + fish schools; Blue Bear pet bounce near house (place-bound).
    polish9: frog color nameplates; shared truck aboard frog icons; start/finish gate + lap sparkle;
    brief jump air hang; Optimus kit visual punch on ranch. Canvas lead.
+   polish10: UI declutter (mini-map / zone signs / quieter nameplates); tighter friction; truck EXIT anytime;
+   particle caps; sunset sky shift over play time.
    ~10× map: real roam between ranch house / track / pond / Starship.
    James ranch house: big house, backyard (animals), huge garage (toys + 10/100-story mechs);
    1000-story mech sits out back (won't fit). Four Cybertrucks + shared pile-in.
@@ -357,8 +359,8 @@
     world.lapSide = 0;
     world.lapCooldown = 0;
     world.ambientT = 0;
-    /* polish5: seed day ambient pollen / dusk fireflies across yard + track apron */
-    for (var ai = 0; ai < 64; ai++) {
+    /* polish5/polish10: capped ambient pollen / fireflies (perf) */
+    for (var ai = 0; ai < 28; ai++) {
       world.ambient.push({
         x: 80 + Math.random() * (MAP_W - 160),
         y: 80 + Math.random() * (MAP_H - 160),
@@ -436,7 +438,11 @@
   }
 
   function spawnDust(world, x, y, n) {
-    for (var i = 0; i < (n || 4); i++) {
+    /* polish10: hard cap dust so race plumes cannot tank frames */
+    if (!world.dust) world.dust = [];
+    var room = Math.max(0, 48 - world.dust.length);
+    var count = Math.min(n || 4, room);
+    for (var i = 0; i < count; i++) {
       world.dust.push({
         x: x + (Math.random() - 0.5) * 20,
         y: y + (Math.random() - 0.5) * 12,
@@ -633,6 +639,11 @@
       k.life -= dt; k.x += k.vx * dt; k.y += k.vy * dt; k.vy += 220 * dt;
       if (k.life <= 0) world.sparks.splice(i, 1);
     }
+    /* polish10: hard caps if arrays ballooned */
+    if (world.dust && world.dust.length > 48) world.dust.length = 48;
+    if (world.sparks && world.sparks.length > 40) world.sparks.length = 40;
+    if (world.ambient && world.ambient.length > 28) world.ambient.length = 28;
+    if (world.ripples && world.ripples.length > 16) world.ripples.length = 16;
     world.ambientT = (world.ambientT || 0) + dt;
     /* polish5: ambient pollen / fireflies drift */
     if (!world.ambient) world.ambient = [];
@@ -859,9 +870,9 @@
   }
 
   function moveEntity(ent, dt, speed) {
-    /* polish3: snappier walk/drive — quicker ramp + firmer stop */
-    var walkMax = 178;
-    var truckMax = 318;
+    /* polish3 + polish10: snappier walk/drive — quicker ramp + firmer stop */
+    var walkMax = 188;
+    var truckMax = 328;
     var maxSp = (ent.inTruck ? truckMax : walkMax) * (ent.speedBoost || 1);
     if (ent.inTruck && ent.dashTrail > 0) maxSp *= 1.28;
     if (typeof speed === "number") maxSp = speed * (ent.speedBoost || 1);
@@ -870,8 +881,8 @@
     var mag = Math.hypot(mx, my);
     if (mag > 1) { mx /= mag; my /= mag; }
     var wetMove = inPond(ent.x, ent.y) && (ent.z || 0) < 3;
-    var accel = ent.inTruck ? 1180 : 1040;
-    var friction = ent.inTruck ? 4.2 : 7.4;
+    var accel = ent.inTruck ? 1320 : 1180;
+    var friction = ent.inTruck ? 5.6 : 9.6;
     if (wetMove && ent.inTruck) {
       accel *= 0.82;
       friction *= 1.15;
@@ -890,7 +901,7 @@
       var damp = Math.exp(-friction * dt);
       ent.vx *= damp;
       ent.vy *= damp;
-      if (Math.hypot(ent.vx, ent.vy) < 6) { ent.vx = 0; ent.vy = 0; }
+      if (Math.hypot(ent.vx, ent.vy) < 8) { ent.vx = 0; ent.vy = 0; }
     }
     var spd = Math.hypot(ent.vx, ent.vy);
     if (spd > maxSp) {
@@ -1035,12 +1046,26 @@
   }
 
   function drawSky(ctx, w, h, t, camX, camY) {
+    /* polish10: soft sunset / dusk shift over play time (one visible delight) */
+    var day = ((t || 0) % 420) / 420; /* ~7 min full cycle */
+    var dusk = day < 0.45 ? 0 : (day < 0.7 ? (day - 0.45) / 0.25 : (day < 0.9 ? 1 : (1 - (day - 0.9) / 0.1)));
+    dusk = Math.max(0, Math.min(1, dusk));
+    function lerpHex(a, b, u) {
+      function parse(h) {
+        return [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+      }
+      var A = parse(a), B = parse(b);
+      var r = Math.round(A[0] + (B[0] - A[0]) * u);
+      var g0 = Math.round(A[1] + (B[1] - A[1]) * u);
+      var bl = Math.round(A[2] + (B[2] - A[2]) * u);
+      return "rgb(" + r + "," + g0 + "," + bl + ")";
+    }
     var g = ctx.createLinearGradient(0, 0, 0, h);
-    g.addColorStop(0, "#122448");
-    g.addColorStop(0.2, "#2a628f");
-    g.addColorStop(0.45, "#6fb3c9");
-    g.addColorStop(0.66, "#8ecf6e");
-    g.addColorStop(1, "#3a6826");
+    g.addColorStop(0, lerpHex("#122448", "#2a1848", dusk));
+    g.addColorStop(0.2, lerpHex("#2a628f", "#c45c2a", dusk));
+    g.addColorStop(0.45, lerpHex("#6fb3c9", "#f0a060", dusk * 0.85));
+    g.addColorStop(0.66, lerpHex("#8ecf6e", "#6a8a4a", dusk * 0.55));
+    g.addColorStop(1, lerpHex("#3a6826", "#2a4818", dusk * 0.4));
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, w, h);
     /* polish6: stronger layered ranch-hill parallax (FF depth feel) */
@@ -1074,13 +1099,13 @@
       if (r === 0) ctx.moveTo(rx, ry); else ctx.lineTo(rx, ry);
     }
     ctx.stroke();
-    var sunX = w * 0.8 - camX * 0.035, sunY = h * 0.09 - camY * 0.018;
-    var sg = ctx.createRadialGradient(sunX, sunY, 3, sunX, sunY, 78);
-    sg.addColorStop(0, "rgba(255, 250, 210, 1)");
-    sg.addColorStop(0.25, "rgba(255, 230, 140, 0.55)");
-    sg.addColorStop(1, "rgba(255, 180, 80, 0)");
+    var sunX = w * (0.8 - dusk * 0.35) - camX * 0.035, sunY = h * (0.09 + dusk * 0.22) - camY * 0.018;
+    var sg = ctx.createRadialGradient(sunX, sunY, 3, sunX, sunY, 78 + dusk * 30);
+    sg.addColorStop(0, dusk > 0.5 ? "rgba(255, 210, 160, 1)" : "rgba(255, 250, 210, 1)");
+    sg.addColorStop(0.25, dusk > 0.5 ? "rgba(255, 140, 70, 0.65)" : "rgba(255, 230, 140, 0.55)");
+    sg.addColorStop(1, "rgba(255, 120, 60, 0)");
     ctx.fillStyle = sg;
-    ctx.beginPath(); ctx.arc(sunX, sunY, 78, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(sunX, sunY, 78 + dusk * 30, 0, Math.PI * 2); ctx.fill();
     for (var c = 0; c < 7; c++) {
       var layer = c < 3 ? 0.28 : 0.55;
       var cx = ((c * 150 + t * (5 + c) + pxMid * layer) % (w + 160)) - 80;
@@ -2297,29 +2322,28 @@
     ctx.restore();
   }
 
-  /* polish9: frog-color nameplates that stay readable */
-  function drawNameplate(ctx, text, x, y, color, depth) {
+  /* polish9/10: frog-color nameplates — quieter so frogs stay readable */
+  function drawNameplate(ctx, text, x, y, color, depth, soft) {
     var d = depth || 1;
     ctx.save();
-    ctx.font = "bold " + Math.round(11 * Math.min(1.35, 0.85 + d * 0.35)) + "px Segoe UI, system-ui, sans-serif";
+    var fs = soft ? 9 : 10;
+    ctx.font = "bold " + Math.round(fs * Math.min(1.2, 0.85 + d * 0.28)) + "px Segoe UI, system-ui, sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    var tw = Math.min(130, ctx.measureText(text).width + 14);
-    var th = 16;
-    ctx.fillStyle = "rgba(15, 23, 42, 0.88)";
+    var tw = Math.min(soft ? 88 : 110, ctx.measureText(text).width + (soft ? 10 : 12));
+    var th = soft ? 13 : 14;
+    ctx.globalAlpha = soft ? 0.72 : 0.9;
+    ctx.fillStyle = "rgba(15, 23, 42, 0.62)";
     ctx.strokeStyle = color || "#fef3c7";
-    ctx.lineWidth = 2;
+    ctx.lineWidth = soft ? 1.2 : 1.5;
     if (ctx.roundRect) {
       ctx.beginPath();
-      ctx.roundRect(x - tw * 0.5, y - th * 0.5, tw, th, 6);
+      ctx.roundRect(x - tw * 0.5, y - th * 0.5, tw, th, 5);
       ctx.fill(); ctx.stroke();
     } else {
       ctx.fillRect(x - tw * 0.5, y - th * 0.5, tw, th);
       ctx.strokeRect(x - tw * 0.5, y - th * 0.5, tw, th);
     }
-    ctx.strokeStyle = "#000";
-    ctx.lineWidth = 3;
-    ctx.strokeText(text, x, y + 0.5);
     ctx.fillStyle = color || "#fff";
     ctx.fillText(text, x, y + 0.5);
     ctx.restore();
@@ -2407,7 +2431,23 @@
         ctx.fill();
       }
       if (frog.truckMode !== "shared") {
-        drawNameplate(ctx, (frog.name || "You") + (frog.local ? " · you" : ""), p.x, p.y - 40 * p.depth - lift, frog.color || "#fff", p.depth);
+        drawNameplate(ctx, frog.name || "You", p.x, p.y - 40 * p.depth - lift, frog.color || "#fff", p.depth, !frog.local);
+      }
+      /* polish10: exit prompt while driving */
+      if (frog.local) {
+        ctx.save();
+        ctx.globalAlpha = 0.9;
+        ctx.fillStyle = "rgba(15,23,42,0.78)";
+        ctx.strokeStyle = "#fbbf24";
+        ctx.lineWidth = 1.8;
+        var exW = 118, exY = p.y - 58 * p.depth - lift;
+        if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(p.x - exW * 0.5, exY - 10, exW, 20, 6); ctx.fill(); ctx.stroke(); }
+        else { ctx.fillRect(p.x - exW * 0.5, exY - 10, exW, 20); ctx.strokeRect(p.x - exW * 0.5, exY - 10, exW, 20); }
+        ctx.fillStyle = "#fde68a";
+        ctx.font = "bold 11px Segoe UI, system-ui, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("EXIT · INTERACT / E", p.x, exY + 1);
+        ctx.restore();
       }
       return p;
     }
@@ -2498,16 +2538,13 @@
     ctx.beginPath();
     ctx.arc(p.x + 1 * p.depth * frog.facing, by + s * 0.22, 4.5 * p.depth, 0.15, Math.PI - 0.15);
     ctx.stroke();
-    /* polish9: color nameplates for every frog — stay readable */
+    /* polish9/10: quieter nameplates — name only; local ring; no · AI clutter */
     if (frog.local) {
-      ctx.strokeStyle = "rgba(255,255,255,0.9)";
-      ctx.lineWidth = 2.5;
-      ctx.beginPath(); ctx.arc(p.x, by, s + 6, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = "rgba(255,255,255,0.75)";
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(p.x, by, s + 5, 0, Math.PI * 2); ctx.stroke();
     }
-    var plate = frog.name || "Frog";
-    if (frog.local) plate = (frog.name || "You") + " · you";
-    else if (!frog.human) plate = (frog.name || "AI") + " · AI";
-    drawNameplate(ctx, plate, p.x, by - s - 14, frog.color || "#fff", p.depth);
+    drawNameplate(ctx, frog.name || "Frog", p.x, by - s - 12, frog.color || "#fff", p.depth, !frog.local);
     /* polish7: chat bubble one-liner (existing canon strings only) */
     if (frog.chatT > 0 && frog.chatLine) {
       var alpha = Math.min(1, frog.chatT * 1.4);
@@ -2611,7 +2648,9 @@
       ctx.fillText(h.label, p.x, badgeY - 8);
       ctx.fillStyle = "#fbbf24";
       ctx.font = "bold 11px Segoe UI, system-ui, sans-serif";
-      ctx.fillText("INTERACT · E", p.x, badgeY + 8);
+      var prompt = (h.kind === "truck" || (h.id && String(h.id).indexOf("truck") === 0))
+        ? "BOARD · INTERACT / E" : "INTERACT · E";
+      ctx.fillText(prompt, p.x, badgeY + 8);
     } else {
       ctx.fillStyle = "rgba(255,255,255,0.82)";
       ctx.font = "bold 11px Segoe UI, system-ui, sans-serif";
@@ -2953,22 +2992,22 @@
     for (var si = 0; si < signs.length; si++) {
       var z = signs[si];
       var a = C && C.zoneSignAlpha ? C.zoneSignAlpha(z, me.x, me.y) : 0;
-      if (a <= 0.02) continue;
+      if (a <= 0.04) continue;
       var p = project(z.x, z.y, camX, camY, vw, vh);
-      var pulse = 0.9 + 0.1 * Math.sin(Date.now() / 320 + si);
-      var bw = Math.min(220, 110 + a * 70) * Math.min(1.3, p.depth + 0.15);
-      var bh = 28 + a * 6;
+      /* polish10: lift signs high above frogs; smaller, less opaque */
+      var bw = Math.min(160, 88 + a * 40) * Math.min(1.15, p.depth + 0.12);
+      var bh = 20 + a * 3;
       var bx = p.x;
-      var by = p.y - 56 * p.depth;
+      var by = p.y - 110 * p.depth;
       ctx.save();
-      ctx.globalAlpha = a * pulse;
-      ctx.fillStyle = "rgba(15, 23, 42, 0.78)";
+      ctx.globalAlpha = Math.min(0.72, a * 0.85);
+      ctx.fillStyle = "rgba(15, 23, 42, 0.55)";
       ctx.fillRect(bx - bw * 0.5, by - bh * 0.5, bw, bh);
       ctx.strokeStyle = z.color || "#fbbf24";
-      ctx.lineWidth = 2.2;
+      ctx.lineWidth = 1.5;
       ctx.strokeRect(bx - bw * 0.5, by - bh * 0.5, bw, bh);
       ctx.fillStyle = z.color || "#fef3c7";
-      ctx.font = "bold " + Math.round(13 + a * 3) + "px Segoe UI, system-ui, sans-serif";
+      ctx.font = "bold " + Math.round(11 + a * 2) + "px Segoe UI, system-ui, sans-serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(z.label, bx, by);
@@ -2977,13 +3016,14 @@
   }
 
   function drawMiniMap(ctx, frogs, vw, vh) {
-    var mw = Math.min(168, Math.max(120, vw * 0.18));
+    /* polish10: smaller map, top-left under HUD — clear of right INTERACT/ability */
+    var mw = Math.min(118, Math.max(96, vw * 0.12));
     var mh = mw * (MAP_H / MAP_W);
     var pad = 10;
-    var ox = vw - mw - pad - 8;
-    var oy = pad + 52;
+    var ox = pad + 6;
+    var oy = pad + 86;
     ctx.save();
-    ctx.globalAlpha = 0.88;
+    ctx.globalAlpha = 0.72;
     ctx.fillStyle = "rgba(15, 23, 42, 0.72)";
     ctx.strokeStyle = "rgba(251, 191, 36, 0.55)";
     ctx.lineWidth = 1.5;

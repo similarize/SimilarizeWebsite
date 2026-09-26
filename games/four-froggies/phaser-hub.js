@@ -7,7 +7,8 @@
    polish6: depth shadows + parallax-lite hills + Mars invader silhouette tease + mech wow tip.
    polish7: zone signs + mini-map lite + companion idle bounce / follow lag.
    polish8: truck silhouette + house porch + whale breach + destination beacon (cheap Canvas ports).
-   polish9: color nameplates; aboard icons; track start/finish gate; Optimus visual punch lite. */
+   polish9: color nameplates; aboard icons; track start/finish gate; Optimus visual punch lite.
+   polish10: quieter UI; exit truck anytime; friction/cam tighten; particle caps; dusk sky shift. */
 (function (global) {
   "use strict";
   var C = global.FroggiesCanon;
@@ -124,7 +125,7 @@
           companion.followLag = 0.35 + ci * 0.12;
           companion.idleBounce = Math.random() * 6;
           companion.chatT = 0;
-          companion.nameTag = this.add.text(companion.x, companion.y - 26, cdef.name + " · AI", {
+          companion.nameTag = this.add.text(companion.x, companion.y - 26, cdef.name, {
             fontFamily: "Segoe UI, system-ui, sans-serif", fontSize: "11px", fontStyle: "bold",
             color: cdef.color || "#fff", stroke: "#000", strokeThickness: 3,
             backgroundColor: "#0f172ae6", padding: { x: 6, y: 2 },
@@ -159,7 +160,7 @@
         this.truckBody = this.add.rectangle(0, 0, 78, 36, 0x9ca3af, 1).setDepth(18).setVisible(false).setStrokeStyle(3, 0x111827, 1);
         this.truckAccent = this.add.rectangle(0, -2, 50, 14, hx(def.color), 0.85).setDepth(18).setVisible(false);
         this.waterClip = this.add.rectangle(0, 10, 84, 22, 0x0e7490, 0.55).setDepth(19).setVisible(false);
-        this.cameras.main.startFollow(this.player, true, 0.18, 0.18); /* polish3 less lag */
+        this.cameras.main.startFollow(this.player, true, 0.28, 0.28); /* polish3/10 less lag fight */
         this.cameras.main.setBounds(0, 0, C.MAP_W, C.MAP_H);
         this.cameras.main.setZoom(Math.min(0.95, Math.max(0.42, window.innerWidth / 1400)));
         /* polish6: soft depth shadow under player / truck */
@@ -176,17 +177,17 @@
         var zlist = (C.ZONE_SIGNS || []);
         for (var zi = 0; zi < zlist.length; zi++) {
           var zs = zlist[zi];
-          var zt = this.add.text(zs.x, zs.y - 40, zs.label, {
-            fontFamily: "Segoe UI, system-ui, sans-serif", fontSize: "16px", fontStyle: "bold",
-            color: zs.color || "#fef3c7", backgroundColor: "#0f172acc",
-            padding: { x: 10, y: 5 }, stroke: "#000", strokeThickness: 2,
+          var zt = this.add.text(zs.x, zs.y - 90, zs.label, {
+            fontFamily: "Segoe UI, system-ui, sans-serif", fontSize: "12px", fontStyle: "bold",
+            color: zs.color || "#fef3c7", backgroundColor: "#0f172a99",
+            padding: { x: 8, y: 3 }, stroke: "#000", strokeThickness: 1,
           }).setOrigin(0.5).setDepth(50).setAlpha(0);
           zt.zone = zs;
           this.zoneSignTexts.push(zt);
         }
         this.miniMapGfx = this.add.graphics().setScrollFactor(0).setDepth(60);
         /* polish5: ambient pollen / fireflies */
-        for (var ai = 0; ai < 40; ai++) {
+        for (var ai = 0; ai < 22; ai++) {
           var kind = Math.random() < 0.55 ? "pollen" : "firefly";
           var amb = this.add.circle(
             80 + Math.random() * (C.MAP_W - 160),
@@ -496,8 +497,14 @@
         var dt = Math.min(0.05, delta / 1000);
         this.cd = Math.max(0, this.cd - dt); this.toastT = Math.max(0, this.toastT - dt);
         this.bob += dt * (this.inTruck ? 14 : 10);
+        /* polish10: soft dusk sky shift over play time */
+        this.dayT = (this.dayT || 0) + dt;
+        var day = (this.dayT % 420) / 420;
+        var dusk = day < 0.45 ? 0 : (day < 0.7 ? (day - 0.45) / 0.25 : (day < 0.9 ? 1 : Math.max(0, 1 - (day - 0.9) / 0.1)));
+        var bgR = Math.round(26 + dusk * 40), bgG = Math.round(58 - dusk * 20), bgB = Math.round(26 + dusk * 10);
+        this.cameras.main.setBackgroundColor(Phaser.Display.Color.GetColor(bgR, bgG, bgB));
         /* polish3: snappier locomotion */
-        var maxSp = this.inTruck ? 330 : 195, accel = this.inTruck ? 720 : 560, fric = this.inTruck ? 3.8 : 6.6;
+        var maxSp = this.inTruck ? 340 : 205, accel = this.inTruck ? 820 : 680, fric = this.inTruck ? 5.2 : 8.8;
         var body = this.player.body;
         if (steer.x || steer.y) {
           var len = Math.hypot(steer.x, steer.y) || 1;
@@ -586,7 +593,7 @@
         if (!this.inTruck && !wet && sp > 45) {
           this.dustT = (this.dustT || 0) - dt;
           if (this.dustT <= 0) {
-            this.dustT = 0.16;
+            this.dustT = 0.22;
             var d = this.add.circle(this.player.x - this.facing * 6, this.player.y + 10, 4, 0xb8a070, 0.45).setDepth(15);
             this.fx.push({ g: d, life: 0.35 });
           }
@@ -671,7 +678,7 @@
         /* polish6: walk cam bob (tilt-lite) */
         if (!this.inTruck && sp > 40) {
           this.walkBobT = (this.walkBobT || 0) + dt * 10;
-          this.cameras.main.setAngle(Math.sin(this.walkBobT) * 0.35);
+          this.cameras.main.setAngle(Math.sin(this.walkBobT) * 0.12);
         } else {
           this.cameras.main.setAngle(0);
         }
@@ -805,7 +812,7 @@
         /* polish7: mini-map lite */
         if (this.miniMapGfx) {
           var g = this.miniMapGfx; g.clear();
-          var mw = 130, mh = 98, ox = this.cameras.main.width - mw - 12, oy = 56;
+          var mw = 108, mh = 82, ox = 12, oy = 88; /* polish10: top-left clear of right controls */
           g.fillStyle(0x0f172a, 0.72); g.fillRect(ox, oy, mw, mh);
           g.lineStyle(1.5, 0xfbbf24, 0.55); g.strokeRect(ox, oy, mw, mh);
           function mmx(x) { return ox + (x / C.MAP_W) * mw; }
@@ -865,22 +872,26 @@
           hooks.onHud({
             mode: "ranch", label: C.areaNameAt(this.player.x, this.player.y) + " · Phaser",
             scrap: Math.floor(this.scrap),
-            tip: this.toastT > 0 ? this.toast : this.near ? ("⚡ " + this.near.tip + " · INTERACT / E") : "",
+            tip: this.toastT > 0 ? this.toast : (this.inTruck ? "EXIT TRUCK · INTERACT / E" : (this.near ? ((C.isTruckHotspot(this.near) ? "BOARD · " : "⚡ ") + this.near.tip + " · INTERACT / E") : "")),
             near: this.near, ability: def.ability, cd: this.cd, walk: walk,
           });
         }
       },
       doInteract: function () {
+        /* polish10: EXIT truck anytime */
+        if (this.inTruck) {
+          this.inTruck = false; this.truckMode = null; this.truckId = null;
+          this.toast = "Parked · walking"; this.toastT = 1.8;
+          if (hooks.onToast) hooks.onToast(this.toast);
+          return;
+        }
         if (!this.near) return;
         var id = this.near.id;
         if (C.isTruckHotspot(this.near)) {
-          if (this.inTruck) { this.inTruck = false; this.truckMode = null; this.truckId = null; this.toast = "Hopped out"; }
-          else {
-            this.inTruck = true; this.truckMode = this.near.mode || "solo"; this.truckId = id; this.scrap += 1;
-            this.toast = this.truckMode === "shared"
-              ? "All aboard! Four froggies · one Cybertruck · hit the jumps!"
-              : "Driving Cybertruck · hit the jumps!";
-          }
+          this.inTruck = true; this.truckMode = this.near.mode || "solo"; this.truckId = id; this.scrap += 1;
+          this.toast = this.truckMode === "shared"
+            ? "All aboard! Four froggies · one Cybertruck · hit the jumps!"
+            : "Driving Cybertruck · hit the jumps!";
           this.toastT = 2.4;
         } else if (id === "fishies") {
           this.toast = "Splash! Fishies & whales scatter"; this.toastT = 2; this.scrap += 2;
@@ -975,7 +986,7 @@
         this.invLabel = this.add.text(980, 520, "Invader mechs · silhouette tease", {
           fontSize: "11px", color: "#fca5a5", stroke: "#000", strokeThickness: 3,
         }).setOrigin(0.5).setVisible(false);
-        this.cameras.main.startFollow(this.player, true, 0.18, 0.18); /* polish3 less lag */
+        this.cameras.main.startFollow(this.player, true, 0.28, 0.28); /* polish3/10 less lag fight */
         this.cameras.main.setBounds(0, 0, 1100, 800);
       },
       update: function (time, delta) {

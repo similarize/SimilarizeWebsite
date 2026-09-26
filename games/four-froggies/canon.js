@@ -3,7 +3,8 @@
    parity1: landmark layout (compound / track / pond / trucks) shared for Canvas + Phaser + three.
    polish7: zone signs (HOUSE/TRACK/POND/GARAGE/STARSHIP) + AI chat one-liners from existing canon only.
    polish8: shared landmarks unchanged; art punch lives in engine renderers.
-   polish9: landmarks unchanged; party/nameplate/gate/kit punch in engines. */
+   polish9: landmarks unchanged; party/nameplate/gate/kit punch in engines.
+   polish10: zone signs fade when close (frogs readable). */
 (function (global) {
   "use strict";
 
@@ -214,13 +215,15 @@
   }
 
 
+  /* polish10: peak mid-approach; fade when standing on the sign so frogs stay visible */
   function zoneSignAlpha(sign, x, y) {
     if (!sign) return 0;
     var d = Math.hypot((sign.x || 0) - x, (sign.y || 0) - y);
     var R = sign.approach || 400;
     if (d >= R) return 0;
-    if (d <= R * 0.35) return 1;
-    return 1 - (d - R * 0.35) / (R * 0.65);
+    if (d <= R * 0.16) return 0.18 * (d / Math.max(1, R * 0.16));
+    if (d <= R * 0.42) return 0.55 + 0.2 * ((d - R * 0.16) / (R * 0.26));
+    return 0.75 * (1 - (d - R * 0.42) / (R * 0.58));
   }
 
   global.FroggiesCanon = {
