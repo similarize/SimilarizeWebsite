@@ -1,6 +1,7 @@
 /* Four Froggies — Phaser 3 hub (CDN). Canvas-parity ranch + thin space stub.
    Solo-first. Big map · compound · squiggle track · pond whales · 4 trucks+shared ·
    on-water/under tint · Starship → orbit Escape/hard thruster.
+   spacefix1: dark ground plane; orbit cam locks on planet (env stays fixed).
    polish4: compound presence + track hills + inviting hotspots + drive bob/spray.
    polish5: ambient pollen/fireflies; pond ripples; track race dust; garage door open-near;
    shared ALL ABOARD; land shake; hotspot sparkle; orbit pull rings + Escape banner.
@@ -1420,11 +1421,24 @@
       initialize: function () { Phaser.Scene.call(this, { key: "space" }); },
       create: function () {
         this.cameras.main.setBackgroundColor("#030712");
-        var stars = this.add.graphics();
+        try { document.body.classList.add("in-space"); } catch (e0) {}
+        /* Screen-fixed starfield + dark ground plane (do not spin with orbit) */
+        var stars = this.add.graphics().setScrollFactor(0).setDepth(-20);
+        stars.fillStyle(0x020617, 1);
+        stars.fillRect(0, 0, 2000, 1200);
         for (var i = 0; i < 120; i++) {
           stars.fillStyle(0xffffff, 0.35 + Math.random() * 0.65);
           stars.fillCircle(Math.random() * 1100, Math.random() * 800, Math.random() * 2.2);
         }
+        var ground = this.add.graphics().setScrollFactor(0).setDepth(-19);
+        ground.fillStyle(0x0f172a, 0.92);
+        ground.fillEllipse(550, 720, 980, 220);
+        for (var gi = 0; gi < 24; gi++) {
+          ground.fillStyle(0xe2e8f0, 0.35 + Math.random() * 0.4);
+          ground.fillCircle(80 + Math.random() * 990, 640 + Math.random() * 160, 1 + Math.random());
+        }
+        this.spaceStars = stars;
+        this.spaceGround = ground;
         this.add.text(550, 36, "Space · Moon · Spotty launched", {
           fontFamily: "Segoe UI, system-ui, sans-serif", fontSize: "18px", fontStyle: "bold",
           color: "#e0f2fe", stroke: "#000", strokeThickness: 4,
@@ -1481,6 +1495,7 @@
           fontSize: "11px", color: "#fca5a5", stroke: "#000", strokeThickness: 3,
         }).setOrigin(0.5).setVisible(false);
         this.cameras.main.startFollow(this.player, true, 0.28, 0.28); /* polish3/10 less lag fight */
+        this.cameras.main._ffFollowOn = true;
 
         /* tapsteer1: hold-to-aim on playfield (direction, not go-to) */
         var self = this;
@@ -1519,6 +1534,15 @@
       update: function (time, delta) {
         var dt = Math.min(0.05, delta / 1000);
         this.cd = Math.max(0, this.cd - dt); this.toastT = Math.max(0, this.toastT - dt);
+        /* spacefix1: lock cam on planet while orbiting so env/stars stay fixed */
+        if (this.inOrbit && this.planet) {
+          this.cameras.main.stopFollow();
+          this.cameras.main.centerOn(this.planet.x, this.planet.y);
+        } else if (this.player && !this.cameras.main._ffFollowOn) {
+          this.cameras.main.startFollow(this.player, true, 0.28, 0.28);
+          this.cameras.main._ffFollowOn = true;
+        }
+        if (this.inOrbit) this.cameras.main._ffFollowOn = false;
         var body = this.player.body, cfg = this.orbitCfg || {};
         var capR = cfg.captureRadius || 120, softR = cfg.softPullRadius || 220;
         var alt = cfg.orbitAltitude || 78, pullA = cfg.pullAccel || 420;
@@ -1597,7 +1621,7 @@
           if (this.near && this.near.id === "jimmy") {
             this.catches++; this.jimmy.x = 100 + Math.random() * 900; this.jimmy.y = 100 + Math.random() * 600;
             this.toast = "Caught Jimmy! ×" + this.catches + " · he jetpacks away again"; this.toastT = 2.5;
-          } else if (this.near && this.near.id === "return") { this.scene.start("ranch"); return; }
+          } else if (this.near && this.near.id === "return") { try { document.body.classList.remove("in-space"); } catch (e1) {} this.scene.start("ranch"); return; }
         }
         if (wantAbility) {
           wantAbility = false;

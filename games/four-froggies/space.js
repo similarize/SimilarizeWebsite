@@ -12,7 +12,10 @@
    polish9: Germy / Daisy / King Germy presence markers; soft hundreds-of-dogs silhouette flock near Mars cave.
    earth1: space scenes show procedural Earth (home planet) — ranch grounds stay on Earth, not floating in vacuum.
    solarsys1: clear Solar System — Sun center; Moon+station orbit Earth; all planets gravity wells;
-   compressed scale labeled; asteroid belt beyond Mars; Pluto included (dwarf). */
+   compressed scale labeled; asteroid belt beyond Mars; Pluto included (dwarf).
+   spacefix1: opaque dark starfield+ground plane (no forest leak); orbit locks cam on planet
+   so only froggy orbits; ranch pad grounded on Earth surface; shared blast-off (all 4);
+   ship vs spacesuit modes; space zoom; Mars destination travel. */
 (function (global) {
   "use strict";
 
@@ -322,6 +325,55 @@
     return list;
   }
 
+
+  /** Ranch return pad sits on Earth surface (grounded), never a floating map artifact. */
+  function earthRanchPad(ep) {
+    var earth = bodyById(ep, "earth");
+    if (!earth) return { x: 80, y: 820, r: 42 };
+    var ang = 0.85;
+    var rad = (earth.r || 30) * 0.78;
+    return {
+      x: earth.x + Math.cos(ang) * rad,
+      y: earth.y + Math.sin(ang) * rad,
+      r: 36,
+      earth: earth,
+    };
+  }
+
+  function ensureCrew(ep, opts) {
+    opts = opts || {};
+    var C = global.FroggiesCanon;
+    var order = (C && C.FROG_ORDER) || ["james", "jimmy", "bubbles", "rexy"];
+    var defs = (C && C.FROG_DEFS) || {};
+    var primary = opts.primaryId || (ep.crew && ep.crew.primary) || "james";
+    if (order.indexOf(primary) < 0) primary = order[0];
+    var prev = (ep.crew && ep.crew.members) || [];
+    function prevOf(id) {
+      for (var i = 0; i < prev.length; i++) if (prev[i].id === id) return prev[i];
+      return null;
+    }
+    ep.crew = ep.crew || {};
+    ep.crew.primary = primary;
+    ep.crew.members = [];
+    for (var oi = 0; oi < order.length; oi++) {
+      var id = order[oi];
+      var d = defs[id] || { id: id, name: id, color: "#4ade80" };
+      var ex = prevOf(id);
+      ep.crew.members.push({
+        id: id,
+        name: d.name || id,
+        color: d.color || "#4ade80",
+        suit: ex ? !!ex.suit : false,
+        x: (ep.px || 450) + (oi - 1.5) * 28,
+        y: (ep.py || 560) + (oi % 2) * 16,
+      });
+    }
+    var prim = defs[primary];
+    ep.frogId = primary;
+    ep.frogColor = prim ? prim.color : "#4ade80";
+    ep.frogName = prim ? prim.name : "Froggy";
+  }
+
   function create() {
     return {
       active: false,
@@ -365,6 +417,13 @@
       orbitRadius: 0,
       orbitEscapeCool: 0,
       orbitPull: null,
+      travelMode: "ship",
+      zoom: 1,
+      frogId: "james",
+      frogColor: "#4ade80",
+      frogName: "James",
+      crew: null,
+      shipSilhouette: true,
     };
   }
 
@@ -400,6 +459,17 @@
     ep.scene = "starship";
     ep.px = 450;
     ep.py = 560;
+    ep.travelMode = "ship";
+    ep.zoom = 1;
+    ep.shipSilhouette = true;
+    ensureCrew(ep, opts);
+    if (ep.crew && ep.crew.members) {
+      for (var ci = 0; ci < ep.crew.members.length; ci++) {
+        ep.crew.members[ci].suit = false;
+        ep.crew.members[ci].x = ep.px + (ci - 1.5) * 26;
+        ep.crew.members[ci].y = ep.py + (ci % 2) * 14;
+      }
+    }
     ep.jimmyCatches = 0;
     ep.caveProgress = 0;
     ep.foundGarage = false;
@@ -423,7 +493,7 @@
     seedAsteroids(ep);
     ep.spaceTime = 0;
     ep.jimmy = { x: 620, y: 280, vx: 55, vy: -15, jet: 0 };
-    ep.toast = "Spotty: Welcome aboard, commander on deck!";
+    ep.toast = "Spotty: All four aboard! Blast off together — then suit EVA or stay in ship.";
     ep.toastT = 3.5;
     if (typeof opts.onEnter === "function") opts.onEnter();
   }
@@ -448,14 +518,21 @@
       var earth0 = bodyById(ep, "earth") || { x: SUN_X + 270, y: SUN_Y };
       ep.px = earth0.x - 90;
       ep.py = earth0.y + 55;
+      ep.travelMode = ep.travelMode || "ship";
       ep.jimmy.x = earth0.x + 40;
       ep.jimmy.y = earth0.y - 70;
       ep.germy.x = earth0.x - 40;
       ep.germy.y = earth0.y + 20;
       ep.daisy.x = earth0.x - 10;
       ep.daisy.y = earth0.y + 45;
+      if (ep.crew && ep.crew.members) {
+        for (var csi = 0; csi < ep.crew.members.length; csi++) {
+          ep.crew.members[csi].x = ep.px + (csi - 1.5) * 22;
+          ep.crew.members[csi].y = ep.py + (csi % 2) * 12;
+        }
+      }
       if (!ep.asteroids) seedAsteroids(ep);
-      toast(ep, "Solar System · Earth home · Moon & station orbit · gravity wells!", 3.6);
+      toast(ep, "All four in space · ship rocket or suit jet · Mars ahead!", 3.6);
     } else if (id === "station") {
       ep.px = 450;
       ep.py = 500;
@@ -487,27 +564,36 @@
     var s = ep.scene;
     var list = [];
     if (s === "starship") {
-      list.push({ id: "spotty", label: "Spotty", x: ep.spotty.x, y: ep.spotty.y, r: 55, tip: "Talk to Spotty · launch" });
-      list.push({ id: "launch", label: "Launch", x: 450, y: 320, r: 60, tip: "Launch into space" });
+      list.push({ id: "spotty", label: "Spotty", x: ep.spotty.x, y: ep.spotty.y, r: 55, tip: "Talk to Spotty · blast off (all four)" });
+      list.push({ id: "launch", label: "Launch", x: 450, y: 320, r: 60, tip: "Blast off · all four into space" });
       list.push({ id: "to_ranch", label: "Earth · ranch", x: 80, y: 820, r: 55, tip: "Return home · ranch hub" });
     } else if (s === "space") {
       var st = bodyById(ep, "station");
       var earthH = bodyById(ep, "earth");
+      var marsH = bodyById(ep, "mars");
+      var padH = earthRanchPad(ep);
       list.push({ id: "jimmy", label: "Jimmy", x: ep.jimmy.x, y: ep.jimmy.y, r: 48, tip: "Catch Jimmy · jetpack!" });
       list.push({ id: "germy", label: "Germy", x: ep.germy.x, y: ep.germy.y, r: 40, tip: "Germy the doggy" });
       list.push({ id: "daisy", label: "Daisy", x: ep.daisy.x, y: ep.daisy.y, r: 40, tip: "Daisy Dachshund" });
       if (st) list.push({ id: "to_station", label: "Station", x: st.x, y: st.y, r: 48, tip: "Space station · orbits Earth" });
+      list.push({ id: "to_ranch", label: "Ranch pad", x: padH.x, y: padH.y, r: padH.r, tip: "Earth ranch pad · return home" });
+      if (ep.travelMode === "ship") {
+        list.push({ id: "exit_ship", label: "EVA suit", x: ep.px + 55, y: ep.py - 10, r: 42, tip: "Exit Starship · spacesuit jet (all four)" });
+      } else {
+        list.push({ id: "board_ship", label: "Board ship", x: ep.px + 55, y: ep.py - 10, r: 42, tip: "Board Starship rocket" });
+      }
+      if (marsH) {
+        list.push({ id: "to_mars", label: "Mars", x: marsH.x, y: marsH.y, r: 52, tip: "Travel to Mars · cave + dogs" });
+      }
       if (earthH) {
         list.push({
           id: "to_ship",
-          label: "Starship",
-          x: earthH.x - 110,
-          y: earthH.y + 95,
-          r: 50,
-          tip: "Back to Starship · Earth home",
+          label: "Starship bay",
+          x: earthH.x - Math.cos(0.85) * earthH.r * 0.5,
+          y: earthH.y - Math.sin(0.85) * earthH.r * 0.5,
+          r: 40,
+          tip: "Starship bay · Earth home",
         });
-      } else {
-        list.push({ id: "to_ship", label: "Starship", x: 80, y: 820, r: 50, tip: "Back to Starship" });
       }
     } else if (s === "station") {
       list.push({ id: "alex", label: "Alex", x: ep.alex.x, y: ep.alex.y, r: 48, tip: "Alex · astronaut" });
@@ -579,9 +665,35 @@
       return { ok: true, exitRanch: true, toast: "Back at the ranch hub" };
     }
     if (id === "spotty" || id === "launch") {
+      ep.travelMode = "ship";
+      if (ep.crew && ep.crew.members) {
+        for (var li = 0; li < ep.crew.members.length; li++) ep.crew.members[li].suit = false;
+      }
       setScene(ep, "space");
-      toast(ep, "Spotty: Launch! Jimmy's jetpacking away — catch him!");
+      toast(ep, "Blast off! James · Jimmy · Bubbles · Rexy — all four in the Starship!");
+      return { ok: true, toast: ep.toast, sfx: "jet" };
+    }
+    if (id === "exit_ship") {
+      ep.travelMode = "suit";
+      if (ep.crew && ep.crew.members) {
+        for (var ei = 0; ei < ep.crew.members.length; ei++) ep.crew.members[ei].suit = true;
+      }
+      ep.jet = 0.45;
+      toast(ep, "EVA! All four in spacesuits — jet free. Board ship to ride rocket.");
+      return { ok: true, toast: ep.toast, sfx: "jet" };
+    }
+    if (id === "board_ship") {
+      ep.travelMode = "ship";
+      if (ep.crew && ep.crew.members) {
+        for (var bi = 0; bi < ep.crew.members.length; bi++) ep.crew.members[bi].suit = false;
+      }
+      toast(ep, "Back aboard Starship rocket.");
       return { ok: true, toast: ep.toast };
+    }
+    if (id === "to_mars") {
+      setScene(ep, "mars");
+      toast(ep, "Mars! Cave mouth + dogs ahead · hang TBD");
+      return { ok: true, toast: ep.toast, sfx: "jet" };
     }
     if (id === "jimmy") {
       ep.jimmyCatches++;
@@ -787,9 +899,10 @@
       if (ep.inOrbit) {
         /* captured this frame — orbit tick next */
       } else {
-        var maxSp = ep.scene === "space" || ep.scene === "mars" ? 170 : 150;
-        var accel = 880;
-        var friction = 5.5;
+        var suit = ep.travelMode === "suit";
+        var maxSp = ep.scene === "space" || ep.scene === "mars" ? (suit ? 210 : 170) : 150;
+        var accel = suit ? 1100 : 880;
+        var friction = suit ? 4.2 : 5.5;
         var tvx = steerX * maxSp;
         var tvy = steerY * maxSp;
         if (Math.abs(steerX) + Math.abs(steerY) > 0.05) {
@@ -803,6 +916,21 @@
         ep.px = clamp(ep.px + ep.vx * dt, 40, MAP - 40);
         ep.py = clamp(ep.py + ep.vy * dt, 60, MAP - 40);
         if (steerX !== 0) ep.facing = steerX > 0 ? 1 : -1;
+      }
+    }
+
+    if (ep.crew && ep.crew.members && (ep.scene === "space" || ep.scene === "starship" || ep.scene === "mars")) {
+      for (var cfi = 0; cfi < ep.crew.members.length; cfi++) {
+        var cm = ep.crew.members[cfi];
+        if (cm.id === ep.frogId) {
+          cm.x = ep.px; cm.y = ep.py; cm.suit = ep.travelMode === "suit";
+        } else {
+          var tx = ep.px + Math.cos(cfi * 1.7 + (ep.spaceTime || 0) * 0.4) * (ep.travelMode === "ship" ? 36 : 48);
+          var ty = ep.py + Math.sin(cfi * 1.3 + (ep.spaceTime || 0) * 0.35) * (ep.travelMode === "ship" ? 22 : 32);
+          cm.x += (tx - cm.x) * Math.min(1, 4 * dt);
+          cm.y += (ty - cm.y) * Math.min(1, 4 * dt);
+          cm.suit = ep.travelMode === "suit";
+        }
       }
     }
 
@@ -932,18 +1060,25 @@
   }
 
   function drawStars(ctx, ep, w, h, t) {
+    /* Opaque void first — never leave ranch/forest peeking through clearRect */
+    ctx.fillStyle = "#020617";
+    ctx.fillRect(0, 0, w, h);
     var g = ctx.createLinearGradient(0, 0, 0, h);
     g.addColorStop(0, "#020617");
     g.addColorStop(0.55, "#0b1224");
-    g.addColorStop(1, "#111827");
+    g.addColorStop(1, "#0a1020");
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, w, h);
 
-    // Parallax star layers vs player (overworld depth feel)
-    var camOffX = (ep.px - MAP * 0.5) * 0.04;
-    var camOffY = (ep.py - MAP * 0.5) * 0.03;
-    for (var i = 0; i < ep.stars.length; i++) {
-      var s = ep.stars[i];
+    /* Stars screen-stable while orbiting; mild parallax otherwise */
+    var camOffX = 0, camOffY = 0;
+    if (!ep.inOrbit) {
+      camOffX = (spaceCam.x - MAP * 0.5) * 0.03;
+      camOffY = (spaceCam.y - MAP * 0.5) * 0.022;
+    }
+    var stars = ep.stars || [];
+    for (var i = 0; i < stars.length; i++) {
+      var s = stars[i];
       var layer = (i % 3) + 1;
       var a = 0.35 + 0.65 * Math.abs(Math.sin(t * (1.2 + layer * 0.3) + s.tw));
       ctx.fillStyle = "rgba(255,255,255," + a + ")";
@@ -953,26 +1088,53 @@
       ctx.arc(sx, sy, s.r * (0.7 + layer * 0.15), 0, Math.PI * 2);
       ctx.fill();
     }
-    // Soft nebula wash (original procedural color — not licensed art)
     var neb = ctx.createRadialGradient(w * 0.7, h * 0.25, 10, w * 0.65, h * 0.3, w * 0.45);
     neb.addColorStop(0, "rgba(88, 80, 180, 0.12)");
     neb.addColorStop(0.5, "rgba(30, 64, 120, 0.06)");
     neb.addColorStop(1, "rgba(0,0,0,0)");
     ctx.fillStyle = neb;
     ctx.fillRect(0, 0, w, h);
+    drawDarkGroundPlane(ctx, w, h, t);
+  }
+
+  function drawDarkGroundPlane(ctx, w, h, t) {
+    var gy = h * 0.78;
+    var grd = ctx.createLinearGradient(0, gy - h * 0.2, 0, h);
+    grd.addColorStop(0, "rgba(2,6,23,0)");
+    grd.addColorStop(0.35, "rgba(2,6,23,0.75)");
+    grd.addColorStop(1, "rgba(2,6,23,0.96)");
+    ctx.fillStyle = grd;
+    ctx.fillRect(0, gy - h * 0.22, w, h * 0.45);
+    ctx.fillStyle = "rgba(15,23,42,0.92)";
+    ctx.beginPath();
+    ctx.ellipse(w * 0.5, gy, w * 0.62, h * 0.16, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(51,65,85,0.55)";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    for (var si = 0; si < 28; si++) {
+      var px = (si * 97.3) % w;
+      var py = gy - h * 0.12 + ((si * 53.1) % (h * 0.28));
+      var tw = 0.35 + 0.5 * Math.abs(Math.sin(t * 1.4 + si));
+      ctx.fillStyle = "rgba(226,232,240," + tw + ")";
+      ctx.beginPath();
+      ctx.arc(px, py, 0.8 + (si % 3) * 0.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
 
   var spaceCam = { x: MAP * 0.5, y: MAP * 0.55 };
 
   function worldToScreen(x, y, w, h, camX, camY) {
-    // Fixed-angle 2.5D: isometric-ish foreshorten + depth scale (presentation)
+    // Fixed-angle 2.5D: isometric-ish foreshorten + depth scale + space zoom
     camX = camX == null ? spaceCam.x : camX;
     camY = camY == null ? spaceCam.y : camY;
-    var dx = x - camX;
-    var dy = y - camY;
+    var z = (spaceCam.zoom != null ? spaceCam.zoom : 1);
+    var dx = (x - camX) * z;
+    var dy = (y - camY) * z;
     var sx = w * 0.5 + dx * 0.95 - dy * 0.22;
     var sy = h * 0.42 + dx * 0.18 + dy * 0.62;
-    var depth = clamp(0.62 + y / MAP * 0.5 + dy * 0.0002, 0.48, 1.35);
+    var depth = clamp(0.62 + y / MAP * 0.5 + dy * 0.0002, 0.48, 1.35) * (0.85 + z * 0.15);
     return { x: sx, y: sy, d: depth };
   }
 
@@ -1320,6 +1482,22 @@
 
       if (body.id === "earth") {
         drawEarth(ctx, w, h, t, { cx: scr.x, cy: scr.y, r: body.r * scr.d });
+        var padAng = 0.85;
+        var padR = body.r * scr.d * 0.78;
+        var pdx = scr.x + Math.cos(padAng) * padR;
+        var pdy = scr.y + Math.sin(padAng) * padR;
+        ctx.fillStyle = "rgba(2,132,199,0.85)";
+        ctx.beginPath();
+        ctx.ellipse(pdx, pdy, 14 * scr.d, 6 * scr.d, padAng * 0.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#86efac";
+        ctx.lineWidth = 1.6;
+        ctx.stroke();
+        ctx.fillStyle = "rgba(134,239,172,0.9)";
+        ctx.beginPath();
+        ctx.arc(pdx, pdy, 3.2 * scr.d, 0, Math.PI * 2);
+        ctx.fill();
+        drawLabel(ctx, "Ranch pad", pdx, pdy + 16 * scr.d, "#bbf7d0");
         continue;
       }
 
@@ -1433,140 +1611,6 @@
     ctx.fillText("Invader mechs · distant silhouette tease", w * 0.5, h * 0.08);
   }
 
-  function render(ctx, ep, w, h, t) {
-    spaceCam.x = ep.px;
-    spaceCam.y = ep.py;
-    if (!ep.active) return;
-    var bg = SCENES[ep.scene].bg;
-    if (ep.shake > 0) {
-      ctx.save();
-      ctx.translate((Math.random() - 0.5) * ep.shake * 14, (Math.random() - 0.5) * ep.shake * 14);
-    }
-
-    if (bg === "space") {
-      drawStars(ctx, ep, w, h, t);
-      /* solarsys1: free-fly space draws full system; other space-bg scenes keep distant Earth home */
-      if (ep.scene !== "space") {
-        drawEarth(ctx, w, h, t, {
-          cx: w * (ep.scene === "starship" ? 0.78 : 0.16),
-          cy: h * (ep.scene === "starship" ? 0.28 : 0.74),
-          r: Math.min(w, h) * (ep.scene === "mech" ? 0.14 : 0.2),
-        });
-      }
-    }
-    else if (bg === "station") {
-      var g = ctx.createLinearGradient(0, 0, 0, h);
-      g.addColorStop(0, "#0f172a");
-      g.addColorStop(1, "#1e293b");
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, w, h);
-      ctx.fillStyle = "rgba(51,65,85,0.85)";
-      ctx.fillRect(0, h * 0.55, w, h * 0.45);
-      ctx.fillStyle = "rgba(148,163,184,0.25)";
-      ctx.fillRect(w * 0.1, h * 0.2, w * 0.8, h * 0.12);
-    } else if (bg === "mars") {
-      var mg = ctx.createLinearGradient(0, 0, 0, h);
-      mg.addColorStop(0, "#1c1917");
-      mg.addColorStop(0.4, "#7c2d12");
-      mg.addColorStop(1, "#9a3412");
-      ctx.fillStyle = mg;
-      ctx.fillRect(0, 0, w, h);
-      ctx.fillStyle = "rgba(254,215,170,0.15)";
-      ctx.beginPath();
-      ctx.ellipse(w * 0.5, h * 0.7, w * 0.45, h * 0.18, 0, 0, Math.PI * 2);
-      ctx.fill();
-    } else if (bg === "cave") {
-      ctx.fillStyle = "#1c1917";
-      ctx.fillRect(0, 0, w, h);
-      ctx.fillStyle = "#292524";
-      ctx.beginPath();
-      ctx.moveTo(0, h * 0.3);
-      ctx.quadraticCurveTo(w * 0.5, h * 0.05, w, h * 0.3);
-      ctx.lineTo(w, h);
-      ctx.lineTo(0, h);
-      ctx.fill();
-      ctx.fillStyle = "rgba(120,53,15,0.35)";
-      ctx.fillRect(0, h * 0.7, w, h * 0.3);
-    }
-
-    var hots = hotspotsFor(ep);
-    var near = nearestHotspot(ep, 75);
-    for (var hi = 0; hi < hots.length; hi++) {
-      var hh = hots[hi];
-      // skip dynamic jimmy hotspot ring drawn with jimmy
-      if (hh.id === "jimmy") continue;
-      var hp = worldToScreen(hh.x, hh.y, w, h);
-      drawHot(ctx, hh, hp, near && near.id === hh.id);
-    }
-
-    // Scene actors
-    if (ep.scene === "starship") {
-      // pad
-      var pad = worldToScreen(450, 360, w, h);
-      ctx.fillStyle = "rgba(100,116,139,0.7)";
-      ctx.beginPath();
-      ctx.ellipse(pad.x, pad.y, 90 * pad.d, 28 * pad.d, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = "#38bdf8";
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      drawLabel(ctx, "STARSHIP", pad.x, pad.y - 36 * pad.d, "#7dd3fc");
-      var sp = worldToScreen(ep.spotty.x, ep.spotty.y, w, h);
-      ctx.beginPath();
-      ctx.arc(sp.x, sp.y, 34 * sp.d * (1 + 0.1 * Math.sin(t * 2.6)), 0, Math.PI * 2);
-      ctx.strokeStyle = "rgba(251,146,60,0.65)";
-      ctx.lineWidth = 2.4;
-      ctx.stroke();
-      drawSpotty(ctx, sp.x, sp.y, sp.d);
-      drawLabel(ctx, "Commander on deck", sp.x, sp.y + 28 * sp.d, "#fdba74");
-    }
-
-    if (ep.scene === "space") {
-      drawSolarSystemScene(ctx, ep, w, h, t);
-      drawDistantInvaderSilhouettes(ctx, ep, w, h, t);
-
-      var jp = worldToScreen(ep.jimmy.x, ep.jimmy.y, w, h);
-      drawHot(ctx, { x: ep.jimmy.x, y: ep.jimmy.y }, jp, near && near.id === "jimmy");
-      drawJimmySuit(ctx, jp.x, jp.y, jp.d, ep.jimmy.jet);
-
-      var gp = worldToScreen(ep.germy.x, ep.germy.y, w, h);
-      drawDog(ctx, gp.x, gp.y, gp.d * 0.9, "#b45309", "Germy");
-      var dp = worldToScreen(ep.daisy.x, ep.daisy.y, w, h);
-      drawDog(ctx, dp.x, dp.y, dp.d * 0.85, "#d6d3d1", "Daisy Dachshund");
-    }
-
-    if (ep.scene === "station") {
-      for (var p = 0; p < ep.people.length; p++) {
-        ep.people[p].phase += dt * 2;
-      }
-    }
-
-    if (ep.scene === "mech" && !ep.mechWon) {
-      for (var i = 0; i < ep.invaders.length; i++) {
-        var inv = ep.invaders[i];
-        if (inv.hp <= 0) continue;
-        inv.y += 12 * dt;
-        if (inv.y > 380) {
-          inv.y = 120;
-          ep.mechHp = Math.max(0, ep.mechHp - 4);
-        }
-      }
-      if (ep.mechHp <= 0) {
-        ep.mechHp = 100;
-        toast(ep, "Soft fail — James mech reboots. Blast again!");
-      }
-    }
-
-    // Solar picker: left/right cycles moons
-    if (ep.pickCool > 0) ep.pickCool -= dt;
-    if (ep.scene === "solar" && Math.abs(steerX) > 0.5 && ep.pickCool <= 0) {
-      var moons = ep.solarTab === "mars" ? MARS_MOONS : NEPTUNE_MOONS;
-      ep.solarPick = (ep.solarPick + (steerX > 0 ? 1 : -1) + moons.length) % moons.length;
-      ep.pickCool = 0.28;
-      toast(ep, "Selected: " + selectedMoon(ep).name, 1.2);
-    }
-  }
-
   /** earth1: lightweight procedural Earth (no assets). Ranch lives here — do not draw yard in vacuum. */
   function drawEarth(ctx, w, h, t, opts) {
     opts = opts || {};
@@ -1628,18 +1672,25 @@
   }
 
   function drawStars(ctx, ep, w, h, t) {
+    /* Opaque void first — never leave ranch/forest peeking through clearRect */
+    ctx.fillStyle = "#020617";
+    ctx.fillRect(0, 0, w, h);
     var g = ctx.createLinearGradient(0, 0, 0, h);
     g.addColorStop(0, "#020617");
     g.addColorStop(0.55, "#0b1224");
-    g.addColorStop(1, "#111827");
+    g.addColorStop(1, "#0a1020");
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, w, h);
 
-    // Parallax star layers vs player (overworld depth feel)
-    var camOffX = (ep.px - MAP * 0.5) * 0.04;
-    var camOffY = (ep.py - MAP * 0.5) * 0.03;
-    for (var i = 0; i < ep.stars.length; i++) {
-      var s = ep.stars[i];
+    /* Stars screen-stable while orbiting; mild parallax otherwise */
+    var camOffX = 0, camOffY = 0;
+    if (!ep.inOrbit) {
+      camOffX = (spaceCam.x - MAP * 0.5) * 0.03;
+      camOffY = (spaceCam.y - MAP * 0.5) * 0.022;
+    }
+    var stars = ep.stars || [];
+    for (var i = 0; i < stars.length; i++) {
+      var s = stars[i];
       var layer = (i % 3) + 1;
       var a = 0.35 + 0.65 * Math.abs(Math.sin(t * (1.2 + layer * 0.3) + s.tw));
       ctx.fillStyle = "rgba(255,255,255," + a + ")";
@@ -1649,26 +1700,53 @@
       ctx.arc(sx, sy, s.r * (0.7 + layer * 0.15), 0, Math.PI * 2);
       ctx.fill();
     }
-    // Soft nebula wash (original procedural color — not licensed art)
     var neb = ctx.createRadialGradient(w * 0.7, h * 0.25, 10, w * 0.65, h * 0.3, w * 0.45);
     neb.addColorStop(0, "rgba(88, 80, 180, 0.12)");
     neb.addColorStop(0.5, "rgba(30, 64, 120, 0.06)");
     neb.addColorStop(1, "rgba(0,0,0,0)");
     ctx.fillStyle = neb;
     ctx.fillRect(0, 0, w, h);
+    drawDarkGroundPlane(ctx, w, h, t);
+  }
+
+  function drawDarkGroundPlane(ctx, w, h, t) {
+    var gy = h * 0.78;
+    var grd = ctx.createLinearGradient(0, gy - h * 0.2, 0, h);
+    grd.addColorStop(0, "rgba(2,6,23,0)");
+    grd.addColorStop(0.35, "rgba(2,6,23,0.75)");
+    grd.addColorStop(1, "rgba(2,6,23,0.96)");
+    ctx.fillStyle = grd;
+    ctx.fillRect(0, gy - h * 0.22, w, h * 0.45);
+    ctx.fillStyle = "rgba(15,23,42,0.92)";
+    ctx.beginPath();
+    ctx.ellipse(w * 0.5, gy, w * 0.62, h * 0.16, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(51,65,85,0.55)";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    for (var si = 0; si < 28; si++) {
+      var px = (si * 97.3) % w;
+      var py = gy - h * 0.12 + ((si * 53.1) % (h * 0.28));
+      var tw = 0.35 + 0.5 * Math.abs(Math.sin(t * 1.4 + si));
+      ctx.fillStyle = "rgba(226,232,240," + tw + ")";
+      ctx.beginPath();
+      ctx.arc(px, py, 0.8 + (si % 3) * 0.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
 
   var spaceCam = { x: MAP * 0.5, y: MAP * 0.55 };
 
   function worldToScreen(x, y, w, h, camX, camY) {
-    // Fixed-angle 2.5D: isometric-ish foreshorten + depth scale (presentation)
+    // Fixed-angle 2.5D: isometric-ish foreshorten + depth scale + space zoom
     camX = camX == null ? spaceCam.x : camX;
     camY = camY == null ? spaceCam.y : camY;
-    var dx = x - camX;
-    var dy = y - camY;
+    var z = (spaceCam.zoom != null ? spaceCam.zoom : 1);
+    var dx = (x - camX) * z;
+    var dy = (y - camY) * z;
     var sx = w * 0.5 + dx * 0.95 - dy * 0.22;
     var sy = h * 0.42 + dx * 0.18 + dy * 0.62;
-    var depth = clamp(0.62 + y / MAP * 0.5 + dy * 0.0002, 0.48, 1.35);
+    var depth = clamp(0.62 + y / MAP * 0.5 + dy * 0.0002, 0.48, 1.35) * (0.85 + z * 0.15);
     return { x: sx, y: sy, d: depth };
   }
 
@@ -1955,10 +2033,69 @@
     ctx.fillText("Invader mechs · distant silhouette tease", w * 0.5, h * 0.08);
   }
 
+
+  function drawCrewFrog(ctx, x, y, d, color, suit, name) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(d, d);
+    if (suit) {
+      ctx.fillStyle = "#e2e8f0";
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 15, 13, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#38bdf8";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.fillStyle = "rgba(56,189,248,0.55)";
+      ctx.beginPath();
+      ctx.arc(0, -2, 6, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      ctx.fillStyle = color || "#4ade80";
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 12, 10, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+    if (name) drawLabel(ctx, name, x, y + 18 * d, "#e2e8f0");
+  }
+
+  function drawShipSilhouette(ctx, x, y, d) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(d, d);
+    ctx.fillStyle = "rgba(226,232,240,0.55)";
+    ctx.beginPath();
+    ctx.moveTo(0, -36);
+    ctx.lineTo(14, 8);
+    ctx.lineTo(-14, 8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "rgba(56,189,248,0.5)";
+    ctx.fillRect(-5, -8, 10, 12);
+    ctx.restore();
+  }
+
+  function adjustZoom(ep, delta) {
+    if (!ep) return 1;
+    ep.zoom = Math.max(0.55, Math.min(2.2, (ep.zoom || 1) + (delta || 0)));
+    return ep.zoom;
+  }
+
   function render(ctx, ep, w, h, t) {
-    spaceCam.x = ep.px;
-    spaceCam.y = ep.py;
+    /* Always opaque-clear first so ranch/forest never leaks under space */
+    ctx.fillStyle = "#020617";
+    ctx.fillRect(0, 0, w, h);
     if (!ep.active) return;
+    /* Orbit: lock cam on planet — only froggy orbits; starfield/plane stay screen-stable */
+    if (ep.inOrbit && ep.orbitPlanet) {
+      spaceCam.x = ep.orbitPlanet.x;
+      spaceCam.y = ep.orbitPlanet.y;
+    } else {
+      spaceCam.x = ep.px;
+      spaceCam.y = ep.py;
+    }
+    spaceCam.zoom = ep.zoom != null ? ep.zoom : 1;
     var bg = SCENES[ep.scene].bg;
     if (ep.shake > 0) {
       ctx.save();
@@ -1967,7 +2104,6 @@
 
     if (bg === "space") {
       drawStars(ctx, ep, w, h, t);
-      /* solarsys1: free-fly space draws full system; other space-bg scenes keep distant Earth home */
       if (ep.scene !== "space") {
         drawEarth(ctx, w, h, t, {
           cx: w * (ep.scene === "starship" ? 0.78 : 0.16),
@@ -2041,90 +2177,18 @@
       ctx.stroke();
       drawSpotty(ctx, sp.x, sp.y, sp.d);
       drawLabel(ctx, "Commander on deck", sp.x, sp.y + 28 * sp.d, "#fdba74");
+      if (ep.crew && ep.crew.members) {
+        for (var sci = 0; sci < ep.crew.members.length; sci++) {
+          var scm = ep.crew.members[sci];
+          var scp = worldToScreen(scm.x, scm.y, w, h);
+          drawCrewFrog(ctx, scp.x, scp.y, scp.d * 0.8, scm.color, false, scm.name);
+        }
+      }
     }
 
     if (ep.scene === "space") {
-      // moon + polish5 readable pull / orbit rings
-      var moon = worldToScreen(700, 140, w, h);
-      var cfgVis = orbitCfg();
-      var softScr = (cfgVis.softPullRadius || 220) * moon.d * 0.95;
-      var capScr = (cfgVis.captureRadius || 120) * moon.d * 0.95;
-      var orbScr = (ep.inOrbit ? (ep.orbitRadius || cfgVis.orbitAltitude || 78) : (cfgVis.orbitAltitude || 78)) * moon.d;
-      /* Soft pull halo */
-      ctx.beginPath();
-      ctx.arc(moon.x, moon.y, softScr, 0, Math.PI * 2);
-      ctx.strokeStyle = ep.orbitPull ? "rgba(125,211,252,0.55)" : "rgba(125,211,252,0.2)";
-      ctx.lineWidth = ep.orbitPull ? 2.4 : 1.2;
-      ctx.setLineDash([10, 8]);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      /* Capture ring */
-      ctx.beginPath();
-      ctx.arc(moon.x, moon.y, capScr, 0, Math.PI * 2);
-      ctx.strokeStyle = ep.inOrbit ? "rgba(250,204,21,0.85)" : "rgba(56,189,248,0.45)";
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      if (ep.inOrbit) {
-        ctx.beginPath();
-        ctx.arc(moon.x, moon.y, orbScr, 0, Math.PI * 2);
-        ctx.strokeStyle = "rgba(250,204,21,0.95)";
-        ctx.lineWidth = 3;
-        ctx.stroke();
-        /* orbit chevron at player angle */
-        var oa = ep.orbitAngle || 0;
-        var ox = moon.x + Math.cos(oa) * orbScr;
-        var oy = moon.y + Math.sin(oa) * orbScr;
-        ctx.fillStyle = "#fde68a";
-        ctx.beginPath();
-        ctx.arc(ox, oy, 5, 0, Math.PI * 2);
-        ctx.fill();
-      } else if (ep.orbitPull) {
-        var str = ep.orbitPull.strength || 0;
-        ctx.strokeStyle = "rgba(125,211,252," + (0.35 + str * 0.5) + ")";
-        ctx.lineWidth = 2 + str * 2;
-        ctx.beginPath();
-        ctx.moveTo(moon.x, moon.y);
-        var pp = worldToScreen(ep.px, ep.py, w, h);
-        ctx.lineTo(pp.x, pp.y);
-        ctx.stroke();
-        drawLabel(ctx, "Gravity pull · " + Math.round(str * 100) + "%", moon.x, moon.y + softScr + 14, "#7dd3fc");
-      }
-      ctx.fillStyle = "#e2e8f0";
-      ctx.beginPath();
-      ctx.arc(moon.x, moon.y, 55 * moon.d, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = "rgba(100,116,139,0.35)";
-      ctx.beginPath();
-      ctx.arc(moon.x - 15, moon.y - 8, 12 * moon.d, 0, Math.PI * 2);
-      ctx.arc(moon.x + 18, moon.y + 10, 8 * moon.d, 0, Math.PI * 2);
-      ctx.fill();
-      /* polish8: clearer destination label + soft beacon when heading toward Moon */
-      drawLabel(ctx, "☾ Moon", moon.x, moon.y + 70 * moon.d, "#e2e8f0");
-      drawLabel(ctx, "destination", moon.x, moon.y + 86 * moon.d, "#94a3b8");
-      var headingMoon = false;
-      if (!ep.inOrbit) {
-        var mdx = 700 - ep.px, mdy = 140 - ep.py;
-        var md = Math.hypot(mdx, mdy) || 1;
-        var vx = ep.vx || 0, vy = ep.vy || 0;
-        var spd = Math.hypot(vx, vy);
-        if (spd > 8) {
-          var dot = (vx * mdx + vy * mdy) / (spd * md);
-          headingMoon = dot > 0.35 && md < 520;
-        } else if (ep.orbitPull) headingMoon = true;
-      }
-      if (headingMoon || ep.orbitPull) {
-        var pulse = 0.45 + 0.35 * Math.sin(t * 3.5);
-        ctx.strokeStyle = "rgba(125, 211, 252," + pulse + ")";
-        ctx.lineWidth = 2.5;
-        ctx.beginPath();
-        ctx.arc(moon.x, moon.y, 68 * moon.d + Math.sin(t * 2.2) * 4, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.fillStyle = "rgba(186, 230, 253," + (0.25 + pulse * 0.25) + ")";
-        ctx.beginPath();
-        ctx.arc(moon.x, moon.y - 72 * moon.d, 5, 0, Math.PI * 2);
-        ctx.fill();
-        drawLabel(ctx, "✦ heading · Moon", moon.x, moon.y - 88 * moon.d, "#7dd3fc");
-      }
+      drawSolarSystemScene(ctx, ep, w, h, t);
+      drawDistantInvaderSilhouettes(ctx, ep, w, h, t);
 
       var jp = worldToScreen(ep.jimmy.x, ep.jimmy.y, w, h);
       drawHot(ctx, { x: ep.jimmy.x, y: ep.jimmy.y }, jp, near && near.id === "jimmy");
@@ -2134,6 +2198,19 @@
       drawDog(ctx, gp.x, gp.y, gp.d * 0.9, "#b45309", "Germy");
       var dp = worldToScreen(ep.daisy.x, ep.daisy.y, w, h);
       drawDog(ctx, dp.x, dp.y, dp.d * 0.85, "#d6d3d1", "Daisy Dachshund");
+
+      if (ep.crew && ep.crew.members) {
+        for (var cri = 0; cri < ep.crew.members.length; cri++) {
+          var crm = ep.crew.members[cri];
+          if (crm.id === ep.frogId) continue;
+          var crp = worldToScreen(crm.x, crm.y, w, h);
+          drawCrewFrog(ctx, crp.x, crp.y, crp.d * 0.85, crm.color, crm.suit, crm.name);
+        }
+      }
+      if (ep.travelMode === "ship") {
+        var shipP = worldToScreen(ep.px, ep.py - 18, w, h);
+        drawShipSilhouette(ctx, shipP.x, shipP.y - 20 * shipP.d, shipP.d);
+      }
     }
 
     if (ep.scene === "station") {
@@ -2359,9 +2436,21 @@
       if (ep.mechWon) drawLabel(ctx, "WIN!", w * 0.5, h * 0.5, "#fde68a");
     }
 
-    // Player
+    // Player (primary froggy — suit or ship-mode jet)
     var pp2 = worldToScreen(ep.px, ep.py, w, h);
-    drawFrog(ctx, pp2.x, pp2.y, pp2.d, ep.facing, ep.jet);
+    if (ep.travelMode === "suit") {
+      drawCrewFrog(ctx, pp2.x, pp2.y, pp2.d, ep.frogColor || "#4ade80", true, ep.frogName || null);
+      if (ep.jet > 0) {
+        ctx.fillStyle = "rgba(56,189,248,0.75)";
+        ctx.beginPath();
+        ctx.moveTo(pp2.x - 6, pp2.y + 10 * pp2.d);
+        ctx.lineTo(pp2.x, pp2.y + (22 + ep.jet * 28) * pp2.d);
+        ctx.lineTo(pp2.x + 6, pp2.y + 10 * pp2.d);
+        ctx.fill();
+      }
+    } else {
+      drawFrog(ctx, pp2.x, pp2.y, pp2.d, ep.facing, ep.jet);
+    }
 
     /* polish5: Escape / thruster leave hint when orbit-locked */
     if (ep.inOrbit) {
@@ -2405,8 +2494,10 @@
     var near = nearestHotspot(ep, 75);
     var tip = "";
     if (ep.toastT > 0) tip = ep.toast;
-    else if (ep.inOrbit) tip = "ORBIT · ESCAPE / Esc  ·  Ability = hard thruster leave";
+    else if (ep.inOrbit) tip = "ORBIT · only you spin · ESCAPE / Esc · stars stay fixed";
     else if (ep.orbitPull) tip = "Gravity pull · " + (ep.orbitPull.planet ? ep.orbitPull.planet.name : "planet") + " · drift in to lock";
+    else if (ep.scene === "space" && ep.travelMode === "ship") tip = "SHIP · Exit ship = suit EVA · wheel zoom · Mars hotspot";
+    else if (ep.scene === "space" && ep.travelMode === "suit") tip = "SUIT JET · Board ship = rocket · wheel zoom · Mars";
     else if (near) tip = near.tip + " · INTERACT / E";
     else tip = "Steer · find hotspots · Lobby returns to title";
     return {
@@ -2418,6 +2509,8 @@
       mechWon: ep.mechWon,
       inOrbit: !!ep.inOrbit,
       orbitName: ep.orbitPlanet ? ep.orbitPlanet.name : null,
+      travelMode: ep.travelMode || "ship",
+      zoom: ep.zoom || 1,
     };
   }
 
@@ -2459,5 +2552,7 @@
     hotspotsFor: hotspotsFor,
     getHud: getHud,
     packState: packState,
+    adjustZoom: adjustZoom,
+    earthRanchPad: earthRanchPad,
   };
 })(typeof window !== "undefined" ? window : globalThis);

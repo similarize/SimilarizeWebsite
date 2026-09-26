@@ -360,7 +360,15 @@ html, body {
   background: linear-gradient(90deg, #38bdf8, #a78bfa);
 }
 body.in-space {
-  background: #030712;
+  background: #020617;
+}
+/* spacefix1: never show title splash / forest art while in space episode */
+body.in-space #splash-art,
+body.in-space .splash-art {
+  display: none !important;
+}
+body.in-space #overlay {
+  background: rgba(2, 6, 23, 0.92);
 }
 
 #btn-up, #btn-down {

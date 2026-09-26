@@ -29,6 +29,7 @@
    boardall1: each couch pad/companion can board a DIFFERENT free mech at once.
    earth1: space shows procedural Earth (home) — not ranch grounds in vacuum.
    solarsys1: Solar System layout — Sun center; Moon+station orbit Earth; planet gravity wells;
+   spacefix1: dark ground plane; orbit cam locks on planet; ranch pad on Earth surface;
    asteroid belt; Pluto included; scale compressed (labeled). */
 (function (global) {
   "use strict";
@@ -1545,6 +1546,28 @@
     }
     starGeo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
     scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.14 })));
+    /* Dark starfield ground plane — opaque space floor (no ranch leak) */
+    var spaceGround = new THREE.Mesh(
+      new THREE.CircleGeometry(70, 64),
+      new THREE.MeshStandardMaterial({ color: 0x020617, roughness: 1, metalness: 0, emissive: 0x0a1020, emissiveIntensity: 0.25 })
+    );
+    spaceGround.rotation.x = -Math.PI / 2;
+    spaceGround.position.y = -0.02;
+    spaceGround.receiveShadow = true;
+    scene.add(spaceGround);
+    state.spaceGround = spaceGround;
+    /* Speckle stars on the plane */
+    var planeStarGeo = new THREE.BufferGeometry();
+    var psp = new Float32Array(150);
+    for (var psi = 0; psi < 50; psi++) {
+      var pa = Math.random() * Math.PI * 2;
+      var pr = Math.random() * 55;
+      psp[psi * 3] = Math.cos(pa) * pr;
+      psp[psi * 3 + 1] = 0.04;
+      psp[psi * 3 + 2] = Math.sin(pa) * pr;
+    }
+    planeStarGeo.setAttribute("position", new THREE.BufferAttribute(psp, 3));
+    scene.add(new THREE.Points(planeStarGeo, new THREE.PointsMaterial({ color: 0xe2e8f0, size: 0.12 })));
 
     /* Compressed Solar System (not to scale) — distances in Three units from Sun at origin */
     var SOLAR = [
@@ -1817,17 +1840,28 @@
     state.fredMesh = fred;
     addLabel("Fred", "#e2e8f0", stGroup.position.x + 0.5, 1.2, stGroup.position.z + 0.5);
 
-    /* Return pad → ranch (Earth home) */
+    /* Return pad → ranch — grounded ON Earth surface (not floating detached) */
+    var padAng = 0.85;
+    var padRad = earthBody.r * 0.78;
+    var padX = earthBody.x + Math.cos(padAng) * padRad;
+    var padZ = earthBody.z + Math.sin(padAng) * padRad;
+    var padY = earthBody.mesh.position.y + Math.cos(0.35) * earthBody.r * 0.55;
     var pad = new THREE.Mesh(
-      new THREE.CircleGeometry(1.1, 24),
-      new THREE.MeshStandardMaterial({ color: 0x0284c7, emissive: 0x0c4a6e, emissiveIntensity: 0.45 })
+      new THREE.CircleGeometry(0.42, 20),
+      new THREE.MeshStandardMaterial({ color: 0x0284c7, emissive: 0x0c4a6e, emissiveIntensity: 0.55 })
     );
-    pad.rotation.x = -Math.PI / 2;
-    pad.position.set(earthBody.x - 4.5, 0.05, earthBody.z + 3.2);
-    scene.add(pad);
-    addLabel("Earth · home", "#bbf7d0", earthBody.x - 4.5, 1.2, earthBody.z + 3.2);
-    addLabel("→ ranch hub", "#86efac", earthBody.x - 4.5, 0.85, earthBody.z + 3.2);
-    state.returnPad = { x: earthBody.x - 4.5, z: earthBody.z + 3.2 };
+    pad.rotation.x = -Math.PI / 2.6;
+    pad.rotation.z = padAng;
+    /* Parent to Earth so pad rides the globe surface */
+    pad.position.set(
+      Math.cos(padAng) * earthBody.r * 0.92,
+      Math.sin(0.25) * earthBody.r * 0.35,
+      Math.sin(padAng) * earthBody.r * 0.92
+    );
+    earthBody.mesh.add(pad);
+    addLabel("Ranch pad", "#bbf7d0", padX, padY + 0.9, padZ);
+    addLabel("→ ranch hub", "#86efac", padX, padY + 0.55, padZ);
+    state.returnPad = { x: padX, z: padZ };
 
     state.vx = 0;
     state.vz = 0;
@@ -1835,6 +1869,9 @@
     state.toast = "Solar System · near planets → orbit · Escape / thruster to leave";
     state.toastT = 3.5;
     state.mode = "space";
+    state.travelMode = "ship";
+    state.spaceZoom = 1;
+    try { document.body.classList.add("in-space"); } catch (e) {}
     if (state.miniMapCanvas) state.miniMapCanvas.style.display = "none";
     state.near = null;
     state.inTruck = false;
@@ -2002,6 +2039,7 @@
         state.toast = "Space station · Alex & Fred aboard · orbits Earth";
         state.toastT = 2.5;
       } else if (id === "return") {
+        try { document.body.classList.remove("in-space"); } catch (e) {}
         buildRanch();
         state.toast = "Back at ranch · Earth home";
         state.toastT = 2;
@@ -2899,10 +2937,16 @@
 
     // Locked orbit follow — camera offset fixed, no orbit controls / no FPS look
     var target = camera.userData.lockTarget;
-    /* polish3: stick to player — no lag fight */
+    /* spacefix1: while inOrbit, lock cam on planet so starfield/plane stay stable; only frog orbits */
     var followK = Math.min(1, 14 * dt);
-    target.x += (state.player.position.x - target.x) * followK;
-    target.z += (state.player.position.z - target.z) * followK;
+    var followX = state.player.position.x;
+    var followZ = state.player.position.z;
+    if (state.mode === "space" && state.inOrbit && state.planet) {
+      followX = state.planet.x;
+      followZ = state.planet.z;
+    }
+    target.x += (followX - target.x) * followK;
+    target.z += (followZ - target.z) * followK;
     target.y = 0;
     var camDist = state.mode === "ranch" ? 18.5 : 12;
     var camH = state.mode === "ranch" ? 20.5 : 14;

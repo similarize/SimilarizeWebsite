@@ -1,6 +1,16 @@
 ## Tesla Cybertruck fullscreen
 Live entry includes `../shared/tesla-fullscreen.js` (YouTube-redirect chromeless trick). Desktop no-op; party `room=` query preserved. Full notes: [`games/shared/TESLA_FULLSCREEN.md`](../shared/TESLA_FULLSCREEN.md).
 
+## What's new (spacefix1) — space env fix + shared blast-off slice
+- **Forest leak fixed:** Starship/space episode always opaque-clears to a dark starfield + dark ground plane. Ranch trees/props/splash-forest never remain under the episode (Canvas lead; Three dark ground plane; Phaser screen-fixed stars/ground).
+- **Orbit env spin fixed:** Camera locks on the planet while orbiting — only the froggy (and ship silhouette) orbits. Starfield + dark plane stay screen-stable (Canvas / Three / Phaser).
+- **Ranch pad grounded:** Earth-layer ranch return pad sits on the Earth surface/terrain (not a floating detached artifact).
+- **Shared blast-off:** Any froggy entering Starship boards **all four** (James, Jimmy, Bubbles, Rexy) together for launch.
+- **Ship vs suit:** Exit Starship → EVA spacesuit jet (all four suit up); board ship to ride rocket again. Short loops.
+- **Space zoom:** Mouse wheel zooms in/out in the space episode (ship + suit views).
+- **Mars destination:** Hotspot on Mars in free-fly space → existing Mars cave/dogs scene (hang TBD; no new place names).
+- Cache-bust: `?v=20260926-spacefix1`. Cast unchanged. No paid APIs. Do not message Webmaster.
+
 ## What's new (hop4) — faster hop + humanoid spring-leg frogs
 - **Faster always-hop loco:** Higher launch + shorter ground plant (~0.011s) + stronger hop carry. Walk max nudged up. Snappier than hop3 — frogs cover ground faster while still always-hopping.
 - **Humanoid frogs (not squish spheres):** Torso + head silhouette; **big springy legs** fold/extend on hop (spring out mid-air, tuck on land). Canvas lead draw; Three articulated thigh/shin; Phaser texture matches silhouette. Colors + hats per frog kept. Names-only plates.

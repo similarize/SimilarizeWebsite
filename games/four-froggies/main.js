@@ -632,11 +632,15 @@
       me.truckMode = null;
       me.truckId = null;
     }
-    Space.enter(spaceEp, {});
+    /* Shared blast-off: all four froggies enter space together */
+    Space.enter(spaceEp, { primaryId: me ? me.id : selectedId || "james" });
     phase = "space";
     document.body.classList.add("in-space");
     document.body.classList.add("in-hub");
-    storyToast = "Spotty welcomes you aboard!";
+    document.body.classList.remove("in-title");
+    const splashEl = document.getElementById("splash-art");
+    if (splashEl) splashEl.hidden = true;
+    storyToast = "All four aboard Starship — blast off together!";
     storyToastT = 3;
     beep(180, 0.08, "sawtooth", 0.05);
     beep(360, 0.12, "triangle", 0.05);
@@ -1182,6 +1186,9 @@
     const { w, h } = viewportSize();
     ctx.clearRect(0, 0, w, h);
     if (phase === "space" && spaceEp && Space) {
+      /* Opaque space fill — never composite ranch/forest under episode */
+      ctx.fillStyle = "#020617";
+      ctx.fillRect(0, 0, w, h);
       Space.render(ctx, spaceEp, w, h, t);
     } else if (phase === "hub" && world) {
       ctx.save();
@@ -1583,9 +1590,15 @@
       });
     }
     window.addEventListener("wheel", (e) => {
-      if (phase !== "hub" || !W || !W.adjustViewScale) return;
       if (document.body.classList.contains("in-title")) return;
       if (e.target && (e.target.closest && e.target.closest("#wheel-size, #story-panel, #lobby-panel"))) return;
+      if (phase === "space" && spaceEp && Space && Space.adjustZoom) {
+        e.preventDefault();
+        const dir = e.deltaY > 0 ? -0.08 : 0.08;
+        Space.adjustZoom(spaceEp, dir);
+        return;
+      }
+      if (phase !== "hub" || !W || !W.adjustViewScale) return;
       e.preventDefault();
       const dir = e.deltaY > 0 ? -0.04 : 0.04;
       W.adjustViewScale(dir);
