@@ -13,6 +13,7 @@
    brief jump air hang; Optimus kit visual punch on ranch. Canvas lead.
    polish10: UI declutter (mini-map / zone signs / quieter nameplates); tighter friction; truck EXIT anytime;
    solid1: shared solid walls/mechs/trucks via FroggiesCanon.resolveSolid;
+   tapsteer1: faster walk/drive;
    particle caps; sunset sky shift over play time.
    mobile1: phone+desktop shared UI — smaller/toggle-friendly mini-map + harder particle caps on narrow.
    ~10× map: real roam between ranch house / track / pond / Starship.
@@ -890,8 +891,9 @@
 
   function moveEntity(ent, dt, speed, world) {
     /* polish3 + polish10: snappier walk/drive — quicker ramp + firmer stop */
-    var walkMax = 188;
-    var truckMax = 328;
+    /* tapsteer1: noticeably faster walk + drive */
+    var walkMax = 270;
+    var truckMax = 420;
     var maxSp = (ent.inTruck ? truckMax : walkMax) * (ent.speedBoost || 1);
     if (ent.inTruck && ent.dashTrail > 0) maxSp *= 1.28;
     if (typeof speed === "number") maxSp = speed * (ent.speedBoost || 1);
@@ -900,7 +902,7 @@
     var mag = Math.hypot(mx, my);
     if (mag > 1) { mx /= mag; my /= mag; }
     var wetMove = inPond(ent.x, ent.y) && (ent.z || 0) < 3;
-    var accel = ent.inTruck ? 1320 : 1180;
+    var accel = ent.inTruck ? 1680 : 1520;
     var friction = ent.inTruck ? 5.6 : 9.6;
     if (wetMove && ent.inTruck) {
       accel *= 0.82;

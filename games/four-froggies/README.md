@@ -1,3 +1,9 @@
+## What's new (tapsteer1) — floor pad stable + faster + tap-to-steer
+- **Floor flicker:** 1000-story mech pad was a thick cylinder coplanar with backyard box → z-fight while walking past. Now flat raised CircleGeometry pad + ring (`depthWrite: false`, polygonOffset); backyard is a PlaneGeometry.
+- **Speed:** walk + drive raised noticeably (Canvas world.js, three-hub, phaser-hub).
+- **Tap / click steer:** hold on playfield aims **direction** from player toward pointer (not go-to destination). D-pad/WASD still win when held. Gold ring+arrow marker at tap. Release stops (brief coast). Wired Canvas + Three + Phaser.
+- Cache-bust: `?v=20260926-tapsteer1`. Cast unchanged. No SPS arcade republish.
+
 ## What's new (solid1) — Three floor stable + cast-only names + solid walls
 - **Floor artifact:** z-fighting — GridHelper + thick AREA boxes + soft shadow discs coplanar with ground; fixed by flat zone pads, lifted grid (`depthWrite: false`), lifted shadow discs (`depthWrite: false`), shadow bias.
 - **Role tags:** removed Wheel/Shield/Zap/Bot under frog seat names (cast names only; roles TBD).

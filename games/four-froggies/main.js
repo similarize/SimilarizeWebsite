@@ -61,6 +61,10 @@
   let camTY = 450;
   let steerX = 0;
   let steerY = 0;
+  let tapSteerX = 0;
+  let tapSteerY = 0;
+  let tapHeld = false;
+  let tapMarker = null; /* { x, y, life, ang } CSS px */
   let nearHot = null;
   let prevNearId = null;
   let storyToast = "";
@@ -605,13 +609,79 @@
     if (world && typeof msg.scrap === "number") world.scrap = msg.scrap;
   }
 
+
+  function effectiveSteer() {
+    if (steerX || steerY) return { x: steerX, y: steerY };
+    return { x: tapSteerX, y: tapSteerY };
+  }
+
+  function ensureTapMarkerEl() {
+    let el = document.getElementById("tap-steer-marker");
+    if (el) return el;
+    el = document.createElement("div");
+    el.id = "tap-steer-marker";
+    el.setAttribute("aria-hidden", "true");
+    el.innerHTML = '<span class="tap-ring"></span><span class="tap-arrow"></span>';
+    document.body.appendChild(el);
+    return el;
+  }
+
+  function showTapMarker(clientX, clientY, ang) {
+    const el = ensureTapMarkerEl();
+    el.classList.add("is-on");
+    el.style.left = clientX + "px";
+    el.style.top = clientY + "px";
+    el.style.setProperty("--tap-ang", ang + "rad");
+    el.style.opacity = "1";
+    tapMarker = { x: clientX, y: clientY, life: 0.55, ang: ang };
+  }
+
+  function clearTapAim() {
+    tapHeld = false;
+    tapSteerX = 0;
+    tapSteerY = 0;
+    if (tapMarker) tapMarker.life = Math.min(tapMarker.life, 0.28);
+  }
+
+  function applyCanvasTapAim(e) {
+    if (phase !== "hub" && phase !== "space") return;
+    if (document.body.classList.contains("in-title")) return;
+    if (story && story.isOpen && story.isOpen()) return;
+    const me = localPlayer();
+    if (!me && phase === "hub") return;
+    const { w, h } = viewportSize();
+    const rect = canvas.getBoundingClientRect();
+    const px = ((e.clientX - rect.left) / Math.max(1, rect.width)) * w;
+    const py = ((e.clientY - rect.top) / Math.max(1, rect.height)) * h;
+    let sx, sy;
+    if (phase === "hub" && me && W && W.project) {
+      const p = W.project(me.x, me.y, camX, camY, w, h);
+      sx = p.x; sy = p.y;
+    } else if (phase === "space" && spaceEp) {
+      /* space cam follows ep — player reads near screen center */
+      sx = w * 0.5; sy = h * 0.48;
+    } else {
+      sx = w * 0.5; sy = h * 0.5;
+    }
+    const dx = px - sx;
+    const dy = py - sy;
+    const len = Math.hypot(dx, dy);
+    if (len < 14) return;
+    tapSteerX = dx / len;
+    tapSteerY = dy / len;
+    tapHeld = true;
+    showTapMarker(e.clientX, e.clientY, Math.atan2(dy, dx));
+    pushGuestInput(null);
+  }
+
   function pushGuestInput(extra) {
     if (!party || party.getRole() !== "guest") return;
     const me = localPlayer();
     if (!me) return;
+    const es = effectiveSteer();
     party.sendInput(me.id, {
-      steerX: steerX,
-      steerY: steerY,
+      steerX: es.x,
+      steerY: es.y,
       ability: !!(extra && extra.ability),
       interact: !!(extra && extra.interact),
     });
@@ -637,8 +707,9 @@
     if (!isHostSim) {
       const me = localPlayer();
       if (me) {
-        me.steerX = steerX;
-        me.steerY = steerY;
+        const es = effectiveSteer();
+        me.steerX = es.x;
+        me.steerY = es.y;
         W.moveEntity(me, dt, undefined, world);
         const drive = W.tickDrive(world, me, dt);
         if (drive.jumped) {
@@ -690,8 +761,9 @@
     const me = localPlayer();
     for (const f of frogs) {
       if (f.local) {
-        f.steerX = steerX;
-        f.steerY = steerY;
+        const es = effectiveSteer();
+        f.steerX = es.x;
+        f.steerY = es.y;
       } else if (f.human) {
         const ri = remoteInputs[f.id];
         if (ri) {
@@ -779,8 +851,9 @@
     if (storyToastT > 0) storyToastT -= dt;
     if (shakeT > 0) shakeT -= dt;
     const me = localPlayer();
-    let sx = steerX;
-    let sy = steerY;
+    const es = effectiveSteer();
+    let sx = es.x;
+    let sy = es.y;
     if (me && me.cd > 0) me.cd = Math.max(0, me.cd - dt);
     // companion froggies stay on ranch; space is local story path
     Space.update(spaceEp, dt, sx, sy);
@@ -835,6 +908,17 @@
       updateSpace(dt);
       updateAbilityButton();
       paintHud();
+    }
+    if (tapMarker) {
+      tapMarker.life -= dt;
+      const el = document.getElementById("tap-steer-marker");
+      if (tapMarker.life <= 0) {
+        tapMarker = null;
+        if (el) el.classList.remove("is-on");
+      } else if (el) {
+        el.classList.add("is-on");
+        el.style.opacity = String(Math.min(1, tapMarker.life * 2.2));
+      }
     }
     render(now / 1000);
     requestAnimationFrame(tick);
@@ -939,7 +1023,25 @@
   bindAxis(btnDown, "y", 1);
 
   if (btnAbility) {
-    btnAbility.addEventListener("pointerdown", (e) => {
+  
+  // tapsteer1: hold-to-aim on playfield (direction relative to player, not go-to)
+  canvas.addEventListener("pointerdown", (e) => {
+    if (e.target !== canvas) return;
+    if (e.button != null && e.button !== 0) return;
+    e.preventDefault();
+    try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
+    unlockAudio();
+    applyCanvasTapAim(e);
+  });
+  canvas.addEventListener("pointermove", (e) => {
+    if (!tapHeld) return;
+    applyCanvasTapAim(e);
+  });
+  const endTap = () => { if (tapHeld) { clearTapAim(); pushGuestInput(null); } };
+  canvas.addEventListener("pointerup", endTap);
+  canvas.addEventListener("pointercancel", endTap);
+
+  btnAbility.addEventListener("pointerdown", (e) => {
       e.preventDefault();
       unlockAudio();
       const player = localPlayer();

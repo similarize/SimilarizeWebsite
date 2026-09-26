@@ -8,20 +8,61 @@
    polish7: zone signs + mini-map lite + companion idle bounce / follow lag.
    polish8: truck silhouette + house porch + whale breach + destination beacon (cheap Canvas ports).
    polish9: color nameplates; aboard icons; track start/finish gate; Optimus visual punch lite.
-   polish10: quieter UI; exit truck anytime; friction/cam tighten; particle caps; dusk sky shift. */
+   polish10: quieter UI; exit truck anytime; friction/cam tighten; particle caps; dusk sky shift.
+   tapsteer1: faster walk/drive; hold-to-aim tap/click steer + marker. */
 (function (global) {
   "use strict";
   var C = global.FroggiesCanon;
   var game = null, active = false, hooks = {};
-  var steer = { x: 0, y: 0 }, wantInteract = false, wantAbility = false;
+  var keySteer = { x: 0, y: 0 }, tapSteer = { x: 0, y: 0 }, tapHeld = false;
+  var tapMarker = null;
+  var wantInteract = false, wantAbility = false;
+
+  function mergedSteer() {
+    if (keySteer.x || keySteer.y) return keySteer;
+    return tapSteer;
+  }
+  function ensureTapMarkerEl() {
+    var el = document.getElementById("tap-steer-marker");
+    if (el) return el;
+    el = document.createElement("div");
+    el.id = "tap-steer-marker";
+    el.setAttribute("aria-hidden", "true");
+    el.innerHTML = '<span class="tap-ring"></span><span class="tap-arrow"></span>';
+    document.body.appendChild(el);
+    return el;
+  }
+  function showTapMarker(cx, cy, ang) {
+    var el = ensureTapMarkerEl();
+    el.classList.add("is-on");
+    el.style.left = cx + "px";
+    el.style.top = cy + "px";
+    el.style.setProperty("--tap-ang", ang + "rad");
+    el.style.opacity = "1";
+    tapMarker = { life: 0.55, ang: ang };
+  }
+  function clearTapAim() {
+    tapHeld = false; tapSteer.x = 0; tapSteer.y = 0;
+    if (tapMarker) tapMarker.life = Math.min(tapMarker.life || 0.55, 0.28);
+  }
+  function tickTapMarker(dt) {
+    var el = document.getElementById("tap-steer-marker");
+    if (!tapMarker) { if (el) el.classList.remove("is-on"); return; }
+    tapMarker.life -= dt;
+    if (tapMarker.life <= 0) { tapMarker = null; if (el) el.classList.remove("is-on"); return; }
+    if (el) { el.classList.add("is-on"); el.style.opacity = String(Math.min(1, tapMarker.life * 2.2)); }
+  }
 
   function destroy() {
-    active = false; steer.x = steer.y = 0; wantInteract = wantAbility = false;
+    active = false; keySteer.x = keySteer.y = 0; tapSteer.x = tapSteer.y = 0; tapHeld = false; tapMarker = null;
+    wantInteract = wantAbility = false;
+    var mel = document.getElementById("tap-steer-marker");
+    if (mel) mel.classList.remove("is-on");
     if (game) { try { game.destroy(true); } catch (e) {} game = null; }
     var host = document.getElementById("engine-host");
     if (host) host.innerHTML = "";
   }
-  function setSteer(x, y) { steer.x = x; steer.y = y; }
+  function setSteer(x, y) { keySteer.x = x; keySteer.y = y; }
   function pulseInteract() { wantInteract = true; }
   function pulseAbility() { wantAbility = true; }
   function isActive() { return active; }
@@ -161,6 +202,32 @@
         this.truckAccent = this.add.rectangle(0, -2, 50, 14, hx(def.color), 0.85).setDepth(18).setVisible(false);
         this.waterClip = this.add.rectangle(0, 10, 84, 22, 0x0e7490, 0.55).setDepth(19).setVisible(false);
         this.cameras.main.startFollow(this.player, true, 0.28, 0.28); /* polish3/10 less lag fight */
+
+        /* tapsteer1: hold-to-aim on playfield (direction, not go-to) */
+        var self = this;
+        function aimFromPointer(pointer) {
+          if (!active || !self.player) return;
+          var cam = self.cameras.main;
+          var sx = (self.player.x - cam.worldView.x) * cam.zoom;
+          var sy = (self.player.y - cam.worldView.y) * cam.zoom;
+          var dx = pointer.x - sx;
+          var dy = pointer.y - sy;
+          var len = Math.hypot(dx, dy);
+          if (len < 14) return;
+          tapSteer.x = dx / len;
+          tapSteer.y = dy / len;
+          tapHeld = true;
+          showTapMarker(pointer.event ? pointer.event.clientX : pointer.x, pointer.event ? pointer.event.clientY : pointer.y, Math.atan2(dy, dx));
+        }
+        this.input.on("pointerdown", function (pointer) {
+          aimFromPointer(pointer);
+        });
+        this.input.on("pointermove", function (pointer) {
+          if (!tapHeld || !pointer.isDown) return;
+          aimFromPointer(pointer);
+        });
+        this.input.on("pointerup", function () { clearTapAim(); });
+
         this.cameras.main.setBounds(0, 0, C.MAP_W, C.MAP_H);
         /* mobile1: phone gets closer zoom so frogs aren't mush; desktop unchanged formula */
         (function () {
@@ -512,14 +579,17 @@
         var bgR = Math.round(26 + dusk * 40), bgG = Math.round(58 - dusk * 20), bgB = Math.round(26 + dusk * 10);
         this.cameras.main.setBackgroundColor(Phaser.Display.Color.GetColor(bgR, bgG, bgB));
         /* polish3: snappier locomotion */
-        var maxSp = this.inTruck ? 340 : 205, accel = this.inTruck ? 820 : 680, fric = this.inTruck ? 5.2 : 8.8;
+        /* tapsteer1: faster walk + drive */
+        var maxSp = this.inTruck ? 440 : 290, accel = this.inTruck ? 1050 : 920, fric = this.inTruck ? 5.2 : 8.8;
         var body = this.player.body;
+        var steer = mergedSteer();
         if (steer.x || steer.y) {
           var len = Math.hypot(steer.x, steer.y) || 1;
           body.velocity.x += (steer.x / len) * accel * dt;
           body.velocity.y += (steer.y / len) * accel * dt;
           if (steer.x) this.facing = steer.x > 0 ? 1 : -1;
         }
+        tickTapMarker(dt);
         body.velocity.x *= Math.max(0, 1 - fric * dt);
         body.velocity.y *= Math.max(0, 1 - fric * dt);
         var sp = Math.hypot(body.velocity.x, body.velocity.y);
@@ -1018,6 +1088,32 @@
           fontSize: "11px", color: "#fca5a5", stroke: "#000", strokeThickness: 3,
         }).setOrigin(0.5).setVisible(false);
         this.cameras.main.startFollow(this.player, true, 0.28, 0.28); /* polish3/10 less lag fight */
+
+        /* tapsteer1: hold-to-aim on playfield (direction, not go-to) */
+        var self = this;
+        function aimFromPointer(pointer) {
+          if (!active || !self.player) return;
+          var cam = self.cameras.main;
+          var sx = (self.player.x - cam.worldView.x) * cam.zoom;
+          var sy = (self.player.y - cam.worldView.y) * cam.zoom;
+          var dx = pointer.x - sx;
+          var dy = pointer.y - sy;
+          var len = Math.hypot(dx, dy);
+          if (len < 14) return;
+          tapSteer.x = dx / len;
+          tapSteer.y = dy / len;
+          tapHeld = true;
+          var cx = pointer.event ? pointer.event.clientX : pointer.x;
+          var cy = pointer.event ? pointer.event.clientY : pointer.y;
+          showTapMarker(cx, cy, Math.atan2(dy, dx));
+        }
+        this.input.on("pointerdown", function (pointer) { aimFromPointer(pointer); });
+        this.input.on("pointermove", function (pointer) {
+          if (!tapHeld || !pointer.isDown) return;
+          aimFromPointer(pointer);
+        });
+        this.input.on("pointerup", function () { clearTapAim(); });
+
         this.cameras.main.setBounds(0, 0, 1100, 800);
       },
       update: function (time, delta) {
@@ -1048,6 +1144,8 @@
             this.destBeaconLabel.setAlpha(heading ? pulse : 0);
           }
         }
+        var steer = mergedSteer();
+        tickTapMarker(dt);
         if (this.inOrbit) {
           this.orbitRadius = Phaser.Math.Clamp(this.orbitRadius + (steer.y || 0) * 40 * dt, 55, softR * 0.85);
           this.orbitAngle += (0.85 + (steer.x || 0) * 0.35) * dt;

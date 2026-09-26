@@ -1204,3 +1204,45 @@ html[data-ff-narrow="1"] .aboard-strip { max-width: 4.5rem; overflow: hidden; te
   height: 100%;
   max-height: 100dvh;
 }
+
+/* tapsteer1: obvious tap/click aim marker (ring + arrow) */
+#tap-steer-marker {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 64px;
+  height: 64px;
+  margin: -32px 0 0 -32px;
+  pointer-events: none;
+  z-index: 45;
+  opacity: 0;
+  transform: translateZ(0);
+  transition: opacity 0.08s linear;
+}
+#tap-steer-marker.is-on { opacity: 1; }
+#tap-steer-marker .tap-ring {
+  position: absolute;
+  inset: 6px;
+  border: 3px solid #fbbf24;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.55), 0 0 14px rgba(251, 191, 36, 0.75);
+  background: rgba(251, 191, 36, 0.12);
+  animation: tap-ring-pulse 0.55s ease-out;
+}
+#tap-steer-marker .tap-arrow {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  border-left: 9px solid transparent;
+  border-right: 9px solid transparent;
+  border-bottom: 22px solid #fef08a;
+  filter: drop-shadow(0 1px 2px #000);
+  transform: translate(-50%, -50%) rotate(calc(var(--tap-ang, 0rad) + 1.5708rad));
+  transform-origin: 50% 50%;
+}
+@keyframes tap-ring-pulse {
+  from { transform: scale(0.55); opacity: 0.4; }
+  to { transform: scale(1); opacity: 1; }
+}

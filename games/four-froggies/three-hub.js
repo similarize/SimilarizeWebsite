@@ -11,6 +11,7 @@
    polish9: color nameplates; aboard icons; track gate; Optimus punch lite. Hollow house + frogs kept.
    polish10: quieter UI; exit truck anytime; friction/cam; particle caps; dusk sky. Hollow house + frogs + WASD kept.
    solid1: floor z-fight fix; solid walls/mechs/trucks; cast names only on plates.
+   tapsteer1: mech pad z-fight fix; faster walk/drive; hold-to-aim tap/click steer + marker.
    WASD camera-relative — do not invert. */
 (function (global) {
   "use strict";
@@ -18,9 +19,17 @@
   var C = global.FroggiesCanon;
   var active = false;
   var hooks = {};
-  var steer = { x: 0, y: 0 };
+  var keySteer = { x: 0, y: 0 };
+  var tapSteer = { x: 0, y: 0 };
+  var tapHeld = false;
+  var tapMarker = null; /* { sx, sy, life, ang } screen px in canvas */
   var wantInteract = false;
   var wantAbility = false;
+
+  function mergedSteer() {
+    if (keySteer.x || keySteer.y) return keySteer;
+    return tapSteer;
+  }
 
   var renderer = null;
   var scene = null;
@@ -31,8 +40,10 @@
 
   function destroy() {
     active = false;
-    steer.x = steer.y = 0;
+    keySteer.x = keySteer.y = 0; tapSteer.x = tapSteer.y = 0; tapHeld = false; tapMarker = null;
     wantInteract = wantAbility = false;
+    var mel = document.getElementById("tap-steer-marker");
+    if (mel) mel.classList.remove("is-on");
     if (raf) {
       cancelAnimationFrame(raf);
       raf = 0;
@@ -53,8 +64,8 @@
   }
 
   function setSteer(x, y) {
-    steer.x = x;
-    steer.y = y;
+    keySteer.x = x;
+    keySteer.y = y;
   }
   function pulseInteract() { wantInteract = true; }
   function pulseAbility() { wantAbility = true; }
@@ -254,15 +265,38 @@
     if (m.stories >= 1000) {
       var haze = new THREE.Mesh(
         new THREE.SphereGeometry(h * 0.55, 12, 10),
-        new THREE.MeshBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.12 })
+        new THREE.MeshBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.12, depthWrite: false })
       );
       haze.position.set(p.x, h * 0.55, p.z); scene.add(haze);
     }
+    /* tapsteer1: flat raised pad (not thick cyl) — was z-fighting backyard/ground while walking past */
+    var padR = h * 0.34;
+    var padY = m.stories >= 1000 ? 0.18 : 0.14;
     var pad = new THREE.Mesh(
-      new THREE.CylinderGeometry(h * 0.28, h * 0.32, 0.08, 20),
-      new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.4 })
+      new THREE.CircleGeometry(padR, 28),
+      new THREE.MeshStandardMaterial({
+        color: 0x1e293b, metalness: 0.45, roughness: 0.65,
+        polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3,
+        depthWrite: false, transparent: true, opacity: 0.96,
+        side: THREE.DoubleSide,
+      })
     );
-    pad.position.set(p.x, 0.08, p.z); pad.receiveShadow = true; scene.add(pad);
+    pad.rotation.x = -Math.PI / 2;
+    pad.position.set(p.x, padY, p.z);
+    pad.receiveShadow = false;
+    pad.renderOrder = 3;
+    scene.add(pad);
+    var padRing = new THREE.Mesh(
+      new THREE.RingGeometry(padR * 0.7, padR * 0.92, 32),
+      new THREE.MeshBasicMaterial({
+        color: 0xfbbf24, side: THREE.DoubleSide, depthWrite: false,
+        transparent: true, opacity: 0.88,
+      })
+    );
+    padRing.rotation.x = -Math.PI / 2;
+    padRing.position.set(p.x, padY + 0.02, p.z);
+    padRing.renderOrder = 4;
+    scene.add(padRing);
     var body = new THREE.Mesh(
       new THREE.BoxGeometry(h * 0.28, h, h * 0.22),
       new THREE.MeshStandardMaterial({ color: color, metalness: 0.35, roughness: 0.45 })
@@ -287,14 +321,19 @@
     var cp = C.COMPOUND || {};
     var yard = cp.yard || { x: 100, y: 2100, w: 600, h: 360 };
     var yp = worldToThree(yard.x + yard.w / 2, yard.y + yard.h / 2);
+    /* tapsteer1: flat backyard plane (was thick box fighting mech pad / ground) */
     var yardM = new THREE.Mesh(
-      new THREE.BoxGeometry(yard.w * 0.02, 0.06, yard.h * 0.02),
+      new THREE.PlaneGeometry(yard.w * 0.02, yard.h * 0.02),
       new THREE.MeshStandardMaterial({
         color: 0x468232, roughness: 0.95,
-        polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1,
+        polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2,
       })
     );
-    yardM.position.set(yp.x, 0.08, yp.z); scene.add(yardM);
+    yardM.rotation.x = -Math.PI / 2;
+    yardM.position.set(yp.x, 0.05, yp.z);
+    yardM.receiveShadow = true;
+    yardM.renderOrder = -1;
+    scene.add(yardM);
     addLabel("Backyard", "#ecfccb", yp.x, 1.2, yp.z);
     for (var ai = 0; ai < 40; ai++) {
       var ap = worldToThree(yard.x + 30 + Math.random() * (yard.w - 60), yard.y + 40 + Math.random() * (yard.h - 80));
@@ -1319,8 +1358,9 @@
         }
       }
       if (state.inOrbit) {
-        state.orbitRadius = Math.max(1.4, Math.min(softR * 0.9, state.orbitRadius + (steer.y || 0) * 1.2 * dt));
-        state.orbitAngle += (0.85 + (steer.x || 0) * 0.35) * dt;
+        var oSteer = mergedSteer();
+        state.orbitRadius = Math.max(1.4, Math.min(softR * 0.9, state.orbitRadius + (oSteer.y || 0) * 1.2 * dt));
+        state.orbitAngle += (0.85 + (oSteer.x || 0) * 0.35) * dt;
         state.player.position.x = state.planet.x + Math.cos(state.orbitAngle) * state.orbitRadius;
         state.player.position.z = state.planet.z + Math.sin(state.orbitAngle) * state.orbitRadius;
         state.vx = 0; state.vz = 0;
@@ -1343,8 +1383,9 @@
     }
 
     /* polish3: snappier locomotion (Canvas feel port) */
-    var maxSp = state.mode === "space" ? 7.5 : state.inTruck ? 11.5 : 7.6;
-    var accel = state.mode === "space" ? 16 : state.inTruck ? 28 : 24;
+    /* tapsteer1: noticeably snappier walk + drive */
+    var maxSp = state.mode === "space" ? 7.5 : state.inTruck ? 15.8 : 11.2;
+    var accel = state.mode === "space" ? 16 : state.inTruck ? 38 : 34;
     var fric = state.mode === "space" ? 3.0 : state.inTruck ? 4.8 : 7.8;
 
     // Map screen WASD/D-pad → ground plane relative to locked camera
@@ -1352,6 +1393,7 @@
     // Into-scene (screen up) = (-1,-1) on XZ; screen-right = (+1,-1) on XZ.
     // Ben orbit: when locked, position is owned by orbit tick above
     if (!(state.mode === "space" && state.inOrbit)) {
+    var steer = mergedSteer();
     if (steer.x || steer.y) {
       var len = Math.hypot(steer.x, steer.y) || 1;
       var ix = steer.x / len;
@@ -1886,6 +1928,7 @@
       doAbility();
     }
 
+    updateTapMarkerVisual(dt);
     renderer.render(scene, camera);
 
     if (hooks.onHud) {
@@ -1917,6 +1960,105 @@
         })(),
       });
     }
+  }
+
+
+  function ensureTapMarkerEl() {
+    var el = document.getElementById("tap-steer-marker");
+    if (el) return el;
+    el = document.createElement("div");
+    el.id = "tap-steer-marker";
+    el.setAttribute("aria-hidden", "true");
+    el.innerHTML = '<span class="tap-ring"></span><span class="tap-arrow"></span>';
+    document.body.appendChild(el);
+    return el;
+  }
+
+  function showTapMarker(clientX, clientY, ang) {
+    var el = ensureTapMarkerEl();
+    el.classList.add("is-on");
+    el.style.left = clientX + "px";
+    el.style.top = clientY + "px";
+    el.style.setProperty("--tap-ang", ang + "rad");
+    tapMarker = { sx: clientX, sy: clientY, life: 0.55, ang: ang };
+  }
+
+  function hideTapMarkerSoon() {
+    if (tapMarker) tapMarker.life = Math.min(tapMarker.life, 0.28);
+  }
+
+  function updateTapMarkerVisual(dt) {
+    var el = document.getElementById("tap-steer-marker");
+    if (!tapMarker) {
+      if (el) el.classList.remove("is-on");
+      return;
+    }
+    tapMarker.life -= dt;
+    if (tapMarker.life <= 0) {
+      tapMarker = null;
+      if (el) el.classList.remove("is-on");
+      return;
+    }
+    if (el) {
+      el.classList.add("is-on");
+      el.style.opacity = String(Math.min(1, tapMarker.life * 2.2));
+    }
+  }
+
+  function canvasLocalPointer(e) {
+    if (!renderer || !renderer.domElement) return null;
+    var rect = renderer.domElement.getBoundingClientRect();
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top, cx: e.clientX, cy: e.clientY, w: rect.width, h: rect.height };
+  }
+
+  function applyTapAim(e) {
+    if (!active || !state || !state.player || !camera || !renderer) return;
+    var loc = canvasLocalPointer(e);
+    if (!loc) return;
+    var v = new THREE.Vector3(state.player.position.x, 0.6 + (state.zLift || 0) * 0.08, state.player.position.z);
+    v.project(camera);
+    var sx = (v.x * 0.5 + 0.5) * loc.w;
+    var sy = (-v.y * 0.5 + 0.5) * loc.h;
+    var dx = loc.x - sx;
+    var dy = loc.y - sy;
+    var len = Math.hypot(dx, dy);
+    if (len < 14) return;
+    tapSteer.x = dx / len;
+    tapSteer.y = dy / len;
+    tapHeld = true;
+    showTapMarker(loc.cx, loc.cy, Math.atan2(dy, dx));
+  }
+
+  function clearTapAim() {
+    tapHeld = false;
+    tapSteer.x = 0;
+    tapSteer.y = 0;
+    hideTapMarkerSoon();
+  }
+
+  function wireTapSteer(el) {
+    if (!el || el.dataset.ffTapSteer === "1") return;
+    el.dataset.ffTapSteer = "1";
+    el.addEventListener("pointerdown", function (e) {
+      if (!active) return;
+      if (e.button != null && e.button !== 0) return;
+      e.preventDefault();
+      try { el.setPointerCapture(e.pointerId); } catch (err) {}
+      applyTapAim(e);
+    });
+    el.addEventListener("pointermove", function (e) {
+      if (!active || !tapHeld) return;
+      applyTapAim(e);
+    });
+    function up(e) {
+      if (!tapHeld) return;
+      clearTapAim();
+    }
+    el.addEventListener("pointerup", up);
+    el.addEventListener("pointercancel", up);
+    el.addEventListener("pointerleave", function (e) {
+      if (tapHeld && e.pressure === 0) clearTapAim();
+    });
   }
 
   function boot(opts) {
@@ -1957,6 +2099,7 @@
     renderer.domElement.style.height = "100%";
     renderer.domElement.style.touchAction = "none";
     renderer.domElement.setAttribute("aria-label", "Four Froggies three.js ranch");
+    wireTapSteer(renderer.domElement);
 
     clock = new THREE.Clock();
     buildRanch();
