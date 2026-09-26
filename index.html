@@ -564,24 +564,13 @@ footer.site a:hover {
   font-size: 0.78rem;
   color: #6b7280;
   letter-spacing: 0.01em;
-  opacity: 0;
-  transform: translateY(4px);
-  transition: opacity 0.45s ease, transform 0.45s ease;
-  pointer-events: none;
-}
-.dev-note strong { color: #4b5563; font-weight: 600; }
-.shell.logo-ready .dev-note {
   opacity: 1;
   transform: none;
   pointer-events: auto;
 }
+.dev-note strong { color: #4b5563; font-weight: 600; }
 .composer {
-  opacity: 0;
-  transform: translateY(8px);
-  pointer-events: none;
-  transition: opacity 0.5s ease, transform 0.5s ease;
-}
-.shell.logo-ready .composer {
+  /* Always visible — logo anim plays above; must never hide the field */
   opacity: 1;
   transform: none;
   pointer-events: auto;
@@ -593,8 +582,7 @@ footer.site a:hover {
   line-height: 1.35;
 }
 .helper { display: none; }
-/* results stay hidden until submit; also gated until logo-ready */
-.shell:not(.logo-ready) #results { display: none !important; }
+/* results stay hidden until submit (.results.hidden) — not gated on logo anim */
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -696,22 +684,21 @@ footer.site a:hover {
     else shell.classList.remove("logo-ready");
   }
 
-  function armReady() {
-    if (readyTimer) clearTimeout(readyTimer);
-    readyTimer = setTimeout(function () { setReady(true); }, ANIM_MS);
-  }
-
   function replay() {
     if (reduce) {
       root.classList.remove("is-animating");
       setReady(true);
       return;
     }
-    setReady(false);
+    /* Replay anim only — never hide composer / early preview */
+    setReady(true);
     root.classList.remove("is-animating");
     void root.getBoundingClientRect();
     root.classList.add("is-animating");
-    armReady();
+    if (readyTimer) clearTimeout(readyTimer);
+    readyTimer = setTimeout(function () {
+      root.classList.remove("is-animating");
+    }, ANIM_MS);
   }
 
   logo.addEventListener("click", function (e) {
@@ -720,12 +707,16 @@ footer.site a:hover {
     replay();
   });
 
+  /* Field visible immediately; anim can still play above */
+  setReady(true);
   if (reduce) {
     root.classList.remove("is-animating");
-    setReady(true);
-  } else {
-    armReady();
+  } else if (readyTimer) {
+    clearTimeout(readyTimer);
   }
+  readyTimer = setTimeout(function () {
+    if (root.classList.contains("is-animating")) root.classList.remove("is-animating");
+  }, ANIM_MS);
 })();
 
 // Similarize v1 in-browser rewriter. Deterministic. No APIs.
