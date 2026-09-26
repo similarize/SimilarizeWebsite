@@ -1,3 +1,18 @@
+## What's new (hop3) — faster hop + spam HOP + stack height + mech robots
+- **Faster always-hop loco:** Quicker cadence (shorter ground plant ~0.022s) + higher launch + longer hop carry. Walk max nudged up. Same always-hop-when-moving from hop2 — just snappier.
+- **HOP ability cooldown ~0.1s:** Near-zero anti-double-tap only (was ~5.5–6s). Spam Space / HOP button immediately.
+- **Combo stack height:** Ability HOP while airborne (or within ~0.15s land window) stacks extra upward lift (bunny-hop climb). Soft ceiling at ~10 stacks with diminishing returns — 5–12 hops feel rewarding; gravity brings you down. Toast shows `HOP ×N!`.
+- **Mech art (robots, not skyscrapers):** 10 / 100 / 1000-story mechs redrawn with head, torso, shoulders, arms, legs, glow eyes — Canvas `world.js`, Three `three-hub.js`, Phaser `phaser-hub.js`. Labels stay anonymous (`N-story mech`). Garage toys tiny form pass (Three).
+- Keep: always-hop when moving, shove props, joystick, garage1 door, polish11 truck yaw/EXIT tip, names-only plates. Cast: James, Jimmy, Bubbles, Rexy.
+- Cache-bust: `?v=20260926-hop3`. Cast unchanged. No SPS arcade republish.
+
+## What's new (hop2) — frogs ALWAYS hop when moving
+- **Ranch foot locomotion:** Any non-zero move input (WASD / stick / tap-steer) drives a continuous hop cycle: launch arc → land → brief ground plant → next hop. No hover-slide / walk-glide between hops — frogs get around by hopping.
+- **Cadence:** ~2 hops/sec with clear vertical lift (z / Y), squash on land, stretch mid-air. Tuned for kids — not a micro-bob.
+- **Ability HOP (Space):** Still the bigger deliberate jump (higher/farther). Baseline movement already hops; ability is the power hop. Truck hop jump + space thruster unchanged.
+- **Engines:** Canvas (`world.js` + `FroggiesCanon.tickLocoHop`), Phaser, Three — same always-hop plant/launch pattern. Cast: James, Jimmy, Bubbles, Rexy.
+- Cache-bust: `?v=20260926-hop2`. Cast unchanged. No SPS arcade republish.
+
 ## What's new (hop1) — HOP frogs + shove small props
 - **HOP ability (shared):** Replaces ZOOM on the ranch ability button. Vertical jump arc + forward carry (Space / ability button). Landing squash + mid-air stretch on Canvas; Phaser + Three show Y lift + scale squash/stretch. Fast walk auto-hops so frogs don't hover-glide; low speed keeps leg-bob walk. Truck = hop jump; space = thruster nudge ("HOP · thruster!").
 - **Push small things:** Toys, backyard animals, pollen blobs get physics-ish knockback via `FroggiesCanon.shoveSmallProp` / `tickPushable` (Canvas world + Phaser/Three mesh sync). Walls / trucks / mechs stay solid via `resolveSolid`.

@@ -19,7 +19,8 @@
    track elev follow / crest launch / land bounce via trackElevAt;
    truck2: stronger elev follow / crest / ramp ride-up; EXIT tip always while driving;
    polish11: truck yaw follows travel; brief EXIT tip (no sticky billboard); ZOOM ability;
-   hop1: HOP ability (Y arc + squash); shove toys/animals/pollen; walk bob / fast auto-hop;
+   hop1: HOP ability (Y arc + squash); shove toys/animals/pollen;
+   hop2: ranch foot ALWAYS hops (continuous arc cycle); ability HOP = bigger jump;
    particle caps; sunset sky shift over play time.
    mobile1: phone+desktop shared UI — smaller/toggle-friendly mini-map + harder particle caps on narrow.
    ~10× map: real roam between ranch house / track / pond / Starship.
@@ -775,7 +776,7 @@
 
   function tickDrive(world, ent, dt) {
     var result = { jumped: false, landed: false, scrapGain: 0, splashed: false, onWater: false, landShake: false };
-    var gWalk = 520;
+    var gWalk = 720; /* hop2: snappier loco hop arcs (~2 hops/sec) */
     var gTruck = 560;
     var wet = inPond(ent.x, ent.y);
     if (!ent.inTruck) {
@@ -786,7 +787,10 @@
           ent.z = 0;
           if (ent.zVel < -40) result.landed = true;
           ent.zVel = 0;
-          if (result.landed) ent.hopSquash = 1;
+          if (result.landed) {
+            ent.hopSquash = 1;
+            ent.hopLandT = 0;
+          }
           if (wet) {
             spawnSplash(world, ent.x, ent.y, 6);
             ent.waterSub = Math.max(ent.waterSub || 0, 0.35);
@@ -886,6 +890,8 @@
         var impact = Math.max(0, -(ent.zVel || 0));
         ent.z = groundZ;
         result.landed = true;
+        ent.hopLandT = 0;
+        if (ent.hopSquash == null || ent.hopSquash < 0.5) ent.hopSquash = 1;
         if (world.airTime > 0.35) {
           var airBonus = Math.floor(world.airTime * 25);
           world.scrap += airBonus;
@@ -1003,7 +1009,7 @@
   function moveEntity(ent, dt, speed, world) {
     /* polish3 + polish10: snappier walk/drive — quicker ramp + firmer stop */
     /* tapsteer1: noticeably faster walk + drive */
-    var walkMax = 270;
+    var walkMax = 310;
     var truckMax = 420;
     var maxSp = (ent.inTruck ? truckMax : walkMax) * (ent.speedBoost || 1);
     if (ent.inTruck && ent.dashTrail > 0) maxSp *= 1.28;
@@ -1024,6 +1030,7 @@
       maxSp *= 0.8;
     }
     var canon = global.FroggiesCanon;
+    var airFoot = !ent.inTruck && (ent.z || 0) > 1.5;
     if (mag > 0.05) {
       var aim = Math.atan2(my, mx);
       if (ent.inTruck) {
@@ -1051,12 +1058,21 @@
         var tvy = ay * maxSp;
         ent.vx += (tvx - ent.vx) * Math.min(1, accel * dt / Math.max(60, maxSp));
         ent.vy += (tvy - ent.vy) * Math.min(1, accel * dt / Math.max(60, maxSp));
-      } else {
+      } else if (airFoot) {
+        /* hop2: mild air steer during hop arc — no ground hover-slide */
+        var airA = accel * 0.38;
         var tvx = mx * maxSp;
         var tvy = my * maxSp;
-        ent.vx += (tvx - ent.vx) * Math.min(1, accel * dt / Math.max(60, maxSp));
-        ent.vy += (tvy - ent.vy) * Math.min(1, accel * dt / Math.max(60, maxSp));
-        /* eyes1: face walk direction; idle keeps last faceAngle */
+        ent.vx += (tvx - ent.vx) * Math.min(1, airA * dt / Math.max(60, maxSp));
+        ent.vy += (tvy - ent.vy) * Math.min(1, airA * dt / Math.max(60, maxSp));
+        ent.faceAngle = aim;
+        if (Math.abs(mx) > 0.08) ent.facing = mx >= 0 ? 1 : -1;
+      } else {
+        /* hop2: plant feet on brief ground — damp slide; hop impulse sets travel */
+        var plant = Math.exp(-16 * dt);
+        ent.vx *= plant;
+        ent.vy *= plant;
+        if (Math.hypot(ent.vx, ent.vy) < 10) { ent.vx = 0; ent.vy = 0; }
         ent.faceAngle = aim;
         if (Math.abs(mx) > 0.08) ent.facing = mx >= 0 ? 1 : -1;
       }
@@ -1097,18 +1113,20 @@
     } else {
       ent.walkPhase = (ent.walkPhase || 0) * 0.9;
     }
-    /* hop1: low-speed walk bob; fast move auto-hops so frogs don't hover-glide */
-    if (!ent.inTruck && (ent.z || 0) <= 0.5) {
-      if (spd > 175) {
-        ent.autoHopCd = (ent.autoHopCd || 0) - dt;
-        if (ent.autoHopCd <= 0) {
-          ent.autoHopCd = 0.3;
-          ent.zVel = Math.max(ent.zVel || 0, 168);
-          ent.z = Math.max(ent.z || 0, 3);
-          ent.hopStretch = 0.7;
-        }
-      } else {
-        ent.autoHopCd = Math.min(0.12, ent.autoHopCd || 0);
+    /* hop2: ANY move input → continuous hop cycle (launch → land → brief ground → next) */
+    if (!ent.inTruck && canon && canon.tickLocoHop) {
+      var wantHop = mag > 0.05;
+      var launched = canon.tickLocoHop(ent, dt, {
+        moving: wantHop,
+        up: 215,
+        lift: 7,
+        groundHold: 0.022,
+        groundEps: 1.2,
+      });
+      if (launched && mag > 0.05) {
+        var hopSp = Math.min(maxSp * 0.98, 305);
+        ent.vx = mx * hopSp;
+        ent.vy = my * hopSp;
       }
     }
     if (ent.cd > 0) ent.cd -= dt;
@@ -1341,110 +1359,142 @@
   }
 
   function drawMech(ctx, wx, wy, stories, camX, camY, vw, vh, tint) {
+    /* hop3: robot/mech silhouette (head·torso·arms·legs·glow eyes) — not a skyscraper prism */
     var p = project(wx, wy, camX, camY, vw, vh);
-    /* polish4: garage mechs punchy; 1000-story silhouette dramatic */
     var hScale = stories >= 1000 ? 310 : stories >= 100 ? 138 : 62;
-    var wScale = stories >= 1000 ? 58 : stories >= 100 ? 34 : 20;
+    var wScale = stories >= 1000 ? 72 : stories >= 100 ? 42 : 26;
     var s = p.depth;
-    var lift = hScale * s;
-    var bw = wScale * s;
+    var H = hScale * s;
+    var W = wScale * s;
+    var baseY = p.y;
+    var cx = p.x;
+    var col = tint || "#94a3b8";
+    var eyeCol = stories >= 1000 ? "#fbbf24" : stories >= 100 ? "#67e8f9" : "#a5b4fc";
     if (stories >= 1000) {
-      /* Distant haze silhouette behind tower */
-      var haze = ctx.createRadialGradient(p.x, p.y - lift * 0.55, bw * 0.2, p.x, p.y - lift * 0.4, bw * 3.2);
-      haze.addColorStop(0, "rgba(252, 211, 77, 0.28)");
-      haze.addColorStop(0.55, "rgba(251, 191, 36, 0.1)");
+      var haze = ctx.createRadialGradient(cx, baseY - H * 0.55, W * 0.2, cx, baseY - H * 0.4, W * 2.6);
+      haze.addColorStop(0, "rgba(252, 211, 77, 0.26)");
+      haze.addColorStop(0.55, "rgba(251, 191, 36, 0.08)");
       haze.addColorStop(1, "rgba(0,0,0,0)");
       ctx.fillStyle = haze;
       ctx.beginPath();
-      ctx.ellipse(p.x, p.y - lift * 0.45, bw * 2.8, lift * 0.7, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = "rgba(15, 23, 42, 0.18)";
-      ctx.beginPath();
-      ctx.moveTo(p.x - bw * 1.6, p.y + 4);
-      ctx.lineTo(p.x - bw * 0.9, p.y - lift * 0.95);
-      ctx.lineTo(p.x + bw * 0.9, p.y - lift * 0.95);
-      ctx.lineTo(p.x + bw * 1.6, p.y + 4);
-      ctx.closePath();
+      ctx.ellipse(cx, baseY - H * 0.45, W * 2.2, H * 0.65, 0, 0, Math.PI * 2);
       ctx.fill();
     }
+    /* Pad */
     ctx.fillStyle = "rgba(0,0,0,0.32)";
     ctx.beginPath();
-    ctx.ellipse(p.x, p.y + 5, bw * 1.45, bw * 0.42, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx, baseY + 5, W * 1.15, W * 0.36, 0, 0, Math.PI * 2);
     ctx.fill();
-    /* Landing pad */
     ctx.fillStyle = "rgba(30,41,59,0.78)";
     ctx.beginPath();
-    ctx.ellipse(p.x, p.y + 2, bw * 1.2, bw * 0.36, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx, baseY + 2, W * 0.95, W * 0.3, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.strokeStyle = "#fbbf24";
     ctx.lineWidth = stories >= 1000 ? 2.4 : 1.8;
     ctx.beginPath();
-    ctx.ellipse(p.x, p.y + 2, bw * 0.95, bw * 0.28, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx, baseY + 2, W * 0.75, W * 0.22, 0, 0, Math.PI * 2);
     ctx.stroke();
-    ctx.strokeStyle = "rgba(254, 243, 199, 0.55)";
-    ctx.lineWidth = 1.2;
-    ctx.beginPath();
-    ctx.ellipse(p.x, p.y + 2, bw * 0.55, bw * 0.16, 0, 0, Math.PI * 2);
-    ctx.stroke();
-    var grad = ctx.createLinearGradient(p.x - bw, p.y - lift, p.x + bw, p.y);
-    grad.addColorStop(0, tint || "#94a3b8");
-    grad.addColorStop(0.45, "#64748b");
-    grad.addColorStop(1, "#1e293b");
-    ctx.fillStyle = grad;
-    ctx.fillRect(p.x - bw * 0.5, p.y - lift, bw, lift);
-    ctx.strokeStyle = "#020617";
-    ctx.lineWidth = 2.8;
-    ctx.strokeRect(p.x - bw * 0.5, p.y - lift, bw, lift);
-    /* Shoulder pods (garage presence) */
-    if (stories < 1000) {
-      ctx.fillStyle = tint || "#94a3b8";
-      ctx.fillRect(p.x - bw * 0.95, p.y - lift * 0.72, bw * 0.35, lift * 0.18);
-      ctx.fillRect(p.x + bw * 0.6, p.y - lift * 0.72, bw * 0.35, lift * 0.18);
+
+    function limb(x0, y0, x1, y1, thick, fill) {
       ctx.strokeStyle = "#020617";
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(p.x - bw * 0.95, p.y - lift * 0.72, bw * 0.35, lift * 0.18);
-      ctx.strokeRect(p.x + bw * 0.6, p.y - lift * 0.72, bw * 0.35, lift * 0.18);
+      ctx.lineWidth = thick + 2.2 * s;
+      ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+      ctx.strokeStyle = fill;
+      ctx.lineWidth = thick;
+      ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
     }
-    /* Window bands */
-    var bands = stories >= 1000 ? 14 : stories >= 100 ? 8 : 5;
-    for (var bi = 0; bi < bands; bi++) {
-      var by = p.y - lift * (0.1 + bi * (0.8 / bands));
-      ctx.fillStyle = bi % 2 === 0 ? "rgba(56,189,248,0.62)" : "rgba(251,191,36,0.42)";
-      ctx.fillRect(p.x - bw * 0.4, by, bw * 0.8, Math.max(2.2, lift * 0.032));
+    function block(bx, by, bw, bh, fill) {
+      var g = ctx.createLinearGradient(bx, by, bx + bw, by + bh);
+      g.addColorStop(0, fill);
+      g.addColorStop(0.55, "#64748b");
+      g.addColorStop(1, "#1e293b");
+      ctx.fillStyle = g;
+      ctx.fillRect(bx, by, bw, bh);
+      ctx.strokeStyle = "#020617";
+      ctx.lineWidth = Math.max(1.2, 1.8 * s);
+      ctx.strokeRect(bx, by, bw, bh);
     }
-    /* Side depth plane */
-    ctx.fillStyle = "rgba(15,23,42,0.85)";
+
+    /* Legs */
+    var hipY = baseY - H * 0.38;
+    var footY = baseY - 2 * s;
+    var legT = Math.max(4, W * 0.18);
+    limb(cx - W * 0.22, hipY, cx - W * 0.32, footY, legT, col);
+    limb(cx + W * 0.22, hipY, cx + W * 0.32, footY, legT, col);
+    /* Feet */
+    block(cx - W * 0.48, footY - 3 * s, W * 0.28, 6 * s, col);
+    block(cx + W * 0.2, footY - 3 * s, W * 0.28, 6 * s, col);
+
+    /* Torso */
+    var torsoH = H * 0.34;
+    var torsoW = W * 0.72;
+    var torsoY = baseY - H * 0.38 - torsoH;
+    block(cx - torsoW * 0.5, torsoY, torsoW, torsoH, col);
+    /* Chest plate glow */
+    ctx.fillStyle = eyeCol;
+    ctx.globalAlpha = 0.55;
+    ctx.fillRect(cx - torsoW * 0.18, torsoY + torsoH * 0.28, torsoW * 0.36, torsoH * 0.18);
+    ctx.globalAlpha = 1;
+
+    /* Shoulders */
+    var shW = W * 0.28, shH = H * 0.08;
+    block(cx - torsoW * 0.5 - shW * 0.55, torsoY + torsoH * 0.05, shW, shH, col);
+    block(cx + torsoW * 0.5 - shW * 0.45, torsoY + torsoH * 0.05, shW, shH, col);
+
+    /* Arms */
+    var armT = Math.max(3.5, W * 0.14);
+    var shY = torsoY + shH * 0.5;
+    limb(cx - torsoW * 0.5 - shW * 0.2, shY, cx - W * 0.78, torsoY + torsoH * 0.85, armT, col);
+    limb(cx + torsoW * 0.5 + shW * 0.2, shY, cx + W * 0.78, torsoY + torsoH * 0.85, armT, col);
+    /* Hands / fists */
+    block(cx - W * 0.9, torsoY + torsoH * 0.78, W * 0.2, W * 0.16, col);
+    block(cx + W * 0.7, torsoY + torsoH * 0.78, W * 0.2, W * 0.16, col);
+
+    /* Head */
+    var headH = H * 0.16;
+    var headW = W * 0.48;
+    var headY = torsoY - headH - 2 * s;
+    block(cx - headW * 0.5, headY, headW, headH, col);
+    /* Visor + glow eyes */
+    ctx.fillStyle = "#0f172a";
+    ctx.fillRect(cx - headW * 0.38, headY + headH * 0.28, headW * 0.76, headH * 0.38);
+    ctx.fillStyle = eyeCol;
+    ctx.shadowColor = eyeCol;
+    ctx.shadowBlur = 8 * s;
     ctx.beginPath();
-    ctx.moveTo(p.x + bw * 0.5, p.y - lift);
-    ctx.lineTo(p.x + bw * 0.5 + 14 * s, p.y - lift - 8 * s);
-    ctx.lineTo(p.x + bw * 0.5 + 14 * s, p.y - 4 * s);
-    ctx.lineTo(p.x + bw * 0.5, p.y);
-    ctx.closePath();
+    ctx.arc(cx - headW * 0.16, headY + headH * 0.48, Math.max(1.6, headW * 0.1), 0, Math.PI * 2);
+    ctx.arc(cx + headW * 0.16, headY + headH * 0.48, Math.max(1.6, headW * 0.1), 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = "#020617";
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-    /* Cockpit + antenna */
-    ctx.fillStyle = stories >= 1000 ? "#fbbf24" : "#38bdf8";
-    ctx.fillRect(p.x - bw * 0.24, p.y - lift * 0.94, bw * 0.48, lift * 0.08);
+    ctx.shadowBlur = 0;
+    /* Antenna */
     ctx.strokeStyle = "#f8fafc";
-    ctx.lineWidth = 1.6;
+    ctx.lineWidth = Math.max(1.2, 1.6 * s);
     ctx.beginPath();
-    ctx.moveTo(p.x, p.y - lift);
-    ctx.lineTo(p.x, p.y - lift - (stories >= 1000 ? 22 : 14) * s);
+    ctx.moveTo(cx, headY);
+    ctx.lineTo(cx, headY - (stories >= 1000 ? 18 : 10) * s);
     ctx.stroke();
     ctx.fillStyle = "#f87171";
     ctx.beginPath();
-    ctx.arc(p.x, p.y - lift - (stories >= 1000 ? 22 : 14) * s, (stories >= 1000 ? 3.4 : 2.4) * s, 0, Math.PI * 2);
+    ctx.arc(cx, headY - (stories >= 1000 ? 18 : 10) * s, (stories >= 1000 ? 3.2 : 2.2) * s, 0, Math.PI * 2);
     ctx.fill();
+
+    /* Armor band accents (read as mech plating, not windows) */
+    var bands = stories >= 1000 ? 5 : stories >= 100 ? 3 : 2;
+    for (var bi = 0; bi < bands; bi++) {
+      var by = torsoY + torsoH * (0.15 + bi * (0.55 / bands));
+      ctx.fillStyle = bi % 2 === 0 ? "rgba(15,23,42,0.45)" : "rgba(248,250,252,0.12)";
+      ctx.fillRect(cx - torsoW * 0.42, by, torsoW * 0.84, Math.max(1.5, H * 0.018));
+    }
+
     ctx.fillStyle = "#fff";
     ctx.strokeStyle = "rgba(0,0,0,0.8)";
     ctx.lineWidth = 3.2;
     ctx.font = "bold " + Math.round((stories >= 1000 ? 13 : 11) * s) + "px Segoe UI, system-ui, sans-serif";
     ctx.textAlign = "center";
     var label = stories + "-story mech";
-    ctx.strokeText(label, p.x, p.y - lift - (stories >= 1000 ? 28 : 18) * s);
-    ctx.fillText(label, p.x, p.y - lift - (stories >= 1000 ? 28 : 18) * s);
+    ctx.strokeText(label, cx, headY - (stories >= 1000 ? 24 : 14) * s);
+    ctx.fillText(label, cx, headY - (stories >= 1000 ? 24 : 14) * s);
   }
 
   function drawRanchHouse(ctx, camX, camY, vw, vh, world, frogs) {
@@ -2599,8 +2649,8 @@
   function drawFroggy(ctx, frog, camX, camY, vw, vh, frogs) {
     var p = project(frog.x, frog.y, camX, camY, vw, vh);
     var s = 16.4 * p.depth * (0.92 + 0.08 * p.depth); /* polish3 readable */
-    var bob = (!frog.inTruck && (frog.walkPhase || 0) > 0.05)
-      ? Math.abs(Math.sin(frog.walkPhase)) * 2.4 * p.depth : 0;
+    var bob = (!frog.inTruck && (frog.z || 0) < 2 && (frog.walkPhase || 0) > 0.05)
+      ? Math.abs(Math.sin(frog.walkPhase)) * 1.2 * p.depth : 0;
     /* polish7: idle bounce for AI companions when standing */
     if (!frog.inTruck && bob < 0.4 && (frog.idleBounce || 0) > 0) {
       bob += Math.abs(Math.sin(frog.idleBounce)) * (frog.human ? 0.6 : 2.8) * p.depth;
@@ -2677,11 +2727,12 @@
       ? Math.sin(frog.walkPhase * 2) * 3.2 * p.depth : 0;
     var faceA = (frog.faceAngle != null && isFinite(frog.faceAngle)) ? frog.faceAngle : -Math.PI / 2;
     var groundY = (p.y - by) + 2 - lift * 0.2; /* legs toward feet in local space */
-    /* hop1: stretch mid-air, squash on land */
+    /* hop2: stretch mid-air (+ hopStretch punch), squash on land */
     var airZ = frog.z || 0;
     var sq = frog.hopSquash || 0;
-    var stretchY = 1 + Math.min(0.38, airZ * 0.009) - sq * 0.3;
-    var stretchX = 1 - Math.min(0.24, airZ * 0.006) + sq * 0.34;
+    var st = frog.hopStretch || 0;
+    var stretchY = 1 + Math.min(0.42, airZ * 0.012) + st * 0.2 - sq * 0.32;
+    var stretchX = 1 - Math.min(0.28, airZ * 0.008) - st * 0.14 + sq * 0.36;
     ctx.save();
     ctx.translate(p.x, by);
     ctx.rotate(faceA + Math.PI / 2); /* canonical face points screen-up */

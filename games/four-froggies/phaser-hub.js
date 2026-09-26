@@ -15,7 +15,8 @@
    truck2: EXIT anytime (HUD); full elev lift (no *0.06 damp); stronger crest / ramp ride-up.
    joy2: shared virtual joystick via engine-boot setSteer; touch playfield aim disabled.
    polish11: truck yaw follows travel; brief EXIT tip; shared ZOOM ability.
-   hop1: HOP ability (Y arc + squash); shove toys/animals/pollen. */
+   hop1: HOP ability (Y arc + squash); shove toys/animals/pollen.
+   hop2: ranch foot ALWAYS hops (continuous arc); ability HOP = bigger jump. */
 (function (global) {
   "use strict";
   var C = global.FroggiesCanon;
@@ -425,19 +426,46 @@
         this.drawMech(cp.mech1000 || { x: 340, y: 2420, stories: 1000 }, 0xfcd34d, 220);
       },
       drawMech: function (m, color, h) {
+        /* hop3: robot silhouette (legs/torso/arms/head/eyes) — not a skyscraper rect */
+        var eye = m.stories >= 1000 ? 0xfbbf24 : m.stories >= 100 ? 0x67e8f9 : 0xa5b4fc;
         if (m.stories >= 1000) {
           this.add.ellipse(m.x, m.y - h * 0.5, h * 0.9, h * 0.7, 0xfbbf24, 0.12);
         }
-        this.add.ellipse(m.x, m.y + 6, Math.max(36, h * 0.4), 16, 0x0f172a, 0.45);
-        this.add.rectangle(m.x, m.y - h * 0.45, Math.max(30, h * 0.3), h, color, 0.95)
+        this.add.ellipse(m.x, m.y + 6, Math.max(40, h * 0.42), 16, 0x0f172a, 0.45);
+        this.add.ellipse(m.x, m.y + 4, Math.max(30, h * 0.32), 12, 0x1e293b, 0.9)
+          .setStrokeStyle(2, 0xfbbf24, 0.85);
+        /* Legs */
+        this.add.rectangle(m.x - h * 0.12, m.y - h * 0.16, h * 0.1, h * 0.32, color, 0.95)
+          .setStrokeStyle(2, 0x0f172a, 1);
+        this.add.rectangle(m.x + h * 0.12, m.y - h * 0.16, h * 0.1, h * 0.32, color, 0.95)
+          .setStrokeStyle(2, 0x0f172a, 1);
+        this.add.rectangle(m.x - h * 0.16, m.y - 2, h * 0.14, h * 0.05, color, 1)
+          .setStrokeStyle(2, 0x0f172a, 1);
+        this.add.rectangle(m.x + h * 0.16, m.y - 2, h * 0.14, h * 0.05, color, 1)
+          .setStrokeStyle(2, 0x0f172a, 1);
+        /* Torso */
+        this.add.rectangle(m.x, m.y - h * 0.48, Math.max(28, h * 0.34), h * 0.32, color, 0.95)
           .setStrokeStyle(3, 0x0f172a, 1);
-        if (m.stories < 1000) {
-          this.add.rectangle(m.x - h * 0.28, m.y - h * 0.65, h * 0.16, h * 0.18, color, 0.9)
-            .setStrokeStyle(2, 0x0f172a, 1);
-          this.add.rectangle(m.x + h * 0.28, m.y - h * 0.65, h * 0.16, h * 0.18, color, 0.9)
-            .setStrokeStyle(2, 0x0f172a, 1);
-        }
-        this.add.rectangle(m.x, m.y - h * 0.82, Math.max(18, h * 0.18), h * 0.08, 0xfbbf24, 1);
+        this.add.rectangle(m.x, m.y - h * 0.5, Math.max(12, h * 0.14), h * 0.06, eye, 0.9);
+        /* Shoulders + arms */
+        this.add.rectangle(m.x - h * 0.28, m.y - h * 0.58, h * 0.14, h * 0.1, color, 0.95)
+          .setStrokeStyle(2, 0x0f172a, 1);
+        this.add.rectangle(m.x + h * 0.28, m.y - h * 0.58, h * 0.14, h * 0.1, color, 0.95)
+          .setStrokeStyle(2, 0x0f172a, 1);
+        this.add.rectangle(m.x - h * 0.34, m.y - h * 0.42, h * 0.08, h * 0.26, color, 0.95)
+          .setStrokeStyle(2, 0x0f172a, 1);
+        this.add.rectangle(m.x + h * 0.34, m.y - h * 0.42, h * 0.08, h * 0.26, color, 0.95)
+          .setStrokeStyle(2, 0x0f172a, 1);
+        this.add.rectangle(m.x - h * 0.34, m.y - h * 0.28, h * 0.1, h * 0.08, color, 1)
+          .setStrokeStyle(2, 0x0f172a, 1);
+        this.add.rectangle(m.x + h * 0.34, m.y - h * 0.28, h * 0.1, h * 0.08, color, 1)
+          .setStrokeStyle(2, 0x0f172a, 1);
+        /* Head + glow eyes */
+        this.add.rectangle(m.x, m.y - h * 0.72, Math.max(18, h * 0.2), h * 0.14, color, 0.95)
+          .setStrokeStyle(2, 0x0f172a, 1);
+        this.add.rectangle(m.x, m.y - h * 0.72, Math.max(12, h * 0.14), h * 0.05, 0x0f172a, 1);
+        this.add.circle(m.x - h * 0.05, m.y - h * 0.72, Math.max(3, h * 0.025), eye, 1);
+        this.add.circle(m.x + h * 0.05, m.y - h * 0.72, Math.max(3, h * 0.025), eye, 1);
         this.add.text(m.x, m.y - h - 10, m.stories + "-story mech", {
           fontSize: m.stories >= 1000 ? "14px" : "11px", fontStyle: "bold", color: "#fff",
           stroke: "#000", strokeThickness: 3,
@@ -615,9 +643,11 @@
         var body = this.player.body;
         var spPrev = Math.hypot(body.velocity.x, body.velocity.y);
         var steer = mergedSteer();
-        if (steer.x || steer.y) {
+        var airFootP = !this.inTruck && ((this.zLift || 0) - (this.groundZ || 0)) > 2;
+        var sx = 0, sy = 0, wantMove = !!(steer.x || steer.y);
+        if (wantMove) {
           var len = Math.hypot(steer.x, steer.y) || 1;
-          var sx = steer.x / len, sy = steer.y / len;
+          sx = steer.x / len; sy = steer.y / len;
           var aimFace = Math.atan2(sy, sx) + Math.PI / 2; /* sprite texture faces up */
           if (this.inTruck) {
             /* truck1: smooth yaw; thrust along facing (faceAngle 0 = screen-up) */
@@ -642,17 +672,22 @@
             body.velocity.x += (ax / al) * accel * dt;
             body.velocity.y += (ay / al) * accel * dt;
             this.facing = fx >= 0 ? 1 : -1;
+          } else if (airFootP) {
+            /* hop2: mild air steer during hop arc */
+            body.velocity.x += sx * accel * 0.38 * dt;
+            body.velocity.y += sy * accel * 0.38 * dt;
+            this.faceAngle = aimFace;
+            if (steer.x) this.facing = steer.x > 0 ? 1 : -1;
           } else {
-            body.velocity.x += sx * accel * dt;
-            body.velocity.y += sy * accel * dt;
-            /* eyes1: face walk direction; idle keeps last faceAngle */
+            /* hop2: plant on brief ground — no hover-slide */
             this.faceAngle = aimFace;
             if (steer.x) this.facing = steer.x > 0 ? 1 : -1;
           }
         }
         tickTapMarker(dt);
-        body.velocity.x *= Math.max(0, 1 - fric * dt);
-        body.velocity.y *= Math.max(0, 1 - fric * dt);
+        var fricUse = (!this.inTruck && !airFootP) ? 16 : fric;
+        body.velocity.x *= Math.max(0, 1 - fricUse * dt);
+        body.velocity.y *= Math.max(0, 1 - fricUse * dt);
         var sp = Math.hypot(body.velocity.x, body.velocity.y);
         if (sp > maxSp) { body.velocity.x = (body.velocity.x / sp) * maxSp; body.velocity.y = (body.velocity.y / sp) * maxSp; }
         /* solid1: solid walls / mechs / parked trucks (doorway open) */
@@ -703,16 +738,17 @@
             this.toast = "AIR!"; this.toastT = Math.max(this.toastT || 0, 0.9);
           }
         }
-        /* polish9 + truck1: air hang + land bounce */
+        /* polish9 + truck1: air hang + land bounce; hop2: snappier foot gravity */
         airA = (this.zLift || 0) - groundZ;
-        var gFall = 420;
-        if (airA > 18 && Math.abs(this.zVel) < 80) gFall *= 0.38;
+        var gFall = this.inTruck ? 420 : 680;
+        if (this.inTruck && airA > 18 && Math.abs(this.zVel) < 80) gFall *= 0.38;
         if (airA > 0.2 || this.zVel !== 0) {
           this.zVel -= gFall * dt;
           this.zLift = this.zLift + this.zVel * dt;
           if (this.zLift <= groundZ) {
             var impact = Math.max(0, -this.zVel);
             this.zLift = groundZ;
+            this.hopLandT = 0;
             if (impact > 70) this.zVel = Math.min(140, impact * 0.28);
             else this.zVel = 0;
           }
@@ -736,7 +772,7 @@
           }
           if (nearG || Math.abs(side) > 40) this.lapSide = side >= 0 ? 1 : -1;
         }
-        /* hop1: land squash + walking Y lift + shove small props */
+        /* hop2: land squash + stretch + always-hop Y lift + shove small props */
         var airNowHop = (this.zLift || 0) - (this.groundZ || 0);
         if (this._wasHopAir && airNowHop <= 1) this.hopSquash = 1;
         this._wasHopAir = airNowHop > 6;
@@ -745,20 +781,30 @@
         if (!this.inTruck) {
           this._visLift = (this.zLift || 0) * 0.55;
           this.player.y -= this._visLift;
-          var sx = 1.15 * (1 - Math.min(0.22, airNowHop * 0.006) + (this.hopSquash || 0) * 0.3);
-          var sy = 1.15 * (1 + Math.min(0.32, airNowHop * 0.01) - (this.hopSquash || 0) * 0.26);
-          this.player.setScale(sx, sy);
+          var stP = this.hopStretch || 0;
+          var sxS = 1.15 * (1 - Math.min(0.28, airNowHop * 0.008) - stP * 0.12 + (this.hopSquash || 0) * 0.32);
+          var syS = 1.15 * (1 + Math.min(0.38, airNowHop * 0.012) + stP * 0.18 - (this.hopSquash || 0) * 0.28);
+          this.player.setScale(sxS, syS);
         } else {
           this.player.setScale(1.15, 1.15);
         }
-        /* hop1: fast walk auto-hop */
-        if (!this.inTruck && airNowHop < 2 && sp > 180) {
-          this.autoHopCd = (this.autoHopCd || 0) - dt;
-          if (this.autoHopCd <= 0) {
-            this.autoHopCd = 0.3;
-            this.zVel = Math.max(this.zVel || 0, 200);
-            this.zLift = Math.max(this.zLift || 0, (this.groundZ || 0) + 5);
-            this.hopStretch = 0.7;
+        /* hop2: ANY move input drives continuous hop cycle */
+        if (!this.inTruck && C.tickLocoHop) {
+          this.groundZ = this.groundZ || 0;
+          var launchedP = C.tickLocoHop(this, dt, {
+            moving: wantMove,
+            zKey: "zLift",
+            zvKey: "zVel",
+            gndKey: "groundZ",
+            up: 230,
+            lift: 8,
+            groundHold: 0.022,
+            groundEps: 2,
+          });
+          if (launchedP && wantMove) {
+            var hopSpP = Math.min(maxSp * 0.98, 320);
+            body.velocity.x = sx * hopSpP;
+            body.velocity.y = sy * hopSpP;
           }
         }
         if (C.shoveSmallProp && C.tickPushable && this.pushables) {
@@ -1176,19 +1222,33 @@
         if (hooks.onToast) hooks.onToast(this.toast);
       },
       doAbility: function () {
-        /* hop1: shared HOP — vertical arc + forward carry */
-        if (this.cd > 0) return; this.cd = 5.5;
+        /* hop3: near-zero CD + airborne stack height */
+        if (this.cd > 0) return; this.cd = 0.1;
         var body = this.player.body;
         var ang = (this.faceAngle != null) ? (this.faceAngle - Math.PI / 2) : (this.facing >= 0 ? 0 : Math.PI);
         if (Math.hypot(body.velocity.x, body.velocity.y) > 40) ang = Math.atan2(body.velocity.y, body.velocity.x);
-        var fwd = this.inTruck ? 280 : 200;
-        var up = this.inTruck ? 280 : 320;
+        var fwd = this.inTruck ? 300 : 230;
+        var up = this.inTruck ? 300 : 360;
+        var gnd = this.groundZ || 0;
+        var air = (this.zLift || 0) > gnd + 4;
+        var landAge = this.hopLandT != null ? this.hopLandT : 999;
+        var canStack = air || landAge <= 0.15;
+        if (canStack) this.hopCombo = Math.min(10, (this.hopCombo || 0) + 1);
+        else this.hopCombo = 1;
+        var combo = this.hopCombo || 1;
+        var stackBonus = 0;
+        for (var sci = 1; sci < combo; sci++) stackBonus += up * (0.30 * Math.pow(0.86, sci - 1));
+        var totalUp = up + stackBonus;
         body.velocity.x += Math.cos(ang) * fwd;
         body.velocity.y += Math.sin(ang) * fwd;
-        this.zVel = Math.max(this.zVel || 0, up);
-        this.zLift = Math.max(this.zLift || 0, (this.groundZ || 0) + 8);
+        if (air) this.zVel = Math.max(0, this.zVel || 0) + totalUp * (0.68 + 0.02 * Math.min(combo, 8));
+        else {
+          this.zVel = Math.max(this.zVel || 0, totalUp);
+          this.zLift = Math.max(this.zLift || 0, gnd + 8);
+        }
+        this.hopLandT = 999;
         this.hopSquash = 0; this.hopStretch = 1;
-        this.toast = this.inTruck ? "HOP · truck jump!" : "HOP!";
+        this.toast = this.inTruck ? "HOP · truck jump!" : (combo > 1 ? ("HOP ×" + combo + "!") : "HOP!");
         this.toastT = 1.8;
         for (var zi = 0; zi < 6; zi++) {
           var dg = this.add.circle(this.player.x - Math.cos(ang) * (10 + zi * 5), this.player.y - Math.sin(ang) * (10 + zi * 5), 3 + (zi % 3), 0x86efac, 0.7).setDepth(30);

@@ -17,6 +17,7 @@
    truck2: EXIT anytime (HUD); full elev contact (no zLift damp); ribbon/ramp ride-up; crest launch.
    polish11: truck yaw follows travel; brief EXIT tip; shared ZOOM ability.
    hop1: HOP ability (Y arc + squash); shove toys/animals/pollen.
+   hop2: ranch foot ALWAYS hops (continuous arc); ability HOP = bigger jump.
    joy2: shared virtual joystick via engine-boot setSteer; touch playfield aim disabled.
    WASD camera-relative — do not invert. */
 (function (global) {
@@ -273,7 +274,12 @@
   }
 
   function addMech(m, color, h) {
+    /* hop3: articulated robot mech (legs/torso/arms/head/glow eyes) — not a tall box */
     var p = worldToThree(m.x, m.y);
+    var mat = new THREE.MeshStandardMaterial({ color: color, metalness: 0.42, roughness: 0.4 });
+    var dark = new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.5, roughness: 0.35 });
+    var eyeCol = m.stories >= 1000 ? 0xfbbf24 : m.stories >= 100 ? 0x67e8f9 : 0xa5b4fc;
+    var eyeMat = new THREE.MeshStandardMaterial({ color: eyeCol, emissive: eyeCol, emissiveIntensity: 0.85, metalness: 0.2, roughness: 0.3 });
     if (m.stories >= 1000) {
       var haze = new THREE.Mesh(
         new THREE.SphereGeometry(h * 0.55, 12, 10),
@@ -281,8 +287,7 @@
       );
       haze.position.set(p.x, h * 0.55, p.z); scene.add(haze);
     }
-    /* tapsteer1: flat raised pad (not thick cyl) — was z-fighting backyard/ground while walking past */
-    var padR = h * 0.34;
+    var padR = h * 0.38;
     var padY = m.stories >= 1000 ? 0.18 : 0.14;
     var pad = new THREE.Mesh(
       new THREE.CircleGeometry(padR, 28),
@@ -295,7 +300,6 @@
     );
     pad.rotation.x = -Math.PI / 2;
     pad.position.set(p.x, padY, p.z);
-    pad.receiveShadow = false;
     pad.renderOrder = 3;
     scene.add(pad);
     var padRing = new THREE.Mesh(
@@ -309,23 +313,43 @@
     padRing.position.set(p.x, padY + 0.02, p.z);
     padRing.renderOrder = 4;
     scene.add(padRing);
-    var body = new THREE.Mesh(
-      new THREE.BoxGeometry(h * 0.28, h, h * 0.22),
-      new THREE.MeshStandardMaterial({ color: color, metalness: 0.35, roughness: 0.45 })
-    );
-    body.position.set(p.x, h * 0.5, p.z); body.castShadow = true; scene.add(body);
-    if (m.stories < 1000) {
-      var shoulderMat = new THREE.MeshStandardMaterial({ color: color, metalness: 0.3, roughness: 0.5 });
-      var sL = new THREE.Mesh(new THREE.BoxGeometry(h * 0.16, h * 0.18, h * 0.14), shoulderMat);
-      sL.position.set(p.x - h * 0.28, h * 0.7, p.z); scene.add(sL);
-      var sR = new THREE.Mesh(new THREE.BoxGeometry(h * 0.16, h * 0.18, h * 0.14), shoulderMat);
-      sR.position.set(p.x + h * 0.28, h * 0.7, p.z); scene.add(sR);
+
+    function part(geo, material, x, y, z) {
+      var mesh = new THREE.Mesh(geo, material);
+      mesh.position.set(p.x + x, y, p.z + z);
+      mesh.castShadow = true;
+      scene.add(mesh);
+      return mesh;
     }
-    var edge = new THREE.LineSegments(
-      new THREE.EdgesGeometry(new THREE.BoxGeometry(h * 0.28, h, h * 0.22)),
-      new THREE.LineBasicMaterial({ color: 0x0f172a })
-    );
-    edge.position.copy(body.position); scene.add(edge);
+    var tw = h * 0.34, td = h * 0.22;
+    /* Feet */
+    part(new THREE.BoxGeometry(h * 0.16, h * 0.05, h * 0.22), mat, -h * 0.12, h * 0.03, 0);
+    part(new THREE.BoxGeometry(h * 0.16, h * 0.05, h * 0.22), mat, h * 0.12, h * 0.03, 0);
+    /* Lower / upper legs */
+    part(new THREE.BoxGeometry(h * 0.1, h * 0.22, h * 0.12), mat, -h * 0.11, h * 0.16, 0);
+    part(new THREE.BoxGeometry(h * 0.1, h * 0.22, h * 0.12), mat, h * 0.11, h * 0.16, 0);
+    part(new THREE.BoxGeometry(h * 0.11, h * 0.2, h * 0.13), mat, -h * 0.1, h * 0.36, 0);
+    part(new THREE.BoxGeometry(h * 0.11, h * 0.2, h * 0.13), mat, h * 0.1, h * 0.36, 0);
+    /* Torso + chest glow */
+    part(new THREE.BoxGeometry(tw, h * 0.32, td), mat, 0, h * 0.58, 0);
+    part(new THREE.BoxGeometry(tw * 0.45, h * 0.08, td * 0.2), eyeMat, 0, h * 0.6, td * 0.52);
+    /* Shoulders */
+    part(new THREE.BoxGeometry(h * 0.14, h * 0.1, h * 0.14), mat, -tw * 0.62, h * 0.7, 0);
+    part(new THREE.BoxGeometry(h * 0.14, h * 0.1, h * 0.14), mat, tw * 0.62, h * 0.7, 0);
+    /* Arms + fists */
+    part(new THREE.BoxGeometry(h * 0.08, h * 0.28, h * 0.08), mat, -tw * 0.72, h * 0.52, 0);
+    part(new THREE.BoxGeometry(h * 0.08, h * 0.28, h * 0.08), mat, tw * 0.72, h * 0.52, 0);
+    part(new THREE.BoxGeometry(h * 0.1, h * 0.1, h * 0.1), mat, -tw * 0.72, h * 0.36, 0);
+    part(new THREE.BoxGeometry(h * 0.1, h * 0.1, h * 0.1), mat, tw * 0.72, h * 0.36, 0);
+    /* Head + visor + eyes */
+    part(new THREE.BoxGeometry(h * 0.2, h * 0.16, h * 0.18), mat, 0, h * 0.82, 0);
+    part(new THREE.BoxGeometry(h * 0.16, h * 0.06, h * 0.04), dark, 0, h * 0.84, h * 0.1);
+    part(new THREE.SphereGeometry(h * 0.025, 8, 6), eyeMat, -h * 0.045, h * 0.84, h * 0.12);
+    part(new THREE.SphereGeometry(h * 0.025, 8, 6), eyeMat, h * 0.045, h * 0.84, h * 0.12);
+    /* Antenna */
+    part(new THREE.CylinderGeometry(h * 0.01, h * 0.01, h * 0.1, 6), dark, 0, h * 0.95, 0);
+    part(new THREE.SphereGeometry(h * 0.02, 6, 5), new THREE.MeshStandardMaterial({ color: 0xf87171, emissive: 0xf87171, emissiveIntensity: 0.5 }), 0, h * 1.01, 0);
+
     addLabel(m.stories + "-story mech", "#fff", p.x, h + 0.55, p.z);
   }
 
@@ -419,8 +443,13 @@
     for (var t = 0; t < 32; t++) {
       var twx = gar.x + 40 + (t % 8) * 48, twy = gar.y + 70 + Math.floor(t / 8) * 50;
       var tp = worldToThree(twx, twy);
-      var toy = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.22, 0.22), new THREE.MeshStandardMaterial({ color: 0xfbbf24 }));
-      toy.position.set(tp.x, 0.2, tp.z); scene.add(toy);
+      var toyG = new THREE.Group();
+      var toyBody = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.14, 0.2), new THREE.MeshStandardMaterial({ color: 0xfbbf24 }));
+      toyBody.position.y = 0.07; toyG.add(toyBody);
+      var toyTop = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), new THREE.MeshStandardMaterial({ color: 0xf97316 }));
+      toyTop.position.y = 0.2; toyG.add(toyTop);
+      toyG.position.set(tp.x, 0.05, tp.z); scene.add(toyG);
+      var toy = toyG;
       state.pushables.push({
         mesh: toy, x: twx, y: twy, vx: 0, vy: 0, r: 10, kind: "toy",
         bounds: { x0: gar.x + 20, y0: gar.y + 50, x1: gar.x + gar.w - 20, y1: gar.y + gar.h - 40 },
@@ -1315,7 +1344,7 @@
   function doAbility() {
     /* hop1: shared HOP — vertical arc + forward carry */
     if (!state || state.cd > 0) return;
-    state.cd = 5.5;
+    state.cd = 0.1;
     var yaw = (state.faceYaw != null) ? state.faceYaw : 0;
     var spA = Math.hypot(state.vx || 0, state.vz || 0);
     if (spA > 1.0) yaw = Math.atan2(state.vx, state.vz);
@@ -1340,14 +1369,28 @@
         }
       }
     } else {
-      var fwd = state.inTruck ? 6.5 : 4.8;
-      var up = state.inTruck ? 7.2 : 8.5;
+      var fwd = state.inTruck ? 7.2 : 5.6;
+      var up = state.inTruck ? 8.0 : 9.8;
+      var gndL = state.groundLift || 0;
+      var air = (state.zLift || 0) > gndL + 0.12;
+      var landAge = state.hopLandT != null ? state.hopLandT : 999;
+      var canStack = air || landAge <= 0.15;
+      if (canStack) state.hopCombo = Math.min(10, (state.hopCombo || 0) + 1);
+      else state.hopCombo = 1;
+      var combo = state.hopCombo || 1;
+      var stackBonus = 0;
+      for (var sci = 1; sci < combo; sci++) stackBonus += up * (0.30 * Math.pow(0.86, sci - 1));
+      var totalUp = up + stackBonus;
       state.vx += fx * fwd;
       state.vz += fz * fwd;
-      state.zVel = Math.max(state.zVel || 0, up);
-      state.zLift = Math.max(state.zLift || 0, (state.groundLift || 0) + 0.25);
+      if (air) state.zVel = Math.max(0, state.zVel || 0) + totalUp * (0.68 + 0.02 * Math.min(combo, 8));
+      else {
+        state.zVel = Math.max(state.zVel || 0, totalUp);
+        state.zLift = Math.max(state.zLift || 0, gndL + 0.25);
+      }
+      state.hopLandT = 999;
       state.hopSquash = 0; state.hopStretch = 1;
-      state.toast = state.inTruck ? "HOP · truck jump!" : "HOP!";
+      state.toast = state.inTruck ? "HOP · truck jump!" : (combo > 1 ? ("HOP ×" + combo + "!") : "HOP!");
       if (!state.fx) state.fx = [];
       for (var zi = 0; zi < 8; zi++) {
         var spark = new THREE.Mesh(
@@ -1444,8 +1487,10 @@
     // Canvas convention: steer.y < 0 = Up/W (screen up). Camera sits at +X+Z offset.
     // Into-scene (screen up) = (-1,-1) on XZ; screen-right = (+1,-1) on XZ.
     // Ben orbit: when locked, position is owned by orbit tick above
+    var hopMx = 0, hopMz = 0, wantMove3 = false;
     if (!(state.mode === "space" && state.inOrbit)) {
     var steer = mergedSteer();
+    var airFoot3 = state.mode === "ranch" && !state.inTruck && ((state.zLift || 0) - (state.groundLift || 0)) > 0.08;
     if (steer.x || steer.y) {
       var len = Math.hypot(steer.x, steer.y) || 1;
       var ix = steer.x / len;
@@ -1456,6 +1501,8 @@
       var mx = rx * ix + fx * (-iy);
       var mz = rz * ix + fz * (-iy);
       if (Math.abs(mx) + Math.abs(mz) > 0.01) {
+        wantMove3 = true;
+        hopMx = mx; hopMz = mz;
         var aimYaw = Math.atan2(mx, mz);
         if (state.inTruck) {
           /* truck1: smooth yaw toward aim; thrust along facing */
@@ -1478,17 +1525,27 @@
           var al = Math.hypot(ax, az) || 1;
           state.vx += (ax / al) * accel * dt;
           state.vz += (az / al) * accel * dt;
-        } else {
+        } else if (airFoot3) {
+          /* hop2: mild air steer during hop arc */
+          state.vx += mx * accel * 0.38 * dt;
+          state.vz += mz * accel * 0.38 * dt;
+          state.facing = mx >= 0 ? 1 : -1;
+          state.faceYaw = aimYaw;
+        } else if (state.mode === "space") {
           state.vx += mx * accel * dt;
           state.vz += mz * accel * dt;
           state.facing = mx >= 0 ? 1 : -1;
-          /* eyes1: rotate so eyes (+Z) face walk direction; idle keeps last yaw */
+          state.faceYaw = aimYaw;
+        } else {
+          /* hop2 ranch: plant on brief ground — no hover-slide */
+          state.facing = mx >= 0 ? 1 : -1;
           state.faceYaw = aimYaw;
         }
       }
     }
-    state.vx *= Math.max(0, 1 - fric * dt);
-    state.vz *= Math.max(0, 1 - fric * dt);
+    var fricUse = (state.mode === "ranch" && !state.inTruck && !airFoot3) ? 14 : fric;
+    state.vx *= Math.max(0, 1 - fricUse * dt);
+    state.vz *= Math.max(0, 1 - fricUse * dt);
     var sp = Math.hypot(state.vx, state.vz);
     if (sp > maxSp) {
       state.vx = (state.vx / sp) * maxSp;
@@ -1538,16 +1595,17 @@
           state.toast = "AIR!"; state.toastT = Math.max(state.toastT || 0, 0.9);
         }
       }
-      /* polish9 + truck1: air hang + land bounce vs groundLift */
+      /* polish9 + truck1: air hang + land bounce; hop2: snappier foot gravity */
       airL = (state.zLift || 0) - groundLift;
-      var gFall = 14;
-      if (airL > 0.55 && Math.abs(state.zVel || 0) < 2.2) gFall *= 0.38;
+      var gFall = state.inTruck ? 14 : 22;
+      if (state.inTruck && airL > 0.55 && Math.abs(state.zVel || 0) < 2.2) gFall *= 0.38;
       if (airL > 0.02 || (state.zVel || 0) !== 0) {
         state.zVel = (state.zVel || 0) - gFall * dt;
         state.zLift = (state.zLift || 0) + state.zVel * dt;
         if (state.zLift <= groundLift) {
           var impact = Math.max(0, -(state.zVel || 0));
           state.zLift = groundLift;
+          state.hopLandT = 0;
           if (impact > 1.4) state.zVel = Math.min(3.2, impact * 0.28);
           else state.zVel = 0;
         }
@@ -1748,26 +1806,37 @@
         }
       }
       /* truck2: player Y tracks full elev (hidden while driving; cam/companions use it) */
-      /* hop1: Y lift + squash/stretch */
+      /* hop2: Y lift + squash/stretch + always-hop cycle */
       var airH = Math.max(0, (state.zLift || 0) - (state.groundLift || 0));
       if (state._wasHopAir && airH < 0.04) state.hopSquash = 1;
       state._wasHopAir = airH > 0.2;
       if (state.hopSquash > 0) state.hopSquash = Math.max(0, state.hopSquash - dt * 4);
       if (state.hopStretch > 0) state.hopStretch = Math.max(0, state.hopStretch - dt * 2.5);
-      var bobY = Math.abs(Math.sin(state.bob)) * (sp > 0.5 ? 0.06 : 0.02);
+      var bobY = (!state.inTruck && airH < 0.05)
+        ? Math.abs(Math.sin(state.bob)) * 0.02 : 0;
       state.player.position.y = (state.zLift || 0) + bobY;
       if (!state.inTruck) {
         var sq = state.hopSquash || 0;
-        var sy = 1 + Math.min(0.35, airH * 0.35) - sq * 0.28;
-        var sx = 1 - Math.min(0.22, airH * 0.22) + sq * 0.32;
+        var st3 = state.hopStretch || 0;
+        var sy = 1 + Math.min(0.4, airH * 0.4) + st3 * 0.18 - sq * 0.3;
+        var sx = 1 - Math.min(0.26, airH * 0.26) - st3 * 0.12 + sq * 0.34;
         state.player.scale.set(sx, sy, sx);
-        if (airH < 0.08 && sp > 5.5) {
-          state.autoHopCd = (state.autoHopCd || 0) - dt;
-          if (state.autoHopCd <= 0) {
-            state.autoHopCd = 0.3;
-            state.zVel = Math.max(state.zVel || 0, 5.2);
-            state.zLift = Math.max(state.zLift || 0, (state.groundLift || 0) + 0.15);
-            state.hopStretch = 0.7;
+        if (C.tickLocoHop) {
+          state.groundLift = state.groundLift || 0;
+          var launched3 = C.tickLocoHop(state, dt, {
+            moving: wantMove3,
+            zKey: "zLift",
+            zvKey: "zVel",
+            gndKey: "groundLift",
+            up: 5.6,
+            lift: 0.22,
+            groundHold: 0.022,
+            groundEps: 0.08,
+          });
+          if (launched3 && wantMove3) {
+            var hopSp3 = Math.min(maxSp * 0.98, 13.2);
+            state.vx = hopMx * hopSp3;
+            state.vz = hopMz * hopSp3;
           }
         }
       } else {

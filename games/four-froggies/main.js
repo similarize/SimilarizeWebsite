@@ -33,10 +33,10 @@
   const tipEl = document.getElementById("hub-tip");
 
   const FROG_DEFS = {
-    james: { id: "james", name: "James", role: "Wheel", color: "#4ade80", ability: "HOP", cdMax: 5.5 },
-    jimmy: { id: "jimmy", name: "Jimmy", role: "Shield", color: "#fb923c", ability: "HOP", cdMax: 5.5 },
-    bubbles: { id: "bubbles", name: "Bubbles", role: "Zap", color: "#60a5fa", ability: "HOP", cdMax: 5.5 },
-    rexy: { id: "rexy", name: "Rexy", role: "Bot", color: "#c084fc", ability: "HOP", cdMax: 5.5 },
+    james: { id: "james", name: "James", role: "Wheel", color: "#4ade80", ability: "HOP", cdMax: 0.1 },
+    jimmy: { id: "jimmy", name: "Jimmy", role: "Shield", color: "#fb923c", ability: "HOP", cdMax: 0.1 },
+    bubbles: { id: "bubbles", name: "Bubbles", role: "Zap", color: "#60a5fa", ability: "HOP", cdMax: 0.1 },
+    rexy: { id: "rexy", name: "Rexy", role: "Bot", color: "#c084fc", ability: "HOP", cdMax: 0.1 },
   };
   const FROG_ORDER = ["james", "jimmy", "bubbles", "rexy"];
 
@@ -367,7 +367,8 @@
     const me = localPlayer();
     if (!me || !btnAbility) return;
     const def = FROG_DEFS[me.id];
-    btnAbility.textContent = me.cd > 0 ? def.ability + " " + Math.ceil(me.cd) + "s" : def.ability;
+    /* hop3: sub-second anti-tap CD — do not flash a fake "1s" */
+    btnAbility.textContent = me.cd > 0.25 ? def.ability + " " + Math.ceil(me.cd) + "s" : def.ability;
     btnAbility.classList.toggle("ready", me.cd <= 0);
     btnAbility.classList.toggle("cd", me.cd > 0);
     /* polish7: role temp labels hang as TBD — do not lock roles */
@@ -417,18 +418,22 @@
       let hop = null;
       if (C && C.applyHop) {
         hop = C.applyHop(frog, frog.inTruck
-          ? { up: 260, truckUp: 260, fwd: 170, truckFwd: 210 }
-          : { up: 300, fwd: 150 });
+          ? { up: 280, truckUp: 280, fwd: 190, truckFwd: 230, landWindow: 0.15, maxCombo: 10 }
+          : { up: 340, fwd: 185, landWindow: 0.15, maxCombo: 10 });
       } else {
         const ang = (frog.faceAngle != null && isFinite(frog.faceAngle))
           ? frog.faceAngle
           : (frog.facing >= 0 ? 0 : Math.PI);
         const cx = Math.cos(ang), cy = Math.sin(ang);
-        frog.zVel = Math.max(frog.zVel || 0, frog.inTruck ? 240 : 300);
+        const air = (frog.z || 0) > ((frog.groundZ || 0) + 3);
+        const combo = air ? Math.min(10, (frog.hopCombo || 0) + 1) : 1;
+        frog.hopCombo = combo;
+        const boost = 340 + (combo - 1) * 55;
+        frog.zVel = air ? Math.max(0, frog.zVel || 0) + boost * 0.7 : Math.max(frog.zVel || 0, frog.inTruck ? 260 : boost);
         frog.z = Math.max(frog.z || 0, 6);
-        frog.vx = (frog.vx || 0) + cx * (frog.inTruck ? 200 : 150);
-        frog.vy = (frog.vy || 0) + cy * (frog.inTruck ? 200 : 150);
-        hop = { cx: cx, cy: cy };
+        frog.vx = (frog.vx || 0) + cx * (frog.inTruck ? 220 : 185);
+        frog.vy = (frog.vy || 0) + cy * (frog.inTruck ? 220 : 185);
+        hop = { cx: cx, cy: cy, combo: combo };
       }
       const cx = hop.cx, cy = hop.cy;
       if (world) {
@@ -436,7 +441,9 @@
         W.spawnSparks(world, frog.x, frog.y, 5);
       }
       shakeT = 0.12;
-      storyToast = frog.inTruck ? "HOP · truck jump!" : "HOP!";
+      const comboN = (hop && hop.combo) || frog.hopCombo || 1;
+      storyToast = frog.inTruck ? "HOP · truck jump!"
+        : (comboN > 1 ? ("HOP ×" + comboN + "!") : "HOP!");
       beep(520, 0.05, "triangle", 0.04);
       beep(780, 0.06, "square", 0.03);
     }

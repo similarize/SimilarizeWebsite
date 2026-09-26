@@ -8,7 +8,9 @@
    solid1: shared solid walls / mech pads / parked trucks; house doorway open.
    truck1: kid-toy truck scale constants; trackElevAt for path/mound undulation.
    truck2: stronger trackElevAt + ramp wedges; exit anytime HUD.
-   hop1: HOP ability (replaces ZOOM); shoveSmallProp for toys/animals/pollen. */
+   hop1: HOP ability (replaces ZOOM); shoveSmallProp for toys/animals/pollen.
+   hop2: tickLocoHop — continuous ranch foot hop cycle (any move input).
+   hop3: faster loco hop; near-zero ability CD; airborne stack height (combo hops). */
 (function (global) {
   "use strict";
 
@@ -446,7 +448,48 @@
   }
 
 
-  /* hop1: vertical hop + forward carry along face (shared Canvas / Phaser / Three) */
+  /* hop3: continuous ranch foot hop — snappier plant + higher launch.
+     opts: moving, zKey, zvKey, gndKey|ground, up, lift, groundHold, groundEps */
+  function tickLocoHop(ent, dt, opts) {
+    opts = opts || {};
+    if (!ent || ent.inTruck) return false;
+    var moving = !!opts.moving;
+    var zKey = opts.zKey || "z";
+    var zvKey = opts.zvKey || "zVel";
+    var gnd = opts.ground != null ? opts.ground
+      : (opts.gndKey && ent[opts.gndKey] != null ? ent[opts.gndKey]
+        : (ent.groundZ != null ? ent.groundZ : 0));
+    var up = opts.up != null ? opts.up : 210;
+    var lift = opts.lift != null ? opts.lift : 6;
+    var hold = opts.groundHold != null ? opts.groundHold : 0.025;
+    var eps = opts.groundEps != null ? opts.groundEps : 1.2;
+    var z = ent[zKey] || 0;
+    var zv = ent[zvKey] || 0;
+    var onGround = z <= gnd + eps && zv <= Math.max(12, up * 0.08);
+    if (onGround) {
+      ent.hopLandT = (ent.hopLandT != null ? ent.hopLandT : 0) + dt;
+      if (ent.hopLandT > 0.16) ent.hopCombo = 0;
+    }
+    if (!moving) {
+      ent.hopGroundT = 0;
+      return false;
+    }
+    if (!onGround) {
+      ent.hopGroundT = 0;
+      return false;
+    }
+    ent.hopGroundT = (ent.hopGroundT || 0) + dt;
+    if (ent.hopGroundT < hold) return false;
+    ent[zvKey] = Math.max(zv, up);
+    ent[zKey] = Math.max(z, gnd + lift);
+    ent.hopStretch = Math.max(ent.hopStretch || 0, 0.9);
+    ent.hopGroundT = 0;
+    return true;
+  }
+
+  /* hop3: ability HOP — forward carry + airborne/land-window combo stack height.
+     Stack: each air (or ≤landWindow after land) ability hop adds height; soft-cap ~10.
+     opts: up, fwd, truckUp, truckFwd, ang, zKey, zvKey, landWindow, maxCombo, airEps, gndKey */
   function applyHop(ent, opts) {
     opts = opts || {};
     var ang = (ent.faceAngle != null && isFinite(ent.faceAngle))
@@ -455,25 +498,52 @@
     if (opts.ang != null && isFinite(opts.ang)) ang = opts.ang;
     var cx = Math.cos(ang), cy = Math.sin(ang);
     var inTruck = !!ent.inTruck;
-    var up = inTruck ? (opts.truckUp != null ? opts.truckUp : 240) : (opts.up != null ? opts.up : 290);
-    var fwd = inTruck ? (opts.truckFwd != null ? opts.truckFwd : 200) : (opts.fwd != null ? opts.fwd : 155);
-    var gnd = ent.groundZ != null ? ent.groundZ : 0;
+    var up = inTruck ? (opts.truckUp != null ? opts.truckUp : 260) : (opts.up != null ? opts.up : 320);
+    var fwd = inTruck ? (opts.truckFwd != null ? opts.truckFwd : 220) : (opts.fwd != null ? opts.fwd : 175);
     var zKey = opts.zKey || "z";
     var zvKey = opts.zvKey || "zVel";
+    var gndKey = opts.gndKey || "groundZ";
+    var gnd = ent[gndKey] != null ? ent[gndKey] : (ent.groundZ != null ? ent.groundZ : 0);
     var z = ent[zKey] || 0;
     var zv = ent[zvKey] || 0;
-    if (z <= gnd + 3) {
-      ent[zvKey] = Math.max(zv, up);
-      ent[zKey] = Math.max(z, gnd + 5);
+    var airEps = opts.airEps != null ? opts.airEps : 3;
+    var landWin = opts.landWindow != null ? opts.landWindow : 0.15;
+    var maxCombo = opts.maxCombo != null ? opts.maxCombo : 10;
+    var airborne = z > gnd + airEps;
+    var landAge = ent.hopLandT != null ? ent.hopLandT : 999;
+    var canStack = airborne || landAge <= landWin;
+    if (canStack) {
+      ent.hopCombo = Math.min(maxCombo, (ent.hopCombo || 0) + 1);
     } else {
-      ent[zvKey] = Math.max(zv, up * 0.42);
+      ent.hopCombo = 1;
     }
+    var combo = ent.hopCombo || 1;
+    /* Diminishing stack bonus — ~5–10 hops climb big; soft ceiling after maxCombo */
+    var stackBonus = 0;
+    for (var si = 1; si < combo; si++) {
+      stackBonus += up * (0.30 * Math.pow(0.86, si - 1));
+    }
+    var totalUp = up + stackBonus;
+    if (airborne) {
+      /* Bunny-hop: cancel fall into upward, then add stacked lift */
+      ent[zvKey] = Math.max(0, zv) + totalUp * (0.68 + 0.02 * Math.min(combo, 8));
+    } else {
+      ent[zvKey] = Math.max(zv, totalUp);
+      ent[zKey] = Math.max(z, gnd + 5);
+    }
+    ent.hopLandT = 999;
     ent.vx = (ent.vx || 0) + cx * fwd;
     ent.vy = (ent.vy || 0) + cy * fwd;
     ent.hopStretch = 1;
     ent.dashTrail = Math.max(ent.dashTrail || 0, 0.4);
-    ent.invuln = Math.max(ent.invuln || 0, 0.25);
-    return { ang: ang, cx: cx, cy: cy, up: up, fwd: fwd };
+    ent.invuln = Math.max(ent.invuln || 0, 0.18);
+    return { ang: ang, cx: cx, cy: cy, up: totalUp, fwd: fwd, combo: combo };
+  }
+
+  /* hop3: call on land to open the short combo land-window */
+  function noteHopLand(ent) {
+    if (!ent) return;
+    ent.hopLandT = 0;
   }
 
   /* hop1: shove small movable props (toys / little animals / pollen) — not walls/trucks/mechs */
@@ -568,6 +638,8 @@
     solidCircles: solidCircles,
     resolveSolid: resolveSolid,
     applyHop: applyHop,
+    tickLocoHop: tickLocoHop,
+    noteHopLand: noteHopLand,
     shoveSmallProp: shoveSmallProp,
     tickPushable: tickPushable,
   };
