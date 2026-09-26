@@ -488,18 +488,23 @@
     var accel = state.mode === "space" ? 14 : state.inTruck ? 18 : 14;
     var fric = state.mode === "space" ? 2.8 : state.inTruck ? 2.6 : 4.5;
 
-    // Map screen WASD → ground plane relative to locked camera forward
+    // Map screen WASD/D-pad → ground plane relative to locked camera
+    // Canvas convention: steer.y < 0 = Up/W (screen up). Camera sits at +X+Z offset.
+    // Into-scene (screen up) = (-1,-1) on XZ; screen-right = (+1,-1) on XZ.
     // Ben orbit: when locked, position is owned by orbit tick above
     if (!(state.mode === "space" && state.inOrbit)) {
     if (steer.x || steer.y) {
       var len = Math.hypot(steer.x, steer.y) || 1;
       var ix = steer.x / len;
-      var iy = steer.y / len;
-      var mx = (ix - iy) * 0.707;
-      var mz = (ix + iy) * 0.707;
+      var iy = steer.y / len; // Up/W is negative
+      var inv = 0.70710678;
+      var fx = -inv, fz = -inv; // screen up / into scene
+      var rx = inv, rz = -inv;  // screen right
+      var mx = rx * ix + fx * (-iy);
+      var mz = rz * ix + fz * (-iy);
       state.vx += mx * accel * dt;
       state.vz += mz * accel * dt;
-      if (steer.x) state.facing = steer.x > 0 ? 1 : -1;
+      if (Math.abs(mx) + Math.abs(mz) > 0.01) state.facing = mx >= 0 ? 1 : -1;
     }
     state.vx *= Math.max(0, 1 - fric * dt);
     state.vz *= Math.max(0, 1 - fric * dt);
