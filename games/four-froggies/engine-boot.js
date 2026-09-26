@@ -5,7 +5,7 @@
   "use strict";
 
   var C = global.FroggiesCanon;
-  var CACHE = "20260925-three-dir1";
+  var CACHE = "20260925-parity1";
   var CDN = {
     phaser: "https://cdn.jsdelivr.net/npm/phaser@3.87.0/dist/phaser.min.js",
     three: "https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js",
@@ -107,6 +107,7 @@
     var tipEl = $("hub-tip");
     var btnAbility = $("btn-ability");
     var btnInteract = $("btn-interact");
+    var btnEscape = $("btn-escape");
 
     return {
       onHud: function (h) {
@@ -124,6 +125,11 @@
           btnAbility.textContent = cd > 0 ? h.ability + " " + Math.ceil(cd) + "s" : h.ability;
           btnAbility.classList.toggle("ready", cd <= 0);
           btnAbility.classList.toggle("cd", cd > 0);
+        }
+        if (btnEscape) {
+          var showEsc = !!(h.mode === "space" && h.inOrbit);
+          btnEscape.hidden = !showEsc;
+          btnEscape.classList.toggle("ready", showEsc);
         }
       },
       onToast: function (t) {
@@ -313,6 +319,16 @@
         if (!engineRunning) return;
         var a = api();
         if (a) a.pulseAbility();
+      });
+    }
+
+    var btnEscAlt = $("btn-escape");
+    if (btnEscAlt) {
+      btnEscAlt.addEventListener("click", function () {
+        if (!engineRunning) return;
+        if (global.FroggiesEngines && global.FroggiesEngines.leaveOrbit) {
+          global.FroggiesEngines.leaveOrbit();
+        }
       });
     }
 

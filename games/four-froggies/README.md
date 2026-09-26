@@ -51,9 +51,9 @@ Phaser and three.js load their CDNs on first GO (no paid APIs). Party sync is in
 
 Starship (Spotty) → Space/Moon (Jimmy jetpack chase; Germy + Daisy) → station (Alex + Fred + ~20 people) → solar map (Mars moons + Neptune’s 14) → Mars cave / King Germy → mech set-piece. Soft stubs as before.
 
-### Phaser / three.js (solo stubs)
+### Phaser / three.js (solo — landmark parity)
 
-Same ranch areas & hotspots (house, track, pond, phone, SPS, Cybertruck, Starship/Spotty). INTERACT at **Starship** → thin **space** stub: chase **Jimmy**, see **Spotty / Germy / Daisy**, return pad → ranch. Phone/SPS are toast stubs on these engines (full HUD remains on Canvas).
+Same big-map landmarks as Canvas (house compound + mechs, squiggle track, pond fish+whales, 4 Cybertrucks + shared pile-in, Starship). Drive onto pond for on-water / underwater look. INTERACT at **Starship** → thin **space** stub: chase **Jimmy**, Moon orbit pull, **Escape** / hard thruster leave, see **Spotty / Germy / Daisy**, return pad → ranch. Phone/SPS stay toast stubs (full HUD on Canvas). Party sync not wired. three.js WASD is camera-relative (matches Canvas).
 
 ### Party (Host + Join) — Canvas only
 
@@ -71,10 +71,10 @@ Same PeerJS lobby: **Host room** → QR / invite `?room=CODE` → claim seats �
 | File | Role |
 |------|------|
 | `index.html` | Lobby + engine picker + hub HUD + phone/SPS panels |
-| `canon.js` | Ben-canon constants for Phaser/Three only (independent map scale) |
+| `canon.js` | Shared Ben-canon: map, compound, track, trucks, pond helpers (all engines) |
 | `engine-boot.js` | **Thin lobby switcher** + CDN load + boot / HUD bridge (capture-phase GO) |
-| `phaser-hub.js` | Phaser 3 ranch + thin space stub (CDN, on demand) |
-| `three-hub.js` | three.js fixed-angle ranch + thin space stub (CDN, on demand) |
+| `phaser-hub.js` | Phaser 3 ranch (Canvas-parity landmarks) + thin space stub (CDN) |
+| `three-hub.js` | three.js fixed-angle ranch (Canvas-parity + camera-relative WASD) + thin space stub |
 | `world.js` | Canvas ranch map / physics / render — **Canvas executor owns scale** |
 | `story.js` | Phone (Purple/Blue Bear) + SPS + Optimus (Canvas) |
 | `space.js` | Canvas space episode scenes |
@@ -83,18 +83,18 @@ Same PeerJS lobby: **Host room** → QR / invite `?room=CODE` → claim seats �
 | `ai.js` / `strip.js` | Strip-era leftovers (not default entry) |
 | `assets/` | Imagine splash / backdrop |
 
-**Collision rule:** Phaser/Three live in `phaser-hub.js` / `three-hub.js` + `engine-boot.js`. They do **not** rewrite `world.js` ranch scale. Canvas expansion (10× map, house, track, trucks, etc.) stays on the Canvas files.
+**Collision rule:** Shared landmark layout lives in `canon.js`. Canvas `world.js` remains the richest renderer; Phaser/Three hubs consume the same canon landmarks for parity. Do not invent cast/zone names. Preserve three.js camera-relative WASD.
 
-## What's new (engines1) — physics & look only
 
-Ben: “let’s do all three” = keep Canvas **and** add Phaser 3 **and** three.js for production physics/look comparison. Same story/cast.
+## What's new (parity1) — Phaser/Three toward Canvas landmarks
 
-- Lobby **engine picker** + `localStorage` remember (`ff-engine`).
-- Canvas path unchanged as **default** (PeerJS intact); switcher does not patch `main.js` / `world.js`.
-- Phaser 3 via jsDelivr CDN — `phaser-hub.js` ranch + space stub.
-- three.js (r134 UMD CDN) — `three-hub.js`, **locked** isometric-ish camera (no orbit drag / no FPS free-look).
-- **ranchfeel2 (Canvas):** Cybertruck drives **on** pond water (wake + waterline clip); plunge reads **under** water (submerged tint). Track redesigned for variety (mountain highs, valley lows, squiggles, branch loops — not a simple oval). Crisper silhouettes/edges on house, track, pond, truck. Scale/cast/engines unchanged.
-- Cache-bust: `?v=20260925-ranchfeel2`.
+Ben: keep pouring polish into Canvas, **and** remember everything done on Canvas for Phaser + three.js.
+
+- Shared `canon.js` landmark bible: ~10× map, house compound (backyard / garage / 10·100·1000 mechs), squiggle track + mounds/ramps, 4 Cybertrucks + shared pile-in, pond helpers, Starship approach, orbit physics.
+- **Phaser / three.js** hubs: big map, compound, varied track (not oval), big pond with fish+whales, Cybertruck on-water / underwater look, 4 trucks + shared pile-in, Starship → space with planet orbit pull + Escape / hard thruster leave. Solo-first PeerJS OK.
+- **three.js WASD** camera-relative (Canvas `steer.y < 0` = screen up) — do not invert (`three-dir1` fix kept).
+- **Canvas** not regressed; small polish: Starship approach uses shared gold guide from canon.
+- Cache-bust: `?v=20260925-parity1`.
 
 ## Still stubbed / next
 
@@ -114,4 +114,4 @@ Ben: “let’s do all three” = keep Canvas **and** add Phaser 3 **and** three
 
 ## Publish
 
-Game Creator → **Webmaster** only. Product path: `games/four-froggies/`. Do not republish SPS as arcade. Cache-bust: `?v=20260925-ranchfeel2`.
+Game Creator → **Webmaster** only. Product path: `games/four-froggies/`. Do not republish SPS as arcade. Cache-bust: `?v=20260925-parity1`.

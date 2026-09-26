@@ -1,5 +1,5 @@
 /* Four Froggies — 2.5D ranch hub (fixed-angle / y-sorted layers).
-   ranchfeel2: Cybertruck water surface/under visuals; varied track (mountains/valleys/squiggles/branches); crisper silhouettes.
+   ranchfeel2 + parity1: Cybertruck water; varied track; crisper silhouettes; Starship approach uses shared canon gold guide.
    ~10× map: real roam between ranch house / track / pond / Starship.
    James ranch house: big house, backyard (animals), huge garage (toys + 10/100-story mechs);
    1000-story mech sits out back (won't fit). Four Cybertrucks + shared pile-in.
@@ -1641,9 +1641,10 @@
   }
 
   function drawStarshipPad(ctx, camX, camY, vw, vh, near) {
-    /* Connected approach path from ranch grounds toward pad */
-    var pathPts = [
-      [520, 1200], [480, 980], [440, 760], [400, 540], [360, 380],
+    /* Connected approach — shared canon gold guide (parity1 Canvas polish) */
+    var C0 = global.FroggiesCanon;
+    var pathPts = (C0 && C0.STARSHIP_APPROACH) || [
+      [520, 1480], [480, 1200], [430, 900], [390, 620], [360, 400],
     ];
     ctx.beginPath();
     for (var i = 0; i < pathPts.length; i++) {
@@ -1651,14 +1652,19 @@
       if (i === 0) ctx.moveTo(pp.x, pp.y);
       else ctx.lineTo(pp.x, pp.y);
     }
-    ctx.strokeStyle = "rgba(148, 163, 184, 0.55)";
-    ctx.lineWidth = 10;
+    ctx.strokeStyle = "rgba(180, 140, 40, 0.5)";
+    ctx.lineWidth = 12;
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
     ctx.stroke();
-    ctx.strokeStyle = "rgba(56, 189, 248, 0.35)";
-    ctx.lineWidth = 3;
-    ctx.setLineDash([10, 8]);
+    ctx.strokeStyle = "rgba(251, 191, 36, 0.75)";
+    ctx.lineWidth = 3.5;
+    ctx.setLineDash([12, 9]);
     ctx.stroke();
     ctx.setLineDash([]);
+    ctx.strokeStyle = "rgba(254, 243, 199, 0.55)";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
 
     var p = project(STARSHIP.x, STARSHIP.y, camX, camY, vw, vh);
     /* Wide pad rings */

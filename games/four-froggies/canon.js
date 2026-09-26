@@ -1,5 +1,6 @@
 /* Four Froggies — shared Ben-canon constants for all engines.
-   WORLD_BIBLE only. No invented cast/zone/toy names. Physics/look engines compare. */
+   WORLD_BIBLE only. No invented cast/zone/toy names. Physics/look engines compare.
+   parity1: landmark layout (compound / track / pond / trucks) shared for Canvas + Phaser + three. */
 (function (global) {
   "use strict";
 
@@ -17,10 +18,82 @@
   var MAP_H = 3150;
 
   var AREAS = [
-    /* James ranch compound: big house + backyard + huge garage (one Ben-named area) */
     { id: "house", name: "Ranch house", x: 60, y: 1320, w: 1180, h: 1180, color: "#8b5a2b" },
     { id: "track", name: "Monster truck track", x: 1680, y: 1580, w: 2200, h: 1380, color: "#57534e" },
     { id: "pond", name: "Pond", x: 2320, y: 80, w: 1680, h: 1180, color: "#0e7490" },
+  ];
+
+  var COMPOUND = {
+    yard: { x: 100, y: 2100, w: 600, h: 360 },
+    garage: { x: 700, y: 1400, w: 480, h: 520 },
+    house: { x: 120, y: 1420, w: 520, h: 420 },
+    mech10: { x: 820, y: 1680, stories: 10 },
+    mech100: { x: 980, y: 1700, stories: 100 },
+    mech1000: { x: 340, y: 2420, stories: 1000 },
+    spawn: { x: 280, y: 1750 },
+  };
+
+  var TRACK_MAIN = [
+    [1780, 2220, 0], [1850, 2080, 0.15], [1940, 1920, 0.45], [2060, 1780, 0.85],
+    [2180, 1700, 1.15], [2320, 1660, 1.25], [2480, 1700, 1.05], [2600, 1820, 0.55],
+    [2680, 1960, 0.25], [2780, 2040, 0.2], [2920, 1980, 0.35], [3080, 1860, 0.7],
+    [3220, 1760, 1.0], [3380, 1800, 0.95], [3520, 1940, 0.55], [3620, 2120, 0.2],
+    [3660, 2300, 0], [3600, 2480, -0.15], [3480, 2620, -0.35], [3300, 2740, -0.4],
+    [3100, 2820, -0.3], [2880, 2840, -0.15], [2680, 2760, 0.05], [2500, 2620, 0.25],
+    [2340, 2520, 0.45], [2180, 2480, 0.35], [2020, 2420, 0.2], [1900, 2340, 0.1],
+    [1820, 2280, 0],
+  ];
+  var TRACK_BRANCH_A = [
+    [2200, 2100, 0.3], [2360, 2180, 0.15], [2540, 2280, 0], [2720, 2360, -0.1],
+    [2900, 2420, 0], [3080, 2360, 0.2], [3200, 2200, 0.45], [3180, 2040, 0.55],
+    [3020, 1960, 0.4], [2820, 2000, 0.25], [2620, 2080, 0.2], [2420, 2120, 0.25],
+    [2260, 2100, 0.3],
+  ];
+  var TRACK_BRANCH_B = [
+    [2400, 2400, 0.1], [2560, 2520, -0.1], [2760, 2580, -0.2], [2960, 2520, -0.1],
+    [3080, 2380, 0.15], [3000, 2260, 0.35], [2800, 2220, 0.4], [2600, 2280, 0.25],
+    [2460, 2360, 0.15],
+  ];
+  var TRACK_MOUNDS = [
+    { x: 2260, y: 1740, r: 160, h: 1.2 },
+    { x: 3280, y: 1820, r: 140, h: 1.05 },
+    { x: 2460, y: 2480, r: 110, h: 0.55 },
+    { x: 3180, y: 2680, r: 130, h: -0.35 },
+  ];
+  var RAMPS = [
+    { x: 2060, y: 1780, w: 72, h: 36, boost: 1.45 },
+    { x: 2320, y: 1660, w: 76, h: 38, boost: 1.6 },
+    { x: 2480, y: 1700, w: 70, h: 34, boost: 1.4 },
+    { x: 3080, y: 1860, w: 72, h: 36, boost: 1.48 },
+    { x: 3220, y: 1760, w: 74, h: 36, boost: 1.55 },
+    { x: 3380, y: 1800, w: 70, h: 34, boost: 1.42 },
+    { x: 3480, y: 2620, w: 72, h: 34, boost: 1.35 },
+    { x: 3300, y: 2740, w: 74, h: 36, boost: 1.5 },
+    { x: 2340, y: 2520, w: 68, h: 32, boost: 1.32 },
+    { x: 2680, y: 1960, w: 66, h: 30, boost: 1.28 },
+    { x: 2540, y: 2280, w: 70, h: 34, boost: 1.38 },
+    { x: 2900, y: 2420, w: 68, h: 32, boost: 1.36 },
+    { x: 3200, y: 2200, w: 72, h: 34, boost: 1.44 },
+    { x: 2760, y: 2580, w: 70, h: 34, boost: 1.4 },
+    { x: 3000, y: 2260, w: 68, h: 32, boost: 1.33 },
+    { x: 1940, y: 1920, w: 64, h: 30, boost: 1.25 },
+    { x: 3620, y: 2120, w: 70, h: 34, boost: 1.46 },
+    { x: 2180, y: 2480, w: 66, h: 30, boost: 1.3 },
+    { x: 3100, y: 2820, w: 72, h: 34, boost: 1.52 },
+    { x: 2800, y: 2220, w: 68, h: 32, boost: 1.37 },
+  ];
+
+  var TRUCK_SPOTS = [
+    { id: "james", x: 1880, y: 1720 },
+    { id: "jimmy", x: 2080, y: 1720 },
+    { id: "bubbles", x: 2280, y: 1720 },
+    { id: "rexy", x: 2480, y: 1720 },
+    { id: "shared", x: 2180, y: 1880 },
+  ];
+
+  var STARSHIP = { x: 360, y: 320, padR: 110 };
+  var STARSHIP_APPROACH = [
+    [520, 1480], [480, 1200], [430, 900], [390, 620], [360, 400],
   ];
 
   var HOTSPOTS = [
@@ -44,8 +117,6 @@
     fred: { name: "Fred", tip: "Fred · astronaut" },
   };
 
-  /* Ben physics (ALL engines): near a planet → gravity pull into orbit.
-     Leave only via Escape key/button OR hard thruster push (ability jet). */
   var ORBIT_PHYSICS = {
     captureRadius: 120,
     softPullRadius: 220,
@@ -57,7 +128,6 @@
   };
 
   var ENGINE_KEY = "ff-engine";
-
   var ENGINES = ["canvas", "phaser", "three"];
 
   function getEngine() {
@@ -71,9 +141,7 @@
 
   function setEngine(id) {
     if (ENGINES.indexOf(id) < 0) id = "canvas";
-    try {
-      localStorage.setItem(ENGINE_KEY, id);
-    } catch (e) { /* ignore */ }
+    try { localStorage.setItem(ENGINE_KEY, id); } catch (e) {}
     return id;
   }
 
@@ -100,12 +168,46 @@
     return "Ranch grounds";
   }
 
+  function inPond(x, y) {
+    var a = AREAS[2];
+    var pad = 40;
+    return x >= a.x + pad && x <= a.x + a.w - pad &&
+           y >= a.y + pad && y <= a.y + a.h - pad;
+  }
+
+  function onTrack(x, y) {
+    var a = AREAS[1];
+    return x >= a.x && x <= a.x + a.w && y >= a.y && y <= a.y + a.h;
+  }
+
+  function isTruckHotspot(h) {
+    return !!(h && (h.kind === "truck" || (h.id && String(h.id).indexOf("truck") === 0)));
+  }
+
+  function rampAt(x, y) {
+    for (var i = 0; i < RAMPS.length; i++) {
+      var r = RAMPS[i];
+      if (x >= r.x - r.w * 0.5 && x <= r.x + r.w * 0.5 &&
+          y >= r.y - r.h * 0.5 && y <= r.y + r.h * 0.5) return r;
+    }
+    return null;
+  }
+
   global.FroggiesCanon = {
     FROG_ORDER: FROG_ORDER,
     FROG_DEFS: FROG_DEFS,
     MAP_W: MAP_W,
     MAP_H: MAP_H,
     AREAS: AREAS,
+    COMPOUND: COMPOUND,
+    TRACK_MAIN: TRACK_MAIN,
+    TRACK_BRANCH_A: TRACK_BRANCH_A,
+    TRACK_BRANCH_B: TRACK_BRANCH_B,
+    TRACK_MOUNDS: TRACK_MOUNDS,
+    RAMPS: RAMPS,
+    TRUCK_SPOTS: TRUCK_SPOTS,
+    STARSHIP: STARSHIP,
+    STARSHIP_APPROACH: STARSHIP_APPROACH,
     HOTSPOTS: HOTSPOTS,
     SPACE_CAST: SPACE_CAST,
     ORBIT_PHYSICS: ORBIT_PHYSICS,
@@ -115,5 +217,9 @@
     setEngine: setEngine,
     nearestHotspot: nearestHotspot,
     areaNameAt: areaNameAt,
+    inPond: inPond,
+    onTrack: onTrack,
+    isTruckHotspot: isTruckHotspot,
+    rampAt: rampAt,
   };
 })(typeof window !== "undefined" ? window : globalThis);
