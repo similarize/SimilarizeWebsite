@@ -28,7 +28,9 @@
    mobile1: phone+desktop shared UI — smaller/toggle-friendly mini-map + harder particle caps on narrow.
    ~10× map: real roam between ranch house / track / pond / Starship.
    James ranch house: big house, backyard (animals), huge garage (toys + 10/100-story mechs);
-   1000-story mech sits out back (won't fit). Four Cybertrucks + shared pile-in.
+   1000-story + trillion-story mechs sit out back (won't fit). Four Cybertrucks + shared pile-in.
+   yard1: backyard trees/shrubs/creek/rocks/flowers/fence; soft stream slow/splash;
+   park1: EXIT leaves mech/truck at exit pos (no snap-home).
    Pond: big fish + whales. Starship pad connected → space episode.
    Ben-named only. No invented cast/zone/toy names. */
 (function (global) {
@@ -269,12 +271,15 @@
       { id: "mech-10", label: "Board 10-story mech", x: 820, y: 1680, r: 64, tip: "10-story mech · INTERACT / BOARD", kind: "mech", stories: 10, solidId: "mech10" },
       { id: "mech-100", label: "Board 100-story mech", x: 980, y: 1700, r: 78, tip: "100-story mech · INTERACT / BOARD", kind: "mech", stories: 100, solidId: "mech100" },
       { id: "mech-1000", label: "Board 1000-story mech", x: 340, y: 2420, r: 120, tip: "1000-story mech · INTERACT / BOARD", kind: "mech", stories: 1000, solidId: "mech1000" },
+      { id: "mech-trillion", label: "Board trillion-story mech", x: 600, y: 2170, r: 150, tip: "trillion-story mech · INTERACT / BOARD", kind: "mech", stories: 1e12, solidId: "mechTrillion" },
       { id: "fishies", label: "Fishies", x: 3160, y: 620, r: 70, tip: "Splash the pond" },
       { id: "starship", label: "Starship", x: STARSHIP.x, y: STARSHIP.y, r: 72, tip: "Starship · Spotty · space episode" },
     ];
   }
 
   function createWorld() {
+    var C0 = global.FroggiesCanon;
+    if (C0 && C0.resetVehicleParks) C0.resetVehicleParks();
     return {
       mapW: MAP_W,
       mapH: MAP_H,
@@ -1095,7 +1100,9 @@
     var my = ent.steerY;
     var mag = Math.hypot(mx, my);
     if (mag > 1) { mx /= mag; my /= mag; }
-    var wetMove = inPond(ent.x, ent.y) && (ent.z || 0) < 3;
+    var Cwet = global.FroggiesCanon;
+    var inStream = Cwet && Cwet.inYardStream ? Cwet.inYardStream(ent.x, ent.y) : false;
+    var wetMove = (inPond(ent.x, ent.y) || inStream) && (ent.z || 0) < 3;
     var accel = ent.inMech ? 780 : ent.inTruck ? 1680 : 1520;
     var friction = ent.inMech ? 7.2 : ent.inTruck ? 5.6 : 9.6;
     if (wetMove && ent.inTruck) {
@@ -1103,8 +1110,22 @@
       friction *= 1.15;
       maxSp *= 0.88;
     } else if (wetMove) {
-      accel *= 0.75;
-      maxSp *= 0.8;
+      /* yard1: creek is gentler than pond */
+      if (inStream && !inPond(ent.x, ent.y)) {
+        accel *= 0.88;
+        maxSp *= 0.9;
+      } else {
+        accel *= 0.75;
+        maxSp *= 0.8;
+      }
+    }
+    if (inStream && !ent.inTruck && !ent.inMech && (ent.z || 0) < 3 && world) {
+      ent._streamSplash = (ent._streamSplash || 0) - (typeof dt === "number" ? dt : 0.016);
+      var spNow = Math.hypot(ent.vx || 0, ent.vy || 0);
+      if (ent._streamSplash <= 0 && spNow > 40) {
+        spawnSplash(world, ent.x, ent.y, 2);
+        ent._streamSplash = 0.22;
+      }
     }
     var canon = global.FroggiesCanon;
     var airFoot = !ent.inTruck && !ent.inMech && (ent.z || 0) > 1.5;
@@ -1234,9 +1255,38 @@
     if (ent.dashTrail > 0) ent.dashTrail -= dt;
   }
 
+  function syncWorldHotspotPos(world, id, x, y) {
+    if (!world || !world.hotspots || !id) return;
+    var C = global.FroggiesCanon;
+    var sid = C && C.mechSolidId ? C.mechSolidId(id) : null;
+    for (var i = 0; i < world.hotspots.length; i++) {
+      var h = world.hotspots[i];
+      if (h.id === id || (sid && (h.solidId === sid || (C && C.mechSolidId && C.mechSolidId(h.id) === sid)))) {
+        h.x = x; h.y = y;
+      }
+    }
+    if (world.trucks) {
+      var tid = id === "truck-shared" ? "shared" : String(id || "").replace(/^truck-/, "");
+      for (var t = 0; t < world.trucks.length; t++) {
+        if (world.trucks[t].id === tid || ("truck-" + world.trucks[t].id) === id) {
+          world.trucks[t].x = x; world.trucks[t].y = y;
+        }
+      }
+    }
+  }
+
+  function parkVehicleHere(world, id, x, y) {
+    var C = global.FroggiesCanon;
+    if (C && C.setVehiclePark) C.setVehiclePark(id, x, y);
+    syncWorldHotspotPos(world, id, x, y);
+  }
+
   function boardTruck(world, frogs, frog, hotspot) {
     if (!hotspot || hotspot.kind !== "truck") return false;
     if (frog.inTruck) {
+      /* park1: leave Cybertruck where we EXIT — frog keeps walking from here */
+      var parkId = frog.truckId || hotspot.id || "truck";
+      var px = frog.x, py = frog.y;
       frog.inTruck = false;
       frog.truckMode = null;
       frog.truckId = null;
@@ -1254,9 +1304,11 @@
             f.z = 0;
             f.zVel = 0;
             f.groundZ = 0;
+            f.x = px; f.y = py;
           }
         }
       }
+      parkVehicleHere(world, parkId, px, py);
       return true;
     }
     frog.x = hotspot.x;
@@ -1283,12 +1335,16 @@
     var C = global.FroggiesCanon;
     /* EXIT anytime while piloting */
     if (frog.inMech) {
+      /* park1: leave mech at EXIT pos — no snap back to yard pad */
+      var parkMid = frog.mechId || (hotspot && hotspot.id) || "mech";
+      var mpx = frog.x, mpy = frog.y;
       frog.inMech = false;
       frog.mechId = null;
       frog.mechStories = 0;
       frog.z = 0;
       frog.zVel = 0;
       frog.groundZ = 0;
+      parkVehicleHere(world, parkMid, mpx, mpy);
       return true;
     }
     if (!hotspot || (hotspot.kind !== "mech" && !(C && C.isMechHotspot && C.isMechHotspot(hotspot)))) {
@@ -1506,23 +1562,25 @@
   function drawMech(ctx, wx, wy, stories, camX, camY, vw, vh, tint) {
     /* hop3: robot/mech silhouette (head·torso·arms·legs·glow eyes) — not a skyscraper prism */
     var p = project(wx, wy, camX, camY, vw, vh);
-    var hScale = stories >= 1000 ? 310 : stories >= 100 ? 138 : 62;
-    var wScale = stories >= 1000 ? 72 : stories >= 100 ? 42 : 26;
+    var Cband = global.FroggiesCanon;
+    var band = Cband && Cband.mechBand ? Cband.mechBand(stories) : (stories >= 1e12 ? "trillion" : stories >= 1000 ? "1000" : stories >= 100 ? "100" : "10");
+    var hScale = band === "trillion" ? 460 : band === "1000" ? 310 : band === "100" ? 138 : 62;
+    var wScale = band === "trillion" ? 108 : band === "1000" ? 72 : band === "100" ? 42 : 26;
     var s = p.depth;
     var H = hScale * s;
     var W = wScale * s;
     var baseY = p.y;
     var cx = p.x;
     var col = tint || "#94a3b8";
-    var eyeCol = stories >= 1000 ? "#fbbf24" : stories >= 100 ? "#67e8f9" : "#a5b4fc";
-    if (stories >= 1000) {
-      var haze = ctx.createRadialGradient(cx, baseY - H * 0.55, W * 0.2, cx, baseY - H * 0.4, W * 2.6);
-      haze.addColorStop(0, "rgba(252, 211, 77, 0.26)");
-      haze.addColorStop(0.55, "rgba(251, 191, 36, 0.08)");
+    var eyeCol = band === "trillion" ? "#f472b6" : band === "1000" ? "#fbbf24" : band === "100" ? "#67e8f9" : "#a5b4fc";
+    if (band === "1000" || band === "trillion") {
+      var haze = ctx.createRadialGradient(cx, baseY - H * 0.55, W * 0.2, cx, baseY - H * 0.4, W * (band === "trillion" ? 3.2 : 2.6));
+      haze.addColorStop(0, band === "trillion" ? "rgba(244, 114, 182, 0.32)" : "rgba(252, 211, 77, 0.26)");
+      haze.addColorStop(0.55, band === "trillion" ? "rgba(251, 113, 133, 0.1)" : "rgba(251, 191, 36, 0.08)");
       haze.addColorStop(1, "rgba(0,0,0,0)");
       ctx.fillStyle = haze;
       ctx.beginPath();
-      ctx.ellipse(cx, baseY - H * 0.45, W * 2.2, H * 0.65, 0, 0, Math.PI * 2);
+      ctx.ellipse(cx, baseY - H * 0.45, W * (band === "trillion" ? 2.6 : 2.2), H * 0.65, 0, 0, Math.PI * 2);
       ctx.fill();
     }
     /* Pad */
@@ -1535,7 +1593,7 @@
     ctx.ellipse(cx, baseY + 2, W * 0.95, W * 0.3, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.strokeStyle = "#fbbf24";
-    ctx.lineWidth = stories >= 1000 ? 2.4 : 1.8;
+    ctx.lineWidth = (band === "1000" || band === "trillion") ? (band === "trillion" ? 3.0 : 2.4) : 1.8;
     ctx.beginPath();
     ctx.ellipse(cx, baseY + 2, W * 0.75, W * 0.22, 0, 0, Math.PI * 2);
     ctx.stroke();
@@ -1617,15 +1675,17 @@
     ctx.lineWidth = Math.max(1.2, 1.6 * s);
     ctx.beginPath();
     ctx.moveTo(cx, headY);
-    ctx.lineTo(cx, headY - (stories >= 1000 ? 18 : 10) * s);
+    var antH = band === "trillion" ? 26 : band === "1000" ? 18 : 10;
+    var antR = band === "trillion" ? 4.2 : band === "1000" ? 3.2 : 2.2;
+    ctx.lineTo(cx, headY - antH * s);
     ctx.stroke();
     ctx.fillStyle = "#f87171";
     ctx.beginPath();
-    ctx.arc(cx, headY - (stories >= 1000 ? 18 : 10) * s, (stories >= 1000 ? 3.2 : 2.2) * s, 0, Math.PI * 2);
+    ctx.arc(cx, headY - antH * s, antR * s, 0, Math.PI * 2);
     ctx.fill();
 
     /* Armor band accents (read as mech plating, not windows) */
-    var bands = stories >= 1000 ? 5 : stories >= 100 ? 3 : 2;
+    var bands = band === "trillion" ? 7 : band === "1000" ? 5 : band === "100" ? 3 : 2;
     for (var bi = 0; bi < bands; bi++) {
       var by = torsoY + torsoH * (0.15 + bi * (0.55 / bands));
       ctx.fillStyle = bi % 2 === 0 ? "rgba(15,23,42,0.45)" : "rgba(248,250,252,0.12)";
@@ -1635,11 +1695,173 @@
     ctx.fillStyle = "#fff";
     ctx.strokeStyle = "rgba(0,0,0,0.8)";
     ctx.lineWidth = 3.2;
-    ctx.font = "bold " + Math.round((stories >= 1000 ? 13 : 11) * s) + "px Segoe UI, system-ui, sans-serif";
+    ctx.font = "bold " + Math.round((band === "trillion" ? 15 : band === "1000" ? 13 : 11) * s) + "px Segoe UI, system-ui, sans-serif";
     ctx.textAlign = "center";
-    var label = stories + "-story mech";
-    ctx.strokeText(label, cx, headY - (stories >= 1000 ? 24 : 14) * s);
-    ctx.fillText(label, cx, headY - (stories >= 1000 ? 24 : 14) * s);
+    var label = (Cband && Cband.mechStoriesLabel) ? Cband.mechStoriesLabel(stories) : (stories + "-story mech");
+    var labY = headY - (band === "trillion" ? 32 : band === "1000" ? 24 : 14) * s;
+    ctx.strokeText(label, cx, labY);
+    ctx.fillText(label, cx, labY);
+  }
+
+
+  function drawYardDecor(ctx, camX, camY, vw, vh, t) {
+    /* yard1: creek + trees/shrubs/rocks/flowers/fence from shared canon */
+    var C = global.FroggiesCanon;
+    if (!C) return;
+    var stream = C.YARD_STREAM || [];
+    var halfW = C.YARD_STREAM_HALF_W || 26;
+    var phase = (t || 0) * 1.6;
+
+    /* Soft creek ribbon */
+    if (stream.length >= 2) {
+      var bank = [];
+      for (var si = 0; si < stream.length; si++) {
+        bank.push(project(stream[si][0], stream[si][1], camX, camY, vw, vh));
+      }
+      ctx.beginPath();
+      for (var bi = 0; bi < bank.length; bi++) {
+        if (bi === 0) ctx.moveTo(bank[bi].x, bank[bi].y);
+        else ctx.lineTo(bank[bi].x, bank[bi].y);
+      }
+      ctx.strokeStyle = "rgba(30, 80, 50, 0.55)";
+      ctx.lineWidth = halfW * 2.15 * ((bank[0].depth + bank[bank.length - 1].depth) * 0.5);
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.stroke();
+      ctx.beginPath();
+      for (bi = 0; bi < bank.length; bi++) {
+        if (bi === 0) ctx.moveTo(bank[bi].x, bank[bi].y);
+        else ctx.lineTo(bank[bi].x, bank[bi].y);
+      }
+      var g = ctx.createLinearGradient(bank[0].x, bank[0].y, bank[bank.length - 1].x, bank[bank.length - 1].y);
+      g.addColorStop(0, "rgba(56, 189, 248, 0.72)");
+      g.addColorStop(0.5, "rgba(34, 211, 238, 0.78)");
+      g.addColorStop(1, "rgba(14, 165, 233, 0.7)");
+      ctx.strokeStyle = g;
+      ctx.lineWidth = halfW * 1.55 * ((bank[0].depth + bank[bank.length - 1].depth) * 0.5);
+      ctx.stroke();
+      /* Sparkle glints */
+      for (var gi = 0; gi < stream.length - 1; gi++) {
+        var a = stream[gi], b = stream[gi + 1];
+        var u = (Math.sin(phase + gi * 1.3) * 0.5 + 0.5);
+        var gx = a[0] + (b[0] - a[0]) * u;
+        var gy = a[1] + (b[1] - a[1]) * u;
+        var gp = project(gx, gy, camX, camY, vw, vh);
+        ctx.fillStyle = "rgba(224, 242, 254, " + (0.35 + 0.4 * Math.abs(Math.sin(phase * 2 + gi))) + ")";
+        ctx.beginPath();
+        ctx.arc(gp.x, gp.y - 2 * gp.depth, 2.2 * gp.depth, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    /* Fence posts + rails */
+    var fence = C.YARD_FENCE || [];
+    for (var fi = 0; fi < fence.length; fi++) {
+      var fp = project(fence[fi].x, fence[fi].y, camX, camY, vw, vh);
+      var fh = 18 * fp.depth;
+      ctx.fillStyle = "#78716c";
+      ctx.fillRect(fp.x - 2 * fp.depth, fp.y - fh, 4 * fp.depth, fh);
+      ctx.fillStyle = "#a8a29e";
+      ctx.fillRect(fp.x - 3 * fp.depth, fp.y - fh - 2, 6 * fp.depth, 3 * fp.depth);
+      if (fi > 0) {
+        var prev = project(fence[fi - 1].x, fence[fi - 1].y, camX, camY, vw, vh);
+        var sameRow = Math.abs(fence[fi].y - fence[fi - 1].y) < 8 || Math.abs(fence[fi].x - fence[fi - 1].x) < 8;
+        if (sameRow && Math.hypot(fence[fi].x - fence[fi - 1].x, fence[fi].y - fence[fi - 1].y) < 120) {
+          ctx.strokeStyle = "#57534e";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(prev.x, prev.y - fh * 0.7);
+          ctx.lineTo(fp.x, fp.y - fh * 0.7);
+          ctx.moveTo(prev.x, prev.y - fh * 0.35);
+          ctx.lineTo(fp.x, fp.y - fh * 0.35);
+          ctx.stroke();
+        }
+      }
+    }
+
+    /* Rocks */
+    var rocks = C.YARD_ROCKS || [];
+    for (var ri = 0; ri < rocks.length; ri++) {
+      var rk = rocks[ri];
+      var rp = project(rk.x, rk.y, camX, camY, vw, vh);
+      var rr = (rk.r || 8) * rp.depth;
+      drawSoftShadow(ctx, rp.x, rp.y + 2, rr * 1.1, rr * 0.4, 0.28);
+      ctx.fillStyle = ri % 2 ? "#78716c" : "#57534e";
+      ctx.beginPath();
+      ctx.ellipse(rp.x, rp.y - rr * 0.25, rr, rr * 0.62, -0.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,0.12)";
+      ctx.beginPath();
+      ctx.ellipse(rp.x - rr * 0.25, rp.y - rr * 0.4, rr * 0.35, rr * 0.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    /* Flowers */
+    var flowers = C.YARD_FLOWERS || [];
+    for (var fl = 0; fl < flowers.length; fl++) {
+      var flw = flowers[fl];
+      var flp = project(flw.x, flw.y, camX, camY, vw, vh);
+      var fs = 3.2 * flp.depth;
+      ctx.strokeStyle = "#4d7c0f";
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(flp.x, flp.y);
+      ctx.lineTo(flp.x, flp.y - fs * 2.2);
+      ctx.stroke();
+      ctx.fillStyle = flw.c || "#f472b6";
+      for (var petal = 0; petal < 5; petal++) {
+        var ang = petal * (Math.PI * 2 / 5) + phase * 0.2;
+        ctx.beginPath();
+        ctx.arc(flp.x + Math.cos(ang) * fs * 0.7, flp.y - fs * 2.2 + Math.sin(ang) * fs * 0.7, fs * 0.55, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.fillStyle = "#fde68a";
+      ctx.beginPath();
+      ctx.arc(flp.x, flp.y - fs * 2.2, fs * 0.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    /* Shrubs */
+    var shrubs = C.YARD_SHRUBS || [];
+    for (var sh = 0; sh < shrubs.length; sh++) {
+      var sb = shrubs[sh];
+      var sp = project(sb.x, sb.y, camX, camY, vw, vh);
+      var ss = (sb.s || 0.8) * 14 * sp.depth;
+      drawSoftShadow(ctx, sp.x, sp.y + 2, ss * 1.1, ss * 0.35, 0.25);
+      ctx.fillStyle = sh % 2 ? "#3f6212" : "#4d7c0f";
+      ctx.beginPath();
+      ctx.ellipse(sp.x, sp.y - ss * 0.35, ss, ss * 0.7, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#65a30d";
+      ctx.beginPath();
+      ctx.ellipse(sp.x - ss * 0.25, sp.y - ss * 0.55, ss * 0.55, ss * 0.45, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    /* Trees — trunk solid via canon; canopy visual */
+    var trees = C.YARD_TREES || [];
+    for (var ti = 0; ti < trees.length; ti++) {
+      var tr = trees[ti];
+      var tp = project(tr.x, tr.y, camX, camY, vw, vh);
+      var sc = (tr.s || 1) * tp.depth;
+      var trunkH = 28 * sc;
+      var canopyR = (tr.r || 14) * 1.35 * sc;
+      drawSoftShadow(ctx, tp.x, tp.y + 3, canopyR * 1.1, canopyR * 0.32, 0.3);
+      ctx.fillStyle = "#78350f";
+      ctx.fillRect(tp.x - 4 * sc, tp.y - trunkH, 8 * sc, trunkH);
+      ctx.fillStyle = "#166534";
+      ctx.beginPath();
+      ctx.ellipse(tp.x, tp.y - trunkH - canopyR * 0.15, canopyR, canopyR * 0.85, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#22c55e";
+      ctx.beginPath();
+      ctx.ellipse(tp.x - canopyR * 0.2, tp.y - trunkH - canopyR * 0.35, canopyR * 0.55, canopyR * 0.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#15803d";
+      ctx.beginPath();
+      ctx.ellipse(tp.x + canopyR * 0.25, tp.y - trunkH - canopyR * 0.2, canopyR * 0.5, canopyR * 0.45, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
 
   function drawRanchHouse(ctx, camX, camY, vw, vh, world, frogs) {
@@ -1818,8 +2040,10 @@
     var Cmech = global.FroggiesCanon;
     var m10 = (Cmech && Cmech.COMPOUND && Cmech.COMPOUND.mech10) || { x: gar.x + 120, y: gar.y + 280 };
     var m100 = (Cmech && Cmech.COMPOUND && Cmech.COMPOUND.mech100) || { x: gar.x + 280, y: gar.y + 300 };
-    if (!frogPilotsMech(frogs, "mech10")) drawMech(ctx, m10.x, m10.y, 10, camX, camY, vw, vh, "#a5b4fc");
-    if (!frogPilotsMech(frogs, "mech100")) drawMech(ctx, m100.x, m100.y, 100, camX, camY, vw, vh, "#67e8f9");
+    var p10 = (Cmech && Cmech.vehiclePos) ? Cmech.vehiclePos("mech10", m10.x, m10.y) : m10;
+    var p100 = (Cmech && Cmech.vehiclePos) ? Cmech.vehiclePos("mech100", m100.x, m100.y) : m100;
+    if (!frogPilotsMech(frogs, "mech10")) drawMech(ctx, p10.x, p10.y, 10, camX, camY, vw, vh, "#a5b4fc");
+    if (!frogPilotsMech(frogs, "mech100")) drawMech(ctx, p100.x, p100.y, 100, camX, camY, vw, vh, "#67e8f9");
 
     /* Main house — polish8 stronger 2.5D: porch depth layers, path to door, chimney smoke */
     var hx = a.x + 60, hy = a.y + 100, hw = 520, hh = 420;
@@ -2112,9 +2336,13 @@
       ctx.fillText("place-bound", bp.x, bp.y + 14 * bp.depth);
     }
 
-    /* 1000-story mech — does NOT fit in garage; sits out back (hidden while piloted) */
+    /* 1000-story + trillion-story mechs — outdoors (won't fit garage); park1 uses exit pos */
     var m1000 = (Cmech && Cmech.COMPOUND && Cmech.COMPOUND.mech1000) || { x: a.x + 280, y: a.y + a.h - 80 };
-    if (!frogPilotsMech(frogs, "mech1000")) drawMech(ctx, m1000.x, m1000.y, 1000, camX, camY, vw, vh, "#fcd34d");
+    var mTri = (Cmech && Cmech.COMPOUND && Cmech.COMPOUND.mechTrillion) || { x: 600, y: 2170, stories: 1e12 };
+    var p1000 = (Cmech && Cmech.vehiclePos) ? Cmech.vehiclePos("mech1000", m1000.x, m1000.y) : m1000;
+    var pTri = (Cmech && Cmech.vehiclePos) ? Cmech.vehiclePos("mechTrillion", mTri.x, mTri.y) : mTri;
+    if (!frogPilotsMech(frogs, "mech1000")) drawMech(ctx, p1000.x, p1000.y, 1000, camX, camY, vw, vh, "#fcd34d");
+    if (!frogPilotsMech(frogs, "mechTrillion")) drawMech(ctx, pTri.x, pTri.y, 1e12, camX, camY, vw, vh, "#f9a8d4");
   }
 
   function pathPoint(pt, camX, camY, vw, vh) {
@@ -2965,12 +3193,14 @@
     if (frog.inMech) {
       /* interact1/mech-huge: keep full 10/100/1000-story silhouette while piloting (do NOT clamp) */
       var stories = frog.mechStories || 10;
-      var tint = stories >= 1000 ? "#fcd34d" : stories >= 100 ? "#67e8f9" : "#a5b4fc";
-      var bobM = Math.abs(Math.sin(frog.walkPhase || 0)) * (stories >= 1000 ? 4.5 : stories >= 100 ? 3.2 : 2.2) * p.depth;
+      var CbandP = global.FroggiesCanon;
+      var bandP = CbandP && CbandP.mechBand ? CbandP.mechBand(stories) : (stories >= 1e12 ? "trillion" : stories >= 1000 ? "1000" : stories >= 100 ? "100" : "10");
+      var tint = bandP === "trillion" ? "#f9a8d4" : bandP === "1000" ? "#fcd34d" : bandP === "100" ? "#67e8f9" : "#a5b4fc";
+      var bobM = Math.abs(Math.sin(frog.walkPhase || 0)) * (bandP === "trillion" ? 6.2 : bandP === "1000" ? 4.5 : bandP === "100" ? 3.2 : 2.2) * p.depth;
       drawMech(ctx, frog.x, frog.y, stories, camX, camY, vw, vh, tint);
       /* Pilot hat / nameplate scaled to mech torso height (same hScale bands as drawMech) */
-      var hatH = stories >= 1000 ? 168 : stories >= 100 ? 78 : 36;
-      var hatR = stories >= 1000 ? 9 : stories >= 100 ? 7 : 5.5;
+      var hatH = bandP === "trillion" ? 250 : bandP === "1000" ? 168 : bandP === "100" ? 78 : 36;
+      var hatR = bandP === "trillion" ? 12 : bandP === "1000" ? 9 : bandP === "100" ? 7 : 5.5;
       ctx.fillStyle = frog.color || "#4ade80";
       ctx.beginPath();
       ctx.arc(p.x, p.y - hatH * p.depth - bobM, hatR * p.depth, 0, Math.PI * 2);
@@ -2979,7 +3209,7 @@
       ctx.beginPath();
       ctx.arc(p.x, p.y - (hatH + 8) * p.depth - bobM, hatR * 0.58 * p.depth, 0, Math.PI * 2);
       ctx.fill();
-      var plateH = stories >= 1000 ? 210 : stories >= 100 ? 100 : 58;
+      var plateH = bandP === "trillion" ? 310 : bandP === "1000" ? 210 : bandP === "100" ? 100 : 58;
       drawNameplate(ctx, (frog.name || "Frog") + " · MECH", p.x, p.y - plateH * p.depth - bobM, frog.color || "#fff", p.depth, !frog.local);
       return p;
     }
@@ -3261,7 +3491,10 @@
         return f.inTruck && f.truckMode === "solo" && f.truckId === hid;
       });
       if (soloTaken) continue;
-      var p = project(spot.x, spot.y, camX, camY, vw, vh);
+      var Cpk = global.FroggiesCanon;
+      var hidP = spot.id === "shared" ? "truck-shared" : "truck-" + spot.id;
+      var parkT = Cpk && Cpk.vehiclePos ? Cpk.vehiclePos(hidP, spot.x, spot.y) : { x: spot.x, y: spot.y };
+      var p = project(parkT.x, parkT.y, camX, camY, vw, vh);
       var accent = spot.id === "shared" ? "#fbbf24" : (FROG_COLORS[spot.id] || {}).body;
       if (spot.id === "shared") {
         /* polish5: shared pile-in truck obvious — pad, frog slots, ALL ABOARD */
@@ -3278,7 +3511,7 @@
         ctx.stroke();
         ctx.setLineDash([]);
       }
-      drawCybertruck(ctx, p.x, p.y, -Math.PI / 2, p.depth, false, 0, accent, { inWater: inPond(spot.x, spot.y), sub: 0, wakePhase: 0, wheelScale: 1 });
+      drawCybertruck(ctx, p.x, p.y, -Math.PI / 2, p.depth, false, 0, accent, { inWater: inPond(parkT.x, parkT.y), sub: 0, wakePhase: 0, wheelScale: 1 });
       if (spot.id === "shared") {
         var ids = ["james", "jimmy", "bubbles", "rexy"];
         for (var si = 0; si < 4; si++) {

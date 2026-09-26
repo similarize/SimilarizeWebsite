@@ -361,6 +361,7 @@
         rt.generateTexture(key, s, s); rt.destroy();
       },
       drawCompound: function () {
+        if (C.resetVehicleParks) C.resetVehicleParks();
         var cp = C.COMPOUND || {};
         var yard = cp.yard || { x: 100, y: 2100, w: 600, h: 360 };
         var gar = cp.garage || { x: 700, y: 1400, w: 480, h: 520 };
@@ -454,15 +455,56 @@
         this.add.text(house.x + house.w / 2, house.y + 20, "James · Ranch house", {
           fontSize: "15px", fontStyle: "bold", color: "#fff7ed", stroke: "#000", strokeThickness: 4,
         }).setOrigin(0.5, 0);
+        this.drawYardDecor(cp);
         this.drawMech(cp.mech10 || { x: 820, y: 1680, stories: 10 }, 0xa5b4fc, 68);
         this.drawMech(cp.mech100 || { x: 980, y: 1700, stories: 100 }, 0x67e8f9, 110);
         this.drawMech(cp.mech1000 || { x: 340, y: 2420, stories: 1000 }, 0xfcd34d, 220);
+        this.drawMech(cp.mechTrillion || { x: 600, y: 2170, stories: 1e12 }, 0xf9a8d4, 320);
+      },
+      drawYardDecor: function () {
+        var stream = C.YARD_STREAM || [];
+        if (stream.length >= 2) {
+          var g = this.add.graphics().setDepth(2);
+          g.lineStyle((C.YARD_STREAM_HALF_W || 26) * 1.6, 0x22d3ee, 0.75);
+          g.beginPath();
+          g.moveTo(stream[0][0], stream[0][1]);
+          for (var si = 1; si < stream.length; si++) g.lineTo(stream[si][0], stream[si][1]);
+          g.strokePath();
+        }
+        var trees = C.YARD_TREES || [];
+        for (var ti = 0; ti < trees.length; ti++) {
+          var tr = trees[ti];
+          this.add.rectangle(tr.x, tr.y - 16 * (tr.s || 1), 8, 28 * (tr.s || 1), 0x78350f, 1).setDepth(5);
+          this.add.ellipse(tr.x, tr.y - 36 * (tr.s || 1), (tr.r || 14) * 1.6, (tr.r || 14) * 1.3, 0x16a34a, 0.95).setDepth(5);
+        }
+        var shrubs = C.YARD_SHRUBS || [];
+        for (var shi = 0; shi < shrubs.length; shi++) {
+          var sb = shrubs[shi];
+          this.add.ellipse(sb.x, sb.y - 6, 14 * (sb.s || 0.8), 10 * (sb.s || 0.8), 0x4d7c0f, 0.9).setDepth(4);
+        }
+        var rocks = C.YARD_ROCKS || [];
+        for (var rki = 0; rki < rocks.length; rki++) {
+          var rk = rocks[rki];
+          this.add.ellipse(rk.x, rk.y - 2, (rk.r || 8) * 1.4, (rk.r || 8) * 0.9, 0x78716c, 0.95).setDepth(4);
+        }
+        var flowers = C.YARD_FLOWERS || [];
+        for (var fli = 0; fli < flowers.length; fli++) {
+          var fl = flowers[fli];
+          var col = 0xf472b6;
+          try { if (fl.c) col = Phaser.Display.Color.HexStringToColor(fl.c).color; } catch (e) {}
+          this.add.circle(fl.x, fl.y - 8, 4, col, 1).setDepth(4);
+        }
+        var fence = C.YARD_FENCE || [];
+        for (var fi = 0; fi < fence.length; fi++) {
+          this.add.rectangle(fence[fi].x, fence[fi].y - 10, 5, 20, 0x78716c, 1).setDepth(4);
+        }
       },
       drawMech: function (m, color, h) {
         /* hop3: robot silhouette (legs/torso/arms/head/eyes) — not a skyscraper rect */
-        var eye = m.stories >= 1000 ? 0xfbbf24 : m.stories >= 100 ? 0x67e8f9 : 0xa5b4fc;
-        if (m.stories >= 1000) {
-          this.add.ellipse(m.x, m.y - h * 0.5, h * 0.9, h * 0.7, 0xfbbf24, 0.12);
+        var band = C.mechBand ? C.mechBand(m.stories) : (m.stories >= 1e12 ? "trillion" : m.stories >= 1000 ? "1000" : m.stories >= 100 ? "100" : "10");
+        var eye = band === "trillion" ? 0xf472b6 : band === "1000" ? 0xfbbf24 : band === "100" ? 0x67e8f9 : 0xa5b4fc;
+        if (band === "1000" || band === "trillion") {
+          this.add.ellipse(m.x, m.y - h * 0.5, h * 0.9, h * 0.7, eye, band === "trillion" ? 0.16 : 0.12);
         }
         this.add.ellipse(m.x, m.y + 6, Math.max(40, h * 0.42), 16, 0x0f172a, 0.45);
         this.add.ellipse(m.x, m.y + 4, Math.max(30, h * 0.32), 12, 0x1e293b, 0.9)
@@ -499,7 +541,7 @@
         this.add.rectangle(m.x, m.y - h * 0.72, Math.max(12, h * 0.14), h * 0.05, 0x0f172a, 1);
         this.add.circle(m.x - h * 0.05, m.y - h * 0.72, Math.max(3, h * 0.025), eye, 1);
         this.add.circle(m.x + h * 0.05, m.y - h * 0.72, Math.max(3, h * 0.025), eye, 1);
-        this.add.text(m.x, m.y - h - 10, m.stories + "-story mech", {
+        this.add.text(m.x, m.y - h - 10, (C.mechStoriesLabel ? C.mechStoriesLabel(m.stories) : (m.stories + "-story mech")), {
           fontSize: m.stories >= 1000 ? "14px" : "11px", fontStyle: "bold", color: "#fff",
           stroke: "#000", strokeThickness: 3,
         }).setOrigin(0.5, 1);
@@ -1294,6 +1336,7 @@
       doInteract: function () {
         /* polish10: EXIT truck/mech anytime */
         if (this.inMech) {
+          if (C.setVehiclePark) C.setVehiclePark(this.mechId || "mech", this.player.x, this.player.y);
           this.inMech = false; this.mechId = null; this.mechStories = 0;
           this.zLift = 0; this.zVel = 0; this.groundZ = 0;
           this.toast = "Mech parked · walking"; this.toastT = 1.8; this.exitTipT = 0;
@@ -1301,6 +1344,7 @@
           return;
         }
         if (this.inTruck) {
+          if (C.setVehiclePark) C.setVehiclePark(this.truckId || "truck", this.player.x, this.player.y);
           this.inTruck = false; this.truckMode = null; this.truckId = null;
           this.zLift = 0; this.zVel = 0; this.groundZ = 0;
           this.toast = "Parked · walking"; this.toastT = 1.8; this.exitTipT = 0;

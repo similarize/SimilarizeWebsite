@@ -12,7 +12,9 @@
    hop2: tickLocoHop — continuous ranch foot hop cycle (any move input).
    hop3: faster loco hop; near-zero ability CD; airborne stack height (combo hops).
    track3: banked turns + rock obstacles + live monster-truck wheel scale.
-   hop4: snappier always-hop (higher carry / shorter plant / higher launch); humanoid frog silhouette. */
+   hop4: snappier always-hop (higher carry / shorter plant / higher launch); humanoid frog silhouette.
+   yard1: James backyard trees/shrubs/creek/rocks/flowers/fence (soft stream) + outdoor trillion-story mech.
+   park1: EXIT mech/truck leaves vehicle at exit pos (no snap-home); reset/menu restores pads. */
 (function (global) {
   "use strict";
 
@@ -42,8 +44,57 @@
     mech10: { x: 820, y: 1680, stories: 10 },
     mech100: { x: 980, y: 1700, stories: 100 },
     mech1000: { x: 340, y: 2420, stories: 1000 },
+    /* yard1: trillion-story — outdoors east yard (won't fit garage; bigger than 1000) */
+    mechTrillion: { x: 600, y: 2170, stories: 1e12 },
     spawn: { x: 280, y: 1750 },
   };
+
+  /* yard1: shared backyard décor — edges clear of doorway / mech1000 pad / truck apron.
+     Stream is soft (slow + splash); tree trunks are small walk circles. */
+  var YARD_STREAM = [
+    [145, 2155], [200, 2190], [255, 2230], [320, 2215], [390, 2250],
+    [460, 2285], [530, 2265], [590, 2305], [650, 2340],
+  ];
+  var YARD_STREAM_HALF_W = 26;
+  var YARD_TREES = [
+    { x: 125, y: 2115, r: 14, s: 1.15 },
+    { x: 240, y: 2108, r: 12, s: 0.95 },
+    { x: 450, y: 2112, r: 15, s: 1.2 },
+    { x: 690, y: 2310, r: 13, s: 1.05 },
+    { x: 680, y: 2365, r: 14, s: 1.15 },
+    { x: 155, y: 2345, r: 16, s: 1.3 },
+    { x: 590, y: 2430, r: 13, s: 1.0 },
+    { x: 430, y: 2135, r: 11, s: 0.88 },
+  ];
+  var YARD_SHRUBS = [
+    { x: 175, y: 2185, s: 0.85 }, { x: 290, y: 2160, s: 0.7 },
+    { x: 410, y: 2188, s: 0.8 }, { x: 545, y: 2205, s: 0.75 },
+    { x: 620, y: 2385, s: 0.9 }, { x: 200, y: 2405, s: 0.7 },
+    { x: 480, y: 2410, s: 0.8 }, { x: 350, y: 2145, s: 0.65 },
+    { x: 670, y: 2250, s: 0.75 }, { x: 115, y: 2260, s: 0.7 },
+  ];
+  var YARD_ROCKS = [
+    { x: 190, y: 2210, r: 10 }, { x: 310, y: 2245, r: 8 },
+    { x: 440, y: 2270, r: 11 }, { x: 560, y: 2295, r: 9 },
+    { x: 625, y: 2330, r: 10 }, { x: 250, y: 2280, r: 7 },
+    { x: 500, y: 2235, r: 8 },
+  ];
+  var YARD_FLOWERS = [
+    { x: 160, y: 2135, c: "#f472b6" }, { x: 280, y: 2125, c: "#fbbf24" },
+    { x: 360, y: 2155, c: "#a78bfa" }, { x: 470, y: 2140, c: "#fb7185" },
+    { x: 540, y: 2165, c: "#34d399" }, { x: 610, y: 2130, c: "#f472b6" },
+    { x: 210, y: 2375, c: "#fbbf24" }, { x: 450, y: 2395, c: "#60a5fa" },
+    { x: 640, y: 2410, c: "#f472b6" }, { x: 320, y: 2380, c: "#fb7185" },
+    { x: 560, y: 2415, c: "#a78bfa" }, { x: 130, y: 2300, c: "#34d399" },
+  ];
+  /* Fence posts along west + south rim (gaps for roam / mech approach) */
+  var YARD_FENCE = [
+    { x: 108, y: 2120 }, { x: 108, y: 2180 }, { x: 108, y: 2240 }, { x: 108, y: 2300 },
+    { x: 108, y: 2360 }, { x: 108, y: 2420 },
+    { x: 160, y: 2455 }, { x: 230, y: 2455 }, { x: 470, y: 2455 }, { x: 540, y: 2455 },
+    { x: 610, y: 2455 }, { x: 680, y: 2455 },
+  ];
+
 
   var TRACK_MAIN = [
     [1780, 2220, 0], [1850, 2080, 0.15], [1940, 1920, 0.45], [2060, 1780, 0.85],
@@ -162,6 +213,7 @@
     { id: "mech-10", label: "Board 10-story mech", x: COMPOUND.mech10.x, y: COMPOUND.mech10.y, r: 64, tip: "10-story mech · INTERACT / BOARD", kind: "mech", stories: 10, solidId: "mech10" },
     { id: "mech-100", label: "Board 100-story mech", x: COMPOUND.mech100.x, y: COMPOUND.mech100.y, r: 78, tip: "100-story mech · INTERACT / BOARD", kind: "mech", stories: 100, solidId: "mech100" },
     { id: "mech-1000", label: "Board 1000-story mech", x: COMPOUND.mech1000.x, y: COMPOUND.mech1000.y, r: 120, tip: "1000-story mech · INTERACT / BOARD", kind: "mech", stories: 1000, solidId: "mech1000" },
+    { id: "mech-trillion", label: "Board trillion-story mech", x: COMPOUND.mechTrillion.x, y: COMPOUND.mechTrillion.y, r: 150, tip: "trillion-story mech · INTERACT / BOARD", kind: "mech", stories: 1e12, solidId: "mechTrillion" },
     { id: "fishies", label: "Fishies", x: 3160, y: 620, r: 70, tip: "Splash the pond" },
     { id: "starship", label: "Starship", x: 360, y: 320, r: 72, tip: "Starship · Spotty · space episode" },
   ];
@@ -233,6 +285,34 @@
            y >= a.y + pad && y <= a.y + a.h - pad;
   }
 
+  function _distToSeg(px, py, ax, ay, bx, by) {
+    var dx = bx - ax, dy = by - ay;
+    var len2 = dx * dx + dy * dy;
+    var t = len2 < 1e-6 ? 0 : Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / len2));
+    var qx = ax + t * dx, qy = ay + t * dy;
+    return Math.hypot(px - qx, py - qy);
+  }
+
+  /* yard1: soft creek through backyard — walkable, slows a little */
+  function inYardStream(x, y) {
+    var hw = YARD_STREAM_HALF_W;
+    for (var i = 0; i < YARD_STREAM.length - 1; i++) {
+      var a = YARD_STREAM[i], b = YARD_STREAM[i + 1];
+      if (_distToSeg(x, y, a[0], a[1], b[0], b[1]) < hw) return true;
+    }
+    return false;
+  }
+
+  function yardStreamDist(x, y) {
+    var best = 1e9;
+    for (var i = 0; i < YARD_STREAM.length - 1; i++) {
+      var a = YARD_STREAM[i], b = YARD_STREAM[i + 1];
+      var d = _distToSeg(x, y, a[0], a[1], b[0], b[1]);
+      if (d < best) best = d;
+    }
+    return best;
+  }
+
   function onTrack(x, y) {
     var a = AREAS[1];
     return x >= a.x && x <= a.x + a.w && y >= a.y && y <= a.y + a.h;
@@ -253,6 +333,7 @@
     if (id === "mech-10" || id === "mech10") return "mech10";
     if (id === "mech-100" || id === "mech100") return "mech100";
     if (id === "mech-1000" || id === "mech1000") return "mech1000";
+    if (id === "mech-trillion" || id === "mechTrillion" || id === "mech-1e12") return "mechTrillion";
     return id.indexOf("mech") === 0 ? id.replace(/^mech-/, "mech") : null;
   }
 
@@ -479,16 +560,27 @@
       { id: "mech10", x: COMPOUND.mech10.x, y: COMPOUND.mech10.y, r: 38 },
       { id: "mech100", x: COMPOUND.mech100.x, y: COMPOUND.mech100.y, r: 52 },
       { id: "mech1000", x: COMPOUND.mech1000.x, y: COMPOUND.mech1000.y, r: 95 },
+      { id: "mechTrillion", x: COMPOUND.mechTrillion.x, y: COMPOUND.mechTrillion.y, r: 125 },
     ];
     for (var mi = 0; mi < mechs.length; mi++) {
       if (ignoreMech && mechs[mi].id === ignoreMech) continue;
-      out.push(mechs[mi]);
+      var mp = vehiclePos(mechs[mi].id, mechs[mi].x, mechs[mi].y);
+      out.push({ id: mechs[mi].id, x: mp.x, y: mp.y, r: mechs[mi].r });
     }
     if (!opts.inTruck && !opts.ignoreTrucks) {
       for (var i = 0; i < TRUCK_SPOTS.length; i++) {
         var s = TRUCK_SPOTS[i];
+        var tid = "truck-" + s.id;
+        var tp = vehiclePos(tid, s.x, s.y);
         /* r under hotspot radius so BOARD shell stays reachable (solo ~54, shared ~78) */
-        out.push({ id: "truck-" + s.id, x: s.x, y: s.y, r: s.id === "shared" ? 40 : 28 });
+        out.push({ id: tid, x: tp.x, y: tp.y, r: s.id === "shared" ? 40 : 28 });
+      }
+    }
+    /* yard1: thin tree trunks — edges only, leave doorway / mech pad / stream clear */
+    if (!opts.ignoreYardTrees) {
+      for (var ti = 0; ti < YARD_TREES.length; ti++) {
+        var tr = YARD_TREES[ti];
+        out.push({ id: "yard-tree-" + ti, x: tr.x, y: tr.y, r: Math.max(8, (tr.r || 12) * 0.72) });
       }
     }
     return out;
@@ -730,6 +822,97 @@
     if (Math.hypot(prop.vx, prop.vy) < 5) { prop.vx = 0; prop.vy = 0; }
   }
 
+
+
+  /* park1: parked vehicle XY — EXIT leaves ride here; only resetVehicleParks restores homes */
+  var VEHICLE_PARK = {};
+
+  function _hotspotHome(h) {
+    if (!h) return null;
+    if (h.kind === "mech" || (h.solidId && String(h.solidId).indexOf("mech") === 0)) {
+      var sid = h.solidId || mechSolidId(h.id);
+      if (sid === "mech10") return { x: COMPOUND.mech10.x, y: COMPOUND.mech10.y };
+      if (sid === "mech100") return { x: COMPOUND.mech100.x, y: COMPOUND.mech100.y };
+      if (sid === "mech1000") return { x: COMPOUND.mech1000.x, y: COMPOUND.mech1000.y };
+      if (sid === "mechTrillion") return { x: COMPOUND.mechTrillion.x, y: COMPOUND.mechTrillion.y };
+    }
+    if (h.kind === "truck" || (h.id && String(h.id).indexOf("truck") === 0)) {
+      var tid = h.id === "truck-shared" ? "shared" : String(h.id || "").replace(/^truck-/, "");
+      for (var i = 0; i < TRUCK_SPOTS.length; i++) {
+        if (TRUCK_SPOTS[i].id === tid) return { x: TRUCK_SPOTS[i].x, y: TRUCK_SPOTS[i].y };
+      }
+    }
+    return null;
+  }
+
+  function getVehiclePark(id) {
+    if (!id) return null;
+    if (VEHICLE_PARK[id]) return VEHICLE_PARK[id];
+    var sid = mechSolidId(id);
+    if (sid && VEHICLE_PARK[sid]) return VEHICLE_PARK[sid];
+    if (sid === "mech10" && VEHICLE_PARK["mech-10"]) return VEHICLE_PARK["mech-10"];
+    if (sid === "mech100" && VEHICLE_PARK["mech-100"]) return VEHICLE_PARK["mech-100"];
+    if (sid === "mech1000" && VEHICLE_PARK["mech-1000"]) return VEHICLE_PARK["mech-1000"];
+    if (sid === "mechTrillion" && VEHICLE_PARK["mech-trillion"]) return VEHICLE_PARK["mech-trillion"];
+    return null;
+  }
+
+  function setVehiclePark(id, x, y) {
+    if (!id || !isFinite(x) || !isFinite(y)) return;
+    var keys = [String(id)];
+    var sid = mechSolidId(id);
+    if (sid) {
+      keys.push(sid);
+      if (sid === "mech10") keys.push("mech-10");
+      if (sid === "mech100") keys.push("mech-100");
+      if (sid === "mech1000") keys.push("mech-1000");
+      if (sid === "mechTrillion") keys.push("mech-trillion");
+    }
+    if (String(id).indexOf("truck") === 0) {
+      keys.push(id);
+      keys.push(String(id).replace(/^truck-/, ""));
+    }
+    var pos = { x: x, y: y };
+    for (var k = 0; k < keys.length; k++) VEHICLE_PARK[keys[k]] = pos;
+    for (var h = 0; h < HOTSPOTS.length; h++) {
+      var hs = HOTSPOTS[h];
+      if (keys.indexOf(hs.id) >= 0 || (hs.solidId && keys.indexOf(hs.solidId) >= 0)) {
+        hs.x = x;
+        hs.y = y;
+      }
+    }
+  }
+
+  function resetVehicleParks() {
+    VEHICLE_PARK = {};
+    for (var h = 0; h < HOTSPOTS.length; h++) {
+      var hs = HOTSPOTS[h];
+      var home = _hotspotHome(hs);
+      if (home) { hs.x = home.x; hs.y = home.y; }
+    }
+  }
+
+  function vehiclePos(id, homeX, homeY) {
+    var p = getVehiclePark(id);
+    return p ? { x: p.x, y: p.y } : { x: homeX, y: homeY };
+  }
+
+  function mechStoriesLabel(stories) {
+    var n = Number(stories) || 0;
+    if (n >= 1e12) return "trillion-story mech";
+    if (n >= 1e9) return "billion-story mech";
+    return Math.round(n) + "-story mech";
+  }
+
+  /* Visual scale bands: 10 < 100 < 1000 < trillion */
+  function mechBand(stories) {
+    var n = Number(stories) || 0;
+    if (n >= 1e12) return "trillion";
+    if (n >= 1000) return "1000";
+    if (n >= 100) return "100";
+    return "10";
+  }
+
   global.FroggiesCanon = {
     FROG_ORDER: FROG_ORDER,
     FROG_DEFS: FROG_DEFS,
@@ -737,6 +920,13 @@
     MAP_H: MAP_H,
     AREAS: AREAS,
     COMPOUND: COMPOUND,
+    YARD_STREAM: YARD_STREAM,
+    YARD_STREAM_HALF_W: YARD_STREAM_HALF_W,
+    YARD_TREES: YARD_TREES,
+    YARD_SHRUBS: YARD_SHRUBS,
+    YARD_ROCKS: YARD_ROCKS,
+    YARD_FLOWERS: YARD_FLOWERS,
+    YARD_FENCE: YARD_FENCE,
     TRACK_MAIN: TRACK_MAIN,
     TRACK_BRANCH_A: TRACK_BRANCH_A,
     TRACK_BRANCH_B: TRACK_BRANCH_B,
@@ -759,10 +949,18 @@
     nearestHotspot: nearestHotspot,
     areaNameAt: areaNameAt,
     inPond: inPond,
+    inYardStream: inYardStream,
+    yardStreamDist: yardStreamDist,
     onTrack: onTrack,
     isTruckHotspot: isTruckHotspot,
     isMechHotspot: isMechHotspot,
     mechSolidId: mechSolidId,
+    mechStoriesLabel: mechStoriesLabel,
+    mechBand: mechBand,
+    setVehiclePark: setVehiclePark,
+    getVehiclePark: getVehiclePark,
+    resetVehicleParks: resetVehicleParks,
+    vehiclePos: vehiclePos,
     rampAt: rampAt,
     rampElevAt: rampElevAt,
     bankElevAt: bankElevAt,

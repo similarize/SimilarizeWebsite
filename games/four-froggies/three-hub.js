@@ -18,6 +18,7 @@
    polish11: truck yaw follows travel; brief EXIT tip; shared ZOOM ability.
    hop1: HOP ability (Y arc + squash); shove toys/animals/pollen.
    hop2: ranch foot ALWAYS hops (continuous arc); ability HOP = bigger jump.
+   yard1: backyard creek/trees + outdoor trillion mech; park1: EXIT parks at exit pos.
    interact2: interact/exit + HOP strictly per pad/player; shared HUD = primary only.
    hop3: faster loco + spam HOP + stack; articulated mechs.
    track3: banks + rocks + live monster wheels (preserved).
@@ -490,17 +491,18 @@
     g.position.set(p.x, 0, p.z);
     var mat = new THREE.MeshStandardMaterial({ color: color, metalness: 0.42, roughness: 0.4 });
     var dark = new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.5, roughness: 0.35 });
-    var eyeCol = m.stories >= 1000 ? 0xfbbf24 : m.stories >= 100 ? 0x67e8f9 : 0xa5b4fc;
+    var band = C.mechBand ? C.mechBand(m.stories) : (m.stories >= 1e12 ? "trillion" : m.stories >= 1000 ? "1000" : m.stories >= 100 ? "100" : "10");
+    var eyeCol = band === "trillion" ? 0xf472b6 : band === "1000" ? 0xfbbf24 : band === "100" ? 0x67e8f9 : 0xa5b4fc;
     var eyeMat = new THREE.MeshStandardMaterial({ color: eyeCol, emissive: eyeCol, emissiveIntensity: 0.85, metalness: 0.2, roughness: 0.3 });
-    if (m.stories >= 1000) {
+    if (band === "1000" || band === "trillion") {
       var haze = new THREE.Mesh(
-        new THREE.SphereGeometry(h * 0.55, 12, 10),
-        new THREE.MeshBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.12, depthWrite: false })
+        new THREE.SphereGeometry(h * (band === "trillion" ? 0.7 : 0.55), 12, 10),
+        new THREE.MeshBasicMaterial({ color: eyeCol, transparent: true, opacity: band === "trillion" ? 0.16 : 0.12, depthWrite: false })
       );
       haze.position.set(0, h * 0.55, 0); g.add(haze);
     }
-    var padR = h * 0.38;
-    var padY = m.stories >= 1000 ? 0.18 : 0.14;
+    var padR = h * (band === "trillion" ? 0.42 : 0.38);
+    var padY = (band === "1000" || band === "trillion") ? 0.18 : 0.14;
     var pad = new THREE.Mesh(
       new THREE.CircleGeometry(padR, 28),
       new THREE.MeshStandardMaterial({
@@ -567,10 +569,11 @@
     part(new THREE.CylinderGeometry(h * 0.01, h * 0.01, h * 0.1, 6), dark, 0, h * 0.95, 0);
     part(new THREE.SphereGeometry(h * 0.02, 6, 5), new THREE.MeshStandardMaterial({ color: 0xf87171, emissive: 0xf87171, emissiveIntensity: 0.5 }), 0, h * 1.01, 0);
 
-    var lab = addLabel(m.stories + "-story mech", "#fff", p.x, h + 0.55, p.z);
+    var labTxt = C.mechStoriesLabel ? C.mechStoriesLabel(m.stories) : (m.stories + "-story mech");
+    var lab = addLabel(labTxt, "#fff", p.x, h + 0.55, p.z);
     scene.add(g);
-    var solidId = m.stories >= 1000 ? "mech1000" : m.stories >= 100 ? "mech100" : "mech10";
-    var hotId = m.stories >= 1000 ? "mech-1000" : m.stories >= 100 ? "mech-100" : "mech-10";
+    var solidId = band === "trillion" ? "mechTrillion" : band === "1000" ? "mech1000" : band === "100" ? "mech100" : "mech10";
+    var hotId = band === "trillion" ? "mech-trillion" : band === "1000" ? "mech-1000" : band === "100" ? "mech-100" : "mech-10";
     var entry = {
       id: hotId,
       solidId: solidId,
@@ -592,6 +595,7 @@
   }
 
   function buildCompound() {
+    if (C.resetVehicleParks) C.resetVehicleParks();
     var cp = C.COMPOUND || {};
     var yard = cp.yard || { x: 100, y: 2100, w: 600, h: 360 };
     var yp = worldToThree(yard.x + yard.w / 2, yard.y + yard.h / 2);
@@ -805,6 +809,80 @@
     addMech(Object.assign({}, cp.mech10 || { x: 820, y: 1680 }, { stories: 10 }), 0xa5b4fc, 1.9);
     addMech(Object.assign({}, cp.mech100 || { x: 980, y: 1700 }, { stories: 100 }), 0x67e8f9, 3.2);
     addMech(Object.assign({}, cp.mech1000 || { x: 340, y: 2420 }, { stories: 1000 }), 0xfcd34d, 8.2);
+    addMech(Object.assign({}, cp.mechTrillion || { x: 600, y: 2170 }, { stories: 1e12 }), 0xf9a8d4, 14.5);
+
+    /* yard1: creek / trees / shrubs / rocks / flowers / fence */
+    var stream = C.YARD_STREAM || [];
+    if (stream.length >= 2) {
+      var sPts = [];
+      for (var si = 0; si < stream.length; si++) {
+        var sp = worldToThree(stream[si][0], stream[si][1]);
+        sPts.push(new THREE.Vector3(sp.x, 0.08, sp.z));
+      }
+      try {
+        var sCurve = new THREE.CatmullRomCurve3(sPts, false);
+        var creek = new THREE.Mesh(
+          new THREE.TubeGeometry(sCurve, Math.max(20, stream.length * 4), (C.YARD_STREAM_HALF_W || 26) * 0.018, 8, false),
+          new THREE.MeshStandardMaterial({ color: 0x22d3ee, roughness: 0.35, metalness: 0.15, transparent: true, opacity: 0.85 })
+        );
+        creek.receiveShadow = true; scene.add(creek);
+      } catch (eCreek) {}
+    }
+    var trees = C.YARD_TREES || [];
+    for (var ti = 0; ti < trees.length; ti++) {
+      var tr = trees[ti];
+      var tp = worldToThree(tr.x, tr.y);
+      var ts = tr.s || 1;
+      var trunk = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.08 * ts, 0.12 * ts, 0.9 * ts, 6),
+        new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.9 })
+      );
+      trunk.position.set(tp.x, 0.45 * ts, tp.z); trunk.castShadow = true; scene.add(trunk);
+      var canopy = new THREE.Mesh(
+        new THREE.SphereGeometry((tr.r || 14) * 0.045 * ts, 8, 6),
+        new THREE.MeshStandardMaterial({ color: 0x16a34a, roughness: 0.85 })
+      );
+      canopy.position.set(tp.x, 1.05 * ts, tp.z); canopy.castShadow = true; scene.add(canopy);
+    }
+    var shrubs = C.YARD_SHRUBS || [];
+    for (var shi = 0; shi < shrubs.length; shi++) {
+      var sb = shrubs[shi];
+      var sbp = worldToThree(sb.x, sb.y);
+      var bush = new THREE.Mesh(
+        new THREE.SphereGeometry(0.22 * (sb.s || 0.8), 6, 5),
+        new THREE.MeshStandardMaterial({ color: 0x4d7c0f, roughness: 0.9 })
+      );
+      bush.position.set(sbp.x, 0.18, sbp.z); scene.add(bush);
+    }
+    var rocks = C.YARD_ROCKS || [];
+    for (var rki = 0; rki < rocks.length; rki++) {
+      var rk = rocks[rki];
+      var rkp = worldToThree(rk.x, rk.y);
+      var rock = new THREE.Mesh(
+        new THREE.DodecahedronGeometry((rk.r || 8) * 0.028, 0),
+        new THREE.MeshStandardMaterial({ color: 0x78716c, roughness: 0.95 })
+      );
+      rock.position.set(rkp.x, 0.12, rkp.z); rock.castShadow = true; scene.add(rock);
+    }
+    var flowers = C.YARD_FLOWERS || [];
+    for (var fli = 0; fli < flowers.length; fli++) {
+      var fl = flowers[fli];
+      var flp = worldToThree(fl.x, fl.y);
+      var blossom = new THREE.Mesh(
+        new THREE.SphereGeometry(0.07, 6, 5),
+        new THREE.MeshStandardMaterial({ color: fl.c ? parseInt(String(fl.c).replace("#", ""), 16) : 0xf472b6, roughness: 0.6 })
+      );
+      blossom.position.set(flp.x, 0.2, flp.z); scene.add(blossom);
+    }
+    var fence = C.YARD_FENCE || [];
+    for (var fi = 0; fi < fence.length; fi++) {
+      var fp = worldToThree(fence[fi].x, fence[fi].y);
+      var post = new THREE.Mesh(
+        new THREE.BoxGeometry(0.08, 0.55, 0.08),
+        new THREE.MeshStandardMaterial({ color: 0x78716c, roughness: 0.9 })
+      );
+      post.position.set(fp.x, 0.28, fp.z); scene.add(post);
+    }
   }
 
   function buildTrack() {
@@ -1596,6 +1674,9 @@
         return;
       }
       if (state.inMech) {
+        var parkW = threeToWorld(state.player.position.x, state.player.position.z);
+        var parkMid = state.mechId || "mech";
+        if (C.setVehiclePark) C.setVehiclePark(parkMid, parkW.x, parkW.y);
         state.inMech = false; state.mechId = null; state.mechStories = 0;
         state.mechPilotPadIndex = null;
         state.zLift = 0; state.zVel = 0; state.groundLift = 0;
@@ -1604,6 +1685,9 @@
         if (hooks.onToast) hooks.onToast(state.toast);
         return;
       }
+      var parkTw = threeToWorld(state.player.position.x, state.player.position.z);
+      var parkTid = state.truckId || "truck";
+      if (C.setVehiclePark) C.setVehiclePark(parkTid, parkTw.x, parkTw.y);
       state.inTruck = false; state.truckMode = null; state.truckId = null;
       state.truckPilotPadIndex = null;
       state.zLift = 0; state.zVel = 0; state.groundLift = 0;
@@ -1646,7 +1730,7 @@
         state.vx = 0; state.vz = 0;
         state.walkPhase = 0;
         state.scrap += 1;
-        state.toast = "Boarding " + state.mechStories + "-story mech · lumber walk!";
+        state.toast = "Boarding " + (C.mechStoriesLabel ? C.mechStoriesLabel(state.mechStories) : (state.mechStories + "-story mech")) + " · lumber walk!";
         state.exitTipT = 2.4;
       } else if (id === "fishies") {
         state.toast = "Splash! Fishies & whales scatter";
@@ -2085,7 +2169,7 @@
         }
         if (nearG || Math.abs(side) > 40) state.lapSide = side >= 0 ? 1 : -1;
       }
-      var wet = C.inPond && C.inPond(wpos0.x, wpos0.y);
+      var wet = (C.inPond && C.inPond(wpos0.x, wpos0.y)) || (C.inYardStream && C.inYardStream(wpos0.x, wpos0.y));
       if (state.inTruck && wet) {
         var plunge = Math.max(0, -state.zVel) + (((state.zLift || 0) - (state.groundLift || 0)) > 0.4 ? 1 : 0);
         state.waterSub = Math.min(1.15, 0.45 + plunge * 0.2);
@@ -2254,7 +2338,7 @@
           ment.group.visible = true;
           if (ment.label) ment.label.visible = !piloting;
           if (piloting) {
-            var bobAmp = ment.stories >= 1000 ? 0.22 : ment.stories >= 100 ? 0.12 : 0.07;
+            var bobAmp = (C.mechBand && C.mechBand(ment.stories) === "trillion") ? 0.32 : ment.stories >= 1000 ? 0.22 : ment.stories >= 100 ? 0.12 : 0.07;
             var bobY = lumber ? Math.abs(Math.sin(wpM)) * bobAmp : 0;
             ment.group.position.x = state.player.position.x;
             ment.group.position.z = state.player.position.z;
@@ -2275,7 +2359,14 @@
             offsetLimbs(ment.armsR || [], stride * 0.6, 0);
             ment.group.rotation.x = lumber ? Math.sin(wpM * 2) * 0.015 : 0;
           } else {
-            ment.group.position.set(ment.homeX, 0, ment.homeZ);
+            /* park1: stay at last EXIT / park pos (home only if never parked) */
+            var parkM = C.getVehiclePark ? (C.getVehiclePark(ment.id) || C.getVehiclePark(ment.solidId)) : null;
+            if (parkM) {
+              var ppM = worldToThree(parkM.x, parkM.y);
+              ment.group.position.set(ppM.x, 0, ppM.z);
+            } else {
+              ment.group.position.set(ment.homeX, 0, ment.homeZ);
+            }
             ment.group.rotation.set(0, 0, 0);
             function resetLimbs(arr) {
               for (var ri = 0; ri < (arr || []).length; ri++) {
@@ -2304,6 +2395,13 @@
         pt.mesh.visible = !taken;
         if (pt.label) pt.label.visible = !taken;
         if (!taken) {
+          var parkTr = C.getVehiclePark ? C.getVehiclePark(hid) : null;
+          if (parkTr) {
+            var ptp = worldToThree(parkTr.x, parkTr.y);
+            pt.mesh.position.x = ptp.x;
+            pt.mesh.position.z = ptp.z;
+            if (pt.label) { pt.label.position.x = ptp.x; pt.label.position.z = ptp.z; }
+          }
           var dTruck = Math.hypot(state.player.position.x - pt.mesh.position.x, state.player.position.z - pt.mesh.position.z);
           var nearT = dTruck < 2.4;
           pt.mesh.position.y = nearT ? 0.06 + Math.abs(Math.sin(state.bob * 1.5)) * 0.08 : 0;
@@ -2438,7 +2536,7 @@
     }
 
     if (state.nameTag) {
-      var tagH = state.inMech ? ((state.mechStories || 10) >= 1000 ? 9.2 : (state.mechStories || 10) >= 100 ? 4.0 : 2.6) : 2.95;
+      var tagH = state.inMech ? ((C.mechBand && C.mechBand(state.mechStories) === "trillion") ? 14.5 : (state.mechStories || 10) >= 1000 ? 9.2 : (state.mechStories || 10) >= 100 ? 4.0 : 2.6) : 2.95;
       state.nameTag.position.set(state.player.position.x, tagH + (state.player.position.y || 0), state.player.position.z);
       state.nameTag.visible = !state.inTruck;
     }
@@ -2809,7 +2907,7 @@
         cd: state.cd,
         walk: (function () {
           if (state.mode === "space") return state.inOrbit ? "🌍 Orbit" : "🚀 Space";
-          if (state.inMech) return "🤖 Mech · " + (state.mechStories || "?") + "-story";
+          if (state.inMech) return "🤖 Mech · " + (C.mechStoriesLabel ? C.mechStoriesLabel(state.mechStories).replace(" mech", "") : ((state.mechStories || "?") + "-story"));
           if (!state.inTruck) return "🐸 Walk";
           var wp2 = threeToWorld(state.player.position.x, state.player.position.z);
           var wet2 = C.inPond && C.inPond(wp2.x, wp2.y);
