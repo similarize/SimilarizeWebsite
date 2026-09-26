@@ -632,11 +632,21 @@ body.in-space {
   background: #0c1a0c;
 }
 #engine-host[hidden] { display: none !important; }
-#engine-host canvas {
+/* Renderer fills host; mini-map overlay keeps its own size (data-ff-minimap). */
+#engine-host > canvas:not([data-ff-minimap]) {
   display: block;
   width: 100% !important;
   height: 100% !important;
   touch-action: none;
+}
+#engine-host canvas[data-ff-minimap="1"] {
+  display: block;
+  width: auto !important;
+  height: auto !important;
+  max-width: 30vw;
+  max-height: 22vh;
+  touch-action: none;
+  pointer-events: none;
 }
 
 .engine-pick {

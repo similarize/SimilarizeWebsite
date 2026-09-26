@@ -1,3 +1,8 @@
+## What's new (mapfix1) — Three mini-map not fullscreen
+- Root cause: `#engine-host canvas { width/height: 100% !important }` stretched the Three mini-map overlay canvas to the whole screen → giant blurry "MAP" box on phone.
+- Fix: only the renderer canvas fills the host; `canvas[data-ff-minimap]` keeps its corner size.
+- Cache-bust: `?v=20260926-mapfix1`.
+
 # Four Froggies — ranch hub + space episode (multi-engine)
 
 **Product:** **Four Froggies** (one shared world). Publish: `games/four-froggies/`.
