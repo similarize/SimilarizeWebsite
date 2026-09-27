@@ -314,15 +314,16 @@
         var hipY = cy + s * 0.08;
         /* Spring legs mid-hop silhouette (readable at distance) */
         function springLeg(side) {
-          var hx = cx + side * torsoW * 0.55;
+          /* hipX — must not shadow module hx() color helper (black-screen bug) */
+          var hipX = cx + side * torsoW * 0.55;
           var kx = cx + side * s * 0.32;
           var ky = hipY + s * 0.18;
           var fx = cx + side * s * 0.22;
           var fy = hipY + s * 0.38;
           rt.lineStyle(Math.max(4, s * 0.1), hx(d.accent), 1);
-          rt.beginPath(); rt.moveTo(hx, hipY); rt.lineTo(kx, ky); rt.lineTo(fx, fy); rt.strokePath();
+          rt.beginPath(); rt.moveTo(hipX, hipY); rt.lineTo(kx, ky); rt.lineTo(fx, fy); rt.strokePath();
           rt.lineStyle(Math.max(2.5, s * 0.06), hx(d.color), 1);
-          rt.beginPath(); rt.moveTo(hx, hipY); rt.lineTo(kx, ky); rt.lineTo(fx, fy); rt.strokePath();
+          rt.beginPath(); rt.moveTo(hipX, hipY); rt.lineTo(kx, ky); rt.lineTo(fx, fy); rt.strokePath();
           rt.fillStyle(hx(d.accent), 1);
           rt.fillEllipse(fx, fy + 1, s * 0.1, s * 0.05);
         }

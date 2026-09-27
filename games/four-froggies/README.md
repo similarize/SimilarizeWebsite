@@ -1,3 +1,8 @@
+## What's new (ctrl2) — Phaser black-screen fix
+- **Phaser ranch black screen:** hop4 `ensureFrogTexture` nested `springLeg` declared `var hx` (hip X) which shadowed the module `hx()` hex→color helper → `TypeError: hx is not a function` in `create` → scene abort → black canvas. Renamed to `hipX`.
+- Keep: ctrl1 gamepad hop buffer / RT·LT / pinch zoom, hop4 silhouette, track3, spacefix1. Cast: James, Jimmy, Bubbles, Rexy.
+- Cache-bust: `?v=20260926-ctrl2`. Cast unchanged. Do not publish from agent.
+
 ## What's new (ctrl1) — reliable HOP + RT/LT + pinch zoom
 - **Flaky gamepad X fixed:** `SimilarizeGamepad.pollPad` now frame-caches snapshots — a second poll same frame used to recompute rising edges against an already-updated `prev`, eating `buttonsPressed.x` (HOP intermittent). One snap per slot per browser frame; edges shared.
 - **Hop buffer ~150ms:** If X/B/Space hits during the short ~0.1s anti-tap CD, hop queues and fires when ready (coyote/air stack still via `applyHop`).
