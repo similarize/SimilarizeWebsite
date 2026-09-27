@@ -1,17 +1,17 @@
-const VERSION = "3.15";
+const VERSION = "3.16";
 const VIEW_W = 960;
 const VIEW_H = 540;
 const PLAYER_X = 168;
 const CAR_W = 118;
 const CAR_H = 52;
-const GATE_W = 56;
+const GATE_W = 78;
 const GRAVITY = 1500;
 const HOLD_NET = -900;
 const MAX_UP = -420;
 const MAX_DOWN = 780;
 const IMPULSE = -380;
 const TAP_COST = 3;
-const HOLD_DRAIN = 36;
+const HOLD_DRAIN = 22;
 const RECHARGE = 48;
 const OPENING = 168;
 const IMG_W = 720;
@@ -233,6 +233,7 @@ function createSim(best = 0) {
     trailW: 0,
     prevVy: 0,
     damage: 0,
+    wasGrounded: true,
     recover: 0,
     dents: [],
     scrapes: 0,
@@ -519,15 +520,13 @@ function stepChassis(sim, dt, input) {
   }
   // Terrain pitch (Line Rider): when wheels kiss dirt, lean with the surface; aim still steers in air / on dirt.
   const pitch = contacts > 0 ? surfacePitchDeg(sim) : 0;
+  const aimTarget = aiming ? (contacts > 0 ? clamp(input.aim, -70, 70) : input.aim) : 0;
   if (aiming) {
-    const err = wrapDeg(input.aim - sim.rot);
+    const err = wrapDeg(aimTarget - sim.rot);
     sim.av += clamp(err * 16 - sim.av * 4.2, -560, 560) * dt;
     if (contacts > 0) {
-      // Keep dirt lean alive while aiming (boost-hold aimPoint used to starve pitch follow).
-      const camber = wrapDeg(pitch - sim.rot);
-      sim.av += clamp(camber * 14 - sim.av * 1.1, -280, 280) * dt;
-      sim.rot += camber * Math.min(1, dt * 6);
-      sim.av *= Math.exp(-dt * 1.1);
+      const camber = wrapDeg(pitch - aimTarget);
+      sim.av += clamp(camber * 6, -120, 120) * dt;
     }
   } else if (contacts === 0) {
     const ang = wrapDeg(sim.rot);
@@ -544,9 +543,20 @@ function stepChassis(sim, dt, input) {
   }
   sim.av = clamp(sim.av, -360, 360);
   sim.rot = wrapDeg(sim.rot + sim.av * dt);
-  if (sim.phase === "play" && contacts > 0 && Math.abs(sim.rot) > 100) {
-    crash(sim, "flip");
-    return true;
+  if (sim.phase === "play" && contacts > 0) {
+    const lean = wrapDeg(sim.rot);
+    const landed = !sim.wasGrounded;
+    if (landed && Math.abs(lean) > 100) {
+      sim.wasGrounded = true;
+      crash(sim, "flip");
+      return true;
+    }
+    sim.rot = clamp(lean, -70, 70);
+    if (sim.rot >= 70 && sim.av > 0) sim.av = 0;
+    if (sim.rot <= -70 && sim.av < 0) sim.av = 0;
+    sim.wasGrounded = true;
+  } else if (contacts === 0) {
+    sim.wasGrounded = false;
   }
   sim.grounded = contacts > 0;
   if (contacts === 2 && !aiming) {
@@ -807,18 +817,7 @@ function tick(sim, dt, input) {
     }
   }
   for (const d of sim.drones) {
-    if (d.dead || d.kind === "lock") continue;
-    const p = dronePos(sim, d);
-    const sx = p.x - sim.scroll;
-    if (aabb(hx, hy, hw, hh, sx - 16, p.y - 10, 32, 20)) {
-      crash(sim, "drone");
-      return;
-    }
-  }
-  for (const d of sim.drones) {
-    if (d.dead || d.kind !== "lock") continue;
-    // Body-only (elevated): old X-only test was a ground-to-sky pillar and trapped the truck underneath.
-    // Missiles still use X-proximity so lock drones remain shootable without a precision Y hit.
+    if (d.dead) continue;
     const p = dronePos(sim, d);
     const sx = p.x - sim.scroll;
     if (!aabb(hx, hy, hw, hh, sx - 16, p.y - 10, 32, 20)) continue;
@@ -827,9 +826,18 @@ function tick(sim, dt, input) {
     if (!d.bumped) {
       d.bumped = true;
       sim.speed = Math.min(sim.speed, 64);
-      sim.recover = 0.14;
+      sim.recover = 0.16;
       sim.shake = 0.28;
-      sim.popups.push({ x: d.x, y: hy, text: "SHOOT", life: 0.7, max: 0.7 });
+      const hit = d.kind === "lock" ? 16 : 28;
+      hurt(sim, hit);
+      sim.popups.push({
+        x: d.x,
+        y: hy,
+        text: sim.phase === "over" ? "WRECK" : d.kind === "lock" ? "SHOOT" : "HIT",
+        life: 0.7,
+        max: 0.7
+      });
+      if (sim.phase !== "play") return;
     }
   }
   if (sim.grounded && sim.speed < cruiseOf(sim) - 6) {
@@ -849,6 +857,10 @@ function gateBlocks(g, hy, hh) {
   const hitsFloor = g.gapBot < VIEW_H && hy + hh > g.gapBot;
   return hitsCeiling || hitsFloor;
 }
+function hurt(sim, amount) {
+  sim.damage = Math.min(100, sim.damage + amount);
+  if (sim.damage >= 100 && sim.phase === "play") crash(sim, "wreck");
+}
 function bumpGate(sim, g, hy, hh, topHit) {
   const impact = Math.max(0, sim.speed);
   g.bumped = true;
@@ -862,7 +874,6 @@ function bumpGate(sim, g, hy, hh, topHit) {
       w: 6 + hash(sim.time * 4) * 12
     });
   }
-  sim.damage = Math.min(100, sim.damage + 7 + impact * 0.045);
   if (sim.dents.length < 8) {
     sim.dents.push({
       x: (hash(sim.time * 17 + sim.dents.length) - 0.25) * CAR_W * 0.42,
@@ -878,10 +889,12 @@ function bumpGate(sim, g, hy, hh, topHit) {
   sim.shake = Math.min(0.45, 0.12 + impact / 1400);
   sim.scrapes += 1;
   burst(sim, g.x + 6, hy + hh * 0.5, 7);
+  const add = 7 + impact * 0.045 + (impact > 280 ? 14 : 0);
+  hurt(sim, add);
   sim.popups.push({
     x: g.x + g.w * 0.5,
     y: hy,
-    text: "BUMP",
+    text: sim.phase === "over" ? "WRECK" : "BUMP",
     life: 0.5,
     max: 0.5
   });
@@ -1118,6 +1131,12 @@ function drawKickers(ctx, sim) {
     }
   }
 }
+function gateLabel(gate) {
+  if (gate.kicker) return "KICK";
+  if (gate.kind === "drive") return "DRIVE";
+  if (gate.kind === "climb") return "CLIMB";
+  return "HOP";
+}
 function drawGate(ctx, sim, gate) {
   const sx = gate.x - sim.scroll;
   if (sx > VIEW_W + 20 || sx + gate.w < -20) return;
@@ -1132,12 +1151,20 @@ function drawGate(ctx, sim, gate) {
       ctx.fillRect(sx + 7, m.y + 1, Math.min(m.w, gate.w - 14), 2);
     }
   }
+  const openTop = Math.max(0, gate.gapTop);
+  const openBot = Math.min(gate.gapBot, VIEW_H);
+  const openH = openBot - openTop;
   ctx.strokeStyle = "#f0b429";
   ctx.lineWidth = 3;
+  if (openH > 8) ctx.strokeRect(sx + 1.5, openTop + 1.5, gate.w - 3, openH - 3);
   ctx.strokeRect(sx + 1.5, Math.max(0, gate.gapTop - 2), gate.w - 3, 4);
   if (gate.gapBot < groundY(gate.x) - 10) {
     ctx.strokeRect(sx + 1.5, gate.gapBot - 2, gate.w - 3, 4);
   }
+  ctx.font = "700 18px 'Barlow Condensed', sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#f3e2c4";
+  ctx.fillText(gateLabel(gate), sx + gate.w * 0.5, Math.max(18, openTop - 8));
   const mid = gate.kicker ? gate.gapTop + 110 : (gate.gapTop + Math.min(gate.gapBot, VIEW_H - 8)) / 2;
   ctx.fillStyle = "rgba(240, 180, 41, 0.85)";
   const bob = Math.sin(sim.time * 6) * 3;

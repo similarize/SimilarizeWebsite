@@ -91,12 +91,15 @@
     }
     .icon {
       height: 44px;
-      min-width: 44px;
-      padding: 0 12px;
+      width: 84px;
+      flex: 0 0 84px;
+      padding: 0 4px;
       border-radius: 12px;
       border: 1px solid var(--line);
       background: rgba(35, 28, 22, 0.85);
       color: var(--sand);
+      font-size: 14px;
+      overflow: hidden;
     }
     .pack {
       position: absolute;
@@ -144,10 +147,10 @@
       position: absolute;
       inset: 0;
       display: flex;
-      align-items: safe center;
+      align-items: center;
       justify-content: center;
       padding: 16px;
-      overflow: auto;
+      overflow: hidden;
       touch-action: manipulation;
       pointer-events: none;
     }
@@ -157,6 +160,8 @@
     .card {
       width: 100%;
       max-width: 28rem;
+      max-height: min(640px, calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom)));
+      overflow: auto;
       border-radius: 16px;
       border: 1px solid var(--line);
       background: rgba(35, 28, 22, 0.92);
@@ -249,7 +254,7 @@
       color: var(--amber);
     }
     .go { border: 0; background: var(--ember); color: var(--sand); }
-    .ghost { border: 1px solid var(--line); background: transparent; margin-left: 8px; }
+    .ghost { border: 1px solid var(--line); background: transparent; }
     .hint { margin: 12px 0 0; font-size: 12px; color: var(--muted); }
     .home {
       display: inline-block;
@@ -257,7 +262,7 @@
       color: var(--muted);
       font-size: 12px;
     }
-    .row { display: flex; justify-content: center; gap: 12px; }
+    .row { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; }
     .pips { display: flex; gap: 6px; margin: 0; pointer-events: auto; touch-action: manipulation; cursor: pointer; }
     .pips i {
       width: 28px;
@@ -276,35 +281,41 @@
       gap: 8px;
       margin-top: 6px;
     }
+    .dock {
+      pointer-events: none;
+      position: absolute;
+      left: 12px;
+      right: 12px;
+      bottom: calc(12px + env(safe-area-inset-bottom));
+      display: flex;
+      gap: 8px;
+      z-index: 6;
+    }
     .fire {
       pointer-events: auto;
       touch-action: manipulation;
-      flex: 1;
-      height: 52px;
-      min-width: 88px;
-      padding: 0 16px;
+      flex: 1 1 0;
+      min-width: 0;
+      height: 48px;
+      padding: 0 8px;
       border-radius: 12px;
       border: 1px solid var(--amber);
-      background: var(--ember);
+      background: rgba(35, 28, 22, 0.92);
       color: var(--sand);
       font-family: var(--display);
-      letter-spacing: 0.12em;
-      font-size: 22px;
-      box-shadow: 0 6px 0 rgba(0, 0, 0, 0.28);
+      letter-spacing: 0.06em;
+      font-size: 18px;
+      white-space: nowrap;
     }
     .fire#fire {
-      flex: 1.35;
-      min-width: 110px;
-      font-size: 24px;
-      background: linear-gradient(180deg, #e4572e 0%, #b33a1c 100%);
+      background: #e4572e;
+      color: var(--sand);
     }
     .fire[hidden] { display: none; }
     @media (max-width: 720px) {
-      .fire#fire {
-        height: 58px;
-        min-width: 120px;
-        font-size: 26px;
-      }
+      .icon { width: 64px; flex-basis: 64px; font-size: 13px; }
+      .score { max-width: calc(100% - 220px); }
+      .fire { height: 52px; font-size: 16px; }
     }
     .tune {
       pointer-events: auto;
@@ -406,10 +417,13 @@
           <div class="pack-row"><span>MISSILES</span></div>
           <div class="missile-actions">
             <div class="pips" id="pips" title="Space or tap to fire a missile"><i></i><i></i><i></i></div>
-            <button type="button" class="fire" id="nose" data-ui hidden>Front</button>
-            <button type="button" class="fire" id="fire" data-ui hidden>Missile</button>
           </div>
         </div>
+      </div>
+      <div class="dock" id="dock">
+        <button type="button" class="fire" id="nose-up" data-ui hidden>Up</button>
+        <button type="button" class="fire" id="nose" data-ui hidden>Front</button>
+        <button type="button" class="fire" id="fire" data-ui hidden>Missile</button>
       </div>
     </div>
 
@@ -425,13 +439,13 @@
         </div>
         <p class="picked" id="picked">Selected: rally buggy</p>
         <ul>
-          <li>Press the spot you want the front to point. In front, behind, above, or below. Hold Up / W (or press and hold on the track) to jump. Space fires a missile. Let go and it lands flat. Upside down ends the run.</li>
-          <li>The striped walls are solid. A hit bumps you and leaves a mark. Climb or drop into the gap to get through. A clean gap scores more than a scrape.</li>
+          <li>Hold W, Up, or the track to boost. A or Up noses up. D or Front points the nose forward. S noses down. Let go and it follows the dirt. Landing upside down ends the run. A beat-up truck does too.</li>
+          <li>The striped posts are solid. The word on the gate says DRIVE, HOP, CLIMB, or KICK. A clean gap scores more than a scrape.</li>
           <li>Amber kickers throw you through if you ride them with speed. Too late, and you take the gate on the dirt.</li>
-          <li>Drones pick up after the first minute and get serious by a few minutes in. Shoot a beam to get past it.</li>
+          <li>Drones bump you and mark the body. Shoot to get past. Too many hits and the truck is done.</li>
         </ul>
         <button type="button" class="go" id="start" data-ui>Start run</button>
-        <p class="hint">Aim where the front should point. Up / W or hold to jump. Space or Missile for missiles. Arrows / WASD steer. Xbox: A/RT jump, stick aim, B/X fire, Start pause.</p>
+        <p class="hint">W or hold to boost. A nose up, D front, S nose down. Space or Missile to fire. Xbox: A/RT boost, stick aims, B/X fire.</p>
         <a class="home" href="https://www.similarize.com/">Similarize</a>
       </div>
     </div>
@@ -474,6 +488,6 @@
     </div>
   </div>
   <script src="../shared/gamepad.js?v=gp1"></script>
-  <script type="module" src="./standalone.js?v=20260926-vfs1"></script>
+  <script type="module" src="./standalone.js?v=20260926-play1"></script>
 </body>
 </html>

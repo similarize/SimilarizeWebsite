@@ -14,7 +14,7 @@ import {
   wheelPace,
   MISSILE_MAX,
   MISSILE_RELOAD
-} from "./engine.js?v=20260926-vfs1";
+} from "./engine.js?v=20260926-play1";
 var BEST_KEY = "rc-rally-jump-best";
 var RIG_KEY = "rc-rally-rig";
 var TUNE_KEY = "rc-rally-tune";
@@ -230,6 +230,7 @@ function boot() {
   const pauseBtn = el("pause-btn");
   const fireBtn = el("fire");
   const noseBtn = el("nose");
+  const noseUpBtn = el("nose-up");
   const pips = [...el("pips").children];
   version.textContent = `DESERT CIRCUIT \xB7 ${VERSION}`;
   let pointer = false;
@@ -260,6 +261,7 @@ function boot() {
     bodyDmg.textContent = sim.damage < 34 ? "scuffed" : sim.damage < 68 ? "dented" : "beat up";
     fireBtn.hidden = sim.phase !== "play";
     noseBtn.hidden = sim.phase !== "play";
+    noseUpBtn.hidden = sim.phase !== "play";
     pips.forEach((pip, i) => {
       const on = i < sim.missiles;
       const charging = !on && i === sim.missiles && sim.missiles < MISSILE_MAX;
@@ -278,7 +280,7 @@ function boot() {
     pauseBtn.textContent = sim.phase === "pause" ? "Resume" : "Pause";
     pauseBtn.setAttribute("aria-label", sim.phase === "pause" ? "Resume" : "Pause");
     if (sim.phase === "over") {
-      reason.textContent = sim.crash === "flip" ? "UPSIDE DOWN" : sim.crash === "drone" ? "DRONE HIT" : "CLIPPED A GATE";
+      reason.textContent = sim.crash === "flip" ? "UPSIDE DOWN" : sim.crash === "wreck" ? "BEAT UP" : "RUN OVER";
       overScore.textContent = score.toLocaleString();
       overMeta.textContent = `${sim.gatesCleared} gates \xB7 ${metersOf(sim)} m \xB7 best ${sim.best.toLocaleString()}`;
     }
@@ -292,29 +294,19 @@ function boot() {
     prevGates = 0;
   };
   let noseDown = false;
-  let pointerXY = null;
+  let noseUp = false;
   const padSnap = () => (window.SimilarizeGamepad ? window.SimilarizeGamepad.poll() : null);
   let _pad = null;
   const boostHeld = () => {
     const g = _pad;
-    const gpBoost = !!(g && g.connected && (g.a || g.rt || g.ly < -0.25));
+    const gpBoost = !!(g && g.connected && (g.a || g.rt));
     return pointer || keys.has("ArrowUp") || keys.has("KeyW") || gpBoost;
   };
   const camera = () => {
-    /* Fill entire canvas (no letterbox). Stretch world VIEW_W×VIEW_H to viewport. */
-    const scaleX = canvas.width / VIEW_W;
-    const scaleY = canvas.height / VIEW_H;
-    return { scaleX, scaleY, scale: scaleX, windowStart: 0, ox: 0, oy: 0 };
-  };
-  const viewFromClient = (clientX, clientY) => {
-    const rect = canvas.getBoundingClientRect();
-    const px = (clientX - rect.left) * (canvas.width / rect.width);
-    const py = (clientY - rect.top) * (canvas.height / rect.height);
-    const cam = camera();
-    return {
-      x: (px - cam.ox) / cam.scaleX + cam.windowStart,
-      y: (py - cam.oy) / cam.scaleY
-    };
+    const scale = Math.min(canvas.width / VIEW_W, canvas.height / VIEW_H);
+    const ox = (canvas.width - VIEW_W * scale) / 2;
+    const oy = (canvas.height - VIEW_H * scale) / 2;
+    return { scaleX: scale, scaleY: scale, scale, windowStart: 0, ox, oy };
   };
   const controlAim = () => {
     const tx = 168 + 59;
@@ -324,11 +316,9 @@ function boot() {
     const gpL = !!(g && g.connected && (g.lx < -0.25 || g.dpad.l));
     const gpD = !!(g && g.connected && (g.ly > 0.25 || g.dpad.d));
     const gpU = !!(g && g.connected && (g.ly < -0.25 || g.dpad.u));
-    if (pointer && pointerXY) return { aim: null, aimPoint: viewFromClient(pointerXY.x, pointerXY.y) };
-    if (noseDown || keys.has("ArrowRight") || keys.has("KeyD") || gpR) return { aim: 0, aimPoint: { x: tx + 150, y: ty } };
-    if (keys.has("ArrowLeft") || keys.has("KeyA") || gpL) return { aim: -150, aimPoint: { x: tx - 100, y: ty - 40 } };
+    if (noseUp || keys.has("ArrowLeft") || keys.has("KeyA") || gpL || gpU) return { aim: -150, aimPoint: { x: tx - 40, y: ty - 110 } };
     if (keys.has("ArrowDown") || keys.has("KeyS") || gpD) return { aim: 75, aimPoint: { x: tx + 16, y: ty + 120 } };
-    if (keys.has("ArrowUp") || keys.has("KeyW") || gpU) return { aim: -75, aimPoint: { x: tx + 16, y: ty - 120 } };
+    if (noseDown || keys.has("ArrowRight") || keys.has("KeyD") || gpR) return { aim: 0, aimPoint: { x: tx + 150, y: ty } };
     return { aim: null, aimPoint: null };
   };
   const resize = () => {
@@ -392,18 +382,10 @@ function boot() {
     else if (sim.phase === "over" && sim.sinceOver > 0.4) begin(true);
     else if (sim.phase === "play") {
       pointer = true;
-      pointerXY = { x: e.clientX, y: e.clientY };
     }
   });
-  const move = (e) => {
-    if (!pointer) return;
-    pointerXY = { x: e.clientX, y: e.clientY };
-  };
-  shell.addEventListener("pointermove", move);
-  window.addEventListener("pointermove", move);
   const release = () => {
     pointer = false;
-    pointerXY = null;
   };
   window.addEventListener("pointerup", release);
   window.addEventListener("pointercancel", release);
@@ -440,10 +422,22 @@ function boot() {
   const noseOff = () => {
     noseDown = false;
   };
+  const noseUpOn = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    noseUp = true;
+  };
+  const noseUpOff = () => {
+    noseUp = false;
+  };
   noseBtn.addEventListener("pointerdown", noseOn);
   noseBtn.addEventListener("pointerup", noseOff);
   noseBtn.addEventListener("pointercancel", noseOff);
   noseBtn.addEventListener("pointerleave", noseOff);
+  noseUpBtn.addEventListener("pointerdown", noseUpOn);
+  noseUpBtn.addEventListener("pointerup", noseUpOff);
+  noseUpBtn.addEventListener("pointercancel", noseUpOff);
+  noseUpBtn.addEventListener("pointerleave", noseUpOff);
   el("pips").addEventListener("pointerdown", shoot);
   const tunePanel = el("tune");
   const tuneFields = ["wheel", "chassis", "squish", "gravity", "trailer"];
@@ -534,19 +528,12 @@ function boot() {
     prevScrapes = sim.scrapes;
     prevGates = sim.gatesCleared;
     audio.motorDrive(sim.phase === "play", sim.muted, sim.boosting, wheelPace(sim));
-    const scaleX = canvas.width / VIEW_W;
-    const scaleY = canvas.height / VIEW_H;
+    const cam = camera();
     const shake = shakeOffset(sim);
-    const ox = shake.x * scaleX;
-    const oy = shake.y * scaleY;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    if (art.sky && art.sky.complete && art.sky.naturalWidth > 0) {
-      ctx.drawImage(art.sky, 0, 0, canvas.width, canvas.height);
-    } else {
-      ctx.fillStyle = "#1c2438";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
-    ctx.setTransform(scaleX, 0, 0, scaleY, ox, oy);
+    ctx.fillStyle = "#141820";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.setTransform(cam.scale, 0, 0, cam.scale, cam.ox + shake.x * cam.scale, cam.oy + shake.y * cam.scale);
     draw(ctx, sim, art);
     if (sim.best > bestSaved) {
       bestSaved = sim.best;
