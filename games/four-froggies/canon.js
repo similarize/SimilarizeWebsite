@@ -12,6 +12,7 @@
    hop2: tickLocoHop — continuous ranch foot hop cycle (any move input).
    hop3: faster loco hop; near-zero ability CD; airborne stack height (combo hops).
    track3: banked turns + rock obstacles + live monster-truck wheel scale.
+   ctrl1: hop buffer/coyote + airClear vault; RT/LT vehicle boost.
    hop4: snappier always-hop (higher carry / shorter plant / higher launch); humanoid frog silhouette.
    yard1: James backyard trees/shrubs/creek/rocks/flowers/fence (soft stream) + outdoor trillion-story mech.
    park1: EXIT mech/truck leaves vehicle at exit pos (no snap-home); reset/menu restores pads. */
@@ -628,6 +629,12 @@
     var rad = radius || 22;
     var pos = { x: x, y: y };
     var hit = false;
+    /* ctrl1: airborne vault — soft-pass solids above clear height (hop over low walls) */
+    var airH = opts.airHeight != null ? opts.airHeight : 0;
+    var clearH = opts.airClearHeight != null ? opts.airClearHeight : 28;
+    if (airH >= clearH) {
+      return { x: x, y: y, hit: false, cleared: true };
+    }
     var rects = solidRects(opts);
     for (var i = 0; i < rects.length; i++) {
       if (_pushRectOut(pos, rects[i], rad)) hit = true;
@@ -722,8 +729,13 @@
     if (opts.ang != null && isFinite(opts.ang)) ang = opts.ang;
     var cx = Math.cos(ang), cy = Math.sin(ang);
     var inTruck = !!ent.inTruck;
-    var up = inTruck ? (opts.truckUp != null ? opts.truckUp : 260) : (opts.up != null ? opts.up : 320);
-    var fwd = inTruck ? (opts.truckFwd != null ? opts.truckFwd : 220) : (opts.fwd != null ? opts.fwd : 175);
+    var inMech = !!ent.inMech;
+    var up = inTruck ? (opts.truckUp != null ? opts.truckUp : 260)
+      : inMech ? (opts.mechUp != null ? opts.mechUp : (opts.up != null ? opts.up : 300))
+      : (opts.up != null ? opts.up : 320);
+    var fwd = inTruck ? (opts.truckFwd != null ? opts.truckFwd : 220)
+      : inMech ? (opts.mechFwd != null ? opts.mechFwd : (opts.fwd != null ? opts.fwd : 160))
+      : (opts.fwd != null ? opts.fwd : 175);
     var zKey = opts.zKey || "z";
     var zvKey = opts.zvKey || "zVel";
     var gndKey = opts.gndKey || "groundZ";
@@ -762,6 +774,32 @@
     ent.dashTrail = Math.max(ent.dashTrail || 0, 0.4);
     ent.invuln = Math.max(ent.invuln || 0, 0.18);
     return { ang: ang, cx: cx, cy: cy, up: totalUp, fwd: fwd, combo: combo };
+  }
+
+  /* ctrl1: queue ability hop ~150ms — fire when cd ready (coyote / grounded / air stack all OK) */
+  function queueAbilityHop(ent, ttl) {
+    if (!ent) return;
+    ent.hopWantT = Math.max(ent.hopWantT || 0, ttl != null ? ttl : 0.15);
+  }
+
+  /* ctrl1: true when ability hop should launch (short CD only; grounded OR coyote OR air) */
+  function canAbilityHop(ent, opts) {
+    if (!ent) return false;
+    opts = opts || {};
+    if ((ent.cd || 0) > 0.001) return false;
+    /* Ability hop always allowed — bunny-hop / coyote via applyHop landWindow.
+       Grounded presses must never be refused here. */
+    return true;
+  }
+
+  /* ctrl1: decay buffer; if ready, return true so caller fires applyHop once */
+  function tickHopWant(ent, dt) {
+    if (!ent) return false;
+    if ((ent.hopWantT || 0) <= 0) return false;
+    ent.hopWantT = Math.max(0, (ent.hopWantT || 0) - (dt || 0));
+    if (!canAbilityHop(ent)) return false;
+    ent.hopWantT = 0;
+    return true;
   }
 
   /* hop3: call on land to open the short combo land-window */
@@ -984,6 +1022,9 @@
     applyHop: applyHop,
     tickLocoHop: tickLocoHop,
     noteHopLand: noteHopLand,
+    queueAbilityHop: queueAbilityHop,
+    canAbilityHop: canAbilityHop,
+    tickHopWant: tickHopWant,
     shoveSmallProp: shoveSmallProp,
     tickPushable: tickPushable,
   };

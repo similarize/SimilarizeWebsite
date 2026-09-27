@@ -63,6 +63,8 @@
   let steerX = 0;
   let steerY = 0;
   let _pad = null;
+  let _padSnaps = null; /* ctrl1: one pollAll/frame */
+  let _padFrame = -1;
   let joySteerX = 0;
   let joySteerY = 0;
   let tapSteerX = 0;
@@ -557,8 +559,15 @@
     }, 480);
   }
 
-  function requestAbility(frog) {
-    if (!frog || frog.cd > 0) return;
+  function requestAbility(frog, opts) {
+    if (!frog) return;
+    const Cbuf = globalThis.FroggiesCanon;
+    /* ctrl1: if on short CD, buffer ~150ms so flaky/early X still fires */
+    if (frog.cd > 0) {
+      if (Cbuf && Cbuf.queueAbilityHop) Cbuf.queueAbilityHop(frog, 0.15);
+      else frog.hopWantT = Math.max(frog.hopWantT || 0, 0.15);
+      return;
+    }
     if (phase === "space" && spaceEp && Space) {
       frog.cd = FROG_DEFS[frog.id].cdMax;
       flashAbilityButton(frog.id);
@@ -587,7 +596,9 @@
       if (C && C.applyHop) {
         hop = C.applyHop(frog, frog.inTruck
           ? { up: 280, truckUp: 280, fwd: 190, truckFwd: 230, landWindow: 0.15, maxCombo: 10 }
-          : { up: 340, fwd: 185, landWindow: 0.15, maxCombo: 10 });
+          : frog.inMech
+            ? { up: 300, mechUp: 300, fwd: 160, mechFwd: 160, landWindow: 0.15, maxCombo: 10 }
+            : { up: 340, fwd: 185, landWindow: 0.15, maxCombo: 10 });
       } else {
         const ang = (frog.faceAngle != null && isFinite(frog.faceAngle))
           ? frog.faceAngle
@@ -611,6 +622,7 @@
       shakeT = 0.12;
       const comboN = (hop && hop.combo) || frog.hopCombo || 1;
       storyToast = frog.inTruck ? "HOP · truck jump!"
+        : frog.inMech ? "HOP · mech jump!"
         : (comboN > 1 ? ("HOP ×" + comboN + "!") : "HOP!");
       beep(520, 0.05, "triangle", 0.04);
       beep(780, 0.06, "square", 0.03);
@@ -867,6 +879,26 @@
   }
 
 
+
+  /* ctrl1: ONE pollAll per animation frame — reuse snaps (never re-poll same slot) */
+  function refreshPadSnaps(frameKey) {
+    if (!window.SimilarizeGamepad) { _padSnaps = null; _pad = null; return null; }
+    if (_padSnaps && _padFrame === frameKey) return _padSnaps;
+    _padFrame = frameKey;
+    _padSnaps = window.SimilarizeGamepad.pollAll
+      ? window.SimilarizeGamepad.pollAll(4)
+      : [0, 1, 2, 3].map((i) => window.SimilarizeGamepad.pollPad(i));
+    _pad = null;
+    for (let i = 0; i < _padSnaps.length; i++) {
+      if (_padSnaps[i] && _padSnaps[i].connected) { _pad = _padSnaps[i]; break; }
+    }
+    return _padSnaps;
+  }
+  function padSnap(i) {
+    if (!_padSnaps) return null;
+    return _padSnaps[i | 0] || null;
+  }
+
   function claimedPadIndices() {
     const set = new Set();
     for (const f of frogs) {
@@ -882,9 +914,9 @@
     const claimed = claimedPadIndices();
     let g = _pad;
     if (g && g.connected && g.index != null && claimed.has(g.index | 0)) g = null;
-    /* Hub tick already polls unclaimed pads into _pad; only poll here if still empty */
-    if ((!g || !g.connected) && window.SimilarizeGamepad && claimed.size === 0) {
-      g = window.SimilarizeGamepad.pollPad(0);
+    /* ctrl1: never re-poll — use frame snap only (double poll ate X edges) */
+    if ((!g || !g.connected) && claimed.size === 0) {
+      g = padSnap(0) || _pad;
     }
     if (g && g.connected) {
       let x = g.lx || 0;
@@ -1057,7 +1089,7 @@
       if (f.local) {
         let es;
         if (f.padIndex != null && window.SimilarizeGamepad) {
-          const gp = window.SimilarizeGamepad.pollPad(f.padIndex);
+          const gp = padSnap(f.padIndex);
           if (gp && gp.connected) {
             let x = gp.lx || 0, y = gp.ly || 0;
             if (gp.dpad && gp.dpad.l) x = -1;
@@ -1075,11 +1107,40 @@
               /* interact2: each pad's B/X hops THAT frog only */
               requestAbility(f);
             }
+            /* ctrl1: RT accel / LT brake while boarded */
+            if (f.inTruck || f.inMech) {
+              const rt = gp.rtValue != null ? gp.rtValue : (gp.rt ? 1 : 0);
+              const lt = gp.ltValue != null ? gp.ltValue : (gp.lt ? 1 : 0);
+              f.throttle = rt;
+              f.brake = lt;
+              f.speedBoost = 1 + rt * 0.45;
+              f.fricBoost = 1 + lt * 2.4;
+            } else {
+              f.throttle = 0; f.brake = 0; f.fricBoost = 1;
+            }
           } else {
             es = { x: 0, y: 0 };
           }
         } else {
           es = effectiveSteer();
+          /* padless primary: RT/LT from first unclaimed snap */
+          if ((f.inTruck || f.inMech) && _pad && _pad.connected) {
+            const rt = _pad.rtValue != null ? _pad.rtValue : (_pad.rt ? 1 : 0);
+            const lt = _pad.ltValue != null ? _pad.ltValue : (_pad.lt ? 1 : 0);
+            f.throttle = rt; f.brake = lt;
+            f.speedBoost = 1 + rt * 0.45;
+            f.fricBoost = 1 + lt * 2.4;
+          }
+        }
+        /* ctrl1: consume hop buffer when CD ready (coyote/air OK via applyHop) */
+        {
+          const Cb = globalThis.FroggiesCanon;
+          if (Cb && Cb.tickHopWant) {
+            if (Cb.tickHopWant(f, dt)) requestAbility(f);
+          } else if ((f.hopWantT || 0) > 0) {
+            f.hopWantT = Math.max(0, f.hopWantT - dt);
+            if ((f.cd || 0) <= 0) { f.hopWantT = 0; requestAbility(f); }
+          }
         }
         f.steerX = es.x;
         f.steerY = es.y;
@@ -1133,7 +1194,9 @@
             }
           }
         }
-        if (f.speedBoost > 1) f.speedBoost = Math.max(1, f.speedBoost - dt * 0.5);
+        /* ctrl1: only decay ability boosts; RT sets speedBoost each frame while held */
+        if (!(f.inTruck || f.inMech) && f.speedBoost > 1) f.speedBoost = Math.max(1, f.speedBoost - dt * 0.5);
+        if (!(f.inTruck || f.inMech)) { f.throttle = 0; f.brake = 0; f.fricBoost = 1; }
       }
     }
     W.tickHubAI(frogs, me, dt, world);
@@ -1252,10 +1315,11 @@
       }
       if (yStart) tryStartFromUi();
     } else if (phase === "space") {
-      /* Space: single local — pad0 / primary poll OK */
-      _pad = window.SimilarizeGamepad ? window.SimilarizeGamepad.poll() : null;
-      if (_pad && _pad.connected) {
-        const bp = _pad.buttonsPressed || {};
+      /* ctrl1: one pollAll; reuse snaps — never re-poll */
+      refreshPadSnaps(now | 0);
+      const gp0 = padSnap(0) || _pad;
+      if (gp0 && gp0.connected) {
+        const bp = gp0.buttonsPressed || {};
         if (bp.a) {
           if (party && party.getRole() === "guest") { pushGuestInput({ interact: true }); doInteract(null, { source: "hud" }); }
           else doInteract(null, { source: "hud" });
@@ -1269,27 +1333,26 @@
         }
       }
     } else if (phase === "hub") {
-      /* Hub: per-frog pollPad in updateHub. Unclaimed pads → padless primary only (never other locals). */
-      if (window.SimilarizeGamepad) {
-        const claimed = claimedPadIndices();
-        _pad = null;
-        for (let pi = 0; pi < 4; pi++) {
-          if (claimed.has(pi)) continue;
-          const gp = window.SimilarizeGamepad.pollPad(pi);
-          if (!gp || !gp.connected) continue;
-          if (!_pad) _pad = gp;
-          const bp = gp.buttonsPressed || {};
-          if (bp.a) {
-            const player = localPlayer();
-            if (party && party.getRole() === "guest") { pushGuestInput({ interact: true }); doInteract(player, { source: "hud" }); }
-            else doInteract(player, { source: "hud" });
-          }
-          if (bp.b || bp.x) {
-            const player = localPlayer();
-            if (player) {
-              if (party && party.getRole() === "guest") pushGuestInput({ ability: true });
-              else requestAbility(player); /* interact2: spare pad hops primary only */
-            }
+      /* ctrl1: ONE pollAll for the frame; updateHub + spare pads read same snaps */
+      refreshPadSnaps(now | 0);
+      const claimed = claimedPadIndices();
+      _pad = null;
+      for (let pi = 0; pi < 4; pi++) {
+        const gp = padSnap(pi);
+        if (!gp || !gp.connected) continue;
+        if (claimed.has(pi)) continue;
+        if (!_pad) _pad = gp;
+        const bp = gp.buttonsPressed || {};
+        if (bp.a) {
+          const player = localPlayer();
+          if (party && party.getRole() === "guest") { pushGuestInput({ interact: true }); doInteract(player, { source: "hud" }); }
+          else doInteract(player, { source: "hud" });
+        }
+        if (bp.b || bp.x) {
+          const player = localPlayer();
+          if (player) {
+            if (party && party.getRole() === "guest") pushGuestInput({ ability: true });
+            else requestAbility(player); /* interact2: spare pad hops primary only */
           }
         }
       }
@@ -1605,6 +1668,50 @@
     }, { passive: false });
   }
   bindWheelSizeUi();
+
+  /* ctrl1: two-finger pinch — spread = zoom OUT (negative adjustViewScale), pinch-in = zoom IN */
+  (function bindPinchZoom() {
+    let pinchDist0 = 0;
+    let pinchActive = false;
+    function touchDist(t0, t1) {
+      const dx = t0.clientX - t1.clientX, dy = t0.clientY - t1.clientY;
+      return Math.hypot(dx, dy);
+    }
+    function onPlayfield(el) {
+      if (!el) return false;
+      return el === canvas || el.id === "view" || el.id === "engine-host" ||
+        !!(el.closest && (el.closest("#engine-host") || el.closest("#view")));
+    }
+    window.addEventListener("touchstart", (e) => {
+      if (document.body.classList.contains("in-title")) return;
+      if (!e.touches || e.touches.length !== 2) { pinchActive = false; return; }
+      const t0 = e.touches[0], t1 = e.touches[1];
+      if (!onPlayfield(t0.target) && !onPlayfield(t1.target)) { pinchActive = false; return; }
+      pinchDist0 = touchDist(t0, t1);
+      pinchActive = pinchDist0 > 8;
+    }, { passive: true });
+    window.addEventListener("touchmove", (e) => {
+      if (!pinchActive || !e.touches || e.touches.length !== 2) return;
+      const d = touchDist(e.touches[0], e.touches[1]);
+      const delta = d - pinchDist0;
+      if (Math.abs(delta) < 6) return;
+      pinchDist0 = d;
+      /* spread (delta>0) → zoom OUT → negative viewScale delta */
+      const step = (delta > 0 ? -1 : 1) * Math.min(0.08, Math.abs(delta) * 0.0015);
+      e.preventDefault();
+      if (phase === "space" && spaceEp && Space && Space.adjustZoom) {
+        Space.adjustZoom(spaceEp, step * 2);
+        return;
+      }
+      if (phase === "hub" && W && W.adjustViewScale) W.adjustViewScale(step);
+      if (globalThis.FroggiesEngines && globalThis.FroggiesEngines.adjustZoom) {
+        globalThis.FroggiesEngines.adjustZoom(step);
+      }
+    }, { passive: false });
+    window.addEventListener("touchend", () => { pinchActive = false; });
+    window.addEventListener("touchcancel", () => { pinchActive = false; });
+  })();
+
 
   function tryStartFromUi() {
     const role = party ? party.getRole() : "solo";

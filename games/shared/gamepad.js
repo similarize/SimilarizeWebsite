@@ -11,10 +11,15 @@
  * Poll every frame — Chrome needs a button press after connect before getGamepads is live.
  * Bind by slot index once claimed; never feed one pad into two players.
  *
+ * ctrl1: Frame-cached pollPad/pollAll — first snap of a slot in a browser frame is
+ * reused for later callers. Re-polling used to recompute rising edges against an
+ * already-updated prev → buttonsPressed.x/b eaten (flaky HOP). Also exposes
+ * analog ltValue/rtValue 0–1 from buttons[6]/[7].value.
+ *
  * API (window.SimilarizeGamepad):
  *   start()                 — optional; auto-runs on load
  *   poll() / pollPad(i)     — snapshot { connected, lx,ly,rx,ry, a,b,x,y, lb,rb,lt,rt,
- *                             start,back, dpad:{u,d,l,r}, buttonsPressed:{…edges} }
+ *                             ltValue,rtValue, start,back, dpad:{u,d,l,r}, buttonsPressed:{…edges} }
  *   pollAll(max?)           — poll slots 0..max-1 once (avoids double-poll eating edges)
  *   connectedIndices(max?)  — indices where getGamepads()[i] is present
  *   connectedCount(max?)    — length of connectedIndices
@@ -29,6 +34,21 @@
   var prev = [{}, {}, {}, {}];
   var last = [null, null, null, null];
   var hinted = false;
+  /* ctrl1: one snap per slot per browser frame — share edges across callers */
+  var frameToken = 0;
+  var frameBumpScheduled = false;
+  var frameSlot = []; /* { token, snap } per pad index */
+
+  function scheduleFrameBump() {
+    if (frameBumpScheduled) return;
+    frameBumpScheduled = true;
+    var bump = function () {
+      frameToken++;
+      frameBumpScheduled = false;
+    };
+    if (typeof requestAnimationFrame === "function") requestAnimationFrame(bump);
+    else setTimeout(bump, 16);
+  }
 
   function axis(v) {
     return Math.abs(v) < DZ ? 0 : v;
@@ -37,6 +57,12 @@
     var b = gp.buttons && gp.buttons[i];
     if (!b) return false;
     return !!(b.pressed || (typeof b.value === "number" && b.value > 0.45));
+  }
+  function btnVal(gp, i) {
+    var b = gp.buttons && gp.buttons[i];
+    if (!b) return 0;
+    if (typeof b.value === "number" && isFinite(b.value)) return Math.max(0, Math.min(1, b.value));
+    return b.pressed ? 1 : 0;
   }
   function nowVal(out, n) {
     if (n === "du") return out.dpad.u;
@@ -52,6 +78,7 @@
       lx: 0, ly: 0, rx: 0, ry: 0,
       a: false, b: false, x: false, y: false,
       lb: false, rb: false, lt: false, rt: false,
+      ltValue: 0, rtValue: 0,
       start: false, back: false,
       dpad: { u: false, d: false, l: false, r: false },
       buttonsPressed: {}
@@ -67,6 +94,7 @@
     out.ry = axis(gp.axes[3] || 0);
     out.a = btn(gp, 0); out.b = btn(gp, 1); out.x = btn(gp, 2); out.y = btn(gp, 3);
     out.lb = btn(gp, 4); out.rb = btn(gp, 5); out.lt = btn(gp, 6); out.rt = btn(gp, 7);
+    out.ltValue = btnVal(gp, 6); out.rtValue = btnVal(gp, 7);
     out.back = btn(gp, 8); out.start = btn(gp, 9);
     out.dpad.u = btn(gp, 12); out.dpad.d = btn(gp, 13);
     out.dpad.l = btn(gp, 14); out.dpad.r = btn(gp, 15);
@@ -95,9 +123,16 @@
     if (idx < 0) idx = 0;
     while (prev.length <= idx) prev.push({});
     while (last.length <= idx) last.push(null);
+    while (frameSlot.length <= idx) frameSlot.push({ token: -1, snap: null });
+    scheduleFrameBump();
+    var slot = frameSlot[idx];
+    if (slot.token === frameToken && slot.snap) return slot.snap;
     var list = pads();
     var gp = list && list[idx];
-    return snap(gp || null, idx);
+    var out = snap(gp || null, idx);
+    slot.token = frameToken;
+    slot.snap = out;
+    return out;
   }
   function poll() { return pollPad(0); }
   function pollAll(max) {

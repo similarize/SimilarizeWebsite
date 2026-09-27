@@ -28,6 +28,7 @@
   var keySteer = { x: 0, y: 0 }, tapSteer = { x: 0, y: 0 }, tapHeld = false;
   var tapMarker = null;
   var wantInteract = false, wantAbility = false;
+  var userZoom = 1; /* ctrl1 pinch/wheel */
 
   function mergedSteer() {
     if (keySteer.x || keySteer.y) return keySteer;
@@ -257,6 +258,7 @@
             ? Math.min(0.84, Math.max(0.52, iw / 650))
             : Math.min(0.88, Math.max(0.36, iw / 1500));
           this.cameras.main.setZoom(z);
+          this._baseZoom = z;
         }).call(this);
         /* polish6: soft depth shadow under player / truck */
         this.playerShadow = this.add.ellipse(spawn.x, spawn.y + 14, 40, 16, 0x000000, 0.32).setDepth(18);
@@ -748,6 +750,16 @@
         /* polish3: snappier locomotion */
         /* tapsteer1: faster walk + drive */
         var maxSp = this.inMech ? 195 : this.inTruck ? 440 : 345, accel = this.inMech ? 620 : this.inTruck ? 1050 : 980, fric = this.inMech ? 7.0 : this.inTruck ? 5.2 : 8.8;
+        /* ctrl1: RT accel / LT brake */
+        if ((this.inTruck || this.inMech) && global.SimilarizeGamepad) {
+          var pgp = global.SimilarizeGamepad.pollPad(0);
+          if (pgp && pgp.connected) {
+            var rtP = pgp.rtValue != null ? pgp.rtValue : (pgp.rt ? 1 : 0);
+            var ltP = pgp.ltValue != null ? pgp.ltValue : (pgp.lt ? 1 : 0);
+            if (rtP > 0.05) { maxSp *= 1 + rtP * 0.45; accel *= 1 + rtP * 0.55; }
+            if (ltP > 0.05) { fric *= 1 + ltP * 2.4; maxSp *= Math.max(0.32, 1 - ltP * 0.6); }
+          }
+        }
         var body = this.player.body;
         var spPrev = Math.hypot(body.velocity.x, body.velocity.y);
         var steer = mergedSteer();
@@ -800,12 +812,15 @@
         if (sp > maxSp) { body.velocity.x = (body.velocity.x / sp) * maxSp; body.velocity.y = (body.velocity.y / sp) * maxSp; }
         /* solid1: solid walls / mechs / parked trucks (doorway open) */
         if (C.resolveSolid) {
+          var airHp = Math.max(0, (this.zLift || 0) - (this.groundZ || 0));
           var solid = C.resolveSolid(this.player.x, this.player.y, this.inTruck ? 38 : this.inMech ? 30 : 22, {
             garageOpen: this.garageOpen || 0,
             inTruck: !!this.inTruck,
             inMech: !!this.inMech,
             ignoreMechId: this.inMech && C.mechSolidId ? C.mechSolidId(this.mechId) : null,
             softPond: !this.inTruck && !this.inMech,
+            airHeight: airHp,
+            airClearHeight: this.inMech ? 22 : 28,
           });
           if (solid.hit) {
             var pdx = solid.x - this.player.x, pdy = solid.y - this.player.y;
@@ -1311,7 +1326,15 @@
           if (hg.ring.setScale) hg.ring.setScale(this.near && this.near.id === hg.data.id ? 1.25 : 1);
         }
         if (wantInteract) { wantInteract = false; this.doInteract(); }
+        if (this.cameras && this.cameras.main) {
+          var baseZ = this._baseZoom != null ? this._baseZoom : 1;
+          this.cameras.main.setZoom(baseZ * (userZoom || 1));
+        }
         if (wantAbility) { wantAbility = false; this.doAbility(); }
+        if ((this.hopWantT || 0) > 0) {
+          this.hopWantT = Math.max(0, this.hopWantT - dt);
+          if (this.cd <= 0) { this.hopWantT = 0; this.doAbility(); }
+        }
         if (hooks.onHud) {
           var walk = "🐸 Walk";
           if (this.inMech) walk = "🤖 Mech · " + (this.mechStories || "?") + "-story";
@@ -1379,13 +1402,17 @@
         if (hooks.onToast) hooks.onToast(this.toast);
       },
       doAbility: function () {
-        /* hop3: near-zero CD + airborne stack height */
-        if (this.cd > 0) return; this.cd = 0.1;
+        /* hop3 + ctrl1: near-zero CD + buffer; mech real hop */
+        if (this.cd > 0) {
+          this.hopWantT = Math.max(this.hopWantT || 0, 0.15);
+          return;
+        }
+        this.cd = 0.1;
         var body = this.player.body;
         var ang = (this.faceAngle != null) ? (this.faceAngle - Math.PI / 2) : (this.facing >= 0 ? 0 : Math.PI);
         if (Math.hypot(body.velocity.x, body.velocity.y) > 40) ang = Math.atan2(body.velocity.y, body.velocity.x);
-        var fwd = this.inTruck ? 300 : 230;
-        var up = this.inTruck ? 300 : 360;
+        var fwd = this.inTruck ? 300 : this.inMech ? 200 : 230;
+        var up = this.inTruck ? 300 : this.inMech ? 300 : 360;
         var gnd = this.groundZ || 0;
         var air = (this.zLift || 0) > gnd + 4;
         var landAge = this.hopLandT != null ? this.hopLandT : 999;
@@ -1405,7 +1432,9 @@
         }
         this.hopLandT = 999;
         this.hopSquash = 0; this.hopStretch = 1;
-        this.toast = this.inTruck ? "HOP · truck jump!" : (combo > 1 ? ("HOP ×" + combo + "!") : "HOP!");
+        this.toast = this.inTruck ? "HOP · truck jump!"
+          : this.inMech ? "HOP · mech jump!"
+          : (combo > 1 ? ("HOP ×" + combo + "!") : "HOP!");
         this.toastT = 1.8;
         for (var zi = 0; zi < 6; zi++) {
           var dg = this.add.circle(this.player.x - Math.cos(ang) * (10 + zi * 5), this.player.y - Math.sin(ang) * (10 + zi * 5), 3 + (zi % 3), 0x86efac, 0.7).setDepth(30);
@@ -1706,6 +1735,12 @@
   global.FroggiesPhaser = {
     boot: boot, destroy: destroy, setSteer: setSteer,
     pulseInteract: pulseInteract, pulseAbility: pulseAbility,
+    adjustZoom: function (delta) {
+      /* delta>0 zoom in, delta<0 zoom out — same sign as canvas wheel helper */
+      userZoom = Math.max(0.55, Math.min(1.45, (userZoom || 1) + (delta || 0) * 1.8));
+      return userZoom;
+    },
+    getUserZoom: function () { return userZoom || 1; },
     isActive: isActive, leaveOrbit: leaveOrbitPhaser,
   };
 })(typeof window !== "undefined" ? window : globalThis);

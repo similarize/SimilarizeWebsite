@@ -1,3 +1,12 @@
+## What's new (ctrl1) — reliable HOP + RT/LT + pinch zoom
+- **Flaky gamepad X fixed:** `SimilarizeGamepad.pollPad` now frame-caches snapshots — a second poll same frame used to recompute rising edges against an already-updated `prev`, eating `buttonsPressed.x` (HOP intermittent). One snap per slot per browser frame; edges shared.
+- **Hop buffer ~150ms:** If X/B/Space hits during the short ~0.1s anti-tap CD, hop queues and fires when ready (coyote/air stack still via `applyHop`).
+- **Mech hop:** Three.js toast-only "Mech stomp" replaced with real `zVel`/`zLift` jump; Canvas/Phaser toast `HOP · mech jump!`. Truck hop unchanged.
+- **Wall clear:** Airborne above clear height soft-passes solids (`resolveSolid` airHeight) so hop vaults low walls / obstacles.
+- **RT accel / LT brake:** Triggers 6/7 (+ analog `ltValue`/`rtValue`) speed up / brake truck and mech (Canvas + Phaser + Three).
+- **Pinch zoom:** Two-finger **spread = zoom OUT**, pinch-in = zoom IN on ranch (Canvas `adjustViewScale`; Phaser camera zoom; Three `camDist`). Does not steal 1-finger vjoy.
+- Cache-bust: `?v=20260926-ctrl1`. Cast unchanged. No inventing places/toys. Do not publish from agent.
+
 ## Tesla Cybertruck fullscreen
 Live entry includes `../shared/tesla-fullscreen.js` (YouTube-redirect chromeless trick). Desktop no-op; party `room=` query preserved. Full notes: [`games/shared/TESLA_FULLSCREEN.md`](../shared/TESLA_FULLSCREEN.md).
 

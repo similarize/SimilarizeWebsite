@@ -43,6 +43,7 @@
   var tapMarker = null; /* { sx, sy, life, ang } screen px in canvas */
   var wantInteract = false;
   var wantAbility = false;
+  var userZoom = 1; /* ctrl1: pinch/wheel cam zoom (1 = default) */
   var interactOrigin = null; /* world {x,y} from pad that pressed A (multi-local) */
   var interactPadIndex = null; /* pad that pressed A (null = keyboard/HUD/primary) */
   var abilityPadIndex = null; /* pad that pressed B/X (null = keyboard/HUD/primary) */
@@ -2055,7 +2056,10 @@
     if (!c || !c.userData.local) return false;
     if (state.inTruck && state.truckMode === "shared") return false; /* seated — no solo hop */
     var cd = c.userData.cd || 0;
-    if (cd > 0) return false;
+    if (cd > 0) {
+      c.userData.hopWantT = Math.max(c.userData.hopWantT || 0, 0.15);
+      return false;
+    }
     c.userData.cd = 0.1;
     var yaw = c.userData.faceYaw != null ? c.userData.faceYaw : 0;
     var fx = Math.sin(yaw), fz = Math.cos(yaw);
@@ -2091,9 +2095,8 @@
       return;
     }
     /* Primary / keyboard / HUD → camera frog only */
-    if (state.cd > 0) return;
     if (state.inMech) {
-      /* Only pilot / primary HUD may stomp */
+      /* ctrl1: only pilot / primary HUD may hop the mech — real jump, not toast-only stomp */
       var pilot = state.mechPilotPadIndex;
       if (abilityPadIndex != null && pilot != null && abilityPadIndex !== pilot) {
         abilityPadIndex = null;
@@ -2103,11 +2106,11 @@
         abilityPadIndex = null;
         return;
       }
-      state.cd = 0.2;
-      state.toast = "Mech stomp · keep lumbering";
-      state.toastT = 1.0;
-      state.shakeT = Math.max(state.shakeT || 0, 0.12);
-      if (hooks.onToast) hooks.onToast(state.toast);
+      /* fall through to shared hop impulse below */
+    }
+    /* ctrl1: buffer if short CD still ticking (do NOT silent-return — that ate X) */
+    if (state.cd > 0) {
+      state.hopWantT = Math.max(state.hopWantT || 0, 0.15);
       abilityPadIndex = null;
       return;
     }
@@ -2136,8 +2139,8 @@
         }
       }
     } else {
-      var fwd = state.inTruck ? 7.2 : 5.6;
-      var up = state.inTruck ? 8.0 : 9.8;
+      var fwd = state.inTruck ? 7.2 : state.inMech ? 4.8 : 5.6;
+      var up = state.inTruck ? 8.0 : state.inMech ? 8.4 : 9.8;
       var gndL = state.groundLift || 0;
       var air = (state.zLift || 0) > gndL + 0.12;
       var landAge = state.hopLandT != null ? state.hopLandT : 999;
@@ -2157,7 +2160,9 @@
       }
       state.hopLandT = 999;
       state.hopSquash = 0; state.hopStretch = 1;
-      state.toast = state.inTruck ? "HOP · truck jump!" : (combo > 1 ? ("HOP ×" + combo + "!") : "HOP!");
+      state.toast = state.inTruck ? "HOP · truck jump!"
+        : state.inMech ? "HOP · mech jump!"
+        : (combo > 1 ? ("HOP ×" + combo + "!") : "HOP!");
       if (!state.fx) state.fx = [];
       for (var zi = 0; zi < 8; zi++) {
         var spark = new THREE.Mesh(
@@ -2324,6 +2329,18 @@
     var maxSp = state.mode === "space" ? 11.5 : state.inTruck ? 15.8 : state.inMech ? 6.8 : 13.6;
     var accel = state.mode === "space" ? 22 : state.inTruck ? 38 : state.inMech ? 16 : 34;
     var fric = state.mode === "space" ? 3.0 : state.inTruck ? 4.8 : state.inMech ? 5.2 : 7.8;
+    /* ctrl1: RT accel / LT brake on truck + mech — read primary/pilot pad (frame-cached) */
+    if (state.mode === "ranch" && (state.inTruck || state.inMech) && global.SimilarizeGamepad) {
+      var thrPad = state.inMech && state.mechPilotPadIndex != null ? state.mechPilotPadIndex
+        : (state.primaryPadIndex != null ? state.primaryPadIndex : 0);
+      var tgp = global.SimilarizeGamepad.pollPad(thrPad);
+      if (tgp && tgp.connected) {
+        var rtV = tgp.rtValue != null ? tgp.rtValue : (tgp.rt ? 1 : 0);
+        var ltV = tgp.ltValue != null ? tgp.ltValue : (tgp.lt ? 1 : 0);
+        if (rtV > 0.05) { maxSp *= 1 + rtV * 0.45; accel *= 1 + rtV * 0.55; }
+        if (ltV > 0.05) { fric *= 1 + ltV * 2.4; maxSp *= Math.max(0.32, 1 - ltV * 0.6); }
+      }
+    }
 
     // Map screen WASD/D-pad → ground plane relative to locked camera
     // Canvas convention: steer.y < 0 = Up/W (screen up). Camera sits at +X+Z offset.
@@ -2863,12 +2880,15 @@
       var ignoreMech = null;
       if (state.inMech && C.mechSolidId) ignoreMech = C.mechSolidId(state.mechId);
       else if (state.inMech && state.mechId) ignoreMech = String(state.mechId).replace(/^mech-/, "mech");
+      var airH3 = Math.max(0, (state.zLift || 0) - (state.groundLift || 0));
       var solidOpts = {
         garageOpen: state.garageOpen || 0,
         inTruck: !!state.inTruck,
         inMech: !!state.inMech,
         ignoreMechId: ignoreMech,
         softPond: !state.inTruck && !state.inMech,
+        airHeight: airH3 / 0.02, /* three→world-ish units for canon clear threshold */
+        airClearHeight: state.inMech ? 22 : 28,
       };
       var resolved = C.resolveSolid(wHit.x, wHit.y, radW, solidOpts);
       if (resolved.hit) {
@@ -2948,7 +2968,7 @@
     target.x += (followX - target.x) * followK;
     target.z += (followZ - target.z) * followK;
     target.y = 0;
-    var camDist = state.mode === "ranch" ? 18.5 : 12;
+    var camDist = (state.mode === "ranch" ? 18.5 : 12) * (userZoom || 1);
     var camH = state.mode === "ranch" ? 20.5 : 14;
     /* polish6: slight walk bob / tilt */
     var walkBob = 0, walkTilt = 0;
@@ -3091,6 +3111,13 @@
           c.position.z += (c.userData.vz || 0) * dt;
           /* interact2: per-companion hop arc */
           c.userData.cd = Math.max(0, (c.userData.cd || 0) - dt);
+          if ((c.userData.hopWantT || 0) > 0) {
+            c.userData.hopWantT = Math.max(0, c.userData.hopWantT - dt);
+            if ((c.userData.cd || 0) <= 0) {
+              c.userData.hopWantT = 0;
+              hopCompanionPad(c.userData.padIndex);
+            }
+          }
           var czv = c.userData.zVel || 0;
           var czl = c.userData.zLift || 0;
           if (czl > 0 || czv > 0) {
@@ -3260,6 +3287,14 @@
     if (wantAbility) {
       wantAbility = false;
       doAbility();
+    }
+    /* ctrl1: buffered X — fire when CD ready */
+    if ((state.hopWantT || 0) > 0) {
+      state.hopWantT = Math.max(0, state.hopWantT - dt);
+      if (state.cd <= 0) {
+        state.hopWantT = 0;
+        doAbility();
+      }
     }
     interactOrigin = null;
     interactPadIndex = null;
@@ -3485,6 +3520,12 @@
     setSteer: setSteer,
     pulseInteract: pulseInteract,
     pulseAbility: pulseAbility,
+    adjustZoom: function (delta) {
+      /* positive delta = zoom IN (closer); negative = zoom OUT — match canvas wheel */
+      userZoom = Math.max(0.55, Math.min(1.45, (userZoom || 1) - (delta || 0) * 2.2));
+      return userZoom;
+    },
+    getUserZoom: function () { return userZoom || 1; },
     isActive: isActive,
     leaveOrbit: leaveOrbitThree,
   };

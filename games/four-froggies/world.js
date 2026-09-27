@@ -1146,6 +1146,15 @@
     var wetMove = (inPond(ent.x, ent.y) || inStream) && (ent.z || 0) < 3;
     var accel = ent.inMech ? 780 : ent.inTruck ? 1680 : 1520;
     var friction = ent.inMech ? 7.2 : ent.inTruck ? 5.6 : 9.6;
+    /* ctrl1: RT accel / LT brake while boarded */
+    var thr = (ent.inTruck || ent.inMech) ? (ent.throttle || 0) : 0;
+    var brk = (ent.inTruck || ent.inMech) ? (ent.brake || 0) : 0;
+    if (thr > 0.05) accel *= 1 + Math.min(1, thr) * 0.55;
+    if ((ent.fricBoost || 0) > 1 && (ent.inTruck || ent.inMech)) friction *= ent.fricBoost;
+    if (brk > 0.05) {
+      friction *= 1 + Math.min(1, brk) * 2.2;
+      maxSp *= Math.max(0.32, 1 - Math.min(1, brk) * 0.6);
+    }
     if (wetMove && ent.inTruck) {
       accel *= 0.82;
       friction *= 1.15;
@@ -1250,12 +1259,15 @@
       var ignoreMech = null;
       if (ent.inMech && canon.mechSolidId) ignoreMech = canon.mechSolidId(ent.mechId);
       else if (ent.inMech && ent.mechId) ignoreMech = String(ent.mechId).replace(/^mech-/, "mech");
+      var airH = (ent.z || 0) - (ent.groundZ || 0);
       var solid = canon.resolveSolid(ent.x, ent.y, ent.inTruck ? 38 : ent.inMech ? 30 : 22, {
         garageOpen: (world && world.garageOpen) || 0,
         inTruck: !!ent.inTruck,
         inMech: !!ent.inMech,
         ignoreMechId: ignoreMech,
         softPond: !ent.inTruck && !ent.inMech,
+        airHeight: airH,
+        airClearHeight: ent.inMech ? 22 : 28,
       });
       if (solid.hit) {
         var pdx = solid.x - ent.x, pdy = solid.y - ent.y;

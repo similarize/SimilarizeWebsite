@@ -5,7 +5,7 @@
   "use strict";
 
   var C = global.FroggiesCanon;
-  var CACHE = "20260926-spacefix1";
+  var CACHE = "20260926-ctrl1";
   var CDN = {
     phaser: "https://cdn.jsdelivr.net/npm/phaser@3.87.0/dist/phaser.min.js",
     three: "https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js",
@@ -793,6 +793,11 @@
   }
 
   global.FroggiesEngines = {
+    adjustZoom: function (delta) {
+      var a = altApi();
+      if (a && typeof a.adjustZoom === "function") return a.adjustZoom(delta);
+      return null;
+    },
     tryStart: tryStart,
     startAlt: startAlt,
     isAltEngine: function (mode) {
