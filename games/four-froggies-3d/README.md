@@ -1,13 +1,16 @@
-# Four Froggies 3D — ff3d3
+# Four Froggies 3D — ff3d4 (vehicles + robots + phone)
 
-Standalone Three.js ranch (not Canvas lobby).
+Cache: `20260928-ff3d4` · bundle `assets/index-ff3d4.js`
 
-**Cache:** `20260928-ff3d3` · **Bundle:** `assets/index-ff3d3.js`
+## Vehicles
+- **James's Cybertruck** (playable) + **Dad's Cybertruck** (NPC only)
+- Shared rideables: **Ripsaw**, **Monster Truck**, **Tank** near garage/yard
+- Removed per-froggy extra Cybertrucks
 
-### This build
-- Chief low-lip trestles (`eLow`, `s=0.72`, skip buried stubs)
-- Backdrop forest scaled down (16-tall cylinder @ y=8)
-- Space: in-starship → EVA clear suit → Earth-only return; pad on Earth
-- NPC: James's dad (large froggy) at house / truck — not playable
+## Robots (DESIGN.md §9)
+Optimus (Bubbles), Unitree, Figure 03, Figure 02, Big Figure Two, Atlas HD, Atlas electric
 
-Playable cast: James, Jimmy, Bubbles, Rexy only.
+## Phone remote
+Phone FAB / **P**: call robot, live follow-cam, Come / Move / Stop / Wave
+
+Keeps ff3d3: Dad NPC, low-lip trestles, forest scale, space rocket/EVA/Earth.
