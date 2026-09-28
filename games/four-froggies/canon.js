@@ -24,7 +24,8 @@
          expand playable ground/forest (house size unchanged).
    pond1: swim in pond + docked submarine at pond perimeter (enter/EXIT like other vehicles).
    mech6: tank-blasted props + Rexy 1000-mech respawn after ~7s.
-   mech7: swim pose (engines); board existing sub hull (no clone). */
+   mech7: swim pose (engines); board existing sub hull (no clone).
+   mech8: Rexy 1000-mech tank-blast respawn restores full articulated mesh (Three). */
 (function (global) {
   "use strict";
 

@@ -32,6 +32,7 @@
    pond1: swim in pond + docked submarine at south rim (enter/EXIT).
    mech6: tank blast props + Rexy 1000-mech respawn ~7s.
    mech7: swim POSE (stroke + flat body, no hop); single docked sub hull (no clone).
+   mech8: (Three) Rexy 1000-mech respawn restores full mesh after tank blast.
    ~10× map: real roam between ranch house / track / pond / Starship.
    James ranch house: big house, backyard (animals), huge garage (toys + 10/100-story mechs);
    1000-story + trillion-story mechs sit out back (won't fit). Four Cybertrucks + shared pile-in.

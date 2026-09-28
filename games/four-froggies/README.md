@@ -1,3 +1,12 @@
+## What's new (mech8) — Rexy 1000-mech respawn restores full mesh
+
+**Bug (mech6/mech7 Three):** After Tank destroys **Rexy's thousand-story mech**, the ~7s respawn came back as a **solid yellow ball / pad** instead of the articulated robot. Root cause: blast replaced every child material (including the large faint **haze SphereGeometry**) with a wreck mat; revive only forced `opacity=1` + yellow on those wreck mats — so the glow sphere became an opaque ball hiding the body boxes.
+
+**Fix (`three-hub.js`):** save `userData.homeMat` per mech mesh at build/destroy; on `tickMechRespawn` restore those materials and clear wreck transform. Canvas draw path was already fine (hides while destroyed, `drawMech` on revive).
+
+- Cache-bust: `?v=20260928-mech8`. Lobby exit1 UX kept (`← Arcade` + `Join · enter code`). Cast unchanged: James, Jimmy, Bubbles, Rexy.
+- Includes mech7 (swim LOOK + single sub hull) if not yet live.
+
 ## What's new (mech7) — swim LOOK + single sub hull
 
 - **Swim pose:** in the pond, froggies look like they are swimming (flat/horizontal body, arm/leg stroke) — not the land hop/walk cycle.

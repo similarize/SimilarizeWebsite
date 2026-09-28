@@ -28,6 +28,7 @@
    pond1: swim in pond + docked submarine at south rim.
    mech6: tank blast props + Rexy 1000-mech respawn ~7s.
    mech7: swim POSE (stroke + flat body, no hop); board existing docked sub (no clone hull).
+   mech8: after tank destroys Rexy 1000-mech, respawn restores full mech mesh (not haze-ball).
    interact2: interact/exit + HOP strictly per pad/player; shared HUD = primary only.
    hop3: faster loco + spam HOP + stack; articulated mechs.
    track3: banks + rocks + live monster wheels (preserved).
@@ -757,7 +758,10 @@
         new THREE.SphereGeometry(h * (band === "trillion" ? 0.7 : 0.55), 12, 10),
         new THREE.MeshBasicMaterial({ color: eyeCol, transparent: true, opacity: band === "trillion" ? 0.16 : 0.12, depthWrite: false })
       );
-      haze.position.set(0, h * 0.55, 0); g.add(haze);
+      haze.position.set(0, h * 0.55, 0);
+      haze.userData.homeMat = haze.material; /* mech8 */
+      haze.userData.isMechHaze = true;
+      g.add(haze);
     }
     var padR = h * (band === "trillion" ? 0.42 : 0.38);
     var padY = (band === "1000" || band === "trillion") ? 0.18 : 0.14;
@@ -773,6 +777,7 @@
     pad.rotation.x = -Math.PI / 2;
     pad.position.set(0, padY, 0);
     pad.renderOrder = 3;
+    pad.userData.homeMat = pad.material; /* mech8 */
     g.add(pad);
     var padRing = new THREE.Mesh(
       new THREE.RingGeometry(padR * 0.7, padR * 0.92, 32),
@@ -784,6 +789,7 @@
     padRing.rotation.x = -Math.PI / 2;
     padRing.position.set(0, padY + 0.02, 0);
     padRing.renderOrder = 4;
+    padRing.userData.homeMat = padRing.material; /* mech8 */
     g.add(padRing);
 
     var legsL = [], legsR = [], armsL = [], armsR = [];
@@ -794,6 +800,7 @@
       mesh.userData.baseY = y;
       mesh.userData.baseX = x;
       mesh.userData.baseZ = z;
+      mesh.userData.homeMat = material; /* mech8: restore after tank blast */
       g.add(mesh);
       if (bucket) bucket.push(mesh);
       return mesh;
@@ -2694,6 +2701,8 @@ state.zLift = 0;
     if (ment.group) {
       ment.group.traverse(function (ch) {
         if (ch.isMesh && ch.material) {
+          /* mech8: keep original mats so respawn is full mech, not solid haze-ball */
+          if (!ch.userData.homeMat) ch.userData.homeMat = ch.material;
           ch.material = new THREE.MeshBasicMaterial({ color: 0x78716c, transparent: true, opacity: 0.7 });
         }
       });
@@ -2826,17 +2835,25 @@ state.zLift = 0;
           if (!rm || rm.solidId !== "mech1000") continue;
           rm.destroyed = false;
           rm.wreckT = 0;
+          rm.respawnT = 0;
           if (rm.group) {
             rm.group.visible = true;
+            /* park / home XZ kept; clear wreck float + tumble */
             rm.group.position.y = 0;
+            rm.group.rotation.x = 0;
             rm.group.rotation.z = 0;
-            /* restore look: rebuild materials lightly */
+            /* mech8: restore saved materials (haze stays faint sphere; body = articulated boxes) */
             rm.group.traverse(function (ch) {
-              if (ch.isMesh && ch.material) {
+              if (!ch.isMesh) return;
+              if (ch.userData.homeMat) {
+                ch.material = ch.userData.homeMat;
+              } else if (ch.material) {
                 ch.material.transparent = false;
                 ch.material.opacity = 1;
-                if (ch.material.color) ch.material.color.setHex(0xfcd34d);
               }
+              if (ch.userData.baseX != null) ch.position.x = ch.userData.baseX;
+              if (ch.userData.baseY != null) ch.position.y = ch.userData.baseY;
+              if (ch.userData.baseZ != null) ch.position.z = ch.userData.baseZ;
             });
           }
           if (rm.label) rm.label.visible = true;
