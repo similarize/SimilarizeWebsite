@@ -23,7 +23,8 @@
          distinct vehicle drive (Ripsaw fastest auto; Cybertruck / Monster / Tank feel); mech bands differ;
          expand playable ground/forest (house size unchanged).
    pond1: swim in pond + docked submarine at pond perimeter (enter/EXIT like other vehicles).
-   mech6: tank-blasted props + Rexy 1000-mech respawn after ~7s. */
+   mech6: tank-blasted props + Rexy 1000-mech respawn after ~7s.
+   mech7: swim pose (engines); board existing sub hull (no clone). */
 (function (global) {
   "use strict";
 

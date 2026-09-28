@@ -31,6 +31,7 @@
    mech5: tank blows ONLY Rexy 1000-mech (props stay); distinct vehicle speeds; bigger drive ground.
    pond1: swim in pond + docked submarine at south rim (enter/EXIT).
    mech6: tank blast props + Rexy 1000-mech respawn ~7s.
+   mech7: swim POSE (stroke + flat body, no hop); single docked sub hull (no clone).
    ~10× map: real roam between ranch house / track / pond / Starship.
    James ranch house: big house, backyard (animals), huge garage (toys + 10/100-story mechs);
    1000-story + trillion-story mechs sit out back (won't fit). Four Cybertrucks + shared pile-in.
@@ -1431,6 +1432,11 @@
           ent.waterSub = Math.max(ent.waterSub || 0, 0.35);
           if (world) spawnSplash(world, ent.x, ent.y, 4);
         }
+        /* mech7: no hop height while freestyle swimming */
+        ent.z = 0;
+        ent.zVel = 0;
+        ent.hopSquash = 0;
+        ent.hopStretch = 0;
       } else if (ent.inSwim) {
         ent.inSwim = false;
       }
@@ -3780,13 +3786,21 @@
   function drawFroggy(ctx, frog, camX, camY, vw, vh, frogs) {
     var p = project(frog.x, frog.y, camX, camY, vw, vh);
     var s = 16.4 * p.depth * (0.92 + 0.08 * p.depth); /* polish3 readable */
-    var bob = (!frog.inTruck && !frog.inSub && (frog.z || 0) < 2 && (frog.walkPhase || 0) > 0.05)
+    var bob = (!frog.inTruck && !frog.inSub && !frog.inSwim && (frog.z || 0) < 2 && (frog.walkPhase || 0) > 0.05)
       ? Math.abs(Math.sin(frog.walkPhase)) * 1.2 * p.depth : 0;
     /* polish7: idle bounce for AI companions when standing */
-    if (!frog.inTruck && !frog.inSub && bob < 0.4 && (frog.idleBounce || 0) > 0) {
+    if (!frog.inTruck && !frog.inSub && !frog.inSwim && bob < 0.4 && (frog.idleBounce || 0) > 0) {
       bob += Math.abs(Math.sin(frog.idleBounce)) * (frog.human ? 0.6 : 2.8) * p.depth;
     }
-    if (frog.inSwim && !frog.inSub) bob -= 6 * p.depth * Math.min(1, (frog.waterSub || 0.35) + 0.2);
+    if (frog.inSwim && !frog.inSub) {
+      /* mech7: sink in water + gentle stroke bob (no hop bounce) */
+      bob -= 8 * p.depth * Math.min(1, (frog.waterSub || 0.35) + 0.25);
+      bob += Math.sin(frog.swimPhase || 0) * 1.1 * p.depth;
+      frog.z = 0;
+      frog.zVel = 0;
+      frog.hopSquash = 0;
+      frog.hopStretch = 0;
+    }
     var lift = (frog.z || 0) * 0.58 * p.depth + bob;
 
     if (frog.inSub) {
@@ -3894,31 +3908,42 @@
     var by = p.y - s * 0.55 - lift;
     var faceA = (frog.faceAngle != null && isFinite(frog.faceAngle)) ? frog.faceAngle : -Math.PI / 2;
     /* hop2/hop4: stretch mid-air (+ hopStretch), squash on land; spring = leg extend amount */
-    var airZ = frog.z || 0;
-    var sq = frog.hopSquash || 0;
-    var st = frog.hopStretch || 0;
-    var spring = Math.max(0, Math.min(1.15, airZ * 0.028 + st * 0.55 - sq * 0.85));
-    var stretchY = 1 + Math.min(0.28, airZ * 0.008) + st * 0.12 - sq * 0.22;
-    var stretchX = 1 - Math.min(0.18, airZ * 0.005) - st * 0.08 + sq * 0.22;
+    var swimming = !!(frog.inSwim && !frog.inSub);
+    var airZ = swimming ? 0 : (frog.z || 0);
+    var sq = swimming ? 0 : (frog.hopSquash || 0);
+    var st = swimming ? 0 : (frog.hopStretch || 0);
+    var spring = swimming ? 0 : Math.max(0, Math.min(1.15, airZ * 0.028 + st * 0.55 - sq * 0.85));
+    var stretchY = swimming ? 0.62 : (1 + Math.min(0.28, airZ * 0.008) + st * 0.12 - sq * 0.22);
+    var stretchX = swimming ? 1.28 : (1 - Math.min(0.18, airZ * 0.005) - st * 0.08 + sq * 0.22);
     var d = p.depth;
-    var hipY = s * 0.22;
-    var thighLen = s * (0.55 + spring * 0.55);
-    var shinLen = s * (0.48 + spring * 0.62);
-    var outX = s * (0.22 + spring * 0.55);
-    var kick = (!frog.inTruck && spring < 0.15 && (frog.walkPhase || 0) > 0.05)
-      ? Math.sin(frog.walkPhase * 2) * 2.4 * d : 0;
+    var swimPh = frog.swimPhase || 0;
+    if (swimming) {
+      var spdSwim = Math.hypot(frog.vx || 0, frog.vy || 0);
+      frog.swimPhase = swimPh + 0.18 + Math.min(0.35, spdSwim * 0.002);
+      swimPh = frog.swimPhase;
+    }
+    var stroke = swimming ? Math.sin(swimPh) : 0;
+    var strokeB = swimming ? Math.sin(swimPh + Math.PI) : 0;
+    var hipY = swimming ? s * 0.08 : s * 0.22;
+    var thighLen = swimming ? s * (0.42 + Math.abs(stroke) * 0.2) : s * (0.55 + spring * 0.55);
+    var shinLen = swimming ? s * (0.38 + Math.abs(strokeB) * 0.18) : s * (0.48 + spring * 0.62);
+    var outX = swimming ? s * (0.55 + Math.abs(stroke) * 0.2) : s * (0.22 + spring * 0.55);
+    var kick = swimming ? 0 : ((!frog.inTruck && spring < 0.15 && (frog.walkPhase || 0) > 0.05)
+      ? Math.sin(frog.walkPhase * 2) * 2.4 * d : 0);
     ctx.save();
     ctx.translate(p.x, by);
     ctx.rotate(faceA + Math.PI / 2); /* canonical face points screen-up */
+    if (swimming) ctx.rotate(-1.05); /* mech7: flatter / horizontal in water */
     ctx.scale(stretchX, stretchY);
     /* Big springy hind legs — Z-fold: hip → knee out → foot; spring out mid-hop, tuck on land */
     function drawSpringLeg(side) {
       var hx = side * s * 0.28;
       var hy = hipY;
-      var kx = side * outX + kick * side * 0.15;
-      var ky = hy + thighLen * (0.55 + spring * 0.15);
-      var fx = side * (outX * 0.55 + s * 0.08) + kick * side;
-      var fy = hy + thighLen + shinLen * (0.75 - spring * 0.12);
+      var kickAmt = swimming ? ((side < 0 ? stroke : strokeB) * s * 0.35) : (kick * side * 0.15);
+      var kx = side * outX + kickAmt;
+      var ky = hy + thighLen * (swimming ? (0.35 + (side < 0 ? stroke : strokeB) * 0.2) : (0.55 + spring * 0.15));
+      var fx = side * (outX * 0.55 + s * 0.08) + (swimming ? kickAmt * 1.2 : kick * side);
+      var fy = hy + thighLen + shinLen * (swimming ? (0.55 - Math.abs(side < 0 ? stroke : strokeB) * 0.15) : (0.75 - spring * 0.12));
       ctx.strokeStyle = frog.accent;
       ctx.lineWidth = Math.max(3.4, s * 0.22);
       ctx.lineCap = "round";
@@ -3943,15 +3968,22 @@
     }
     drawSpringLeg(-1);
     drawSpringLeg(1);
-    /* Small arms */
+    /* Small arms — paddle stroke while swimming */
     ctx.strokeStyle = frog.accent;
     ctx.lineWidth = Math.max(2.2, s * 0.12);
     ctx.lineCap = "round";
     ctx.beginPath();
-    ctx.moveTo(-s * 0.38, -s * 0.05);
-    ctx.lineTo(-s * (0.55 + spring * 0.08), s * 0.28);
-    ctx.moveTo(s * 0.38, -s * 0.05);
-    ctx.lineTo(s * (0.55 + spring * 0.08), s * 0.28);
+    if (swimming) {
+      ctx.moveTo(-s * 0.38, -s * 0.02);
+      ctx.lineTo(-s * (0.75 + strokeB * 0.35), s * (-0.05 + strokeB * 0.35));
+      ctx.moveTo(s * 0.38, -s * 0.02);
+      ctx.lineTo(s * (0.75 + stroke * 0.35), s * (-0.05 + stroke * 0.35));
+    } else {
+      ctx.moveTo(-s * 0.38, -s * 0.05);
+      ctx.lineTo(-s * (0.55 + spring * 0.08), s * 0.28);
+      ctx.moveTo(s * 0.38, -s * 0.05);
+      ctx.lineTo(s * (0.55 + spring * 0.08), s * 0.28);
+    }
     ctx.stroke();
     /* Torso */
     var torsoGrad = ctx.createRadialGradient(-3, -s * 0.15, 2, 0, 0, s * 0.7);

@@ -27,6 +27,7 @@
    mech5: tank destroys ONLY Rexy 1000-mech; distinct vehicle speeds; expand drive ground/forest.
    pond1: swim in pond + docked submarine at south rim.
    mech6: tank blast props + Rexy 1000-mech respawn ~7s.
+   mech7: swim POSE (stroke + flat body, no hop); board existing docked sub (no clone hull).
    interact2: interact/exit + HOP strictly per pad/player; shared HUD = primary only.
    hop3: faster loco + spam HOP + stack; articulated mechs.
    track3: banks + rocks + live monster wheels (preserved).
@@ -367,13 +368,17 @@
       g.add(ep);
     }
     eye(-0.12 * s); eye(0.12 * s);
-    /* Arms */
+    /* Arms — refs for swim stroke */
+    var armMeshes = [];
     for (var ai = 0; ai < 2; ai++) {
       var aside = ai === 0 ? -1 : 1;
       var arm = new THREE.Mesh(new THREE.CylinderGeometry(0.05 * s, 0.06 * s, 0.32 * s, 6), bodyMat);
       arm.position.set(aside * 0.38 * s, 0.78 * s, 0.05 * s);
       arm.rotation.z = aside * 0.55;
+      arm.userData.basePos = arm.position.clone();
+      arm.userData.side = aside;
       g.add(arm);
+      armMeshes.push(arm);
     }
     /* Big springy hind legs — thigh + shin + foot; refs for hop spring */
     var legRoots = [];
@@ -413,6 +418,9 @@
     g.userData.ring = ring;
     g.userData.frogId = def.id;
     g.userData.legRoots = legRoots;
+    g.userData.armMeshes = armMeshes;
+    g.userData.torso = torso;
+    g.userData.head = head;
     g.userData.frogScale = s;
     g.castShadow = true;
     setFrogSpring(g, 0);
@@ -431,6 +439,55 @@
       L.root.rotation.x = -0.55 + sp * 1.15;
       L.root.rotation.z = side * (0.35 - sp * 0.15);
       L.knee.rotation.x = 1.35 - sp * 1.55;
+    }
+  }
+
+  /* mech7: freestyle swim — flatter body, alternating arm/leg stroke, no hop bounce */
+  function setFrogSwim(mesh, phase, on) {
+    if (!mesh || !mesh.userData.legRoots) return;
+    if (!on) {
+      mesh.rotation.x = 0;
+      if (mesh.userData.torso) mesh.userData.torso.rotation.x = 0;
+      if (mesh.userData.head) mesh.userData.head.rotation.x = 0;
+      var arms0 = mesh.userData.armMeshes || [];
+      for (var ai = 0; ai < arms0.length; ai++) {
+        var a0 = arms0[ai];
+        var side0 = a0.userData.side || (ai === 0 ? -1 : 1);
+        if (a0.userData.basePos) a0.position.copy(a0.userData.basePos);
+        a0.rotation.set(0, 0, side0 * 0.55);
+      }
+      return;
+    }
+    var ph = phase || 0;
+    var stroke = Math.sin(ph);
+    var strokeB = Math.sin(ph + Math.PI);
+    /* Body flatter / horizontal in water */
+    mesh.rotation.x = -1.05;
+    if (mesh.userData.torso) mesh.userData.torso.rotation.x = 0.12;
+    if (mesh.userData.head) mesh.userData.head.rotation.x = 0.35;
+    var legs = mesh.userData.legRoots;
+    for (var i = 0; i < legs.length; i++) {
+      var L = legs[i];
+      var kick = (L.side < 0 ? stroke : strokeB);
+      L.root.rotation.x = 0.15 + kick * 0.85;
+      L.root.rotation.z = L.side * 0.55;
+      L.knee.rotation.x = 0.55 - kick * 0.7;
+    }
+    var arms = mesh.userData.armMeshes || [];
+    for (var aj = 0; aj < arms.length; aj++) {
+      var arm = arms[aj];
+      var side = arm.userData.side || (aj === 0 ? -1 : 1);
+      var padd = (side < 0 ? strokeB : stroke);
+      arm.rotation.x = -0.35 + padd * 1.1;
+      arm.rotation.z = side * (0.85 + padd * 0.25);
+      arm.rotation.y = side * padd * 0.35;
+      if (arm.userData.basePos) {
+        arm.position.set(
+          arm.userData.basePos.x,
+          arm.userData.basePos.y + padd * 0.04 * (mesh.userData.frogScale || 1),
+          arm.userData.basePos.z + padd * 0.08 * (mesh.userData.frogScale || 1)
+        );
+      }
     }
   }
 
@@ -2255,13 +2312,20 @@ state.zLift = 0;
           state.toast = "Sub parked · shore";
         }
         state.toastT = 1.8; state.exitTipT = 0;
-        if (state.driveSub) state.driveSub.visible = false;
+        /* mech7: same hull stays parked at exit — no hidden clone */
         if (state.parkedSub) {
           var psp = worldToThree(parkSw.x, parkSw.y);
           state.parkedSub.position.set(psp.x, 0.22, psp.z);
+          state.parkedSub.rotation.y = state.faceYaw != null ? state.faceYaw : Math.PI;
           state.parkedSub.visible = true;
+          if (state.parkedSub.userData.bodyMat) {
+            state.parkedSub.userData.bodyMat.opacity = 1;
+            state.parkedSub.userData.bodyMat.transparent = false;
+          }
         }
+        state.driveSub = null;
         state.player.visible = true;
+        setFrogSwim(state.player, 0, false);
         interactOrigin = null; interactPadIndex = null;
         if (hooks.onToast) hooks.onToast(state.toast);
         return;
@@ -2321,11 +2385,14 @@ state.zLift = 0;
         state.inSwim = false;
         state.waterSub = Math.max(state.waterSub || 0, 0.85);
         state.player.visible = false;
-        if (state.parkedSub) state.parkedSub.visible = false;
-        if (state.driveSub && state.driveSub.parent) state.driveSub.parent.remove(state.driveSub);
-        state.driveSub = makeSubMesh(hex((C.FROG_DEFS[state.frogId] || {}).color || "#38bdf8"));
+        /* mech7: board the EXISTING docked hull — never spawn a second sub */
+        if (!state.parkedSub) {
+          state.parkedSub = makeSubMesh(hex((C.FROG_DEFS[state.frogId] || {}).color || "#38bdf8"));
+          scene.add(state.parkedSub);
+        }
+        state.driveSub = state.parkedSub;
         state.driveSub.visible = true;
-        scene.add(state.driveSub);
+        state.driveSub.position.set(state.player.position.x, -0.35 - (state.waterSub || 0.85) * 0.25, state.player.position.z);
         state.toast = "Submarine · diving underwater · EXIT INTERACT / E";
         state.toastT = 2.4; state.exitTipT = 2.4;
         if (hooks.onToast) hooks.onToast(state.toast);
@@ -2843,6 +2910,15 @@ state.zLift = 0;
           state.jimmyJetT = 0.7;
         }
       }
+    } else if (state.inSwim && !state.inSub && !state.inTruck && !state.inMech) {
+      /* mech7: water HOP = swim surge (no aerial hop bounce) */
+      state.vx += fx * 6.4;
+      state.vz += fz * 6.4;
+      state.zLift = state.groundLift || 0;
+      state.zVel = 0;
+      state.hopStretch = 0;
+      state.swimPhase = (state.swimPhase || 0) + 1.2;
+      state.toast = "🏊 Stroke!";
     } else {
       var fwd = state.inTruck ? 7.2 : state.inMech ? 4.8 : 5.6;
       var up = state.inTruck ? 8.0 : state.inMech ? 8.4 : 9.8;
@@ -3294,19 +3370,22 @@ state.zLift = 0;
       if (!state.inTruck && !state.inMech && !state.inSub) {
         state.player.scale.set(1, 1, 1);
       }
-      if (state.driveSub) {
-        state.driveSub.visible = !!state.inSub;
-        if (state.inSub) {
+      /* mech7: single sub hull — drive = parked mesh while boarded */
+      if (state.inSub) {
+        if (!state.driveSub && state.parkedSub) state.driveSub = state.parkedSub;
+        if (state.driveSub) {
+          state.driveSub.visible = true;
           var diveY = -0.35 - (state.waterSub || 0.85) * 0.25;
           state.driveSub.position.set(state.player.position.x, diveY, state.player.position.z);
-          state.driveSub.rotation.y = (state.faceAngle != null ? state.faceAngle : 0);
+          state.driveSub.rotation.y = (state.faceYaw != null ? state.faceYaw : 0);
           if (state.driveSub.userData.bodyMat) {
             state.driveSub.userData.bodyMat.opacity = 0.78;
             state.driveSub.userData.bodyMat.transparent = true;
           }
         }
+      } else if (state.parkedSub) {
+        state.parkedSub.visible = true;
       }
-      if (state.parkedSub) state.parkedSub.visible = !state.inSub;
       /* polish4: bounce + spray / bubbles / walk dust */
       state.bouncePhase = (state.bouncePhase || 0) + dt * (3 + sp * 0.4);
       var airNow = (state.zLift || 0) - (state.groundLift || 0);
@@ -3555,43 +3634,59 @@ state.zLift = 0;
         global.FroggiesEngines.setWheelPanelVisible(!!state.inTruck);
       }
       /* truck2: player Y tracks full elev (hidden while driving; cam/companions use it) */
-      /* hop2: Y lift + squash/stretch + always-hop cycle */
+      /* hop2: Y lift + squash/stretch + always-hop cycle (land only) */
       var airH = Math.max(0, (state.zLift || 0) - (state.groundLift || 0));
       if (state._wasHopAir && airH < 0.04) state.hopSquash = 1;
       state._wasHopAir = airH > 0.2;
       if (state.hopSquash > 0) state.hopSquash = Math.max(0, state.hopSquash - dt * 4);
       if (state.hopStretch > 0) state.hopStretch = Math.max(0, state.hopStretch - dt * 2.5);
-      var bobY = (!state.inTruck && airH < 0.05)
-        ? Math.abs(Math.sin(state.bob)) * 0.02 : 0;
-      state.player.position.y = (state.zLift || 0) + bobY;
-      if (!state.inTruck && !state.inMech) {
-        var sq = state.hopSquash || 0;
-        var st3 = state.hopStretch || 0;
-        var sy = 1 + Math.min(0.4, airH * 0.4) + st3 * 0.18 - sq * 0.3;
-        var sx = 1 - Math.min(0.26, airH * 0.26) - st3 * 0.12 + sq * 0.34;
-        state.player.scale.set(sx, sy, sx);
-        /* hop4: legs spring out mid-air, tuck on land */
-        setFrogSpring(state.player, Math.min(1.15, airH * 1.1 + st3 * 0.5 - sq * 0.7));
-        if (C.tickLocoHop) {
-          state.groundLift = state.groundLift || 0;
-          var launched3 = C.tickLocoHop(state, dt, {
-            moving: wantMove3,
-            zKey: "zLift",
-            zvKey: "zVel",
-            gndKey: "groundLift",
-            up: 7.0,
-            lift: 0.30,
-            groundHold: 0.011,
-            groundEps: 0.08,
-          });
-          if (launched3 && wantMove3) {
-            var hopSp3 = Math.min(maxSp * 0.98, 16.8);
-            state.vx = hopMx * hopSp3;
-            state.vz = hopMz * hopSp3;
+      var swimNow = !!(state.inSwim && !state.inSub && !state.inTruck && !state.inMech);
+      if (swimNow) {
+        /* mech7: kill hop bounce in water — stay sunk, stroke pose */
+        state.zLift = state.groundLift || 0;
+        state.zVel = 0;
+        state.hopSquash = 0;
+        state.hopStretch = 0;
+        state.swimPhase = (state.swimPhase || 0) + dt * (5.5 + Math.min(6, Math.hypot(state.vx || 0, state.vz || 0) * 0.35));
+        var sinkY = 0.28 + Math.min(0.35, (state.waterSub || 0.35) * 0.35);
+        var strokeBob = Math.sin(state.swimPhase) * 0.03;
+        state.player.position.y = (state.groundLift || 0) - sinkY + strokeBob;
+        state.player.scale.set(1.05, 0.78, 1.12);
+        setFrogSwim(state.player, state.swimPhase, true);
+      } else {
+        setFrogSwim(state.player, 0, false);
+        var bobY = (!state.inTruck && airH < 0.05)
+          ? Math.abs(Math.sin(state.bob)) * 0.02 : 0;
+        state.player.position.y = (state.zLift || 0) + bobY;
+        if (!state.inTruck && !state.inMech) {
+          var sq = state.hopSquash || 0;
+          var st3 = state.hopStretch || 0;
+          var sy = 1 + Math.min(0.4, airH * 0.4) + st3 * 0.18 - sq * 0.3;
+          var sx = 1 - Math.min(0.26, airH * 0.26) - st3 * 0.12 + sq * 0.34;
+          state.player.scale.set(sx, sy, sx);
+          /* hop4: legs spring out mid-air, tuck on land */
+          setFrogSpring(state.player, Math.min(1.15, airH * 1.1 + st3 * 0.5 - sq * 0.7));
+          if (C.tickLocoHop) {
+            state.groundLift = state.groundLift || 0;
+            var launched3 = C.tickLocoHop(state, dt, {
+              moving: wantMove3,
+              zKey: "zLift",
+              zvKey: "zVel",
+              gndKey: "groundLift",
+              up: 7.0,
+              lift: 0.30,
+              groundHold: 0.011,
+              groundEps: 0.08,
+            });
+            if (launched3 && wantMove3) {
+              var hopSp3 = Math.min(maxSp * 0.98, 16.8);
+              state.vx = hopMx * hopSp3;
+              state.vz = hopMz * hopSp3;
+            }
           }
+        } else if (state.inTruck) {
+          state.player.scale.set(1, 1, 1);
         }
-      } else if (state.inTruck) {
-        state.player.scale.set(1, 1, 1);
       }
       /* hop1: shove small props + sync meshes */
       if (C.shoveSmallProp && C.tickPushable && state.pushables) {

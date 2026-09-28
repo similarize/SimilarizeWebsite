@@ -647,7 +647,18 @@
     {
       const C = globalThis.FroggiesCanon;
       let hop = null;
-      if (C && C.applyHop) {
+      if (frog.inSwim && !frog.inSub && !frog.inTruck && !frog.inMech) {
+        /* mech7: water HOP = swim surge */
+        const ang = (frog.faceAngle != null && isFinite(frog.faceAngle))
+          ? frog.faceAngle : (frog.facing >= 0 ? 0 : Math.PI);
+        const cx = Math.cos(ang), cy = Math.sin(ang);
+        frog.vx = (frog.vx || 0) + cx * 220;
+        frog.vy = (frog.vy || 0) + cy * 220;
+        frog.z = 0; frog.zVel = 0;
+        frog.swimPhase = (frog.swimPhase || 0) + 1.2;
+        hop = { cx: cx, cy: cy, combo: 1 };
+        storyToast = "🏊 Stroke!";
+      } else if (C && C.applyHop) {
         hop = C.applyHop(frog, frog.inTruck
           ? { up: 280, truckUp: 280, fwd: 190, truckFwd: 230, landWindow: 0.15, maxCombo: 10 }
           : frog.inMech
@@ -675,9 +686,11 @@
       }
       shakeT = 0.12;
       const comboN = (hop && hop.combo) || frog.hopCombo || 1;
-      storyToast = frog.inTruck ? "HOP · truck jump!"
-        : frog.inMech ? "HOP · mech jump!"
-        : (comboN > 1 ? ("HOP ×" + comboN + "!") : "HOP!");
+      if (!(frog.inSwim && !frog.inSub && !frog.inTruck && !frog.inMech)) {
+        storyToast = frog.inTruck ? "HOP · truck jump!"
+          : frog.inMech ? "HOP · mech jump!"
+          : (comboN > 1 ? ("HOP ×" + comboN + "!") : "HOP!");
+      }
       beep(520, 0.05, "triangle", 0.04);
       beep(780, 0.06, "square", 0.03);
     }

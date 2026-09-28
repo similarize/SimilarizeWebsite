@@ -1,3 +1,10 @@
+## What's new (mech7) — swim LOOK + single sub hull
+
+- **Swim pose:** in the pond, froggies look like they are swimming (flat/horizontal body, arm/leg stroke) — not the land hop/walk cycle.
+- **Submarine:** board the **existing** docked hull in place — no second/cloned sub. EXIT leaves that same hull at shore/exit.
+- Land hop/walk unchanged. Sub boarding ride pose unchanged. Lobby exit1 UX kept.
+- Cache-bust: `?v=20260928-mech7`.
+
 ## What's new (mech6) — pond swim + docked submarine · tank blast respawn ~7s
 
 - **Swim:** walk into the pond — soft rim no longer blocks; frog enters swim (slower stroke, splash).
