@@ -1,16 +1,12 @@
-# Four Froggies 3D — ff3d5 (track vehicle physics)
+# Four Froggies 3D — ff3d6 (vehicles + track + controls)
 
-Cache: `20260928-ff3d5` · bundle `assets/index-ff3d5.js`
+Cache: `20260928-ff3d6` · bundle `assets/index-ff3d6.js`
 
-## Physics (this build)
-- Sample ribbon **height + bank + tangent/yaw** under the vehicle (`Rr` → `surfY`, `yaw`)
-- Align pitch/roll/yaw so trucks **lean with banked turns** and follow the path
-- Keep wheels/body on dirt mesh (ribbon half-width clamp + bank-aware floor)
-- Trestle/mast **push-out** collision (`tS` / `Br`) — stop nosing into posts
-- Applies to all track rides in `V`: James Cybertruck, Ripsaw, Monster Truck, Tank
+## This build
+1. **Track rebuild** — clean CCW loop, no self-intersecting ribbon; approach ramp lands into loop; banks = outer-high on turns.
+2. **Bank lean** — `sr = ribbon bank` (no travel-sign flip); wheels sit on `surfY`; forward-only soft path-align (reverse never flips yaw/camera).
+3. **Tank/truck controls** — L/R steer yaw only (no strafe); hold reverse stays reverse; forward/back + steer = arcade drive. Applies to James CT + Ripsaw + Monster + Tank.
+4. **Roster** — exactly **2 Cybertrucks** (James playable + Dad NPC). Shared **Ripsaw** (tracked Howe&Howe-style), **Monster Truck**, **Tank** parked **inside garage**.
+5. Keeps: phone robots, Dad NPC, Monster shared, ff3d5 trestle collision.
 
-## Roster (unchanged from ff3d4)
-- Vehicles: 2 CTs (James playable + Dad NPC), Ripsaw, MT, Tank
-- Robots / phone remote / Dad / space rocket+EVA kept
-
-Baseline: ff3d4. Do not publish from agent — handoff only.
+Baseline: ff3d5. Do not publish from agent — handoff only.
