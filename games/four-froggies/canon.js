@@ -1,6 +1,7 @@
 /* Four Froggies — shared Ben-canon constants for all engines.
    WORLD_BIBLE only. No invented cast/zone/toy names. Physics/look engines compare.
-   parity1: landmark layout (compound / track / pond / trucks) shared for Canvas + Phaser + three.
+   view1: Phaser dropped (Canvas + Three only); outdoor spawn at garage/yard mouth; track support pillars.
+   parity1: landmark layout (compound / track / pond / trucks) shared for Canvas + three.
    polish7: zone signs (HOUSE/TRACK/POND/GARAGE/STARSHIP) + AI chat one-liners from existing canon only.
    polish8: shared landmarks unchanged; art punch lives in engine renderers.
    polish9: landmarks unchanged; party/nameplate/gate/kit punch in engines.
@@ -47,7 +48,7 @@
     mech1000: { x: 340, y: 2420, stories: 1000 },
     /* yard1: trillion-story — outdoors east yard (won't fit garage; bigger than 1000) */
     mechTrillion: { x: 600, y: 2170, stories: 1e12 },
-    spawn: { x: 280, y: 1750 },
+    spawn: { x: 420, y: 1960 }, /* view1: outdoor yard / garage-mouth lineup (was inside house) */
   };
 
   /* yard1: shared backyard décor — edges clear of doorway / mech1000 pad / truck apron.
@@ -150,6 +151,27 @@
     { x: 3000, y: 2140, r: 44, h: 0.8, bounce: 1.5 },
     { x: 1980, y: 2280, r: 50, h: 0.95, bounce: 1.75 },
   ];
+  /* view1: pillars under elevated ribbon — spaced posts, not floating leftovers */
+  var TRACK_SUPPORTS = [
+    { x: 1940, y: 1920, elev: 0.45 },
+    { x: 2060, y: 1780, elev: 0.85 },
+    { x: 2180, y: 1700, elev: 1.15 },
+    { x: 2320, y: 1660, elev: 1.25 },
+    { x: 2480, y: 1700, elev: 1.05 },
+    { x: 2600, y: 1820, elev: 0.55 },
+    { x: 2920, y: 1980, elev: 0.35 },
+    { x: 3080, y: 1860, elev: 0.7 },
+    { x: 3220, y: 1760, elev: 1.0 },
+    { x: 3380, y: 1800, elev: 0.95 },
+    { x: 3520, y: 1940, elev: 0.55 },
+    { x: 2340, y: 2520, elev: 0.45 },
+    { x: 2180, y: 2480, elev: 0.35 },
+    { x: 3200, y: 2200, elev: 0.45 },
+    { x: 3180, y: 2040, elev: 0.55 },
+    { x: 3020, y: 1960, elev: 0.4 },
+    { x: 2800, y: 2220, elev: 0.4 },
+  ];
+
   var RAMPS = [
     { x: 2060, y: 1780, w: 72, h: 36, boost: 1.45 },
     { x: 2320, y: 1660, w: 76, h: 38, boost: 1.6 },
@@ -239,11 +261,12 @@
   };
 
   var ENGINE_KEY = "ff-engine";
-  var ENGINES = ["canvas", "phaser", "three"];
+  var ENGINES = ["canvas", "three"];
 
   function getEngine() {
     try {
       var v = localStorage.getItem(ENGINE_KEY) || "canvas";
+      if (v === "phaser") v = "canvas"; /* view1: Phaser removed */
       return ENGINES.indexOf(v) >= 0 ? v : "canvas";
     } catch (e) {
       return "canvas";
@@ -971,6 +994,7 @@
     TRACK_MOUNDS: TRACK_MOUNDS,
     TRACK_BANKS: TRACK_BANKS,
     TRACK_ROCKS: TRACK_ROCKS,
+    TRACK_SUPPORTS: TRACK_SUPPORTS,
     RAMPS: RAMPS,
     TRUCK_SPOTS: TRUCK_SPOTS,
     STARSHIP: STARSHIP,

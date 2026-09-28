@@ -1,13 +1,12 @@
-/* Four Froggies — thin lobby engine switcher + CDN boot (phaser-hub / three-hub).
+/* Four Froggies — thin lobby engine switcher + CDN boot (three-hub).
    Canvas path stays default (main.js + PeerJS + world.js). Do not touch world.js scale.
-   Phaser/Three = solo-first physics/look compare. */
+   view1: Phaser removed from lobby; Three = solo-first 2.5D compare. */
 (function (global) {
   "use strict";
 
   var C = global.FroggiesCanon;
-  var CACHE = "20260926-ctrl2";
+  var CACHE = "20260928-view1";
   var CDN = {
-    phaser: "https://cdn.jsdelivr.net/npm/phaser@3.87.0/dist/phaser.min.js",
     three: "https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js",
   };
   var loading = null;
@@ -30,22 +29,6 @@
       s.onload = function () { resolve(); };
       s.onerror = function () { reject(new Error("Failed to load " + url)); };
       document.head.appendChild(s);
-    });
-  }
-
-  function ensurePhaser() {
-    var chain = Promise.resolve();
-    if (!global.Phaser) {
-      chain = chain.then(function () { return loadScript(CDN.phaser); });
-    }
-    return chain.then(function () {
-      if (!global.Phaser) throw new Error("Phaser CDN failed to load");
-      if (global.FroggiesPhaser) return;
-      return loadScript("phaser-hub.js?v=" + CACHE);
-    }).then(function () {
-      if (!global.FroggiesPhaser || typeof global.FroggiesPhaser.boot !== "function") {
-        throw new Error("phaser-hub failed to boot (FroggiesPhaser missing)");
-      }
     });
   }
 
@@ -81,8 +64,6 @@
     if (note) {
       if (mode === "canvas") {
         note.textContent = "Canvas · default · Host/Join (PeerJS) works here";
-      } else if (mode === "phaser") {
-        note.textContent = "Phaser 3 · solo-first (party sync not wired)";
       } else {
         note.textContent = "three.js · fixed-angle 2.5D · solo-first";
       }
@@ -236,7 +217,7 @@
     var map = null;
     try {
       var P = global.FroggiesParty;
-      /* Prefer startParty so couch pads + default seat are finalized (no peer start for three/phaser guests) */
+      /* Prefer startParty so couch pads + default seat are finalized (no peer start for three guests) */
       if (P && P.active && typeof P.active.startParty === "function" && P.active.canStart && P.active.canStart()) {
         map = P.active.startParty();
       } else if (P && P.active && typeof P.active.buildSeatMap === "function") {
@@ -258,7 +239,7 @@
   function hardFailAlt(mode, err) {
     console.error(err);
     /* Never silently fall back to Canvas — keep selected engine + toast hard fail */
-    if (C && C.setEngine) C.setEngine(mode === "phaser" ? "phaser" : "three");
+    if (C && C.setEngine) C.setEngine("three");
     currentEngine = mode;
     paintPicker();
     stopAltEngines();
@@ -273,7 +254,7 @@
     if (inviteCta) inviteCta.hidden = false;
     var partyBar = $("party-bar");
     if (partyBar) partyBar.hidden = false;
-    var msg = (mode === "three" ? "Three.js failed" : "Phaser failed") + ": " + (err && err.message ? err.message : String(err || "boot error"));
+    var msg = "Three.js failed: " + (err && err.message ? err.message : String(err || "boot error"));
     var tipEl = $("hub-tip");
     if (tipEl) tipEl.textContent = msg;
     var partyStatus = $("party-status");
@@ -287,7 +268,7 @@
 
   function startAlt(mode) {
     if (loading) return loading;
-    if (mode !== "phaser" && mode !== "three") {
+    if (mode !== "three") {
       hardFailAlt("three", new Error("Invalid alt engine: " + mode));
       return Promise.reject(new Error("Invalid alt engine"));
     }
@@ -317,7 +298,6 @@
 
     loading = Promise.resolve()
       .then(function () {
-        if (mode === "phaser") return ensurePhaser();
         return ensureThree();
       })
       .then(function () {
@@ -327,16 +307,9 @@
         var view = $("view");
         if (view) view.style.display = "none";
 
-        if (mode === "phaser") {
-          global.FroggiesPhaser.boot(opts);
-        } else {
-          global.FroggiesThree.boot(opts);
-        }
-        if (mode === "three" && (!global.FroggiesThree || !global.FroggiesThree.isActive || !global.FroggiesThree.isActive())) {
+        global.FroggiesThree.boot(opts);
+        if (!global.FroggiesThree || !global.FroggiesThree.isActive || !global.FroggiesThree.isActive()) {
           throw new Error("Three boot did not become active");
-        }
-        if (mode === "phaser" && (!global.FroggiesPhaser || !global.FroggiesPhaser.isActive || !global.FroggiesPhaser.isActive())) {
-          throw new Error("Phaser boot did not become active");
         }
         engineRunning = true;
         currentEngine = mode;
@@ -353,7 +326,7 @@
     return loading;
   }
 
-  /* joy2: shared steer — virtual joystick + WASD/D-pad fan-out to Canvas / Phaser / Three */
+  /* joy2: shared steer — virtual joystick + WASD/D-pad fan-out to Canvas / Three */
   var controlsBound = false;
   var joyBound = false;
   var keys = { left: false, right: false, up: false, down: false };
@@ -363,9 +336,6 @@
   var canvasJoyListeners = [];
 
   function altApi() {
-    if (currentEngine === "phaser" && global.FroggiesPhaser && global.FroggiesPhaser.isActive()) {
-      return global.FroggiesPhaser;
-    }
     if (currentEngine === "three" && global.FroggiesThree && global.FroggiesThree.isActive()) {
       return global.FroggiesThree;
     }
@@ -418,7 +388,7 @@
       if (keys.right) x += 1;
       if (keys.up) y -= 1;
       if (keys.down) y += 1;
-      /* When primary has its own pad, three/phaser mergedSteer polls that pad —
+      /* When primary has its own pad, three mergedSteer polls that pad —
          avoid also stuffing the same stick into keySteer (double accel). Keyboard still OK. */
       if (gPad && gPad.connected && !x && !y && primaryPadIndex == null) {
         x = gPad.lx || 0;
@@ -710,7 +680,7 @@
       paintPicker();
     });
 
-    // Capture-phase GO: Phaser/Three never enter Canvas main.js startHub
+    // Capture-phase GO: Three never enters Canvas main.js startHub
     // (Canvas expansion executor owns main.js / world.js — keep this file thin.)
     var btnStart = $("btn-start");
     if (btnStart) {
@@ -728,7 +698,7 @@
       );
     }
 
-    // Space/Enter on title while Phaser/Three selected
+    // Space/Enter on title while Three selected
     window.addEventListener(
       "keydown",
       function (e) {

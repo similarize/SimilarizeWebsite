@@ -26,6 +26,8 @@
   const btnEscape = document.getElementById("btn-escape");
   const btnStart = document.getElementById("btn-start");
   const btnHost = document.getElementById("btn-host");
+  const btnJoin = document.getElementById("btn-join");
+  const joinCodeInput = document.getElementById("join-code");
   const btnCopy = document.getElementById("btn-copy");
   const roomCodeEl = document.getElementById("room-code");
   const inviteCta = document.getElementById("invite-cta");
@@ -1431,6 +1433,18 @@
       btnHost.textContent = role === "host" ? "Hosting…" : "Host room";
       btnHost.disabled = role === "host" && partyMeta.status === "ready";
     }
+    if (btnJoin) {
+      btnJoin.hidden = role === "host" || role === "guest";
+      btnJoin.disabled = role === "guest" && partyMeta.status === "connecting";
+      btnJoin.textContent = role === "guest" ? "Joining…" : "Join room";
+    }
+    if (joinCodeInput) {
+      const showJoinCode = role === "solo" || (role === "guest" && partyMeta.status === "connecting");
+      // Keep input visible while solo so user can type code then press Join; hide once joined/hosting
+      joinCodeInput.hidden = role === "host" || (role === "guest" && partyMeta.status === "ready");
+      joinCodeInput.disabled = role === "guest";
+      if (role === "guest" && partyMeta.room && !joinCodeInput.value) joinCodeInput.value = partyMeta.room;
+    }
     if (inviteQr) {
       if (role === "host" && partyMeta.invite) {
         inviteQr.hidden = false;
@@ -1498,7 +1512,7 @@
   canvas.addEventListener("pointerup", endTap);
   canvas.addEventListener("pointercancel", endTap);
 
-  /* joy2: shared stick from engine-boot — same path Canvas / Phaser / Three */
+  /* joy2: shared stick from engine-boot — same path Canvas / Three */
   if (globalThis.FroggiesEngines && typeof globalThis.FroggiesEngines.onJoySteer === "function") {
     globalThis.FroggiesEngines.onJoySteer((x, y) => {
       joySteerX = x || 0;
@@ -1716,11 +1730,11 @@
   function tryStartFromUi() {
     const role = party ? party.getRole() : "solo";
     if (role === "guest") return;
-    /* Critical: never silently start Canvas when Three/Phaser is selected */
+    /* Critical: never silently start Canvas when Three is selected */
     const Eng = globalThis.FroggiesEngines;
     const C = globalThis.FroggiesCanon;
     const mode = (C && C.getEngine && C.getEngine()) || (Eng && Eng.getMode && Eng.getMode()) || "canvas";
-    if (mode === "phaser" || mode === "three") {
+    if (mode === "three") {
       if (Eng && typeof Eng.tryStart === "function") {
         const handled = Eng.tryStart();
         if (handled) return;
@@ -1778,6 +1792,52 @@
     btnHost.addEventListener("click", () => {
       unlockAudio();
       if (party) party.hostRoom();
+    });
+  }
+  function doJoinFromUi() {
+    unlockAudio();
+    if (!party) return;
+    const raw = (joinCodeInput && joinCodeInput.value) || "";
+    const code = String(raw).toUpperCase().replace(/[^A-Z0-9]/g, "");
+    if (!code) {
+      if (partyStatus) {
+        partyStatus.classList.add("is-error");
+        partyStatus.textContent = "Enter the host room code to Join";
+      }
+      if (joinCodeInput) {
+        joinCodeInput.hidden = false;
+        joinCodeInput.focus();
+      }
+      return;
+    }
+    if (joinCodeInput) joinCodeInput.value = code;
+    try {
+      const u = new URL(location.href);
+      u.searchParams.set("room", code);
+      history.replaceState(null, "", u.pathname + u.search + u.hash);
+    } catch (_) {}
+    party.joinRoom(code);
+  }
+  if (btnJoin) {
+    btnJoin.addEventListener("click", () => {
+      if (joinCodeInput && joinCodeInput.hidden) {
+        joinCodeInput.hidden = false;
+        joinCodeInput.focus();
+        if (partyStatus) {
+          partyStatus.classList.remove("is-error");
+          partyStatus.textContent = "Enter room code · Join";
+        }
+        return;
+      }
+      doJoinFromUi();
+    });
+  }
+  if (joinCodeInput) {
+    joinCodeInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        doJoinFromUi();
+      }
     });
   }
   if (btnCopy) {

@@ -1,4 +1,5 @@
 /* Four Froggies — three.js hub (CDN). Fixed-angle 2.5D-ish (orbit locked / isometric-ish).
+   view1: outdoor spawn camera toward garage/yard + trucks; track support pillars under elev.
    NOT free-fly FPS. Canvas-parity landmarks · solo-first.
    Big map · compound · squiggle track · pond whales · 4 trucks+shared ·
    on-water/under · Starship → Escape/hard thruster.
@@ -987,6 +988,30 @@
     addPathRibbon(C.TRACK_BRANCH_A, 0.17, 0xa8a29e, 0.14);
     addPathRibbon(C.TRACK_BRANCH_B, 0.12, 0x292524, 0.32);
     addPathRibbon(C.TRACK_BRANCH_B, 0.17, 0xa8a29e, 0.13);
+    /* view1: sensible pillars under elevated ribbon (paired posts + crossbeam) */
+    (function addTrackSupports() {
+      var list = C.TRACK_SUPPORTS || [];
+      var postMat = new THREE.MeshStandardMaterial({ color: 0x78716c, roughness: 0.88, metalness: 0.12 });
+      var beamMat = new THREE.MeshStandardMaterial({ color: 0x57534e, roughness: 0.9, metalness: 0.08 });
+      for (var si = 0; si < list.length; si++) {
+        var s = list[si];
+        var elev = s.elev != null ? s.elev : 0.5;
+        if (elev < 0.3) continue;
+        var sp = worldToThree(s.x, s.y);
+        var topY = 0.12 + elev * 0.95;
+        var h = Math.max(0.35, topY - 0.02);
+        var half = 0.38;
+        for (var side = -1; side <= 1; side += 2) {
+          var post = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, h, 6), postMat);
+          post.position.set(sp.x + side * half, h * 0.5, sp.z);
+          post.castShadow = true;
+          scene.add(post);
+        }
+        var beam = new THREE.Mesh(new THREE.BoxGeometry(half * 2 + 0.12, 0.07, 0.1), beamMat);
+        beam.position.set(sp.x, topY - 0.02, sp.z);
+        scene.add(beam);
+      }
+    })();
     var ramps = C.RAMPS || [];
     for (var r = 0; r < ramps.length; r++) {
       var rp = ramps[r], tp = worldToThree(rp.x, rp.y);
@@ -994,8 +1019,9 @@
         new THREE.BoxGeometry(rp.w * 0.02, 0.55, rp.h * 0.02),
         new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.2 })
       );
-      /* truck2: taller wedge — truck rides up via elev, mesh matches contact */
-      ramp.position.set(tp.x, 0.42, tp.z); ramp.rotation.x = -0.42; scene.add(ramp);
+      /* truck2 + view1: wedge footed on ground under elevated ribbon */
+      var rampH = 0.55;
+      ramp.position.set(tp.x, rampH * 0.45, tp.z); ramp.rotation.x = -0.42; scene.add(ramp);
     }
     /* track3: bank berms */
     var banks = C.TRACK_BANKS || [];
@@ -1367,10 +1393,17 @@
     state.aboardLabel.visible = false;
     scene.add(state.aboardLabel);
     state.kitFxT = 0; state.kitFxKind = ""; state.lapSide = 0; state.lapCd = 0; state.lapCount = 0;
-    // Snap locked camera onto spawn immediately (no multi-second lerp from origin)
+    /* view1: outdoor spawn — establishing shot from south so garage mouth,
+       all froggies, and the four Cybertrucks are in frame (was SE-through-garage). */
+    var truckMid = worldToThree(2180, 1720);
+    var lookX = spawn.x * 0.42 + truckMid.x * 0.58;
+    var lookZ = spawn.z * 0.42 + truckMid.z * 0.58;
     camera.userData.lockTarget.set(spawn.x, 0, spawn.z);
-    camera.position.set(spawn.x + 17, 22, spawn.z + 17);
-    camera.lookAt(spawn.x, 0.6, spawn.z);
+    camera.position.set(spawn.x - 4, 28, spawn.z + 26);
+    camera.lookAt(lookX, 0.5, lookZ);
+    state.establishT = 2.6;
+    state.establishLook = { x: lookX, z: lookZ };
+    state.establishCam = { x: spawn.x - 4, y: 28, z: spawn.z + 26 };
 
     state.driveTruck = makeTruckMesh(hex(def.color));
     state.driveTruck.visible = false;
@@ -2977,7 +3010,31 @@
       walkBob = Math.sin(state.walkBobT) * 0.05;
       walkTilt = Math.sin(state.walkBobT * 0.5) * 0.006;
     }
-    camera.position.set(target.x + camDist * 0.85, camH + walkBob, target.z + camDist * 0.85);
+    /* view1: south-biased follow (look north at open yard / garage mouth — not through bay) */
+    var wantCamX = target.x + camDist * 0.35;
+    var wantCamY = camH + walkBob;
+    var wantCamZ = target.z + camDist * 0.98;
+    var wantLookX = target.x;
+    var wantLookY = 0.5 + walkTilt;
+    var wantLookZ = target.z;
+    if (state.mode === "ranch" && (state.establishT || 0) > 0 && state.establishCam) {
+      state.establishT -= dt;
+      var u = Math.max(0, Math.min(1, 1 - state.establishT / 2.6));
+      var ease = u * u * (3 - 2 * u);
+      var ec = state.establishCam;
+      var el = state.establishLook || { x: target.x, z: target.z };
+      wantCamX = ec.x + (wantCamX - ec.x) * ease;
+      wantCamY = ec.y + (wantCamY - ec.y) * ease;
+      wantCamZ = ec.z + (wantCamZ - ec.z) * ease;
+      wantLookX = el.x + (wantLookX - el.x) * ease;
+      wantLookZ = el.z + (wantLookZ - el.z) * ease;
+      if (state.establishT <= 0) {
+        state.establishT = 0;
+        state.establishCam = null;
+        state.establishLook = null;
+      }
+    }
+    camera.position.set(wantCamX, wantCamY, wantCamZ);
     /* polish10: soft dusk sky shift over play time */
     if (state.mode === "ranch" && scene) {
       state.dayT = (state.dayT || 0) + dt;
@@ -2987,7 +3044,7 @@
       col.setRGB(0.10 + dusk * 0.18, 0.22 - dusk * 0.06, 0.14 + dusk * 0.04);
       scene.background = col;
     }
-    camera.lookAt(target.x, 0.5 + walkTilt, target.z);
+    camera.lookAt(wantLookX, wantLookY, wantLookZ);
     /* polish6: depth shadow under player */
     if (state.playerShadow) {
       var shS = state.inTruck ? 1.7 : 1;

@@ -9,7 +9,7 @@
   <!-- Tesla Cybertruck chromeless FS — see games/shared/TESLA_FULLSCREEN.md -->
   <script src="../shared/tesla-fullscreen.js?v=tfs1"></script>
   <script src="../shared/viewport-fill.js?v=vfs1"></script>
-  <link rel="stylesheet" href="style.css?v=20260926-ctrl2">
+  <link rel="stylesheet" href="style.css?v=20260928-partyjoin">
 </head>
 <body class="in-title">
   <canvas id="view"></canvas>
@@ -110,9 +110,9 @@
   </div>
 
   <div id="overlay">
-    <img id="splash-art" class="splash-art" src="assets/splash-forest-roof.png?v=20260926-ctrl2" alt="Four froggies on a Cybertruck roof" width="832" height="1248" decoding="async">
+    <img id="splash-art" class="splash-art" src="assets/splash-forest-roof.png?v=20260928-view1" alt="Four froggies on a Cybertruck roof" width="832" height="1248" decoding="async">
     <h1 id="overlay-title">Four Froggies</h1>
-    <p id="overlay-sub">Ranch hub · Canvas / Phaser / Three · couch pads claim seats · scroll to GO</p>
+    <p id="overlay-sub">Ranch hub · Canvas / Three · couch pads claim seats · scroll to GO</p>
     <div id="frog-pick" class="frog-pick">
       <p class="pick-label">Claim a froggy seat</p>
       <div class="frog-btns">
@@ -138,7 +138,6 @@
       <p class="pick-label">Engine · physics &amp; look compare</p>
       <div class="engine-btns">
         <button type="button" class="engine-btn is-on" data-engine="canvas" aria-pressed="true">Canvas</button>
-        <button type="button" class="engine-btn" data-engine="phaser" aria-pressed="false">Phaser</button>
         <button type="button" class="engine-btn" data-engine="three" aria-pressed="false">Three</button>
       </div>
       <p id="engine-note" class="engine-note">Canvas · default · Host/Join (PeerJS) works here</p>
@@ -146,25 +145,27 @@
     <p id="invite-cta" class="invite-cta">Party: <strong>Host room</strong> → Copy invite link or scan QR · friends open link to <strong>Join</strong> · claim froggy seats · Host presses GO. Solo: claim a seat and GO (AI fills open seats).</p>
     <div id="party-bar" class="party-bar">
       <button type="button" id="btn-host" class="party-btn">Host room</button>
+      <button type="button" id="btn-join" class="party-btn">Join room</button>
+      <input type="text" id="join-code" class="join-code" maxlength="8" placeholder="CODE" autocomplete="off" spellcheck="false" aria-label="Room code" hidden>
       <button type="button" id="btn-copy" class="party-btn" hidden>Copy invite link</button>
       <span id="room-code" class="room-code" hidden></span>
     </div>
     <img id="invite-qr" class="invite-qr" hidden alt="QR code to join this room" width="112" height="112">
-    <p id="party-help" class="party-help">Host = you make the room · Join = scan QR / open invite · Canvas only for peer party</p>
+    <p id="party-help" class="party-help">Host = make room · Join = enter code or open invite link · Canvas only for peer party</p>
     <p id="party-status" class="party-status"></p>
     <p id="overlay-text">Big ranch · James house/garage/mechs · Cybertrucks · pond whales · Starship → space (orbit physics).</p>
     <p class="go" id="overlay-go">Pads: A/Start claim · B release · scroll for GO · Y/GO starts</p>
     <button type="button" id="btn-start" class="start-btn">GO · Ranch Hub</button>
   </div>
 
-  <script src="../shared/gamepad.js?v=20260926-ctrl2"></script>
-  <script src="canon.js?v=20260926-ctrl2"></script>
-  <script src="ai.js?v=20260926-ctrl2"></script>
-  <script src="party.js?v=20260926-ctrl2"></script>
-  <script src="world.js?v=20260926-ctrl2"></script>
-  <script src="story.js?v=20260926-ctrl2"></script>
-  <script src="space.js?v=20260926-ctrl2"></script>
-  <script src="engine-boot.js?v=20260926-ctrl2"></script>
-  <script src="main.js?v=20260926-ctrl2"></script>
+  <script src="../shared/gamepad.js?v=20260928-view1"></script>
+  <script src="canon.js?v=20260928-view1"></script>
+  <script src="ai.js?v=20260928-view1"></script>
+  <script src="party.js?v=20260928-partyjoin"></script>
+  <script src="world.js?v=20260928-view1"></script>
+  <script src="story.js?v=20260928-view1"></script>
+  <script src="space.js?v=20260928-view1"></script>
+  <script src="engine-boot.js?v=20260928-view1"></script>
+  <script src="main.js?v=20260928-partyjoin"></script>
 </body>
 </html>

@@ -18,6 +18,7 @@
    truck1: kid-toy Cybertruck scale; smooth yaw steer (face+drive toward aim);
    track elev follow / crest launch / land bounce via trackElevAt;
    truck2: stronger elev follow / crest / ramp ride-up; EXIT tip always while driving;
+   view1: track support pillars under elevated ribbon; spawn from canon outdoor yard;
    polish11: truck yaw follows travel; brief EXIT tip (no sticky billboard); ZOOM ability;
    hop1: HOP ability (Y arc + squash); shove toys/animals/pollen;
    hop2: ranch foot ALWAYS hops (continuous arc cycle); ability HOP = bigger jump;
@@ -432,9 +433,10 @@
 
   function makeFrogEntity(id, human, local, laneIndex) {
     var colors = FROG_COLORS[id] || FROG_COLORS.james;
-    var ox = 420 + (laneIndex % 2) * 48;
-    var oy = 1960 + Math.floor(laneIndex / 2) * 48;
     var C = global.FroggiesCanon;
+    var sp = (C && C.COMPOUND && C.COMPOUND.spawn) || { x: 420, y: 1960 };
+    var ox = sp.x + (laneIndex % 2) * 48;
+    var oy = sp.y + Math.floor(laneIndex / 2) * 48;
     var def = (C && C.FROG_DEFS && C.FROG_DEFS[id]) || null;
     return {
       id: id,
@@ -2526,6 +2528,43 @@
 
     drawPathRibbon(ctx, TRACK_BRANCH_B, camX, camY, vw, vh, "rgba(28,22,16,0.92)", 14, null, true);
     drawPathRibbon(ctx, TRACK_BRANCH_B, camX, camY, vw, vh, "#fde68a", 2.6, [9, 9], true);
+
+    /* view1: pillars under elevated ribbon — ground to deck */
+    (function drawSupports() {
+      var list = (global.FroggiesCanon && global.FroggiesCanon.TRACK_SUPPORTS) || [];
+      for (var si = 0; si < list.length; si++) {
+        var s = list[si];
+        var elev = (s.elev != null ? s.elev : 0.5) * 52;
+        if (elev < 16) continue;
+        var gp = project(s.x, s.y, camX, camY, vw, vh);
+        var top = pathPoint([s.x, s.y, s.elev], camX, camY, vw, vh);
+        var half = 10 * gp.depth;
+        for (var side = -1; side <= 1; side += 2) {
+          var bx = gp.x + side * half;
+          var by0 = gp.y + 2;
+          var by1 = top.y + 2;
+          ctx.strokeStyle = "#57534e";
+          ctx.lineWidth = Math.max(2.2, 3.4 * gp.depth);
+          ctx.beginPath();
+          ctx.moveTo(bx, by0);
+          ctx.lineTo(bx, by1);
+          ctx.stroke();
+          ctx.strokeStyle = "rgba(168,162,158,0.85)";
+          ctx.lineWidth = Math.max(1.2, 1.8 * gp.depth);
+          ctx.beginPath();
+          ctx.moveTo(bx - 1, by0);
+          ctx.lineTo(bx - 1, by1);
+          ctx.stroke();
+        }
+        /* Crossbeam under deck */
+        ctx.strokeStyle = "#78716c";
+        ctx.lineWidth = Math.max(2, 2.8 * gp.depth);
+        ctx.beginPath();
+        ctx.moveTo(gp.x - half, top.y + 1);
+        ctx.lineTo(gp.x + half, top.y + 1);
+        ctx.stroke();
+      }
+    })();
 
     /* polish9: start/finish gate + checkered line */
     (function drawGate() {
