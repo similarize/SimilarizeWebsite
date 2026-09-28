@@ -1,3 +1,12 @@
+## What's new (mech6) — pond swim + docked submarine · tank blast respawn ~7s
+
+- **Swim:** walk into the pond — soft rim no longer blocks; frog enters swim (slower stroke, splash).
+- **Submarine:** docked at the **south pond perimeter** (near ranch approach). INTERACT / E to board · dive underwater · EXIT back to swim (if still in pond) or shore.
+- Phone + desktop: same INTERACT / E / virtual joystick patterns as trucks/mechs.
+- **mech6 blast respawn:** tank missiles that wreck toys/animals/props **and** Rexy's thousand-story mech bring them back after **~7 seconds**.
+- House/garage size unchanged (mech5 ground scale kept).
+- Cache-bust: `?v=20260928-mech6`. Lobby UX kept (`← Arcade` + `Join · enter code`). Cast: James, Jimmy, Bubbles, Rexy.
+
 ## What's new (mech5) — tank vs Rexy 1000-mech · vehicle feel · bigger drive ground
 
 **Tank missiles (Canvas + Three lobby):** still blow up **toys / animals / props**. Among **mechs**, only **Rexy's thousand-story (1000)** can be destroyed — **not** trillion / hundred / ten. Boom ejects a pilot if aboard; mech fades out. World reset / `resetVehicleParks` respawns it.

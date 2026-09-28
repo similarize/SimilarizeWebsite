@@ -21,7 +21,9 @@
    mech3: Tank FIRE — Space / X / button; big missiles blow up toys/animals/props (Canvas + Three).
    mech5: tank blast kills ONLY Rexy 1000-story mech (not other mechs); props stay blastable;
          distinct vehicle drive (Ripsaw fastest auto; Cybertruck / Monster / Tank feel); mech bands differ;
-         expand playable ground/forest (house size unchanged). */
+         expand playable ground/forest (house size unchanged).
+   pond1: swim in pond + docked submarine at pond perimeter (enter/EXIT like other vehicles).
+   mech6: tank-blasted props + Rexy 1000-mech respawn after ~7s. */
 (function (global) {
   "use strict";
 
@@ -44,6 +46,8 @@
     { id: "track", name: "Monster truck track", x: 1680, y: 1580, w: 2200, h: 1380, color: "#57534e" },
     { id: "pond", name: "Pond", x: 2320, y: 80, w: 1680, h: 1180, color: "#0e7490" },
   ];
+  /* pond1: submarine docked at south pond perimeter (approach from ranch / track) */
+  var SUB_DOCK = { x: 2900, y: 1240 };
 
   var COMPOUND = {
     yard: { x: 100, y: 2100, w: 600, h: 360 },
@@ -248,7 +252,8 @@
     { id: "mech-100", label: "Jimmy · 100-story mech", x: COMPOUND.mech100.x, y: COMPOUND.mech100.y, r: 78, tip: "Jimmy only · 100-story mech", kind: "mech", stories: 100, solidId: "mech100", frogId: "jimmy" },
     { id: "mech-1000", label: "Rexy · 1000-story mech", x: COMPOUND.mech1000.x, y: COMPOUND.mech1000.y, r: 120, tip: "Rexy only · 1000-story mech", kind: "mech", stories: 1000, solidId: "mech1000", frogId: "rexy" },
     { id: "mech-trillion", label: "James · trillion-story mech", x: COMPOUND.mechTrillion.x, y: COMPOUND.mechTrillion.y, r: 150, tip: "James only · trillion-story mech", kind: "mech", stories: 1e12, solidId: "mechTrillion", frogId: "james" },
-    { id: "fishies", label: "Fishies", x: 3160, y: 620, r: 70, tip: "Splash the pond" },
+    { id: "fishies", label: "Fishies", x: 3160, y: 620, r: 70, tip: "Swim the pond · fishies & whales" },
+    { id: "submarine", label: "Submarine", x: SUB_DOCK.x, y: SUB_DOCK.y, r: 72, tip: "Submarine · dive underwater", kind: "submarine", vehicleStyle: "submarine", mode: "solo" },
     { id: "starship", label: "Starship", x: 360, y: 320, r: 72, tip: "Starship · Spotty · space episode" },
   ];
 
@@ -362,6 +367,10 @@
     return !!(h && (h.kind === "mech" || (h.id && String(h.id).indexOf("mech") === 0)));
   }
 
+  function isSubHotspot(h) {
+    return !!(h && (h.kind === "submarine" || (h.id && String(h.id).indexOf("submarine") === 0)));
+  }
+
   function mechSolidId(idOrHot) {
     var id = idOrHot && typeof idOrHot === "object" ? idOrHot.solidId || idOrHot.id : idOrHot;
     if (!id) return null;
@@ -428,6 +437,7 @@
     var id = String(hotOrId);
     if (id.indexOf("ripsaw") >= 0) return "ripsaw";
     if (id.indexOf("tank") >= 0) return "tank";
+    if (id.indexOf("submarine") >= 0 || id.indexOf("sub") === 0) return "submarine";
     return "cybertruck";
   }
 
@@ -455,7 +465,9 @@
     return "Driving Tank · FIRE (Space / X / button) · big missiles · EXIT INTERACT";
   }
 
-  /* mech5: among MECHS, only Rexy's thousand-story can be tank-blasted */
+  /* mech5: among MECHS, only Rexy's thousand-story can be tank-blasted
+     mech6: DESTROYED_MECHS[sid] = seconds remaining until respawn (~7s) */
+  var BLAST_RESPAWN_SEC = 7;
   var DESTROYED_MECHS = {};
   function mechSolidKeys(idOrHot) {
     var sid = mechSolidId(idOrHot);
@@ -474,17 +486,37 @@
   }
   function isMechDestroyed(idOrHot) {
     var sid = mechSolidKeys(idOrHot);
-    return !!(sid && DESTROYED_MECHS[sid]);
+    return !!(sid && DESTROYED_MECHS[sid] != null && DESTROYED_MECHS[sid] > 0);
   }
   function markMechDestroyed(idOrHot) {
     var sid = mechSolidKeys(idOrHot);
     if (!sid) return false;
     if (!isTankBlastableMech(sid)) return false; /* hard gate: never destroy other mechs */
-    DESTROYED_MECHS[sid] = true;
+    DESTROYED_MECHS[sid] = BLAST_RESPAWN_SEC;
     return true;
   }
   function clearDestroyedMechs() {
     DESTROYED_MECHS = {};
+  }
+  /* mech6: count down; returns list of solidIds that just respawned */
+  function tickMechRespawn(dt) {
+    var revived = [];
+    if (!dt || dt <= 0) return revived;
+    var keys = Object.keys(DESTROYED_MECHS);
+    for (var i = 0; i < keys.length; i++) {
+      var k = keys[i];
+      DESTROYED_MECHS[k] = (DESTROYED_MECHS[k] || 0) - dt;
+      if (DESTROYED_MECHS[k] <= 0) {
+        delete DESTROYED_MECHS[k];
+        revived.push(k);
+      }
+    }
+    return revived;
+  }
+  function mechRespawnRemaining(idOrHot) {
+    var sid = mechSolidKeys(idOrHot);
+    if (!sid || DESTROYED_MECHS[sid] == null) return 0;
+    return Math.max(0, DESTROYED_MECHS[sid]);
   }
 
   /* mech5: distinct automobile + mech drive feel.
@@ -494,6 +526,7 @@
     monster:    { maxSp: 0.94, accel: 1.14, turn: 0.72, fric: 1.06 },
     ripsaw:     { maxSp: 1.22, accel: 1.30, turn: 1.12, fric: 0.90 },
     tank:       { maxSp: 0.66, accel: 0.58, turn: 0.52, fric: 1.28 },
+    submarine:  { maxSp: 0.78, accel: 0.72, turn: 0.88, fric: 1.10 },
   };
   var MECH_DRIVE = {
     "10":       { maxSp: 1.28, accel: 1.22, turn: 1.35, fric: 0.92 },
@@ -508,7 +541,7 @@
     if (!style && styleOrFrog.truckId) style = vehicleStyleOf(styleOrFrog.truckId);
     if (!style) style = "cybertruck";
     style = String(style);
-    if (style === "ripsaw" || style === "tank") return style;
+    if (style === "ripsaw" || style === "tank" || style === "submarine") return style;
     /* Monster truck feel = Cybertruck with big live wheels */
     var ws = wheelScaleLive;
     if (styleOrFrog && typeof styleOrFrog === "object" && styleOrFrog.wheelScale != null) ws = styleOrFrog.wheelScale;
@@ -835,7 +868,7 @@
       if (_pushCircleOut(pos, circs[j].x, circs[j].y, circs[j].r + rad)) hit = true;
     }
     /* Optional soft pond rim — gentle slide, not a hard wall */
-    if (opts.softPond && !opts.inTruck && !opts.inMech) {
+    if (opts.softPond && !opts.inTruck && !opts.inMech && !opts.inSwim && !opts.inSub) {
       var pond = AREAS[2];
       var margin = 36;
       var inside =
@@ -1071,6 +1104,7 @@
         if (TRUCK_SPOTS[i].id === tid) return { x: TRUCK_SPOTS[i].x, y: TRUCK_SPOTS[i].y };
       }
     }
+    if (isSubHotspot(h)) return { x: SUB_DOCK.x, y: SUB_DOCK.y };
     return null;
   }
 
@@ -1100,6 +1134,10 @@
     if (String(id).indexOf("truck") === 0) {
       keys.push(id);
       keys.push(String(id).replace(/^truck-/, ""));
+    }
+    if (String(id).indexOf("submarine") >= 0 || String(id) === "sub") {
+      keys.push("submarine");
+      keys.push("sub");
     }
     var pos = { x: x, y: y };
     for (var k = 0; k < keys.length; k++) VEHICLE_PARK[keys[k]] = pos;
@@ -1149,6 +1187,7 @@
     MAP_W: MAP_W,
     MAP_H: MAP_H,
     AREAS: AREAS,
+    SUB_DOCK: SUB_DOCK,
     COMPOUND: COMPOUND,
     YARD_STREAM: YARD_STREAM,
     YARD_STREAM_HALF_W: YARD_STREAM_HALF_W,
@@ -1185,6 +1224,7 @@
     onTrack: onTrack,
     isTruckHotspot: isTruckHotspot,
     isMechHotspot: isMechHotspot,
+    isSubHotspot: isSubHotspot,
     mechSolidId: mechSolidId,
     mechOwnerId: mechOwnerId,
     mechOwnerName: mechOwnerName,
@@ -1198,6 +1238,9 @@
     isMechDestroyed: isMechDestroyed,
     markMechDestroyed: markMechDestroyed,
     clearDestroyedMechs: clearDestroyedMechs,
+    tickMechRespawn: tickMechRespawn,
+    mechRespawnRemaining: mechRespawnRemaining,
+    BLAST_RESPAWN_SEC: BLAST_RESPAWN_SEC,
     VEHICLE_DRIVE: VEHICLE_DRIVE,
     MECH_DRIVE: MECH_DRIVE,
     resolveDriveStyle: resolveDriveStyle,

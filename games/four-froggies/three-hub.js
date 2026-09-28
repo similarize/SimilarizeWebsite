@@ -25,6 +25,8 @@
    mech1: mech ownership locks + shared Ripsaw/Tank (garage).
    mech3: Tank big missiles (Space / X / button) blow up toys/animals/props.
    mech5: tank destroys ONLY Rexy 1000-mech; distinct vehicle speeds; expand drive ground/forest.
+   pond1: swim in pond + docked submarine at south rim.
+   mech6: tank blast props + Rexy 1000-mech respawn ~7s.
    interact2: interact/exit + HOP strictly per pad/player; shared HUD = primary only.
    hop3: faster loco + spam HOP + stack; articulated mechs.
    track3: banks + rocks + live monster wheels (preserved).
@@ -111,10 +113,11 @@
   /** interact2: does current interactPadIndex own the boarded vehicle? */
   function inputOwnsBoarded() {
     if (!state) return false;
-    if (!state.inMech && !state.inTruck) return false;
+    if (!state.inMech && !state.inTruck && !state.inSub) return false;
     var pilot = null;
     if (state.inMech) pilot = state.mechPilotPadIndex;
     else if (state.inTruck) pilot = state.truckPilotPadIndex;
+    else if (state.inSub) pilot = state.truckPilotPadIndex;
     /* null interactPad = keyboard/HUD — owns if pilot is null (keyboard boarded) or primary pad */
     if (interactPadIndex == null) {
       return pilot == null || pilot === state.primaryPadIndex;
@@ -603,7 +606,41 @@
   function makeVehicleMesh(style, accentHex) {
     if (style === "ripsaw") return makeRipsawMesh(accentHex);
     if (style === "tank") return makeTankMesh(accentHex);
+    if (style === "submarine") return makeSubMesh(accentHex);
     return makeTruckMesh(accentHex);
+  }
+
+  function makeSubMesh(accentHex) {
+    var g = new THREE.Group();
+    var hullMat = new THREE.MeshStandardMaterial({
+      color: 0x0ea5e9, metalness: 0.55, roughness: 0.32, emissive: 0x0369a1, emissiveIntensity: 0.18
+    });
+    var hull = new THREE.Mesh(new THREE.SphereGeometry(1.05, 16, 12), hullMat);
+    hull.scale.set(2.2, 0.72, 0.95);
+    hull.castShadow = true;
+    g.add(hull);
+    var tower = new THREE.Mesh(
+      new THREE.BoxGeometry(0.55, 0.7, 0.45),
+      new THREE.MeshStandardMaterial({ color: accentHex || 0x7dd3fc, metalness: 0.4, roughness: 0.4 })
+    );
+    tower.position.set(0.15, 0.75, 0);
+    g.add(tower);
+    var peri = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.04, 0.04, 0.7, 6),
+      new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.6, roughness: 0.35 })
+    );
+    peri.position.set(0.25, 1.25, 0);
+    g.add(peri);
+    var glass = new THREE.MeshStandardMaterial({ color: 0xe0f2fe, metalness: 0.2, roughness: 0.15, transparent: true, opacity: 0.85 });
+    [[-0.55, 0.1, 0.35], [0.35, 0.1, 0.35], [0.9, 0.08, 0.28]].forEach(function (pos) {
+      var port = new THREE.Mesh(new THREE.CircleGeometry(0.14, 10), glass);
+      port.position.set(pos[0], pos[1], pos[2]);
+      g.add(port);
+      var port2 = port.clone(); port2.position.z = -pos[2]; g.add(port2);
+    });
+    g.userData.bodyMat = hullMat;
+    g.userData.truckScale = 1.15;
+    return g;
   }
 
   function applyTruckWheelScale(g, ws) {
@@ -1208,6 +1245,15 @@
     shore.scale.set(pond.w / Math.min(pond.w, pond.h), 1, pond.h / Math.min(pond.w, pond.h));
     scene.add(shore);
     addLabel("Pond · fishies & whales", "#ecfeff", pl.x, 1.5, pl.z);
+    /* pond1: docked submarine at south perimeter */
+    var dock = C.SUB_DOCK || { x: 2900, y: 1240 };
+    var parkSub = C.vehiclePos ? C.vehiclePos("submarine", dock.x, dock.y) : dock;
+    var sp = worldToThree(parkSub.x, parkSub.y);
+    state.parkedSub = makeSubMesh(0x7dd3fc);
+    state.parkedSub.position.set(sp.x, 0.22, sp.z);
+    state.parkedSub.rotation.y = Math.PI;
+    scene.add(state.parkedSub);
+    addLabel("Submarine", "#e0f2fe", sp.x, 1.6, sp.z);
   }
 
   function buildStarshipApproach() {
@@ -1691,8 +1737,13 @@
     state.mechId = null;
     state.mechStories = 0;
     state.mechPilotPadIndex = null;
-    state.waterSub = 0;
-    state.zLift = 0;
+        state.waterSub = 0;
+    state.inSwim = false;
+    state.inSub = false;
+    state.subId = null;
+    state.driveSub = null;
+    state.parkedSub = null;
+state.zLift = 0;
     state.zVel = 0;
     state.scrap = 0;
     state.bouncePhase = 0;
@@ -2172,7 +2223,7 @@
       return;
     }
     /* interact2: primary EXIT only if this input owns the boarded vehicle */
-    if (state.mode === "ranch" && (state.inMech || state.inTruck) && !companion) {
+    if (state.mode === "ranch" && (state.inMech || state.inTruck || state.inSub) && !companion) {
       if (!inputOwnsBoarded()) {
         interactOrigin = null; interactPadIndex = null;
         return;
@@ -2189,16 +2240,44 @@
         if (hooks.onToast) hooks.onToast(state.toast);
         return;
       }
-      var parkTw = threeToWorld(state.player.position.x, state.player.position.z);
-      var parkTid = state.truckId || "truck";
-      if (C.setVehiclePark) C.setVehiclePark(parkTid, parkTw.x, parkTw.y);
-      state.inTruck = false; state.truckMode = null; state.truckId = null; state.vehicleStyle = null;
-      state.truckPilotPadIndex = null;
-      state.zLift = 0; state.zVel = 0; state.groundLift = 0;
-      state.toast = "Parked · walking"; state.toastT = 1.8; state.exitTipT = 0;
-      interactOrigin = null; interactPadIndex = null;
-      if (hooks.onToast) hooks.onToast(state.toast);
-      return;
+      if (state.inSub) {
+        var parkSw = threeToWorld(state.player.position.x, state.player.position.z);
+        var parkSid = state.subId || "submarine";
+        if (C.setVehiclePark) C.setVehiclePark(parkSid, parkSw.x, parkSw.y);
+        state.inSub = false; state.subId = null; state.vehicleStyle = null;
+        state.zLift = 0; state.zVel = 0; state.groundLift = 0;
+        if (C.inPond && C.inPond(parkSw.x, parkSw.y)) {
+          state.inSwim = true;
+          state.waterSub = Math.max(state.waterSub || 0, 0.4);
+          state.toast = "Surfaced · swimming";
+        } else {
+          state.inSwim = false;
+          state.toast = "Sub parked · shore";
+        }
+        state.toastT = 1.8; state.exitTipT = 0;
+        if (state.driveSub) state.driveSub.visible = false;
+        if (state.parkedSub) {
+          var psp = worldToThree(parkSw.x, parkSw.y);
+          state.parkedSub.position.set(psp.x, 0.22, psp.z);
+          state.parkedSub.visible = true;
+        }
+        state.player.visible = true;
+        interactOrigin = null; interactPadIndex = null;
+        if (hooks.onToast) hooks.onToast(state.toast);
+        return;
+      }
+      if (state.inTruck) {
+        var parkTw = threeToWorld(state.player.position.x, state.player.position.z);
+        var parkTid = state.truckId || "truck";
+        if (C.setVehiclePark) C.setVehiclePark(parkTid, parkTw.x, parkTw.y);
+        state.inTruck = false; state.truckMode = null; state.truckId = null; state.vehicleStyle = null;
+        state.truckPilotPadIndex = null;
+        state.zLift = 0; state.zVel = 0; state.groundLift = 0;
+        state.toast = "Parked · walking"; state.toastT = 1.8; state.exitTipT = 0;
+        interactOrigin = null; interactPadIndex = null;
+        if (hooks.onToast) hooks.onToast(state.toast);
+        return;
+      }
     }
     /* Companion pad while primary is boarded: fall through to board a free mech */
     if (!state.near) { interactOrigin = null; interactPadIndex = null; return; }
@@ -2231,6 +2310,25 @@
           : state.vehicleStyle === "tank" ? (C.tankDrivingTip ? C.tankDrivingTip() : "Driving Tank · FIRE (Space / X / button) · EXIT INTERACT")
           : "Driving Cybertruck · hit the jumps!";
         state.exitTipT = 2.4;
+      } else if (C.isSubHotspot && C.isSubHotspot(state.near)) {
+        if (companion) { interactOrigin = null; interactPadIndex = null; return; }
+        if (state.inMech || state.inTruck || state.inSub) {
+          interactOrigin = null; interactPadIndex = null; return;
+        }
+        var spb = worldToThree(state.near.x, state.near.y);
+        state.player.position.x = spb.x; state.player.position.z = spb.z;
+        state.inSub = true; state.subId = id; state.vehicleStyle = "submarine";
+        state.inSwim = false;
+        state.waterSub = Math.max(state.waterSub || 0, 0.85);
+        state.player.visible = false;
+        if (state.parkedSub) state.parkedSub.visible = false;
+        if (state.driveSub && state.driveSub.parent) state.driveSub.parent.remove(state.driveSub);
+        state.driveSub = makeSubMesh(hex((C.FROG_DEFS[state.frogId] || {}).color || "#38bdf8"));
+        state.driveSub.visible = true;
+        scene.add(state.driveSub);
+        state.toast = "Submarine · diving underwater · EXIT INTERACT / E";
+        state.toastT = 2.4; state.exitTipT = 2.4;
+        if (hooks.onToast) hooks.onToast(state.toast);
       } else if (C.isMechHotspot && C.isMechHotspot(state.near)) {
         /* boardall1: companion boards their own mech; primary uses state.inMech */
         if (companion) {
@@ -2468,8 +2566,17 @@
         var nx = d > 0.05 ? dx / d : 0, nz = d > 0.05 ? dz / d : 0;
         pu.vx = (pu.vx || 0) + nx * 380 * fall;
         pu.vy = (pu.vy || 0) + nz * 380 * fall;
+        if (pu.homeX == null) {
+          pu.homeX = pu.x; pu.homeY = pu.y; pu.homeR = pu.r;
+          if (pu.mesh) {
+            pu.homeScale = pu.mesh.scale.clone();
+            pu.homeMat = pu.mesh.material;
+            pu.homeMeshY = pu.mesh.position.y;
+          }
+        }
         pu.wrecked = true;
         pu.wreckT = 0.85 + Math.random() * 0.4;
+        pu.respawnT = (C && C.BLAST_RESPAWN_SEC) ? C.BLAST_RESPAWN_SEC : 7;
         if (pu.mesh) {
           pu.mesh.material = new THREE.MeshBasicMaterial({ color: 0x78716c, transparent: true, opacity: 0.85 });
           pu.mesh.scale.multiplyScalar(0.75);
@@ -2501,6 +2608,7 @@
     if (md > (radius || 2.4) + mr) return 0;
     if (!C.markMechDestroyed("mech1000")) return 0;
     ment.destroyed = true;
+    ment.respawnT = (C && C.BLAST_RESPAWN_SEC) ? C.BLAST_RESPAWN_SEC : 7;
     /* eject pilots */
     if (state.inMech && mechSidOf(state.mechId) === "mech1000") {
       state.inMech = false; state.mechId = null; state.mechStories = 0; state.mechPilotPadIndex = null;
@@ -2579,47 +2687,95 @@
         state.shells.splice(i, 1);
       }
     }
-    /* remove fully wrecked pushables after fling */
+    /* mech6: wreck fade then respawn props (~7s) — do not delete */
     if (state.pushables) {
-      for (var wi = state.pushables.length - 1; wi >= 0; wi--) {
+      for (var wi = 0; wi < state.pushables.length; wi++) {
         var wp = state.pushables[wi];
         if (!wp || !wp.wrecked) continue;
-        wp.wreckT = (wp.wreckT || 0) - dt;
-        if (wp.mesh) {
-          wp.mesh.position.y = (wp.mesh.position.y || 0) + dt * 1.4;
-          if (wp.mesh.material && wp.mesh.material.opacity != null) {
-            wp.mesh.material.transparent = true;
-            wp.mesh.material.opacity = Math.max(0, (wp.wreckT || 0) * 1.1);
+        if ((wp.wreckT || 0) > 0) {
+          wp.wreckT -= dt;
+          if (wp.mesh) {
+            wp.mesh.position.y = (wp.mesh.position.y || 0) + dt * 1.4;
+            if (wp.mesh.material && wp.mesh.material.opacity != null) {
+              wp.mesh.material.transparent = true;
+              wp.mesh.material.opacity = Math.max(0, (wp.wreckT || 0) * 1.1);
+            }
+            wp.mesh.rotation.y += dt * 4;
           }
-          wp.mesh.rotation.y += dt * 4;
+        } else if (wp.mesh) {
+          wp.mesh.visible = false;
+          if (wp.head) wp.head.visible = false;
         }
-        if (wp.wreckT <= 0) {
-          if (wp.mesh && wp.mesh.parent) wp.mesh.parent.remove(wp.mesh);
-          if (wp.head && wp.head.parent) wp.head.parent.remove(wp.head);
-          state.pushables.splice(wi, 1);
+        wp.respawnT = (wp.respawnT != null ? wp.respawnT : 7) - dt;
+        if (wp.respawnT <= 0) {
+          wp.wrecked = false;
+          wp.wreckT = 0;
+          wp.respawnT = 0;
+          wp.vx = 0; wp.vy = 0;
+          wp.x = wp.homeX != null ? wp.homeX : wp.x;
+          wp.y = wp.homeY != null ? wp.homeY : wp.y;
+          if (wp.homeR != null) wp.r = wp.homeR;
+          if (wp.mesh) {
+            var pt = worldToThree(wp.x, wp.y);
+            wp.mesh.position.set(pt.x, wp.homeMeshY != null ? wp.homeMeshY : 0.2, pt.z);
+            wp.mesh.visible = true;
+            wp.mesh.rotation.set(0, 0, 0);
+            if (wp.homeScale) wp.mesh.scale.copy(wp.homeScale);
+            if (wp.homeMat) wp.mesh.material = wp.homeMat;
+            else if (wp.mesh.material) { wp.mesh.material.opacity = 1; wp.mesh.material.transparent = false; }
+          }
+          if (wp.head) wp.head.visible = true;
         }
       }
     }
-    /* mech5: fade out destroyed 1000-mech */
+    /* mech6: fade destroyed 1000-mech then respawn (timer in canon) */
     if (state.mechs) {
-      for (var wmi = state.mechs.length - 1; wmi >= 0; wmi--) {
+      for (var wmi = 0; wmi < state.mechs.length; wmi++) {
         var wm = state.mechs[wmi];
         if (!wm || !wm.destroyed) continue;
-        wm.wreckT = (wm.wreckT || 0) - dt;
-        if (wm.group) {
-          wm.group.position.y += dt * 0.8;
-          wm.group.rotation.z += dt * 0.9;
-          wm.group.traverse(function (ch) {
-            if (ch.isMesh && ch.material && ch.material.opacity != null) {
-              ch.material.transparent = true;
-              ch.material.opacity = Math.max(0, (wm.wreckT || 0) * 0.85);
-            }
-          });
+        if ((wm.wreckT || 0) > 0) {
+          wm.wreckT -= dt;
+          if (wm.group) {
+            wm.group.position.y += dt * 0.8;
+            wm.group.rotation.z += dt * 0.9;
+            wm.group.traverse(function (ch) {
+              if (ch.isMesh && ch.material && ch.material.opacity != null) {
+                ch.material.transparent = true;
+                ch.material.opacity = Math.max(0, (wm.wreckT || 0) * 0.85);
+              }
+            });
+          }
+        } else if (wm.group) {
+          wm.group.visible = false;
+          if (wm.label) wm.label.visible = false;
         }
-        if (wm.wreckT <= 0) {
-          if (wm.group && wm.group.parent) wm.group.parent.remove(wm.group);
-          if (wm.label && wm.label.parent) wm.label.parent.remove(wm.label);
-          state.mechs.splice(wmi, 1);
+      }
+    }
+    if (C.tickMechRespawn) {
+      var revived3 = C.tickMechRespawn(dt);
+      if (revived3 && revived3.indexOf("mech1000") >= 0) {
+        for (var rmi = 0; rmi < (state.mechs || []).length; rmi++) {
+          var rm = state.mechs[rmi];
+          if (!rm || rm.solidId !== "mech1000") continue;
+          rm.destroyed = false;
+          rm.wreckT = 0;
+          if (rm.group) {
+            rm.group.visible = true;
+            rm.group.position.y = 0;
+            rm.group.rotation.z = 0;
+            /* restore look: rebuild materials lightly */
+            rm.group.traverse(function (ch) {
+              if (ch.isMesh && ch.material) {
+                ch.material.transparent = false;
+                ch.material.opacity = 1;
+                if (ch.material.color) ch.material.color.setHex(0xfcd34d);
+              }
+            });
+          }
+          if (rm.label) rm.label.visible = true;
+          state.toast = "Rexy 1000-story mech is back!";
+          state.toastT = 2.0;
+          if (hooks.onToast) hooks.onToast(state.toast);
         }
       }
     }
@@ -2877,11 +3033,11 @@
     /* tapsteer1: noticeably snappier walk + drive */
     /* mechwalk1: lumber slower/heavier than frog hop; continuous thrust while piloted */
     /* mech5: per-vehicle / per-mech drive (Ripsaw fastest auto) */
-    var vStat3 = (state.inTruck && C.vehicleDriveStats) ? C.vehicleDriveStats({ vehicleStyle: state.vehicleStyle, wheelScale: C.getWheelScale ? C.getWheelScale() : 1 }) : null;
+    var vStat3 = ((state.inTruck || state.inSub) && C.vehicleDriveStats) ? C.vehicleDriveStats({ vehicleStyle: state.inSub ? "submarine" : state.vehicleStyle, wheelScale: C.getWheelScale ? C.getWheelScale() : 1 }) : null;
     var mStat3 = (state.inMech && C.mechDriveStats) ? C.mechDriveStats(state.mechStories || 10) : null;
-    var maxSp = state.mode === "space" ? 11.5 : state.inTruck ? 15.8 : state.inMech ? 6.8 : 13.6;
-    var accel = state.mode === "space" ? 22 : state.inTruck ? 38 : state.inMech ? 16 : 34;
-    var fric = state.mode === "space" ? 3.0 : state.inTruck ? 4.8 : state.inMech ? 5.2 : 7.8;
+    var maxSp = state.mode === "space" ? 11.5 : state.inSub ? 9.2 : state.inTruck ? 15.8 : state.inMech ? 6.8 : state.inSwim ? 8.5 : 13.6;
+    var accel = state.mode === "space" ? 22 : state.inSub ? 22 : state.inTruck ? 38 : state.inMech ? 16 : state.inSwim ? 22 : 34;
+    var fric = state.mode === "space" ? 3.0 : state.inSub ? 5.5 : state.inTruck ? 4.8 : state.inMech ? 5.2 : state.inSwim ? 6.2 : 7.8;
     if (vStat3) { maxSp *= vStat3.maxSp || 1; accel *= vStat3.accel || 1; fric *= vStat3.fric || 1; }
     if (mStat3) { maxSp *= mStat3.maxSp || 1; accel *= mStat3.accel || 1; fric *= mStat3.fric || 1; }
     /* ctrl1: RT accel / LT brake on truck + mech — read primary/pilot pad (frame-cached) */
@@ -3095,6 +3251,36 @@
         if (nearG || Math.abs(side) > 40) state.lapSide = side >= 0 ? 1 : -1;
       }
       var wet = (C.inPond && C.inPond(wpos0.x, wpos0.y)) || (C.inYardStream && C.inYardStream(wpos0.x, wpos0.y));
+      /* pond1: walk into pond → swim; leave shore → stop swim */
+      if (!state.inTruck && !state.inMech && !state.inSub) {
+        if (C.inPond && C.inPond(wpos0.x, wpos0.y)) {
+          if (!state.inSwim) {
+            state.inSwim = true;
+            state.waterSub = Math.max(state.waterSub || 0, 0.35);
+            state.toast = "🏊 Swimming · Submarine at the shore";
+            state.toastT = 1.6;
+          }
+        } else if (state.inSwim) {
+          state.inSwim = false;
+        }
+      }
+      if (state.inSub) {
+        state.inSwim = false;
+        state.waterSub = Math.min(1.15, Math.max(0.8, (state.waterSub || 0.85) + 0.1));
+        /* keep sub in pond */
+        var pondB = C.AREAS && C.AREAS[2];
+        if (pondB) {
+          var ww = threeToWorld(state.player.position.x, state.player.position.z);
+          var pad = 40;
+          var cx = Math.max(pondB.x + pad, Math.min(pondB.x + pondB.w - pad, ww.x));
+          var cy = Math.max(pondB.y + pad, Math.min(pondB.y + pondB.h - pad, ww.y));
+          if (cx !== ww.x || cy !== ww.y) {
+            var tp = worldToThree(cx, cy);
+            state.player.position.x = tp.x;
+            state.player.position.z = tp.z;
+          }
+        }
+      }
       if (state.inTruck && wet) {
         var plunge = Math.max(0, -state.zVel) + (((state.zLift || 0) - (state.groundLift || 0)) > 0.4 ? 1 : 0);
         state.waterSub = Math.min(1.15, 0.45 + plunge * 0.2);
@@ -3104,10 +3290,23 @@
         state.waterSub = Math.max(0, (state.waterSub || 0) - dt * 1.5);
       }
       /* mechwalk1: hide frog while piloting — full story-height mech mesh follows player */
-      state.player.visible = !state.inTruck && !state.inMech;
-      if (!state.inTruck && !state.inMech) {
+      state.player.visible = !state.inTruck && !state.inMech && !state.inSub;
+      if (!state.inTruck && !state.inMech && !state.inSub) {
         state.player.scale.set(1, 1, 1);
       }
+      if (state.driveSub) {
+        state.driveSub.visible = !!state.inSub;
+        if (state.inSub) {
+          var diveY = -0.35 - (state.waterSub || 0.85) * 0.25;
+          state.driveSub.position.set(state.player.position.x, diveY, state.player.position.z);
+          state.driveSub.rotation.y = (state.faceAngle != null ? state.faceAngle : 0);
+          if (state.driveSub.userData.bodyMat) {
+            state.driveSub.userData.bodyMat.opacity = 0.78;
+            state.driveSub.userData.bodyMat.transparent = true;
+          }
+        }
+      }
+      if (state.parkedSub) state.parkedSub.visible = !state.inSub;
       /* polish4: bounce + spray / bubbles / walk dust */
       state.bouncePhase = (state.bouncePhase || 0) + dt * (3 + sp * 0.4);
       var airNow = (state.zLift || 0) - (state.groundLift || 0);
@@ -3325,7 +3524,7 @@
         }
       }
       if (state.waterPlane) {
-        state.waterPlane.visible = !!(state.inTruck && wet);
+        state.waterPlane.visible = !!((state.inTruck && wet) || state.inSub || (state.inSwim && wet));
         if (wet && state.inTruck) {
           state.waterPlane.position.set(state.player.position.x, 0.12 + state.waterSub * 0.08, state.player.position.z);
           state.waterPlane.material.opacity = 0.35 + state.waterSub * 0.4;
@@ -3437,7 +3636,7 @@
     // solid1 + mechwalk1: solid walls / mech pads / parked trucks; ignore own pad while piloting
     if (state.mode === "ranch" && C.resolveSolid) {
       var wHit = threeToWorld(state.player.position.x, state.player.position.z);
-      var radW = state.inTruck ? 38 : state.inMech ? 30 : 22;
+      var radW = state.inTruck ? 38 : state.inSub ? 36 : state.inMech ? 30 : 22;
       var ignoreMech = null;
       if (state.inMech && C.mechSolidId) ignoreMech = C.mechSolidId(state.mechId);
       else if (state.inMech && state.mechId) ignoreMech = String(state.mechId).replace(/^mech-/, "mech");
@@ -3446,8 +3645,10 @@
         garageOpen: state.garageOpen || 0,
         inTruck: !!state.inTruck,
         inMech: !!state.inMech,
+        inSwim: !!state.inSwim,
+        inSub: !!state.inSub,
         ignoreMechId: ignoreMech,
-        softPond: !state.inTruck && !state.inMech,
+        softPond: !state.inTruck && !state.inMech && !state.inSwim && !state.inSub,
         airHeight: airH3 / 0.02, /* three→world-ish units for canon clear threshold */
         airClearHeight: state.inMech ? 22 : 28,
       };
@@ -3915,22 +4116,26 @@
         mode: state.mode,
         label: label,
         scrap: state.mode === "space" ? state.catches : state.scrap,
-        tip: (state.inTruck || state.inMech)
-          ? (state.toastT > 0 ? state.toast : ((state.exitTipT || 0) > 0 ? "EXIT · INTERACT / E" : (state.inTruck && state.vehicleStyle === "tank" ? "FIRE · Space / X / button · EXIT INTERACT" : "")))
+        tip: (state.inTruck || state.inMech || state.inSub)
+          ? (state.toastT > 0 ? state.toast : ((state.exitTipT || 0) > 0 ? "EXIT · INTERACT / E" : (state.inSub ? "🛸 Diving · EXIT · INTERACT / E" : (state.inTruck && state.vehicleStyle === "tank" ? "FIRE · Space / X / button · EXIT INTERACT" : ""))))
           : (state.toastT > 0 ? state.toast : state.inOrbit ? "Orbit locked · Escape or hard thruster" : state.near ? (
             (C.isMechHotspot && C.isMechHotspot(state.near) && C.canBoardMech && !C.canBoardMech(state.frogId, state.near))
               ? ((C.mechDeniedTip ? C.mechDeniedTip(state.frogId, state.near) : state.near.tip) + " · INTERACT")
-              : ((((C.isTruckHotspot && C.isTruckHotspot(state.near)) || (C.isMechHotspot && C.isMechHotspot(state.near))) ? "BOARD · " : "⚡ ") + state.near.tip + " · INTERACT / E")
-          ) : (state.invLabel && state.invLabel.visible ? "Mars · invader silhouettes" : "")),
+              : ((((C.isTruckHotspot && C.isTruckHotspot(state.near)) || (C.isMechHotspot && C.isMechHotspot(state.near)) || (C.isSubHotspot && C.isSubHotspot(state.near))) ? "BOARD · " : "⚡ ") + state.near.tip + " · INTERACT / E")
+          ) : (state.inSwim ? "🏊 Swimming · Submarine at shore · INTERACT / E" : (state.invLabel && state.invLabel.visible ? "Mars · invader silhouettes" : ""))),
         inOrbit: !!state.inOrbit,
         inTruck: !!state.inTruck,
+        inSub: !!state.inSub,
+        inSwim: !!state.inSwim,
         inMech: !!state.inMech,
-        near: (state.inTruck || state.inMech) ? true : state.near,
+        near: (state.inTruck || state.inMech || state.inSub) ? true : state.near,
         ability: (state.inTruck && state.vehicleStyle === "tank") ? "FIRE" : "HOP",
         cd: state.cd,
         walk: (function () {
           if (state.mode === "space") return state.inOrbit ? "🌍 Orbit" : "🚀 Space";
           if (state.inMech) return "🤖 Mech · " + (C.mechStoriesLabel ? C.mechStoriesLabel(state.mechStories).replace(" mech", "") : ((state.mechStories || "?") + "-story"));
+          if (state.inSub) return "🛸 Sub · under";
+          if (state.inSwim) return "🏊 Swim";
           if (!state.inTruck) return "🐸 Walk";
           var wp2 = threeToWorld(state.player.position.x, state.player.position.z);
           var wet2 = C.inPond && C.inPond(wp2.x, wp2.y);

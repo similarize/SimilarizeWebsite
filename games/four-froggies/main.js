@@ -180,9 +180,10 @@
     const C = globalThis.FroggiesCanon;
     if (C && C.isTruckHotspot && C.isTruckHotspot(h)) return true;
     if (C && C.isMechHotspot && C.isMechHotspot(h)) return true;
-    if (h.kind === "truck" || h.kind === "mech") return true;
+    if (C && C.isSubHotspot && C.isSubHotspot(h)) return true;
+    if (h.kind === "truck" || h.kind === "mech" || h.kind === "submarine") return true;
     const id = h.id ? String(h.id) : "";
-    return id.indexOf("truck") === 0 || id.indexOf("mech") === 0;
+    return id.indexOf("truck") === 0 || id.indexOf("mech") === 0 || id.indexOf("submarine") === 0;
   }
 
   /** Frog owned by this input (pad N → that frog; keyboard/HUD → primary only). */
@@ -203,12 +204,12 @@
     if (opts.source === "pad" && opts.padIndex != null) {
       for (const f of frogs) {
         if (f.local && f.padIndex != null && (f.padIndex | 0) === (opts.padIndex | 0) &&
-            (f.inTruck || f.inMech)) return f;
+            (f.inTruck || f.inMech || f.inSub)) return f;
       }
       return null;
     }
     for (const f of frogs) {
-      if ((f.inTruck || f.inMech) && frogOwnedByInput(f, opts)) return f;
+      if ((f.inTruck || f.inMech || f.inSub) && frogOwnedByInput(f, opts)) return f;
     }
     return null;
   }
@@ -237,7 +238,7 @@
     if (!world || !W || !W.nearestHotspot) return localPlayer();
     /* Shared HUD/keyboard: act on primary only (nearest hotspot at primary) */
     const me = localPlayer();
-    if (!me || me.inTruck || me.inMech) return me;
+    if (!me || me.inTruck || me.inMech || me.inSub) return me;
     return me;
   }
 
@@ -282,7 +283,7 @@
       if (!f.local) continue;
       /* Shared HUD near-check: primary + padless only (not other pads' positions for EXIT/BOARD label) */
       if (f.padIndex != null && f.padIndex !== undefined && f !== me) continue;
-      if (f.inTruck || f.inMech) continue;
+      if (f.inTruck || f.inMech || f.inSub) continue;
       const hot = W.nearestHotspot(world, f.x, f.y, 70, { frogs, frog: f });
       if (!hot) continue;
       const d = Math.hypot(f.x - hot.x, f.y - hot.y);
@@ -393,12 +394,14 @@
 
   function paintHud() {
     const me = localPlayer();
-    const hudBoarded = hudBoardedFrog() || (me && (me.inTruck || me.inMech) && frogOwnedByInput(me, { source: "hud" }) ? me : null);
+    const hudBoarded = hudBoardedFrog() || (me && (me.inTruck || me.inMech || me.inSub) && frogOwnedByInput(me, { source: "hud" }) ? me : null);
     if (livesEl) {
       if (phase === "space" && spaceEp && spaceEp.inOrbit) {
         livesEl.textContent = "🌍 Orbit";
       } else if (hudBoarded && hudBoarded.inMech) {
         livesEl.textContent = "🤖 Mech · " + (hudBoarded.mechStories || "?") + "-story";
+      } else if (hudBoarded && hudBoarded.inSub) {
+        livesEl.textContent = "🛸 Sub · underwater";
       } else if (hudBoarded && hudBoarded.inTruck) {
         const mode = hudBoarded.truckMode === "shared" ? "All aboard" : "Drive";
         livesEl.textContent = (hudBoarded.z || 0) > 4 ? "🚚 AIR!" : "🚚 " + mode;
@@ -474,6 +477,8 @@
         /* polish11: no sticky EXIT billboard — brief toast / exitTip only; INTERACT button shows EXIT */
         if (storyToastT > 0 && storyToast) tipEl.textContent = storyToast;
         else if (exitTipT > 0) tipEl.textContent = "EXIT · INTERACT / E";
+        else if (hudBoarded.inSub)
+          tipEl.textContent = "🛸 Diving · EXIT · INTERACT / E";
         else if (hudBoarded.inTruck && globalThis.FroggiesCanon && globalThis.FroggiesCanon.isTankVehicle && globalThis.FroggiesCanon.isTankVehicle(hudBoarded))
           tipEl.textContent = "FIRE · Space / X / button · EXIT INTERACT";
         else tipEl.textContent = "";
@@ -487,7 +492,11 @@
         }
       } else if (nearHot && (nearHot.kind === "truck" || (nearHot.id && nearHot.id.indexOf("truck") === 0)))
         tipEl.textContent = "BOARD · " + nearHot.tip + " · INTERACT / E";
+      else if (nearHot && (nearHot.kind === "submarine" || (nearHot.id && nearHot.id.indexOf("submarine") === 0)))
+        tipEl.textContent = "BOARD · " + nearHot.tip + " · INTERACT / E";
       else if (nearHot) tipEl.textContent = "⚡ " + nearHot.tip + " · INTERACT / E";
+      else if (me && me.inSwim && !me.inSub)
+        tipEl.textContent = "🏊 Swimming · find Submarine at shore · INTERACT / E";
       else if (me && W.nearMech1000 && W.nearMech1000(frogs, 170))
         tipEl.textContent = "★ WOW · Rexy 1000-story mech · scale tease";
       else tipEl.textContent = "";
@@ -779,7 +788,7 @@
       hot = W && W.nearestHotspot ? W.nearestHotspot(world, me.x, me.y, 70, nearOpts) : null;
     } else {
       hot = nearHot;
-      if (!hot && !(me.inTruck || me.inMech) && W && W.nearestHotspot) {
+      if (!hot && !(me.inTruck || me.inMech || me.inSub) && W && W.nearestHotspot) {
         hot = W.nearestHotspot(world, me.x, me.y, 70, nearOpts);
       }
     }
@@ -788,6 +797,15 @@
       if (W.boardMech) W.boardMech(world, frogs, me, { kind: "mech", id: me.mechId || "mech" });
       else { me.inMech = false; me.mechId = null; me.mechStories = 0; me.z = 0; me.zVel = 0; }
       storyToast = "Mech parked · walking";
+      storyToastT = 1.8;
+      exitTipT = 0;
+      paintHud();
+      return;
+    }
+    if (me.inSub) {
+      if (W.boardSub) W.boardSub(world, frogs, me, { kind: "submarine", id: me.subId || "submarine" });
+      else { me.inSub = false; me.subId = null; me.z = 0; me.zVel = 0; }
+      storyToast = me.inSwim ? "Surfaced · swimming" : "Sub parked · shore";
       storyToastT = 1.8;
       exitTipT = 0;
       paintHud();
@@ -822,6 +840,20 @@
       if (story) story.openSps();
       storyToast = "SPS open";
       storyToastT = 2;
+    } else if (hot.kind === "submarine" || (hot.id && hot.id.indexOf("submarine") === 0)) {
+      const wasSub = !!me.inSub;
+      if (W.boardSub) W.boardSub(world, frogs, me, hot);
+      else {
+        me.inSub = true; me.subId = hot.id; me.vehicleStyle = "submarine";
+        me.x = hot.x; me.y = hot.y; me.inSwim = false;
+      }
+      if (me.inSub && !wasSub) {
+        storyToast = "Submarine · diving underwater · EXIT INTERACT / E";
+        storyToastT = 2.4;
+        exitTipT = 2.4;
+      }
+      paintHud();
+      return;
     } else if (hot.kind === "truck" || (hot.id && hot.id.indexOf("truck") === 0)) {
       const wasIn = !!me.inTruck;
       if (W.boardTruck) W.boardTruck(world, frogs, me, hot);
@@ -1168,7 +1200,7 @@
               requestAbility(f);
             }
             /* ctrl1: RT accel / LT brake while boarded */
-            if (f.inTruck || f.inMech) {
+            if (f.inTruck || f.inMech || f.inSub) {
               const rt = gp.rtValue != null ? gp.rtValue : (gp.rt ? 1 : 0);
               const lt = gp.ltValue != null ? gp.ltValue : (gp.lt ? 1 : 0);
               f.throttle = rt;
@@ -1184,7 +1216,7 @@
         } else {
           es = effectiveSteer();
           /* padless primary: RT/LT from first unclaimed snap */
-          if ((f.inTruck || f.inMech) && _pad && _pad.connected) {
+          if ((f.inTruck || f.inMech || f.inSub) && _pad && _pad.connected) {
             const rt = _pad.rtValue != null ? _pad.rtValue : (_pad.rt ? 1 : 0);
             const lt = _pad.ltValue != null ? _pad.ltValue : (_pad.lt ? 1 : 0);
             f.throttle = rt; f.brake = lt;
@@ -1255,8 +1287,8 @@
           }
         }
         /* ctrl1: only decay ability boosts; RT sets speedBoost each frame while held */
-        if (!(f.inTruck || f.inMech) && f.speedBoost > 1) f.speedBoost = Math.max(1, f.speedBoost - dt * 0.5);
-        if (!(f.inTruck || f.inMech)) { f.throttle = 0; f.brake = 0; f.fricBoost = 1; }
+        if (!(f.inTruck || f.inMech || f.inSub) && f.speedBoost > 1) f.speedBoost = Math.max(1, f.speedBoost - dt * 0.5);
+        if (!(f.inTruck || f.inMech || f.inSub)) { f.throttle = 0; f.brake = 0; f.fricBoost = 1; }
       }
     }
     W.tickHubAI(frogs, me, dt, world);
@@ -1267,6 +1299,11 @@
       storyToast = world._mechBoomToast;
       storyToastT = 2.2;
       world._mechBoomToast = null;
+    }
+    if (world && world._mechRespawnToast) {
+      storyToast = world._mechRespawnToast;
+      storyToastT = 2.0;
+      world._mechRespawnToast = null;
     }
 
     easeCam(dt);

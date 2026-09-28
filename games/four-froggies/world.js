@@ -29,6 +29,8 @@
    mobile1: phone+desktop shared UI — smaller/toggle-friendly mini-map + harder particle caps on narrow.
    mech3: Tank big missiles — blast wrecks toys/animals/props.
    mech5: tank blows ONLY Rexy 1000-mech (props stay); distinct vehicle speeds; bigger drive ground.
+   pond1: swim in pond + docked submarine at south rim (enter/EXIT).
+   mech6: tank blast props + Rexy 1000-mech respawn ~7s.
    ~10× map: real roam between ranch house / track / pond / Starship.
    James ranch house: big house, backyard (animals), huge garage (toys + 10/100-story mechs);
    1000-story + trillion-story mechs sit out back (won't fit). Four Cybertrucks + shared pile-in.
@@ -281,7 +283,8 @@
       { id: "mech-100", label: "Jimmy · 100-story mech", x: 980, y: 1700, r: 78, tip: "Jimmy only · 100-story mech", kind: "mech", stories: 100, solidId: "mech100", frogId: "jimmy" },
       { id: "mech-1000", label: "Rexy · 1000-story mech", x: 340, y: 2420, r: 120, tip: "Rexy only · 1000-story mech", kind: "mech", stories: 1000, solidId: "mech1000", frogId: "rexy" },
       { id: "mech-trillion", label: "James · trillion-story mech", x: 600, y: 2170, r: 150, tip: "James only · trillion-story mech", kind: "mech", stories: 1e12, solidId: "mechTrillion", frogId: "james" },
-      { id: "fishies", label: "Fishies", x: 3160, y: 620, r: 70, tip: "Splash the pond" },
+      { id: "fishies", label: "Fishies", x: 3160, y: 620, r: 70, tip: "Swim the pond · fishies & whales" },
+      { id: "submarine", label: "Submarine", x: 2900, y: 1240, r: 72, tip: "Submarine · dive underwater", kind: "submarine", vehicleStyle: "submarine", mode: "solo" },
       { id: "starship", label: "Starship", x: STARSHIP.x, y: STARSHIP.y, r: 72, tip: "Starship · Spotty · space episode" },
     ];
   }
@@ -466,6 +469,8 @@
       inMech: false,
       mechId: null,
       mechStories: 0,
+      inSwim: false,
+      inSub: false,
       padIndex: null,
       z: 0,
       zVel: 0,
@@ -509,7 +514,8 @@
     var hid = hot.id ? String(hot.id) : "";
     var isMech = hot.kind === "mech" || (C && C.isMechHotspot && C.isMechHotspot(hot)) || hid.indexOf("mech") === 0;
     var isTruck = hot.kind === "truck" || (C && C.isTruckHotspot && C.isTruckHotspot(hot)) || hid.indexOf("truck") === 0;
-    if (!isMech && !isTruck) return false;
+    var isSub = hot.kind === "submarine" || (C && C.isSubHotspot && C.isSubHotspot(hot)) || hid.indexOf("submarine") === 0;
+    if (!isMech && !isTruck && !isSub) return false;
     if (hot.mode === "shared") return false;
     var sid = C && C.mechSolidId ? C.mechSolidId(hid) : null;
     for (var i = 0; i < frogs.length; i++) {
@@ -521,6 +527,7 @@
           return true;
       }
       if (isTruck && f.inTruck && f.truckMode !== "shared" && f.truckId === hid) return true;
+      if (isSub && f.inSub) return true;
     }
     return false;
   }
@@ -687,8 +694,10 @@
         var ny = d > 0.1 ? dy / d : (Math.random() - 0.5);
         prop.vx = (prop.vx || 0) + nx * F * (0.45 + falloff);
         prop.vy = (prop.vy || 0) + ny * F * (0.45 + falloff);
+        if (prop.homeX == null) { prop.homeX = prop.x; prop.homeY = prop.y; prop.homeR = prop.r || 10; prop.homeSize = prop.size; }
         prop.wrecked = true;
         prop.wreckT = 0.9 + Math.random() * 0.5;
+        prop.respawnT = (C && C.BLAST_RESPAWN_SEC) ? C.BLAST_RESPAWN_SEC : 7;
         prop.spin = (Math.random() - 0.5) * 14;
         prop.r = Math.max(4, (prop.r || 10) * 0.7);
         hitN++;
@@ -981,20 +990,38 @@
     }
     function tickWreck(arr) {
       if (!arr) return;
-      for (var wi = arr.length - 1; wi >= 0; wi--) {
+      for (var wi = 0; wi < arr.length; wi++) {
         var wp = arr[wi];
         if (!wp || !wp.wrecked) continue;
-        wp.wreckT = (wp.wreckT || 0) - dt;
-        wp.x += (wp.vx || 0) * dt;
-        wp.y += (wp.vy || 0) * dt;
-        wp.vx = (wp.vx || 0) * Math.max(0, 1 - 3.2 * dt);
-        wp.vy = (wp.vy || 0) * Math.max(0, 1 - 3.2 * dt);
-        if (wp.spin) wp.ang = (wp.ang || 0) + wp.spin * dt;
-        if (wp.wreckT <= 0) arr.splice(wi, 1);
+        if ((wp.wreckT || 0) > 0) {
+          wp.wreckT -= dt;
+          wp.x += (wp.vx || 0) * dt;
+          wp.y += (wp.vy || 0) * dt;
+          wp.vx = (wp.vx || 0) * Math.max(0, 1 - 3.2 * dt);
+          wp.vy = (wp.vy || 0) * Math.max(0, 1 - 3.2 * dt);
+          if (wp.spin) wp.ang = (wp.ang || 0) + wp.spin * dt;
+        }
+        wp.respawnT = (wp.respawnT != null ? wp.respawnT : 7) - dt;
+        if (wp.respawnT <= 0) {
+          wp.wrecked = false;
+          wp.wreckT = 0;
+          wp.respawnT = 0;
+          wp.vx = 0; wp.vy = 0; wp.spin = 0; wp.ang = 0;
+          wp.x = wp.homeX != null ? wp.homeX : wp.x;
+          wp.y = wp.homeY != null ? wp.homeY : wp.y;
+          if (wp.homeR != null) wp.r = wp.homeR;
+          if (wp.homeSize != null) wp.size = wp.homeSize;
+        }
       }
     }
     tickWreck(world.toys);
     tickWreck(world.animals);
+    /* mech6: Rexy 1000-mech comes back after blast timer */
+    var Cresp = global.FroggiesCanon;
+    if (Cresp && Cresp.tickMechRespawn) {
+      var revived = Cresp.tickMechRespawn(dt);
+      if (revived && revived.length) world._mechRespawnToast = "Rexy 1000-story mech is back!";
+    }
     /* polish10: hard caps if arrays ballooned */
     var capsFx = particleCaps();
     if (world.dust && world.dust.length > capsFx.dust) world.dust.length = capsFx.dust;
@@ -1056,6 +1083,13 @@
     var gWalk = 720; /* hop2: snappier loco hop arcs (~2 hops/sec) */
     var gTruck = 560;
     var wet = inPond(ent.x, ent.y);
+    if (ent.inSub) {
+      ent.waterSub = Math.min(1.15, Math.max(0.75, (ent.waterSub || 0.85) + dt * 0.15));
+      ent.wakePhase = (ent.wakePhase || 0) + dt * (2.2 + Math.hypot(ent.vx || 0, ent.vy || 0) * 0.01);
+      if (wet && Math.random() < dt * 4) spawnBubbles(world, ent.x, ent.y, 2);
+      result.onWater = true;
+      return result;
+    }
     if (!ent.inTruck) {
       if (ent.z > 0 || ent.zVel !== 0) {
         ent.zVel -= gWalk * dt;
@@ -1335,12 +1369,18 @@
     var walkMax = 345;
     var truckMax = 420;
     var mechMax = 195;
+    var subMax = 280;
     var vStat = null, mStat = null;
-    if (ent.inTruck && Cdrv && Cdrv.vehicleDriveStats) vStat = Cdrv.vehicleDriveStats(ent);
+    if ((ent.inTruck || ent.inSub) && Cdrv && Cdrv.vehicleDriveStats) {
+      vStat = Cdrv.vehicleDriveStats(ent.inSub ? "submarine" : ent);
+    }
     if (ent.inMech && Cdrv && Cdrv.mechDriveStats) mStat = Cdrv.mechDriveStats(ent.mechStories || ent);
-    if (vStat) truckMax *= vStat.maxSp || 1;
+    if (vStat) {
+      if (ent.inSub) subMax *= vStat.maxSp || 1;
+      else truckMax *= vStat.maxSp || 1;
+    }
     if (mStat) mechMax *= mStat.maxSp || 1;
-    var maxSp = (ent.inMech ? mechMax : ent.inTruck ? truckMax : walkMax) * (ent.speedBoost || 1);
+    var maxSp = (ent.inMech ? mechMax : ent.inSub ? subMax : ent.inTruck ? truckMax : walkMax) * (ent.speedBoost || 1);
     if (ent.inTruck && ent.dashTrail > 0) maxSp *= 1.28;
     if (typeof speed === "number") maxSp = speed * (ent.speedBoost || 1);
     var mx = ent.steerX;
@@ -1350,15 +1390,15 @@
     var Cwet = global.FroggiesCanon;
     var inStream = Cwet && Cwet.inYardStream ? Cwet.inYardStream(ent.x, ent.y) : false;
     var wetMove = (inPond(ent.x, ent.y) || inStream) && (ent.z || 0) < 3;
-    var accel = ent.inMech ? 780 : ent.inTruck ? 1680 : 1520;
-    var friction = ent.inMech ? 7.2 : ent.inTruck ? 5.6 : 9.6;
+    var accel = ent.inMech ? 780 : ent.inSub ? 980 : ent.inTruck ? 1680 : 1520;
+    var friction = ent.inMech ? 7.2 : ent.inSub ? 6.4 : ent.inTruck ? 5.6 : 9.6;
     if (vStat) { accel *= vStat.accel || 1; friction *= vStat.fric || 1; }
     if (mStat) { accel *= mStat.accel || 1; friction *= mStat.fric || 1; }
     /* ctrl1: RT accel / LT brake while boarded */
-    var thr = (ent.inTruck || ent.inMech) ? (ent.throttle || 0) : 0;
-    var brk = (ent.inTruck || ent.inMech) ? (ent.brake || 0) : 0;
+    var thr = (ent.inTruck || ent.inMech || ent.inSub) ? (ent.throttle || 0) : 0;
+    var brk = (ent.inTruck || ent.inMech || ent.inSub) ? (ent.brake || 0) : 0;
     if (thr > 0.05) accel *= 1 + Math.min(1, thr) * 0.55;
-    if ((ent.fricBoost || 0) > 1 && (ent.inTruck || ent.inMech)) friction *= ent.fricBoost;
+    if ((ent.fricBoost || 0) > 1 && (ent.inTruck || ent.inMech || ent.inSub)) friction *= ent.fricBoost;
     if (brk > 0.05) {
       friction *= 1 + Math.min(1, brk) * 2.2;
       maxSp *= Math.max(0.32, 1 - Math.min(1, brk) * 0.6);
@@ -1367,15 +1407,42 @@
       accel *= 0.82;
       friction *= 1.15;
       maxSp *= 0.88;
+    } else if (wetMove && ent.inSub) {
+      accel *= 0.9;
+      friction *= 1.05;
+      maxSp *= 0.92;
     } else if (wetMove) {
       /* yard1: creek is gentler than pond */
       if (inStream && !inPond(ent.x, ent.y)) {
         accel *= 0.88;
         maxSp *= 0.9;
       } else {
-        accel *= 0.75;
-        maxSp *= 0.8;
+        /* pond1: swim feel — slower stroke in open water */
+        accel *= 0.7;
+        maxSp *= 0.72;
+        friction *= 1.08;
       }
+    }
+    /* pond1: auto swim when walking into pond; leave swim on shore */
+    if (!ent.inTruck && !ent.inMech && !ent.inSub) {
+      if (inPond(ent.x, ent.y) && (ent.z || 0) < 8) {
+        if (!ent.inSwim) {
+          ent.inSwim = true;
+          ent.waterSub = Math.max(ent.waterSub || 0, 0.35);
+          if (world) spawnSplash(world, ent.x, ent.y, 4);
+        }
+      } else if (ent.inSwim) {
+        ent.inSwim = false;
+      }
+    } else if (ent.inSub) {
+      ent.inSwim = false;
+      /* keep sub inside / near pond */
+      var pondB = AREAS[2];
+      var pad = 20;
+      if (ent.x < pondB.x + pad) ent.x = pondB.x + pad;
+      if (ent.x > pondB.x + pondB.w - pad) ent.x = pondB.x + pondB.w - pad;
+      if (ent.y < pondB.y + pad) ent.y = pondB.y + pad;
+      if (ent.y > pondB.y + pondB.h - pad) ent.y = pondB.y + pondB.h - pad;
     }
     if (inStream && !ent.inTruck && !ent.inMech && (ent.z || 0) < 3 && world) {
       ent._streamSplash = (ent._streamSplash || 0) - (typeof dt === "number" ? dt : 0.016);
@@ -1386,7 +1453,7 @@
       }
     }
     var canon = global.FroggiesCanon;
-    var airFoot = !ent.inTruck && !ent.inMech && (ent.z || 0) > 1.5;
+    var airFoot = !ent.inTruck && !ent.inMech && !ent.inSub && (ent.z || 0) > 1.5;
     if (mag > 0.05) {
       var aim = Math.atan2(my, mx);
       if (ent.inMech) {
@@ -1406,8 +1473,8 @@
         var mfx = Math.cos(ent.faceAngle), mfy = Math.sin(ent.faceAngle);
         ent.vx += (mfx * 0.72 + mx * 0.28) * accel * dt;
         ent.vy += (mfy * 0.72 + my * 0.28) * accel * dt;
-      } else if (ent.inTruck) {
-        /* truck1: smooth yaw toward aim, then thrust along facing (traction) */
+      } else if (ent.inTruck || ent.inSub) {
+        /* truck1 / pond1 sub: smooth yaw toward aim, then thrust along facing */
         var cur = (ent.faceAngle != null && isFinite(ent.faceAngle)) ? ent.faceAngle : aim;
         var turnRate = (3.6 + Math.min(2.4, Math.hypot(ent.vx, ent.vy) / 160)) * (vStat && vStat.turn != null ? vStat.turn : 1);
         if (canon && canon.approachAngle) ent.faceAngle = canon.approachAngle(cur, aim, turnRate * dt);
@@ -1468,12 +1535,14 @@
       if (ent.inMech && canon.mechSolidId) ignoreMech = canon.mechSolidId(ent.mechId);
       else if (ent.inMech && ent.mechId) ignoreMech = String(ent.mechId).replace(/^mech-/, "mech");
       var airH = (ent.z || 0) - (ent.groundZ || 0);
-      var solid = canon.resolveSolid(ent.x, ent.y, ent.inTruck ? 38 : ent.inMech ? 30 : 22, {
+      var solid = canon.resolveSolid(ent.x, ent.y, ent.inTruck ? 38 : ent.inSub ? 36 : ent.inMech ? 30 : 22, {
         garageOpen: (world && world.garageOpen) || 0,
         inTruck: !!ent.inTruck,
         inMech: !!ent.inMech,
+        inSwim: !!ent.inSwim,
+        inSub: !!ent.inSub,
         ignoreMechId: ignoreMech,
-        softPond: !ent.inTruck && !ent.inMech,
+        softPond: !ent.inTruck && !ent.inMech && !ent.inSwim && !ent.inSub,
         airHeight: airH,
         airClearHeight: ent.inMech ? 22 : 28,
       });
@@ -1497,7 +1566,7 @@
     }
     /* hop2: ANY move input → continuous hop cycle (launch → land → brief ground → next) */
     /* Mechs: no loco hop — piloting a robot feels like a heavy walk */
-    if (!ent.inTruck && !ent.inMech && canon && canon.tickLocoHop) {
+    if (!ent.inTruck && !ent.inMech && !ent.inSub && !ent.inSwim && canon && canon.tickLocoHop) {
       var wantHop = mag > 0.05;
       var launched = canon.tickLocoHop(ent, dt, {
         moving: wantHop,
@@ -1635,6 +1704,52 @@
     frog.z = 0;
     frog.zVel = 0;
     frog.groundZ = 0;
+    return true;
+  }
+
+  function boardSub(world, frogs, frog, hotspot) {
+    if (!frog) return false;
+    var C = global.FroggiesCanon;
+    /* EXIT anytime while in submarine → swim if still in pond, else shore */
+    if (frog.inSub) {
+      var parkSid = frog.subId || (hotspot && hotspot.id) || "submarine";
+      var sx = frog.x, sy = frog.y;
+      frog.inSub = false;
+      frog.subId = null;
+      frog.vehicleStyle = null;
+      frog.z = 0;
+      frog.zVel = 0;
+      frog.groundZ = 0;
+      parkVehicleHere(world, parkSid, sx, sy);
+      if (inPond(sx, sy)) {
+        frog.inSwim = true;
+        frog.waterSub = Math.max(frog.waterSub || 0, 0.4);
+        if (world) spawnSplash(world, sx, sy, 5);
+      } else {
+        frog.inSwim = false;
+      }
+      return true;
+    }
+    if (!hotspot || (hotspot.kind !== "submarine" && !(C && C.isSubHotspot && C.isSubHotspot(hotspot)))) {
+      return false;
+    }
+    if (frog.inTruck) {
+      frog.inTruck = false; frog.truckMode = null; frog.truckId = null;
+    }
+    if (frog.inMech) {
+      frog.inMech = false; frog.mechId = null; frog.mechStories = 0;
+    }
+    frog.inSwim = false;
+    frog.x = hotspot.x;
+    frog.y = hotspot.y;
+    frog.inSub = true;
+    frog.subId = hotspot.id || "submarine";
+    frog.vehicleStyle = "submarine";
+    frog.z = 0;
+    frog.zVel = 0;
+    frog.groundZ = 0;
+    frog.waterSub = Math.max(frog.waterSub || 0, 0.85);
+    if (world) spawnSplash(world, frog.x, frog.y, 8);
     return true;
   }
 
@@ -2176,6 +2291,7 @@
         if (ap.x < -40 || ap.x > vw + 40 || ap.y < -40 || ap.y > vh + 40) continue;
         var asz = 8.5 * an.size * ap.depth;
         if (an.wrecked) {
+          if ((an.wreckT || 0) <= 0) continue; /* mech6: hidden until respawn */
           var awa = Math.max(0.12, Math.min(1, (an.wreckT || 0) * 1.1));
           ctx.save();
           ctx.translate(ap.x, ap.y);
@@ -3122,6 +3238,7 @@
       if (p.x < -20 || p.x > vw + 20 || p.y < -20 || p.y > vh + 20) continue;
       var s = (toy.inGarage ? 7 : 8) * p.depth;
       if (toy.wrecked) {
+        if ((toy.wreckT || 0) <= 0) continue; /* mech6: hidden until respawn */
         var wa = clamp((toy.wreckT || 0) * 1.2, 0.15, 1);
         ctx.save();
         ctx.translate(p.x, p.y);
@@ -3287,7 +3404,70 @@
     var st = style || "cybertruck";
     if (st === "ripsaw") return drawRipsaw(ctx, x, y, faceAngle, depth, driving, z, accent || "#a8a29e", water);
     if (st === "tank") return drawTank(ctx, x, y, faceAngle, depth, driving, z, accent || "#6b7280", water);
+    if (st === "submarine") return drawSubmarine(ctx, x, y, faceAngle, depth, driving, z, accent || "#0ea5e9", water);
     return drawCybertruck(ctx, x, y, faceAngle, depth, driving, z, accent, water);
+  }
+
+  function drawSubmarine(ctx, x, y, faceAngle, depth, driving, z, accent, water) {
+    var sc = 0.92 * depth;
+    var sub = water && water.sub != null ? water.sub : (driving ? 0.9 : 0.15);
+    var dive = Math.min(1.15, Math.max(0.2, sub));
+    var lift = (z || 0) * 0.4 * depth;
+    var drawY = y - lift + dive * 10 * depth;
+    var ang = (faceAngle != null && isFinite(faceAngle)) ? faceAngle : 0;
+    ctx.save();
+    ctx.translate(x, drawY);
+    ctx.rotate(ang);
+    if (driving) {
+      var wp = (water && water.wakePhase) || 0;
+      for (var b = 0; b < 4; b++) {
+        ctx.fillStyle = "rgba(186,230,253," + (0.35 - b * 0.06) + ")";
+        ctx.beginPath();
+        ctx.arc(-28 * sc - b * 8 * sc, (Math.sin(wp + b) * 4) * sc, (3.5 - b * 0.4) * sc, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    drawSoftShadow(ctx, 0, 8 * sc, 40 * sc, 10 * sc, 0.22);
+    var hull = ctx.createLinearGradient(-40 * sc, -10 * sc, 42 * sc, 12 * sc);
+    hull.addColorStop(0, driving ? "#38bdf8" : "#0284c7");
+    hull.addColorStop(0.45, driving ? "#0ea5e9" : "#0369a1");
+    hull.addColorStop(1, "#0c4a6e");
+    ctx.fillStyle = hull;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 42 * sc, 14 * sc, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#082f49";
+    ctx.lineWidth = 2.4;
+    ctx.stroke();
+    ctx.fillStyle = accent || "#7dd3fc";
+    ctx.fillRect(-6 * sc, -28 * sc, 14 * sc, 18 * sc);
+    ctx.strokeStyle = "#0c4a6e";
+    ctx.lineWidth = 1.6;
+    ctx.strokeRect(-6 * sc, -28 * sc, 14 * sc, 18 * sc);
+    ctx.fillStyle = "#94a3b8";
+    ctx.fillRect(2 * sc, -40 * sc, 3.2 * sc, 14 * sc);
+    ctx.fillRect(2 * sc, -42 * sc, 10 * sc, 3 * sc);
+    ctx.fillStyle = "rgba(224,242,254,0.85)";
+    ctx.beginPath(); ctx.arc(-14 * sc, -2 * sc, 4 * sc, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(6 * sc, -2 * sc, 4 * sc, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(24 * sc, -1 * sc, 3.2 * sc, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = "#cbd5e1";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-42 * sc, 0);
+    ctx.lineTo(-52 * sc, -6 * sc);
+    ctx.moveTo(-42 * sc, 0);
+    ctx.lineTo(-52 * sc, 6 * sc);
+    ctx.stroke();
+    if (driving) {
+      ctx.fillStyle = "rgba(15,23,42,0.75)";
+      ctx.fillRect(-36 * sc, 16 * sc, 72 * sc, 14 * sc);
+      ctx.fillStyle = "#e0f2fe";
+      ctx.font = "bold " + Math.round(9 * depth) + "px Segoe UI, system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("UNDERWATER", 0, 26 * sc);
+    }
+    ctx.restore();
   }
 
   function drawCybertruck(ctx, x, y, faceAngle, depth, driving, z, accent, water) {
@@ -3600,13 +3780,25 @@
   function drawFroggy(ctx, frog, camX, camY, vw, vh, frogs) {
     var p = project(frog.x, frog.y, camX, camY, vw, vh);
     var s = 16.4 * p.depth * (0.92 + 0.08 * p.depth); /* polish3 readable */
-    var bob = (!frog.inTruck && (frog.z || 0) < 2 && (frog.walkPhase || 0) > 0.05)
+    var bob = (!frog.inTruck && !frog.inSub && (frog.z || 0) < 2 && (frog.walkPhase || 0) > 0.05)
       ? Math.abs(Math.sin(frog.walkPhase)) * 1.2 * p.depth : 0;
     /* polish7: idle bounce for AI companions when standing */
-    if (!frog.inTruck && bob < 0.4 && (frog.idleBounce || 0) > 0) {
+    if (!frog.inTruck && !frog.inSub && bob < 0.4 && (frog.idleBounce || 0) > 0) {
       bob += Math.abs(Math.sin(frog.idleBounce)) * (frog.human ? 0.6 : 2.8) * p.depth;
     }
+    if (frog.inSwim && !frog.inSub) bob -= 6 * p.depth * Math.min(1, (frog.waterSub || 0.35) + 0.2);
     var lift = (frog.z || 0) * 0.58 * p.depth + bob;
+
+    if (frog.inSub) {
+      var yawSub = frog.faceAngle != null ? frog.faceAngle : -Math.PI / 2;
+      var spSub = Math.hypot(frog.vx || 0, frog.vy || 0);
+      if (spSub > 25) yawSub = Math.atan2(frog.vy, frog.vx);
+      drawSubmarine(ctx, p.x, p.y, yawSub, p.depth, true, frog.z || 0, frog.color, {
+        inWater: true, sub: Math.max(0.75, frog.waterSub || 0.9), wakePhase: frog.wakePhase || 0
+      });
+      drawNameplate(ctx, frog.name || "You", p.x, p.y - 48 * p.depth, frog.color || "#fff", p.depth, !frog.local);
+      return p;
+    }
 
     if (frog.inTruck && frog.truckMode === "shared" && !frog.local) {
       return p; /* drawn on shared truck roof by driver */
@@ -3945,7 +4137,7 @@
       ctx.fillText(h.label, p.x, badgeY - 8);
       ctx.fillStyle = "#fbbf24";
       ctx.font = "bold 11px Segoe UI, system-ui, sans-serif";
-      var prompt = (h.kind === "truck" || (h.id && String(h.id).indexOf("truck") === 0) || h.kind === "mech" || (h.id && String(h.id).indexOf("mech") === 0))
+      var prompt = (h.kind === "truck" || (h.id && String(h.id).indexOf("truck") === 0) || h.kind === "mech" || (h.id && String(h.id).indexOf("mech") === 0) || h.kind === "submarine" || (h.id && String(h.id).indexOf("submarine") === 0))
         ? "BOARD · INTERACT / E" : "INTERACT · E";
       ctx.fillText(prompt, p.x, badgeY + 8);
     } else {
@@ -4029,6 +4221,15 @@
         ctx.textAlign = "center";
         ctx.fillText("★ ALL ABOARD · 4", p.x, p.y + 37 * p.depth);
       }
+    }
+    /* pond1: parked submarine at dock / last EXIT */
+    var anyInSub = frogs.some(function (f) { return f.inSub; });
+    if (!anyInSub) {
+      var Csub = global.FroggiesCanon;
+      var dock = (Csub && Csub.SUB_DOCK) ? Csub.SUB_DOCK : { x: 2900, y: 1240 };
+      var parkS = Csub && Csub.vehiclePos ? Csub.vehiclePos("submarine", dock.x, dock.y) : dock;
+      var ps = project(parkS.x, parkS.y, camX, camY, vw, vh);
+      drawSubmarine(ctx, ps.x, ps.y, -Math.PI / 2, ps.depth, false, 0, "#38bdf8", { inWater: true, sub: 0.2, wakePhase: 0 });
     }
   }
 
@@ -4495,7 +4696,8 @@
       var hideTruck = h.kind === "truck" && frogs.some(function (f) {
         return f.local && f.inTruck && (f.truckId === h.id || (f.truckMode === "shared" && h.mode === "shared"));
       });
-      if (hideTruck) continue;
+      var hideSub = (h.kind === "submarine" || h.id === "submarine") && frogs.some(function (f) { return f.inSub; });
+      if (hideTruck || hideSub) continue;
       drawHotspot(ctx, h, camX, camY, vw, vh, nearHot && nearHot.id === h.id);
     }
 
@@ -4556,6 +4758,7 @@
     tickHubAI: tickHubAI,
     boardTruck: boardTruck,
     boardMech: boardMech,
+    boardSub: boardSub,
     project: project,
     getViewScale: getViewScale,
     setViewScaleUser: setViewScaleUser,
