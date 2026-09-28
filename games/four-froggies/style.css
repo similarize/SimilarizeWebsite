@@ -300,6 +300,21 @@ html, body {
 }
 .party-btn:active { transform: translateY(1px); }
 #btn-host { border-color: #a3e635; color: #ecfccb; }
+#btn-join { border-color: #38bdf8; color: #e0f2fe; }
+.join-code {
+  width: 5.5em;
+  border: 2px solid rgba(56,189,248,.55);
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: rgba(0,0,0,.45);
+  color: #e0f2fe;
+  font: 800 14px ui-monospace, "Cascadia Code", monospace;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-align: center;
+}
+.join-code::placeholder { color: rgba(224,242,254,.45); letter-spacing: 0.08em; }
+.join-code[hidden] { display: none; }
 
 .room-code {
   font: 800 18px ui-monospace, "Cascadia Code", monospace;

@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>Soccer RC</title>
-    <!-- Soccer RC (was Basketball RC). Paths stay basketball.html. Cache-bust: ?v=vfs1 -->
+    <!-- Soccer RC (was Basketball RC). Paths stay basketball.html. Cache-bust: ?v=20260928-soccer2 -->
     <!-- Tesla Cybertruck chromeless FS — see games/shared/TESLA_FULLSCREEN.md -->
     <script src="shared/tesla-fullscreen.js?v=tfs1"></script>
     <script src="shared/viewport-fill.js?v=vfs1"></script>
@@ -706,16 +706,69 @@
             _gp0 = GP ? GP.pollPad(0) : null;
             _gp1 = GP ? GP.pollPad(1) : null;
         }
-        // Soccer RC drive: RT=forward, LT=reverse; stick/dpad steer only while thrusting.
-        // Stick Y never auto-drives. Keyboard Up/W / Down/S still thrust/reverse.
+        // Soccer RC drive (soccer2): RT fwd / LT rev (analog), net thrust cancels dual-pull;
+        // stick X / dpad steer only while thrusting; ly ignored; proportional turn+speed.
+        const PAD_TRIG_DZ = 0.12;
+        const PAD_STEER_DZ = 0.18;
         function padDrive(g) {
-            if (!g || !g.connected) return { steerL:0, steerR:0, fwd:0, rev:0, thrusting:0 };
-            const fwd = g.rt ? 1 : 0;
-            const rev = g.lt ? 1 : 0;
-            const thrusting = (fwd || rev) ? 1 : 0;
-            const steerL = thrusting && (g.lx < -0.25 || g.dpad.l) ? 1 : 0;
-            const steerR = thrusting && (g.lx > 0.25 || g.dpad.r) ? 1 : 0;
-            return { steerL, steerR, fwd, rev, thrusting };
+            if (!g || !g.connected) return { steerL:0, steerR:0, fwd:0, rev:0, thrusting:0, steer:0, thrust:0 };
+            let rt = (typeof g.rtValue === 'number') ? g.rtValue : (g.rt ? 1 : 0);
+            let lt = (typeof g.ltValue === 'number') ? g.ltValue : (g.lt ? 1 : 0);
+            // Non-standard mapping only: never treat standard axes[2/3] (R-stick) as triggers
+            if (rt < 0.02 && lt < 0.02 && !g.rt && !g.lt) {
+                try {
+                    const list = navigator.getGamepads && navigator.getGamepads();
+                    const raw = list && list[g.index];
+                    if (raw && raw.mapping !== 'standard' && raw.axes && raw.axes.length > 4) {
+                        const a2 = raw.axes[2] || 0, a5 = raw.axes[5] || 0;
+                        const norm = (v) => {
+                            if (v >= 0 && v <= 1) return v;
+                            if (v < 0) return Math.min(1, -v);
+                            return Math.min(1, v);
+                        };
+                        rt = norm(a2); lt = norm(a5);
+                    }
+                } catch (_) {}
+            }
+            if (rt < PAD_TRIG_DZ) rt = 0;
+            if (lt < PAD_TRIG_DZ) lt = 0;
+            // Net thrust: holding both triggers cancels (no double-input lurch)
+            let thrust = rt - lt;
+            if (Math.abs(thrust) < PAD_TRIG_DZ) thrust = 0;
+            const fwd = thrust > 0 ? 1 : 0;
+            const rev = thrust < 0 ? 1 : 0;
+            const thrusting = thrust !== 0 ? 1 : 0;
+            let steer = 0;
+            if (thrusting) {
+                if (g.dpad && g.dpad.l) steer = -1;
+                else if (g.dpad && g.dpad.r) steer = 1;
+                else {
+                    const lx = g.lx || 0;
+                    steer = Math.abs(lx) < PAD_STEER_DZ ? 0 : Math.max(-1, Math.min(1, lx));
+                }
+            }
+            return {
+                steerL: steer < -0.01 ? 1 : 0,
+                steerR: steer > 0.01 ? 1 : 0,
+                fwd, rev, thrusting, steer, thrust
+            };
+        }
+        function keyOn() {
+            for (let i = 0; i < arguments.length; i++) if (keys[arguments[i]]) return true;
+            return false;
+        }
+        function applyPadMotion(car, d, leftKeys, rightKeys, fwdKeys, revKeys) {
+            // Keyboard wins when held; else proportional pad (steer only while thrusting)
+            if (keyOn.apply(null, leftKeys)) car.rotation = -ROTATION_SPEED;
+            else if (keyOn.apply(null, rightKeys)) car.rotation = ROTATION_SPEED;
+            else if (d.thrusting && d.steer) car.rotation = d.steer * ROTATION_SPEED;
+            else car.rotation = 0;
+
+            if (keyOn.apply(null, fwdKeys)) car.speed = car.maxSpeed;
+            else if (keyOn.apply(null, revKeys)) car.speed = -car.maxSpeed / 2;
+            else if (d.thrust > 0) car.speed = d.thrust * car.maxSpeed;
+            else if (d.thrust < 0) car.speed = d.thrust * (car.maxSpeed / 2);
+            else car.speed = 0;
         }
         function updateCarControls(car) {
             if (car.isDestroyed) return;
@@ -729,21 +782,11 @@
             const d1 = padDrive(_gp1);
 
             if (car === car1) {
-                if (keys['ArrowLeft'] || d0.steerL) car.rotation = -ROTATION_SPEED;
-                else if (keys['ArrowRight'] || d0.steerR) car.rotation = ROTATION_SPEED;
-                else car.rotation = 0;
-                if (keys['ArrowUp'] || d0.fwd) car.speed = car.maxSpeed;
-                else if (keys['ArrowDown'] || d0.rev) car.speed = -car.maxSpeed/2;
-                else car.speed = 0;
+                applyPadMotion(car, d0, ['ArrowLeft'], ['ArrowRight'], ['ArrowUp'], ['ArrowDown']);
             }
             if (car === car2) {
                 // pad1 only — single pad must not steal car2
-                if (keys['a'] || keys['A'] || d1.steerL) car.rotation = -ROTATION_SPEED;
-                else if (keys['d'] || keys['D'] || d1.steerR) car.rotation = ROTATION_SPEED;
-                else car.rotation = 0;
-                if (keys['w'] || keys['W'] || d1.fwd) car.speed = car.maxSpeed;
-                else if (keys['s'] || keys['S'] || d1.rev) car.speed = -car.maxSpeed/2;
-                else car.speed = 0;
+                applyPadMotion(car, d1, ['a','A'], ['d','D'], ['w','W'], ['s','S']);
             }
 
             if (car.speed > 0 && !car.wasDriving) {
