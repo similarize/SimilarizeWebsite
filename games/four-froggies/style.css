@@ -377,6 +377,10 @@ html, body {
 body.in-space {
   background: #020617;
 }
+/* view2: host chrome must not flash forest green under the WebGL canvas */
+body.in-space #engine-host {
+  background: #020617 !important;
+}
 /* spacefix1: never show title splash / forest art while in space episode */
 body.in-space #splash-art,
 body.in-space .splash-art {

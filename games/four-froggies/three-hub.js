@@ -1,5 +1,6 @@
 /* Four Froggies — three.js hub (CDN). Fixed-angle 2.5D-ish (orbit locked / isometric-ish).
    view1: outdoor spawn camera toward garage/yard + trucks; track support pillars under elev.
+   view2: hard leave-ranch space (fresh scene + starfield plane); perimeter forest matches yard trees.
    NOT free-fly FPS. Canvas-parity landmarks · solo-first.
    Big map · compound · squiggle track · pond whales · 4 trucks+shared ·
    on-water/under · Starship → Escape/hard thruster.
@@ -1174,8 +1175,8 @@
   function buildRanch() {
     scene = new THREE.Scene();
     scene.position.set(0, 0, 0);
-    scene.background = new THREE.Color(0x87b5d9);
-    scene.fog = new THREE.Fog(0x87b5d9, 55, 160);
+    scene.background = new THREE.Color(0x7eb8d4);
+    scene.fog = new THREE.Fog(0x6fae78, 48, 145); /* view2: forest haze matches tree canopy */
 
     // Fixed-angle isometric-ish camera — orbit LOCKED (no free-fly)
     var aspect = window.innerWidth / Math.max(1, window.innerHeight);
@@ -1209,21 +1210,84 @@
     ground.renderOrder = -2;
     scene.add(ground);
 
-    /* polish6: parallax-lite distant ranch hills (cheap depth bands) */
+    /* view2: perimeter forest — same trunk/canopy as yard trees so the woods continue */
     state.paraHills = [];
-    for (var hi = 0; hi < 3; hi++) {
-      var hill = new THREE.Mesh(
-        new THREE.BoxGeometry(28 + hi * 6, 2.2 + hi * 0.8, 4 + hi),
-        new THREE.MeshStandardMaterial({
-          color: hi === 0 ? 0x1e3a5f : hi === 1 ? 0x2f5a3a : 0x3d7a35,
-          transparent: true, opacity: 0.55 - hi * 0.08, roughness: 1,
-        })
-      );
-      hill.position.set(-8 + hi * 10, 1.2 + hi * 0.4, -C.MAP_H * 0.009 - hi * 2);
-      hill.userData.para = 0.12 + hi * 0.08;
-      scene.add(hill);
-      state.paraHills.push(hill);
-    }
+    state.forestRing = [];
+    (function buildForestPerimeter() {
+      var trunkMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.9 });
+      var canopyMats = [
+        new THREE.MeshStandardMaterial({ color: 0x16a34a, roughness: 0.85 }),
+        new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.88 }),
+        new THREE.MeshStandardMaterial({ color: 0x4d7c0f, roughness: 0.9 }),
+      ];
+      var halfW = C.MAP_W * 0.01;
+      var halfH = C.MAP_H * 0.01;
+      /* Soft distant green berm behind the tree line (not mismatched photo boxes) */
+      for (var hi = 0; hi < 2; hi++) {
+        var berm = new THREE.Mesh(
+          new THREE.CylinderGeometry(halfW * (1.35 + hi * 0.18), halfW * (1.45 + hi * 0.2), 2.4 + hi * 1.1, 32, 1, true),
+          new THREE.MeshStandardMaterial({
+            color: hi === 0 ? 0x14532d : 0x166534,
+            roughness: 1, side: THREE.BackSide, transparent: true, opacity: 0.55 - hi * 0.12,
+          })
+        );
+        berm.position.set(0, 0.9 + hi * 0.6, 0);
+        berm.userData.para = 0.08 + hi * 0.06;
+        scene.add(berm);
+        state.paraHills.push(berm);
+      }
+      function plantTree(x, z, s, ci) {
+        var g = new THREE.Group();
+        var trunk = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.08 * s, 0.12 * s, 0.9 * s, 6),
+          trunkMat
+        );
+        trunk.position.y = 0.45 * s;
+        trunk.castShadow = true;
+        g.add(trunk);
+        var canopy = new THREE.Mesh(
+          new THREE.SphereGeometry(0.55 * s, 8, 6),
+          canopyMats[ci % canopyMats.length]
+        );
+        canopy.position.y = 1.05 * s;
+        canopy.castShadow = true;
+        g.add(canopy);
+        g.position.set(x, 0, z);
+        scene.add(g);
+        state.forestRing.push(g);
+      }
+      /* Outer + mid rings around map edge */
+      var rings = [
+        { rScale: 1.08, n: 56, s0: 1.35, s1: 2.1 },
+        { rScale: 1.22, n: 72, s0: 1.6, s1: 2.6 },
+        { rScale: 1.38, n: 64, s0: 1.9, s1: 3.0 },
+      ];
+      for (var ri = 0; ri < rings.length; ri++) {
+        var rg = rings[ri];
+        for (var ti = 0; ti < rg.n; ti++) {
+          var ang = (ti / rg.n) * Math.PI * 2 + ri * 0.07;
+          var jr = rg.rScale * (0.94 + (ti % 5) * 0.025);
+          var s = rg.s0 + (ti % 7) * ((rg.s1 - rg.s0) / 7);
+          plantTree(Math.cos(ang) * halfW * jr, Math.sin(ang) * halfH * jr, s, ti + ri);
+        }
+      }
+      /* Fill corners denser so skybox gaps don't read as a different perimeter */
+      var corners = [
+        [-halfW * 1.15, -halfH * 1.15], [halfW * 1.15, -halfH * 1.15],
+        [-halfW * 1.15, halfH * 1.15], [halfW * 1.15, halfH * 1.15],
+        [-halfW * 1.28, 0], [halfW * 1.28, 0], [0, -halfH * 1.28], [0, halfH * 1.28],
+      ];
+      for (var ci = 0; ci < corners.length; ci++) {
+        for (var k = 0; k < 5; k++) {
+          plantTree(
+            corners[ci][0] + (k - 2) * 1.4,
+            corners[ci][1] + ((k % 3) - 1) * 1.2,
+            1.5 + (k % 4) * 0.35,
+            ci + k
+          );
+        }
+      }
+    })();
 
     // Soft grid — lifted + no depth write (was z-fighting ground → floor shudder)
     var grid = new THREE.GridHelper(Math.max(C.MAP_W, C.MAP_H) * 0.02, 30, 0x2f5e2a, 0x2f5e2a);
@@ -1556,52 +1620,89 @@
   }
 
   function buildSpace() {
-    while (scene.children.length) scene.remove(scene.children[0]);
+    /* view2: hard leave-ranch — fresh scene, dark clear, no forest/CSS leak */
+    scene = new THREE.Scene();
     scene.position.set(0, 0, 0);
     scene.background = new THREE.Color(0x020617);
-    scene.fog = new THREE.FogExp2(0x020617, 0.008);
+    scene.fog = new THREE.FogExp2(0x020617, 0.012);
+    if (renderer) {
+      renderer.setClearColor(0x020617, 1);
+      try {
+        var hostEl = document.getElementById("engine-host");
+        if (hostEl) hostEl.style.background = "#020617";
+        document.body.classList.add("in-space");
+      } catch (eSp) {}
+    }
+    /* Drop ranch establish / forest ring refs so follow cam cannot blend ranch */
+    if (state) {
+      state.establishT = 0;
+      state.establishCam = null;
+      state.establishLook = null;
+      state.paraHills = [];
+      state.forestRing = [];
+      state.garageDoor = null;
+      state.parkedTrucks = [];
+      state.fish = [];
+      state.whales = [];
+      state.hotMeshes = [];
+      state.mechEnts = null;
+    }
 
-    var hemi = new THREE.HemisphereLight(0x93c5fd, 0x1e1b4b, 0.55);
+    var hemi = new THREE.HemisphereLight(0x93c5fd, 0x020617, 0.45);
     scene.add(hemi);
-    var sunLight = new THREE.PointLight(0xfff7ed, 1.35, 120, 2);
+    var sunLight = new THREE.PointLight(0xfff7ed, 1.45, 140, 2);
     sunLight.position.set(0, 2, 0);
     scene.add(sunLight);
-    var fill = new THREE.DirectionalLight(0xcbd5e1, 0.25);
+    var fill = new THREE.DirectionalLight(0xcbd5e1, 0.22);
     fill.position.set(8, 12, -6);
     scene.add(fill);
 
-    /* Stars */
+    /* Deep starfield (sky dome points) — ranch never visible behind */
     var starGeo = new THREE.BufferGeometry();
-    var positions = new Float32Array(600);
-    for (var i = 0; i < 200; i++) {
-      positions[i * 3] = (Math.random() - 0.5) * 140;
-      positions[i * 3 + 1] = (Math.random() - 0.5) * 60;
-      positions[i * 3 + 2] = (Math.random() - 0.5) * 140;
+    var positions = new Float32Array(2400);
+    for (var i = 0; i < 800; i++) {
+      positions[i * 3] = (Math.random() - 0.5) * 220;
+      positions[i * 3 + 1] = (Math.random() - 0.5) * 120;
+      positions[i * 3 + 2] = (Math.random() - 0.5) * 220;
     }
     starGeo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-    scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.14 })));
-    /* Dark starfield ground plane — opaque space floor (no ranch leak) */
+    scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.16, sizeWrite: false })));
+    /* Space PLAY plane — starfield floor (not ranch grass). Large + opaque. */
     var spaceGround = new THREE.Mesh(
-      new THREE.CircleGeometry(70, 64),
-      new THREE.MeshStandardMaterial({ color: 0x020617, roughness: 1, metalness: 0, emissive: 0x0a1020, emissiveIntensity: 0.25 })
+      new THREE.CircleGeometry(95, 72),
+      new THREE.MeshStandardMaterial({
+        color: 0x020617, roughness: 1, metalness: 0.05,
+        emissive: 0x0b1224, emissiveIntensity: 0.55,
+      })
     );
     spaceGround.rotation.x = -Math.PI / 2;
-    spaceGround.position.y = -0.02;
+    spaceGround.position.y = -0.04;
     spaceGround.receiveShadow = true;
+    spaceGround.renderOrder = -2;
     scene.add(spaceGround);
     state.spaceGround = spaceGround;
-    /* Speckle stars on the plane */
+    /* Dense star speckles ON the play plane */
     var planeStarGeo = new THREE.BufferGeometry();
-    var psp = new Float32Array(150);
-    for (var psi = 0; psi < 50; psi++) {
+    var psp = new Float32Array(900);
+    for (var psi = 0; psi < 300; psi++) {
       var pa = Math.random() * Math.PI * 2;
-      var pr = Math.random() * 55;
+      var pr = Math.pow(Math.random(), 0.65) * 88;
       psp[psi * 3] = Math.cos(pa) * pr;
-      psp[psi * 3 + 1] = 0.04;
+      psp[psi * 3 + 1] = 0.05;
       psp[psi * 3 + 2] = Math.sin(pa) * pr;
     }
     planeStarGeo.setAttribute("position", new THREE.BufferAttribute(psp, 3));
-    scene.add(new THREE.Points(planeStarGeo, new THREE.PointsMaterial({ color: 0xe2e8f0, size: 0.12 })));
+    scene.add(new THREE.Points(planeStarGeo, new THREE.PointsMaterial({ color: 0xe2e8f0, size: 0.11, depthWrite: false })));
+    /* Soft nebula wash so plane reads as void, not dirt */
+    var neb = new THREE.Mesh(
+      new THREE.CircleGeometry(70, 48),
+      new THREE.MeshBasicMaterial({
+        color: 0x1e1b4b, transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide,
+      })
+    );
+    neb.rotation.x = -Math.PI / 2;
+    neb.position.y = -0.01;
+    scene.add(neb);
 
     /* Compressed Solar System (not to scale) — distances in Three units from Sun at origin */
     var SOLAR = [
@@ -2073,7 +2174,12 @@
         state.toast = "Space station · Alex & Fred aboard · orbits Earth";
         state.toastT = 2.5;
       } else if (id === "return") {
-        try { document.body.classList.remove("in-space"); } catch (e) {}
+        try {
+          document.body.classList.remove("in-space");
+          var hostBack = document.getElementById("engine-host");
+          if (hostBack) hostBack.style.background = "";
+        } catch (e) {}
+        if (renderer) renderer.setClearColor(0x7eb8d4, 1);
         buildRanch();
         state.toast = "Back at ranch · Earth home";
         state.toastT = 2;
@@ -3533,7 +3639,7 @@
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.setSize(hostW, hostH, false);
     renderer.shadowMap.enabled = true;
-    renderer.setClearColor(0x87b5d9, 1);
+    renderer.setClearColor(0x7eb8d4, 1);
     host.appendChild(renderer.domElement);
     renderer.domElement.style.display = "block";
     renderer.domElement.style.width = "100%";

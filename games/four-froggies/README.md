@@ -1,8 +1,14 @@
+## What's new (view2) — leave-ranch space + continuous forest
+- **Three.js Starship→space:** fresh scene (not clear-in-place), `setClearColor` + `#engine-host` go void `#020617`, dense starfield + starfield **play plane** (no ranch grass / forest leak; planets no longer sit on the woods).
+- **Ranch perimeter:** mismatched box “hills” replaced with the same trunk/canopy trees as the yard so the forest reads continuous.
+- Keeps view1: Phaser out of lobby, outdoor start cam, track support pillars.
+- Cache-bust: `?v=20260928-view2`. Cast unchanged.
+
 ## What's new (view1) — Phaser out · start camera · track supports
 - **Phaser removed** from lobby/engine picker (Canvas + Three.js only). `phaser-hub.js` left on disk but unwired; saved `ff-engine=phaser` migrates to Canvas.
 - **Three.js start camera:** spawn aligned to outdoor yard / garage-mouth lineup (was inside house → garage blocked view). ~2.6s establishing shot from south frames all four froggies + four Cybertrucks, then blends to south-biased follow.
 - **Track supports:** paired pillars + crossbeam under elevated ribbon points (Canvas + Three). Ramps footed on ground.
-- Cache-bust: `?v=20260928-view1`. Cast unchanged. Do not publish froggies-sps.
+- Cache-bust: `?v=20260928-view2`. Cast unchanged. Do not publish froggies-sps.
 
 ## What's new (ctrl2) — Phaser black-screen fix
 - **Phaser ranch black screen:** hop4 `ensureFrogTexture` nested `springLeg` declared `var hx` (hip X) which shadowed the module `hx()` hex→color helper → `TypeError: hx is not a function` in `create` → scene abort → black canvas. Renamed to `hipX`.
