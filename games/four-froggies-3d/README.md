@@ -1,3 +1,11 @@
+## What's new (ff3d15) — pond swim + docked submarine
+
+- **Swim** in the pond (deeper foot sink; splash tip).
+- **Submarine** docked at the pond south rim — E / Interact to board, dive/drive underwater feel, EXIT parks at exit.
+- Keeps ff3d14 bigger ranch floor / forest / clamps. Mansion/garage unchanged.
+- Cache: `?v=20260928-ff3d15` · asset `index-ff3d15.js`
+- Cast: James, Jimmy, Bubbles, Rexy only.
+
 # Four Froggies 3D — ff3d14 (bigger ranch floor)
 
 Cache: `20260928-ff3d14`
