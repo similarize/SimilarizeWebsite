@@ -1,0 +1,82 @@
+/* Four Froggies 3D — Host/Join party bar on the title gate */
+.ff3d-party {
+  margin: 10px 0 4px;
+  width: 100%;
+  max-width: 26rem;
+}
+.ff3d-party .invite-cta {
+  margin: 0 0 8px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: #fde68a;
+}
+.ff3d-party .invite-cta strong { color: #fef3c7; font-weight: 800; }
+.ff3d-party .party-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  margin: 4px 0 6px;
+}
+.ff3d-party .party-btn {
+  border: 2px solid rgba(255,255,255,.45);
+  border-radius: 999px;
+  padding: 8px 14px;
+  background: rgba(0,0,0,.4);
+  color: #fff;
+  font: 700 13px Outfit, "Segoe UI", system-ui, sans-serif;
+  touch-action: manipulation;
+  cursor: pointer;
+}
+.ff3d-party .party-btn:active { transform: translateY(1px); }
+.ff3d-party #ff3d-btn-host { border-color: #a3e635; color: #ecfccb; }
+.ff3d-party #ff3d-btn-join { border-color: #38bdf8; color: #e0f2fe; }
+.ff3d-party .join-code {
+  width: 5.5em;
+  border: 2px solid rgba(56,189,248,.55);
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: rgba(0,0,0,.45);
+  color: #e0f2fe;
+  font: 800 14px ui-monospace, "Cascadia Code", monospace;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-align: center;
+}
+.ff3d-party .join-code[hidden],
+.ff3d-party .invite-qr[hidden],
+.ff3d-party #ff3d-btn-copy[hidden] { display: none; }
+.ff3d-party .room-code {
+  font: 800 16px ui-monospace, monospace;
+  letter-spacing: 0.16em;
+  color: #fbbf24;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: rgba(0,0,0,.45);
+  border: 1px solid rgba(251,191,36,.4);
+}
+.ff3d-party .room-code:empty { display: none; }
+.ff3d-party .invite-qr {
+  display: block;
+  width: 104px;
+  height: 104px;
+  margin: 6px auto;
+  border-radius: 10px;
+  border: 2px solid rgba(255,255,255,.35);
+  background: #fff;
+}
+.ff3d-party .party-status {
+  margin: 4px 0 0;
+  min-height: 1.1em;
+  font-size: 12px;
+  color: #bbf7d0;
+}
+.ff3d-party .party-status.is-error { color: #fca5a5; }
+.ff3d-party .party-help {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: rgba(248,245,238,.72);
+  line-height: 1.35;
+}
+body.ff3d-playing .ff3d-party { display: none !important; }
