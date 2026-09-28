@@ -1,4 +1,5 @@
 /* Four Froggies — three.js hub (CDN). Fixed-angle 2.5D-ish (orbit locked / isometric-ish).
+   view3: start cam frames froggies+trucks toward garage; ranch forest = yard-scale trees (no flat berm).
    view1: outdoor spawn camera toward garage/yard + trucks; track support pillars under elev.
    view2: hard leave-ranch space (fresh scene + starfield plane); perimeter forest matches yard trees.
    NOT free-fly FPS. Canvas-parity landmarks · solo-first.
@@ -1176,7 +1177,8 @@
     scene = new THREE.Scene();
     scene.position.set(0, 0, 0);
     scene.background = new THREE.Color(0x7eb8d4);
-    scene.fog = new THREE.Fog(0x6fae78, 48, 145); /* view2: forest haze matches tree canopy */
+    /* view3: softer haze — trees stay readable; was flat green wall at 48–145 */
+    scene.fog = new THREE.Fog(0x8eb89a, 78, 220);
 
     // Fixed-angle isometric-ish camera — orbit LOCKED (no free-fly)
     var aspect = window.innerWidth / Math.max(1, window.innerHeight);
@@ -1210,7 +1212,8 @@
     ground.renderOrder = -2;
     scene.add(ground);
 
-    /* view2: perimeter forest — same trunk/canopy as yard trees so the woods continue */
+    /* view3: continuous perimeter forest — SAME trunk/canopy recipe + scale as yard trees.
+       Prior rings used s=1.35–3.0 + green cylinder berms → mismatched flat backdrop. */
     state.paraHills = [];
     state.forestRing = [];
     (function buildForestPerimeter() {
@@ -1222,68 +1225,80 @@
       ];
       var halfW = C.MAP_W * 0.01;
       var halfH = C.MAP_H * 0.01;
-      /* Soft distant green berm behind the tree line (not mismatched photo boxes) */
-      for (var hi = 0; hi < 2; hi++) {
-        var berm = new THREE.Mesh(
-          new THREE.CylinderGeometry(halfW * (1.35 + hi * 0.18), halfW * (1.45 + hi * 0.2), 2.4 + hi * 1.1, 32, 1, true),
-          new THREE.MeshStandardMaterial({
-            color: hi === 0 ? 0x14532d : 0x166534,
-            roughness: 1, side: THREE.BackSide, transparent: true, opacity: 0.55 - hi * 0.12,
-          })
-        );
-        berm.position.set(0, 0.9 + hi * 0.6, 0);
-        berm.userData.para = 0.08 + hi * 0.06;
-        scene.add(berm);
-        state.paraHills.push(berm);
-      }
-      function plantTree(x, z, s, ci) {
+      /* Match yard1 plant: Cylinder 0.08/0.12/0.9 * s, Sphere (r||14)*0.045*s, s≈0.88–1.3 */
+      function plantTree(x, z, s, ci, r) {
         var g = new THREE.Group();
+        var ts = s || 1;
         var trunk = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.08 * s, 0.12 * s, 0.9 * s, 6),
+          new THREE.CylinderGeometry(0.08 * ts, 0.12 * ts, 0.9 * ts, 6),
           trunkMat
         );
-        trunk.position.y = 0.45 * s;
+        trunk.position.y = 0.45 * ts;
         trunk.castShadow = true;
         g.add(trunk);
         var canopy = new THREE.Mesh(
-          new THREE.SphereGeometry(0.55 * s, 8, 6),
+          new THREE.SphereGeometry((r || 14) * 0.045 * ts, 8, 6),
           canopyMats[ci % canopyMats.length]
         );
-        canopy.position.y = 1.05 * s;
+        canopy.position.y = 1.05 * ts;
         canopy.castShadow = true;
         g.add(canopy);
         g.position.set(x, 0, z);
         scene.add(g);
         state.forestRing.push(g);
       }
-      /* Outer + mid rings around map edge */
+      function plantShrub(x, z, s) {
+        var bush = new THREE.Mesh(
+          new THREE.SphereGeometry(0.22 * (s || 0.8), 6, 5),
+          new THREE.MeshStandardMaterial({ color: 0x4d7c0f, roughness: 0.9 })
+        );
+        bush.position.set(x, 0.18, z);
+        scene.add(bush);
+        state.forestRing.push(bush);
+      }
+      /* Outer rings — forest forever at playable tree scale (not giant backdrop props) */
       var rings = [
-        { rScale: 1.08, n: 56, s0: 1.35, s1: 2.1 },
-        { rScale: 1.22, n: 72, s0: 1.6, s1: 2.6 },
-        { rScale: 1.38, n: 64, s0: 1.9, s1: 3.0 },
+        { rScale: 1.04, n: 68, s0: 0.88, s1: 1.18 },
+        { rScale: 1.12, n: 84, s0: 0.92, s1: 1.22 },
+        { rScale: 1.22, n: 96, s0: 0.95, s1: 1.28 },
+        { rScale: 1.34, n: 92, s0: 0.9, s1: 1.3 },
+        { rScale: 1.48, n: 80, s0: 0.98, s1: 1.28 },
+        { rScale: 1.64, n: 72, s0: 1.0, s1: 1.3 },
+        { rScale: 1.82, n: 64, s0: 0.95, s1: 1.25 },
       ];
       for (var ri = 0; ri < rings.length; ri++) {
         var rg = rings[ri];
         for (var ti = 0; ti < rg.n; ti++) {
-          var ang = (ti / rg.n) * Math.PI * 2 + ri * 0.07;
+          var ang = (ti / rg.n) * Math.PI * 2 + ri * 0.09;
           var jr = rg.rScale * (0.94 + (ti % 5) * 0.025);
           var s = rg.s0 + (ti % 7) * ((rg.s1 - rg.s0) / 7);
-          plantTree(Math.cos(ang) * halfW * jr, Math.sin(ang) * halfH * jr, s, ti + ri);
+          var rr = 11 + (ti % 5);
+          plantTree(Math.cos(ang) * halfW * jr, Math.sin(ang) * halfH * jr, s, ti + ri, rr);
+          if (ti % 3 === 0) {
+            plantShrub(
+              Math.cos(ang + 0.04) * halfW * jr * 0.98,
+              Math.sin(ang + 0.04) * halfH * jr * 0.98,
+              0.65 + (ti % 4) * 0.08
+            );
+          }
         }
       }
-      /* Fill corners denser so skybox gaps don't read as a different perimeter */
+      /* Dense corners so the woods read continuous (no flat sky gaps) */
       var corners = [
-        [-halfW * 1.15, -halfH * 1.15], [halfW * 1.15, -halfH * 1.15],
-        [-halfW * 1.15, halfH * 1.15], [halfW * 1.15, halfH * 1.15],
-        [-halfW * 1.28, 0], [halfW * 1.28, 0], [0, -halfH * 1.28], [0, halfH * 1.28],
+        [-halfW * 1.12, -halfH * 1.12], [halfW * 1.12, -halfH * 1.12],
+        [-halfW * 1.12, halfH * 1.12], [halfW * 1.12, halfH * 1.12],
+        [-halfW * 1.26, 0], [halfW * 1.26, 0], [0, -halfH * 1.26], [0, halfH * 1.26],
+        [-halfW * 1.4, -halfH * 0.55], [halfW * 1.4, -halfH * 0.55],
+        [-halfW * 1.4, halfH * 0.55], [halfW * 1.4, halfH * 0.55],
       ];
       for (var ci = 0; ci < corners.length; ci++) {
-        for (var k = 0; k < 5; k++) {
+        for (var k = 0; k < 7; k++) {
           plantTree(
-            corners[ci][0] + (k - 2) * 1.4,
-            corners[ci][1] + ((k % 3) - 1) * 1.2,
-            1.5 + (k % 4) * 0.35,
-            ci + k
+            corners[ci][0] + (k - 3) * 1.15,
+            corners[ci][1] + ((k % 3) - 1) * 1.05,
+            0.9 + (k % 5) * 0.08,
+            ci + k,
+            12 + (k % 4)
           );
         }
       }
@@ -1457,17 +1472,27 @@
     state.aboardLabel.visible = false;
     scene.add(state.aboardLabel);
     state.kitFxT = 0; state.kitFxKind = ""; state.lapSide = 0; state.lapCd = 0; state.lapCount = 0;
-    /* view1: outdoor spawn — establishing shot from south so garage mouth,
-       all froggies, and the four Cybertrucks are in frame (was SE-through-garage). */
+    /* view3: establishing shot south of the yard looking north — frames all four
+       froggies + garage mouth + four Cybertrucks. Prior cam sat west/close and
+       read as looking the wrong way through the garage bay. */
+    var garBox = (C.COMPOUND && C.COMPOUND.garage) || { x: 700, y: 1400, w: 480, h: 520 };
+    var garMouth = worldToThree(garBox.x + garBox.w * 0.5, garBox.y + garBox.h);
     var truckMid = worldToThree(2180, 1720);
-    var lookX = spawn.x * 0.42 + truckMid.x * 0.58;
-    var lookZ = spawn.z * 0.42 + truckMid.z * 0.58;
+    var lookX = spawn.x * 0.22 + garMouth.x * 0.28 + truckMid.x * 0.50;
+    var lookZ = spawn.z * 0.28 + garMouth.z * 0.22 + truckMid.z * 0.50;
+    var ESTAB_T = 3.2;
+    var estCam = {
+      x: lookX - 2,
+      y: 38,
+      z: Math.max(spawn.z, truckMid.z) + 48,
+    };
     camera.userData.lockTarget.set(spawn.x, 0, spawn.z);
-    camera.position.set(spawn.x - 4, 28, spawn.z + 26);
-    camera.lookAt(lookX, 0.5, lookZ);
-    state.establishT = 2.6;
+    camera.position.set(estCam.x, estCam.y, estCam.z);
+    camera.lookAt(lookX, 0.6, lookZ);
+    state.establishT = ESTAB_T;
+    state.establishDur = ESTAB_T;
     state.establishLook = { x: lookX, z: lookZ };
-    state.establishCam = { x: spawn.x - 4, y: 28, z: spawn.z + 26 };
+    state.establishCam = estCam;
 
     state.driveTruck = makeTruckMesh(hex(def.color));
     state.driveTruck.visible = false;
@@ -1636,6 +1661,7 @@
     /* Drop ranch establish / forest ring refs so follow cam cannot blend ranch */
     if (state) {
       state.establishT = 0;
+      state.establishDur = 0;
       state.establishCam = null;
       state.establishLook = null;
       state.paraHills = [];
@@ -3116,16 +3142,17 @@
       walkBob = Math.sin(state.walkBobT) * 0.05;
       walkTilt = Math.sin(state.walkBobT * 0.5) * 0.006;
     }
-    /* view1: south-biased follow (look north at open yard / garage mouth — not through bay) */
-    var wantCamX = target.x + camDist * 0.35;
+    /* view3: south-biased follow — look north at open yard / garage mouth (not through bay) */
+    var wantCamX = target.x + camDist * 0.22;
     var wantCamY = camH + walkBob;
-    var wantCamZ = target.z + camDist * 0.98;
+    var wantCamZ = target.z + camDist * 1.05;
     var wantLookX = target.x;
     var wantLookY = 0.5 + walkTilt;
-    var wantLookZ = target.z;
+    var wantLookZ = target.z - (state.mode === "ranch" ? camDist * 0.06 : 0);
     if (state.mode === "ranch" && (state.establishT || 0) > 0 && state.establishCam) {
       state.establishT -= dt;
-      var u = Math.max(0, Math.min(1, 1 - state.establishT / 2.6));
+      var estDur = state.establishDur || 3.2;
+      var u = Math.max(0, Math.min(1, 1 - state.establishT / estDur));
       var ease = u * u * (3 - 2 * u);
       var ec = state.establishCam;
       var el = state.establishLook || { x: target.x, z: target.z };
@@ -3141,14 +3168,18 @@
       }
     }
     camera.position.set(wantCamX, wantCamY, wantCamZ);
-    /* polish10: soft dusk sky shift over play time */
+    /* view3 + polish10: soft dusk — keep sky blue so forest trees read (was flat forest-green void) */
     if (state.mode === "ranch" && scene) {
       state.dayT = (state.dayT || 0) + dt;
       var day = (state.dayT % 420) / 420;
       var dusk = day < 0.45 ? 0 : (day < 0.7 ? (day - 0.45) / 0.25 : (day < 0.9 ? 1 : Math.max(0, 1 - (day - 0.9) / 0.1)));
       var col = scene.background && scene.background.isColor ? scene.background : new THREE.Color();
-      col.setRGB(0.10 + dusk * 0.18, 0.22 - dusk * 0.06, 0.14 + dusk * 0.04);
+      /* 0x7eb8d4 day → warm dusk; never the old 0.10/0.22/0.14 green slab */
+      col.setRGB(0.49 + dusk * 0.28, 0.72 - dusk * 0.32, 0.83 - dusk * 0.48);
       scene.background = col;
+      if (scene.fog && scene.fog.color) {
+        scene.fog.color.setRGB(0.55 + dusk * 0.12, 0.72 - dusk * 0.18, 0.60 - dusk * 0.12);
+      }
     }
     camera.lookAt(wantLookX, wantLookY, wantLookZ);
     /* polish6: depth shadow under player */

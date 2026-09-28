@@ -1,3 +1,8 @@
+## What's new (view3) — Three.js start cam + yard-scale forest
+- **Three.js cold start camera:** establishing shot moved south/higher and aimed at garage mouth + Cybertruck apron so all four froggies and four trucks are in frame (was west/close → looked through the garage bay). Follow cam stays south-biased looking north toward the yard/garage.
+- **Ranch forest backdrop:** removed oversized perimeter trees (s=1.35–3.0) and green cylinder berms; rings now use the **same** trunk/canopy recipe and scale as playable yard trees (s≈0.88–1.3). Sky stays blue (dusk no longer paints a flat forest-green void). Softer fog so the woods read continuous.
+- Cache-bust: `?v=20260928-view3`. Canvas forest untouched. Do not publish house2 / basketball / froggies-sps.
+
 ## What's new (view2) — leave-ranch space + continuous forest
 - **Three.js Starship→space:** fresh scene (not clear-in-place), `setClearColor` + `#engine-host` go void `#020617`, dense starfield + starfield **play plane** (no ranch grass / forest leak; planets no longer sit on the woods).
 - **Ranch perimeter:** mismatched box “hills” replaced with the same trunk/canopy trees as the yard so the forest reads continuous.
