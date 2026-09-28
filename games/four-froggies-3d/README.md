@@ -1,16 +1,16 @@
-# Four Froggies 3D — ff3d4 (vehicles + robots + phone)
+# Four Froggies 3D — ff3d5 (track vehicle physics)
 
-Cache: `20260928-ff3d4` · bundle `assets/index-ff3d4.js`
+Cache: `20260928-ff3d5` · bundle `assets/index-ff3d5.js`
 
-## Vehicles
-- **James's Cybertruck** (playable) + **Dad's Cybertruck** (NPC only)
-- Shared rideables: **Ripsaw**, **Monster Truck**, **Tank** near garage/yard
-- Removed per-froggy extra Cybertrucks
+## Physics (this build)
+- Sample ribbon **height + bank + tangent/yaw** under the vehicle (`Rr` → `surfY`, `yaw`)
+- Align pitch/roll/yaw so trucks **lean with banked turns** and follow the path
+- Keep wheels/body on dirt mesh (ribbon half-width clamp + bank-aware floor)
+- Trestle/mast **push-out** collision (`tS` / `Br`) — stop nosing into posts
+- Applies to all track rides in `V`: James Cybertruck, Ripsaw, Monster Truck, Tank
 
-## Robots (DESIGN.md §9)
-Optimus (Bubbles), Unitree, Figure 03, Figure 02, Big Figure Two, Atlas HD, Atlas electric
+## Roster (unchanged from ff3d4)
+- Vehicles: 2 CTs (James playable + Dad NPC), Ripsaw, MT, Tank
+- Robots / phone remote / Dad / space rocket+EVA kept
 
-## Phone remote
-Phone FAB / **P**: call robot, live follow-cam, Come / Move / Stop / Wave
-
-Keeps ff3d3: Dad NPC, low-lip trestles, forest scale, space rocket/EVA/Earth.
+Baseline: ff3d4. Do not publish from agent — handoff only.
