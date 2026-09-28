@@ -27,7 +27,7 @@
    hop4: faster always-hop carry/plant/launch; humanoid frogs (torso+head, spring legs);
    particle caps; sunset sky shift over play time.
    mobile1: phone+desktop shared UI — smaller/toggle-friendly mini-map + harder particle caps on narrow.
-   mech2: Tank FIRE shells (forward from turret) while driving.
+   mech3: Tank big missiles — blast wrecks toys/animals/props.
    ~10× map: real roam between ranch house / track / pond / Starship.
    James ranch house: big house, backyard (animals), huge garage (toys + 10/100-story mechs);
    1000-story + trillion-story mechs sit out back (won't fit). Four Cybertrucks + shared pile-in.
@@ -408,7 +408,8 @@
     world.splashes = [];
     world.bubbles = [];
     world.sparks = [];
-    world.shells = []; /* mech2: tank projectiles */
+    world.shells = []; /* mech3: tank missiles */
+    world.booms = [];
     world.ambient = [];
     world.ripples = [];
     world.sparkles = [];
@@ -613,17 +614,17 @@
     }
   }
 
-  /* mech2: tank shell — forward from turret along faceAngle */
+  /* mech3: big tank missile — forward from turret; blast wrecks props */
   function spawnTankShell(world, x, y, faceAngle, ownerId) {
     if (!world) return null;
     if (!world.shells) world.shells = [];
     var C = global.FroggiesCanon;
-    var cfg = (C && C.TANK_FIRE) || { speed: 640, life: 1.2, muzzle: 42, hitR: 22 };
+    var cfg = (C && C.TANK_FIRE) || { speed: 720, life: 1.55, muzzle: 52, hitR: 36, blastR: 118, size: 2.4 };
     var ang = (faceAngle != null && isFinite(faceAngle)) ? faceAngle : 0;
     var cx = Math.cos(ang), cy = Math.sin(ang);
-    var muzzle = cfg.muzzle != null ? cfg.muzzle : 42;
-    var spd = cfg.speed != null ? cfg.speed : 640;
-    var life = cfg.life != null ? cfg.life : 1.2;
+    var muzzle = cfg.muzzle != null ? cfg.muzzle : 52;
+    var spd = cfg.speed != null ? cfg.speed : 720;
+    var life = cfg.life != null ? cfg.life : 1.55;
     var shell = {
       x: x + cx * muzzle,
       y: y + cy * muzzle,
@@ -633,13 +634,66 @@
       life: life,
       maxLife: life,
       ownerId: ownerId || null,
-      r: cfg.hitR != null ? cfg.hitR : 22,
+      r: cfg.hitR != null ? cfg.hitR : 36,
+      blastR: cfg.blastR != null ? cfg.blastR : 118,
+      blastForce: cfg.blastForce != null ? cfg.blastForce : 520,
+      size: cfg.size != null ? cfg.size : 2.4,
+      big: true,
     };
     world.shells.push(shell);
-    if (world.shells.length > 24) world.shells.splice(0, world.shells.length - 24);
-    spawnSparks(world, shell.x, shell.y, 6);
-    spawnDust(world, x - cx * 8, y - cy * 8, 3);
+    if (world.shells.length > 16) world.shells.splice(0, world.shells.length - 16);
+    spawnSparks(world, shell.x, shell.y, 14);
+    spawnDust(world, x - cx * 8, y - cy * 8, 6);
     return shell;
+  }
+
+  function spawnBoom(world, x, y, power) {
+    if (!world) return;
+    if (!world.booms) world.booms = [];
+    var p = power != null ? power : 1;
+    world.booms.push({
+      x: x, y: y,
+      life: 0.55 + 0.15 * p,
+      maxLife: 0.55 + 0.15 * p,
+      r: 18,
+      maxR: 70 + 50 * p,
+      power: p,
+    });
+    spawnSparks(world, x, y, 18 + Math.floor(10 * p));
+    spawnDust(world, x, y, 10);
+    spawnSparkle(world, x, y, 14);
+  }
+
+  /* mech3: radial blast — wreck / fling toys + animals in radius */
+  function blastWreckProps(world, x, y, radius, force) {
+    if (!world) return 0;
+    var R = radius != null ? radius : 118;
+    var F = force != null ? force : 520;
+    var hitN = 0;
+    function wreckList(arr) {
+      if (!arr) return;
+      for (var i = 0; i < arr.length; i++) {
+        var prop = arr[i];
+        if (!prop || prop.wrecked) continue;
+        var dx = prop.x - x, dy = prop.y - y;
+        var d = Math.hypot(dx, dy);
+        var pr = prop.r || 10;
+        if (d > R + pr) continue;
+        var falloff = 1 - d / (R + pr);
+        var nx = d > 0.1 ? dx / d : (Math.random() - 0.5);
+        var ny = d > 0.1 ? dy / d : (Math.random() - 0.5);
+        prop.vx = (prop.vx || 0) + nx * F * (0.45 + falloff);
+        prop.vy = (prop.vy || 0) + ny * F * (0.45 + falloff);
+        prop.wrecked = true;
+        prop.wreckT = 0.9 + Math.random() * 0.5;
+        prop.spin = (Math.random() - 0.5) * 14;
+        prop.r = Math.max(4, (prop.r || 10) * 0.7);
+        hitN++;
+      }
+    }
+    wreckList(world.toys);
+    wreckList(world.animals);
+    return hitN;
   }
 
 
@@ -779,8 +833,8 @@
     var mapB = { x0: 40, y0: 40, x1: MAP_W - 40, y1: MAP_H - 40 };
     var list = [];
     var i, p, f;
-    if (world.toys) for (i = 0; i < world.toys.length; i++) list.push({ prop: world.toys[i], bounds: world.toys[i].inGarage ? garB : mapB, r: world.toys[i].r || 9, strength: 1 });
-    if (world.animals) for (i = 0; i < world.animals.length; i++) list.push({ prop: world.animals[i], bounds: yardB, r: 10 + (world.animals[i].size || 1) * 4, strength: 0.85 });
+    if (world.toys) for (i = 0; i < world.toys.length; i++) { if (world.toys[i].wrecked) continue; list.push({ prop: world.toys[i], bounds: world.toys[i].inGarage ? garB : mapB, r: world.toys[i].r || 9, strength: 1 }); }
+    if (world.animals) for (i = 0; i < world.animals.length; i++) { if (world.animals[i].wrecked) continue; list.push({ prop: world.animals[i], bounds: yardB, r: 10 + (world.animals[i].size || 1) * 4, strength: 0.85 }); }
     if (world.ambient) for (i = 0; i < world.ambient.length; i++) {
       if (world.ambient[i].kind === "pollen" || world.ambient[i].pushable)
         list.push({ prop: world.ambient[i], bounds: mapB, r: Math.max(4, (world.ambient[i].r || 2) * 2.2), strength: 0.55, ambient: true });
@@ -836,38 +890,64 @@
       k.life -= dt; k.x += k.vx * dt; k.y += k.vy * dt; k.vy += 220 * dt;
       if (k.life <= 0) world.sparks.splice(i, 1);
     }
-    /* mech2: tank shells fly + shove toys/animals */
+    /* mech3: big missiles fly; on hit / timeout → boom + wreck props */
     if (!world.shells) world.shells = [];
     for (i = world.shells.length - 1; i >= 0; i--) {
       var sh = world.shells[i];
       sh.life -= dt;
       sh.x += sh.vx * dt;
       sh.y += sh.vy * dt;
-      if (sh.life <= 0 || sh.x < -40 || sh.y < -40 || sh.x > MAP_W + 40 || sh.y > MAP_H + 40) {
-        world.shells.splice(i, 1);
-        continue;
-      }
+      var expired = sh.life <= 0 || sh.x < -40 || sh.y < -40 || sh.x > MAP_W + 40 || sh.y > MAP_H + 40;
       var hit = false;
-      var lists = [world.toys || [], world.animals || []];
-      for (var li = 0; li < lists.length && !hit; li++) {
-        var arr = lists[li];
-        for (var j = 0; j < arr.length; j++) {
-          var prop = arr[j];
-          if (!prop) continue;
-          var pr = prop.r || 10;
-          var dx = prop.x - sh.x, dy = prop.y - sh.y;
-          if (dx * dx + dy * dy < (pr + (sh.r || 18)) * (pr + (sh.r || 18))) {
-            prop.vx = (prop.vx || 0) + sh.vx * 0.35;
-            prop.vy = (prop.vy || 0) + sh.vy * 0.35;
-            spawnSparks(world, sh.x, sh.y, 5);
-            spawnDust(world, sh.x, sh.y, 4);
-            hit = true;
-            break;
+      if (!expired) {
+        var lists = [world.toys || [], world.animals || []];
+        for (var li = 0; li < lists.length && !hit; li++) {
+          var arr = lists[li];
+          for (var j = 0; j < arr.length; j++) {
+            var prop = arr[j];
+            if (!prop || prop.wrecked) continue;
+            var pr = prop.r || 10;
+            var dx = prop.x - sh.x, dy = prop.y - sh.y;
+            var rr = pr + (sh.r || 28);
+            if (dx * dx + dy * dy < rr * rr) { hit = true; break; }
           }
         }
       }
-      if (hit) world.shells.splice(i, 1);
+      if (hit || expired) {
+        var br = sh.blastR != null ? sh.blastR : 118;
+        var bf = sh.blastForce != null ? sh.blastForce : 520;
+        if (hit || (expired && sh.life <= 0)) {
+          blastWreckProps(world, sh.x, sh.y, br, bf);
+          spawnBoom(world, sh.x, sh.y, sh.size != null ? sh.size * 0.55 : 1.2);
+        }
+        world.shells.splice(i, 1);
+      }
     }
+    /* mech3: boom rings + wrecked prop decay / remove */
+    if (!world.booms) world.booms = [];
+    for (i = world.booms.length - 1; i >= 0; i--) {
+      var bm = world.booms[i];
+      bm.life -= dt;
+      var u = 1 - Math.max(0, bm.life) / (bm.maxLife || 0.6);
+      bm.r = (bm.maxR || 90) * (0.25 + 0.75 * u);
+      if (bm.life <= 0) world.booms.splice(i, 1);
+    }
+    function tickWreck(arr) {
+      if (!arr) return;
+      for (var wi = arr.length - 1; wi >= 0; wi--) {
+        var wp = arr[wi];
+        if (!wp || !wp.wrecked) continue;
+        wp.wreckT = (wp.wreckT || 0) - dt;
+        wp.x += (wp.vx || 0) * dt;
+        wp.y += (wp.vy || 0) * dt;
+        wp.vx = (wp.vx || 0) * Math.max(0, 1 - 3.2 * dt);
+        wp.vy = (wp.vy || 0) * Math.max(0, 1 - 3.2 * dt);
+        if (wp.spin) wp.ang = (wp.ang || 0) + wp.spin * dt;
+        if (wp.wreckT <= 0) arr.splice(wi, 1);
+      }
+    }
+    tickWreck(world.toys);
+    tickWreck(world.animals);
     /* polish10: hard caps if arrays ballooned */
     var capsFx = particleCaps();
     if (world.dust && world.dust.length > capsFx.dust) world.dust.length = capsFx.dust;
@@ -2038,6 +2118,19 @@
         var ap = project(an.x, an.y, camX, camY, vw, vh);
         if (ap.x < -40 || ap.x > vw + 40 || ap.y < -40 || ap.y > vh + 40) continue;
         var asz = 8.5 * an.size * ap.depth;
+        if (an.wrecked) {
+          var awa = Math.max(0.12, Math.min(1, (an.wreckT || 0) * 1.1));
+          ctx.save();
+          ctx.translate(ap.x, ap.y);
+          ctx.rotate(an.ang || 0);
+          ctx.globalAlpha = awa;
+          ctx.fillStyle = an.tone || "#a8a29e";
+          ctx.fillRect(-asz, -asz * 0.35, asz * 2, asz * 0.7);
+          ctx.fillStyle = "rgba(248, 113, 113, 0.75)";
+          ctx.beginPath(); ctx.arc(0, -asz * 0.6, asz * 0.35, 0, Math.PI * 2); ctx.fill();
+          ctx.restore();
+          continue;
+        }
         var bobY = Math.sin(an.bob || 0) * 1.6 * ap.depth;
         var ay = ap.y - bobY;
         drawSoftShadow(ctx, ap.x, ap.y + 3, asz * 1.1, asz * 0.36, 0.32);
@@ -2969,6 +3062,18 @@
       var p = project(toy.x, toy.y, camX, camY, vw, vh);
       if (p.x < -20 || p.x > vw + 20 || p.y < -20 || p.y > vh + 20) continue;
       var s = (toy.inGarage ? 7 : 8) * p.depth;
+      if (toy.wrecked) {
+        var wa = clamp((toy.wreckT || 0) * 1.2, 0.15, 1);
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(toy.ang || 0);
+        ctx.fillStyle = "rgba(120, 53, 15, " + (wa * 0.85) + ")";
+        ctx.fillRect(-s, -s * 0.4, s * 2, s * 0.8);
+        ctx.fillStyle = "rgba(251, 146, 60, " + (wa * 0.7) + ")";
+        ctx.fillRect(-s * 0.5, -s * 1.1, s, s * 0.5);
+        ctx.restore();
+        continue;
+      }
       ctx.fillStyle = "rgba(0,0,0,0.2)";
       ctx.beginPath();
       ctx.ellipse(p.x, p.y + 2, s * 0.9, s * 0.3, 0, 0, Math.PI * 2);
@@ -3900,23 +4005,54 @@
       ctx.fillStyle = "hsla(" + k.hue + ", 90%, 60%, " + clamp(k.life * 2, 0, 1) + ")";
       ctx.fillRect(kp.x, kp.y - (0.4 - k.life) * 20, 3, 3);
     }
-    /* mech2: tank shells */
+    /* mech3: big tank missiles */
     for (i = 0; i < (world.shells || []).length; i++) {
       var shd = world.shells[i];
       var shp = project(shd.x, shd.y, camX, camY, vw, vh);
-      var sha = clamp((shd.life / (shd.maxLife || 1.2)) * 1.2, 0.25, 1);
+      var sha = clamp((shd.life / (shd.maxLife || 1.55)) * 1.2, 0.35, 1);
+      var sz = (shd.size != null ? shd.size : 2.4) * shp.depth;
       ctx.save();
       ctx.translate(shp.x, shp.y);
       ctx.rotate(shd.ang || 0);
-      ctx.fillStyle = "rgba(253, 224, 71, " + sha + ")";
-      ctx.fillRect(-2 * shp.depth, -2.2 * shp.depth, 14 * shp.depth, 4.4 * shp.depth);
-      ctx.fillStyle = "rgba(248, 113, 113, " + sha + ")";
-      ctx.fillRect(8 * shp.depth, -1.6 * shp.depth, 6 * shp.depth, 3.2 * shp.depth);
-      ctx.fillStyle = "rgba(254, 243, 199, " + (sha * 0.7) + ")";
+      /* exhaust trail */
+      ctx.fillStyle = "rgba(251, 146, 60, " + (sha * 0.55) + ")";
       ctx.beginPath();
-      ctx.arc(0, 0, 2.4 * shp.depth, 0, Math.PI * 2);
+      ctx.ellipse(-10 * sz, 0, 10 * sz, 3.2 * sz, 0, 0, Math.PI * 2);
+      ctx.fill();
+      /* fat body */
+      ctx.fillStyle = "rgba(253, 224, 71, " + sha + ")";
+      ctx.fillRect(-6 * sz, -3.6 * sz, 22 * sz, 7.2 * sz);
+      ctx.fillStyle = "rgba(248, 113, 113, " + sha + ")";
+      ctx.beginPath();
+      ctx.moveTo(16 * sz, 0);
+      ctx.lineTo(8 * sz, -4.2 * sz);
+      ctx.lineTo(8 * sz, 4.2 * sz);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = "rgba(254, 243, 199, " + (sha * 0.85) + ")";
+      ctx.beginPath();
+      ctx.arc(-2 * sz, 0, 3.2 * sz, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
+    }
+    /* mech3: explosion rings */
+    for (i = 0; i < (world.booms || []).length; i++) {
+      var bmd = world.booms[i];
+      var bmp = project(bmd.x, bmd.y, camX, camY, vw, vh);
+      var bma = clamp(bmd.life / (bmd.maxLife || 0.6), 0, 1);
+      ctx.beginPath();
+      ctx.ellipse(bmp.x, bmp.y, bmd.r * bmp.depth, bmd.r * 0.42 * bmp.depth, 0, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(251, 146, 60, " + (bma * 0.95) + ")";
+      ctx.lineWidth = 4 * bmp.depth;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.ellipse(bmp.x, bmp.y, bmd.r * 0.55 * bmp.depth, bmd.r * 0.22 * bmp.depth, 0, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(254, 240, 138, " + (bma * 0.45) + ")";
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(bmp.x, bmp.y - 6 * bmp.depth, 5 * bmp.depth * (0.6 + bma), 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(248, 113, 113, " + (bma * 0.8) + ")";
+      ctx.fill();
     }
     /* polish5: pond ripple rings */
     for (i = 0; i < (world.ripples || []).length; i++) {
@@ -4351,6 +4487,8 @@
     spawnSplash: spawnSplash,
     spawnSparks: spawnSparks,
     spawnTankShell: spawnTankShell,
+    spawnBoom: spawnBoom,
+    blastWreckProps: blastWreckProps,
     spawnRipple: spawnRipple,
     spawnSparkle: spawnSparkle,
     spawnKitFx: spawnKitFx,

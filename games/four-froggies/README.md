@@ -1,3 +1,16 @@
+## What's new (mech3) — FIRE actually works + big boom missiles
+
+**Root cause (mech2 FIRE no-op):** Canvas `main.js` used bare `global.FroggiesCanon` inside a strict IIFE. Browsers have no `global` → `ReferenceError` on every ability press / ability HUD update. Button label could show FIRE (Three) or hang; **Space / click / X did nothing on Canvas**.
+
+**Fixes (Canvas + Three lobby — `/games/four-froggies/` only):**
+1. All `global.` → `globalThis.` in `main.js` (ability + tips + mech ownership).
+2. **Space**, **X**, and on-screen **FIRE** all shoot (Canvas keydown + Three `engine-boot` binds Space/X/q/shift).
+3. **Big missiles** with blast radius — dramatic boom FX; toys/animals/destructible props wreck then remove (Canvas `world.js` + Three `three-hub.js`).
+4. Lobby UX kept from **exit1 / current gh-pages**: `← Arcade` (overlay + HUD) + **Join · enter code** + visible CODE field. Do **not** regress mech2 handoff lobby overwrite.
+
+- Cache-bust: `?v=20260928-mech3`. Cast: James, Jimmy, Bubbles, Rexy.
+- Not touched: `games/four-froggies-3d/`.
+
 ## What's new (mech2) — Tank FIRE while driving
 
 - **Tank shoot (Canvas + Three lobby):** while driving the shared **Tank**, ability button / gamepad **X·B** / Space fires a **forward shell from the turret** (hull facing). Short CD (~0.28s). Ability HUD shows **FIRE**.

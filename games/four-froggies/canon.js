@@ -18,7 +18,7 @@
    yard1: James backyard trees/shrubs/creek/rocks/flowers/fence (soft stream) + outdoor trillion-story mech.
    park1: EXIT mech/truck leaves vehicle at exit pos (no snap-home); reset/menu restores pads.
    mech1: mech ownership locks (James=trillion, Rexy=1000, Bubbles=10, Jimmy=100) + shared Ripsaw/Tank.
-   mech2: Tank can FIRE (ability / X) while driving — forward shell from turret (Canvas + Three). */
+   mech3: Tank FIRE — Space / X / button; big missiles blow up toys/animals/props (Canvas + Three). */
 (function (global) {
   "use strict";
 
@@ -425,8 +425,17 @@
     return "cybertruck";
   }
 
-  /* mech2: Tank FIRE — short CD, forward shell from turret */
-  var TANK_FIRE = { cd: 0.28, speed: 640, life: 1.2, muzzle: 42, hitR: 22 };
+  /* mech3: Tank FIRE — big missile, blast wrecks toys/animals/props */
+  var TANK_FIRE = {
+    cd: 0.38,
+    speed: 720,
+    life: 1.55,
+    muzzle: 52,
+    hitR: 36,
+    blastR: 118,
+    blastForce: 520,
+    size: 2.4,
+  };
 
   function isTankVehicle(styleOrFrog) {
     if (!styleOrFrog) return false;
@@ -437,7 +446,7 @@
   }
 
   function tankDrivingTip() {
-    return "Driving Tank · FIRE (ability / X) · EXIT INTERACT";
+    return "Driving Tank · FIRE (Space / X / button) · big missiles · EXIT INTERACT";
   }
 
   function rampAt(x, y) {

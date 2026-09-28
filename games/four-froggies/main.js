@@ -474,12 +474,12 @@
         /* polish11: no sticky EXIT billboard — brief toast / exitTip only; INTERACT button shows EXIT */
         if (storyToastT > 0 && storyToast) tipEl.textContent = storyToast;
         else if (exitTipT > 0) tipEl.textContent = "EXIT · INTERACT / E";
-        else if (hudBoarded.inTruck && global.FroggiesCanon && global.FroggiesCanon.isTankVehicle && global.FroggiesCanon.isTankVehicle(hudBoarded))
-          tipEl.textContent = "FIRE · ability / X · EXIT INTERACT";
+        else if (hudBoarded.inTruck && globalThis.FroggiesCanon && globalThis.FroggiesCanon.isTankVehicle && globalThis.FroggiesCanon.isTankVehicle(hudBoarded))
+          tipEl.textContent = "FIRE · Space / X / button · EXIT INTERACT";
         else tipEl.textContent = "";
       } else if (storyToastT > 0) tipEl.textContent = storyToast;
       else if (nearHot && (nearHot.kind === "mech" || (nearHot.id && String(nearHot.id).indexOf("mech") === 0))) {
-        const Cown = global.FroggiesCanon;
+        const Cown = globalThis.FroggiesCanon;
         if (me && Cown && Cown.canBoardMech && !Cown.canBoardMech(me.id, nearHot)) {
           tipEl.textContent = (Cown.mechDeniedTip ? Cown.mechDeniedTip(me.id, nearHot) : ("Only " + (nearHot.tip || "owner") + " can board")) + " · INTERACT";
         } else {
@@ -548,7 +548,7 @@
     const me = localPlayer();
     if (!me || !btnAbility) return;
     const def = FROG_DEFS[me.id];
-    const Cabil = global.FroggiesCanon;
+    const Cabil = globalThis.FroggiesCanon;
     const tankFire = !!(me.inTruck && Cabil && Cabil.isTankVehicle && Cabil.isTankVehicle(me));
     const label = tankFire ? "FIRE" : def.ability;
     /* hop3: sub-second anti-tap CD — do not flash a fake "1s" */
@@ -600,11 +600,11 @@
       return;
     }
     const def = FROG_DEFS[frog.id];
-    const Ctank = global.FroggiesCanon;
-    /* mech2: Tank FIRE — ability / X / click shoots forward from turret (no hop) */
+    const Ctank = globalThis.FroggiesCanon;
+    /* mech3: Tank FIRE — Space / X / button shoots big missile (no hop). Fixed global→globalThis. */
     if (frog.inTruck && Ctank && Ctank.isTankVehicle && Ctank.isTankVehicle(frog)) {
-      const cfg = Ctank.TANK_FIRE || { cd: 0.28 };
-      frog.cd = cfg.cd != null ? cfg.cd : 0.28;
+      const cfg = Ctank.TANK_FIRE || { cd: 0.38 };
+      frog.cd = cfg.cd != null ? cfg.cd : 0.38;
       if (btnAbility) {
         btnAbility.classList.remove("fire-dash", "fire-shield", "fire-zap", "fire-bot", "fire-zoom", "fire-hop", "fire-fire");
         void btnAbility.offsetWidth;
@@ -826,11 +826,11 @@
         if (me.inTruck) { me.x = hot.x; me.y = hot.y; }
       }
       if (me.inTruck && !wasIn) {
-        const vs = me.vehicleStyle || (global.FroggiesCanon && global.FroggiesCanon.vehicleStyleOf ? global.FroggiesCanon.vehicleStyleOf(hot) : "cybertruck");
+        const vs = me.vehicleStyle || (globalThis.FroggiesCanon && globalThis.FroggiesCanon.vehicleStyleOf ? globalThis.FroggiesCanon.vehicleStyleOf(hot) : "cybertruck");
         storyToast = hot.mode === "shared"
           ? "All aboard! Four froggies · one Cybertruck · hit the jumps!"
           : vs === "ripsaw" ? "Driving Ripsaw · tracked · hit the jumps!"
-          : vs === "tank" ? ((global.FroggiesCanon && global.FroggiesCanon.tankDrivingTip) ? global.FroggiesCanon.tankDrivingTip() : "Driving Tank · FIRE (ability / X) · EXIT INTERACT")
+          : vs === "tank" ? ((globalThis.FroggiesCanon && globalThis.FroggiesCanon.tankDrivingTip) ? globalThis.FroggiesCanon.tankDrivingTip() : "Driving Tank · FIRE (Space / X / button) · EXIT INTERACT")
           : "Driving Cybertruck · hit the jumps!";
         beep(200, 0.1, "sawtooth", 0.04);
         exitTipT = 2.4;
@@ -840,7 +840,7 @@
       }
       storyToastT = 2.5;
     } else if (hot.kind === "mech" || (hot.id && String(hot.id).indexOf("mech") === 0)) {
-      const Cown2 = global.FroggiesCanon;
+      const Cown2 = globalThis.FroggiesCanon;
       if (Cown2 && Cown2.canBoardMech && !Cown2.canBoardMech(me.id, hot)) {
         storyToast = Cown2.mechDeniedTip ? Cown2.mechDeniedTip(me.id, hot) : ("Only " + (hot.tip || "owner") + " can board this mech");
         storyToastT = 2.4;
@@ -1637,14 +1637,14 @@
       e.preventDefault();
       pushGuestInput(null);
     }
-    if (e.key === " " || e.key === "Enter") {
+    if (e.key === " " || e.key === "Enter" || e.key === "x" || e.key === "X") {
       e.preventDefault();
       if (phase === "hub" || phase === "space") {
         const player = localPlayer();
         if (!player) return;
         if (party && party.getRole() === "guest") pushGuestInput({ ability: true });
         else requestAbility(player);
-      } else if (phase === "title") tryStartFromUi();
+      } else if (phase === "title" && (e.key === " " || e.key === "Enter")) tryStartFromUi();
     }
     if ((e.key === "e" || e.key === "E" || e.key === "f" || e.key === "F") && (phase === "hub" || phase === "space")) {
       doInteract(null, { source: "keyboard" });

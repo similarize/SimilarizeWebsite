@@ -5,7 +5,7 @@
   "use strict";
 
   var C = global.FroggiesCanon;
-  var CACHE = "20260928-mech2";
+  var CACHE = "20260928-mech3";
   var CDN = {
     three: "https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js",
   };
@@ -572,8 +572,8 @@
         a.pulseInteract(); /* keyboard/HUD → primary only */
         e.preventDefault();
       }
-      if (k === " " || k === "q" || k === "shift") {
-        a.pulseAbility(); /* keyboard HOP → primary only */
+      if (k === " " || k === "q" || k === "shift" || k === "x") {
+        a.pulseAbility(); /* keyboard FIRE/HOP → primary only (Space / X) */
         e.preventDefault();
       }
       /* track3: wheel size while driving — [ ] / - = */
