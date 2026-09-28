@@ -1,8 +1,9 @@
-# Four Froggies 3D — ff3d9
+# Four Froggies 3D — ff3d10 (SPACE)
 
-- Bank lean: surfY sign matches ribbon (+sin); wheels stay on dirt, truck leans with bank.
-- Forest: soft see-through trunk band + translucent canopy cylinder + foliage orb silhouettes (~playable tree height).
-- Garage: six-car / 3 double-bay farm garage.
-- House: large mansion-scale ranch house (~20-room feel) with backyard pool.
-- Pond: lake-scale (r=42) water body; fishies + water driving kept.
-- Keeps camH, BrPush, title cam, 2 CTs, vehicles, space/Dad/phone.
+Cache: `20260928-ff3d10`
+
+- Rocket mesh aligns to travel (nose along velocity, banks on turn)
+- Planet orbit moves ship only; camera yaw frozen so starfield stays fixed
+- Leave orbit: **F** / **Enter** / gamepad **Y** / on-screen **LAND** (E stays EVA)
+- Earth orbit LAND → ranch; other planets → free flight near body
+- Keeps BrPush, camH, title cam, bank/forest/house/pond from ff3d9
