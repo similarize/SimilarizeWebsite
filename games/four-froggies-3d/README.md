@@ -1,3 +1,10 @@
+## What's new (ff3d16) — swim LOOK + single sub hull
+
+- **Swim pose:** in the pond, froggies look like they are swimming (flat body, arm/leg stroke) — not land hop/walk.
+- **Submarine:** board the existing docked hull — no second/cloned sub. EXIT leaves that same hull parked.
+- Keeps ff3d15 pond swim + docked sub. Mansion/garage unchanged. Lobby exit1 UX kept.
+- Cache: `?v=20260928-ff3d16` · asset `index-ff3d16.js`
+
 ## What's new (ff3d15) — pond swim + docked submarine
 
 - **Swim** in the pond (deeper foot sink; splash tip).
