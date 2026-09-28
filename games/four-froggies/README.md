@@ -1,3 +1,10 @@
+## What's new (mech1) — mech ownership locks + Ripsaw + Tank
+
+- **Mech ownership (Canvas + Three lobby engines):** only the named froggy may board each mech — **James → trillion-story**, **Rexy → thousand-story (1000)**, **Bubbles → ten-story**, **Jimmy → hundred-story**. Wrong froggy gets a clear tip (near + on INTERACT); cannot enter/drive.
+- **Ripsaw + Tank:** shared driveable vehicles in the garage (any frog, one at a time) in **both** Canvas and Three lobby modes. Silhouettes read as real **tracked Ripsaw** (wedge + cage + track pads) and **tank** (hull + tracks + turret/barrel) — not Cybertruck clones.
+- Cast names only: James, Jimmy, Bubbles, Rexy. **Not** standalone `four-froggies-3d`.
+- Cache-bust: `?v=20260928-mech1`. Do not invent cast/zone names.
+
 ## What's new (view3) — Three.js start cam + yard-scale forest
 - **Three.js cold start camera:** establishing shot moved south/higher and aimed at garage mouth + Cybertruck apron so all four froggies and four trucks are in frame (was west/close → looked through the garage bay). Follow cam stays south-biased looking north toward the yard/garage.
 - **Ranch forest backdrop:** removed oversized perimeter trees (s=1.35–3.0) and green cylinder berms; rings now use the **same** trunk/canopy recipe and scale as playable yard trees (s≈0.88–1.3). Sky stays blue (dusk no longer paints a flat forest-green void). Softer fog so the woods read continuous.

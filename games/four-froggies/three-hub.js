@@ -22,6 +22,7 @@
    hop1: HOP ability (Y arc + squash); shove toys/animals/pollen.
    hop2: ranch foot ALWAYS hops (continuous arc); ability HOP = bigger jump.
    yard1: backyard creek/trees + outdoor trillion mech; park1: EXIT parks at exit pos.
+   mech1: mech ownership locks + shared Ripsaw/Tank (garage).
    interact2: interact/exit + HOP strictly per pad/player; shared HUD = primary only.
    hop3: faster loco + spam HOP + stack; articulated mechs.
    track3: banks + rocks + live monster wheels (preserved).
@@ -166,6 +167,13 @@
   function boardCompanionMech(c, hot) {
     if (!c || !hot) return false;
     var id = hot.id;
+    var cid = c.userData.frogId;
+    if (C.canBoardMech && !C.canBoardMech(cid, hot)) {
+      state.toast = C.mechDeniedTip ? C.mechDeniedTip(cid, hot) : "Wrong froggy for this mech";
+      state.toastT = 2.2;
+      if (hooks.onToast) hooks.onToast(state.toast);
+      return false;
+    }
     if (whoPilotsMechId(id)) {
       state.toast = "Already boarded · pick another"; state.toastT = 1.6;
       if (hooks.onToast) hooks.onToast(state.toast);
@@ -530,6 +538,69 @@
     return g;
   }
 
+  function makeRipsawMesh(accentHex) {
+    /* mech1: low tracked wedge + cage — reads as Ripsaw, not a wheeled truck */
+    var g = new THREE.Group();
+    var hullM = new THREE.MeshStandardMaterial({ color: accentHex || 0xa8a29e, metalness: 0.55, roughness: 0.4 });
+    var trackM = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.85 });
+    var hull = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.28, 0.7), hullM);
+    hull.position.set(0.05, 0.32, 0); hull.castShadow = true; g.add(hull);
+    var nose = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.18, 0.66), hullM);
+    nose.position.set(1.05, 0.28, 0); nose.rotation.z = -0.38; g.add(nose);
+    function track(z) {
+      var t = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.22, 0.22), trackM);
+      t.position.set(0, 0.14, z); g.add(t);
+      for (var i = 0; i < 6; i++) {
+        var pad = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.06, 0.24), new THREE.MeshStandardMaterial({ color: 0x334155 }));
+        pad.position.set(-0.85 + i * 0.34, 0.04, z); g.add(pad);
+      }
+    }
+    track(0.42); track(-0.42);
+    var cageM = new THREE.MeshStandardMaterial({ color: 0xd6d3d1, metalness: 0.7, roughness: 0.3 });
+    var cage = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.45, 0.55), cageM);
+    cage.position.set(-0.15, 0.62, 0); g.add(cage);
+    var bar = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.55), new THREE.MeshStandardMaterial({ color: 0xfde68a, emissive: 0xfbbf24, emissiveIntensity: 0.4 }));
+    bar.position.set(1.15, 0.36, 0); g.add(bar);
+    g.userData.wheels = []; g.userData.arches = [];
+    g.userData.bodyMat = hullM;
+    var ts = (C.TRUCK_VIS && C.TRUCK_VIS.threeScale != null) ? C.TRUCK_VIS.threeScale : 2.05;
+    g.scale.setScalar(ts); g.userData.truckScale = ts;
+    g.userData.vehicleStyle = "ripsaw";
+    return g;
+  }
+
+  function makeTankMesh(accentHex) {
+    /* mech1: hull + tracks + turret/barrel */
+    var g = new THREE.Group();
+    var hullM = new THREE.MeshStandardMaterial({ color: accentHex || 0x6b7280, metalness: 0.45, roughness: 0.5 });
+    var trackM = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.9 });
+    var hull = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.35, 0.85), hullM);
+    hull.position.set(0, 0.34, 0); hull.castShadow = true; g.add(hull);
+    var glacis = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.22, 0.8), hullM);
+    glacis.position.set(0.95, 0.32, 0); glacis.rotation.z = -0.25; g.add(glacis);
+    function track(z) {
+      var t = new THREE.Mesh(new THREE.BoxGeometry(1.85, 0.24, 0.24), trackM);
+      t.position.set(0, 0.14, z); g.add(t);
+    }
+    track(0.48); track(-0.48);
+    var tur = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.36, 0.28, 12), new THREE.MeshStandardMaterial({ color: 0x374151, metalness: 0.5, roughness: 0.45 }));
+    tur.position.set(0.05, 0.62, 0); g.add(tur);
+    var barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 1.1, 8), new THREE.MeshStandardMaterial({ color: 0x1f2937 }));
+    barrel.rotation.z = Math.PI / 2; barrel.position.set(0.75, 0.62, 0); g.add(barrel);
+    g.userData.wheels = []; g.userData.arches = [];
+    g.userData.bodyMat = hullM;
+    var ts = (C.TRUCK_VIS && C.TRUCK_VIS.threeScale != null) ? C.TRUCK_VIS.threeScale : 2.05;
+    g.scale.setScalar(ts); g.userData.truckScale = ts;
+    g.userData.vehicleStyle = "tank";
+    return g;
+  }
+
+  function makeVehicleMesh(style, accentHex) {
+    if (style === "ripsaw") return makeRipsawMesh(accentHex);
+    if (style === "tank") return makeTankMesh(accentHex);
+    return makeTruckMesh(accentHex);
+  }
+
   function applyTruckWheelScale(g, ws) {
     if (!g || !g.userData) return;
     ws = ws != null ? ws : (C.getWheelScale ? C.getWheelScale() : 1);
@@ -658,6 +729,10 @@
     part(new THREE.SphereGeometry(h * 0.02, 6, 5), new THREE.MeshStandardMaterial({ color: 0xf87171, emissive: 0xf87171, emissiveIntensity: 0.5 }), 0, h * 1.01, 0);
 
     var labTxt = C.mechStoriesLabel ? C.mechStoriesLabel(m.stories) : (m.stories + "-story mech");
+    if (C.mechOwnerName) {
+      var on = C.mechOwnerName(m);
+      if (on) labTxt = on + " · " + labTxt;
+    }
     var lab = addLabel(labTxt, "#fff", p.x, h + 0.55, p.z);
     scene.add(g);
     var solidId = band === "trillion" ? "mechTrillion" : band === "1000" ? "mech1000" : band === "100" ? "mech100" : "mech10";
@@ -1147,14 +1222,21 @@
     var spots = C.TRUCK_SPOTS || [];
     for (var i = 0; i < spots.length; i++) {
       var s = spots[i];
-      var accent = s.id === "shared" ? 0xfbbf24 : hex((C.FROG_DEFS[s.id] || C.FROG_DEFS.james).color);
-      var truck = makeTruckMesh(accent);
+      var style = s.vehicleStyle || (C.vehicleStyleOf ? C.vehicleStyleOf("truck-" + s.id) : "cybertruck");
+      var accent = s.id === "shared" ? 0xfbbf24
+        : style === "ripsaw" ? 0xa8a29e
+        : style === "tank" ? 0x6b7280
+        : hex((C.FROG_DEFS[s.id] || C.FROG_DEFS.james).color);
+      var truck = makeVehicleMesh(style, accent);
       var p = worldToThree(s.x, s.y);
       truck.position.set(p.x, 0, p.z);
       truck.rotation.y = -Math.PI / 2; /* polish11: nose +Z like idle frogs, not sideways +X */
       scene.add(truck);
-      var label = s.id === "shared" ? "★ ALL ABOARD · 4" : ("Cybertruck · " + (C.FROG_DEFS[s.id] || {}).name);
-      var lab = labelSprite(label, s.id === "shared" ? "#fef3c7" : "#fde68a");
+      var label = s.id === "shared" ? "★ ALL ABOARD · 4"
+        : style === "ripsaw" ? "Ripsaw · shared"
+        : style === "tank" ? "Tank · shared"
+        : ("Cybertruck · " + (C.FROG_DEFS[s.id] || {}).name);
+      var lab = labelSprite(label, s.id === "shared" ? "#fef3c7" : (style === "ripsaw" || style === "tank" ? "#e2e8f0" : "#fde68a"));
       lab.position.set(p.x, s.id === "shared" ? 1.85 : 1.5, p.z); scene.add(lab);
       if (s.id === "shared") {
         var pad = new THREE.Mesh(
@@ -2104,7 +2186,7 @@
       var parkTw = threeToWorld(state.player.position.x, state.player.position.z);
       var parkTid = state.truckId || "truck";
       if (C.setVehiclePark) C.setVehiclePark(parkTid, parkTw.x, parkTw.y);
-      state.inTruck = false; state.truckMode = null; state.truckId = null;
+      state.inTruck = false; state.truckMode = null; state.truckId = null; state.vehicleStyle = null;
       state.truckPilotPadIndex = null;
       state.zLift = 0; state.zVel = 0; state.groundLift = 0;
       state.toast = "Parked · walking"; state.toastT = 1.8; state.exitTipT = 0;
@@ -2127,11 +2209,20 @@
         var tp = worldToThree(state.near.x, state.near.y);
         state.player.position.x = tp.x; state.player.position.z = tp.z;
         state.inTruck = true; state.truckMode = state.near.mode || "solo"; state.truckId = id;
+        state.vehicleStyle = state.near.vehicleStyle || (C.vehicleStyleOf ? C.vehicleStyleOf(state.near) : "cybertruck");
         state.truckPilotPadIndex = (interactPadIndex != null) ? interactPadIndex
           : (state.primaryPadIndex != null ? state.primaryPadIndex : null);
         state.scrap += 1;
+        /* Swap drive mesh to match Ripsaw/Tank/Cybertruck */
+        if (state.driveTruck && state.driveTruck.parent) state.driveTruck.parent.remove(state.driveTruck);
+        var frogDef = C.FROG_DEFS[state.frogId] || C.FROG_DEFS.james;
+        state.driveTruck = makeVehicleMesh(state.vehicleStyle, hex(frogDef.color));
+        state.driveTruck.visible = true;
+        scene.add(state.driveTruck);
         state.toast = state.truckMode === "shared"
           ? "All aboard! Four froggies · one Cybertruck · hit the jumps!"
+          : state.vehicleStyle === "ripsaw" ? "Driving Ripsaw · tracked · hit the jumps!"
+          : state.vehicleStyle === "tank" ? "Driving Tank · hit the jumps!"
           : "Driving Cybertruck · hit the jumps!";
         state.exitTipT = 2.4;
       } else if (C.isMechHotspot && C.isMechHotspot(state.near)) {
@@ -2143,6 +2234,13 @@
         }
         if (state.inMech || state.inTruck) {
           interactOrigin = null; interactPadIndex = null; return;
+        }
+        if (C.canBoardMech && !C.canBoardMech(state.frogId, state.near)) {
+          state.toast = C.mechDeniedTip ? C.mechDeniedTip(state.frogId, state.near) : "Wrong froggy for this mech";
+          state.toastT = 2.2;
+          interactOrigin = null; interactPadIndex = null;
+          if (hooks.onToast) hooks.onToast(state.toast);
+          return;
         }
         if (whoPilotsMechId(id)) {
           state.toast = "Already boarded · pick another"; state.toastT = 1.6;
@@ -3203,13 +3301,13 @@
         ph.position.x = -8 + phi * 10 + target.x * para * 0.15;
       }
     }
-    /* polish6: James 1000-story mech wow tip */
+    /* polish6: Rexy 1000-story mech wow tip */
     if (state.mode === "ranch") {
       var m1000 = (C.COMPOUND && C.COMPOUND.mech1000) || { x: 340, y: 2420 };
       var mp = worldToThree(m1000.x, m1000.y);
       var dM = Math.hypot(state.player.position.x - mp.x, state.player.position.z - mp.z);
       if (dM < 3.4 && state.toastT <= 0.3) {
-        state.toast = "★ WOW · James 1000-story mech · scale tease";
+        state.toast = "★ WOW · Rexy 1000-story mech · scale tease";
         state.toastT = 1.8;
         if (hooks.onToast) hooks.onToast(state.toast);
       }
@@ -3511,7 +3609,11 @@
         scrap: state.mode === "space" ? state.catches : state.scrap,
         tip: (state.inTruck || state.inMech)
           ? (state.toastT > 0 ? state.toast : ((state.exitTipT || 0) > 0 ? "EXIT · INTERACT / E" : ""))
-          : (state.toastT > 0 ? state.toast : state.inOrbit ? "Orbit locked · Escape or hard thruster" : state.near ? ((((C.isTruckHotspot && C.isTruckHotspot(state.near)) || (C.isMechHotspot && C.isMechHotspot(state.near))) ? "BOARD · " : "⚡ ") + state.near.tip + " · INTERACT / E") : (state.invLabel && state.invLabel.visible ? "Mars · invader silhouettes" : "")),
+          : (state.toastT > 0 ? state.toast : state.inOrbit ? "Orbit locked · Escape or hard thruster" : state.near ? (
+            (C.isMechHotspot && C.isMechHotspot(state.near) && C.canBoardMech && !C.canBoardMech(state.frogId, state.near))
+              ? ((C.mechDeniedTip ? C.mechDeniedTip(state.frogId, state.near) : state.near.tip) + " · INTERACT")
+              : ((((C.isTruckHotspot && C.isTruckHotspot(state.near)) || (C.isMechHotspot && C.isMechHotspot(state.near))) ? "BOARD · " : "⚡ ") + state.near.tip + " · INTERACT / E")
+          ) : (state.invLabel && state.invLabel.visible ? "Mars · invader silhouettes" : "")),
         inOrbit: !!state.inOrbit,
         inTruck: !!state.inTruck,
         inMech: !!state.inMech,

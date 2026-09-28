@@ -476,11 +476,18 @@
         else if (exitTipT > 0) tipEl.textContent = "EXIT · INTERACT / E";
         else tipEl.textContent = "";
       } else if (storyToastT > 0) tipEl.textContent = storyToast;
-      else if (nearHot && (nearHot.kind === "truck" || (nearHot.id && nearHot.id.indexOf("truck") === 0) || nearHot.kind === "mech" || (nearHot.id && String(nearHot.id).indexOf("mech") === 0)))
+      else if (nearHot && (nearHot.kind === "mech" || (nearHot.id && String(nearHot.id).indexOf("mech") === 0))) {
+        const Cown = global.FroggiesCanon;
+        if (me && Cown && Cown.canBoardMech && !Cown.canBoardMech(me.id, nearHot)) {
+          tipEl.textContent = (Cown.mechDeniedTip ? Cown.mechDeniedTip(me.id, nearHot) : ("Only " + (nearHot.tip || "owner") + " can board")) + " · INTERACT";
+        } else {
+          tipEl.textContent = "BOARD · " + nearHot.tip + " · INTERACT / E";
+        }
+      } else if (nearHot && (nearHot.kind === "truck" || (nearHot.id && nearHot.id.indexOf("truck") === 0)))
         tipEl.textContent = "BOARD · " + nearHot.tip + " · INTERACT / E";
       else if (nearHot) tipEl.textContent = "⚡ " + nearHot.tip + " · INTERACT / E";
       else if (me && W.nearMech1000 && W.nearMech1000(frogs, 170))
-        tipEl.textContent = "★ WOW · James 1000-story mech · scale tease";
+        tipEl.textContent = "★ WOW · Rexy 1000-story mech · scale tease";
       else tipEl.textContent = "";
     }
     /* polish6: playful phone chrome when near Purple Bear phone hotspot */
@@ -645,6 +652,7 @@
       me.inTruck = false;
       me.truckMode = null;
       me.truckId = null;
+      me.vehicleStyle = null;
     }
     /* Shared blast-off: all four froggies enter space together */
     Space.enter(spaceEp, { primaryId: me ? me.id : selectedId || "james" });
@@ -752,7 +760,7 @@
     if (me.inTruck) {
       if (W.boardTruck) W.boardTruck(world, frogs, me, { kind: "truck", id: me.truckId || "truck" });
       else {
-        me.inTruck = false; me.truckMode = null; me.truckId = null; me.z = 0; me.zVel = 0;
+        me.inTruck = false; me.truckMode = null; me.truckId = null; me.vehicleStyle = null; me.z = 0; me.zVel = 0;
       }
       storyToast = "Parked · walking";
       storyToastT = 1.8;
@@ -788,8 +796,11 @@
         if (me.inTruck) { me.x = hot.x; me.y = hot.y; }
       }
       if (me.inTruck && !wasIn) {
+        const vs = me.vehicleStyle || (global.FroggiesCanon && global.FroggiesCanon.vehicleStyleOf ? global.FroggiesCanon.vehicleStyleOf(hot) : "cybertruck");
         storyToast = hot.mode === "shared"
           ? "All aboard! Four froggies · one Cybertruck · hit the jumps!"
+          : vs === "ripsaw" ? "Driving Ripsaw · tracked · hit the jumps!"
+          : vs === "tank" ? "Driving Tank · hit the jumps!"
           : "Driving Cybertruck · hit the jumps!";
         beep(200, 0.1, "sawtooth", 0.04);
         exitTipT = 2.4;
@@ -799,6 +810,14 @@
       }
       storyToastT = 2.5;
     } else if (hot.kind === "mech" || (hot.id && String(hot.id).indexOf("mech") === 0)) {
+      const Cown2 = global.FroggiesCanon;
+      if (Cown2 && Cown2.canBoardMech && !Cown2.canBoardMech(me.id, hot)) {
+        storyToast = Cown2.mechDeniedTip ? Cown2.mechDeniedTip(me.id, hot) : ("Only " + (hot.tip || "owner") + " can board this mech");
+        storyToastT = 2.4;
+        beep(140, 0.08, "square", 0.04);
+        paintHud();
+        return;
+      }
       const wasMech = !!me.inMech;
       if (W.boardMech) W.boardMech(world, frogs, me, hot);
       else {
@@ -808,7 +827,8 @@
         me.x = hot.x; me.y = hot.y;
       }
       if (me.inMech && !wasMech) {
-        storyToast = "Boarding " + (me.mechStories || "") + "-story mech · walk like a robot!";
+        const bandLabel = (Cown2 && Cown2.mechStoriesLabel) ? Cown2.mechStoriesLabel(me.mechStories) : ((me.mechStories || "") + "-story mech");
+        storyToast = "Boarding " + bandLabel + " · walk like a robot!";
         beep(160, 0.1, "sawtooth", 0.04);
         exitTipT = 2.4;
       } else if (!me.inMech) {
@@ -841,6 +861,7 @@
         inTruck: f.inTruck,
         truckMode: f.truckMode || null,
         truckId: f.truckId || null,
+        vehicleStyle: f.vehicleStyle || null,
         inMech: !!f.inMech,
         mechId: f.mechId || null,
         mechStories: f.mechStories || 0,
@@ -869,6 +890,7 @@
       f.inTruck = sf.inTruck;
       f.truckMode = sf.truckMode || null;
       f.truckId = sf.truckId || null;
+      f.vehicleStyle = sf.vehicleStyle || null;
       f.inMech = !!sf.inMech;
       f.mechId = sf.mechId || null;
       f.mechStories = sf.mechStories || 0;
@@ -1072,9 +1094,9 @@
         } else if (!nearHot) {
           prevNearId = null;
         }
-        /* polish6: wow tip when approaching James 1000-story mech */
+        /* polish6/mech1: wow tip when approaching Rexy 1000-story mech */
         if (W.nearMech1000 && W.nearMech1000(frogs, 170) && storyToastT <= 0.2) {
-          storyToast = "★ WOW · James 1000-story mech";
+          storyToast = "★ WOW · Rexy 1000-story mech";
           storyToastT = 1.8;
         }
       }
@@ -1215,7 +1237,7 @@
       prevNearId = null;
     }
     if (W.nearMech1000 && W.nearMech1000(frogs, 170) && storyToastT <= 0.2) {
-      storyToast = "★ WOW · James 1000-story mech";
+      storyToast = "★ WOW · Rexy 1000-story mech";
       storyToastT = 1.8;
     }
 

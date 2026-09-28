@@ -166,6 +166,8 @@
     { id: "bubbles", x: 2280, y: 1720 },
     { id: "rexy", x: 2480, y: 1720 },
     { id: "shared", x: 2180, y: 1880 },
+    { id: "ripsaw", x: 780, y: 1520, vehicleStyle: "ripsaw" },
+    { id: "tank", x: 1080, y: 1520, vehicleStyle: "tank" },
   ];
 
   /* Starship pad + path anchor (connected approach from ranch grounds) */
@@ -258,21 +260,24 @@
           id: h.id, label: h.label, x: h.x, y: h.y, r: h.r, tip: h.tip,
           kind: h.kind || null, frogId: h.frogId || null, mode: h.mode || null,
           stories: h.stories || null, solidId: h.solidId || null,
+          vehicleStyle: h.vehicleStyle || null,
         };
       });
     }
     return [
       { id: "phone", label: "Phone", x: 380, y: 1880, r: 52, tip: "Call Purple Bear" },
       { id: "sps", label: "SPS", x: 520, y: 1940, r: 48, tip: "Solar Positioning System" },
-      { id: "truck-james", label: "Cybertruck · James", x: 1880, y: 1720, r: 54, tip: "James Cybertruck · solo drive", kind: "truck", frogId: "james", mode: "solo" },
-      { id: "truck-jimmy", label: "Cybertruck · Jimmy", x: 2080, y: 1720, r: 54, tip: "Jimmy Cybertruck · solo drive", kind: "truck", frogId: "jimmy", mode: "solo" },
-      { id: "truck-bubbles", label: "Cybertruck · Bubbles", x: 2280, y: 1720, r: 54, tip: "Bubbles Cybertruck · solo drive", kind: "truck", frogId: "bubbles", mode: "solo" },
-      { id: "truck-rexy", label: "Cybertruck · Rexy", x: 2480, y: 1720, r: 54, tip: "Rexy Cybertruck · solo drive", kind: "truck", frogId: "rexy", mode: "solo" },
-      { id: "truck-shared", label: "★ ALL ABOARD · 4 frogs", x: 2180, y: 1880, r: 78, tip: "Shared Cybertruck · all four pile in", kind: "truck", frogId: null, mode: "shared" },
-      { id: "mech-10", label: "Board 10-story mech", x: 820, y: 1680, r: 64, tip: "10-story mech · INTERACT / BOARD", kind: "mech", stories: 10, solidId: "mech10" },
-      { id: "mech-100", label: "Board 100-story mech", x: 980, y: 1700, r: 78, tip: "100-story mech · INTERACT / BOARD", kind: "mech", stories: 100, solidId: "mech100" },
-      { id: "mech-1000", label: "Board 1000-story mech", x: 340, y: 2420, r: 120, tip: "1000-story mech · INTERACT / BOARD", kind: "mech", stories: 1000, solidId: "mech1000" },
-      { id: "mech-trillion", label: "Board trillion-story mech", x: 600, y: 2170, r: 150, tip: "trillion-story mech · INTERACT / BOARD", kind: "mech", stories: 1e12, solidId: "mechTrillion" },
+      { id: "truck-james", label: "Cybertruck · James", x: 1880, y: 1720, r: 54, tip: "James Cybertruck · solo drive", kind: "truck", frogId: "james", mode: "solo", vehicleStyle: "cybertruck" },
+      { id: "truck-jimmy", label: "Cybertruck · Jimmy", x: 2080, y: 1720, r: 54, tip: "Jimmy Cybertruck · solo drive", kind: "truck", frogId: "jimmy", mode: "solo", vehicleStyle: "cybertruck" },
+      { id: "truck-bubbles", label: "Cybertruck · Bubbles", x: 2280, y: 1720, r: 54, tip: "Bubbles Cybertruck · solo drive", kind: "truck", frogId: "bubbles", mode: "solo", vehicleStyle: "cybertruck" },
+      { id: "truck-rexy", label: "Cybertruck · Rexy", x: 2480, y: 1720, r: 54, tip: "Rexy Cybertruck · solo drive", kind: "truck", frogId: "rexy", mode: "solo", vehicleStyle: "cybertruck" },
+      { id: "truck-shared", label: "★ ALL ABOARD · 4 frogs", x: 2180, y: 1880, r: 78, tip: "Shared Cybertruck · all four pile in", kind: "truck", frogId: null, mode: "shared", vehicleStyle: "cybertruck" },
+      { id: "truck-ripsaw", label: "Ripsaw", x: 780, y: 1520, r: 62, tip: "Shared Ripsaw · tracked · any frog", kind: "truck", frogId: null, mode: "solo", vehicleStyle: "ripsaw" },
+      { id: "truck-tank", label: "Tank", x: 1080, y: 1520, r: 62, tip: "Shared Tank · any frog", kind: "truck", frogId: null, mode: "solo", vehicleStyle: "tank" },
+      { id: "mech-10", label: "Bubbles · 10-story mech", x: 820, y: 1680, r: 64, tip: "Bubbles only · 10-story mech", kind: "mech", stories: 10, solidId: "mech10", frogId: "bubbles" },
+      { id: "mech-100", label: "Jimmy · 100-story mech", x: 980, y: 1700, r: 78, tip: "Jimmy only · 100-story mech", kind: "mech", stories: 100, solidId: "mech100", frogId: "jimmy" },
+      { id: "mech-1000", label: "Rexy · 1000-story mech", x: 340, y: 2420, r: 120, tip: "Rexy only · 1000-story mech", kind: "mech", stories: 1000, solidId: "mech1000", frogId: "rexy" },
+      { id: "mech-trillion", label: "James · trillion-story mech", x: 600, y: 2170, r: 150, tip: "James only · trillion-story mech", kind: "mech", stories: 1e12, solidId: "mechTrillion", frogId: "james" },
       { id: "fishies", label: "Fishies", x: 3160, y: 620, r: 70, tip: "Splash the pond" },
       { id: "starship", label: "Starship", x: STARSHIP.x, y: STARSHIP.y, r: 72, tip: "Starship · Spotty · space episode" },
     ];
@@ -452,6 +457,7 @@
       inTruck: false,
       truckMode: null,
       truckId: null,
+      vehicleStyle: null,
       inMech: false,
       mechId: null,
       mechStories: 0,
@@ -1345,6 +1351,7 @@
       frog.inTruck = false;
       frog.truckMode = null;
       frog.truckId = null;
+      frog.vehicleStyle = null;
       frog.z = 0;
       frog.zVel = 0;
       frog.groundZ = 0;
@@ -1356,6 +1363,7 @@
             f.inTruck = false;
             f.truckMode = null;
             f.truckId = null;
+            f.vehicleStyle = null;
             f.z = 0;
             f.zVel = 0;
             f.groundZ = 0;
@@ -1371,6 +1379,8 @@
     frog.inTruck = true;
     frog.truckId = hotspot.id;
     frog.truckMode = hotspot.mode || "solo";
+    var Cstyle = global.FroggiesCanon;
+    frog.vehicleStyle = (hotspot.vehicleStyle) || (Cstyle && Cstyle.vehicleStyleOf ? Cstyle.vehicleStyleOf(hotspot) : "cybertruck");
     if (hotspot.mode === "shared") {
       world.sharedDriverId = frog.id;
       for (var j = 0; j < frogs.length; j++) {
@@ -1405,11 +1415,16 @@
     if (!hotspot || (hotspot.kind !== "mech" && !(C && C.isMechHotspot && C.isMechHotspot(hotspot)))) {
       return false;
     }
+    /* mech1: ownership lock — wrong frog cannot enter */
+    if (C && C.canBoardMech && !C.canBoardMech(frog.id, hotspot)) {
+      return false;
+    }
     /* Leave truck if somehow boarding from truck */
     if (frog.inTruck) {
       frog.inTruck = false;
       frog.truckMode = null;
       frog.truckId = null;
+      frog.vehicleStyle = null;
     }
     frog.x = hotspot.x;
     frog.y = hotspot.y;
@@ -1753,6 +1768,10 @@
     ctx.font = "bold " + Math.round((band === "trillion" ? 15 : band === "1000" ? 13 : 11) * s) + "px Segoe UI, system-ui, sans-serif";
     ctx.textAlign = "center";
     var label = (Cband && Cband.mechStoriesLabel) ? Cband.mechStoriesLabel(stories) : (stories + "-story mech");
+    if (Cband && Cband.mechOwnerName) {
+      var onLab = Cband.mechOwnerName(stories);
+      if (onLab) label = onLab + " · " + label;
+    }
     var labY = headY - (band === "trillion" ? 32 : band === "1000" ? 24 : 14) * s;
     ctx.strokeText(label, cx, labY);
     ctx.fillText(label, cx, labY);
@@ -2905,6 +2924,144 @@
     }
   }
 
+  /* mech1: Howe&Howe-style Ripsaw — low tracked wedge + cage (not a wheeled truck) */
+  function drawRipsaw(ctx, x, y, faceAngle, depth, driving, z, accent, water) {
+    var s = 0.92 * depth;
+    var lift = (z || 0) * 0.72 * depth + ((water && water.bounce) ? water.bounce * depth * 0.4 : 0);
+    var drawY = y - lift;
+    ctx.save();
+    ctx.translate(x, drawY);
+    var ang = (faceAngle != null && isFinite(faceAngle)) ? faceAngle : 0;
+    ctx.rotate(ang);
+    /* ground shadow */
+    ctx.fillStyle = "rgba(15,23,42,0.35)";
+    ctx.beginPath();
+    ctx.ellipse(0, 11 * s, 36 * s, 9 * s, 0, 0, Math.PI * 2);
+    ctx.fill();
+    /* continuous tracks (left/right) with pad nubs */
+    function track(side) {
+      var zy = side * 16 * s;
+      ctx.fillStyle = "#1e293b";
+      ctx.fillRect(-28 * s, zy - 5 * s, 56 * s, 10 * s);
+      ctx.strokeStyle = "#0f172a";
+      ctx.lineWidth = 1.4;
+      ctx.strokeRect(-28 * s, zy - 5 * s, 56 * s, 10 * s);
+      ctx.fillStyle = "#334155";
+      for (var i = 0; i < 8; i++) {
+        var px = -24 * s + i * 7 * s;
+        ctx.fillRect(px, zy - 6.5 * s, 4.2 * s, 13 * s);
+      }
+      /* sprocket hubs */
+      ctx.fillStyle = "#64748b";
+      ctx.beginPath(); ctx.arc(-22 * s, zy, 4.5 * s, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(22 * s, zy, 4.5 * s, 0, Math.PI * 2); ctx.fill();
+    }
+    track(-1); track(1);
+    /* low armored hull / wedge nose */
+    ctx.fillStyle = accent || "#78716c";
+    ctx.beginPath();
+    ctx.moveTo(30 * s, 0);
+    ctx.lineTo(14 * s, -10 * s);
+    ctx.lineTo(-22 * s, -9 * s);
+    ctx.lineTo(-26 * s, 0);
+    ctx.lineTo(-22 * s, 9 * s);
+    ctx.lineTo(14 * s, 10 * s);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "#0f172a";
+    ctx.lineWidth = 1.8;
+    ctx.stroke();
+    /* deck plate */
+    ctx.fillStyle = "#57534e";
+    ctx.fillRect(-18 * s, -6 * s, 28 * s, 12 * s);
+    /* roll cage */
+    ctx.strokeStyle = "#a8a29e";
+    ctx.lineWidth = 2.2;
+    ctx.strokeRect(-10 * s, -14 * s, 16 * s, 10 * s);
+    ctx.beginPath();
+    ctx.moveTo(-10 * s, -14 * s); ctx.lineTo(-6 * s, -20 * s); ctx.lineTo(6 * s, -20 * s); ctx.lineTo(6 * s, -14 * s);
+    ctx.stroke();
+    /* light bar */
+    ctx.fillStyle = "#fde68a";
+    ctx.fillRect(12 * s, -4 * s, 4 * s, 8 * s);
+    if (driving) {
+      ctx.fillStyle = "#fef3c7";
+      ctx.font = "bold " + Math.round(8 * depth) + "px system-ui,sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("RIPSAW", 0, 22 * s);
+    }
+    ctx.restore();
+  }
+
+  /* mech1: classic tank — hull + continuous tracks + turret/barrel */
+  function drawTank(ctx, x, y, faceAngle, depth, driving, z, accent, water) {
+    var s = 0.9 * depth;
+    var lift = (z || 0) * 0.72 * depth + ((water && water.bounce) ? water.bounce * depth * 0.35 : 0);
+    var drawY = y - lift;
+    ctx.save();
+    ctx.translate(x, drawY);
+    var ang = (faceAngle != null && isFinite(faceAngle)) ? faceAngle : 0;
+    ctx.rotate(ang);
+    ctx.fillStyle = "rgba(15,23,42,0.35)";
+    ctx.beginPath();
+    ctx.ellipse(0, 12 * s, 34 * s, 10 * s, 0, 0, Math.PI * 2);
+    ctx.fill();
+    function track(side) {
+      var zy = side * 15 * s;
+      ctx.fillStyle = "#111827";
+      ctx.fillRect(-26 * s, zy - 5.5 * s, 52 * s, 11 * s);
+      ctx.fillStyle = "#374151";
+      for (var i = 0; i < 7; i++) {
+        ctx.fillRect(-22 * s + i * 7 * s, zy - 7 * s, 4 * s, 14 * s);
+      }
+      ctx.fillStyle = "#6b7280";
+      ctx.beginPath(); ctx.arc(-20 * s, zy, 4 * s, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(18 * s, zy, 4 * s, 0, Math.PI * 2); ctx.fill();
+    }
+    track(-1); track(1);
+    /* hull */
+    ctx.fillStyle = accent || "#4b5563";
+    ctx.fillRect(-22 * s, -8 * s, 40 * s, 16 * s);
+    ctx.strokeStyle = "#0f172a";
+    ctx.lineWidth = 1.8;
+    ctx.strokeRect(-22 * s, -8 * s, 40 * s, 16 * s);
+    /* glacis wedge */
+    ctx.fillStyle = "#6b7280";
+    ctx.beginPath();
+    ctx.moveTo(18 * s, -8 * s);
+    ctx.lineTo(28 * s, 0);
+    ctx.lineTo(18 * s, 8 * s);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    /* turret */
+    ctx.fillStyle = "#374151";
+    ctx.beginPath();
+    ctx.ellipse(0, -2 * s, 12 * s, 9 * s, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    /* barrel */
+    ctx.fillStyle = "#1f2937";
+    ctx.fillRect(10 * s, -4 * s, 26 * s, 4.5 * s);
+    ctx.strokeRect(10 * s, -4 * s, 26 * s, 4.5 * s);
+    ctx.fillStyle = "#9ca3af";
+    ctx.fillRect(34 * s, -4.5 * s, 4 * s, 5.5 * s);
+    if (driving) {
+      ctx.fillStyle = "#e5e7eb";
+      ctx.font = "bold " + Math.round(8 * depth) + "px system-ui,sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("TANK", 0, 24 * s);
+    }
+    ctx.restore();
+  }
+
+  function drawDriveVehicle(ctx, style, x, y, faceAngle, depth, driving, z, accent, water) {
+    var st = style || "cybertruck";
+    if (st === "ripsaw") return drawRipsaw(ctx, x, y, faceAngle, depth, driving, z, accent || "#a8a29e", water);
+    if (st === "tank") return drawTank(ctx, x, y, faceAngle, depth, driving, z, accent || "#6b7280", water);
+    return drawCybertruck(ctx, x, y, faceAngle, depth, driving, z, accent, water);
+  }
+
   function drawCybertruck(ctx, x, y, faceAngle, depth, driving, z, accent, water) {
     /* truck1: kid-toy scale vs frog (~16px radius) — bigger than frog, not a building */
     var vis = (global.FroggiesCanon && global.FroggiesCanon.TRUCK_VIS) || {};
@@ -3232,7 +3389,8 @@
       var yawDrive = frog.faceAngle != null ? frog.faceAngle : -Math.PI / 2;
       var spDrive = Math.hypot(frog.vx || 0, frog.vy || 0);
       if (spDrive > 35) yawDrive = Math.atan2(frog.vy, frog.vx);
-      drawCybertruck(ctx, p.x, p.y, yawDrive, p.depth, true, frog.z || 0, frog.color, { inWater: inPond(frog.x, frog.y), sub: frog.waterSub || 0, wakePhase: frog.wakePhase || 0, bounce: frog.truckBounce || 0, wheelScale: frog.wheelScale || (global.FroggiesCanon && global.FroggiesCanon.getWheelScale ? global.FroggiesCanon.getWheelScale() : 1) });
+      var styleDrive = frog.vehicleStyle || (global.FroggiesCanon && global.FroggiesCanon.vehicleStyleOf ? global.FroggiesCanon.vehicleStyleOf(frog.truckId) : "cybertruck");
+      drawDriveVehicle(ctx, styleDrive, p.x, p.y, yawDrive, p.depth, true, frog.z || 0, frog.color, { inWater: inPond(frog.x, frog.y), sub: frog.waterSub || 0, wakePhase: frog.wakePhase || 0, bounce: frog.truckBounce || 0, wheelScale: frog.wheelScale || (global.FroggiesCanon && global.FroggiesCanon.getWheelScale ? global.FroggiesCanon.getWheelScale() : 1) });
       if (frog.truckMode === "shared" && frogs) {
         drawAboardIcons(ctx, frogs, p.x, p.y, p.depth, lift);
       } else {
@@ -3273,7 +3431,8 @@
       var yawSolo = frog.faceAngle != null ? frog.faceAngle : -Math.PI / 2;
       var spSolo = Math.hypot(frog.vx || 0, frog.vy || 0);
       if (spSolo > 35) yawSolo = Math.atan2(frog.vy, frog.vx);
-      drawCybertruck(ctx, p.x, p.y, yawSolo, p.depth, true, frog.z || 0, frog.color, { inWater: inPond(frog.x, frog.y), sub: frog.waterSub || 0, wakePhase: frog.wakePhase || 0, bounce: frog.truckBounce || 0, wheelScale: frog.wheelScale || (global.FroggiesCanon && global.FroggiesCanon.getWheelScale ? global.FroggiesCanon.getWheelScale() : 1) });
+      var styleSolo = frog.vehicleStyle || (global.FroggiesCanon && global.FroggiesCanon.vehicleStyleOf ? global.FroggiesCanon.vehicleStyleOf(frog.truckId) : "cybertruck");
+      drawDriveVehicle(ctx, styleSolo, p.x, p.y, yawSolo, p.depth, true, frog.z || 0, frog.color, { inWater: inPond(frog.x, frog.y), sub: frog.waterSub || 0, wakePhase: frog.wakePhase || 0, bounce: frog.truckBounce || 0, wheelScale: frog.wheelScale || (global.FroggiesCanon && global.FroggiesCanon.getWheelScale ? global.FroggiesCanon.getWheelScale() : 1) });
       ctx.fillStyle = frog.color;
       ctx.beginPath();
       ctx.arc(p.x, p.y - 22 * p.depth - lift, 6 * p.depth, 0, Math.PI * 2);
@@ -3558,7 +3717,7 @@
       ctx.fillText(h.label, p.x, badgeY - 8);
       ctx.fillStyle = "#fbbf24";
       ctx.font = "bold 11px Segoe UI, system-ui, sans-serif";
-      var prompt = (h.kind === "truck" || (h.id && String(h.id).indexOf("truck") === 0))
+      var prompt = (h.kind === "truck" || (h.id && String(h.id).indexOf("truck") === 0) || h.kind === "mech" || (h.id && String(h.id).indexOf("mech") === 0))
         ? "BOARD · INTERACT / E" : "INTERACT · E";
       ctx.fillText(prompt, p.x, badgeY + 8);
     } else {
@@ -3587,7 +3746,11 @@
       var hidP = spot.id === "shared" ? "truck-shared" : "truck-" + spot.id;
       var parkT = Cpk && Cpk.vehiclePos ? Cpk.vehiclePos(hidP, spot.x, spot.y) : { x: spot.x, y: spot.y };
       var p = project(parkT.x, parkT.y, camX, camY, vw, vh);
-      var accent = spot.id === "shared" ? "#fbbf24" : (FROG_COLORS[spot.id] || {}).body;
+      var styleP = spot.vehicleStyle || (spot.id === "ripsaw" ? "ripsaw" : spot.id === "tank" ? "tank" : "cybertruck");
+      var accent = spot.id === "shared" ? "#fbbf24"
+        : styleP === "ripsaw" ? "#a8a29e"
+        : styleP === "tank" ? "#6b7280"
+        : (FROG_COLORS[spot.id] || {}).body;
       if (spot.id === "shared") {
         /* polish5: shared pile-in truck obvious — pad, frog slots, ALL ABOARD */
         var pulse = 1 + Math.sin(Date.now() / 220) * 0.06;
@@ -3603,7 +3766,18 @@
         ctx.stroke();
         ctx.setLineDash([]);
       }
-      drawCybertruck(ctx, p.x, p.y, -Math.PI / 2, p.depth, false, 0, accent, { inWater: inPond(parkT.x, parkT.y), sub: 0, wakePhase: 0, wheelScale: 1 });
+      drawDriveVehicle(ctx, styleP, p.x, p.y, -Math.PI / 2, p.depth, false, 0, accent, { inWater: inPond(parkT.x, parkT.y), sub: 0, wakePhase: 0, wheelScale: 1 });
+      if (styleP === "ripsaw" || styleP === "tank") {
+        ctx.fillStyle = "rgba(15, 23, 42, 0.82)";
+        ctx.fillRect(p.x - 36 * p.depth, p.y + 18 * p.depth, 72 * p.depth, 16 * p.depth);
+        ctx.strokeStyle = styleP === "ripsaw" ? "#a8a29e" : "#9ca3af";
+        ctx.lineWidth = 1.6;
+        ctx.strokeRect(p.x - 36 * p.depth, p.y + 18 * p.depth, 72 * p.depth, 16 * p.depth);
+        ctx.fillStyle = "#f8fafc";
+        ctx.font = "bold " + Math.round(10 * p.depth) + "px system-ui,sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(styleP === "ripsaw" ? "RIPSAW" : "TANK", p.x, p.y + 29 * p.depth);
+      }
       if (spot.id === "shared") {
         var ids = ["james", "jimmy", "bubbles", "rexy"];
         for (var si = 0; si < 4; si++) {
@@ -4003,7 +4177,7 @@
     ctx.fillStyle = "#fef3c7";
     ctx.font = "bold " + Math.round(13 * Math.min(1.2, p.depth + 0.25)) + "px Segoe UI, system-ui, sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText("★ WOW · James 1000-story mech", bx, by - 6);
+    ctx.fillText("★ WOW · Rexy 1000-story mech", bx, by - 6);
     ctx.fillStyle = "#fde68a";
     ctx.font = "bold " + Math.round(11 * Math.min(1.15, p.depth + 0.2)) + "px Segoe UI, system-ui, sans-serif";
     ctx.fillText("scale tease · won't fit in the garage", bx, by + 12);
@@ -4053,7 +4227,7 @@
       drawFroggy(ctx, sorted[fi], camX, camY, vw, vh, frogs);
     }
 
-    /* polish6: James 1000-story mech wow-scale tip when approached */
+    /* polish6/mech1: Rexy 1000-story mech wow-scale tip when approached */
     drawMechWowTip(ctx, frogs, camX, camY, vw, vh);
     /* polish7: zone signs + mini-map */
     drawZoneSigns(ctx, frogs, camX, camY, vw, vh);

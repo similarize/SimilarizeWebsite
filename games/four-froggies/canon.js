@@ -16,7 +16,8 @@
    ctrl1: hop buffer/coyote + airClear vault; RT/LT vehicle boost.
    hop4: snappier always-hop (higher carry / shorter plant / higher launch); humanoid frog silhouette.
    yard1: James backyard trees/shrubs/creek/rocks/flowers/fence (soft stream) + outdoor trillion-story mech.
-   park1: EXIT mech/truck leaves vehicle at exit pos (no snap-home); reset/menu restores pads. */
+   park1: EXIT mech/truck leaves vehicle at exit pos (no snap-home); reset/menu restores pads.
+   mech1: mech ownership locks (James=trillion, Rexy=1000, Bubbles=10, Jimmy=100) + shared Ripsaw/Tank. */
 (function (global) {
   "use strict";
 
@@ -201,6 +202,9 @@
     { id: "bubbles", x: 2280, y: 1720 },
     { id: "rexy", x: 2480, y: 1720 },
     { id: "shared", x: 2180, y: 1880 },
+    /* mech1: shared garage toys — real Ripsaw tracked + tank silhouettes (any frog) */
+    { id: "ripsaw", x: 780, y: 1520, vehicleStyle: "ripsaw" },
+    { id: "tank", x: 1080, y: 1520, vehicleStyle: "tank" },
   ];
 
   var STARSHIP = { x: 360, y: 320, padR: 110 };
@@ -228,15 +232,17 @@
   var HOTSPOTS = [
     { id: "phone", label: "Phone", x: 380, y: 1880, r: 52, tip: "Call Purple Bear" },
     { id: "sps", label: "SPS", x: 520, y: 1940, r: 48, tip: "Solar Positioning System" },
-    { id: "truck-james", label: "Cybertruck · James", x: 1880, y: 1720, r: 54, tip: "James Cybertruck · solo drive", kind: "truck", frogId: "james", mode: "solo" },
-    { id: "truck-jimmy", label: "Cybertruck · Jimmy", x: 2080, y: 1720, r: 54, tip: "Jimmy Cybertruck · solo drive", kind: "truck", frogId: "jimmy", mode: "solo" },
-    { id: "truck-bubbles", label: "Cybertruck · Bubbles", x: 2280, y: 1720, r: 54, tip: "Bubbles Cybertruck · solo drive", kind: "truck", frogId: "bubbles", mode: "solo" },
-    { id: "truck-rexy", label: "Cybertruck · Rexy", x: 2480, y: 1720, r: 54, tip: "Rexy Cybertruck · solo drive", kind: "truck", frogId: "rexy", mode: "solo" },
-    { id: "truck-shared", label: "★ ALL ABOARD · 4 frogs", x: 2180, y: 1880, r: 78, tip: "Shared Cybertruck · all four pile in", kind: "truck", frogId: null, mode: "shared" },
-    { id: "mech-10", label: "Board 10-story mech", x: COMPOUND.mech10.x, y: COMPOUND.mech10.y, r: 64, tip: "10-story mech · INTERACT / BOARD", kind: "mech", stories: 10, solidId: "mech10" },
-    { id: "mech-100", label: "Board 100-story mech", x: COMPOUND.mech100.x, y: COMPOUND.mech100.y, r: 78, tip: "100-story mech · INTERACT / BOARD", kind: "mech", stories: 100, solidId: "mech100" },
-    { id: "mech-1000", label: "Board 1000-story mech", x: COMPOUND.mech1000.x, y: COMPOUND.mech1000.y, r: 120, tip: "1000-story mech · INTERACT / BOARD", kind: "mech", stories: 1000, solidId: "mech1000" },
-    { id: "mech-trillion", label: "Board trillion-story mech", x: COMPOUND.mechTrillion.x, y: COMPOUND.mechTrillion.y, r: 150, tip: "trillion-story mech · INTERACT / BOARD", kind: "mech", stories: 1e12, solidId: "mechTrillion" },
+    { id: "truck-james", label: "Cybertruck · James", x: 1880, y: 1720, r: 54, tip: "James Cybertruck · solo drive", kind: "truck", frogId: "james", mode: "solo", vehicleStyle: "cybertruck" },
+    { id: "truck-jimmy", label: "Cybertruck · Jimmy", x: 2080, y: 1720, r: 54, tip: "Jimmy Cybertruck · solo drive", kind: "truck", frogId: "jimmy", mode: "solo", vehicleStyle: "cybertruck" },
+    { id: "truck-bubbles", label: "Cybertruck · Bubbles", x: 2280, y: 1720, r: 54, tip: "Bubbles Cybertruck · solo drive", kind: "truck", frogId: "bubbles", mode: "solo", vehicleStyle: "cybertruck" },
+    { id: "truck-rexy", label: "Cybertruck · Rexy", x: 2480, y: 1720, r: 54, tip: "Rexy Cybertruck · solo drive", kind: "truck", frogId: "rexy", mode: "solo", vehicleStyle: "cybertruck" },
+    { id: "truck-shared", label: "★ ALL ABOARD · 4 frogs", x: 2180, y: 1880, r: 78, tip: "Shared Cybertruck · all four pile in", kind: "truck", frogId: null, mode: "shared", vehicleStyle: "cybertruck" },
+    { id: "truck-ripsaw", label: "Ripsaw", x: 780, y: 1520, r: 62, tip: "Shared Ripsaw · tracked · any frog", kind: "truck", frogId: null, mode: "solo", vehicleStyle: "ripsaw" },
+    { id: "truck-tank", label: "Tank", x: 1080, y: 1520, r: 62, tip: "Shared Tank · any frog", kind: "truck", frogId: null, mode: "solo", vehicleStyle: "tank" },
+    { id: "mech-10", label: "Bubbles · 10-story mech", x: COMPOUND.mech10.x, y: COMPOUND.mech10.y, r: 64, tip: "Bubbles only · 10-story mech", kind: "mech", stories: 10, solidId: "mech10", frogId: "bubbles" },
+    { id: "mech-100", label: "Jimmy · 100-story mech", x: COMPOUND.mech100.x, y: COMPOUND.mech100.y, r: 78, tip: "Jimmy only · 100-story mech", kind: "mech", stories: 100, solidId: "mech100", frogId: "jimmy" },
+    { id: "mech-1000", label: "Rexy · 1000-story mech", x: COMPOUND.mech1000.x, y: COMPOUND.mech1000.y, r: 120, tip: "Rexy only · 1000-story mech", kind: "mech", stories: 1000, solidId: "mech1000", frogId: "rexy" },
+    { id: "mech-trillion", label: "James · trillion-story mech", x: COMPOUND.mechTrillion.x, y: COMPOUND.mechTrillion.y, r: 150, tip: "James only · trillion-story mech", kind: "mech", stories: 1e12, solidId: "mechTrillion", frogId: "james" },
     { id: "fishies", label: "Fishies", x: 3160, y: 620, r: 70, tip: "Splash the pond" },
     { id: "starship", label: "Starship", x: 360, y: 320, r: 72, tip: "Starship · Spotty · space episode" },
   ];
@@ -359,6 +365,63 @@
     if (id === "mech-1000" || id === "mech1000") return "mech1000";
     if (id === "mech-trillion" || id === "mechTrillion" || id === "mech-1e12") return "mechTrillion";
     return id.indexOf("mech") === 0 ? id.replace(/^mech-/, "mech") : null;
+  }
+
+  /* mech1: only the named frog may board each mech band */
+  var MECH_OWNER_BY_SOLID = {
+    mech10: "bubbles",
+    mech100: "jimmy",
+    mech1000: "rexy",
+    mechTrillion: "james",
+  };
+
+  function mechOwnerId(hotOrStories) {
+    if (hotOrStories == null) return null;
+    if (typeof hotOrStories === "object") {
+      if (hotOrStories.frogId) return String(hotOrStories.frogId);
+      var sid = mechSolidId(hotOrStories);
+      if (sid && MECH_OWNER_BY_SOLID[sid]) return MECH_OWNER_BY_SOLID[sid];
+      return mechOwnerId(hotOrStories.stories);
+    }
+    var n = Number(hotOrStories) || 0;
+    if (n >= 1e12) return "james";
+    if (n >= 1000) return "rexy";
+    if (n >= 100) return "jimmy";
+    if (n >= 10) return "bubbles";
+    return null;
+  }
+
+  function mechOwnerName(hotOrStories) {
+    var oid = mechOwnerId(hotOrStories);
+    if (!oid) return null;
+    var def = FROG_DEFS[oid];
+    return def ? def.name : oid.charAt(0).toUpperCase() + oid.slice(1);
+  }
+
+  function canBoardMech(frogId, hot) {
+    if (!hot || !isMechHotspot(hot)) return true;
+    var owner = mechOwnerId(hot);
+    if (!owner) return true;
+    return String(frogId || "") === owner;
+  }
+
+  function mechDeniedTip(frogId, hot) {
+    var ownerName = mechOwnerName(hot) || "owner";
+    var label = mechStoriesLabel(hot && hot.stories);
+    var who = (FROG_DEFS[frogId] && FROG_DEFS[frogId].name) || "That froggy";
+    return "Only " + ownerName + " can drive the " + label + " · not " + who;
+  }
+
+  function vehicleStyleOf(hotOrId) {
+    if (!hotOrId) return "cybertruck";
+    if (typeof hotOrId === "object") {
+      if (hotOrId.vehicleStyle) return String(hotOrId.vehicleStyle);
+      return vehicleStyleOf(hotOrId.id);
+    }
+    var id = String(hotOrId);
+    if (id.indexOf("ripsaw") >= 0) return "ripsaw";
+    if (id.indexOf("tank") >= 0) return "tank";
+    return "cybertruck";
   }
 
   function rampAt(x, y) {
@@ -597,7 +660,8 @@
         var tid = "truck-" + s.id;
         var tp = vehiclePos(tid, s.x, s.y);
         /* r under hotspot radius so BOARD shell stays reachable (solo ~54, shared ~78) */
-        out.push({ id: tid, x: tp.x, y: tp.y, r: s.id === "shared" ? 40 : 28 });
+        var tr = s.id === "shared" ? 40 : (s.vehicleStyle === "ripsaw" || s.vehicleStyle === "tank" ? 34 : 28);
+        out.push({ id: tid, x: tp.x, y: tp.y, r: tr });
       }
     }
     /* yard1: thin tree trunks — edges only, leave doorway / mech pad / stream clear */
@@ -1017,6 +1081,12 @@
     isTruckHotspot: isTruckHotspot,
     isMechHotspot: isMechHotspot,
     mechSolidId: mechSolidId,
+    mechOwnerId: mechOwnerId,
+    mechOwnerName: mechOwnerName,
+    canBoardMech: canBoardMech,
+    mechDeniedTip: mechDeniedTip,
+    vehicleStyleOf: vehicleStyleOf,
+    MECH_OWNER_BY_SOLID: MECH_OWNER_BY_SOLID,
     mechStoriesLabel: mechStoriesLabel,
     mechBand: mechBand,
     setVehiclePark: setVehiclePark,
