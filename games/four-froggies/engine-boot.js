@@ -5,7 +5,7 @@
   "use strict";
 
   var C = global.FroggiesCanon;
-  var CACHE = "20260928-mech3";
+  var CACHE = "20260928-mech4";
   var CDN = {
     three: "https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js",
   };
@@ -268,6 +268,8 @@
 
   function startAlt(mode) {
     if (loading) return loading;
+    /* mech4: never reboot an already-running Three session (Space was calling tryStart→startAlt) */
+    if (engineRunning) return Promise.resolve();
     if (mode !== "three") {
       hardFailAlt("three", new Error("Invalid alt engine: " + mode));
       return Promise.reject(new Error("Invalid alt engine"));
@@ -575,6 +577,7 @@
       if (k === " " || k === "q" || k === "shift" || k === "x") {
         a.pulseAbility(); /* keyboard FIRE/HOP → primary only (Space / X) */
         e.preventDefault();
+        if (e.stopPropagation) e.stopPropagation();
       }
       /* track3: wheel size while driving — [ ] / - = */
       if (k === "[" || k === "-" || k === "]") {
@@ -615,10 +618,22 @@
       });
     }
     if (btnAbility) {
-      btnAbility.addEventListener("click", function () {
+      btnAbility.addEventListener("click", function (e) {
+        if (e && e.preventDefault) e.preventDefault();
+        if (e && e.stopPropagation) e.stopPropagation();
         if (!engineRunning) return;
         var a = altApi();
         if (a) a.pulseAbility();
+      });
+      /* mech4: Space on focused FIRE must not synthesize a second path / page default */
+      btnAbility.addEventListener("keydown", function (e) {
+        if (!engineRunning) return;
+        var kk = e.key;
+        var kkl = kk.length === 1 ? kk.toLowerCase() : kk;
+        if (kk === " " || kk === "Enter" || kkl === "x") {
+          e.preventDefault();
+          e.stopPropagation();
+        }
       });
     }
 
@@ -663,6 +678,8 @@
       stopAltEngines();
       return false;
     }
+    /* mech4: already playing Three — do not rebuild world */
+    if (engineRunning) return true;
     startAlt(mode);
     return true;
   }
@@ -698,16 +715,22 @@
       );
     }
 
-    // Space/Enter on title while Three selected
+    // Space/Enter/X while Three selected
     window.addEventListener(
       "keydown",
       function (e) {
+        var k = e.key;
+        var kl = k.length === 1 ? k.toLowerCase() : k;
         if (engineRunning) {
-          // block main.js title-start re-entry
-          if (e.key === " " || e.key === "Enter") {
-            var overlay = $("overlay");
-            if (overlay && !overlay.hidden) return;
-            // playing alt — leave ability/interact to bindAltControls
+          /* mech4: while playing, Space/Enter/X must NEVER re-enter tryStart/startAlt
+             (main.js phase stays "title" → Space was rebuilding the ranch = brown reset).
+             Swallow + pulse ability here so main.js never sees the key. */
+          if (k === " " || k === "Enter" || kl === "x" || kl === "q" || k === "Shift") {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            if (k === "Enter") return; /* Enter: block restart only */
+            var aPlay = altApi();
+            if (aPlay && aPlay.pulseAbility) aPlay.pulseAbility();
           }
           return;
         }

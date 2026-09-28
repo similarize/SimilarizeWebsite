@@ -425,7 +425,7 @@
     return "cybertruck";
   }
 
-  /* mech3: Tank FIRE — big missile, blast wrecks toys/animals/props */
+  /* mech4: Tank FIRE — big missile, blast wrecks toys/animals/props */
   var TANK_FIRE = {
     cd: 0.38,
     speed: 720,

@@ -578,6 +578,11 @@
     const Cbuf = globalThis.FroggiesCanon;
     /* ctrl1: if on short CD, buffer ~150ms so flaky/early X still fires */
     if (frog.cd > 0) {
+      /* mech4: while tank, buffer a FIRE retry — never a hop */
+      if (frog.inTruck && Cbuf && Cbuf.isTankVehicle && Cbuf.isTankVehicle(frog)) {
+        frog.hopWantT = Math.max(frog.hopWantT || 0, 0.15);
+        return;
+      }
       if (Cbuf && Cbuf.queueAbilityHop) Cbuf.queueAbilityHop(frog, 0.15);
       else frog.hopWantT = Math.max(frog.hopWantT || 0, 0.15);
       return;
@@ -601,8 +606,9 @@
     }
     const def = FROG_DEFS[frog.id];
     const Ctank = globalThis.FroggiesCanon;
-    /* mech3: Tank FIRE — Space / X / button shoots big missile (no hop). Fixed global→globalThis. */
+    /* mech4: Tank FIRE — Space / X / ability / FIRE ONLY shoots (never hop / reload / reset). */
     if (frog.inTruck && Ctank && Ctank.isTankVehicle && Ctank.isTankVehicle(frog)) {
+      frog.hopWantT = 0; /* never buffer a hop while tank */
       const cfg = Ctank.TANK_FIRE || { cd: 0.38 };
       frog.cd = cfg.cd != null ? cfg.cd : 0.38;
       if (btnAbility) {
@@ -1576,7 +1582,11 @@
   if (btnAbility) {
     btnAbility.addEventListener("pointerdown", (e) => {
       e.preventDefault();
+      if (e.stopPropagation) e.stopPropagation();
       unlockAudio();
+      /* mech4: alt Three owns FIRE button while running */
+      const EngA = globalThis.FroggiesEngines;
+      if (EngA && typeof EngA.isAltRunning === "function" && EngA.isAltRunning()) return;
       const player = localPlayer();
       if (!player || (phase !== "hub" && phase !== "space")) return;
       if (party && party.getRole() === "guest") {
@@ -1639,6 +1649,10 @@
     }
     if (e.key === " " || e.key === "Enter" || e.key === "x" || e.key === "X") {
       e.preventDefault();
+      if (e.stopPropagation) e.stopPropagation();
+      /* mech4: Three/alt owns Space/X/FIRE while running — never title-restart (brown reset) */
+      const EngLive = globalThis.FroggiesEngines;
+      if (EngLive && typeof EngLive.isAltRunning === "function" && EngLive.isAltRunning()) return;
       if (phase === "hub" || phase === "space") {
         const player = localPlayer();
         if (!player) return;
@@ -1785,6 +1799,8 @@
     /* Critical: never silently start Canvas when Three is selected */
     const Eng = globalThis.FroggiesEngines;
     const C = globalThis.FroggiesCanon;
+    /* mech4: Space while already in Three must not rebuild the ranch */
+    if (Eng && typeof Eng.isAltRunning === "function" && Eng.isAltRunning()) return;
     const mode = (C && C.getEngine && C.getEngine()) || (Eng && Eng.getMode && Eng.getMode()) || "canvas";
     if (mode === "three") {
       if (Eng && typeof Eng.tryStart === "function") {

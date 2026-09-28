@@ -1,3 +1,16 @@
+## What's new (mech4) — Tank FIRE no longer resets the world
+
+**Bug (live mech3):** While driving Tank in Three, **Space / X / FIRE** often **rebuilt the ranch** (brown dirt spawn / “reset”) instead of shooting. Root cause: `main.js` stayed on `phase === "title"` during Three play, so Space/Enter hit `tryStartFromUi` → `startAlt` → `stopAltEngines` + fresh boot.
+
+**Fixes (`/games/four-froggies/` Canvas + Three lobby):**
+1. **While alt/Three is running:** Space / Enter / X are swallowed (preventDefault + stopImmediatePropagation) and only `pulseAbility` — never title-restart.
+2. **`startAlt` / `tryStart`:** refuse to reboot if `engineRunning` already.
+3. **Tank:** Space / X / ability / FIRE **only** fires big missiles (no hop buffer / no world reset). Keep boom + destroy toys/animals/props.
+4. Lobby UX kept: **`← Arcade`** + **`Join · enter code`** + CODE field (exit1 / current gh-pages). Do **not** regress mech2 lobby overwrite.
+
+- Cache-bust: `?v=20260928-mech4`. Cast: James, Jimmy, Bubbles, Rexy.
+- Not touched: `games/four-froggies-3d/`.
+
 ## What's new (mech3) — FIRE actually works + big boom missiles
 
 **Root cause (mech2 FIRE no-op):** Canvas `main.js` used bare `global.FroggiesCanon` inside a strict IIFE. Browsers have no `global` → `ReferenceError` on every ability press / ability HUD update. Button label could show FIRE (Three) or hang; **Space / click / X did nothing on Canvas**.

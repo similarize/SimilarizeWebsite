@@ -2351,13 +2351,16 @@
   }
 
 
-  /* mech3: Tank FIRE — big missile; blast wrecks toys/animals/props */
+  /* mech4: Tank FIRE — big missile; blast wrecks toys/animals/props. Never hop/reset. */
   function fireTankShell() {
     if (!state || !state.inTruck || state.vehicleStyle !== "tank") return false;
     if (state.cd > 0) {
-      state.hopWantT = Math.max(state.hopWantT || 0, 0.15);
+      state.fireWantT = Math.max(state.fireWantT || 0, 0.15);
+      state.hopWantT = 0; /* never queue a hop while tank */
       return false;
     }
+    state.hopWantT = 0;
+    state.fireWantT = 0;
     var cfg = (C.TANK_FIRE) || { cd: 0.38, speed: 720, life: 1.55, muzzle: 1.9, blastR: 118, size: 2.4 };
     state.cd = cfg.cd != null ? cfg.cd : 0.38;
     var yaw = (state.faceYaw != null) ? state.faceYaw : 0;
@@ -2552,8 +2555,9 @@
       return;
     }
     /* Primary / keyboard / HUD → camera frog only */
-    /* mech3: Tank FIRE (ability / Space / X) instead of hop while driving tank */
+    /* mech4: Tank FIRE ONLY (ability / Space / X / FIRE) — never hop / reload / reset */
     if (state.inTruck && state.vehicleStyle === "tank") {
+      state.hopWantT = 0;
       fireTankShell();
       abilityPadIndex = null;
       return;
@@ -3782,8 +3786,18 @@
       wantAbility = false;
       doAbility();
     }
-    /* ctrl1: buffered X — fire when CD ready */
-    if ((state.hopWantT || 0) > 0) {
+    /* mech4: buffered FIRE while tank (separate from hop buffer) */
+    if (state.inTruck && state.vehicleStyle === "tank") {
+      state.hopWantT = 0; /* hop must never consume ability while tank */
+      if ((state.fireWantT || 0) > 0) {
+        state.fireWantT = Math.max(0, state.fireWantT - dt);
+        if (state.cd <= 0) {
+          state.fireWantT = 0;
+          doAbility();
+        }
+      }
+    } else if ((state.hopWantT || 0) > 0) {
+      /* ctrl1: buffered X — hop when CD ready (non-tank) */
       state.hopWantT = Math.max(0, state.hopWantT - dt);
       if (state.cd <= 0) {
         state.hopWantT = 0;
