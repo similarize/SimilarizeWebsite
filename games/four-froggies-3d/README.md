@@ -1,3 +1,13 @@
+## What's new (ff3d19) — ranch HOUSE pass + kid BGM
+
+- **Stairs + 2nd floor:** real step standY + back-half 2F slab (frogs hop/walk up; no float/clip). Camera opens upstairs.
+- **Explorable rooms (~20):** foyer, living, kitchen, dining, play, fish gallery, pet parlor, mud room, family, hall + upstairs bedrooms/lofts/library/craft/guest/toy/balcony. Interior walls with doorways.
+- **Fish tanks:** 5 big tanks with many animated swimming fish; E to look.
+- **Animal pens:** indoor + yard-adjacent dogs, cats, rabbits, lizards, snakes (lots); E to pet.
+- **Kid BGM:** upbeat cheerful WebAudio loop (bright majors, bouncy melody) — not melodramatic/low/scary.
+- Keeps ff3d18 track physics + ff3d17 Unitree + ff3d16 swim/sub + exit1 lobby. Garage size unchanged. Canon cast only.
+- Cache: `?v=20260928-ff3d19` · asset `index-ff3d19.js`
+
 ## What's new (ff3d18) — dirt track surface physics (serious fix)
 
 - **Root cause:** `Rr` surfY used `+sin(bank)*lat/cos` while ribbon mesh `Le` uses `-sin(bank)*along + cos*0.05` — up to ~8m error on banked lips → vehicles clipped through the ribbon. Frogs used `standY` that ignored the track entirely.
@@ -21,20 +31,3 @@
 - **Submarine:** board the existing docked hull — no second/cloned sub. EXIT leaves that same hull parked.
 - Keeps ff3d15 pond swim + docked sub. Mansion/garage unchanged. Lobby exit1 UX kept.
 - Cache: `?v=20260928-ff3d16` · asset `index-ff3d16.js`
-
-## What's new (ff3d15) — pond swim + docked submarine
-
-- **Swim** in the pond (deeper foot sink; splash tip).
-- **Submarine** docked at the pond south rim — E / Interact to board, dive/drive underwater feel, EXIT parks at exit.
-- Keeps ff3d14 bigger ranch floor / forest / clamps. Mansion/garage unchanged.
-- Cache: `?v=20260928-ff3d15` · asset `index-ff3d15.js`
-- Cast: James, Jimmy, Bubbles, Rexy only.
-
-# Four Froggies 3D — ff3d14 (bigger ranch floor)
-
-Cache: `20260928-ff3d14`
-
-- Expand playable ranch **ground** + push **forest ring** and **world clamps** out so drivers are not stuck at the old tree/clamp rectangle
-- Mansion / garage **same size** (standY + indoor cam clamps unchanged)
-- Keeps floor standY / phone (Unitree) / bank / pond / space / BrPush / camH from ff3d13
-- Includes **exit1** `party-lobby.js` / `party-lobby.css` (Arcade exit + Join CTA)
