@@ -9,7 +9,7 @@
   <!-- Tesla Cybertruck chromeless FS — see games/shared/TESLA_FULLSCREEN.md -->
   <script src="../shared/tesla-fullscreen.js?v=tfs1"></script>
   <script src="../shared/viewport-fill.js?v=vfs1"></script>
-  <link rel="stylesheet" href="style.css?v=20260928-mech1">
+  <link rel="stylesheet" href="style.css?v=20260928-exit1">
 </head>
 <body class="in-title">
   <canvas id="view"></canvas>
@@ -20,6 +20,7 @@
       <span id="lives">🐸 Walk</span>
       <span id="scrap">Scrap 0</span>
       <span id="progress-label">Ranch hub</span>
+      <a id="hud-exit" class="exit-arcade hud-exit" href="/games/">← Arcade</a>
       <button type="button" id="btn-menu" class="menu-btn" aria-label="Lobby">Lobby</button>
     </div>
     <div id="progress-wrap"><div id="progress-bar"></div></div>
@@ -110,6 +111,7 @@
   </div>
 
   <div id="overlay">
+    <a id="exit-arcade" class="exit-arcade" href="/games/">← Arcade</a>
     <img id="splash-art" class="splash-art" src="assets/splash-forest-roof.png?v=20260928-view3" alt="Four froggies on a Cybertruck roof" width="832" height="1248" decoding="async">
     <h1 id="overlay-title">Four Froggies</h1>
     <p id="overlay-sub">Ranch hub · Canvas / Three · couch pads claim seats · scroll to GO</p>
@@ -145,8 +147,8 @@
     <p id="invite-cta" class="invite-cta">Party: <strong>Host room</strong> → Copy invite link or scan QR · friends open link to <strong>Join</strong> · claim froggy seats · Host presses GO. Solo: claim a seat and GO (AI fills open seats).</p>
     <div id="party-bar" class="party-bar">
       <button type="button" id="btn-host" class="party-btn">Host room</button>
-      <button type="button" id="btn-join" class="party-btn">Join room</button>
-      <input type="text" id="join-code" class="join-code" maxlength="8" placeholder="CODE" autocomplete="off" spellcheck="false" aria-label="Room code" hidden>
+      <button type="button" id="btn-join" class="party-btn party-btn-join">Join · enter code</button>
+      <input type="text" id="join-code" class="join-code" maxlength="8" placeholder="CODE" autocomplete="off" spellcheck="false" aria-label="Room code">
       <button type="button" id="btn-copy" class="party-btn" hidden>Copy invite link</button>
       <span id="room-code" class="room-code" hidden></span>
     </div>
@@ -158,14 +160,14 @@
     <button type="button" id="btn-start" class="start-btn">GO · Ranch Hub</button>
   </div>
 
-  <script src="../shared/gamepad.js?v=20260928-mech1"></script>
-  <script src="canon.js?v=20260928-mech1"></script>
-  <script src="ai.js?v=20260928-mech1"></script>
-  <script src="party.js?v=20260928-mech1"></script>
-  <script src="world.js?v=20260928-mech1"></script>
-  <script src="story.js?v=20260928-mech1"></script>
-  <script src="space.js?v=20260928-mech1"></script>
-  <script src="engine-boot.js?v=20260928-mech1"></script>
-  <script src="main.js?v=20260928-mech1"></script>
+  <script src="../shared/gamepad.js?v=20260928-exit1"></script>
+  <script src="canon.js?v=20260928-exit1"></script>
+  <script src="ai.js?v=20260928-exit1"></script>
+  <script src="party.js?v=20260928-exit1"></script>
+  <script src="world.js?v=20260928-exit1"></script>
+  <script src="story.js?v=20260928-exit1"></script>
+  <script src="space.js?v=20260928-exit1"></script>
+  <script src="engine-boot.js?v=20260928-exit1"></script>
+  <script src="main.js?v=20260928-exit1"></script>
 </body>
 </html>

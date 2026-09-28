@@ -7,7 +7,7 @@
   const overlayText = document.getElementById("overlay-text");
   const phone = window.matchMedia("(pointer: coarse), (max-width: 800px)").matches;
 
-  const JOIN_SECS = 10;
+  const JOIN_SECS = 2;
   const FADE_SECS = 1.2;
 
   const keys = new Set();

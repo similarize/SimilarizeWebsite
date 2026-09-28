@@ -1510,3 +1510,40 @@ body.in-space .vjoy.vjoy-hint {
   .wheel-size input[type="range"] { width: min(110px, 32vw); }
   .wheel-size button { width: 32px; height: 32px; font-size: 18px; }
 }
+
+
+/* exit1: obvious Arcade exit on lobby + in-game HUD */
+.exit-arcade {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+  color: #fef3c7;
+  font: 800 13px "Segoe UI", system-ui, sans-serif;
+  text-decoration: none;
+  border: 2px solid rgba(253,230,138,.65);
+  background: rgba(0,0,0,.55);
+  border-radius: 999px;
+  padding: 8px 14px;
+  pointer-events: auto;
+  touch-action: manipulation;
+}
+#overlay > .exit-arcade {
+  position: absolute;
+  top: max(10px, env(safe-area-inset-top));
+  left: max(10px, env(safe-area-inset-left));
+}
+.hud-exit {
+  margin-left: auto;
+  font-size: 12px;
+  padding: 4px 10px;
+}
+#btn-menu { margin-left: 6px; }
+.party-btn-join, #btn-join {
+  border-color: #38bdf8 !important;
+  color: #e0f2fe !important;
+  background: rgba(14,165,233,.28) !important;
+  font-weight: 800;
+  box-shadow: 0 0 0 1px rgba(56,189,248,.35);
+}
+.join-code:not([hidden]) { display: inline-block; }

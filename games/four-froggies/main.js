@@ -1458,11 +1458,10 @@
     if (btnJoin) {
       btnJoin.hidden = role === "host" || role === "guest";
       btnJoin.disabled = role === "guest" && partyMeta.status === "connecting";
-      btnJoin.textContent = role === "guest" ? "Joining…" : "Join room";
+      btnJoin.textContent = role === "guest" ? "Joining…" : "Join · enter code";
     }
     if (joinCodeInput) {
-      const showJoinCode = role === "solo" || (role === "guest" && partyMeta.status === "connecting");
-      // Keep input visible while solo so user can type code then press Join; hide once joined/hosting
+      // exit1: CODE field always visible in solo (and while connecting); Host/ready guest hide it
       joinCodeInput.hidden = role === "host" || (role === "guest" && partyMeta.status === "ready");
       joinCodeInput.disabled = role === "guest";
       if (role === "guest" && partyMeta.room && !joinCodeInput.value) joinCodeInput.value = partyMeta.room;
@@ -1842,14 +1841,17 @@
   }
   if (btnJoin) {
     btnJoin.addEventListener("click", () => {
-      if (joinCodeInput && joinCodeInput.hidden) {
+      if (joinCodeInput) {
         joinCodeInput.hidden = false;
-        joinCodeInput.focus();
-        if (partyStatus) {
-          partyStatus.classList.remove("is-error");
-          partyStatus.textContent = "Enter room code · Join";
+        const raw = String(joinCodeInput.value || "").trim();
+        if (!raw) {
+          joinCodeInput.focus();
+          if (partyStatus) {
+            partyStatus.classList.remove("is-error");
+            partyStatus.textContent = "Type the host CODE then Join";
+          }
+          return;
         }
-        return;
       }
       doJoinFromUi();
     });

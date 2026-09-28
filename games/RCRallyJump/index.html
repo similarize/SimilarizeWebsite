@@ -256,11 +256,26 @@
     .go { border: 0; background: var(--ember); color: var(--sand); }
     .ghost { border: 1px solid var(--line); background: transparent; }
     .hint { margin: 12px 0 0; font-size: 12px; color: var(--muted); }
-    .home {
+    .hud-exit {
+      position: absolute;
+      top: calc(10px + env(safe-area-inset-top));
+      left: 12px;
+      z-index: 8;
+      margin-top: 0;
+      pointer-events: auto;
+      font-size: 12px;
+      padding: 6px 12px;
+    }
+    .home, .exit-arcade {
       display: inline-block;
       margin-top: 14px;
-      color: var(--muted);
-      font-size: 12px;
+      color: #fef3c7;
+      font: 800 14px var(--sans);
+      text-decoration: none;
+      border: 2px solid rgba(253,230,138,.55);
+      background: rgba(0,0,0,.45);
+      border-radius: 999px;
+      padding: 8px 14px;
     }
     .row { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; }
     .pips { display: flex; gap: 6px; margin: 0; pointer-events: auto; touch-action: manipulation; cursor: pointer; }
@@ -388,6 +403,7 @@
 </head>
 <body>
   <div id="shell">
+    <a id="exit-arcade" class="exit-arcade hud-exit" href="/games/">← Arcade</a>
     <canvas id="view"></canvas>
     <div class="hud">
       <div class="score" id="hud-score">
@@ -446,7 +462,7 @@
         </ul>
         <button type="button" class="go" id="start" data-ui>Start run</button>
         <p class="hint">W or hold to boost. A nose up, D front, S nose down. Space or Missile to fire. Xbox: A/RT boost, stick aims, B/X fire.</p>
-        <a class="home" href="https://www.similarize.com/">Similarize</a>
+        <a class="exit-arcade home" href="/games/">← Arcade</a>
       </div>
     </div>
 
@@ -488,6 +504,6 @@
     </div>
   </div>
   <script src="../shared/gamepad.js?v=gp1"></script>
-  <script type="module" src="./standalone.js?v=20260926-play1"></script>
+  <script type="module" src="./standalone.js?v=20260928-exit1"></script>
 </body>
 </html>

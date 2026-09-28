@@ -70,6 +70,13 @@
             font: inherit;
             text-decoration: none;
         }
+        .top a.exit-arcade {
+            font-weight: 800;
+            border: 2px solid rgba(253,230,138,.7);
+            background: rgba(0,0,0,.62);
+            padding: 8px 14px;
+            color: #fef3c7;
+        }
         .scores { font-weight: 700; letter-spacing: 0.02em; }
         .scores b.o { color: #fb923c; }
         .scores b.b { color: #60a5fa; }
@@ -197,7 +204,7 @@
 </head>
 <body>
     <div class="top">
-        <a href="/games/">Games</a>
+        <a class="exit-arcade" href="/games/">← Arcade</a>
         <span class="scores"><b class="o">P1 <span id="s1">0</span></b> · <b class="b">P2 <span id="s2">0</span></b></span>
         <span class="hint">P1 arrows + space · P2 WASD + Q · R resets · Pad: RT fwd · LT back · stick steer · A kick</span>
         <button type="button" id="soundBtn">Sound on</button>
@@ -230,7 +237,7 @@
             <button type="button" class="fire" data-fire="2">KICK</button>
         </div>
     </div>
-    <script src="shared/gamepad.js?v=gp1"></script>
+    <script src="shared/gamepad.js?v=20260928-exit1"></script>
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
@@ -516,10 +523,10 @@
             const d = padDrive(_gp0);
             return {
                 type: 'input',
-                u: (keys['w'] || keys['W'] || keys['ArrowUp'] || d.fwd) ? 1 : 0,
-                d: (keys['s'] || keys['S'] || keys['ArrowDown'] || d.rev) ? 1 : 0,
-                l: (keys['a'] || keys['A'] || keys['ArrowLeft'] || d.steerL) ? 1 : 0,
-                r: (keys['d'] || keys['D'] || keys['ArrowRight'] || d.steerR) ? 1 : 0,
+                u: (keys['w'] || keys['W'] || keys['ArrowUp'] || d.fwd > 0.04) ? 1 : 0,
+                d: (keys['s'] || keys['S'] || keys['ArrowDown'] || d.rev > 0.04) ? 1 : 0,
+                l: (keys['a'] || keys['A'] || keys['ArrowLeft'] || d.steer < -0.2) ? 1 : 0,
+                r: (keys['d'] || keys['D'] || keys['ArrowRight'] || d.steer > 0.2) ? 1 : 0,
                 fire: netFireArmed ? 1 : 0
             };
         }
@@ -706,16 +713,23 @@
             _gp0 = GP ? GP.pollPad(0) : null;
             _gp1 = GP ? GP.pollPad(1) : null;
         }
-        // Soccer RC drive: RT=forward, LT=reverse; stick/dpad steer only while thrusting.
-        // Stick Y never auto-drives. Keyboard Up/W / Down/S still thrust/reverse.
+        // Soccer RC drive: RT=fwd LT=rev (analog preferred via rtValue/ltValue).
+        // Stick X / dpad steer only while thrusting; stick Y never drives. Binary rot was the weird feel.
         function padDrive(g) {
-            if (!g || !g.connected) return { steerL:0, steerR:0, fwd:0, rev:0, thrusting:0 };
-            const fwd = g.rt ? 1 : 0;
-            const rev = g.lt ? 1 : 0;
-            const thrusting = (fwd || rev) ? 1 : 0;
-            const steerL = thrusting && (g.lx < -0.25 || g.dpad.l) ? 1 : 0;
-            const steerR = thrusting && (g.lx > 0.25 || g.dpad.r) ? 1 : 0;
-            return { steerL, steerR, fwd, rev, thrusting };
+            if (!g || !g.connected) return { steer:0, fwd:0, rev:0, thrusting:0 };
+            let fwd = (typeof g.rtValue === 'number') ? g.rtValue : (g.rt ? 1 : 0);
+            let rev = (typeof g.ltValue === 'number') ? g.ltValue : (g.lt ? 1 : 0);
+            fwd = Math.max(0, Math.min(1, fwd));
+            rev = Math.max(0, Math.min(1, rev));
+            if (fwd > 0 && rev > 0) { if (fwd >= rev) rev = 0; else fwd = 0; }
+            const thrusting = (fwd > 0.04 || rev > 0.04) ? 1 : 0;
+            let steer = 0;
+            if (thrusting) {
+                if (g.dpad && g.dpad.l) steer = -1;
+                else if (g.dpad && g.dpad.r) steer = 1;
+                else steer = Math.max(-1, Math.min(1, g.lx || 0));
+            }
+            return { steer, fwd, rev, thrusting };
         }
         function updateCarControls(car) {
             if (car.isDestroyed) return;
@@ -729,20 +743,24 @@
             const d1 = padDrive(_gp1);
 
             if (car === car1) {
-                if (keys['ArrowLeft'] || d0.steerL) car.rotation = -ROTATION_SPEED;
-                else if (keys['ArrowRight'] || d0.steerR) car.rotation = ROTATION_SPEED;
-                else car.rotation = 0;
-                if (keys['ArrowUp'] || d0.fwd) car.speed = car.maxSpeed;
-                else if (keys['ArrowDown'] || d0.rev) car.speed = -car.maxSpeed/2;
+                const keySteer = keys['ArrowLeft'] ? -1 : keys['ArrowRight'] ? 1 : 0;
+                const steer = keySteer || d0.steer;
+                car.rotation = steer * ROTATION_SPEED;
+                if (keys['ArrowUp']) car.speed = car.maxSpeed;
+                else if (keys['ArrowDown']) car.speed = -car.maxSpeed / 2;
+                else if (d0.fwd > 0) car.speed = car.maxSpeed * d0.fwd;
+                else if (d0.rev > 0) car.speed = -(car.maxSpeed / 2) * d0.rev;
                 else car.speed = 0;
             }
             if (car === car2) {
                 // pad1 only — single pad must not steal car2
-                if (keys['a'] || keys['A'] || d1.steerL) car.rotation = -ROTATION_SPEED;
-                else if (keys['d'] || keys['D'] || d1.steerR) car.rotation = ROTATION_SPEED;
-                else car.rotation = 0;
-                if (keys['w'] || keys['W'] || d1.fwd) car.speed = car.maxSpeed;
-                else if (keys['s'] || keys['S'] || d1.rev) car.speed = -car.maxSpeed/2;
+                const keySteer = (keys['a'] || keys['A']) ? -1 : (keys['d'] || keys['D']) ? 1 : 0;
+                const steer = keySteer || d1.steer;
+                car.rotation = steer * ROTATION_SPEED;
+                if (keys['w'] || keys['W']) car.speed = car.maxSpeed;
+                else if (keys['s'] || keys['S']) car.speed = -car.maxSpeed / 2;
+                else if (d1.fwd > 0) car.speed = car.maxSpeed * d1.fwd;
+                else if (d1.rev > 0) car.speed = -(car.maxSpeed / 2) * d1.rev;
                 else car.speed = 0;
             }
 

@@ -49,17 +49,18 @@
       text-shadow: 0 0 3px #000, 0 0 3px #000, 0 1px 2px #000;
     }
     .leaflet-tooltip.bom-label::before { display: none; }
-    .back {
+    .back, .exit-arcade {
       position: absolute;
       z-index: 500;
       left: 10px;
       bottom: max(10px, env(safe-area-inset-bottom));
-      background: rgba(255,255,255,.92);
-      color: #1c1917;
+      background: rgba(28,25,23,.88);
+      color: #fef3c7;
+      font: 800 14px system-ui, sans-serif;
       text-decoration: none;
+      border: 2px solid rgba(253,230,138,.65);
       border-radius: 999px;
-      padding: 6px 12px;
-      font-size: 13px;
+      padding: 8px 14px;
     }
     #status {
       position: absolute;
@@ -86,7 +87,7 @@
     <label class="file">Open a KML<input id="file" type="file" accept=".kml,.xml,text/xml"></label>
   </div>
   <div id="status"></div>
-  <a class="back" href="/games/">All games</a>
+  <a class="back exit-arcade" href="/games/">← Arcade</a>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="../shared/gamepad.js?v=gp1"></script>
   <script>

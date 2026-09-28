@@ -30,14 +30,25 @@
     var startBtn = card.querySelector("button.start");
     if (!startBtn) return false;
 
+    // exit1: clear Arcade exit on 3D gate (do not touch ranch/space bundles)
+    if (!document.getElementById("ff3d-exit-arcade")) {
+      var exitA = document.createElement("a");
+      exitA.id = "ff3d-exit-arcade";
+      exitA.className = "exit-arcade ff3d-exit";
+      exitA.href = "/games/";
+      exitA.textContent = "← Arcade";
+      var gate = document.querySelector(".gate") || document.body;
+      gate.appendChild(exitA);
+    }
+
     var wrap = document.createElement("div");
     wrap.className = "ff3d-party";
     wrap.innerHTML =
       '<p class="invite-cta">Party: <strong>Host room</strong> → Copy invite / scan QR · friends open link to <strong>Join</strong> · claim seats · Host presses Start. Solo: claim a seat and Start (AI fills open seats).</p>' +
       '<div class="party-bar">' +
       '<button type="button" class="party-btn" id="ff3d-btn-host">Host room</button>' +
-      '<button type="button" class="party-btn" id="ff3d-btn-join">Join room</button>' +
-      '<input class="join-code" id="ff3d-join-code" maxlength="6" placeholder="CODE" hidden autocomplete="off" spellcheck="false" />' +
+      '<button type="button" class="party-btn party-btn-join" id="ff3d-btn-join">Join · enter code</button>' +
+      '<input class="join-code" id="ff3d-join-code" maxlength="6" placeholder="CODE" autocomplete="off" spellcheck="false" aria-label="Room code" />' +
       '<button type="button" class="party-btn" id="ff3d-btn-copy" hidden>Copy invite link</button>' +
       '<span class="room-code" id="ff3d-room-code" aria-live="polite"></span>' +
       "</div>" +
@@ -55,13 +66,23 @@
     $("ff3d-btn-join").addEventListener("click", function () {
       var input = $("ff3d-join-code");
       if (!party) return;
-      if (input.hidden) {
-        input.hidden = false;
-        input.focus();
+      if (input) input.hidden = false;
+      var code = String((input && input.value) || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+      if (code.length < 3) {
+        if (input) input.focus();
+        var st = $("ff3d-party-status");
+        if (st) {
+          st.classList.remove("is-error");
+          st.textContent = "Type the host CODE then Join";
+        }
         return;
       }
-      var code = String(input.value || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
-      if (code.length >= 3) party.joinRoom(code);
+      try {
+        var u = new URL(location.href);
+        u.searchParams.set("room", code);
+        history.replaceState(null, "", u.pathname + u.search + u.hash);
+      } catch (e) {}
+      party.joinRoom(code);
       paintParty();
     });
     $("ff3d-join-code").addEventListener("keydown", function (e) {
@@ -155,8 +176,16 @@
       hostBtn.textContent = role === "host" ? "Hosting…" : "Host room";
       hostBtn.disabled = role === "host" && partyMeta.status === "ready";
     }
-    if (joinBtn) joinBtn.hidden = role === "host";
-    if (joinInput && role === "host") joinInput.hidden = true;
+    if (joinBtn) {
+      joinBtn.hidden = role === "host" || role === "guest";
+      joinBtn.disabled = role === "guest" && partyMeta.status === "connecting";
+      joinBtn.textContent = role === "guest" ? "Joining…" : "Join · enter code";
+    }
+    if (joinInput) {
+      joinInput.hidden = role === "host" || (role === "guest" && partyMeta.status === "ready");
+      joinInput.disabled = role === "guest";
+      if (role === "guest" && partyMeta.room && !joinInput.value) joinInput.value = partyMeta.room;
+    }
     if (qr) {
       if (role === "host" && partyMeta.invite) {
         qr.hidden = false;
