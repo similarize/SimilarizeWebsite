@@ -474,6 +474,8 @@
         /* polish11: no sticky EXIT billboard — brief toast / exitTip only; INTERACT button shows EXIT */
         if (storyToastT > 0 && storyToast) tipEl.textContent = storyToast;
         else if (exitTipT > 0) tipEl.textContent = "EXIT · INTERACT / E";
+        else if (hudBoarded.inTruck && global.FroggiesCanon && global.FroggiesCanon.isTankVehicle && global.FroggiesCanon.isTankVehicle(hudBoarded))
+          tipEl.textContent = "FIRE · ability / X · EXIT INTERACT";
         else tipEl.textContent = "";
       } else if (storyToastT > 0) tipEl.textContent = storyToast;
       else if (nearHot && (nearHot.kind === "mech" || (nearHot.id && String(nearHot.id).indexOf("mech") === 0))) {
@@ -546,12 +548,15 @@
     const me = localPlayer();
     if (!me || !btnAbility) return;
     const def = FROG_DEFS[me.id];
+    const Cabil = global.FroggiesCanon;
+    const tankFire = !!(me.inTruck && Cabil && Cabil.isTankVehicle && Cabil.isTankVehicle(me));
+    const label = tankFire ? "FIRE" : def.ability;
     /* hop3: sub-second anti-tap CD — do not flash a fake "1s" */
-    btnAbility.textContent = me.cd > 0.25 ? def.ability + " " + Math.ceil(me.cd) + "s" : def.ability;
+    btnAbility.textContent = me.cd > 0.25 ? label + " " + Math.ceil(me.cd) + "s" : label;
     btnAbility.classList.toggle("ready", me.cd <= 0);
     btnAbility.classList.toggle("cd", me.cd > 0);
     /* polish7: role temp labels hang as TBD — do not lock roles */
-    btnAbility.dataset.roleTbd = def.ability;
+    btnAbility.dataset.roleTbd = label;
   }
 
   /* hop1/interact2: HOP feedback on shared HUD (fires for the frog that hopped) */
@@ -559,7 +564,7 @@
     if (!btnAbility) return;
     const def = FROG_DEFS[frogId] || FROG_DEFS.james;
     const kind = (def.ability || "HOP").toLowerCase();
-    btnAbility.classList.remove("fire-dash", "fire-shield", "fire-zap", "fire-bot", "fire-zoom", "fire-hop");
+    btnAbility.classList.remove("fire-dash", "fire-shield", "fire-zap", "fire-bot", "fire-zoom", "fire-hop", "fire-fire");
     void btnAbility.offsetWidth;
     btnAbility.classList.add("fire-" + kind);
     btnAbility.classList.add("ability-fired");
@@ -595,6 +600,31 @@
       return;
     }
     const def = FROG_DEFS[frog.id];
+    const Ctank = global.FroggiesCanon;
+    /* mech2: Tank FIRE — ability / X / click shoots forward from turret (no hop) */
+    if (frog.inTruck && Ctank && Ctank.isTankVehicle && Ctank.isTankVehicle(frog)) {
+      const cfg = Ctank.TANK_FIRE || { cd: 0.28 };
+      frog.cd = cfg.cd != null ? cfg.cd : 0.28;
+      if (btnAbility) {
+        btnAbility.classList.remove("fire-dash", "fire-shield", "fire-zap", "fire-bot", "fire-zoom", "fire-hop", "fire-fire");
+        void btnAbility.offsetWidth;
+        btnAbility.classList.add("fire-fire", "ability-fired");
+        setTimeout(function () {
+          btnAbility.classList.remove("fire-fire", "ability-fired");
+        }, 480);
+      }
+      beep(180, 0.05, "sawtooth", 0.06);
+      beep(90, 0.08, "square", 0.05);
+      const ang = (frog.faceAngle != null && isFinite(frog.faceAngle))
+        ? frog.faceAngle
+        : (frog.facing >= 0 ? 0 : Math.PI);
+      if (world && W.spawnTankShell) W.spawnTankShell(world, frog.x, frog.y, ang, frog.id);
+      shakeT = 0.1;
+      storyToast = "FIRE!";
+      storyToastT = 0.9;
+      updateAbilityButton();
+      return;
+    }
     frog.cd = def.cdMax;
     flashAbilityButton(frog.id);
     beep(660, 0.06, "square", 0.05);
@@ -800,7 +830,7 @@
         storyToast = hot.mode === "shared"
           ? "All aboard! Four froggies · one Cybertruck · hit the jumps!"
           : vs === "ripsaw" ? "Driving Ripsaw · tracked · hit the jumps!"
-          : vs === "tank" ? "Driving Tank · hit the jumps!"
+          : vs === "tank" ? ((global.FroggiesCanon && global.FroggiesCanon.tankDrivingTip) ? global.FroggiesCanon.tankDrivingTip() : "Driving Tank · FIRE (ability / X) · EXIT INTERACT")
           : "Driving Cybertruck · hit the jumps!";
         beep(200, 0.1, "sawtooth", 0.04);
         exitTipT = 2.4;
@@ -1461,7 +1491,8 @@
       btnJoin.textContent = role === "guest" ? "Joining…" : "Join · enter code";
     }
     if (joinCodeInput) {
-      // exit1: CODE field always visible in solo (and while connecting); Host/ready guest hide it
+      const showJoinCode = role === "solo" || (role === "guest" && partyMeta.status === "connecting");
+      // Keep input visible while solo so user can type code then press Join; hide once joined/hosting
       joinCodeInput.hidden = role === "host" || (role === "guest" && partyMeta.status === "ready");
       joinCodeInput.disabled = role === "guest";
       if (role === "guest" && partyMeta.room && !joinCodeInput.value) joinCodeInput.value = partyMeta.room;

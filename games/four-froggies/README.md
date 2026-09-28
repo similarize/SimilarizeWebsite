@@ -1,3 +1,10 @@
+## What's new (mech2) — Tank FIRE while driving
+
+- **Tank shoot (Canvas + Three lobby):** while driving the shared **Tank**, ability button / gamepad **X·B** / Space fires a **forward shell from the turret** (hull facing). Short CD (~0.28s). Ability HUD shows **FIRE**.
+- Tip on board + while driving: **FIRE · ability / X · EXIT INTERACT**. Toys/animals take a shove on Canvas hit.
+- Ripsaw / Cybertrucks / mechs unchanged (still HOP). **Not** standalone `four-froggies-3d`.
+- Cache-bust: `?v=20260928-mech2`. Cast: James, Jimmy, Bubbles, Rexy.
+
 ## What's new (mech1) — mech ownership locks + Ripsaw + Tank
 
 - **Mech ownership (Canvas + Three lobby engines):** only the named froggy may board each mech — **James → trillion-story**, **Rexy → thousand-story (1000)**, **Bubbles → ten-story**, **Jimmy → hundred-story**. Wrong froggy gets a clear tip (near + on INTERACT); cannot enter/drive.

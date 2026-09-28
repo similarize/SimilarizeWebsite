@@ -27,6 +27,7 @@
    hop4: faster always-hop carry/plant/launch; humanoid frogs (torso+head, spring legs);
    particle caps; sunset sky shift over play time.
    mobile1: phone+desktop shared UI — smaller/toggle-friendly mini-map + harder particle caps on narrow.
+   mech2: Tank FIRE shells (forward from turret) while driving.
    ~10× map: real roam between ranch house / track / pond / Starship.
    James ranch house: big house, backyard (animals), huge garage (toys + 10/100-story mechs);
    1000-story + trillion-story mechs sit out back (won't fit). Four Cybertrucks + shared pile-in.
@@ -273,7 +274,7 @@
       { id: "truck-rexy", label: "Cybertruck · Rexy", x: 2480, y: 1720, r: 54, tip: "Rexy Cybertruck · solo drive", kind: "truck", frogId: "rexy", mode: "solo", vehicleStyle: "cybertruck" },
       { id: "truck-shared", label: "★ ALL ABOARD · 4 frogs", x: 2180, y: 1880, r: 78, tip: "Shared Cybertruck · all four pile in", kind: "truck", frogId: null, mode: "shared", vehicleStyle: "cybertruck" },
       { id: "truck-ripsaw", label: "Ripsaw", x: 780, y: 1520, r: 62, tip: "Shared Ripsaw · tracked · any frog", kind: "truck", frogId: null, mode: "solo", vehicleStyle: "ripsaw" },
-      { id: "truck-tank", label: "Tank", x: 1080, y: 1520, r: 62, tip: "Shared Tank · any frog", kind: "truck", frogId: null, mode: "solo", vehicleStyle: "tank" },
+      { id: "truck-tank", label: "Tank", x: 1080, y: 1520, r: 62, tip: "Shared Tank · FIRE while driving · any frog", kind: "truck", frogId: null, mode: "solo", vehicleStyle: "tank" },
       { id: "mech-10", label: "Bubbles · 10-story mech", x: 820, y: 1680, r: 64, tip: "Bubbles only · 10-story mech", kind: "mech", stories: 10, solidId: "mech10", frogId: "bubbles" },
       { id: "mech-100", label: "Jimmy · 100-story mech", x: 980, y: 1700, r: 78, tip: "Jimmy only · 100-story mech", kind: "mech", stories: 100, solidId: "mech100", frogId: "jimmy" },
       { id: "mech-1000", label: "Rexy · 1000-story mech", x: 340, y: 2420, r: 120, tip: "Rexy only · 1000-story mech", kind: "mech", stories: 1000, solidId: "mech1000", frogId: "rexy" },
@@ -407,6 +408,7 @@
     world.splashes = [];
     world.bubbles = [];
     world.sparks = [];
+    world.shells = []; /* mech2: tank projectiles */
     world.ambient = [];
     world.ripples = [];
     world.sparkles = [];
@@ -611,6 +613,36 @@
     }
   }
 
+  /* mech2: tank shell — forward from turret along faceAngle */
+  function spawnTankShell(world, x, y, faceAngle, ownerId) {
+    if (!world) return null;
+    if (!world.shells) world.shells = [];
+    var C = global.FroggiesCanon;
+    var cfg = (C && C.TANK_FIRE) || { speed: 640, life: 1.2, muzzle: 42, hitR: 22 };
+    var ang = (faceAngle != null && isFinite(faceAngle)) ? faceAngle : 0;
+    var cx = Math.cos(ang), cy = Math.sin(ang);
+    var muzzle = cfg.muzzle != null ? cfg.muzzle : 42;
+    var spd = cfg.speed != null ? cfg.speed : 640;
+    var life = cfg.life != null ? cfg.life : 1.2;
+    var shell = {
+      x: x + cx * muzzle,
+      y: y + cy * muzzle,
+      vx: cx * spd,
+      vy: cy * spd,
+      ang: ang,
+      life: life,
+      maxLife: life,
+      ownerId: ownerId || null,
+      r: cfg.hitR != null ? cfg.hitR : 22,
+    };
+    world.shells.push(shell);
+    if (world.shells.length > 24) world.shells.splice(0, world.shells.length - 24);
+    spawnSparks(world, shell.x, shell.y, 6);
+    spawnDust(world, x - cx * 8, y - cy * 8, 3);
+    return shell;
+  }
+
+
   function spawnRipple(world, x, y, maxR) {
     if (!world.ripples) world.ripples = [];
     world.ripples.push({
@@ -803,6 +835,38 @@
       var k = world.sparks[i];
       k.life -= dt; k.x += k.vx * dt; k.y += k.vy * dt; k.vy += 220 * dt;
       if (k.life <= 0) world.sparks.splice(i, 1);
+    }
+    /* mech2: tank shells fly + shove toys/animals */
+    if (!world.shells) world.shells = [];
+    for (i = world.shells.length - 1; i >= 0; i--) {
+      var sh = world.shells[i];
+      sh.life -= dt;
+      sh.x += sh.vx * dt;
+      sh.y += sh.vy * dt;
+      if (sh.life <= 0 || sh.x < -40 || sh.y < -40 || sh.x > MAP_W + 40 || sh.y > MAP_H + 40) {
+        world.shells.splice(i, 1);
+        continue;
+      }
+      var hit = false;
+      var lists = [world.toys || [], world.animals || []];
+      for (var li = 0; li < lists.length && !hit; li++) {
+        var arr = lists[li];
+        for (var j = 0; j < arr.length; j++) {
+          var prop = arr[j];
+          if (!prop) continue;
+          var pr = prop.r || 10;
+          var dx = prop.x - sh.x, dy = prop.y - sh.y;
+          if (dx * dx + dy * dy < (pr + (sh.r || 18)) * (pr + (sh.r || 18))) {
+            prop.vx = (prop.vx || 0) + sh.vx * 0.35;
+            prop.vy = (prop.vy || 0) + sh.vy * 0.35;
+            spawnSparks(world, sh.x, sh.y, 5);
+            spawnDust(world, sh.x, sh.y, 4);
+            hit = true;
+            break;
+          }
+        }
+      }
+      if (hit) world.shells.splice(i, 1);
     }
     /* polish10: hard caps if arrays ballooned */
     var capsFx = particleCaps();
@@ -3836,6 +3900,24 @@
       ctx.fillStyle = "hsla(" + k.hue + ", 90%, 60%, " + clamp(k.life * 2, 0, 1) + ")";
       ctx.fillRect(kp.x, kp.y - (0.4 - k.life) * 20, 3, 3);
     }
+    /* mech2: tank shells */
+    for (i = 0; i < (world.shells || []).length; i++) {
+      var shd = world.shells[i];
+      var shp = project(shd.x, shd.y, camX, camY, vw, vh);
+      var sha = clamp((shd.life / (shd.maxLife || 1.2)) * 1.2, 0.25, 1);
+      ctx.save();
+      ctx.translate(shp.x, shp.y);
+      ctx.rotate(shd.ang || 0);
+      ctx.fillStyle = "rgba(253, 224, 71, " + sha + ")";
+      ctx.fillRect(-2 * shp.depth, -2.2 * shp.depth, 14 * shp.depth, 4.4 * shp.depth);
+      ctx.fillStyle = "rgba(248, 113, 113, " + sha + ")";
+      ctx.fillRect(8 * shp.depth, -1.6 * shp.depth, 6 * shp.depth, 3.2 * shp.depth);
+      ctx.fillStyle = "rgba(254, 243, 199, " + (sha * 0.7) + ")";
+      ctx.beginPath();
+      ctx.arc(0, 0, 2.4 * shp.depth, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
     /* polish5: pond ripple rings */
     for (i = 0; i < (world.ripples || []).length; i++) {
       var rp = world.ripples[i];
@@ -4268,6 +4350,7 @@
     spawnBubbles: spawnBubbles,
     spawnSplash: spawnSplash,
     spawnSparks: spawnSparks,
+    spawnTankShell: spawnTankShell,
     spawnRipple: spawnRipple,
     spawnSparkle: spawnSparkle,
     spawnKitFx: spawnKitFx,

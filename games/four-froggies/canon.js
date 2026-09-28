@@ -17,7 +17,8 @@
    hop4: snappier always-hop (higher carry / shorter plant / higher launch); humanoid frog silhouette.
    yard1: James backyard trees/shrubs/creek/rocks/flowers/fence (soft stream) + outdoor trillion-story mech.
    park1: EXIT mech/truck leaves vehicle at exit pos (no snap-home); reset/menu restores pads.
-   mech1: mech ownership locks (James=trillion, Rexy=1000, Bubbles=10, Jimmy=100) + shared Ripsaw/Tank. */
+   mech1: mech ownership locks (James=trillion, Rexy=1000, Bubbles=10, Jimmy=100) + shared Ripsaw/Tank.
+   mech2: Tank can FIRE (ability / X) while driving — forward shell from turret (Canvas + Three). */
 (function (global) {
   "use strict";
 
@@ -238,7 +239,7 @@
     { id: "truck-rexy", label: "Cybertruck · Rexy", x: 2480, y: 1720, r: 54, tip: "Rexy Cybertruck · solo drive", kind: "truck", frogId: "rexy", mode: "solo", vehicleStyle: "cybertruck" },
     { id: "truck-shared", label: "★ ALL ABOARD · 4 frogs", x: 2180, y: 1880, r: 78, tip: "Shared Cybertruck · all four pile in", kind: "truck", frogId: null, mode: "shared", vehicleStyle: "cybertruck" },
     { id: "truck-ripsaw", label: "Ripsaw", x: 780, y: 1520, r: 62, tip: "Shared Ripsaw · tracked · any frog", kind: "truck", frogId: null, mode: "solo", vehicleStyle: "ripsaw" },
-    { id: "truck-tank", label: "Tank", x: 1080, y: 1520, r: 62, tip: "Shared Tank · any frog", kind: "truck", frogId: null, mode: "solo", vehicleStyle: "tank" },
+    { id: "truck-tank", label: "Tank", x: 1080, y: 1520, r: 62, tip: "Shared Tank · FIRE while driving · any frog", kind: "truck", frogId: null, mode: "solo", vehicleStyle: "tank" },
     { id: "mech-10", label: "Bubbles · 10-story mech", x: COMPOUND.mech10.x, y: COMPOUND.mech10.y, r: 64, tip: "Bubbles only · 10-story mech", kind: "mech", stories: 10, solidId: "mech10", frogId: "bubbles" },
     { id: "mech-100", label: "Jimmy · 100-story mech", x: COMPOUND.mech100.x, y: COMPOUND.mech100.y, r: 78, tip: "Jimmy only · 100-story mech", kind: "mech", stories: 100, solidId: "mech100", frogId: "jimmy" },
     { id: "mech-1000", label: "Rexy · 1000-story mech", x: COMPOUND.mech1000.x, y: COMPOUND.mech1000.y, r: 120, tip: "Rexy only · 1000-story mech", kind: "mech", stories: 1000, solidId: "mech1000", frogId: "rexy" },
@@ -422,6 +423,21 @@
     if (id.indexOf("ripsaw") >= 0) return "ripsaw";
     if (id.indexOf("tank") >= 0) return "tank";
     return "cybertruck";
+  }
+
+  /* mech2: Tank FIRE — short CD, forward shell from turret */
+  var TANK_FIRE = { cd: 0.28, speed: 640, life: 1.2, muzzle: 42, hitR: 22 };
+
+  function isTankVehicle(styleOrFrog) {
+    if (!styleOrFrog) return false;
+    if (typeof styleOrFrog === "string") return styleOrFrog === "tank";
+    if (styleOrFrog.vehicleStyle === "tank") return true;
+    if (styleOrFrog.truckId) return vehicleStyleOf(styleOrFrog.truckId) === "tank";
+    return false;
+  }
+
+  function tankDrivingTip() {
+    return "Driving Tank · FIRE (ability / X) · EXIT INTERACT";
   }
 
   function rampAt(x, y) {
@@ -1086,6 +1102,9 @@
     canBoardMech: canBoardMech,
     mechDeniedTip: mechDeniedTip,
     vehicleStyleOf: vehicleStyleOf,
+    TANK_FIRE: TANK_FIRE,
+    isTankVehicle: isTankVehicle,
+    tankDrivingTip: tankDrivingTip,
     MECH_OWNER_BY_SOLID: MECH_OWNER_BY_SOLID,
     mechStoriesLabel: mechStoriesLabel,
     mechBand: mechBand,

@@ -23,6 +23,7 @@
    hop2: ranch foot ALWAYS hops (continuous arc); ability HOP = bigger jump.
    yard1: backyard creek/trees + outdoor trillion mech; park1: EXIT parks at exit pos.
    mech1: mech ownership locks + shared Ripsaw/Tank (garage).
+   mech2: Tank FIRE shells while driving (ability / X).
    interact2: interact/exit + HOP strictly per pad/player; shared HUD = primary only.
    hop3: faster loco + spam HOP + stack; articulated mechs.
    track3: banks + rocks + live monster wheels (preserved).
@@ -589,6 +590,9 @@
     barrel.rotation.z = Math.PI / 2; barrel.position.set(0.75, 0.62, 0); g.add(barrel);
     g.userData.wheels = []; g.userData.arches = [];
     g.userData.bodyMat = hullM;
+    g.userData.turret = tur;
+    g.userData.barrel = barrel;
+    g.userData.muzzleLocal = new THREE.Vector3(1.35, 0.62, 0); /* mech2: shell spawn along +X hull */
     var ts = (C.TRUCK_VIS && C.TRUCK_VIS.threeScale != null) ? C.TRUCK_VIS.threeScale : 2.05;
     g.scale.setScalar(ts); g.userData.truckScale = ts;
     g.userData.vehicleStyle = "tank";
@@ -2222,7 +2226,7 @@
         state.toast = state.truckMode === "shared"
           ? "All aboard! Four froggies · one Cybertruck · hit the jumps!"
           : state.vehicleStyle === "ripsaw" ? "Driving Ripsaw · tracked · hit the jumps!"
-          : state.vehicleStyle === "tank" ? "Driving Tank · hit the jumps!"
+          : state.vehicleStyle === "tank" ? (C.tankDrivingTip ? C.tankDrivingTip() : "Driving Tank · FIRE (ability / X) · EXIT INTERACT")
           : "Driving Cybertruck · hit the jumps!";
         state.exitTipT = 2.4;
       } else if (C.isMechHotspot && C.isMechHotspot(state.near)) {
@@ -2346,6 +2350,86 @@
     return true;
   }
 
+
+  /* mech2: Tank FIRE — forward shell from turret along faceYaw */
+  function fireTankShell() {
+    if (!state || !state.inTruck || state.vehicleStyle !== "tank") return false;
+    if (state.cd > 0) {
+      state.hopWantT = Math.max(state.hopWantT || 0, 0.15);
+      return false;
+    }
+    var cfg = (C.TANK_FIRE) || { cd: 0.28, speed: 14, life: 1.2, muzzle: 1.55 };
+    state.cd = cfg.cd != null ? cfg.cd : 0.28;
+    var yaw = (state.faceYaw != null) ? state.faceYaw : 0;
+    var spA = Math.hypot(state.vx || 0, state.vz || 0);
+    if (spA > 1.0) yaw = Math.atan2(state.vx, state.vz);
+    var fx = Math.sin(yaw), fz = Math.cos(yaw);
+    var muzzle = cfg.muzzle != null ? cfg.muzzle : 1.55;
+    /* World units in Three (~canon speed / ~45) */
+    var spd = cfg.speed != null ? (cfg.speed > 40 ? cfg.speed / 45 : cfg.speed) : 14;
+    var life = cfg.life != null ? cfg.life : 1.2;
+    var px = state.player.position.x + fx * muzzle;
+    var py = 0.55 + (state.zLift || 0);
+    var pz = state.player.position.z + fz * muzzle;
+    var shellGeo = (typeof THREE.CapsuleGeometry === "function")
+      ? new THREE.CapsuleGeometry(0.08, 0.28, 4, 8)
+      : new THREE.SphereGeometry(0.1, 8, 6);
+    var mesh = new THREE.Mesh(shellGeo, new THREE.MeshBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 1 }));
+    if (typeof THREE.CapsuleGeometry !== "function") mesh.scale.set(2.2, 0.75, 0.75);
+    mesh.position.set(px, py, pz);
+    mesh.rotation.y = yaw;
+    scene.add(mesh);
+    if (!state.shells) state.shells = [];
+    state.shells.push({
+      mesh: mesh,
+      vx: fx * spd,
+      vz: fz * spd,
+      life: life,
+      maxLife: life,
+      yaw: yaw,
+    });
+    if (state.shells.length > 20) {
+      var old = state.shells.shift();
+      if (old && old.mesh && old.mesh.parent) old.mesh.parent.remove(old.mesh);
+    }
+    /* muzzle flash sparks */
+    if (!state.fx) state.fx = [];
+    for (var zi = 0; zi < 7; zi++) {
+      var spark = new THREE.Mesh(
+        new THREE.SphereGeometry(0.05 + (zi % 3) * 0.02, 5, 4),
+        new THREE.MeshBasicMaterial({ color: zi % 2 ? 0xfbbf24 : 0xf87171, transparent: true, opacity: 0.95 })
+      );
+      spark.position.set(px - fx * 0.1, py, pz - fz * 0.1);
+      scene.add(spark);
+      state.fx.push({ mesh: spark, life: 0.28 + zi * 0.02, rise: 1.2, vx: fx * (2 + zi * 0.3), vz: fz * (2 + zi * 0.3) });
+    }
+    state.toast = "FIRE!";
+    state.toastT = 0.9;
+    if (hooks.onToast) hooks.onToast(state.toast);
+    if (hooks.onAbilityFire) hooks.onAbilityFire(state.frogId, "FIRE");
+    return true;
+  }
+
+  function tickTankShells(dt) {
+    if (!state || !state.shells) return;
+    for (var i = state.shells.length - 1; i >= 0; i--) {
+      var sh = state.shells[i];
+      sh.life -= dt;
+      if (sh.mesh) {
+        sh.mesh.position.x += sh.vx * dt;
+        sh.mesh.position.z += sh.vz * dt;
+        if (sh.mesh.material) sh.mesh.material.opacity = Math.max(0.2, sh.life / (sh.maxLife || 1.2));
+        if (sh.mesh.material && sh.mesh.material.transparent !== true) {
+          sh.mesh.material.transparent = true;
+        }
+      }
+      if (sh.life <= 0) {
+        if (sh.mesh && sh.mesh.parent) sh.mesh.parent.remove(sh.mesh);
+        state.shells.splice(i, 1);
+      }
+    }
+  }
+
   function doAbility() {
     /* interact2: HOP only the frog whose pad/HUD pressed — never all locals */
     if (!state) return;
@@ -2358,6 +2442,12 @@
       return;
     }
     /* Primary / keyboard / HUD → camera frog only */
+    /* mech2: Tank FIRE (ability) instead of hop while driving tank */
+    if (state.inTruck && state.vehicleStyle === "tank") {
+      fireTankShell();
+      abilityPadIndex = null;
+      return;
+    }
     if (state.inMech) {
       /* ctrl1: only pilot / primary HUD may hop the mech — real jump, not toast-only stomp */
       var pilot = state.mechPilotPadIndex;
@@ -2455,6 +2545,7 @@
     state.toastT = Math.max(0, state.toastT - dt);
     state.exitTipT = Math.max(0, (state.exitTipT || 0) - dt);
     state.bob += dt * 10;
+    tickTankShells(dt);
 
     if (state.mode === "space" && state.solarBodies) {
       state.spaceTime = (state.spaceTime || 0) + dt;
@@ -3608,7 +3699,7 @@
         label: label,
         scrap: state.mode === "space" ? state.catches : state.scrap,
         tip: (state.inTruck || state.inMech)
-          ? (state.toastT > 0 ? state.toast : ((state.exitTipT || 0) > 0 ? "EXIT · INTERACT / E" : ""))
+          ? (state.toastT > 0 ? state.toast : ((state.exitTipT || 0) > 0 ? "EXIT · INTERACT / E" : (state.inTruck && state.vehicleStyle === "tank" ? "FIRE · ability / X · EXIT INTERACT" : "")))
           : (state.toastT > 0 ? state.toast : state.inOrbit ? "Orbit locked · Escape or hard thruster" : state.near ? (
             (C.isMechHotspot && C.isMechHotspot(state.near) && C.canBoardMech && !C.canBoardMech(state.frogId, state.near))
               ? ((C.mechDeniedTip ? C.mechDeniedTip(state.frogId, state.near) : state.near.tip) + " · INTERACT")
@@ -3618,7 +3709,7 @@
         inTruck: !!state.inTruck,
         inMech: !!state.inMech,
         near: (state.inTruck || state.inMech) ? true : state.near,
-        ability: "HOP",
+        ability: (state.inTruck && state.vehicleStyle === "tank") ? "FIRE" : "HOP",
         cd: state.cd,
         walk: (function () {
           if (state.mode === "space") return state.inOrbit ? "🌍 Orbit" : "🚀 Space";

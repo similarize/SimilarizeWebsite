@@ -877,6 +877,10 @@ body.in-space #overlay {
   animation: abil-fire-hop 0.45s ease-out;
   background: rgba(74, 222, 128, 0.9) !important;
 }
+#btn-ability.fire-fire {
+  animation: abil-fire-fire 0.4s ease-out;
+  background: rgba(251, 191, 36, 0.95) !important;
+}
 #btn-ability.fire-zoom {
   animation: abil-fire-zoom 0.45s ease-out;
   background: rgba(125, 211, 252, 0.85) !important;
@@ -939,6 +943,11 @@ body.in-space #overlay {
 .contact-btn.blue-pet-bounce {
   border-color: #93c5fd;
   background: linear-gradient(135deg, rgba(37, 99, 235, 0.45), rgba(0,0,0,0.3));
+}
+@keyframes abil-fire-fire {
+  0% { filter: brightness(1.8); transform: scale(1.16); box-shadow: 0 0 28px rgba(251, 191, 36, 0.9); }
+  45% { transform: scale(1.08) translateY(-3px); }
+  100% { filter: brightness(1); transform: scale(1); }
 }
 @keyframes blue-pet-bounce {
   0%, 100% { transform: translateY(0) scale(1); }
