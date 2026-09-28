@@ -268,7 +268,7 @@
       y: ship.y + Math.sin(ship.a) * (ship.r + 4),
       vx: Math.cos(ship.a) * 460 + ship.vx,
       vy: Math.sin(ship.a) * 460 + ship.vy,
-      life: 0.85,
+      life: 3.4, // 4x range before bullets despawn
       color: ship.color,
     });
     beep(640, 0.06, "square", 0.04);
