@@ -24,6 +24,7 @@
    yard1: backyard creek/trees + outdoor trillion mech; park1: EXIT parks at exit pos.
    mech1: mech ownership locks + shared Ripsaw/Tank (garage).
    mech3: Tank big missiles (Space / X / button) blow up toys/animals/props.
+   mech5: tank destroys ONLY Rexy 1000-mech; distinct vehicle speeds; expand drive ground/forest.
    interact2: interact/exit + HOP strictly per pad/player; shared HUD = primary only.
    hop3: faster loco + spam HOP + stack; articulated mechs.
    track3: banks + rocks + live monster wheels (preserved).
@@ -1264,7 +1265,7 @@
     scene.position.set(0, 0, 0);
     scene.background = new THREE.Color(0x7eb8d4);
     /* view3: softer haze — trees stay readable; was flat green wall at 48–145 */
-    scene.fog = new THREE.Fog(0x8eb89a, 78, 220);
+    scene.fog = new THREE.Fog(0x8eb89a, 95, 290); /* mech5: farther fog for expanded ranch */
 
     // Fixed-angle isometric-ish camera — orbit LOCKED (no free-fly)
     var aspect = window.innerWidth / Math.max(1, window.innerHeight);
@@ -1299,7 +1300,8 @@
     scene.add(ground);
 
     /* view3: continuous perimeter forest — SAME trunk/canopy recipe + scale as yard trees.
-       Prior rings used s=1.35–3.0 + green cylinder berms → mismatched flat backdrop. */
+       Prior rings used s=1.35–3.0 + green cylinder berms → mismatched flat backdrop.
+       mech5: rings follow expanded MAP_* (more driveable green; house size unchanged). */
     state.paraHills = [];
     state.forestRing = [];
     (function buildForestPerimeter() {
@@ -2450,34 +2452,80 @@
   }
 
   function blastWreckThree(hx, hz, radius) {
-    if (!state || !state.pushables) return 0;
+    if (!state) return 0;
     var n = 0;
     var R = radius != null ? radius : 2.4;
-    for (var i = state.pushables.length - 1; i >= 0; i--) {
-      var pu = state.pushables[i];
-      if (!pu || pu.wrecked) continue;
-      var pt = worldToThree(pu.x, pu.y);
-      var dx = pt.x - hx, dz = pt.z - hz;
-      var d = Math.hypot(dx, dz);
-      var pr = (pu.r || 10) * 0.02;
-      if (d > R + pr) continue;
-      var fall = 1 - d / (R + pr + 0.01);
-      var nx = d > 0.05 ? dx / d : 0, nz = d > 0.05 ? dz / d : 0;
-      pu.vx = (pu.vx || 0) + nx * 380 * fall;
-      pu.vy = (pu.vy || 0) + nz * 380 * fall;
-      pu.wrecked = true;
-      pu.wreckT = 0.85 + Math.random() * 0.4;
-      if (pu.mesh) {
-        pu.mesh.material = new THREE.MeshBasicMaterial({ color: 0x78716c, transparent: true, opacity: 0.85 });
-        pu.mesh.scale.multiplyScalar(0.75);
+    if (state.pushables) {
+      for (var i = state.pushables.length - 1; i >= 0; i--) {
+        var pu = state.pushables[i];
+        if (!pu || pu.wrecked) continue;
+        var pt = worldToThree(pu.x, pu.y);
+        var dx = pt.x - hx, dz = pt.z - hz;
+        var d = Math.hypot(dx, dz);
+        var pr = (pu.r || 10) * 0.02;
+        if (d > R + pr) continue;
+        var fall = 1 - d / (R + pr + 0.01);
+        var nx = d > 0.05 ? dx / d : 0, nz = d > 0.05 ? dz / d : 0;
+        pu.vx = (pu.vx || 0) + nx * 380 * fall;
+        pu.vy = (pu.vy || 0) + nz * 380 * fall;
+        pu.wrecked = true;
+        pu.wreckT = 0.85 + Math.random() * 0.4;
+        if (pu.mesh) {
+          pu.mesh.material = new THREE.MeshBasicMaterial({ color: 0x78716c, transparent: true, opacity: 0.85 });
+          pu.mesh.scale.multiplyScalar(0.75);
+        }
+        if (pu.head) {
+          if (pu.head.parent) pu.head.parent.remove(pu.head);
+          pu.head = null;
+        }
+        n++;
       }
-      if (pu.head) {
-        if (pu.head.parent) pu.head.parent.remove(pu.head);
-        pu.head = null;
-      }
-      n++;
     }
+    /* mech5: ONLY Rexy 1000-story mech among mechs */
+    n += blastDestroyMech1000Three(hx, hz, R);
     return n;
+  }
+
+  function blastDestroyMech1000Three(hx, hz, radius) {
+    if (!state || !state.mechs || !C || !C.isTankBlastableMech) return 0;
+    if (C.isMechDestroyed && C.isMechDestroyed("mech1000")) return 0;
+    var ment = null;
+    for (var mi = 0; mi < state.mechs.length; mi++) {
+      if (state.mechs[mi] && state.mechs[mi].solidId === "mech1000") { ment = state.mechs[mi]; break; }
+    }
+    if (!ment || ment.destroyed) return 0;
+    var mx = ment.group ? ment.group.position.x : ment.homeX;
+    var mz = ment.group ? ment.group.position.z : ment.homeZ;
+    var md = Math.hypot(mx - hx, mz - hz);
+    var mr = (ment.h || 8.2) * 0.42; /* pad-ish hit radius */
+    if (md > (radius || 2.4) + mr) return 0;
+    if (!C.markMechDestroyed("mech1000")) return 0;
+    ment.destroyed = true;
+    /* eject pilots */
+    if (state.inMech && mechSidOf(state.mechId) === "mech1000") {
+      state.inMech = false; state.mechId = null; state.mechStories = 0; state.mechPilotPadIndex = null;
+      state.toast = "BOOM · Rexy 1000-story mech!"; state.toastT = 2.2;
+      if (hooks.onToast) hooks.onToast(state.toast);
+    }
+    if (state.companions) {
+      for (var ci = 0; ci < state.companions.length; ci++) {
+        var c = state.companions[ci];
+        if (c && c.userData.inMech && mechSidOf(c.userData.mechId) === "mech1000") {
+          c.userData.inMech = false; c.userData.mechId = null; c.userData.mechStories = 0;
+        }
+      }
+    }
+    spawnThreeBoom(mx, (ment.h || 8) * 0.45, mz, 2.8);
+    if (ment.group) {
+      ment.group.traverse(function (ch) {
+        if (ch.isMesh && ch.material) {
+          ch.material = new THREE.MeshBasicMaterial({ color: 0x78716c, transparent: true, opacity: 0.7 });
+        }
+      });
+      ment.wreckT = 1.15;
+    }
+    if (ment.label) ment.label.visible = false;
+    return 1;
   }
 
   function tickTankShells(dt) {
@@ -2493,7 +2541,7 @@
         if (sh.mesh.material && sh.mesh.material.transparent !== true) {
           sh.mesh.material.transparent = true;
         }
-        /* collide with pushables (toys/animals) */
+        /* collide with pushables (toys/animals) + Rexy 1000-mech only */
         if (state.pushables) {
           for (var pi = 0; pi < state.pushables.length && !hit; pi++) {
             var pu = state.pushables[pi];
@@ -2502,6 +2550,17 @@
             var dx = pt.x - sh.mesh.position.x, dz = pt.z - sh.mesh.position.z;
             var rr = (sh.hitR || 0.55) + (pu.r || 10) * 0.02;
             if (dx * dx + dz * dz < rr * rr) hit = true;
+          }
+        }
+        if (!hit && state.mechs && !(C.isMechDestroyed && C.isMechDestroyed("mech1000"))) {
+          for (var mci = 0; mci < state.mechs.length && !hit; mci++) {
+            var mentH = state.mechs[mci];
+            if (!mentH || mentH.solidId !== "mech1000" || mentH.destroyed) continue;
+            var mxh = mentH.group ? mentH.group.position.x : mentH.homeX;
+            var mzh = mentH.group ? mentH.group.position.z : mentH.homeZ;
+            var mrr = (sh.hitR || 0.55) + (mentH.h || 8.2) * 0.42;
+            var mdx = mxh - sh.mesh.position.x, mdz = mzh - sh.mesh.position.z;
+            if (mdx * mdx + mdz * mdz < mrr * mrr) hit = true;
           }
         }
       }
@@ -2538,6 +2597,29 @@
           if (wp.mesh && wp.mesh.parent) wp.mesh.parent.remove(wp.mesh);
           if (wp.head && wp.head.parent) wp.head.parent.remove(wp.head);
           state.pushables.splice(wi, 1);
+        }
+      }
+    }
+    /* mech5: fade out destroyed 1000-mech */
+    if (state.mechs) {
+      for (var wmi = state.mechs.length - 1; wmi >= 0; wmi--) {
+        var wm = state.mechs[wmi];
+        if (!wm || !wm.destroyed) continue;
+        wm.wreckT = (wm.wreckT || 0) - dt;
+        if (wm.group) {
+          wm.group.position.y += dt * 0.8;
+          wm.group.rotation.z += dt * 0.9;
+          wm.group.traverse(function (ch) {
+            if (ch.isMesh && ch.material && ch.material.opacity != null) {
+              ch.material.transparent = true;
+              ch.material.opacity = Math.max(0, (wm.wreckT || 0) * 0.85);
+            }
+          });
+        }
+        if (wm.wreckT <= 0) {
+          if (wm.group && wm.group.parent) wm.group.parent.remove(wm.group);
+          if (wm.label && wm.label.parent) wm.label.parent.remove(wm.label);
+          state.mechs.splice(wmi, 1);
         }
       }
     }
@@ -2794,9 +2876,14 @@
     /* polish3: snappier locomotion (Canvas feel port) */
     /* tapsteer1: noticeably snappier walk + drive */
     /* mechwalk1: lumber slower/heavier than frog hop; continuous thrust while piloted */
+    /* mech5: per-vehicle / per-mech drive (Ripsaw fastest auto) */
+    var vStat3 = (state.inTruck && C.vehicleDriveStats) ? C.vehicleDriveStats({ vehicleStyle: state.vehicleStyle, wheelScale: C.getWheelScale ? C.getWheelScale() : 1 }) : null;
+    var mStat3 = (state.inMech && C.mechDriveStats) ? C.mechDriveStats(state.mechStories || 10) : null;
     var maxSp = state.mode === "space" ? 11.5 : state.inTruck ? 15.8 : state.inMech ? 6.8 : 13.6;
     var accel = state.mode === "space" ? 22 : state.inTruck ? 38 : state.inMech ? 16 : 34;
     var fric = state.mode === "space" ? 3.0 : state.inTruck ? 4.8 : state.inMech ? 5.2 : 7.8;
+    if (vStat3) { maxSp *= vStat3.maxSp || 1; accel *= vStat3.accel || 1; fric *= vStat3.fric || 1; }
+    if (mStat3) { maxSp *= mStat3.maxSp || 1; accel *= mStat3.accel || 1; fric *= mStat3.fric || 1; }
     /* ctrl1: RT accel / LT brake on truck + mech — read primary/pilot pad (frame-cached) */
     if (state.mode === "ranch" && (state.inTruck || state.inMech) && global.SimilarizeGamepad) {
       var thrPad = state.inMech && state.mechPilotPadIndex != null ? state.mechPilotPadIndex
@@ -2834,7 +2921,7 @@
         if (state.inMech) {
           /* mechwalk1: heavy robot walk — slow turn, thrust mostly along facing */
           var curM = (state.faceYaw != null) ? state.faceYaw : aimYaw;
-          var turnM = 2.35;
+          var turnM = 2.35 * (mStat3 && mStat3.turn != null ? mStat3.turn : 1);
           if (C.approachAngle) state.faceYaw = C.approachAngle(curM, aimYaw, turnM * dt);
           else {
             var dM = aimYaw - curM;
@@ -2852,7 +2939,7 @@
         } else if (state.inTruck) {
           /* truck1: smooth yaw toward aim; thrust along facing */
           var curY = (state.faceYaw != null) ? state.faceYaw : aimYaw;
-          var turnRate = 3.8 + Math.min(2.2, Math.hypot(state.vx, state.vz) / 6);
+          var turnRate = (3.8 + Math.min(2.2, Math.hypot(state.vx, state.vz) / 6)) * (vStat3 && vStat3.turn != null ? vStat3.turn : 1);
           if (C.approachAngle) state.faceYaw = C.approachAngle(curY, aimYaw, turnRate * dt);
           else {
             var dY = aimYaw - curY;
@@ -3167,6 +3254,11 @@
       if (state.mechs && state.mechs.length) {
         for (var mi = 0; mi < state.mechs.length; mi++) {
           var ment = state.mechs[mi];
+          if (ment.destroyed || (C.isMechDestroyed && C.isMechDestroyed(ment.solidId))) {
+            if (ment.group) ment.group.visible = !!ment.destroyed; /* fading */
+            if (ment.label) ment.label.visible = false;
+            continue;
+          }
           var pilotPos = null; var wpM = 0; var faceY = 0; var lumber = false;
           if (state.inMech && mechSidOf(state.mechId) === ment.solidId) {
             pilotPos = state.player.position;
@@ -3379,7 +3471,7 @@
       }
     }
 
-    // Clamp ranch bounds
+    // Clamp ranch bounds — mech5: follows expanded MAP_* (more green/dirt; house size unchanged)
     if (state.mode === "ranch") {
       var halfW = C.MAP_W * 0.01;
       var halfH = C.MAP_H * 0.01;

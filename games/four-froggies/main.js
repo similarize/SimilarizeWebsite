@@ -1263,6 +1263,11 @@
     W.updateFish(world, dt);
     if (W.updatePushables) W.updatePushables(world, frogs, dt);
     W.updateFx(world, dt);
+    if (world && world._mechBoomToast) {
+      storyToast = world._mechBoomToast;
+      storyToastT = 2.2;
+      world._mechBoomToast = null;
+    }
 
     easeCam(dt);
     refreshNearHotFromLocals();
@@ -1272,7 +1277,8 @@
     } else if (!nearHot) {
       prevNearId = null;
     }
-    if (W.nearMech1000 && W.nearMech1000(frogs, 170) && storyToastT <= 0.2) {
+    if (W.nearMech1000 && W.nearMech1000(frogs, 170) && storyToastT <= 0.2 &&
+        !(globalThis.FroggiesCanon && globalThis.FroggiesCanon.isMechDestroyed && globalThis.FroggiesCanon.isMechDestroyed("mech1000"))) {
       storyToast = "★ WOW · Rexy 1000-story mech";
       storyToastT = 1.8;
     }

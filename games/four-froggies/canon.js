@@ -18,7 +18,10 @@
    yard1: James backyard trees/shrubs/creek/rocks/flowers/fence (soft stream) + outdoor trillion-story mech.
    park1: EXIT mech/truck leaves vehicle at exit pos (no snap-home); reset/menu restores pads.
    mech1: mech ownership locks (James=trillion, Rexy=1000, Bubbles=10, Jimmy=100) + shared Ripsaw/Tank.
-   mech3: Tank FIRE — Space / X / button; big missiles blow up toys/animals/props (Canvas + Three). */
+   mech3: Tank FIRE — Space / X / button; big missiles blow up toys/animals/props (Canvas + Three).
+   mech5: tank blast kills ONLY Rexy 1000-story mech (not other mechs); props stay blastable;
+         distinct vehicle drive (Ripsaw fastest auto; Cybertruck / Monster / Tank feel); mech bands differ;
+         expand playable ground/forest (house size unchanged). */
 (function (global) {
   "use strict";
 
@@ -31,9 +34,10 @@
     rexy: { id: "rexy", name: "Rexy", role: "Bot", color: "#c084fc", accent: "#6b21a8", hat: "#e879f9", ability: "HOP" },
   };
 
-  /* ~10× area vs old 1200×900 — real roam between house / track / pond / Starship */
-  var MAP_W = 4200;
-  var MAP_H = 3150;
+  /* ~10× area vs old 1200×900 — real roam between house / track / pond / Starship.
+     mech5: expand playable green/dirt (clamps + forest out); ranch house size unchanged. */
+  var MAP_W = 5600;
+  var MAP_H = 4200;
 
   var AREAS = [
     { id: "house", name: "Ranch house", x: 60, y: 1320, w: 1180, h: 1180, color: "#8b5a2b" },
@@ -291,6 +295,7 @@
     var bestD = maxR || 70;
     for (var i = 0; i < HOTSPOTS.length; i++) {
       var h = HOTSPOTS[i];
+      if (isMechHotspot(h) && isMechDestroyed(h)) continue; /* mech5 */
       var d = Math.hypot(h.x - x, h.y - y);
       var reach = Math.max(bestD, h.r || 70);
       if (d < reach && d < (best ? Math.hypot(best.x - x, best.y - y) : reach)) {
@@ -401,6 +406,7 @@
 
   function canBoardMech(frogId, hot) {
     if (!hot || !isMechHotspot(hot)) return true;
+    if (isMechDestroyed(hot)) return false; /* mech5: blown-up mech */
     var owner = mechOwnerId(hot);
     if (!owner) return true;
     return String(frogId || "") === owner;
@@ -425,7 +431,7 @@
     return "cybertruck";
   }
 
-  /* mech4: Tank FIRE — big missile, blast wrecks toys/animals/props */
+  /* mech5: Tank FIRE — big missile; props + ONLY Rexy 1000-story mech */
   var TANK_FIRE = {
     cd: 0.38,
     speed: 720,
@@ -447,6 +453,78 @@
 
   function tankDrivingTip() {
     return "Driving Tank · FIRE (Space / X / button) · big missiles · EXIT INTERACT";
+  }
+
+  /* mech5: among MECHS, only Rexy's thousand-story can be tank-blasted */
+  var DESTROYED_MECHS = {};
+  function mechSolidKeys(idOrHot) {
+    var sid = mechSolidId(idOrHot);
+    if (!sid && idOrHot && typeof idOrHot === "object") {
+      if (idOrHot.solidId) sid = mechSolidId(idOrHot.solidId);
+      else if (idOrHot.id) sid = mechSolidId(idOrHot.id);
+      else if (idOrHot.stories != null) sid = mechSolidId(idOrHot.stories >= 1e12 ? "mechTrillion" : idOrHot.stories >= 1000 ? "mech1000" : idOrHot.stories >= 100 ? "mech100" : "mech10");
+    }
+    if (!sid && typeof idOrHot === "number") {
+      sid = idOrHot >= 1e12 ? "mechTrillion" : idOrHot >= 1000 ? "mech1000" : idOrHot >= 100 ? "mech100" : "mech10";
+    }
+    return sid;
+  }
+  function isTankBlastableMech(idOrHot) {
+    return mechSolidKeys(idOrHot) === "mech1000";
+  }
+  function isMechDestroyed(idOrHot) {
+    var sid = mechSolidKeys(idOrHot);
+    return !!(sid && DESTROYED_MECHS[sid]);
+  }
+  function markMechDestroyed(idOrHot) {
+    var sid = mechSolidKeys(idOrHot);
+    if (!sid) return false;
+    if (!isTankBlastableMech(sid)) return false; /* hard gate: never destroy other mechs */
+    DESTROYED_MECHS[sid] = true;
+    return true;
+  }
+  function clearDestroyedMechs() {
+    DESTROYED_MECHS = {};
+  }
+
+  /* mech5: distinct automobile + mech drive feel.
+     Autos: Ripsaw fastest; Cybertruck balanced; Monster (big wheels) punchy/slower turn; Tank heavy/slow. */
+  var VEHICLE_DRIVE = {
+    cybertruck: { maxSp: 1.00, accel: 1.00, turn: 1.00, fric: 1.00 },
+    monster:    { maxSp: 0.94, accel: 1.14, turn: 0.72, fric: 1.06 },
+    ripsaw:     { maxSp: 1.22, accel: 1.30, turn: 1.12, fric: 0.90 },
+    tank:       { maxSp: 0.66, accel: 0.58, turn: 0.52, fric: 1.28 },
+  };
+  var MECH_DRIVE = {
+    "10":       { maxSp: 1.28, accel: 1.22, turn: 1.35, fric: 0.92 },
+    "100":      { maxSp: 1.05, accel: 1.05, turn: 1.10, fric: 1.00 },
+    "1000":     { maxSp: 0.82, accel: 0.88, turn: 0.82, fric: 1.12 },
+    "trillion": { maxSp: 0.62, accel: 0.70, turn: 0.68, fric: 1.22 },
+  };
+  function resolveDriveStyle(styleOrFrog) {
+    if (!styleOrFrog) return "cybertruck";
+    var style = typeof styleOrFrog === "string" ? styleOrFrog : null;
+    if (!style && styleOrFrog.vehicleStyle) style = String(styleOrFrog.vehicleStyle);
+    if (!style && styleOrFrog.truckId) style = vehicleStyleOf(styleOrFrog.truckId);
+    if (!style) style = "cybertruck";
+    style = String(style);
+    if (style === "ripsaw" || style === "tank") return style;
+    /* Monster truck feel = Cybertruck with big live wheels */
+    var ws = wheelScaleLive;
+    if (styleOrFrog && typeof styleOrFrog === "object" && styleOrFrog.wheelScale != null) ws = styleOrFrog.wheelScale;
+    if (ws >= 1.35) return "monster";
+    return "cybertruck";
+  }
+  function vehicleDriveStats(styleOrFrog) {
+    var key = resolveDriveStyle(styleOrFrog);
+    return VEHICLE_DRIVE[key] || VEHICLE_DRIVE.cybertruck;
+  }
+  function mechDriveStats(storiesOrHot) {
+    var band = mechBand(storiesOrHot);
+    if (band === "trillion") return MECH_DRIVE.trillion;
+    if (band === "1000") return MECH_DRIVE["1000"];
+    if (band === "100") return MECH_DRIVE["100"];
+    return MECH_DRIVE["10"];
   }
 
   function rampAt(x, y) {
@@ -676,6 +754,7 @@
     ];
     for (var mi = 0; mi < mechs.length; mi++) {
       if (ignoreMech && mechs[mi].id === ignoreMech) continue;
+      if (isMechDestroyed(mechs[mi].id)) continue; /* mech5: blasted mechs gone */
       var mp = vehiclePos(mechs[mi].id, mechs[mi].x, mechs[mi].y);
       out.push({ id: mechs[mi].id, x: mp.x, y: mp.y, r: mechs[mi].r });
     }
@@ -1035,6 +1114,7 @@
 
   function resetVehicleParks() {
     VEHICLE_PARK = {};
+    clearDestroyedMechs(); /* mech5: respawn blasted mechs with world reset */
     for (var h = 0; h < HOTSPOTS.length; h++) {
       var hs = HOTSPOTS[h];
       var home = _hotspotHome(hs);
@@ -1114,6 +1194,15 @@
     TANK_FIRE: TANK_FIRE,
     isTankVehicle: isTankVehicle,
     tankDrivingTip: tankDrivingTip,
+    isTankBlastableMech: isTankBlastableMech,
+    isMechDestroyed: isMechDestroyed,
+    markMechDestroyed: markMechDestroyed,
+    clearDestroyedMechs: clearDestroyedMechs,
+    VEHICLE_DRIVE: VEHICLE_DRIVE,
+    MECH_DRIVE: MECH_DRIVE,
+    resolveDriveStyle: resolveDriveStyle,
+    vehicleDriveStats: vehicleDriveStats,
+    mechDriveStats: mechDriveStats,
     MECH_OWNER_BY_SOLID: MECH_OWNER_BY_SOLID,
     mechStoriesLabel: mechStoriesLabel,
     mechBand: mechBand,

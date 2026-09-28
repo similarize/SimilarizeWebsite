@@ -28,6 +28,7 @@
    particle caps; sunset sky shift over play time.
    mobile1: phone+desktop shared UI — smaller/toggle-friendly mini-map + harder particle caps on narrow.
    mech3: Tank big missiles — blast wrecks toys/animals/props.
+   mech5: tank blows ONLY Rexy 1000-mech (props stay); distinct vehicle speeds; bigger drive ground.
    ~10× map: real roam between ranch house / track / pond / Starship.
    James ranch house: big house, backyard (animals), huge garage (toys + 10/100-story mechs);
    1000-story + trillion-story mechs sit out back (won't fit). Four Cybertrucks + shared pile-in.
@@ -38,8 +39,9 @@
 (function (global) {
   "use strict";
 
-  var MAP_W = 4200;
-  var MAP_H = 3150;
+  /* mech5: bigger playable green/dirt; house geometry unchanged (canon COMPOUND). */
+  var MAP_W = 5600;
+  var MAP_H = 4200;
 
   /* mobile1: density helpers — desktop keeps polish10 caps; narrow phones get harder caps */
   function isNarrowView(vw, vh) {
@@ -664,12 +666,13 @@
     spawnSparkle(world, x, y, 14);
   }
 
-  /* mech3: radial blast — wreck / fling toys + animals in radius */
-  function blastWreckProps(world, x, y, radius, force) {
+  /* mech3 + mech5: radial blast — toys/animals; ONLY Rexy 1000-story mech among mechs */
+  function blastWreckProps(world, x, y, radius, force, frogs) {
     if (!world) return 0;
     var R = radius != null ? radius : 118;
     var F = force != null ? force : 520;
     var hitN = 0;
+    var C = global.FroggiesCanon;
     function wreckList(arr) {
       if (!arr) return;
       for (var i = 0; i < arr.length; i++) {
@@ -693,7 +696,49 @@
     }
     wreckList(world.toys);
     wreckList(world.animals);
+    /* mech5: ONLY thousand-story (Rexy) mech is destructible by tank */
+    if (C && C.isTankBlastableMech && C.markMechDestroyed && !C.isMechDestroyed("mech1000")) {
+      var home = (C.COMPOUND && C.COMPOUND.mech1000) || { x: 340, y: 2420 };
+      var mp = C.vehiclePos ? C.vehiclePos("mech1000", home.x, home.y) : home;
+      var md = Math.hypot(mp.x - x, mp.y - y);
+      var mr = 95;
+      if (md <= R + mr) {
+        if (C.markMechDestroyed("mech1000")) {
+          hitN++;
+          ejectPilotsFromMech(frogs || world._frogsRef, "mech1000");
+          spawnBoom(world, mp.x, mp.y, 3.2);
+          spawnSparks(world, mp.x, mp.y, 28);
+          spawnDust(world, mp.x, mp.y, 16);
+          world._mechBoomToast = "BOOM · Rexy 1000-story mech!";
+        }
+      }
+    }
     return hitN;
+  }
+
+  function ejectPilotsFromMech(frogs, solidId) {
+    if (!frogs || !solidId) return;
+    var C = global.FroggiesCanon;
+    for (var i = 0; i < frogs.length; i++) {
+      var f = frogs[i];
+      if (!f || !f.inMech) continue;
+      var sid = C && C.mechSolidId ? C.mechSolidId(f.mechId) : String(f.mechId || "").replace(/^mech-/, "mech");
+      if (sid !== solidId && f.mechId !== solidId) continue;
+      f.inMech = false;
+      f.mechId = null;
+      f.mechStories = 0;
+      f.z = 0; f.zVel = 0;
+    }
+  }
+
+  function shellHitsBlastableMech(world, sh) {
+    var C = global.FroggiesCanon;
+    if (!C || !C.isTankBlastableMech || C.isMechDestroyed("mech1000")) return false;
+    var home = (C.COMPOUND && C.COMPOUND.mech1000) || { x: 340, y: 2420 };
+    var mp = C.vehiclePos ? C.vehiclePos("mech1000", home.x, home.y) : home;
+    var rr = 95 + (sh.r || 28);
+    var dx = mp.x - sh.x, dy = mp.y - sh.y;
+    return dx * dx + dy * dy < rr * rr;
   }
 
 
@@ -825,6 +870,7 @@
 
   function updatePushables(world, frogs, dt) {
     if (!world) return;
+    world._frogsRef = frogs; /* mech5 */
     var C = global.FroggiesCanon;
     var shove = C && C.shoveSmallProp;
     var tick = C && C.tickPushable;
@@ -912,12 +958,13 @@
             if (dx * dx + dy * dy < rr * rr) { hit = true; break; }
           }
         }
+        if (!hit && shellHitsBlastableMech(world, sh)) hit = true; /* mech5: Rexy 1000 only */
       }
       if (hit || expired) {
         var br = sh.blastR != null ? sh.blastR : 118;
         var bf = sh.blastForce != null ? sh.blastForce : 520;
         if (hit || (expired && sh.life <= 0)) {
-          blastWreckProps(world, sh.x, sh.y, br, bf);
+          blastWreckProps(world, sh.x, sh.y, br, bf, world._frogsRef);
           spawnBoom(world, sh.x, sh.y, sh.size != null ? sh.size * 0.55 : 1.2);
         }
         world.shells.splice(i, 1);
@@ -1283,9 +1330,16 @@
   function moveEntity(ent, dt, speed, world) {
     /* polish3 + polish10: snappier walk/drive — quicker ramp + firmer stop */
     /* tapsteer1: noticeably faster walk + drive */
+    /* mech5: per-vehicle / per-mech drive feel (Ripsaw fastest auto) */
+    var Cdrv = global.FroggiesCanon;
     var walkMax = 345;
     var truckMax = 420;
     var mechMax = 195;
+    var vStat = null, mStat = null;
+    if (ent.inTruck && Cdrv && Cdrv.vehicleDriveStats) vStat = Cdrv.vehicleDriveStats(ent);
+    if (ent.inMech && Cdrv && Cdrv.mechDriveStats) mStat = Cdrv.mechDriveStats(ent.mechStories || ent);
+    if (vStat) truckMax *= vStat.maxSp || 1;
+    if (mStat) mechMax *= mStat.maxSp || 1;
     var maxSp = (ent.inMech ? mechMax : ent.inTruck ? truckMax : walkMax) * (ent.speedBoost || 1);
     if (ent.inTruck && ent.dashTrail > 0) maxSp *= 1.28;
     if (typeof speed === "number") maxSp = speed * (ent.speedBoost || 1);
@@ -1298,6 +1352,8 @@
     var wetMove = (inPond(ent.x, ent.y) || inStream) && (ent.z || 0) < 3;
     var accel = ent.inMech ? 780 : ent.inTruck ? 1680 : 1520;
     var friction = ent.inMech ? 7.2 : ent.inTruck ? 5.6 : 9.6;
+    if (vStat) { accel *= vStat.accel || 1; friction *= vStat.fric || 1; }
+    if (mStat) { accel *= mStat.accel || 1; friction *= mStat.fric || 1; }
     /* ctrl1: RT accel / LT brake while boarded */
     var thr = (ent.inTruck || ent.inMech) ? (ent.throttle || 0) : 0;
     var brk = (ent.inTruck || ent.inMech) ? (ent.brake || 0) : 0;
@@ -1336,7 +1392,7 @@
       if (ent.inMech) {
         /* Pilot as walking robot — face follows steer, heavier turn */
         var curM = (ent.faceAngle != null && isFinite(ent.faceAngle)) ? ent.faceAngle : aim;
-        var turnM = 2.4;
+        var turnM = 2.4 * (mStat && mStat.turn != null ? mStat.turn : 1);
         if (canon && canon.approachAngle) ent.faceAngle = canon.approachAngle(curM, aim, turnM * dt);
         else {
           var daM = aim - curM;
@@ -1353,7 +1409,7 @@
       } else if (ent.inTruck) {
         /* truck1: smooth yaw toward aim, then thrust along facing (traction) */
         var cur = (ent.faceAngle != null && isFinite(ent.faceAngle)) ? ent.faceAngle : aim;
-        var turnRate = 3.6 + Math.min(2.4, Math.hypot(ent.vx, ent.vy) / 160);
+        var turnRate = (3.6 + Math.min(2.4, Math.hypot(ent.vx, ent.vy) / 160)) * (vStat && vStat.turn != null ? vStat.turn : 1);
         if (canon && canon.approachAngle) ent.faceAngle = canon.approachAngle(cur, aim, turnRate * dt);
         else {
           var da = aim - cur;
@@ -1431,6 +1487,7 @@
         ent.x = solid.x; ent.y = solid.y;
       }
     }
+    /* mech5: clamps follow expanded MAP_* (more green/dirt; house size unchanged) */
     ent.x = clamp(ent.x, 40, MAP_W - 40);
     ent.y = clamp(ent.y, 40, MAP_H - 40);
     if ((!ent.inTruck || ent.inMech) && spd > 18) {
@@ -2572,7 +2629,9 @@
     var mTri = (Cmech && Cmech.COMPOUND && Cmech.COMPOUND.mechTrillion) || { x: 600, y: 2170, stories: 1e12 };
     var p1000 = (Cmech && Cmech.vehiclePos) ? Cmech.vehiclePos("mech1000", m1000.x, m1000.y) : m1000;
     var pTri = (Cmech && Cmech.vehiclePos) ? Cmech.vehiclePos("mechTrillion", mTri.x, mTri.y) : mTri;
-    if (!frogPilotsMech(frogs, "mech1000")) drawMech(ctx, p1000.x, p1000.y, 1000, camX, camY, vw, vh, "#fcd34d");
+    var Cdest = global.FroggiesCanon;
+    if (!(Cdest && Cdest.isMechDestroyed && Cdest.isMechDestroyed("mech1000")) && !frogPilotsMech(frogs, "mech1000"))
+      drawMech(ctx, p1000.x, p1000.y, 1000, camX, camY, vw, vh, "#fcd34d");
     if (!frogPilotsMech(frogs, "mechTrillion")) drawMech(ctx, pTri.x, pTri.y, 1e12, camX, camY, vw, vh, "#f9a8d4");
   }
 

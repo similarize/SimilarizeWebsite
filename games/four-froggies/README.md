@@ -1,3 +1,19 @@
+## What's new (mech5) — tank vs Rexy 1000-mech · vehicle feel · bigger drive ground
+
+**Tank missiles (Canvas + Three lobby):** still blow up **toys / animals / props**. Among **mechs**, only **Rexy's thousand-story (1000)** can be destroyed — **not** trillion / hundred / ten. Boom ejects a pilot if aboard; mech fades out. World reset / `resetVehicleParks` respawns it.
+
+**Vehicle drive feel (autos):** distinct accel / top speed / turn —
+- **Ripsaw** = fastest automobile-type
+- **Cybertruck** = balanced baseline
+- **Monster** = Cybertruck with big live wheels (wheel scale ≥ 1.35) — punchy, slower turn
+- **Tank** = heaviest / slowest (FIRE unchanged)
+Mech bands also differ slightly (10 snappy → trillion lumber).
+
+**World size:** `MAP_W×MAP_H` **5600×4200** (was 4200×3150). More green/dirt to drive; clamps + perimeter forest push out. **Ranch house / garage sizes unchanged.**
+
+- Cache-bust: `?v=20260928-mech5`. Lobby UX kept (`← Arcade` + `Join · enter code`). Cast: James, Jimmy, Bubbles, Rexy.
+- Not touched: standalone `games/four-froggies-3d/` (parent may ship parallel ff3d expand).
+
 ## What's new (mech4) — Tank FIRE no longer resets the world
 
 **Bug (live mech3):** While driving Tank in Three, **Space / X / FIRE** often **rebuilt the ranch** (brown dirt spawn / “reset”) instead of shooting. Root cause: `main.js` stayed on `phase === "title"` during Three play, so Space/Enter hit `tryStartFromUi` → `startAlt` → `stopAltEngines` + fresh boot.
