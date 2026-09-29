@@ -1,3 +1,9 @@
+# What's new (ff3d66) — solid open cockpit with visible seated rider
+
+- Keep the submarine hull and bow opaque; remove the translucent cockpit panes so the top is solid/open rather than see-through.
+- Raise and resize the frog in all submarine entry, reboarding, and movement paths so the body sits within the cockpit and remains visible above its rim.
+- Cache: `?v=20260929-ff3d66` · asset `index-ff3d66.js`
+
 # What's new (ff3d65) — attach the frog to the submarine seat
 
 - Parent the rider under the actual seat group and place its feet at the cabin floor, so submarine motion cannot separate the frog from the seat.
