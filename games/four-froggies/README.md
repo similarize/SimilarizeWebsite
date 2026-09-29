@@ -1,3 +1,9 @@
+## What's new (air4) — raise and enlarge the Three.js landing pads
+
+- Raise the heli and drone pad graphics above the translucent orange house-zone floor that covered them.
+- Enlarge both pad discs, accent rings, and labels so they are easy to see beneath the aircraft.
+- Cache-bust: `?v=20260929-air4`.
+
 ## What's new (air3) — point aircraft along their flight path
 
 - Remove the 90-degree nose offset from helicopter and drone heading in both Canvas and Three.js; the aircraft now point along the same world-space direction used by flight steering.

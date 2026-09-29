@@ -869,27 +869,28 @@
   function makeAirPadMesh(kind) {
     var g = new THREE.Group();
     g.name = kind === "drone" ? "DronePad" : "HeliPad";
-    var R = kind === "drone" ? 1.55 : 2.45;
+    var R = kind === "drone" ? 3.4 : 4.6;
     var pad = new THREE.Mesh(
       new THREE.CircleGeometry(R, 48),
       new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.85, metalness: 0.15, side: THREE.DoubleSide })
     );
     pad.rotation.x = -Math.PI / 2;
-    pad.position.y = 0.03;
+    pad.position.y = 0.04;
     g.add(pad);
     var ring = new THREE.Mesh(
       new THREE.RingGeometry(R * 0.72, R * 0.95, 48),
       new THREE.MeshBasicMaterial({ color: kind === "drone" ? 0x67e8f9 : 0xfbbf24, transparent: true, opacity: 0.85, side: THREE.DoubleSide })
     );
     ring.rotation.x = -Math.PI / 2;
-    ring.position.y = 0.04;
+    ring.position.y = 0.1;
     g.add(ring);
     var mark = labelSprite(kind === "drone" ? "D" : "H", kind === "drone" ? "#a5f3fc" : "#fde68a");
-    mark.position.set(0, 0.35, 0);
-    mark.scale.multiplyScalar(1.4);
+    mark.position.set(0, 0.5, 0);
+    mark.scale.multiplyScalar(2);
     g.add(mark);
     var lab = labelSprite(kind === "drone" ? "DRONE PAD" : "HELIPAD", kind === "drone" ? "#ecfeff" : "#fef3c7");
-    lab.position.set(0, 1.15, 0);
+    lab.position.set(0, 1.45, 0);
+    lab.scale.multiplyScalar(1.35);
     g.add(lab);
     return g;
   }
@@ -1746,7 +1747,7 @@
       var p = worldToThree(home.x, home.y);
       var deck = ranchGroundY(home.x, home.y);
       var padMesh = makeAirPadMesh(k.kind);
-      padMesh.position.set(p.x, deck, p.z);
+      padMesh.position.set(p.x, deck + 0.12, p.z);
       scene.add(padMesh);
       state.airPads.push({ kind: k.kind, mesh: padMesh, wx: home.x, wy: home.y });
       var craft = k.kind === "drone" ? makePassengerDroneMesh(k.accent) : makeHeliMesh(k.accent);
