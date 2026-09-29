@@ -1,3 +1,10 @@
+# What's new (ff3d69) — keep the underwater rider in the submarine
+
+- Fixed the final scene-render branch: underwater had been falling through to the space EVA renderer, which reparented the frog out of the sub and put it above the scene every frame after the submarine update.
+- Underwater transforms are now owned only by the underwater update, so the rider stays attached to the seat and an outside swimmer stays at their actual swimming position.
+- Preserves the solid submarine hull, clear cockpit dome, fitted scuba gear, and E-to-shore behavior.
+- Cache: `?v=20260929-ff3d69` · asset `index-ff3d69.js`
+
 # What's new (ff3d68) — fit scuba gear and exit to the nearest shore
 
 - Scale the tank and vest to the frog, place the tank behind its back, and align the mask and regulator to its face.
