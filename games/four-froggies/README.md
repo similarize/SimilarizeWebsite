@@ -1,3 +1,9 @@
+## What's new (air2) — takeoff and scale aircraft to the froggies
+
+- Fix takeoff in both Canvas and Three engines: actively climbing aircraft are no longer forced back onto the ground by the landing assist.
+- Scale the Three.js helicopter and passenger drone up to better fit the froggies: helicopter 2.2×, drone 3.2×.
+- Cache-bust: `?v=20260929-air2`.
+
 ## What's new (qa1) — feet on the track, screen steer, flat ribbon
 
 **Feet were walking through the elevated track.** Canvas landed hops at `z = 0`. Three.js applied `trackElevAt` only while driving, so frogs, mechs, and followers passed through the ribbon. Both engines now stand and hop from the shared deck. Swim and the submarine still use the water line.

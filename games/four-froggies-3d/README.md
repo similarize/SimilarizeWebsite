@@ -1,3 +1,9 @@
+# What's new (ff3d72) — repair the propeller release startup
+
+- Restore separate propeller and seat assignments in the underwater submarine builder; ff3d71 accidentally concatenated them into an undefined `propellerus` reference.
+- Keeps the completed upper hull, clear canopy, seated frog, and spinning stern propellers.
+- Cache: `?v=20260929-ff3d72` · asset `index-ff3d72.js`
+
 # What's new (ff3d71) — spin the submarine stern propellers
 
 - Mount the surface and underwater stern propellers as rotating assemblies and spin them continuously while their respective submarine scene updates.

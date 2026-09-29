@@ -315,7 +315,7 @@
     var landZ = stats.landZ || 14;
     var landSp = stats.landSp || 55;
     var spd2 = Math.hypot(craft.vx, craft.vy);
-    if (craft.z <= landZ && spd2 <= landSp && craft.vz <= 40) {
+    if (climbIn <= 0.05 && craft.z <= landZ && spd2 <= landSp && craft.vz <= 40) {
       craft.z = Math.max(0, craft.z * 0.85);
       if (craft.z < 3) {
         craft.z = 0;

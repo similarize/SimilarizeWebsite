@@ -820,6 +820,7 @@
       rotor.add(blade);
     }
     g.add(rotor);
+    g.scale.setScalar(2.2);
     g.userData.rotor = rotor;
     g.userData.vehicleStyle = "heli";
     return g;
@@ -859,6 +860,7 @@
       g.add(rg);
       rotors.push(rg);
     }
+    g.scale.setScalar(3.2);
     g.userData.rotors = rotors;
     g.userData.vehicleStyle = "drone";
     return g;
