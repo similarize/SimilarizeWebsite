@@ -1,3 +1,8 @@
+## What's new (ff3d43) — climb the trees
+
+- Hop next to a tree and he grabs the trunk. Another hop or two puts him in the crown. Walk out of the leaves and he drops.
+- Cache: `?v=20260929-ff3d43` · asset `index-ff3d43.js`
+
 ## What's new (ff3d42) — normal frog controls
 
 - W, A, S, and D move him relative to the camera. W goes where you are looking, A and D go left and right, and S backs up straight. He turns to face the way he is running.
