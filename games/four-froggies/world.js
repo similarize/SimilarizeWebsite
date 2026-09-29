@@ -35,6 +35,7 @@
    mech6: tank blast props + Rexy 1000-mech respawn ~7s.
    mech7: swim POSE (stroke + flat body, no hop); single docked sub hull (no clone).
    mech8: (Three) Rexy 1000-mech respawn restores full mesh after tank blast.
+   air1: helipad H + heli (4 seats) + drone pad D + passenger drone (1–2) · fly over ranch.
    ~10× map: real roam between ranch house / track / pond / Starship.
    James ranch house: big house, backyard (animals), huge garage (toys + 10/100-story mechs);
    1000-story + trillion-story mechs sit out back (won't fit). Four Cybertrucks + shared pile-in.
@@ -300,6 +301,8 @@
       { id: "mech-trillion", label: "James · trillion-story mech", x: 600, y: 2170, r: 150, tip: "James only · trillion-story mech", kind: "mech", stories: 1e12, solidId: "mechTrillion", frogId: "james" },
       { id: "fishies", label: "Fishies", x: 3160, y: 620, r: 70, tip: "Swim the pond · fishies & whales" },
       { id: "submarine", label: "Submarine", x: 2900, y: 1240, r: 72, tip: "Submarine · dive underwater", kind: "submarine", vehicleStyle: "submarine", mode: "solo" },
+      { id: "heli", label: "Helipad · H", x: 980, y: 2000, r: 52, tip: "Helicopter · 4 seats · INTERACT board", kind: "heli", vehicleStyle: "heli", mode: "shared", seats: 4 },
+      { id: "drone", label: "Drone pad · D", x: 1180, y: 2000, r: 40, tip: "Passenger drone · 1–2 seats · INTERACT board", kind: "drone", vehicleStyle: "drone", mode: "shared", seats: 2 },
       { id: "starship", label: "Starship", x: STARSHIP.x, y: STARSHIP.y, r: 72, tip: "Starship · Spotty · space episode" },
     ];
   }
@@ -307,7 +310,7 @@
   function createWorld() {
     var C0 = global.FroggiesCanon;
     if (C0 && C0.resetVehicleParks) C0.resetVehicleParks();
-    return {
+    var world = {
       mapW: MAP_W,
       mapH: MAP_H,
       areas: AREAS,
@@ -333,12 +336,16 @@
       airTime: 0,
       lastJumpT: 0,
       sharedDriverId: null,
+      air: null,
       garageOpen: 0,
       ambientT: 0,
       lapCount: 0,
       lapSide: 0,
       lapCooldown: 0,
     };
+    var Air0 = global.FroggiesAir;
+    if (Air0 && Air0.resetAir) Air0.resetAir(world);
+    return world;
   }
 
   function seedDecor(world) {
@@ -486,6 +493,12 @@
       mechStories: 0,
       inSwim: false,
       inSub: false,
+      inHeli: false,
+      inDrone: false,
+      airKind: null,
+      airSeat: null,
+      climbIn: 0,
+      airBoost: false,
       padIndex: null,
       z: 0,
       zVel: 0,
@@ -530,7 +543,25 @@
     var isMech = hot.kind === "mech" || (C && C.isMechHotspot && C.isMechHotspot(hot)) || hid.indexOf("mech") === 0;
     var isTruck = hot.kind === "truck" || (C && C.isTruckHotspot && C.isTruckHotspot(hot)) || hid.indexOf("truck") === 0;
     var isSub = hot.kind === "submarine" || (C && C.isSubHotspot && C.isSubHotspot(hot)) || hid.indexOf("submarine") === 0;
-    if (!isMech && !isTruck && !isSub) return false;
+    var isAir = hot.kind === "heli" || hot.kind === "drone" || (C && C.isAirHotspot && C.isAirHotspot(hot)) || hid === "heli" || hid === "drone";
+    if (!isMech && !isTruck && !isSub && !isAir) return false;
+    if (isAir) {
+      var AirT = global.FroggiesAir;
+      if (AirT && world) {
+        var kindT = (C && C.airKindOf) ? C.airKindOf(hot) : (hot.kind === "drone" ? "drone" : "heli");
+        var craftT = AirT.ensureCraft(world, kindT);
+        if (craftT && craftT.seats) {
+          var aboardMe = false, openSeat = false;
+          for (var si = 0; si < craftT.seats.length; si++) {
+            if (craftT.seats[si] === me.id) aboardMe = true;
+            if (!craftT.seats[si]) openSeat = true;
+          }
+          if (aboardMe) return false;
+          if (!openSeat) return true;
+        }
+      }
+      return false;
+    }
     if (hot.mode === "shared") return false;
     var sid = C && C.mechSolidId ? C.mechSolidId(hid) : null;
     for (var i = 0; i < frogs.length; i++) {
@@ -1383,6 +1414,37 @@
   }
 
   function moveEntity(ent, dt, speed, world) {
+    /* air1: flying craft owns motion — never walk + fly same frame */
+    var AirM = global.FroggiesAir;
+    if (AirM && AirM.isAirborneFrog && AirM.isAirborneFrog(ent) && world) {
+      var kindM = AirM.frogAirKind(ent);
+      var craftM = AirM.ensureCraft(world, kindM);
+      var mx = ent.steerX || 0, my = ent.steerY || 0;
+      if (ent.steerScreen) {
+        var swAir = screenSteerToWorld(mx, my);
+        mx = swAir.x; my = swAir.y;
+      }
+      var climb = ent.climbIn || 0;
+      var boost = !!(ent.airBoost || (ent.speedBoost && ent.speedBoost > 1.05));
+      if (AirM.isPilot(craftM, ent)) {
+        AirM.tickFlight(world, null, ent, dt, mx, my, climb, boost);
+        ent.x = craftM.x; ent.y = craftM.y; ent.z = craftM.z;
+        ent.vx = craftM.vx; ent.vy = craftM.vy; ent.zVel = craftM.vz;
+        ent.faceAngle = craftM.faceAngle;
+        ent.groundZ = 0;
+        ent.hopSquash = 0;
+        ent.inSwim = false;
+        ent._airPilot = true;
+      } else if (craftM) {
+        ent.x = craftM.x; ent.y = craftM.y; ent.z = craftM.z || 0;
+        ent.vx = craftM.vx || 0; ent.vy = craftM.vy || 0;
+        ent.faceAngle = craftM.faceAngle;
+        ent.groundZ = 0;
+        ent._airPilot = false;
+      }
+      if (craftM) ent._airRotor = craftM.rotor || 0;
+      return;
+    }
     /* polish3 + polish10: snappier walk/drive — quicker ramp + firmer stop */
     /* tapsteer1: noticeably faster walk + drive */
     /* mech5: per-vehicle / per-mech drive feel (Ripsaw fastest auto) */
@@ -1450,7 +1512,7 @@
       }
     }
     /* pond1: auto swim when walking into pond; leave swim on shore */
-    if (!ent.inTruck && !ent.inMech && !ent.inSub) {
+    if (!ent.inTruck && !ent.inMech && !ent.inSub && !ent.inHeli && !ent.inDrone) {
       if (inPond(ent.x, ent.y) && (ent.z || 0) < 8) {
         if (!ent.inSwim) {
           ent.inSwim = true;
@@ -1484,7 +1546,7 @@
       }
     }
     var canon = global.FroggiesCanon;
-    var airFoot = !ent.inTruck && !ent.inMech && !ent.inSub && (ent.z || 0) > 1.5;
+    var airFoot = !ent.inTruck && !ent.inMech && !ent.inSub && !ent.inHeli && !ent.inDrone && (ent.z || 0) > 1.5;
     if (mag > 0.05) {
       var aim = Math.atan2(my, mx);
       if (ent.inMech) {
@@ -1609,7 +1671,7 @@
       }
       if (ent.inSwim) ent.groundZ = 0;
     }
-    if (!ent.inTruck && !ent.inMech && !ent.inSub && !ent.inSwim && canon && canon.tickLocoHop) {
+    if (!ent.inTruck && !ent.inMech && !ent.inSub && !ent.inHeli && !ent.inDrone && !ent.inSwim && canon && canon.tickLocoHop) {
       var wantHop = mag > 0.05;
       var launched = canon.tickLocoHop(ent, dt, {
         moving: wantHop,
@@ -1796,6 +1858,19 @@
     return true;
   }
 
+  function boardAir(world, frogs, frog, hotspot) {
+    var Air = global.FroggiesAir;
+    if (!Air || !Air.boardAir) return false;
+    var res = Air.boardAir(world, frogs, frog, hotspot);
+    return !!(res && res.ok);
+  }
+
+  function boardAirResult(world, frogs, frog, hotspot) {
+    var Air = global.FroggiesAir;
+    if (!Air || !Air.boardAir) return { ok: false };
+    return Air.boardAir(world, frogs, frog, hotspot) || { ok: false };
+  }
+
   function pickAiChat(frogId) {
     var C = global.FroggiesCanon;
     var lines = (C && C.AI_CHAT && C.AI_CHAT[frogId]) || null;
@@ -1824,6 +1899,20 @@
         f.wakePhase = localFrog.wakePhase || 0;
         f.idleBounce = (f.idleBounce || 0) + dt * 5;
         if (f.chatT > 0) f.chatT -= dt;
+        continue;
+      }
+      /* air1: AI passengers ride if already seated (no auto-board); sync to craft */
+      var AirAI = global.FroggiesAir;
+      if (AirAI && AirAI.isAirborneFrog && AirAI.isAirborneFrog(f) && world) {
+        var ck = AirAI.frogAirKind(f);
+        var cr = AirAI.ensureCraft(world, ck);
+        if (cr) {
+          f.x = cr.x; f.y = cr.y; f.z = cr.z || 0;
+          f.vx = cr.vx || 0; f.vy = cr.vy || 0;
+          f.faceAngle = cr.faceAngle;
+          f.idleBounce = (f.idleBounce || 0) + dt * 5;
+          if (f.chatT > 0) f.chatT -= dt;
+        }
         continue;
       }
       if (f.truckMode === "shared" && !(localFrog && localFrog.inTruck && localFrog.truckMode === "shared")) {
@@ -3876,6 +3965,29 @@
       return p;
     }
 
+    if (frog.inHeli || frog.inDrone) {
+      var kindD = frog.inDrone ? "drone" : "heli";
+      var yawAir = frog.faceAngle != null ? frog.faceAngle : -Math.PI / 2;
+      var rotor = frog._airRotor || 0;
+      var isPilotSeat = frog.airSeat === 0 || frog._airPilot;
+      /* Draw craft once: local frog always; else only pilot seat so AI passengers don't stack meshes */
+      if (frog.local || isPilotSeat) {
+        if (kindD === "heli") drawHelicopter(ctx, p.x, p.y, yawAir, p.depth, (frog.z || 0) > 4, frog.z || 0, "#94a3b8", rotor);
+        else drawPassengerDrone(ctx, p.x, p.y, yawAir, p.depth, (frog.z || 0) > 4, frog.z || 0, "#67e8f9", rotor);
+        if (frogs) {
+          var airCrew = [];
+          for (var ai = 0; ai < frogs.length; ai++) {
+            if ((kindD === "heli" && frogs[ai].inHeli) || (kindD === "drone" && frogs[ai].inDrone)) airCrew.push(frogs[ai]);
+          }
+          if (airCrew.length > 1) {
+            drawAboardIcons(ctx, airCrew, p.x, p.y - 18 * p.depth - (frog.z || 0) * 0.35 * p.depth, p.depth, (frog.z || 0) * 0.35 * p.depth);
+          }
+        }
+        drawNameplate(ctx, frog.name || "You", p.x, p.y - 52 * p.depth - (frog.z || 0) * 0.4 * p.depth, frog.color || "#fff", p.depth, !frog.local);
+      }
+      return p;
+    }
+
     if (frog.inTruck && frog.truckMode === "shared" && !frog.local) {
       return p; /* drawn on shared truck roof by driver */
     }
@@ -4152,6 +4264,179 @@
     return p;
   }
 
+  function drawAirPad(ctx, wx, wy, kind, camX, camY, vw, vh, near) {
+    var p = project(wx, wy, camX, camY, vw, vh);
+    var s = p.depth;
+    var big = kind === "heli";
+    var R = (big ? 46 : 32) * s;
+    ctx.save();
+    /* Painted circle */
+    ctx.beginPath();
+    ctx.ellipse(p.x, p.y, R, R * 0.42, -0.12, 0, Math.PI * 2);
+    ctx.fillStyle = near ? "rgba(30, 41, 59, 0.88)" : "rgba(30, 41, 59, 0.72)";
+    ctx.fill();
+    ctx.strokeStyle = big ? "#fbbf24" : "#67e8f9";
+    ctx.lineWidth = (near ? 3.4 : 2.2) * s;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(p.x, p.y, R * 0.72, R * 0.30, -0.12, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(255,255,255,0.45)";
+    ctx.lineWidth = 1.4 * s;
+    ctx.stroke();
+    ctx.fillStyle = big ? "#fde68a" : "#a5f3fc";
+    ctx.font = "bold " + Math.round((big ? 28 : 22) * s) + "px Segoe UI, system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(big ? "H" : "D", p.x, p.y - 2 * s);
+    ctx.textBaseline = "alphabetic";
+    ctx.fillStyle = near ? "#fef3c7" : "rgba(255,255,255,0.75)";
+    ctx.font = "bold " + Math.round(11 * s) + "px Segoe UI, system-ui, sans-serif";
+    ctx.fillText(big ? "HELIPAD" : "DRONE", p.x, p.y + R * 0.55 + 10 * s);
+    ctx.restore();
+  }
+
+  function drawHelicopter(ctx, x, y, faceAngle, depth, flying, z, accent, rotor) {
+    var s = depth;
+    var lift = (z || 0) * 0.58 * s;
+    var yaw = faceAngle != null ? faceAngle : -Math.PI / 2;
+    ctx.save();
+    ctx.translate(x, y - lift);
+    /* Ground shadow shrinks with height */
+    var sh = Math.max(0.25, 1 - (z || 0) / 320);
+    ctx.fillStyle = "rgba(0,0,0," + (0.28 * sh) + ")";
+    ctx.beginPath();
+    ctx.ellipse(0, lift + 6 * s, 38 * s * sh, 12 * s * sh, -0.12, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.rotate(yaw + Math.PI / 2);
+    /* Skids */
+    ctx.strokeStyle = "#64748b";
+    ctx.lineWidth = 2.4 * s;
+    ctx.beginPath();
+    ctx.moveTo(-22 * s, 10 * s); ctx.lineTo(22 * s, 10 * s);
+    ctx.moveTo(-22 * s, 16 * s); ctx.lineTo(22 * s, 16 * s);
+    ctx.moveTo(-14 * s, 4 * s); ctx.lineTo(-14 * s, 16 * s);
+    ctx.moveTo(14 * s, 4 * s); ctx.lineTo(14 * s, 16 * s);
+    ctx.stroke();
+    /* Fuselage */
+    ctx.fillStyle = accent || "#94a3b8";
+    ctx.beginPath();
+    ctx.moveTo(-8 * s, -6 * s);
+    ctx.lineTo(18 * s, -4 * s);
+    ctx.lineTo(26 * s, 2 * s);
+    ctx.lineTo(14 * s, 10 * s);
+    ctx.lineTo(-16 * s, 10 * s);
+    ctx.lineTo(-22 * s, 2 * s);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "#1e293b";
+    ctx.lineWidth = 1.2 * s;
+    ctx.stroke();
+    /* Cabin glass */
+    ctx.fillStyle = "rgba(125, 211, 252, 0.55)";
+    ctx.fillRect(-6 * s, -4 * s, 16 * s, 8 * s);
+    /* Tail boom */
+    ctx.fillStyle = "#64748b";
+    ctx.fillRect(-36 * s, -2 * s, 18 * s, 5 * s);
+    ctx.fillStyle = "#fbbf24";
+    ctx.fillRect(-38 * s, -8 * s, 4 * s, 14 * s);
+    /* Main rotor */
+    var spin = (rotor || 0) * (flying ? 1 : 0.15);
+    ctx.save();
+    ctx.translate(2 * s, -10 * s);
+    ctx.rotate(spin);
+    ctx.strokeStyle = flying ? "rgba(226,232,240,0.85)" : "rgba(148,163,184,0.7)";
+    ctx.lineWidth = 2.2 * s;
+    ctx.beginPath();
+    ctx.moveTo(-34 * s, 0); ctx.lineTo(34 * s, 0);
+    ctx.moveTo(0, -34 * s); ctx.lineTo(0, 34 * s);
+    ctx.stroke();
+    ctx.fillStyle = "#334155";
+    ctx.beginPath(); ctx.arc(0, 0, 3.2 * s, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    /* H mark on roof */
+    ctx.fillStyle = "#fde68a";
+    ctx.font = "bold " + Math.round(10 * s) + "px Segoe UI, system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("H", 2 * s, 8 * s);
+    ctx.restore();
+  }
+
+  function drawPassengerDrone(ctx, x, y, faceAngle, depth, flying, z, accent, rotor) {
+    var s = depth;
+    var lift = (z || 0) * 0.58 * s;
+    var yaw = faceAngle != null ? faceAngle : -Math.PI / 2;
+    ctx.save();
+    ctx.translate(x, y - lift);
+    var sh = Math.max(0.25, 1 - (z || 0) / 280);
+    ctx.fillStyle = "rgba(0,0,0," + (0.24 * sh) + ")";
+    ctx.beginPath();
+    ctx.ellipse(0, lift + 4 * s, 22 * s * sh, 8 * s * sh, -0.12, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.rotate(yaw + Math.PI / 2);
+    /* Body */
+    ctx.fillStyle = accent || "#67e8f9";
+    ctx.beginPath();
+    ctx.moveTo(-10 * s, -8 * s);
+    ctx.lineTo(10 * s, -8 * s);
+    ctx.quadraticCurveTo(14 * s, -8 * s, 14 * s, -4 * s);
+    ctx.lineTo(14 * s, 4 * s);
+    ctx.quadraticCurveTo(14 * s, 8 * s, 10 * s, 8 * s);
+    ctx.lineTo(-10 * s, 8 * s);
+    ctx.quadraticCurveTo(-14 * s, 8 * s, -14 * s, 4 * s);
+    ctx.lineTo(-14 * s, -4 * s);
+    ctx.quadraticCurveTo(-14 * s, -8 * s, -10 * s, -8 * s);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "#0e7490";
+    ctx.lineWidth = 1.4 * s;
+    ctx.stroke();
+    ctx.fillStyle = "rgba(15, 23, 42, 0.45)";
+    ctx.fillRect(-7 * s, -5 * s, 14 * s, 8 * s);
+    /* Arms + 4 rotors */
+    var arms = [[-16, -12], [16, -12], [-16, 12], [16, 12]];
+    var spin = (rotor || 0) * (flying ? 1.4 : 0.2);
+    for (var ai = 0; ai < arms.length; ai++) {
+      var ax = arms[ai][0] * s, ay = arms[ai][1] * s;
+      ctx.strokeStyle = "#475569";
+      ctx.lineWidth = 2 * s;
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(ax, ay); ctx.stroke();
+      ctx.save();
+      ctx.translate(ax, ay);
+      ctx.rotate(spin + ai * 0.7);
+      ctx.strokeStyle = flying ? "rgba(165,243,252,0.9)" : "rgba(148,163,184,0.65)";
+      ctx.lineWidth = 1.8 * s;
+      ctx.beginPath(); ctx.moveTo(-9 * s, 0); ctx.lineTo(9 * s, 0); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, -9 * s); ctx.lineTo(0, 9 * s); ctx.stroke();
+      ctx.restore();
+    }
+    ctx.fillStyle = "#ecfeff";
+    ctx.font = "bold " + Math.round(9 * s) + "px Segoe UI, system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("D", 0, 4 * s);
+    ctx.restore();
+  }
+
+  function drawParkedAir(ctx, world, frogs, camX, camY, vw, vh) {
+    var Air = global.FroggiesAir;
+    var C = global.FroggiesCanon;
+    if (!Air || !world) return;
+    var kinds = ["heli", "drone"];
+    for (var ki = 0; ki < kinds.length; ki++) {
+      var kind = kinds[ki];
+      var craft = Air.ensureCraft(world, kind);
+      var homePad = kind === "drone" ? ((C && C.DRONE_PAD) || { x: 1180, y: 2000 }) : ((C && C.HELI_PAD) || { x: 980, y: 2000 });
+      /* Painted H/D pad stays at ranch home — craft may fly away */
+      drawAirPad(ctx, homePad.x, homePad.y, kind, camX, camY, vw, vh, false);
+      var occupied = Air.occupiedCount(craft) > 0;
+      /* Occupied craft drawn by pilot frog; empty craft silhouette at park/craft xy */
+      if (!occupied && craft) {
+        var p = project(craft.x, craft.y, camX, camY, vw, vh);
+        if (kind === "heli") drawHelicopter(ctx, p.x, p.y, craft.faceAngle, p.depth, false, 0, "#94a3b8", craft.rotor || 0);
+        else drawPassengerDrone(ctx, p.x, p.y, craft.faceAngle, p.depth, false, 0, "#67e8f9", craft.rotor || 0);
+      }
+    }
+  }
+
   function drawHotspot(ctx, h, camX, camY, vw, vh, near) {
     /* polish4: story props invite — phone / SPS / Starship / trucks */
     var p = project(h.x, h.y, camX, camY, vw, vh);
@@ -4231,7 +4516,7 @@
       ctx.fillText(h.label, p.x, badgeY - 8);
       ctx.fillStyle = "#fbbf24";
       ctx.font = "bold 11px Segoe UI, system-ui, sans-serif";
-      var prompt = (h.kind === "truck" || (h.id && String(h.id).indexOf("truck") === 0) || h.kind === "mech" || (h.id && String(h.id).indexOf("mech") === 0) || h.kind === "submarine" || (h.id && String(h.id).indexOf("submarine") === 0))
+      var prompt = (h.kind === "truck" || (h.id && String(h.id).indexOf("truck") === 0) || h.kind === "mech" || (h.id && String(h.id).indexOf("mech") === 0) || h.kind === "submarine" || (h.id && String(h.id).indexOf("submarine") === 0) || h.kind === "heli" || h.kind === "drone" || h.id === "heli" || h.id === "drone")
         ? "BOARD · INTERACT / E" : "INTERACT · E";
       ctx.fillText(prompt, p.x, badgeY + 8);
     } else {
@@ -4784,6 +5069,7 @@
     drawStarshipPad(ctx, camX, camY, vw, vh, nearHot && nearHot.id === "starship");
     drawFx(ctx, world, camX, camY, vw, vh);
     drawParkedTrucks(ctx, world, frogs, camX, camY, vw, vh);
+    drawParkedAir(ctx, world, frogs, camX, camY, vw, vh);
 
     for (var hi = 0; hi < world.hotspots.length; hi++) {
       var h = world.hotspots[hi];
@@ -4791,7 +5077,8 @@
         return f.local && f.inTruck && (f.truckId === h.id || (f.truckMode === "shared" && h.mode === "shared"));
       });
       var hideSub = (h.kind === "submarine" || h.id === "submarine") && frogs.some(function (f) { return f.inSub; });
-      if (hideTruck || hideSub) continue;
+      var hideAir = h.kind === "heli" || h.kind === "drone" || h.id === "heli" || h.id === "drone";
+      if (hideTruck || hideSub || hideAir) continue;
       drawHotspot(ctx, h, camX, camY, vw, vh, nearHot && nearHot.id === h.id);
     }
 
@@ -4853,6 +5140,8 @@
     boardTruck: boardTruck,
     boardMech: boardMech,
     boardSub: boardSub,
+    boardAir: boardAir,
+    boardAirResult: boardAirResult,
     project: project,
     getViewScale: getViewScale,
     setViewScaleUser: setViewScaleUser,

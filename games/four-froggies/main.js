@@ -181,9 +181,10 @@
     if (C && C.isTruckHotspot && C.isTruckHotspot(h)) return true;
     if (C && C.isMechHotspot && C.isMechHotspot(h)) return true;
     if (C && C.isSubHotspot && C.isSubHotspot(h)) return true;
-    if (h.kind === "truck" || h.kind === "mech" || h.kind === "submarine") return true;
+    if (C && C.isAirHotspot && C.isAirHotspot(h)) return true;
+    if (h.kind === "truck" || h.kind === "mech" || h.kind === "submarine" || h.kind === "heli" || h.kind === "drone") return true;
     const id = h.id ? String(h.id) : "";
-    return id.indexOf("truck") === 0 || id.indexOf("mech") === 0 || id.indexOf("submarine") === 0;
+    return id.indexOf("truck") === 0 || id.indexOf("mech") === 0 || id.indexOf("submarine") === 0 || id === "heli" || id === "drone";
   }
 
   /** Frog owned by this input (pad N → that frog; keyboard/HUD → primary only). */
@@ -204,12 +205,12 @@
     if (opts.source === "pad" && opts.padIndex != null) {
       for (const f of frogs) {
         if (f.local && f.padIndex != null && (f.padIndex | 0) === (opts.padIndex | 0) &&
-            (f.inTruck || f.inMech || f.inSub)) return f;
+            (f.inTruck || f.inMech || f.inSub || f.inHeli || f.inDrone)) return f;
       }
       return null;
     }
     for (const f of frogs) {
-      if ((f.inTruck || f.inMech || f.inSub) && frogOwnedByInput(f, opts)) return f;
+      if ((f.inTruck || f.inMech || f.inSub || f.inHeli || f.inDrone) && frogOwnedByInput(f, opts)) return f;
     }
     return null;
   }
@@ -238,7 +239,7 @@
     if (!world || !W || !W.nearestHotspot) return localPlayer();
     /* Shared HUD/keyboard: act on primary only (nearest hotspot at primary) */
     const me = localPlayer();
-    if (!me || me.inTruck || me.inMech || me.inSub) return me;
+    if (!me || me.inTruck || me.inMech || me.inSub || me.inHeli || me.inDrone) return me;
     return me;
   }
 
@@ -246,7 +247,10 @@
    *  boardall1: compare via mechSolidId so mech-10 / mech10 match; different mechs stay free. */
   function vehicleTakenByOtherLocal(hot, me) {
     if (!hot || !me || !isBoardableHot(hot)) return false;
-    if (hot.mode === "shared") return false;
+    if (hot.mode === "shared" || hot.kind === "heli" || hot.kind === "drone") {
+      if (W && W.hotspotTakenByOther) return W.hotspotTakenByOther(world, frogs, hot, me);
+      return false;
+    }
     if (W && W.hotspotTakenByOther) return W.hotspotTakenByOther(world, frogs, hot, me);
     const C = globalThis.FroggiesCanon;
     const hid = hot.id ? String(hot.id) : "";
@@ -283,7 +287,7 @@
       if (!f.local) continue;
       /* Shared HUD near-check: primary + padless only (not other pads' positions for EXIT/BOARD label) */
       if (f.padIndex != null && f.padIndex !== undefined && f !== me) continue;
-      if (f.inTruck || f.inMech || f.inSub) continue;
+      if (f.inTruck || f.inMech || f.inSub || f.inHeli || f.inDrone) continue;
       const hot = W.nearestHotspot(world, f.x, f.y, 70, { frogs, frog: f });
       if (!hot) continue;
       const d = Math.hypot(f.x - hot.x, f.y - hot.y);
@@ -394,7 +398,7 @@
 
   function paintHud() {
     const me = localPlayer();
-    const hudBoarded = hudBoardedFrog() || (me && (me.inTruck || me.inMech || me.inSub) && frogOwnedByInput(me, { source: "hud" }) ? me : null);
+    const hudBoarded = hudBoardedFrog() || (me && (me.inTruck || me.inMech || me.inSub || me.inHeli || me.inDrone) && frogOwnedByInput(me, { source: "hud" }) ? me : null);
     if (livesEl) {
       if (phase === "space" && spaceEp && spaceEp.inOrbit) {
         livesEl.textContent = "🌍 Orbit";
@@ -402,6 +406,10 @@
         livesEl.textContent = "🤖 Mech · " + (hudBoarded.mechStories || "?") + "-story";
       } else if (hudBoarded && hudBoarded.inSub) {
         livesEl.textContent = "🛸 Sub · underwater";
+      } else if (hudBoarded && hudBoarded.inHeli) {
+        livesEl.textContent = (hudBoarded.z || 0) > 8 ? "🚁 Heli" : "🚁 Heli · pad";
+      } else if (hudBoarded && hudBoarded.inDrone) {
+        livesEl.textContent = (hudBoarded.z || 0) > 8 ? "🛸 Drone" : "🛸 Drone · pad";
       } else if (hudBoarded && hudBoarded.inTruck) {
         const mode = hudBoarded.truckMode === "shared" ? "All aboard" : "Drive";
         livesEl.textContent = (hudBoarded.z || 0) > 4 ? "🚚 AIR!" : "🚚 " + mode;
@@ -476,6 +484,12 @@
       } else if (hudBoarded) {
         /* polish11: no sticky EXIT billboard — brief toast / exitTip only; INTERACT button shows EXIT */
         if (storyToastT > 0 && storyToast) tipEl.textContent = storyToast;
+        else if (hudBoarded.inHeli || hudBoarded.inDrone) {
+          const Air = globalThis.FroggiesAir;
+          const kind = hudBoarded.inDrone ? "drone" : "heli";
+          const craft = Air && world ? Air.ensureCraft(world, kind) : null;
+          tipEl.textContent = (Air && Air.flyingTip) ? Air.flyingTip(craft, kind) : "land + INTERACT to hop out";
+        }
         else if (exitTipT > 0) tipEl.textContent = "EXIT · INTERACT / E";
         else if (hudBoarded.inSub)
           tipEl.textContent = "🛸 Diving · EXIT · INTERACT / E";
@@ -483,6 +497,11 @@
           tipEl.textContent = "FIRE · Space / X / button · EXIT INTERACT";
         else tipEl.textContent = "";
       } else if (storyToastT > 0) tipEl.textContent = storyToast;
+      else if (nearHot && (nearHot.kind === "heli" || nearHot.kind === "drone" || nearHot.id === "heli" || nearHot.id === "drone")) {
+        const Air = globalThis.FroggiesAir;
+        const kind = (nearHot.kind === "drone" || nearHot.id === "drone") ? "drone" : "heli";
+        tipEl.textContent = (Air && Air.nearPadTip) ? Air.nearPadTip(kind) : ("Walk | " + (kind === "drone" ? "Drone" : "Heli") + " · INTERACT / E");
+      }
       else if (nearHot && (nearHot.kind === "mech" || (nearHot.id && String(nearHot.id).indexOf("mech") === 0))) {
         const Cown = globalThis.FroggiesCanon;
         if (me && Cown && Cown.canBoardMech && !Cown.canBoardMech(me.id, nearHot)) {
@@ -559,7 +578,8 @@
     const def = FROG_DEFS[me.id];
     const Cabil = globalThis.FroggiesCanon;
     const tankFire = !!(me.inTruck && Cabil && Cabil.isTankVehicle && Cabil.isTankVehicle(me));
-    const label = tankFire ? "FIRE" : def.ability;
+    const flying = !!(me.inHeli || me.inDrone);
+    const label = tankFire ? "FIRE" : flying ? "CLIMB" : def.ability;
     /* hop3: sub-second anti-tap CD — do not flash a fake "1s" */
     btnAbility.textContent = me.cd > 0.25 ? label + " " + Math.ceil(me.cd) + "s" : label;
     btnAbility.classList.toggle("ready", me.cd <= 0);
@@ -615,6 +635,16 @@
     }
     const def = FROG_DEFS[frog.id];
     const Ctank = globalThis.FroggiesCanon;
+    /* air1: while flying, ability/Space = climb thrust (hop axis) */
+    if (frog.inHeli || frog.inDrone) {
+      frog.climbIn = 1;
+      frog._climbPulseT = 0.35;
+      frog.cd = 0.08;
+      flashAbilityButton(frog.id);
+      beep(520, 0.05, "triangle", 0.04);
+      updateAbilityButton();
+      return;
+    }
     /* mech4: Tank FIRE — Space / X / ability / FIRE ONLY shoots (never hop / reload / reset). */
     if (frog.inTruck && Ctank && Ctank.isTankVehicle && Ctank.isTankVehicle(frog)) {
       frog.hopWantT = 0; /* never buffer a hop while tank */
@@ -801,11 +831,27 @@
       hot = W && W.nearestHotspot ? W.nearestHotspot(world, me.x, me.y, 70, nearOpts) : null;
     } else {
       hot = nearHot;
-      if (!hot && !(me.inTruck || me.inMech || me.inSub) && W && W.nearestHotspot) {
+      if (!hot && !(me.inTruck || me.inMech || me.inSub || me.inHeli || me.inDrone) && W && W.nearestHotspot) {
         hot = W.nearestHotspot(world, me.x, me.y, 70, nearOpts);
       }
     }
     /* EXIT only for this frog — caller ownership already enforced */
+    if (me.inHeli || me.inDrone) {
+      const res = W.boardAirResult
+        ? W.boardAirResult(world, frogs, me, { kind: me.inDrone ? "drone" : "heli", id: me.inDrone ? "drone" : "heli" })
+        : (W.boardAir ? { ok: W.boardAir(world, frogs, me, { kind: me.inDrone ? "drone" : "heli" }) } : { ok: false });
+      if (res && res.denied) {
+        storyToast = res.toast || "Land + slow · then INTERACT to hop out";
+        storyToastT = 1.8;
+        paintHud();
+        return;
+      }
+      storyToast = (res && res.toast) || "Parked · walking";
+      storyToastT = 1.8;
+      exitTipT = 0;
+      paintHud();
+      return;
+    }
     if (me.inMech) {
       if (W.boardMech) W.boardMech(world, frogs, me, { kind: "mech", id: me.mechId || "mech" });
       else { me.inMech = false; me.mechId = null; me.mechStories = 0; me.z = 0; me.zVel = 0; }
@@ -917,6 +963,22 @@
         exitTipT = 0;
       }
       storyToastT = 2.5;
+    } else if (hot.kind === "heli" || hot.kind === "drone" || hot.id === "heli" || hot.id === "drone") {
+      const res = W.boardAirResult
+        ? W.boardAirResult(world, frogs, me, hot)
+        : (W.boardAir ? { ok: !!W.boardAir(world, frogs, me, hot), boarded: true } : { ok: false });
+      if (res && res.denied) {
+        storyToast = res.toast || "Cannot board";
+        storyToastT = 1.8;
+        beep(140, 0.08, "square", 0.04);
+      } else if (res && res.ok) {
+        storyToast = res.toast || "Boarded air craft";
+        storyToastT = 2.6;
+        exitTipT = 2.6;
+        beep(200, 0.1, "sawtooth", 0.04);
+      }
+      paintHud();
+      return;
     } else if (hot.id === "fishies") {
       if (world) W.scareFishies(world, me.x, me.y);
       sfxSplash();
@@ -1115,10 +1177,11 @@
     if (!me) return;
     // polish3/10: snappy follow — shorter look-ahead so cam stops fighting steer
     const spd = Math.hypot(me.vx || 0, me.vy || 0);
-    const look = spd < 40 ? 0.02 : me.inTruck ? 0.07 : 0.045;
+    const flying = !!(me.inHeli || me.inDrone);
+    const look = spd < 40 ? 0.02 : (me.inTruck || flying) ? 0.07 : 0.045;
     camTX = me.x + me.vx * look;
-    camTY = me.y + me.vy * look - (me.z || 0) * 0.1;
-    const follow = me.inTruck ? 9.5 : 8.6;
+    camTY = me.y + me.vy * look - (me.z || 0) * (flying ? 0.22 : 0.1);
+    const follow = (me.inTruck || flying) ? 9.5 : 8.6;
     const k = 1 - Math.exp(-follow * dt);
     camX += (camTX - camX) * k;
     camY += (camTY - camY) * k;
@@ -1134,6 +1197,13 @@
         me.steerScreen = true;
         me.steerX = es.x;
         me.steerY = es.y;
+        if (me.inHeli || me.inDrone) {
+          if (me._climbPulseT > 0) {
+            me._climbPulseT -= dt;
+            if (me.climbIn == null || me.climbIn === 0) me.climbIn = 1;
+            if (me._climbPulseT <= 0 && me.climbIn > 0 && !me._climbKeyHeld) me.climbIn = 0;
+          }
+        }
         W.moveEntity(me, dt, undefined, world);
         const drive = W.tickDrive(world, me, dt);
         if (drive.rockHit) {
@@ -1722,6 +1792,15 @@
     if ((e.key === "e" || e.key === "E" || e.key === "f" || e.key === "F") && (phase === "hub" || phase === "space")) {
       doInteract(null, { source: "keyboard" });
     }
+    /* air1: R climb / C descend / Shift boost while heli or drone */
+    if (phase === "hub") {
+      const flyer = localPlayer();
+      if (flyer && (flyer.inHeli || flyer.inDrone)) {
+        if (e.key === "r" || e.key === "R") { flyer.climbIn = 1; flyer._climbKeyHeld = true; e.preventDefault(); }
+        if (e.key === "c" || e.key === "C") { flyer.climbIn = -1; flyer._climbKeyHeld = true; e.preventDefault(); }
+        if (e.key === "Shift") { flyer.airBoost = true; e.preventDefault(); }
+      }
+    }
     /* track3: monster-truck wheels — [ ] or - = (hold grows/shrinks) */
     if (e.key === "[" || e.key === "-" || e.key === "_") {
       const me = localPlayer();
@@ -1760,6 +1839,13 @@
     if (["ArrowRight", "d", "D"].includes(e.key) && steerX > 0) steerX = 0;
     if (["ArrowUp", "w", "W"].includes(e.key) && steerY < 0) steerY = 0;
     if (["ArrowDown", "s", "S"].includes(e.key) && steerY > 0) steerY = 0;
+    {
+      const flyer = localPlayer();
+      if (flyer && (flyer.inHeli || flyer.inDrone)) {
+        if (e.key === "r" || e.key === "R" || e.key === "c" || e.key === "C") { flyer.climbIn = 0; flyer._climbKeyHeld = false; }
+        if (e.key === "Shift") flyer.airBoost = false;
+      }
+    }
     if (e.key === "[" || e.key === "-" || e.key === "_" || e.key === "]" || e.key === "=" || e.key === "+") {
       wheelHoldDir = 0;
     }

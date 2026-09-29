@@ -23,6 +23,7 @@
          distinct vehicle drive (Ripsaw fastest auto; Cybertruck / Monster / Tank feel); mech bands differ;
          expand playable ground/forest (house size unchanged).
    pond1: swim in pond + docked submarine at pond perimeter (enter/EXIT like other vehicles).
+   air1: helipad H + passenger-drone pad D near house/garage; heli 4 seats / drone 1–2.
    mech6: tank-blasted props + Rexy 1000-mech respawn after ~7s.
    mech7: swim pose (engines); board existing sub hull (no clone).
    mech8: Rexy 1000-mech tank-blast respawn restores full articulated mesh (Three). */
@@ -50,6 +51,14 @@
   ];
   /* pond1: submarine docked at south pond perimeter (approach from ranch / track) */
   var SUB_DOCK = { x: 2900, y: 1240 };
+  /* air1: helipad + passenger-drone pad near house/garage driveway (short walk apart) */
+  var HELI_PAD = { x: 980, y: 2000, r: 52 };
+  var DRONE_PAD = { x: 1180, y: 2000, r: 40 };
+  var AIR_ENTER_R = 48; /* ~40px canvas / ~2.5 three units at typical zoom */
+  var AIR_STATS = {
+    heli: { maxSp: 380, accel: 980, fric: 3.8, climb: 220, descend: 180, ceiling: 420, boost: 1.45, seats: 4, landZ: 14, landSp: 55 },
+    drone: { maxSp: 440, accel: 1280, fric: 4.6, climb: 280, descend: 240, ceiling: 260, boost: 1.55, seats: 2, landZ: 12, landSp: 60 },
+  };
 
   var COMPOUND = {
     yard: { x: 100, y: 2100, w: 600, h: 360 },
@@ -256,6 +265,8 @@
     { id: "mech-trillion", label: "James · trillion-story mech", x: COMPOUND.mechTrillion.x, y: COMPOUND.mechTrillion.y, r: 150, tip: "James only · trillion-story mech", kind: "mech", stories: 1e12, solidId: "mechTrillion", frogId: "james" },
     { id: "fishies", label: "Fishies", x: 3160, y: 620, r: 70, tip: "Swim the pond · fishies & whales" },
     { id: "submarine", label: "Submarine", x: SUB_DOCK.x, y: SUB_DOCK.y, r: 72, tip: "Submarine · dive underwater", kind: "submarine", vehicleStyle: "submarine", mode: "solo" },
+    { id: "heli", label: "Helipad · H", x: HELI_PAD.x, y: HELI_PAD.y, r: HELI_PAD.r, tip: "Helicopter · 4 seats · INTERACT board", kind: "heli", vehicleStyle: "heli", mode: "shared", seats: 4 },
+    { id: "drone", label: "Drone pad · D", x: DRONE_PAD.x, y: DRONE_PAD.y, r: DRONE_PAD.r, tip: "Passenger drone · 1–2 seats · INTERACT board", kind: "drone", vehicleStyle: "drone", mode: "shared", seats: 2 },
     { id: "starship", label: "Starship", x: 360, y: 320, r: 72, tip: "Starship · Spotty · space episode" },
   ];
 
@@ -373,6 +384,34 @@
     return !!(h && (h.kind === "submarine" || (h.id && String(h.id).indexOf("submarine") === 0)));
   }
 
+  function isHeliHotspot(h) {
+    return !!(h && (h.kind === "heli" || (h.id && (String(h.id) === "heli" || String(h.id).indexOf("heli") === 0))));
+  }
+
+  function isDroneHotspot(h) {
+    return !!(h && (h.kind === "drone" || (h.id && (String(h.id) === "drone" || String(h.id).indexOf("drone") === 0))));
+  }
+
+  function isAirHotspot(h) {
+    return isHeliHotspot(h) || isDroneHotspot(h);
+  }
+
+  function airKindOf(hOrId) {
+    if (!hOrId) return null;
+    if (typeof hOrId === "object") {
+      if (hOrId.kind === "heli" || hOrId.kind === "drone") return hOrId.kind;
+      return airKindOf(hOrId.id || hOrId.vehicleStyle);
+    }
+    var id = String(hOrId);
+    if (id.indexOf("heli") >= 0) return "heli";
+    if (id.indexOf("drone") >= 0) return "drone";
+    return null;
+  }
+
+  function airStats(kind) {
+    return AIR_STATS[kind === "drone" ? "drone" : "heli"] || AIR_STATS.heli;
+  }
+
   function mechSolidId(idOrHot) {
     var id = idOrHot && typeof idOrHot === "object" ? idOrHot.solidId || idOrHot.id : idOrHot;
     if (!id) return null;
@@ -440,6 +479,8 @@
     if (id.indexOf("ripsaw") >= 0) return "ripsaw";
     if (id.indexOf("tank") >= 0) return "tank";
     if (id.indexOf("submarine") >= 0 || id.indexOf("sub") === 0) return "submarine";
+    if (id.indexOf("heli") >= 0) return "heli";
+    if (id.indexOf("drone") >= 0) return "drone";
     return "cybertruck";
   }
 
@@ -1107,6 +1148,8 @@
       }
     }
     if (isSubHotspot(h)) return { x: SUB_DOCK.x, y: SUB_DOCK.y };
+    if (isHeliHotspot(h)) return { x: HELI_PAD.x, y: HELI_PAD.y };
+    if (isDroneHotspot(h)) return { x: DRONE_PAD.x, y: DRONE_PAD.y };
     return null;
   }
 
@@ -1140,6 +1183,12 @@
     if (String(id).indexOf("submarine") >= 0 || String(id) === "sub") {
       keys.push("submarine");
       keys.push("sub");
+    }
+    if (String(id).indexOf("heli") >= 0) {
+      keys.push("heli");
+    }
+    if (String(id).indexOf("drone") >= 0) {
+      keys.push("drone");
     }
     var pos = { x: x, y: y };
     for (var k = 0; k < keys.length; k++) VEHICLE_PARK[keys[k]] = pos;
@@ -1190,6 +1239,10 @@
     MAP_H: MAP_H,
     AREAS: AREAS,
     SUB_DOCK: SUB_DOCK,
+    HELI_PAD: HELI_PAD,
+    DRONE_PAD: DRONE_PAD,
+    AIR_ENTER_R: AIR_ENTER_R,
+    AIR_STATS: AIR_STATS,
     COMPOUND: COMPOUND,
     YARD_STREAM: YARD_STREAM,
     YARD_STREAM_HALF_W: YARD_STREAM_HALF_W,
@@ -1227,6 +1280,11 @@
     isTruckHotspot: isTruckHotspot,
     isMechHotspot: isMechHotspot,
     isSubHotspot: isSubHotspot,
+    isHeliHotspot: isHeliHotspot,
+    isDroneHotspot: isDroneHotspot,
+    isAirHotspot: isAirHotspot,
+    airKindOf: airKindOf,
+    airStats: airStats,
     mechSolidId: mechSolidId,
     mechOwnerId: mechOwnerId,
     mechOwnerName: mechOwnerName,

@@ -5,7 +5,7 @@
   "use strict";
 
   var C = global.FroggiesCanon;
-  var CACHE = "20260928-qa1";
+  var CACHE = "20260929-air1";
   var CDN = {
     three: "https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js",
   };
@@ -126,11 +126,11 @@
         if (tipEl) tipEl.textContent = h.tip || "";
         if (btnInteract) {
           /* truck2: EXIT anytime while driving — don't require near parked pad */
-          var canAct = !!(h.near) || !!(h.inTruck) || !!(h.inMech);
+          var canAct = !!(h.near) || !!(h.inTruck) || !!(h.inMech) || !!(h.inHeli) || !!(h.inDrone) || !!(h.inSub);
           btnInteract.classList.toggle("ready", canAct);
           btnInteract.disabled = !canAct;
-          if (h.inTruck || h.inMech) btnInteract.textContent = "EXIT";
-          else if (h.near && C && ((C.isTruckHotspot && C.isTruckHotspot(h.near)) || (C.isMechHotspot && C.isMechHotspot(h.near))))
+          if (h.inTruck || h.inMech || h.inHeli || h.inDrone || h.inSub) btnInteract.textContent = "EXIT";
+          else if (h.near && C && ((C.isTruckHotspot && C.isTruckHotspot(h.near)) || (C.isMechHotspot && C.isMechHotspot(h.near)) || (C.isSubHotspot && C.isSubHotspot(h.near)) || (C.isAirHotspot && C.isAirHotspot(h.near))))
             btnInteract.textContent = "BOARD";
           else btnInteract.textContent = "INTERACT";
         }
@@ -574,8 +574,17 @@
         a.pulseInteract(); /* keyboard/HUD → primary only */
         e.preventDefault();
       }
-      if (k === " " || k === "q" || k === "shift" || k === "x") {
-        a.pulseAbility(); /* keyboard FIRE/HOP → primary only (Space / X) */
+      /* air1: R climb / C descend / Shift boost while heli/drone (Three) */
+      if (k === "r" || k === "c" || k === "shift") {
+        if (a.setAirControls) {
+          if (k === "r") a.setAirControls({ climb: 1 });
+          if (k === "c") a.setAirControls({ climb: -1 });
+          if (k === "shift") a.setAirControls({ boost: true });
+          e.preventDefault();
+        }
+      }
+      if (k === " " || k === "q" || k === "x") {
+        a.pulseAbility(); /* keyboard FIRE/HOP/CLIMB → primary only (Space / X) */
         e.preventDefault();
         if (e.stopPropagation) e.stopPropagation();
       }
@@ -605,6 +614,13 @@
       if (k === "arrowright" || k === "d") keys.right = false;
       if (k === "arrowup" || k === "w") keys.up = false;
       if (k === "arrowdown" || k === "s") keys.down = false;
+      if (k === "r" || k === "c" || k === "shift") {
+        var aUp = altApi();
+        if (aUp && aUp.setAirControls) {
+          if (k === "r" || k === "c") aUp.setAirControls({ climb: 0 });
+          if (k === "shift") aUp.setAirControls({ boost: false });
+        }
+      }
       applySharedSteer();
     });
 

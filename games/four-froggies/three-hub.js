@@ -38,6 +38,7 @@
    qa1: feet/mechs/followers ride trackElevAt; the apron mesh and lane use that same height.
    mechwalk1: boarded mech lumber walk (steer+solid ignore+mesh sync); pad pilot drives.
    boardall1: each couch pad/companion can board a DIFFERENT free mech at once.
+   air1: HeliPad + DronePad · low-poly heli (4) + passenger drone (1–2) · fly over ranch.
    earth1: space shows procedural Earth (home) — not ranch grounds in vacuum.
    solarsys1: Solar System layout — Sun center; Moon+station orbit Earth; planet gravity wells;
    spacefix1: dark ground plane; orbit cam locks on planet; ranch pad on Earth surface;
@@ -116,11 +117,12 @@
   /** interact2: does current interactPadIndex own the boarded vehicle? */
   function inputOwnsBoarded() {
     if (!state) return false;
-    if (!state.inMech && !state.inTruck && !state.inSub) return false;
+    if (!state.inMech && !state.inTruck && !state.inSub && !state.inHeli && !state.inDrone) return false;
     var pilot = null;
     if (state.inMech) pilot = state.mechPilotPadIndex;
     else if (state.inTruck) pilot = state.truckPilotPadIndex;
     else if (state.inSub) pilot = state.truckPilotPadIndex;
+    else if (state.inHeli || state.inDrone) pilot = state.truckPilotPadIndex; /* reuse pilot pad field */
     /* null interactPad = keyboard/HUD — owns if pilot is null (keyboard boarded) or primary pad */
     if (interactPadIndex == null) {
       return pilot == null || pilot === state.primaryPadIndex;
@@ -689,6 +691,123 @@
     if (style === "tank") return makeTankMesh(accentHex);
     if (style === "submarine") return makeSubMesh(accentHex);
     return makeTruckMesh(accentHex);
+  }
+
+
+  function makeHeliMesh(accentHex) {
+    var g = new THREE.Group();
+    g.name = "Helicopter";
+    var body = new THREE.Mesh(
+      new THREE.BoxGeometry(1.6, 0.45, 0.7),
+      new THREE.MeshStandardMaterial({ color: accentHex || 0x94a3b8, metalness: 0.55, roughness: 0.35 })
+    );
+    body.position.set(0.1, 0.55, 0); body.castShadow = true; g.add(body);
+    var nose = new THREE.Mesh(
+      new THREE.BoxGeometry(0.55, 0.32, 0.55),
+      new THREE.MeshStandardMaterial({ color: 0x7dd3fc, metalness: 0.3, roughness: 0.25, transparent: true, opacity: 0.75 })
+    );
+    nose.position.set(0.85, 0.58, 0); g.add(nose);
+    var boom = new THREE.Mesh(
+      new THREE.BoxGeometry(1.1, 0.12, 0.12),
+      new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.5, roughness: 0.4 })
+    );
+    boom.position.set(-1.1, 0.55, 0); g.add(boom);
+    var fin = new THREE.Mesh(
+      new THREE.BoxGeometry(0.12, 0.45, 0.08),
+      new THREE.MeshStandardMaterial({ color: 0xfbbf24, metalness: 0.4, roughness: 0.4 })
+    );
+    fin.position.set(-1.6, 0.7, 0); g.add(fin);
+    /* Skids */
+    var skidM = new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.6, roughness: 0.4 });
+    [[-0.35, 0.28], [-0.35, -0.28], [0.45, 0.28], [0.45, -0.28]].forEach(function (p) {
+      var leg = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.35, 6), skidM);
+      leg.position.set(p[0], 0.2, p[1]); g.add(leg);
+    });
+    var skL = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.05, 0.06), skidM);
+    skL.position.set(0.05, 0.05, 0.28); g.add(skL);
+    var skR = skL.clone(); skR.position.z = -0.28; g.add(skR);
+    /* Main rotor */
+    var rotor = new THREE.Group();
+    rotor.position.set(0.05, 0.95, 0);
+    var hub = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.08, 8), new THREE.MeshStandardMaterial({ color: 0x1e293b }));
+    rotor.add(hub);
+    var bladeM = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.4, roughness: 0.5 });
+    for (var bi = 0; bi < 2; bi++) {
+      var blade = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.03, 0.12), bladeM);
+      blade.rotation.y = bi * Math.PI / 2;
+      rotor.add(blade);
+    }
+    g.add(rotor);
+    g.userData.rotor = rotor;
+    g.userData.vehicleStyle = "heli";
+    return g;
+  }
+
+  function makePassengerDroneMesh(accentHex) {
+    var g = new THREE.Group();
+    g.name = "PassengerDrone";
+    var body = new THREE.Mesh(
+      new THREE.BoxGeometry(0.7, 0.28, 0.55),
+      new THREE.MeshStandardMaterial({ color: accentHex || 0x67e8f9, metalness: 0.45, roughness: 0.35 })
+    );
+    body.position.set(0, 0.35, 0); body.castShadow = true; g.add(body);
+    var canopy = new THREE.Mesh(
+      new THREE.SphereGeometry(0.22, 10, 8, 0, Math.PI * 2, 0, Math.PI * 0.55),
+      new THREE.MeshStandardMaterial({ color: 0x0ea5e9, metalness: 0.2, roughness: 0.2, transparent: true, opacity: 0.65 })
+    );
+    canopy.position.set(0.05, 0.48, 0); g.add(canopy);
+    var armM = new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.5, roughness: 0.4 });
+    var rotors = [];
+    var arms = [[0.45, 0.45], [0.45, -0.45], [-0.45, 0.45], [-0.45, -0.45]];
+    for (var ai = 0; ai < arms.length; ai++) {
+      var ax = arms[ai][0], az = arms[ai][1];
+      var arm = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.05, 0.05), armM);
+      arm.position.set(ax * 0.5, 0.38, az * 0.5);
+      arm.rotation.y = Math.atan2(az, ax);
+      g.add(arm);
+      var rg = new THREE.Group();
+      rg.position.set(ax, 0.42, az);
+      var disc = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.22, 0.22, 0.03, 12),
+        new THREE.MeshStandardMaterial({ color: 0xa5f3fc, metalness: 0.3, roughness: 0.4, transparent: true, opacity: 0.7 })
+      );
+      rg.add(disc);
+      var blade = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.02, 0.06), new THREE.MeshStandardMaterial({ color: 0xe0f2fe }));
+      rg.add(blade);
+      g.add(rg);
+      rotors.push(rg);
+    }
+    g.userData.rotors = rotors;
+    g.userData.vehicleStyle = "drone";
+    return g;
+  }
+
+  function makeAirPadMesh(kind) {
+    var g = new THREE.Group();
+    g.name = kind === "drone" ? "DronePad" : "HeliPad";
+    var R = kind === "drone" ? 1.55 : 2.45;
+    var pad = new THREE.Mesh(
+      new THREE.CircleGeometry(R, 48),
+      new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.85, metalness: 0.15, side: THREE.DoubleSide })
+    );
+    pad.rotation.x = -Math.PI / 2;
+    pad.position.y = 0.03;
+    g.add(pad);
+    var ring = new THREE.Mesh(
+      new THREE.RingGeometry(R * 0.72, R * 0.95, 48),
+      new THREE.MeshBasicMaterial({ color: kind === "drone" ? 0x67e8f9 : 0xfbbf24, transparent: true, opacity: 0.85, side: THREE.DoubleSide })
+    );
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = 0.04;
+    g.add(ring);
+    var mark = labelSprite(kind === "drone" ? "D" : "H", kind === "drone" ? "#a5f3fc" : "#fde68a");
+    mark.position.set(0, 0.35, 0);
+    mark.scale.multiplyScalar(1.4);
+    g.add(mark);
+    var lab = labelSprite(kind === "drone" ? "DRONE PAD" : "HELIPAD", kind === "drone" ? "#ecfeff" : "#fef3c7");
+    lab.position.set(0, 1.15, 0);
+    g.add(lab);
+    return g;
   }
 
   function makeSubMesh(accentHex) {
@@ -1526,6 +1645,39 @@
     }
   }
 
+
+  function buildAirCrafts() {
+    var Air = global.FroggiesAir;
+    state.airPads = [];
+    state.parkedAir = [];
+    var kinds = [
+      { kind: "heli", pad: (C.HELI_PAD || { x: 980, y: 2000 }), accent: 0x94a3b8 },
+      { kind: "drone", pad: (C.DRONE_PAD || { x: 1180, y: 2000 }), accent: 0x67e8f9 },
+    ];
+    for (var i = 0; i < kinds.length; i++) {
+      var k = kinds[i];
+      var home = C.vehiclePos ? C.vehiclePos(k.kind, k.pad.x, k.pad.y) : k.pad;
+      var p = worldToThree(home.x, home.y);
+      var deck = ranchGroundY(home.x, home.y);
+      var padMesh = makeAirPadMesh(k.kind);
+      padMesh.position.set(p.x, deck, p.z);
+      scene.add(padMesh);
+      state.airPads.push({ kind: k.kind, mesh: padMesh, wx: home.x, wy: home.y });
+      var craft = k.kind === "drone" ? makePassengerDroneMesh(k.accent) : makeHeliMesh(k.accent);
+      craft.position.set(p.x, deck, p.z);
+      craft.rotation.y = -Math.PI / 2;
+      scene.add(craft);
+      state.parkedAir.push({ kind: k.kind, mesh: craft, wx: home.x, wy: home.y });
+      if (Air && Air.ensureCraft) {
+        /* ensure shared air state exists for Three solo session */
+        if (!state.airWorld) state.airWorld = { air: null, hotspots: (C.HOTSPOTS || []).map(function (h) {
+          return { id: h.id, kind: h.kind, x: h.x, y: h.y, r: h.r, tip: h.tip, mode: h.mode, vehicleStyle: h.vehicleStyle, seats: h.seats };
+        }) };
+        Air.ensureCraft(state.airWorld, k.kind);
+      }
+    }
+  }
+
   function buildRanch() {
     scene = new THREE.Scene();
     scene.position.set(0, 0, 0);
@@ -1746,12 +1898,14 @@
     buildPondLife();
     buildStarshipApproach();
     buildTrucks();
+    buildAirCrafts();
 
     // Hotspots (non-truck rings — trucks drawn as Cybertrucks) — polish4 inviting
     state.hotMeshes = [];
     for (var h = 0; h < C.HOTSPOTS.length; h++) {
       var hs = C.HOTSPOTS[h];
       if (C.isTruckHotspot && C.isTruckHotspot(hs)) continue;
+      if (C.isAirHotspot && C.isAirHotspot(hs)) continue;
       var hp = worldToThree(hs.x, hs.y);
       var ring = new THREE.Mesh(
         new THREE.RingGeometry(0.85, 1.2, 28),
@@ -2001,6 +2155,15 @@
     state.subId = null;
     state.driveSub = null;
     state.parkedSub = null;
+    state.inHeli = false;
+    state.inDrone = false;
+    state.airKind = null;
+    state.airSeat = null;
+    state.driveAir = null;
+    state.climbIn = 0;
+    state.airBoost = false;
+    state._climbKeyHeld = false;
+    state._climbPulseT = 0;
 state.zLift = 0;
     state.zVel = 0;
     state.scrap = 0;
@@ -2481,9 +2644,49 @@ state.zLift = 0;
       return;
     }
     /* interact2: primary EXIT only if this input owns the boarded vehicle */
-    if (state.mode === "ranch" && (state.inMech || state.inTruck || state.inSub) && !companion) {
-      if (!inputOwnsBoarded()) {
+    if (state.mode === "ranch" && (state.inMech || state.inTruck || state.inSub || state.inHeli || state.inDrone) && !companion) {
+      if (!inputOwnsBoarded() && !(state.inHeli || state.inDrone)) {
         interactOrigin = null; interactPadIndex = null;
+        return;
+      }
+      if (state.inHeli || state.inDrone) {
+        var AirX = global.FroggiesAir;
+        var kindX = state.inDrone ? "drone" : "heli";
+        if (!state.airWorld) state.airWorld = { air: null, hotspots: [] };
+        var frogX = { id: state.frogId, inHeli: state.inHeli, inDrone: state.inDrone, airSeat: state.airSeat,
+          x: 0, y: 0, z: 0 };
+        var wposX = threeToWorld(state.player.position.x, state.player.position.z);
+        frogX.x = wposX.x; frogX.y = wposX.y; frogX.z = (state.zLift || 0) / 0.02;
+        var craftX = AirX ? AirX.ensureCraft(state.airWorld, kindX) : null;
+        if (craftX) {
+          craftX.x = wposX.x; craftX.y = wposX.y; craftX.z = (state.zLift || 0) / 0.02;
+          craftX.vx = (state.vx || 0) / 0.02; craftX.vy = (state.vz || 0) / 0.02; craftX.vz = (state.zVel || 0) / 0.02;
+        }
+        var resX = AirX ? AirX.boardAir(state.airWorld, [frogX], frogX, { kind: kindX, id: kindX }) : { ok: false };
+        if (resX && resX.denied) {
+          state.toast = resX.toast || "Land + slow · then INTERACT to hop out";
+          state.toastT = 1.8;
+          if (hooks.onToast) hooks.onToast(state.toast);
+          interactOrigin = null; interactPadIndex = null;
+          return;
+        }
+        state.inHeli = false; state.inDrone = false; state.airKind = null; state.airSeat = null;
+        state.zLift = 0; state.zVel = 0; state.groundLift = 0;
+        state.player.visible = true;
+        if (state.driveAir) state.driveAir.visible = true;
+        /* Park craft at exit */
+        if (craftX) {
+          var pp = worldToThree(craftX.x, craftX.y);
+          if (state.driveAir) {
+            state.driveAir.position.set(pp.x, ranchGroundY(craftX.x, craftX.y), pp.z);
+          }
+          if (C.setVehiclePark) C.setVehiclePark(kindX, craftX.x, craftX.y);
+        }
+        state.driveAir = null;
+        state.toast = (resX && resX.toast) || "Parked · walking";
+        state.toastT = 1.8; state.exitTipT = 0;
+        interactOrigin = null; interactPadIndex = null;
+        if (hooks.onToast) hooks.onToast(state.toast);
         return;
       }
       if (state.inMech) {
@@ -2596,6 +2799,49 @@ state.zLift = 0;
         state.driveSub.position.set(state.player.position.x, -0.35 - (state.waterSub || 0.85) * 0.25, state.player.position.z);
         state.toast = "Submarine · diving underwater · EXIT INTERACT / E";
         state.toastT = 2.4; state.exitTipT = 2.4;
+        if (hooks.onToast) hooks.onToast(state.toast);
+      } else if (C.isAirHotspot && C.isAirHotspot(state.near)) {
+        if (companion) { interactOrigin = null; interactPadIndex = null; return; }
+        if (state.inMech || state.inTruck || state.inSub || state.inHeli || state.inDrone) {
+          interactOrigin = null; interactPadIndex = null; return;
+        }
+        var kindB = C.airKindOf ? C.airKindOf(state.near) : (state.near.kind === "drone" ? "drone" : "heli");
+        var AirB = global.FroggiesAir;
+        if (!state.airWorld) state.airWorld = { air: null, hotspots: (C.HOTSPOTS || []).slice() };
+        var frogB = { id: state.frogId, inHeli: false, inDrone: false, x: state.near.x, y: state.near.y, z: 0 };
+        var resB = AirB ? AirB.boardAir(state.airWorld, [frogB], frogB, state.near) : { ok: false };
+        if (resB && resB.denied) {
+          state.toast = resB.toast || "Cannot board";
+          state.toastT = 1.8;
+          if (hooks.onToast) hooks.onToast(state.toast);
+          interactOrigin = null; interactPadIndex = null;
+          return;
+        }
+        var tpB = worldToThree(state.near.x, state.near.y);
+        state.player.position.x = tpB.x; state.player.position.z = tpB.z;
+        state.inHeli = kindB === "heli";
+        state.inDrone = kindB === "drone";
+        state.airKind = kindB;
+        state.airSeat = frogB.airSeat != null ? frogB.airSeat : 0;
+        state.truckPilotPadIndex = (interactPadIndex != null) ? interactPadIndex
+          : (state.primaryPadIndex != null ? state.primaryPadIndex : null);
+        state.player.visible = false;
+        /* Use parked air mesh as drive mesh */
+        state.driveAir = null;
+        for (var pai = 0; pai < (state.parkedAir || []).length; pai++) {
+          if (state.parkedAir[pai].kind === kindB) {
+            state.driveAir = state.parkedAir[pai].mesh;
+            break;
+          }
+        }
+        if (!state.driveAir) {
+          state.driveAir = kindB === "drone" ? makePassengerDroneMesh(0x67e8f9) : makeHeliMesh(0x94a3b8);
+          scene.add(state.driveAir);
+        }
+        state.driveAir.visible = true;
+        state.driveAir.position.set(tpB.x, ranchGroundY(state.near.x, state.near.y), tpB.z);
+        state.toast = resB.toast || (kindB === "drone" ? "Passenger drone · fly!" : "Helicopter · fly!");
+        state.toastT = 2.6; state.exitTipT = 2.6;
         if (hooks.onToast) hooks.onToast(state.toast);
       } else if (C.isMechHotspot && C.isMechHotspot(state.near)) {
         /* boardall1: companion boards their own mech; primary uses state.inMech */
@@ -3076,6 +3322,15 @@ state.zLift = 0;
       return;
     }
     /* Primary / keyboard / HUD → camera frog only */
+    /* air1: ability / Space = climb while flying */
+    if (state.inHeli || state.inDrone) {
+      state.climbIn = 1;
+      state._climbPulseT = 0.35;
+      state.cd = 0.08;
+      abilityPadIndex = null;
+      if (hooks.onAbilityFire) hooks.onAbilityFire(state.frogId, "CLIMB");
+      return;
+    }
     /* mech4: Tank FIRE ONLY (ability / Space / X / FIRE) — never hop / reload / reset */
     if (state.inTruck && state.vehicleStyle === "tank") {
       state.hopWantT = 0;
@@ -3321,6 +3576,77 @@ state.zLift = 0;
       state.earth.rotation.y += dt * 0.08;
     }
 
+    /* air1: flight control stack — never walk + fly same frame */
+    if (state.mode === "ranch" && (state.inHeli || state.inDrone)) {
+      var AirF = global.FroggiesAir;
+      var kindF = state.inDrone ? "drone" : "heli";
+      if (!state.airWorld) state.airWorld = { air: null, hotspots: [] };
+      var craftF = AirF ? AirF.ensureCraft(state.airWorld, kindF) : null;
+      var wposF = threeToWorld(state.player.position.x, state.player.position.z);
+      if (craftF) {
+        craftF.x = wposF.x; craftF.y = wposF.y;
+        craftF.z = (state.zLift || 0) / 0.02;
+        craftF.vx = (state.vx || 0) / 0.02;
+        craftF.vy = (state.vz || 0) / 0.02;
+        craftF.vz = (state.zVel || 0) / 0.02;
+        if (!craftF.pilotId) craftF.pilotId = state.frogId;
+        if (craftF.seats && craftF.seats.indexOf(state.frogId) < 0) {
+          for (var sfi = 0; sfi < craftF.seats.length; sfi++) {
+            if (!craftF.seats[sfi]) { craftF.seats[sfi] = state.frogId; break; }
+          }
+        }
+      }
+      var steerF = mergedSteer();
+      var basisF = cameraGroundBasis();
+      var mxF = 0, myF = 0;
+      if (steerF.x || steerF.y) {
+        var lenF = Math.hypot(steerF.x, steerF.y) || 1;
+        var ixF = steerF.x / lenF, iyF = steerF.y / lenF;
+        mxF = basisF.rx * ixF - basisF.fx * iyF;
+        myF = basisF.rz * ixF - basisF.fz * iyF;
+        /* Convert three XZ delta to world XY steer: world x ~ three x, world y ~ three z */
+        /* tickFlight expects world-space steer in same units as canvas (pixels). Scale. */
+        mxF *= 50; myF *= 50;
+      }
+      if (state._climbPulseT > 0) {
+        state._climbPulseT -= dt;
+        if (!state.climbIn) state.climbIn = 1;
+        if (state._climbPulseT <= 0 && state.climbIn > 0 && !state._climbKeyHeld) state.climbIn = 0;
+      }
+      var climbF = state.climbIn || 0;
+      var boostF = !!state.airBoost;
+      var frogF = { id: state.frogId, inHeli: state.inHeli, inDrone: state.inDrone };
+      if (AirF && craftF) {
+        AirF.tickFlight(state.airWorld, [frogF], frogF, dt, mxF, myF, climbF, boostF);
+        var tpF = worldToThree(craftF.x, craftF.y);
+        state.player.position.x = tpF.x;
+        state.player.position.z = tpF.z;
+        state.zLift = (craftF.z || 0) * 0.02;
+        state.zVel = (craftF.vz || 0) * 0.02;
+        state.vx = (craftF.vx || 0) * 0.02;
+        state.vz = (craftF.vy || 0) * 0.02;
+        state.faceYaw = craftF.faceAngle != null ? -craftF.faceAngle + Math.PI / 2 : state.faceYaw;
+        state.groundLift = 0;
+        state.player.position.y = state.zLift;
+        if (state.driveAir) {
+          state.driveAir.visible = true;
+          state.driveAir.position.set(tpF.x, state.zLift, tpF.z);
+          if (craftF.faceAngle != null) state.driveAir.rotation.y = -craftF.faceAngle + Math.PI / 2;
+          if (state.driveAir.userData.rotor) state.driveAir.userData.rotor.rotation.y = craftF.rotor || 0;
+          if (state.driveAir.userData.rotors) {
+            for (var ri = 0; ri < state.driveAir.userData.rotors.length; ri++) {
+              state.driveAir.userData.rotors[ri].rotation.y = (craftF.rotor || 0) * 1.3 + ri;
+            }
+          }
+        }
+        state.player.visible = false;
+        if (state.toastT <= 0.2) {
+          state.toast = AirF.flyingTip(craftF, kindF);
+          /* soft refresh tip without toast spam */
+        }
+      }
+      /* Skip ground locomotion this frame */
+    } else {
     /* polish3: snappier locomotion (Canvas feel port) */
     /* tapsteer1: noticeably snappier walk + drive */
     /* mechwalk1: lumber slower/heavier than frog hop; continuous thrust while piloted */
@@ -3581,7 +3907,7 @@ state.zLift = 0;
         state.waterSub = Math.max(0, (state.waterSub || 0) - dt * 1.5);
       }
       /* mechwalk1: hide frog while piloting — full story-height mech mesh follows player */
-      state.player.visible = !state.inTruck && !state.inMech && !state.inSub;
+      state.player.visible = !state.inTruck && !state.inMech && !state.inSub && !state.inHeli && !state.inDrone;
       if (!state.inTruck && !state.inMech && !state.inSub) {
         state.player.scale.set(1, 1, 1);
       }
@@ -4029,6 +4355,7 @@ state.zLift = 0;
       state.kitFxMesh.material.opacity = Math.min(1, state.kitFxT * 2) * 0.55;
       if (state.kitFxT <= 0) state.kitFxMesh.visible = false;
     }
+    } /* end else !flying ground locomotion */
 
     // Locked orbit follow — camera offset fixed, no orbit controls / no FPS look
     var target = camera.userData.lockTarget;
@@ -4045,6 +4372,11 @@ state.zLift = 0;
     target.y = 0;
     var camDist = (state.mode === "ranch" ? 18.5 : 12) * (userZoom || 1);
     var camH = state.mode === "ranch" ? 20.5 : 14;
+    if (state.mode === "ranch" && (state.inHeli || state.inDrone)) {
+      camH += 4 + Math.min(18, (state.zLift || 0) * 1.1);
+      camDist += 2 + Math.min(8, (state.zLift || 0) * 0.35);
+      target.y = Math.min(12, (state.zLift || 0) * 0.85);
+    }
     /* polish6: slight walk bob / tilt */
     var walkBob = 0, walkTilt = 0;
     if (state.mode === "ranch" && !state.inTruck && Math.hypot(state.vx || 0, state.vz || 0) > 1.2) {
@@ -4057,7 +4389,7 @@ state.zLift = 0;
     var wantCamY = camH + walkBob;
     var wantCamZ = target.z + camDist * 1.05;
     var wantLookX = target.x;
-    var wantLookY = 0.5 + walkTilt;
+    var wantLookY = 0.5 + walkTilt + ((state.inHeli || state.inDrone) ? Math.min(10, (state.zLift || 0) * 0.7) : 0);
     var wantLookZ = target.z - (state.mode === "ranch" ? camDist * 0.06 : 0);
     if (state.mode === "ranch" && (state.establishT || 0) > 0 && state.establishCam) {
       state.establishT -= dt;
@@ -4435,25 +4767,35 @@ state.zLift = 0;
         mode: state.mode,
         label: label,
         scrap: state.mode === "space" ? state.catches : state.scrap,
-        tip: (state.inTruck || state.inMech || state.inSub)
+        tip: (state.inHeli || state.inDrone)
+          ? (state.toastT > 0 ? state.toast : ((global.FroggiesAir && global.FroggiesAir.flyingTip)
+              ? global.FroggiesAir.flyingTip(global.FroggiesAir.ensureCraft(state.airWorld || { air: null }, state.inDrone ? "drone" : "heli"), state.inDrone ? "drone" : "heli")
+              : "land + INTERACT to hop out"))
+          : (state.inTruck || state.inMech || state.inSub)
           ? (state.toastT > 0 ? state.toast : ((state.exitTipT || 0) > 0 ? "EXIT · INTERACT / E" : (state.inSub ? "🛸 Diving · EXIT · INTERACT / E" : (state.inTruck && state.vehicleStyle === "tank" ? "FIRE · Space / X / button · EXIT INTERACT" : ""))))
           : (state.toastT > 0 ? state.toast : state.inOrbit ? "Orbit locked · Escape or hard thruster" : state.near ? (
             (C.isMechHotspot && C.isMechHotspot(state.near) && C.canBoardMech && !C.canBoardMech(state.frogId, state.near))
               ? ((C.mechDeniedTip ? C.mechDeniedTip(state.frogId, state.near) : state.near.tip) + " · INTERACT")
-              : ((((C.isTruckHotspot && C.isTruckHotspot(state.near)) || (C.isMechHotspot && C.isMechHotspot(state.near)) || (C.isSubHotspot && C.isSubHotspot(state.near))) ? "BOARD · " : "⚡ ") + state.near.tip + " · INTERACT / E")
+              : ((C.isAirHotspot && C.isAirHotspot(state.near))
+                  ? ((global.FroggiesAir && global.FroggiesAir.nearPadTip) ? global.FroggiesAir.nearPadTip(C.airKindOf(state.near)) : ("Walk | " + (state.near.kind === "drone" ? "Drone" : "Heli") + " · INTERACT / E"))
+                  : ((((C.isTruckHotspot && C.isTruckHotspot(state.near)) || (C.isMechHotspot && C.isMechHotspot(state.near)) || (C.isSubHotspot && C.isSubHotspot(state.near))) ? "BOARD · " : "⚡ ") + state.near.tip + " · INTERACT / E"))
           ) : (state.inSwim ? "🏊 Swimming · Submarine at shore · INTERACT / E" : (state.invLabel && state.invLabel.visible ? "Mars · invader silhouettes" : ""))),
         inOrbit: !!state.inOrbit,
         inTruck: !!state.inTruck,
         inSub: !!state.inSub,
         inSwim: !!state.inSwim,
         inMech: !!state.inMech,
-        near: (state.inTruck || state.inMech || state.inSub) ? true : state.near,
-        ability: (state.inTruck && state.vehicleStyle === "tank") ? "FIRE" : "HOP",
+        inHeli: !!state.inHeli,
+        inDrone: !!state.inDrone,
+        near: (state.inTruck || state.inMech || state.inSub || state.inHeli || state.inDrone) ? true : state.near,
+        ability: (state.inTruck && state.vehicleStyle === "tank") ? "FIRE" : ((state.inHeli || state.inDrone) ? "CLIMB" : "HOP"),
         cd: state.cd,
         walk: (function () {
           if (state.mode === "space") return state.inOrbit ? "🌍 Orbit" : "🚀 Space";
           if (state.inMech) return "🤖 Mech · " + (C.mechStoriesLabel ? C.mechStoriesLabel(state.mechStories).replace(" mech", "") : ((state.mechStories || "?") + "-story"));
           if (state.inSub) return "🛸 Sub · under";
+          if (state.inHeli) return (state.zLift || 0) > 0.3 ? "🚁 Heli" : "🚁 Heli · pad";
+          if (state.inDrone) return (state.zLift || 0) > 0.3 ? "🛸 Drone" : "🛸 Drone · pad";
           if (state.inSwim) return "🏊 Swim";
           if (!state.inTruck) return "🐸 Walk";
           var wp2 = threeToWorld(state.player.position.x, state.player.position.z);
@@ -4648,6 +4990,15 @@ state.zLift = 0;
     setSteer: setSteer,
     pulseInteract: pulseInteract,
     pulseAbility: pulseAbility,
+    setAirControls: function (opts) {
+      if (!state) return;
+      opts = opts || {};
+      if (opts.climb != null) {
+        state.climbIn = opts.climb;
+        state._climbKeyHeld = opts.climb !== 0;
+      }
+      if (opts.boost != null) state.airBoost = !!opts.boost;
+    },
     adjustZoom: function (delta) {
       /* positive delta = zoom IN (closer); negative = zoom OUT — match canvas wheel */
       userZoom = Math.max(0.55, Math.min(1.45, (userZoom || 1) - (delta || 0) * 2.2));
