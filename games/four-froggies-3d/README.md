@@ -1,3 +1,8 @@
+## What's new (ff3d34) — see the room you're in
+
+- Inside the house the camera sits in the gap above that floor's walls and under its ceiling, and it looks at the frog. Walls stay visible, so the room reads. The roof overview is unchanged.
+- Cache: `?v=20260929-ff3d34` · asset `index-ff3d34.js`
+
 ## What's new (ff3d33) — pond matches wading
 
 - Swimming starts on the blue water. The pond disc and the wade circle are the same spot: center (90, -48), radius 30. The old wade circle was radius 52, so you swam on dry ground well outside the water.
