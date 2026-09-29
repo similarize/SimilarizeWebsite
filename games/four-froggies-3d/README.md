@@ -1,3 +1,9 @@
+# What's new (ff3d65) — attach the frog to the submarine seat
+
+- Parent the rider under the actual seat group and place its feet at the cabin floor, so submarine motion cannot separate the frog from the seat.
+- Restore a translucent hull and bow to keep the seated rider visible through the submarine shell.
+- Cache: `?v=20260929-ff3d65` · asset `index-ff3d65.js`
+
 # What's new (ff3d64) — bring the hull up around the seated rider
 
 - Raised the open-top hull so its gunwale surrounds the frog at cockpit height instead of sitting below the rider, and added a dark cabin floor beneath the seat.
