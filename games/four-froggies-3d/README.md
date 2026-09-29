@@ -1,3 +1,8 @@
+# What's new (ff3d71) — spin the submarine stern propellers
+
+- Mount the surface and underwater stern propellers as rotating assemblies and spin them continuously while their respective submarine scene updates.
+- Cache: `?v=20260929-ff3d71` · asset `index-ff3d71.js`
+
 # What's new (ff3d70) — complete the submarine shell around the cockpit
 
 - Add the missing opaque upper hull around the existing opaque lower hull and continue the curved form up to a small clear polar cockpit/periscope cap.
