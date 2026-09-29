@@ -6,3 +6,6 @@
 - **Kept:** ALL ff3d26 (roof pads, mixed forest, Catmull track, underwater, phone cam, exit1 lobby, distinct froggies).
 
 - Cache: `?v=20260928-ff3d27` · asset `index-ff3d27.js`
+
+## ff3d27b
+Same as ff3d27 package; asset renamed so CDN is not stuck on prior same-tag publish (9108868).
