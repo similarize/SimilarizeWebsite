@@ -1,5 +1,9 @@
-# What's new (ff3d49) — two lanes for racing
+# What's new (ff3d50) — a proper submarine
 
+- Replaced the tank-shaped cone-like sub with a rounded blue hull, bow, conning tower, periscope, portholes, tail fins, and propeller.
+- Cache: `?v=20260929-ff3d50` · asset `index-ff3d50.js`
+
+## What's new (ff3d49) — two lanes for racing
 - A repeating dashed center line divides the full track into two lanes, following the bends and vertical loop.
 - Cache: `?v=20260929-ff3d49` · asset `index-ff3d49.js`
 
