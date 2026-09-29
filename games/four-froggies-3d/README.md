@@ -1,3 +1,8 @@
+## What's new (ff3d38) — climb out of the pond
+
+- Press E while swimming and you step onto the nearest shore. Press E in the submarine and you surface on that shore, with the submarine parked beside you.
+- Cache: `?v=20260929-ff3d38` · asset `index-ff3d38.js`
+
 ## What's new (ff3d37) — a bigger lobed pond
 
 - The ranch pond is about ten times the old circle, and its shore is five ovals grown together: two northern coves, a west bulge, an east bulge, and a south lobe. Wading, swimming, and the blue water are the same shape. The house, porch, garage, and yard stay dry.
