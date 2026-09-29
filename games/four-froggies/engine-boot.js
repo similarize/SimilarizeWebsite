@@ -5,7 +5,7 @@
   "use strict";
 
   var C = global.FroggiesCanon;
-  var CACHE = "20260929-mechgun2";
+  var CACHE = "20260929-spear1";
   var CDN = {
     three: "https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js",
   };
@@ -379,6 +379,8 @@
           var aEdge = gpN.buttonsPressed || {};
           if (aEdge.a && apiBtn.pulseInteract) apiBtn.pulseInteract(pi);
           if ((aEdge.b || aEdge.x) && apiBtn.pulseAbility) apiBtn.pulseAbility(pi);
+          /* spear1: RB = SPEAR */
+          if (aEdge.rb && apiBtn.pulseSpear) apiBtn.pulseSpear(pi);
         }
       }
     }
@@ -585,6 +587,13 @@
       }
       if (k === " " || k === "q" || k === "x") {
         a.pulseAbility(); /* keyboard FIRE/HOP/CLIMB → primary only (Space / X) */
+        e.preventDefault();
+        if (e.stopPropagation) e.stopPropagation();
+      }
+      /* spear1: B = SPEAR (dedicated; never steals FIRE). Also mash when down. */
+      if (k === "b") {
+        if (a.pulseSpear) a.pulseSpear();
+        else a.pulseAbility();
         e.preventDefault();
         if (e.stopPropagation) e.stopPropagation();
       }

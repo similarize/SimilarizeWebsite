@@ -497,10 +497,18 @@
           tipEl.textContent = "🛸 Diving · EXIT · INTERACT / E";
         else if (hudBoarded.inTruck && globalThis.FroggiesCanon && globalThis.FroggiesCanon.isTankVehicle && globalThis.FroggiesCanon.isTankVehicle(hudBoarded))
           tipEl.textContent = "FIRE · Space / X / button · EXIT INTERACT";
-        else if (hudBoarded.inMech)
-          tipEl.textContent = (globalThis.FroggiesCanon && globalThis.FroggiesCanon.mechGunTip)
-            ? globalThis.FroggiesCanon.mechGunTip()
-            : "FIRE · Space / X / button · EXIT INTERACT";
+        else if (hudBoarded.inMech) {
+          const Ctip = globalThis.FroggiesCanon;
+          if (Ctip && Ctip.isPilotKnocked && Ctip.isPilotKnocked(hudBoarded)) {
+            tipEl.textContent = (Ctip.mashGetUpTip ? Ctip.mashGetUpTip() : "MASH to get up!") + " · Space / X / B / stick";
+          } else if (Ctip && Ctip.canSpearPilot && Ctip.canSpearPilot(hudBoarded)) {
+            tipEl.textContent = Ctip.spearTip ? Ctip.spearTip() : "SPEAR · B / RB · FIRE · Space / X · EXIT INTERACT";
+          } else {
+            tipEl.textContent = (Ctip && Ctip.mechGunTip)
+              ? Ctip.mechGunTip()
+              : "FIRE · Space / X / button · EXIT INTERACT";
+          }
+        }
         else tipEl.textContent = "";
       } else if (storyToastT > 0) tipEl.textContent = storyToast;
       else if (nearHot && (nearHot.kind === "heli" || nearHot.kind === "drone" || nearHot.id === "heli" || nearHot.id === "drone")) {
@@ -586,7 +594,8 @@
     const tankFire = !!(me.inTruck && Cabil && Cabil.isTankVehicle && Cabil.isTankVehicle(me));
     const mechFire = !!(me.inMech && !(me.sessionDead));
     const flying = !!(me.inHeli || me.inDrone);
-    const label = tankFire || mechFire ? "FIRE" : flying ? "CLIMB" : def.ability;
+    const knocked = !!(mechFire && Cabil && Cabil.isPilotKnocked && Cabil.isPilotKnocked(me));
+    const label = knocked ? "MASH" : tankFire || mechFire ? "FIRE" : flying ? "CLIMB" : def.ability;
     /* hop3: sub-second anti-tap CD — do not flash a fake "1s" */
     btnAbility.textContent = me.cd > 0.25 ? label + " " + Math.ceil(me.cd) + "s" : label;
     btnAbility.classList.toggle("ready", me.cd <= 0);
@@ -654,6 +663,34 @@
       frog.cd = 0.08;
       flashAbilityButton(frog.id);
       beep(520, 0.05, "triangle", 0.04);
+      updateAbilityButton();
+      return;
+    }
+    /* spear1: while knocked, ability/Space/X = MASH get-up (not FIRE) */
+    if (frog.inMech && !frog.sessionDead && Ctank && Ctank.isPilotKnocked && Ctank.isPilotKnocked(frog)) {
+      frog.hopWantT = 0;
+      frog.cd = 0.08;
+      const recovered = Ctank.mashMechKnock ? Ctank.mashMechKnock(frog.mechId || "mechTrillion", 1) : false;
+      if (btnAbility) {
+        btnAbility.classList.remove("fire-dash", "fire-shield", "fire-zap", "fire-bot", "fire-zoom", "fire-hop", "fire-fire");
+        void btnAbility.offsetWidth;
+        btnAbility.classList.add("fire-hop", "ability-fired");
+        setTimeout(function () {
+          btnAbility.classList.remove("fire-hop", "ability-fired");
+        }, 280);
+      }
+      beep(420, 0.04, "square", 0.04);
+      if (recovered) {
+        storyToast = "Back up!";
+        storyToastT = 1.2;
+        shakeT = 0.1;
+      } else {
+        const st = Ctank.mechKnockState ? Ctank.mechKnockState(frog.mechId || "mechTrillion") : null;
+        const m = st ? (st.mash || 0) : 0;
+        const need = st ? (st.need || 8) : 8;
+        storyToast = "MASH! " + m + "/" + need;
+        storyToastT = 0.7;
+      }
       updateAbilityButton();
       return;
     }
@@ -763,6 +800,31 @@
     }
     storyToastT = 1.5;
     updateAbilityButton();
+  }
+
+  /* spear1: Rexy 1000-mech SPEAR — dedicated B / RB (never steals FIRE) */
+  function requestSpear(frog) {
+    if (!frog || frog.sessionDead) return;
+    const C = globalThis.FroggiesCanon;
+    if (!C || !C.canSpearPilot || !C.canSpearPilot(frog)) return;
+    if (C.isPilotKnocked && C.isPilotKnocked(frog)) return;
+    if ((frog.spearCd || 0) > 0) return;
+    const cfg = C.MECH_SPEAR || { cd: 0.55 };
+    frog.spearCd = cfg.cd != null ? cfg.cd : 0.55;
+    beep(300, 0.05, "sawtooth", 0.05);
+    beep(180, 0.07, "triangle", 0.04);
+    let res = null;
+    if (world && W.tryMechSpear) res = W.tryMechSpear(world, frog);
+    if (res && res.hit) {
+      shakeT = 0.22;
+      storyToast = res.toast || "SPEAR · trillion DOWN!";
+      storyToastT = 1.6;
+    } else {
+      storyToast = (res && res.toast) || "SPEAR!";
+      storyToastT = 0.85;
+      shakeT = 0.08;
+    }
+    paintHud();
   }
 
   function enterSpaceEpisode() {
@@ -1327,6 +1389,23 @@
               /* interact2: each pad's B/X hops THAT frog only */
               requestAbility(f);
             }
+            /* spear1: RB = SPEAR (or mash when knocked) */
+            if (gp.buttonsPressed && gp.buttonsPressed.rb) {
+              const Crb = globalThis.FroggiesCanon;
+              if (Crb && Crb.isPilotKnocked && Crb.isPilotKnocked(f)) requestAbility(f);
+              else requestSpear(f);
+            }
+            /* spear1: stick flick counts as mash while knocked */
+            if (f.inMech) {
+              const Ck = globalThis.FroggiesCanon;
+              if (Ck && Ck.isPilotKnocked && Ck.isPilotKnocked(f)) {
+                const sm = Math.hypot(gp.lx || 0, gp.ly || 0);
+                if (sm > 0.72 && !(f._mashStickArmed)) {
+                  f._mashStickArmed = true;
+                  requestAbility(f);
+                } else if (sm < 0.35) f._mashStickArmed = false;
+              }
+            }
             /* ctrl1: RT accel / LT brake while boarded */
             if (f.inTruck || f.inMech || f.inSub) {
               const rt = gp.rtValue != null ? gp.rtValue : (gp.rt ? 1 : 0);
@@ -1417,6 +1496,7 @@
           }
         }
         /* ctrl1: only decay ability boosts; RT sets speedBoost each frame while held */
+        if ((f.spearCd || 0) > 0) f.spearCd = Math.max(0, f.spearCd - dt);
         if (!(f.inTruck || f.inMech || f.inSub) && f.speedBoost > 1) f.speedBoost = Math.max(1, f.speedBoost - dt * 0.5);
         if (!(f.inTruck || f.inMech || f.inSub)) { f.throttle = 0; f.brake = 0; f.fricBoost = 1; }
       }
@@ -1450,6 +1530,12 @@
       storyToastT = 1.8;
     }
 
+    if (world) {
+      if (world._spearKnockToast) { storyToast = world._spearKnockToast; storyToastT = 1.6; world._spearKnockToast = null; }
+      if (world._spearRecoverToast) { storyToast = world._spearRecoverToast; storyToastT = 1.4; world._spearRecoverToast = null; }
+      if (world._mechBoomToast) { storyToast = world._mechBoomToast; storyToastT = 1.8; world._mechBoomToast = null; }
+      if (world._mechRespawnToast) { storyToast = world._mechRespawnToast; storyToastT = 1.6; world._mechRespawnToast = null; }
+    }
     if (storyToastT > 0) storyToastT -= dt;
     if (exitTipT > 0) exitTipT = Math.max(0, exitTipT - dt);
     if (shakeT > 0) shakeT -= dt;
@@ -1465,6 +1551,12 @@
 
   function updateSpace(dt) {
     if (!spaceEp || !Space) return;
+    if (world) {
+      if (world._spearKnockToast) { storyToast = world._spearKnockToast; storyToastT = 1.6; world._spearKnockToast = null; }
+      if (world._spearRecoverToast) { storyToast = world._spearRecoverToast; storyToastT = 1.4; world._spearRecoverToast = null; }
+      if (world._mechBoomToast) { storyToast = world._mechBoomToast; storyToastT = 1.8; world._mechBoomToast = null; }
+      if (world._mechRespawnToast) { storyToast = world._mechRespawnToast; storyToastT = 1.6; world._mechRespawnToast = null; }
+    }
     if (storyToastT > 0) storyToastT -= dt;
     if (exitTipT > 0) exitTipT = Math.max(0, exitTipT - dt);
     if (shakeT > 0) shakeT -= dt;
@@ -1588,6 +1680,14 @@
             else requestAbility(player); /* interact2: spare pad hops primary only */
           }
         }
+        if (bp.rb) {
+          const playerRb = localPlayer();
+          if (playerRb) {
+            const Crb2 = globalThis.FroggiesCanon;
+            if (Crb2 && Crb2.isPilotKnocked && Crb2.isPilotKnocked(playerRb)) requestAbility(playerRb);
+            else requestSpear(playerRb);
+          }
+        }
       }
     }
     if (phase === "hub") {
@@ -1623,11 +1723,19 @@
       const id = btn.dataset.id;
       const seat = seats[id] || { status: "open" };
       let status = seat.status || "open";
-      btn.classList.remove("seat-open", "seat-you", "seat-human", "seat-ai", "seat-taken", "selected");
+      btn.classList.remove("seat-open", "seat-you", "seat-human", "seat-ai", "seat-taken", "selected", "seat-pad");
+      btn.removeAttribute("data-pad");
       const stateEl = btn.querySelector(".seat-state");
       if (status === "you") {
         btn.classList.add("seat-you", "selected");
-        if (stateEl) stateEl.textContent = seat.label || "You";
+        const pi = seat.padIndex != null ? (seat.padIndex | 0) : null;
+        if (pi != null) {
+          btn.classList.add("seat-pad");
+          btn.setAttribute("data-pad", String(pi + 1));
+          if (stateEl) stateEl.textContent = "Pad " + (pi + 1) + " · " + (id.charAt(0).toUpperCase() + id.slice(1));
+        } else if (stateEl) {
+          stateEl.textContent = seat.label || "You";
+        }
       } else if (status === "human") {
         btn.classList.add("seat-human", "seat-taken");
         if (stateEl) stateEl.textContent = seat.label || "Joined";
@@ -1649,7 +1757,7 @@
         partyStatus.textContent = "JOINED · claim an Open froggy seat · wait for Host to press GO";
       else if (role === "solo")
         partyStatus.textContent =
-          "SOLO · pads: A/Start claim · B release · click seat = next free pad · GO (AI fills rest)";
+          "SOLO · each pad picks ONE froggy (A claim/cycle · B release · click moves that pad) · GO (AI fills rest)";
       else partyStatus.textContent = "";
     }
     if (roomCodeEl) {
@@ -1694,7 +1802,7 @@
     if (overlayGo && phase === "title") {
       if (role === "guest") overlayGo.textContent = "JOIN · claim an Open froggy · Host starts with GO";
       else if (role === "host") overlayGo.textContent = "HOST · Copy invite / scan QR · friends claim seats · you press GO";
-      else overlayGo.textContent = "Pads: A/Start claim · B release · click picks frog for free pad · Y/GO starts";
+      else overlayGo.textContent = "Pads: A claim/cycle one froggy · B release · click moves your pad · Y/GO starts";
     }
   }
 
@@ -1835,6 +1943,20 @@
     }
     if ((e.key === "e" || e.key === "E" || e.key === "f" || e.key === "F") && (phase === "hub" || phase === "space")) {
       doInteract(null, { source: "keyboard" });
+    }
+    /* spear1: B = SPEAR while Rexy pilots 1000-mech (Canvas); also mash when down */
+    if ((e.key === "b" || e.key === "B") && phase === "hub") {
+      const EngLiveB = globalThis.FroggiesEngines;
+      if (EngLiveB && typeof EngLiveB.isAltRunning === "function" && EngLiveB.isAltRunning()) { /* three owns B */ }
+      else {
+        const playerB = localPlayer();
+        if (playerB) {
+          e.preventDefault();
+          const Cb = globalThis.FroggiesCanon;
+          if (Cb && Cb.isPilotKnocked && Cb.isPilotKnocked(playerB)) requestAbility(playerB);
+          else requestSpear(playerB);
+        }
+      }
     }
     /* air1: R climb / C descend / Shift boost while heli or drone */
     if (phase === "hub") {

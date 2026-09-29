@@ -41,6 +41,7 @@
    air1: HeliPad + DronePad · low-poly heli (4) + passenger drone (1–2) · fly over ranch.
    mechgun1: story-mech omnigun FIRE — permanent session kill (Canvas parity).
    mechgun2: omnigun also permanently wrecks house/garage/trees/rocks/fish/fences (session).
+   spear1: Rexy 1000 SPEAR (B/RB) knocks trillion ~2s; mash get-up; tipped mesh.
    earth1: space shows procedural Earth (home) — not ranch grounds in vacuum.
    solarsys1: Solar System layout — Sun center; Moon+station orbit Earth; planet gravity wells;
    spacefix1: dark ground plane; orbit cam locks on planet; ranch pad on Earth surface;
@@ -57,6 +58,7 @@
   var tapMarker = null; /* { sx, sy, life, ang } screen px in canvas */
   var wantInteract = false;
   var wantAbility = false;
+  var wantSpear = false; /* spear1 */
   var userZoom = 1; /* ctrl1: pinch/wheel cam zoom (1 = default) */
   var interactOrigin = null; /* world {x,y} from pad that pressed A (multi-local) */
   var interactPadIndex = null; /* pad that pressed A (null = keyboard/HUD/primary) */
@@ -244,6 +246,10 @@
             wantAbility = true;
             abilityPadIndex = steerPad;
           }
+          if (gp.buttonsPressed.rb) {
+            wantSpear = true;
+            abilityPadIndex = steerPad;
+          }
         }
       }
     }
@@ -261,7 +267,7 @@
   function destroy() {
     active = false;
     keySteer.x = keySteer.y = 0; tapSteer.x = tapSteer.y = 0; tapHeld = false; tapMarker = null;
-    wantInteract = wantAbility = false;
+    wantInteract = wantAbility = wantSpear = false;
     interactPadIndex = abilityPadIndex = null;
     interactOrigin = null;
     var mel = document.getElementById("tap-steer-marker");
@@ -314,6 +320,13 @@
       abilityPadIndex = padIndex | 0;
     } else {
       abilityPadIndex = null;
+    }
+  }
+  function pulseSpear(padIndex) {
+    /* spear1: dedicated SPEAR pulse (B / RB) — never steals FIRE */
+    wantSpear = true;
+    if (padIndex != null && padIndex !== undefined && padIndex !== "") {
+      abilityPadIndex = padIndex | 0;
     }
   }
   function isActive() { return active; }
@@ -548,6 +561,13 @@
   function ranchGroundY(wx, wy) {
     if (!C.onTrack || !C.trackElevAt || !C.onTrack(wx, wy)) return 0;
     return (C.trackElevAt(wx, wy) || 0) * 0.02;
+  }
+  /* padfix1: parked air craft sit above raised H/D pad discs (and orange zone) */
+  var AIR_PAD_LIFT = 0.16;
+  function airCraftDeckY(wx, wy, zLift) {
+    var base = ranchGroundY(wx, wy) + AIR_PAD_LIFT;
+    if (zLift != null && zLift > base) return zLift;
+    return base;
   }
 
   /* qa1: screen basis from the camera's flattened view. right = forward × up.
@@ -787,27 +807,36 @@
   function makeAirPadMesh(kind) {
     var g = new THREE.Group();
     g.name = kind === "drone" ? "DronePad" : "HeliPad";
-    var R = kind === "drone" ? 1.55 : 2.45;
+    /* padfix1: larger discs raised above translucent orange house-zone floor (y≈0.04) */
+    var R = kind === "drone" ? 1.85 : 2.85;
     var pad = new THREE.Mesh(
       new THREE.CircleGeometry(R, 48),
-      new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.85, metalness: 0.15, side: THREE.DoubleSide })
+      new THREE.MeshStandardMaterial({
+        color: 0x1e293b, roughness: 0.85, metalness: 0.15, side: THREE.DoubleSide,
+        polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
+      })
     );
     pad.rotation.x = -Math.PI / 2;
-    pad.position.y = 0.03;
+    pad.position.y = 0.12;
+    pad.renderOrder = 2;
     g.add(pad);
     var ring = new THREE.Mesh(
-      new THREE.RingGeometry(R * 0.72, R * 0.95, 48),
-      new THREE.MeshBasicMaterial({ color: kind === "drone" ? 0x67e8f9 : 0xfbbf24, transparent: true, opacity: 0.85, side: THREE.DoubleSide })
+      new THREE.RingGeometry(R * 0.72, R * 0.98, 48),
+      new THREE.MeshBasicMaterial({
+        color: kind === "drone" ? 0x67e8f9 : 0xfbbf24, transparent: true, opacity: 0.92,
+        side: THREE.DoubleSide, depthWrite: false,
+      })
     );
     ring.rotation.x = -Math.PI / 2;
-    ring.position.y = 0.04;
+    ring.position.y = 0.14;
+    ring.renderOrder = 3;
     g.add(ring);
     var mark = labelSprite(kind === "drone" ? "D" : "H", kind === "drone" ? "#a5f3fc" : "#fde68a");
-    mark.position.set(0, 0.35, 0);
-    mark.scale.multiplyScalar(1.4);
+    mark.position.set(0, 0.55, 0);
+    mark.scale.multiplyScalar(1.55);
     g.add(mark);
     var lab = labelSprite(kind === "drone" ? "DRONE PAD" : "HELIPAD", kind === "drone" ? "#ecfeff" : "#fef3c7");
-    lab.position.set(0, 1.15, 0);
+    lab.position.set(0, 1.35, 0);
     g.add(lab);
     return g;
   }
@@ -1698,7 +1727,8 @@
       scene.add(padMesh);
       state.airPads.push({ kind: k.kind, mesh: padMesh, wx: home.x, wy: home.y });
       var craft = k.kind === "drone" ? makePassengerDroneMesh(k.accent) : makeHeliMesh(k.accent);
-      craft.position.set(p.x, deck, p.z);
+      /* Sit just above raised pad disc so craft is never under orange zone */
+      craft.position.set(p.x, deck + AIR_PAD_LIFT, p.z);
       craft.rotation.y = -Math.PI / 2;
       scene.add(craft);
       state.parkedAir.push({ kind: k.kind, mesh: craft, wx: home.x, wy: home.y });
@@ -1896,7 +1926,17 @@
     state.areaMeshes = [];
     for (var i = 0; i < C.AREAS.length; i++) {
       var a = C.AREAS[i];
-      var p = worldToThree(a.x + a.w / 2, a.y + a.h / 2);
+      /* padfix1: house-zone orange floor stops before heli/drone pads (was burying craft) */
+      var zoneH = a.h;
+      var zoneCy = a.y + a.h / 2;
+      if (a.id === "house") {
+        var heliY = (C.HELI_PAD && C.HELI_PAD.y) || 2000;
+        var droneY = (C.DRONE_PAD && C.DRONE_PAD.y) || 2000;
+        var padStopY = Math.min(heliY, droneY) - 70;
+        zoneH = Math.max(200, Math.min(a.h, padStopY - a.y));
+        zoneCy = a.y + zoneH / 2;
+      }
+      var p = worldToThree(a.x + a.w / 2, zoneCy);
       /* The apron mesh is the track floor. A flat pad would cover the valleys. */
       if (a.id === "track") {
         addLabel(a.name, "#ffffff", p.x, 6.6, p.z);
@@ -1904,21 +1944,23 @@
       }
       /* solid1: flat zone pads (not thick boxes) — thick boxes z-fought the ground plane */
       var mesh = new THREE.Mesh(
-        new THREE.PlaneGeometry(a.w * 0.02, a.h * 0.02),
+        new THREE.PlaneGeometry(a.w * 0.02, zoneH * 0.02),
         new THREE.MeshStandardMaterial({
           color: hex(a.color),
           roughness: 0.85,
           transparent: true,
-          opacity: 0.92,
+          opacity: a.id === "house" ? 0.72 : 0.92,
           polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2,
         })
       );
       mesh.rotation.x = -Math.PI / 2;
       mesh.position.set(p.x, 0.04, p.z);
       mesh.receiveShadow = true;
+      mesh.renderOrder = -1;
       scene.add(mesh);
+      state.areaMeshes.push(mesh);
       var edgeA = new THREE.LineSegments(
-        new THREE.EdgesGeometry(new THREE.PlaneGeometry(a.w * 0.02, a.h * 0.02)),
+        new THREE.EdgesGeometry(new THREE.PlaneGeometry(a.w * 0.02, zoneH * 0.02)),
         new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.4, depthWrite: false })
       );
       edgeA.rotation.x = -Math.PI / 2;
@@ -2712,7 +2754,7 @@ state.zLift = 0;
         if (craftX) {
           var pp = worldToThree(craftX.x, craftX.y);
           if (state.driveAir) {
-            state.driveAir.position.set(pp.x, ranchGroundY(craftX.x, craftX.y), pp.z);
+            state.driveAir.position.set(pp.x, airCraftDeckY(craftX.x, craftX.y, 0), pp.z);
           }
           if (C.setVehiclePark) C.setVehiclePark(kindX, craftX.x, craftX.y);
         }
@@ -2873,7 +2915,7 @@ state.zLift = 0;
           scene.add(state.driveAir);
         }
         state.driveAir.visible = true;
-        state.driveAir.position.set(tpB.x, ranchGroundY(state.near.x, state.near.y), tpB.z);
+        state.driveAir.position.set(tpB.x, airCraftDeckY(state.near.x, state.near.y, 0), tpB.z);
         state.toast = resB.toast || (kindB === "drone" ? "Passenger drone · fly!" : "Helicopter · fly!");
         state.toastT = 2.6; state.exitTipT = 2.6;
         if (hooks.onToast) hooks.onToast(state.toast);
@@ -3141,6 +3183,200 @@ state.zLift = 0;
     state.toastT = 0.9;
     if (hooks.onToast) hooks.onToast(state.toast);
     if (hooks.onAbilityFire) hooks.onAbilityFire(state.frogId, "FIRE");
+    return true;
+  }
+
+  /* spear1: Rexy 1000-mech SPEAR — cone hit vs trillion */
+  function fireMechSpear() {
+    if (!state || !state.inMech) return false;
+    if (!C.canSpearPilot || !C.canSpearPilot({ inMech: true, frogId: state.frogId, id: state.frogId, mechId: state.mechId, mechStories: state.mechStories })) {
+      return false;
+    }
+    if (C.isPilotKnocked && C.isPilotKnocked({ inMech: true, mechId: state.mechId, mechStories: state.mechStories })) return false;
+    if ((state.spearCd || 0) > 0) return false;
+    var cfg = C.MECH_SPEAR || { cd: 0.55, range3: 5.6, halfArc: 0.95, thrustLife: 0.28 };
+    state.spearCd = cfg.cd != null ? cfg.cd : 0.55;
+    var yaw = (state.faceYaw != null) ? state.faceYaw : 0;
+    var spA = Math.hypot(state.vx || 0, state.vz || 0);
+    if (spA > 1.0) yaw = Math.atan2(state.vx, state.vz);
+    var fx = Math.sin(yaw), fz = Math.cos(yaw);
+    var range = cfg.range3 != null ? cfg.range3 : 5.6;
+    var halfArc = cfg.halfArc != null ? cfg.halfArc : 0.95;
+    /* visual spear thrust */
+    if (!state.fx) state.fx = [];
+    var spearLen = Math.min(range, 4.2);
+    var shaft = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.06, 0.04, spearLen, 6),
+      new THREE.MeshBasicMaterial({ color: 0xfef3c7, transparent: true, opacity: 0.95 })
+    );
+    shaft.rotation.x = Math.PI / 2;
+    shaft.position.set(
+      state.player.position.x + fx * (spearLen * 0.55),
+      1.4 + (state.zLift || 0),
+      state.player.position.z + fz * (spearLen * 0.55)
+    );
+    shaft.rotation.y = yaw;
+    scene.add(shaft);
+    state.fx.push({ mesh: shaft, life: cfg.thrustLife != null ? cfg.thrustLife : 0.28, rise: 0, spear: true });
+    var tip = new THREE.Mesh(
+      new THREE.ConeGeometry(0.14, 0.42, 6),
+      new THREE.MeshBasicMaterial({ color: 0xfbbf24 })
+    );
+    tip.rotation.x = Math.PI / 2;
+    tip.position.set(
+      state.player.position.x + fx * spearLen,
+      1.4 + (state.zLift || 0),
+      state.player.position.z + fz * spearLen
+    );
+    tip.rotation.y = yaw;
+    scene.add(tip);
+    state.fx.push({ mesh: tip, life: cfg.thrustLife != null ? cfg.thrustLife : 0.28, rise: 0, spear: true });
+    /* find trillion mech */
+    var ment = null;
+    for (var mi = 0; mi < (state.mechs || []).length; mi++) {
+      if (state.mechs[mi] && state.mechs[mi].solidId === "mechTrillion") { ment = state.mechs[mi]; break; }
+    }
+    if (!ment || !ment.group) {
+      state.toast = "SPEAR · miss";
+      state.toastT = 0.85;
+      if (hooks.onToast) hooks.onToast(state.toast);
+      return true;
+    }
+    var tx = ment.group.position.x, tz = ment.group.position.z;
+    /* if piloted by primary, use player pos */
+    if (state.inMech && mechSidOf(state.mechId) === "mechTrillion") {
+      tx = state.player.position.x; tz = state.player.position.z;
+    } else if (state.companions) {
+      for (var ci = 0; ci < state.companions.length; ci++) {
+        var cc = state.companions[ci];
+        if (cc && cc.userData.inMech && mechSidOf(cc.userData.mechId) === "mechTrillion") {
+          tx = cc.position.x; tz = cc.position.z; break;
+        }
+      }
+    }
+    var dx = tx - state.player.position.x, dz = tz - state.player.position.z;
+    var dist = Math.hypot(dx, dz);
+    var hitR = 2.8;
+    if (dist > range + hitR) {
+      state.toast = "SPEAR · miss";
+      state.toastT = 0.85;
+      if (hooks.onToast) hooks.onToast(state.toast);
+      return true;
+    }
+    var aim = Math.atan2(dx, dz);
+    var da = aim - yaw;
+    while (da > Math.PI) da -= Math.PI * 2;
+    while (da < -Math.PI) da += Math.PI * 2;
+    if (Math.abs(da) > halfArc && dist > hitR * 0.55) {
+      state.toast = "SPEAR · miss";
+      state.toastT = 0.85;
+      if (hooks.onToast) hooks.onToast(state.toast);
+      return true;
+    }
+    if (C.isMechKnocked && C.isMechKnocked("mechTrillion")) {
+      state.toast = "Already down!";
+      state.toastT = 0.9;
+      if (hooks.onToast) hooks.onToast(state.toast);
+      return true;
+    }
+    if (!C.knockMechDown || !C.knockMechDown("mechTrillion")) {
+      state.toast = "SPEAR · no effect";
+      state.toastT = 0.85;
+      if (hooks.onToast) hooks.onToast(state.toast);
+      return true;
+    }
+    spawnThreeBoom(tx, 1.2, tz, 1.8);
+    state.toast = "SPEAR · trillion DOWN!";
+    state.toastT = 1.6;
+    if (hooks.onToast) hooks.onToast(state.toast);
+    if (hooks.onAbilityFire) hooks.onAbilityFire(state.frogId, "SPEAR");
+    return true;
+  }
+
+  function mashGetUpThree() {
+    if (!state || !state.inMech) return false;
+    if (!C.isPilotKnocked || !C.isPilotKnocked({ inMech: true, mechId: state.mechId, mechStories: state.mechStories })) return false;
+    state.cd = 0.08;
+    var recovered = C.mashMechKnock ? C.mashMechKnock(state.mechId || "mechTrillion", 1) : false;
+    if (recovered) {
+      state.toast = "Back up!";
+      state.toastT = 1.2;
+    } else {
+      var st = C.mechKnockState ? C.mechKnockState(state.mechId || "mechTrillion") : null;
+      var m = st ? (st.mash || 0) : 0;
+      var need = st ? (st.need || 8) : 8;
+      state.toast = "MASH! " + m + "/" + need;
+      state.toastT = 0.7;
+    }
+    if (hooks.onToast) hooks.onToast(state.toast);
+    return true;
+  }
+
+  function spearCompanionPad(padIndex) {
+    var c = companionForPad(padIndex);
+    if (!c || !c.userData.local || !c.userData.inMech) return false;
+    var ent = {
+      inMech: true,
+      frogId: c.userData.frogId || c.userData.id,
+      id: c.userData.frogId || c.userData.id,
+      mechId: c.userData.mechId,
+      mechStories: c.userData.mechStories,
+    };
+    if (C.isPilotKnocked && C.isPilotKnocked(ent)) {
+      var rec = C.mashMechKnock ? C.mashMechKnock(c.userData.mechId || "mechTrillion", 1) : false;
+      state.toast = rec ? "Back up!" : "MASH!";
+      state.toastT = rec ? 1.2 : 0.7;
+      if (hooks.onToast) hooks.onToast(state.toast);
+      return true;
+    }
+    if (!C.canSpearPilot || !C.canSpearPilot(ent)) return false;
+    if ((c.userData.spearCd || 0) > 0) return false;
+    var cfg = C.MECH_SPEAR || { cd: 0.55, range3: 5.6, halfArc: 0.95 };
+    c.userData.spearCd = cfg.cd != null ? cfg.cd : 0.55;
+    var yaw = c.userData.faceYaw != null ? c.userData.faceYaw : 0;
+    var fx = Math.sin(yaw), fz = Math.cos(yaw);
+    var range = cfg.range3 != null ? cfg.range3 : 5.6;
+    var halfArc = cfg.halfArc != null ? cfg.halfArc : 0.95;
+    var ment = null;
+    for (var mi = 0; mi < (state.mechs || []).length; mi++) {
+      if (state.mechs[mi] && state.mechs[mi].solidId === "mechTrillion") { ment = state.mechs[mi]; break; }
+    }
+    if (!ment || !ment.group) {
+      state.toast = "SPEAR · miss"; state.toastT = 0.85;
+      if (hooks.onToast) hooks.onToast(state.toast);
+      return true;
+    }
+    var tx = ment.group.position.x, tz = ment.group.position.z;
+    if (state.inMech && mechSidOf(state.mechId) === "mechTrillion") {
+      tx = state.player.position.x; tz = state.player.position.z;
+    }
+    var dx = tx - c.position.x, dz = tz - c.position.z;
+    var dist = Math.hypot(dx, dz);
+    var hitR = 2.8;
+    if (dist > range + hitR) {
+      state.toast = "SPEAR · miss"; state.toastT = 0.85;
+      if (hooks.onToast) hooks.onToast(state.toast);
+      return true;
+    }
+    var aim = Math.atan2(dx, dz);
+    var da = aim - yaw;
+    while (da > Math.PI) da -= Math.PI * 2;
+    while (da < -Math.PI) da += Math.PI * 2;
+    if (Math.abs(da) > halfArc && dist > hitR * 0.55) {
+      state.toast = "SPEAR · miss"; state.toastT = 0.85;
+      if (hooks.onToast) hooks.onToast(state.toast);
+      return true;
+    }
+    if (C.isMechKnocked && C.isMechKnocked("mechTrillion")) {
+      state.toast = "Already down!"; state.toastT = 0.9;
+      if (hooks.onToast) hooks.onToast(state.toast);
+      return true;
+    }
+    if (!C.knockMechDown || !C.knockMechDown("mechTrillion")) return false;
+    spawnThreeBoom(tx, 1.2, tz, 1.8);
+    state.toast = "SPEAR · trillion DOWN!";
+    state.toastT = 1.6;
+    if (hooks.onToast) hooks.onToast(state.toast);
     return true;
   }
 
@@ -3875,6 +4111,16 @@ state.zLift = 0;
         }
       }
     }
+    /* spear1: knockdown timer */
+    if (C.tickMechKnock) {
+      var gotUp3 = C.tickMechKnock(dt);
+      if (gotUp3 && gotUp3.length) {
+        state.toast = "Trillion mech is back up!";
+        state.toastT = 1.4;
+        if (hooks.onToast) hooks.onToast(state.toast);
+      }
+    }
+    if ((state.spearCd || 0) > 0) state.spearCd = Math.max(0, state.spearCd - dt);
   }
 
   function doAbility() {
@@ -3902,6 +4148,13 @@ state.zLift = 0;
     if (state.inTruck && state.vehicleStyle === "tank") {
       state.hopWantT = 0;
       fireTankShell();
+      abilityPadIndex = null;
+      return;
+    }
+    /* spear1: knocked trillion — ability/Space/X = MASH (not FIRE) */
+    if (state.inMech && C.isPilotKnocked && C.isPilotKnocked({ inMech: true, mechId: state.mechId, mechStories: state.mechStories })) {
+      state.hopWantT = 0;
+      mashGetUpThree();
       abilityPadIndex = null;
       return;
     }
@@ -4200,7 +4453,7 @@ state.zLift = 0;
         state.player.position.y = state.zLift;
         if (state.driveAir) {
           state.driveAir.visible = true;
-          state.driveAir.position.set(tpF.x, state.zLift, tpF.z);
+          state.driveAir.position.set(tpF.x, airCraftDeckY(craftF.x, craftF.y, state.zLift), tpF.z);
           if (craftF.faceAngle != null) state.driveAir.rotation.y = -craftF.faceAngle + Math.PI / 2;
           if (state.driveAir.userData.rotor) state.driveAir.userData.rotor.rotation.y = craftF.rotor || 0;
           if (state.driveAir.userData.rotors) {
@@ -4228,6 +4481,21 @@ state.zLift = 0;
     var fric = state.mode === "space" ? 3.0 : state.inSub ? 5.5 : state.inTruck ? 4.8 : state.inMech ? 5.2 : state.inSwim ? 6.2 : 7.8;
     if (vStat3) { maxSp *= vStat3.maxSp || 1; accel *= vStat3.accel || 1; fric *= vStat3.fric || 1; }
     if (mStat3) { maxSp *= mStat3.maxSp || 1; accel *= mStat3.accel || 1; fric *= mStat3.fric || 1; }
+    /* spear1: freeze while knocked; stick-flick mash */
+    var knockedPilot = !!(state.inMech && C.isPilotKnocked && C.isPilotKnocked({ inMech: true, mechId: state.mechId, mechStories: state.mechStories }));
+    if (knockedPilot) {
+      maxSp = 0; accel = 0;
+      state.vx = 0; state.vz = 0;
+      if (global.SimilarizeGamepad) {
+        var mashPad2 = state.mechPilotPadIndex != null ? state.mechPilotPadIndex : (state.primaryPadIndex != null ? state.primaryPadIndex : 0);
+        var gpM2 = global.SimilarizeGamepad.pollPad(mashPad2);
+        if (gpM2 && gpM2.connected) {
+          var sm2 = Math.hypot(gpM2.lx || 0, gpM2.ly || 0);
+          if (sm2 > 0.72 && !state._mashStickArmed) { state._mashStickArmed = true; mashGetUpThree(); }
+          else if (sm2 < 0.35) state._mashStickArmed = false;
+        }
+      }
+    }
     /* ctrl1: RT accel / LT brake on truck + mech — read primary/pilot pad (frame-cached) */
     if (state.mode === "ranch" && (state.inTruck || state.inMech) && global.SimilarizeGamepad) {
       var thrPad = state.inMech && state.mechPilotPadIndex != null ? state.mechPilotPadIndex
@@ -4669,17 +4937,19 @@ state.zLift = 0;
           var piloting = !!pilotPos;
           ment.group.visible = true;
           if (ment.label) ment.label.visible = !piloting;
+          var tippedNow = !!(C.isMechKnocked && C.isMechKnocked(ment.solidId));
           if (piloting) {
             var bobAmp = (C.mechBand && C.mechBand(ment.stories) === "trillion") ? 0.32 : ment.stories >= 1000 ? 0.22 : ment.stories >= 100 ? 0.12 : 0.07;
-            var bobY = lumber ? Math.abs(Math.sin(wpM)) * bobAmp : 0;
+            var bobY = (lumber && !tippedNow) ? Math.abs(Math.sin(wpM)) * bobAmp : 0;
             var deckY = (pilotPos === state.player.position)
               ? (state.zLift || 0)
               : ((pilotPos.userData && pilotPos.userData.zLift) || pilotPos.y || 0);
             ment.group.position.x = pilotPos.x;
             ment.group.position.z = pilotPos.z;
-            ment.group.position.y = deckY + bobY;
+            ment.group.position.y = deckY + bobY + (tippedNow ? ment.h * 0.08 : 0);
             ment.group.rotation.y = faceY;
-            ment.group.rotation.z = lumber ? Math.sin(wpM) * 0.04 : 0;
+            ment.group.rotation.z = tippedNow ? Math.PI / 2.1 : (lumber ? Math.sin(wpM) * 0.04 : 0);
+            ment.group.rotation.x = tippedNow ? 0.15 : (lumber ? Math.sin(wpM * 2) * 0.015 : 0);
             var stride = lumber ? Math.sin(wpM) * (ment.h * 0.04) : 0;
             function offsetLimbs(arr, zOff, yOff) {
               for (var li = 0; li < arr.length; li++) {
@@ -4690,19 +4960,20 @@ state.zLift = 0;
             }
             offsetLimbs(ment.legsL || [], stride, Math.max(0, -stride) * 0.15);
             offsetLimbs(ment.legsR || [], -stride, Math.max(0, stride) * 0.15);
-            offsetLimbs(ment.armsL || [], -stride * 0.6, 0);
-            offsetLimbs(ment.armsR || [], stride * 0.6, 0);
-            ment.group.rotation.x = lumber ? Math.sin(wpM * 2) * 0.015 : 0;
+            offsetLimbs(ment.armsL || [], tippedNow ? 0 : -stride * 0.6, 0);
+            offsetLimbs(ment.armsR || [], tippedNow ? 0 : stride * 0.6, 0);
+            if (!tippedNow) ment.group.rotation.x = lumber ? Math.sin(wpM * 2) * 0.015 : ment.group.rotation.x;
           } else {
             /* park1: stay at last EXIT / park pos (home only if never parked) */
             var parkM = C.getVehiclePark ? (C.getVehiclePark(ment.id) || C.getVehiclePark(ment.solidId)) : null;
             if (parkM) {
               var ppM = worldToThree(parkM.x, parkM.y);
-              ment.group.position.set(ppM.x, 0, ppM.z);
+              ment.group.position.set(ppM.x, tippedNow ? (ment.h * 0.08) : 0, ppM.z);
             } else {
-              ment.group.position.set(ment.homeX, 0, ment.homeZ);
+              ment.group.position.set(ment.homeX, tippedNow ? (ment.h * 0.08) : 0, ment.homeZ);
             }
-            ment.group.rotation.set(0, 0, 0);
+            if (tippedNow) ment.group.rotation.set(0.15, 0, Math.PI / 2.1);
+            else ment.group.rotation.set(0, 0, 0);
             function resetLimbs(arr) {
               for (var ri = 0; ri < (arr || []).length; ri++) {
                 var rm = arr[ri];
@@ -5097,9 +5368,19 @@ state.zLift = 0;
               wantAbility = true;
               abilityPadIndex = c.userData.padIndex;
             }
+            if (lgp.buttonsPressed && lgp.buttonsPressed.rb) {
+              wantSpear = true;
+              abilityPadIndex = c.userData.padIndex;
+            }
           }
           /* boardall1: companion lumber-walks their own boarded mech */
-          var lmax = c.userData.inMech ? 6.8 : 11.5;
+          if ((c.userData.spearCd || 0) > 0) c.userData.spearCd = Math.max(0, c.userData.spearCd - dt);
+        /* spear1: freeze companion while their mech is knocked */
+        if (c.userData.inMech && C.isPilotKnocked && C.isPilotKnocked({ inMech: true, mechId: c.userData.mechId, mechStories: c.userData.mechStories })) {
+          c.userData.vx = 0; c.userData.vz = 0;
+          continue;
+        }
+        var lmax = c.userData.inMech ? 6.8 : 11.5;
           var lacc = c.userData.inMech ? 16 : 28;
           var lfric = c.userData.inMech ? 5.2 : 7.5;
           if (lsx || lsy) {
@@ -5306,6 +5587,20 @@ state.zLift = 0;
       wantAbility = false;
       doAbility();
     }
+    /* spear1 */
+    if (wantSpear) {
+      wantSpear = false;
+      if (abilityPadIndex != null &&
+          (state.primaryPadIndex == null || abilityPadIndex !== state.primaryPadIndex) &&
+          companionForPad(abilityPadIndex)) {
+        spearCompanionPad(abilityPadIndex);
+      } else if (state.inMech && C.isPilotKnocked && C.isPilotKnocked({ inMech: true, mechId: state.mechId, mechStories: state.mechStories })) {
+        mashGetUpThree();
+      } else {
+        fireMechSpear();
+      }
+      abilityPadIndex = null;
+    }
     /* mech4/mechgun1: buffered FIRE while tank OR story mech (never hop) */
     if ((state.inTruck && state.vehicleStyle === "tank") || state.inMech) {
       state.hopWantT = 0; /* hop must never consume ability while firing */
@@ -5350,7 +5645,11 @@ state.zLift = 0;
           : (state.inTruck || state.inMech || state.inSub)
           ? (state.toastT > 0 ? state.toast : ((state.exitTipT || 0) > 0 ? "EXIT · INTERACT / E" : (state.inSub ? "🛸 Diving · EXIT · INTERACT / E" : (
               (state.inTruck && state.vehicleStyle === "tank") || state.inMech
-                ? ((C.mechGunTip && state.inMech) ? C.mechGunTip() : "FIRE · Space / X / button · EXIT INTERACT")
+                ? (state.inMech && C.isPilotKnocked && C.isPilotKnocked({ inMech: true, mechId: state.mechId, mechStories: state.mechStories })
+                    ? ((C.mashGetUpTip ? C.mashGetUpTip() : "MASH to get up!") + " · Space / X / B / stick")
+                    : (state.inMech && C.canSpearPilot && C.canSpearPilot({ inMech: true, frogId: state.frogId, id: state.frogId, mechId: state.mechId, mechStories: state.mechStories })
+                        ? (C.spearTip ? C.spearTip() : "SPEAR · B / RB · FIRE · Space / X · EXIT INTERACT")
+                        : ((C.mechGunTip && state.inMech) ? C.mechGunTip() : "FIRE · Space / X / button · EXIT INTERACT")))
                 : ""
             ))))
           : (state.toastT > 0 ? state.toast : state.inOrbit ? "Orbit locked · Escape or hard thruster" : state.near ? (
@@ -5368,7 +5667,7 @@ state.zLift = 0;
         inHeli: !!state.inHeli,
         inDrone: !!state.inDrone,
         near: (state.inTruck || state.inMech || state.inSub || state.inHeli || state.inDrone) ? true : state.near,
-        ability: ((state.inTruck && state.vehicleStyle === "tank") || state.inMech) ? "FIRE" : ((state.inHeli || state.inDrone) ? "CLIMB" : "HOP"),
+        ability: (state.inMech && C.isPilotKnocked && C.isPilotKnocked({ inMech: true, mechId: state.mechId, mechStories: state.mechStories })) ? "MASH" : (((state.inTruck && state.vehicleStyle === "tank") || state.inMech) ? "FIRE" : ((state.inHeli || state.inDrone) ? "CLIMB" : "HOP")),
         cd: state.cd,
         walk: (function () {
           if (state.mode === "space") return state.inOrbit ? "🌍 Orbit" : "🚀 Space";
@@ -5570,6 +5869,7 @@ state.zLift = 0;
     setSteer: setSteer,
     pulseInteract: pulseInteract,
     pulseAbility: pulseAbility,
+    pulseSpear: pulseSpear,
     setAirControls: function (opts) {
       if (!state) return;
       opts = opts || {};

@@ -30,7 +30,9 @@
    mechgun1: story-mech omnigun — any piloted story mech FIRE (Space/X/button) permanently
              removes hit targets for the session (no 7s respawn); tank FIRE unchanged.
    mechgun2: omnigun also permanently wrecks house/garage, trees, rocks, fish/whales,
-             fences/shrubs/flowers, track rocks — same session PERMA_GONE; tank FIRE unchanged. */
+             fences/shrubs/flowers, track rocks — same session PERMA_GONE; tank FIRE unchanged.
+   spear1: Rexy-only 1000-story mech SPEAR (B / RB) knocks James trillion ~2s;
+           mash face/Space/ability/stick to get up sooner; omnigun FIRE unchanged. */
 (function (global) {
   "use strict";
 
@@ -532,6 +534,104 @@
   }
   function mechGunDrivingTip() {
     return "Story mech · FIRE (Space / X / button) · omni-gun · EXIT INTERACT";
+  }
+
+  /* spear1: Rexy 1000-mech SPEAR — knocks trillion; mash recovers */
+  var MECH_SPEAR = {
+    cd: 0.55,
+    range: 280,
+    range3: 5.6,
+    halfArc: 0.95,
+    knockSec: 2.0,
+    mashNeed: 8,
+    thrustLife: 0.28,
+  };
+  var KNOCKED_MECHS = {}; /* sid -> { t, mash, need, knockSec } */
+
+  function frogIdOf(ent) {
+    if (!ent) return null;
+    if (ent.id) return ent.id;
+    if (ent.frogId) return ent.frogId;
+    return null;
+  }
+  function canSpearPilot(ent) {
+    if (!ent || !ent.inMech) return false;
+    if (frogIdOf(ent) !== "rexy") return false;
+    var sid = mechSolidId(ent.mechId);
+    if (sid === "mech1000") return true;
+    var stories = Number(ent.mechStories) || 0;
+    return stories >= 1000 && stories < 1e12;
+  }
+  function spearTip() {
+    return "SPEAR · B / RB · FIRE · Space / X · EXIT INTERACT";
+  }
+  function mashGetUpTip() {
+    return "MASH to get up!";
+  }
+  function isMechKnocked(idOrHot) {
+    var sid = mechSolidKeys(idOrHot);
+    if (!sid) return false;
+    var k = KNOCKED_MECHS[sid];
+    return !!(k && k.t > 0);
+  }
+  function mechKnockState(idOrHot) {
+    var sid = mechSolidKeys(idOrHot);
+    if (!sid) return null;
+    var k = KNOCKED_MECHS[sid];
+    if (!k || k.t <= 0) return null;
+    return k;
+  }
+  function knockMechDown(idOrHot) {
+    var sid = mechSolidKeys(idOrHot);
+    if (!sid) return false;
+    /* Only trillion is spear-knockable */
+    if (sid !== "mechTrillion") return false;
+    var ks = MECH_SPEAR.knockSec != null ? MECH_SPEAR.knockSec : 2.0;
+    var need = MECH_SPEAR.mashNeed != null ? MECH_SPEAR.mashNeed : 8;
+    KNOCKED_MECHS[sid] = { t: ks, mash: 0, need: need, knockSec: ks };
+    return true;
+  }
+  function mashMechKnock(idOrHot, amount) {
+    var sid = mechSolidKeys(idOrHot);
+    if (!sid) return false;
+    var k = KNOCKED_MECHS[sid];
+    if (!k || k.t <= 0) return false;
+    var n = amount != null ? amount : 1;
+    k.mash = (k.mash || 0) + n;
+    var slice = (k.knockSec || 2) / Math.max(1, k.need || 8);
+    k.t = Math.max(0, k.t - slice * n);
+    if (k.mash >= (k.need || 8) || k.t <= 0) {
+      delete KNOCKED_MECHS[sid];
+      return true; /* recovered */
+    }
+    return false;
+  }
+  function tickMechKnock(dt) {
+    var recovered = [];
+    var keys = Object.keys(KNOCKED_MECHS);
+    for (var i = 0; i < keys.length; i++) {
+      var sid = keys[i];
+      var k = KNOCKED_MECHS[sid];
+      if (!k) continue;
+      k.t -= dt;
+      if (k.t <= 0) {
+        delete KNOCKED_MECHS[sid];
+        recovered.push(sid);
+      }
+    }
+    return recovered;
+  }
+  function clearKnockedMechs() {
+    KNOCKED_MECHS = {};
+  }
+  function isPilotKnocked(ent) {
+    if (!ent || !ent.inMech) return false;
+    var sid = mechSolidId(ent.mechId);
+    if (!sid && ent.mechStories != null) {
+      var n = Number(ent.mechStories) || 0;
+      sid = n >= 1e12 ? "mechTrillion" : n >= 1000 ? "mech1000" : n >= 100 ? "mech100" : "mech10";
+    }
+    return isMechKnocked(sid);
   }
 
   /* mech5: among MECHS, only Rexy's thousand-story can be tank-blasted
@@ -1268,6 +1368,7 @@
     VEHICLE_PARK = {};
     clearDestroyedMechs(); /* mech5: respawn blasted mechs with world reset */
     clearPermaGone(); /* mechgun1: session kills clear on world reset */
+    clearKnockedMechs(); /* spear1 */
     for (var h = 0; h < HOTSPOTS.length; h++) {
       var hs = HOTSPOTS[h];
       var home = _hotspotHome(hs);
@@ -1362,6 +1463,17 @@
     isStoryMechPilot: isStoryMechPilot,
     mechGunTip: mechGunTip,
     mechGunDrivingTip: mechGunDrivingTip,
+    MECH_SPEAR: MECH_SPEAR,
+    canSpearPilot: canSpearPilot,
+    spearTip: spearTip,
+    mashGetUpTip: mashGetUpTip,
+    isMechKnocked: isMechKnocked,
+    mechKnockState: mechKnockState,
+    knockMechDown: knockMechDown,
+    mashMechKnock: mashMechKnock,
+    tickMechKnock: tickMechKnock,
+    clearKnockedMechs: clearKnockedMechs,
+    isPilotKnocked: isPilotKnocked,
     isTankBlastableMech: isTankBlastableMech,
     isMechDestroyed: isMechDestroyed,
     markMechDestroyed: markMechDestroyed,

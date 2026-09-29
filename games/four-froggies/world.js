@@ -742,6 +742,71 @@
     return shell;
   }
 
+  /* spear1: Rexy 1000-mech melee spear thrust — knocks trillion if in range/arc */
+  function tryMechSpear(world, frog) {
+    if (!world || !frog) return { ok: false, reason: "no-frog" };
+    var C = global.FroggiesCanon;
+    if (!C || !C.canSpearPilot || !C.canSpearPilot(frog)) return { ok: false, reason: "no-spear" };
+    if (C.isPilotKnocked && C.isPilotKnocked(frog)) return { ok: false, reason: "self-down" };
+    var cfg = C.MECH_SPEAR || { range: 280, halfArc: 0.95, thrustLife: 0.28 };
+    var ang = (frog.faceAngle != null && isFinite(frog.faceAngle))
+      ? frog.faceAngle
+      : (frog.facing >= 0 ? 0 : Math.PI);
+    var cx = Math.cos(ang), cy = Math.sin(ang);
+    var range = cfg.range != null ? cfg.range : 280;
+    var halfArc = cfg.halfArc != null ? cfg.halfArc : 0.95;
+    /* Target: trillion entity (pilot pos or park) */
+    var home = (C.COMPOUND && C.COMPOUND.mechTrillion) || { x: 600, y: 2170 };
+    var tp = C.vehiclePos ? C.vehiclePos("mechTrillion", home.x, home.y) : home;
+    var frogs = world._frogsRef || null;
+    var pilot = null;
+    if (frogs) {
+      for (var fi = 0; fi < frogs.length; fi++) {
+        var f = frogs[fi];
+        if (!f || !f.inMech || f.sessionDead) continue;
+        var sid = C.mechSolidId ? C.mechSolidId(f.mechId) : null;
+        if (sid === "mechTrillion") { pilot = f; break; }
+      }
+    }
+    var tx = pilot ? pilot.x : tp.x;
+    var ty = pilot ? pilot.y : tp.y;
+    var dx = tx - frog.x, dy = ty - frog.y;
+    var dist = Math.hypot(dx, dy);
+    var hitR = 125; /* trillion body radius */
+    /* Thrust FX always */
+    if (!world.spears) world.spears = [];
+    world.spears.push({
+      x: frog.x, y: frog.y, ang: ang,
+      life: cfg.thrustLife != null ? cfg.thrustLife : 0.28,
+      maxLife: cfg.thrustLife != null ? cfg.thrustLife : 0.28,
+      len: Math.min(range, 200),
+      ownerId: frog.id,
+    });
+    if (world.spears.length > 6) world.spears.splice(0, world.spears.length - 6);
+    spawnSparks(world, frog.x + cx * 40, frog.y + cy * 40, 12);
+    if (dist > range + hitR) {
+      return { ok: true, hit: false, toast: "SPEAR · miss" };
+    }
+    var aim = Math.atan2(dy, dx);
+    var da = aim - ang;
+    while (da > Math.PI) da -= Math.PI * 2;
+    while (da < -Math.PI) da += Math.PI * 2;
+    if (Math.abs(da) > halfArc && dist > hitR * 0.55) {
+      return { ok: true, hit: false, toast: "SPEAR · miss" };
+    }
+    if (C.isMechKnocked && C.isMechKnocked("mechTrillion")) {
+      return { ok: true, hit: false, toast: "Already down!" };
+    }
+    if (!C.knockMechDown || !C.knockMechDown("mechTrillion")) {
+      return { ok: true, hit: false, toast: "SPEAR · no effect" };
+    }
+    spawnBoom(world, tx, ty, 1.6);
+    spawnSparks(world, tx, ty, 22);
+    spawnDust(world, tx, ty, 10);
+    world._spearKnockToast = "SPEAR · trillion DOWN!";
+    return { ok: true, hit: true, toast: "SPEAR · trillion DOWN!", target: pilot || null };
+  }
+
   function spawnBoom(world, x, y, power) {
     if (!world) return;
     if (!world.booms) world.booms = [];
@@ -1531,6 +1596,17 @@
       var revived = Cresp.tickMechRespawn(dt);
       if (revived && revived.length) world._mechRespawnToast = "Rexy 1000-story mech is back!";
     }
+    /* spear1: thrust FX + knockdown timer */
+    if (!world.spears) world.spears = [];
+    for (i = world.spears.length - 1; i >= 0; i--) {
+      var sp = world.spears[i];
+      sp.life -= dt;
+      if (sp.life <= 0) world.spears.splice(i, 1);
+    }
+    if (Cresp && Cresp.tickMechKnock) {
+      var gotUp = Cresp.tickMechKnock(dt);
+      if (gotUp && gotUp.length) world._spearRecoverToast = "Trillion mech is back up!";
+    }
     /* polish10: hard caps if arrays ballooned */
     var capsFx = particleCaps();
     if (world.dust && world.dust.length > capsFx.dust) world.dust.length = capsFx.dust;
@@ -1908,6 +1984,16 @@
       }
       if (craftM) ent._airRotor = craftM.rotor || 0;
       return;
+    }
+    /* spear1: knocked mech cannot move / steer while down */
+    {
+      var Ckn = global.FroggiesCanon;
+      if (ent.inMech && Ckn && Ckn.isPilotKnocked && Ckn.isPilotKnocked(ent)) {
+        ent.vx = 0; ent.vy = 0; ent.steerX = 0; ent.steerY = 0;
+        ent.throttle = 0; ent.brake = 0;
+        ent.zVel = Math.min(ent.zVel || 0, 0);
+        return;
+      }
     }
     /* polish3 + polish10: snappier walk/drive — quicker ramp + firmer stop */
     /* tapsteer1: noticeably faster walk + drive */
@@ -2541,8 +2627,9 @@
     return false;
   }
 
-  function drawMech(ctx, wx, wy, stories, camX, camY, vw, vh, tint) {
-    /* hop3: robot/mech silhouette (head·torso·arms·legs·glow eyes) — not a skyscraper prism */
+  function drawMech(ctx, wx, wy, stories, camX, camY, vw, vh, tint, opts) {
+    /* hop3: robot/mech silhouette (head·torso·arms·legs·glow eyes) — not a skyscraper prism
+       spear1: opts.tipped = toppled knockdown pose */
     var p = project(wx, wy, camX, camY, vw, vh);
     var Cband = global.FroggiesCanon;
     var band = Cband && Cband.mechBand ? Cband.mechBand(stories) : (stories >= 1e12 ? "trillion" : stories >= 1000 ? "1000" : stories >= 100 ? "100" : "10");
@@ -2555,6 +2642,19 @@
     var cx = p.x;
     var col = tint || "#94a3b8";
     var eyeCol = band === "trillion" ? "#f472b6" : band === "1000" ? "#fbbf24" : band === "100" ? "#67e8f9" : "#a5b4fc";
+    var tipped = !!(opts && opts.tipped);
+    if (!tipped && Cband && Cband.isMechKnocked) {
+      var tipSid = band === "trillion" ? "mechTrillion" : band === "1000" ? "mech1000" : band === "100" ? "mech100" : "mech10";
+      tipped = Cband.isMechKnocked(tipSid);
+    }
+    var _tipSaved = false;
+    if (tipped) {
+      ctx.save();
+      _tipSaved = true;
+      ctx.translate(cx, baseY);
+      ctx.rotate(Math.PI / 2.15);
+      ctx.translate(-cx, -baseY + H * 0.12);
+    }
     if (band === "1000" || band === "trillion") {
       var haze = ctx.createRadialGradient(cx, baseY - H * 0.55, W * 0.2, cx, baseY - H * 0.4, W * (band === "trillion" ? 3.2 : 2.6));
       haze.addColorStop(0, band === "trillion" ? "rgba(244, 114, 182, 0.32)" : "rgba(252, 211, 77, 0.26)");
@@ -2687,6 +2787,24 @@
     var labY = headY - (band === "trillion" ? 32 : band === "1000" ? 24 : 14) * s;
     ctx.strokeText(label, cx, labY);
     ctx.fillText(label, cx, labY);
+    /* spear1: spear arm cue on Rexy 1000 when not tipped */
+    if (band === "1000" && !tipped) {
+      ctx.strokeStyle = "#e2e8f0";
+      ctx.lineWidth = Math.max(2.2, 3.2 * s);
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(cx + W * 0.55, baseY - H * 0.55);
+      ctx.lineTo(cx + W * 1.55, baseY - H * 0.72);
+      ctx.stroke();
+      ctx.fillStyle = "#fbbf24";
+      ctx.beginPath();
+      ctx.moveTo(cx + W * 1.55, baseY - H * 0.72);
+      ctx.lineTo(cx + W * 1.78, baseY - H * 0.78);
+      ctx.lineTo(cx + W * 1.52, baseY - H * 0.62);
+      ctx.closePath();
+      ctx.fill();
+    }
+    if (_tipSaved) ctx.restore();
   }
 
 
@@ -2928,8 +3046,19 @@
     }
 
     var a = AREAS[0];
-    /* Compound ground */
-    drawGroundPoly(ctx, areaCorners(a, camX, camY, vw, vh), "rgba(100, 70, 40, 0.28)", "rgba(60,30,10,0.3)");
+    /* Compound ground — padfix1: stop south of garage before heli/drone pads
+       so the translucent orange house-zone floor does not cover H/D craft. */
+    var Cpad = global.FroggiesCanon;
+    var heliY = (Cpad && Cpad.HELI_PAD && Cpad.HELI_PAD.y) || 2000;
+    var droneY = (Cpad && Cpad.DRONE_PAD && Cpad.DRONE_PAD.y) || 2000;
+    var padStopY = Math.min(heliY, droneY) - 70;
+    var compoundFloor = {
+      x: a.x,
+      y: a.y,
+      w: a.w,
+      h: Math.max(200, Math.min(a.h, padStopY - a.y)),
+    };
+    drawGroundPoly(ctx, areaCorners(compoundFloor, camX, camY, vw, vh), "rgba(100, 70, 40, 0.28)", "rgba(60,30,10,0.3)");
 
     /* Big backyard (south) */
     var yard = { x: a.x + 40, y: a.y + a.h - 400, w: 600, h: 360 };
@@ -4814,15 +4943,16 @@
     var p = project(wx, wy, camX, camY, vw, vh);
     var s = p.depth;
     var big = kind === "heli";
-    var R = (big ? 46 : 32) * s;
+    var R = (big ? 52 : 36) * s;
     ctx.save();
     /* Painted circle */
     ctx.beginPath();
     ctx.ellipse(p.x, p.y, R, R * 0.42, -0.12, 0, Math.PI * 2);
-    ctx.fillStyle = near ? "rgba(30, 41, 59, 0.88)" : "rgba(30, 41, 59, 0.72)";
+    /* padfix1: opaque disc so orange compound tint cannot wash out H/D */
+    ctx.fillStyle = near ? "rgba(15, 23, 42, 0.98)" : "rgba(15, 23, 42, 0.94)";
     ctx.fill();
     ctx.strokeStyle = big ? "#fbbf24" : "#67e8f9";
-    ctx.lineWidth = (near ? 3.4 : 2.2) * s;
+    ctx.lineWidth = (near ? 3.8 : 2.6) * s;
     ctx.stroke();
     ctx.beginPath();
     ctx.ellipse(p.x, p.y, R * 0.72, R * 0.30, -0.12, 0, Math.PI * 2);
@@ -5573,6 +5703,32 @@
     ctx.restore();
   }
 
+  function drawSpears(ctx, world, camX, camY, vw, vh) {
+    if (!world || !world.spears) return;
+    for (var si = 0; si < world.spears.length; si++) {
+      var sp = world.spears[si];
+      var p0 = project(sp.x, sp.y, camX, camY, vw, vh);
+      var len = (sp.len || 160) * p0.depth;
+      var fade = Math.max(0, sp.life / Math.max(0.01, sp.maxLife || 0.28));
+      var ex = p0.x + Math.cos(sp.ang) * len;
+      var ey = p0.y + Math.sin(sp.ang) * len * 0.55;
+      ctx.save();
+      ctx.globalAlpha = 0.35 + 0.65 * fade;
+      ctx.strokeStyle = "#fef3c7";
+      ctx.lineWidth = Math.max(3, 5 * p0.depth);
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(p0.x, p0.y - 30 * p0.depth);
+      ctx.lineTo(ex, ey - 40 * p0.depth);
+      ctx.stroke();
+      ctx.fillStyle = "#fbbf24";
+      ctx.beginPath();
+      ctx.arc(ex, ey - 40 * p0.depth, Math.max(3, 6 * p0.depth), 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
   function drawMechWowTip(ctx, frogs, camX, camY, vw, vh) {
     var hit = nearMech1000(frogs, 170);
     if (!hit) return;
@@ -5625,6 +5781,7 @@
     drawStarshipPad(ctx, camX, camY, vw, vh, nearHot && nearHot.id === "starship");
     drawFx(ctx, world, camX, camY, vw, vh);
     drawParkedTrucks(ctx, world, frogs, camX, camY, vw, vh);
+    /* padfix1: pads after trucks / clipped orange compound — before frogs so boardable craft stay visible */
     drawParkedAir(ctx, world, frogs, camX, camY, vw, vh);
 
     for (var hi = 0; hi < world.hotspots.length; hi++) {
@@ -5644,6 +5801,7 @@
     }
 
     /* polish6/mech1: Rexy 1000-story mech wow-scale tip when approached */
+    drawSpears(ctx, world, camX, camY, vw, vh);
     drawMechWowTip(ctx, frogs, camX, camY, vw, vh);
     /* polish7: zone signs + mini-map */
     drawZoneSigns(ctx, frogs, camX, camY, vw, vh);
@@ -5686,6 +5844,7 @@
     spawnSparks: spawnSparks,
     spawnTankShell: spawnTankShell,
     spawnMechGunShell: spawnMechGunShell,
+    tryMechSpear: tryMechSpear,
     spawnBoom: spawnBoom,
     blastWreckProps: blastWreckProps,
     blastOmnigunKill: blastOmnigunKill,
