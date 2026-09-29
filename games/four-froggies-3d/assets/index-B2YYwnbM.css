@@ -16,3 +16,26 @@
 .phone-cmds{display:grid;grid-template-columns:repeat(3,1fr);gap:.28rem}
 .phone-cmds button{padding:.38rem .2rem;border-radius:.45rem;border:1px solid #3a4a3e;background:linear-gradient(180deg,#2a382e,#1a221c);color:#e8f0e6;font-size:.68rem;font-weight:600;cursor:pointer}
 .phone-cmds button:active{filter:brightness(1.12)}
+
+/* ff3d25 — lobby seats match in-world frog traits (canon colors + hats) */
+.seat-fig{position:relative;display:block;width:4.2rem;height:4.2rem}
+.seat-fig img{width:100%;height:100%;object-fit:contain}
+.seat-hat{position:absolute;top:.05rem;left:50%;width:.95rem;height:.7rem;margin-left:-.48rem;border:1px solid #0f172a88;box-shadow:0 1px 2px #0006;pointer-events:none}
+.seat-hat-james{background:#facc15;border-radius:.2rem .2rem .05rem .05rem;height:.55rem;top:.12rem}
+.seat-hat-james:after{content:"";position:absolute;left:.08rem;right:.08rem;bottom:-.18rem;height:.2rem;background:#facc15;border-radius:0 0 .15rem .15rem}
+.seat-hat-jimmy{background:#ef4444;border-radius:50% 50% 40% 40%;height:.7rem;width:1.05rem;margin-left:-.52rem}
+.seat-hat-jimmy:after{content:"";position:absolute;left:50%;top:-.18rem;width:.28rem;height:.28rem;margin-left:-.14rem;background:#ef4444;border-radius:50%}
+.seat-hat-bubbles{background:#38bdf8;border-radius:50%;height:.55rem;width:1.05rem;margin-left:-.52rem;top:.18rem}
+.seat-hat-bubbles:after{content:"";position:absolute;left:50%;top:-.2rem;width:.22rem;height:.22rem;margin-left:-.11rem;background:#1e3a8a;border-radius:50%}
+.seat-hat-rexy{background:#e879f9;width:0;height:0;border:.02rem solid transparent;border-left:.48rem solid transparent;border-right:.48rem solid transparent;border-bottom:.75rem solid #e879f9;background:transparent;border-radius:0;box-shadow:none;top:.02rem}
+.seat-hat-rexy:after{content:"";position:absolute;left:50%;top:-.35rem;width:.14rem;height:.35rem;margin-left:-.07rem;background:#6b21a8;border-radius:.05rem}
+.seat-role{font-style:normal;font-size:.68rem;letter-spacing:.04em;text-transform:uppercase;opacity:.85}
+.seat-james{border-color:#4ade80}.seat-james .seat-role{color:#4ade80}
+.seat-jimmy{border-color:#fb923c}.seat-jimmy .seat-role{color:#fb923c}
+.seat-bubbles{border-color:#60a5fa}.seat-bubbles .seat-role{color:#60a5fa}
+.seat-rexy{border-color:#c084fc}.seat-rexy .seat-role{color:#c084fc}
+.seat.on.seat-james{box-shadow:inset 0 0 0 1px #4ade80}
+.seat.on.seat-jimmy{box-shadow:inset 0 0 0 1px #fb923c}
+.seat.on.seat-bubbles{box-shadow:inset 0 0 0 1px #60a5fa}
+.seat.on.seat-rexy{box-shadow:inset 0 0 0 1px #c084fc}
+@media (width<=720px){.seat-fig{width:3.1rem;height:3.1rem}}
