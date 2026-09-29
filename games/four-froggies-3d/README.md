@@ -1,4 +1,14 @@
-# What's new (ff3d55) — land jumps on the track and steady loop view
+# What's new (ff3d57) — barriers, Cybertruck details, and submarine swimming
+
+- Added continuous barriers on both sides of the racing track, shaped to follow the banked road and vertical loop. Grounded cars are kept on the track, while a high enough jump can clear the finite barrier to escape.
+- Reworked the Cybertruck's dark glazing and added front/rear bumpers, bed rails and floor, side rockers, wheel flares, door seams, and handles while preserving its angular stainless-steel shape.
+- Shows the frog seated inside the underwater submarine's transparent cockpit instead of hiding the rider above the hull.
+- E now lets the frog disembark into scuba swimming, then surface into the pond. Boarding again requires swimming back near the sub; pressing E at the water's edge enters the pond instead of pushing the frog back to shore.
+- Cache: `?v=20260929-ff3d57` · asset `index-ff3d57.js`
+
+- Retains the ff3d55 landing and stable loop-camera fixes.
+
+## What's new (ff3d55) — land jumps on the track and steady loop view
 
 - Track jumps now keep their height above the road when leaving a raised surface and reset jump height on landing, preventing cars from staying suspended above the track.
 - The camera keeps a steady, wider view through the loop and lets the two-racer framing handle both cars.
