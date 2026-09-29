@@ -1,3 +1,11 @@
+# What's new (ff3d47) — climb pose, solid truck walls, track bank and start
+
+- Holding into a wall gives James an animated climbing pose while the existing climb and camera fade keep him readable.
+- Vehicles now keep their full footprint clear of house and garage walls instead of clipping through them.
+- The cars roll around the vehicle's forward axis to match the banked track, while the nose follows track pitch.
+- The entry spur joins the oval as one road mesh, removing the overlapping track surfaces that flickered at the start.
+- Cache: `?v=20260929-ff3d47` · asset `index-ff3d47.js`
+
 ## What's new (ff3d46) — camera stays with him
 
 - The view sits behind him and a little above, and it follows him up walls, through the house, and onto the roof. Drag the mouse to look around. Walking sideways does not spin the camera.

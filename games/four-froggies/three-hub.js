@@ -495,6 +495,88 @@
     }
   }
 
+  function setFrogClimb(mesh, phase, on) {
+    if (!mesh || !mesh.userData.legRoots) return;
+    var arms = mesh.userData.armMeshes || [];
+    if (!on) {
+      if (mesh.userData.torso) mesh.userData.torso.rotation.x = 0;
+      if (mesh.userData.head) mesh.userData.head.rotation.x = 0;
+      for (var ri = 0; ri < arms.length; ri++) {
+        var resetArm = arms[ri];
+        var resetSide = resetArm.userData.side || (ri === 0 ? -1 : 1);
+        if (resetArm.userData.basePos) resetArm.position.copy(resetArm.userData.basePos);
+        resetArm.rotation.set(0, 0, resetSide * 0.55);
+      }
+      setFrogSpring(mesh, 0);
+      return;
+    }
+    var ph = phase || 0;
+    if (mesh.userData.torso) mesh.userData.torso.rotation.x = -0.12;
+    if (mesh.userData.head) mesh.userData.head.rotation.x = -0.08;
+    var legs = mesh.userData.legRoots;
+    for (var li = 0; li < legs.length; li++) {
+      var leg = legs[li];
+      var step = Math.sin(ph + (leg.side < 0 ? 0 : Math.PI));
+      leg.root.rotation.x = -0.25 + step * 0.42;
+      leg.root.rotation.z = leg.side * 0.42;
+      leg.knee.rotation.x = 0.8 - Math.max(0, step) * 0.55;
+    }
+    for (var ai = 0; ai < arms.length; ai++) {
+      var arm = arms[ai];
+      var side = arm.userData.side || (ai === 0 ? -1 : 1);
+      var reach = Math.sin(ph + (side < 0 ? 0 : Math.PI));
+      arm.rotation.x = -0.85 - Math.max(0, reach) * 0.3;
+      arm.rotation.y = side * 0.12;
+      arm.rotation.z = side * 0.72;
+      if (arm.userData.basePos) {
+        arm.position.set(
+          arm.userData.basePos.x,
+          arm.userData.basePos.y + Math.max(0, reach) * 0.06 * (mesh.userData.frogScale || 1),
+          arm.userData.basePos.z - 0.08 * (mesh.userData.frogScale || 1)
+        );
+      }
+    }
+  }
+
+  function registerWallOccluder(mesh) {
+    if (!mesh || !state) return;
+    mesh.material = mesh.material.clone();
+    if (!state.occludingWalls) state.occludingWalls = [];
+    state.occludingWalls.push(mesh);
+  }
+
+  var wallOcclusionRaycaster = null;
+  function updateWallOcclusion() {
+    if (!state || !camera || !state.occludingWalls || !state.occludingWalls.length) return;
+    if (!wallOcclusionRaycaster) wallOcclusionRaycaster = new THREE.Raycaster();
+    var target = new THREE.Vector3(
+      state.player.position.x,
+      state.player.position.y + 0.55,
+      state.player.position.z
+    );
+    var ray = target.sub(camera.position);
+    var distance = ray.length();
+    if (distance <= 0.001) return;
+    wallOcclusionRaycaster.set(camera.position, ray.multiplyScalar(1 / distance));
+    var hits = wallOcclusionRaycaster.intersectObjects(state.occludingWalls, false);
+    var blockers = [];
+    for (var hi = 0; hi < hits.length; hi++) {
+      if (hits[hi].distance >= distance - 0.2) break;
+      blockers.push(hits[hi].object);
+    }
+    for (var wi = 0; wi < state.occludingWalls.length; wi++) {
+      var mesh = state.occludingWalls[wi];
+      var faded = blockers.indexOf(mesh) >= 0;
+      var mat = mesh.material;
+      if (faded === !!mesh.userData.occlusionFaded) continue;
+      mesh.userData.occlusionFaded = faded;
+      mat.transparent = faded;
+      mat.opacity = faded ? 0.28 : 1;
+      mat.depthWrite = !faded;
+      mat.needsUpdate = true;
+    }
+  }
+
   function labelSprite(text, color) {
     /* polish9/10: quieter plate nameplates */
     var canvas = document.createElement("canvas");
@@ -1098,6 +1180,7 @@
       });
     }
     var gar = cp.garage || { x: 700, y: 1400, w: 480, h: 520 };
+    state.occludingWalls = [];
     var gp = worldToThree(gar.x + gar.w / 2, gar.y + gar.h / 2);
     var gw = gar.w * 0.02, gd = gar.h * 0.02;
     var gFloor = new THREE.Mesh(
@@ -1111,7 +1194,7 @@
     var gMat = new THREE.MeshStandardMaterial({ color: 0x6b7280, roughness: 0.75, metalness: 0.15 });
     function gWall(wx, wz, ww, wd, wh) {
       var m = new THREE.Mesh(new THREE.BoxGeometry(ww, wh || 2.0, wd), gMat);
-      m.position.set(wx, (wh || 2.0) * 0.5, wz); m.castShadow = true; scene.add(m);
+      m.position.set(wx, (wh || 2.0) * 0.5, wz); m.castShadow = true; registerWallOccluder(m); scene.add(m);
     }
     gWall(gp.x, gp.z - gd * 0.5 + 0.1, gw, 0.2);
     gWall(gp.x - gw * 0.5 + 0.1, gp.z, 0.2, gd);
@@ -1123,9 +1206,9 @@
     var jambMat = new THREE.MeshStandardMaterial({ color: 0x374151, roughness: 0.7, metalness: 0.1 });
     // Left / right jambs flush with side walls
     var jambL = new THREE.Mesh(new THREE.BoxGeometry(jambT, 2.0, 0.22), jambMat);
-    jambL.position.set(gp.x - doorW * 0.5 - jambT * 0.5, 1.0, southZ); jambL.castShadow = true; scene.add(jambL);
+    jambL.position.set(gp.x - doorW * 0.5 - jambT * 0.5, 1.0, southZ); jambL.castShadow = true; registerWallOccluder(jambL); scene.add(jambL);
     var jambR = new THREE.Mesh(new THREE.BoxGeometry(jambT, 2.0, 0.22), jambMat);
-    jambR.position.set(gp.x + doorW * 0.5 + jambT * 0.5, 1.0, southZ); jambR.castShadow = true; scene.add(jambR);
+    jambR.position.set(gp.x + doorW * 0.5 + jambT * 0.5, 1.0, southZ); jambR.castShadow = true; registerWallOccluder(jambR); scene.add(jambR);
     var lintel = new THREE.Mesh(new THREE.BoxGeometry(doorW + jambT * 2, 0.35, 0.24), new THREE.MeshStandardMaterial({ color: 0x111827 }));
     lintel.position.set(gp.x, 1.95, southZ); scene.add(lintel);
     state.garageDoor = new THREE.Mesh(
@@ -1137,6 +1220,7 @@
     state.garageDoor.userData.h0 = 1.7;
     state.garageDoor.userData.cx = gp.x;
     state.garageDoor.userData.cz = gp.z + gd * 0.5;
+    registerWallOccluder(state.garageDoor);
     scene.add(state.garageDoor);
     state.garageOpen = 0;
     state.garageOpenLabel = labelSprite("OPEN", "#bbf7d0");
@@ -1176,7 +1260,7 @@
     var wallH = 2.2, thick = 0.18;
     function wall(wx, wz, ww, wd) {
       var m = new THREE.Mesh(new THREE.BoxGeometry(ww, wallH, wd), wallMat);
-      m.position.set(wx, wallH * 0.5, wz); m.castShadow = true; scene.add(m);
+      m.position.set(wx, wallH * 0.5, wz); m.castShadow = true; registerWallOccluder(m); scene.add(m);
     }
     // North/South (along X), East/West (along Z) — leave south gap as doorway
     wall(hp.x, hp.z - hd * 0.5 + thick * 0.5, hw, thick); // north
@@ -3830,8 +3914,13 @@ state.zLift = 0;
       /* polish9 + truck1: air hang + land bounce; hop2: snappier foot gravity */
       airL = (state.zLift || 0) - groundLift;
       var gFall = state.inTruck ? 14 : 22;
-      if (state.inTruck && airL > 0.55 && Math.abs(state.zVel || 0) < 2.2) gFall *= 0.38;
-      if (airL > 0.02 || (state.zVel || 0) !== 0) {
+      if (state.wallClimbing && !state.inTruck && !state.inMech) {
+        var climbTop3 = (state.groundLift || 0) + (C.WALL_CLIMB_HEIGHT || 160) * 0.02;
+        var climbSpeed3 = (C.WALL_CLIMB_SPEED || 150) * 0.02;
+        state.zLift = Math.min(climbTop3, Math.max(state.zLift || 0, state.groundLift || 0) + climbSpeed3 * dt);
+        state.zVel = state.zLift < climbTop3 ? climbSpeed3 : 0;
+        state.wallClimbPhase = (state.wallClimbPhase || 0) + dt * 12;
+      } else if (airL > 0.02 || (state.zVel || 0) !== 0) {
         state.zVel = (state.zVel || 0) - gFall * dt;
         state.zLift = (state.zLift || 0) + state.zVel * dt;
         if (state.zLift <= groundLift) {
@@ -4209,8 +4298,12 @@ state.zLift = 0;
           var sx = 1 - Math.min(0.26, airH * 0.26) - st3 * 0.12 + sq * 0.34;
           state.player.scale.set(sx, sy, sx);
           /* hop4: legs spring out mid-air, tuck on land */
-          setFrogSpring(state.player, Math.min(1.15, airH * 1.1 + st3 * 0.5 - sq * 0.7));
-          if (C.tickLocoHop) {
+          if (state.wallClimbing) setFrogClimb(state.player, state.wallClimbPhase, true);
+          else {
+            setFrogClimb(state.player, 0, false);
+            setFrogSpring(state.player, Math.min(1.15, airH * 1.1 + st3 * 0.5 - sq * 0.7));
+          }
+          if (C.tickLocoHop && !state.wallClimbing) {
             state.groundLift = state.groundLift || 0;
             var launched3 = C.tickLocoHop(state, dt, {
               moving: wantMove3,
@@ -4280,6 +4373,12 @@ state.zLift = 0;
       if (state.inMech && C.mechSolidId) ignoreMech = C.mechSolidId(state.mechId);
       else if (state.inMech && state.mechId) ignoreMech = String(state.mechId).replace(/^mech-/, "mech");
       var airH3 = Math.max(0, (state.zLift || 0) - (state.groundLift || 0));
+      var canClimb3 = !state.inTruck && !state.inMech && !state.inSub && !state.inSwim;
+      var wall3 = canClimb3 && C.wallContact && (state.wallClimbing || airH3 / 0.02 < 28)
+        ? C.wallContact(wHit.x, wHit.y, 44, { garageOpen: state.garageOpen || 0 }, hopMx, hopMz)
+        : null;
+      state.wallClimbing = !!wall3;
+      if (state.wallClimbing) state.wallClimbPhase = (state.wallClimbPhase || 0) + dt * 12;
       var solidOpts = {
         garageOpen: state.garageOpen || 0,
         inTruck: !!state.inTruck,
@@ -4289,7 +4388,7 @@ state.zLift = 0;
         ignoreMechId: ignoreMech,
         softPond: !state.inTruck && !state.inMech && !state.inSwim && !state.inSub,
         airHeight: airH3 / 0.02, /* three→world-ish units for canon clear threshold */
-        airClearHeight: state.inMech ? 22 : 28,
+        airClearHeight: state.wallClimbing ? ((C.WALL_CLIMB_HEIGHT || 160) - 1) : state.inMech ? 22 : 28,
       };
       var resolved = C.resolveSolid(wHit.x, wHit.y, radW, solidOpts);
       if (resolved.hit) {
@@ -4424,6 +4523,7 @@ state.zLift = 0;
       }
     }
     camera.lookAt(wantLookX, wantLookY, wantLookZ);
+    if (state.mode === "ranch") updateWallOcclusion();
     /* polish6: depth shadow under player */
     if (state.playerShadow) {
       var shS = state.inTruck ? 1.7 : 1;

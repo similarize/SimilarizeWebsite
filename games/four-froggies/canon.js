@@ -789,6 +789,8 @@
   var WALL_THICK = 20;
   var HOUSE_DOOR_W = 96;
   var GARAGE_DOOR_W = 440; /* garage1: nearly full bay (gar.w=480) */
+  var WALL_CLIMB_HEIGHT = 160;
+  var WALL_CLIMB_SPEED = 150;
 
   function solidRects(opts) {
     opts = opts || {};
@@ -932,6 +934,23 @@
       }
     }
     return { x: pos.x, y: pos.y, hit: hit };
+  }
+
+  function wallContact(x, y, radius, opts, steerX, steerY) {
+    var mag = Math.hypot(steerX || 0, steerY || 0);
+    if (mag < 0.05) return null;
+    var rects = solidRects(opts);
+    var rad = radius || 22;
+    for (var i = 0; i < rects.length; i++) {
+      var pos = { x: x, y: y };
+      if (!_pushRectOut(pos, rects[i], rad)) continue;
+      var nx = pos.x - x;
+      var ny = pos.y - y;
+      if ((steerX || 0) * nx + (steerY || 0) * ny < -0.01) {
+        return { id: rects[i].id, nx: nx, ny: ny };
+      }
+    }
+    return null;
   }
 
   /* polish10: peak mid-approach; fade when standing on the sign so frogs stay visible */
@@ -1333,6 +1352,9 @@
     solidRects: solidRects,
     solidCircles: solidCircles,
     resolveSolid: resolveSolid,
+    wallContact: wallContact,
+    WALL_CLIMB_HEIGHT: WALL_CLIMB_HEIGHT,
+    WALL_CLIMB_SPEED: WALL_CLIMB_SPEED,
     applyHop: applyHop,
     tickLocoHop: tickLocoHop,
     noteHopLand: noteHopLand,
