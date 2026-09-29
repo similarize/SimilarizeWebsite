@@ -1,3 +1,8 @@
+## What's new (ff3d45) — ride with dad
+
+- As James, stand by dad's truck and press E. James sits in the passenger seat. Dad keeps driving, and James goes where the truck goes. E hops him out. The stick does not steer.
+- Cache: `?v=20260929-ff3d45` · asset `index-ff3d45.js`
+
 ## What's new (ff3d44) — climb any wall
 
 - Hold into a wall and he climbs it. The mansion wall still lands on the roof. The garage wall lands on the garage roof. Let go and he drops.
