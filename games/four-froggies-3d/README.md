@@ -1,3 +1,12 @@
+## What's new (ff3d20) — Dad lifestyle + porch platforms + truck stays outside
+
+- **Dad lifestyle loop (NPC):** drive a bit → exit Cybertruck → walk mansion (fish tanks, pens, stairs/2F, back out) → yard walk → remount → drive around house to starship pad (optional Spotty hop) → loop. Not endless truck-only laps.
+- **Dad = James's dad** interactable NPC (big froggy OK). Canon cast only: James, Jimmy, Bubbles, Rexy.
+- **Cybertruck never enters house interior** — pathing skirts exterior; vehicle collision pushes trucks out to front. Park **front driveway** or **garage bay** only. Dad walks inside on foot after exit.
+- **Porch/platforms:** standY + step-up so froggies walk/hop **on top** of porch/steps/pool deck and continue inside — not under/through. Real walls stay solid (door gaps OK).
+- Keeps ff3d19 track/swim/house/exit1 + kid BGM.
+- Cache: `?v=20260928-ff3d20` · asset `index-ff3d20.js`
+
 ## What's new (ff3d19) — ranch HOUSE pass + kid BGM
 
 - **Stairs + 2nd floor:** real step standY + back-half 2F slab (frogs hop/walk up; no float/clip). Camera opens upstairs.
