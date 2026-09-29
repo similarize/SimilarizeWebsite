@@ -39,6 +39,7 @@
    mechgun1: story-mech omnigun FIRE — permanent session kill of hit targets (not tank).
    mechgun2: omnigun also blows house/garage/trees/rocks/fish/fences/shrubs (session permanent).
    goldsteam1: James trillion-story mech GOLD armor + steam pipe (Canvas+Three); omnigun FIRE kept.
+   airgun1: heli + passenger-drone FIRE — forward shells + boom (tank-like props); pilot only.
    ~10× map: real roam between ranch house / track / pond / Starship.
    James ranch house: big house, backyard (animals), huge garage (toys + 10/100-story mechs);
    1000-story + trillion-story mechs sit out back (won't fit). Four Cybertrucks + shared pile-in.
@@ -761,7 +762,45 @@
     return shell;
   }
 
-  /* spear1: Rexy 1000-mech melee spear thrust — knocks trillion if in range/arc */
+  /* airgun1: heli/drone forward shell — tank-like blast wreck; distinct airKind for draw */
+  function spawnAirShell(world, x, y, faceAngle, ownerId, airKind) {
+    if (!world) return null;
+    if (!world.shells) world.shells = [];
+    var C = global.FroggiesCanon;
+    var kind = airKind === "drone" ? "drone" : "heli";
+    var cfg = (C && C.airFireCfg) ? C.airFireCfg(kind) : (kind === "drone"
+      ? { speed: 880, life: 1.25, muzzle: 48, hitR: 28, blastR: 88, blastForce: 400, size: 1.7 }
+      : { speed: 760, life: 1.45, muzzle: 58, hitR: 34, blastR: 108, blastForce: 480, size: 2.15 });
+    var ang = (faceAngle != null && isFinite(faceAngle)) ? faceAngle : 0;
+    var cx = Math.cos(ang), cy = Math.sin(ang);
+    var muzzle = cfg.muzzle != null ? cfg.muzzle : 52;
+    var spd = cfg.speed != null ? cfg.speed : 760;
+    var life = cfg.life != null ? cfg.life : 1.45;
+    var shell = {
+      x: x + cx * muzzle,
+      y: y + cy * muzzle,
+      vx: cx * spd,
+      vy: cy * spd,
+      ang: ang,
+      life: life,
+      maxLife: life,
+      ownerId: ownerId || null,
+      r: cfg.hitR != null ? cfg.hitR : 34,
+      blastR: cfg.blastR != null ? cfg.blastR : 108,
+      blastForce: cfg.blastForce != null ? cfg.blastForce : 480,
+      size: cfg.size != null ? cfg.size : 2.15,
+      big: true,
+      airGun: true,
+      airKind: kind,
+    };
+    world.shells.push(shell);
+    if (world.shells.length > 18) world.shells.splice(0, world.shells.length - 18);
+    spawnSparks(world, shell.x, shell.y, kind === "drone" ? 12 : 16);
+    spawnDust(world, x - cx * 8, y - cy * 8, 5);
+    return shell;
+  }
+
+    /* spear1: Rexy 1000-mech melee spear thrust — knocks trillion if in range/arc */
   function tryMechSpear(world, frog) {
     if (!world || !frog) return { ok: false, reason: "no-frog" };
     var C = global.FroggiesCanon;
@@ -5424,32 +5463,46 @@
       ctx.fillStyle = "hsla(" + k.hue + ", 90%, 60%, " + clamp(k.life * 2, 0, 1) + ")";
       ctx.fillRect(kp.x, kp.y - (0.4 - k.life) * 20, 3, 3);
     }
-    /* mech3: big tank missiles · mechgun1: cyan omnigun bolts */
+    /* mech3: tank missiles · mechgun1: cyan omnigun · airgun1: heli amber / drone lime */
     for (i = 0; i < (world.shells || []).length; i++) {
       var shd = world.shells[i];
       var shp = project(shd.x, shd.y, camX, camY, vw, vh);
       var sha = clamp((shd.life / (shd.maxLife || 1.55)) * 1.2, 0.35, 1);
       var sz = (shd.size != null ? shd.size : 2.4) * shp.depth;
       var omni = !!shd.omnigun;
+      var airG = !!shd.airGun;
+      var droneG = airG && shd.airKind === "drone";
       ctx.save();
       ctx.translate(shp.x, shp.y);
       ctx.rotate(shd.ang || 0);
       /* exhaust / muzzle trail */
-      ctx.fillStyle = omni ? ("rgba(34, 211, 238, " + (sha * 0.6) + ")") : ("rgba(251, 146, 60, " + (sha * 0.55) + ")");
+      ctx.fillStyle = omni ? ("rgba(34, 211, 238, " + (sha * 0.6) + ")")
+        : droneG ? ("rgba(132, 204, 22, " + (sha * 0.6) + ")")
+        : airG ? ("rgba(251, 191, 36, " + (sha * 0.58) + ")")
+        : ("rgba(251, 146, 60, " + (sha * 0.55) + ")");
       ctx.beginPath();
       ctx.ellipse(-10 * sz, 0, 10 * sz, 3.2 * sz, 0, 0, Math.PI * 2);
       ctx.fill();
       /* fat body */
-      ctx.fillStyle = omni ? ("rgba(244, 114, 182, " + sha + ")") : ("rgba(253, 224, 71, " + sha + ")");
+      ctx.fillStyle = omni ? ("rgba(244, 114, 182, " + sha + ")")
+        : droneG ? ("rgba(190, 242, 100, " + sha + ")")
+        : airG ? ("rgba(252, 211, 77, " + sha + ")")
+        : ("rgba(253, 224, 71, " + sha + ")");
       ctx.fillRect(-6 * sz, -3.6 * sz, 22 * sz, 7.2 * sz);
-      ctx.fillStyle = omni ? ("rgba(103, 232, 249, " + sha + ")") : ("rgba(248, 113, 113, " + sha + ")");
+      ctx.fillStyle = omni ? ("rgba(103, 232, 249, " + sha + ")")
+        : droneG ? ("rgba(74, 222, 128, " + sha + ")")
+        : airG ? ("rgba(249, 115, 22, " + sha + ")")
+        : ("rgba(248, 113, 113, " + sha + ")");
       ctx.beginPath();
       ctx.moveTo(16 * sz, 0);
       ctx.lineTo(8 * sz, -4.2 * sz);
       ctx.lineTo(8 * sz, 4.2 * sz);
       ctx.closePath();
       ctx.fill();
-      ctx.fillStyle = omni ? ("rgba(254, 240, 255, " + (sha * 0.9) + ")") : ("rgba(254, 243, 199, " + (sha * 0.85) + ")");
+      ctx.fillStyle = omni ? ("rgba(254, 240, 255, " + (sha * 0.9) + ")")
+        : droneG ? ("rgba(236, 252, 203, " + (sha * 0.9) + ")")
+        : airG ? ("rgba(255, 237, 213, " + (sha * 0.9) + ")")
+        : ("rgba(254, 243, 199, " + (sha * 0.85) + ")");
       ctx.beginPath();
       ctx.arc(-2 * sz, 0, 3.2 * sz, 0, Math.PI * 2);
       ctx.fill();
@@ -5939,6 +5992,7 @@
     spawnSparks: spawnSparks,
     spawnTankShell: spawnTankShell,
     spawnMechGunShell: spawnMechGunShell,
+    spawnAirShell: spawnAirShell,
     tryMechSpear: tryMechSpear,
     spawnBoom: spawnBoom,
     blastWreckProps: blastWreckProps,

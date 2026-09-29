@@ -43,6 +43,7 @@
    mechgun2: omnigun also permanently wrecks house/garage/trees/rocks/fish/fences (session).
    spear1: Rexy 1000 SPEAR (B/RB) knocks trillion ~2s; mash get-up; tipped mesh.
    goldsteam1: James trillion GOLD armor + steam pipe billows; omnigun FIRE kept.
+   airgun1: heli + passenger-drone FIRE (Space/X/ability) pilot only; climb R/C/RT.
    drivefix1: companions board/drive free Cybertruck(s)+Ripsaw+Tank like primary; mech locks stay.
    drivefix2: one INTERACT edge boards and STAYS (no same-press exit). Mech locks stay.
    drivefix3: companions board sub/heli/drone too; own-mech prefer; garage any local; wider reach.
@@ -3432,10 +3433,66 @@ state.zLift = 0;
     if (hooks.onToast) hooks.onToast(state.toast);
   }
 
-  function hopCompanionPad(padIndex) {
+  function fireCompanionAirGun(c) {
+    if (!c || !(c.userData.inHeli || c.userData.inDrone)) return false;
+    var kind = c.userData.inDrone ? "drone" : "heli";
+    var Air = global.FroggiesAir;
+    if (Air && state.airWorld) {
+      var craft = Air.ensureCraft(state.airWorld, kind);
+      if (craft && Air.isPilot && !Air.isPilot(craft, { id: c.userData.frogId })) {
+        state.toast = "Pilot fires · hang on!";
+        state.toastT = 0.9;
+        if (hooks.onToast) hooks.onToast(state.toast);
+        return false;
+      }
+    }
+    var cd = c.userData.cd || 0;
+    if (cd > 0) {
+      c.userData.hopWantT = Math.max(c.userData.hopWantT || 0, 0.15);
+      return false;
+    }
+    var cfg = (C.airFireCfg) ? C.airFireCfg(kind) : { cd: 0.36, speed: 760, life: 1.4, muzzle: 1.7, blastR: 100, size: 2 };
+    c.userData.cd = cfg.cd != null ? cfg.cd : 0.36;
+    var yaw = c.userData.faceYaw != null ? c.userData.faceYaw : 0;
+    var fx = Math.sin(yaw), fz = Math.cos(yaw);
+    var muzzle = cfg.muzzle != null ? (cfg.muzzle > 8 ? cfg.muzzle / 34 : cfg.muzzle) : 1.7;
+    var spd = cfg.speed != null ? (cfg.speed > 40 ? cfg.speed / 42 : cfg.speed) : 18;
+    var life = cfg.life != null ? cfg.life : 1.4;
+    var blastR3 = (cfg.blastR != null ? cfg.blastR : 100) * 0.02;
+    var px = c.position.x + fx * muzzle;
+    var py = 0.55 + (c.userData.zLift || 0);
+    var pz = c.position.z + fz * muzzle;
+    var col = kind === "drone" ? 0x84cc16 : 0xfbbf24;
+    var shellGeo = (typeof THREE.CapsuleGeometry === "function")
+      ? new THREE.CapsuleGeometry(0.18, 0.7, 6, 10)
+      : new THREE.SphereGeometry(0.24, 10, 8);
+    var mesh = new THREE.Mesh(shellGeo, new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 1 }));
+    if (typeof THREE.CapsuleGeometry === "function") mesh.rotation.z = Math.PI / 2;
+    else mesh.scale.set(3.0, 1.0, 1.0);
+    mesh.position.set(px, py, pz);
+    mesh.rotation.y = yaw;
+    scene.add(mesh);
+    if (!state.shells) state.shells = [];
+    state.shells.push({
+      mesh: mesh, vx: fx * spd, vz: fz * spd, life: life, maxLife: life, yaw: yaw,
+      blastR: blastR3, hitR: 0.5, size: cfg.size != null ? cfg.size : 2,
+      airGun: true, airKind: kind, ownerId: c.userData.frogId,
+    });
+    state.toast = "FIRE!";
+    state.toastT = 0.85;
+    if (hooks.onToast) hooks.onToast(state.toast);
+    if (hooks.onAbilityFire) hooks.onAbilityFire(c.userData.frogId || "james", "FIRE");
+    return true;
+  }
+
+    function hopCompanionPad(padIndex) {
     var c = companionForPad(padIndex);
     if (!c || !c.userData.local) return false;
     if (state.inTruck && state.truckMode === "shared") return false; /* seated — no solo hop */
+    /* airgun1: companion air pilot FIRE; passengers no-op */
+    if (c.userData.inHeli || c.userData.inDrone) {
+      return fireCompanionAirGun(c);
+    }
     var cd = c.userData.cd || 0;
     if (cd > 0) {
       c.userData.hopWantT = Math.max(c.userData.hopWantT || 0, 0.15);
@@ -3539,7 +3596,93 @@ state.zLift = 0;
     return true;
   }
 
-  /* mechgun1: story-mech omnigun — Space / X / button; permanent kill blast */
+  /* airgun1: heli / drone FIRE — forward bolt; tank-like boom; pilot only */
+  function fireAirGun() {
+    if (!state || !(state.inHeli || state.inDrone)) return false;
+    var kind = state.inDrone ? "drone" : "heli";
+    var Air = global.FroggiesAir;
+    if (Air && state.airWorld) {
+      var craft = Air.ensureCraft(state.airWorld, kind);
+      if (craft && Air.isPilot && !Air.isPilot(craft, { id: state.frogId })) {
+        state.toast = "Pilot fires · hang on!";
+        state.toastT = 0.9;
+        if (hooks.onToast) hooks.onToast(state.toast);
+        return false;
+      }
+    }
+    if (state.cd > 0) {
+      state.fireWantT = Math.max(state.fireWantT || 0, 0.15);
+      state.hopWantT = 0;
+      return false;
+    }
+    state.hopWantT = 0;
+    state.fireWantT = 0;
+    var cfg = (C.airFireCfg) ? C.airFireCfg(kind) : (kind === "drone"
+      ? { cd: 0.28, speed: 880, life: 1.25, muzzle: 1.5, blastR: 88, size: 1.7 }
+      : { cd: 0.36, speed: 760, life: 1.45, muzzle: 1.8, blastR: 108, size: 2.15 });
+    state.cd = cfg.cd != null ? cfg.cd : 0.36;
+    var yaw = (state.faceYaw != null) ? state.faceYaw : 0;
+    var spA = Math.hypot(state.vx || 0, state.vz || 0);
+    if (spA > 1.0) yaw = Math.atan2(state.vx, state.vz);
+    var fx = Math.sin(yaw), fz = Math.cos(yaw);
+    var muzzle = cfg.muzzle != null ? (cfg.muzzle > 8 ? cfg.muzzle / 34 : cfg.muzzle) : (kind === "drone" ? 1.5 : 1.8);
+    var spd = cfg.speed != null ? (cfg.speed > 40 ? cfg.speed / 42 : cfg.speed) : (kind === "drone" ? 21 : 18);
+    var life = cfg.life != null ? cfg.life : 1.4;
+    var blastR3 = (cfg.blastR != null ? cfg.blastR : 108) * 0.02;
+    var px = state.player.position.x + fx * muzzle;
+    var py = 0.55 + (state.zLift || 0) + (kind === "heli" ? 0.35 : 0.15);
+    var pz = state.player.position.z + fz * muzzle;
+    var col = kind === "drone" ? 0x84cc16 : 0xfbbf24;
+    var colTip = kind === "drone" ? 0x4ade80 : 0xf97316;
+    var shellGeo = (typeof THREE.CapsuleGeometry === "function")
+      ? new THREE.CapsuleGeometry(kind === "drone" ? 0.16 : 0.2, kind === "drone" ? 0.65 : 0.8, 6, 10)
+      : new THREE.SphereGeometry(kind === "drone" ? 0.22 : 0.26, 10, 8);
+    var mesh = new THREE.Mesh(shellGeo, new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 1 }));
+    if (typeof THREE.CapsuleGeometry === "function") {
+      mesh.rotation.z = Math.PI / 2;
+    } else {
+      mesh.scale.set(kind === "drone" ? 2.8 : 3.2, 1.0, 1.0);
+    }
+    mesh.position.set(px, py, pz);
+    mesh.rotation.y = yaw;
+    scene.add(mesh);
+    if (!state.shells) state.shells = [];
+    state.shells.push({
+      mesh: mesh,
+      vx: fx * spd,
+      vz: fz * spd,
+      life: life,
+      maxLife: life,
+      yaw: yaw,
+      blastR: blastR3,
+      hitR: kind === "drone" ? 0.45 : 0.52,
+      size: cfg.size != null ? cfg.size : (kind === "drone" ? 1.7 : 2.15),
+      airGun: true,
+      airKind: kind,
+      ownerId: state.frogId,
+    });
+    if (state.shells.length > 16) {
+      var old = state.shells.shift();
+      if (old && old.mesh && old.mesh.parent) old.mesh.parent.remove(old.mesh);
+    }
+    if (!state.fx) state.fx = [];
+    for (var zi = 0; zi < (kind === "drone" ? 8 : 12); zi++) {
+      var spark = new THREE.Mesh(
+        new THREE.SphereGeometry(0.06 + (zi % 3) * 0.03, 5, 4),
+        new THREE.MeshBasicMaterial({ color: zi % 2 ? col : colTip, transparent: true, opacity: 0.95 })
+      );
+      spark.position.set(px - fx * 0.12, py, pz - fz * 0.12);
+      scene.add(spark);
+      state.fx.push({ mesh: spark, life: 0.28 + zi * 0.02, rise: 1.4, vx: fx * (2.5 + zi * 0.3), vz: fz * (2.5 + zi * 0.3) });
+    }
+    state.toast = "FIRE!";
+    state.toastT = 0.85;
+    if (hooks.onToast) hooks.onToast(state.toast);
+    if (hooks.onAbilityFire) hooks.onAbilityFire(state.frogId, "FIRE");
+    return true;
+  }
+
+    /* mechgun1: story-mech omnigun — Space / X / button; permanent kill blast */
   function fireMechGun() {
     if (!state || !state.inMech) return false;
     if (state.cd > 0) {
@@ -4559,13 +4702,11 @@ state.zLift = 0;
       return;
     }
     /* Primary / keyboard / HUD → camera frog only */
-    /* air1: ability / Space = climb while flying */
+    /* airgun1: ability / Space / X = FIRE while flying (pilot). Climb = R/C/RT. */
     if (state.inHeli || state.inDrone) {
-      state.climbIn = 1;
-      state._climbPulseT = 0.35;
-      state.cd = 0.08;
+      state.hopWantT = 0;
+      fireAirGun();
       abilityPadIndex = null;
-      if (hooks.onAbilityFire) hooks.onAbilityFire(state.frogId, "CLIMB");
       return;
     }
     /* mech4: Tank FIRE ONLY (ability / Space / X / FIRE) — never hop / reload / reset */
@@ -4860,6 +5001,20 @@ state.zLift = 0;
         state._climbPulseT -= dt;
         if (!state.climbIn) state.climbIn = 1;
         if (state._climbPulseT <= 0 && state.climbIn > 0 && !state._climbKeyHeld) state.climbIn = 0;
+      }
+      /* airgun1: RT climb / LT descend (Space is FIRE) */
+      if (!state._climbKeyHeld && !(state._climbPulseT > 0) && global.SimilarizeGamepad) {
+        var padClimb = state.truckPilotPadIndex != null ? state.truckPilotPadIndex
+          : (state.primaryPadIndex != null ? state.primaryPadIndex : 0);
+        var gpCl = global.SimilarizeGamepad.pollPad(padClimb);
+        if (gpCl && gpCl.connected) {
+          var rtF = gpCl.rtValue != null ? gpCl.rtValue : (gpCl.rt ? 1 : 0);
+          var ltF = gpCl.ltValue != null ? gpCl.ltValue : (gpCl.lt ? 1 : 0);
+          if (rtF > 0.2) state.climbIn = rtF;
+          else if (ltF > 0.2) state.climbIn = -ltF;
+          else if (gpCl.y || gpCl.lb) state.climbIn = 1;
+          else if ((state.climbIn || 0) !== 0) state.climbIn = 0;
+        }
       }
       var climbF = state.climbIn || 0;
       var boostF = !!state.airBoost;
@@ -5879,9 +6034,15 @@ state.zLift = 0;
               mxC = (lbasisC.rx * (lsx / llenC) + lbasisC.fx * (-lsy / llenC)) * 50;
               myC = (lbasisC.rz * (lsx / llenC) + lbasisC.fz * (-lsy / llenC)) * 50;
             }
-            /* B/X climb while companion flies */
+            /* airgun1: B/Y/LB climb while companion flies (X = FIRE via ability) */
             var climbC = 0;
-            if (lgp && lgp.connected && (lgp.b || lgp.x)) climbC = 1;
+            if (lgp && lgp.connected && (lgp.b || lgp.y || lgp.lb)) climbC = 1;
+            if (lgp && lgp.connected) {
+              var rtC = lgp.rtValue != null ? lgp.rtValue : (lgp.rt ? 1 : 0);
+              var ltC = lgp.ltValue != null ? lgp.ltValue : (lgp.lt ? 1 : 0);
+              if (rtC > 0.2) climbC = rtC;
+              else if (ltC > 0.2) climbC = -ltC;
+            }
             var frogCF = { id: c.userData.frogId, inHeli: !!c.userData.inHeli, inDrone: !!c.userData.inDrone };
             AirC.tickFlight(state.airWorld, [frogCF], frogCF, dt, mxC, myC, climbC, false);
             var tpC = worldToThree(craftC.x, craftC.y);
@@ -6167,8 +6328,8 @@ state.zLift = 0;
       }
       abilityPadIndex = null;
     }
-    /* mech4/mechgun1: buffered FIRE while tank OR story mech (never hop) */
-    if ((state.inTruck && state.vehicleStyle === "tank") || state.inMech) {
+    /* mech4/mechgun1/airgun1: buffered FIRE while tank OR story mech OR air (never hop) */
+    if ((state.inTruck && state.vehicleStyle === "tank") || state.inMech || state.inHeli || state.inDrone) {
       state.hopWantT = 0; /* hop must never consume ability while firing */
       if ((state.fireWantT || 0) > 0) {
         state.fireWantT = Math.max(0, state.fireWantT - dt);
@@ -6233,7 +6394,7 @@ state.zLift = 0;
         inHeli: !!state.inHeli,
         inDrone: !!state.inDrone,
         near: (state.inTruck || state.inMech || state.inSub || state.inHeli || state.inDrone) ? true : state.near,
-        ability: (state.inMech && C.isPilotKnocked && C.isPilotKnocked({ inMech: true, mechId: state.mechId, mechStories: state.mechStories })) ? "MASH" : (((state.inTruck && state.vehicleStyle === "tank") || state.inMech) ? "FIRE" : ((state.inHeli || state.inDrone) ? "CLIMB" : "HOP")),
+        ability: (state.inMech && C.isPilotKnocked && C.isPilotKnocked({ inMech: true, mechId: state.mechId, mechStories: state.mechStories })) ? "MASH" : (((state.inTruck && state.vehicleStyle === "tank") || state.inMech || state.inHeli || state.inDrone) ? "FIRE" : "HOP"),
         cd: state.cd,
         walk: (function () {
           if (state.mode === "space") return state.inOrbit ? "🌍 Orbit" : "🚀 Space";

@@ -3,6 +3,7 @@
 /* interact2: per-player interact/exit + HOP; shared HUD/E = primary only.
    drivefix3: wider board reach + own-mech prefer (canon/world); couch pads unchanged. */
 /* drivefix2: one INTERACT press boards and stays until a later EXIT press. */
+/* airgun1: heli/drone pilot FIRE on Space/X/ability (climb = R/C). */
 (() => {
   "use strict";
 
@@ -608,8 +609,9 @@
     const tankFire = !!(me.inTruck && Cabil && Cabil.isTankVehicle && Cabil.isTankVehicle(me));
     const mechFire = !!(me.inMech && !(me.sessionDead));
     const flying = !!(me.inHeli || me.inDrone);
+    const airFire = !!(flying && (!(Cabil && Cabil.isAirCraftPilot) || Cabil.isAirCraftPilot(world, me) || me._airPilot || me.airSeat === 0));
     const knocked = !!(mechFire && Cabil && Cabil.isPilotKnocked && Cabil.isPilotKnocked(me));
-    const label = knocked ? "MASH" : tankFire || mechFire ? "FIRE" : flying ? "CLIMB" : def.ability;
+    const label = knocked ? "MASH" : tankFire || mechFire || airFire ? "FIRE" : flying ? "RIDE" : def.ability;
     /* hop3: sub-second anti-tap CD — do not flash a fake "1s" */
     btnAbility.textContent = me.cd > 0.25 ? label + " " + Math.ceil(me.cd) + "s" : label;
     btnAbility.classList.toggle("ready", me.cd <= 0);
@@ -647,6 +649,11 @@
         frog.hopWantT = Math.max(frog.hopWantT || 0, 0.15);
         return;
       }
+      /* airgun1: buffer FIRE while piloting heli/drone */
+      if ((frog.inHeli || frog.inDrone) && (frog._airPilot || frog.airSeat === 0 || (Cbuf && Cbuf.isAirCraftPilot && Cbuf.isAirCraftPilot(world, frog)))) {
+        frog.hopWantT = Math.max(frog.hopWantT || 0, 0.15);
+        return;
+      }
       if (Cbuf && Cbuf.queueAbilityHop) Cbuf.queueAbilityHop(frog, 0.15);
       else frog.hopWantT = Math.max(frog.hopWantT || 0, 0.15);
       return;
@@ -670,13 +677,47 @@
     }
     const def = FROG_DEFS[frog.id];
     const Ctank = globalThis.FroggiesCanon;
-    /* air1: while flying, ability/Space = climb thrust (hop axis) */
+    /* airgun1: while flying, ability/Space/X = FIRE (pilot only). Climb = R / C. */
     if (frog.inHeli || frog.inDrone) {
-      frog.climbIn = 1;
-      frog._climbPulseT = 0.35;
-      frog.cd = 0.08;
-      flashAbilityButton(frog.id);
-      beep(520, 0.05, "triangle", 0.04);
+      frog.hopWantT = 0;
+      const Air = globalThis.FroggiesAir;
+      const kindA = frog.inDrone ? "drone" : "heli";
+      const craftA = (Air && world) ? Air.ensureCraft(world, kindA) : null;
+      const isPilot = !!(craftA && Air && Air.isPilot && Air.isPilot(craftA, frog))
+        || !!(frog._airPilot)
+        || (frog.airSeat === 0 && craftA && craftA.pilotId === frog.id)
+        || (Ctank && Ctank.isAirCraftPilot && Ctank.isAirCraftPilot(world, frog));
+      if (!isPilot) {
+        frog.cd = 0.12;
+        storyToast = "Pilot fires · hang on!";
+        storyToastT = 0.9;
+        updateAbilityButton();
+        return;
+      }
+      const cfgA = (Ctank && Ctank.airFireCfg) ? Ctank.airFireCfg(kindA) : { cd: kindA === "drone" ? 0.28 : 0.36 };
+      frog.cd = cfgA.cd != null ? cfgA.cd : 0.36;
+      if (btnAbility) {
+        btnAbility.classList.remove("fire-dash", "fire-shield", "fire-zap", "fire-bot", "fire-zoom", "fire-hop", "fire-fire");
+        void btnAbility.offsetWidth;
+        btnAbility.classList.add("fire-fire", "ability-fired");
+        setTimeout(function () {
+          btnAbility.classList.remove("fire-fire", "ability-fired");
+        }, 480);
+      }
+      if (kindA === "drone") {
+        beep(640, 0.04, "square", 0.05);
+        beep(880, 0.05, "triangle", 0.04);
+      } else {
+        beep(200, 0.05, "sawtooth", 0.06);
+        beep(120, 0.07, "square", 0.05);
+      }
+      const angA = (frog.faceAngle != null && isFinite(frog.faceAngle))
+        ? frog.faceAngle
+        : (frog.facing >= 0 ? 0 : Math.PI);
+      if (world && W.spawnAirShell) W.spawnAirShell(world, frog.x, frog.y, angA, frog.id, kindA);
+      shakeT = kindA === "drone" ? 0.07 : 0.1;
+      storyToast = "FIRE!";
+      storyToastT = 0.85;
       updateAbilityButton();
       return;
     }
@@ -1385,6 +1426,19 @@
             me._climbPulseT -= dt;
             if (me.climbIn == null || me.climbIn === 0) me.climbIn = 1;
             if (me._climbPulseT <= 0 && me.climbIn > 0 && !me._climbKeyHeld) me.climbIn = 0;
+          }
+          /* airgun1: RT climb / LT descend (Space is FIRE) */
+          if (!me._climbKeyHeld && globalThis.SimilarizeGamepad) {
+            const snapsA = typeof globalThis.SimilarizeGamepad.pollAll === "function"
+              ? globalThis.SimilarizeGamepad.pollAll(4) : null;
+            const padA = snapsA && snapsA[0] ? snapsA[0] : globalThis.SimilarizeGamepad.pollPad(0);
+            if (padA && padA.connected) {
+              const rtA = padA.rtValue != null ? padA.rtValue : (padA.rt ? 1 : 0);
+              const ltA = padA.ltValue != null ? padA.ltValue : (padA.lt ? 1 : 0);
+              if (rtA > 0.2) me.climbIn = rtA;
+              else if (ltA > 0.2) me.climbIn = -ltA;
+              else if ((me.climbIn || 0) !== 0 && !(me._climbPulseT > 0)) me.climbIn = 0;
+            }
           }
         }
         W.moveEntity(me, dt, undefined, world);

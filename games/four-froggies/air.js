@@ -1,6 +1,7 @@
 /* air1: shared helipad / helicopter + passenger-drone pad / drone for Canvas + Three.
    Board/exit uses the same INTERACT path as trucks/mechs/sub. Flight: WASD + climb on
-   ability/hop or R, descend on C (F stays INTERACT), Shift boost. Landed+slow → EXIT. */
+   R, descend on C (F stays INTERACT), Shift boost. Landed+slow → EXIT.
+   airgun1: pilot FIRE on Space/X/ability (same stack as tank/mech); climb stays R/C. */
 (function (global) {
   "use strict";
 
@@ -234,11 +235,11 @@
       boarded: true,
       toast: seat === 0 || craft.pilotId === frog.id
         ? (kind === "drone"
-          ? "Passenger drone · pilot · WASD fly · Space/R climb · C descend · Shift boost"
-          : "Helicopter · pilot · WASD fly · Space/R climb · C descend · Shift boost")
+          ? "Passenger drone · pilot · FIRE (Space/X) · WASD fly · R climb · C descend · Shift boost"
+          : "Helicopter · pilot · FIRE (Space/X) · WASD fly · R climb · C descend · Shift boost")
         : (kind === "drone"
-          ? "Drone rider · seat " + (seat + 1)
-          : "Heli passenger · seat " + (seat + 1)),
+          ? "Drone rider · seat " + (seat + 1) + " · pilot fires"
+          : "Heli passenger · seat " + (seat + 1) + " · pilot fires"),
     };
   }
 
@@ -294,6 +295,8 @@
     }
 
     var climbIn = climb || 0;
+    /* airgun1: steer-away takeoff so Space can be FIRE (touch/gamepad still lift off) */
+    if (craft.landed && mag > 0.28 && climbIn <= 0.05) climbIn = 0.85;
     if (climbIn > 0.05) craft.vz += (stats.climb || 220) * climbIn * dt;
     else if (climbIn < -0.05) craft.vz -= (stats.descend || 180) * (-climbIn) * dt;
     else craft.vz -= 90 * dt; /* gentle auto settle */
@@ -353,8 +356,10 @@
   }
 
   function flyingTip(craft, kind) {
-    if (canExitNow(craft, kind)) return "Landed · INTERACT / E to hop out";
-    return "Flying · land + INTERACT to hop out · Space/R climb · C descend · Shift boost";
+    var Ca = C();
+    if (canExitNow(craft, kind)) return "Landed · INTERACT / E to hop out · FIRE on pad OK";
+    if (Ca && Ca.airGunFlyingTip) return Ca.airGunFlyingTip(kind);
+    return "FIRE available · Space / X / button · R climb · C descend · land + INTERACT exit";
   }
 
   function nearPadTip(kind) {

@@ -37,7 +37,9 @@
            (frogId on truck spots is label/color only — NOT an ownership lock).
            Mech locks stay exclusive (James=trillion, Rexy=1000, Bubbles=10, Jimmy=100).
    drivefix2: boarding sticks until a later EXIT press (no same-edge board+exit).
-   drivefix3: companion board all rides; own-mech prefer; wider INTERACT reach. */
+   drivefix3: companion board all rides; own-mech prefer; wider INTERACT reach.
+   airgun1: heli + passenger-drone FIRE (Space/X/ability) — pilot only; tank-like boom;
+           climb stays R / C; exit1 goldsteam drivefix3 spear lobbypick kept. */
 (function (global) {
   "use strict";
 
@@ -586,6 +588,56 @@
   }
   function mechGunDrivingTip() {
     return "Story mech · FIRE (Space / X / button) · omni-gun · EXIT INTERACT";
+  }
+
+  /* airgun1: heli + passenger-drone forward guns — pilot only; tank-like wreck (not omnigun) */
+  var AIR_FIRE = {
+    heli: {
+      cd: 0.36,
+      speed: 760,
+      life: 1.45,
+      muzzle: 58,
+      hitR: 34,
+      blastR: 108,
+      blastForce: 480,
+      size: 2.15,
+      color: "heli", /* amber rockets */
+    },
+    drone: {
+      cd: 0.28,
+      speed: 880,
+      life: 1.25,
+      muzzle: 48,
+      hitR: 28,
+      blastR: 88,
+      blastForce: 400,
+      size: 1.7,
+      color: "drone", /* lime bolts */
+    },
+  };
+  function airFireCfg(kind) {
+    var k = (kind === "drone") ? "drone" : "heli";
+    return AIR_FIRE[k] || AIR_FIRE.heli;
+  }
+  function isAirCraftPilot(worldOrCraft, frog) {
+    if (!frog || !(frog.inHeli || frog.inDrone)) return false;
+    if (frog._airPilot) return true;
+    var root = typeof globalThis !== "undefined" ? globalThis : (typeof window !== "undefined" ? window : {});
+    var Air = root.FroggiesAir;
+    if (!Air) return !!(frog.airSeat === 0);
+    var kind = frog.inDrone ? "drone" : "heli";
+    var craft = null;
+    if (worldOrCraft && worldOrCraft.kind) craft = worldOrCraft;
+    else if (worldOrCraft && Air.ensureCraft) craft = Air.ensureCraft(worldOrCraft, kind);
+    if (craft && Air.isPilot) return !!Air.isPilot(craft, frog);
+    return !!(frog.airSeat === 0 || (craft && craft.pilotId === frog.id));
+  }
+  function airGunTip(kind) {
+    var who = kind === "drone" ? "Drone" : "Heli";
+    return who + " · FIRE (Space / X / button) · R climb · C descend · Shift boost · EXIT INTERACT";
+  }
+  function airGunFlyingTip(kind) {
+    return "FIRE available · Space / X / button · R climb · C descend · land + INTERACT exit";
   }
 
   /* spear1: Rexy 1000-mech SPEAR — knocks trillion; mash recovers */
@@ -1518,6 +1570,11 @@
     isStoryMechPilot: isStoryMechPilot,
     mechGunTip: mechGunTip,
     mechGunDrivingTip: mechGunDrivingTip,
+    AIR_FIRE: AIR_FIRE,
+    airFireCfg: airFireCfg,
+    isAirCraftPilot: isAirCraftPilot,
+    airGunTip: airGunTip,
+    airGunFlyingTip: airGunFlyingTip,
     MECH_SPEAR: MECH_SPEAR,
     canSpearPilot: canSpearPilot,
     spearTip: spearTip,
