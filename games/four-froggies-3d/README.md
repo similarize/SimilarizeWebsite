@@ -1,3 +1,8 @@
+## What's new (ff3d33) — pond matches wading
+
+- Swimming starts on the blue water. The pond disc and the wade circle are the same spot: center (90, -48), radius 30. The old wade circle was radius 52, so you swam on dry ground well outside the water.
+- Cache: `?v=20260929-ff3d33` · asset `index-ff3d33.js`
+
 ## What's new (ff3d32) — roof, dad, rooms, falls, sub
 
 - Dad stands on the floor he is actually on (porch, ground, loft, roof stair, roof deck) and slides around blockers instead of freezing.
