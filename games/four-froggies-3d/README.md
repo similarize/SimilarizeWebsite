@@ -1,3 +1,8 @@
+## What's new (ff3d36) — Cybertruck stays off the porch
+
+- The Cybertruck stops at the porch edge. Its nose and corners share the porch rectangle, so it cannot drive up onto the deck.
+- Cache: `?v=20260929-ff3d36` · asset `index-ff3d36.js`
+
 ## What's new (ff3d35) — frog reverse goes straight back
 
 - Holding back moves the frog straight back along the way it is facing, and it keeps that facing. Forward still turns you toward where you're going.
