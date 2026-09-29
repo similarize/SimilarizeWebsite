@@ -1,3 +1,8 @@
+## What's new (ff3d47) — two-lane dashed centerline
+
+- A dashed white stripe runs down the middle of the rally track so two trucks can race in lanes.
+- Cache: `?v=20260929-ff3d47` · asset `index-ff3d47.js`
+
 ## What's new (ff3d46) — camera stays with him
 
 - The view sits behind him and a little above, and it follows him up walls, through the house, and onto the roof. Drag the mouse to look around. Walking sideways does not spin the camera.
