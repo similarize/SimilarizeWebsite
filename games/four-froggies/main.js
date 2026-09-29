@@ -1824,15 +1824,19 @@
     lastTs = now;
     /* Couch lobby: poll pads 0–3 once per frame (avoid double-poll eating edges) */
     if (phase === "title" && window.SimilarizeGamepad) {
-      /* lobbypick1: D-pad/stick cycles focus · A claims focused frog · B releases */
+      /* lobbypick1 + lobbyfix1: unique pads only (dedupe dual-slot Xbox/Steam) */
       const snaps = window.SimilarizeGamepad.pollAll
         ? window.SimilarizeGamepad.pollAll(4)
         : [0, 1, 2, 3].map((i) => window.SimilarizeGamepad.pollPad(i));
+      const uniq = (window.SimilarizeGamepad.uniqueConnectedIndices
+        || window.SimilarizeGamepad.connectedIndices
+        || (() => [])).call(window.SimilarizeGamepad, 4);
+      const uniqSet = new Set(uniq.map((n) => n | 0));
       let yStart = false;
       let focusDirty = false;
       for (let pi = 0; pi < 4; pi++) {
         const gp = snaps[pi];
-        const connected = !!(gp && gp.connected);
+        const connected = !!(gp && gp.connected) && uniqSet.has(pi);
         lobbyPadConnected[pi] = connected;
         if (!connected) {
           lobbyPadFocus[pi] = null;
@@ -2035,7 +2039,7 @@
         partyStatus.textContent = "JOINED · claim an Open froggy seat · wait for Host to press GO";
       else if (role === "solo")
         partyStatus.textContent =
-          "SOLO · D-pad/stick cycle froggy · A claim · B release · click/keyboard still work · GO (AI fills rest)";
+          "Each controller = one froggy · stick/D-pad cycle · A claim · B release · click moves your pad · GO (AI fills rest)";
       else partyStatus.textContent = "";
     }
     if (roomCodeEl) {
@@ -2430,13 +2434,35 @@
         }
         return;
       }
-      /* Couch: click moves last-active pad onto that frog (or binds a free pad). */
-      if (party && party.claimPadOntoFrog && lastLobbyPadIndex != null) {
-        const moved = party.claimPadOntoFrog(lastLobbyPadIndex, id);
-        if (moved) {
-          lobbyPadFocus[lastLobbyPadIndex] = moved;
-          selectedId = moved;
-          paintLobbySeats();
+      /* Couch: click moves last-active pad, else first unbound unique pad — never silent multi-claim */
+      if (party && party.claimPadOntoFrog) {
+        let padToMove = lastLobbyPadIndex;
+        if (padToMove == null && party.connectedPadIndices) {
+          const live = party.connectedPadIndices() || [];
+          for (let i = 0; i < live.length; i++) {
+            const pi = live[i] | 0;
+            const peer = "local-pad-" + pi;
+            const claimed = lobbySeats && Object.keys(lobbySeats).some((fid) => {
+              const s = lobbySeats[fid];
+              return s && s.peerId === peer;
+            });
+            if (!claimed) { padToMove = pi; break; }
+          }
+          if (padToMove == null && live.length) padToMove = live[0] | 0;
+        }
+        if (padToMove != null) {
+          const moved = party.claimPadOntoFrog(padToMove, id);
+          if (moved) {
+            lastLobbyPadIndex = padToMove;
+            lobbyPadFocus[padToMove] = moved;
+            selectedId = moved;
+            paintLobbySeats();
+            return;
+          }
+          if (partyStatus) {
+            partyStatus.textContent = "Seat taken · stick cycle + A, or B to release";
+            partyStatus.classList.add("is-error");
+          }
           return;
         }
       }

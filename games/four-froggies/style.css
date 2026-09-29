@@ -270,6 +270,16 @@ html, body {
 }
 .frog-btn.seat-you { background: rgba(255,255,255,.18); box-shadow: 0 0 0 2px #fff; }
 
+/* lobbyfix1: one-pad-one-frog hint under pick label */
+.pad-hint {
+  margin: 0 0 10px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: #fde68a;
+  text-align: center;
+  opacity: 0.95;
+}
+
 /* lobbypick1: couch pad focus cursor + Pad N badge colors */
 .frog-btn.pad-focus:not(.seat-taken) {
   box-shadow: 0 0 0 2px #fbbf24, 0 0 14px rgba(251, 191, 36, 0.5);
