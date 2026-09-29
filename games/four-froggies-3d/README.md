@@ -1,7 +1,10 @@
-## What's new (ff3d24) — Dad exit-after-park unstuck
+## What's new (ff3d26) — roof pads + forest + Catmull track + underwater + phone cam
 
-- **Root cause:** `dadForceTruckOffPorch` applied truck AABB to Dad's *walk* position and teleported him back to park every time he stepped toward the porch house-tour — so after parking he never completed exit → walk → remount.
-- **Fix:** force-exit only relocates Dad while driving; on foot it only snaps the *truck* off the porch. After park arrives, `dadExitParkToWalk` forces exit → house walk loop → yard remount. Drive/walk unstuck if no progress ~2s.
-- **Kept:** porch ban, parkFront (−42, 22.5), parkGarage (−2, 22), force-exit, ALL ff3d23 features, exit1 lobby.
+- **Roof helipad + passenger drone pad:** Walkable mansion roof deck with east stairs from 2F. Helipad (west, yellow **H**) + passenger drone pad (east, cyan marking). Phone Helipad/Drone pad fly-land; Spotty can land on H.
+- **Mixed forest:** Conifers + deciduous, many colors/sizes/shapes, see-through spaced canopies.
+- **Track package:** Catmull-Rom 4-lobe cloverleaf (Nebula-Rush / Frenet-bank). Bridges, jump lips, dashed lanes, edge rails. Replaces homemade spaghetti.
+- **Underwater world:** Board Submarine → pond → **entire new underwater scene** (fish, turtles, rays, jellyfish, kelp, rocks). Buoyancy + drag physics. E at red buoy to surface.
+- **Phone cam:** Live POV follows selected robot wherever it is; **indoors walls fade/clip** so the view stays clear.
+- **Kept:** ALL ff3d25 (garage↔house door, distinct froggies, Dad, parks, space, exit1 lobby).
 
-- Cache: `?v=20260928-ff3d24` · asset `index-ff3d24.js`
+- Cache: `?v=20260928-ff3d26` · asset `index-ff3d26.js`
