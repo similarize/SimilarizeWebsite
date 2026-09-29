@@ -1,8 +1,8 @@
-# What's new (ff3d60) — seat the rider inside the cockpit
+# What's new (ff3d61) — make the seated rider visible in the sub
 
-- Attach the frog directly to the submarine and position it in submarine-local coordinates, avoiding the nested seat transform that left it hovering above the model.
-- Added a raised, clear cockpit and visible seat cushion/back so the seated rider is visibly contained inside the submarine.
-- Cache: `?v=20260929-ff3d60` · asset `index-ff3d60.js`
+- Made the complete hull and bow highly translucent, and framed the cockpit with glass walls and a visible seat so the frog reads as enclosed inside the submarine rather than above its shell.
+- Enlarged the rider and aligned its feet with the cockpit seat in submarine-local coordinates, with a seated leg and arm pose reapplied during movement.
+- Cache: `?v=20260929-ff3d61` · asset `index-ff3d61.js`
 
 ## What's new (ff3d57) — barriers, Cybertruck details, and submarine swimming
 
