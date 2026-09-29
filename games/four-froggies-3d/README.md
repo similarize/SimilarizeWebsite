@@ -1,4 +1,10 @@
-# What's new (ff3d61) — open track entry without barriers
+# What's new (ff3d62) — fix the underwater sub entry and rider seat
+
+- Fixed a runtime error on submarine entry: the frog was being attached through an undefined variable, which could abort the game update as the underwater scene loaded.
+- Made the hull and bow transparent around the full cockpit, added visible cockpit glass, seat padding, and side rails, and aligned the frog's feet and seated pose with the seat.
+- Cache: `?v=20260929-ff3d62` · asset `index-ff3d62.js`
+
+## What's new (ff3d61) — open track entry without barriers
 
 - Removed barriers completely from the entry spur and left the track entry junction open so racers can enter and leave the track freely from the ranch.
 - Kept continuous barriers along the racing oval (full inside perimeter to prevent infield shortcuts, and outside perimeter except at the entry).
