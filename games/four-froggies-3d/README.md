@@ -1,4 +1,9 @@
-# What's new (ff3d50) — a proper submarine
+# What's new (ff3d51) — stay on banked track in either direction
+
+- Vehicles align their forward and up axes to the road's sampled 3D tangent and surface normal, keeping the tires planted on banked and sloped sections in forward and reverse.
+- Cache: `?v=20260929-ff3d51` · asset `index-ff3d51.js`
+
+## What's new (ff3d50) — a proper submarine
 
 - Replaced the tank-shaped cone-like sub with a rounded blue hull, bow, conning tower, periscope, portholes, tail fins, and propeller.
 - Cache: `?v=20260929-ff3d50` · asset `index-ff3d50.js`
