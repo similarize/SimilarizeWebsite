@@ -1,5 +1,10 @@
-# What's new (ff3d53) — proper submarine underwater too
+# What's new (ff3d55) — land jumps on the track and steady loop view
 
+- Track jumps now keep their height above the road when leaving a raised surface and reset jump height on landing, preventing cars from staying suspended above the track.
+- The camera keeps a steady, wider view through the loop and lets the two-racer framing handle both cars.
+- Cache: `?v=20260929-ff3d55` · asset `index-ff3d55.js`
+
+## What's new (ff3d53) — proper submarine underwater too
 - Replaced the underwater-only tapered cylinder with a streamlined rounded hull, bow, conning tower, periscope, portholes, fins, and propeller, matching the submarine on the surface.
 - Cache: `?v=20260929-ff3d53` · asset `index-ff3d53.js`
 
