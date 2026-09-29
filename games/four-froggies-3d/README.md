@@ -8,3 +8,6 @@
 - Keeps ff3d21 occlusion fade + ff3d20 lifestyle + exit1 Arcade/Join lobby.
 
 - Cache: `?v=20260928-ff3d22` · asset `index-ff3d22.js`
+
+## ff3d22b
+Same as ff3d22 porch-ban package; asset renamed so CDN is not stuck on prior same-tag ribbon build.
