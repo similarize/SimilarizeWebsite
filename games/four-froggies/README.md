@@ -7,7 +7,7 @@
 **Track art uses the same height as the tires.** Canvas and Three.js build the apron from `trackElevAt` (path, hills, banks, ramps, and rocks together), sampled closely enough that the road follows the hills instead of spiking at the old corner list. Lane stripes sit a few centimeters above that apron. Pillars, the start gate, parked trucks, rocks, and ramp lips stand on it. The ranch floor has a hole under the apron so the dips stay visible. Shadows and dust sit on the deck.
 
 - Cache-bust: `?v=20260928-qa1`. Lobby exit1 UX kept. Cast unchanged: James, Jimmy, Bubbles, Rexy.
-- Standalone `games/four-froggies-3d/` already has its own ribbon sampler (ff3d18) and house pass (ff3d19). That cabinet is a minified bundle with no source in this repo, so this pass does not patch it.
+- Standalone cabinet `games/four-froggies-3d/` got the same contact pass in ff3d22: rocks sit on the ribbon, the dirt surface wins the z-fight, on-foot and mech hops keep their height off a lip, and walk / EVA use the yaw the camera is showing. ff3d21 camera fade stays.
 
 ## What's new (mech8) — Rexy 1000-mech respawn restores full mesh
 
