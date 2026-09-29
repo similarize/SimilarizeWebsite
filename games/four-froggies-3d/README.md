@@ -1,7 +1,7 @@
-# What's new (ff3d51) — stay on banked track in either direction
+# What's new (ff3d52) — preserve steering on banked track
 
-- Vehicles align their forward and up axes to the road's sampled 3D tangent and surface normal, keeping the tires planted on banked and sloped sections in forward and reverse.
-- Cache: `?v=20260929-ff3d51` · asset `index-ff3d51.js`
+- On regular track sections, vehicles keep their steered heading while tilting to match the road surface; the vertical loop still uses the full track frame.
+- Cache: `?v=20260929-ff3d52` · asset `index-ff3d52.js`
 
 ## What's new (ff3d50) — a proper submarine
 
