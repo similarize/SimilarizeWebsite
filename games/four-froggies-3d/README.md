@@ -1,3 +1,8 @@
+# What's new (ff3d75) — start garage-roof descent at the edge
+
+- Engage controlled outward-facing climbing as soon as movement points over a garage-roof edge, before collision handling can stop the frog from crossing it.
+- Cache: `?v=20260929-ff3d75` · asset `index-ff3d75.js`
+
 # What's new (ff3d74) — jump or climb down from the garage roof
 
 - Start a controlled, outward-facing descent when walking off the garage roof edge, even though the roof-height collision rules disable the regular wall blocker.
