@@ -1,3 +1,14 @@
+## What's new (qa1) — feet on the track, screen steer, flat ribbon
+
+**Feet were walking through the elevated track.** Canvas landed hops at `z = 0`. Three.js applied `trackElevAt` only while driving, so frogs, mechs, and followers passed through the ribbon. Both engines now stand and hop from the shared deck. Swim and the submarine still use the water line.
+
+**Three.js steer no longer assumes the old corner camera.** The follow camera sits mostly south (view3). WASD still used a 45° basis, so W walked diagonal to the screen. Movement now reads the camera’s flattened view each frame (`forward × up = right`). W is into the picture, D is screen-right. Canvas keyboard, stick, and click-to-aim use the same screen-up rule against the isometric projection. AI follow stays in world axes.
+
+**Track art uses the same height as the tires.** Canvas and Three.js build the apron from `trackElevAt` (path, hills, banks, ramps, and rocks together), sampled closely enough that the road follows the hills instead of spiking at the old corner list. Lane stripes sit a few centimeters above that apron. Pillars, the start gate, parked trucks, rocks, and ramp lips stand on it. The ranch floor has a hole under the apron so the dips stay visible. Shadows and dust sit on the deck.
+
+- Cache-bust: `?v=20260928-qa1`. Lobby exit1 UX kept. Cast unchanged: James, Jimmy, Bubbles, Rexy.
+- Standalone `games/four-froggies-3d/` already has its own ribbon sampler (ff3d18) and house pass (ff3d19). That cabinet is a minified bundle with no source in this repo, so this pass does not patch it.
+
 ## What's new (mech8) — Rexy 1000-mech respawn restores full mesh
 
 **Bug (mech6/mech7 Three):** After Tank destroys **Rexy's thousand-story mech**, the ~7s respawn came back as a **solid yellow ball / pad** instead of the articulated robot. Root cause: blast replaced every child material (including the large faint **haze SphereGeometry**) with a wreck mat; revive only forced `opacity=1` + yellow on those wreck mats — so the glow sphere became an opaque ball hiding the body boxes.

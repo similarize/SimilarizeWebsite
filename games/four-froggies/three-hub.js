@@ -34,7 +34,8 @@
    track3: banks + rocks + live monster wheels (preserved).
    hop4: snappier always-hop; humanoid frogs (torso+head, spring legs).
    joy2: shared virtual joystick via engine-boot setSteer; touch playfield aim disabled.
-   WASD camera-relative — do not invert.
+   WASD camera-relative — read from the live camera, do not hardcode +X+Z.
+   qa1: feet/mechs/followers ride trackElevAt; the apron mesh and lane use that same height.
    mechwalk1: boarded mech lumber walk (steer+solid ignore+mesh sync); pad pilot drives.
    boardall1: each couch pad/companion can board a DIFFERENT free mech at once.
    earth1: space shows procedural Earth (home) — not ranch grounds in vacuum.
@@ -539,6 +540,28 @@
     };
   }
 
+  /* qa1: scene Y of the shared deck. Same trackElevAt the feet stand on, times the XZ scale. */
+  function ranchGroundY(wx, wy) {
+    if (!C.onTrack || !C.trackElevAt || !C.onTrack(wx, wy)) return 0;
+    return (C.trackElevAt(wx, wy) || 0) * 0.02;
+  }
+
+  /* qa1: screen basis from the camera's flattened view. right = forward × up.
+     Check: fwd (0, -1) → right (1, 0). Old isometric fwd (-1,-1) still matches three-dir1. */
+  function groundBasis(fwdX, fwdZ) {
+    var fl = Math.hypot(fwdX, fwdZ) || 1;
+    var fx = fwdX / fl, fz = fwdZ / fl;
+    return { fx: fx, fz: fz, rx: -fz, rz: fx };
+  }
+
+  function cameraGroundBasis() {
+    if (!camera) return groundBasis(-1, -1);
+    camera.updateMatrixWorld();
+    var e = camera.matrixWorld.elements;
+    /* local +Z column is elements 8,10; camera looks down -Z */
+    return groundBasis(-e[8], -e[10]);
+  }
+
   function makeTruckMesh(accentHex) {
     /* polish8: angular stainless Cybertruck — light bar + wheel arches */
     var g = new THREE.Group();
@@ -727,20 +750,72 @@
     g.userData.wheelLift = lift;
   }
 
-  function addPathRibbon(pts, y, color, width) {
-    if (!pts || pts.length < 2) return;
-    var curvePts = [];
-    for (var i = 0; i < pts.length; i++) {
-      var p = worldToThree(pts[i][0], pts[i][1]);
-      /* truck2: ribbon follows path elev so track is not a flat tube through hills */
-      var ey = y + (pts[i][2] || 0) * 0.95;
-      curvePts.push(new THREE.Vector3(p.x, ey, p.z));
+  function densifyRibbon(pts, step, close) {
+    var out = [];
+    if (!pts || pts.length < 2) return out;
+    var nSeg = close ? pts.length : pts.length - 1;
+    for (var i = 0; i < nSeg; i++) {
+      var a = pts[i];
+      var b = pts[(i + 1) % pts.length];
+      var dist = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+      var n = Math.max(1, Math.round(dist / step));
+      for (var s = 0; s < n; s++) {
+        var u = s / n;
+        out.push([
+          a[0] + (b[0] - a[0]) * u,
+          a[1] + (b[1] - a[1]) * u,
+        ]);
+      }
     }
-    var tube = new THREE.Mesh(
-      new THREE.TubeGeometry(new THREE.CatmullRomCurve3(curvePts, false), Math.max(24, pts.length * 3), width, 6, false),
-      new THREE.MeshStandardMaterial({ color: color, roughness: 0.9 })
-    );
-    tube.receiveShadow = true; scene.add(tube);
+    if (!close) out.push([pts[pts.length - 1][0], pts[pts.length - 1][1]]);
+    return out;
+  }
+
+  function addPathRibbon(pts, yBase, color, halfWidth, yLift, close) {
+    /* Lane sits a few centimeters above the apron. Height is ranchGroundY at
+       each sample, so a hill on the racing line is the hill under the tires. */
+    var dense = densifyRibbon(pts, 12, !!close);
+    if (dense.length < 2) return;
+    var verts = [];
+    var n = dense.length;
+    var lift = yLift || 0;
+    var closed = !!close;
+    for (var i = 0; i < n; i++) {
+      var prev = dense[closed ? (i - 1 + n) % n : Math.max(0, i - 1)];
+      var next = dense[closed ? (i + 1) % n : Math.min(n - 1, i + 1)];
+      var p0 = worldToThree(prev[0], prev[1]);
+      var p1 = worldToThree(next[0], next[1]);
+      var dx = p1.x - p0.x, dz = p1.z - p0.z;
+      var len = Math.hypot(dx, dz) || 1;
+      var px = -dz / len, pz = dx / len;
+      var cur = worldToThree(dense[i][0], dense[i][1]);
+      var ey = yBase + ranchGroundY(dense[i][0], dense[i][1]) + lift;
+      verts.push(cur.x + px * halfWidth, ey, cur.z + pz * halfWidth);
+      verts.push(cur.x - px * halfWidth, ey, cur.z - pz * halfWidth);
+    }
+    var idx = [];
+    var segCount = closed ? n : n - 1;
+    for (var s = 0; s < segCount; s++) {
+      var a = (s % n) * 2, b = a + 1, c = ((s + 1) % n) * 2, d = c + 1;
+      idx.push(a, c, b, b, c, d);
+    }
+    var geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.Float32BufferAttribute(verts, 3));
+    geo.setIndex(idx);
+    geo.computeVertexNormals();
+    var mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
+      color: color,
+      roughness: 0.9,
+      metalness: 0.02,
+      polygonOffset: true,
+      polygonOffsetFactor: -1 - lift * 40,
+      polygonOffsetUnits: -1 - lift * 40,
+      side: THREE.DoubleSide,
+    }));
+    mesh.receiveShadow = true;
+    mesh.castShadow = false;
+    mesh.renderOrder = 2 + Math.round(lift * 100);
+    scene.add(mesh);
   }
 
   function addMech(m, color, h) {
@@ -1154,23 +1229,104 @@
     }
   }
 
+  function elevRGB(y) {
+    var t = y / 4.4;
+    if (t < 0) t = 0;
+    if (t > 1) t = 1;
+    if (y < 0) t = Math.max(-0.35, y / 2);
+    return [
+      (0x3a + (0xc8 - 0x3a) * t) / 255,
+      (0x2e + (0xb0 - 0x2e) * t) / 255,
+      (0x24 + (0x8a - 0x24) * t) / 255,
+    ];
+  }
+
+  function addTrackSurface() {
+    var a = C.AREAS[1];
+    var step = 8;
+    var nx = Math.max(2, Math.round(a.w / step));
+    var ny = Math.max(2, Math.round(a.h / step));
+    var cols = nx + 1;
+    var verts = [];
+    var colors = [];
+    function gy(ix, iy) {
+      var wx = a.x + (ix / nx) * a.w;
+      var wy = a.y + (iy / ny) * a.h;
+      return ranchGroundY(wx, wy);
+    }
+    function pushV(ix, iy, yv) {
+      var wx = a.x + (ix / nx) * a.w;
+      var wy = a.y + (iy / ny) * a.h;
+      var p = worldToThree(wx, wy);
+      verts.push(p.x, yv, p.z);
+      var rgb = elevRGB(yv);
+      colors.push(rgb[0], rgb[1], rgb[2]);
+    }
+    for (var iy = 0; iy <= ny; iy++) {
+      for (var ix = 0; ix <= nx; ix++) pushV(ix, iy, gy(ix, iy));
+    }
+    var idx = [];
+    for (var jy = 0; jy < ny; jy++) {
+      for (var jx = 0; jx < nx; jx++) {
+        var v00 = jy * cols + jx;
+        var v10 = v00 + 1;
+        var v01 = v00 + cols;
+        var v11 = v01 + 1;
+        /* CCW from +Y. Check: flat +X/+Z quad → normal y > 0. */
+        idx.push(v00, v01, v11, v00, v11, v10);
+      }
+    }
+    function pushWall(ix, iy, jx, jy) {
+      var ah = gy(ix, iy), bh = gy(jx, jy);
+      if (Math.abs(ah) < 0.08 && Math.abs(bh) < 0.08) return;
+      var base = verts.length / 3;
+      pushV(ix, iy, 0);
+      pushV(jx, jy, 0);
+      pushV(jx, jy, bh);
+      pushV(ix, iy, ah);
+      idx.push(base, base + 1, base + 2, base, base + 2, base + 3);
+    }
+    for (var e = 0; e < nx; e++) {
+      pushWall(e, 0, e + 1, 0);
+      pushWall(e, ny, e + 1, ny);
+    }
+    for (var s = 0; s < ny; s++) {
+      pushWall(0, s, 0, s + 1);
+      pushWall(nx, s, nx, s + 1);
+    }
+    var geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.Float32BufferAttribute(verts, 3));
+    geo.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+    geo.setIndex(idx);
+    geo.computeVertexNormals();
+    var mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
+      vertexColors: true,
+      roughness: 0.94,
+      metalness: 0.02,
+      side: THREE.DoubleSide,
+    }));
+    mesh.receiveShadow = true;
+    mesh.castShadow = false;
+    mesh.renderOrder = 1;
+    scene.add(mesh);
+  }
+
   function buildTrack() {
+    addTrackSurface();
     var mounds = C.TRACK_MOUNDS || [];
     for (var i = 0; i < mounds.length; i++) {
       var m = mounds[i], p = worldToThree(m.x, m.y);
-      var geo = new THREE.SphereGeometry(m.r * 0.022, 16, 12);
-      geo.scale(1, Math.abs(m.h) * 0.85 + 0.25, 0.55);
-      var mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: m.h >= 0 ? 0x78716c : 0x44403c, roughness: 0.95 }));
-      mesh.position.set(p.x, Math.abs(m.h) * 0.55 + 0.15, p.z); scene.add(mesh);
-      if (m.h >= 0) addLabel("HILL", "#fef3c7", p.x, Math.abs(m.h) * 0.9 + 0.6, p.z);
+      var deck = ranchGroundY(m.x, m.y);
+      var name = m.h >= 1 ? "HILL" : (m.h < 0 ? "DIP" : "RISE");
+      addLabel(name, "#fef3c7", p.x, deck + 0.55, p.z);
     }
-    addPathRibbon(C.TRACK_MAIN, 0.12, 0x1c1917, 0.62);
-    addPathRibbon(C.TRACK_MAIN, 0.18, 0xfbbf24, 0.18);
-    addPathRibbon(C.TRACK_MAIN, 0.22, 0xfafaf9, 0.08);
-    addPathRibbon(C.TRACK_BRANCH_A, 0.12, 0x292524, 0.35);
-    addPathRibbon(C.TRACK_BRANCH_A, 0.17, 0xa8a29e, 0.14);
-    addPathRibbon(C.TRACK_BRANCH_B, 0.12, 0x292524, 0.32);
-    addPathRibbon(C.TRACK_BRANCH_B, 0.17, 0xa8a29e, 0.13);
+    addPathRibbon(C.TRACK_MAIN, 0.02, 0x1c1917, 0.78, 0, true);
+    addPathRibbon(C.TRACK_MAIN, 0.02, 0xfbbf24, 0.14, 0.02, true);
+    addPathRibbon(C.TRACK_MAIN, 0.02, 0xfafaf9, 0.045, 0.035, true);
+    addPathRibbon(C.TRACK_BRANCH_A, 0.02, 0x292524, 0.42, 0.01, true);
+    addPathRibbon(C.TRACK_BRANCH_A, 0.02, 0xa8a29e, 0.1, 0.025, true);
+    addPathRibbon(C.TRACK_BRANCH_B, 0.02, 0x292524, 0.38, 0.01, true);
+    addPathRibbon(C.TRACK_BRANCH_B, 0.02, 0xa8a29e, 0.09, 0.025, true);
     /* view1: sensible pillars under elevated ribbon (paired posts + crossbeam) */
     (function addTrackSupports() {
       var list = C.TRACK_SUPPORTS || [];
@@ -1178,10 +1334,9 @@
       var beamMat = new THREE.MeshStandardMaterial({ color: 0x57534e, roughness: 0.9, metalness: 0.08 });
       for (var si = 0; si < list.length; si++) {
         var s = list[si];
-        var elev = s.elev != null ? s.elev : 0.5;
-        if (elev < 0.3) continue;
         var sp = worldToThree(s.x, s.y);
-        var topY = 0.12 + elev * 0.95;
+        var topY = ranchGroundY(s.x, s.y);
+        if (topY < 0.28) continue;
         var h = Math.max(0.35, topY - 0.02);
         var half = 0.38;
         for (var side = -1; side <= 1; side += 2) {
@@ -1198,57 +1353,57 @@
     var ramps = C.RAMPS || [];
     for (var r = 0; r < ramps.length; r++) {
       var rp = ramps[r], tp = worldToThree(rp.x, rp.y);
+      var rampDeck = ranchGroundY(rp.x, rp.y);
+      /* Crest marker, seated on the deck. */
       var ramp = new THREE.Mesh(
-        new THREE.BoxGeometry(rp.w * 0.02, 0.55, rp.h * 0.02),
-        new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.2 })
+        new THREE.ConeGeometry(0.16, 0.28, 4),
+        new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.15 })
       );
-      /* truck2 + view1: wedge footed on ground under elevated ribbon */
-      var rampH = 0.55;
-      ramp.position.set(tp.x, rampH * 0.45, tp.z); ramp.rotation.x = -0.42; scene.add(ramp);
+      ramp.position.set(tp.x, rampDeck + 0.16, tp.z);
+      ramp.rotation.y = 0.4;
+      scene.add(ramp);
     }
-    /* track3: bank berms */
+    /* Banks are in the apron height. The label marks the crown. */
     var banks = C.TRACK_BANKS || [];
     for (var bi = 0; bi < banks.length; bi++) {
       var bk = banks[bi], bp = worldToThree(bk.x, bk.y);
-      var berm = new THREE.Mesh(
-        new THREE.TorusGeometry(Math.max(0.6, bk.r * 0.012), 0.22 + (bk.tilt || 0.8) * 0.12, 8, 24, Math.PI * 1.4),
-        new THREE.MeshStandardMaterial({ color: 0x78716c, roughness: 0.92 })
-      );
-      berm.rotation.x = -Math.PI / 2;
-      berm.position.set(bp.x, 0.2 + (bk.tilt || 0.8) * 0.25, bp.z);
-      scene.add(berm);
-      addLabel(bk.label || "BANK", "#fef3c7", bp.x, 0.9 + (bk.tilt || 0.8) * 0.35, bp.z);
+      var bankDeck = ranchGroundY(bk.x, bk.y);
+      addLabel(bk.label || "BANK", "#fef3c7", bp.x, bankDeck + 0.45, bp.z);
     }
-    /* track3: big rocks */
+    /* Rocks sit in the bump the height already adds, crown just above the deck. */
     var rocks = C.TRACK_ROCKS || [];
     state.trackRocks = [];
     for (var rk = 0; rk < rocks.length; rk++) {
-      var rko = rocks[rk], rp = worldToThree(rko.x, rko.y);
+      var rko = rocks[rk], rp3 = worldToThree(rko.x, rko.y);
+      var rockDeck = ranchGroundY(rko.x, rko.y);
+      var rad = rko.r * 0.018;
+      var sy = 0.85 + (rko.h || 1) * 0.25;
       var rock = new THREE.Mesh(
-        new THREE.DodecahedronGeometry(rko.r * 0.018, 0),
+        new THREE.DodecahedronGeometry(rad, 0),
         new THREE.MeshStandardMaterial({ color: 0x57534e, roughness: 0.88, flatShading: true })
       );
-      rock.position.set(rp.x, (rko.h || 1) * 0.35 + 0.15, rp.z);
-      rock.scale.set(1, 0.85 + (rko.h || 1) * 0.25, 1);
+      rock.scale.set(1, sy, 1);
+      rock.position.set(rp3.x, rockDeck - rad * sy * 0.45, rp3.z);
       rock.castShadow = true;
       scene.add(rock);
-      addLabel("ROCK", "#e7e5e4", rp.x, rock.position.y + 0.55, rp.z);
+      addLabel("ROCK", "#e7e5e4", rp3.x, rockDeck + rad * sy * 0.7, rp3.z);
       state.trackRocks.push({ data: rko, mesh: rock });
     }
 
     /* polish9: start/finish gate */
     var gp = worldToThree(1870, 2225);
+    var gateDeck = ranchGroundY(1870, 2225);
     var postMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.4 });
     var leftPost = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.4, 0.12), postMat);
-    leftPost.position.set(gp.x - 1.4, 0.7, gp.z); scene.add(leftPost);
+    leftPost.position.set(gp.x - 1.4, gateDeck + 0.7, gp.z); scene.add(leftPost);
     var rightPost = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.4, 0.12), postMat);
-    rightPost.position.set(gp.x + 1.4, 0.7, gp.z); scene.add(rightPost);
+    rightPost.position.set(gp.x + 1.4, gateDeck + 0.7, gp.z); scene.add(rightPost);
     var banner = new THREE.Mesh(
       new THREE.BoxGeometry(2.8, 0.28, 0.06),
       new THREE.MeshStandardMaterial({ color: 0x0f172a, emissive: 0xfbbf24, emissiveIntensity: 0.25 })
     );
-    banner.position.set(gp.x, 1.35, gp.z); scene.add(banner);
-    addLabel("START / FINISH", "#fef3c7", gp.x, 1.7, gp.z);
+    banner.position.set(gp.x, gateDeck + 1.35, gp.z); scene.add(banner);
+    addLabel("START / FINISH", "#fef3c7", gp.x, gateDeck + 1.75, gp.z);
   }
 
   function buildPondLife() {
@@ -1344,7 +1499,8 @@
         : hex((C.FROG_DEFS[s.id] || C.FROG_DEFS.james).color);
       var truck = makeVehicleMesh(style, accent);
       var p = worldToThree(s.x, s.y);
-      truck.position.set(p.x, 0, p.z);
+      var spotDeck = ranchGroundY(s.x, s.y);
+      truck.position.set(p.x, spotDeck, p.z);
       truck.rotation.y = -Math.PI / 2; /* polish11: nose +Z like idle frogs, not sideways +X */
       scene.add(truck);
       var label = s.id === "shared" ? "★ ALL ABOARD · 4"
@@ -1352,18 +1508,18 @@
         : style === "tank" ? "Tank · shared"
         : ("Cybertruck · " + (C.FROG_DEFS[s.id] || {}).name);
       var lab = labelSprite(label, s.id === "shared" ? "#fef3c7" : (style === "ripsaw" || style === "tank" ? "#e2e8f0" : "#fde68a"));
-      lab.position.set(p.x, s.id === "shared" ? 1.85 : 1.5, p.z); scene.add(lab);
+      lab.position.set(p.x, (s.id === "shared" ? 1.85 : 1.5) + spotDeck, p.z); scene.add(lab);
       if (s.id === "shared") {
         var pad = new THREE.Mesh(
           new THREE.RingGeometry(1.1, 1.45, 32),
           new THREE.MeshBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.55, side: THREE.DoubleSide })
         );
-        pad.rotation.x = -Math.PI / 2; pad.position.set(p.x, 0.06, p.z); scene.add(pad);
+        pad.rotation.x = -Math.PI / 2; pad.position.set(p.x, spotDeck + 0.06, p.z); scene.add(pad);
         var ids = ["james", "jimmy", "bubbles", "rexy"];
         for (var si = 0; si < 4; si++) {
           var col = hex((C.FROG_DEFS[ids[si]] || C.FROG_DEFS.james).color);
           var slot = new THREE.Mesh(new THREE.SphereGeometry(0.14, 8, 6), new THREE.MeshStandardMaterial({ color: col }));
-          slot.position.set(p.x + (si - 1.5) * 0.35, 0.85, p.z); scene.add(slot);
+          slot.position.set(p.x + (si - 1.5) * 0.35, spotDeck + 0.85, p.z); scene.add(slot);
         }
       }
       state.parkedTrucks.push({ spot: s, mesh: truck, label: lab });
@@ -1395,9 +1551,31 @@
     sun.shadow.normalBias = 0.035;
     scene.add(sun);
 
-    // Ground — flat (no subdiv) + polygonOffset so overlays don't z-fight
+    /* Ranch floor with a hole where the truck apron is. The apron mesh
+       (including valleys below y=0) would be hidden by a solid plane. */
+    var halfW = C.MAP_W * 0.01;
+    var halfH = C.MAP_H * 0.01;
+    var floorShape = new THREE.Shape();
+    floorShape.moveTo(-halfW, -halfH);
+    floorShape.lineTo(halfW, -halfH);
+    floorShape.lineTo(halfW, halfH);
+    floorShape.lineTo(-halfW, halfH);
+    floorShape.closePath();
+    var trackA = C.AREAS[1];
+    function shapeX(wx) { return (wx - C.MAP_W * 0.5) * 0.02; }
+    /* Rx(-90°): geometry +Y becomes world −Z, so shape Y is −world Z. */
+    function shapeY(wy) { return -((wy - C.MAP_H * 0.5) * 0.02); }
+    var hx0 = shapeX(trackA.x), hx1 = shapeX(trackA.x + trackA.w);
+    var hy0 = shapeY(trackA.y), hy1 = shapeY(trackA.y + trackA.h);
+    var hole = new THREE.Path();
+    hole.moveTo(hx0, hy0);
+    hole.lineTo(hx1, hy0);
+    hole.lineTo(hx1, hy1);
+    hole.lineTo(hx0, hy1);
+    hole.closePath();
+    floorShape.holes.push(hole);
     var ground = new THREE.Mesh(
-      new THREE.PlaneGeometry(C.MAP_W * 0.02, C.MAP_H * 0.02),
+      new THREE.ShapeGeometry(floorShape),
       new THREE.MeshStandardMaterial({
         color: 0x3d7a35, roughness: 0.9,
         polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1,
@@ -1408,6 +1586,16 @@
     ground.receiveShadow = true;
     ground.renderOrder = -2;
     scene.add(ground);
+    var bowlC = worldToThree(trackA.x + trackA.w * 0.5, trackA.y + trackA.h * 0.5);
+    var bowl = new THREE.Mesh(
+      new THREE.PlaneGeometry(trackA.w * 0.02 + 0.4, trackA.h * 0.02 + 0.4),
+      new THREE.MeshStandardMaterial({ color: 0x1c1410, roughness: 1 })
+    );
+    bowl.rotation.x = -Math.PI / 2;
+    bowl.position.set(bowlC.x, -1.2, bowlC.z);
+    bowl.receiveShadow = true;
+    bowl.renderOrder = -3;
+    scene.add(bowl);
 
     /* view3: continuous perimeter forest — SAME trunk/canopy recipe + scale as yard trees.
        Prior rings used s=1.35–3.0 + green cylinder berms → mismatched flat backdrop.
@@ -1523,6 +1711,11 @@
     for (var i = 0; i < C.AREAS.length; i++) {
       var a = C.AREAS[i];
       var p = worldToThree(a.x + a.w / 2, a.y + a.h / 2);
+      /* The apron mesh is the track floor. A flat pad would cover the valleys. */
+      if (a.id === "track") {
+        addLabel(a.name, "#ffffff", p.x, 6.6, p.z);
+        continue;
+      }
       /* solid1: flat zone pads (not thick boxes) — thick boxes z-fought the ground plane */
       var mesh = new THREE.Mesh(
         new THREE.PlaneGeometry(a.w * 0.02, a.h * 0.02),
@@ -1564,30 +1757,31 @@
         new THREE.RingGeometry(0.85, 1.2, 28),
         new THREE.MeshBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.55, side: THREE.DoubleSide })
       );
+      var hotDeck = ranchGroundY(hs.x, hs.y);
       ring.rotation.x = -Math.PI / 2;
-      ring.position.set(hp.x, 0.06, hp.z);
+      ring.position.set(hp.x, hotDeck + 0.06, hp.z);
       scene.add(ring);
       var glow = new THREE.Mesh(
         new THREE.CircleGeometry(1.15, 20),
         new THREE.MeshBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.15, side: THREE.DoubleSide })
       );
-      glow.rotation.x = -Math.PI / 2; glow.position.set(hp.x, 0.04, hp.z); scene.add(glow);
+      glow.rotation.x = -Math.PI / 2; glow.position.set(hp.x, hotDeck + 0.04, hp.z); scene.add(glow);
       if (hs.id === "phone") {
         var booth = new THREE.Mesh(
           new THREE.BoxGeometry(0.45, 0.9, 0.4),
           new THREE.MeshStandardMaterial({ color: 0x7c3aed, metalness: 0.2 })
         );
-        booth.position.set(hp.x, 0.5, hp.z); scene.add(booth);
-        addLabel("Phone → Purple Bear", "#e9d5ff", hp.x, 1.9, hp.z);
+        booth.position.set(hp.x, hotDeck + 0.5, hp.z); scene.add(booth);
+        addLabel("Phone → Purple Bear", "#e9d5ff", hp.x, hotDeck + 1.9, hp.z);
       } else if (hs.id === "sps") {
         var dish = new THREE.Mesh(
           new THREE.SphereGeometry(0.35, 10, 8, 0, Math.PI * 2, 0, Math.PI * 0.5),
           new THREE.MeshStandardMaterial({ color: 0x38bdf8, metalness: 0.4, side: THREE.DoubleSide })
         );
-        dish.position.set(hp.x, 0.35, hp.z); dish.rotation.x = -0.5; scene.add(dish);
-        addLabel("SPS → Optimus · Jimmy", "#bae6fd", hp.x, 1.9, hp.z);
+        dish.position.set(hp.x, hotDeck + 0.35, hp.z); dish.rotation.x = -0.5; scene.add(dish);
+        addLabel("SPS → Optimus · Jimmy", "#bae6fd", hp.x, hotDeck + 1.9, hp.z);
       } else {
-        addLabel(hs.label, "#fde68a", hp.x, 1.7, hp.z);
+        addLabel(hs.label, "#fde68a", hp.x, hotDeck + 1.7, hp.z);
       }
       state.hotMeshes.push({ data: hs, ring: ring });
     }
@@ -2506,7 +2700,12 @@ state.zLift = 0;
     var fx = Math.sin(yaw), fz = Math.cos(yaw);
     var zLift = c.userData.zLift || 0;
     var zVel = c.userData.zVel || 0;
-    var air = zLift > 0.12;
+    var cgHop = 0;
+    if (c.position) {
+      var chw = threeToWorld(c.position.x, c.position.z);
+      cgHop = ranchGroundY(chw.x, chw.y);
+    }
+    var air = zLift > cgHop + 0.12;
     var combo = air ? Math.min(10, (c.userData.hopCombo || 0) + 1) : 1;
     c.userData.hopCombo = combo;
     var up = 9.8 + (combo - 1) * 1.2;
@@ -2515,7 +2714,7 @@ state.zLift = 0;
     if (air) c.userData.zVel = Math.max(0, zVel) + up * 0.7;
     else {
       c.userData.zVel = Math.max(zVel, up);
-      c.userData.zLift = Math.max(zLift, 0.25);
+      c.userData.zLift = Math.max(zLift, cgHop + 0.25);
     }
     state.toast = combo > 1 ? ("HOP ×" + combo + "!") : "HOP!";
     state.toastT = 1.2;
@@ -3146,10 +3345,9 @@ state.zLift = 0;
       }
     }
 
-    // Map screen WASD/D-pad → ground plane relative to locked camera
-    // Canvas convention: steer.y < 0 = Up/W (screen up). Camera sits at +X+Z offset.
-    // Into-scene (screen up) = (-1,-1) on XZ; screen-right = (+1,-1) on XZ.
-    // Ben orbit: when locked, position is owned by orbit tick above
+    // Map screen WASD/D-pad → ground plane from the camera that is actually up.
+    // steer.y < 0 = Up/W (screen up). Do not hardcode the old +X+Z isometric basis:
+    // view3 parked the camera mostly south, so that basis walked diagonal to the screen.
     var hopMx = 0, hopMz = 0, wantMove3 = false;
     if (!(state.mode === "space" && state.inOrbit)) {
     var steer = mergedSteer();
@@ -3158,11 +3356,9 @@ state.zLift = 0;
       var len = Math.hypot(steer.x, steer.y) || 1;
       var ix = steer.x / len;
       var iy = steer.y / len; // Up/W is negative
-      var inv = 0.70710678;
-      var fx = -inv, fz = -inv; // screen up / into scene
-      var rx = inv, rz = -inv;  // screen right
-      var mx = rx * ix + fx * (-iy);
-      var mz = rz * ix + fz * (-iy);
+      var basis = cameraGroundBasis();
+      var mx = basis.rx * ix + basis.fx * (-iy);
+      var mz = basis.rz * ix + basis.fz * (-iy);
       if (Math.abs(mx) + Math.abs(mz) > 0.01) {
         wantMove3 = true;
         hopMx = mx; hopMz = mz;
@@ -3250,11 +3446,13 @@ state.zLift = 0;
       var wpos0 = threeToWorld(state.player.position.x, state.player.position.z);
       /* truck2: track elev ground plane — same XY scale (0.02); no extra damp */
       var elevZ = 0;
-      if (state.inTruck && C.onTrack && C.onTrack(wpos0.x, wpos0.y) && C.trackElevAt) {
+      var onDeck = !!(C.onTrack && C.onTrack(wpos0.x, wpos0.y));
+      var rideDeck = onDeck && !state.inSwim && !state.inSub;
+      if (rideDeck && C.trackElevAt) {
         elevZ = (C.trackElevAt(wpos0.x, wpos0.y) || 0) * 0.02;
       }
       var prevG = state.groundLift != null ? state.groundLift : elevZ;
-      if (state.inTruck && C.onTrack && C.onTrack(wpos0.x, wpos0.y)) {
+      if (rideDeck) {
         /* Snappy follow so hills/ramps are felt, not lerped flat */
         state.groundLift = prevG + (elevZ - prevG) * Math.min(1, 22 * dt);
       } else {
@@ -3417,7 +3615,7 @@ state.zLift = 0;
             new THREE.SphereGeometry(0.08, 6, 5),
             new THREE.MeshBasicMaterial({ color: 0xb8a070, transparent: true, opacity: 0.5 })
           );
-          dust.position.set(state.player.position.x - state.facing * 0.2, 0.08, state.player.position.z);
+          dust.position.set(state.player.position.x - state.facing * 0.2, (state.groundLift || 0) + 0.08, state.player.position.z);
           scene.add(dust);
           state.fx.push({ mesh: dust, life: 0.35, rise: 0.2 });
         }
@@ -3429,7 +3627,7 @@ state.zLift = 0;
             new THREE.SphereGeometry(0.1 + Math.random() * 0.06, 6, 5),
             new THREE.MeshBasicMaterial({ color: 0xb8a070, transparent: true, opacity: 0.55 })
           );
-          td.position.set(state.player.position.x - state.facing * 0.5, 0.1, state.player.position.z);
+          td.position.set(state.player.position.x - state.facing * 0.5, (state.groundLift || 0) + 0.1, state.player.position.z);
           scene.add(td);
           state.fx.push({ mesh: td, life: 0.4, rise: 0.25 });
         }
@@ -3578,9 +3776,12 @@ state.zLift = 0;
           if (piloting) {
             var bobAmp = (C.mechBand && C.mechBand(ment.stories) === "trillion") ? 0.32 : ment.stories >= 1000 ? 0.22 : ment.stories >= 100 ? 0.12 : 0.07;
             var bobY = lumber ? Math.abs(Math.sin(wpM)) * bobAmp : 0;
+            var deckY = (pilotPos === state.player.position)
+              ? (state.zLift || 0)
+              : ((pilotPos.userData && pilotPos.userData.zLift) || pilotPos.y || 0);
             ment.group.position.x = pilotPos.x;
             ment.group.position.z = pilotPos.z;
-            ment.group.position.y = bobY;
+            ment.group.position.y = deckY + bobY;
             ment.group.rotation.y = faceY;
             ment.group.rotation.z = lumber ? Math.sin(wpM) * 0.04 : 0;
             var stride = lumber ? Math.sin(wpM) * (ment.h * 0.04) : 0;
@@ -3895,11 +4096,11 @@ state.zLift = 0;
     if (state.playerShadow) {
       var shS = state.inTruck ? 1.7 : 1;
       var shA = ((state.zLift || 0) - (state.groundLift || 0)) > 0.45 ? 0.12 : 0.32;
-      state.playerShadow.position.set(state.player.position.x, 0.07, state.player.position.z);
+      state.playerShadow.position.set(state.player.position.x, (state.groundLift || 0) + 0.04, state.player.position.z);
       state.playerShadow.scale.set(shS, shS, shS);
       state.playerShadow.material.opacity = shA;
       if (state.playerShadowSoft) {
-        state.playerShadowSoft.position.set(state.player.position.x, 0.065, state.player.position.z);
+        state.playerShadowSoft.position.set(state.player.position.x, (state.groundLift || 0) + 0.035, state.player.position.z);
         state.playerShadowSoft.scale.set(shS * 1.2, shS * 1.2, shS * 1.2);
         state.playerShadowSoft.material.opacity = shA * 0.45;
       }
@@ -3996,9 +4197,9 @@ state.zLift = 0;
           if (lsx || lsy) {
             var llen = Math.hypot(lsx, lsy) || 1;
             var lix = lsx / llen, liy = lsy / llen;
-            var inv2 = 0.70710678;
-            var lmx = inv2 * lix + (-inv2) * (-liy);
-            var lmz = (-inv2) * lix + (-inv2) * (-liy);
+            var lbasis = cameraGroundBasis();
+            var lmx = lbasis.rx * lix + lbasis.fx * (-liy);
+            var lmz = lbasis.rz * lix + lbasis.fz * (-liy);
             c.userData.vx = (c.userData.vx || 0) + lmx * lacc * dt;
             c.userData.vz = (c.userData.vz || 0) + lmz * lacc * dt;
             c.userData.faceYaw = Math.atan2(lmx, lmz);
@@ -4023,12 +4224,17 @@ state.zLift = 0;
           }
           var czv = c.userData.zVel || 0;
           var czl = c.userData.zLift || 0;
-          if (czl > 0 || czv > 0) {
+          var cww = threeToWorld(c.position.x, c.position.z);
+          var cgnd = ranchGroundY(cww.x, cww.y);
+          if (czl > cgnd + 0.02 || czv !== 0 || czl < cgnd - 0.02) {
             czv -= 28 * dt;
             czl += czv * dt;
-            if (czl <= 0) { czl = 0; czv = 0; c.userData.hopCombo = 0; }
+            if (czl <= cgnd) { czl = cgnd; czv = 0; c.userData.hopCombo = 0; }
             c.userData.zVel = czv;
             c.userData.zLift = czl;
+          } else {
+            c.userData.zLift = cgnd;
+            c.userData.zVel = 0;
           }
           if (c.userData.inMech) {
             c.visible = false;
@@ -4047,7 +4253,8 @@ state.zLift = 0;
           c.userData.faceYaw = state.faceYaw || 0;
         } else if (!c.userData.local) {
           c.visible = true;
-          c.position.y = Math.abs(Math.sin(c.userData.idleBounce)) * 0.14;
+          var fw = threeToWorld(c.position.x, c.position.z);
+          c.position.y = ranchGroundY(fw.x, fw.y) + Math.abs(Math.sin(c.userData.idleBounce)) * 0.14;
           c.userData.timer -= dt;
           if (c.userData.timer <= 0) {
             var behind = -(state.facing || 1) * (1.2 + lag * 2.2);

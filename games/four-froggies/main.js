@@ -1131,6 +1131,7 @@
       const me = localPlayer();
       if (me) {
         const es = effectiveSteer();
+        me.steerScreen = true;
         me.steerX = es.x;
         me.steerY = es.y;
         W.moveEntity(me, dt, undefined, world);
@@ -1247,11 +1248,13 @@
             if ((f.cd || 0) <= 0) { f.hopWantT = 0; requestAbility(f); }
           }
         }
+        f.steerScreen = true;
         f.steerX = es.x;
         f.steerY = es.y;
       } else if (f.human) {
         const ri = remoteInputs[f.id];
         if (ri) {
+          f.steerScreen = true;
           f.steerX = ri.steerX || 0;
           f.steerY = ri.steerY || 0;
           if (ri.abilityQueued) {
