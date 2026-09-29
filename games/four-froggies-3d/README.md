@@ -1,8 +1,3 @@
-<<<<<<< HEAD
-## What's new (ff3d47) — two-lane dashed centerline
-
-- A dashed white stripe runs down the middle of the rally track so two trucks can race in lanes.
-=======
 # What's new (ff3d57) — barriers, Cybertruck details, and submarine swimming
 
 - Added continuous barriers on both sides of the racing track, shaped to follow the banked road and vertical loop. Grounded cars are kept on the track, while a high enough jump can clear the finite barrier to escape.
@@ -48,7 +43,6 @@
 - Vehicles now keep their full footprint clear of house and garage walls instead of clipping through them.
 - The cars roll around the vehicle's forward axis to match the banked track, while the nose follows track pitch.
 - The entry spur joins the oval as one road mesh, removing the overlapping track surfaces that flickered at the start.
->>>>>>> 9fb9513f4fbb20f4ab1f42101bf6f13fb44bfacf
 - Cache: `?v=20260929-ff3d47` · asset `index-ff3d47.js`
 
 ## What's new (ff3d46) — camera stays with him
