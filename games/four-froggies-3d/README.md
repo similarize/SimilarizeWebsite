@@ -1,3 +1,8 @@
+## What's new (ff3d46) — camera stays with him
+
+- The view sits behind him and a little above, and it follows him up walls, through the house, and onto the roof. Drag the mouse to look around. Walking sideways does not spin the camera.
+- Cache: `?v=20260929-ff3d46` · asset `index-ff3d46.js`
+
 ## What's new (ff3d45) — ride with dad
 
 - As James, stand by dad's truck and press E. James sits in the passenger seat. Dad keeps driving, and James goes where the truck goes. E hops him out. The stick does not steer.
