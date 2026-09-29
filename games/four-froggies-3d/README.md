@@ -1,6 +1,54 @@
+<<<<<<< HEAD
 ## What's new (ff3d47) — two-lane dashed centerline
 
 - A dashed white stripe runs down the middle of the rally track so two trucks can race in lanes.
+=======
+# What's new (ff3d57) — barriers, Cybertruck details, and submarine swimming
+
+- Added continuous barriers on both sides of the racing track, shaped to follow the banked road and vertical loop. Grounded cars are kept on the track, while a high enough jump can clear the finite barrier to escape.
+- Reworked the Cybertruck's dark glazing and added front/rear bumpers, bed rails and floor, side rockers, wheel flares, door seams, and handles while preserving its angular stainless-steel shape.
+- Shows the frog seated inside the underwater submarine's transparent cockpit instead of hiding the rider above the hull.
+- E now lets the frog disembark into scuba swimming, then surface into the pond. Boarding again requires swimming back near the sub; pressing E at the water's edge enters the pond instead of pushing the frog back to shore.
+- Cache: `?v=20260929-ff3d57` · asset `index-ff3d57.js`
+
+- Retains the ff3d55 landing and stable loop-camera fixes.
+
+## What's new (ff3d55) — land jumps on the track and steady loop view
+
+- Track jumps now keep their height above the road when leaving a raised surface and reset jump height on landing, preventing cars from staying suspended above the track.
+- The camera keeps a steady, wider view through the loop and lets the two-racer framing handle both cars.
+- Cache: `?v=20260929-ff3d55` · asset `index-ff3d55.js`
+
+## What's new (ff3d53) — proper submarine underwater too
+- Replaced the underwater-only tapered cylinder with a streamlined rounded hull, bow, conning tower, periscope, portholes, fins, and propeller, matching the submarine on the surface.
+- Cache: `?v=20260929-ff3d53` · asset `index-ff3d53.js`
+
+## What's new (ff3d52) — preserve steering on banked track
+
+- On regular track sections, vehicles keep their steered heading while tilting to match the road surface; the vertical loop still uses the full track frame.
+- Cache: `?v=20260929-ff3d52` · asset `index-ff3d52.js`
+
+## What's new (ff3d50) — a proper submarine
+
+- Replaced the tank-shaped cone-like sub with a rounded blue hull, bow, conning tower, periscope, portholes, tail fins, and propeller.
+- Cache: `?v=20260929-ff3d50` · asset `index-ff3d50.js`
+
+## What's new (ff3d49) — two lanes for racing
+- A repeating dashed center line divides the full track into two lanes, following the bends and vertical loop.
+- Cache: `?v=20260929-ff3d49` · asset `index-ff3d49.js`
+
+## What's new (ff3d48) — back down walls and smooth the vertical loop
+- While climbing, back away from the wall to descend along it and return to the height where the climb began.
+- The car follows the vertical loop with a smooth 3D track frame rather than flipping its heading near the top; denser loop samples smooth the ride further.
+- Cache: `?v=20260929-ff3d48` · asset `index-ff3d48.js`
+
+## What's new (ff3d47) — climb pose, solid truck walls, track bank and start
+
+- Holding into a wall gives James an animated climbing pose while the existing climb and camera fade keep him readable.
+- Vehicles now keep their full footprint clear of house and garage walls instead of clipping through them.
+- The cars roll around the vehicle's forward axis to match the banked track, while the nose follows track pitch.
+- The entry spur joins the oval as one road mesh, removing the overlapping track surfaces that flickered at the start.
+>>>>>>> 9fb9513f4fbb20f4ab1f42101bf6f13fb44bfacf
 - Cache: `?v=20260929-ff3d47` · asset `index-ff3d47.js`
 
 ## What's new (ff3d46) — camera stays with him

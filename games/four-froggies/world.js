@@ -1140,7 +1140,13 @@
       /* qa1: feet stand on the same track deck trucks use — not the flat map. */
       var gndFoot = (ent.inSwim || ent.inSub) ? 0 : (ent.groundZ || 0);
       var aboveFoot = (ent.z || 0) - gndFoot;
-      if (aboveFoot > 0.15 || (ent.zVel || 0) !== 0) {
+      if (ent.wallClimbing) {
+        var climbTop = gndFoot + ((global.FroggiesCanon && global.FroggiesCanon.WALL_CLIMB_HEIGHT) || 160);
+        var climbSpeed = (global.FroggiesCanon && global.FroggiesCanon.WALL_CLIMB_SPEED) || 150;
+        ent.z = Math.min(climbTop, Math.max(ent.z || 0, gndFoot) + climbSpeed * dt);
+        ent.zVel = ent.z < climbTop ? climbSpeed : 0;
+        ent.wallClimbPhase = (ent.wallClimbPhase || 0) + dt * 12;
+      } else if (aboveFoot > 0.15 || (ent.zVel || 0) !== 0) {
         ent.zVel -= gWalk * dt;
         ent.z += ent.zVel * dt;
         if (ent.z <= gndFoot) {
@@ -1628,6 +1634,12 @@
       if (ent.inMech && canon.mechSolidId) ignoreMech = canon.mechSolidId(ent.mechId);
       else if (ent.inMech && ent.mechId) ignoreMech = String(ent.mechId).replace(/^mech-/, "mech");
       var airH = (ent.z || 0) - (ent.groundZ || 0);
+      var canClimbWalls = !!ent.local && !ent.inTruck && !ent.inMech && !ent.inSub && !ent.inSwim;
+      var wall = canClimbWalls && canon.wallContact && (ent.wallClimbing || airH < 28)
+        ? canon.wallContact(ent.x, ent.y, 44, { garageOpen: (world && world.garageOpen) || 0 }, mx, my)
+        : null;
+      ent.wallClimbing = !!wall;
+      if (ent.wallClimbing) ent.wallClimbPhase = (ent.wallClimbPhase || 0) + dt * 12;
       var solid = canon.resolveSolid(ent.x, ent.y, ent.inTruck ? 38 : ent.inSub ? 36 : ent.inMech ? 30 : 22, {
         garageOpen: (world && world.garageOpen) || 0,
         inTruck: !!ent.inTruck,
@@ -1637,7 +1649,7 @@
         ignoreMechId: ignoreMech,
         softPond: !ent.inTruck && !ent.inMech && !ent.inSwim && !ent.inSub,
         airHeight: airH,
-        airClearHeight: ent.inMech ? 22 : 28,
+        airClearHeight: ent.wallClimbing ? ((canon.WALL_CLIMB_HEIGHT || 160) - 1) : ent.inMech ? 22 : 28,
       });
       if (solid.hit) {
         var pdx = solid.x - ent.x, pdy = solid.y - ent.y;
@@ -1671,7 +1683,7 @@
       }
       if (ent.inSwim) ent.groundZ = 0;
     }
-    if (!ent.inTruck && !ent.inMech && !ent.inSub && !ent.inHeli && !ent.inDrone && !ent.inSwim && canon && canon.tickLocoHop) {
+    if (!ent.inTruck && !ent.inMech && !ent.inSub && !ent.inHeli && !ent.inDrone && !ent.inSwim && !ent.wallClimbing && canon && canon.tickLocoHop) {
       var wantHop = mag > 0.05;
       var launched = canon.tickLocoHop(ent, dt, {
         moving: wantHop,
@@ -4102,8 +4114,9 @@
     var thighLen = swimming ? s * (0.42 + Math.abs(stroke) * 0.2) : s * (0.55 + spring * 0.55);
     var shinLen = swimming ? s * (0.38 + Math.abs(strokeB) * 0.18) : s * (0.48 + spring * 0.62);
     var outX = swimming ? s * (0.55 + Math.abs(stroke) * 0.2) : s * (0.22 + spring * 0.55);
-    var kick = swimming ? 0 : ((!frog.inTruck && spring < 0.15 && (frog.walkPhase || 0) > 0.05)
-      ? Math.sin(frog.walkPhase * 2) * 2.4 * d : 0);
+    var climbKick = frog.wallClimbing ? Math.sin(frog.wallClimbPhase || 0) * 3.2 * d : 0;
+    var kick = swimming ? 0 : (frog.wallClimbing ? climbKick : ((!frog.inTruck && spring < 0.15 && (frog.walkPhase || 0) > 0.05)
+      ? Math.sin(frog.walkPhase * 2) * 2.4 * d : 0));
     ctx.save();
     ctx.translate(p.x, by);
     ctx.rotate(faceA + Math.PI / 2); /* canonical face points screen-up */
@@ -4113,7 +4126,9 @@
     function drawSpringLeg(side) {
       var hx = side * s * 0.28;
       var hy = hipY;
-      var kickAmt = swimming ? ((side < 0 ? stroke : strokeB) * s * 0.35) : (kick * side * 0.15);
+      var kickAmt = swimming ? ((side < 0 ? stroke : strokeB) * s * 0.35) : (frog.wallClimbing
+        ? Math.sin((frog.wallClimbPhase || 0) + (side < 0 ? 0 : Math.PI)) * s * 0.24
+        : (kick * side * 0.15));
       var kx = side * outX + kickAmt;
       var ky = hy + thighLen * (swimming ? (0.35 + (side < 0 ? stroke : strokeB) * 0.2) : (0.55 + spring * 0.15));
       var fx = side * (outX * 0.55 + s * 0.08) + (swimming ? kickAmt * 1.2 : kick * side);
@@ -4152,6 +4167,12 @@
       ctx.lineTo(-s * (0.75 + strokeB * 0.35), s * (-0.05 + strokeB * 0.35));
       ctx.moveTo(s * 0.38, -s * 0.02);
       ctx.lineTo(s * (0.75 + stroke * 0.35), s * (-0.05 + stroke * 0.35));
+    } else if (frog.wallClimbing) {
+      var reach = Math.sin(frog.wallClimbPhase || 0) * s * 0.12;
+      ctx.moveTo(-s * 0.38, -s * 0.05);
+      ctx.lineTo(-s * 0.68, -s * (0.45 + reach / s));
+      ctx.moveTo(s * 0.38, -s * 0.05);
+      ctx.lineTo(s * 0.68, -s * (0.45 - reach / s));
     } else {
       ctx.moveTo(-s * 0.38, -s * 0.05);
       ctx.lineTo(-s * (0.55 + spring * 0.08), s * 0.28);
