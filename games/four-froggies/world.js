@@ -40,6 +40,7 @@
    mechgun2: omnigun also blows house/garage/trees/rocks/fish/fences/shrubs (session permanent).
    goldsteam1: James trillion-story mech GOLD armor + steam pipe (Canvas+Three); omnigun FIRE kept.
    airgun1: heli + passenger-drone FIRE — forward shells + boom (tank-like props); pilot only.
+   storymuzzle1: story-mech omnigun muzzle = glowing chest plate (not feet).
    ~10× map: real roam between ranch house / track / pond / Starship.
    James ranch house: big house, backyard (animals), huge garage (toys + 10/100-story mechs);
    1000-story + trillion-story mechs sit out back (won't fit). Four Cybertrucks + shared pile-in.
@@ -727,15 +728,25 @@
     return shell;
   }
 
-  /* mechgun1: story-mech omnigun shell — permanent kill blast on impact */
-  function spawnMechGunShell(world, x, y, faceAngle, ownerId, ownerMechId) {
+  /* mechgun1 + storymuzzle1: omnigun shell from glowing chest plate (not feet) */
+  function spawnMechGunShell(world, x, y, faceAngle, ownerId, ownerMechId, ownerStories) {
     if (!world) return null;
     if (!world.shells) world.shells = [];
     var C = global.FroggiesCanon;
     var cfg = (C && C.MECH_GUN) || { speed: 780, life: 1.7, muzzle: 64, hitR: 42, blastR: 140, size: 2.8 };
     var ang = (faceAngle != null && isFinite(faceAngle)) ? faceAngle : 0;
     var cx = Math.cos(ang), cy = Math.sin(ang);
-    var muzzle = cfg.muzzle != null ? cfg.muzzle : 64;
+    var stories = ownerStories;
+    if (stories == null && ownerMechId && C && C.mechSolidId) {
+      var sid = C.mechSolidId(ownerMechId);
+      if (sid === "mechTrillion") stories = 1e12;
+      else if (sid === "mech1000") stories = 1000;
+      else if (sid === "mech100") stories = 100;
+      else if (sid === "mech10") stories = 10;
+    }
+    var chest = (C && C.mechChestMuzzle) ? C.mechChestMuzzle(stories) : null;
+    var muzzle = (chest && chest.canvasMuzzle != null) ? chest.canvasMuzzle
+      : (cfg.muzzle != null ? cfg.muzzle : 64);
     var spd = cfg.speed != null ? cfg.speed : 780;
     var life = cfg.life != null ? cfg.life : 1.7;
     var shell = {
@@ -754,6 +765,8 @@
       size: cfg.size != null ? cfg.size : 2.8,
       big: true,
       omnigun: true,
+      /* storymuzzle1: draw shells at chest height on the upright mech billboard */
+      chestLift: chest && chest.canvasLift != null ? chest.canvasLift : 0,
     };
     world.shells.push(shell);
     if (world.shells.length > 18) world.shells.splice(0, world.shells.length - 18);
@@ -5473,7 +5486,9 @@
       var airG = !!shd.airGun;
       var droneG = airG && shd.airKind === "drone";
       ctx.save();
-      ctx.translate(shp.x, shp.y);
+      /* storymuzzle1: lift omnigun draw to glowing chest plate on mech billboard */
+      var chestLiftPx = (omni && shd.chestLift) ? (shd.chestLift * shp.depth) : 0;
+      ctx.translate(shp.x, shp.y - chestLiftPx);
       ctx.rotate(shd.ang || 0);
       /* exhaust / muzzle trail */
       ctx.fillStyle = omni ? ("rgba(34, 211, 238, " + (sha * 0.6) + ")")

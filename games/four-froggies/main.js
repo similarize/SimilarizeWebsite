@@ -3,7 +3,8 @@
 /* interact2: per-player interact/exit + HOP; shared HUD/E = primary only.
    drivefix3: wider board reach + own-mech prefer (canon/world); couch pads unchanged. */
 /* drivefix2: one INTERACT press boards and stays until a later EXIT press. */
-/* airgun1: heli/drone pilot FIRE on Space/X/ability (climb = R/C). */
+/* airgun1: heli/drone pilot FIRE on Space/X/ability (climb = R/C).
+   storymuzzle1: story-mech omnigun from chest plate. */
 (() => {
   "use strict";
 
@@ -767,7 +768,7 @@
       const angM = (frog.faceAngle != null && isFinite(frog.faceAngle))
         ? frog.faceAngle
         : (frog.facing >= 0 ? 0 : Math.PI);
-      if (world && W.spawnMechGunShell) W.spawnMechGunShell(world, frog.x, frog.y, angM, frog.id, frog.mechId);
+      if (world && W.spawnMechGunShell) W.spawnMechGunShell(world, frog.x, frog.y, angM, frog.id, frog.mechId, frog.mechStories);
       shakeT = 0.12;
       storyToast = "FIRE!";
       storyToastT = 0.9;

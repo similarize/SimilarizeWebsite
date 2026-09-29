@@ -580,6 +580,24 @@
     blastForce: 640,
     size: 2.8,
   };
+  /* storymuzzle1: omnigun exits the glowing chest plate (not feet/ankles).
+     Canvas lift matches drawMech chest center (~0.59 * hScale); Three matches addMech chest glow. */
+  function mechChestMuzzle(storiesOrHot) {
+    var n = storiesOrHot;
+    if (n && typeof n === "object") n = n.stories != null ? n.stories : n.mechStories;
+    n = Number(n) || 0;
+    var band = n >= 1e12 ? "trillion" : n >= 1000 ? "1000" : n >= 100 ? "100" : "10";
+    var hScale = band === "trillion" ? 460 : band === "1000" ? 310 : band === "100" ? 138 : 62;
+    var wScale = band === "trillion" ? 108 : band === "1000" ? 72 : band === "100" ? 42 : 26;
+    return {
+      band: band,
+      canvasLift: hScale * 0.59,
+      canvasMuzzle: Math.max(48, wScale * 0.72),
+      threeYFrac: 0.6,
+      threeZFrac: 0.22 * 0.52,
+      threeExtraZ: 0.18,
+    };
+  }
   function isStoryMechPilot(ent) {
     return !!(ent && ent.inMech);
   }
@@ -1567,6 +1585,7 @@
     isTankVehicle: isTankVehicle,
     tankDrivingTip: tankDrivingTip,
     MECH_GUN: MECH_GUN,
+    mechChestMuzzle: mechChestMuzzle,
     isStoryMechPilot: isStoryMechPilot,
     mechGunTip: mechGunTip,
     mechGunDrivingTip: mechGunDrivingTip,

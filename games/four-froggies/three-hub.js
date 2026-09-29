@@ -44,6 +44,7 @@
    spear1: Rexy 1000 SPEAR (B/RB) knocks trillion ~2s; mash get-up; tipped mesh.
    goldsteam1: James trillion GOLD armor + steam pipe billows; omnigun FIRE kept.
    airgun1: heli + passenger-drone FIRE (Space/X/ability) pilot only; climb R/C/RT.
+   storymuzzle1: story-mech omnigun muzzle = glowing chest plate (not ankles).
    drivefix1: companions board/drive free Cybertruck(s)+Ripsaw+Tank like primary; mech locks stay.
    drivefix2: one INTERACT edge boards and STAYS (no same-press exit). Mech locks stay.
    drivefix3: companions board sub/heli/drone too; own-mech prefer; garage any local; wider reach.
@@ -1350,9 +1351,10 @@
     part(new THREE.BoxGeometry(h * 0.1, h * 0.22, h * 0.12), mat, h * 0.11, h * 0.16, 0, legsR);
     part(new THREE.BoxGeometry(h * 0.11, h * 0.2, h * 0.13), mat, -h * 0.1, h * 0.36, 0, legsL);
     part(new THREE.BoxGeometry(h * 0.11, h * 0.2, h * 0.13), mat, h * 0.1, h * 0.36, 0, legsR);
-    /* Torso + chest glow */
+    /* Torso + chest glow (storymuzzle1: this plate is the omnigun muzzle) */
     part(new THREE.BoxGeometry(tw, h * 0.32, td), mat, 0, h * 0.58, 0);
-    part(new THREE.BoxGeometry(tw * 0.45, h * 0.08, td * 0.2), eyeMat, 0, h * 0.6, td * 0.52);
+    var chestGlow = part(new THREE.BoxGeometry(tw * 0.45, h * 0.08, td * 0.2), eyeMat, 0, h * 0.6, td * 0.52);
+    chestGlow.userData.isChestMuzzle = true;
     /* Shoulders */
     part(new THREE.BoxGeometry(h * 0.14, h * 0.1, h * 0.14), mat, -tw * 0.62, h * 0.7, 0);
     part(new THREE.BoxGeometry(h * 0.14, h * 0.1, h * 0.14), mat, tw * 0.62, h * 0.7, 0);
@@ -1421,6 +1423,9 @@
       armsR: armsR,
       walkPhase: 0,
       steamPuffs: steamPuffs,
+      /* storymuzzle1: local chest plate = omnigun origin (+Z face front) */
+      chestGlow: chestGlow,
+      chestMuzzleLocal: new THREE.Vector3(0, h * 0.6, td * 0.52),
     };
     if (!state.mechs) state.mechs = [];
     state.mechs.push(entry);
@@ -3682,7 +3687,7 @@ state.zLift = 0;
     return true;
   }
 
-    /* mechgun1: story-mech omnigun — Space / X / button; permanent kill blast */
+    /* mechgun1 + storymuzzle1: omnigun from glowing chest plate */
   function fireMechGun() {
     if (!state || !state.inMech) return false;
     if (state.cd > 0) {
@@ -3702,9 +3707,28 @@ state.zLift = 0;
     var spd = cfg.speed != null ? (cfg.speed > 40 ? cfg.speed / 42 : cfg.speed) : 18.5;
     var life = cfg.life != null ? cfg.life : 1.7;
     var blastR3 = (cfg.blastR != null ? cfg.blastR : 140) * 0.02;
+    /* storymuzzle1: spawn at chest glow world pos (fallback = old ankle+forward) */
     var px = state.player.position.x + fx * muzzle;
     var py = 1.1 + (state.zLift || 0) + (state.inMech ? 1.4 : 0);
     var pz = state.player.position.z + fz * muzzle;
+    var mentGun = null;
+    for (var mgi = 0; mgi < (state.mechs || []).length; mgi++) {
+      if (state.mechs[mgi] && mechSidOf(state.mechId) === state.mechs[mgi].solidId) {
+        mentGun = state.mechs[mgi];
+        break;
+      }
+    }
+    if (mentGun && mentGun.group && mentGun.chestMuzzleLocal) {
+      var chestCfg = (C.mechChestMuzzle) ? C.mechChestMuzzle(mentGun.stories || state.mechStories) : null;
+      var extraZ = chestCfg && chestCfg.threeExtraZ != null ? chestCfg.threeExtraZ : 0.18;
+      var loc = mentGun.chestMuzzleLocal.clone();
+      loc.z += extraZ; /* past the plate so bolt clears the torso */
+      mentGun.group.updateMatrixWorld(true);
+      mentGun.group.localToWorld(loc);
+      px = loc.x;
+      py = loc.y;
+      pz = loc.z;
+    }
     var shellGeo = (typeof THREE.CapsuleGeometry === "function")
       ? new THREE.CapsuleGeometry(0.26, 1.0, 6, 10)
       : new THREE.SphereGeometry(0.32, 10, 8);
