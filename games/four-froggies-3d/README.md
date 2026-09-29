@@ -1,4 +1,9 @@
-# What's new (ff3d52) — preserve steering on banked track
+# What's new (ff3d53) — proper submarine underwater too
+
+- Replaced the underwater-only tapered cylinder with a streamlined rounded hull, bow, conning tower, periscope, portholes, fins, and propeller, matching the submarine on the surface.
+- Cache: `?v=20260929-ff3d53` · asset `index-ff3d53.js`
+
+## What's new (ff3d52) — preserve steering on banked track
 
 - On regular track sections, vehicles keep their steered heading while tilting to match the road surface; the vertical loop still uses the full track frame.
 - Cache: `?v=20260929-ff3d52` · asset `index-ff3d52.js`
