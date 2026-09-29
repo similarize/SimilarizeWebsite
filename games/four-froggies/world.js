@@ -589,27 +589,42 @@
     var frogs = opts.frogs || null;
     var me = opts.frog || null;
     var preferFree = !!(frogs && me);
+    var CgoneH = global.FroggiesCanon;
+    var baseMax = maxR != null ? maxR : 110;
+    /* drivefix3: owner story-mech wins when in generous reach */
+    if (me && CgoneH && CgoneH.ownMechInReach && !opts.skipOwnMech) {
+      var own = CgoneH.ownMechInReach(x, y, me.id, Math.max(baseMax, 140));
+      if (own) {
+        /* Prefer live world hotspot copy (park-synced) when present */
+        for (var oi = 0; oi < world.hotspots.length; oi++) {
+          var oh = world.hotspots[oi];
+          if (oh && own && (oh.id === own.id || (oh.solidId && own.solidId && oh.solidId === own.solidId))) {
+            if (!preferFree || !hotspotTakenByOther(world, frogs, oh, me)) return oh;
+          }
+        }
+        if (!preferFree || !hotspotTakenByOther(world, frogs, own, me)) return own;
+      }
+    }
     var best = null;
-    var bestD = maxR || 80;
+    var bestD = baseMax;
     var bestFree = null;
-    var bestFreeD = maxR || 80;
+    var bestFreeD = baseMax;
     for (var i = 0; i < world.hotspots.length; i++) {
       var h = world.hotspots[i];
-      var CgoneH = global.FroggiesCanon;
       if (h && h.id && CgoneH && CgoneH.isPermaGone && CgoneH.isPermaGone(h.id)) continue;
       if (h && CgoneH && CgoneH.isMechHotspot && CgoneH.isMechHotspot(h) && CgoneH.isMechDestroyed && CgoneH.isMechDestroyed(h)) continue;
       /* drivefix1: skip mechs this frog cannot board so free Cybertruck/Ripsaw win INTERACT */
       if (me && CgoneH && CgoneH.isMechHotspot && CgoneH.isMechHotspot(h) &&
           CgoneH.canBoardMech && !CgoneH.canBoardMech(me.id, h)) continue;
       var d = Math.hypot(h.x - x, h.y - y);
-      var reach = Math.max(bestD, (h.r || 60) + 12);
+      var reach = (CgoneH && CgoneH.boardReachFor) ? CgoneH.boardReachFor(h, bestD) : Math.max(bestD, (h.r || 60) + 36);
       if (d >= reach) continue;
       if (!best || d < Math.hypot(best.x - x, best.y - y)) {
         best = h;
         bestD = d;
       }
       if (preferFree && !hotspotTakenByOther(world, frogs, h, me)) {
-        var freeReach = Math.max(bestFreeD, (h.r || 60) + 12);
+        var freeReach = (CgoneH && CgoneH.boardReachFor) ? CgoneH.boardReachFor(h, bestFreeD) : Math.max(bestFreeD, (h.r || 60) + 36);
         if (d < freeReach && (!bestFree || d < Math.hypot(bestFree.x - x, bestFree.y - y))) {
           bestFree = h;
           bestFreeD = d;

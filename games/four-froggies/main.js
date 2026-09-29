@@ -1,6 +1,7 @@
 /* Four Froggies — lobby + 2.5D ranch hub (flagship).
    Party: PeerJS via party.js. Solo+AI offline. Strip kept in strip.js as sandbox activity. */
-/* interact2: per-player interact/exit + HOP; shared HUD/E = primary only. */
+/* interact2: per-player interact/exit + HOP; shared HUD/E = primary only.
+   drivefix3: wider board reach + own-mech prefer (canon/world); couch pads unchanged. */
 /* drivefix2: one INTERACT press boards and stays until a later EXIT press. */
 (() => {
   "use strict";
@@ -301,7 +302,7 @@
       /* Shared HUD near-check: primary + padless only (not other pads' positions for EXIT/BOARD label) */
       if (f.padIndex != null && f.padIndex !== undefined && f !== me) continue;
       if (f.inTruck || f.inMech || f.inSub || f.inHeli || f.inDrone) continue;
-      const hot = W.nearestHotspot(world, f.x, f.y, 70, { frogs, frog: f });
+      const hot = W.nearestHotspot(world, f.x, f.y, 110, { frogs, frog: f });
       if (!hot) continue;
       const d = Math.hypot(f.x - hot.x, f.y - hot.y);
       const score = d - (isBoardableHot(hot) ? 8 : 0);
@@ -974,11 +975,11 @@
     let hot = null;
     const nearOpts = { frogs, frog: me };
     if (optFrog || (opts.source === "pad")) {
-      hot = W && W.nearestHotspot ? W.nearestHotspot(world, me.x, me.y, 70, nearOpts) : null;
+      hot = W && W.nearestHotspot ? W.nearestHotspot(world, me.x, me.y, 110, nearOpts) : null;
     } else {
       hot = nearHot;
       if (!hot && !(me.inTruck || me.inMech || me.inSub || me.inHeli || me.inDrone) && W && W.nearestHotspot) {
-        hot = W.nearestHotspot(world, me.x, me.y, 70, nearOpts);
+        hot = W.nearestHotspot(world, me.x, me.y, 110, nearOpts);
       }
     }
     /* EXIT only for this frog — caller ownership already enforced */
@@ -1092,7 +1093,7 @@
         /* drivefix1: locked mech nearby — fall through to free Cybertruck/Ripsaw if in reach */
         let alt = null;
         if (W && W.nearestHotspot) {
-          const cand = W.nearestHotspot(world, me.x, me.y, 70, { frogs, frog: me });
+          const cand = W.nearestHotspot(world, me.x, me.y, 110, { frogs, frog: me, skipOwnMech: true });
           if (cand && cand !== hot && (cand.kind === "truck" || (cand.id && String(cand.id).indexOf("truck") === 0)) &&
               !vehicleTakenByOtherLocal(cand, me)) alt = cand;
         }
@@ -1420,7 +1421,7 @@
         if (me.speedBoost > 1) me.speedBoost = Math.max(1, me.speedBoost - dt * 0.5);
         if (me.inTruck && wheelHoldDir) nudgeWheel(wheelHoldDir * dt * 4.5);
         easeCam(dt);
-        nearHot = W.nearestHotspot(world, me.x, me.y, 70, { frogs, frog: me }); /* drivefix1 */
+        nearHot = W.nearestHotspot(world, me.x, me.y, 110, { frogs, frog: me }); /* drivefix3 */
         /* polish5: sparkle when entering a hotspot */
         if (nearHot && nearHot.id !== prevNearId) {
           if (W.spawnSparkle) W.spawnSparkle(world, nearHot.x, nearHot.y, 12);

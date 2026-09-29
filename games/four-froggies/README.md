@@ -1,3 +1,9 @@
+## What's new (drivefix3) — companions board everything James can (and stay)
+
+- **Bug:** James (camera/primary) boarded Cybertruck / Ripsaw / Tank / heli / drone / sub / mechs; Jimmy / Bubbles / Rexy on other pads still failed — Three hard-blocked companion INTERACT on sub/heli/drone; garage door opened for camera frog only; INTERACT reach was too tight at mech/truck solid rims so owners missed their own story mech; nearest-hotspot could prefer a free truck over the owner's mech.
+- **Fix (Canvas + Three):** Companions board/drive free trucks + sub + heli/drone (passenger or free pilot) with the same drivefix2 latch. Owner story-mech preferred when in reach. Wider INTERACT reach past solid push-out. Garage opens for any local frog. Mech locks unchanged.
+- Cache: `20260929-drivefix3`. lobbypick1 / air land-exit / omnigun / spear / exit1 lobby untouched.
+
 ## What's new (lobbypick1) — gamepad alone picks James / Jimmy / Bubbles / Rexy
 
 - **Bug:** After padfix1/drivefix2, A claimed the first open froggy then stuck — `claimLocalPad` returned the existing seat and the title lobby never read D-pad/stick, so Ben could not choose another froggy with the pad alone.

@@ -36,7 +36,8 @@
    drivefix1: Cybertruck(s)+Ripsaw+Tank boardable by ANY grounded frog when free
            (frogId on truck spots is label/color only — NOT an ownership lock).
            Mech locks stay exclusive (James=trillion, Rexy=1000, Bubbles=10, Jimmy=100).
-   drivefix2: boarding sticks until a later EXIT press (no same-edge board+exit). */
+   drivefix2: boarding sticks until a later EXIT press (no same-edge board+exit).
+   drivefix3: companion board all rides; own-mech prefer; wider INTERACT reach. */
 (function (global) {
   "use strict";
 
@@ -318,14 +319,47 @@
     return id;
   }
 
+  /* drivefix3: generous INTERACT reach past solid push-out (mech/truck rim). */
+  var BOARD_REACH_PAD = 36;
+  function boardReachFor(hot, maxR) {
+    var base = maxR != null ? maxR : 110;
+    var hr = hot && hot.r != null ? hot.r : 70;
+    return Math.max(base, hr + BOARD_REACH_PAD);
+  }
+
+  /** drivefix3: owner's story mech wins when in reach (over nearby free trucks). */
+  function ownMechInReach(x, y, frogId, maxR) {
+    if (!frogId) return null;
+    var best = null;
+    var bestD = Infinity;
+    var lim = maxR != null ? maxR : 140;
+    for (var i = 0; i < HOTSPOTS.length; i++) {
+      var h = HOTSPOTS[i];
+      if (!isMechHotspot(h) || isMechDestroyed(h)) continue;
+      if (h && h.id && isPermaGone(h.id)) continue;
+      if (!canBoardMech(frogId, h)) continue;
+      var d = Math.hypot(h.x - x, h.y - y);
+      var reach = boardReachFor(h, lim);
+      if (d < reach && d < bestD) { bestD = d; best = h; }
+    }
+    return best;
+  }
+
   function nearestHotspot(x, y, maxR, opts) {
     /* drivefix1: opts.frogId / opts.frog → skip mechs this frog cannot board so free
-       trucks/ripsaw win INTERACT near locked mechs. Mech locks themselves unchanged. */
+       trucks/ripsaw win INTERACT near locked mechs. Mech locks themselves unchanged.
+       drivefix3: wider board reach; owner mech preferred when in reach. */
     opts = opts || {};
     var frogId = opts.frogId || null;
     if (!frogId && opts.frog) frogId = opts.frog.id || opts.frog.frogId || null;
+    var baseMax = maxR != null ? maxR : 110;
+    /* Owner standing at their mech rim must board easily */
+    if (!opts.skipOwnMech) {
+      var own = ownMechInReach(x, y, frogId, Math.max(baseMax, 140));
+      if (own) return own;
+    }
     var best = null;
-    var bestD = maxR || 70;
+    var bestD = baseMax;
     for (var i = 0; i < HOTSPOTS.length; i++) {
       var h = HOTSPOTS[i];
       if (isMechHotspot(h) && isMechDestroyed(h)) continue; /* mech5 / mechgun1 */
@@ -333,7 +367,7 @@
       /* drivefix1: never prefer a mech the acting frog cannot board */
       if (frogId && isMechHotspot(h) && !canBoardMech(frogId, h)) continue;
       var d = Math.hypot(h.x - x, h.y - y);
-      var reach = Math.max(bestD, h.r || 70);
+      var reach = boardReachFor(h, bestD);
       if (d < reach && d < (best ? Math.hypot(best.x - x, best.y - y) : reach)) {
         bestD = d;
         best = h;
@@ -1455,6 +1489,8 @@
     getEngine: getEngine,
     setEngine: setEngine,
     nearestHotspot: nearestHotspot,
+    ownMechInReach: ownMechInReach,
+    boardReachFor: boardReachFor,
     areaNameAt: areaNameAt,
     inPond: inPond,
     inYardStream: inYardStream,
