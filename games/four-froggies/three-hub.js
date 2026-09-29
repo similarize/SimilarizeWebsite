@@ -39,6 +39,7 @@
    mechwalk1: boarded mech lumber walk (steer+solid ignore+mesh sync); pad pilot drives.
    boardall1: each couch pad/companion can board a DIFFERENT free mech at once.
    air1: HeliPad + DronePad · low-poly heli (4) + passenger drone (1–2) · fly over ranch.
+   mechgun1: story-mech omnigun FIRE — permanent session kill (Canvas parity).
    earth1: space shows procedural Earth (home) — not ranch grounds in vacuum.
    solarsys1: Solar System layout — Sun center; Moon+station orbit Earth; planet gravity wells;
    spacefix1: dark ground plane; orbit cam locks on planet; ranch pad on Earth surface;
@@ -199,7 +200,7 @@
     c.userData.walkPhase = 0;
     c.visible = false;
     state.scrap += 1;
-    state.toast = "Boarding " + (C.mechStoriesLabel ? C.mechStoriesLabel(c.userData.mechStories) : (c.userData.mechStories + "-story mech")) + " · lumber walk!";
+    state.toast = "Boarding " + (C.mechStoriesLabel ? C.mechStoriesLabel(c.userData.mechStories) : (c.userData.mechStories + "-story mech")) + " · FIRE (Space / X / button)!";
     state.exitTipT = 2.4; state.toastT = 2.5;
     if (hooks.onToast) hooks.onToast(state.toast);
     return true;
@@ -495,88 +496,6 @@
     }
   }
 
-  function setFrogClimb(mesh, phase, on) {
-    if (!mesh || !mesh.userData.legRoots) return;
-    var arms = mesh.userData.armMeshes || [];
-    if (!on) {
-      if (mesh.userData.torso) mesh.userData.torso.rotation.x = 0;
-      if (mesh.userData.head) mesh.userData.head.rotation.x = 0;
-      for (var ri = 0; ri < arms.length; ri++) {
-        var resetArm = arms[ri];
-        var resetSide = resetArm.userData.side || (ri === 0 ? -1 : 1);
-        if (resetArm.userData.basePos) resetArm.position.copy(resetArm.userData.basePos);
-        resetArm.rotation.set(0, 0, resetSide * 0.55);
-      }
-      setFrogSpring(mesh, 0);
-      return;
-    }
-    var ph = phase || 0;
-    if (mesh.userData.torso) mesh.userData.torso.rotation.x = -0.12;
-    if (mesh.userData.head) mesh.userData.head.rotation.x = -0.08;
-    var legs = mesh.userData.legRoots;
-    for (var li = 0; li < legs.length; li++) {
-      var leg = legs[li];
-      var step = Math.sin(ph + (leg.side < 0 ? 0 : Math.PI));
-      leg.root.rotation.x = -0.25 + step * 0.42;
-      leg.root.rotation.z = leg.side * 0.42;
-      leg.knee.rotation.x = 0.8 - Math.max(0, step) * 0.55;
-    }
-    for (var ai = 0; ai < arms.length; ai++) {
-      var arm = arms[ai];
-      var side = arm.userData.side || (ai === 0 ? -1 : 1);
-      var reach = Math.sin(ph + (side < 0 ? 0 : Math.PI));
-      arm.rotation.x = -0.85 - Math.max(0, reach) * 0.3;
-      arm.rotation.y = side * 0.12;
-      arm.rotation.z = side * 0.72;
-      if (arm.userData.basePos) {
-        arm.position.set(
-          arm.userData.basePos.x,
-          arm.userData.basePos.y + Math.max(0, reach) * 0.06 * (mesh.userData.frogScale || 1),
-          arm.userData.basePos.z - 0.08 * (mesh.userData.frogScale || 1)
-        );
-      }
-    }
-  }
-
-  function registerWallOccluder(mesh) {
-    if (!mesh || !state) return;
-    mesh.material = mesh.material.clone();
-    if (!state.occludingWalls) state.occludingWalls = [];
-    state.occludingWalls.push(mesh);
-  }
-
-  var wallOcclusionRaycaster = null;
-  function updateWallOcclusion() {
-    if (!state || !camera || !state.occludingWalls || !state.occludingWalls.length) return;
-    if (!wallOcclusionRaycaster) wallOcclusionRaycaster = new THREE.Raycaster();
-    var target = new THREE.Vector3(
-      state.player.position.x,
-      state.player.position.y + 0.55,
-      state.player.position.z
-    );
-    var ray = target.sub(camera.position);
-    var distance = ray.length();
-    if (distance <= 0.001) return;
-    wallOcclusionRaycaster.set(camera.position, ray.multiplyScalar(1 / distance));
-    var hits = wallOcclusionRaycaster.intersectObjects(state.occludingWalls, false);
-    var blockers = [];
-    for (var hi = 0; hi < hits.length; hi++) {
-      if (hits[hi].distance >= distance - 0.2) break;
-      blockers.push(hits[hi].object);
-    }
-    for (var wi = 0; wi < state.occludingWalls.length; wi++) {
-      var mesh = state.occludingWalls[wi];
-      var faded = blockers.indexOf(mesh) >= 0;
-      var mat = mesh.material;
-      if (faded === !!mesh.userData.occlusionFaded) continue;
-      mesh.userData.occlusionFaded = faded;
-      mat.transparent = faded;
-      mat.opacity = faded ? 0.28 : 1;
-      mat.depthWrite = !faded;
-      mat.needsUpdate = true;
-    }
-  }
-
   function labelSprite(text, color) {
     /* polish9/10: quieter plate nameplates */
     var canvas = document.createElement("canvas");
@@ -820,7 +739,6 @@
       rotor.add(blade);
     }
     g.add(rotor);
-    g.scale.setScalar(2.2);
     g.userData.rotor = rotor;
     g.userData.vehicleStyle = "heli";
     return g;
@@ -860,7 +778,6 @@
       g.add(rg);
       rotors.push(rg);
     }
-    g.scale.setScalar(3.2);
     g.userData.rotors = rotors;
     g.userData.vehicleStyle = "drone";
     return g;
@@ -869,28 +786,27 @@
   function makeAirPadMesh(kind) {
     var g = new THREE.Group();
     g.name = kind === "drone" ? "DronePad" : "HeliPad";
-    var R = kind === "drone" ? 3.4 : 4.6;
+    var R = kind === "drone" ? 1.55 : 2.45;
     var pad = new THREE.Mesh(
       new THREE.CircleGeometry(R, 48),
       new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.85, metalness: 0.15, side: THREE.DoubleSide })
     );
     pad.rotation.x = -Math.PI / 2;
-    pad.position.y = 0.04;
+    pad.position.y = 0.03;
     g.add(pad);
     var ring = new THREE.Mesh(
       new THREE.RingGeometry(R * 0.72, R * 0.95, 48),
       new THREE.MeshBasicMaterial({ color: kind === "drone" ? 0x67e8f9 : 0xfbbf24, transparent: true, opacity: 0.85, side: THREE.DoubleSide })
     );
     ring.rotation.x = -Math.PI / 2;
-    ring.position.y = 0.1;
+    ring.position.y = 0.04;
     g.add(ring);
     var mark = labelSprite(kind === "drone" ? "D" : "H", kind === "drone" ? "#a5f3fc" : "#fde68a");
-    mark.position.set(0, 0.5, 0);
-    mark.scale.multiplyScalar(2);
+    mark.position.set(0, 0.35, 0);
+    mark.scale.multiplyScalar(1.4);
     g.add(mark);
     var lab = labelSprite(kind === "drone" ? "DRONE PAD" : "HELIPAD", kind === "drone" ? "#ecfeff" : "#fef3c7");
-    lab.position.set(0, 1.45, 0);
-    lab.scale.multiplyScalar(1.35);
+    lab.position.set(0, 1.15, 0);
     g.add(lab);
     return g;
   }
@@ -1183,7 +1099,6 @@
       });
     }
     var gar = cp.garage || { x: 700, y: 1400, w: 480, h: 520 };
-    state.occludingWalls = [];
     var gp = worldToThree(gar.x + gar.w / 2, gar.y + gar.h / 2);
     var gw = gar.w * 0.02, gd = gar.h * 0.02;
     var gFloor = new THREE.Mesh(
@@ -1197,7 +1112,7 @@
     var gMat = new THREE.MeshStandardMaterial({ color: 0x6b7280, roughness: 0.75, metalness: 0.15 });
     function gWall(wx, wz, ww, wd, wh) {
       var m = new THREE.Mesh(new THREE.BoxGeometry(ww, wh || 2.0, wd), gMat);
-      m.position.set(wx, (wh || 2.0) * 0.5, wz); m.castShadow = true; registerWallOccluder(m); scene.add(m);
+      m.position.set(wx, (wh || 2.0) * 0.5, wz); m.castShadow = true; scene.add(m);
     }
     gWall(gp.x, gp.z - gd * 0.5 + 0.1, gw, 0.2);
     gWall(gp.x - gw * 0.5 + 0.1, gp.z, 0.2, gd);
@@ -1209,9 +1124,9 @@
     var jambMat = new THREE.MeshStandardMaterial({ color: 0x374151, roughness: 0.7, metalness: 0.1 });
     // Left / right jambs flush with side walls
     var jambL = new THREE.Mesh(new THREE.BoxGeometry(jambT, 2.0, 0.22), jambMat);
-    jambL.position.set(gp.x - doorW * 0.5 - jambT * 0.5, 1.0, southZ); jambL.castShadow = true; registerWallOccluder(jambL); scene.add(jambL);
+    jambL.position.set(gp.x - doorW * 0.5 - jambT * 0.5, 1.0, southZ); jambL.castShadow = true; scene.add(jambL);
     var jambR = new THREE.Mesh(new THREE.BoxGeometry(jambT, 2.0, 0.22), jambMat);
-    jambR.position.set(gp.x + doorW * 0.5 + jambT * 0.5, 1.0, southZ); jambR.castShadow = true; registerWallOccluder(jambR); scene.add(jambR);
+    jambR.position.set(gp.x + doorW * 0.5 + jambT * 0.5, 1.0, southZ); jambR.castShadow = true; scene.add(jambR);
     var lintel = new THREE.Mesh(new THREE.BoxGeometry(doorW + jambT * 2, 0.35, 0.24), new THREE.MeshStandardMaterial({ color: 0x111827 }));
     lintel.position.set(gp.x, 1.95, southZ); scene.add(lintel);
     state.garageDoor = new THREE.Mesh(
@@ -1223,7 +1138,6 @@
     state.garageDoor.userData.h0 = 1.7;
     state.garageDoor.userData.cx = gp.x;
     state.garageDoor.userData.cz = gp.z + gd * 0.5;
-    registerWallOccluder(state.garageDoor);
     scene.add(state.garageDoor);
     state.garageOpen = 0;
     state.garageOpenLabel = labelSprite("OPEN", "#bbf7d0");
@@ -1263,7 +1177,7 @@
     var wallH = 2.2, thick = 0.18;
     function wall(wx, wz, ww, wd) {
       var m = new THREE.Mesh(new THREE.BoxGeometry(ww, wallH, wd), wallMat);
-      m.position.set(wx, wallH * 0.5, wz); m.castShadow = true; registerWallOccluder(m); scene.add(m);
+      m.position.set(wx, wallH * 0.5, wz); m.castShadow = true; scene.add(m);
     }
     // North/South (along X), East/West (along Z) — leave south gap as doorway
     wall(hp.x, hp.z - hd * 0.5 + thick * 0.5, hw, thick); // north
@@ -1747,7 +1661,7 @@
       var p = worldToThree(home.x, home.y);
       var deck = ranchGroundY(home.x, home.y);
       var padMesh = makeAirPadMesh(k.kind);
-      padMesh.position.set(p.x, deck + 0.12, p.z);
+      padMesh.position.set(p.x, deck, p.z);
       scene.add(padMesh);
       state.airPads.push({ kind: k.kind, mesh: padMesh, wx: home.x, wy: home.y });
       var craft = k.kind === "drone" ? makePassengerDroneMesh(k.accent) : makeHeliMesh(k.accent);
@@ -2964,7 +2878,7 @@ state.zLift = 0;
         state.vx = 0; state.vz = 0;
         state.walkPhase = 0;
         state.scrap += 1;
-        state.toast = "Boarding " + (C.mechStoriesLabel ? C.mechStoriesLabel(state.mechStories) : (state.mechStories + "-story mech")) + " · lumber walk!";
+        state.toast = "Boarding " + (C.mechStoriesLabel ? C.mechStoriesLabel(state.mechStories) : (state.mechStories + "-story mech")) + " · FIRE (Space / X / button)!";
         state.exitTipT = 2.4;
       } else if (id === "fishies") {
         state.toast = "Splash! Fishies & whales scatter";
@@ -3126,6 +3040,77 @@ state.zLift = 0;
     return true;
   }
 
+  /* mechgun1: story-mech omnigun — Space / X / button; permanent kill blast */
+  function fireMechGun() {
+    if (!state || !state.inMech) return false;
+    if (state.cd > 0) {
+      state.fireWantT = Math.max(state.fireWantT || 0, 0.15);
+      state.hopWantT = 0;
+      return false;
+    }
+    state.hopWantT = 0;
+    state.fireWantT = 0;
+    var cfg = (C.MECH_GUN) || { cd: 0.42, speed: 780, life: 1.7, muzzle: 2.2, blastR: 140, size: 2.8 };
+    state.cd = cfg.cd != null ? cfg.cd : 0.42;
+    var yaw = (state.faceYaw != null) ? state.faceYaw : 0;
+    var spA = Math.hypot(state.vx || 0, state.vz || 0);
+    if (spA > 1.0) yaw = Math.atan2(state.vx, state.vz);
+    var fx = Math.sin(yaw), fz = Math.cos(yaw);
+    var muzzle = cfg.muzzle != null ? (cfg.muzzle > 8 ? cfg.muzzle / 34 : cfg.muzzle) : 2.2;
+    var spd = cfg.speed != null ? (cfg.speed > 40 ? cfg.speed / 42 : cfg.speed) : 18.5;
+    var life = cfg.life != null ? cfg.life : 1.7;
+    var blastR3 = (cfg.blastR != null ? cfg.blastR : 140) * 0.02;
+    var px = state.player.position.x + fx * muzzle;
+    var py = 1.1 + (state.zLift || 0) + (state.inMech ? 1.4 : 0);
+    var pz = state.player.position.z + fz * muzzle;
+    var shellGeo = (typeof THREE.CapsuleGeometry === "function")
+      ? new THREE.CapsuleGeometry(0.26, 1.0, 6, 10)
+      : new THREE.SphereGeometry(0.32, 10, 8);
+    var mesh = new THREE.Mesh(shellGeo, new THREE.MeshBasicMaterial({ color: 0x22d3ee, transparent: true, opacity: 1 }));
+    if (typeof THREE.CapsuleGeometry === "function") {
+      mesh.rotation.z = Math.PI / 2;
+    } else {
+      mesh.scale.set(3.6, 1.2, 1.2);
+    }
+    mesh.position.set(px, py, pz);
+    mesh.rotation.y = yaw;
+    scene.add(mesh);
+    if (!state.shells) state.shells = [];
+    state.shells.push({
+      mesh: mesh,
+      vx: fx * spd,
+      vz: fz * spd,
+      life: life,
+      maxLife: life,
+      yaw: yaw,
+      blastR: blastR3,
+      hitR: 0.7,
+      size: cfg.size != null ? cfg.size : 2.8,
+      omnigun: true,
+      ownerId: state.frogId,
+      ownerMechId: state.mechId,
+    });
+    if (state.shells.length > 14) {
+      var old = state.shells.shift();
+      if (old && old.mesh && old.mesh.parent) old.mesh.parent.remove(old.mesh);
+    }
+    if (!state.fx) state.fx = [];
+    for (var zi = 0; zi < 14; zi++) {
+      var spark = new THREE.Mesh(
+        new THREE.SphereGeometry(0.09 + (zi % 3) * 0.04, 5, 4),
+        new THREE.MeshBasicMaterial({ color: zi % 2 ? 0xf472b6 : 0x67e8f9, transparent: true, opacity: 0.95 })
+      );
+      spark.position.set(px - fx * 0.15, py, pz - fz * 0.15);
+      scene.add(spark);
+      state.fx.push({ mesh: spark, life: 0.34 + zi * 0.02, rise: 1.8, vx: fx * (3.2 + zi * 0.35), vz: fz * (3.2 + zi * 0.35) });
+    }
+    state.toast = "FIRE!";
+    state.toastT = 0.9;
+    if (hooks.onToast) hooks.onToast(state.toast);
+    if (hooks.onAbilityFire) hooks.onAbilityFire(state.frogId, "FIRE");
+    return true;
+  }
+
   function spawnThreeBoom(x, y, z, power) {
     if (!state) return;
     if (!state.fx) state.fx = [];
@@ -3244,6 +3229,215 @@ state.zLift = 0;
     return 1;
   }
 
+  function mechSidOfShell(sh) {
+    if (!sh) return null;
+    if (sh.ownerMechId) return mechSidOf(sh.ownerMechId);
+    if (state && state.inMech && state.frogId === sh.ownerId) return mechSidOf(state.mechId);
+    return null;
+  }
+
+  /* mechgun1: permanent session kill in Three */
+  function blastOmnigunThree(hx, hz, radius, sh) {
+    if (!state) return 0;
+    var n = 0;
+    var R = radius != null ? radius : 2.8;
+    var ownSid = mechSidOfShell(sh);
+    var ownerId = sh && sh.ownerId;
+
+    if (state.pushables) {
+      for (var i = state.pushables.length - 1; i >= 0; i--) {
+        var pu = state.pushables[i];
+        if (!pu || pu.goneForever) continue;
+        var pt = worldToThree(pu.x, pu.y);
+        var dx = pt.x - hx, dz = pt.z - hz;
+        var d = Math.hypot(dx, dz);
+        var pr = (pu.r || 10) * 0.02;
+        if (d > R + pr) continue;
+        pu.goneForever = true;
+        pu.wrecked = true;
+        pu.wreckT = 0.9;
+        pu.respawnT = 1e12;
+        if (pu.mesh) {
+          pu.mesh.material = new THREE.MeshBasicMaterial({ color: 0xf472b6, transparent: true, opacity: 0.75 });
+          pu.mesh.scale.multiplyScalar(0.6);
+        }
+        if (pu.head) {
+          if (pu.head.parent) pu.head.parent.remove(pu.head);
+          pu.head = null;
+        }
+        n++;
+      }
+    }
+
+    if (state.mechs) {
+      for (var mi = 0; mi < state.mechs.length; mi++) {
+        var ment = state.mechs[mi];
+        if (!ment || ment.destroyed || ment.goneForever) continue;
+        if (ownSid && ment.solidId === ownSid) continue;
+        var mx = ment.group ? ment.group.position.x : ment.homeX;
+        var mz = ment.group ? ment.group.position.z : ment.homeZ;
+        /* piloted mech uses pilot world pos */
+        if (state.inMech && mechSidOf(state.mechId) === ment.solidId) {
+          mx = state.player.position.x; mz = state.player.position.z;
+        }
+        if (state.companions) {
+          for (var ci0 = 0; ci0 < state.companions.length; ci0++) {
+            var c0 = state.companions[ci0];
+            if (c0 && c0.userData.inMech && mechSidOf(c0.userData.mechId) === ment.solidId) {
+              mx = c0.position.x; mz = c0.position.z;
+            }
+          }
+        }
+        var md = Math.hypot(mx - hx, mz - hz);
+        var mr = (ment.h || 8.2) * 0.42;
+        if (md > R + mr) continue;
+        if (C.markMechDestroyed) C.markMechDestroyed(ment.solidId, { permanent: true });
+        ment.destroyed = true;
+        ment.goneForever = true;
+        ment.respawnT = 1e12;
+        if (state.inMech && mechSidOf(state.mechId) === ment.solidId) {
+          /* should not happen for ownSid — safety */
+        } else {
+          if (state.companions) {
+            for (var ci = 0; ci < state.companions.length; ci++) {
+              var c = state.companions[ci];
+              if (c && c.userData.inMech && mechSidOf(c.userData.mechId) === ment.solidId) {
+                c.userData.inMech = false; c.userData.mechId = null; c.userData.mechStories = 0;
+                c.userData.sessionDead = true;
+                c.visible = false;
+              }
+            }
+          }
+        }
+        spawnThreeBoom(mx, (ment.h || 8) * 0.45, mz, 3.0);
+        if (ment.group) {
+          ment.group.traverse(function (ch) {
+            if (ch.isMesh && ch.material) {
+              if (!ch.userData.homeMat) ch.userData.homeMat = ch.material;
+              ch.material = new THREE.MeshBasicMaterial({ color: 0xf472b6, transparent: true, opacity: 0.65 });
+            }
+          });
+          ment.wreckT = 1.1;
+        }
+        if (ment.label) ment.label.visible = false;
+        n++;
+        state.toast = "GONE · story mech!";
+        state.toastT = 1.8;
+        if (hooks.onToast) hooks.onToast(state.toast);
+      }
+    }
+
+    /* parked trucks */
+    if (state.parkedTrucks) {
+      for (var ti = 0; ti < state.parkedTrucks.length; ti++) {
+        var ptk = state.parkedTrucks[ti];
+        if (!ptk || ptk.goneForever) continue;
+        var spot = ptk.spot || {};
+        var hid = spot.id === "shared" ? "truck-shared" : "truck-" + spot.id;
+        if (C.isPermaGone && C.isPermaGone(hid)) { ptk.goneForever = true; if (ptk.mesh) ptk.mesh.visible = false; continue; }
+        var tx = ptk.mesh ? ptk.mesh.position.x : 0;
+        var tz = ptk.mesh ? ptk.mesh.position.z : 0;
+        if (state.inTruck && state.truckId === hid) {
+          tx = state.player.position.x; tz = state.player.position.z;
+        }
+        if (Math.hypot(tx - hx, tz - hz) > R + 1.2) continue;
+        if (C.markPermaGone) C.markPermaGone(hid);
+        ptk.goneForever = true;
+        if (ptk.mesh) ptk.mesh.visible = false;
+        if (ptk.label) ptk.label.visible = false;
+        if (state.inTruck && state.truckId === hid) {
+          state.inTruck = false; state.truckId = null; state.truckMode = null; state.vehicleStyle = null;
+        }
+        spawnThreeBoom(tx, 0.6, tz, 2.4);
+        n++;
+        state.toast = "GONE · vehicle!";
+        state.toastT = 1.5;
+        if (hooks.onToast) hooks.onToast(state.toast);
+      }
+    }
+
+    /* parked air */
+    if (state.parkedAir) {
+      for (var ai = 0; ai < state.parkedAir.length; ai++) {
+        var pa = state.parkedAir[ai];
+        if (!pa || pa.goneForever) continue;
+        if (C.isPermaGone && C.isPermaGone(pa.kind)) { pa.goneForever = true; if (pa.mesh) pa.mesh.visible = false; continue; }
+        var ax = pa.mesh ? pa.mesh.position.x : 0;
+        var az = pa.mesh ? pa.mesh.position.z : 0;
+        if ((state.inHeli && pa.kind === "heli") || (state.inDrone && pa.kind === "drone")) {
+          ax = state.player.position.x; az = state.player.position.z;
+        }
+        if (Math.hypot(ax - hx, az - hz) > R + 1.1) continue;
+        if (C.markPermaGone) C.markPermaGone(pa.kind);
+        pa.goneForever = true;
+        if (pa.mesh) pa.mesh.visible = false;
+        if (pa.kind === "heli" && state.inHeli) { state.inHeli = false; }
+        if (pa.kind === "drone" && state.inDrone) { state.inDrone = false; }
+        spawnThreeBoom(ax, 0.8, az, 2.5);
+        n++;
+        state.toast = "GONE · " + pa.kind + "!";
+        state.toastT = 1.5;
+        if (hooks.onToast) hooks.onToast(state.toast);
+      }
+    }
+
+    /* submarine */
+    if (state.parkedSub && !state.parkedSub.userData.goneForever) {
+      if (!(C.isPermaGone && C.isPermaGone("submarine"))) {
+        var sx = state.parkedSub.position.x, sz = state.parkedSub.position.z;
+        if (state.inSub) { sx = state.player.position.x; sz = state.player.position.z; }
+        if (Math.hypot(sx - hx, sz - hz) <= R + 1.3) {
+          if (C.markPermaGone) C.markPermaGone("submarine");
+          state.parkedSub.userData.goneForever = true;
+          state.parkedSub.visible = false;
+          if (state.inSub) { state.inSub = false; state.subId = null; state.vehicleStyle = null; }
+          spawnThreeBoom(sx, 0.5, sz, 2.3);
+          n++;
+        }
+      }
+    }
+
+    /* companion froggies */
+    if (state.companions) {
+      for (var cgi = 0; cgi < state.companions.length; cgi++) {
+        var cg = state.companions[cgi];
+        if (!cg || cg.userData.sessionDead) continue;
+        if (cg.userData.frogId === ownerId) continue;
+        if (cg.userData.inMech && ownSid && mechSidOf(cg.userData.mechId) === ownSid) continue;
+        var cdx = cg.position.x - hx, cdz = cg.position.z - hz;
+        if (cdx * cdx + cdz * cdz > (R + 0.6) * (R + 0.6)) continue;
+        cg.userData.sessionDead = true;
+        cg.userData.inMech = false; cg.userData.inTruck = false;
+        cg.userData.inHeli = false; cg.userData.inDrone = false; cg.userData.inSub = false;
+        cg.visible = false;
+        spawnThreeBoom(cg.position.x, 0.5, cg.position.z, 1.8);
+        n++;
+        state.toast = "GONE · " + (cg.userData.name || cg.userData.frogId || "froggy") + "!";
+        state.toastT = 1.4;
+        if (hooks.onToast) hooks.onToast(state.toast);
+      }
+    }
+
+    /* soft-handle: if blast hits local player avatar while NOT the shooter (e.g. companion view) — rare */
+    if (state.frogId !== ownerId && !state.sessionDead && state.player) {
+      var pdx = state.player.position.x - hx, pdz = state.player.position.z - hz;
+      if (pdx * pdx + pdz * pdz <= (R + 0.55) * (R + 0.55)) {
+        if (!(state.inMech && ownSid && mechSidOf(state.mechId) === ownSid)) {
+          state.sessionDead = true;
+          state.inTruck = false; state.inMech = false; state.inSub = false;
+          state.inHeli = false; state.inDrone = false;
+          if (state.player) state.player.visible = false;
+          n++;
+          state.toast = "OUT · session";
+          state.toastT = 2.2;
+          if (hooks.onToast) hooks.onToast(state.toast);
+        }
+      }
+    }
+
+    return n;
+  }
+
   function tickTankShells(dt) {
     if (!state || !state.shells) return;
     for (var i = state.shells.length - 1; i >= 0; i--) {
@@ -3257,26 +3451,86 @@ state.zLift = 0;
         if (sh.mesh.material && sh.mesh.material.transparent !== true) {
           sh.mesh.material.transparent = true;
         }
-        /* collide with pushables (toys/animals) + Rexy 1000-mech only */
-        if (state.pushables) {
-          for (var pi = 0; pi < state.pushables.length && !hit; pi++) {
-            var pu = state.pushables[pi];
-            if (!pu || pu.wrecked) continue;
-            var pt = worldToThree(pu.x, pu.y);
-            var dx = pt.x - sh.mesh.position.x, dz = pt.z - sh.mesh.position.z;
-            var rr = (sh.hitR || 0.55) + (pu.r || 10) * 0.02;
-            if (dx * dx + dz * dz < rr * rr) hit = true;
+        /* collide: tank = props + Rexy 1000; omnigun = everything (not own mech) */
+        if (sh.omnigun) {
+          var ownSidH = mechSidOfShell(sh);
+          if (state.pushables) {
+            for (var pi = 0; pi < state.pushables.length && !hit; pi++) {
+              var pu = state.pushables[pi];
+              if (!pu || pu.wrecked || pu.goneForever) continue;
+              var pt = worldToThree(pu.x, pu.y);
+              var dx = pt.x - sh.mesh.position.x, dz = pt.z - sh.mesh.position.z;
+              var rr = (sh.hitR || 0.7) + (pu.r || 10) * 0.02;
+              if (dx * dx + dz * dz < rr * rr) hit = true;
+            }
           }
-        }
-        if (!hit && state.mechs && !(C.isMechDestroyed && C.isMechDestroyed("mech1000"))) {
-          for (var mci = 0; mci < state.mechs.length && !hit; mci++) {
-            var mentH = state.mechs[mci];
-            if (!mentH || mentH.solidId !== "mech1000" || mentH.destroyed) continue;
-            var mxh = mentH.group ? mentH.group.position.x : mentH.homeX;
-            var mzh = mentH.group ? mentH.group.position.z : mentH.homeZ;
-            var mrr = (sh.hitR || 0.55) + (mentH.h || 8.2) * 0.42;
-            var mdx = mxh - sh.mesh.position.x, mdz = mzh - sh.mesh.position.z;
-            if (mdx * mdx + mdz * mdz < mrr * mrr) hit = true;
+          if (!hit && state.mechs) {
+            for (var mci = 0; mci < state.mechs.length && !hit; mci++) {
+              var mentH = state.mechs[mci];
+              if (!mentH || mentH.destroyed || mentH.goneForever) continue;
+              if (ownSidH && mentH.solidId === ownSidH) continue;
+              var mxh = mentH.group ? mentH.group.position.x : mentH.homeX;
+              var mzh = mentH.group ? mentH.group.position.z : mentH.homeZ;
+              var mrr = (sh.hitR || 0.7) + (mentH.h || 8.2) * 0.42;
+              var mdx = mxh - sh.mesh.position.x, mdz = mzh - sh.mesh.position.z;
+              if (mdx * mdx + mdz * mdz < mrr * mrr) hit = true;
+            }
+          }
+          if (!hit && state.parkedTrucks) {
+            for (var pti = 0; pti < state.parkedTrucks.length && !hit; pti++) {
+              var ptk = state.parkedTrucks[pti];
+              if (!ptk || ptk.goneForever || !ptk.mesh || !ptk.mesh.visible) continue;
+              var tdx = ptk.mesh.position.x - sh.mesh.position.x, tdz = ptk.mesh.position.z - sh.mesh.position.z;
+              if (tdx * tdx + tdz * tdz < (sh.hitR || 0.7) + 1.0) hit = true;
+            }
+          }
+          if (!hit && state.parkedAir) {
+            for (var pai = 0; pai < state.parkedAir.length && !hit; pai++) {
+              var pa = state.parkedAir[pai];
+              if (!pa || pa.goneForever || !pa.mesh || !pa.mesh.visible) continue;
+              var adx = pa.mesh.position.x - sh.mesh.position.x, adz = pa.mesh.position.z - sh.mesh.position.z;
+              if (adx * adx + adz * adz < (sh.hitR || 0.7) + 1.0) hit = true;
+            }
+          }
+          /* driven truck / flying craft at player */
+          if (!hit && state.inTruck && state.frogId !== sh.ownerId) {
+            var dtx = state.player.position.x - sh.mesh.position.x, dtz = state.player.position.z - sh.mesh.position.z;
+            if (dtx * dtx + dtz * dtz < ((sh.hitR || 0.7) + 1.1) * ((sh.hitR || 0.7) + 1.1)) hit = true;
+          }
+          if (!hit && (state.inHeli || state.inDrone) && state.frogId !== sh.ownerId) {
+            var fax = state.player.position.x - sh.mesh.position.x, faz = state.player.position.z - sh.mesh.position.z;
+            if (fax * fax + faz * faz < ((sh.hitR || 0.7) + 1.0) * ((sh.hitR || 0.7) + 1.0)) hit = true;
+          }
+          if (!hit && state.companions) {
+            for (var cgi = 0; cgi < state.companions.length && !hit; cgi++) {
+              var cg = state.companions[cgi];
+              if (!cg || !cg.visible || cg.userData.sessionDead) continue;
+              if (cg.userData.frogId === sh.ownerId) continue;
+              var cdx = cg.position.x - sh.mesh.position.x, cdz = cg.position.z - sh.mesh.position.z;
+              if (cdx * cdx + cdz * cdz < (sh.hitR || 0.7) + 0.55) hit = true;
+            }
+          }
+        } else {
+          if (state.pushables) {
+            for (var pi2 = 0; pi2 < state.pushables.length && !hit; pi2++) {
+              var pu2 = state.pushables[pi2];
+              if (!pu2 || pu2.wrecked || pu2.goneForever) continue;
+              var pt2 = worldToThree(pu2.x, pu2.y);
+              var dx2 = pt2.x - sh.mesh.position.x, dz2 = pt2.z - sh.mesh.position.z;
+              var rr2 = (sh.hitR || 0.55) + (pu2.r || 10) * 0.02;
+              if (dx2 * dx2 + dz2 * dz2 < rr2 * rr2) hit = true;
+            }
+          }
+          if (!hit && state.mechs && !(C.isMechDestroyed && C.isMechDestroyed("mech1000"))) {
+            for (var mci2 = 0; mci2 < state.mechs.length && !hit; mci2++) {
+              var mentH2 = state.mechs[mci2];
+              if (!mentH2 || mentH2.solidId !== "mech1000" || mentH2.destroyed) continue;
+              var mxh2 = mentH2.group ? mentH2.group.position.x : mentH2.homeX;
+              var mzh2 = mentH2.group ? mentH2.group.position.z : mentH2.homeZ;
+              var mrr2 = (sh.hitR || 0.55) + (mentH2.h || 8.2) * 0.42;
+              var mdx2 = mxh2 - sh.mesh.position.x, mdz2 = mzh2 - sh.mesh.position.z;
+              if (mdx2 * mdx2 + mdz2 * mdz2 < mrr2 * mrr2) hit = true;
+            }
           }
         }
       }
@@ -3285,11 +3539,21 @@ state.zLift = 0;
         var by = sh.mesh ? sh.mesh.position.y : 0.5;
         var bz = sh.mesh ? sh.mesh.position.z : 0;
         if (hit || sh.life <= 0) {
-          blastWreckThree(bx, bz, sh.blastR != null ? sh.blastR : 2.4);
-          spawnThreeBoom(bx, by, bz, sh.size != null ? sh.size * 0.5 : 1.2);
-          state.toast = "BOOM!";
-          state.toastT = 0.7;
-          if (hooks.onToast) hooks.onToast(state.toast);
+          if (sh.omnigun) {
+            blastOmnigunThree(bx, bz, sh.blastR != null ? sh.blastR : 2.8, sh);
+            spawnThreeBoom(bx, by, bz, sh.size != null ? sh.size * 0.65 : 1.6);
+            if (!state.toast || state.toastT <= 0) {
+              state.toast = "BOOM!";
+              state.toastT = 0.7;
+              if (hooks.onToast) hooks.onToast(state.toast);
+            }
+          } else {
+            blastWreckThree(bx, bz, sh.blastR != null ? sh.blastR : 2.4);
+            spawnThreeBoom(bx, by, bz, sh.size != null ? sh.size * 0.5 : 1.2);
+            state.toast = "BOOM!";
+            state.toastT = 0.7;
+            if (hooks.onToast) hooks.onToast(state.toast);
+          }
         }
         if (sh.mesh && sh.mesh.parent) sh.mesh.parent.remove(sh.mesh);
         state.shells.splice(i, 1);
@@ -3313,6 +3577,10 @@ state.zLift = 0;
         } else if (wp.mesh) {
           wp.mesh.visible = false;
           if (wp.head) wp.head.visible = false;
+        }
+        if (wp.goneForever) {
+          if ((wp.wreckT || 0) <= 0 && wp.mesh) wp.mesh.visible = false;
+          continue; /* mechgun1: permanent */
         }
         wp.respawnT = (wp.respawnT != null ? wp.respawnT : 7) - dt;
         if (wp.respawnT <= 0) {
@@ -3361,10 +3629,11 @@ state.zLift = 0;
     }
     if (C.tickMechRespawn) {
       var revived3 = C.tickMechRespawn(dt);
-      if (revived3 && revived3.indexOf("mech1000") >= 0) {
+      if (revived3 && revived3.length) {
         for (var rmi = 0; rmi < (state.mechs || []).length; rmi++) {
           var rm = state.mechs[rmi];
-          if (!rm || rm.solidId !== "mech1000") continue;
+          if (!rm || revived3.indexOf(rm.solidId) < 0) continue;
+          if (rm.goneForever || (C.isPermaGone && C.isPermaGone(rm.solidId))) continue;
           rm.destroyed = false;
           rm.wreckT = 0;
           rm.respawnT = 0;
@@ -3389,7 +3658,7 @@ state.zLift = 0;
             });
           }
           if (rm.label) rm.label.visible = true;
-          state.toast = "Rexy 1000-story mech is back!";
+          state.toast = (rm.solidId === "mech1000" ? "Rexy 1000-story mech is back!" : "Mech is back!");
           state.toastT = 2.0;
           if (hooks.onToast) hooks.onToast(state.toast);
         }
@@ -3425,8 +3694,8 @@ state.zLift = 0;
       abilityPadIndex = null;
       return;
     }
+    /* mechgun1: story-mech omnigun FIRE (replaces hop while piloting) */
     if (state.inMech) {
-      /* ctrl1: only pilot / primary HUD may hop the mech — real jump, not toast-only stomp */
       var pilot = state.mechPilotPadIndex;
       if (abilityPadIndex != null && pilot != null && abilityPadIndex !== pilot) {
         abilityPadIndex = null;
@@ -3436,7 +3705,10 @@ state.zLift = 0;
         abilityPadIndex = null;
         return;
       }
-      /* fall through to shared hop impulse below */
+      state.hopWantT = 0;
+      fireMechGun();
+      abilityPadIndex = null;
+      return;
     }
     /* ctrl1: buffer if short CD still ticking (do NOT silent-return — that ate X) */
     if (state.cd > 0) {
@@ -3718,7 +3990,7 @@ state.zLift = 0;
         if (state.driveAir) {
           state.driveAir.visible = true;
           state.driveAir.position.set(tpF.x, state.zLift, tpF.z);
-          if (craftF.faceAngle != null) state.driveAir.rotation.y = -craftF.faceAngle;
+          if (craftF.faceAngle != null) state.driveAir.rotation.y = -craftF.faceAngle + Math.PI / 2;
           if (state.driveAir.userData.rotor) state.driveAir.userData.rotor.rotation.y = craftF.rotor || 0;
           if (state.driveAir.userData.rotors) {
             for (var ri = 0; ri < state.driveAir.userData.rotors.length; ri++) {
@@ -3917,13 +4189,8 @@ state.zLift = 0;
       /* polish9 + truck1: air hang + land bounce; hop2: snappier foot gravity */
       airL = (state.zLift || 0) - groundLift;
       var gFall = state.inTruck ? 14 : 22;
-      if (state.wallClimbing && !state.inTruck && !state.inMech) {
-        var climbTop3 = (state.groundLift || 0) + (C.WALL_CLIMB_HEIGHT || 160) * 0.02;
-        var climbSpeed3 = (C.WALL_CLIMB_SPEED || 150) * 0.02;
-        state.zLift = Math.min(climbTop3, Math.max(state.zLift || 0, state.groundLift || 0) + climbSpeed3 * dt);
-        state.zVel = state.zLift < climbTop3 ? climbSpeed3 : 0;
-        state.wallClimbPhase = (state.wallClimbPhase || 0) + dt * 12;
-      } else if (airL > 0.02 || (state.zVel || 0) !== 0) {
+      if (state.inTruck && airL > 0.55 && Math.abs(state.zVel || 0) < 2.2) gFall *= 0.38;
+      if (airL > 0.02 || (state.zVel || 0) !== 0) {
         state.zVel = (state.zVel || 0) - gFall * dt;
         state.zLift = (state.zLift || 0) + state.zVel * dt;
         if (state.zLift <= groundLift) {
@@ -4301,12 +4568,8 @@ state.zLift = 0;
           var sx = 1 - Math.min(0.26, airH * 0.26) - st3 * 0.12 + sq * 0.34;
           state.player.scale.set(sx, sy, sx);
           /* hop4: legs spring out mid-air, tuck on land */
-          if (state.wallClimbing) setFrogClimb(state.player, state.wallClimbPhase, true);
-          else {
-            setFrogClimb(state.player, 0, false);
-            setFrogSpring(state.player, Math.min(1.15, airH * 1.1 + st3 * 0.5 - sq * 0.7));
-          }
-          if (C.tickLocoHop && !state.wallClimbing) {
+          setFrogSpring(state.player, Math.min(1.15, airH * 1.1 + st3 * 0.5 - sq * 0.7));
+          if (C.tickLocoHop) {
             state.groundLift = state.groundLift || 0;
             var launched3 = C.tickLocoHop(state, dt, {
               moving: wantMove3,
@@ -4376,12 +4639,6 @@ state.zLift = 0;
       if (state.inMech && C.mechSolidId) ignoreMech = C.mechSolidId(state.mechId);
       else if (state.inMech && state.mechId) ignoreMech = String(state.mechId).replace(/^mech-/, "mech");
       var airH3 = Math.max(0, (state.zLift || 0) - (state.groundLift || 0));
-      var canClimb3 = !state.inTruck && !state.inMech && !state.inSub && !state.inSwim;
-      var wall3 = canClimb3 && C.wallContact && (state.wallClimbing || airH3 / 0.02 < 28)
-        ? C.wallContact(wHit.x, wHit.y, 44, { garageOpen: state.garageOpen || 0 }, hopMx, hopMz)
-        : null;
-      state.wallClimbing = !!wall3;
-      if (state.wallClimbing) state.wallClimbPhase = (state.wallClimbPhase || 0) + dt * 12;
       var solidOpts = {
         garageOpen: state.garageOpen || 0,
         inTruck: !!state.inTruck,
@@ -4391,7 +4648,7 @@ state.zLift = 0;
         ignoreMechId: ignoreMech,
         softPond: !state.inTruck && !state.inMech && !state.inSwim && !state.inSub,
         airHeight: airH3 / 0.02, /* three→world-ish units for canon clear threshold */
-        airClearHeight: state.wallClimbing ? ((C.WALL_CLIMB_HEIGHT || 160) - 1) : state.inMech ? 22 : 28,
+        airClearHeight: state.inMech ? 22 : 28,
       };
       var resolved = C.resolveSolid(wHit.x, wHit.y, radW, solidOpts);
       if (resolved.hit) {
@@ -4526,7 +4783,6 @@ state.zLift = 0;
       }
     }
     camera.lookAt(wantLookX, wantLookY, wantLookZ);
-    if (state.mode === "ranch") updateWallOcclusion();
     /* polish6: depth shadow under player */
     if (state.playerShadow) {
       var shS = state.inTruck ? 1.7 : 1;
@@ -4833,9 +5089,9 @@ state.zLift = 0;
       wantAbility = false;
       doAbility();
     }
-    /* mech4: buffered FIRE while tank (separate from hop buffer) */
-    if (state.inTruck && state.vehicleStyle === "tank") {
-      state.hopWantT = 0; /* hop must never consume ability while tank */
+    /* mech4/mechgun1: buffered FIRE while tank OR story mech (never hop) */
+    if ((state.inTruck && state.vehicleStyle === "tank") || state.inMech) {
+      state.hopWantT = 0; /* hop must never consume ability while firing */
       if ((state.fireWantT || 0) > 0) {
         state.fireWantT = Math.max(0, state.fireWantT - dt);
         if (state.cd <= 0) {
@@ -4875,7 +5131,11 @@ state.zLift = 0;
               ? global.FroggiesAir.flyingTip(global.FroggiesAir.ensureCraft(state.airWorld || { air: null }, state.inDrone ? "drone" : "heli"), state.inDrone ? "drone" : "heli")
               : "land + INTERACT to hop out"))
           : (state.inTruck || state.inMech || state.inSub)
-          ? (state.toastT > 0 ? state.toast : ((state.exitTipT || 0) > 0 ? "EXIT · INTERACT / E" : (state.inSub ? "🛸 Diving · EXIT · INTERACT / E" : (state.inTruck && state.vehicleStyle === "tank" ? "FIRE · Space / X / button · EXIT INTERACT" : ""))))
+          ? (state.toastT > 0 ? state.toast : ((state.exitTipT || 0) > 0 ? "EXIT · INTERACT / E" : (state.inSub ? "🛸 Diving · EXIT · INTERACT / E" : (
+              (state.inTruck && state.vehicleStyle === "tank") || state.inMech
+                ? ((C.mechGunTip && state.inMech) ? C.mechGunTip() : "FIRE · Space / X / button · EXIT INTERACT")
+                : ""
+            ))))
           : (state.toastT > 0 ? state.toast : state.inOrbit ? "Orbit locked · Escape or hard thruster" : state.near ? (
             (C.isMechHotspot && C.isMechHotspot(state.near) && C.canBoardMech && !C.canBoardMech(state.frogId, state.near))
               ? ((C.mechDeniedTip ? C.mechDeniedTip(state.frogId, state.near) : state.near.tip) + " · INTERACT")
@@ -4891,7 +5151,7 @@ state.zLift = 0;
         inHeli: !!state.inHeli,
         inDrone: !!state.inDrone,
         near: (state.inTruck || state.inMech || state.inSub || state.inHeli || state.inDrone) ? true : state.near,
-        ability: (state.inTruck && state.vehicleStyle === "tank") ? "FIRE" : ((state.inHeli || state.inDrone) ? "CLIMB" : "HOP"),
+        ability: ((state.inTruck && state.vehicleStyle === "tank") || state.inMech) ? "FIRE" : ((state.inHeli || state.inDrone) ? "CLIMB" : "HOP"),
         cd: state.cd,
         walk: (function () {
           if (state.mode === "space") return state.inOrbit ? "🌍 Orbit" : "🚀 Space";

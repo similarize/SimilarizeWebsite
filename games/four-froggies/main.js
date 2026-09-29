@@ -400,7 +400,9 @@
     const me = localPlayer();
     const hudBoarded = hudBoardedFrog() || (me && (me.inTruck || me.inMech || me.inSub || me.inHeli || me.inDrone) && frogOwnedByInput(me, { source: "hud" }) ? me : null);
     if (livesEl) {
-      if (phase === "space" && spaceEp && spaceEp.inOrbit) {
+      if (me && me.sessionDead) {
+        livesEl.textContent = "💥 Out (session)";
+      } else if (phase === "space" && spaceEp && spaceEp.inOrbit) {
         livesEl.textContent = "🌍 Orbit";
       } else if (hudBoarded && hudBoarded.inMech) {
         livesEl.textContent = "🤖 Mech · " + (hudBoarded.mechStories || "?") + "-story";
@@ -495,6 +497,10 @@
           tipEl.textContent = "🛸 Diving · EXIT · INTERACT / E";
         else if (hudBoarded.inTruck && globalThis.FroggiesCanon && globalThis.FroggiesCanon.isTankVehicle && globalThis.FroggiesCanon.isTankVehicle(hudBoarded))
           tipEl.textContent = "FIRE · Space / X / button · EXIT INTERACT";
+        else if (hudBoarded.inMech)
+          tipEl.textContent = (globalThis.FroggiesCanon && globalThis.FroggiesCanon.mechGunTip)
+            ? globalThis.FroggiesCanon.mechGunTip()
+            : "FIRE · Space / X / button · EXIT INTERACT";
         else tipEl.textContent = "";
       } else if (storyToastT > 0) tipEl.textContent = storyToast;
       else if (nearHot && (nearHot.kind === "heli" || nearHot.kind === "drone" || nearHot.id === "heli" || nearHot.id === "drone")) {
@@ -578,8 +584,9 @@
     const def = FROG_DEFS[me.id];
     const Cabil = globalThis.FroggiesCanon;
     const tankFire = !!(me.inTruck && Cabil && Cabil.isTankVehicle && Cabil.isTankVehicle(me));
+    const mechFire = !!(me.inMech && !(me.sessionDead));
     const flying = !!(me.inHeli || me.inDrone);
-    const label = tankFire ? "FIRE" : flying ? "CLIMB" : def.ability;
+    const label = tankFire || mechFire ? "FIRE" : flying ? "CLIMB" : def.ability;
     /* hop3: sub-second anti-tap CD — do not flash a fake "1s" */
     btnAbility.textContent = me.cd > 0.25 ? label + " " + Math.ceil(me.cd) + "s" : label;
     btnAbility.classList.toggle("ready", me.cd <= 0);
@@ -603,12 +610,17 @@
   }
 
   function requestAbility(frog, opts) {
-    if (!frog) return;
+    if (!frog || frog.sessionDead) return;
     const Cbuf = globalThis.FroggiesCanon;
     /* ctrl1: if on short CD, buffer ~150ms so flaky/early X still fires */
     if (frog.cd > 0) {
-      /* mech4: while tank, buffer a FIRE retry — never a hop */
+      /* mech4: while tank, buffer a FIRE retry — never a hop
+         mechgun1: same buffer while piloting story mech */
       if (frog.inTruck && Cbuf && Cbuf.isTankVehicle && Cbuf.isTankVehicle(frog)) {
+        frog.hopWantT = Math.max(frog.hopWantT || 0, 0.15);
+        return;
+      }
+      if (frog.inMech) {
         frog.hopWantT = Math.max(frog.hopWantT || 0, 0.15);
         return;
       }
@@ -642,6 +654,31 @@
       frog.cd = 0.08;
       flashAbilityButton(frog.id);
       beep(520, 0.05, "triangle", 0.04);
+      updateAbilityButton();
+      return;
+    }
+    /* mechgun1: Story-mech omnigun FIRE — Space / X / ability / FIRE (never hop). */
+    if (frog.inMech && !frog.sessionDead) {
+      frog.hopWantT = 0;
+      const cfgM = (Ctank && Ctank.MECH_GUN) || { cd: 0.42 };
+      frog.cd = cfgM.cd != null ? cfgM.cd : 0.42;
+      if (btnAbility) {
+        btnAbility.classList.remove("fire-dash", "fire-shield", "fire-zap", "fire-bot", "fire-zoom", "fire-hop", "fire-fire");
+        void btnAbility.offsetWidth;
+        btnAbility.classList.add("fire-fire", "ability-fired");
+        setTimeout(function () {
+          btnAbility.classList.remove("fire-fire", "ability-fired");
+        }, 480);
+      }
+      beep(220, 0.05, "sawtooth", 0.06);
+      beep(110, 0.07, "square", 0.05);
+      const angM = (frog.faceAngle != null && isFinite(frog.faceAngle))
+        ? frog.faceAngle
+        : (frog.facing >= 0 ? 0 : Math.PI);
+      if (world && W.spawnMechGunShell) W.spawnMechGunShell(world, frog.x, frog.y, angM, frog.id, frog.mechId);
+      shakeT = 0.12;
+      storyToast = "FIRE!";
+      storyToastT = 0.9;
       updateAbilityButton();
       return;
     }
@@ -955,7 +992,9 @@
       }
       if (me.inMech && !wasMech) {
         const bandLabel = (Cown2 && Cown2.mechStoriesLabel) ? Cown2.mechStoriesLabel(me.mechStories) : ((me.mechStories || "") + "-story mech");
-        storyToast = "Boarding " + bandLabel + " · walk like a robot!";
+        storyToast = (Cown2 && Cown2.mechGunDrivingTip)
+          ? ("Boarding " + bandLabel + " · " + Cown2.mechGunDrivingTip())
+          : ("Boarding " + bandLabel + " · FIRE (Space / X / button) · walk like a robot!");
         beep(160, 0.1, "sawtooth", 0.04);
         exitTipT = 2.4;
       } else if (!me.inMech) {
@@ -1262,6 +1301,11 @@
 
     const me = localPlayer();
     for (const f of frogs) {
+      if (f.sessionDead) {
+        f.steerX = 0; f.steerY = 0; f.vx = 0; f.vy = 0;
+        f.throttle = 0; f.brake = 0;
+        continue; /* mechgun1: soft-removed for session */
+      }
       if (f.local) {
         let es;
         if (f.padIndex != null && window.SimilarizeGamepad) {

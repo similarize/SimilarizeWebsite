@@ -36,6 +36,7 @@
    mech7: swim POSE (stroke + flat body, no hop); single docked sub hull (no clone).
    mech8: (Three) Rexy 1000-mech respawn restores full mesh after tank blast.
    air1: helipad H + heli (4 seats) + drone pad D + passenger drone (1–2) · fly over ranch.
+   mechgun1: story-mech omnigun FIRE — permanent session kill of hit targets (not tank).
    ~10× map: real roam between ranch house / track / pond / Starship.
    James ranch house: big house, backyard (animals), huge garage (toys + 10/100-story mechs);
    1000-story + trillion-story mechs sit out back (won't fit). Four Cybertrucks + shared pile-in.
@@ -593,6 +594,9 @@
     var bestFreeD = maxR || 80;
     for (var i = 0; i < world.hotspots.length; i++) {
       var h = world.hotspots[i];
+      var CgoneH = global.FroggiesCanon;
+      if (h && h.id && CgoneH && CgoneH.isPermaGone && CgoneH.isPermaGone(h.id)) continue;
+      if (h && CgoneH && CgoneH.isMechHotspot && CgoneH.isMechHotspot(h) && CgoneH.isMechDestroyed && CgoneH.isMechDestroyed(h)) continue;
       var d = Math.hypot(h.x - x, h.y - y);
       var reach = Math.max(bestD, (h.r || 60) + 12);
       if (d >= reach) continue;
@@ -702,6 +706,41 @@
     return shell;
   }
 
+  /* mechgun1: story-mech omnigun shell — permanent kill blast on impact */
+  function spawnMechGunShell(world, x, y, faceAngle, ownerId, ownerMechId) {
+    if (!world) return null;
+    if (!world.shells) world.shells = [];
+    var C = global.FroggiesCanon;
+    var cfg = (C && C.MECH_GUN) || { speed: 780, life: 1.7, muzzle: 64, hitR: 42, blastR: 140, size: 2.8 };
+    var ang = (faceAngle != null && isFinite(faceAngle)) ? faceAngle : 0;
+    var cx = Math.cos(ang), cy = Math.sin(ang);
+    var muzzle = cfg.muzzle != null ? cfg.muzzle : 64;
+    var spd = cfg.speed != null ? cfg.speed : 780;
+    var life = cfg.life != null ? cfg.life : 1.7;
+    var shell = {
+      x: x + cx * muzzle,
+      y: y + cy * muzzle,
+      vx: cx * spd,
+      vy: cy * spd,
+      ang: ang,
+      life: life,
+      maxLife: life,
+      ownerId: ownerId || null,
+      ownerMechId: ownerMechId || null,
+      r: cfg.hitR != null ? cfg.hitR : 42,
+      blastR: cfg.blastR != null ? cfg.blastR : 140,
+      blastForce: cfg.blastForce != null ? cfg.blastForce : 640,
+      size: cfg.size != null ? cfg.size : 2.8,
+      big: true,
+      omnigun: true,
+    };
+    world.shells.push(shell);
+    if (world.shells.length > 18) world.shells.splice(0, world.shells.length - 18);
+    spawnSparks(world, shell.x, shell.y, 18);
+    spawnDust(world, x - cx * 10, y - cy * 10, 8);
+    return shell;
+  }
+
   function spawnBoom(world, x, y, power) {
     if (!world) return;
     if (!world.booms) world.booms = [];
@@ -796,6 +835,285 @@
     return dx * dx + dy * dy < rr * rr;
   }
 
+  function ownerMechSolidId(sh, frogs) {
+    var C = global.FroggiesCanon;
+    if (sh && sh.ownerMechId && C && C.mechSolidId) return C.mechSolidId(sh.ownerMechId);
+    if (sh && sh.ownerMechId) return String(sh.ownerMechId).replace(/^mech-/, "mech");
+    if (!frogs || !sh || !sh.ownerId) return null;
+    for (var i = 0; i < frogs.length; i++) {
+      var f = frogs[i];
+      if (f && f.id === sh.ownerId && f.inMech) {
+        return C && C.mechSolidId ? C.mechSolidId(f.mechId) : String(f.mechId || "").replace(/^mech-/, "mech");
+      }
+    }
+    return null;
+  }
+
+  /* mechgun1: permanent session kill — everything in blast except shooter + own mech */
+  function blastOmnigunKill(world, x, y, radius, force, frogs, sh) {
+    if (!world) return 0;
+    var R = radius != null ? radius : 140;
+    var F = force != null ? force : 640;
+    var hitN = 0;
+    var C = global.FroggiesCanon;
+    var ownerId = sh && sh.ownerId;
+    var ownSid = ownerMechSolidId(sh, frogs || world._frogsRef);
+    frogs = frogs || world._frogsRef || [];
+
+    function inBlast(px, py, pr) {
+      var dx = px - x, dy = py - y;
+      return Math.hypot(dx, dy) <= R + (pr || 0);
+    }
+
+    function wreckForever(prop) {
+      if (!prop || prop.goneForever) return false;
+      if (prop.homeX == null) { prop.homeX = prop.x; prop.homeY = prop.y; prop.homeR = prop.r || 10; prop.homeSize = prop.size; }
+      var dx = prop.x - x, dy = prop.y - y;
+      var d = Math.hypot(dx, dy) || 0.1;
+      prop.vx = (prop.vx || 0) + (dx / d) * F * 0.7;
+      prop.vy = (prop.vy || 0) + (dy / d) * F * 0.7;
+      prop.wrecked = true;
+      prop.goneForever = true;
+      prop.wreckT = 1.0 + Math.random() * 0.5;
+      prop.respawnT = 1e12;
+      prop.spin = (Math.random() - 0.5) * 16;
+      prop.r = Math.max(3, (prop.r || 10) * 0.55);
+      return true;
+    }
+
+    function killList(arr) {
+      if (!arr) return;
+      for (var i = 0; i < arr.length; i++) {
+        var prop = arr[i];
+        if (!prop || prop.goneForever) continue;
+        if (!inBlast(prop.x, prop.y, prop.r || 10)) continue;
+        if (wreckForever(prop)) hitN++;
+      }
+    }
+    killList(world.toys);
+    killList(world.animals);
+
+    /* other story mechs (not shooter's) */
+    var mechDefs = [
+      { sid: "mech10", home: (C && C.COMPOUND && C.COMPOUND.mech10) || { x: 820, y: 1680 }, r: 64 },
+      { sid: "mech100", home: (C && C.COMPOUND && C.COMPOUND.mech100) || { x: 980, y: 1700 }, r: 78 },
+      { sid: "mech1000", home: (C && C.COMPOUND && C.COMPOUND.mech1000) || { x: 340, y: 2420 }, r: 95 },
+      { sid: "mechTrillion", home: (C && C.COMPOUND && C.COMPOUND.mechTrillion) || { x: 600, y: 2170 }, r: 125 },
+    ];
+    for (var mi = 0; mi < mechDefs.length; mi++) {
+      var md = mechDefs[mi];
+      if (ownSid && md.sid === ownSid) continue;
+      if (C && C.isMechDestroyed && C.isMechDestroyed(md.sid)) continue;
+      var mp = C && C.vehiclePos ? C.vehiclePos(md.sid, md.home.x, md.home.y) : md.home;
+      /* if piloted, use pilot position */
+      for (var fi = 0; fi < frogs.length; fi++) {
+        var pf = frogs[fi];
+        if (!pf || !pf.inMech) continue;
+        var psid = C && C.mechSolidId ? C.mechSolidId(pf.mechId) : String(pf.mechId || "").replace(/^mech-/, "mech");
+        if (psid === md.sid) { mp = { x: pf.x, y: pf.y }; break; }
+      }
+      if (!inBlast(mp.x, mp.y, md.r)) continue;
+      if (C && C.markMechDestroyed && C.markMechDestroyed(md.sid, { permanent: true })) {
+        hitN++;
+        ejectPilotsFromMech(frogs, md.sid);
+        spawnBoom(world, mp.x, mp.y, 3.4);
+        spawnSparks(world, mp.x, mp.y, 30);
+        world._mechBoomToast = "GONE · story mech!";
+      }
+    }
+
+    /* trucks / ripsaw / tank (parked or driven) */
+    var truckSpots = (C && C.TRUCK_SPOTS) || TRUCK_SPOTS || [];
+    for (var ti = 0; ti < truckSpots.length; ti++) {
+      var spot = truckSpots[ti];
+      var hid = spot.id === "shared" ? "truck-shared" : (String(spot.id).indexOf("truck") === 0 ? spot.id : "truck-" + spot.id);
+      if (C && C.isPermaGone && C.isPermaGone(hid)) continue;
+      var tp = C && C.vehiclePos ? C.vehiclePos(hid, spot.x, spot.y) : { x: spot.x, y: spot.y };
+      var driven = null;
+      for (var tfi = 0; tfi < frogs.length; tfi++) {
+        var tf = frogs[tfi];
+        if (tf && tf.inTruck && (tf.truckId === hid || (spot.id === "shared" && tf.truckMode === "shared"))) {
+          driven = tf; tp = { x: tf.x, y: tf.y }; break;
+        }
+      }
+      if (!inBlast(tp.x, tp.y, 50)) continue;
+      if (C && C.markPermaGone) C.markPermaGone(hid);
+      hitN++;
+      for (var efi = 0; efi < frogs.length; efi++) {
+        var ef = frogs[efi];
+        if (!ef || !ef.inTruck) continue;
+        if (ef.truckId !== hid && !(spot.id === "shared" && ef.truckMode === "shared")) continue;
+        if (ef.id === ownerId) continue; /* shouldn't happen — shooter in mech */
+        ef.inTruck = false; ef.truckId = null; ef.truckMode = null; ef.vehicleStyle = null;
+        ef.z = 0; ef.zVel = 0;
+      }
+      spawnBoom(world, tp.x, tp.y, 2.6);
+      spawnSparks(world, tp.x, tp.y, 20);
+      world._mechBoomToast = "GONE · vehicle!";
+    }
+
+    /* submarine */
+    if (!(C && C.isPermaGone && C.isPermaGone("submarine"))) {
+      var dock = (C && C.SUB_DOCK) || { x: 2900, y: 1240 };
+      var sp = C && C.vehiclePos ? C.vehiclePos("submarine", dock.x, dock.y) : dock;
+      for (var sfi = 0; sfi < frogs.length; sfi++) {
+        if (frogs[sfi] && frogs[sfi].inSub) { sp = { x: frogs[sfi].x, y: frogs[sfi].y }; break; }
+      }
+      if (inBlast(sp.x, sp.y, 56)) {
+        if (C && C.markPermaGone) C.markPermaGone("submarine");
+        hitN++;
+        for (var sfe = 0; sfe < frogs.length; sfe++) {
+          var sf = frogs[sfe];
+          if (!sf || !sf.inSub) continue;
+          if (sf.id === ownerId) continue;
+          sf.inSub = false; sf.subId = null; sf.vehicleStyle = null;
+        }
+        spawnBoom(world, sp.x, sp.y, 2.4);
+      }
+    }
+
+    /* heli + drone craft */
+    var Air = global.FroggiesAir;
+    if (Air && world.air && world.air.crafts) {
+      var kinds = ["heli", "drone"];
+      for (var ki = 0; ki < kinds.length; ki++) {
+        var kind = kinds[ki];
+        if (C && C.isPermaGone && C.isPermaGone(kind)) continue;
+        var craft = Air.ensureCraft ? Air.ensureCraft(world, kind) : null;
+        if (!craft) continue;
+        if (!inBlast(craft.x, craft.y, 48)) continue;
+        if (C && C.markPermaGone) C.markPermaGone(kind);
+        hitN++;
+        for (var afi = 0; afi < frogs.length; afi++) {
+          var af = frogs[afi];
+          if (!af) continue;
+          if ((kind === "heli" && af.inHeli) || (kind === "drone" && af.inDrone)) {
+            if (af.id === ownerId) continue;
+            af.inHeli = false; af.inDrone = false;
+            af.airSeat = null; af._airPilot = false;
+            af.z = 0; af.zVel = 0;
+          }
+        }
+        craft.goneForever = true;
+        craft.landed = true;
+        craft.z = 0; craft.vx = craft.vy = craft.vz = 0;
+        if (craft.seats) {
+          for (var si = 0; si < craft.seats.length; si++) craft.seats[si] = null;
+          craft.pilotId = null;
+        }
+        spawnBoom(world, craft.x, craft.y, 2.8);
+        spawnSparks(world, craft.x, craft.y, 22);
+        world._mechBoomToast = "GONE · " + kind + "!";
+      }
+    }
+
+    /* other froggies (AI or players) — soft-disable; never the shooter */
+    for (var gi = 0; gi < frogs.length; gi++) {
+      var gf = frogs[gi];
+      if (!gf || gf.id === ownerId || gf.sessionDead) continue;
+      /* shooter stays in mech — skip anyone still piloting shooter's mech */
+      if (gf.inMech && ownSid) {
+        var gsid = C && C.mechSolidId ? C.mechSolidId(gf.mechId) : String(gf.mechId || "").replace(/^mech-/, "mech");
+        if (gsid === ownSid) continue;
+      }
+      if (!inBlast(gf.x, gf.y, 28)) continue;
+      gf.sessionDead = true;
+      gf.inTruck = false; gf.truckId = null; gf.truckMode = null; gf.vehicleStyle = null;
+      gf.inMech = false; gf.mechId = null; gf.mechStories = 0;
+      gf.inSub = false; gf.subId = null;
+      gf.inHeli = false; gf.inDrone = false;
+      gf.inSwim = false;
+      gf.vx = 0; gf.vy = 0; gf.z = 0; gf.zVel = 0;
+      hitN++;
+      spawnBoom(world, gf.x, gf.y, 2.0);
+      spawnSparks(world, gf.x, gf.y, 16);
+      if (gf.local) world._mechBoomToast = "OUT · " + (gf.name || "froggy") + " (session)";
+      else world._mechBoomToast = "GONE · " + (gf.name || "froggy") + "!";
+    }
+
+    return hitN;
+  }
+
+  function shellHitsOmnigunTarget(world, sh, frogs) {
+    var R = (sh.r || 42);
+    var C = global.FroggiesCanon;
+    var ownSid = ownerMechSolidId(sh, frogs);
+    var ownerId = sh.ownerId;
+    frogs = frogs || world._frogsRef || [];
+    function near(px, py, pr) {
+      var dx = px - sh.x, dy = py - sh.y;
+      var rr = R + (pr || 0);
+      return dx * dx + dy * dy < rr * rr;
+    }
+    var lists = [world.toys || [], world.animals || []];
+    for (var li = 0; li < lists.length; li++) {
+      for (var j = 0; j < lists[li].length; j++) {
+        var prop = lists[li][j];
+        if (!prop || prop.goneForever || prop.wrecked) continue;
+        if (near(prop.x, prop.y, prop.r || 10)) return true;
+      }
+    }
+    var mechDefs = ["mech10", "mech100", "mech1000", "mechTrillion"];
+    var homes = {
+      mech10: (C && C.COMPOUND && C.COMPOUND.mech10) || { x: 820, y: 1680 },
+      mech100: (C && C.COMPOUND && C.COMPOUND.mech100) || { x: 980, y: 1700 },
+      mech1000: (C && C.COMPOUND && C.COMPOUND.mech1000) || { x: 340, y: 2420 },
+      mechTrillion: (C && C.COMPOUND && C.COMPOUND.mechTrillion) || { x: 600, y: 2170 },
+    };
+    var mrs = { mech10: 64, mech100: 78, mech1000: 95, mechTrillion: 125 };
+    for (var mi = 0; mi < mechDefs.length; mi++) {
+      var sid = mechDefs[mi];
+      if (ownSid && sid === ownSid) continue;
+      if (C && C.isMechDestroyed && C.isMechDestroyed(sid)) continue;
+      var mp = C && C.vehiclePos ? C.vehiclePos(sid, homes[sid].x, homes[sid].y) : homes[sid];
+      for (var fi = 0; fi < frogs.length; fi++) {
+        var pf = frogs[fi];
+        if (!pf || !pf.inMech) continue;
+        var psid = C && C.mechSolidId ? C.mechSolidId(pf.mechId) : String(pf.mechId || "").replace(/^mech-/, "mech");
+        if (psid === sid) { mp = { x: pf.x, y: pf.y }; break; }
+      }
+      if (near(mp.x, mp.y, mrs[sid])) return true;
+    }
+    var truckSpots = (C && C.TRUCK_SPOTS) || TRUCK_SPOTS || [];
+    for (var ti = 0; ti < truckSpots.length; ti++) {
+      var spot = truckSpots[ti];
+      var hid = spot.id === "shared" ? "truck-shared" : "truck-" + spot.id;
+      if (C && C.isPermaGone && C.isPermaGone(hid)) continue;
+      var tp = C && C.vehiclePos ? C.vehiclePos(hid, spot.x, spot.y) : { x: spot.x, y: spot.y };
+      for (var tfi = 0; tfi < frogs.length; tfi++) {
+        var tf = frogs[tfi];
+        if (tf && tf.inTruck && tf.truckId === hid) { tp = { x: tf.x, y: tf.y }; break; }
+      }
+      if (near(tp.x, tp.y, 44)) return true;
+    }
+    if (!(C && C.isPermaGone && C.isPermaGone("submarine"))) {
+      var dock = (C && C.SUB_DOCK) || { x: 2900, y: 1240 };
+      var sp = C && C.vehiclePos ? C.vehiclePos("submarine", dock.x, dock.y) : dock;
+      for (var sfi = 0; sfi < frogs.length; sfi++) {
+        if (frogs[sfi] && frogs[sfi].inSub) { sp = { x: frogs[sfi].x, y: frogs[sfi].y }; break; }
+      }
+      if (near(sp.x, sp.y, 50)) return true;
+    }
+    var Air = global.FroggiesAir;
+    if (Air && world.air) {
+      for (var ki = 0; ki < 2; ki++) {
+        var kind = ki === 0 ? "heli" : "drone";
+        if (C && C.isPermaGone && C.isPermaGone(kind)) continue;
+        var craft = Air.ensureCraft(world, kind);
+        if (craft && !craft.goneForever && near(craft.x, craft.y, 42)) return true;
+      }
+    }
+    for (var gi = 0; gi < frogs.length; gi++) {
+      var gf = frogs[gi];
+      if (!gf || gf.id === ownerId || gf.sessionDead) continue;
+      if (gf.inMech && ownSid) {
+        var gsid = C && C.mechSolidId ? C.mechSolidId(gf.mechId) : String(gf.mechId || "").replace(/^mech-/, "mech");
+        if (gsid === ownSid) continue;
+      }
+      if (near(gf.x, gf.y, 26)) return true;
+    }
+    return false;
+  }
 
   function spawnRipple(world, x, y, maxR) {
     if (!world.ripples) world.ripples = [];
@@ -991,7 +1309,8 @@
       k.life -= dt; k.x += k.vx * dt; k.y += k.vy * dt; k.vy += 220 * dt;
       if (k.life <= 0) world.sparks.splice(i, 1);
     }
-    /* mech3: big missiles fly; on hit / timeout → boom + wreck props */
+    /* mech3: big missiles fly; on hit / timeout → boom + wreck props
+       mechgun1: omnigun shells permanently remove hit targets */
     if (!world.shells) world.shells = [];
     for (i = world.shells.length - 1; i >= 0; i--) {
       var sh = world.shells[i];
@@ -1001,26 +1320,35 @@
       var expired = sh.life <= 0 || sh.x < -40 || sh.y < -40 || sh.x > MAP_W + 40 || sh.y > MAP_H + 40;
       var hit = false;
       if (!expired) {
-        var lists = [world.toys || [], world.animals || []];
-        for (var li = 0; li < lists.length && !hit; li++) {
-          var arr = lists[li];
-          for (var j = 0; j < arr.length; j++) {
-            var prop = arr[j];
-            if (!prop || prop.wrecked) continue;
-            var pr = prop.r || 10;
-            var dx = prop.x - sh.x, dy = prop.y - sh.y;
-            var rr = pr + (sh.r || 28);
-            if (dx * dx + dy * dy < rr * rr) { hit = true; break; }
+        if (sh.omnigun) {
+          if (shellHitsOmnigunTarget(world, sh, world._frogsRef)) hit = true;
+        } else {
+          var lists = [world.toys || [], world.animals || []];
+          for (var li = 0; li < lists.length && !hit; li++) {
+            var arr = lists[li];
+            for (var j = 0; j < arr.length; j++) {
+              var prop = arr[j];
+              if (!prop || prop.wrecked || prop.goneForever) continue;
+              var pr = prop.r || 10;
+              var dx = prop.x - sh.x, dy = prop.y - sh.y;
+              var rr = pr + (sh.r || 28);
+              if (dx * dx + dy * dy < rr * rr) { hit = true; break; }
+            }
           }
+          if (!hit && shellHitsBlastableMech(world, sh)) hit = true; /* mech5: Rexy 1000 only */
         }
-        if (!hit && shellHitsBlastableMech(world, sh)) hit = true; /* mech5: Rexy 1000 only */
       }
       if (hit || expired) {
         var br = sh.blastR != null ? sh.blastR : 118;
         var bf = sh.blastForce != null ? sh.blastForce : 520;
         if (hit || (expired && sh.life <= 0)) {
-          blastWreckProps(world, sh.x, sh.y, br, bf, world._frogsRef);
-          spawnBoom(world, sh.x, sh.y, sh.size != null ? sh.size * 0.55 : 1.2);
+          if (sh.omnigun) {
+            blastOmnigunKill(world, sh.x, sh.y, br, bf, world._frogsRef, sh);
+            spawnBoom(world, sh.x, sh.y, sh.size != null ? sh.size * 0.7 : 1.6);
+          } else {
+            blastWreckProps(world, sh.x, sh.y, br, bf, world._frogsRef);
+            spawnBoom(world, sh.x, sh.y, sh.size != null ? sh.size * 0.55 : 1.2);
+          }
         }
         world.shells.splice(i, 1);
       }
@@ -1046,6 +1374,11 @@
           wp.vx = (wp.vx || 0) * Math.max(0, 1 - 3.2 * dt);
           wp.vy = (wp.vy || 0) * Math.max(0, 1 - 3.2 * dt);
           if (wp.spin) wp.ang = (wp.ang || 0) + wp.spin * dt;
+        }
+        if (wp.goneForever) {
+          /* mechgun1: fade out permanently — never restore */
+          if ((wp.wreckT || 0) <= 0) { wp.hidden = true; wp.r = 0; }
+          continue;
         }
         wp.respawnT = (wp.respawnT != null ? wp.respawnT : 7) - dt;
         if (wp.respawnT <= 0) {
@@ -1140,13 +1473,7 @@
       /* qa1: feet stand on the same track deck trucks use — not the flat map. */
       var gndFoot = (ent.inSwim || ent.inSub) ? 0 : (ent.groundZ || 0);
       var aboveFoot = (ent.z || 0) - gndFoot;
-      if (ent.wallClimbing) {
-        var climbTop = gndFoot + ((global.FroggiesCanon && global.FroggiesCanon.WALL_CLIMB_HEIGHT) || 160);
-        var climbSpeed = (global.FroggiesCanon && global.FroggiesCanon.WALL_CLIMB_SPEED) || 150;
-        ent.z = Math.min(climbTop, Math.max(ent.z || 0, gndFoot) + climbSpeed * dt);
-        ent.zVel = ent.z < climbTop ? climbSpeed : 0;
-        ent.wallClimbPhase = (ent.wallClimbPhase || 0) + dt * 12;
-      } else if (aboveFoot > 0.15 || (ent.zVel || 0) !== 0) {
+      if (aboveFoot > 0.15 || (ent.zVel || 0) !== 0) {
         ent.zVel -= gWalk * dt;
         ent.z += ent.zVel * dt;
         if (ent.z <= gndFoot) {
@@ -1420,6 +1747,7 @@
   }
 
   function moveEntity(ent, dt, speed, world) {
+    if (ent && ent.sessionDead) return; /* mechgun1 */
     /* air1: flying craft owns motion — never walk + fly same frame */
     var AirM = global.FroggiesAir;
     if (AirM && AirM.isAirborneFrog && AirM.isAirborneFrog(ent) && world) {
@@ -1457,7 +1785,7 @@
     var Cdrv = global.FroggiesCanon;
     var walkMax = 345;
     var truckMax = 420;
-    var mechMax = 280;
+    var mechMax = 195;
     var subMax = 280;
     var vStat = null, mStat = null;
     if ((ent.inTruck || ent.inSub) && Cdrv && Cdrv.vehicleDriveStats) {
@@ -1484,8 +1812,8 @@
     var Cwet = global.FroggiesCanon;
     var inStream = Cwet && Cwet.inYardStream ? Cwet.inYardStream(ent.x, ent.y) : false;
     var wetMove = (inPond(ent.x, ent.y) || inStream) && (ent.z || 0) < 3;
-    var accel = ent.inMech ? 1500 : ent.inSub ? 980 : ent.inTruck ? 1680 : 1520;
-    var friction = ent.inMech ? 6.0 : ent.inSub ? 6.4 : ent.inTruck ? 5.6 : 9.6;
+    var accel = ent.inMech ? 780 : ent.inSub ? 980 : ent.inTruck ? 1680 : 1520;
+    var friction = ent.inMech ? 7.2 : ent.inSub ? 6.4 : ent.inTruck ? 5.6 : 9.6;
     if (vStat) { accel *= vStat.accel || 1; friction *= vStat.fric || 1; }
     if (mStat) { accel *= mStat.accel || 1; friction *= mStat.fric || 1; }
     /* ctrl1: RT accel / LT brake while boarded */
@@ -1634,12 +1962,6 @@
       if (ent.inMech && canon.mechSolidId) ignoreMech = canon.mechSolidId(ent.mechId);
       else if (ent.inMech && ent.mechId) ignoreMech = String(ent.mechId).replace(/^mech-/, "mech");
       var airH = (ent.z || 0) - (ent.groundZ || 0);
-      var canClimbWalls = !!ent.local && !ent.inTruck && !ent.inMech && !ent.inSub && !ent.inSwim;
-      var wall = canClimbWalls && canon.wallContact && (ent.wallClimbing || airH < 28)
-        ? canon.wallContact(ent.x, ent.y, 44, { garageOpen: (world && world.garageOpen) || 0 }, mx, my)
-        : null;
-      ent.wallClimbing = !!wall;
-      if (ent.wallClimbing) ent.wallClimbPhase = (ent.wallClimbPhase || 0) + dt * 12;
       var solid = canon.resolveSolid(ent.x, ent.y, ent.inTruck ? 38 : ent.inSub ? 36 : ent.inMech ? 30 : 22, {
         garageOpen: (world && world.garageOpen) || 0,
         inTruck: !!ent.inTruck,
@@ -1649,7 +1971,7 @@
         ignoreMechId: ignoreMech,
         softPond: !ent.inTruck && !ent.inMech && !ent.inSwim && !ent.inSub,
         airHeight: airH,
-        airClearHeight: ent.wallClimbing ? ((canon.WALL_CLIMB_HEIGHT || 160) - 1) : ent.inMech ? 22 : 28,
+        airClearHeight: ent.inMech ? 22 : 28,
       });
       if (solid.hit) {
         var pdx = solid.x - ent.x, pdy = solid.y - ent.y;
@@ -1683,7 +2005,7 @@
       }
       if (ent.inSwim) ent.groundZ = 0;
     }
-    if (!ent.inTruck && !ent.inMech && !ent.inSub && !ent.inHeli && !ent.inDrone && !ent.inSwim && !ent.wallClimbing && canon && canon.tickLocoHop) {
+    if (!ent.inTruck && !ent.inMech && !ent.inSub && !ent.inHeli && !ent.inDrone && !ent.inSwim && canon && canon.tickLocoHop) {
       var wantHop = mag > 0.05;
       var launched = canon.tickLocoHop(ent, dt, {
         moving: wantHop,
@@ -2089,14 +2411,14 @@
     return false;
   }
 
-  function drawMech(ctx, wx, wy, stories, camX, camY, vw, vh, tint, walkPhase, moving) {
+  function drawMech(ctx, wx, wy, stories, camX, camY, vw, vh, tint) {
     /* hop3: robot/mech silhouette (head·torso·arms·legs·glow eyes) — not a skyscraper prism */
     var p = project(wx, wy, camX, camY, vw, vh);
     var Cband = global.FroggiesCanon;
     var band = Cband && Cband.mechBand ? Cband.mechBand(stories) : (stories >= 1e12 ? "trillion" : stories >= 1000 ? "1000" : stories >= 100 ? "100" : "10");
     var hScale = band === "trillion" ? 460 : band === "1000" ? 310 : band === "100" ? 138 : 62;
     var wScale = band === "trillion" ? 108 : band === "1000" ? 72 : band === "100" ? 42 : 26;
-    var s = 1;
+    var s = p.depth;
     var H = hScale * s;
     var W = wScale * s;
     var baseY = p.y;
@@ -2151,26 +2473,13 @@
 
     /* Legs */
     var hipY = baseY - H * 0.38;
+    var footY = baseY - 2 * s;
     var legT = Math.max(4, W * 0.18);
-    function mechLeg(side, phase) {
-      var stride = moving ? Math.sin(phase) * W * 0.18 : 0;
-      var lift = moving ? Math.max(0, Math.cos(phase)) * H * 0.025 : 0;
-      var hipX = cx + side * W * 0.22;
-      var kneeX = hipX + side * W * 0.08 + stride * 0.55;
-      var kneeY = baseY - H * 0.2 - lift * 0.3;
-      var footX = hipX + stride;
-      var footY = baseY - 2 * s - lift;
-      limb(hipX, hipY, kneeX, kneeY, legT, col);
-      limb(kneeX, kneeY, footX, footY, legT * 0.78, col);
-      ctx.fillStyle = col;
-      ctx.beginPath();
-      ctx.arc(kneeX, kneeY, Math.max(3, legT * 0.58), 0, Math.PI * 2);
-      ctx.fill();
-      block(footX - W * 0.14, footY - 3 * s, W * 0.28, 6 * s, col);
-    }
-    var gait = walkPhase || 0;
-    mechLeg(-1, gait);
-    mechLeg(1, gait + Math.PI);
+    limb(cx - W * 0.22, hipY, cx - W * 0.32, footY, legT, col);
+    limb(cx + W * 0.22, hipY, cx + W * 0.32, footY, legT, col);
+    /* Feet */
+    block(cx - W * 0.48, footY - 3 * s, W * 0.28, 6 * s, col);
+    block(cx + W * 0.2, footY - 3 * s, W * 0.28, 6 * s, col);
 
     /* Torso */
     var torsoH = H * 0.34;
@@ -2603,8 +2912,8 @@
     var m100 = (Cmech && Cmech.COMPOUND && Cmech.COMPOUND.mech100) || { x: gar.x + 280, y: gar.y + 300 };
     var p10 = (Cmech && Cmech.vehiclePos) ? Cmech.vehiclePos("mech10", m10.x, m10.y) : m10;
     var p100 = (Cmech && Cmech.vehiclePos) ? Cmech.vehiclePos("mech100", m100.x, m100.y) : m100;
-    if (!frogPilotsMech(frogs, "mech10")) drawMech(ctx, p10.x, p10.y, 10, camX, camY, vw, vh, "#a5b4fc");
-    if (!frogPilotsMech(frogs, "mech100")) drawMech(ctx, p100.x, p100.y, 100, camX, camY, vw, vh, "#67e8f9");
+    if (!(Cmech && Cmech.isMechDestroyed && Cmech.isMechDestroyed("mech10")) && !frogPilotsMech(frogs, "mech10")) drawMech(ctx, p10.x, p10.y, 10, camX, camY, vw, vh, "#a5b4fc");
+    if (!(Cmech && Cmech.isMechDestroyed && Cmech.isMechDestroyed("mech100")) && !frogPilotsMech(frogs, "mech100")) drawMech(ctx, p100.x, p100.y, 100, camX, camY, vw, vh, "#67e8f9");
 
     /* Main house — polish8 stronger 2.5D: porch depth layers, path to door, chimney smoke */
     var hx = a.x + 60, hy = a.y + 100, hw = 520, hh = 420;
@@ -2905,7 +3214,7 @@
     var Cdest = global.FroggiesCanon;
     if (!(Cdest && Cdest.isMechDestroyed && Cdest.isMechDestroyed("mech1000")) && !frogPilotsMech(frogs, "mech1000"))
       drawMech(ctx, p1000.x, p1000.y, 1000, camX, camY, vw, vh, "#fcd34d");
-    if (!frogPilotsMech(frogs, "mechTrillion")) drawMech(ctx, pTri.x, pTri.y, 1e12, camX, camY, vw, vh, "#f9a8d4");
+    if (!(Cmech && Cmech.isMechDestroyed && Cmech.isMechDestroyed("mechTrillion")) && !frogPilotsMech(frogs, "mechTrillion")) drawMech(ctx, pTri.x, pTri.y, 1e12, camX, camY, vw, vh, "#f9a8d4");
   }
 
   function pathPoint(pt, camX, camY, vw, vh) {
@@ -3958,6 +4267,7 @@
   }
 
   function drawFroggy(ctx, frog, camX, camY, vw, vh, frogs) {
+    if (frog && frog.sessionDead) return null; /* mechgun1: removed for session */
     var p = project(frog.x, frog.y, camX, camY, vw, vh);
     var s = 16.4 * p.depth * (0.92 + 0.08 * p.depth); /* polish3 readable */
     var airOnly = (frog.z || 0) - (frog.groundZ || 0);
@@ -4080,21 +4390,21 @@
       var CbandP = global.FroggiesCanon;
       var bandP = CbandP && CbandP.mechBand ? CbandP.mechBand(stories) : (stories >= 1e12 ? "trillion" : stories >= 1000 ? "1000" : stories >= 100 ? "100" : "10");
       var tint = bandP === "trillion" ? "#f9a8d4" : bandP === "1000" ? "#fcd34d" : bandP === "100" ? "#67e8f9" : "#a5b4fc";
-      var movingMech = Math.hypot(frog.vx || 0, frog.vy || 0) > 18;
-      drawMech(ctx, frog.x, frog.y, stories, camX, camY, vw, vh, tint, frog.walkPhase || 0, movingMech);
-      /* Pilot hat / nameplate use the same fixed screen scale as the mech. */
+      var bobM = Math.abs(Math.sin(frog.walkPhase || 0)) * (bandP === "trillion" ? 6.2 : bandP === "1000" ? 4.5 : bandP === "100" ? 3.2 : 2.2) * p.depth;
+      drawMech(ctx, frog.x, frog.y, stories, camX, camY, vw, vh, tint);
+      /* Pilot hat / nameplate scaled to mech torso height (same hScale bands as drawMech) */
       var hatH = bandP === "trillion" ? 250 : bandP === "1000" ? 168 : bandP === "100" ? 78 : 36;
       var hatR = bandP === "trillion" ? 12 : bandP === "1000" ? 9 : bandP === "100" ? 7 : 5.5;
       ctx.fillStyle = frog.color || "#4ade80";
       ctx.beginPath();
-      ctx.arc(p.x, p.y - hatH, hatR, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y - hatH * p.depth - bobM, hatR * p.depth, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = frog.hat || "#facc15";
       ctx.beginPath();
-      ctx.arc(p.x, p.y - (hatH + 8), hatR * 0.58, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y - (hatH + 8) * p.depth - bobM, hatR * 0.58 * p.depth, 0, Math.PI * 2);
       ctx.fill();
       var plateH = bandP === "trillion" ? 310 : bandP === "1000" ? 210 : bandP === "100" ? 100 : 58;
-      drawNameplate(ctx, (frog.name || "Frog") + " · MECH", p.x, p.y - plateH, frog.color || "#fff", 1, !frog.local);
+      drawNameplate(ctx, (frog.name || "Frog") + " · MECH", p.x, p.y - plateH * p.depth - bobM, frog.color || "#fff", p.depth, !frog.local);
       return p;
     }
 
@@ -4127,9 +4437,8 @@
     var thighLen = swimming ? s * (0.42 + Math.abs(stroke) * 0.2) : s * (0.55 + spring * 0.55);
     var shinLen = swimming ? s * (0.38 + Math.abs(strokeB) * 0.18) : s * (0.48 + spring * 0.62);
     var outX = swimming ? s * (0.55 + Math.abs(stroke) * 0.2) : s * (0.22 + spring * 0.55);
-    var climbKick = frog.wallClimbing ? Math.sin(frog.wallClimbPhase || 0) * 3.2 * d : 0;
-    var kick = swimming ? 0 : (frog.wallClimbing ? climbKick : ((!frog.inTruck && spring < 0.15 && (frog.walkPhase || 0) > 0.05)
-      ? Math.sin(frog.walkPhase * 2) * 2.4 * d : 0));
+    var kick = swimming ? 0 : ((!frog.inTruck && spring < 0.15 && (frog.walkPhase || 0) > 0.05)
+      ? Math.sin(frog.walkPhase * 2) * 2.4 * d : 0);
     ctx.save();
     ctx.translate(p.x, by);
     ctx.rotate(faceA + Math.PI / 2); /* canonical face points screen-up */
@@ -4139,9 +4448,7 @@
     function drawSpringLeg(side) {
       var hx = side * s * 0.28;
       var hy = hipY;
-      var kickAmt = swimming ? ((side < 0 ? stroke : strokeB) * s * 0.35) : (frog.wallClimbing
-        ? Math.sin((frog.wallClimbPhase || 0) + (side < 0 ? 0 : Math.PI)) * s * 0.24
-        : (kick * side * 0.15));
+      var kickAmt = swimming ? ((side < 0 ? stroke : strokeB) * s * 0.35) : (kick * side * 0.15);
       var kx = side * outX + kickAmt;
       var ky = hy + thighLen * (swimming ? (0.35 + (side < 0 ? stroke : strokeB) * 0.2) : (0.55 + spring * 0.15));
       var fx = side * (outX * 0.55 + s * 0.08) + (swimming ? kickAmt * 1.2 : kick * side);
@@ -4180,12 +4487,6 @@
       ctx.lineTo(-s * (0.75 + strokeB * 0.35), s * (-0.05 + strokeB * 0.35));
       ctx.moveTo(s * 0.38, -s * 0.02);
       ctx.lineTo(s * (0.75 + stroke * 0.35), s * (-0.05 + stroke * 0.35));
-    } else if (frog.wallClimbing) {
-      var reach = Math.sin(frog.wallClimbPhase || 0) * s * 0.12;
-      ctx.moveTo(-s * 0.38, -s * 0.05);
-      ctx.lineTo(-s * 0.68, -s * (0.45 + reach / s));
-      ctx.moveTo(s * 0.38, -s * 0.05);
-      ctx.lineTo(s * 0.68, -s * (0.45 - reach / s));
     } else {
       ctx.moveTo(-s * 0.38, -s * 0.05);
       ctx.lineTo(-s * (0.55 + spring * 0.08), s * 0.28);
@@ -4341,7 +4642,7 @@
     ctx.beginPath();
     ctx.ellipse(0, lift + 6 * s, 38 * s * sh, 12 * s * sh, -0.12, 0, Math.PI * 2);
     ctx.fill();
-    ctx.rotate(yaw);
+    ctx.rotate(yaw + Math.PI / 2);
     /* Skids */
     ctx.strokeStyle = "#64748b";
     ctx.lineWidth = 2.4 * s;
@@ -4406,7 +4707,7 @@
     ctx.beginPath();
     ctx.ellipse(0, lift + 4 * s, 22 * s * sh, 8 * s * sh, -0.12, 0, Math.PI * 2);
     ctx.fill();
-    ctx.rotate(yaw);
+    ctx.rotate(yaw + Math.PI / 2);
     /* Body */
     ctx.fillStyle = accent || "#67e8f9";
     ctx.beginPath();
@@ -4457,7 +4758,13 @@
     var kinds = ["heli", "drone"];
     for (var ki = 0; ki < kinds.length; ki++) {
       var kind = kinds[ki];
+      if (C && C.isPermaGone && C.isPermaGone(kind)) {
+        var homePadGone = kind === "drone" ? ((C && C.DRONE_PAD) || { x: 1180, y: 2000 }) : ((C && C.HELI_PAD) || { x: 980, y: 2000 });
+        drawAirPad(ctx, homePadGone.x, homePadGone.y, kind, camX, camY, vw, vh, false);
+        continue; /* mechgun1: craft gone for session */
+      }
       var craft = Air.ensureCraft(world, kind);
+      if (craft && craft.goneForever) continue;
       var homePad = kind === "drone" ? ((C && C.DRONE_PAD) || { x: 1180, y: 2000 }) : ((C && C.HELI_PAD) || { x: 980, y: 2000 });
       /* Painted H/D pad stays at ranch home — craft may fly away */
       drawAirPad(ctx, homePad.x, homePad.y, kind, camX, camY, vw, vh, false);
@@ -4568,6 +4875,8 @@
     for (var t = 0; t < TRUCK_SPOTS.length; t++) {
       var spot = TRUCK_SPOTS[t];
       var hid = spot.id === "shared" ? "truck-shared" : "truck-" + spot.id;
+      var Cgone = global.FroggiesCanon;
+      if (Cgone && Cgone.isPermaGone && Cgone.isPermaGone(hid)) continue; /* mechgun1 */
       if (occupied[hid]) continue;
       var anyInShared = frogs.some(function (f) { return f.inTruck && f.truckMode === "shared"; });
       if (spot.id === "shared" && anyInShared) continue;
@@ -4637,7 +4946,8 @@
     }
     /* pond1: parked submarine at dock / last EXIT */
     var anyInSub = frogs.some(function (f) { return f.inSub; });
-    if (!anyInSub) {
+    var CsubGone = global.FroggiesCanon;
+    if (!anyInSub && !(CsubGone && CsubGone.isPermaGone && CsubGone.isPermaGone("submarine"))) {
       var Csub = global.FroggiesCanon;
       var dock = (Csub && Csub.SUB_DOCK) ? Csub.SUB_DOCK : { x: 2900, y: 1240 };
       var parkS = Csub && Csub.vehiclePos ? Csub.vehiclePos("submarine", dock.x, dock.y) : dock;
@@ -4678,31 +4988,32 @@
       ctx.fillStyle = "hsla(" + k.hue + ", 90%, 60%, " + clamp(k.life * 2, 0, 1) + ")";
       ctx.fillRect(kp.x, kp.y - (0.4 - k.life) * 20, 3, 3);
     }
-    /* mech3: big tank missiles */
+    /* mech3: big tank missiles · mechgun1: cyan omnigun bolts */
     for (i = 0; i < (world.shells || []).length; i++) {
       var shd = world.shells[i];
       var shp = project(shd.x, shd.y, camX, camY, vw, vh);
       var sha = clamp((shd.life / (shd.maxLife || 1.55)) * 1.2, 0.35, 1);
       var sz = (shd.size != null ? shd.size : 2.4) * shp.depth;
+      var omni = !!shd.omnigun;
       ctx.save();
       ctx.translate(shp.x, shp.y);
       ctx.rotate(shd.ang || 0);
-      /* exhaust trail */
-      ctx.fillStyle = "rgba(251, 146, 60, " + (sha * 0.55) + ")";
+      /* exhaust / muzzle trail */
+      ctx.fillStyle = omni ? ("rgba(34, 211, 238, " + (sha * 0.6) + ")") : ("rgba(251, 146, 60, " + (sha * 0.55) + ")");
       ctx.beginPath();
       ctx.ellipse(-10 * sz, 0, 10 * sz, 3.2 * sz, 0, 0, Math.PI * 2);
       ctx.fill();
       /* fat body */
-      ctx.fillStyle = "rgba(253, 224, 71, " + sha + ")";
+      ctx.fillStyle = omni ? ("rgba(244, 114, 182, " + sha + ")") : ("rgba(253, 224, 71, " + sha + ")");
       ctx.fillRect(-6 * sz, -3.6 * sz, 22 * sz, 7.2 * sz);
-      ctx.fillStyle = "rgba(248, 113, 113, " + sha + ")";
+      ctx.fillStyle = omni ? ("rgba(103, 232, 249, " + sha + ")") : ("rgba(248, 113, 113, " + sha + ")");
       ctx.beginPath();
       ctx.moveTo(16 * sz, 0);
       ctx.lineTo(8 * sz, -4.2 * sz);
       ctx.lineTo(8 * sz, 4.2 * sz);
       ctx.closePath();
       ctx.fill();
-      ctx.fillStyle = "rgba(254, 243, 199, " + (sha * 0.85) + ")";
+      ctx.fillStyle = omni ? ("rgba(254, 240, 255, " + (sha * 0.9) + ")") : ("rgba(254, 243, 199, " + (sha * 0.85) + ")");
       ctx.beginPath();
       ctx.arc(-2 * sz, 0, 3.2 * sz, 0, Math.PI * 2);
       ctx.fill();
@@ -5163,8 +5474,10 @@
     spawnSplash: spawnSplash,
     spawnSparks: spawnSparks,
     spawnTankShell: spawnTankShell,
+    spawnMechGunShell: spawnMechGunShell,
     spawnBoom: spawnBoom,
     blastWreckProps: blastWreckProps,
+    blastOmnigunKill: blastOmnigunKill,
     spawnRipple: spawnRipple,
     spawnSparkle: spawnSparkle,
     spawnKitFx: spawnKitFx,

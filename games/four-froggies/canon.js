@@ -26,7 +26,9 @@
    air1: helipad H + passenger-drone pad D near house/garage; heli 4 seats / drone 1–2.
    mech6: tank-blasted props + Rexy 1000-mech respawn after ~7s.
    mech7: swim pose (engines); board existing sub hull (no clone).
-   mech8: Rexy 1000-mech tank-blast respawn restores full articulated mesh (Three). */
+   mech8: Rexy 1000-mech tank-blast respawn restores full articulated mesh (Three).
+   mechgun1: story-mech omnigun — any piloted story mech FIRE (Space/X/button) permanently
+             removes hit targets for the session (no 7s respawn); tank FIRE unchanged. */
 (function (global) {
   "use strict";
 
@@ -313,7 +315,8 @@
     var bestD = maxR || 70;
     for (var i = 0; i < HOTSPOTS.length; i++) {
       var h = HOTSPOTS[i];
-      if (isMechHotspot(h) && isMechDestroyed(h)) continue; /* mech5 */
+      if (isMechHotspot(h) && isMechDestroyed(h)) continue; /* mech5 / mechgun1 */
+      if (h && h.id && isPermaGone(h.id)) continue; /* mechgun1 */
       var d = Math.hypot(h.x - x, h.y - y);
       var reach = Math.max(bestD, h.r || 70);
       if (d < reach && d < (best ? Math.hypot(best.x - x, best.y - y) : reach)) {
@@ -508,10 +511,33 @@
     return "Driving Tank · FIRE (Space / X / button) · big missiles · EXIT INTERACT";
   }
 
+  /* mechgun1: story-mech omnigun — all playable story mechs (10/100/1000/trillion) */
+  var MECH_GUN = {
+    cd: 0.42,
+    speed: 780,
+    life: 1.7,
+    muzzle: 64,
+    hitR: 42,
+    blastR: 140,
+    blastForce: 640,
+    size: 2.8,
+  };
+  function isStoryMechPilot(ent) {
+    return !!(ent && ent.inMech);
+  }
+  function mechGunTip() {
+    return "FIRE · Space / X / button · EXIT INTERACT";
+  }
+  function mechGunDrivingTip() {
+    return "Story mech · FIRE (Space / X / button) · omni-gun · EXIT INTERACT";
+  }
+
   /* mech5: among MECHS, only Rexy's thousand-story can be tank-blasted
-     mech6: DESTROYED_MECHS[sid] = seconds remaining until respawn (~7s) */
+     mech6: DESTROYED_MECHS[sid] = seconds remaining until respawn (~7s)
+     mechgun1: PERMA_GONE = session-permanent removals (no respawn) */
   var BLAST_RESPAWN_SEC = 7;
   var DESTROYED_MECHS = {};
+  var PERMA_GONE = {};
   function mechSolidKeys(idOrHot) {
     var sid = mechSolidId(idOrHot);
     if (!sid && idOrHot && typeof idOrHot === "object") {
@@ -527,27 +553,51 @@
   function isTankBlastableMech(idOrHot) {
     return mechSolidKeys(idOrHot) === "mech1000";
   }
+  function isPermaGone(id) {
+    if (!id) return false;
+    return !!PERMA_GONE[String(id)];
+  }
+  function markPermaGone(id) {
+    if (!id) return false;
+    PERMA_GONE[String(id)] = true;
+    return true;
+  }
+  function clearPermaGone() {
+    PERMA_GONE = {};
+  }
   function isMechDestroyed(idOrHot) {
     var sid = mechSolidKeys(idOrHot);
-    return !!(sid && DESTROYED_MECHS[sid] != null && DESTROYED_MECHS[sid] > 0);
+    if (!sid) return false;
+    if (PERMA_GONE[sid]) return true;
+    return !!(DESTROYED_MECHS[sid] != null && DESTROYED_MECHS[sid] > 0);
   }
-  function markMechDestroyed(idOrHot) {
+  function markMechDestroyed(idOrHot, opts) {
     var sid = mechSolidKeys(idOrHot);
     if (!sid) return false;
+    opts = opts || {};
+    /* mechgun1: permanent kill any mech (session); tank path still 1000-only */
+    if (opts.permanent) {
+      PERMA_GONE[sid] = true;
+      DESTROYED_MECHS[sid] = 1e12;
+      return true;
+    }
     if (!isTankBlastableMech(sid)) return false; /* hard gate: never destroy other mechs */
     DESTROYED_MECHS[sid] = BLAST_RESPAWN_SEC;
     return true;
   }
   function clearDestroyedMechs() {
     DESTROYED_MECHS = {};
+    /* keep PERMA_GONE until full world reset clears both */
   }
-  /* mech6: count down; returns list of solidIds that just respawned */
+  /* mech6: count down; returns list of solidIds that just respawned
+     mechgun1: never revive PERMA_GONE mechs */
   function tickMechRespawn(dt) {
     var revived = [];
     if (!dt || dt <= 0) return revived;
     var keys = Object.keys(DESTROYED_MECHS);
     for (var i = 0; i < keys.length; i++) {
       var k = keys[i];
+      if (PERMA_GONE[k]) continue;
       DESTROYED_MECHS[k] = (DESTROYED_MECHS[k] || 0) - dt;
       if (DESTROYED_MECHS[k] <= 0) {
         delete DESTROYED_MECHS[k];
@@ -558,7 +608,9 @@
   }
   function mechRespawnRemaining(idOrHot) {
     var sid = mechSolidKeys(idOrHot);
-    if (!sid || DESTROYED_MECHS[sid] == null) return 0;
+    if (!sid) return 0;
+    if (PERMA_GONE[sid]) return 1e12;
+    if (DESTROYED_MECHS[sid] == null) return 0;
     return Math.max(0, DESTROYED_MECHS[sid]);
   }
 
@@ -789,8 +841,6 @@
   var WALL_THICK = 20;
   var HOUSE_DOOR_W = 96;
   var GARAGE_DOOR_W = 440; /* garage1: nearly full bay (gar.w=480) */
-  var WALL_CLIMB_HEIGHT = 160;
-  var WALL_CLIMB_SPEED = 150;
 
   function solidRects(opts) {
     opts = opts || {};
@@ -840,6 +890,7 @@
       for (var i = 0; i < TRUCK_SPOTS.length; i++) {
         var s = TRUCK_SPOTS[i];
         var tid = "truck-" + s.id;
+        if (isPermaGone(tid) || isPermaGone(s.id)) continue; /* mechgun1 */
         var tp = vehiclePos(tid, s.x, s.y);
         /* r under hotspot radius so BOARD shell stays reachable (solo ~54, shared ~78) */
         var tr = s.id === "shared" ? 40 : (s.vehicleStyle === "ripsaw" || s.vehicleStyle === "tank" ? 34 : 28);
@@ -934,23 +985,6 @@
       }
     }
     return { x: pos.x, y: pos.y, hit: hit };
-  }
-
-  function wallContact(x, y, radius, opts, steerX, steerY) {
-    var mag = Math.hypot(steerX || 0, steerY || 0);
-    if (mag < 0.05) return null;
-    var rects = solidRects(opts);
-    var rad = radius || 22;
-    for (var i = 0; i < rects.length; i++) {
-      var pos = { x: x, y: y };
-      if (!_pushRectOut(pos, rects[i], rad)) continue;
-      var nx = pos.x - x;
-      var ny = pos.y - y;
-      if ((steerX || 0) * nx + (steerY || 0) * ny < -0.01) {
-        return { id: rects[i].id, nx: nx, ny: ny };
-      }
-    }
-    return null;
   }
 
   /* polish10: peak mid-approach; fade when standing on the sign so frogs stay visible */
@@ -1223,6 +1257,7 @@
   function resetVehicleParks() {
     VEHICLE_PARK = {};
     clearDestroyedMechs(); /* mech5: respawn blasted mechs with world reset */
+    clearPermaGone(); /* mechgun1: session kills clear on world reset */
     for (var h = 0; h < HOTSPOTS.length; h++) {
       var hs = HOTSPOTS[h];
       var home = _hotspotHome(hs);
@@ -1313,6 +1348,10 @@
     TANK_FIRE: TANK_FIRE,
     isTankVehicle: isTankVehicle,
     tankDrivingTip: tankDrivingTip,
+    MECH_GUN: MECH_GUN,
+    isStoryMechPilot: isStoryMechPilot,
+    mechGunTip: mechGunTip,
+    mechGunDrivingTip: mechGunDrivingTip,
     isTankBlastableMech: isTankBlastableMech,
     isMechDestroyed: isMechDestroyed,
     markMechDestroyed: markMechDestroyed,
@@ -1320,6 +1359,9 @@
     tickMechRespawn: tickMechRespawn,
     mechRespawnRemaining: mechRespawnRemaining,
     BLAST_RESPAWN_SEC: BLAST_RESPAWN_SEC,
+    isPermaGone: isPermaGone,
+    markPermaGone: markPermaGone,
+    clearPermaGone: clearPermaGone,
     VEHICLE_DRIVE: VEHICLE_DRIVE,
     MECH_DRIVE: MECH_DRIVE,
     resolveDriveStyle: resolveDriveStyle,
@@ -1352,9 +1394,6 @@
     solidRects: solidRects,
     solidCircles: solidCircles,
     resolveSolid: resolveSolid,
-    wallContact: wallContact,
-    WALL_CLIMB_HEIGHT: WALL_CLIMB_HEIGHT,
-    WALL_CLIMB_SPEED: WALL_CLIMB_SPEED,
     applyHop: applyHop,
     tickLocoHop: tickLocoHop,
     noteHopLand: noteHopLand,
