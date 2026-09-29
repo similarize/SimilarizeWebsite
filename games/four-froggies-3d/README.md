@@ -1,3 +1,9 @@
+# What's new (ff3d74) — jump or climb down from the garage roof
+
+- Start a controlled, outward-facing descent when walking off the garage roof edge, even though the roof-height collision rules disable the regular wall blocker.
+- Give jumps from the garage roof enough lift and forward travel to clear the edge; preserve a one-jump limit until landing.
+- Cache: `?v=20260929-ff3d74` · asset `index-ff3d74.js`
+
 # What's new (ff3d73) — make wall descents and drop jumps easy
 
 - Turn the froggy outward while backing down a climbable wall, and increase the controlled descent speed.

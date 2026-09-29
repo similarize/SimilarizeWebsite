@@ -1457,7 +1457,7 @@
     var Cdrv = global.FroggiesCanon;
     var walkMax = 345;
     var truckMax = 420;
-    var mechMax = 195;
+    var mechMax = 280;
     var subMax = 280;
     var vStat = null, mStat = null;
     if ((ent.inTruck || ent.inSub) && Cdrv && Cdrv.vehicleDriveStats) {
@@ -1484,8 +1484,8 @@
     var Cwet = global.FroggiesCanon;
     var inStream = Cwet && Cwet.inYardStream ? Cwet.inYardStream(ent.x, ent.y) : false;
     var wetMove = (inPond(ent.x, ent.y) || inStream) && (ent.z || 0) < 3;
-    var accel = ent.inMech ? 780 : ent.inSub ? 980 : ent.inTruck ? 1680 : 1520;
-    var friction = ent.inMech ? 7.2 : ent.inSub ? 6.4 : ent.inTruck ? 5.6 : 9.6;
+    var accel = ent.inMech ? 1500 : ent.inSub ? 980 : ent.inTruck ? 1680 : 1520;
+    var friction = ent.inMech ? 6.0 : ent.inSub ? 6.4 : ent.inTruck ? 5.6 : 9.6;
     if (vStat) { accel *= vStat.accel || 1; friction *= vStat.fric || 1; }
     if (mStat) { accel *= mStat.accel || 1; friction *= mStat.fric || 1; }
     /* ctrl1: RT accel / LT brake while boarded */
@@ -2089,14 +2089,14 @@
     return false;
   }
 
-  function drawMech(ctx, wx, wy, stories, camX, camY, vw, vh, tint) {
+  function drawMech(ctx, wx, wy, stories, camX, camY, vw, vh, tint, walkPhase, moving) {
     /* hop3: robot/mech silhouette (head·torso·arms·legs·glow eyes) — not a skyscraper prism */
     var p = project(wx, wy, camX, camY, vw, vh);
     var Cband = global.FroggiesCanon;
     var band = Cband && Cband.mechBand ? Cband.mechBand(stories) : (stories >= 1e12 ? "trillion" : stories >= 1000 ? "1000" : stories >= 100 ? "100" : "10");
     var hScale = band === "trillion" ? 460 : band === "1000" ? 310 : band === "100" ? 138 : 62;
     var wScale = band === "trillion" ? 108 : band === "1000" ? 72 : band === "100" ? 42 : 26;
-    var s = p.depth;
+    var s = 1;
     var H = hScale * s;
     var W = wScale * s;
     var baseY = p.y;
@@ -2151,13 +2151,26 @@
 
     /* Legs */
     var hipY = baseY - H * 0.38;
-    var footY = baseY - 2 * s;
     var legT = Math.max(4, W * 0.18);
-    limb(cx - W * 0.22, hipY, cx - W * 0.32, footY, legT, col);
-    limb(cx + W * 0.22, hipY, cx + W * 0.32, footY, legT, col);
-    /* Feet */
-    block(cx - W * 0.48, footY - 3 * s, W * 0.28, 6 * s, col);
-    block(cx + W * 0.2, footY - 3 * s, W * 0.28, 6 * s, col);
+    function mechLeg(side, phase) {
+      var stride = moving ? Math.sin(phase) * W * 0.18 : 0;
+      var lift = moving ? Math.max(0, Math.cos(phase)) * H * 0.025 : 0;
+      var hipX = cx + side * W * 0.22;
+      var kneeX = hipX + side * W * 0.08 + stride * 0.55;
+      var kneeY = baseY - H * 0.2 - lift * 0.3;
+      var footX = hipX + stride;
+      var footY = baseY - 2 * s - lift;
+      limb(hipX, hipY, kneeX, kneeY, legT, col);
+      limb(kneeX, kneeY, footX, footY, legT * 0.78, col);
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      ctx.arc(kneeX, kneeY, Math.max(3, legT * 0.58), 0, Math.PI * 2);
+      ctx.fill();
+      block(footX - W * 0.14, footY - 3 * s, W * 0.28, 6 * s, col);
+    }
+    var gait = walkPhase || 0;
+    mechLeg(-1, gait);
+    mechLeg(1, gait + Math.PI);
 
     /* Torso */
     var torsoH = H * 0.34;
@@ -4067,21 +4080,21 @@
       var CbandP = global.FroggiesCanon;
       var bandP = CbandP && CbandP.mechBand ? CbandP.mechBand(stories) : (stories >= 1e12 ? "trillion" : stories >= 1000 ? "1000" : stories >= 100 ? "100" : "10");
       var tint = bandP === "trillion" ? "#f9a8d4" : bandP === "1000" ? "#fcd34d" : bandP === "100" ? "#67e8f9" : "#a5b4fc";
-      var bobM = Math.abs(Math.sin(frog.walkPhase || 0)) * (bandP === "trillion" ? 6.2 : bandP === "1000" ? 4.5 : bandP === "100" ? 3.2 : 2.2) * p.depth;
-      drawMech(ctx, frog.x, frog.y, stories, camX, camY, vw, vh, tint);
-      /* Pilot hat / nameplate scaled to mech torso height (same hScale bands as drawMech) */
+      var movingMech = Math.hypot(frog.vx || 0, frog.vy || 0) > 18;
+      drawMech(ctx, frog.x, frog.y, stories, camX, camY, vw, vh, tint, frog.walkPhase || 0, movingMech);
+      /* Pilot hat / nameplate use the same fixed screen scale as the mech. */
       var hatH = bandP === "trillion" ? 250 : bandP === "1000" ? 168 : bandP === "100" ? 78 : 36;
       var hatR = bandP === "trillion" ? 12 : bandP === "1000" ? 9 : bandP === "100" ? 7 : 5.5;
       ctx.fillStyle = frog.color || "#4ade80";
       ctx.beginPath();
-      ctx.arc(p.x, p.y - hatH * p.depth - bobM, hatR * p.depth, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y - hatH, hatR, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = frog.hat || "#facc15";
       ctx.beginPath();
-      ctx.arc(p.x, p.y - (hatH + 8) * p.depth - bobM, hatR * 0.58 * p.depth, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y - (hatH + 8), hatR * 0.58, 0, Math.PI * 2);
       ctx.fill();
       var plateH = bandP === "trillion" ? 310 : bandP === "1000" ? 210 : bandP === "100" ? 100 : 58;
-      drawNameplate(ctx, (frog.name || "Frog") + " · MECH", p.x, p.y - plateH * p.depth - bobM, frog.color || "#fff", p.depth, !frog.local);
+      drawNameplate(ctx, (frog.name || "Frog") + " · MECH", p.x, p.y - plateH, frog.color || "#fff", 1, !frog.local);
       return p;
     }
 

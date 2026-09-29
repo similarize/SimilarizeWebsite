@@ -1,3 +1,10 @@
+## What's new (mechwalk1) — articulated, faster mechs with stable height
+
+- Animate the mech's upper legs, bent knees, shins, and alternating feet while it moves.
+- Increase Canvas mech acceleration and top speed for a quicker, more responsive walk.
+- Keep the mech body and pilot marker at a fixed screen scale so camera depth/player position no longer changes mech height.
+- Cache-bust: `?v=20260929-mechwalk1`.
+
 ## What's new (air4) — raise and enlarge the Three.js landing pads
 
 - Raise the heli and drone pad graphics above the translucent orange house-zone floor that covered them.
