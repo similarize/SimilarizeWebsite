@@ -42,6 +42,7 @@
    mechgun1: story-mech omnigun FIRE — permanent session kill (Canvas parity).
    mechgun2: omnigun also permanently wrecks house/garage/trees/rocks/fish/fences (session).
    spear1: Rexy 1000 SPEAR (B/RB) knocks trillion ~2s; mash get-up; tipped mesh.
+   goldsteam1: James trillion GOLD armor + steam pipe billows; omnigun FIRE kept.
    drivefix1: companions board/drive free Cybertruck(s)+Ripsaw+Tank like primary; mech locks stay.
    drivefix2: one INTERACT edge boards and STAYS (no same-press exit). Mech locks stay.
    drivefix3: companions board sub/heli/drone too; own-mech prefer; garage any local; wider reach.
@@ -1277,10 +1278,15 @@
     var p = worldToThree(m.x, m.y);
     var g = new THREE.Group();
     g.position.set(p.x, 0, p.z);
-    var mat = new THREE.MeshStandardMaterial({ color: color, metalness: 0.42, roughness: 0.4 });
+    var _isTriGold = (m.stories >= 1e12);
+    var mat = new THREE.MeshStandardMaterial({
+      color: color,
+      metalness: _isTriGold ? 0.72 : 0.42,
+      roughness: _isTriGold ? 0.28 : 0.4,
+    });
     var dark = new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.5, roughness: 0.35 });
     var band = C.mechBand ? C.mechBand(m.stories) : (m.stories >= 1e12 ? "trillion" : m.stories >= 1000 ? "1000" : m.stories >= 100 ? "100" : "10");
-    var eyeCol = band === "trillion" ? 0xf472b6 : band === "1000" ? 0xfbbf24 : band === "100" ? 0x67e8f9 : 0xa5b4fc;
+    var eyeCol = band === "trillion" ? 0xfef08a : band === "1000" ? 0xfbbf24 : band === "100" ? 0x67e8f9 : 0xa5b4fc;
     var eyeMat = new THREE.MeshStandardMaterial({ color: eyeCol, emissive: eyeCol, emissiveIntensity: 0.85, metalness: 0.2, roughness: 0.3 });
     if (band === "1000" || band === "trillion") {
       var haze = new THREE.Mesh(
@@ -1360,8 +1366,35 @@
     part(new THREE.SphereGeometry(h * 0.025, 8, 6), eyeMat, -h * 0.045, h * 0.84, h * 0.12);
     part(new THREE.SphereGeometry(h * 0.025, 8, 6), eyeMat, h * 0.045, h * 0.84, h * 0.12);
     /* Antenna */
+    var antTipCol = band === "trillion" ? 0xf59e0b : 0xf87171;
     part(new THREE.CylinderGeometry(h * 0.01, h * 0.01, h * 0.1, 6), dark, 0, h * 0.95, 0);
-    part(new THREE.SphereGeometry(h * 0.02, 6, 5), new THREE.MeshStandardMaterial({ color: 0xf87171, emissive: 0xf87171, emissiveIntensity: 0.5 }), 0, h * 1.01, 0);
+    part(new THREE.SphereGeometry(h * 0.02, 6, 5), new THREE.MeshStandardMaterial({ color: antTipCol, emissive: antTipCol, emissiveIntensity: 0.5 }), 0, h * 1.01, 0);
+
+    /* goldsteam1: steam pipe + billow puffs — James trillion only */
+    var steamPuffs = null;
+    if (band === "trillion") {
+      var pipeMat = new THREE.MeshStandardMaterial({ color: 0x44403c, metalness: 0.72, roughness: 0.38 });
+      var rimMat = new THREE.MeshStandardMaterial({ color: 0x78716c, metalness: 0.55, roughness: 0.45 });
+      var pipeX = h * 0.14, pipeZ = -h * 0.06;
+      part(new THREE.CylinderGeometry(h * 0.028, h * 0.034, h * 0.26, 8), pipeMat, pipeX, h * 0.78, pipeZ);
+      part(new THREE.CylinderGeometry(h * 0.045, h * 0.045, h * 0.035, 8), rimMat, pipeX, h * 0.92, pipeZ);
+      part(new THREE.CylinderGeometry(h * 0.02, h * 0.02, h * 0.02, 6), dark, pipeX, h * 0.94, pipeZ);
+      steamPuffs = [];
+      for (var spi = 0; spi < 6; spi++) {
+        var puff = new THREE.Mesh(
+          new THREE.SphereGeometry(h * (0.035 + spi * 0.008), 6, 6),
+          new THREE.MeshBasicMaterial({ color: 0xf1f5f9, transparent: true, opacity: 0.5, depthWrite: false })
+        );
+        puff.position.set(pipeX, h * 0.96 + spi * 0.06, pipeZ);
+        puff.userData.phase = spi * 0.5;
+        puff.userData.baseY = h * 0.96;
+        puff.userData.pipeX = pipeX;
+        puff.userData.pipeZ = pipeZ;
+        puff.renderOrder = 6;
+        g.add(puff);
+        steamPuffs.push(puff);
+      }
+    }
 
     var labTxt = C.mechStoriesLabel ? C.mechStoriesLabel(m.stories) : (m.stories + "-story mech");
     if (C.mechOwnerName) {
@@ -1386,6 +1419,7 @@
       armsL: armsL,
       armsR: armsR,
       walkPhase: 0,
+      steamPuffs: steamPuffs,
     };
     if (!state.mechs) state.mechs = [];
     state.mechs.push(entry);
@@ -1616,7 +1650,7 @@
     addMech(Object.assign({}, cp.mech10 || { x: 820, y: 1680 }, { stories: 10 }), 0xa5b4fc, 1.9);
     addMech(Object.assign({}, cp.mech100 || { x: 980, y: 1700 }, { stories: 100 }), 0x67e8f9, 3.2);
     addMech(Object.assign({}, cp.mech1000 || { x: 340, y: 2420 }, { stories: 1000 }), 0xfcd34d, 8.2);
-    addMech(Object.assign({}, cp.mechTrillion || { x: 600, y: 2170 }, { stories: 1e12 }), 0xf9a8d4, 14.5);
+    addMech(Object.assign({}, cp.mechTrillion || { x: 600, y: 2170 }, { stories: 1e12 }), 0xffd700, 14.5);
 
     /* yard1: creek / trees / shrubs / rocks / flowers / fence */
     state.ranchBlastables = state.ranchBlastables || [];
@@ -5384,6 +5418,26 @@ state.zLift = 0;
             }
             resetLimbs(ment.legsL); resetLimbs(ment.legsR);
             resetLimbs(ment.armsL); resetLimbs(ment.armsR);
+          }
+          /* goldsteam1: animate trillion steam billows (always; stronger when occupied/moving) */
+          if (ment.steamPuffs && ment.steamPuffs.length) {
+            var stBoost = piloting ? (lumber ? 1.55 : 1.2) : 0.9;
+            var stDt = Math.min(0.05, (typeof dt === "number" && dt > 0) ? dt : 0.016);
+            for (var spi2 = 0; spi2 < ment.steamPuffs.length; spi2++) {
+              var sp = ment.steamPuffs[spi2];
+              if (!sp) continue;
+              sp.userData.phase = (sp.userData.phase || 0) + stDt * (1.15 * stBoost);
+              var life = sp.userData.phase % 2.4;
+              sp.position.y = (sp.userData.baseY || 0) + life * 0.55 * stBoost;
+              sp.position.x = (sp.userData.pipeX || 0) + Math.sin(sp.userData.phase) * 0.1 * stBoost;
+              sp.position.z = (sp.userData.pipeZ || 0) + Math.cos(sp.userData.phase * 0.7) * 0.06;
+              var sc = 0.65 + life * 0.95;
+              sp.scale.set(sc, sc * 0.85, sc);
+              if (sp.material) {
+                sp.material.opacity = Math.max(0, (0.55 - life * 0.2) * (piloting ? 1 : 0.78));
+                sp.visible = !ment.destroyed;
+              }
+            }
           }
         }
       }

@@ -38,6 +38,7 @@
    air1: helipad H + heli (4 seats) + drone pad D + passenger drone (1–2) · fly over ranch.
    mechgun1: story-mech omnigun FIRE — permanent session kill of hit targets (not tank).
    mechgun2: omnigun also blows house/garage/trees/rocks/fish/fences/shrubs (session permanent).
+   goldsteam1: James trillion-story mech GOLD armor + steam pipe (Canvas+Three); omnigun FIRE kept.
    ~10× map: real roam between ranch house / track / pond / Starship.
    James ranch house: big house, backyard (animals), huge garage (toys + 10/100-story mechs);
    1000-story + trillion-story mechs sit out back (won't fit). Four Cybertrucks + shared pile-in.
@@ -2663,7 +2664,8 @@
 
   function drawMech(ctx, wx, wy, stories, camX, camY, vw, vh, tint, opts) {
     /* hop3: robot/mech silhouette (head·torso·arms·legs·glow eyes) — not a skyscraper prism
-       spear1: opts.tipped = toppled knockdown pose */
+       spear1: opts.tipped = toppled knockdown pose
+       goldsteam1: trillion = GOLD armor + steam pipe / billows (James only) */
     var p = project(wx, wy, camX, camY, vw, vh);
     var Cband = global.FroggiesCanon;
     var band = Cband && Cband.mechBand ? Cband.mechBand(stories) : (stories >= 1e12 ? "trillion" : stories >= 1000 ? "1000" : stories >= 100 ? "100" : "10");
@@ -2674,8 +2676,10 @@
     var W = wScale * s;
     var baseY = p.y;
     var cx = p.x;
-    var col = tint || "#94a3b8";
-    var eyeCol = band === "trillion" ? "#f472b6" : band === "1000" ? "#fbbf24" : band === "100" ? "#67e8f9" : "#a5b4fc";
+    /* goldsteam1: trillion forced gold (distinct from Rexy 1000 amber #fcd34d) */
+    var col = band === "trillion" ? (tint || "#ffd700") : (tint || "#94a3b8");
+    if (band === "trillion") col = "#ffd700";
+    var eyeCol = band === "trillion" ? "#fef08a" : band === "1000" ? "#fbbf24" : band === "100" ? "#67e8f9" : "#a5b4fc";
     var tipped = !!(opts && opts.tipped);
     if (!tipped && Cband && Cband.isMechKnocked) {
       var tipSid = band === "trillion" ? "mechTrillion" : band === "1000" ? "mech1000" : band === "100" ? "mech100" : "mech10";
@@ -2691,8 +2695,8 @@
     }
     if (band === "1000" || band === "trillion") {
       var haze = ctx.createRadialGradient(cx, baseY - H * 0.55, W * 0.2, cx, baseY - H * 0.4, W * (band === "trillion" ? 3.2 : 2.6));
-      haze.addColorStop(0, band === "trillion" ? "rgba(244, 114, 182, 0.32)" : "rgba(252, 211, 77, 0.26)");
-      haze.addColorStop(0.55, band === "trillion" ? "rgba(251, 113, 133, 0.1)" : "rgba(251, 191, 36, 0.08)");
+      haze.addColorStop(0, band === "trillion" ? "rgba(255, 215, 0, 0.36)" : "rgba(252, 211, 77, 0.26)");
+      haze.addColorStop(0.55, band === "trillion" ? "rgba(251, 191, 36, 0.12)" : "rgba(251, 191, 36, 0.08)");
       haze.addColorStop(1, "rgba(0,0,0,0)");
       ctx.fillStyle = haze;
       ctx.beginPath();
@@ -2708,7 +2712,7 @@
     ctx.beginPath();
     ctx.ellipse(cx, baseY + 2, W * 0.95, W * 0.3, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = "#fbbf24";
+    ctx.strokeStyle = band === "trillion" ? "#f59e0b" : "#fbbf24";
     ctx.lineWidth = (band === "1000" || band === "trillion") ? (band === "trillion" ? 3.0 : 2.4) : 1.8;
     ctx.beginPath();
     ctx.ellipse(cx, baseY + 2, W * 0.75, W * 0.22, 0, 0, Math.PI * 2);
@@ -2725,9 +2729,15 @@
     }
     function block(bx, by, bw, bh, fill) {
       var g = ctx.createLinearGradient(bx, by, bx + bw, by + bh);
-      g.addColorStop(0, fill);
-      g.addColorStop(0.55, "#64748b");
-      g.addColorStop(1, "#1e293b");
+      if (band === "trillion") {
+        g.addColorStop(0, fill);
+        g.addColorStop(0.4, "#fbbf24");
+        g.addColorStop(1, "#92400e");
+      } else {
+        g.addColorStop(0, fill);
+        g.addColorStop(0.55, "#64748b");
+        g.addColorStop(1, "#1e293b");
+      }
       ctx.fillStyle = g;
       ctx.fillRect(bx, by, bw, bh);
       ctx.strokeStyle = "#020617";
@@ -2795,7 +2805,7 @@
     var antR = band === "trillion" ? 4.2 : band === "1000" ? 3.2 : 2.2;
     ctx.lineTo(cx, headY - antH * s);
     ctx.stroke();
-    ctx.fillStyle = "#f87171";
+    ctx.fillStyle = band === "trillion" ? "#f59e0b" : "#f87171";
     ctx.beginPath();
     ctx.arc(cx, headY - antH * s, antR * s, 0, Math.PI * 2);
     ctx.fill();
@@ -2804,8 +2814,49 @@
     var bands = band === "trillion" ? 7 : band === "1000" ? 5 : band === "100" ? 3 : 2;
     for (var bi = 0; bi < bands; bi++) {
       var by = torsoY + torsoH * (0.15 + bi * (0.55 / bands));
-      ctx.fillStyle = bi % 2 === 0 ? "rgba(15,23,42,0.45)" : "rgba(248,250,252,0.12)";
+      ctx.fillStyle = bi % 2 === 0 ? "rgba(15,23,42,0.45)" : (band === "trillion" ? "rgba(254,243,199,0.28)" : "rgba(248,250,252,0.12)");
       ctx.fillRect(cx - torsoW * 0.42, by, torsoW * 0.84, Math.max(1.5, H * 0.018));
+    }
+
+    /* goldsteam1: steam pipe (chimney/exhaust) on trillion shoulder — kid-readable */
+    if (band === "trillion") {
+      var pipeX = cx + torsoW * 0.32;
+      var pipeBot = torsoY + torsoH * 0.08;
+      var pipeH = H * 0.28;
+      var pipeTop = pipeBot - pipeH;
+      var pipeW = Math.max(5, W * 0.1);
+      ctx.fillStyle = "#44403c";
+      ctx.fillRect(pipeX - pipeW * 0.5, pipeTop, pipeW, pipeH);
+      ctx.strokeStyle = "#1c1917";
+      ctx.lineWidth = Math.max(1, 1.4 * s);
+      ctx.strokeRect(pipeX - pipeW * 0.5, pipeTop, pipeW, pipeH);
+      /* rim / cap */
+      ctx.fillStyle = "#78716c";
+      ctx.fillRect(pipeX - pipeW * 0.75, pipeTop - 4 * s, pipeW * 1.5, 5 * s);
+      ctx.fillStyle = "#292524";
+      ctx.fillRect(pipeX - pipeW * 0.35, pipeTop - 2 * s, pipeW * 0.7, 3 * s);
+      /* steam billows — continuous; stronger when occupied/moving */
+      var steamT = (opts && opts.steamT != null) ? opts.steamT : (Date.now() / 1000);
+      var boost = 1;
+      if (opts && opts.moving) boost = 1.55;
+      else if (opts && opts.occupied) boost = 1.25;
+      var puffN = Math.round(5 * Math.min(1.4, boost));
+      for (var smi = 0; smi < puffN; smi++) {
+        var life = (steamT * 1.15 + smi * 0.48) % 2.35;
+        var sy = pipeTop - 4 * s - life * (16 * s * boost);
+        var sx = pipeX + Math.sin(steamT * 1.4 + smi * 0.9) * (8 * s * boost);
+        var sr = (5 + life * 6 + smi * 0.8) * s * 0.5 * Math.min(1.35, boost);
+        var a = Math.max(0, (0.58 - life * 0.22) * (opts && opts.occupied ? 1 : 0.85));
+        ctx.fillStyle = "rgba(241, 245, 249," + a + ")";
+        ctx.beginPath();
+        ctx.ellipse(sx, sy, sr, sr * 0.72, 0, 0, Math.PI * 2);
+        ctx.fill();
+        /* soft gray outer */
+        ctx.fillStyle = "rgba(148, 163, 184," + (a * 0.45) + ")";
+        ctx.beginPath();
+        ctx.ellipse(sx + sr * 0.25, sy - sr * 0.15, sr * 0.7, sr * 0.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
 
     ctx.fillStyle = "#fff";
@@ -2840,6 +2891,7 @@
     }
     if (_tipSaved) ctx.restore();
   }
+
 
 
   function drawYardDecor(ctx, camX, camY, vw, vh, t) {
@@ -3581,7 +3633,10 @@
     var Cdest = global.FroggiesCanon;
     if (!(Cdest && Cdest.isMechDestroyed && Cdest.isMechDestroyed("mech1000")) && !frogPilotsMech(frogs, "mech1000"))
       drawMech(ctx, p1000.x, p1000.y, 1000, camX, camY, vw, vh, "#fcd34d");
-    if (!(Cmech && Cmech.isMechDestroyed && Cmech.isMechDestroyed("mechTrillion")) && !frogPilotsMech(frogs, "mechTrillion")) drawMech(ctx, pTri.x, pTri.y, 1e12, camX, camY, vw, vh, "#f9a8d4");
+    if (!(Cmech && Cmech.isMechDestroyed && Cmech.isMechDestroyed("mechTrillion")) && !frogPilotsMech(frogs, "mechTrillion")) {
+      var steamParkT = (world && world.ambientT != null) ? world.ambientT : (Date.now() / 1000);
+      drawMech(ctx, pTri.x, pTri.y, 1e12, camX, camY, vw, vh, "#ffd700", { steamT: steamParkT, occupied: false, moving: false });
+    }
   }
 
   function pathPoint(pt, camX, camY, vw, vh) {
@@ -4763,9 +4818,15 @@
       var stories = frog.mechStories || 10;
       var CbandP = global.FroggiesCanon;
       var bandP = CbandP && CbandP.mechBand ? CbandP.mechBand(stories) : (stories >= 1e12 ? "trillion" : stories >= 1000 ? "1000" : stories >= 100 ? "100" : "10");
-      var tint = bandP === "trillion" ? "#f9a8d4" : bandP === "1000" ? "#fcd34d" : bandP === "100" ? "#67e8f9" : "#a5b4fc";
+      var tint = bandP === "trillion" ? "#ffd700" : bandP === "1000" ? "#fcd34d" : bandP === "100" ? "#67e8f9" : "#a5b4fc";
       var bobM = Math.abs(Math.sin(frog.walkPhase || 0)) * (bandP === "trillion" ? 6.2 : bandP === "1000" ? 4.5 : bandP === "100" ? 3.2 : 2.2) * p.depth;
-      drawMech(ctx, frog.x, frog.y, stories, camX, camY, vw, vh, tint);
+      var mechSp = Math.hypot(frog.vx || 0, frog.vy || 0);
+      var steamOpts = bandP === "trillion" ? {
+        steamT: (typeof performance !== "undefined" ? performance.now() : Date.now()) / 1000,
+        occupied: true,
+        moving: mechSp > 28,
+      } : null;
+      drawMech(ctx, frog.x, frog.y, stories, camX, camY, vw, vh, tint, steamOpts);
       /* Pilot hat / nameplate scaled to mech torso height (same hScale bands as drawMech) */
       var hatH = bandP === "trillion" ? 250 : bandP === "1000" ? 168 : bandP === "100" ? 78 : 36;
       var hatR = bandP === "trillion" ? 12 : bandP === "1000" ? 9 : bandP === "100" ? 7 : 5.5;

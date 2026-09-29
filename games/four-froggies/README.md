@@ -1,3 +1,10 @@
+## What's new (goldsteam1) — James trillion-story mech GOLD + steam pipe
+
+- **Look:** James's exclusive trillion-story mech is tinted **gold** (Canvas draw + Three materials) — distinct from Rexy's amber 1000, Bubbles indigo 10, Jimmy cyan 100.
+- **Steam:** Visible exhaust/chimney stack on the trillion; white/gray steam billows continuously and puffs harder when occupied / moving. Wired in Canvas + Three.
+- **Combat:** Story-mech omnigun **FIRE** (Space / X / button) unchanged while piloting.
+- Cache: `20260929-goldsteam1`. drivefix3 board, spear, air, lobbypick, exit1 lobby untouched. four-froggies-3d untouched.
+
 ## What's new (drivefix3) — companions board everything James can (and stay)
 
 - **Bug:** James (camera/primary) boarded Cybertruck / Ripsaw / Tank / heli / drone / sub / mechs; Jimmy / Bubbles / Rexy on other pads still failed — Three hard-blocked companion INTERACT on sub/heli/drone; garage door opened for camera frog only; INTERACT reach was too tight at mech/truck solid rims so owners missed their own story mech; nearest-hotspot could prefer a free truck over the owner's mech.
