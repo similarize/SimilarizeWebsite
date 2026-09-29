@@ -23,9 +23,45 @@
 
   function game() { return window.__ff3dGame || null; }
 
+  function ensurePlayNav() {
+    if (document.getElementById("ff3d-play-nav")) return;
+    var nav = document.createElement("div");
+    nav.id = "ff3d-play-nav";
+    nav.className = "ff3d-play-nav";
+    var lobby = document.createElement("button");
+    lobby.type = "button";
+    lobby.className = "ff3d-nav-btn";
+    lobby.textContent = "\u2190 Lobby";
+    lobby.addEventListener("click", function () {
+      var g = game();
+      if (g && g.toLobby) g.toLobby();
+      started = false;
+      document.body.classList.remove("ff3d-playing");
+      injected = false;
+      var tries = 0;
+      var timer = setInterval(function () {
+        tries++;
+        var card = document.querySelector(".gate-card");
+        var fresh = card && !card.querySelector("#ff3d-btn-host");
+        if (fresh && injectUi()) clearInterval(timer);
+        if (tries > 40) clearInterval(timer);
+      }, 50);
+    });
+    var arcade = document.createElement("a");
+    arcade.className = "ff3d-nav-btn";
+    arcade.href = "/games/";
+    arcade.textContent = "Arcade";
+    nav.appendChild(lobby);
+    nav.appendChild(arcade);
+    document.body.appendChild(nav);
+  }
+
   function injectUi() {
-    if (injected) return true;
     var card = document.querySelector(".gate-card");
+    if (card && card.querySelector("#ff3d-btn-host")) {
+      injected = true;
+      return true;
+    }
     if (!card) return false;
     var startBtn = card.querySelector("button.start");
     if (!startBtn) return false;
@@ -299,6 +335,7 @@
   }
 
   function boot() {
+    ensurePlayNav();
     if (!injectUi()) {
       requestAnimationFrame(boot);
       return;

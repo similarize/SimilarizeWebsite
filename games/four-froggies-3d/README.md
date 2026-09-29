@@ -1,3 +1,12 @@
+## What's new (ff3d41) — turn, trees, look, and dad
+
+- A and D turn in place. W still walks, and S still backs up straight.
+- Trees are solid. Hop against a trunk to climb it, then walk off to drop.
+- Drag the mouse to look around. The view stays where you leave it. Click the ground and he walks to that spot, facing it.
+- Lobby and Arcade stay on screen while you play.
+- James's dad has legs and faces the way he is walking.
+- Cache: `?v=20260929-ff3d41` · asset `index-ff3d41.js`
+
 ## What's new (ff3d40) — hop up to the roof
 
 - Stand against the mansion and hop. Each hop climbs the wall and perches there. The third hop lands you on the roof, and you can walk to the helipad. A normal hop everywhere else is unchanged.
