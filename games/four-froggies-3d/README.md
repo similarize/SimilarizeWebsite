@@ -1,3 +1,8 @@
+# What's new (ff3d66) — frog sits in the cockpit glass
+
+- Moved the rider up into the clear cockpit and turned him toward the bow, with the seat under him. The tower sits aft of the cockpit so it no longer covers him.
+- Cache: `?v=20260929-ff3d66` · asset `index-ff3d66.js`
+
 # What's new (ff3d65) — attach the frog to the submarine seat
 
 - Parent the rider under the actual seat group and place its feet at the cabin floor, so submarine motion cannot separate the frog from the seat.
