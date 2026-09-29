@@ -1,7 +1,7 @@
-# What's new (ff3d58) — see the frog inside the submarine
+# What's new (ff3d59) — make the underwater rider visible
 
 - Made the submarine hull translucent around a larger clear cockpit and lowered the frog into a seated pose inside it, so the rider is visible through the hull instead of appearing perched on top.
-- Cache: `?v=20260929-ff3d58` · asset `index-ff3d58.js`
+- Cache: `?v=20260929-ff3d59` · asset `index-ff3d59.js`
 
 ## What's new (ff3d57) — barriers, Cybertruck details, and submarine swimming
 
