@@ -1,10 +1,7 @@
-## What's new (ff3d23) — Cybertruck porch ban + Dad unstuck
+## What's new (ff3d24) — Dad exit-after-park unstuck
 
-- **Truck never parks through porch:** hard ban on porch AABB (x −53.6…−30.4, z 12.05…18.45) expanded by truck half-extents (~2.75×2.4).
-- **Valid stops only:** `parkFront` (−42, 22.5) front-lawn pad north of porch; `parkGarage` (−2, 22) garage bay.
-- **Drive path retargeted:** waypoints stay at z≥22.5 near house; never aim through porch volume. Porch waypoints skipped at runtime.
-- **Force-exit:** each Dad tick, if truck AABB intersects porch (or sits in house interior), snap to nearest valid park immediately.
-- **Dad walk (secondary):** after ~2.4s no progress, repath/teleport around porch to yard→door points (stand ON porch OK; clip-through blocked via pushWalls).
-- Keeps ff3d23 occlusion fade + ff3d23 lifestyle + exit1 Arcade/Join lobby.
+- **Root cause:** `dadForceTruckOffPorch` applied truck AABB to Dad's *walk* position and teleported him back to park every time he stepped toward the porch house-tour — so after parking he never completed exit → walk → remount.
+- **Fix:** force-exit only relocates Dad while driving; on foot it only snaps the *truck* off the porch. After park arrives, `dadExitParkToWalk` forces exit → house walk loop → yard remount. Drive/walk unstuck if no progress ~2s.
+- **Kept:** porch ban, parkFront (−42, 22.5), parkGarage (−2, 22), force-exit, ALL ff3d23 features, exit1 lobby.
 
-- Cache: `?v=20260928-ff3d23` · asset `index-ff3d23.js`
+- Cache: `?v=20260928-ff3d24` · asset `index-ff3d24.js`
