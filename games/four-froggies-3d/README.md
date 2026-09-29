@@ -1,4 +1,10 @@
-# What's new (ff3d60) — seat the rider inside the cockpit
+# What's new (ff3d61) — open track entry without barriers
+
+- Removed barriers completely from the entry spur and left the track entry junction open so racers can enter and leave the track freely from the ranch.
+- Kept continuous barriers along the racing oval (full inside perimeter to prevent infield shortcuts, and outside perimeter except at the entry).
+- Cache: `?v=20260929-ff3d61` · asset `index-ff3d61.js`
+
+## What's new (ff3d60) — seat the rider inside the cockpit
 
 - Attach the frog directly to the submarine and position it in submarine-local coordinates, avoiding the nested seat transform that left it hovering above the model.
 - Added a raised, clear cockpit and visible seat cushion/back so the seated rider is visibly contained inside the submarine.
