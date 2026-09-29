@@ -40,6 +40,7 @@
    boardall1: each couch pad/companion can board a DIFFERENT free mech at once.
    air1: HeliPad + DronePad · low-poly heli (4) + passenger drone (1–2) · fly over ranch.
    mechgun1: story-mech omnigun FIRE — permanent session kill (Canvas parity).
+   mechgun2: omnigun also permanently wrecks house/garage/trees/rocks/fish/fences (session).
    earth1: space shows procedural Earth (home) — not ranch grounds in vacuum.
    solarsys1: Solar System layout — Sun center; Moon+station orbit Earth; planet gravity wells;
    spacefix1: dark ground plane; orbit cam locks on planet; ranch pad on Earth surface;
@@ -1110,9 +1111,11 @@
     );
     gFloor.position.set(gp.x, 0.09, gp.z); gFloor.receiveShadow = true; scene.add(gFloor);
     var gMat = new THREE.MeshStandardMaterial({ color: 0x6b7280, roughness: 0.75, metalness: 0.15 });
+    state.garageParts = state.garageParts || [];
     function gWall(wx, wz, ww, wd, wh) {
       var m = new THREE.Mesh(new THREE.BoxGeometry(ww, wh || 2.0, wd), gMat);
       m.position.set(wx, (wh || 2.0) * 0.5, wz); m.castShadow = true; scene.add(m);
+      state.garageParts.push(m);
     }
     gWall(gp.x, gp.z - gd * 0.5 + 0.1, gw, 0.2);
     gWall(gp.x - gw * 0.5 + 0.1, gp.z, 0.2, gd);
@@ -1127,6 +1130,8 @@
     jambL.position.set(gp.x - doorW * 0.5 - jambT * 0.5, 1.0, southZ); jambL.castShadow = true; scene.add(jambL);
     var jambR = new THREE.Mesh(new THREE.BoxGeometry(jambT, 2.0, 0.22), jambMat);
     jambR.position.set(gp.x + doorW * 0.5 + jambT * 0.5, 1.0, southZ); jambR.castShadow = true; scene.add(jambR);
+    state.garageParts.push(jambL, jambR);
+    state.garageBlast = { id: "garage", kind: "building", x: gar.x + gar.w * 0.5, y: gar.y + gar.h * 0.5, r: Math.max(gar.w, gar.h) * 0.42, boom: 3.6 };
     var lintel = new THREE.Mesh(new THREE.BoxGeometry(doorW + jambT * 2, 0.35, 0.24), new THREE.MeshStandardMaterial({ color: 0x111827 }));
     lintel.position.set(gp.x, 1.95, southZ); scene.add(lintel);
     state.garageDoor = new THREE.Mesh(
@@ -1139,6 +1144,7 @@
     state.garageDoor.userData.cx = gp.x;
     state.garageDoor.userData.cz = gp.z + gd * 0.5;
     scene.add(state.garageDoor);
+    state.garageParts.push(state.garageDoor);
     state.garageOpen = 0;
     state.garageOpenLabel = labelSprite("OPEN", "#bbf7d0");
     state.garageOpenLabel.position.set(gp.x, 2.2, gp.z + gd * 0.5);
@@ -1175,9 +1181,11 @@
     floor.position.set(hp.x, 0.1, hp.z); floor.receiveShadow = true; scene.add(floor);
     var wallMat = new THREE.MeshStandardMaterial({ color: 0xd4b896, roughness: 0.7, side: THREE.DoubleSide });
     var wallH = 2.2, thick = 0.18;
+    state.houseParts = state.houseParts || [];
     function wall(wx, wz, ww, wd) {
       var m = new THREE.Mesh(new THREE.BoxGeometry(ww, wallH, wd), wallMat);
       m.position.set(wx, wallH * 0.5, wz); m.castShadow = true; scene.add(m);
+      state.houseParts.push(m);
     }
     // North/South (along X), East/West (along Z) — leave south gap as doorway
     wall(hp.x, hp.z - hd * 0.5 + thick * 0.5, hw, thick); // north
@@ -1228,6 +1236,8 @@
       new THREE.MeshStandardMaterial({ color: 0xb8956a, roughness: 0.85 })
     );
     porch.position.set(hp.x, 0.12, hp.z + hd * 0.5 + 0.4); porch.receiveShadow = true; scene.add(porch);
+    state.houseParts.push(roof, chimney, sofa, table, lamp, porch);
+    state.houseBlast = { id: "house", kind: "building", x: house.x + house.w * 0.5, y: house.y + house.h * 0.5, r: Math.max(house.w, house.h) * 0.42, boom: 4.2 };
     var path = new THREE.Mesh(
       new THREE.BoxGeometry(0.9, 0.06, 1.6),
       new THREE.MeshStandardMaterial({
@@ -1276,6 +1286,9 @@
     addMech(Object.assign({}, cp.mechTrillion || { x: 600, y: 2170 }, { stories: 1e12 }), 0xf9a8d4, 14.5);
 
     /* yard1: creek / trees / shrubs / rocks / flowers / fence */
+    state.ranchBlastables = state.ranchBlastables || [];
+    state.houseParts = state.houseParts || [];
+    state.garageParts = state.garageParts || [];
     var stream = C.YARD_STREAM || [];
     if (stream.length >= 2) {
       var sPts = [];
@@ -1307,6 +1320,10 @@
         new THREE.MeshStandardMaterial({ color: 0x16a34a, roughness: 0.85 })
       );
       canopy.position.set(tp.x, 1.05 * ts, tp.z); canopy.castShadow = true; scene.add(canopy);
+      state.ranchBlastables.push({
+        id: "yard-tree-" + ti, kind: "tree", x: tr.x, y: tr.y, r: Math.max(18, (tr.r || 14) * 1.2),
+        meshes: [trunk, canopy], boom: 2.4
+      });
     }
     var shrubs = C.YARD_SHRUBS || [];
     for (var shi = 0; shi < shrubs.length; shi++) {
@@ -1317,6 +1334,10 @@
         new THREE.MeshStandardMaterial({ color: 0x4d7c0f, roughness: 0.9 })
       );
       bush.position.set(sbp.x, 0.18, sbp.z); scene.add(bush);
+      state.ranchBlastables.push({
+        id: "yard-shrub-" + shi, kind: "shrub", x: sb.x, y: sb.y, r: 12 * (sb.s || 0.8),
+        meshes: [bush], boom: 1.3
+      });
     }
     var rocks = C.YARD_ROCKS || [];
     for (var rki = 0; rki < rocks.length; rki++) {
@@ -1327,6 +1348,10 @@
         new THREE.MeshStandardMaterial({ color: 0x78716c, roughness: 0.95 })
       );
       rock.position.set(rkp.x, 0.12, rkp.z); rock.castShadow = true; scene.add(rock);
+      state.ranchBlastables.push({
+        id: "yard-rock-" + rki, kind: "rock", x: rk.x, y: rk.y, r: (rk.r || 8) + 6,
+        meshes: [rock], boom: 1.5
+      });
     }
     var flowers = C.YARD_FLOWERS || [];
     for (var fli = 0; fli < flowers.length; fli++) {
@@ -1337,6 +1362,10 @@
         new THREE.MeshStandardMaterial({ color: fl.c ? parseInt(String(fl.c).replace("#", ""), 16) : 0xf472b6, roughness: 0.6 })
       );
       blossom.position.set(flp.x, 0.2, flp.z); scene.add(blossom);
+      state.ranchBlastables.push({
+        id: "yard-flower-" + fli, kind: "flower", x: fl.x, y: fl.y, r: 10,
+        meshes: [blossom], boom: 0.9
+      });
     }
     var fence = C.YARD_FENCE || [];
     for (var fi = 0; fi < fence.length; fi++) {
@@ -1346,6 +1375,10 @@
         new THREE.MeshStandardMaterial({ color: 0x78716c, roughness: 0.9 })
       );
       post.position.set(fp.x, 0.28, fp.z); scene.add(post);
+      state.ranchBlastables.push({
+        id: "yard-fence-" + fi, kind: "fence", x: fence[fi].x, y: fence[fi].y, r: 14,
+        meshes: [post], boom: 1.2
+      });
     }
   }
 
@@ -1507,7 +1540,7 @@
       rock.castShadow = true;
       scene.add(rock);
       addLabel("ROCK", "#e7e5e4", rp3.x, rockDeck + rad * sy * 0.7, rp3.z);
-      state.trackRocks.push({ data: rko, mesh: rock });
+      state.trackRocks.push({ data: rko, mesh: rock, id: "track-rock-" + rk, x: rko.x, y: rko.y, r: (rko.r || 10) + 8 });
     }
 
     /* polish9: start/finish gate */
@@ -3397,6 +3430,139 @@ state.zLift = 0;
       }
     }
 
+    /* mechgun2: yard decor (trees/rocks/fence/shrubs/flowers) */
+    if (state.ranchBlastables) {
+      for (var rbi = 0; rbi < state.ranchBlastables.length; rbi++) {
+        var rb = state.ranchBlastables[rbi];
+        if (!rb || rb.goneForever) continue;
+        if (C.isPermaGone && C.isPermaGone(rb.id)) {
+          rb.goneForever = true;
+          if (rb.meshes) for (var rm0 = 0; rm0 < rb.meshes.length; rm0++) if (rb.meshes[rm0]) rb.meshes[rm0].visible = false;
+          continue;
+        }
+        var rpt = worldToThree(rb.x, rb.y);
+        var rpr = (rb.r || 14) * 0.02;
+        if (Math.hypot(rpt.x - hx, rpt.z - hz) > R + rpr) continue;
+        if (C.markPermaGone) C.markPermaGone(rb.id);
+        rb.goneForever = true;
+        if (rb.meshes) {
+          for (var rm = 0; rm < rb.meshes.length; rm++) {
+            var msh = rb.meshes[rm];
+            if (!msh) continue;
+            if (rb.kind === "tree") {
+              /* stump rubble: shrink canopy away, flatten trunk */
+              msh.visible = true;
+              if (msh.geometry && msh.geometry.type && String(msh.geometry.type).indexOf("Sphere") >= 0) {
+                msh.visible = false;
+              } else {
+                msh.scale.y *= 0.18;
+                msh.position.y *= 0.25;
+                if (msh.material) {
+                  msh.material = new THREE.MeshBasicMaterial({ color: 0x5c3a1a });
+                }
+              }
+            } else {
+              msh.visible = false;
+            }
+          }
+        }
+        spawnThreeBoom(rpt.x, rb.kind === "tree" ? 0.9 : 0.35, rpt.z, rb.boom || 1.5);
+        n++;
+        if (rb.kind === "tree") {
+          state.toast = "GONE · tree!";
+          state.toastT = 1.4;
+          if (hooks.onToast) hooks.onToast(state.toast);
+        }
+      }
+    }
+
+    /* mechgun2: track rocks */
+    if (state.trackRocks) {
+      for (var tri = 0; tri < state.trackRocks.length; tri++) {
+        var trk = state.trackRocks[tri];
+        if (!trk || trk.goneForever) continue;
+        var tid = trk.id || ("track-rock-" + tri);
+        if (C.isPermaGone && C.isPermaGone(tid)) {
+          trk.goneForever = true;
+          if (trk.mesh) trk.mesh.visible = false;
+          continue;
+        }
+        var trx = trk.mesh ? trk.mesh.position.x : 0;
+        var trz = trk.mesh ? trk.mesh.position.z : 0;
+        if (Math.hypot(trx - hx, trz - hz) > R + 0.9) continue;
+        if (C.markPermaGone) C.markPermaGone(tid);
+        trk.goneForever = true;
+        if (trk.mesh) trk.mesh.visible = false;
+        spawnThreeBoom(trx, 0.5, trz, 1.6);
+        n++;
+      }
+    }
+
+    /* mechgun2: fish + whales */
+    function killThreeSwimmers(arr, rad, boom) {
+      if (!arr) return;
+      for (var si = 0; si < arr.length; si++) {
+        var sw = arr[si];
+        if (!sw || sw.userData.goneForever) continue;
+        var sdx = sw.position.x - hx, sdz = sw.position.z - hz;
+        if (sdx * sdx + sdz * sdz > (R + rad) * (R + rad)) continue;
+        sw.userData.goneForever = true;
+        sw.visible = false;
+        spawnThreeBoom(sw.position.x, 0.3, sw.position.z, boom);
+        n++;
+      }
+    }
+    killThreeSwimmers(state.fish, 0.45, 1.2);
+    killThreeSwimmers(state.whales, 0.9, 2.2);
+
+    /* mechgun2: house + garage buildings — hide walls, leave faint rubble cubes */
+    function wreckBuilding(blastInfo, parts, label) {
+      if (!blastInfo || blastInfo.goneForever) return;
+      if (C.isPermaGone && C.isPermaGone(blastInfo.id)) {
+        blastInfo.goneForever = true;
+        if (parts) for (var pi0 = 0; pi0 < parts.length; pi0++) if (parts[pi0]) parts[pi0].visible = false;
+        return;
+      }
+      var bp = worldToThree(blastInfo.x, blastInfo.y);
+      var br = (blastInfo.r || 200) * 0.02;
+      if (Math.hypot(bp.x - hx, bp.z - hz) > R + br) return;
+      if (C.markPermaGone) C.markPermaGone(blastInfo.id);
+      blastInfo.goneForever = true;
+      if (parts) {
+        for (var pi = 0; pi < parts.length; pi++) {
+          if (parts[pi]) parts[pi].visible = false;
+        }
+      }
+      /* rubble chunks kids can see */
+      for (var rc = 0; rc < 6; rc++) {
+        var chunk = new THREE.Mesh(
+          new THREE.BoxGeometry(0.35 + Math.random() * 0.45, 0.18 + Math.random() * 0.22, 0.3 + Math.random() * 0.4),
+          new THREE.MeshStandardMaterial({ color: rc % 2 ? 0x78716c : 0x57534e, roughness: 0.95 })
+        );
+        chunk.position.set(bp.x + (Math.random() - 0.5) * 3.2, 0.12, bp.z + (Math.random() - 0.5) * 2.8);
+        chunk.rotation.set(Math.random(), Math.random(), Math.random());
+        scene.add(chunk);
+      }
+      spawnThreeBoom(bp.x, 1.2, bp.z, blastInfo.boom || 3.5);
+      n++;
+      state.toast = label;
+      state.toastT = 2.0;
+      if (hooks.onToast) hooks.onToast(state.toast);
+      if (blastInfo.id === "house" && C.markPermaGone) C.markPermaGone("blue-bear");
+    }
+    wreckBuilding(state.houseBlast, state.houseParts, "GONE · ranch house!");
+    wreckBuilding(state.garageBlast, state.garageParts, "GONE · garage!");
+    if (state.blueBear && !state.blueBear.userData.goneForever) {
+      if ((C.isPermaGone && C.isPermaGone("blue-bear")) ||
+          Math.hypot(state.blueBear.position.x - hx, state.blueBear.position.z - hz) <= R + 0.7) {
+        if (C.markPermaGone) C.markPermaGone("blue-bear");
+        state.blueBear.userData.goneForever = true;
+        state.blueBear.visible = false;
+        spawnThreeBoom(state.blueBear.position.x, 0.4, state.blueBear.position.z, 1.8);
+        n++;
+      }
+    }
+
     /* companion froggies */
     if (state.companions) {
       for (var cgi = 0; cgi < state.companions.length; cgi++) {
@@ -3501,6 +3667,51 @@ state.zLift = 0;
             var fax = state.player.position.x - sh.mesh.position.x, faz = state.player.position.z - sh.mesh.position.z;
             if (fax * fax + faz * faz < ((sh.hitR || 0.7) + 1.0) * ((sh.hitR || 0.7) + 1.0)) hit = true;
           }
+          if (!hit && state.ranchBlastables) {
+            for (var rhi = 0; rhi < state.ranchBlastables.length && !hit; rhi++) {
+              var rhb = state.ranchBlastables[rhi];
+              if (!rhb || rhb.goneForever) continue;
+              if (C.isPermaGone && C.isPermaGone(rhb.id)) continue;
+              var rht = worldToThree(rhb.x, rhb.y);
+              var rhdx = rht.x - sh.mesh.position.x, rhdz = rht.z - sh.mesh.position.z;
+              var rhrr = (sh.hitR || 0.7) + (rhb.r || 14) * 0.02;
+              if (rhdx * rhdx + rhdz * rhdz < rhrr * rhrr) hit = true;
+            }
+          }
+          if (!hit && state.trackRocks) {
+            for (var thi = 0; thi < state.trackRocks.length && !hit; thi++) {
+              var thr = state.trackRocks[thi];
+              if (!thr || thr.goneForever || !thr.mesh || !thr.mesh.visible) continue;
+              var thdx = thr.mesh.position.x - sh.mesh.position.x, thdz = thr.mesh.position.z - sh.mesh.position.z;
+              if (thdx * thdx + thdz * thdz < ((sh.hitR || 0.7) + 0.85) * ((sh.hitR || 0.7) + 0.85)) hit = true;
+            }
+          }
+          if (!hit && state.fish) {
+            for (var fhi = 0; fhi < state.fish.length && !hit; fhi++) {
+              var fh = state.fish[fhi];
+              if (!fh || !fh.visible || fh.userData.goneForever) continue;
+              var fhdx = fh.position.x - sh.mesh.position.x, fhdz = fh.position.z - sh.mesh.position.z;
+              if (fhdx * fhdx + fhdz * fhdz < ((sh.hitR || 0.7) + 0.4) * ((sh.hitR || 0.7) + 0.4)) hit = true;
+            }
+          }
+          if (!hit && state.whales) {
+            for (var whi = 0; whi < state.whales.length && !hit; whi++) {
+              var wh = state.whales[whi];
+              if (!wh || !wh.visible || wh.userData.goneForever) continue;
+              var whdx = wh.position.x - sh.mesh.position.x, whdz = wh.position.z - sh.mesh.position.z;
+              if (whdx * whdx + whdz * whdz < ((sh.hitR || 0.7) + 0.85) * ((sh.hitR || 0.7) + 0.85)) hit = true;
+            }
+          }
+          function hitBuilding(info) {
+            if (!info || info.goneForever) return false;
+            if (C.isPermaGone && C.isPermaGone(info.id)) return false;
+            var bpt = worldToThree(info.x, info.y);
+            var bdx = bpt.x - sh.mesh.position.x, bdz = bpt.z - sh.mesh.position.z;
+            var brr = (sh.hitR || 0.7) + (info.r || 200) * 0.018;
+            return bdx * bdx + bdz * bdz < brr * brr;
+          }
+          if (!hit && hitBuilding(state.houseBlast)) hit = true;
+          if (!hit && hitBuilding(state.garageBlast)) hit = true;
           if (!hit && state.companions) {
             for (var cgi = 0; cgi < state.companions.length && !hit; cgi++) {
               var cg = state.companions[cgi];
@@ -4823,6 +5034,7 @@ state.zLift = 0;
       }
       for (var fi = 0; fi < (state.fish || []).length; fi++) {
         var fish = state.fish[fi];
+        if (fish.userData.goneForever) { fish.visible = false; continue; }
         fish.userData.phase += dt * 2;
         var sch2 = state.schools && state.schools[fish.userData.school];
         if (sch2) {
@@ -4835,6 +5047,7 @@ state.zLift = 0;
       }
       for (var wj = 0; wj < (state.whales || []).length; wj++) {
         var wh = state.whales[wj];
+        if (wh.userData.goneForever) { wh.visible = false; continue; }
         wh.userData.phase += dt * 0.7;
         wh.userData.breach = (wh.userData.breach || 0) + dt * 0.7;
         var bl = Math.max(0, Math.sin(wh.userData.breach)) * (wh.userData.breachAmp || 0.7);
@@ -4844,8 +5057,12 @@ state.zLift = 0;
       }
       /* polish8: Blue Bear pet bounce + chimney smoke */
       if (state.blueBear) {
-        state.blueBear.userData.bob = (state.blueBear.userData.bob || 0) + dt * 3.2;
-        state.blueBear.position.y = Math.abs(Math.sin(state.blueBear.userData.bob)) * 0.18;
+        if (state.blueBear.userData.goneForever || (C.isPermaGone && C.isPermaGone("blue-bear"))) {
+          state.blueBear.visible = false;
+        } else {
+          state.blueBear.userData.bob = (state.blueBear.userData.bob || 0) + dt * 3.2;
+          state.blueBear.position.y = Math.abs(Math.sin(state.blueBear.userData.bob)) * 0.18;
+        }
       }
       for (var smi = 0; smi < (state.chimneySmoke || []).length; smi++) {
         var puff = state.chimneySmoke[smi];

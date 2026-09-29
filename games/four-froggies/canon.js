@@ -28,7 +28,9 @@
    mech7: swim pose (engines); board existing sub hull (no clone).
    mech8: Rexy 1000-mech tank-blast respawn restores full articulated mesh (Three).
    mechgun1: story-mech omnigun — any piloted story mech FIRE (Space/X/button) permanently
-             removes hit targets for the session (no 7s respawn); tank FIRE unchanged. */
+             removes hit targets for the session (no 7s respawn); tank FIRE unchanged.
+   mechgun2: omnigun also permanently wrecks house/garage, trees, rocks, fish/whales,
+             fences/shrubs/flowers, track rocks — same session PERMA_GONE; tank FIRE unchanged. */
 (function (global) {
   "use strict";
 
@@ -783,6 +785,7 @@
     reach = reach != null ? reach : 8;
     var best = null, bestD = 1e12;
     for (var i = 0; i < TRACK_ROCKS.length; i++) {
+      if (isPermaGone("track-rock-" + i)) continue; /* mechgun2 */
       var rk = TRACK_ROCKS[i];
       var d = Math.hypot(x - rk.x, y - rk.y);
       var hitR = rk.r + reach;
@@ -850,22 +853,27 @@
     var t = WALL_THICK;
     var midX = house.x + house.w * 0.5;
     var gap = HOUSE_DOOR_W * 0.5;
-    /* North / West / East full; South split around doorway (walkable gap) */
-    out.push({ id: "house-n", x: house.x, y: house.y - t * 0.5, w: house.w, h: t });
-    out.push({ id: "house-w", x: house.x - t * 0.5, y: house.y, w: t, h: house.h });
-    out.push({ id: "house-e", x: house.x + house.w - t * 0.5, y: house.y, w: t, h: house.h });
-    out.push({ id: "house-sl", x: house.x, y: house.y + house.h - t * 0.5, w: Math.max(8, midX - gap - house.x), h: t });
-    out.push({ id: "house-sr", x: midX + gap, y: house.y + house.h - t * 0.5, w: Math.max(8, house.x + house.w - (midX + gap)), h: t });
+    /* mechgun2: wrecked house/garage — no wall blockers (walk through rubble) */
+    if (!isPermaGone("house")) {
+      /* North / West / East full; South split around doorway (walkable gap) */
+      out.push({ id: "house-n", x: house.x, y: house.y - t * 0.5, w: house.w, h: t });
+      out.push({ id: "house-w", x: house.x - t * 0.5, y: house.y, w: t, h: house.h });
+      out.push({ id: "house-e", x: house.x + house.w - t * 0.5, y: house.y, w: t, h: house.h });
+      out.push({ id: "house-sl", x: house.x, y: house.y + house.h - t * 0.5, w: Math.max(8, midX - gap - house.x), h: t });
+      out.push({ id: "house-sr", x: midX + gap, y: house.y + house.h - t * 0.5, w: Math.max(8, house.x + house.w - (midX + gap)), h: t });
+    }
 
     var gar = COMPOUND.garage;
-    out.push({ id: "gar-n", x: gar.x, y: gar.y - t * 0.5, w: gar.w, h: t });
-    out.push({ id: "gar-w", x: gar.x - t * 0.5, y: gar.y, w: t, h: gar.h });
-    out.push({ id: "gar-e", x: gar.x + gar.w - t * 0.5, y: gar.y, w: t, h: gar.h });
-    /* Rolling door blocks south bay until open enough to walk under */
-    if (garageOpen < 0.45) {
-      /* garage1: door fills south bay wall-to-wall (tiny side margins for jambs) */
-      var margin = Math.max(8, (gar.w - GARAGE_DOOR_W) * 0.5);
-      out.push({ id: "gar-door", x: gar.x + margin, y: gar.y + gar.h - t * 0.5, w: gar.w - margin * 2, h: t });
+    if (!isPermaGone("garage")) {
+      out.push({ id: "gar-n", x: gar.x, y: gar.y - t * 0.5, w: gar.w, h: t });
+      out.push({ id: "gar-w", x: gar.x - t * 0.5, y: gar.y, w: t, h: gar.h });
+      out.push({ id: "gar-e", x: gar.x + gar.w - t * 0.5, y: gar.y, w: t, h: gar.h });
+      /* Rolling door blocks south bay until open enough to walk under */
+      if (garageOpen < 0.45) {
+        /* garage1: door fills south bay wall-to-wall (tiny side margins for jambs) */
+        var margin = Math.max(8, (gar.w - GARAGE_DOOR_W) * 0.5);
+        out.push({ id: "gar-door", x: gar.x + margin, y: gar.y + gar.h - t * 0.5, w: gar.w - margin * 2, h: t });
+      }
     }
     return out;
   }
@@ -897,10 +905,12 @@
         out.push({ id: tid, x: tp.x, y: tp.y, r: tr });
       }
     }
-    /* yard1: thin tree trunks — edges only, leave doorway / mech pad / stream clear */
+    /* yard1: thin tree trunks — edges only, leave doorway / mech pad / stream clear
+       mechgun2: skip trees permanently blown up this session */
     if (!opts.ignoreYardTrees) {
       for (var ti = 0; ti < YARD_TREES.length; ti++) {
         var tr = YARD_TREES[ti];
+        if (isPermaGone("yard-tree-" + ti)) continue;
         out.push({ id: "yard-tree-" + ti, x: tr.x, y: tr.y, r: Math.max(8, (tr.r || 12) * 0.72) });
       }
     }

@@ -37,6 +37,7 @@
    mech8: (Three) Rexy 1000-mech respawn restores full mesh after tank blast.
    air1: helipad H + heli (4 seats) + drone pad D + passenger drone (1–2) · fly over ranch.
    mechgun1: story-mech omnigun FIRE — permanent session kill of hit targets (not tank).
+   mechgun2: omnigun also blows house/garage/trees/rocks/fish/fences/shrubs (session permanent).
    ~10× map: real roam between ranch house / track / pond / Starship.
    James ranch house: big house, backyard (animals), huge garage (toys + 10/100-story mechs);
    1000-story + trillion-story mechs sit out back (won't fit). Four Cybertrucks + shared pile-in.
@@ -1007,6 +1008,89 @@
       }
     }
 
+    /* mechgun2: pond fish + whales — permanent */
+    function killSwimmers(arr, pr) {
+      if (!arr) return;
+      for (var si = 0; si < arr.length; si++) {
+        var sw = arr[si];
+        if (!sw || sw.goneForever) continue;
+        if (!inBlast(sw.x, sw.y, pr || (sw.size || 4))) continue;
+        sw.goneForever = true;
+        sw.wrecked = true;
+        sw.scare = 0;
+        hitN++;
+        spawnBoom(world, sw.x, sw.y, sw.kind === "whale" ? 2.2 : 1.2);
+      }
+    }
+    killSwimmers(world.fish, 18);
+    killSwimmers(world.whales, 36);
+
+    /* mechgun2: static ranch decor from canon — trees/rocks/fence/shrubs/flowers/track rocks */
+    function killStaticList(list, idPrefix, radFn, boomPow, toast) {
+      if (!list || !C || !C.markPermaGone) return;
+      for (var ii = 0; ii < list.length; ii++) {
+        var it = list[ii];
+        if (!it) continue;
+        var id = idPrefix + ii;
+        if (C.isPermaGone && C.isPermaGone(id)) continue;
+        var rr = radFn ? radFn(it) : (it.r || 14);
+        if (!inBlast(it.x, it.y, rr)) continue;
+        C.markPermaGone(id);
+        hitN++;
+        spawnBoom(world, it.x, it.y, boomPow != null ? boomPow : 1.6);
+        spawnSparks(world, it.x, it.y, 10);
+        if (toast) world._mechBoomToast = toast;
+      }
+    }
+    killStaticList(C.YARD_TREES || [], "yard-tree-", function (tr) { return Math.max(18, (tr.r || 14) * 1.2); }, 2.4, "GONE · tree!");
+    killStaticList(C.YARD_ROCKS || [], "yard-rock-", function (rk) { return (rk.r || 8) + 6; }, 1.5, "GONE · rock!");
+    killStaticList(C.YARD_SHRUBS || [], "yard-shrub-", function (sb) { return 12 * (sb.s || 0.8); }, 1.3, null);
+    killStaticList(C.YARD_FLOWERS || [], "yard-flower-", function () { return 10; }, 0.9, null);
+    killStaticList(C.YARD_FENCE || [], "yard-fence-", function () { return 14; }, 1.2, "GONE · fence!");
+    killStaticList(C.TRACK_ROCKS || [], "track-rock-", function (rk) { return (rk.r || 10) + 8; }, 1.6, "GONE · rock!");
+
+    /* mechgun2: house + garage buildings — visual wreck + disable wall colliders */
+    if (C && C.COMPOUND) {
+      var house = C.COMPOUND.house;
+      var gar = C.COMPOUND.garage;
+      if (house && !(C.isPermaGone && C.isPermaGone("house"))) {
+        var hcx = house.x + house.w * 0.5, hcy = house.y + house.h * 0.5;
+        var hr = Math.max(house.w, house.h) * 0.42;
+        if (inBlast(hcx, hcy, hr) || inBlast(house.x, house.y, 40) || inBlast(house.x + house.w, house.y + house.h, 40)
+            || inBlast(house.x + house.w * 0.5, house.y + house.h, 50)) {
+          C.markPermaGone("house");
+          hitN++;
+          spawnBoom(world, hcx, hcy, 4.2);
+          spawnSparks(world, hcx, hcy, 36);
+          spawnDust(world, hcx, hcy, 22);
+          world._mechBoomToast = "GONE · ranch house!";
+          if (C.markPermaGone) C.markPermaGone("blue-bear");
+        }
+      }
+      if (gar && !(C.isPermaGone && C.isPermaGone("garage"))) {
+        var gcx = gar.x + gar.w * 0.5, gcy = gar.y + gar.h * 0.5;
+        var gr = Math.max(gar.w, gar.h) * 0.42;
+        if (inBlast(gcx, gcy, gr) || inBlast(gar.x + gar.w * 0.5, gar.y + gar.h, 50)) {
+          C.markPermaGone("garage");
+          hitN++;
+          spawnBoom(world, gcx, gcy, 3.6);
+          spawnSparks(world, gcx, gcy, 28);
+          spawnDust(world, gcx, gcy, 18);
+          world._mechBoomToast = "GONE · garage!";
+        }
+      }
+    }
+
+    /* mechgun2: Blue Bear (place-bound pet) */
+    if (C && !(C.isPermaGone && C.isPermaGone("blue-bear"))) {
+      if (inBlast(320, 1920, 28)) {
+        C.markPermaGone("blue-bear");
+        hitN++;
+        spawnBoom(world, 320, 1920, 1.8);
+        world._mechBoomToast = "GONE · Blue Bear!";
+      }
+    }
+
     /* other froggies (AI or players) — soft-disable; never the shooter */
     for (var gi = 0; gi < frogs.length; gi++) {
       var gf = frogs[gi];
@@ -1112,6 +1196,50 @@
       }
       if (near(gf.x, gf.y, 26)) return true;
     }
+    /* mechgun2: fish / whales / static ranch / buildings count as hits */
+    if (world.fish) {
+      for (var fi2 = 0; fi2 < world.fish.length; fi2++) {
+        var ff = world.fish[fi2];
+        if (ff && !ff.goneForever && near(ff.x, ff.y, 16)) return true;
+      }
+    }
+    if (world.whales) {
+      for (var wi2 = 0; wi2 < world.whales.length; wi2++) {
+        var ww = world.whales[wi2];
+        if (ww && !ww.goneForever && near(ww.x, ww.y, 32)) return true;
+      }
+    }
+    function nearStatic(list, idPrefix, radFn) {
+      if (!list) return false;
+      for (var si = 0; si < list.length; si++) {
+        var it = list[si];
+        if (!it) continue;
+        if (C && C.isPermaGone && C.isPermaGone(idPrefix + si)) continue;
+        var rr = radFn ? radFn(it) : (it.r || 12);
+        if (near(it.x, it.y, rr)) return true;
+      }
+      return false;
+    }
+    if (C) {
+      if (nearStatic(C.YARD_TREES, "yard-tree-", function (tr) { return Math.max(16, (tr.r || 14)); })) return true;
+      if (nearStatic(C.YARD_ROCKS, "yard-rock-", function (rk) { return (rk.r || 8) + 4; })) return true;
+      if (nearStatic(C.YARD_SHRUBS, "yard-shrub-", function (sb) { return 10 * (sb.s || 0.8); })) return true;
+      if (nearStatic(C.YARD_FLOWERS, "yard-flower-", function () { return 8; })) return true;
+      if (nearStatic(C.YARD_FENCE, "yard-fence-", function () { return 12; })) return true;
+      if (nearStatic(C.TRACK_ROCKS, "track-rock-", function (rk) { return (rk.r || 10) + 6; })) return true;
+      if (C.COMPOUND) {
+        var house = C.COMPOUND.house, gar = C.COMPOUND.garage;
+        if (house && !(C.isPermaGone && C.isPermaGone("house"))) {
+          var hcx = house.x + house.w * 0.5, hcy = house.y + house.h * 0.5;
+          if (near(hcx, hcy, Math.max(house.w, house.h) * 0.38)) return true;
+          if (near(house.x + house.w * 0.5, house.y + house.h, 40)) return true;
+        }
+        if (gar && !(C.isPermaGone && C.isPermaGone("garage"))) {
+          var gcx = gar.x + gar.w * 0.5, gcy = gar.y + gar.h * 0.5;
+          if (near(gcx, gcy, Math.max(gar.w, gar.h) * 0.38)) return true;
+        }
+      }
+    }
     return false;
   }
 
@@ -1201,6 +1329,7 @@
     }
     for (var i = 0; i < world.fish.length; i++) {
       var f = world.fish[i];
+      if (f.goneForever) continue;
       f.phase += dt * f.speed * (f.scare > 0 ? 3.5 : 1);
       if (f.scare > 0) f.scare -= dt;
       var sch = world.schools && world.schools[f.school];
@@ -1219,6 +1348,7 @@
     }
     for (var wi = 0; wi < world.whales.length; wi++) {
       var wh = world.whales[wi];
+      if (wh.goneForever) continue;
       wh.phase += dt * wh.speed * (wh.scare > 0 ? 3.5 : 1);
       if (wh.scare > 0) wh.scare -= dt;
       var wsp = wh.scare > 0 ? 12 * 2.6 : 12;
@@ -2610,16 +2740,17 @@
       }
     }
 
-    /* Fence posts + rails */
+    /* Fence posts + rails — mechgun2 skip blown posts */
     var fence = C.YARD_FENCE || [];
     for (var fi = 0; fi < fence.length; fi++) {
+      if (C.isPermaGone && C.isPermaGone("yard-fence-" + fi)) continue;
       var fp = project(fence[fi].x, fence[fi].y, camX, camY, vw, vh);
       var fh = 18 * fp.depth;
       ctx.fillStyle = "#78716c";
       ctx.fillRect(fp.x - 2 * fp.depth, fp.y - fh, 4 * fp.depth, fh);
       ctx.fillStyle = "#a8a29e";
       ctx.fillRect(fp.x - 3 * fp.depth, fp.y - fh - 2, 6 * fp.depth, 3 * fp.depth);
-      if (fi > 0) {
+      if (fi > 0 && !(C.isPermaGone && C.isPermaGone("yard-fence-" + (fi - 1)))) {
         var prev = project(fence[fi - 1].x, fence[fi - 1].y, camX, camY, vw, vh);
         var sameRow = Math.abs(fence[fi].y - fence[fi - 1].y) < 8 || Math.abs(fence[fi].x - fence[fi - 1].x) < 8;
         if (sameRow && Math.hypot(fence[fi].x - fence[fi - 1].x, fence[fi].y - fence[fi - 1].y) < 120) {
@@ -2635,12 +2766,19 @@
       }
     }
 
-    /* Rocks */
+    /* Rocks — mechgun2 skip blown rocks (leave tiny rubble crumb) */
     var rocks = C.YARD_ROCKS || [];
     for (var ri = 0; ri < rocks.length; ri++) {
       var rk = rocks[ri];
       var rp = project(rk.x, rk.y, camX, camY, vw, vh);
       var rr = (rk.r || 8) * rp.depth;
+      if (C.isPermaGone && C.isPermaGone("yard-rock-" + ri)) {
+        ctx.fillStyle = "rgba(87, 83, 78, 0.55)";
+        ctx.beginPath();
+        ctx.ellipse(rp.x, rp.y - 2, rr * 0.35, rr * 0.18, 0, 0, Math.PI * 2);
+        ctx.fill();
+        continue;
+      }
       drawSoftShadow(ctx, rp.x, rp.y + 2, rr * 1.1, rr * 0.4, 0.28);
       ctx.fillStyle = ri % 2 ? "#78716c" : "#57534e";
       ctx.beginPath();
@@ -2655,6 +2793,7 @@
     /* Flowers */
     var flowers = C.YARD_FLOWERS || [];
     for (var fl = 0; fl < flowers.length; fl++) {
+      if (C.isPermaGone && C.isPermaGone("yard-flower-" + fl)) continue;
       var flw = flowers[fl];
       var flp = project(flw.x, flw.y, camX, camY, vw, vh);
       var fs = 3.2 * flp.depth;
@@ -2680,6 +2819,7 @@
     /* Shrubs */
     var shrubs = C.YARD_SHRUBS || [];
     for (var sh = 0; sh < shrubs.length; sh++) {
+      if (C.isPermaGone && C.isPermaGone("yard-shrub-" + sh)) continue;
       var sb = shrubs[sh];
       var sp = project(sb.x, sb.y, camX, camY, vw, vh);
       var ss = (sb.s || 0.8) * 14 * sp.depth;
@@ -2694,7 +2834,7 @@
       ctx.fill();
     }
 
-    /* Trees — trunk solid via canon; canopy visual */
+    /* Trees — trunk solid via canon; canopy visual; mechgun2 stump rubble when blown */
     var trees = C.YARD_TREES || [];
     for (var ti = 0; ti < trees.length; ti++) {
       var tr = trees[ti];
@@ -2702,6 +2842,20 @@
       var sc = (tr.s || 1) * tp.depth;
       var trunkH = 28 * sc;
       var canopyR = (tr.r || 14) * 1.35 * sc;
+      if (C.isPermaGone && C.isPermaGone("yard-tree-" + ti)) {
+        drawSoftShadow(ctx, tp.x, tp.y + 2, canopyR * 0.55, canopyR * 0.18, 0.35);
+        ctx.fillStyle = "#5c3a1a";
+        ctx.fillRect(tp.x - 5 * sc, tp.y - 8 * sc, 10 * sc, 8 * sc);
+        ctx.fillStyle = "rgba(120, 53, 15, 0.75)";
+        ctx.beginPath();
+        ctx.ellipse(tp.x + 10 * sc, tp.y - 4 * sc, 9 * sc, 4 * sc, 0.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "rgba(34, 197, 94, 0.35)";
+        ctx.beginPath();
+        ctx.ellipse(tp.x - 8 * sc, tp.y - 2 * sc, 7 * sc, 3 * sc, -0.3, 0, Math.PI * 2);
+        ctx.fill();
+        continue;
+      }
       drawSoftShadow(ctx, tp.x, tp.y + 3, canopyR * 1.1, canopyR * 0.32, 0.3);
       ctx.fillStyle = "#78350f";
       ctx.fillRect(tp.x - 4 * sc, tp.y - trunkH, 8 * sc, trunkH);
@@ -2718,6 +2872,43 @@
       ctx.ellipse(tp.x + canopyR * 0.25, tp.y - trunkH - canopyR * 0.2, canopyR * 0.5, canopyR * 0.45, 0, 0, Math.PI * 2);
       ctx.fill();
     }
+  }
+
+
+  /* mechgun2: kid-readable rubble pile where a building blew up */
+  function drawBuildingRubble(ctx, cx, cy, w, h, camX, camY, vw, vh, label) {
+    var p = project(cx, cy, camX, camY, vw, vh);
+    var s = Math.max(w, h) * 0.018 * p.depth;
+    drawSoftShadow(ctx, p.x, p.y + 4, s * 2.2, s * 0.7, 0.4);
+    var chunks = [
+      [-0.9, -0.1, 0.7, 0.35, "#78716c"],
+      [0.2, -0.25, 0.85, 0.4, "#57534e"],
+      [-0.3, 0.15, 0.6, 0.28, "#a8a29e"],
+      [0.7, 0.05, 0.45, 0.22, "#44403c"],
+      [-0.55, -0.35, 0.4, 0.2, "#9a3412"],
+      [0.05, -0.5, 0.5, 0.25, "#6d4c41"],
+    ];
+    for (var i = 0; i < chunks.length; i++) {
+      var c = chunks[i];
+      ctx.fillStyle = c[4];
+      ctx.beginPath();
+      ctx.ellipse(p.x + c[0] * s * 1.4, p.y + c[1] * s - c[3] * s, c[2] * s, c[3] * s, (i % 3) * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    /* smoke wisps */
+    ctx.fillStyle = "rgba(200, 200, 210, 0.35)";
+    for (var sm = 0; sm < 3; sm++) {
+      ctx.beginPath();
+      ctx.arc(p.x - 10 + sm * 14, p.y - s * 0.9 - sm * 8, 6 + sm * 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.font = "bold " + Math.round(12 * p.depth) + "px Segoe UI, system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.strokeStyle = "rgba(0,0,0,0.7)";
+    ctx.lineWidth = 3;
+    ctx.strokeText(label || "WRECKED", p.x, p.y - s * 1.15);
+    ctx.fillStyle = "#fda4af";
+    ctx.fillText(label || "WRECKED", p.x, p.y - s * 1.15);
   }
 
   function drawRanchHouse(ctx, camX, camY, vw, vh, world, frogs) {
@@ -2819,11 +3010,17 @@
     /* Huge garage (east of house) */
     var gar = { x: a.x + 640, y: a.y + 80, w: 480, h: 520 };
     drawGroundPoly(ctx, areaCorners(gar, camX, camY, vw, vh), "rgba(55, 55, 60, 0.55)", "rgba(20,20,25,0.5)");
+    var Cgone = global.FroggiesCanon;
+    var garageGone = !!(Cgone && Cgone.isPermaGone && Cgone.isPermaGone("garage"));
+    if (garageGone) {
+      drawBuildingRubble(ctx, gar.x + gar.w * 0.5, gar.y + gar.h * 0.55, gar.w, gar.h, camX, camY, vw, vh, "WRECKED · garage");
+    }
     var g0 = project(gar.x + 30, gar.y + 60, camX, camY, vw, vh);
     var g1 = project(gar.x + gar.w - 30, gar.y + 60, camX, camY, vw, vh);
     var g2 = project(gar.x + gar.w - 30, gar.y + gar.h - 40, camX, camY, vw, vh);
     var g3 = project(gar.x + 30, gar.y + gar.h - 40, camX, camY, vw, vh);
     var gH = 72 * ((g0.depth + g2.depth) * 0.5);
+    if (!garageGone) {
     /* Garage side wall */
     ctx.fillStyle = "#4b5563";
     ctx.beginPath();
@@ -2905,6 +3102,7 @@
     ctx.font = "bold 13px Segoe UI, system-ui, sans-serif";
     ctx.textAlign = "center";
     ctx.fillText("Garage · James toys", gl.x, gl.y - gH - 18);
+    } /* !garageGone */
 
     /* 10-story + 100-story mechs reside in garage (hidden while piloted) */
     var Cmech = global.FroggiesCanon;
@@ -2917,7 +3115,8 @@
 
     /* Main house — polish8 stronger 2.5D: porch depth layers, path to door, chimney smoke */
     var hx = a.x + 60, hy = a.y + 100, hw = 520, hh = 420;
-    /* Path to door (walkway) */
+    var houseGone = !!(Cgone && Cgone.isPermaGone && Cgone.isPermaGone("house"));
+    /* Path to door (walkway) — keep even when wrecked so kids see footprint */
     var pathPts = [
       project(hx + hw * 0.42, hy + hh + 40, camX, camY, vw, vh),
       project(hx + hw * 0.58, hy + hh + 40, camX, camY, vw, vh),
@@ -2925,6 +3124,10 @@
       project(hx + hw * 0.45, hy + hh - 25, camX, camY, vw, vh),
     ];
     drawGroundPoly(ctx, pathPts, "rgba(160, 140, 110, 0.72)", "rgba(70,50,30,0.5)");
+    if (houseGone) {
+      drawBuildingRubble(ctx, hx + hw * 0.5, hy + hh * 0.55, hw, hh, camX, camY, vw, vh, "WRECKED · ranch house");
+    }
+    if (!houseGone) {
     /* Path edge stones */
     for (var sti = 0; sti < 5; sti++) {
       var stx = hx + hw * 0.48 + (sti - 2) * 8;
@@ -3168,11 +3371,12 @@
     ctx.strokeText("James · Ranch house", ridge.x, ridge.y - ridgeH - 14);
     ctx.fillStyle = "#fff7ed";
     ctx.fillText("James · Ranch house", ridge.x, ridge.y - ridgeH - 14);
+    } /* !houseGone */
 
     /* polish8: Blue Bear place-bound pet bounce near porch / phone */
     var blueX = 320, blueY = 1920;
     var bp = project(blueX, blueY, camX, camY, vw, vh);
-    if (bp.x > -40 && bp.x < vw + 40 && bp.y > -40 && bp.y < vh + 40) {
+    if (!(Cgone && Cgone.isPermaGone && Cgone.isPermaGone("blue-bear")) && bp.x > -40 && bp.x < vw + 40 && bp.y > -40 && bp.y < vh + 40) {
       var bobT = (world && world.ambientT) ? world.ambientT : (Date.now() / 1000);
       var bounce = Math.abs(Math.sin(bobT * 3.2)) * 7 * bp.depth;
       var bs = 11 * bp.depth;
@@ -3490,6 +3694,7 @@
       var rocks = (global.FroggiesCanon && global.FroggiesCanon.TRACK_ROCKS) || [];
       for (var ri = 0; ri < rocks.length; ri++) {
         var rk = rocks[ri];
+        if (global.FroggiesCanon && global.FroggiesCanon.isPermaGone && global.FroggiesCanon.isPermaGone("track-rock-" + ri)) continue;
         var rp = project(rk.x, rk.y, camX, camY, vw, vh);
         var rr = rk.r * 0.42 * rp.depth;
         var rh = (rk.h || 1) * 22 * rp.depth;
@@ -3708,8 +3913,14 @@
         ctx.fill();
       }
     }
-    for (var i = 0; i < world.fish.length; i++) drawSwimmer(world.fish[i], false);
-    for (var wj = 0; wj < world.whales.length; wj++) drawSwimmer(world.whales[wj], true);
+    for (var i = 0; i < world.fish.length; i++) {
+      if (world.fish[i] && world.fish[i].goneForever) continue;
+      drawSwimmer(world.fish[i], false);
+    }
+    for (var wj = 0; wj < world.whales.length; wj++) {
+      if (world.whales[wj] && world.whales[wj].goneForever) continue;
+      drawSwimmer(world.whales[wj], true);
+    }
     var label = project(a.x + a.w * 0.5, a.y + 28, camX, camY, vw, vh);
     ctx.font = "bold 14px Segoe UI, system-ui, sans-serif";
     ctx.textAlign = "center";
