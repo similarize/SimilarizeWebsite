@@ -1,3 +1,13 @@
+## What's new (ff3d32) — roof, dad, rooms, falls, sub
+
+- Dad stands on the floor he is actually on (porch, ground, loft, roof stair, roof deck) and slides around blockers instead of freezing.
+- Roof landing deck sits above the chimneys and spire. Helipad and drone pad are inset on that deck, clear of the upper house.
+- On the roof the camera pulls up over the whole house so both pads stay in view. In rooms the camera sits above the walls and the nearby walls fade.
+- On foot, Space hops (4.2 m/s) and walking off a roof, loft, or cliff falls with gravity until you land. Holding into a wall climbs over it.
+- Underwater submarine is a horizontal hull. The frog rides inside it and stays hidden.
+
+- Cache: `?v=20260929-ff3d32` · asset `index-ff3d32.js`
+
 ## What's new (ff3d30) — big oval and a speed loop
 
 - Much larger stadium north of the yard: long straights, a steep east sweeper, a milder west sweeper, a table jump on the way out, whoops and a second jump on the way back, and the driveway spur.
