@@ -1,3 +1,9 @@
+# What's new (ff3d77) — correct garage climb direction and block indoor wall climbs
+
+- Use movement toward the garage to climb back up and movement away from it to descend from the roof.
+- Prevent wall climbing and automatic stuck-recovery hops from inside the house or garage, so frogs cannot crawl through the roof from indoors.
+- Cache: `?v=20260929-ff3d77` · asset `index-ff3d77.js`
+
 # What's new (ff3d75) — start garage-roof descent at the edge
 
 - Engage controlled outward-facing climbing as soon as movement points over a garage-roof edge, before collision handling can stop the frog from crossing it.
