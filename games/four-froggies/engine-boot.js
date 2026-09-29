@@ -5,7 +5,7 @@
   "use strict";
 
   var C = global.FroggiesCanon;
-  var CACHE = "20260929-drivefix1";
+  var CACHE = "20260929-drivefix2";
   var CDN = {
     three: "https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js",
   };
@@ -573,6 +573,7 @@
       if (k === "arrowup" || k === "w") { keys.up = true; applySharedSteer(); e.preventDefault(); }
       if (k === "arrowdown" || k === "s") { keys.down = true; applySharedSteer(); e.preventDefault(); }
       if (k === "e" || k === "f") {
+        if (a.setInteractHeld) a.setInteractHeld(true);
         a.pulseInteract(); /* keyboard/HUD → primary only */
         e.preventDefault();
       }
@@ -619,6 +620,10 @@
     window.addEventListener("keyup", function (e) {
       if (!engineRunning) return;
       var k = e.key.toLowerCase();
+      if (k === "e" || k === "f") {
+        var aRel = altApi();
+        if (aRel && aRel.setInteractHeld) aRel.setInteractHeld(false);
+      }
       if (k === "arrowleft" || k === "a") keys.left = false;
       if (k === "arrowright" || k === "d") keys.right = false;
       if (k === "arrowup" || k === "w") keys.up = false;

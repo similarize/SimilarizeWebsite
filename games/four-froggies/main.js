@@ -1,6 +1,7 @@
 /* Four Froggies — lobby + 2.5D ranch hub (flagship).
    Party: PeerJS via party.js. Solo+AI offline. Strip kept in strip.js as sandbox activity. */
 /* interact2: per-player interact/exit + HOP; shared HUD/E = primary only. */
+/* drivefix2: one INTERACT press boards and stays until a later EXIT press. */
 (() => {
   "use strict";
 
@@ -78,6 +79,8 @@
   let storyToast = "";
   let storyToastT = 0;
   let exitTipT = 0; /* polish11: brief EXIT tip after board */
+  let interactKeyHeld = false; /* drivefix2: keyboard E/F still down */
+  const vehEdgeSeen = {};
   let wheelHoldDir = 0; /* track3: hold [ ] or −/= to grow/shrink wheels */
   const wheelSizeEl = document.getElementById("wheel-size");
   const wheelSlider = document.getElementById("wheel-slider");
@@ -903,6 +906,40 @@
     paintHud();
   }
 
+  function claimPadInteract(padIndex) {
+    const snap = padSnap(padIndex);
+    if (!snap || !snap.buttonsPressed) return true;
+    const key = "p" + (padIndex | 0);
+    if (vehEdgeSeen[key] === snap.buttonsPressed) return false;
+    vehEdgeSeen[key] = snap.buttonsPressed;
+    return true;
+  }
+  function frogInVehicle(me) {
+    return !!(me && (me.inTruck || me.inMech || me.inSub || me.inHeli || me.inDrone));
+  }
+  function armVehicleLatch(me, opts) {
+    if (!me) return;
+    me._vehLatch = 1;
+    const src = (opts && opts.source) || "";
+    if (src === "pad" && opts.padIndex != null) me._vehLatchKind = "pad:" + (opts.padIndex | 0);
+    else if (src === "keyboard" || interactKeyHeld) me._vehLatchKind = "kb";
+    else me._vehLatchKind = "tap";
+  }
+  function releaseVehicleLatches() {
+    if (!frogs) return;
+    for (const f of frogs) {
+      if (!f || !f._vehLatch) continue;
+      const k = f._vehLatchKind || "tap";
+      let up = true;
+      if (k === "kb") up = !interactKeyHeld;
+      else if (k.indexOf("pad:") === 0) {
+        const gp = padSnap(parseInt(k.slice(4), 10));
+        up = !(gp && gp.a);
+      }
+      if (up) f._vehLatch = 0;
+    }
+  }
+
   function doInteract(optFrog, opts) {
     if (phase === "space") {
       doSpaceInteract();
@@ -935,6 +972,8 @@
       }
     }
     /* EXIT only for this frog — caller ownership already enforced */
+    /* drivefix2: same press / key-repeat must not board and immediately hop out */
+    if (frogInVehicle(me) && me._vehLatch) return;
     if (me.inHeli || me.inDrone) {
       const res = W.boardAirResult
         ? W.boardAirResult(world, frogs, me, { kind: me.inDrone ? "drone" : "heli", id: me.inDrone ? "drone" : "heli" })
@@ -1009,6 +1048,7 @@
         storyToast = "Submarine · diving underwater · EXIT INTERACT / E";
         storyToastT = 2.4;
         exitTipT = 2.4;
+        armVehicleLatch(me, opts);
       }
       paintHud();
       return;
@@ -1030,6 +1070,7 @@
           : "Driving Cybertruck · hit the jumps!";
         beep(200, 0.1, "sawtooth", 0.04);
         exitTipT = 2.4;
+        armVehicleLatch(me, opts);
       } else if (!me.inTruck) {
         storyToast = "Parked · walking";
         exitTipT = 0;
@@ -1060,6 +1101,7 @@
               : "Driving Cybertruck · hit the jumps!";
             beep(200, 0.1, "sawtooth", 0.04);
             exitTipT = 2.4;
+            armVehicleLatch(me, opts);
           }
           storyToastT = 2.5;
           paintHud();
@@ -1086,6 +1128,7 @@
           : ("Boarding " + bandLabel + " · FIRE (Space / X / button) · walk like a robot!");
         beep(160, 0.1, "sawtooth", 0.04);
         exitTipT = 2.4;
+        armVehicleLatch(me, opts);
       } else if (!me.inMech) {
         storyToast = "Mech parked · walking";
         exitTipT = 0;
@@ -1104,6 +1147,7 @@
         storyToastT = 2.6;
         exitTipT = 2.6;
         beep(200, 0.1, "sawtooth", 0.04);
+        if (me.inHeli || me.inDrone) armVehicleLatch(me, opts);
       }
       paintHud();
       return;
@@ -1408,7 +1452,7 @@
             const mag = Math.hypot(x, y);
             if (mag > 1) { x /= mag; y /= mag; }
             es = { x, y };
-            if (gp.buttonsPressed && gp.buttonsPressed.a) {
+            if (gp.buttonsPressed && gp.buttonsPressed.a && claimPadInteract(f.padIndex)) {
               /* interact2: each pad's A boards/exits for THAT frog only */
               doInteract(f, { source: "pad", padIndex: f.padIndex });
             }
@@ -1687,6 +1731,7 @@
     } else if (phase === "hub") {
       /* ctrl1: ONE pollAll for the frame; updateHub + spare pads read same snaps */
       refreshPadSnaps(now | 0);
+      releaseVehicleLatches();
       const claimed = claimedPadIndices();
       _pad = null;
       for (let pi = 0; pi < 4; pi++) {
@@ -1695,7 +1740,7 @@
         if (claimed.has(pi)) continue;
         if (!_pad) _pad = gp;
         const bp = gp.buttonsPressed || {};
-        if (bp.a) {
+        if (bp.a && claimPadInteract(pi)) {
           const player = localPlayer();
           if (party && party.getRole() === "guest") { pushGuestInput({ interact: true }); doInteract(player, { source: "hud" }); }
           else doInteract(player, { source: "hud" });
@@ -1969,6 +2014,7 @@
       } else if (phase === "title" && (e.key === " " || e.key === "Enter")) tryStartFromUi();
     }
     if ((e.key === "e" || e.key === "E" || e.key === "f" || e.key === "F") && (phase === "hub" || phase === "space")) {
+      interactKeyHeld = true;
       doInteract(null, { source: "keyboard" });
     }
     /* spear1: B = SPEAR while Rexy pilots 1000-mech (Canvas); also mash when down */
@@ -2028,6 +2074,7 @@
     }
   });
   window.addEventListener("keyup", (e) => {
+    if (e.key === "e" || e.key === "E" || e.key === "f" || e.key === "F") interactKeyHeld = false;
     if (["ArrowLeft", "a", "A"].includes(e.key) && steerX < 0) steerX = 0;
     if (["ArrowRight", "d", "D"].includes(e.key) && steerX > 0) steerX = 0;
     if (["ArrowUp", "w", "W"].includes(e.key) && steerY < 0) steerY = 0;

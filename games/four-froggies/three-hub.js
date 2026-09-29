@@ -43,6 +43,7 @@
    mechgun2: omnigun also permanently wrecks house/garage/trees/rocks/fish/fences (session).
    spear1: Rexy 1000 SPEAR (B/RB) knocks trillion ~2s; mash get-up; tipped mesh.
    drivefix1: companions board/drive free Cybertruck(s)+Ripsaw+Tank like primary; mech locks stay.
+   drivefix2: one INTERACT edge boards and STAYS (no same-press exit). Mech locks stay.
    earth1: space shows procedural Earth (home) — not ranch grounds in vacuum.
    solarsys1: Solar System layout — Sun center; Moon+station orbit Earth; planet gravity wells;
    spacefix1: dark ground plane; orbit cam locks on planet; ranch pad on Earth surface;
@@ -65,6 +66,48 @@
   var interactPadIndex = null; /* pad that pressed A (null = keyboard/HUD/primary) */
   var abilityPadIndex = null; /* pad that pressed B/X (null = keyboard/HUD/primary) */
   var interactConsumed = false;
+  /* drivefix2: same cached A-edge must not board and then EXIT.
+     Gamepad frame-cache reuses one buttonsPressed object; engine-boot polls it
+     again after this tick already consumed the edge. */
+  var vehEdgeSeen = {};
+  var kbInteractHeld = false;
+
+  function claimHeldEdge(padKey, snap) {
+    if (!snap || !snap.buttonsPressed) return true;
+    if (vehEdgeSeen[padKey] === snap.buttonsPressed) return false;
+    vehEdgeSeen[padKey] = snap.buttonsPressed;
+    return true;
+  }
+  function armVehicleLatch(actor) {
+    if (!actor) return;
+    actor._vehLatch = 1;
+    if (interactPadIndex != null) actor._vehLatchKind = "pad:" + (interactPadIndex | 0);
+    else if (kbInteractHeld) actor._vehLatchKind = "kb";
+    else actor._vehLatchKind = "tap";
+  }
+  function vehicleLatched(actor) {
+    return !!(actor && actor._vehLatch);
+  }
+  function releaseOneLatch(actor) {
+    if (!actor || !actor._vehLatch) return;
+    var k = actor._vehLatchKind || "tap";
+    var up = false;
+    if (k === "kb") up = !kbInteractHeld;
+    else if (k.indexOf("pad:") === 0) {
+      var pi = parseInt(k.slice(4), 10);
+      var gp = global.SimilarizeGamepad && global.SimilarizeGamepad.pollPad(pi);
+      up = !(gp && gp.a);
+    } else up = true;
+    if (up) actor._vehLatch = 0;
+  }
+  function releaseVehicleLatches() {
+    if (!state) return;
+    releaseOneLatch(state);
+    if (state.companions) {
+      for (var i = 0; i < state.companions.length; i++) releaseOneLatch(state.companions[i].userData);
+    }
+  }
+  function setInteractHeld(on) { kbInteractHeld = !!on; }
 
   function refreshNearFromLocals() {
     if (!state || !C || state.mode !== "ranch") return;
@@ -185,6 +228,7 @@
 
   function exitCompanionMech(c) {
     if (!c || !c.userData.inMech) return;
+    if (vehicleLatched(c.userData)) return; /* drivefix2: same press must not hop out */
     var parkW = threeToWorld(c.position.x, c.position.z);
     var parkMid = c.userData.mechId || "mech";
     if (C.setVehiclePark) C.setVehiclePark(parkMid, parkW.x, parkW.y);
@@ -224,6 +268,7 @@
     state.toast = "Boarding " + (C.mechStoriesLabel ? C.mechStoriesLabel(c.userData.mechStories) : (c.userData.mechStories + "-story mech")) + " · FIRE (Space / X / button)!";
     state.exitTipT = 2.4; state.toastT = 2.5;
     if (hooks.onToast) hooks.onToast(state.toast);
+    armVehicleLatch(c.userData);
     return true;
   }
 
@@ -243,6 +288,7 @@
 
   function exitCompanionTruck(c) {
     if (!c || !c.userData.inTruck) return;
+    if (vehicleLatched(c.userData)) return; /* drivefix2 */
     var parkW = threeToWorld(c.position.x, c.position.z);
     var parkTid = c.userData.truckId || "truck";
     if (C.setVehiclePark) C.setVehiclePark(parkTid, parkW.x, parkW.y);
@@ -287,12 +333,18 @@
       : "Driving Cybertruck · hit the jumps!";
     state.exitTipT = 2.4; state.toastT = 2.5;
     if (hooks.onToast) hooks.onToast(state.toast);
+    armVehicleLatch(c.userData);
     return true;
   }
 
   function setInteractFromPad(padIndex, wx, wy) {
+    var pIdx = padIndex != null ? (padIndex | 0) : null;
+    if (pIdx != null && global.SimilarizeGamepad) {
+      var snap = global.SimilarizeGamepad.pollPad(pIdx);
+      if (snap && snap.buttonsPressed && snap.buttonsPressed.a && !claimHeldEdge("p" + pIdx, snap)) return;
+    }
     wantInteract = true;
-    interactPadIndex = padIndex != null ? (padIndex | 0) : null;
+    interactPadIndex = pIdx;
     if (wx != null && wy != null) interactOrigin = { x: wx, y: wy };
   }
 
@@ -378,6 +430,11 @@
   }
   function pulseInteract(padIndex) {
     /* interact2: optional padIndex from engine-boot; null = HUD/keyboard → primary only */
+    /* drivefix2: ignore a second read of the same cached A edge (board then EXIT). */
+    if (padIndex != null && padIndex !== undefined && padIndex !== "" && global.SimilarizeGamepad) {
+      var snapI = global.SimilarizeGamepad.pollPad(padIndex | 0);
+      if (snapI && snapI.buttonsPressed && snapI.buttonsPressed.a && !claimHeldEdge("p" + (padIndex | 0), snapI)) return;
+    }
     wantInteract = true;
     if (padIndex != null && padIndex !== undefined && padIndex !== "") {
       interactPadIndex = padIndex | 0;
@@ -2811,6 +2868,11 @@ state.zLift = 0;
     }
     /* interact2: primary EXIT only if this input owns the boarded vehicle */
     if (state.mode === "ranch" && (state.inMech || state.inTruck || state.inSub || state.inHeli || state.inDrone) && !companion) {
+      /* drivefix2: duplicate INTERACT while the board button is still down stays aboard */
+      if (vehicleLatched(state)) {
+        interactOrigin = null; interactPadIndex = null;
+        return;
+      }
       if (!inputOwnsBoarded() && !(state.inHeli || state.inDrone)) {
         interactOrigin = null; interactPadIndex = null;
         return;
@@ -2952,6 +3014,7 @@ state.zLift = 0;
           : state.vehicleStyle === "tank" ? (C.tankDrivingTip ? C.tankDrivingTip() : "Driving Tank · FIRE (Space / X / button) · EXIT INTERACT")
           : "Driving Cybertruck · hit the jumps!";
         state.exitTipT = 2.4;
+        armVehicleLatch(state);
       } else if (C.isSubHotspot && C.isSubHotspot(state.near)) {
         if (companion) { interactOrigin = null; interactPadIndex = null; return; }
         if (state.inMech || state.inTruck || state.inSub) {
@@ -2973,6 +3036,7 @@ state.zLift = 0;
         state.driveSub.position.set(state.player.position.x, -0.35 - (state.waterSub || 0.85) * 0.25, state.player.position.z);
         state.toast = "Submarine · diving underwater · EXIT INTERACT / E";
         state.toastT = 2.4; state.exitTipT = 2.4;
+        armVehicleLatch(state);
         if (hooks.onToast) hooks.onToast(state.toast);
       } else if (C.isAirHotspot && C.isAirHotspot(state.near)) {
         if (companion) { interactOrigin = null; interactPadIndex = null; return; }
@@ -3016,6 +3080,7 @@ state.zLift = 0;
         state.driveAir.position.set(tpB.x, airCraftDeckY(state.near.x, state.near.y, 0), tpB.z);
         state.toast = resB.toast || (kindB === "drone" ? "Passenger drone · fly!" : "Helicopter · fly!");
         state.toastT = 2.6; state.exitTipT = 2.6;
+        armVehicleLatch(state);
         if (hooks.onToast) hooks.onToast(state.toast);
       } else if (C.isMechHotspot && C.isMechHotspot(state.near)) {
         /* boardall1: companion boards their own mech; primary uses state.inMech */
@@ -3055,6 +3120,7 @@ state.zLift = 0;
               : state.vehicleStyle === "tank" ? (C.tankDrivingTip ? C.tankDrivingTip() : "Driving Tank · FIRE · EXIT INTERACT")
               : "Driving Cybertruck · hit the jumps!";
             state.exitTipT = 2.4; state.toastT = 2.5;
+            armVehicleLatch(state);
             interactOrigin = null; interactPadIndex = null;
             if (hooks.onToast) hooks.onToast(state.toast);
             return;
@@ -3084,6 +3150,7 @@ state.zLift = 0;
         state.scrap += 1;
         state.toast = "Boarding " + (C.mechStoriesLabel ? C.mechStoriesLabel(state.mechStories) : (state.mechStories + "-story mech")) + " · FIRE (Space / X / button)!";
         state.exitTipT = 2.4;
+        armVehicleLatch(state);
       } else if (id === "fishies") {
         state.toast = "Splash! Fishies & whales scatter";
         state.scrap += 2;
@@ -4392,6 +4459,7 @@ state.zLift = 0;
     if (!active || !state) return;
     raf = requestAnimationFrame(tick);
     var dt = Math.min(0.05, clock.getDelta());
+    releaseVehicleLatches(); /* drivefix2: drop latch only after the board button is up */
     state.cd = Math.max(0, state.cd - dt);
     state.toastT = Math.max(0, state.toastT - dt);
     state.exitTipT = Math.max(0, (state.exitTipT || 0) - dt);
@@ -5563,6 +5631,11 @@ state.zLift = 0;
           }
           c.position.x += (c.userData.vx || 0) * dt;
           c.position.z += (c.userData.vz || 0) * dt;
+          if ((c.userData.inTruck && c.userData.truckId) || (c.userData.inMech && c.userData.mechId)) {
+            var parkW = threeToWorld(c.position.x, c.position.z);
+            var parkId = c.userData.inTruck ? c.userData.truckId : c.userData.mechId;
+            if (C.setVehiclePark) C.setVehiclePark(parkId, parkW.x, parkW.y);
+          }
           /* interact2: per-companion hop arc */
           c.userData.cd = Math.max(0, (c.userData.cd || 0) - dt);
           if ((c.userData.hopWantT || 0) > 0) {
@@ -5602,6 +5675,11 @@ state.zLift = 0;
           c.visible = true;
           c.userData.faceYaw = state.faceYaw || 0;
         } else if (!c.userData.local) {
+          /* drivefix2: boarded AI stays in the vehicle — follow must not yank them out */
+          if (c.userData.inTruck || c.userData.inMech || c.userData.inSub || c.userData.inHeli || c.userData.inDrone) {
+            c.visible = !(c.userData.inTruck || c.userData.inMech || c.userData.inSub);
+            c.userData.vx = 0; c.userData.vz = 0;
+          } else {
           c.visible = true;
           var fw = threeToWorld(c.position.x, c.position.z);
           c.position.y = ranchGroundY(fw.x, fw.y) + Math.abs(Math.sin(c.userData.idleBounce)) * 0.14;
@@ -5618,6 +5696,7 @@ state.zLift = 0;
           c.position.x += cdx * fk;
           c.position.z += cdz * fk;
           if (Math.hypot(cdx, cdz) > 0.05) c.userData.faceYaw = Math.atan2(cdx, cdz);
+          }
         } else {
           c.visible = true;
           c.position.y = Math.abs(Math.sin(c.userData.idleBounce)) * 0.08;
@@ -5669,6 +5748,12 @@ state.zLift = 0;
         mctx.fillText("MAP", 6, 11);
       }
       var wpos = threeToWorld(state.player.position.x, state.player.position.z);
+      /* drivefix2: occupied rig's hotspot rides with the pilot (not a stale mech underfoot) */
+      if (C.setVehiclePark) {
+        if (state.inTruck && state.truckId) C.setVehiclePark(state.truckId, wpos.x, wpos.y);
+        else if (state.inMech && state.mechId) C.setVehiclePark(state.mechId, wpos.x, wpos.y);
+        else if (state.inSub && state.subId) C.setVehiclePark(state.subId, wpos.x, wpos.y);
+      }
       refreshNearFromLocals();
       if (state.mode === "ranch" && state.near && state.near.id !== state.prevNearId) {
         for (var spi = 0; spi < 10; spi++) {
@@ -6029,6 +6114,7 @@ state.zLift = 0;
     destroy: destroy,
     setSteer: setSteer,
     pulseInteract: pulseInteract,
+    setInteractHeld: setInteractHeld,
     pulseAbility: pulseAbility,
     pulseSpear: pulseSpear,
     setAirControls: function (opts) {

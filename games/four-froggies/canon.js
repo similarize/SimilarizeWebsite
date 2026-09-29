@@ -35,7 +35,8 @@
            mash face/Space/ability/stick to get up sooner; omnigun FIRE unchanged.
    drivefix1: Cybertruck(s)+Ripsaw+Tank boardable by ANY grounded frog when free
            (frogId on truck spots is label/color only — NOT an ownership lock).
-           Mech locks stay exclusive (James=trillion, Rexy=1000, Bubbles=10, Jimmy=100). */
+           Mech locks stay exclusive (James=trillion, Rexy=1000, Bubbles=10, Jimmy=100).
+   drivefix2: boarding sticks until a later EXIT press (no same-edge board+exit). */
 (function (global) {
   "use strict";
 

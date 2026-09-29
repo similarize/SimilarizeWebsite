@@ -2205,6 +2205,12 @@
     /* mech5: clamps follow expanded MAP_* (more green/dirt; house size unchanged) */
     ent.x = clamp(ent.x, 40, MAP_W - 40);
     ent.y = clamp(ent.y, 40, MAP_H - 40);
+    /* drivefix2: hotspot/park rides the occupied rig so a stale mech ring is not left under the frog */
+    if (world && ((ent.inTruck && ent.truckId) || (ent.inMech && ent.mechId) || (ent.inSub && ent.subId))) {
+      var rideId = ent.inTruck ? ent.truckId : (ent.inMech ? ent.mechId : ent.subId);
+      if (canon && canon.setVehiclePark) canon.setVehiclePark(rideId, ent.x, ent.y);
+      syncWorldHotspotPos(world, rideId, ent.x, ent.y);
+    }
     if ((!ent.inTruck || ent.inMech) && spd > 18) {
       ent.walkPhase = (ent.walkPhase || 0) + dt * ((ent.inMech ? 5.5 : 8) + spd * 0.04);
     } else {
@@ -2474,7 +2480,15 @@
         f.inTruck = false;
         f.truckMode = null;
         f.truckId = null;
+        f.vehicleStyle = null;
         f.z = 0;
+      }
+      /* drivefix2: solo truck / mech / sub — do not wander-yank or clear the seat */
+      if ((f.inTruck && f.truckMode !== "shared") || f.inMech || f.inSub) {
+        f.steerX = 0; f.steerY = 0;
+        f.idleBounce = (f.idleBounce || 0) + dt * 4;
+        if (f.chatT > 0) f.chatT -= dt;
+        continue;
       }
       /* polish7: follow lag — stagger retarget so AI trail behind, not snap */
       f.aiTimer -= dt;

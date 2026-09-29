@@ -1,3 +1,9 @@
+## What's new (drivefix2) — board Ripsaw / Cybertruck / Tank and STAY
+
+- **Bug:** Jimmy (and the other froggies) could board a free Ripsaw, then the same INTERACT edge fired again — Three's pad loop re-read the cached A press after the tick already boarded, so the next frame EXITed. Standing in the vehicle solid then popped them out. AI follow could also yank a seated companion.
+- **Fix (Canvas + Three):** One press boards and latches until that button is released. A later INTERACT is EXIT. Occupied hotspot rides with the rig. Mech locks unchanged (James=trillion, Rexy=1000, Bubbles=10, Jimmy=100). padfix1 / air / omnigun / spear untouched.
+- Cache: `20260929-drivefix2`.
+
 ## What's new (drivefix1) — any frog boards free Cybertrucks + Ripsaw
 
 - **Bug:** Couch companions (Rexy / Jimmy / Bubbles) could not board/drive the other Cybertruck(s) or Ripsaw the way James (primary) could — Three blocked companion truck INTERACT; near locked mechs also stole INTERACT from free trucks.
