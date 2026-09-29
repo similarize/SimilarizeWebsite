@@ -1,3 +1,8 @@
+## What's new (ff3d35) — frog reverse goes straight back
+
+- Holding back moves the frog straight back along the way it is facing, and it keeps that facing. Forward still turns you toward where you're going.
+- Cache: `?v=20260929-ff3d35` · asset `index-ff3d35.js`
+
 ## What's new (ff3d34) — see the room you're in
 
 - Inside the house the camera sits in the gap above that floor's walls and under its ceiling, and it looks at the frog. Walls stay visible, so the room reads. The roof overview is unchanged.
