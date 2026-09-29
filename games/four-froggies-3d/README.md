@@ -1,3 +1,17 @@
+# What's new (ff3d68) — fit scuba gear and exit to the nearest shore
+
+- Scale the tank and vest to the frog, place the tank behind its back, and align the mask and regulator to its face.
+- Scuba E exits to the nearest safe shore from the diver's current pond location; exiting from inside the submarine still returns to swimming.
+- Cache: `?v=20260929-ff3d68` · asset `index-ff3d68.js`
+
+# What's new (ff3d67) — seat the frog in an opaque sub with a clear cockpit dome
+
+- Keep the submarine hull and bow opaque; confine transparency to a small canopy over the cockpit beside the aft-set periscope tower.
+- Place the frog inside the open cockpit at a seat-height transform, feet down and facing the bow, consistently on entry, reboarding, and every movement update.
+- Pressing E while scuba swimming outside the submarine now exits to a safe nearby shore; pressing E inside the submarine still exits to swimming.
+- Use a new versioned bundle/cache URL so browsers cannot reuse the conflicting ff3d66 asset.
+- Cache: `?v=20260929-ff3d67` · asset `index-ff3d67.js`
+
 # What's new (ff3d66) — solid open cockpit with visible seated rider
 
 - Keep the submarine hull and bow opaque; remove the translucent cockpit panes so the top is solid/open rather than see-through.
