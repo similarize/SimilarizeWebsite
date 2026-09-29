@@ -1,3 +1,9 @@
+## What's new (padfix1) — one pad → one froggy · heli/drone above orange zone
+
+- **Bug A:** Dual gamepads were multi-claiming froggies (keyboard "You" stacked on top of pad seats; click rebound poorly). Each pad now claims exactly one froggy — A cycles to the next open seat, B releases, click moves that pad. Clear Pad 1–4 seat badges.
+- **Bug B:** Translucent orange house-zone floor covered helipad / drone pad / craft (Three y=0.03 under zone y=0.04; Canvas compound poly over pads). Zone floor clipped short of pads; Three pads raised & enlarged; craft sit on pad deck.
+- Cache-bust: `?v=20260929-padfix1`. Lobby exit1 kept. Cast: James, Jimmy, Bubbles, Rexy. mechgun2 omnigun + air1 flight untouched.
+
 ## What's new (mechwalk1) — articulated, faster mechs with stable height
 
 - Animate the mech's upper legs, bent knees, shins, and alternating feet while it moves.
