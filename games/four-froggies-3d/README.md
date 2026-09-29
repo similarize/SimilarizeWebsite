@@ -1,3 +1,9 @@
+## What's new (ff3d42) — normal frog controls
+
+- W, A, S, and D move him relative to the camera. W goes where you are looking, A and D go left and right, and S backs up straight. He turns to face the way he is running.
+- Drag the mouse to look around. The camera stays there instead of swinging behind him when he strafes.
+- Cache: `?v=20260929-ff3d42` · asset `index-ff3d42.js`
+
 ## What's new (ff3d41) — turn, trees, look, and dad
 
 - A and D turn in place. W still walks, and S still backs up straight.
