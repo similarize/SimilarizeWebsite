@@ -7,7 +7,7 @@
 **Track art uses the same height as the tires.** Canvas and Three.js build the apron from `trackElevAt` (path, hills, banks, ramps, and rocks together), sampled closely enough that the road follows the hills instead of spiking at the old corner list. Lane stripes sit a few centimeters above that apron. Pillars, the start gate, parked trucks, rocks, and ramp lips stand on it. The ranch floor has a hole under the apron so the dips stay visible. Shadows and dust sit on the deck.
 
 - Cache-bust: `?v=20260928-qa1`. Lobby exit1 UX kept. Cast unchanged: James, Jimmy, Bubbles, Rexy.
-- Standalone cabinet `games/four-froggies-3d/` ff3d27 replaces the overlapping cloverleaf with one banked oval and a yard spur. The jump is a rounded crest, rocks sit beside the dirt, and the cabinet script runs again.
+- Standalone cabinet `games/four-froggies-3d/` ff3d30 is a much larger oval with jumps, whoops, banked sweepers, and a vertical loop that drops the truck unless it carries speed.
 
 ## What's new (mech8) — Rexy 1000-mech respawn restores full mesh
 
