@@ -1,3 +1,9 @@
+# What's new (ff3d73) — make wall descents and drop jumps easy
+
+- Turn the froggy outward while backing down a climbable wall, and increase the controlled descent speed.
+- Allow a one-time jump away from a wall climb or while falling from a ledge; landings reset the extra-jump allowance so lower floors, roofs, and platforms remain reachable.
+- Cache: `?v=20260929-ff3d73` · asset `index-ff3d73.js`
+
 # What's new (ff3d72) — repair the propeller release startup
 
 - Restore separate propeller and seat assignments in the underwater submarine builder; ff3d71 accidentally concatenated them into an undefined `propellerus` reference.
