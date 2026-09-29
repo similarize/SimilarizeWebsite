@@ -3717,7 +3717,7 @@ state.zLift = 0;
         if (state.driveAir) {
           state.driveAir.visible = true;
           state.driveAir.position.set(tpF.x, state.zLift, tpF.z);
-          if (craftF.faceAngle != null) state.driveAir.rotation.y = -craftF.faceAngle + Math.PI / 2;
+          if (craftF.faceAngle != null) state.driveAir.rotation.y = -craftF.faceAngle;
           if (state.driveAir.userData.rotor) state.driveAir.userData.rotor.rotation.y = craftF.rotor || 0;
           if (state.driveAir.userData.rotors) {
             for (var ri = 0; ri < state.driveAir.userData.rotors.length; ri++) {

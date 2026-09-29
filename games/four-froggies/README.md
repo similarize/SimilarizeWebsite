@@ -1,3 +1,8 @@
+## What's new (air3) — point aircraft along their flight path
+
+- Remove the 90-degree nose offset from helicopter and drone heading in both Canvas and Three.js; the aircraft now point along the same world-space direction used by flight steering.
+- Cache-bust: `?v=20260929-air3`.
+
 ## What's new (air2) — takeoff and scale aircraft to the froggies
 
 - Fix takeoff in both Canvas and Three engines: actively climbing aircraft are no longer forced back onto the ground by the landing assist.

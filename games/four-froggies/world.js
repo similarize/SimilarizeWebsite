@@ -4328,7 +4328,7 @@
     ctx.beginPath();
     ctx.ellipse(0, lift + 6 * s, 38 * s * sh, 12 * s * sh, -0.12, 0, Math.PI * 2);
     ctx.fill();
-    ctx.rotate(yaw + Math.PI / 2);
+    ctx.rotate(yaw);
     /* Skids */
     ctx.strokeStyle = "#64748b";
     ctx.lineWidth = 2.4 * s;
@@ -4393,7 +4393,7 @@
     ctx.beginPath();
     ctx.ellipse(0, lift + 4 * s, 22 * s * sh, 8 * s * sh, -0.12, 0, Math.PI * 2);
     ctx.fill();
-    ctx.rotate(yaw + Math.PI / 2);
+    ctx.rotate(yaw);
     /* Body */
     ctx.fillStyle = accent || "#67e8f9";
     ctx.beginPath();
