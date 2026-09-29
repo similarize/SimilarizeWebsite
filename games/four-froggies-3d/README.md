@@ -1,3 +1,9 @@
+## What's new (ff3d44) — climb any wall
+
+- Hold into a wall and he climbs it. The mansion wall still lands on the roof. The garage wall lands on the garage roof. Let go and he drops.
+- A roof or wall between the camera and him turns see-through until it is out of the way.
+- Cache: `?v=20260929-ff3d44` · asset `index-ff3d44.js`
+
 ## What's new (ff3d43) — climb the trees
 
 - Hop next to a tree and he grabs the trunk. Another hop or two puts him in the crown. Walk out of the leaves and he drops.
