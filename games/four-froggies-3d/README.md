@@ -1,4 +1,10 @@
-# What's new (ff3d63) — seat the frog inside an open submarine cockpit
+# What's new (ff3d64) — bring the hull up around the seated rider
+
+- Raised the open-top hull so its gunwale surrounds the frog at cockpit height instead of sitting below the rider, and added a dark cabin floor beneath the seat.
+- Kept the opaque hull, transparent cockpit glazing, and seated frog pose.
+- Cache: `?v=20260929-ff3d64` · asset `index-ff3d64.js`
+
+## What's new (ff3d63) — seat the frog inside an open submarine cockpit
 
 - Replaced the closed see-through bubble/hull with an opaque, open-top lower hull and a clear, framed cockpit, so the frog sits down inside the boat rather than appearing above its shell.
 - Lowered the rider's body to the seat and kept the feet bent inside the hull.
