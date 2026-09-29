@@ -1,4 +1,10 @@
-# What's new (ff3d62) — fix the underwater sub entry and rider seat
+# What's new (ff3d63) — seat the frog inside an open submarine cockpit
+
+- Replaced the closed see-through bubble/hull with an opaque, open-top lower hull and a clear, framed cockpit, so the frog sits down inside the boat rather than appearing above its shell.
+- Lowered the rider's body to the seat and kept the feet bent inside the hull.
+- Cache: `?v=20260929-ff3d63` · asset `index-ff3d63.js`
+
+## What's new (ff3d62) — fix the underwater sub entry and rider seat
 
 - Fixed a runtime error on submarine entry: the frog was being attached through an undefined variable, which could abort the game update as the underwater scene loaded.
 - Made the hull and bow transparent around the full cockpit, added visible cockpit glass, seat padding, and side rails, and aligned the frog's feet and seated pose with the seat.
