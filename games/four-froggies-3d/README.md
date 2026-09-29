@@ -1,4 +1,10 @@
-# What's new (ff3d47) — climb pose, solid truck walls, track bank and start
+# What's new (ff3d48) — back down walls and smooth the vertical loop
+
+- While climbing, back away from the wall to descend along it and return to the height where the climb began.
+- The car follows the vertical loop with a smooth 3D track frame rather than flipping its heading near the top; denser loop samples smooth the ride further.
+- Cache: `?v=20260929-ff3d48` · asset `index-ff3d48.js`
+
+## What's new (ff3d47) — climb pose, solid truck walls, track bank and start
 
 - Holding into a wall gives James an animated climbing pose while the existing climb and camera fade keep him readable.
 - Vehicles now keep their full footprint clear of house and garage walls instead of clipping through them.
