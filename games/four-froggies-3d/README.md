@@ -1,3 +1,8 @@
+## What's new (ff3d39) — fly the helicopter and the passenger drone
+
+- A helicopter sits on the H pad. The passenger drone sits on its pad, and the floating sign now fits the whole word, including the P. A cyan P is painted on that pad. Walk up and press E to get in. The stick flies, RT or Hop climbs, LT descends, and it hovers when you let go. E hops you out onto the roof, or into a fall if you bail in the air.
+- Cache: `?v=20260929-ff3d39` · asset `index-ff3d39.js`
+
 ## What's new (ff3d38) — climb out of the pond
 
 - Press E while swimming and you step onto the nearest shore. Press E in the submarine and you surface on that shore, with the submarine parked beside you.
