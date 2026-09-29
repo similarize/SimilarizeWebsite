@@ -1,3 +1,8 @@
+## What's new (ff3d37) — a bigger lobed pond
+
+- The ranch pond is about ten times the old circle, and its shore is five ovals grown together: two northern coves, a west bulge, an east bulge, and a south lobe. Wading, swimming, and the blue water are the same shape. The house, porch, garage, and yard stay dry.
+- Cache: `?v=20260929-ff3d37` · asset `index-ff3d37.js`
+
 ## What's new (ff3d36) — Cybertruck stays off the porch
 
 - The Cybertruck stops at the porch edge. Its nose and corners share the porch rectangle, so it cannot drive up onto the deck.
