@@ -68,6 +68,16 @@
   let _pad = null;
   let _padSnaps = null; /* ctrl1: one pollAll/frame */
   let _padFrame = -1;
+  /* lobbypick1: per-pad frog focus (D-pad/stick cycle · A claim · B release) */
+  let lobbyPadFocus = [null, null, null, null];
+  let lobbyPadAxisLatch = [
+    { x: 0, y: 0 },
+    { x: 0, y: 0 },
+    { x: 0, y: 0 },
+    { x: 0, y: 0 },
+  ];
+  let lastLobbyPadIndex = null;
+  let lobbyPadConnected = [false, false, false, false];
   let joySteerX = 0;
   let joySteerY = 0;
   let tapSteerX = 0;
@@ -1681,34 +1691,139 @@
     }
   }
 
+  function frogDisplayName(id) {
+    const d = FROG_DEFS[id];
+    return d && d.name ? d.name : (id ? id.charAt(0).toUpperCase() + id.slice(1) : "");
+  }
+
+  function lobbySeatTakenByOther(frogId, padIndex) {
+    const seat = lobbySeats && lobbySeats[frogId];
+    if (!seat || !seat.peerId) return false;
+    if (seat.status !== "human" && seat.status !== "you") return false;
+    const peer = "local-pad-" + (padIndex | 0);
+    return seat.peerId !== peer;
+  }
+
+  function ensureLobbyPadFocus(pi) {
+    const idx = pi | 0;
+    let cur = lobbyPadFocus[idx];
+    if (cur && FROG_ORDER.indexOf(cur) >= 0 && !lobbySeatTakenByOther(cur, idx)) return cur;
+    /* Prefer own claimed seat, else first open/ownable */
+    for (let i = 0; i < FROG_ORDER.length; i++) {
+      const id = FROG_ORDER[i];
+      const s = lobbySeats && lobbySeats[id];
+      if (s && s.padIndex != null && (s.padIndex | 0) === idx) {
+        lobbyPadFocus[idx] = id;
+        return id;
+      }
+    }
+    for (let i = 0; i < FROG_ORDER.length; i++) {
+      const id = FROG_ORDER[i];
+      if (!lobbySeatTakenByOther(id, idx)) {
+        lobbyPadFocus[idx] = id;
+        return id;
+      }
+    }
+    lobbyPadFocus[idx] = FROG_ORDER[0];
+    return lobbyPadFocus[idx];
+  }
+
+  function cycleLobbyPadFocus(pi, dir) {
+    const idx = pi | 0;
+    const step = dir < 0 ? -1 : 1;
+    let cur = ensureLobbyPadFocus(idx);
+    let at = FROG_ORDER.indexOf(cur);
+    if (at < 0) at = 0;
+    for (let n = 0; n < FROG_ORDER.length; n++) {
+      at = (at + step + FROG_ORDER.length) % FROG_ORDER.length;
+      const fid = FROG_ORDER[at];
+      if (!lobbySeatTakenByOther(fid, idx)) {
+        lobbyPadFocus[idx] = fid;
+        return fid;
+      }
+    }
+    return cur;
+  }
+
+  function lobbyAxisEdge(pi, gp) {
+    const latch = lobbyPadAxisLatch[pi] || (lobbyPadAxisLatch[pi] = { x: 0, y: 0 });
+    const ax = gp && typeof gp.lx === "number" ? gp.lx : 0;
+    const ay = gp && typeof gp.ly === "number" ? gp.ly : 0;
+    const TH = 0.55;
+    let dir = 0;
+    const bp = (gp && gp.buttonsPressed) || {};
+    if (bp.dr || bp.dd) dir = 1;
+    else if (bp.dl || bp.du) dir = -1;
+    else if (ax > TH && latch.x <= TH) dir = 1;
+    else if (ax < -TH && latch.x >= -TH) dir = -1;
+    else if (ay > TH && latch.y <= TH) dir = 1;
+    else if (ay < -TH && latch.y >= -TH) dir = -1;
+    latch.x = ax;
+    latch.y = ay;
+    return dir;
+  }
+
   function tick(now) {
+
     const dt = Math.min(0.05, (now - (lastTs || now)) / 1000);
     lastTs = now;
     /* Couch lobby: poll pads 0–3 once per frame (avoid double-poll eating edges) */
     if (phase === "title" && window.SimilarizeGamepad) {
+      /* lobbypick1: D-pad/stick cycles focus · A claims focused frog · B releases */
       const snaps = window.SimilarizeGamepad.pollAll
         ? window.SimilarizeGamepad.pollAll(4)
         : [0, 1, 2, 3].map((i) => window.SimilarizeGamepad.pollPad(i));
       let yStart = false;
+      let focusDirty = false;
       for (let pi = 0; pi < 4; pi++) {
         const gp = snaps[pi];
-        if (!gp || !gp.connected) continue;
+        const connected = !!(gp && gp.connected);
+        lobbyPadConnected[pi] = connected;
+        if (!connected) {
+          lobbyPadFocus[pi] = null;
+          if (lobbyPadAxisLatch[pi]) {
+            lobbyPadAxisLatch[pi].x = 0;
+            lobbyPadAxisLatch[pi].y = 0;
+          }
+          continue;
+        }
         if (pi === 0) _pad = gp;
+        ensureLobbyPadFocus(pi);
         const bp = gp.buttonsPressed || {};
+        const axisDir = lobbyAxisEdge(pi, gp);
+        if (axisDir) {
+          lastLobbyPadIndex = pi;
+          cycleLobbyPadFocus(pi, axisDir);
+          focusDirty = true;
+          unlockAudio();
+          beep(320 + pi * 30, 0.04, "square", 0.02);
+        }
         if (bp.a || bp.start) {
-          if (party && party.claimLocalPad) {
-            const claimed = party.claimLocalPad(pi);
-            if (claimed) {
-              selectedId = claimed;
-              unlockAudio();
-              beep(440 + pi * 40, 0.05, "triangle", 0.03);
-            }
+          lastLobbyPadIndex = pi;
+          const focus = ensureLobbyPadFocus(pi);
+          let claimed = null;
+          if (party && party.claimPadOntoFrog) claimed = party.claimPadOntoFrog(pi, focus);
+          else if (party && party.claimLocalPad) claimed = party.claimLocalPad(pi);
+          if (claimed) {
+            lobbyPadFocus[pi] = claimed;
+            selectedId = claimed;
+            unlockAudio();
+            beep(440 + pi * 40, 0.05, "triangle", 0.03);
+            focusDirty = true;
+          } else {
+            unlockAudio();
+            beep(180, 0.06, "sawtooth", 0.02);
           }
         } else if (bp.b) {
+          lastLobbyPadIndex = pi;
           if (party && party.releaseLocalPad) party.releaseLocalPad(pi);
+          ensureLobbyPadFocus(pi);
+          focusDirty = true;
         }
+        if (bp.x || bp.y || bp.lb || bp.rb) lastLobbyPadIndex = pi;
         if (bp.y) yStart = true;
       }
+      if (focusDirty) paintLobbySeats();
       if (yStart) tryStartFromUi();
     } else if (phase === "space") {
       /* ctrl1: one pollAll; reuse snaps — never re-poll */
@@ -1791,20 +1906,44 @@
   function paintLobbySeats() {
     const seats = lobbySeats || {};
     const role = partyMeta.role || "solo";
+    /* Build focus → pads map for open-seat hints */
+    const focusByFrog = {};
+    for (let pi = 0; pi < 4; pi++) {
+      if (!lobbyPadConnected[pi]) continue;
+      const fid = lobbyPadFocus[pi];
+      if (!fid) continue;
+      if (!focusByFrog[fid]) focusByFrog[fid] = [];
+      focusByFrog[fid].push(pi + 1);
+    }
     document.querySelectorAll(".frog-btn").forEach((btn) => {
       const id = btn.dataset.id;
       const seat = seats[id] || { status: "open" };
       let status = seat.status || "open";
-      btn.classList.remove("seat-open", "seat-you", "seat-human", "seat-ai", "seat-taken", "selected", "seat-pad");
+      btn.classList.remove(
+        "seat-open",
+        "seat-you",
+        "seat-human",
+        "seat-ai",
+        "seat-taken",
+        "selected",
+        "seat-pad",
+        "pad-focus"
+      );
       btn.removeAttribute("data-pad");
+      btn.removeAttribute("data-focus-pad");
       const stateEl = btn.querySelector(".seat-state");
+      const fname = frogDisplayName(id);
       if (status === "you") {
         btn.classList.add("seat-you", "selected");
         const pi = seat.padIndex != null ? (seat.padIndex | 0) : null;
         if (pi != null) {
           btn.classList.add("seat-pad");
           btn.setAttribute("data-pad", String(pi + 1));
-          if (stateEl) stateEl.textContent = "Pad " + (pi + 1) + " · " + (id.charAt(0).toUpperCase() + id.slice(1));
+          if (stateEl) stateEl.textContent = "Pad " + (pi + 1) + " · " + fname;
+          if (lobbyPadFocus[pi] === id) {
+            btn.classList.add("pad-focus");
+            btn.setAttribute("data-focus-pad", String(pi + 1));
+          }
         } else if (stateEl) {
           stateEl.textContent = seat.label || "You";
         }
@@ -1813,7 +1952,19 @@
         if (stateEl) stateEl.textContent = seat.label || "Joined";
       } else {
         btn.classList.add("seat-open", "seat-ai");
-        if (stateEl) stateEl.textContent = "Open · AI";
+        const focusPads = focusByFrog[id] || [];
+        if (focusPads.length) {
+          btn.classList.add("pad-focus");
+          btn.setAttribute("data-focus-pad", String(focusPads[0]));
+          if (stateEl) {
+            stateEl.textContent =
+              focusPads.length === 1
+                ? "Pad " + focusPads[0] + " · pick " + fname
+                : "Pads " + focusPads.join(",") + " · pick";
+          }
+        } else if (stateEl) {
+          stateEl.textContent = "Open · AI";
+        }
       }
     });
 
@@ -1829,7 +1980,7 @@
         partyStatus.textContent = "JOINED · claim an Open froggy seat · wait for Host to press GO";
       else if (role === "solo")
         partyStatus.textContent =
-          "SOLO · each pad picks ONE froggy (A claim/cycle · B release · click moves that pad) · GO (AI fills rest)";
+          "SOLO · D-pad/stick cycle froggy · A claim · B release · click/keyboard still work · GO (AI fills rest)";
       else partyStatus.textContent = "";
     }
     if (roomCodeEl) {
@@ -1874,7 +2025,7 @@
     if (overlayGo && phase === "title") {
       if (role === "guest") overlayGo.textContent = "JOIN · claim an Open froggy · Host starts with GO";
       else if (role === "host") overlayGo.textContent = "HOST · Copy invite / scan QR · friends claim seats · you press GO";
-      else overlayGo.textContent = "Pads: A claim/cycle one froggy · B release · click moves your pad · Y/GO starts";
+      else overlayGo.textContent = "Pads: D-pad/stick pick froggy · A claim · B release · Y/GO starts";
     }
   }
 
@@ -2223,6 +2374,16 @@
           partyStatus.classList.add("is-error");
         }
         return;
+      }
+      /* Couch: click moves last-active pad onto that frog (or binds a free pad). */
+      if (party && party.claimPadOntoFrog && lastLobbyPadIndex != null) {
+        const moved = party.claimPadOntoFrog(lastLobbyPadIndex, id);
+        if (moved) {
+          lobbyPadFocus[lastLobbyPadIndex] = moved;
+          selectedId = moved;
+          paintLobbySeats();
+          return;
+        }
       }
       selectedId = id;
       if (party) party.claimSeat(id);

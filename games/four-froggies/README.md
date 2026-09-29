@@ -1,3 +1,9 @@
+## What's new (lobbypick1) — gamepad alone picks James / Jimmy / Bubbles / Rexy
+
+- **Bug:** After padfix1/drivefix2, A claimed the first open froggy then stuck — `claimLocalPad` returned the existing seat and the title lobby never read D-pad/stick, so Ben could not choose another froggy with the pad alone.
+- **Fix (shared HTML lobby → Canvas + Three):** Per-pad focus cursor. D-pad or left stick L/R (or U/D) cycles open froggies for that pad; **A** claims / confirms; **B** releases. Badge `Pad N · FrogName` with Pad 1–4 colors. Cannot steal an occupied seat. Click/keyboard still work; click moves last-active pad. drivefix2 board latch, mechs, air, omnigun, spear untouched.
+- Cache: `20260929-lobbypick1`. Lobby exit1 kept.
+
 ## What's new (drivefix2) — board Ripsaw / Cybertruck / Tank and STAY
 
 - **Bug:** Jimmy (and the other froggies) could board a free Ripsaw, then the same INTERACT edge fired again — Three's pad loop re-read the cached A press after the tick already boarded, so the next frame EXITed. Standing in the vehicle solid then popped them out. AI follow could also yank a seated companion.

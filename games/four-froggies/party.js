@@ -230,7 +230,7 @@
       return null;
     }
 
-    /** Couch: bind pad N onto a specific frog (click pick). One pad → one seat. */
+    /** Couch: bind pad N onto a specific frog (focus+A or click). One pad → one seat; no steal. */
     function claimPadOntoFrog(padIndex, frogId) {
       if (role === "guest") return null;
       var idx = padIndex | 0;
@@ -242,6 +242,7 @@
       if (cur && cur.peerId && cur.peerId !== peerId && (cur.status === "human" || cur.status === "you")) {
         return null;
       }
+      clearKeyboardOnlyLocals();
       var res = applyClaim(frogId, peerId, "Pad " + (idx + 1), true, idx);
       if (!res.ok) return null;
       if (role === "host") broadcast(lobbyPayload());
@@ -249,7 +250,11 @@
       return frogId;
     }
 
-    /** Couch: pad N claims next open froggy (does not steal). Returns frogId or null. */
+    /**
+     * Couch: pad N claims next open froggy (GO auto-seat / fallback).
+     * Does not steal. If already claimed, keeps that seat (no silent reshuffle).
+     * Lobby pick UX uses claimPadOntoFrog after D-pad/stick focus — not this.
+     */
     function claimLocalPad(padIndex) {
       if (role === "guest") return null;
       var idx = padIndex | 0;
@@ -258,6 +263,7 @@
       var peerId = "local-pad-" + idx;
       var existing = seatClaimedBy(peerId);
       if (existing) return existing;
+      clearKeyboardOnlyLocals();
       for (var i = 0; i < FROG_ORDER.length; i++) {
         var fid = FROG_ORDER[i];
         if (!seats[fid].peerId || seats[fid].status === "open") {

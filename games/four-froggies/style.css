@@ -270,6 +270,35 @@ html, body {
 }
 .frog-btn.seat-you { background: rgba(255,255,255,.18); box-shadow: 0 0 0 2px #fff; }
 
+/* lobbypick1: couch pad focus cursor + Pad N badge colors */
+.frog-btn.pad-focus:not(.seat-taken) {
+  box-shadow: 0 0 0 2px #fbbf24, 0 0 14px rgba(251, 191, 36, 0.5);
+  background: rgba(251, 191, 36, 0.14);
+}
+.frog-btn.seat-you.pad-focus {
+  box-shadow: 0 0 0 2px #fff, 0 0 0 5px rgba(251, 191, 36, 0.55);
+}
+.frog-btn.seat-pad[data-pad="1"] .seat-state,
+.frog-btn.pad-focus[data-focus-pad="1"] .seat-state {
+  background: rgba(74, 222, 128, 0.55);
+  color: #ecfdf5;
+}
+.frog-btn.seat-pad[data-pad="2"] .seat-state,
+.frog-btn.pad-focus[data-focus-pad="2"] .seat-state {
+  background: rgba(251, 146, 60, 0.55);
+  color: #fff7ed;
+}
+.frog-btn.seat-pad[data-pad="3"] .seat-state,
+.frog-btn.pad-focus[data-focus-pad="3"] .seat-state {
+  background: rgba(96, 165, 250, 0.55);
+  color: #eff6ff;
+}
+.frog-btn.seat-pad[data-pad="4"] .seat-state,
+.frog-btn.pad-focus[data-focus-pad="4"] .seat-state {
+  background: rgba(192, 132, 252, 0.55);
+  color: #faf5ff;
+}
+
 .invite-cta {
   margin: 8px 0 6px;
   max-width: 26rem;
