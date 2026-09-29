@@ -1,3 +1,9 @@
+## What's new (drivefix1) — any frog boards free Cybertrucks + Ripsaw
+
+- **Bug:** Couch companions (Rexy / Jimmy / Bubbles) could not board/drive the other Cybertruck(s) or Ripsaw the way James (primary) could — Three blocked companion truck INTERACT; near locked mechs also stole INTERACT from free trucks.
+- **Fix (Canvas + Three):** Any grounded froggy boards a **free** Cybertruck / Ripsaw / Tank (same INTERACT). `frogId` on truck spots is paint/label only. **Mech locks stay exclusive** (James=trillion, Rexy=1000, Bubbles=10, Jimmy=100). Nearest-hotspot skips mechs the acting frog cannot board so free trucks win.
+- Cache: `20260929-drivefix1`. Lobby exit1 / padfix1 claim / air heli-drone / omnigun / spear unchanged.
+
 ## What's new (padfix1) — one pad → one froggy · heli/drone above orange zone
 
 - **Bug A:** Dual gamepads were multi-claiming froggies (keyboard "You" stacked on top of pad seats; click rebound poorly). Each pad now claims exactly one froggy — A cycles to the next open seat, B releases, click moves that pad. Clear Pad 1–4 seat badges.

@@ -290,10 +290,10 @@
     return [
       { id: "phone", label: "Phone", x: 380, y: 1880, r: 52, tip: "Call Purple Bear" },
       { id: "sps", label: "SPS", x: 520, y: 1940, r: 48, tip: "Solar Positioning System" },
-      { id: "truck-james", label: "Cybertruck · James", x: 1880, y: 1720, r: 54, tip: "James Cybertruck · solo drive", kind: "truck", frogId: "james", mode: "solo", vehicleStyle: "cybertruck" },
-      { id: "truck-jimmy", label: "Cybertruck · Jimmy", x: 2080, y: 1720, r: 54, tip: "Jimmy Cybertruck · solo drive", kind: "truck", frogId: "jimmy", mode: "solo", vehicleStyle: "cybertruck" },
-      { id: "truck-bubbles", label: "Cybertruck · Bubbles", x: 2280, y: 1720, r: 54, tip: "Bubbles Cybertruck · solo drive", kind: "truck", frogId: "bubbles", mode: "solo", vehicleStyle: "cybertruck" },
-      { id: "truck-rexy", label: "Cybertruck · Rexy", x: 2480, y: 1720, r: 54, tip: "Rexy Cybertruck · solo drive", kind: "truck", frogId: "rexy", mode: "solo", vehicleStyle: "cybertruck" },
+      { id: "truck-james", label: "Cybertruck · James", x: 1880, y: 1720, r: 54, tip: "Cybertruck · James paint · any frog · solo", kind: "truck", frogId: "james", mode: "solo", vehicleStyle: "cybertruck" },
+      { id: "truck-jimmy", label: "Cybertruck · Jimmy", x: 2080, y: 1720, r: 54, tip: "Cybertruck · Jimmy paint · any frog · solo", kind: "truck", frogId: "jimmy", mode: "solo", vehicleStyle: "cybertruck" },
+      { id: "truck-bubbles", label: "Cybertruck · Bubbles", x: 2280, y: 1720, r: 54, tip: "Cybertruck · Bubbles paint · any frog · solo", kind: "truck", frogId: "bubbles", mode: "solo", vehicleStyle: "cybertruck" },
+      { id: "truck-rexy", label: "Cybertruck · Rexy", x: 2480, y: 1720, r: 54, tip: "Cybertruck · Rexy paint · any frog · solo", kind: "truck", frogId: "rexy", mode: "solo", vehicleStyle: "cybertruck" },
       { id: "truck-shared", label: "★ ALL ABOARD · 4 frogs", x: 2180, y: 1880, r: 78, tip: "Shared Cybertruck · all four pile in", kind: "truck", frogId: null, mode: "shared", vehicleStyle: "cybertruck" },
       { id: "truck-ripsaw", label: "Ripsaw", x: 780, y: 1520, r: 62, tip: "Shared Ripsaw · tracked · any frog", kind: "truck", frogId: null, mode: "solo", vehicleStyle: "ripsaw" },
       { id: "truck-tank", label: "Tank", x: 1080, y: 1520, r: 62, tip: "Shared Tank · FIRE while driving · any frog", kind: "truck", frogId: null, mode: "solo", vehicleStyle: "tank" },
@@ -598,6 +598,9 @@
       var CgoneH = global.FroggiesCanon;
       if (h && h.id && CgoneH && CgoneH.isPermaGone && CgoneH.isPermaGone(h.id)) continue;
       if (h && CgoneH && CgoneH.isMechHotspot && CgoneH.isMechHotspot(h) && CgoneH.isMechDestroyed && CgoneH.isMechDestroyed(h)) continue;
+      /* drivefix1: skip mechs this frog cannot board so free Cybertruck/Ripsaw win INTERACT */
+      if (me && CgoneH && CgoneH.isMechHotspot && CgoneH.isMechHotspot(h) &&
+          CgoneH.canBoardMech && !CgoneH.canBoardMech(me.id, h)) continue;
       var d = Math.hypot(h.x - x, h.y - y);
       var reach = Math.max(bestD, (h.r || 60) + 12);
       if (d >= reach) continue;
@@ -2268,6 +2271,8 @@
   }
 
   function boardTruck(world, frogs, frog, hotspot) {
+    /* drivefix1: ANY grounded frog may board free Cybertruck/Ripsaw/Tank (no frogId lock).
+       frogId on truck hotspots is paint/label only — mech locks stay in boardMech. */
     if (!hotspot || hotspot.kind !== "truck") return false;
     if (frog.inTruck) {
       /* park1: leave Cybertruck where we EXIT — frog keeps walking from here */

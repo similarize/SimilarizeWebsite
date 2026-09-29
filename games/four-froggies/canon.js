@@ -32,7 +32,10 @@
    mechgun2: omnigun also permanently wrecks house/garage, trees, rocks, fish/whales,
              fences/shrubs/flowers, track rocks — same session PERMA_GONE; tank FIRE unchanged.
    spear1: Rexy-only 1000-story mech SPEAR (B / RB) knocks James trillion ~2s;
-           mash face/Space/ability/stick to get up sooner; omnigun FIRE unchanged. */
+           mash face/Space/ability/stick to get up sooner; omnigun FIRE unchanged.
+   drivefix1: Cybertruck(s)+Ripsaw+Tank boardable by ANY grounded frog when free
+           (frogId on truck spots is label/color only — NOT an ownership lock).
+           Mech locks stay exclusive (James=trillion, Rexy=1000, Bubbles=10, Jimmy=100). */
 (function (global) {
   "use strict";
 
@@ -258,10 +261,10 @@
   var HOTSPOTS = [
     { id: "phone", label: "Phone", x: 380, y: 1880, r: 52, tip: "Call Purple Bear" },
     { id: "sps", label: "SPS", x: 520, y: 1940, r: 48, tip: "Solar Positioning System" },
-    { id: "truck-james", label: "Cybertruck · James", x: 1880, y: 1720, r: 54, tip: "James Cybertruck · solo drive", kind: "truck", frogId: "james", mode: "solo", vehicleStyle: "cybertruck" },
-    { id: "truck-jimmy", label: "Cybertruck · Jimmy", x: 2080, y: 1720, r: 54, tip: "Jimmy Cybertruck · solo drive", kind: "truck", frogId: "jimmy", mode: "solo", vehicleStyle: "cybertruck" },
-    { id: "truck-bubbles", label: "Cybertruck · Bubbles", x: 2280, y: 1720, r: 54, tip: "Bubbles Cybertruck · solo drive", kind: "truck", frogId: "bubbles", mode: "solo", vehicleStyle: "cybertruck" },
-    { id: "truck-rexy", label: "Cybertruck · Rexy", x: 2480, y: 1720, r: 54, tip: "Rexy Cybertruck · solo drive", kind: "truck", frogId: "rexy", mode: "solo", vehicleStyle: "cybertruck" },
+    { id: "truck-james", label: "Cybertruck · James", x: 1880, y: 1720, r: 54, tip: "Cybertruck · James paint · any frog · solo", kind: "truck", frogId: "james", mode: "solo", vehicleStyle: "cybertruck" },
+    { id: "truck-jimmy", label: "Cybertruck · Jimmy", x: 2080, y: 1720, r: 54, tip: "Cybertruck · Jimmy paint · any frog · solo", kind: "truck", frogId: "jimmy", mode: "solo", vehicleStyle: "cybertruck" },
+    { id: "truck-bubbles", label: "Cybertruck · Bubbles", x: 2280, y: 1720, r: 54, tip: "Cybertruck · Bubbles paint · any frog · solo", kind: "truck", frogId: "bubbles", mode: "solo", vehicleStyle: "cybertruck" },
+    { id: "truck-rexy", label: "Cybertruck · Rexy", x: 2480, y: 1720, r: 54, tip: "Cybertruck · Rexy paint · any frog · solo", kind: "truck", frogId: "rexy", mode: "solo", vehicleStyle: "cybertruck" },
     { id: "truck-shared", label: "★ ALL ABOARD · 4 frogs", x: 2180, y: 1880, r: 78, tip: "Shared Cybertruck · all four pile in", kind: "truck", frogId: null, mode: "shared", vehicleStyle: "cybertruck" },
     { id: "truck-ripsaw", label: "Ripsaw", x: 780, y: 1520, r: 62, tip: "Shared Ripsaw · tracked · any frog", kind: "truck", frogId: null, mode: "solo", vehicleStyle: "ripsaw" },
     { id: "truck-tank", label: "Tank", x: 1080, y: 1520, r: 62, tip: "Shared Tank · FIRE while driving · any frog", kind: "truck", frogId: null, mode: "solo", vehicleStyle: "tank" },
@@ -314,13 +317,20 @@
     return id;
   }
 
-  function nearestHotspot(x, y, maxR) {
+  function nearestHotspot(x, y, maxR, opts) {
+    /* drivefix1: opts.frogId / opts.frog → skip mechs this frog cannot board so free
+       trucks/ripsaw win INTERACT near locked mechs. Mech locks themselves unchanged. */
+    opts = opts || {};
+    var frogId = opts.frogId || null;
+    if (!frogId && opts.frog) frogId = opts.frog.id || opts.frog.frogId || null;
     var best = null;
     var bestD = maxR || 70;
     for (var i = 0; i < HOTSPOTS.length; i++) {
       var h = HOTSPOTS[i];
       if (isMechHotspot(h) && isMechDestroyed(h)) continue; /* mech5 / mechgun1 */
       if (h && h.id && isPermaGone(h.id)) continue; /* mechgun1 */
+      /* drivefix1: never prefer a mech the acting frog cannot board */
+      if (frogId && isMechHotspot(h) && !canBoardMech(frogId, h)) continue;
       var d = Math.hypot(h.x - x, h.y - y);
       var reach = Math.max(bestD, h.r || 70);
       if (d < reach && d < (best ? Math.hypot(best.x - x, best.y - y) : reach)) {
@@ -329,6 +339,13 @@
       }
     }
     return best;
+  }
+
+  /* drivefix1: trucks/ripsaw/tank/sub/air = any frog; mechs stay ownership-locked */
+  function canBoardHotspot(frogId, hot) {
+    if (!hot) return false;
+    if (isMechHotspot(hot)) return canBoardMech(frogId, hot);
+    return true;
   }
 
   function areaNameAt(x, y) {
@@ -1454,6 +1471,7 @@
     mechOwnerId: mechOwnerId,
     mechOwnerName: mechOwnerName,
     canBoardMech: canBoardMech,
+    canBoardHotspot: canBoardHotspot,
     mechDeniedTip: mechDeniedTip,
     vehicleStyleOf: vehicleStyleOf,
     TANK_FIRE: TANK_FIRE,

@@ -42,6 +42,7 @@
    mechgun1: story-mech omnigun FIRE — permanent session kill (Canvas parity).
    mechgun2: omnigun also permanently wrecks house/garage/trees/rocks/fish/fences (session).
    spear1: Rexy 1000 SPEAR (B/RB) knocks trillion ~2s; mash get-up; tipped mesh.
+   drivefix1: companions board/drive free Cybertruck(s)+Ripsaw+Tank like primary; mech locks stay.
    earth1: space shows procedural Earth (home) — not ranch grounds in vacuum.
    solarsys1: Solar System layout — Sun center; Moon+station orbit Earth; planet gravity wells;
    spacefix1: dark ground plane; orbit cam locks on planet; ranch pad on Earth surface;
@@ -68,8 +69,8 @@
   function refreshNearFromLocals() {
     if (!state || !C || state.mode !== "ranch") return;
     var companion = (interactPadIndex != null) ? companionForPad(interactPadIndex) : null;
-    /* boardall1: only clear near when THIS input is already boarded (EXIT mode) */
-    if (companion && companion.userData.inMech) {
+    /* boardall1 / drivefix1: only clear near when THIS input is already boarded (EXIT mode) */
+    if (companion && (companion.userData.inMech || companion.userData.inTruck)) {
       state.near = null;
       return;
     }
@@ -77,10 +78,11 @@
       state.near = null;
       return;
     }
+    var actingFrogId = companion ? companion.userData.frogId : state.frogId;
     var best = null;
     var bestScore = Infinity;
     function consider(wx, wy) {
-      var h = C.nearestHotspot(wx, wy, 70);
+      var h = C.nearestHotspot(wx, wy, 70, { frogId: actingFrogId });
       if (!h) return;
       /* Prefer free mechs when occupied */
       if (C.isMechHotspot && C.isMechHotspot(h) && whoPilotsMechId(h.id)) {
@@ -91,11 +93,27 @@
           var ah = alts[ai];
           if (!(C.isMechHotspot && C.isMechHotspot(ah))) continue;
           if (whoPilotsMechId(ah.id)) continue;
+          if (C.canBoardMech && !C.canBoardMech(actingFrogId, ah)) continue;
           var ad = Math.hypot(wx - ah.x, wy - ah.y);
           if (ad < (ah.r || 70) + 12 && ad < freeD) { freeD = ad; freeBest = ah; }
         }
         if (freeBest) h = freeBest;
         else return; /* only occupied nearby */
+      }
+      /* drivefix1: skip trucks already driven by someone else; prefer free truck alts */
+      if (C.isTruckHotspot && C.isTruckHotspot(h) && h.mode !== "shared" && whoPilotsTruckId(h.id)) {
+        var talts = C.HOTSPOTS || [];
+        var tFree = null; var tD = 1e9;
+        for (var ti = 0; ti < talts.length; ti++) {
+          var th = talts[ti];
+          if (!(C.isTruckHotspot && C.isTruckHotspot(th))) continue;
+          if (th.mode === "shared") continue;
+          if (whoPilotsTruckId(th.id)) continue;
+          var td = Math.hypot(wx - th.x, wy - th.y);
+          if (td < (th.r || 70) + 12 && td < tD) { tD = td; tFree = th; }
+        }
+        if (tFree) h = tFree;
+        else return;
       }
       var d = Math.hypot(wx - h.x, wy - h.y);
       var board = (C.isTruckHotspot && C.isTruckHotspot(h)) || (C.isMechHotspot && C.isMechHotspot(h));
@@ -204,6 +222,69 @@
     c.visible = false;
     state.scrap += 1;
     state.toast = "Boarding " + (C.mechStoriesLabel ? C.mechStoriesLabel(c.userData.mechStories) : (c.userData.mechStories + "-story mech")) + " · FIRE (Space / X / button)!";
+    state.exitTipT = 2.4; state.toastT = 2.5;
+    if (hooks.onToast) hooks.onToast(state.toast);
+    return true;
+  }
+
+  /** drivefix1: who already drives this solo truck/ripsaw/tank? */
+  function whoPilotsTruckId(hotId) {
+    if (!state || !hotId) return null;
+    var hid = String(hotId);
+    if (state.inTruck && state.truckMode !== "shared" && state.truckId === hid) return "primary";
+    if (state.companions) {
+      for (var i = 0; i < state.companions.length; i++) {
+        var c = state.companions[i];
+        if (c.userData.inTruck && c.userData.truckMode !== "shared" && c.userData.truckId === hid) return c;
+      }
+    }
+    return null;
+  }
+
+  function exitCompanionTruck(c) {
+    if (!c || !c.userData.inTruck) return;
+    var parkW = threeToWorld(c.position.x, c.position.z);
+    var parkTid = c.userData.truckId || "truck";
+    if (C.setVehiclePark) C.setVehiclePark(parkTid, parkW.x, parkW.y);
+    c.userData.inTruck = false;
+    c.userData.truckId = null;
+    c.userData.truckMode = null;
+    c.userData.vehicleStyle = null;
+    c.userData.zLift = 0; c.userData.zVel = 0;
+    c.visible = true;
+    state.toast = "Parked · walking"; state.toastT = 1.8; state.exitTipT = 0;
+    if (hooks.onToast) hooks.onToast(state.toast);
+  }
+
+  function boardCompanionTruck(c, hot) {
+    if (!c || !hot) return false;
+    var id = hot.id;
+    /* Shared pile-in stays primary-started (companions already ride when primary boards) */
+    if (hot.mode === "shared") {
+      state.toast = "Shared truck · primary INTERACT to pile in"; state.toastT = 1.6;
+      if (hooks.onToast) hooks.onToast(state.toast);
+      return false;
+    }
+    if (whoPilotsTruckId(id)) {
+      state.toast = "Already boarded · pick another"; state.toastT = 1.6;
+      if (hooks.onToast) hooks.onToast(state.toast);
+      return false;
+    }
+    if (c.userData.inMech) exitCompanionMech(c);
+    var tp = worldToThree(hot.x, hot.y);
+    c.position.x = tp.x; c.position.z = tp.z;
+    c.userData.inTruck = true;
+    c.userData.truckId = id;
+    c.userData.truckMode = hot.mode || "solo";
+    c.userData.vehicleStyle = hot.vehicleStyle || (C.vehicleStyleOf ? C.vehicleStyleOf(hot) : "cybertruck");
+    c.userData.vx = 0; c.userData.vz = 0;
+    c.userData.zLift = 0; c.userData.zVel = 0;
+    c.visible = false;
+    state.scrap += 1;
+    var vs = c.userData.vehicleStyle;
+    state.toast = vs === "ripsaw" ? "Driving Ripsaw · tracked · hit the jumps!"
+      : vs === "tank" ? (C.tankDrivingTip ? C.tankDrivingTip() : "Driving Tank · FIRE · EXIT INTERACT")
+      : "Driving Cybertruck · hit the jumps!";
     state.exitTipT = 2.4; state.toastT = 2.5;
     if (hooks.onToast) hooks.onToast(state.toast);
     return true;
@@ -2173,6 +2254,10 @@
           cm.userData.inMech = false;
           cm.userData.mechId = null;
           cm.userData.mechStories = 0;
+          cm.userData.inTruck = false;
+          cm.userData.truckId = null;
+          cm.userData.truckMode = null;
+          cm.userData.vehicleStyle = null;
           if (cm.userData.ring) cm.userData.ring.material.opacity = 0.75;
         }
       }
@@ -2713,9 +2798,14 @@ state.zLift = 0;
     /* Prefer hotspot at the pad/frog that pressed A; else primary near */
     refreshNearFromLocals();
     var companion = (interactPadIndex != null) ? companionForPad(interactPadIndex) : null;
-    /* boardall1: companion EXIT their own mech (never eject primary) */
+    /* boardall1 / drivefix1: companion EXIT their own mech/truck (never eject primary) */
     if (state.mode === "ranch" && companion && companion.userData.inMech) {
       exitCompanionMech(companion);
+      interactOrigin = null; interactPadIndex = null;
+      return;
+    }
+    if (state.mode === "ranch" && companion && companion.userData.inTruck) {
+      exitCompanionTruck(companion);
       interactOrigin = null; interactPadIndex = null;
       return;
     }
@@ -2828,12 +2918,20 @@ state.zLift = 0;
     var id = state.near.id;
     if (state.mode === "ranch") {
       if (C.isTruckHotspot && C.isTruckHotspot(state.near)) {
+        /* drivefix1: couch companions board free Cybertruck/Ripsaw/Tank same as primary */
         if (companion) {
-          /* Companions use mechs for multi-board; trucks stay primary for now */
-          interactOrigin = null; interactPadIndex = null; return;
+          boardCompanionTruck(companion, state.near);
+          interactOrigin = null; interactPadIndex = null;
+          return;
         }
         if (state.inMech || state.inTruck) {
           interactOrigin = null; interactPadIndex = null; return;
+        }
+        if (state.near.mode !== "shared" && whoPilotsTruckId(id)) {
+          state.toast = "Already boarded · pick another"; state.toastT = 1.6;
+          interactOrigin = null; interactPadIndex = null;
+          if (hooks.onToast) hooks.onToast(state.toast);
+          return;
         }
         var tp = worldToThree(state.near.x, state.near.y);
         state.player.position.x = tp.x; state.player.position.z = tp.z;
@@ -2922,7 +3020,12 @@ state.zLift = 0;
       } else if (C.isMechHotspot && C.isMechHotspot(state.near)) {
         /* boardall1: companion boards their own mech; primary uses state.inMech */
         if (companion) {
-          boardCompanionMech(companion, state.near);
+          if (!boardCompanionMech(companion, state.near)) {
+            /* drivefix1: wrong mech — try free truck/ripsaw for this companion */
+            var cww = threeToWorld(companion.position.x, companion.position.z);
+            var altC = C.nearestHotspot(cww.x, cww.y, 70, { frogId: companion.userData.frogId });
+            if (altC && C.isTruckHotspot && C.isTruckHotspot(altC)) boardCompanionTruck(companion, altC);
+          }
           interactOrigin = null; interactPadIndex = null;
           return;
         }
@@ -2930,6 +3033,32 @@ state.zLift = 0;
           interactOrigin = null; interactPadIndex = null; return;
         }
         if (C.canBoardMech && !C.canBoardMech(state.frogId, state.near)) {
+          /* drivefix1: locked mech — board free Cybertruck/Ripsaw in reach instead */
+          var wpDeny = threeToWorld(state.player.position.x, state.player.position.z);
+          var altT = C.nearestHotspot(wpDeny.x, wpDeny.y, 70, { frogId: state.frogId });
+          if (altT && C.isTruckHotspot && C.isTruckHotspot(altT) && altT.mode !== "shared" && !whoPilotsTruckId(altT.id)) {
+            state.near = altT;
+            id = altT.id;
+            var tpD = worldToThree(altT.x, altT.y);
+            state.player.position.x = tpD.x; state.player.position.z = tpD.z;
+            state.inTruck = true; state.truckMode = altT.mode || "solo"; state.truckId = id;
+            state.vehicleStyle = altT.vehicleStyle || (C.vehicleStyleOf ? C.vehicleStyleOf(altT) : "cybertruck");
+            state.truckPilotPadIndex = (interactPadIndex != null) ? interactPadIndex
+              : (state.primaryPadIndex != null ? state.primaryPadIndex : null);
+            state.scrap += 1;
+            if (state.driveTruck && state.driveTruck.parent) state.driveTruck.parent.remove(state.driveTruck);
+            var frogDefD = C.FROG_DEFS[state.frogId] || C.FROG_DEFS.james;
+            state.driveTruck = makeVehicleMesh(state.vehicleStyle, hex(frogDefD.color));
+            state.driveTruck.visible = true;
+            scene.add(state.driveTruck);
+            state.toast = state.vehicleStyle === "ripsaw" ? "Driving Ripsaw · tracked · hit the jumps!"
+              : state.vehicleStyle === "tank" ? (C.tankDrivingTip ? C.tankDrivingTip() : "Driving Tank · FIRE · EXIT INTERACT")
+              : "Driving Cybertruck · hit the jumps!";
+            state.exitTipT = 2.4; state.toastT = 2.5;
+            interactOrigin = null; interactPadIndex = null;
+            if (hooks.onToast) hooks.onToast(state.toast);
+            return;
+          }
           state.toast = C.mechDeniedTip ? C.mechDeniedTip(state.frogId, state.near) : "Wrong froggy for this mech";
           state.toastT = 2.2;
           interactOrigin = null; interactPadIndex = null;
@@ -4997,22 +5126,45 @@ state.zLift = 0;
       for (var pti = 0; pti < (state.parkedTrucks || []).length; pti++) {
         var pt = state.parkedTrucks[pti];
         var hid = pt.spot.id === "shared" ? "truck-shared" : "truck-" + pt.spot.id;
-        var taken = state.inTruck && (state.truckId === hid || (state.truckMode === "shared" && pt.spot.id === "shared"));
-        pt.mesh.visible = !taken;
-        if (pt.label) pt.label.visible = !taken;
-        if (!taken) {
-          var parkTr = C.getVehiclePark ? C.getVehiclePark(hid) : null;
-          if (parkTr) {
-            var ptp = worldToThree(parkTr.x, parkTr.y);
-            pt.mesh.position.x = ptp.x;
-            pt.mesh.position.z = ptp.z;
-            if (pt.label) { pt.label.position.x = ptp.x; pt.label.position.z = ptp.z; }
+        var takenPrimary = state.inTruck && (state.truckId === hid || (state.truckMode === "shared" && pt.spot.id === "shared"));
+        var takenComp = null;
+        if (!takenPrimary && state.companions) {
+          for (var cti = 0; cti < state.companions.length; cti++) {
+            var ct = state.companions[cti];
+            if (ct.userData.inTruck && ct.userData.truckId === hid) { takenComp = ct; break; }
           }
-          var dTruck = Math.hypot(state.player.position.x - pt.mesh.position.x, state.player.position.z - pt.mesh.position.z);
-          var nearT = dTruck < 2.4;
-          pt.mesh.position.y = nearT ? 0.06 + Math.abs(Math.sin(state.bob * 1.5)) * 0.08 : 0;
-          var pts = pt.mesh.userData.truckScale || ((C.TRUCK_VIS && C.TRUCK_VIS.threeScale) || 2.05);
-          pt.mesh.scale.setScalar(pts * (nearT ? 1.06 : 1));
+        }
+        var taken = !!(takenPrimary || takenComp);
+        /* drivefix1: companion-driven truck mesh follows companion (like mech sync) */
+        if (takenComp) {
+          pt.mesh.visible = true;
+          if (pt.label) pt.label.visible = false;
+          var wLiftC = pt.mesh.userData.wheelLift || 0;
+          var bounceC = Math.abs(Math.sin((takenComp.userData.walkPhase || 0))) * 0.04;
+          pt.mesh.position.set(takenComp.position.x, 0.08 + (takenComp.userData.zLift || 0) + bounceC + wLiftC, takenComp.position.z);
+          var yawC = takenComp.userData.faceYaw != null ? takenComp.userData.faceYaw : 0;
+          var spC = Math.hypot(takenComp.userData.vx || 0, takenComp.userData.vz || 0);
+          if (spC > 1.2) yawC = Math.atan2(takenComp.userData.vx, takenComp.userData.vz);
+          pt.mesh.rotation.y = yawC - Math.PI / 2;
+          var ptsC = pt.mesh.userData.truckScale || ((C.TRUCK_VIS && C.TRUCK_VIS.threeScale) || 2.05);
+          pt.mesh.scale.setScalar(ptsC);
+        } else {
+          pt.mesh.visible = !takenPrimary;
+          if (pt.label) pt.label.visible = !takenPrimary;
+          if (!takenPrimary) {
+            var parkTr = C.getVehiclePark ? C.getVehiclePark(hid) : null;
+            if (parkTr) {
+              var ptp = worldToThree(parkTr.x, parkTr.y);
+              pt.mesh.position.x = ptp.x;
+              pt.mesh.position.z = ptp.z;
+              if (pt.label) { pt.label.position.x = ptp.x; pt.label.position.z = ptp.z; }
+            }
+            var dTruck = Math.hypot(state.player.position.x - pt.mesh.position.x, state.player.position.z - pt.mesh.position.z);
+            var nearT = dTruck < 2.4;
+            pt.mesh.position.y = nearT ? 0.06 + Math.abs(Math.sin(state.bob * 1.5)) * 0.08 : 0;
+            var pts = pt.mesh.userData.truckScale || ((C.TRUCK_VIS && C.TRUCK_VIS.threeScale) || 2.05);
+            pt.mesh.scale.setScalar(pts * (nearT ? 1.06 : 1));
+          }
         }
       }
       if (global.FroggiesEngines && global.FroggiesEngines.setWheelPanelVisible) {
@@ -5380,9 +5532,18 @@ state.zLift = 0;
           c.userData.vx = 0; c.userData.vz = 0;
           continue;
         }
-        var lmax = c.userData.inMech ? 6.8 : 11.5;
-          var lacc = c.userData.inMech ? 16 : 28;
-          var lfric = c.userData.inMech ? 5.2 : 7.5;
+        /* drivefix1: companion truck/ripsaw drive feel (Ripsaw fastest) */
+        var lmax = c.userData.inMech ? 6.8 : c.userData.inTruck ? 15.8 : 11.5;
+          var lacc = c.userData.inMech ? 16 : c.userData.inTruck ? 38 : 28;
+          var lfric = c.userData.inMech ? 5.2 : c.userData.inTruck ? 4.8 : 7.5;
+          if (c.userData.inTruck && C.vehicleDriveStats) {
+            var cvs = C.vehicleDriveStats({ vehicleStyle: c.userData.vehicleStyle, wheelScale: C.getWheelScale ? C.getWheelScale() : 1 });
+            if (cvs) {
+              if (cvs.maxSp) lmax *= cvs.maxSp;
+              if (cvs.accel) lacc *= cvs.accel;
+              if (cvs.fric) lfric *= cvs.fric;
+            }
+          }
           if (lsx || lsy) {
             var llen = Math.hypot(lsx, lsy) || 1;
             var lix = lsx / llen, liy = lsy / llen;
@@ -5425,10 +5586,10 @@ state.zLift = 0;
             c.userData.zLift = cgnd;
             c.userData.zVel = 0;
           }
-          if (c.userData.inMech) {
+          if (c.userData.inMech || c.userData.inTruck) {
             c.visible = false;
             c.userData.walkPhase = (c.userData.walkPhase || 0) + dt * (5.5 + lsp * 0.04);
-            c.position.y = 0;
+            c.position.y = c.userData.inTruck ? ((c.userData.zLift || 0) + 0.08) : 0;
           } else {
             c.visible = true;
             c.position.y = (c.userData.zLift || 0) + Math.abs(Math.sin(c.userData.idleBounce)) * (lsp > 0.8 ? 0.12 : 0.05);

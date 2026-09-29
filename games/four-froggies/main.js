@@ -1038,6 +1038,33 @@
     } else if (hot.kind === "mech" || (hot.id && String(hot.id).indexOf("mech") === 0)) {
       const Cown2 = globalThis.FroggiesCanon;
       if (Cown2 && Cown2.canBoardMech && !Cown2.canBoardMech(me.id, hot)) {
+        /* drivefix1: locked mech nearby — fall through to free Cybertruck/Ripsaw if in reach */
+        let alt = null;
+        if (W && W.nearestHotspot) {
+          const cand = W.nearestHotspot(world, me.x, me.y, 70, { frogs, frog: me });
+          if (cand && cand !== hot && (cand.kind === "truck" || (cand.id && String(cand.id).indexOf("truck") === 0)) &&
+              !vehicleTakenByOtherLocal(cand, me)) alt = cand;
+        }
+        if (alt) {
+          hot = alt;
+          nearHot = alt;
+          /* fall through by re-entering truck branch via recursive-ish inline */
+          const wasIn = !!me.inTruck;
+          if (W.boardTruck) W.boardTruck(world, frogs, me, hot);
+          if (me.inTruck && !wasIn) {
+            const vs = me.vehicleStyle || (Cown2 && Cown2.vehicleStyleOf ? Cown2.vehicleStyleOf(hot) : "cybertruck");
+            storyToast = hot.mode === "shared"
+              ? "All aboard! Four froggies · one Cybertruck · hit the jumps!"
+              : vs === "ripsaw" ? "Driving Ripsaw · tracked · hit the jumps!"
+              : vs === "tank" ? (Cown2.tankDrivingTip ? Cown2.tankDrivingTip() : "Driving Tank · FIRE · EXIT INTERACT")
+              : "Driving Cybertruck · hit the jumps!";
+            beep(200, 0.1, "sawtooth", 0.04);
+            exitTipT = 2.4;
+          }
+          storyToastT = 2.5;
+          paintHud();
+          return;
+        }
         storyToast = Cown2.mechDeniedTip ? Cown2.mechDeniedTip(me.id, hot) : ("Only " + (hot.tip || "owner") + " can board this mech");
         storyToastT = 2.4;
         beep(140, 0.08, "square", 0.04);
@@ -1339,7 +1366,7 @@
         if (me.speedBoost > 1) me.speedBoost = Math.max(1, me.speedBoost - dt * 0.5);
         if (me.inTruck && wheelHoldDir) nudgeWheel(wheelHoldDir * dt * 4.5);
         easeCam(dt);
-        nearHot = W.nearestHotspot(world, me.x, me.y, 70);
+        nearHot = W.nearestHotspot(world, me.x, me.y, 70, { frogs, frog: me }); /* drivefix1 */
         /* polish5: sparkle when entering a hotspot */
         if (nearHot && nearHot.id !== prevNearId) {
           if (W.spawnSparkle) W.spawnSparkle(world, nearHot.x, nearHot.y, 12);
