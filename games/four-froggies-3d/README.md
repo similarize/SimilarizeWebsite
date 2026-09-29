@@ -1,3 +1,9 @@
+# What's new (ff3d70) — complete the submarine shell around the cockpit
+
+- Add the missing opaque upper hull around the existing opaque lower hull and continue the curved form up to a small clear polar cockpit/periscope cap.
+- Keep the cockpit canopy aligned to the hull's actual ellipsoid so the seated rider remains visible through the only transparent submarine panel.
+- Cache: `?v=20260929-ff3d70` · asset `index-ff3d70.js`
+
 # What's new (ff3d69) — keep the underwater rider in the submarine
 
 - Fixed the final scene-render branch: underwater had been falling through to the space EVA renderer, which reparented the frog out of the sub and put it above the scene every frame after the submarine update.
