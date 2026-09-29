@@ -1,3 +1,8 @@
+## What's new (ff3d40) — hop up to the roof
+
+- Stand against the mansion and hop. Each hop climbs the wall and perches there. The third hop lands you on the roof, and you can walk to the helipad. A normal hop everywhere else is unchanged.
+- Cache: `?v=20260929-ff3d40` · asset `index-ff3d40.js`
+
 ## What's new (ff3d39) — fly the helicopter and the passenger drone
 
 - A helicopter sits on the H pad. The passenger drone sits on its pad, and the floating sign now fits the whole word, including the P. A cyan P is painted on that pad. Walk up and press E to get in. The stick flies, RT or Hop climbs, LT descends, and it hovers when you let go. E hops you out onto the roof, or into a fall if you bail in the air.
