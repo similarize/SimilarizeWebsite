@@ -210,15 +210,10 @@
       <span class="screen-wrap"><canvas data-demo="rocks"></canvas><span class="glass"></span></span>
       <span class="panel"><span class="plate">Turn and fire</span><span class="buttons" aria-hidden="true"><i></i><i class="alt"></i></span></span>
     </a>
-    <a class="cab" href="/games/four-froggies/?v=20260929-storymuzzle1">
+    <a class="cab" href="/games/four-froggies/?v=20260929-onelobby1">
       <span class="marquee">Four Froggies</span>
-      <span class="screen-wrap"><canvas data-demo="froggies"></canvas><span class="glass"></span></span>
-      <span class="panel"><span class="plate">Ranch · Jimmy · Bear · SPS · Optimus</span><span class="buttons" aria-hidden="true"><i></i><i class="alt"></i></span></span>
-    </a>
-    <a class="cab cab-3d" href="/games/four-froggies-3d/?v=20260929-ff3d77">
-      <span class="marquee">Four Froggies <span class="badge-3d">3D</span></span>
-      <span class="screen-wrap"><canvas data-demo="froggies3d"></canvas><span class="glass"></span></span>
-      <span class="panel"><span class="plate">Three.js ranch · 4 Cybertrucks · Host QR</span><span class="buttons" aria-hidden="true"><i></i><i class="alt"></i></span></span>
+      <span class="screen-wrap"><canvas data-demo="ffversions"></canvas><span class="glass"></span></span>
+      <span class="panel"><span class="plate">Canvas · 2.5D · 3D</span><span class="buttons" aria-hidden="true"><i></i><i class="alt"></i></span></span>
     </a>
     <a class="cab" href="/games/basketball.html?v=20260929-goals2">
       <span class="marquee">Soccer RC</span>
@@ -616,7 +611,43 @@
       }
     }
 
-    const draw = { rally, rocks, ball, froggies, froggies3d, map, drop };
+    const draw = { rally, rocks, ball, froggies, froggies3d, map, drop, ffversions };
+
+    function ffversions(v) {
+      const { ctx, w, h, t } = v;
+      const panes = [
+        { label: "CANVAS", sky: "#8ecae6", ground: "#4ade80" },
+        { label: "2.5D", sky: "#155e75", ground: "#65a30d" },
+        { label: "3D", sky: "#042f2e", ground: "#14532d" },
+      ];
+      panes.forEach((pane, i) => {
+        const x = (w / 3) * i;
+        const pw = w / 3;
+        ctx.fillStyle = pane.sky;
+        ctx.fillRect(x, 0, pw + 1, h * 0.62);
+        ctx.fillStyle = pane.ground;
+        ctx.fillRect(x, h * 0.62, pw + 1, h * 0.38);
+        ctx.fillStyle = i === 2 ? "#cbd5e1" : "#14532d";
+        const tx = x + pw * 0.22;
+        const ty = h * 0.58 + Math.sin(t * 1.4 + i) * 3;
+        ctx.fillRect(tx, ty, pw * 0.56, h * 0.12);
+        ctx.fillStyle = "#111";
+        ctx.beginPath();
+        ctx.arc(tx + pw * 0.12, ty + h * 0.13, h * 0.045, 0, Math.PI * 2);
+        ctx.arc(tx + pw * 0.44, ty + h * 0.13, h * 0.045, 0, Math.PI * 2);
+        ctx.fill();
+        ["#4ade80", "#fb923c", "#60a5fa", "#c084fc"].forEach((c, fi) => {
+          ctx.fillStyle = c;
+          ctx.beginPath();
+          ctx.arc(tx + 6 + fi * (pw * 0.12), ty - 6 + Math.sin(t * 3 + fi) * 2, Math.max(2, h * 0.035), 0, Math.PI * 2);
+          ctx.fill();
+        });
+        ctx.fillStyle = "#f8fafc";
+        ctx.font = "700 10px Outfit, sans-serif";
+        ctx.fillText(pane.label, x + 6, 14);
+      });
+    }
+
     function frame() {
       for (const s of screens) {
         if (!reduced) s.t += 0.016;

@@ -9,11 +9,39 @@
   <!-- Tesla Cybertruck chromeless FS — see games/shared/TESLA_FULLSCREEN.md -->
   <script src="../shared/tesla-fullscreen.js?v=tfs1"></script>
   <script src="../shared/viewport-fill.js?v=vfs1"></script>
-  <link rel="stylesheet" href="style.css?v=20260929-storymuzzle1">
+  <link rel="stylesheet" href="style.css?v=20260929-onelobby1">
 </head>
 <body class="in-title">
   <canvas id="view"></canvas>
   <div id="engine-host" hidden aria-label="Alternate engine view"></div>
+
+  <div id="version-lobby" aria-label="Choose a Four Froggies version">
+    <div class="version-top">
+      <div>
+        <p class="version-kicker">Similarize</p>
+        <h1>Four Froggies</h1>
+        <p class="version-lead">Three ways into the same ranch. Pick one.</p>
+      </div>
+      <a class="exit-arcade" href="/games/">← Arcade</a>
+    </div>
+    <div class="version-grid">
+      <button type="button" class="version-card" data-version="canvas">
+        <canvas data-shot="canvas" width="320" height="180" aria-hidden="true"></canvas>
+        <strong>Canvas</strong>
+        <span>Ranch · party. Host a room or play solo.</span>
+      </button>
+      <button type="button" class="version-card" data-version="three">
+        <canvas data-shot="three" width="320" height="180" aria-hidden="true"></canvas>
+        <strong>2.5D</strong>
+        <span>Fixed-angle Three ranch. Solo first.</span>
+      </button>
+      <button type="button" class="version-card" data-version="3d">
+        <canvas data-shot="3d" width="320" height="180" aria-hidden="true"></canvas>
+        <strong>3D</strong>
+        <span>Cybertrucks · full 3D · host QR.</span>
+      </button>
+    </div>
+  </div>
 
   <div id="hud">
     <div id="hud-top">
@@ -114,7 +142,8 @@
     <a id="exit-arcade" class="exit-arcade" href="/games/">← Arcade</a>
     <img id="splash-art" class="splash-art" src="assets/splash-forest-roof.png?v=20260928-view3" alt="Four froggies on a Cybertruck roof" width="832" height="1248" decoding="async">
     <h1 id="overlay-title">Four Froggies</h1>
-    <p id="overlay-sub">Ranch hub · Canvas / Three · couch pads claim seats · scroll to GO</p>
+    <p id="overlay-sub">Claim a seat, then GO.</p>
+    <button type="button" id="btn-versions" class="versions-back">Versions</button>
     <div id="frog-pick" class="frog-pick">
       <p class="pick-label">Claim a froggy seat</p>
       <p class="pad-hint" id="pad-hint">Each controller = one froggy · stick/D-pad cycle · A claim · B release</p>
@@ -137,7 +166,7 @@
         </button>
       </div>
     </div>
-    <div id="engine-pick" class="engine-pick" role="group" aria-label="Physics / look engine">
+    <div id="engine-pick" class="engine-pick" role="group" aria-label="Physics / look engine" hidden>
       <p class="pick-label">Engine · physics &amp; look compare</p>
       <div class="engine-btns">
         <button type="button" class="engine-btn is-on" data-engine="canvas" aria-pressed="true">Canvas</button>
@@ -170,6 +199,7 @@
   <script src="story.js?v=20260928-qa1"></script>
   <script src="space.js?v=20260928-qa1"></script>
   <script src="engine-boot.js?v=20260929-storymuzzle1"></script>
+  <script src="version-lobby.js?v=20260929-onelobby1"></script>
   <script src="main.js?v=20260929-storymuzzle1"></script>
 </body>
 </html>
