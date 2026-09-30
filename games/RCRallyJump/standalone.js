@@ -1,1 +1,1 @@
-import "./standalone-rally17.js";
+import "./standalone-rally18.js";
