@@ -40,7 +40,9 @@
    drivefix2: boarding sticks until a later EXIT press (no same-edge board+exit).
    drivefix3: companion board all rides; own-mech prefer; wider INTERACT reach.
    airgun1: heli + passenger-drone FIRE (Space/X/ability) — pilot only; tank-like boom;
-           climb stays R / C; exit1 goldsteam drivefix3 spear lobbypick kept. */
+           climb stays R / C; exit1 goldsteam drivefix3 spear lobbypick kept.
+   rtxform1: while piloting trillion-story mech, RT edge → morph to driveable semi-truck
+           (EXIT INTERACT still works; heli/drone RT climb unchanged). */
 (function (global) {
   "use strict";
 
@@ -540,10 +542,20 @@
     var id = String(hotOrId);
     if (id.indexOf("ripsaw") >= 0) return "ripsaw";
     if (id.indexOf("tank") >= 0) return "tank";
+    if (id.indexOf("semi") >= 0) return "semi";
     if (id.indexOf("submarine") >= 0 || id.indexOf("sub") === 0) return "submarine";
     if (id.indexOf("heli") >= 0) return "heli";
     if (id.indexOf("drone") >= 0) return "drone";
     return "cybertruck";
+  }
+
+  /* rtxform1: boarded trillion (James lock or stories band) — RT morph target */
+  function isTrillionMechPilot(f) {
+    if (!f || !f.inMech) return false;
+    var stories = f.mechStories != null ? f.mechStories : f.stories;
+    if (mechBand(stories) === "trillion") return true;
+    var sid = mechSolidId(f.mechId || f);
+    return sid === "mechTrillion";
   }
 
   /* mech5: Tank FIRE — big missile; props + ONLY Rexy 1000-story mech */
@@ -849,7 +861,10 @@
     ripsaw:     { maxSp: 1.22, accel: 1.30, turn: 1.12, fric: 0.90 },
     tank:       { maxSp: 0.66, accel: 0.58, turn: 0.52, fric: 1.28 },
     submarine:  { maxSp: 0.78, accel: 0.72, turn: 0.88, fric: 1.10 },
+    /* rtxform1: big cab+trailer — slower turn, solid highway feel */
+    semi:       { maxSp: 0.92, accel: 0.78, turn: 0.58, fric: 1.16 },
   };
+  var RT_MECH_SEMI = { edge: 0.45, release: 0.28, cooldown: 0.55 };
   var MECH_DRIVE = {
     "10":       { maxSp: 1.28, accel: 1.22, turn: 1.35, fric: 0.92 },
     "100":      { maxSp: 1.05, accel: 1.05, turn: 1.10, fric: 1.00 },
@@ -863,7 +878,7 @@
     if (!style && styleOrFrog.truckId) style = vehicleStyleOf(styleOrFrog.truckId);
     if (!style) style = "cybertruck";
     style = String(style);
-    if (style === "ripsaw" || style === "tank" || style === "submarine") return style;
+    if (style === "ripsaw" || style === "tank" || style === "submarine" || style === "semi") return style;
     /* Monster truck feel = Cybertruck with big live wheels */
     var ws = wheelScaleLive;
     if (styleOrFrog && typeof styleOrFrog === "object" && styleOrFrog.wheelScale != null) ws = styleOrFrog.wheelScale;
@@ -1584,6 +1599,8 @@
     canBoardHotspot: canBoardHotspot,
     mechDeniedTip: mechDeniedTip,
     vehicleStyleOf: vehicleStyleOf,
+    isTrillionMechPilot: isTrillionMechPilot,
+    RT_MECH_SEMI: RT_MECH_SEMI,
     TANK_FIRE: TANK_FIRE,
     isTankVehicle: isTankVehicle,
     tankDrivingTip: tankDrivingTip,

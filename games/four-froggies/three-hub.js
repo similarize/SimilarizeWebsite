@@ -626,6 +626,44 @@
       interactOrigin = null;
     }
   }
+  /* rtxform1: trillion-story mech + RT edge → driveable semi-truck */
+  function tryRtTrillionToSemiThree() {
+    if (!state || state.mode !== "ranch" || !state.inMech) return false;
+    if (C.isTrillionMechPilot) {
+      if (!C.isTrillionMechPilot({ inMech: true, mechId: state.mechId, mechStories: state.mechStories })) return false;
+    } else {
+      var band = C.mechBand ? C.mechBand(state.mechStories) : null;
+      if (band !== "trillion" && !(state.mechStories >= 1e12)) return false;
+    }
+    if ((state._rtMorphCd || 0) > 0) return false;
+    var parkW = threeToWorld(state.player.position.x, state.player.position.z);
+    var parkMid = state.mechId || "mech-trillion";
+    if (C.setVehiclePark) C.setVehiclePark(parkMid, parkW.x, parkW.y);
+    var keepPad = state.mechPilotPadIndex != null ? state.mechPilotPadIndex
+      : (state.primaryPadIndex != null ? state.primaryPadIndex : null);
+    state.inMech = false; state.mechId = null; state.mechStories = 0;
+    state.mechPilotPadIndex = null;
+    state.inTruck = true; state.truckMode = "solo"; state.truckId = "rt-semi";
+    state.vehicleStyle = "semi";
+    state.truckPilotPadIndex = keepPad;
+    state.zLift = 0; state.zVel = 0; state.groundLift = 0;
+    state.vx *= 0.35; state.vz *= 0.35;
+    if (state.driveTruck && state.driveTruck.parent) state.driveTruck.parent.remove(state.driveTruck);
+    var frogDefS = C.FROG_DEFS[state.frogId] || C.FROG_DEFS.james;
+    state.driveTruck = makeVehicleMesh("semi", hex(frogDefS.color));
+    state.driveTruck.visible = true;
+    scene.add(state.driveTruck);
+    state.player.visible = false;
+    state._rtMorphCd = (C.RT_MECH_SEMI && C.RT_MECH_SEMI.cooldown) || 0.55;
+    state._rtWasDown = true;
+    state.toast = "RT · trillion → SEMI-TRUCK!";
+    state.toastT = 2.2;
+    state.exitTipT = 2.4;
+    if (typeof armVehicleLatch === "function") armVehicleLatch(state);
+    if (hooks.onToast) hooks.onToast(state.toast);
+    return true;
+  }
+
   function pulseAbility(padIndex) {
     wantAbility = true;
     if (padIndex != null && padIndex !== undefined && padIndex !== "") {
@@ -1020,10 +1058,51 @@
     return g;
   }
 
+  /* rtxform1: cab + long trailer — reads as semi, larger than Cybertruck */
+  function makeSemiMesh(accentHex) {
+    var g = new THREE.Group();
+    g.name = "SemiTruck";
+    var cabM = new THREE.MeshStandardMaterial({ color: accentHex || 0xf59e0b, metalness: 0.45, roughness: 0.38, emissive: accentHex || 0xf59e0b, emissiveIntensity: 0.08 });
+    var chrome = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, metalness: 0.82, roughness: 0.22 });
+    var trailM = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.35, roughness: 0.55 });
+    var dark = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.85 });
+    var cab = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.72, 0.95), cabM);
+    cab.position.set(1.55, 0.62, 0); cab.castShadow = true; g.add(cab);
+    var nose = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.42, 0.9), chrome);
+    nose.position.set(2.25, 0.42, 0); g.add(nose);
+    var sleeper = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.55, 0.92), cabM);
+    sleeper.position.set(0.85, 0.7, 0); g.add(sleeper);
+    var hl = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.12, 0.7), new THREE.MeshStandardMaterial({ color: 0xfef08a, emissive: 0xfbbf24, emissiveIntensity: 0.7 }));
+    hl.position.set(2.52, 0.38, 0); g.add(hl);
+    var fifth = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.18, 0.1, 10), dark);
+    fifth.position.set(0.15, 0.42, 0); g.add(fifth);
+    var trailer = new THREE.Mesh(new THREE.BoxGeometry(3.4, 1.05, 1.05), trailM);
+    trailer.position.set(-1.55, 0.85, 0); trailer.castShadow = true; g.add(trailer);
+    var door = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.85, 0.85), chrome);
+    door.position.set(-3.25, 0.85, 0); g.add(door);
+    g.userData.wheels = []; g.userData.arches = [];
+    function wheel(x, z) {
+      var w = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.16, 10), dark);
+      w.rotation.z = Math.PI / 2; w.position.set(x, 0.18, z); g.add(w);
+      w.userData.baseY = 0.18; g.userData.wheels.push(w);
+    }
+    wheel(1.9, 0.48); wheel(1.9, -0.48);
+    wheel(0.95, 0.48); wheel(0.95, -0.48);
+    wheel(-0.55, 0.48); wheel(-0.55, -0.48);
+    wheel(-1.35, 0.48); wheel(-1.35, -0.48);
+    wheel(-2.55, 0.48); wheel(-2.55, -0.48);
+    g.userData.bodyMat = trailM;
+    var ts = ((C.TRUCK_VIS && C.TRUCK_VIS.threeScale != null) ? C.TRUCK_VIS.threeScale : 2.05) * 1.28;
+    g.scale.setScalar(ts); g.userData.truckScale = ts;
+    g.userData.vehicleStyle = "semi";
+    return g;
+  }
+
   function makeVehicleMesh(style, accentHex) {
     if (style === "ripsaw") return makeRipsawMesh(accentHex);
     if (style === "tank") return makeTankMesh(accentHex);
     if (style === "submarine") return makeSubMesh(accentHex);
+    if (style === "semi") return makeSemiMesh(accentHex);
     return makeTruckMesh(accentHex);
   }
 
@@ -3239,6 +3318,7 @@ state.zLift = 0;
         state.toast = state.truckMode === "shared"
           ? "All aboard! Four froggies · one Cybertruck · hit the jumps!"
           : state.vehicleStyle === "ripsaw" ? "Driving Ripsaw · tracked · hit the jumps!"
+          : state.vehicleStyle === "semi" ? "Driving SEMI-TRUCK · EXIT INTERACT"
           : state.vehicleStyle === "tank" ? (C.tankDrivingTip ? C.tankDrivingTip() : "Driving Tank · FIRE (Space / X / button) · EXIT INTERACT")
           : "Driving Cybertruck · hit the jumps!";
         state.exitTipT = 2.4;
@@ -3357,6 +3437,7 @@ state.zLift = 0;
             state.driveTruck.visible = true;
             scene.add(state.driveTruck);
             state.toast = state.vehicleStyle === "ripsaw" ? "Driving Ripsaw · tracked · hit the jumps!"
+              : state.vehicleStyle === "semi" ? "Driving SEMI-TRUCK · EXIT INTERACT"
               : state.vehicleStyle === "tank" ? (C.tankDrivingTip ? C.tankDrivingTip() : "Driving Tank · FIRE · EXIT INTERACT")
               : "Driving Cybertruck · hit the jumps!";
             state.exitTipT = 2.4; state.toastT = 2.5;
@@ -3388,8 +3469,12 @@ state.zLift = 0;
         state.vx = 0; state.vz = 0;
         state.walkPhase = 0;
         state.scrap += 1;
-        state.toast = "Boarding " + (C.mechStoriesLabel ? C.mechStoriesLabel(state.mechStories) : (state.mechStories + "-story mech")) + " · FIRE (Space / X / button)!";
+        var boardLab = (C.mechStoriesLabel ? C.mechStoriesLabel(state.mechStories) : (state.mechStories + "-story mech"));
+        var isTriBoard = (C.mechBand && C.mechBand(state.mechStories) === "trillion") || state.mechStories >= 1e12;
+        state.toast = "Boarding " + boardLab + " · FIRE (Space / X / button)!" + (isTriBoard ? " · RT → SEMI" : "");
         state.exitTipT = 2.4;
+        state._rtWasDown = true; /* ignore held RT from prior vehicle */
+        state._rtMorphCd = 0.2;
         armVehicleLatch(state);
       } else if (id === "fishies") {
         state.toast = "Splash! Fishies & whales scatter";
@@ -5280,16 +5365,39 @@ state.zLift = 0;
         }
       }
     }
-    /* ctrl1: RT accel / LT brake on truck + mech — read primary/pilot pad (frame-cached) */
+    /* ctrl1: RT accel / LT brake on truck + mech — read primary/pilot pad (frame-cached)
+       rtxform1: while trillion mech, RT edge morphs to semi (no accel steal on that edge). */
+    if ((state._rtMorphCd || 0) > 0) state._rtMorphCd -= dt;
     if (state.mode === "ranch" && (state.inTruck || state.inMech) && global.SimilarizeGamepad) {
       var thrPad = state.inMech && state.mechPilotPadIndex != null ? state.mechPilotPadIndex
-        : (state.primaryPadIndex != null ? state.primaryPadIndex : 0);
+        : (state.inTruck && state.truckPilotPadIndex != null ? state.truckPilotPadIndex
+          : (state.primaryPadIndex != null ? state.primaryPadIndex : 0));
       var tgp = global.SimilarizeGamepad.pollPad(thrPad);
       if (tgp && tgp.connected) {
         var rtV = tgp.rtValue != null ? tgp.rtValue : (tgp.rt ? 1 : 0);
         var ltV = tgp.ltValue != null ? tgp.ltValue : (tgp.lt ? 1 : 0);
-        if (rtV > 0.05) { maxSp *= 1 + rtV * 0.45; accel *= 1 + rtV * 0.55; }
-        if (ltV > 0.05) { fric *= 1 + ltV * 2.4; maxSp *= Math.max(0.32, 1 - ltV * 0.6); }
+        var rtEdgeCfg = C.RT_MECH_SEMI || { edge: 0.45, release: 0.28, cooldown: 0.55 };
+        var isTriPilot = !!(state.inMech && (
+          (C.isTrillionMechPilot && C.isTrillionMechPilot({ inMech: true, mechId: state.mechId, mechStories: state.mechStories }))
+          || (C.mechBand && C.mechBand(state.mechStories) === "trillion")
+          || (state.mechStories >= 1e12)
+        ));
+        if (isTriPilot) {
+          if (rtV >= (rtEdgeCfg.edge || 0.45) && !state._rtWasDown && (state._rtMorphCd || 0) <= 0) {
+            if (tryRtTrillionToSemiThree()) {
+              /* morph consumed this frame — skip leftover loco boost math */
+              state._rtWasDown = true;
+            }
+          }
+          if (rtV < (rtEdgeCfg.release || 0.28)) state._rtWasDown = false;
+          else state._rtWasDown = true;
+          /* no RT accel while trillion (RT = morph); LT brake still OK */
+          if (ltV > 0.05) { fric *= 1 + ltV * 2.4; maxSp *= Math.max(0.32, 1 - ltV * 0.6); }
+        } else {
+          if (rtV > 0.05) { maxSp *= 1 + rtV * 0.45; accel *= 1 + rtV * 0.55; }
+          if (ltV > 0.05) { fric *= 1 + ltV * 2.4; maxSp *= Math.max(0.32, 1 - ltV * 0.6); }
+          if (rtV < (rtEdgeCfg.release || 0.28)) state._rtWasDown = false;
+        }
       }
     }
 

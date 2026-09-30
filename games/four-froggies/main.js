@@ -1543,14 +1543,36 @@
                 } else if (sm < 0.35) f._mashStickArmed = false;
               }
             }
-            /* ctrl1: RT accel / LT brake while boarded */
+            /* ctrl1: RT accel / LT brake while boarded
+               rtxform1: trillion mech RT edge → semi (Canvas mirror) */
+            if ((f._rtMorphCd || 0) > 0) f._rtMorphCd = Math.max(0, f._rtMorphCd - dt);
             if (f.inTruck || f.inMech || f.inSub) {
               const rt = gp.rtValue != null ? gp.rtValue : (gp.rt ? 1 : 0);
               const lt = gp.ltValue != null ? gp.ltValue : (gp.lt ? 1 : 0);
-              f.throttle = rt;
-              f.brake = lt;
-              f.speedBoost = 1 + rt * 0.45;
-              f.fricBoost = 1 + lt * 2.4;
+              const Crt = globalThis.FroggiesCanon;
+              const cfg = (Crt && Crt.RT_MECH_SEMI) || { edge: 0.45, release: 0.28, cooldown: 0.55 };
+              const tri = !!(f.inMech && Crt && Crt.isTrillionMechPilot && Crt.isTrillionMechPilot(f));
+              if (tri && rt >= cfg.edge && !f._rtWasDown && (f._rtMorphCd || 0) <= 0) {
+                const Wrt = globalThis.FroggiesWorld;
+                const res = Wrt && Wrt.tryRtTrillionToSemi ? Wrt.tryRtTrillionToSemi(world, f) : null;
+                if (res && res.ok) {
+                  storyToast = res.toast; storyToastT = 2.2;
+                  f._rtWasDown = true;
+                }
+              }
+              if (rt < cfg.release) f._rtWasDown = false;
+              else f._rtWasDown = true;
+              if (tri) {
+                f.throttle = 0;
+                f.brake = lt;
+                f.speedBoost = 1;
+                f.fricBoost = 1 + lt * 2.4;
+              } else {
+                f.throttle = rt;
+                f.brake = lt;
+                f.speedBoost = 1 + rt * 0.45;
+                f.fricBoost = 1 + lt * 2.4;
+              }
             } else {
               f.throttle = 0; f.brake = 0; f.fricBoost = 1;
             }
@@ -1560,12 +1582,26 @@
         } else {
           es = effectiveSteer();
           /* padless primary: RT/LT from first unclaimed snap */
+          if ((f._rtMorphCd || 0) > 0) f._rtMorphCd = Math.max(0, f._rtMorphCd - dt);
           if ((f.inTruck || f.inMech || f.inSub) && _pad && _pad.connected) {
             const rt = _pad.rtValue != null ? _pad.rtValue : (_pad.rt ? 1 : 0);
             const lt = _pad.ltValue != null ? _pad.ltValue : (_pad.lt ? 1 : 0);
-            f.throttle = rt; f.brake = lt;
-            f.speedBoost = 1 + rt * 0.45;
-            f.fricBoost = 1 + lt * 2.4;
+            const Crt2 = globalThis.FroggiesCanon;
+            const cfg2 = (Crt2 && Crt2.RT_MECH_SEMI) || { edge: 0.45, release: 0.28, cooldown: 0.55 };
+            const tri2 = !!(f.inMech && Crt2 && Crt2.isTrillionMechPilot && Crt2.isTrillionMechPilot(f));
+            if (tri2 && rt >= cfg2.edge && !f._rtWasDown && (f._rtMorphCd || 0) <= 0) {
+              const Wrt2 = globalThis.FroggiesWorld;
+              const res2 = Wrt2 && Wrt2.tryRtTrillionToSemi ? Wrt2.tryRtTrillionToSemi(world, f) : null;
+              if (res2 && res2.ok) { storyToast = res2.toast; storyToastT = 2.2; f._rtWasDown = true; }
+            }
+            if (rt < cfg2.release) f._rtWasDown = false; else f._rtWasDown = true;
+            if (tri2) {
+              f.throttle = 0; f.brake = lt; f.speedBoost = 1; f.fricBoost = 1 + lt * 2.4;
+            } else {
+              f.throttle = rt; f.brake = lt;
+              f.speedBoost = 1 + rt * 0.45;
+              f.fricBoost = 1 + lt * 2.4;
+            }
           }
         }
         /* ctrl1: consume hop buffer when CD ready (coyote/air OK via applyHop) */

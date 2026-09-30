@@ -4421,12 +4421,69 @@
     ctx.restore();
   }
 
+  /* rtxform1: elongated cab+trailer silhouette */
+  function drawSemi(ctx, x, y, faceAngle, depth, driving, z, accent, water) {
+    var s = 1.05 * depth;
+    var lift = (z || 0) * 0.35 * depth;
+    var ang = (faceAngle != null && isFinite(faceAngle)) ? faceAngle : 0;
+    ctx.save();
+    ctx.translate(x, y - lift);
+    ctx.rotate(ang);
+    if (typeof drawSoftShadow === "function") drawSoftShadow(ctx, 0, 10 * s, 52 * s, 12 * s, 0.22);
+    ctx.fillStyle = "#e2e8f0";
+    ctx.strokeStyle = "#0f172a";
+    ctx.lineWidth = Math.max(1.5, 2 * depth);
+    ctx.beginPath();
+    ctx.rect(-48 * s, -14 * s, 58 * s, 24 * s);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = accent || "#f59e0b";
+    ctx.beginPath();
+    ctx.rect(12 * s, -16 * s, 28 * s, 28 * s);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = "#fef08a";
+    ctx.fillRect(38 * s, -6 * s, 4 * s, 10 * s);
+    ctx.fillStyle = "#0f172a";
+    [[-40, 12], [-22, 12], [-4, 12], [18, 12], [32, 12], [-40, -12], [-22, -12], [-4, -12], [18, -12], [32, -12]].forEach(function (w) {
+      ctx.beginPath(); ctx.arc(w[0] * s, w[1] * s, 4.2 * s, 0, Math.PI * 2); ctx.fill();
+    });
+    if (driving) {
+      ctx.fillStyle = "#f8fafc";
+      ctx.font = "bold " + Math.round(9 * depth) + "px system-ui,sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("SEMI", 0, 28 * s);
+    }
+    ctx.restore();
+  }
+
   function drawDriveVehicle(ctx, style, x, y, faceAngle, depth, driving, z, accent, water) {
     var st = style || "cybertruck";
     if (st === "ripsaw") return drawRipsaw(ctx, x, y, faceAngle, depth, driving, z, accent || "#a8a29e", water);
     if (st === "tank") return drawTank(ctx, x, y, faceAngle, depth, driving, z, accent || "#6b7280", water);
+    if (st === "semi") return drawSemi(ctx, x, y, faceAngle, depth, driving, z, accent || "#f59e0b", water);
     if (st === "submarine") return drawSubmarine(ctx, x, y, faceAngle, depth, driving, z, accent || "#0ea5e9", water);
     return drawCybertruck(ctx, x, y, faceAngle, depth, driving, z, accent, water);
+  }
+
+  /* rtxform1: Canvas mirror — trillion mech + RT → semi */
+  function tryRtTrillionToSemi(world, frog) {
+    if (!frog || !frog.inMech) return null;
+    var C = global.FroggiesCanon;
+    if (C && C.isTrillionMechPilot) {
+      if (!C.isTrillionMechPilot(frog)) return null;
+    } else {
+      var st = frog.mechStories || 0;
+      if (!(st >= 1e12)) return null;
+    }
+    if ((frog._rtMorphCd || 0) > 0) return null;
+    if (C && C.setVehiclePark) C.setVehiclePark(frog.mechId || "mech-trillion", frog.x, frog.y);
+    frog.inMech = false; frog.mechId = null; frog.mechStories = 0;
+    frog.inTruck = true; frog.truckMode = "solo"; frog.truckId = "rt-semi";
+    frog.vehicleStyle = "semi";
+    frog.z = 0; frog.zVel = 0;
+    frog.vx = (frog.vx || 0) * 0.35; frog.vy = (frog.vy || 0) * 0.35;
+    frog._rtMorphCd = (C && C.RT_MECH_SEMI && C.RT_MECH_SEMI.cooldown) || 0.55;
+    frog._rtWasDown = true;
+    return { ok: true, toast: "RT · trillion → SEMI-TRUCK!" };
   }
 
   function drawSubmarine(ctx, x, y, faceAngle, depth, driving, z, accent, water) {
@@ -6068,6 +6125,7 @@
     spawnMechGunShell: spawnMechGunShell,
     spawnAirShell: spawnAirShell,
     tryMechSpear: tryMechSpear,
+    tryRtTrillionToSemi: tryRtTrillionToSemi,
     spawnBoom: spawnBoom,
     blastWreckProps: blastWreckProps,
     blastOmnigunKill: blastOmnigunKill,
