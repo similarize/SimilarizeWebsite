@@ -648,11 +648,15 @@
     state.truckPilotPadIndex = keepPad;
     state.zLift = 0; state.zVel = 0; state.groundLift = 0;
     state.vx *= 0.35; state.vz *= 0.35;
-    if (state.driveTruck && state.driveTruck.parent) state.driveTruck.parent.remove(state.driveTruck);
+    if (state.driveTruck && state.driveTruck.parent && !state.driveTruck.userData.parkedSemi) {
+      state.driveTruck.parent.remove(state.driveTruck);
+    }
     var frogDefS = C.FROG_DEFS[state.frogId] || C.FROG_DEFS.james;
     state.driveTruck = makeVehicleMesh("semi", hex(frogDefS.color));
     state.driveTruck.visible = true;
+    state.driveTruck.userData.semiCargo = [];
     scene.add(state.driveTruck);
+    state._ltDumpWasDown = true; /* avoid dump on same frame as morph brake */
     state.player.visible = false;
     state._rtMorphCd = (C.RT_MECH_SEMI && C.RT_MECH_SEMI.cooldown) || 0.55;
     state._rtWasDown = true;
@@ -1080,6 +1084,13 @@
     trailer.position.set(-1.55, 0.85, 0); trailer.castShadow = true; g.add(trailer);
     var door = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.85, 0.85), chrome);
     door.position.set(-3.25, 0.85, 0); g.add(door);
+    /* semiscoop1: cargo attachment inside trailer bed */
+    var cargoBed = new THREE.Group();
+    cargoBed.name = "SemiCargoBed";
+    cargoBed.position.set(-1.55, 1.22, 0);
+    g.add(cargoBed);
+    g.userData.cargoBed = cargoBed;
+    g.userData.semiCargo = [];
     g.userData.wheels = []; g.userData.arches = [];
     function wheel(x, z) {
       var w = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.16, 10), dark);
@@ -1106,6 +1117,342 @@
     return makeTruckMesh(accentHex);
   }
 
+  /* semiscoop1: trailer cargo visuals + scoop / LT dump */
+  function semiCargoColorHex(kind) {
+    var css = (C.semiScoopColor && C.semiScoopColor(kind)) || "#94a3b8";
+    return parseInt(String(css).replace("#", ""), 16);
+  }
+  function semiCargoCount(mesh) {
+    if (!mesh || !mesh.userData) return 0;
+    return (mesh.userData.semiCargo && mesh.userData.semiCargo.length) || 0;
+  }
+  function addSemiCargoVisual(mesh, kind, meta) {
+    if (!mesh || !mesh.userData) return null;
+    var bed = mesh.userData.cargoBed;
+    if (!bed) return null;
+    var list = mesh.userData.semiCargo || (mesh.userData.semiCargo = []);
+    var cfg = C.SEMI_SCOOP || {};
+    var cap = cfg.cap != null ? cfg.cap : 10;
+    if (list.length >= cap) return null;
+    var i = list.length;
+    var cols = 3;
+    var col = i % cols;
+    var row = Math.floor(i / cols) % 3;
+    var layer = Math.floor(i / (cols * 3));
+    var box = new THREE.Mesh(
+      new THREE.BoxGeometry(0.42, 0.32, 0.38),
+      new THREE.MeshStandardMaterial({ color: semiCargoColorHex(kind), roughness: 0.65, metalness: 0.12 })
+    );
+    box.position.set(-1.05 + row * 0.72, 0.18 + layer * 0.34, (col - 1) * 0.3);
+    box.castShadow = true;
+    bed.add(box);
+    var entry = { kind: kind, mesh: box, meta: meta || null };
+    list.push(entry);
+    return entry;
+  }
+  function clearSemiCargoVisuals(mesh) {
+    if (!mesh || !mesh.userData) return [];
+    var list = mesh.userData.semiCargo || [];
+    var bed = mesh.userData.cargoBed;
+    var out = list.slice();
+    for (var i = 0; i < list.length; i++) {
+      var e = list[i];
+      if (e && e.mesh && bed) bed.remove(e.mesh);
+    }
+    mesh.userData.semiCargo = [];
+    return out;
+  }
+  function semiScoopNear(wx, wy, ox, oy, hitR) {
+    var dx = wx - ox, dy = wy - oy;
+    return dx * dx + dy * dy <= hitR * hitR;
+  }
+  function semiScoopPointsWorld() {
+    var cfg = C.SEMI_SCOOP || {};
+    var w = threeToWorld(state.player.position.x, state.player.position.z);
+    var yaw = state.faceYaw != null ? state.faceYaw : 0;
+    /* faceYaw: +Z forward in three → world +Y forward */
+    var fx = Math.sin(yaw), fy = Math.cos(yaw);
+    var back = cfg.trailerBack != null ? cfg.trailerBack : 72;
+    return [
+      { x: w.x, y: w.y },
+      { x: w.x - fx * back * 0.55, y: w.y - fy * back * 0.55 },
+      { x: w.x - fx * back, y: w.y - fy * back },
+    ];
+  }
+  function semiHitsAny(ox, oy, hitR) {
+    var pts = semiScoopPointsWorld();
+    for (var i = 0; i < pts.length; i++) {
+      if (semiScoopNear(pts[i].x, pts[i].y, ox, oy, hitR)) return true;
+    }
+    return false;
+  }
+  function hideRanchBlastable(rb) {
+    if (!rb) return;
+    rb.goneForever = true;
+    if (rb.meshes) {
+      for (var i = 0; i < rb.meshes.length; i++) {
+        if (rb.meshes[i]) rb.meshes[i].visible = false;
+      }
+    }
+  }
+  function restoreRanchBlastable(rb, wx, wy) {
+    if (!rb) return;
+    rb.goneForever = false;
+    rb.x = wx; rb.y = wy;
+    if (C.clearPermaGoneId) C.clearPermaGoneId(rb.id);
+    var tp = worldToThree(wx, wy);
+    if (rb.meshes && rb.meshes.length) {
+      var ox0 = rb.meshes[0].position.x, oz0 = rb.meshes[0].position.z;
+      for (var j = 0; j < rb.meshes.length; j++) {
+        var mj = rb.meshes[j];
+        if (!mj) continue;
+        var offX = mj.position.x - ox0, offZ = mj.position.z - oz0;
+        mj.position.x = tp.x + offX;
+        mj.position.z = tp.z + offZ;
+        mj.visible = true;
+      }
+    }
+  }
+  function spawnDumpPropThree(kind, wx, wy) {
+    var tp = worldToThree(wx, wy);
+    var col = semiCargoColorHex(kind);
+    var mesh;
+    if (kind === "tree") {
+      mesh = new THREE.Group();
+      var trunk = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.07, 0.1, 0.7, 6),
+        new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.9 })
+      );
+      trunk.position.y = 0.35; mesh.add(trunk);
+      var canopy = new THREE.Mesh(
+        new THREE.SphereGeometry(0.35, 8, 6),
+        new THREE.MeshStandardMaterial({ color: col, roughness: 0.85 })
+      );
+      canopy.position.y = 0.85; mesh.add(canopy);
+    } else if (kind === "mech") {
+      mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(0.45, 0.7, 0.35),
+        new THREE.MeshStandardMaterial({ color: col, metalness: 0.4, roughness: 0.4 })
+      );
+      mesh.position.y = 0.35;
+    } else {
+      mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(0.28, 0.22, 0.28),
+        new THREE.MeshStandardMaterial({ color: col, roughness: 0.7 })
+      );
+      mesh.position.y = 0.12;
+    }
+    mesh.position.x = tp.x; mesh.position.z = tp.z;
+    if (mesh.position.y == null || (kind !== "tree" && kind !== "mech" && !mesh.children.length)) {
+      /* already set for simple box */
+    }
+    if (kind === "tree") {
+      mesh.position.set(tp.x, 0, tp.z);
+    } else if (kind === "mech") {
+      mesh.position.set(tp.x, 0.35, tp.z);
+    } else {
+      mesh.position.set(tp.x, 0.12, tp.z);
+    }
+    mesh.castShadow = true;
+    scene.add(mesh);
+    state.dumpProps = state.dumpProps || [];
+    state.dumpProps.push({ mesh: mesh, kind: kind, x: wx, y: wy });
+    return mesh;
+  }
+  function tickSemiScoopThree(dt) {
+    if (!state || state.mode !== "ranch" || !state.inTruck || state.vehicleStyle !== "semi") return;
+    if (!state.driveTruck) return;
+    var cfg = C.SEMI_SCOOP || {};
+    if ((state._semiScoopCd || 0) > 0) {
+      state._semiScoopCd = Math.max(0, state._semiScoopCd - dt);
+      return;
+    }
+    var sp = Math.hypot(state.vx || 0, state.vz || 0);
+    if (sp < (cfg.minSpeedThree != null ? cfg.minSpeedThree : 1.6)) return;
+    var cap = cfg.cap != null ? cfg.cap : 10;
+    if (semiCargoCount(state.driveTruck) >= cap) {
+      if ((state._semiFullToastCd || 0) <= 0) {
+        state.toast = "SEMI · trailer FULL!";
+        state.toastT = 1.2;
+        state._semiFullToastCd = cfg.fullToastCd != null ? cfg.fullToastCd : 1.4;
+        if (hooks.onToast) hooks.onToast(state.toast);
+      } else {
+        state._semiFullToastCd = Math.max(0, (state._semiFullToastCd || 0) - dt);
+      }
+      return;
+    }
+    state._semiFullToastCd = Math.max(0, (state._semiFullToastCd || 0) - dt);
+    var baseR = cfg.radius != null ? cfg.radius : 88;
+    var scooped = null;
+
+    /* trees / rocks / shrubs / flowers */
+    if (state.ranchBlastables) {
+      for (var ri = 0; ri < state.ranchBlastables.length; ri++) {
+        var rb = state.ranchBlastables[ri];
+        if (!rb || rb.goneForever) continue;
+        if (C.isPermaGone && C.isPermaGone(rb.id)) continue;
+        if (!(C.isSemiScoopKind ? C.isSemiScoopKind(rb.kind) : true)) continue;
+        if (rb.kind === "fence") continue;
+        var hitR = baseR + (rb.r || 14) * 0.35;
+        if (!semiHitsAny(rb.x, rb.y, hitR)) continue;
+        if (C.markPermaGone) C.markPermaGone(rb.id);
+        hideRanchBlastable(rb);
+        scooped = addSemiCargoVisual(state.driveTruck, rb.kind, { type: "blastable", id: rb.id, index: ri });
+        if (scooped) {
+          state.toast = (C.semiScoopToast && C.semiScoopToast(rb.kind)) || "SCOOP · cargo!";
+          state.toastT = 1.2;
+          if (hooks.onToast) hooks.onToast(state.toast);
+          state._semiScoopCd = cfg.cooldown != null ? cfg.cooldown : 0.07;
+          return;
+        }
+      }
+    }
+
+    /* toys (not animals / not froggies) */
+    if (state.pushables) {
+      for (var pi = 0; pi < state.pushables.length; pi++) {
+        var pu = state.pushables[pi];
+        if (!pu || pu.goneForever || pu.wrecked) continue;
+        if (pu.kind !== "toy" && pu.kind !== "prop") continue;
+        var pr = baseR + (pu.r || 10) * 0.5;
+        if (!semiHitsAny(pu.x, pu.y, pr)) continue;
+        pu.goneForever = true;
+        pu.wrecked = true;
+        if (pu.mesh) pu.mesh.visible = false;
+        if (pu.head) pu.head.visible = false;
+        scooped = addSemiCargoVisual(state.driveTruck, "toy", { type: "pushable", index: pi });
+        if (scooped) {
+          state.toast = (C.semiScoopToast && C.semiScoopToast("toy")) || "SCOOP · toy!";
+          state.toastT = 1.2;
+          if (hooks.onToast) hooks.onToast(state.toast);
+          state._semiScoopCd = cfg.cooldown != null ? cfg.cooldown : 0.07;
+          return;
+        }
+      }
+    }
+
+    /* parked / unclaimed story mechs */
+    if (state.mechs) {
+      for (var mi = 0; mi < state.mechs.length; mi++) {
+        var ment = state.mechs[mi];
+        if (!ment || ment.destroyed) continue;
+        if (C.isMechDestroyed && C.isMechDestroyed(ment.solidId)) continue;
+        var piloted = false;
+        if (state.inMech && ment.solidId && typeof mechSidOf === "function" && mechSidOf(state.mechId) === ment.solidId) piloted = true;
+        if (!piloted && state.companions) {
+          for (var ci = 0; ci < state.companions.length; ci++) {
+            var c = state.companions[ci];
+            if (c && c.userData.inMech && typeof mechSidOf === "function" && mechSidOf(c.userData.mechId) === ment.solidId) {
+              piloted = true; break;
+            }
+          }
+        }
+        if (piloted) continue;
+        var mx = ment.wx != null ? ment.wx : (ment.group ? threeToWorld(ment.group.position.x, ment.group.position.z).x : null);
+        var my = ment.wy != null ? ment.wy : (ment.group ? threeToWorld(ment.group.position.x, ment.group.position.z).y : null);
+        if (mx == null) continue;
+        var mr = baseR + Math.max(28, (ment.h || 2) * 8);
+        if (!semiHitsAny(mx, my, mr)) continue;
+        if (C.markMechDestroyed) C.markMechDestroyed(ment.solidId, { permanent: true });
+        ment.destroyed = true;
+        if (ment.group) ment.group.visible = false;
+        if (ment.label) ment.label.visible = false;
+        scooped = addSemiCargoVisual(state.driveTruck, "mech", { type: "mech", solidId: ment.solidId, index: mi });
+        if (scooped) {
+          state.toast = (C.semiScoopToast && C.semiScoopToast("mech")) || "SCOOP · mech!";
+          state.toastT = 1.2;
+          if (hooks.onToast) hooks.onToast(state.toast);
+          state._semiScoopCd = cfg.cooldown != null ? cfg.cooldown : 0.07;
+          return;
+        }
+      }
+    }
+  }
+  function tryDumpSemiCargoThree() {
+    if (!state || !state.inTruck || state.vehicleStyle !== "semi" || !state.driveTruck) return false;
+    var n = semiCargoCount(state.driveTruck);
+    if (n <= 0) {
+      state.toast = (C.semiDumpToast && C.semiDumpToast(0)) || "SEMI · trailer empty";
+      state.toastT = 1.0;
+      if (hooks.onToast) hooks.onToast(state.toast);
+      return true;
+    }
+    var cfg = C.SEMI_SCOOP || {};
+    var spread = cfg.dumpSpread != null ? cfg.dumpSpread : 54;
+    var w = threeToWorld(state.player.position.x, state.player.position.z);
+    var yaw = state.faceYaw != null ? state.faceYaw : 0;
+    var fx = Math.sin(yaw), fy = Math.cos(yaw);
+    /* dump beside / behind trailer */
+    var sideX = Math.cos(yaw), sideY = -Math.sin(yaw);
+    var entries = clearSemiCargoVisuals(state.driveTruck);
+    for (var i = 0; i < entries.length; i++) {
+      var e = entries[i];
+      if (!e) continue;
+      var t = (i - (entries.length - 1) * 0.5) * (spread * 0.55);
+      var back = (cfg.trailerBack != null ? cfg.trailerBack : 72) * 0.85;
+      var dx = w.x - fx * back + sideX * (28 + (i % 3) * 18) + sideX * t * 0.15;
+      var dy = w.y - fy * back + sideY * (28 + (i % 3) * 18) + sideY * t * 0.15;
+      var meta = e.meta;
+      var restored = false;
+      if (meta && meta.type === "blastable" && state.ranchBlastables && meta.index != null) {
+        var rb = state.ranchBlastables[meta.index];
+        if (rb && rb.id === meta.id) {
+          restoreRanchBlastable(rb, dx, dy);
+          if (C.setStaticPosOverride) C.setStaticPosOverride(rb.id, dx, dy);
+          restored = true;
+        }
+      } else if (meta && meta.type === "pushable" && state.pushables && meta.index != null) {
+        var pu = state.pushables[meta.index];
+        if (pu) {
+          pu.goneForever = false; pu.wrecked = false; pu.respawnT = 0;
+          pu.x = dx; pu.y = dy; pu.vx = 0; pu.vy = 0;
+          var ptp = worldToThree(dx, dy);
+          if (pu.mesh) {
+            pu.mesh.visible = true;
+            pu.mesh.position.x = ptp.x; pu.mesh.position.z = ptp.z;
+          }
+          if (pu.head) {
+            pu.head.visible = true;
+            pu.head.position.x = ptp.x + (pu.headOx || 0); pu.head.position.z = ptp.z;
+          }
+          restored = true;
+        }
+      } else if (meta && meta.type === "mech" && state.mechs && meta.index != null) {
+        var ment = state.mechs[meta.index];
+        if (ment && ment.solidId === meta.solidId) {
+          if (C.clearMechDestroyed) C.clearMechDestroyed(ment.solidId);
+          ment.destroyed = false;
+          var mtp = worldToThree(dx, dy);
+          if (ment.group) {
+            ment.group.visible = true;
+            ment.group.position.x = mtp.x; ment.group.position.z = mtp.z;
+            ment.group.rotation.z = 0; ment.group.rotation.x = 0;
+          }
+          if (ment.label) {
+            ment.label.visible = true;
+            ment.label.position.x = mtp.x; ment.label.position.z = mtp.z;
+          }
+          ment.wx = dx; ment.wy = dy;
+          if (C.setVehiclePark) C.setVehiclePark(ment.solidId, dx, dy);
+          restored = true;
+        }
+      }
+      if (!restored) spawnDumpPropThree(e.kind || "prop", dx, dy);
+    }
+    state.toast = (C.semiDumpToast && C.semiDumpToast(entries.length)) || ("LT · DUMP " + entries.length + " cargo!");
+    state.toastT = 1.8;
+    if (hooks.onToast) hooks.onToast(state.toast);
+    return true;
+  }
+  function parkDrivenSemiOnExit() {
+    /* semiscoop1: leave loaded semi mesh parked with cargo visible */
+    if (!state || !state.driveTruck || state.vehicleStyle !== "semi") return;
+    state.parkedSemis = state.parkedSemis || [];
+    state.driveTruck.userData.parkedSemi = true;
+    state.driveTruck.visible = true;
+    state.parkedSemis.push(state.driveTruck);
+    state.driveTruck = null;
+  }
 
   function makeHeliMesh(accentHex) {
     var g = new THREE.Group();
@@ -3273,10 +3620,13 @@ state.zLift = 0;
         var parkTw = threeToWorld(state.player.position.x, state.player.position.z);
         var parkTid = state.truckId || "truck";
         if (C.setVehiclePark) C.setVehiclePark(parkTid, parkTw.x, parkTw.y);
+        var wasSemi = state.vehicleStyle === "semi";
+        if (wasSemi) parkDrivenSemiOnExit();
         state.inTruck = false; state.truckMode = null; state.truckId = null; state.vehicleStyle = null;
         state.truckPilotPadIndex = null;
         state.zLift = 0; state.zVel = 0; state.groundLift = 0;
-        state.toast = "Parked · walking"; state.toastT = 1.8; state.exitTipT = 0;
+        state.toast = wasSemi ? "SEMI parked · cargo stays" : "Parked · walking";
+        state.toastT = 1.8; state.exitTipT = 0;
         interactOrigin = null; interactPadIndex = null;
         if (hooks.onToast) hooks.onToast(state.toast);
         return;
@@ -3309,8 +3659,10 @@ state.zLift = 0;
         state.truckPilotPadIndex = (interactPadIndex != null) ? interactPadIndex
           : (state.primaryPadIndex != null ? state.primaryPadIndex : null);
         state.scrap += 1;
-        /* Swap drive mesh to match Ripsaw/Tank/Cybertruck */
-        if (state.driveTruck && state.driveTruck.parent) state.driveTruck.parent.remove(state.driveTruck);
+        /* Swap drive mesh to match Ripsaw/Tank/Cybertruck (keep parked semis) */
+        if (state.driveTruck && state.driveTruck.parent && !state.driveTruck.userData.parkedSemi) {
+          state.driveTruck.parent.remove(state.driveTruck);
+        }
         var frogDef = C.FROG_DEFS[state.frogId] || C.FROG_DEFS.james;
         state.driveTruck = makeVehicleMesh(state.vehicleStyle, hex(frogDef.color));
         state.driveTruck.visible = true;
@@ -3431,7 +3783,7 @@ state.zLift = 0;
             state.truckPilotPadIndex = (interactPadIndex != null) ? interactPadIndex
               : (state.primaryPadIndex != null ? state.primaryPadIndex : null);
             state.scrap += 1;
-            if (state.driveTruck && state.driveTruck.parent) state.driveTruck.parent.remove(state.driveTruck);
+            if (state.driveTruck && state.driveTruck.parent && !state.driveTruck.userData.parkedSemi) state.driveTruck.parent.remove(state.driveTruck);
             var frogDefD = C.FROG_DEFS[state.frogId] || C.FROG_DEFS.james;
             state.driveTruck = makeVehicleMesh(state.vehicleStyle, hex(frogDefD.color));
             state.driveTruck.visible = true;
@@ -5117,6 +5469,7 @@ state.zLift = 0;
     state.exitTipT = Math.max(0, (state.exitTipT || 0) - dt);
     state.bob += dt * 10;
     tickTankShells(dt);
+    if (state.mode === "ranch") tickSemiScoopThree(dt);
 
     if (state.mode === "space" && state.solarBodies) {
       state.spaceTime = (state.spaceTime || 0) + dt;
@@ -5395,7 +5748,22 @@ state.zLift = 0;
           if (ltV > 0.05) { fric *= 1 + ltV * 2.4; maxSp *= Math.max(0.32, 1 - ltV * 0.6); }
         } else {
           if (rtV > 0.05) { maxSp *= 1 + rtV * 0.45; accel *= 1 + rtV * 0.55; }
-          if (ltV > 0.05) { fric *= 1 + ltV * 2.4; maxSp *= Math.max(0.32, 1 - ltV * 0.6); }
+          /* semiscoop1: LT edge dumps trailer cargo (before brake); RT stays accel */
+          if (state.inTruck && state.vehicleStyle === "semi") {
+            var dumpCfg = C.SEMI_SCOOP || {};
+            var dEdge = dumpCfg.dumpEdge != null ? dumpCfg.dumpEdge : 0.45;
+            var dRel = dumpCfg.dumpRelease != null ? dumpCfg.dumpRelease : 0.28;
+            if (ltV >= dEdge && !state._ltDumpWasDown) {
+              tryDumpSemiCargoThree();
+              state._ltDumpWasDown = true;
+            }
+            if (ltV < dRel) state._ltDumpWasDown = false;
+            else state._ltDumpWasDown = true;
+            /* light brake still OK while dumping / holding LT */
+            if (ltV > 0.05) { fric *= 1 + ltV * 1.4; maxSp *= Math.max(0.45, 1 - ltV * 0.35); }
+          } else {
+            if (ltV > 0.05) { fric *= 1 + ltV * 2.4; maxSp *= Math.max(0.32, 1 - ltV * 0.6); }
+          }
           if (rtV < (rtEdgeCfg.release || 0.28)) state._rtWasDown = false;
         }
       }
@@ -5793,8 +6161,13 @@ state.zLift = 0;
         }
         if (fx.life <= 0) { scene.remove(fx.mesh); state.fx.splice(fxi, 1); }
       }
+      if (state.parkedSemis) {
+        for (var psi = 0; psi < state.parkedSemis.length; psi++) {
+          if (state.parkedSemis[psi]) state.parkedSemis[psi].visible = true;
+        }
+      }
       if (state.driveTruck) {
-        state.driveTruck.visible = !!state.inTruck;
+        state.driveTruck.visible = !!state.inTruck || !!state.driveTruck.userData.parkedSemi;
         if (state.inTruck) {
           /* truck2: zLift already three-Y — was *0.08 (invisible hills) */
           var wsVis = C.getWheelScale ? C.getWheelScale() : 1;

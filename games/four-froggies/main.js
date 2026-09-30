@@ -4,7 +4,8 @@
    drivefix3: wider board reach + own-mech prefer (canon/world); couch pads unchanged. */
 /* drivefix2: one INTERACT press boards and stays until a later EXIT press. */
 /* airgun1: heli/drone pilot FIRE on Space/X/ability (climb = R/C).
-   storymuzzle1: story-mech omnigun from chest plate. */
+   storymuzzle1: story-mech omnigun from chest plate.
+   rtxform1: trillion mech RT → semi; dogxform1: thousand mech RT → robot dog. */
 (() => {
   "use strict";
 
@@ -1062,11 +1063,12 @@
       return;
     }
     if (me.inTruck) {
+      const wasSemiExit = me.vehicleStyle === "semi";
       if (W.boardTruck) W.boardTruck(world, frogs, me, { kind: "truck", id: me.truckId || "truck" });
       else {
         me.inTruck = false; me.truckMode = null; me.truckId = null; me.vehicleStyle = null; me.z = 0; me.zVel = 0;
       }
-      storyToast = "Parked · walking";
+      storyToast = wasSemiExit ? "SEMI parked · cargo stays" : "Parked · walking";
       storyToastT = 1.8;
       exitTipT = 0;
       paintHud();
@@ -1119,6 +1121,8 @@
         storyToast = hot.mode === "shared"
           ? "All aboard! Four froggies · one Cybertruck · hit the jumps!"
           : vs === "ripsaw" ? "Driving Ripsaw · tracked · hit the jumps!"
+          : vs === "semi" ? "Driving SEMI-TRUCK · EXIT INTERACT"
+          : vs === "robotdog" ? "Driving ROBOT DOG · EXIT INTERACT"
           : vs === "tank" ? ((globalThis.FroggiesCanon && globalThis.FroggiesCanon.tankDrivingTip) ? globalThis.FroggiesCanon.tankDrivingTip() : "Driving Tank · FIRE (Space / X / button) · EXIT INTERACT")
           : "Driving Cybertruck · hit the jumps!";
         beep(200, 0.1, "sawtooth", 0.04);
@@ -1150,6 +1154,8 @@
             storyToast = hot.mode === "shared"
               ? "All aboard! Four froggies · one Cybertruck · hit the jumps!"
               : vs === "ripsaw" ? "Driving Ripsaw · tracked · hit the jumps!"
+              : vs === "semi" ? "Driving SEMI-TRUCK · EXIT INTERACT"
+              : vs === "robotdog" ? "Driving ROBOT DOG · EXIT INTERACT"
               : vs === "tank" ? (Cown2.tankDrivingTip ? Cown2.tankDrivingTip() : "Driving Tank · FIRE · EXIT INTERACT")
               : "Driving Cybertruck · hit the jumps!";
             beep(200, 0.1, "sawtooth", 0.04);
@@ -1176,9 +1182,14 @@
       }
       if (me.inMech && !wasMech) {
         const bandLabel = (Cown2 && Cown2.mechStoriesLabel) ? Cown2.mechStoriesLabel(me.mechStories) : ((me.mechStories || "") + "-story mech");
+        const isTriB = !!(Cown2 && Cown2.isTrillionMechPilot && Cown2.isTrillionMechPilot(me));
+        const isThouB = !!(Cown2 && Cown2.isThousandMechPilot && Cown2.isThousandMechPilot(me));
+        const rtHint = isTriB ? " · RT → SEMI" : (isThouB ? " · RT → ROBOT DOG" : "");
         storyToast = (Cown2 && Cown2.mechGunDrivingTip)
-          ? ("Boarding " + bandLabel + " · " + Cown2.mechGunDrivingTip())
-          : ("Boarding " + bandLabel + " · FIRE (Space / X / button) · walk like a robot!");
+          ? ("Boarding " + bandLabel + " · " + Cown2.mechGunDrivingTip() + rtHint)
+          : ("Boarding " + bandLabel + " · FIRE (Space / X / button) · walk like a robot!" + rtHint);
+        me._rtWasDown = true;
+        me._rtMorphCd = Math.max(me._rtMorphCd || 0, 0.2);
         beep(160, 0.1, "sawtooth", 0.04);
         exitTipT = 2.4;
         armVehicleLatch(me, opts);
@@ -1444,6 +1455,24 @@
         }
         W.moveEntity(me, dt, undefined, world);
         const drive = W.tickDrive(world, me, dt);
+        /* semiscoop1: scoop while driving semi */
+        if (me.inTruck && me.vehicleStyle === "semi") {
+          if ((me._semiScoopCd || 0) > 0) me._semiScoopCd = Math.max(0, me._semiScoopCd - dt);
+          if ((me._semiFullToastCd || 0) > 0) me._semiFullToastCd = Math.max(0, me._semiFullToastCd - dt);
+          if (W.tickSemiScoop) {
+            const scoop = W.tickSemiScoop(world, me, frogs);
+            if (scoop && scoop.full) {
+              if ((me._semiFullToastCd || 0) <= 0) {
+                storyToast = scoop.toast || "SEMI · trailer FULL!";
+                storyToastT = 1.2;
+                me._semiFullToastCd = 1.4;
+              }
+            } else if (scoop && scoop.ok) {
+              storyToast = scoop.toast || "SCOOP · cargo!";
+              storyToastT = 1.2;
+            }
+          }
+        }
         if (drive.rockHit) {
           sfxJump();
           storyToast = "ROCK HIT! +" + (drive.scrapGain || 0);
@@ -1544,14 +1573,16 @@
               }
             }
             /* ctrl1: RT accel / LT brake while boarded
-               rtxform1: trillion mech RT edge → semi (Canvas mirror) */
+               rtxform1: trillion → semi; dogxform1: thousand → robot dog (Canvas) */
             if ((f._rtMorphCd || 0) > 0) f._rtMorphCd = Math.max(0, f._rtMorphCd - dt);
             if (f.inTruck || f.inMech || f.inSub) {
               const rt = gp.rtValue != null ? gp.rtValue : (gp.rt ? 1 : 0);
               const lt = gp.ltValue != null ? gp.ltValue : (gp.lt ? 1 : 0);
               const Crt = globalThis.FroggiesCanon;
               const cfg = (Crt && Crt.RT_MECH_SEMI) || { edge: 0.45, release: 0.28, cooldown: 0.55 };
+              const cfgDog = (Crt && Crt.RT_MECH_DOG) || cfg;
               const tri = !!(f.inMech && Crt && Crt.isTrillionMechPilot && Crt.isTrillionMechPilot(f));
+              const thou = !!(f.inMech && !tri && Crt && Crt.isThousandMechPilot && Crt.isThousandMechPilot(f));
               if (tri && rt >= cfg.edge && !f._rtWasDown && (f._rtMorphCd || 0) <= 0) {
                 const Wrt = globalThis.FroggiesWorld;
                 const res = Wrt && Wrt.tryRtTrillionToSemi ? Wrt.tryRtTrillionToSemi(world, f) : null;
@@ -1559,14 +1590,39 @@
                   storyToast = res.toast; storyToastT = 2.2;
                   f._rtWasDown = true;
                 }
+              } else if (thou && rt >= (cfgDog.edge || 0.45) && !f._rtWasDown && (f._rtMorphCd || 0) <= 0) {
+                const WrtD = globalThis.FroggiesWorld;
+                const resD = WrtD && WrtD.tryRtThousandToDog ? WrtD.tryRtThousandToDog(world, f) : null;
+                if (resD && resD.ok) {
+                  storyToast = resD.toast; storyToastT = 2.2;
+                  f._rtWasDown = true;
+                }
               }
-              if (rt < cfg.release) f._rtWasDown = false;
+              const morphRel = thou ? (cfgDog.release || 0.28) : (cfg.release || 0.28);
+              if (rt < morphRel) f._rtWasDown = false;
               else f._rtWasDown = true;
-              if (tri) {
+              if (tri || thou) {
                 f.throttle = 0;
                 f.brake = lt;
                 f.speedBoost = 1;
                 f.fricBoost = 1 + lt * 2.4;
+              } else if (f.inTruck && f.vehicleStyle === "semi") {
+                /* semiscoop1: LT edge dumps cargo; light brake while holding */
+                const dumpCfg = (Crt && Crt.SEMI_SCOOP) || {};
+                const dEdge = dumpCfg.dumpEdge != null ? dumpCfg.dumpEdge : 0.45;
+                const dRel = dumpCfg.dumpRelease != null ? dumpCfg.dumpRelease : 0.28;
+                if (lt >= dEdge && !f._ltDumpWasDown) {
+                  const Wdump = globalThis.FroggiesWorld;
+                  const dump = Wdump && Wdump.tryDumpSemiCargo ? Wdump.tryDumpSemiCargo(world, f) : null;
+                  if (dump && dump.toast) { storyToast = dump.toast; storyToastT = dump.empty ? 1.0 : 1.8; }
+                  f._ltDumpWasDown = true;
+                }
+                if (lt < dRel) f._ltDumpWasDown = false;
+                else f._ltDumpWasDown = true;
+                f.throttle = rt;
+                f.brake = lt;
+                f.speedBoost = 1 + rt * 0.45;
+                f.fricBoost = 1 + lt * 1.4;
               } else {
                 f.throttle = rt;
                 f.brake = lt;
@@ -1588,15 +1644,37 @@
             const lt = _pad.ltValue != null ? _pad.ltValue : (_pad.lt ? 1 : 0);
             const Crt2 = globalThis.FroggiesCanon;
             const cfg2 = (Crt2 && Crt2.RT_MECH_SEMI) || { edge: 0.45, release: 0.28, cooldown: 0.55 };
+            const cfgDog2 = (Crt2 && Crt2.RT_MECH_DOG) || cfg2;
             const tri2 = !!(f.inMech && Crt2 && Crt2.isTrillionMechPilot && Crt2.isTrillionMechPilot(f));
+            const thou2 = !!(f.inMech && !tri2 && Crt2 && Crt2.isThousandMechPilot && Crt2.isThousandMechPilot(f));
             if (tri2 && rt >= cfg2.edge && !f._rtWasDown && (f._rtMorphCd || 0) <= 0) {
               const Wrt2 = globalThis.FroggiesWorld;
               const res2 = Wrt2 && Wrt2.tryRtTrillionToSemi ? Wrt2.tryRtTrillionToSemi(world, f) : null;
               if (res2 && res2.ok) { storyToast = res2.toast; storyToastT = 2.2; f._rtWasDown = true; }
+            } else if (thou2 && rt >= (cfgDog2.edge || 0.45) && !f._rtWasDown && (f._rtMorphCd || 0) <= 0) {
+              const WrtD2 = globalThis.FroggiesWorld;
+              const resD2 = WrtD2 && WrtD2.tryRtThousandToDog ? WrtD2.tryRtThousandToDog(world, f) : null;
+              if (resD2 && resD2.ok) { storyToast = resD2.toast; storyToastT = 2.2; f._rtWasDown = true; }
             }
-            if (rt < cfg2.release) f._rtWasDown = false; else f._rtWasDown = true;
-            if (tri2) {
+            const morphRel2 = thou2 ? (cfgDog2.release || 0.28) : (cfg2.release || 0.28);
+            if (rt < morphRel2) f._rtWasDown = false; else f._rtWasDown = true;
+            if (tri2 || thou2) {
               f.throttle = 0; f.brake = lt; f.speedBoost = 1; f.fricBoost = 1 + lt * 2.4;
+            } else if (f.inTruck && f.vehicleStyle === "semi") {
+              const dumpCfg2 = (Crt2 && Crt2.SEMI_SCOOP) || {};
+              const dEdge2 = dumpCfg2.dumpEdge != null ? dumpCfg2.dumpEdge : 0.45;
+              const dRel2 = dumpCfg2.dumpRelease != null ? dumpCfg2.dumpRelease : 0.28;
+              if (lt >= dEdge2 && !f._ltDumpWasDown) {
+                const Wdump2 = globalThis.FroggiesWorld;
+                const dump2 = Wdump2 && Wdump2.tryDumpSemiCargo ? Wdump2.tryDumpSemiCargo(world, f) : null;
+                if (dump2 && dump2.toast) { storyToast = dump2.toast; storyToastT = dump2.empty ? 1.0 : 1.8; }
+                f._ltDumpWasDown = true;
+              }
+              if (lt < dRel2) f._ltDumpWasDown = false;
+              else f._ltDumpWasDown = true;
+              f.throttle = rt; f.brake = lt;
+              f.speedBoost = 1 + rt * 0.45;
+              f.fricBoost = 1 + lt * 1.4;
             } else {
               f.throttle = rt; f.brake = lt;
               f.speedBoost = 1 + rt * 0.45;

@@ -46,6 +46,8 @@
    1000-story + trillion-story mechs sit out back (won't fit). Four Cybertrucks + shared pile-in.
    yard1: backyard trees/shrubs/creek/rocks/flowers/fence; soft stream slow/splash;
    park1: EXIT leaves mech/truck at exit pos (no snap-home).
+   rtxform1: trillion mech RT → semi (Canvas).
+   dogxform1: thousand mech (Rexy) RT → robot dog (Canvas); EXIT walks froggy.
    Pond: big fish + whales. Starship pad connected → space episode.
    Ben-named only. No invented cast/zone/toy names. */
 (function (global) {
@@ -2400,13 +2402,26 @@
        frogId on truck hotspots is paint/label only — mech locks stay in boardMech. */
     if (!hotspot || hotspot.kind !== "truck") return false;
     if (frog.inTruck) {
-      /* park1: leave Cybertruck where we EXIT — frog keeps walking from here */
+      /* park1: leave Cybertruck where we EXIT — frog keeps walking from here
+         semiscoop1: parked semi keeps cargo visible */
       var parkId = frog.truckId || hotspot.id || "truck";
       var px = frog.x, py = frog.y;
+      var wasSemi = frog.vehicleStyle === "semi";
+      if (wasSemi) {
+        world.parkedSemis = world.parkedSemis || [];
+        world.parkedSemis.push({
+          x: px, y: py,
+          faceAngle: frog.faceAngle != null ? frog.faceAngle : 0,
+          accent: frog.color,
+          cargo: (frog.semiCargo || []).slice(),
+          truckId: parkId,
+        });
+      }
       frog.inTruck = false;
       frog.truckMode = null;
       frog.truckId = null;
       frog.vehicleStyle = null;
+      frog.semiCargo = wasSemi ? [] : frog.semiCargo;
       frog.z = 0;
       frog.zVel = 0;
       frog.groundZ = 0;
@@ -2997,8 +3012,13 @@
 
 
 
-  function drawYardDecor(ctx, camX, camY, vw, vh, t) {
+  function drawYardDecor(ctx, camX, camY, vw, vh, t, world) {
     /* yard1: creek + trees/shrubs/rocks/flowers/fence from shared canon */
+    var posOv = (world && world.staticPosOverride) || {};
+    function ovXY(id, x, y) {
+      var o = posOv[id];
+      return o ? { x: o.x, y: o.y } : { x: x, y: y };
+    }
     var C = global.FroggiesCanon;
     if (!C) return;
     var stream = C.YARD_STREAM || [];
@@ -3077,7 +3097,8 @@
     var rocks = C.YARD_ROCKS || [];
     for (var ri = 0; ri < rocks.length; ri++) {
       var rk = rocks[ri];
-      var rp = project(rk.x, rk.y, camX, camY, vw, vh);
+      var rkxy = ovXY("yard-rock-" + ri, rk.x, rk.y);
+      var rp = project(rkxy.x, rkxy.y, camX, camY, vw, vh);
       var rr = (rk.r || 8) * rp.depth;
       if (C.isPermaGone && C.isPermaGone("yard-rock-" + ri)) {
         ctx.fillStyle = "rgba(87, 83, 78, 0.55)";
@@ -3102,7 +3123,8 @@
     for (var fl = 0; fl < flowers.length; fl++) {
       if (C.isPermaGone && C.isPermaGone("yard-flower-" + fl)) continue;
       var flw = flowers[fl];
-      var flp = project(flw.x, flw.y, camX, camY, vw, vh);
+      var flxy = ovXY("yard-flower-" + fl, flw.x, flw.y);
+      var flp = project(flxy.x, flxy.y, camX, camY, vw, vh);
       var fs = 3.2 * flp.depth;
       ctx.strokeStyle = "#4d7c0f";
       ctx.lineWidth = 1.4;
@@ -3128,7 +3150,8 @@
     for (var sh = 0; sh < shrubs.length; sh++) {
       if (C.isPermaGone && C.isPermaGone("yard-shrub-" + sh)) continue;
       var sb = shrubs[sh];
-      var sp = project(sb.x, sb.y, camX, camY, vw, vh);
+      var sbxy = ovXY("yard-shrub-" + sh, sb.x, sb.y);
+      var sp = project(sbxy.x, sbxy.y, camX, camY, vw, vh);
       var ss = (sb.s || 0.8) * 14 * sp.depth;
       drawSoftShadow(ctx, sp.x, sp.y + 2, ss * 1.1, ss * 0.35, 0.25);
       ctx.fillStyle = sh % 2 ? "#3f6212" : "#4d7c0f";
@@ -3145,7 +3168,8 @@
     var trees = C.YARD_TREES || [];
     for (var ti = 0; ti < trees.length; ti++) {
       var tr = trees[ti];
-      var tp = project(tr.x, tr.y, camX, camY, vw, vh);
+      var trxy = ovXY("yard-tree-" + ti, tr.x, tr.y);
+      var tp = project(trxy.x, trxy.y, camX, camY, vw, vh);
       var sc = (tr.s || 1) * tp.depth;
       var trunkH = 28 * sc;
       var canopyR = (tr.r || 14) * 1.35 * sc;
@@ -4421,11 +4445,12 @@
     ctx.restore();
   }
 
-  /* rtxform1: elongated cab+trailer silhouette */
-  function drawSemi(ctx, x, y, faceAngle, depth, driving, z, accent, water) {
+  /* rtxform1: elongated cab+trailer silhouette; semiscoop1: cargo boxes in trailer */
+  function drawSemi(ctx, x, y, faceAngle, depth, driving, z, accent, water, cargo) {
     var s = 1.05 * depth;
     var lift = (z || 0) * 0.35 * depth;
     var ang = (faceAngle != null && isFinite(faceAngle)) ? faceAngle : 0;
+    var C = global.FroggiesCanon;
     ctx.save();
     ctx.translate(x, y - lift);
     ctx.rotate(ang);
@@ -4436,6 +4461,20 @@
     ctx.beginPath();
     ctx.rect(-48 * s, -14 * s, 58 * s, 24 * s);
     ctx.fill(); ctx.stroke();
+    /* cargo stacked in trailer bed */
+    var list = cargo || [];
+    for (var ci = 0; ci < list.length; ci++) {
+      var kind = list[ci] && list[ci].kind ? list[ci].kind : list[ci];
+      var col = (C && C.semiScoopColor) ? C.semiScoopColor(kind) : "#94a3b8";
+      var colI = ci % 3;
+      var rowI = Math.floor(ci / 3) % 3;
+      var layerI = Math.floor(ci / 9);
+      ctx.fillStyle = col;
+      ctx.fillRect((-42 + rowI * 12) * s, (-8 + colI * 5 - layerI * 2) * s, 10 * s, 8 * s);
+      ctx.strokeStyle = "rgba(15,23,42,0.45)";
+      ctx.lineWidth = 1;
+      ctx.strokeRect((-42 + rowI * 12) * s, (-8 + colI * 5 - layerI * 2) * s, 10 * s, 8 * s);
+    }
     ctx.fillStyle = accent || "#f59e0b";
     ctx.beginPath();
     ctx.rect(12 * s, -16 * s, 28 * s, 28 * s);
@@ -4450,16 +4489,80 @@
       ctx.fillStyle = "#f8fafc";
       ctx.font = "bold " + Math.round(9 * depth) + "px system-ui,sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText("SEMI", 0, 28 * s);
+      ctx.fillText(list.length ? ("SEMI · " + list.length) : "SEMI", 0, 28 * s);
     }
     ctx.restore();
   }
 
-  function drawDriveVehicle(ctx, style, x, y, faceAngle, depth, driving, z, accent, water) {
+  /* dogxform1: Unitree-style robot dog — body + 4 legs + sensor head (matches space dog silhouette energy) */
+  function drawRobotDog(ctx, x, y, faceAngle, depth, driving, z, accent, water) {
+    var s = 0.95 * depth;
+    var lift = (z || 0) * 0.35 * depth;
+    var ang = (faceAngle != null && isFinite(faceAngle)) ? faceAngle : 0;
+    ctx.save();
+    ctx.translate(x, y - lift);
+    ctx.rotate(ang);
+    if (typeof drawSoftShadow === "function") drawSoftShadow(ctx, 0, 8 * s, 36 * s, 10 * s, 0.2);
+    /* chassis */
+    ctx.fillStyle = "#94a3b8";
+    ctx.strokeStyle = "#0f172a";
+    ctx.lineWidth = Math.max(1.4, 1.8 * depth);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 22 * s, 10 * s, 0, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    /* battery pack / spine ridge */
+    ctx.fillStyle = accent || "#c084fc";
+    ctx.fillRect(-10 * s, -6 * s, 18 * s, 5 * s);
+    ctx.strokeRect(-10 * s, -6 * s, 18 * s, 5 * s);
+    /* sensor head */
+    ctx.fillStyle = "#cbd5e1";
+    ctx.beginPath();
+    ctx.ellipse(18 * s, -4 * s, 9 * s, 7 * s, 0.15, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = "#38bdf8";
+    ctx.beginPath();
+    ctx.arc(22 * s, -5 * s, 2.4 * s, 0, Math.PI * 2);
+    ctx.fill();
+    /* ears / antenna stubs */
+    ctx.fillStyle = "#64748b";
+    ctx.fillRect(14 * s, -12 * s, 3 * s, 5 * s);
+    ctx.fillRect(20 * s, -11 * s, 2.5 * s, 4 * s);
+    /* four legs */
+    ctx.strokeStyle = "#334155";
+    ctx.lineWidth = Math.max(2, 2.6 * depth);
+    ctx.lineCap = "round";
+    [[-14, 6, -16, 16], [-4, 7, -2, 17], [6, 7, 8, 17], [14, 6, 16, 16]].forEach(function (L) {
+      ctx.beginPath();
+      ctx.moveTo(L[0] * s, L[1] * s);
+      ctx.lineTo(L[2] * s, L[3] * s);
+      ctx.stroke();
+      ctx.fillStyle = "#1e293b";
+      ctx.beginPath();
+      ctx.ellipse(L[2] * s, (L[3] + 1) * s, 3.2 * s, 2 * s, 0, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    /* tail stub */
+    ctx.strokeStyle = "#475569";
+    ctx.lineWidth = Math.max(1.5, 2 * depth);
+    ctx.beginPath();
+    ctx.moveTo(-20 * s, -2 * s);
+    ctx.lineTo(-26 * s, -8 * s);
+    ctx.stroke();
+    if (driving) {
+      ctx.fillStyle = "#f8fafc";
+      ctx.font = "bold " + Math.round(9 * depth) + "px system-ui,sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("ROBOT DOG", 0, 26 * s);
+    }
+    ctx.restore();
+  }
+
+  function drawDriveVehicle(ctx, style, x, y, faceAngle, depth, driving, z, accent, water, cargo) {
     var st = style || "cybertruck";
     if (st === "ripsaw") return drawRipsaw(ctx, x, y, faceAngle, depth, driving, z, accent || "#a8a29e", water);
     if (st === "tank") return drawTank(ctx, x, y, faceAngle, depth, driving, z, accent || "#6b7280", water);
-    if (st === "semi") return drawSemi(ctx, x, y, faceAngle, depth, driving, z, accent || "#f59e0b", water);
+    if (st === "semi") return drawSemi(ctx, x, y, faceAngle, depth, driving, z, accent || "#f59e0b", water, cargo);
+    if (st === "robotdog") return drawRobotDog(ctx, x, y, faceAngle, depth, driving, z, accent || "#c084fc", water);
     if (st === "submarine") return drawSubmarine(ctx, x, y, faceAngle, depth, driving, z, accent || "#0ea5e9", water);
     return drawCybertruck(ctx, x, y, faceAngle, depth, driving, z, accent, water);
   }
@@ -4479,11 +4582,181 @@
     frog.inMech = false; frog.mechId = null; frog.mechStories = 0;
     frog.inTruck = true; frog.truckMode = "solo"; frog.truckId = "rt-semi";
     frog.vehicleStyle = "semi";
+    frog.semiCargo = [];
     frog.z = 0; frog.zVel = 0;
     frog.vx = (frog.vx || 0) * 0.35; frog.vy = (frog.vy || 0) * 0.35;
     frog._rtMorphCd = (C && C.RT_MECH_SEMI && C.RT_MECH_SEMI.cooldown) || 0.55;
     frog._rtWasDown = true;
+    frog._ltDumpWasDown = true;
     return { ok: true, toast: "RT · trillion → SEMI-TRUCK!" };
+  }
+
+  /* dogxform1: Canvas — thousand mech + RT → robot dog */
+  function tryRtThousandToDog(world, frog) {
+    if (!frog || !frog.inMech) return null;
+    var C = global.FroggiesCanon;
+    if (C && C.isThousandMechPilot) {
+      if (!C.isThousandMechPilot(frog)) return null;
+    } else {
+      var st = frog.mechStories || 0;
+      if (!(st >= 1000 && st < 1e12)) return null;
+    }
+    if ((frog._rtMorphCd || 0) > 0) return null;
+    if (C && C.setVehiclePark) C.setVehiclePark(frog.mechId || "mech-1000", frog.x, frog.y);
+    frog.inMech = false; frog.mechId = null; frog.mechStories = 0;
+    frog.inTruck = true; frog.truckMode = "solo"; frog.truckId = "rt-robotdog";
+    frog.vehicleStyle = "robotdog";
+    frog.z = 0; frog.zVel = 0;
+    frog.vx = (frog.vx || 0) * 0.4; frog.vy = (frog.vy || 0) * 0.4;
+    frog._rtMorphCd = (C && C.RT_MECH_DOG && C.RT_MECH_DOG.cooldown)
+      || (C && C.RT_MECH_SEMI && C.RT_MECH_SEMI.cooldown) || 0.55;
+    frog._rtWasDown = true;
+    return { ok: true, toast: "RT · thousand → ROBOT DOG!" };
+  }
+
+  /* semiscoop1: Canvas scoop into semi trailer + LT dump beside truck */
+  function semiHitsCanvas(frog, ox, oy, hitR) {
+    var C = global.FroggiesCanon;
+    var cfg = (C && C.SEMI_SCOOP) || {};
+    var back = cfg.trailerBack != null ? cfg.trailerBack : 72;
+    var ang = frog.faceAngle != null ? frog.faceAngle : (frog.facing >= 0 ? 0 : Math.PI);
+    var fx = Math.cos(ang), fy = Math.sin(ang);
+    var pts = [
+      { x: frog.x, y: frog.y },
+      { x: frog.x - fx * back * 0.55, y: frog.y - fy * back * 0.55 },
+      { x: frog.x - fx * back, y: frog.y - fy * back },
+    ];
+    for (var i = 0; i < pts.length; i++) {
+      var dx = pts[i].x - ox, dy = pts[i].y - oy;
+      if (dx * dx + dy * dy <= hitR * hitR) return true;
+    }
+    return false;
+  }
+  function tickSemiScoop(world, frog, frogs) {
+    if (!world || !frog || !frog.inTruck || frog.vehicleStyle !== "semi") return null;
+    var C = global.FroggiesCanon;
+    var cfg = (C && C.SEMI_SCOOP) || {};
+    if ((frog._semiScoopCd || 0) > 0) return null;
+    var sp = Math.hypot(frog.vx || 0, frog.vy || 0);
+    if (sp < (cfg.minSpeedWorld != null ? cfg.minSpeedWorld : 40)) return null;
+    if (!frog.semiCargo) frog.semiCargo = [];
+    var cap = cfg.cap != null ? cfg.cap : 10;
+    if (frog.semiCargo.length >= cap) {
+      return { full: true, toast: "SEMI · trailer FULL!" };
+    }
+    var baseR = cfg.radius != null ? cfg.radius : 88;
+
+    /* toys */
+    var toys = world.toys || [];
+    for (var ti = 0; ti < toys.length; ti++) {
+      var toy = toys[ti];
+      if (!toy || toy.goneForever || toy.wrecked) continue;
+      if (!semiHitsCanvas(frog, toy.x, toy.y, baseR + (toy.r || 10))) continue;
+      toy.goneForever = true; toy.wrecked = true; toy.respawnT = 1e12;
+      frog.semiCargo.push({ kind: "toy", meta: { type: "toy", index: ti } });
+      frog._semiScoopCd = cfg.cooldown != null ? cfg.cooldown : 0.07;
+      return { ok: true, kind: "toy", toast: (C && C.semiScoopToast) ? C.semiScoopToast("toy") : "SCOOP · toy!" };
+    }
+
+    /* yard trees / rocks / shrubs / flowers via canon lists + permaGone */
+    function scoopStatic(list, idPrefix, kind, rFn) {
+      if (!list || !C) return null;
+      for (var i = 0; i < list.length; i++) {
+        var it = list[i];
+        if (!it) continue;
+        var id = idPrefix + i;
+        if (C.isPermaGone && C.isPermaGone(id)) continue;
+        var rr = rFn ? rFn(it) : 16;
+        if (!semiHitsCanvas(frog, it.x, it.y, baseR + rr * 0.35)) continue;
+        if (C.markPermaGone) C.markPermaGone(id);
+        frog.semiCargo.push({ kind: kind, meta: { type: "static", id: id, index: i, x: it.x, y: it.y, kind: kind } });
+        frog._semiScoopCd = cfg.cooldown != null ? cfg.cooldown : 0.07;
+        return { ok: true, kind: kind, toast: (C && C.semiScoopToast) ? C.semiScoopToast(kind) : "SCOOP · cargo!" };
+      }
+      return null;
+    }
+    var got = scoopStatic(C && C.YARD_TREES, "yard-tree-", "tree", function (tr) { return Math.max(18, (tr.r || 14) * 1.2); });
+    if (got) return got;
+    got = scoopStatic(C && C.YARD_ROCKS, "yard-rock-", "rock", function (rk) { return (rk.r || 8) + 6; });
+    if (got) return got;
+    got = scoopStatic(C && C.YARD_SHRUBS, "yard-shrub-", "shrub", function (sb) { return 12 * (sb.s || 0.8); });
+    if (got) return got;
+    got = scoopStatic(C && C.YARD_FLOWERS, "yard-flower-", "flower", function () { return 10; });
+    if (got) return got;
+
+    /* parked story mechs from hotspots — only if not driven */
+    var hots = (C && C.HOTSPOTS) || [];
+    for (var hi = 0; hi < hots.length; hi++) {
+      var h = hots[hi];
+      if (!h || !(C.isMechHotspot ? C.isMechHotspot(h) : (h.kind === "mech"))) continue;
+      var sid = C.mechSolidId ? C.mechSolidId(h) : h.solidId;
+      if (!sid) continue;
+      if (C.isMechDestroyed && C.isMechDestroyed(sid)) continue;
+      /* skip if any frog pilots this mech */
+      var frogList = frogs || world._frogsRef || null;
+      var piloted = false;
+      if (frogList) {
+        for (var fi = 0; fi < frogList.length; fi++) {
+          var ff = frogList[fi];
+          if (ff && ff.inMech && (ff.mechId === h.id || (C.mechSolidId && C.mechSolidId(ff.mechId) === sid))) {
+            piloted = true; break;
+          }
+        }
+      }
+      if (piloted) continue;
+      if (!semiHitsCanvas(frog, h.x, h.y, baseR + (h.r || 40))) continue;
+      if (C.markMechDestroyed) C.markMechDestroyed(sid, { permanent: true });
+      frog.semiCargo.push({ kind: "mech", meta: { type: "mech", id: h.id, solidId: sid, x: h.x, y: h.y } });
+      frog._semiScoopCd = cfg.cooldown != null ? cfg.cooldown : 0.07;
+      return { ok: true, kind: "mech", toast: (C && C.semiScoopToast) ? C.semiScoopToast("mech") : "SCOOP · mech!" };
+    }
+    return null;
+  }
+  function tryDumpSemiCargo(world, frog) {
+    if (!frog || !frog.inTruck || frog.vehicleStyle !== "semi") return null;
+    var C = global.FroggiesCanon;
+    var cfg = (C && C.SEMI_SCOOP) || {};
+    var cargo = frog.semiCargo || [];
+    if (!cargo.length) {
+      return { ok: true, empty: true, toast: (C && C.semiDumpToast) ? C.semiDumpToast(0) : "SEMI · trailer empty" };
+    }
+    var spread = cfg.dumpSpread != null ? cfg.dumpSpread : 54;
+    var back = cfg.trailerBack != null ? cfg.trailerBack : 72;
+    var ang = frog.faceAngle != null ? frog.faceAngle : 0;
+    var fx = Math.cos(ang), fy = Math.sin(ang);
+    var sideX = -Math.sin(ang), sideY = Math.cos(ang);
+    var dumped = cargo.slice();
+    frog.semiCargo = [];
+    world.dumpProps = world.dumpProps || [];
+    for (var i = 0; i < dumped.length; i++) {
+      var e = dumped[i];
+      var t = (i - (dumped.length - 1) * 0.5) * (spread * 0.55);
+      var dx = frog.x - fx * back * 0.85 + sideX * (30 + (i % 3) * 16) + sideX * t * 0.12;
+      var dy = frog.y - fy * back * 0.85 + sideY * (30 + (i % 3) * 16) + sideY * t * 0.12;
+      var meta = e.meta || {};
+      var restored = false;
+      if (meta.type === "toy" && world.toys && meta.index != null && world.toys[meta.index]) {
+        var toy = world.toys[meta.index];
+        toy.goneForever = false; toy.wrecked = false; toy.respawnT = 0;
+        toy.x = dx; toy.y = dy; toy.vx = 0; toy.vy = 0;
+        restored = true;
+      } else if (meta.type === "static" && meta.id && C && C.clearPermaGoneId) {
+        C.clearPermaGoneId(meta.id);
+        if (C.setStaticPosOverride) C.setStaticPosOverride(meta.id, dx, dy);
+        world.staticPosOverride = world.staticPosOverride || {};
+        world.staticPosOverride[meta.id] = { x: dx, y: dy, kind: e.kind || meta.kind };
+        restored = true;
+      } else if (meta.type === "mech" && meta.solidId && C && C.clearMechDestroyed) {
+        C.clearMechDestroyed(meta.solidId);
+        if (C.setVehiclePark) C.setVehiclePark(meta.solidId, dx, dy);
+        if (meta.id && C.setVehiclePark) C.setVehiclePark(meta.id, dx, dy);
+        restored = true;
+      }
+      if (!restored) {
+        world.dumpProps.push({ kind: e.kind || "prop", x: dx, y: dy, life: 1e9 });
+      }
+    }
+    return { ok: true, n: dumped.length, toast: (C && C.semiDumpToast) ? C.semiDumpToast(dumped.length) : ("LT · DUMP " + dumped.length + " cargo!") };
   }
 
   function drawSubmarine(ctx, x, y, faceAngle, depth, driving, z, accent, water) {
@@ -4922,7 +5195,7 @@
       var spDrive = Math.hypot(frog.vx || 0, frog.vy || 0);
       if (spDrive > 35) yawDrive = Math.atan2(frog.vy, frog.vx);
       var styleDrive = frog.vehicleStyle || (global.FroggiesCanon && global.FroggiesCanon.vehicleStyleOf ? global.FroggiesCanon.vehicleStyleOf(frog.truckId) : "cybertruck");
-      drawDriveVehicle(ctx, styleDrive, p.x, p.y, yawDrive, p.depth, true, frog.z || 0, frog.color, { inWater: inPond(frog.x, frog.y), sub: frog.waterSub || 0, wakePhase: frog.wakePhase || 0, bounce: frog.truckBounce || 0, wheelScale: frog.wheelScale || (global.FroggiesCanon && global.FroggiesCanon.getWheelScale ? global.FroggiesCanon.getWheelScale() : 1) });
+      drawDriveVehicle(ctx, styleDrive, p.x, p.y, yawDrive, p.depth, true, frog.z || 0, frog.color, { inWater: inPond(frog.x, frog.y), sub: frog.waterSub || 0, wakePhase: frog.wakePhase || 0, bounce: frog.truckBounce || 0, wheelScale: frog.wheelScale || (global.FroggiesCanon && global.FroggiesCanon.getWheelScale ? global.FroggiesCanon.getWheelScale() : 1) }, frog.semiCargo);
       if (frog.truckMode === "shared" && frogs) {
         drawAboardIcons(ctx, frogs, p.x, p.y, p.depth, lift);
       } else {
@@ -4964,7 +5237,7 @@
       var spSolo = Math.hypot(frog.vx || 0, frog.vy || 0);
       if (spSolo > 35) yawSolo = Math.atan2(frog.vy, frog.vx);
       var styleSolo = frog.vehicleStyle || (global.FroggiesCanon && global.FroggiesCanon.vehicleStyleOf ? global.FroggiesCanon.vehicleStyleOf(frog.truckId) : "cybertruck");
-      drawDriveVehicle(ctx, styleSolo, p.x, p.y, yawSolo, p.depth, true, frog.z || 0, frog.color, { inWater: inPond(frog.x, frog.y), sub: frog.waterSub || 0, wakePhase: frog.wakePhase || 0, bounce: frog.truckBounce || 0, wheelScale: frog.wheelScale || (global.FroggiesCanon && global.FroggiesCanon.getWheelScale ? global.FroggiesCanon.getWheelScale() : 1) });
+      drawDriveVehicle(ctx, styleSolo, p.x, p.y, yawSolo, p.depth, true, frog.z || 0, frog.color, { inWater: inPond(frog.x, frog.y), sub: frog.waterSub || 0, wakePhase: frog.wakePhase || 0, bounce: frog.truckBounce || 0, wheelScale: frog.wheelScale || (global.FroggiesCanon && global.FroggiesCanon.getWheelScale ? global.FroggiesCanon.getWheelScale() : 1) }, frog.semiCargo);
       ctx.fillStyle = frog.color;
       ctx.beginPath();
       ctx.arc(p.x, p.y - 22 * p.depth - lift, 6 * p.depth, 0, Math.PI * 2);
@@ -6055,11 +6328,31 @@
 
     drawPond(ctx, camX, camY, vw, vh, world, t);
     drawRanchHouse(ctx, camX, camY, vw, vh, world, frogs);
+    drawYardDecor(ctx, camX, camY, vw, vh, t, world);
     drawTrack(ctx, camX, camY, vw, vh, t);
     drawToys(ctx, world, camX, camY, vw, vh);
     drawStarshipPad(ctx, camX, camY, vw, vh, nearHot && nearHot.id === "starship");
     drawFx(ctx, world, camX, camY, vw, vh);
     drawParkedTrucks(ctx, world, frogs, camX, camY, vw, vh);
+    /* semiscoop1: parked RT-semis keep cargo; dump piles beside truck */
+    if (world.parkedSemis) {
+      for (var psi = 0; psi < world.parkedSemis.length; psi++) {
+        var ps = world.parkedSemis[psi];
+        if (!ps) continue;
+        var psp = project(ps.x, ps.y, camX, camY, vw, vh);
+        drawSemi(ctx, psp.x, psp.y, ps.faceAngle || 0, psp.depth, false, 0, ps.accent || "#f59e0b", null, ps.cargo || []);
+      }
+    }
+    if (world.dumpProps) {
+      for (var dpi = 0; dpi < world.dumpProps.length; dpi++) {
+        var dp = world.dumpProps[dpi];
+        if (!dp) continue;
+        var dpp = project(dp.x, dp.y, camX, camY, vw, vh);
+        var Cdump = global.FroggiesCanon;
+        ctx.fillStyle = (Cdump && Cdump.semiScoopColor) ? Cdump.semiScoopColor(dp.kind) : "#94a3b8";
+        ctx.fillRect(dpp.x - 6 * dpp.depth, dpp.y - 10 * dpp.depth, 12 * dpp.depth, 12 * dpp.depth);
+      }
+    }
     /* padfix1: pads after trucks / clipped orange compound — before frogs so boardable craft stay visible */
     drawParkedAir(ctx, world, frogs, camX, camY, vw, vh);
 
@@ -6126,6 +6419,9 @@
     spawnAirShell: spawnAirShell,
     tryMechSpear: tryMechSpear,
     tryRtTrillionToSemi: tryRtTrillionToSemi,
+    tryRtThousandToDog: tryRtThousandToDog,
+    tickSemiScoop: tickSemiScoop,
+    tryDumpSemiCargo: tryDumpSemiCargo,
     spawnBoom: spawnBoom,
     blastWreckProps: blastWreckProps,
     blastOmnigunKill: blastOmnigunKill,

@@ -42,7 +42,10 @@
    airgun1: heli + passenger-drone FIRE (Space/X/ability) — pilot only; tank-like boom;
            climb stays R / C; exit1 goldsteam drivefix3 spear lobbypick kept.
    rtxform1: while piloting trillion-story mech, RT edge → morph to driveable semi-truck
-           (EXIT INTERACT still works; heli/drone RT climb unchanged). */
+           (EXIT INTERACT still works; heli/drone RT climb unchanged).
+   dogxform1: while piloting thousand-story mech (Rexy), RT edge → morph to driveable robot dog
+           (Unitree-style; separate from trillion→semi; EXIT INTERACT walks as froggy).
+   semiscoop1: semi scoops trees/toys/props/parked mechs into trailer; LT dumps cargo outside. */
 (function (global) {
   "use strict";
 
@@ -543,6 +546,7 @@
     if (id.indexOf("ripsaw") >= 0) return "ripsaw";
     if (id.indexOf("tank") >= 0) return "tank";
     if (id.indexOf("semi") >= 0) return "semi";
+    if (id.indexOf("robotdog") >= 0 || id.indexOf("unitree") >= 0 || id.indexOf("rt-dog") >= 0) return "robotdog";
     if (id.indexOf("submarine") >= 0 || id.indexOf("sub") === 0) return "submarine";
     if (id.indexOf("heli") >= 0) return "heli";
     if (id.indexOf("drone") >= 0) return "drone";
@@ -556,6 +560,15 @@
     if (mechBand(stories) === "trillion") return true;
     var sid = mechSolidId(f.mechId || f);
     return sid === "mechTrillion";
+  }
+
+  /* dogxform1: boarded thousand (Rexy lock or stories band) — RT morph → robot dog */
+  function isThousandMechPilot(f) {
+    if (!f || !f.inMech) return false;
+    var stories = f.mechStories != null ? f.mechStories : f.stories;
+    if (mechBand(stories) === "1000") return true;
+    var sid = mechSolidId(f.mechId || f);
+    return sid === "mech1000";
   }
 
   /* mech5: Tank FIRE — big missile; props + ONLY Rexy 1000-story mech */
@@ -801,8 +814,30 @@
     PERMA_GONE[String(id)] = true;
     return true;
   }
+  function clearPermaGoneId(id) {
+    if (!id) return false;
+    delete PERMA_GONE[String(id)];
+    return true;
+  }
   function clearPermaGone() {
     PERMA_GONE = {};
+    STATIC_POS_OVERRIDE = {};
+  }
+  /* semiscoop1: dumped scoopables keep collider at dump XY */
+  var STATIC_POS_OVERRIDE = {};
+  function setStaticPosOverride(id, x, y) {
+    if (!id || !isFinite(x) || !isFinite(y)) return false;
+    STATIC_POS_OVERRIDE[String(id)] = { x: x, y: y };
+    return true;
+  }
+  function getStaticPosOverride(id) {
+    if (!id) return null;
+    return STATIC_POS_OVERRIDE[String(id)] || null;
+  }
+  function clearStaticPosOverride(id) {
+    if (!id) return false;
+    delete STATIC_POS_OVERRIDE[String(id)];
+    return true;
   }
   function isMechDestroyed(idOrHot) {
     var sid = mechSolidKeys(idOrHot);
@@ -827,6 +862,14 @@
   function clearDestroyedMechs() {
     DESTROYED_MECHS = {};
     /* keep PERMA_GONE until full world reset clears both */
+  }
+  /* semiscoop1: restore a scooped mech back into the world on LT dump */
+  function clearMechDestroyed(idOrHot) {
+    var sid = mechSolidKeys(idOrHot);
+    if (!sid) return false;
+    delete DESTROYED_MECHS[sid];
+    delete PERMA_GONE[sid];
+    return true;
   }
   /* mech6: count down; returns list of solidIds that just respawned
      mechgun1: never revive PERMA_GONE mechs */
@@ -863,8 +906,50 @@
     submarine:  { maxSp: 0.78, accel: 0.72, turn: 0.88, fric: 1.10 },
     /* rtxform1: big cab+trailer — slower turn, solid highway feel */
     semi:       { maxSp: 0.92, accel: 0.78, turn: 0.58, fric: 1.16 },
+    /* dogxform1: Unitree-style robot dog — agile quadruped */
+    robotdog:   { maxSp: 1.08, accel: 1.18, turn: 1.22, fric: 0.94 },
   };
   var RT_MECH_SEMI = { edge: 0.45, release: 0.28, cooldown: 0.55 };
+  /* dogxform1: same edge/release feel as trillion→semi (separate morph target) */
+  var RT_MECH_DOG = { edge: 0.45, release: 0.28, cooldown: 0.55 };
+  /* semiscoop1: semi trailer scoop — soft cap, world radius, min move speed */
+  var SEMI_SCOOP = {
+    cap: 10,
+    radius: 88,
+    trailerBack: 72,
+    minSpeedWorld: 40,
+    minSpeedThree: 1.6,
+    cooldown: 0.07,
+    fullToastCd: 1.4,
+    dumpEdge: 0.45,
+    dumpRelease: 0.28,
+    dumpSpread: 54,
+  };
+  function isSemiScoopKind(kind) {
+    var k = String(kind || "");
+    return k === "tree" || k === "rock" || k === "shrub" || k === "flower"
+      || k === "toy" || k === "prop" || k === "mech";
+  }
+  function semiScoopToast(kind) {
+    if (kind === "tree") return "SCOOP · tree!";
+    if (kind === "mech") return "SCOOP · mech!";
+    if (kind === "toy") return "SCOOP · toy!";
+    if (kind === "rock") return "SCOOP · rock!";
+    return "SCOOP · cargo!";
+  }
+  function semiScoopColor(kind) {
+    if (kind === "tree") return "#16a34a";
+    if (kind === "rock") return "#78716c";
+    if (kind === "shrub") return "#4d7c0f";
+    if (kind === "flower") return "#f472b6";
+    if (kind === "toy") return "#f59e0b";
+    if (kind === "mech") return "#fbbf24";
+    return "#94a3b8";
+  }
+  function semiDumpToast(n) {
+    if (!n) return "SEMI · trailer empty";
+    return "LT · DUMP " + n + " cargo!";
+  }
   var MECH_DRIVE = {
     "10":       { maxSp: 1.28, accel: 1.22, turn: 1.35, fric: 0.92 },
     "100":      { maxSp: 1.05, accel: 1.05, turn: 1.10, fric: 1.00 },
@@ -878,7 +963,7 @@
     if (!style && styleOrFrog.truckId) style = vehicleStyleOf(styleOrFrog.truckId);
     if (!style) style = "cybertruck";
     style = String(style);
-    if (style === "ripsaw" || style === "tank" || style === "submarine" || style === "semi") return style;
+    if (style === "ripsaw" || style === "tank" || style === "submarine" || style === "semi" || style === "robotdog") return style;
     /* Monster truck feel = Cybertruck with big live wheels */
     var ws = wheelScaleLive;
     if (styleOrFrog && typeof styleOrFrog === "object" && styleOrFrog.wheelScale != null) ws = styleOrFrog.wheelScale;
@@ -1150,8 +1235,10 @@
     if (!opts.ignoreYardTrees) {
       for (var ti = 0; ti < YARD_TREES.length; ti++) {
         var tr = YARD_TREES[ti];
-        if (isPermaGone("yard-tree-" + ti)) continue;
-        out.push({ id: "yard-tree-" + ti, x: tr.x, y: tr.y, r: Math.max(8, (tr.r || 12) * 0.72) });
+        var tid = "yard-tree-" + ti;
+        if (isPermaGone(tid)) continue;
+        var tov = getStaticPosOverride(tid);
+        out.push({ id: tid, x: tov ? tov.x : tr.x, y: tov ? tov.y : tr.y, r: Math.max(8, (tr.r || 12) * 0.72) });
       }
     }
     return out;
@@ -1600,7 +1687,14 @@
     mechDeniedTip: mechDeniedTip,
     vehicleStyleOf: vehicleStyleOf,
     isTrillionMechPilot: isTrillionMechPilot,
+    isThousandMechPilot: isThousandMechPilot,
     RT_MECH_SEMI: RT_MECH_SEMI,
+    RT_MECH_DOG: RT_MECH_DOG,
+    SEMI_SCOOP: SEMI_SCOOP,
+    isSemiScoopKind: isSemiScoopKind,
+    semiScoopToast: semiScoopToast,
+    semiScoopColor: semiScoopColor,
+    semiDumpToast: semiDumpToast,
     TANK_FIRE: TANK_FIRE,
     isTankVehicle: isTankVehicle,
     tankDrivingTip: tankDrivingTip,
@@ -1629,12 +1723,17 @@
     isMechDestroyed: isMechDestroyed,
     markMechDestroyed: markMechDestroyed,
     clearDestroyedMechs: clearDestroyedMechs,
+    clearMechDestroyed: clearMechDestroyed,
     tickMechRespawn: tickMechRespawn,
     mechRespawnRemaining: mechRespawnRemaining,
     BLAST_RESPAWN_SEC: BLAST_RESPAWN_SEC,
     isPermaGone: isPermaGone,
     markPermaGone: markPermaGone,
+    clearPermaGoneId: clearPermaGoneId,
     clearPermaGone: clearPermaGone,
+    setStaticPosOverride: setStaticPosOverride,
+    getStaticPosOverride: getStaticPosOverride,
+    clearStaticPosOverride: clearStaticPosOverride,
     VEHICLE_DRIVE: VEHICLE_DRIVE,
     MECH_DRIVE: MECH_DRIVE,
     resolveDriveStyle: resolveDriveStyle,
