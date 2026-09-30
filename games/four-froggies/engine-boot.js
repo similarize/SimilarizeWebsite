@@ -1,11 +1,11 @@
 /* Four Froggies — thin lobby engine switcher + CDN boot (three-hub).
    Canvas path stays default (main.js + PeerJS + world.js). Do not touch world.js scale.
-   view1: Phaser removed from lobby; Three = solo-first 2.5D compare. */
+   view1: Phaser removed from lobby; Three = 2.5D compare; party lobby UI shown (party25d1). */
 (function (global) {
   "use strict";
 
   var C = global.FroggiesCanon;
-  var CACHE = "20260929-storymuzzle1";
+  var CACHE = "20260929-party25d1";
   var CDN = {
     three: "https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js",
   };
@@ -65,16 +65,13 @@
       if (mode === "canvas") {
         note.textContent = "Canvas · default · Host/Join (PeerJS) works here";
       } else {
-        note.textContent = "three.js · fixed-angle 2.5D · solo-first";
+        note.textContent = "three.js · fixed-angle 2.5D · party bar shown (Host/Join)";
       }
     }
-    // Soft-hide party when not canvas (still visible but noted)
     var partyBar = $("party-bar");
     var inviteCta = $("invite-cta");
-    if (partyBar) partyBar.style.opacity = mode === "canvas" ? "" : "0.45";
-    if (inviteCta && mode !== "canvas") {
-      /* leave text; note covers it */
-    }
+    if (partyBar) partyBar.style.opacity = "";
+    if (inviteCta) inviteCta.style.opacity = "";
   }
 
   function stopAltEngines() {

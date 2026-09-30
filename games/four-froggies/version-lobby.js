@@ -1,5 +1,5 @@
 /* Four Froggies — version lobby. 2D, 2.5D, and full 3D.
-   Pad identity is decided here. Cache: 20260929-onelobby3 */
+   Pad identity is decided here. Cache: 20260929-party25d1 */
 (function () {
   "use strict";
 
