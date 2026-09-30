@@ -519,9 +519,10 @@
   }
 
   function mergedSteer() {
-    /* While piloting a mech, the pad that boarded drives (padIndex local or primary) */
+    /* While piloting a mech or truck, the pad that boarded drives (padIndex local or primary) */
     var steerPad = null;
     if (state && state.inMech && state.mechPilotPadIndex != null) steerPad = state.mechPilotPadIndex;
+    else if (state && state.inTruck && state.truckPilotPadIndex != null) steerPad = state.truckPilotPadIndex;
     else if (state && state.primaryPadIndex != null) steerPad = state.primaryPadIndex;
     /* Primary local pad (if claimed) OR keyboard/joy OR tap */
     if (steerPad != null && global.SimilarizeGamepad) {
@@ -3491,14 +3492,18 @@ state.zLift = 0;
     return true;
   }
 
-    function hopCompanionPad(padIndex) {
+  function hopCompanionPad(padIndex) {
     var c = companionForPad(padIndex);
     if (!c || !c.userData.local) return false;
-    if (state.inTruck && state.truckMode === "shared") return false; /* seated — no solo hop */
+    /* tankfire1: a tank-seated companion fires; never falls through to hop */
+    if (c.userData.inTruck && c.userData.vehicleStyle === "tank") {
+      return fireCompanionTankShell(c);
+    }
     /* airgun1: companion air pilot FIRE; passengers no-op */
     if (c.userData.inHeli || c.userData.inDrone) {
       return fireCompanionAirGun(c);
     }
+    if (state.inTruck && state.truckMode === "shared") return false; /* seated — no solo hop */
     var cd = c.userData.cd || 0;
     if (cd > 0) {
       c.userData.hopWantT = Math.max(c.userData.hopWantT || 0, 0.15);
@@ -3532,6 +3537,74 @@ state.zLift = 0;
     return true;
   }
 
+
+  /* tankfire1: companion Tank FIRE — same shell/blast path, using the companion pose. */
+  function fireCompanionTankShell(c) {
+    if (!c || !c.userData || !c.userData.inTruck || c.userData.vehicleStyle !== "tank") return false;
+    c.userData.hopWantT = 0; /* never queue or consume a hop while tank */
+    if ((c.userData.cd || 0) > 0) {
+      c.userData.fireWantT = Math.max(c.userData.fireWantT || 0, 0.15);
+      return false;
+    }
+    c.userData.fireWantT = 0;
+    var cfg = (C.TANK_FIRE) || { cd: 0.38, speed: 720, life: 1.55, muzzle: 1.9, blastR: 118, size: 2.4 };
+    c.userData.cd = cfg.cd != null ? cfg.cd : 0.38;
+    var yaw = (c.userData.faceYaw != null) ? c.userData.faceYaw : 0;
+    var spA = Math.hypot(c.userData.vx || 0, c.userData.vz || 0);
+    if (spA > 1.0) yaw = Math.atan2(c.userData.vx, c.userData.vz);
+    var fx = Math.sin(yaw), fz = Math.cos(yaw);
+    var muzzle = cfg.muzzle != null ? (cfg.muzzle > 8 ? cfg.muzzle / 34 : cfg.muzzle) : 1.9;
+    var spd = cfg.speed != null ? (cfg.speed > 40 ? cfg.speed / 42 : cfg.speed) : 17;
+    var life = cfg.life != null ? cfg.life : 1.55;
+    var blastR3 = (cfg.blastR != null ? cfg.blastR : 118) * 0.02;
+    var px = c.position.x + fx * muzzle;
+    var py = 0.7 + (c.userData.zLift || 0);
+    var pz = c.position.z + fz * muzzle;
+    var shellGeo = (typeof THREE.CapsuleGeometry === "function")
+      ? new THREE.CapsuleGeometry(0.22, 0.85, 6, 10)
+      : new THREE.SphereGeometry(0.28, 10, 8);
+    var mesh = new THREE.Mesh(shellGeo, new THREE.MeshBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 1 }));
+    if (typeof THREE.CapsuleGeometry === "function") {
+      mesh.rotation.z = Math.PI / 2;
+    } else {
+      mesh.scale.set(3.4, 1.1, 1.1);
+    }
+    mesh.position.set(px, py, pz);
+    mesh.rotation.y = yaw;
+    scene.add(mesh);
+    if (!state.shells) state.shells = [];
+    state.shells.push({
+      mesh: mesh,
+      vx: fx * spd,
+      vz: fz * spd,
+      life: life,
+      maxLife: life,
+      yaw: yaw,
+      blastR: blastR3,
+      hitR: 0.55,
+      size: cfg.size != null ? cfg.size : 2.4,
+      ownerId: c.userData.frogId,
+    });
+    if (state.shells.length > 14) {
+      var old = state.shells.shift();
+      if (old && old.mesh && old.mesh.parent) old.mesh.parent.remove(old.mesh);
+    }
+    if (!state.fx) state.fx = [];
+    for (var zi = 0; zi < 12; zi++) {
+      var spark = new THREE.Mesh(
+        new THREE.SphereGeometry(0.08 + (zi % 3) * 0.04, 5, 4),
+        new THREE.MeshBasicMaterial({ color: zi % 2 ? 0xfbbf24 : 0xf87171, transparent: true, opacity: 0.95 })
+      );
+      spark.position.set(px - fx * 0.15, py, pz - fz * 0.15);
+      scene.add(spark);
+      state.fx.push({ mesh: spark, life: 0.32 + zi * 0.02, rise: 1.6, vx: fx * (3 + zi * 0.35), vz: fz * (3 + zi * 0.35) });
+    }
+    state.toast = "FIRE!";
+    state.toastT = 0.9;
+    if (hooks.onToast) hooks.onToast(state.toast);
+    if (hooks.onAbilityFire) hooks.onAbilityFire(c.userData.frogId, "FIRE");
+    return true;
+  }
 
   /* mech4: Tank FIRE — big missile; blast wrecks toys/animals/props. Never hop/reset. */
   function fireTankShell() {
@@ -6379,6 +6452,21 @@ state.zLift = 0;
       if (state.cd <= 0) {
         state.hopWantT = 0;
         doAbility();
+      }
+    }
+    /* tankfire1: drain buffered FIRE for couch companions independently of primary vehicle state. */
+    if (state.companions) {
+      for (var cfi = 0; cfi < state.companions.length; cfi++) {
+        var cf = state.companions[cfi];
+        if (!cf || !cf.userData || !cf.userData.inTruck || cf.userData.vehicleStyle !== "tank") continue;
+        cf.userData.hopWantT = 0;
+        if ((cf.userData.fireWantT || 0) > 0) {
+          cf.userData.fireWantT = Math.max(0, cf.userData.fireWantT - dt);
+          if ((cf.userData.cd || 0) <= 0) {
+            cf.userData.fireWantT = 0;
+            fireCompanionTankShell(cf);
+          }
+        }
       }
     }
     interactOrigin = null;
