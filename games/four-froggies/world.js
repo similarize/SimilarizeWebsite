@@ -813,7 +813,7 @@
     return shell;
   }
 
-    /* spear1: Rexy 1000-mech melee spear thrust — knocks trillion; speartank1 also wrecks tank */
+    /* spear1: Rexy 1000-mech melee spear thrust — knocks trillion; speartank1 also wrecks tank; spearvis1 thicker draw */
   function tryMechSpear(world, frog) {
     if (!world || !frog) return { ok: false, reason: "no-frog" };
     var C = global.FroggiesCanon;
@@ -848,9 +848,10 @@
     if (!world.spears) world.spears = [];
     world.spears.push({
       x: frog.x, y: frog.y, ang: ang,
-      life: cfg.thrustLife != null ? cfg.thrustLife : 0.28,
-      maxLife: cfg.thrustLife != null ? cfg.thrustLife : 0.28,
-      len: Math.min(range, 200),
+      life: cfg.thrustLife != null ? cfg.thrustLife : 0.55,
+      maxLife: cfg.thrustLife != null ? cfg.thrustLife : 0.55,
+      /* spearvis1: longer lance vs 1000-mech silhouette */
+      len: Math.max(Math.min(range, 360), 280),
       ownerId: frog.id,
     });
     if (world.spears.length > 6) world.spears.splice(0, world.spears.length - 6);
@@ -5928,15 +5929,16 @@
       ctx.save();
       ctx.globalAlpha = 0.35 + 0.65 * fade;
       ctx.strokeStyle = "#fef3c7";
-      ctx.lineWidth = Math.max(3, 5 * p0.depth);
+      /* spearvis1: thicker readable thrust vs 1000-mech */
+      ctx.lineWidth = Math.max(6, 12 * p0.depth);
       ctx.lineCap = "round";
       ctx.beginPath();
-      ctx.moveTo(p0.x, p0.y - 30 * p0.depth);
-      ctx.lineTo(ex, ey - 40 * p0.depth);
+      ctx.moveTo(p0.x, p0.y - 40 * p0.depth);
+      ctx.lineTo(ex, ey - 55 * p0.depth);
       ctx.stroke();
       ctx.fillStyle = "#fbbf24";
       ctx.beginPath();
-      ctx.arc(ex, ey - 40 * p0.depth, Math.max(3, 6 * p0.depth), 0, Math.PI * 2);
+      ctx.arc(ex, ey - 55 * p0.depth, Math.max(5, 10 * p0.depth), 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     }

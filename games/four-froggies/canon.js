@@ -660,7 +660,8 @@
   }
 
   /* spear1: Rexy 1000-mech SPEAR — knocks trillion; mash recovers.
-     speartank1: same SPEAR also wrecks tank (parked/driven) via markPermaGone. */
+     speartank1: same SPEAR also wrecks tank (parked/driven) via markPermaGone.
+     spearvis1: thrustLife long enough to read tip/lance on 1000-mech. */
   var MECH_SPEAR = {
     cd: 0.55,
     range: 280,
@@ -668,7 +669,7 @@
     halfArc: 0.95,
     knockSec: 2.0,
     mashNeed: 8,
-    thrustLife: 0.28,
+    thrustLife: 0.55,
   };
   var KNOCKED_MECHS = {}; /* sid -> { t, mash, need, knockSec } */
 

@@ -45,6 +45,7 @@
    mechgun2: omnigun also permanently wrecks house/garage/trees/rocks/fish/fences (session).
    spear1: Rexy 1000 SPEAR (B/RB) knocks trillion ~2s; mash get-up; tipped mesh.
    speartank1: thousand-story SPEAR also wrecks tank (parked/driven); eject pilot; perma-gone.
+   spearvis1: SPEAR tip/thrust mesh scaled to 1000-mech (was frog-scale @ y=1.4 — invisible).
    goldsteam1: James trillion GOLD armor + steam pipe billows; omnigun FIRE kept.
    airgun1: heli + passenger-drone FIRE (Space/X/ability) pilot only; climb R/C/RT.
    storymuzzle1: story-mech omnigun muzzle = glowing chest plate (not ankles).
@@ -3916,6 +3917,61 @@ state.zLift = 0;
     return false;
   }
 
+  /* spearvis1: visible lance from mech chest toward aim — sized to ment.h (1000≈8.2) */
+  function mechEntryBySid(sid) {
+    for (var mi = 0; mi < (state.mechs || []).length; mi++) {
+      if (state.mechs[mi] && state.mechs[mi].solidId === sid) return state.mechs[mi];
+    }
+    return null;
+  }
+  function spawnSpearThrustThree(ox, oz, yaw, mechH) {
+    if (!state || !scene) return;
+    if (!state.fx) state.fx = [];
+    var cfg = C.MECH_SPEAR || {};
+    var h = (mechH > 0.5) ? mechH : 8.2;
+    var range = cfg.range3 != null ? cfg.range3 : 5.6;
+    /* stick past body; hit cone still uses range alone */
+    var spearLen = Math.max(range * 1.2, h * 1.15);
+    var rad = Math.max(0.22, h * 0.05);
+    var tipR = Math.max(0.35, h * 0.08);
+    var tipLen = Math.max(0.7, h * 0.16);
+    var y = (state.zLift || 0) + h * 0.55;
+    var life = cfg.thrustLife != null ? cfg.thrustLife : 0.55;
+    if (life < 0.45) life = 0.55;
+    var fx = Math.sin(yaw), fz = Math.cos(yaw);
+    var shaft = new THREE.Mesh(
+      new THREE.CylinderGeometry(rad * 0.85, rad, spearLen, 8),
+      new THREE.MeshBasicMaterial({ color: 0xfef3c7, transparent: true, opacity: 1, depthWrite: false })
+    );
+    shaft.rotation.x = Math.PI / 2;
+    shaft.position.set(ox + fx * (spearLen * 0.52), y, oz + fz * (spearLen * 0.52));
+    shaft.rotation.y = yaw;
+    shaft.renderOrder = 8;
+    scene.add(shaft);
+    state.fx.push({ mesh: shaft, life: life, maxLife: life, rise: 0, spear: true });
+    var tip = new THREE.Mesh(
+      new THREE.ConeGeometry(tipR, tipLen, 8),
+      new THREE.MeshBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 1, depthWrite: false })
+    );
+    tip.rotation.x = Math.PI / 2;
+    tip.position.set(ox + fx * spearLen, y, oz + fz * spearLen);
+    tip.rotation.y = yaw;
+    tip.renderOrder = 9;
+    scene.add(tip);
+    state.fx.push({ mesh: tip, life: life, maxLife: life, rise: 0, spear: true });
+    /* thin glow sheath so it reads against gold mech */
+    var glow = new THREE.Mesh(
+      new THREE.CylinderGeometry(rad * 1.55, rad * 1.35, spearLen * 0.92, 8),
+      new THREE.MeshBasicMaterial({ color: 0xfde68a, transparent: true, opacity: 0.35, depthWrite: false })
+    );
+    glow.rotation.x = Math.PI / 2;
+    glow.position.set(ox + fx * (spearLen * 0.48), y, oz + fz * (spearLen * 0.48));
+    glow.rotation.y = yaw;
+    glow.renderOrder = 7;
+    scene.add(glow);
+    state.fx.push({ mesh: glow, life: life * 0.9, maxLife: life * 0.9, rise: 0, spear: true });
+  }
+
   /* spear1: Rexy 1000-mech SPEAR — cone hit vs trillion; speartank1 also wrecks tank */
   function fireMechSpear() {
     if (!state || !state.inMech) return false;
@@ -3932,35 +3988,9 @@ state.zLift = 0;
     var fx = Math.sin(yaw), fz = Math.cos(yaw);
     var range = cfg.range3 != null ? cfg.range3 : 5.6;
     var halfArc = cfg.halfArc != null ? cfg.halfArc : 0.95;
-    /* visual spear thrust */
-    if (!state.fx) state.fx = [];
-    var spearLen = Math.min(range, 4.2);
-    var shaft = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.06, 0.04, spearLen, 6),
-      new THREE.MeshBasicMaterial({ color: 0xfef3c7, transparent: true, opacity: 0.95 })
-    );
-    shaft.rotation.x = Math.PI / 2;
-    shaft.position.set(
-      state.player.position.x + fx * (spearLen * 0.55),
-      1.4 + (state.zLift || 0),
-      state.player.position.z + fz * (spearLen * 0.55)
-    );
-    shaft.rotation.y = yaw;
-    scene.add(shaft);
-    state.fx.push({ mesh: shaft, life: cfg.thrustLife != null ? cfg.thrustLife : 0.28, rise: 0, spear: true });
-    var tip = new THREE.Mesh(
-      new THREE.ConeGeometry(0.14, 0.42, 6),
-      new THREE.MeshBasicMaterial({ color: 0xfbbf24 })
-    );
-    tip.rotation.x = Math.PI / 2;
-    tip.position.set(
-      state.player.position.x + fx * spearLen,
-      1.4 + (state.zLift || 0),
-      state.player.position.z + fz * spearLen
-    );
-    tip.rotation.y = yaw;
-    scene.add(tip);
-    state.fx.push({ mesh: tip, life: cfg.thrustLife != null ? cfg.thrustLife : 0.28, rise: 0, spear: true });
+    /* spearvis1: mech-scaled tip/thrust (hit cone unchanged below) */
+    var mentSelf = mechEntryBySid(mechSidOf(state.mechId)) || mechEntryBySid("mech1000");
+    spawnSpearThrustThree(state.player.position.x, state.player.position.z, yaw, mentSelf ? mentSelf.h : 8.2);
     /* speartank1: tank wreck first (same cone); then spear1 trillion knock */
     var tankHit = wreckTankSpearThree(state.player.position.x, state.player.position.z, yaw, range, halfArc);
     var ment = null;
@@ -4061,6 +4091,9 @@ state.zLift = 0;
     var fx = Math.sin(yaw), fz = Math.cos(yaw);
     var range = cfg.range3 != null ? cfg.range3 : 5.6;
     var halfArc = cfg.halfArc != null ? cfg.halfArc : 0.95;
+    /* spearvis1: companion SPEAR also shows tip/thrust */
+    var mentC = mechEntryBySid(mechSidOf(c.userData.mechId)) || mechEntryBySid("mech1000");
+    spawnSpearThrustThree(c.position.x, c.position.z, yaw, mentC ? mentC.h : 8.2);
     /* speartank1 + spear1 */
     var tankHit = wreckTankSpearThree(c.position.x, c.position.z, yaw, range, halfArc);
     var ment = null;
@@ -5641,11 +5674,15 @@ state.zLift = 0;
       for (var fxi = state.fx.length - 1; fxi >= 0; fxi--) {
         var fx = state.fx[fxi];
         fx.life -= dt;
-        fx.mesh.position.y += (fx.rise || 0.3) * dt;
+        fx.mesh.position.y += (fx.rise != null ? fx.rise : 0.3) * dt;
         if (fx.grow) fx.mesh.scale.multiplyScalar(1 + fx.grow * dt);
         if (fx.vx) { fx.mesh.position.x += fx.vx * dt; fx.vx *= 0.96; }
         if (fx.vz) { fx.mesh.position.z += fx.vz * dt; }
-        fx.mesh.material.opacity = Math.max(0, fx.life * 1.4);
+        if (fx.spear && fx.maxLife > 0) {
+          fx.mesh.material.opacity = Math.max(0, fx.life / fx.maxLife);
+        } else {
+          fx.mesh.material.opacity = Math.max(0, fx.life * 1.4);
+        }
         if (fx.life <= 0) { scene.remove(fx.mesh); state.fx.splice(fxi, 1); }
       }
       if (state.driveTruck) {
