@@ -38,6 +38,7 @@
    qa1: feet/mechs/followers ride trackElevAt; the apron mesh and lane use that same height.
    mechwalk1: boarded mech lumber walk (steer+solid ignore+mesh sync); pad pilot drives.
    boardall1: each couch pad/companion can board a DIFFERENT free mech at once.
+   heliyaw1: 2.5D heli nose faces travel (-faceAngle; drone yaw unchanged).
    air1: HeliPad + DronePad · low-poly heli (4) + passenger drone (1–2) · fly over ranch.
    mechgun1: story-mech omnigun FIRE — permanent session kill (Canvas parity).
    mechgun2: omnigun also permanently wrecks house/garage/trees/rocks/fish/fences (session).
@@ -2073,7 +2074,7 @@
       var craft = k.kind === "drone" ? makePassengerDroneMesh(k.accent) : makeHeliMesh(k.accent);
       /* Sit just above raised pad disc so craft is never under orange zone */
       craft.position.set(p.x, deck + AIR_PAD_LIFT, p.z);
-      craft.rotation.y = -Math.PI / 2;
+      craft.rotation.y = k.kind === "heli" ? Math.PI / 2 : -Math.PI / 2; /* heliyaw1: match faceAngle -PI/2 */
       scene.add(craft);
       state.parkedAir.push({ kind: k.kind, mesh: craft, wx: home.x, wy: home.y });
       if (Air && Air.ensureCraft) {
@@ -5058,7 +5059,13 @@ state.zLift = 0;
         if (state.driveAir) {
           state.driveAir.visible = true;
           state.driveAir.position.set(tpF.x, airCraftDeckY(craftF.x, craftF.y, state.zLift), tpF.z);
-          if (craftF.faceAngle != null) state.driveAir.rotation.y = -craftF.faceAngle + Math.PI / 2;
+          if (craftF.faceAngle != null) {
+            /* heliyaw1: heli mesh nose = +X; faceAngle = atan2(vy,vx) → yaw = -faceAngle.
+               Old +PI/2 made heli crab sideways. Drone stays +PI/2 (Ben: drone OK). */
+            state.driveAir.rotation.y = state.inHeli
+              ? -craftF.faceAngle
+              : (-craftF.faceAngle + Math.PI / 2);
+          }
           if (state.driveAir.userData.rotor) state.driveAir.userData.rotor.rotation.y = craftF.rotor || 0;
           if (state.driveAir.userData.rotors) {
             for (var ri = 0; ri < state.driveAir.userData.rotors.length; ri++) {
@@ -6082,7 +6089,11 @@ state.zLift = 0;
                 if (!(state.inHeli && cAirKind === "heli") && !(state.inDrone && cAirKind === "drone")) {
                   state.parkedAir[paiC].mesh.visible = true;
                   state.parkedAir[paiC].mesh.position.set(tpC.x, airCraftDeckY(craftC.x, craftC.y, c.userData.zLift), tpC.z);
-                  if (craftC.faceAngle != null) state.parkedAir[paiC].mesh.rotation.y = -craftC.faceAngle + Math.PI / 2;
+                  if (craftC.faceAngle != null) {
+                    state.parkedAir[paiC].mesh.rotation.y = (cAirKind === "heli")
+                      ? -craftC.faceAngle
+                      : (-craftC.faceAngle + Math.PI / 2);
+                  }
                 }
               }
             }
