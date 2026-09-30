@@ -1,3 +1,9 @@
+## What's new (zoommech1) — steady mech scale and cleaner zoom-out
+
+- Keep Canvas mech bodies, pilot markers, and nameplates at a constant screen size as camera depth and player position change.
+- Thin ground-polygon outlines and fade decorative checker marks at low zoom to reduce aliasing and flicker at maximum zoom-out.
+- Cache-bust the Canvas world script with `?v=20261002-zoommech1`.
+
 ## What's new (same-model-pads1) — detect multiple identical Xbox controllers
 
 - Controller model IDs are shared by devices of the same model, so they cannot identify individual physical controllers. Deduplicate only repeated `Gamepad.index` values instead.

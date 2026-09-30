@@ -2687,7 +2687,7 @@
     ctx.fill();
     if (stroke) {
       ctx.strokeStyle = stroke;
-      ctx.lineWidth = 2.4;
+      ctx.lineWidth = Math.max(1, 2.4 * getViewScale() / VIEW_SCALE_BASE);
       ctx.lineJoin = "round";
       ctx.stroke();
     }
@@ -2723,7 +2723,7 @@
     var band = Cband && Cband.mechBand ? Cband.mechBand(stories) : (stories >= 1e12 ? "trillion" : stories >= 1000 ? "1000" : stories >= 100 ? "100" : "10");
     var hScale = band === "trillion" ? 460 : band === "1000" ? 310 : band === "100" ? 138 : 62;
     var wScale = band === "trillion" ? 108 : band === "1000" ? 72 : band === "100" ? 42 : 26;
-    var s = p.depth;
+    var s = 1;
     var H = hScale * s;
     var W = wScale * s;
     var baseY = p.y;
@@ -4871,7 +4871,7 @@
       var CbandP = global.FroggiesCanon;
       var bandP = CbandP && CbandP.mechBand ? CbandP.mechBand(stories) : (stories >= 1e12 ? "trillion" : stories >= 1000 ? "1000" : stories >= 100 ? "100" : "10");
       var tint = bandP === "trillion" ? "#ffd700" : bandP === "1000" ? "#fcd34d" : bandP === "100" ? "#67e8f9" : "#a5b4fc";
-      var bobM = Math.abs(Math.sin(frog.walkPhase || 0)) * (bandP === "trillion" ? 6.2 : bandP === "1000" ? 4.5 : bandP === "100" ? 3.2 : 2.2) * p.depth;
+      var bobM = Math.abs(Math.sin(frog.walkPhase || 0)) * (bandP === "trillion" ? 6.2 : bandP === "1000" ? 4.5 : bandP === "100" ? 3.2 : 2.2);
       var mechSp = Math.hypot(frog.vx || 0, frog.vy || 0);
       var steamOpts = bandP === "trillion" ? {
         steamT: (typeof performance !== "undefined" ? performance.now() : Date.now()) / 1000,
@@ -4884,14 +4884,14 @@
       var hatR = bandP === "trillion" ? 12 : bandP === "1000" ? 9 : bandP === "100" ? 7 : 5.5;
       ctx.fillStyle = frog.color || "#4ade80";
       ctx.beginPath();
-      ctx.arc(p.x, p.y - hatH * p.depth - bobM, hatR * p.depth, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y - hatH - bobM, hatR, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = frog.hat || "#facc15";
       ctx.beginPath();
-      ctx.arc(p.x, p.y - (hatH + 8) * p.depth - bobM, hatR * 0.58 * p.depth, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y - hatH - 8 - bobM, hatR * 0.58, 0, Math.PI * 2);
       ctx.fill();
       var plateH = bandP === "trillion" ? 310 : bandP === "1000" ? 210 : bandP === "100" ? 100 : 58;
-      drawNameplate(ctx, (frog.name || "Frog") + " · MECH", p.x, p.y - plateH * p.depth - bobM, frog.color || "#fff", p.depth, !frog.local);
+      drawNameplate(ctx, (frog.name || "Frog") + " · MECH", p.x, p.y - plateH - bobM, frog.color || "#fff", 1, !frog.local);
       return p;
     }
 
@@ -5923,18 +5923,25 @@
     var g3 = project(0, MAP_H, camX, camY, vw, vh);
     drawGroundPoly(ctx, [g0, g1, g2, g3], "rgba(88, 148, 52, 0.72)", null);
 
-    var tileStep = 120;
-    for (var ty = 40; ty < MAP_H; ty += tileStep) {
-      for (var tx = 40; tx < MAP_W; tx += tileStep) {
-        if (areaAt(tx + 20, ty + 20)) continue;
-        var tp = project(tx, ty, camX, camY, vw, vh);
-        if (tp.x < -40 || tp.x > vw + 40 || tp.y < -40 || tp.y > vh + 40) continue;
-        var checker = ((tx / tileStep) + (ty / tileStep)) % 2 === 0;
-        ctx.fillStyle = checker ? "rgba(70, 130, 45, 0.14)" : "rgba(110, 170, 70, 0.1)";
-        ctx.beginPath();
-        ctx.ellipse(tp.x, tp.y, 28 * tp.depth, 12 * tp.depth, -0.4, 0, Math.PI * 2);
-        ctx.fill();
+    var tileDetail = clamp((getViewScale() - VIEW_SCALE_MIN) / (VIEW_SCALE_BASE - VIEW_SCALE_MIN), 0, 1);
+    tileDetail *= tileDetail;
+    if (tileDetail > 0.01) {
+      ctx.save();
+      ctx.globalAlpha = tileDetail;
+      var tileStep = 120;
+      for (var ty = 40; ty < MAP_H; ty += tileStep) {
+        for (var tx = 40; tx < MAP_W; tx += tileStep) {
+          if (areaAt(tx + 20, ty + 20)) continue;
+          var tp = project(tx, ty, camX, camY, vw, vh);
+          if (tp.x < -40 || tp.x > vw + 40 || tp.y < -40 || tp.y > vh + 40) continue;
+          var checker = ((tx / tileStep) + (ty / tileStep)) % 2 === 0;
+          ctx.fillStyle = checker ? "rgba(70, 130, 45, 0.14)" : "rgba(110, 170, 70, 0.1)";
+          ctx.beginPath();
+          ctx.ellipse(tp.x, tp.y, 28 * tp.depth, 12 * tp.depth, -0.4, 0, Math.PI * 2);
+          ctx.fill();
+        }
       }
+      ctx.restore();
     }
 
     drawPond(ctx, camX, camY, vw, vh, world, t);
