@@ -9,7 +9,7 @@
   <!-- Tesla Cybertruck chromeless FS — see games/shared/TESLA_FULLSCREEN.md -->
   <script src="../shared/tesla-fullscreen.js?v=tfs1"></script>
   <script src="../shared/viewport-fill.js?v=vfs1"></script>
-  <link rel="stylesheet" href="style.css?v=20260929-onelobby4">
+  <link rel="stylesheet" href="style.css?v=20260929-onelobby5">
   <style>
     #pad-dock{width:min(920px,100%);display:flex;flex-direction:column;gap:8px}
     #pad-count{margin:0;font-weight:800;font-size:clamp(18px,3.2vw,28px);letter-spacing:.01em;color:#fff}
@@ -40,6 +40,28 @@
     .pad-tile[data-pad="3"].is-hot{background:#c084fc;border-color:#f3e8ff;color:#1e1b4b}
     @keyframes pad-pulse{50%{transform:scale(1.06)}}
     @media (max-width:640px){#pad-row{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    .version-card img.version-shot{display:block;width:100%;height:148px;object-fit:cover;object-position:center;border-radius:10px;background:#052e16}
+    #lobby-badge{margin:0 0 8px;padding:6px 14px;border-radius:999px;font-weight:900;letter-spacing:.06em;font-size:clamp(18px,4vw,28px);line-height:1}
+    #lobby-badge[hidden]{display:none!important}
+    .lobby-still{display:block;width:min(100%,560px);height:148px;object-fit:cover;object-position:center;border-radius:14px;margin:0 0 8px}
+    .lobby-still[hidden]{display:none!important}
+    body.lobby-2d .splash-art,body.lobby-25d .splash-art{display:none!important}
+    body.lobby-2d #overlay{background:#2f9e3a}
+    body.lobby-2d #lobby-badge{background:#facc15;color:#1c1917}
+    body.lobby-2d #overlay h1,body.lobby-2d #overlay-sub,body.lobby-2d .pick-label,body.lobby-2d .pad-hint{color:#052e16}
+    body.lobby-2d .lobby-still{border:4px solid #facc15}
+    body.lobby-2d .frog-btn{background:#fef9c3;color:#1c1917;border-color:#ca8a04;border-radius:8px;box-shadow:3px 3px 0 #14532d}
+    body.lobby-2d .frog-btn .frog-name,body.lobby-2d .frog-btn.seat-open .seat-state{color:#1c1917}
+    body.lobby-2d .frog-btn.seat-open .seat-state{background:rgba(0,0,0,.08)}
+    body.lobby-2d.in-title #overlay .start-btn{background:#facc15;color:#1c1917;box-shadow:0 4px 0 #a16207,0 10px 28px rgba(0,0,0,.45)}
+    body.lobby-25d #overlay{background-color:#5fa84a;background-image:linear-gradient(rgba(255,255,255,.28) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.28) 1px,transparent 1px),linear-gradient(#8ec8ef,#8ec8ef);background-size:26px 26px,26px 26px,100% 46%;background-repeat:repeat,repeat,no-repeat;background-position:center bottom,center bottom,center top}
+    body.lobby-25d #lobby-badge{background:#0284c7;color:#fff}
+    body.lobby-25d #overlay h1{color:#0c4a6e}
+    body.lobby-25d #overlay-sub,body.lobby-25d .pick-label{color:#082f49}
+    body.lobby-25d .lobby-still{border:4px solid #38bdf8}
+    body.lobby-25d .frog-btn{background:rgba(15,23,42,.72);color:#fff;border-color:#38bdf8;border-radius:18px;box-shadow:0 6px 0 #075985}
+    body.lobby-25d.in-title #overlay .start-btn{background:#0284c7;color:#fff;box-shadow:0 4px 0 #075985,0 10px 28px rgba(0,0,0,.45)}
+    body.lobby-25d #party-bar,body.lobby-25d #invite-cta,body.lobby-25d #party-help,body.lobby-25d #invite-qr{display:none!important}
   </style>
 </head>
 <body class="in-title">
@@ -58,7 +80,7 @@
     <div id="pad-dock" aria-label="Controllers">
       <p id="pad-count">No controllers are connected</p>
       <p id="pad-you" hidden>You are Pad 1</p>
-      <p id="pad-hint">Plug in a controller, then press any button.</p>
+      <p id="pad-dock-hint">Plug in a controller, then press any button.</p>
       <div id="pad-row">
         <div class="pad-tile" data-pad="0"><b>Pad 1</b><em>Not connected</em></div>
         <div class="pad-tile" data-pad="1"><b>Pad 2</b><em>Not connected</em></div>
@@ -68,17 +90,17 @@
     </div>
     <div class="version-grid">
       <button type="button" class="version-card" data-version="canvas">
-        <canvas data-shot="canvas" width="320" height="180" aria-hidden="true"></canvas>
+        <img class="version-shot" src="assets/play-2d.jpg?v=20260929-onelobby5" alt="2D gameplay: flat green ranch, mechs, and the garage" width="960" height="540">
         <strong>2D</strong>
-        <span>Ranch · party. Host a room or play solo.</span>
+        <span>Flat ranch · party. Host a room or play solo.</span>
       </button>
       <button type="button" class="version-card" data-version="three">
-        <canvas data-shot="three" width="320" height="180" aria-hidden="true"></canvas>
+        <img class="version-shot" src="assets/play-25d.jpg?v=20260929-onelobby5" alt="2.5D gameplay: fixed camera over the grid ranch, trees, and pond" width="960" height="540">
         <strong>2.5D</strong>
-        <span>Fixed-angle ranch. Solo first.</span>
+        <span>Fixed camera · solo. Not the party ranch.</span>
       </button>
       <button type="button" class="version-card" data-version="3d">
-        <canvas data-shot="3d" width="320" height="180" aria-hidden="true"></canvas>
+        <img class="version-shot" src="assets/play-3d.jpg?v=20260929-onelobby5" alt="3D gameplay: Cybertruck at James's garage" width="960" height="540">
         <strong>3D</strong>
         <span>Cybertrucks · full 3D · host QR.</span>
       </button>
@@ -182,6 +204,8 @@
 
   <div id="overlay">
     <a id="exit-arcade" class="exit-arcade" href="/games/">← Arcade</a>
+    <p id="lobby-badge" hidden>2D</p>
+    <img id="lobby-still" class="lobby-still" alt="" hidden width="960" height="540">
     <img id="splash-art" class="splash-art" src="assets/splash-forest-roof.png?v=20260928-view3" alt="Four froggies on a Cybertruck roof" width="832" height="1248" decoding="async">
     <h1 id="overlay-title">Four Froggies</h1>
     <p id="overlay-sub">Claim a seat, then GO.</p>
@@ -241,13 +265,13 @@
   <script src="story.js?v=20260928-qa1"></script>
   <script src="space.js?v=20260928-qa1"></script>
   <script src="engine-boot.js?v=20260929-storymuzzle1"></script>
-  <script src="version-lobby.js?v=20260929-onelobby4"></script>
+  <script src="version-lobby.js?v=20260929-onelobby5"></script>
   <script>
     /* Pad identity on the version lobby. Press any button: that pad lights up. */
     (function () {
       var lobby = document.getElementById("version-lobby");
       var countEl = document.getElementById("pad-count");
-      var hintEl = document.getElementById("pad-hint");
+      var hintEl = document.getElementById("pad-dock-hint");
       var youEl = document.getElementById("pad-you");
       var tiles = document.querySelectorAll("#pad-row .pad-tile");
       if (!lobby || !countEl || !tiles.length) return;
@@ -333,6 +357,70 @@
       var back = document.getElementById("btn-versions");
       if (back) back.addEventListener("click", function () { requestAnimationFrame(loop); });
       window.addEventListener("gamepadconnected", function () { requestAnimationFrame(loop); });
+    })();
+  </script>
+  <script>
+    /* Seat lobby chrome: 2D and 2.5D must not look like the same room. */
+    (function () {
+      var SHOT = "20260929-onelobby5";
+      function applyLobbyLook(which) {
+        var badge = document.getElementById("lobby-badge");
+        var still = document.getElementById("lobby-still");
+        var title = document.getElementById("overlay-title");
+        var sub = document.getElementById("overlay-sub");
+        var go = document.getElementById("btn-start");
+        var help = document.getElementById("overlay-go");
+        document.body.classList.remove("lobby-2d", "lobby-25d");
+        if (which !== "2d" && which !== "25d") {
+          if (badge) badge.hidden = true;
+          if (still) still.hidden = true;
+          if (title) title.textContent = "Four Froggies";
+          if (go) go.textContent = "GO · Ranch Hub";
+          return;
+        }
+        var twoD = which === "2d";
+        document.body.classList.add(twoD ? "lobby-2d" : "lobby-25d");
+        if (badge) {
+          badge.hidden = false;
+          badge.textContent = twoD ? "2D · FLAT RANCH" : "2.5D · FIXED CAMERA";
+        }
+        if (still) {
+          still.hidden = false;
+          still.src = twoD
+            ? "assets/play-2d.jpg?v=" + SHOT
+            : "assets/play-25d.jpg?v=" + SHOT;
+          still.alt = twoD ? "2D ranch gameplay" : "2.5D ranch gameplay";
+        }
+        if (title) title.textContent = twoD ? "2D Ranch" : "2.5D Ranch";
+        if (sub) {
+          sub.textContent = twoD
+            ? "Flat map. This is the party lobby. Host a room or play solo."
+            : "Fixed camera. Solo only. This is not the 2D party lobby.";
+        }
+        if (go) go.textContent = twoD ? "GO · 2D Ranch" : "GO · 2.5D Ranch";
+        if (help) {
+          help.textContent = twoD
+            ? "One pad, one froggy. Stick to cycle. A claims. B releases."
+            : "Same seats, different ranch. No host room on this version.";
+        }
+      }
+      var lobby = document.getElementById("version-lobby");
+      if (lobby) {
+        lobby.addEventListener("click", function (e) {
+          var btn = e.target.closest("[data-version]");
+          if (!btn) return;
+          var id = btn.getAttribute("data-version");
+          if (id === "canvas") applyLobbyLook("2d");
+          else if (id === "three") applyLobbyLook("25d");
+        });
+      }
+      var back = document.getElementById("btn-versions");
+      if (back) back.addEventListener("click", function () { applyLobbyLook(null); });
+      try {
+        var eng = new URLSearchParams(location.search).get("engine");
+        if (eng === "three") applyLobbyLook("25d");
+        else if (eng === "canvas") applyLobbyLook("2d");
+      } catch (err) { /* keep default */ }
     })();
   </script>
   <script src="main.js?v=20260929-storymuzzle1"></script>

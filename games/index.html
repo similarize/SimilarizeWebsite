@@ -210,7 +210,7 @@
       <span class="screen-wrap"><canvas data-demo="rocks"></canvas><span class="glass"></span></span>
       <span class="panel"><span class="plate">Turn and fire</span><span class="buttons" aria-hidden="true"><i></i><i class="alt"></i></span></span>
     </a>
-    <a class="cab" href="/games/four-froggies/?v=20260929-onelobby4">
+    <a class="cab" href="/games/four-froggies/?v=20260929-onelobby5">
       <span class="marquee">Four Froggies</span>
       <span class="screen-wrap"><canvas data-demo="ffversions"></canvas><span class="glass"></span></span>
       <span class="panel"><span class="plate">2D · 2.5D · 3D</span><span class="buttons" aria-hidden="true"><i></i><i class="alt"></i></span></span>
@@ -613,38 +613,42 @@
 
     const draw = { rally, rocks, ball, froggies, froggies3d, map, drop, ffversions };
 
+    const ffShots = [
+      { label: "2D", src: "/games/four-froggies/assets/play-2d.jpg?v=20260929-onelobby5" },
+      { label: "2.5D", src: "/games/four-froggies/assets/play-25d.jpg?v=20260929-onelobby5" },
+      { label: "3D", src: "/games/four-froggies/assets/play-3d.jpg?v=20260929-onelobby5" },
+    ].map((pane) => {
+      const img = new Image();
+      img.src = pane.src;
+      return { label: pane.label, img };
+    });
+
     function ffversions(v) {
-      const { ctx, w, h, t } = v;
-      const panes = [
-        { label: "2D", sky: "#8ecae6", ground: "#4ade80" },
-        { label: "2.5D", sky: "#155e75", ground: "#65a30d" },
-        { label: "3D", sky: "#042f2e", ground: "#14532d" },
-      ];
-      panes.forEach((pane, i) => {
+      const { ctx, w, h } = v;
+      ffShots.forEach((pane, i) => {
         const x = (w / 3) * i;
         const pw = w / 3;
-        ctx.fillStyle = pane.sky;
-        ctx.fillRect(x, 0, pw + 1, h * 0.62);
-        ctx.fillStyle = pane.ground;
-        ctx.fillRect(x, h * 0.62, pw + 1, h * 0.38);
-        ctx.fillStyle = i === 2 ? "#cbd5e1" : "#14532d";
-        const tx = x + pw * 0.22;
-        const ty = h * 0.58 + Math.sin(t * 1.4 + i) * 3;
-        ctx.fillRect(tx, ty, pw * 0.56, h * 0.12);
-        ctx.fillStyle = "#111";
-        ctx.beginPath();
-        ctx.arc(tx + pw * 0.12, ty + h * 0.13, h * 0.045, 0, Math.PI * 2);
-        ctx.arc(tx + pw * 0.44, ty + h * 0.13, h * 0.045, 0, Math.PI * 2);
-        ctx.fill();
-        ["#4ade80", "#fb923c", "#60a5fa", "#c084fc"].forEach((c, fi) => {
-          ctx.fillStyle = c;
-          ctx.beginPath();
-          ctx.arc(tx + 6 + fi * (pw * 0.12), ty - 6 + Math.sin(t * 3 + fi) * 2, Math.max(2, h * 0.035), 0, Math.PI * 2);
-          ctx.fill();
-        });
-        ctx.fillStyle = "#f8fafc";
+        const img = pane.img;
+        ctx.fillStyle = "#14532d";
+        ctx.fillRect(x, 0, pw + 1, h);
+        if (img.complete && img.naturalWidth) {
+          const ir = img.naturalWidth / img.naturalHeight;
+          const pr = pw / h;
+          let sx = 0, sy = 0, sw = img.naturalWidth, sh = img.naturalHeight;
+          if (ir > pr) {
+            sw = sh * pr;
+            sx = (img.naturalWidth - sw) / 2;
+          } else {
+            sh = sw / pr;
+            sy = (img.naturalHeight - sh) / 2;
+          }
+          ctx.drawImage(img, sx, sy, sw, sh, x, 0, pw + 1, h);
+        }
+        ctx.fillStyle = "rgba(0,0,0,.55)";
+        ctx.fillRect(x, h - 16, pw + 1, 16);
+        ctx.fillStyle = "#fff";
         ctx.font = "700 10px Outfit, sans-serif";
-        ctx.fillText(pane.label, x + 6, 14);
+        ctx.fillText(pane.label, x + 5, h - 4);
       });
     }
 
