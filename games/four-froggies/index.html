@@ -9,7 +9,7 @@
   <!-- Tesla Cybertruck chromeless FS — see games/shared/TESLA_FULLSCREEN.md -->
   <script src="../shared/tesla-fullscreen.js?v=tfs1"></script>
   <script src="../shared/viewport-fill.js?v=vfs1"></script>
-  <link rel="stylesheet" href="style.css?v=20260929-onelobby2">
+  <link rel="stylesheet" href="style.css?v=20260929-onelobby3">
 </head>
 <body class="in-title">
   <canvas id="view"></canvas>
@@ -23,6 +23,17 @@
         <p class="version-lead">Three ways into the same ranch. Pick one.</p>
       </div>
       <a class="exit-arcade" href="/games/">← Arcade</a>
+    </div>
+    <div id="pad-dock" aria-label="Controllers">
+      <p id="pad-count">No controllers are connected</p>
+      <p id="pad-you" hidden>You are Pad 1</p>
+      <p id="pad-hint">Plug in a controller, then press any button.</p>
+      <div id="pad-row">
+        <div class="pad-tile" data-pad="0"><b>Pad 1</b><em>Not connected</em></div>
+        <div class="pad-tile" data-pad="1"><b>Pad 2</b><em>Not connected</em></div>
+        <div class="pad-tile" data-pad="2"><b>Pad 3</b><em>Not connected</em></div>
+        <div class="pad-tile" data-pad="3"><b>Pad 4</b><em>Not connected</em></div>
+      </div>
     </div>
     <div class="version-grid">
       <button type="button" class="version-card" data-version="canvas">
@@ -199,7 +210,7 @@
   <script src="story.js?v=20260928-qa1"></script>
   <script src="space.js?v=20260928-qa1"></script>
   <script src="engine-boot.js?v=20260929-storymuzzle1"></script>
-  <script src="version-lobby.js?v=20260929-onelobby2"></script>
+  <script src="version-lobby.js?v=20260929-onelobby3"></script>
   <script src="main.js?v=20260929-storymuzzle1"></script>
 </body>
 </html>

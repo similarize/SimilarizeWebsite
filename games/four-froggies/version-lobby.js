@@ -1,10 +1,91 @@
-/* Four Froggies — version lobby. Canvas, 2.5D Three, and full 3D.
-   Does not rebuild the ranch. Cache: 20260929-onelobby1 */
+/* Four Froggies — version lobby. 2D, 2.5D, and full 3D.
+   Pad identity is decided here. Cache: 20260929-onelobby3 */
 (function () {
   "use strict";
 
   var lobby = document.getElementById("version-lobby");
   if (!lobby) return;
+
+  var COUNT_LINE = [
+    "No controllers are connected",
+    "One controller is connected",
+    "Two controllers are connected",
+    "Three controllers are connected",
+    "Four controllers are connected"
+  ];
+  var countEl = document.getElementById("pad-count");
+  var hintEl = document.getElementById("pad-hint");
+  var youEl = document.getElementById("pad-you");
+  var tiles = lobby.querySelectorAll(".pad-tile");
+  var seen = [false, false, false, false];
+  var lastYou = -1;
+
+  function padHot(s) {
+    if (!s || !s.connected) return false;
+    if (s.a || s.b || s.x || s.y || s.lb || s.rb || s.lt || s.rt || s.start || s.back) return true;
+    if (s.dpad && (s.dpad.u || s.dpad.d || s.dpad.l || s.dpad.r)) return true;
+    if (s.lx || s.ly || s.rx || s.ry) return true;
+    return false;
+  }
+
+  function paintPads() {
+    if (!countEl || !tiles.length) return;
+    var GP = window.SimilarizeGamepad;
+    var connected = {};
+    var snaps = [];
+    var n = 0;
+    if (GP) {
+      var idxs = typeof GP.connectedIndices === "function" ? (GP.connectedIndices(4) || []) : [];
+      n = idxs.length;
+      for (var i = 0; i < idxs.length; i++) connected[idxs[i] | 0] = true;
+      snaps = typeof GP.pollAll === "function" ? GP.pollAll(4) : [];
+    }
+    var line = COUNT_LINE[n] || (n + " controllers are connected");
+    if (countEl.textContent !== line) countEl.textContent = line;
+    if (hintEl) {
+      var hint = n === 0
+        ? "Plug in a controller, then press any button."
+        : "Press any button. Your pad lights up so you know who you are.";
+      if (hintEl.textContent !== hint) hintEl.textContent = hint;
+    }
+    var hotList = [];
+    for (var p = 0; p < tiles.length; p++) {
+      var on = !!connected[p];
+      var hot = !!(on && snaps[p] && padHot(snaps[p]));
+      if (hot) {
+        seen[p] = true;
+        lastYou = p;
+        hotList.push(p);
+      }
+      var tile = tiles[p];
+      tile.classList.toggle("is-on", on);
+      tile.classList.toggle("is-hot", hot);
+      tile.classList.toggle("is-you", !!seen[p]);
+      var em = tile.querySelector("em");
+      var label = !on ? "Not connected" : (hot ? "You" : (seen[p] ? "You" : "Connected"));
+      if (em && em.textContent !== label) em.textContent = label;
+    }
+    if (!youEl) return;
+    if (!hotList.length && lastYou < 0) {
+      youEl.hidden = true;
+      return;
+    }
+    youEl.hidden = false;
+    var msg;
+    var padAttr;
+    if (hotList.length > 1) {
+      msg = "You are " + hotList.map(function (p) { return "Pad " + (p + 1); }).join(" and ");
+      padAttr = "";
+      youEl.classList.add("is-multi");
+    } else {
+      var who = hotList.length ? hotList[0] : lastYou;
+      msg = "You are Pad " + (who + 1);
+      padAttr = String(who);
+      youEl.classList.remove("is-multi");
+    }
+    if (youEl.getAttribute("data-pad") !== padAttr) youEl.setAttribute("data-pad", padAttr);
+    if (youEl.textContent !== msg) youEl.textContent = msg;
+  }
 
   function drawPane(canvas, kind, t) {
     var ctx = canvas.getContext("2d");
@@ -146,6 +227,7 @@
   function frame(now) {
     if (lobby.hidden) return;
     paint((now - started) / 1000);
+    paintPads();
     requestAnimationFrame(frame);
   }
 
@@ -172,7 +254,7 @@
     if (!btn) return;
     var id = btn.getAttribute("data-version");
     if (id === "3d") {
-      location.href = "/games/four-froggies-3d/?v=20260929-onelobby1";
+      location.href = "/games/four-froggies-3d/?v=20260929-onelobby3";
       return;
     }
     enterRanch(id === "three" ? "three" : "canvas");
@@ -195,7 +277,7 @@
   try {
     var q = new URLSearchParams(location.search);
     if (q.get("engine") === "3d") {
-      location.replace("/games/four-froggies-3d/?v=20260929-onelobby1");
+      location.replace("/games/four-froggies-3d/?v=20260929-onelobby3");
       return;
     }
     if (q.get("engine") || q.get("go") === "1") skip = true;
