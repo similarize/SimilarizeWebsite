@@ -9,7 +9,7 @@
   <!-- Tesla Cybertruck chromeless FS — see games/shared/TESLA_FULLSCREEN.md -->
   <script src="../shared/tesla-fullscreen.js?v=tfs1"></script>
   <script src="../shared/viewport-fill.js?v=vfs1"></script>
-  <link rel="stylesheet" href="style.css?v=20260929-onelobby1">
+  <link rel="stylesheet" href="style.css?v=20260929-onelobby2">
 </head>
 <body class="in-title">
   <canvas id="view"></canvas>
@@ -27,13 +27,13 @@
     <div class="version-grid">
       <button type="button" class="version-card" data-version="canvas">
         <canvas data-shot="canvas" width="320" height="180" aria-hidden="true"></canvas>
-        <strong>Canvas</strong>
+        <strong>2D</strong>
         <span>Ranch · party. Host a room or play solo.</span>
       </button>
       <button type="button" class="version-card" data-version="three">
         <canvas data-shot="three" width="320" height="180" aria-hidden="true"></canvas>
         <strong>2.5D</strong>
-        <span>Fixed-angle Three ranch. Solo first.</span>
+        <span>Fixed-angle ranch. Solo first.</span>
       </button>
       <button type="button" class="version-card" data-version="3d">
         <canvas data-shot="3d" width="320" height="180" aria-hidden="true"></canvas>
@@ -169,10 +169,10 @@
     <div id="engine-pick" class="engine-pick" role="group" aria-label="Physics / look engine" hidden>
       <p class="pick-label">Engine · physics &amp; look compare</p>
       <div class="engine-btns">
-        <button type="button" class="engine-btn is-on" data-engine="canvas" aria-pressed="true">Canvas</button>
-        <button type="button" class="engine-btn" data-engine="three" aria-pressed="false">Three</button>
+        <button type="button" class="engine-btn is-on" data-engine="canvas" aria-pressed="true">2D</button>
+        <button type="button" class="engine-btn" data-engine="three" aria-pressed="false">2.5D</button>
       </div>
-      <p id="engine-note" class="engine-note">Canvas · default · Host/Join (PeerJS) works here</p>
+      <p id="engine-note" class="engine-note">2D · default · Host/Join (PeerJS) works here</p>
     </div>
     <p id="invite-cta" class="invite-cta">Party: <strong>Host room</strong> → Copy invite link or scan QR · friends open link to <strong>Join</strong> · claim froggy seats · Host presses GO. Solo: claim a seat and GO (AI fills open seats).</p>
     <div id="party-bar" class="party-bar">
@@ -183,7 +183,7 @@
       <span id="room-code" class="room-code" hidden></span>
     </div>
     <img id="invite-qr" class="invite-qr" hidden alt="QR code to join this room" width="112" height="112">
-    <p id="party-help" class="party-help">Host = make room · Join = enter code or open invite link · Canvas only for peer party</p>
+    <p id="party-help" class="party-help">Host = make room · Join = enter code or open invite link · 2D only for peer party</p>
     <p id="party-status" class="party-status"></p>
     <p id="overlay-text">Big ranch · James house/garage/mechs · Cybertrucks · pond whales · Starship → space (orbit physics).</p>
     <p class="go" id="overlay-go">One pad → one froggy · stick cycle · A claim · B release · Y / GO starts</p>
@@ -199,7 +199,7 @@
   <script src="story.js?v=20260928-qa1"></script>
   <script src="space.js?v=20260928-qa1"></script>
   <script src="engine-boot.js?v=20260929-storymuzzle1"></script>
-  <script src="version-lobby.js?v=20260929-onelobby1"></script>
+  <script src="version-lobby.js?v=20260929-onelobby2"></script>
   <script src="main.js?v=20260929-storymuzzle1"></script>
 </body>
 </html>

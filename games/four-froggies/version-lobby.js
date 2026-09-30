@@ -38,6 +38,8 @@
     ctx.lineTo(0, h);
     ctx.fill();
     ctx.fillStyle = "#f8fafc";
+    ctx.font = "700 11px Segoe UI, sans-serif";
+    ctx.fillText("2D", 8, 16);
     ctx.fillRect(w * 0.18, h * 0.42, w * 0.22, h * 0.16);
     ctx.fillStyle = "#b91c1c";
     ctx.beginPath();
@@ -161,7 +163,7 @@
     if (sub) {
       sub.textContent = engine === "three"
         ? "2.5D · fixed angle · claim a seat · GO"
-        : "Canvas ranch · party · claim a seat · GO";
+        : "2D · ranch · party · claim a seat · GO";
     }
   }
 
