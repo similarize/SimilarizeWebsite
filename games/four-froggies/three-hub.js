@@ -39,6 +39,7 @@
    mechwalk1: boarded mech lumber walk (steer+solid ignore+mesh sync); pad pilot drives.
    boardall1: each couch pad/companion can board a DIFFERENT free mech at once.
    heliyaw1: 2.5D heli nose faces travel (-faceAngle; drone yaw unchanged).
+   subyaw1: 2.5D sub nose faces travel (faceYaw - PI/2; mesh nose +X like truck).
    air1: HeliPad + DronePad · low-poly heli (4) + passenger drone (1–2) · fly over ranch.
    mechgun1: story-mech omnigun FIRE — permanent session kill (Canvas parity).
    mechgun2: omnigun also permanently wrecks house/garage/trees/rocks/fish/fences (session).
@@ -1998,7 +1999,7 @@
     var sp = worldToThree(parkSub.x, parkSub.y);
     state.parkedSub = makeSubMesh(0x7dd3fc);
     state.parkedSub.position.set(sp.x, 0.22, sp.z);
-    state.parkedSub.rotation.y = Math.PI;
+    state.parkedSub.rotation.y = -Math.PI / 2; /* subyaw1: nose +X → default face (+Z) */
     scene.add(state.parkedSub);
     addLabel("Submarine", "#e0f2fe", sp.x, 1.6, sp.z);
   }
@@ -3172,7 +3173,8 @@ state.zLift = 0;
         if (state.parkedSub) {
           var psp = worldToThree(parkSw.x, parkSw.y);
           state.parkedSub.position.set(psp.x, 0.22, psp.z);
-          state.parkedSub.rotation.y = state.faceYaw != null ? state.faceYaw : Math.PI;
+          /* subyaw1: mesh nose +X; faceYaw aims +Z → -PI/2 */
+          state.parkedSub.rotation.y = (state.faceYaw != null ? state.faceYaw : 0) - Math.PI / 2;
           state.parkedSub.visible = true;
           if (state.parkedSub.userData.bodyMat) {
             state.parkedSub.userData.bodyMat.opacity = 1;
@@ -5440,7 +5442,11 @@ state.zLift = 0;
           state.driveSub.visible = true;
           var diveY = -0.35 - (state.waterSub || 0.85) * 0.25;
           state.driveSub.position.set(state.player.position.x, diveY, state.player.position.z);
-          state.driveSub.rotation.y = (state.faceYaw != null ? state.faceYaw : 0);
+          /* subyaw1: nose +X like truck; faceYaw is frog +Z — same -PI/2 as polish11 */
+          var yawS = (state.faceYaw != null) ? state.faceYaw : 0;
+          var spS = Math.hypot(state.vx || 0, state.vz || 0);
+          if (spS > 1.2) yawS = Math.atan2(state.vx, state.vz);
+          state.driveSub.rotation.y = yawS - Math.PI / 2;
           if (state.driveSub.userData.bodyMat) {
             state.driveSub.userData.bodyMat.opacity = 0.78;
             state.driveSub.userData.bodyMat.transparent = true;
@@ -6219,7 +6225,7 @@ state.zLift = 0;
           if (c.userData.inSub && state.parkedSub && !state.inSub) {
             state.parkedSub.visible = true;
             state.parkedSub.position.set(c.position.x, -0.35 - 0.2, c.position.z);
-            if (c.userData.faceYaw != null) state.parkedSub.rotation.y = c.userData.faceYaw;
+            if (c.userData.faceYaw != null) state.parkedSub.rotation.y = c.userData.faceYaw - Math.PI / 2; /* subyaw1 */
           }
         }
           if (!cAirKind) {
