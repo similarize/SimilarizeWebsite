@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>Drop Lab — Similarize Arcade</title>
+  <!-- Tesla Cybertruck chromeless FS — see games/shared/TESLA_FULLSCREEN.md -->
+  <script src="../shared/tesla-fullscreen.js?v=tfs1"></script>
+  <script src="../shared/viewport-fill.js?v=vfs1"></script>
+  <style>
+    :root {
+      --bg: #101114;
+      --panel: rgba(16, 17, 20, 0.82);
+      --cream: #f3e2c4;
+      --amber: #e4a23a;
+      --mute: #9a9080;
+      --line: rgba(228, 162, 58, 0.35);
+      --sans: "Segoe UI", system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      height: 100dvh;
+      max-height: 100dvh;
+      background: var(--bg);
+      color: var(--cream);
+      font-family: var(--sans);
+      overflow: hidden;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    #view {
+      display: block;
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+      cursor: grab;
+    }
+    #view.grabbing { cursor: grabbing; }
+    #view.hover-shape { cursor: grab; }
+    #hud {
+      position: absolute;
+      inset: 0;
+      z-index: 4;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding:
+        max(10px, env(safe-area-inset-top))
+        max(12px, env(safe-area-inset-right))
+        max(12px, env(safe-area-inset-bottom))
+        max(12px, env(safe-area-inset-left));
+    }
+    .top-bar, .dock, .sliders, .hint, .brand, .actions {
+      pointer-events: auto;
+    }
+    .top-bar {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      min-width: 0;
+    }
+    .brand {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 10px 14px 8px;
+      backdrop-filter: blur(8px);
+      min-width: 0;
+    }
+    .brand h1 {
+      margin: 0;
+      font-size: clamp(22px, 4.5vw, 30px);
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      line-height: 1;
+      color: var(--amber);
+      text-shadow: 0 0 18px rgba(228, 162, 58, 0.35);
+    }
+    .brand .sub {
+      margin: 4px 0 0;
+      font-size: 12px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--mute);
+    }
+    .brand .count {
+      margin: 6px 0 0;
+      font-size: 13px;
+      color: var(--cream);
+      font-variant-numeric: tabular-nums;
+    }
+    .exit-arcade {
+      display: inline-block;
+      color: #fef3c7;
+      font: 800 14px var(--sans);
+      text-decoration: none;
+      border: 2px solid rgba(253, 230, 138, 0.7);
+      background: rgba(0, 0, 0, 0.62);
+      border-radius: 999px;
+      padding: 8px 14px;
+      white-space: nowrap;
+    }
+    .exit-arcade:hover, .exit-arcade:focus-visible {
+      background: rgba(0, 0, 0, 0.82);
+      outline: none;
+    }
+    .bottom {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-width: 0;
+      max-width: 100%;
+    }
+    .hint {
+      align-self: center;
+      margin: 0;
+      max-width: min(520px, 100%);
+      text-align: center;
+      font-size: 13px;
+      color: var(--mute);
+      background: var(--panel);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
+      padding: 8px 14px;
+      backdrop-filter: blur(8px);
+    }
+    .dock {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      min-width: 0;
+    }
+    .dock button, .sliders label {
+      background: rgba(28, 30, 36, 0.92);
+      border: 1px solid var(--line);
+      color: var(--cream);
+      border-radius: 12px;
+      font: 700 14px var(--sans);
+    }
+    .dock button {
+      min-height: 48px;
+      min-width: 72px;
+      padding: 10px 14px;
+      touch-action: manipulation;
+      cursor: pointer;
+    }
+    .dock button:hover, .dock button:focus-visible {
+      border-color: var(--amber);
+      color: var(--amber);
+      outline: none;
+    }
+    .dock button.danger {
+      border-color: rgba(228, 87, 46, 0.55);
+      color: #f0b8a8;
+    }
+    .sliders {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      min-width: 0;
+    }
+    .sliders label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      min-height: 48px;
+      min-width: 0;
+      flex: 1 1 180px;
+      max-width: 320px;
+    }
+    .sliders span.name { min-width: 58px; color: var(--mute); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; }
+    .sliders span.val { min-width: 36px; text-align: right; font-variant-numeric: tabular-nums; color: var(--amber); }
+    .sliders input[type="range"] {
+      flex: 1;
+      min-width: 0;
+      accent-color: var(--amber);
+      touch-action: manipulation;
+    }
+    #boot {
+      position: absolute;
+      inset: 0;
+      z-index: 6;
+      display: grid;
+      place-items: center;
+      background: var(--bg);
+      color: var(--mute);
+      font: 600 15px var(--sans);
+      pointer-events: none;
+    }
+    #boot[hidden] { display: none; }
+    @media (max-width: 560px) {
+      .brand { padding: 8px 12px; }
+      .brand h1 { font-size: 22px; }
+      .dock button { flex: 1 1 calc(33.33% - 8px); min-width: 0; }
+      .hint { font-size: 12px; border-radius: 14px; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="view" aria-label="Drop Lab workshop"></canvas>
+  <div id="boot">Loading Drop Lab…</div>
+  <div id="hud">
+    <div class="top-bar">
+      <div class="brand">
+        <h1>Drop Lab</h1>
+        <p class="sub">Workshop</p>
+        <p class="count"><span id="shape-count">0</span> / 48 shapes</p>
+      </div>
+      <a class="exit-arcade" href="/games/">← Arcade</a>
+    </div>
+    <div class="bottom">
+      <p class="hint">Drag a shape to throw it. Drag the floor to look around.</p>
+      <div class="dock" role="toolbar" aria-label="Spawn shapes">
+        <button type="button" id="btn-sphere" data-spawn="sphere">Sphere</button>
+        <button type="button" id="btn-box" data-spawn="box">Box</button>
+        <button type="button" id="btn-cylinder" data-spawn="cylinder">Cylinder</button>
+        <button type="button" id="btn-pile" data-spawn="pile">Pile</button>
+        <button type="button" id="btn-clear" class="danger">Clear</button>
+      </div>
+      <div class="sliders">
+        <label>
+          <span class="name">Gravity</span>
+          <input type="range" id="gravity" min="0" max="25" step="0.1" value="9.8" aria-label="Gravity">
+          <span class="val" id="gravity-val">9.8</span>
+        </label>
+        <label>
+          <span class="name">Bounce</span>
+          <input type="range" id="bounce" min="0" max="0.92" step="0.01" value="0.32" aria-label="Bounce">
+          <span class="val" id="bounce-val">0.32</span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "@dimforge/rapier3d-compat": "https://esm.sh/@dimforge/rapier3d-compat@0.14.0"
+    }
+  }
+  </script>
+  <script type="module" src="./main.js?v=20260929-droplab1"></script>
+</body>
+</html>
