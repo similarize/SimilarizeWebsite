@@ -1,4 +1,4 @@
-const VERSION = "3.16";
+const VERSION = "3.17";
 const VIEW_W = 960;
 const VIEW_H = 540;
 const PLAYER_X = 168;
@@ -168,15 +168,21 @@ const MISSILE_RELOAD = 9;
 function rampAt(sim, worldX) {
   for (let i = sim.ramps.length - 1; i >= 0; i--) {
     const r = sim.ramps[i];
-    if (worldX >= r.x0 && worldX <= r.lip) return r;
+    if (worldX >= r.x0 && worldX <= r.lip + RAMP_RUN) return r;
   }
   return null;
+}
+function smoothstep(t) {
+  const x = clamp(t, 0, 1);
+  return x * x * (3 - 2 * x);
 }
 function rampLift(sim, worldX) {
   const r = rampAt(sim, worldX);
   if (!r) return 0;
-  const t = (worldX - r.x0) / (r.lip - r.x0);
-  return r.rise * t * t;
+  if (worldX <= r.lip) {
+    return r.rise * smoothstep((worldX - r.x0) / (r.lip - r.x0));
+  }
+  return r.rise * (1 - smoothstep((worldX - r.lip) / RAMP_RUN));
 }
 function surfaceY(sim, worldX) {
   return groundY(worldX) - rampLift(sim, worldX);
@@ -226,6 +232,8 @@ function createSim(best = 0) {
     crash: null,
     sinceOver: 0,
     time: 0,
+    accumulator: 0,
+    pendingFire: false,
     muted: false,
     reduced: false,
     squash: [0, 0],
@@ -791,10 +799,13 @@ function tick(sim, dt, input) {
   spawnDrones(sim);
   stepDrones(sim, dt);
   const s = sim.tune.chassis;
-  const hw = (CAR_W - 28) * s;
-  const hh = (CAR_H - 12) * s;
-  const hx = PLAYER_X + CAR_W / 2 - hw / 2;
-  const hy = sim.y + CAR_H / 2 - hh / 2;
+  const halfW = (CAR_W - 28) * s / 2;
+  const halfH = (CAR_H - 12) * s / 2;
+  const angle = sim.rot * Math.PI / 180;
+  const hw = Math.abs(Math.cos(angle)) * halfW + Math.abs(Math.sin(angle)) * halfH;
+  const hh = Math.abs(Math.sin(angle)) * halfW + Math.abs(Math.cos(angle)) * halfH;
+  const hx = PLAYER_X + CAR_W / 2 - hw;
+  const hy = sim.y + CAR_H / 2 - hh;
   for (const g of sim.gates) {
     const sx = g.x - sim.scroll;
     if (!g.blown && hx + hw > sx && hx < sx + g.w && gateBlocks(g, hy, hh)) {
@@ -934,7 +945,7 @@ function ageBits(sim, dt) {
   sim.shake = Math.max(0, sim.shake - dt * 1.8);
 }
 function step(sim, dt, input) {
-  const capped = Math.min(dt, 0.05);
+  const capped = clamp(Number.isFinite(dt) ? dt : 0, 0, 0.05);
   if (sim.phase === "title") {
     sim.speed = 48;
     sim.scroll += sim.speed * capped;
@@ -978,17 +989,19 @@ function step(sim, dt, input) {
     ageBits(sim, capped);
     return;
   }
-  let acc = capped;
+  sim.accumulator += capped;
+  sim.pendingFire = sim.pendingFire || !!input.fire;
   const h = 1 / 120;
   let guard = 0;
-  let shot = !!input.fire;
-  while (acc >= h && guard < 8) {
+  while (sim.accumulator + 1e-10 >= h && guard < 8) {
     if (sim.phase !== "play") break;
+    const shot = sim.pendingFire;
+    sim.pendingFire = false;
     tick(sim, h, { boost: input.boost, fire: shot, aim: input.aim, aimPoint: input.aimPoint });
-    shot = false;
-    acc -= h;
+    sim.accumulator -= h;
     guard += 1;
   }
+  if (sim.accumulator < 1e-10) sim.accumulator = 0;
 }
 function draw(ctx, sim, art) {
   const W = VIEW_W;
@@ -1070,7 +1083,7 @@ function drawTrees(ctx, sim) {
 function drawGround(ctx, sim) {
   ctx.beginPath();
   ctx.moveTo(0, VIEW_H);
-  for (let x = 0; x <= VIEW_W; x += 8) {
+  for (let x = 0; x <= VIEW_W; x += 4) {
     ctx.lineTo(x, surfaceY(sim, sim.scroll + x));
   }
   ctx.lineTo(VIEW_W, VIEW_H);
@@ -1082,7 +1095,7 @@ function drawGround(ctx, sim) {
   ctx.fillStyle = g;
   ctx.fill();
   ctx.beginPath();
-  for (let x = 0; x <= VIEW_W; x += 8) {
+  for (let x = 0; x <= VIEW_W; x += 4) {
     const y = surfaceY(sim, sim.scroll + x);
     if (x === 0) ctx.moveTo(x, y);
     else ctx.lineTo(x, y);
@@ -1105,19 +1118,36 @@ function drawKickers(ctx, sim) {
   for (const r of sim.ramps) {
     const x0 = r.x0 - sim.scroll;
     const lip = r.lip - sim.scroll;
-    if (lip < -40 || x0 > VIEW_W + 40) continue;
+    const exit = r.lip + RAMP_RUN;
+    const end = exit - sim.scroll;
+    if (end < -40 || x0 > VIEW_W + 40) continue;
     ctx.beginPath();
     ctx.moveTo(x0, groundY(r.x0));
-    for (let x = r.x0; x <= r.lip; x += 8) ctx.lineTo(x - sim.scroll, surfaceY(sim, x));
-    ctx.lineTo(lip, groundY(r.lip));
+    for (let x = r.x0; x <= exit; x += 4) ctx.lineTo(x - sim.scroll, surfaceY(sim, x));
+    ctx.lineTo(end, groundY(exit));
     ctx.closePath();
-    ctx.fillStyle = "rgba(228, 87, 46, 0.35)";
+    const dirt = ctx.createLinearGradient(0, VIEW_H * 0.62, 0, VIEW_H);
+    dirt.addColorStop(0, "rgba(228, 87, 46, 0.42)");
+    dirt.addColorStop(1, "rgba(105, 55, 29, 0.12)");
+    ctx.fillStyle = dirt;
     ctx.fill();
+    ctx.beginPath();
+    for (let x = r.x0; x <= exit; x += 4) {
+      const sx = x - sim.scroll;
+      const sy = surfaceY(sim, x);
+      if (x === r.x0) ctx.moveTo(sx, sy);
+      else ctx.lineTo(sx, sy);
+    }
+    ctx.strokeStyle = "rgba(240, 180, 41, 0.85)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
     ctx.strokeStyle = "#f0b429";
     ctx.lineWidth = 3;
     ctx.beginPath();
+    const lipY = surfaceY(sim, r.lip);
     ctx.moveTo(lip, surfaceY(sim, r.lip));
-    ctx.lineTo(lip + 16, groundY(r.lip + 12));
+    ctx.lineTo(lip, lipY - 16);
+    ctx.lineTo(lip + 10, lipY - 10);
     ctx.stroke();
     for (let k = 1; k <= 3; k++) {
       const wx = r.x0 + (r.lip - r.x0) * k / 4;
