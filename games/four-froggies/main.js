@@ -1825,7 +1825,7 @@
     lastTs = now;
     /* Couch lobby: poll pads 0–3 once per frame (avoid double-poll eating edges) */
     if (phase === "title" && window.SimilarizeGamepad) {
-      /* lobbypick1 + lobbyfix1: unique pads only (dedupe dual-slot Xbox/Steam) */
+      /* Keep every distinct Gamepad index so identical controller models each get a seat. */
       const snaps = window.SimilarizeGamepad.pollAll
         ? window.SimilarizeGamepad.pollAll(4)
         : [0, 1, 2, 3].map((i) => window.SimilarizeGamepad.pollPad(i));

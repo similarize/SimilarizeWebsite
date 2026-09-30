@@ -1,7 +1,13 @@
+## What's new (same-model-pads1) — detect multiple identical Xbox controllers
+
+- Controller model IDs are shared by devices of the same model, so they cannot identify individual physical controllers. Deduplicate only repeated `Gamepad.index` values instead.
+- This keeps multiple matching Xbox controllers available as separate lobby seats while still collapsing duplicate reports of the same index.
+- Cache-bust the shared controller helper with `?v=20260929-same-model-pads1`.
+
 ## What's new (lobbyfix1) — one physical controller = one froggy
 
 - **Bug:** Xbox/Steam often expose ONE pad as TWO `getGamepads()` slots. Lobby + `startParty` treated each slot as a separate controller → two froggies both driven by the same stick. Click also stacked keyboard "You" beside pad seats when all pads were already bound.
-- **Fix:** `SimilarizeGamepad.connectedIndices` / `uniqueConnectedIndices` dedupe by `gamepad.id` (lowest index kept). Lobby title tick only polls unique slots. `applyClaim` scrubs duplicate `padIndex`. `claimSeat` never creates keyboard You while pads are in play. Click moves last-active / unbound pad explicitly. Badge + hint: "Each controller = one froggy".
+- **Original fix:** `connectedIndices` / `uniqueConnectedIndices` deduped repeated slots by `gamepad.id`. This was later found to collapse separate controllers of the same model; same-model-pads1 supersedes it by deduplicating only repeated `Gamepad.index` values. Lobby title tick still polls unique slots. `applyClaim` scrubs duplicate `padIndex`. `claimSeat` never creates keyboard You while pads are in play. Click moves last-active / unbound pad explicitly. Badge + hint: "Each controller = one froggy".
 - Cache: `20260929-lobbyfix1`. Deploy `games/shared/gamepad.js` AND four-froggies files. exit1 lobby chrome + canon names kept. **Not** four-froggies-3d. Vehicles/guns/heli untouched.
 - Package: `/workspace/ff-lobbyfix1/`
 

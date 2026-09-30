@@ -21,8 +21,8 @@
  *   poll() / pollPad(i)     — snapshot { connected, lx,ly,rx,ry, a,b,x,y, lb,rb,lt,rt,
  *                             ltValue,rtValue, start,back, dpad:{u,d,l,r}, buttonsPressed:{…edges} }
  *   pollAll(max?)           — poll slots 0..max-1 once (avoids double-poll eating edges)
- *   connectedIndices(max?)  — unique physical pads (dedupe by gamepad.id; lowest index kept)
- *   uniqueConnectedIndices(max?) — alias of connectedIndices (explicit 1-pad-1-id)
+ *   connectedIndices(max?)  — connected Gamepad indices (duplicate reported indices collapsed)
+ *   uniqueConnectedIndices(max?) — alias of connectedIndices
  *   connectedCount(max?)    — length of connectedIndices
  *   pressed(name, i?)       — held (uses last pollPad cache, or polls once)
  *   justPressed(name, i?)   — rising edge (uses last pollPad cache, or polls once)
@@ -144,8 +144,8 @@
     for (var i = 0; i < n; i++) out.push(pollPad(i));
     return out;
   }
-  /** One physical controller often fills 2+ getGamepads() slots (Xbox/Steam).
-   *  Keep lowest index per gamepad.id so one stick never claims two froggies. */
+  /** Device ids identify controller models, not individual controllers.
+   *  Keep distinct Gamepad.index values so multiple matching Xbox pads stay usable. */
   function uniqueConnectedIndices(max) {
     var n = typeof max === "number" ? max : 4;
     if (n < 1) n = 1;
@@ -153,14 +153,16 @@
     var list = pads();
     var idxs = [];
     var seen = Object.create(null);
-    var anon = 0;
     for (var i = 0; i < n; i++) {
       var gp = list && list[i];
       if (!gp) continue;
-      var key = gp.id ? String(gp.id) : ("__anon_" + (anon++));
+      var physicalIndex = typeof gp.index === "number" && isFinite(gp.index) && gp.index >= 0
+        ? gp.index | 0
+        : i;
+      var key = "__index_" + physicalIndex;
       if (seen[key]) continue;
       seen[key] = true;
-      idxs.push(i);
+      idxs.push(physicalIndex);
     }
     return idxs;
   }

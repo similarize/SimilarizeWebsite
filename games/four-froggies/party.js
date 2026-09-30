@@ -225,7 +225,7 @@
       try {
         var GP = global.SimilarizeGamepad;
         if (!GP) return [];
-        /* Prefer uniqueConnectedIndices — one physical pad (by id) → one slot */
+        /* Distinct Gamepad indices keep multiple identical controller models separate. */
         if (typeof GP.uniqueConnectedIndices === "function") {
           return GP.uniqueConnectedIndices(4) || [];
         }
@@ -659,8 +659,7 @@
 
     function startParty() {
       if (!canStart()) return null;
-      // Seat every UNIQUE live pad (deduped by gamepad.id — dual-slot Xbox/Steam safe).
-      // humans = min(uniquePads, 4); remainder AI. One pad → one frog. Keeps existing claims.
+      // Seat every live Gamepad index, up to four; remaining frogs are AI.
       var livePads = connectedPadIndices();
       var anyPad = anyPadSeatBound();
       var pi;
