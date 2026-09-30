@@ -813,7 +813,7 @@
     return shell;
   }
 
-    /* spear1: Rexy 1000-mech melee spear thrust — knocks trillion if in range/arc */
+    /* spear1: Rexy 1000-mech melee spear thrust — knocks trillion; speartank1 also wrecks tank */
   function tryMechSpear(world, frog) {
     if (!world || !frog) return { ok: false, reason: "no-frog" };
     var C = global.FroggiesCanon;
@@ -855,27 +855,77 @@
     });
     if (world.spears.length > 6) world.spears.splice(0, world.spears.length - 6);
     spawnSparks(world, frog.x + cx * 40, frog.y + cy * 40, 12);
-    if (dist > range + hitR) {
-      return { ok: true, hit: false, toast: "SPEAR · miss" };
+    /* speartank1: wreck tank in same spear cone (parked or driven) */
+    var tankHit = false;
+    var truckSpots = (C.TRUCK_SPOTS) || [];
+    for (var ti = 0; ti < truckSpots.length; ti++) {
+      var spot = truckSpots[ti];
+      if (!spot || spot.vehicleStyle !== "tank") continue;
+      var hid = spot.id === "shared" ? "truck-shared"
+        : (String(spot.id).indexOf("truck") === 0 ? spot.id : "truck-" + spot.id);
+      if (C.isPermaGone && C.isPermaGone(hid)) continue;
+      var tpTank = C.vehiclePos ? C.vehiclePos(hid, spot.x, spot.y) : { x: spot.x, y: spot.y };
+      if (frogs) {
+        for (var tfi = 0; tfi < frogs.length; tfi++) {
+          var tf = frogs[tfi];
+          if (!tf || !tf.inTruck) continue;
+          if (tf.truckId === hid || tf.vehicleStyle === "tank") {
+            tpTank = { x: tf.x, y: tf.y }; break;
+          }
+        }
+      }
+      var tdx = tpTank.x - frog.x, tdy = tpTank.y - frog.y;
+      var tdist = Math.hypot(tdx, tdy);
+      var tankHitR = 90;
+      if (tdist > range + tankHitR) continue;
+      var taim = Math.atan2(tdy, tdx);
+      var tda = taim - ang;
+      while (tda > Math.PI) tda -= Math.PI * 2;
+      while (tda < -Math.PI) tda += Math.PI * 2;
+      if (Math.abs(tda) > halfArc && tdist > tankHitR * 0.55) continue;
+      if (C.markPermaGone) C.markPermaGone(hid);
+      tankHit = true;
+      if (frogs) {
+        for (var efi = 0; efi < frogs.length; efi++) {
+          var ef = frogs[efi];
+          if (!ef || !ef.inTruck) continue;
+          if (ef.truckId !== hid && ef.vehicleStyle !== "tank") continue;
+          ef.inTruck = false; ef.truckId = null; ef.truckMode = null; ef.vehicleStyle = null;
+          ef.z = 0; ef.zVel = 0;
+        }
+      }
+      spawnBoom(world, tpTank.x, tpTank.y, 2.6);
+      spawnSparks(world, tpTank.x, tpTank.y, 20);
+      break;
     }
+    var triHit = false;
+    var alreadyDown = false;
+    var inTriRange = dist <= range + hitR;
     var aim = Math.atan2(dy, dx);
     var da = aim - ang;
     while (da > Math.PI) da -= Math.PI * 2;
     while (da < -Math.PI) da += Math.PI * 2;
-    if (Math.abs(da) > halfArc && dist > hitR * 0.55) {
-      return { ok: true, hit: false, toast: "SPEAR · miss" };
+    var inTriArc = Math.abs(da) <= halfArc || dist <= hitR * 0.55;
+    if (inTriRange && inTriArc) {
+      if (C.isMechKnocked && C.isMechKnocked("mechTrillion")) {
+        alreadyDown = true;
+      } else if (C.knockMechDown && C.knockMechDown("mechTrillion")) {
+        spawnBoom(world, tx, ty, 1.6);
+        spawnSparks(world, tx, ty, 22);
+        spawnDust(world, tx, ty, 10);
+        triHit = true;
+      }
     }
-    if (C.isMechKnocked && C.isMechKnocked("mechTrillion")) {
-      return { ok: true, hit: false, toast: "Already down!" };
+    if (tankHit) {
+      world._spearKnockToast = "SPEAR · tank WRECKED!";
+      return { ok: true, hit: true, toast: "SPEAR · tank WRECKED!", tank: true };
     }
-    if (!C.knockMechDown || !C.knockMechDown("mechTrillion")) {
-      return { ok: true, hit: false, toast: "SPEAR · no effect" };
+    if (triHit) {
+      world._spearKnockToast = "SPEAR · trillion DOWN!";
+      return { ok: true, hit: true, toast: "SPEAR · trillion DOWN!", target: pilot || null };
     }
-    spawnBoom(world, tx, ty, 1.6);
-    spawnSparks(world, tx, ty, 22);
-    spawnDust(world, tx, ty, 10);
-    world._spearKnockToast = "SPEAR · trillion DOWN!";
-    return { ok: true, hit: true, toast: "SPEAR · trillion DOWN!", target: pilot || null };
+    if (alreadyDown) return { ok: true, hit: false, toast: "Already down!" };
+    return { ok: true, hit: false, toast: "SPEAR · miss" };
   }
 
   function spawnBoom(world, x, y, power) {

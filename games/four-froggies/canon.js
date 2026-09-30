@@ -32,6 +32,7 @@
    mechgun2: omnigun also permanently wrecks house/garage, trees, rocks, fish/whales,
              fences/shrubs/flowers, track rocks — same session PERMA_GONE; tank FIRE unchanged.
    spear1: Rexy-only 1000-story mech SPEAR (B / RB) knocks James trillion ~2s;
+   speartank1: same SPEAR wrecks tank (parked/driven); other mechs unchanged;
            mash face/Space/ability/stick to get up sooner; omnigun FIRE unchanged.
    drivefix1: Cybertruck(s)+Ripsaw+Tank boardable by ANY grounded frog when free
            (frogId on truck spots is label/color only — NOT an ownership lock).
@@ -658,7 +659,8 @@
     return "FIRE available · Space / X / button · R climb · C descend · land + INTERACT exit";
   }
 
-  /* spear1: Rexy 1000-mech SPEAR — knocks trillion; mash recovers */
+  /* spear1: Rexy 1000-mech SPEAR — knocks trillion; mash recovers.
+     speartank1: same SPEAR also wrecks tank (parked/driven) via markPermaGone. */
   var MECH_SPEAR = {
     cd: 0.55,
     range: 280,

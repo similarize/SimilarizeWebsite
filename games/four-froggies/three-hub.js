@@ -44,6 +44,7 @@
    mechgun1: story-mech omnigun FIRE — permanent session kill (Canvas parity).
    mechgun2: omnigun also permanently wrecks house/garage/trees/rocks/fish/fences (session).
    spear1: Rexy 1000 SPEAR (B/RB) knocks trillion ~2s; mash get-up; tipped mesh.
+   speartank1: thousand-story SPEAR also wrecks tank (parked/driven); eject pilot; perma-gone.
    goldsteam1: James trillion GOLD armor + steam pipe billows; omnigun FIRE kept.
    airgun1: heli + passenger-drone FIRE (Space/X/ability) pilot only; climb R/C/RT.
    storymuzzle1: story-mech omnigun muzzle = glowing chest plate (not ankles).
@@ -3853,7 +3854,69 @@ state.zLift = 0;
     return true;
   }
 
-  /* spear1: Rexy 1000-mech SPEAR — cone hit vs trillion */
+  /* speartank1: thousand SPEAR cone → wreck tank (parked or driven) */
+  function wreckTankSpearThree(ox, oz, yaw, range, halfArc) {
+    if (!state || !state.parkedTrucks) return false;
+    var hitR = 1.6;
+    for (var ti = 0; ti < state.parkedTrucks.length; ti++) {
+      var ptk = state.parkedTrucks[ti];
+      if (!ptk || ptk.goneForever) continue;
+      var spot = ptk.spot || {};
+      var style = spot.vehicleStyle || (ptk.mesh && ptk.mesh.userData && ptk.mesh.userData.vehicleStyle);
+      if (style !== "tank") continue;
+      var hid = spot.id === "shared" ? "truck-shared" : "truck-" + spot.id;
+      if (C.isPermaGone && C.isPermaGone(hid)) {
+        ptk.goneForever = true;
+        if (ptk.mesh) ptk.mesh.visible = false;
+        if (ptk.label) ptk.label.visible = false;
+        continue;
+      }
+      var tx = ptk.mesh ? ptk.mesh.position.x : 0;
+      var tz = ptk.mesh ? ptk.mesh.position.z : 0;
+      if (state.inTruck && state.vehicleStyle === "tank" && (state.truckId === hid || !state.truckId)) {
+        tx = state.player.position.x; tz = state.player.position.z;
+      } else if (state.companions) {
+        for (var ci = 0; ci < state.companions.length; ci++) {
+          var cc = state.companions[ci];
+          if (cc && cc.userData.inTruck && cc.userData.vehicleStyle === "tank" &&
+              (cc.userData.truckId === hid || !cc.userData.truckId)) {
+            tx = cc.position.x; tz = cc.position.z; break;
+          }
+        }
+      }
+      var dx = tx - ox, dz = tz - oz;
+      var dist = Math.hypot(dx, dz);
+      if (dist > range + hitR) continue;
+      var aim = Math.atan2(dx, dz);
+      var da = aim - yaw;
+      while (da > Math.PI) da -= Math.PI * 2;
+      while (da < -Math.PI) da += Math.PI * 2;
+      if (Math.abs(da) > halfArc && dist > hitR * 0.55) continue;
+      if (C.markPermaGone) C.markPermaGone(hid);
+      ptk.goneForever = true;
+      if (ptk.mesh) ptk.mesh.visible = false;
+      if (ptk.label) ptk.label.visible = false;
+      if (state.inTruck && (state.truckId === hid || state.vehicleStyle === "tank")) {
+        state.inTruck = false; state.truckId = null; state.truckMode = null; state.vehicleStyle = null;
+        state.truckPilotPadIndex = null;
+      }
+      if (state.companions) {
+        for (var ej = 0; ej < state.companions.length; ej++) {
+          var ce = state.companions[ej];
+          if (!ce || !ce.userData.inTruck) continue;
+          if (ce.userData.truckId !== hid && ce.userData.vehicleStyle !== "tank") continue;
+          ce.userData.inTruck = false; ce.userData.truckId = null;
+          ce.userData.truckMode = null; ce.userData.vehicleStyle = null;
+          ce.userData.zLift = 0; ce.userData.zVel = 0;
+        }
+      }
+      spawnThreeBoom(tx, 0.6, tz, 2.4);
+      return true;
+    }
+    return false;
+  }
+
+  /* spear1: Rexy 1000-mech SPEAR — cone hit vs trillion; speartank1 also wrecks tank */
   function fireMechSpear() {
     if (!state || !state.inMech) return false;
     if (!C.canSpearPilot || !C.canSpearPilot({ inMech: true, frogId: state.frogId, id: state.frogId, mechId: state.mechId, mechStories: state.mechStories })) {
@@ -3898,65 +3961,59 @@ state.zLift = 0;
     tip.rotation.y = yaw;
     scene.add(tip);
     state.fx.push({ mesh: tip, life: cfg.thrustLife != null ? cfg.thrustLife : 0.28, rise: 0, spear: true });
-    /* find trillion mech */
+    /* speartank1: tank wreck first (same cone); then spear1 trillion knock */
+    var tankHit = wreckTankSpearThree(state.player.position.x, state.player.position.z, yaw, range, halfArc);
     var ment = null;
     for (var mi = 0; mi < (state.mechs || []).length; mi++) {
       if (state.mechs[mi] && state.mechs[mi].solidId === "mechTrillion") { ment = state.mechs[mi]; break; }
     }
-    if (!ment || !ment.group) {
-      state.toast = "SPEAR · miss";
-      state.toastT = 0.85;
-      if (hooks.onToast) hooks.onToast(state.toast);
-      return true;
-    }
-    var tx = ment.group.position.x, tz = ment.group.position.z;
-    /* if piloted by primary, use player pos */
-    if (state.inMech && mechSidOf(state.mechId) === "mechTrillion") {
-      tx = state.player.position.x; tz = state.player.position.z;
-    } else if (state.companions) {
-      for (var ci = 0; ci < state.companions.length; ci++) {
-        var cc = state.companions[ci];
-        if (cc && cc.userData.inMech && mechSidOf(cc.userData.mechId) === "mechTrillion") {
-          tx = cc.position.x; tz = cc.position.z; break;
+    var triHit = false;
+    var alreadyDown = false;
+    if (ment && ment.group) {
+      var tx = ment.group.position.x, tz = ment.group.position.z;
+      if (state.inMech && mechSidOf(state.mechId) === "mechTrillion") {
+        tx = state.player.position.x; tz = state.player.position.z;
+      } else if (state.companions) {
+        for (var ci = 0; ci < state.companions.length; ci++) {
+          var cc = state.companions[ci];
+          if (cc && cc.userData.inMech && mechSidOf(cc.userData.mechId) === "mechTrillion") {
+            tx = cc.position.x; tz = cc.position.z; break;
+          }
+        }
+      }
+      var dx = tx - state.player.position.x, dz = tz - state.player.position.z;
+      var dist = Math.hypot(dx, dz);
+      var hitR = 2.8;
+      var inRange = dist <= range + hitR;
+      var aim = Math.atan2(dx, dz);
+      var da = aim - yaw;
+      while (da > Math.PI) da -= Math.PI * 2;
+      while (da < -Math.PI) da += Math.PI * 2;
+      var inArc = Math.abs(da) <= halfArc || dist <= hitR * 0.55;
+      if (inRange && inArc) {
+        if (C.isMechKnocked && C.isMechKnocked("mechTrillion")) {
+          alreadyDown = true;
+        } else if (C.knockMechDown && C.knockMechDown("mechTrillion")) {
+          spawnThreeBoom(tx, 1.2, tz, 1.8);
+          triHit = true;
         }
       }
     }
-    var dx = tx - state.player.position.x, dz = tz - state.player.position.z;
-    var dist = Math.hypot(dx, dz);
-    var hitR = 2.8;
-    if (dist > range + hitR) {
-      state.toast = "SPEAR · miss";
-      state.toastT = 0.85;
-      if (hooks.onToast) hooks.onToast(state.toast);
-      return true;
-    }
-    var aim = Math.atan2(dx, dz);
-    var da = aim - yaw;
-    while (da > Math.PI) da -= Math.PI * 2;
-    while (da < -Math.PI) da += Math.PI * 2;
-    if (Math.abs(da) > halfArc && dist > hitR * 0.55) {
-      state.toast = "SPEAR · miss";
-      state.toastT = 0.85;
-      if (hooks.onToast) hooks.onToast(state.toast);
-      return true;
-    }
-    if (C.isMechKnocked && C.isMechKnocked("mechTrillion")) {
+    if (tankHit) {
+      state.toast = "SPEAR · tank WRECKED!";
+      state.toastT = 1.6;
+    } else if (triHit) {
+      state.toast = "SPEAR · trillion DOWN!";
+      state.toastT = 1.6;
+    } else if (alreadyDown) {
       state.toast = "Already down!";
       state.toastT = 0.9;
-      if (hooks.onToast) hooks.onToast(state.toast);
-      return true;
-    }
-    if (!C.knockMechDown || !C.knockMechDown("mechTrillion")) {
-      state.toast = "SPEAR · no effect";
+    } else {
+      state.toast = "SPEAR · miss";
       state.toastT = 0.85;
-      if (hooks.onToast) hooks.onToast(state.toast);
-      return true;
     }
-    spawnThreeBoom(tx, 1.2, tz, 1.8);
-    state.toast = "SPEAR · trillion DOWN!";
-    state.toastT = 1.6;
     if (hooks.onToast) hooks.onToast(state.toast);
-    if (hooks.onAbilityFire) hooks.onAbilityFire(state.frogId, "SPEAR");
+    if ((tankHit || triHit) && hooks.onAbilityFire) hooks.onAbilityFire(state.frogId, "SPEAR");
     return true;
   }
 
@@ -4004,45 +4061,53 @@ state.zLift = 0;
     var fx = Math.sin(yaw), fz = Math.cos(yaw);
     var range = cfg.range3 != null ? cfg.range3 : 5.6;
     var halfArc = cfg.halfArc != null ? cfg.halfArc : 0.95;
+    /* speartank1 + spear1 */
+    var tankHit = wreckTankSpearThree(c.position.x, c.position.z, yaw, range, halfArc);
     var ment = null;
     for (var mi = 0; mi < (state.mechs || []).length; mi++) {
       if (state.mechs[mi] && state.mechs[mi].solidId === "mechTrillion") { ment = state.mechs[mi]; break; }
     }
-    if (!ment || !ment.group) {
-      state.toast = "SPEAR · miss"; state.toastT = 0.85;
-      if (hooks.onToast) hooks.onToast(state.toast);
-      return true;
+    var triHit = false;
+    var alreadyDown = false;
+    if (ment && ment.group) {
+      var tx = ment.group.position.x, tz = ment.group.position.z;
+      if (state.inMech && mechSidOf(state.mechId) === "mechTrillion") {
+        tx = state.player.position.x; tz = state.player.position.z;
+      } else if (state.companions) {
+        for (var ci2 = 0; ci2 < state.companions.length; ci2++) {
+          var cc2 = state.companions[ci2];
+          if (cc2 && cc2 !== c && cc2.userData.inMech && mechSidOf(cc2.userData.mechId) === "mechTrillion") {
+            tx = cc2.position.x; tz = cc2.position.z; break;
+          }
+        }
+      }
+      var dx = tx - c.position.x, dz = tz - c.position.z;
+      var dist = Math.hypot(dx, dz);
+      var hitR = 2.8;
+      var inRange = dist <= range + hitR;
+      var aim = Math.atan2(dx, dz);
+      var da = aim - yaw;
+      while (da > Math.PI) da -= Math.PI * 2;
+      while (da < -Math.PI) da += Math.PI * 2;
+      var inArc = Math.abs(da) <= halfArc || dist <= hitR * 0.55;
+      if (inRange && inArc) {
+        if (C.isMechKnocked && C.isMechKnocked("mechTrillion")) {
+          alreadyDown = true;
+        } else if (C.knockMechDown && C.knockMechDown("mechTrillion")) {
+          spawnThreeBoom(tx, 1.2, tz, 1.8);
+          triHit = true;
+        }
+      }
     }
-    var tx = ment.group.position.x, tz = ment.group.position.z;
-    if (state.inMech && mechSidOf(state.mechId) === "mechTrillion") {
-      tx = state.player.position.x; tz = state.player.position.z;
-    }
-    var dx = tx - c.position.x, dz = tz - c.position.z;
-    var dist = Math.hypot(dx, dz);
-    var hitR = 2.8;
-    if (dist > range + hitR) {
-      state.toast = "SPEAR · miss"; state.toastT = 0.85;
-      if (hooks.onToast) hooks.onToast(state.toast);
-      return true;
-    }
-    var aim = Math.atan2(dx, dz);
-    var da = aim - yaw;
-    while (da > Math.PI) da -= Math.PI * 2;
-    while (da < -Math.PI) da += Math.PI * 2;
-    if (Math.abs(da) > halfArc && dist > hitR * 0.55) {
-      state.toast = "SPEAR · miss"; state.toastT = 0.85;
-      if (hooks.onToast) hooks.onToast(state.toast);
-      return true;
-    }
-    if (C.isMechKnocked && C.isMechKnocked("mechTrillion")) {
+    if (tankHit) {
+      state.toast = "SPEAR · tank WRECKED!"; state.toastT = 1.6;
+    } else if (triHit) {
+      state.toast = "SPEAR · trillion DOWN!"; state.toastT = 1.6;
+    } else if (alreadyDown) {
       state.toast = "Already down!"; state.toastT = 0.9;
-      if (hooks.onToast) hooks.onToast(state.toast);
-      return true;
+    } else {
+      state.toast = "SPEAR · miss"; state.toastT = 0.85;
     }
-    if (!C.knockMechDown || !C.knockMechDown("mechTrillion")) return false;
-    spawnThreeBoom(tx, 1.2, tz, 1.8);
-    state.toast = "SPEAR · trillion DOWN!";
-    state.toastT = 1.6;
     if (hooks.onToast) hooks.onToast(state.toast);
     return true;
   }
@@ -5716,6 +5781,13 @@ state.zLift = 0;
       for (var pti = 0; pti < (state.parkedTrucks || []).length; pti++) {
         var pt = state.parkedTrucks[pti];
         var hid = pt.spot.id === "shared" ? "truck-shared" : "truck-" + pt.spot.id;
+        /* speartank1 / mechgun1: stay gone after wreck */
+        if (pt.goneForever || (C.isPermaGone && (C.isPermaGone(hid) || C.isPermaGone(pt.spot.id)))) {
+          pt.goneForever = true;
+          if (pt.mesh) pt.mesh.visible = false;
+          if (pt.label) pt.label.visible = false;
+          continue;
+        }
         var takenPrimary = state.inTruck && (state.truckId === hid || (state.truckMode === "shared" && pt.spot.id === "shared"));
         var takenComp = null;
         if (!takenPrimary && state.companions) {
