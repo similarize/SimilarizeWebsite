@@ -5,7 +5,8 @@
 /* drivefix2: one INTERACT press boards and stays until a later EXIT press. */
 /* airgun1: heli/drone pilot FIRE on Space/X/ability (climb = R/C).
    storymuzzle1: story-mech omnigun from chest plate.
-   rtxform1: trillion mech RT → semi; dogxform1: thousand mech RT → robot dog. */
+   rtxform1: trillion mech RT → semi; dogxform1: thousand mech RT → robot dog;
+   reboard1: RT button-edge + keyboard T morph; parked RT craft reboard. */
 (() => {
   "use strict";
 
@@ -994,7 +995,25 @@
     }
   }
 
-  function doInteract(optFrog, opts) {
+  
+  /** reboard1: keyboard T = RT morph while piloting thousand/trillion (Canvas; gamepad RT still primary). */
+  function requestRtMorph(frog) {
+    if (!frog || !frog.local || !frog.inMech || !world) return false;
+    if ((frog._rtMorphCd || 0) > 0) return false;
+    const Crt = globalThis.FroggiesCanon;
+    const Wrt = globalThis.FroggiesWorld;
+    if (Crt && Crt.isTrillionMechPilot && Crt.isTrillionMechPilot(frog) && Wrt && Wrt.tryRtTrillionToSemi) {
+      const res = Wrt.tryRtTrillionToSemi(world, frog);
+      if (res && res.ok) { storyToast = res.toast; storyToastT = 2.2; frog._rtWasDown = true; return true; }
+    }
+    if (Crt && Crt.isThousandMechPilot && Crt.isThousandMechPilot(frog) && Wrt && Wrt.tryRtThousandToDog) {
+      const resD = Wrt.tryRtThousandToDog(world, frog);
+      if (resD && resD.ok) { storyToast = resD.toast; storyToastT = 2.2; frog._rtWasDown = true; return true; }
+    }
+    return false;
+  }
+
+function doInteract(optFrog, opts) {
     if (phase === "space") {
       doSpaceInteract();
       return;
@@ -1184,7 +1203,7 @@
         const bandLabel = (Cown2 && Cown2.mechStoriesLabel) ? Cown2.mechStoriesLabel(me.mechStories) : ((me.mechStories || "") + "-story mech");
         const isTriB = !!(Cown2 && Cown2.isTrillionMechPilot && Cown2.isTrillionMechPilot(me));
         const isThouB = !!(Cown2 && Cown2.isThousandMechPilot && Cown2.isThousandMechPilot(me));
-        const rtHint = isTriB ? " · RT → SEMI" : (isThouB ? " · RT → ROBOT DOG" : "");
+        const rtHint = isTriB ? " · RT/T → SEMI" : (isThouB ? " · RT/T → ROBOT DOG" : "");
         storyToast = (Cown2 && Cown2.mechGunDrivingTip)
           ? ("Boarding " + bandLabel + " · " + Cown2.mechGunDrivingTip() + rtHint)
           : ("Boarding " + bandLabel + " · FIRE (Space / X / button) · walk like a robot!" + rtHint);
@@ -1576,21 +1595,25 @@
                rtxform1: trillion → semi; dogxform1: thousand → robot dog (Canvas) */
             if ((f._rtMorphCd || 0) > 0) f._rtMorphCd = Math.max(0, f._rtMorphCd - dt);
             if (f.inTruck || f.inMech || f.inSub) {
-              const rt = gp.rtValue != null ? gp.rtValue : (gp.rt ? 1 : 0);
-              const lt = gp.ltValue != null ? gp.ltValue : (gp.lt ? 1 : 0);
+              /* reboard1: RT morph uses button edge OR analog; digital RT with value=0 still fires */
+              const rtAnalog = gp.rtValue != null ? gp.rtValue : 0;
+              const rt = Math.max(rtAnalog, gp.rt ? 1 : 0);
+              const lt = Math.max(gp.ltValue != null ? gp.ltValue : 0, gp.lt ? 1 : 0);
               const Crt = globalThis.FroggiesCanon;
               const cfg = (Crt && Crt.RT_MECH_SEMI) || { edge: 0.45, release: 0.28, cooldown: 0.55 };
               const cfgDog = (Crt && Crt.RT_MECH_DOG) || cfg;
               const tri = !!(f.inMech && Crt && Crt.isTrillionMechPilot && Crt.isTrillionMechPilot(f));
               const thou = !!(f.inMech && !tri && Crt && Crt.isThousandMechPilot && Crt.isThousandMechPilot(f));
-              if (tri && rt >= cfg.edge && !f._rtWasDown && (f._rtMorphCd || 0) <= 0) {
+              const rtBtnEdge = !!(gp.buttonsPressed && gp.buttonsPressed.rt);
+              const rtMorphEdge = rtBtnEdge || (rt >= (thou ? (cfgDog.edge || 0.45) : (cfg.edge || 0.45)) && !f._rtWasDown);
+              if (tri && rtMorphEdge && (f._rtMorphCd || 0) <= 0) {
                 const Wrt = globalThis.FroggiesWorld;
                 const res = Wrt && Wrt.tryRtTrillionToSemi ? Wrt.tryRtTrillionToSemi(world, f) : null;
                 if (res && res.ok) {
                   storyToast = res.toast; storyToastT = 2.2;
                   f._rtWasDown = true;
                 }
-              } else if (thou && rt >= (cfgDog.edge || 0.45) && !f._rtWasDown && (f._rtMorphCd || 0) <= 0) {
+              } else if (thou && rtMorphEdge && (f._rtMorphCd || 0) <= 0) {
                 const WrtD = globalThis.FroggiesWorld;
                 const resD = WrtD && WrtD.tryRtThousandToDog ? WrtD.tryRtThousandToDog(world, f) : null;
                 if (resD && resD.ok) {
@@ -1599,8 +1622,8 @@
                 }
               }
               const morphRel = thou ? (cfgDog.release || 0.28) : (cfg.release || 0.28);
-              if (rt < morphRel) f._rtWasDown = false;
-              else f._rtWasDown = true;
+              if (!gp.rt && rtAnalog < morphRel) f._rtWasDown = false;
+              else if (gp.rt || rtAnalog >= morphRel) f._rtWasDown = true;
               if (tri || thou) {
                 f.throttle = 0;
                 f.brake = lt;
@@ -1640,24 +1663,28 @@
           /* padless primary: RT/LT from first unclaimed snap */
           if ((f._rtMorphCd || 0) > 0) f._rtMorphCd = Math.max(0, f._rtMorphCd - dt);
           if ((f.inTruck || f.inMech || f.inSub) && _pad && _pad.connected) {
-            const rt = _pad.rtValue != null ? _pad.rtValue : (_pad.rt ? 1 : 0);
-            const lt = _pad.ltValue != null ? _pad.ltValue : (_pad.lt ? 1 : 0);
+            const rtAnalog2 = _pad.rtValue != null ? _pad.rtValue : 0;
+            const rt = Math.max(rtAnalog2, _pad.rt ? 1 : 0);
+            const lt = Math.max(_pad.ltValue != null ? _pad.ltValue : 0, _pad.lt ? 1 : 0);
             const Crt2 = globalThis.FroggiesCanon;
             const cfg2 = (Crt2 && Crt2.RT_MECH_SEMI) || { edge: 0.45, release: 0.28, cooldown: 0.55 };
             const cfgDog2 = (Crt2 && Crt2.RT_MECH_DOG) || cfg2;
             const tri2 = !!(f.inMech && Crt2 && Crt2.isTrillionMechPilot && Crt2.isTrillionMechPilot(f));
             const thou2 = !!(f.inMech && !tri2 && Crt2 && Crt2.isThousandMechPilot && Crt2.isThousandMechPilot(f));
-            if (tri2 && rt >= cfg2.edge && !f._rtWasDown && (f._rtMorphCd || 0) <= 0) {
+            const rtBtnEdge2 = !!( _pad.buttonsPressed && _pad.buttonsPressed.rt);
+            const rtMorphEdge2 = rtBtnEdge2 || (rt >= (thou2 ? (cfgDog2.edge || 0.45) : (cfg2.edge || 0.45)) && !f._rtWasDown);
+            if (tri2 && rtMorphEdge2 && (f._rtMorphCd || 0) <= 0) {
               const Wrt2 = globalThis.FroggiesWorld;
               const res2 = Wrt2 && Wrt2.tryRtTrillionToSemi ? Wrt2.tryRtTrillionToSemi(world, f) : null;
               if (res2 && res2.ok) { storyToast = res2.toast; storyToastT = 2.2; f._rtWasDown = true; }
-            } else if (thou2 && rt >= (cfgDog2.edge || 0.45) && !f._rtWasDown && (f._rtMorphCd || 0) <= 0) {
+            } else if (thou2 && rtMorphEdge2 && (f._rtMorphCd || 0) <= 0) {
               const WrtD2 = globalThis.FroggiesWorld;
               const resD2 = WrtD2 && WrtD2.tryRtThousandToDog ? WrtD2.tryRtThousandToDog(world, f) : null;
               if (resD2 && resD2.ok) { storyToast = resD2.toast; storyToastT = 2.2; f._rtWasDown = true; }
             }
             const morphRel2 = thou2 ? (cfgDog2.release || 0.28) : (cfg2.release || 0.28);
-            if (rt < morphRel2) f._rtWasDown = false; else f._rtWasDown = true;
+            if (!_pad.rt && rtAnalog2 < morphRel2) f._rtWasDown = false;
+            else if (_pad.rt || rtAnalog2 >= morphRel2) f._rtWasDown = true;
             if (tri2 || thou2) {
               f.throttle = 0; f.brake = lt; f.speedBoost = 1; f.fricBoost = 1 + lt * 2.4;
             } else if (f.inTruck && f.vehicleStyle === "semi") {
@@ -2399,7 +2426,11 @@
     }
   });
   window.addEventListener("keyup", (e) => {
-    if (e.key === "e" || e.key === "E" || e.key === "f" || e.key === "F") interactKeyHeld = false;
+    if ((e.key === "t" || e.key === "T") && phase === "hub") {
+        const meT = localPlayer();
+        if (meT && meT.inMech && requestRtMorph(meT)) { e.preventDefault(); return; }
+      }
+      if (e.key === "e" || e.key === "E" || e.key === "f" || e.key === "F") interactKeyHeld = false;
     if (["ArrowLeft", "a", "A"].includes(e.key) && steerX < 0) steerX = 0;
     if (["ArrowRight", "d", "D"].includes(e.key) && steerX > 0) steerX = 0;
     if (["ArrowUp", "w", "W"].includes(e.key) && steerY < 0) steerY = 0;

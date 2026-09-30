@@ -48,6 +48,7 @@
    park1: EXIT leaves mech/truck at exit pos (no snap-home).
    rtxform1: trillion mech RT → semi (Canvas).
    dogxform1: thousand mech (Rexy) RT → robot dog (Canvas); EXIT walks froggy.
+   reboard1: parked RT-semi/dog + morph-parked mechs stay INTERACT-boardable; no scoop of just-parked mech.
    Pond: big fish + whales. Starship pad connected → space episode.
    Ben-named only. No invented cast/zone/toy names. */
 (function (global) {
@@ -2369,6 +2370,7 @@
     if (ent.cd > 0) ent.cd -= dt;
     if (ent.invuln > 0) ent.invuln -= dt;
     if (ent.dashTrail > 0) ent.dashTrail -= dt;
+    if ((ent._rtMorphScoopGrace || 0) > 0) ent._rtMorphScoopGrace = Math.max(0, ent._rtMorphScoopGrace - dt);
   }
 
   function syncWorldHotspotPos(world, id, x, y) {
@@ -2391,10 +2393,51 @@
     }
   }
 
+  /* reboard1: keep world.hotspots in sync with RT-spawned boardables */
+  function ensureWorldBoardHotspot(world, id, x, y, style, opts) {
+    var C = global.FroggiesCanon;
+    if (C && C.ensureRtBoardHotspot) C.ensureRtBoardHotspot(id, x, y, style, opts);
+    if (!world || !world.hotspots || !id || !isFinite(x) || !isFinite(y)) return null;
+    opts = opts || {};
+    var st = style || (C && C.vehicleStyleOf ? C.vehicleStyleOf(id) : "semi");
+    var tip = opts.tip || (st === "robotdog"
+      ? "Robot dog · INTERACT board"
+      : "SEMI-TRUCK · INTERACT board");
+    var label = opts.label || (st === "robotdog" ? "Robot dog" : "SEMI-TRUCK");
+    var r = opts.r != null ? opts.r : (st === "robotdog" ? 52 : 70);
+    var found = null;
+    for (var i = 0; i < world.hotspots.length; i++) {
+      if (world.hotspots[i] && world.hotspots[i].id === id) { found = world.hotspots[i]; break; }
+    }
+    if (found) {
+      found.x = x; found.y = y;
+      found.kind = "truck";
+      found.vehicleStyle = st;
+      found.mode = "solo";
+      found.tip = tip;
+      found.label = label;
+      found.r = r;
+      found.frogId = null;
+    } else {
+      found = {
+        id: id, label: label, x: x, y: y, r: r, tip: tip,
+        kind: "truck", mode: "solo", vehicleStyle: st, frogId: null
+      };
+      world.hotspots.push(found);
+    }
+    return found;
+  }
+
   function parkVehicleHere(world, id, x, y) {
     var C = global.FroggiesCanon;
     if (C && C.setVehiclePark) C.setVehiclePark(id, x, y);
     syncWorldHotspotPos(world, id, x, y);
+    /* reboard1: RT ids are not in default HOTSPOTS — upsert boardable pads */
+    var sid = String(id || "");
+    if (sid.indexOf("rt-semi") === 0 || sid.indexOf("rt-robotdog") === 0) {
+      var st = (C && C.vehicleStyleOf) ? C.vehicleStyleOf(sid) : (sid.indexOf("robotdog") >= 0 ? "robotdog" : "semi");
+      ensureWorldBoardHotspot(world, sid, x, y, st, null);
+    }
   }
 
   function boardTruck(world, frogs, frog, hotspot) {
@@ -2403,10 +2446,12 @@
     if (!hotspot || hotspot.kind !== "truck") return false;
     if (frog.inTruck) {
       /* park1: leave Cybertruck where we EXIT — frog keeps walking from here
-         semiscoop1: parked semi keeps cargo visible */
+         semiscoop1: parked semi keeps cargo visible
+         reboard1: RT-semi / RT-dog get a real boardable hotspot (not only a visual) */
       var parkId = frog.truckId || hotspot.id || "truck";
       var px = frog.x, py = frog.y;
       var wasSemi = frog.vehicleStyle === "semi";
+      var wasDog = frog.vehicleStyle === "robotdog";
       if (wasSemi) {
         world.parkedSemis = world.parkedSemis || [];
         world.parkedSemis.push({
@@ -2425,6 +2470,8 @@
       frog.z = 0;
       frog.zVel = 0;
       frog.groundZ = 0;
+      frog._rtMorphParkSid = null;
+      frog._rtMorphScoopGrace = 0;
       if (world.sharedDriverId === frog.id) {
         world.sharedDriverId = null;
         for (var i = 0; i < frogs.length; i++) {
@@ -2442,6 +2489,9 @@
         }
       }
       parkVehicleHere(world, parkId, px, py);
+      if (wasSemi || wasDog || String(parkId).indexOf("rt-") === 0) {
+        ensureWorldBoardHotspot(world, parkId, px, py, wasDog ? "robotdog" : (wasSemi ? "semi" : null), null);
+      }
       return true;
     }
     frog.x = hotspot.x;
@@ -2451,6 +2501,20 @@
     frog.truckMode = hotspot.mode || "solo";
     var Cstyle = global.FroggiesCanon;
     frog.vehicleStyle = (hotspot.vehicleStyle) || (Cstyle && Cstyle.vehicleStyleOf ? Cstyle.vehicleStyleOf(hotspot) : "cybertruck");
+    /* reboard1: reclaim cargo from matching parked semi visual */
+    if (frog.vehicleStyle === "semi" && world.parkedSemis && world.parkedSemis.length) {
+      for (var psi = world.parkedSemis.length - 1; psi >= 0; psi--) {
+        var ps = world.parkedSemis[psi];
+        if (!ps) continue;
+        var sameId = ps.truckId && hotspot.id && String(ps.truckId) === String(hotspot.id);
+        var near = Math.hypot((ps.x || 0) - hotspot.x, (ps.y || 0) - hotspot.y) < 48;
+        if (sameId || near) {
+          frog.semiCargo = (ps.cargo || []).slice();
+          world.parkedSemis.splice(psi, 1);
+          break;
+        }
+      }
+    }
     if (hotspot.mode === "shared") {
       world.sharedDriverId = frog.id;
       for (var j = 0; j < frogs.length; j++) {
@@ -4578,7 +4642,15 @@
       if (!(st >= 1e12)) return null;
     }
     if ((frog._rtMorphCd || 0) > 0) return null;
-    if (C && C.setVehiclePark) C.setVehiclePark(frog.mechId || "mech-trillion", frog.x, frog.y);
+    /* reboard1: park mech BEHIND cab + sync world.hotspots so INTERACT still finds it */
+    var parkMid = frog.mechId || "mech-trillion";
+    var sid = (C && C.mechSolidId) ? (C.mechSolidId(parkMid) || "mechTrillion") : "mechTrillion";
+    var ang = frog.faceAngle != null ? frog.faceAngle : (frog.facing >= 0 ? 0 : Math.PI);
+    var bx = frog.x - Math.cos(ang) * 110;
+    var by = frog.y - Math.sin(ang) * 110;
+    parkVehicleHere(world, parkMid, bx, by);
+    frog._rtMorphParkSid = sid;
+    frog._rtMorphScoopGrace = 2.8;
     frog.inMech = false; frog.mechId = null; frog.mechStories = 0;
     frog.inTruck = true; frog.truckMode = "solo"; frog.truckId = "rt-semi";
     frog.vehicleStyle = "semi";
@@ -4602,7 +4674,15 @@
       if (!(st >= 1000 && st < 1e12)) return null;
     }
     if ((frog._rtMorphCd || 0) > 0) return null;
-    if (C && C.setVehiclePark) C.setVehiclePark(frog.mechId || "mech-1000", frog.x, frog.y);
+    /* reboard1: park thousand behind dog + sync world hotspot (Canvas INTERACT) */
+    var parkMid2 = frog.mechId || "mech-1000";
+    var sid2 = (C && C.mechSolidId) ? (C.mechSolidId(parkMid2) || "mech1000") : "mech1000";
+    var ang2 = frog.faceAngle != null ? frog.faceAngle : (frog.facing >= 0 ? 0 : Math.PI);
+    var bx2 = frog.x - Math.cos(ang2) * 95;
+    var by2 = frog.y - Math.sin(ang2) * 95;
+    parkVehicleHere(world, parkMid2, bx2, by2);
+    frog._rtMorphParkSid = sid2;
+    frog._rtMorphScoopGrace = 2.8;
     frog.inMech = false; frog.mechId = null; frog.mechStories = 0;
     frog.inTruck = true; frog.truckMode = "solo"; frog.truckId = "rt-robotdog";
     frog.vehicleStyle = "robotdog";
@@ -4684,13 +4764,16 @@
     got = scoopStatic(C && C.YARD_FLOWERS, "yard-flower-", "flower", function () { return 10; });
     if (got) return got;
 
-    /* parked story mechs from hotspots — only if not driven */
+    /* parked story mechs from hotspots — only if not driven
+       reboard1: never scoop the mech we just RT-parked (grace + solid id) */
+    if ((frog._rtMorphScoopGrace || 0) > 0) return null;
     var hots = (C && C.HOTSPOTS) || [];
     for (var hi = 0; hi < hots.length; hi++) {
       var h = hots[hi];
       if (!h || !(C.isMechHotspot ? C.isMechHotspot(h) : (h.kind === "mech"))) continue;
       var sid = C.mechSolidId ? C.mechSolidId(h) : h.solidId;
       if (!sid) continue;
+      if (frog._rtMorphParkSid && sid === frog._rtMorphParkSid) continue;
       if (C.isMechDestroyed && C.isMechDestroyed(sid)) continue;
       /* skip if any frog pilots this mech */
       var frogList = frogs || world._frogsRef || null;
@@ -4750,6 +4833,9 @@
         C.clearMechDestroyed(meta.solidId);
         if (C.setVehiclePark) C.setVehiclePark(meta.solidId, dx, dy);
         if (meta.id && C.setVehiclePark) C.setVehiclePark(meta.id, dx, dy);
+        /* reboard1: Canvas world.hotspots must move with restored mech */
+        syncWorldHotspotPos(world, meta.solidId, dx, dy);
+        if (meta.id) syncWorldHotspotPos(world, meta.id, dx, dy);
         restored = true;
       }
       if (!restored) {
@@ -6420,6 +6506,7 @@
     tryMechSpear: tryMechSpear,
     tryRtTrillionToSemi: tryRtTrillionToSemi,
     tryRtThousandToDog: tryRtThousandToDog,
+    ensureWorldBoardHotspot: ensureWorldBoardHotspot,
     tickSemiScoop: tickSemiScoop,
     tryDumpSemiCargo: tryDumpSemiCargo,
     spawnBoom: spawnBoom,

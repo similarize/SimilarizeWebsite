@@ -440,7 +440,14 @@
   }
 
   function isTruckHotspot(h) {
-    return !!(h && (h.kind === "truck" || (h.id && String(h.id).indexOf("truck") === 0)));
+    if (!h) return false;
+    if (h.kind === "truck") return true;
+    var id = h.id ? String(h.id) : "";
+    if (id.indexOf("truck") === 0) return true;
+    /* reboard1: RT-morph semis / robot dogs are boardable truck hotspots */
+    if (id.indexOf("rt-semi") === 0 || id.indexOf("rt-robotdog") === 0) return true;
+    if (h.vehicleStyle === "semi" || h.vehicleStyle === "robotdog") return true;
+    return false;
   }
 
   function isMechHotspot(h) {
@@ -1591,6 +1598,40 @@
     }
   }
 
+  /* reboard1: upsert boardable hotspot for RT-spawned semi / robot dog (not in default pads) */
+  function ensureRtBoardHotspot(id, x, y, style, opts) {
+    if (!id || !isFinite(x) || !isFinite(y)) return null;
+    opts = opts || {};
+    var st = style || vehicleStyleOf(id) || "semi";
+    var tip = opts.tip || (st === "robotdog"
+      ? "Robot dog · INTERACT board"
+      : "SEMI-TRUCK · INTERACT board");
+    var label = opts.label || (st === "robotdog" ? "Robot dog" : "SEMI-TRUCK");
+    var r = opts.r != null ? opts.r : (st === "robotdog" ? 52 : 70);
+    var found = null;
+    for (var i = 0; i < HOTSPOTS.length; i++) {
+      if (HOTSPOTS[i] && HOTSPOTS[i].id === id) { found = HOTSPOTS[i]; break; }
+    }
+    if (found) {
+      found.x = x; found.y = y;
+      found.kind = "truck";
+      found.vehicleStyle = st;
+      found.mode = "solo";
+      found.tip = tip;
+      found.label = label;
+      found.r = r;
+      found.frogId = null;
+    } else {
+      found = {
+        id: id, label: label, x: x, y: y, r: r, tip: tip,
+        kind: "truck", mode: "solo", vehicleStyle: st, frogId: null
+      };
+      HOTSPOTS.push(found);
+    }
+    setVehiclePark(id, x, y);
+    return found;
+  }
+
   function resetVehicleParks() {
     VEHICLE_PARK = {};
     clearDestroyedMechs(); /* mech5: respawn blasted mechs with world reset */
@@ -1743,6 +1784,7 @@
     mechStoriesLabel: mechStoriesLabel,
     mechBand: mechBand,
     setVehiclePark: setVehiclePark,
+    ensureRtBoardHotspot: ensureRtBoardHotspot,
     getVehiclePark: getVehiclePark,
     resetVehicleParks: resetVehicleParks,
     vehiclePos: vehiclePos,

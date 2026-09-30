@@ -603,6 +603,15 @@
     keySteer.x = x;
     keySteer.y = y;
   }
+  
+  /* reboard1: keyboard T → same morph as RT (thousand→dog / trillion→semi) */
+  function pulseRtMorph() {
+    if (!state || state.mode !== "ranch" || !state.inMech) return false;
+    if ((state._rtMorphCd || 0) > 0) return false;
+    if (tryRtTrillionToSemiThree()) return true;
+    if (tryRtThousandToDogThree()) return true;
+    return false;
+  }
   function pulseInteract(padIndex) {
     /* interact2: optional padIndex from engine-boot; null = HUD/keyboard → primary only */
     /* drivefix2: ignore a second read of the same cached A edge (board then EXIT). */
@@ -639,7 +648,23 @@
     if ((state._rtMorphCd || 0) > 0) return false;
     var parkW = threeToWorld(state.player.position.x, state.player.position.z);
     var parkMid = state.mechId || "mech-trillion";
+    /* reboard1: park behind cab so INTERACT + scoop do not stack on the semi */
+    var yawP = state.faceYaw != null ? state.faceYaw : 0;
+    var backX = parkW.x - Math.sin(yawP) * 110;
+    var backY = parkW.y - Math.cos(yawP) * 110;
+    parkW = { x: backX, y: backY };
     if (C.setVehiclePark) C.setVehiclePark(parkMid, parkW.x, parkW.y);
+    var sidPark = (typeof mechSidOf === "function") ? mechSidOf(parkMid) : "mechTrillion";
+    state._rtMorphParkSid = sidPark || "mechTrillion";
+    state._rtMorphScoopGrace = 2.8;
+    if (state.mechs) {
+      for (var miP = 0; miP < state.mechs.length; miP++) {
+        var mentP = state.mechs[miP];
+        if (mentP && mentP.solidId === state._rtMorphParkSid) {
+          mentP.wx = parkW.x; mentP.wy = parkW.y;
+        }
+      }
+    }
     var keepPad = state.mechPilotPadIndex != null ? state.mechPilotPadIndex
       : (state.primaryPadIndex != null ? state.primaryPadIndex : null);
     state.inMech = false; state.mechId = null; state.mechStories = 0;
@@ -681,7 +706,22 @@
     if ((state._rtMorphCd || 0) > 0) return false;
     var parkW2 = threeToWorld(state.player.position.x, state.player.position.z);
     var parkMid2 = state.mechId || "mech-1000";
+    var yawD = state.faceYaw != null ? state.faceYaw : 0;
+    var backX2 = parkW2.x - Math.sin(yawD) * 95;
+    var backY2 = parkW2.y - Math.cos(yawD) * 95;
+    parkW2 = { x: backX2, y: backY2 };
     if (C.setVehiclePark) C.setVehiclePark(parkMid2, parkW2.x, parkW2.y);
+    var sidPark2 = (typeof mechSidOf === "function") ? mechSidOf(parkMid2) : "mech1000";
+    state._rtMorphParkSid = sidPark2 || "mech1000";
+    state._rtMorphScoopGrace = 2.8;
+    if (state.mechs) {
+      for (var miD = 0; miD < state.mechs.length; miD++) {
+        var mentD = state.mechs[miD];
+        if (mentD && mentD.solidId === state._rtMorphParkSid) {
+          mentD.wx = parkW2.x; mentD.wy = parkW2.y;
+        }
+      }
+    }
     var keepPad2 = state.mechPilotPadIndex != null ? state.mechPilotPadIndex
       : (state.primaryPadIndex != null ? state.primaryPadIndex : null);
     state.inMech = false; state.mechId = null; state.mechStories = 0;
@@ -1417,12 +1457,14 @@
       }
     }
 
-    /* parked / unclaimed story mechs */
+    /* parked / unclaimed story mechs — reboard1: skip just-RT-parked solid during grace */
+    if ((state._rtMorphScoopGrace || 0) > 0) return;
     if (state.mechs) {
       for (var mi = 0; mi < state.mechs.length; mi++) {
         var ment = state.mechs[mi];
         if (!ment || ment.destroyed) continue;
         if (C.isMechDestroyed && C.isMechDestroyed(ment.solidId)) continue;
+        if (state._rtMorphParkSid && ment.solidId === state._rtMorphParkSid) continue;
         var piloted = false;
         if (state.inMech && ment.solidId && typeof mechSidOf === "function" && mechSidOf(state.mechId) === ment.solidId) piloted = true;
         if (!piloted && state.companions) {
@@ -1531,12 +1573,30 @@
     return true;
   }
   function parkDrivenSemiOnExit() {
-    /* semiscoop1: leave loaded semi mesh parked with cargo visible */
-    if (!state || !state.driveTruck || state.vehicleStyle !== "semi") return;
-    state.parkedSemis = state.parkedSemis || [];
-    state.driveTruck.userData.parkedSemi = true;
-    state.driveTruck.visible = true;
-    state.parkedSemis.push(state.driveTruck);
+    /* semiscoop1: leave loaded semi mesh parked with cargo visible
+       reboard1: also upsert a boardable RT hotspot at the park pose */
+    if (!state || !state.driveTruck) return;
+    var sty = state.vehicleStyle;
+    if (sty !== "semi" && sty !== "robotdog") return;
+    var parkTw = threeToWorld(state.player.position.x, state.player.position.z);
+    var parkTid = state.truckId || (sty === "robotdog" ? "rt-robotdog" : "rt-semi");
+    if (C.ensureRtBoardHotspot) C.ensureRtBoardHotspot(parkTid, parkTw.x, parkTw.y, sty, null);
+    else if (C.setVehiclePark) C.setVehiclePark(parkTid, parkTw.x, parkTw.y);
+    if (sty === "semi") {
+      state.parkedSemis = state.parkedSemis || [];
+      state.driveTruck.userData.parkedSemi = true;
+      state.driveTruck.userData.truckId = parkTid;
+      state.driveTruck.visible = true;
+      state.parkedSemis.push(state.driveTruck);
+    } else {
+      /* robot dog: leave mesh as a parked craft (same list) */
+      state.parkedSemis = state.parkedSemis || [];
+      state.driveTruck.userData.parkedSemi = true;
+      state.driveTruck.userData.truckId = parkTid;
+      state.driveTruck.userData.vehicleStyle = "robotdog";
+      state.driveTruck.visible = true;
+      state.parkedSemis.push(state.driveTruck);
+    }
     state.driveTruck = null;
   }
 
@@ -3707,11 +3767,14 @@ state.zLift = 0;
         var parkTid = state.truckId || "truck";
         if (C.setVehiclePark) C.setVehiclePark(parkTid, parkTw.x, parkTw.y);
         var wasSemi = state.vehicleStyle === "semi";
-        if (wasSemi) parkDrivenSemiOnExit();
+        var wasDog = state.vehicleStyle === "robotdog";
+        if (wasSemi || wasDog || String(parkTid).indexOf("rt-") === 0) parkDrivenSemiOnExit();
         state.inTruck = false; state.truckMode = null; state.truckId = null; state.vehicleStyle = null;
         state.truckPilotPadIndex = null;
+        state._rtMorphParkSid = null;
+        state._rtMorphScoopGrace = 0;
         state.zLift = 0; state.zVel = 0; state.groundLift = 0;
-        state.toast = wasSemi ? "SEMI parked · cargo stays" : "Parked · walking";
+        state.toast = wasSemi ? "SEMI parked · cargo stays" : (wasDog ? "Robot dog parked · walking" : "Parked · walking");
         state.toastT = 1.8; state.exitTipT = 0;
         interactOrigin = null; interactPadIndex = null;
         if (hooks.onToast) hooks.onToast(state.toast);
@@ -3745,14 +3808,41 @@ state.zLift = 0;
         state.truckPilotPadIndex = (interactPadIndex != null) ? interactPadIndex
           : (state.primaryPadIndex != null ? state.primaryPadIndex : null);
         state.scrap += 1;
-        /* Swap drive mesh to match Ripsaw/Tank/Cybertruck (keep parked semis) */
+        /* Swap drive mesh to match Ripsaw/Tank/Cybertruck (keep parked semis)
+           reboard1: reclaim parked RT-semi / robot-dog mesh + cargo when boarding that pad */
         if (state.driveTruck && state.driveTruck.parent && !state.driveTruck.userData.parkedSemi) {
           state.driveTruck.parent.remove(state.driveTruck);
         }
-        var frogDef = C.FROG_DEFS[state.frogId] || C.FROG_DEFS.james;
-        state.driveTruck = makeVehicleMesh(state.vehicleStyle, hex(frogDef.color));
-        state.driveTruck.visible = true;
-        scene.add(state.driveTruck);
+        var reclaimed = null;
+        if (state.parkedSemis && state.parkedSemis.length &&
+            (state.vehicleStyle === "semi" || state.vehicleStyle === "robotdog" || String(id).indexOf("rt-") === 0)) {
+          for (var psiB = state.parkedSemis.length - 1; psiB >= 0; psiB--) {
+            var psB = state.parkedSemis[psiB];
+            if (!psB) continue;
+            var psId = psB.userData && psB.userData.truckId;
+            var same = psId && String(psId) === String(id);
+            var psw = threeToWorld(psB.position.x, psB.position.z);
+            var nearPs = Math.hypot(psw.x - state.near.x, psw.y - state.near.y) < 48;
+            if (same || nearPs) {
+              reclaimed = psB;
+              state.parkedSemis.splice(psiB, 1);
+              break;
+            }
+          }
+        }
+        if (reclaimed) {
+          reclaimed.userData.parkedSemi = false;
+          reclaimed.visible = true;
+          state.driveTruck = reclaimed;
+          if (state.vehicleStyle === "semi" && reclaimed.userData.semiCargo) {
+            /* cargo stays on mesh userData */
+          }
+        } else {
+          var frogDef = C.FROG_DEFS[state.frogId] || C.FROG_DEFS.james;
+          state.driveTruck = makeVehicleMesh(state.vehicleStyle, hex(frogDef.color));
+          state.driveTruck.visible = true;
+          scene.add(state.driveTruck);
+        }
         state.toast = state.truckMode === "shared"
           ? "All aboard! Four froggies · one Cybertruck · hit the jumps!"
           : state.vehicleStyle === "ripsaw" ? "Driving Ripsaw · tracked · hit the jumps!"
@@ -3912,7 +4002,7 @@ state.zLift = 0;
         var boardLab = (C.mechStoriesLabel ? C.mechStoriesLabel(state.mechStories) : (state.mechStories + "-story mech"));
         var isTriBoard = (C.mechBand && C.mechBand(state.mechStories) === "trillion") || state.mechStories >= 1e12;
         var isThouBoard = !isTriBoard && ((C.mechBand && C.mechBand(state.mechStories) === "1000") || (state.mechStories >= 1000 && state.mechStories < 1e12));
-        var rtBoardHint = isTriBoard ? " · RT → SEMI" : (isThouBoard ? " · RT → ROBOT DOG" : "");
+        var rtBoardHint = isTriBoard ? " · RT/T → SEMI" : (isThouBoard ? " · RT/T → ROBOT DOG" : "");
         state.toast = "Boarding " + boardLab + " · FIRE (Space / X / button)!" + rtBoardHint;
         state.exitTipT = 2.4;
         state._rtWasDown = true; /* ignore held RT from prior vehicle */
@@ -5811,14 +5901,16 @@ state.zLift = 0;
     /* ctrl1: RT accel / LT brake on truck + mech — read primary/pilot pad (frame-cached)
        rtxform1: trillion RT → semi; dogxform1: thousand RT → robot dog (no accel on morph edge). */
     if ((state._rtMorphCd || 0) > 0) state._rtMorphCd -= dt;
+    if ((state._rtMorphScoopGrace || 0) > 0) state._rtMorphScoopGrace = Math.max(0, state._rtMorphScoopGrace - dt);
     if (state.mode === "ranch" && (state.inTruck || state.inMech) && global.SimilarizeGamepad) {
       var thrPad = state.inMech && state.mechPilotPadIndex != null ? state.mechPilotPadIndex
         : (state.inTruck && state.truckPilotPadIndex != null ? state.truckPilotPadIndex
           : (state.primaryPadIndex != null ? state.primaryPadIndex : 0));
       var tgp = global.SimilarizeGamepad.pollPad(thrPad);
       if (tgp && tgp.connected) {
-        var rtV = tgp.rtValue != null ? tgp.rtValue : (tgp.rt ? 1 : 0);
-        var ltV = tgp.ltValue != null ? tgp.ltValue : (tgp.lt ? 1 : 0);
+        var rtAnalog = tgp.rtValue != null ? tgp.rtValue : 0;
+        var rtV = Math.max(rtAnalog, tgp.rt ? 1 : 0);
+        var ltV = Math.max(tgp.ltValue != null ? tgp.ltValue : 0, tgp.lt ? 1 : 0);
         var rtEdgeCfg = C.RT_MECH_SEMI || { edge: 0.45, release: 0.28, cooldown: 0.55 };
         var rtDogCfg = C.RT_MECH_DOG || rtEdgeCfg;
         var isTriPilot = !!(state.inMech && (
@@ -5831,25 +5923,28 @@ state.zLift = 0;
           || (C.mechBand && C.mechBand(state.mechStories) === "1000")
           || (state.mechStories >= 1000 && state.mechStories < 1e12)
         ));
+        var rtBtnEdge = !!(tgp.buttonsPressed && tgp.buttonsPressed.rt);
         if (isTriPilot) {
-          if (rtV >= (rtEdgeCfg.edge || 0.45) && !state._rtWasDown && (state._rtMorphCd || 0) <= 0) {
+          var triEdge = rtBtnEdge || (rtV >= (rtEdgeCfg.edge || 0.45) && !state._rtWasDown);
+          if (triEdge && (state._rtMorphCd || 0) <= 0) {
             if (tryRtTrillionToSemiThree()) {
               /* morph consumed this frame — skip leftover loco boost math */
               state._rtWasDown = true;
             }
           }
-          if (rtV < (rtEdgeCfg.release || 0.28)) state._rtWasDown = false;
-          else state._rtWasDown = true;
+          if (!tgp.rt && rtAnalog < (rtEdgeCfg.release || 0.28)) state._rtWasDown = false;
+          else if (tgp.rt || rtAnalog >= (rtEdgeCfg.release || 0.28)) state._rtWasDown = true;
           /* no RT accel while trillion (RT = morph); LT brake still OK */
           if (ltV > 0.05) { fric *= 1 + ltV * 2.4; maxSp *= Math.max(0.32, 1 - ltV * 0.6); }
         } else if (isThouPilot) {
-          if (rtV >= (rtDogCfg.edge || 0.45) && !state._rtWasDown && (state._rtMorphCd || 0) <= 0) {
+          var thouEdge = rtBtnEdge || (rtV >= (rtDogCfg.edge || 0.45) && !state._rtWasDown);
+          if (thouEdge && (state._rtMorphCd || 0) <= 0) {
             if (tryRtThousandToDogThree()) {
               state._rtWasDown = true;
             }
           }
-          if (rtV < (rtDogCfg.release || 0.28)) state._rtWasDown = false;
-          else state._rtWasDown = true;
+          if (!tgp.rt && rtAnalog < (rtDogCfg.release || 0.28)) state._rtWasDown = false;
+          else if (tgp.rt || rtAnalog >= (rtDogCfg.release || 0.28)) state._rtWasDown = true;
           /* no RT accel while thousand (RT = morph); LT brake still OK */
           if (ltV > 0.05) { fric *= 1 + ltV * 2.4; maxSp *= Math.max(0.32, 1 - ltV * 0.6); }
         } else {
@@ -7420,6 +7515,7 @@ state.zLift = 0;
     destroy: destroy,
     setSteer: setSteer,
     pulseInteract: pulseInteract,
+    pulseRtMorph: pulseRtMorph,
     setInteractHeld: setInteractHeld,
     pulseAbility: pulseAbility,
     pulseSpear: pulseSpear,

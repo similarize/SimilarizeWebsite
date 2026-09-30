@@ -5,7 +5,7 @@
   "use strict";
 
   var C = global.FroggiesCanon;
-  var CACHE = "20260930-dogxform1";
+  var CACHE = "20260930-reboard1";
   var CDN = {
     three: "https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js",
   };
@@ -573,6 +573,10 @@
         if (a.setInteractHeld) a.setInteractHeld(true);
         a.pulseInteract(); /* keyboard/HUD → primary only */
         e.preventDefault();
+      }
+      /* reboard1: T = RT morph (thousand→dog / trillion→semi) while in mech */
+      if (k === "t") {
+        if (a.pulseRtMorph && a.pulseRtMorph()) e.preventDefault();
       }
       /* air1: R climb / C descend / Shift boost while heli/drone (Three) */
       if (k === "r" || k === "c" || k === "shift") {
