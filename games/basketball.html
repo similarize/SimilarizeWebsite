@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>Soccer RC</title>
-    <!-- Soccer RC (was Basketball RC). Paths stay basketball.html. Cache-bust: ?v=vfs1 -->
+    <!-- Soccer RC (was Basketball RC). Paths stay basketball.html. Cache-bust: ?v=20260929-goals2 -->
     <!-- Tesla Cybertruck chromeless FS — see games/shared/TESLA_FULLSCREEN.md -->
     <script src="shared/tesla-fullscreen.js?v=tfs1"></script>
     <script src="shared/viewport-fill.js?v=vfs1"></script>
@@ -296,7 +296,7 @@
             isStuck: false
         };
 
-        // Player 1's hoop (left side)
+        // Player 1's goal (left side).
         const hoop1 = {
             x: viewW / 4,
             y: 100,
@@ -306,7 +306,7 @@
             netHeight: 40
         };
 
-        // Player 2's hoop (right side)
+        // Player 2's goal (right side).
         const hoop2 = {
             x: 3 * viewW / 4,
             y: 100,
@@ -851,24 +851,37 @@
         }
 
         // Draw hoop function
-        function drawHoop(hoop) {
-            ctx.fillStyle = 'gray';
-            ctx.fillRect(hoop.x - hoop.width/2, hoop.y - hoop.rimThickness, hoop.width, hoop.rimThickness);
+        function drawHoop(hoop, color, label) {
+            const left = hoop.x - hoop.width / 2;
+            const boardTop = hoop.y - hoop.rimThickness - 20;
+            ctx.fillStyle = color;
+            ctx.fillRect(left, hoop.y - hoop.rimThickness, hoop.width, hoop.rimThickness);
+            ctx.fillStyle = color;
+            ctx.fillRect(left + 5, boardTop, hoop.width - 10, 20);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = Math.max(1.5, 2 * S);
+            ctx.strokeRect(left + 5, boardTop, hoop.width - 10, 20);
             ctx.fillStyle = 'white';
-            ctx.fillRect(hoop.x - hoop.width/2 + 5, hoop.y - hoop.rimThickness - 20, hoop.width - 10, 20);
-            ctx.strokeStyle = 'black';
-            ctx.strokeRect(hoop.x - hoop.width/2 + 5, hoop.y - hoop.rimThickness - 20, hoop.width - 10, 20);
-            ctx.strokeStyle = 'white';
+            ctx.font = `700 ${Math.max(7, Math.min(14 * S, hoop.width * 0.17))}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(label, hoop.x, boardTop + 10);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = Math.max(1, S);
             ctx.beginPath();
             ctx.moveTo(hoop.x - hoop.width/2, hoop.y);
             ctx.lineTo(hoop.x - hoop.width/2, hoop.y + hoop.netHeight);
             ctx.moveTo(hoop.x + hoop.width/2, hoop.y);
             ctx.lineTo(hoop.x + hoop.width/2, hoop.y + hoop.netHeight);
+            ctx.fillStyle = color === '#fb923c' ? 'rgba(251, 146, 60, 0.16)' : 'rgba(96, 165, 250, 0.16)';
+            ctx.fillRect(left, hoop.y, hoop.width, hoop.netHeight);
             for (let i = 0; i < hoop.netHeight; i += 10) {
                 ctx.moveTo(hoop.x - hoop.width/2 + i/2, hoop.y + i);
                 ctx.lineTo(hoop.x + hoop.width/2 - i/2, hoop.y + i);
             }
             ctx.stroke();
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'alphabetic';
         }
 
         // Game loop
@@ -1024,6 +1037,7 @@
                         (Math.hypot(car1.x - basketball.x, car1.y - basketball.y) < Math.hypot(car2.x - basketball.x, car2.y - basketball.y) ? car1 : car2);
                     if (lastTouch === car1) {
                         car1.score++;
+                        resetKickoff();
                         console.log('Score for Player 1!');
                     }
                 }
@@ -1043,6 +1057,7 @@
                         (Math.hypot(car1.x - basketball.x, car1.y - basketball.y) < Math.hypot(car2.x - basketball.x, car2.y - basketball.y) ? car1 : car2);
                     if (lastTouch === car2) {
                         car2.score++;
+                        resetKickoff();
                         console.log('Score for Player 2!');
                     }
                 }
@@ -1071,8 +1086,8 @@
             drawCar(car1, 'orange');
             drawCar(car2, 'blue');
 
-            drawHoop(hoop1);
-            drawHoop(hoop2);
+            drawHoop(hoop1, '#fb923c', 'P1 GOAL');
+            drawHoop(hoop2, '#60a5fa', 'P2 GOAL');
 
             ctx.beginPath();
             ctx.arc(basketball.x, basketball.y, basketball.radius, 0, Math.PI * 2);
@@ -1189,10 +1204,25 @@
             car2.y = viewH * 0.58;
             car2.angle = -Math.PI / 2;
             basketball.x = viewW / 2;
-            basketball.y = viewH * 0.62;
+            basketball.y = viewH / 2;
             basketball.dx = 0;
             basketball.dy = 0;
             basketball.isStuck = false;
+        }
+        function resetKickoff() {
+            [car1, car2].forEach((car) => {
+                car.speed = 0;
+                car.rotation = 0;
+                car.wasDriving = false;
+                car.wasReverse = false;
+                car.isShooting = false;
+                car.isDestroyed = false;
+                car.onConveyor = false;
+                car.isStuckInGoal = false;
+            });
+            projectiles = [];
+            tracks = [];
+            placeFresh();
         }
         function makeSpecks() {
             specks = [];
