@@ -1,3 +1,11 @@
+# What's new (ff3d80) — return to the version lobby and see through structures
+
+- Send direct 3D-page visits to the shared lobby for choosing 2D, 2.5D, or 3D; a 3D launch from that lobby starts directly without the retired title gate.
+- Replace overlapping Lobby/Arcade overlays with compact **Versions** and **Center View** controls at the top-right.
+- Only start garage-roof descents from actual roof height, so opening the doors gives access through the garage instead of a shortcut onto the roof.
+- Fade every material on structures between the camera and locally controlled frogs or vehicles, then restore it smoothly after the view clears.
+- Cache: `?v=20261001-ff3d80` · asset `index-ff3d80.js`
+
 # What's new (ff3d79) — turn the Cybertruck into a boat
 
 - Switch James's Cybertruck into a floating Cyberboat as it enters pond water, then restore the truck when it reaches shore.

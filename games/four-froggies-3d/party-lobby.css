@@ -102,22 +102,26 @@ body.ff3d-playing .exit-arcade.ff3d-exit { display: none !important; }
   display: none;
   position: fixed;
   top: max(10px, env(safe-area-inset-top));
-  left: max(10px, env(safe-area-inset-left));
+  right: max(10px, env(safe-area-inset-right));
   z-index: 80;
   gap: 8px;
+  max-width: calc(100vw - 20px);
+  justify-content: flex-end;
   pointer-events: auto;
 }
 body.ff3d-playing .ff3d-play-nav { display: flex; }
 .ff3d-play-nav .ff3d-nav-btn {
   color: #fef3c7;
-  font: 800 13px Outfit, "Segoe UI", system-ui, sans-serif;
+  font: 800 12px Outfit, "Segoe UI", system-ui, sans-serif;
   text-decoration: none;
   border: 2px solid rgba(253,230,138,.65);
   background: rgba(0,0,0,.6);
   border-radius: 999px;
-  padding: 8px 14px;
+  padding: 7px 11px;
   cursor: pointer;
+  white-space: nowrap;
 }
+html.ff3d-autostart .gate { display: none !important; }
 .ff3d-party .party-btn-join, .ff3d-party #ff3d-btn-join {
   border-color: #38bdf8;
   color: #e0f2fe;
