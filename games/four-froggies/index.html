@@ -9,7 +9,7 @@
   <!-- Tesla Cybertruck chromeless FS — see games/shared/TESLA_FULLSCREEN.md -->
   <script src="../shared/tesla-fullscreen.js?v=tfs1"></script>
   <script src="../shared/viewport-fill.js?v=vfs1"></script>
-  <link rel="stylesheet" href="style.css?v=20260929-party25d1">
+  <link rel="stylesheet" href="style.css?v=20260930-onelobby2">
   <style>
     #pad-dock{width:min(920px,100%);display:flex;flex-direction:column;gap:8px}
     #pad-count{margin:0;font-weight:800;font-size:clamp(18px,3.2vw,28px);letter-spacing:.01em;color:#fff}
@@ -67,41 +67,64 @@
   <canvas id="view"></canvas>
   <div id="engine-host" hidden aria-label="Alternate engine view"></div>
 
-  <div id="version-lobby" aria-label="Choose a Four Froggies version">
+  <div id="version-lobby" aria-label="Four Froggies arcade entrance">
     <div class="version-top">
       <div>
         <p class="version-kicker">Similarize</p>
         <h1>Four Froggies</h1>
-        <p class="version-lead">Three ways into the same ranch. Pick one.</p>
+        <p class="version-lead">Claim a froggy · Host or Join · then pick 2D / 2.5D / 3D to play.</p>
       </div>
       <a class="exit-arcade" href="/games/">← Arcade</a>
     </div>
-    <div id="pad-dock" aria-label="Controllers">
+    <div id="pad-dock" aria-label="Four Froggies seats">
       <p id="pad-count">No controllers are connected</p>
-      <p id="pad-you" hidden>You are Pad 1</p>
-      <p id="pad-dock-hint">Plug in a controller, then press any button.</p>
-      <div id="pad-row">
-        <div class="pad-tile" data-pad="0"><b>Pad 1</b><em>Not connected</em></div>
-        <div class="pad-tile" data-pad="1"><b>Pad 2</b><em>Not connected</em></div>
-        <div class="pad-tile" data-pad="2"><b>Pad 3</b><em>Not connected</em></div>
-        <div class="pad-tile" data-pad="3"><b>Pad 4</b><em>Not connected</em></div>
+      <p id="pad-you" hidden>You are James</p>
+      <p id="pad-dock-hint">Each pad picks one froggy · stick/D-pad cycle · A claim · B release · or tap a name</p>
+      <div id="pad-row" class="frog-btns entrance-frogs">
+        <button type="button" class="pad-tile frog-btn" data-id="james" data-pad-seat="0">
+          <b class="frog-name">James</b>
+          <em class="seat-state" data-seat="james">Open</em>
+        </button>
+        <button type="button" class="pad-tile frog-btn" data-id="jimmy" data-pad-seat="1">
+          <b class="frog-name">Jimmy</b>
+          <em class="seat-state" data-seat="jimmy">Open</em>
+        </button>
+        <button type="button" class="pad-tile frog-btn" data-id="bubbles" data-pad-seat="2">
+          <b class="frog-name">Bubbles</b>
+          <em class="seat-state" data-seat="bubbles">Open</em>
+        </button>
+        <button type="button" class="pad-tile frog-btn" data-id="rexy" data-pad-seat="3">
+          <b class="frog-name">Rexy</b>
+          <em class="seat-state" data-seat="rexy">Open</em>
+        </button>
       </div>
     </div>
+    <p id="invite-cta" class="invite-cta entrance-party">Party: <strong>Host room</strong> → Copy invite / scan QR · friends <strong>Join</strong> · claim James / Jimmy / Bubbles / Rexy · Host picks a mode to start. Solo: claim a froggy and pick 2D / 2.5D / 3D (AI fills open seats).</p>
+    <div id="party-bar" class="party-bar entrance-party">
+      <button type="button" id="btn-host" class="party-btn">Host room</button>
+      <button type="button" id="btn-join" class="party-btn party-btn-join">Join · enter code</button>
+      <input type="text" id="join-code" class="join-code" maxlength="8" placeholder="CODE" autocomplete="off" spellcheck="false" aria-label="Room code">
+      <button type="button" id="btn-copy" class="party-btn" hidden>Copy invite link</button>
+      <span id="room-code" class="room-code" hidden></span>
+    </div>
+    <img id="invite-qr" class="invite-qr" hidden alt="QR code to join this room" width="112" height="112">
+    <p id="party-help" class="party-help entrance-party">Host = make room · Join = enter code or open invite link · one pad = one froggy</p>
+    <p id="party-status" class="party-status entrance-party"></p>
     <div class="version-grid">
       <button type="button" class="version-card" data-version="canvas">
-        <img class="version-shot" src="assets/play-2d.jpg?v=20260929-party25d1" alt="2D gameplay: flat green ranch, mechs, and the garage" width="960" height="540">
+        <img class="version-shot" src="assets/play-2d.jpg?v=20260930-onelobby2" alt="2D gameplay: flat green ranch, mechs, and the garage" width="960" height="540">
         <strong>2D</strong>
-        <span>Flat ranch · party. Host a room or play solo.</span>
+        <span>Flat ranch · start with current seats.</span>
       </button>
       <button type="button" class="version-card" data-version="three">
-        <img class="version-shot" src="assets/play-25d.jpg?v=20260929-party25d1" alt="2.5D gameplay: fixed camera over the grid ranch, trees, and pond" width="960" height="540">
+        <img class="version-shot" src="assets/play-25d.jpg?v=20260930-onelobby2" alt="2.5D gameplay: fixed camera over the grid ranch, trees, and pond" width="960" height="540">
         <strong>2.5D</strong>
-        <span>Fixed camera · seats + Host/Join visible.</span>
+        <span>Fixed camera · start with current seats.</span>
       </button>
       <button type="button" class="version-card" data-version="3d">
-        <img class="version-shot" src="assets/play-3d.jpg?v=20260929-party25d1" alt="3D gameplay: Cybertruck at James's garage" width="960" height="540">
+        <img class="version-shot" src="assets/play-3d.jpg?v=20260930-onelobby2" alt="3D gameplay: Cybertruck at James's garage" width="960" height="540">
         <strong>3D</strong>
-        <span>Cybertrucks · full 3D · host QR.</span>
+        <span>Full 3D · hand off seats / room.</span>
       </button>
     </div>
   </div>
@@ -209,27 +232,10 @@
     <h1 id="overlay-title">Four Froggies</h1>
     <p id="overlay-sub">Claim a seat, then GO.</p>
     <button type="button" id="btn-versions" class="versions-back">Versions</button>
-    <div id="frog-pick" class="frog-pick">
+    <div id="frog-pick" class="frog-pick" hidden>
       <p class="pick-label">Claim a froggy seat</p>
-      <p class="pad-hint" id="pad-hint">Each controller = one froggy · stick/D-pad cycle · A claim · B release</p>
-      <div class="frog-btns">
-        <button type="button" class="frog-btn" data-id="james">
-          <span class="frog-name">James</span>
-          <span class="seat-state" data-seat="james">Open</span>
-        </button>
-        <button type="button" class="frog-btn" data-id="jimmy">
-          <span class="frog-name">Jimmy</span>
-          <span class="seat-state" data-seat="jimmy">Open</span>
-        </button>
-        <button type="button" class="frog-btn" data-id="bubbles">
-          <span class="frog-name">Bubbles</span>
-          <span class="seat-state" data-seat="bubbles">Open</span>
-        </button>
-        <button type="button" class="frog-btn" data-id="rexy">
-          <span class="frog-name">Rexy</span>
-          <span class="seat-state" data-seat="rexy">Open</span>
-        </button>
-      </div>
+      <p class="pad-hint" id="pad-hint">Seats live on the entrance lobby</p>
+      <div class="frog-btns" hidden></div>
     </div>
     <div id="engine-pick" class="engine-pick" role="group" aria-label="Physics / look engine" hidden>
       <p class="pick-label">Engine · physics &amp; look compare</p>
@@ -239,189 +245,21 @@
       </div>
       <p id="engine-note" class="engine-note">2D · default · Host/Join (PeerJS) works here</p>
     </div>
-    <p id="invite-cta" class="invite-cta">Party: <strong>Host room</strong> → Copy invite link or scan QR · friends open link to <strong>Join</strong> · claim froggy seats · Host presses GO. Solo: claim a seat and GO (AI fills open seats).</p>
-    <div id="party-bar" class="party-bar">
-      <button type="button" id="btn-host" class="party-btn">Host room</button>
-      <button type="button" id="btn-join" class="party-btn party-btn-join">Join · enter code</button>
-      <input type="text" id="join-code" class="join-code" maxlength="8" placeholder="CODE" autocomplete="off" spellcheck="false" aria-label="Room code">
-      <button type="button" id="btn-copy" class="party-btn" hidden>Copy invite link</button>
-      <span id="room-code" class="room-code" hidden></span>
-    </div>
-    <img id="invite-qr" class="invite-qr" hidden alt="QR code to join this room" width="112" height="112">
-    <p id="party-help" class="party-help">Host = make room · Join = enter code or open invite link · 2D only for peer party</p>
-    <p id="party-status" class="party-status"></p>
     <p id="overlay-text">Big ranch · James house/garage/mechs · Cybertrucks · pond whales · Starship → space (orbit physics).</p>
-    <p class="go" id="overlay-go">One pad → one froggy · stick cycle · A claim · B release · Y / GO starts</p>
-    <button type="button" id="btn-start" class="start-btn">GO · Ranch Hub</button>
+    <p class="go" id="overlay-go">Entrance lobby: claim James / Jimmy / Bubbles / Rexy · Host/Join · pick a mode</p>
+    <button type="button" id="btn-start" class="start-btn" hidden>GO · Ranch Hub</button>
   </div>
 
   <script src="../shared/gamepad.js?v=20260929-storymuzzle1"></script>
   <script src="canon.js?v=20260930-reboard1"></script>
   <script src="air.js?v=20260929-storymuzzle1"></script>
   <script src="ai.js?v=20260928-qa1"></script>
-  <script src="party.js?v=20260929-storymuzzle1"></script>
+  <script src="party.js?v=20260930-onelobby2"></script>
   <script src="world.js?v=20260930-reboard1"></script>
   <script src="story.js?v=20260928-qa1"></script>
   <script src="space.js?v=20260928-qa1"></script>
-  <script src="engine-boot.js?v=20260930-reboard1"></script>
-  <script src="version-lobby.js?v=20260929-party25d1"></script>
-  <script>
-    /* Pad identity on the version lobby. Press any button: that pad lights up. */
-    (function () {
-      var lobby = document.getElementById("version-lobby");
-      var countEl = document.getElementById("pad-count");
-      var hintEl = document.getElementById("pad-dock-hint");
-      var youEl = document.getElementById("pad-you");
-      var tiles = document.querySelectorAll("#pad-row .pad-tile");
-      if (!lobby || !countEl || !tiles.length) return;
-      var LINES = [
-        "No controllers are connected",
-        "One controller is connected",
-        "Two controllers are connected",
-        "Three controllers are connected",
-        "Four controllers are connected"
-      ];
-      var seen = [false, false, false, false];
-      var lastYou = -1;
-      function hot(s) {
-        if (!s || !s.connected) return false;
-        if (s.a || s.b || s.x || s.y || s.lb || s.rb || s.lt || s.rt || s.start || s.back) return true;
-        if (s.dpad && (s.dpad.u || s.dpad.d || s.dpad.l || s.dpad.r)) return true;
-        if (s.lx || s.ly || s.rx || s.ry) return true;
-        return false;
-      }
-      function paint() {
-        if (lobby.hidden) return;
-        var GP = window.SimilarizeGamepad;
-        var connected = {};
-        var snaps = [];
-        var n = 0;
-        if (GP) {
-          var idxs = typeof GP.connectedIndices === "function" ? (GP.connectedIndices(4) || []) : [];
-          n = idxs.length;
-          for (var i = 0; i < idxs.length; i++) connected[idxs[i] | 0] = true;
-          snaps = typeof GP.pollAll === "function" ? GP.pollAll(4) : [];
-        }
-        var line = LINES[n] || (n + " controllers are connected");
-        if (countEl.textContent !== line) countEl.textContent = line;
-        if (hintEl) {
-          var hint = n === 0
-            ? "Plug in a controller, then press any button."
-            : "Press any button. Your pad lights up so you know who you are.";
-          if (hintEl.textContent !== hint) hintEl.textContent = hint;
-        }
-        var hotList = [];
-        for (var p = 0; p < tiles.length; p++) {
-          var on = !!connected[p];
-          var isHot = !!(on && snaps[p] && hot(snaps[p]));
-          if (isHot) {
-            seen[p] = true;
-            lastYou = p;
-            hotList.push(p);
-          }
-          var tile = tiles[p];
-          tile.classList.toggle("is-on", on);
-          tile.classList.toggle("is-hot", isHot);
-          tile.classList.toggle("is-you", !!seen[p]);
-          var em = tile.querySelector("em");
-          var label = !on ? "Not connected" : ((isHot || seen[p]) ? "You" : "Connected");
-          if (em && em.textContent !== label) em.textContent = label;
-        }
-        if (!youEl) return;
-        if (!hotList.length && lastYou < 0) {
-          youEl.hidden = true;
-          return;
-        }
-        youEl.hidden = false;
-        var msg;
-        var padAttr;
-        if (hotList.length > 1) {
-          msg = "You are " + hotList.map(function (p) { return "Pad " + (p + 1); }).join(" and ");
-          padAttr = "";
-          youEl.classList.add("is-multi");
-        } else {
-          var who = hotList.length ? hotList[0] : lastYou;
-          msg = "You are Pad " + (who + 1);
-          padAttr = String(who);
-          youEl.classList.remove("is-multi");
-        }
-        if (youEl.getAttribute("data-pad") !== padAttr) youEl.setAttribute("data-pad", padAttr);
-        if (youEl.textContent !== msg) youEl.textContent = msg;
-      }
-      function loop() {
-        paint();
-        if (!lobby.hidden) requestAnimationFrame(loop);
-      }
-      requestAnimationFrame(loop);
-      var back = document.getElementById("btn-versions");
-      if (back) back.addEventListener("click", function () { requestAnimationFrame(loop); });
-      window.addEventListener("gamepadconnected", function () { requestAnimationFrame(loop); });
-    })();
-  </script>
-  <script>
-    /* Seat lobby chrome: 2D and 2.5D must not look like the same room. */
-    (function () {
-      var SHOT = "20260929-party25d1";
-      function applyLobbyLook(which) {
-        var badge = document.getElementById("lobby-badge");
-        var still = document.getElementById("lobby-still");
-        var title = document.getElementById("overlay-title");
-        var sub = document.getElementById("overlay-sub");
-        var go = document.getElementById("btn-start");
-        var help = document.getElementById("overlay-go");
-        document.body.classList.remove("lobby-2d", "lobby-25d");
-        if (which !== "2d" && which !== "25d") {
-          if (badge) badge.hidden = true;
-          if (still) still.hidden = true;
-          if (title) title.textContent = "Four Froggies";
-          if (go) go.textContent = "GO · Ranch Hub";
-          return;
-        }
-        var twoD = which === "2d";
-        document.body.classList.add(twoD ? "lobby-2d" : "lobby-25d");
-        if (badge) {
-          badge.hidden = false;
-          badge.textContent = twoD ? "2D · FLAT RANCH" : "2.5D · FIXED CAMERA";
-        }
-        if (still) {
-          still.hidden = false;
-          still.src = twoD
-            ? "assets/play-2d.jpg?v=" + SHOT
-            : "assets/play-25d.jpg?v=" + SHOT;
-          still.alt = twoD ? "2D ranch gameplay" : "2.5D ranch gameplay";
-        }
-        if (title) title.textContent = twoD ? "2D Ranch" : "2.5D Ranch";
-        if (sub) {
-          sub.textContent = twoD
-            ? "Flat map. This is the party lobby. Host a room or play solo."
-            : "Fixed camera. Claim seats · Host/Join · GO (same party bar as 2D).";
-        }
-        if (go) go.textContent = twoD ? "GO · 2D Ranch" : "GO · 2.5D Ranch";
-        if (help) {
-          help.textContent = twoD
-            ? "One pad, one froggy. Stick to cycle. A claims. B releases."
-            : "One pad, one froggy. Stick to cycle. A claims. B releases.";
-        }
-      }
-      var lobby = document.getElementById("version-lobby");
-      if (lobby) {
-        lobby.addEventListener("click", function (e) {
-          var btn = e.target.closest("[data-version]");
-          if (!btn) return;
-          var id = btn.getAttribute("data-version");
-          if (id === "canvas") applyLobbyLook("2d");
-          else if (id === "three") applyLobbyLook("25d");
-        });
-      }
-      var back = document.getElementById("btn-versions");
-      if (back) back.addEventListener("click", function () { applyLobbyLook(null); });
-      try {
-        var eng = new URLSearchParams(location.search).get("engine");
-        if (eng === "three") applyLobbyLook("25d");
-        else if (eng === "canvas") applyLobbyLook("2d");
-      } catch (err) { /* keep default */ }
-    })();
-  </script>
-  <script src="main.js?v=20260930-reboard1"></script>
+  <script src="engine-boot.js?v=20260930-onelobby2"></script>
+  <script src="version-lobby.js?v=20260930-onelobby2"></script>
+  <script src="main.js?v=20260930-onelobby2"></script>
 </body>
 </html>

@@ -1,5 +1,6 @@
 /* Four Froggies 3D — PeerJS Host/Join lobby on the title gate.
-   Uses shared FroggiesParty API (party.js). Solo always works if PeerJS fails. */
+   Uses shared FroggiesParty API (party.js). Solo always works if PeerJS fails.
+   onelobby2: honors ?host=CODE&frog=name&go=1 handoff from shared entrance. */
 (function () {
   "use strict";
 
@@ -330,8 +331,33 @@
     });
     if (party.resetSoloLobby) party.resetSoloLobby();
     var room = FroggiesParty.parseRoomFromUrl && FroggiesParty.parseRoomFromUrl();
-    if (room) party.joinRoom(room);
+    var hostCode = null;
+    var frogQ = null;
+    var goQ = false;
+    try {
+      var u = new URL(location.href);
+      hostCode = u.searchParams.get("host");
+      frogQ = u.searchParams.get("frog");
+      goQ = u.searchParams.get("go") === "1";
+    } catch (eQ) {}
+    if (hostCode && party.hostRoom) {
+      party.hostRoom(String(hostCode).toUpperCase());
+    } else if (room) {
+      party.joinRoom(room);
+    }
+    if (frogQ) {
+      localPick = String(frogQ).toLowerCase();
+      if (FROG_ORDER.indexOf(localPick) < 0) localPick = "james";
+      var g0 = game();
+      if (g0 && g0.pick) g0.pick(localPick);
+      if (party && party.claimSeat) party.claimSeat(localPick);
+    }
     paintParty();
+    if (goQ) {
+      setTimeout(function () {
+        if (!started) doStart();
+      }, 200);
+    }
   }
 
   function boot() {

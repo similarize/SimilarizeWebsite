@@ -391,26 +391,50 @@
     startHub(seatMapOrPlayerId);
   }
 
+  function returnToEntrance() {
+    if (spaceEp && Space && Space.isActive(spaceEp)) Space.exit(spaceEp);
+    phase = "title";
+    if (story) story.hide();
+    if (window.FroggiesEngines && FroggiesEngines.stopAltEngines) FroggiesEngines.stopAltEngines();
+    overlay.hidden = true;
+    document.body.classList.add("in-title");
+    document.body.classList.remove("in-hub");
+    document.body.classList.remove("in-space");
+    if (inviteCta) inviteCta.hidden = false;
+    const partyBar = document.getElementById("party-bar");
+    if (partyBar) partyBar.hidden = false;
+    if (inviteQr) { /* paintLobbySeats decides QR */ }
+    if (window.FroggiesVersionLobby && FroggiesVersionLobby.show) FroggiesVersionLobby.show();
+    paintLobbySeats();
+  }
+
   function showOverlay(title, text, go, showPick) {
+    /* onelobby2: prefer the entrance pad lobby over the old overlay pick screen */
+    if (showPick && window.FroggiesVersionLobby && FroggiesVersionLobby.show) {
+      returnToEntrance();
+      return;
+    }
     overlayTitle.textContent = title;
     overlayText.textContent = text;
     overlayGo.textContent = go;
     overlaySub.textContent = "2.5D ranch hub · Up to 4 players · AI fills empty seats";
-    frogPick.hidden = !showPick;
-    if (inviteCta) inviteCta.hidden = !showPick;
+    if (frogPick) frogPick.hidden = true;
+    if (inviteCta) inviteCta.hidden = false;
     const partyBar = document.getElementById("party-bar");
-    if (partyBar) partyBar.hidden = !showPick;
+    if (partyBar) partyBar.hidden = false;
     const splashEl = document.getElementById("splash-art");
-    if (splashEl) splashEl.hidden = !showPick;
-    overlay.hidden = false;
+    if (splashEl) splashEl.hidden = true;
+    overlay.hidden = true;
     document.body.classList.add("in-title");
     document.body.classList.remove("in-hub");
     document.body.classList.remove("in-space");
     if (spaceEp && Space && Space.isActive(spaceEp)) Space.exit(spaceEp);
     const role = party ? party.getRole() : "solo";
-    btnStart.textContent = role === "guest" ? "Waiting for host…" : "GO · Ranch Hub";
-    btnStart.disabled = role === "guest";
-    btnStart.classList.toggle("is-disabled", role === "guest");
+    if (btnStart) {
+      btnStart.textContent = role === "guest" ? "Waiting for host…" : "GO · Ranch Hub";
+      btnStart.disabled = role === "guest";
+      btnStart.classList.toggle("is-disabled", role === "guest");
+    }
     if (showPick) paintLobbySeats();
   }
 
@@ -1965,7 +1989,7 @@ function doInteract(optFrog, opts) {
     const dt = Math.min(0.05, (now - (lastTs || now)) / 1000);
     lastTs = now;
     /* Couch lobby: poll pads 0–3 once per frame (avoid double-poll eating edges) */
-    if (phase === "title" && window.SimilarizeGamepad) {
+    if (phase === "title" && window.SimilarizeGamepad && !document.body.classList.contains("in-entrance")) {
       /* Keep every distinct Gamepad index so identical controller models each get a seat. */
       const snaps = window.SimilarizeGamepad.pollAll
         ? window.SimilarizeGamepad.pollAll(4)
@@ -2363,7 +2387,7 @@ function doInteract(optFrog, opts) {
         if (!player) return;
         if (party && party.getRole() === "guest") pushGuestInput({ ability: true });
         else requestAbility(player);
-      } else if (phase === "title" && (e.key === " " || e.key === "Enter")) tryStartFromUi();
+      } else if (phase === "title" && (e.key === " " || e.key === "Enter") && !document.body.classList.contains("in-entrance")) tryStartFromUi();
     }
     if ((e.key === "e" || e.key === "E" || e.key === "f" || e.key === "F") && (phase === "hub" || phase === "space")) {
       interactKeyHeld = true;
@@ -2716,16 +2740,7 @@ function doInteract(optFrog, opts) {
   if (btnMenu) {
     btnMenu.addEventListener("click", () => {
       if (phase !== "hub" && phase !== "space") return;
-      if (spaceEp && Space && phase === "space") Space.exit(spaceEp);
-      phase = "title";
-      if (story) story.hide();
-      showOverlay(
-        "Four Froggies",
-        "Drive the track · splash the pond · call Purple Bear · SPS + Optimus · Starship → space.",
-        "Claim a seat · Host to invite · or GO solo (AI fills)",
-        true
-      );
-      paintLobbySeats();
+      returnToEntrance();
     });
   }
 
@@ -2742,7 +2757,18 @@ function doInteract(optFrog, opts) {
         partyMeta = meta || partyMeta;
         if (phase === "title") paintLobbySeats();
       },
-      onStart(seatMap) {
+      onStart(seatMap, meta) {
+        const eng = (meta && meta.engine) || (globalThis.FroggiesCanon && FroggiesCanon.getEngine && FroggiesCanon.getEngine()) || "canvas";
+        if (globalThis.FroggiesCanon && FroggiesCanon.setEngine) FroggiesCanon.setEngine(eng === "three" ? "three" : "canvas");
+        if (window.FroggiesVersionLobby && FroggiesVersionLobby.hide) FroggiesVersionLobby.hide();
+        overlay.hidden = true;
+        if (eng === "three") {
+          const Eng = globalThis.FroggiesEngines;
+          if (Eng && typeof Eng.startAlt === "function") {
+            Eng.startAlt("three");
+            return;
+          }
+        }
         startHub(seatMap);
       },
       onInput(frogId, payload) {
@@ -2868,13 +2894,27 @@ function doInteract(optFrog, opts) {
   ensurePartyBroadcast();
   setTimeout(ensurePartyBroadcast, 100);
 
-  showOverlay(
-    "Four Froggies",
-    "Drive the track · splash the pond · call Purple Bear · SPS + Optimus · bring Jimmy home · Starship → space episode. Xbox: stick steer, A interact, B/X ability.",
-    "Pads: A/Start claim next froggy · B release · Y/GO starts · scroll to GO if needed",
-    true
-  );
+  /* onelobby2: entrance (#version-lobby) is the lobby — do not open overlay pick */
+  overlay.hidden = true;
+  document.body.classList.add("in-title");
+  paintLobbySeats();
+  if (window.FroggiesVersionLobby && FroggiesVersionLobby.paint) FroggiesVersionLobby.paint();
   requestAnimationFrame(tick);
+
+  window.FroggiesOneLobby = {
+    startNow(engine) {
+      const C = globalThis.FroggiesCanon;
+      const Eng = globalThis.FroggiesEngines;
+      const mode = engine || (C && C.getEngine && C.getEngine()) || "canvas";
+      if (C && C.setEngine) C.setEngine(mode === "three" ? "three" : "canvas");
+      overlay.hidden = true;
+      if (window.FroggiesVersionLobby && FroggiesVersionLobby.hide) FroggiesVersionLobby.hide();
+      phase = "title";
+      tryStartFromUi();
+    },
+    startHub,
+    returnToEntrance,
+  };
 
   /* mobile1 QA: ?autogo=1 auto-starts solo hub (for headless shots) */
   try {

@@ -244,9 +244,8 @@
     document.body.classList.remove("in-hub");
     document.body.classList.remove("in-space");
     var overlay = $("overlay");
-    if (overlay) overlay.hidden = false;
-    var frogPick = $("frog-pick");
-    if (frogPick) frogPick.hidden = false;
+    if (overlay) overlay.hidden = true;
+    if (global.FroggiesVersionLobby && FroggiesVersionLobby.show) FroggiesVersionLobby.show();
     var inviteCta = $("invite-cta");
     if (inviteCta) inviteCta.hidden = false;
     var partyBar = $("party-bar");

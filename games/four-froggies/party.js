@@ -435,7 +435,7 @@
             if (!map[fid]) continue;
             map[fid].local = !!(map[fid].human && map[fid].peerId === localId);
           }
-          hooks.onStart(map);
+          hooks.onStart(map, { engine: msg.engine || "canvas" });
         }
         return;
       }
@@ -683,7 +683,13 @@
       }
       var map = buildSeatMap();
       if (role === "host") {
-        broadcast({ t: "start", seatMap: map });
+        var eng = "canvas";
+        try {
+          if (global.FroggiesCanon && typeof global.FroggiesCanon.getEngine === "function") {
+            eng = global.FroggiesCanon.getEngine() || "canvas";
+          }
+        } catch (eEng) { /* canvas */ }
+        broadcast({ t: "start", seatMap: map, engine: eng });
       }
       return map;
     }

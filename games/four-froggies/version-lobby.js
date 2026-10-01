@@ -1,7 +1,12 @@
-/* Four Froggies — version lobby. 2D, 2.5D, and full 3D.
-   Pad identity is decided here. Cache: 20260929-party25d1 */
+/* Four Froggies — onelobby2 entrance.
+   One screen: claim James/Jimmy/Bubbles/Rexy + Host/Join + pick 2D/2.5D/3D → play.
+   Skips the old overlay frog-pick / party lobby. Cache: 20260930-onelobby2 */
 (function () {
   "use strict";
+
+  var CACHE = "20260930-onelobby2";
+  var FROG_ORDER = ["james", "jimmy", "bubbles", "rexy"];
+  var FROG_NAME = { james: "James", jimmy: "Jimmy", bubbles: "Bubbles", rexy: "Rexy" };
 
   var lobby = document.getElementById("version-lobby");
   if (!lobby) return;
@@ -14,277 +19,402 @@
     "Four controllers are connected"
   ];
   var countEl = document.getElementById("pad-count");
-  var hintEl = document.getElementById("pad-hint");
+  var hintEl = document.getElementById("pad-dock-hint");
   var youEl = document.getElementById("pad-you");
-  var tiles = lobby.querySelectorAll(".pad-tile");
-  var seen = [false, false, false, false];
-  var lastYou = -1;
+  var tiles = lobby.querySelectorAll(".pad-tile.frog-btn");
+  var padFocus = { 0: null, 1: null, 2: null, 3: null };
+  var padAxisLatch = { 0: { x: 0, y: 0 }, 1: { x: 0, y: 0 }, 2: { x: 0, y: 0 }, 3: { x: 0, y: 0 } };
+  var lastPad = -1;
+  var starting = false;
 
-  function padHot(s) {
-    if (!s || !s.connected) return false;
-    if (s.a || s.b || s.x || s.y || s.lb || s.rb || s.lt || s.rt || s.start || s.back) return true;
-    if (s.dpad && (s.dpad.u || s.dpad.d || s.dpad.l || s.dpad.r)) return true;
-    if (s.lx || s.ly || s.rx || s.ry) return true;
-    return false;
+  function partyApi() {
+    return (window.FroggiesParty && window.FroggiesParty.active) || null;
+  }
+
+  function connectedIdxs() {
+    var GP = window.SimilarizeGamepad;
+    if (!GP) return [];
+    if (typeof GP.uniqueConnectedIndices === "function") return GP.uniqueConnectedIndices(4) || [];
+    if (typeof GP.connectedIndices === "function") return GP.connectedIndices(4) || [];
+    return [];
+  }
+
+  function openFrogs(seats) {
+    var out = [];
+    for (var i = 0; i < FROG_ORDER.length; i++) {
+      var id = FROG_ORDER[i];
+      var s = seats && seats[id];
+      if (!s || s.status === "open" || !s.peerId) out.push(id);
+    }
+    return out;
+  }
+
+  function ensureFocus(pi, seats) {
+    var cur = padFocus[pi];
+    var open = openFrogs(seats);
+    if (cur && open.indexOf(cur) >= 0) return cur;
+    if (cur) {
+      var s = seats && seats[cur];
+      if (s && s.padIndex === pi) return cur;
+    }
+    padFocus[pi] = open.length ? open[0] : FROG_ORDER[pi % 4];
+    return padFocus[pi];
+  }
+
+  function cycleFocus(pi, dir, seats) {
+    var open = openFrogs(seats);
+    if (!open.length) return ensureFocus(pi, seats);
+    var cur = ensureFocus(pi, seats);
+    var idx = open.indexOf(cur);
+    if (idx < 0) idx = 0;
+    idx = (idx + (dir > 0 ? 1 : -1) + open.length) % open.length;
+    padFocus[pi] = open[idx];
+    return padFocus[pi];
+  }
+
+  function axisEdge(pi, snap) {
+    var latch = padAxisLatch[pi] || (padAxisLatch[pi] = { x: 0, y: 0 });
+    var lx = snap && snap.lx ? snap.lx : 0;
+    var ly = snap && snap.ly ? snap.ly : 0;
+    var dx = 0;
+    var dy = 0;
+    if (snap && snap.dpad) {
+      if (snap.dpad.r) dx = 1;
+      else if (snap.dpad.l) dx = -1;
+      if (snap.dpad.d) dy = 1;
+      else if (snap.dpad.u) dy = -1;
+    }
+    if (!dx) {
+      if (lx > 0.55) dx = 1;
+      else if (lx < -0.55) dx = -1;
+    }
+    if (!dy) {
+      if (ly > 0.55) dy = 1;
+      else if (ly < -0.55) dy = -1;
+    }
+    var out = 0;
+    if (dx && dx !== latch.x) out = dx;
+    else if (dy && dy !== latch.y) out = dy;
+    latch.x = dx;
+    latch.y = dy;
+    return out;
   }
 
   function paintPads() {
     if (!countEl || !tiles.length) return;
     var GP = window.SimilarizeGamepad;
+    var P = partyApi();
+    var seats = P && P.getSeats ? P.getSeats() : null;
+    var idxs = connectedIdxs();
     var connected = {};
-    var snaps = [];
-    var n = 0;
-    if (GP) {
-      var idxs = typeof GP.connectedIndices === "function" ? (GP.connectedIndices(4) || []) : [];
-      n = idxs.length;
-      for (var i = 0; i < idxs.length; i++) connected[idxs[i] | 0] = true;
-      snaps = typeof GP.pollAll === "function" ? GP.pollAll(4) : [];
-    }
+    for (var i = 0; i < idxs.length; i++) connected[idxs[i] | 0] = true;
+    var snaps = GP && typeof GP.pollAll === "function" ? GP.pollAll(4) : [];
+    var n = idxs.length;
     var line = COUNT_LINE[n] || (n + " controllers are connected");
     if (countEl.textContent !== line) countEl.textContent = line;
     if (hintEl) {
       var hint = n === 0
-        ? "Plug in a controller, then press any button."
-        : "Press any button. Your pad lights up so you know who you are.";
+        ? "Tap James / Jimmy / Bubbles / Rexy (or plug a pad). Host/Join optional. Then pick 2D / 2.5D / 3D."
+        : "Stick/D-pad cycles open froggies · A claims · B releases · one pad = one froggy";
       if (hintEl.textContent !== hint) hintEl.textContent = hint;
     }
-    var hotList = [];
-    for (var p = 0; p < tiles.length; p++) {
-      var on = !!connected[p];
-      var hot = !!(on && snaps[p] && padHot(snaps[p]));
-      if (hot) {
-        seen[p] = true;
-        lastYou = p;
-        hotList.push(p);
+
+    /* Pad input while entrance is up */
+    if (!lobby.hidden && P && snaps && snaps.length) {
+      for (var pi = 0; pi < 4; pi++) {
+        if (!connected[pi]) {
+          padFocus[pi] = null;
+          continue;
+        }
+        var snap = snaps[pi];
+        if (!snap || !snap.connected) continue;
+        ensureFocus(pi, seats);
+        var dir = axisEdge(pi, snap);
+        if (dir) {
+          lastPad = pi;
+          cycleFocus(pi, dir, seats);
+          seats = P.getSeats ? P.getSeats() : seats;
+        }
+        var bp = snap.buttonsPressed || {};
+        if (bp.a || bp.start) {
+          lastPad = pi;
+          var focus = ensureFocus(pi, seats);
+          if (P.claimPadOntoFrog) P.claimPadOntoFrog(pi, focus);
+          seats = P.getSeats ? P.getSeats() : seats;
+        } else if (bp.b) {
+          lastPad = pi;
+          if (P.releaseLocalPad) P.releaseLocalPad(pi);
+          ensureFocus(pi, seats);
+          seats = P.getSeats ? P.getSeats() : seats;
+        }
+        if (bp.y) {
+          lastPad = pi;
+          /* Y = start default 2D from entrance when allowed */
+          tryStartMode("canvas");
+        }
       }
-      var tile = tiles[p];
-      tile.classList.toggle("is-on", on);
-      tile.classList.toggle("is-hot", hot);
-      tile.classList.toggle("is-you", !!seen[p]);
-      var em = tile.querySelector("em");
-      var label = !on ? "Not connected" : (hot ? "You" : (seen[p] ? "You" : "Connected"));
-      if (em && em.textContent !== label) em.textContent = label;
     }
-    if (!youEl) return;
-    if (!hotList.length && lastYou < 0) {
-      youEl.hidden = true;
+
+    seats = P && P.getSeats ? P.getSeats() : seats;
+    var focusByFrog = {};
+    for (var pj = 0; pj < 4; pj++) {
+      if (!connected[pj]) continue;
+      var fid = padFocus[pj];
+      if (!fid) continue;
+      if (!focusByFrog[fid]) focusByFrog[fid] = [];
+      focusByFrog[fid].push(pj + 1);
+    }
+
+    var youFrog = null;
+    for (var t = 0; t < tiles.length; t++) {
+      var tile = tiles[t];
+      var id = tile.getAttribute("data-id");
+      var seat = seats && seats[id] ? seats[id] : { status: "open" };
+      var status = seat.status || "open";
+      tile.classList.remove("is-on", "is-hot", "is-you", "seat-you", "seat-human", "seat-open", "pad-focus", "seat-pad");
+      tile.removeAttribute("data-pad");
+      tile.removeAttribute("data-focus-pad");
+      var em = tile.querySelector(".seat-state, em");
+      var fname = FROG_NAME[id] || id;
+
+      if (status === "you") {
+        tile.classList.add("is-on", "is-you", "seat-you");
+        var pIdx = seat.padIndex != null ? (seat.padIndex | 0) : null;
+        if (pIdx != null) {
+          tile.classList.add("seat-pad", "is-hot");
+          tile.setAttribute("data-pad", String(pIdx + 1));
+          if (em) em.textContent = "Pad " + (pIdx + 1) + " · " + fname;
+          if (!youFrog) youFrog = { frog: fname, pad: pIdx };
+        } else {
+          if (em) em.textContent = seat.label || "You · " + fname;
+          if (!youFrog) youFrog = { frog: fname, pad: -1 };
+        }
+      } else if (status === "human") {
+        tile.classList.add("is-on", "seat-human");
+        if (em) em.textContent = seat.label || "Joined";
+      } else {
+        tile.classList.add("seat-open");
+        var focusPads = focusByFrog[id] || [];
+        if (focusPads.length) {
+          tile.classList.add("pad-focus", "is-on");
+          tile.setAttribute("data-focus-pad", String(focusPads[0]));
+          if (em) {
+            em.textContent = focusPads.length === 1
+              ? "Pad " + focusPads[0] + " · pick " + fname
+              : "Pads " + focusPads.join(",") + " · pick";
+          }
+        } else if (em) {
+          em.textContent = "Open · AI";
+        }
+      }
+    }
+
+    if (youEl) {
+      if (!youFrog) {
+        youEl.hidden = true;
+      } else {
+        youEl.hidden = false;
+        youEl.classList.remove("is-multi");
+        var msg = youFrog.pad >= 0
+          ? ("You are " + youFrog.frog + " · Pad " + (youFrog.pad + 1))
+          : ("You are " + youFrog.frog);
+        if (youEl.textContent !== msg) youEl.textContent = msg;
+        if (youFrog.pad >= 0) youEl.setAttribute("data-pad", String(youFrog.pad));
+        else youEl.removeAttribute("data-pad");
+      }
+    }
+  }
+
+  function claimedFrogId() {
+    var P = partyApi();
+    if (P && P.getLocalFrogId) {
+      var id = P.getLocalFrogId();
+      if (id) return id;
+    }
+    var seats = P && P.getSeats ? P.getSeats() : null;
+    if (seats) {
+      for (var i = 0; i < FROG_ORDER.length; i++) {
+        var fid = FROG_ORDER[i];
+        if (seats[fid] && seats[fid].status === "you") return fid;
+      }
+    }
+    return "james";
+  }
+
+  function hideEntrance() {
+    lobby.hidden = true;
+    document.body.classList.remove("in-entrance");
+  }
+
+  function showEntrance() {
+    lobby.hidden = false;
+    document.body.classList.add("in-entrance");
+    document.body.classList.add("in-title");
+    document.body.classList.remove("in-hub");
+    document.body.classList.remove("in-space");
+    var overlay = document.getElementById("overlay");
+    if (overlay) overlay.hidden = true;
+    starting = false;
+    requestAnimationFrame(frame);
+  }
+
+  function tryStartMode(engine) {
+    if (starting || lobby.hidden) return;
+    var P = partyApi();
+    var role = P && P.getRole ? P.getRole() : "solo";
+    if (role === "guest") {
+      var st = document.getElementById("party-status");
+      if (st) {
+        st.classList.remove("is-error");
+        st.textContent = "Joined · wait for Host to pick 2D / 2.5D / 3D";
+      }
       return;
     }
-    youEl.hidden = false;
-    var msg;
-    var padAttr;
-    if (hotList.length > 1) {
-      msg = "You are " + hotList.map(function (p) { return "Pad " + (p + 1); }).join(" and ");
-      padAttr = "";
-      youEl.classList.add("is-multi");
-    } else {
-      var who = hotList.length ? hotList[0] : lastYou;
-      msg = "You are Pad " + (who + 1);
-      padAttr = String(who);
-      youEl.classList.remove("is-multi");
+
+    if (engine === "3d") {
+      starting = true;
+      var frog = claimedFrogId();
+      var room = P && P.getRoom ? P.getRoom() : null;
+      var q = "?v=" + CACHE + "&frog=" + encodeURIComponent(frog) + "&go=1";
+      if (role === "host" && room) q += "&host=" + encodeURIComponent(room);
+      else if (room) q += "&room=" + encodeURIComponent(room);
+      location.href = "/games/four-froggies-3d/" + q;
+      return;
     }
-    if (youEl.getAttribute("data-pad") !== padAttr) youEl.setAttribute("data-pad", padAttr);
-    if (youEl.textContent !== msg) youEl.textContent = msg;
-  }
 
-  function drawPane(canvas, kind, t) {
-    var ctx = canvas.getContext("2d");
-    var dpr = Math.min(2, window.devicePixelRatio || 1);
-    var w = canvas.clientWidth || 240;
-    var h = canvas.clientHeight || 140;
-    var pw = Math.max(1, Math.floor(w * dpr));
-    var ph = Math.max(1, Math.floor(h * dpr));
-    if (canvas.width !== pw || canvas.height !== ph) {
-      canvas.width = pw;
-      canvas.height = ph;
+    starting = true;
+    hideEntrance();
+    if (window.FroggiesCanon && FroggiesCanon.setEngine) FroggiesCanon.setEngine(engine);
+    if (window.FroggiesEngines && FroggiesEngines.paintPicker) FroggiesEngines.paintPicker();
+
+    var overlay = document.getElementById("overlay");
+    if (overlay) overlay.hidden = true;
+
+    /* Prefer the shared one-lobby start hook from main.js */
+    if (window.FroggiesOneLobby && typeof window.FroggiesOneLobby.startNow === "function") {
+      window.FroggiesOneLobby.startNow(engine);
+      return;
     }
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    if (kind === "canvas") drawCanvas(ctx, w, h, t);
-    else if (kind === "three") drawThree(ctx, w, h, t);
-    else draw3d(ctx, w, h, t);
-  }
 
-  function drawCanvas(ctx, w, h, t) {
-    ctx.fillStyle = "#8ecae6";
-    ctx.fillRect(0, 0, w, h);
-    ctx.fillStyle = "#4ade80";
-    ctx.fillRect(0, h * 0.55, w, h * 0.45);
-    ctx.fillStyle = "#166534";
-    ctx.fillRect(0, h * 0.62, w, h * 0.08);
-    ctx.fillStyle = "#a16207";
-    ctx.beginPath();
-    ctx.moveTo(0, h * 0.78);
-    ctx.lineTo(w, h * 0.7);
-    ctx.lineTo(w, h);
-    ctx.lineTo(0, h);
-    ctx.fill();
-    ctx.fillStyle = "#f8fafc";
-    ctx.font = "700 11px Segoe UI, sans-serif";
-    ctx.fillText("2D", 8, 16);
-    ctx.fillRect(w * 0.18, h * 0.42, w * 0.22, h * 0.16);
-    ctx.fillStyle = "#b91c1c";
-    ctx.beginPath();
-    ctx.moveTo(w * 0.16, h * 0.42);
-    ctx.lineTo(w * 0.29, h * 0.3);
-    ctx.lineTo(w * 0.42, h * 0.42);
-    ctx.fill();
-    truck(ctx, w * 0.58, h * 0.66, w * 0.28, h * 0.16, "#14532d", t);
-    frogs(ctx, w * 0.62, h * 0.58, 4, t);
-  }
-
-  function drawThree(ctx, w, h, t) {
-    var bands = ["#0e7490", "#155e75", "#166534", "#15803d", "#65a30d"];
-    for (var i = 0; i < bands.length; i++) {
-      ctx.fillStyle = bands[i];
-      var y = h * (0.18 + i * 0.12) + Math.sin(t * 0.6 + i) * 2;
-      ctx.fillRect(0, y, w, h);
+    /* Fallback */
+    if (engine === "three" && window.FroggiesEngines && FroggiesEngines.startAlt) {
+      FroggiesEngines.startAlt("three");
+      return;
     }
-    ctx.fillStyle = "#fef3c7";
-    ctx.fillRect(w * 0.08, h * 0.34, w * 0.2, h * 0.22);
-    ctx.fillStyle = "#92400e";
-    ctx.beginPath();
-    ctx.moveTo(w * 0.06, h * 0.34);
-    ctx.lineTo(w * 0.18, h * 0.2);
-    ctx.lineTo(w * 0.3, h * 0.34);
-    ctx.fill();
-    ctx.fillStyle = "#1e293b";
-    ctx.fillRect(w * 0.22, h * 0.62, w * 0.7, h * 0.06);
-    truck(ctx, w * 0.46 + Math.sin(t) * 6, h * 0.5, w * 0.34, h * 0.18, "#334155", t);
-    frogs(ctx, w * 0.5, h * 0.42, 4, t);
-    ctx.fillStyle = "rgba(255,255,255,.55)";
-    ctx.font = "700 11px Segoe UI, sans-serif";
-    ctx.fillText("2.5D", 8, 16);
-  }
-
-  function draw3d(ctx, w, h, t) {
-    var sky = ctx.createLinearGradient(0, 0, 0, h);
-    sky.addColorStop(0, "#042f2e");
-    sky.addColorStop(0.5, "#115e59");
-    sky.addColorStop(1, "#14532d");
-    ctx.fillStyle = sky;
-    ctx.fillRect(0, 0, w, h);
-    ctx.fillStyle = "#064e3b";
-    for (var i = 0; i < 5; i++) {
-      var x = (i / 5) * w + 8;
-      ctx.beginPath();
-      ctx.moveTo(x, h * 0.72);
-      ctx.lineTo(x + 10, h * 0.38 + (i % 2) * 8);
-      ctx.lineTo(x + 20, h * 0.72);
-      ctx.fill();
-    }
-    ctx.fillStyle = "#0f172a";
-    ctx.beginPath();
-    ctx.moveTo(w * 0.08, h * 0.86);
-    ctx.lineTo(w * 0.92, h * 0.86);
-    ctx.lineTo(w * 0.78, h * 0.62);
-    ctx.lineTo(w * 0.22, h * 0.62);
-    ctx.fill();
-    ctx.fillStyle = "#cbd5e1";
-    ctx.beginPath();
-    ctx.moveTo(w * 0.28, h * 0.6);
-    ctx.lineTo(w * 0.72, h * 0.6);
-    ctx.lineTo(w * 0.66, h * 0.42);
-    ctx.lineTo(w * 0.34, h * 0.42);
-    ctx.fill();
-    ctx.fillStyle = "#0f172a";
-    ctx.fillRect(w * 0.4, h * 0.46, w * 0.2, h * 0.08);
-    frogs(ctx, w * 0.38, h * 0.36 + Math.sin(t * 2) * 1.5, 4, t * 1.4);
-    ctx.fillStyle = "#5eead4";
-    ctx.font = "700 11px Segoe UI, sans-serif";
-    ctx.fillText("3D", 8, 16);
-  }
-
-  function truck(ctx, x, y, bw, bh, color) {
-    ctx.fillStyle = color;
-    ctx.fillRect(x, y, bw, bh * 0.7);
-    ctx.fillStyle = "#e2e8f0";
-    ctx.fillRect(x + bw * 0.15, y + bh * 0.12, bw * 0.7, bh * 0.28);
-    ctx.fillStyle = "#111";
-    ctx.beginPath();
-    ctx.arc(x + bw * 0.22, y + bh * 0.72, bh * 0.28, 0, Math.PI * 2);
-    ctx.arc(x + bw * 0.78, y + bh * 0.72, bh * 0.28, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  function frogs(ctx, x, y, n, t) {
-    var colors = ["#4ade80", "#fb923c", "#60a5fa", "#c084fc"];
-    for (var i = 0; i < n; i++) {
-      ctx.fillStyle = colors[i];
-      ctx.beginPath();
-      ctx.arc(x + i * 14, y + Math.sin(t * 3 + i) * 2, 5, 0, Math.PI * 2);
-      ctx.fill();
+    if (P && P.startParty) {
+      var map = P.startParty();
+      if (window.FroggiesOneLobby && FroggiesOneLobby.startHub) {
+        FroggiesOneLobby.startHub(map);
+      }
     }
   }
 
-  function paint(t) {
-    var shots = lobby.querySelectorAll("canvas[data-shot]");
-    for (var i = 0; i < shots.length; i++) {
-      drawPane(shots[i], shots[i].getAttribute("data-shot"), t || 0);
-    }
-  }
-
-  var started = performance.now();
-  function frame(now) {
+  function frame() {
     if (lobby.hidden) return;
-    paint((now - started) / 1000);
     paintPads();
     requestAnimationFrame(frame);
   }
 
-  function showLobby() {
-    lobby.hidden = false;
-    requestAnimationFrame(frame);
-  }
-
-  function enterRanch(engine) {
-    if (window.FroggiesEngines && FroggiesEngines.stopAltEngines) FroggiesEngines.stopAltEngines();
-    if (window.FroggiesCanon && FroggiesCanon.setEngine) FroggiesCanon.setEngine(engine);
-    if (window.FroggiesEngines && FroggiesEngines.paintPicker) FroggiesEngines.paintPicker();
-    lobby.hidden = true;
-    var sub = document.getElementById("overlay-sub");
-    if (sub) {
-      sub.textContent = engine === "three"
-        ? "2.5D · fixed angle · claim a seat · GO"
-        : "2D · ranch · party · claim a seat · GO";
-    }
-  }
-
   lobby.addEventListener("click", function (e) {
-    var btn = e.target.closest("[data-version]");
-    if (!btn) return;
-    var id = btn.getAttribute("data-version");
-    if (id === "3d") {
-      location.href = "/games/four-froggies-3d/?v=20260929-onelobby3";
+    var frogBtn = e.target.closest(".frog-btn[data-id]");
+    if (frogBtn && lobby.contains(frogBtn)) {
+      var id = frogBtn.getAttribute("data-id");
+      var P = partyApi();
+      if (P) {
+        if (lastPad >= 0 && P.claimPadOntoFrog) {
+          var moved = P.claimPadOntoFrog(lastPad, id);
+          if (moved) {
+            padFocus[lastPad] = moved;
+            paintPads();
+            return;
+          }
+        }
+        if (P.claimPadOntoFrog && P.connectedPadIndices) {
+          var live = P.connectedPadIndices() || [];
+          var padToMove = null;
+          for (var i = 0; i < live.length; i++) {
+            var pi = live[i] | 0;
+            var seats = P.getSeats() || {};
+            var claimed = FROG_ORDER.some(function (fid) {
+              var s = seats[fid];
+              return s && s.peerId === ("local-pad-" + pi);
+            });
+            if (!claimed) { padToMove = pi; break; }
+          }
+          if (padToMove == null && live.length) padToMove = live[0] | 0;
+          if (padToMove != null && P.claimPadOntoFrog(padToMove, id)) {
+            lastPad = padToMove;
+            padFocus[padToMove] = id;
+            paintPads();
+            return;
+          }
+        }
+        if (P.claimSeat) P.claimSeat(id);
+      }
+      paintPads();
       return;
     }
-    enterRanch(id === "three" ? "three" : "canvas");
+
+    var btn = e.target.closest("[data-version]");
+    if (!btn || !lobby.contains(btn)) return;
+    var ver = btn.getAttribute("data-version");
+    if (ver === "3d") tryStartMode("3d");
+    else if (ver === "three") tryStartMode("three");
+    else tryStartMode("canvas");
   });
 
   var back = document.getElementById("btn-versions");
   if (back) {
     back.addEventListener("click", function () {
       if (window.FroggiesEngines && FroggiesEngines.stopAltEngines) FroggiesEngines.stopAltEngines();
-      var overlay = document.getElementById("overlay");
-      if (overlay) overlay.hidden = false;
-      document.body.classList.add("in-title");
-      document.body.classList.remove("in-hub");
-      document.body.classList.remove("in-space");
-      showLobby();
+      showEntrance();
     });
   }
 
   var skip = false;
+  var autoEngine = null;
   try {
     var q = new URLSearchParams(location.search);
     if (q.get("engine") === "3d") {
-      location.replace("/games/four-froggies-3d/?v=20260929-onelobby3");
+      location.replace("/games/four-froggies-3d/?v=" + CACHE + "&go=1");
       return;
     }
-    if (q.get("engine") || q.get("go") === "1") skip = true;
+    if (q.get("engine") === "three" || q.get("engine") === "canvas") {
+      autoEngine = q.get("engine");
+      skip = true;
+    }
+    if (q.get("go") === "1" || q.get("autogo") === "1") {
+      skip = true;
+      if (!autoEngine) autoEngine = "canvas";
+    }
   } catch (err) { /* keep lobby */ }
 
-  if (skip) lobby.hidden = true;
-  else showLobby();
-  paint(0);
-  window.addEventListener("resize", function () { paint(0); });
+  document.body.classList.add("in-entrance");
+  if (skip) {
+    lobby.hidden = true;
+    document.body.classList.remove("in-entrance");
+    var overlaySkip = document.getElementById("overlay");
+    if (overlaySkip) overlaySkip.hidden = true;
+    if (autoEngine) {
+      setTimeout(function () {
+        if (window.FroggiesOneLobby && FroggiesOneLobby.startNow) {
+          FroggiesOneLobby.startNow(autoEngine);
+        } else {
+          tryStartMode(autoEngine);
+        }
+      }, 320);
+    }
+  } else {
+    var overlay = document.getElementById("overlay");
+    if (overlay) overlay.hidden = true;
+    showEntrance();
+  }
+
+  window.FroggiesVersionLobby = {
+    show: showEntrance,
+    hide: hideEntrance,
+    startMode: tryStartMode,
+    paint: paintPads,
+    cache: CACHE,
+  };
 })();

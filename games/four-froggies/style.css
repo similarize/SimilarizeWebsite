@@ -1643,3 +1643,27 @@ body.in-space .vjoy.vjoy-hint {
 .pad-tile[data-pad="3"].is-hot{background:#c084fc;border-color:#f3e8ff;color:#1e1b4b}
 @keyframes pad-pulse{50%{transform:scale(1.06)}}
 @media (max-width:640px){#pad-row{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+
+/* onelobby2 — entrance is the only party/cast lobby */
+body.in-entrance #overlay{display:none!important}
+#version-lobby .entrance-party{width:min(920px,100%)}
+#version-lobby #party-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center}
+#version-lobby #invite-cta{margin:0;color:#bbf7d0;font-size:13px;line-height:1.35;text-align:center}
+#version-lobby #party-help{margin:0;color:#86efac;font-size:12px;text-align:center}
+#version-lobby #party-status{margin:0;min-height:1.2em;color:#e2e8f0;font-size:13px;font-weight:700;text-align:center}
+#version-lobby #party-status.is-error{color:#fecaca}
+#version-lobby .invite-qr{margin:0 auto}
+#version-lobby .pad-tile.frog-btn{cursor:pointer;touch-action:manipulation;font:inherit;text-align:left;width:100%}
+#version-lobby .pad-tile.frog-btn .frog-name{display:block;font-size:clamp(16px,2.4vw,22px);color:#e2e8f0;font-weight:800}
+#version-lobby .pad-tile.frog-btn .seat-state{display:block;font-style:normal;font-size:12px;font-weight:700;margin-top:4px}
+#version-lobby .pad-tile.seat-you{border-width:3px}
+#version-lobby .pad-tile.seat-you[data-id="james"],#version-lobby .pad-tile.frog-btn.seat-you[data-id="james"]{border-color:#4ade80;background:rgba(74,222,128,.18)}
+#version-lobby .pad-tile.seat-you[data-id="jimmy"]{border-color:#fb923c;background:rgba(251,146,60,.18)}
+#version-lobby .pad-tile.seat-you[data-id="bubbles"]{border-color:#60a5fa;background:rgba(96,165,250,.18)}
+#version-lobby .pad-tile.seat-you[data-id="rexy"]{border-color:#c084fc;background:rgba(192,132,252,.18)}
+#version-lobby .pad-tile.pad-focus{outline:2px dashed rgba(255,255,255,.55);outline-offset:2px}
+#version-lobby .pad-tile.seat-human{border-color:#fbbf24;background:rgba(251,191,36,.12)}
+#version-lobby .version-card{position:relative}
+#version-lobby .version-card strong{font-size:18px}
+body.in-entrance #hud,body.in-entrance #controls,body.in-entrance #vjoy{visibility:hidden;pointer-events:none}
