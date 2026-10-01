@@ -242,6 +242,33 @@
     return null;
   }
 
+
+  /* kidfix1: after EXIT any ride, restore full frog hop + walk speed (no leftover vehicle feel) */
+  function resetFootAfterExit(target) {
+    var t = target || state;
+    if (!t) return;
+    t.zLift = t.groundLift || 0;
+    t.zVel = 0;
+    t.hopLandT = 0;
+    t.hopGroundT = 0;
+    t.hopCombo = 0;
+    t.hopStretch = 0;
+    t.hopSquash = 0;
+    t.hopWantT = 0;
+    t.speedBoost = 1;
+    t.dashTrail = 0;
+    t.vx = 0; t.vz = 0;
+    t._ltDumpWasDown = false;
+  }
+  function resetCompanionFoot(c) {
+    if (!c || !c.userData) return;
+    var u = c.userData;
+    u.zLift = 0; u.zVel = 0;
+    u.hopLandT = 0; u.hopGroundT = 0; u.hopCombo = 0;
+    u.hopWantT = 0; u.vx = 0; u.vz = 0;
+    u.speedBoost = 1; u.dashTrail = 0;
+  }
+
   function exitCompanionMech(c) {
     if (!c || !c.userData.inMech) return;
     if (vehicleLatched(c.userData)) return; /* drivefix2: same press must not hop out */
@@ -3699,6 +3726,7 @@ state.zLift = 0;
         }
         state.inHeli = false; state.inDrone = false; state.airKind = null; state.airSeat = null;
         state.zLift = 0; state.zVel = 0; state.groundLift = 0;
+        resetFootAfterExit(state);
         state.player.visible = true;
         if (state.driveAir) state.driveAir.visible = true;
         /* Park craft at exit */
@@ -3723,6 +3751,7 @@ state.zLift = 0;
         state.inMech = false; state.mechId = null; state.mechStories = 0;
         state.mechPilotPadIndex = null;
         state.zLift = 0; state.zVel = 0; state.groundLift = 0;
+        resetFootAfterExit(state);
         state.toast = "Mech parked · walking"; state.toastT = 1.8; state.exitTipT = 0;
         interactOrigin = null; interactPadIndex = null;
         if (hooks.onToast) hooks.onToast(state.toast);
@@ -3734,6 +3763,7 @@ state.zLift = 0;
         if (C.setVehiclePark) C.setVehiclePark(parkSid, parkSw.x, parkSw.y);
         state.inSub = false; state.subId = null; state.vehicleStyle = null;
         state.zLift = 0; state.zVel = 0; state.groundLift = 0;
+        resetFootAfterExit(state);
         if (C.inPond && C.inPond(parkSw.x, parkSw.y)) {
           state.inSwim = true;
           state.waterSub = Math.max(state.waterSub || 0, 0.4);
@@ -3774,6 +3804,7 @@ state.zLift = 0;
         state._rtMorphParkSid = null;
         state._rtMorphScoopGrace = 0;
         state.zLift = 0; state.zVel = 0; state.groundLift = 0;
+        resetFootAfterExit(state);
         state.toast = wasSemi ? "SEMI parked · cargo stays" : (wasDog ? "Robot dog parked · walking" : "Parked · walking");
         state.toastT = 1.8; state.exitTipT = 0;
         interactOrigin = null; interactPadIndex = null;
@@ -5878,11 +5909,15 @@ state.zLift = 0;
     /* mech5: per-vehicle / per-mech drive (Ripsaw fastest auto) */
     var vStat3 = ((state.inTruck || state.inSub) && C.vehicleDriveStats) ? C.vehicleDriveStats({ vehicleStyle: state.inSub ? "submarine" : state.vehicleStyle, wheelScale: C.getWheelScale ? C.getWheelScale() : 1 }) : null;
     var mStat3 = (state.inMech && C.mechDriveStats) ? C.mechDriveStats(state.mechStories || 10) : null;
-    var maxSp = state.mode === "space" ? 11.5 : state.inSub ? 9.2 : state.inTruck ? 15.8 : state.inMech ? 6.8 : state.inSwim ? 8.5 : 13.6;
+    /* kidfix1: on-foot always full hop speed */
+    var maxSp = state.mode === "space" ? 11.5 : state.inSub ? 9.2 : state.inTruck ? 15.8 : state.inMech ? 6.8 : state.inSwim ? 8.5 : 14.2;
     var accel = state.mode === "space" ? 22 : state.inSub ? 22 : state.inTruck ? 38 : state.inMech ? 16 : state.inSwim ? 22 : 34;
     var fric = state.mode === "space" ? 3.0 : state.inSub ? 5.5 : state.inTruck ? 4.8 : state.inMech ? 5.2 : state.inSwim ? 6.2 : 7.8;
     if (vStat3) { maxSp *= vStat3.maxSp || 1; accel *= vStat3.accel || 1; fric *= vStat3.fric || 1; }
     if (mStat3) { maxSp *= mStat3.maxSp || 1; accel *= mStat3.accel || 1; fric *= mStat3.fric || 1; }
+    /* kidfix1: phone brake/boost parity */
+    if (state.phoneBrake) { fric *= 3.2; maxSp *= 0.4; }
+    if (state.phoneBoost && (state.inTruck || state.inMech || state.inHeli || state.inDrone)) { maxSp *= 1.4; accel *= 1.5; }
     /* spear1: freeze while knocked; stick-flick mash */
     var knockedPilot = !!(state.inMech && C.isPilotKnocked && C.isPilotKnocked({ inMech: true, mechId: state.mechId, mechStories: state.mechStories }));
     if (knockedPilot) {
@@ -7006,6 +7041,26 @@ state.zLift = 0;
             c.userData.vx = (c.userData.vx / lsp) * lmax;
             c.userData.vz = (c.userData.vz / lsp) * lmax;
           }
+
+          /* kidfix1: same continuous hop as primary — no slide */
+          if (!c.userData.inMech && !c.userData.inTruck && !c.userData.inSub && C.tickLocoHop) {
+            var cWant = Math.hypot(lsx || 0, lsy || 0) > 0.08;
+            c.userData.groundLift = ranchGroundY(threeToWorld(c.position.x, c.position.z).x, threeToWorld(c.position.x, c.position.z).y);
+            var launchedC = C.tickLocoHop(c.userData, dt, {
+              moving: cWant,
+              zKey: "zLift", zvKey: "zVel", gndKey: "groundLift",
+              up: 7.0, lift: 0.30, groundHold: 0.011, groundEps: 0.08,
+            });
+            if (launchedC && cWant) {
+              var llenH = Math.hypot(lsx, lsy) || 1;
+              var lbasisH = cameraGroundBasis();
+              var hmx = lbasisH.rx * (lsx / llenH) + lbasisH.fx * (-lsy / llenH);
+              var hmz = lbasisH.rz * (lsx / llenH) + lbasisH.fz * (-lsy / llenH);
+              var hopSpC = Math.min(lmax * 0.98, 16.8);
+              c.userData.vx = hmx * hopSpC;
+              c.userData.vz = hmz * hopSpC;
+            }
+          }
           c.position.x += (c.userData.vx || 0) * dt;
           c.position.z += (c.userData.vz || 0) * dt;
           if ((c.userData.inTruck && c.userData.truckId) || (c.userData.inMech && c.userData.mechId) || (c.userData.inSub && c.userData.subId)) {
@@ -7076,11 +7131,36 @@ state.zLift = 0;
             c.userData.tz = state.player.position.z + (Math.random() - 0.5) * (3 + lag * 2);
             c.userData.timer = 0.9 + lag + Math.random() * (1.3 + lag);
           }
-          var fk = Math.min(1, (1.05 / (0.7 + lag)) * dt);
+          /* kidfix1: AI hop-follow — same hop feel, no slide/lerp */
           var cdx = c.userData.tx - c.position.x;
           var cdz = c.userData.tz - c.position.z;
-          c.position.x += cdx * fk;
-          c.position.z += cdz * fk;
+          var cd = Math.hypot(cdx, cdz) || 1;
+          if (cd > 0.35) {
+            var aimx = cdx / cd, aimz = cdz / cd;
+            c.userData.faceYaw = Math.atan2(aimx, aimz);
+            c.userData.groundLift = ranchGroundY(threeToWorld(c.position.x, c.position.z).x, threeToWorld(c.position.x, c.position.z).y);
+            if (C.tickLocoHop) {
+              var launchedAi = C.tickLocoHop(c.userData, dt, {
+                moving: true, zKey: "zLift", zvKey: "zVel", gndKey: "groundLift",
+                up: 7.0, lift: 0.30, groundHold: 0.011, groundEps: 0.08,
+              });
+              if (launchedAi) {
+                var hopSpAi = 14.5;
+                c.userData.vx = aimx * hopSpAi;
+                c.userData.vz = aimz * hopSpAi;
+              }
+            } else {
+              c.userData.vx = (c.userData.vx || 0) + aimx * 28 * dt;
+              c.userData.vz = (c.userData.vz || 0) + aimz * 28 * dt;
+            }
+            c.userData.vx = (c.userData.vx || 0) * Math.max(0, 1 - 7.5 * dt);
+            c.userData.vz = (c.userData.vz || 0) * Math.max(0, 1 - 7.5 * dt);
+            c.position.x += (c.userData.vx || 0) * dt;
+            c.position.z += (c.userData.vz || 0) * dt;
+          } else {
+            c.userData.vx = 0; c.userData.vz = 0;
+          }
+
           if (Math.hypot(cdx, cdz) > 0.05) c.userData.faceYaw = Math.atan2(cdx, cdz);
           }
         } else {
@@ -7519,6 +7599,9 @@ state.zLift = 0;
     setInteractHeld: setInteractHeld,
     pulseAbility: pulseAbility,
     pulseSpear: pulseSpear,
+    pulseDump: function () { return tryDumpSemiCargoThree(); },
+    setBrake: function (on) { if (state) state.phoneBrake = !!on; },
+    setBoost: function (on) { if (state) { state.phoneBoost = !!on; state.airBoost = !!on; } },
     setAirControls: function (opts) {
       if (!state) return;
       opts = opts || {};

@@ -9,7 +9,7 @@
   <!-- Tesla Cybertruck chromeless FS — see games/shared/TESLA_FULLSCREEN.md -->
   <script src="../shared/tesla-fullscreen.js?v=tfs1"></script>
   <script src="../shared/viewport-fill.js?v=vfs1"></script>
-  <link rel="stylesheet" href="style.css?v=20260930-onefrog1">
+  <link rel="stylesheet" href="style.css?v=20261001-kidfix1">
   <style>
     #pad-dock{width:min(920px,100%);display:flex;flex-direction:column;gap:8px}
     #pad-count{margin:0;font-weight:800;font-size:clamp(18px,3.2vw,28px);letter-spacing:.01em;color:#fff}
@@ -112,17 +112,17 @@
     <p id="party-status" class="party-status entrance-party"></p>
     <div class="version-grid">
       <button type="button" class="version-card" data-version="canvas">
-        <img class="version-shot" src="assets/play-2d.jpg?v=20260930-onefrog1" alt="2D gameplay: flat green ranch, mechs, and the garage" width="960" height="540">
+        <img class="version-shot" src="assets/play-2d.jpg?v=20261001-kidfix1" alt="2D gameplay: flat green ranch, mechs, and the garage" width="960" height="540">
         <strong>2D</strong>
         <span>Flat ranch · start with current seats.</span>
       </button>
       <button type="button" class="version-card" data-version="three">
-        <img class="version-shot" src="assets/play-25d.jpg?v=20260930-onefrog1" alt="2.5D gameplay: fixed camera over the grid ranch, trees, and pond" width="960" height="540">
+        <img class="version-shot" src="assets/play-25d.jpg?v=20261001-kidfix1" alt="2.5D gameplay: fixed camera over the grid ranch, trees, and pond" width="960" height="540">
         <strong>2.5D</strong>
         <span>Fixed camera · start with current seats.</span>
       </button>
       <button type="button" class="version-card" data-version="3d">
-        <img class="version-shot" src="assets/play-3d.jpg?v=20260930-onefrog1" alt="3D gameplay: Cybertruck at James's garage" width="960" height="540">
+        <img class="version-shot" src="assets/play-3d.jpg?v=20261001-kidfix1" alt="3D gameplay: Cybertruck at James's garage" width="960" height="540">
         <strong>3D</strong>
         <span>Full 3D · hand off seats / room.</span>
       </button>
@@ -158,6 +158,16 @@
     <button type="button" id="btn-interact" aria-label="Interact">INTERACT</button>
     <button type="button" id="btn-ability" aria-label="Ability">HOP</button>
     <button type="button" id="btn-escape" class="escape-btn" aria-label="Escape orbit" hidden>ESCAPE</button>
+    <!-- kidfix1: phone parity for mech/vehicle actions (same as gamepad/keyboard) -->
+    <div id="mech-phone" class="mech-phone" aria-label="Mech actions">
+      <button type="button" id="btn-morph" aria-label="Morph">MORPH</button>
+      <button type="button" id="btn-dump" aria-label="Dump">DUMP</button>
+      <button type="button" id="btn-spear" aria-label="Spear">SPEAR</button>
+      <button type="button" id="btn-boost" aria-label="Boost">BOOST</button>
+      <button type="button" id="btn-brake" aria-label="Brake">BRAKE</button>
+      <button type="button" id="btn-climb" aria-label="Climb">CLIMB</button>
+      <button type="button" id="btn-dive" aria-label="Dive">DIVE</button>
+    </div>
   </div>
 
   <!-- track3: monster-truck wheel size (visible while driving) -->
@@ -228,7 +238,7 @@
     <a id="exit-arcade" class="exit-arcade" href="/games/">← Arcade</a>
     <p id="lobby-badge" hidden>2D</p>
     <img id="lobby-still" class="lobby-still" alt="" hidden width="960" height="540">
-    <img id="splash-art" class="splash-art" src="assets/splash-forest-roof.png?v=20260928-view3" alt="Four froggies on a Cybertruck roof" width="832" height="1248" decoding="async">
+    <img id="splash-art" class="splash-art" src="assets/splash-forest-roof.png?v=20261001-kidfix1" alt="Four froggies on a Cybertruck roof" width="832" height="1248" decoding="async">
     <h1 id="overlay-title">Four Froggies</h1>
     <p id="overlay-sub">Claim a seat, then GO.</p>
     <button type="button" id="btn-versions" class="versions-back">Versions</button>
@@ -250,16 +260,16 @@
     <button type="button" id="btn-start" class="start-btn" hidden>GO · Ranch Hub</button>
   </div>
 
-  <script src="../shared/gamepad.js?v=20260930-onefrog1"></script>
-  <script src="canon.js?v=20260930-reboard1"></script>
-  <script src="air.js?v=20260929-storymuzzle1"></script>
-  <script src="ai.js?v=20260928-qa1"></script>
-  <script src="party.js?v=20260930-onefrog1"></script>
-  <script src="world.js?v=20260930-reboard1"></script>
-  <script src="story.js?v=20260928-qa1"></script>
-  <script src="space.js?v=20260928-qa1"></script>
-  <script src="engine-boot.js?v=20260930-onefrog1"></script>
-  <script src="version-lobby.js?v=20260930-onefrog1"></script>
-  <script src="main.js?v=20260930-onefrog1"></script>
+  <script src="../shared/gamepad.js?v=20261001-kidfix1"></script>
+  <script src="canon.js?v=20261001-kidfix1"></script>
+  <script src="air.js?v=20261001-kidfix1"></script>
+  <script src="ai.js?v=20261001-kidfix1"></script>
+  <script src="party.js?v=20261001-kidfix1"></script>
+  <script src="world.js?v=20261001-kidfix1"></script>
+  <script src="story.js?v=20261001-kidfix1"></script>
+  <script src="space.js?v=20261001-kidfix1"></script>
+  <script src="engine-boot.js?v=20261001-kidfix1"></script>
+  <script src="version-lobby.js?v=20261001-kidfix1"></script>
+  <script src="main.js?v=20261001-kidfix1"></script>
 </body>
 </html>

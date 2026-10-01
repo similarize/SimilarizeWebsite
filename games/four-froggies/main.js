@@ -99,6 +99,72 @@
   let wheelHoldDir = 0; /* track3: hold [ ] or −/= to grow/shrink wheels */
   const wheelSizeEl = document.getElementById("wheel-size");
   const wheelSlider = document.getElementById("wheel-slider");
+
+  /* kidfix1 phone canvas: MORPH/DUMP/SPEAR/BOOST/BRAKE/CLIMB/DIVE */
+  (function bindKidfixPhoneCanvas() {
+    function frog() {
+      try {
+        return (typeof frogs !== "undefined" && frogs && selectedId != null)
+          ? frogs.find(function (f) { return f.id === selectedId; }) || frogs[0]
+          : null;
+      } catch (e) { return null; }
+    }
+    function on(id, fn) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener("click", function (e) {
+        if (e && e.preventDefault) e.preventDefault();
+        if (document.body.classList.contains("in-title")) return;
+        if (window.FroggiesThree && window.FroggiesThree.isActive && window.FroggiesThree.isActive()) return; /* Three owns */
+        fn(e);
+      });
+    }
+    function hold(id, down, up) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      var onP = function (e) {
+        e.preventDefault();
+        if (document.body.classList.contains("in-title")) return;
+        if (window.FroggiesThree && window.FroggiesThree.isActive && window.FroggiesThree.isActive()) return;
+        el.classList.add("held");
+        down();
+        try { el.setPointerCapture(e.pointerId); } catch (err) {}
+      };
+      var offP = function (e) {
+        e.preventDefault();
+        el.classList.remove("held");
+        up();
+      };
+      el.addEventListener("pointerdown", onP);
+      el.addEventListener("pointerup", offP);
+      el.addEventListener("pointercancel", offP);
+      el.addEventListener("pointerleave", offP);
+    }
+    on("btn-morph", function () {
+      var f = frog(); if (!f || !world) return;
+      var W = window.FroggiesWorld, C = window.FroggiesCanon;
+      if (C && C.isTrillionMechPilot && C.isTrillionMechPilot(f) && W && W.tryRtTrillionToSemi) {
+        var r = W.tryRtTrillionToSemi(world, f); if (r && r.toast) storyToast = r.toast;
+      } else if (C && C.isThousandMechPilot && C.isThousandMechPilot(f) && W && W.tryRtThousandToDog) {
+        var r2 = W.tryRtThousandToDog(world, f); if (r2 && r2.toast) storyToast = r2.toast;
+      }
+    });
+    on("btn-dump", function () {
+      var f = frog(); if (!f || !world) return;
+      var W = window.FroggiesWorld;
+      if (W && W.tryDumpSemiCargo) { var d = W.tryDumpSemiCargo(world, f); if (d && d.toast) storyToast = d.toast; }
+    });
+    on("btn-spear", function () {
+      var f = frog(); if (!f) return;
+      if (typeof trySpear === "function") trySpear(f);
+      else if (typeof pulseAbility === "function") { /* fallthrough */ }
+    });
+    hold("btn-boost", function () { window.__ffPhoneBoost = true; }, function () { window.__ffPhoneBoost = false; });
+    hold("btn-brake", function () { window.__ffPhoneBrake = true; }, function () { window.__ffPhoneBrake = false; });
+    hold("btn-climb", function () { window.__ffPhoneClimb = 1; }, function () { window.__ffPhoneClimb = 0; });
+    hold("btn-dive", function () { window.__ffPhoneClimb = -1; }, function () { window.__ffPhoneClimb = 0; });
+  })();
+
   const wheelValEl = document.getElementById("wheel-size-val");
   const btnWheelDown = document.getElementById("btn-wheel-down");
   const btnWheelUp = document.getElementById("btn-wheel-up");

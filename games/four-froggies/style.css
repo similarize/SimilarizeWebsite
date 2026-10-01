@@ -1667,3 +1667,19 @@ body.in-entrance #overlay{display:none!important}
 #version-lobby .version-card{position:relative}
 #version-lobby .version-card strong{font-size:18px}
 body.in-entrance #hud,body.in-entrance #controls,body.in-entrance #vjoy{visibility:hidden;pointer-events:none}
+
+
+/* kidfix1: phone mech/vehicle actions */
+.mech-phone {
+  display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end;
+  max-width: 220px; pointer-events: auto;
+}
+.mech-phone button {
+  min-width: 56px; min-height: 44px; padding: 6px 8px;
+  border-radius: 12px; border: 2px solid rgba(255,255,255,.45);
+  background: rgba(0,0,0,.55); color: #fff; font: 700 11px Outfit, system-ui, sans-serif;
+  touch-action: none; user-select: none;
+}
+.mech-phone button:active, .mech-phone button.held {
+  background: rgba(74, 222, 128, .35); border-color: #86efac;
+}

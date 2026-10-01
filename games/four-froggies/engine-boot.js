@@ -5,7 +5,7 @@
   "use strict";
 
   var C = global.FroggiesCanon;
-  var CACHE = "20260930-onefrog1";
+  var CACHE = "20261001-kidfix1";
   var CDN = {
     three: "https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js",
   };
@@ -712,6 +712,56 @@
         }
       });
     }
+
+
+    /* kidfix1: phone buttons = same actions as keyboard/gamepad (do not flip A/D) */
+    function bindMechPhone() {
+      function pulse(fn) {
+        return function (e) {
+          if (e && e.preventDefault) e.preventDefault();
+          if (!engineRunning) return;
+          var a = altApi();
+          if (!a) return;
+          fn(a);
+        };
+      }
+      function holdBtn(id, down, up) {
+        var btn = $(id);
+        if (!btn) return;
+        var on = function (e) {
+          e.preventDefault();
+          if (!engineRunning) return;
+          btn.classList.add("held");
+          var a = altApi();
+          if (a) down(a);
+          try { btn.setPointerCapture(e.pointerId); } catch (err) {}
+        };
+        var off = function (e) {
+          e.preventDefault();
+          btn.classList.remove("held");
+          var a = altApi();
+          if (a) up(a);
+        };
+        btn.addEventListener("pointerdown", on);
+        btn.addEventListener("pointerup", off);
+        btn.addEventListener("pointercancel", off);
+        btn.addEventListener("pointerleave", off);
+      }
+      var bm = $("btn-morph");
+      if (bm) bm.addEventListener("click", pulse(function (a) { if (a.pulseRtMorph) a.pulseRtMorph(); }));
+      var bd = $("btn-dump");
+      if (bd) bd.addEventListener("click", pulse(function (a) { if (a.pulseDump) a.pulseDump(); }));
+      var bs = $("btn-spear");
+      if (bs) bs.addEventListener("click", pulse(function (a) { if (a.pulseSpear) a.pulseSpear(); else a.pulseAbility(); }));
+      holdBtn("btn-boost", function (a) { if (a.setBoost) a.setBoost(true); if (a.setAirControls) a.setAirControls({ boost: true }); },
+        function (a) { if (a.setBoost) a.setBoost(false); if (a.setAirControls) a.setAirControls({ boost: false }); });
+      holdBtn("btn-brake", function (a) { if (a.setBrake) a.setBrake(true); }, function (a) { if (a.setBrake) a.setBrake(false); });
+      holdBtn("btn-climb", function (a) { if (a.setAirControls) a.setAirControls({ climb: 1 }); },
+        function (a) { if (a.setAirControls) a.setAirControls({ climb: 0 }); });
+      holdBtn("btn-dive", function (a) { if (a.setAirControls) a.setAirControls({ climb: -1 }); },
+        function (a) { if (a.setAirControls) a.setAirControls({ climb: 0 }); });
+    }
+    bindMechPhone();
 
     var btnEscAlt = $("btn-escape");
     if (btnEscAlt) {

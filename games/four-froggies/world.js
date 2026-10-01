@@ -2139,6 +2139,9 @@
     }
     if (mStat) mechMax *= mStat.maxSp || 1;
     var maxSp = (ent.inMech ? mechMax : ent.inSub ? subMax : ent.inTruck ? truckMax : walkMax) * (ent.speedBoost || 1);
+    /* kidfix1 phone boost/brake */
+    if (global.__ffPhoneBoost && (ent.inTruck || ent.inMech)) { maxSp *= 1.4; }
+    if (global.__ffPhoneBrake) { maxSp *= 0.4; }
     if (ent.inTruck && ent.dashTrail > 0) maxSp *= 1.28;
     if (typeof speed === "number") maxSp = speed * (ent.speedBoost || 1);
     var mx = ent.steerX;
@@ -2470,6 +2473,11 @@
       frog.z = 0;
       frog.zVel = 0;
       frog.groundZ = 0;
+      /* kidfix1: exit foot reset — full hop/speed for all froggies */
+      frog.hopLandT = 0; frog.hopGroundT = 0; frog.hopCombo = 0;
+      frog.hopStretch = 0; frog.hopSquash = 0;
+      frog.speedBoost = 1; frog.dashTrail = 0;
+      frog.vx = 0; frog.vy = 0;
       frog._rtMorphParkSid = null;
       frog._rtMorphScoopGrace = 0;
       if (world.sharedDriverId === frog.id) {
@@ -2537,7 +2545,9 @@
       /* park1: leave mech at EXIT pos — no snap back to yard pad */
       var parkMid = frog.mechId || (hotspot && hotspot.id) || "mech";
       var mpx = frog.x, mpy = frog.y;
-      frog.inMech = false;
+      /* kidfix1: mech exit foot reset */
+    frog.hopLandT = 0; frog.hopGroundT = 0; frog.hopCombo = 0; frog.speedBoost = 1; frog.dashTrail = 0; frog.vx = 0; frog.vy = 0;
+    frog.inMech = false;
       frog.mechId = null;
       frog.mechStories = 0;
       frog.z = 0;
@@ -2709,9 +2719,9 @@
       if (d < 32) { f.steerX = 0; f.steerY = 0; }
       else {
         /* soft follow — damp steer by lag so they trail */
-        var soft = 0.55 + (1 - Math.min(1, lag)) * 0.35;
-        f.steerX = (dx / d) * soft;
-        f.steerY = (dy / d) * soft;
+        /* kidfix1: companions hop full strength — no slide/lerp soft-follow */
+        f.steerX = dx / d;
+        f.steerY = dy / d;
       }
       moveEntity(f, dt, undefined, world);
       var spd = Math.hypot(f.vx || 0, f.vy || 0);
