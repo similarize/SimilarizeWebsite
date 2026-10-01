@@ -187,30 +187,100 @@
           seats[id].padIndex = null;
         }
       }
-      /* Defense: one padIndex / one local-pad-N peer → exactly one frog */
-      if (pIdx != null) {
-        for (var j = 0; j < FROG_ORDER.length; j++) {
-          var oid = FROG_ORDER[j];
-          if (oid === frogId) continue;
-          var os = seats[oid];
-          if (!os || !os.peerId) continue;
-          var opi = os.padIndex != null ? os.padIndex : padIndexFromPeer(os.peerId);
-          if (opi === pIdx || os.peerId === peerId) {
-            seats[oid] = { status: "open", peerId: null, label: null, padIndex: null };
-          }
-        }
-      }
+      enforceSeatInvariant(frogId);
       return { ok: true };
     }
 
+    /**
+     * Hard invariant: one peerId ↔ one frog; one padIndex ↔ one frog;
+     * keyboard localId never stacks beside local-pad-* seats.
+     * preferredFrogId (optional) wins when duplicates must be dropped.
+     */
+    function enforceSeatInvariant(preferredFrogId) {
+      var seenPeer = Object.create(null);
+      var seenPad = Object.create(null);
+      var hasPadSeat = false;
+      var i, id, s, peer, pi;
+      /* Prefer keeping preferredFrogId / earlier frogs; drop later dupes */
+      var order = FROG_ORDER.slice();
+      if (preferredFrogId && order.indexOf(preferredFrogId) >= 0) {
+        order.splice(order.indexOf(preferredFrogId), 1);
+        order.unshift(preferredFrogId);
+      }
+      for (i = 0; i < order.length; i++) {
+        id = order[i];
+        s = seats[id];
+        if (!s || !s.peerId) {
+          seats[id] = { status: "open", peerId: null, label: null, padIndex: null };
+          continue;
+        }
+        peer = String(s.peerId);
+        pi = s.padIndex != null ? (s.padIndex | 0) : padIndexFromPeer(peer);
+        if (peer.indexOf("local-pad-") === 0) hasPadSeat = true;
+        if (seenPeer[peer]) {
+          seats[id] = { status: "open", peerId: null, label: null, padIndex: null };
+          continue;
+        }
+        if (pi != null && seenPad[pi] != null) {
+          seats[id] = { status: "open", peerId: null, label: null, padIndex: null };
+          continue;
+        }
+        seenPeer[peer] = id;
+        if (pi != null) seenPad[pi] = id;
+        s.padIndex = pi;
+      }
+      /* Drop keyboard-only locals when any pad seat exists */
+      if (hasPadSeat) {
+        for (i = 0; i < FROG_ORDER.length; i++) {
+          id = FROG_ORDER[i];
+          s = seats[id];
+          if (!s || !s.peerId) continue;
+          if (String(s.peerId).indexOf("local-pad-") === 0) continue;
+          if (isLocalPeerId(s.peerId) || s.peerId === localId || s.peerId === "local") {
+            seats[id] = { status: "open", peerId: null, label: null, padIndex: null };
+          }
+        }
+      }
+      /* Re-normalize status/labels after scrub */
+      for (i = 0; i < FROG_ORDER.length; i++) {
+        id = FROG_ORDER[i];
+        s = seats[id];
+        if (!s || !s.peerId) {
+          seats[id] = { status: "open", peerId: null, label: null, padIndex: null };
+          continue;
+        }
+        if (isLocalPeerId(s.peerId)) {
+          s.status = "you";
+          pi = s.padIndex != null ? s.padIndex : padIndexFromPeer(s.peerId);
+          s.padIndex = pi;
+          s.label = pi != null ? ("Pad " + (pi + 1)) : (s.peerId === localId ? "You" : (s.label || "You"));
+        } else {
+          s.status = "human";
+          s.padIndex = null;
+          s.label = s.label || "Joined";
+        }
+      }
+    }
+
     function buildSeatMap() {
+      enforceSeatInvariant();
       var map = {};
+      var usedPads = Object.create(null);
       for (var i = 0; i < FROG_ORDER.length; i++) {
         var id = FROG_ORDER[i];
         var s = seats[id];
         var isHuman = !!(s.peerId && (s.status === "you" || s.status === "human"));
         var local = isHuman && isLocalPeerId(s.peerId);
         var pIdx = s.padIndex != null ? s.padIndex : padIndexFromPeer(s.peerId);
+        if (local && pIdx != null) {
+          if (usedPads[pIdx] != null) {
+            isHuman = false;
+            local = false;
+            pIdx = null;
+          } else {
+            usedPads[pIdx] = id;
+          }
+        }
         map[id] = {
           human: isHuman,
           local: local,
@@ -309,6 +379,7 @@
       var peerId = "local-pad-" + (padIndex | 0);
       if (!seatClaimedBy(peerId)) return false;
       clearPeerSeat(peerId);
+      enforceSeatInvariant();
       if (role === "host") broadcast(lobbyPayload());
       emitLobby(role === "solo" ? "idle" : "ready");
       return true;
@@ -681,6 +752,7 @@
           }
         }
       }
+      enforceSeatInvariant();
       var map = buildSeatMap();
       if (role === "host") {
         var eng = "canvas";
@@ -726,7 +798,15 @@
     }
 
     function getLocalFrogId() {
-      return seatClaimedBy(localId);
+      enforceSeatInvariant();
+      var byKeyboard = seatClaimedBy(localId);
+      if (byKeyboard) return byKeyboard;
+      for (var i = 0; i < FROG_ORDER.length; i++) {
+        var id = FROG_ORDER[i];
+        var s = seats[id];
+        if (s && s.status === "you" && s.peerId) return id;
+      }
+      return null;
     }
 
     function resetSoloLobby() {
@@ -764,6 +844,7 @@
       claimPadOntoFrog: claimPadOntoFrog,
       releaseLocalPad: releaseLocalPad,
       connectedPadIndices: connectedPadIndices,
+      enforceSeatInvariant: enforceSeatInvariant,
       startParty: startParty,
       canStart: canStart,
       sendInput: sendInput,

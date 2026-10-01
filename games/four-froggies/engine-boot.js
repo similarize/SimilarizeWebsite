@@ -5,7 +5,7 @@
   "use strict";
 
   var C = global.FroggiesCanon;
-  var CACHE = "20260930-reboard1";
+  var CACHE = "20260930-onefrog1";
   var CDN = {
     three: "https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js",
   };
@@ -188,9 +188,47 @@
     return "james";
   }
 
+  function scrubSeatMapPads(seatMap) {
+    if (!seatMap) return seatMap;
+    var order = (C && C.FROG_ORDER) || ["james", "jimmy", "bubbles", "rexy"];
+    var seenPad = Object.create(null);
+    var seenPeer = Object.create(null);
+    var hasPad = false;
+    var i, id, s, pi, peer;
+    for (i = 0; i < order.length; i++) {
+      id = order[i];
+      s = seatMap[id];
+      if (!s) continue;
+      if (s.local && s.padIndex != null && s.padIndex !== undefined) hasPad = true;
+    }
+    for (i = 0; i < order.length; i++) {
+      id = order[i];
+      s = seatMap[id];
+      if (!s || !s.human) continue;
+      peer = s.peerId ? String(s.peerId) : null;
+      pi = (s.padIndex != null && s.padIndex !== undefined) ? (s.padIndex | 0) : null;
+      if (peer && seenPeer[peer]) {
+        seatMap[id] = { human: false, local: false, peerId: null, padIndex: null };
+        continue;
+      }
+      if (pi != null && seenPad[pi] != null) {
+        seatMap[id] = { human: false, local: false, peerId: null, padIndex: null };
+        continue;
+      }
+      if (hasPad && s.local && pi == null && !(peer && peer.indexOf("local-pad-") === 0)) {
+        seatMap[id] = { human: false, local: false, peerId: null, padIndex: null };
+        continue;
+      }
+      if (peer) seenPeer[peer] = id;
+      if (pi != null) seenPad[pi] = id;
+    }
+    return seatMap;
+  }
+
   function ingestSeatMapPads(seatMap, primaryFrogId) {
     claimedPadSet = {};
     primaryPadIndex = null;
+    seatMap = scrubSeatMapPads(seatMap);
     lastSeatMap = seatMap || null;
     if (!seatMap) return;
     var order = (C && C.FROG_ORDER) || ["james", "jimmy", "bubbles", "rexy"];
@@ -199,6 +237,11 @@
       var s = seatMap[id];
       if (!s || !s.local || s.padIndex == null || s.padIndex === undefined) continue;
       var pi = s.padIndex | 0;
+      if (claimedPadSet[pi]) {
+        /* already bound — demote duplicate frog in map */
+        seatMap[id] = { human: false, local: false, peerId: null, padIndex: null };
+        continue;
+      }
       claimedPadSet[pi] = id;
       if (primaryPadIndex == null && (id === primaryFrogId || (s.human && s.local))) {
         if (id === primaryFrogId) primaryPadIndex = pi;
@@ -214,6 +257,9 @@
     var map = null;
     try {
       var P = global.FroggiesParty;
+      if (P && P.active && typeof P.active.enforceSeatInvariant === "function") {
+        P.active.enforceSeatInvariant(preferredFrogId || null);
+      }
       /* Prefer startParty so couch pads + default seat are finalized (no peer start for three guests) */
       if (P && P.active && typeof P.active.startParty === "function" && P.active.canStart && P.active.canStart()) {
         map = P.active.startParty();
@@ -230,7 +276,7 @@
         map[id] = { human: id === fid, local: id === fid, peerId: null, padIndex: id === fid ? null : undefined };
       }
     }
-    return map;
+    return scrubSeatMapPads(map);
   }
 
   function hardFailAlt(mode, err) {

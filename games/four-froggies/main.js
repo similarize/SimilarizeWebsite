@@ -320,12 +320,56 @@
   }
 
   function normalizeSeatMap(seatMapOrPlayerId) {
-    if (seatMapOrPlayerId && typeof seatMapOrPlayerId === "object") return seatMapOrPlayerId;
+    if (seatMapOrPlayerId && typeof seatMapOrPlayerId === "object") return scrubSeatMapForPlay(seatMapOrPlayerId);
     const pid = seatMapOrPlayerId || selectedId || "james";
     selectedId = pid;
     const map = {};
     for (const id of FROG_ORDER) {
-      map[id] = { human: id === pid, local: id === pid, peerId: null };
+      map[id] = { human: id === pid, local: id === pid, peerId: null, padIndex: null };
+    }
+    return map;
+  }
+
+  /** one padIndex / one peerId → one frog; drop keyboard You beside pad locals */
+  function scrubSeatMapForPlay(raw) {
+    const map = {};
+    const seenPad = Object.create(null);
+    const seenPeer = Object.create(null);
+    let hasPadLocal = false;
+    for (const id of FROG_ORDER) {
+      const s = (raw && raw[id]) || { human: false, local: false };
+      map[id] = {
+        human: !!s.human,
+        local: !!s.local,
+        peerId: s.peerId || null,
+        padIndex: (s.padIndex != null && s.padIndex !== undefined) ? (s.padIndex | 0) : null,
+      };
+      if (map[id].local && map[id].padIndex != null) hasPadLocal = true;
+    }
+    for (const id of FROG_ORDER) {
+      const s = map[id];
+      if (!s.human) continue;
+      const peer = s.peerId ? String(s.peerId) : null;
+      const pi = s.padIndex;
+      if (peer && seenPeer[peer]) {
+        map[id] = { human: false, local: false, peerId: null, padIndex: null };
+        continue;
+      }
+      if (pi != null && seenPad[pi] != null) {
+        map[id] = { human: false, local: false, peerId: null, padIndex: null };
+        continue;
+      }
+      if (peer) seenPeer[peer] = id;
+      if (pi != null) seenPad[pi] = id;
+    }
+    if (hasPadLocal) {
+      for (const id of FROG_ORDER) {
+        const s = map[id];
+        if (!s.local) continue;
+        if (s.padIndex != null) continue;
+        if (s.peerId && String(s.peerId).indexOf("local-pad-") === 0) continue;
+        map[id] = { human: false, local: false, peerId: null, padIndex: null };
+      }
     }
     return map;
   }
@@ -336,6 +380,7 @@
       console.error("FroggiesWorld missing");
       return;
     }
+    if (party && party.enforceSeatInvariant) party.enforceSeatInvariant();
     const seatMap = normalizeSeatMap(seatMapOrPlayerId || pendingSeatMap);
     pendingSeatMap = seatMap;
     const localId = FROG_ORDER.find((id) => seatMap[id] && seatMap[id].human && seatMap[id].local);
@@ -343,11 +388,23 @@
 
     world = W.createWorld();
     W.seedDecor(world);
+    const usedPads = Object.create(null);
     frogs = FROG_ORDER.map((id, i) => {
       const seat = seatMap[id] || { human: false, local: false };
-      const ent = W.makeFrogEntity(id, !!seat.human, !!seat.local, i);
-      if (seat.padIndex != null && seat.padIndex !== undefined) ent.padIndex = seat.padIndex;
-      else ent.padIndex = null;
+      let human = !!seat.human;
+      let local = !!seat.local;
+      let padIndex = (seat.padIndex != null && seat.padIndex !== undefined) ? (seat.padIndex | 0) : null;
+      if (local && padIndex != null) {
+        if (usedPads[padIndex] != null) {
+          human = false;
+          local = false;
+          padIndex = null;
+        } else {
+          usedPads[padIndex] = id;
+        }
+      }
+      const ent = W.makeFrogEntity(id, human, local, i);
+      ent.padIndex = padIndex;
       return ent;
     });
 
@@ -2583,6 +2640,7 @@ function doInteract(optFrog, opts) {
       return;
     }
     if (party) {
+      if (party.enforceSeatInvariant) party.enforceSeatInvariant();
       const map = party.startParty();
       if (map) {
         startHub(map);
@@ -2594,6 +2652,8 @@ function doInteract(optFrog, opts) {
 
   document.querySelectorAll(".frog-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
+      /* onefrog1 / onelobby2: entrance tiles are owned by version-lobby.js — do not double-claim */
+      if (btn.closest("#version-lobby")) return;
       unlockAudio();
       const id = btn.dataset.id;
       const seat = lobbySeats[id];
@@ -2626,6 +2686,7 @@ function doInteract(optFrog, opts) {
             lastLobbyPadIndex = padToMove;
             lobbyPadFocus[padToMove] = moved;
             selectedId = moved;
+            if (party.enforceSeatInvariant) party.enforceSeatInvariant(moved);
             paintLobbySeats();
             return;
           }
@@ -2637,8 +2698,10 @@ function doInteract(optFrog, opts) {
         }
       }
       selectedId = id;
-      if (party) party.claimSeat(id);
-      else {
+      if (party) {
+        party.claimSeat(id);
+        if (party.enforceSeatInvariant) party.enforceSeatInvariant(id);
+      } else {
         lobbySeats = typeof FroggiesParty !== "undefined" ? FroggiesParty.emptySeats() : lobbySeats;
         for (const fid of FROG_ORDER) lobbySeats[fid] = { status: "open", peerId: null, label: null };
         lobbySeats[id] = { status: "you", peerId: "local", label: "You" };

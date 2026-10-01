@@ -1,10 +1,10 @@
-/* Four Froggies — onelobby2 entrance.
+/* Four Froggies — onefrog1 entrance.
    One screen: claim James/Jimmy/Bubbles/Rexy + Host/Join + pick 2D/2.5D/3D → play.
-   Skips the old overlay frog-pick / party lobby. Cache: 20260930-onelobby2 */
+   Skips the old overlay frog-pick / party lobby. Cache: 20260930-onefrog1 */
 (function () {
   "use strict";
 
-  var CACHE = "20260930-onelobby2";
+  var CACHE = "20260930-onefrog1";
   var FROG_ORDER = ["james", "jimmy", "bubbles", "rexy"];
   var FROG_NAME = { james: "James", jimmy: "Jimmy", bubbles: "Bubbles", rexy: "Rexy" };
 
@@ -140,10 +140,12 @@
           lastPad = pi;
           var focus = ensureFocus(pi, seats);
           if (P.claimPadOntoFrog) P.claimPadOntoFrog(pi, focus);
+          if (P.enforceSeatInvariant) P.enforceSeatInvariant(focus);
           seats = P.getSeats ? P.getSeats() : seats;
         } else if (bp.b) {
           lastPad = pi;
           if (P.releaseLocalPad) P.releaseLocalPad(pi);
+          if (P.enforceSeatInvariant) P.enforceSeatInvariant();
           ensureFocus(pi, seats);
           seats = P.getSeats ? P.getSeats() : seats;
         }
@@ -227,16 +229,26 @@
 
   function claimedFrogId() {
     var P = partyApi();
+    if (P && P.enforceSeatInvariant) P.enforceSeatInvariant();
     if (P && P.getLocalFrogId) {
       var id = P.getLocalFrogId();
       if (id) return id;
     }
     var seats = P && P.getSeats ? P.getSeats() : null;
     if (seats) {
+      var padYou = null;
+      var anyYou = null;
       for (var i = 0; i < FROG_ORDER.length; i++) {
         var fid = FROG_ORDER[i];
-        if (seats[fid] && seats[fid].status === "you") return fid;
+        var s = seats[fid];
+        if (!s || s.status !== "you") continue;
+        if (!anyYou) anyYou = fid;
+        if (s.padIndex != null || (s.peerId && String(s.peerId).indexOf("local-pad-") === 0)) {
+          if (!padYou) padYou = fid;
+        }
       }
+      if (padYou) return padYou;
+      if (anyYou) return anyYou;
     }
     return "james";
   }
@@ -321,35 +333,38 @@
       var id = frogBtn.getAttribute("data-id");
       var P = partyApi();
       if (P) {
-        if (lastPad >= 0 && P.claimPadOntoFrog) {
-          var moved = P.claimPadOntoFrog(lastPad, id);
-          if (moved) {
-            padFocus[lastPad] = moved;
-            paintPads();
-            return;
-          }
-        }
-        if (P.claimPadOntoFrog && P.connectedPadIndices) {
-          var live = P.connectedPadIndices() || [];
+        if (P.enforceSeatInvariant) P.enforceSeatInvariant();
+        var live = (P.connectedPadIndices && P.connectedPadIndices()) || [];
+        var seatsNow = (P.getSeats && P.getSeats()) || {};
+        /* Prefer last-active unique pad; else first unbound; else first live — never a second frog for same pad */
+        if (P.claimPadOntoFrog && live.length) {
           var padToMove = null;
-          for (var i = 0; i < live.length; i++) {
-            var pi = live[i] | 0;
-            var seats = P.getSeats() || {};
-            var claimed = FROG_ORDER.some(function (fid) {
-              var s = seats[fid];
-              return s && s.peerId === ("local-pad-" + pi);
-            });
-            if (!claimed) { padToMove = pi; break; }
+          if (lastPad >= 0 && live.indexOf(lastPad) >= 0) padToMove = lastPad;
+          if (padToMove == null) {
+            for (var i = 0; i < live.length; i++) {
+              var pi = live[i] | 0;
+              var claimed = FROG_ORDER.some(function (fid) {
+                var s = seatsNow[fid];
+                return s && s.peerId === ("local-pad-" + pi);
+              });
+              if (!claimed) { padToMove = pi; break; }
+            }
           }
-          if (padToMove == null && live.length) padToMove = live[0] | 0;
-          if (padToMove != null && P.claimPadOntoFrog(padToMove, id)) {
+          if (padToMove == null) padToMove = live[0] | 0;
+          var moved = P.claimPadOntoFrog(padToMove, id);
+          if (moved) {
             lastPad = padToMove;
-            padFocus[padToMove] = id;
+            padFocus[padToMove] = moved;
+            if (P.enforceSeatInvariant) P.enforceSeatInvariant(moved);
             paintPads();
             return;
           }
+          /* Seat taken or claim failed — do NOT claimSeat (would stack keyboard You) */
+          paintPads();
+          return;
         }
         if (P.claimSeat) P.claimSeat(id);
+        if (P.enforceSeatInvariant) P.enforceSeatInvariant(id);
       }
       paintPads();
       return;
