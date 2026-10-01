@@ -1,3 +1,9 @@
+# What's new (ff3d79) — turn the Cybertruck into a boat
+
+- Switch James's Cybertruck into a floating Cyberboat as it enters pond water, then restore the truck when it reaches shore.
+- Add a moving, foamy wake behind the boat and expanding shore wash that fades after the boat leaves the water.
+- Cache: `?v=20261001-ff3d79` · asset `index-ff3d79.js`
+
 # What's new (ff3d78) — keep players framed on loops and indoors
 
 - Use the vehicle's live track height for camera targeting and include vertical separation in multiplayer framing, so racers remain visible through the vertical loop.
