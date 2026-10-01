@@ -1,3 +1,11 @@
+# What's new (ff3d81) — camera control, boat wake, and easier house stairs
+
+- Mouse-look now follows the drag direction, and a manually positioned camera stays put until the player begins moving.
+- Keep the Cybertruck visible above a flatter pontoon hull; increase water acceleration and speed, and leave a brighter paired wake that grows and dissipates. Shore wash still builds on exit.
+- Make the two house stair runs shallower and open-sided, with an intermediate third-floor landing before the roof.
+- Recompile occluding materials when their transparency changes so walls reliably fade out and restore.
+- Cache: `?v=20261002-ff3d81` · asset `index-ff3d81.js`
+
 # What's new (ff3d80) — return to the version lobby and see through structures
 
 - Send direct 3D-page visits to the shared lobby for choosing 2D, 2.5D, or 3D; a 3D launch from that lobby starts directly without the retired title gate.

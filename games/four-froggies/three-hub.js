@@ -7136,27 +7136,20 @@ state.zLift = 0;
           var cdz = c.userData.tz - c.position.z;
           var cd = Math.hypot(cdx, cdz) || 1;
           if (cd > 0.35) {
-            var aimx = cdx / cd, aimz = cdz / cd;
-            c.userData.faceYaw = Math.atan2(aimx, aimz);
-            c.userData.groundLift = ranchGroundY(threeToWorld(c.position.x, c.position.z).x, threeToWorld(c.position.x, c.position.z).y);
+            c.userData.faceYaw = Math.atan2(cdx, cdz);
+            var followW = threeToWorld(c.position.x, c.position.z);
+            c.userData.groundLift = ranchGroundY(followW.x, followW.y);
             if (C.tickLocoHop) {
-              var launchedAi = C.tickLocoHop(c.userData, dt, {
+              C.tickLocoHop(c.userData, dt, {
                 moving: true, zKey: "zLift", zvKey: "zVel", gndKey: "groundLift",
                 up: 7.0, lift: 0.30, groundHold: 0.011, groundEps: 0.08,
               });
-              if (launchedAi) {
-                var hopSpAi = 14.5;
-                c.userData.vx = aimx * hopSpAi;
-                c.userData.vz = aimz * hopSpAi;
-              }
-            } else {
-              c.userData.vx = (c.userData.vx || 0) + aimx * 28 * dt;
-              c.userData.vz = (c.userData.vz || 0) + aimz * 28 * dt;
             }
-            c.userData.vx = (c.userData.vx || 0) * Math.max(0, 1 - 7.5 * dt);
-            c.userData.vz = (c.userData.vz || 0) * Math.max(0, 1 - 7.5 * dt);
-            c.position.x += (c.userData.vx || 0) * dt;
-            c.position.z += (c.userData.vz || 0) * dt;
+            var followK = Math.min(1, (1.05 / (0.7 + lag)) * dt);
+            c.position.x += cdx * followK;
+            c.position.z += cdz * followK;
+            c.userData.vx = 0;
+            c.userData.vz = 0;
           } else {
             c.userData.vx = 0; c.userData.vz = 0;
           }

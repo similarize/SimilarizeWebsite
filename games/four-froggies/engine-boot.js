@@ -5,7 +5,7 @@
   "use strict";
 
   var C = global.FroggiesCanon;
-  var CACHE = "20261001-kidfix1";
+  var CACHE = "20261001-mechfix2";
   var CDN = {
     three: "https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js",
   };
@@ -784,14 +784,17 @@
         document.body.classList.remove("in-hub");
         document.body.classList.remove("in-space");
         var overlay = $("overlay");
-        if (overlay) overlay.hidden = false;
+        if (overlay) overlay.hidden = true;
         var frogPick = $("frog-pick");
-        if (frogPick) frogPick.hidden = false;
+        if (frogPick) frogPick.hidden = true;
         var inviteCta = $("invite-cta");
         if (inviteCta) inviteCta.hidden = false;
         var partyBar = $("party-bar");
         if (partyBar) partyBar.hidden = false;
         paintPicker();
+        if (global.FroggiesVersionLobby && global.FroggiesVersionLobby.show) {
+          global.FroggiesVersionLobby.show();
+        }
       }, true);
     }
   }
