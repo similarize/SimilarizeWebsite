@@ -1,3 +1,10 @@
+# What's new (ff3d78) — keep players framed on loops and indoors
+
+- Use the vehicle's live track height for camera targeting and include vertical separation in multiplayer framing, so racers remain visible through the vertical loop.
+- Automatically widen the shared local-player view as players spread out and fade walls that block any locally controlled frog.
+- Add a **Center View** control to return the camera behind the player's direction.
+- Cache: `?v=20261002-ff3d78` · asset `index-ff3d78.js`
+
 # What's new (ff3d77) — correct garage climb direction and block indoor wall climbs
 
 - Use movement toward the garage to climb back up and movement away from it to descend from the roof.

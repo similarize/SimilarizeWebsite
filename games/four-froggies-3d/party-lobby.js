@@ -48,11 +48,20 @@
         if (tries > 40) clearInterval(timer);
       }, 50);
     });
+    var follow = document.createElement("button");
+    follow.type = "button";
+    follow.className = "ff3d-nav-btn";
+    follow.textContent = "Center View";
+    follow.addEventListener("click", function () {
+      var g = game();
+      if (g && g.centerCamera) g.centerCamera();
+    });
     var arcade = document.createElement("a");
     arcade.className = "ff3d-nav-btn";
     arcade.href = "/games/";
     arcade.textContent = "Arcade";
     nav.appendChild(lobby);
+    nav.appendChild(follow);
     nav.appendChild(arcade);
     document.body.appendChild(nav);
   }
