@@ -1,11 +1,3 @@
-## What's new (mechfix2) — accessible controls, zoom, AI follow, and lobby routing
-
-- Arrange the 2.5D action buttons in a clickable side panel instead of overlapping at the screen corner.
-- Mouse-wheel and two-finger zoom now target the active engine, so the 2.5D camera zooms out to reveal more of the scene.
-- Restore continuous AI companion following while keeping their hop animation.
-- The in-game Lobby button returns to the shared 2D / 2.5D / 3D chooser instead of the retired engine picker.
-- Cache-bust `style.css` with `?v=20261001-mechui1` and `main.js` / `engine-boot.js` / `three-hub.js` with `?v=20261001-mechfix2`.
-
 ## What's new (zoommech1) — steady mech scale and cleaner zoom-out
 
 - Keep Canvas mech bodies, pilot markers, and nameplates at a constant screen size as camera depth and player position change.

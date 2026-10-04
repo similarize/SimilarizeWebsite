@@ -29,20 +29,31 @@
     var nav = document.createElement("div");
     nav.id = "ff3d-play-nav";
     nav.className = "ff3d-play-nav";
-    var versions = document.createElement("a");
-    versions.className = "ff3d-nav-btn";
-    versions.href = "/games/four-froggies/";
-    versions.textContent = "\u2190 Versions";
-    var follow = document.createElement("button");
-    follow.type = "button";
-    follow.className = "ff3d-nav-btn";
-    follow.textContent = "Center View";
-    follow.addEventListener("click", function () {
+    var lobby = document.createElement("button");
+    lobby.type = "button";
+    lobby.className = "ff3d-nav-btn";
+    lobby.textContent = "\u2190 Lobby";
+    lobby.addEventListener("click", function () {
       var g = game();
-      if (g && g.centerCamera) g.centerCamera();
+      if (g && g.toLobby) g.toLobby();
+      started = false;
+      document.body.classList.remove("ff3d-playing");
+      injected = false;
+      var tries = 0;
+      var timer = setInterval(function () {
+        tries++;
+        var card = document.querySelector(".gate-card");
+        var fresh = card && !card.querySelector("#ff3d-btn-host");
+        if (fresh && injectUi()) clearInterval(timer);
+        if (tries > 40) clearInterval(timer);
+      }, 50);
     });
-    nav.appendChild(versions);
-    nav.appendChild(follow);
+    var arcade = document.createElement("a");
+    arcade.className = "ff3d-nav-btn";
+    arcade.href = "/games/";
+    arcade.textContent = "Arcade";
+    nav.appendChild(lobby);
+    nav.appendChild(arcade);
     document.body.appendChild(nav);
   }
 
@@ -55,6 +66,17 @@
     if (!card) return false;
     var startBtn = card.querySelector("button.start");
     if (!startBtn) return false;
+
+    // exit1: clear Arcade exit on 3D gate (do not touch ranch/space bundles)
+    if (!document.getElementById("ff3d-exit-arcade")) {
+      var exitA = document.createElement("a");
+      exitA.id = "ff3d-exit-arcade";
+      exitA.className = "exit-arcade ff3d-exit";
+      exitA.href = "/games/";
+      exitA.textContent = "← Arcade";
+      var gate = document.querySelector(".gate") || document.body;
+      gate.appendChild(exitA);
+    }
 
     var wrap = document.createElement("div");
     wrap.className = "ff3d-party";
@@ -340,10 +362,6 @@
 
   function boot() {
     ensurePlayNav();
-    if (document.documentElement.classList.contains("ff3d-autostart")) {
-      initParty();
-      return;
-    }
     if (!injectUi()) {
       requestAnimationFrame(boot);
       return;

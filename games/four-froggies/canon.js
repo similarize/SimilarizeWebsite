@@ -915,6 +915,8 @@
     semi:       { maxSp: 0.92, accel: 0.78, turn: 0.58, fric: 1.16 },
     /* dogxform1: Unitree-style robot dog — agile quadruped */
     robotdog:   { maxSp: 1.08, accel: 1.18, turn: 1.22, fric: 0.94 },
+    /* marsrover1: crawl — slower than Ripsaw (fastest auto) */
+    curiosity:  { maxSp: 0.42, accel: 0.62, turn: 0.90, fric: 1.20 },
   };
   var RT_MECH_SEMI = { edge: 0.45, release: 0.28, cooldown: 0.55 };
   /* dogxform1: same edge/release feel as trillion→semi (separate morph target) */
@@ -970,7 +972,7 @@
     if (!style && styleOrFrog.truckId) style = vehicleStyleOf(styleOrFrog.truckId);
     if (!style) style = "cybertruck";
     style = String(style);
-    if (style === "ripsaw" || style === "tank" || style === "submarine" || style === "semi" || style === "robotdog") return style;
+    if (style === "ripsaw" || style === "tank" || style === "submarine" || style === "semi" || style === "robotdog" || style === "curiosity") return style;
     /* Monster truck feel = Cybertruck with big live wheels */
     var ws = wheelScaleLive;
     if (styleOrFrog && typeof styleOrFrog === "object" && styleOrFrog.wheelScale != null) ws = styleOrFrog.wheelScale;

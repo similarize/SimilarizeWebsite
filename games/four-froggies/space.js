@@ -542,6 +542,10 @@
     } else if (id === "mars" || id.indexOf("cave") === 0 || id === "escape") {
       ep.px = 450;
       ep.py = 700;
+      if (id === "mars") {
+        ep.drivingCuriosity = false;
+        ensureCuriosity(ep);
+      }
     } else if (id === "mech") {
       ep.px = 450;
       ep.py = 640;
@@ -558,6 +562,106 @@
   function toast(ep, msg, t) {
     ep.toast = msg;
     ep.toastT = t == null ? 2.5 : t;
+  }
+
+  /* marsrover1: NASA Curiosity on the Mars plain (slower crawl than a Ripsaw). */
+  function ensureCuriosity(ep) {
+    if (!ep.curiosity) {
+      ep.curiosity = { x: 530, y: 640, angle: 0, speed: 0 };
+    }
+    return ep.curiosity;
+  }
+
+  function exitCuriosity(ep) {
+    if (!ep || !ep.drivingCuriosity) return { ok: false };
+    var rov = ensureCuriosity(ep);
+    ep.drivingCuriosity = false;
+    ep.curiosityDriver = null;
+    /* kidfix1: no leftover vehicle speed after EXIT */
+    ep.vx = 0;
+    ep.vy = 0;
+    ep.speedBoost = 1;
+    ep.px = clamp(rov.x + 42, 80, MAP - 80);
+    ep.py = clamp(rov.y + 28, 80, MAP - 80);
+    toast(ep, (ep.frogName || "Froggy") + " hops off Curiosity");
+    return { ok: true, toast: ep.toast };
+  }
+
+  function boardCuriosity(ep) {
+    var rov = ensureCuriosity(ep);
+    if (ep.drivingCuriosity) return exitCuriosity(ep);
+    ep.drivingCuriosity = true;
+    ep.curiosityDriver = ep.frogId || "james";
+    ep.px = rov.x;
+    ep.py = rov.y;
+    ep.vx = 0;
+    ep.vy = 0;
+    rov.speed = 0;
+    toast(ep, "Curiosity · crawl · EXIT INTERACT");
+    return { ok: true, toast: ep.toast };
+  }
+
+  function driveCuriosity(ep, dt, steerX, steerY) {
+    var rov = ensureCuriosity(ep);
+    /* steer.y < 0 is screen up — same sign as ranch vehicles. Do not flip A/D. */
+    var aimX = steerX || 0;
+    var aimY = steerY || 0;
+    var mag = Math.hypot(aimX, aimY);
+    var maxSp = 108;
+    var accel = 78;
+    if (mag > 0.12) {
+      var aim = Math.atan2(aimX, aimY);
+      var d = aim - rov.angle;
+      while (d > Math.PI) d -= Math.PI * 2;
+      while (d < -Math.PI) d += Math.PI * 2;
+      var step = 2.6 * dt;
+      if (d > step) d = step;
+      if (d < -step) d = -step;
+      rov.angle += d;
+      rov.speed += (maxSp - rov.speed) * Math.min(1, (accel * dt) / maxSp);
+    } else {
+      rov.speed *= Math.exp(-3.6 * dt);
+      if (Math.abs(rov.speed) < 1) rov.speed = 0;
+    }
+    ep.vx = Math.sin(rov.angle) * rov.speed;
+    ep.vy = Math.cos(rov.angle) * rov.speed;
+    rov.x = clamp(rov.x + ep.vx * dt, 100, MAP - 100);
+    rov.y = clamp(rov.y + ep.vy * dt, 140, MAP - 100);
+    ep.px = rov.x;
+    ep.py = rov.y;
+    if (steerX) ep.facing = steerX > 0 ? 1 : -1;
+  }
+
+  function drawCuriosity(ctx, x, y, d, angle) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    var s = Math.max(0.35, d || 1);
+    ctx.fillStyle = "rgba(0,0,0,0.28)";
+    ctx.beginPath();
+    ctx.ellipse(0, 4 * s, 16 * s, 22 * s, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#44403c";
+    var wy = [-16, 0, 16];
+    for (var i = 0; i < wy.length; i++) {
+      ctx.beginPath();
+      ctx.ellipse(-12 * s, wy[i] * s, 5.5 * s, 4.2 * s, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(12 * s, wy[i] * s, 5.5 * s, 4.2 * s, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = "#d6d3d1";
+    ctx.fillRect(-9 * s, -20 * s, 18 * s, 40 * s);
+    ctx.fillStyle = "#f59e0b";
+    ctx.fillRect(-7 * s, 2 * s, 14 * s, 12 * s);
+    ctx.fillStyle = "#292524";
+    ctx.fillRect(-1.4 * s, 10 * s, 3 * s, 14 * s);
+    ctx.fillStyle = "#1c1917";
+    ctx.fillRect(-5 * s, 20 * s, 12 * s, 6 * s);
+    ctx.fillStyle = "#fbbf24";
+    ctx.fillRect(5 * s, 21.5 * s, 5 * s, 3 * s);
+    ctx.restore();
   }
 
   function hotspotsFor(ep) {
@@ -609,6 +713,10 @@
     } else if (s === "mars") {
       list.push({ id: "cave_mouth", label: "Cave", x: 450, y: 360, r: 60, tip: "Secret passageways · King Germy" });
       list.push({ id: "to_solar", label: "Map", x: 80, y: 820, r: 50, tip: "Back to solar map" });
+      var rovH = ensureCuriosity(ep);
+      if (!ep.drivingCuriosity) {
+        list.push({ id: "curiosity", label: "Curiosity", x: rovH.x, y: rovH.y, r: 62, tip: "Curiosity rover · any frog · INTERACT board" });
+      }
     } else if (s === "cave1") {
       list.push({ id: "deeper", label: "Deeper", x: 450, y: 280, r: 55, tip: "Level 2 passageway" });
       list.push({ id: "to_mars", label: "Out", x: 80, y: 820, r: 50, tip: "Back to Mars surface" });
@@ -656,6 +764,7 @@
   }
 
   function interact(ep) {
+    if (ep && ep.drivingCuriosity) return exitCuriosity(ep);
     var h = nearestHotspot(ep, 75);
     if (!h) return { ok: false };
     var id = h.id;
@@ -692,7 +801,8 @@
     }
     if (id === "to_mars") {
       setScene(ep, "mars");
-      toast(ep, "Mars! Cave mouth + dogs ahead · hang TBD");
+      ensureCuriosity(ep);
+      toast(ep, "Mars! Curiosity rover on the plain · cave + dogs ahead");
       return { ok: true, toast: ep.toast, sfx: "jet" };
     }
     if (id === "jimmy") {
@@ -772,6 +882,9 @@
       setScene(ep, "solar");
       return { ok: true };
     }
+    if (id === "curiosity") {
+      return boardCuriosity(ep);
+    }
     if (id === "cave_mouth") {
       setScene(ep, "cave1");
       ep.caveProgress = Math.max(ep.caveProgress, 1);
@@ -850,6 +963,10 @@
 
   function ability(ep, frogId) {
     if (ep.scene === "mech") return blastMech(ep);
+    if (ep.drivingCuriosity && ep.scene === "mars") {
+      toast(ep, "Curiosity stays on the ground");
+      return { ok: true, toast: ep.toast };
+    }
     if (ep.inOrbit) {
       return tryHardThrustEscape(ep);
     }
@@ -892,7 +1009,9 @@
 
     if (ep.vx == null) ep.vx = 0;
     if (ep.vy == null) ep.vy = 0;
-    if (tickOrbit(ep, dt, steerX, steerY)) {
+    if (ep.drivingCuriosity && ep.scene === "mars") {
+      driveCuriosity(ep, dt, steerX, steerY);
+    } else if (tickOrbit(ep, dt, steerX, steerY)) {
       if (steerX !== 0) ep.facing = steerX > 0 ? 1 : -1;
     } else {
       tryCaptureOrbit(ep, dt);
@@ -2325,6 +2444,10 @@
     }
 
     if (ep.scene === "mars") {
+      var rovD = ensureCuriosity(ep);
+      var rp = worldToScreen(rovD.x, rovD.y, w, h);
+      drawCuriosity(ctx, rp.x, rp.y, rp.d * 1.15, rovD.angle);
+      if (!ep.drivingCuriosity) drawLabel(ctx, "Curiosity", rp.x, rp.y - 36 * rp.d, "#f5f5f4");
       drawDistantInvaderSilhouettes(ctx, ep, w, h, t);
       var cave = worldToScreen(450, 360, w, h);
       ctx.fillStyle = "#1c1917";
@@ -2436,9 +2559,11 @@
       if (ep.mechWon) drawLabel(ctx, "WIN!", w * 0.5, h * 0.5, "#fde68a");
     }
 
-    // Player (primary froggy — suit or ship-mode jet)
+    // Player (primary froggy — suit or ship-mode jet). Hidden inside Curiosity while driving.
     var pp2 = worldToScreen(ep.px, ep.py, w, h);
-    if (ep.travelMode === "suit") {
+    if (ep.drivingCuriosity && ep.scene === "mars") {
+      /* driver rides inside the rover */
+    } else if (ep.travelMode === "suit") {
       drawCrewFrog(ctx, pp2.x, pp2.y, pp2.d, ep.frogColor || "#4ade80", true, ep.frogName || null);
       if (ep.jet > 0) {
         ctx.fillStyle = "rgba(56,189,248,0.75)";
@@ -2498,6 +2623,8 @@
     else if (ep.orbitPull) tip = "Gravity pull · " + (ep.orbitPull.planet ? ep.orbitPull.planet.name : "planet") + " · drift in to lock";
     else if (ep.scene === "space" && ep.travelMode === "ship") tip = "SHIP · Exit ship = suit EVA · wheel zoom · Mars hotspot";
     else if (ep.scene === "space" && ep.travelMode === "suit") tip = "SUIT JET · Board ship = rocket · wheel zoom · Mars";
+    else if (ep.drivingCuriosity) tip = "Curiosity · steer · EXIT INTERACT / E";
+    else if (ep.scene === "mars" && !near) tip = "Mars surface · Curiosity rover on the plain · cave ahead";
     else if (near) tip = near.tip + " · INTERACT / E";
     else tip = "Steer · find hotspots · Lobby returns to title";
     return {

@@ -3667,6 +3667,54 @@ state.zLift = 0;
   function doInteract() {
     if (!state) return;
     if (interactConsumed) return;
+    if (state.mode === "mars") {
+      if (state.marsDriving) {
+        if (vehicleLatched(state)) {
+          interactOrigin = null; interactPadIndex = null;
+          return;
+        }
+        state.marsDriving = false;
+        state.inTruck = false;
+        state.vehicleStyle = null;
+        state.truckId = null;
+        state.truckMode = null;
+        state.player.position.x += 1.7;
+        resetFootAfterExit(state);
+        state.player.visible = true;
+        state.player.position.y = 0;
+        state.toast = (state.frogId ? (state.frogId.charAt(0).toUpperCase() + state.frogId.slice(1)) : "Froggy") + " hops off Curiosity";
+        state.toastT = 1.8;
+        state.exitTipT = 0;
+        interactOrigin = null; interactPadIndex = null;
+        if (hooks.onToast) hooks.onToast(state.toast);
+        return;
+      }
+      if (state.near && state.near.id === "curiosity") {
+        state.marsDriving = true;
+        state.inTruck = true;
+        state.vehicleStyle = "curiosity";
+        state.truckId = "curiosity";
+        state.truckMode = "solo";
+        state.player.position.x = state.marsRover.x;
+        state.player.position.z = state.marsRover.z;
+        state.vx = 0; state.vz = 0; state.zLift = 0; state.zVel = 0;
+        state.faceYaw = state.marsRover.yaw || 0;
+        armVehicleLatch(state);
+        state.toast = "Driving Curiosity · crawl · EXIT INTERACT";
+        state.toastT = 2.4;
+        state.exitTipT = 2.4;
+        interactOrigin = null; interactPadIndex = null;
+        if (hooks.onToast) hooks.onToast(state.toast);
+        return;
+      }
+      if (state.near && state.near.id === "mars_return") {
+        leaveMarsSurface();
+        interactOrigin = null; interactPadIndex = null;
+        return;
+      }
+      interactOrigin = null; interactPadIndex = null;
+      return;
+    }
     interactConsumed = true;
     /* Prefer hotspot at the pad/frog that pressed A; else primary near */
     refreshNearFromLocals();
@@ -4075,6 +4123,8 @@ state.zLift = 0;
       } else if (id === "station") {
         state.toast = "Space station · Alex & Fred aboard · orbits Earth";
         state.toastT = 2.5;
+      } else if (id === "land_mars") {
+        enterMarsSurface();
       } else if (id === "return") {
         try {
           document.body.classList.remove("in-space");
@@ -5536,9 +5586,340 @@ state.zLift = 0;
     if ((state.spearCd || 0) > 0) state.spearCd = Math.max(0, state.spearCd - dt);
   }
 
+
+  /* marsrover1: walkable Mars surface reached from space, with a Curiosity rover. */
+  function makeCuriosityMesh() {
+    var g = new THREE.Group();
+    var bodyMat = new THREE.MeshStandardMaterial({ color: 0xc4b5a0, metalness: 0.35, roughness: 0.55 });
+    var dark = new THREE.MeshStandardMaterial({ color: 0x44403c, roughness: 0.8 });
+    var gold = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.4, roughness: 0.4 });
+    var body = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.52, 1.65), bodyMat);
+    body.position.y = 0.74;
+    g.add(body);
+    var deck = new THREE.Mesh(new THREE.BoxGeometry(1.25, 0.26, 1.3), gold);
+    deck.position.set(-0.12, 1.08, 0);
+    g.add(deck);
+    var mast = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 1.15, 8), dark);
+    mast.position.set(-0.12, 1.72, 0.12);
+    g.add(mast);
+    var head = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.28, 0.32), new THREE.MeshStandardMaterial({ color: 0x1c1917, metalness: 0.5, roughness: 0.35 }));
+    head.position.set(0.06, 2.28, 0.12);
+    g.add(head);
+    var cam = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.18, 8), gold);
+    cam.rotation.z = Math.PI / 2;
+    cam.position.set(0.28, 2.28, 0.12);
+    g.add(cam);
+    var wheelGeo = new THREE.CylinderGeometry(0.28, 0.28, 0.22, 10);
+    wheelGeo.rotateX(Math.PI / 2);
+    var wheelMat = new THREE.MeshStandardMaterial({ color: 0x292524, roughness: 0.9 });
+    g.userData.wheels = [];
+    var xs = [-0.85, 0.05, 0.92];
+    var zs = [-0.78, 0.78];
+    for (var i = 0; i < xs.length; i++) {
+      for (var j = 0; j < zs.length; j++) {
+        var w = new THREE.Mesh(wheelGeo, wheelMat);
+        w.position.set(xs[i], 0.28, zs[j]);
+        g.add(w);
+        g.userData.wheels.push(w);
+      }
+    }
+    return g;
+  }
+
+  function ensureMarsArena() {
+    if (!state || state.marsArena) return;
+    var root = new THREE.Group();
+    var ground = new THREE.Mesh(
+      new THREE.CircleGeometry(34, 48),
+      new THREE.MeshStandardMaterial({ color: 0xc2410c, roughness: 0.96 })
+    );
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.set(0, 0, 400);
+    root.add(ground);
+    var dune = new THREE.Mesh(
+      new THREE.SphereGeometry(5.5, 16, 10),
+      new THREE.MeshStandardMaterial({ color: 0xb45309, roughness: 0.95 })
+    );
+    dune.scale.set(1.7, 0.28, 1);
+    dune.position.set(-8, 0.4, 408);
+    root.add(dune);
+    var cave = new THREE.Mesh(
+      new THREE.SphereGeometry(3.3, 16, 12),
+      new THREE.MeshStandardMaterial({ color: 0x1c1917, roughness: 1 })
+    );
+    cave.scale.set(1.45, 0.55, 0.75);
+    cave.position.set(0, 1.15, 376);
+    root.add(cave);
+    for (var di = 0; di < 16; di++) {
+      var dog = new THREE.Mesh(
+        new THREE.SphereGeometry(0.2, 6, 5),
+        new THREE.MeshStandardMaterial({ color: di % 2 ? 0xd6d3d1 : 0xb45309 })
+      );
+      var ang = (di / 16) * Math.PI * 2;
+      dog.position.set(Math.cos(ang) * 4.4, 0.22, 376 + Math.sin(ang) * 2.3);
+      root.add(dog);
+    }
+    var caveLab = labelSprite("Mars cave · dogs", "#fdba74");
+    caveLab.position.set(0, 3.8, 376);
+    root.add(caveLab);
+    var rover = makeCuriosityMesh();
+    rover.position.set(6, 0, 404);
+    root.add(rover);
+    var name = labelSprite("Curiosity", "#f5f5f4");
+    name.position.set(6, 2.7, 404);
+    root.add(name);
+    var pad = new THREE.Mesh(
+      new THREE.CircleGeometry(1.35, 18),
+      new THREE.MeshStandardMaterial({ color: 0x0284c7, emissive: 0x0ea5e9, emissiveIntensity: 0.45 })
+    );
+    pad.rotation.x = -Math.PI / 2;
+    pad.position.set(-10, 0.06, 412);
+    root.add(pad);
+    var padLab = labelSprite("Back to space", "#bae6fd");
+    padLab.position.set(-10, 1.7, 412);
+    root.add(padLab);
+    scene.add(root);
+    root.visible = false;
+    state.marsArena = root;
+    state.curiosityMesh = rover;
+    state.curiosityLabel = name;
+    state.marsRover = { x: 6, z: 404, yaw: 0 };
+    state.marsReturn = { x: -10, z: 412 };
+    state.marsCenter = { x: 0, z: 396 };
+  }
+
+  function clampMarsPos(pos) {
+    var c = state.marsCenter || { x: 0, z: 396 };
+    var dx = pos.x - c.x;
+    var dz = pos.z - c.z;
+    var d = Math.hypot(dx, dz);
+    if (d > 30) {
+      pos.x = c.x + (dx / d) * 30;
+      pos.z = c.z + (dz / d) * 30;
+      state.vx *= 0.15;
+      state.vz *= 0.15;
+    }
+  }
+
+  function marsLandable() {
+    if (!state || state.mode !== "space" || !state.planetMeshes || !state.planetMeshes.mars) return false;
+    var m = state.planetMeshes.mars;
+    if (state.inOrbit && state.planet && (state.planet.id === "mars" || (state.planet.name || "").indexOf("Mars") === 0)) return true;
+    return Math.hypot(state.player.position.x - m.x, state.player.position.z - m.z) < (m.soft || 3.1) + 0.35;
+  }
+
+  function enterMarsSurface() {
+    if (!state) return;
+    ensureMarsArena();
+    state._marsReturn = {
+      x: state.player.position.x,
+      z: state.player.position.z,
+      yaw: state.faceYaw || 0,
+    };
+    state.mode = "mars";
+    state.inOrbit = false;
+    state.marsDriving = false;
+    state.inTruck = false;
+    state.vehicleStyle = null;
+    state.truckId = null;
+    state.vx = 0;
+    state.vz = 0;
+    state.zLift = 0;
+    state.zVel = 0;
+    state.player.visible = true;
+    state.player.position.set(0, 0, 414);
+    state.faceYaw = Math.PI;
+    state.marsArena.visible = true;
+    if (renderer) renderer.setClearColor(0x9a3412, 1);
+    if (scene) scene.fog = new THREE.FogExp2(0x9a3412, 0.04);
+    state.toast = "Mars surface · Curiosity ahead · INTERACT to board";
+    state.toastT = 3.2;
+    if (hooks.onToast) hooks.onToast(state.toast);
+  }
+
+  function leaveMarsSurface() {
+    if (!state) return;
+    state.marsDriving = false;
+    state.inTruck = false;
+    state.vehicleStyle = null;
+    state.truckId = null;
+    state.truckMode = null;
+    resetFootAfterExit(state);
+    state.player.visible = true;
+    var back = state._marsReturn || { x: 12, z: 8, yaw: 0 };
+    state.player.position.set(back.x, 0, back.z);
+    state.faceYaw = back.yaw || 0;
+    state.mode = "space";
+    if (state.marsArena) state.marsArena.visible = false;
+    if (renderer) renderer.setClearColor(0x020617, 1);
+    if (scene) scene.fog = new THREE.FogExp2(0x020617, 0.012);
+    state.toast = "Back in space · above Mars";
+    state.toastT = 2.2;
+    if (hooks.onToast) hooks.onToast(state.toast);
+  }
+
+  function tickMarsSurface(dt) {
+    ensureMarsArena();
+    var steer = mergedSteer();
+    var ix = 0, iy = 0;
+    if (steer.x || steer.y) {
+      var len = Math.hypot(steer.x, steer.y) || 1;
+      ix = steer.x / len;
+      iy = steer.y / len;
+    }
+    var basis = cameraGroundBasis();
+    var mx = basis.rx * ix + basis.fx * (-iy);
+    var mz = basis.rz * ix + basis.fz * (-iy);
+    var moving = Math.hypot(mx, mz) > 0.08;
+    if (state.marsDriving) {
+      var st = (C.vehicleDriveStats && C.vehicleDriveStats("curiosity")) || { maxSp: 0.42, accel: 0.62, turn: 0.9, fric: 1.2 };
+      var maxSp = 15.8 * (st.maxSp || 0.42);
+      var accel = 38 * (st.accel || 0.62);
+      var fric = 4.8 * (st.fric || 1.2);
+      if (state.phoneBrake) { fric *= 3.2; maxSp *= 0.4; }
+      if (state.phoneBoost) { maxSp *= 1.2; accel *= 1.25; }
+      if (moving) {
+        var aim = Math.atan2(mx, mz);
+        var cur = state.faceYaw != null ? state.faceYaw : aim;
+        var turn = (3.6 * (st.turn || 0.9)) * dt;
+        if (C.approachAngle) state.faceYaw = C.approachAngle(cur, aim, turn);
+        else {
+          var dY = aim - cur;
+          while (dY > Math.PI) dY -= Math.PI * 2;
+          while (dY < -Math.PI) dY += Math.PI * 2;
+          if (dY > turn) dY = turn;
+          if (dY < -turn) dY = -turn;
+          state.faceYaw = cur + dY;
+        }
+        var fxx = Math.sin(state.faceYaw), fzz = Math.cos(state.faceYaw);
+        state.vx += fxx * accel * dt;
+        state.vz += fzz * accel * dt;
+      }
+      state.vx *= Math.max(0, 1 - fric * dt);
+      state.vz *= Math.max(0, 1 - fric * dt);
+      var sp = Math.hypot(state.vx, state.vz);
+      if (sp > maxSp) { state.vx = (state.vx / sp) * maxSp; state.vz = (state.vz / sp) * maxSp; sp = maxSp; }
+      state.player.position.x += state.vx * dt;
+      state.player.position.z += state.vz * dt;
+      clampMarsPos(state.player.position);
+      state.player.position.y = 0.9;
+      state.player.visible = false;
+      state.zLift = 0;
+      state.zVel = 0;
+      state.inTruck = true;
+      state.vehicleStyle = "curiosity";
+      state.curiosityMesh.position.set(state.player.position.x, 0, state.player.position.z);
+      state.curiosityMesh.rotation.y = (state.faceYaw || 0) - Math.PI / 2;
+      state.marsRover.x = state.player.position.x;
+      state.marsRover.z = state.player.position.z;
+      state.marsRover.yaw = state.faceYaw || 0;
+      state._wheelSpin = (state._wheelSpin || 0) + sp * dt * 1.5;
+      var wheels = state.curiosityMesh.userData.wheels || [];
+      for (var wi = 0; wi < wheels.length; wi++) wheels[wi].rotation.z = state._wheelSpin;
+      if (state.curiosityLabel) state.curiosityLabel.position.set(state.marsRover.x, 2.7, state.marsRover.z);
+      state.near = null;
+    } else {
+      state.inTruck = false;
+      state.vehicleStyle = null;
+      state.player.visible = true;
+      if (moving) state.faceYaw = Math.atan2(mx, mz);
+      state.groundLift = 0;
+      var launched = C.tickLocoHop && C.tickLocoHop(state, dt, {
+        moving: moving, zKey: "zLift", zvKey: "zVel", gndKey: "groundLift",
+        up: 7.0, lift: 0.30, groundHold: 0.011, groundEps: 0.08,
+      });
+      if (launched && moving) {
+        state.vx = mx * 13.5;
+        state.vz = mz * 13.5;
+      }
+      if (!moving && (state.zLift || 0) <= 0.08) { state.vx = 0; state.vz = 0; }
+      else {
+        state.vx *= Math.max(0, 1 - 7.8 * dt);
+        state.vz *= Math.max(0, 1 - 7.8 * dt);
+      }
+      var zv = state.zVel || 0;
+      var zl = state.zLift || 0;
+      zv -= 28 * dt;
+      zl += zv * dt;
+      if (zl <= 0) { zl = 0; zv = 0; }
+      state.zVel = zv;
+      state.zLift = zl;
+      state.player.position.x += (state.vx || 0) * dt;
+      state.player.position.z += (state.vz || 0) * dt;
+      clampMarsPos(state.player.position);
+      state.player.position.y = zl;
+      state.player.rotation.y = state.faceYaw || 0;
+      state.curiosityMesh.position.set(state.marsRover.x, 0, state.marsRover.z);
+      state.curiosityMesh.rotation.y = (state.marsRover.yaw || 0) - Math.PI / 2;
+      if (state.curiosityLabel) state.curiosityLabel.position.set(state.marsRover.x, 2.7, state.marsRover.z);
+      var dd = Math.hypot(state.player.position.x - state.marsRover.x, state.player.position.z - state.marsRover.z);
+      var pd = Math.hypot(state.player.position.x - state.marsReturn.x, state.player.position.z - state.marsReturn.z);
+      if (dd < 3.3) state.near = { id: "curiosity", tip: "Curiosity rover · any frog · INTERACT board" };
+      else if (pd < 2.5) state.near = { id: "mars_return", tip: "Back to space" };
+      else state.near = null;
+    }
+    var target = state.player.position;
+    var camH = 13 * (userZoom || 1);
+    camera.position.x += (target.x + 12 - camera.position.x) * Math.min(1, 4 * dt);
+    camera.position.y += (camH - camera.position.y) * Math.min(1, 4 * dt);
+    camera.position.z += (target.z + 12 - camera.position.z) * Math.min(1, 4 * dt);
+    camera.lookAt(target.x, 1, target.z);
+    if (state.nameTag) {
+      state.nameTag.position.set(target.x, (state.player.position.y || 0) + 2.2, target.z);
+      state.nameTag.visible = !!state.player.visible;
+    }
+    if (state.playerShadow) state.playerShadow.position.set(target.x, 0.05, target.z);
+  }
+
+  function finishMarsFrame(dt) {
+    interactConsumed = false;
+    if (wantInteract) { wantInteract = false; doInteract(); }
+    if (wantAbility) {
+      wantAbility = false;
+      if (state.marsDriving) {
+        state.toast = "Curiosity stays on the ground";
+        state.toastT = 0.8;
+        abilityPadIndex = null;
+      } else doAbility();
+    }
+    wantSpear = false;
+    interactOrigin = null;
+    interactPadIndex = null;
+    abilityPadIndex = null;
+    updateTapMarkerVisual(dt);
+    renderer.render(scene, camera);
+    if (hooks.onHud) {
+      hooks.onHud({
+        mode: "mars",
+        label: "Mars surface · Curiosity",
+        scrap: state.scrap || 0,
+        tip: state.toastT > 0 ? state.toast : (state.marsDriving
+          ? ((state.exitTipT || 0) > 0 ? "EXIT · INTERACT / E" : "Curiosity · steer · EXIT INTERACT")
+          : (state.near ? (state.near.tip + " · INTERACT / E") : "Mars ground · cave + dogs ahead")),
+        inOrbit: false,
+        inTruck: !!state.marsDriving,
+        inSub: false,
+        inSwim: false,
+        inMech: false,
+        inHeli: false,
+        inDrone: false,
+        near: state.marsDriving ? true : state.near,
+        ability: "HOP",
+        cd: state.cd,
+        walk: state.marsDriving ? "Curiosity" : "Mars",
+      });
+    }
+  }
+
   function doAbility() {
     /* interact2: HOP only the frog whose pad/HUD pressed — never all locals */
     if (!state) return;
+    if (state.mode === "mars" && state.marsDriving) {
+      state.toast = "Curiosity stays on the ground";
+      state.toastT = 0.8;
+      abilityPadIndex = null;
+      return;
+    }
     /* Secondary pad → hop that companion only */
     if (abilityPadIndex != null &&
         (state.primaryPadIndex == null || abilityPadIndex !== state.primaryPadIndex) &&
@@ -5679,6 +6060,11 @@ state.zLift = 0;
     state.toastT = Math.max(0, state.toastT - dt);
     state.exitTipT = Math.max(0, (state.exitTipT || 0) - dt);
     state.bob += dt * 10;
+    if (state.mode === "mars") {
+      tickMarsSurface(dt);
+      finishMarsFrame(dt);
+      return;
+    }
     tickTankShells(dt);
     if (state.mode === "ranch") tickSemiScoopThree(dt);
 
@@ -7136,20 +7522,27 @@ state.zLift = 0;
           var cdz = c.userData.tz - c.position.z;
           var cd = Math.hypot(cdx, cdz) || 1;
           if (cd > 0.35) {
-            c.userData.faceYaw = Math.atan2(cdx, cdz);
-            var followW = threeToWorld(c.position.x, c.position.z);
-            c.userData.groundLift = ranchGroundY(followW.x, followW.y);
+            var aimx = cdx / cd, aimz = cdz / cd;
+            c.userData.faceYaw = Math.atan2(aimx, aimz);
+            c.userData.groundLift = ranchGroundY(threeToWorld(c.position.x, c.position.z).x, threeToWorld(c.position.x, c.position.z).y);
             if (C.tickLocoHop) {
-              C.tickLocoHop(c.userData, dt, {
+              var launchedAi = C.tickLocoHop(c.userData, dt, {
                 moving: true, zKey: "zLift", zvKey: "zVel", gndKey: "groundLift",
                 up: 7.0, lift: 0.30, groundHold: 0.011, groundEps: 0.08,
               });
+              if (launchedAi) {
+                var hopSpAi = 14.5;
+                c.userData.vx = aimx * hopSpAi;
+                c.userData.vz = aimz * hopSpAi;
+              }
+            } else {
+              c.userData.vx = (c.userData.vx || 0) + aimx * 28 * dt;
+              c.userData.vz = (c.userData.vz || 0) + aimz * 28 * dt;
             }
-            var followK = Math.min(1, (1.05 / (0.7 + lag)) * dt);
-            c.position.x += cdx * followK;
-            c.position.z += cdz * followK;
-            c.userData.vx = 0;
-            c.userData.vz = 0;
+            c.userData.vx = (c.userData.vx || 0) * Math.max(0, 1 - 7.5 * dt);
+            c.userData.vz = (c.userData.vz || 0) * Math.max(0, 1 - 7.5 * dt);
+            c.position.x += (c.userData.vx || 0) * dt;
+            c.position.z += (c.userData.vz || 0) * dt;
           } else {
             c.userData.vx = 0; c.userData.vz = 0;
           }
@@ -7267,6 +7660,7 @@ state.zLift = 0;
       if (dJ < 1.1) state.near = { id: "jimmy", tip: "Catch Jimmy!" };
       else if (dSt < 1.5) state.near = { id: "station", tip: "Space station · orbits Earth" };
       else if (dR < 1.6) state.near = { id: "return", tip: "Return to ranch · Earth home" };
+      else if (marsLandable()) state.near = { id: "land_mars", tip: "Land on Mars · Curiosity rover" };
       /* polish6: invader silhouettes when near Mars */
       if (state.marsPos) {
         var dMars = Math.hypot(state.player.position.x - state.marsPos.x, state.player.position.z - state.marsPos.z);
