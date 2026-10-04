@@ -1,3 +1,17 @@
+## What's new (marsrover2) — Curiosity on the mechfix2 tip
+
+- Keeps mechfix2: side-panel phone buttons, wheel/pinch zoom on the 2.5D engine, Lobby returns to the version chooser, continuous AI hop-follow.
+- Ports the Curiosity rover onto that tip: any of James/Jimmy/Bubbles/Rexy boards with INTERACT/E, crawls slower than the Ripsaw, and 2.5D lands from Mars orbit onto a plain with the rover ahead and a pad back to space. 2D Mars plain rover stays in space.js / canon.js.
+- Cache: `20261004-marsrover2` on style.css, main.js, engine-boot.js, three-hub.js, canon.js, and space.js.
+
+## What's new (mechfix2) — accessible controls, zoom, AI follow, and lobby routing
+
+- Arrange the 2.5D action buttons in a clickable side panel instead of overlapping at the screen corner.
+- Mouse-wheel and two-finger zoom now target the active engine, so the 2.5D camera zooms out to reveal more of the scene.
+- Restore continuous AI companion following while keeping their hop animation.
+- The in-game Lobby button returns to the shared 2D / 2.5D / 3D chooser instead of the retired engine picker.
+- Cache-bust `style.css` with `?v=20261001-mechui1` and `main.js` / `engine-boot.js` / `three-hub.js` with `?v=20261001-mechfix2`.
+
 ## What's new (zoommech1) — steady mech scale and cleaner zoom-out
 
 - Keep Canvas mech bodies, pilot markers, and nameplates at a constant screen size as camera depth and player position change.

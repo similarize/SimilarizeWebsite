@@ -2629,6 +2629,14 @@ function doInteract(optFrog, opts) {
         Space.adjustZoom(spaceEp, dir);
         return;
       }
+      const engines = globalThis.FroggiesEngines;
+      if (document.body.classList.contains("in-hub") &&
+          engines && engines.isAltEngine && engines.isAltEngine() && engines.adjustZoom) {
+        e.preventDefault();
+        const dir = e.deltaY > 0 ? -0.04 : 0.04;
+        engines.adjustZoom(dir);
+        return;
+      }
       if (phase !== "hub" || !W || !W.adjustViewScale) return;
       e.preventDefault();
       const dir = e.deltaY > 0 ? -0.04 : 0.04;
@@ -2671,9 +2679,12 @@ function doInteract(optFrog, opts) {
         Space.adjustZoom(spaceEp, step * 2);
         return;
       }
-      if (phase === "hub" && W && W.adjustViewScale) W.adjustViewScale(step);
-      if (globalThis.FroggiesEngines && globalThis.FroggiesEngines.adjustZoom) {
-        globalThis.FroggiesEngines.adjustZoom(step);
+      const engines = globalThis.FroggiesEngines;
+      if (document.body.classList.contains("in-hub") &&
+          engines && engines.isAltEngine && engines.isAltEngine() && engines.adjustZoom) {
+        engines.adjustZoom(step);
+      } else if (phase === "hub" && W && W.adjustViewScale) {
+        W.adjustViewScale(step);
       }
     }, { passive: false });
     window.addEventListener("touchend", () => { pinchActive = false; });

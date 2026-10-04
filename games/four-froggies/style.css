@@ -1671,15 +1671,34 @@ body.in-entrance #hud,body.in-entrance #controls,body.in-entrance #vjoy{visibili
 
 /* kidfix1: phone mech/vehicle actions */
 .mech-phone {
-  display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end;
-  max-width: 220px; pointer-events: auto;
+  position: absolute;
+  top: max(88px, calc(env(safe-area-inset-top) + 80px));
+  right: max(14px, env(safe-area-inset-right));
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  width: min(196px, 44vw);
+  pointer-events: auto;
+  z-index: 4;
 }
-.mech-phone button {
-  min-width: 56px; min-height: 44px; padding: 6px 8px;
+#controls .mech-phone button {
+  position: relative;
+  min-width: 0; min-height: 44px; padding: 6px 8px;
   border-radius: 12px; border: 2px solid rgba(255,255,255,.45);
   background: rgba(0,0,0,.55); color: #fff; font: 700 11px Outfit, system-ui, sans-serif;
   touch-action: none; user-select: none;
 }
-.mech-phone button:active, .mech-phone button.held {
+#controls .mech-phone button:active, #controls .mech-phone button.held {
   background: rgba(74, 222, 128, .35); border-color: #86efac;
+}
+@media (max-width: 520px) {
+  .mech-phone { width: min(168px, 44vw); }
+}
+@media (max-height: 520px) and (orientation: landscape) {
+  .mech-phone {
+    top: max(52px, calc(env(safe-area-inset-top) + 44px));
+    width: min(380px, 54vw);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  #controls .mech-phone button { min-height: 36px; }
 }
