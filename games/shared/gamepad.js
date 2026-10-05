@@ -13,7 +13,9 @@
  *
  * ctrl1: Frame-cached pollPad/pollAll — first snap of a slot in a browser frame is
  * reused for later callers. Re-polling used to recompute rising edges against an
- * already-updated prev → buttonsPressed.x/b eaten (flaky HOP). Also exposes
+ * already-updated prev → buttonsPressed.x/b eaten (flaky HOP). The cache token
+ * bumps in a microtask so the NEXT animation frame is a new snap (pad3d1:
+ * a cached A edge must not still be true on the following frame). Also exposes
  * analog ltValue/rtValue 0–1 from buttons[6]/[7].value.
  *
  * API (window.SimilarizeGamepad):
@@ -47,7 +49,14 @@
       frameToken++;
       frameBumpScheduled = false;
     };
-    if (typeof requestAnimationFrame === "function") requestAnimationFrame(bump);
+    /* pad3d1: bump at the end of this turn, not on a later rAF.
+       The game queues its next frame before this bump, so an rAF bump
+       left the same buttonsPressed edge true for a second animation frame
+       (board, then immediate EXIT). Microtasks run after this frame's
+       rAF callbacks and before the next frame, so same-frame callers still
+       share one snap. */
+    if (typeof queueMicrotask === "function") queueMicrotask(bump);
+    else if (typeof requestAnimationFrame === "function") requestAnimationFrame(bump);
     else setTimeout(bump, 16);
   }
 
