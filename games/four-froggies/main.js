@@ -1457,6 +1457,21 @@ function doInteract(optFrog, opts) {
     _padSnaps = window.SimilarizeGamepad.pollAll
       ? window.SimilarizeGamepad.pollAll(4)
       : [0, 1, 2, 3].map((i) => window.SimilarizeGamepad.pollPad(i));
+    /* Hide repeated Gamepad.index ghosts. Do not mutate the shared poll cache. */
+    if (window.SimilarizeGamepad.uniqueConnectedIndices) {
+      const uniq = new Set(window.SimilarizeGamepad.uniqueConnectedIndices(4).map((n) => n | 0));
+      _padSnaps = _padSnaps.map((snap, i) => {
+        if (!snap || uniq.has(i)) return snap;
+        return {
+          connected: false, index: i, lx: 0, ly: 0, rx: 0, ry: 0,
+          a: false, b: false, x: false, y: false,
+          lb: false, rb: false, lt: false, rt: false,
+          ltValue: 0, rtValue: 0, start: false, back: false,
+          dpad: { u: false, d: false, l: false, r: false },
+          buttonsPressed: {},
+        };
+      });
+    }
     _pad = null;
     for (let i = 0; i < _padSnaps.length; i++) {
       if (_padSnaps[i] && _padSnaps[i].connected) { _pad = _padSnaps[i]; break; }
@@ -2050,23 +2065,28 @@ function doInteract(optFrog, opts) {
 
   function ensureLobbyPadFocus(pi) {
     const idx = pi | 0;
-    let cur = lobbyPadFocus[idx];
-    if (cur && FROG_ORDER.indexOf(cur) >= 0 && !lobbySeatTakenByOther(cur, idx)) return cur;
-    /* Prefer own claimed seat, else first open/ownable */
+    /* Own claim wins, then a cursor that is still free, else the next frog
+       not already taken by a lower pad (pad 0 → James, pad 1 → Jimmy, …). */
     for (let i = 0; i < FROG_ORDER.length; i++) {
       const id = FROG_ORDER[i];
       const s = lobbySeats && lobbySeats[id];
-      if (s && s.padIndex != null && (s.padIndex | 0) === idx) {
+      if (s && s.padIndex != null && (s.padIndex | 0) === idx && s.peerId) {
         lobbyPadFocus[idx] = id;
         return id;
       }
     }
+    const heldByLower = (fid) => {
+      for (let j = 0; j < idx; j++) if (lobbyPadFocus[j] === fid) return true;
+      return false;
+    };
+    let cur = lobbyPadFocus[idx];
+    if (cur && FROG_ORDER.indexOf(cur) >= 0 && !lobbySeatTakenByOther(cur, idx)) return cur;
     for (let i = 0; i < FROG_ORDER.length; i++) {
       const id = FROG_ORDER[i];
-      if (!lobbySeatTakenByOther(id, idx)) {
-        lobbyPadFocus[idx] = id;
-        return id;
-      }
+      if (lobbySeatTakenByOther(id, idx)) continue;
+      if (heldByLower(id)) continue;
+      lobbyPadFocus[idx] = id;
+      return id;
     }
     lobbyPadFocus[idx] = FROG_ORDER[0];
     return lobbyPadFocus[idx];
@@ -2090,7 +2110,7 @@ function doInteract(optFrog, opts) {
   }
 
   function lobbyAxisEdge(pi, gp) {
-    const latch = lobbyPadAxisLatch[pi] || (lobbyPadAxisLatch[pi] = { x: 0, y: 0 });
+    const latch = lobbyPadAxisLatch[pi] || (lobbyPadAxisLatch[pi] = { x: 0, y: 0, armed: false });
     const ax = gp && typeof gp.lx === "number" ? gp.lx : 0;
     const ay = gp && typeof gp.ly === "number" ? gp.ly : 0;
     const TH = 0.55;
@@ -2102,6 +2122,13 @@ function doInteract(optFrog, opts) {
     else if (ax < -TH && latch.x >= -TH) dir = -1;
     else if (ay > TH && latch.y <= TH) dir = 1;
     else if (ay < -TH && latch.y >= -TH) dir = -1;
+    /* First sample arms only — a resting stick must not open on Jimmy. */
+    if (!latch.armed) {
+      latch.x = ax;
+      latch.y = ay;
+      latch.armed = true;
+      return 0;
+    }
     latch.x = ax;
     latch.y = ay;
     return dir;
@@ -2132,6 +2159,7 @@ function doInteract(optFrog, opts) {
           if (lobbyPadAxisLatch[pi]) {
             lobbyPadAxisLatch[pi].x = 0;
             lobbyPadAxisLatch[pi].y = 0;
+            lobbyPadAxisLatch[pi].armed = false;
           }
           continue;
         }
@@ -2165,6 +2193,7 @@ function doInteract(optFrog, opts) {
         } else if (bp.b) {
           lastLobbyPadIndex = pi;
           if (party && party.releaseLocalPad) party.releaseLocalPad(pi);
+          /* releaseLocalPad emits lobby first, so seats are already fresh */
           ensureLobbyPadFocus(pi);
           focusDirty = true;
         }
@@ -2255,13 +2284,22 @@ function doInteract(optFrog, opts) {
     const seats = lobbySeats || {};
     const role = partyMeta.role || "solo";
     /* Build focus → pads map for open-seat hints */
+    const claimedPadFrog = {};
+    for (const id of FROG_ORDER) {
+      const s = seats[id];
+      if (!s || s.padIndex == null || !s.peerId) continue;
+      if (s.status !== "you" && s.status !== "human") continue;
+      claimedPadFrog[s.padIndex | 0] = id;
+    }
     const focusByFrog = {};
+    const paintedPad = {};
     for (let pi = 0; pi < 4; pi++) {
       if (!lobbyPadConnected[pi]) continue;
-      const fid = lobbyPadFocus[pi];
-      if (!fid) continue;
+      let fid = claimedPadFrog[pi] != null ? claimedPadFrog[pi] : lobbyPadFocus[pi];
+      if (!fid || paintedPad[pi]) continue;
+      paintedPad[pi] = fid;
       if (!focusByFrog[fid]) focusByFrog[fid] = [];
-      focusByFrog[fid].push(pi + 1);
+      if (!focusByFrog[fid].includes(pi + 1)) focusByFrog[fid].push(pi + 1);
     }
     document.querySelectorAll(".frog-btn").forEach((btn) => {
       const id = btn.dataset.id;
@@ -2308,7 +2346,7 @@ function doInteract(optFrog, opts) {
             stateEl.textContent =
               focusPads.length === 1
                 ? "Pad " + focusPads[0] + " · pick " + fname
-                : "Pads " + focusPads.join(",") + " · pick";
+                : "Pads " + focusPads.join(",") + " · pick " + fname;
           }
         } else if (stateEl) {
           stateEl.textContent = "Open · AI";

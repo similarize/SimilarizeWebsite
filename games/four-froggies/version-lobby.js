@@ -1,6 +1,6 @@
 /* Four Froggies — onefrog1 entrance.
    One screen: claim James/Jimmy/Bubbles/Rexy + Host/Join + pick 2D/2.5D/3D → play.
-   Skips the old overlay frog-pick / party lobby. Cache: 20260930-onefrog1 */
+   Skips the old overlay frog-pick / party lobby. Cache: 20261004-padpick1 */
 (function () {
   "use strict";
 
@@ -49,13 +49,41 @@
     return out;
   }
 
+  function seatOwnedByPad(seat, pi) {
+    if (!seat || !seat.peerId) return false;
+    if (seat.padIndex != null && (seat.padIndex | 0) === pi) return true;
+    return seat.peerId === ("local-pad-" + pi);
+  }
+
+  /* One pad, one cursor. Lowest connected index gets the first open frog
+     (James when free); the next pad gets the next open frog (Jimmy, …).
+     A cursor already on an open frog stays there so B does not jump to Jimmy. */
   function ensureFocus(pi, seats) {
-    var cur = padFocus[pi];
-    var open = openFrogs(seats);
+    var i, id, s, cur, open, j;
+    for (i = 0; i < FROG_ORDER.length; i++) {
+      id = FROG_ORDER[i];
+      s = seats && seats[id];
+      if (seatOwnedByPad(s, pi)) {
+        padFocus[pi] = id;
+        return id;
+      }
+    }
+    /* Only lower indices count. A higher slot still sitting on James must
+       not push pad 0 onto Jimmy; that higher slot moves off on its own turn. */
+    function heldByOther(fid) {
+      for (j = 0; j < pi; j++) {
+        if (padFocus[j] === fid) return true;
+      }
+      return false;
+    }
+    cur = padFocus[pi];
+    open = openFrogs(seats);
     if (cur && open.indexOf(cur) >= 0) return cur;
-    if (cur) {
-      var s = seats && seats[cur];
-      if (s && s.padIndex === pi) return cur;
+    for (i = 0; i < open.length; i++) {
+      id = open[i];
+      if (heldByOther(id)) continue;
+      padFocus[pi] = id;
+      return id;
     }
     padFocus[pi] = open.length ? open[0] : FROG_ORDER[pi % 4];
     return padFocus[pi];
@@ -73,7 +101,7 @@
   }
 
   function axisEdge(pi, snap) {
-    var latch = padAxisLatch[pi] || (padAxisLatch[pi] = { x: 0, y: 0 });
+    var latch = padAxisLatch[pi] || (padAxisLatch[pi] = { x: 0, y: 0, armed: false });
     var lx = snap && snap.lx ? snap.lx : 0;
     var ly = snap && snap.ly ? snap.ly : 0;
     var dx = 0;
@@ -91,6 +119,14 @@
     if (!dy) {
       if (ly > 0.55) dy = 1;
       else if (ly < -0.55) dy = -1;
+    }
+    /* First sample only arms the latch. A resting stick must not cycle
+       James → Jimmy the moment the entrance opens. */
+    if (!latch.armed) {
+      latch.x = dx;
+      latch.y = dy;
+      latch.armed = true;
+      return 0;
     }
     var out = 0;
     if (dx && dx !== latch.x) out = dx;
@@ -124,6 +160,7 @@
       for (var pi = 0; pi < 4; pi++) {
         if (!connected[pi]) {
           padFocus[pi] = null;
+          if (padAxisLatch[pi]) padAxisLatch[pi].armed = false;
           continue;
         }
         var snap = snaps[pi];
@@ -146,8 +183,10 @@
           lastPad = pi;
           if (P.releaseLocalPad) P.releaseLocalPad(pi);
           if (P.enforceSeatInvariant) P.enforceSeatInvariant();
-          ensureFocus(pi, seats);
+          /* Fresh seats: the pre-release copy still showed James claimed,
+             so a cleared cursor skipped him and stuck on "pick Jimmy". */
           seats = P.getSeats ? P.getSeats() : seats;
+          ensureFocus(pi, seats);
         }
         if (bp.y) {
           lastPad = pi;
@@ -158,13 +197,26 @@
     }
 
     seats = P && P.getSeats ? P.getSeats() : seats;
+    /* Claimed pads paint on their seat only — never also as a second "pick" tile. */
+    var claimedPadFrog = {};
+    var fk;
+    for (fk = 0; fk < FROG_ORDER.length; fk++) {
+      var fs = seats && seats[FROG_ORDER[fk]];
+      if (!fs || fs.padIndex == null || !fs.peerId) continue;
+      if (fs.status !== "you" && fs.status !== "human") continue;
+      claimedPadFrog[fs.padIndex | 0] = FROG_ORDER[fk];
+    }
     var focusByFrog = {};
+    var paintedPad = {};
     for (var pj = 0; pj < 4; pj++) {
       if (!connected[pj]) continue;
       var fid = padFocus[pj];
+      if (claimedPadFrog[pj] != null) fid = claimedPadFrog[pj];
       if (!fid) continue;
+      if (paintedPad[pj]) continue;
+      paintedPad[pj] = fid;
       if (!focusByFrog[fid]) focusByFrog[fid] = [];
-      focusByFrog[fid].push(pj + 1);
+      if (focusByFrog[fid].indexOf(pj + 1) < 0) focusByFrog[fid].push(pj + 1);
     }
 
     var youFrog = null;
@@ -203,7 +255,7 @@
           if (em) {
             em.textContent = focusPads.length === 1
               ? "Pad " + focusPads[0] + " · pick " + fname
-              : "Pads " + focusPads.join(",") + " · pick";
+              : "Pads " + focusPads.join(",") + " · pick " + fname;
           }
         } else if (em) {
           em.textContent = "Open · AI";

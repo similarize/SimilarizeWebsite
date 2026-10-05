@@ -407,7 +407,14 @@
       var snaps = typeof global.SimilarizeGamepad.pollAll === "function"
         ? global.SimilarizeGamepad.pollAll(4)
         : null;
+      var uniqPads = null;
+      if (typeof global.SimilarizeGamepad.uniqueConnectedIndices === "function") {
+        uniqPads = Object.create(null);
+        var uxs = global.SimilarizeGamepad.uniqueConnectedIndices(4) || [];
+        for (var ui = 0; ui < uxs.length; ui++) uniqPads[uxs[ui] | 0] = 1;
+      }
       for (var pi = 0; pi < 4; pi++) {
+        if (uniqPads && !uniqPads[pi]) continue;
         var gpN = snaps ? snaps[pi] : global.SimilarizeGamepad.pollPad(pi);
         if (!gpN || !gpN.connected) continue;
         var claimedBy = claimedPadSet[pi];

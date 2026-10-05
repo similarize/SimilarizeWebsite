@@ -23,8 +23,8 @@
  *   poll() / pollPad(i)     — snapshot { connected, lx,ly,rx,ry, a,b,x,y, lb,rb,lt,rt,
  *                             ltValue,rtValue, start,back, dpad:{u,d,l,r}, buttonsPressed:{…edges} }
  *   pollAll(max?)           — poll slots 0..max-1 once (avoids double-poll eating edges)
- *   connectedIndices(max?)  — unique physical pads (id + lockstep dual-slot collapse)
- *   uniqueConnectedIndices(max?) — alias of connectedIndices (1 physical stick → 1 index)
+ *   connectedIndices(max?)  — physical pads (dedupe repeated Gamepad.index only)
+ *   uniqueConnectedIndices(max?) — alias of connectedIndices (same-model id is NOT a dedupe key)
  *   connectedCount(max?)    — length of connectedIndices
  *   pressed(name, i?)       — held (uses last pollPad cache, or polls once)
  *   justPressed(name, i?)   — rising edge (uses last pollPad cache, or polls once)
@@ -153,28 +153,12 @@
     for (var i = 0; i < n; i++) out.push(pollPad(i));
     return out;
   }
-  /* Same-model pads share gamepad.id; Xbox/Steam dual-slot also shares id and
-   * mirrors axes/buttons. Per frame: lockstep/idle same-id → one slot; clearly
-   * diverged inputs → keep each (two physical pads). No sticky diverge flag
-   * (analog noise must not permanently split one stick into two frogs). */
-  function padFingerprint(gp) {
-    if (!gp) return "";
-    var parts = [];
-    var ax = gp.axes || [];
-    for (var a = 0; a < ax.length; a++) {
-      var v = ax[a] || 0;
-      if (Math.abs(v) < DZ) v = 0;
-      parts.push(Math.round(v * 10));
-    }
-    var bt = gp.buttons || [];
-    for (var b = 0; b < bt.length; b++) {
-      var btn = bt[b];
-      var on = btn && (btn.pressed || (typeof btn.value === "number" && btn.value > 0.45));
-      parts.push(on ? 1 : 0);
-    }
-    return parts.join(",");
-  }
-
+  /* padpick1 / same-model-pads1: two Xbox pads of the same model share gamepad.id.
+   * Collapsing on id (or on a matching idle fingerprint) dropped the second USB
+   * pad, and a B press made the fingerprints differ so that second slot flashed
+   * back for a moment. Dedupe ONLY a repeated Gamepad.index — a mirrored ghost
+   * of the same device reported twice under one index. Different indices stay
+   * separate seats even when id and sticks match. */
   function uniqueConnectedIndices(max) {
     var n = typeof max === "number" ? max : 4;
     if (n < 1) n = 1;
@@ -182,9 +166,7 @@
     var list = pads();
     var idxs = [];
     var seenIndex = Object.create(null);
-    var byId = Object.create(null);
-    var anon = 0;
-    var i, gp, id, physicalIndex, group, g, fp0, allMatch, k;
+    var i, gp, physicalIndex;
     for (i = 0; i < n; i++) {
       gp = list && list[i];
       if (!gp) continue;
@@ -193,28 +175,7 @@
         : i;
       if (seenIndex[physicalIndex]) continue;
       seenIndex[physicalIndex] = true;
-      id = gp.id ? String(gp.id) : ("__anon_" + (anon++));
-      if (!byId[id]) byId[id] = [];
-      byId[id].push({ slot: i, index: physicalIndex, fp: padFingerprint(gp) });
-    }
-    for (id in byId) {
-      if (!Object.prototype.hasOwnProperty.call(byId, id)) continue;
-      group = byId[id];
-      if (group.length === 1) {
-        idxs.push(group[0].slot);
-        continue;
-      }
-      fp0 = group[0].fp;
-      allMatch = true;
-      for (k = 1; k < group.length; k++) {
-        if (group[k].fp !== fp0) { allMatch = false; break; }
-      }
-      if (allMatch) {
-        /* Dual-slot mirror or all-idle same model — one stick only */
-        idxs.push(group[0].slot);
-      } else {
-        for (g = 0; g < group.length; g++) idxs.push(group[g].slot);
-      }
+      idxs.push(i);
     }
     idxs.sort(function (a, b) { return a - b; });
     return idxs;
