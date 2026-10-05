@@ -3,6 +3,13 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <!--
+      Four Froggies 3D entry:
+      - Requires ?go=1 to stay on this 3D world. Without go=1 the page redirects to
+        /games/four-froggies/ (the version lobby). Live play:
+        /games/four-froggies-3d/?go=1&v=20261005-load1
+      - go=1 also adds html.ff3d-autostart (hides the seat gate; party-lobby auto-Starts).
+    -->
     <script>
       (function () {
         var params = new URLSearchParams(location.search);
@@ -20,15 +27,35 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560;9..144,680&family=Outfit:wght@380;520;640&display=swap" rel="stylesheet" />
+    <style>
+      /* Early boot splash: visible before the ~1MB module parses (esp. with go=1 which hides .gate). */
+      #ff3d-boot-splash{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.7rem;background:#121610;color:#e8f0e6;font-family:Outfit,system-ui,sans-serif;text-align:center;padding:1.25rem;transition:opacity .45s ease}
+      #ff3d-boot-splash.ff3d-boot-hide{opacity:0;pointer-events:none}
+      #ff3d-boot-splash .ff3d-boot-kicker{color:#e3a008;letter-spacing:.16em;text-transform:uppercase;font-size:.72rem;font-weight:640;margin:0}
+      #ff3d-boot-splash h1{font-family:Fraunces,Georgia,serif;font-size:clamp(1.8rem,5vw,2.8rem);font-weight:680;letter-spacing:-.03em;margin:0;line-height:1}
+      #ff3d-boot-msg{margin:.15rem 0 0;color:#a7b5a8;font-size:.95rem;max-width:22rem}
+      #ff3d-boot-track{width:min(16rem,70vw);height:.45rem;border-radius:999px;background:#2c382e;overflow:hidden;margin-top:.35rem}
+      #ff3d-boot-bar{height:100%;width:4%;background:#e3a008;border-radius:999px;transition:width .25s ease}
+      #ff3d-boot-pct{font-size:.8rem;color:#a7b5a8;margin:0}
+      #ff3d-boot-hint{font-size:.72rem;color:#6f7d70;margin:.4rem 0 0;max-width:22rem;line-height:1.35}
+    </style>
     <script src="/games/shared/tesla-fullscreen.js?v=fs1"></script>
     <script src="/games/shared/gamepad.js?v=20261004-padpick1"></script>
     <script src="/games/four-froggies-3d/party.js?v=20261001-kidfix1"></script>
-    <link rel="stylesheet" href="/games/four-froggies-3d/party-lobby.css?v=20261004-marsrover2" />
-    <script type="module" crossorigin src="/games/four-froggies-3d/assets/index-ff3d85.js?v=20261005-real1"></script>
+    <link rel="stylesheet" href="/games/four-froggies-3d/party-lobby.css?v=20261005-load1" />
+    <script type="module" crossorigin src="/games/four-froggies-3d/assets/index-ff3d86.js?v=20261005-load1"></script>
     <link rel="stylesheet" crossorigin href="/games/four-froggies-3d/assets/index-B2YYwnbM.css?v=20261001-kidfix1">
   </head>
   <body>
+    <div id="ff3d-boot-splash" role="status" aria-live="polite" aria-busy="true">
+      <p class="ff3d-boot-kicker">Three.js · ranch</p>
+      <h1>Four Froggies 3D</h1>
+      <p id="ff3d-boot-msg">Loading Four Froggies 3D…</p>
+      <div id="ff3d-boot-track" aria-hidden="true"><div id="ff3d-boot-bar"></div></div>
+      <p id="ff3d-boot-pct">0%</p>
+      <p id="ff3d-boot-hint">First open downloads a ~1&nbsp;MB world script plus planet maps. The ranch starts even if a space map is slow.</p>
+    </div>
     <div id="root"></div>
-    <script src="/games/four-froggies-3d/party-lobby.js?v=20261004-marsrover2" defer></script>
+    <script src="/games/four-froggies-3d/party-lobby.js?v=20261005-load1" defer></script>
   </body>
 </html>

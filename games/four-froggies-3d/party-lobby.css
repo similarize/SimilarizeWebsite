@@ -130,3 +130,7 @@ html.ff3d-autostart .gate { display: none !important; }
   box-shadow: 0 0 0 1px rgba(56,189,248,.35);
 }
 .ff3d-party .join-code:not([hidden]) { display: inline-block; }
+
+/* load1: boot splash stays visible with go=1 (gate is hidden). */
+html.ff3d-autostart #ff3d-boot-splash:not(.ff3d-boot-hide) { display: flex !important; }
+body.ff3d-playing #ff3d-boot-splash { opacity: 0; pointer-events: none; }

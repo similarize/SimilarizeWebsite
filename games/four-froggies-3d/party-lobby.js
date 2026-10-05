@@ -283,6 +283,18 @@
     document.body.classList.add("ff3d-playing");
     var gate = document.querySelector(".gate");
     if (gate) gate.style.display = "none";
+    try {
+      if (typeof ffBootSplashHide === "function") ffBootSplashHide();
+      else {
+        var splash = document.getElementById("ff3d-boot-splash");
+        if (splash) {
+          splash.classList.add("ff3d-boot-hide");
+          setTimeout(function () {
+            try { splash.remove(); } catch (e) {}
+          }, 500);
+        }
+      }
+    } catch (eHide) {}
   }
 
   function initParty() {

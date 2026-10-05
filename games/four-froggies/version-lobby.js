@@ -5,6 +5,7 @@
   "use strict";
 
   var CACHE = "20260930-onefrog1";
+  var FF3D_CACHE = "20261005-load1";
   var FROG_ORDER = ["james", "jimmy", "bubbles", "rexy"];
   var FROG_NAME = { james: "James", jimmy: "Jimmy", bubbles: "Bubbles", rexy: "Rexy" };
 
@@ -339,7 +340,7 @@
       starting = true;
       var frog = claimedFrogId();
       var room = P && P.getRoom ? P.getRoom() : null;
-      var q = "?v=" + CACHE + "&frog=" + encodeURIComponent(frog) + "&go=1";
+      var q = "?v=" + FF3D_CACHE + "&frog=" + encodeURIComponent(frog) + "&go=1";
       if (role === "host" && room) q += "&host=" + encodeURIComponent(room);
       else if (room) q += "&room=" + encodeURIComponent(room);
       location.href = "/games/four-froggies-3d/" + q;
@@ -443,7 +444,7 @@
   try {
     var q = new URLSearchParams(location.search);
     if (q.get("engine") === "3d") {
-      location.replace("/games/four-froggies-3d/?v=" + CACHE + "&go=1");
+      location.replace("/games/four-froggies-3d/?v=" + FF3D_CACHE + "&go=1");
       return;
     }
     if (q.get("engine") === "three" || q.get("engine") === "canvas") {
