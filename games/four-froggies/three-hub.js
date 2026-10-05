@@ -2976,11 +2976,36 @@
       new THREE.MeshBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.7, side: THREE.DoubleSide })
     );
     padRing.rotation.x = -Math.PI / 2; padRing.position.set(sp.x, 0.14, sp.z); scene.add(padRing);
-    var rocket = new THREE.Mesh(
-      new THREE.ConeGeometry(0.45, 2.2, 10),
-      new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.5 })
-    );
-    rocket.position.set(sp.x, 1.3, sp.z); scene.add(rocket);
+    /* garage1: SpaceX Starship stack (low-poly) — stainless + heat tiles + flaps */
+    var ssSteel = new THREE.MeshStandardMaterial({ color: 0xe6e9ef, metalness: 0.9, roughness: 0.3 });
+    var ssTile = new THREE.MeshStandardMaterial({ color: 0x1c1917, metalness: 0.25, roughness: 0.7 });
+    var ssDark = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.55, roughness: 0.4 });
+    var ssRoot = new THREE.Group();
+    var boost = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 2.4, 12), ssSteel);
+    boost.position.y = 1.2; boost.castShadow = true; ssRoot.add(boost);
+    var heat = new THREE.Mesh(new THREE.CylinderGeometry(0.425, 0.425, 2.35, 12, 1, false, 0, Math.PI), ssTile);
+    heat.position.y = 1.2; ssRoot.add(heat);
+    var ship = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 1.7, 12), ssSteel);
+    ship.position.y = 3.05; ssRoot.add(ship);
+    var nose = new THREE.Mesh(new THREE.ConeGeometry(0.4, 0.95, 12), ssSteel);
+    nose.position.y = 4.3; ssRoot.add(nose);
+    for (var fi = 0; fi < 2; fi++) {
+      var side = fi ? 1 : -1;
+      var aft = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.55, 0.28), ssDark);
+      aft.position.set(side * 0.48, 2.55, 0); aft.rotation.z = side * 0.3; ssRoot.add(aft);
+      var fwd = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.28, 0.18), ssDark);
+      fwd.position.set(side * 0.42, 3.7, 0); ssRoot.add(fwd);
+    }
+    for (var gi = 0; gi < 4; gi++) {
+      var ga = (gi / 4) * Math.PI * 2 + Math.PI / 4;
+      var gfin = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.35, 0.28), ssDark);
+      gfin.position.set(Math.cos(ga) * 0.48, 2.15, Math.sin(ga) * 0.48);
+      gfin.rotation.y = ga; ssRoot.add(gfin);
+    }
+    var skirt = new THREE.Mesh(new THREE.CylinderGeometry(0.48, 0.48, 0.12, 12), ssDark);
+    skirt.position.y = 0.08; ssRoot.add(skirt);
+    ssRoot.position.set(sp.x, 0, sp.z); scene.add(ssRoot);
+    var rocket = nose; /* keep ref name for any legacy */
     var spotty = new THREE.Mesh(
       new THREE.SphereGeometry(0.35, 12, 10),
       new THREE.MeshStandardMaterial({ color: 0xfdba74 })
@@ -6296,8 +6321,8 @@ state.zLift = 0;
     var vStat3 = ((state.inTruck || state.inSub) && C.vehicleDriveStats) ? C.vehicleDriveStats({ vehicleStyle: state.inSub ? "submarine" : state.vehicleStyle, wheelScale: C.getWheelScale ? C.getWheelScale() : 1 }) : null;
     var mStat3 = (state.inMech && C.mechDriveStats) ? C.mechDriveStats(state.mechStories || 10) : null;
     /* kidfix1: on-foot always full hop speed */
-    var maxSp = state.mode === "space" ? 11.5 : state.inSub ? 9.2 : state.inTruck ? 15.8 : state.inMech ? 6.8 : state.inSwim ? 8.5 : 14.2;
-    var accel = state.mode === "space" ? 22 : state.inSub ? 22 : state.inTruck ? 38 : state.inMech ? 16 : state.inSwim ? 22 : 34;
+    var maxSp = state.mode === "space" ? 11.5 : state.inSub ? 9.2 : state.inTruck ? 22.9 : state.inMech ? 6.8 : state.inSwim ? 8.5 : 14.2; /* garage1: cyber +45% */
+    var accel = state.mode === "space" ? 22 : state.inSub ? 22 : state.inTruck ? 55.1 : state.inMech ? 16 : state.inSwim ? 22 : 34; /* garage1 */
     var fric = state.mode === "space" ? 3.0 : state.inSub ? 5.5 : state.inTruck ? 4.8 : state.inMech ? 5.2 : state.inSwim ? 6.2 : 7.8;
     if (vStat3) { maxSp *= vStat3.maxSp || 1; accel *= vStat3.accel || 1; fric *= vStat3.fric || 1; }
     if (mStat3) { maxSp *= mStat3.maxSp || 1; accel *= mStat3.accel || 1; fric *= mStat3.fric || 1; }

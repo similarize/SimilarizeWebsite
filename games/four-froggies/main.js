@@ -657,9 +657,9 @@
           const craft = Air && world ? Air.ensureCraft(world, kind) : null;
           tipEl.textContent = (Air && Air.flyingTip) ? Air.flyingTip(craft, kind) : "land + INTERACT to hop out";
         }
-        else if (exitTipT > 0) tipEl.textContent = "EXIT · INTERACT / E";
+        else if (exitTipT > 0) tipEl.textContent = "exit · INTERACT / E";
         else if (hudBoarded.inSub)
-          tipEl.textContent = "🛸 Diving · EXIT · INTERACT / E";
+          tipEl.textContent = "exit submarine · INTERACT / E";
         else if (hudBoarded.inTruck && globalThis.FroggiesCanon && globalThis.FroggiesCanon.isTankVehicle && globalThis.FroggiesCanon.isTankVehicle(hudBoarded))
           tipEl.textContent = "FIRE · Space / X / button · EXIT INTERACT";
         else if (hudBoarded.inMech) {
@@ -676,23 +676,11 @@
         }
         else tipEl.textContent = "";
       } else if (storyToastT > 0) tipEl.textContent = storyToast;
-      else if (nearHot && (nearHot.kind === "heli" || nearHot.kind === "drone" || nearHot.id === "heli" || nearHot.id === "drone")) {
-        const Air = globalThis.FroggiesAir;
-        const kind = (nearHot.kind === "drone" || nearHot.id === "drone") ? "drone" : "heli";
-        tipEl.textContent = (Air && Air.nearPadTip) ? Air.nearPadTip(kind) : ("Walk | " + (kind === "drone" ? "Drone" : "Heli") + " · INTERACT / E");
+      else if (nearHot) {
+        const Cpr = globalThis.FroggiesCanon;
+        const prompt = (Cpr && Cpr.interactPromptFor) ? Cpr.interactPromptFor(me && me.id, nearHot, null) : (nearHot.tip || "look around");
+        tipEl.textContent = prompt + " · INTERACT / E";
       }
-      else if (nearHot && (nearHot.kind === "mech" || (nearHot.id && String(nearHot.id).indexOf("mech") === 0))) {
-        const Cown = globalThis.FroggiesCanon;
-        if (me && Cown && Cown.canBoardMech && !Cown.canBoardMech(me.id, nearHot)) {
-          tipEl.textContent = (Cown.mechDeniedTip ? Cown.mechDeniedTip(me.id, nearHot) : ("Only " + (nearHot.tip || "owner") + " can board")) + " · INTERACT";
-        } else {
-          tipEl.textContent = "BOARD · " + nearHot.tip + " · INTERACT / E";
-        }
-      } else if (nearHot && (nearHot.kind === "truck" || (nearHot.id && nearHot.id.indexOf("truck") === 0)))
-        tipEl.textContent = "BOARD · " + nearHot.tip + " · INTERACT / E";
-      else if (nearHot && (nearHot.kind === "submarine" || (nearHot.id && nearHot.id.indexOf("submarine") === 0)))
-        tipEl.textContent = "BOARD · " + nearHot.tip + " · INTERACT / E";
-      else if (nearHot) tipEl.textContent = "⚡ " + nearHot.tip + " · INTERACT / E";
       else if (me && me.inSwim && !me.inSub)
         tipEl.textContent = "🏊 Swimming · find Submarine at shore · INTERACT / E";
       else if (me && W.nearMech1000 && W.nearMech1000(frogs, 170))
@@ -715,10 +703,13 @@
       const canAct = !!nearHot || !!(hudBoarded && phase === "hub");
       btnInteract.classList.toggle("ready", canAct);
       btnInteract.disabled = !canAct && (phase === "hub" || phase === "space");
-      if (phase === "hub" && hudBoarded) btnInteract.textContent = "EXIT";
-      else if (nearHot && isBoardableHot(nearHot))
-        btnInteract.textContent = "BOARD";
-      else btnInteract.textContent = "INTERACT";
+      if (phase === "hub" && hudBoarded) {
+        const Cpr = globalThis.FroggiesCanon;
+        btnInteract.textContent = (Cpr && Cpr.interactPromptFor) ? Cpr.interactPromptFor(me && me.id, null, hudBoarded) : "exit";
+      } else if (nearHot) {
+        const Cpr = globalThis.FroggiesCanon;
+        btnInteract.textContent = (Cpr && Cpr.interactPromptFor) ? Cpr.interactPromptFor(me && me.id, nearHot, null) : (isBoardableHot(nearHot) ? "enter" : "look around");
+      } else btnInteract.textContent = "look around";
     }
     if (livesEl && phase === "space") {
       livesEl.textContent = "🚀 Space";

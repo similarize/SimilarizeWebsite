@@ -538,9 +538,51 @@
 
   function mechDeniedTip(frogId, hot) {
     var ownerName = mechOwnerName(hot) || "owner";
-    var label = mechStoriesLabel(hot && hot.stories);
-    var who = (FROG_DEFS[frogId] && FROG_DEFS[frogId].name) || "That froggy";
-    return "Only " + ownerName + " can drive the " + label + " · not " + who;
+    /* garage1: locked mech label is possessive, no board offer */
+    return ownerName + "'s mech";
+  }
+
+  /* garage1: exact enter/board/exit prompt for a hotspot + acting frog */
+  function interactPromptFor(frogId, hot, boarded) {
+    if (boarded) {
+      if (boarded.inMech) {
+        var ms = boarded.mechStories != null ? boarded.mechStories : boarded.stories;
+        return "exit " + mechStoriesLabel(ms);
+      }
+      if (boarded.inHeli) return "exit helicopter";
+      if (boarded.inDrone) return "exit drone";
+      if (boarded.inSub) return "exit submarine";
+      if (boarded.inTruck) {
+        var st = vehicleStyleOf(boarded.truckId || boarded.vehicleStyle || boarded);
+        if (st === "ripsaw") return "exit Ripsaw";
+        if (st === "tank") return "exit tank";
+        if (st === "submarine") return "exit submarine";
+        return "exit Cybertruck";
+      }
+      return "exit";
+    }
+    if (!hot) return "look around";
+    if (hot.id === "starship") return "enter Starship";
+    if (isMechHotspot(hot)) {
+      if (!canBoardMech(frogId, hot)) return mechDeniedTip(frogId, hot);
+      var lab = mechStoriesLabel(hot.stories);
+      if (lab.indexOf("10-story") === 0) lab = "ten-story mech";
+      else if (lab.indexOf("100-story") === 0) lab = "hundred-story mech";
+      else if (lab.indexOf("1000-story") === 0) lab = "thousand-story mech";
+      return "board " + lab;
+    }
+    if (hot.kind === "heli" || hot.id === "heli") return "enter helicopter";
+    if (hot.kind === "drone" || hot.id === "drone") return "board drone";
+    if (hot.kind === "submarine" || (hot.id && String(hot.id).indexOf("submarine") === 0)) return "enter submarine";
+    if (hot.kind === "truck" || (hot.id && String(hot.id).indexOf("truck") === 0)) {
+      var vs = vehicleStyleOf(hot);
+      if (vs === "ripsaw") return "enter Ripsaw";
+      if (vs === "tank") return "enter tank";
+      return "enter Cybertruck";
+    }
+    if (hot.id === "phone") return "call Purple Bear";
+    if (hot.id === "sps") return "talk to Optimus";
+    return "look around";
   }
 
   function vehicleStyleOf(hotOrId) {
@@ -906,7 +948,7 @@
   /* mech5: distinct automobile + mech drive feel.
      Autos: Ripsaw fastest; Cybertruck balanced; Monster (big wheels) punchy/slower turn; Tank heavy/slow. */
   var VEHICLE_DRIVE = {
-    cybertruck: { maxSp: 1.00, accel: 1.00, turn: 1.00, fric: 1.00 },
+    cybertruck: { maxSp: 1.45, accel: 1.45, turn: 1.00, fric: 1.00 }, /* garage1: +45% base speed */
     monster:    { maxSp: 0.94, accel: 1.14, turn: 0.72, fric: 1.06 },
     ripsaw:     { maxSp: 1.22, accel: 1.30, turn: 1.12, fric: 0.90 },
     tank:       { maxSp: 0.66, accel: 0.58, turn: 0.52, fric: 1.28 },
@@ -1655,6 +1697,9 @@
     var n = Number(stories) || 0;
     if (n >= 1e12) return "trillion-story mech";
     if (n >= 1e9) return "billion-story mech";
+    if (n >= 1000) return "thousand-story mech";
+    if (n >= 100) return "hundred-story mech";
+    if (n >= 10) return "ten-story mech";
     return Math.round(n) + "-story mech";
   }
 
@@ -1728,6 +1773,7 @@
     canBoardMech: canBoardMech,
     canBoardHotspot: canBoardHotspot,
     mechDeniedTip: mechDeniedTip,
+    interactPromptFor: interactPromptFor,
     vehicleStyleOf: vehicleStyleOf,
     isTrillionMechPilot: isTrillionMechPilot,
     isThousandMechPilot: isThousandMechPilot,

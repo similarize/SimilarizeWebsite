@@ -4978,15 +4978,16 @@
     bodyGrad.addColorStop(1, driving ? "#5b6778" : "#4a5564");
     ctx.fillStyle = bodyGrad;
     ctx.beginPath();
-    ctx.moveTo(-38 * s, 4 * s);        /* rear bumper sharp */
-    ctx.lineTo(-36 * s, -4 * s);       /* bed rear upright */
-    ctx.lineTo(-14 * s, -8 * s);       /* bed flat */
-    ctx.lineTo(-6 * s, -12 * s);       /* cab break */
-    ctx.lineTo(4 * s, -26 * s);        /* roof peak (steep) */
-    ctx.lineTo(40 * s, -8 * s);        /* long nose slope */
-    ctx.lineTo(48 * s, 2 * s);         /* front tip */
-    ctx.lineTo(44 * s, 8 * s);         /* front bumper */
-    ctx.lineTo(-40 * s, 10 * s);
+    /* garage1: sharper Cybertruck — B-pillar peak, flat windshield rake, long tonneau */
+    ctx.moveTo(-40 * s, 6 * s);        /* rear bumper */
+    ctx.lineTo(-38 * s, -2 * s);       /* bed rear upright */
+    ctx.lineTo(-12 * s, -6 * s);       /* flat tonneau */
+    ctx.lineTo(-2 * s, -10 * s);       /* cab break / B-pillar */
+    ctx.lineTo(2 * s, -28 * s);        /* roof peak above B-pillar */
+    ctx.lineTo(42 * s, -6 * s);        /* flat windshield rake */
+    ctx.lineTo(50 * s, 4 * s);         /* flat front face */
+    ctx.lineTo(46 * s, 10 * s);        /* front bumper */
+    ctx.lineTo(-42 * s, 12 * s);
     ctx.closePath();
     ctx.fill();
     ctx.strokeStyle = "#020617";
@@ -5822,8 +5823,8 @@
       ctx.fillText(h.label, p.x, badgeY - 8);
       ctx.fillStyle = "#fbbf24";
       ctx.font = "bold 11px Segoe UI, system-ui, sans-serif";
-      var prompt = (h.kind === "truck" || (h.id && String(h.id).indexOf("truck") === 0) || h.kind === "mech" || (h.id && String(h.id).indexOf("mech") === 0) || h.kind === "submarine" || (h.id && String(h.id).indexOf("submarine") === 0) || h.kind === "heli" || h.kind === "drone" || h.id === "heli" || h.id === "drone")
-        ? "BOARD · INTERACT / E" : "INTERACT · E";
+      var Cpr = global.FroggiesCanon;
+      var prompt = (Cpr && Cpr.interactPromptFor) ? Cpr.interactPromptFor(null, h, null) : "look around";
       ctx.fillText(prompt, p.x, badgeY + 8);
     } else {
       ctx.fillStyle = "rgba(255,255,255,0.82)";
@@ -6176,27 +6177,42 @@
       ctx.fillStyle = li % 2 ? "#fbbf24" : "#38bdf8";
       ctx.beginPath(); ctx.arc(lx, ly, 2.6 * sd, 0, Math.PI * 2); ctx.fill();
     }
-    /* Starship silhouette — taller + fins */
-    ctx.fillStyle = "#e2e8f0";
+    /* garage1: SpaceX Starship silhouette — booster + ship + nose + flaps + heat tiles */
+    var ssH = 78 * sd, ssR = 11 * sd;
+    /* booster */
+    ctx.fillStyle = "#d6dbe3";
+    ctx.fillRect(p.x - ssR, p.y - ssH * 0.55, ssR * 2, ssH * 0.55);
+    /* heat-shield (windward half) */
+    ctx.fillStyle = "#1c1917";
+    ctx.fillRect(p.x - ssR, p.y - ssH * 0.55, ssR * 0.95, ssH * 0.55);
+    /* ship */
+    ctx.fillStyle = "#e8edf4";
+    ctx.fillRect(p.x - ssR * 0.95, p.y - ssH * 0.88, ssR * 1.9, ssH * 0.33);
+    ctx.fillStyle = "#1c1917";
+    ctx.fillRect(p.x - ssR * 0.95, p.y - ssH * 0.88, ssR * 0.9, ssH * 0.33);
+    /* ogive nose */
+    ctx.fillStyle = "#f1f5f9";
     ctx.beginPath();
-    ctx.moveTo(p.x, p.y - 68 * sd);
-    ctx.lineTo(p.x + 18 * sd, p.y - 8 * sd);
-    ctx.lineTo(p.x - 18 * sd, p.y - 8 * sd);
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = "#64748b";
-    ctx.fillRect(p.x - 10 * sd, p.y - 8 * sd, 20 * sd, 22 * sd);
-    ctx.fillStyle = "#94a3b8";
+    ctx.moveTo(p.x, p.y - ssH);
+    ctx.lineTo(p.x + ssR * 0.95, p.y - ssH * 0.88);
+    ctx.lineTo(p.x - ssR * 0.95, p.y - ssH * 0.88);
+    ctx.closePath(); ctx.fill();
+    /* aft flaps */
+    ctx.fillStyle = "#334155";
     ctx.beginPath();
-    ctx.moveTo(p.x - 10 * sd, p.y + 4 * sd);
-    ctx.lineTo(p.x - 26 * sd, p.y + 14 * sd);
-    ctx.lineTo(p.x - 10 * sd, p.y + 10 * sd);
+    ctx.moveTo(p.x - ssR, p.y - ssH * 0.72);
+    ctx.lineTo(p.x - ssR * 1.85, p.y - ssH * 0.62);
+    ctx.lineTo(p.x - ssR, p.y - ssH * 0.58);
     ctx.closePath(); ctx.fill();
     ctx.beginPath();
-    ctx.moveTo(p.x + 10 * sd, p.y + 4 * sd);
-    ctx.lineTo(p.x + 26 * sd, p.y + 14 * sd);
-    ctx.lineTo(p.x + 10 * sd, p.y + 10 * sd);
+    ctx.moveTo(p.x + ssR, p.y - ssH * 0.72);
+    ctx.lineTo(p.x + ssR * 1.85, p.y - ssH * 0.62);
+    ctx.lineTo(p.x + ssR, p.y - ssH * 0.58);
     ctx.closePath(); ctx.fill();
+    /* grid fins */
+    ctx.fillStyle = "#475569";
+    ctx.fillRect(p.x - ssR * 1.55, p.y - ssH * 0.5, ssR * 0.55, 5 * sd);
+    ctx.fillRect(p.x + ssR * 1.0, p.y - ssH * 0.5, ssR * 0.55, 5 * sd);
     /* Exhaust glow */
     ctx.fillStyle = near ? "rgba(251, 146, 60, 0.7)" : "rgba(249, 115, 22, 0.45)";
     ctx.beginPath();
