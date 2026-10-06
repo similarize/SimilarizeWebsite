@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <title>Soccer RC 3D</title>
+  <!-- Cache-bust: ?v=20261006-soccerrc3d1 — Rocket League–lite 3D Soccer RC -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560&family=Outfit:wght@400;500;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./style.css?v=20261006-soccerrc3d1" />
+  <script src="/games/shared/tesla-fullscreen.js?v=tfs1"></script>
+  <script src="/games/shared/viewport-fill.js?v=vfs1"></script>
+  <script src="/games/shared/gamepad.js?v=20261006-soccerrc3d1"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.170.0/build/three.module.js"
+    }
+  }
+  </script>
+</head>
+<body>
+  <canvas id="view"></canvas>
+  <div class="vignette" aria-hidden="true"></div>
+  <div class="top">
+    <a class="exit-arcade" href="/games/">← Arcade</a>
+    <span class="scores"><span class="o">P1 <span id="s1">0</span></span> · <span class="b">P2 <span id="s2">0</span></span></span>
+    <span class="hint">P1 arrows + Space kick · Shift boost · P2 WASD + Q kick · E boost · R reset · Pad: RT/LT drive · stick steer · A kick · B boost</span>
+    <button type="button" id="resetBtn">Reset</button>
+  </div>
+  <div id="banner" aria-live="polite"></div>
+  <div class="boost-row">
+    <div class="boost-card p1">
+      <label>Orange boost</label>
+      <div class="meter" aria-hidden="true"><i id="boost1"></i></div>
+    </div>
+    <div class="boost-card p2">
+      <label>Blue boost</label>
+      <div class="meter" aria-hidden="true"><i id="boost2"></i></div>
+    </div>
+  </div>
+  <div class="pads">
+    <div class="cluster p1">
+      <span>ORANGE</span>
+      <button type="button" class="up" data-p="0" data-act="fwd" aria-label="P1 forward">▲</button>
+      <button type="button" class="boost" data-p="0" data-act="boost" aria-label="P1 boost">BST</button>
+      <button type="button" class="left" data-p="0" data-act="left" aria-label="P1 left">◀</button>
+      <button type="button" class="down" data-p="0" data-act="rev" aria-label="P1 back">▼</button>
+      <button type="button" class="right" data-p="0" data-act="right" aria-label="P1 right">▶</button>
+      <button type="button" class="fire" data-p="0" data-act="kick" aria-label="P1 kick">KICK</button>
+    </div>
+    <div class="cluster p2">
+      <span>BLUE</span>
+      <button type="button" class="fire" data-p="1" data-act="kick" aria-label="P2 kick">KICK</button>
+      <button type="button" class="boost" data-p="1" data-act="boost" aria-label="P2 boost">BST</button>
+      <button type="button" class="up" data-p="1" data-act="fwd" aria-label="P2 forward">▲</button>
+      <button type="button" class="left" data-p="1" data-act="left" aria-label="P2 left">◀</button>
+      <button type="button" class="down" data-p="1" data-act="rev" aria-label="P2 back">▼</button>
+      <button type="button" class="right" data-p="1" data-act="right" aria-label="P2 right">▶</button>
+    </div>
+  </div>
+  <div id="boot">Loading Soccer RC 3D…</div>
+  <script type="module" src="./game.js?v=20261006-soccerrc3d1"></script>
+</body>
+</html>

@@ -220,6 +220,11 @@
       <span class="screen-wrap"><canvas data-demo="ball"></canvas><span class="glass"></span></span>
       <span class="panel"><span class="plate">Two cars, one ball · RT/LT drive</span><span class="buttons" aria-hidden="true"><i></i><i class="alt"></i></span></span>
     </a>
+    <a class="cab" href="/games/soccer-rc-3d/?v=20261006-soccerrc3d1">
+      <span class="marquee">Soccer RC 3D</span>
+      <span class="screen-wrap"><canvas data-demo="soccer3d"></canvas><span class="glass"></span></span>
+      <span class="panel"><span class="plate">3D · boost and score</span><span class="buttons" aria-hidden="true"><i></i><i class="alt"></i></span></span>
+    </a>
     <a class="cab maps" href="/games/Book%20of%20Mormon%20Maps/?v=20260928-exit1">
       <span class="tab">FOLDER</span>
       <span class="marquee">Book of Mormon Maps</span>
@@ -381,6 +386,64 @@
     }
 
 
+
+
+    function soccer3d(v) {
+      const { ctx, w, h, t } = v;
+      const sky = ctx.createLinearGradient(0, 0, 0, h);
+      sky.addColorStop(0, "#0c1014");
+      sky.addColorStop(0.45, "#1a2430");
+      sky.addColorStop(1, "#2f6b3a");
+      ctx.fillStyle = sky;
+      ctx.fillRect(0, 0, w, h);
+      // Perspective pitch
+      ctx.fillStyle = "#3a7d48";
+      ctx.beginPath();
+      ctx.moveTo(w * 0.08, h * 0.92);
+      ctx.lineTo(w * 0.28, h * 0.42);
+      ctx.lineTo(w * 0.72, h * 0.42);
+      ctx.lineTo(w * 0.92, h * 0.92);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = "rgba(244,239,230,0.55)";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(w * 0.5, h * 0.42);
+      ctx.lineTo(w * 0.5, h * 0.92);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.ellipse(w * 0.5, h * 0.62, w * 0.08, h * 0.06, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      // Goals
+      ctx.strokeStyle = "#fb923c";
+      ctx.strokeRect(w * 0.26, h * 0.38, w * 0.06, h * 0.12);
+      ctx.strokeStyle = "#60a5fa";
+      ctx.strokeRect(w * 0.68, h * 0.38, w * 0.06, h * 0.12);
+      // Cars
+      const bob = Math.sin(t * 2.2) * 3;
+      ctx.fillStyle = "#e4572e";
+      ctx.fillRect(w * 0.34, h * 0.68 + bob, 18, 10);
+      ctx.fillStyle = "#3b82f6";
+      ctx.fillRect(w * 0.58, h * 0.55 - bob, 18, 10);
+      // Ball
+      const bx = w * 0.5 + Math.sin(t * 1.5) * w * 0.12;
+      const by = h * 0.58 + Math.abs(Math.cos(t * 2.4)) * h * 0.12;
+      ctx.fillStyle = "#f4efe6";
+      ctx.beginPath();
+      ctx.arc(bx, by, 7, 0, Math.PI * 2);
+      ctx.fill();
+      // Boost streak
+      ctx.strokeStyle = "rgba(228,162,58,0.8)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(w * 0.34 - 4, h * 0.73 + bob);
+      ctx.lineTo(w * 0.28, h * 0.76 + bob);
+      ctx.stroke();
+      ctx.fillStyle = "rgba(228,162,58,.9)";
+      ctx.font = "bold 10px Outfit, sans-serif";
+      ctx.textAlign = "left";
+      ctx.fillText("3D", 10, 18);
+    }
 
     function froggies3d(v) {
       /* Distinct from Canvas froggies demo: teal forest + perspective Cybertruck apron + "3D" badge */
@@ -611,7 +674,7 @@
       }
     }
 
-    const draw = { rally, rocks, ball, froggies, froggies3d, map, drop, ffversions };
+    const draw = { rally, rocks, ball, soccer3d, froggies, froggies3d, map, drop, ffversions };
 
     const ffShots = [
       { label: "2D", src: "/games/four-froggies/assets/play-2d.jpg?v=20260929-onelobby5" },
