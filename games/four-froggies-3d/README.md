@@ -1,3 +1,8 @@
+# What's new (ff3d99) — dots
+
+- Racing line down the middle of the track is a row of yellow dots again.
+- Cache: `?v=20261005-dots2` · asset `index-ff3d99.js`
+
 # What's new (ff3d98) — grove
 
 - Trees are solid leafy crowns on slim trunks, with a grass patch at the base. The see-through blobs are gone.
