@@ -1,9 +1,9 @@
 # What's new (ff3d102) — cyber3
 
-- Cybertruck body rebuilt. The hopglass1 / ff3d97 wedge is gone.
-- Blunt nearly-vertical nose, short hood, one flat windshield up to a roof peak near the B-pillar, triangular side glass, then a separate short bed.
-- Black tonneau covers the bed only. Hop still hops the truck; it is not wired to the tonneau.
-- Brushed stainless body, dark see-through glass (opacity 0.36, no transmission), froggy seat stays in the cabin.
+- Cybertruck body is a stainless exoskeleton again: blunt nearly-vertical nose, short hood, one flat windshield up to a roof peak near the B-pillar, triangular side glass, then a short pickup bed. Not the one-piece wedge.
+- Black tonneau covers the bed only. Hop still hops the truck. The cover is not wired to Hop.
+- Cabin glass stays see-through (opacity 0.36, no transmission) so the froggy shows in the driver's seat.
+- Bigger tires and a higher beltline so it sits like a truck, not a low sports car.
 - Cache: `?v=20261006-cyber3` · asset `index-ff3d102.js`
 
 # What's new (ff3d101) — hopglass1

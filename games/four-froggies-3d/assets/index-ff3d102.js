@@ -7415,187 +7415,189 @@ function od(e, t) {
     let t = new vn(),
       n = new vn();
     t.add(n);
-    /* cyber3: production Cybertruck — blunt nose, short hood, one windshield,
-       roof peak at the B-pillar, sail down to a separate bed. Not a wedge. */
-    let steelCol = 13882623,
-      r = new Q({
-        color: steelCol,
-        metalness: 0.58,
-        roughness: 0.46,
-        envMapIntensity: 0.7,
-      }),
-      i = new Q({ color: 1710618, metalness: 0.35, roughness: 0.55 }),
-      archMat = new Q({ color: 526344, roughness: 0.9 }),
-      black = new Q({ color: 1710618, roughness: 0.7, metalness: 0.08 }),
-      crease = new Q({
-        color: 12303291,
-        metalness: 0.5,
+    let steel = new Q({
+        color: 13028048,
+        metalness: 0.82,
         roughness: 0.4,
+        envMapIntensity: 0.85,
+      }),
+      trim = new Q({
+        color: 9870500,
+        metalness: 0.74,
+        roughness: 0.46,
         envMapIntensity: 0.55,
-      });
-    let winMat = new Q({
-      color: 6974058,
-      metalness: 0.04,
-      roughness: 0.06,
-      transparent: !0,
-      opacity: 0.36,
-      side: 2,
-      depthWrite: !1,
-      polygonOffset: !0,
-      polygonOffsetFactor: -3,
-      polygonOffsetUnits: -3,
-      envMapIntensity: 0.45,
-    });
-    function slab(w, h, d, x, y, z, mat, rz) {
-      let m = new Z(new Ni(w, h, d), mat || r);
-      m.position.set(x, y, z);
-      if (rz) m.rotation.z = rz;
-      m.castShadow = !0;
-      m.receiveShadow = !0;
-      n.add(m);
-      return m;
-    }
-    /* black rocker — truck sits up on the tires, not a low coupe */
-    slab(5.2, 0.22, 2.08, -0.02, 0.7, 0, black);
-    /* lower stainless exoskeleton */
-    slab(5.05, 0.38, 2.16, -0.02, 0.96, 0, r);
-    /* blunt nearly-vertical nose / fascia */
-    slab(0.26, 0.58, 2.12, 2.46, 1.02, 0, r);
-    slab(0.18, 0.16, 2.04, 2.52, 0.74, 0, black);
-    /* short hood, then the windshield break — not bumper-to-bed */
-    slab(0.82, 0.07, 2.02, 1.92, 1.2, 0, r, -0.07);
-    /* beltline shoulder across the cabin */
-    slab(1.55, 0.1, 2.2, 0.78, 1.2, 0, r);
-    /* bed tub: sides + floor, lower than the roof peak */
-    slab(1.95, 0.34, 0.1, -1.42, 1.22, 1.03, r);
-    slab(1.95, 0.34, 0.1, -1.42, 1.22, -1.03, r);
-    slab(1.95, 0.08, 1.96, -1.42, 1.02, 0, i);
-    /* vertical tailgate */
-    slab(0.12, 0.62, 2.1, -2.5, 1.08, 0, r);
-    /* sail pillar at the cabin/bed break */
-    slab(0.14, 0.42, 2.08, -0.4, 1.46, 0, r, 0.55);
-    /* roof-peak rail at the B-pillar */
-    slab(0.12, 0.07, 2.02, 0.3, 1.84, 0, crease);
-    /* angular wheel-arch brows (flat, not round) */
-    for (let side of [-1, 1]) {
-      for (let x of [1.58, -1.48]) {
-        slab(1.05, 0.1, 0.12, x, 1.22, side * 1.1, archMat);
-        slab(0.1, 0.36, 0.12, x - 0.48, 1.02, side * 1.1, archMat);
-        slab(0.1, 0.36, 0.12, x + 0.48, 1.02, side * 1.1, archMat);
-      }
-      slab(4.7, 0.045, 0.06, -0.05, 1.16, side * 1.1, crease);
-      let mirror = new Z(new Ni(0.22, 0.08, 0.1), i);
-      mirror.position.set(1.35, 1.32, side * 1.2);
-      n.add(mirror);
-    }
-    /* one large flat windshield, short hood to roof peak */
-    let windshield = new Z(new Ni(1.38, 0.035, 1.96), winMat);
-    windshield.position.set(0.92, 1.5, 0);
-    windshield.rotation.z = Math.atan2(0.62, -1.16);
-    windshield.renderOrder = 2;
-    n.add(windshield);
-    /* cabin roof glass only — stops at the sail, not the bed */
-    let roofGlass = new Z(new Ni(0.78, 0.035, 1.9), winMat);
-    roofGlass.position.set(-0.04, 1.66, 0);
-    roofGlass.rotation.z = Math.atan2(-0.28, -0.7);
-    roofGlass.renderOrder = 2;
-    n.add(roofGlass);
-    /* triangular side glass so froggy reads in the driver's seat */
-    for (let side of [-1, 1]) {
-      let shape = new ha();
-      shape.moveTo(0.85, 0);
-      shape.lineTo(0.15, 0.58);
-      shape.lineTo(-0.72, 0.26);
-      shape.lineTo(-0.72, 0);
-      shape.closePath();
-      let geo = new $a(shape, {
-        depth: 0.03,
-        bevelEnabled: !1,
-        bevelThickness: 0,
-        bevelSize: 0,
-        bevelSegments: 1,
-      });
-      geo.translate(0, 0, -0.015);
-      let sideWin = new Z(geo, winMat);
-      sideWin.position.set(0.55, 1.2, side * 1.07);
-      sideWin.renderOrder = 2;
-      n.add(sideWin);
-    }
-    /* tonneau covers the bed only. Hop does not drive this pivot. */
-    let tonneauPivot = new vn();
-    tonneauPivot.position.set(-0.48, 1.4, 0);
-    n.add(tonneauPivot);
-    let cover = new Z(new Ni(1.92, 0.045, 1.98), black);
-    cover.position.set(-0.96, 0.02, 0);
-    cover.rotation.z = -0.045;
-    tonneauPivot.add(cover);
-    let noseBar = new Z(
-      new Ni(0.045, 0.055, 1.92),
-      new Q({
+      }),
+      black = new Q({ color: 1184276, roughness: 0.68, metalness: 0.14 }),
+      winMat = new Q({
+        color: 9348280,
+        metalness: 0.05,
+        roughness: 0.06,
+        transparent: !0,
+        opacity: 0.36,
+        side: 2,
+        depthWrite: !1,
+        polygonOffset: !0,
+        polygonOffsetFactor: -4,
+        polygonOffsetUnits: -4,
+        envMapIntensity: 0.4,
+      }),
+      lit = new Q({
         color: 16777215,
         emissive: 16777215,
         emissiveIntensity: 1.5,
-        roughness: 0.25,
+        roughness: 0.2,
       }),
-    );
-    noseBar.position.set(2.56, 1.22, 0);
-    n.add(noseBar);
-    let rearBar = new Z(
-      new Ni(0.04, 0.05, 1.9),
-      new Q({
-        color: 16711680,
+      tailL = new Q({
+        color: 12457996,
         emissive: 16711680,
         emissiveIntensity: 1.05,
         roughness: 0.3,
       }),
-    );
-    rearBar.position.set(-2.56, 1.32, 0);
-    n.add(rearBar);
-    let h = new Ii(0.58, 0.58, 0.42, 20);
+      rad = Math.PI / 180,
+      panel = (sx, sy, sz, x, y, z, mat, rz, ry, shadow) => {
+        let m = new Z(new Ni(sx, sy, sz), mat);
+        (m.position.set(x, y, z),
+          rz && (m.rotation.z = rz * rad),
+          ry && (m.rotation.y = ry * rad),
+          shadow && ((m.castShadow = !0), (m.receiveShadow = !0)),
+          n.add(m));
+        return m;
+      },
+      pane = (pts, z, mat, order) => {
+        let s = new ha();
+        (s.moveTo(pts[0][0], pts[0][1]),
+          s.lineTo(pts[1][0], pts[1][1]),
+          s.lineTo(pts[2][0], pts[2][1]),
+          s.closePath());
+        let g = new $a(s, { depth: 0.04, bevelEnabled: !1 });
+        g.translate(0, 0, -0.02);
+        let m = new Z(g, mat);
+        ((m.position.z = z), order && (m.renderOrder = order), n.add(m));
+        return m;
+      };
+    /* cyber3: stainless exoskeleton. Blunt nose, short hood, one windshield
+       up to a roof peak near the B-pillar, then a short bed. Black tonneau
+       covers the bed only and is not wired to Hop. */
+    panel(4.78, 0.58, 2.12, -0.04, 1.03, 0, steel, 0, 0, !0);
+    panel(4.6, 0.09, 2.16, -0.04, 0.745, 0, black, 0, 0, !1);
+    panel(4.78, 0.03, 0.05, -0.04, 1.33, 1.07, trim, 0, 0, !1);
+    panel(4.78, 0.03, 0.05, -0.04, 1.33, -1.07, trim, 0, 0, !1);
+    panel(0.14, 0.62, 2.28, 2.52, 1.02, 0, steel, 4, 0, !0);
+    panel(0.1, 0.16, 2.2, 2.575, 0.76, 0, black, 0, 0, !1);
+    panel(0.22, 0.56, 0.22, 2.44, 1.04, 1.08, steel, 0, 38, !1);
+    panel(0.22, 0.56, 0.22, 2.44, 1.04, -1.08, steel, 0, -38, !1);
+    panel(0.04, 0.045, 1.85, 2.595, 1.26, 0, lit, 0, 0, !1);
+    panel(0.9, 0.05, 2.1, 1.88, 1.325, 0, steel, -2.6, 0, !0);
+    panel(0.06, 0.035, 1.95, 1.44, 1.355, 0, black, 0, 0, !1);
+    let windshield = panel(0.035, 1.34, 1.9, 0.82, 1.64, 0, winMat, 63.4, 0, !1);
+    windshield.renderOrder = 2;
+    panel(0.05, 1.38, 0.065, 0.82, 1.64, 0.97, trim, 63.4, 0, !1);
+    panel(0.05, 1.38, 0.065, 0.82, 1.64, -0.97, trim, 63.4, 0, !1);
+    panel(0.08, 0.05, 1.95, 0.22, 1.95, 0, steel, 0, 0, !1);
+    let roofGlass = panel(1.04, 0.035, 1.7, -0.28, 1.8, 0, winMat, 15.6, 0, !1);
+    ((roofGlass.renderOrder = 2),
+      panel(1.08, 0.05, 0.065, -0.28, 1.835, 0.88, steel, 15.6, 0, !1),
+      panel(1.08, 0.05, 0.065, -0.28, 1.835, -0.88, steel, 15.6, 0, !1),
+      panel(0.065, 0.58, 0.065, 0.14, 1.62, 1.07, trim, 0, 0, !1),
+      panel(0.065, 0.58, 0.065, 0.14, 1.62, -1.07, trim, 0, 0, !1));
+    for (let side of [1, -1]) {
+      pane(
+        [
+          [1.28, 1.36],
+          [0.12, 1.36],
+          [0.24, 1.88],
+        ],
+        side * 1.075,
+        winMat,
+        2,
+      );
+      pane(
+        [
+          [0.02, 1.38],
+          [-0.5, 1.42],
+          [-0.02, 1.7],
+        ],
+        side * 1.07,
+        winMat,
+        2,
+      );
+      pane(
+        [
+          [-0.02, 1.76],
+          [-1, 1.36],
+          [-0.62, 1.7],
+        ],
+        side * 1.05,
+        steel,
+        0,
+      );
+    }
+    panel(0.07, 0.36, 1.82, -0.82, 1.5, 0, steel, 12, 0, !1);
+    panel(0.48, 0.05, 1.66, -0.95, 1.6, 0, steel, 18, 0, !1);
+    panel(1.55, 0.34, 0.08, -1.72, 1.28, 1.04, steel, 5.5, 0, !0);
+    panel(1.55, 0.34, 0.08, -1.72, 1.28, -1.04, steel, 5.5, 0, !0);
+    panel(1.48, 0.05, 1.84, -1.72, 1.1, 0, black, 0, 0, !1);
+    panel(0.07, 0.58, 1.98, -2.56, 1.08, 0, steel, 0, 0, !0);
+    panel(0.04, 0.04, 1.62, -2.605, 1.28, 0, tailL, 0, 0, !1);
+    panel(0.09, 0.14, 2.1, -2.58, 0.78, 0, black, 0, 0, !1);
+    /* Bed cover only — static. Hop does not open it. */
+    panel(1.54, 0.04, 1.78, -1.72, 1.44, 0, black, 6, 0, !1);
+    for (let wx of [1.55, -1.55]) {
+      for (let sgn of [1, -1]) {
+        panel(0.7, 0.09, 0.4, wx, 1.4, sgn * 1.28, steel, 0, 0, !1);
+        panel(0.32, 0.07, 0.36, wx + 0.4, 1.24, sgn * 1.26, steel, -46, 0, !1);
+        panel(0.32, 0.07, 0.36, wx - 0.4, 1.24, sgn * 1.26, steel, 46, 0, !1);
+      }
+    }
+    panel(0.38, 0.08, 1.65, 1.1, 1.38, 0, black, 0, 0, !1);
+    for (let seatZ of [0.42, -0.42]) {
+      panel(0.34, 0.06, 0.4, 0.5, 1.36, seatZ, black, 0, 0, !1);
+      panel(0.08, 0.3, 0.36, 0.26, 1.48, seatZ, black, 0, 0, !1);
+    }
+    let h = new Ii(0.64, 0.64, 0.42, 16);
     h.rotateX(Math.PI / 2);
-    let g = new Ii(0.32, 0.32, 0.1, 16);
+    let g = new Ii(0.28, 0.28, 0.08, 14);
     g.rotateX(Math.PI / 2);
     let _ = new Q({ color: 789516, roughness: 0.92 }),
-      v = new Q({ color: 11776947, metalness: 0.85, roughness: 0.22 }),
+      v = new Q({ color: 6908265, metalness: 0.72, roughness: 0.32 }),
       y = [],
       b = [];
     for (let [ex, ez] of [
-      [1.58, 1.32],
-      [1.58, -1.32],
-      [-1.48, 1.32],
-      [-1.48, -1.32],
+      [1.55, 1.32],
+      [1.55, -1.32],
+      [-1.55, 1.32],
+      [-1.55, -1.32],
     ]) {
       let wh = new Z(h, _),
         hub = new Z(g, v);
-      wh.add(hub);
-      wh.userData.hub = hub;
-      let coverHub = new Z(new Ii(0.28, 0.28, 0.04, 16), v);
-      coverHub.rotation.x = Math.PI / 2;
-      coverHub.position.z = ez > 0 ? 0.06 : -0.06;
-      wh.add(coverHub);
-      wh.position.set(ex, 0.58, ez);
-      wh.castShadow = !0;
-      t.add(wh);
-      y.push(wh);
-      b.push({ x: ex, z: ez });
+      (wh.add(hub), (wh.userData.hub = hub));
+      let coverHub = new Z(new Ii(0.4, 0.4, 0.045, 16), v);
+      ((coverHub.rotation.x = Math.PI / 2),
+        (coverHub.position.z = ez > 0 ? 0.07 : -0.07),
+        wh.add(coverHub),
+        wh.position.set(ex, 0.64, ez),
+        (wh.castShadow = !0),
+        t.add(wh),
+        y.push(wh),
+        b.push({ x: ex, z: ez }));
     }
     let x = new vn();
-    /* driver's seat stays in the glass cabin, under the windshield */
-    x.position.set(0.72, 1.28, 0);
-    n.add(x);
+    (x.position.set(0.58, 1.32, 0), n.add(x));
     return (
       (t.userData.wheels = y),
       (t.userData.wheelBase = b),
       (t.userData.chassis = n),
       (t.userData.riders = x),
-      (t.userData.steel = r),
+      (t.userData.steel = steel),
       (t.userData.glass = winMat),
       (t.userData.keepPaint = !0),
-      (t.userData.tonneau = tonneauPivot),
+      (t.userData.tonneau = null),
       (t.userData.tonneauOpen = 0),
-      (t.userData.wheelR = 0.58),
+      (t.userData.wheelR = 0.64),
       (t.userData.wheelHalfW = 0.21),
       (t.userData.wheelInner = 1.11),
+      (t.userData.seatOff = [0.52, 1.42, 0.4]),
+      (t.userData.seatScale = 1.05),
       createCyberBoat(e || 7173758, t, n),
       (t.rotation.y = Math.PI / 2),
       t
