@@ -220,10 +220,10 @@
       <span class="screen-wrap"><canvas data-demo="ball"></canvas><span class="glass"></span></span>
       <span class="panel"><span class="plate">Two cars, one ball · RT/LT drive</span><span class="buttons" aria-hidden="true"><i></i><i class="alt"></i></span></span>
     </a>
-    <a class="cab" href="/games/soccer-rc-3d/?v=20261006-soccerrc3d1">
+    <a class="cab" href="/games/soccer-rc-3d/?v=20261006-soccerrc3d3">
       <span class="marquee">Soccer RC 3D</span>
       <span class="screen-wrap"><canvas data-demo="soccer3d"></canvas><span class="glass"></span></span>
-      <span class="panel"><span class="plate">3D · boost and score</span><span class="buttons" aria-hidden="true"><i></i><i class="alt"></i></span></span>
+      <span class="panel"><span class="plate">3D arena · RC cars + ball</span><span class="buttons" aria-hidden="true"><i></i><i class="alt"></i></span></span>
     </a>
     <a class="cab maps" href="/games/Book%20of%20Mormon%20Maps/?v=20260928-exit1">
       <span class="tab">FOLDER</span>
@@ -389,57 +389,147 @@
 
 
     function soccer3d(v) {
+      /* Match live Soccer RC 3D: dark arena, green pitch, orange/blue RC cars + ball */
       const { ctx, w, h, t } = v;
+      // Arena backdrop (game clear color #0c1014 + soft fog)
       const sky = ctx.createLinearGradient(0, 0, 0, h);
       sky.addColorStop(0, "#0c1014");
-      sky.addColorStop(0.45, "#1a2430");
-      sky.addColorStop(1, "#2f6b3a");
+      sky.addColorStop(0.38, "#151c24");
+      sky.addColorStop(0.55, "#1e2a22");
+      sky.addColorStop(1, "#0c1014");
       ctx.fillStyle = sky;
       ctx.fillRect(0, 0, w, h);
-      // Perspective pitch
-      ctx.fillStyle = "#3a7d48";
+
+      // Perspective pitch (elevated cam, vanishing toward far end)
+      const nearL = w * 0.04, nearR = w * 0.96, nearY = h * 0.94;
+      const farL = w * 0.30, farR = w * 0.70, farY = h * 0.40;
+      const pitch = ctx.createLinearGradient(0, farY, 0, nearY);
+      pitch.addColorStop(0, "#2a5c36");
+      pitch.addColorStop(1, "#3d8a4e");
+      ctx.fillStyle = pitch;
       ctx.beginPath();
-      ctx.moveTo(w * 0.08, h * 0.92);
-      ctx.lineTo(w * 0.28, h * 0.42);
-      ctx.lineTo(w * 0.72, h * 0.42);
-      ctx.lineTo(w * 0.92, h * 0.92);
+      ctx.moveTo(nearL, nearY);
+      ctx.lineTo(farL, farY);
+      ctx.lineTo(farR, farY);
+      ctx.lineTo(nearR, nearY);
       ctx.closePath();
       ctx.fill();
-      ctx.strokeStyle = "rgba(244,239,230,0.55)";
+
+      // Side boards
+      ctx.fillStyle = "#1e2430";
+      ctx.beginPath();
+      ctx.moveTo(nearL, nearY); ctx.lineTo(farL, farY);
+      ctx.lineTo(farL - 4, farY - 8); ctx.lineTo(nearL - 6, nearY - 10); ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(nearR, nearY); ctx.lineTo(farR, farY);
+      ctx.lineTo(farR + 4, farY - 8); ctx.lineTo(nearR + 6, nearY - 10); ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = "rgba(201,184,150,0.7)";
       ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.moveTo(w * 0.5, h * 0.42);
-      ctx.lineTo(w * 0.5, h * 0.92);
+      ctx.moveTo(nearL - 3, nearY - 10); ctx.lineTo(farL - 2, farY - 8); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(nearR + 3, nearY - 10); ctx.lineTo(farR + 2, farY - 8); ctx.stroke();
+
+      // Center line + circle
+      ctx.strokeStyle = "rgba(244,239,230,0.65)";
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(w * 0.5, farY + 2);
+      ctx.lineTo(w * 0.5, nearY - 4);
       ctx.stroke();
       ctx.beginPath();
-      ctx.ellipse(w * 0.5, h * 0.62, w * 0.08, h * 0.06, 0, 0, Math.PI * 2);
+      ctx.ellipse(w * 0.5, h * 0.62, w * 0.09, h * 0.055, 0, 0, Math.PI * 2);
       ctx.stroke();
-      // Goals
-      ctx.strokeStyle = "#fb923c";
-      ctx.strokeRect(w * 0.26, h * 0.38, w * 0.06, h * 0.12);
-      ctx.strokeStyle = "#60a5fa";
-      ctx.strokeRect(w * 0.68, h * 0.38, w * 0.06, h * 0.12);
-      // Cars
-      const bob = Math.sin(t * 2.2) * 3;
-      ctx.fillStyle = "#e4572e";
-      ctx.fillRect(w * 0.34, h * 0.68 + bob, 18, 10);
-      ctx.fillStyle = "#3b82f6";
-      ctx.fillRect(w * 0.58, h * 0.55 - bob, 18, 10);
-      // Ball
-      const bx = w * 0.5 + Math.sin(t * 1.5) * w * 0.12;
-      const by = h * 0.58 + Math.abs(Math.cos(t * 2.4)) * h * 0.12;
+
+      // Goal mouths (far left orange / far right blue) — posts like the 3D arena
+      function goal(x, color) {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        const gw = w * 0.055, gh = h * 0.11;
+        ctx.strokeRect(x - gw * 0.5, farY - gh + 4, gw, gh);
+        ctx.fillStyle = "rgba(255,255,255,0.08)";
+        ctx.fillRect(x - gw * 0.5, farY - gh + 4, gw, gh);
+      }
+      goal(farL + w * 0.04, "#fb923c");
+      goal(farR - w * 0.04, "#60a5fa");
+
+      // Tiny tire-track hints on pitch
+      ctx.strokeStyle = "rgba(10,12,16,0.28)";
+      ctx.lineWidth = 2;
+      for (let i = 0; i < 3; i++) {
+        const tx = w * (0.36 + i * 0.06) + Math.sin(t + i) * 2;
+        const ty = h * (0.72 - i * 0.04);
+        ctx.beginPath();
+        ctx.moveTo(tx, ty);
+        ctx.lineTo(tx + 10, ty - 3);
+        ctx.stroke();
+      }
+
+      // Mini RC car (body + cabin + nose + wheels) — matches makeCarMesh silhouette
+      function drawRc(cx, cy, scale, yaw, color, boost) {
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(yaw);
+        ctx.scale(scale, scale);
+        // shadow
+        ctx.fillStyle = "rgba(0,0,0,0.35)";
+        ctx.beginPath();
+        ctx.ellipse(0, 6, 16, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // wheels
+        ctx.fillStyle = "#1a1d24";
+        [[-8, 8], [-8, -8], [8, 8], [8, -8]].forEach(([x, y]) => {
+          ctx.fillRect(x - 3, y - 2.5, 6, 5);
+        });
+        // body
+        ctx.fillStyle = color;
+        ctx.fillRect(-14, -7, 26, 14);
+        // cabin
+        ctx.fillStyle = "#1a1d24";
+        ctx.fillRect(-6, -6, 10, 12);
+        // nose accent
+        ctx.fillStyle = "#f5d08a";
+        ctx.fillRect(10, -6, 6, 12);
+        if (boost) {
+          ctx.fillStyle = "rgba(255,170,51,0.9)";
+          ctx.beginPath();
+          ctx.moveTo(-14, 0);
+          ctx.lineTo(-26, 4);
+          ctx.lineTo(-26, -4);
+          ctx.closePath();
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      const bob = Math.sin(t * 2.4) * 2;
+      // Orange P1 (near, boosting toward ball)
+      drawRc(w * 0.36, h * 0.74 + bob, 1.05, -0.35 + Math.sin(t) * 0.08, "#e4572e", true);
+      // Blue P2 (midfield)
+      drawRc(w * 0.64, h * 0.56 - bob * 0.6, 0.85, Math.PI * 0.85 + Math.cos(t * 1.1) * 0.1, "#3b82f6", false);
+
+      // Ball (cream + dark panel stripe like 3D mesh)
+      const bx = w * 0.5 + Math.sin(t * 1.55) * w * 0.14;
+      const by = h * 0.58 + Math.abs(Math.cos(t * 2.2)) * h * 0.1;
       ctx.fillStyle = "#f4efe6";
       ctx.beginPath();
-      ctx.arc(bx, by, 7, 0, Math.PI * 2);
+      ctx.arc(bx, by, 8, 0, Math.PI * 2);
       ctx.fill();
-      // Boost streak
-      ctx.strokeStyle = "rgba(228,162,58,0.8)";
-      ctx.lineWidth = 2;
+      ctx.fillStyle = "#1a1d24";
       ctx.beginPath();
-      ctx.moveTo(w * 0.34 - 4, h * 0.73 + bob);
-      ctx.lineTo(w * 0.28, h * 0.76 + bob);
-      ctx.stroke();
-      ctx.fillStyle = "rgba(228,162,58,.9)";
+      ctx.arc(bx - 1, by - 2, 4.5, -0.4, Math.PI * 0.9);
+      ctx.fill();
+
+      // Soft vignette
+      const vig = ctx.createRadialGradient(w * 0.5, h * 0.55, h * 0.15, w * 0.5, h * 0.55, h * 0.7);
+      vig.addColorStop(0, "rgba(12,16,20,0)");
+      vig.addColorStop(1, "rgba(12,16,20,0.45)");
+      ctx.fillStyle = vig;
+      ctx.fillRect(0, 0, w, h);
+
+      ctx.fillStyle = "rgba(228,162,58,.95)";
       ctx.font = "bold 10px Outfit, sans-serif";
       ctx.textAlign = "left";
       ctx.fillText("3D", 10, 18);
