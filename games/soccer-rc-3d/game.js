@@ -6,7 +6,7 @@
  */
 import * as THREE from "three";
 
-const CACHE = "20261006-soccerrc3d3";
+const CACHE = "20261006-soccerrc3d4";
 const HALF_X = 22;
 const HALF_Z = 14;
 const WALL_H = 5.5;
@@ -484,12 +484,11 @@ function padDrive(g) {
     else fwd = 0;
   }
   const thrusting = fwd > 0.04 || rev > 0.04 ? 1 : 0;
+  // Tank pivot: stick X / dpad yaw ALWAYS — no thrust required (real RC in-place turn)
   let steer = 0;
-  if (thrusting) {
-    if (g.dpad && g.dpad.l) steer = -1;
-    else if (g.dpad && g.dpad.r) steer = 1;
-    else steer = Math.max(-1, Math.min(1, g.lx || 0));
-  }
+  if (g.dpad && g.dpad.l) steer = -1;
+  else if (g.dpad && g.dpad.r) steer = 1;
+  else steer = Math.max(-1, Math.min(1, g.lx || 0));
   const kick = !!(g.buttonsPressed && g.buttonsPressed.a);
   const boost = !!(g.b || g.rb);
   return { steer, fwd, rev, thrusting, kick, boost };
@@ -869,7 +868,7 @@ function updateCar(car, inp, dt) {
   if (car.jumpCd > 0) car.jumpCd -= dt;
 
   if (Math.abs(inp.steer) > 0.05) {
-    // Real RC: tank-pivot in place (no thrust required, no strafe).
+    // Real RC tank pivot: yaw from steer alone — never gated on fwd/rev (no strafe).
     // Invert L/R while reversing (hold-rev or clearly coasting backward).
     const fx = Math.cos(car.yaw), fz = Math.sin(car.yaw);
     const along = car.vx * fx + car.vz * fz;
@@ -1335,17 +1334,25 @@ function bindVirtualStick(root) {
 
   function applyMove(nx, ny, mag) {
     const t = touch[p];
-    if (mag < dead) {
+    // Deadzone on axes independently so pure left/right still pivots with no throttle
+    const ax = Math.abs(nx);
+    const ay = Math.abs(ny);
+    if (ax < dead && ay < dead) {
       t.fwd = 0;
       t.rev = 0;
       t.steer = 0;
       return;
     }
-    const scale = Math.min(1, (mag - dead) / (1 - dead));
-    const sx = (nx / mag) * scale;
-    const sy = (ny / mag) * scale;
-    // Tank drive (not strafe): Y = throttle, X = in-place yaw. No lateral slide.
-    // Screen Y+: down → reverse; Y-: up → forward. X alone pivots in place.
+    // Remap each axis past deadzone to 0..1 (real RC: X yaw independent of Y throttle)
+    function axis(v) {
+      const a = Math.abs(v);
+      if (a < dead) return 0;
+      const s = Math.min(1, (a - dead) / (1 - dead));
+      return Math.sign(v) * s;
+    }
+    const sx = axis(nx);
+    const sy = axis(ny);
+    // Tank drive (not strafe): Y = throttle, X = in-place yaw with NO throttle required.
     if (sy < -0.04) {
       t.fwd = Math.min(1, -sy);
       t.rev = 0;
