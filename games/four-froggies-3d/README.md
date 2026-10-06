@@ -1,3 +1,9 @@
+# What's new (ff3d95) — site
+
+- The place label (garage, scrap) sits clear of Versions and Center View.
+- Ripsaw top speed matches the Cybertruck.
+- Cache: `?v=20261005-site1` · asset `index-ff3d95.js`
+
 # What's new (ff3d94) — the yard
 
 - The ground in front of the house and along the west side is a lawn, not the same dirt tile as the rest of the ranch.
