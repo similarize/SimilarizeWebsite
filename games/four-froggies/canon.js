@@ -353,18 +353,42 @@
     return best;
   }
 
+  /* padexit1 / reboard1: free truck closer than own mech wins (parked RT-semi reboard).
+     Own-mech preference still applies when the mech is the nearer boardable. */
+  function nearerFreeTruckThan(x, y, mechHot, maxR) {
+    if (!mechHot) return null;
+    var mechD = Math.hypot(mechHot.x - x, mechHot.y - y);
+    var best = null;
+    var bestD = mechD;
+    var lim = maxR != null ? maxR : 110;
+    for (var i = 0; i < HOTSPOTS.length; i++) {
+      var h = HOTSPOTS[i];
+      if (!isTruckHotspot(h)) continue;
+      if (h.mode === "shared") continue;
+      var d = Math.hypot(h.x - x, h.y - y);
+      var reach = boardReachFor(h, lim);
+      if (d < reach && d < bestD) { bestD = d; best = h; }
+    }
+    return best;
+  }
+
   function nearestHotspot(x, y, maxR, opts) {
     /* drivefix1: opts.frogId / opts.frog → skip mechs this frog cannot board so free
        trucks/ripsaw win INTERACT near locked mechs. Mech locks themselves unchanged.
-       drivefix3: wider board reach; owner mech preferred when in reach. */
+       drivefix3: wider board reach; owner mech preferred when in reach.
+       padexit1: except a closer free truck (RT-semi / RT-dog / Cybertruck…) wins. */
     opts = opts || {};
     var frogId = opts.frogId || null;
     if (!frogId && opts.frog) frogId = opts.frog.id || opts.frog.frogId || null;
     var baseMax = maxR != null ? maxR : 110;
-    /* Owner standing at their mech rim must board easily */
+    /* Owner standing at their mech rim must board easily — unless a free truck is closer */
     if (!opts.skipOwnMech) {
       var own = ownMechInReach(x, y, frogId, Math.max(baseMax, 140));
-      if (own) return own;
+      if (own) {
+        var nearerTruck = nearerFreeTruckThan(x, y, own, baseMax);
+        if (nearerTruck) return nearerTruck;
+        return own;
+      }
     }
     var best = null;
     var bestD = baseMax;
@@ -1752,6 +1776,7 @@
     getEngine: getEngine,
     setEngine: setEngine,
     nearestHotspot: nearestHotspot,
+    nearerFreeTruckThan: nearerFreeTruckThan,
     ownMechInReach: ownMechInReach,
     boardReachFor: boardReachFor,
     areaNameAt: areaNameAt,

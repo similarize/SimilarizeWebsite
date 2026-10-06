@@ -4,7 +4,7 @@
 (function () {
   "use strict";
 
-  var CACHE = "20261005-garage1";
+  var CACHE = "20261006-padexit1";
   var FF3D_CACHE = "20261006-cyber3";
   var FROG_ORDER = ["james", "jimmy", "bubbles", "rexy"];
   var FROG_NAME = { james: "James", jimmy: "Jimmy", bubbles: "Bubbles", rexy: "Rexy" };

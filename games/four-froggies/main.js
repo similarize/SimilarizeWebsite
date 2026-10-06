@@ -6,7 +6,8 @@
 /* airgun1: heli/drone pilot FIRE on Space/X/ability (climb = R/C).
    storymuzzle1: story-mech omnigun from chest plate.
    rtxform1: trillion mech RT → semi; dogxform1: thousand mech RT → robot dog;
-   reboard1: RT button-edge + keyboard T morph; parked RT craft reboard. */
+   reboard1: RT button-edge + keyboard T morph; parked RT craft reboard.
+   padexit1: wheel UI still drives Ripsaw track scale via canon getWheelScale. */
 (() => {
   "use strict";
 

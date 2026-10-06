@@ -49,6 +49,7 @@
    rtxform1: trillion mech RT → semi (Canvas).
    dogxform1: thousand mech (Rexy) RT → robot dog (Canvas); EXIT walks froggy.
    reboard1: parked RT-semi/dog + morph-parked mechs stay INTERACT-boardable; no scoop of just-parked mech.
+   padexit1: closer free truck wins over own-mech prefer; Ripsaw tracks scale with wheel-size UI.
    Pond: big fish + whales. Starship pad connected → space episode.
    Ben-named only. No invented cast/zone/toy names. */
 (function (global) {
@@ -597,18 +598,35 @@
     var preferFree = !!(frogs && me);
     var CgoneH = global.FroggiesCanon;
     var baseMax = maxR != null ? maxR : 110;
-    /* drivefix3: owner story-mech wins when in generous reach */
+    /* drivefix3: owner story-mech wins when in generous reach
+       padexit1 / reboard1: closer free truck (parked RT-semi) wins over own mech */
     if (me && CgoneH && CgoneH.ownMechInReach && !opts.skipOwnMech) {
       var own = CgoneH.ownMechInReach(x, y, me.id, Math.max(baseMax, 140));
       if (own) {
-        /* Prefer live world hotspot copy (park-synced) when present */
-        for (var oi = 0; oi < world.hotspots.length; oi++) {
-          var oh = world.hotspots[oi];
-          if (oh && own && (oh.id === own.id || (oh.solidId && own.solidId && oh.solidId === own.solidId))) {
-            if (!preferFree || !hotspotTakenByOther(world, frogs, oh, me)) return oh;
+        var ownLive = own;
+        for (var oi0 = 0; oi0 < world.hotspots.length; oi0++) {
+          var oh0 = world.hotspots[oi0];
+          if (oh0 && own && (oh0.id === own.id || (oh0.solidId && own.solidId && oh0.solidId === own.solidId))) {
+            ownLive = oh0; break;
           }
         }
-        if (!preferFree || !hotspotTakenByOther(world, frogs, own, me)) return own;
+        /* Scan world hotspots for a free truck nearer than the mech */
+        var mechD = Math.hypot(ownLive.x - x, ownLive.y - y);
+        var nearerTruck = null;
+        var nearerD = mechD;
+        for (var ti0 = 0; ti0 < world.hotspots.length; ti0++) {
+          var th0 = world.hotspots[ti0];
+          if (!th0) continue;
+          if (!(CgoneH.isTruckHotspot && CgoneH.isTruckHotspot(th0))) continue;
+          if (th0.mode === "shared") continue;
+          if (preferFree && hotspotTakenByOther(world, frogs, th0, me)) continue;
+          var td0 = Math.hypot(th0.x - x, th0.y - y);
+          var tReach = CgoneH.boardReachFor ? CgoneH.boardReachFor(th0, baseMax) : Math.max(baseMax, (th0.r || 60) + 36);
+          if (td0 < tReach && td0 < nearerD) { nearerD = td0; nearerTruck = th0; }
+        }
+        if (nearerTruck) return nearerTruck;
+        /* Prefer live world hotspot copy (park-synced) when present */
+        if (!preferFree || !hotspotTakenByOther(world, frogs, ownLive, me)) return ownLive;
       }
     }
     var best = null;
@@ -4388,10 +4406,17 @@
     }
   }
 
-  /* mech1: Howe&Howe-style Ripsaw — low tracked wedge + cage (not a wheeled truck) */
+  /* mech1: Howe&Howe-style Ripsaw — low tracked wedge + cage (not a wheeled truck)
+     padexit1: live wheel-size control scales tracks + stance (same WHEEL_SCALE as Cybertruck). */
   function drawRipsaw(ctx, x, y, faceAngle, depth, driving, z, accent, water) {
+    var ws = 1;
+    if (water && water.wheelScale != null) ws = water.wheelScale;
+    else if (global.FroggiesCanon && global.FroggiesCanon.getWheelScale) ws = global.FroggiesCanon.getWheelScale();
+    if (!(ws >= 1)) ws = 1;
+    if (ws > 2.8) ws = 2.8;
     var s = 0.92 * depth;
-    var lift = (z || 0) * 0.72 * depth + ((water && water.bounce) ? water.bounce * depth * 0.4 : 0);
+    var lift = (z || 0) * 0.72 * depth + ((water && water.bounce) ? water.bounce * depth * 0.4 : 0)
+      + (ws - 1) * 10 * depth;
     var drawY = y - lift;
     ctx.save();
     ctx.translate(x, drawY);
@@ -4400,25 +4425,28 @@
     /* ground shadow */
     ctx.fillStyle = "rgba(15,23,42,0.35)";
     ctx.beginPath();
-    ctx.ellipse(0, 11 * s, 36 * s, 9 * s, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, 11 * s, 36 * s * (0.85 + ws * 0.15), (9 * s) * ws, 0, 0, Math.PI * 2);
     ctx.fill();
-    /* continuous tracks (left/right) with pad nubs */
+    /* continuous tracks (left/right) with pad nubs — grow with wheel size */
     function track(side) {
-      var zy = side * 16 * s;
+      var zy = side * 16 * s * (0.7 + ws * 0.3);
+      var th = 10 * s * ws;
+      var tw = 56 * s * (0.92 + (ws - 1) * 0.2);
       ctx.fillStyle = "#1e293b";
-      ctx.fillRect(-28 * s, zy - 5 * s, 56 * s, 10 * s);
+      ctx.fillRect(-tw * 0.5, zy - th * 0.5, tw, th);
       ctx.strokeStyle = "#0f172a";
-      ctx.lineWidth = 1.4;
-      ctx.strokeRect(-28 * s, zy - 5 * s, 56 * s, 10 * s);
+      ctx.lineWidth = 1.4 + (ws - 1) * 0.6;
+      ctx.strokeRect(-tw * 0.5, zy - th * 0.5, tw, th);
       ctx.fillStyle = "#334155";
       for (var i = 0; i < 8; i++) {
-        var px = -24 * s + i * 7 * s;
-        ctx.fillRect(px, zy - 6.5 * s, 4.2 * s, 13 * s);
+        var px = -tw * 0.43 + i * (tw * 0.125);
+        ctx.fillRect(px, zy - th * 0.65, 4.2 * s * ws, th * 1.3);
       }
       /* sprocket hubs */
+      var hubR = 4.5 * s * ws;
       ctx.fillStyle = "#64748b";
-      ctx.beginPath(); ctx.arc(-22 * s, zy, 4.5 * s, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(22 * s, zy, 4.5 * s, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(-tw * 0.39, zy, hubR, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(tw * 0.39, zy, hubR, 0, Math.PI * 2); ctx.fill();
     }
     track(-1); track(1);
     /* low armored hull / wedge nose */

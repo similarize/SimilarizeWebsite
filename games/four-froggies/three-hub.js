@@ -52,6 +52,8 @@
    drivefix1: companions board/drive free Cybertruck(s)+Ripsaw+Tank like primary; mech locks stay.
    drivefix2: one INTERACT edge boards and STAYS (no same-press exit). Mech locks stay.
    drivefix3: companions board sub/heli/drone too; own-mech prefer; garage any local; wider reach.
+   padexit1: closer free truck reboards RT-semi over own mech; Ripsaw tracks live-scale;
+            2.5D cam frames all ranch froggies (bbox), not only James.
    earth1: space shows procedural Earth (home) — not ranch grounds in vacuum.
    solarsys1: Solar System layout — Sun center; Moon+station orbit Earth; planet gravity wells;
    spacefix1: dark ground plane; orbit cam locks on planet; ranch pad on Earth surface;
@@ -1112,7 +1114,8 @@
   }
 
   function makeRipsawMesh(accentHex) {
-    /* mech1: low tracked wedge + cage — reads as Ripsaw, not a wheeled truck */
+    /* mech1: low tracked wedge + cage — reads as Ripsaw, not a wheeled truck
+       padexit1: track belts + pads registered as wheels so wheel-size UI scales live */
     var g = new THREE.Group();
     var hullM = new THREE.MeshStandardMaterial({ color: accentHex || 0xa8a29e, metalness: 0.55, roughness: 0.4 });
     var trackM = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.85 });
@@ -1120,12 +1123,21 @@
     hull.position.set(0.05, 0.32, 0); hull.castShadow = true; g.add(hull);
     var nose = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.18, 0.66), hullM);
     nose.position.set(1.05, 0.28, 0); nose.rotation.z = -0.38; g.add(nose);
+    g.userData.wheels = []; g.userData.arches = [];
     function track(z) {
       var t = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.22, 0.22), trackM);
-      t.position.set(0, 0.14, z); g.add(t);
+      t.position.set(0, 0.14, z);
+      t.userData.baseY = 0.14;
+      t.userData.baseZ = z;
+      g.add(t);
+      g.userData.wheels.push(t);
       for (var i = 0; i < 6; i++) {
         var pad = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.06, 0.24), new THREE.MeshStandardMaterial({ color: 0x334155 }));
-        pad.position.set(-0.85 + i * 0.34, 0.04, z); g.add(pad);
+        pad.position.set(-0.85 + i * 0.34, 0.04, z);
+        pad.userData.baseY = 0.04;
+        pad.userData.baseZ = z;
+        g.add(pad);
+        g.userData.wheels.push(pad);
       }
     }
     track(0.42); track(-0.42);
@@ -1134,7 +1146,6 @@
     cage.position.set(-0.15, 0.62, 0); g.add(cage);
     var bar = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.55), new THREE.MeshStandardMaterial({ color: 0xfde68a, emissive: 0xfbbf24, emissiveIntensity: 0.4 }));
     bar.position.set(1.15, 0.36, 0); g.add(bar);
-    g.userData.wheels = []; g.userData.arches = [];
     g.userData.bodyMat = hullM;
     var ts = (C.TRUCK_VIS && C.TRUCK_VIS.threeScale != null) ? C.TRUCK_VIS.threeScale : 2.05;
     g.scale.setScalar(ts); g.userData.truckScale = ts;
@@ -1795,6 +1806,10 @@
       var w = wheels[i];
       w.scale.set(ws, ws, ws);
       w.position.y = (w.userData.baseY || 0.16) * ws;
+      /* Ripsaw tracks: spread stance with size (baseZ stored at build) */
+      if (w.userData.baseZ != null) {
+        w.position.z = w.userData.baseZ * (0.75 + ws * 0.25);
+      }
     }
     var arches = g.userData.arches || [];
     for (var j = 0; j < arches.length; j++) {
@@ -6966,6 +6981,8 @@ state.zLift = 0;
         if (takenComp) {
           pt.mesh.visible = true;
           if (pt.label) pt.label.visible = false;
+          var wsComp = C.getWheelScale ? C.getWheelScale() : 1;
+          if (typeof applyTruckWheelScale === "function") applyTruckWheelScale(pt.mesh, wsComp);
           var wLiftC = pt.mesh.userData.wheelLift || 0;
           var bounceC = Math.abs(Math.sin((takenComp.userData.walkPhase || 0))) * 0.04;
           pt.mesh.position.set(takenComp.position.x, 0.08 + (takenComp.userData.zLift || 0) + bounceC + wLiftC, takenComp.position.z);
@@ -7179,19 +7196,51 @@ state.zLift = 0;
 
     // Locked orbit follow — camera offset fixed, no orbit controls / no FPS look
     var target = camera.userData.lockTarget;
-    /* spacefix1: while inOrbit, lock cam on planet so starfield/plane stay stable; only frog orbits */
+    /* spacefix1: while inOrbit, lock cam on planet so starfield/plane stay stable; only frog orbits
+       padexit1: ranch cam frames bbox of ALL froggies (primary + companions/AI), not only James */
     var followK = Math.min(1, 14 * dt);
     var followX = state.player.position.x;
     var followZ = state.player.position.z;
+    var partySpan = 0;
+    if (state.mode === "ranch" && state.player) {
+      var minX = state.player.position.x, maxX = minX;
+      var minZ = state.player.position.z, maxZ = minZ;
+      function includeFrogCam(px, pz) {
+        if (!isFinite(px) || !isFinite(pz)) return;
+        if (px < minX) minX = px; if (px > maxX) maxX = px;
+        if (pz < minZ) minZ = pz; if (pz > maxZ) maxZ = pz;
+      }
+      if (state.companions) {
+        for (var cami = 0; cami < state.companions.length; cami++) {
+          var cf = state.companions[cami];
+          if (!cf) continue;
+          /* Include locals + AI froggies still on the ranch scene */
+          if (cf.visible === false && !(cf.userData && (cf.userData.inTruck || cf.userData.inMech || cf.userData.inSub || cf.userData.inHeli || cf.userData.inDrone))) {
+            continue;
+          }
+          includeFrogCam(cf.position.x, cf.position.z);
+        }
+      }
+      followX = (minX + maxX) * 0.5;
+      followZ = (minZ + maxZ) * 0.5;
+      partySpan = Math.max(maxX - minX, maxZ - minZ);
+    }
     if (state.mode === "space" && state.inOrbit && state.planet) {
       followX = state.planet.x;
       followZ = state.planet.z;
+      partySpan = 0;
     }
     target.x += (followX - target.x) * followK;
     target.z += (followZ - target.z) * followK;
     target.y = 0;
     var camDist = (state.mode === "ranch" ? 18.5 : 12) * (userZoom || 1);
     var camH = state.mode === "ranch" ? 20.5 : 14;
+    if (state.mode === "ranch" && partySpan > 2.5) {
+      /* Widen / lift so spread froggies stay in frame (soft cap) */
+      var widen = Math.min(28, Math.max(0, (partySpan - 2.5) * 0.72));
+      camDist += widen;
+      camH += widen * 0.42;
+    }
     if (state.mode === "ranch" && (state.inHeli || state.inDrone)) {
       camH += 4 + Math.min(18, (state.zLift || 0) * 1.1);
       camDist += 2 + Math.min(8, (state.zLift || 0) * 0.35);
