@@ -54,6 +54,7 @@
    drivefix3: companions board sub/heli/drone too; own-mech prefer; garage any local; wider reach.
    padexit1: closer free truck reboards RT-semi over own mech; Ripsaw tracks live-scale;
             2.5D cam frames all ranch froggies (bbox), not only James.
+   padexit2: EXIT restores full foot hop/walk (wheel clearance truck-only; foot reset).
    earth1: space shows procedural Earth (home) — not ranch grounds in vacuum.
    solarsys1: Solar System layout — Sun center; Moon+station orbit Earth; planet gravity wells;
    spacefix1: dark ground plane; orbit cam locks on planet; ranch pad on Earth surface;
@@ -245,11 +246,13 @@
   }
 
 
-  /* kidfix1: after EXIT any ride, restore full frog hop + walk speed (no leftover vehicle feel) */
+  /* kidfix1 / padexit2: after EXIT any ride, restore full frog hop + walk speed (no leftover vehicle feel) */
   function resetFootAfterExit(target) {
     var t = target || state;
     if (!t) return;
-    t.zLift = t.groundLift || 0;
+    /* Foot/loco only — caller already cleared inTruck/inMech/inSub/air flags */
+    t.groundLift = 0;
+    t.zLift = 0;
     t.zVel = 0;
     t.hopLandT = 0;
     t.hopGroundT = 0;
@@ -259,16 +262,25 @@
     t.hopWantT = 0;
     t.speedBoost = 1;
     t.dashTrail = 0;
+    t.fricBoost = 1;
+    t.throttle = 0;
+    t.brake = 0;
+    t.phoneBrake = false;
+    t.cd = 0;
     t.vx = 0; t.vz = 0;
     t._ltDumpWasDown = false;
+    t._vehLatch = 0;
+    if (t.player) t.player.visible = true;
   }
   function resetCompanionFoot(c) {
     if (!c || !c.userData) return;
     var u = c.userData;
+    u.groundLift = 0;
     u.zLift = 0; u.zVel = 0;
     u.hopLandT = 0; u.hopGroundT = 0; u.hopCombo = 0;
     u.hopWantT = 0; u.vx = 0; u.vz = 0;
-    u.speedBoost = 1; u.dashTrail = 0;
+    u.speedBoost = 1; u.dashTrail = 0; u.fricBoost = 1; u.cd = 0;
+    u._vehLatch = 0;
   }
 
   function exitCompanionMech(c) {
@@ -280,6 +292,7 @@
     c.userData.inMech = false;
     c.userData.mechId = null;
     c.userData.mechStories = 0;
+    resetCompanionFoot(c);
     c.visible = true;
     state.toast = "Mech parked · walking"; state.toastT = 1.8; state.exitTipT = 0;
     if (hooks.onToast) hooks.onToast(state.toast);
@@ -341,7 +354,7 @@
     c.userData.truckId = null;
     c.userData.truckMode = null;
     c.userData.vehicleStyle = null;
-    c.userData.zLift = 0; c.userData.zVel = 0;
+    resetCompanionFoot(c);
     c.visible = true;
     state.toast = "Parked · walking"; state.toastT = 1.8; state.exitTipT = 0;
     if (hooks.onToast) hooks.onToast(state.toast);
@@ -6500,7 +6513,7 @@ state.zLift = 0;
           state.facing = mx >= 0 ? 1 : -1;
           state.faceYaw = aimYaw;
         } else {
-          /* hop2 ranch: plant on brief ground — no hover-slide */
+          /* hop2 ranch: plant on brief ground — hop impulse sets travel (padexit2: wheel clearance no longer breaks grounded hop) */
           state.facing = mx >= 0 ? 1 : -1;
           state.faceYaw = aimYaw;
         }
@@ -6549,7 +6562,8 @@ state.zLift = 0;
       var ws3 = C.getWheelScale ? C.getWheelScale() : 1;
       var jumpMul3 = C.wheelJumpMul ? C.wheelJumpMul(ws3) : (0.9 + (ws3 - 1) * 0.55);
       var bounceMul3 = C.wheelBounceMul ? C.wheelBounceMul(ws3) : (0.85 + ws3 * 0.55);
-      var clear3 = (ws3 - 1) * 0.12;
+      /* padexit2: wheel clearance is truck-only — never lift foot ground (broke loco hop after EXIT) */
+      var clear3 = state.inTruck ? ((ws3 - 1) * 0.12) : 0;
       groundLift = groundLift + clear3;
       var airL = (state.zLift || 0) - groundLift;
       if (state.inTruck && C.rampAt) {

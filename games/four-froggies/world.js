@@ -50,6 +50,7 @@
    dogxform1: thousand mech (Rexy) RT → robot dog (Canvas); EXIT walks froggy.
    reboard1: parked RT-semi/dog + morph-parked mechs stay INTERACT-boardable; no scoop of just-parked mech.
    padexit1: closer free truck wins over own-mech prefer; Ripsaw tracks scale with wheel-size UI.
+   padexit2: EXIT foot reset clears hop locks / fric / cd so walk+hop restore.
    Pond: big fish + whales. Starship pad connected → space episode.
    Ben-named only. No invented cast/zone/toy names. */
 (function (global) {
@@ -2461,6 +2462,29 @@
     }
   }
 
+  /* padexit2: clear vehicle leftovers so freeroam walk + hop work after EXIT */
+  function resetFrogFootAfterExit(frog) {
+    if (!frog) return;
+    frog.hopLandT = 0;
+    frog.hopGroundT = 0;
+    frog.hopCombo = 0;
+    frog.hopStretch = 0;
+    frog.hopSquash = 0;
+    frog.hopWantT = 0;
+    frog.speedBoost = 1;
+    frog.dashTrail = 0;
+    frog.fricBoost = 1;
+    frog.throttle = 0;
+    frog.brake = 0;
+    frog.vx = 0;
+    frog.vy = 0;
+    frog.z = 0;
+    frog.zVel = 0;
+    frog.groundZ = 0;
+    frog.cd = 0;
+    frog._vehLatch = 0;
+  }
+
   function boardTruck(world, frogs, frog, hotspot) {
     /* drivefix1: ANY grounded frog may board free Cybertruck/Ripsaw/Tank (no frogId lock).
        frogId on truck hotspots is paint/label only — mech locks stay in boardMech. */
@@ -2491,11 +2515,8 @@
       frog.z = 0;
       frog.zVel = 0;
       frog.groundZ = 0;
-      /* kidfix1: exit foot reset — full hop/speed for all froggies */
-      frog.hopLandT = 0; frog.hopGroundT = 0; frog.hopCombo = 0;
-      frog.hopStretch = 0; frog.hopSquash = 0;
-      frog.speedBoost = 1; frog.dashTrail = 0;
-      frog.vx = 0; frog.vy = 0;
+      /* kidfix1 / padexit2: exit foot reset — full hop/speed for all froggies */
+      resetFrogFootAfterExit(frog);
       frog._rtMorphParkSid = null;
       frog._rtMorphScoopGrace = 0;
       if (world.sharedDriverId === frog.id) {
@@ -2563,8 +2584,8 @@
       /* park1: leave mech at EXIT pos — no snap back to yard pad */
       var parkMid = frog.mechId || (hotspot && hotspot.id) || "mech";
       var mpx = frog.x, mpy = frog.y;
-      /* kidfix1: mech exit foot reset */
-    frog.hopLandT = 0; frog.hopGroundT = 0; frog.hopCombo = 0; frog.speedBoost = 1; frog.dashTrail = 0; frog.vx = 0; frog.vy = 0;
+      /* kidfix1 / padexit2: mech exit foot reset */
+      resetFrogFootAfterExit(frog);
     frog.inMech = false;
       frog.mechId = null;
       frog.mechStories = 0;
@@ -6573,6 +6594,7 @@
     moveEntity: moveEntity,
     tickHubAI: tickHubAI,
     boardTruck: boardTruck,
+    resetFrogFootAfterExit: resetFrogFootAfterExit,
     boardMech: boardMech,
     boardSub: boardSub,
     boardAir: boardAir,

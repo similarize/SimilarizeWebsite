@@ -1,11 +1,11 @@
 /* Four Froggies — onefrog1 entrance.
    One screen: claim James/Jimmy/Bubbles/Rexy + Host/Join + pick 2D/2.5D/3D → play.
-   Skips the old overlay frog-pick / party lobby. Cache: 20261004-padpick1 */
+   Skips the old overlay frog-pick / party lobby. Cache: 20261006-padexit2 */
 (function () {
   "use strict";
 
-  var CACHE = "20261006-padexit1";
-  var FF3D_CACHE = "20261006-cyber3";
+  var CACHE = "20261006-padexit2";
+  var FF3D_CACHE = "20261006-padexit2";
   var FROG_ORDER = ["james", "jimmy", "bubbles", "rexy"];
   var FROG_NAME = { james: "James", jimmy: "Jimmy", bubbles: "Bubbles", rexy: "Rexy" };
 

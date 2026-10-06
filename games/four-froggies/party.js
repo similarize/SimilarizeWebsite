@@ -730,14 +730,25 @@
 
     function startParty() {
       if (!canStart()) return null;
-      // Seat every live Gamepad index, up to four; remaining frogs are AI.
+      /* padexit2: one pad = one froggy.
+         If lobby already has pad claims, keep ONLY those — do not auto-seat every
+         live index (USB/Steam ghost slots were claiming a second frog on Start).
+         Plug-and-go (no claims yet): auto-seat each unique live index once. */
       var livePads = connectedPadIndices();
       var anyPad = anyPadSeatBound();
       var pi;
       if (livePads.length > 0 || anyPad) {
         clearKeyboardOnlyLocals();
-        for (pi = 0; pi < livePads.length && pi < 4; pi++) {
-          claimLocalPad(livePads[pi]);
+        if (!anyPad) {
+          for (pi = 0; pi < livePads.length && pi < 4; pi++) {
+            claimLocalPad(livePads[pi]);
+          }
+        } else {
+          /* Refresh existing pad peers only — never invent a second frog for an unbound ghost slot */
+          for (pi = 0; pi < livePads.length && pi < 4; pi++) {
+            var idxKeep = livePads[pi] | 0;
+            if (padAlreadyBound(idxKeep)) claimLocalPad(idxKeep);
+          }
         }
       } else if (!seatClaimedBy(localId || "local")) {
         if (!localId) localId = "local-" + makeCode(6);

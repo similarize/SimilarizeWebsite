@@ -1196,6 +1196,7 @@ function doInteract(optFrog, opts) {
         paintHud();
         return;
       }
+      if (W.resetFrogFootAfterExit) W.resetFrogFootAfterExit(me);
       storyToast = (res && res.toast) || "Parked · walking";
       storyToastT = 1.8;
       exitTipT = 0;
@@ -1701,6 +1702,19 @@ function doInteract(optFrog, opts) {
     }
 
     const me = localPlayer();
+    /* padexit2: one Gamepad.index → one frog; demote later dupes to AI/non-local */
+    {
+      const seenPad = Object.create(null);
+      for (const f of frogs) {
+        if (!f || !f.local || f.padIndex == null || f.padIndex === undefined) continue;
+        const pi = f.padIndex | 0;
+        if (seenPad[pi] != null) {
+          f.local = false; f.human = false; f.padIndex = null;
+        } else {
+          seenPad[pi] = f.id;
+        }
+      }
+    }
     for (const f of frogs) {
       if (f.sessionDead) {
         f.steerX = 0; f.steerY = 0; f.vx = 0; f.vy = 0;

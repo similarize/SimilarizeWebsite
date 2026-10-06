@@ -164,6 +164,11 @@
       frog.z = 0;
       frog.zVel = 0;
       frog.groundZ = 0;
+      /* padexit2: freeroam hop/walk after air EXIT */
+      frog.hopLandT = 0; frog.hopGroundT = 0; frog.hopCombo = 0;
+      frog.hopWantT = 0; frog.speedBoost = 1; frog.dashTrail = 0;
+      frog.fricBoost = 1; frog.throttle = 0; frog.brake = 0; frog.cd = 0;
+      frog._vehLatch = 0;
       /* Exit beside skids / rotors */
       var side = (wasSeat % 2 === 0) ? 1 : -1;
       frog.x = craft.x + side * 28;

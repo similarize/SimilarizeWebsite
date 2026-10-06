@@ -630,8 +630,7 @@
 
     function startParty() {
       if (!canStart()) return null;
-      // Seat every live pad (Web API may only show them after a button press).
-      // humans = min(connectedPads, 4); remainder AI. One pad → one frog.
+      /* padexit2: keep lobby pad claims; do not auto-seat unbound ghost indices on Start */
       var livePads = connectedPadIndices();
       var anyPad = false;
       var pi, ps;
@@ -641,8 +640,15 @@
       }
       if (livePads.length > 0 || anyPad) {
         clearKeyboardOnlyLocals();
-        for (pi = 0; pi < livePads.length && pi < 4; pi++) {
-          claimLocalPad(livePads[pi]);
+        if (!anyPad) {
+          for (pi = 0; pi < livePads.length && pi < 4; pi++) {
+            claimLocalPad(livePads[pi]);
+          }
+        } else {
+          for (pi = 0; pi < livePads.length && pi < 4; pi++) {
+            var idxKeep = livePads[pi] | 0;
+            if (padAlreadyBound(idxKeep)) claimLocalPad(idxKeep);
+          }
         }
       } else if (!seatClaimedBy(localId || "local")) {
         if (!localId) localId = "local-" + makeCode(6);
