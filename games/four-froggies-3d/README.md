@@ -1,3 +1,9 @@
+# What's new (ff3d98) — grove
+
+- Trees are solid leafy crowns on slim trunks, with a grass patch at the base. The see-through blobs are gone.
+- The track is packed dirt with two ruts and a lighter apron, not a flat stripe.
+- Cache: `?v=20261005-grove1` · asset `index-ff3d98.js`
+
 # What's new (ff3d97) — wedge
 
 - Cybertruck is one wedge: flat nose, one glass slope, black tonneau. Park and press Hop to open or shut the cover.
