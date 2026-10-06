@@ -740,9 +740,9 @@
       if (livePads.length > 0 || anyPad) {
         clearKeyboardOnlyLocals();
         if (!anyPad) {
-          for (pi = 0; pi < livePads.length && pi < 4; pi++) {
-            claimLocalPad(livePads[pi]);
-          }
+          /* rstick1: auto-seat ONLY the first live pad. Extra pads must A-claim.
+             Steam/USB ghost indices used to seat a second frog on the same stick. */
+          if (livePads.length) claimLocalPad(livePads[0]);
         } else {
           /* Refresh existing pad peers only — never invent a second frog for an unbound ghost slot */
           for (pi = 0; pi < livePads.length && pi < 4; pi++) {

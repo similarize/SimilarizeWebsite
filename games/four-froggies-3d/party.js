@@ -188,17 +188,106 @@
           seats[id].padIndex = null;
         }
       }
+      enforceSeatInvariant(frogId);
       return { ok: true };
     }
 
+    /**
+     * Hard invariant: one peerId ↔ one frog; one padIndex ↔ one frog;
+     * keyboard localId never stacks beside local-pad-* seats.
+     * preferredFrogId (optional) wins when duplicates must be dropped.
+     * rstick1: 3D party.js was missing this — dual-claim returned silently.
+     */
+    function enforceSeatInvariant(preferredFrogId) {
+      var seenPeer = Object.create(null);
+      var seenPad = Object.create(null);
+      var hasPadSeat = false;
+      var i, id, s, peer, pi;
+      var order = FROG_ORDER.slice();
+      if (preferredFrogId && order.indexOf(preferredFrogId) >= 0) {
+        order.splice(order.indexOf(preferredFrogId), 1);
+        order.unshift(preferredFrogId);
+      }
+      for (i = 0; i < order.length; i++) {
+        id = order[i];
+        s = seats[id];
+        if (!s || !s.peerId) {
+          seats[id] = { status: "open", peerId: null, label: null, padIndex: null };
+          continue;
+        }
+        peer = String(s.peerId);
+        pi = s.padIndex != null ? (s.padIndex | 0) : padIndexFromPeer(peer);
+        if (peer.indexOf("local-pad-") === 0) hasPadSeat = true;
+        if (seenPeer[peer]) {
+          seats[id] = { status: "open", peerId: null, label: null, padIndex: null };
+          continue;
+        }
+        if (pi != null && seenPad[pi] != null) {
+          seats[id] = { status: "open", peerId: null, label: null, padIndex: null };
+          continue;
+        }
+        seenPeer[peer] = id;
+        if (pi != null) seenPad[pi] = id;
+        s.padIndex = pi;
+      }
+      if (hasPadSeat) {
+        for (i = 0; i < FROG_ORDER.length; i++) {
+          id = FROG_ORDER[i];
+          s = seats[id];
+          if (!s || !s.peerId) continue;
+          if (String(s.peerId).indexOf("local-pad-") === 0) continue;
+          if (isLocalPeerId(s.peerId) || s.peerId === localId || s.peerId === "local") {
+            seats[id] = { status: "open", peerId: null, label: null, padIndex: null };
+          }
+        }
+      }
+      for (i = 0; i < FROG_ORDER.length; i++) {
+        id = FROG_ORDER[i];
+        s = seats[id];
+        if (!s || !s.peerId) {
+          seats[id] = { status: "open", peerId: null, label: null, padIndex: null };
+          continue;
+        }
+        if (isLocalPeerId(s.peerId)) {
+          s.status = "you";
+          pi = s.padIndex != null ? s.padIndex : padIndexFromPeer(s.peerId);
+          s.padIndex = pi;
+          s.label = pi != null ? ("Pad " + (pi + 1)) : (s.peerId === localId ? "You" : (s.label || "You"));
+        } else {
+          s.status = "human";
+          s.padIndex = null;
+          s.label = s.label || "Joined";
+        }
+      }
+    }
+
+    function anyPadSeatBound() {
+      for (var i = 0; i < FROG_ORDER.length; i++) {
+        var s = seats[FROG_ORDER[i]];
+        if (s && s.peerId && String(s.peerId).indexOf("local-pad-") === 0) return true;
+      }
+      return false;
+    }
+
     function buildSeatMap() {
+      enforceSeatInvariant();
       var map = {};
+      var usedPads = Object.create(null);
       for (var i = 0; i < FROG_ORDER.length; i++) {
         var id = FROG_ORDER[i];
         var s = seats[id];
         var isHuman = !!(s.peerId && (s.status === "you" || s.status === "human"));
         var local = isHuman && isLocalPeerId(s.peerId);
         var pIdx = s.padIndex != null ? s.padIndex : padIndexFromPeer(s.peerId);
+        if (local && pIdx != null) {
+          if (usedPads[pIdx] != null) {
+            isHuman = false;
+            local = false;
+            pIdx = null;
+          } else {
+            usedPads[pIdx] = id;
+          }
+        }
         map[id] = {
           human: isHuman,
           local: local,
@@ -211,8 +300,13 @@
 
     function connectedPadIndices() {
       try {
-        if (global.SimilarizeGamepad && typeof global.SimilarizeGamepad.connectedIndices === "function") {
-          return global.SimilarizeGamepad.connectedIndices(4) || [];
+        var GP = global.SimilarizeGamepad;
+        if (!GP) return [];
+        if (typeof GP.uniqueConnectedIndices === "function") {
+          return GP.uniqueConnectedIndices(4) || [];
+        }
+        if (typeof GP.connectedIndices === "function") {
+          return GP.connectedIndices(4) || [];
         }
       } catch (e) { /* ignore */ }
       return [];
@@ -231,7 +325,7 @@
       return null;
     }
 
-    /** Couch: bind pad N onto a specific frog (click pick). One pad → one seat. */
+    /** Couch: bind pad N onto frog (focus+A / click). One pad → one seat; A moves claim. */
     function claimPadOntoFrog(padIndex, frogId) {
       if (role === "guest") return null;
       var idx = padIndex | 0;
@@ -243,8 +337,20 @@
       if (cur && cur.peerId && cur.peerId !== peerId && (cur.status === "human" || cur.status === "you")) {
         return null;
       }
+      clearKeyboardOnlyLocals();
       var res = applyClaim(frogId, peerId, "Pad " + (idx + 1), true, idx);
       if (!res.ok) return null;
+      enforceSeatInvariant(frogId);
+      /* Hard guard: same padIndex must not remain on two frogs */
+      var dup = 0, fi;
+      for (fi = 0; fi < FROG_ORDER.length; fi++) {
+        var ss = seats[FROG_ORDER[fi]];
+        if (ss && ss.padIndex != null && (ss.padIndex | 0) === idx) dup++;
+      }
+      if (dup > 1) {
+        console.warn("[ff3d-party] dual-claim blocked for pad", idx);
+        enforceSeatInvariant(frogId);
+      }
       if (role === "host") broadcast(lobbyPayload());
       emitLobby(role === "solo" ? "idle" : "ready");
       return frogId;
@@ -259,6 +365,7 @@
       var peerId = "local-pad-" + idx;
       var existing = seatClaimedBy(peerId);
       if (existing) return existing;
+      clearKeyboardOnlyLocals();
       for (var i = 0; i < FROG_ORDER.length; i++) {
         var fid = FROG_ORDER[i];
         if (!seats[fid].peerId || seats[fid].status === "open") {
@@ -277,6 +384,7 @@
       var peerId = "local-pad-" + (padIndex | 0);
       if (!seatClaimedBy(peerId)) return false;
       clearPeerSeat(peerId);
+      enforceSeatInvariant();
       if (role === "host") broadcast(lobbyPayload());
       emitLobby(role === "solo" ? "idle" : "ready");
       return true;
@@ -599,11 +707,13 @@
       // solo or host: prefer binding a free connected pad (one pad → one frog)
       if (!localId) localId = "local-" + makeCode(6);
       var target = seats[frogId];
+      var livePads = connectedPadIndices();
+      var padsInPlay = livePads.length > 0 || anyPadSeatBound();
       var freePad = firstUnboundConnectedPad();
       if (freePad != null) {
         if (target && target.peerId && String(target.peerId).indexOf("local-pad-") === 0 &&
             target.peerId !== ("local-pad-" + freePad)) {
-          lastError = "Seat taken";
+          lastError = "Seat taken · pick another froggy";
           emitLobby();
           lastError = null;
           return false;
@@ -613,7 +723,14 @@
       }
       if (target && target.peerId && target.peerId !== localId &&
           (target.status === "human" || target.status === "you")) {
-        lastError = "Seat taken";
+        lastError = "Seat taken · pick another froggy";
+        emitLobby();
+        lastError = null;
+        return false;
+      }
+      /* Never stack keyboard "You" beside pad seats (one controller was driving two frogs) */
+      if (padsInPlay) {
+        lastError = "Use stick + A on a pad (or click moves your pad) · one pad = one froggy";
         emitLobby();
         lastError = null;
         return false;
@@ -630,20 +747,16 @@
 
     function startParty() {
       if (!canStart()) return null;
-      /* padexit2: keep lobby pad claims; do not auto-seat unbound ghost indices on Start */
+      /* rstick1/padexit2: keep lobby pad claims; never auto-seat unbound ghost indices */
       var livePads = connectedPadIndices();
-      var anyPad = false;
-      var pi, ps;
-      for (pi = 0; pi < FROG_ORDER.length; pi++) {
-        ps = seats[FROG_ORDER[pi]];
-        if (ps && ps.peerId && String(ps.peerId).indexOf("local-pad-") === 0) { anyPad = true; break; }
-      }
+      var anyPad = anyPadSeatBound();
+      var pi;
       if (livePads.length > 0 || anyPad) {
         clearKeyboardOnlyLocals();
         if (!anyPad) {
-          for (pi = 0; pi < livePads.length && pi < 4; pi++) {
-            claimLocalPad(livePads[pi]);
-          }
+          /* rstick1: auto-seat ONLY the first live pad. Extra pads must A-claim.
+             Steam/USB ghost indices used to seat a second frog on the same stick. */
+          if (livePads.length) claimLocalPad(livePads[0]);
         } else {
           for (pi = 0; pi < livePads.length && pi < 4; pi++) {
             var idxKeep = livePads[pi] | 0;
@@ -663,6 +776,7 @@
           }
         }
       }
+      enforceSeatInvariant();
       var map = buildSeatMap();
       if (role === "host") {
         broadcast({ t: "start", seatMap: map });
@@ -740,6 +854,7 @@
       claimPadOntoFrog: claimPadOntoFrog,
       releaseLocalPad: releaseLocalPad,
       connectedPadIndices: connectedPadIndices,
+      enforceSeatInvariant: enforceSeatInvariant,
       startParty: startParty,
       canStart: canStart,
       sendInput: sendInput,

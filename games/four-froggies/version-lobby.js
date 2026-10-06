@@ -1,11 +1,11 @@
 /* Four Froggies — onefrog1 entrance.
    One screen: claim James/Jimmy/Bubbles/Rexy + Host/Join + pick 2D/2.5D/3D → play.
-   Skips the old overlay frog-pick / party lobby. Cache: 20261006-padexit2 */
+   Skips the old overlay frog-pick / party lobby. Cache: 20261006-rstick1 */
 (function () {
   "use strict";
 
-  var CACHE = "20261006-padexit2";
-  var FF3D_CACHE = "20261006-padexit2";
+  var CACHE = "20261006-rstick1";
+  var FF3D_CACHE = "20261006-rstick1";
   var FROG_ORDER = ["james", "jimmy", "bubbles", "rexy"];
   var FROG_NAME = { james: "James", jimmy: "Jimmy", bubbles: "Bubbles", rexy: "Rexy" };
 
@@ -341,6 +341,12 @@
       var frog = claimedFrogId();
       var room = P && P.getRoom ? P.getRoom() : null;
       var q = "?v=" + FF3D_CACHE + "&frog=" + encodeURIComponent(frog) + "&go=1";
+      /* rstick1: carry pad claim so 3D page doesn't ghost-seat a second frog */
+      try {
+        var seats3 = P && P.getSeats ? P.getSeats() : null;
+        var st3 = seats3 && seats3[frog];
+        if (st3 && st3.padIndex != null) q += "&pad=" + (st3.padIndex | 0);
+      } catch (ePad) {}
       if (role === "host" && room) q += "&host=" + encodeURIComponent(room);
       else if (room) q += "&room=" + encodeURIComponent(room);
       location.href = "/games/four-froggies-3d/" + q;

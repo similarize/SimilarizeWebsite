@@ -55,6 +55,8 @@
    padexit1: closer free truck reboards RT-semi over own mech; Ripsaw tracks live-scale;
             2.5D cam frames all ranch froggies (bbox), not only James.
    padexit2: EXIT restores full foot hop/walk (wheel clearance truck-only; foot reset).
+   rstick1: party cam more margin; soft right-stick orbit nudge; D-pad U/D zoom;
+            house LOS nudge; one pad = one froggy (lobby party.js).
    earth1: space shows procedural Earth (home) — not ranch grounds in vacuum.
    solarsys1: Solar System layout — Sun center; Moon+station orbit Earth; planet gravity wells;
    spacefix1: dark ground plane; orbit cam locks on planet; ranch pad on Earth surface;
@@ -578,8 +580,7 @@
         if (gp.dpad) {
           if (gp.dpad.l) px = -1;
           if (gp.dpad.r) px = 1;
-          if (gp.dpad.u) py = -1;
-          if (gp.dpad.d) py = 1;
+          /* rstick1: D-pad U/D → cam zoom in tick, not drive */
         }
         if (px || py) return { x: px, y: py };
         /* edge buttons for primary pad */
@@ -7247,13 +7248,33 @@ state.zLift = 0;
     target.x += (followX - target.x) * followK;
     target.z += (followZ - target.z) * followK;
     target.y = 0;
-    var camDist = (state.mode === "ranch" ? 18.5 : 12) * (userZoom || 1);
-    var camH = state.mode === "ranch" ? 20.5 : 14;
-    if (state.mode === "ranch" && partySpan > 2.5) {
-      /* Widen / lift so spread froggies stay in frame (soft cap) */
-      var widen = Math.min(28, Math.max(0, (partySpan - 2.5) * 0.72));
+    var camDist = (state.mode === "ranch" ? 21.5 : 12) * (userZoom || 1);
+    var camH = state.mode === "ranch" ? 23 : 14;
+    if (state.mode === "ranch" && partySpan > 2.0) {
+      /* rstick1: wider party framing margin so froggies aren't at the edge */
+      var widen = Math.min(34, Math.max(0, (partySpan - 2.0) * 0.95));
       camDist += widen;
-      camH += widen * 0.42;
+      camH += widen * 0.48;
+    }
+    /* rstick1: soft right-stick orbit nudge + D-pad zoom (fixed-angle cam stays locked) */
+    if (state.mode === "ranch" && global.SimilarizeGamepad) {
+      var camPad = state.primaryPadIndex != null ? state.primaryPadIndex : null;
+      if (camPad == null && state.inTruck && state.truckPilotPadIndex != null) camPad = state.truckPilotPadIndex;
+      if (camPad == null && state.inMech && state.mechPilotPadIndex != null) camPad = state.mechPilotPadIndex;
+      if (camPad != null) {
+        var cgp = global.SimilarizeGamepad.pollPad(camPad | 0);
+        if (cgp && cgp.connected) {
+          state._orbitYaw = (state._orbitYaw || 0);
+          state._orbitPitch = (state._orbitPitch || 0);
+          var rx = cgp.rx || 0, ry = cgp.ry || 0;
+          if (Math.abs(rx) > 0.18) state._orbitYaw += rx * dt * 1.35;
+          else state._orbitYaw *= (1 - Math.min(1, 0.55 * dt)); /* decay yaw only when stick idle */
+          if (Math.abs(ry) > 0.18) state._orbitPitch = Math.max(-0.55, Math.min(0.45, state._orbitPitch + ry * dt * 1.1));
+          else state._orbitPitch *= (1 - Math.min(1, 0.55 * dt));
+          if (cgp.dpad && cgp.dpad.u) userZoom = Math.max(0.55, Math.min(1.45, (userZoom || 1) * Math.exp(-1.1 * dt)));
+          if (cgp.dpad && cgp.dpad.d) userZoom = Math.max(0.55, Math.min(1.45, (userZoom || 1) * Math.exp(1.25 * dt)));
+        }
+      }
     }
     if (state.mode === "ranch" && (state.inHeli || state.inDrone)) {
       camH += 4 + Math.min(18, (state.zLift || 0) * 1.1);
@@ -7268,12 +7289,46 @@ state.zLift = 0;
       walkTilt = Math.sin(state.walkBobT * 0.5) * 0.006;
     }
     /* view3: south-biased follow — look north at open yard / garage mouth (not through bay) */
-    var wantCamX = target.x + camDist * 0.22;
-    var wantCamY = camH + walkBob;
-    var wantCamZ = target.z + camDist * 1.05;
+    var oy = state._orbitYaw || 0;
+    var op = state._orbitPitch || 0;
+    var cosY = Math.cos(oy), sinY = Math.sin(oy);
+    var baseOffX = camDist * 0.22, baseOffZ = camDist * 1.05;
+    var wantCamX = target.x + baseOffX * cosY - baseOffZ * sinY;
+    var wantCamY = camH + walkBob + op * camDist * 0.35;
+    var wantCamZ = target.z + baseOffX * sinY + baseOffZ * cosY;
     var wantLookX = target.x;
-    var wantLookY = 0.5 + walkTilt + ((state.inHeli || state.inDrone) ? Math.min(10, (state.zLift || 0) * 0.7) : 0);
+    var wantLookY = 0.5 + walkTilt + ((state.inHeli || state.inDrone) ? Math.min(10, (state.zLift || 0) * 0.7) : 0) + op * 2.2;
     var wantLookZ = target.z - (state.mode === "ranch" ? camDist * 0.06 : 0);
+    /* rstick1: if cam→target crosses ranch house AABB, lateral nudge for LOS */
+    if (state.mode === "ranch" && C && C.COMPOUND && C.COMPOUND.house) {
+      var hh = C.COMPOUND.house;
+      var hMin = worldToThree(hh.x, hh.y);
+      var hMax = worldToThree(hh.x + hh.w, hh.y + hh.h);
+      var hx0 = Math.min(hMin.x, hMax.x), hx1 = Math.max(hMin.x, hMax.x);
+      var hz0 = Math.min(hMin.z, hMax.z), hz1 = Math.max(hMin.z, hMax.z);
+      function segHits(ax, az, bx, bz) {
+        var dx = bx - ax, dz = bz - az, t0 = 0, t1 = 1;
+        function clip(p, q) {
+          if (Math.abs(p) < 1e-8) return q >= 0;
+          var r = q / p;
+          if (p < 0) { if (r > t1) return false; if (r > t0) t0 = r; }
+          else { if (r < t0) return false; if (r < t1) t1 = r; }
+          return true;
+        }
+        return clip(-dx, ax - hx0) && clip(dx, hx1 - ax) && clip(-dz, az - hz0) && clip(dz, hz1 - az) && t0 < t1;
+      }
+      var prefer = target.x >= (hx0 + hx1) * 0.5 ? 1 : -1;
+      var tries = 0;
+      while (tries < 8 && segHits(wantCamX, wantCamZ, target.x, target.z)) {
+        oy += prefer * 0.18;
+        state._orbitYaw = oy;
+        cosY = Math.cos(oy); sinY = Math.sin(oy);
+        wantCamX = target.x + baseOffX * cosY - baseOffZ * sinY;
+        wantCamZ = target.z + baseOffX * sinY + baseOffZ * cosY;
+        wantCamY = Math.max(wantCamY, camH + 3);
+        tries++;
+      }
+    }
     if (state.mode === "ranch" && (state.establishT || 0) > 0 && state.establishCam) {
       state.establishT -= dt;
       var estDur = state.establishDur || 3.2;

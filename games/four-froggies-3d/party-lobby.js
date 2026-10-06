@@ -276,6 +276,10 @@
     var g = game();
     if (!g || !g.start) return;
     var frog = myFrogFromSeats(seatMap);
+    /* rstick1: pass pad→frog map into bundle so autoBindPads won't ghost-seat a 2nd frog */
+    try {
+      window.__ffSeatMap = seatMap || null;
+    } catch (eMap) {}
     if (g.pick) g.pick(frog);
     // Claim locals into gamepad-style roster: pick then start
     g.start(frog);
@@ -340,7 +344,14 @@
       if (FROG_ORDER.indexOf(localPick) < 0) localPick = "james";
       var g0 = game();
       if (g0 && g0.pick) g0.pick(localPick);
-      if (party && party.claimSeat) party.claimSeat(localPick);
+      var padQ = null;
+      try { padQ = u.searchParams.get("pad"); } catch (eP) {}
+      if (padQ != null && padQ !== "" && party && party.claimPadOntoFrog) {
+        party.claimPadOntoFrog(padQ | 0, localPick);
+        if (party.enforceSeatInvariant) party.enforceSeatInvariant(localPick);
+      } else if (party && party.claimSeat) {
+        party.claimSeat(localPick);
+      }
     }
     paintParty();
     if (goQ) {
