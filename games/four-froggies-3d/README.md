@@ -1,3 +1,9 @@
+# What's new (ff3d101) — hopglass1
+
+- Hop while boarded in a parked Cybertruck hops the truck again. It no longer opens or shuts the black tonneau cover (that intercept landed in ff3d97). Tonneau mesh stays; Hop is not wired to it.
+- Cybertruck front/top glass is see-through: steel body stops at the cabin beltline, canopy + windshield use clear opacity glass (~0.32) so a boarded froggy shows through the driver’s seat. No transmission (Quest/Tesla-friendly).
+- Cache: `?v=20261006-hopglass1` · asset `index-ff3d101.js`
+
 # What's new (ff3d99) — dots
 
 - Racing line down the middle of the track is a row of yellow dots again.
@@ -11,7 +17,7 @@
 
 # What's new (ff3d97) — wedge
 
-- Cybertruck is one wedge: flat nose, one glass slope, black tonneau. Park and press Hop to open or shut the cover.
+- Cybertruck is one wedge: flat nose, one glass slope, black tonneau. (Hop→tonneau removed + glass cleared in ff3d101/hopglass1.)
 - Bigger tires lift the body and grow outward, so they turn into a monster truck instead of sinking into the truck.
 - Cache: `?v=20261005-wedge1` · asset `index-ff3d97.js`
 
