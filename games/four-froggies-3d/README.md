@@ -1,3 +1,10 @@
+# What's new (ff3d94) — the yard
+
+- The ground in front of the house and along the west side is a lawn, not the same dirt tile as the rest of the ranch.
+- A dirt drive runs from the garage out to the rally track. A narrower path leaves the porch and stops before the pond.
+- The fence posts have two rails. Flower clumps sit by the porch, the west yard, and the drive.
+- Cache: `?v=20261005-yard1` · asset `index-ff3d94.js`
+
 # What's new (ff3d93) — ranch, track, and vehicles
 
 - Richer ranch is the default: siding, stone, and roof textures on shared materials, reflective glass, a porch rail, and warm interior light. Walls share one material until the camera actually fades one.
