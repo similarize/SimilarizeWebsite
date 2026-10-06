@@ -1,3 +1,9 @@
+# What's new (ff3d97) — wedge
+
+- Cybertruck is one wedge: flat nose, one glass slope, black tonneau. Park and press Hop to open or shut the cover.
+- Bigger tires lift the body and grow outward, so they turn into a monster truck instead of sinking into the truck.
+- Cache: `?v=20261005-wedge1` · asset `index-ff3d97.js`
+
 # What's new (ff3d96) — pad
 
 - Phone button sits below Center View.
