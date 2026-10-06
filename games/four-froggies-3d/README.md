@@ -1,3 +1,16 @@
+# What's new (ff3d93) — ranch, track, and vehicles
+
+- Richer ranch is the default: siding, stone, and roof textures on shared materials, reflective glass, a porch rail, and warm interior light. Walls share one material until the camera actually fades one.
+- Trees stay instanced, with see-through layered crowns and a light wind sway.
+- Pond water ripples, with a soft shore, reeds, and lily pads. It stays out by the edge of the ranch.
+- The rally track reads as packed dirt, with flags and a dust trail when a truck is moving.
+- Grass tufts, rocks, a fence line, and the same foggy sky.
+- Cybertruck side profile is the tall stainless shape: high beltline, one roof peak over the B-pillar, a flat windshield, and a long tonneau.
+- Starship has a rounded ogive nose, silver steel, black windward tiles, flaps, grid fins, a hot-staging ring, and Raptor bells. Stack height is about 13 times the diameter.
+- Weak devices (Tesla, or a 3 second frame-time probe) drop to a low tier: Lambert materials, no environment map, no point lights or shadows, pixel ratio about 0.8.
+- In-game Credits link opens `assets/space/CREDITS.md` (CC BY).
+- Cache: `?v=20261005-ranch1` · asset `index-ff3d93.js`
+
 # What's new (ff3d92) — area loading and group travel
 
 - Only the active area stays visible. Every move between the ranch, space, Mars, and the pond goes through the boot splash.
