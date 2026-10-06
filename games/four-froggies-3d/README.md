@@ -1,3 +1,12 @@
+# What's new (ff3d91) — ranch performance
+
+- Pond water is plain transparent opacity. The transmission pass (a full extra scene render) is gone.
+- Pixel ratio caps at 1.25, and at 1.0 in the Tesla browser. Antialiasing is off in the Tesla browser.
+- One sun for every area. Leaving space no longer leaves a second sun on, so shaders are not rebuilt for an extra light.
+- Shadow map is 1024. Only frogs, vehicles, tree trunks, and the house shell cast shadows. No ranch shadows in space, on Mars, or underwater.
+- `?fps=1` shows fps, frame time, draws, triangles, DPR, canvas size, area, quality tier, and the GPU string.
+- Cache: `?v=20261005-perf1` · asset `index-ff3d91.js`
+
 # What's new (ff3d77) — correct garage climb direction and block indoor wall climbs
 
 - Use movement toward the garage to climb back up and movement away from it to descend from the roof.
