@@ -352,6 +352,14 @@
         }
         return;
       }
+      if (msg.t === "tripReq") {
+        if (typeof window.__ffOnTripReq === "function") window.__ffOnTripReq(msg.area, fromId);
+        return;
+      }
+      if (msg.t === "tripReady") {
+        if (typeof window.__ffOnTripReady === "function") window.__ffOnTripReady(fromId, msg.id);
+        return;
+      }
       if (msg.t === "input") {
         if (typeof hooks.onInput === "function") {
           hooks.onInput(msg.frogId, {
@@ -409,6 +417,10 @@
       }
       if (msg.t === "state" || msg.t === "hub") {
         if (typeof hooks.onState === "function") hooks.onState(msg);
+        return;
+      }
+      if (msg.t === "trip") {
+        if (typeof window.__ffOnTrip === "function") window.__ffOnTrip(msg.area, msg.id);
         return;
       }
       if (msg.t === "end") {
@@ -727,6 +739,19 @@
       sendInput: sendInput,
       sendState: sendState,
       sendEnd: sendEnd,
+      requestTrip: function (area) {
+        if (role === "guest" && hostConn) send(hostConn, { t: "tripReq", area: area });
+      },
+      broadcastTrip: function (area, id) {
+        if (role !== "host") return;
+        broadcast({ t: "trip", area: area, id: id || Date.now() });
+      },
+      tripReady: function (id) {
+        if (role === "guest" && hostConn) send(hostConn, { t: "tripReady", id: id || 0 });
+      },
+      guestCount: function () {
+        return Object.keys(conns).length;
+      },
       getSeats: cloneSeats,
       getRole: function () { return role; },
       getRoom: function () { return room; },

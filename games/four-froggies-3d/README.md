@@ -1,3 +1,13 @@
+# What's new (ff3d92) — area loading and group travel
+
+- Only the active area stays visible. Every move between the ranch, space, Mars, and the pond goes through the boot splash.
+- Space textures load on the first trip, not at boot.
+- When any froggy starts a trip, all four go. They leave cars, the helicopter, the drone, and mechs (those stay parked), stop climbing, swimming, and the jetpack, and close the phone. Space and Mars use the Starship. The pond uses the submarine, which seats all four. Everyone arrives in a ring on the ranch and on Mars.
+- Online play is host-run. The host broadcasts the trip. Controls unlock when every guest is ready, or after 15 seconds.
+- House furniture stays hidden until a froggy or the camera is inside.
+- Shared camera zoom limits: ranch 18–110, space 24–200, Mars 14–70, underwater 12–60. At the far zoom, edge arrows point at off-screen froggies, resolution drops, and shadows turn off.
+- Cache: `?v=20261005-area1` · asset `index-ff3d92.js`
+
 # What's new (ff3d91) — ranch performance
 
 - Pond water is plain transparent opacity. The transmission pass (a full extra scene render) is gone.
