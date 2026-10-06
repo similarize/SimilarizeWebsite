@@ -1,3 +1,11 @@
+# What's new (ff3d102) — cyber3
+
+- Cybertruck body is a stainless exoskeleton again: blunt nearly-vertical nose, short hood, one flat windshield up to a roof peak near the B-pillar, triangular side glass, then a short pickup bed. Not the one-piece wedge.
+- Black tonneau covers the bed only. Hop still hops the truck. The cover is not wired to Hop.
+- Cabin glass stays see-through (opacity 0.36, no transmission) so the froggy shows in the driver's seat.
+- Bigger tires and a higher beltline so it sits like a truck, not a low sports car.
+- Cache: `?v=20261006-cyber3` · asset `index-ff3d102.js`
+
 # What's new (ff3d101) — hopglass1
 
 - Hop while boarded in a parked Cybertruck hops the truck again. It no longer opens or shuts the black tonneau cover (that intercept landed in ff3d97). Tonneau mesh stays; Hop is not wired to it.
