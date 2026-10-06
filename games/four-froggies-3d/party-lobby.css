@@ -114,6 +114,9 @@ body.ff3d-playing .ff3d-play-nav { display: flex; }
 body.ff3d-playing .ff3d-play-nav {
   top: calc(max(8px, env(safe-area-inset-top)) + 2.9rem);
 }
+/* Phone sits under Versions / Center View, not behind them. */
+body.ff3d-playing .phone-fab { top: 7.7rem; }
+body.ff3d-playing .phone-shell { top: 10.5rem; }
 .ff3d-play-nav .ff3d-nav-btn {
   color: #fef3c7;
   font: 800 12px Outfit, "Segoe UI", system-ui, sans-serif;

@@ -1,3 +1,11 @@
+# What's new (ff3d96) — pad
+
+- Phone button sits below Center View.
+- Cybertruck windshield leans back onto the roof crease. The extra glass slabs are gone.
+- Starship stands on a Stage Zero mount with a tower and chopsticks, lattice grid fins, and a launch when you board.
+- Dirt track uses the photo texture again, plus a rut. The flat olive tint was what made it look cheap.
+- Cache: `?v=20261005-pad1` · asset `index-ff3d96.js`
+
 # What's new (ff3d95) — site
 
 - The place label (garage, scrap) sits clear of Versions and Center View.
