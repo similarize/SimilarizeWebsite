@@ -45,7 +45,8 @@
            (EXIT INTERACT still works; heli/drone RT climb unchanged).
    dogxform1: while piloting thousand-story mech (Rexy), RT edge → morph to driveable robot dog
            (Unitree-style; separate from trillion→semi; EXIT INTERACT walks as froggy).
-   semiscoop1: semi scoops trees/toys/props/parked mechs into trailer; LT dumps cargo outside. */
+   semiscoop1: semi scoops trees/toys/props/parked mechs into trailer; LT dumps cargo outside.
+   semitrees1: semi scoops ALL ranch trees (yard + 2.5D perimeter forest). */
 (function (global) {
   "use strict";
 

@@ -58,6 +58,7 @@
    rstick1: party cam more margin; soft right-stick orbit nudge; D-pad U/D zoom;
             house LOS nudge; one pad = one froggy (lobby party.js).
    groundmusic1: green floor under forest + pull trees in; ranch BGM; pinch zoom fix.
+   semitrees1: semi scoops ALL ranch trees (yard + perimeter forest ring).
    earth1: space shows procedural Earth (home) — not ranch grounds in vacuum.
    solarsys1: Solar System layout — Sun center; Moon+station orbit Earth; planet gravity wells;
    spacefix1: dark ground plane; orbit cam locks on planet; ranch pad on Earth surface;
@@ -1391,7 +1392,10 @@
     /* faceYaw: +Z forward in three → world +Y forward */
     var fx = Math.sin(yaw), fy = Math.cos(yaw);
     var back = cfg.trailerBack != null ? cfg.trailerBack : 72;
+    /* semitrees1: nose + mid + trailer so drive-into trees scoop */
+    var nose = back * 0.42;
     return [
+      { x: w.x + fx * nose, y: w.y + fy * nose },
       { x: w.x, y: w.y },
       { x: w.x - fx * back * 0.55, y: w.y - fy * back * 0.55 },
       { x: w.x - fx * back, y: w.y - fy * back },
@@ -2879,6 +2883,14 @@
         g.position.set(x, 0, z);
         scene.add(g);
         state.forestRing.push(g);
+        /* semitrees1: perimeter forest scoops like yard trees (semi morph) */
+        state.ranchBlastables = state.ranchBlastables || [];
+        var wxy = threeToWorld(x, z);
+        var n = (state._forestTreeSeq = (state._forestTreeSeq || 0) + 1);
+        state.ranchBlastables.push({
+          id: "forest-tree-" + n, kind: "tree", x: wxy.x, y: wxy.y,
+          r: Math.max(18, (r || 14) * 1.2), meshes: [g], boom: 2.4, forest: true
+        });
       }
       function plantShrub(x, z, s) {
         var bush = new THREE.Mesh(
@@ -5257,10 +5269,10 @@ state.zLift = 0;
           for (var rm = 0; rm < rb.meshes.length; rm++) {
             var msh = rb.meshes[rm];
             if (!msh) continue;
-            if (rb.kind === "tree") {
+            if (rb.kind === "tree" && !rb.forest && msh.geometry) {
               /* stump rubble: shrink canopy away, flatten trunk */
               msh.visible = true;
-              if (msh.geometry && msh.geometry.type && String(msh.geometry.type).indexOf("Sphere") >= 0) {
+              if (msh.geometry.type && String(msh.geometry.type).indexOf("Sphere") >= 0) {
                 msh.visible = false;
               } else {
                 msh.scale.y *= 0.18;
