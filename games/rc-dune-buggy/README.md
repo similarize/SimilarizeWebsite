@@ -11,7 +11,7 @@ suspension bounce approx, dust on sand. Light **WebXR** entry for Quest browser.
 room code + QR, Cloudflare Worker signaling + optional WS relay, WebRTC datachannels
 when ICE works. **Worker not deployed yet** — needs Ben/Webmaster approval.
 
-Play: `/games/rc-dune-buggy/?v=20261007-dune1`
+Play: `/games/rc-dune-buggy/?v=20261007-dune2`
 
 ## Why Three.js this pass
 Unity 6 Editor install is a separate track (not blocking this prototype).
@@ -19,9 +19,9 @@ Unity 6 Editor install is a separate track (not blocking this prototype).
 (unavailable here earlier). Static CDN prototype ships the gameplay brief. No paid APIs.
 
 ## Controls (local)
-- **P1 keyboard:** arrows or WASD
-- **P1 phone:** on-screen stick + FWD/REV
-- **Gamepads (Xbox):** one pad = one buggy; RT/LT or stick Y throttle; empty seats = AI
+- **P1 keyboard:** arrows or WASD (W/Up throttle, S/Down reverse, A/D steer)
+- **P1 phone:** on-screen stick X = steer + FWD/REV buttons (no stick Y drive)
+- **Gamepads (Xbox):** one pad = one buggy; left stick X = steer; RT = forward, LT = reverse (no stick Y throttle); empty seats = AI
 - **Reset** — 3-lap heat
 - **WebXR** — Quest browser when `navigator.xr` present
 

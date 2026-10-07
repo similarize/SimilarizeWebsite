@@ -5,9 +5,9 @@
  * Sand/hardpack friction + dust. Light WebXR for Quest browser.
  */
 import * as THREE from "three";
-import { createNet, fillQr } from "./net.js?v=20261007-dune1";
+import { createNet, fillQr } from "./net.js?v=20261007-dune2";
 
-const CACHE = "20261007-dune1";
+const CACHE = "20261007-dune2";
 const LAPS = 3;
 const N_CARS = 4;
 const COLORS = [0xe85d2a, 0x3b82f6, 0xf2c21b, 0x2fa84f];
@@ -474,14 +474,24 @@ function readHumanInput(carIndex) {
   if (c.padSlot >= 0 && GP) {
     const gp = GP.pollPad(c.padSlot);
     if (gp && gp.connected) {
-      steer = gp.lx || 0;
-      // RT forward, LT reverse (Xbox analog); stick Y also drives
-      let th = (gp.rtValue || 0) - (gp.ltValue || 0);
-      if (Math.abs(th) < 0.05) th = (gp.rt ? 1 : 0) - (gp.lt ? 1 : 0);
-      if (Math.abs(gp.ly) > 0.2) th -= gp.ly;
-      if (gp.a) th = Math.max(th, 1);
-      throttle = Math.max(-1, Math.min(1, th));
-      return { steer, throttle };
+      // RC feel: left stick X = steering wheel only (ignore stick Y)
+      if (gp.dpad && gp.dpad.l) steer = -1;
+      else if (gp.dpad && gp.dpad.r) steer = 1;
+      else steer = gp.lx || 0;
+      // RT = forward throttle, LT = reverse (Soccer RC pattern)
+      let fwd = typeof gp.rtValue === "number" ? gp.rtValue : gp.rt ? 1 : 0;
+      let rev = typeof gp.ltValue === "number" ? gp.ltValue : gp.lt ? 1 : 0;
+      fwd = Math.max(0, Math.min(1, fwd));
+      rev = Math.max(0, Math.min(1, rev));
+      if (fwd > 0 && rev > 0) {
+        if (fwd >= rev) rev = 0;
+        else fwd = 0;
+      }
+      throttle = fwd - rev;
+      return {
+        steer: Math.max(-1, Math.min(1, steer)),
+        throttle: Math.max(-1, Math.min(1, throttle)),
+      };
     }
   }
 
@@ -490,11 +500,10 @@ function readHumanInput(carIndex) {
     if (keys.ArrowRight || keys.KeyD) steer += 1;
     if (keys.ArrowUp || keys.KeyW) throttle += 1;
     if (keys.ArrowDown || keys.KeyS) throttle -= 1;
+    // Phone: stick X = steer; FWD/REV buttons = throttle (no stick Y drive)
     steer += touchSteer.x;
     if (touchFwd) throttle += 1;
     if (touchRev) throttle -= 1;
-    // phone stick Y as throttle when held
-    if (Math.abs(touchSteer.y) > 0.25) throttle -= touchSteer.y;
   }
   return {
     steer: Math.max(-1, Math.min(1, steer)),

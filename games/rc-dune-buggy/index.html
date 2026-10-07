@@ -4,14 +4,14 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <title>RC Dune Buggy</title>
-  <!-- Cache-bust: ?v=20261007-dune1 — Host/Join scaffold -->
+  <!-- Cache-bust: ?v=20261007-dune2 — RC pad: RT/LT + stick X steer -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="./style.css?v=20261007-dune1" />
+  <link rel="stylesheet" href="./style.css?v=20261007-dune2" />
   <script src="/games/shared/tesla-fullscreen.js?v=tfs1"></script>
   <script src="/games/shared/viewport-fill.js?v=vfs1"></script>
-  <script src="/games/shared/gamepad.js?v=20261007-dune1"></script>
+  <script src="/games/shared/gamepad.js?v=20261007-dune2"></script>
   <script type="importmap">
   {
     "imports": {
@@ -27,7 +27,7 @@
     <a class="exit-arcade" href="/games/">← Arcade</a>
     <span class="title">RC Dune Buggy</span>
     <span class="lap" id="lapLabel">Lap 1/3</span>
-    <span class="hint">James·Jimmy·Bubbles·Rexy · P1 arrows/WASD · pads 1:1 · empty=AI · Host/Join</span>
+    <span class="hint">James·Jimmy·Bubbles·Rexy · P1 WASD · pad RT+stick · empty=AI · Host/Join</span>
     <button type="button" id="resetBtn">Reset</button>
     <button type="button" id="xrBtn" hidden>Enter VR</button>
     <span class="online" id="onlineBar">
@@ -50,7 +50,7 @@
     <div class="cluster" data-p="0">
       <span class="cluster-label">P1</span>
       <div class="thumbs">
-        <div class="stick-wrap" data-role="steer" data-p="0" aria-label="P1 stick">
+        <div class="stick-wrap" data-role="steer" data-p="0" aria-label="P1 steer">
           <div class="stick-base"><span class="stick-ring"></span><span class="stick-knob"></span></div>
         </div>
         <div class="thumb-drive" role="group" aria-label="P1 throttle">
@@ -61,6 +61,6 @@
     </div>
   </div>
   <div id="boot">Loading RC Dune Buggy…</div>
-  <script type="module" src="./game.js?v=20261007-dune1"></script>
+  <script type="module" src="./game.js?v=20261007-dune2"></script>
 </body>
 </html>

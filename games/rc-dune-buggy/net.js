@@ -236,7 +236,7 @@ export function createNet(hooks) {
 
   function joinUrl(c) {
     const origin = typeof location !== "undefined" ? location.origin : "https://www.similarize.com";
-    return origin + JOIN_PATH + "?v=20261007-dune1&join=" + encodeURIComponent(c || code);
+    return origin + JOIN_PATH + "?v=20261007-dune2&join=" + encodeURIComponent(c || code);
   }
 
   return {
