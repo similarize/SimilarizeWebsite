@@ -69,6 +69,10 @@
       .x-tb.is-down { background: rgba(142,243,106,.6); }
       .x-hop { width: 120px; height: 120px; right: max(24px, env(safe-area-inset-right)); bottom: max(28px, env(safe-area-inset-bottom)); font-size: 22px; }
       .x-use { width: 78px; height: 78px; right: max(158px, calc(env(safe-area-inset-right) + 140px)); bottom: max(70px, env(safe-area-inset-bottom)); }
+      .x-jump { width: 68px; height: 68px; right: max(156px, calc(env(safe-area-inset-right) + 138px)); bottom: 172px; font-size: 14px; }
+      .x-jcd { position: absolute; left: calc(100% + 10px); top: 50%; transform: translateY(-50%); width: 40px; height: 40px; border-radius: 50%; background: conic-gradient(rgba(142,243,106,.95) var(--p, 360deg), rgba(255,255,255,.25) 0); display: grid; place-items: center; }
+      .x-jcd b { width: 30px; height: 30px; border-radius: 50%; background: rgba(10,40,60,.7); color: #fff; font: 600 12px var(--sans); display: grid; place-items: center; }
+      .x-jcd.is-ready b { background: rgba(47,158,58,.9); }
       .x-brake { width: 60px; height: 60px; right: max(48px, env(safe-area-inset-right)); bottom: 170px; font-size: 13px; }
       .x-pausebtn { top: max(12px, env(safe-area-inset-top)); right: calc(clamp(110px, 16vw, 170px) + 24px); width: 44px; height: 44px; border-radius: var(--r-s); font-size: 18px; }
       .x-touch.is-on ~ .x-hud .x-meter { bottom: auto; top: 118px; }
@@ -99,12 +103,13 @@
           <div class="x-stick" id="stick"><i></i></div>
           <button class="x-tb x-hop" id="b-hop" aria-label="Hop">HOP</button>
           <button class="x-tb x-use" id="b-item" aria-label="Use item">ITEM</button>
+          <button class="x-tb x-jump" id="b-jump" aria-label="Super jump">JUMP</button>
           <button class="x-tb x-brake" id="b-brake" aria-label="Brake">BACK</button>
           <button class="x-tb x-pausebtn" id="b-pause" aria-label="Pause">II</button>
         </div>
         <div class="x-hud" id="hud" style="display:none">
           <div class="x-pos x-shadow"><b id="h-pos">6</b><span id="h-of">th / 6</span><span class="x-lap" id="h-lap">Lap 1/3</span><span class="x-times" id="h-times"></span></div>
-          <div class="x-item" id="h-item"><span id="h-icon"></span><small class="x-shadow" id="h-iname"></small><em class="x-shadow" id="h-hint" hidden>Press X / RB / Space</em></div>
+          <div class="x-item" id="h-item"><span id="h-icon"></span><small class="x-shadow" id="h-iname"></small><em class="x-shadow" id="h-hint" hidden>Press X / RB / Space</em><span class="x-jcd is-ready" id="h-jcd" title="Super jump"><b>Y</b></span></div>
           <canvas class="x-map" id="h-map" width="170" height="170"></canvas>
           <div class="x-meter x-shadow">HOP POWER <span id="h-spd">0</span> km/h<i><u id="h-bar"></u></i></div>
           <div class="x-count x-shadow" id="h-count"></div>
@@ -125,9 +130,9 @@
             <button class="x-btn" id="b-play">Play</button>
             <p class="x-sub" id="x-msg" role="alert" hidden></p>
             <div class="x-help x-shadow">
-              <b>Keyboard</b> ↑/W hop · ↓/S back · ←→/AD steer · Space item · Esc pause · M mute<br />
-              <b>Gamepad</b> RT or A hop · LT back · stick steer · X or RB item · Start pause<br />
-              <b>Touch</b> left thumb steer · HOP hold · ITEM · BACK<br />
+              <b>Keyboard</b> ↑/W hop · ↓/S back · ←→/AD steer · Space item · E/Shift super jump · Esc pause · M mute<br />
+              <b>Gamepad</b> RT or A hop · LT back · stick steer · X or RB item · Y super jump (lobby: Y animal) · Start pause<br />
+              <b>Touch</b> left thumb steer · HOP hold · ITEM · JUMP · BACK<br />
               <b>Up to 4 players</b> press A on each controller to join split-screen
             </div>
           </div>
@@ -550,6 +555,7 @@ const SFX = {
   splash: play((t) => { noise(t, 0.4, 0.5, 900, 0.6); noise(t + 0.03, 0.25, 0.25, 2500, 1); }),
   bloop: play((t) => tone(260, t, 0.18, "sine", 0.4, null, 760)),
   chime: play((t) => [988, 1319, 1976].forEach((f, i) => tone(f, t + i * 0.06, 0.35, "triangle", 0.2))),
+  whoosh: play((t) => { noise(t, 0.45, 0.35, 700, 0.7, null, "bandpass"); tone(220, t, 0.35, "sine", 0.12, null, 660); }),
   boost: play((t) => { tone(80, t, 0.7, "sawtooth", 0.12, null, 300); tone(160, t, 0.7, "square", 0.04, null, 600); }),
   thwip: play((t) => tone(1500, t, 0.14, "square", 0.08, null, 250)),
   pew: play((t) => tone(1300, t, 0.18, "square", 0.09, null, 220)),
@@ -634,7 +640,7 @@ function resetRace() {
       groundT: 0, landT: 1, idx: i, lap: 0, prog: i, finished: false, finishTime: 0, lapStart: 0, lapTimes: [],
       item: null, itemHeld: 0, boostT: 0, shieldT: 0, spinT: 0, spinA: 0, tongue: null, bounce: false,
       skill: f.ai ? rnd(0.9, 0.97) : 1, band: 1, aiLine: rnd(-3, 3), aiLineT: rnd(1, 3), aiItemT: rnd(1, 3), auto: f.ai, finalShown: false,
-      input: { thr: 0, brk: 0, steer: 0, item: false },
+      jcd: 0, sup: false, input: { thr: 0, brk: 0, steer: 0, item: false, jump: false },
     });
   });
   hazards.forEach((h) => scene.remove(h.m)); hazards = [];
@@ -647,7 +653,7 @@ function resetRace() {
 }
 function hit(f, dur) {
   if (f.shieldT > 0) { f.shieldT = 0; puff(f.x, 1, f.z, 0x9fe8ff, 10, 4, 4); if (near(f)) SFX.pop(); return; }
-  f.spinT = dur || 1; f.m = 0; f.v *= 0.3; puff(f.x, 0.6, f.z, 0xffffff, 8, 3, 3); if (near(f)) SFX.spin();
+  f.spinT = (dur || 1) * (f.kind === "cat" ? 0.5 : 1); f.m = 0; f.v *= 0.3; puff(f.x, 0.6, f.z, 0xffffff, 8, 3, 3); if (near(f)) SFX.spin();
 }
 function useItem(f) {
   const it = f.item; if (!it || f.spinT > 0) return; f.item = null;
@@ -677,6 +683,11 @@ function racePlaces() {
   return arr;
 }
 
+const SPEC = {
+  frog: { hh: 1, rate: 1, st: 1, acc: 1, top: 1, toast: "🐸 Water Hopper" },
+  cat: { hh: 0.55, rate: 1.3, st: 1.25, acc: 1.15, top: 1, toast: "🐱 Nine Lives" },
+  dog: { hh: 0.75, rate: 1, st: 0.9, acc: 1, top: 1.08, toast: "🐶 Zoomies" },
+};
 /* ---------- frog update ---------- */
 function updFrog(f, dt) {
   const racing = state === "race";
@@ -684,9 +695,10 @@ function updFrog(f, dt) {
   if (f.spinT > 0) { f.spinT -= dt; f.spinA += dt * 14; thr = brk = st = 0; } else f.spinA *= 0.8;
   if (f.boostT > 0) f.boostT -= dt;
   if (f.shieldT > 0) f.shieldT -= dt;
-  const boost = f.boostT > 0, seg = SEG(f.idx);
-  const maxV = (boost ? 44 : 27) * f.skill * f.band;
-  f.h += -st * (f.air ? 2.1 : 2.6) * dt;
+  if (f.jcd > 0) f.jcd -= dt;
+  const boost = f.boostT > 0, seg = SEG(f.idx), K = SPEC[f.kind] || SPEC.frog, isFrog = (f.kind || "frog") === "frog";
+  const maxV = (boost ? 44 : 27) * f.skill * f.band * K.top;
+  f.h += -st * (f.air ? 2.1 : 2.6) * K.st * dt;
   if (f.tongue) {
     const t = f.tongue, o = t.tgt; t.t -= dt;
     if (t.t <= 0) {
@@ -699,32 +711,34 @@ function updFrog(f, dt) {
     f.groundT -= dt; f.v *= Math.exp(-7 * dt);
     if (thr < 0.05 && !boost) f.m = Math.max(0, f.m - dt * 1.4);
     if (brk > 0.05 && f.v > 1) { f.m = Math.max(0, f.m - dt * 4); f.v *= Math.exp(-6 * dt); }
-    if (f.groundT <= 0 && racing && f.spinT <= 0) {
-      const eff = boost ? 1 : thr;
+    const sj = f.input.jump && f.jcd <= 0;
+    if ((f.groundT <= 0 || sj) && racing && f.spinT <= 0) {
+      const eff = boost || sj ? 1 : thr;
       let dur, hh;
       if (eff > 0.05) {
-        f.m = Math.min(1, f.m + 0.16 * eff + (boost ? 0.3 : 0));
-        dur = 0.46 - 0.16 * f.m; hh = 0.8 + 0.9 * f.m;
+        f.m = Math.min(1, f.m + 0.16 * eff * K.acc + (boost ? 0.3 : 0));
+        dur = (0.46 - 0.16 * f.m) / K.rate; hh = (0.8 + 0.9 * f.m) * K.hh;
         f.v = maxV * (0.35 + 0.65 * f.m) * (0.5 + 0.5 * eff);
-        if (seg === "shallow" && !f.bounce) { f.v *= 0.6; dur *= 1.1; }
-        if (f.bounce) { hh *= 1.6; dur *= 1.15; f.v *= 1.15; f.bounce = false; }
+        if (seg === "shallow" && !f.bounce && !isFrog) { f.v *= 0.6; dur *= 1.1; }
+        if (f.bounce) { const lb = isFrog ? 1.5 : 1; hh *= 1 + 0.6 * lb; dur *= 1.15; f.v *= 1 + 0.15 * lb; f.bounce = false; }
+        if (sj) { hh *= 2.2; dur *= 1.25; f.sup = true; f.jcd = 3; if (near(f)) try { SFX.whoosh(); } catch (e) {} }
       } else if (brk > 0.05 && f.v < 2) { f.m = 0; dur = 0.3; hh = 0.5; f.v = -8 * brk; }
       if (dur) {
         f.air = true; f.airT = 0; f.dur = dur; f.g = (8 * hh) / (dur * dur); f.vy = (4 * hh) / dur;
-        if (humanOf(f)) SFX.hop(f.v);
-        puff(f.x, 0.2, f.z, seg === "shallow" ? 0xbff4f5 : 0xf3dfb0, 3, 1.5, 1.5);
+        if (humanOf(f) && !sj) SFX.hop(f.v);
+        if (f.kind !== "cat") puff(f.x, 0.2, f.z, seg === "shallow" ? 0xbff4f5 : 0xf3dfb0, 3, 1.5, 1.5);
       }
     }
   } else {
     f.airT += dt; f.vy -= f.g * dt; f.y += f.vy * dt;
     if (f.y <= 0) {
-      f.y = 0; f.air = false; f.landT = 0; f.groundT = Math.max(0.03, 0.11 - 0.08 * f.m);
+      f.y = 0; f.air = false; f.landT = 0; f.sup = false; f.groundT = Math.max(0.03, 0.11 - 0.08 * f.m);
       if (seg === "shallow") {
         const pad = lilies.some((l) => (l.x - f.x) ** 2 + (l.z - f.z) ** 2 < 2.4);
         const mine = !!humanOf(f);
         if (pad) { f.bounce = true; puff(f.x, 0.3, f.z, 0x5fd06a, 5, 2, 3); if (mine) SFX.bloop(); }
-        else { f.m = Math.min(f.m, 0.5); f.groundT += 0.08; puff(f.x, 0.3, f.z, 0xe8fbff, 9, 2.5, 5); if (mine) SFX.splash(); }
-      } else puff(f.x, 0.2, f.z, seg === "bridge" ? 0xc9a27a : 0xf3dfb0, 6, 2.2, 2);
+        else { if (!isFrog) { f.m = Math.min(f.m, 0.5); f.groundT += 0.08; } puff(f.x, 0.3, f.z, 0xe8fbff, isFrog ? 4 : 9, 2.5, 5); if (mine) SFX.splash(); }
+      } else puff(f.x, 0.2, f.z, seg === "bridge" ? 0xc9a27a : 0xf3dfb0, f.kind === "cat" ? 1 : 6, 2.2, 2);
     }
   }
   f.x += Math.sin(f.h) * f.v * dt; f.z += Math.cos(f.h) * f.v * dt;
@@ -749,13 +763,14 @@ function updFrog(f, dt) {
   if (!f.item && !f.tongue) for (const b of boxes) if (b.off <= 0 && f.y < 8 && (b.x - f.x) ** 2 + (b.z - f.z) ** 2 < 9) {
     b.off = 3; b.m.visible = false; f.item = ITEM_KEYS[Math.floor(Math.random() * ITEM_KEYS.length)]; f.itemHeld = 0;
     puff(b.x, 1.3, b.z, 0xffd23f, 10, 3, 3);
+    if (f.kind === "dog") { f.boostT = Math.max(f.boostT, 1); f.m = 1; }
     const hp = humanOf(f);
     if (hp) { SFX.chime(); toast((players.length > 1 ? hp.tag + " " : "") + ITEMS[f.item][0] + " " + ITEMS[f.item][1] + "!", 1.4); }
     break;
   }
   if (f.item) f.itemHeld += dt;
   if (f.input.item && racing) useItem(f);
-  f.input.item = false;
+  f.input.item = false; f.input.jump = false;
   for (let k = hazards.length - 1; k >= 0; k--) {
     const hz = hazards[k];
     if ((hz.owner !== f || hz.age > 1.2) && f.y < 0.6 && (hz.x - f.x) ** 2 + (hz.z - f.z) ** 2 < 3.2) { hit(f); scene.remove(hz.m); hazards.splice(k, 1); }
@@ -764,13 +779,33 @@ function updFrog(f, dt) {
 function animFrog(f, dt) {
   f.root.position.set(f.x, f.y + (SEG(f.idx) === "shallow" ? -0.05 : 0.02), f.z);
   f.root.rotation.y = f.h + f.spinA;
-  let stretch;
-  if (f.air) { const p = f.airT / f.dur; stretch = p < 0.3 ? 1 : Math.max(0, 1 - (p - 0.3) / 0.45); }
-  else stretch = 0;
-  f.legs.forEach((l) => { l.hip.rotation.x = -0.2 + 0.7 * (1 - stretch) - 0.6 * stretch; l.knee.rotation.x = -2.2 * (1 - stretch) + 0.3 * stretch; l.hip.scale.z = 0.8 + 0.4 * stretch; });
+  const kind = f.kind || "frog", rig = f.rig, u = rig.userData, p = f.air ? clamp(f.airT / f.dur, 0, 1) : 0, tm = performance.now() / 1000;
+  let stretch = f.air ? (p < 0.3 ? 1 : Math.max(0, 1 - (p - 0.3) / 0.45)) : 0;
+  if (f.sup && f.air) stretch = 1;
   f.landT += dt;
-  const sq = f.air ? 1 + 0.12 * stretch : 1 - 0.22 * Math.exp(-f.landT * 14);
-  f.rig.scale.set(2 - sq, sq, 1); f.rig.rotation.x = f.air ? clamp(-f.vy * 0.04, -0.4, 0.4) : 0;
+  const land = Math.exp(-f.landT * 14), pitch = f.air ? clamp(-f.vy * 0.04, -0.4, 0.4) : 0;
+  if (kind === "frog") {
+    f.legs.forEach((l) => { l.hip.rotation.x = -0.2 + 0.7 * (1 - stretch) - 0.6 * stretch; l.knee.rotation.x = -2.2 * (1 - stretch) + 0.3 * stretch; l.hip.scale.z = 0.8 + 0.4 * stretch; });
+    const sq = f.air ? 1 + (f.sup ? 0.22 : 0.12) * stretch : 1 - 0.22 * land;
+    rig.scale.set(2 - sq, sq, 1); rig.rotation.x = pitch;
+  } else {
+    if (u.tail === undefined) { u.tail = rig.getObjectByName("tail"); u.ears = rig.getObjectByName("ears"); if (u.ears) u.ears.children.forEach((c) => (c.userData.rz = c.rotation.z)); }
+    const gal = f.air ? Math.sin(p * Math.PI * 2) : 0;
+    f.legs.forEach((l, i) => { const fr = i < 2 ? -1 : 1; l.hip.rotation.x = f.air ? fr * (0.25 + 0.75 * stretch) + (kind === "dog" ? 0.35 * gal * fr : 0) : fr * 0.15 * land; });
+    if (kind === "cat") {
+      const s = f.air ? (f.sup ? 0.4 : 0.32) * stretch : 0;
+      rig.scale.set(1 - 0.12 * s + 0.15 * land, 1 - 0.1 * s - 0.25 * land, 1 + s - 0.18 * land);
+      rig.rotation.x = pitch * 0.7; rig.position.y = 0;
+      if (u.tail) u.tail.rotation.y = Math.sin(tm * 3.2 + f.def.c) * 0.5;
+    } else {
+      const sq = f.air ? 1 + 0.1 * stretch : 1 - 0.16 * land;
+      rig.scale.set(2 - sq, sq, 1); rig.position.y = f.air ? 0.1 * Math.sin(p * Math.PI * 4) : 0.04 * Math.abs(Math.sin(tm * 9)) * Math.min(1, Math.abs(f.v) / 10);
+      rig.rotation.x = pitch * 0.8 + (f.air ? 0.1 * gal : 0);
+      const flap = f.air ? stretch * (1 - p) + 0.3 * Math.max(0, gal) : 0.4 * land;
+      if (u.ears) u.ears.children.forEach((c) => (c.rotation.z = c.userData.rz + Math.sign(c.position.x) * 1.1 * flap));
+      if (u.tail) u.tail.rotation.y = Math.sin(tm * (7 + Math.abs(f.v) * 0.6)) * 0.6;
+    }
+  }
   f.shield.visible = f.shieldT > 0; if (f.shield.visible) f.shield.rotation.y += dt * 2;
   f.swarm.visible = f.boostT > 0; if (f.swarm.visible) { f.swarm.rotation.y += dt * 18; f.swarm.children.forEach((c, k) => (c.position.y = Math.sin(raceT * 30 + k) * 0.5 + 0.2)); }
 }
@@ -781,6 +816,7 @@ function aiThink(f, dt, leader) {
   const diff = wrapA(Math.atan2(tx - f.x, tz - f.z) - f.h);
   inp.steer = clamp(-diff * 2.6, -1, 1); inp.thr = 1; inp.brk = 0;
   if (f.ai) f.band = 1 + clamp((leader.prog - f.prog) / 180, -1, 1) * 0.15;
+  if (f.jcd <= 0 && !f.air && Math.abs(diff) < 0.1 && Math.abs(wrapA(TH[j] - TH[f.idx])) < 0.08 && Math.random() < dt * 0.3) inp.jump = true;
   if (f.item) {
     f.aiItemT -= dt;
     if (f.aiItemT <= 0) {
@@ -808,6 +844,7 @@ addEventListener("keydown", (e) => {
   if (!keys[e.code]) {
     if (e.code === "KeyM") toggleMute();
     if (e.code === "Space" && kbPl()) kbPl().frog.input.item = state === "race";
+    if ((e.code === "KeyE" || e.key === "Shift") && kbPl() && state === "race") kbPl().frog.input.jump = true;
     if (e.code === "Escape" && state === "lobby") { state = "menu"; $("s-lobby").classList.remove("is-on"); $("s-start").classList.add("is-on"); }
     if (e.code === "Escape" || e.code === "KeyP") togglePause();
     if (e.code === "Enter" && state === "menu") onPlay();
@@ -838,6 +875,7 @@ function holdBtn(id, on, off) {
   b.addEventListener("pointerup", up); b.addEventListener("pointercancel", up); b.addEventListener("contextmenu", (e) => e.preventDefault());
 }
 holdBtn("b-hop", () => (touch.thr = 1), () => (touch.thr = 0));
+holdBtn("b-jump", () => { if (state === "race" && kbPl()) kbPl().frog.input.jump = true; });
 holdBtn("b-brake", () => (touch.brk = 1), () => (touch.brk = 0));
 holdBtn("b-item", () => { if (state === "race" && kbPl()) kbPl().frog.input.item = true; });
 holdBtn("b-pause", togglePause);
@@ -949,6 +987,7 @@ function readInput() {
       thr = Math.max(thr, b(7), b(0)); brk = Math.max(brk, b(6));
       if (Math.abs(ax) > 0.15) steer += (ax - Math.sign(ax) * 0.15) / 0.85;
       if (pr(2) || pr(5)) inp.item = state === "race";
+      if (pr(3) && state === "race") inp.jump = true;
       if (pr(9)) togglePause();
       if (pr(8)) toggleMute();
     }
@@ -993,6 +1032,8 @@ function updHud(dt) {
     lastItem = it; $("h-icon").textContent = f.item ? ITEMS[f.item][0] : ""; $("h-iname").textContent = f.item ? ITEMS[f.item][1] : ""; $("h-hint").hidden = !f.item;
     const el = $("h-item"); el.classList.remove("is-new"); void el.offsetWidth; if (f.item) el.classList.add("is-new");
   }
+  const jc = $("h-jcd"), jr = clamp(1 - (f.jcd || 0) / 3, 0, 1);
+  jc.style.setProperty("--p", jr * 360 + "deg"); jc.classList.toggle("is-ready", jr >= 1);
   $("h-bar").style.width = (f.boostT > 0 ? 100 : f.m * 100) + "%";
   $("h-spd").textContent = Math.round(Math.abs(f.v) * 3.2);
   }
@@ -1053,7 +1094,7 @@ function loop(now) {
       countT -= dt; const n = Math.ceil(countT - 0.6);
       $("h-count").textContent = n > 0 ? n : "GO!";
       if (n !== lastN) { lastN = n; SFX.beep(n <= 0); }
-      if (countT <= 0.6) { state = "race"; }
+      if (countT <= 0.6) { state = "race"; toast(players.map((p) => (players.length > 1 ? p.tag + " " : "") + (SPEC[p.frog.kind] || SPEC.frog).toast).join("  ·  "), 2.2); }
     } else if (state === "race") {
       raceT += dt;
       if (countT > -0.6) { countT -= dt; if (countT <= -0.4) $("h-count").textContent = ""; }
