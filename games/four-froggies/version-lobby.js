@@ -40,6 +40,15 @@
     return [];
   }
 
+  /* padmerge1: "Pad N" from the deduped list (ignored ghosts don't shift numbers) */
+  function padNo(pi) {
+    var GP = window.SimilarizeGamepad;
+    try {
+      if (GP && typeof GP.padNumber === "function") return GP.padNumber(pi | 0, 4);
+    } catch (e) { /* ignore */ }
+    return (pi | 0) + 1;
+  }
+
   function pluggedIdxs() {
     var GP = window.SimilarizeGamepad;
     if (!GP) return [];
@@ -259,7 +268,7 @@
       }
       paintedPad[pj] = fid;
       if (!focusByFrog[fid]) focusByFrog[fid] = [];
-      if (focusByFrog[fid].indexOf(pj + 1) < 0) focusByFrog[fid].push(pj + 1);
+      if (focusByFrog[fid].indexOf(padNo(pj)) < 0) focusByFrog[fid].push(padNo(pj));
     }
 
     /* padheads1: collect EVERY local you-claim — heading must list all pads,
@@ -287,7 +296,7 @@
         if (pIdx != null) {
           tile.classList.add("seat-pad", "is-hot");
           tile.setAttribute("data-pad", String(pIdx + 1));
-          if (em) em.textContent = "Pad " + (pIdx + 1) + " · " + fname;
+          if (em) em.textContent = "Pad " + padNo(pIdx) + " · " + fname;
           youClaims.push({ frog: fname, pad: pIdx });
         } else {
           if (em) em.textContent = "Keyboard · " + fname;
@@ -330,7 +339,7 @@
         });
         var msg = youClaims.map(function (c) {
           return c.pad >= 0
-            ? ("Pad " + (c.pad + 1) + " " + c.frog)
+            ? ("Pad " + padNo(c.pad) + " " + c.frog)
             : ("Keyboard " + c.frog);
         }).join(" · ");
         if (youClaims.length === 1 && youClaims[0].pad >= 0) {
