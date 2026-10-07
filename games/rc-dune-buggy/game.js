@@ -279,14 +279,18 @@ function makeBuggy(colorHex) {
   const wheels = [];
   [[0.65, 0.55], [0.65, -0.55], [-0.7, 0.55], [-0.7, -0.55]].forEach(([x, z], i) => {
     const w = new THREE.Mesh(wheelGeo, dark);
-    w.rotation.z = Math.PI / 2;
+    w.rotation.x = Math.PI / 2; // axle across the car
     w.position.set(x, 0.38, z);
     w.castShadow = true;
     g.add(w);
     wheels.push(w);
   });
-  g.userData.wheels = wheels;
-  return g;
+  // model is built nose +X; car drives along +Z, so turn it to face forward
+  const outer = new THREE.Group();
+  g.rotation.y = -Math.PI / 2;
+  outer.add(g);
+  outer.userData.wheels = wheels;
+  return outer;
 }
 
 
@@ -489,7 +493,7 @@ function readHumanInput(carIndex) {
       }
       throttle = fwd - rev;
       return {
-        steer: Math.max(-1, Math.min(1, steer)),
+        steer: -Math.max(-1, Math.min(1, steer)),
         throttle: Math.max(-1, Math.min(1, throttle)),
       };
     }
@@ -506,7 +510,7 @@ function readHumanInput(carIndex) {
     if (touchRev) throttle -= 1;
   }
   return {
-    steer: Math.max(-1, Math.min(1, steer)),
+    steer: -Math.max(-1, Math.min(1, steer)),
     throttle: Math.max(-1, Math.min(1, throttle)),
   };
 }
@@ -672,7 +676,7 @@ function updateCar(c, dt) {
   const wheels = c.mesh.userData.wheels;
   if (wheels) {
     const spin = speed * dt * 2.2;
-    wheels.forEach((w) => { w.rotation.x += spin; });
+    wheels.forEach((w) => { w.rotation.y -= spin; });
   }
 
   // dust on sand when moving
