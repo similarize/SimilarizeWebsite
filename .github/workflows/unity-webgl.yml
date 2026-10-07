@@ -65,6 +65,33 @@ jobs:
             Library-WebGL-${{ hashFiles('src/unity/balloon-blast/Packages/manifest.json', 'src/unity/balloon-blast/ProjectSettings/ProjectVersion.txt') }}-
             Library-WebGL-
 
+      # Hub 3.20+ installs to /usr/lib/unityhub but unity-setup@v2 still checks /opt/unityhub.
+      # Pass 1 installs the Hub (and fails on that path check), the shim links the dir, pass 2 continues.
+      - name: Set up Unity Hub (pass 1)
+        id: unity-hub-install
+        continue-on-error: true
+        uses: RageAgainstThePixel/unity-setup@v2
+        with:
+          version-file: src/unity/balloon-blast/ProjectSettings/ProjectVersion.txt
+          build-targets: WebGL
+          cache-installation: true
+
+      - name: Unity Hub path shim
+        run: |
+          echo "hub pass1: ${{ steps.unity-hub-install.outcome }}" | tee -a "$LOG_DIR/status.txt"
+          ls -la /usr/lib/unityhub/unityhub /opt/unityhub 2>&1 | tee -a "$LOG_DIR/status.txt" || true
+          if [ ! -e /opt/unityhub/unityhub ]; then
+            if [ -x /usr/lib/unityhub/unityhub ]; then
+              sudo rm -rf /opt/unityhub
+              sudo ln -s /usr/lib/unityhub /opt/unityhub
+            else
+              B=$(readlink -f "$(command -v unityhub)" 2>/dev/null || true)
+              echo "unityhub resolves to: $B" | tee -a "$LOG_DIR/status.txt"
+              [ -n "$B" ] && sudo mkdir -p /opt/unityhub && sudo ln -sf "$B" /opt/unityhub/unityhub
+            fi
+          fi
+          ls -la /opt/unityhub/unityhub 2>&1 | tee -a "$LOG_DIR/status.txt" || true
+
       - name: Set up Unity + WebGL
         id: unity-setup
         uses: RageAgainstThePixel/unity-setup@v2
@@ -72,6 +99,7 @@ jobs:
           version-file: src/unity/balloon-blast/ProjectSettings/ProjectVersion.txt
           build-targets: WebGL
           cache-installation: true
+          auto-update-hub: false
 
       - name: Activate Unity license
         id: activate
