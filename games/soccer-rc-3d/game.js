@@ -1,12 +1,12 @@
 /**
  * Soccer RC 3D — Rocket League–lite arcade cabinet.
  * Vanilla Three.js (CDN) + simple custom physics.
- * Controls: twin-stick touch (L drive · R aim/kick) · KB/pad (RT/LT · stick · A kick · B boost).
+ * Controls: phone stick=steer + FWD/REV buttons · KB/pad (RT/LT · stick · A kick · B boost).
  * Online: same CF Worker rooms as flat Soccer RC (Create/Join two-phone).
  */
 import * as THREE from "three";
 
-const CACHE = "20261006-soccerrc3d4";
+const CACHE = "20261006-soccerrc3d5";
 const HALF_X = 22;
 const HALF_Z = 14;
 const WALL_H = 5.5;
@@ -244,7 +244,6 @@ const touch = [
   { fwd: 0, rev: 0, steer: 0, boost: 0, kickEdge: false, aimX: 0, aimZ: 0, aimActive: false },
   { fwd: 0, rev: 0, steer: 0, boost: 0, kickEdge: false, aimX: 0, aimZ: 0, aimActive: false },
 ];
-const AIM_FIRE_THRESH = 0.55; // right-stick kick when pushed past this (rising edge)
 
 // --- Online two-phone multiplayer (same CF Worker rooms as flat Soccer RC) ---
 const ROOM_WS_BASE = "wss://similarize-bball-rooms.ben-e22.workers.dev/ws";
@@ -523,17 +522,10 @@ function readInput(playerIndex) {
   let boost = pd.boost || !!t.boost;
   let aimX = 0, aimZ = 0, aimActive = false;
 
-  // Twin-stick touch writes into touch[0]; host uses it for Orange, guest packs it for Blue
-  if (playerIndex === 0) {
-    if (t.fwd > 0.04) fwd = Math.max(fwd, t.fwd);
-    if (t.rev > 0.04) rev = Math.max(rev, t.rev);
-    if (Math.abs(t.steer) > 0.05) steer = t.steer;
-    if (t.aimActive) {
-      aimX = t.aimX;
-      aimZ = t.aimZ;
-      aimActive = true;
-    }
-  }
+  // Phone RC: stick → steer only; FWD/REV/KICK/BST buttons → touch[p]
+  if (t.fwd > 0.04) fwd = Math.max(fwd, t.fwd);
+  if (t.rev > 0.04) rev = Math.max(rev, t.rev);
+  if (Math.abs(t.steer) > 0.05) steer = t.steer;
 
   if (playerIndex === 0) {
     if (keys.ArrowUp) fwd = 1;
@@ -977,16 +969,10 @@ function setOnlineStatus(msg, kind) {
 function applyPadMode() {
   if (!padsEl) return;
   padsEl.classList.remove("solo-guest", "solo-host");
-  const labels = padsEl.querySelectorAll(".stick-label");
-  if (netRole === "guest") {
-    padsEl.classList.add("solo-guest");
-    if (labels[0]) labels[0].textContent = "MOVE (BLUE)";
-    if (labels[1]) labels[1].textContent = "AIM / KICK";
-  } else {
-    if (netRole === "host") padsEl.classList.add("solo-host");
-    if (labels[0]) labels[0].textContent = "MOVE";
-    if (labels[1]) labels[1].textContent = "AIM / KICK";
-  }
+  if (netRole === "guest") padsEl.classList.add("solo-guest");
+  else if (netRole === "host") padsEl.classList.add("solo-host");
+  const lab = padsEl.querySelector(".cluster.p1 .cluster-label");
+  if (lab) lab.textContent = netRole === "guest" ? "BLUE" : "ORANGE";
 }
 
 function round3(n) { return Math.round(n * 1000) / 1000; }
@@ -1050,7 +1036,7 @@ function netSend(obj) {
 }
 
 function readLocalGuestBits() {
-  // Guest uses pad0 + twin sticks (touch[0]) + arrows/WASD — same feel as host Orange controls
+  // Guest: pad0 + phone stick(steer)/FWD/REV + arrows/WASD
   const t = touch[0];
   const d = padDrive(_gp0);
   let fwd = d.fwd > 0.04 || t.fwd > 0.04 || keys.ArrowUp || keys.w || keys.W;
@@ -1060,9 +1046,8 @@ function readLocalGuestBits() {
   else if (d.steer) steer = d.steer;
   else if (keys.ArrowLeft || keys.a || keys.A) steer = -1;
   else if (keys.ArrowRight || keys.d || keys.D) steer = 1;
-  const fire = !!(netFireArmed || t.kickEdge || (d.kick));
+  const fire = !!(netFireArmed || t.kickEdge || d.kick);
   const boost = !!(t.boost || d.boost || keys.ShiftLeft || keys.ShiftRight || keys.e || keys.E);
-  const aim = !!t.aimActive;
   const bits = {
     type: "input",
     u: fwd ? 1 : 0,
@@ -1071,9 +1056,9 @@ function readLocalGuestBits() {
     r: steer > 0.2 ? 1 : 0,
     fire: fire ? 1 : 0,
     boost: boost ? 1 : 0,
-    ax: aim ? round3(t.aimX) : 0,
-    az: aim ? round3(t.aimZ) : 0,
-    aim: aim ? 1 : 0,
+    ax: 0,
+    az: 0,
+    aim: 0,
   };
   t.kickEdge = false;
   return bits;
@@ -1316,76 +1301,29 @@ function bindKeys() {
   document.getElementById("resetBtn").addEventListener("click", () => requestReset());
 }
 
-function bindVirtualStick(root) {
+function bindSteerStick(root) {
   if (!root) return;
   const knob = root.querySelector(".stick-knob");
   const base = root.querySelector(".stick-base");
   if (!knob || !base) return;
-  const role = root.dataset.role; // "move" | "aim"
   const p = +root.dataset.p || 0;
   let ptrId = null;
   let maxR = 36;
   const dead = 0.14;
-  let aimWasHot = false;
 
   function setKnob(dx, dy) {
     knob.style.transform = "translate(" + dx + "px," + dy + "px)";
   }
 
-  function applyMove(nx, ny, mag) {
+  function applySteer(nx) {
     const t = touch[p];
-    // Deadzone on axes independently so pure left/right still pivots with no throttle
-    const ax = Math.abs(nx);
-    const ay = Math.abs(ny);
-    if (ax < dead && ay < dead) {
-      t.fwd = 0;
-      t.rev = 0;
+    const a = Math.abs(nx);
+    if (a < dead) {
       t.steer = 0;
       return;
     }
-    // Remap each axis past deadzone to 0..1 (real RC: X yaw independent of Y throttle)
-    function axis(v) {
-      const a = Math.abs(v);
-      if (a < dead) return 0;
-      const s = Math.min(1, (a - dead) / (1 - dead));
-      return Math.sign(v) * s;
-    }
-    const sx = axis(nx);
-    const sy = axis(ny);
-    // Tank drive (not strafe): Y = throttle, X = in-place yaw with NO throttle required.
-    if (sy < -0.04) {
-      t.fwd = Math.min(1, -sy);
-      t.rev = 0;
-    } else if (sy > 0.04) {
-      t.rev = Math.min(1, sy);
-      t.fwd = 0;
-    } else {
-      t.fwd = 0;
-      t.rev = 0;
-    }
-    t.steer = Math.max(-1, Math.min(1, sx));
-  }
-
-  function applyAim(nx, ny, mag) {
-    const t = touch[p];
-    // Camera sits at +Z looking toward midfield: screen right = +X, screen up = -Z
-    if (mag < dead) {
-      t.aimActive = false;
-      t.aimX = 0;
-      t.aimZ = 0;
-      aimWasHot = false;
-      return;
-    }
-    const scale = Math.min(1, (mag - dead) / (1 - dead));
-    const sx = (nx / mag) * scale;
-    const sy = (ny / mag) * scale;
-    t.aimX = sx;
-    t.aimZ = sy; // stick up (sy < 0) → aim toward -Z
-    t.aimActive = true;
-    // Fire kick on rising edge past threshold (matches A-kick edge feel)
-    const hot = mag >= AIM_FIRE_THRESH;
-    if (hot && !aimWasHot) t.kickEdge = true;
-    aimWasHot = hot;
+    const s = Math.min(1, (a - dead) / (1 - dead));
+    t.steer = Math.sign(nx) * s;
   }
 
   function fromEvent(e) {
@@ -1395,6 +1333,7 @@ function bindVirtualStick(root) {
     const cy = rect.top + rect.height * 0.5;
     let dx = e.clientX - cx;
     let dy = e.clientY - cy;
+    // Constrain knob to circle for feel, but only X drives yaw (no throttle from Y)
     let len = Math.hypot(dx, dy);
     if (len > maxR && len > 0) {
       dx = (dx / len) * maxR;
@@ -1403,27 +1342,14 @@ function bindVirtualStick(root) {
     }
     setKnob(dx, dy);
     const nx = maxR > 0 ? dx / maxR : 0;
-    const ny = maxR > 0 ? dy / maxR : 0;
-    const mag = Math.hypot(nx, ny);
-    if (role === "aim") applyAim(nx, ny, mag);
-    else applyMove(nx, ny, mag);
+    applySteer(nx);
   }
 
   function endStick() {
     ptrId = null;
     root.classList.remove("is-active");
     setKnob(0, 0);
-    const t = touch[p];
-    if (role === "aim") {
-      t.aimActive = false;
-      t.aimX = 0;
-      t.aimZ = 0;
-      aimWasHot = false;
-    } else {
-      t.fwd = 0;
-      t.rev = 0;
-      t.steer = 0;
-    }
+    touch[p].steer = 0;
   }
 
   function tryFS() {
@@ -1434,8 +1360,6 @@ function bindVirtualStick(root) {
 
   root.addEventListener("pointerdown", (e) => {
     if (e.button != null && e.button !== 0) return;
-    // Ignore boost button presses bubbling from inside wrap
-    if (e.target && e.target.closest && e.target.closest(".boost-btn")) return;
     e.preventDefault();
     e.stopPropagation();
     ptrId = e.pointerId;
@@ -1461,11 +1385,19 @@ function bindVirtualStick(root) {
   });
 }
 
-function bindBoostButtons() {
-  document.querySelectorAll(".pads .boost-btn").forEach((btn) => {
+function bindPadButtons() {
+  document.querySelectorAll(".pads button[data-act]").forEach((btn) => {
     const p = +btn.dataset.p || 0;
+    const act = btn.dataset.act;
     const set = (v) => {
-      touch[p].boost = v ? 1 : 0;
+      const on = v ? 1 : 0;
+      if (act === "fwd") touch[p].fwd = on;
+      else if (act === "rev") touch[p].rev = on;
+      else if (act === "boost") touch[p].boost = on;
+      else if (act === "kick") {
+        if (v) touch[p].kickEdge = true;
+        touch[p].kick = on;
+      }
       btn.classList.toggle("is-held", !!v);
     };
     const down = (e) => {
@@ -1489,9 +1421,8 @@ function bindBoostButtons() {
 }
 
 function bindTouch() {
-  bindVirtualStick(document.getElementById("stickMove"));
-  bindVirtualStick(document.getElementById("stickAim"));
-  bindBoostButtons();
+  document.querySelectorAll(".pads .stick-wrap").forEach(bindSteerStick);
+  bindPadButtons();
 }
 
 function init() {

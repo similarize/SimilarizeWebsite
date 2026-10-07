@@ -4,14 +4,14 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <title>Soccer RC 3D</title>
-  <!-- Cache-bust: ?v=20261006-soccerrc3d4 — twin-stick + online + tank pivot fix -->
+  <!-- Cache-bust: ?v=20261006-soccerrc3d5 — stick steer + FWD/REV buttons -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560&family=Outfit:wght@400;500;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="./style.css?v=20261006-soccerrc3d4" />
+  <link rel="stylesheet" href="./style.css?v=20261006-soccerrc3d5" />
   <script src="/games/shared/tesla-fullscreen.js?v=tfs1"></script>
   <script src="/games/shared/viewport-fill.js?v=vfs1"></script>
-  <script src="/games/shared/gamepad.js?v=20261006-soccerrc3d4"></script>
+  <script src="/games/shared/gamepad.js?v=20261006-soccerrc3d5"></script>
   <script type="importmap">
   {
     "imports": {
@@ -48,25 +48,48 @@
       <div class="meter" aria-hidden="true"><i id="boost2"></i></div>
     </div>
   </div>
-  <!-- Twin-stick touch: left = drive (thrust+steer), right = aim/kick. Boost stays a button. -->
+  <!-- Phone RC: stick = yaw only; FWD/REV buttons = throttle; Kick + Boost -->
   <div class="pads" id="pads">
-    <div class="stick-wrap left" id="stickMove" data-role="move" data-p="0" aria-label="P1 move stick">
-      <span class="stick-label">MOVE</span>
-      <div class="stick-base">
-        <span class="stick-ring" aria-hidden="true"></span>
-        <span class="stick-knob" aria-hidden="true"></span>
+    <div class="cluster p1" data-p="0">
+      <span class="cluster-label">ORANGE</span>
+      <div class="cluster-row">
+        <div class="stick-wrap" data-role="steer" data-p="0" aria-label="P1 steer">
+          <div class="stick-base">
+            <span class="stick-ring" aria-hidden="true"></span>
+            <span class="stick-knob" aria-hidden="true"></span>
+          </div>
+        </div>
+        <div class="drive-col">
+          <button type="button" class="drive-btn fwd" data-p="0" data-act="fwd" aria-label="P1 forward">FWD</button>
+          <button type="button" class="drive-btn rev" data-p="0" data-act="rev" aria-label="P1 reverse">REV</button>
+        </div>
       </div>
-      <button type="button" class="boost-btn" data-p="0" data-act="boost" aria-label="P1 boost">BST</button>
+      <div class="action-row">
+        <button type="button" class="act-btn kick" data-p="0" data-act="kick" aria-label="P1 kick">KICK</button>
+        <button type="button" class="act-btn boost" data-p="0" data-act="boost" aria-label="P1 boost">BST</button>
+      </div>
     </div>
-    <div class="stick-wrap right" id="stickAim" data-role="aim" data-p="0" aria-label="P1 aim and kick stick">
-      <span class="stick-label">AIM / KICK</span>
-      <div class="stick-base">
-        <span class="stick-ring" aria-hidden="true"></span>
-        <span class="stick-knob" aria-hidden="true"></span>
+    <div class="cluster p2" data-p="1">
+      <span class="cluster-label">BLUE</span>
+      <div class="cluster-row">
+        <div class="drive-col">
+          <button type="button" class="drive-btn fwd" data-p="1" data-act="fwd" aria-label="P2 forward">FWD</button>
+          <button type="button" class="drive-btn rev" data-p="1" data-act="rev" aria-label="P2 reverse">REV</button>
+        </div>
+        <div class="stick-wrap" data-role="steer" data-p="1" aria-label="P2 steer">
+          <div class="stick-base">
+            <span class="stick-ring" aria-hidden="true"></span>
+            <span class="stick-knob" aria-hidden="true"></span>
+          </div>
+        </div>
+      </div>
+      <div class="action-row">
+        <button type="button" class="act-btn boost" data-p="1" data-act="boost" aria-label="P2 boost">BST</button>
+        <button type="button" class="act-btn kick" data-p="1" data-act="kick" aria-label="P2 kick">KICK</button>
       </div>
     </div>
   </div>
   <div id="boot">Loading Soccer RC 3D…</div>
-  <script type="module" src="./game.js?v=20261006-soccerrc3d4"></script>
+  <script type="module" src="./game.js?v=20261006-soccerrc3d5"></script>
 </body>
 </html>
