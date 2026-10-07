@@ -600,3 +600,49 @@ body.mode-race .online,
 body.mode-race #soccerBoostRow,
 body.mode-race .hint { display: none !important; }
 body.mode-lobby .pads { visibility: hidden; pointer-events: none; }
+
+.race-player-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+.lobby-btn.race-sm {
+  flex: 1;
+  padding: 12px 10px;
+  font-size: 14px;
+  background: rgba(37, 99, 235, 0.35);
+  border-color: rgba(96, 165, 250, 0.65);
+}
+/* Race: one joystick only — hide FWD/REV chrome */
+body.mode-race .thumb-drive { display: none !important; }
+body.mode-race .cluster-label { font-size: 9px; opacity: 0.85; }
+body.mode-race .thumbs { justify-content: center; gap: 0; }
+body.mode-race .stick-base {
+  width: 86px;
+  height: 86px;
+  opacity: 0.92;
+  border-width: 2px;
+}
+body.mode-race .stick-knob {
+  width: 34px;
+  height: 34px;
+  margin: -17px 0 0 -17px;
+}
+body.mode-race .cluster.p1,
+body.mode-race .cluster.p2 { max-width: 120px; }
+body.mode-race #pads.solo-host .cluster.p1,
+body.mode-race #pads.solo-guest .cluster.p1 {
+  max-width: none;
+}
+body.mode-race #pads.solo-host .stick-base,
+body.mode-race #pads.solo-guest .stick-base {
+  width: 100px;
+  height: 100px;
+}
+.stick-wrap.is-boosting .stick-base {
+  box-shadow: 0 0 20px rgba(228, 162, 58, 0.75), inset 0 0 12px rgba(0,0,0,.35);
+  border-color: #f5d08a;
+}
+@media (orientation: landscape) {
+  body.mode-race .stick-base { width: 78px; height: 78px; }
+}

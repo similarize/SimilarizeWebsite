@@ -1,7 +1,7 @@
 /**
  * Soccer RC 3D — Rocket League–lite arcade cabinet.
  * Vanilla Three.js (CDN) + simple custom physics.
- * Controls: phone stick=steer · FWD/REV (dbl-tap FWD=boost, auto-kick) · KB/pad A kick · B boost.
+ * Controls: soccer=stick+FWD/REV; race=one smart stick (X steer, Y throttle, dbl-tap boost, auto-kick).
  * Online: same CF Worker rooms as flat Soccer RC (Create/Join two-phone).
  */
 import * as THREE from "three";
@@ -11,13 +11,12 @@ import {
   updateRaceProgress,
   rankRacers,
   boundRaceCar,
-  sampleRampY,
-  raceCameraTarget,
+  raceChaseFocus,
   RACE_COLORS,
   RACE_NAMES,
-} from "./race-mode.js?v=20261006-soccerrc3d9";
+} from "./race-mode.js?v=20261006-soccerrc3d10";
 
-const CACHE = "20261006-soccerrc3d9";
+const CACHE = "20261006-soccerrc3d10";
 const HALF_X = 22;
 const HALF_Z = 14;
 const WALL_H = 5.5;
@@ -252,13 +251,11 @@ const boost1El = document.getElementById("boost1");
 const boost2El = document.getElementById("boost2");
 
 const keys = Object.create(null);
-const touch = [
-  { fwd: 0, rev: 0, steer: 0, boost: 0, boostUntil: 0, kickEdge: false, aimX: 0, aimZ: 0, aimActive: false },
-  { fwd: 0, rev: 0, steer: 0, boost: 0, boostUntil: 0, kickEdge: false, aimX: 0, aimZ: 0, aimActive: false },
-];
-const FWD_DOUBLE_MS = 300;   // double-tap FWD window → boost
+const touchSlot = () => ({ fwd: 0, rev: 0, steer: 0, boost: 0, boostUntil: 0, kickEdge: false, aimX: 0, aimZ: 0, aimActive: false });
+const touch = [touchSlot(), touchSlot(), touchSlot(), touchSlot()];
+const FWD_DOUBLE_MS = 300;   // double-tap FWD/stick window → boost
 const FWD_BOOST_MS = 520;    // boost linger after double-tap
-const fwdTapAt = [0, 0];
+const fwdTapAt = [0, 0, 0, 0];
 const AUTO_KICK_CD = 0.45;
 
 // --- Online two-phone multiplayer (same CF Worker rooms as flat Soccer RC) ---
@@ -563,7 +560,7 @@ function readInput(playerIndex) {
   let boost = pd.boost || !!t.boost;
   let aimX = 0, aimZ = 0, aimActive = false;
 
-  // Phone RC: stick → steer only; FWD/REV buttons → throttle (+ dbl-tap boost)
+  // Phone: soccer = stick steer + FWD/REV; race = stick X/Y + dbl-tap boost
   if (t.fwd > 0.04) fwd = Math.max(fwd, t.fwd);
   if (t.rev > 0.04) rev = Math.max(rev, t.rev);
   if (Math.abs(t.steer) > 0.05) steer = t.steer;
@@ -969,7 +966,7 @@ function updateCar(car, inp, dt) {
   car.pos.z += car.vz * dt;
   car.onGround = false;
   if (gameMode === "race" && raceMeta) {
-    boundRaceCar(car, CAR_HALF.y, raceMeta.ramps, sampleRampY);
+    boundRaceCar(car, CAR_HALF.y, raceMeta);
   } else {
     boundCar(car);
   }
@@ -1366,7 +1363,7 @@ function startRaceMode(numPlayers, laps) {
     const sp = spots[i];
     const mesh = makeCarMesh(RACE_COLORS[i]);
     scene.add(mesh);
-    const c = makeCarState(mesh, sp.x, CAR_HALF.y, sp.z, sp.yaw);
+    const c = makeCarState(mesh, sp.x, (sp.y != null ? sp.y : 0) + CAR_HALF.y, sp.z, sp.yaw);
     c.mesh.visible = true;
     cars.push(c);
   }
@@ -1381,7 +1378,7 @@ function startRaceMode(numPlayers, laps) {
 
 function updateRaceHud() {
   if (!raceState || !raceMeta) return;
-  const order = rankRacers(raceState, raceMeta.checkpoints);
+  const order = rankRacers(raceState);
   const lines = order.map((ci, place) => {
     const r = raceState.racers[ci];
     const lapShow = Math.min(raceState.laps, r.lap + 1);
@@ -1428,7 +1425,7 @@ function tickRace(dt) {
         showBanner(RACE_NAMES[i] + " finishes!", "", 1.4);
         if (raceState.finishCount >= cars.length) {
           raceState.finished = true;
-          const winner = rankRacers(raceState, raceMeta.checkpoints)[0];
+          const winner = rankRacers(raceState)[0];
           showBanner(RACE_NAMES[winner] + " wins!", "", 2.5);
         }
       }
@@ -1464,25 +1461,42 @@ function tickRace(dt) {
     }
   }
 
-  // Race camera: chase pack
-  const tgt = raceCameraTarget(cars);
-  camTarget.lerp(new THREE.Vector3(tgt.x, tgt.y * 0.3, tgt.z), 1 - Math.pow(0.002, dt));
+  // Chase cam: keep P1 framed — look-ahead + speed FOV (blend nearby pack)
+  const focus = raceChaseFocus(cars, 0);
+  const lookAhead = 6 + Math.min(14, focus.sp * 0.55);
+  const fx = Math.cos(focus.yaw);
+  const fz = Math.sin(focus.yaw);
+  const aimX = focus.x + fx * lookAhead;
+  const aimZ = focus.z + fz * lookAhead;
+  camTarget.lerp(new THREE.Vector3(aimX, focus.y * 0.45 + 0.8, aimZ), 1 - Math.pow(0.0008, dt));
+
+  const back = 12 + Math.min(10, focus.sp * 0.35);
+  const up = 7 + Math.min(8, focus.y * 0.35 + focus.sp * 0.08);
   const desired = new THREE.Vector3(
-    camTarget.x * 0.25 - 8,
-    22 + Math.min(10, tgt.y * 0.6),
-    camTarget.z * 0.25 + 34
+    focus.x - fx * back + fz * 2.5,
+    focus.y + up,
+    focus.z - fz * back - fx * 2.5
   );
-  camPos.lerp(desired, 1 - Math.pow(0.03, dt));
+  camPos.lerp(desired, 1 - Math.pow(0.00015, dt));
   camera.position.copy(camPos);
-  camera.lookAt(camTarget.x, 1.2, camTarget.z);
+  camera.lookAt(camTarget.x, camTarget.y + 0.6, camTarget.z);
+  const wantFov = 52 + Math.min(18, focus.sp * 0.55);
+  camera.fov += (wantFov - camera.fov) * Math.min(1, dt * 4);
+  camera.updateProjectionMatrix();
 }
 
 function bindModeLobby() {
   const pickSoccer = document.getElementById("pickSoccer");
   const pickRace = document.getElementById("pickRace");
   if (pickSoccer) pickSoccer.addEventListener("click", () => startSoccerMode());
-  // One tap → race (defaults: 2 players, 3 laps)
+  // Race Track = 2P; 3P / 4P via data-race-players buttons
   if (pickRace) pickRace.addEventListener("click", () => startRaceMode(2, 3));
+  document.querySelectorAll("[data-race-players]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const n = +btn.dataset.racePlayers || 2;
+      startRaceMode(n, 3);
+    });
+  });
   if (modesBtn) modesBtn.addEventListener("click", () => showLobby());
 }
 
@@ -1623,15 +1637,23 @@ function bindSteerStick(root) {
     knob.style.transform = "translate(" + dx + "px," + dy + "px)";
   }
 
-  function applySteer(nx) {
-    const t = touch[p];
-    const a = Math.abs(nx);
-    if (a < dead) {
-      t.steer = 0;
-      return;
-    }
+  function axis(v) {
+    const a = Math.abs(v);
+    if (a < dead) return 0;
     const s = Math.min(1, (a - dead) / (1 - dead));
-    t.steer = Math.sign(nx) * s;
+    return Math.sign(v) * s;
+  }
+
+  function applyAxes(nx, ny) {
+    const t = touch[p];
+    t.steer = axis(nx);
+    // Race: stick Y = throttle. Soccer: steer-only (FWD/REV buttons).
+    if (gameMode === "race") {
+      const sy = axis(ny);
+      if (sy < -0.04) { t.fwd = Math.min(1, -sy); t.rev = 0; }
+      else if (sy > 0.04) { t.rev = Math.min(1, sy); t.fwd = 0; }
+      else { t.fwd = 0; t.rev = 0; }
+    }
   }
 
   function fromEvent(e) {
@@ -1641,16 +1663,13 @@ function bindSteerStick(root) {
     const cy = rect.top + rect.height * 0.5;
     let dx = e.clientX - cx;
     let dy = e.clientY - cy;
-    // Constrain knob to circle for feel, but only X drives yaw (no throttle from Y)
     let len = Math.hypot(dx, dy);
     if (len > maxR && len > 0) {
       dx = (dx / len) * maxR;
       dy = (dy / len) * maxR;
-      len = maxR;
     }
     setKnob(dx, dy);
-    const nx = maxR > 0 ? dx / maxR : 0;
-    applySteer(nx);
+    applyAxes(maxR > 0 ? dx / maxR : 0, maxR > 0 ? dy / maxR : 0);
   }
 
   function endStick() {
@@ -1658,6 +1677,10 @@ function bindSteerStick(root) {
     root.classList.remove("is-active");
     setKnob(0, 0);
     touch[p].steer = 0;
+    if (gameMode === "race") {
+      touch[p].fwd = 0;
+      touch[p].rev = 0;
+    }
   }
 
   function tryFS() {
@@ -1670,6 +1693,17 @@ function bindSteerStick(root) {
     if (e.button != null && e.button !== 0) return;
     e.preventDefault();
     e.stopPropagation();
+    // Race: double-tap stick = boost
+    if (gameMode === "race") {
+      const now = performance.now();
+      if (now - fwdTapAt[p] < FWD_DOUBLE_MS) {
+        touch[p].boostUntil = now + FWD_BOOST_MS;
+        touch[p].boost = 1;
+        root.classList.add("is-boosting");
+        setTimeout(() => root.classList.remove("is-boosting"), FWD_BOOST_MS);
+      }
+      fwdTapAt[p] = now;
+    }
     ptrId = e.pointerId;
     root.classList.add("is-active");
     try { root.setPointerCapture(e.pointerId); } catch (_) {}
