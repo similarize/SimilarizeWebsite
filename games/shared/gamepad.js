@@ -23,8 +23,9 @@
  *   poll() / pollPad(i)     — snapshot { connected, lx,ly,rx,ry, a,b,x,y, lb,rb,lt,rt,
  *                             ltValue,rtValue, start,back, dpad:{u,d,l,r}, buttonsPressed:{…edges} }
  *   pollAll(max?)           — poll slots 0..max-1 once (avoids double-poll eating edges)
- *   connectedIndices(max?)  — physical pads (index dedupe + same-id lockstep/sticky-split)
- *   uniqueConnectedIndices(max?) — alias of connectedIndices (1 physical stick → 1 seat)
+ *   connectedIndices(max?)  — pads that have actually moved on their own (one physical stick → one seat)
+ *   pluggedIndices(max?)    — raw connected endpoints (deduped by Gamepad.index only). Not for seating.
+ *   uniqueConnectedIndices(max?) — alias of connectedIndices
  *   connectedCount(max?)    — length of connectedIndices
  *   canonicalIndex(slot?)   — map a raw/ghost slot to the unique representative
  *   pressed(name, i?)       — held (uses last pollPad cache, or polls once)
@@ -154,151 +155,188 @@
     for (var i = 0; i < n; i++) out.push(pollPad(i));
     return out;
   }
-  /* padbind1: one physical stick → one lobby/index seat.
+  /* padreal1: one physical controller → one seat, even when the OS lists extras.
    *
-   * History: onefrog1 collapsed same-id + matching fingerprint (fixed Steam dual-slot
-   * ghosts, but also hid a second idle same-model pad). padpick1 then deduped ONLY
-   * repeated Gamepad.index — two real Xbox pads stayed two seats, but Steam/USB
-   * mirrors under DIFFERENT indices each claimed a frog (Ben: 2 pads → 3 UI, one
-   * stick lights Pad1/Pad2/Pad4).
+   * Chrome / Steam / Tesla enumerate ghosts that stay "connected" but never
+   * drive, or that mirror one real pad under a second index and a different
+   * id. Grouping by id missed those (2 sticks → 3 highlighted frogs, one of
+   * them dead). Fingerprint-at-rest also merged two idle Xbox pads.
    *
-   * Fix: per frame, group by gamepad.id. Matching fingerprints collapse to the
-   * lowest slot (ghosts stay one). Diverged ACTIVE fingerprints prove a split and
-   * stick until disconnect — two real same-model pads stay two after either is
-   * touched, even when both return to idle. Idle-only mismatch is ignored (noise).
+   * A slot earns a seat only after its sticks, face buttons, or d-pad
+   * actually change. If that change happens while a higher-ranked slot
+   * (standard / XInput / lower index) changes — this poll or the one just
+   * before — the extra slot is an echo and does not get a frog. A second
+   * real controller gets the next frog the moment it moves on its own, and
+   * keeps that seat after it goes idle. A dead endpoint never gets a name.
    */
-  var provenSplit = Object.create(null); /* id -> { slot: true, ... } */
+  var slotPrev = [];
+  var slotProven = [];
+  var slotSolo = [];
+  var slotLastFrame = [];
+  var slotId = [];
+  var slotAlias = [];
+  var ACT_BTNS = [0, 1, 2, 3, 4, 5, 8, 9, 12, 13, 14, 15];
 
-  function padFingerprint(gp) {
-    if (!gp) return { key: "", active: false };
-    var parts = [];
-    var active = false;
-    var ax = gp.axes || [];
-    var a, v, bt, b, btn, on;
-    for (a = 0; a < ax.length; a++) {
-      v = ax[a] || 0;
-      if (Math.abs(v) < DZ) v = 0;
-      else active = true;
-      parts.push(Math.round(v * 10));
+  function clearSlot(i) {
+    slotPrev[i] = null;
+    slotProven[i] = false;
+    slotSolo[i] = false;
+    slotLastFrame[i] = -1;
+    slotId[i] = "";
+    slotAlias[i] = -1;
+  }
+
+  function idInfo(gp) {
+    var id = String(gp && gp.id || "").toLowerCase();
+    return {
+      id: id,
+      xinput: id.indexOf("xinput") >= 0,
+      microsoft: id.indexOf("045e") >= 0 || id.indexOf("xbox") >= 0 || id.indexOf("microsoft") >= 0,
+      standard: !!(gp && gp.mapping === "standard")
+    };
+  }
+
+  function controlVector(gp) {
+    var v = [];
+    var ax = (gp && gp.axes) || [];
+    var a, x, b, btn, on;
+    for (a = 0; a < 4; a++) {
+      x = ax[a] || 0;
+      if (x > 0.55) v.push(1);
+      else if (x < -0.55) v.push(-1);
+      else v.push(0);
     }
-    bt = gp.buttons || [];
-    for (b = 0; b < bt.length; b++) {
-      btn = bt[b];
-      on = !!(btn && (btn.pressed || (typeof btn.value === "number" && btn.value > 0.45)));
-      if (on) active = true;
-      parts.push(on ? 1 : 0);
+    var bt = (gp && gp.buttons) || [];
+    for (b = 0; b < ACT_BTNS.length; b++) {
+      btn = bt[ACT_BTNS[b]];
+      on = !!(btn && (btn.pressed || (typeof btn.value === "number" && btn.value > 0.55)));
+      v.push(on ? 1 : 0);
     }
-    return { key: parts.join(","), active: active };
+    return v;
+  }
+
+  function deltaKey(prev, now) {
+    if (!prev || !now) return "";
+    var p = [];
+    var i, n = now.length < prev.length ? now.length : prev.length;
+    for (i = 0; i < n; i++) if (now[i] !== prev[i]) p.push(i + "=" + now[i]);
+    return p.join(",");
+  }
+
+  function rankOf(item) {
+    var s = 0;
+    if (item.info.standard) s += 4;
+    if (item.info.xinput) s += 2;
+    return s * 10 - item.slot;
   }
 
   function uniqueConnectedIndices(max) {
     var n = typeof max === "number" ? max : 4;
     if (n < 1) n = 1;
     if (n > 8) n = 8;
+    scheduleFrameBump();
+    var serial = frameToken;
     var list = pads();
-    var idxs = [];
+    var live = [];
     var seenIndex = Object.create(null);
-    var byId = Object.create(null);
-    var liveSlots = Object.create(null);
-    var anon = 0;
-    var i, gp, id, physicalIndex, group, g, fp, key, cluster, reps, proven, keep;
-    var slot, empty, liveInGroup, outSlots, anyActiveRep, rep, k;
+    var i, gp, id, vec, prev, dkey, px, item;
     for (i = 0; i < n; i++) {
       gp = list && list[i];
-      if (!gp) continue;
-      physicalIndex = typeof gp.index === "number" && isFinite(gp.index) && gp.index >= 0
-        ? gp.index | 0
-        : i;
-      if (seenIndex[physicalIndex]) continue;
-      seenIndex[physicalIndex] = true;
-      liveSlots[i] = true;
-      id = gp.id ? String(gp.id) : ("__anon_" + (anon++));
-      if (!byId[id]) byId[id] = [];
-      fp = padFingerprint(gp);
-      byId[id].push({ slot: i, index: physicalIndex, key: fp.key, active: fp.active });
-    }
-    for (id in provenSplit) {
-      if (!Object.prototype.hasOwnProperty.call(provenSplit, id)) continue;
-      proven = provenSplit[id];
-      keep = Object.create(null);
-      empty = true;
-      for (slot in proven) {
-        if (!Object.prototype.hasOwnProperty.call(proven, slot)) continue;
-        if (liveSlots[slot | 0]) {
-          keep[slot] = true;
-          empty = false;
-        }
-      }
-      if (empty) delete provenSplit[id];
-      else provenSplit[id] = keep;
-    }
-    for (id in byId) {
-      if (!Object.prototype.hasOwnProperty.call(byId, id)) continue;
-      group = byId[id];
-      if (group.length === 1) {
-        idxs.push(group[0].slot);
+      if (!gp || gp.connected === false) {
+        clearSlot(i);
         continue;
       }
-      /* Collapse lockstep mirrors (same fingerprint) to lowest slot per key */
-      cluster = Object.create(null);
-      for (g = 0; g < group.length; g++) {
-        key = group[g].key;
-        if (!cluster[key]) cluster[key] = [];
-        cluster[key].push(group[g]);
+      px = typeof gp.index === "number" && isFinite(gp.index) && gp.index >= 0 ? gp.index | 0 : i;
+      if (seenIndex[px]) {
+        clearSlot(i);
+        continue;
       }
-      reps = [];
-      for (key in cluster) {
-        if (!Object.prototype.hasOwnProperty.call(cluster, key)) continue;
-        cluster[key].sort(function (a, b) { return a.slot - b.slot; });
-        reps.push(cluster[key][0]);
+      seenIndex[px] = true;
+      id = gp.id ? String(gp.id) : "";
+      if (slotId[i] !== id) {
+        clearSlot(i);
+        slotId[i] = id;
       }
-      reps.sort(function (a, b) { return a.slot - b.slot; });
+      vec = controlVector(gp);
+      prev = slotPrev[i];
+      dkey = prev ? deltaKey(prev, vec) : "";
+      live.push({
+        slot: i,
+        gp: gp,
+        vec: vec,
+        delta: dkey,
+        active: !!(prev && dkey),
+        info: idInfo(gp)
+      });
+    }
 
-      liveInGroup = Object.create(null);
-      for (g = 0; g < group.length; g++) liveInGroup[group[g].slot] = true;
-
-      proven = provenSplit[id];
-      if (proven) {
-        outSlots = [];
-        for (slot in proven) {
-          if (!Object.prototype.hasOwnProperty.call(proven, slot)) continue;
-          if (liveInGroup[slot | 0]) outSlots.push(slot | 0);
-        }
-        if (outSlots.length) {
-          /* New active fingerprint cluster → prove its representative too */
-          anyActiveRep = false;
-          for (k = 0; k < reps.length; k++) if (reps[k].active) anyActiveRep = true;
-          if (anyActiveRep && reps.length > 1) {
-            for (k = 0; k < reps.length; k++) {
-              proven[reps[k].slot] = true;
-              if (outSlots.indexOf(reps[k].slot) < 0) outSlots.push(reps[k].slot);
-            }
+    /* A lower-ranked slot that only changes while a better slot changes
+       (same poll, or one frame later) is an echo. It never earns a seat.
+       A slot that changes on its own — the other sticks still — does. */
+    function wasJust(slot) {
+      return slotLastFrame[slot] >= 0 && slotLastFrame[slot] === serial - 1;
+    }
+    function backer(it) {
+      var best = -1;
+      var bestR = -1e9;
+      var r = rankOf(it);
+      var j, o;
+      for (j = 0; j < live.length; j++) {
+        o = live[j];
+        if (o.slot === it.slot) continue;
+        if (rankOf(o) <= r) continue;
+        if (o.active || wasJust(o.slot)) {
+          if (rankOf(o) > bestR) {
+            bestR = rankOf(o);
+            best = o.slot;
           }
-          outSlots.sort(function (a, b) { return a - b; });
-          for (k = 0; k < outSlots.length; k++) idxs.push(outSlots[k]);
-          continue;
         }
       }
-
-      if (reps.length === 1) {
-        idxs.push(reps[0].slot);
-        continue;
-      }
-      anyActiveRep = false;
-      for (k = 0; k < reps.length; k++) if (reps[k].active) anyActiveRep = true;
-      if (anyActiveRep) {
-        if (!provenSplit[id]) provenSplit[id] = Object.create(null);
-        for (k = 0; k < reps.length; k++) {
-          provenSplit[id][reps[k].slot] = true;
-          idxs.push(reps[k].slot);
-        }
-        continue;
-      }
-      /* Never-proven idle same-model set (or idle noise) → one canonical seat */
-      idxs.push(reps[0].slot);
+      return best;
     }
-    idxs.sort(function (a, b) { return a - b; });
-    return idxs;
+
+    for (i = 0; i < live.length; i++) {
+      item = live[i];
+      var parent = backer(item);
+      if (item.active && parent < 0) {
+        slotSolo[item.slot] = true;
+        slotProven[item.slot] = true;
+        slotAlias[item.slot] = -1;
+      } else if (!slotSolo[item.slot]) {
+        slotProven[item.slot] = false;
+        if (parent >= 0) slotAlias[item.slot] = parent;
+      } else {
+        slotAlias[item.slot] = -1;
+      }
+      if (item.active) slotLastFrame[item.slot] = serial;
+      slotPrev[item.slot] = item.vec;
+    }
+
+    var out = [];
+    for (i = 0; i < live.length; i++) {
+      if (slotProven[live[i].slot]) out.push(live[i].slot);
+    }
+    out.sort(function (a, b) { return a - b; });
+    return out;
+  }
+
+  function pluggedIndices(max) {
+    var n = typeof max === "number" ? max : 4;
+    if (n < 1) n = 1;
+    if (n > 8) n = 8;
+    var list = pads();
+    var out = [];
+    var seenIndex = Object.create(null);
+    var i, gp, px;
+    for (i = 0; i < n; i++) {
+      gp = list && list[i];
+      if (!gp || gp.connected === false) continue;
+      px = typeof gp.index === "number" && isFinite(gp.index) && gp.index >= 0 ? gp.index | 0 : i;
+      if (seenIndex[px]) continue;
+      seenIndex[px] = true;
+      out.push(i);
+    }
+    return out;
   }
 
   function connectedIndices(max) {
@@ -307,23 +345,14 @@
   function connectedCount(max) {
     return connectedIndices(max).length;
   }
-  /** Map a raw slot to the canonical uniqueConnectedIndices representative, or -1. */
+  /** Map a raw slot to the live representative, or -1 if it is not a real seat. */
   function canonicalIndex(slot, max) {
     var want = slot | 0;
     var xs = uniqueConnectedIndices(max);
-    var list = pads();
-    var i, gp, idWant, id;
     if (xs.indexOf(want) >= 0) return want;
-    gp = list && list[want];
-    if (!gp) return xs.length ? xs[0] : -1;
-    idWant = gp.id ? String(gp.id) : null;
-    if (!idWant) return xs.length ? xs[0] : -1;
-    for (i = 0; i < xs.length; i++) {
-      gp = list && list[xs[i]];
-      id = gp && gp.id ? String(gp.id) : null;
-      if (id && id === idWant) return xs[i] | 0;
-    }
-    return xs.length ? xs[0] : -1;
+    var alias = slotAlias[want];
+    if (typeof alias === "number" && alias >= 0 && xs.indexOf(alias) >= 0) return alias;
+    return -1;
   }
   function cached(i) {
     var idx = i | 0;
@@ -364,6 +393,7 @@
     pollAll: pollAll,
     connectedIndices: connectedIndices,
     uniqueConnectedIndices: uniqueConnectedIndices,
+    pluggedIndices: pluggedIndices,
     connectedCount: connectedCount,
     canonicalIndex: canonicalIndex,
     pressed: pressed,

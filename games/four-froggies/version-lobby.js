@@ -1,11 +1,11 @@
 /* Four Froggies — onefrog1 entrance.
    One screen: claim James/Jimmy/Bubbles/Rexy + Host/Join + pick 2D/2.5D/3D → play.
-   Skips the old overlay frog-pick / party lobby. Cache: 20261006-padbind1 */
+   Skips the old overlay frog-pick / party lobby. Cache: 20261006-padreal1 */
 (function () {
   "use strict";
 
-  var CACHE = "20261006-padbind1";
-  var FF3D_CACHE = "20261006-padbind1";
+  var CACHE = "20261006-padreal1";
+  var FF3D_CACHE = "20261006-padreal1";
   var FROG_ORDER = ["james", "jimmy", "bubbles", "rexy"];
   var FROG_NAME = { james: "James", jimmy: "Jimmy", bubbles: "Bubbles", rexy: "Rexy" };
 
@@ -38,6 +38,13 @@
     if (typeof GP.uniqueConnectedIndices === "function") return GP.uniqueConnectedIndices(4) || [];
     if (typeof GP.connectedIndices === "function") return GP.connectedIndices(4) || [];
     return [];
+  }
+
+  function pluggedIdxs() {
+    var GP = window.SimilarizeGamepad;
+    if (!GP) return [];
+    if (typeof GP.pluggedIndices === "function") return GP.pluggedIndices(4) || [];
+    return connectedIdxs();
   }
 
   function openFrogs(seats) {
@@ -145,16 +152,20 @@
     if (P && P.pruneDeadPadClaims) P.pruneDeadPadClaims();
     seats = P && P.getSeats ? P.getSeats() : seats;
     var idxs = connectedIdxs();
+    var plugged = pluggedIdxs();
     var connected = {};
     for (var i = 0; i < idxs.length; i++) connected[idxs[i] | 0] = true;
     var snaps = GP && typeof GP.pollAll === "function" ? GP.pollAll(4) : [];
     var n = idxs.length;
     var line = COUNT_LINE[n] || (n + " controllers are connected");
+    if (n === 0 && plugged.length) line = "Move a stick to pick one frog";
     if (countEl.textContent !== line) countEl.textContent = line;
     if (hintEl) {
       var hint = n === 0
-        ? "Tap James / Jimmy / Bubbles / Rexy (or plug a pad). Host/Join optional. Then pick 2D / 2.5D / 3D."
-        : "Stick/D-pad cycles · A claims · B releases · one pad = one froggy · wiggle a 2nd same-model pad to register it";
+        ? (plugged.length
+          ? "Each live stick picks one frog. A silent extra pad is ignored. A claims · B releases."
+          : "Tap James / Jimmy / Bubbles / Rexy (or plug a pad). Host/Join optional. Then pick 2D / 2.5D / 3D.")
+        : "One pad = one frog · stick cycles · A claims · B releases. A second controller picks a name when it moves.";
       if (hintEl.textContent !== hint) hintEl.textContent = hint;
     }
 
