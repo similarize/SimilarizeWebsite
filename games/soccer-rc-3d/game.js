@@ -14,9 +14,9 @@ import {
   raceArenaFocus,
   RACE_COLORS,
   RACE_NAMES,
-} from "./race-mode.js?v=20261006-soccerrc3d12r2";
+} from "./race-mode.js?v=20261007-soccerrc3d13";
 
-const CACHE = "20261006-soccerrc3d12r2";
+const CACHE = "20261007-soccerrc3d13";
 const HALF_X = 22;
 const HALF_Z = 14;
 const WALL_H = 5.5;
@@ -285,10 +285,11 @@ let soccerGroup = null;
 let raceGroup = null;
 let raceMeta = null; // { checkpoints, startSpots, ramps }
 let raceState = null;
-/** Per-seat binding for Race: { kind:'human'|'ai'|'remote', padSlot:number|-1, keys:string|null, touch:number|-1 } */
+/** Per-seat binding for Race: { kind, padSlot, padOrd, keys, touch, label } — padOrd indexes connectedIndices */
 let raceSeats = null;
 let _gp2 = null, _gp3 = null;
 let _uniquePadSlots = []; // connectedIndices result, refreshed each frame
+let _racePadClaimed = []; // per-frame exclusive padOrd claims (race)
 const modeLobbyEl = document.getElementById("modeLobby");
 const raceHudEl = document.getElementById("raceHud");
 const raceStandingsEl = document.getElementById("raceStandings");
@@ -548,9 +549,20 @@ function readInput(playerIndex) {
       }
       return { fwd, rev, steer, kick, boost, aimX: 0, aimZ: 0, aimActive: false };
     }
-    // human seat — pad ONLY from this seat's padSlot (never pads[playerIndex] raw)
-    const pads = [_gp0, _gp1, _gp2, _gp3];
-    const g = seat.padSlot >= 0 ? (pads[seat.padSlot] || null) : null;
+    // human seat — pad ONLY via this seat's unique ordinal (never raw pollPad(playerIndex)
+    // and never a frozen ghost slot that still mirrors after demotion)
+    let g = null;
+    if (typeof seat.padOrd === "number" && seat.padOrd >= 0) {
+      g = pollUniquePad(seat.padOrd);
+    } else if (seat.padSlot >= 0 && _uniquePadSlots.indexOf(seat.padSlot) >= 0) {
+      const pads = [_gp0, _gp1, _gp2, _gp3];
+      g = pads[seat.padSlot] || null;
+    }
+    // Frame claim: one unique pad ordinal → at most one car this tick
+    if (g && g.connected && typeof seat.padOrd === "number" && seat.padOrd >= 0) {
+      if (_racePadClaimed[seat.padOrd]) g = null;
+      else _racePadClaimed[seat.padOrd] = true;
+    }
     const pd = padDrive(g);
     let fwd = pd.fwd, rev = pd.rev, steer = pd.steer;
     const tIdx = seat.touch >= 0 ? seat.touch : -1;
@@ -615,10 +627,11 @@ function readInput(playerIndex) {
   }
 
   const t = touch[playerIndex] || touch[0];
-  // Soccer: assign unique pads only — seat 0 → first unique, seat 1 → second unique
-  // (never raw pollPad(playerIndex), which double-binds Steam/Chrome ghosts)
+  // Soccer: unique pads only — seat 0 → first unique, seat 1 → second unique
+  // (never raw pollPad(playerIndex); one physical pad must not drive both cars)
   let g = null;
   if (playerIndex === 0) {
+    // Pre-prove fallback: raw slot 0 only for P1 when nothing unique yet (P2 stays null)
     g = _uniquePadSlots.length ? pollUniquePad(0) : _gp0;
   } else if (!(netRole === "host" && playerIndex === 1)) {
     g = _uniquePadSlots.length >= 2 ? pollUniquePad(1) : null;
@@ -1331,6 +1344,8 @@ function refreshGamepads() {
   _uniquePadSlots = typeof GP.connectedIndices === "function"
     ? GP.connectedIndices(4)
     : [];
+  _racePadClaimed = [];
+  if (gameMode === "race" && raceSeats) syncRaceSeatBindings();
 }
 
 function pollUniquePad(ordinal) {
@@ -1341,44 +1356,71 @@ function pollUniquePad(ordinal) {
 }
 
 /**
- * Race seats: each unique pad + local P1 (phone/arrows) bind at most once.
- * Remaining seats → AI. Host+ready remote claims seat 1 if still open/AI.
+ * Race seats: each unique pad binds to exactly one car (padOrd into connectedIndices).
+ * Seat 0 always local human (phone/arrows ± first unique pad). Extra unique pads
+ * claim seats 1+ as human; everyone else → AI. Host+ready remote claims seat 1.
  * Examples: 4P+2 pads → 2 human + 2 AI; 3P+1 pad → 1 human + 2 AI.
+ * Frozen padSlot alone was wrong: Steam/Chrome ghosts stay connected and mirror
+ * axes after connectedIndices demotes them, so one stick drove two human seats.
  */
 function buildRaceSeats(numCars) {
   const n = Math.max(2, Math.min(4, numCars | 0));
-  const GP = window.SimilarizeGamepad;
-  // Fresh poll so lobby click sees current pads
-  if (GP && typeof GP.connectedIndices === "function") {
-    _uniquePadSlots = GP.connectedIndices(4);
-    _gp0 = GP.pollPad(0);
-    _gp1 = GP.pollPad(1);
-    _gp2 = GP.pollPad(2);
-    _gp3 = GP.pollPad(3);
-  }
-  const pads = _uniquePadSlots.slice();
+  refreshGamepads();
   const seats = [];
-  let padOrd = 0;
+  for (let i = 0; i < n; i++) {
+    seats.push({ kind: "ai", padSlot: -1, padOrd: -1, keys: null, touch: -1, label: "AI" });
+  }
+  raceSeats = seats;
+  syncRaceSeatBindings();
+  return raceSeats;
+}
 
-  // Seat 0 always local human (phone stick / arrows / first unique pad)
-  const p0 = padOrd < pads.length ? pads[padOrd++] : -1;
-  seats.push({ kind: "human", padSlot: p0, keys: "arrows", touch: 0, label: "Human" });
+/** Live rebind from SimilarizeGamepad.connectedIndices — one physical pad → one seat. */
+function syncRaceSeatBindings() {
+  if (!raceSeats || !raceSeats.length) return;
+  const pads = _uniquePadSlots.slice();
+  let padOrd = 0;
+  const n = raceSeats.length;
+
+  // Seat 0: always human (keyboard / phone); claim first unique pad if any
+  {
+    const slot = padOrd < pads.length ? pads[padOrd] : -1;
+    const ord = slot >= 0 ? padOrd++ : -1;
+    raceSeats[0] = {
+      kind: "human",
+      padSlot: slot,
+      padOrd: ord,
+      keys: "arrows",
+      touch: 0,
+      label: "Human",
+    };
+  }
 
   for (let i = 1; i < n; i++) {
-    // Remote joiner fills a human seat when host has a ready peer
     if (i === 1 && netRole === "host" && netReady) {
-      seats.push({ kind: "remote", padSlot: -1, keys: null, touch: -1, label: "Join" });
+      raceSeats[i] = { kind: "remote", padSlot: -1, padOrd: -1, keys: null, touch: -1, label: "Join" };
       continue;
     }
     if (padOrd < pads.length) {
-      const slot = pads[padOrd++];
+      const slot = pads[padOrd];
+      const ord = padOrd++;
       const keyScheme = i === 1 ? "wasd" : i === 2 ? "ijkl" : null;
-      seats.push({ kind: "human", padSlot: slot, keys: keyScheme, touch: i < 2 ? i : -1, label: "Human" });
+      raceSeats[i] = {
+        kind: "human",
+        padSlot: slot,
+        padOrd: ord,
+        keys: keyScheme,
+        touch: i < 2 ? i : -1,
+        label: "Human",
+      };
     } else {
-      seats.push({ kind: "ai", padSlot: -1, keys: null, touch: -1, label: "AI" });
+      raceSeats[i] = { kind: "ai", padSlot: -1, padOrd: -1, keys: null, touch: -1, label: "AI" };
     }
   }
-  return seats;
+  for (let i = 0; i < cars.length && i < raceSeats.length; i++) {
+    cars[i].seatKind = raceSeats[i].kind;
+  }
+  syncRacePadClusters();
 }
 
 function raceSeatLabel(i) {
