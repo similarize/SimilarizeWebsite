@@ -46,11 +46,26 @@
       .x-sub { font-size: clamp(15px, 2vw, 19px); margin: 0 0 24px; opacity: .95; }
       .x-btn { font: 600 clamp(20px, 3vw, 28px)/1 var(--sans); color: #0d3b2a; background: #8ef36a; border: 0; border-radius: var(--r-pill); padding: 18px 54px; min-height: var(--tap); cursor: pointer; box-shadow: 0 6px 0 #3d9a2a; margin: 6px; }
       .x-btn--ghost { background: rgba(255,255,255,.9); box-shadow: 0 6px 0 rgba(0,0,0,.2); font-size: 18px; padding: 14px 30px; }
-      .x-pick { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin: 0 auto 8px; max-width: 560px; max-height: 40vh; overflow-y: auto; padding: 4px; }
-      .x-pick .x-btn { padding: 8px 14px; font-size: 15px; opacity: .7; }
-      #x-tracks { max-width: 600px; }
-      #x-tracks .x-btn { flex: 0 1 auto; white-space: nowrap; }
-      .x-pick .x-btn.is-sel { opacity: 1; background: #8ef36a; box-shadow: 0 6px 0 #3d9a2a, 0 0 0 3px #fff; }
+      #s-start { overflow-y: auto; }
+      #s-start .x-panel { max-width: 720px; }
+      .x-car { display: grid; grid-template-columns: auto auto auto; justify-content: center; align-items: center; gap: 10px; margin: 0 auto 10px; outline: none; }
+      .x-car[hidden] { display: none; }
+      .x-arrow { width: 56px; height: 56px; border-radius: 50%; border: 3px solid #fff; background: rgba(10,40,60,.45); color: #fff; font-size: 22px; cursor: pointer; touch-action: manipulation; }
+      .x-arrow:active { background: rgba(142,243,106,.6); }
+      .x-card { width: min(70vw, 520px, 54vh); border-radius: var(--r-m); background: rgba(255,255,255,.12); padding: 8px; box-sizing: border-box; touch-action: pan-y; user-select: none; transition: box-shadow var(--dur-quick) var(--ease-out); }
+      .x-car.is-focus .x-card { box-shadow: 0 0 0 4px #fff, 0 0 26px 8px rgba(142,243,106,.85); }
+      .x-card canvas { display: block; width: 100%; aspect-ratio: 16 / 10; border-radius: var(--r-s); }
+      .x-card__name { margin: 8px 0 2px; font: 600 20px/1.2 var(--sans); color: #fff; }
+      .x-card--char { display: grid; grid-template-columns: min(30vw, 26vh, 190px) 1fr; gap: 14px; align-items: center; text-align: left; }
+      .x-card__pic { aspect-ratio: 1; border-radius: var(--r-s); background: radial-gradient(circle at 50% 40%, rgba(255,255,255,.55), rgba(255,255,255,.1)); display: grid; place-items: center; overflow: hidden; }
+      .x-card__pic img { width: 100%; height: 100%; object-fit: contain; }
+      .x-card__pic span { font-size: min(18vw, 15vh, 110px); line-height: 1; }
+      .x-card__meta { margin: 0; font: 400 15px/1.35 var(--sans); color: #fff; }
+      .x-card__meta b { font-weight: 600; }
+      .x-dots { grid-column: 1 / -1; display: flex; justify-content: center; gap: 6px; }
+      .x-dots i { width: 9px; height: 9px; border-radius: 50%; background: rgba(255,255,255,.4); }
+      .x-dots i.is-on { background: #fff; transform: scale(1.3); }
+      .x-slot img { width: 76px; height: 76px; object-fit: contain; }
       .x-pickst { margin: 4px 0 8px; font-size: 16px; }
       .x-pickst.is-bump { animation: x-bump .3s var(--ease-out); }
       @keyframes x-bump { 50% { transform: scale(1.08); } }
@@ -123,25 +138,17 @@
           <div class="x-panel">
             <h1 class="x-title x-shadow">Froggy <em>Hop</em><br />Racing</h1>
             <p class="x-sub x-shadow" id="x-subt">Six racers. Three laps. Palm Beach Loop.</p>
-            <div class="x-pick" id="x-tracks" role="group" aria-label="Choose a track">
-              <button class="x-btn x-btn--ghost" data-track="0" aria-pressed="false">🌴 Palm Beach Loop</button>
-              <button class="x-btn x-btn--ghost" data-track="1" aria-pressed="false">🌋 Volcano Climb</button>
-              <button class="x-btn x-btn--ghost" data-track="2" aria-pressed="false">🪷 Lily Lagoon</button>
-              <button class="x-btn x-btn--ghost" data-track="3" aria-pressed="false">🌲 Snowy Pines</button>
-              <button class="x-btn x-btn--ghost" data-track="4" aria-pressed="false">🏜️ Desert Canyon</button>
-              <button class="x-btn x-btn--ghost" data-track="5" aria-pressed="false">🍭 Candy Garden</button>
+            <div class="x-car is-focus" id="x-tracks" tabindex="0" role="group" aria-roledescription="carousel" aria-label="Choose a track">
+              <button class="x-arrow" data-d="-1" aria-label="Previous track">◀</button>
+              <div class="x-card"><canvas width="640" height="400" role="img" aria-label="Track map"></canvas><p class="x-card__name" aria-live="polite"></p></div>
+              <button class="x-arrow" data-d="1" aria-label="Next track">▶</button>
+              <div class="x-dots" aria-hidden="true"></div>
             </div>
-            <div class="x-pick" id="x-pick" role="group" aria-label="Choose your character">
-              <button class="x-btn x-btn--ghost is-sel" data-char="0" aria-pressed="true">🐸 James</button>
-              <button class="x-btn x-btn--ghost" data-char="1" aria-pressed="false">🐸 Jimmy</button>
-              <button class="x-btn x-btn--ghost" data-char="2" aria-pressed="false">🐸 Bubbles</button>
-              <button class="x-btn x-btn--ghost" data-char="3" aria-pressed="false">🐸 Rexy</button>
-              <button class="x-btn x-btn--ghost" data-char="4" aria-pressed="false">🐱 Spotty</button>
-              <button class="x-btn x-btn--ghost" data-char="5" aria-pressed="false">🐯 Tigy</button>
-              <button class="x-btn x-btn--ghost" data-char="6" aria-pressed="false">🐱 Kitty</button>
-              <button class="x-btn x-btn--ghost" data-char="7" aria-pressed="false">🐈‍⬛ Little White Socks</button>
-              <button class="x-btn x-btn--ghost" data-char="8" aria-pressed="false">🐕 Germy</button>
-              <button class="x-btn x-btn--ghost" data-char="9" aria-pressed="false">🐶 Daisy</button>
+            <div class="x-car" id="x-pick" tabindex="0" role="group" aria-roledescription="carousel" aria-label="Choose your character">
+              <button class="x-arrow" data-d="-1" aria-label="Previous character">◀</button>
+              <div class="x-card x-card--char"><div class="x-card__pic"><img alt="" hidden /><span aria-hidden="true">🐸</span></div><div><p class="x-card__name"></p><p class="x-card__meta"></p></div></div>
+              <button class="x-arrow" data-d="1" aria-label="Next character">▶</button>
+              <div class="x-dots" aria-hidden="true"></div>
             </div>
             <p class="x-sub x-shadow x-pickst" id="x-pickst" aria-live="polite">You race as 🐸 James</p>
             <button class="x-btn" id="b-play">Play</button>
@@ -192,44 +199,30 @@
       } };
       document.getElementById("b-mute").addEventListener("click", function (e) { e.stopPropagation(); xMute.toggle(); this.blur(); });
       window.xTrack = 0;
-      try { var q = parseInt(new URLSearchParams(location.search).get("track"), 10); if (q >= 0 && q < document.querySelectorAll("#x-tracks [data-track]").length) window.xTrack = q; } catch (e) {}
+      try { var q = parseInt(new URLSearchParams(location.search).get("track"), 10); if (q >= 0 && q < 6) window.xTrack = q; } catch (e) {}
       (function () {
-        var tb = document.querySelectorAll("#x-tracks [data-track]"), cur = tb[window.xTrack];
-        var name = cur.textContent.replace(/^\S+\s/, "");
-        cur.classList.add("is-sel"); cur.setAttribute("aria-pressed", "true");
-        document.getElementById("x-subt").textContent = "Six racers. Three laps. " + name + ".";
-        document.getElementById("l-track").textContent = "Track: " + cur.textContent;
-        var built = window.xTrack, want = built;
-        tb.forEach(function (b) { b.addEventListener("click", function (e) {
-          e.stopPropagation(); want = +b.dataset.track;
-          tb.forEach(function (o) { o.classList.toggle("is-sel", o === b); o.setAttribute("aria-pressed", String(o === b)); });
-          var n = b.textContent.replace(/^\S+\s/, "");
-          document.getElementById("x-subt").textContent = "Six racers. Three laps. " + n + ".";
-          document.getElementById("l-track").textContent = "Track: " + b.textContent;
-          window.xTrack = want;
-          try { history.replaceState(null, "", "?track=" + want); } catch (err) {}
-        }); });
+        // the track carousel calls this (no reload; the scene is built from xTrack at boot)
+        window.xSetTrack = function (i, label, quiet) {
+          window.xTrack = i;
+          document.getElementById("x-subt").textContent = "Six racers. Three laps. " + label.replace(/^\S+\s/, "") + ".";
+          document.getElementById("l-track").textContent = "Track: " + label;
+          if (!quiet) try { history.replaceState(null, "", "?track=" + i); } catch (err) {}
+        };
         // the scene is built once, from the chosen track, when the player first commits (Play, a gamepad, or Enter)
         window.xBooted = false;
         function boot() {
           if (window.xBooted || !window.xBoot) return false;
           window.xBooted = true; document.getElementById("x-tracks").hidden = true;
+          if (window.xCarFocus) window.xCarFocus(1);
           try { window.xBoot(); } catch (err) { console.error(err); }
           return true;
         }
+        window.xBootNow = boot;
         var play = document.getElementById("b-play");
         play.addEventListener("click", function (e) { if (boot() && play.onclick) { e.stopImmediatePropagation(); play.onclick(e); } });
-        addEventListener("gamepadconnected", boot);
         addEventListener("keydown", function (e) { if (!window.xBooted && e.code === "Enter" && !(document.activeElement && document.activeElement.tagName === "BUTTON")) { boot(); if (play.onclick) play.onclick(e); } });
       })();
       window.xChar = 0;
-      document.querySelectorAll("#x-pick [data-char]").forEach(function (b) {
-        b.addEventListener("click", function (e) {
-          e.stopPropagation(); window.xChar = +b.dataset.char;
-          document.querySelectorAll("#x-pick [data-char]").forEach(function (o) { o.classList.toggle("is-sel", o === b); o.setAttribute("aria-pressed", o === b); });
-          var st = document.getElementById("x-pickst"); st.textContent = "You race as " + b.textContent; st.classList.remove("is-bump"); void st.offsetWidth; st.classList.add("is-bump");
-        });
-      });
     </script>
     <script src="https://unpkg.com/three@0.149.0/build/three.min.js"></script>
     <script>
@@ -1099,7 +1092,7 @@ function cycle(s, d) { for (let k = 1; k < 6; k++) { const c = (s.col + d * k + 
 function drawLobby() {
   $("l-slots").innerHTML = [0, 1, 2, 3].map((k) => {
     const s = seats[k]; if (!s) return `<div class="x-slot"><b>P${k + 1}</b><span>Press A to join</span></div>`;
-    return `<div class="x-slot is-on" style="border-color:${hexC(s.col)}"><i class="x-tag" style="background:${hexC(s.col)}">P${k + 1}</i><b>${ROSTER[s.ch].emoji} ${ROSTER[s.ch].name}</b><span>${s.src === "kb" ? "Keyboard / touch" : padLabel(s.src) + " · ↑↓ / Y character"}</span></div>`;
+    return `<div class="x-slot is-on" style="border-color:${hexC(s.col)}"><i class="x-tag" style="background:${hexC(s.col)}">P${k + 1}</i>${window.xPortraits && window.xPortraits[s.ch] ? `<img src="${window.xPortraits[s.ch]}" alt="" />` : ""}<b>${ROSTER[s.ch].emoji} ${ROSTER[s.ch].name}</b><span>${s.src === "kb" ? "Keyboard / touch" : padLabel(s.src) + " · ↑↓ / Y character"}</span></div>`;
   }).join("");
   $("b-join").textContent = seats.some((s) => s.src === "kb") ? "Leave" : "Join";
   $("b-go").textContent = seats.length ? "Start race" : "Start solo";
@@ -1308,5 +1301,138 @@ function loop(now) {
 requestAnimationFrame(loop);
 };
 </script>
+    <script>
+/* ---------- start-screen carousels: track maps and character portraits ---------- */
+(function () {
+  "use strict";
+  const src = window.xBoot ? String(window.xBoot) : "", $ = (id) => document.getElementById(id);
+  // reuse the game's own TRACKS / ROSTER / makeAnimal source so the previews always match
+  function grab(a, b, ret) { const i = src.indexOf(a), j = i < 0 ? -1 : src.indexOf(b, i); if (j < 0) return null; try { return new Function(src.slice(i, j) + "\nreturn " + ret + ";")(); } catch (e) { console.warn(e); return null; } }
+  const TR = grab("const TRACKS = [", "let TI = 0;", "TRACKS") || [], RO = grab("const ROSTER = [", "const charNow", "ROSTER") || [];
+  const TE = ["🌴", "🌋", "🪷", "🌲", "🏜️", "🍭"], PORT = (window.xPortraits = []);
+  const hex = (n) => "#" + (n >>> 0).toString(16).padStart(6, "0");
+  const mix = (n, t) => "rgb(" + [n >> 16 & 255, n >> 8 & 255, n & 255].map((c) => Math.round(c + (255 - c) * t)) + ")";
+  function sample(C) {
+    if (window.THREE) return new THREE.CatmullRomCurve3(C.map((p) => new THREE.Vector3(p[0], p[2] || 0, p[1])), true, "centripetal").getSpacedPoints(320).slice(0, 320).map((v) => [v.x, v.z, v.y]);
+    const out = [], n = C.length;
+    for (let k = 0; k < 320; k++) {
+      const u = (k / 320) * n, i = Math.floor(u), t = u - i, P = [-1, 0, 1, 2].map((o) => C[(i + o + n) % n]);
+      out.push([0, 1, 2].map((d) => { const [a, b, c, e] = P.map((p) => p[d] || 0); return 0.5 * (2 * b + (c - a) * t + (2 * a - 5 * b + 4 * c - e) * t * t + (3 * b - a - 3 * c + e) * t * t * t); }));
+    }
+    return out;
+  }
+  function drawTrack(cv, T) {
+    const x = cv.getContext("2d"), W = cv.width, H = cv.height, th = T.theme, P = sample(T.CTRL), n = P.length;
+    const xs = P.map((p) => p[0]), zs = P.map((p) => p[1]), hs = P.map((p) => p[2]);
+    const minX = Math.min(...xs), maxX = Math.max(...xs), minZ = Math.min(...zs), maxZ = Math.max(...zs), minH = Math.min(...hs), hr = Math.max(...hs) - minH || 1;
+    const s = Math.min((W - 90) / (maxX - minX), (H - 90) / (maxZ - minZ)), cx = (minX + maxX) / 2, cz = (minZ + maxZ) / 2;
+    const Q = P.map((p) => [W / 2 + (p[0] - cx) * s, H / 2 + (p[1] - cz) * s, (p[2] - minH) / hr]), lw = Math.max(12, Math.min(26, 14 * s));
+    const norm = (i) => { const a = Q[(i - 1 + n) % n], b = Q[(i + 1) % n], l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1, tx = (b[0] - a[0]) / l, ty = (b[1] - a[1]) / l; return [-ty, tx, tx, ty]; };
+    const path = () => { x.beginPath(); Q.forEach((q, i) => (i ? x.lineTo(q[0], q[1]) : x.moveTo(q[0], q[1]))); x.closePath(); };
+    const seg = (i, o) => { const a = Q[i], b = Q[(i + 1) % n]; x.beginPath(); x.moveTo(a[0] + o, a[1] + o); x.lineTo(b[0] + o, b[1] + o); x.stroke(); };
+    const inSeg = (r, i) => r && i / n >= r[0] && i / n <= r[1];
+    x.lineJoin = x.lineCap = "round";
+    x.fillStyle = hex(th.water); x.fillRect(0, 0, W, H);
+    path(); x.strokeStyle = hex(th.ground); x.lineWidth = lw * 3.4; x.stroke();
+    x.strokeStyle = "rgba(0,0,0,.28)"; x.lineWidth = lw + 6;
+    for (let i = 0; i < n; i++) seg(i, 3 + Q[i][2] * 9); // higher track casts a longer shadow
+    path(); x.strokeStyle = hex(th.berm); x.lineWidth = lw + 7; x.stroke();
+    const sand = Array.isArray(th.sand) ? th.sand[0] : th.sand; x.lineWidth = lw;
+    for (let i = 0; i < n; i++) {
+      x.strokeStyle = inSeg(T.segs.bridge, i) ? "#8a5a2b" : inSeg(T.segs.shallow, i) ? hex(th.shallowCol || th.lagoon) : mix(sand, Q[i][2] * 0.45);
+      seg(i, 0);
+    }
+    x.strokeStyle = "#4a2e14"; x.lineWidth = 2;
+    for (let i = 0; i < n; i += 3) if (inSeg(T.segs.bridge, i)) { const [nx, ny] = norm(i), q = Q[i]; x.beginPath(); x.moveTo(q[0] + nx * lw / 2, q[1] + ny * lw / 2); x.lineTo(q[0] - nx * lw / 2, q[1] - ny * lw / 2); x.stroke(); }
+    const [nx, ny, tx, ty] = norm(0), c = lw / 5;
+    x.save(); x.translate(Q[0][0], Q[0][1]); x.rotate(Math.atan2(ny, nx));
+    for (let r = 0; r < 2; r++) for (let k = 0; k < 5; k++) { x.fillStyle = (r + k) % 2 ? "#111" : "#fff"; x.fillRect(-lw / 2 + k * c, (r - 1) * c, c, c); }
+    x.restore();
+    let seed = 11 + T.name.length * 97; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    const cols = [th.grass != null ? th.grass : th.berm, th.berm, th.lagoon];
+    for (let k = 0, tries = 0; k < 16 && tries < 200; tries++) {
+      const i = Math.floor(rnd() * n), [ax, ay] = norm(i), d = lw * (1.4 + rnd() * 1.8) * (rnd() < 0.5 ? -1 : 1), px = Q[i][0] + ax * d, py = Q[i][1] + ay * d;
+      if (Q.some((q) => Math.hypot(q[0] - px, q[1] - py) < lw * 1.1)) continue;
+      x.fillStyle = hex(cols[k % 3]); x.beginPath(); x.arc(px, py, 4 + rnd() * 5, 0, 7); x.fill();
+      x.strokeStyle = "rgba(0,0,0,.25)"; x.lineWidth = 1.5; x.stroke(); k++;
+    }
+    void tx; void ty;
+  }
+  const species = (r) => (r.kind === "dog" ? (r.breed === "shepherd" ? "German shepherd" : "Dachshund") : r.kind === "cat" ? "Cat" : "Frog");
+  const ability = (r) => (r.kind === "frog" ? "Big springy hops" : r.kind === "cat" ? "Quick, nimble turns" : r.breed === "shepherd" ? "Strong, steady sprint" : "Low and zippy");
+  const cars = []; let F = 0;
+  function focus(k) { if (k === 0 && $("x-tracks").hidden) k = 1; F = k; cars.forEach((c, j) => c.el.classList.toggle("is-focus", j === F)); }
+  window.xCarFocus = focus;
+  function car(el, n, i0, show) {
+    const dots = el.querySelector(".x-dots"), card = el.querySelector(".x-card"); dots.innerHTML = "<i></i>".repeat(n);
+    const o = { el, i: i0, go(d) { o.i = (o.i + d + n) % n; o.paint(false); }, paint(first) { show(o.i, first); [...dots.children].forEach((d, k) => d.classList.toggle("is-on", k === o.i)); } };
+    cars.push(o);
+    el.querySelectorAll(".x-arrow").forEach((b) => b.addEventListener("click", (e) => { e.stopPropagation(); focus(cars.indexOf(o)); o.go(+b.dataset.d); }));
+    let sx = null;
+    card.addEventListener("pointerdown", (e) => { sx = e.clientX; focus(cars.indexOf(o)); });
+    card.addEventListener("pointerup", (e) => { if (sx != null && Math.abs(e.clientX - sx) > 40) o.go(e.clientX < sx ? 1 : -1); sx = null; });
+    card.addEventListener("pointercancel", () => (sx = null));
+    el.addEventListener("click", (e) => e.stopPropagation());
+    el.addEventListener("focus", () => focus(cars.indexOf(o)));
+    o.paint(true); return o;
+  }
+  const tEl = $("x-tracks"), tCv = tEl.querySelector("canvas"), tName = tEl.querySelector(".x-card__name");
+  car(tEl, TR.length || 1, Math.min(window.xTrack || 0, Math.max(TR.length - 1, 0)), (i, first) => {
+    const T = TR[i]; if (!T) return; drawTrack(tCv, T);
+    const label = TE[i] + " " + T.name; tName.textContent = label; tCv.setAttribute("aria-label", "Map of " + T.name);
+    window.xSetTrack(i, label, first);
+  });
+  const cEl = $("x-pick"), cImg = cEl.querySelector("img"), cEmo = cEl.querySelector(".x-card__pic span"), cName = cEl.querySelector(".x-card__name"), cMeta = cEl.querySelector(".x-card__meta");
+  const charCar = car(cEl, RO.length || 1, 0, (i, first) => {
+    const r = RO[i]; if (!r) return; window.xChar = i;
+    cName.textContent = r.name; cMeta.innerHTML = "<b>" + species(r) + "</b><br />Ability: " + ability(r);
+    if (PORT[i]) { cImg.src = PORT[i]; cImg.alt = r.name + " the " + species(r).toLowerCase(); cImg.hidden = false; cEmo.hidden = true; }
+    else { cImg.hidden = true; cEmo.hidden = false; cEmo.textContent = r.emoji; }
+    if (first) return;
+    const st = $("x-pickst"); st.textContent = "You race as " + r.emoji + " " + r.name; st.classList.remove("is-bump"); void st.offsetWidth; st.classList.add("is-bump");
+  });
+  const onStart = () => $("s-start").classList.contains("is-on");
+  addEventListener("keydown", (e) => {
+    if (!onStart() || e.altKey || e.ctrlKey || e.metaKey) return;
+    if (e.key === "ArrowLeft" || e.key === "ArrowRight") { e.preventDefault(); cars[F].go(e.key === "ArrowLeft" ? -1 : 1); }
+    else if (e.key === "ArrowUp" || e.key === "ArrowDown") { e.preventDefault(); focus(e.key === "ArrowUp" ? 0 : 1); }
+  });
+  const prev = {};
+  (function poll() {
+    requestAnimationFrame(poll);
+    if (!onStart() || !navigator.getGamepads) return;
+    Array.from(navigator.getGamepads()).forEach((p) => {
+      if (!p || !p.connected) return;
+      const b = (i) => !!(p.buttons[i] && p.buttons[i].pressed), ax = p.axes[0] || 0, ay = p.axes[1] || 0;
+      const dir = b(14) || ax < -0.5 ? "L" : b(15) || ax > 0.5 ? "R" : b(12) || ay < -0.5 ? "U" : b(13) || ay > 0.5 ? "D" : "", a = b(0) || b(9), pv = prev[p.index] || {};
+      if (dir && dir !== pv.dir) { if (dir === "L" || dir === "R") cars[F].go(dir === "L" ? -1 : 1); else focus(dir === "U" ? 0 : 1); }
+      if (a && !pv.a && !window.xBooted && window.xBootNow) window.xBootNow(); // after boot the game's own pad loop opens the lobby on A
+      prev[p.index] = { dir, a };
+    });
+  })();
+  function portraits() {
+    const make = window.THREE && grab("/* ---------- cute animals", "function setAnimal", "makeAnimal"); if (!make) return;
+    let R;
+    try { const c = document.createElement("canvas"); c.width = c.height = 256; R = new THREE.WebGLRenderer({ canvas: c, alpha: true, antialias: true, preserveDrawingBuffer: true }); } catch (e) { return; }
+    R.setClearColor(0x000000, 0); R.outputEncoding = THREE.sRGBEncoding; R.toneMapping = THREE.ACESFilmicToneMapping; R.toneMappingExposure = 0.95;
+    const sc = new THREE.Scene(), sun = new THREE.DirectionalLight(0xffffff, 1.6), cam = new THREE.PerspectiveCamera(30, 1, 0.1, 100);
+    sc.add(new THREE.HemisphereLight(0xffffff, 0x8899aa, 1.0)); sun.position.set(3, 6, 6); sc.add(sun);
+    let i = 0;
+    (function next() {
+      if (i >= RO.length) { R.dispose(); R.forceContextLoss(); return; }
+      try {
+        const g = make(RO[i]); sc.add(g);
+        const box = new THREE.Box3().setFromObject(g), ctr = box.getCenter(new THREE.Vector3()), rad = box.getBoundingSphere(new THREE.Sphere()).radius;
+        const d = rad / Math.sin(THREE.MathUtils.degToRad(15)) * 0.95; // 3/4 front view
+        cam.position.set(ctr.x + d * 0.55, ctr.y + d * 0.3, ctr.z + d * 0.78); cam.lookAt(ctr);
+        R.render(sc, cam); PORT[i] = R.domElement.toDataURL("image/png"); sc.remove(g);
+        if (charCar.i === i) charCar.paint(true);
+      } catch (e) { console.warn(e); }
+      i++; setTimeout(next, 16);
+    })();
+  }
+  requestAnimationFrame(() => setTimeout(portraits, 60));
+})();
+    </script>
   </body>
 </html>
