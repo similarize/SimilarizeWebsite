@@ -334,13 +334,13 @@
     function pruneDeadPadClaims() {
       var live = connectedPadIndices();
       var liveSet = Object.create(null);
-      var i, id, s, pi, peer, list, raw;
+      var i, id, s, pi, peer;
       for (i = 0; i < live.length; i++) liveSet[live[i] | 0] = true;
-      try {
-        list = navigator.getGamepads ? navigator.getGamepads() : [];
-      } catch (e) {
-        return;
-      }
+      /* padfix2: if ANY unique pad is live, free claims whose index is not in
+         that set — covers connected Steam ghosts (padbind1) AND null/disconnect
+         (padedge1). Skip wipe only when the unique set is empty (Chrome empty
+         frame) so real seats are not cleared mid-poll. */
+      if (!live.length) return;
       var changed = false;
       for (i = 0; i < FROG_ORDER.length; i++) {
         id = FROG_ORDER[i];
@@ -350,13 +350,8 @@
         if (peer.indexOf("local-pad-") !== 0) continue;
         pi = s.padIndex != null ? (s.padIndex | 0) : padIndexFromPeer(peer);
         if (pi == null || liveSet[pi]) continue;
-        raw = list && list[pi];
-        /* padedge1: free seat on missing/null slot OR disconnected Gamepad.
-           (Chrome may keep a null hole; Steam ghosts stay enumerated but !connected.) */
-        if (raw === undefined || raw === null || (raw && !raw.connected)) {
-          seats[id] = { status: "open", peerId: null, label: null, padIndex: null };
-          changed = true;
-        }
+        seats[id] = { status: "open", peerId: null, label: null, padIndex: null };
+        changed = true;
       }
       if (changed) enforceSeatInvariant();
     }
@@ -380,6 +375,63 @@
       enforceSeatInvariant();
     }
 
+
+    /** padfix2: local pad→frog claims must not exceed unique connected sticks. */
+    function capLocalPadSeats(preferredFrogId) {
+      var live = connectedPadIndices();
+      var liveSet = Object.create(null);
+      var i, id, s, pi, peer, list;
+      for (i = 0; i < live.length; i++) liveSet[live[i] | 0] = true;
+      list = [];
+      for (i = 0; i < FROG_ORDER.length; i++) {
+        id = FROG_ORDER[i];
+        s = seats[id];
+        if (!s || !s.peerId) continue;
+        peer = String(s.peerId);
+        if (peer.indexOf("local-pad-") !== 0) continue;
+        pi = s.padIndex != null ? (s.padIndex | 0) : padIndexFromPeer(peer);
+        if (pi == null) continue;
+        if (live.length && !liveSet[pi]) {
+          seats[id] = { status: "open", peerId: null, label: null, padIndex: null };
+          continue;
+        }
+        list.push({ id: id, pi: pi });
+      }
+      if (!live.length || list.length <= live.length) {
+        enforceSeatInvariant(preferredFrogId);
+        return;
+      }
+      /* Too many claims for the sticks we have — keep preferred + earliest live pads */
+      var keep = Object.create(null);
+      if (preferredFrogId) {
+        for (i = 0; i < list.length; i++) {
+          if (list[i].id === preferredFrogId) {
+            keep[list[i].id] = true;
+            break;
+          }
+        }
+      }
+      for (i = 0; i < live.length; i++) {
+        var want = live[i] | 0;
+        for (var j = 0; j < list.length; j++) {
+          if (keep[list[j].id]) continue;
+          if ((list[j].pi | 0) === want) {
+            keep[list[j].id] = true;
+            break;
+          }
+        }
+        var kept = 0;
+        for (var k in keep) if (Object.prototype.hasOwnProperty.call(keep, k)) kept++;
+        if (kept >= live.length) break;
+      }
+      for (i = 0; i < list.length; i++) {
+        if (!keep[list[i].id]) {
+          seats[list[i].id] = { status: "open", peerId: null, label: null, padIndex: null };
+        }
+      }
+      enforceSeatInvariant(preferredFrogId);
+    }
+
     function canonicalizePadIndex(padIndex) {
       var idx = padIndex | 0;
       try {
@@ -387,9 +439,12 @@
         if (GP && typeof GP.canonicalIndex === "function") {
           var c = GP.canonicalIndex(idx, 4);
           if (typeof c === "number" && c >= 0) return c | 0;
+          /* padfix2: unproven / ghost slot — do NOT fall back to raw index */
+          return -1;
         }
       } catch (e) { /* ignore */ }
-      return idx;
+      var live = connectedPadIndices();
+      return live.indexOf(idx) >= 0 ? idx : -1;
     }
 
     /** Couch: bind pad N onto a specific frog (focus+A or click). One pad → one seat; no steal. */
@@ -397,6 +452,9 @@
       if (role === "guest") return null;
       var idx = canonicalizePadIndex(padIndex);
       if (idx < 0 || idx > 3) return null;
+      /* padfix2: only unique live sticks may claim */
+      var liveNow = connectedPadIndices();
+      if (liveNow.indexOf(idx) < 0) return null;
       if (FROG_ORDER.indexOf(frogId) < 0) return null;
       if (!localId) localId = "local-" + makeCode(6);
       var peerId = "local-pad-" + idx;
@@ -409,9 +467,9 @@
       if (!res.ok) return null;
       enforceSeatInvariant(frogId);
       /* Hard guard: same padIndex must not remain on two frogs (padedge1) */
-      var dup = 0, fi;
+      var dup = 0, fi, ss, otherPi;
       for (fi = 0; fi < FROG_ORDER.length; fi++) {
-        var ss = seats[FROG_ORDER[fi]];
+        ss = seats[FROG_ORDER[fi]];
         if (ss && ss.padIndex != null && (ss.padIndex | 0) === idx) dup++;
       }
       if (dup > 1) {
@@ -420,6 +478,19 @@
         enforceSeatInvariant(frogId);
         return null;
       }
+      /* padfix2: drop ghost-index seats that canonicalize onto this stick */
+      for (fi = 0; fi < FROG_ORDER.length; fi++) {
+        if (FROG_ORDER[fi] === frogId) continue;
+        ss = seats[FROG_ORDER[fi]];
+        if (!ss || !ss.peerId || String(ss.peerId).indexOf("local-pad-") !== 0) continue;
+        otherPi = ss.padIndex != null ? (ss.padIndex | 0) : padIndexFromPeer(ss.peerId);
+        if (otherPi == null || otherPi === idx) continue;
+        if (canonicalizePadIndex(otherPi) === idx) {
+          seats[FROG_ORDER[fi]] = { status: "open", peerId: null, label: null, padIndex: null };
+        }
+      }
+      enforceSeatInvariant(frogId);
+      capLocalPadSeats(frogId);
       if (role === "host") broadcast(lobbyPayload());
       emitLobby(role === "solo" ? "idle" : "ready");
       return frogId;
@@ -937,6 +1008,7 @@
       enforceSeatInvariant: enforceSeatInvariant,
       pruneDeadPadClaims: pruneDeadPadClaims,
       pruneDeadPadClaimsHard: pruneDeadPadClaimsHard,
+      capLocalPadSeats: capLocalPadSeats,
       startParty: startParty,
       canStart: canStart,
       sendInput: sendInput,

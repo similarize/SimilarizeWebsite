@@ -158,19 +158,14 @@
     for (var i = 0; i < n; i++) out.push(pollPad(i));
     return out;
   }
-  /* padreal1: one physical controller → one seat, even when the OS lists extras.
+  /* padreal1 + padfix2: one physical controller → one seat, even when the OS
+   * lists extras (Chrome / Steam / Tesla ghosts under other indices + ids).
    *
-   * Chrome / Steam / Tesla enumerate ghosts that stay "connected" but never
-   * drive, or that mirror one real pad under a second index and a different
-   * id. Grouping by id missed those (2 sticks → 3 highlighted frogs, one of
-   * them dead). Fingerprint-at-rest also merged two idle Xbox pads.
-   *
-   * A slot earns a seat only after its sticks, face buttons, or d-pad
-   * actually change. If that change happens while a higher-ranked slot
-   * (standard / XInput / lower index) changes — this poll or the one just
-   * before — the extra slot is an echo and does not get a frog. A second
-   * real controller gets the next frog the moment it moves on its own, and
-   * keeps that seat after it goes idle. A dead endpoint never gets a name.
+   * A slot earns a seat only after sticks / face / d-pad change on their own.
+   * Echoes that move with a higher-ranked slot (same poll, or within a few
+   * frames into the same non-idle pose) never earn a frog — and a once-sticky
+   * solo that later locksteps is demoted (padfix2). Idle matching is ignored
+   * so two real same-model pads stay two after either is wiggled.
    */
   var slotPrev = [];
   var slotProven = [];
@@ -179,6 +174,8 @@
   var slotId = [];
   var slotAlias = [];
   var ACT_BTNS = [0, 1, 2, 3, 4, 5, 8, 9, 12, 13, 14, 15];
+  /* Steam mirrors often lag 2–3 frames behind the real stick. */
+  var ECHO_FRAMES = 4;
 
   function clearSlot(i) {
     slotPrev[i] = null;
@@ -224,6 +221,17 @@
     var i, n = now.length < prev.length ? now.length : prev.length;
     for (i = 0; i < n; i++) if (now[i] !== prev[i]) p.push(i + "=" + now[i]);
     return p.join(",");
+  }
+
+  function vecKey(v) {
+    return v && v.length ? v.join(",") : "";
+  }
+
+  function vecBusy(v) {
+    var i;
+    if (!v) return false;
+    for (i = 0; i < v.length; i++) if (v[i]) return true;
+    return false;
   }
 
   function rankOf(item) {
@@ -273,41 +281,61 @@
       });
     }
 
-    /* A lower-ranked slot that only changes while a better slot changes
-       (same poll, or one frame later) is an echo. It never earns a seat.
-       A slot that changes on its own — the other sticks still — does. */
-    function wasJust(slot) {
-      return slotLastFrame[slot] >= 0 && slotLastFrame[slot] === serial - 1;
+    /* Echo only when the lower slot's change/pose matches a better slot —
+       never because an unrelated higher pad twitched (that hid real pad 2). */
+    function recentlyActive(slot) {
+      return slotLastFrame[slot] >= 0 && (serial - slotLastFrame[slot]) <= ECHO_FRAMES;
     }
     function backer(it) {
       var best = -1;
       var bestR = -1e9;
       var r = rankOf(it);
-      var j, o;
+      var myPose = vecKey(it.vec);
+      var busy = vecBusy(it.vec);
+      var j, o, match;
       for (j = 0; j < live.length; j++) {
         o = live[j];
         if (o.slot === it.slot) continue;
         if (rankOf(o) <= r) continue;
-        if (o.active || wasJust(o.slot)) {
-          if (rankOf(o) > bestR) {
-            bestR = rankOf(o);
-            best = o.slot;
-          }
+        match = false;
+        if (it.active && o.active && it.delta && o.delta && it.delta === o.delta) {
+          /* Same-frame lockstep. Shared release-to-idle from DIFFERENT poses
+             (two sticks centering) must NOT count — that demoted real pad 2. */
+          var prevSame = vecKey(slotPrev[it.slot]) === vecKey(slotPrev[o.slot]);
+          if (busy || prevSame) match = true;
+        } else if (it.active && busy && recentlyActive(o.slot) && myPose === vecKey(o.vec)) {
+          match = true; /* lagged mirror into the same non-idle pose */
+        } else if (!it.active && busy && slotProven[o.slot] && myPose === vecKey(o.vec)) {
+          match = true; /* held pose twin of a proven better pad */
+        }
+        if (!match) continue;
+        if (rankOf(o) > bestR) {
+          bestR = rankOf(o);
+          best = o.slot;
         }
       }
       return best;
     }
 
+    /* Decide parents against a frozen slotPrev, then mutate — updating
+       slotPrev mid-loop made release-to-idle miss prevSame for later slots. */
+    var parents = [];
+    for (i = 0; i < live.length; i++) parents[i] = backer(live[i]);
     for (i = 0; i < live.length; i++) {
       item = live[i];
-      var parent = backer(item);
+      var parent = parents[i];
       if (item.active && parent < 0) {
         slotSolo[item.slot] = true;
         slotProven[item.slot] = true;
         slotAlias[item.slot] = -1;
+      } else if (parent >= 0) {
+        /* padfix2: demote sticky solo that is now echoing a better pad */
+        slotAlias[item.slot] = parent;
+        slotSolo[item.slot] = false;
+        slotProven[item.slot] = false;
       } else if (!slotSolo[item.slot]) {
         slotProven[item.slot] = false;
-        if (parent >= 0) slotAlias[item.slot] = parent;
+        slotAlias[item.slot] = -1;
       } else {
         slotAlias[item.slot] = -1;
       }

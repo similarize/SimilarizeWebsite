@@ -1,10 +1,10 @@
 /* Four Froggies — onefrog1 entrance.
    One screen: claim James/Jimmy/Bubbles/Rexy + Host/Join + pick 2.5D/3D → play.
-   Flat 2D removed from picker (lobby253d1). Cache: 20261006-padheads1 */
+   Flat 2D removed from picker (lobby253d1). Cache: 20261006-padfix2 */
 (function () {
   "use strict";
 
-  var CACHE = "20261006-padheads1";
+  var CACHE = "20261006-padfix2";
   var FF3D_CACHE = "20261006-trackcam1";
   var FROG_ORDER = ["james", "jimmy", "bubbles", "rexy"];
   var FROG_NAME = { james: "James", jimmy: "Jimmy", bubbles: "Bubbles", rexy: "Rexy" };
@@ -225,24 +225,38 @@
       }
     }
 
+    if (P && P.capLocalPadSeats) P.capLocalPadSeats();
+    if (P && P.pruneDeadPadClaims) P.pruneDeadPadClaims();
     seats = P && P.getSeats ? P.getSeats() : seats;
-    /* Claimed pads paint on their seat only — never also as a second "pick" tile. */
+    /* Claimed pads paint on their seat only — never also as a second "pick" tile.
+       padfix2: only unique canonical pads count toward selection. */
     var claimedPadFrog = {};
     var fk;
+    var liveClaimCount = 0;
     for (fk = 0; fk < FROG_ORDER.length; fk++) {
       var fs = seats && seats[FROG_ORDER[fk]];
       if (!fs || fs.padIndex == null || !fs.peerId) continue;
       if (fs.status !== "you" && fs.status !== "human") continue;
-      claimedPadFrog[fs.padIndex | 0] = FROG_ORDER[fk];
+      var cpi = fs.padIndex | 0;
+      if (!connected[cpi]) continue; /* ghost claim — prune should have cleared; skip paint */
+      claimedPadFrog[cpi] = FROG_ORDER[fk];
+      liveClaimCount++;
     }
     var focusByFrog = {};
     var paintedPad = {};
+    var focusBudget = idxs.length;
+    var focusUsed = 0;
     for (var pj = 0; pj < 4; pj++) {
       if (!connected[pj]) continue;
       var fid = padFocus[pj];
       if (claimedPadFrog[pj] != null) fid = claimedPadFrog[pj];
       if (!fid) continue;
       if (paintedPad[pj]) continue;
+      /* Cap open-seat focus highlights so UI selection ≤ unique pads */
+      if (claimedPadFrog[pj] == null) {
+        if (focusUsed + liveClaimCount >= focusBudget && focusBudget > 0) continue;
+        focusUsed++;
+      }
       paintedPad[pj] = fid;
       if (!focusByFrog[fid]) focusByFrog[fid] = [];
       if (focusByFrog[fid].indexOf(pj + 1) < 0) focusByFrog[fid].push(pj + 1);
@@ -263,16 +277,22 @@
       var fname = FROG_NAME[id] || id;
 
       if (status === "you") {
-        tile.classList.add("is-on", "is-you", "seat-you");
         var pIdx = seat.padIndex != null ? (seat.padIndex | 0) : null;
+        /* padfix2: ghost padIndex not in unique set → paint as open, not selected */
+        if (pIdx != null && !connected[pIdx]) {
+          tile.classList.add("seat-open");
+          if (em) em.textContent = "Open · AI";
+        } else {
+        tile.classList.add("is-on", "is-you", "seat-you");
         if (pIdx != null) {
           tile.classList.add("seat-pad", "is-hot");
           tile.setAttribute("data-pad", String(pIdx + 1));
           if (em) em.textContent = "Pad " + (pIdx + 1) + " · " + fname;
           youClaims.push({ frog: fname, pad: pIdx });
         } else {
-          if (em) em.textContent = seat.label || "You · " + fname;
+          if (em) em.textContent = "Keyboard · " + fname;
           youClaims.push({ frog: fname, pad: -1 });
+        }
         }
       } else if (status === "human") {
         tile.classList.add("is-on", "seat-human");
@@ -301,27 +321,27 @@
         youEl.removeAttribute("data-pad");
       } else {
         youEl.hidden = false;
-        /* Pad order (0..3), then padless keyboard You last */
+        /* Pad order (0..3), then padless keyboard claim last.
+           padfix2: NEVER "You are" / "U R" — always "Pad N Froggy" or "Keyboard Froggy". */
         youClaims.sort(function (a, b) {
           var ap = a.pad >= 0 ? a.pad : 99;
           var bp = b.pad >= 0 ? b.pad : 99;
           return ap - bp;
         });
-        var msg;
-        if (youClaims.length === 1) {
+        var msg = youClaims.map(function (c) {
+          return c.pad >= 0
+            ? ("Pad " + (c.pad + 1) + " " + c.frog)
+            : ("Keyboard " + c.frog);
+        }).join(" · ");
+        if (youClaims.length === 1 && youClaims[0].pad >= 0) {
           youEl.classList.remove("is-multi");
-          var one = youClaims[0];
-          msg = one.pad >= 0
-            ? ("You are " + one.frog + " · Pad " + (one.pad + 1))
-            : ("You are " + one.frog);
-          if (one.pad >= 0) youEl.setAttribute("data-pad", String(one.pad));
-          else youEl.removeAttribute("data-pad");
+          youEl.setAttribute("data-pad", String(youClaims[0].pad));
+        } else if (youClaims.length === 1) {
+          youEl.classList.remove("is-multi");
+          youEl.removeAttribute("data-pad");
         } else {
           youEl.classList.add("is-multi");
           youEl.removeAttribute("data-pad");
-          msg = youClaims.map(function (c) {
-            return c.pad >= 0 ? ("Pad " + (c.pad + 1) + " " + c.frog) : c.frog;
-          }).join(" · ");
         }
         if (youEl.textContent !== msg) youEl.textContent = msg;
       }
