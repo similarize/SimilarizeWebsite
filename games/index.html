@@ -229,12 +229,12 @@
     </a>
     <a class="cab" href="/games/balloon-blast-babylon/?v=20261007-bbb1">
       <span class="marquee">Balloon Blast Airsoft</span>
-      <span class="screen-wrap"><canvas data-demo="balloonBlast"></canvas><span class="glass"></span></span>
+      <span class="screen-wrap"><canvas data-demo="balloonBlastAirsoft"></canvas><span class="glass"></span></span>
       <span class="panel"><span class="plate">3D FPS · Pop 3 balloons</span><span class="buttons" aria-hidden="true"><i></i><i class="alt"></i></span></span>
     </a>
     <a class="cab" href="/games/balloon-blast-unity/?v=20261007-bbu1">
       <span class="marquee">Balloon Blast Unity</span>
-      <span class="screen-wrap"><canvas data-demo="balloonBlast"></canvas><span class="glass"></span></span>
+      <span class="screen-wrap"><canvas data-demo="balloonBlastUnity"></canvas><span class="glass"></span></span>
       <span class="panel"><span class="plate">3D FPS · Unity WebGL</span><span class="buttons" aria-hidden="true"><i></i><i class="alt"></i></span></span>
     </a>
     <a class="cab" href="/games/drop-lab/?v=20260929-droplab1">
@@ -1148,7 +1148,261 @@
       if (popped > 0 && (t * 0.8) % 1 < 0.3) { ctx.font = "900 " + Math.round(h * 0.1) + "px sans-serif"; ctx.textAlign = "center"; ctx.fillStyle = "#fff"; ctx.fillText("POP!", w / 2, h * 0.3); }
     }
 
-    const draw = { balloonBlast, rally, dirtTrack, duneBuggy, rocks, ball, soccer3d, froggies, froggies3d, map, drop, ffversions, froggyHop };
+
+    // Balloon Blast Airsoft (Babylon.js): third-person over-the-shoulder, hazy PBR sky,
+    // grass arena with rock boulders, X-Bot mannequins carrying 3 glossy balloons, pill HUD.
+    function balloonBlastAirsoft(v) {
+      const { ctx, w, h, t } = v;
+      const hz = h * 0.56, U = Math.min(w, h);
+      let g = ctx.createLinearGradient(0, 0, 0, hz);
+      g.addColorStop(0, "#8f88a3"); g.addColorStop(0.6, "#c7a9ab"); g.addColorStop(1, "#e2bfa4");
+      ctx.fillStyle = g; ctx.fillRect(0, 0, w, hz);
+      g = ctx.createRadialGradient(w * 0.82, h * 0.05, 0, w * 0.82, h * 0.05, w * 0.45);
+      g.addColorStop(0, "rgba(255,248,240,0.75)"); g.addColorStop(1, "rgba(255,248,240,0)");
+      ctx.fillStyle = g; ctx.fillRect(0, 0, w, hz);
+      g = ctx.createLinearGradient(0, hz, 0, h);
+      g.addColorStop(0, "#7d9a55"); g.addColorStop(0.25, "#6c9a3f"); g.addColorStop(1, "#4b8a2c");
+      ctx.fillStyle = g; ctx.fillRect(0, hz, w, h - hz);
+      ctx.fillStyle = "#7a5a3c"; ctx.fillRect(0, hz - 1.5, w, 2.5); // far fence
+      ctx.fillStyle = "rgba(40,80,20,0.35)";
+      for (let i = 0; i < 40; i++) { const sx = (i * 97.3) % w, sy = hz + ((i * 53.7) % (h - hz)); ctx.fillRect(sx, sy, 2, 1 + (sy - hz) / (h - hz) * 2); }
+      ctx.fillStyle = "rgba(240,220,90,0.8)";
+      for (let i = 0; i < 6; i++) { const sx = (i * 131.7 + 40) % w, sy = hz + (h - hz) * (0.45 + ((i * 0.37) % 0.5)); ctx.beginPath(); ctx.ellipse(sx, sy, 2.5, 1.2, 0, 0, Math.PI * 2); ctx.fill(); }
+
+      function rock(x, y, rw, rh) {
+        ctx.fillStyle = "rgba(0,0,0,0.25)"; ctx.beginPath(); ctx.ellipse(x + rw * 0.1, y + rh * 0.4, rw * 1.05, rh * 0.3, 0, 0, Math.PI * 2); ctx.fill();
+        const rg = ctx.createLinearGradient(0, y - rh, 0, y + rh * 0.5);
+        rg.addColorStop(0, "#6e604f"); rg.addColorStop(1, "#2f271f");
+        ctx.fillStyle = rg; ctx.beginPath(); ctx.ellipse(x, y, rw, rh, 0, Math.PI, 0); ctx.ellipse(x, y, rw, rh * 0.38, 0, 0, Math.PI); ctx.fill();
+        ctx.fillStyle = "rgba(150,130,105,0.35)";
+        for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.ellipse(x - rw * 0.45 + k * rw * 0.4, y - rh * (0.45 + (k % 2) * 0.2), rw * 0.16, rh * 0.12, 0.4, 0, Math.PI * 2); ctx.fill(); }
+        ctx.fillStyle = "rgba(15,10,5,0.35)";
+        for (let k = 0; k < 2; k++) { ctx.beginPath(); ctx.ellipse(x - rw * 0.2 + k * rw * 0.45, y - rh * 0.2, rw * 0.14, rh * 0.09, -0.3, 0, Math.PI * 2); ctx.fill(); }
+      }
+      rock(w * 0.13, hz + h * 0.01, w * 0.075, h * 0.035); rock(w * 0.3, hz, w * 0.06, h * 0.03);
+      rock(w * 0.52, hz + h * 0.005, w * 0.07, h * 0.032); rock(w * 0.93, hz + h * 0.005, w * 0.08, h * 0.035);
+      rock(w * 0.79, hz + h * 0.04, w * 0.07, h * 0.075); rock(w * 0.15, hz + h * 0.1, w * 0.1, h * 0.07);
+      rock(w * 0.7, hz + h * 0.11, w * 0.13, h * 0.07);
+
+      const CB = ["#f23340", "#338cff", "#ffcc26", "#4dd966"];
+      const cycle = 2.4, n = Math.floor(t / cycle), ph = t - n * cycle, target = 1 + (n % 3);
+      const lost = [0, 0, 0, 0];
+      const done = n % 9;
+      for (let k = 0; k < done; k++) lost[1 + (k % 3)]++;
+      const popping = ph > 1.25;
+      if (popping) lost[target]++;
+
+      function bot(x, y, s, col, left, mirror) {
+        ctx.save(); ctx.translate(x, y); ctx.scale(mirror ? -s : s, s);
+        const step = Math.sin(t * 7 + x) * 0.25;
+        ctx.strokeStyle = "#c9c9cf"; ctx.lineCap = "round"; ctx.lineWidth = 2.8;
+        ctx.beginPath(); ctx.moveTo(0, -9); ctx.lineTo(-2.5 + step * 6, 0); ctx.moveTo(0, -9); ctx.lineTo(2.5 - step * 6, 0); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, -17); ctx.lineTo(0, -9); ctx.stroke();
+        ctx.strokeStyle = col; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(0, -16); ctx.lineTo(5, -12); ctx.moveTo(0, -16); ctx.lineTo(-4, -11); ctx.stroke();
+        ctx.fillStyle = "#c9c9cf"; ctx.beginPath(); ctx.arc(0, -19.5, 2.4, 0, Math.PI * 2); ctx.fill();
+        for (let k = 0; k < left; k++) {
+          const bx = (k - 1) * 3.4, by = -29 - (k === 1 ? 2 : 0) + Math.sin(t * 2 + k) * 0.5;
+          ctx.strokeStyle = "rgba(255,255,255,0.7)"; ctx.lineWidth = 0.5; ctx.beginPath(); ctx.moveTo(0, -18); ctx.lineTo(bx, by + 3); ctx.stroke();
+          ctx.fillStyle = col; ctx.beginPath(); ctx.ellipse(bx, by, 2.4, 3, 0, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.restore();
+      }
+      const bots = [
+        null,
+        { x: w * (0.06 + Math.sin(t * 0.6) * 0.03), y: hz + h * 0.06, s: U / 260, m: false },
+        { x: w * (0.6 + Math.sin(t * 0.45 + 1) * 0.04), y: hz + h * 0.015, s: U / 420, m: true },
+        { x: w * (0.9 + Math.sin(t * 0.7 + 2) * 0.03), y: hz + h * 0.05, s: U / 300, m: true },
+      ];
+      for (let i = 1; i < 4; i++) bot(bots[i].x, bots[i].y, bots[i].s, CB[i], Math.max(0, 3 - lost[i]), bots[i].m);
+
+      // BB shot from the player's shoulder to the target's balloons, then a pop burst.
+      const tb = bots[target], tx = tb.x, ty = tb.y - 29 * tb.s;
+      const ox = w * 0.53, oy = h * 0.6;
+      if (ph > 0.45 && ph < 1.25) {
+        const p = (ph - 0.45) / 0.8;
+        for (let k = 0; k < 3; k++) {
+          const q = Math.max(0, p - k * 0.06);
+          const bx = ox + (tx - ox) * q, by = oy + (ty - oy) * q - Math.sin(q * Math.PI) * h * 0.03;
+          ctx.fillStyle = k ? "rgba(255,250,200,0.45)" : "#fffbd8";
+          ctx.beginPath(); ctx.arc(bx, by, k ? 1.4 : 2, 0, Math.PI * 2); ctx.fill();
+        }
+      }
+      if (popping && ph < 1.9) {
+        const q = (ph - 1.25) / 0.65;
+        ctx.fillStyle = CB[target];
+        for (let k = 0; k < 10; k++) { const a = k * 0.63; ctx.fillRect(tx + Math.cos(a) * q * U * 0.06, ty + Math.sin(a) * q * U * 0.05 + q * q * U * 0.04, 2, 2); }
+        ctx.font = "900 " + Math.round(h * 0.07) + "px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+        const lx = Math.max(w * 0.1, Math.min(w * 0.9, tx));
+        ctx.fillStyle = "rgba(0,0,0,0.3)"; ctx.fillText("POP!", lx + 1, ty - h * 0.05 + 1);
+        ctx.fillStyle = "#fff"; ctx.fillText("POP!", lx, ty - h * 0.05);
+      }
+
+      // Player: red-tinted X-Bot seen from behind with three glossy balloons.
+      const px = w * 0.42, py = h * 0.99, s = h / 245, sway = Math.sin(t * 6) * 0.6;
+      ctx.save(); ctx.translate(px, py); ctx.scale(s, s);
+      ctx.fillStyle = "rgba(0,0,0,0.22)"; ctx.beginPath(); ctx.ellipse(0, -2, 24, 6, 0, 0, Math.PI * 2); ctx.fill();
+      const body = ctx.createLinearGradient(-20, 0, 20, 0);
+      body.addColorStop(0, "#9c4c4c"); body.addColorStop(0.5, "#d9837c"); body.addColorStop(1, "#8e4444");
+      ctx.fillStyle = body;
+      ctx.beginPath(); ctx.ellipse(-8 + sway, -24, 6, 24, 0.04, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(8 - sway, -24, 6, 24, -0.04, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(0, -56, 13, 11, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(-18, -100); ctx.quadraticCurveTo(0, -108, 18, -100); ctx.lineTo(12, -64); ctx.lineTo(-12, -64); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(-22, -82, 4.5, 20, 0.12, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(22, -82, 4.5, 20, -0.12, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#b65a57"; ctx.fillRect(-3.5, -113, 7, 8);
+      ctx.beginPath(); ctx.ellipse(0, -122, 9, 11, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = "rgba(90,30,30,0.5)"; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(0, -100); ctx.lineTo(0, -66); ctx.moveTo(-12, -82); ctx.lineTo(12, -82); ctx.stroke();
+      const myLeft = 3;
+      const BAL = [[-27, -175], [0, -192], [27, -170]];
+      for (let k = 0; k < myLeft; k++) {
+        const [bx, byy] = BAL[k], by = byy + Math.sin(t * 2 + k) * 2;
+        ctx.strokeStyle = "rgba(240,240,240,0.85)"; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(2, -112); ctx.lineTo(bx, by + 22); ctx.stroke();
+        const bg = ctx.createRadialGradient(bx - 6, by - 8, 1, bx, by, 24);
+        bg.addColorStop(0, "#ffd0d0"); bg.addColorStop(0.25, "#ee6f78"); bg.addColorStop(1, "#a8323e");
+        ctx.fillStyle = bg; ctx.beginPath(); ctx.ellipse(bx, by, 17, 21, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "#a8323e"; ctx.beginPath(); ctx.moveTo(bx - 2, by + 21); ctx.lineTo(bx + 2, by + 21); ctx.lineTo(bx, by + 24); ctx.fill();
+      }
+      ctx.restore();
+
+      // Crosshair and HUD pills (top-left), like the Babylon page.
+      ctx.strokeStyle = "#fff"; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.moveTo(w / 2 - 6, h * 0.5); ctx.lineTo(w / 2 + 6, h * 0.5); ctx.moveTo(w / 2, h * 0.5 - 6); ctx.lineTo(w / 2, h * 0.5 + 6); ctx.stroke();
+      const names = ["You", "Blue", "Yellow", "Green"], ph2 = Math.max(9, h * 0.066), fz = Math.round(ph2 * 0.62);
+      ctx.font = "600 " + fz + "px sans-serif"; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+      for (let i = 0; i < 4; i++) {
+        const y = 6 + i * (ph2 + 3), pw = ph2 * 4.6;
+        ctx.fillStyle = "rgba(245,240,245,0.82)";
+        ctx.beginPath(); ctx.moveTo(6 + ph2 / 2, y); ctx.lineTo(6 + pw - ph2 / 2, y); ctx.arc(6 + pw - ph2 / 2, y + ph2 / 2, ph2 / 2, -Math.PI / 2, Math.PI / 2); ctx.lineTo(6 + ph2 / 2, y + ph2); ctx.arc(6 + ph2 / 2, y + ph2 / 2, ph2 / 2, Math.PI / 2, Math.PI * 1.5); ctx.fill();
+        ctx.fillStyle = "#222"; ctx.fillText(names[i], 6 + ph2 * 0.45, y + ph2 / 2 + 0.5);
+        for (let k = 0; k < 3; k++) {
+          ctx.fillStyle = CB[i]; ctx.globalAlpha = k < 3 - lost[i] ? 1 : 0.2;
+          ctx.beginPath(); ctx.ellipse(6 + pw - ph2 * (1.85 - k * 0.6), y + ph2 / 2, ph2 * 0.19, ph2 * 0.25, 0, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+      }
+      g = ctx.createRadialGradient(w / 2, h / 2, U * 0.35, w / 2, h / 2, Math.hypot(w, h) * 0.6);
+      g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, "rgba(30,10,30,0.45)");
+      ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+    }
+
+    // Balloon Blast Unity: first-person blocky airsoft rifle, bright blue sky, field of trees,
+    // hay bales, pallet walls, concrete bunkers, barrels and crates; ROUND / LEFT / clock HUD,
+    // balloon-icon panel, kill feed and ammo counter, as in the Unity WebGL build.
+    function balloonBlastUnity(v) {
+      const { ctx, w, h, t } = v;
+      const hz = h * 0.5, U = Math.min(w, h);
+      const look = Math.sin(t * 0.35) * w * 0.05, bob = Math.sin(t * 5) * h * 0.006;
+      let g = ctx.createLinearGradient(0, 0, 0, hz);
+      g.addColorStop(0, "#3f7fe0"); g.addColorStop(0.7, "#8fb8ef"); g.addColorStop(1, "#c9dcf2");
+      ctx.fillStyle = g; ctx.fillRect(0, 0, w, hz + 1);
+      ctx.save(); ctx.translate(-look, bob);
+      ctx.fillStyle = "#79ad4a";
+      ctx.beginPath(); ctx.moveTo(-w * 0.2, hz - h * 0.11); ctx.quadraticCurveTo(w * 0.25, hz - h * 0.04, w * 0.6, hz); ctx.lineTo(-w * 0.2, hz + 2); ctx.fill();
+      g = ctx.createLinearGradient(0, hz, 0, h);
+      g.addColorStop(0, "#7cbc4c"); g.addColorStop(1, "#4f9a2e");
+      ctx.fillStyle = g; ctx.fillRect(-w * 0.2, hz, w * 1.4, h - hz + 10);
+      // Distant tree line.
+      for (let i = 0; i < 18; i++) {
+        const x = -w * 0.15 + i * w * 0.085 + ((i * 37) % 11), s = 0.6 + ((i * 13) % 5) * 0.12;
+        ctx.fillStyle = "#4b3a2a"; ctx.fillRect(x - 0.6, hz - h * 0.035 * s, 1.2, h * 0.035 * s);
+        ctx.fillStyle = i % 2 ? "#4f7a3a" : "#5b8746"; ctx.beginPath(); ctx.ellipse(x, hz - h * 0.045 * s, w * 0.022 * s, h * 0.028 * s, 0, 0, Math.PI * 2); ctx.fill();
+      }
+      // Cover props on the field.
+      function bunker(x, y, bw, bh) { ctx.fillStyle = "#62676b"; ctx.fillRect(x, y - bh, bw, bh); ctx.fillStyle = "#7b8085"; ctx.fillRect(x - 1, y - bh - 2, bw + 2, 2.5); ctx.fillStyle = "#3d4144"; ctx.fillRect(x + bw * 0.1, y - bh * 0.6, bw * 0.8, bh * 0.15); }
+      function pallets(x, y, pw, ph) { ctx.fillStyle = "#6b4a2d"; for (let k = 0; k <= 6; k++) ctx.fillRect(x + k * pw / 6 - 0.7, y - ph, 1.4, ph); ctx.fillRect(x, y - ph * 0.85, pw, 1.4); ctx.fillRect(x, y - ph * 0.35, pw, 1.4); }
+      function hay(x, y, r) { ctx.fillStyle = "#c79a3a"; ctx.fillRect(x - r * 1.6, y - r * 2, r * 3.2, r * 2); ctx.fillStyle = "#dcb556"; ctx.beginPath(); ctx.ellipse(x + r * 1.6, y - r, r * 0.5, r, 0, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "#a57b2a"; ctx.lineWidth = 0.6; ctx.beginPath(); ctx.ellipse(x + r * 1.6, y - r, r * 0.25, r * 0.5, 0, 0, Math.PI * 2); ctx.stroke(); }
+      function barrel(x, y, s, c) { ctx.fillStyle = c; ctx.fillRect(x - s * 0.5, y - s * 1.4, s, s * 1.4); ctx.fillStyle = "rgba(0,0,0,0.25)"; ctx.fillRect(x - s * 0.5, y - s * 1.0, s, s * 0.12); ctx.fillRect(x - s * 0.5, y - s * 0.45, s, s * 0.12); }
+      function crate(x, y, s) { ctx.fillStyle = "#6e4b2e"; ctx.fillRect(x - s / 2, y - s, s, s); ctx.fillStyle = "#87613d"; ctx.fillRect(x - s / 2, y - s, s, s * 0.18); ctx.strokeStyle = "#4e3420"; ctx.lineWidth = 1; ctx.strokeRect(x - s / 2 + 0.5, y - s + 0.5, s - 1, s - 1); }
+      bunker(w * 0.02, hz + 1, w * 0.12, h * 0.035); bunker(w * 0.58, hz + 1, w * 0.1, h * 0.03); bunker(w * 0.86, hz + 1, w * 0.13, h * 0.035);
+      pallets(w * 0.38, hz + h * 0.06, w * 0.07, h * 0.05);
+      hay(w * 0.2, hz + h * 0.03, h * 0.012); hay(w * 0.98, hz + h * 0.04, h * 0.014);
+      barrel(w * 0.16, hz + h * 0.08, h * 0.04, "#1f4fa8"); barrel(w * 0.2, hz + h * 0.07, h * 0.03, "#1f4fa8"); barrel(w * 0.6, hz + h * 0.065, h * 0.03, "#b07a20");
+      crate(w * 0.46, hz + h * 0.14, h * 0.11); crate(w * 0.82, hz + h * 0.13, h * 0.1);
+      // Mid-field tree.
+      const tx0 = w * 0.36;
+      ctx.fillStyle = "rgba(0,0,0,0.18)"; ctx.beginPath(); ctx.ellipse(tx0, hz + h * 0.12, w * 0.07, h * 0.015, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#3f2e20"; ctx.fillRect(tx0 - 1.5, hz - h * 0.1, 3, h * 0.22);
+      ctx.fillStyle = "#2f5a26"; ctx.beginPath(); ctx.ellipse(tx0, hz - h * 0.17, w * 0.06, h * 0.1, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#3d6e30"; ctx.beginPath(); ctx.ellipse(tx0 - w * 0.015, hz - h * 0.2, w * 0.035, h * 0.06, 0, 0, Math.PI * 2); ctx.fill();
+
+      // Blue-team soldier strafing behind cover with balloons; gets popped on a loop.
+      const cyc = 3.2, n = Math.floor(t / cyc), ph = t - n * cyc;
+      const left = 3 - (n % 4 === 3 ? 3 : (n % 4)) - (ph > 1.6 ? 1 : 0);
+      const ex = w * (0.68 + Math.sin(t * 0.8) * 0.06), ey = hz + h * 0.1, es = h / 200;
+      ctx.save(); ctx.translate(ex, ey); ctx.scale(es, es);
+      const step = Math.sin(t * 8) * 2.5;
+      ctx.strokeStyle = "#2c4f9e"; ctx.lineCap = "round"; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(-2 + step, 0); ctx.moveTo(0, -10); ctx.lineTo(2 - step, 0); ctx.moveTo(0, -20); ctx.lineTo(0, -10); ctx.stroke();
+      ctx.strokeStyle = "#1c1c22"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, -18); ctx.lineTo(6, -16); ctx.stroke();
+      ctx.fillStyle = "#2c4f9e"; ctx.beginPath(); ctx.arc(0, -23, 3, 0, Math.PI * 2); ctx.fill();
+      for (let k = 0; k < Math.max(0, left); k++) {
+        const bx = (k - 1) * 4.5, by = -36 - (k === 1 ? 2 : 0) + Math.sin(t * 2 + k);
+        ctx.strokeStyle = "rgba(255,255,255,0.75)"; ctx.lineWidth = 0.6; ctx.beginPath(); ctx.moveTo(0, -22); ctx.lineTo(bx, by + 4); ctx.stroke();
+        ctx.fillStyle = "#2f6fe0"; ctx.beginPath(); ctx.ellipse(bx, by, 3.2, 4, 0, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.restore();
+      const popX = ex, popY = ey - 37 * es;
+      if (ph > 1.6 && ph < 2.2) {
+        const q = (ph - 1.6) / 0.6;
+        ctx.fillStyle = "#2f6fe0";
+        for (let k = 0; k < 8; k++) { const a = k * 0.8; ctx.fillRect(popX + Math.cos(a) * q * U * 0.05, popY + Math.sin(a) * q * U * 0.04 + q * q * U * 0.03, 2, 2); }
+      }
+      ctx.restore();
+
+      // Tracers from the rifle to the crosshair while firing.
+      const firing = ph > 0.7 && ph < 1.6, shot = firing ? Math.floor((ph - 0.7) / 0.15) : -1, kickP = firing ? 1 - ((ph - 0.7) % 0.15) / 0.15 : 0;
+      const mzx = w * 0.62, mzy = h * 0.66 + kickP * h * 0.02;
+      if (firing) {
+        const q = ((ph - 0.7) % 0.15) / 0.15;
+        ctx.strokeStyle = "rgba(255,240,140,0.9)"; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(mzx + (popX - look - mzx) * q, mzy + (popY + bob - mzy) * q); ctx.lineTo(mzx + (popX - look - mzx) * Math.min(1, q + 0.25), mzy + (popY + bob - mzy) * Math.min(1, q + 0.25)); ctx.stroke();
+      }
+      // Blocky first-person rifle (black body, grey top rail, orange tip, red grip).
+      ctx.save(); ctx.translate(kickP * w * 0.01, kickP * h * 0.03 + bob * 2);
+      ctx.fillStyle = "#7a1414";
+      ctx.beginPath(); ctx.moveTo(w * 0.64, h * 0.83); ctx.lineTo(w * 0.7, h * 0.83); ctx.lineTo(w * 0.72, h * 1.02); ctx.lineTo(w * 0.64, h * 1.02); ctx.fill();
+      ctx.fillStyle = "#111";
+      ctx.beginPath(); ctx.moveTo(w * 0.6, h * 0.645); ctx.lineTo(w * 0.69, h * 0.65); ctx.lineTo(w * 1.02, h * 0.9); ctx.lineTo(w * 1.02, h * 1.02); ctx.lineTo(w * 0.7, h * 1.02); ctx.lineTo(w * 0.6, h * 0.72); ctx.fill();
+      ctx.fillStyle = "#3a3a3e";
+      ctx.beginPath(); ctx.moveTo(w * 0.665, h * 0.65); ctx.lineTo(w * 0.77, h * 0.655); ctx.lineTo(w * 0.77, h * 0.79); ctx.lineTo(w * 0.69, h * 0.77); ctx.fill();
+      ctx.fillStyle = "#26262a"; ctx.fillRect(w * 0.665, h * 0.635, w * 0.11, h * 0.02);
+      ctx.fillStyle = "#e46a12"; ctx.fillRect(w * 0.595, h * 0.645, w * 0.012, h * 0.07);
+      ctx.restore();
+      if (firing && kickP > 0.6) {
+        ctx.fillStyle = "rgba(255,220,120,0.85)";
+        ctx.beginPath(); ctx.arc(mzx - w * 0.02, mzy - h * 0.005, U * 0.03 * kickP, 0, Math.PI * 2); ctx.fill();
+      }
+      // Crosshair: four bars with a gap.
+      ctx.fillStyle = "#fff";
+      const gap = 3 + kickP * 2, len = 5;
+      ctx.fillRect(w / 2 - gap - len, h * 0.47 - 0.6, len, 1.2); ctx.fillRect(w / 2 + gap, h * 0.47 - 0.6, len, 1.2);
+      ctx.fillRect(w / 2 - 0.6, h * 0.47 - gap - len, 1.2, len); ctx.fillRect(w / 2 - 0.6, h * 0.47 + gap, 1.2, len);
+
+      // HUD.
+      function txt(s, x, y, size, align, col) {
+        ctx.font = "800 " + size + "px Arial, sans-serif"; ctx.textAlign = align; ctx.textBaseline = "top";
+        ctx.lineWidth = Math.max(2, size * 0.22); ctx.strokeStyle = "rgba(0,0,0,0.75)"; ctx.lineJoin = "round"; ctx.strokeText(s, x, y);
+        ctx.fillStyle = col; ctx.fillText(s, x, y);
+      }
+      const clock = Math.max(0, 150 - Math.floor(t % 150)), mm = Math.floor(clock / 60), ss = String(clock % 60).padStart(2, "0");
+      const fs = Math.max(8, Math.round(h * 0.055));
+      txt("ROUND 1 | " + (8 - (n % 4)) + " LEFT | " + mm + ":" + ss, w / 2, 4, fs, "center", "#fff");
+      txt("WINS  YOU 0  (first to 2)", w / 2, 6 + fs, Math.round(fs * 0.8), "center", "#fff");
+      const pr = h * 0.045;
+      ctx.fillStyle = "rgba(40,70,140,0.75)"; ctx.fillRect(4, 4, pr * 7.2, pr * 2.6);
+      for (let k = 0; k < 3; k++) { ctx.fillStyle = "#ef3a3a"; ctx.beginPath(); ctx.arc(4 + pr * 1.35 + k * pr * 2.25, 4 + pr * 1.3, pr * 0.95, 0, Math.PI * 2); ctx.fill(); }
+      txt("P1", 6, 6 + pr * 2.7, Math.round(fs * 0.85), "left", "#ff3030");
+      const feed = ["Ace popped Bolt's balloon", "Dash popped Fizz's balloon", "Echo popped Gizmo's balloon", "Comet popped Ace's balloon"];
+      const fz = Math.max(7, Math.round(h * 0.04));
+      txt(feed[n % 4], w - 4, fs * 2.4 + 6, fz, "right", "#fff");
+      txt(feed[(n + 1) % 4], w - 4, fs * 2.4 + 8 + fz, fz, "right", "#fff");
+      const ammo = 30 - (firing ? shot + 1 : ph >= 1.6 ? 6 : 0) - (n % 3) * 6;
+      txt(Math.max(0, ammo) + " / 30", w - 5, h - fs * 1.35 - 3, Math.round(fs * 1.3), "right", "#fff");
+    }
+
+    const draw = { balloonBlast, balloonBlastAirsoft, balloonBlastUnity, rally, dirtTrack, duneBuggy, rocks, ball, soccer3d, froggies, froggies3d, map, drop, ffversions, froggyHop };
 
     const ffShots = [
       { label: "2.5D", src: "/games/four-froggies/assets/play-25d.jpg?v=20261007-card25d1r1" },
