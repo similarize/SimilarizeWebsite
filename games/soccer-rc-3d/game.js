@@ -6,7 +6,7 @@
  */
 import * as THREE from "three";
 
-const CACHE = "20261006-soccerrc3d5";
+const CACHE = "20261006-soccerrc3d6";
 const HALF_X = 22;
 const HALF_Z = 14;
 const WALL_H = 5.5;
