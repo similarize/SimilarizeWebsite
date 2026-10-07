@@ -66,6 +66,22 @@
       .x-brake { width: 60px; height: 60px; right: max(48px, env(safe-area-inset-right)); bottom: 170px; font-size: 13px; }
       .x-pausebtn { top: max(12px, env(safe-area-inset-top)); right: calc(clamp(110px, 16vw, 170px) + 24px); width: 44px; height: 44px; border-radius: var(--r-s); font-size: 18px; }
       .x-touch.is-on ~ .x-hud .x-meter { bottom: auto; top: 118px; }
+      .x-hud .x-vhud { inset: 0; }
+      .x-vp { position: absolute; overflow: hidden; box-shadow: inset 0 0 0 2px rgba(255,255,255,.55); }
+      .x-vp > * { position: absolute; }
+      .x-vp .x-pos { top: 10px; left: 12px; }
+      .x-vp .x-pos b { font-size: clamp(30px, 5vw, 56px); }
+      .x-vp .x-item { top: 10px; width: 56px; height: 56px; font-size: 30px; }
+      .x-tag { display: table; font: 600 13px/1 var(--sans); font-style: normal; padding: 5px 9px; border-radius: var(--r-pill); color: #fff; border: 2px solid #fff; margin: 0 0 6px; text-shadow: 0 1px 2px rgba(0,0,0,.7); }
+      .x-standings .x-tag { display: inline-block; margin: 0 8px 0 0; vertical-align: 1px; }
+      .x-hud.is-multi > .x-pos, .x-hud.is-multi > .x-item, .x-hud.is-multi > .x-meter { display: none; }
+      .x-hud.is-three > .x-map { top: auto; right: calc(25vw - min(18vw, 18vh)); bottom: calc(25vh - min(18vw, 18vh)); width: min(36vw, 36vh); height: min(36vw, 36vh); }
+      .x-panel--wide { max-width: 860px; }
+      .x-slots { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin: 0 0 16px; }
+      .x-slot { border: 3px dashed rgba(255,255,255,.55); border-radius: var(--r-m); padding: 16px; min-height: 110px; background: rgba(10,40,60,.35); display: grid; align-content: center; justify-items: center; gap: 6px; font-size: 14px; }
+      .x-slot.is-on { border-style: solid; }
+      .x-slot b { font-size: 20px; font-weight: 600; }
+      #l-msg { min-height: 1.4em; margin: 0 0 8px; }
     </style>
   </head>
   <body>
@@ -87,6 +103,7 @@
           <div class="x-meter x-shadow">HOP POWER <span id="h-spd">0</span> km/h<i><u id="h-bar"></u></i></div>
           <div class="x-count x-shadow" id="h-count"></div>
           <div class="x-toast x-shadow" id="h-toast"></div>
+          <div class="x-vhud" id="vhud"></div>
         </div>
         <button class="x-tb x-mute" id="b-mute" aria-label="Mute sound (M)" aria-pressed="false">🔊</button>
         <div class="x-screen is-on" id="s-start">
@@ -98,8 +115,19 @@
             <div class="x-help x-shadow">
               <b>Keyboard</b> ↑/W hop · ↓/S back · ←→/AD steer · Space item · Esc pause · M mute<br />
               <b>Gamepad</b> RT or A hop · LT back · stick steer · X or RB item · Start pause<br />
-              <b>Touch</b> left thumb steer · HOP hold · ITEM · BACK
+              <b>Touch</b> left thumb steer · HOP hold · ITEM · BACK<br />
+              <b>Up to 4 players</b> press A on each controller to join split-screen
             </div>
+          </div>
+        </div>
+        <div class="x-screen" id="s-lobby">
+          <div class="x-panel x-panel--wide">
+            <h2 class="x-title x-shadow">Who's racing?</h2>
+            <p class="x-sub x-shadow">A join · ◀ ▶ or LB RB colour · B leave · Start or Enter to race</p>
+            <div class="x-slots" id="l-slots"></div>
+            <p class="x-sub x-shadow" id="l-msg" role="status"></p>
+            <button class="x-btn x-btn--ghost" id="b-join">Join</button>
+            <button class="x-btn" id="b-go">Start solo</button>
           </div>
         </div>
         <div class="x-screen" id="s-pause">
@@ -449,11 +477,16 @@ const SFX = {
   lap: play((t) => { tone(1319, t, 0.5, "triangle", 0.25); tone(1760, t + 0.1, 0.6, "triangle", 0.2); }),
   fanfare: play((t) => [523, 659, 784, 659, 784, 1047].forEach((f, i) => { const d = i === 5 ? 0.9 : 0.16; tone(f, t + i * 0.14, d, "square", 0.1); tone(f / 2, t + i * 0.14, d, "triangle", 0.15); })),
 };
-const near = (f) => { const p = players[0].frog; return f === p || (f.x - p.x) ** 2 + (f.z - p.z) ** 2 < 1600; };
+const near = (f) => players.some(({ frog: p }) => f === p || (f.x - p.x) ** 2 + (f.z - p.z) ** 2 < 1600);
+const humanOf = (f) => players.find((p) => p.frog === f);
+const hexC = (c) => "#" + FROGS[c].c.toString(16).padStart(6, "0");
+const nm = (o) => o.def.name.replace(" (you)", "") + (players.length === 1 && humanOf(o) ? " (you)" : "");
 addEventListener("pointerdown", auInit, true);
 
 const frogs = FROGS.map((d, i) => Object.assign({ id: i, def: d, ai: i !== 0, tg: makeTongue() }, makeFrog(d)));
-const players = [{ frog: frogs[0], camH: 0, cam: camera, pad: null }]; // stage 2: more players + split screen
+const cams = [camera, 1, 2, 3].map((c) => (c === camera ? c : new THREE.PerspectiveCamera(68, 1, 0.5, 2500)));
+const players = [{ frog: frogs[0], camH: 0, cam: camera, pad: null, kb: true, tag: "P1" }];
+const kbPl = () => players.find((p) => p.kb) || (players.length === 1 ? players[0] : null);
 
 /* ---------- items ---------- */
 const ITEMS = { boost: ["🪰", "Fly Swarm"], tongue: ["👅", "Tongue Lash"], slick: ["🍃", "Lily Slick"], shield: ["🫧", "Bubble Shield"], spit: ["🟢", "Spit Ball"] };
@@ -509,8 +542,10 @@ function nearestIdx(f, range) {
   return best;
 }
 function resetRace() {
-  frogs.forEach((f, k) => {
-    const slot = k === 0 ? 5 : k - 1, row = Math.floor(slot / 2), i = N - 6 - row * 6, d = slot % 2 ? 3.2 : -3.2;
+  frogs.forEach((f) => (f.ai = !humanOf(f)));
+  const grid = frogs.filter((f) => f.ai).concat(frogs.filter((f) => !f.ai));
+  frogs.forEach((f) => {
+    const slot = grid.indexOf(f), row = Math.floor(slot / 2), i = N - 6 - row * 6, d = slot % 2 ? 3.2 : -3.2;
     Object.assign(f, {
       x: P[i].x + R[i].x * d, z: P[i].z + R[i].z * d, y: 0, vy: 0, g: 30, h: TH[i], v: 0, m: 0, air: false, airT: 0, dur: 0.4,
       groundT: 0, landT: 1, idx: i, lap: 0, prog: i, finished: false, finishTime: 0, lapStart: 0, lapTimes: [],
@@ -524,7 +559,7 @@ function resetRace() {
   boxes.forEach((b) => { b.off = 0; b.m.visible = true; });
   players.forEach((p) => { p.camH = p.frog.h; p.snap = true; });
   state = "countdown"; countT = 3.6; raceT = 0; finishShown = false; finishT = 0; paused = false;
-  ["s-start", "s-pause", "s-finish"].forEach((s) => $(s).classList.remove("is-on"));
+  ["s-start", "s-lobby", "s-pause", "s-finish"].forEach((s) => $(s).classList.remove("is-on"));
   $("hud").style.display = ""; lastItem = "-"; toast("");
 }
 function hit(f, dur) {
@@ -593,7 +628,7 @@ function updFrog(f, dt) {
       } else if (brk > 0.05 && f.v < 2) { f.m = 0; dur = 0.3; hh = 0.5; f.v = -8 * brk; }
       if (dur) {
         f.air = true; f.airT = 0; f.dur = dur; f.g = (8 * hh) / (dur * dur); f.vy = (4 * hh) / dur;
-        if (f === players[0].frog) SFX.hop(f.v);
+        if (humanOf(f)) SFX.hop(f.v);
         puff(f.x, 0.2, f.z, seg === "shallow" ? 0xbff4f5 : 0xf3dfb0, 3, 1.5, 1.5);
       }
     }
@@ -603,7 +638,7 @@ function updFrog(f, dt) {
       f.y = 0; f.air = false; f.landT = 0; f.groundT = Math.max(0.03, 0.11 - 0.08 * f.m);
       if (seg === "shallow") {
         const pad = lilies.some((l) => (l.x - f.x) ** 2 + (l.z - f.z) ** 2 < 2.4);
-        const mine = f === players[0].frog;
+        const mine = !!humanOf(f);
         if (pad) { f.bounce = true; puff(f.x, 0.3, f.z, 0x5fd06a, 5, 2, 3); if (mine) SFX.bloop(); }
         else { f.m = Math.min(f.m, 0.5); f.groundT += 0.08; puff(f.x, 0.3, f.z, 0xe8fbff, 9, 2.5, 5); if (mine) SFX.splash(); }
       } else puff(f.x, 0.2, f.z, seg === "bridge" ? 0xc9a27a : 0xf3dfb0, 6, 2.2, 2);
@@ -616,8 +651,8 @@ function updFrog(f, dt) {
     f.lap++;
     if (f.lap >= 2) f.lapTimes.push(raceT - f.lapStart);
     f.lapStart = raceT;
-    if (f.lap > LAPS && !f.finished) { f.finished = true; f.finishTime = raceT; if (f === players[0].frog) { f.auto = true; finishT = 1.4; SFX.fanfare(); } }
-    else if (f.lap >= 2 && f === players[0].frog && state === "race") SFX.lap();
+    if (f.lap > LAPS && !f.finished) { f.finished = true; f.finishTime = raceT; if (humanOf(f)) { f.auto = true; finishT = 1.4; SFX.fanfare(); } }
+    else if (f.lap >= 2 && humanOf(f) && state === "race") SFX.lap();
   } else if (old < N * 0.2 && f.idx > N * 0.8) f.lap--;
   f.prog = f.lap * N + f.idx;
   // soft berms
@@ -631,7 +666,8 @@ function updFrog(f, dt) {
   if (!f.item && !f.tongue) for (const b of boxes) if (b.off <= 0 && f.y < 8 && (b.x - f.x) ** 2 + (b.z - f.z) ** 2 < 9) {
     b.off = 3; b.m.visible = false; f.item = ITEM_KEYS[Math.floor(Math.random() * ITEM_KEYS.length)]; f.itemHeld = 0;
     puff(b.x, 1.3, b.z, 0xffd23f, 10, 3, 3);
-    if (f === players[0].frog) { SFX.chime(); toast(ITEMS[f.item][0] + " " + ITEMS[f.item][1] + "!", 1.4); }
+    const hp = humanOf(f);
+    if (hp) { SFX.chime(); toast((players.length > 1 ? hp.tag + " " : "") + ITEMS[f.item][0] + " " + ITEMS[f.item][1] + "!", 1.4); }
     break;
   }
   if (f.item) f.itemHeld += dt;
@@ -688,9 +724,11 @@ addEventListener("keydown", (e) => {
   auInit();
   if (!keys[e.code]) {
     if (e.code === "KeyM") toggleMute();
-    if (e.code === "Space") players[0].frog.input.item = state === "race";
+    if (e.code === "Space" && kbPl()) kbPl().frog.input.item = state === "race";
+    if (e.code === "Escape" && state === "lobby") { state = "menu"; $("s-lobby").classList.remove("is-on"); $("s-start").classList.add("is-on"); }
     if (e.code === "Escape" || e.code === "KeyP") togglePause();
-    if (e.code === "Enter" && state === "menu") resetRace();
+    if (e.code === "Enter" && state === "menu") onPlay();
+    else if (e.code === "Enter" && state === "lobby") { if (!seats.some((s) => s.src === "kb") && seats.length < 4) { join("kb"); drawLobby(); } else startRace(); }
   }
   keys[e.code] = true;
 });
@@ -718,43 +756,110 @@ function holdBtn(id, on, off) {
 }
 holdBtn("b-hop", () => (touch.thr = 1), () => (touch.thr = 0));
 holdBtn("b-brake", () => (touch.brk = 1), () => (touch.brk = 0));
-holdBtn("b-item", () => { if (state === "race") players[0].frog.input.item = true; });
+holdBtn("b-item", () => { if (state === "race" && kbPl()) kbPl().frog.input.item = true; });
 holdBtn("b-pause", togglePause);
-// gamepads: drop null/disconnected; one entry per physical pad
-const padPrev = {};
-function getPads() {
-  const raw = navigator.getGamepads ? Array.from(navigator.getGamepads()) : [];
-  const byId = {};
-  raw.forEach((p) => {
-    if (!p || !p.connected) return;
-    const cur = byId[p.id];
-    if (!cur || (p.mapping === "standard" && cur.mapping !== "standard")) byId[p.id] = p;
-  });
-  return Object.values(byId).sort((a, b) => a.index - b.index);
+// gamepads: drop null/disconnected, prefer standard mapping, alias ghost duplicates by press coincidence
+const padPrev = {}, pressT = {}, aT = {}, alias = {}, coinc = {}, alone = {}, pend = {};
+let padList = [], padPress = {}, seats = [], lastPadN = -1;
+const btnOn = (b) => !!b && (b.pressed || b.value > 0.5);
+function note(s) { if (state === "lobby") { $("l-msg").textContent = s; setTimeout(() => { if ($("l-msg").textContent === s) $("l-msg").textContent = ""; }, 2500); } else toast(s, 2); }
+function setAlias(hi, lo) {
+  if (alias[hi] != null) return; alias[hi] = lo; alone[hi] = 0; pend[hi] = 0;
+  const s = seats.findIndex((x) => x.src === hi); if (s >= 0 && state === "lobby") seats.splice(s, 1);
+  const pl = players.find((p) => p.pad === hi); if (pl && state !== "lobby" && state !== "menu") pl.frog.auto = true;
+  note("Merged duplicate controller"); if (state === "lobby") drawLobby();
 }
+function scanPads() {
+  const now = performance.now();
+  let all = (navigator.getGamepads ? Array.from(navigator.getGamepads()) : []).filter((p) => p && p.connected);
+  if (all.some((p) => p.mapping === "standard")) all = all.filter((p) => p.mapping === "standard");
+  padPress = {};
+  all.forEach((p) => {
+    const prev = padPrev[p.index] || [], cur = p.buttons.map(btnOn), n = Math.min(prev.length, cur.length), pr = [];
+    for (let i = 0; i < n; i++) if (cur[i] && !prev[i]) pr.push(i);
+    padPrev[p.index] = cur; if (pr.length) padPress[p.index] = pr;
+  });
+  const idx = Object.keys(padPress).map(Number).sort((a, b) => a - b);
+  if (idx.length) auInit();
+  idx.forEach((i) => {
+    const isA = padPress[i].includes(0);
+    for (const k in pressT) {
+      const j = +k, lo = Math.min(i, j), hi = Math.max(i, j), key = lo + "," + hi; if (j === i) continue;
+      if (now - pressT[j] < 80 && (coinc[key] = (coinc[key] || 0) + 1) >= 2) setAlias(hi, lo);
+      if (isA && aT[j] != null && now - aT[j] < 120) setAlias(hi, lo);
+    }
+    pressT[i] = now; if (isA) aT[i] = now;
+    if (alias[i] != null && !pend[i]) pend[i] = now;
+  });
+  for (const k in alias) if (pend[k] && now - pend[k] > 80) {
+    const m = alias[k], t = pend[k]; pend[k] = 0;
+    if (Math.abs((pressT[m] || -1e9) - t) >= 80) { if (++alone[k] >= 2) { delete alias[k]; coinc[m + "," + k] = 0; note("Controller released"); } } else alone[k] = 0;
+  }
+  padList = all.filter((p) => alias[p.index] == null);
+}
+const padLabel = (i) => "Pad " + (padList.findIndex((p) => p.index === i) + 1);
+function join(src) {
+  if (seats.length >= 4) return;
+  let c = 0; while (seats.some((s) => s.col === c)) c++;
+  seats.push({ src, col: c });
+}
+function cycle(s, d) { for (let k = 1; k < 6; k++) { const c = (s.col + d * k + 6) % 6; if (!seats.some((x) => x.col === c)) { s.col = c; return; } } }
+function drawLobby() {
+  $("l-slots").innerHTML = [0, 1, 2, 3].map((k) => {
+    const s = seats[k]; if (!s) return `<div class="x-slot"><b>P${k + 1}</b><span>Press A to join</span></div>`;
+    return `<div class="x-slot is-on" style="border-color:${hexC(s.col)}"><i class="x-tag" style="background:${hexC(s.col)}">P${k + 1}</i><b>${FROGS[s.col].name.replace(" (you)", "")}</b><span>${s.src === "kb" ? "Keyboard / touch" : padLabel(s.src)}</span></div>`;
+  }).join("");
+  $("b-join").textContent = seats.some((s) => s.src === "kb") ? "Leave" : "Join";
+  $("b-go").textContent = seats.length ? "Start race" : "Start solo";
+}
+function openLobby() { state = "lobby"; seats = []; $("s-start").classList.remove("is-on"); $("s-lobby").classList.add("is-on"); drawLobby(); }
+function onPlay() { auInit(); if (padList.length) openLobby(); else { seats = []; startRace(); } }
+function startRace() {
+  if (!seats.length) seats = [{ src: "kb", col: 0 }];
+  players.length = 0;
+  seats.forEach((s, k) => players.push({ frog: frogs[s.col], camH: 0, cam: cams[k], pad: s.src === "kb" ? null : s.src, kb: s.src === "kb", tag: "P" + (k + 1) }));
+  const multi = players.length > 1;
+  $("vhud").innerHTML = multi ? players.map((p, k) => `<div class="x-vp" id="vp${k}"><div class="x-pos x-shadow"><i class="x-tag" style="background:${hexC(p.frog.id)}">${p.tag}</i><b></b><span></span><span class="x-lap"></span></div><div class="x-item"><span></span></div></div>`).join("") : "";
+  players.forEach((p, k) => { const e = $("vp" + k); if (e) p.ui = { el: e, b: e.querySelector("b"), of: e.querySelector(".x-pos span"), lap: e.querySelector(".x-lap"), ic: e.querySelector(".x-item span") }; });
+  $("hud").classList.toggle("is-multi", multi); $("hud").classList.toggle("is-three", players.length === 3);
+  resize(); resetRace();
+}
+function padActions() {
+  const anyA = padList.some((p) => (padPress[p.index] || []).includes(0));
+  if (state === "menu" && anyA) openLobby();
+  if (state === "lobby") {
+    const n0 = seats.length; seats = seats.filter((s) => s.src === "kb" || padList.some((p) => p.index === s.src));
+    let ch = seats.length !== n0 || padList.length !== lastPadN, go = false; lastPadN = padList.length;
+    padList.forEach((p) => {
+      const pr = padPress[p.index]; if (!pr) return;
+      const s = seats.find((x) => x.src === p.index), has = (b) => pr.includes(b);
+      if (!s) { if (has(0)) { join(p.index); ch = true; } return; }
+      if (has(14) || has(4)) cycle(s, -1); if (has(15) || has(5)) cycle(s, 1);
+      if (has(1)) seats.splice(seats.indexOf(s), 1); else if (has(9)) go = true; ch = true;
+    });
+    if (ch) drawLobby(); if (go) startRace();
+  } else if (finishShown && anyA) resetRace();
+}
+$("b-join").onclick = () => { const k = seats.findIndex((s) => s.src === "kb"); if (k >= 0) seats.splice(k, 1); else join("kb"); drawLobby(); };
+$("b-go").onclick = startRace;
 function readInput() {
-  const pads = getPads();
-  players.forEach((pl, k) => {
-    const f = pl.frog, inp = f.input, pad = pads[k];
+  const solo = players.length === 1 && players[0].pad == null;
+  players.forEach((pl) => {
+    const f = pl.frog, inp = f.input, pad = solo ? padList[0] : padList.find((p) => p.index === pl.pad);
     let thr = 0, brk = 0, steer = 0;
-    if (k === 0) {
+    if (pl === kbPl()) {
       thr = keys.ArrowUp || keys.KeyW ? 1 : 0; brk = keys.ArrowDown || keys.KeyS ? 1 : 0;
       steer = (keys.ArrowRight || keys.KeyD ? 1 : 0) - (keys.ArrowLeft || keys.KeyA ? 1 : 0);
       thr = Math.max(thr, touch.thr); brk = Math.max(brk, touch.brk); steer += touch.steer;
     }
     if (pad) {
       const b = (i) => (pad.buttons[i] ? pad.buttons[i].value || (pad.buttons[i].pressed ? 1 : 0) : 0);
-      const pr = (i) => !!(pad.buttons[i] && pad.buttons[i].pressed);
-      const ax = pad.axes[0] || 0;
+      const ax = pad.axes[0] || 0, np = padPress[pad.index] || [], pr = (i) => np.includes(i);
       thr = Math.max(thr, b(7), b(0)); brk = Math.max(brk, b(6));
       if (Math.abs(ax) > 0.15) steer += (ax - Math.sign(ax) * 0.15) / 0.85;
-      const prev = padPrev[pad.index] || {};
-      if ((pr(2) && !prev[2]) || (pr(5) && !prev[5])) inp.item = state === "race";
-      if (pr(9) && !prev[9]) togglePause();
-      if (pr(8) && !prev[8]) toggleMute();
-      if (pad.buttons.some((x, i) => x && x.pressed && !prev[i])) auInit();
-      if (pr(0) && !prev[0] && (state === "menu" || finishShown)) resetRace();
-      padPrev[pad.index] = pad.buttons.map((x) => !!(x && x.pressed));
+      if (pr(2) || pr(5)) inp.item = state === "race";
+      if (pr(9)) togglePause();
+      if (pr(8)) toggleMute();
     }
     if (!f.auto) { inp.thr = thr > 0.05 ? thr : 0; inp.brk = brk; inp.steer = clamp(steer, -1, 1); }
   });
@@ -763,7 +868,7 @@ function togglePause() {
   if ((state !== "race" && state !== "countdown") || finishShown) return;
   paused = !paused; $("s-pause").classList.toggle("is-on", paused);
 }
-$("b-play").onclick = () => { auInit(); resetRace(); }; $("b-restart").onclick = resetRace; $("b-restart2").onclick = resetRace;
+$("b-play").onclick = onPlay; $("b-restart").onclick = resetRace; $("b-restart2").onclick = resetRace;
 $("b-resume").onclick = togglePause;
 
 /* ---------- HUD ---------- */
@@ -784,6 +889,11 @@ let lastItem = "-", toastT = 0;
 function toast(s, t) { $("h-toast").textContent = s; toastT = t || 1.5; }
 function updHud(dt) {
   const f = players[0].frog;
+  if (players.length > 1) players.forEach(({ frog: o, ui }) => {
+    ui.b.textContent = o.place; ui.of.textContent = ORD[o.place - 1] + " / 6"; ui.lap.textContent = `Lap ${clamp(o.lap, 1, LAPS)}/${LAPS}`;
+    const ic = o.item ? ITEMS[o.item][0] : ""; if (ui.ic.textContent !== ic) ui.ic.textContent = ic;
+  });
+  else {
   $("h-pos").textContent = f.place; $("h-of").textContent = ORD[f.place - 1] + " / 6";
   $("h-lap").textContent = `Lap ${clamp(f.lap, 1, LAPS)}/${LAPS}`;
   $("h-times").innerHTML = f.lapTimes.map((t, k) => `L${k + 1} ${fmt(t)}`).join("<br>") + (state === "race" && !f.finished ? (f.lapTimes.length ? "<br>" : "") + `▸ ${fmt(Math.max(0, raceT - f.lapStart))}` : "");
@@ -794,17 +904,19 @@ function updHud(dt) {
   }
   $("h-bar").style.width = (f.boostT > 0 ? 100 : f.m * 100) + "%";
   $("h-spd").textContent = Math.round(Math.abs(f.v) * 3.2);
+  }
   mapX.clearRect(0, 0, 170, 170); mapX.drawImage(mapBg, 0, 0);
   frogs.slice().reverse().forEach((o) => {
-    const [x, y] = mp(o.x, o.z); mapX.beginPath(); mapX.arc(x, y, o === f ? 6 : 4.5, 0, 7);
-    mapX.fillStyle = "#" + o.def.c.toString(16).padStart(6, "0"); mapX.fill(); mapX.lineWidth = 2; mapX.strokeStyle = o === f ? "#fff" : "rgba(0,0,0,.5)"; mapX.stroke();
+    const me = !!humanOf(o), [x, y] = mp(o.x, o.z); mapX.beginPath(); mapX.arc(x, y, me ? 6 : 4.5, 0, 7);
+    mapX.fillStyle = "#" + o.def.c.toString(16).padStart(6, "0"); mapX.fill(); mapX.lineWidth = 2; mapX.strokeStyle = me ? "#fff" : "rgba(0,0,0,.5)"; mapX.stroke();
   });
   if (toastT > 0) { toastT -= dt; if (toastT <= 0) $("h-toast").textContent = ""; }
 }
 function showFinish() {
-  const order = racePlaces(), me = players[0].frog;
-  $("f-title").textContent = me.place === 1 ? "You win! 🏆" : `You finished ${me.place}${ORD[me.place - 1]}`;
-  $("f-table").innerHTML = order.map((o) => `<tr class="${o === me ? "is-you" : ""}"><td>${o.place}${ORD[o.place - 1]}</td><td><span class="x-sw" style="background:#${o.def.c.toString(16).padStart(6, "0")}"></span>${o.def.name}</td><td>${o.finished ? fmt(o.finishTime) : "racing…"}</td></tr>`).join("");
+  const order = racePlaces(), me = players[0].frog, multi = players.length > 1;
+  const best = players.slice().sort((a, b) => a.frog.place - b.frog.place)[0], bp = best.frog.place;
+  $("f-title").textContent = multi ? (bp === 1 ? `${best.tag} wins! 🏆` : `${best.tag} best, ${bp}${ORD[bp - 1]}`) : me.place === 1 ? "You win! 🏆" : `You finished ${me.place}${ORD[me.place - 1]}`;
+  $("f-table").innerHTML = order.map((o) => { const h = humanOf(o); return `<tr class="${h ? "is-you" : ""}"><td>${o.place}${ORD[o.place - 1]}</td><td>${h && multi ? `<i class="x-tag" style="background:${hexC(o.id)}">${h.tag}</i>` : ""}<span class="x-sw" style="background:${hexC(o.id)}"></span>${nm(o)}</td><td>${o.finished ? fmt(o.finishTime) : "racing…"}</td></tr>`; }).join("");
 }
 
 /* ---------- camera + loop ---------- */
@@ -817,12 +929,25 @@ function updCam(pl, dt) {
   cam.lookAt(f.x + fx * 5, 1.3 + f.y * 0.3, f.z + fz * 5);
   const fov = 66 + f.m * 5 + (f.boostT > 0 ? 14 : 0);
   if (Math.abs(cam.fov - fov) > 0.05) { cam.fov += (fov - cam.fov) * Math.min(1, dt * 5); cam.updateProjectionMatrix(); }
+}
+function aim(pl) {
+  const f = pl.frog;
   sun.position.set(f.x + sunDir.x * 100, sunDir.y * 100, f.z + sunDir.z * 100); sun.target.position.set(f.x, 0, f.z);
-  sky.position.copy(cam.position);
+  sky.position.copy(pl.cam.position);
+}
+// viewports as [x, y-from-bottom, w, h]: 1 full, 2 top/bottom, 3-4 quadrants
+function views(n, W, H) {
+  const w2 = W / 2, h2 = H / 2;
+  if (n === 1) return [[0, 0, W, H]];
+  if (n === 2) return [[0, h2, W, h2], [0, 0, W, h2]];
+  return [[0, h2, w2, h2], [w2, h2, w2, h2], [0, 0, w2, h2], [w2, 0, w2, h2]];
 }
 function resize() {
-  const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false);
-  players.forEach((p) => { p.cam.aspect = w / h; p.cam.updateProjectionMatrix(); });
+  const w = innerWidth, h = innerHeight, V = views(players.length, w, h); renderer.setSize(w, h, false);
+  players.forEach((p, k) => {
+    const [x, y, vw, vh] = V[k]; p.cam.aspect = vw / vh; p.cam.updateProjectionMatrix();
+    if (p.ui) Object.assign(p.ui.el.style, { left: x + "px", top: h - y - vh + "px", width: vw + "px", height: vh + "px" });
+  });
 }
 addEventListener("resize", resize); resize();
 resetRace(); state = "menu"; $("s-start").classList.add("is-on"); $("hud").style.display = "none";
@@ -831,7 +956,7 @@ let last = performance.now(), t0 = 0;
 function loop(now) {
   requestAnimationFrame(loop);
   const dt = Math.min(0.05, (now - last) / 1000); last = now; t0 += dt;
-  readInput();
+  scanPads(); readInput(); padActions();
   if (!paused) {
     if (state === "countdown") {
       countT -= dt; const n = Math.ceil(countT - 0.6);
@@ -864,14 +989,21 @@ function loop(now) {
     hazards = hazards.filter((h) => (h.age < 25 ? true : (scene.remove(h.m), false)));
     updParts(dt);
     const me = players[0].frog;
-    if (me.finished && !finishShown) { finishT -= dt; if (finishT <= 0) { finishShown = true; showFinish(); $("s-finish").classList.add("is-on"); } }
+    const hf = players.filter((p) => p.frog.finished);
+    if (hf.length && !finishShown) {
+      finishT -= dt; const first = Math.min(...hf.map((p) => p.frog.finishTime));
+      if ((hf.length === players.length && finishT <= 0) || raceT - first > 20) { finishShown = true; showFinish(); $("s-finish").classList.add("is-on"); }
+    }
     if (finishShown && Math.floor(t0 * 2) !== Math.floor((t0 - dt) * 2)) showFinish();
     if (state === "race" && me.lap === LAPS && me.lapTimes.length === LAPS - 1 && !me.finalShown) { me.finalShown = true; toast("Final lap!", 2); }
-    if (state !== "menu") updHud(dt);
+    if (state !== "menu" && state !== "lobby") updHud(dt);
   }
   water.material.color.setHSL(0.51, 0.82, 0.31 + Math.sin(t0 * 0.8) * 0.012);
   players.forEach((pl) => updCam(pl, dt));
-  renderer.render(scene, players[0].cam);
+  const V = views(players.length, innerWidth, innerHeight);
+  renderer.setScissorTest(players.length > 1);
+  players.forEach((pl, k) => { const [x, y, w, h] = V[k]; renderer.setViewport(x, y, w, h); renderer.setScissor(x, y, w, h); aim(pl); renderer.render(scene, pl.cam); });
+  if (players.length === 3) { const [x, y, w, h] = V[3]; renderer.setViewport(x, y, w, h); renderer.setScissor(x, y, w, h); renderer.setClearColor(0x0a3d5a); renderer.clear(); }
 }
 requestAnimationFrame(loop);
 })();
