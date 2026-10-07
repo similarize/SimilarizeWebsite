@@ -11,6 +11,50 @@ export const RACE_NAMES = ["Orange", "Blue", "Green", "Purple"];
 
 const ROAD_HALF_W = 4.2;
 const SAMPLE_N = 220;
+const RAIL_OFFSET = ROAD_HALF_W + 0.45;
+
+/**
+ * Intentional rail gaps (normalized u along closed curve).
+ * both: omit L+R. outerOnly: omit outer-of-bend side only.
+ * jump crest ~u 0.83, loop ~u 0.02, banks, scenic overlook.
+ */
+const RAIL_GAPS = [
+  { u0: 0.78, u1: 0.88, both: true },       // jump crest
+  { u0: 0.97, u1: 1.0, both: true },        // loop approach (wrap)
+  { u0: 0.0, u1: 0.09, both: true },        // loop crest / landing
+  { u0: 0.40, u1: 0.48, both: true },       // scenic overlook stretch
+  { u0: 0.18, u1: 0.30, outerOnly: true },  // outer bank (bridge high)
+  { u0: 0.55, u1: 0.66, outerOnly: true },  // outer bank (SE lobe)
+];
+
+function uInRange(u, a, b) {
+  u = ((u % 1) + 1) % 1;
+  if (a <= b) return u >= a && u <= b;
+  return u >= a || u <= b;
+}
+
+/** @returns {{ left: boolean, right: boolean }} side = +1 is "right" of tangent (nx,nz)=(-tz,tx) */
+export function railPresence(u, outerSign) {
+  let left = true, right = true;
+  for (const g of RAIL_GAPS) {
+    if (!uInRange(u, g.u0, g.u1)) continue;
+    if (g.both) return { left: false, right: false };
+    if (g.outerOnly && typeof outerSign === "number") {
+      if (outerSign > 0) right = false;
+      else left = false;
+    }
+  }
+  return { left, right };
+}
+
+function bendOuterSign(curve, u) {
+  const u0 = ((u - 0.008) % 1 + 1) % 1;
+  const u1 = ((u + 0.008) % 1 + 1) % 1;
+  const t0 = curve.getTangentAt(u0);
+  const t1 = curve.getTangentAt(u1);
+  const cross = t0.x * t1.z - t0.z * t1.x;
+  return cross >= 0 ? 1 : -1;
+}
 
 /** Lemniscate figure-eight centerline with adventure elevation. */
 export function buildRaceCurve() {
@@ -126,8 +170,10 @@ export function buildRaceTrack(scene) {
   group.add(dashes);
 
   // —— FEATURE décor (not the driving surface) ——
-  // Banked turn rails (outer walls along high-curvature samples)
+  // Banked turn décor (outer walls along high-curvature samples)
   addBankRails(group, curve, wallMat);
+  // Continuous side rails with intentional fall-off gaps
+  const railMask = addSideRails(group, curve);
 
   // Loop-like arch at east tip (visual)
   const east = curve.getPoint(0.02);
@@ -217,6 +263,7 @@ export function buildRaceTrack(scene) {
     checkpoints,
     startSpots,
     roadHalfW: ROAD_HALF_W,
+    railMask,
     ramps: [], // height from curve now
   };
 }
@@ -256,6 +303,83 @@ function addBankRails(group, curve, wallMat) {
     wall.castShadow = true;
     group.add(wall);
   }
+}
+
+/** Glow-metal side rails along curb edges; gaps leave fall-off danger. */
+function addSideRails(group, curve) {
+  const railMat = new THREE.MeshStandardMaterial({
+    color: 0xb8c4d4, roughness: 0.35, metalness: 0.85,
+    emissive: 0x3b82f6, emissiveIntensity: 0.18,
+  });
+  const n = 120;
+  const mask = new Array(n);
+  for (let i = 0; i < n; i++) {
+    const u = i / n;
+    const outer = bendOuterSign(curve, u);
+    const pres = railPresence(u, outer);
+    mask[i] = pres;
+    const p = curve.getPointAt(u);
+    const tan = curve.getTangentAt(u).normalize();
+    const nx = -tan.z, nz = tan.x;
+    const len = curve.getPointAt((i + 1) / n).distanceTo(p) * 1.05;
+    for (const side of [-1, 1]) {
+      const on = side < 0 ? pres.left : pres.right;
+      if (!on) continue;
+      const tube = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.12, 0.12, Math.max(0.8, len), 6),
+        railMat
+      );
+      // Cylinder default along Y — lay along tangent in XZ
+      tube.rotation.z = Math.PI / 2;
+      tube.rotation.y = Math.atan2(tan.z, tan.x);
+      tube.position.set(
+        p.x + nx * side * RAIL_OFFSET,
+        p.y + 0.55,
+        p.z + nz * side * RAIL_OFFSET
+      );
+      tube.castShadow = true;
+      group.add(tube);
+      // Low glow wall under tube for readability
+      const wall = new THREE.Mesh(
+        new THREE.BoxGeometry(Math.max(0.8, len), 0.55, 0.18),
+        railMat
+      );
+      wall.position.set(
+        p.x + nx * side * RAIL_OFFSET,
+        p.y + 0.28,
+        p.z + nz * side * RAIL_OFFSET
+      );
+      wall.rotation.y = Math.atan2(tan.x, tan.z);
+      group.add(wall);
+    }
+  }
+  return { n, samples: mask };
+}
+
+/** Nearest curve sample: lateral offset (+ = right of tangent), u, point, tangent. */
+export function nearestOnTrack(curve, x, z) {
+  let bestD = Infinity;
+  let bestU = 0;
+  let bestP = null;
+  const coarse = 90;
+  for (let i = 0; i <= coarse; i++) {
+    const u = i / coarse;
+    const p = curve.getPointAt(u);
+    const d = Math.hypot(p.x - x, p.z - z);
+    if (d < bestD) { bestD = d; bestU = u; bestP = p; }
+  }
+  const refine = 14;
+  for (let i = -refine; i <= refine; i++) {
+    let u = bestU + i / (coarse * refine);
+    u = ((u % 1) + 1) % 1;
+    const p = curve.getPointAt(u);
+    const d = Math.hypot(p.x - x, p.z - z);
+    if (d < bestD) { bestD = d; bestU = u; bestP = p; }
+  }
+  const tan = curve.getTangentAt(bestU).normalize();
+  const nx = -tan.z, nz = tan.x;
+  const lat = (x - bestP.x) * nx + (z - bestP.z) * nz;
+  return { u: bestU, p: bestP, tan, nx, nz, lat, dist: bestD };
 }
 
 /** Height from nearest point on continuous road curve. */
@@ -366,6 +490,48 @@ export function boundRaceCar(car, carHalfY, raceMeta) {
 
   const curve = raceMeta && raceMeta.curve;
   const hw = (raceMeta && raceMeta.roadHalfW) || ROAD_HALF_W;
+
+  // Side-rail redirect: bounce inward, preserve speed (no friction drain)
+  if (curve) {
+    const hit = nearestOnTrack(curve, car.pos.x, car.pos.z);
+    const outer = bendOuterSign(curve, hit.u);
+    const pres = railPresence(hit.u, outer);
+    const limit = hw + 0.15;
+    const onRight = hit.lat > 0;
+    const blocked = onRight ? pres.right : pres.left;
+    if (blocked && Math.abs(hit.lat) > limit && hit.dist < hw + 3.5) {
+      const sign = onRight ? 1 : -1;
+      // Push back onto road
+      const over = Math.abs(hit.lat) - limit;
+      car.pos.x -= hit.nx * sign * over;
+      car.pos.z -= hit.nz * sign * over;
+      // Inward normal (toward centerline)
+      const inx = -hit.nx * sign;
+      const inz = -hit.nz * sign;
+      const sp = Math.hypot(car.vx, car.vz);
+      const vn = car.vx * inx + car.vz * inz;
+      if (vn < 0) {
+        // Reflect against inward normal, keep magnitude
+        car.vx -= 2 * vn * inx;
+        car.vz -= 2 * vn * inz;
+        const sp2 = Math.hypot(car.vx, car.vz);
+        if (sp2 > 1e-4 && sp > 1e-4) {
+          car.vx = (car.vx / sp2) * sp;
+          car.vz = (car.vz / sp2) * sp;
+        }
+      } else if (sp > 0.5) {
+        // Sliding along rail — nudge inward without slowdown
+        car.vx += inx * 0.8;
+        car.vz += inz * 0.8;
+        const sp3 = Math.hypot(car.vx, car.vz);
+        if (sp3 > 1e-4) {
+          car.vx = (car.vx / sp3) * sp;
+          car.vz = (car.vz / sp3) * sp;
+        }
+      }
+    }
+  }
+
   const groundY = curve
     ? sampleTrackHeight(curve, car.pos.x, car.pos.z, hw, carHalfY)
     : carHalfY;
@@ -390,6 +556,11 @@ export function boundRaceCar(car, carHalfY, raceMeta) {
     car.pos.y = 18;
     car.vy *= -0.2;
   }
+  // Soft floor if somehow underground off-track
+  if (car.pos.y < carHalfY * 0.5) {
+    car.pos.y = carHalfY;
+    if (car.vy < 0) car.vy = 0;
+  }
 }
 
 export function raceCameraTarget(cars) {
@@ -403,32 +574,46 @@ export function raceCameraTarget(cars) {
   return { x: x / n, y: y / n, z: z / n };
 }
 
-/** Chase cam focus: prefer P1, blend pack if close. */
+/** @deprecated chase cam — race uses raceArenaFocus (overview). Kept for import compat. */
 export function raceChaseFocus(cars, preferIndex = 0) {
-  if (!cars.length) return { x: 0, y: 0, z: 0, sp: 0, yaw: 0 };
-  const main = cars[Math.min(preferIndex, cars.length - 1)];
-  const sp = Math.hypot(main.vx, main.vz);
-  // Mild blend toward nearby cars so pack stays framed
-  let bx = main.pos.x, by = main.pos.y, bz = main.pos.z;
-  let w = 1;
-  for (let i = 0; i < cars.length; i++) {
-    if (i === preferIndex) continue;
-    const d = main.pos.distanceTo(cars[i].pos);
-    if (d < 18) {
-      const k = (1 - d / 18) * 0.35;
-      bx += cars[i].pos.x * k;
-      by += cars[i].pos.y * k;
-      bz += cars[i].pos.z * k;
-      w += k;
-    }
+  return raceArenaFocus(cars);
+}
+
+/**
+ * Elevated arena overview: pack centroid + span so EVERY car stays framed.
+ * Caller places camera high and pulls out with `span`.
+ */
+export function raceArenaFocus(cars) {
+  if (!cars || !cars.length) {
+    return { x: 0, y: 2, z: 0, span: 42, minX: -30, maxX: 30, minZ: -24, maxZ: 24 };
   }
+  let sx = 0, sy = 0, sz = 0;
+  let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+  let maxY = 0;
+  for (const c of cars) {
+    sx += c.pos.x; sy += c.pos.y; sz += c.pos.z;
+    if (c.pos.x < minX) minX = c.pos.x;
+    if (c.pos.x > maxX) maxX = c.pos.x;
+    if (c.pos.z < minZ) minZ = c.pos.z;
+    if (c.pos.z > maxZ) maxZ = c.pos.z;
+    if (c.pos.y > maxY) maxY = c.pos.y;
+  }
+  const n = cars.length;
+  // Pad so cars near edges stay on-screen; also keep a minimum track footprint
+  const pad = 14;
+  minX = Math.min(minX - pad, -36);
+  maxX = Math.max(maxX + pad, 36);
+  minZ = Math.min(minZ - pad, -28);
+  maxZ = Math.max(maxZ + pad, 28);
+  const spanX = maxX - minX;
+  const spanZ = maxZ - minZ;
+  const span = Math.max(spanX, spanZ, 40);
   return {
-    x: bx / w,
-    y: by / w,
-    z: bz / w,
-    sp,
-    yaw: main.yaw,
-    vx: main.vx,
-    vz: main.vz,
+    x: sx / n,
+    y: sy / n,
+    z: sz / n,
+    span,
+    maxY,
+    minX, maxX, minZ, maxZ,
   };
 }

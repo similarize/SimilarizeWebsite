@@ -11,12 +11,12 @@ import {
   updateRaceProgress,
   rankRacers,
   boundRaceCar,
-  raceChaseFocus,
+  raceArenaFocus,
   RACE_COLORS,
   RACE_NAMES,
-} from "./race-mode.js?v=20261006-soccerrc3d10";
+} from "./race-mode.js?v=20261006-soccerrc3d11";
 
-const CACHE = "20261006-soccerrc3d10";
+const CACHE = "20261006-soccerrc3d11";
 const HALF_X = 22;
 const HALF_Z = 14;
 const WALL_H = 5.5;
@@ -280,7 +280,10 @@ let soccerGroup = null;
 let raceGroup = null;
 let raceMeta = null; // { checkpoints, startSpots, ramps }
 let raceState = null;
+/** Per-seat binding for Race: { kind:'human'|'ai'|'remote', padSlot:number|-1, keys:string|null, touch:number|-1 } */
+let raceSeats = null;
 let _gp2 = null, _gp3 = null;
+let _uniquePadSlots = []; // connectedIndices result, refreshed each frame
 const modeLobbyEl = document.getElementById("modeLobby");
 const raceHudEl = document.getElementById("raceHud");
 const raceStandingsEl = document.getElementById("raceStandings");
@@ -522,7 +525,74 @@ function padDrive(g) {
 }
 
 function readInput(playerIndex) {
-  // Host online: P2 is driven only by remote guest bits
+  // Race: honor seat bindings — never reuse a pad across cars; AI seats get AI
+  if (gameMode === "race" && raceSeats && raceSeats[playerIndex]) {
+    const seat = raceSeats[playerIndex];
+    if (seat.kind === "ai") return aiRaceInput(playerIndex);
+    if (seat.kind === "remote") {
+      const ri = netRemoteInput;
+      let fwd = ri.u ? 1 : 0;
+      let rev = ri.d ? 1 : 0;
+      let steer = ri.l ? -1 : ri.r ? 1 : 0;
+      let kick = !!ri.fire;
+      let boost = !!ri.boost;
+      if (ri.fire) ri.fire = 0;
+      if (fwd > 0 && rev > 0) {
+        if (fwd >= rev) rev = 0;
+        else fwd = 0;
+      }
+      return { fwd, rev, steer, kick, boost, aimX: 0, aimZ: 0, aimActive: false };
+    }
+    // human seat — pad ONLY from this seat's padSlot (never pads[playerIndex] raw)
+    const pads = [_gp0, _gp1, _gp2, _gp3];
+    const g = seat.padSlot >= 0 ? (pads[seat.padSlot] || null) : null;
+    const pd = padDrive(g);
+    let fwd = pd.fwd, rev = pd.rev, steer = pd.steer;
+    const tIdx = seat.touch >= 0 ? seat.touch : -1;
+    const t = tIdx >= 0 ? touch[tIdx] : null;
+    if (t) {
+      if (t.boostUntil && performance.now() < t.boostUntil) t.boost = 1;
+      else if (t.boostUntil && performance.now() >= t.boostUntil) {
+        t.boost = 0;
+        t.boostUntil = 0;
+      }
+      if (t.fwd > 0.04) fwd = Math.max(fwd, t.fwd);
+      if (t.rev > 0.04) rev = Math.max(rev, t.rev);
+      if (Math.abs(t.steer) > 0.05) steer = t.steer;
+    }
+    let kick = pd.kick || !!(t && t.kickEdge);
+    let boost = pd.boost || !!(t && t.boost);
+    if (seat.keys === "arrows") {
+      if (keys.ArrowUp) fwd = 1;
+      if (keys.ArrowDown) rev = 1;
+      const keySteer = keys.ArrowLeft ? -1 : keys.ArrowRight ? 1 : 0;
+      if (keySteer) steer = keySteer;
+      if (keys[" "] || keys.Space) kick = true;
+      if (keys.ShiftLeft || keys.ShiftRight) boost = true;
+    } else if (seat.keys === "wasd") {
+      if (keys.w || keys.W) fwd = 1;
+      if (keys.s || keys.S) rev = 1;
+      const keySteer = keys.a || keys.A ? -1 : keys.d || keys.D ? 1 : 0;
+      if (keySteer) steer = keySteer;
+      if (keys.q || keys.Q) kick = true;
+      if (keys.e || keys.E) boost = true;
+    } else if (seat.keys === "ijkl") {
+      if (keys.i || keys.I) fwd = 1;
+      if (keys.k || keys.K) rev = 1;
+      const keySteer = keys.j || keys.J ? -1 : keys.l || keys.L ? 1 : 0;
+      if (keySteer) steer = keySteer;
+      if (keys.u || keys.U) kick = true;
+      if (keys.o || keys.O) boost = true;
+    }
+    if (fwd > 0 && rev > 0) {
+      if (fwd >= rev) rev = 0;
+      else fwd = 0;
+    }
+    if (t) t.kickEdge = false;
+    return { fwd, rev, steer, kick, boost, aimX: 0, aimZ: 0, aimActive: false };
+  }
+
+  // Soccer (and non-race): Host online P2 = remote only
   if (netRole === "host" && playerIndex === 1) {
     const ri = netRemoteInput;
     let fwd = ri.u ? 1 : 0;
@@ -539,13 +609,15 @@ function readInput(playerIndex) {
     return { fwd, rev, steer, kick, boost, aimX, aimZ, aimActive };
   }
 
-  const t = touch[playerIndex];
-  // Guest phone: local sticks/keys/pad0 drive their car via net bits, not local sim —
-  // but host + local couch still use this path for P1 (and P2 when offline).
-  const pads = [_gp0, _gp1, _gp2, _gp3];
-  const g = playerIndex === 0
-    ? _gp0
-    : (netRole === "host" && playerIndex === 1 ? null : pads[playerIndex] || null);
+  const t = touch[playerIndex] || touch[0];
+  // Soccer: assign unique pads only — seat 0 → first unique, seat 1 → second unique
+  // (never raw pollPad(playerIndex), which double-binds Steam/Chrome ghosts)
+  let g = null;
+  if (playerIndex === 0) {
+    g = _uniquePadSlots.length ? pollUniquePad(0) : _gp0;
+  } else if (!(netRole === "host" && playerIndex === 1)) {
+    g = _uniquePadSlots.length >= 2 ? pollUniquePad(1) : null;
+  }
   const pd = padDrive(g);
 
   let fwd = pd.fwd, rev = pd.rev, steer = pd.steer;
@@ -560,7 +632,7 @@ function readInput(playerIndex) {
   let boost = pd.boost || !!t.boost;
   let aimX = 0, aimZ = 0, aimActive = false;
 
-  // Phone: soccer = stick steer + FWD/REV; race = stick X/Y + dbl-tap boost
+  // Phone: soccer = stick steer + FWD/REV
   if (t.fwd > 0.04) fwd = Math.max(fwd, t.fwd);
   if (t.rev > 0.04) rev = Math.max(rev, t.rev);
   if (Math.abs(t.steer) > 0.05) steer = t.steer;
@@ -589,16 +661,6 @@ function readInput(playerIndex) {
     if (keySteer) steer = keySteer;
     if (keys.q || keys.Q) kick = true;
     if (keys.e || keys.E) boost = true;
-  } else if (playerIndex === 2) {
-    // P3 IJKL · U kick · O boost
-    if (keys.i || keys.I) fwd = 1;
-    if (keys.k || keys.K) rev = 1;
-    const keySteer = keys.j || keys.J ? -1 : keys.l || keys.L ? 1 : 0;
-    if (keySteer) steer = keySteer;
-    if (keys.u || keys.U) kick = true;
-    if (keys.o || keys.O) boost = true;
-  } else if (playerIndex === 3) {
-    // P4: pad only (or arrow-adjacent numpad-ish via pad)
   }
 
   if (fwd > 0 && rev > 0) {
@@ -1253,12 +1315,94 @@ function refreshGamepads() {
   const GP = window.SimilarizeGamepad;
   if (!GP) {
     _gp0 = _gp1 = _gp2 = _gp3 = null;
+    _uniquePadSlots = [];
     return;
   }
   _gp0 = GP.pollPad(0);
   _gp1 = GP.pollPad(1);
   _gp2 = GP.pollPad(2);
   _gp3 = GP.pollPad(3);
+  // One physical controller → one seat (dedupe Steam/Chrome ghosts)
+  _uniquePadSlots = typeof GP.connectedIndices === "function"
+    ? GP.connectedIndices(4)
+    : [];
+}
+
+function pollUniquePad(ordinal) {
+  const slot = _uniquePadSlots[ordinal];
+  if (slot == null || slot < 0) return null;
+  const pads = [_gp0, _gp1, _gp2, _gp3];
+  return pads[slot] || null;
+}
+
+/**
+ * Race seats: each unique pad + local P1 (phone/arrows) bind at most once.
+ * Remaining seats → AI. Host+ready remote claims seat 1 if still open/AI.
+ * Examples: 4P+2 pads → 2 human + 2 AI; 3P+1 pad → 1 human + 2 AI.
+ */
+function buildRaceSeats(numCars) {
+  const n = Math.max(2, Math.min(4, numCars | 0));
+  const GP = window.SimilarizeGamepad;
+  // Fresh poll so lobby click sees current pads
+  if (GP && typeof GP.connectedIndices === "function") {
+    _uniquePadSlots = GP.connectedIndices(4);
+    _gp0 = GP.pollPad(0);
+    _gp1 = GP.pollPad(1);
+    _gp2 = GP.pollPad(2);
+    _gp3 = GP.pollPad(3);
+  }
+  const pads = _uniquePadSlots.slice();
+  const seats = [];
+  let padOrd = 0;
+
+  // Seat 0 always local human (phone stick / arrows / first unique pad)
+  const p0 = padOrd < pads.length ? pads[padOrd++] : -1;
+  seats.push({ kind: "human", padSlot: p0, keys: "arrows", touch: 0, label: "Human" });
+
+  for (let i = 1; i < n; i++) {
+    // Remote joiner fills a human seat when host has a ready peer
+    if (i === 1 && netRole === "host" && netReady) {
+      seats.push({ kind: "remote", padSlot: -1, keys: null, touch: -1, label: "Join" });
+      continue;
+    }
+    if (padOrd < pads.length) {
+      const slot = pads[padOrd++];
+      const keyScheme = i === 1 ? "wasd" : i === 2 ? "ijkl" : null;
+      seats.push({ kind: "human", padSlot: slot, keys: keyScheme, touch: i < 2 ? i : -1, label: "Human" });
+    } else {
+      seats.push({ kind: "ai", padSlot: -1, keys: null, touch: -1, label: "AI" });
+    }
+  }
+  return seats;
+}
+
+function raceSeatLabel(i) {
+  if (!raceSeats || !raceSeats[i]) return "";
+  return raceSeats[i].label || raceSeats[i].kind;
+}
+
+function aiRaceInput(carIndex) {
+  const car = cars[carIndex];
+  const racer = raceState && raceState.racers[carIndex];
+  const cps = raceMeta && raceMeta.checkpoints;
+  if (!car || !racer || !cps || !cps.length) {
+    return { fwd: 0.6, rev: 0, steer: 0, kick: false, boost: false, aimX: 0, aimZ: 0, aimActive: false };
+  }
+  const cp = cps[racer.cp % cps.length];
+  // Look slightly ahead for smoother lines
+  const next = cps[(racer.cp + 1) % cps.length];
+  const tx = cp.x * 0.65 + next.x * 0.35;
+  const tz = cp.z * 0.65 + next.z * 0.35;
+  const desired = Math.atan2(tz - car.pos.z, tx - car.pos.x);
+  let dyaw = desired - car.yaw;
+  while (dyaw > Math.PI) dyaw -= Math.PI * 2;
+  while (dyaw < -Math.PI) dyaw += Math.PI * 2;
+  const steer = Math.max(-1, Math.min(1, dyaw * 2.2));
+  const sharp = Math.abs(dyaw) > 0.9;
+  const fwd = sharp ? 0.42 : 0.92;
+  const sp = Math.hypot(car.vx, car.vz);
+  const boost = !sharp && sp > 9 && Math.abs(dyaw) < 0.28;
+  return { fwd, rev: 0, steer, kick: false, boost, aimX: 0, aimZ: 0, aimActive: false };
 }
 
 
@@ -1305,8 +1449,11 @@ function makeCarState(mesh, x, y, z, yaw) {
 
 function showLobby() {
   gameMode = "lobby";
+  raceSeats = null;
   freezeT = 999;
   setModeUI("lobby");
+  updateLobbySeatHint();
+  syncRacePadClusters();
   clearTracks();
   if (soccerGroup) soccerGroup.visible = false;
   if (raceGroup) raceGroup.visible = false;
@@ -1339,6 +1486,7 @@ function startSoccerMode() {
   resetMatch();
   freezeT = 0.8;
   showBanner("Soccer!", "orange", 1.2);
+  syncRacePadClusters();
 }
 
 function startRaceMode(numPlayers, laps) {
@@ -1358,6 +1506,7 @@ function startRaceMode(numPlayers, laps) {
   clearSceneCars();
   clearTracks();
   raceState = createRaceState(numPlayers, laps);
+  raceSeats = buildRaceSeats(raceState.numCars);
   const spots = raceMeta.startSpots;
   for (let i = 0; i < raceState.numCars; i++) {
     const sp = spots[i];
@@ -1365,6 +1514,7 @@ function startRaceMode(numPlayers, laps) {
     scene.add(mesh);
     const c = makeCarState(mesh, sp.x, (sp.y != null ? sp.y : 0) + CAR_HALF.y, sp.z, sp.yaw);
     c.mesh.visible = true;
+    c.seatKind = raceSeats[i] ? raceSeats[i].kind : "human";
     cars.push(c);
   }
   raceState.started = false;
@@ -1373,7 +1523,14 @@ function startRaceMode(numPlayers, laps) {
   raceState.finishCount = 0;
   freezeT = 0;
   updateRaceHud();
-  showBanner("Race!", "", 1.0);
+  const humans = raceSeats.filter((s) => s.kind === "human" || s.kind === "remote").length;
+  const ais = raceSeats.filter((s) => s.kind === "ai").length;
+  const bits = [];
+  if (humans) bits.push(humans + " human");
+  if (ais) bits.push(ais + " AI");
+  showBanner("Race! · " + bits.join(" + "), "", 1.4);
+  updateLobbySeatHint();
+  syncRacePadClusters();
 }
 
 function updateRaceHud() {
@@ -1383,7 +1540,9 @@ function updateRaceHud() {
     const r = raceState.racers[ci];
     const lapShow = Math.min(raceState.laps, r.lap + 1);
     const done = r.finished ? " FIN" : "";
-    return `<div class="row"><span class="pos">${place + 1}</span><span>${RACE_NAMES[ci]}</span><span style="margin-left:auto;opacity:.75">L${lapShow}${done}</span></div>`;
+    const tag = raceSeatLabel(ci);
+    const tagCls = tag === "AI" ? "seat-ai" : tag === "Join" ? "seat-join" : "seat-human";
+    return `<div class="row"><span class="pos">${place + 1}</span><span>${RACE_NAMES[ci]}</span><span class="seat-tag ${tagCls}">${tag}</span><span style="margin-left:auto;opacity:.75">L${lapShow}${done}</span></div>`;
   });
   if (raceStandingsEl) raceStandingsEl.innerHTML = lines.join("");
   const p1 = raceState.racers[0];
@@ -1394,6 +1553,30 @@ function updateRaceHud() {
   }
   const place = order.indexOf(0) + 1;
   if (racePosLabel) racePosLabel.textContent = "P1 · " + place + "/" + raceState.numCars;
+}
+
+function updateLobbySeatHint() {
+  const el = document.getElementById("raceSeatHint");
+  if (!el) return;
+  const GP = window.SimilarizeGamepad;
+  const nPads = GP && typeof GP.connectedCount === "function"
+    ? GP.connectedCount(4)
+    : (_uniquePadSlots ? _uniquePadSlots.length : 0);
+  // Always at least local P1 (phone/keys); pads beyond the first add humans
+  el.innerHTML = "Pads detected: <b>" + nPads + "</b> · empty race seats fill with <b>AI</b> · Create/Join can claim a human seat";
+}
+
+function syncRacePadClusters() {
+  if (!padsEl) return;
+  const p2 = padsEl.querySelector(".cluster.p2");
+  if (!p2) return;
+  if (gameMode === "race" && raceSeats) {
+    const s1 = raceSeats[1];
+    const show = !!(s1 && s1.kind === "human" && s1.touch === 1);
+    p2.style.display = show ? "" : "none";
+  } else {
+    p2.style.display = "";
+  }
 }
 
 function tickRace(dt) {
@@ -1461,27 +1644,24 @@ function tickRace(dt) {
     }
   }
 
-  // Chase cam: keep P1 framed — look-ahead + speed FOV (blend nearby pack)
-  const focus = raceChaseFocus(cars, 0);
-  const lookAhead = 6 + Math.min(14, focus.sp * 0.55);
-  const fx = Math.cos(focus.yaw);
-  const fz = Math.sin(focus.yaw);
-  const aimX = focus.x + fx * lookAhead;
-  const aimZ = focus.z + fz * lookAhead;
-  camTarget.lerp(new THREE.Vector3(aimX, focus.y * 0.45 + 0.8, aimZ), 1 - Math.pow(0.0008, dt));
-
-  const back = 12 + Math.min(10, focus.sp * 0.35);
-  const up = 7 + Math.min(8, focus.y * 0.35 + focus.sp * 0.08);
+  // Arena overview cam — stand above the track; every car stays on-screen
+  const focus = raceArenaFocus(cars);
+  camTarget.lerp(new THREE.Vector3(focus.x, 1.2, focus.z), 1 - Math.pow(0.002, dt));
+  // Pull out with pack span (wider as cars spread); add height for jumps/loop
+  const span = focus.span || 42;
+  const elev = 28 + span * 0.55 + Math.min(12, (focus.maxY || 0) * 0.8);
+  const pull = 8 + span * 0.22;
   const desired = new THREE.Vector3(
-    focus.x - fx * back + fz * 2.5,
-    focus.y + up,
-    focus.z - fz * back - fx * 2.5
+    camTarget.x * 0.15,
+    elev,
+    camTarget.z * 0.15 + pull
   );
-  camPos.lerp(desired, 1 - Math.pow(0.00015, dt));
+  camPos.lerp(desired, 1 - Math.pow(0.04, dt));
   camera.position.copy(camPos);
-  camera.lookAt(camTarget.x, camTarget.y + 0.6, camTarget.z);
-  const wantFov = 52 + Math.min(18, focus.sp * 0.55);
-  camera.fov += (wantFov - camera.fov) * Math.min(1, dt * 4);
+  camera.lookAt(camTarget.x, 1.0, camTarget.z);
+  // FOV widens slightly when pack is spread so edges stay framed
+  const wantFov = 48 + Math.min(16, Math.max(0, span - 40) * 0.35);
+  camera.fov += (wantFov - camera.fov) * Math.min(1, dt * 3);
   camera.updateProjectionMatrix();
 }
 
@@ -1489,7 +1669,7 @@ function bindModeLobby() {
   const pickSoccer = document.getElementById("pickSoccer");
   const pickRace = document.getElementById("pickRace");
   if (pickSoccer) pickSoccer.addEventListener("click", () => startSoccerMode());
-  // Race Track = 2P; 3P / 4P via data-race-players buttons
+  // Race Track = 2P; 3P / 4P via data-race-players buttons (empty seats → AI)
   if (pickRace) pickRace.addEventListener("click", () => startRaceMode(2, 3));
   document.querySelectorAll("[data-race-players]").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -1498,6 +1678,14 @@ function bindModeLobby() {
     });
   });
   if (modesBtn) modesBtn.addEventListener("click", () => showLobby());
+  updateLobbySeatHint();
+  // Refresh pad count while lobby is open
+  setInterval(() => {
+    if (gameMode === "lobby") {
+      refreshGamepads();
+      updateLobbySeatHint();
+    }
+  }, 800);
 }
 
 function requestReset() {

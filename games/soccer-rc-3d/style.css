@@ -646,3 +646,43 @@ body.mode-race #pads.solo-guest .stick-base {
 @media (orientation: landscape) {
   body.mode-race .stick-base { width: 78px; height: 78px; }
 }
+
+.seat-legend {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+.seat-tag {
+  display: inline-block;
+  font: 700 10px var(--sans);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 999px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.seat-legend .seat-tag { margin-left: 0; }
+.seat-human {
+  background: rgba(52, 211, 153, 0.22);
+  color: #6ee7b7;
+  border: 1px solid rgba(52, 211, 153, 0.45);
+}
+.seat-ai {
+  background: rgba(148, 163, 184, 0.2);
+  color: #cbd5e1;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+}
+.seat-join {
+  background: rgba(96, 165, 250, 0.22);
+  color: #93c5fd;
+  border: 1px solid rgba(96, 165, 250, 0.5);
+}
+.race-standings .seat-tag {
+  margin-left: 4px;
+  font-size: 9px;
+  padding: 1px 5px;
+}
+.race-seat-hint b { color: var(--fg); }
