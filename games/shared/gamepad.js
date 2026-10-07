@@ -28,6 +28,22 @@
  *   uniqueConnectedIndices(max?) — alias of connectedIndices
  *   connectedCount(max?)    — length of connectedIndices
  *   canonicalIndex(slot?)   — map a raw/ghost slot to the unique representative
+ *   padNumber(slot?)        — 1-based "Pad N" label from the deduped list (fallback slot+1)
+ *   debug()                 — one line per raw entry: kept / alias→#n / ignored
+ *
+ * padmerge1 (ported from Dirt Track RC Rally, confirmed on Bill's 2× Xbox setup):
+ *   1) if any connected pad reports mapping==="standard", every non-standard entry is
+ *      ignored outright (never counted, pollPad returns a disconnected snapshot);
+ *   2) press-coincidence aliasing, independent of id / mapping / button count: two raw
+ *      entries whose button presses land within 80 ms twice (or whose A presses land
+ *      within 120 ms once while either is still unproven = a join) are one device —
+ *      the later presser (tie: lower index) becomes an alias. Aliases are never counted
+ *      and pollPad(alias) returns a disconnected snapshot, so a ghost can't drive a frog.
+ *      Pairs that have each pressed alone are known-distinct and never merged; an alias
+ *      that presses alone twice is released (false merge of two real pads self-heals).
+ *   3) on every merge window fires "similarize-gamepad-merge" {detail:{alias, root, handled}}
+ *      so games can move/free a seat on the alias (set detail.handled = true when they did);
+ *      a "Merged duplicate controller" toast shows if the alias was counted or a seat moved.
  *   pressed(name, i?)       — held (uses last pollPad cache, or polls once)
  *   justPressed(name, i?)   — rising edge (uses last pollPad cache, or polls once)
  * Typical frame: const gp = SimilarizeGamepad.poll(); then read gp.* / buttonsPressed.
@@ -133,6 +149,239 @@
     }
     catch (e) { return []; }
   }
+
+  /* ---------- padmerge1: standard-mapping preference + press-coincidence aliasing ---------- */
+  var MAXP = 8;
+  var COIN_MS = 80;      /* two presses this close = same device (needs 2 hits) */
+  var JOIN_MS = 120;     /* A presses this close = same device on a join (1 hit) */
+  var SOLO_MS = 120;     /* a press with no partner press this close = pressed alone */
+  var pressScanToken = -1;
+  var pressId = [];
+  var rawPrevBtn = [];
+  var lastPressT = [];
+  var lastAT = [];
+  var pressAll = [];     /* recent press times, any button */
+  var pressPend = [];    /* digital presses awaiting solo evaluation */
+  var pressAlias = [];   /* -1 or representative raw index */
+  var ignoredSlot = [];  /* non-standard while a standard pad exists */
+  var pairCoin = Object.create(null);
+  var pairSolo = Object.create(null);
+  var pairDistinct = Object.create(null);
+  var mergeListeners = [];
+
+  function nowMs() {
+    return (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
+  }
+  function pairKey(a, b) { return a < b ? a + "|" + b : b + "|" + a; }
+  function rootOf(i) {
+    var n = 0;
+    while (pressAlias[i] >= 0 && n < MAXP) { i = pressAlias[i]; n++; }
+    return i;
+  }
+  function isAliasSlot(i) { return typeof pressAlias[i] === "number" && pressAlias[i] >= 0; }
+  function isDeadSlot(i) { return !!ignoredSlot[i] || isAliasSlot(i); }
+  function resetPress(i) {
+    var k;
+    pressId[i] = "";
+    rawPrevBtn[i] = null;
+    lastPressT[i] = null;
+    lastAT[i] = null;
+    pressAll[i] = [];
+    pressPend[i] = [];
+    pressAlias[i] = -1;
+    ignoredSlot[i] = false;
+    for (k = 0; k < MAXP; k++) if (pressAlias[k] === i) pressAlias[k] = -1;
+    var pre = i + "|", post = "|" + i;
+    for (k in pairCoin) if (k.indexOf(pre) === 0 || k.slice(-post.length) === post) delete pairCoin[k];
+    for (k in pairDistinct) if (k.indexOf(pre) === 0 || k.slice(-post.length) === post) delete pairDistinct[k];
+    for (k in pairSolo) {
+      var ab = k.split(">");
+      if ((ab[0] | 0) === i || (ab[1] | 0) === i) delete pairSolo[k];
+    }
+  }
+  function pressedNear(y, t, w) {
+    var h = pressAll[y] || [];
+    for (var i = 0; i < h.length; i++) if (Math.abs(h[i] - t) <= w) return true;
+    return false;
+  }
+  function toast(msg) {
+    if (typeof document === "undefined" || !document.body) return;
+    var el = document.createElement("div");
+    el.setAttribute("aria-live", "polite");
+    el.textContent = msg;
+    el.style.cssText = "position:fixed;left:50%;bottom:12px;transform:translateX(-50%);z-index:9999;padding:6px 12px;border-radius:8px;background:rgba(0,0,0,.72);color:#f3e2c4;font:12px/1.3 system-ui,sans-serif;pointer-events:none;opacity:1;transition:opacity .4s";
+    document.body.appendChild(el);
+    setTimeout(function () { el.style.opacity = "0"; setTimeout(function () { el.remove(); }, 500); }, 2200);
+  }
+  function rankSlot(i, list) {
+    var gp = list && list[i];
+    var s = 0;
+    if (gp && gp.mapping === "standard") s += 4;
+    if (gp && String(gp.id || "").toLowerCase().indexOf("xinput") >= 0) s += 2;
+    return s;
+  }
+  function mergeSlots(a, b, list) {
+    var ra = rootOf(a), rb = rootOf(b);
+    if (ra === rb) return;
+    var keep, drop;
+    var pa = !!slotProven[ra], pb = !!slotProven[rb];
+    if (pa !== pb) keep = pa ? ra : rb;              /* the already-counted one keeps its seat */
+    else {
+      var ta = lastPressT[ra], tb = lastPressT[rb];
+      if (ta != null && tb != null && Math.abs(ta - tb) > 8) keep = ta < tb ? ra : rb; /* earlier presser = real */
+      else {
+        var ka = rankSlot(ra, list), kb = rankSlot(rb, list);
+        keep = ka !== kb ? (ka > kb ? ra : rb) : (ra < rb ? ra : rb);
+      }
+    }
+    drop = keep === ra ? rb : ra;
+    var wasCounted = !!slotProven[drop];
+    pressAlias[drop] = keep;
+    for (var k = 0; k < MAXP; k++) if (pressAlias[k] === drop) pressAlias[k] = keep;
+    delete pairCoin[pairKey(a, b)];
+    slotProven[drop] = false;
+    slotSolo[drop] = false;
+    slotAlias[drop] = keep;
+    frameSlot[drop] = { token: -1, snap: null };
+    uniqCache = null;
+    /* Always tell the game (it may hold a seat on the alias even if the echo
+       filter had already stopped counting it); toast when a seat/pad merged. */
+    var detail = { alias: drop, root: keep, handled: false };
+    try {
+      if (typeof CustomEvent === "function" && typeof window !== "undefined" && window.dispatchEvent) {
+        window.dispatchEvent(new CustomEvent("similarize-gamepad-merge", { detail: detail }));
+      }
+    } catch (e) { /* ignore */ }
+    for (var m = 0; m < mergeListeners.length; m++) {
+      try { if (mergeListeners[m](detail) === true) detail.handled = true; } catch (e2) { /* ignore */ }
+    }
+    if (wasCounted || detail.handled) toast("Merged duplicate controller");
+  }
+  /* Runs once per frame token, before any snapshot or seat list of that frame. */
+  function scanPresses() {
+    if (pressScanToken === frameToken) return;
+    pressScanToken = frameToken;
+    var list = pads();
+    var now = nowMs();
+    var i, j, gp, id, k;
+    var live = [];
+    var liveSet = Object.create(null);
+    var seenIdx = Object.create(null);
+    var hasStd = false;
+    for (i = 0; i < MAXP; i++) {
+      gp = list && list[i];
+      if (!gp || gp.connected === false) {
+        if (pressId[i] !== "" && pressId[i] != null) resetPress(i);
+        else ignoredSlot[i] = false;
+        continue;
+      }
+      var px = typeof gp.index === "number" && isFinite(gp.index) && gp.index >= 0 ? gp.index | 0 : i;
+      if (seenIdx[px]) continue;
+      seenIdx[px] = true;
+      id = "#" + String(gp.id || "") + "/" + String(gp.mapping || "");
+      if (pressId[i] !== id) { resetPress(i); pressId[i] = id; }
+      live.push(i);
+      liveSet[i] = true;
+      if (gp.mapping === "standard") hasStd = true;
+    }
+    /* drop aliases whose representative vanished */
+    for (i = 0; i < MAXP; i++) if (isAliasSlot(i) && !liveSet[pressAlias[i]]) pressAlias[i] = -1;
+    var elig = [];
+    for (i = 0; i < live.length; i++) {
+      j = live[i];
+      ignoredSlot[j] = !!(hasStd && list[j].mapping !== "standard");
+      if (ignoredSlot[j]) {
+        if (slotProven[j]) uniqCache = null;
+        pressAlias[j] = -1;
+        continue;
+      }
+      elig.push(j);
+    }
+    /* 1) every eligible entry's press transitions first */
+    var hit = Object.create(null), hitA = Object.create(null);
+    for (i = 0; i < elig.length; i++) {
+      j = elig[i];
+      gp = list[j];
+      var bt = gp.buttons || [];
+      var cur = [];
+      for (k = 0; k < bt.length; k++) {
+        var b = bt[k];
+        cur.push(!!b && !!(b.pressed || (typeof b.value === "number" && b.value > 0.5)));
+      }
+      var pv = rawPrevBtn[j];
+      rawPrevBtn[j] = cur;
+      if (!pv) continue; /* first sight: no edges */
+      var n = cur.length < pv.length ? cur.length : pv.length;
+      var t = false, a = false, dig = false;
+      for (k = 0; k < n; k++) {
+        if (cur[k] && !pv[k]) {
+          t = true;
+          if (k === 0) a = true;
+          if (k !== 6 && k !== 7) dig = true;
+        }
+      }
+      if (!t) continue;
+      hit[j] = true;
+      lastPressT[j] = now;
+      if (a) { lastAT[j] = now; hitA[j] = true; }
+      (pressAll[j] = pressAll[j] || []).push(now);
+      if (dig) (pressPend[j] = pressPend[j] || []).push(now);
+    }
+    /* 2) coincidences → alias */
+    for (i = 0; i < elig.length; i++) {
+      for (j = i + 1; j < elig.length; j++) {
+        var x = elig[i], y = elig[j];
+        if (!hit[x] && !hit[y]) continue;
+        if (rootOf(x) === rootOf(y)) continue;
+        var key = pairKey(x, y);
+        if (pairDistinct[key]) continue;
+        var tx = lastPressT[x], ty = lastPressT[y];
+        if (tx == null || ty == null) continue;
+        var joinA = (hitA[x] || hitA[y]) && lastAT[x] != null && lastAT[y] != null &&
+          Math.abs(lastAT[x] - lastAT[y]) <= JOIN_MS && now - lastAT[x] <= JOIN_MS && now - lastAT[y] <= JOIN_MS &&
+          (!slotProven[rootOf(x)] || !slotProven[rootOf(y)]);
+        if (Math.abs(tx - ty) > COIN_MS && !joinA) continue;
+        var c = pairCoin[key] || (pairCoin[key] = { n: 0, last: -1e9 });
+        if (now - c.last > COIN_MS) { c.n++; c.last = now; }
+        if (c.n >= 2 || joinA) mergeSlots(x, y, list);
+      }
+    }
+    /* 3) solo presses (evaluated once the partner window has passed) */
+    for (i = 0; i < elig.length; i++) {
+      x = elig[i];
+      var pend = pressPend[x] || [];
+      var keepPend = [];
+      for (k = 0; k < pend.length; k++) {
+        var pt = pend[k];
+        if (now - pt <= SOLO_MS + 10) { keepPend.push(pt); continue; }
+        for (j = 0; j < elig.length; j++) {
+          y = elig[j];
+          if (y === x || pressedNear(y, pt, SOLO_MS)) continue;
+          var sk = x + ">" + y;
+          pairSolo[sk] = (pairSolo[sk] || 0) + 1;
+          var ck = pairKey(x, y);
+          if (pairCoin[ck]) pairCoin[ck].n = 0;
+          if (pairSolo[y + ">" + x] >= 1) pairDistinct[ck] = true;
+          if (isAliasSlot(x) && rootOf(x) === rootOf(y) && pairSolo[sk] >= 2) {
+            /* alias keeps pressing on its own: two real pads, undo the merge */
+            pressAlias[x] = -1;
+            pairSolo[sk] = 0;
+            uniqCache = null;
+          }
+        }
+      }
+      pressPend[x] = keepPend;
+      var all = pressAll[x] || [];
+      while (all.length && now - all[0] > 1500) all.shift();
+    }
+    for (i = 0; i < elig.length; i++) {
+      x = elig[i];
+      if (pressAlias[x] >= 0) slotAlias[x] = rootOf(x);
+    }
+  }
+  function emptySnap(idx) {
+    return snap(null, idx);
+  }
   function pollPad(i) {
     var idx = i | 0;
     if (idx < 0) idx = 0;
@@ -140,11 +389,18 @@
     while (last.length <= idx) last.push(null);
     while (frameSlot.length <= idx) frameSlot.push({ token: -1, snap: null });
     scheduleFrameBump();
+    scanPresses();
     var slot = frameSlot[idx];
     if (slot.token === frameToken && slot.snap) return slot.snap;
-    var list = pads();
-    var gp = list && list[idx];
-    var out = snap(gp || null, idx);
+    var out;
+    if (idx < MAXP && isDeadSlot(idx)) {
+      /* padmerge1: ignored non-standard twin / pressed-in-lockstep alias never drives anything */
+      out = emptySnap(idx);
+    } else {
+      var list = pads();
+      var gp = list && list[idx];
+      out = snap(gp || null, idx);
+    }
     slot.token = frameToken;
     slot.snap = out;
     return out;
@@ -241,11 +497,14 @@
     return s * 10 - item.slot;
   }
 
+  var uniqCache = null; /* { token, n, out } — one decision per frame token */
   function uniqueConnectedIndices(max) {
     var n = typeof max === "number" ? max : 4;
     if (n < 1) n = 1;
     if (n > 8) n = 8;
     scheduleFrameBump();
+    scanPresses();
+    if (uniqCache && uniqCache.token === frameToken && uniqCache.n === n) return uniqCache.out.slice();
     var serial = frameToken;
     var list = pads();
     var live = [];
@@ -269,6 +528,19 @@
         slotId[i] = id;
       }
       vec = controlVector(gp);
+      if (ignoredSlot[i]) {
+        /* padmerge1: a standard pad exists — non-standard entries never seat */
+        clearSlot(i);
+        slotId[i] = id;
+        continue;
+      }
+      if (isAliasSlot(i)) {
+        slotProven[i] = false;
+        slotSolo[i] = false;
+        slotAlias[i] = rootOf(i);
+        slotPrev[i] = vec;
+        continue;
+      }
       prev = slotPrev[i];
       dkey = prev ? deltaKey(prev, vec) : "";
       live.push({
@@ -297,6 +569,8 @@
         o = live[j];
         if (o.slot === it.slot) continue;
         if (rankOf(o) <= r) continue;
+        /* padmerge1: both have pressed alone before — two real pads, never an echo */
+        if (pairDistinct[pairKey(it.slot, o.slot)]) continue;
         match = false;
         if (it.active && o.active && it.delta && o.delta && it.delta === o.delta) {
           /* Same-frame lockstep. Shared release-to-idle from DIFFERENT poses
@@ -348,6 +622,7 @@
       if (slotProven[live[i].slot]) out.push(live[i].slot);
     }
     out.sort(function (a, b) { return a - b; });
+    uniqCache = { token: frameToken, n: n, out: out.slice() };
     return out;
   }
 
@@ -355,6 +630,7 @@
     var n = typeof max === "number" ? max : 4;
     if (n < 1) n = 1;
     if (n > 8) n = 8;
+    scanPresses();
     var list = pads();
     var out = [];
     var seenIndex = Object.create(null);
@@ -365,6 +641,7 @@
       px = typeof gp.index === "number" && isFinite(gp.index) && gp.index >= 0 ? gp.index | 0 : i;
       if (seenIndex[px]) continue;
       seenIndex[px] = true;
+      if (isDeadSlot(i)) continue; /* padmerge1: ignored twin / alias */
       out.push(i);
     }
     return out;
@@ -384,6 +661,30 @@
     var alias = slotAlias[want];
     if (typeof alias === "number" && alias >= 0 && xs.indexOf(alias) >= 0) return alias;
     return -1;
+  }
+  /** 1-based label number from the deduped list ("Pad 1".."Pad N"). */
+  function padNumber(slot, max) {
+    var want = slot | 0;
+    var xs = uniqueConnectedIndices(max);
+    var c = xs.indexOf(want);
+    if (c < 0 && isAliasSlot(want)) c = xs.indexOf(rootOf(want));
+    return c >= 0 ? c + 1 : want + 1;
+  }
+  function debug() {
+    var list = pads();
+    var xs = uniqueConnectedIndices(MAXP);
+    var out = [];
+    for (var i = 0; i < MAXP; i++) {
+      var gp = list && list[i];
+      if (!gp) continue;
+      var st = xs.indexOf(i) >= 0 ? "kept" : ignoredSlot[i] ? "ignored (non-standard)" :
+        isAliasSlot(i) ? "alias→#" + rootOf(i) : "unproven";
+      out.push("#" + i + " " + (gp.mapping || "(none)") + " " + st + " · " + String(gp.id || ""));
+    }
+    return out;
+  }
+  function onMerge(fn) {
+    if (typeof fn === "function") mergeListeners.push(fn);
   }
   function cached(i) {
     var idx = i | 0;
@@ -427,6 +728,9 @@
     pluggedIndices: pluggedIndices,
     connectedCount: connectedCount,
     canonicalIndex: canonicalIndex,
+    padNumber: padNumber,
+    debug: debug,
+    onMerge: onMerge,
     pressed: pressed,
     justPressed: justPressed,
     DEADZONE: DZ
