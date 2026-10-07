@@ -46,6 +46,12 @@
       .x-sub { font-size: clamp(15px, 2vw, 19px); margin: 0 0 24px; opacity: .95; }
       .x-btn { font: 600 clamp(20px, 3vw, 28px)/1 var(--sans); color: #0d3b2a; background: #8ef36a; border: 0; border-radius: var(--r-pill); padding: 18px 54px; min-height: var(--tap); cursor: pointer; box-shadow: 0 6px 0 #3d9a2a; margin: 6px; }
       .x-btn--ghost { background: rgba(255,255,255,.9); box-shadow: 0 6px 0 rgba(0,0,0,.2); font-size: 18px; padding: 14px 30px; }
+      .x-pick { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; margin: 0 0 8px; }
+      .x-pick .x-btn { padding: 10px 20px; opacity: .7; }
+      .x-pick .x-btn.is-sel { opacity: 1; background: #8ef36a; box-shadow: 0 6px 0 #3d9a2a, 0 0 0 3px #fff; }
+      .x-pickst { margin: 4px 0 8px; font-size: 16px; }
+      .x-pickst.is-bump { animation: x-bump .3s var(--ease-out); }
+      @keyframes x-bump { 50% { transform: scale(1.08); } }
       .x-btn:active { transform: translateY(3px); box-shadow: 0 3px 0 #3d9a2a; }
       .x-help { margin-top: 26px; font-size: 14px; line-height: 1.6; opacity: .92; }
       .x-help b { font-weight: 600; }
@@ -110,6 +116,12 @@
           <div class="x-panel">
             <h1 class="x-title x-shadow">Froggy <em>Hop</em><br />Racing</h1>
             <p class="x-sub x-shadow">Six frogs. Three laps. One tropical beach.</p>
+            <div class="x-pick" id="x-pick" role="group" aria-label="Choose your animal">
+              <button class="x-btn x-btn--ghost is-sel" data-kind="frog" aria-pressed="true">🐸 Frog</button>
+              <button class="x-btn x-btn--ghost" data-kind="cat" aria-pressed="false">🐱 Cat</button>
+              <button class="x-btn x-btn--ghost" data-kind="dog" aria-pressed="false">🐶 Dog</button>
+            </div>
+            <p class="x-sub x-shadow x-pickst" id="x-pickst" aria-live="polite">You race as 🐸 Frog</p>
             <button class="x-btn" id="b-play">Play</button>
             <p class="x-sub" id="x-msg" role="alert" hidden></p>
             <div class="x-help x-shadow">
@@ -156,6 +168,14 @@
         if (this.on) try { this.on(this.muted); } catch (e) {}
       } };
       document.getElementById("b-mute").addEventListener("click", function (e) { e.stopPropagation(); xMute.toggle(); this.blur(); });
+      window.xKind = "frog";
+      document.querySelectorAll("#x-pick [data-kind]").forEach(function (b) {
+        b.addEventListener("click", function (e) {
+          e.stopPropagation(); window.xKind = b.dataset.kind;
+          document.querySelectorAll("#x-pick [data-kind]").forEach(function (o) { o.classList.toggle("is-sel", o === b); o.setAttribute("aria-pressed", o === b); });
+          var st = document.getElementById("x-pickst"); st.textContent = "You race as " + b.textContent; st.classList.remove("is-bump"); void st.offsetWidth; st.classList.add("is-bump");
+        });
+      });
     </script>
     <script src="https://unpkg.com/three@0.149.0/build/three.min.js"></script>
     <script>
@@ -379,31 +399,94 @@ const footGeo = new THREE.BoxGeometry(0.6, 0.12, 0.7); footGeo.translate(0, 0, -
 const armGeo = new THREE.CylinderGeometry(0.12, 0.14, 0.7, 5);
 const shieldMat = new THREE.MeshPhongMaterial({ color: 0x9fe8ff, transparent: true, opacity: 0.35, shininess: 120, specular: 0xffffff, depthWrite: false });
 const flyGeo = new THREE.SphereGeometry(0.1, 4, 3);
+/* ---------- cute animals ---------- */
+const ANIMALS = { frog: ["🐸", "Frog"], cat: ["🐱", "Cat"], dog: ["🐶", "Dog"] }, KINDS = Object.keys(ANIMALS);
+const NAMES = ["James", "Jimmy", "Bubbles", "Rexy", "Pip", "Coco"];
+const kindNow = () => window.xKind || "frog";
+const SG = new THREE.SphereGeometry(1, 28, 20), earGeo = new THREE.ConeGeometry(1, 1, 24), whiskGeo = new THREE.BoxGeometry(0.42, 0.015, 0.015);
+const smileGeo = new THREE.TorusGeometry(1, 0.22, 8, 20, Math.PI);
+const std = (c, r) => new THREE.MeshStandardMaterial({ color: c, roughness: r == null ? 0.55 : r, flatShading: false });
+const M = { white: std(0xffffff, 0.15), pupil: std(0x111111, 0.12), shine: new THREE.MeshBasicMaterial({ color: 0xffffff }), blush: std(0xff8fb0), pink: std(0xff7fa8), dark: std(0x2a1a1a, 0.4) };
+function sp(par, mat, x, y, z, sx, sy, sz, name, geo) {
+  const m = new THREE.Mesh(geo || SG, mat); m.position.set(x, y, z); m.scale.set(sx, sy == null ? sx : sy, sz == null ? sx : sz);
+  m.castShadow = true; if (name) m.name = name; par.add(m); return m;
+}
+function face(g, ex, ey, ez, er, cy, cz, cx, sy, sz, sr) {
+  [1, -1].forEach((s) => {
+    sp(g, M.white, s * ex, ey, ez, er, er, er * 0.85, "eye");
+    sp(g, M.pupil, s * ex, ey - er * 0.05, ez + er * 0.38, er * 0.7, er * 0.74, er * 0.5);
+    sp(g, M.shine, s * ex + er * 0.25, ey + er * 0.3, ez + er * 0.66, er * 0.2);
+    sp(g, M.blush, s * cx, cy, cz, 0.13, 0.08, 0.04, "cheek");
+  });
+  const sm = sp(g, M.dark, 0, sy, sz, sr, sr, sr, "smile", smileGeo); sm.rotation.z = Math.PI; sm.castShadow = false;
+}
+function quadLegs(g, mat, legs) {
+  [[1, 0.35], [-1, 0.35], [1, -0.35], [-1, -0.35]].forEach(([s, z]) => {
+    const hip = new THREE.Group(); hip.position.set(s * 0.3, 0.4, z); hip.name = "leg";
+    sp(hip, mat, 0, -0.2, 0, 0.17, 0.24, 0.17); const knee = new THREE.Group(); hip.add(knee); g.add(hip); legs.push({ hip, knee });
+  });
+}
+function makeAnimal(kind, color) {
+  const g = new THREE.Group(), mat = std(color), light = std(new THREE.Color(color).lerp(new THREE.Color(0xfffff0), 0.55)), legs = [];
+  g.name = kind;
+  if (kind === "frog") {
+    sp(g, mat, 0, 0.7, 0, 0.95, 0.7, 1.05, "body"); sp(g, light, 0, 0.62, 0.24, 0.78, 0.55, 0.85, "belly");
+    const head = sp(g, mat, 0, 1.15, 0.45, 0.9, 0.65, 0.8, "head");
+    [1, -1].forEach((s) => { sp(g, mat, s * 0.42, 1.6, 0.5, 0.34); sp(g, mat, s * 0.5, 0.22, 0.85, 0.2, 0.12, 0.27, "arm"); });
+    face(g, 0.42, 1.68, 0.66, 0.28, 1.05, 1.03, 0.56, 1.0, 1.21, 0.12);
+    [1, -1].forEach((s) => {
+      const hip = new THREE.Group(); hip.position.set(s * 0.7, 0.45, -0.4); hip.name = "leg";
+      sp(hip, mat, 0, 0, -0.4, 0.28, 0.28, 0.5); const knee = new THREE.Group(); knee.position.z = -0.8; hip.add(knee);
+      sp(knee, mat, 0, 0, -0.2, 0.3, 0.08, 0.38); g.add(hip); legs.push({ hip, knee });
+    });
+  } else {
+    sp(g, mat, 0, 0.68, -0.05, 0.6, 0.52, 0.75, "body"); sp(g, light, 0, 0.62, 0.25, 0.42, 0.38, 0.45, "belly");
+    sp(g, mat, 0, 1.45, 0.35, 0.72, 0.65, 0.66, "head"); quadLegs(g, mat, legs);
+    const tail = new THREE.Group(); tail.name = "tail"; g.add(tail);
+    const ears = new THREE.Group(); ears.name = "ears"; g.add(ears);
+    if (kind === "cat") {
+      face(g, 0.27, 1.52, 0.84, 0.2, 1.28, 0.88, 0.42, 1.22, 0.98, 0.07);
+      [1, -1].forEach((s) => {
+        const e = sp(ears, mat, s * 0.38, 2.02, 0.3, 0.22, 0.45, 0.22, null, earGeo); e.rotation.z = -s * 0.3;
+        const ei = sp(ears, M.pink, s * 0.37, 1.99, 0.39, 0.13, 0.28, 0.06, null, earGeo); ei.rotation.z = -s * 0.3;
+        [0.12, -0.1].forEach((r, k) => { const w = sp(g, M.dark, s * 0.5, 1.31 - k * 0.07, 0.86, 1, 1, 1, "whisker", whiskGeo); w.rotation.z = s * r; w.castShadow = false; });
+      });
+      sp(g, M.pink, 0, 1.33, 1.0, 0.06, 0.045, 0.045, "nose");
+      [[0.75, -0.72], [0.95, -0.86], [1.15, -0.9], [1.33, -0.82]].forEach(([y, z]) => sp(tail, mat, 0, y, z, 0.11));
+    } else {
+      sp(g, light, 0, 1.28, 0.92, 0.3, 0.22, 0.22, "snout");
+      face(g, 0.28, 1.6, 0.82, 0.2, 1.3, 0.86, 0.46, 1.16, 1.1, 0.07);
+      sp(g, M.pupil, 0, 1.36, 1.12, 0.09, 0.07, 0.07, "nose"); sp(g, M.pink, 0, 1.06, 1.04, 0.08, 0.1, 0.05, "tongue");
+      const dk = std(new THREE.Color(color).multiplyScalar(0.6));
+      [1, -1].forEach((s) => { const e = sp(ears, dk, s * 0.66, 1.42, 0.3, 0.2, 0.4, 0.1); e.rotation.z = s * 0.3; });
+      const t = sp(tail, mat, 0, 0.9, -0.78, 0.1, 0.1, 0.26); t.rotation.x = -0.7;
+    }
+  }
+  g.userData.legs = legs;
+  return g;
+}
+function setAnimal(o, kind) {
+  if (o.rig) o.root.remove(o.rig);
+  o.rigs = o.rigs || {}; o.kind = kind;
+  o.rig = o.rigs[kind] || (o.rigs[kind] = makeAnimal(kind, o.def.c)); o.legs = o.rig.userData.legs; o.root.add(o.rig);
+}
+function setTag(o, name) {
+  const c = o.tagCv, x = c.getContext("2d"); x.clearRect(0, 0, c.width, c.height);
+  x.font = "bold 44px Geist, system-ui, sans-serif"; x.textAlign = "center"; x.textBaseline = "middle"; x.lineJoin = "round";
+  x.lineWidth = 10; x.strokeStyle = "rgba(10,20,30,.9)"; x.strokeText(name, 128, 34); x.fillStyle = "#fff"; x.fillText(name, 128, 34);
+  o.tag.material.map.needsUpdate = true;
+}
 function makeFrog(def) {
-  const mat = new THREE.MeshLambertMaterial({ color: def.c, flatShading: true });
-  const belly = new THREE.MeshLambertMaterial({ color: new THREE.Color(def.c).lerp(new THREE.Color(0xffffee), 0.55), flatShading: true });
-  const root = new THREE.Group(), rig = new THREE.Group(); root.add(rig);
-  const body = new THREE.Mesh(bodyGeo, mat); body.scale.set(1, 0.68, 1.25); body.position.y = 0.75; body.castShadow = true; rig.add(body);
-  const bel = new THREE.Mesh(bodyGeo, belly); bel.scale.set(0.82, 0.5, 1.05); bel.position.set(0, 0.6, 0.15); rig.add(bel);
-  [1, -1].forEach((s) => {
-    const e = new THREE.Mesh(eyeGeo, eyeW); e.position.set(s * 0.45, 1.35, 0.7); e.castShadow = true; rig.add(e);
-    const lid = new THREE.Mesh(eyeGeo, mat); lid.scale.set(1.08, 0.55, 1.08); lid.position.set(s * 0.45, 1.5, 0.66); rig.add(lid);
-    const p = new THREE.Mesh(pupGeo, eyeB); p.position.set(s * 0.47, 1.36, 1.0); rig.add(p);
-    const arm = new THREE.Mesh(armGeo, mat); arm.position.set(s * 0.6, 0.35, 0.8); arm.rotation.x = 0.3; rig.add(arm);
-  });
-  const legs = [];
-  [1, -1].forEach((s) => {
-    const hip = new THREE.Group(); hip.position.set(s * 0.75, 0.55, -0.55);
-    const th = new THREE.Mesh(thighGeo, mat); th.castShadow = true; hip.add(th);
-    const knee = new THREE.Group(); knee.position.z = -0.95; hip.add(knee);
-    const ft = new THREE.Mesh(footGeo, mat); knee.add(ft); rig.add(hip); legs.push({ hip, knee });
-  });
+  const root = new THREE.Group();
+  const tagCv = document.createElement("canvas"); tagCv.width = 256; tagCv.height = 68;
+  const tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(tagCv), depthTest: true, transparent: true }));
+  tag.scale.set(3.6, 0.95, 1); tag.position.y = 3.0; tag.renderOrder = 2; root.add(tag);
   const shield = new THREE.Mesh(new THREE.SphereGeometry(1.9, 16, 10), shieldMat); shield.position.y = 0.9; shield.visible = false; root.add(shield);
   const swarm = new THREE.Group(); swarm.position.y = 1;
   for (let k = 0; k < 10; k++) { const f = new THREE.Mesh(flyGeo, eyeB); f.position.set(Math.cos(k) * 1.6, rnd(-0.4, 0.7), Math.sin(k) * 1.6 - 0.6); swarm.add(f); }
   swarm.visible = false; root.add(swarm);
   root.scale.setScalar(0.9); scene.add(root);
-  return { root, rig, legs, shield, swarm };
+  return { root, shield, swarm, tag, tagCv };
 }
 const tongueGeo = new THREE.CylinderGeometry(0.16, 0.16, 1, 8); tongueGeo.rotateX(Math.PI / 2); tongueGeo.translate(0, 0, 0.5);
 const tongueMat = new THREE.MeshBasicMaterial({ color: 0xff5f95 });
@@ -480,10 +563,10 @@ const SFX = {
 const near = (f) => players.some(({ frog: p }) => f === p || (f.x - p.x) ** 2 + (f.z - p.z) ** 2 < 1600);
 const humanOf = (f) => players.find((p) => p.frog === f);
 const hexC = (c) => "#" + FROGS[c].c.toString(16).padStart(6, "0");
-const nm = (o) => o.def.name.replace(" (you)", "") + (players.length === 1 && humanOf(o) ? " (you)" : "");
+const nm = (o) => (o.name || o.def.name.replace(" (you)", "")) + (players.length === 1 && humanOf(o) ? " (you)" : "");
 addEventListener("pointerdown", auInit, true);
 
-const frogs = FROGS.map((d, i) => Object.assign({ id: i, def: d, ai: i !== 0, tg: makeTongue() }, makeFrog(d)));
+const frogs = FROGS.map((d, i) => { const o = Object.assign({ id: i, def: d, ai: i !== 0, tg: makeTongue() }, makeFrog(d)); setAnimal(o, "frog"); o.name = NAMES[i]; setTag(o, o.name); return o; });
 const cams = [camera, 1, 2, 3].map((c) => (c === camera ? c : new THREE.PerspectiveCamera(68, 1, 0.5, 2500)));
 const players = [{ frog: frogs[0], camH: 0, cam: camera, pad: null, kb: true, tag: "P1" }];
 const kbPl = () => players.find((p) => p.kb) || (players.length === 1 ? players[0] : null);
@@ -801,13 +884,15 @@ const padLabel = (i) => "Pad " + (padList.findIndex((p) => p.index === i) + 1);
 function join(src) {
   if (seats.length >= 4) return;
   let c = 0; while (seats.some((s) => s.col === c)) c++;
-  seats.push({ src, col: c });
+  seats.push({ src, col: c, kind: src === "kb" ? kindNow() : "frog" });
 }
+const cycleKind = (s, d) => (s.kind = KINDS[(KINDS.indexOf(s.kind || "frog") + d + KINDS.length) % KINDS.length]);
+
 function cycle(s, d) { for (let k = 1; k < 6; k++) { const c = (s.col + d * k + 6) % 6; if (!seats.some((x) => x.col === c)) { s.col = c; return; } } }
 function drawLobby() {
   $("l-slots").innerHTML = [0, 1, 2, 3].map((k) => {
     const s = seats[k]; if (!s) return `<div class="x-slot"><b>P${k + 1}</b><span>Press A to join</span></div>`;
-    return `<div class="x-slot is-on" style="border-color:${hexC(s.col)}"><i class="x-tag" style="background:${hexC(s.col)}">P${k + 1}</i><b>${FROGS[s.col].name.replace(" (you)", "")}</b><span>${s.src === "kb" ? "Keyboard / touch" : padLabel(s.src)}</span></div>`;
+    return `<div class="x-slot is-on" style="border-color:${hexC(s.col)}"><i class="x-tag" style="background:${hexC(s.col)}">P${k + 1}</i><b>${ANIMALS[s.kind || "frog"].join(" ")}</b><span>${s.src === "kb" ? "Keyboard / touch" : padLabel(s.src) + " · ↑↓ / Y animal"}</span></div>`;
   }).join("");
   $("b-join").textContent = seats.some((s) => s.src === "kb") ? "Leave" : "Join";
   $("b-go").textContent = seats.length ? "Start race" : "Start solo";
@@ -815,9 +900,14 @@ function drawLobby() {
 function openLobby() { state = "lobby"; seats = []; $("s-start").classList.remove("is-on"); $("s-lobby").classList.add("is-on"); drawLobby(); }
 function onPlay() { auInit(); if (padList.length) openLobby(); else { seats = []; startRace(); } }
 function startRace() {
-  if (!seats.length) seats = [{ src: "kb", col: 0 }];
+  if (!seats.length) seats = [{ src: "kb", col: 0, kind: kindNow() }];
   players.length = 0;
   seats.forEach((s, k) => players.push({ frog: frogs[s.col], camH: 0, cam: cams[k], pad: s.src === "kb" ? null : s.src, kb: s.src === "kb", tag: "P" + (k + 1) }));
+  seats.forEach((s) => setAnimal(frogs[s.col], s.kind || "frog"));
+  players.map((p) => p.frog).concat(frogs.filter((f) => !humanOf(f))).forEach((f, k) => {
+    if (!humanOf(f)) setAnimal(f, KINDS[Math.floor(Math.random() * KINDS.length)]);
+    f.name = NAMES[k]; setTag(f, f.name);
+  });
   const multi = players.length > 1;
   $("vhud").innerHTML = multi ? players.map((p, k) => `<div class="x-vp" id="vp${k}"><div class="x-pos x-shadow"><i class="x-tag" style="background:${hexC(p.frog.id)}">${p.tag}</i><b></b><span></span><span class="x-lap"></span></div><div class="x-item"><span></span></div></div>`).join("") : "";
   players.forEach((p, k) => { const e = $("vp" + k); if (e) p.ui = { el: e, b: e.querySelector("b"), of: e.querySelector(".x-pos span"), lap: e.querySelector(".x-lap"), ic: e.querySelector(".x-item span") }; });
@@ -835,6 +925,7 @@ function padActions() {
       const s = seats.find((x) => x.src === p.index), has = (b) => pr.includes(b);
       if (!s) { if (has(0)) { join(p.index); ch = true; } return; }
       if (has(14) || has(4)) cycle(s, -1); if (has(15) || has(5)) cycle(s, 1);
+      if (has(12) || has(3)) cycleKind(s, 1); if (has(13)) cycleKind(s, -1);
       if (has(1)) seats.splice(seats.indexOf(s), 1); else if (has(9)) go = true; ch = true;
     });
     if (ch) drawLobby(); if (go) startRace();
