@@ -2748,11 +2748,13 @@
        (including valleys below y=0) would be hidden by a solid plane. */
     var halfW = C.MAP_W * 0.01;
     var halfH = C.MAP_H * 0.01;
+    /* walkspin1: green floor covers perimeter forest (rings to ~1.82×) — trees were in blue void */
+    var floorPad = 2.05;
     var floorShape = new THREE.Shape();
-    floorShape.moveTo(-halfW, -halfH);
-    floorShape.lineTo(halfW, -halfH);
-    floorShape.lineTo(halfW, halfH);
-    floorShape.lineTo(-halfW, halfH);
+    floorShape.moveTo(-halfW * floorPad, -halfH * floorPad);
+    floorShape.lineTo(halfW * floorPad, -halfH * floorPad);
+    floorShape.lineTo(halfW * floorPad, halfH * floorPad);
+    floorShape.lineTo(-halfW * floorPad, halfH * floorPad);
     floorShape.closePath();
     var trackA = C.AREAS[1];
     function shapeX(wx) { return (wx - C.MAP_W * 0.5) * 0.02; }
@@ -2884,7 +2886,7 @@
     })();
 
     // Soft grid — lifted + no depth write (was z-fighting ground → floor shudder)
-    var grid = new THREE.GridHelper(Math.max(C.MAP_W, C.MAP_H) * 0.02, 30, 0x2f5e2a, 0x2f5e2a);
+    var grid = new THREE.GridHelper(Math.max(C.MAP_W, C.MAP_H) * 0.02 * 2.05, 36, 0x2f5e2a, 0x2f5e2a);
     grid.position.y = 0.14;
     if (Array.isArray(grid.material)) {
       for (var gi = 0; gi < grid.material.length; gi++) {
