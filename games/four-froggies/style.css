@@ -1603,15 +1603,16 @@ body.in-space .vjoy.vjoy-hint {
 .version-top h1{margin:0;font-size:clamp(28px,6vw,44px);letter-spacing:.03em;line-height:1}
 .version-kicker{margin:0 0 4px;color:#86efac;letter-spacing:.16em;font-size:12px;text-transform:uppercase}
 .version-lead{margin:6px 0 0;color:#d1fae5;font-size:14px}
-.version-grid{width:min(920px,100%);display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-.version-card{display:flex;flex-direction:column;gap:8px;margin:0;padding:8px;border-radius:16px;border:2px solid rgba(255,255,255,.28);background:rgba(0,0,0,.35);color:#fff;text-align:left;font:inherit;cursor:pointer;touch-action:manipulation}
-.version-card canvas{display:block;width:100%;height:132px;border-radius:10px;background:#052e16}
+/* lobbyui1: 2.5D+3D as a centered pair (not a 3-col hole) */
+.version-grid{width:min(640px,100%);margin-inline:auto;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;justify-content:center}
+.version-card{display:flex;flex-direction:column;gap:8px;margin:0;padding:10px;border-radius:16px;border:2px solid rgba(255,255,255,.28);background:rgba(0,0,0,.35);color:#fff;text-align:left;font:inherit;cursor:pointer;touch-action:manipulation;min-width:0}
+.version-card canvas,.version-card img.version-shot{display:block;width:100%;height:168px;object-fit:cover;object-position:center;border-radius:10px;background:#052e16}
 .version-card strong{font-size:16px}
 .version-card span{color:#bbf7d0;font-size:13px;line-height:1.3}
-.version-card:hover,.version-card:focus-visible{border-color:#86efac;outline:none}
+.version-card:hover,.version-card:focus-visible{border-color:#86efac;outline:none;box-shadow:0 0 0 1px rgba(134,239,172,.35)}
 .versions-back{border:2px solid rgba(255,255,255,.45);border-radius:999px;background:rgba(0,0,0,.35);color:#fff;font:700 13px "Segoe UI",system-ui,sans-serif;padding:8px 14px;margin:0 0 8px;cursor:pointer}
 .engine-pick[hidden]{display:none!important}
-@media (max-width:800px){.version-grid{grid-template-columns:1fr}.version-card canvas{height:120px}}
+@media (max-width:800px){.version-grid{grid-template-columns:1fr;width:min(420px,100%)}.version-card canvas,.version-card img.version-shot{height:140px}}
 
 /* onelobby3 pads */
 #pad-dock{width:min(920px,100%);display:flex;flex-direction:column;gap:8px}
@@ -1623,7 +1624,7 @@ body.in-space .vjoy.vjoy-hint {
 #pad-you[data-pad="1"]{background:#fb923c;color:#1c1917}
 #pad-you[data-pad="2"]{background:#60a5fa;color:#0f172a}
 #pad-you[data-pad="3"]{background:#c084fc;color:#1e1b4b}
-#pad-you.is-multi{background:#fef9c3;color:#1c1917}
+#pad-you.is-multi{background:#fef9c3;color:#1c1917;font-size:clamp(22px,4.5vw,42px);line-height:1.15;letter-spacing:.02em}
 #pad-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
 .pad-tile{border-radius:14px;border:2px solid rgba(255,255,255,.18);background:rgba(0,0,0,.4);padding:10px 8px;min-height:74px;color:#64748b}
 .pad-tile b{display:block;font-size:clamp(16px,2.4vw,22px);color:#e2e8f0}

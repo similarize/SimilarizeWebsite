@@ -1,10 +1,10 @@
 /* Four Froggies — onefrog1 entrance.
    One screen: claim James/Jimmy/Bubbles/Rexy + Host/Join + pick 2.5D/3D → play.
-   Flat 2D removed from picker (lobby253d1). Cache: 20261006-lobby253d1 */
+   Flat 2D removed from picker (lobby253d1). Cache: 20261006-padheads1 */
 (function () {
   "use strict";
 
-  var CACHE = "20261006-lobby253d1";
+  var CACHE = "20261006-padheads1";
   var FF3D_CACHE = "20261006-trackcam1";
   var FROG_ORDER = ["james", "jimmy", "bubbles", "rexy"];
   var FROG_NAME = { james: "James", jimmy: "Jimmy", bubbles: "Bubbles", rexy: "Rexy" };
@@ -248,7 +248,9 @@
       if (focusByFrog[fid].indexOf(pj + 1) < 0) focusByFrog[fid].push(pj + 1);
     }
 
-    var youFrog = null;
+    /* padheads1: collect EVERY local you-claim — heading must list all pads,
+       not only the first/latest frog that overwrote "You are …". */
+    var youClaims = [];
     for (var t = 0; t < tiles.length; t++) {
       var tile = tiles[t];
       var id = tile.getAttribute("data-id");
@@ -267,10 +269,10 @@
           tile.classList.add("seat-pad", "is-hot");
           tile.setAttribute("data-pad", String(pIdx + 1));
           if (em) em.textContent = "Pad " + (pIdx + 1) + " · " + fname;
-          if (!youFrog) youFrog = { frog: fname, pad: pIdx };
+          youClaims.push({ frog: fname, pad: pIdx });
         } else {
           if (em) em.textContent = seat.label || "You · " + fname;
-          if (!youFrog) youFrog = { frog: fname, pad: -1 };
+          youClaims.push({ frog: fname, pad: -1 });
         }
       } else if (status === "human") {
         tile.classList.add("is-on", "seat-human");
@@ -293,17 +295,35 @@
     }
 
     if (youEl) {
-      if (!youFrog) {
+      if (!youClaims.length) {
         youEl.hidden = true;
+        youEl.classList.remove("is-multi");
+        youEl.removeAttribute("data-pad");
       } else {
         youEl.hidden = false;
-        youEl.classList.remove("is-multi");
-        var msg = youFrog.pad >= 0
-          ? ("You are " + youFrog.frog + " · Pad " + (youFrog.pad + 1))
-          : ("You are " + youFrog.frog);
+        /* Pad order (0..3), then padless keyboard You last */
+        youClaims.sort(function (a, b) {
+          var ap = a.pad >= 0 ? a.pad : 99;
+          var bp = b.pad >= 0 ? b.pad : 99;
+          return ap - bp;
+        });
+        var msg;
+        if (youClaims.length === 1) {
+          youEl.classList.remove("is-multi");
+          var one = youClaims[0];
+          msg = one.pad >= 0
+            ? ("You are " + one.frog + " · Pad " + (one.pad + 1))
+            : ("You are " + one.frog);
+          if (one.pad >= 0) youEl.setAttribute("data-pad", String(one.pad));
+          else youEl.removeAttribute("data-pad");
+        } else {
+          youEl.classList.add("is-multi");
+          youEl.removeAttribute("data-pad");
+          msg = youClaims.map(function (c) {
+            return c.pad >= 0 ? ("Pad " + (c.pad + 1) + " " + c.frog) : c.frog;
+          }).join(" · ");
+        }
         if (youEl.textContent !== msg) youEl.textContent = msg;
-        if (youFrog.pad >= 0) youEl.setAttribute("data-pad", String(youFrog.pad));
-        else youEl.removeAttribute("data-pad");
       }
     }
   }

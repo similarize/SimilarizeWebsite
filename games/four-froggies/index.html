@@ -9,7 +9,7 @@
   <!-- Tesla Cybertruck chromeless FS — see games/shared/TESLA_FULLSCREEN.md -->
   <script src="../shared/tesla-fullscreen.js?v=tfs1"></script>
   <script src="../shared/viewport-fill.js?v=vfs1"></script>
-  <link rel="stylesheet" href="style.css?v=20261004-marsrover2">
+  <link rel="stylesheet" href="style.css?v=20261006-padheads1">
   <style>
     #pad-dock{width:min(920px,100%);display:flex;flex-direction:column;gap:8px}
     #pad-count{margin:0;font-weight:800;font-size:clamp(18px,3.2vw,28px);letter-spacing:.01em;color:#fff}
@@ -20,7 +20,7 @@
     #pad-you[data-pad="1"]{background:#fb923c;color:#1c1917}
     #pad-you[data-pad="2"]{background:#60a5fa;color:#0f172a}
     #pad-you[data-pad="3"]{background:#c084fc;color:#1e1b4b}
-    #pad-you.is-multi{background:#fef9c3;color:#1c1917}
+    #pad-you.is-multi{background:#fef9c3;color:#1c1917;font-size:clamp(22px,4.5vw,42px);line-height:1.15;letter-spacing:.02em}
     #pad-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
     .pad-tile{border-radius:14px;border:2px solid rgba(255,255,255,.18);background:rgba(0,0,0,.4);padding:10px 8px;min-height:74px;color:#64748b}
     .pad-tile b{display:block;font-size:clamp(16px,2.4vw,22px);color:#e2e8f0}
@@ -40,7 +40,7 @@
     .pad-tile[data-pad="3"].is-hot{background:#c084fc;border-color:#f3e8ff;color:#1e1b4b}
     @keyframes pad-pulse{50%{transform:scale(1.06)}}
     @media (max-width:640px){#pad-row{grid-template-columns:repeat(2,minmax(0,1fr))}}
-    .version-card img.version-shot{display:block;width:100%;height:148px;object-fit:cover;object-position:center;border-radius:10px;background:#052e16}
+    .version-card img.version-shot{display:block;width:100%;height:168px;object-fit:cover;object-position:center;border-radius:10px;background:#052e16}
     #lobby-badge{margin:0 0 8px;padding:6px 14px;border-radius:999px;font-weight:900;letter-spacing:.06em;font-size:clamp(18px,4vw,28px);line-height:1}
     #lobby-badge[hidden]{display:none!important}
     .lobby-still{display:block;width:min(100%,560px);height:148px;object-fit:cover;object-position:center;border-radius:14px;margin:0 0 8px}
@@ -99,6 +99,18 @@
         </button>
       </div>
     </div>
+    <div class="version-grid">
+      <button type="button" class="version-card" data-version="three">
+        <img class="version-shot" src="assets/play-25d.jpg?v=20261006-lobbyui1" alt="2.5D gameplay: fixed camera over the grid ranch, trees, and pond" width="960" height="540">
+        <strong>2.5D</strong>
+        <span>Fixed camera · start with current seats.</span>
+      </button>
+      <button type="button" class="version-card" data-version="3d">
+        <img class="version-shot" src="assets/play-3d.jpg?v=20261006-lobbyui1" alt="3D gameplay: Cybertruck at James's 6-bay garage" width="960" height="540">
+        <strong>3D</strong>
+        <span>Full 3D · hand off seats / room.</span>
+      </button>
+    </div>
     <p id="invite-cta" class="invite-cta entrance-party">Party: <strong>Host room</strong> → Copy invite / scan QR · friends <strong>Join</strong> · claim James / Jimmy / Bubbles / Rexy · Host picks a mode to start. Solo: claim a froggy and pick 2.5D / 3D (AI fills open seats).</p>
     <div id="party-bar" class="party-bar entrance-party">
       <button type="button" id="btn-host" class="party-btn">Host room</button>
@@ -110,18 +122,6 @@
     <img id="invite-qr" class="invite-qr" hidden alt="QR code to join this room" width="112" height="112">
     <p id="party-help" class="party-help entrance-party">Host = make room · Join = enter code or open invite link · one pad = one froggy</p>
     <p id="party-status" class="party-status entrance-party"></p>
-    <div class="version-grid">
-      <button type="button" class="version-card" data-version="three">
-        <img class="version-shot" src="assets/play-25d.jpg?v=20261001-kidfix1" alt="2.5D gameplay: fixed camera over the grid ranch, trees, and pond" width="960" height="540">
-        <strong>2.5D</strong>
-        <span>Fixed camera · start with current seats.</span>
-      </button>
-      <button type="button" class="version-card" data-version="3d">
-        <img class="version-shot" src="assets/play-3d.jpg?v=20261001-kidfix1" alt="3D gameplay: Cybertruck at James's garage" width="960" height="540">
-        <strong>3D</strong>
-        <span>Full 3D · hand off seats / room.</span>
-      </button>
-    </div>
   </div>
 
   <div id="hud">
@@ -264,7 +264,7 @@
   <script src="story.js?v=20261001-kidfix1"></script>
   <script src="space.js?v=20261004-marsrover2"></script>
   <script src="engine-boot.js?v=20261006-padbind1"></script>
-  <script src="version-lobby.js?v=20261006-trackcam1"></script>
+  <script src="version-lobby.js?v=20261006-padheads1"></script>
   <script src="main.js?v=20261006-padbind1"></script>
 </body>
 </html>
