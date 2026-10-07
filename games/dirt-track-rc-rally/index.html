@@ -63,6 +63,19 @@
         text-align: left; font: var(--type-label); }
       .x-slots li { border: 1px solid var(--stroke-secondary); border-radius: var(--r-s); padding: 8px 10px; color: var(--text-secondary); }
       .x-slots li.on { border-color: var(--stroke-primary); color: var(--text-primary); }
+      .x-slots li { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+      .x-slots li small { display: block; font: var(--type-caption); color: var(--text-secondary); }
+      .x-slots li.x-wide { grid-column: 1 / -1; }
+      .x-car { width: 36px; height: 20px; flex: none; }
+      .x-sw { display: flex; flex-wrap: wrap; gap: 4px; width: 100%; }
+      .x-sw button { width: var(--tap); height: var(--tap); padding: 0; border-radius: 50%; border: 2px solid transparent; cursor: pointer; }
+      .x-sw button[aria-pressed="true"] { border-color: var(--stroke-primary); box-shadow: inset 0 0 0 3px var(--fill-primary-on); }
+      .x-sw button:disabled { opacity: 0.25; cursor: default; }
+      .x-pads { list-style: none; padding: 0; margin: 0 0 8px; display: flex; flex-direction: column; gap: 4px; text-align: left; font: var(--type-label); }
+      .x-pads li { display: flex; align-items: center; gap: 8px; }
+      .x-pads:empty { display: none; }
+      .x-padico { width: 22px; height: 15px; flex: none; }
+      .x-panel .x-hint { font: var(--type-caption); margin: 0 0 16px; }
       .x-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; vertical-align: middle; }
       .x-btns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
       .x-panel ol li.x-me { font-weight: var(--weight-bold); }
@@ -102,7 +115,9 @@
         <h1>Dirt Track RC Rally</h1>
         <p>3 laps, 4 cars. Mud slows you, rocks bounce you, the ramp sends you flying.</p>
         <p><b>Local Race.</b> Join with A on a controller, Enter on the keyboard, or Join (touch). Empty slots race as AI.</p>
+        <ul class="x-pads" id="pads" aria-live="polite"></ul>
         <ul class="x-slots" id="slots"></ul>
+        <p class="x-hint">A join · ◀ ▶ colour · B leave · Start race</p>
         <div class="x-btns">
           <button class="btn" id="joinTouch">Join (touch)</button>
           <button class="btn" id="startBtn">Start Race</button>
@@ -355,11 +370,31 @@
       // Players: one entry per human. `src` names the input source in SOURCES (kbd, touch, pad, any);
       // an online player later is just another src (e.g. "net") with its own reader.
       const players = [];
-      const COLORS = [["Red", "#e0302f"], ["Blue", "#2f6fe0"], ["Yellow", "#f2c21b"], ["Green", "#2fa84f"]];
+      const PAL = [["Red", "#e0302f"], ["Blue", "#2f6fe0"], ["Yellow", "#f2c21b"], ["Green", "#2fa84f"],
+        ["Orange", "#f07f1a"], ["Purple", "#8a4fd8"], ["Cyan", "#1fc2d6"], ["Pink", "#f05aa8"]];
+      const COLORS = PAL.slice(0, 4); // the 4 slots' current colours, refreshed by syncColors()
+      // slot colours: humans keep their pick; AI slots (and players without one) take the first free colours
+      function slotColors() {
+        const used = new Set(players.map((p) => p.col).filter((c) => c != null)), out = [];
+        for (let i = 0; i < 4; i++) {
+          const p = players[i];
+          if (p && p.col != null) { out.push(p.col); continue; }
+          let c = 0; while (used.has(c)) c++;
+          used.add(c); out.push(c); if (p) p.col = c;
+        }
+        return out;
+      }
+      function syncColors() { slotColors().forEach((c, i) => (COLORS[i] = PAL[c])); }
+      function cycleCol(p, dir) {
+        const used = new Set(players.filter((q) => q !== p).map((q) => q.col));
+        let c = p.col;
+        for (let k = 0; k < 8; k++) { c = (c + dir + 8) % 8; if (!used.has(c)) break; }
+        p.col = c;
+      }
       const GRID = [[-130, 35], [-60, -35], [-60, 35], [-130, -35]], POW = [0.95, 0.9, 0.93, 0.96];
       const makePlayer = (src, id) => ({ src, id, car: null, cam: { x: 0, y: 0, z: 1 } });
       function reset() {
-        dust.length = 0;
+        dust.length = 0; syncColors();
         const solo = players.length === 1;
         cars = COLORS.map(([n, col], i) => {
           const p = players[i];
@@ -388,6 +423,8 @@
         ArrowUp: "gas", KeyW: "gas", ArrowDown: "brake", KeyS: "brake" };
       addEventListener("keydown", (e) => {
         if (KMAP[e.code]) { keys[KMAP[e.code]] = true; e.preventDefault(); }
+        if (!titleEl.hidden && !e.repeat && (KMAP[e.code] === "left" || KMAP[e.code] === "right")) action(KMAP[e.code] === "left" ? "prev" : "next", "kbd", 0);
+        if (e.code === "Escape" && !e.repeat) action("b", "kbd", 0);
         if (e.code === "KeyP" && !e.repeat) action("pause", "kbd", 0);
         if ((e.code === "Enter" || e.code === "NumpadEnter") && !e.repeat) { e.preventDefault(); action("enter", "kbd", 0); }
       });
@@ -502,19 +539,40 @@
       // ---------- lobby ----------
       const titleEl = document.getElementById("title"), finishEl = document.getElementById("finish");
       const slotsEl = document.getElementById("slots"), joinTouchBtn = document.getElementById("joinTouch");
-      const SRC_NAME = { kbd: "Keyboard", touch: "Touch", pad: "Controller", any: "Solo" };
+      const SRC_NAME = { kbd: "Keyboard", touch: "Touch", pad: "Pad", any: "Solo" };
+      const padsEl = document.getElementById("pads");
+      const carSvg = (col) => `<svg class="x-car" viewBox="0 0 44 24" aria-hidden="true"><g fill="#161616"><rect x="7" y="1" width="9" height="5" rx="1.5"/><rect x="28" y="1" width="9" height="5" rx="1.5"/><rect x="7" y="18" width="9" height="5" rx="1.5"/><rect x="28" y="18" width="9" height="5" rx="1.5"/></g><rect x="2" y="4" width="40" height="16" rx="5" fill="${col}"/><rect x="15" y="7" width="12" height="10" rx="2" fill="#2a3440"/></svg>`;
+      const PAD_ICO = `<svg class="x-padico" viewBox="0 0 24 16" aria-hidden="true"><path fill="currentColor" d="M6 1h12a5 5 0 0 1 5 4.6l.9 6.4a3 3 0 0 1-5.2 2.3L16 11.5H8l-2.7 2.8A3 3 0 0 1 .1 12L1 5.6A5 5 0 0 1 6 1z"/><path d="M5.5 5.5v4M3.5 7.5h4" stroke="var(--fill-primary-on)" stroke-width="1.5"/><circle cx="17" cy="6.3" r="1.2" fill="var(--fill-primary-on)"/><circle cx="19.2" cy="8.7" r="1.2" fill="var(--fill-primary-on)"/></svg>`;
+      const firstLocal = () => players.find((p) => p.src !== "net");
       function renderSlots() {
-        slotsEl.innerHTML = COLORS.map(([n, col], i) => {
-          const p = players[i], who = p ? SRC_NAME[p.src] + (p.src === "pad" ? ` ${p.id + 1}` : "") : "AI";
-          return `<li class="${p ? "on" : ""}"><span class="x-dot" style="background:${col}"></span>P${i + 1} ${n} · ${who}</li>`;
+        const sc = slotColors(); syncColors();
+        if (state === "title" && cars) cars.forEach((c, i) => (c.color = COLORS[i][1]));
+        const pads = padKept.filter((g) => !isJoined("pad", g.index));
+        padsEl.innerHTML = pads.map((g) => `<li>${PAD_ICO}${padName(g.index)} connected – press A to join</li>`).join("");
+        const used = new Set(players.map((p) => p.col));
+        slotsEl.innerHTML = sc.map((c, i) => {
+          const p = players[i], [n, col] = PAL[c];
+          const who = p ? (p.src === "pad" ? padName(p.id) : SRC_NAME[p.src]) + (p === firstLocal() ? " · Ready" : "") : "AI";
+          const sw = p && p.src === "touch" ? `<span class="x-sw" role="group" aria-label="Colour">${PAL.map(([pn, pc], k) =>
+            `<button type="button" data-col="${k}" style="background:${pc}" aria-label="${pn}" aria-pressed="${k === c}"${used.has(k) && k !== c ? " disabled" : ""}></button>`).join("")}</span>` : "";
+          return `<li class="${p ? "on" : ""}${sw ? " x-wide" : ""}">${carSvg(col)}<span>P${i + 1} ${n}<small>${who}</small></span>${sw}</li>`;
         }).join("");
-        joinTouchBtn.disabled = players.length >= 4 || players.some((p) => p.src === "touch");
+        const tj = isJoined("touch", 0);
+        joinTouchBtn.textContent = tj ? "Leave (touch)" : "Join (touch)";
+        joinTouchBtn.disabled = !tj && players.length >= 4;
       }
       const isJoined = (src, id) => players.some((p) => p.src === src && p.id === id);
       function join(src, id) {
         if (players.length >= 4 || isJoined(src, id) || (src === "touch" && players.some((p) => p.src === "touch"))) return;
-        players.push(makePlayer(src, id)); renderSlots();
+        const p = makePlayer(src, id); p.col = slotColors()[players.length];
+        players.push(p); renderSlots();
       }
+      function leaveSlot(p) { const i = players.indexOf(p); if (i >= 0) players.splice(i, 1); renderSlots(); }
+      slotsEl.addEventListener("click", (e) => {
+        const b = e.target.closest("button[data-col]"), p = players.find((q) => q.src === "touch");
+        if (!b || !p || b.disabled) return;
+        p.col = +b.dataset.col; renderSlots();
+      });
       function startRace() {
         if (!players.length) players.push(makePlayer("any", 0));
         titleEl.hidden = true;
@@ -530,11 +588,18 @@
       // one entry point for every player's buttons: enter / a / b / start / pause
       function action(btn, src, id) {
         if (!titleEl.hidden) {
-          const was = isJoined(src, id);
-          if (btn === "a" || btn === "enter" || btn === "start") join(src, id);
-          if ((btn === "start" || (btn === "enter" && was)) && isJoined(src, id)) startRace();
+          const me = () => players.find((q) => q.src === src && q.id === id), p = me();
+          if (btn === "pause") return;
+          if (src === "pad" && !padKept.some((g) => g.index === id)) return; // ghost/duplicate entries never act
+          if (btn === "b") { if (p) leaveSlot(p); return; }
+          if (btn === "prev" || btn === "next") { if (p) { cycleCol(p, btn === "next" ? 1 : -1); renderSlots(); } return; }
+          // never auto-join: a pad takes a slot only when it presses A
+          if (!p) { if (src === "pad" && btn !== "a") return; join(src, id); if (btn !== "start") return; }
+          // the first joined player starts with Start (or A again once Ready); Enter always starts once the keyboard has joined
+          if (me() && (me() === firstLocal() || btn === "enter")) startRace();
           return;
         }
+        if (btn === "prev" || btn === "next") return;
         if (state === "finish" && !finishEl.hidden) {
           if (btn === "b") toLobby(); else if (btn !== "pause") reset();
           return;
@@ -563,13 +628,80 @@
         toastEl.textContent = msg; toastEl.classList.add("on");
         clearTimeout(toastT); toastT = setTimeout(() => toastEl.classList.remove("on"), 2000);
       }
-      addEventListener("gamepadconnected", (e) => toast(`Controller connected`));
-      addEventListener("gamepaddisconnected", (e) => { toast("Controller disconnected"); delete padState[e.gamepad.index]; });
+      // Dedupe: browsers can list one physical pad twice (a 'standard' entry plus a raw one, or a stale
+      // entry at another index). padKept is the deduped list; slots bind to a kept raw index, labels use list order.
+      let padKept = [];
+      const padMirrorGhost = {}, padMirror = {};
+      const padSig = (g) => g.buttons.map((x) => (x.pressed ? "1" : "0") + (x.value || 0).toFixed(3)).join(",") + "|" + g.axes.map((v) => (v || 0).toFixed(3)).join(",");
+      const padActive = (g) => g.buttons.some((x) => x.pressed || x.value > 0.3) || g.axes.some((v) => Math.abs(v || 0) > 0.3);
+      const padNum = (i) => padKept.findIndex((g) => g.index === i) + 1;
+      const padName = (i) => { const n = padNum(i); return n ? `Pad ${n}` : "Pad (disconnected)"; };
+      const padGone = new Set(); // indexes reported disconnected that a browser may still list as stale entries
+      function padScan() {
+        const raw = [...(navigator.getGamepads ? navigator.getGamepads() : [])]
+          .filter((g) => g && g.connected !== false && !padGone.has(g.index)).sort((a, b) => a.index - b.index);
+        const live = new Set(raw.map((g) => g.index));
+        for (const k in padMirrorGhost) if (!live.has(+k) || !live.has(padMirrorGhost[k])) delete padMirrorGhost[k];
+        for (const k in padMirror) { const [a, b] = k.split("|").map(Number); if (!live.has(a) || !live.has(b)) delete padMirror[k]; }
+        // same gamepad.id listed twice: keep the 'standard' mapping (or the lowest index), the other is a ghost
+        const ghost = {}, byId = {};
+        for (const g of raw) (byId[g.id] = byId[g.id] || []).push(g);
+        for (const id in byId) {
+          const grp = byId[id];
+          if (grp.length < 2) continue;
+          const std = grp.filter((g) => g.mapping === "standard");
+          // mixed mappings = one device seen twice; identical twins (two real pads of one model) are left to the mirror test
+          if (std.length && std.length < grp.length) {
+            grp.filter((g) => g.mapping !== "standard").forEach((g, k) => (ghost[g.index] = std[Math.min(k, std.length - 1)].index));
+          }
+        }
+        for (const k in padMirrorGhost) if (ghost[k] == null) ghost[k] = padMirrorGhost[k];
+        let cand = raw.filter((g) => ghost[g.index] == null);
+        // two entries whose buttons/axes match exactly, frame after frame, through several input changes = one device
+        for (let x = 0; x < cand.length; x++) for (let y = x + 1; y < cand.length; y++) {
+          const a = cand[x], b = cand[y];
+          if (ghost[a.index] != null || ghost[b.index] != null) continue;
+          if (a.buttons.length !== b.buttons.length || a.axes.length !== b.axes.length) continue;
+          if (!padActive(a) && !padActive(b)) continue;
+          const key = a.index + "|" + b.index, sa = padSig(a);
+          if (sa !== padSig(b)) { delete padMirror[key]; continue; }
+          const m = padMirror[key] || (padMirror[key] = { n: 0, ch: 0, sig: "" });
+          m.n++; if (m.sig !== sa) { m.ch++; m.sig = sa; }
+          if (m.n >= 10 && m.ch >= 2) {
+            const [k, d] = a.index < b.index ? [a, b] : [b, a]; // the higher index is the ghost
+            padMirrorGhost[d.index] = k.index; ghost[d.index] = k.index; delete padMirror[key];
+          }
+        }
+        cand = cand.filter((g) => ghost[g.index] == null);
+        const before = padKept.map((g) => g.index).join(), oldNames = {};
+        padKept.forEach((g) => (oldNames[g.index] = padName(g.index)));
+        const prevIdx = new Set(padKept.map((g) => g.index));
+        padKept = cand;
+        const keptIdx = new Set(cand.map((g) => g.index));
+        let changed = before !== cand.map((g) => g.index).join();
+        // drop state of anything not kept, so a ghost can never feed a car
+        for (const k in padState) if (!keptIdx.has(+k)) delete padState[k];
+        // rebind or free slots whose index is no longer a kept pad; a pad never owns two slots
+        for (const p of [...players]) {
+          if (p.src !== "pad" || keptIdx.has(p.id)) continue;
+          const to = ghost[p.id];
+          if (to != null && keptIdx.has(to) && !isJoined("pad", to)) {
+            padPrev[to] = padPrev[p.id] || []; delete padPrev[p.id]; p.id = to; changed = true;
+          } else if (!titleEl.hidden) { players.splice(players.indexOf(p), 1); changed = true; }
+        }
+        for (const k in padPrev) if (!keptIdx.has(+k)) delete padPrev[k];
+        if (changed) {
+          for (const i of prevIdx) if (!live.has(i)) toast(`${oldNames[i]} disconnected`);
+          for (const g of cand) if (!prevIdx.has(g.index)) toast(`${padName(g.index)} connected`);
+          renderSlots();
+        }
+      }
+      addEventListener("gamepadconnected", (e) => { padGone.delete(e.gamepad.index); padScan(); });
+      addEventListener("gamepaddisconnected", (e) => { padGone.add(e.gamepad.index); padScan(); });
       function pollPad() {
-        const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+        padScan();
         const any = { steer: 0, gas: 0, brake: 0 };
-        for (const p of pads) {
-          if (!p || !p.connected) continue;
+        for (const p of padKept) {
           const prev = padPrev[p.index] || [];
           const b = (i) => { const x = p.buttons[i]; return !!x && (x.pressed || x.value > 0.3); };
           const pressed = (i) => b(i) && !prev[i];
@@ -586,6 +718,8 @@
           if (pressed(9)) action("start", "pad", p.index);
           else if (pressed(0)) action("a", "pad", p.index);
           else if (pressed(1)) action("b", "pad", p.index);
+          else if (pressed(14) || pressed(4)) action("prev", "pad", p.index);
+          else if (pressed(15) || pressed(5)) action("next", "pad", p.index);
         }
         gp = any;
       }
@@ -798,13 +932,13 @@
       }
       reset(); state = "title"; countdown = 0; renderSlots();
       document.getElementById("startBtn").addEventListener("click", (e) => { e.currentTarget.blur(); startRace(); });
-      joinTouchBtn.addEventListener("click", () => join("touch", 0));
+      joinTouchBtn.addEventListener("click", () => { const p = players.find((q) => q.src === "touch"); if (p) leaveSlot(p); else join("touch", 0); });
       document.getElementById("againBtn").addEventListener("click", (e) => { e.currentTarget.blur(); reset(); });
       document.getElementById("lobbyBtn").addEventListener("click", (e) => { e.currentTarget.blur(); toLobby(); });
       requestAnimationFrame(frame);
     </script>
     <script src="hark.js"></script>
-    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+    <script async src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script>
       // ---------- online play (PeerJS): host simulates, clients send input and render snapshots ----------
       (() => {
@@ -885,6 +1019,8 @@
               const entry = { conn, p }; NET.conns.push(entry);
               toast("Online player joined");
               conn.on("data", (d) => {
+                if (d && d.t === "hi" && Number.isInteger(d.col) && d.col >= 0 && d.col < 8 && titleEl.hidden === false &&
+                  !players.some((q) => q !== p && q.col === d.col)) { p.col = d.col; renderSlots(); }
                 if (d && typeof d.steer === "number") p.input = { steer: clamp(d.steer, -1, 1), gas: d.gas ? 1 : 0, brake: d.brake ? 1 : 0 };
               });
               conn.on("close", () => {
@@ -899,8 +1035,9 @@
         });
         function sendSnaps() {
           const cs = cars.map((c) => [Math.round(c.x * 10) / 10, Math.round(c.y * 10) / 10, Math.round(c.a * 1000) / 1000, c.lap, c.finish, c.count]);
+          const cl = cars.map((c) => [c.color, c.name]);
           for (const { conn, p } of NET.conns) if (conn.open)
-            conn.send({ t: "snap", cars: cs, state, timer: raceTime, cd: countdown, you: p.car ? cars.indexOf(p.car) : -1 });
+            conn.send({ t: "snap", cars: cs, cl, state, timer: raceTime, cd: countdown, you: p.car ? cars.indexOf(p.car) : -1 });
         }
 
         // client
@@ -922,6 +1059,8 @@
           peer.on("open", () => {
             const conn = peer.connect(PRE + code);
             conn.on("open", () => {
+              const pref = (players.find(isLocal) || {}).col;
+              if (pref != null) conn.send({ t: "hi", col: pref });
               joinOv.hidden = true; titleEl.hidden = true; finishEl.hidden = true;
               reset(); players.length = 0; players.push(makePlayer("net", 0));
               NET.client = true; NET.conn = conn; NET.snap = null; NET.first = true; NET.shown = false;
@@ -948,6 +1087,7 @@
             const c = cars[i]; if (!c) return;
             c.x += (v[0] - c.x) * k; c.y += (v[1] - c.y) * k; c.a += angNorm(v[2] - c.a) * k;
             c.finish = v[4]; c.count = v[5];
+            if (s.cl && s.cl[i]) { c.color = s.cl[i][0]; c.name = s.cl[i][1]; }
           });
           state = s.state; raceTime = s.timer; countdown = s.cd;
           if (state === "count" || state === "race") { if (NET.shown) { NET.shown = false; finishEl.hidden = true; } }
@@ -1172,7 +1312,7 @@
           const rg2 = new T.RingGeometry(66, 70, 40); rg2.rotateX(-Math.PI / 2);
           ring.add(xray(new T.Mesh(rg2, new T.MeshBasicMaterial({ color: 0xffffff, depthTest: false, depthWrite: false, transparent: true })), 1000));
           mk.rotation.x = Math.PI; mk.visible = ring.visible = false; scene.add(g, mk, ring);
-          Object.assign(g.userData, { mk, ring, bd, wheels, fronts, pa: null, roll: 0 });
+          Object.assign(g.userData, { mk, ring, bd, body, col: c, wheels, fronts, pa: null, roll: 0 });
           return g;
         });
 
@@ -1238,7 +1378,7 @@
             if (behind) { qx = -qx; qy = -qy; }
             if (!behind && Math.abs(qx) <= 1 && Math.abs(qy) <= 1) { e.style.display = "none"; return; }
             const m = Math.max(Math.abs(qx) / 0.92, Math.abs(qy) / 0.86, 1e-6), px = qx / m, py = qy / m;
-            e.style.display = "block";
+            e.style.display = "block"; e.style.background = c.color;
             e.style.transform = `translate(${((px + 1) / 2) * w}px, ${((1 - py) / 2) * h}px) rotate(${Math.atan2(-qy * h, qx * w)}rad)`;
           });
         }
@@ -1298,6 +1438,7 @@
           creekM.material.opacity = 0.68 + Math.sin(t * 2) * 0.06;
           models.forEach((g, i) => {
             const c = cars[i], u = g.userData, mk = u.mk; g.visible = !!c; if (!c) { mk.visible = u.ring.visible = false; u.pa = null; return; }
+            if (u.col !== c.color) { u.col = c.color; u.body.color.set(c.color); mk.material.color.set(c.color); u.ring.material.color.set(c.color); }
             const h = c.air > 0 ? Math.sin(Math.PI * (1 - c.air / c.airT)) * 40 : 0;
             g.position.set(c.x, h, c.y); g.rotation.y = -c.a;
             const fwd = c.vx * Math.cos(c.a) + c.vy * Math.sin(c.a);
