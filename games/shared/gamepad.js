@@ -59,7 +59,7 @@
        share one snap. */
     if (typeof queueMicrotask === "function") queueMicrotask(bump);
     else if (typeof requestAnimationFrame === "function") requestAnimationFrame(bump);
-    else setTimeout(bump, 16);
+    else setTimeout(bump, 0);
   }
 
   function axis(v) {
@@ -127,7 +127,10 @@
     return out;
   }
   function pads() {
-    try { return navigator.getGamepads ? navigator.getGamepads() : []; }
+    try {
+      var gps = navigator.getGamepads ? navigator.getGamepads() : [];
+      return gps || [];
+    }
     catch (e) { return []; }
   }
   function pollPad(i) {

@@ -351,9 +351,9 @@
         pi = s.padIndex != null ? (s.padIndex | 0) : padIndexFromPeer(peer);
         if (pi == null || liveSet[pi]) continue;
         raw = list && list[pi];
-        /* Ghost alias: still plugged under a collapsed index → free the seat.
-           Fully missing slot: leave claim (Chrome empty-frame) unless startParty. */
-        if (raw) {
+        /* padedge1: free seat on missing/null slot OR disconnected Gamepad.
+           (Chrome may keep a null hole; Steam ghosts stay enumerated but !connected.) */
+        if (raw === undefined || raw === null || (raw && !raw.connected)) {
           seats[id] = { status: "open", peerId: null, label: null, padIndex: null };
           changed = true;
         }
@@ -407,6 +407,19 @@
       clearKeyboardOnlyLocals();
       var res = applyClaim(frogId, peerId, "Pad " + (idx + 1), true, idx);
       if (!res.ok) return null;
+      enforceSeatInvariant(frogId);
+      /* Hard guard: same padIndex must not remain on two frogs (padedge1) */
+      var dup = 0, fi;
+      for (fi = 0; fi < FROG_ORDER.length; fi++) {
+        var ss = seats[FROG_ORDER[fi]];
+        if (ss && ss.padIndex != null && (ss.padIndex | 0) === idx) dup++;
+      }
+      if (dup > 1) {
+        console.warn("[ff-party] dual-claim blocked for pad", idx);
+        seats[frogId] = { status: "open", peerId: null, label: null, padIndex: null };
+        enforceSeatInvariant(frogId);
+        return null;
+      }
       if (role === "host") broadcast(lobbyPayload());
       emitLobby(role === "solo" ? "idle" : "ready");
       return frogId;
