@@ -95,18 +95,28 @@ export function buildRaceTrack(scene) {
 
   const curve = buildRaceCurve();
 
+  // Brighter race palette — readable asphalt/curbs without blowing out whites
   const asphalt = new THREE.MeshStandardMaterial({
-    color: 0x2c313a, roughness: 0.88, metalness: 0.12,
+    color: 0x5a6574, roughness: 0.82, metalness: 0.1,
+    emissive: 0x1a2030, emissiveIntensity: 0.22,
   });
   const asphaltEdge = new THREE.MeshStandardMaterial({
-    color: 0xe4a23a, roughness: 0.55, metalness: 0.15,
+    color: 0xf0b45a, roughness: 0.5, metalness: 0.12,
+    emissive: 0xa86a18, emissiveIntensity: 0.28,
   });
-  const grass = new THREE.MeshStandardMaterial({ color: 0x143224, roughness: 0.95, metalness: 0.02 });
-  const wallMat = new THREE.MeshStandardMaterial({ color: 0x1a1f28, roughness: 0.85, metalness: 0.2 });
+  const grass = new THREE.MeshStandardMaterial({
+    color: 0x2a5a3e, roughness: 0.92, metalness: 0.02,
+    emissive: 0x0a2014, emissiveIntensity: 0.12,
+  });
+  const wallMat = new THREE.MeshStandardMaterial({
+    color: 0x3a4558, roughness: 0.78, metalness: 0.18,
+    emissive: 0x121820, emissiveIntensity: 0.15,
+  });
   const accent = new THREE.MeshStandardMaterial({
-    color: 0x60a5fa, roughness: 0.45, metalness: 0.3, emissive: 0x1e40af, emissiveIntensity: 0.2,
+    color: 0x7eb8ff, roughness: 0.42, metalness: 0.28,
+    emissive: 0x2563eb, emissiveIntensity: 0.35,
   });
-  const stripe = new THREE.MeshBasicMaterial({ color: 0xf4efe6 });
+  const stripe = new THREE.MeshBasicMaterial({ color: 0xfff8ec });
 
   // Ground
   const ground = new THREE.Mesh(new THREE.CylinderGeometry(55, 55, 0.5, 48), grass);
@@ -192,7 +202,7 @@ export function buildRaceTrack(scene) {
   group.add(tun);
   const tunHole = new THREE.Mesh(
     new THREE.BoxGeometry(8, 2.4, 13),
-    new THREE.MeshStandardMaterial({ color: 0x07090c, roughness: 1 })
+    new THREE.MeshStandardMaterial({ color: 0x1a1e28, roughness: 1, emissive: 0x0a0c12, emissiveIntensity: 0.1 })
   );
   tunHole.position.set(crossLow.x, 0.9, crossLow.z);
   group.add(tunHole);
@@ -308,8 +318,8 @@ function addBankRails(group, curve, wallMat) {
 /** Glow-metal side rails along curb edges; gaps leave fall-off danger. */
 function addSideRails(group, curve) {
   const railMat = new THREE.MeshStandardMaterial({
-    color: 0xb8c4d4, roughness: 0.35, metalness: 0.85,
-    emissive: 0x3b82f6, emissiveIntensity: 0.18,
+    color: 0xd0dae8, roughness: 0.32, metalness: 0.8,
+    emissive: 0x60a5fa, emissiveIntensity: 0.32,
   });
   const n = 120;
   const mask = new Array(n);

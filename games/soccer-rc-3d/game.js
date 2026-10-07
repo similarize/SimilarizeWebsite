@@ -14,9 +14,9 @@ import {
   raceArenaFocus,
   RACE_COLORS,
   RACE_NAMES,
-} from "./race-mode.js?v=20261006-soccerrc3d11";
+} from "./race-mode.js?v=20261006-soccerrc3d12";
 
-const CACHE = "20261006-soccerrc3d11";
+const CACHE = "20261006-soccerrc3d12";
 const HALF_X = 22;
 const HALF_Z = 14;
 const WALL_H = 5.5;
@@ -276,6 +276,11 @@ const roomCodeInput = document.getElementById("roomCodeInput");
 const padsEl = document.getElementById("pads");
 
 let gameMode = "lobby"; // lobby | soccer | race
+/** Race-only brighter look; soccer/lobby keep stadium night levels. */
+let hemiLight = null;
+let sunLight = null;
+let fillLight = null;
+
 let soccerGroup = null;
 let raceGroup = null;
 let raceMeta = null; // { checkpoints, startSpots, ramps }
@@ -1406,9 +1411,44 @@ function aiRaceInput(carIndex) {
 }
 
 
+
+/** Mode-forked lighting/fog: race gets readable asphalt; soccer stays as-is. */
+function applyWorldLook(mode) {
+  if (!scene || !renderer) return;
+  const race = mode === "race";
+  if (hemiLight) {
+    hemiLight.color.setHex(race ? 0xd8e4f4 : 0xb8c8e0);
+    hemiLight.groundColor.setHex(race ? 0x3a4a3c : 0x2a3a28);
+    hemiLight.intensity = race ? 1.35 : 0.85;
+  }
+  if (sunLight) {
+    sunLight.color.setHex(race ? 0xfff0d0 : 0xffe2b0);
+    sunLight.intensity = race ? 1.55 : 1.15;
+    // Wider shadow frustum so elevated figure-eight banks stay lit
+    const ext = race ? 55 : 30;
+    sunLight.shadow.camera.left = -ext;
+    sunLight.shadow.camera.right = ext;
+    sunLight.shadow.camera.top = ext;
+    sunLight.shadow.camera.bottom = -ext;
+    sunLight.shadow.camera.updateProjectionMatrix();
+  }
+  if (fillLight) {
+    fillLight.color.setHex(race ? 0xa8c4ff : 0x88aaff);
+    fillLight.intensity = race ? 0.55 : 0.25;
+  }
+  const fogCol = race ? 0x1c2836 : 0x0c1014;
+  renderer.setClearColor(fogCol);
+  if (scene.fog) {
+    scene.fog.color.setHex(fogCol);
+    scene.fog.near = race ? 70 : 40;
+    scene.fog.far = race ? 150 : 90;
+  }
+}
+
 function setModeUI(mode) {
   document.body.classList.remove("mode-lobby", "mode-soccer", "mode-race");
   document.body.classList.add("mode-" + mode);
+  applyWorldLook(mode);
   if (modeLobbyEl) modeLobbyEl.hidden = mode !== "lobby";
   if (raceHudEl) raceHudEl.hidden = mode !== "race";
   if (modesBtn) modesBtn.hidden = mode === "lobby";
@@ -1976,20 +2016,21 @@ function init() {
   camera = new THREE.PerspectiveCamera(55, 1, 0.1, 200);
   camera.position.copy(camPos);
 
-  const hemi = new THREE.HemisphereLight(0xb8c8e0, 0x2a3a28, 0.85);
-  scene.add(hemi);
-  const sun = new THREE.DirectionalLight(0xffe2b0, 1.15);
-  sun.position.set(12, 28, 10);
-  sun.castShadow = true;
-  sun.shadow.mapSize.set(1024, 1024);
-  sun.shadow.camera.left = -30;
-  sun.shadow.camera.right = 30;
-  sun.shadow.camera.top = 30;
-  sun.shadow.camera.bottom = -30;
-  scene.add(sun);
-  const fill = new THREE.DirectionalLight(0x88aaff, 0.25);
-  fill.position.set(-10, 12, -8);
-  scene.add(fill);
+  hemiLight = new THREE.HemisphereLight(0xb8c8e0, 0x2a3a28, 0.85);
+  scene.add(hemiLight);
+  sunLight = new THREE.DirectionalLight(0xffe2b0, 1.15);
+  sunLight.position.set(12, 28, 10);
+  sunLight.castShadow = true;
+  sunLight.shadow.mapSize.set(1024, 1024);
+  sunLight.shadow.camera.left = -30;
+  sunLight.shadow.camera.right = 30;
+  sunLight.shadow.camera.top = 30;
+  sunLight.shadow.camera.bottom = -30;
+  scene.add(sunLight);
+  fillLight = new THREE.DirectionalLight(0x88aaff, 0.25);
+  fillLight.position.set(-10, 12, -8);
+  scene.add(fillLight);
+  applyWorldLook("lobby");
 
   // Soccer world in a group so Race can hide it
   soccerGroup = new THREE.Group();
