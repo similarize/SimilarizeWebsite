@@ -44,6 +44,18 @@
       .x-seats li.empty { color: var(--text-secondary); }
       .x-toast { position: fixed; left: 50%; top: 20px; transform: translateX(-50%); background: var(--fill-primary); color: var(--text-primary-on); padding: 8px 16px; border-radius: var(--r-pill); font: var(--type-label); font-family: var(--sans); opacity: 0; transition: opacity .2s; pointer-events: none; }
       .x-toast.on { opacity: 1; }
+      .x-touch { position: fixed; inset: 0; display: none; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+      .x-joy { position: absolute; width: 120px; height: 120px; margin: -60px 0 0 -60px; border-radius: 50%; border: 2px solid rgba(255,255,255,.6); background: rgba(255,255,255,.12); display: none; pointer-events: none; }
+      .x-joy i { position: absolute; left: 50%; top: 50%; width: 52px; height: 52px; margin: -26px 0 0 -26px; border-radius: 50%; background: rgba(255,255,255,.55); }
+      .x-tb { position: absolute; border-radius: 50%; border: 2px solid rgba(255,255,255,.7); background: rgba(10,30,50,.35); color: #fff; font: var(--type-label); font-family: var(--sans); display: grid; place-items: center; touch-action: none; }
+      .x-tb.on { background: rgba(255,255,255,.45); }
+      #tFire { width: 104px; height: 104px; right: 28px; bottom: 36px; font: var(--type-heading); font-family: var(--sans); }
+      #tAds { width: 64px; height: 64px; right: 148px; bottom: 40px; }
+      #tJump { width: 64px; height: 64px; right: 132px; bottom: 120px; }
+      #tReload { width: 64px; height: 64px; right: 52px; bottom: 156px; }
+      .x-rot { position: fixed; left: 50%; top: 56px; transform: translateX(-50%); display: none; align-items: center; gap: 8px; background: var(--fill-primary); color: var(--text-primary-on); padding: 4px 4px 4px 16px; border-radius: var(--r-pill); font: var(--type-label); font-family: var(--sans); white-space: nowrap; }
+      .x-rot button { min-width: var(--tap); min-height: var(--tap); border: 0; background: none; color: inherit; font: var(--type-body); font-family: var(--sans); cursor: pointer; }
+      .x-touchdev #go { width: 100%; min-height: 64px; font: var(--type-heading); font-family: var(--sans); }
       .x-card .btn { min-height: var(--tap); padding: 0 24px; font: var(--type-label); font-family: var(--sans); cursor: pointer; background: var(--fill-primary); color: var(--text-primary-on); border: 0; border-radius: var(--r-pill); }
     </style>
   </head>
@@ -54,10 +66,18 @@
       <div class="x-div" id="divH"></div><div class="x-div" id="divV"></div>
       <div class="x-banner" id="banner"></div>
     </div>
+    <div class="x-touch" id="touch">
+      <div class="x-joy" id="joy"><i></i></div>
+      <div class="x-tb" id="tAds" data-b="ads">ADS</div>
+      <div class="x-tb" id="tJump" data-b="jump">JUMP</div>
+      <div class="x-tb" id="tReload" data-b="reload">RELOAD</div>
+      <div class="x-tb" id="tFire" data-b="fire">FIRE</div>
+    </div>
+    <div class="x-rot" id="rot">Turn your phone sideways for the best view<button id="rotX" aria-label="Dismiss">×</button></div>
     <div class="x-start" id="lobby" style="display:none">
       <div class="x-card">
         <h1>Lobby</h1>
-        <p>Keyboard + mouse: click or press Enter to join. Gamepad: press A to join. Enter or Start begins the match; bots fill the rest of the 8 spots.</p>
+        <p id="lobbyHint">Keyboard + mouse: click or press Enter to join. Gamepad: press A to join. Touch: tap to join. Enter, Start or the button begins the match; bots fill the rest of the 8 spots.</p>
         <ol class="x-seats" id="seats"></ol>
         <button class="btn" id="go">Start match</button>
       </div>
@@ -67,7 +87,7 @@
       <div class="x-card">
         <h1>Balloon Blast Airsoft</h1>
         <p>Pop the three balloons on every rival's shoulders. Lose all three and you're out. Last one standing takes the round; best of 3.</p>
-        <p>WASD move · mouse look · click fire · right-click aim · Space jump · R reload. Gamepad: sticks, RT fire, LT aim, A jump, X reload. Up to 4 players split-screen.</p>
+        <p id="ctrlHint">WASD move · mouse look · click fire · right-click aim · Space jump · R reload. Gamepad: sticks, RT fire, LT aim, A jump, X reload. Up to 4 players split-screen.</p>
         <button class="btn" id="play">Play</button>
       </div>
     </div>
@@ -280,15 +300,60 @@
   });
   addEventListener("keyup", (e) => (keys[e.code] = false));
   canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+  const isTouch = "ontouchstart" in window || navigator.maxTouchPoints > 0;
+  let lastTouch = -1e9; const recentTouch = () => performance.now() - lastTouch < 800;
+  ["touchstart", "touchmove", "touchend"].forEach((t) => addEventListener(t, () => (lastTouch = performance.now()), { capture: true, passive: true }));
+  addEventListener("pointerdown", (e) => { if (e.pointerType === "touch") lastTouch = performance.now(); }, true);
+  const hasTouch = () => seats.some((s) => s.type === "touch");
+  const tch = { mx: 0, my: 0, dx: 0, dy: 0, fire: false, ads: false, jump: false, reload: false }, tptr = {};
+  const tl = document.getElementById("touch"), joy = document.getElementById("joy"), JR = 50;
+  function tReset() { for (const k in tptr) delete tptr[k]; Object.assign(tch, { mx: 0, my: 0, dx: 0, dy: 0, fire: false, ads: false, jump: false, reload: false }); joy.style.display = "none"; tl.querySelectorAll(".x-tb").forEach((b) => b.classList.remove("on")); }
+  tl.addEventListener("pointerdown", (e) => {
+    e.preventDefault(); lastTouch = performance.now();
+    const b = e.target.closest && e.target.closest(".x-tb");
+    const t = (tptr[e.pointerId] = { kind: b ? b.dataset.b : e.clientX < innerWidth / 2 ? "move" : "look", x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, el: b });
+    try { tl.setPointerCapture(e.pointerId); } catch (_) {}
+    if (b) { tch[t.kind] = true; b.classList.add("on"); }
+    else if (t.kind === "move") { joy.style.display = "block"; joy.style.left = e.clientX + "px"; joy.style.top = e.clientY + "px"; joy.firstChild.style.transform = ""; }
+  });
+  tl.addEventListener("pointermove", (e) => {
+    const t = tptr[e.pointerId]; if (!t) return; e.preventDefault();
+    if (t.kind === "move") {
+      let ox = e.clientX - t.x0, oy = e.clientY - t.y0; const l = Math.hypot(ox, oy); if (l > JR) { ox *= JR / l; oy *= JR / l; }
+      tch.mx = ox / JR; tch.my = -oy / JR; joy.firstChild.style.transform = "translate(" + ox + "px," + oy + "px)";
+    } else if (t.kind === "look" || t.kind === "fire") { tch.dx += e.clientX - t.x; tch.dy += e.clientY - t.y; }
+    t.x = e.clientX; t.y = e.clientY;
+  });
+  const tUp = (e) => {
+    const t = tptr[e.pointerId]; if (!t) return; e.preventDefault(); delete tptr[e.pointerId];
+    if (t.kind === "move") { tch.mx = tch.my = 0; joy.style.display = "none"; }
+    else if (t.el && !Object.values(tptr).some((o) => o.el === t.el)) { tch[t.kind] = false; t.el.classList.remove("on"); }
+  };
+  ["pointerup", "pointercancel", "lostpointercapture"].forEach((n) => tl.addEventListener(n, tUp));
+  tl.addEventListener("touchstart", (e) => e.preventDefault(), { passive: false });
+  tl.addEventListener("contextmenu", (e) => e.preventDefault());
+  function aimAssist(p, dt) {
+    const f = fwd(p.yaw, p.pitch), e0 = eye(p); let best = Math.cos(6 * Math.PI / 180), tgt = null;
+    for (const o of players) {
+      if (o === p || !o.alive) continue;
+      for (let k = 0; k < 3; k++) { if (!o.balloons[k].alive) continue;
+        const c = balloonPos(o, k), d = c.clone().sub(e0).normalize(), dot = d.dot(f);
+        if (dot > best && los(e0, c)) { best = dot; tgt = d; } }
+    }
+    if (!tgt) return;
+    const dy = ((Math.atan2(-tgt.x, -tgt.z) - p.yaw + Math.PI * 3) % (Math.PI * 2)) - Math.PI, k = Math.min(1, dt * 1.5);
+    p.yaw += dy * k; p.pitch += (Math.asin(tgt.y) - p.pitch) * k;
+  }
   canvas.addEventListener("mousedown", (e) => {
-    if (!running || !humans.some((h) => h.seat && h.seat.type === "km")) return;
+    if (recentTouch() || !running || !humans.some((h) => h.seat && h.seat.type === "km")) return;
     if (document.pointerLockElement !== canvas && canvas.requestPointerLock) { try { canvas.requestPointerLock(); } catch (_) {} }
     if (e.button === 0) mouse.fire = true;
     if (e.button === 2) mouse.ads = true;
     mouse.drag = true; mouse.lx = e.clientX; mouse.ly = e.clientY;
   });
-  addEventListener("mouseup", (e) => { if (e.button === 0) mouse.fire = false; if (e.button === 2) mouse.ads = false; mouse.drag = false; });
+  addEventListener("mouseup", (e) => { if (recentTouch()) return; if (e.button === 0) mouse.fire = false; if (e.button === 2) mouse.ads = false; mouse.drag = false; });
   addEventListener("mousemove", (e) => {
+    if (recentTouch() || !running) return;
     if (document.pointerLockElement === canvas) { mouse.dx += e.movementX; mouse.dy += e.movementY; }
     else if (mouse.drag) { mouse.dx += e.clientX - mouse.lx; mouse.dy += e.clientY - mouse.ly; mouse.lx = e.clientX; mouse.ly = e.clientY; }
   });
@@ -338,6 +403,13 @@
       i.lx = mouse.dx; i.ly = mouse.dy; mouse.dx = mouse.dy = 0;
       i.fire = mouse.fire; i.ads = mouse.ads; i.jump = !!keys.Space; i.reload = !!(keys.KeyR || keys.KeyX);
     }
+    if (p.seat && p.seat.type === "touch") {
+      i.mx = tch.mx; i.my = tch.my; i.lx = tch.dx * 2.4; i.ly = tch.dy * 2.4; tch.dx = tch.dy = 0; // 0.006 rad/px
+      i.fire = tch.fire; i.ads = tch.ads; i.jump = tch.jump; i.reload = tch.reload;
+      if (p.alive) aimAssist(p, dt);
+    }
+    if (!isFinite(i.lx) || Math.abs(i.lx) > 400) i.lx = 0;
+    if (!isFinite(i.ly) || Math.abs(i.ly) > 400) i.ly = 0;
     const g = p.seat && p.seat.type === "pad" && padList.find((q) => q.index === p.seat.idx);
     if (g) {
       const ax = g.axes, bt = (n) => g.buttons[n] && (g.buttons[n].pressed || g.buttons[n].value > 0.5);
@@ -386,7 +458,7 @@
   function step(p, dt) {
     const i = p.input;
     if (!p.alive) return;
-    p.yaw -= i.lx * 0.0025 * (i.ads ? 0.5 : 1); p.pitch = Math.max(-1.4, Math.min(1.4, p.pitch - i.ly * 0.0025 * (i.ads ? 0.5 : 1)));
+    p.yaw -= i.lx * 0.0025 * (i.ads ? 0.5 : 1); p.pitch = Math.max(-1.2, Math.min(1.2, (p.pitch || 0) - i.ly * 0.0025 * (i.ads ? 0.5 : 1)));
     const sp = i.ads ? 3 : 6, s = Math.sin(p.yaw), c = Math.cos(p.yaw);
     let mx = i.mx, my = i.my; const l = Math.hypot(mx, my); if (l > 1) { mx /= l; my /= l; }
     const vx = (-s * my + c * mx) * sp * dt, vz = (-c * my - s * mx) * sp * dt;
@@ -405,7 +477,7 @@
     else if (i.fire && p.fireT <= 0 && p.ammo > 0) { p.fireT = 1 / 8; p.ammo--; shoot(p); }
     p.group.position.copy(p.pos); p.group.rotation.y = p.yaw;
     p.camera.position.copy(eye(p)); p.camera.rotation.set(p.pitch, p.yaw, 0, "YXZ");
-    const fov = i.ads ? 40 : 75; p.camera.fov += (fov - p.camera.fov) * Math.min(1, dt * 12); p.camera.updateProjectionMatrix();
+    const fov = (p.camera.aspect < 1 ? 90 : 75) * (i.ads ? 0.55 : 1); p.camera.fov += (fov - p.camera.fov) * Math.min(1, dt * 12); p.camera.updateProjectionMatrix();
   }
 
   // rounds
@@ -419,7 +491,8 @@
       const a = off + (n / players.length) * Math.PI * 2;
       let x = Math.cos(a) * 110, z = Math.sin(a) * 110;
       while (inCol(x, groundY(x, z) + 0.5, z, R + 0.5)) { x *= 0.97; z *= 0.97; }
-      p.pos.set(x, floorAt(x, z, 99), z); p.vy = 0; p.yaw = Math.atan2(x, z); p.pitch = 0;
+      p.pos.set(x, floorAt(x, z, groundY(x, z) + 0.5), z); p.vy = 0; p.yaw = Math.atan2(x, z); p.pitch = 0; // faces (0,0)
+      p.camera.position.copy(eye(p)); p.camera.rotation.set(0, p.yaw, 0, "YXZ");
       p.alive = true; p.ammo = 30; p.reloadT = 0; p.group.visible = true; p.spec = null;
       p.balloons.forEach((b) => { b.alive = true; b.mesh.visible = b.line.visible = true; });
       p.ai.target = null; pickGoal(p);
@@ -472,15 +545,18 @@
   }
   function renderLobby() {
     let s = "";
-    for (let k = 0; k < 4; k++) s += seats[k] ? "<li><b>P" + (k + 1) + "</b> · " + (seats[k].type === "km" ? "Keyboard + mouse" : padName(seats[k].idx)) + "</li>" : '<li class="empty">Seat ' + (k + 1) + " open · bot</li>";
+    for (let k = 0; k < 4; k++) s += seats[k] ? "<li><b>P" + (k + 1) + "</b> · " + (seats[k].type === "km" ? "Keyboard + mouse" : seats[k].type === "touch" ? "Touch" : padName(seats[k].idx)) + "</li>" : '<li class="empty">Seat ' + (k + 1) + " open · bot</li>";
     s += '<li class="empty">' + (8 - seats.length) + " bots fill the other spots</li>";
     if (s !== lastLobby) $("seats").innerHTML = lastLobby = s;
   }
   function joinKm() { if (!hasKm() && seats.length < 4) seats.push({ type: "km" }); renderLobby(); }
   function joinPad(idx) { if (!seatOf(idx) && seats.length < 4) seats.push({ type: "pad", idx }); renderLobby(); }
-  $("lobby").addEventListener("click", (e) => { if (e.target.id === "go") startMatch(); else joinKm(); });
+  function joinTouch() { if (!hasTouch() && seats.length < 4) seats.push({ type: "touch" }); renderLobby(); }
+  $("lobby").addEventListener("pointerdown", (e) => { if (e.pointerType === "touch" && e.target.id !== "go") { e.preventDefault(); joinTouch(); } });
+  $("lobby").addEventListener("click", (e) => { if (e.target.id === "go") startMatch(); else if (!recentTouch()) joinKm(); });
   function startMatch() {
-    if (!seats.length) seats.push({ type: "km" });
+    if (!seats.length) seats.push({ type: isTouch ? "touch" : "km" });
+    mouse.dx = mouse.dy = 0; mouse.fire = mouse.ads = mouse.drag = false; tReset();
     players.forEach((p, i) => { const s = seats[i]; p.isBot = !s; p.seat = s || null; p.name = s ? (seats.length === 1 ? "You" : "P" + (i + 1)) : "Bot " + i; p.wins = 0; p.hitT = 0; });
     humans = players.filter((p) => !p.isBot); buildHud();
     $("lobby").style.display = "none"; lobbyOpen = false;
@@ -491,13 +567,27 @@
     if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (_) {} }
     if (ac && ac.state === "suspended") ac.resume();
     $("start").style.display = "none"; $("lobby").style.display = ""; lobbyOpen = true; lastLobby = ""; renderLobby();
+    if (isTouch) { joinTouch(); $("go").textContent = "START"; }
     if (document.activeElement) document.activeElement.blur();
   };
-
-  function resize() { renderer.setSize(innerWidth, innerHeight, false); }
-  addEventListener("resize", resize); resize();
+  if (isTouch) document.body.classList.add("x-touchdev");
+  function setHint() {
+    $("ctrlHint").textContent = isTouch ? "Left thumb: move · right thumb: drag to look · FIRE (hold), ADS, JUMP, RELOAD buttons bottom right."
+      : padList.length ? "Left stick move · right stick look · RT fire · LT aim · A jump · X reload. Up to 4 players split-screen."
+      : "WASD move · mouse look · click fire · right-click aim · Space jump · R reload. Plug in gamepads for up to 4-player split-screen.";
+  }
+  addEventListener("gamepadconnected", () => { pollPads(); setHint(); }); setHint();
+  let rotOff = false;
+  $("rotX").addEventListener("click", () => { rotOff = true; $("rot").style.display = "none"; });
+  const lobbyCam = new THREE.PerspectiveCamera(75, 1, 0.5, 600); lobbyCam.layers.enableAll();
+  function resize() {
+    renderer.setSize(innerWidth, innerHeight, false);
+    $("rot").style.display = isTouch && !rotOff && innerHeight > innerWidth ? "flex" : "none";
+    const port = innerWidth < innerHeight; lobbyCam.fov = port ? 90 : 60;
+    lobbyCam.position.set(0, port ? 45 : 30, port ? 120 : 90); lobbyCam.lookAt(0, 0, 0);
+  }
+  addEventListener("resize", resize); addEventListener("orientationchange", resize); resize();
   startRound(); $("banner").classList.remove("on");
-  const h0 = humans[0]; h0.camera.position.set(0, 30, 90); h0.camera.lookAt(0, 0, 0);
 
   const clock = new THREE.Clock();
   renderer.setAnimationLoop(() => {
@@ -514,11 +604,14 @@
       if (bannerT > 0 && (bannerT -= dt) <= 0) $("banner").classList.remove("on");
       if (running) hud();
     }
-    const n = humans.length, rs = layout(n), H = innerHeight;
+    const showT = running && hasTouch() ? "block" : "none";
+    if (tl.style.display !== showT) { tl.style.display = showT; tReset(); }
+    $("views").style.display = running ? "" : "none";
+    const n = running ? humans.length : 1, rs = layout(n), H = innerHeight;
     $("divH").style.display = n >= 2 ? "block" : "none"; $("divV").style.display = n >= 3 ? "block" : "none";
     renderer.setScissorTest(true);
     rs.forEach((r, k) => {
-      const cam = humans[k] ? specOf(humans[k]).camera : over;
+      const cam = !running ? lobbyCam : humans[k] ? specOf(humans[k]).camera : over;
       cam.aspect = r[2] / r[3]; cam.updateProjectionMatrix();
       renderer.setViewport(r[0], H - r[1] - r[3], r[2], r[3]); renderer.setScissor(r[0], H - r[1] - r[3], r[2], r[3]);
       renderer.render(scene, cam);
