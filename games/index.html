@@ -219,7 +219,7 @@
     </a>
     <a class="cab" href="/games/froggy-hop-racing/?v=20261007-fhr1">
       <span class="marquee">Froggy Hop Racing</span>
-      <span class="screen-wrap"><canvas data-demo="ffversions"></canvas><span class="glass"></span></span>
+      <span class="screen-wrap"><canvas data-demo="froggyHop"></canvas><span class="glass"></span></span>
       <span class="panel"><span class="plate">3D beach race · Hop to win</span><span class="buttons" aria-hidden="true"><i></i><i class="alt"></i></span></span>
     </a>
     <a class="cab" href="/games/drop-lab/?v=20260929-droplab1">
@@ -894,7 +894,98 @@
       }
     }
 
-    const draw = { rally, dirtTrack, rocks, ball, soccer3d, froggies, froggies3d, map, drop, ffversions };
+    function froggyHop(v) {
+      // Chase-cam view of hopping frogs on a beach track (Froggy Hop Racing).
+      const { ctx, w, h, t } = v;
+      const hz = h * 0.38;
+      let g = ctx.createLinearGradient(0, 0, 0, hz);
+      g.addColorStop(0, "#4fb6f0"); g.addColorStop(1, "#bfe9ff");
+      ctx.fillStyle = g; ctx.fillRect(0, 0, w, hz);
+      ctx.fillStyle = "#fff4b0";
+      ctx.beginPath(); ctx.arc(w * 0.8, hz * 0.35, h * 0.06, 0, Math.PI * 2); ctx.fill();
+      g = ctx.createLinearGradient(0, hz, 0, h);
+      g.addColorStop(0, "#3fd0d4"); g.addColorStop(1, "#0f8fb0");
+      ctx.fillStyle = g; ctx.fillRect(0, hz, w, h - hz);
+      ctx.fillStyle = "#f3dfa2";
+      ctx.beginPath(); ctx.moveTo(w * 0.42, hz); ctx.lineTo(w, hz); ctx.lineTo(w, h); ctx.lineTo(w * 0.05, h); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = "rgba(255,255,255,0.7)"; ctx.lineWidth = 2;
+      for (let i = 0; i < 4; i++) {
+        const y = hz + (h - hz) * ((i * 0.27 + t * 0.15) % 1);
+        const f = (y - hz) / (h - hz);
+        ctx.beginPath(); ctx.moveTo(w * (0.42 - f * 0.37) - 6, y); ctx.lineTo(w * (0.42 - f * 0.37) - 30 * f - 10, y + 3); ctx.stroke();
+      }
+      const L = w * 0.47, R = w * 0.6, BL = w * 0.12, BR = w * 0.95;
+      ctx.fillStyle = "#d9b974";
+      ctx.beginPath(); ctx.moveTo(L, hz); ctx.lineTo(R, hz); ctx.lineTo(BR, h); ctx.lineTo(BL, h); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "#c9a35c";
+      for (let i = 0; i < 9; i++) {
+        const f = ((i / 9) + t * 0.35) % 1, y = hz + (h - hz) * f * f;
+        const xl = L + (BL - L) * f * f, xr = R + (BR - R) * f * f;
+        ctx.fillRect(xl, y, (xr - xl), Math.max(1, 3 * f));
+      }
+      function palm(f, side) {
+        const y = hz + (h - hz) * f * f, s = 0.3 + f * 1.6;
+        const x = side < 0 ? L + (BL - L) * f * f - 18 * s : R + (BR - R) * f * f + 14 * s;
+        ctx.strokeStyle = "#8a5a2b"; ctx.lineWidth = 3 * s;
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + 6 * s, y - 20 * s, x + 3 * s, y - 34 * s); ctx.stroke();
+        ctx.strokeStyle = "#2e9c45"; ctx.lineWidth = 3 * s;
+        for (let k = 0; k < 5; k++) {
+          const a = -Math.PI / 2 + (k - 2) * 0.7 + Math.sin(t * 1.5 + k) * 0.05;
+          ctx.beginPath(); ctx.moveTo(x + 3 * s, y - 34 * s);
+          ctx.quadraticCurveTo(x + 3 * s + Math.cos(a) * 10 * s, y - 40 * s, x + 3 * s + Math.cos(a) * 16 * s, y - 30 * s + Math.abs(Math.cos(a)) * 6 * s);
+          ctx.stroke();
+        }
+      }
+      for (let i = 0; i < 3; i++) { palm(((i / 3) + t * 0.12) % 1, 1); }
+      palm(((0.5) + t * 0.12) % 1, -1);
+      const frogs = [
+        { c: "#ff5a4a", lane: 0.25, d: 0.25, p: 0.0 },
+        { c: "#4a7dff", lane: 0.7, d: 0.38, p: 0.4 },
+        { c: "#ffd23f", lane: 0.45, d: 0.15, p: 0.7 },
+        { c: "#46c85a", lane: 0.52, d: 0.78, p: 0.2 },
+      ];
+      frogs.sort((a, b) => a.d - b.d);
+      for (const fr of frogs) {
+        const f = fr.d + Math.sin(t * 0.4 + fr.p * 6) * 0.03;
+        const y0 = hz + (h - hz) * f * f;
+        const xl = L + (BL - L) * f * f, xr = R + (BR - R) * f * f;
+        const x = xl + (xr - xl) * fr.lane;
+        const s = (0.25 + f * 1.4) * Math.min(w, h) / 160;
+        const ph = (t * 2.2 + fr.p) % 1;
+        const hop = Math.sin(ph * Math.PI) * 16 * s;
+        ctx.fillStyle = "rgba(0,0,0,0.18)";
+        ctx.beginPath(); ctx.ellipse(x, y0, 9 * s * (1 - hop / (40 * s)), 3 * s, 0, 0, Math.PI * 2); ctx.fill();
+        const y = y0 - hop - 6 * s;
+        const leg = ph < 0.5 ? 1 : 0.4;
+        ctx.fillStyle = fr.c;
+        ctx.beginPath(); ctx.ellipse(x - 7 * s, y + 4 * s + leg * 2 * s, 3 * s, (2 + leg * 3) * s, 0.5, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(x + 7 * s, y + 4 * s + leg * 2 * s, 3 * s, (2 + leg * 3) * s, -0.5, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(x, y, 9 * s, 7 * s, 0, 0, Math.PI * 2); ctx.fill();
+        for (const ex of [-4, 4]) {
+          ctx.fillStyle = fr.c; ctx.beginPath(); ctx.arc(x + ex * s, y - 6 * s, 3.4 * s, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(x + ex * s, y - 6.5 * s, 2.4 * s, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = "#111"; ctx.beginPath(); ctx.arc(x + ex * s, y - 6.5 * s, 1.1 * s, 0, Math.PI * 2); ctx.fill();
+        }
+        if (ph > 0.9 || ph < 0.08) {
+          ctx.fillStyle = "rgba(240,220,170,0.8)";
+          for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.arc(x + (k - 1.5) * 5 * s, y0 - 1, 2 * s, 0, Math.PI * 2); ctx.fill(); }
+        }
+      }
+      const bx = w * 0.62, by = hz + (h - hz) * 0.12, bs = Math.min(w, h) * 0.04;
+      ctx.save(); ctx.translate(bx, by - Math.sin(t * 3) * 3); ctx.rotate(t);
+      ctx.fillStyle = "#ffb020"; ctx.fillRect(-bs / 2, -bs / 2, bs, bs); ctx.restore();
+      ctx.fillStyle = "#fff"; ctx.font = "bold " + Math.round(bs * 0.8) + "px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText("?", bx, by - Math.sin(t * 3) * 3);
+      const fs = Math.max(10, Math.round(h * 0.09));
+      ctx.textAlign = "left"; ctx.textBaseline = "top";
+      ctx.font = "900 " + fs + "px sans-serif";
+      ctx.fillStyle = "rgba(0,0,0,0.35)"; ctx.fillText("2nd", 9, 7);
+      ctx.fillStyle = "#fff"; ctx.fillText("2nd", 8, 6);
+      ctx.font = "700 " + Math.round(fs * 0.5) + "px sans-serif";
+      ctx.fillText("LAP 1/3", 8, 8 + fs);
+    }
+
+    const draw = { rally, dirtTrack, rocks, ball, soccer3d, froggies, froggies3d, map, drop, ffversions, froggyHop };
 
     const ffShots = [
       { label: "2.5D", src: "/games/four-froggies/assets/play-25d.jpg?v=20261007-card25d1r1" },
