@@ -22,12 +22,12 @@ public class Hud
         UIK.Img(r, UIK.Circle, new Color(0, 0, 0, 0.35f), new Vector2(0, 1), new Vector2(100, -46), new Vector2(190, 70)).sprite = null;
         for (int i = 0; i < 3; i++)
             balloonIcons[i] = UIK.Img(r, UIK.Circle, color, new Vector2(0, 1), new Vector2(42 + i * 56, -46), new Vector2(44, 52));
-        label = UIK.Label(r, name, 26, TextAnchor.MiddleLeft, new Vector2(0, 1), new Vector2(110, -100), new Vector2(200, 34), color);
+        label = UIK.Label(r, name, 26, TextAnchor.MiddleLeft, new Vector2(0, 1), new Vector2(200, -100), new Vector2(380, 34), color);
 
         // round info (top-center)
         top = UIK.Label(r, "", 24, TextAnchor.UpperCenter, new Vector2(0.5f, 1), new Vector2(0, -34), new Vector2(700, 60), Color.white);
         // feed (top-right)
-        feed = UIK.Label(r, "", 20, TextAnchor.UpperRight, new Vector2(1, 1), new Vector2(-190, -70), new Vector2(360, 120), new Color(1, 1, 1, 0.9f));
+        feed = UIK.Label(r, "", 20, TextAnchor.UpperRight, new Vector2(1, 1), new Vector2(-245, -70), new Vector2(470, 120), new Color(1, 1, 1, 0.9f));
 
         // crosshair
         Vector2[] offs = { new Vector2(0, 14), new Vector2(0, -14), new Vector2(14, 0), new Vector2(-14, 0) };
