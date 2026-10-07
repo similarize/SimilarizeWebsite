@@ -4,14 +4,14 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <title>Soccer RC 3D</title>
-  <!-- Cache-bust: ?v=20261006-soccerrc3d8r2 — Soccer + Race Track modes -->
+  <!-- Cache-bust: ?v=20261006-soccerrc3d9 — Race one-tap + adventure track -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560&family=Outfit:wght@400;500;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="./style.css?v=20261006-soccerrc3d8r2" />
+  <link rel="stylesheet" href="./style.css?v=20261006-soccerrc3d9" />
   <script src="/games/shared/tesla-fullscreen.js?v=tfs1"></script>
   <script src="/games/shared/viewport-fill.js?v=vfs1"></script>
-  <script src="/games/shared/gamepad.js?v=20261006-soccerrc3d8r2"></script>
+  <script src="/games/shared/gamepad.js?v=20261006-soccerrc3d9"></script>
   <script type="importmap">
   {
     "imports": {
@@ -46,24 +46,7 @@
         <button type="button" id="pickSoccer" class="lobby-btn soccer">Soccer</button>
         <button type="button" id="pickRace" class="lobby-btn race">Race Track</button>
       </div>
-      <div id="raceSetup" class="race-setup" hidden>
-        <label>Players
-          <select id="racePlayers">
-            <option value="2" selected>2</option>
-            <option value="3">3</option>
-            <option value="4">4</option>
-          </select>
-        </label>
-        <label>Laps
-          <select id="raceLaps">
-            <option value="3" selected>3</option>
-            <option value="5">5</option>
-          </select>
-        </label>
-        <p class="lobby-hint">P1: arrows / on-screen · P2: WASD · P3: IJKL · P4: pad · Pads auto-bind</p>
-        <button type="button" id="startRaceBtn" class="lobby-btn go">Start Race</button>
-        <button type="button" id="raceSetupBack" class="lobby-link">← Back</button>
-      </div>
+      <p class="lobby-hint" style="margin-top:12px;text-align:center">Race: 2 players · 3 laps · P1 on-screen / arrows · P2 WASD · pads bind extra seats</p>
     </div>
   </div>
   <div id="raceHud" class="race-hud" hidden>
@@ -118,6 +101,6 @@
     </div>
   </div>
   <div id="boot">Loading Soccer RC 3D…</div>
-  <script type="module" src="./game.js?v=20261006-soccerrc3d8r2"></script>
+  <script type="module" src="./game.js?v=20261006-soccerrc3d9"></script>
 </body>
 </html>

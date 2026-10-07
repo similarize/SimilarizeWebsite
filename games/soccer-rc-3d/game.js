@@ -15,9 +15,9 @@ import {
   raceCameraTarget,
   RACE_COLORS,
   RACE_NAMES,
-} from "./race-mode.js?v=20261006-soccerrc3d8r2";
+} from "./race-mode.js?v=20261006-soccerrc3d9";
 
-const CACHE = "20261006-soccerrc3d8r2";
+const CACHE = "20261006-soccerrc3d9";
 const HALF_X = 22;
 const HALF_Z = 14;
 const WALL_H = 5.5;
@@ -1349,10 +1349,14 @@ function startRaceMode(numPlayers, laps) {
   setModeUI("race");
   if (soccerGroup) soccerGroup.visible = false;
   if (ballMesh) ballMesh.visible = false;
-  if (!raceMeta) {
-    raceMeta = buildRaceTrack(scene);
-    raceGroup = raceMeta.group;
+  // Always rebuild so track upgrades ship cleanly
+  if (raceGroup) {
+    try { scene.remove(raceGroup); } catch (_) {}
+    raceGroup = null;
+    raceMeta = null;
   }
+  raceMeta = buildRaceTrack(scene);
+  raceGroup = raceMeta.group;
   raceGroup.visible = true;
   clearSceneCars();
   clearTracks();
@@ -1464,9 +1468,9 @@ function tickRace(dt) {
   const tgt = raceCameraTarget(cars);
   camTarget.lerp(new THREE.Vector3(tgt.x, tgt.y * 0.3, tgt.z), 1 - Math.pow(0.002, dt));
   const desired = new THREE.Vector3(
-    camTarget.x * 0.2 - 6,
-    18 + Math.min(8, tgt.y),
-    camTarget.z * 0.2 + 28
+    camTarget.x * 0.25 - 8,
+    22 + Math.min(10, tgt.y * 0.6),
+    camTarget.z * 0.25 + 34
   );
   camPos.lerp(desired, 1 - Math.pow(0.03, dt));
   camera.position.copy(camPos);
@@ -1476,23 +1480,9 @@ function tickRace(dt) {
 function bindModeLobby() {
   const pickSoccer = document.getElementById("pickSoccer");
   const pickRace = document.getElementById("pickRace");
-  const raceSetup = document.getElementById("raceSetup");
-  const raceSetupBack = document.getElementById("raceSetupBack");
-  const startRaceBtn = document.getElementById("startRaceBtn");
   if (pickSoccer) pickSoccer.addEventListener("click", () => startSoccerMode());
-  if (pickRace) pickRace.addEventListener("click", () => {
-    if (raceSetup) raceSetup.hidden = false;
-    document.querySelector(".lobby-actions").hidden = true;
-  });
-  if (raceSetupBack) raceSetupBack.addEventListener("click", () => {
-    if (raceSetup) raceSetup.hidden = true;
-    document.querySelector(".lobby-actions").hidden = false;
-  });
-  if (startRaceBtn) startRaceBtn.addEventListener("click", () => {
-    const n = +document.getElementById("racePlayers").value || 2;
-    const laps = +document.getElementById("raceLaps").value || 3;
-    startRaceMode(n, laps);
-  });
+  // One tap → race (defaults: 2 players, 3 laps)
+  if (pickRace) pickRace.addEventListener("click", () => startRaceMode(2, 3));
   if (modesBtn) modesBtn.addEventListener("click", () => showLobby());
 }
 
