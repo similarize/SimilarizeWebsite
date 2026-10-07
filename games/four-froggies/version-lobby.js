@@ -5,7 +5,7 @@
   "use strict";
 
   var CACHE = "20261006-padfix2";
-  var FF3D_CACHE = "20261006-trackcam1";
+  var FF3D_CACHE = "20261006-movefeel1";
   var FROG_ORDER = ["james", "jimmy", "bubbles", "rexy"];
   var FROG_NAME = { james: "James", jimmy: "Jimmy", bubbles: "Bubbles", rexy: "Rexy" };
 
