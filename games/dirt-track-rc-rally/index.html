@@ -48,11 +48,17 @@
       .x-mode { position: fixed; top: 12px; right: calc(24px + clamp(44px, 7vmin, 88px)); z-index: 4; height: clamp(44px, 7vmin, 88px);
         padding: 0 1em; border-radius: var(--r-pill); border: 2px solid rgba(255, 255, 255, 0.7); background: rgba(0, 0, 0, 0.3); color: #fff;
         font: var(--type-label); font-size: clamp(13px, 1.9vmin, 26px); cursor: pointer; touch-action: none; }
-      .x-joy { position: fixed; left: 0; top: 0; z-index: 3; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.7);
-        background: rgba(0, 0, 0, 0.22); pointer-events: none; display: none; }
+      .x-joy { position: fixed; left: 0; top: 0; z-index: 3; border-radius: var(--r-pill); border: 2px solid rgba(255, 255, 255, 0.8);
+        background: rgba(0, 0, 0, 0.28); pointer-events: none; display: none; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25); }
       .x-joy.on { display: block; }
-      .x-joy i { position: absolute; left: 50%; top: 50%; width: 46%; height: 46%; margin: -23% 0 0 -23%; border-radius: 50%;
-        background: rgba(255, 255, 255, 0.6); }
+      .x-joy.idle { opacity: 0.4; }
+      body.x-gp .x-joy.idle { display: none; }
+      .x-joy i { position: absolute; left: 50%; top: 50%; width: var(--k, 46%); height: var(--k, 46%); margin: calc(var(--k, 46%) / -2) 0 0 calc(var(--k, 46%) / -2);
+        border-radius: 50%; background: rgba(255, 255, 255, 0.75); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35); }
+      .x-joy b { position: absolute; left: 50%; bottom: 100%; transform: translateX(-50%); margin-bottom: 8px; white-space: nowrap;
+        font: var(--type-tag); font-size: var(--size-caption); letter-spacing: 0.08em; color: #fff; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8); }
+      .x-edge { position: fixed; left: 0; top: 0; z-index: 3; width: 34px; height: 34px; margin: -17px 0 0 -17px; pointer-events: none; display: none;
+        clip-path: polygon(100% 50%, 0 0, 22% 50%, 0 100%); filter: drop-shadow(0 0 2px #fff); }
       .x-slots { list-style: none; padding: 0; margin: 0 0 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
         text-align: left; font: var(--type-label); }
       .x-slots li { border: 1px solid var(--stroke-secondary); border-radius: var(--r-s); padding: 8px 10px; color: var(--text-secondary); }
@@ -88,11 +94,9 @@
   <body>
     <canvas id="c"></canvas>
     <div class="x-hud" id="hud"><span id="hLap">Lap 1/3</span><span id="hPos">Pos 4/4</span><span id="hTime">0:00.0</span></div>
-    <div class="x-pad r">
-      <div class="x-tb x-brk" data-k="brake" aria-label="Brake">Brake</div>
-    </div>
-    <div class="x-joy" id="joy"><i></i></div>
-    <button class="x-mode" id="modeBtn" aria-label="Steering mode">Point</button>
+    <div class="x-joy" id="joy"><i></i><b>THROTTLE</b></div>
+    <div class="x-joy" id="joyR"><i></i><b>STEER</b></div>
+    <button class="x-mode" id="modeBtn" aria-label="Control mode">RC (default)</button>
     <div class="x-over" id="title">
       <div class="x-panel">
         <h1>Dirt Track RC Rally</h1>
@@ -103,7 +107,7 @@
           <button class="btn" id="joinTouch">Join (touch)</button>
           <button class="btn" id="startBtn">Start Race</button>
         </div>
-        <p class="x-fine">Arrows / WASD, a controller, or the on-screen buttons. Start or Enter starts; P or Start pauses everyone.</p>
+        <p class="x-fine">Touch: left thumb throttle, right thumb steer. Keys: Up/W gas, Down/S brake and reverse, Left/Right steer. Controller (each one drives its own car): RT gas, LT brake and reverse, left stick steer; A gas, B brake. Start or Enter starts; P or Start pauses everyone.</p>
       </div>
     </div>
     <button class="x-pause" id="pauseBtn" aria-label="Pause">❚❚</button>
@@ -158,6 +162,8 @@
         for (let s = 0; s < SUB; s++)
           S.push(cr(WP[(i - 1 + N) % N], WP[i], WP[(i + 1) % N], WP[(i + 2) % N], s / SUB));
       const SN = S.length;
+      const sAt = (i) => S[((i % SN) + SN) % SN];
+      const nearestS = (x, y) => { let bi = 0, bd = 1e18; for (let i = 0; i < SN; i++) { const d = (S[i][0] - x) ** 2 + (S[i][1] - y) ** 2; if (d < bd) { bd = d; bi = i; } } return bi; };
 
       function trackDist(x, y) {
         let best = 1e9;
@@ -219,15 +225,25 @@
           const seg = Math.hypot(nx[0] - pv[0], nx[1] - pv[1]);
           return this.count + 1 - clamp(Math.hypot(nx[0] - this.x, nx[1] - this.y) / seg, 0, 1);
         }
-        drive() {
-          const n1 = WP[this.count % N], n2 = WP[(this.count + 1) % N];
-          let t = n1;
-          if (Math.hypot(n1[0] - this.x, n1[1] - this.y) < 230) t = n2;
-          const desired = Math.atan2(t[1] + this.offset - this.y, t[0] + this.offset - this.x);
-          const diff = angNorm(desired - this.a);
-          this.input.steer = clamp(diff * 2.5, -1, 1);
-          this.input.gas = 1;
-          this.input.brake = Math.abs(diff) > 0.9 && this.speed > 200 ? 1 : 0;
+        // AI: car-relative steer/throttle (same input as RC), aimed at a look-ahead point on the centerline
+        drive(dt = 1 / 60) {
+          if (this.wi === undefined || Math.hypot(sAt(this.wi)[0] - this.x, sAt(this.wi)[1] - this.y) > 400) this.wi = nearestS(this.x, this.y);
+          // advance the waypoint when within a radius, or once the car is past it along the track
+          for (let k = 0; k < 8; k++) {
+            const p = sAt(this.wi), q = sAt(this.wi + 1), dx = this.x - p[0], dy = this.y - p[1];
+            if (Math.hypot(dx, dy) < 70 || dx * (q[0] - p[0]) + dy * (q[1] - p[1]) > 0) this.wi++; else break;
+          }
+          const sp = this.speed, la = this.wi + 3 + Math.round(sp / 110);
+          const t = sAt(la), ta = sAt(la - 1), tb = sAt(la + 1), ang = Math.atan2(tb[1] - ta[1], tb[0] - ta[0]);
+          const tx = t[0] - Math.sin(ang) * this.offset, ty = t[1] + Math.cos(ang) * this.offset;
+          const diff = angNorm(Math.atan2(ty - this.y, tx - this.x) - this.a);
+          const far = sAt(this.wi + 9), fdiff = angNorm(Math.atan2(far[1] - this.y, far[0] - this.x) - this.a);
+          // unstick: reverse briefly after sitting still (rock, wall of cars)
+          this.stuck = sp < 25 ? (this.stuck || 0) + dt : Math.max(0, (this.stuck || 0) - dt);
+          if (this.stuck > 1.2) { this.rev = 0.7; this.stuck = 0; }
+          if (this.rev > 0) { this.rev -= dt; this.input = { steer: -Math.sign(diff), gas: 0, brake: 1 }; return; }
+          const brake = sp > 230 && Math.abs(fdiff) > 0.8;
+          this.input = { steer: clamp(diff * 2.2, -1, 1), gas: brake ? 0 : 1, brake: brake ? 1 : 0 };
         }
         update(dt) {
           if (this.spin > -1) this.spin -= dt;
@@ -268,7 +284,7 @@
             }
             const maxS = MAXS * surf * this.pow * (this.boost > 0 ? 1.45 : 1);
             if (i.gas && fwd < maxS) fwd += ACC * this.pow * Math.min(1, i.gas) * dt;
-            if (i.brake) fwd -= (fwd > 0 ? BRK : ACC * 0.6) * dt;
+            if (i.brake) fwd -= (fwd > 0 ? BRK : ACC * 0.6) * Math.min(1, i.brake) * dt;
             if (!i.gas && !i.brake) fwd -= Math.sign(fwd) * Math.min(Math.abs(fwd), 90 * dt);
             fwd = Math.max(fwd, -maxS * 0.4);
             if (fwd > maxS) fwd -= (fwd - maxS) * 3 * dt;
@@ -305,8 +321,10 @@
           } else this.air -= dt;
           this.x += this.vx * dt; this.y += this.vy * dt;
           // checkpoints
-          const w = WP[this.count % N];
-          if (Math.hypot(w[0] - this.x, w[1] - this.y) < 125) {
+          // checkpoint passes when close, or when the car has crossed it near the line (no endless circling)
+          const wk = this.count % N, w = WP[wk], tp = sAt(wk * SUB - 1), tq = sAt(wk * SUB + 1);
+          const cdx = this.x - w[0], cdy = this.y - w[1], cd = Math.hypot(cdx, cdy);
+          if (cd < 125 || (cd < 260 && cdx * (tq[0] - tp[0]) + cdy * (tq[1] - tp[1]) > 0)) {
             this.count++;
             if (this.count >= LAPS * N + 1 && this.finish === null) this.finish = raceTime;
           }
@@ -389,15 +407,16 @@
       const fromFlags = (f) => ({ steer: (f.right ? 1 : 0) - (f.left ? 1 : 0), gas: f.gas ? 1 : 0, brake: f.brake ? 1 : 0 });
 
       // ---------- virtual joystick + steering modes ----------
-      let steerMode = "point";
-      try { steerMode = localStorage.getItem("rcSteerMode") === "classic" ? "classic" : "point"; } catch (err) { steerMode = "point"; }
+      // RC (dual-stick transmitter) is the default; a new key so old saved modes are ignored
+      let steerMode = "rc";
+      try { steerMode = localStorage.getItem("rcCtrlMode2") === "point" ? "point" : "rc"; } catch (err) { steerMode = "rc"; }
       const modeBtn = document.getElementById("modeBtn");
-      const showMode = () => { modeBtn.textContent = steerMode === "point" ? "Point" : "Classic"; };
+      const showMode = () => { modeBtn.textContent = steerMode === "point" ? "Point" : "RC (default)"; };
       showMode();
       modeBtn.addEventListener("click", (e) => {
-        e.currentTarget.blur(); steerMode = steerMode === "point" ? "classic" : "point";
-        try { localStorage.setItem("rcSteerMode", steerMode); } catch (err) {}
-        showMode(); toast(steerMode === "point" ? "Point steering" : "Classic RC steering");
+        e.currentTarget.blur(); steerMode = steerMode === "point" ? "rc" : "point";
+        try { localStorage.setItem("rcCtrlMode2", steerMode); } catch (err) {}
+        showMode(); stickIdle(); toast(steerMode === "point" ? "Point steering" : "RC transmitter controls");
       });
       // screen direction (y down) at a car's world position -> world heading; the 3D renderer replaces this
       let toWorldDir = (x, y, dx, dy) => Math.atan2(dy, dx);
@@ -411,50 +430,62 @@
         if (Math.abs(diff) > 2.62) return { steer: Math.sign(diff) * (fwd < 0 ? -1 : 1), gas: 0, brake: 1 };
         return { steer: clamp(diff * 2.5, -1, 1), gas: Math.max((mag - DEAD) / (1 - DEAD), extraGas || 0), brake: 0 };
       }
-      const joy = { id: null, ox: 0, oy: 0, x: 0, y: 0 }, joyEl = document.getElementById("joy"), knob = joyEl.firstChild;
-      const joyR = () => Math.max(60, Math.min(innerWidth, innerHeight) * 0.1);
-      function joyDraw() {
-        const r = joyR();
-        joyEl.style.width = joyEl.style.height = 2 * r + "px";
-        joyEl.style.transform = `translate(${joy.ox - r}px, ${joy.oy - r}px)`;
-        knob.style.transform = `translate(${joy.x * r}px, ${joy.y * r}px)`;
+      // two floating sticks: left = THROTTLE (vertical; Point mode: 2D point stick), right = STEER (horizontal, RC only)
+      const mkStick = (id) => { const el = document.getElementById(id); return { id: null, ox: 0, oy: 0, x: 0, y: 0, el, knob: el.querySelector("i"), lab: el.querySelector("b") }; };
+      const sL = mkStick("joy"), sR = mkStick("joyR"), joy = sL;
+      const stickR = () => Math.max(56, Math.min(innerWidth, innerHeight) * 0.1);
+      const kindOf = (s) => (s === sR ? "h" : steerMode === "point" ? "c" : "v");
+      function stickDraw(s) {
+        const r = stickR(), k = kindOf(s), w = k === "h" ? 2.5 * r : k === "v" ? 1.15 * r : 2 * r, h = k === "v" ? 2.5 * r : k === "h" ? 1.15 * r : 2 * r;
+        Object.assign(s.el.style, { width: w + "px", height: h + "px", transform: `translate(${s.ox - w / 2}px, ${s.oy - h / 2}px)` });
+        s.el.style.setProperty("--k", r * 0.92 + "px");
+        s.knob.style.transform = `translate(${s.x * r}px, ${s.y * r}px)`;
+        if (s === sL) s.lab.textContent = k === "c" ? "DRIVE" : "THROTTLE";
       }
+      // resting hints on touch screens, so both sticks are discoverable
+      function stickIdle() {
+        let coarse = false; try { coarse = matchMedia("(pointer: coarse)").matches; } catch (err) {}
+        for (const s of [sL, sR]) {
+          if (s.id !== null) { stickDraw(s); continue; }
+          const show = coarse && (s === sL || steerMode !== "point"), r = stickR();
+          s.x = s.y = 0; s.el.classList.toggle("on", show); s.el.classList.toggle("idle", show);
+          if (show) { s.ox = s === sL ? Math.max(1.4 * r, innerWidth * 0.13) : Math.min(innerWidth - 1.6 * r, innerWidth * 0.86); s.oy = innerHeight - 1.6 * r; stickDraw(s); }
+        }
+      }
+      stickIdle(); addEventListener("resize", stickIdle);
       addEventListener("touchstart", (e) => {
         for (const t of e.changedTouches) {
-          if (joy.id !== null || t.clientX > innerWidth * 0.45 || t.target.tagName !== "CANVAS") continue;
-          Object.assign(joy, { id: t.identifier, ox: t.clientX, oy: t.clientY, x: 0, y: 0 });
-          joyEl.classList.add("on"); joyDraw(); document.body.classList.remove("x-gp");
+          if (t.target.tagName !== "CANVAS") continue;
+          const s = t.clientX < innerWidth / 2 ? sL : steerMode === "point" ? null : sR;
+          if (!s || s.id !== null) continue;
+          Object.assign(s, { id: t.identifier, ox: t.clientX, oy: t.clientY, x: 0, y: 0 });
+          s.el.classList.add("on"); s.el.classList.remove("idle"); stickDraw(s); document.body.classList.remove("x-gp");
         }
       }, { passive: true });
       addEventListener("touchmove", (e) => {
-        for (const t of e.changedTouches) if (t.identifier === joy.id) {
-          const r = joyR(); let dx = (t.clientX - joy.ox) / r, dy = (t.clientY - joy.oy) / r;
-          const m = Math.hypot(dx, dy); if (m > 1) { dx /= m; dy /= m; }
-          joy.x = dx; joy.y = dy; joyDraw();
+        for (const t of e.changedTouches) for (const s of [sL, sR]) if (t.identifier === s.id) {
+          const r = stickR(), k = kindOf(s); let dx = (t.clientX - s.ox) / r, dy = (t.clientY - s.oy) / r;
+          if (k === "v") { dx = 0; dy = clamp(dy, -1, 1); } else if (k === "h") { dy = 0; dx = clamp(dx, -1, 1); }
+          else { const m = Math.hypot(dx, dy); if (m > 1) { dx /= m; dy /= m; } }
+          s.x = dx; s.y = dy; stickDraw(s);
         }
       }, { passive: true });
-      const joyEnd = (e) => { for (const t of e.changedTouches) if (t.identifier === joy.id) {
-        joy.id = null; joy.x = joy.y = 0; joyEl.classList.remove("on"); } };
+      const joyEnd = (e) => { for (const t of e.changedTouches) for (const s of [sL, sR]) if (t.identifier === s.id) {
+        s.id = null; s.x = s.y = 0; s.el.classList.remove("on"); } stickIdle(); };
       addEventListener("touchend", joyEnd); addEventListener("touchcancel", joyEnd);
       function touchInput(car) {
-        const brk = held.brake ? 1 : 0;
-        if (joy.id === null) return { steer: 0, gas: 0, brake: brk };
         if (steerMode === "point") {
-          const r = pointDrive(car, joy.x, joy.y);
-          return r ? { ...r, brake: r.brake || brk, gas: brk ? 0 : r.gas } : { steer: 0, gas: 0, brake: brk };
+          if (joy.id === null) return NONE;
+          return pointDrive(car, joy.x, joy.y) || NONE;
         }
-        const sx = Math.abs(joy.x) < DEAD ? 0 : joy.x, up = -joy.y;
-        return { steer: clamp(sx * 1.2, -1, 1), gas: up > DEAD && !brk ? up : 0, brake: brk || up < -0.3 ? 1 : 0 };
+        // RC: proportional gas up, brake then reverse down, proportional car-relative steering (never flipped in reverse)
+        const up = sL.id === null ? 0 : -sL.y, sx = sR.id === null ? 0 : sR.x;
+        return { steer: Math.abs(sx) < 0.06 ? 0 : clamp(sx, -1, 1), gas: up > 0.08 ? (up - 0.08) / 0.92 : 0, brake: up < -0.25 ? 1 : 0 };
       }
-      // gamepad: Point mode turns the left stick into point-to-drive, RT still adds gas
+      // gamepad: always RC racing style, car-relative, whatever the touch mode; never point-to-drive
       function padInput(car, st) {
         if (!st) return NONE;
-        if (steerMode === "point") {
-          const r = pointDrive(car, st.sx || 0, st.sy || 0, st.gas);
-          if (r) return { ...r, brake: r.brake || st.brake, gas: r.brake || st.brake ? 0 : r.gas };
-          return { steer: st.dp || 0, gas: st.gas, brake: st.brake };
-        }
-        return st;
+        return { steer: st.steer, gas: st.brake ? 0 : st.gas, brake: st.brake };
       }
       const SOURCES = {
         kbd: () => fromFlags(keys),
@@ -463,7 +494,7 @@
         any: (p) => { // solo / online client: every input drives the one car
           const car = (p || players[0] || {}).car;
           const a = fromFlags(keys), b = touchInput(car), g = padInput(car, gp);
-          return { steer: a.steer || b.steer || g.steer, gas: Math.max(a.gas, b.gas, g.gas), brake: a.brake || b.brake || g.brake ? 1 : 0 };
+          return { steer: a.steer || b.steer || g.steer, gas: Math.max(a.gas, b.gas, g.gas), brake: Math.max(a.brake, b.brake, g.brake) };
         },
       };
       const readInput = (p) => SOURCES[players.length === 1 ? "any" : p.src](p);
@@ -542,14 +573,13 @@
           const prev = padPrev[p.index] || [];
           const b = (i) => { const x = p.buttons[i]; return !!x && (x.pressed || x.value > 0.3); };
           const pressed = (i) => b(i) && !prev[i];
-          let ax = p.axes[0] || 0;
-          ax = Math.abs(ax) < 0.18 ? 0 : (ax - Math.sign(ax) * 0.18) / 0.82;
+          const dz = (v) => (Math.abs(v || 0) < 0.12 ? 0 : clamp((v - Math.sign(v) * 0.12) / 0.88, -1, 1));
+          const tv = (i) => { const x = p.buttons[i]; const v = x ? Math.max(x.value || 0, x.pressed ? 1 : 0) : 0; return v > 0.05 ? v : 0; };
           const dp = (b(15) ? 1 : 0) - (b(14) ? 1 : 0);
-          const sx = p.axes[0] || 0, sy = p.axes[1] || 0;
-          const st = { steer: dp || ax, gas: b(7) || b(0) ? 1 : 0, brake: b(6) || b(1) ? 1 : 0, dp, sx, sy };
+          // RT = analog gas, LT = analog brake then reverse, left stick X = analog steer (d-pad backup); A full gas, B full brake
+          const st = { steer: clamp(dz(p.axes[0]) || dp, -1, 1), gas: Math.max(tv(7), b(0) ? 1 : 0), brake: Math.max(tv(6), b(1) ? 1 : 0) };
           padState[p.index] = st;
-          any.steer = any.steer || st.steer; any.gas |= st.gas; any.brake |= st.brake; any.dp = any.dp || dp;
-          if (!any.sx && !any.sy && Math.hypot(sx, sy) > 0.15) { any.sx = sx; any.sy = sy; }
+          any.steer = any.steer || st.steer; any.gas = Math.max(any.gas, st.gas); any.brake = Math.max(any.brake, st.brake);
           if ((st.steer || p.buttons.some((x) => x.pressed)) && !(players.length > 1 && players.some((q) => q.src === "touch")))
             document.body.classList.add("x-gp");
           padPrev[p.index] = p.buttons.map((x, i) => b(i));
@@ -587,7 +617,7 @@
           if (countdown > 0) countdown -= dt;
           raceTime += dt;
           for (const c of cars) {
-            if (c.ai || c.finish !== null) c.drive(); else c.input = readInput(c.owner);
+            if (c.ai || c.finish !== null) c.drive(dt); else c.input = readInput(c.owner);
             c.update(dt);
           }
           collideCars();
@@ -983,8 +1013,8 @@
         sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -0.0005;
         Object.assign(sun.shadow.camera, { left: -1100, right: 1100, top: 1100, bottom: -1100, near: 100, far: 4500 });
 
-        // spectator spot: middle of one long side, just outside the tire wall, about 12 car lengths up
-        const CAR_L = 26 * 1.6, CAM_H = CAR_L * 12;
+        // spectator spot: middle of one long side, just outside the tire wall, about 18 (visual, 2x) car lengths up
+        const CAR_VIS = 3.2, CAR_L = 26 * CAR_VIS, CAM_H = CAR_L * 18;
         const camSpot = (() => {
           let best = null;
           for (const p of S) { const along = longX ? p[0] - cx : p[1] - cz, side = longX ? p[1] - cz : p[0] - cx;
@@ -998,13 +1028,21 @@
           for (let i = 0, j = SN - 1; i < SN; j = i++) { const a = S[i], b = S[j];
             if ((a[1] > z) !== (b[1] > z) && x < ((b[0] - a[0]) * (z - a[1])) / (b[1] - a[1]) + a[0]) c = !c; }
           return c; };
+        // scenery zone: only behind the far side or beyond the ends, never between the camera and the track
+        const camSide = longX ? camSpot.z : camSpot.x, sgn = Math.sign(camSide - (longX ? cz : cx)) || 1;
+        const farEdge = sgn > 0 ? (longX ? BB[1] : BB[0]) - TW / 2 : (longX ? BB[3] : BB[2]) + TW / 2;
+        const endLo = (longX ? BB[0] : BB[1]) - TW / 2, endHi = (longX ? BB[2] : BB[3]) + TW / 2;
+        const zone = (x, z) => { const sd = longX ? z : x, al = longX ? x : z;
+          const f = (v) => Math.max(0, Math.min(1, v / 250));
+          return Math.max(f((farEdge - sd) * sgn - 80), f(endLo - al - 80), f(al - endHi - 80)); };
         const groundH = (x, z) => {
-          if (insideS(x, z)) return 0;
+          const zf = zone(x, z);
+          if (zf <= 0 || insideS(x, z)) return 0;
           const d = trackDist(x, z) - (TW / 2 + 110), dc = Math.hypot(x - camSpot.x, z - camSpot.z) - 260;
           if (d <= 0 || dc <= 0) return 0;
           const r = Math.min(1, d / 500), rc = Math.min(1, dc / 400), k = r * r * (3 - 2 * r) * rc * rc * (3 - 2 * rc);
           const n = Math.sin(x * 0.0021 + 0.7) * Math.cos(z * 0.0017) * 0.6 + Math.sin((x + z) * 0.0043 + 1.3) * 0.3 + Math.sin(x * 0.0009 - z * 0.0012) * 0.5;
-          return Math.max(-6, (n + 0.35) * 120 * k);
+          return Math.max(-6, (n + 0.35) * 60 * k * zf);
         };
         let seed = 1337; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
         const lam = (c, o) => new T.MeshLambertMaterial({ color: c, ...o });
@@ -1048,12 +1086,13 @@
             if (trackDist(x, y) > TW / 2 + 8 && !inBox(creek, x, y, 14)) tires.push([x, y]);
           }
         }
-        const tireM = new T.InstancedMesh(new T.CylinderGeometry(10, 10, 7, 12), lam(0xffffff), tires.length * 2);
+        // single-height tire ring along both edges
+        const tireM = new T.InstancedMesh(new T.CylinderGeometry(10, 10, 7, 12), lam(0xffffff), tires.length);
         const mt = new T.Matrix4(), col = new T.Color();
-        tires.forEach(([x, y], i) => [0, 1].forEach((l) => {
-          mt.makeTranslation(x, 3.5 + l * 7, y); tireM.setMatrixAt(i * 2 + l, mt);
-          tireM.setColorAt(i * 2 + l, col.set(i % 6 === 0 && l ? 0xeeeeee : 0x222222));
-        }));
+        tires.forEach(([x, y], i) => {
+          mt.makeTranslation(x, 3.5, y); tireM.setMatrixAt(i, mt);
+          tireM.setColorAt(i, col.set(i % 6 === 0 ? 0xeeeeee : 0x222222));
+        });
         tireM.castShadow = tireM.receiveShadow = true; scene.add(tireM);
 
         // low-poly trees and hay bales outside the track; any that would stand in the camera's sightline to the track are lowered or left out
@@ -1069,11 +1108,12 @@
             const x = BB[0] - 1400 + rnd() * (wid + 2800), z = BB[1] - 1400 + rnd() * (dep + 2800);
             const dc = Math.hypot(x - camSpot.x, z - camSpot.z), td = trackDist(x, z);
             if (inBox(creek, x, z, 40)) continue;
+            if (zone(x, z) < 0.3) continue; // nothing between the camera and the far edge
             if (trees.length < 170 && td > TW / 2 + 90 && dc > 700 && !insideS(x, z)) {
-              const s = Math.min(0.8 + rnd() * 0.8, (sightTop(x, z, 30) - groundH(x, z)) / 104);
-              if (s >= 0.5) trees.push([x, z, s]);
+              const s = Math.min(0.45 + rnd() * 0.3, (sightTop(x, z, 30) - groundH(x, z)) / 104);
+              if (s >= 0.35) trees.push([x, z, s]);
             }
-            else if (bales.length < 44 && td > TW / 2 + 40 && td < TW / 2 + 240 && dc > 260 && sightTop(x, z, 14) > groundH(x, z) + 26) bales.push([x, z, rnd() * Math.PI]);
+            else if (bales.length < 44 && td > TW / 2 + 40 && td < TW / 2 + 400 && dc > 260 && sightTop(x, z, 14) > groundH(x, z) + 26) bales.push([x, z, rnd() * Math.PI]);
           }
           const pm = (c) => new T.MeshPhongMaterial({ color: c, flatShading: true, shininess: 0 });
           const trunk = new T.InstancedMesh(new T.CylinderGeometry(4, 6, 30, 5), pm(0x6b4a2b), trees.length);
@@ -1114,7 +1154,7 @@
         const spokeG = new T.BoxGeometry(7.4, 1.6, 4.3);
         const models = COLORS.map(([, c]) => {
           const g = new T.Group(), sc = new T.Group(), bd = new T.Group(), body = new T.MeshStandardMaterial({ color: c, roughness: 0.45 });
-          sc.scale.setScalar(1.6); g.add(sc); sc.add(bd);
+          sc.scale.setScalar(CAR_VIS); g.add(sc); sc.add(bd);
           bd.add(box(26, 6, 13, body, 0, 9, 0), box(10, 5, 9, dark, 1, 14, 0), box(8, 3, 10, body, 11, 7, 0));
           bd.add(box(4, 1.2, 18, body, -13, 18, 0), box(1.5, 6, 1.5, black, -12, 14.5, -4), box(1.5, 6, 1.5, black, -12, 14.5, 4));
           const ant = new T.Mesh(new T.CylinderGeometry(0.4, 0.4, 18, 4), black); ant.position.set(-6, 21, 5); bd.add(ant);
@@ -1124,9 +1164,15 @@
             if (wx > 0) { const pv = new T.Group(); pv.position.set(wx, 5, wz); pv.add(w); sc.add(pv); fronts.push(pv); }
             else { w.position.set(wx, 5, wz); sc.add(w); }
           }
-          const mk = new T.Mesh(new T.ConeGeometry(6, 13, 12), new T.MeshBasicMaterial({ color: c }));
-          mk.rotation.x = Math.PI; mk.visible = false; scene.add(g, mk);
-          Object.assign(g.userData, { mk, bd, wheels, fronts, pa: null, roll: 0 });
+          // always-visible markers: floating cone and a ground ring, drawn over everything
+          const xray = (m, o) => { m.renderOrder = o; m.frustumCulled = false; return m; };
+          const mk = xray(new T.Mesh(new T.ConeGeometry(11, 24, 12), new T.MeshBasicMaterial({ color: c, depthTest: false, depthWrite: false, transparent: true })), 1001);
+          const rg = new T.RingGeometry(54, 66, 40); rg.rotateX(-Math.PI / 2);
+          const ring = xray(new T.Mesh(rg, new T.MeshBasicMaterial({ color: c, depthTest: false, depthWrite: false, transparent: true, opacity: 0.95 })), 1000);
+          const rg2 = new T.RingGeometry(66, 70, 40); rg2.rotateX(-Math.PI / 2);
+          ring.add(xray(new T.Mesh(rg2, new T.MeshBasicMaterial({ color: 0xffffff, depthTest: false, depthWrite: false, transparent: true })), 1000));
+          mk.rotation.x = Math.PI; mk.visible = ring.visible = false; scene.add(g, mk, ring);
+          Object.assign(g.userData, { mk, ring, bd, wheels, fronts, pa: null, roll: 0 });
           return g;
         });
 
@@ -1138,52 +1184,63 @@
         const pts = new T.Points(pg, new T.PointsMaterial({ size: 16, map: dot, vertexColors: true, transparent: true, opacity: 0.7, depthWrite: false }));
         pts.frustumCulled = false; scene.add(pts);
 
-        // spectator camera: fixed spot, look-down 35-42°, aim lerps to the center of the human cars' bounding box,
-        // fov lerps (28 to 70) so the box fits with ~25% margin; solo adds the nearest AI ahead; title frames the whole track
+        // spectator camera: position fixed, it only rotates and zooms. Look-down 48-55°, bent past that only as far as needed
+        // to keep the aim in frame. Solo: aim at the human car with a slight lead, fov 30-55 (AI cars never widen it).
+        // Several humans: fit their bounding box with 25% margin, fov 30-75. Title frames the whole track. No foreground railing.
         cam.position.copy(camSpot); scene.add(cam);
         const aim = new T.Vector3(cx, 0, cz), aimT = new T.Vector3(), look = new T.Vector3(), v = new T.Vector3();
-        const P_MIN = 35 * Math.PI / 180, P_MAX = 42 * Math.PI / 180, MARGIN = 1 / 1.25, FOV_MIN = 28, FOV_MAX = 70;
+        const D2R = Math.PI / 180, P_MIN = 48 * D2R, P_MAX = 55 * D2R, CAR_R = CAR_L * 0.55;
         const TRACK_PTS = [[BB[0], BB[1]], [BB[2], BB[1]], [BB[0], BB[3]], [BB[2], BB[3]]].map(([x, y]) => ({ x: x + Math.sign(x - cx) * TW / 2, y: y + Math.sign(y - cz) * TW / 2 }));
         let fovNow = 50;
         function orient(fov) {
           const dx = aim.x - camSpot.x, dz = aim.z - camSpot.z, hd = Math.hypot(dx, dz) || 1;
-          const p = Math.min(P_MAX, Math.max(P_MIN, Math.atan2(CAM_H, hd)));
+          const th = Math.atan2(CAM_H, hd), k = fov * D2R * 0.5 * 0.4;
+          const p = Math.min(th + k, Math.max(th - k, Math.min(P_MAX, Math.max(P_MIN, th))));
           look.set(camSpot.x + (dx / hd) * Math.cos(p) * 100, CAM_H - Math.sin(p) * 100, camSpot.z + (dz / hd) * Math.cos(p) * 100);
           cam.fov = fov; cam.lookAt(look); cam.updateProjectionMatrix(); cam.updateMatrixWorld();
         }
         function updateCam() {
-          let focus = state === "title" ? TRACK_PTS : players.filter((p) => p.car).map((p) => p.car);
-          if (focus.length === 1 && cars.length > 1) {
-            const me = focus[0], mp = me.progress(); let best = null, bd = Infinity, back = null, bb = Infinity;
-            for (const c of cars) { if (!c || c === me || c.owner) continue; const d = c.progress() - mp;
-              if (d > 0 && d < bd) { bd = d; best = c; } else if (d <= 0 && -d < bb) { bb = -d; back = c; } }
-            if (best || back) focus = [me, best || back];
+          const title = state === "title", hum = title ? [] : players.filter((p) => p.car).map((p) => p.car);
+          let focus, lo = 30, hi = 75, margin = 1 / 1.25, pad = CAR_R;
+          if (hum.length === 1) {
+            const c = hum[0], sp = c.speed, L = sp > 1 ? Math.min(sp * 0.3, 130) / sp : 0;
+            focus = hum; hi = 55; margin = 1 / 1.6;
+            aimT.set(c.x + c.vx * L, 0, c.y + c.vy * L);
+          } else {
+            focus = hum.length ? hum : title ? TRACK_PTS : cars.filter(Boolean);
+            if (!hum.length) { hi = 90; pad = 0; }
+            if (focus.length) { let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+              for (const c of focus) { x0 = Math.min(x0, c.x); x1 = Math.max(x1, c.x); z0 = Math.min(z0, c.y); z1 = Math.max(z1, c.y); }
+              aimT.set((x0 + x1) / 2, 0, (z0 + z1) / 2); }
+            else aimT.set(cx, 0, cz);
           }
-          if (!focus.length) focus = cars.filter(Boolean);
-          if (focus.length) { let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
-            for (const c of focus) { x0 = Math.min(x0, c.x); x1 = Math.max(x1, c.x); z0 = Math.min(z0, c.y); z1 = Math.max(z1, c.y); }
-            aimT.set((x0 + x1) / 2, 0, (z0 + z1) / 2); }
-          else aimT.set(cx, 0, cz);
-          aim.lerp(aimT, 0.08);
+          aim.lerp(aimT, title ? 0.05 : 0.1);
           orient(fovNow);
-          const A = cam.aspect; let tv = Math.tan((FOV_MIN * Math.PI) / 360);
+          const A = cam.aspect; let tv = Math.tan(lo * D2R / 2);
           for (const c of focus) {
-            v.set(c.x, 8, c.y).applyMatrix4(cam.matrixWorldInverse); const zz = Math.max(30, -v.z);
-            tv = Math.max(tv, Math.abs(v.y) / zz / MARGIN, Math.abs(v.x) / zz / MARGIN / A);
+            v.set(c.x, 10, c.y).applyMatrix4(cam.matrixWorldInverse); const zz = Math.max(30, -v.z);
+            tv = Math.max(tv, (Math.abs(v.y) + pad) / zz / margin, (Math.abs(v.x) + pad) / zz / margin / A);
           }
-          const want = Math.min(FOV_MAX, Math.max(FOV_MIN, (Math.atan(tv) * 360) / Math.PI));
-          fovNow += (want - fovNow) * 0.08; orient(fovNow);
+          const want = Math.min(hi, Math.max(lo, (Math.atan(tv) * 2) / D2R));
+          fovNow += (want - fovNow) * 0.1; fovNow = Math.min(Math.max(fovNow, lo), Math.max(hi, fovNow - 1)); orient(fovNow);
           sun.target.position.set(aim.x, 0, aim.z); sun.position.copy(sun.target.position).add(SUN_OFF);
-          // keep the railing the same size at the bottom of the view whatever the fov
-          rail.scale.setScalar(Math.tan((fovNow * Math.PI) / 360) / Math.tan((FOV_MIN * Math.PI) / 360));
         }
-        // foreground railing, lowered to a thin strip at the very bottom of the view
-        const rail = new T.Group(); cam.add(rail);
-        {
-          const metal = lam(0x8d949c), postM = lam(0x5b6168), Y0 = -50 * Math.tan((FOV_MIN * Math.PI) / 360) - 1.1;
-          const bar = (y, t) => { const m = new T.Mesh(new T.BoxGeometry(600, t, t), metal); m.position.set(0, Y0 + y, -50); rail.add(m); };
-          bar(1.75, 0.32); bar(0.85, 0.2);
-          for (let x = -300; x <= 300; x += 9) { const m = new T.Mesh(new T.BoxGeometry(0.28, 2, 0.28), postM); m.position.set(x, Y0 + 0.9, -50); rail.add(m); }
+        // edge arrows for human cars that are off screen
+        const edges = COLORS.map(([, c]) => { const e = Object.assign(document.createElement("div"), { className: "x-edge" }); e.style.background = c; document.body.append(e); return e; });
+        const ev = new T.Vector3(), ec = new T.Vector3();
+        function drawEdges() {
+          const w = innerWidth, h = innerHeight;
+          edges.forEach((e, i) => {
+            const c = cars[i];
+            if (!c || !c.owner || state === "title") { e.style.display = "none"; return; }
+            ec.set(c.x, 10, c.y).applyMatrix4(cam.matrixWorldInverse); ev.set(c.x, 10, c.y).project(cam);
+            let qx = ev.x, qy = ev.y; const behind = ec.z > -1;
+            if (behind) { qx = -qx; qy = -qy; }
+            if (!behind && Math.abs(qx) <= 1 && Math.abs(qy) <= 1) { e.style.display = "none"; return; }
+            const m = Math.max(Math.abs(qx) / 0.92, Math.abs(qy) / 0.86, 1e-6), px = qx / m, py = qy / m;
+            e.style.display = "block";
+            e.style.transform = `translate(${((px + 1) / 2) * w}px, ${((1 - py) / 2) * h}px) rotate(${Math.atan2(-qy * h, qx * w)}rad)`;
+          });
         }
         function fit() {
           const w = innerWidth, h = innerHeight;
@@ -1240,7 +1297,7 @@
           const t = performance.now() / 1000, dt = Math.min(0.1, Math.max(0.001, t - (lastT || t))); lastT = t;
           creekM.material.opacity = 0.68 + Math.sin(t * 2) * 0.06;
           models.forEach((g, i) => {
-            const c = cars[i], u = g.userData, mk = u.mk; g.visible = !!c; if (!c) { mk.visible = false; u.pa = null; return; }
+            const c = cars[i], u = g.userData, mk = u.mk; g.visible = !!c; if (!c) { mk.visible = u.ring.visible = false; u.pa = null; return; }
             const h = c.air > 0 ? Math.sin(Math.PI * (1 - c.air / c.airT)) * 40 : 0;
             g.position.set(c.x, h, c.y); g.rotation.y = -c.a;
             const fwd = c.vx * Math.cos(c.a) + c.vy * Math.sin(c.a);
@@ -1251,9 +1308,10 @@
             for (const w of u.wheels) w.rotation.z -= (fwd * dt) / 8;
             const st = (c.input && c.input.steer) || 0;
             for (const pv of u.fronts) pv.rotation.y += (-st * 0.45 - pv.rotation.y) * Math.min(1, dt * 12);
-            mk.visible = !!c.owner && state !== "title"; mk.position.set(c.x, h + 62 + Math.sin(t * 4 + i) * 3, c.y); mk.rotation.y = t * 2;
+            mk.visible = u.ring.visible = !!c.owner && state !== "title"; mk.position.set(c.x, h + 120 + Math.sin(t * 4 + i) * 5, c.y); mk.rotation.y = t * 2;
+            u.ring.position.set(c.x, 2.5, c.y); u.ring.scale.setScalar(1 + Math.sin(t * 5 + i) * 0.06);
           });
-          updateCam(); drawMini();
+          updateCam(); drawMini(); drawEdges();
           const n = Math.min(dust.length, PMAX);
           for (let i = 0; i < n; i++) {
             const p = dust[i], f = p.life / p.max; col.set(p.col).multiplyScalar(1 - f * 0.35);
