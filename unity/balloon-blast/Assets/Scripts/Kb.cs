@@ -57,6 +57,43 @@ public static class Kb
         try { return Input.GetKeyDown(KeyCode.R); } catch { return false; }
     }
 
+    public static bool FDown()
+    {
+        Keyboard k = Keyboard.current;
+        if (k != null) return k.fKey.wasPressedThisFrame;
+        try { return Input.GetKeyDown(KeyCode.F); } catch { return false; }
+    }
+
+    public static bool LeftDown()
+    {
+        Keyboard k = Keyboard.current;
+        if (k != null) return k.leftArrowKey.wasPressedThisFrame;
+        try { return Input.GetKeyDown(KeyCode.LeftArrow); } catch { return false; }
+    }
+
+    public static bool RightDown()
+    {
+        Keyboard k = Keyboard.current;
+        if (k != null) return k.rightArrowKey.wasPressedThisFrame;
+        try { return Input.GetKeyDown(KeyCode.RightArrow); } catch { return false; }
+    }
+
+    // screen positions of touches that began this frame
+    public static System.Collections.Generic.List<Vector2> TouchesBegan()
+    {
+        var l = new System.Collections.Generic.List<Vector2>();
+        try
+        {
+            for (int i = 0; i < Input.touchCount; i++)
+            {
+                UnityEngine.Touch t = Input.GetTouch(i);
+                if (t.phase == UnityEngine.TouchPhase.Began) l.Add(t.position);
+            }
+        }
+        catch { }
+        return l;
+    }
+
     public static bool MouseLeft()
     {
         Mouse m = Mouse.current;
