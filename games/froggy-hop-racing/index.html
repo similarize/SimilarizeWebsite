@@ -48,6 +48,8 @@
       .x-btn--ghost { background: rgba(255,255,255,.9); box-shadow: 0 6px 0 rgba(0,0,0,.2); font-size: 18px; padding: 14px 30px; }
       .x-pick { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin: 0 auto 8px; max-width: 560px; max-height: 40vh; overflow-y: auto; padding: 4px; }
       .x-pick .x-btn { padding: 8px 14px; font-size: 15px; opacity: .7; }
+      #x-tracks { max-width: 600px; }
+      #x-tracks .x-btn { flex: 0 1 auto; white-space: nowrap; }
       .x-pick .x-btn.is-sel { opacity: 1; background: #8ef36a; box-shadow: 0 6px 0 #3d9a2a, 0 0 0 3px #fff; }
       .x-pickst { margin: 4px 0 8px; font-size: 16px; }
       .x-pickst.is-bump { animation: x-bump .3s var(--ease-out); }
@@ -125,6 +127,9 @@
               <button class="x-btn x-btn--ghost" data-track="0" aria-pressed="false">🌴 Palm Beach Loop</button>
               <button class="x-btn x-btn--ghost" data-track="1" aria-pressed="false">🌋 Volcano Climb</button>
               <button class="x-btn x-btn--ghost" data-track="2" aria-pressed="false">🪷 Lily Lagoon</button>
+              <button class="x-btn x-btn--ghost" data-track="3" aria-pressed="false">🌲 Snowy Pines</button>
+              <button class="x-btn x-btn--ghost" data-track="4" aria-pressed="false">🏜️ Desert Canyon</button>
+              <button class="x-btn x-btn--ghost" data-track="5" aria-pressed="false">🍭 Candy Garden</button>
             </div>
             <div class="x-pick" id="x-pick" role="group" aria-label="Choose your character">
               <button class="x-btn x-btn--ghost is-sel" data-char="0" aria-pressed="true">🐸 James</button>
@@ -187,7 +192,7 @@
       } };
       document.getElementById("b-mute").addEventListener("click", function (e) { e.stopPropagation(); xMute.toggle(); this.blur(); });
       window.xTrack = 0;
-      try { var q = parseInt(new URLSearchParams(location.search).get("track"), 10); if (q >= 0 && q < 3) window.xTrack = q; } catch (e) {}
+      try { var q = parseInt(new URLSearchParams(location.search).get("track"), 10); if (q >= 0 && q < document.querySelectorAll("#x-tracks [data-track]").length) window.xTrack = q; } catch (e) {}
       (function () {
         var tb = document.querySelectorAll("#x-tracks [data-track]"), cur = tb[window.xTrack];
         var name = cur.textContent.replace(/^\S+\s/, "");
@@ -251,6 +256,18 @@ const TRACKS = [
     CTRL: [[-160,40,0],[-120,120,2],[-60,140,3],[-20,60,0],[30,50,0],[70,130,2],[140,140,4],[180,70,1],[150,-10,0],[160,-90,1],[100,-160,1],[40,-80,0],[-20,-70,0],[-80,-160,1],[-150,-140,0],[-180,-60,0]],
     theme: { sand: [0x7cc45a, 0x72ba52], berm: 0x3f8a3a, apron: [0x8fcf5a, 0x86c552], island: null, grass: null, water: 0x2aa5a0, lagoon: 0x3cc7bd, lilies: 2, skyTop: 0x3aa8b0, skyBot: 0xc8f0e8, fog: 0xa8e0d8, ground: 0x7cc45a },
     segs: { bridge: [0.12, 0.2], shallow: [0.47, 0.87] } },
+  { name: "Snowy Pines", // short lift up to 18, then a long sweeping downhill with two big banked curves
+    CTRL: [[-170,-120,6],[-150,-170,12],[-90,-185,18],[-20,-170,18],[40,-130,16],[110,-150,14],[170,-110,12],[185,-40,10],[150,20,8],[80,30,7],[30,70,6],[55,125,4],[120,145,3],[105,188,2],[20,182,1],[-80,160,0],[-160,100,0],[-185,10,1],[-185,-60,3]],
+    theme: { sand: [0xe8f0f6, 0xdfe9f2], berm: 0x6fa8d6, apron: [0xcfdde9, 0xc6d6e4], island: 0xd6e3ee, grass: 0xeef4f8, water: 0x4a6478, lagoon: 0xcfe6f2, shallowCol: 0xbfe0ee, shallowBerm: 0x8fbcd8, rocky: true, skyTop: 0x9fb4c8, skyBot: 0xe6eef5, fog: 0xdde7ef, ground: 0x5a7088 },
+    segs: { bridge: [0.4, 0.46], shallow: [0.72, 0.86] } },
+  { name: "Desert Canyon", // switchbacks climbing to 14, rope bridge over a dry gorge, then a fast straight drop
+    CTRL: [[-170,150,0],[-80,180,0],[150,172,2],[185,142,3],[150,112,4],[60,110,5],[28,80,6],[60,50,6],[150,48,7],[185,18,8],[150,-12,9],[60,-14,10],[28,-45,11],[60,-76,12],[150,-80,13],[185,-115,14],[150,-160,14],[40,-180,14],[-150,-120,9],[-170,10,4]],
+    theme: { sand: [0xc8743e, 0xbb6a37], berm: 0x7a3518, apron: [0xd99a5e, 0xd09156], island: 0xd09156, grass: 0xe0b07a, water: 0xc98a52, lagoon: 0x6e3a1e, rocky: true, skyTop: 0xe0a070, skyBot: 0xf6dcb0, fog: 0xeec89a, ground: 0xc98a52 },
+    segs: { bridge: [0.68, 0.75], shallow: null } },
+  { name: "Candy Garden", // big twisty oval with rolling 0-8 bumps and a chocolate river
+    CTRL: [[185,0,0],[146,43,8],[142,96,0],[78,109,8],[32,148,0],[-27,124,8],[-92,130,0],[-119,81,8],[-174,51,0],[-155,0,8],[-174,-51,0],[-119,-81,8],[-93,-130,0],[-27,-124,8],[32,-148,0],[78,-109,8],[142,-96,0],[146,-43,8]],
+    theme: { sand: [0xf6b8d0, 0xbfeedd], berm: 0xc7a6ec, apron: [0xd8f5c8, 0xcdeebc], island: 0xfde6f0, grass: 0xc6f0b8, water: 0x9fd8f0, lagoon: 0x6b3a22, shallowCol: 0x7a4a2a, shallowBerm: 0x5a3420, skyTop: 0x9fd0f8, skyBot: 0xfbe8f6, fog: 0xf3e2f2, ground: 0xc6f0b8 },
+    segs: { bridge: [0.2, 0.26], shallow: [0.55, 0.66] } },
 ];
 let TI = 0; try { TI = clamp(parseInt(new URLSearchParams(location.search).get("track"), 10) || 0, 0, TRACKS.length - 1); } catch (e) {}
 if (window.xTrack != null) TI = clamp(window.xTrack | 0, 0, TRACKS.length - 1); // picker choice (set before boot)
@@ -355,10 +372,10 @@ function ribbon(d0, y0, d1, y1, col, keep, abs1) {
   scene.add(m);
   return m;
 }
-const trackCol = (i) => { const s = SEG(i); return s === "bridge" ? (i % 3 === 0 ? 0x6b4a2b : 0xa8774a) : s === "shallow" ? 0x3fb3b0 : TT.sand[i % 8 < 4 ? 0 : 1]; };
+const trackCol = (i) => { const s = SEG(i); return s === "bridge" ? (i % 3 === 0 ? 0x6b4a2b : 0xa8774a) : s === "shallow" ? (TT.shallowCol ?? 0x3fb3b0) : TT.sand[i % 8 < 4 ? 0 : 1]; };
 ribbon(-HW, 0.02, HW, 0.02, trackCol);
 // berms (sand) / rails (wood on the bridge)
-const bermCol = (i) => (SEG(i) === "bridge" ? 0x7a5230 : SEG(i) === "shallow" ? 0x2f6e47 : TT.berm);
+const bermCol = (i) => (SEG(i) === "bridge" ? 0x7a5230 : SEG(i) === "shallow" ? (TT.shallowBerm ?? 0x2f6e47) : TT.berm);
 [1, -1].forEach((s) => {
   ribbon(s * HW, 0.02, s * (HW + 0.6), 0.55, bermCol);
   ribbon(s * (HW + 0.6), 0.55, s * (HW + 1.3), 0.0, bermCol);
