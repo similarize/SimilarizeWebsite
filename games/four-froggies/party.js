@@ -60,6 +60,17 @@
    * onEnd(payload) — wipe/clear from host
    * onPeerGone(peerId) — host
    */
+  /* padmerge1: "Pad N" numbers come from the deduped controller list, so an
+     ignored ghost at a low raw index doesn't make real pads read "Pad 2/3". */
+  function padLabel(pi) {
+    var n = (pi | 0) + 1;
+    try {
+      var GP = global.SimilarizeGamepad;
+      if (GP && typeof GP.padNumber === "function") n = GP.padNumber(pi | 0, 4) || n;
+    } catch (e) { /* ignore */ }
+    return "Pad " + n;
+  }
+
   function createParty(hooks) {
     hooks = hooks || {};
     var role = "solo"; // solo | host | guest
@@ -167,7 +178,7 @@
       seats[frogId] = {
         status: isLocalPeerId(peerId) ? "you" : (isLocal ? "you" : "human"),
         peerId: peerId,
-        label: label || (pIdx != null ? ("Pad " + (pIdx + 1)) : (isLocal ? "You" : "Joined")),
+        label: label || (pIdx != null ? padLabel(pIdx) : (isLocal ? "You" : "Joined")),
         padIndex: pIdx,
       };
       // Normalize: keyboard localId + local-pad-* are couch locals; remotes are human
@@ -180,7 +191,7 @@
           seats[id].status = "you";
           var pi = s.padIndex != null ? s.padIndex : padIndexFromPeer(s.peerId);
           seats[id].padIndex = pi;
-          seats[id].label = pi != null ? ("Pad " + (pi + 1)) : (s.peerId === localId ? "You" : (s.label || "You"));
+          seats[id].label = pi != null ? padLabel(pi) : (s.peerId === localId ? "You" : (s.label || "You"));
         } else {
           seats[id].status = "human";
           seats[id].label = s.label || "Joined";
@@ -253,7 +264,7 @@
           s.status = "you";
           pi = s.padIndex != null ? s.padIndex : padIndexFromPeer(s.peerId);
           s.padIndex = pi;
-          s.label = pi != null ? ("Pad " + (pi + 1)) : (s.peerId === localId ? "You" : (s.label || "You"));
+          s.label = pi != null ? padLabel(pi) : (s.peerId === localId ? "You" : (s.label || "You"));
         } else {
           s.status = "human";
           s.padIndex = null;
@@ -350,10 +361,42 @@
         if (peer.indexOf("local-pad-") !== 0) continue;
         pi = s.padIndex != null ? (s.padIndex | 0) : padIndexFromPeer(peer);
         if (pi == null || liveSet[pi]) continue;
-        seats[id] = { status: "open", peerId: null, label: null, padIndex: null };
+        /* padmerge1: a duplicate of a live stick hands its seat to that stick */
+        var ci = canonicalizePadIndex(pi);
+        if (ci >= 0 && ci !== pi && liveSet[ci] && !seatClaimedBy("local-pad-" + ci)) {
+          seats[id] = { status: "you", peerId: "local-pad-" + ci, label: padLabel(ci), padIndex: ci };
+        } else {
+          seats[id] = { status: "open", peerId: null, label: null, padIndex: null };
+        }
         changed = true;
       }
       if (changed) enforceSeatInvariant();
+    }
+
+    /** padmerge1: SimilarizeGamepad found raw slot aliasIdx is the same physical
+     *  controller as rootIdx. Move its seat onto rootIdx (if that stick has none),
+     *  otherwise free it — one controller never keeps two frogs. */
+    function mergePadSeat(aliasIdx, rootIdx) {
+      if (role === "guest") return false;
+      var a = aliasIdx | 0, r = rootIdx | 0;
+      if (a === r) return false;
+      var fid = null, i, s, pi;
+      for (i = 0; i < FROG_ORDER.length; i++) {
+        s = seats[FROG_ORDER[i]];
+        if (!s || !s.peerId || String(s.peerId).indexOf("local-pad-") !== 0) continue;
+        pi = s.padIndex != null ? (s.padIndex | 0) : padIndexFromPeer(s.peerId);
+        if (pi === a) { fid = FROG_ORDER[i]; break; }
+      }
+      if (!fid) return false;
+      if (seatClaimedBy("local-pad-" + r)) {
+        seats[fid] = { status: "open", peerId: null, label: null, padIndex: null };
+      } else {
+        seats[fid] = { status: "you", peerId: "local-pad-" + r, label: padLabel(r), padIndex: r };
+      }
+      enforceSeatInvariant();
+      if (role === "host") broadcast(lobbyPayload());
+      emitLobby(role === "solo" ? "idle" : "ready");
+      return true;
     }
 
     /** Aggressive prune for Start / disconnect: also drop seats whose slot is gone. */
@@ -463,7 +506,7 @@
         return null;
       }
       clearKeyboardOnlyLocals();
-      var res = applyClaim(frogId, peerId, "Pad " + (idx + 1), true, idx);
+      var res = applyClaim(frogId, peerId, padLabel(idx), true, idx);
       if (!res.ok) return null;
       enforceSeatInvariant(frogId);
       /* Hard guard: same padIndex must not remain on two frogs (padedge1) */
@@ -513,7 +556,7 @@
       for (var i = 0; i < FROG_ORDER.length; i++) {
         var fid = FROG_ORDER[i];
         if (!seats[fid].peerId || seats[fid].status === "open") {
-          var res = applyClaim(fid, peerId, "Pad " + (idx + 1), true, idx);
+          var res = applyClaim(fid, peerId, padLabel(idx), true, idx);
           if (res.ok) {
             if (role === "host") broadcast(lobbyPayload());
             emitLobby(role === "solo" ? "idle" : "ready");
@@ -1009,6 +1052,7 @@
       pruneDeadPadClaims: pruneDeadPadClaims,
       pruneDeadPadClaimsHard: pruneDeadPadClaimsHard,
       capLocalPadSeats: capLocalPadSeats,
+      mergePadSeat: mergePadSeat,
       startParty: startParty,
       canStart: canStart,
       sendInput: sendInput,
@@ -1030,6 +1074,15 @@
     };
     global.FroggiesParty.active = api;
     return api;
+  }
+
+  /* padmerge1: seat follows the merge (lobby or mid-game) */
+  if (global.addEventListener) {
+    global.addEventListener("similarize-gamepad-merge", function (e) {
+      var d = e && e.detail;
+      var act = global.FroggiesParty && global.FroggiesParty.active;
+      if (d && act && typeof act.mergePadSeat === "function" && act.mergePadSeat(d.alias, d.root)) d.handled = true;
+    });
   }
 
   global.FroggiesParty = {
