@@ -76,6 +76,7 @@
       .x-pads:empty { display: none; }
       .x-padico { width: 22px; height: 15px; flex: none; }
       .x-panel .x-hint { font: var(--type-caption); margin: 0 0 16px; }
+      .x-panel .x-dbg { font: var(--type-caption); color: var(--text-secondary); margin: -8px 0 12px; overflow-wrap: anywhere; }
       .x-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; vertical-align: middle; }
       .x-btns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
       .x-panel ol li.x-me { font-weight: var(--weight-bold); }
@@ -117,6 +118,7 @@
         <p><b>Local Race.</b> Join with A on a controller, Enter on the keyboard, or Join (touch). Empty slots race as AI.</p>
         <ul class="x-pads" id="pads" aria-live="polite"></ul>
         <ul class="x-slots" id="slots"></ul>
+        <p class="x-dbg" id="padDbg" aria-label="Gamepads reported by the browser"></p>
         <p class="x-hint">A join · ◀ ▶ colour · B leave · Start race</p>
         <div class="x-btns">
           <button class="btn" id="joinTouch">Join (touch)</button>
@@ -594,7 +596,16 @@
           if (btn === "b") { if (p) leaveSlot(p); return; }
           if (btn === "prev" || btn === "next") { if (p) { cycleCol(p, btn === "next" ? 1 : -1); renderSlots(); } return; }
           // never auto-join: a pad takes a slot only when it presses A
-          if (!p) { if (src === "pad" && btn !== "a") return; join(src, id); if (btn !== "start") return; }
+          if (!p) {
+            if (src === "pad" && btn !== "a") return;
+            if (src === "pad") {
+              // join guard: another entry pressed within 120 ms and is joined or lower = same device, alias instead of joining
+              const now = performance.now();
+              const o = [...padElig].find((i) => i !== id && padRoot(i) !== id && now - (padPressT[i] ?? -1e9) <= 120 && (isJoined("pad", padRoot(i)) || i < id));
+              if (o != null) { padAlias[id] = padRoot(o); padScan(); return; }
+            }
+            join(src, id); if (btn !== "start") return;
+          }
           // the first joined player starts with Start (or A again once Ready); Enter always starts once the keyboard has joined
           if (me() && (me() === firstLocal() || btn === "enter")) startRace();
           return;
@@ -628,51 +639,35 @@
         toastEl.textContent = msg; toastEl.classList.add("on");
         clearTimeout(toastT); toastT = setTimeout(() => toastEl.classList.remove("on"), 2000);
       }
-      // Dedupe: browsers can list one physical pad twice (a 'standard' entry plus a raw one, or a stale
-      // entry at another index). padKept is the deduped list; slots bind to a kept raw index, labels use list order.
-      let padKept = [];
-      const padMirrorGhost = {}, padMirror = {};
-      const padSig = (g) => g.buttons.map((x) => (x.pressed ? "1" : "0") + (x.value || 0).toFixed(3)).join(",") + "|" + g.axes.map((v) => (v || 0).toFixed(3)).join(",");
-      const padActive = (g) => g.buttons.some((x) => x.pressed || x.value > 0.3) || g.axes.some((v) => Math.abs(v || 0) > 0.3);
+      // Dedupe: a browser can list one physical pad twice, with a different id, mapping or button count.
+      // 1) if any entry is 'standard', every non-standard entry is ignored outright;
+      // 2) entries whose presses coincide (within 80 ms) are one device: the higher index becomes an alias of the lower.
+      // padKept is the deduped list; slots bind to a kept raw index, labels use list order.
+      let padKept = [], padElig = new Set();
+      const padAlias = {}, padPressT = {}, padAT = {}, padRawPrev = {}, padCoin = {};
+      const padRoot = (i) => { for (let n = 0; padAlias[i] != null && n < 8; n++) i = padAlias[i]; return i; };
       const padNum = (i) => padKept.findIndex((g) => g.index === i) + 1;
       const padName = (i) => { const n = padNum(i); return n ? `Pad ${n}` : "Pad (disconnected)"; };
       const padGone = new Set(); // indexes reported disconnected that a browser may still list as stale entries
+      const padDbgEl = document.getElementById("padDbg");
+      const padList = () => [...(navigator.getGamepads ? navigator.getGamepads() : [])].filter((g) => g).sort((a, b) => a.index - b.index);
+      // a joined duplicate loses its slot; in a race its car goes to the AI
+      function dropPlayer(p) {
+        const i = players.indexOf(p); if (i < 0) return;
+        if (titleEl.hidden && p.car) { p.car.ai = true; p.car.owner = null; }
+        players.splice(i, 1);
+        if (titleEl.hidden) document.body.classList.toggle("x-multi", players.length > 1);
+      }
       function padScan() {
-        const raw = [...(navigator.getGamepads ? navigator.getGamepads() : [])]
-          .filter((g) => g && g.connected !== false && !padGone.has(g.index)).sort((a, b) => a.index - b.index);
+        const all = padList(), raw = all.filter((g) => g.connected !== false && !padGone.has(g.index));
         const live = new Set(raw.map((g) => g.index));
-        for (const k in padMirrorGhost) if (!live.has(+k) || !live.has(padMirrorGhost[k])) delete padMirrorGhost[k];
-        for (const k in padMirror) { const [a, b] = k.split("|").map(Number); if (!live.has(a) || !live.has(b)) delete padMirror[k]; }
-        // same gamepad.id listed twice: keep the 'standard' mapping (or the lowest index), the other is a ghost
-        const ghost = {}, byId = {};
-        for (const g of raw) (byId[g.id] = byId[g.id] || []).push(g);
-        for (const id in byId) {
-          const grp = byId[id];
-          if (grp.length < 2) continue;
-          const std = grp.filter((g) => g.mapping === "standard");
-          // mixed mappings = one device seen twice; identical twins (two real pads of one model) are left to the mirror test
-          if (std.length && std.length < grp.length) {
-            grp.filter((g) => g.mapping !== "standard").forEach((g, k) => (ghost[g.index] = std[Math.min(k, std.length - 1)].index));
-          }
-        }
-        for (const k in padMirrorGhost) if (ghost[k] == null) ghost[k] = padMirrorGhost[k];
-        let cand = raw.filter((g) => ghost[g.index] == null);
-        // two entries whose buttons/axes match exactly, frame after frame, through several input changes = one device
-        for (let x = 0; x < cand.length; x++) for (let y = x + 1; y < cand.length; y++) {
-          const a = cand[x], b = cand[y];
-          if (ghost[a.index] != null || ghost[b.index] != null) continue;
-          if (a.buttons.length !== b.buttons.length || a.axes.length !== b.axes.length) continue;
-          if (!padActive(a) && !padActive(b)) continue;
-          const key = a.index + "|" + b.index, sa = padSig(a);
-          if (sa !== padSig(b)) { delete padMirror[key]; continue; }
-          const m = padMirror[key] || (padMirror[key] = { n: 0, ch: 0, sig: "" });
-          m.n++; if (m.sig !== sa) { m.ch++; m.sig = sa; }
-          if (m.n >= 10 && m.ch >= 2) {
-            const [k, d] = a.index < b.index ? [a, b] : [b, a]; // the higher index is the ghost
-            padMirrorGhost[d.index] = k.index; ghost[d.index] = k.index; delete padMirror[key];
-          }
-        }
-        cand = cand.filter((g) => ghost[g.index] == null);
+        for (const k in padAlias) if (!live.has(+k) || !live.has(padAlias[k])) delete padAlias[k];
+        for (const k in padCoin) { const [a, b] = k.split("|").map(Number); if (!live.has(a) || !live.has(b)) delete padCoin[k]; }
+        for (const o of [padPressT, padAT, padRawPrev]) for (const k in o) if (!live.has(+k)) delete o[k];
+        const hasStd = raw.some((g) => g.mapping === "standard");
+        const elig = raw.filter((g) => !hasStd || g.mapping === "standard");
+        padElig = new Set(elig.map((g) => g.index));
+        const cand = elig.filter((g) => padAlias[g.index] == null);
         const before = padKept.map((g) => g.index).join(), oldNames = {};
         padKept.forEach((g) => (oldNames[g.index] = padName(g.index)));
         const prevIdx = new Set(padKept.map((g) => g.index));
@@ -682,24 +677,61 @@
         // drop state of anything not kept, so a ghost can never feed a car
         for (const k in padState) if (!keptIdx.has(+k)) delete padState[k];
         // rebind or free slots whose index is no longer a kept pad; a pad never owns two slots
+        let merged = false;
         for (const p of [...players]) {
           if (p.src !== "pad" || keptIdx.has(p.id)) continue;
-          const to = ghost[p.id];
-          if (to != null && keptIdx.has(to) && !isJoined("pad", to)) {
-            padPrev[to] = padPrev[p.id] || []; delete padPrev[p.id]; p.id = to; changed = true;
+          if (live.has(p.id)) {
+            // still listed but not kept = a duplicate (alias or ignored mapping): its device keeps one slot at most
+            const to = padAlias[p.id] != null ? padRoot(p.id) : null;
+            if (to != null && keptIdx.has(to) && !isJoined("pad", to)) { padPrev[to] = padPrev[p.id] || []; delete padPrev[p.id]; p.id = to; }
+            else dropPlayer(p);
+            merged = changed = true;
           } else if (!titleEl.hidden) { players.splice(players.indexOf(p), 1); changed = true; }
         }
         for (const k in padPrev) if (!keptIdx.has(+k)) delete padPrev[k];
         if (changed) {
           for (const i of prevIdx) if (!live.has(i)) toast(`${oldNames[i]} disconnected`);
           for (const g of cand) if (!prevIdx.has(g.index)) toast(`${padName(g.index)} connected`);
+          if (merged) toast("Merged duplicate controller");
           renderSlots();
         }
+        const dbg = all.length ? all.map((g) => `#${g.index} ${g.mapping || "(none)"} ` +
+          (keptIdx.has(g.index) ? "✓kept" : padAlias[g.index] != null ? `alias→#${padRoot(g.index)}` : "ignored")).join(" · ") : "No gamepads reported";
+        if (padDbgEl.textContent !== dbg) padDbgEl.textContent = dbg;
       }
       addEventListener("gamepadconnected", (e) => { padGone.delete(e.gamepad.index); padScan(); });
       addEventListener("gamepaddisconnected", (e) => { padGone.add(e.gamepad.index); padScan(); });
       function pollPad() {
         padScan();
+        // 1) press transitions of every eligible entry first, so simultaneous entries are seen together
+        const now = performance.now(), hit = new Set();
+        for (const g of padList()) {
+          if (!padElig.has(g.index)) continue;
+          const cur = g.buttons.map((x) => !!x && (x.pressed || x.value > 0.5)), prev = padRawPrev[g.index];
+          const n = prev ? Math.min(cur.length, prev.length) : cur.length;
+          let t = false; for (let i = 0; i < n; i++) if (cur[i] && !(prev && prev[i])) t = true;
+          padRawPrev[g.index] = cur;
+          if (t) { padPressT[g.index] = now; if (cur[0] && !(prev && prev[0])) padAT[g.index] = now; hit.add(g.index); }
+        }
+        // 2) coincidence: two entries pressing within 80 ms on 2 occasions (1 if it is the A that would join) = one device
+        const el = [...padElig];
+        let aliased = false;
+        for (let x = 0; x < el.length; x++) for (let y = x + 1; y < el.length; y++) {
+          const a = el[x], b = el[y];
+          if (padAlias[a] != null || padAlias[b] != null) continue;
+          const ta = padPressT[a], tb = padPressT[b];
+          if (ta == null || tb == null) continue;
+          const k = a + "|" + b, c = padCoin[k] || (padCoin[k] = { n: 0, last: -1e9 });
+          if ((hit.has(a) || hit.has(b)) && Math.abs(ta - tb) <= 80 && now - c.last > 80) {
+            c.n++; c.last = now;
+            const joinA = !titleEl.hidden && now - (padAT[a] ?? -1e9) <= 80 && now - (padAT[b] ?? -1e9) <= 80 &&
+              (!isJoined("pad", a) || !isJoined("pad", b));
+            if (c.n >= 2 || joinA) { padAlias[b] = padRoot(a); delete padCoin[k]; aliased = true; }
+          } else if (c.n && (now - c.last > 4000 || [ta, tb].some((t) => now - t > 80 && t - c.last > 80 && Math.abs(ta - tb) > 80))) c.n = 0; // a solo press: two real pads
+        }
+        if (aliased) padScan();
+        // 3) per kept pad: state, then actions once every pad has been read
+        const acts = [];
         const any = { steer: 0, gas: 0, brake: 0 };
         for (const p of padKept) {
           const prev = padPrev[p.index] || [];
@@ -715,13 +747,11 @@
           if ((st.steer || p.buttons.some((x) => x.pressed)) && !(players.length > 1 && players.some((q) => q.src === "touch")))
             document.body.classList.add("x-gp");
           padPrev[p.index] = p.buttons.map((x, i) => b(i));
-          if (pressed(9)) action("start", "pad", p.index);
-          else if (pressed(0)) action("a", "pad", p.index);
-          else if (pressed(1)) action("b", "pad", p.index);
-          else if (pressed(14) || pressed(4)) action("prev", "pad", p.index);
-          else if (pressed(15) || pressed(5)) action("next", "pad", p.index);
+          const btn = pressed(9) ? "start" : pressed(0) ? "a" : pressed(1) ? "b" : pressed(14) || pressed(4) ? "prev" : pressed(15) || pressed(5) ? "next" : "";
+          if (btn) acts.push([btn, p.index]);
         }
         gp = any;
+        for (const [btn, i] of acts) action(btn, "pad", i);
       }
 
       // ---------- update ----------
