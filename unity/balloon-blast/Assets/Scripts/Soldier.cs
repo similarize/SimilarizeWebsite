@@ -37,6 +37,9 @@ public class Soldier : MonoBehaviour
     Animation anim;
     string clipIdle, clipWalk, clipRun, clipSad, curClip;
 
+    public Critter critter;
+    public float HSpeed { get { return new Vector2(vel.x, vel.z).magnitude; } }
+
     public bool Reloading { get { return reloadLeft > 0f; } }
 
     public int BalloonsLeft
@@ -51,7 +54,7 @@ public class Soldier : MonoBehaviour
         return n > 0 ? sum / n : eye.position;
     }
 
-    public void Build(int id, string nick, Color color, bool human, int layer)
+    public void Build(int id, string nick, Color color, bool human, int layer, int critterIndex = -1)
     {
         this.id = id; this.nick = nick; this.color = color; this.human = human; this.layer = layer;
         gameObject.name = nick;
@@ -68,10 +71,20 @@ public class Soldier : MonoBehaviour
         eye.SetParent(transform, false);
         eye.localPosition = new Vector3(0f, 1.6f, 0f);
 
+        Color dark = new Color(0.18f, 0.2f, 0.22f);
+        if (critterIndex >= 0 && critterIndex < Critters.Count)
+        {
+            // Critters mode: procedural frog / cat / dog that carries its own blaster
+            var cg = new GameObject("Critter");
+            cg.transform.SetParent(transform, false);
+            critter = cg.AddComponent<Critter>();
+            critter.Build(this, Critters.All[critterIndex]);
+        }
+        else
+        {
         // Procedural fallback body (hidden once the X-Bot model arrives)
         capsuleBody = new GameObject("CapsuleBody");
         capsuleBody.transform.SetParent(transform, false);
-        Color dark = new Color(0.18f, 0.2f, 0.22f);
         Mats.Prim(PrimitiveType.Capsule, capsuleBody.transform, new Vector3(0f, 0.85f, 0f), new Vector3(0.62f, 0.62f, 0.45f), Mats.Lit(color), false);
         Mats.Prim(PrimitiveType.Sphere, capsuleBody.transform, new Vector3(0f, 1.62f, 0f), Vector3.one * 0.36f, Mats.Lit(new Color(0.95f, 0.8f, 0.65f)), false);
         Mats.Prim(PrimitiveType.Cube, capsuleBody.transform, new Vector3(0f, 1.66f, 0.15f), new Vector3(0.3f, 0.1f, 0.1f), Mats.Lit(dark), false);
@@ -84,6 +97,7 @@ public class Soldier : MonoBehaviour
         Mats.Prim(PrimitiveType.Cube, gun, Vector3.zero, new Vector3(0.07f, 0.1f, 0.6f), Mats.Lit(dark), false);
         Mats.Prim(PrimitiveType.Cube, gun, new Vector3(0f, -0.1f, 0.05f), new Vector3(0.05f, 0.14f, 0.07f), Mats.Lit(dark), false);
         Mats.Prim(PrimitiveType.Cube, gun, new Vector3(0f, 0f, 0.33f), new Vector3(0.075f, 0.075f, 0.07f), Mats.Lit(new Color(1f, 0.45f, 0.05f)), false);
+        }
 
         // Three balloons above the shoulders
         Vector3[] pos = { new Vector3(-0.36f, 2.2f, -0.08f), new Vector3(0f, 2.42f, -0.12f), new Vector3(0.36f, 2.2f, -0.08f) };
@@ -106,7 +120,7 @@ public class Soldier : MonoBehaviour
         }
 
         Mats.SetLayer(gameObject, layer);
-        ModelLoader.Request(this);
+        if (critter == null) ModelLoader.Request(this);
     }
 
     public void ResetForRound(Vector3 pos, float yawDeg)
@@ -126,8 +140,12 @@ public class Soldier : MonoBehaviour
             b.gameObject.SetActive(true);
             if (b.stringObj != null) b.stringObj.SetActive(true);
         }
-        capsuleBody.transform.localRotation = Quaternion.identity;
-        capsuleBody.transform.localPosition = Vector3.zero;
+        if (capsuleBody != null)
+        {
+            capsuleBody.transform.localRotation = Quaternion.identity;
+            capsuleBody.transform.localPosition = Vector3.zero;
+        }
+        if (critter != null) critter.ResetPose();
         if (modelRoot != null) modelRoot.localRotation = Quaternion.identity;
         curClip = null;
         PlayClip(clipIdle);
@@ -231,7 +249,7 @@ public class Soldier : MonoBehaviour
         inFire = false;
         vel = Vector3.zero;
         if (clipSad != null && anim != null) PlayClip(clipSad);
-        else
+        else if (capsuleBody != null)
         {
             capsuleBody.transform.localPosition = new Vector3(0f, -0.35f, 0f);
             capsuleBody.transform.localRotation = Quaternion.Euler(0f, 0f, 12f);
