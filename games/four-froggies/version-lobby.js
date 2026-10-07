@@ -1,10 +1,10 @@
 /* Four Froggies — onefrog1 entrance.
    One screen: claim James/Jimmy/Bubbles/Rexy + Host/Join + pick 2.5D/3D → play.
-   Flat 2D removed from picker (lobby253d1). Cache: 20261006-padfix2 */
+   Flat 2D removed from picker (lobby253d1). Cache: 20261007-lobby3d1 */
 (function () {
   "use strict";
 
-  var CACHE = "20261007-semitrees1r1";
+  var CACHE = "20261007-lobby3d1";
   var FF3D_CACHE = "20261006-walkspin1";
   var FROG_ORDER = ["james", "jimmy", "bubbles", "rexy"];
   var FROG_NAME = { james: "James", jimmy: "Jimmy", bubbles: "Bubbles", rexy: "Rexy" };
@@ -414,19 +414,25 @@
     }
 
     if (engine === "3d") {
-      starting = true;
-      var frog = claimedFrogId();
-      var room = P && P.getRoom ? P.getRoom() : null;
-      var q = "?v=" + FF3D_CACHE + "&frog=" + encodeURIComponent(frog) + "&go=1";
-      /* rstick1: carry pad claim so 3D page doesn't ghost-seat a second frog */
+      /* lobby3d1: build URL first; only latch starting right before navigate
+         so a throw cannot permanently eat later clicks. */
       try {
-        var seats3 = P && P.getSeats ? P.getSeats() : null;
-        var st3 = seats3 && seats3[frog];
-        if (st3 && st3.padIndex != null) q += "&pad=" + (st3.padIndex | 0);
-      } catch (ePad) {}
-      if (role === "host" && room) q += "&host=" + encodeURIComponent(room);
-      else if (room) q += "&room=" + encodeURIComponent(room);
-      location.href = "/games/four-froggies-3d/" + q;
+        var frog = claimedFrogId();
+        var room = P && P.getRoom ? P.getRoom() : null;
+        var q = "?v=" + FF3D_CACHE + "&frog=" + encodeURIComponent(frog) + "&go=1";
+        /* rstick1: carry pad claim so 3D page doesn't ghost-seat a second frog */
+        try {
+          var seats3 = P && P.getSeats ? P.getSeats() : null;
+          var st3 = seats3 && seats3[frog];
+          if (st3 && st3.padIndex != null) q += "&pad=" + (st3.padIndex | 0);
+        } catch (ePad) {}
+        if (role === "host" && room) q += "&host=" + encodeURIComponent(room);
+        else if (room) q += "&room=" + encodeURIComponent(room);
+        starting = true;
+        location.href = "/games/four-froggies-3d/" + q;
+      } catch (e3) {
+        starting = false;
+      }
       return;
     }
 
@@ -463,7 +469,36 @@
     requestAnimationFrame(frame);
   }
 
+  /* lobby3d1: claimed .is-hot pads used transform:scale and could composite
+     above the version cards — first 3D/2.5D click hit the frog tile instead.
+     Prefer any [data-version] under the pointer (elementsFromPoint). */
+  function versionUnderPointer(e) {
+    var t = e.target && e.target.closest ? e.target.closest("[data-version]") : null;
+    if (t && lobby.contains(t)) return t;
+    try {
+      if (typeof document.elementsFromPoint !== "function") return null;
+      var stack = document.elementsFromPoint(e.clientX, e.clientY) || [];
+      var i, el, v;
+      for (i = 0; i < stack.length; i++) {
+        el = stack[i];
+        if (!el || !el.closest) continue;
+        v = el.closest("[data-version]");
+        if (v && lobby.contains(v)) return v;
+      }
+    } catch (err) { /* ignore */ }
+    return null;
+  }
+
   lobby.addEventListener("click", function (e) {
+    var btn = versionUnderPointer(e);
+    if (btn) {
+      var ver = btn.getAttribute("data-version");
+      if (ver === "3d") tryStartMode("3d");
+      else if (ver === "three") tryStartMode("three");
+      /* lobby253d1: flat 2D (canvas) no longer a lobby choice */
+      return;
+    }
+
     var frogBtn = e.target.closest(".frog-btn[data-id]");
     if (frogBtn && lobby.contains(frogBtn)) {
       var id = frogBtn.getAttribute("data-id");
@@ -505,13 +540,6 @@
       paintPads();
       return;
     }
-
-    var btn = e.target.closest("[data-version]");
-    if (!btn || !lobby.contains(btn)) return;
-    var ver = btn.getAttribute("data-version");
-    if (ver === "3d") tryStartMode("3d");
-    else if (ver === "three") tryStartMode("three");
-    /* lobby253d1: flat 2D (canvas) no longer a lobby choice */
   });
 
   var back = document.getElementById("btn-versions");

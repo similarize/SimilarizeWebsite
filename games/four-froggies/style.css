@@ -1604,7 +1604,7 @@ body.in-space .vjoy.vjoy-hint {
 .version-kicker{margin:0 0 4px;color:#86efac;letter-spacing:.16em;font-size:12px;text-transform:uppercase}
 .version-lead{margin:6px 0 0;color:#d1fae5;font-size:14px}
 /* lobbyui1: 2.5D+3D as a centered pair (not a 3-col hole) */
-.version-grid{width:min(640px,100%);margin-inline:auto;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;justify-content:center}
+.version-grid{position:relative;z-index:2;width:min(640px,100%);margin-inline:auto;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;justify-content:center}
 .version-card{display:flex;flex-direction:column;gap:8px;margin:0;padding:10px;border-radius:16px;border:2px solid rgba(255,255,255,.28);background:rgba(0,0,0,.35);color:#fff;text-align:left;font:inherit;cursor:pointer;touch-action:manipulation;min-width:0}
 .version-card canvas,.version-card img.version-shot{display:block;width:100%;height:168px;object-fit:cover;object-position:center;border-radius:10px;background:#052e16}
 .version-card strong{font-size:16px}
@@ -1615,7 +1615,7 @@ body.in-space .vjoy.vjoy-hint {
 @media (max-width:800px){.version-grid{grid-template-columns:1fr;width:min(420px,100%)}.version-card canvas,.version-card img.version-shot{height:140px}}
 
 /* onelobby3 pads */
-#pad-dock{width:min(920px,100%);display:flex;flex-direction:column;gap:8px}
+#pad-dock{position:relative;z-index:1;width:min(920px,100%);display:flex;flex-direction:column;gap:8px}
 #pad-count{margin:0;font-weight:800;font-size:clamp(18px,3.2vw,28px);letter-spacing:.01em;color:#fff}
 #pad-hint{margin:0;color:#bbf7d0;font-size:13px}
 #pad-you{margin:0;font-weight:900;font-size:clamp(34px,7vw,68px);line-height:.92;letter-spacing:.03em;text-transform:uppercase;padding:10px 12px;border-radius:16px;background:#ecfccb;color:#052e16}
@@ -1642,7 +1642,7 @@ body.in-space .vjoy.vjoy-hint {
 .pad-tile[data-pad="1"].is-hot{background:#fb923c;border-color:#ffedd5;color:#1c1917}
 .pad-tile[data-pad="2"].is-hot{background:#60a5fa;border-color:#dbeafe;color:#0f172a}
 .pad-tile[data-pad="3"].is-hot{background:#c084fc;border-color:#f3e8ff;color:#1e1b4b}
-@keyframes pad-pulse{50%{transform:scale(1.06)}}
+@keyframes pad-pulse{50%{filter:brightness(1.14);box-shadow:0 0 0 3px rgba(255,255,255,.55)}}/* lobby3d1: was transform:scale(1.06) — scaled hit box + stacking stole first 2.5D/3D clicks */
 @media (max-width:640px){#pad-row{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
 
@@ -1665,7 +1665,7 @@ body.in-entrance #overlay{display:none!important}
 #version-lobby .pad-tile.seat-you[data-id="rexy"]{border-color:#c084fc;background:rgba(192,132,252,.18)}
 #version-lobby .pad-tile.pad-focus{outline:2px dashed rgba(255,255,255,.55);outline-offset:2px}
 #version-lobby .pad-tile.seat-human{border-color:#fbbf24;background:rgba(251,191,36,.12)}
-#version-lobby .version-card{position:relative}
+#version-lobby .version-card{position:relative;z-index:1}#version-lobby .version-shot{-webkit-user-drag:none;user-select:none;pointer-events:none}
 #version-lobby .version-card strong{font-size:18px}
 body.in-entrance #hud,body.in-entrance #controls,body.in-entrance #vjoy{visibility:hidden;pointer-events:none}
 
