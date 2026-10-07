@@ -1,0 +1,498 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+    <title>Balloon Blast Airsoft</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400&display=swap" />
+    <link rel="stylesheet" href="hark.css" />
+    <link rel="stylesheet" href="hark-hero.css" />
+    <style>
+      html, body { margin: 0; height: 100%; overflow: hidden; background: #000; }
+      #x-canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; outline: none; }
+      .x-hud { position: fixed; top: 12px; left: 12px; display: grid; gap: 6px; pointer-events: none; font: var(--type-label); font-family: var(--sans); }
+      .x-row { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: var(--r-pill); background: var(--mat-regular); backdrop-filter: var(--hark-blur); -webkit-backdrop-filter: var(--hark-blur); color: var(--text-primary); }
+      .x-row.is-out { opacity: .45; text-decoration: line-through; }
+      .x-b { width: 12px; height: 15px; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; display: inline-block; }
+      .x-b.is-gone { opacity: .2; }
+      .x-cross { position: fixed; left: 50%; top: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px; pointer-events: none; }
+      .x-cross { z-index: 5; }
+      .x-cross::before, .x-cross::after { content: ""; position: absolute; background: #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.85), 0 0 3px rgba(0,0,0,.6); }
+      .x-ammo { position: fixed; right: 16px; bottom: 16px; padding: 6px 14px; border-radius: var(--r-pill); background: var(--mat-regular); backdrop-filter: var(--hark-blur); -webkit-backdrop-filter: var(--hark-blur); color: var(--text-primary); font: var(--type-label); font-family: var(--sans); pointer-events: none; }
+      .x-touch .x-ammo { bottom: 124px; }
+      .x-touch .x-ads { right: 124px; bottom: 38px; width: 64px; height: 64px; }
+      .x-touch .x-ads.is-on { background: rgba(255,255,255,.35); }
+      .x-cross::before { left: 8px; top: 0; width: 2px; height: 18px; }
+      .x-cross::after { top: 8px; left: 0; height: 2px; width: 18px; }
+      .x-overlay { position: fixed; inset: 0; display: grid; place-items: center; padding: var(--gutter); background: rgba(0,0,0,.35); }
+      .x-overlay[hidden] { display: none; }
+      .x-panel { max-width: 440px; padding: 24px; border-radius: var(--r-l); background: var(--mat-regular); backdrop-filter: var(--hark-blur); -webkit-backdrop-filter: var(--hark-blur); box-shadow: var(--hark-shadow); color: var(--text-primary); font: var(--type-body); font-family: var(--sans); }
+      .x-panel h1 { font: var(--type-title); font-family: var(--sans); margin: 0 0 8px; }
+      .x-panel p { margin: 0 0 12px; color: var(--text-secondary); }
+      .x-panel ul { margin: 0 0 16px; padding-left: 18px; color: var(--text-secondary); font: var(--type-small); font-family: var(--sans); }
+      .x-go { min-height: var(--tap); padding: 0 20px; border: 0; border-radius: var(--r-pill); background: var(--fill-primary); color: var(--text-primary-on); font: var(--type-label); font-family: var(--sans); cursor: pointer; }
+      .x-go:disabled { opacity: .5; cursor: wait; }
+      .x-fire, .x-stick { position: fixed; bottom: 28px; border-radius: 50%; display: none; pointer-events: none; }
+      .x-touch .x-fire { display: grid; place-items: center; pointer-events: auto; right: 28px; width: 84px; height: 84px; background: var(--mat-thin); border: 2px solid rgba(255,255,255,.7); color: #fff; font: var(--type-label); font-family: var(--sans); user-select: none; -webkit-user-select: none; touch-action: none; }
+      .x-touch .x-stick { display: block; left: 28px; width: 120px; height: 120px; border: 2px solid rgba(255,255,255,.5); }
+      .x-knob { position: absolute; left: 40px; top: 40px; width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,.7); }
+    </style>
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+    <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+  </head>
+  <body>
+    <canvas id="x-canvas"></canvas>
+    <div class="x-hud" id="hud" aria-live="polite"></div>
+    <div class="x-cross" aria-hidden="true"></div>
+    <div class="x-stick" id="stick" aria-hidden="true"><div class="x-knob" id="knob"></div></div>
+    <div class="x-fire" id="fire" role="button" aria-label="Fire">FIRE</div>
+    <div class="x-fire x-ads" id="adsBtn" role="button" aria-label="Aim down sights">AIM</div>
+    <div class="x-ammo" id="ammo" aria-live="polite">30 / 30</div>
+    <div class="x-overlay" id="overlay">
+      <div class="x-panel">
+        <h1 id="msgTitle">Balloon Blast Airsoft</h1>
+        <p id="msgText">Everyone carries 3 balloons. Pop the others' balloons and keep yours. Last one with a balloon wins.</p>
+        <ul>
+          <li>Keyboard and mouse: WASD to move, Shift to sprint, mouse to look, left click to shoot, right click to aim, R to reload</li>
+          <li>Gamepad: left stick moves, right stick looks, RT or A shoots, LT aims, Start restarts</li>
+          <li>Touch: left thumb moves, drag right side to look, FIRE shoots, AIM toggles sights</li>
+        </ul>
+        <button class="x-go" id="go" disabled>Loading…</button>
+      </div>
+    </div>
+    <script src="hark.js"></script>
+    <script>
+(function () {
+  const V3 = BABYLON.Vector3, C3 = BABYLON.Color3;
+  const ASSETS = "https://assets.babylonjs.com/";
+  const canvas = document.getElementById("x-canvas");
+  const engine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: false, stencil: true });
+  const scene = new BABYLON.Scene(engine);
+  scene.clearColor = new BABYLON.Color4(0.55, 0.72, 0.9, 1);
+
+  // Environment, lights, post-processing
+  const env = BABYLON.CubeTexture.CreateFromPrefilteredData(ASSETS + "environments/environmentSpecular.env", scene);
+  scene.environmentTexture = env;
+  scene.environmentIntensity = 0.9;
+  scene.createDefaultSkybox(env, true, 500, 0.35);
+  const hemi = new BABYLON.HemisphericLight("hemi", new V3(0, 1, 0), scene); hemi.intensity = 0.35;
+  const sun = new BABYLON.DirectionalLight("sun", new V3(-0.5, -1, -0.4), scene);
+  sun.position = new V3(30, 50, 25); sun.intensity = 2.2;
+  const shadows = new BABYLON.ShadowGenerator(1024, sun);
+  shadows.useBlurExponentialShadowMap = true; shadows.blurKernel = 16;
+
+  const camera = new BABYLON.UniversalCamera("cam", new V3(0, 3, -6), scene);
+  camera.minZ = 0.05; camera.fov = 0.9;
+  const BASE_FOV = 0.9, SELF = 0x10000000; // SELF layer: hidden from the player's own camera
+  scene.preventDefaultOnPointerDown = false; scene.preventDefaultOnPointerUp = false;
+
+  // First-person airsoft rifle, parented to the camera
+  const gun = new BABYLON.TransformNode("gun", scene); gun.parent = camera;
+  const HIP = new V3(0.28, -0.25, 0.6), ADS = new V3(0, -0.2, 0.5), MUZ = new V3(0, 0.02, 0.62);
+  gun.position.copyFrom(HIP);
+  const gMetal = new BABYLON.StandardMaterial("gunMat", scene); gMetal.diffuseColor = new C3(0.18, 0.18, 0.2); gMetal.emissiveColor = new C3(0.06, 0.06, 0.07); gMetal.specularColor = new C3(0.3, 0.3, 0.3);
+  const gTip = new BABYLON.StandardMaterial("tipMat", scene); gTip.emissiveColor = new C3(1, 0.45, 0.05); gTip.diffuseColor = new C3(1, 0.45, 0.05);
+  const gunPart = (w, h, d, x, y, z, mat, rx) => {
+    const b = BABYLON.MeshBuilder.CreateBox("gunPart", { width: w, height: h, depth: d }, scene);
+    b.parent = gun; b.position.set(x, y, z); if (rx) b.rotation.x = rx; b.material = mat || gMetal;
+    b.renderingGroupId = 1; b.alwaysSelectAsActiveMesh = true; b.isPickable = false; return b;
+  };
+  gunPart(0.07, 0.09, 0.42, 0, 0, 0.1);                 // body
+  gunPart(0.035, 0.035, 0.24, 0, 0.02, 0.42);           // barrel
+  gunPart(0.042, 0.042, 0.05, 0, 0.02, 0.57, gTip);     // orange tip
+  gunPart(0.06, 0.08, 0.2, 0, -0.02, -0.2);             // stock
+  gunPart(0.045, 0.16, 0.07, 0, -0.11, 0.14, null, 0.25); // magazine
+  gunPart(0.045, 0.1, 0.05, 0, -0.08, -0.03, null, -0.3); // grip
+  gunPart(0.045, 0.045, 0.2, 0, 0.085, 0.08);           // scope
+  gunPart(0.02, 0.04, 0.03, 0, 0.055, 0.08);            // scope mount
+  const flash = BABYLON.MeshBuilder.CreateSphere("flash", { diameter: 0.09, segments: 6 }, scene);
+  const flashMat = new BABYLON.StandardMaterial("flashMat", scene); flashMat.emissiveColor = new C3(1, 0.85, 0.4); flashMat.disableLighting = true;
+  flash.material = flashMat; flash.parent = gun; flash.position.copyFrom(MUZ); flash.renderingGroupId = 1;
+  flash.alwaysSelectAsActiveMesh = true; flash.isPickable = false; flash.setEnabled(false);
+  let flashT = 0, kick = 0, adsT = 0, ammo = 30, reloadT = 0;
+  const ammoEl = document.getElementById("ammo");
+  const updateAmmo = () => (ammoEl.textContent = reloadT > 0 ? "Reloading…" : `${ammo} / 30`);
+  const pipe = new BABYLON.DefaultRenderingPipeline("pipe", true, scene, [camera]);
+  pipe.fxaaEnabled = true; pipe.samples = 4;
+  pipe.bloomEnabled = true; pipe.bloomThreshold = 0.8; pipe.bloomWeight = 0.3;
+  pipe.imageProcessingEnabled = true;
+  pipe.imageProcessing.toneMappingEnabled = true; pipe.imageProcessing.contrast = 1.15; pipe.imageProcessing.exposure = 1.05;
+  pipe.imageProcessing.vignetteEnabled = true; pipe.imageProcessing.vignetteWeight = 1.5;
+  pipe.sharpenEnabled = true; pipe.sharpen.edgeAmount = 0.2;
+
+  // Arena
+  const ARENA = 36;
+  const ground = BABYLON.MeshBuilder.CreateGround("ground", { width: ARENA * 2 + 20, height: ARENA * 2 + 20 }, scene);
+  const gMat = new BABYLON.PBRMaterial("gMat", scene);
+  const gTex = new BABYLON.Texture(ASSETS + "textures/grass.png", scene); gTex.uScale = gTex.vScale = 20;
+  gMat.albedoTexture = gTex; gMat.metallic = 0; gMat.roughness = 1;
+  ground.material = gMat; ground.receiveShadows = true;
+  const rMat = new BABYLON.PBRMaterial("rMat", scene);
+  const rTex = new BABYLON.Texture(ASSETS + "textures/rock.png", scene); rTex.uScale = rTex.vScale = 2;
+  rMat.albedoTexture = rTex; rMat.metallic = 0; rMat.roughness = 0.9;
+  const rocks = [];
+  const spawns = [new V3(0, 0, -22), new V3(22, 0, 0), new V3(0, 0, 22), new V3(-22, 0, 0)];
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  while (rocks.length < 18) {
+    const x = (rnd() * 2 - 1) * (ARENA - 4), z = (rnd() * 2 - 1) * (ARENA - 4);
+    if (spawns.some((s) => Math.hypot(s.x - x, s.z - z) < 6) || rocks.some((r) => Math.hypot(r.x - x, r.z - z) < 6)) continue;
+    const sx = 2 + rnd() * 3, sy = 1.4 + rnd() * 2.2, sz = 2 + rnd() * 3;
+    const m = BABYLON.MeshBuilder.CreateSphere("rock", { diameter: 1, segments: 8 }, scene);
+    m.scaling.set(sx, sy, sz); m.position.set(x, sy * 0.3, z); m.rotation.y = rnd() * 3;
+    m.material = rMat; m.receiveShadows = true; shadows.addShadowCaster(m);
+    rocks.push({ x, z, r: Math.max(sx, sz) / 2, h: sy * 0.8, mesh: m });
+  }
+  // Low fence posts on the border
+  const fMat = new BABYLON.PBRMaterial("fMat", scene); fMat.albedoColor = new C3(0.45, 0.3, 0.18); fMat.metallic = 0; fMat.roughness = 0.8;
+  for (let i = 0; i < 4; i++) {
+    const w = BABYLON.MeshBuilder.CreateBox("fence", { width: ARENA * 2 + 1, height: 0.8, depth: 0.3 }, scene);
+    w.material = fMat; w.position.y = 0.4; w.rotation.y = (i * Math.PI) / 2;
+    w.position.x = i === 1 ? ARENA + 0.5 : i === 3 ? -ARENA - 0.5 : 0;
+    w.position.z = i === 0 ? ARENA + 0.5 : i === 2 ? -ARENA - 0.5 : 0;
+  }
+
+  // Audio
+  let actx = null;
+  function sfx(kind) {
+    try {
+      actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+      const len = kind === "pop" ? 0.18 : 0.05, buf = actx.createBuffer(1, actx.sampleRate * len, actx.sampleRate), d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, kind === "pop" ? 3 : 6);
+      const s = actx.createBufferSource(), g = actx.createGain(); g.gain.value = kind === "pop" ? 0.5 : 0.15;
+      s.buffer = buf; s.connect(g); g.connect(actx.destination); s.start();
+    } catch (e) {}
+  }
+
+  // Players
+  const COLORS = [new C3(0.95, 0.2, 0.25), new C3(0.2, 0.55, 1), new C3(1, 0.8, 0.15), new C3(0.3, 0.85, 0.4)];
+  const NAMES = ["You", "Blue bot", "Yellow bot", "Green bot"];
+  const CSS = ["#f23340", "#338cff", "#ffcc26", "#4dd966"];
+  const players = [];
+  const bMats = COLORS.map((c, i) => {
+    const m = new BABYLON.PBRMaterial("bal" + i, scene);
+    m.albedoColor = c; m.metallic = 0; m.roughness = 0.25; m.clearCoat.isEnabled = true; return m;
+  });
+  const BAL_OFF = [new V3(-0.4, 2.35, -0.35), new V3(0, 2.6, -0.45), new V3(0.4, 2.35, -0.35)];
+
+  function makeBalloons(p) {
+    p.balloons.forEach((b) => b && b.dispose());
+    p.balloons = BAL_OFF.map((o, k) => {
+      const b = BABYLON.MeshBuilder.CreateSphere("b" + p.id + k, { diameterX: 0.5, diameterY: 0.62, diameterZ: 0.5, segments: 12 }, scene);
+      b.material = bMats[p.id]; b.parent = p.node; b.position.copyFrom(o);
+      const str = BABYLON.MeshBuilder.CreateLines("s", { points: [new V3(0, -0.31, 0), new V3(-o.x, 1.45 - o.y, 0.3 - o.z)] }, scene);
+      str.color = new C3(0.9, 0.9, 0.9); str.parent = b; shadows.addShadowCaster(b);
+      if (p.id === 0) b.layerMask = str.layerMask = SELF;
+      return b;
+    });
+  }
+
+  function setAnim(p, name) {
+    if (p.state === name || !p.anims) return;
+    p.state = name;
+    Object.values(p.anims).forEach((g) => g && g.stop());
+    const g = p.anims[name] || p.anims.idle; if (g) g.start(true, 1);
+  }
+
+  async function loadBots() {
+    let container = null;
+    try { container = await BABYLON.SceneLoader.LoadAssetContainerAsync(ASSETS + "meshes/", "Xbot.glb", scene); } catch (e) { console.warn("Xbot failed, using capsules", e); }
+    for (let i = 0; i < 4; i++) {
+      const node = new BABYLON.TransformNode("p" + i, scene);
+      const p = { id: i, node, ai: i > 0, yaw: 0, balloons: [], alive: true, cool: 0, think: 0, strafe: 1, state: "", anims: null, vel: 0 };
+      if (container) {
+        const inst = container.instantiateModelsToScene((n) => n + "_" + i, true);
+        inst.rootNodes.forEach((r) => (r.parent = node));
+        const find = (k) => inst.animationGroups.find((g) => g.name.indexOf(k) === 0);
+        p.anims = { idle: find("idle"), walk: find("walk"), run: find("run") };
+        inst.animationGroups.forEach((g) => g.stop());
+        node.getChildMeshes().forEach((m) => {
+          shadows.addShadowCaster(m);
+          if (m.material && /Joints/i.test(m.material.name)) m.material.albedoColor = COLORS[i];
+        });
+      } else {
+        const body = BABYLON.MeshBuilder.CreateCapsule("cap" + i, { height: 1.8, radius: 0.35 }, scene);
+        const cm = new BABYLON.PBRMaterial("cm" + i, scene); cm.albedoColor = COLORS[i]; cm.metallic = 0; cm.roughness = 0.6;
+        body.material = cm; body.position.y = 0.9; body.parent = node; shadows.addShadowCaster(body);
+      }
+      if (i === 0) node.getChildMeshes().forEach((m) => (m.layerMask = SELF));
+      players.push(p);
+    }
+  }
+
+  // Bullets and effects
+  const bullets = [], fx = [];
+  const bbMat = new BABYLON.StandardMaterial("bb", scene); bbMat.emissiveColor = new C3(1, 1, 0.85); bbMat.disableLighting = true;
+  const bbBase = BABYLON.MeshBuilder.CreateSphere("bbBase", { diameter: 0.07, segments: 4 }, scene); bbBase.material = bbMat; bbBase.isVisible = false;
+  function fire(p, origin, dir) {
+    if (p.cool > 0 || !p.alive) return;
+    p.cool = p.ai ? 0.75 + Math.random() * 0.5 : 0.16;
+    const m = bbBase.createInstance("bb"); m.position.copyFrom(origin);
+    bullets.push({ m, v: dir.normalize().scale(45), owner: p, life: 1.6 });
+    if (!p.ai || BABYLON.Vector3.Distance(p.node.position, players[0].node.position) < 25) sfx("shot");
+  }
+  function pop(p, k) {
+    const b = p.balloons[k], at = b.getAbsolutePosition().clone();
+    b.dispose(); p.balloons[k] = null; sfx("pop");
+    for (let i = 0; i < 12; i++) {
+      const s = BABYLON.MeshBuilder.CreateBox("frag", { size: 0.08 }, scene);
+      s.material = bMats[p.id]; s.position.copyFrom(at);
+      fx.push({ m: s, v: new V3(Math.random() - 0.5, Math.random() * 0.8, Math.random() - 0.5).scale(8), life: 0.7 });
+    }
+    if (p.balloons.every((x) => !x)) {
+      p.alive = false; p.place = players.filter((q) => q.alive).length + 1;
+      setTimeout(() => p.node.setEnabled(false), 400);
+    }
+    updateHud(); checkEnd();
+  }
+  function segSphere(a, b, c, r) {
+    const ab = b.subtract(a), t = Math.max(0, Math.min(1, V3.Dot(c.subtract(a), ab) / Math.max(ab.lengthSquared(), 1e-6)));
+    return V3.DistanceSquared(a.add(ab.scale(t)), c) < r * r;
+  }
+
+  // HUD and game state
+  const hud = document.getElementById("hud"), overlay = document.getElementById("overlay"), go = document.getElementById("go");
+  let playing = false;
+  function updateHud() {
+    hud.innerHTML = players.map((p) =>
+      `<div class="x-row${p.alive ? "" : " is-out"}"><span>${NAMES[p.id]}</span>` +
+      p.balloons.map((b) => `<span class="x-b${b ? "" : " is-gone"}" style="background:${CSS[p.id]}"></span>`).join("") + `</div>`
+    ).join("");
+  }
+  function show(title, text, btn) {
+    document.getElementById("msgTitle").textContent = title;
+    document.getElementById("msgText").textContent = text;
+    go.textContent = btn; go.disabled = false; overlay.hidden = false;
+    if (document.pointerLockElement) document.exitPointerLock();
+  }
+  function checkEnd() {
+    if (!playing) return;
+    const alive = players.filter((p) => p.alive);
+    if (!players[0].alive) { playing = false; setTimeout(() => show("Popped!", `You finished in place ${players[0].place} of 4.`, "Play again"), 700); }
+    else if (alive.length === 1) { playing = false; setTimeout(() => show("You win!", "Last one standing with a balloon. Nice shooting.", "Play again"), 700); }
+  }
+  function reset() {
+    bullets.forEach((b) => b.m.dispose()); bullets.length = 0;
+    players.forEach((p, i) => {
+      p.alive = true; p.place = 0; p.cool = 0.8; p.node.setEnabled(true);
+      p.node.position.copyFrom(spawns[i]); p.yaw = Math.atan2(-spawns[i].x, -spawns[i].z); p.state = "";
+      makeBalloons(p); setAnim(p, "idle");
+    });
+    camYaw = players[0].yaw; camPitch = 0.05;
+    ammo = 30; reloadT = 0; updateAmmo();
+    updateHud(); playing = true; overlay.hidden = true;
+  }
+
+  // Input
+  const keys = {}; let camYaw = 0, camPitch = 0.05, mouseDown = false, ads = false, touchAds = false;
+  const isTouch = "ontouchstart" in window || navigator.maxTouchPoints > 0;
+  if (isTouch) document.body.classList.add("x-touch"); // mouse input below works regardless
+  addEventListener("keydown", (e) => {
+    keys[e.code] = true; if (e.code === "Enter" && !overlay.hidden && !go.disabled) start();
+    if (e.code === "KeyR" && playing && reloadT <= 0 && ammo < 30) { reloadT = 1.5; updateAmmo(); }
+  });
+  addEventListener("keyup", (e) => (keys[e.code] = false));
+  function lock() {
+    try { if (document.pointerLockElement !== canvas && canvas.requestPointerLock) { const r = canvas.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } } catch (err) {}
+  }
+  function mouseDownAt(e) {
+    if (!playing) return;
+    if (e.button === 0) { lock(); mouseDown = true; }
+    else if (e.button === 2) ads = true;
+  }
+  function mouseUpAt(e) { if (e.button === 0) mouseDown = false; else if (e.button === 2) ads = false; }
+  canvas.addEventListener("pointerdown", (e) => { if (e.pointerType === "mouse") mouseDownAt(e); });
+  addEventListener("pointerup", (e) => { if (e.pointerType === "mouse") mouseUpAt(e); });
+  addEventListener("mousedown", (e) => { if (e.target === canvas || document.pointerLockElement === canvas) mouseDownAt(e); });
+  addEventListener("mouseup", mouseUpAt);
+  canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+  addEventListener("mousemove", (e) => {
+    // Pointer lock look, or drag-to-look with the left button when lock is unavailable
+    if (document.pointerLockElement !== canvas && !(mouseDown && (e.buttons & 1))) return;
+    const s = 0.0025 * (adsT > 0.5 ? 0.6 : 1);
+    camYaw += e.movementX * s; camPitch -= e.movementY * s;
+  });
+  // Touch: left half joystick, right half look
+  const stick = { id: null, ox: 0, oy: 0, x: 0, y: 0 }, look = { id: null, x: 0, y: 0 }; let touchFire = false;
+  const knob = document.getElementById("knob");
+  canvas.addEventListener("pointerdown", (e) => {
+    if (e.pointerType !== "touch") return;
+    if (e.clientX < innerWidth / 2 && stick.id === null) Object.assign(stick, { id: e.pointerId, ox: e.clientX, oy: e.clientY, x: 0, y: 0 });
+    else if (look.id === null) Object.assign(look, { id: e.pointerId, x: e.clientX, y: e.clientY });
+  });
+  canvas.addEventListener("pointermove", (e) => {
+    if (e.pointerId === stick.id) {
+      let dx = e.clientX - stick.ox, dy = e.clientY - stick.oy; const l = Math.hypot(dx, dy);
+      if (l > 50) { dx *= 50 / l; dy *= 50 / l; }
+      stick.x = dx / 50; stick.y = dy / 50; knob.style.transform = `translate(${dx}px,${dy}px)`;
+    } else if (e.pointerId === look.id) {
+      camYaw += (e.clientX - look.x) * 0.006; camPitch -= (e.clientY - look.y) * 0.006;
+      look.x = e.clientX; look.y = e.clientY;
+    }
+  });
+  const endTouch = (e) => {
+    if (e.pointerId === stick.id) { stick.id = null; stick.x = stick.y = 0; knob.style.transform = ""; }
+    if (e.pointerId === look.id) look.id = null;
+  };
+  canvas.addEventListener("pointerup", endTouch); canvas.addEventListener("pointercancel", endTouch);
+  const fireBtn = document.getElementById("fire");
+  fireBtn.addEventListener("pointerdown", (e) => { e.preventDefault(); touchFire = true; });
+  ["pointerup", "pointercancel", "pointerleave"].forEach((t) => fireBtn.addEventListener(t, () => (touchFire = false)));
+  const adsBtn = document.getElementById("adsBtn");
+  adsBtn.addEventListener("pointerdown", (e) => { e.preventDefault(); touchAds = !touchAds; adsBtn.classList.toggle("is-on", touchAds); });
+  function pad() {
+    const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+    for (const g of pads) if (g && g.connected) return g;
+    return null;
+  }
+  const dz = (v) => (Math.abs(v) < 0.15 ? 0 : v);
+  let padStartWas = false;
+
+  // Movement helpers
+  function collide(pos) {
+    for (const r of rocks) {
+      const dx = pos.x - r.x, dz2 = pos.z - r.z, d = Math.hypot(dx, dz2), min = r.r + 0.4;
+      if (d < min && d > 1e-4) { pos.x = r.x + (dx / d) * min; pos.z = r.z + (dz2 / d) * min; }
+    }
+    for (const q of players) {
+      // keep players apart is skipped for simplicity of the ref pos
+    }
+    pos.x = Math.max(-ARENA + 0.6, Math.min(ARENA - 0.6, pos.x));
+    pos.z = Math.max(-ARENA + 0.6, Math.min(ARENA - 0.6, pos.z));
+  }
+  function move(p, fx_, rx, speed, dt) {
+    const f = new V3(Math.sin(p.yaw), 0, Math.cos(p.yaw)), r = new V3(Math.cos(p.yaw), 0, -Math.sin(p.yaw));
+    const v = f.scale(fx_).add(r.scale(rx)); const l = v.length();
+    if (l > 1) v.scaleInPlace(1 / l);
+    p.node.position.addInPlace(v.scale(speed * dt)); collide(p.node.position);
+    const s = Math.min(l, 1) * speed;
+    setAnim(p, s > 4.2 ? "run" : s > 0.3 ? "walk" : "idle");
+  }
+
+  function aiUpdate(p, dt) {
+    const foes = players.filter((q) => q !== p && q.alive);
+    if (!foes.length) { setAnim(p, "idle"); return; }
+    let t = foes[0], best = 1e9;
+    for (const q of foes) { const d = V3.Distance(q.node.position, p.node.position); if (d < best) { best = d; t = q; } }
+    const to = t.node.position.subtract(p.node.position);
+    const want = Math.atan2(to.x, to.z);
+    let dy = want - p.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); p.yaw += dy * Math.min(1, dt * 5);
+    p.think -= dt; if (p.think <= 0) { p.think = 1 + Math.random() * 2; p.strafe = Math.random() < 0.5 ? -1 : 1; }
+    move(p, best > 14 ? 1 : best < 7 ? -0.6 : 0, p.strafe * 0.7, 4.6, dt);
+    if (best < 30 && Math.abs(dy) < 0.4) {
+      const targets = t.balloons.filter(Boolean); if (!targets.length) return;
+      const aim = targets[Math.floor(Math.random() * targets.length)].getAbsolutePosition();
+      const origin = p.node.position.add(new V3(0, 1.4, 0)).add(new V3(Math.sin(p.yaw), 0, Math.cos(p.yaw)).scale(0.5));
+      const spread = 0.05 + best * 0.006;
+      const dir = aim.subtract(origin).normalize().add(new V3((Math.random() - 0.5) * spread * 2, (Math.random() - 0.5) * spread * 2, (Math.random() - 0.5) * spread * 2));
+      fire(p, origin, dir);
+    }
+  }
+
+  // Main loop
+  scene.onBeforeRenderObservable.add(() => {
+    const dt = Math.min(engine.getDeltaTime() / 1000, 0.05);
+    const me = players[0]; if (!me) return;
+    const g = pad();
+    let fwd = 0, side = 0, wantFire = mouseDown || touchFire, sprint = keys.ShiftLeft || keys.ShiftRight, padAds = false;
+    if (keys.KeyW || keys.ArrowUp) fwd += 1; if (keys.KeyS || keys.ArrowDown) fwd -= 1;
+    if (keys.KeyD || keys.ArrowRight) side += 1; if (keys.KeyA || keys.ArrowLeft) side -= 1;
+    if (keys.Space) wantFire = true;
+    fwd -= stick.y; side += stick.x;
+    if (g) {
+      fwd -= dz(g.axes[1] || 0); side += dz(g.axes[0] || 0);
+      camYaw += dz(g.axes[2] || 0) * dt * 2.6; camPitch -= dz(g.axes[3] || 0) * dt * 2;
+      if ((g.buttons[7] && g.buttons[7].value > 0.3) || (g.buttons[0] && g.buttons[0].pressed)) wantFire = true;
+      if (g.buttons[10] && g.buttons[10].pressed) sprint = true;
+      if (g.buttons[6] && g.buttons[6].value > 0.3) padAds = true;
+      if (g.buttons[2] && g.buttons[2].pressed && playing && reloadT <= 0 && ammo < 30) { reloadT = 1.5; updateAmmo(); }
+      const st = g.buttons[9] && g.buttons[9].pressed;
+      if (st && !padStartWas && !overlay.hidden && !go.disabled) start();
+      padStartWas = st;
+    }
+    camPitch = Math.max(-0.5, Math.min(0.7, camPitch));
+    players.forEach((p) => (p.cool -= dt));
+
+    if (playing) {
+      if (me.alive) {
+        me.yaw = camYaw;
+        move(me, fwd, side, sprint || Math.hypot(fwd, side) > 0.9 && (stick.id !== null || g) ? 6.5 : 4, dt);
+      }
+      players.forEach((p) => p.ai && p.alive && aiUpdate(p, dt));
+    }
+    players.forEach((p) => (p.node.rotation.y = p.yaw));
+
+    // Camera: first person at eye height
+    const dir = new V3(Math.sin(camYaw) * Math.cos(camPitch), Math.sin(camPitch), Math.cos(camYaw) * Math.cos(camPitch));
+    const right = new V3(Math.cos(camYaw), 0, -Math.sin(camYaw)), up = V3.Cross(dir, right);
+    const camPos = me.node.position.add(new V3(0, 1.65, 0));
+    camera.position.copyFrom(camPos); camera.setTarget(camPos.add(dir));
+
+    // Aim down sights, reload, recoil and flash
+    const aiming = playing && me.alive && (ads || touchAds || padAds);
+    adsT += ((aiming ? 1 : 0) - adsT) * Math.min(1, dt * 12);
+    camera.fov = BASE_FOV * (1 - 0.45 * adsT);
+    if (reloadT > 0) { reloadT -= dt; if (reloadT <= 0) { ammo = 30; updateAmmo(); } }
+    kick = Math.max(0, kick - dt * 10);
+    gun.position.copyFrom(V3.Lerp(HIP, ADS, adsT)).addInPlaceFromFloats(0, kick * 0.015 - (reloadT > 0 ? 0.12 : 0), -kick * 0.05);
+    gun.rotation.x = -kick * 0.08 + (reloadT > 0 ? 0.5 : 0);
+    if (flashT > 0) { flashT -= dt; if (flashT <= 0) flash.setEnabled(false); }
+
+    if (playing && me.alive && wantFire && me.cool <= 0 && ammo > 0 && reloadT <= 0) {
+      const ray = new BABYLON.Ray(camPos, dir, 80);
+      const hit = scene.pickWithRay(ray, (m) => m === ground || m.name === "rock");
+      const aim = hit && hit.hit ? hit.pickedPoint : camPos.add(dir.scale(80));
+      const gp = gun.position, mz = MUZ.z;
+      const origin = camPos.add(right.scale(gp.x)).add(up.scale(gp.y + MUZ.y)).add(dir.scale(gp.z + mz));
+      const spread = 0.022 * (1 - adsT) + 0.003;
+      const shot = aim.subtract(origin).normalize().add(new V3((Math.random() - 0.5) * 2 * spread, (Math.random() - 0.5) * 2 * spread, (Math.random() - 0.5) * 2 * spread));
+      fire(me, origin, shot);
+      ammo--; kick = 1; camPitch += 0.006 * (1 - 0.5 * adsT);
+      flash.setEnabled(true); flashT = 0.05;
+      if (ammo === 0) reloadT = 1.5;
+      updateAmmo();
+    }
+
+    // Bullets
+    for (let i = bullets.length - 1; i >= 0; i--) {
+      const b = bullets[i], a = b.m.position.clone();
+      b.v.y -= 2.5 * dt; b.m.position.addInPlace(b.v.scale(dt)); b.life -= dt;
+      const n = b.m.position; let dead = b.life <= 0 || n.y < 0 || Math.abs(n.x) > ARENA + 5 || Math.abs(n.z) > ARENA + 5;
+      for (const r of rocks) if (!dead && n.y < r.h && Math.hypot(n.x - r.x, n.z - r.z) < r.r * 0.9) dead = true;
+      if (!dead && playing) {
+        outer: for (const p of players) {
+          if (p === b.owner || !p.alive) continue;
+          for (let k = 0; k < p.balloons.length; k++) {
+            const bal = p.balloons[k];
+            if (bal && segSphere(a, n, bal.getAbsolutePosition(), 0.36)) { pop(p, k); dead = true; break outer; }
+          }
+        }
+      }
+      if (dead) { b.m.dispose(); bullets.splice(i, 1); }
+    }
+    // Pop fragments
+    for (let i = fx.length - 1; i >= 0; i--) {
+      const f = fx[i]; f.v.y -= 12 * dt; f.m.position.addInPlace(f.v.scale(dt)); f.m.rotation.x += dt * 8; f.life -= dt;
+      f.m.scaling.setAll(Math.max(0.01, f.life / 0.7));
+      if (f.life <= 0) { f.m.dispose(); fx.splice(i, 1); }
+    }
+    // Balloons bob
+    const t = performance.now() / 1000;
+    players.forEach((p) => p.balloons.forEach((b, k) => b && (b.position.y = BAL_OFF[k].y + Math.sin(t * 2 + k + p.id) * 0.05)));
+  });
+
+  function start() { if (actx && actx.state === "suspended") actx.resume(); reset(); }
+  go.addEventListener("click", () => { start(); if (!isTouch || matchMedia("(any-pointer: fine)").matches) lock(); });
+
+  loadBots().then(() => {
+    players.forEach((p, i) => { p.node.position.copyFrom(spawns[i]); p.yaw = Math.atan2(-spawns[i].x, -spawns[i].z); makeBalloons(p); setAnim(p, "idle"); });
+    camYaw = players[0].yaw; updateHud();
+    go.textContent = "Start"; go.disabled = false;
+  });
+  engine.runRenderLoop(() => scene.render());
+  addEventListener("resize", () => engine.resize());
+})();
+    </script>
+  </body>
+</html>
