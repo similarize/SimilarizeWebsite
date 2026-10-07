@@ -1,4 +1,6 @@
-run 37655603008 attempt 1 event push sha 28d5132e62e742fb6496f57c7f80eb3a7b980354 started 2026-10-07T17:02:44Z
-MISSING_SECRETS: UNITY_EMAIL set=no UNITY_PASSWORD set=no
-=== step outcomes: secrets=failure setup=skipped activate=skipped build=skipped publish=skipped
+run 37669371133 attempt 1 event workflow_dispatch sha a33ef8c53e003470daa09f1450d561c91e26faf4 started 2026-10-07T18:46:26Z
+secrets present
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/root       145G   41G  104G  29% /
+=== step outcomes: secrets=success setup=failure activate=skipped build=skipped publish=skipped
 === no editor log
