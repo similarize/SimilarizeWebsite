@@ -463,3 +463,140 @@ html, body {
   background: rgba(22, 101, 52, 0.45);
   color: #bbf7d0;
 }
+
+
+/* ===== Mode lobby + Race HUD ===== */
+.mode-lobby {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  display: grid;
+  place-items: center;
+  background: rgba(8, 10, 14, 0.82);
+  backdrop-filter: blur(10px);
+  pointer-events: auto;
+}
+.mode-lobby[hidden] { display: none !important; }
+.lobby-card {
+  width: min(420px, calc(100% - 32px));
+  padding: 28px 24px 22px;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,.18);
+  background: linear-gradient(160deg, rgba(30,36,48,.95), rgba(12,16,20,.98));
+  box-shadow: 0 20px 50px rgba(0,0,0,.45);
+  text-align: center;
+}
+.lobby-card h1 {
+  margin: 0 0 6px;
+  font-family: var(--display);
+  font-size: clamp(1.6rem, 5vw, 2.2rem);
+  font-weight: 560;
+  letter-spacing: -0.02em;
+}
+.lobby-sub { margin: 0 0 18px; color: var(--muted); font-size: 14px; }
+.lobby-actions { display: flex; flex-direction: column; gap: 10px; }
+.lobby-btn {
+  appearance: none;
+  border-radius: 14px;
+  border: 2px solid rgba(255,255,255,.35);
+  padding: 14px 16px;
+  font: 800 16px var(--sans);
+  color: #fff;
+  cursor: pointer;
+  background: rgba(0,0,0,.4);
+}
+.lobby-btn.soccer {
+  background: rgba(234, 88, 12, 0.45);
+  border-color: rgba(251, 146, 60, 0.75);
+}
+.lobby-btn.race {
+  background: rgba(37, 99, 235, 0.45);
+  border-color: rgba(96, 165, 250, 0.75);
+}
+.lobby-btn.go {
+  background: rgba(52, 211, 153, 0.35);
+  border-color: rgba(134, 239, 172, 0.7);
+  margin-top: 8px;
+}
+.lobby-link {
+  margin-top: 10px;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font: 600 13px var(--sans);
+  cursor: pointer;
+}
+.race-setup {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: left;
+}
+.race-setup label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font: 600 13px var(--sans);
+  color: var(--fg);
+}
+.race-setup select {
+  font: 700 14px var(--sans);
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.35);
+  background: rgba(0,0,0,.45);
+  color: #fff;
+  padding: 6px 12px;
+}
+.lobby-hint {
+  margin: 0;
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.35;
+}
+.race-hud {
+  position: absolute;
+  top: max(52px, calc(env(safe-area-inset-top) + 44px));
+  left: max(10px, env(safe-area-inset-left));
+  z-index: 6;
+  pointer-events: none;
+  max-width: min(280px, 70vw);
+}
+.race-hud[hidden] { display: none !important; }
+.race-standings {
+  background: rgba(12,16,20,.78);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 8px 10px;
+  font: 700 13px var(--sans);
+  backdrop-filter: blur(8px);
+}
+.race-standings .row { display: flex; gap: 8px; margin: 3px 0; }
+.race-standings .pos { width: 1.4em; opacity: 0.75; }
+.race-meta {
+  margin-top: 6px;
+  font: 600 12px var(--sans);
+  color: var(--muted);
+  text-shadow: 0 1px 4px rgba(0,0,0,.6);
+}
+.modes-btn {
+  position: absolute;
+  top: max(8px, env(safe-area-inset-top));
+  right: max(10px, env(safe-area-inset-right));
+  z-index: 7;
+  pointer-events: auto;
+  color: var(--fg);
+  background: rgba(0,0,0,.5);
+  border: 1px solid rgba(255,255,255,.35);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font: 600 12px var(--sans);
+  cursor: pointer;
+}
+.modes-btn[hidden] { display: none !important; }
+body.mode-race .scores,
+body.mode-race .online,
+body.mode-race #soccerBoostRow,
+body.mode-race .hint { display: none !important; }
+body.mode-lobby .pads { visibility: hidden; pointer-events: none; }

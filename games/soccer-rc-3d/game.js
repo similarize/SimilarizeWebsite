@@ -5,8 +5,19 @@
  * Online: same CF Worker rooms as flat Soccer RC (Create/Join two-phone).
  */
 import * as THREE from "three";
+import {
+  buildRaceTrack,
+  createRaceState,
+  updateRaceProgress,
+  rankRacers,
+  boundRaceCar,
+  sampleRampY,
+  raceCameraTarget,
+  RACE_COLORS,
+  RACE_NAMES,
+} from "./race-mode.js";
 
-const CACHE = "20261006-soccerrc3d7";
+const CACHE = "20261006-soccerrc3d8";
 const HALF_X = 22;
 const HALF_Z = 14;
 const WALL_H = 5.5;
@@ -123,22 +134,23 @@ function startMotors() {
 }
 
 function updateMotorAudio() {
-  if (!cars || cars.length < 2) return;
+  if (!cars || !cars.length) return;
   const ctx = ensureAudio();
   if (!ctx) return;
-  // Don't start oscillators until context is running (after user gesture)
   if (ctx.state !== "running") return;
   const tNow = ctx.currentTime;
-  for (let i = 0; i < 2; i++) {
+  const n = Math.min(4, cars.length);
+  for (let i = 0; i < n; i++) {
     const m = ensureMotor(i);
     if (!m) continue;
     const c = cars[i];
+    if (!c) continue;
     const sp = Math.hypot(c.vx, c.vz);
-    const drive = Math.min(1, sp / CAR_BOOST_MAX); // 0 idle → 1 top boost speed
-    // Idle hum always present once unlocked; rises with accel, falls when slow/stop
-    const freq = m.base + drive * 175;          // ~58 → ~233 Hz
+    const drive = Math.min(1, sp / CAR_BOOST_MAX);
+    const freq = m.base + drive * 175;
     const freq2 = freq * 2.02;
-    const vol = 0.014 + drive * 0.05;            // soft; louder when moving
+    // Quieter when many cars
+    const vol = (0.012 + drive * 0.045) * (n > 2 ? 0.75 : 1);
     try {
       m.osc.frequency.setTargetAtTime(freq, tNow, 0.09);
       m.osc2.frequency.setTargetAtTime(freq2, tNow, 0.09);
@@ -265,6 +277,21 @@ let netLeaveIntent = false;
 const onlineStatus = document.getElementById("onlineStatus");
 const roomCodeInput = document.getElementById("roomCodeInput");
 const padsEl = document.getElementById("pads");
+
+let gameMode = "lobby"; // lobby | soccer | race
+let soccerGroup = null;
+let raceGroup = null;
+let raceMeta = null; // { checkpoints, startSpots, ramps }
+let raceState = null;
+let _gp2 = null, _gp3 = null;
+const modeLobbyEl = document.getElementById("modeLobby");
+const raceHudEl = document.getElementById("raceHud");
+const raceStandingsEl = document.getElementById("raceStandings");
+const raceLapLabel = document.getElementById("raceLapLabel");
+const racePosLabel = document.getElementById("racePosLabel");
+const modesBtn = document.getElementById("modesBtn");
+const soccerBoostRow = document.getElementById("soccerBoostRow");
+const soccerScores = document.getElementById("soccerScores");
 
 let renderer, scene, camera, clock;
 let ballMesh, ball;
@@ -518,7 +545,10 @@ function readInput(playerIndex) {
   const t = touch[playerIndex];
   // Guest phone: local sticks/keys/pad0 drive their car via net bits, not local sim —
   // but host + local couch still use this path for P1 (and P2 when offline).
-  const g = playerIndex === 0 ? _gp0 : (netRole === "host" ? null : _gp1);
+  const pads = [_gp0, _gp1, _gp2, _gp3];
+  const g = playerIndex === 0
+    ? _gp0
+    : (netRole === "host" && playerIndex === 1 ? null : pads[playerIndex] || null);
   const pd = padDrive(g);
 
   let fwd = pd.fwd, rev = pd.rev, steer = pd.steer;
@@ -554,14 +584,24 @@ function readInput(playerIndex) {
       if (keys.q || keys.Q) kick = true;
       if (keys.e || keys.E) boost = true;
     }
-  } else if (netRole !== "host") {
-    // Local couch P2 only when not hosting online
+  } else if (playerIndex === 1 && netRole !== "host") {
+    // Local couch P2
     if (keys.w || keys.W) fwd = 1;
     if (keys.s || keys.S) rev = 1;
     const keySteer = keys.a || keys.A ? -1 : keys.d || keys.D ? 1 : 0;
     if (keySteer) steer = keySteer;
     if (keys.q || keys.Q) kick = true;
     if (keys.e || keys.E) boost = true;
+  } else if (playerIndex === 2) {
+    // P3 IJKL · U kick · O boost
+    if (keys.i || keys.I) fwd = 1;
+    if (keys.k || keys.K) rev = 1;
+    const keySteer = keys.j || keys.J ? -1 : keys.l || keys.L ? 1 : 0;
+    if (keySteer) steer = keySteer;
+    if (keys.u || keys.U) kick = true;
+    if (keys.o || keys.O) boost = true;
+  } else if (playerIndex === 3) {
+    // P4: pad only (or arrow-adjacent numpad-ish via pad)
   }
 
   if (fwd > 0 && rev > 0) {
@@ -642,11 +682,12 @@ function collideCarBall(car) {
     if (impact > 0.12) sfxBallHit(impact);
   }
   // Phone scheme: auto-kick when bumping/thrusting into ball while holding FWD
-  // (KB/pad still have explicit A/Space kick via inp.kick)
-  const thrustingIn = car._holdingFwd && (vn < 0.5 || d2 < 0.85);
-  if (thrustingIn && (car.autoKickCd || 0) <= 0) {
-    car.autoKickCd = AUTO_KICK_CD;
-    kickBall(car, null);
+  if (gameMode === "soccer") {
+    const thrustingIn = car._holdingFwd && (vn < 0.5 || d2 < 0.85);
+    if (thrustingIn && (car.autoKickCd || 0) <= 0) {
+      car.autoKickCd = AUTO_KICK_CD;
+      kickBall(car, null);
+    }
   }
 }
 
@@ -927,9 +968,13 @@ function updateCar(car, inp, dt) {
   car.pos.y += car.vy * dt;
   car.pos.z += car.vz * dt;
   car.onGround = false;
-  boundCar(car);
+  if (gameMode === "race" && raceMeta) {
+    boundRaceCar(car, CAR_HALF.y, raceMeta.ramps, sampleRampY);
+  } else {
+    boundCar(car);
+  }
 
-  if (inp.kick) kickBall(car, inp);
+  if (gameMode !== "race" && inp.kick) kickBall(car, inp);
 
   // Sync mesh
   car.mesh.position.copy(car.pos);
@@ -1210,14 +1255,253 @@ function bindOnlineUI() {
 function refreshGamepads() {
   const GP = window.SimilarizeGamepad;
   if (!GP) {
-    _gp0 = _gp1 = null;
+    _gp0 = _gp1 = _gp2 = _gp3 = null;
     return;
   }
   _gp0 = GP.pollPad(0);
   _gp1 = GP.pollPad(1);
+  _gp2 = GP.pollPad(2);
+  _gp3 = GP.pollPad(3);
+}
+
+
+function setModeUI(mode) {
+  document.body.classList.remove("mode-lobby", "mode-soccer", "mode-race");
+  document.body.classList.add("mode-" + mode);
+  if (modeLobbyEl) modeLobbyEl.hidden = mode !== "lobby";
+  if (raceHudEl) raceHudEl.hidden = mode !== "race";
+  if (modesBtn) modesBtn.hidden = mode === "lobby";
+  if (soccerBoostRow) soccerBoostRow.style.display = mode === "soccer" ? "" : "none";
+  if (soccerScores) soccerScores.style.display = mode === "soccer" ? "" : "none";
+  const online = document.getElementById("onlineBar");
+  if (online) online.style.display = mode === "soccer" ? "" : "none";
+  const hint = document.querySelector(".hint");
+  if (hint) hint.style.display = mode === "soccer" ? "" : "none";
+  // Phone pads: show in soccer/race (P1), hide in lobby
+  if (padsEl) {
+    padsEl.style.visibility = mode === "lobby" ? "hidden" : "";
+    padsEl.style.pointerEvents = mode === "lobby" ? "none" : "";
+  }
+}
+
+function clearSceneCars() {
+  for (const c of cars) {
+    if (c.mesh && c.mesh.parent) c.mesh.parent.remove(c.mesh);
+  }
+  cars = [];
+}
+
+function makeCarState(mesh, x, y, z, yaw) {
+  return {
+    mesh,
+    pos: new THREE.Vector3(x, y, z),
+    yaw,
+    vx: 0, vy: 0, vz: 0,
+    boost: 1,
+    onGround: true,
+    jumpCd: 0,
+    autoKickCd: 0,
+    _holdingFwd: false,
+    _trackAcc: 0,
+  };
+}
+
+function showLobby() {
+  gameMode = "lobby";
+  freezeT = 999;
+  setModeUI("lobby");
+  clearTracks();
+  if (soccerGroup) soccerGroup.visible = false;
+  if (raceGroup) raceGroup.visible = false;
+  if (ballMesh) ballMesh.visible = false;
+  for (const c of cars) if (c.mesh) c.mesh.visible = false;
+  camPos.set(0, 22, 36);
+  camera.position.copy(camPos);
+  camera.lookAt(0, 0, 0);
+  showBanner("Pick a mode", "", 1.2);
+}
+
+function startSoccerMode() {
+  gameMode = "soccer";
+  setModeUI("soccer");
+  if (raceGroup) raceGroup.visible = false;
+  if (soccerGroup) soccerGroup.visible = true;
+  if (ballMesh) ballMesh.visible = true;
+  // Ensure 2 soccer cars
+  clearSceneCars();
+  clearTracks();
+  const mesh0 = makeCarMesh(0xe4572e);
+  const mesh1 = makeCarMesh(0x3b82f6);
+  scene.add(mesh0, mesh1);
+  cars = [
+    makeCarState(mesh0, -8, CAR_HALF.y, 0, 0),
+    makeCarState(mesh1, 8, CAR_HALF.y, 0, Math.PI),
+  ];
+  for (const c of cars) c.mesh.visible = true;
+  if (!ball) ball = { pos: new THREE.Vector3(0, BALL_R, 0), vx: 0, vy: 0, vz: 0 };
+  resetMatch();
+  freezeT = 0.8;
+  showBanner("Soccer!", "orange", 1.2);
+}
+
+function startRaceMode(numPlayers, laps) {
+  gameMode = "race";
+  setModeUI("race");
+  if (soccerGroup) soccerGroup.visible = false;
+  if (ballMesh) ballMesh.visible = false;
+  if (!raceMeta) {
+    raceMeta = buildRaceTrack(scene);
+    raceGroup = raceMeta.group;
+  }
+  raceGroup.visible = true;
+  clearSceneCars();
+  clearTracks();
+  raceState = createRaceState(numPlayers, laps);
+  const spots = raceMeta.startSpots;
+  for (let i = 0; i < raceState.numCars; i++) {
+    const sp = spots[i];
+    const mesh = makeCarMesh(RACE_COLORS[i]);
+    scene.add(mesh);
+    const c = makeCarState(mesh, sp.x, CAR_HALF.y, sp.z, sp.yaw);
+    c.mesh.visible = true;
+    cars.push(c);
+  }
+  raceState.started = false;
+  raceState.finished = false;
+  raceState.countdown = 3.2;
+  raceState.finishCount = 0;
+  freezeT = 0;
+  updateRaceHud();
+  showBanner("Race!", "", 1.0);
+}
+
+function updateRaceHud() {
+  if (!raceState || !raceMeta) return;
+  const order = rankRacers(raceState, raceMeta.checkpoints);
+  const lines = order.map((ci, place) => {
+    const r = raceState.racers[ci];
+    const lapShow = Math.min(raceState.laps, r.lap + 1);
+    const done = r.finished ? " FIN" : "";
+    return `<div class="row"><span class="pos">${place + 1}</span><span>${RACE_NAMES[ci]}</span><span style="margin-left:auto;opacity:.75">L${lapShow}${done}</span></div>`;
+  });
+  if (raceStandingsEl) raceStandingsEl.innerHTML = lines.join("");
+  const p1 = raceState.racers[0];
+  if (raceLapLabel) {
+    raceLapLabel.textContent = p1.finished
+      ? "Finished"
+      : ("Lap " + Math.min(raceState.laps, p1.lap + 1) + "/" + raceState.laps);
+  }
+  const place = order.indexOf(0) + 1;
+  if (racePosLabel) racePosLabel.textContent = "P1 · " + place + "/" + raceState.numCars;
+}
+
+function tickRace(dt) {
+  if (!raceState || !raceMeta) return;
+
+  if (!raceState.started) {
+    raceState.countdown -= dt;
+    if (raceState.countdown > 0) {
+      const n = Math.ceil(raceState.countdown);
+      if (bannerT < 0.15) showBanner(String(n), "", 0.35);
+    } else {
+      raceState.started = true;
+      showBanner("GO!", "", 0.8);
+    }
+    // still allow camera / render pose
+    for (const c of cars) {
+      c.mesh.position.copy(c.pos);
+      c.mesh.rotation.y = -c.yaw;
+    }
+  } else if (!raceState.finished) {
+    for (let i = 0; i < cars.length; i++) {
+      const inp = edgeKick(i, readInput(i));
+      // No soccer kick in race — strip kick for pad A (optional jump? keep kickBall off)
+      inp.kick = false;
+      updateCar(cars[i], inp, dt);
+      const justFin = updateRaceProgress(cars[i], raceState.racers[i], raceMeta.checkpoints, raceState.laps);
+      if (justFin) {
+        raceState.racers[i].finishOrder = raceState.finishCount++;
+        showBanner(RACE_NAMES[i] + " finishes!", "", 1.4);
+        if (raceState.finishCount >= cars.length) {
+          raceState.finished = true;
+          const winner = rankRacers(raceState, raceMeta.checkpoints)[0];
+          showBanner(RACE_NAMES[winner] + " wins!", "", 2.5);
+        }
+      }
+    }
+    // Light car-car bump
+    for (let a = 0; a < cars.length; a++) {
+      for (let b = a + 1; b < cars.length; b++) {
+        const A = cars[a], B = cars[b];
+        const dx = B.pos.x - A.pos.x, dz = B.pos.z - A.pos.z;
+        const d = Math.hypot(dx, dz);
+        const minD = CAR_HALF.x * 2 * 0.9;
+        if (d < minD && d > 1e-4) {
+          const nx = dx / d, nz = dz / d;
+          const push = (minD - d) * 0.5;
+          A.pos.x -= nx * push; A.pos.z -= nz * push;
+          B.pos.x += nx * push; B.pos.z += nz * push;
+          const rv = (B.vx - A.vx) * nx + (B.vz - A.vz) * nz;
+          if (rv < 0) {
+            A.vx += rv * nx * 0.45; A.vz += rv * nz * 0.45;
+            B.vx -= rv * nx * 0.45; B.vz -= rv * nz * 0.45;
+            if (Math.abs(rv) > 2) sfxCrash();
+          }
+        }
+      }
+    }
+    updateRaceHud();
+  } else {
+    // Finished — freeze motion visually
+    for (const c of cars) {
+      c.vx *= 0.9; c.vz *= 0.9;
+      c.mesh.position.copy(c.pos);
+      c.mesh.rotation.y = -c.yaw;
+    }
+  }
+
+  // Race camera: chase pack
+  const tgt = raceCameraTarget(cars);
+  camTarget.lerp(new THREE.Vector3(tgt.x, tgt.y * 0.3, tgt.z), 1 - Math.pow(0.002, dt));
+  const desired = new THREE.Vector3(
+    camTarget.x * 0.2 - 6,
+    18 + Math.min(8, tgt.y),
+    camTarget.z * 0.2 + 28
+  );
+  camPos.lerp(desired, 1 - Math.pow(0.03, dt));
+  camera.position.copy(camPos);
+  camera.lookAt(camTarget.x, 1.2, camTarget.z);
+}
+
+function bindModeLobby() {
+  const pickSoccer = document.getElementById("pickSoccer");
+  const pickRace = document.getElementById("pickRace");
+  const raceSetup = document.getElementById("raceSetup");
+  const raceSetupBack = document.getElementById("raceSetupBack");
+  const startRaceBtn = document.getElementById("startRaceBtn");
+  if (pickSoccer) pickSoccer.addEventListener("click", () => startSoccerMode());
+  if (pickRace) pickRace.addEventListener("click", () => {
+    if (raceSetup) raceSetup.hidden = false;
+    document.querySelector(".lobby-actions").hidden = true;
+  });
+  if (raceSetupBack) raceSetupBack.addEventListener("click", () => {
+    if (raceSetup) raceSetup.hidden = true;
+    document.querySelector(".lobby-actions").hidden = false;
+  });
+  if (startRaceBtn) startRaceBtn.addEventListener("click", () => {
+    const n = +document.getElementById("racePlayers").value || 2;
+    const laps = +document.getElementById("raceLaps").value || 3;
+    startRaceMode(n, laps);
+  });
+  if (modesBtn) modesBtn.addEventListener("click", () => showLobby());
 }
 
 function requestReset() {
+  if (gameMode === "lobby") return;
+  if (gameMode === "race") {
+    if (raceState) startRaceMode(raceState.numCars, raceState.laps);
+    return;
+  }
   if (netRole === "guest") return; // host owns match state
   resetMatch();
   if (netRole === "host") netSend({ type: "reset" });
@@ -1227,12 +1511,14 @@ function tick() {
   const dt = Math.min(0.05, clock.getDelta());
   refreshGamepads();
 
-  if (_gp0 && _gp0.connected && (_gp0.buttonsPressed.start || _gp0.buttonsPressed.back)) {
-    requestReset();
-  }
-  if (keys.r || keys.R) {
-    keys.r = keys.R = false;
-    requestReset();
+  if (gameMode !== "lobby") {
+    if (_gp0 && _gp0.connected && (_gp0.buttonsPressed.start || _gp0.buttonsPressed.back)) {
+      requestReset();
+    }
+    if (keys.r || keys.R) {
+      keys.r = keys.R = false;
+      requestReset();
+    }
   }
 
   if (bannerT > 0) {
@@ -1240,12 +1526,20 @@ function tick() {
     if (bannerT <= 0) bannerEl.className = "";
   }
 
-  if (netRole === "guest") {
-    // Guest: send inputs ~30Hz; render from host snapshots only
+  if (gameMode === "lobby") {
+    // gentle orbit while choosing
+    const t = performance.now() * 0.00025;
+    camPos.set(Math.sin(t) * 28, 20, Math.cos(t) * 28);
+    camera.position.copy(camPos);
+    camera.lookAt(0, 0, 0);
+  } else if (gameMode === "race") {
+    tickRace(dt);
+    updateTracks(dt);
+    updateMotorAudio();
+  } else if (netRole === "guest") {
     const now = performance.now();
     if (now - guestInputTimer > 33) {
       guestInputTimer = now;
-      // Capture pad A / space edge into netFireArmed
       if (_gp0 && _gp0.connected && _gp0.buttonsPressed && _gp0.buttonsPressed.a) netFireArmed = true;
       if (keys[" "] || keys.Space || keys.q || keys.Q) netFireArmed = true;
       const bits = readLocalGuestBits();
@@ -1256,15 +1550,19 @@ function tick() {
       applyStateMsg(guestPendingState);
       guestPendingState = null;
     }
-    // Local tire tracks from snapshot velocities (same look as host)
     for (const c of cars) {
       c.onGround = c.pos.y <= CAR_HALF.y + 0.08;
       maybeDropTracks(c, dt);
     }
+    if (cars[0]) boost1El.style.transform = "scaleX(" + cars[0].boost.toFixed(3) + ")";
+    if (cars[1]) boost2El.style.transform = "scaleX(" + cars[1].boost.toFixed(3) + ")";
+    updateTracks(dt);
+    updateMotorAudio();
+    updateCamera(dt);
   } else {
     if (freezeT > 0) {
       freezeT -= dt;
-    } else {
+    } else if (cars.length >= 2) {
       const inp0 = readInput(0);
       const inp1 = readInput(1);
       updateCar(cars[0], edgeKick(0, inp0), dt);
@@ -1281,19 +1579,18 @@ function tick() {
         netSend(buildStateMsg());
       }
     }
+    if (cars[0]) boost1El.style.transform = "scaleX(" + cars[0].boost.toFixed(3) + ")";
+    if (cars[1]) boost2El.style.transform = "scaleX(" + cars[1].boost.toFixed(3) + ")";
+    updateTracks(dt);
+    updateMotorAudio();
+    updateCamera(dt);
   }
 
-  boost1El.style.transform = "scaleX(" + cars[0].boost.toFixed(3) + ")";
-  boost2El.style.transform = "scaleX(" + cars[1].boost.toFixed(3) + ")";
-
-  updateTracks(dt);
-  updateMotorAudio();
-  updateCamera(dt);
   renderer.render(scene, camera);
   requestAnimationFrame(tick);
 }
 
-const _prevKick = [false, false];
+const _prevKick = [false, false, false, false];
 function edgeKick(i, inp) {
   const out = Object.assign({}, inp);
   const held = !!inp.kick;
@@ -1482,47 +1779,30 @@ function init() {
   fill.position.set(-10, 12, -8);
   scene.add(fill);
 
+  // Soccer world in a group so Race can hide it
+  soccerGroup = new THREE.Group();
+  soccerGroup.name = "soccerArena";
+  scene.add(soccerGroup);
+  const _add = scene.add.bind(scene);
+  scene.add = (...objs) => {
+    // temporarily route buildArena additions into soccerGroup
+    return soccerGroup.add(...objs);
+  };
   buildArena();
+  scene.add = _add;
 
   ballMesh = createBallMesh();
-  scene.add(ballMesh);
+  soccerGroup.add(ballMesh);
   ball = { pos: new THREE.Vector3(0, BALL_R, 0), vx: 0, vy: 0, vz: 0 };
 
-  const mesh0 = makeCarMesh(0xe4572e);
-  const mesh1 = makeCarMesh(0x3b82f6);
-  scene.add(mesh0, mesh1);
-  cars = [
-    {
-      mesh: mesh0,
-      pos: new THREE.Vector3(-8, CAR_HALF.y, 0),
-      yaw: 0,
-      vx: 0, vy: 0, vz: 0,
-      boost: 1,
-      onGround: true,
-      jumpCd: 0,
-      autoKickCd: 0,
-      _holdingFwd: false,
-      _trackAcc: 0,
-    },
-    {
-      mesh: mesh1,
-      pos: new THREE.Vector3(8, CAR_HALF.y, 0),
-      yaw: Math.PI,
-      vx: 0, vy: 0, vz: 0,
-      boost: 1,
-      onGround: true,
-      jumpCd: 0,
-      autoKickCd: 0,
-      _holdingFwd: false,
-      _trackAcc: 0,
-    },
-  ];
+  cars = [];
 
   clock = new THREE.Clock();
   bindKeys();
   bindTouch();
   bindOnlineUI();
   bindAudioUI();
+  bindModeLobby();
   applyPadMode();
   onResize();
   window.addEventListener("resize", onResize);
@@ -1535,10 +1815,9 @@ function init() {
   }
 
   boot.hidden = true;
-  showBanner("Soccer RC 3D", "", 1.4);
-  freezeT = 0.8;
+  showLobby();
   requestAnimationFrame(tick);
-  console.info("[Soccer RC 3D]", CACHE, "ready");
+  console.info("[Soccer RC 3D]", CACHE, "lobby ready");
 }
 
 init();

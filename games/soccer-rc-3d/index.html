@@ -4,14 +4,14 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <title>Soccer RC 3D</title>
-  <!-- Cache-bust: ?v=20261006-soccerrc3d7 — stick + FWD/REV · auto-kick · dbl-tap boost -->
+  <!-- Cache-bust: ?v=20261006-soccerrc3d8 — Soccer + Race Track modes -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560&family=Outfit:wght@400;500;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="./style.css?v=20261006-soccerrc3d7" />
+  <link rel="stylesheet" href="./style.css?v=20261006-soccerrc3d8" />
   <script src="/games/shared/tesla-fullscreen.js?v=tfs1"></script>
   <script src="/games/shared/viewport-fill.js?v=vfs1"></script>
-  <script src="/games/shared/gamepad.js?v=20261006-soccerrc3d7"></script>
+  <script src="/games/shared/gamepad.js?v=20261006-soccerrc3d8"></script>
   <script type="importmap">
   {
     "imports": {
@@ -25,7 +25,7 @@
   <div class="vignette" aria-hidden="true"></div>
   <div class="top">
     <a class="exit-arcade" href="/games/">← Arcade</a>
-    <span class="scores"><span class="o">P1 <span id="s1">0</span></span> · <span class="b">P2 <span id="s2">0</span></span></span>
+    <span class="scores" id="soccerScores"><span class="o">P1 <span id="s1">0</span></span> · <span class="b">P2 <span id="s2">0</span></span></span>
     <span class="hint">P1 arrows + Space kick · Shift boost · P2 WASD + Q kick · E boost · R reset · Pad: RT/LT drive · stick steer · A kick · B boost</span>
     <button type="button" id="resetBtn">Reset</button>
     <button type="button" id="musicBtn" aria-pressed="false" title="Toggle background music">Music off</button>
@@ -38,7 +38,40 @@
     </span>
   </div>
   <div id="banner" aria-live="polite"></div>
-  <div class="boost-row">
+  <div id="modeLobby" class="mode-lobby">
+    <div class="lobby-card">
+      <h1>Soccer RC 3D</h1>
+      <p class="lobby-sub">Pick a mode</p>
+      <div class="lobby-actions">
+        <button type="button" id="pickSoccer" class="lobby-btn soccer">Soccer</button>
+        <button type="button" id="pickRace" class="lobby-btn race">Race Track</button>
+      </div>
+      <div id="raceSetup" class="race-setup" hidden>
+        <label>Players
+          <select id="racePlayers">
+            <option value="2" selected>2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+          </select>
+        </label>
+        <label>Laps
+          <select id="raceLaps">
+            <option value="3" selected>3</option>
+            <option value="5">5</option>
+          </select>
+        </label>
+        <p class="lobby-hint">P1: arrows / on-screen · P2: WASD · P3: IJKL · P4: pad · Pads auto-bind</p>
+        <button type="button" id="startRaceBtn" class="lobby-btn go">Start Race</button>
+        <button type="button" id="raceSetupBack" class="lobby-link">← Back</button>
+      </div>
+    </div>
+  </div>
+  <div id="raceHud" class="race-hud" hidden>
+    <div id="raceStandings" class="race-standings"></div>
+    <div class="race-meta"><span id="raceLapLabel">Lap 1/3</span> · <span id="racePosLabel">—</span></div>
+  </div>
+  <button type="button" id="modesBtn" class="modes-btn" hidden>Modes</button>
+  <div class="boost-row" id="soccerBoostRow">
     <div class="boost-card p1">
       <label>Orange boost</label>
       <div class="meter" aria-hidden="true"><i id="boost1"></i></div>
@@ -85,6 +118,6 @@
     </div>
   </div>
   <div id="boot">Loading Soccer RC 3D…</div>
-  <script type="module" src="./game.js?v=20261006-soccerrc3d7"></script>
+  <script type="module" src="./game.js?v=20261006-soccerrc3d8"></script>
 </body>
 </html>
