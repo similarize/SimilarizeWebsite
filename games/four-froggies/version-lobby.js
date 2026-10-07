@@ -1,11 +1,11 @@
 /* Four Froggies — onefrog1 entrance.
    One screen: claim James/Jimmy/Bubbles/Rexy + Host/Join + pick 2D/2.5D/3D → play.
-   Skips the old overlay frog-pick / party lobby. Cache: 20261006-earthorbit1 */
+   Skips the old overlay frog-pick / party lobby. Cache: 20261006-padbind1 */
 (function () {
   "use strict";
 
-  var CACHE = "20261006-earthorbit1";
-  var FF3D_CACHE = "20261006-earthorbit1";
+  var CACHE = "20261006-padbind1";
+  var FF3D_CACHE = "20261006-padbind1";
   var FROG_ORDER = ["james", "jimmy", "bubbles", "rexy"];
   var FROG_NAME = { james: "James", jimmy: "Jimmy", bubbles: "Bubbles", rexy: "Rexy" };
 
@@ -142,6 +142,8 @@
     var GP = window.SimilarizeGamepad;
     var P = partyApi();
     var seats = P && P.getSeats ? P.getSeats() : null;
+    if (P && P.pruneDeadPadClaims) P.pruneDeadPadClaims();
+    seats = P && P.getSeats ? P.getSeats() : seats;
     var idxs = connectedIdxs();
     var connected = {};
     for (var i = 0; i < idxs.length; i++) connected[idxs[i] | 0] = true;
@@ -152,7 +154,7 @@
     if (hintEl) {
       var hint = n === 0
         ? "Tap James / Jimmy / Bubbles / Rexy (or plug a pad). Host/Join optional. Then pick 2D / 2.5D / 3D."
-        : "Stick/D-pad cycles open froggies · A claims · B releases · one pad = one froggy";
+        : "Stick/D-pad cycles · A claims · B releases · one pad = one froggy · wiggle a 2nd same-model pad to register it";
       if (hintEl.textContent !== hint) hintEl.textContent = hint;
     }
 
@@ -175,14 +177,29 @@
         }
         var bp = snap.buttonsPressed || {};
         if (bp.a || bp.start) {
-          lastPad = pi;
-          var focus = ensureFocus(pi, seats);
-          if (P.claimPadOntoFrog) P.claimPadOntoFrog(pi, focus);
+          var claimPi = pi;
+          try {
+            if (GP && typeof GP.canonicalIndex === "function") {
+              var cPi = GP.canonicalIndex(pi, 4);
+              if (typeof cPi === "number" && cPi >= 0) claimPi = cPi | 0;
+            }
+          } catch (eC) {}
+          lastPad = claimPi;
+          var focus = ensureFocus(claimPi, seats);
+          if (P.claimPadOntoFrog) P.claimPadOntoFrog(claimPi, focus);
           if (P.enforceSeatInvariant) P.enforceSeatInvariant(focus);
+          if (P.pruneDeadPadClaims) P.pruneDeadPadClaims();
           seats = P.getSeats ? P.getSeats() : seats;
         } else if (bp.b) {
-          lastPad = pi;
-          if (P.releaseLocalPad) P.releaseLocalPad(pi);
+          var relPi = pi;
+          try {
+            if (GP && typeof GP.canonicalIndex === "function") {
+              var rPi = GP.canonicalIndex(pi, 4);
+              if (typeof rPi === "number" && rPi >= 0) relPi = rPi | 0;
+            }
+          } catch (eR) {}
+          lastPad = relPi;
+          if (P.releaseLocalPad) P.releaseLocalPad(relPi);
           if (P.enforceSeatInvariant) P.enforceSeatInvariant();
           /* Fresh seats: the pre-release copy still showed James claimed,
              so a cleared cursor skipped him and stuck on "pick Jimmy". */

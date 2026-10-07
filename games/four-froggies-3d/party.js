@@ -325,10 +325,75 @@
       return null;
     }
 
+
+    /** padbind1: drop local-pad claims on Steam/USB ghost aliases (still enumerated
+     *  in getGamepads but collapsed out of uniqueConnectedIndices). Do NOT wipe on a
+     *  transient empty poll — that was wiping real seats mid-frame. */
+    function pruneDeadPadClaims() {
+      var live = connectedPadIndices();
+      var liveSet = Object.create(null);
+      var i, id, s, pi, peer, list, raw;
+      for (i = 0; i < live.length; i++) liveSet[live[i] | 0] = true;
+      try {
+        list = navigator.getGamepads ? navigator.getGamepads() : [];
+      } catch (e) {
+        return;
+      }
+      var changed = false;
+      for (i = 0; i < FROG_ORDER.length; i++) {
+        id = FROG_ORDER[i];
+        s = seats[id];
+        if (!s || !s.peerId) continue;
+        peer = String(s.peerId);
+        if (peer.indexOf("local-pad-") !== 0) continue;
+        pi = s.padIndex != null ? (s.padIndex | 0) : padIndexFromPeer(peer);
+        if (pi == null || liveSet[pi]) continue;
+        raw = list && list[pi];
+        /* Ghost alias: still plugged under a collapsed index → free the seat.
+           Fully missing slot: leave claim (Chrome empty-frame) unless startParty. */
+        if (raw) {
+          seats[id] = { status: "open", peerId: null, label: null, padIndex: null };
+          changed = true;
+        }
+      }
+      if (changed) enforceSeatInvariant();
+    }
+
+    /** Aggressive prune for Start / disconnect: also drop seats whose slot is gone. */
+    function pruneDeadPadClaimsHard() {
+      var live = connectedPadIndices();
+      var liveSet = Object.create(null);
+      var i, id, s, pi, peer;
+      for (i = 0; i < live.length; i++) liveSet[live[i] | 0] = true;
+      for (i = 0; i < FROG_ORDER.length; i++) {
+        id = FROG_ORDER[i];
+        s = seats[id];
+        if (!s || !s.peerId) continue;
+        peer = String(s.peerId);
+        if (peer.indexOf("local-pad-") !== 0) continue;
+        pi = s.padIndex != null ? (s.padIndex | 0) : padIndexFromPeer(peer);
+        if (pi == null || liveSet[pi]) continue;
+        seats[id] = { status: "open", peerId: null, label: null, padIndex: null };
+      }
+      enforceSeatInvariant();
+    }
+
+    function canonicalizePadIndex(padIndex) {
+      var idx = padIndex | 0;
+      try {
+        var GP = global.SimilarizeGamepad;
+        if (GP && typeof GP.canonicalIndex === "function") {
+          var c = GP.canonicalIndex(idx, 4);
+          if (typeof c === "number" && c >= 0) return c | 0;
+        }
+      } catch (e) { /* ignore */ }
+      return idx;
+    }
+
     /** Couch: bind pad N onto frog (focus+A / click). One pad → one seat; A moves claim. */
     function claimPadOntoFrog(padIndex, frogId) {
       if (role === "guest") return null;
-      var idx = padIndex | 0;
+      var idx = canonicalizePadIndex(padIndex);
       if (idx < 0 || idx > 3) return null;
       if (FROG_ORDER.indexOf(frogId) < 0) return null;
       if (!localId) localId = "local-" + makeCode(6);
@@ -359,7 +424,7 @@
     /** Couch: pad N claims next open froggy (does not steal). Returns frogId or null. */
     function claimLocalPad(padIndex) {
       if (role === "guest") return null;
-      var idx = padIndex | 0;
+      var idx = canonicalizePadIndex(padIndex);
       if (idx < 0 || idx > 3) return null;
       if (!localId) localId = "local-" + makeCode(6);
       var peerId = "local-pad-" + idx;
@@ -747,6 +812,7 @@
 
     function startParty() {
       if (!canStart()) return null;
+      pruneDeadPadClaimsHard();
       /* rstick1/padexit2: keep lobby pad claims; never auto-seat unbound ghost indices */
       var livePads = connectedPadIndices();
       var anyPad = anyPadSeatBound();
@@ -855,6 +921,8 @@
       releaseLocalPad: releaseLocalPad,
       connectedPadIndices: connectedPadIndices,
       enforceSeatInvariant: enforceSeatInvariant,
+      pruneDeadPadClaims: pruneDeadPadClaims,
+      pruneDeadPadClaimsHard: pruneDeadPadClaimsHard,
       startParty: startParty,
       canStart: canStart,
       sendInput: sendInput,

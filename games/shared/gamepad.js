@@ -23,9 +23,10 @@
  *   poll() / pollPad(i)     — snapshot { connected, lx,ly,rx,ry, a,b,x,y, lb,rb,lt,rt,
  *                             ltValue,rtValue, start,back, dpad:{u,d,l,r}, buttonsPressed:{…edges} }
  *   pollAll(max?)           — poll slots 0..max-1 once (avoids double-poll eating edges)
- *   connectedIndices(max?)  — physical pads (dedupe repeated Gamepad.index only)
- *   uniqueConnectedIndices(max?) — alias of connectedIndices (same-model id is NOT a dedupe key)
+ *   connectedIndices(max?)  — physical pads (index dedupe + same-id lockstep/sticky-split)
+ *   uniqueConnectedIndices(max?) — alias of connectedIndices (1 physical stick → 1 seat)
  *   connectedCount(max?)    — length of connectedIndices
+ *   canonicalIndex(slot?)   — map a raw/ghost slot to the unique representative
  *   pressed(name, i?)       — held (uses last pollPad cache, or polls once)
  *   justPressed(name, i?)   — rising edge (uses last pollPad cache, or polls once)
  * Typical frame: const gp = SimilarizeGamepad.poll(); then read gp.* / buttonsPressed.
@@ -153,12 +154,43 @@
     for (var i = 0; i < n; i++) out.push(pollPad(i));
     return out;
   }
-  /* padpick1 / same-model-pads1: two Xbox pads of the same model share gamepad.id.
-   * Collapsing on id (or on a matching idle fingerprint) dropped the second USB
-   * pad, and a B press made the fingerprints differ so that second slot flashed
-   * back for a moment. Dedupe ONLY a repeated Gamepad.index — a mirrored ghost
-   * of the same device reported twice under one index. Different indices stay
-   * separate seats even when id and sticks match. */
+  /* padbind1: one physical stick → one lobby/index seat.
+   *
+   * History: onefrog1 collapsed same-id + matching fingerprint (fixed Steam dual-slot
+   * ghosts, but also hid a second idle same-model pad). padpick1 then deduped ONLY
+   * repeated Gamepad.index — two real Xbox pads stayed two seats, but Steam/USB
+   * mirrors under DIFFERENT indices each claimed a frog (Ben: 2 pads → 3 UI, one
+   * stick lights Pad1/Pad2/Pad4).
+   *
+   * Fix: per frame, group by gamepad.id. Matching fingerprints collapse to the
+   * lowest slot (ghosts stay one). Diverged ACTIVE fingerprints prove a split and
+   * stick until disconnect — two real same-model pads stay two after either is
+   * touched, even when both return to idle. Idle-only mismatch is ignored (noise).
+   */
+  var provenSplit = Object.create(null); /* id -> { slot: true, ... } */
+
+  function padFingerprint(gp) {
+    if (!gp) return { key: "", active: false };
+    var parts = [];
+    var active = false;
+    var ax = gp.axes || [];
+    var a, v, bt, b, btn, on;
+    for (a = 0; a < ax.length; a++) {
+      v = ax[a] || 0;
+      if (Math.abs(v) < DZ) v = 0;
+      else active = true;
+      parts.push(Math.round(v * 10));
+    }
+    bt = gp.buttons || [];
+    for (b = 0; b < bt.length; b++) {
+      btn = bt[b];
+      on = !!(btn && (btn.pressed || (typeof btn.value === "number" && btn.value > 0.45)));
+      if (on) active = true;
+      parts.push(on ? 1 : 0);
+    }
+    return { key: parts.join(","), active: active };
+  }
+
   function uniqueConnectedIndices(max) {
     var n = typeof max === "number" ? max : 4;
     if (n < 1) n = 1;
@@ -166,7 +198,11 @@
     var list = pads();
     var idxs = [];
     var seenIndex = Object.create(null);
-    var i, gp, physicalIndex;
+    var byId = Object.create(null);
+    var liveSlots = Object.create(null);
+    var anon = 0;
+    var i, gp, id, physicalIndex, group, g, fp, key, cluster, reps, proven, keep;
+    var slot, empty, liveInGroup, outSlots, anyActiveRep, rep, k;
     for (i = 0; i < n; i++) {
       gp = list && list[i];
       if (!gp) continue;
@@ -175,16 +211,119 @@
         : i;
       if (seenIndex[physicalIndex]) continue;
       seenIndex[physicalIndex] = true;
-      idxs.push(i);
+      liveSlots[i] = true;
+      id = gp.id ? String(gp.id) : ("__anon_" + (anon++));
+      if (!byId[id]) byId[id] = [];
+      fp = padFingerprint(gp);
+      byId[id].push({ slot: i, index: physicalIndex, key: fp.key, active: fp.active });
+    }
+    for (id in provenSplit) {
+      if (!Object.prototype.hasOwnProperty.call(provenSplit, id)) continue;
+      proven = provenSplit[id];
+      keep = Object.create(null);
+      empty = true;
+      for (slot in proven) {
+        if (!Object.prototype.hasOwnProperty.call(proven, slot)) continue;
+        if (liveSlots[slot | 0]) {
+          keep[slot] = true;
+          empty = false;
+        }
+      }
+      if (empty) delete provenSplit[id];
+      else provenSplit[id] = keep;
+    }
+    for (id in byId) {
+      if (!Object.prototype.hasOwnProperty.call(byId, id)) continue;
+      group = byId[id];
+      if (group.length === 1) {
+        idxs.push(group[0].slot);
+        continue;
+      }
+      /* Collapse lockstep mirrors (same fingerprint) to lowest slot per key */
+      cluster = Object.create(null);
+      for (g = 0; g < group.length; g++) {
+        key = group[g].key;
+        if (!cluster[key]) cluster[key] = [];
+        cluster[key].push(group[g]);
+      }
+      reps = [];
+      for (key in cluster) {
+        if (!Object.prototype.hasOwnProperty.call(cluster, key)) continue;
+        cluster[key].sort(function (a, b) { return a.slot - b.slot; });
+        reps.push(cluster[key][0]);
+      }
+      reps.sort(function (a, b) { return a.slot - b.slot; });
+
+      liveInGroup = Object.create(null);
+      for (g = 0; g < group.length; g++) liveInGroup[group[g].slot] = true;
+
+      proven = provenSplit[id];
+      if (proven) {
+        outSlots = [];
+        for (slot in proven) {
+          if (!Object.prototype.hasOwnProperty.call(proven, slot)) continue;
+          if (liveInGroup[slot | 0]) outSlots.push(slot | 0);
+        }
+        if (outSlots.length) {
+          /* New active fingerprint cluster → prove its representative too */
+          anyActiveRep = false;
+          for (k = 0; k < reps.length; k++) if (reps[k].active) anyActiveRep = true;
+          if (anyActiveRep && reps.length > 1) {
+            for (k = 0; k < reps.length; k++) {
+              proven[reps[k].slot] = true;
+              if (outSlots.indexOf(reps[k].slot) < 0) outSlots.push(reps[k].slot);
+            }
+          }
+          outSlots.sort(function (a, b) { return a - b; });
+          for (k = 0; k < outSlots.length; k++) idxs.push(outSlots[k]);
+          continue;
+        }
+      }
+
+      if (reps.length === 1) {
+        idxs.push(reps[0].slot);
+        continue;
+      }
+      anyActiveRep = false;
+      for (k = 0; k < reps.length; k++) if (reps[k].active) anyActiveRep = true;
+      if (anyActiveRep) {
+        if (!provenSplit[id]) provenSplit[id] = Object.create(null);
+        for (k = 0; k < reps.length; k++) {
+          provenSplit[id][reps[k].slot] = true;
+          idxs.push(reps[k].slot);
+        }
+        continue;
+      }
+      /* Never-proven idle same-model set (or idle noise) → one canonical seat */
+      idxs.push(reps[0].slot);
     }
     idxs.sort(function (a, b) { return a - b; });
     return idxs;
   }
+
   function connectedIndices(max) {
     return uniqueConnectedIndices(max);
   }
   function connectedCount(max) {
     return connectedIndices(max).length;
+  }
+  /** Map a raw slot to the canonical uniqueConnectedIndices representative, or -1. */
+  function canonicalIndex(slot, max) {
+    var want = slot | 0;
+    var xs = uniqueConnectedIndices(max);
+    var list = pads();
+    var i, gp, idWant, id;
+    if (xs.indexOf(want) >= 0) return want;
+    gp = list && list[want];
+    if (!gp) return xs.length ? xs[0] : -1;
+    idWant = gp.id ? String(gp.id) : null;
+    if (!idWant) return xs.length ? xs[0] : -1;
+    for (i = 0; i < xs.length; i++) {
+      gp = list && list[xs[i]];
+      id = gp && gp.id ? String(gp.id) : null;
+      if (id && id === idWant) return xs[i] | 0;
+    }
+    return xs.length ? xs[0] : -1;
   }
   function cached(i) {
     var idx = i | 0;
@@ -226,6 +365,7 @@
     connectedIndices: connectedIndices,
     uniqueConnectedIndices: uniqueConnectedIndices,
     connectedCount: connectedCount,
+    canonicalIndex: canonicalIndex,
     pressed: pressed,
     justPressed: justPressed,
     DEADZONE: DZ
