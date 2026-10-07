@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Balloon Blast Airsoft</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400&display=swap" />
+    <link rel="stylesheet" href="hark.css" />
+    <link rel="stylesheet" href="hark-hero.css" />
+    <style>
+      html, body { margin: 0; height: 100%; overflow: hidden; background: #000; }
+      #game { position: fixed; inset: 0; display: block; }
+      .x-layer { position: fixed; inset: 0; pointer-events: none; font: var(--type-label); font-family: var(--sans); color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.6); }
+      .x-cross { position: absolute; left: 50%; top: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px; }
+      .x-cross::before, .x-cross::after { content: ""; position: absolute; background: #fff; box-shadow: 0 0 2px #000; }
+      .x-cross::before { left: 8px; top: 0; width: 2px; height: 18px; }
+      .x-cross::after { top: 8px; left: 0; height: 2px; width: 18px; }
+      .x-hit { position: absolute; left: 50%; top: calc(50% - 56px); transform: translateX(-50%); font: var(--type-heading); font-family: var(--sans); color: #ffd23f; opacity: 0; transition: opacity .15s; }
+      .x-hit.on { opacity: 1; }
+      .x-bl { position: absolute; left: 20px; bottom: 20px; display: flex; gap: 8px; }
+      .x-bl i { width: 22px; height: 28px; border-radius: 50% 50% 46% 46%; display: block; border: 2px solid #fff; }
+      .x-bl i.gone { opacity: .2; }
+      .x-br { position: absolute; right: 20px; bottom: 20px; text-align: right; }
+      .x-br b { font: var(--type-figure); font-family: var(--sans); display: block; }
+      .x-tl { position: absolute; left: 20px; top: 20px; }
+      .x-banner { position: absolute; left: 50%; top: 28%; transform: translateX(-50%); font: var(--type-display); font-family: var(--sans); text-align: center; opacity: 0; transition: opacity .3s; }
+      .x-banner.on { opacity: 1; }
+      .x-banner small { display: block; font: var(--type-body); font-family: var(--sans); }
+      .x-start { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(10,30,50,.45); }
+      .x-card { background: var(--fill-primary-on); color: var(--text-primary); border-radius: var(--r-l); padding: 32px; max-width: 420px; margin: var(--gutter); box-shadow: var(--hark-shadow); }
+      .x-card h1 { font: var(--type-title); font-family: var(--sans); margin: 0 0 8px; }
+      .x-card p { font: var(--type-small); font-family: var(--sans); color: var(--text-secondary); margin: 0 0 16px; }
+      .x-card .btn { min-height: var(--tap); padding: 0 24px; font: var(--type-label); font-family: var(--sans); cursor: pointer; background: var(--fill-primary); color: var(--text-primary-on); border: 0; border-radius: var(--r-pill); }
+    </style>
+  </head>
+  <body>
+    <canvas id="game"></canvas>
+    <div class="x-layer" id="hud">
+      <div class="x-cross"></div>
+      <div class="x-hit" id="hit">POP!</div>
+      <div class="x-tl" id="left"></div>
+      <div class="x-bl" id="balloons"><i></i><i></i><i></i></div>
+      <div class="x-br"><b id="ammo">30</b><span id="ammoSub">/ 30</span></div>
+      <div class="x-banner" id="banner"></div>
+    </div>
+    <div class="x-start" id="start">
+      <div class="x-card">
+        <h1>Balloon Blast Airsoft</h1>
+        <p>Pop the three balloons on every rival's shoulders. Lose all three and you're out. Last one standing takes the round; best of 3.</p>
+        <p>WASD move · mouse look · click fire · right-click aim · Space jump · R reload. Gamepad: sticks, RT fire, LT aim, A jump, X reload.</p>
+        <button class="btn" id="play">Play</button>
+      </div>
+    </div>
+    <script>
+      document.getElementById("play").addEventListener("click", function () {
+        if (window.bbStart) { try { window.bbStart(); return; } catch (e) { console.error(e); } }
+        document.getElementById("start").style.display = "none";
+        var b = document.getElementById("banner");
+        b.innerHTML = "Can't start the game<small>3D graphics (WebGL) or the three.js download isn't available here.</small>";
+        b.classList.add("on");
+      });
+    </script>
+    <script src="https://unpkg.com/three@0.149.0/build/three.min.js"></script>
+    <script>
+(function () {
+  if (!window.THREE) return;
+  const canvas = document.getElementById("game");
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  const scene = new THREE.Scene();
+  const SKY = 0x9fd0f2;
+  scene.background = new THREE.Color(SKY);
+  scene.fog = new THREE.Fog(SKY, 60, 240);
+  scene.add(new THREE.HemisphereLight(0xdfefff, 0x4a6a2a, 0.7));
+  const sun = new THREE.DirectionalLight(0xfff1d6, 1.6);
+  sun.position.set(80, 120, 40);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(2048, 2048);
+  Object.assign(sun.shadow.camera, { left: -160, right: 160, top: 160, bottom: -160, near: 1, far: 400 });
+  scene.add(sun);
+
+  // terrain
+  const groundY = (x, z) => 1.6 * Math.sin(x * 0.03) * Math.cos(z * 0.04) + 0.8 * Math.sin(x * 0.07 + z * 0.05);
+  const tg = new THREE.PlaneGeometry(300, 300, 120, 120);
+  tg.rotateX(-Math.PI / 2);
+  const tp = tg.attributes.position;
+  for (let i = 0; i < tp.count; i++) tp.setY(i, groundY(tp.getX(i), tp.getZ(i)));
+  tg.computeVertexNormals();
+  const ground = new THREE.Mesh(tg, new THREE.MeshStandardMaterial({ color: 0x5c9a3a, roughness: 1 }));
+  ground.receiveShadow = true;
+  scene.add(ground);
+
+  // cover
+  let seed = 7;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const cols = [];
+  const mat = (c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.9 });
+  const M = { hay: mat(0xd9b44a), pallet: mat(0x8a5a2b), trunk: mat(0x5b3a1e), leaf: mat(0x2f6b2a), barrel: mat(0x2f5f8f) };
+  function addBox(x, z, w, h, d, m, y0) {
+    const base = y0 != null ? y0 : groundY(x, z) - 0.1;
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
+    mesh.position.set(x, base + h / 2, z);
+    mesh.castShadow = mesh.receiveShadow = true;
+    scene.add(mesh);
+    cols.push({ x0: x - w / 2, x1: x + w / 2, z0: z - d / 2, z1: z + d / 2, top: base + h });
+    return base + h;
+  }
+  const spot = () => { let x, z; do { x = (rnd() - 0.5) * 260; z = (rnd() - 0.5) * 260; } while (Math.hypot(x, z) < 12); return [x, z]; };
+  for (let i = 0; i < 14; i++) { const [x, z] = spot(); const r = rnd() > 0.5; const t = addBox(x, z, r ? 1.6 : 1, 1, r ? 1 : 1.6, M.hay); if (i % 3 === 0) addBox(x, z, r ? 1.6 : 1, 1, r ? 1 : 1.6, M.hay, t); }
+  for (let i = 0; i < 10; i++) { const [x, z] = spot(); const r = rnd() > 0.5; addBox(x, z, r ? 3.2 : 0.2, 1.7, r ? 0.2 : 3.2, M.pallet); }
+  for (let i = 0; i < 8; i++) {
+    const [x, z] = spot(), y = groundY(x, z);
+    const tr = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.35, 4.5, 8), M.trunk);
+    tr.position.set(x, y + 2.25, z);
+    const lf = new THREE.Mesh(new THREE.SphereGeometry(2.4, 12, 10), M.leaf);
+    lf.position.set(x, y + 5.2, z);
+    tr.castShadow = lf.castShadow = true;
+    scene.add(tr, lf);
+    cols.push({ x0: x - 0.35, x1: x + 0.35, z0: z - 0.35, z1: z + 0.35, top: y + 7 });
+  }
+  for (let i = 0; i < 8; i++) {
+    const [x, z] = spot(), y = groundY(x, z) - 0.05;
+    const b = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 1.1, 14), M.barrel);
+    b.position.set(x, y + 0.55, z);
+    b.castShadow = b.receiveShadow = true;
+    scene.add(b);
+    cols.push({ x0: x - 0.4, x1: x + 0.4, z0: z - 0.4, z1: z + 0.4, top: y + 1.1 });
+  }
+  const inCol = (x, y, z, r) => cols.some((c) => x > c.x0 - r && x < c.x1 + r && z > c.z0 - r && z < c.z1 + r && y < c.top);
+  function floorAt(x, z, y) {
+    let h = groundY(x, z);
+    for (const c of cols) if (x > c.x0 - 0.3 && x < c.x1 + 0.3 && z > c.z0 - 0.3 && z < c.z1 + 0.3 && y >= c.top - 0.45) h = Math.max(h, c.top);
+    return h;
+  }
+  function los(a, b) {
+    for (let i = 1; i < 16; i++) {
+      const t = i / 16, x = a.x + (b.x - a.x) * t, y = a.y + (b.y - a.y) * t, z = a.z + (b.z - a.z) * t;
+      if (y < groundY(x, z) || inCol(x, y, z, 0)) return false;
+    }
+    return true;
+  }
+
+  // players
+  const COLORS = [0xff4d4d, 0x3d7dff, 0xffc93d, 0x9b5cff, 0x2fd17a, 0xff8a2b, 0x2fd6d6, 0xff5fb8];
+  const B_OFF = [[-0.32, 2.25, 0.05], [0, 2.45, 0.12], [0.32, 2.25, 0.05]];
+  const EYE = 1.6, R = 0.4;
+  const players = [];
+  const blankInput = () => ({ mx: 0, my: 0, lx: 0, ly: 0, fire: false, ads: false, jump: false, reload: false });
+  function makePlayer(i, isBot) {
+    const g = new THREE.Group();
+    const skin = mat(0x3b4048), vest = mat(COLORS[i]);
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.3, 1.2, 12), skin); body.position.y = 0.85;
+    const v = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.34, 0.6, 12), vest); v.position.y = 1.1;
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 10), mat(0xe0b58f)); head.position.y = 1.65;
+    const gun = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.1, 0.7), mat(0x222222)); gun.position.set(0.25, 1.2, -0.4);
+    [body, v, head, gun].forEach((m) => { m.castShadow = true; g.add(m); });
+    const balloons = B_OFF.map((o, k) => {
+      const bm = new THREE.Mesh(new THREE.SphereGeometry(0.22, 14, 12), new THREE.MeshStandardMaterial({ color: COLORS[i], roughness: 0.3 }));
+      bm.position.set(o[0], o[1], o[2]); bm.castShadow = true;
+      const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(o[0] * 0.8, 1.45, 0), new THREE.Vector3(o[0], o[1] - 0.22, o[2])]), new THREE.LineBasicMaterial({ color: 0xffffff }));
+      g.add(bm, line);
+      return { mesh: bm, line, alive: true };
+    });
+    scene.add(g);
+    const cam = new THREE.PerspectiveCamera(75, 1, 0.05, 500);
+    return { id: i, isBot, color: COLORS[i], name: isBot ? "Bot " + i : "You", group: g, balloons, camera: cam, input: blankInput(),
+      pos: new THREE.Vector3(), vy: 0, yaw: 0, pitch: 0, alive: true, ammo: 30, reloadT: 0, fireT: 0, wins: 0,
+      ai: { goal: new THREE.Vector3(), t: 0, target: null, aimB: 0, seeT: 0, err: [0, 0] } };
+  }
+  players.push(makePlayer(0, false));
+  for (let i = 1; i < 8; i++) players.push(makePlayer(i, true));
+  const humans = players.filter((p) => !p.isBot);
+  humans.forEach((p) => (p.group.visible = false));
+  const balloonPos = (p, k) => {
+    const o = B_OFF[k], c = Math.cos(p.yaw), s = Math.sin(p.yaw);
+    return new THREE.Vector3(p.pos.x + o[0] * c + o[2] * s, p.pos.y + o[1], p.pos.z - o[0] * s + o[2] * c);
+  };
+  const eye = (p) => new THREE.Vector3(p.pos.x, p.pos.y + EYE, p.pos.z);
+  const fwd = (yaw, pitch) => new THREE.Vector3(-Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), -Math.cos(yaw) * Math.cos(pitch));
+
+  // audio
+  let ac = null;
+  function popSound(vol) {
+    if (!ac) return;
+    const t = ac.currentTime, len = 0.18, buf = ac.createBuffer(1, ac.sampleRate * len, ac.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 3);
+    const src = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
+    src.buffer = buf; f.type = "bandpass"; f.frequency.value = 1400; f.Q.value = 0.7;
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + len);
+    src.connect(f).connect(g).connect(ac.destination); src.start(t);
+  }
+
+  // pellets and particles
+  const pellets = [], parts = [];
+  const pelGeo = new THREE.SphereGeometry(0.035, 6, 4), pelMat = new THREE.MeshBasicMaterial({ color: 0xfff6c8 });
+  const partGeo = new THREE.SphereGeometry(0.05, 5, 4);
+  function shoot(p) {
+    const spread = p.input.ads ? 0.004 : 0.012;
+    const d = fwd(p.yaw + (Math.random() - 0.5) * spread, p.pitch + (Math.random() - 0.5) * spread);
+    const m = new THREE.Mesh(pelGeo, pelMat);
+    const o = eye(p).addScaledVector(d, 0.6); o.y -= 0.08;
+    m.position.copy(o); scene.add(m);
+    pellets.push({ mesh: m, vel: d.multiplyScalar(90), owner: p, life: 2 });
+  }
+  function burst(at, color) {
+    for (let i = 0; i < 14; i++) {
+      const m = new THREE.Mesh(partGeo, new THREE.MeshBasicMaterial({ color }));
+      m.position.copy(at); scene.add(m);
+      parts.push({ mesh: m, vel: new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.2, Math.random() - 0.5).multiplyScalar(7), life: 0.6 });
+    }
+  }
+  const segDist = (a, b, c) => { const ab = b.clone().sub(a), t = Math.max(0, Math.min(1, c.clone().sub(a).dot(ab) / ab.lengthSq())); return a.clone().addScaledVector(ab, t).distanceTo(c); };
+  function updatePellets(dt) {
+    for (let i = pellets.length - 1; i >= 0; i--) {
+      const pl = pellets[i], a = pl.mesh.position.clone();
+      pl.vel.y -= 3 * dt;
+      const b = a.clone().addScaledVector(pl.vel, dt);
+      let dead = (pl.life -= dt) <= 0 || b.y < groundY(b.x, b.z) || inCol(b.x, b.y, b.z, 0);
+      if (!dead) for (const p of players) {
+        if (p === pl.owner || !p.alive) continue;
+        if (a.distanceTo(p.pos) > 6 && b.distanceTo(p.pos) > 6 && segDist(a, b, p.pos) > 4) continue;
+        for (let k = 0; k < 3 && !dead; k++) {
+          if (!p.balloons[k].alive) continue;
+          const c = balloonPos(p, k);
+          if (segDist(a, b, c) < 0.27) { dead = true; popBalloon(p, k, c, pl.owner); }
+        }
+        if (dead) break;
+      }
+      if (dead) { scene.remove(pl.mesh); pellets.splice(i, 1); } else pl.mesh.position.copy(b);
+    }
+    for (let i = parts.length - 1; i >= 0; i--) {
+      const q = parts[i]; q.vel.y -= 12 * dt; q.mesh.position.addScaledVector(q.vel, dt);
+      if ((q.life -= dt) <= 0) { scene.remove(q.mesh); parts.splice(i, 1); }
+    }
+  }
+  let hitT = 0;
+  function popBalloon(p, k, at, by) {
+    const b = p.balloons[k]; b.alive = false; b.mesh.visible = b.line.visible = false;
+    burst(at, p.color);
+    const h = humans[0], dist = at.distanceTo(h.pos);
+    popSound(Math.max(0.05, 0.7 - dist / 120));
+    if (!by.isBot) hitT = 0.45;
+    if (p.balloons.every((x) => !x.alive)) { p.alive = false; p.group.visible = false; if (!p.isBot) showBanner("You're out", "Popped by " + by.name, 2); }
+  }
+
+  // input
+  const keys = {}; let mouse = { dx: 0, dy: 0, fire: false, ads: false, drag: false, lx: 0, ly: 0 };
+  addEventListener("keydown", (e) => { keys[e.code] = true; if (e.code === "Space") e.preventDefault(); });
+  addEventListener("keyup", (e) => (keys[e.code] = false));
+  canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+  canvas.addEventListener("mousedown", (e) => {
+    if (!running) return;
+    if (document.pointerLockElement !== canvas && canvas.requestPointerLock) { try { canvas.requestPointerLock(); } catch (_) {} }
+    if (e.button === 0) mouse.fire = true;
+    if (e.button === 2) mouse.ads = true;
+    mouse.drag = true; mouse.lx = e.clientX; mouse.ly = e.clientY;
+  });
+  addEventListener("mouseup", (e) => { if (e.button === 0) mouse.fire = false; if (e.button === 2) mouse.ads = false; mouse.drag = false; });
+  addEventListener("mousemove", (e) => {
+    if (document.pointerLockElement === canvas) { mouse.dx += e.movementX; mouse.dy += e.movementY; }
+    else if (mouse.drag) { mouse.dx += e.clientX - mouse.lx; mouse.dy += e.clientY - mouse.ly; mouse.lx = e.clientX; mouse.ly = e.clientY; }
+  });
+  function getPad() {
+    const pads = [...(navigator.getGamepads ? navigator.getGamepads() : [])].filter(Boolean);
+    return pads.find((p) => p.mapping === "standard") || pads[0] || null;
+  }
+  const dz = (v) => (Math.abs(v) < 0.15 ? 0 : v);
+  function readHuman(p, dt) {
+    const i = p.input;
+    i.mx = (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0); i.my = (keys.KeyW ? 1 : 0) - (keys.KeyS ? 1 : 0);
+    i.lx = mouse.dx; i.ly = mouse.dy; mouse.dx = mouse.dy = 0;
+    i.fire = mouse.fire; i.ads = mouse.ads; i.jump = !!keys.Space; i.reload = !!(keys.KeyR || keys.KeyX);
+    const g = getPad();
+    if (g) {
+      const ax = g.axes, bt = (n) => g.buttons[n] && (g.buttons[n].pressed || g.buttons[n].value > 0.5);
+      i.mx += dz(ax[0] || 0); i.my -= dz(ax[1] || 0);
+      i.lx += dz(ax[2] || 0) * 900 * dt; i.ly += dz(ax[3] || 0) * 700 * dt;
+      i.fire = i.fire || bt(7); i.ads = i.ads || bt(6); i.jump = i.jump || bt(0); i.reload = i.reload || bt(2);
+    }
+  }
+
+  // bots
+  function pickGoal(p) { p.ai.goal.set((Math.random() - 0.5) * 240, 0, (Math.random() - 0.5) * 240); p.ai.t = 8 + Math.random() * 8; }
+  function think(p, dt) {
+    const ai = p.ai, i = p.input;
+    i.fire = false; i.jump = false; i.reload = p.ammo === 0; i.lx = i.ly = 0;
+    ai.seeT -= dt;
+    if (ai.seeT <= 0) {
+      ai.seeT = 0.3; ai.target = null; let best = 60;
+      for (const o of players) {
+        if (o === p || !o.alive) continue;
+        const d = o.pos.distanceTo(p.pos);
+        if (d < best && los(eye(p), eye(o).add(new THREE.Vector3(0, 0.6, 0)))) { best = d; ai.target = o; }
+      }
+      if (ai.target) { const alive = [0, 1, 2].filter((k) => ai.target.balloons[k].alive); ai.aimB = alive[(Math.random() * alive.length) | 0]; ai.err = [(Math.random() - 0.5) * 0.08, (Math.random() - 0.5) * 0.06]; }
+    }
+    const t = ai.target;
+    if (t && t.alive && t.balloons[ai.aimB] && t.balloons[ai.aimB].alive) {
+      const d = balloonPos(t, ai.aimB).sub(eye(p)), dist = d.length();
+      d.y += dist * dist * 1.5 / 8100;
+      const wantYaw = Math.atan2(-d.x, -d.z) + ai.err[0], wantPitch = Math.asin(d.y / d.length()) + ai.err[1];
+      let dy = ((wantYaw - p.yaw + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+      p.yaw += dy * Math.min(1, dt * 5); p.pitch += (wantPitch - p.pitch) * Math.min(1, dt * 5);
+      i.my = dist > 25 ? 0.6 : 0; i.mx = Math.sin(performance.now() / 700 + p.id) * 0.7;
+      i.fire = Math.abs(dy) < 0.12 && Math.random() < 0.6;
+    } else {
+      ai.t -= dt;
+      const d = ai.goal.clone().sub(p.pos); d.y = 0;
+      if (ai.t <= 0 || d.length() < 3) pickGoal(p);
+      let dy = ((Math.atan2(-d.x, -d.z) - p.yaw + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+      p.yaw += dy * Math.min(1, dt * 3); p.pitch *= 0.9;
+      i.my = 1; i.mx = 0;
+      if (ai.stuck > 0.5) { i.jump = true; ai.stuck = 0; if (Math.random() < 0.5) pickGoal(p); }
+    }
+  }
+
+  // simulation
+  function step(p, dt) {
+    const i = p.input;
+    if (!p.alive) return;
+    p.yaw -= i.lx * 0.0025 * (i.ads ? 0.5 : 1); p.pitch = Math.max(-1.4, Math.min(1.4, p.pitch - i.ly * 0.0025 * (i.ads ? 0.5 : 1)));
+    const sp = i.ads ? 3 : 6, s = Math.sin(p.yaw), c = Math.cos(p.yaw);
+    let mx = i.mx, my = i.my; const l = Math.hypot(mx, my); if (l > 1) { mx /= l; my /= l; }
+    const vx = (-s * my + c * mx) * sp * dt, vz = (-c * my - s * mx) * sp * dt;
+    const ox = p.pos.x, oz = p.pos.z, top = p.pos.y + 0.45;
+    if (!inCol(p.pos.x + vx, top, p.pos.z, R)) p.pos.x += vx;
+    if (!inCol(p.pos.x, top, p.pos.z + vz, R)) p.pos.z += vz;
+    p.pos.x = Math.max(-145, Math.min(145, p.pos.x)); p.pos.z = Math.max(-145, Math.min(145, p.pos.z));
+    if (p.isBot) p.ai.stuck = (Math.hypot(p.pos.x - ox, p.pos.z - oz) < sp * dt * 0.3 && l > 0.5) ? (p.ai.stuck || 0) + dt : 0;
+    const fl = floorAt(p.pos.x, p.pos.z, p.pos.y);
+    p.vy -= 20 * dt; p.pos.y += p.vy * dt;
+    if (p.pos.y <= fl) { p.pos.y = fl; p.vy = i.jump ? 7 : 0; }
+    // weapon
+    p.fireT -= dt;
+    if (p.reloadT > 0) { p.reloadT -= dt; if (p.reloadT <= 0) p.ammo = 30; }
+    else if (i.reload && p.ammo < 30) p.reloadT = 1.6;
+    else if (i.fire && p.fireT <= 0 && p.ammo > 0) { p.fireT = 1 / 8; p.ammo--; shoot(p); }
+    p.group.position.copy(p.pos); p.group.rotation.y = p.yaw;
+    p.camera.position.copy(eye(p)); p.camera.rotation.set(p.pitch, p.yaw, 0, "YXZ");
+    const fov = i.ads ? 40 : 75; p.camera.fov += (fov - p.camera.fov) * Math.min(1, dt * 12); p.camera.updateProjectionMatrix();
+  }
+
+  // rounds
+  let running = false, round = 1, roundOver = 0, matchOver = false, bannerT = 0;
+  const $ = (id) => document.getElementById(id);
+  function showBanner(t, sub, secs) { $("banner").innerHTML = t + (sub ? "<small>" + sub + "</small>" : ""); $("banner").classList.add("on"); bannerT = secs; }
+  function startRound() {
+    pellets.forEach((q) => scene.remove(q.mesh)); pellets.length = 0;
+    const off = Math.random() * Math.PI * 2;
+    players.forEach((p, n) => {
+      const a = off + (n / players.length) * Math.PI * 2;
+      let x = Math.cos(a) * 110, z = Math.sin(a) * 110;
+      while (inCol(x, groundY(x, z) + 0.5, z, R + 0.5)) { x *= 0.97; z *= 0.97; }
+      p.pos.set(x, floorAt(x, z, 99), z); p.vy = 0; p.yaw = Math.atan2(x, z); p.pitch = 0;
+      p.alive = true; p.ammo = 30; p.reloadT = 0; p.group.visible = p.isBot;
+      p.balloons.forEach((b) => { b.alive = true; b.mesh.visible = b.line.visible = true; });
+      p.ai.target = null; pickGoal(p);
+    });
+    roundOver = 0; showBanner("Round " + round, "Best of 3 · " + scoreText(), 2.2);
+  }
+  const scoreText = () => players.filter((p) => p.wins).map((p) => p.name + " " + p.wins).join(" · ") || "No wins yet";
+  function checkRound(dt) {
+    if (roundOver > 0) {
+      roundOver -= dt;
+      if (roundOver <= 0) {
+        if (matchOver) { running = false; $("start").style.display = ""; document.exitPointerLock && document.exitPointerLock(); }
+        else { round++; startRound(); }
+      }
+      return;
+    }
+    const alive = players.filter((p) => p.alive);
+    if (alive.length <= 1) {
+      const w = alive[0];
+      if (w) w.wins++;
+      matchOver = !!w && w.wins >= 2;
+      showBanner(matchOver ? (w.isBot ? w.name + " wins the match" : "You win the match!") : (w ? (w.isBot ? w.name : "You") + " win" + (w.isBot ? "s" : "") + " round " + round : "Draw"), scoreText(), 4);
+      roundOver = 4;
+    }
+  }
+  function hud() {
+    const h = humans[0];
+    $("balloons").querySelectorAll("i").forEach((el, k) => { el.style.background = "#" + h.color.toString(16).padStart(6, "0"); el.classList.toggle("gone", !h.balloons[k].alive); });
+    $("ammo").textContent = h.reloadT > 0 ? "…" : h.ammo; $("ammoSub").textContent = h.reloadT > 0 ? "Reloading" : "/ 30";
+    $("left").textContent = "Players left " + players.filter((p) => p.alive).length + " · Round " + round;
+    $("hit").classList.toggle("on", hitT > 0);
+  }
+  window.bbStart = () => {
+    if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (_) {} }
+    if (ac && ac.state === "suspended") ac.resume();
+    $("start").style.display = "none";
+    if (matchOver || !running) { players.forEach((p) => (p.wins = 0)); round = 1; matchOver = false; }
+    running = true; startRound();
+    try { canvas.requestPointerLock(); } catch (_) {}
+  };
+
+  function resize() {
+    renderer.setSize(innerWidth, innerHeight, false);
+    humans.forEach((p) => { p.camera.aspect = innerWidth / innerHeight; p.camera.updateProjectionMatrix(); });
+  }
+  addEventListener("resize", resize); resize();
+  startRound(); $("banner").classList.remove("on");
+  const h0 = humans[0]; h0.camera.position.set(0, 30, 90); h0.camera.lookAt(0, 0, 0);
+
+  const clock = new THREE.Clock();
+  renderer.setAnimationLoop(() => {
+    const dt = Math.min(clock.getDelta(), 0.05);
+    if (running) {
+      humans.forEach((p) => readHuman(p, dt));
+      players.forEach((p) => { if (p.isBot && p.alive) think(p, dt); step(p, dt); });
+      updatePellets(dt); checkRound(dt);
+      hitT -= dt;
+      if (bannerT > 0 && (bannerT -= dt) <= 0) $("banner").classList.remove("on");
+      hud();
+    }
+    renderer.render(scene, humans[0].camera);
+  });
+})();
+    </script>
+  </body>
+</html>
