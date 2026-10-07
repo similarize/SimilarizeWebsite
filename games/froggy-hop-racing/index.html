@@ -46,8 +46,8 @@
       .x-sub { font-size: clamp(15px, 2vw, 19px); margin: 0 0 24px; opacity: .95; }
       .x-btn { font: 600 clamp(20px, 3vw, 28px)/1 var(--sans); color: #0d3b2a; background: #8ef36a; border: 0; border-radius: var(--r-pill); padding: 18px 54px; min-height: var(--tap); cursor: pointer; box-shadow: 0 6px 0 #3d9a2a; margin: 6px; }
       .x-btn--ghost { background: rgba(255,255,255,.9); box-shadow: 0 6px 0 rgba(0,0,0,.2); font-size: 18px; padding: 14px 30px; }
-      .x-pick { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; margin: 0 0 8px; }
-      .x-pick .x-btn { padding: 10px 20px; opacity: .7; }
+      .x-pick { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin: 0 auto 8px; max-width: 560px; max-height: 40vh; overflow-y: auto; padding: 4px; }
+      .x-pick .x-btn { padding: 8px 14px; font-size: 15px; opacity: .7; }
       .x-pick .x-btn.is-sel { opacity: 1; background: #8ef36a; box-shadow: 0 6px 0 #3d9a2a, 0 0 0 3px #fff; }
       .x-pickst { margin: 4px 0 8px; font-size: 16px; }
       .x-pickst.is-bump { animation: x-bump .3s var(--ease-out); }
@@ -121,17 +121,24 @@
           <div class="x-panel">
             <h1 class="x-title x-shadow">Froggy <em>Hop</em><br />Racing</h1>
             <p class="x-sub x-shadow">Six frogs. Three laps. One tropical beach.</p>
-            <div class="x-pick" id="x-pick" role="group" aria-label="Choose your animal">
-              <button class="x-btn x-btn--ghost is-sel" data-kind="frog" aria-pressed="true">🐸 Frog</button>
-              <button class="x-btn x-btn--ghost" data-kind="cat" aria-pressed="false">🐱 Cat</button>
-              <button class="x-btn x-btn--ghost" data-kind="dog" aria-pressed="false">🐶 Dog</button>
+            <div class="x-pick" id="x-pick" role="group" aria-label="Choose your character">
+              <button class="x-btn x-btn--ghost is-sel" data-char="0" aria-pressed="true">🐸 James</button>
+              <button class="x-btn x-btn--ghost" data-char="1" aria-pressed="false">🐸 Jimmy</button>
+              <button class="x-btn x-btn--ghost" data-char="2" aria-pressed="false">🐸 Bubbles</button>
+              <button class="x-btn x-btn--ghost" data-char="3" aria-pressed="false">🐸 Rexy</button>
+              <button class="x-btn x-btn--ghost" data-char="4" aria-pressed="false">🐱 Spotty</button>
+              <button class="x-btn x-btn--ghost" data-char="5" aria-pressed="false">🐯 Tigy</button>
+              <button class="x-btn x-btn--ghost" data-char="6" aria-pressed="false">🐱 Kitty</button>
+              <button class="x-btn x-btn--ghost" data-char="7" aria-pressed="false">🐈‍⬛ Little White Socks</button>
+              <button class="x-btn x-btn--ghost" data-char="8" aria-pressed="false">🐕 Germy</button>
+              <button class="x-btn x-btn--ghost" data-char="9" aria-pressed="false">🐶 Daisy</button>
             </div>
-            <p class="x-sub x-shadow x-pickst" id="x-pickst" aria-live="polite">You race as 🐸 Frog</p>
+            <p class="x-sub x-shadow x-pickst" id="x-pickst" aria-live="polite">You race as 🐸 James</p>
             <button class="x-btn" id="b-play">Play</button>
             <p class="x-sub" id="x-msg" role="alert" hidden></p>
             <div class="x-help x-shadow">
               <b>Keyboard</b> ↑/W hop · ↓/S back · ←→/AD steer · Space item · E/Shift super jump · Esc pause · M mute<br />
-              <b>Gamepad</b> RT or A hop · LT back · stick steer · X or RB item · Y super jump (lobby: Y animal) · Start pause<br />
+              <b>Gamepad</b> RT or A hop · LT back · stick steer · X or RB item · Y super jump (lobby: ↑↓ or Y character) · Start pause<br />
               <b>Touch</b> left thumb steer · HOP hold · ITEM · JUMP · BACK<br />
               <b>Up to 4 players</b> press A on each controller to join split-screen
             </div>
@@ -173,11 +180,11 @@
         if (this.on) try { this.on(this.muted); } catch (e) {}
       } };
       document.getElementById("b-mute").addEventListener("click", function (e) { e.stopPropagation(); xMute.toggle(); this.blur(); });
-      window.xKind = "frog";
-      document.querySelectorAll("#x-pick [data-kind]").forEach(function (b) {
+      window.xChar = 0;
+      document.querySelectorAll("#x-pick [data-char]").forEach(function (b) {
         b.addEventListener("click", function (e) {
-          e.stopPropagation(); window.xKind = b.dataset.kind;
-          document.querySelectorAll("#x-pick [data-kind]").forEach(function (o) { o.classList.toggle("is-sel", o === b); o.setAttribute("aria-pressed", o === b); });
+          e.stopPropagation(); window.xChar = +b.dataset.char;
+          document.querySelectorAll("#x-pick [data-char]").forEach(function (o) { o.classList.toggle("is-sel", o === b); o.setAttribute("aria-pressed", o === b); });
           var st = document.getElementById("x-pickst"); st.textContent = "You race as " + b.textContent; st.classList.remove("is-bump"); void st.offsetWidth; st.classList.add("is-bump");
         });
       });
@@ -406,8 +413,26 @@ const shieldMat = new THREE.MeshPhongMaterial({ color: 0x9fe8ff, transparent: tr
 const flyGeo = new THREE.SphereGeometry(0.1, 4, 3);
 /* ---------- cute animals ---------- */
 const ANIMALS = { frog: ["🐸", "Frog"], cat: ["🐱", "Cat"], dog: ["🐶", "Dog"] }, KINDS = Object.keys(ANIMALS);
-const NAMES = ["James", "Jimmy", "Bubbles", "Rexy", "Pip", "Coco"];
-const kindNow = () => window.xKind || "frog";
+const ROSTER = [
+  { kind: "frog", name: "James", emoji: "🐸", color: 0x3fbf3f },
+  { kind: "frog", name: "Jimmy", emoji: "🐸", color: 0xa6d832 },
+  { kind: "frog", name: "Bubbles", emoji: "🐸", color: 0x2fb3c4 },
+  { kind: "frog", name: "Rexy", emoji: "🐸", color: 0xf2582a },
+  { kind: "cat", name: "Spotty", emoji: "🐱", color: 0xf4f1ea, pattern: "spots", mark: 0x2a2626 },
+  { kind: "cat", name: "Tigy", emoji: "🐯", color: 0xf28c28, pattern: "stripes", mark: 0x7a3a10 },
+  { kind: "cat", name: "Kitty", emoji: "🐱", color: 0xb8a9c9 },
+  { kind: "cat", name: "Little White Socks", emoji: "🐈‍⬛", color: 0x34343a, pattern: "socks", mark: 0xffffff },
+  { kind: "dog", name: "Germy", emoji: "🐕", color: 0xb47a3c, breed: "shepherd", mark: 0x1e1a18 },
+  { kind: "dog", name: "Daisy", emoji: "🐶", color: 0xa0482a, breed: "dachshund" },
+];
+const charNow = () => window.xChar || 0;
+const stripeGeo = new THREE.TorusGeometry(1, 0.07, 6, 20, Math.PI);
+function patch(g, mat, c, r, dirs, s) {
+  dirs.forEach(([dx, dy, dz]) => {
+    const d = new THREE.Vector3(dx, dy, dz).normalize(), p = new THREE.Vector3(c[0] + r[0] * d.x, c[1] + r[1] * d.y, c[2] + r[2] * d.z);
+    const m = sp(g, mat, p.x, p.y, p.z, s, s * 0.8, s * 0.3); m.castShadow = false; m.lookAt(p.clone().multiplyScalar(2).sub(new THREE.Vector3(...c)));
+  });
+}
 const SG = new THREE.SphereGeometry(1, 28, 20), earGeo = new THREE.ConeGeometry(1, 1, 24), whiskGeo = new THREE.BoxGeometry(0.42, 0.015, 0.015);
 const smileGeo = new THREE.TorusGeometry(1, 0.22, 8, 20, Math.PI);
 const std = (c, r) => new THREE.MeshStandardMaterial({ color: c, roughness: r == null ? 0.55 : r, flatShading: false });
@@ -431,7 +456,8 @@ function quadLegs(g, mat, legs) {
     sp(hip, mat, 0, -0.2, 0, 0.17, 0.24, 0.17); const knee = new THREE.Group(); hip.add(knee); g.add(hip); legs.push({ hip, knee });
   });
 }
-function makeAnimal(kind, color) {
+function makeAnimal(r) {
+  const kind = r.kind, color = r.color, breed = r.breed, pattern = r.pattern, mk = r.mark != null ? std(r.mark) : null;
   const g = new THREE.Group(), mat = std(color), light = std(new THREE.Color(color).lerp(new THREE.Color(0xfffff0), 0.55)), legs = [];
   g.name = kind;
   if (kind === "frog") {
@@ -457,28 +483,58 @@ function makeAnimal(kind, color) {
         [0.12, -0.1].forEach((r, k) => { const w = sp(g, M.dark, s * 0.5, 1.31 - k * 0.07, 0.86, 1, 1, 1, "whisker", whiskGeo); w.rotation.z = s * r; w.castShadow = false; });
       });
       sp(g, M.pink, 0, 1.33, 1.0, 0.06, 0.045, 0.045, "nose");
-      [[0.75, -0.72], [0.95, -0.86], [1.15, -0.9], [1.33, -0.82]].forEach(([y, z]) => sp(tail, mat, 0, y, z, 0.11));
+      [[0.75, -0.72], [0.95, -0.86], [1.15, -0.9], [1.33, -0.82]].forEach(([y, z]) => sp(tail, pattern === "socks" ? (z < -0.85 ? mk : mat) : mat, 0, y, z, 0.11));
+      if (pattern === "spots") {
+        patch(g, mk, [0, 0.68, -0.05], [0.6, 0.52, 0.75], [[0.6, 0.7, -0.3], [-0.5, 0.8, 0.1], [0.2, 0.9, -0.7], [-0.8, 0.3, -0.5], [0.9, 0.2, 0.2]], 0.15);
+        patch(g, mk, [0, 1.45, 0.35], [0.72, 0.65, 0.66], [[0.5, 0.8, 0.2], [-0.7, 0.5, -0.2], [0.1, 0.6, -0.8]], 0.12);
+      } else if (pattern === "stripes") {
+        [-0.45, -0.2, 0.05, 0.3].forEach((z) => { const k = Math.sqrt(1 - (z / 0.75) ** 2); const b = sp(g, mk, 0, 0.68, -0.05 + z, 0.61 * k, 0.53 * k, 1, null, stripeGeo); b.castShadow = false; });
+        const bx = new THREE.BoxGeometry(1, 1, 1);
+        [-0.16, 0, 0.16].forEach((x) => { const m = sp(g, mk, x, 2.02, 0.4, 0.05, 0.03, 0.3, null, bx); m.rotation.x = 0.5; m.castShadow = false; });
+      } else if (pattern === "socks") {
+        legs.forEach((l) => sp(l.hip, mk, 0, -0.32, 0, 0.19, 0.13, 0.19));
+        sp(g, mk, 0, 0.88, 0.52, 0.3, 0.32, 0.18, "chest");
+      }
     } else {
-      sp(g, light, 0, 1.28, 0.92, 0.3, 0.22, 0.22, "snout");
+      const sh = breed === "shepherd";
+      sp(g, sh ? mk : light, 0, 1.28, sh ? 1.0 : 0.92, 0.3, 0.22, sh ? 0.4 : 0.22, "snout");
       face(g, 0.28, 1.6, 0.82, 0.2, 1.3, 0.86, 0.46, 1.16, 1.1, 0.07);
-      sp(g, M.pupil, 0, 1.36, 1.12, 0.09, 0.07, 0.07, "nose"); sp(g, M.pink, 0, 1.06, 1.04, 0.08, 0.1, 0.05, "tongue");
+      sp(g, M.pupil, 0, 1.36, sh ? 1.38 : 1.12, 0.09, 0.07, 0.07, "nose"); sp(g, M.pink, 0, 1.06, sh ? 1.2 : 1.04, 0.08, 0.1, 0.05, "tongue");
       const dk = std(new THREE.Color(color).multiplyScalar(0.6));
-      [1, -1].forEach((s) => { const e = sp(ears, dk, s * 0.66, 1.42, 0.3, 0.2, 0.4, 0.1); e.rotation.z = s * 0.3; });
-      const t = sp(tail, mat, 0, 0.9, -0.78, 0.1, 0.1, 0.26); t.rotation.x = -0.7;
+      if (sh) {
+        [1, -1].forEach((s) => { const e = sp(ears, mk, s * 0.36, 2.05, 0.3, 0.2, 0.48, 0.14, null, earGeo); e.rotation.z = -s * 0.2; });
+        sp(g, mk, 0, 0.98, -0.12, 0.5, 0.26, 0.64, "saddle");
+        sp(tail, mat, 0, 0.88, -0.9, 0.17, 0.17, 0.42).rotation.x = -0.5; sp(tail, mk, 0, 0.66, -1.24, 0.12, 0.12, 0.16);
+        g.userData.stiffEars = true;
+      } else {
+        const lo = breed === "dachshund";
+        [1, -1].forEach((s) => { const e = sp(ears, dk, s * 0.66, lo ? 1.3 : 1.42, 0.3, 0.2, lo ? 0.6 : 0.4, 0.1); e.rotation.z = s * 0.3; });
+        const t = sp(tail, mat, 0, 0.9, -0.78, 0.1, 0.1, 0.26); t.rotation.x = -0.7;
+      }
+      if (breed === "dachshund") {
+        g.children.slice().forEach((c) => {
+          if (c.name === "leg") { c.position.y = 0.24; c.position.z *= 1.7; c.scale.y = 0.6; return; }
+          c.position.y -= 0.25;
+          if (c.name === "body" || c.name === "belly") { c.scale.z *= 1.7; c.scale.y *= 0.82; }
+          else if (c.name === "tail") c.position.z -= 0.45;
+          else if (c.name === "ears" || c.position.z > 0.2) c.position.z += 0.6;
+        });
+        g.userData.bob = 0.4;
+      }
     }
   }
   g.userData.legs = legs;
   return g;
 }
-function setAnimal(o, kind) {
+function setAnimal(o, ch) {
   if (o.rig) o.root.remove(o.rig);
-  o.rigs = o.rigs || {}; o.kind = kind;
-  o.rig = o.rigs[kind] || (o.rigs[kind] = makeAnimal(kind, o.def.c)); o.legs = o.rig.userData.legs; o.root.add(o.rig);
+  const r = ROSTER[ch]; o.rigs = o.rigs || {}; o.ch = ch; o.kind = r.kind; o.name = r.name;
+  o.rig = o.rigs[ch] || (o.rigs[ch] = makeAnimal(r)); o.legs = o.rig.userData.legs; o.root.add(o.rig);
 }
 function setTag(o, name) {
   const c = o.tagCv, x = c.getContext("2d"); x.clearRect(0, 0, c.width, c.height);
   x.font = "bold 44px Geist, system-ui, sans-serif"; x.textAlign = "center"; x.textBaseline = "middle"; x.lineJoin = "round";
-  x.lineWidth = 10; x.strokeStyle = "rgba(10,20,30,.9)"; x.strokeText(name, 128, 34); x.fillStyle = "#fff"; x.fillText(name, 128, 34);
+  x.lineWidth = 10; x.strokeStyle = "rgba(10,20,30,.9)"; x.strokeText(name, 128, 34, 240); x.fillStyle = "#fff"; x.fillText(name, 128, 34, 240);
   o.tag.material.map.needsUpdate = true;
 }
 function makeFrog(def) {
@@ -572,7 +628,7 @@ const hexC = (c) => "#" + FROGS[c].c.toString(16).padStart(6, "0");
 const nm = (o) => (o.name || o.def.name.replace(" (you)", "")) + (players.length === 1 && humanOf(o) ? " (you)" : "");
 addEventListener("pointerdown", auInit, true);
 
-const frogs = FROGS.map((d, i) => { const o = Object.assign({ id: i, def: d, ai: i !== 0, tg: makeTongue() }, makeFrog(d)); setAnimal(o, "frog"); o.name = NAMES[i]; setTag(o, o.name); return o; });
+const frogs = FROGS.map((d, i) => { const o = Object.assign({ id: i, def: d, ai: i !== 0, tg: makeTongue() }, makeFrog(d)); setAnimal(o, i); setTag(o, o.name); return o; });
 const cams = [camera, 1, 2, 3].map((c) => (c === camera ? c : new THREE.PerspectiveCamera(68, 1, 0.5, 2500)));
 const players = [{ frog: frogs[0], camH: 0, cam: camera, pad: null, kb: true, tag: "P1" }];
 const kbPl = () => players.find((p) => p.kb) || (players.length === 1 ? players[0] : null);
@@ -799,10 +855,10 @@ function animFrog(f, dt) {
       if (u.tail) u.tail.rotation.y = Math.sin(tm * 3.2 + f.def.c) * 0.5;
     } else {
       const sq = f.air ? 1 + 0.1 * stretch : 1 - 0.16 * land;
-      rig.scale.set(2 - sq, sq, 1); rig.position.y = f.air ? 0.1 * Math.sin(p * Math.PI * 4) : 0.04 * Math.abs(Math.sin(tm * 9)) * Math.min(1, Math.abs(f.v) / 10);
+      rig.scale.set(2 - sq, sq, 1); rig.position.y = (u.bob || 1) * (f.air ? 0.1 * Math.sin(p * Math.PI * 4) : 0.04 * Math.abs(Math.sin(tm * 9)) * Math.min(1, Math.abs(f.v) / 10));
       rig.rotation.x = pitch * 0.8 + (f.air ? 0.1 * gal : 0);
       const flap = f.air ? stretch * (1 - p) + 0.3 * Math.max(0, gal) : 0.4 * land;
-      if (u.ears) u.ears.children.forEach((c) => (c.rotation.z = c.userData.rz + Math.sign(c.position.x) * 1.1 * flap));
+      if (u.ears && !u.stiffEars) u.ears.children.forEach((c) => (c.rotation.z = c.userData.rz + Math.sign(c.position.x) * 1.1 * flap));
       if (u.tail) u.tail.rotation.y = Math.sin(tm * (7 + Math.abs(f.v) * 0.6)) * 0.6;
     }
   }
@@ -922,15 +978,16 @@ const padLabel = (i) => "Pad " + (padList.findIndex((p) => p.index === i) + 1);
 function join(src) {
   if (seats.length >= 4) return;
   let c = 0; while (seats.some((s) => s.col === c)) c++;
-  seats.push({ src, col: c, kind: src === "kb" ? kindNow() : "frog" });
+  const s = { src, col: c, ch: src === "kb" ? charNow() : 0 }; seats.push(s);
+  if (seats.some((x) => x !== s && x.ch === s.ch)) cycleChar(s, 1);
 }
-const cycleKind = (s, d) => (s.kind = KINDS[(KINDS.indexOf(s.kind || "frog") + d + KINDS.length) % KINDS.length]);
+function cycleChar(s, d) { const n = ROSTER.length; for (let k = 1; k < n; k++) { const c = (s.ch + d * k + n * 2) % n; if (!seats.some((x) => x !== s && x.ch === c)) { s.ch = c; return; } } }
 
 function cycle(s, d) { for (let k = 1; k < 6; k++) { const c = (s.col + d * k + 6) % 6; if (!seats.some((x) => x.col === c)) { s.col = c; return; } } }
 function drawLobby() {
   $("l-slots").innerHTML = [0, 1, 2, 3].map((k) => {
     const s = seats[k]; if (!s) return `<div class="x-slot"><b>P${k + 1}</b><span>Press A to join</span></div>`;
-    return `<div class="x-slot is-on" style="border-color:${hexC(s.col)}"><i class="x-tag" style="background:${hexC(s.col)}">P${k + 1}</i><b>${ANIMALS[s.kind || "frog"].join(" ")}</b><span>${s.src === "kb" ? "Keyboard / touch" : padLabel(s.src) + " · ↑↓ / Y animal"}</span></div>`;
+    return `<div class="x-slot is-on" style="border-color:${hexC(s.col)}"><i class="x-tag" style="background:${hexC(s.col)}">P${k + 1}</i><b>${ROSTER[s.ch].emoji} ${ROSTER[s.ch].name}</b><span>${s.src === "kb" ? "Keyboard / touch" : padLabel(s.src) + " · ↑↓ / Y character"}</span></div>`;
   }).join("");
   $("b-join").textContent = seats.some((s) => s.src === "kb") ? "Leave" : "Join";
   $("b-go").textContent = seats.length ? "Start race" : "Start solo";
@@ -938,14 +995,12 @@ function drawLobby() {
 function openLobby() { state = "lobby"; seats = []; $("s-start").classList.remove("is-on"); $("s-lobby").classList.add("is-on"); drawLobby(); }
 function onPlay() { auInit(); if (padList.length) openLobby(); else { seats = []; startRace(); } }
 function startRace() {
-  if (!seats.length) seats = [{ src: "kb", col: 0, kind: kindNow() }];
+  if (!seats.length) seats = [{ src: "kb", col: 0, ch: charNow() }];
   players.length = 0;
   seats.forEach((s, k) => players.push({ frog: frogs[s.col], camH: 0, cam: cams[k], pad: s.src === "kb" ? null : s.src, kb: s.src === "kb", tag: "P" + (k + 1) }));
-  seats.forEach((s) => setAnimal(frogs[s.col], s.kind || "frog"));
-  players.map((p) => p.frog).concat(frogs.filter((f) => !humanOf(f))).forEach((f, k) => {
-    if (!humanOf(f)) setAnimal(f, KINDS[Math.floor(Math.random() * KINDS.length)]);
-    f.name = NAMES[k]; setTag(f, f.name);
-  });
+  seats.forEach((s) => setAnimal(frogs[s.col], s.ch));
+  const pool = ROSTER.map((_, i) => i).filter((i) => !seats.some((s) => s.ch === i)).sort(() => Math.random() - 0.5);
+  frogs.forEach((f) => { if (!humanOf(f)) setAnimal(f, pool.pop()); setTag(f, f.name); });
   const multi = players.length > 1;
   $("vhud").innerHTML = multi ? players.map((p, k) => `<div class="x-vp" id="vp${k}"><div class="x-pos x-shadow"><i class="x-tag" style="background:${hexC(p.frog.id)}">${p.tag}</i><b></b><span></span><span class="x-lap"></span></div><div class="x-item"><span></span></div></div>`).join("") : "";
   players.forEach((p, k) => { const e = $("vp" + k); if (e) p.ui = { el: e, b: e.querySelector("b"), of: e.querySelector(".x-pos span"), lap: e.querySelector(".x-lap"), ic: e.querySelector(".x-item span") }; });
@@ -963,7 +1018,7 @@ function padActions() {
       const s = seats.find((x) => x.src === p.index), has = (b) => pr.includes(b);
       if (!s) { if (has(0)) { join(p.index); ch = true; } return; }
       if (has(14) || has(4)) cycle(s, -1); if (has(15) || has(5)) cycle(s, 1);
-      if (has(12) || has(3)) cycleKind(s, 1); if (has(13)) cycleKind(s, -1);
+      if (has(12) || has(3)) cycleChar(s, 1); if (has(13)) cycleChar(s, -1);
       if (has(1)) seats.splice(seats.indexOf(s), 1); else if (has(9)) go = true; ch = true;
     });
     if (ch) drawLobby(); if (go) startRace();
