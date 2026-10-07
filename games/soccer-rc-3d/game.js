@@ -1,12 +1,12 @@
 /**
  * Soccer RC 3D — Rocket League–lite arcade cabinet.
  * Vanilla Three.js (CDN) + simple custom physics.
- * Controls: phone stick=steer + FWD/REV buttons · KB/pad (RT/LT · stick · A kick · B boost).
+ * Controls: phone stick=steer · FWD/REV (dbl-tap FWD=boost, auto-kick) · KB/pad A kick · B boost.
  * Online: same CF Worker rooms as flat Soccer RC (Create/Join two-phone).
  */
 import * as THREE from "three";
 
-const CACHE = "20261006-soccerrc3d6";
+const CACHE = "20261006-soccerrc3d7";
 const HALF_X = 22;
 const HALF_Z = 14;
 const WALL_H = 5.5;
@@ -241,9 +241,13 @@ const boost2El = document.getElementById("boost2");
 
 const keys = Object.create(null);
 const touch = [
-  { fwd: 0, rev: 0, steer: 0, boost: 0, kickEdge: false, aimX: 0, aimZ: 0, aimActive: false },
-  { fwd: 0, rev: 0, steer: 0, boost: 0, kickEdge: false, aimX: 0, aimZ: 0, aimActive: false },
+  { fwd: 0, rev: 0, steer: 0, boost: 0, boostUntil: 0, kickEdge: false, aimX: 0, aimZ: 0, aimActive: false },
+  { fwd: 0, rev: 0, steer: 0, boost: 0, boostUntil: 0, kickEdge: false, aimX: 0, aimZ: 0, aimActive: false },
 ];
+const FWD_DOUBLE_MS = 300;   // double-tap FWD window → boost
+const FWD_BOOST_MS = 520;    // boost linger after double-tap
+const fwdTapAt = [0, 0];
+const AUTO_KICK_CD = 0.45;
 
 // --- Online two-phone multiplayer (same CF Worker rooms as flat Soccer RC) ---
 const ROOM_WS_BASE = "wss://similarize-bball-rooms.ben-e22.workers.dev/ws";
@@ -518,11 +522,18 @@ function readInput(playerIndex) {
   const pd = padDrive(g);
 
   let fwd = pd.fwd, rev = pd.rev, steer = pd.steer;
+  // Phone double-tap FWD arms boost for a short window
+  if (t.boostUntil && performance.now() < t.boostUntil) t.boost = 1;
+  else if (t.boostUntil && performance.now() >= t.boostUntil) {
+    t.boost = 0;
+    t.boostUntil = 0;
+  }
+
   let kick = pd.kick || t.kickEdge;
   let boost = pd.boost || !!t.boost;
   let aimX = 0, aimZ = 0, aimActive = false;
 
-  // Phone RC: stick → steer only; FWD/REV/KICK/BST buttons → touch[p]
+  // Phone RC: stick → steer only; FWD/REV buttons → throttle (+ dbl-tap boost)
   if (t.fwd > 0.04) fwd = Math.max(fwd, t.fwd);
   if (t.rev > 0.04) rev = Math.max(rev, t.rev);
   if (Math.abs(t.steer) > 0.05) steer = t.steer;
@@ -629,6 +640,13 @@ function collideCarBall(car) {
     ball.vz += car.vz * 0.25;
     const impact = Math.min(1.5, Math.abs(vn) / 8);
     if (impact > 0.12) sfxBallHit(impact);
+  }
+  // Phone scheme: auto-kick when bumping/thrusting into ball while holding FWD
+  // (KB/pad still have explicit A/Space kick via inp.kick)
+  const thrustingIn = car._holdingFwd && (vn < 0.5 || d2 < 0.85);
+  if (thrustingIn && (car.autoKickCd || 0) <= 0) {
+    car.autoKickCd = AUTO_KICK_CD;
+    kickBall(car, null);
   }
 }
 
@@ -858,6 +876,8 @@ function updateTracks(dt) {
 
 function updateCar(car, inp, dt) {
   if (car.jumpCd > 0) car.jumpCd -= dt;
+  if (car.autoKickCd > 0) car.autoKickCd -= dt;
+  car._holdingFwd = inp.fwd > 0.04;
 
   if (Math.abs(inp.steer) > 0.05) {
     // Real RC tank pivot: yaw from steer alone — never gated on fwd/rev (no strafe).
@@ -1046,6 +1066,7 @@ function readLocalGuestBits() {
   else if (d.steer) steer = d.steer;
   else if (keys.ArrowLeft || keys.a || keys.A) steer = -1;
   else if (keys.ArrowRight || keys.d || keys.D) steer = 1;
+  if (t.boostUntil && performance.now() < t.boostUntil) t.boost = 1;
   const fire = !!(netFireArmed || t.kickEdge || d.kick);
   const boost = !!(t.boost || d.boost || keys.ShiftLeft || keys.ShiftRight || keys.e || keys.E);
   const bits = {
@@ -1391,18 +1412,27 @@ function bindPadButtons() {
     const act = btn.dataset.act;
     const set = (v) => {
       const on = v ? 1 : 0;
-      if (act === "fwd") touch[p].fwd = on;
-      else if (act === "rev") touch[p].rev = on;
-      else if (act === "boost") touch[p].boost = on;
-      else if (act === "kick") {
-        if (v) touch[p].kickEdge = true;
-        touch[p].kick = on;
-      }
+      if (act === "fwd") {
+        touch[p].fwd = on;
+        if (!on && !(touch[p].boostUntil && performance.now() < touch[p].boostUntil)) {
+          // keep boost flag until boostUntil expires (handled in readInput)
+        }
+      } else if (act === "rev") touch[p].rev = on;
       btn.classList.toggle("is-held", !!v);
     };
     const down = (e) => {
       e.preventDefault();
       e.stopPropagation();
+      if (act === "fwd") {
+        const now = performance.now();
+        if (now - fwdTapAt[p] < FWD_DOUBLE_MS) {
+          touch[p].boostUntil = now + FWD_BOOST_MS;
+          touch[p].boost = 1;
+          btn.classList.add("is-boosting");
+          setTimeout(() => btn.classList.remove("is-boosting"), FWD_BOOST_MS);
+        }
+        fwdTapAt[p] = now;
+      }
       set(1);
       try { btn.setPointerCapture(e.pointerId); } catch (_) {}
       try {
@@ -1470,6 +1500,8 @@ function init() {
       boost: 1,
       onGround: true,
       jumpCd: 0,
+      autoKickCd: 0,
+      _holdingFwd: false,
       _trackAcc: 0,
     },
     {
@@ -1480,6 +1512,8 @@ function init() {
       boost: 1,
       onGround: true,
       jumpCd: 0,
+      autoKickCd: 0,
+      _holdingFwd: false,
       _trackAcc: 0,
     },
   ];

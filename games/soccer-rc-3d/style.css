@@ -199,14 +199,12 @@ html, body {
 
 
 
+
 /* ========== TWO-THUMB PHONE RC (landscape-first) ==========
-   Solo/host/guest: left thumb = stick; right thumb = 2×2 action pad
-     [ FWD ] [ KICK ]
-     [ REV ] [ BST  ]
-   Local 2P: each half of the screen is one player’s two-thumb zone
-     P1 left half  — stick outer-left + 2×2 inward
-     P2 right half — 2×2 inward + stick outer-right
-   No orphan buttons; no third finger.
+   Left thumb: stick = pivot only
+   Right thumb: FWD + REV only (large stack)
+   Auto-kick / double-tap boost handled in JS — no Kick/BST pads
+   Local 2P: each half mirrored
 */
 .pads.solo-host .cluster.p2,
 .pads.solo-guest .cluster.p2 { display: none; }
@@ -222,7 +220,6 @@ html, body {
   gap: 6px;
   padding: 0 max(8px, env(safe-area-inset-right)) 0 max(8px, env(safe-area-inset-left));
   pointer-events: none;
-  /* Sit above boost meters slightly on portrait; landscape uses more width */
   margin-bottom: 56px;
 }
 
@@ -254,22 +251,15 @@ html, body {
   flex-direction: row;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
   width: 100%;
 }
-.thumbs.mirror {
-  /* actions then stick — already in DOM order for P2 */
-}
 
-/* Left thumb (P1) / outer thumb: pivot stick only */
-.thumb-steer {
-  flex: 0 0 auto;
-  touch-action: none;
-}
+.thumb-steer { flex: 0 0 auto; touch-action: none; }
 .stick-base {
   position: relative;
-  width: 88px;
-  height: 88px;
+  width: 96px;
+  height: 96px;
   border-radius: 50%;
   background: rgba(15, 18, 24, 0.58);
   border: 2.5px solid rgba(251, 146, 60, 0.78);
@@ -290,7 +280,7 @@ html, body {
 .cluster.p2 .stick-wrap.is-active .stick-base { border-color: rgba(96, 165, 250, 1); }
 .stick-ring {
   position: absolute;
-  inset: 11px;
+  inset: 12px;
   border-radius: 50%;
   border: 1.5px solid rgba(255, 255, 255, 0.16);
   pointer-events: none;
@@ -298,8 +288,8 @@ html, body {
 .stick-knob {
   position: absolute;
   left: 50%; top: 50%;
-  width: 38px; height: 38px;
-  margin: -19px 0 0 -19px;
+  width: 40px; height: 40px;
+  margin: -20px 0 0 -20px;
   border-radius: 50%;
   background: radial-gradient(
     circle at 32% 28%,
@@ -324,80 +314,61 @@ html, body {
   box-shadow: 0 0 12px rgba(96, 165, 250, 0.55), 0 3px 6px rgba(0,0,0,.45);
 }
 
-/* Right thumb (P1): one compact 2×2 — thumb slides between cells, never leaves this zone
-     [ FWD  ] [ KICK ]
-     [ REV  ] [ BST  ]
-*/
-.thumb-actions {
+/* Right thumb: FWD above REV — only two targets */
+.thumb-drive {
   flex: 1 1 auto;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr 1fr;
-  gap: 7px;
-  width: min(46vw, 168px);
-  height: min(46vw, 168px);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(40vw, 140px);
   max-width: 100%;
-  min-width: 112px;
-  min-height: 112px;
+  min-width: 100px;
 }
 .pad-btn {
   width: 100%;
-  height: 100%;
+  height: 72px;
   margin: 0;
   padding: 0;
-  border-radius: 16px;
+  border-radius: 18px;
   border: 2px solid rgba(255,255,255,.45);
   background: rgba(0,0,0,.55);
   color: #fff;
-  font: 800 15px/1.05 var(--sans);
-  letter-spacing: 0.03em;
+  font: 800 20px/1 var(--sans);
+  letter-spacing: 0.04em;
   touch-action: none;
   cursor: pointer;
   box-shadow: 0 3px 10px rgba(0,0,0,.4);
   -webkit-tap-highlight-color: transparent;
 }
 .pad-btn.fwd {
-  background: rgba(234, 88, 12, 0.62);
-  border-color: rgba(251, 146, 60, 0.9);
-  font-size: 17px;
+  height: 84px;
+  background: rgba(234, 88, 12, 0.65);
+  border-color: rgba(251, 146, 60, 0.95);
+  font-size: 22px;
 }
 .cluster.p2 .pad-btn.fwd {
-  background: rgba(37, 99, 235, 0.62);
-  border-color: rgba(96, 165, 250, 0.9);
-}
-.pad-btn.kick {
-  background: rgba(194, 65, 12, 0.7);
-  border-color: rgba(254, 215, 170, 0.85);
-  font-size: 15px;
-}
-.cluster.p2 .pad-btn.kick {
-  background: rgba(29, 78, 216, 0.7);
-  border-color: rgba(191, 219, 254, 0.85);
+  background: rgba(37, 99, 235, 0.65);
+  border-color: rgba(96, 165, 250, 0.95);
 }
 .pad-btn.rev {
-  background: rgba(30, 36, 48, 0.82);
-  border-color: rgba(255,255,255,.35);
-}
-.pad-btn.boost {
-  background: rgba(228, 162, 58, 0.55);
-  border-color: rgba(245, 208, 138, 0.8);
-  font-size: 14px;
-}
-.cluster.p2 .pad-btn.boost {
-  background: rgba(96, 165, 250, 0.5);
-  border-color: rgba(147, 197, 253, 0.8);
+  height: 72px;
+  background: rgba(30, 36, 48, 0.85);
+  border-color: rgba(255,255,255,.4);
+  font-size: 18px;
 }
 .pad-btn.is-held,
 .pad-btn:active {
   filter: brightness(1.28);
-  transform: scale(0.96);
+  transform: scale(0.97);
+}
+.pad-btn.fwd.is-boosting {
+  box-shadow: 0 0 18px rgba(228, 162, 58, 0.85), 0 3px 10px rgba(0,0,0,.4);
+  border-color: #f5d08a;
 }
 
-/* Solo / online: one player uses FULL width — stick far left, 2×2 far right (true 2-thumb) */
+/* Solo / online: full-width two-thumb */
 .pads.solo-host,
-.pads.solo-guest {
-  justify-content: stretch;
-}
+.pads.solo-guest { justify-content: stretch; }
 .pads.solo-host .cluster.p1,
 .pads.solo-guest .cluster.p1 {
   max-width: none;
@@ -407,36 +378,34 @@ html, body {
 .pads.solo-host .cluster.p1 .thumbs,
 .pads.solo-guest .cluster.p1 .thumbs {
   width: 100%;
-  gap: clamp(12px, 6vw, 40px);
+  gap: clamp(16px, 8vw, 48px);
   justify-content: space-between;
 }
 .pads.solo-host .cluster.p1 .stick-base,
 .pads.solo-guest .cluster.p1 .stick-base {
-  width: 112px;
-  height: 112px;
+  width: 120px;
+  height: 120px;
 }
 .pads.solo-host .cluster.p1 .stick-knob,
 .pads.solo-guest .cluster.p1 .stick-knob {
-  width: 48px;
-  height: 48px;
-  margin: -24px 0 0 -24px;
+  width: 50px;
+  height: 50px;
+  margin: -25px 0 0 -25px;
 }
-.pads.solo-host .cluster.p1 .thumb-actions,
-.pads.solo-guest .cluster.p1 .thumb-actions {
-  width: min(52vw, 200px);
-  height: min(52vw, 200px);
-  min-width: 140px;
-  min-height: 140px;
-  gap: 9px;
-}
-.pads.solo-host .cluster.p1 .pad-btn,
-.pads.solo-guest .cluster.p1 .pad-btn {
-  font-size: 17px;
-  border-radius: 18px;
+.pads.solo-host .cluster.p1 .thumb-drive,
+.pads.solo-guest .cluster.p1 .thumb-drive {
+  width: min(42vw, 168px);
+  min-width: 128px;
 }
 .pads.solo-host .cluster.p1 .pad-btn.fwd,
 .pads.solo-guest .cluster.p1 .pad-btn.fwd {
-  font-size: 19px;
+  height: 96px;
+  font-size: 24px;
+}
+.pads.solo-host .cluster.p1 .pad-btn.rev,
+.pads.solo-guest .cluster.p1 .pad-btn.rev {
+  height: 80px;
+  font-size: 20px;
 }
 .pads.solo-guest .cluster.p1 .cluster-label { color: var(--blue); }
 .pads.solo-guest .cluster.p1 .stick-base {
@@ -453,39 +422,25 @@ html, body {
   border-color: rgba(191, 219, 254, 0.9);
 }
 .pads.solo-guest .cluster.p1 .pad-btn.fwd {
-  background: rgba(37, 99, 235, 0.62);
-  border-color: rgba(96, 165, 250, 0.9);
-}
-.pads.solo-guest .cluster.p1 .pad-btn.kick {
-  background: rgba(29, 78, 216, 0.7);
-  border-color: rgba(191, 219, 254, 0.85);
-}
-.pads.solo-guest .cluster.p1 .pad-btn.boost {
-  background: rgba(96, 165, 250, 0.5);
-  border-color: rgba(147, 197, 253, 0.8);
+  background: rgba(37, 99, 235, 0.65);
+  border-color: rgba(96, 165, 250, 0.95);
 }
 
-/* Landscape-first: bigger hit areas when width > height */
 @media (orientation: landscape) {
-  .pads { margin-bottom: 44px; }
-  .stick-base { width: 100px; height: 100px; }
-  .stick-knob { width: 42px; height: 42px; margin: -21px 0 0 -21px; }
-  .thumb-actions {
-    width: min(38vh, 42vw, 190px);
-    height: min(38vh, 42vw, 190px);
-    min-width: 128px;
-    min-height: 128px;
-  }
-  .pad-btn { font-size: 16px; border-radius: 18px; }
+  .pads { margin-bottom: 40px; }
+  .stick-base { width: 104px; height: 104px; }
+  .stick-knob { width: 44px; height: 44px; margin: -22px 0 0 -22px; }
+  .thumb-drive { width: min(28vh, 36vw, 150px); gap: 12px; }
+  .pad-btn.fwd { height: min(22vh, 96px); }
+  .pad-btn.rev { height: min(18vh, 80px); }
   .pads.solo-host .cluster.p1 .stick-base,
   .pads.solo-guest .cluster.p1 .stick-base {
-    width: min(28vh, 130px);
-    height: min(28vh, 130px);
+    width: min(30vh, 132px);
+    height: min(30vh, 132px);
   }
-  .pads.solo-host .cluster.p1 .thumb-actions,
-  .pads.solo-guest .cluster.p1 .thumb-actions {
-    width: min(48vh, 36vw, 220px);
-    height: min(48vh, 36vw, 220px);
+  .pads.solo-host .cluster.p1 .thumb-drive,
+  .pads.solo-guest .cluster.p1 .thumb-drive {
+    width: min(34vh, 28vw, 180px);
   }
 }
 
@@ -496,10 +451,11 @@ html, body {
   .hint { display: none; }
 }
 @media (max-width: 380px) and (orientation: portrait) {
-  .stick-base { width: 76px; height: 76px; }
-  .stick-knob { width: 32px; height: 32px; margin: -16px 0 0 -16px; }
-  .thumb-actions { min-width: 100px; min-height: 100px; gap: 5px; }
-  .pad-btn { font-size: 12px; border-radius: 12px; }
+  .stick-base { width: 80px; height: 80px; }
+  .stick-knob { width: 34px; height: 34px; margin: -17px 0 0 -17px; }
+  .thumb-drive { min-width: 88px; gap: 8px; }
+  .pad-btn.fwd { height: 68px; font-size: 18px; }
+  .pad-btn.rev { height: 58px; font-size: 15px; }
 }
 
 #musicBtn[aria-pressed="true"] {

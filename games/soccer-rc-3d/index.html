@@ -4,14 +4,14 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <title>Soccer RC 3D</title>
-  <!-- Cache-bust: ?v=20261006-soccerrc3d6 — 2-thumb only: stick | 2x2 FWD/KICK/REV/BST -->
+  <!-- Cache-bust: ?v=20261006-soccerrc3d7 — stick + FWD/REV · auto-kick · dbl-tap boost -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560&family=Outfit:wght@400;500;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="./style.css?v=20261006-soccerrc3d6" />
+  <link rel="stylesheet" href="./style.css?v=20261006-soccerrc3d7" />
   <script src="/games/shared/tesla-fullscreen.js?v=tfs1"></script>
   <script src="/games/shared/viewport-fill.js?v=vfs1"></script>
-  <script src="/games/shared/gamepad.js?v=20261006-soccerrc3d6"></script>
+  <script src="/games/shared/gamepad.js?v=20261006-soccerrc3d7"></script>
   <script type="importmap">
   {
     "imports": {
@@ -48,9 +48,10 @@
       <div class="meter" aria-hidden="true"><i id="boost2"></i></div>
     </div>
   </div>
-  <!-- TWO THUMBS ONLY (landscape-first):
-       P1: left thumb = stick (pivot); right thumb = 2×2 FWD|KICK / REV|BST
-       P2: mirrored on right half — each local player uses both thumbs on their half -->
+  <!-- TWO THUMBS ONLY:
+       Left thumb = stick (pivot). Right thumb = FWD + REV only.
+       Auto-kick on ball bump while holding FWD. Double-tap FWD = boost.
+       Local 2P: mirrored per half. KB/pad keep A kick · B boost. -->
   <div class="pads" id="pads">
     <div class="cluster p1" data-p="0">
       <span class="cluster-label">ORANGE</span>
@@ -61,22 +62,18 @@
             <span class="stick-knob" aria-hidden="true"></span>
           </div>
         </div>
-        <div class="thumb-actions" role="group" aria-label="P1 drive kick boost">
+        <div class="thumb-drive" role="group" aria-label="P1 forward reverse — double-tap FWD to boost">
           <button type="button" class="pad-btn fwd" data-p="0" data-act="fwd" aria-label="P1 forward">FWD</button>
-          <button type="button" class="pad-btn kick" data-p="0" data-act="kick" aria-label="P1 kick">KICK</button>
           <button type="button" class="pad-btn rev" data-p="0" data-act="rev" aria-label="P1 reverse">REV</button>
-          <button type="button" class="pad-btn boost" data-p="0" data-act="boost" aria-label="P1 boost">BST</button>
         </div>
       </div>
     </div>
     <div class="cluster p2" data-p="1">
       <span class="cluster-label">BLUE</span>
       <div class="thumbs mirror">
-        <div class="thumb-actions" role="group" aria-label="P2 drive kick boost">
+        <div class="thumb-drive" role="group" aria-label="P2 forward reverse — double-tap FWD to boost">
           <button type="button" class="pad-btn fwd" data-p="1" data-act="fwd" aria-label="P2 forward">FWD</button>
-          <button type="button" class="pad-btn kick" data-p="1" data-act="kick" aria-label="P2 kick">KICK</button>
           <button type="button" class="pad-btn rev" data-p="1" data-act="rev" aria-label="P2 reverse">REV</button>
-          <button type="button" class="pad-btn boost" data-p="1" data-act="boost" aria-label="P2 boost">BST</button>
         </div>
         <div class="thumb-steer stick-wrap" data-role="steer" data-p="1" aria-label="P2 steer">
           <div class="stick-base">
@@ -88,6 +85,6 @@
     </div>
   </div>
   <div id="boot">Loading Soccer RC 3D…</div>
-  <script type="module" src="./game.js?v=20261006-soccerrc3d6"></script>
+  <script type="module" src="./game.js?v=20261006-soccerrc3d7"></script>
 </body>
 </html>
