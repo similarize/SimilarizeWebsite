@@ -16,6 +16,7 @@ public class Slot
     public Transform viewModel;
     public float joinTime;
     public int spectate;
+    public int critter;   // index into Critters.All (used in Critters mode)
 }
 
 // Lobby, split-screen, rounds (best of 3), input routing.
@@ -37,6 +38,13 @@ public class Game : MonoBehaviour
     float stateT, roundClock, autoStartT = -1f, orbit;
     Soldier roundWinner, matchWinner;
     bool mobileAutoJoined;
+
+    // Figures: false = Soldiers (X-Bot), true = Critters
+    public static bool critterMode;
+    float lastFigureToggle = -10f;
+    Image figImg;
+    Text figText;
+    readonly Image[] arrowL = new Image[4], arrowR = new Image[4], swatches = new Image[4];
 
     readonly HashSet<int> ghosts = new HashSet<int>();
     readonly Dictionary<int, float> southTimes = new Dictionary<int, float>();
@@ -83,15 +91,22 @@ public class Game : MonoBehaviour
         var bg = UIK.Img(r, null, new Color(0.05f, 0.08f, 0.12f, 0.55f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1180, 640));
         bg.raycastTarget = false;
         UIK.Label(r, "BALLOON BLAST AIRSOFT", 64, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, 250), new Vector2(1100, 90), new Color(1f, 0.85f, 0.2f));
-        UIK.Label(r, "Pop everyone else's balloons! 3 balloons each - lose them all and you're out.\nLast one standing wins the round. Best of 3. 8 players: empty seats are bots.", 24, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, 175), new Vector2(1100, 70), Color.white);
+        UIK.Label(r, "Pop everyone else's balloons! 3 balloons each - lose them all and you're out.\nLast one standing wins the round. Best of 3. 8 players: empty seats are bots.", 24, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, 182), new Vector2(1100, 70), Color.white);
+        figImg = UIK.Img(r, null, new Color(0f, 0f, 0f, 0.45f), new Vector2(0.5f, 0.5f), new Vector2(0, 126), new Vector2(640, 46));
+        figText = UIK.Label(figImg.transform, "", 24, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(630, 44), Color.white);
         for (int i = 0; i < 4; i++)
         {
-            Vector2 p = new Vector2(-405 + i * 270, 40);
+            Vector2 p = new Vector2(-405 + i * 270, 22);
             slotPanels[i] = UIK.Img(r, null, new Color(1, 1, 1, 0.12f), new Vector2(0.5f, 0.5f), p, new Vector2(250, 150));
-            slotTexts[i] = UIK.Label(r, "", 24, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), p, new Vector2(240, 140), Color.white);
+            slotTexts[i] = UIK.Label(r, "", 22, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), p, new Vector2(196, 140), Color.white);
+            swatches[i] = UIK.Img(r, null, Color.white, new Vector2(0.5f, 0.5f), p + new Vector2(0, -64), new Vector2(110, 9));
+            arrowL[i] = UIK.Img(r, null, new Color(0f, 0f, 0f, 0.4f), new Vector2(0.5f, 0.5f), p + new Vector2(-104, 0), new Vector2(38, 70));
+            UIK.Label(arrowL[i].transform, "<", 34, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(38, 60), Color.white);
+            arrowR[i] = UIK.Img(r, null, new Color(0f, 0f, 0f, 0.4f), new Vector2(0.5f, 0.5f), p + new Vector2(104, 0), new Vector2(38, 70));
+            UIK.Label(arrowR[i].transform, ">", 34, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(38, 60), Color.white);
         }
         lobbyStatus = UIK.Label(r, "", 30, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, -90), new Vector2(1100, 60), new Color(0.6f, 1f, 0.6f));
-        lobbyHint = UIK.Label(r, "Gamepad: L-stick move | R-stick look | RT fire | LT aim | A jump | X reload\nKeyboard: WASD | mouse look | click fire | right-click aim | Space jump | R reload\nTouch: left stick | drag right side to look | FIRE / ADS / JUMP / RELOAD", 20, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, -200), new Vector2(1150, 110), new Color(1, 1, 1, 0.85f));
+        lobbyHint = UIK.Label(r, "Gamepad: L-stick move | R-stick look | RT fire | LT aim | A jump | X reload\nKeyboard: WASD | mouse look | click fire | right-click aim | Space jump | R reload\nTouch: left stick | drag right side to look | FIRE / ADS / JUMP / RELOAD\nFigures: Y / F / tap the FIGURES bar.  Critters: pick with D-pad / Left-Right arrows / tap < >", 20, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, -208), new Vector2(1150, 130), new Color(1, 1, 1, 0.85f));
     }
 
     void RefreshLobbyUI()
@@ -102,16 +117,29 @@ public class Game : MonoBehaviour
             {
                 Slot s = slots[i];
                 string dev = s.kind == InputKind.Gamepad ? "Gamepad" : s.kind == InputKind.Keyboard ? "Keyboard + Mouse" : "Touch";
-                slotTexts[i].text = "P" + (i + 1) + "\n" + dev + "\nREADY";
                 slotPanels[i].color = new Color(Colors[i].r, Colors[i].g, Colors[i].b, 0.55f);
+                if (critterMode)
+                {
+                    CritterDef d = Critters.All[s.critter];
+                    slotTexts[i].text = "P" + (i + 1) + "  " + dev + "\n<size=26>" + d.name + "</size>\n" + d.KindName + "\nREADY";
+                    swatches[i].color = d.main;
+                }
+                else slotTexts[i].text = "P" + (i + 1) + "\n" + dev + "\nREADY";
             }
             else
             {
                 slotTexts[i].text = "P" + (i + 1) + "\nPress A / Enter\nto join";
                 slotPanels[i].color = new Color(1, 1, 1, 0.12f);
             }
+            bool pick = critterMode && i < slots.Count;
+            swatches[i].enabled = pick;
+            arrowL[i].gameObject.SetActive(pick);
+            arrowR[i].gameObject.SetActive(pick);
         }
-        string model = ModelLoader.Ready ? "" : ModelLoader.Failed ? "  (using simple soldiers)" : "  (loading soldiers...)";
+        figText.text = critterMode
+            ? "FIGURES:   Soldiers   <color=#ffd84a>[ CRITTERS ]</color>     <size=18>(Y / F / tap)</size>"
+            : "FIGURES:   <color=#ffd84a>[ SOLDIERS ]</color>   Critters     <size=18>(Y / F / tap)</size>";
+        string model = critterMode || ModelLoader.Ready ? "" : ModelLoader.Failed ? "  (using simple soldiers)" : "  (loading soldiers...)";
         if (slots.Count == 0) lobbyStatus.text = "Press A on a gamepad or Enter on the keyboard to join" + model;
         else
         {
@@ -176,12 +204,32 @@ public class Game : MonoBehaviour
             else if (Time.unscaledTime - ks.joinTime > 0.3f) { StartMatch(); return; }
         }
         if (Kb.EscDown()) Leave(FindSlot(InputKind.Keyboard));
+        if (Kb.FDown()) ToggleFigures();
+        if (critterMode)
+        {
+            Slot kslot = FindSlot(InputKind.Keyboard);
+            if (kslot != null)
+            {
+                if (Kb.LeftDown()) CycleCritter(kslot, -1);
+                if (Kb.RightDown()) CycleCritter(kslot, 1);
+            }
+        }
 
         // gamepads (with ghost/duplicate filtering)
         float now = Time.unscaledTime;
         foreach (Gamepad pad in Gamepad.all)
         {
             if (pad.buttonEast.wasPressedThisFrame && !ghosts.Contains(pad.deviceId)) Leave(FindPad(pad));
+            if (pad.buttonNorth.wasPressedThisFrame && !ghosts.Contains(pad.deviceId)) ToggleFigures();
+            if (critterMode)
+            {
+                Slot ps = FindPad(pad);
+                if (ps != null)
+                {
+                    if (pad.dpad.left.wasPressedThisFrame) CycleCritter(ps, -1);
+                    if (pad.dpad.right.wasPressedThisFrame) CycleCritter(ps, 1);
+                }
+            }
             if (!pad.buttonSouth.wasPressedThisFrame && !pad.startButton.wasPressedThisFrame) continue;
             bool coincident = false;
             foreach (Gamepad other in Gamepad.all)
@@ -205,7 +253,7 @@ public class Game : MonoBehaviour
             Join(InputKind.Touch, null);
             autoStartT = 5f;
         }
-        if (Kb.AnyTouchBegan())
+        if (LobbyTaps())
         {
             Slot ts = FindSlot(InputKind.Touch);
             if (ts == null) Join(InputKind.Touch, null);
@@ -225,6 +273,68 @@ public class Game : MonoBehaviour
         RefreshLobbyUI();
     }
 
+    // Touch in the lobby: the FIGURES bar toggles, the < > arrows pick critters, any other tap joins / starts.
+    bool LobbyTaps()
+    {
+        bool generic = false;
+        foreach (Vector2 pos in Kb.TouchesBegan())
+        {
+            if (Hit(figImg, pos)) { ToggleFigures(); continue; }
+            bool used = false;
+            if (critterMode)
+                for (int i = 0; i < slots.Count && i < 4; i++)
+                {
+                    if (Hit(arrowL[i], pos)) { CycleCritter(slots[i], -1); used = true; break; }
+                    if (Hit(arrowR[i], pos)) { CycleCritter(slots[i], 1); used = true; break; }
+                }
+            if (!used) generic = true;
+        }
+        return generic;
+    }
+
+    static bool Hit(Image img, Vector2 screenPos)
+    {
+        return img != null && img.gameObject.activeInHierarchy && RectTransformUtility.RectangleContainsScreenPoint(img.rectTransform, screenPos, null);
+    }
+
+    void ToggleFigures()
+    {
+        float now = Time.unscaledTime;
+        if (now - lastFigureToggle < 0.3f) return;   // duplicate/ghost pads report the same press
+        lastFigureToggle = now;
+        critterMode = !critterMode;
+        BumpAutoStart();
+        Debug.Log("Figures: " + (critterMode ? "Critters" : "Soldiers"));
+    }
+
+    void BumpAutoStart()
+    {
+        if (slots.Count > 0 && autoStartT > 0f && autoStartT < 10f) autoStartT = 10f;
+    }
+
+    bool CritterTaken(int c, Slot except)
+    {
+        foreach (var o in slots) if (o != except && o.critter == c) return true;
+        return false;
+    }
+
+    int FirstFreeCritter(Slot except)
+    {
+        for (int c = 0; c < Critters.Count; c++) if (!CritterTaken(c, except)) return c;
+        return 0;
+    }
+
+    void CycleCritter(Slot sl, int dir)
+    {
+        int n = Critters.Count;
+        for (int k = 1; k <= n; k++)
+        {
+            int c = ((sl.critter + dir * k) % n + n) % n;
+            if (!CritterTaken(c, sl)) { sl.critter = c; break; }
+        }
+        BumpAutoStart();
+    }
+
     Slot FindSlot(InputKind k)
     {
         foreach (var s in slots) if (s.kind == k) return s;
@@ -241,6 +351,7 @@ public class Game : MonoBehaviour
     {
         if (slots.Count >= 4) return;
         var s = new Slot { kind = kind, pad = pad, index = slots.Count, joinTime = Time.unscaledTime };
+        s.critter = FirstFreeCritter(null);
         slots.Add(s);
         if (kind == InputKind.Keyboard) Cursor.lockState = CursorLockMode.Locked;
         autoStartT = (kind == InputKind.Touch && slots.Count == 1) ? 5f : 20f;
@@ -289,14 +400,29 @@ public class Game : MonoBehaviour
         matchWinner = null;
         feedLines.Clear(); feedTimes.Clear();
 
+        // Critters mode: humans keep their picks, bots get different random critters
+        var botCritters = new List<int>();
+        if (critterMode)
+        {
+            for (int c = 0; c < Critters.Count; c++) if (!CritterTaken(c, null)) botCritters.Add(c);
+            for (int k = botCritters.Count - 1; k > 0; k--) { int j = Random.Range(0, k + 1); int t = botCritters[k]; botCritters[k] = botCritters[j]; botCritters[j] = t; }
+        }
+
         int bot = 0;
         for (int i = 0; i < TotalPlayers; i++)
         {
             bool human = i < slots.Count;
             var go = new GameObject("Soldier" + i);
             var s = go.AddComponent<Soldier>();
-            string nick = human ? "P" + (i + 1) : BotNames[bot++ % BotNames.Length];
-            s.Build(i, nick, Colors[i], human, human ? 20 + i : 0);
+            int critter = -1;
+            string nick;
+            if (critterMode)
+            {
+                critter = human ? slots[i].critter : botCritters[bot++ % botCritters.Count];
+                nick = Critters.All[critter].name;
+            }
+            else nick = human ? "P" + (i + 1) : BotNames[bot++ % BotNames.Length];
+            s.Build(i, nick, Colors[i], human, human ? 20 + i : 0, critter);
             soldiers.Add(s);
             if (human)
             {
@@ -347,7 +473,18 @@ public class Game : MonoBehaviour
         vm.gameObject.layer = 24 + sl.index;
         sl.viewModel = vm;
 
-        sl.hud = new Hud(cam, "P" + (sl.index + 1), sl.soldier.color, 10 + sl.index);
+        if (sl.soldier.critter != null)
+        {
+            // paw on the grip, tinted like the critter
+            CritterDef cd = sl.soldier.critter.def;
+            Color paw = cd.look == CritterLook.Socks ? cd.accent : cd.main;
+            GameObject pw = Mats.Prim(PrimitiveType.Sphere, vm, new Vector3(0.01f, -0.1f, 0.04f), new Vector3(0.1f, 0.09f, 0.11f), Mats.Lit(paw), false);
+            pw.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            pw.layer = 24 + sl.index;
+        }
+
+        string hudName = "P" + (sl.index + 1) + (sl.soldier.critter != null ? "  " + sl.soldier.nick : "");
+        sl.hud = new Hud(cam, hudName, sl.soldier.color, 10 + sl.index);
     }
 
     void LayoutCameras()
@@ -577,7 +714,7 @@ public class Game : MonoBehaviour
     {
         var parts = new List<string>();
         foreach (var s in soldiers)
-            if (wins[s.id] > 0 || s == me) parts.Add((s == me ? "YOU" : s.nick) + " " + wins[s.id]);
+            if (wins[s.id] > 0 || s == me) parts.Add((s == me ? (s.critter != null ? s.nick + " (YOU)" : "YOU") : s.nick) + " " + wins[s.id]);
         return string.Join("  ", parts.ToArray()) + "  (first to " + WinsNeeded + ")";
     }
 }
