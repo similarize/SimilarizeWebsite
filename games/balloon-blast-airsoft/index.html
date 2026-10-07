@@ -32,24 +32,42 @@
       .x-card { background: var(--fill-primary-on); color: var(--text-primary); border-radius: var(--r-l); padding: 32px; max-width: 420px; margin: var(--gutter); box-shadow: var(--hark-shadow); }
       .x-card h1 { font: var(--type-title); font-family: var(--sans); margin: 0 0 8px; }
       .x-card p { font: var(--type-small); font-family: var(--sans); color: var(--text-secondary); margin: 0 0 16px; }
+      .x-view { position: absolute; overflow: hidden; }
+      .x-out { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font: var(--type-heading); font-family: var(--sans); display: none; white-space: nowrap; }
+      .x-view.out .x-out { display: block; }
+      .x-view.out .x-cross, .x-view.out .x-hit { display: none; }
+      .x-div { position: fixed; background: #000; pointer-events: none; display: none; }
+      #divH { left: 0; right: 0; top: 50%; height: 2px; margin-top: -1px; }
+      #divV { top: 0; bottom: 0; left: 50%; width: 2px; margin-left: -1px; }
+      .x-seats { list-style: none; padding: 0; margin: 0 0 16px; }
+      .x-seats li { background: var(--fill-tertiary); border-radius: var(--r-s); padding: 10px 12px; margin-bottom: 8px; font: var(--type-label); font-family: var(--sans); }
+      .x-seats li.empty { color: var(--text-secondary); }
+      .x-toast { position: fixed; left: 50%; top: 20px; transform: translateX(-50%); background: var(--fill-primary); color: var(--text-primary-on); padding: 8px 16px; border-radius: var(--r-pill); font: var(--type-label); font-family: var(--sans); opacity: 0; transition: opacity .2s; pointer-events: none; }
+      .x-toast.on { opacity: 1; }
       .x-card .btn { min-height: var(--tap); padding: 0 24px; font: var(--type-label); font-family: var(--sans); cursor: pointer; background: var(--fill-primary); color: var(--text-primary-on); border: 0; border-radius: var(--r-pill); }
     </style>
   </head>
   <body>
     <canvas id="game"></canvas>
     <div class="x-layer" id="hud">
-      <div class="x-cross"></div>
-      <div class="x-hit" id="hit">POP!</div>
-      <div class="x-tl" id="left"></div>
-      <div class="x-bl" id="balloons"><i></i><i></i><i></i></div>
-      <div class="x-br"><b id="ammo">30</b><span id="ammoSub">/ 30</span></div>
+      <div id="views"></div>
+      <div class="x-div" id="divH"></div><div class="x-div" id="divV"></div>
       <div class="x-banner" id="banner"></div>
     </div>
+    <div class="x-start" id="lobby" style="display:none">
+      <div class="x-card">
+        <h1>Lobby</h1>
+        <p>Keyboard + mouse: click or press Enter to join. Gamepad: press A to join. Enter or Start begins the match; bots fill the rest of the 8 spots.</p>
+        <ol class="x-seats" id="seats"></ol>
+        <button class="btn" id="go">Start match</button>
+      </div>
+    </div>
+    <div class="x-toast" id="toast"></div>
     <div class="x-start" id="start">
       <div class="x-card">
         <h1>Balloon Blast Airsoft</h1>
         <p>Pop the three balloons on every rival's shoulders. Lose all three and you're out. Last one standing takes the round; best of 3.</p>
-        <p>WASD move · mouse look · click fire · right-click aim · Space jump · R reload. Gamepad: sticks, RT fire, LT aim, A jump, X reload.</p>
+        <p>WASD move · mouse look · click fire · right-click aim · Space jump · R reload. Gamepad: sticks, RT fire, LT aim, A jump, X reload. Up to 4 players split-screen.</p>
         <button class="btn" id="play">Play</button>
       </div>
     </div>
@@ -167,16 +185,19 @@
       g.add(bm, line);
       return { mesh: bm, line, alive: true };
     });
+    g.traverse((o) => o.layers.set(1 + i));
     scene.add(g);
     const cam = new THREE.PerspectiveCamera(75, 1, 0.05, 500);
+    cam.layers.enableAll(); cam.layers.disable(1 + i);
     return { id: i, isBot, color: COLORS[i], name: isBot ? "Bot " + i : "You", group: g, balloons, camera: cam, input: blankInput(),
       pos: new THREE.Vector3(), vy: 0, yaw: 0, pitch: 0, alive: true, ammo: 30, reloadT: 0, fireT: 0, wins: 0,
       ai: { goal: new THREE.Vector3(), t: 0, target: null, aimB: 0, seeT: 0, err: [0, 0] } };
   }
   players.push(makePlayer(0, false));
   for (let i = 1; i < 8; i++) players.push(makePlayer(i, true));
-  const humans = players.filter((p) => !p.isBot);
-  humans.forEach((p) => (p.group.visible = false));
+  let humans = players.filter((p) => !p.isBot);
+  const over = new THREE.PerspectiveCamera(60, 1, 1, 600);
+  over.position.set(0, 170, 70); over.lookAt(0, 0, 0); over.layers.enableAll();
   const balloonPos = (p, k) => {
     const o = B_OFF[k], c = Math.cos(p.yaw), s = Math.sin(p.yaw);
     return new THREE.Vector3(p.pos.x + o[0] * c + o[2] * s, p.pos.y + o[1], p.pos.z - o[0] * s + o[2] * c);
@@ -239,23 +260,28 @@
       if ((q.life -= dt) <= 0) { scene.remove(q.mesh); parts.splice(i, 1); }
     }
   }
-  let hitT = 0;
   function popBalloon(p, k, at, by) {
     const b = p.balloons[k]; b.alive = false; b.mesh.visible = b.line.visible = false;
     burst(at, p.color);
-    const h = humans[0], dist = at.distanceTo(h.pos);
+    const dist = Math.min(...humans.map((h) => at.distanceTo(h.pos)));
     popSound(Math.max(0.05, 0.7 - dist / 120));
-    if (!by.isBot) hitT = 0.45;
-    if (p.balloons.every((x) => !x.alive)) { p.alive = false; p.group.visible = false; if (!p.isBot) showBanner("You're out", "Popped by " + by.name, 2); }
+    if (!by.isBot) by.hitT = 0.45;
+    if (p.balloons.every((x) => !x.alive)) { p.alive = false; p.group.visible = false; if (!p.isBot) showBanner(p.name === "You" ? "You're out" : p.name + " is out", "Popped by " + by.name, 2); }
   }
 
   // input
   const keys = {}; let mouse = { dx: 0, dy: 0, fire: false, ads: false, drag: false, lx: 0, ly: 0 };
-  addEventListener("keydown", (e) => { keys[e.code] = true; if (e.code === "Space") e.preventDefault(); });
+  let lobbyOpen = false, lastLobby = "", toastT = 0;
+  const seats = [];
+  const hasKm = () => seats.some((s) => s.type === "km");
+  addEventListener("keydown", (e) => {
+    keys[e.code] = true; if (e.code === "Space") e.preventDefault();
+    if (lobbyOpen && e.code === "Enter") { e.preventDefault(); if (!hasKm() && seats.length < 4) joinKm(); else startMatch(); }
+  });
   addEventListener("keyup", (e) => (keys[e.code] = false));
   canvas.addEventListener("contextmenu", (e) => e.preventDefault());
   canvas.addEventListener("mousedown", (e) => {
-    if (!running) return;
+    if (!running || !humans.some((h) => h.seat && h.seat.type === "km")) return;
     if (document.pointerLockElement !== canvas && canvas.requestPointerLock) { try { canvas.requestPointerLock(); } catch (_) {} }
     if (e.button === 0) mouse.fire = true;
     if (e.button === 2) mouse.ads = true;
@@ -266,17 +292,53 @@
     if (document.pointerLockElement === canvas) { mouse.dx += e.movementX; mouse.dy += e.movementY; }
     else if (mouse.drag) { mouse.dx += e.clientX - mouse.lx; mouse.dy += e.clientY - mouse.ly; mouse.lx = e.clientX; mouse.ly = e.clientY; }
   });
-  function getPad() {
-    const pads = [...(navigator.getGamepads ? navigator.getGamepads() : [])].filter(Boolean);
-    return pads.find((p) => p.mapping === "standard") || pads[0] || null;
+  // gamepads, deduped: padList holds connected, non-alias pads in raw index order
+  const padSt = {}; let padList = [];
+  const pbtn = (g, n) => g.buttons[n] && (g.buttons[n].pressed || g.buttons[n].value > 0.5);
+  const seatOf = (idx) => seats.find((s) => s.type === "pad" && s.idx === idx);
+  const padName = (idx) => { const n = padList.findIndex((g) => g.index === idx); return n < 0 ? "Pad (disconnected)" : "Pad " + (n + 1); };
+  function toast(t) { $("toast").textContent = t; $("toast").classList.add("on"); toastT = 2; }
+  function pollPads() {
+    const raw = [...(navigator.getGamepads ? navigator.getGamepads() : [])].filter((g) => g && g.connected);
+    const list = raw.some((g) => g.mapping === "standard") ? raw.filter((g) => g.mapping === "standard") : raw;
+    const now = performance.now(), ev = [];
+    list.forEach((g) => {
+      const s = padSt[g.index] || (padSt[g.index] = { a: false, st: false, t: -1e9, alias: null, solo: 0, pend: 0 });
+      const a = pbtn(g, 0), st = pbtn(g, 9);
+      if (a && !s.a) { s.t = now; ev.push({ idx: g.index, type: "A" }); if (s.alias != null) s.pend = now; }
+      if (st && !s.st) ev.push({ idx: g.index, type: "start" });
+      s.a = a; s.st = st;
+    });
+    ev.forEach((e) => { if (e.type !== "A") return;
+      list.forEach((o) => {
+        if (o.index === e.idx || Math.abs(padSt[o.index].t - padSt[e.idx].t) >= 120) return;
+        const hi = Math.max(o.index, e.idx), lo = Math.min(o.index, e.idx), sh = padSt[hi];
+        if (running && seatOf(hi) && seatOf(lo)) return;
+        sh.solo = 0; sh.pend = 0;
+        if (sh.alias === lo) return;
+        sh.alias = lo;
+        const k = seats.indexOf(seatOf(hi)); if (k >= 0 && !running) seats.splice(k, 1);
+        toast("Merged duplicate controller");
+      });
+    });
+    list.forEach((g) => { const s = padSt[g.index];
+      if (s.alias == null || !s.pend || now - s.pend < 120) return;
+      const lo = padSt[s.alias];
+      if (!lo || Math.abs(lo.t - s.pend) >= 120) { if (++s.solo >= 2) { s.alias = null; s.solo = 0; } }
+      s.pend = 0;
+    });
+    padList = list.filter((g) => padSt[g.index].alias == null);
+    return ev.filter((e) => padSt[e.idx].alias == null);
   }
   const dz = (v) => (Math.abs(v) < 0.15 ? 0 : v);
   function readHuman(p, dt) {
-    const i = p.input;
-    i.mx = (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0); i.my = (keys.KeyW ? 1 : 0) - (keys.KeyS ? 1 : 0);
-    i.lx = mouse.dx; i.ly = mouse.dy; mouse.dx = mouse.dy = 0;
-    i.fire = mouse.fire; i.ads = mouse.ads; i.jump = !!keys.Space; i.reload = !!(keys.KeyR || keys.KeyX);
-    const g = getPad();
+    const i = p.input; Object.assign(i, blankInput());
+    if (p.seat && p.seat.type === "km") {
+      i.mx = (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0); i.my = (keys.KeyW ? 1 : 0) - (keys.KeyS ? 1 : 0);
+      i.lx = mouse.dx; i.ly = mouse.dy; mouse.dx = mouse.dy = 0;
+      i.fire = mouse.fire; i.ads = mouse.ads; i.jump = !!keys.Space; i.reload = !!(keys.KeyR || keys.KeyX);
+    }
+    const g = p.seat && p.seat.type === "pad" && padList.find((q) => q.index === p.seat.idx);
     if (g) {
       const ax = g.axes, bt = (n) => g.buttons[n] && (g.buttons[n].pressed || g.buttons[n].value > 0.5);
       i.mx += dz(ax[0] || 0); i.my -= dz(ax[1] || 0);
@@ -358,13 +420,13 @@
       let x = Math.cos(a) * 110, z = Math.sin(a) * 110;
       while (inCol(x, groundY(x, z) + 0.5, z, R + 0.5)) { x *= 0.97; z *= 0.97; }
       p.pos.set(x, floorAt(x, z, 99), z); p.vy = 0; p.yaw = Math.atan2(x, z); p.pitch = 0;
-      p.alive = true; p.ammo = 30; p.reloadT = 0; p.group.visible = p.isBot;
+      p.alive = true; p.ammo = 30; p.reloadT = 0; p.group.visible = true; p.spec = null;
       p.balloons.forEach((b) => { b.alive = true; b.mesh.visible = b.line.visible = true; });
       p.ai.target = null; pickGoal(p);
     });
     roundOver = 0; showBanner("Round " + round, "Best of 3 · " + scoreText(), 2.2);
   }
-  const scoreText = () => players.filter((p) => p.wins).map((p) => p.name + " " + p.wins).join(" · ") || "No wins yet";
+  const scoreText = () => players.filter((p) => p.wins || !p.isBot).map((p) => p.name + " " + p.wins).join(" · ") || "No wins yet";
   function checkRound(dt) {
     if (roundOver > 0) {
       roundOver -= dt;
@@ -379,30 +441,60 @@
       const w = alive[0];
       if (w) w.wins++;
       matchOver = !!w && w.wins >= 2;
-      showBanner(matchOver ? (w.isBot ? w.name + " wins the match" : "You win the match!") : (w ? (w.isBot ? w.name : "You") + " win" + (w.isBot ? "s" : "") + " round " + round : "Draw"), scoreText(), 4);
+      const you = w && w.name === "You";
+      showBanner(matchOver ? (you ? "You win the match!" : w.name + " wins the match") : (w ? w.name + (you ? " win" : " wins") + " round " + round : "Draw"), scoreText(), 4);
       roundOver = 4;
     }
   }
+  function layout(n) {
+    const W = innerWidth, H = innerHeight, hw = Math.floor(W / 2), hh = Math.floor(H / 2);
+    if (n <= 1) return [[0, 0, W, H]];
+    if (n === 2) return [[0, 0, W, hh], [0, hh, W, H - hh]];
+    return [[0, 0, hw, hh], [hw, 0, W - hw, hh], [0, hh, hw, H - hh], [hw, hh, W - hw, H - hh]];
+  }
+  const specOf = (h) => (h.alive ? h : (h.spec = h.spec && h.spec.alive ? h.spec : humans.find((o) => o.alive) || players.find((o) => o.alive) || h));
+  function buildHud() {
+    $("views").innerHTML = humans.map(() => '<div class="x-view"><div class="x-cross"></div><div class="x-hit">POP!</div><div class="x-tl"></div><div class="x-bl"><i></i><i></i><i></i></div><div class="x-br"><b>30</b><span>/ 30</span></div><div class="x-out"></div></div>').join("");
+    humans.forEach((h, k) => (h.hud = $("views").children[k]));
+  }
   function hud() {
-    const h = humans[0];
-    $("balloons").querySelectorAll("i").forEach((el, k) => { el.style.background = "#" + h.color.toString(16).padStart(6, "0"); el.classList.toggle("gone", !h.balloons[k].alive); });
-    $("ammo").textContent = h.reloadT > 0 ? "…" : h.ammo; $("ammoSub").textContent = h.reloadT > 0 ? "Reloading" : "/ 30";
-    $("left").textContent = "Players left " + players.filter((p) => p.alive).length + " · Round " + round;
-    $("hit").classList.toggle("on", hitT > 0);
+    const rs = layout(humans.length), left = players.filter((p) => p.alive).length;
+    humans.forEach((h, k) => {
+      const el = h.hud, r = rs[k], q = (s) => el.querySelector(s);
+      Object.assign(el.style, { left: r[0] + "px", top: r[1] + "px", width: r[2] + "px", height: r[3] + "px" });
+      q(".x-bl").querySelectorAll("i").forEach((b, n) => { b.style.background = "#" + h.color.toString(16).padStart(6, "0"); b.classList.toggle("gone", !h.balloons[n].alive); });
+      q(".x-br b").textContent = h.reloadT > 0 ? "…" : h.ammo; q(".x-br span").textContent = h.reloadT > 0 ? "Reloading" : "/ 30";
+      q(".x-tl").textContent = (humans.length > 1 ? h.name + " · " : "") + "Players left " + left + " · Round " + round;
+      q(".x-hit").classList.toggle("on", h.hitT > 0);
+      el.classList.toggle("out", !h.alive);
+      q(".x-out").textContent = "OUT - spectating " + (specOf(h) !== h ? specOf(h).name : "");
+    });
+  }
+  function renderLobby() {
+    let s = "";
+    for (let k = 0; k < 4; k++) s += seats[k] ? "<li><b>P" + (k + 1) + "</b> · " + (seats[k].type === "km" ? "Keyboard + mouse" : padName(seats[k].idx)) + "</li>" : '<li class="empty">Seat ' + (k + 1) + " open · bot</li>";
+    s += '<li class="empty">' + (8 - seats.length) + " bots fill the other spots</li>";
+    if (s !== lastLobby) $("seats").innerHTML = lastLobby = s;
+  }
+  function joinKm() { if (!hasKm() && seats.length < 4) seats.push({ type: "km" }); renderLobby(); }
+  function joinPad(idx) { if (!seatOf(idx) && seats.length < 4) seats.push({ type: "pad", idx }); renderLobby(); }
+  $("lobby").addEventListener("click", (e) => { if (e.target.id === "go") startMatch(); else joinKm(); });
+  function startMatch() {
+    if (!seats.length) seats.push({ type: "km" });
+    players.forEach((p, i) => { const s = seats[i]; p.isBot = !s; p.seat = s || null; p.name = s ? (seats.length === 1 ? "You" : "P" + (i + 1)) : "Bot " + i; p.wins = 0; p.hitT = 0; });
+    humans = players.filter((p) => !p.isBot); buildHud();
+    $("lobby").style.display = "none"; lobbyOpen = false;
+    round = 1; matchOver = false; running = true; startRound();
+    if (hasKm()) { try { canvas.requestPointerLock(); } catch (_) {} }
   }
   window.bbStart = () => {
     if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (_) {} }
     if (ac && ac.state === "suspended") ac.resume();
-    $("start").style.display = "none";
-    if (matchOver || !running) { players.forEach((p) => (p.wins = 0)); round = 1; matchOver = false; }
-    running = true; startRound();
-    try { canvas.requestPointerLock(); } catch (_) {}
+    $("start").style.display = "none"; $("lobby").style.display = ""; lobbyOpen = true; lastLobby = ""; renderLobby();
+    if (document.activeElement) document.activeElement.blur();
   };
 
-  function resize() {
-    renderer.setSize(innerWidth, innerHeight, false);
-    humans.forEach((p) => { p.camera.aspect = innerWidth / innerHeight; p.camera.updateProjectionMatrix(); });
-  }
+  function resize() { renderer.setSize(innerWidth, innerHeight, false); }
   addEventListener("resize", resize); resize();
   startRound(); $("banner").classList.remove("on");
   const h0 = humans[0]; h0.camera.position.set(0, 30, 90); h0.camera.lookAt(0, 0, 0);
@@ -410,15 +502,27 @@
   const clock = new THREE.Clock();
   renderer.setAnimationLoop(() => {
     const dt = Math.min(clock.getDelta(), 0.05);
+    const pev = pollPads();
+    pev.forEach((e) => { if (!lobbyOpen) return; if (e.type === "A") joinPad(e.idx); else { if (!seats.length) joinPad(e.idx); startMatch(); } });
+    if (lobbyOpen) renderLobby();
+    if (toastT > 0 && (toastT -= dt) <= 0) $("toast").classList.remove("on");
     if (running) {
       humans.forEach((p) => readHuman(p, dt));
       players.forEach((p) => { if (p.isBot && p.alive) think(p, dt); step(p, dt); });
       updatePellets(dt); checkRound(dt);
-      hitT -= dt;
+      humans.forEach((h) => (h.hitT -= dt));
       if (bannerT > 0 && (bannerT -= dt) <= 0) $("banner").classList.remove("on");
-      hud();
+      if (running) hud();
     }
-    renderer.render(scene, humans[0].camera);
+    const n = humans.length, rs = layout(n), H = innerHeight;
+    $("divH").style.display = n >= 2 ? "block" : "none"; $("divV").style.display = n >= 3 ? "block" : "none";
+    renderer.setScissorTest(true);
+    rs.forEach((r, k) => {
+      const cam = humans[k] ? specOf(humans[k]).camera : over;
+      cam.aspect = r[2] / r[3]; cam.updateProjectionMatrix();
+      renderer.setViewport(r[0], H - r[1] - r[3], r[2], r[3]); renderer.setScissor(r[0], H - r[1] - r[3], r[2], r[3]);
+      renderer.render(scene, cam);
+    });
   });
 })();
     </script>
