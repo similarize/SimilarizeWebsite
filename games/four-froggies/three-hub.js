@@ -57,6 +57,7 @@
    padexit2: EXIT restores full foot hop/walk (wheel clearance truck-only; foot reset).
    rstick1: party cam more margin; soft right-stick orbit nudge; D-pad U/D zoom;
             house LOS nudge; one pad = one froggy (lobby party.js).
+   groundmusic1: green floor under forest + pull trees in; ranch BGM; pinch zoom fix.
    earth1: space shows procedural Earth (home) — not ranch grounds in vacuum.
    solarsys1: Solar System layout — Sun center; Moon+station orbit Earth; planet gravity wells;
    spacefix1: dark ground plane; orbit cam locks on planet; ranch pad on Earth surface;
@@ -75,7 +76,45 @@
   var wantInteract = false;
   var wantAbility = false;
   var wantSpear = false; /* spear1 */
-  var userZoom = 1; /* ctrl1: pinch/wheel cam zoom (1 = default) */
+  var userZoom = 1; /* ctrl1: pinch/wheel cam zoom (1 = default; higher = farther) */
+  var ZOOM_MIN = 0.42; /* groundmusic1: closer min */
+  var ZOOM_MAX = 3.2;  /* groundmusic1: much farther ranch overview */
+  var ranchBgm = null;
+  var ranchBgmWant = false;
+  var ranchBgmMuteWired = false;
+
+  function ranchBgmMuted() {
+    try { return localStorage.getItem("ff-ranch-bgm-mute") === "1"; } catch (e) { return false; }
+  }
+  function setRanchBgmMuted(on) {
+    try { localStorage.setItem("ff-ranch-bgm-mute", on ? "1" : "0"); } catch (e) {}
+    if (ranchBgm) ranchBgm.muted = !!on;
+  }
+  function stopRanchBgm() {
+    ranchBgmWant = false;
+    if (!ranchBgm) return;
+    try { ranchBgm.pause(); } catch (e) {}
+  }
+  function startRanchBgm() {
+    ranchBgmWant = true;
+    if (typeof Audio === "undefined") return;
+    if (!ranchBgm) {
+      ranchBgm = new Audio("assets/ranch-bgm.ogg");
+      ranchBgm.loop = true;
+      ranchBgm.preload = "auto";
+      ranchBgm.volume = 0.28;
+    }
+    ranchBgm.muted = ranchBgmMuted();
+    var p = ranchBgm.play();
+    if (p && typeof p.catch === "function") p.catch(function () { /* wait for gesture */ });
+  }
+  function ensureRanchBgmPlaying() {
+    if (!ranchBgmWant || !ranchBgm || ranchBgmMuted()) return;
+    if (ranchBgm.paused) {
+      var p = ranchBgm.play();
+      if (p && typeof p.catch === "function") p.catch(function () {});
+    }
+  }
   var interactOrigin = null; /* world {x,y} from pad that pressed A (multi-local) */
   var interactPadIndex = null; /* pad that pressed A (null = keyboard/HUD/primary) */
   var abilityPadIndex = null; /* pad that pressed B/X (null = keyboard/HUD/primary) */
@@ -616,6 +655,7 @@
   var clock = null;
 
   function destroy() {
+    stopRanchBgm();
     active = false;
     keySteer.x = keySteer.y = 0; tapSteer.x = tapSteer.y = 0; tapHeld = false; tapMarker = null;
     wantInteract = wantAbility = wantSpear = false;
@@ -2720,15 +2760,16 @@
   }
 
   function buildRanch() {
+    startRanchBgm();
     scene = new THREE.Scene();
     scene.position.set(0, 0, 0);
     scene.background = new THREE.Color(0x7eb8d4);
     /* view3: softer haze — trees stay readable; was flat green wall at 48–145 */
-    scene.fog = new THREE.Fog(0x8eb89a, 95, 290); /* mech5: farther fog for expanded ranch */
+    scene.fog = new THREE.Fog(0x8eb89a, 110, 420); /* groundmusic1: farther fog for overview zoom */
 
     // Fixed-angle isometric-ish camera — orbit LOCKED (no free-fly)
     var aspect = window.innerWidth / Math.max(1, window.innerHeight);
-    camera = new THREE.PerspectiveCamera(46, aspect, 0.1, 400);
+    camera = new THREE.PerspectiveCamera(46, aspect, 0.1, 700);
     camera.position.set(18, 22, 18);
     camera.lookAt(0, 0, 0);
     camera.userData.lockTarget = new THREE.Vector3(0, 0, 0);
@@ -2748,8 +2789,9 @@
        (including valleys below y=0) would be hidden by a solid plane. */
     var halfW = C.MAP_W * 0.01;
     var halfH = C.MAP_H * 0.01;
-    /* walkspin1: green floor covers perimeter forest (rings to ~1.82×) — trees were in blue void */
-    var floorPad = 2.05;
+    /* groundmusic1: big green skirt past forest so trees never sit in blue void/sky.
+       walkspin1 2.05× still left outer canopy against clearColor 0x7eb8d4 when zoomed. */
+    var floorPad = 2.85;
     var floorShape = new THREE.Shape();
     floorShape.moveTo(-halfW * floorPad, -halfH * floorPad);
     floorShape.lineTo(halfW * floorPad, -halfH * floorPad);
@@ -2781,6 +2823,16 @@
     ground.receiveShadow = true;
     ground.renderOrder = -2;
     scene.add(ground);
+    /* groundmusic1: oversized underlay so zoom-out never shows blue under canopy */
+    var skirt = new THREE.Mesh(
+      new THREE.PlaneGeometry(halfW * floorPad * 2.4, halfH * floorPad * 2.4),
+      new THREE.MeshStandardMaterial({ color: 0x356b2e, roughness: 1, depthWrite: true })
+    );
+    skirt.rotation.x = -Math.PI / 2;
+    skirt.position.y = -0.04;
+    skirt.receiveShadow = true;
+    skirt.renderOrder = -3;
+    scene.add(skirt);
     var bowlC = worldToThree(trackA.x + trackA.w * 0.5, trackA.y + trackA.h * 0.5);
     var bowl = new THREE.Mesh(
       new THREE.PlaneGeometry(trackA.w * 0.02 + 0.4, trackA.h * 0.02 + 0.4),
@@ -2838,14 +2890,14 @@
         state.forestRing.push(bush);
       }
       /* Outer rings — forest forever at playable tree scale (not giant backdrop props) */
+      /* groundmusic1: pull rings inward (max ~1.48) so canopy sits on green, not blue rim */
       var rings = [
-        { rScale: 1.04, n: 68, s0: 0.88, s1: 1.18 },
-        { rScale: 1.12, n: 84, s0: 0.92, s1: 1.22 },
-        { rScale: 1.22, n: 96, s0: 0.95, s1: 1.28 },
-        { rScale: 1.34, n: 92, s0: 0.9, s1: 1.3 },
-        { rScale: 1.48, n: 80, s0: 0.98, s1: 1.28 },
-        { rScale: 1.64, n: 72, s0: 1.0, s1: 1.3 },
-        { rScale: 1.82, n: 64, s0: 0.95, s1: 1.25 },
+        { rScale: 1.02, n: 68, s0: 0.88, s1: 1.18 },
+        { rScale: 1.10, n: 84, s0: 0.92, s1: 1.22 },
+        { rScale: 1.18, n: 96, s0: 0.95, s1: 1.28 },
+        { rScale: 1.28, n: 92, s0: 0.9, s1: 1.3 },
+        { rScale: 1.38, n: 80, s0: 0.98, s1: 1.28 },
+        { rScale: 1.48, n: 72, s0: 1.0, s1: 1.3 },
       ];
       for (var ri = 0; ri < rings.length; ri++) {
         var rg = rings[ri];
@@ -2866,11 +2918,11 @@
       }
       /* Dense corners so the woods read continuous (no flat sky gaps) */
       var corners = [
-        [-halfW * 1.12, -halfH * 1.12], [halfW * 1.12, -halfH * 1.12],
-        [-halfW * 1.12, halfH * 1.12], [halfW * 1.12, halfH * 1.12],
-        [-halfW * 1.26, 0], [halfW * 1.26, 0], [0, -halfH * 1.26], [0, halfH * 1.26],
-        [-halfW * 1.4, -halfH * 0.55], [halfW * 1.4, -halfH * 0.55],
-        [-halfW * 1.4, halfH * 0.55], [halfW * 1.4, halfH * 0.55],
+        [-halfW * 1.08, -halfH * 1.08], [halfW * 1.08, -halfH * 1.08],
+        [-halfW * 1.08, halfH * 1.08], [halfW * 1.08, halfH * 1.08],
+        [-halfW * 1.18, 0], [halfW * 1.18, 0], [0, -halfH * 1.18], [0, halfH * 1.18],
+        [-halfW * 1.28, -halfH * 0.5], [halfW * 1.28, -halfH * 0.5],
+        [-halfW * 1.28, halfH * 0.5], [halfW * 1.28, halfH * 0.5],
       ];
       for (var ci = 0; ci < corners.length; ci++) {
         for (var k = 0; k < 7; k++) {
@@ -2886,7 +2938,7 @@
     })();
 
     // Soft grid — lifted + no depth write (was z-fighting ground → floor shudder)
-    var grid = new THREE.GridHelper(Math.max(C.MAP_W, C.MAP_H) * 0.02 * 2.05, 36, 0x2f5e2a, 0x2f5e2a);
+    var grid = new THREE.GridHelper(Math.max(C.MAP_W, C.MAP_H) * 0.02 * 2.85, 40, 0x2f5e2a, 0x2f5e2a);
     grid.position.y = 0.14;
     if (Array.isArray(grid.material)) {
       for (var gi = 0; gi < grid.material.length; gi++) {
@@ -3295,6 +3347,7 @@ state.zLift = 0;
   }
 
   function buildSpace() {
+    stopRanchBgm();
     /* view2: hard leave-ranch — fresh scene, dark clear, no forest/CSS leak */
     scene = new THREE.Scene();
     scene.position.set(0, 0, 0);
@@ -7165,10 +7218,10 @@ state.zLift = 0;
       }
     }
 
-    // Clamp ranch bounds — mech5: follows expanded MAP_* (more green/dirt; house size unchanged)
+    // Clamp ranch bounds — groundmusic1: playable green out to ~1.55× (trees sit inside)
     if (state.mode === "ranch") {
-      var halfW = C.MAP_W * 0.01;
-      var halfH = C.MAP_H * 0.01;
+      var halfW = C.MAP_W * 0.01 * 1.55;
+      var halfH = C.MAP_H * 0.01 * 1.55;
       state.player.position.x = Math.max(-halfW + 0.5, Math.min(halfW - 0.5, state.player.position.x));
       state.player.position.z = Math.max(-halfH + 0.5, Math.min(halfH - 0.5, state.player.position.z));
     } else {
@@ -7273,8 +7326,8 @@ state.zLift = 0;
           else state._orbitYaw *= (1 - Math.min(1, 0.55 * dt)); /* decay yaw only when stick idle */
           if (Math.abs(ry) > 0.18) state._orbitPitch = Math.max(-0.55, Math.min(0.45, state._orbitPitch + ry * dt * 1.1));
           else state._orbitPitch *= (1 - Math.min(1, 0.55 * dt));
-          if (cgp.dpad && cgp.dpad.u) userZoom = Math.max(0.55, Math.min(1.45, (userZoom || 1) * Math.exp(-1.1 * dt)));
-          if (cgp.dpad && cgp.dpad.d) userZoom = Math.max(0.55, Math.min(1.45, (userZoom || 1) * Math.exp(1.25 * dt)));
+          if (cgp.dpad && cgp.dpad.u) userZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, (userZoom || 1) * Math.exp(-1.1 * dt)));
+          if (cgp.dpad && cgp.dpad.d) userZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, (userZoom || 1) * Math.exp(1.25 * dt)));
         }
       }
     }
@@ -8085,9 +8138,32 @@ state.zLift = 0;
     renderer.domElement.style.touchAction = "none";
     renderer.domElement.setAttribute("aria-label", "Four Froggies three.js ranch");
     wireTapSteer(renderer.domElement);
+    /* groundmusic1: unlock BGM on first pointer; M toggles mute */
+    function unlockBgmOnce() {
+      ensureRanchBgmPlaying();
+      if (renderer && renderer.domElement) {
+        renderer.domElement.removeEventListener("pointerdown", unlockBgmOnce);
+      }
+      window.removeEventListener("keydown", unlockBgmOnce);
+    }
+    if (renderer && renderer.domElement) {
+      renderer.domElement.addEventListener("pointerdown", unlockBgmOnce);
+    }
+    window.addEventListener("keydown", unlockBgmOnce);
+    if (!ranchBgmMuteWired) {
+      ranchBgmMuteWired = true;
+      window.addEventListener("keydown", function (e) {
+        if (!active || !ranchBgmWant) return;
+        if (e.key !== "m" && e.key !== "M") return;
+        if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName || "")) return;
+        setRanchBgmMuted(!ranchBgmMuted());
+        if (hooks.onToast) hooks.onToast(ranchBgmMuted() ? "Music off (M)" : "Music on (M)");
+      });
+    }
 
     clock = new THREE.Clock();
     buildRanch();
+    startRanchBgm();
     active = true;
     window.addEventListener("resize", resize);
     window.addEventListener("orientationchange", function () { setTimeout(resize, 60); });
@@ -8137,8 +8213,9 @@ state.zLift = 0;
       if (opts.boost != null) state.airBoost = !!opts.boost;
     },
     adjustZoom: function (delta) {
-      /* positive delta = zoom IN (closer); negative = zoom OUT — match canvas wheel */
-      userZoom = Math.max(0.55, Math.min(1.45, (userZoom || 1) - (delta || 0) * 2.2));
+      /* groundmusic1: invert — positive delta = zoom OUT (farther), so pinch-out / Maps-style
+         zoom-in brings cam closer (main.js pinch spread was sending the wrong way before). */
+      userZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, (userZoom || 1) + (delta || 0) * 2.2));
       return userZoom;
     },
     getUserZoom: function () { return userZoom || 1; },

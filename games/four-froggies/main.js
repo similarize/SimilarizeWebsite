@@ -2677,7 +2677,8 @@ function doInteract(optFrog, opts) {
       if (document.body.classList.contains("in-hub") &&
           engines && engines.isAltEngine && engines.isAltEngine() && engines.adjustZoom) {
         e.preventDefault();
-        const dir = e.deltaY > 0 ? -0.04 : 0.04;
+        /* groundmusic1: three-hub adjustZoom inverted — scroll down still zooms OUT */
+        const dir = e.deltaY > 0 ? 0.04 : -0.04;
         engines.adjustZoom(dir);
         return;
       }
