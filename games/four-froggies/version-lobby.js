@@ -1,11 +1,11 @@
 /* Four Froggies — onefrog1 entrance.
-   One screen: claim James/Jimmy/Bubbles/Rexy + Host/Join + pick 2D/2.5D/3D → play.
-   Skips the old overlay frog-pick / party lobby. Cache: 20261006-padreal2 */
+   One screen: claim James/Jimmy/Bubbles/Rexy + Host/Join + pick 2.5D/3D → play.
+   Flat 2D removed from picker (lobby253d1). Cache: 20261006-lobby253d1 */
 (function () {
   "use strict";
 
-  var CACHE = "20261006-padreal2";
-  var FF3D_CACHE = "20261006-padreal2";
+  var CACHE = "20261006-lobby253d1";
+  var FF3D_CACHE = "20261006-lobby253d1";
   var FROG_ORDER = ["james", "jimmy", "bubbles", "rexy"];
   var FROG_NAME = { james: "James", jimmy: "Jimmy", bubbles: "Bubbles", rexy: "Rexy" };
 
@@ -164,7 +164,7 @@
       var hint = n === 0
         ? (plugged.length
           ? "Each live stick picks one frog. A silent extra pad is ignored. A claims · B releases."
-          : "Tap James / Jimmy / Bubbles / Rexy (or plug a pad). Host/Join optional. Then pick 2D / 2.5D / 3D.")
+          : "Tap James / Jimmy / Bubbles / Rexy (or plug a pad). Host/Join optional. Then pick 2.5D / 3D.")
         : "One pad = one frog · stick cycles · A claims · B releases. A second controller picks a name when it moves.";
       if (hintEl.textContent !== hint) hintEl.textContent = hint;
     }
@@ -219,8 +219,8 @@
         }
         if (bp.y) {
           lastPad = pi;
-          /* Y = start default 2D from entrance when allowed */
-          tryStartMode("canvas");
+          /* Y = start default 2.5D from entrance when allowed */
+          tryStartMode("three");
         }
       }
     }
@@ -359,7 +359,7 @@
       var st = document.getElementById("party-status");
       if (st) {
         st.classList.remove("is-error");
-        st.textContent = "Joined · wait for Host to pick 2D / 2.5D / 3D";
+        st.textContent = "Joined · wait for Host to pick 2.5D / 3D";
       }
       return;
     }
@@ -462,7 +462,7 @@
     var ver = btn.getAttribute("data-version");
     if (ver === "3d") tryStartMode("3d");
     else if (ver === "three") tryStartMode("three");
-    else tryStartMode("canvas");
+    /* lobby253d1: flat 2D (canvas) no longer a lobby choice */
   });
 
   var back = document.getElementById("btn-versions");
@@ -481,13 +481,17 @@
       location.replace("/games/four-froggies-3d/?v=" + FF3D_CACHE + "&go=1");
       return;
     }
-    if (q.get("engine") === "three" || q.get("engine") === "canvas") {
-      autoEngine = q.get("engine");
+    if (q.get("engine") === "three") {
+      autoEngine = "three";
+      skip = true;
+    } else if (q.get("engine") === "canvas") {
+      /* Deep-link still works; flat 2D not offered in lobby UI */
+      autoEngine = "canvas";
       skip = true;
     }
     if (q.get("go") === "1" || q.get("autogo") === "1") {
       skip = true;
-      if (!autoEngine) autoEngine = "canvas";
+      if (!autoEngine) autoEngine = "three";
     }
   } catch (err) { /* keep lobby */ }
 

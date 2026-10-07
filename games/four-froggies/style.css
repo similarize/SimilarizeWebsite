@@ -1603,7 +1603,7 @@ body.in-space .vjoy.vjoy-hint {
 .version-top h1{margin:0;font-size:clamp(28px,6vw,44px);letter-spacing:.03em;line-height:1}
 .version-kicker{margin:0 0 4px;color:#86efac;letter-spacing:.16em;font-size:12px;text-transform:uppercase}
 .version-lead{margin:6px 0 0;color:#d1fae5;font-size:14px}
-.version-grid{width:min(920px,100%);display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.version-grid{width:min(920px,100%);display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .version-card{display:flex;flex-direction:column;gap:8px;margin:0;padding:8px;border-radius:16px;border:2px solid rgba(255,255,255,.28);background:rgba(0,0,0,.35);color:#fff;text-align:left;font:inherit;cursor:pointer;touch-action:manipulation}
 .version-card canvas{display:block;width:100%;height:132px;border-radius:10px;background:#052e16}
 .version-card strong{font-size:16px}

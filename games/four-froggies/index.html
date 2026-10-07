@@ -72,7 +72,7 @@
       <div>
         <p class="version-kicker">Similarize</p>
         <h1>Four Froggies</h1>
-        <p class="version-lead">Claim a froggy · Host or Join · then pick 2D / 2.5D / 3D to play.</p>
+        <p class="version-lead">Claim a froggy · Host or Join · then pick 2.5D / 3D to play.</p>
       </div>
       <a class="exit-arcade" href="/games/">← Arcade</a>
     </div>
@@ -99,7 +99,7 @@
         </button>
       </div>
     </div>
-    <p id="invite-cta" class="invite-cta entrance-party">Party: <strong>Host room</strong> → Copy invite / scan QR · friends <strong>Join</strong> · claim James / Jimmy / Bubbles / Rexy · Host picks a mode to start. Solo: claim a froggy and pick 2D / 2.5D / 3D (AI fills open seats).</p>
+    <p id="invite-cta" class="invite-cta entrance-party">Party: <strong>Host room</strong> → Copy invite / scan QR · friends <strong>Join</strong> · claim James / Jimmy / Bubbles / Rexy · Host picks a mode to start. Solo: claim a froggy and pick 2.5D / 3D (AI fills open seats).</p>
     <div id="party-bar" class="party-bar entrance-party">
       <button type="button" id="btn-host" class="party-btn">Host room</button>
       <button type="button" id="btn-join" class="party-btn party-btn-join">Join · enter code</button>
@@ -111,11 +111,6 @@
     <p id="party-help" class="party-help entrance-party">Host = make room · Join = enter code or open invite link · one pad = one froggy</p>
     <p id="party-status" class="party-status entrance-party"></p>
     <div class="version-grid">
-      <button type="button" class="version-card" data-version="canvas">
-        <img class="version-shot" src="assets/play-2d.jpg?v=20261001-kidfix1" alt="2D gameplay: flat green ranch, mechs, and the garage" width="960" height="540">
-        <strong>2D</strong>
-        <span>Flat ranch · start with current seats.</span>
-      </button>
       <button type="button" class="version-card" data-version="three">
         <img class="version-shot" src="assets/play-25d.jpg?v=20261001-kidfix1" alt="2.5D gameplay: fixed camera over the grid ranch, trees, and pond" width="960" height="540">
         <strong>2.5D</strong>
@@ -236,7 +231,7 @@
 
   <div id="overlay">
     <a id="exit-arcade" class="exit-arcade" href="/games/">← Arcade</a>
-    <p id="lobby-badge" hidden>2D</p>
+    <p id="lobby-badge" hidden>2.5D</p>
     <img id="lobby-still" class="lobby-still" alt="" hidden width="960" height="540">
     <img id="splash-art" class="splash-art" src="assets/splash-forest-roof.png?v=20261001-kidfix1" alt="Four froggies on a Cybertruck roof" width="832" height="1248" decoding="async">
     <h1 id="overlay-title">Four Froggies</h1>
@@ -250,10 +245,10 @@
     <div id="engine-pick" class="engine-pick" role="group" aria-label="Physics / look engine" hidden>
       <p class="pick-label">Engine · physics &amp; look compare</p>
       <div class="engine-btns">
-        <button type="button" class="engine-btn is-on" data-engine="canvas" aria-pressed="true">2D</button>
-        <button type="button" class="engine-btn" data-engine="three" aria-pressed="false">2.5D</button>
+        <button type="button" class="engine-btn" data-engine="canvas" aria-pressed="false" hidden>2D</button>
+        <button type="button" class="engine-btn is-on" data-engine="three" aria-pressed="true">2.5D</button>
       </div>
-      <p id="engine-note" class="engine-note">2D · default · Host/Join (PeerJS) works here</p>
+      <p id="engine-note" class="engine-note">2.5D · fixed angle · Host/Join (PeerJS) works here</p>
     </div>
     <p id="overlay-text">Big ranch · James house/garage/mechs · Cybertrucks · pond whales · Starship → space (orbit physics).</p>
     <p class="go" id="overlay-go">Entrance lobby: claim James / Jimmy / Bubbles / Rexy · Host/Join · pick a mode</p>
@@ -269,7 +264,7 @@
   <script src="story.js?v=20261001-kidfix1"></script>
   <script src="space.js?v=20261004-marsrover2"></script>
   <script src="engine-boot.js?v=20261006-padbind1"></script>
-  <script src="version-lobby.js?v=20261006-padreal2"></script>
+  <script src="version-lobby.js?v=20261006-lobby253d1"></script>
   <script src="main.js?v=20261006-padbind1"></script>
 </body>
 </html>
