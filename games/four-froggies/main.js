@@ -2140,6 +2140,15 @@ function doInteract(optFrog, opts) {
     return dir;
   }
 
+  /* padmerge1: "Pad N" from the deduped list (ignored ghosts don't shift numbers) */
+  function padNo(pi) {
+    const GP = window.SimilarizeGamepad;
+    try {
+      if (GP && typeof GP.padNumber === "function") return GP.padNumber(pi | 0, 4);
+    } catch (e) { /* ignore */ }
+    return (pi | 0) + 1;
+  }
+
   function tick(now) {
 
     const dt = Math.min(0.05, (now - (lastTs || now)) / 1000);
@@ -2305,7 +2314,7 @@ function doInteract(optFrog, opts) {
       if (!fid || paintedPad[pi]) continue;
       paintedPad[pi] = fid;
       if (!focusByFrog[fid]) focusByFrog[fid] = [];
-      if (!focusByFrog[fid].includes(pi + 1)) focusByFrog[fid].push(pi + 1);
+      if (!focusByFrog[fid].includes(padNo(pi))) focusByFrog[fid].push(padNo(pi));
     }
     document.querySelectorAll(".frog-btn").forEach((btn) => {
       const id = btn.dataset.id;
@@ -2331,7 +2340,7 @@ function doInteract(optFrog, opts) {
         if (pi != null) {
           btn.classList.add("seat-pad");
           btn.setAttribute("data-pad", String(pi + 1));
-          if (stateEl) stateEl.textContent = "Pad " + (pi + 1) + " · " + fname;
+          if (stateEl) stateEl.textContent = "Pad " + padNo(pi) + " · " + fname;
           if (lobbyPadFocus[pi] === id) {
             btn.classList.add("pad-focus");
             btn.setAttribute("data-focus-pad", String(pi + 1));
