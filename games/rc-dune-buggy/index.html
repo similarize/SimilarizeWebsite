@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <title>RC Dune Buggy</title>
+  <!-- Cache-bust: ?v=20261007-dune1 — Host/Join scaffold -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./style.css?v=20261007-dune1" />
+  <script src="/games/shared/tesla-fullscreen.js?v=tfs1"></script>
+  <script src="/games/shared/viewport-fill.js?v=vfs1"></script>
+  <script src="/games/shared/gamepad.js?v=20261007-dune1"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.170.0/build/three.module.js"
+    }
+  }
+  </script>
+</head>
+<body>
+  <canvas id="view"></canvas>
+  <div class="vignette" aria-hidden="true"></div>
+  <div class="top">
+    <a class="exit-arcade" href="/games/">← Arcade</a>
+    <span class="title">RC Dune Buggy</span>
+    <span class="lap" id="lapLabel">Lap 1/3</span>
+    <span class="hint">James·Jimmy·Bubbles·Rexy · P1 arrows/WASD · pads 1:1 · empty=AI · Host/Join</span>
+    <button type="button" id="resetBtn">Reset</button>
+    <button type="button" id="xrBtn" hidden>Enter VR</button>
+    <span class="online" id="onlineBar">
+      <button type="button" id="hostBtn">Host</button>
+      <input id="roomCodeInput" maxlength="4" placeholder="CODE" autocomplete="off" spellcheck="false" aria-label="Room code" />
+      <button type="button" id="joinBtn">Join</button>
+      <button type="button" id="leaveBtn" hidden>Leave</button>
+      <span class="status" id="onlineStatus"></span>
+    </span>
+  </div>
+  <div id="hostPanel" class="host-panel" hidden>
+    <p class="host-code">Room <strong id="hostCode">----</strong></p>
+    <img id="joinQr" width="140" height="140" alt="" />
+    <p class="host-hint">Share code or QR · local pads still work on host</p>
+    <button type="button" id="copyJoinBtn">Copy join link</button>
+  </div>
+  <div id="standings" class="standings" aria-live="polite"></div>
+  <div id="banner" aria-live="polite"></div>
+  <div class="pads" id="pads">
+    <div class="cluster" data-p="0">
+      <span class="cluster-label">P1</span>
+      <div class="thumbs">
+        <div class="stick-wrap" data-role="steer" data-p="0" aria-label="P1 stick">
+          <div class="stick-base"><span class="stick-ring"></span><span class="stick-knob"></span></div>
+        </div>
+        <div class="thumb-drive" role="group" aria-label="P1 throttle">
+          <button type="button" class="pad-btn fwd" data-p="0" data-act="fwd">FWD</button>
+          <button type="button" class="pad-btn rev" data-p="0" data-act="rev">REV</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="boot">Loading RC Dune Buggy…</div>
+  <script type="module" src="./game.js?v=20261007-dune1"></script>
+</body>
+</html>

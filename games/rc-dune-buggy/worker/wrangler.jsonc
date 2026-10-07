@@ -1,0 +1,17 @@
+{
+  "name": "similarize-dune-rooms",
+  "main": "src/index.js",
+  "compatibility_date": "2026-09-01",
+  "workers_dev": true,
+  "durable_objects": {
+    "bindings": [
+      { "name": "ROOM", "class_name": "DuneRoom" }
+    ]
+  },
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["DuneRoom"] }
+  ],
+  "vars": {
+    "ALLOWED_ORIGINS": "https://www.similarize.com,https://similarize.com,http://localhost:3000,http://localhost:8000,http://127.0.0.1:8000,http://127.0.0.1:3000"
+  }
+}
