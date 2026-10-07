@@ -37,6 +37,10 @@
       .x-fire, .x-stick { position: fixed; bottom: 28px; border-radius: 50%; display: none; pointer-events: none; }
       .x-touch .x-fire { display: grid; place-items: center; pointer-events: auto; right: 28px; width: 84px; height: 84px; background: var(--mat-thin); border: 2px solid rgba(255,255,255,.7); color: #fff; font: var(--type-label); font-family: var(--sans); user-select: none; -webkit-user-select: none; touch-action: none; }
       .x-touch .x-stick { display: block; left: 28px; width: 120px; height: 120px; border: 2px solid rgba(255,255,255,.5); }
+      .x-fig, .x-pick { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 12px; font: var(--type-label); font-family: var(--sans); }
+      .x-pick[hidden] { display: none; }
+      .x-opt { min-height: var(--tap); padding: 0 14px; border: 1px solid var(--stroke-primary); border-radius: var(--r-pill); background: transparent; color: var(--text-primary); font: var(--type-label); font-family: var(--sans); cursor: pointer; }
+      .x-opt.is-on { background: var(--fill-primary); color: var(--text-primary-on); border-color: var(--fill-primary); }
       .x-knob { position: absolute; left: 40px; top: 40px; width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,.7); }
     </style>
     <script src="https://cdn.babylonjs.com/babylon.js"></script>
@@ -59,10 +63,42 @@
           <li>Gamepad: left stick moves, right stick looks, RT or A shoots, LT aims, Start restarts</li>
           <li>Touch: left thumb moves, drag right side to look, FIRE shoots, AIM toggles sights</li>
         </ul>
+        <div class="x-fig"><button class="x-opt" id="figBtn" aria-pressed="false" aria-label="Figures: Soldiers or Critters">Figures: <b>Soldiers</b> / Critters</button></div>
+        <div class="x-pick" id="pick" role="group" aria-label="Pick your critter (D-pad left/right)" hidden></div>
         <button class="x-go" id="go" disabled>Loading…</button>
       </div>
     </div>
     <script src="hark.js"></script>
+    <script>
+// Figures picker UI, independent of the 3D engine
+window.XFIG = (function () {
+  const ROSTER = [
+    { n: "James", k: "frog", c: 0x3fbf3f }, { n: "Jimmy", k: "frog", c: 0xa6d832 }, { n: "Bubbles", k: "frog", c: 0x2fb3c4 }, { n: "Rexy", k: "frog", c: 0xf2582a },
+    { n: "Spotty", k: "cat", c: 0xf4f1ea, spots: 0x2a2626 }, { n: "Tigy", k: "cat", c: 0xf28c28, stripes: 0x7a3a10 },
+    { n: "Kitty", k: "cat", c: 0xb8a9c9 }, { n: "Little White Socks", k: "cat", c: 0x34343a, paws: 0xffffff },
+    { n: "Germy", k: "dog", c: 0xb47a3c, saddle: 0x1e1a18 }, { n: "Daisy", k: "dog", c: 0xa0482a, long: true },
+  ];
+  const EMOJI = { frog: "🐸", cat: "🐱", dog: "🐶" };
+  const S = { ROSTER, mode: "soldiers", pick: 0 };
+  const pickEl = document.getElementById("pick"), figBtn = document.getElementById("figBtn"), overlay = document.getElementById("overlay");
+  pickEl.innerHTML = ROSTER.map((r, i) => `<button class="x-opt" data-i="${i}" aria-pressed="false">${EMOJI[r.k]} ${r.n}</button>`).join("");
+  S.setPick = (i) => {
+    S.pick = (i + ROSTER.length) % ROSTER.length;
+    pickEl.querySelectorAll("button").forEach((b, k) => { b.classList.toggle("is-on", k === S.pick); b.setAttribute("aria-pressed", k === S.pick); });
+  };
+  S.setMode = (m) => {
+    S.mode = m; const c = m === "critters"; pickEl.hidden = !c;
+    figBtn.classList.toggle("is-on", c); figBtn.setAttribute("aria-pressed", c);
+    figBtn.innerHTML = c ? "Figures: Soldiers / <b>Critters</b>" : "Figures: <b>Soldiers</b> / Critters";
+  };
+  S.toggle = () => S.setMode(S.mode === "soldiers" ? "critters" : "soldiers");
+  figBtn.addEventListener("click", () => { S.toggle(); figBtn.blur(); });
+  pickEl.addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) { S.setPick(+b.dataset.i); b.blur(); } });
+  addEventListener("keydown", (e) => { if (!overlay.hidden && S.mode === "critters" && (e.code === "ArrowLeft" || e.code === "ArrowRight")) S.setPick(S.pick + (e.code === "ArrowLeft" ? -1 : 1)); });
+  S.setPick(0);
+  return S;
+})();
+    </script>
     <script>
 (function () {
   const V3 = BABYLON.Vector3, C3 = BABYLON.Color3;
@@ -203,7 +239,7 @@
       const p = { id: i, node, ai: i > 0, yaw: 0, balloons: [], alive: true, cool: 0, think: 0, strafe: 1, state: "", anims: null, vel: 0 };
       if (container) {
         const inst = container.instantiateModelsToScene((n) => n + "_" + i, true);
-        inst.rootNodes.forEach((r) => (r.parent = node));
+        inst.rootNodes.forEach((r) => (r.parent = node)); p.xRoots = inst.rootNodes;
         const find = (k) => inst.animationGroups.find((g) => g.name.indexOf(k) === 0);
         p.anims = { idle: find("idle"), walk: find("walk"), run: find("run") };
         inst.animationGroups.forEach((g) => g.stop());
@@ -214,7 +250,7 @@
       } else {
         const body = BABYLON.MeshBuilder.CreateCapsule("cap" + i, { height: 1.8, radius: 0.35 }, scene);
         const cm = new BABYLON.PBRMaterial("cm" + i, scene); cm.albedoColor = COLORS[i]; cm.metallic = 0; cm.roughness = 0.6;
-        body.material = cm; body.position.y = 0.9; body.parent = node; shadows.addShadowCaster(body);
+        body.material = cm; body.position.y = 0.9; body.parent = node; shadows.addShadowCaster(body); p.xRoots = [body];
       }
       if (i === 0) node.getChildMeshes().forEach((m) => (m.layerMask = SELF));
       players.push(p);
@@ -256,7 +292,7 @@
   let playing = false;
   function updateHud() {
     hud.innerHTML = players.map((p) =>
-      `<div class="x-row${p.alive ? "" : " is-out"}"><span>${NAMES[p.id]}</span>` +
+      `<div class="x-row${p.alive ? "" : " is-out"}"><span>${p.label ? (p.id === 0 ? "You · " : "") + p.label : NAMES[p.id]}</span>` +
       p.balloons.map((b) => `<span class="x-b${b ? "" : " is-gone"}" style="background:${CSS[p.id]}"></span>`).join("") + `</div>`
     ).join("");
   }
@@ -273,7 +309,7 @@
     else if (alive.length === 1) { playing = false; setTimeout(() => show("You win!", "Last one standing with a balloon. Nice shooting.", "Play again"), 700); }
   }
   function reset() {
-    bullets.forEach((b) => b.m.dispose()); bullets.length = 0;
+    bullets.forEach((b) => b.m.dispose()); bullets.length = 0; dress();
     players.forEach((p, i) => {
       p.alive = true; p.place = 0; p.cool = 0.8; p.node.setEnabled(true);
       p.node.position.copyFrom(spawns[i]); p.yaw = Math.atan2(-spawns[i].x, -spawns[i].z); p.state = "";
@@ -480,6 +516,118 @@
     // Balloons bob
     const t = performance.now() / 1000;
     players.forEach((p) => p.balloons.forEach((b, k) => b && (b.position.y = BAL_OFF[k].y + Math.sin(t * 2 + k + p.id) * 0.05)));
+  });
+
+  // Critters mode: procedural figures from primitives, merged into one mesh each
+  const XF = window.XFIG, ROSTER = XF.ROSTER; let padWas = {};
+  const cMats = {};
+  function cMat(hex) {
+    if (!cMats[hex]) {
+      const m = new BABYLON.StandardMaterial("crit" + hex, scene), c = C3.FromInts((hex >> 16) & 255, (hex >> 8) & 255, hex & 255);
+      m.diffuseColor = c; m.emissiveColor = c.scale(0.12); m.specularColor = new C3(0.15, 0.15, 0.15); cMats[hex] = m;
+    }
+    return cMats[hex];
+  }
+  function buildCritter(r) {
+    const parts = [], MB = BABYLON.MeshBuilder, c = r.c, W = 0xffffff, K = 0x111111;
+    const add = (m, hex, x, y, z, rz) => { m.position.set(x, y, z); m.rotation.z = rz || 0; m.material = cMat(hex); parts.push(m); return m; };
+    const ell = (hex, dx, dy, dz, x, y, z, rz) => add(MB.CreateSphere("cp", { diameterX: dx, diameterY: dy, diameterZ: dz, segments: 10 }, scene), hex, x, y, z, rz);
+    const box = (hex, w, h, d, x, y, z) => add(MB.CreateBox("cp", { width: w, height: h, depth: d }, scene), hex, x, y, z);
+    const cone = (hex, h, d, x, y, z, rz) => add(MB.CreateCylinder("cp", { height: h, diameterTop: 0, diameterBottom: d, tessellation: 3 }, scene), hex, x, y, z, rz);
+    const tube = (hex, pts, rad) => add(MB.CreateTube("cp", { path: pts.map((p) => new V3(p[0], p[1], p[2])), radius: rad, tessellation: 8, cap: BABYLON.Mesh.CAP_ALL }, scene), hex, 0, 0, 0);
+    const ring = (hex, cy, ry, ax, az, y, rad) => {
+      const f = Math.sqrt(Math.max(0, 1 - ((y - cy) / ry) ** 2)), pts = [];
+      for (let a = 0; a <= 24; a++) pts.push([Math.sin((a / 24) * 6.2832) * (ax * f + 0.01), y, Math.cos((a / 24) * 6.2832) * (az * f + 0.01)]);
+      tube(hex, pts, rad);
+    };
+    const armsAndBlaster = (hex, sx, sy, y, z) => { // a little orange-tipped blaster held in both paws
+      tube(hex, [[sx, sy, 0.05], [0.25, y - 0.04, z - 0.12]], 0.06); tube(hex, [[-sx, sy, 0.05], [0.13, y - 0.06, z + 0.06]], 0.06);
+      box(0x2e2e33, 0.09, 0.13, 0.42, 0.24, y, z); box(0x2e2e33, 0.07, 0.15, 0.07, 0.24, y - 0.12, z - 0.1);
+      add(MB.CreateCylinder("cp", { height: 0.08, diameter: 0.08, tessellation: 10 }, scene), 0xff7a1a, 0.24, y, z + 0.24).rotation.x = Math.PI / 2;
+    };
+    if (r.k === "frog") {
+      ell(c, 1.1, 1.25, 0.85, 0, 0.85, 0); ell(0xf3efc4, 0.7, 0.85, 0.4, 0, 0.78, 0.23);
+      for (const s of [-1, 1]) {
+        ell(c, 0.38, 0.38, 0.38, s * 0.25, 1.5, 0.1); ell(W, 0.3, 0.3, 0.3, s * 0.25, 1.56, 0.18); ell(K, 0.13, 0.15, 0.08, s * 0.25, 1.58, 0.32);
+        ell(c, 0.32, 0.5, 0.75, s * 0.48, 0.32, -0.05); ell(c, 0.2, 0.2, 0.62, s * 0.56, 0.12, 0.22); ell(c, 0.34, 0.06, 0.42, s * 0.58, 0.03, 0.5);
+      }
+      const mouth = []; for (let a = -70; a <= 70; a += 10) { const q = (a * Math.PI) / 180; mouth.push([Math.sin(q) * 0.41, 1.28, Math.cos(q) * 0.32]); }
+      tube(0x4a1616, mouth, 0.02); armsAndBlaster(c, 0.45, 1.1, 1.0, 0.62);
+    } else if (r.k === "cat") {
+      ell(c, 0.7, 1.0, 0.6, 0, 0.78, 0); ell(c, 0.62, 0.56, 0.56, 0, 1.47, 0.02);
+      const wh = r.spots ? 0x444444 : 0xf5f5f5;
+      for (const s of [-1, 1]) {
+        tube(c, [[s * 0.16, 0.38, 0], [s * 0.16, 0.06, 0.02]], 0.09); ell(r.paws || c, 0.2, 0.1, 0.26, s * 0.16, 0.05, 0.06);
+        cone(r.spots && s > 0 ? r.spots : c, 0.26, 0.22, s * 0.17, 1.76, 0, -s * 0.25);
+        ell(0x3a9a3a, 0.1, 0.12, 0.05, s * 0.12, 1.52, 0.27); ell(K, 0.04, 0.09, 0.03, s * 0.12, 1.52, 0.295);
+        tube(wh, [[s * 0.08, 1.41, 0.3], [s * 0.33, 1.44, 0.27]], 0.008); tube(wh, [[s * 0.08, 1.4, 0.3], [s * 0.32, 1.37, 0.27]], 0.008);
+      }
+      ell(0xf08a9a, 0.07, 0.05, 0.05, 0, 1.43, 0.3);
+      tube(c, [[0, 0.45, -0.26], [0, 0.35, -0.6], [0, 0.6, -0.85], [0.05, 0.95, -0.9]], 0.05);
+      if (r.spots) {
+        ell(r.spots, 0.22, 0.2, 0.08, 0.15, 0.95, 0.25); ell(r.spots, 0.2, 0.18, 0.08, -0.2, 0.62, 0.23); ell(r.spots, 0.08, 0.22, 0.24, 0.33, 0.8, -0.05);
+        ell(r.spots, 0.26, 0.24, 0.08, -0.1, 0.9, -0.28); ell(r.spots, 0.18, 0.16, 0.08, -0.15, 1.6, 0.22);
+      }
+      if (r.stripes) {
+        for (const y of [0.55, 0.72, 0.9, 1.05]) ring(r.stripes, 0.78, 0.5, 0.35, 0.3, y, 0.03);
+        for (const x of [-0.09, 0, 0.09]) box(r.stripes, 0.05, 0.03, 0.26, x, 1.745, -0.01);
+      }
+      armsAndBlaster(c, 0.3, 1.12, 0.95, 0.5);
+    } else {
+      const by = r.long ? 0.78 : 0.82, hy = r.long ? 1.6 : 1.55, leg = r.long ? 0.2 : 0.4, dark = r.saddle || 0x6e2c18;
+      ell(c, r.long ? 0.62 : 0.72, r.long ? 1.25 : 1.0, r.long ? 0.56 : 0.62, 0, by, 0); ell(c, 0.56, 0.54, 0.56, 0, hy, 0);
+      if (r.saddle) ell(r.saddle, 0.74, 0.8, 0.5, 0, 0.9, -0.1);
+      ell(r.saddle || c, 0.3, 0.24, 0.4, 0, hy - 0.08, 0.28); ell(K, 0.1, 0.08, 0.08, 0, hy - 0.03, 0.48);
+      for (const s of [-1, 1]) {
+        tube(c, [[s * 0.16, leg, 0], [s * 0.16, 0.06, 0.03]], 0.09); ell(c, 0.2, 0.1, 0.28, s * 0.16, 0.05, 0.08);
+        ell(K, 0.08, 0.09, 0.05, s * 0.12, hy + 0.06, 0.25);
+        if (r.long) ell(dark, 0.08, 0.42, 0.24, s * 0.3, hy - 0.1, 0, s * 0.2); else cone(dark, 0.32, 0.22, s * 0.16, hy + 0.36, -0.02, -s * 0.2);
+      }
+      if (r.long) tube(c, [[0, 0.4, -0.25], [0, 0.55, -0.6], [0, 0.75, -0.7]], 0.04);
+      else tube(c, [[0, 0.62, -0.28], [0, 0.45, -0.6], [0, 0.3, -0.75]], 0.08);
+      armsAndBlaster(c, 0.32, 1.15, 1.0, 0.5);
+    }
+    return BABYLON.Mesh.MergeMeshes(parts, true, true, undefined, false, true);
+  }
+  function dress() {
+    const pickIdx = XF.pick, crit = XF.mode === "critters", others = ROSTER.map((_, i) => i).filter((i) => i !== pickIdx).sort(() => Math.random() - 0.5);
+    players.forEach((p, i) => {
+      (p.xRoots || []).forEach((n) => n.setEnabled(!crit));
+      if (p.critter) p.critter.setEnabled(false);
+      p.critter = null; p.label = null;
+      if (!crit) return;
+      const r = ROSTER[i === 0 ? pickIdx : others[i - 1]];
+      p.cache = p.cache || {};
+      if (!p.cache[r.n]) {
+        const m = buildCritter(r); m.parent = p.node; shadows.addShadowCaster(m);
+        if (i === 0) m.layerMask = SELF; // hidden from your own first-person camera
+        p.cache[r.n] = m;
+      }
+      p.critter = p.cache[r.n]; p.critter.setEnabled(true); p.critter.position.y = 0; p.critter.rotation.set(0, 0, 0);
+      p.label = r.n; p.kind = r.k;
+    });
+  }
+  // Critter animation: hop or waddle while moving, idle sway, sink and flop when out. Also the gamepad picker.
+  scene.onBeforeRenderObservable.add(() => {
+    const dt = Math.min(engine.getDeltaTime() / 1000, 0.05), t = performance.now() / 1000;
+    players.forEach((p) => {
+      const m = p.critter; if (!m) return;
+      const pos = p.node.position, last = p.lastPos || pos, sp = Math.hypot(pos.x - last.x, pos.z - last.z) / Math.max(dt, 1e-3);
+      p.lastPos = pos.clone(); p.mv = (p.mv || 0) + ((sp > 0.5 && sp < 20 ? 1 : 0) - (p.mv || 0)) * Math.min(1, dt * 8);
+      if (!p.alive) { m.rotation.x += (-1.45 - m.rotation.x) * Math.min(1, dt * 9); m.position.y += (-0.35 - m.position.y) * Math.min(1, dt * 6); return; }
+      const frog = p.kind === "frog", ph = t * (frog ? 7 : 10) + p.id;
+      m.position.y = p.mv * Math.abs(Math.sin(ph)) * (frog ? 0.22 : 0.05);
+      m.rotation.z = p.mv * Math.sin(ph) * (frog ? 0.04 : 0.1) + (1 - p.mv) * Math.sin(t * 1.6 + p.id) * 0.035;
+      m.rotation.x = p.mv * 0.08;
+    });
+    const g = pad();
+    if (g && !overlay.hidden) {
+      const b = (k) => !!(g.buttons[k] && g.buttons[k].pressed), L = b(14), R = b(15), U = b(12) || b(13);
+      if (XF.mode === "critters" && L && !padWas.L) XF.setPick(XF.pick - 1);
+      if (XF.mode === "critters" && R && !padWas.R) XF.setPick(XF.pick + 1);
+      if (U && !padWas.U) XF.toggle();
+      padWas = { L, R, U };
+    }
   });
 
   function start() { if (actx && actx.state === "suspended") actx.resume(); reset(); }
