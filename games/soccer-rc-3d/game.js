@@ -14,9 +14,9 @@ import {
   raceArenaFocus,
   RACE_COLORS,
   RACE_NAMES,
-} from "./race-mode.js?v=20261006-soccerrc3d12r1";
+} from "./race-mode.js?v=20261006-soccerrc3d12r2";
 
-const CACHE = "20261006-soccerrc3d12r1";
+const CACHE = "20261006-soccerrc3d12r2";
 const HALF_X = 22;
 const HALF_Z = 14;
 const WALL_H = 5.5;
