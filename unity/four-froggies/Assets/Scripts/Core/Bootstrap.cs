@@ -46,7 +46,10 @@ public class Bootstrap : MonoBehaviour
         Mats.Init(litMat, unlitMat, fxMat, waterMat, glassMat);
         Sfx.Init();
         FX.Init();
+        Worlds.Init();
         Ranch.Build(terrain);
+        HouseWorld.Create();
+        if (Worlds.UnderwaterOn) UnderwaterWorld.Create();
         SpawnVehicles();
         gameObject.AddComponent<Game>();
     }

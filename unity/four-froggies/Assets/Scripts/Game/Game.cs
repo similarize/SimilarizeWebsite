@@ -13,6 +13,7 @@ public class Slot
     public CamRig rig;
     public ViewHud hud;
     public PIn last;
+    public WorldId world = WorldId.Ranch;
 }
 
 // Lobby (press A to claim a frog), 1-4 player split-screen or shared camera, input routing, mid-game joins.
@@ -75,8 +76,7 @@ public class Game : MonoBehaviour
         var g = new GameObject(name);
         Camera c = g.AddComponent<Camera>();
         c.depth = depth;
-        c.nearClipPlane = 0.2f;
-        c.farClipPlane = 650f;
+        Worlds.SetCamera(c, WorldId.Ranch);
         c.fieldOfView = 60f;
         c.clearFlags = CameraClearFlags.Skybox;
         return c;
@@ -138,6 +138,7 @@ public class Game : MonoBehaviour
             "Fly: Space up, Shift down.  Tank: click shell, right-click missile.  Wheel / Q / X zoom.  V view.  H help.  M sound.\n\n" +
             "<b>Touch (P1)</b>  left stick  |  drag the free area for camera (double-tap = reset)  |  A  |  FIRE  |  MSL  |  UP / DOWN  |  - / +  |  SND\n\n" +
             "Rally: figure-8 with a bridge, jumps, and a loop lane west of the garage (keep the throttle on).  Pond: boat gate course - start at gate 1.\n" +
+            "House: walk into the front door. Inside, A at a fish tank feeds it, the toy box starts fetch with Germy + Daisy, the cat bed starts hide-and-seek, A near Dad to chat.\n" +
             "Back / V switches Shared and Split view.  Start / H closes this.  B / Esc here leaves your seat.";
 
     void RefreshLobby()
@@ -475,7 +476,7 @@ public class Game : MonoBehaviour
         for (int i = 0; i < frogs.Count; i++)
         {
             if (frogs[i].vehicle != null) frogs[i].ExitVehicle();
-            frogs[i].Teleport(Ranch.FrogSpawn(i));
+            frogs[i].SendTo(WorldId.Ranch, Ranch.FrogSpawn(i), 0f);
         }
         foreach (var s in slots) MakeView(s);
         sharedInit = false;
@@ -498,7 +499,7 @@ public class Game : MonoBehaviour
     void ApplyLayout()
     {
         int n = slots.Count;
-        bool split = !shared && n > 1;
+        bool split = (!shared || MixedWorlds) && n > 1;
         bool portrait = Screen.height > Screen.width;
         for (int i = 0; i < n; i++)
         {
@@ -516,6 +517,7 @@ public class Game : MonoBehaviour
             s.hud.SetActive(split || n == 1);
         }
         sharedCam.enabled = !(split || n == 1);
+        if (n > 0) Worlds.SetCamera(sharedCam, frogs[slots[0].frog].world);
         sharedHud.SetActive(sharedCam.enabled);
         overview.enabled = split && n == 3;
         overview.rect = new Rect(0.5f, 0f, 0.5f, 0.5f);
@@ -604,10 +606,46 @@ public class Game : MonoBehaviour
         Cursor.lockState = CursorLockMode.None;
     }
 
+    // humans in different worlds can't share one camera: Shared view splits until they are together again
+    bool MixedWorlds
+    {
+        get
+        {
+            for (int i = 1; i < slots.Count; i++) if (frogs[slots[i].frog].world != frogs[slots[0].frog].world) return true;
+            return false;
+        }
+    }
+
+    void TrackWorlds()
+    {
+        bool relayout = false;
+        foreach (var s in slots)
+        {
+            Frog f = frogs[s.frog];
+            if (f.world == s.world) continue;
+            s.world = f.world;
+            relayout = true;
+            if (s.cam != null) Worlds.SetCamera(s.cam, f.world);
+            if (s.rig != null)
+            {
+                s.rig.Snap();
+                s.rig.SetYaw(f.transform.eulerAngles.y);
+                bool house = f.world == WorldId.House, under = f.world == WorldId.Underwater;
+                s.rig.minPitch = house ? 26f : under ? -40f : -5f;
+                s.rig.maxPitch = house ? 80f : 70f;
+                s.rig.pitch = house ? 38f : under ? 10f : 16f;
+                s.rig.ResetView(f.transform.eulerAngles.y);
+            }
+        }
+        if (relayout) ApplyLayout();
+        if (slots.Count > 0) Sfx.Music(Worlds.Mood(frogs[slots[0].frog].world));
+    }
+
     void LateUpdate()
     {
         if (state != State.Play) return;
         float dt = Time.deltaTime;
+        TrackWorlds();
         foreach (var s in slots)
             if (s.rig != null && s.cam.enabled) s.rig.Update(frogs[s.frog], s.last, dt);
         if (sharedCam.enabled) UpdateShared(dt);

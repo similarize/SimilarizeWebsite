@@ -11,6 +11,31 @@ public class Frog : MonoBehaviour
     public CharacterController cc;
     public FrogModel model;
     public Vehicle vehicle;
+    public WorldId world = WorldId.Ranch;
+    public float autoCool;        // after a doorway / world change, auto hotspots wait
+    public float spaceGravity = 1f;   // low-g worlds (Callisto) set this per frame
+    public Vehicle passengerOf;       // riding along (Starship) without driving
+
+    public void BoardAsPassenger(Vehicle v)
+    {
+        if (vehicle != null) ExitVehicle();
+        passengerOf = v;
+        cc.enabled = false;
+        transform.SetParent(v.seat, false);
+        transform.localPosition = Vector3.zero;
+        transform.localRotation = Quaternion.identity;
+        model.gameObject.SetActive(false);
+    }
+
+    public void LeavePassenger()
+    {
+        if (passengerOf == null) return;
+        passengerOf = null;
+        transform.SetParent(null, true);
+        transform.localScale = Vector3.one;
+        model.gameObject.SetActive(true);
+        cc.enabled = true;
+    }
     public string prompt = "";
     public string toast = "";
     public float toastT;
@@ -35,7 +60,7 @@ public class Frog : MonoBehaviour
     public const float Speed = 6.5f, SwimSpeed = 3.2f, HopV = 8.5f, Gravity = 22f;
 
     public Vector3 Center { get { return transform.position + Vector3.up * 0.7f; } }
-    public Vector3 FocusPoint { get { return vehicle != null ? vehicle.transform.position + Vector3.up * 1.2f : transform.position + Vector3.up * 0.9f; } }
+    public Vector3 FocusPoint { get { Vehicle v = vehicle != null ? vehicle : passengerOf; return v != null ? v.transform.position + Vector3.up * 1.2f : transform.position + Vector3.up * 0.9f; } }
     public float HSpeed { get { return vehicle != null ? vehicle.Speed : new Vector2(planar.x, planar.z).magnitude; } }
 
     public void Build(int index, Vector3 pos, float yawDeg)
@@ -76,6 +101,20 @@ public class Frog : MonoBehaviour
         if (vel.y < 3f) vel.y = 3f;
     }
 
+    // move to another world (or another spot in this one) facing yawDeg
+    public void SendTo(WorldId w, Vector3 p, float yawDeg)
+    {
+        if (vehicle != null) ExitVehicle();
+        LeavePassenger();
+        SetChute(false);
+        world = w;
+        Teleport(p);
+        yaw = yawDeg;
+        transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+        autoCool = 1.5f;
+        exitCool = 0.4f;
+    }
+
     public void Teleport(Vector3 p)
     {
         bool was = cc.enabled;
@@ -92,10 +131,16 @@ public class Frog : MonoBehaviour
         if (toastT > 0f) { toastT -= dt; if (toastT <= 0f) toast = ""; }
         if (!human) Think(dt);
         exitCool -= dt;
+        if (passengerOf != null)
+        {
+            prompt = "Riding along in the " + passengerOf.Title + (passengerOf.driver != null ? " - " + passengerOf.driver.nick + " is flying" : "");
+            input = new PIn();
+            return;
+        }
         if (vehicle != null)
         {
             prompt = vehicle.HelpLine;
-            if (input.use && exitCool <= 0f) ExitVehicle();
+            if (input.use && exitCool <= 0f && vehicle.CanExit(this)) ExitVehicle();
             else vehicle.Drive(input, camYaw, dt);
             model.Animate(0f, false, true, false, dt);
             input = new PIn();
@@ -107,22 +152,41 @@ public class Frog : MonoBehaviour
 
     void Walk(float dt)
     {
-        // nearest free vehicle
+        // nearest free vehicle, or a hotspot (door, tank, toy box, person...) if that is closer
         Vehicle near = Vehicle.Nearest(transform.position, this);
+        float hd;
+        Hotspot hs = Interact.Nearest(transform.position, this, out hd);
+        autoCool -= dt;
+        if (hs != null && hs.auto)
+        {
+            if (autoCool <= 0f) { autoCool = 1.5f; hs.act(this); return; }
+            hs = null;
+        }
+        if (hs != null && near != null && near.body != null && (near.body.ClosestPoint(transform.position) - transform.position).magnitude < hd) hs = null;
         prompt = "";
-        if (near != null)
+        if (hs != null) prompt = "A / E: " + hs.Label(this);
+        else if (near != null)
         {
             if (near.driver != null) prompt = near.Title + " - " + near.driver.nick + " is driving";
             else prompt = "A / E: " + near.EnterVerb;
         }
-        if (input.use && near != null && near.driver == null && exitCool <= 0f)
+        if (input.use && hs != null && exitCool <= 0f)
+        {
+            exitCool = 0.35f;
+            hs.act(this);
+            return;
+        }
+        if (input.use && hs == null && near != null && near.driver == null && exitCool <= 0f)
         {
             EnterVehicle(near);
             return;
         }
 
+        if (world == WorldId.Underwater) { Scuba(dt); return; }
+        spaceGravity = world == WorldId.Mars ? 0.45f : world == WorldId.Callisto ? 0.22f : 1f;
+        SetScuba(false);
         Vector3 p = transform.position;
-        swimming = Layout.InPond(p.x, p.z) && p.y < Layout.WaterY - 0.35f;
+        swimming = world == WorldId.Ranch && Layout.InPond(p.x, p.z) && p.y < Layout.WaterY - 0.35f;
         if (swimming && !wasSwim) { FX.Splash(p + Vector3.up * 0.5f, 14); if (human) Sfx.Play(Sfx.Splash, 0.9f); }
         wasSwim = swimming;
 
@@ -164,7 +228,7 @@ public class Frog : MonoBehaviour
                 vel.x = Mathf.MoveTowards(vel.x, 0f, 3f * dt);
                 vel.z = Mathf.MoveTowards(vel.z, 0f, 3f * dt);
             }
-            vel.y -= Gravity * dt;
+            vel.y -= Gravity * spaceGravity * dt;
             if (chute)
             {
                 if (vel.y < -4f) vel.y = Mathf.MoveTowards(vel.y, -4f, 40f * dt);
@@ -173,9 +237,53 @@ public class Frog : MonoBehaviour
         }
         if (swimming && chute) SetChute(false);
         cc.Move((planar + vel) * dt + VehiclePush(dt));
-        if (transform.position.y < -30f) Teleport(new Vector3(-6f + id * 3f, 2f, 40f));
+        if (transform.position.y < Worlds.KillY(world)) Worlds.Respawn(this);
         model.Animate(new Vector2(planar.x, planar.z).magnitude, !cc.isGrounded && !swimming, false, swimming, dt);
         if (chuteGo != null && chute) chuteGo.transform.localRotation = Quaternion.Euler(Mathf.Sin(Time.time * 2f) * 6f, 0f, Mathf.Sin(Time.time * 1.3f) * 8f);
+    }
+
+    // ---------- scuba (underwater world) ----------
+    GameObject scubaGo;
+    float bubbleT, surfaceT;
+    void SetScuba(bool on)
+    {
+        if (on && scubaGo == null)
+        {
+            scubaGo = new GameObject("Scuba");
+            scubaGo.transform.SetParent(model.transform, false);
+            Mats.Prim(PrimitiveType.Capsule, scubaGo.transform, new Vector3(0f, 0.75f, -0.42f), new Vector3(0.28f, 0.3f, 0.28f), Mats.Steel(new Color(0.95f, 0.8f, 0.1f)));
+            Mats.Prim(PrimitiveType.Cube, scubaGo.transform, new Vector3(0f, 1.15f, 0.42f), new Vector3(0.55f, 0.22f, 0.12f), Mats.Glass);
+            Mats.Prim(PrimitiveType.Cube, scubaGo.transform, new Vector3(0f, 1.15f, 0.36f), new Vector3(0.6f, 0.06f, 0.06f), Mats.Lit(Color.black));
+            for (int s = -1; s <= 1; s += 2) Mats.Prim(PrimitiveType.Cube, scubaGo.transform, new Vector3(0.12f * s, 0.15f, -0.45f), new Vector3(0.16f, 0.03f, 0.4f), Mats.Lit(new Color(0.1f, 0.3f, 0.9f)));
+            Mats.SetLayer(scubaGo, 9);
+        }
+        if (scubaGo != null && scubaGo.activeSelf != on) scubaGo.SetActive(on);
+    }
+
+    void Scuba(float dt)
+    {
+        SetScuba(true);
+        Vector3 p = transform.position;
+        Quaternion cy = Quaternion.Euler(0f, camYaw, 0f);
+        Vector3 wish = cy * new Vector3(input.move.x, 0f, input.move.y);
+        if (wish.sqrMagnitude > 1f) wish.Normalize();
+        float up = Mathf.Clamp(input.climb + (input.hopHeld ? 1f : 0f) - (input.downHeld ? 1f : 0f), -1f, 1f);
+        planar = Vector3.MoveTowards(planar, wish * 4.6f, 7f * dt);
+        float wantY = up * 3.4f + 0.22f;   // gentle buoyancy: drift up slowly with no input
+        vel.x = Mathf.MoveTowards(vel.x, 0f, 6f * dt); vel.z = Mathf.MoveTowards(vel.z, 0f, 6f * dt);
+        vel.y = Mathf.MoveTowards(vel.y, wantY, 5f * dt);
+        float top = Worlds.UnderO.y - 0.9f;
+        if (p.y > top && vel.y > 0f) vel.y = 0f;
+        if (wish.sqrMagnitude > 0.01f) yaw = Mathf.MoveTowardsAngle(yaw, Mathf.Atan2(wish.x, wish.z) * Mathf.Rad2Deg, 360f * dt);
+        transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+        cc.Move((planar + vel) * dt + VehiclePush(dt));
+        bubbleT -= dt;
+        if (bubbleT <= 0f) { bubbleT = Random.Range(0.35f, 0.9f) / (1f + planar.magnitude * 0.3f); FX.Bubble(transform.position + Vector3.up * 1.15f + transform.forward * 0.4f, Random.Range(2, 5)); }
+        // swim to the surface and keep rising -> climb out at the pond dock
+        if (p.y > top - 0.3f && up > 0.3f) surfaceT += dt; else surfaceT = 0f;
+        if (human && surfaceT > 0.3f && surfaceT - dt <= 0.3f) Toast("At the surface - keep rising to climb out at the dock", 1.6f);
+        if (surfaceT > 1.5f && UnderwaterWorld.I != null) { surfaceT = 0f; UnderwaterWorld.I.Surface(this); return; }
+        model.Animate(planar.magnitude, false, false, true, dt);
     }
 
     void SetChute(bool on)
@@ -269,6 +377,13 @@ public class Frog : MonoBehaviour
             spot = v.transform.position + side * (v.body.size.x * 0.5f + 1.4f) - Vector3.up * 0.6f;
             if (Physics.CheckCapsule(spot + Vector3.up * 0.5f, spot + Vector3.up * 1.0f, 0.42f, Vehicle.GroundMask, QueryTriggerInteraction.Ignore))
                 spot = v.transform.position - Vector3.up * 2.2f;
+        }
+        else if (v is Submarine)
+        {
+            Vector3 side = v.transform.right; side.y = 0f; side.Normalize();
+            spot = v.transform.position + side * 2.6f - Vector3.up * 0.4f;
+            if (Physics.CheckCapsule(spot + Vector3.up * 0.5f, spot + Vector3.up * 1.0f, 0.42f, Vehicle.GroundMask, QueryTriggerInteraction.Ignore))
+                spot = v.transform.position + Vector3.up * 2.2f;
         }
         else spot = v.ExitPoint();
         transform.rotation = Quaternion.Euler(0f, v.transform.eulerAngles.y, 0f);

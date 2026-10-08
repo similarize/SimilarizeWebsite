@@ -3,7 +3,7 @@ using UnityEngine;
 // One world-space particle system, fed with EmitParams for every effect (cheap on WebGL).
 public static class FX
 {
-    static ParticleSystem ps;
+    static ParticleSystem ps, bubbles;
 
     public static void Init()
     {
@@ -37,6 +37,47 @@ public static class FX
         rend.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         rend.receiveShadows = false;
         ps.Play();
+
+        // bubbles rise (negative gravity) in their own little system
+        var bgo = new GameObject("FX Bubbles");
+        bubbles = bgo.AddComponent<ParticleSystem>();
+        bubbles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        var bm = bubbles.main;
+        bm.loop = true; bm.playOnAwake = false; bm.simulationSpace = ParticleSystemSimulationSpace.World;
+        bm.maxParticles = 600; bm.gravityModifier = -0.12f; bm.startSpeed = 0f;
+        var bem = bubbles.emission; bem.enabled = false;
+        var bsh = bubbles.shape; bsh.enabled = false;
+        var bcol = bubbles.colorOverLifetime; bcol.enabled = true;
+        var bg = new Gradient();
+        bg.SetKeys(new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) }, new[] { new GradientAlphaKey(0.8f, 0f), new GradientAlphaKey(0.6f, 0.7f), new GradientAlphaKey(0f, 1f) });
+        bcol.color = bg;
+        var bn = bubbles.noise; bn.enabled = true; bn.strength = 0.4f; bn.frequency = 0.8f;
+        var br = bgo.GetComponent<ParticleSystemRenderer>();
+        br.sharedMaterial = Mats.Fx; br.renderMode = ParticleSystemRenderMode.Billboard;
+        br.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; br.receiveShadows = false;
+        bubbles.Play();
+    }
+
+    public static void Bubble(Vector3 p, int n)
+    {
+        if (bubbles == null) return;
+        for (int i = 0; i < n; i++)
+        {
+            var ep = new ParticleSystem.EmitParams();
+            ep.position = p + Random.insideUnitSphere * 0.15f;
+            ep.velocity = Vector3.up * Random.Range(0.6f, 1.4f) + Random.insideUnitSphere * 0.3f;
+            ep.startSize = Random.Range(0.06f, 0.18f);
+            ep.startLifetime = Random.Range(1.5f, 3f);
+            ep.startColor = new Color(0.85f, 0.95f, 1f, 0.8f);
+            bubbles.Emit(ep, 1);
+        }
+    }
+
+    // generic coloured puff (pickups, beacons)
+    public static void Sparkle(Vector3 p, Color c, int n)
+    {
+        if (ps == null) return;
+        for (int i = 0; i < n; i++) Emit(p, Random.insideUnitSphere * 3f + Vector3.up * 2f, Random.Range(0.15f, 0.35f), Random.Range(0.4f, 0.8f), c);
     }
 
     static void Emit(Vector3 p, Vector3 v, float size, float life, Color c)

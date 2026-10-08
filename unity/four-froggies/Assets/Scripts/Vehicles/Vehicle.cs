@@ -137,7 +137,7 @@ public abstract class Vehicle : MonoBehaviour
                 rb.rotation = Quaternion.Euler(0f, transform.eulerAngles.y, 0f);
             }
         }
-        if (rb.position.y < -40f || Mathf.Abs(rb.position.x) > Layout.Half + 20f || Mathf.Abs(rb.position.z) > Layout.Half + 20f)
+        if (OutOfWorld(rb.position))
         {
             rb.velocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
@@ -147,6 +147,18 @@ public abstract class Vehicle : MonoBehaviour
     }
 
     public Vector3 HomePos { get { return spawnPos; } }
+
+    // vehicles that live in another world (Curiosity on Mars...) set a centre + radius
+    public bool hasWorldBounds;
+    public Vector3 worldCenter;
+    public float worldRadius = 100f;
+    public virtual bool CanExit(Frog f) { return true; }
+
+    protected virtual bool OutOfWorld(Vector3 p)
+    {
+        if (hasWorldBounds) { Vector3 l = p - worldCenter; return l.y < -60f || new Vector2(l.x, l.z).magnitude > worldRadius; }
+        return p.y < -40f || Mathf.Abs(p.x) > Layout.Half + 20f || Mathf.Abs(p.z) > Layout.Half + 20f;
+    }
 
     public Vector3 ExitPoint()
     {

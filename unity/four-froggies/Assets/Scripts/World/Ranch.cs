@@ -291,14 +291,16 @@ public static class Ranch
             Ball(rp + new Vector3(-5f, 0f, 3.5f), Vector3.one * 1.2f, new Color(1f, 0.3f, 0.2f));
             Ball(rp + new Vector3(-5f, 0f, -3.5f), Vector3.one * 1.2f, new Color(1f, 0.3f, 0.2f));
         }
-        // underwater world: stubbed. A parked submarine + sign.
-        Vector3 sp = new Vector3(c.x - r.x + 13f, Layout.WaterY - 0.4f, dz - 7f);
+        // the submarine moored at the end of the dock: board it to dive into the underwater world
+        Vector3 sp = new Vector3(dx1 - 3f, Layout.WaterY - 0.4f, dz - 3.9f);
         Material subM = Mats.Shiny(Mats.Hex("#00a5ff"));
         Mats.Prim(PrimitiveType.Capsule, root, sp, new Vector3(2.4f, 3.6f, 2.4f), new Vector3(0f, 0f, 90f), subM, true);
         Mats.Prim(PrimitiveType.Cube, root, sp + new Vector3(0.5f, 1.4f, 0f), new Vector3(1.6f, 1.2f, 1.2f), Vector3.zero, subM, false);
         Mats.Prim(PrimitiveType.Sphere, root, sp + new Vector3(0.5f, 2.0f, 0f), new Vector3(1.1f, 0.6f, 0.9f), Vector3.zero, Mats.Glass, false);
         Cyl(sp + new Vector3(0.2f, 2.6f, 0f), new Vector3(0.12f, 0.6f, 0.12f), new Color(0.2f, 0.2f, 0.2f));
-        Sign(new Vector3(dx1 - 1f, 2.4f, dz + 1.7f), 270f, "UNDERWATER WORLD\n<size=30>coming soon</size>", new Color(0.05f, 0.3f, 0.55f), 7f, 2.2f);
+        Sign(new Vector3(dx1 - 1f, 2.4f, dz + 1.7f), 270f, Worlds.UnderwaterOn ? "SUBMARINE\n<size=28>board it to dive!</size>" : "UNDERWATER WORLD\n<size=30>coming soon</size>", new Color(0.05f, 0.3f, 0.55f), 7f, 2.2f);
+        var dive = Interact.Add(new Vector3(dx1 - 3f, 0.45f, dz - 0.8f), 3.2f, "board the Submarine (dive!)", f => UnderwaterWorld.I.Dive(f));
+        dive.enabled = f => f.world == WorldId.Ranch && UnderwaterWorld.I != null;
         B(new Vector3(dx1 - 1f, 1.1f, dz + 1.6f), new Vector3(0.15f, 1.6f, 0.15f), Wood, false);
     }
 

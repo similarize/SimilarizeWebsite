@@ -20,6 +20,13 @@ public struct PIn
     public bool lookHeld;     // a look finger / right stick is held (suppresses camera auto-follow)
     public bool camReset;     // R3 / 0: camera back behind, default pitch + zoom
     public bool phone;        // James's phone (stage E)
+    public bool hopHeld;      // A held (swim up)
+    public bool downHeld;     // B held (swim down)
+    public bool target;       // space: pick next target (D-pad right / T)
+    public bool targetPrev;   // D-pad left / Shift+T
+    public bool auto;         // space: auto-transfer (X / G)
+    public bool land;         // space: land (Y / F)
+    public bool warpUp, warpDown;   // space: RB / LB, C / Z
 }
 
 public static class Kb
@@ -47,8 +54,14 @@ public static class Kb
     public static bool SpaceDown() { return Key(k => k.spaceKey.wasPressedThisFrame, KeyCode.Space, true); }
     public static bool Space() { return Key(k => k.spaceKey.isPressed, KeyCode.Space, false); }
     public static bool Shift() { return Key(k => k.leftShiftKey.isPressed || k.leftCtrlKey.isPressed, KeyCode.LeftShift, false); }
-    public static bool EDown() { return Key(k => k.eKey.wasPressedThisFrame || k.fKey.wasPressedThisFrame, KeyCode.E, true); }
+    public static bool EDown() { return Key(k => k.eKey.wasPressedThisFrame, KeyCode.E, true); }
     public static bool ZeroDown() { return Key(k => k.digit0Key.wasPressedThisFrame, KeyCode.Alpha0, true); }
+    public static bool TDown() { return Key(k => k.tKey.wasPressedThisFrame, KeyCode.T, true); }
+    public static bool GDown() { return Key(k => k.gKey.wasPressedThisFrame, KeyCode.G, true); }
+    public static bool FDown() { return Key(k => k.fKey.wasPressedThisFrame || k.enterKey.wasPressedThisFrame, KeyCode.F, true); }
+    public static bool CDown() { return Key(k => k.cKey.wasPressedThisFrame, KeyCode.C, true); }
+    public static bool ZDown() { return Key(k => k.zKey.wasPressedThisFrame, KeyCode.Z, true); }
+    public static bool PDown() { return Key(k => k.pKey.wasPressedThisFrame, KeyCode.P, true); }
     public static bool MDown() { return Key(k => k.mKey.wasPressedThisFrame, KeyCode.M, true); }
     public static bool VDown() { return Key(k => k.vKey.wasPressedThisFrame, KeyCode.V, true); }
     public static bool HDown() { return Key(k => k.hKey.wasPressedThisFrame || k.f1Key.wasPressedThisFrame, KeyCode.H, true); }
@@ -130,6 +143,15 @@ public static class Pads
         Vector2 r = Dead(p.rightStick.ReadValue(), 0.14f);
         i.look = new Vector2(r.x, r.y * 0.7f) * r.magnitude * 160f * dt;
         i.lookHeld = r.sqrMagnitude > 0.0001f;
+        i.hopHeld = p.buttonSouth.isPressed;
+        i.downHeld = p.buttonEast.isPressed;
+        i.target = p.dpad.right.wasPressedThisFrame;
+        i.targetPrev = p.dpad.left.wasPressedThisFrame;
+        i.auto = p.buttonWest.wasPressedThisFrame;
+        i.land = p.buttonNorth.wasPressedThisFrame;
+        i.warpUp = p.rightShoulder.wasPressedThisFrame;
+        i.warpDown = p.leftShoulder.wasPressedThisFrame;
+        i.phone = p.leftShoulder.wasPressedThisFrame;
         i.camReset = p.rightStickButton.wasPressedThisFrame;
         i.hop = p.buttonSouth.wasPressedThisFrame;
         i.use = i.hop;
@@ -171,6 +193,15 @@ public static class Pads
         i.view = Kb.VDown();
         i.help = Kb.HDown();
         i.camReset = Kb.ZeroDown();
+        i.hopHeld = Kb.Space();
+        i.downHeld = Kb.Shift();
+        i.target = Kb.TDown() && !Kb.Shift();
+        i.targetPrev = Kb.TDown() && Kb.Shift();
+        i.auto = Kb.GDown();
+        i.land = Kb.FDown();
+        i.warpUp = Kb.CDown();
+        i.warpDown = Kb.ZDown();
+        i.phone = Kb.PDown();
         i.lookHeld = locked ? md.sqrMagnitude > 0.01f : Kb.MouseLeft();
         return i;
     }

@@ -9,7 +9,8 @@ public class CamRig
 {
     public Camera cam;
     public float yaw, pitch = 16f, zoomMul = 1f;
-    public float extraDistance;          // worlds / big mechs push the camera further out
+    public float extraDistance;
+    public float minPitch = -5f, maxPitch = 70f;          // worlds / big mechs push the camera further out
     float yawT, pitchT = 16f, followW, curDist = -1f, yawVel, pitchVel;
     Vector3 focus;
     float manualT = 10f, trauma;
@@ -25,18 +26,18 @@ public class CamRig
 
     public void ResetView(float behindYaw)
     {
-        yawT = behindYaw; pitchT = 16f; zoomMul = 1f; manualT = 10f;
+        yawT = behindYaw; pitchT = Mathf.Clamp(16f, minPitch, maxPitch); zoomMul = 1f; manualT = 10f;
     }
 
     public void Update(Frog f, PIn i, float dt)
     {
         if (f == null) return;
-        Vehicle v = f.vehicle;
+        Vehicle v = f.vehicle != null ? f.vehicle : f.passengerOf;
         bool tank = v != null && !float.IsNaN(v.AimYaw);
         if (!init) { yawT = yaw; pitchT = pitch; }
         if (i.camReset) ResetView(v != null ? v.transform.eulerAngles.y : f.transform.eulerAngles.y);
         if (!tank) yawT += i.look.x;
-        pitchT = Mathf.Clamp(pitchT - i.look.y * (tank ? 0.3f : 1f), -5f, 70f);
+        pitchT = Mathf.Clamp(pitchT - i.look.y * (tank ? 0.3f : 1f), minPitch, maxPitch);
         bool touching = i.lookHeld || i.look.sqrMagnitude > 0.0001f;
         if (touching) { manualT = 0f; followW = 0f; } else manualT += dt;
         zoomMul = Mathf.Clamp(zoomMul * (1f + i.zoom * 1.4f * dt), 0.45f, 3.2f);
