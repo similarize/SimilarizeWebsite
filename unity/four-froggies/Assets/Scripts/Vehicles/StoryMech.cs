@@ -2,8 +2,9 @@ using UnityEngine;
 
 // Giant "story mechs" from the 2.5D Four Froggies (games/four-froggies canon.js: 10 / 100 / 1000 / trillion-story
 // bands, colours a5b4fc / 67e8f9 / fcd34d / ffd700, omnigun FIRE). In the 2.5D canon each band belongs to one frog
-// (Bubbles 10, Jimmy 100, Rexy 1000, James trillion); per Bill's v2 request every froggy has all four here,
-// trimmed in the frog's colour, and only the owner can pilot their own.
+// (Bubbles 10, Jimmy 100, Rexy 1000, James trillion). Lineup here (Ben, Oct 2026; built in RanchLife, 11 mechs):
+// every froggy has a 10-story and a 100-story mech, James and Bubbles each have a 1000-story, and only James has
+// the trillion-story. Each is trimmed in the frog's colour, and only the owner can pilot their own.
 // Scale is stylised so it works with the camera and far plane: 10-story 12 m, 100-story 30 m, 1000-story 60 m,
 // trillion-story 160 m (the Starship stack is ~73 m). Kinematic: walks on the terrain with a slow heavy gait,
 // footstep shake + thud, camera pulled back with size. FIRE (RT / X / click / FIRE) = omnigun blast.

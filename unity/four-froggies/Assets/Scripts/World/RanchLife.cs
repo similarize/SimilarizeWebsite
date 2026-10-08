@@ -9,7 +9,7 @@ using UnityEngine.UI;
 //    drone pad, plus a live POV cam of the linked robot; Follow and Dance are extra orders added for Bill.
 //  * Ranch animals (unnamed): cows + horses in a fenced pasture, goats and chickens, and the 3D yard pens
 //    (Yard dog run, Backyard animal yard, Lizard terrace) - they wander, graze and bolt from frogs and vehicles.
-//  * The giant story mechs: every froggy's 10 / 100 / 1000 / trillion-story mech.
+//  * The giant story mechs: every froggy's 10 + 100-story, James's + Bubbles's 1000-story, James's trillion-story.
 public class RanchLife : MonoBehaviour
 {
     public static RanchLife I;
@@ -22,7 +22,7 @@ public class RanchLife : MonoBehaviour
         if (new Rect(Pasture.xMin - 4f, Pasture.yMin - 4f, Pasture.width + 8f, Pasture.height + 8f).Contains(new Vector2(x, z))) return true;
         if (x < -125f && z > -50f && z < 20f) return true;          // 10 / 100-story rows
         if (z < -145f && x < -30f) return true;                      // 1000-story row
-        if (z > 150f && x < -20f) return true;                       // trillion-story row
+        if (z > 150f && x < -20f) return true;                       // James's trillion-story mech
         return false;
     }
 
@@ -87,19 +87,24 @@ public class RanchLife : MonoBehaviour
         Pen(new Rect(-74f, -14f, 7f, 6f), "Lizard terrace", a => Animal.Lizard(a, new Color(0.45f, 0.6f, 0.25f)), 3, null, 0);
 
         // ---- the story mechs ----
-        // mech yard west of the house: 10-story and 100-story rows; 1000-story along the south; trillion-story to the north-west
+        // mech yard west of the house: every froggy's 10-story and 100-story rows; James's + Bubbles's 1000-story along
+        // the south; James's trillion-story alone to the north-west (Ben's lineup, 11 mechs; owner-only piloting)
         for (int f = 0; f < 4; f++)
         {
             float x10 = -160f + f * 9f, z10 = 6f;
             StoryMech.Build(f, 0, new Vector3(x10, Ranch.GY(x10, z10), z10), 90f);
             float x100 = -165f + f * 16f, z100 = -28f;
             StoryMech.Build(f, 1, new Vector3(x100, Ranch.GY(x100, z100), z100), 90f);
-            float x1k = -150f + f * 34f, z1k = -160f;
-            StoryMech.Build(f, 2, new Vector3(x1k, Ranch.GY(x1k, z1k), z1k), 0f);
-            float xt = -168f + f * 40f, zt = 176f;
-            StoryMech.Build(f, 3, new Vector3(xt, Ranch.GY(xt, zt), zt), 180f);
         }
-        Ranch.Sign(new Vector3(-128f, Ranch.GY(-128f, 14f) + 3f, 14f), 90f, "MECH YARD\n<size=22>every froggy has a 10 / 100 / 1000 / trillion-story mech</size>", new Color(0.25f, 0.25f, 0.45f), 8f, 2f);
+        int[] owners1k = { 0, 2 };   // James, Bubbles (Froggies.Names order: James, Jimmy, Bubbles, Rexy)
+        for (int i = 0; i < owners1k.Length; i++)
+        {
+            float x1k = -140f + i * 50f, z1k = -160f;
+            StoryMech.Build(owners1k[i], 2, new Vector3(x1k, Ranch.GY(x1k, z1k), z1k), 0f);
+        }
+        float xt = -108f, zt = 176f;
+        StoryMech.Build(0, 3, new Vector3(xt, Ranch.GY(xt, zt), zt), 180f);   // James only
+        Ranch.Sign(new Vector3(-128f, Ranch.GY(-128f, 14f) + 3f, 14f), 90f, "MECH YARD\n<size=22>every froggy: 10 + 100-story mech\nJames & Bubbles: 1000-story\nJames: trillion-story</size>", new Color(0.25f, 0.25f, 0.45f), 8f, 3.2f);
     }
 
     static void Post(Transform p, float x, float z, Color c)
