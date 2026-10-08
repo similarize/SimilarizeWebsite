@@ -1,0 +1,557 @@
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.UI;
+
+public class Slot
+{
+    public InputKind kind;
+    public Gamepad pad;
+    public int frog;          // index into Game.frogs / Froggies
+    public float joinTime;
+    public Camera cam;
+    public CamRig rig;
+    public ViewHud hud;
+    public PIn last;
+}
+
+// Lobby (press A to claim a frog), 1-4 player split-screen or shared camera, input routing, mid-game joins.
+[DefaultExecutionOrder(-50)]
+public class Game : MonoBehaviour
+{
+    public static Game I;
+    public enum State { Lobby, Play }
+    public State state = State.Lobby;
+
+    public readonly List<Frog> frogs = new List<Frog>();
+    public readonly List<Slot> slots = new List<Slot>();
+    public bool shared;            // Shared camera vs split-screen
+    bool help;
+
+    readonly HashSet<int> ghosts = new HashSet<int>();
+    readonly Dictionary<int, float> pressTimes = new Dictionary<int, float>();
+    readonly Dictionary<int, string> pressSig = new Dictionary<int, string>();
+
+    Camera overview, sharedCam;
+    float orbit, sharedYaw = 180f, sharedPitch = 48f, sharedZoom = 1f, sharedTrauma, autoStartT = -1f, lastViewToggle = -10f;
+    Vector3 sharedFocus;
+    bool sharedInit, mobileAutoJoined;
+
+    Canvas lobbyCanvas, hudCanvas;
+    Text lobbyStatus, viewText, joinText, helpText;
+    Image viewBar, playBtn, helpBg;
+    float lastTouchTime = -10f;
+    readonly Image[] cards = new Image[4];
+    readonly Text[] cardTexts = new Text[4];
+    ViewHud sharedHud;
+    Image sepV, sepH;
+    TouchControls touch;
+
+    void Awake()
+    {
+        I = this;
+        overview = MakeCam("OverviewCam", -10);
+        sharedCam = MakeCam("SharedCam", 1);
+        sharedCam.enabled = false;
+        touch = gameObject.AddComponent<TouchControls>();
+        for (int i = 0; i < 4; i++)
+        {
+            var go = new GameObject("Frog" + i);
+            Frog f = go.AddComponent<Frog>();
+            f.Build(i, Ranch.FrogSpawn(i), 0f);
+            frogs.Add(f);
+        }
+        BuildLobbyUI();
+        BuildHudUI();
+    }
+
+    static Camera MakeCam(string name, int depth)
+    {
+        var g = new GameObject(name);
+        Camera c = g.AddComponent<Camera>();
+        c.depth = depth;
+        c.nearClipPlane = 0.2f;
+        c.farClipPlane = 650f;
+        c.fieldOfView = 60f;
+        c.clearFlags = CameraClearFlags.Skybox;
+        return c;
+    }
+
+    // ---------------- UI ----------------
+    void BuildLobbyUI()
+    {
+        lobbyCanvas = UIK.MakeCanvas("Lobby", null, 100, true);
+        Transform r = lobbyCanvas.transform;
+        UIK.Img(r, null, new Color(0.03f, 0.08f, 0.05f, 0.55f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1200, 650));
+        UIK.Label(r, "FOUR FROGGIES", 70, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, 262), new Vector2(1100, 90), new Color(0.55f, 1f, 0.45f));
+        UIK.Label(r, "James's ranch: hop around, jump in any vehicle, blow stuff up. 1-4 players.", 24, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, 200), new Vector2(1100, 40), Color.white);
+        for (int i = 0; i < 4; i++)
+        {
+            Vector2 p = new Vector2(-420 + i * 280, 60);
+            cards[i] = UIK.Img(r, null, new Color(1, 1, 1, 0.12f), new Vector2(0.5f, 0.5f), p, new Vector2(255, 200));
+            UIK.Img(r, UIK.Circle, Froggies.Color(i), new Vector2(0.5f, 0.5f), p + new Vector2(0, 52), new Vector2(70, 70));
+            cardTexts[i] = UIK.Label(r, "", 24, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), p + new Vector2(0, -38), new Vector2(240, 110), Color.white);
+        }
+        viewBar = UIK.Img(r, null, new Color(0f, 0f, 0f, 0.45f), new Vector2(0.5f, 0.5f), new Vector2(0, -88), new Vector2(620, 44));
+        viewText = UIK.Label(viewBar.transform, "", 22, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(610, 42), Color.white);
+        playBtn = UIK.Img(r, null, new Color(0.2f, 0.65f, 0.25f, 0.85f), new Vector2(0.5f, 0.5f), new Vector2(0, -148), new Vector2(300, 56));
+        UIK.Label(playBtn.transform, "PLAY", 34, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(300, 56), Color.white);
+        lobbyStatus = UIK.Label(r, "", 24, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, -204), new Vector2(1150, 40), new Color(0.7f, 1f, 0.7f));
+        UIK.Label(r, "Each gamepad: press A to claim a frog (D-pad < > to switch, B to leave). Start / A again = play.\nKeyboard: Enter to join / play, Left-Right to switch.  Touch: tap a frog, then PLAY.  Back / V = Shared / Split view.",
+            19, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, -262), new Vector2(1180, 60), new Color(1, 1, 1, 0.85f));
+    }
+
+    void BuildHudUI()
+    {
+        hudCanvas = UIK.MakeCanvas("HUD", null, 50, true);
+        Transform r = hudCanvas.transform;
+        sharedHud = new ViewHud(r, "Shared");
+        sharedHud.SetActive(false);
+        sepV = UIK.Img(r, null, new Color(0f, 0f, 0f, 0.85f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(4f, 0f));
+        sepV.rectTransform.anchorMin = new Vector2(0.5f, 0f); sepV.rectTransform.anchorMax = new Vector2(0.5f, 1f);
+        sepV.rectTransform.sizeDelta = new Vector2(4f, 0f);
+        sepH = UIK.Img(r, null, new Color(0f, 0f, 0f, 0.85f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(0f, 4f));
+        sepH.rectTransform.anchorMin = new Vector2(0f, 0.5f); sepH.rectTransform.anchorMax = new Vector2(1f, 0.5f);
+        sepH.rectTransform.sizeDelta = new Vector2(0f, 4f);
+        joinText = UIK.Label(r, "Press A / Start to join", 28, TextAnchor.MiddleCenter, new Vector2(0.75f, 0.25f), Vector2.zero, new Vector2(500, 60), Color.white);
+        helpBg = UIK.Img(r, null, new Color(0f, 0f, 0f, 0.75f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1200, 590));
+        helpText = UIK.Label(r, "", 21, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1150, 560), Color.white);
+        helpBg.enabled = false;
+        helpText.text =
+            "<size=34><color=#8cff70>FOUR FROGGIES - CONTROLS</color></size>\n\n" +
+            "<b>Gamepad</b>  L-stick move / steer  |  R-stick camera  |  A hop, get in / out  |  D-pad up/down zoom\n" +
+            "Cars, Ripsaw, boat: RT gas, LT brake / reverse.   Helicopter + drone: RT up, LT down.\n" +
+            "Tank: L-stick drive, R-stick aims the turret, RT fires shells, RB / LT missiles.\n\n" +
+            "<b>Keyboard + mouse (P1)</b>  WASD move  |  mouse camera (click to lock)  |  Space hop  |  E get in / out\n" +
+            "Fly: Space up, Shift down.  Tank: click shell, right-click missile.  Wheel / Q / X zoom.  V view.  H help.\n\n" +
+            "<b>Touch (P1)</b>  left stick  |  drag right side for camera  |  A  |  FIRE  |  MSL  |  UP / DOWN  |  - / +\n\n" +
+            "Back / V switches Shared and Split view.  Start / H closes this.  B / Esc here leaves your seat.\n" +
+            "<color=#ffd84a>Coming soon: the underwater world (by the pond dock) and space (Starship pad).</color>";
+        helpText.enabled = false;
+        joinText.enabled = false;
+        hudCanvas.enabled = false;
+    }
+
+    void RefreshLobby()
+    {
+        for (int i = 0; i < 4; i++)
+        {
+            Slot s = SlotForFrog(i);
+            Color fc = Froggies.Color(i);
+            if (s != null)
+            {
+                int pn = slots.IndexOf(s) + 1;
+                string dev = s.kind == InputKind.Gamepad ? "Gamepad" : s.kind == InputKind.Keyboard ? "Keyboard" : "Touch";
+                cards[i].color = new Color(fc.r, fc.g, fc.b, 0.6f);
+                cardTexts[i].text = "<size=30>" + Froggies.Names[i] + "</size>\nP" + pn + "  " + dev + "\nREADY";
+            }
+            else
+            {
+                cards[i].color = new Color(1, 1, 1, 0.12f);
+                cardTexts[i].text = "<size=30>" + Froggies.Names[i] + "</size>\nopen seat\n(AI frog)";
+            }
+        }
+        viewText.text = shared ? "VIEW:   Split   <color=#ffd84a>[ SHARED ]</color>   <size=16>(Back / V / tap)</size>"
+                               : "VIEW:   <color=#ffd84a>[ SPLIT ]</color>   Shared   <size=16>(Back / V / tap)</size>";
+        if (slots.Count == 0) lobbyStatus.text = "Press A on a gamepad, Enter on the keyboard, or tap a frog to join";
+        else lobbyStatus.text = slots.Count + " player" + (slots.Count > 1 ? "s" : "") + " ready - Start / A again / Enter / PLAY to begin" + (autoStartT > 0f ? "  (auto in " + Mathf.CeilToInt(autoStartT) + ")" : "");
+    }
+
+    // ---------------- helpers ----------------
+    Slot SlotForFrog(int f) { foreach (var s in slots) if (s.frog == f) return s; return null; }
+    Slot FindSlot(InputKind k) { foreach (var s in slots) if (s.kind == k) return s; return null; }
+    Slot FindPad(Gamepad p) { foreach (var s in slots) if (s.kind == InputKind.Gamepad && s.pad == p) return s; return null; }
+
+    int FreeFrog(int from, int dir)
+    {
+        for (int k = 0; k < 4; k++)
+        {
+            int f = ((from + dir * k) % 4 + 4) % 4;
+            if (SlotForFrog(f) == null) return f;
+        }
+        return -1;
+    }
+
+    Slot Join(InputKind kind, Gamepad pad, int frog = -1)
+    {
+        if (slots.Count >= 4) return null;
+        if (frog < 0 || SlotForFrog(frog) != null) frog = FreeFrog(0, 1);
+        if (frog < 0) return null;
+        var s = new Slot { kind = kind, pad = pad, frog = frog, joinTime = Time.unscaledTime };
+        slots.Add(s);
+        frogs[frog].human = true;
+        if (state == State.Play) { MakeView(s); ApplyLayout(); }
+        else autoStartT = 30f;
+        Debug.Log("Join P" + slots.Count + " " + kind + (pad != null ? " " + pad.displayName + " #" + pad.deviceId : "") + " -> " + Froggies.Names[frog]);
+        return s;
+    }
+
+    void Leave(Slot s)
+    {
+        if (s == null) return;
+        Frog f = frogs[s.frog];
+        if (f.vehicle != null) f.ExitVehicle();
+        f.human = false;
+        if (s.cam != null) Destroy(s.cam.gameObject);
+        if (s.hud != null) Destroy(s.hud.panel.gameObject);
+        slots.Remove(s);
+        if (slots.Count == 0) autoStartT = -1f;
+        if (state == State.Play) ApplyLayout();
+    }
+
+    void Cycle(Slot s, int dir)
+    {
+        if (s == null) return;
+        int f = FreeFrog(s.frog + dir, dir);
+        if (f < 0) return;
+        frogs[s.frog].human = false;
+        s.frog = f;
+        frogs[f].human = true;
+    }
+
+    void ToggleView()
+    {
+        if (Time.unscaledTime - lastViewToggle < 0.3f) return;   // duplicate pads report the same press
+        lastViewToggle = Time.unscaledTime;
+        shared = !shared;
+        if (state == State.Play) ApplyLayout();
+    }
+
+    // A pad press is a ghost if another, already-joined pad reported an identical press within 150 ms.
+    bool IsGhostPress(Gamepad pad)
+    {
+        float now = Time.unscaledTime;
+        string sig = Pads.Signature(pad);
+        bool ghost = false;
+        foreach (Gamepad other in Gamepad.all)
+        {
+            if (other == pad) continue;
+            float t;
+            string os;
+            if (pressTimes.TryGetValue(other.deviceId, out t) && now - t < 0.15f && FindPad(other) != null
+                && pressSig.TryGetValue(other.deviceId, out os) && os == sig) ghost = true;
+        }
+        pressTimes[pad.deviceId] = now;
+        pressSig[pad.deviceId] = sig;
+        if (ghost) ghosts.Add(pad.deviceId); else ghosts.Remove(pad.deviceId);
+        return ghost;
+    }
+
+    public static void Shake(Vector3 p, float power)
+    {
+        if (I == null) return;
+        foreach (var s in I.slots)
+        {
+            if (s.rig == null) continue;
+            float d = (I.frogs[s.frog].FocusPoint - p).magnitude;
+            s.rig.AddShake(power * Mathf.Clamp01(1f - d / 45f) * 0.9f);
+        }
+        float sd = (I.sharedFocus - p).magnitude;
+        I.sharedTrauma = Mathf.Min(1f, I.sharedTrauma + power * Mathf.Clamp01(1f - sd / 70f) * 0.6f);
+    }
+
+    // ---------------- main loop ----------------
+    void Update()
+    {
+        float dt = Time.deltaTime;
+        touch.active = state == State.Play && FindSlot(InputKind.Touch) != null && !help;
+        if (state == State.Lobby) UpdateLobby(dt);
+        else UpdatePlay(dt);
+    }
+
+    void UpdateLobby(float dt)
+    {
+        lobbyCanvas.enabled = true;
+        hudCanvas.enabled = false;
+        overview.enabled = true;
+        overview.rect = new Rect(0, 0, 1, 1);
+        float now = Time.unscaledTime;
+
+        // keyboard
+        Slot ks = FindSlot(InputKind.Keyboard);
+        if (Kb.EnterDown())
+        {
+            if (ks == null) Join(InputKind.Keyboard, null);
+            else if (now - ks.joinTime > 0.3f) { StartPlay(); return; }
+        }
+        if (Kb.EscDown()) Leave(ks);
+        if (Kb.VDown()) ToggleView();
+        ks = FindSlot(InputKind.Keyboard);
+        if (ks != null)
+        {
+            Keyboard k = Keyboard.current;
+            if (k != null && (k.leftArrowKey.wasPressedThisFrame)) Cycle(ks, -1);
+            if (k != null && (k.rightArrowKey.wasPressedThisFrame)) Cycle(ks, 1);
+        }
+
+        // gamepads
+        foreach (Gamepad pad in Gamepad.all)
+        {
+            Slot ps = FindPad(pad);
+            bool g = ghosts.Contains(pad.deviceId);
+            if (ps != null && !g)
+            {
+                if (pad.buttonEast.wasPressedThisFrame) { Leave(ps); continue; }
+                if (pad.dpad.left.wasPressedThisFrame) Cycle(ps, -1);
+                if (pad.dpad.right.wasPressedThisFrame) Cycle(ps, 1);
+            }
+            if (pad.selectButton.wasPressedThisFrame && !g) ToggleView();
+            if (!pad.buttonSouth.wasPressedThisFrame && !pad.startButton.wasPressedThisFrame) continue;
+            if (IsGhostPress(pad) && ps == null) continue;
+            if (ps == null) Join(InputKind.Gamepad, pad);
+            else if (now - ps.joinTime > 0.4f) { StartPlay(); return; }
+        }
+
+        // touch
+        if (Application.isMobilePlatform && !mobileAutoJoined && FindSlot(InputKind.Touch) == null && slots.Count == 0)
+        {
+            mobileAutoJoined = true;
+            Join(InputKind.Touch, null);
+        }
+        foreach (Vector2 pos in Kb.TouchesBegan())
+        {
+            lastTouchTime = now;
+            if (Hit(viewBar, pos)) { ToggleView(); continue; }
+            if (Hit(playBtn, pos))
+            {
+                if (FindSlot(InputKind.Touch) == null) Join(InputKind.Touch, null);
+                StartPlay(); return;
+            }
+            for (int i = 0; i < 4; i++)
+                if (Hit(cards[i], pos))
+                {
+                    Slot ts = FindSlot(InputKind.Touch);
+                    if (ts == null) Join(InputKind.Touch, null, i);
+                    else if (SlotForFrog(i) == null) { frogs[ts.frog].human = false; ts.frog = i; frogs[i].human = true; }
+                }
+        }
+        // mouse clicks on the lobby (desktop without a touch screen)
+        if (Kb.MouseLeftDown() && Kb.TouchCount() == 0 && now - lastTouchTime > 1f)
+        {
+            Vector2 mp = Mouse.current != null ? Mouse.current.position.ReadValue() : (Vector2)Input.mousePosition;
+            if (Hit(viewBar, mp)) ToggleView();
+            else if (Hit(playBtn, mp)) { if (FindSlot(InputKind.Keyboard) == null) Join(InputKind.Keyboard, null); StartPlay(); return; }
+            else for (int i = 0; i < 4; i++)
+                    if (Hit(cards[i], mp))
+                    {
+                        Slot k2 = FindSlot(InputKind.Keyboard);
+                        if (k2 == null) Join(InputKind.Keyboard, null, i);
+                        else if (SlotForFrog(i) == null) { frogs[k2.frog].human = false; k2.frog = i; frogs[i].human = true; }
+                    }
+        }
+
+        if (slots.Count > 0 && autoStartT > 0f)
+        {
+            autoStartT -= dt;
+            if (autoStartT <= 0f) { StartPlay(); return; }
+        }
+        orbit += dt * 5f;
+        float a = orbit * Mathf.Deg2Rad;
+        Vector3 c = new Vector3(-10f, 0f, 10f);
+        overview.transform.position = c + new Vector3(Mathf.Sin(a) * 85f, 38f, Mathf.Cos(a) * 85f);
+        overview.transform.LookAt(c + Vector3.up * 3f);
+        RefreshLobby();
+    }
+
+    static bool Hit(Image img, Vector2 screenPos)
+    {
+        return img != null && img.gameObject.activeInHierarchy && RectTransformUtility.RectangleContainsScreenPoint(img.rectTransform, screenPos, null);
+    }
+
+    void StartPlay()
+    {
+        if (slots.Count == 0) return;
+        state = State.Play;
+        lobbyCanvas.enabled = false;
+        hudCanvas.enabled = true;
+        autoStartT = -1f;
+        if (slots.Count < 2) shared = false;
+        for (int i = 0; i < frogs.Count; i++)
+        {
+            if (frogs[i].vehicle != null) frogs[i].ExitVehicle();
+            frogs[i].Teleport(Ranch.FrogSpawn(i));
+        }
+        foreach (var s in slots) MakeView(s);
+        sharedInit = false;
+        ApplyLayout();
+        if (FindSlot(InputKind.Keyboard) != null) Cursor.lockState = CursorLockMode.Locked;
+    }
+
+    void MakeView(Slot s)
+    {
+        if (s.cam == null)
+        {
+            s.cam = MakeCam("Cam P" + (slots.IndexOf(s) + 1), 2 + slots.IndexOf(s));
+            s.rig = new CamRig(s.cam);
+            s.rig.yaw = 0f;   // behind the frog, looking out towards the track
+        }
+        if (s.hud == null) s.hud = new ViewHud(hudCanvas.transform, "P" + (slots.IndexOf(s) + 1));
+        s.rig.Snap();
+    }
+
+    void ApplyLayout()
+    {
+        int n = slots.Count;
+        bool split = !shared && n > 1;
+        bool portrait = Screen.height > Screen.width;
+        for (int i = 0; i < n; i++)
+        {
+            Slot s = slots[i];
+            if (s.cam == null) MakeView(s);
+            Rect r;
+            if (n == 1) r = new Rect(0, 0, 1, 1);
+            else if (n == 2) r = portrait ? (i == 0 ? new Rect(0, 0.5f, 1, 0.5f) : new Rect(0, 0, 1, 0.5f)) : (i == 0 ? new Rect(0, 0, 0.5f, 1) : new Rect(0.5f, 0, 0.5f, 1));
+            else r = new Rect((i % 2) * 0.5f, i < 2 ? 0.5f : 0f, 0.5f, 0.5f);
+            s.cam.rect = r;
+            s.cam.depth = 2 + i;
+            s.cam.enabled = split || n == 1;
+            s.cam.fieldOfView = n == 2 && !portrait ? 70f : 60f;
+            s.hud.SetRect(r);
+            s.hud.SetActive(split || n == 1);
+        }
+        sharedCam.enabled = !(split || n == 1);
+        sharedHud.SetActive(sharedCam.enabled);
+        overview.enabled = split && n == 3;
+        overview.rect = new Rect(0.5f, 0f, 0.5f, 0.5f);
+        joinText.enabled = split && n == 3;
+        sepV.enabled = split && (n >= 3 || (n == 2 && !portrait));
+        sepH.enabled = split && (n >= 3 || (n == 2 && portrait));
+
+        // performance: fewer shadows the more views we draw (Tesla browser friendly)
+        int views = split ? n + (n == 3 ? 1 : 0) : 1;
+        if (views >= 3) QualitySettings.shadows = ShadowQuality.Disable;
+        else
+        {
+            QualitySettings.shadows = ShadowQuality.All;
+            QualitySettings.shadowDistance = views == 2 ? 30f : 45f;
+        }
+        Debug.Log("Layout: " + n + " players, " + (split ? "split" : n == 1 ? "single" : "shared"));
+    }
+
+    void UpdatePlay(float dt)
+    {
+        float now = Time.unscaledTime;
+        bool viewPressed = false, helpPressed = false;
+
+        // mid-game joins: an unbound pad presses A / Start, Enter on the keyboard, a tap on a touch screen
+        foreach (Gamepad pad in Gamepad.all)
+        {
+            if (FindPad(pad) != null) continue;
+            if (!pad.buttonSouth.wasPressedThisFrame && !pad.startButton.wasPressedThisFrame) continue;
+            if (IsGhostPress(pad)) continue;
+            Join(InputKind.Gamepad, pad);
+        }
+        if (FindSlot(InputKind.Keyboard) == null && Kb.EnterDown()) Join(InputKind.Keyboard, null);
+        if (FindSlot(InputKind.Touch) == null && Kb.TouchesBegan().Count > 0 && Application.isMobilePlatform) Join(InputKind.Touch, null);
+
+        for (int k = slots.Count - 1; k >= 0; k--)
+        {
+            Slot s = slots[k];
+            PIn i;
+            switch (s.kind)
+            {
+                case InputKind.Gamepad:
+                    if (s.pad == null || !s.pad.added) { i = new PIn(); break; }
+                    if (s.pad.buttonSouth.wasPressedThisFrame || s.pad.startButton.wasPressedThisFrame) IsGhostPress(s.pad);
+                    i = Pads.Read(s.pad, dt);
+                    if (help && s.pad.buttonEast.wasPressedThisFrame) { help = false; Leave(s); continue; }
+                    break;
+                case InputKind.Keyboard:
+                    if (Kb.MouseLeftDown() && Cursor.lockState != CursorLockMode.Locked && !help) Cursor.lockState = CursorLockMode.Locked;
+                    i = Pads.ReadKeyboard(dt);
+                    if (help && Kb.EscDown()) { help = false; Leave(s); continue; }
+                    break;
+                default:
+                    i = touch.Read();
+                    break;
+            }
+            if (i.view) viewPressed = true;
+            if (i.help) helpPressed = true;
+            if (help) i = new PIn();
+            s.last = i;
+            Frog f = frogs[s.frog];
+            float camYaw = sharedCam.enabled ? sharedYaw : (s.rig != null ? s.rig.yaw : 0f);
+            f.SetInput(i, camYaw);
+        }
+        if (viewPressed) ToggleView();
+        if (helpPressed) { help = !help; if (help) Cursor.lockState = CursorLockMode.None; }
+        helpText.enabled = help;
+        helpBg.enabled = help;
+        if (state == State.Play && slots.Count == 0) EnterLobby();
+    }
+
+    void EnterLobby()
+    {
+        state = State.Lobby;
+        foreach (var f in frogs) f.human = false;
+        sharedCam.enabled = false;
+        sharedHud.SetActive(false);
+        QualitySettings.shadows = ShadowQuality.All;
+        QualitySettings.shadowDistance = 45f;
+        Cursor.lockState = CursorLockMode.None;
+    }
+
+    void LateUpdate()
+    {
+        if (state != State.Play) return;
+        float dt = Time.deltaTime;
+        foreach (var s in slots)
+            if (s.rig != null && s.cam.enabled) s.rig.Update(frogs[s.frog], s.last, dt);
+        if (sharedCam.enabled) UpdateShared(dt);
+        if (overview.enabled)
+        {
+            orbit += dt * 5f;
+            float a = orbit * Mathf.Deg2Rad;
+            Vector3 c = new Vector3(-10f, 0f, 10f);
+            overview.transform.position = c + new Vector3(Mathf.Sin(a) * 90f, 55f, Mathf.Cos(a) * 90f);
+            overview.transform.LookAt(c);
+        }
+        for (int k = 0; k < slots.Count; k++)
+        {
+            Slot s = slots[k];
+            if (s.hud == null) continue;
+            if (s.cam.enabled) s.hud.Tick(s.cam, frogs[s.frog], "P" + (k + 1), frogs, null);
+            string c = "";
+            if (s.kind == InputKind.Keyboard && Cursor.lockState != CursorLockMode.Locked && !help) c = "<size=22>Click to use the mouse for the camera</size>";
+            s.hud.SetCenter(c);
+        }
+        if (sharedCam.enabled)
+        {
+            var lines = new List<string>();
+            for (int k = 0; k < slots.Count; k++)
+            {
+                Frog f = frogs[slots[k].frog];
+                lines.Add("<color=#" + ColorUtility.ToHtmlStringRGB(f.color) + ">P" + (k + 1) + " " + f.nick + "</color>  " + (f.vehicle != null ? f.vehicle.Title : "") + (f.prompt.Length > 0 && f.vehicle == null ? "  " + f.prompt : ""));
+            }
+            sharedHud.Tick(sharedCam, null, "", frogs, string.Join("\n", lines.ToArray()));
+        }
+    }
+
+    void UpdateShared(float dt)
+    {
+        Vector3 sum = Vector3.zero;
+        int n = 0;
+        float look = 0f, zoom = 0f, pitchIn = 0f;
+        foreach (var s in slots)
+        {
+            sum += frogs[s.frog].FocusPoint; n++;
+            look += s.last.look.x; zoom += s.last.zoom; pitchIn += s.last.look.y;
+        }
+        if (n == 0) return;
+        Vector3 c = sum / n;
+        float spread = 0f;
+        foreach (var s in slots) spread = Mathf.Max(spread, (frogs[s.frog].FocusPoint - c).magnitude);
+        sharedYaw += look;
+        sharedPitch = Mathf.Clamp(sharedPitch - pitchIn * 0.5f, 20f, 80f);
+        sharedZoom = Mathf.Clamp(sharedZoom * (1f + zoom * 1.2f * dt), 0.5f, 2.5f);
+        float dist = Mathf.Clamp(spread * 1.5f + 14f, 14f, 120f) * sharedZoom;
+        if (!sharedInit) { sharedFocus = c; sharedInit = true; }
+        sharedFocus = Vector3.Lerp(sharedFocus, c, Mathf.Min(1f, dt * 4f));
+        Quaternion rot = Quaternion.Euler(sharedPitch, sharedYaw, 0f);
+        sharedTrauma = Mathf.MoveTowards(sharedTrauma, 0f, dt * 1.5f);
+        Vector3 shake = Random.insideUnitSphere * sharedTrauma * sharedTrauma * 0.8f;
+        sharedCam.transform.position = sharedFocus + rot * new Vector3(0f, 0f, -dist) + shake;
+        sharedCam.transform.rotation = rot;
+        sharedCam.fieldOfView = 55f;
+    }
+}
