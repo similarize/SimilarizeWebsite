@@ -11,12 +11,13 @@
    ff3dtouch1: 3D phone joystick drives/walks again; pinch ignores the joystick thumb. Cache: 20261007-ff3dtouch1
    ff3daudio1: shared arcade audio (3D SFX + engine hum, 2.5D SFX). Cache: 20261008-ff3daudio1
    loop1: 3D track loop is a corkscrew (inlet/outlet side by side). FF3D_CACHE: 20261008-loop1
-   space1: 3D space fixes (launch rumble, Deorbit, nose-first flight, Star Trek scale). FF3D_CACHE: 20261008-space1 */
+   space1: 3D space fixes (launch rumble, Deorbit, nose-first flight, Star Trek scale). FF3D_CACHE: 20261008-space1
+   space2: Deorbit = free flight; separate Land button (Earth/Mars/Callisto). FF3D_CACHE: 20261008-space2 */
 (function () {
   "use strict";
 
   var CACHE = "20261008-ff3daudio1";
-  var FF3D_CACHE = "20261008-space1";
+  var FF3D_CACHE = "20261008-space2";
   var FROG_ORDER = ["james", "jimmy", "bubbles", "rexy"];
   var FROG_NAME = { james: "James", jimmy: "Jimmy", bubbles: "Bubbles", rexy: "Rexy" };
 
