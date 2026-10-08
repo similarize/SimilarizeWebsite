@@ -1,3 +1,14 @@
+# What's new (ff3d110) — ff3dsplit1 (split-screen)
+
+- **View: Shared / Split.** Split gives every local human with a frog their own camera: 2 players side by side (top/bottom when the screen is portrait), 3–4 players in quadrants (an empty 4th quadrant says "Press A / Start to join"). Default is Split whenever 2+ humans have frogs; Shared (the old party-framing camera) is one toggle away.
+- **Toggle:** the "View" pill at top-left (shows only with 2+ players), any pad's **Back/View** button, or key **V**. Lobby: "3D view: Split / Shared" under the cards, handed over as `&view=split|shared`. The choice is remembered (localStorage `ff3d.view`).
+- Player 1's viewport uses the normal follow camera (garage/house/phone/vehicle logic intact). Players 2–4 get the same follow rules (distance, height, zoom clamps, vehicles swing the camera behind, on foot only the right stick turns it, D-pad zooms), and in split their on-foot stick walks relative to their own camera.
+- Each viewport is drawn with `setViewport`/`setScissor` and its own aspect. Per-viewport name/colour label and off-screen arrows pointing to the other players.
+- Performance in split: shadows off, pixel ratio ×0.88 (2P) / ×0.75 (3–4P), floor 0.6; restored when leaving split.
+- Split is ranch-only; space/mars/underwater, travel, dad/launch cinematics and Quest VR keep the shared camera. Mid-game joins re-split on the next frame.
+- Testing aid: `&splitdemo=N` adds AI frogs as extra viewports (view only).
+- Cache: `?v=20261007-ff3dsplit1` · asset `index-ff3d110.js` (ff3d109 left in place)
+
 # What's new (ff3d109) — ff3dmp1 (couch multiplayer)
 
 - The entrance hands off EVERY couch pad seat to 3D (`&pads=james.0,jimmy.1,…`), not just player 1. `party-lobby.js` merges them into the seat map, so 2–4 pads keep their froggies.
