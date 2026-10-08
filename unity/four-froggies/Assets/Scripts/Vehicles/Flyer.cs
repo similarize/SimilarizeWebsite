@@ -12,30 +12,48 @@ public class Flyer : Vehicle
     public readonly List<Vector3> rotorAxes = new List<Vector3>();
     public Transform tailRotor;
     float spool, yaw, pitchVis, rollVis;
+    // return-to-home: abandoned in the air -> fly back to the original roof pad and land there
+    public bool returning;
+    float homeYaw;
 
-    public override string HelpLine
-    {
-        get
-        {
-            return isDrone ? "L-stick fly (camera-relative) | RT/Space up | LT/Shift down | A get out"
-                           : "L-stick fly + turn | RT/Space up | LT/Shift down | A get out";
-        }
-    }
 
     public void InitFlyer(float mass, Vector3 center, Vector3 size)
     {
         flyer = true;
+        engineKind = isDrone ? 3 : 2;
         SetupBody(mass, center, size, new Vector3(0f, center.y - size.y * 0.3f, 0f));
         rb.useGravity = false;
         rb.freezeRotation = true;
         rb.drag = 0f;
         yaw = transform.eulerAngles.y;
+        homeYaw = yaw;
     }
 
     public override void OnEnter()
     {
         base.OnEnter();
         yaw = transform.eulerAngles.y;
+        returning = false;
+    }
+
+    public override void OnExit()
+    {
+        base.OnExit();
+        float h;
+        NearGround(out h);
+        // landed anywhere -> it stays put; left in the air -> autopilot home
+        returning = h > 1.2f;
+    }
+
+    public float AltitudeAboveGround { get { float h; NearGround(out h); return h; } }
+
+    public override string HelpLine
+    {
+        get
+        {
+            return isDrone ? "L-stick fly (camera-relative) | RT/Space up | LT/Shift down | A get out (in the air: parachute, it flies home)"
+                           : "L-stick fly + turn | RT/Space up | LT/Shift down | A get out (in the air: parachute, it flies home)";
+        }
     }
 
     bool NearGround(out float h)
@@ -51,13 +69,52 @@ public class Flyer : Vehicle
     {
         base.FixedUpdate();
         float dt = Time.fixedDeltaTime;
-        bool on = driver != null;
+        if (driver != null) returning = false;
+        bool on = driver != null || returning;
         spool = Mathf.MoveTowards(spool, on ? 1f : 0f, dt * (on ? 0.8f : 0.35f));
         float h;
         NearGround(out h);
         Vector3 v = rb.velocity;
 
-        if (on && spool > 0.6f)
+        if (returning)
+        {
+            // autopilot: climb to a safe cruise height, fly over the pad, settle straight down, land, rotors off
+            spool = Mathf.Max(spool, 0.7f);
+            Vector3 pos = rb.position, home = spawnPos;
+            Vector3 to = home - pos; to.y = 0f;
+            float d = to.magnitude;
+            Vector3 wishH;
+            float wishV;
+            if (d > 2.5f)
+            {
+                float cruise = Mathf.Max(home.y + 12f, Ranch.GY(pos.x, pos.z) + 14f);
+                wishV = Mathf.Clamp((cruise - pos.y) * 0.8f, -4f, 6f);
+                float sp = Mathf.Min(11f, d * 0.6f + 1f);
+                if (pos.y < cruise - 6f && d > 10f) sp *= 0.35f;   // climb first when low
+                wishH = to / d * sp;
+                yaw = Mathf.MoveTowardsAngle(yaw, Mathf.Atan2(to.x, to.z) * Mathf.Rad2Deg, 70f * dt);
+            }
+            else
+            {
+                wishH = to * 1.5f;
+                wishV = h > 2f ? -3f : -1.1f;
+                yaw = Mathf.MoveTowardsAngle(yaw, homeYaw, 60f * dt);
+                if (h < 0.3f && d < 1.2f)
+                {
+                    returning = false;
+                    wishV = 0f;
+                    rb.velocity = Vector3.zero;
+                }
+            }
+            if (returning)
+            {
+                Vector3 hv = Vector3.MoveTowards(new Vector3(v.x, 0f, v.z), wishH, 8f * dt);
+                float vy = Mathf.MoveTowards(v.y, wishV, 10f * dt);
+                if (h < 0.3f && vy < 0f) vy = 0f;
+                rb.velocity = new Vector3(hv.x, vy, hv.z);
+            }
+        }
+        else if (on && spool > 0.6f)
         {
             Vector3 wishH;
             if (isDrone)

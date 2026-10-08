@@ -16,6 +16,9 @@ public abstract class Vehicle : MonoBehaviour
     public BoxCollider body;
     public float camDistance = 11f, camHeight = 2.5f;
     public bool flyer;
+    public int engineKind;   // 0 car, 1 tracks, 2 rotor, 3 drone, 4 boat, 5 mech (footsteps)
+    AudioSource engine;
+    float stepT;
 
     protected PIn inp;
     protected float camYawIn;
@@ -83,13 +86,47 @@ public abstract class Vehicle : MonoBehaviour
     public virtual void OnEnter() { if (rb != null) rb.WakeUp(); }
     public virtual void OnExit() { inp = new PIn(); }
 
+    protected void EngineSound(float dt)
+    {
+        bool heard = driver != null && driver.human;
+        Flyer fl = this as Flyer;
+        if (fl != null && fl.returning) heard = true;
+        float spd = Speed;
+        if (engineKind == 5)
+        {
+            if (heard && spd > 0.8f)
+            {
+                stepT -= dt;
+                if (stepT <= 0f) { stepT = Mathf.Clamp(1.4f / spd, 0.3f, 0.7f); Sfx.Play(Sfx.Step, 0.55f, Random.Range(0.9f, 1.05f)); }
+            }
+            return;
+        }
+        if (engine == null)
+        {
+            if (!heard) return;
+            AudioClip c = engineKind == 1 ? Sfx.EngineTank : engineKind == 2 ? Sfx.Rotor : engineKind == 3 ? Sfx.DroneWhine : engineKind == 4 ? Sfx.BoatMotor : Sfx.EngineCar;
+            if (c == null) return;
+            engine = Sfx.Loop(gameObject, c);
+            engine.Play();
+        }
+        float target = heard ? (fl != null && fl.returning && driver == null ? 0.12f : 0.32f) : 0f;
+        engine.volume = Mathf.MoveTowards(engine.volume, target, dt * 0.8f);
+        float load = Mathf.Clamp01(Mathf.Abs(inp.gas - inp.brake) + Mathf.Abs(inp.move.y) + Mathf.Abs(inp.climb));
+        engine.pitch = Mathf.Lerp(engine.pitch, 0.75f + spd / 28f + load * 0.15f, dt * 3f);
+        if (engine.volume <= 0.001f && engine.isPlaying) engine.Pause();
+        else if (engine.volume > 0.001f && !engine.isPlaying) engine.UnPause();
+    }
+
     protected virtual void FixedUpdate()
     {
+        EngineSound(Time.fixedDeltaTime);
         if (driver == null) inp = new PIn();
         // self-righting when flipped and slow
         if (!flyer)
         {
-            if (Vector3.Dot(transform.up, Vector3.up) < 0.35f && rb.velocity.magnitude < 3f) flipT += Time.fixedDeltaTime;
+            bool loop = false;
+            foreach (Bounds b in RallyTrack.LoopZones) if (b.Contains(rb.position)) loop = true;
+            if (!loop && Vector3.Dot(transform.up, Vector3.up) < 0.35f && rb.velocity.magnitude < 3f) flipT += Time.fixedDeltaTime;
             else flipT = 0f;
             if (flipT > 1.6f)
             {
@@ -108,6 +145,8 @@ public abstract class Vehicle : MonoBehaviour
             rb.rotation = spawnRot;
         }
     }
+
+    public Vector3 HomePos { get { return spawnPos; } }
 
     public Vector3 ExitPoint()
     {

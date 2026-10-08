@@ -84,6 +84,7 @@ public static class Boom
     public static void At(Vector3 p, float radius, float power)
     {
         FX.Boom(p, power);
+        Sfx.PlayAt(Sfx.Boom, p, Mathf.Clamp(power, 0.5f, 1f), 140f, Random.Range(0.85f, 1.1f));
         var lg = new GameObject("BoomLight");
         lg.transform.position = p + Vector3.up;
         var l = lg.AddComponent<Light>();

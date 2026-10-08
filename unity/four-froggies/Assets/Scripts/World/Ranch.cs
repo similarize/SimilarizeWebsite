@@ -58,12 +58,14 @@ public static class Ranch
         Trees();
         MeshMerge.Merge(root, true);
         Props();
+        PondCourse.Create();
     }
 
     // ---------------- house ----------------
     static void Window(Vector3 p, bool alongX)
     {
-        Vector3 s = alongX ? new Vector3(2.2f, 1.7f, 0.12f) : new Vector3(0.12f, 1.7f, 2.2f);
+        // glass sits 4 cm proud of the wall (no coplanar back face with the wall = no shimmer)
+        Vector3 s = alongX ? new Vector3(2.2f, 1.7f, 0.06f) : new Vector3(0.06f, 1.7f, 2.2f);
         BM(p, s, Mats.Glass, false);
         Vector3 f = alongX ? new Vector3(2.5f, 0.12f, 0.16f) : new Vector3(0.16f, 0.12f, 2.5f);
         B(p + Vector3.up * 0.9f, f, Trim, false);
@@ -77,10 +79,11 @@ public static class Ranch
         float x0 = c.x - s.x * 0.5f, x1 = c.x + s.x * 0.5f, z0 = c.y - s.y * 0.5f, z1 = c.y + s.y * 0.5f;
         // shell (solid, walkable roof)
         B(new Vector3(c.x, H * 0.25f, c.y), new Vector3(s.x, H * 0.5f, s.y), Cream);
-        B(new Vector3(c.x, H * 0.75f, c.y), new Vector3(s.x - 0.02f, H * 0.5f, s.y - 0.02f), new Color(0.78f, 0.82f, 0.86f));
+        B(new Vector3(c.x, H * 0.75f - 0.15f, c.y), new Vector3(s.x - 0.02f, H * 0.5f - 0.3f, s.y - 0.02f), new Color(0.78f, 0.82f, 0.86f));
         B(new Vector3(c.x, 0.4f, c.y), new Vector3(s.x + 0.2f, 0.8f, s.y + 0.2f), Stone, false);
         B(new Vector3(c.x, H * 0.5f, c.y), new Vector3(s.x + 0.3f, 0.3f, s.y + 0.3f), Trim, false);
-        B(new Vector3(c.x, H - 0.1f, c.y), new Vector3(s.x + 0.4f, 0.2f, s.y + 0.4f), RoofC, false);
+        // roof slab: top at H + 0.1 is the walk surface (solid collider); nothing else is coplanar with it
+        B(new Vector3(c.x, H - 0.15f, c.y), new Vector3(s.x + 0.4f, 0.5f, s.y + 0.4f), RoofC, true);
         // parapet (gap on the east side where the ramp lands)
         float ph = 0.8f, py = H + ph * 0.5f;
         B(new Vector3(c.x, py, z0), new Vector3(s.x, ph, 0.4f), Trim);
@@ -95,15 +98,15 @@ public static class Ranch
             bool door = Mathf.Abs(x - c.x) < 3f;
             foreach (float y in new[] { 2.4f, 6.8f })
             {
-                if (!(door && y < 4f)) Window(new Vector3(x, y, z1 + 0.06f), true);
-                Window(new Vector3(x, y, z0 - 0.06f), true);
+                if (!(door && y < 4f)) Window(new Vector3(x, y, z1 + 0.07f), true);
+                Window(new Vector3(x, y, z0 - 0.07f), true);
             }
         }
         for (float z = z0 + 4f; z < z1 - 2f; z += 5f)
             foreach (float y in new[] { 2.4f, 6.8f })
             {
-                Window(new Vector3(x0 - 0.06f, y, z), false);
-                if (z < 0f) Window(new Vector3(x1 + 0.06f, y, z), false);
+                Window(new Vector3(x0 - 0.07f, y, z), false);
+                if (z < 0f) Window(new Vector3(x1 + 0.07f, y, z), false);
             }
         // front door
         B(new Vector3(c.x, 1.6f, z1 + 0.08f), new Vector3(2.8f, 3.2f, 0.12f), new Color(0.35f, 0.22f, 0.12f), false);
@@ -134,7 +137,7 @@ public static class Ranch
         float len = Mathf.Sqrt((rz1 - rz0) * (rz1 - rz0) + H * H), ang = Mathf.Atan2(H, rz1 - rz0) * Mathf.Rad2Deg;
         B(new Vector3(rx, H * 0.5f - 0.2f, (rz0 + rz1) * 0.5f), new Vector3(4f, 0.4f, len), Concrete, true, new Vector3(-ang, 0f, 0f));
         B(new Vector3(rx + 2.05f, H * 0.5f + 0.75f, (rz0 + rz1) * 0.5f), new Vector3(0.12f, 0.12f, len), Trim, true, new Vector3(-ang, 0f, 0f));
-        B(new Vector3(rx, H - 0.2f, (rz1 + gapB) * 0.5f), new Vector3(4f, 0.4f, gapB - rz1), Concrete);   // landing
+        B(new Vector3(rx, H - 0.08f, (rz1 + gapB) * 0.5f), new Vector3(4f, 0.4f, gapB - rz1), Concrete);   // landing (2 cm above the roof slab top)
         B(new Vector3(rx + 2.05f, H + 0.5f, (rz1 + gapB) * 0.5f), new Vector3(0.12f, 1f, gapB - rz1), Trim);
         for (float z = rz0 + 3f; z < rz1; z += 6f)
         {
@@ -144,24 +147,30 @@ public static class Ranch
         // roof pads
         RoofPad(new Vector3(-52f, H, -6f), 6f, new Color(1f, 0.82f, 0.1f), true);
         RoofPad(new Vector3(-30f, H, -6f), 4.5f, new Color(0.2f, 0.9f, 0.45f), false);
-        B(new Vector3(c.x + 8f, H + 1.2f, c.y + 10f), new Vector3(2f, 2.4f, 2f), Stone);    // chimney
+        B(new Vector3(c.x + 8f, H + 1.3f, c.y + 10f), new Vector3(2f, 2.4f, 2f), Stone);    // chimney
     }
 
+    // Pads are stacked 3 cm layers ABOVE the roof slab top (H + 0.1): ring top +0.13, pad top +0.16, paint top +0.19.
+    // Earlier they sat inside / flush with the slab, which is what made the roof shimmer.
+    public const float PadTop = 0.19f;
     static void RoofPad(Vector3 p, float r, Color ring, bool heli)
     {
-        Cyl(p + Vector3.up * 0.03f, new Vector3(r * 2f, 0.03f, r * 2f), ring);
-        Cyl(p + Vector3.up * 0.05f, new Vector3(r * 1.8f, 0.03f, r * 1.8f), new Color(0.18f, 0.19f, 0.21f));
+        float y0 = p.y + 0.1f;
+        Vector3 b = new Vector3(p.x, y0, p.z);
+        Cyl(b + Vector3.up * 0.015f, new Vector3(r * 2f, 0.015f, r * 2f), ring);
+        Cyl(b + Vector3.up * 0.045f, new Vector3(r * 1.8f, 0.015f, r * 1.8f), new Color(0.18f, 0.19f, 0.21f));
         Color w = Color.white;
+        float my = 0.075f;
         if (heli)
         {
-            B(p + new Vector3(-1.2f, 0.09f, 0f), new Vector3(0.5f, 0.02f, 3.4f), w, false);
-            B(p + new Vector3(1.2f, 0.09f, 0f), new Vector3(0.5f, 0.02f, 3.4f), w, false);
-            B(p + new Vector3(0f, 0.09f, 0f), new Vector3(2.0f, 0.02f, 0.5f), w, false);
+            B(b + new Vector3(-1.2f, my, 0f), new Vector3(0.5f, 0.03f, 3.4f), w, false);
+            B(b + new Vector3(1.2f, my, 0f), new Vector3(0.5f, 0.03f, 3.4f), w, false);
+            B(b + new Vector3(0f, my, 0f), new Vector3(1.9f, 0.03f, 0.5f), w, false);
         }
         else
         {
             for (int k = 0; k < 4; k++)
-                B(p + Quaternion.Euler(0f, 45f + k * 90f, 0f) * new Vector3(0f, 0.09f, 1.6f), new Vector3(0.4f, 0.02f, 1.4f), w, false, new Vector3(0f, 45f + k * 90f, 0f));
+                B(b + Quaternion.Euler(0f, 45f + k * 90f, 0f) * new Vector3(0f, my, 1.6f), new Vector3(0.4f, 0.03f, 1.4f), w, false, new Vector3(0f, 45f + k * 90f, 0f));
         }
     }
 
@@ -228,13 +237,15 @@ public static class Ranch
             for (int s = -1; s <= 1; s += 2) Cyl(new Vector3(x, -1f, dz + 1.4f * s), new Vector3(0.3f, 1.4f, 0.3f), Color.Lerp(Wood, Color.black, 0.3f));
         // reeds + lily pads
         var rnd = new System.Random(11);
-        for (int i = 0; i < 70; i++)
+        for (int i = 0; i < 130; i++)
         {
             float a = (float)rnd.NextDouble() * Mathf.PI * 2f;
             bool pad = i % 3 == 0;
             float q = pad ? 0.75f + (float)rnd.NextDouble() * 0.25f : 1.02f + (float)rnd.NextDouble() * 0.1f;
             float x = c.x + Mathf.Cos(a) * r.x * q, z = c.y + Mathf.Sin(a) * r.y * q;
-            if (Mathf.Abs(z - dz) < 5f && x < c.x) continue;
+            if (Mathf.Abs(z - dz) < 6f && x < c.x) continue;
+            int wi;
+            if (Layout.IslandK(x, z, out wi) > 0f) continue;
             if (pad) Cyl(new Vector3(x, Layout.WaterY + 0.03f, z), new Vector3(1.1f, 0.01f, 1.1f), new Color(0.25f, 0.55f, 0.2f));
             else
             {
@@ -242,6 +253,43 @@ public static class Ranch
                 for (int k = 0; k < 3; k++)
                     Cyl(new Vector3(x + k * 0.25f, gy + 0.9f, z + (k % 2) * 0.2f), new Vector3(0.08f, 1f + k * 0.2f, 0.08f), new Color(0.35f, 0.5f, 0.2f));
             }
+        }
+        // islands: sandy beach ring, palms, a hut with a flag on the big one
+        var ir = new System.Random(23);
+        for (int k = 0; k < Layout.Islands.Length; k++)
+        {
+            Vector3 isl = Layout.Islands[k];
+            float gy = GY(isl.x, isl.y);
+            int palms = k == 0 ? 4 : 2;
+            for (int i = 0; i < palms; i++)
+            {
+                float a = (float)ir.NextDouble() * 6.28f, d = (float)ir.NextDouble() * isl.z * 0.45f;
+                float x = isl.x + Mathf.Cos(a) * d, z = isl.y + Mathf.Sin(a) * d, py = GY(x, z);
+                float lean = 8f + (float)ir.NextDouble() * 10f;
+                Cyl(new Vector3(x, py + 2.6f, z), new Vector3(0.35f, 2.6f, 0.35f), new Color(0.5f, 0.38f, 0.24f), true, new Vector3(lean, a * 57f, 0f));
+                Vector3 top = new Vector3(x, py + 5.1f, z) + Quaternion.Euler(0f, a * 57f, 0f) * new Vector3(0f, 0f, Mathf.Sin(lean * Mathf.Deg2Rad) * 5f);
+                for (int f = 0; f < 5; f++)
+                    B(top + Quaternion.Euler(0f, f * 72f, 0f) * new Vector3(0f, -0.3f, 1.3f), new Vector3(0.6f, 0.08f, 2.8f), new Color(0.2f, 0.55f, 0.2f), false, new Vector3(18f, f * 72f, 0f));
+                Ball(top + Vector3.down * 0.2f, Vector3.one * 0.45f, new Color(0.45f, 0.3f, 0.15f));
+            }
+            if (k == 0)
+            {
+                Vector3 h = new Vector3(isl.x + 2.5f, gy, isl.y - 2f);
+                B(h + Vector3.up * 1.2f, new Vector3(3.2f, 2.4f, 3.2f), Wood);
+                B(h + Vector3.up * 2.65f, new Vector3(4f, 0.5f, 4f), new Color(0.75f, 0.65f, 0.3f), false, new Vector3(0f, 45f, 0f));
+                Cyl(h + new Vector3(-2f, 3f, 2f), new Vector3(0.1f, 3f, 0.1f), Color.white, true);
+                B(h + new Vector3(-1.4f, 5.4f, 2f), new Vector3(1.2f, 0.7f, 0.04f), Froggies.Color(0), false);
+            }
+        }
+        // boat jump ramp out in open water (faces east)
+        {
+            Vector3 rp = new Vector3(c.x - 22f, Layout.WaterY, c.y + 18f);
+            float ang = 15f, len = 9f;
+            B(rp + new Vector3(0f, len * 0.5f * Mathf.Sin(ang * Mathf.Deg2Rad) - 0.6f, 0f), new Vector3(6f, 0.4f, len), new Color(0.95f, 0.75f, 0.2f), true, new Vector3(-ang, 90f, 0f));
+            for (int sd = -1; sd <= 1; sd += 2)
+                B(rp + new Vector3(len * 0.35f, 0.3f, 3.3f * sd), new Vector3(0.6f, 2.6f, 0.6f), new Color(0.3f, 0.3f, 0.32f), false);
+            Ball(rp + new Vector3(-5f, 0f, 3.5f), Vector3.one * 1.2f, new Color(1f, 0.3f, 0.2f));
+            Ball(rp + new Vector3(-5f, 0f, -3.5f), Vector3.one * 1.2f, new Color(1f, 0.3f, 0.2f));
         }
         // underwater world: stubbed. A parked submarine + sign.
         Vector3 sp = new Vector3(c.x - r.x + 13f, Layout.WaterY - 0.4f, dz - 7f);
@@ -254,43 +302,31 @@ public static class Ranch
         B(new Vector3(dx1 - 1f, 1.1f, dz + 1.6f), new Vector3(0.15f, 1.6f, 0.15f), Wood, false);
     }
 
-    // ---------------- rally track ----------------
+    // ---------------- rally track (see RallyTrack.cs) ----------------
     static void Track()
     {
+        RallyTrack.Build(root);
         Color[] flagC = { new Color(1f, 0.25f, 0.2f), new Color(1f, 0.9f, 0.2f), new Color(0.2f, 0.6f, 1f), Color.white };
-        const int n = 28;
-        for (int i = 0; i < n; i++)
+        // flags around the outside of both lobes
+        for (int i = 0; i < 24; i++)
         {
-            float t = i * Mathf.PI * 2f / n;
-            Vector3 p = Layout.OvalPoint(t);
-            Vector3 outward = new Vector3(Mathf.Cos(t) / Layout.TrackR.x, 0f, Mathf.Sin(t) / Layout.TrackR.y).normalized;
-            Vector3 fp = p + outward * (Layout.TrackW * 0.5f + 2.5f);
-            if ((new Vector2(fp.x, fp.z) - Layout.Spur[Layout.Spur.Length - 1]).magnitude < 12f) continue;
+            float t = i * Mathf.PI * 2f / 24f;
+            float a = Mathf.Abs(Mathf.Atan2(Mathf.Sin(t), Mathf.Cos(t)));
+            if (a < 1.3f || Mathf.Abs(a - Mathf.PI) < 0.5f) continue;   // not on the bridge or the crossing
+            Vector3 p = Layout.TrackPoint(t);
+            Vector3 q = Layout.TrackPoint(t + 0.01f);
+            Vector3 f = (q - p).normalized;
+            Vector3 right = Vector3.Cross(Vector3.up, f);
+            Vector3 lobe = new Vector3(Layout.TrackC.x + Mathf.Sign(p.x - Layout.TrackC.x) * Layout.TrackAx * 0.55f, 0f, Layout.TrackC.y);
+            Vector3 outward = Vector3.Dot(right, p - lobe) > 0f ? right : -right;
+            Vector3 fp = p + outward * (Layout.TrackW * 0.5f + 7f);
             float gy = GY(fp.x, fp.z);
             Cyl(new Vector3(fp.x, gy + 1.5f, fp.z), new Vector3(0.12f, 1.5f, 0.12f), new Color(0.9f, 0.9f, 0.9f), true);
-            B(new Vector3(fp.x, gy + 2.6f, fp.z) + Vector3.Cross(outward, Vector3.up) * 0.6f, new Vector3(1.2f, 0.7f, 0.04f), flagC[i % flagC.Length], false,
-              new Vector3(0f, Mathf.Atan2(outward.x, outward.z) * Mathf.Rad2Deg + 90f, 0f));
-            // tyre stacks on the inside
-            Vector3 ip = p - outward * (Layout.TrackW * 0.5f + 1.5f);
-            float iy = GY(ip.x, ip.z);
-            for (int k = 0; k < 2; k++) Cyl(new Vector3(ip.x, iy + 0.25f + k * 0.5f, ip.z), new Vector3(1.2f, 0.25f, 1.2f), k == 0 ? new Color(0.1f, 0.1f, 0.1f) : new Color(0.9f, 0.9f, 0.9f), k == 0);
+            B(new Vector3(fp.x, gy + 2.6f, fp.z) + f * 0.6f, new Vector3(1.2f, 0.7f, 0.04f), flagC[i % flagC.Length], false,
+              new Vector3(0f, Mathf.Atan2(f.x, f.z) * Mathf.Rad2Deg + 90f, 0f));
         }
-        // start / finish arch on the east side
-        Vector3 a = Layout.OvalPoint(0f);
-        float ay = GY(a.x, a.z);
-        for (int s = -1; s <= 1; s += 2) B(new Vector3(a.x, ay + 3f, a.z + (Layout.TrackW * 0.5f + 1f) * s), new Vector3(0.6f, 6f, 0.6f), new Color(0.15f, 0.15f, 0.15f));
-        for (int k = 0; k < 8; k++)
-            B(new Vector3(a.x, ay + 6.2f, a.z - Layout.TrackW * 0.5f - 0.75f + k * (Layout.TrackW + 1.5f) / 8f + 0.9f), new Vector3(0.3f, 0.8f, (Layout.TrackW + 1.5f) / 8f), k % 2 == 0 ? Color.white : Color.black, false);
-        // two dirt jumps on the north straight
-        foreach (float tt in new[] { Mathf.PI * 0.42f, Mathf.PI * 0.62f })
-        {
-            Vector3 p = Layout.OvalPoint(tt);
-            Vector3 tan = new Vector3(-Mathf.Sin(tt) * Layout.TrackR.x, 0f, Mathf.Cos(tt) * Layout.TrackR.y).normalized;
-            float yaw = Mathf.Atan2(-tan.x, -tan.z) * Mathf.Rad2Deg;   // ramps face clockwise travel
-            float gy = GY(p.x, p.z);
-            B(new Vector3(p.x, gy + 0.6f, p.z), new Vector3(8f, 0.4f, 7f), new Color(0.5f, 0.4f, 0.28f), true, new Vector3(-14f, yaw, 0f));
-        }
-        Sign(new Vector3(Layout.Spur[2].x - 9f, GY(Layout.Spur[2].x - 9f, Layout.Spur[2].y) + 3f, Layout.Spur[2].y), 200f, "RALLY TRACK", new Color(0.55f, 0.25f, 0.1f), 8f, 1.6f);
+        Vector2 sp = Layout.Spur[2];
+        Sign(new Vector3(sp.x - 2f, GY(sp.x - 2f, sp.y + 9f) + 3f, sp.y + 9f), 200f, "RALLY TRACK\n<size=24>figure 8 - bridge - jumps</size>", new Color(0.55f, 0.25f, 0.1f), 8f, 2.2f);
     }
 
     // ---------------- Starship (space world stubbed) ----------------
@@ -392,7 +428,7 @@ public static class Ranch
         var parent = new GameObject("Props").transform;
         Color crate = new Color(0.68f, 0.5f, 0.28f);
         // crate pyramid in the track infield (tank target range)
-        Vector3 c = new Vector3(Layout.TrackC.x, 0f, Layout.TrackC.y);
+        Vector3 c = new Vector3(Layout.TrackC.x + 45f, 0f, Layout.TrackC.y);   // inside the east lobe
         float gy = GY(c.x, c.y);
         int idx = 0;
         for (int row = 0; row < 4; row++)
@@ -413,7 +449,7 @@ public static class Ranch
         // hay bales near the pond path
         for (int i = 0; i < 6; i++)
         {
-            float x = 12f + i * 2.4f, z = -24f;
+            float x = 12f + i * 2.4f, z = -2f;
             var hb = Prop(parent, PrimitiveType.Cylinder, new Vector3(x, GY(x, z) + 0.8f, z), new Vector3(1.6f, 0.7f, 1.6f), new Color(0.85f, 0.72f, 0.35f), 80f);
             hb.transform.rotation = Quaternion.Euler(0f, 0f, 90f);
         }

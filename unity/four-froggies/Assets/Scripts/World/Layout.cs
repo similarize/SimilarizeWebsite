@@ -25,17 +25,23 @@ public static class Layout
     public static readonly Vector2 PoolC = new Vector2(-42f, -30f);
     public static readonly Vector2 PoolSize = new Vector2(16f, 9f);
 
-    // Pond (ellipse) with a dock on the west shore
-    public static readonly Vector2 PondC = new Vector2(64f, -64f);
-    public static readonly Vector2 PondR = new Vector2(42f, 30f);
+    // Pond (ellipse) with a dock on the west shore, three islands, a boat ramp and a buoy gate course
+    public static readonly Vector2 PondC = new Vector2(70f, -80f);
+    public static readonly Vector2 PondR = new Vector2(80f, 56f);
+    // islands: x, z, radius (inside the pond)
+    public static readonly Vector3[] Islands = { new Vector3(88f, -70f, 10f), new Vector3(118f, -98f, 6.5f), new Vector3(46f, -108f, 5.5f) };
 
-    // Rally oval + a dirt spur from the garage
+    // Figure-eight dirt rally track (crossover bridge at the centre) + loop-the-loop stunt lane + spur from the garage
     public static readonly Vector2 TrackC = new Vector2(40f, 112f);
-    public static readonly Vector2 TrackR = new Vector2(58f, 32f);
+    public const float TrackAx = 75f, TrackAz = 34f;   // lobe half-length (x), lobe half-height (z)
     public const float TrackW = 12f;
-    public static readonly Vector2[] Spur = { new Vector2(-2f, 31f), new Vector2(4f, 46f), new Vector2(16f, 62f), new Vector2(30f, 74f), new Vector2(40f, 80f) };
+    public const float BridgeH = 7.5f;                 // deck height above ground at the crossover
+    public static readonly Vector2[] Spur = { new Vector2(-2f, 31f), new Vector2(10f, 46f), new Vector2(35f, 60f), new Vector2(65f, 70f), new Vector2(93f, 77f) };
+    // loop-the-loop runway (along +x)
+    public static readonly Vector2 LoopC = new Vector2(-70f, 64f);
+    public const float LoopR = 7.5f, LoopW = 6f, LoopShift = 7.5f, LoopRun = 34f;
 
-    // Starship on its Stage Zero pad (space world is stubbed)
+    // Starship on its Stage Zero pad
     public static readonly Vector2 PadC = new Vector2(-105f, -55f);
 
     public static float PondQ(float x, float z)
@@ -46,10 +52,34 @@ public static class Layout
 
     public static bool InPond(float x, float z) { return PondQ(x, z) < 1.08f; }
 
-    public static Vector3 OvalPoint(float t)
+    // 0 outside every island, 1 at an island's centre
+    public static float IslandK(float x, float z, out int which)
     {
-        return new Vector3(TrackC.x + Mathf.Cos(t) * TrackR.x, 0f, TrackC.y + Mathf.Sin(t) * TrackR.y);
+        float best = 0f; which = -1;
+        for (int i = 0; i < Islands.Length; i++)
+        {
+            float d = new Vector2(x - Islands[i].x, z - Islands[i].y).magnitude / Islands[i].z;
+            float k = Mathf.Clamp01(1.35f - d);
+            if (k > best) { best = k; which = i; }
+        }
+        return best;
     }
+
+    // centreline of the figure-eight (y = 0); t in radians, t=0 bridge over the crossing, t=PI the underpass
+    public static Vector3 TrackPoint(float t)
+    {
+        return new Vector3(TrackC.x + TrackAx * Mathf.Sin(t), 0f, TrackC.y + TrackAz * Mathf.Sin(2f * t));
+    }
+
+    // deck height above the ground along the track: a ramped bridge around t=0, flat elsewhere
+    public static float TrackH(float t)
+    {
+        float a = Mathf.Abs(Mathf.Atan2(Mathf.Sin(t), Mathf.Cos(t)));
+        return BridgeH * Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((1.15f - a) / 0.85f));
+    }
+
+    // kept for older callers: a point on the track
+    public static Vector3 OvalPoint(float t) { return TrackPoint(t); }
 
     static float SegDist(Vector2 p, Vector2 a, Vector2 b)
     {
@@ -58,20 +88,21 @@ public static class Layout
         return (p - (a + ab * t)).magnitude;
     }
 
-    // distance from (x,z) to the nearest dirt road centreline (oval + spur)
+    // distance from (x,z) to the nearest dirt road centreline (figure-eight + spur + loop runway)
     public static float RoadDist(float x, float z)
     {
         Vector2 p = new Vector2(x, z);
         float best = 1e9f;
-        const int n = 96;
-        Vector3 prev = OvalPoint(0f);
+        const int n = 128;
+        Vector3 prev = TrackPoint(0f);
         for (int i = 1; i <= n; i++)
         {
-            Vector3 cur = OvalPoint(i * Mathf.PI * 2f / n);
+            Vector3 cur = TrackPoint(i * Mathf.PI * 2f / n);
             best = Mathf.Min(best, SegDist(p, new Vector2(prev.x, prev.z), new Vector2(cur.x, cur.z)));
             prev = cur;
         }
         for (int i = 0; i < Spur.Length - 1; i++) best = Mathf.Min(best, SegDist(p, Spur[i], Spur[i + 1]));
+        best = Mathf.Min(best, SegDist(p, LoopC + new Vector2(-LoopRun - 6f, 0f), LoopC + new Vector2(LoopRun, LoopShift)) - LoopShift * 0.5f);
         return best;
     }
 
@@ -87,7 +118,9 @@ public static class Layout
     {
         float d = Mathf.Min(RectDist(x, z, HouseC, HouseSize + new Vector2(14f, 14f)), RectDist(x, z, GarageC, GarageSize + new Vector2(10f, 22f)));
         d = Mathf.Min(d, RectDist(x, z, PadC, new Vector2(30f, 30f)));
-        d = Mathf.Min(d, RoadDist(x, z) - TrackW * 0.5f - 2f);
+        d = Mathf.Min(d, RoadDist(x, z) - TrackW * 0.5f - 6f);
+        d = Mathf.Min(d, RectDist(x, z, LoopC + new Vector2(-6f, LoopShift * 0.5f), new Vector2(LoopRun * 2f + 24f, LoopShift + LoopW + 14f)));
+        d = Mathf.Min(d, RectDist(x, z, new Vector2(TrackC.x, TrackC.y), new Vector2(TrackAx * 2f + 20f, TrackAz * 2f + 24f)) );
         return Mathf.Clamp01(d / 18f);
     }
 
@@ -104,6 +137,9 @@ public static class Layout
             float k = Mathf.SmoothStep(0f, 1f, (1.25f - q) / 0.45f);
             float bottom = -4.2f + q * 1.5f;
             y = Mathf.Lerp(y, bottom, k);
+            int wi;
+            float ik = IslandK(x, z, out wi);
+            if (ik > 0f) y = Mathf.Max(y, Mathf.Lerp(bottom, WaterY + 1.1f, Mathf.SmoothStep(0f, 1f, ik / 0.55f)));
         }
         // edge berm
         float edge = Mathf.Max(Mathf.Abs(x), Mathf.Abs(z)) / Half;

@@ -17,6 +17,9 @@ public struct PIn
     public float zoom;        // + out / - in (per second units)
     public bool view;         // Back/View / V / touch VIEW
     public bool help;         // Start / H
+    public bool lookHeld;     // a look finger / right stick is held (suppresses camera auto-follow)
+    public bool camReset;     // R3 / 0: camera back behind, default pitch + zoom
+    public bool phone;        // James's phone (stage E)
 }
 
 public static class Kb
@@ -45,6 +48,8 @@ public static class Kb
     public static bool Space() { return Key(k => k.spaceKey.isPressed, KeyCode.Space, false); }
     public static bool Shift() { return Key(k => k.leftShiftKey.isPressed || k.leftCtrlKey.isPressed, KeyCode.LeftShift, false); }
     public static bool EDown() { return Key(k => k.eKey.wasPressedThisFrame || k.fKey.wasPressedThisFrame, KeyCode.E, true); }
+    public static bool ZeroDown() { return Key(k => k.digit0Key.wasPressedThisFrame, KeyCode.Alpha0, true); }
+    public static bool MDown() { return Key(k => k.mKey.wasPressedThisFrame, KeyCode.M, true); }
     public static bool VDown() { return Key(k => k.vKey.wasPressedThisFrame, KeyCode.V, true); }
     public static bool HDown() { return Key(k => k.hKey.wasPressedThisFrame || k.f1Key.wasPressedThisFrame, KeyCode.H, true); }
     public static bool LeftDown() { return Key(k => k.leftArrowKey.wasPressedThisFrame || k.aKey.wasPressedThisFrame, KeyCode.LeftArrow, true); }
@@ -124,6 +129,8 @@ public static class Pads
         i.move = Dead(p.leftStick.ReadValue(), 0.18f);
         Vector2 r = Dead(p.rightStick.ReadValue(), 0.14f);
         i.look = new Vector2(r.x, r.y * 0.7f) * r.magnitude * 160f * dt;
+        i.lookHeld = r.sqrMagnitude > 0.0001f;
+        i.camReset = p.rightStickButton.wasPressedThisFrame;
         i.hop = p.buttonSouth.wasPressedThisFrame;
         i.use = i.hop;
         i.gas = p.rightTrigger.ReadValue();
@@ -163,6 +170,8 @@ public static class Pads
         i.zoom = z;
         i.view = Kb.VDown();
         i.help = Kb.HDown();
+        i.camReset = Kb.ZeroDown();
+        i.lookHeld = locked ? md.sqrMagnitude > 0.01f : Kb.MouseLeft();
         return i;
     }
 

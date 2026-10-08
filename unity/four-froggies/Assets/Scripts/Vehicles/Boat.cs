@@ -6,9 +6,31 @@ public class Boat : Vehicle
     public float accel = 9f, maxSpeed = 18f, turnRate = 1.4f;
     public Transform prop;
     readonly Vector3[] floats = { new Vector3(-0.9f, 0f, 1.8f), new Vector3(0.9f, 0f, 1.8f), new Vector3(-0.9f, 0f, -1.9f), new Vector3(0.9f, 0f, -1.9f) };
-    float wet;
+    float wet, beachedT, pushCool;
+    public bool Beached { get { return beachedT > 0.6f; } }
 
-    public override string HelpLine { get { return "L-stick steer | RT gas | LT reverse | A get out"; } }
+    public override string HelpLine
+    {
+        get
+        {
+            return Beached ? "Beached! RB / Y / right-click / MSL = push off (it also drifts back on its own)"
+                           : "L-stick steer | RT gas | LT reverse | A get out";
+        }
+    }
+
+    // direction from here to deep water: away from an island we are stuck on, else towards the pond centre
+    Vector3 DeepDir(Vector3 p)
+    {
+        float best = 1e9f; Vector3 dir = Vector3.zero;
+        foreach (Vector3 isl in Layout.Islands)
+        {
+            Vector2 d = new Vector2(p.x - isl.x, p.z - isl.y);
+            float k = d.magnitude / isl.z;
+            if (k < 1.9f && k < best) { best = k; dir = new Vector3(d.x, 0f, d.y).normalized; }
+        }
+        if (dir == Vector3.zero) dir = new Vector3(Layout.PondC.x - p.x, 0f, Layout.PondC.y - p.z).normalized;
+        return dir;
+    }
 
     protected override void FixedUpdate()
     {
@@ -29,6 +51,42 @@ public class Boat : Vehicle
             }
         }
         wet = inWater / (float)floats.Length;
+        // beached on a shore or an island: drift (and on request shove) back into deep water
+        Vector3 bp = rb.position;
+        bool nearPond = Layout.PondQ(bp.x, bp.z) < 1.45f;
+        if (nearPond) { if (wet < 0.75f && rb.velocity.magnitude < 2.5f) beachedT += dt; else beachedT = Mathf.Max(0f, beachedT - dt * 2f); }
+        pushCool -= dt;
+        if (beachedT > 0.6f)
+        {
+            Vector3 deep = DeepDir(bp);
+            if (driver != null && inp.alt && pushCool <= 0f)
+            {
+                pushCool = 0.8f;
+                rb.AddForce((deep * 7f + Vector3.up * 2.5f), ForceMode.VelocityChange);
+                FX.Splash(bp + Vector3.up * 0.3f, 12);
+                Sfx.PlayAt(Sfx.Splash, bp, 0.9f);
+            }
+            if (beachedT > 2.0f)
+            {
+                // a little wave keeps nudging it out
+                rb.AddForce(deep * 7f + Vector3.up * (wet < 0.25f ? 3f : 0f), ForceMode.Acceleration);
+                float yaw = Mathf.Atan2(deep.x, deep.z) * Mathf.Rad2Deg;
+                rb.MoveRotation(Quaternion.Slerp(rb.rotation, Quaternion.Euler(0f, yaw, 0f), dt * 0.6f));
+                if (Random.value < 0.08f) FX.Splash(bp + deep * 2f, 3);
+            }
+            // way up on land with nobody aboard for a while: back to its mooring
+            if (driver == null && beachedT > 12f && Layout.PondQ(bp.x, bp.z) > 1.15f)
+            {
+                beachedT = 0f;
+                rb.velocity = Vector3.zero; rb.angularVelocity = Vector3.zero;
+                rb.position = spawnPos + Vector3.up * 0.5f; rb.rotation = spawnRot;
+            }
+        }
+        else if (!nearPond && driver == null)
+        {
+            beachedT += dt;
+            if (beachedT > 12f) { beachedT = 0f; rb.velocity = Vector3.zero; rb.angularVelocity = Vector3.zero; rb.position = spawnPos + Vector3.up * 0.5f; rb.rotation = spawnRot; }
+        }
         Vector3 v = rb.velocity;
         Vector3 fwd = transform.forward; fwd.y = 0f; fwd.Normalize();
         Vector3 right = transform.right; right.y = 0f; right.Normalize();

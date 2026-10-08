@@ -12,6 +12,12 @@ public class Frog : MonoBehaviour
     public FrogModel model;
     public Vehicle vehicle;
     public string prompt = "";
+    public string toast = "";
+    public float toastT;
+    public bool chute;            // parachute after bailing out of a flyer in the air
+    GameObject chuteGo;
+
+    public void Toast(string s, float secs = 2.5f) { toast = s; toastT = secs; }
 
     PIn input;
     float camYaw;
@@ -19,7 +25,7 @@ public class Frog : MonoBehaviour
     Vector3 planar;       // smoothed walking velocity
     float yaw;
     float hopCool;
-    bool swimming;
+    bool swimming, wasSwim;
     float exitCool;
 
     // AI
@@ -83,6 +89,7 @@ public class Frog : MonoBehaviour
     void Update()
     {
         float dt = Mathf.Min(Time.deltaTime, 0.05f);
+        if (toastT > 0f) { toastT -= dt; if (toastT <= 0f) toast = ""; }
         if (!human) Think(dt);
         exitCool -= dt;
         if (vehicle != null)
@@ -116,6 +123,8 @@ public class Frog : MonoBehaviour
 
         Vector3 p = transform.position;
         swimming = Layout.InPond(p.x, p.z) && p.y < Layout.WaterY - 0.35f;
+        if (swimming && !wasSwim) { FX.Splash(p + Vector3.up * 0.5f, 14); if (human) Sfx.Play(Sfx.Splash, 0.9f); }
+        wasSwim = swimming;
 
         Vector3 wish = Vector3.zero;
         if (input.move.sqrMagnitude > 0.0001f)
@@ -138,7 +147,7 @@ public class Frog : MonoBehaviour
         {
             float wantY = Layout.WaterY - 0.55f;
             vel.y = Mathf.Lerp(vel.y, (wantY - p.y) * 4f, dt * 5f);
-            if (input.hop) { vel.y = HopV * 0.8f; FX.Splash(p + Vector3.up * 0.5f, 10); }
+            if (input.hop) { vel.y = HopV * 0.8f; FX.Splash(p + Vector3.up * 0.5f, 10); if (human) Sfx.Play(Sfx.Splash, 0.8f); }
             if (Random.value < planar.magnitude * dt * 2f) FX.Splash(p + Vector3.up * 0.4f, 1);
         }
         else
@@ -148,7 +157,7 @@ public class Frog : MonoBehaviour
                 if (vel.y < -2f) vel.y = -2f;
                 vel.x = Mathf.MoveTowards(vel.x, 0f, 30f * dt);
                 vel.z = Mathf.MoveTowards(vel.z, 0f, 30f * dt);
-                if (input.hop && hopCool <= 0f) { vel.y = HopV; hopCool = 0.25f; }
+                if (input.hop && hopCool <= 0f) { vel.y = HopV; hopCool = 0.25f; if (human) Sfx.Play(Sfx.Hop, 0.7f, Random.Range(0.92f, 1.1f)); }
             }
             else
             {
@@ -156,10 +165,39 @@ public class Frog : MonoBehaviour
                 vel.z = Mathf.MoveTowards(vel.z, 0f, 3f * dt);
             }
             vel.y -= Gravity * dt;
+            if (chute)
+            {
+                if (vel.y < -4f) vel.y = Mathf.MoveTowards(vel.y, -4f, 40f * dt);
+                if (cc.isGrounded) SetChute(false);
+            }
         }
+        if (swimming && chute) SetChute(false);
         cc.Move((planar + vel) * dt + VehiclePush(dt));
         if (transform.position.y < -30f) Teleport(new Vector3(-6f + id * 3f, 2f, 40f));
         model.Animate(new Vector2(planar.x, planar.z).magnitude, !cc.isGrounded && !swimming, false, swimming, dt);
+        if (chuteGo != null && chute) chuteGo.transform.localRotation = Quaternion.Euler(Mathf.Sin(Time.time * 2f) * 6f, 0f, Mathf.Sin(Time.time * 1.3f) * 8f);
+    }
+
+    void SetChute(bool on)
+    {
+        chute = on;
+        if (on && chuteGo == null)
+        {
+            chuteGo = new GameObject("Chute");
+            chuteGo.transform.SetParent(transform, false);
+            chuteGo.transform.localPosition = new Vector3(0f, 1.2f, 0f);
+            Color c = Color.Lerp(color, Color.white, 0.35f);
+            Mats.Prim(PrimitiveType.Sphere, chuteGo.transform, new Vector3(0f, 2.4f, 0f), new Vector3(3.2f, 1.2f, 3.2f), Mats.Lit(c));
+            Mats.Prim(PrimitiveType.Sphere, chuteGo.transform, new Vector3(0f, 2.15f, 0f), new Vector3(3.0f, 0.9f, 3.0f), Mats.Lit(Color.white));
+            for (int k = 0; k < 4; k++)
+            {
+                Vector3 e = Quaternion.Euler(0f, 45f + k * 90f, 0f) * new Vector3(0f, 2.1f, 1.3f);
+                var g = Mats.Prim(PrimitiveType.Cube, chuteGo.transform, e * 0.5f, new Vector3(0.03f, e.magnitude, 0.03f), Mats.Lit(Color.white));
+                g.transform.localRotation = Quaternion.FromToRotation(Vector3.up, e.normalized);
+            }
+            Mats.SetLayer(chuteGo, 9);
+        }
+        if (chuteGo != null) chuteGo.SetActive(on);
     }
 
     // Frogs and vehicles don't physically collide (layer 8/9 ignored), so keep frogs out of vehicle bodies
@@ -205,7 +243,9 @@ public class Frog : MonoBehaviour
         model.gameObject.SetActive(v.showDriver);
         exitCool = 0.4f;
         planar = Vector3.zero; vel = Vector3.zero;
+        SetChute(false);
         v.OnEnter();
+        Sfx.Play(Sfx.Door, 1f);
     }
 
     public void ExitVehicle()
@@ -218,13 +258,27 @@ public class Frog : MonoBehaviour
         transform.SetParent(null, true);
         transform.localScale = Vector3.one;
         model.gameObject.SetActive(true);
-        Vector3 spot = v.ExitPoint();
+        Vector3 spot;
+        bool bail = false;
+        Flyer fl = v as Flyer;
+        if (fl != null && fl.AltitudeAboveGround > 2.5f)
+        {
+            // bail out beside the aircraft and float down under a parachute
+            bail = true;
+            Vector3 side = v.transform.right; side.y = 0f; side.Normalize();
+            spot = v.transform.position + side * (v.body.size.x * 0.5f + 1.4f) - Vector3.up * 0.6f;
+            if (Physics.CheckCapsule(spot + Vector3.up * 0.5f, spot + Vector3.up * 1.0f, 0.42f, Vehicle.GroundMask, QueryTriggerInteraction.Ignore))
+                spot = v.transform.position - Vector3.up * 2.2f;
+        }
+        else spot = v.ExitPoint();
         transform.rotation = Quaternion.Euler(0f, v.transform.eulerAngles.y, 0f);
         yaw = v.transform.eulerAngles.y;
         cc.enabled = true;
         Teleport(spot);
         vel = v.Velocity * 0.5f;
+        if (bail) { vel.y = Mathf.Min(vel.y, 0f); SetChute(true); Toast("Parachute! The " + v.Title + " flies itself home.", 3f); }
         exitCool = 0.4f;
+        Sfx.Play(Sfx.Door, 0.8f);
     }
 
     // ---------- AI wander ----------

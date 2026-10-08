@@ -6,7 +6,8 @@ using UnityEngine.UI;
 public class ViewHud
 {
     public RectTransform panel;
-    readonly Text title, prompt, status, center;
+    readonly Text title, prompt, status, center, toast;
+    float inset = -1f;
     readonly Text[] tags = new Text[4];
     readonly Image frame;
 
@@ -22,6 +23,7 @@ public class ViewHud
         title = UIK.Label(panel, "", 24, TextAnchor.UpperLeft, new Vector2(0f, 1f), new Vector2(170f, -26f), new Vector2(320f, 40f), Color.white);
         status = UIK.Label(panel, "", 20, TextAnchor.LowerLeft, new Vector2(0f, 0f), new Vector2(170f, 26f), new Vector2(320f, 40f), Color.white);
         prompt = UIK.Label(panel, "", 22, TextAnchor.LowerCenter, new Vector2(0.5f, 0f), new Vector2(0f, 64f), new Vector2(760f, 70f), new Color(1f, 0.95f, 0.6f));
+        toast = UIK.Label(panel, "", 26, TextAnchor.LowerCenter, new Vector2(0.5f, 0f), new Vector2(0f, 120f), new Vector2(760f, 80f), new Color(0.6f, 1f, 0.6f));
         center = UIK.Label(panel, "", 30, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(700f, 160f), Color.white);
         for (int i = 0; i < 4; i++)
         {
@@ -41,6 +43,18 @@ public class ViewHud
 
     public void SetCenter(string s) { center.text = s; }
 
+    // bottom band reserved for touch controls (canvas units); 0 = none
+    public void SetBottomInset(float units, float width)
+    {
+        if (Mathf.Abs(units - inset) < 0.5f) return;
+        inset = units;
+        prompt.rectTransform.anchoredPosition = new Vector2(0f, 64f + units);
+        prompt.rectTransform.sizeDelta = new Vector2(Mathf.Min(760f, width - 20f), 70f);
+        toast.rectTransform.anchoredPosition = new Vector2(0f, 120f + units);
+        toast.rectTransform.sizeDelta = new Vector2(Mathf.Min(760f, width - 20f), 80f);
+        status.rectTransform.anchoredPosition = new Vector2(170f, 26f + units);
+    }
+
     // me == null: shared view (list every player in the status corner)
     public void Tick(Camera cam, Frog me, string playerTag, List<Frog> frogs, string sharedStatus)
     {
@@ -50,6 +64,7 @@ public class ViewHud
             title.text = playerTag + "  " + me.nick;
             title.color = me.color;
             prompt.text = me.prompt;
+            toast.text = me.toastT > 0f ? me.toast : "";
             Vehicle v = me.vehicle;
             if (v != null)
             {
@@ -63,6 +78,9 @@ public class ViewHud
         {
             title.text = "";
             prompt.text = "";
+            string tl = "";
+            foreach (Frog f in frogs) if (f != null && f.human && f.toastT > 0f) tl += (tl.Length > 0 ? "\n" : "") + "<color=#" + ColorUtility.ToHtmlStringRGB(f.color) + ">" + f.nick + "</color>: " + f.toast;
+            toast.text = tl;
             status.text = sharedStatus;
         }
         for (int i = 0; i < tags.Length; i++)

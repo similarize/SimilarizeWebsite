@@ -63,6 +63,7 @@ public class GroundVehicle : Vehicle
         Vector3 nsum = Vector3.zero;
         Vector3 up = transform.up;
         int mask = GroundMask;
+        bool onStunt = false, onTrack = false;
         foreach (Wheel w in wheels)
         {
             Vector3 origin = transform.TransformPoint(w.mount);
@@ -79,6 +80,9 @@ public class GroundVehicle : Vehicle
                 rb.AddForceAtPosition(up * f, origin);
                 groundedCount++;
                 nsum += hit.normal;
+                int hl = hit.collider.gameObject.layer;
+                if (hl == RallyTrack.StuntLayer) onStunt = true;
+                else if (hl == RallyTrack.TrackLayer) onTrack = true;
             }
             else
             {
@@ -89,6 +93,28 @@ public class GroundVehicle : Vehicle
         float gf = wheels.Count > 0 ? groundedCount / (float)wheels.Count : 0f;
         groundNormal = groundedCount > 0 ? nsum.normalized : Vector3.up;
         bool driven = driver != null;
+
+        // rally assists: the loop holds you on (downforce + a minimum speed while you keep the throttle on),
+        // banked turns get a little extra stick so the trucks can lean on the berms
+        bool inLoop = false;
+        Bounds zone = default(Bounds);
+        foreach (Bounds b in RallyTrack.LoopZones) if (b.Contains(rb.position)) { inLoop = true; zone = b; }
+        if (inLoop)
+        {
+            if (groundedCount > 0 && onStunt)
+            {
+                rb.AddForce(-groundNormal * 17f, ForceMode.Acceleration);
+                Vector3 lf = Vector3.ProjectOnPlane(transform.forward, groundNormal).normalized;
+                float lfs = Vector3.Dot(rb.velocity, lf);
+                if (driven && throttle > -0.1f && lfs < 17f && lfs > -1f) rb.AddForce(lf * 11f, ForceMode.Acceleration);
+            }
+            else if (groundedCount == 0)
+            {
+                Vector3 radial = rb.position - zone.center; radial.z = 0f;
+                if (radial.y > -1f) rb.AddForce(radial.normalized * 15f, ForceMode.Acceleration);
+            }
+        }
+        else if (onTrack && groundedCount > 0) rb.AddForce(-groundNormal * 4f, ForceMode.Acceleration);
 
         if (groundedCount > 0)
         {

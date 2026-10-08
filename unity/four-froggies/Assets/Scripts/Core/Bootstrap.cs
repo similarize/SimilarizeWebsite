@@ -44,6 +44,7 @@ public class Bootstrap : MonoBehaviour
         Physics.IgnoreLayerCollision(Vehicle.VehicleLayer, Vehicle.FrogLayer, true);
 
         Mats.Init(litMat, unlitMat, fxMat, waterMat, glassMat);
+        Sfx.Init();
         FX.Init();
         Ranch.Build(terrain);
         SpawnVehicles();
@@ -63,7 +64,7 @@ public class Bootstrap : MonoBehaviour
         VehicleFactory.Mech(G(Layout.BayX(5), bz, 0.6f), 0f);
         // a third truck out on the drive so all four frogs can drive at once even without the flyers
         VehicleFactory.Cybertruck("Cybertruck", G(14f, 44f, 0.6f), 30f, Froggies.Color(3));
-        float roof = Layout.HouseH + 0.15f;
+        float roof = Layout.HouseH + 0.1f + Ranch.PadTop + 0.05f;   // on the pad paint, above the roof slab
         VehicleFactory.Helicopter(new Vector3(-52f, roof, -6f), 90f);
         VehicleFactory.Drone(new Vector3(-30f, roof, -6f), 90f);
         Vector2 pc = Layout.PondC, pr = Layout.PondR;

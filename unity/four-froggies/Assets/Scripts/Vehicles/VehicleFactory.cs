@@ -149,6 +149,7 @@ public static class VehicleFactory
         var v = Root<GroundVehicle>("Ripsaw", pos, yaw);
         v.EnterVerb = "drive the Ripsaw";
         v.tracked = true;
+        v.engineKind = 1;
         v.SetupBodyPublic(3200f, new Vector3(0f, 1.15f, 0f), new Vector3(3.3f, 1.0f, 5.4f), new Vector3(0f, 0.5f, 0f));
         v.maxSpeed = 30f; v.accel = 14f; v.turnRate = 2.1f; v.grip = 9f;
         Transform t = v.transform;
@@ -182,6 +183,7 @@ public static class VehicleFactory
         var v = Root<Tank>("Tank", pos, yaw);
         v.EnterVerb = "command the Tank";
         v.tracked = true;
+        v.engineKind = 1;
         v.usesTriggers = false;
         v.SetupBodyPublic(11000f, new Vector3(0f, 1.35f, 0f), new Vector3(4.5f, 1.2f, 6.5f), new Vector3(0f, 0.6f, 0f));
         v.maxSpeed = 13f; v.accel = 7f; v.turnRate = 1.1f; v.grip = 10f;
@@ -223,6 +225,7 @@ public static class VehicleFactory
         var v = Root<GroundVehicle>("Optimus", pos, yaw);
         v.EnterVerb = "ride Optimus";
         v.tracked = true;
+        v.engineKind = 5;
         v.rest = 0.9f;
         v.dustAmount = 0f;
         v.SetupBodyPublic(1400f, new Vector3(0f, 2.4f, 0f), new Vector3(1.4f, 2.0f, 1.0f), new Vector3(0f, 1.0f, 0f));
@@ -361,6 +364,7 @@ public static class VehicleFactory
     {
         var v = Root<Boat>("Boat", pos, yaw);
         v.EnterVerb = "take the Boat";
+        v.engineKind = 4;
         v.SetupBodyPublic(700f, new Vector3(0f, 0.5f, -0.2f), new Vector3(2.2f, 0.8f, 5.0f), new Vector3(0f, 0.15f, 0f));
         v.rb.drag = 0.1f;
         v.rb.angularDrag = 2f;

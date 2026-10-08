@@ -1,58 +1,117 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-// Simple on-screen controls for P1 on a touch screen: left stick, drag the right side to look,
-// A (hop / get in / out), FIRE, MSL, UP / DOWN (fly), and - / + zoom.
+// On-screen controls for P1 on a touch screen: left stick, drag the free area to look,
+// A (hop / get in / out), FIRE, MSL, UP / DOWN (fly), - / + zoom, SND (sound level).
+// Two layouts, both inside the device safe area:
+//   landscape: stick lower-left, button arc lower-right (as before);
+//   portrait:  everything smaller in the bottom band, stick bottom-left, buttons bottom-right, no overlap.
+// Look drags use our own per-finger position tracking (no deltaPosition spikes), are clamped per frame,
+// and a finger that started on the stick or a button never turns the camera.
 public class TouchControls : MonoBehaviour
 {
     public bool active;
+    public bool extraButtons;        // worlds can show a 2nd row (PHONE etc.) later
     Canvas canvas;
     RectTransform stickBase, stickKnob;
     int stickId = -1, lookId = -1, upId = -1, downId = -1, fireId = -1;
-    Vector2 stickOrigin, stickVec, lookAcc;
-    bool aQ, fireQ, altQ;
-    float zoom;
-    readonly Image[] imgs = new Image[7];
+    Vector2 stickOrigin, stickVec, lookAcc, lookLast;
+    bool aQ, fireQ, altQ, resetQ;
+    float zoom, lastLookTap = -10f;
+    const int Count = 8;
+    readonly Image[] imgs = new Image[Count];
+    readonly Text[] labels = new Text[Count];
+    public static bool Portrait { get { return Screen.height > Screen.width; } }
 
-    static readonly string[] Names = { "A", "FIRE", "MSL", "UP", "DOWN", "-", "+" };
-    static readonly Vector2[] Pos = { new Vector2(-120, 150), new Vector2(-270, 90), new Vector2(-280, 220), new Vector2(-75, 300), new Vector2(-175, 300), new Vector2(-150, -60), new Vector2(-70, -60) };
-    static readonly float[] Rad = { 80, 58, 44, 44, 44, 30, 30 };
-    static readonly Color[] Cols = { new Color(0.3f, 0.85f, 0.35f, 0.6f), new Color(1f, 0.35f, 0.25f, 0.6f), new Color(1f, 0.7f, 0.2f, 0.55f), new Color(0.4f, 0.8f, 1f, 0.5f), new Color(0.4f, 0.8f, 1f, 0.5f), new Color(1f, 1f, 1f, 0.35f), new Color(1f, 1f, 1f, 0.35f) };
-    static readonly Vector2 StickHome = new Vector2(170, 170);
+    static readonly string[] Names = { "A", "FIRE", "MSL", "UP", "DOWN", "-", "+", "SND" };
+    // anchor 0 = bottom-right, 1 = top-right, 2 = top-left of the safe area; offsets in canvas units
+    static readonly int[] Anchor = { 0, 0, 0, 0, 0, 1, 1, 2 };
+    static readonly Vector2[] PosL = { new Vector2(-120, 150), new Vector2(-270, 90), new Vector2(-280, 220), new Vector2(-75, 300), new Vector2(-175, 300), new Vector2(-150, -60), new Vector2(-70, -60), new Vector2(60, -150) };
+    static readonly float[] RadL = { 80, 58, 44, 44, 44, 30, 30, 30 };
+    // portrait: compact cluster, checked for overlap (A r50 / FIRE r38 / MSL r32 / UP r32 / DOWN r32)
+    static readonly Vector2[] PosP = { new Vector2(-82, 100), new Vector2(-190, 74), new Vector2(-190, 172), new Vector2(-82, 210), new Vector2(-290, 120), new Vector2(-130, -70), new Vector2(-60, -70), new Vector2(55, -150) };
+    static readonly float[] RadP = { 50, 38, 32, 32, 32, 26, 26, 26 };
+    static readonly Color[] Cols = { new Color(0.3f, 0.85f, 0.35f, 0.6f), new Color(1f, 0.35f, 0.25f, 0.6f), new Color(1f, 0.7f, 0.2f, 0.55f), new Color(0.4f, 0.8f, 1f, 0.5f), new Color(0.4f, 0.8f, 1f, 0.5f), new Color(1f, 1f, 1f, 0.35f), new Color(1f, 1f, 1f, 0.35f), new Color(1f, 1f, 1f, 0.3f) };
+    static readonly Vector2 StickHomeL = new Vector2(170, 170), StickHomeP = new Vector2(112, 118);
 
-    float Scale { get { return Mathf.Clamp(Screen.height / 720f, 0.5f, 2.5f); } }
+    Vector2[] Pos { get { return Portrait ? PosP : PosL; } }
+    float[] Rad { get { return Portrait ? RadP : RadL; } }
+    Vector2 StickHome { get { return Portrait ? StickHomeP : StickHomeL; } }
+    float StickR { get { return Portrait ? 58f : 75f; } }
+
+    // canvas units per pixel: landscape scales with height, portrait with width
+    float Scale { get { return Portrait ? Mathf.Clamp(Screen.width / 720f, 0.5f, 2.5f) : Mathf.Clamp(Screen.height / 720f, 0.5f, 2.5f); } }
+
+    Rect Safe { get { Rect r = Screen.safeArea; if (r.width < 10f || r.height < 10f) r = new Rect(0, 0, Screen.width, Screen.height); return r; } }
+
+    // screen position of a control centre
+    Vector2 ScreenPos(int i)
+    {
+        Rect sa = Safe;
+        float s = Scale;
+        Vector2 o = Pos[i] * s;
+        switch (Anchor[i])
+        {
+            case 1: return new Vector2(sa.xMax + o.x, sa.yMax + o.y);
+            case 2: return new Vector2(sa.xMin + o.x, sa.yMax + o.y);
+            default: return new Vector2(sa.xMax + o.x, sa.yMin + o.y);
+        }
+    }
 
     void Awake()
     {
         canvas = UIK.MakeCanvas("TouchControls", null, 60, false);
         Transform r = canvas.transform;
-        stickBase = UIK.Img(r, UIK.Ring, new Color(1, 1, 1, 0.45f), Vector2.zero, StickHome, new Vector2(170, 170)).rectTransform;
-        stickKnob = UIK.Img(r, UIK.Circle, new Color(1, 1, 1, 0.6f), Vector2.zero, StickHome, new Vector2(80, 80)).rectTransform;
-        for (int i = 0; i < Names.Length; i++)
+        stickBase = UIK.Img(r, UIK.Ring, new Color(1, 1, 1, 0.45f), Vector2.zero, StickHomeL, new Vector2(170, 170)).rectTransform;
+        stickKnob = UIK.Img(r, UIK.Circle, new Color(1, 1, 1, 0.6f), Vector2.zero, StickHomeL, new Vector2(80, 80)).rectTransform;
+        for (int i = 0; i < Count; i++)
         {
-            Vector2 anchor = i >= 5 ? new Vector2(1, 1) : new Vector2(1, 0);
-            imgs[i] = UIK.Img(r, UIK.Circle, Cols[i], anchor, Pos[i], Vector2.one * Rad[i] * 2f);
-            UIK.Label(imgs[i].transform, Names[i], Names[i].Length > 2 ? 20 : 30, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(Rad[i] * 2f, 40), Color.white);
+            imgs[i] = UIK.Img(r, UIK.Circle, Cols[i], Vector2.zero, Vector2.zero, Vector2.one * 100f);
+            labels[i] = UIK.Label(imgs[i].transform, Names[i], 30, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(160, 40), Color.white);
         }
         canvas.enabled = false;
+    }
+
+    void LayoutControls()
+    {
+        float s = Scale;
+        canvas.scaleFactor = s;
+        for (int i = 0; i < Count; i++)
+        {
+            float rad = Rad[i];
+            imgs[i].rectTransform.anchoredPosition = ScreenPos(i) / s;
+            imgs[i].rectTransform.sizeDelta = Vector2.one * rad * 2f;
+            labels[i].fontSize = Mathf.RoundToInt((Names[i].Length > 2 ? 0.42f : 0.62f) * rad * (Names[i].Length > 3 ? 0.85f : 1f));
+            labels[i].rectTransform.sizeDelta = new Vector2(rad * 2.4f, rad);
+        }
+        labels[7].text = "SND\n<size=" + Mathf.RoundToInt(Rad[7] * 0.38f) + ">" + Sfx.LevelName + "</size>";
+        float sr = StickR;
+        stickBase.sizeDelta = Vector2.one * sr * 2.25f;
+        stickKnob.sizeDelta = Vector2.one * sr * 1.05f;
     }
 
     int Hit(Vector2 screen)
     {
         float s = Scale;
-        for (int i = 0; i < Names.Length; i++)
-        {
-            Vector2 p = i >= 5 ? new Vector2((screen.x - Screen.width) / s, (screen.y - Screen.height) / s) : new Vector2((screen.x - Screen.width) / s, screen.y / s);
-            if ((p - Pos[i]).magnitude < Rad[i] * 1.15f) return i;
-        }
+        for (int i = 0; i < Count; i++)
+            if ((screen - ScreenPos(i)).magnitude < Rad[i] * s * 1.15f) return i;
         return -1;
+    }
+
+    Vector2 StickHomeScreen { get { Rect sa = Safe; return new Vector2(sa.xMin, sa.yMin) + StickHome * Scale; } }
+
+    bool InStickZone(Vector2 p)
+    {
+        Rect sa = Safe;
+        if (Portrait) return p.x < sa.xMin + sa.width * 0.5f && p.y < sa.yMin + sa.height * 0.4f;
+        return p.x < sa.xMin + sa.width * 0.45f;
     }
 
     void ResetState()
     {
         stickId = lookId = upId = downId = fireId = -1;
         stickVec = lookAcc = Vector2.zero;
-        aQ = fireQ = altQ = false;
+        aQ = fireQ = altQ = resetQ = false;
         zoom = 0f;
     }
 
@@ -64,10 +123,11 @@ public class TouchControls : MonoBehaviour
             return;
         }
         canvas.enabled = true;
+        LayoutControls();
         float s = Scale;
-        canvas.scaleFactor = s;
         zoom = 0f;
         int count = Kb.TouchCount();
+        bool stickSeen = false, lookSeen = false;
         for (int i = 0; i < count; i++)
         {
             Touch t = Input.GetTouch(i);
@@ -82,14 +142,27 @@ public class TouchControls : MonoBehaviour
                         else if (b == 3) upId = t.fingerId;
                         else if (b == 4) downId = t.fingerId;
                         else if (b == 5 || b == 6) { }
-                        else if (t.position.x < Screen.width * 0.45f && stickId < 0) { stickId = t.fingerId; stickOrigin = t.position; }
-                        else if (lookId < 0) lookId = t.fingerId;
+                        else if (b == 7) Sfx.CycleVolume();
+                        else if (InStickZone(t.position) && stickId < 0) { stickId = t.fingerId; stickOrigin = t.position; stickVec = Vector2.zero; stickSeen = true; }
+                        else if (lookId < 0 && !InStickZone(t.position))
+                        {
+                            lookId = t.fingerId; lookLast = t.position; lookSeen = true;
+                            // double-tap the look area = camera reset
+                            if (Time.unscaledTime - lastLookTap < 0.3f) resetQ = true;
+                            lastLookTap = Time.unscaledTime;
+                        }
                         break;
                     }
                 case TouchPhase.Moved:
                 case TouchPhase.Stationary:
-                    if (t.fingerId == stickId) stickVec = Vector2.ClampMagnitude((t.position - stickOrigin) / s / 75f, 1f);
-                    else if (t.fingerId == lookId) lookAcc += t.deltaPosition / s;
+                    if (t.fingerId == stickId) { stickVec = Vector2.ClampMagnitude((t.position - stickOrigin) / s / StickR, 1f); stickSeen = true; }
+                    else if (t.fingerId == lookId)
+                    {
+                        Vector2 d = t.position - lookLast;
+                        lookLast = t.position;
+                        lookAcc += Vector2.ClampMagnitude(d / s, 60f);
+                        lookSeen = true;
+                    }
                     else
                     {
                         int b = Hit(t.position);
@@ -107,17 +180,28 @@ public class TouchControls : MonoBehaviour
                     break;
             }
         }
+        // a finger that vanished without an Ended event
+        if (stickId >= 0 && !stickSeen && !FingerDown(stickId)) { stickId = -1; stickVec = Vector2.zero; }
+        if (lookId >= 0 && !lookSeen && !FingerDown(lookId)) lookId = -1;
         if (count == 0) { stickId = lookId = upId = downId = fireId = -1; stickVec = Vector2.zero; }
-        Vector2 home = stickId >= 0 ? stickOrigin / s : StickHome;
+        Vector2 home = stickId >= 0 ? stickOrigin / s : StickHomeScreen / s;
         stickBase.anchoredPosition = home;
-        stickKnob.anchoredPosition = home + stickVec * 75f;
+        stickKnob.anchoredPosition = home + stickVec * StickR;
+    }
+
+    static bool FingerDown(int id)
+    {
+        int n = Kb.TouchCount();
+        for (int i = 0; i < n; i++) if (Input.GetTouch(i).fingerId == id) return true;
+        return false;
     }
 
     public PIn Read()
     {
         var i = new PIn();
         i.move = stickVec;
-        i.look = lookAcc * 0.25f;
+        i.look = lookAcc * 0.22f;
+        i.lookHeld = lookId >= 0;
         lookAcc = Vector2.zero;
         i.hop = i.use = aQ;
         i.fire = fireQ;
@@ -127,7 +211,8 @@ public class TouchControls : MonoBehaviour
         i.gas = upId >= 0 ? 1f : 0f;
         i.brake = downId >= 0 ? 1f : 0f;
         i.zoom = zoom;
-        aQ = fireQ = altQ = false;
+        i.camReset = resetQ;
+        aQ = fireQ = altQ = resetQ = false;
         return i;
     }
 }

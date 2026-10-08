@@ -55,6 +55,7 @@ public class Tank : GroundVehicle
         Vector3 dir = muzzle.forward;
         Projectile.Spawn(false, muzzle.position + dir * 0.3f, dir * 75f + rb.velocity, this);
         FX.Muzzle(muzzle.position, dir);
+        Sfx.PlayAt(Sfx.Shell, muzzle.position, 0.9f);
         rb.AddForceAtPosition(-dir * rb.mass * 2.5f, turret.position, ForceMode.Impulse);
         recoil = 1f;
         Game.Shake(muzzle.position, 0.35f);
@@ -67,5 +68,6 @@ public class Tank : GroundVehicle
         Vector3 from = turret.position + turret.up * 1.1f + turret.right * 0.9f;
         Projectile.Spawn(true, from + dir * 0.5f, dir * 38f + rb.velocity, this);
         FX.Muzzle(from, dir);
+        Sfx.PlayAt(Sfx.Missile, from, 0.8f);
     }
 }

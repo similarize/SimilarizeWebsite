@@ -43,6 +43,11 @@ public class Game : MonoBehaviour
     float lastTouchTime = -10f;
     readonly Image[] cards = new Image[4];
     readonly Text[] cardTexts = new Text[4];
+    readonly Image[] swatches = new Image[4];
+    Image lobbyBg, soundBtn;
+    Text lobbyTitle, lobbySub, lobbyHelp, soundText;
+    int lobbyLayout = -1;      // 0 landscape, 1 portrait
+    int hudLayout = -1;
     ViewHud sharedHud;
     Image sepV, sepH;
     TouchControls touch;
@@ -82,14 +87,14 @@ public class Game : MonoBehaviour
     {
         lobbyCanvas = UIK.MakeCanvas("Lobby", null, 100, true);
         Transform r = lobbyCanvas.transform;
-        UIK.Img(r, null, new Color(0.03f, 0.08f, 0.05f, 0.55f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1200, 650));
-        UIK.Label(r, "FOUR FROGGIES", 70, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, 262), new Vector2(1100, 90), new Color(0.55f, 1f, 0.45f));
-        UIK.Label(r, "James's ranch: hop around, jump in any vehicle, blow stuff up. 1-4 players.", 24, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, 200), new Vector2(1100, 40), Color.white);
+        lobbyBg = UIK.Img(r, null, new Color(0.03f, 0.08f, 0.05f, 0.55f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1200, 650));
+        lobbyTitle = UIK.Label(r, "FOUR FROGGIES", 70, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, 262), new Vector2(1100, 90), new Color(0.55f, 1f, 0.45f));
+        lobbySub = UIK.Label(r, "James's ranch: hop around, jump in any vehicle, blow stuff up. 1-4 players.", 24, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, 200), new Vector2(1100, 40), Color.white);
         for (int i = 0; i < 4; i++)
         {
             Vector2 p = new Vector2(-420 + i * 280, 60);
             cards[i] = UIK.Img(r, null, new Color(1, 1, 1, 0.12f), new Vector2(0.5f, 0.5f), p, new Vector2(255, 200));
-            UIK.Img(r, UIK.Circle, Froggies.Color(i), new Vector2(0.5f, 0.5f), p + new Vector2(0, 52), new Vector2(70, 70));
+            swatches[i] = UIK.Img(r, UIK.Circle, Froggies.Color(i), new Vector2(0.5f, 0.5f), p + new Vector2(0, 52), new Vector2(70, 70));
             cardTexts[i] = UIK.Label(r, "", 24, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), p + new Vector2(0, -38), new Vector2(240, 110), Color.white);
         }
         viewBar = UIK.Img(r, null, new Color(0f, 0f, 0f, 0.45f), new Vector2(0.5f, 0.5f), new Vector2(0, -88), new Vector2(620, 44));
@@ -97,8 +102,9 @@ public class Game : MonoBehaviour
         playBtn = UIK.Img(r, null, new Color(0.2f, 0.65f, 0.25f, 0.85f), new Vector2(0.5f, 0.5f), new Vector2(0, -148), new Vector2(300, 56));
         UIK.Label(playBtn.transform, "PLAY", 34, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(300, 56), Color.white);
         lobbyStatus = UIK.Label(r, "", 24, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, -204), new Vector2(1150, 40), new Color(0.7f, 1f, 0.7f));
-        UIK.Label(r, "Each gamepad: press A to claim a frog (D-pad < > to switch, B to leave). Start / A again = play.\nKeyboard: Enter to join / play, Left-Right to switch.  Touch: tap a frog, then PLAY.  Back / V = Shared / Split view.",
-            19, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, -262), new Vector2(1180, 60), new Color(1, 1, 1, 0.85f));
+        lobbyHelp = UIK.Label(r, "", 19, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, -262), new Vector2(1180, 60), new Color(1, 1, 1, 0.85f));
+        soundBtn = UIK.Img(r, null, new Color(0f, 0f, 0f, 0.45f), new Vector2(0.5f, 0.5f), new Vector2(430, -148), new Vector2(200, 44));
+        soundText = UIK.Label(soundBtn.transform, "", 20, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(200, 42), Color.white);
     }
 
     void BuildHudUI()
@@ -117,20 +123,22 @@ public class Game : MonoBehaviour
         helpBg = UIK.Img(r, null, new Color(0f, 0f, 0f, 0.75f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1200, 590));
         helpText = UIK.Label(r, "", 21, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1150, 560), Color.white);
         helpBg.enabled = false;
-        helpText.text =
-            "<size=34><color=#8cff70>FOUR FROGGIES - CONTROLS</color></size>\n\n" +
-            "<b>Gamepad</b>  L-stick move / steer  |  R-stick camera  |  A hop, get in / out  |  D-pad up/down zoom\n" +
-            "Cars, Ripsaw, boat: RT gas, LT brake / reverse.   Helicopter + drone: RT up, LT down.\n" +
-            "Tank: L-stick drive, R-stick aims the turret, RT fires shells, RB / LT missiles.\n\n" +
-            "<b>Keyboard + mouse (P1)</b>  WASD move  |  mouse camera (click to lock)  |  Space hop  |  E get in / out\n" +
-            "Fly: Space up, Shift down.  Tank: click shell, right-click missile.  Wheel / Q / X zoom.  V view.  H help.\n\n" +
-            "<b>Touch (P1)</b>  left stick  |  drag right side for camera  |  A  |  FIRE  |  MSL  |  UP / DOWN  |  - / +\n\n" +
-            "Back / V switches Shared and Split view.  Start / H closes this.  B / Esc here leaves your seat.\n" +
-            "<color=#ffd84a>Coming soon: the underwater world (by the pond dock) and space (Starship pad).</color>";
+        helpText.text = HelpBody;
         helpText.enabled = false;
         joinText.enabled = false;
         hudCanvas.enabled = false;
     }
+
+    const string HelpBody =
+            "<size=34><color=#8cff70>FOUR FROGGIES - CONTROLS</color></size>\n\n" +
+            "<b>Gamepad</b>  L-stick move / steer  |  R-stick camera (R3 resets it)  |  A hop, get in / out  |  D-pad up/down zoom\n" +
+            "Cars, Ripsaw, boat: RT gas, LT brake / reverse.   Helicopter + drone: RT up, LT down. Bail out in the air = parachute, it flies home.\n" +
+            "Tank: L-stick drive, R-stick aims the turret, RT fires shells, RB / Y missiles.   Beached boat: RB / Y pushes off.\n\n" +
+            "<b>Keyboard + mouse (P1)</b>  WASD move  |  mouse camera (click to lock)  |  Space hop  |  E get in / out  |  0 camera reset\n" +
+            "Fly: Space up, Shift down.  Tank: click shell, right-click missile.  Wheel / Q / X zoom.  V view.  H help.  M sound.\n\n" +
+            "<b>Touch (P1)</b>  left stick  |  drag the free area for camera (double-tap = reset)  |  A  |  FIRE  |  MSL  |  UP / DOWN  |  - / +  |  SND\n\n" +
+            "Rally: figure-8 with a bridge, jumps, and a loop lane west of the garage (keep the throttle on).  Pond: boat gate course - start at gate 1.\n" +
+            "Back / V switches Shared and Split view.  Start / H closes this.  B / Esc here leaves your seat.";
 
     void RefreshLobby()
     {
@@ -151,10 +159,101 @@ public class Game : MonoBehaviour
                 cardTexts[i].text = "<size=30>" + Froggies.Names[i] + "</size>\nopen seat\n(AI frog)";
             }
         }
+        bool touchOnly = TouchOnly;
+        soundText.text = "SOUND: " + Sfx.LevelName + " <size=15>(M / tap)</size>";
+        viewBar.gameObject.SetActive(!touchOnly);
+        if (touchOnly)
+        {
+            lobbyHelp.text = "Phone = 1 player: tap the frog you want, then PLAY. The other frogs run on AI.\n" +
+                "More players: connect gamepads (each presses A) for split-screen here, or use online host / join in Four Froggies 3D.";
+            Slot ts = FindSlot(InputKind.Touch);
+            for (int i = 0; i < 4; i++)
+                if (ts == null || ts.frog != i)
+                {
+                    cards[i].color = new Color(1, 1, 1, 0.12f);
+                    cardTexts[i].text = "<size=30>" + Froggies.Names[i] + "</size>\ntap to play\n(AI frog)";
+                }
+            lobbyStatus.text = ts == null ? "Tap a frog to pick it" : "You are " + Froggies.Names[ts.frog] + " - tap PLAY";
+            return;
+        }
+        lobbyHelp.text = "Each gamepad: press A to claim a frog (D-pad < > to switch, B to leave). Start / A again = play.\nKeyboard: Enter to join / play, Left-Right to switch.  Touch: tap a frog, then PLAY.  Back / V = Shared / Split view.";
         viewText.text = shared ? "VIEW:   Split   <color=#ffd84a>[ SHARED ]</color>   <size=16>(Back / V / tap)</size>"
                                : "VIEW:   <color=#ffd84a>[ SPLIT ]</color>   Shared   <size=16>(Back / V / tap)</size>";
         if (slots.Count == 0) lobbyStatus.text = "Press A on a gamepad, Enter on the keyboard, or tap a frog to join";
         else lobbyStatus.text = slots.Count + " player" + (slots.Count > 1 ? "s" : "") + " ready - Start / A again / Enter / PLAY to begin" + (autoStartT > 0f ? "  (auto in " + Mathf.CeilToInt(autoStartT) + ")" : "");
+    }
+
+    // a phone / tablet with no gamepads: local multiplayer makes no sense, so the lobby is a 1-player picker
+    public static bool TouchOnly { get { return Application.isMobilePlatform && Gamepad.all.Count == 0; } }
+
+    void LayoutLobby()
+    {
+        bool portrait = Screen.height > Screen.width;
+        int want = portrait ? 1 : 0;
+        if (want == lobbyLayout) return;
+        lobbyLayout = want;
+        var sc = lobbyCanvas.GetComponent<CanvasScaler>();
+        sc.referenceResolution = portrait ? new Vector2(720, 1280) : new Vector2(1280, 720);
+        sc.matchWidthOrHeight = portrait ? 0f : 0.6f;
+        System.Action<Graphic, Vector2, Vector2> put = (g, p, size) => { g.rectTransform.anchoredPosition = p; g.rectTransform.sizeDelta = size; };
+        if (portrait)
+        {
+            put(lobbyBg, Vector2.zero, new Vector2(700, 1240));
+            put(lobbyTitle, new Vector2(0, 530), new Vector2(680, 80)); lobbyTitle.fontSize = 54;
+            put(lobbySub, new Vector2(0, 462), new Vector2(660, 70)); lobbySub.fontSize = 22;
+            for (int i = 0; i < 4; i++)
+            {
+                Vector2 p = new Vector2(i % 2 == 0 ? -170 : 170, i < 2 ? 280 : 50);
+                put(cards[i], p, new Vector2(310, 205));
+                put(swatches[i], p + new Vector2(0, 55), new Vector2(70, 70));
+                put(cardTexts[i], p + new Vector2(0, -38), new Vector2(300, 110));
+            }
+            put(viewBar, new Vector2(0, -110), new Vector2(620, 50));
+            put(playBtn, new Vector2(0, -200), new Vector2(360, 86));
+            put(lobbyStatus, new Vector2(0, -280), new Vector2(680, 60));
+            put(soundBtn, new Vector2(0, -350), new Vector2(260, 50));
+            put(lobbyHelp, new Vector2(0, -460), new Vector2(680, 160)); lobbyHelp.fontSize = 20;
+        }
+        else
+        {
+            put(lobbyBg, Vector2.zero, new Vector2(1200, 650));
+            put(lobbyTitle, new Vector2(0, 262), new Vector2(1100, 90)); lobbyTitle.fontSize = 70;
+            put(lobbySub, new Vector2(0, 200), new Vector2(1100, 40)); lobbySub.fontSize = 24;
+            for (int i = 0; i < 4; i++)
+            {
+                Vector2 p = new Vector2(-420 + i * 280, 60);
+                put(cards[i], p, new Vector2(255, 200));
+                put(swatches[i], p + new Vector2(0, 52), new Vector2(70, 70));
+                put(cardTexts[i], p + new Vector2(0, -38), new Vector2(240, 110));
+            }
+            put(viewBar, new Vector2(0, -88), new Vector2(620, 44));
+            put(playBtn, new Vector2(0, -148), new Vector2(300, 56));
+            put(lobbyStatus, new Vector2(0, -204), new Vector2(1150, 40));
+            put(soundBtn, new Vector2(430, -148), new Vector2(200, 44));
+            put(lobbyHelp, new Vector2(0, -262), new Vector2(1180, 60)); lobbyHelp.fontSize = 19;
+        }
+    }
+
+    void LayoutHud()
+    {
+        bool portrait = Screen.height > Screen.width;
+        bool touchUi = touch.active;
+        int want = (portrait ? 1 : 0) + (touchUi ? 2 : 0);
+        if (want != hudLayout)
+        {
+            hudLayout = want;
+            var sc = hudCanvas.GetComponent<CanvasScaler>();
+            sc.referenceResolution = portrait ? new Vector2(720, 1280) : new Vector2(1280, 720);
+            sc.matchWidthOrHeight = portrait ? 0f : 0.6f;
+            float w = portrait ? 720f : 1280f;
+            helpBg.rectTransform.sizeDelta = portrait ? new Vector2(700, 1100) : new Vector2(1200, 590);
+            helpText.rectTransform.sizeDelta = portrait ? new Vector2(680, 1080) : new Vector2(1150, 560);
+            helpText.fontSize = portrait ? 19 : 21;
+        }
+        float inset = touchUi ? (portrait ? 290f : 120f) : 0f;
+        float width = portrait ? 720f : 1280f;
+        foreach (var s in slots) if (s.hud != null) s.hud.SetBottomInset(s.kind == InputKind.Touch ? inset : 0f, width);
+        sharedHud.SetBottomInset(inset, width);
     }
 
     // ---------------- helpers ----------------
@@ -263,6 +362,8 @@ public class Game : MonoBehaviour
     {
         lobbyCanvas.enabled = true;
         hudCanvas.enabled = false;
+        LayoutLobby();
+        Sfx.Music("lobby");
         overview.enabled = true;
         overview.rect = new Rect(0, 0, 1, 1);
         float now = Time.unscaledTime;
@@ -311,7 +412,8 @@ public class Game : MonoBehaviour
         foreach (Vector2 pos in Kb.TouchesBegan())
         {
             lastTouchTime = now;
-            if (Hit(viewBar, pos)) { ToggleView(); continue; }
+            if (Hit(soundBtn, pos)) { Sfx.CycleVolume(); continue; }
+            if (Hit(viewBar, pos)) { ToggleView(); Sfx.Play(Sfx.Click, 0.6f); continue; }
             if (Hit(playBtn, pos))
             {
                 if (FindSlot(InputKind.Touch) == null) Join(InputKind.Touch, null);
@@ -323,13 +425,15 @@ public class Game : MonoBehaviour
                     Slot ts = FindSlot(InputKind.Touch);
                     if (ts == null) Join(InputKind.Touch, null, i);
                     else if (SlotForFrog(i) == null) { frogs[ts.frog].human = false; ts.frog = i; frogs[i].human = true; }
+                    Sfx.Play(Sfx.Click, 0.6f);
                 }
         }
         // mouse clicks on the lobby (desktop without a touch screen)
         if (Kb.MouseLeftDown() && Kb.TouchCount() == 0 && now - lastTouchTime > 1f)
         {
             Vector2 mp = Mouse.current != null ? Mouse.current.position.ReadValue() : (Vector2)Input.mousePosition;
-            if (Hit(viewBar, mp)) ToggleView();
+            if (Hit(soundBtn, mp)) Sfx.CycleVolume();
+            else if (Hit(viewBar, mp)) ToggleView();
             else if (Hit(playBtn, mp)) { if (FindSlot(InputKind.Keyboard) == null) Join(InputKind.Keyboard, null); StartPlay(); return; }
             else for (int i = 0; i < 4; i++)
                     if (Hit(cards[i], mp))
@@ -366,6 +470,8 @@ public class Game : MonoBehaviour
         hudCanvas.enabled = true;
         autoStartT = -1f;
         if (slots.Count < 2) shared = false;
+        Sfx.Play(Sfx.Click, 0.8f);
+        Sfx.Music("ranch");
         for (int i = 0; i < frogs.Count; i++)
         {
             if (frogs[i].vehicle != null) frogs[i].ExitVehicle();
@@ -383,7 +489,7 @@ public class Game : MonoBehaviour
         {
             s.cam = MakeCam("Cam P" + (slots.IndexOf(s) + 1), 2 + slots.IndexOf(s));
             s.rig = new CamRig(s.cam);
-            s.rig.yaw = 0f;   // behind the frog, looking out towards the track
+            s.rig.SetYaw(0f);   // behind the frog, looking out towards the track
         }
         if (s.hud == null) s.hud = new ViewHud(hudCanvas.transform, "P" + (slots.IndexOf(s) + 1));
         s.rig.Snap();
@@ -474,7 +580,14 @@ public class Game : MonoBehaviour
             f.SetInput(i, camYaw);
         }
         if (viewPressed) ToggleView();
-        if (helpPressed) { help = !help; if (help) Cursor.lockState = CursorLockMode.None; }
+        if (helpPressed) { help = !help; if (help) Cursor.lockState = CursorLockMode.None; Sfx.Play(Sfx.Click, 0.7f); }
+        if (help)
+        {
+            // sound level from the help / pause menu: Y on any joined pad (M works everywhere)
+            foreach (var s in slots) if (s.kind == InputKind.Gamepad && s.pad != null && s.pad.added && s.pad.buttonNorth.wasPressedThisFrame) { Sfx.CycleVolume(); break; }
+            helpText.text = HelpBody + "\n<color=#8cff70>Sound: " + Sfx.LevelName + "</color>  (Y here / M key / SND button cycles ON - LOW - OFF)";
+        }
+        LayoutHud();
         helpText.enabled = help;
         helpBg.enabled = help;
         if (state == State.Play && slots.Count == 0) EnterLobby();
