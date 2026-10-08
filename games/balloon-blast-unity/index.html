@@ -49,13 +49,13 @@
     streamingAssetsUrl: "StreamingAssets",
     companyName: "Similarize",
     productName: "Balloon Blast Airsoft",
-    productVersion: "202610072130-83ea99b",
+    productVersion: "202610081049-9142812",
     devicePixelRatio: Math.min(window.devicePixelRatio || 1, isMobile ? 1.5 : 2),
     showBanner: function (msg, type) { if (type === "error") { var e = document.getElementById("err"); e.style.display = "block"; e.textContent = msg; } else console.log(msg); }
   };
   var fill = document.getElementById("fill"), pct = document.getElementById("pct"), loader = document.getElementById("loader");
   var script = document.createElement("script");
-  script.src = buildUrl + "/" + name + ".loader.js?v=202610072130-83ea99b";
+  script.src = buildUrl + "/" + name + ".loader.js?v=202610081049-9142812";
   script.onload = function () {
     createUnityInstance(canvas, config, function (p) {
       fill.style.width = Math.round(p * 100) + "%";
