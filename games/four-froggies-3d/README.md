@@ -1,3 +1,10 @@
+# What's new (ff3d114) — ff3daudio1 (sound effects)
+
+- **Sound effects.** Hops, boarding and leaving vehicles, launches, landings, pickups (crystals, pups, shards, beacons), splashes, scene changes, and mission-complete jingles now make sounds, and driving a ranch vehicle has an engine hum that follows the throttle and speed (helicopter and drone get a lighter hum).
+- **Mute.** Press M or tap the small speaker button to mute everything, including the music. The choice is remembered across the arcade.
+- Music is the same built-in loop as before. Controls, camera, space and touch are unchanged.
+- Cache: `?v=20261008-ff3daudio1` · asset `index-ff3d114.js` (ff3d113 left in place)
+
 # What's new (ff3d113) — ff3dtouch1 (phone touch controls fixed)
 
 - **Phone joystick works again.** On a phone/tablet the on-screen joystick now walks your frog and drives the Cybertruck (and every ranch vehicle) forward, back and steers. Since ff3d108 the joystick's input only reached space flight, so on the ranch the truck would not move and the frog stood still after getting out.
