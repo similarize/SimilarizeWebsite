@@ -10,7 +10,7 @@ public enum WorldId { Ranch, House, Underwater, Space, Mars, Callisto }
 public static class Worlds
 {
     // staged rollout switches (stage B = house, C = underwater, D = space, E = mechs/robots/animals)
-    public static bool UnderwaterOn = false, SpaceOn = false, StageEOn = false;
+    public static bool UnderwaterOn = true, SpaceOn = false, StageEOn = false;
 
     public static readonly Vector3 HouseO = new Vector3(0f, 0f, 1400f);
     public static readonly Vector3 UnderO = new Vector3(1400f, 0f, 0f);
@@ -32,6 +32,7 @@ public static class Worlds
         ranchSky = RenderSettings.skybox;
         fog0 = RenderSettings.fogColor; fogD0 = RenderSettings.fogDensity;
         amb0 = RenderSettings.ambientSkyColor; amb1 = RenderSettings.ambientEquatorColor; amb2 = RenderSettings.ambientGroundColor;
+        if (RenderSettings.sun != null) sunRot0 = RenderSettings.sun.transform.rotation;
         Camera.onPreCull += PreCull;
     }
 
@@ -55,10 +56,12 @@ public static class Worlds
         }
     }
 
+    static Quaternion sunRot0;
     static void PreCull(Camera c)
     {
         WorldId w;
         if (!camWorld.TryGetValue(c, out w)) w = WorldId.Ranch;
+        if (w != WorldId.Space && RenderSettings.sun != null) RenderSettings.sun.transform.rotation = sunRot0;
         switch (w)
         {
             case WorldId.Underwater:
@@ -66,10 +69,18 @@ public static class Worlds
                 RenderSettings.ambientSkyColor = new Color(0.35f, 0.6f, 0.75f); RenderSettings.ambientEquatorColor = new Color(0.2f, 0.42f, 0.5f); RenderSettings.ambientGroundColor = new Color(0.1f, 0.2f, 0.25f);
                 break;
             case WorldId.Space:
+                if (SpaceWorld.I != null) SpaceWorld.I.PreCull(c);
                 RenderSettings.fog = false;
                 RenderSettings.ambientSkyColor = new Color(0.12f, 0.12f, 0.16f); RenderSettings.ambientEquatorColor = new Color(0.08f, 0.08f, 0.1f); RenderSettings.ambientGroundColor = new Color(0.03f, 0.03f, 0.04f);
                 break;
             case WorldId.Mars:
+                if (SurfaceWorlds.InCave(c.transform.position))
+                {
+                    // inside the cave: dark, teal / violet glow
+                    RenderSettings.fog = true; RenderSettings.fogColor = new Color(0.05f, 0.04f, 0.06f); RenderSettings.fogDensity = 0.03f;
+                    RenderSettings.ambientSkyColor = new Color(0.12f, 0.3f, 0.32f); RenderSettings.ambientEquatorColor = new Color(0.2f, 0.12f, 0.3f); RenderSettings.ambientGroundColor = new Color(0.05f, 0.05f, 0.06f);
+                    break;
+                }
                 RenderSettings.fog = true; RenderSettings.fogColor = new Color(0.62f, 0.42f, 0.3f); RenderSettings.fogDensity = MarsFog;
                 RenderSettings.ambientSkyColor = new Color(0.7f, 0.5f, 0.38f); RenderSettings.ambientEquatorColor = new Color(0.5f, 0.34f, 0.25f); RenderSettings.ambientGroundColor = new Color(0.25f, 0.15f, 0.1f);
                 break;
@@ -115,6 +126,8 @@ public static class Worlds
         switch (f.world)
         {
             case WorldId.House: f.SendTo(WorldId.House, HouseWorld.Spawn(f.id), 180f); break;
+            case WorldId.Mars: SurfaceWorlds.LandMars(f, f.id); break;
+            case WorldId.Callisto: SurfaceWorlds.LandCallisto(f, f.id); break;
             case WorldId.Underwater: f.SendTo(WorldId.Underwater, UnderwaterWorld.I.sub.transform.position + Vector3.up * 3f, 0f); break;
             default: f.SendTo(WorldId.Ranch, Ranch.FrogSpawn(f.id), 0f); break;
         }

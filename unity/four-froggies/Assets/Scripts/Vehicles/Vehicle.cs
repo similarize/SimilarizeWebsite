@@ -30,7 +30,8 @@ public abstract class Vehicle : MonoBehaviour
     public const int VehicleLayer = 8, FrogLayer = 9, ProjectileLayer = 10, PropLayer = 11;
     public static int GroundMask { get { return ~((1 << 2) | (1 << VehicleLayer) | (1 << FrogLayer) | (1 << ProjectileLayer) | (1 << PropLayer)); } }
 
-    public Vector3 Velocity { get { return rb != null ? rb.velocity : Vector3.zero; } }
+    protected Vector3 kinVel;      // kinematic vehicles (the space Starship) report their own velocity
+    public Vector3 Velocity { get { return rb != null && !rb.isKinematic ? rb.velocity : kinVel; } }
     public float Speed { get { Vector3 v = Velocity; v.y = 0f; return v.magnitude; } }
     public float ForwardSpeed { get { return Vector3.Dot(Velocity, transform.forward); } }
 
@@ -92,6 +93,7 @@ public abstract class Vehicle : MonoBehaviour
         Flyer fl = this as Flyer;
         if (fl != null && fl.returning) heard = true;
         float spd = Speed;
+        if (engineKind == 6) return;   // story mechs make their own footsteps
         if (engineKind == 5)
         {
             if (heard && spd > 0.8f)
@@ -153,6 +155,8 @@ public abstract class Vehicle : MonoBehaviour
     public Vector3 worldCenter;
     public float worldRadius = 100f;
     public virtual bool CanExit(Frog f) { return true; }
+    public virtual bool CanEnter(Frog f) { return true; }
+    public virtual string DeniedLine { get { return Title; } }
 
     protected virtual bool OutOfWorld(Vector3 p)
     {

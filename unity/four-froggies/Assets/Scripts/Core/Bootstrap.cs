@@ -50,7 +50,9 @@ public class Bootstrap : MonoBehaviour
         Ranch.Build(terrain);
         HouseWorld.Create();
         if (Worlds.UnderwaterOn) UnderwaterWorld.Create();
+        if (Worlds.SpaceOn) { SpaceWorld.Create(); SurfaceWorlds.Create(); }
         SpawnVehicles();
+        if (Worlds.StageEOn) RanchLife.Create();
         gameObject.AddComponent<Game>();
     }
 

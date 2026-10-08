@@ -43,7 +43,7 @@ public class UnderwaterWorld : MonoBehaviour
         Pickups.Listen((it, f) => { if (it.group == Group) I.OnPearl(f); });
     }
 
-    public Vector3 DockSpot { get { Vector2 c = Layout.PondC, r = Layout.PondR; return new Vector3(c.x - r.x + 4f, 0.7f, c.y + 2.2f); } }
+    public Vector3 DockSpot { get { Vector2 c = Layout.PondC, r = Layout.PondR; return new Vector3(c.x - r.x + 2f, 0.7f, c.y); } }
 
     // ranch side: board the parked sub at the dock -> dive
     public void Dive(Frog f)
@@ -68,7 +68,7 @@ public class UnderwaterWorld : MonoBehaviour
     public void Surface(Frog f)
     {
         if (f.vehicle != null) f.ExitVehicle();
-        Vector3 d = DockSpot + new Vector3(0f, 0f, (f.id - 1.5f) * 1.2f);
+        Vector3 d = DockSpot + new Vector3((f.id - 1.5f) * 1.6f, 0f, 0f);
         f.SendTo(WorldId.Ranch, d, 270f);
         f.Toast("Back at the pond dock", 2.5f);
         Sfx.Play(Sfx.Splash, 0.9f, 1.2f);

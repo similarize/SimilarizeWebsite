@@ -12,6 +12,7 @@ public class TouchControls : MonoBehaviour
 {
     public bool active;
     public bool extraButtons;        // worlds can show a 2nd row (PHONE etc.) later
+    public static bool spaceMode;    // space: A = next target, FIRE = auto-transfer, MSL = land, UP = burn, DOWN = brake
     Canvas canvas;
     RectTransform stickBase, stickKnob;
     int stickId = -1, lookId = -1, upId = -1, downId = -1, fireId = -1;
@@ -24,6 +25,7 @@ public class TouchControls : MonoBehaviour
     public static bool Portrait { get { return Screen.height > Screen.width; } }
 
     static readonly string[] Names = { "A", "FIRE", "MSL", "UP", "DOWN", "-", "+", "SND" };
+    static readonly string[] SpaceNames = { "TGT", "AUTO", "LAND", "BURN", "BRAKE", "-", "+", "SND" };
     // anchor 0 = bottom-right, 1 = top-right, 2 = top-left of the safe area; offsets in canvas units
     static readonly int[] Anchor = { 0, 0, 0, 0, 0, 1, 1, 2 };
     static readonly Vector2[] PosL = { new Vector2(-120, 150), new Vector2(-270, 90), new Vector2(-280, 220), new Vector2(-75, 300), new Vector2(-175, 300), new Vector2(-150, -60), new Vector2(-70, -60), new Vector2(60, -150) };
@@ -84,6 +86,8 @@ public class TouchControls : MonoBehaviour
             labels[i].fontSize = Mathf.RoundToInt((Names[i].Length > 2 ? 0.42f : 0.62f) * rad * (Names[i].Length > 3 ? 0.85f : 1f));
             labels[i].rectTransform.sizeDelta = new Vector2(rad * 2.4f, rad);
         }
+        string[] nm = spaceMode ? SpaceNames : Names;
+        for (int i = 0; i < 5; i++) labels[i].text = nm[i];
         labels[7].text = "SND\n<size=" + Mathf.RoundToInt(Rad[7] * 0.38f) + ">" + Sfx.LevelName + "</size>";
         float sr = StickR;
         stickBase.sizeDelta = Vector2.one * sr * 2.25f;
@@ -212,6 +216,8 @@ public class TouchControls : MonoBehaviour
         i.brake = downId >= 0 ? 1f : 0f;
         i.zoom = zoom;
         i.camReset = resetQ;
+        if (spaceMode) { i.target = aQ; i.auto = fireQ; i.land = altQ; i.hop = i.use = false; }
+        if (spaceMode) { i.move.y = Mathf.Max(i.move.y, upId >= 0 ? 1f : 0f); }
         aQ = fireQ = altQ = resetQ = false;
         return i;
     }

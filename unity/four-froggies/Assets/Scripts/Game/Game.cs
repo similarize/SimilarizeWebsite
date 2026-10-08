@@ -129,7 +129,7 @@ public class Game : MonoBehaviour
         hudCanvas.enabled = false;
     }
 
-    const string HelpBody =
+    static string HelpBody { get { return
             "<size=34><color=#8cff70>FOUR FROGGIES - CONTROLS</color></size>\n\n" +
             "<b>Gamepad</b>  L-stick move / steer  |  R-stick camera (R3 resets it)  |  A hop, get in / out  |  D-pad up/down zoom\n" +
             "Cars, Ripsaw, boat: RT gas, LT brake / reverse.   Helicopter + drone: RT up, LT down. Bail out in the air = parachute, it flies home.\n" +
@@ -138,8 +138,11 @@ public class Game : MonoBehaviour
             "Fly: Space up, Shift down.  Tank: click shell, right-click missile.  Wheel / Q / X zoom.  V view.  H help.  M sound.\n\n" +
             "<b>Touch (P1)</b>  left stick  |  drag the free area for camera (double-tap = reset)  |  A  |  FIRE  |  MSL  |  UP / DOWN  |  - / +  |  SND\n\n" +
             "Rally: figure-8 with a bridge, jumps, and a loop lane west of the garage (keep the throttle on).  Pond: boat gate course - start at gate 1.\n" +
+            (Worlds.UnderwaterOn ? "Pond dock: A at the submarine dives. Underwater: L-stick drive, RT up, LT down, A swim out in scuba (A / RT up, B / LT down), A by the sub climbs back in, surface + keep rising = ranch.\n" : "") +
+            (Worlds.SpaceOn ? "Starship pad: A launches. Space: D-pad < > target, X auto-transfer, LB / RB warp, RT boost, LT brake, Y land (Earth, Mars, Callisto).  Keys: T G Z C F.\n" : "") +
+            (Worlds.StageEOn ? "Mechs: every froggy pilots its own 10 / 100 / 1000 / trillion-story mech (mech yard west, south and north edges); RT / X omnigun.  Robot phone: LB / P / PHONE.\n" : "") +
             "House: walk into the front door. Inside, A at a fish tank feeds it, the toy box starts fetch with Germy + Daisy, the cat bed starts hide-and-seek, A near Dad to chat.\n" +
-            "Back / V switches Shared and Split view.  Start / H closes this.  B / Esc here leaves your seat.";
+            "Back / V switches Shared and Split view.  Start / H closes this.  B / Esc here leaves your seat."; } }
 
     void RefreshLobby()
     {
@@ -570,8 +573,17 @@ public class Game : MonoBehaviour
                     if (help && Kb.EscDown()) { help = false; Leave(s); continue; }
                     break;
                 default:
+                    {
+                        Frog tf = frogs[s.frog];
+                        TouchControls.spaceMode = tf.world == WorldId.Space && tf.vehicle is Starship;
+                    }
                     i = touch.Read();
                     break;
+            }
+            {
+                Frog pf = frogs[s.frog];
+                if (i.phone && RobotPhone.I != null && pf.world == WorldId.Ranch && pf.vehicle == null) RobotPhone.I.Toggle(pf);
+                if (RobotPhone.I != null && RobotPhone.I.Handle(pf, i)) { Vector2 lk = i.look; bool v = i.view, h = i.help; i = new PIn(); i.look = lk; i.view = v; i.help = h; }
             }
             if (i.view) viewPressed = true;
             if (i.help) helpPressed = true;
@@ -630,10 +642,10 @@ public class Game : MonoBehaviour
             {
                 s.rig.Snap();
                 s.rig.SetYaw(f.transform.eulerAngles.y);
-                bool house = f.world == WorldId.House, under = f.world == WorldId.Underwater;
-                s.rig.minPitch = house ? 26f : under ? -40f : -5f;
-                s.rig.maxPitch = house ? 80f : 70f;
-                s.rig.pitch = house ? 38f : under ? 10f : 16f;
+                bool house = f.world == WorldId.House, under = f.world == WorldId.Underwater, space = f.world == WorldId.Space;
+                s.rig.minPitch = house ? 26f : under ? -40f : space ? -70f : -5f;
+                s.rig.maxPitch = house ? 80f : space ? 85f : 70f;
+                s.rig.pitch = house ? 38f : under ? 10f : space ? 25f : 16f;
                 s.rig.ResetView(f.transform.eulerAngles.y);
             }
         }

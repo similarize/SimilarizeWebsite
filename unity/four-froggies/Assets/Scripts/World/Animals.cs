@@ -11,6 +11,7 @@ public class Animal : MonoBehaviour
     public string petName = "";        // empty = unnamed
     public Rect area;                  // wander bounds (x/z, world)
     public float floorY;
+    public System.Func<float, float, float> groundFn;   // follow a ground function instead of a flat floor
     public float speed = 1.6f, runSpeed = 4.5f;
     public bool skittish = true;       // flees from frogs / vehicles that come close
     public Transform body, head, tail;
@@ -102,8 +103,7 @@ public class Animal : MonoBehaviour
         // stay inside the area
         p.x = Mathf.Clamp(p.x, area.xMin + 0.3f, area.xMax - 0.3f);
         p.z = Mathf.Clamp(p.z, area.yMin + 0.3f, area.yMax - 0.3f);
-        p.y = floorY >= -1e4f ? floorY : p.y;
-        if (floorY < -1e4f) p.y = Ranch.GY(p.x, p.z);
+        p.y = groundFn != null ? groundFn(p.x, p.z) : floorY;
         transform.position = p;
         transform.rotation = Quaternion.Euler(0f, yaw, 0f);
         Animate(spd, dt);

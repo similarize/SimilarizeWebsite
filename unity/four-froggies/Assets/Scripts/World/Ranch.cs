@@ -374,7 +374,9 @@ public static class Ranch
             B(tw + new Vector3(1.5f, h, 0f), new Vector3(0.3f, 0.3f, 3.4f), lat, false);
         }
         for (int s = -1; s <= 1; s += 2) B(tw + new Vector3(5.5f, 52f, 2.6f * s), new Vector3(9f, 0.8f, 0.6f), lat, false, new Vector3(0f, -12f * s, 0f));
-        Sign(new Vector3(c.x + 15f, top + 2.8f, c.y), 90f, "SPACE WORLD\n<size=30>coming soon</size>", new Color(0.1f, 0.1f, 0.25f), 8f, 2.4f);
+        Sign(new Vector3(c.x + 15f, top + 2.8f, c.y), 90f, Worlds.SpaceOn ? "STARSHIP\n<size=28>board it to launch!</size>" : "SPACE WORLD\n<size=30>coming soon</size>", new Color(0.1f, 0.1f, 0.25f), 8f, 2.4f);
+        var launch = Interact.Add(new Vector3(c.x + 9f, top, c.y), 5f, "board the Starship (launch to space!)", f => SpaceWorld.I.Launch(f));
+        launch.enabled = f => f.world == WorldId.Ranch && SpaceWorld.I != null;
         B(new Vector3(c.x + 15f, top + 1f, c.y), new Vector3(0.2f, 2f, 0.2f), new Color(0.3f, 0.3f, 0.3f), false);
     }
 
@@ -393,6 +395,7 @@ public static class Ranch
             if (Layout.PondQ(x, z) < 1.3f) continue;
             if (Layout.RoadDist(x, z) < Layout.TrackW + 4f) continue;
             if (x > -30f && x < 30f && z > 30f && z < 70f) continue;   // keep the yard in front of the garage clear
+            if (Worlds.StageEOn && RanchLife.Reserved(x, z)) continue;
             float gy = GY(x, z);
             float s = 0.8f + (float)r.NextDouble() * 0.6f;
             bool conifer = r.NextDouble() < 0.45;
