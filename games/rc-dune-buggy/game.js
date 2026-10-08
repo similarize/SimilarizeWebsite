@@ -24,6 +24,11 @@ const SAND_DRAG = 0.955;
 const HARD_DRAG = 0.978;
 const JUMP_BOOST = 1.15;
 
+/* audio1: shared arcade audio (games/shared/sfx.js) */
+const AUD = window.ArcadeAudio || null;
+if (AUD) AUD.init({ mood: "sport", engine: "buggy", button: "bottom-right" });
+function sfx(name, s) { if (AUD) AUD.play(name, s); }
+function isLocalCar(c) { return net && net.connected && net.role === "guest" ? c.i === net.seat : !!c.human; }
 const canvas = document.getElementById("view");
 const boot = document.getElementById("boot");
 const bannerEl = document.getElementById("banner");
@@ -612,6 +617,7 @@ function updateCar(c, dt) {
   } else {
     inp = c.human ? readHumanInput(c.i) : aiInput(c);
   }
+  c._thr = inp.throttle || 0;
   const speed = Math.hypot(c.vx, c.vz);
   const sand = surfaceSand(c.x, c.z);
   const drag = SAND_DRAG + (HARD_DRAG - SAND_DRAG) * (1 - sand);
@@ -695,7 +701,11 @@ function updateCar(c, dt) {
       c.finished = true;
       c.finishTime = raceTime;
       showBanner(`${c.name} finished!`);
-    }
+      if (isLocalCar(c)) {
+        const place = cars.filter((o) => o.finished).length;
+        sfx(place === 1 ? "win" : place === 2 ? "lap" : "lose");
+      }
+    } else if (isLocalCar(c)) sfx("lap");
   } else if (delta > 0.5) {
     // going backward over line — ignore lap
     delta = 0;
@@ -713,6 +723,7 @@ function settleGround(c, dt) {
     if (!c.grounded && c.vy < -2) {
       // landing squish
       c.susPitch -= 0.08;
+      if (isLocalCar(c)) sfx("land", Math.min(1.3, -c.vy / 12));
     }
     // jump ramp: if slope ahead steep and fast, launch
     if (c.grounded) {
@@ -723,6 +734,7 @@ function settleGround(c, dt) {
       if (slope > 0.35 && spd > 12 && n.y < 0.92) {
         c.vy = Math.max(c.vy, slope * spd * 0.55 * JUMP_BOOST);
         c.grounded = false;
+        if (isLocalCar(c)) sfx("jump");
         c.y = ground + 0.05;
         return;
       }
@@ -749,6 +761,7 @@ function carCollisions() {
         b.x += nx * push; b.z += nz * push;
         const dvx = b.vx - a.vx, dvz = b.vz - a.vz;
         const impact = dvx * nx + dvz * nz;
+        if (impact < -3 && (isLocalCar(a) || isLocalCar(b))) sfx("bump", Math.min(1.3, -impact / 14));
         if (impact < 0) {
           a.vx += nx * impact * 0.55; a.vz += nz * impact * 0.55;
           b.vx -= nx * impact * 0.55; b.vz -= nz * impact * 0.55;
@@ -828,6 +841,7 @@ function resetRace() {
     syncMesh(c);
   }
   showBanner("3 · 2 · 1 · GO!");
+  if (AUD) { sfx("countdown"); setTimeout(() => sfx("countdown"), 450); setTimeout(() => sfx("countdown"), 900); setTimeout(() => sfx("go"), 1350); }
   if (net && net.connected && net.role === "host") {
     net.sendReset();
     net.sendBanner("3 · 2 · 1 · GO!");
@@ -884,6 +898,11 @@ function frame() {
     }
   }
 
+  if (AUD) {
+    const me = cars.find(isLocalCar);
+    if (me) AUD.engine(Math.abs(me._thr || 0), Math.hypot(me.vx, me.vz) / MAX_SPEED, "buggy");
+    else AUD.engineStop();
+  }
   updateDust(dt);
   if (!xrSession) updateCamera();
   updateHud();
