@@ -5,8 +5,8 @@ on:
   push:
     branches: [unity-src]
     paths:
-      - 'unity/**'
-      - '!unity/logs/**'
+      - 'unity/balloon-blast/**'
+      - 'unity/web/**'
 
 permissions:
   contents: write
