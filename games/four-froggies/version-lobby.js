@@ -7,12 +7,13 @@
    ff3dsplit1: "3D view: Split / Shared" toggle under the cards (localStorage ff3d.view,
    default Split) is handed to 3D as &view=split|shared. Cache: 20261007-ff3dsplit1
    ff3dcam1: 3D Shared view auto-fits every player; zoom/turn/tilt in both views. Cache: 20261007-ff3dcam1
-   ff3dspace1: 3D space overhaul (solar system, travel assists, Mars cave, Callisto). Cache: 20261007-ff3dspace1 */
+   ff3dspace1: 3D space overhaul (solar system, travel assists, Mars cave, Callisto). Cache: 20261007-ff3dspace1
+   ff3dtouch1: 3D phone joystick drives/walks again; pinch ignores the joystick thumb. Cache: 20261007-ff3dtouch1 */
 (function () {
   "use strict";
 
-  var CACHE = "20261007-ff3dspace1";
-  var FF3D_CACHE = "20261007-ff3dspace1";
+  var CACHE = "20261007-ff3dtouch1";
+  var FF3D_CACHE = "20261007-ff3dtouch1";
   var FROG_ORDER = ["james", "jimmy", "bubbles", "rexy"];
   var FROG_NAME = { james: "James", jimmy: "Jimmy", bubbles: "Bubbles", rexy: "Rexy" };
 
