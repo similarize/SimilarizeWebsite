@@ -231,6 +231,7 @@ public class Soldier : MonoBehaviour
         if (!alive || b.popped) return;
         b.popped = true;
         FX.Pop(b.transform.position, color);
+        Sfx.OnPop(b.transform.position, this, by);
         b.gameObject.SetActive(false);
         if (b.stringObj != null) b.stringObj.SetActive(false);
         if (by != null)
@@ -294,7 +295,7 @@ public class Soldier : MonoBehaviour
             if (cc.isGrounded)
             {
                 if (vy < 0f) vy = -2f;
-                if (inJump && alive && playing) vy = 6.4f;
+                if (inJump && alive && playing) { vy = 6.4f; Sfx.OnJump(this); }
             }
             vy -= 20f * dt;
             vel = new Vector3(hv.x, vy, hv.z);
@@ -317,9 +318,9 @@ public class Soldier : MonoBehaviour
         if (reloadLeft > 0f)
         {
             reloadLeft -= dt;
-            if (reloadLeft <= 0f) { reloadLeft = 0f; ammo = Mag; }
+            if (reloadLeft <= 0f) { reloadLeft = 0f; ammo = Mag; Sfx.OnReload(this, true); }
         }
-        if (inReload && ammo < Mag && reloadLeft <= 0f) reloadLeft = 1.4f;
+        if (inReload && ammo < Mag && reloadLeft <= 0f) { reloadLeft = 1.4f; Sfx.OnReload(this, false); }
         inReload = false;
         if (alive && playing && inFire && cooldown <= 0f && reloadLeft <= 0f)
         {
@@ -328,7 +329,7 @@ public class Soldier : MonoBehaviour
                 Fire();
                 ammo--;
                 cooldown = 1f / 9f;
-                if (ammo == 0) reloadLeft = 1.4f;
+                if (ammo == 0) { reloadLeft = 1.4f; Sfx.OnReload(this, false); }
             }
         }
 
@@ -356,6 +357,7 @@ public class Soldier : MonoBehaviour
         Vector3 origin = eye.position + eye.forward * 0.35f;
         if (BBs.I != null) BBs.I.Fire(origin, dir * BBs.Speed, this);
         kick = 1f;
+        Sfx.OnShot(this);
         pitch -= 0.2f;
     }
 }

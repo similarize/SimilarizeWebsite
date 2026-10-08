@@ -27,7 +27,7 @@ public class Hud
         // round info (top-center)
         top = UIK.Label(r, "", 24, TextAnchor.UpperCenter, new Vector2(0.5f, 1), new Vector2(0, -34), new Vector2(700, 60), Color.white);
         // feed (top-right)
-        feed = UIK.Label(r, "", 20, TextAnchor.UpperRight, new Vector2(1, 1), new Vector2(-245, -70), new Vector2(470, 120), new Color(1, 1, 1, 0.9f));
+        feed = UIK.Label(r, "", 20, TextAnchor.UpperRight, new Vector2(1, 1), new Vector2(-245, -112), new Vector2(470, 120), new Color(1, 1, 1, 0.9f));
 
         // crosshair
         Vector2[] offs = { new Vector2(0, 14), new Vector2(0, -14), new Vector2(14, 0), new Vector2(-14, 0) };

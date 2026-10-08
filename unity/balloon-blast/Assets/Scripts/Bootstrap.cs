@@ -34,6 +34,7 @@ public class Bootstrap : MonoBehaviour
         Mats.Init(litMat, unlitMat, fxMat);
         World.Build(terrain, System.Environment.TickCount);
         FX.Init();
+        Sfx.Init();
         gameObject.AddComponent<BBs>();
         gameObject.AddComponent<Game>();
         ModelLoader.Begin();

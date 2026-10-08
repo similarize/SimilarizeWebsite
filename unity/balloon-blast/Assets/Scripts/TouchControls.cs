@@ -78,6 +78,7 @@ public class TouchControls : MonoBehaviour
                 case TouchPhase.Began:
                     {
                         string b = HitButton(t.position);
+                        if (Sfx.ButtonHit(t.position)) break;   // SOUND button (handled by SfxDriver)
                         if (b == "fire") fireId = t.fingerId;
                         else if (b == "ads") adsOn = !adsOn;
                         else if (b == "jump") jumpQ = true;

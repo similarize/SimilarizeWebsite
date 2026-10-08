@@ -38,6 +38,7 @@ public class Game : MonoBehaviour
     float stateT, roundClock, autoStartT = -1f, orbit;
     Soldier roundWinner, matchWinner;
     bool mobileAutoJoined;
+    int lastBeep = -1;
 
     // Figures: false = Soldiers (X-Bot), true = Critters
     public static bool critterMode;
@@ -106,7 +107,7 @@ public class Game : MonoBehaviour
             UIK.Label(arrowR[i].transform, ">", 34, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(38, 60), Color.white);
         }
         lobbyStatus = UIK.Label(r, "", 30, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, -90), new Vector2(1100, 60), new Color(0.6f, 1f, 0.6f));
-        lobbyHint = UIK.Label(r, "Gamepad: L-stick move | R-stick look | RT fire | LT aim | A jump | X reload\nKeyboard: WASD | mouse look | click fire | right-click aim | Space jump | R reload\nTouch: left stick | drag right side to look | FIRE / ADS / JUMP / RELOAD\nFigures: Y / F / tap the FIGURES bar.  Critters: pick with D-pad / Left-Right arrows / tap < >", 20, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, -208), new Vector2(1150, 130), new Color(1, 1, 1, 0.85f));
+        lobbyHint = UIK.Label(r, "Gamepad: L-stick move | R-stick look | RT fire | LT aim | A jump | X reload\nKeyboard: WASD | mouse look | click fire | right-click aim | Space jump | R reload\nTouch: left stick | drag right side to look | FIRE / ADS / JUMP / RELOAD\nFigures: Y / F / tap the FIGURES bar.  Critters: pick with D-pad / Left-Right arrows / tap < >.  Sound: M / SOUND button", 20, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, -208), new Vector2(1150, 130), new Color(1, 1, 1, 0.85f));
     }
 
     void RefreshLobbyUI()
@@ -159,7 +160,12 @@ public class Game : MonoBehaviour
             case State.Lobby: UpdateLobby(dt); break;
             case State.Countdown:
                 stateT -= dt;
-                if (stateT <= 0f) state = State.Playing;
+                {
+                    int c = Mathf.CeilToInt(stateT);
+                    if (c != lastBeep && c >= 1 && c <= 3) Sfx.CountBeep();
+                    lastBeep = c;
+                }
+                if (stateT <= 0f) { state = State.Playing; Sfx.RoundGo(); }
                 break;
             case State.Playing:
                 roundClock -= dt;
@@ -279,6 +285,7 @@ public class Game : MonoBehaviour
         bool generic = false;
         foreach (Vector2 pos in Kb.TouchesBegan())
         {
+            if (Sfx.ButtonHit(pos)) continue;   // SOUND button
             if (Hit(figImg, pos)) { ToggleFigures(); continue; }
             bool used = false;
             if (critterMode)
@@ -534,6 +541,7 @@ public class Game : MonoBehaviour
         roundWinner = null;
         state = State.Countdown;
         stateT = 3.5f;
+        lastBeep = -1;
     }
 
     void CheckRoundEnd()
@@ -558,6 +566,7 @@ public class Game : MonoBehaviour
         wins[w.id]++;
         if (wins[w.id] >= WinsNeeded) { matchWinner = w; state = State.MatchOver; stateT = 9f; }
         else { state = State.RoundOver; stateT = 4.5f; }
+        Sfx.RoundEnd(w.human, state == State.MatchOver);
     }
 
     public void OnPop(Soldier by, Soldier victim)
@@ -694,6 +703,7 @@ public class Game : MonoBehaviour
             {
                 case State.Countdown: center = "ROUND " + round + "\n" + Mathf.CeilToInt(stateT); break;
                 case State.Playing:
+                    if (s.alive && roundClock > RoundLength - 0.9f) center = "<size=72>GO!</size>";
                     if (!s.alive) center = "YOU'RE OUT!\n<size=24>Spectating " + (target != null ? target.nick : "") + " - press JUMP to switch</size>";
                     break;
                 case State.RoundOver:

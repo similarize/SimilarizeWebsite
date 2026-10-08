@@ -57,6 +57,35 @@ public static class Kb
         try { return Input.GetKeyDown(KeyCode.R); } catch { return false; }
     }
 
+    public static bool MDown()
+    {
+        Keyboard k = Keyboard.current;
+        if (k != null) return k.mKey.wasPressedThisFrame;
+        try { return Input.GetKeyDown(KeyCode.M); } catch { return false; }
+    }
+
+    public static Vector2 MousePos()
+    {
+        Mouse m = Mouse.current;
+        if (m != null) return m.position.ReadValue();
+        try { return Input.mousePosition; } catch { return Vector2.zero; }
+    }
+
+    // any key / click / tap / pad button this frame: browsers only start audio after a user gesture
+    public static bool AnyGesture()
+    {
+        Keyboard k = Keyboard.current;
+        if (k != null && k.anyKey.wasPressedThisFrame) return true;
+        Mouse m = Mouse.current;
+        if (m != null && (m.leftButton.wasPressedThisFrame || m.rightButton.wasPressedThisFrame)) return true;
+        if (AnyTouchBegan()) return true;
+        foreach (Gamepad p in Gamepad.all)
+            if (p.buttonSouth.wasPressedThisFrame || p.startButton.wasPressedThisFrame || p.buttonEast.wasPressedThisFrame ||
+                p.buttonNorth.wasPressedThisFrame || p.buttonWest.wasPressedThisFrame || p.rightTrigger.wasPressedThisFrame) return true;
+        try { if (k == null && Input.anyKeyDown) return true; } catch { }
+        return false;
+    }
+
     public static bool FDown()
     {
         Keyboard k = Keyboard.current;
