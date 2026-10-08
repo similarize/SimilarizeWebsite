@@ -8,12 +8,13 @@
    default Split) is handed to 3D as &view=split|shared. Cache: 20261007-ff3dsplit1
    ff3dcam1: 3D Shared view auto-fits every player; zoom/turn/tilt in both views. Cache: 20261007-ff3dcam1
    ff3dspace1: 3D space overhaul (solar system, travel assists, Mars cave, Callisto). Cache: 20261007-ff3dspace1
-   ff3dtouch1: 3D phone joystick drives/walks again; pinch ignores the joystick thumb. Cache: 20261007-ff3dtouch1 */
+   ff3dtouch1: 3D phone joystick drives/walks again; pinch ignores the joystick thumb. Cache: 20261007-ff3dtouch1
+   ff3daudio1: shared arcade audio (3D SFX + engine hum, 2.5D SFX). Cache: 20261008-ff3daudio1 */
 (function () {
   "use strict";
 
-  var CACHE = "20261007-ff3dtouch1";
-  var FF3D_CACHE = "20261007-ff3dtouch1";
+  var CACHE = "20261008-ff3daudio1";
+  var FF3D_CACHE = "20261008-ff3daudio1";
   var FROG_ORDER = ["james", "jimmy", "bubbles", "rexy"];
   var FROG_NAME = { james: "James", jimmy: "Jimmy", bubbles: "Bubbles", rexy: "Rexy" };
 
