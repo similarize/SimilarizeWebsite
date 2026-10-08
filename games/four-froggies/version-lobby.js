@@ -3,12 +3,14 @@
    Flat 2D removed from picker (lobby253d1). Cache: 20261007-ff3dmp1
    ff3dmp1: 3D handoff carries EVERY couch pad seat (&pads=james.0,jimmy.1,…),
    not just the first frog — players 2–4 were silently dropped on the 3D page.
-   Pad X on the entrance = start 3D (Y = 2.5D). */
+   Pad X on the entrance = start 3D (Y = 2.5D).
+   ff3dsplit1: "3D view: Split / Shared" toggle under the cards (localStorage ff3d.view,
+   default Split) is handed to 3D as &view=split|shared. Cache: 20261007-ff3dsplit1 */
 (function () {
   "use strict";
 
-  var CACHE = "20261007-ff3dmp1";
-  var FF3D_CACHE = "20261007-ff3dmp1";
+  var CACHE = "20261007-ff3dsplit1";
+  var FF3D_CACHE = "20261007-ff3dsplit1";
   var FROG_ORDER = ["james", "jimmy", "bubbles", "rexy"];
   var FROG_NAME = { james: "James", jimmy: "Jimmy", bubbles: "Bubbles", rexy: "Rexy" };
 
@@ -443,6 +445,7 @@
           }
           if (padList.length) q += "&pads=" + padList.join(",");
         } catch (ePad) {}
+        q += "&view=" + ff3dView();
         if (role === "host" && room) q += "&host=" + encodeURIComponent(room);
         else if (room) q += "&room=" + encodeURIComponent(room);
         starting = true;
@@ -505,6 +508,35 @@
     } catch (err) { /* ignore */ }
     return null;
   }
+
+  /* ff3dsplit1: 3D camera choice. Split (default) = one view per local player when 2+ have frogs. */
+  function ff3dView() {
+    try {
+      var sv = localStorage.getItem("ff3d.view");
+      if (sv === "shared" || sv === "split") return sv;
+    } catch (eV) { /* ignore */ }
+    return "split";
+  }
+  function paintViewToggle() {
+    var vb = document.getElementById("ff3d-view-toggle");
+    if (!vb) return;
+    var split = ff3dView() === "split";
+    vb.innerHTML = "3D view: " + (split ? "<b>Split</b> / <span>Shared</span>" : "<span>Split</span> / <b>Shared</b>");
+    vb.setAttribute("aria-pressed", split ? "true" : "false");
+    vb.title = split ? "Each player gets their own screen (2+ players)" : "Everyone shares one camera";
+  }
+  (function () {
+    var vb = document.getElementById("ff3d-view-toggle");
+    if (!vb) return;
+    vb.addEventListener("click", function (eV) {
+      eV.preventDefault();
+      eV.stopPropagation();
+      var nv = ff3dView() === "split" ? "shared" : "split";
+      try { localStorage.setItem("ff3d.view", nv); } catch (eS) { /* ignore */ }
+      paintViewToggle();
+    });
+    paintViewToggle();
+  })();
 
   lobby.addEventListener("click", function (e) {
     var btn = versionUnderPointer(e);
