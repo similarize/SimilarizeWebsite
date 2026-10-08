@@ -40,6 +40,7 @@ public class StoryMech : Vehicle
         m.flyer = true;   // no flip rescue; camera follows the body heading
         m.SetupBodyPublic(1000f, new Vector3(0f, H * 0.32f, 0f), new Vector3(H * 0.42f, H * 0.64f, H * 0.26f), Vector3.zero);
         m.rb.isKinematic = true; m.rb.useGravity = false;
+        m.rb.interpolation = RigidbodyInterpolation.None;
         m.rb.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
         m.camDistance = H * 1.15f + 6f; m.camHeight = H * 0.75f;
         m.showDriver = false;
@@ -64,9 +65,10 @@ public class StoryMech : Vehicle
         Mats.Prim(PrimitiveType.Cube, m.torso, new Vector3(0f, H * 0.2f, 0f), new Vector3(H * 0.38f, H * 0.28f, H * 0.22f), body);
         Mats.Prim(PrimitiveType.Cube, m.torso, new Vector3(0f, H * 0.22f, H * 0.112f), new Vector3(H * 0.2f, H * 0.12f, H * 0.01f), trim);   // chest plate in the frog colour
         Mats.Prim(PrimitiveType.Sphere, m.torso, new Vector3(0f, H * 0.22f, H * 0.12f), Vector3.one * H * 0.06f, glow);                      // reactor
+        for (int s = -1; s <= 1; s += 2) Mats.Prim(PrimitiveType.Cube, m.torso, new Vector3(H * 0.22f * s, H * 0.33f, 0f), new Vector3(H * 0.14f, H * 0.08f, H * 0.18f), trim);   // shoulders
+        MeshMerge.Merge(m.torso, band >= 2);   // before the arms / head are parented under it, so they stay animated
         for (int s = -1; s <= 1; s += 2)
         {
-            Mats.Prim(PrimitiveType.Cube, m.torso, new Vector3(H * 0.22f * s, H * 0.33f, 0f), new Vector3(H * 0.14f, H * 0.08f, H * 0.18f), trim);   // shoulder
             Transform arm = Mats.Node(m.torso, s < 0 ? "ArmL" : "ArmR", new Vector3(H * 0.24f * s, H * 0.3f, 0f));
             Mats.Prim(PrimitiveType.Cube, arm, new Vector3(0f, -H * 0.12f, 0f), new Vector3(H * 0.08f, H * 0.22f, H * 0.09f), body);
             Mats.Prim(PrimitiveType.Cube, arm, new Vector3(0f, -H * 0.27f, 0f), new Vector3(H * 0.1f, H * 0.1f, H * 0.11f), dark);   // fist
@@ -81,9 +83,6 @@ public class StoryMech : Vehicle
         m.seatScale = 0.5f;
         // fewer draw calls: merge each moving part, and cull the small ones when they are tiny on screen
         foreach (Transform part in new[] { m.legL, m.legR, m.armL, m.armR, m.head }) MeshMerge.Merge(part, band >= 2);
-        MeshMerge.Merge(m.torso, band >= 2);
-        var lod = go.AddComponent<LODGroup>();
-        lod.SetLODs(new[] { new LOD(band == 0 ? 0.02f : 0.005f, go.GetComponentsInChildren<Renderer>()) });
         Mats.SetLayer(go, VehicleLayer);
         // name plate on the chest
         var tag = new GameObject("Plate");
@@ -94,6 +93,15 @@ public class StoryMech : Vehicle
         tm.font = UIK.Font; tm.fontSize = 64; tm.characterSize = H * 0.004f; tm.anchor = TextAnchor.MiddleCenter; tm.alignment = TextAlignment.Center;
         tag.GetComponent<MeshRenderer>().sharedMaterial = UIK.Font != null ? UIK.Font.material : null;
         return m;
+    }
+
+    void Start()
+    {
+        // cull the small mechs when they are tiny on screen (renderers settle after the merge)
+        var lod = gameObject.AddComponent<LODGroup>();
+        var rs = new System.Collections.Generic.List<Renderer>();
+        foreach (var r in GetComponentsInChildren<Renderer>()) if (r != null && !(r is MeshRenderer && r.GetComponent<TextMesh>() != null)) rs.Add(r);
+        lod.SetLODs(new[] { new LOD(band == 0 ? 0.02f : 0.004f, rs.ToArray()) });
     }
 
     public override void OnEnter()

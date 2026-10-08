@@ -10,7 +10,7 @@ public enum WorldId { Ranch, House, Underwater, Space, Mars, Callisto }
 public static class Worlds
 {
     // staged rollout switches (stage B = house, C = underwater, D = space, E = mechs/robots/animals)
-    public static bool UnderwaterOn = true, SpaceOn = false, StageEOn = false;
+    public static bool UnderwaterOn = true, SpaceOn = true, StageEOn = false;
 
     public static readonly Vector3 HouseO = new Vector3(0f, 0f, 1400f);
     public static readonly Vector3 UnderO = new Vector3(1400f, 0f, 0f);

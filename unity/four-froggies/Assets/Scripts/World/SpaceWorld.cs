@@ -168,6 +168,7 @@ public class SpaceWorld : MonoBehaviour
         targetArrow = Line(new Color(1f, 0.85f, 0.2f, 0.95f), 1.8f, 2, false);
         progradeLine = Line(new Color(0.3f, 1f, 0.4f, 0.9f), 1.4f, 2, false);
         ship = Starship.Build(this);
+        ship.EnterOrbit(Find("earth"), bodies[Find("earth")].cap, 0f);
         foreach (var r in root.GetComponentsInChildren<Renderer>()) { r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; r.receiveShadows = false; }
         Tick(0f);
     }
@@ -315,6 +316,7 @@ public class SpaceWorld : MonoBehaviour
             int b = v.Count;
             v.Add(d + q * new Vector3(-s, -s, 0f)); v.Add(d + q * new Vector3(s, -s, 0f)); v.Add(d + q * new Vector3(0f, s, 0f));
             tri.Add(b); tri.Add(b + 2); tri.Add(b + 1);
+            tri.Add(b); tri.Add(b + 1); tri.Add(b + 2);   // both faces, whatever the winding
         }
         var mesh = new Mesh { indexFormat = UnityEngine.Rendering.IndexFormat.UInt32 };
         mesh.SetVertices(v); mesh.SetTriangles(tri, 0); mesh.RecalculateBounds();
@@ -451,6 +453,7 @@ public class Starship : Vehicle
         v.showDriver = false;
         v.SetupBodyPublic(5000f, new Vector3(0f, 0f, 0f), new Vector3(3.6f, 3.6f, 16f), Vector3.zero);
         v.rb.isKinematic = true; v.rb.useGravity = false;
+        v.rb.interpolation = RigidbodyInterpolation.None;
         v.rb.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
         v.body.isTrigger = true;
         v.camDistance = 34f; v.camHeight = 6f;

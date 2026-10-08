@@ -52,7 +52,12 @@ public class Bootstrap : MonoBehaviour
         if (Worlds.UnderwaterOn) UnderwaterWorld.Create();
         if (Worlds.SpaceOn) { SpaceWorld.Create(); SurfaceWorlds.Create(); }
         SpawnVehicles();
-        if (Worlds.StageEOn) RanchLife.Create();
+        if (Worlds.StageEOn)
+        {
+            // the walking Optimus robot now lives by the garage, so the rideable bay-5 suit gets a clearer name
+            foreach (Vehicle v in Vehicle.All) if (v.Title == "Optimus") { v.Title = "Optimus mech suit"; v.EnterVerb = "ride the Optimus mech suit"; }
+            RanchLife.Create();
+        }
         gameObject.AddComponent<Game>();
     }
 
