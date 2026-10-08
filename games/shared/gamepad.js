@@ -50,6 +50,9 @@
  */
 (function (global) {
   "use strict";
+  /* ff3dmp1 (Oct 7 2026): same-model Xbox pads also become "known distinct" after two
+     independent-activity events (solo press OR stick moved while the other pad was idle),
+     so pad 2 no longer drops out while both players hold the same stick pose. */
   var DZ = 0.25;
   var NAMES = ["a", "b", "x", "y", "lb", "rb", "lt", "rt", "back", "start", "du", "dd", "dl", "dr"];
   var prev = [{}, {}, {}, {}];
@@ -167,6 +170,13 @@
   var pairCoin = Object.create(null);
   var pairSolo = Object.create(null);
   var pairDistinct = Object.create(null);
+  /* ff3dmp1: stick-only "moved while the other pad sat fully idle" evidence.
+     A mirror/ghost can never move while its twin is idle, so two such events
+     (or one plus a solo press) prove two real pads — even same-model Xbox pads. */
+  var moveSolo = Object.create(null);
+  var busyHist = [];
+  var movePend = [];
+  var MOVE_WIN = 200;
   var mergeListeners = [];
 
   function nowMs() {
@@ -198,6 +208,26 @@
       var ab = k.split(">");
       if ((ab[0] | 0) === i || (ab[1] | 0) === i) delete pairSolo[k];
     }
+    for (k in moveSolo) {
+      var mb = k.split(">");
+      if ((mb[0] | 0) === i || (mb[1] | 0) === i) delete moveSolo[k];
+    }
+    busyHist[i] = [];
+    movePend[i] = [];
+  }
+  /* ff3dmp1: any two independent-activity events between a pair (solo press or
+     solo stick move, either direction) = two real controllers. Undo a false
+     merge right away so a same-model pad that joined in sync gets its seat back. */
+  function noteEvidence(x, y) {
+    var ck = pairKey(x, y);
+    if (pairDistinct[ck]) return;
+    var ev = (pairSolo[x + ">" + y] | 0) + (pairSolo[y + ">" + x] | 0) +
+      (moveSolo[x + ">" + y] | 0) + (moveSolo[y + ">" + x] | 0);
+    if (ev < 2) return;
+    pairDistinct[ck] = true;
+    if (pairCoin[ck]) pairCoin[ck].n = 0;
+    if (pressAlias[x] === y || (isAliasSlot(x) && rootOf(x) === y)) { pressAlias[x] = -1; uniqCache = null; }
+    if (pressAlias[y] === x || (isAliasSlot(y) && rootOf(y) === x)) { pressAlias[y] = -1; uniqCache = null; }
   }
   function pressedNear(y, t, w) {
     var h = pressAll[y] || [];
@@ -362,6 +392,7 @@
           var ck = pairKey(x, y);
           if (pairCoin[ck]) pairCoin[ck].n = 0;
           if (pairSolo[y + ">" + x] >= 1) pairDistinct[ck] = true;
+          noteEvidence(x, y);
           if (isAliasSlot(x) && rootOf(x) === rootOf(y) && pairSolo[sk] >= 2) {
             /* alias keeps pressing on its own: two real pads, undo the merge */
             pressAlias[x] = -1;
@@ -497,6 +528,48 @@
     return s * 10 - item.slot;
   }
 
+  function rawBusy(gp) {
+    var ax = (gp && gp.axes) || [];
+    var a, b, btn;
+    for (a = 0; a < 4; a++) if (Math.abs(ax[a] || 0) > 0.3) return true;
+    var bt = (gp && gp.buttons) || [];
+    for (b = 0; b < ACT_BTNS.length; b++) {
+      btn = bt[ACT_BTNS[b]];
+      if (btn && (btn.pressed || (typeof btn.value === "number" && btn.value > 0.3))) return true;
+    }
+    return false;
+  }
+  function busyNear(o, t) {
+    var h = busyHist[o] || [];
+    for (var k = 0; k < h.length; k++) if (Math.abs(h[k] - t) <= MOVE_WIN) return true;
+    return false;
+  }
+  /* ff3dmp1: a move into a non-idle pose while another pad stayed fully idle for
+     MOVE_WIN ms before AND after it. Judged only once the after-window passed. */
+  function scoreSoloMoves(slots, now) {
+    var i, j, x, y, k, pend, keep, pt;
+    for (i = 0; i < slots.length; i++) {
+      x = slots[i];
+      pend = movePend[x] || [];
+      keep = [];
+      for (k = 0; k < pend.length; k++) {
+        pt = pend[k];
+        if (now - pt <= MOVE_WIN) { keep.push(pt); continue; }
+        for (j = 0; j < slots.length; j++) {
+          y = slots[j];
+          if (y === x || busyNear(y, pt)) continue;
+          moveSolo[x + ">" + y] = (moveSolo[x + ">" + y] | 0) + 1;
+          noteEvidence(x, y);
+        }
+      }
+      movePend[x] = keep.length > 6 ? keep.slice(-6) : keep;
+    }
+    for (i = 0; i < slots.length; i++) {
+      var h = busyHist[slots[i]];
+      while (h && h.length && now - h[0] > 1500) h.shift();
+    }
+  }
+
   var uniqCache = null; /* { token, n, out } — one decision per frame token */
   function uniqueConnectedIndices(max) {
     var n = typeof max === "number" ? max : 4;
@@ -508,6 +581,8 @@
     var serial = frameToken;
     var list = pads();
     var live = [];
+    var evNow = nowMs();
+    var evSlots = [];
     var seenIndex = Object.create(null);
     var i, gp, id, vec, prev, dkey, px, item;
     for (i = 0; i < n; i++) {
@@ -528,6 +603,12 @@
         slotId[i] = id;
       }
       vec = controlVector(gp);
+      if (!ignoredSlot[i]) {
+        /* ff3dmp1: busy history + "moved into a pose" moments for solo-move evidence */
+        evSlots.push(i);
+        if (rawBusy(gp)) (busyHist[i] = busyHist[i] || []).push(evNow);
+        if (slotPrev[i] && vecBusy(vec) && deltaKey(slotPrev[i], vec)) (movePend[i] = movePend[i] || []).push(evNow);
+      }
       if (ignoredSlot[i]) {
         /* padmerge1: a standard pad exists — non-standard entries never seat */
         clearSlot(i);
@@ -552,6 +633,8 @@
         info: idInfo(gp)
       });
     }
+
+    scoreSoloMoves(evSlots, evNow);
 
     /* Echo only when the lower slot's change/pose matches a better slot —
        never because an unrelated higher pad twitched (that hid real pad 2). */
