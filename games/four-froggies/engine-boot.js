@@ -76,6 +76,7 @@
 
   function stopAltEngines() {
     engineRunning = false;
+    try { if (global.ArcadeAudio) global.ArcadeAudio.engineStop(); } catch (e) {}
     claimedPadSet = {};
     primaryPadIndex = null;
     lastSeatMap = null;
@@ -104,7 +105,31 @@
     var btnInteract = $("btn-interact");
     var btnEscape = $("btn-escape");
 
+    /* audio1: 2.5D SFX through shared arcade audio. Ranch BGM (ogg) stays the music; its M mute also silences these. */
+    var AUD = global.ArcadeAudio || null;
+    if (AUD) AUD.init({ mood: "pond", music: false, button: false, muteKey: false });
+    function ffMuted() { try { return localStorage.getItem("ff-ranch-bgm-mute") === "1"; } catch (e) { return false; } }
+    function asfx(n, s) { if (AUD && !ffMuted()) AUD.play(n, s); }
+    var prevHud = null;
+    function hudSounds(h) {
+      var p = prevHud; prevHud = { scrap: h.scrap | 0, mode: h.mode, inOrbit: !!h.inOrbit, inSwim: !!h.inSwim,
+        veh: h.inTruck ? "truck" : h.inMech ? "mech" : h.inHeli ? "heli" : h.inDrone ? "drone" : h.inSub ? "sub" : "" };
+      var c = prevHud;
+      if (AUD) {
+        if (c.veh && !ffMuted()) AUD.engine(0.25, 0.3, c.veh === "heli" || c.veh === "drone" ? "jet" : "truck");
+        else AUD.engineStop();
+      }
+      if (!p) return;
+      if (c.scrap > p.scrap) asfx("pickup");
+      if (c.inSwim && !p.inSwim) asfx("splash");
+      if (c.veh && !p.veh) asfx(c.veh === "truck" ? "horn" : "powerup");
+      else if (!c.veh && p.veh) asfx("click");
+      if (c.mode !== p.mode) asfx("whoosh", 1.2);
+      if (c.inOrbit && !p.inOrbit) asfx("powerup");
+    }
     function flashAbility(abilityName) {
+      var an = String(abilityName || "HOP").toUpperCase();
+      asfx(an === "HOP" ? "jump" : an === "FIRE" ? "laser" : an === "SPEAR" ? "whoosh" : "powerup");
       if (!btnAbility) return;
       var kind = String(abilityName || "HOP").toLowerCase();
       btnAbility.classList.remove("fire-dash", "fire-shield", "fire-zap", "fire-bot", "fire-zoom", "fire-hop", "fire-fire", "ability-fired");
@@ -116,6 +141,7 @@
     }
     return {
       onHud: function (h) {
+        try { hudSounds(h || {}); } catch (e) { /* audio must never break the HUD */ }
         if (livesEl) livesEl.textContent = h.walk || "🐸 Walk";
         if (scrapEl) scrapEl.textContent = (h.mode === "space" ? "Catches " : "Scrap ") + (h.scrap | 0);
         if (progressBar) progressBar.style.width = Math.min(100, (h.scrap | 0) * 8) + "%";
