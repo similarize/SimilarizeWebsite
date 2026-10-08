@@ -1,6 +1,8 @@
 /* Four Froggies 3D — PeerJS Host/Join lobby on the title gate.
    Uses shared FroggiesParty API (party.js). Solo always works if PeerJS fails.
-   onelobby2: honors ?host=CODE&frog=name&go=1 handoff from shared entrance. */
+   onelobby2: honors ?host=CODE&frog=name&go=1 handoff from shared entrance.
+   ff3dmp1: also honors &pads=james.0,jimmy.1,… — every couch pad seat from the
+   entrance, so players 2–4 keep their frogs (was: only &pad= for player 1). */
 (function () {
   "use strict";
 
@@ -238,6 +240,8 @@
       if (lf) return lf;
     }
     if (!seatMap) return localPick;
+    /* ff3dmp1: the entrance's frog (&frog=) stays player one when it is a local seat */
+    if (localPick && seatMap[localPick] && seatMap[localPick].local) return localPick;
     var localId = party && party.getLocalId && party.getLocalId();
     for (var i = 0; i < FROG_ORDER.length; i++) {
       var id = FROG_ORDER[i];
@@ -271,10 +275,60 @@
     beginGame(seatMap);
   }
 
+  /* ff3dmp1: { frogId: padIndex } from &pads=frog.idx,… (entrance handoff) */
+  function urlPadSeats() {
+    try {
+      var raw = new URL(location.href).searchParams.get("pads");
+      if (!raw) return null;
+      var out = {}, usedPad = {}, n = 0;
+      raw.split(",").forEach(function (part) {
+        var m = String(part).toLowerCase().match(/^([a-z]+)[.:](\d)$/);
+        if (!m || FROG_ORDER.indexOf(m[1]) < 0) return;
+        var pi = parseInt(m[2], 10);
+        if (pi < 0 || pi > 3 || usedPad[pi] || out[m[1]] != null) return;
+        usedPad[pi] = 1;
+        out[m[1]] = pi;
+        n++;
+      });
+      return n ? out : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function mergeUrlPads(seatMap) {
+    var pads = urlPadSeats();
+    if (!pads) return seatMap;
+    var map = seatMap || {};
+    var i, id, s;
+    for (i = 0; i < FROG_ORDER.length; i++) {
+      id = FROG_ORDER[i];
+      if (!map[id]) map[id] = { human: false, local: false, peerId: null, padIndex: null };
+    }
+    for (var fid in pads) {
+      if (!Object.prototype.hasOwnProperty.call(pads, fid)) continue;
+      var pi = pads[fid] | 0;
+      for (i = 0; i < FROG_ORDER.length; i++) {
+        id = FROG_ORDER[i];
+        s = map[id];
+        if (id !== fid && s && s.local && s.padIndex != null && (s.padIndex | 0) === pi) {
+          map[id] = { human: false, local: false, peerId: null, padIndex: null };
+        }
+      }
+      s = map[fid];
+      /* never overwrite a remote (online) player's seat */
+      if (s && s.human && !s.local) continue;
+      map[fid] = { human: true, local: true, peerId: "local-pad-" + pi, padIndex: pi };
+    }
+    return map;
+  }
+
   function beginGame(seatMap) {
     if (started) return;
     var g = game();
     if (!g || !g.start) return;
+    var roleNow = party && party.getRole ? party.getRole() : "solo";
+    if (roleNow !== "guest") seatMap = mergeUrlPads(seatMap);
     var frog = myFrogFromSeats(seatMap);
     /* rstick1: pass pad→frog map into bundle so autoBindPads won't ghost-seat a 2nd frog */
     try {
