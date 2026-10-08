@@ -7,6 +7,10 @@
   const overlayText = document.getElementById("overlay-text");
   const phone = window.matchMedia("(pointer: coarse), (max-width: 800px)").matches;
 
+  /* audio1: shared arcade audio (shared/sfx.js); legacy beep() is silenced when it is present */
+  const AUD = window.ArcadeAudio || null;
+  if (AUD) AUD.init({ mood: "space", engine: "jet", button: "bottom-center" });
+  function sfx(name, s) { if (AUD) AUD.play(name, s); }
   const JOIN_SECS = 2;
   const FADE_SECS = 1.2;
 
@@ -160,7 +164,7 @@
   }
 
   function beep(freq, dur, type, vol) {
-    if (!audio) return;
+    if (!audio || AUD) return;
     const t = audio.currentTime;
     const o = audio.createOscillator();
     const g = audio.createGain();
@@ -248,6 +252,7 @@
     }
     phase = "play";
     spawnField();
+    sfx("go");
     overlay.hidden = true;
     paintHud();
   }
@@ -272,6 +277,7 @@
       color: ship.color,
     });
     beep(640, 0.06, "square", 0.04);
+    sfx("laser");
   }
 
   function hitShip(ship) {
@@ -279,8 +285,10 @@
     lives -= 1;
     burst(ship.x, ship.y, 16, ship.color);
     beep(90, 0.3, "sawtooth", 0.08);
+    sfx("explode", 1.2);
     if (lives <= 0) {
       phase = "over";
+      if (AUD) { AUD.engineStop(); setTimeout(() => sfx("lose"), 500); }
       if (score > best) {
         best = score;
         try { localStorage.setItem("asteroids-best", String(best)); } catch (e) {}
@@ -300,6 +308,7 @@
     score += rock.tier === 3 ? 20 : rock.tier === 2 ? 50 : 100;
     burst(rock.x, rock.y, 8, "#ddd");
     beep(180 + rock.tier * 40, 0.08, "triangle", 0.05);
+    sfx("explode", rock.tier === 3 ? 0.9 : rock.tier === 2 ? 0.6 : 0.35);
     if (rock.tier > 1) {
       rocks.push(makeRock(rock.x, rock.y, rock.tier - 1));
       rocks.push(makeRock(rock.x, rock.y, rock.tier - 1));
@@ -309,6 +318,7 @@
         if (s.active) s.invuln = Math.max(s.invuln, 1.2);
       }
       spawnField();
+      sfx("powerup");
     }
     paintHud();
   }
@@ -487,6 +497,10 @@
     const dt = (now - last) / 1000;
     last = now;
     step(dt);
+    if (AUD) {
+      const th = phase === "play" && ships.some((sh) => sh.active && sh.thrusting);
+      if (th) AUD.engine(1, 0.6, "jet"); else AUD.engineStop();
+    }
     draw();
     requestAnimationFrame(frame);
   }
