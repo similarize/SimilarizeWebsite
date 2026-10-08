@@ -1,11 +1,14 @@
 /* Four Froggies — onefrog1 entrance.
    One screen: claim James/Jimmy/Bubbles/Rexy + Host/Join + pick 2.5D/3D → play.
-   Flat 2D removed from picker (lobby253d1). Cache: 20261007-lobby3d1 */
+   Flat 2D removed from picker (lobby253d1). Cache: 20261007-ff3dmp1
+   ff3dmp1: 3D handoff carries EVERY couch pad seat (&pads=james.0,jimmy.1,…),
+   not just the first frog — players 2–4 were silently dropped on the 3D page.
+   Pad X on the entrance = start 3D (Y = 2.5D). */
 (function () {
   "use strict";
 
-  var CACHE = "20261007-lobby3d1";
-  var FF3D_CACHE = "20261006-walkspin1";
+  var CACHE = "20261007-ff3dmp1";
+  var FF3D_CACHE = "20261007-ff3dmp1";
   var FROG_ORDER = ["james", "jimmy", "bubbles", "rexy"];
   var FROG_NAME = { james: "James", jimmy: "Jimmy", bubbles: "Bubbles", rexy: "Rexy" };
 
@@ -174,7 +177,7 @@
         ? (plugged.length
           ? "Each live stick picks one frog. A silent extra pad is ignored. A claims · B releases."
           : "Tap James / Jimmy / Bubbles / Rexy (or plug a pad). Host/Join optional. Then pick 2.5D / 3D.")
-        : "One pad = one frog · stick cycles · A claims · B releases. A second controller picks a name when it moves.";
+        : "One pad = one frog · stick cycles · A claims · B releases · then Y = 2.5D or X = 3D.";
       if (hintEl.textContent !== hint) hintEl.textContent = hint;
     }
 
@@ -230,6 +233,10 @@
           lastPad = pi;
           /* Y = start default 2.5D from entrance when allowed */
           tryStartMode("three");
+        } else if (bp.x) {
+          lastPad = pi;
+          /* ff3dmp1: X = start full 3D with every claimed pad */
+          tryStartMode("3d");
         }
       }
     }
@@ -425,6 +432,16 @@
           var seats3 = P && P.getSeats ? P.getSeats() : null;
           var st3 = seats3 && seats3[frog];
           if (st3 && st3.padIndex != null) q += "&pad=" + (st3.padIndex | 0);
+          /* ff3dmp1: hand off all local pad seats so 2–4 couch players keep their frogs */
+          var padList = [];
+          if (seats3) {
+            for (var pf = 0; pf < FROG_ORDER.length; pf++) {
+              var sp = seats3[FROG_ORDER[pf]];
+              if (!sp || sp.padIndex == null || !sp.peerId || sp.status !== "you") continue;
+              padList.push(FROG_ORDER[pf] + "." + (sp.padIndex | 0));
+            }
+          }
+          if (padList.length) q += "&pads=" + padList.join(",");
         } catch (ePad) {}
         if (role === "host" && room) q += "&host=" + encodeURIComponent(room);
         else if (room) q += "&room=" + encodeURIComponent(room);
