@@ -5,12 +5,13 @@
    not just the first frog — players 2–4 were silently dropped on the 3D page.
    Pad X on the entrance = start 3D (Y = 2.5D).
    ff3dsplit1: "3D view: Split / Shared" toggle under the cards (localStorage ff3d.view,
-   default Split) is handed to 3D as &view=split|shared. Cache: 20261007-ff3dsplit1 */
+   default Split) is handed to 3D as &view=split|shared. Cache: 20261007-ff3dsplit1
+   ff3dcam1: 3D Shared view auto-fits every player; zoom/turn/tilt in both views. Cache: 20261007-ff3dcam1 */
 (function () {
   "use strict";
 
-  var CACHE = "20261007-ff3dsplit1";
-  var FF3D_CACHE = "20261007-ff3dsplit1";
+  var CACHE = "20261007-ff3dcam1";
+  var FF3D_CACHE = "20261007-ff3dcam1";
   var FROG_ORDER = ["james", "jimmy", "bubbles", "rexy"];
   var FROG_NAME = { james: "James", jimmy: "Jimmy", bubbles: "Bubbles", rexy: "Rexy" };
 
@@ -523,7 +524,8 @@
     var split = ff3dView() === "split";
     vb.innerHTML = "3D view: " + (split ? "<b>Split</b> / <span>Shared</span>" : "<span>Split</span> / <b>Shared</b>");
     vb.setAttribute("aria-pressed", split ? "true" : "false");
-    vb.title = split ? "Each player gets their own screen (2+ players)" : "Everyone shares one camera";
+    vb.title = (split ? "Each player gets their own screen (2+ players)" : "Everyone shares one camera that zooms out to fit all players") +
+      " · In 3D: right stick turns, stick up/down zooms, hold R3 + stick tilts, R3 twice resets";
   }
   (function () {
     var vb = document.getElementById("ff3d-view-toggle");
