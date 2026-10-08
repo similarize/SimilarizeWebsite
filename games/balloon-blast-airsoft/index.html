@@ -101,6 +101,7 @@
       });
     </script>
     <script src="https://unpkg.com/three@0.149.0/build/three.min.js"></script>
+    <script src="../shared/sfx.js?v=20261008-audio1"></script>
     <script>
 (function () {
   if (!window.THREE) return;
@@ -225,10 +226,13 @@
   const eye = (p) => new THREE.Vector3(p.pos.x, p.pos.y + EYE, p.pos.z);
   const fwd = (yaw, pitch) => new THREE.Vector3(-Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), -Math.cos(yaw) * Math.cos(pitch));
 
-  // audio
+  // audio (audio1: legacy pop + shared arcade music/SFX)
   let ac = null;
+  const AUD = window.ArcadeAudio || null;
+  if (AUD) AUD.init({ mood: "party", button: "top-right" });
+  const asfx = (n, s) => { if (AUD) AUD.play(n, s); };
   function popSound(vol) {
-    if (!ac) return;
+    if (!ac || (AUD && AUD.isMuted())) return;
     const t = ac.currentTime, len = 0.18, buf = ac.createBuffer(1, ac.sampleRate * len, ac.sampleRate), d = buf.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 3);
     const src = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
@@ -248,6 +252,7 @@
     const o = eye(p).addScaledVector(d, 0.6); o.y -= 0.08;
     m.position.copy(o); scene.add(m);
     pellets.push({ mesh: m, vel: d.multiplyScalar(90), owner: p, life: 2 });
+    if (!p.isBot) asfx("shot");
   }
   function burst(at, color) {
     for (let i = 0; i < 14; i++) {
@@ -285,6 +290,8 @@
     burst(at, p.color);
     const dist = Math.min(...humans.map((h) => at.distanceTo(h.pos)));
     popSound(Math.max(0.05, 0.7 - dist / 120));
+    asfx("pop", Math.max(0.3, 1.2 - dist / 60));
+    if (!p.isBot) asfx("hurt");
     if (!by.isBot) by.hitT = 0.45;
     if (p.balloons.every((x) => !x.alive)) { p.alive = false; p.group.visible = false; if (!p.isBot) showBanner(p.name === "You" ? "You're out" : p.name + " is out", "Popped by " + by.name, 2); }
   }
@@ -469,11 +476,11 @@
     if (p.isBot) p.ai.stuck = (Math.hypot(p.pos.x - ox, p.pos.z - oz) < sp * dt * 0.3 && l > 0.5) ? (p.ai.stuck || 0) + dt : 0;
     const fl = floorAt(p.pos.x, p.pos.z, p.pos.y);
     p.vy -= 20 * dt; p.pos.y += p.vy * dt;
-    if (p.pos.y <= fl) { p.pos.y = fl; p.vy = i.jump ? 7 : 0; }
+    if (p.pos.y <= fl) { p.pos.y = fl; p.vy = i.jump ? 7 : 0; if (i.jump && !p.isBot) asfx("jump"); }
     // weapon
     p.fireT -= dt;
     if (p.reloadT > 0) { p.reloadT -= dt; if (p.reloadT <= 0) p.ammo = 30; }
-    else if (i.reload && p.ammo < 30) p.reloadT = 1.6;
+    else if (i.reload && p.ammo < 30) { p.reloadT = 1.6; if (!p.isBot) asfx("reload"); }
     else if (i.fire && p.fireT <= 0 && p.ammo > 0) { p.fireT = 1 / 8; p.ammo--; shoot(p); }
     p.group.position.copy(p.pos); p.group.rotation.y = p.yaw;
     p.camera.position.copy(eye(p)); p.camera.rotation.set(p.pitch, p.yaw, 0, "YXZ");
@@ -497,7 +504,7 @@
       p.balloons.forEach((b) => { b.alive = true; b.mesh.visible = b.line.visible = true; });
       p.ai.target = null; pickGoal(p);
     });
-    roundOver = 0; showBanner("Round " + round, "Best of 3 · " + scoreText(), 2.2);
+    roundOver = 0; asfx("go"); showBanner("Round " + round, "Best of 3 · " + scoreText(), 2.2);
   }
   const scoreText = () => players.filter((p) => p.wins || !p.isBot).map((p) => p.name + " " + p.wins).join(" · ") || "No wins yet";
   function checkRound(dt) {
@@ -515,6 +522,7 @@
       if (w) w.wins++;
       matchOver = !!w && w.wins >= 2;
       const you = w && w.name === "You";
+      asfx(w && !w.isBot ? "win" : "lose");
       showBanner(matchOver ? (you ? "You win the match!" : w.name + " wins the match") : (w ? w.name + (you ? " win" : " wins") + " round " + round : "Draw"), scoreText(), 4);
       roundOver = 4;
     }
