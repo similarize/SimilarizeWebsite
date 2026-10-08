@@ -238,6 +238,7 @@
         </div>
     </div>
     <script src="shared/gamepad.js?v=20260928-exit1"></script>
+    <script src="shared/sfx.js?v=20261008-audio1"></script>
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
@@ -246,6 +247,10 @@
         let projectileSpeed = 5;
         let specks = [];
         const soundOn = { fx: true, music: true, fxVol: 0.25, musicVol: 0.18 };
+        /* audio1: shared arcade music + goal/explosion SFX; the page's own Sound button stays the mute control (M toggles it too) */
+        const AUD = window.ArcadeAudio || null;
+        if (AUD) { AUD.init({ mood: "sport", button: false, muteKey: false }); if (AUD.isMuted()) { soundOn.fx = false; soundOn.music = false; } }
+        const asfx = (n, s) => { if (AUD && soundOn.fx) AUD.play(n, s); };
 
         // Player 1 RC car (orange)
         const car1 = {
@@ -351,12 +356,16 @@
             gainNode.connect(audioCtx.destination);
             oscillator.type = type;
             oscillator.frequency.value = frequency;
-            gainNode.gain.value = baseVolume * soundOn.fxVol;
-            oscillator.start();
-            oscillator.stop(audioCtx.currentTime + duration);
+            const t0 = audioCtx.currentTime, v0 = baseVolume * soundOn.fxVol;
+            gainNode.gain.setValueAtTime(0.0001, t0);
+            gainNode.gain.linearRampToValueAtTime(v0, t0 + 0.008);
+            gainNode.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
+            oscillator.start(t0);
+            oscillator.stop(t0 + duration + 0.02);
         }
 
         function startBackgroundMusic() {
+            if (AUD) { if (soundOn.music) AUD.music(true); return; }
             if (!soundOn.music || backgroundOscillator1) return;
             const notes = [261.63, 293.66, 329.63, 349.23, 392.00];
             const harmonicNotes = notes.map(note => note * 2);
@@ -389,6 +398,7 @@
         }
 
         function stopBackgroundMusic() {
+            if (AUD) AUD.music(false);
             if (backgroundOscillator1) {
                 backgroundOscillator1.stop();
                 backgroundOscillator2.stop();
@@ -402,11 +412,16 @@
             soundOn.fx = !soundOn.fx;
             soundOn.music = soundOn.fx;
             document.getElementById('soundBtn').textContent = soundOn.fx ? 'Sound on' : 'Sound off';
+            if (AUD) AUD.setMuted(!soundOn.fx);
             if (soundOn.music) startBackgroundMusic();
             else stopBackgroundMusic();
         });
         document.getElementById('resetBtn').addEventListener('click', () => { resetBasketball(); if (netRole === 'host') netSend({ type: 'reset' }); });
 
+        if (!soundOn.fx) document.getElementById('soundBtn').textContent = 'Sound off';
+        document.addEventListener('keydown', (e) => {
+            if ((e.key === 'm' || e.key === 'M') && !e.repeat && !(e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName))) document.getElementById('soundBtn').click();
+        });
         document.addEventListener('pointerdown', () => { if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); startBackgroundMusic(); }, { once: true });
 
         // Reset basketball function
@@ -1018,6 +1033,7 @@
                         (Math.hypot(car1.x - basketball.x, car1.y - basketball.y) < Math.hypot(car2.x - basketball.x, car2.y - basketball.y) ? car1 : car2);
                     if (lastTouch === car1) {
                         car1.score++;
+                        asfx('goal');
                         resetKickoff();
                         console.log('Score for Player 1!');
                     }
@@ -1038,6 +1054,7 @@
                         (Math.hypot(car1.x - basketball.x, car1.y - basketball.y) < Math.hypot(car2.x - basketball.x, car2.y - basketball.y) ? car1 : car2);
                     if (lastTouch === car2) {
                         car2.score++;
+                        asfx('goal');
                         resetKickoff();
                         console.log('Score for Player 2!');
                     }
@@ -1113,6 +1130,7 @@
                     if (projectile.radius === 10) {
                         otherCar.isDestroyed = true;
                         playSound(100, 0.5, 'sawtooth', 0.4);
+                        asfx('explode');
                         if (projectile.owner.onConveyor) {
                             projectile.owner.onConveyor = false;
                             projectile.owner.y = conveyor.y - projectile.owner.height - 10;
