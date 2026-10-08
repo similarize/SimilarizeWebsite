@@ -254,6 +254,11 @@
       <span class="screen-wrap"><canvas data-demo="ffversions"></canvas><span class="glass"></span></span>
       <span class="panel"><span class="plate">2.5D · 3D</span><span class="buttons" aria-hidden="true"><i></i><i class="alt"></i></span></span>
     </a>
+    <a class="cab" href="/games/four-froggies-unity/?v=20261007-ffu1">
+      <span class="marquee">Four Froggies Unity</span>
+      <span class="screen-wrap"><canvas data-demo="fourFroggiesUnity"></canvas><span class="glass"></span></span>
+      <span class="panel"><span class="plate">Ranch · 1-4P split · Unity WebGL</span><span class="buttons" aria-hidden="true"><i></i><i class="alt"></i></span></span>
+    </a>
     <a class="cab" href="/games/basketball.html?v=20261004-soccer-goal1">
       <span class="marquee">Soccer RC</span>
       <span class="screen-wrap"><canvas data-demo="ball"></canvas><span class="glass"></span></span>
@@ -1402,7 +1407,109 @@
       txt(Math.max(0, ammo) + " / 30", w - 5, h - fs * 1.35 - 3, Math.round(fs * 1.3), "right", "#fff");
     }
 
-    const draw = { balloonBlast, balloonBlastAirsoft, balloonBlastUnity, rally, dirtTrack, duneBuggy, rocks, ball, soccer3d, froggies, froggies3d, map, drop, ffversions, froggyHop };
+        // Four Froggies Unity demo: 4-player split-screen on James's ranch. Each quadrant follows one frog
+    // (James, Jimmy, Bubbles, Rexy) past the 6-bay garage, with a Cybertruck, the tank firing, and the helicopter.
+    function fourFroggiesUnity(v) {
+      const { ctx, w, h, t } = v;
+      const frogs = [["James", "#3fbf3f"], ["Jimmy", "#a6d832"], ["Bubbles", "#2fb3c4"], ["Rexy", "#f2582a"]];
+      function view(x0, y0, vw, vh, k) {
+        const tt = t + k * 1.7;
+        ctx.save();
+        ctx.beginPath(); ctx.rect(x0, y0, vw, vh); ctx.clip();
+        ctx.translate(x0, y0);
+        const hz = vh * 0.46, pan = Math.sin(tt * 0.3) * vw * 0.08;
+        let g = ctx.createLinearGradient(0, 0, 0, hz);
+        g.addColorStop(0, "#4f8fdc"); g.addColorStop(1, "#cfe2f2");
+        ctx.fillStyle = g; ctx.fillRect(0, 0, vw, hz + 1);
+        g = ctx.createLinearGradient(0, hz, 0, vh);
+        g.addColorStop(0, "#77b24a"); g.addColorStop(1, "#4b8f2c");
+        ctx.fillStyle = g; ctx.fillRect(0, hz, vw, vh - hz);
+        ctx.save(); ctx.translate(-pan, 0);
+        // tree line
+        for (let i = 0; i < 12; i++) {
+          const x = -vw * 0.1 + i * vw * 0.12, s = 0.7 + ((i * 7) % 4) * 0.12;
+          ctx.fillStyle = i % 2 ? "#2f5d2a" : "#3d6f33";
+          ctx.beginPath(); ctx.ellipse(x, hz - vh * 0.05 * s, vw * 0.045 * s, vh * 0.07 * s, 0, 0, Math.PI * 2); ctx.fill();
+        }
+        // garage with 6 bays
+        const gx = vw * 0.12, gw = vw * 0.62, gy = hz - vh * 0.16, gh = vh * 0.16;
+        ctx.fillStyle = "#3d4046"; ctx.fillRect(gx - 3, gy - 4, gw + 6, 5);
+        ctx.fillStyle = "#e6dcc5"; ctx.fillRect(gx, gy, gw, gh);
+        for (let b = 0; b < 6; b++) {
+          const bx = gx + 3 + b * (gw - 6) / 6;
+          ctx.fillStyle = "#2a2f36"; ctx.fillRect(bx + 1, gy + gh * 0.3, (gw - 6) / 6 - 3, gh * 0.7);
+          ctx.fillStyle = "#fff6d8"; ctx.fillRect(bx + 3, gy + gh * 0.34, (gw - 6) / 6 - 7, 1.2);
+        }
+        // house corner + roof helipad with the helicopter hovering
+        ctx.fillStyle = "#c8d0d8"; ctx.fillRect(gx + gw + 6, hz - vh * 0.26, vw * 0.3, vh * 0.26);
+        ctx.fillStyle = "#26323d";
+        for (let r = 0; r < 2; r++) for (let c = 0; c < 3; c++) ctx.fillRect(gx + gw + 12 + c * vw * 0.09, hz - vh * 0.22 + r * vh * 0.11, vw * 0.05, vh * 0.06);
+        const hx = gx + gw + vw * 0.15, hy = hz - vh * 0.36 + Math.sin(tt * 1.3) * vh * 0.03;
+        ctx.fillStyle = "#f2f2f2"; ctx.beginPath(); ctx.ellipse(hx, hy, vw * 0.045, vh * 0.035, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillRect(hx - vw * 0.09, hy - 1.2, vw * 0.06, 2.4);
+        ctx.strokeStyle = "rgba(30,30,30,0.8)"; ctx.lineWidth = 1.2;
+        const rw = vw * 0.08 * Math.abs(Math.cos(tt * 18));
+        ctx.beginPath(); ctx.moveTo(hx - rw, hy - vh * 0.045); ctx.lineTo(hx + rw, hy - vh * 0.045); ctx.stroke();
+        ctx.restore();
+        // dirt drive
+        ctx.fillStyle = "#9c7f5a";
+        ctx.beginPath(); ctx.moveTo(vw * 0.3 - pan, hz); ctx.lineTo(vw * 0.5 - pan, hz); ctx.lineTo(vw * 0.9, vh); ctx.lineTo(vw * 0.05, vh); ctx.fill();
+        // Cybertruck driving across
+        const cx = ((tt * 0.12 + k * 0.25) % 1.3) * vw * 1.1 - vw * 0.2, cy = hz + vh * 0.16;
+        ctx.fillStyle = "#bcc2c8";
+        ctx.beginPath(); ctx.moveTo(cx - vw * 0.09, cy); ctx.lineTo(cx - vw * 0.08, cy - vh * 0.05); ctx.lineTo(cx + vw * 0.01, cy - vh * 0.085); ctx.lineTo(cx + vw * 0.09, cy - vh * 0.045); ctx.lineTo(cx + vw * 0.09, cy); ctx.fill();
+        ctx.fillStyle = "#15191d";
+        ctx.beginPath(); ctx.arc(cx - vw * 0.055, cy, vh * 0.025, 0, Math.PI * 2); ctx.arc(cx + vw * 0.055, cy, vh * 0.025, 0, Math.PI * 2); ctx.fill();
+        // tank firing + explosion
+        const tx = vw * 0.8, ty = hz + vh * 0.1;
+        ctx.fillStyle = "#4f5a3c"; ctx.fillRect(tx - vw * 0.07, ty - vh * 0.04, vw * 0.14, vh * 0.04);
+        ctx.fillStyle = "#5d6a46"; ctx.fillRect(tx - vw * 0.035, ty - vh * 0.07, vw * 0.07, vh * 0.03);
+        ctx.fillRect(tx - vw * 0.12, ty - vh * 0.06, vw * 0.09, 2);
+        ctx.fillStyle = "#1b1d1f"; ctx.fillRect(tx - vw * 0.075, ty - vh * 0.012, vw * 0.15, vh * 0.016);
+        const ph = (tt * 0.55) % 1;
+        if (ph < 0.45) {
+          const sx = tx - vw * 0.12 - ph / 0.45 * vw * 0.4, sy = ty - vh * 0.06 - Math.sin(ph / 0.45 * Math.PI) * vh * 0.08;
+          ctx.fillStyle = "#ffe07a"; ctx.beginPath(); ctx.arc(sx, sy, 2, 0, Math.PI * 2); ctx.fill();
+        } else if (ph < 0.8) {
+          const e = (ph - 0.45) / 0.35, ex = tx - vw * 0.52, ey = ty - vh * 0.02;
+          ctx.globalAlpha = 1 - e;
+          ctx.fillStyle = "#ff9a2e"; ctx.beginPath(); ctx.arc(ex, ey, vh * (0.04 + e * 0.1), 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = "#ffe07a"; ctx.beginPath(); ctx.arc(ex, ey, vh * (0.02 + e * 0.05), 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = "rgba(90,90,90,0.8)"; ctx.beginPath(); ctx.arc(ex + vw * 0.02, ey - vh * (0.05 + e * 0.12), vh * (0.03 + e * 0.07), 0, Math.PI * 2); ctx.fill();
+          ctx.globalAlpha = 1;
+        }
+        // this view's frog, hopping in the foreground
+        const col = frogs[k][1];
+        const fx = vw * 0.42, hop = Math.abs(Math.sin(tt * 4)) * vh * 0.06, fy = vh * 0.86 - hop, s = vh * 0.075;
+        ctx.fillStyle = "rgba(0,0,0,0.25)"; ctx.beginPath(); ctx.ellipse(fx, vh * 0.9, s * 1.1, s * 0.25, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = col;
+        ctx.beginPath(); ctx.ellipse(fx - s * 0.75, fy + s * 0.15, s * 0.45, s * 0.3, 0, 0, Math.PI * 2); ctx.ellipse(fx + s * 0.75, fy + s * 0.15, s * 0.45, s * 0.3, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(fx, fy - s * 0.2, s, s * 0.75, 0, 0, Math.PI * 2); ctx.fill();
+        for (const sd of [-1, 1]) {
+          ctx.fillStyle = col; ctx.beginPath(); ctx.arc(fx + sd * s * 0.42, fy - s * 0.85, s * 0.32, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(fx + sd * s * 0.42, fy - s * 0.87, s * 0.22, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = "#111"; ctx.beginPath(); ctx.arc(fx + sd * s * 0.42, fy - s * 0.87, s * 0.11, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.fillStyle = "rgba(255,255,255,0.75)"; ctx.beginPath(); ctx.ellipse(fx, fy - s * 0.05, s * 0.55, s * 0.35, 0, 0, Math.PI * 2); ctx.fill();
+        // HUD tag
+        const fz = Math.max(7, Math.round(vh * 0.085));
+        ctx.font = "700 " + fz + "px Outfit, sans-serif"; ctx.textAlign = "left";
+        ctx.fillStyle = "rgba(0,0,0,0.55)"; ctx.fillText("P" + (k + 1) + " " + frogs[k][0], 5, fz + 4);
+        ctx.fillStyle = col; ctx.fillText("P" + (k + 1) + " " + frogs[k][0], 4, fz + 3);
+        ctx.restore();
+      }
+      const hw = w / 2, hh = h / 2;
+      for (let k = 0; k < 4; k++) view((k % 2) * hw, Math.floor(k / 2) * hh, hw, hh, k);
+      ctx.fillStyle = "#0b0f0c"; ctx.fillRect(hw - 1, 0, 2, h); ctx.fillRect(0, hh - 1, w, 2);
+      const bz = Math.max(8, Math.round(h * 0.07));
+      ctx.font = "800 " + bz + "px Outfit, sans-serif"; ctx.textAlign = "center";
+      const bw = bz * 3.6;
+      ctx.fillStyle = "rgba(0,0,0,0.65)"; ctx.fillRect(w / 2 - bw / 2, h / 2 - bz * 0.75, bw, bz * 1.5);
+      ctx.fillStyle = "#8cff70"; ctx.fillText("UNITY", w / 2, h / 2 + bz * 0.35);
+      ctx.textAlign = "left";
+    }
+
+    const draw = { balloonBlast, balloonBlastAirsoft, balloonBlastUnity, fourFroggiesUnity, rally, dirtTrack, duneBuggy, rocks, ball, soccer3d, froggies, froggies3d, map, drop, ffversions, froggyHop };
 
     const ffShots = [
       { label: "2.5D", src: "/games/four-froggies/assets/play-25d.jpg?v=20261007-card25d1r1" },
