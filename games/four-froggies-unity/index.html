@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0b1a10">
+<title>Four Froggies (Unity)</title>
+<style>
+  html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #0b1a10; color: #fff;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; touch-action: none; -webkit-user-select: none; user-select: none; overscroll-behavior: none; }
+  #unity-canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100dvh; display: block; background: #0b1a10; outline: none; }
+  #loader { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+    background: radial-gradient(ellipse at center, #1d3a26 0%, #0b1a10 70%); z-index: 5; transition: opacity .4s; }
+  #loader h1 { margin: 0; font-size: clamp(26px, 6vw, 54px); letter-spacing: 2px; color: #8cff70; text-shadow: 0 3px 0 #1f6b2a; text-align: center; }
+  #loader .balloons { font-size: clamp(30px, 8vw, 60px); }
+  #bar { width: min(80vw, 520px); height: 18px; border-radius: 10px; background: rgba(255,255,255,.12); overflow: hidden; border: 2px solid rgba(255,255,255,.25); }
+  #fill { height: 100%; width: 0%; background: linear-gradient(90deg, #3fbf3f, #a6d832, #2fb3c4, #f2582a); transition: width .2s; }
+  #pct { font-size: 15px; opacity: .8; }
+  #err { color: #ff8a80; max-width: 80vw; text-align: center; display: none; }
+  .tb { position: fixed; top: 8px; right: 8px; z-index: 10; display: flex; gap: 6px; }
+  .tb a, .tb button { font: 600 13px system-ui, sans-serif; color: #fff; background: rgba(0,0,0,.45); border: 1px solid rgba(255,255,255,.3);
+    border-radius: 8px; padding: 6px 10px; text-decoration: none; cursor: pointer; }
+</style>
+</head>
+<body>
+<canvas id="unity-canvas" tabindex="-1"></canvas>
+<div id="loader">
+  <div class="balloons">🐸🐸🐸🐸</div>
+  <h1>FOUR FROGGIES</h1>
+  <div id="bar"><div id="fill"></div></div>
+  <div id="pct">Loading 0%</div>
+  <div id="err"></div>
+</div>
+<div class="tb">
+  <button id="fs" title="Fullscreen">⛶</button>
+  <a href="../" title="Back to the arcade">✕ Arcade</a>
+</div>
+<script>
+  var buildUrl = "Build";
+  var name = "WebGL";
+  var canvas = document.getElementById("unity-canvas");
+  var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));
+  var config = {
+    dataUrl: buildUrl + "/" + name + ".data",
+    frameworkUrl: buildUrl + "/" + name + ".framework.js",
+    codeUrl: buildUrl + "/" + name + ".wasm",
+    streamingAssetsUrl: "StreamingAssets",
+    companyName: "Similarize",
+    productName: "Four Froggies",
+    productVersion: "202610080421-9269d64",
+    devicePixelRatio: Math.min(window.devicePixelRatio || 1, isMobile ? 1.5 : 2),
+    showBanner: function (msg, type) { if (type === "error") { var e = document.getElementById("err"); e.style.display = "block"; e.textContent = msg; } else console.log(msg); }
+  };
+  var fill = document.getElementById("fill"), pct = document.getElementById("pct"), loader = document.getElementById("loader");
+  var script = document.createElement("script");
+  script.src = buildUrl + "/" + name + ".loader.js?v=202610080421-9269d64";
+  script.onload = function () {
+    createUnityInstance(canvas, config, function (p) {
+      fill.style.width = Math.round(p * 100) + "%";
+      pct.textContent = "Loading " + Math.round(p * 100) + "%";
+    }).then(function (inst) {
+      window.unityInstance = inst;
+      loader.style.opacity = "0";
+      setTimeout(function () { loader.style.display = "none"; }, 450);
+      canvas.focus();
+      document.getElementById("fs").onclick = function () { inst.SetFullscreen(1); };
+    }).catch(function (m) {
+      var e = document.getElementById("err"); e.style.display = "block"; e.textContent = "Could not start the game: " + m;
+    });
+  };
+  script.onerror = function () { var e = document.getElementById("err"); e.style.display = "block"; e.textContent = "Could not load the game files."; };
+  document.body.appendChild(script);
+  canvas.addEventListener("pointerdown", function () { canvas.focus(); });
+  document.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+  document.addEventListener("touchmove", function (e) { e.preventDefault(); }, { passive: false });
+</script>
+</body>
+</html>
