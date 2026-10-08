@@ -61,6 +61,10 @@
     body.lobby-25d .lobby-still{border:4px solid #38bdf8}
     body.lobby-25d .frog-btn{background:rgba(15,23,42,.72);color:#fff;border-color:#38bdf8;border-radius:18px;box-shadow:0 6px 0 #075985}
     body.lobby-25d.in-title #overlay .start-btn{background:#0284c7;color:#fff;box-shadow:0 4px 0 #075985,0 10px 28px rgba(0,0,0,.45)}
+    .view-row{position:relative;z-index:2;width:min(640px,100%);margin:8px auto 0;display:flex;justify-content:flex-end}
+    .view-toggle{font:700 13px Outfit,system-ui,sans-serif;color:#fff;background:rgba(0,0,0,.42);border:2px solid rgba(255,255,255,.3);border-radius:999px;padding:6px 14px;cursor:pointer}
+    .view-toggle b{color:#facc15}.view-toggle span{opacity:.6}
+    @media (max-width:800px){.view-row{width:min(420px,100%);justify-content:center}}
   </style>
 </head>
 <body class="in-title">
@@ -111,6 +115,7 @@
         <span>Full 3D · hand off seats / room.</span>
       </button>
     </div>
+    <div class="view-row"><button type="button" id="ff3d-view-toggle" class="view-toggle" aria-pressed="true">3D view: <b>Split</b> / <span>Shared</span></button></div>
     <p id="invite-cta" class="invite-cta entrance-party">Party: <strong>Host room</strong> → Copy invite / scan QR · friends <strong>Join</strong> · claim James / Jimmy / Bubbles / Rexy · Host picks a mode to start. Solo: claim a froggy and pick 2.5D / 3D (AI fills open seats).</p>
     <div id="party-bar" class="party-bar entrance-party">
       <button type="button" id="btn-host" class="party-btn">Host room</button>
@@ -264,7 +269,7 @@
   <script src="story.js?v=20261001-kidfix1"></script>
   <script src="space.js?v=20261004-marsrover2"></script>
   <script src="engine-boot.js?v=20261007-semitrees1r1"></script>
-  <script src="version-lobby.js?v=20261007-ff3dmp1"></script>
+  <script src="version-lobby.js?v=20261007-ff3dsplit1"></script>
   <script src="main.js?v=20261007-padmerge1"></script>
 </body>
 </html>
