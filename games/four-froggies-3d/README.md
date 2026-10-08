@@ -1,3 +1,10 @@
+# What's new (ff3d113) — ff3dtouch1 (phone touch controls fixed)
+
+- **Phone joystick works again.** On a phone/tablet the on-screen joystick now walks your frog and drives the Cybertruck (and every ranch vehicle) forward, back and steers. Since ff3d108 the joystick's input only reached space flight, so on the ranch the truck would not move and the frog stood still after getting out.
+- **Pinch and twist ignore the joystick.** Holding the joystick with one thumb and touching the screen with another finger no longer zooms the camera; pinch-zoom and two-finger twist work when both fingers are on the game view (off the joystick and buttons).
+- Everything from ff3dspace1 (space, Mars, Callisto) and ff3dcam1 (camera) is unchanged. Gamepad and keyboard are unchanged.
+- Cache: `?v=20261007-ff3dtouch1` · asset `index-ff3d113.js` (ff3d112 left in place)
+
 # What's new (ff3d112) — ff3dspace1 (space overhaul: solar system, travel, Mars, Callisto)
 
 - **Launch goes to Earth orbit.** Blasting off from the ranch now parks the whole party aboard Spotty in a low, sunlit Earth orbit beside the Station (camera on the sunward side). Before, the ship sat off Earth's night side while Earth drifted away, so it looked like orbiting the Sun in its shadow.
