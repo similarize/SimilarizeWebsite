@@ -1,3 +1,15 @@
+# What's new (ff3d111) — ff3dcam1 (camera: auto-fit + zoom / turn / tilt)
+
+- **Shared view auto-fits.** With 2+ human frogs in Shared view on the ranch, the camera aims at the middle of the group (centre of the human frogs' bounding box) and backs off and rises until every human frog is on screen with margin. Smoothed; capped at 72 units so frogs stay readable on the big ranch. Past the cap, the off-screen arrows point at whoever is outside (humans only). The old rstick1 party framing is replaced.
+- **Falls back to Player 1 follow** when fitting makes no sense: Player 1 inside the garage or house, phone camera, loop ride, space/Mars/underwater, travel, dad/launch cut-scenes, Quest VR. One human: unchanged.
+- **Zoom / turn / tilt on top, in Shared and Split.** Offsets stay until you reset them. In Shared, any human pad can drive the shared camera. In Split, each player's inputs move only their own view.
+  - Pad: right stick left/right turns · right stick up/down zooms (up = in) · D-pad up/down zooms · **hold R3 (right-stick click) + stick up/down tilts** (up = more overhead) · **press R3 twice quickly = reset view**.
+  - Keyboard (Player 1's view): `,` `.` turn · `PageUp`/`PageDown` or `Numpad +`/`Numpad −` zoom · `Home`/`End` tilt · `0` reset · mouse wheel zooms · drag looks/tilts. (`-` `=` `[` `]` stay wheel size, `E` stays interact.)
+  - Touch: pinch zooms · two-finger twist turns · drag looks · small `−` `+` `⟲` buttons under the View pill (2+ players).
+  - A short toast shows each change ("Shared view: zoom 1.4×", "Jimmy's view: reset").
+- No gameplay button changed: A interact, B/X hop, LB/RB wheel size, D-pad left/right steer, Back/View view toggle, Start join.
+- Cache: `?v=20261007-ff3dcam1` · asset `index-ff3d111.js` (ff3d110 left in place)
+
 # What's new (ff3d110) — ff3dsplit1 (split-screen)
 
 - **View: Shared / Split.** Split gives every local human with a frog their own camera: 2 players side by side (top/bottom when the screen is portrait), 3–4 players in quadrants (an empty 4th quadrant says "Press A / Start to join"). Default is Split whenever 2+ humans have frogs; Shared (the old party-framing camera) is one toggle away.
