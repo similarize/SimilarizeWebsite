@@ -7,7 +7,7 @@
       Four Froggies 3D entry:
       - Requires ?go=1 to stay on this 3D world. Without go=1 the page redirects to
         /games/four-froggies/ (the version lobby). Live play:
-        /games/four-froggies-3d/?go=1&v=20261007-ff3dtouch1
+        /games/four-froggies-3d/?go=1&v=20261008-ff3daudio1
       - go=1 also adds html.ff3d-autostart (hides the seat gate; party-lobby auto-Starts).
       - ff3dsplit1: &view=split|shared picks the camera (default split when 2+ local players
         have frogs). In game: View pill (top-left), pad Back/View, or key V toggles.
@@ -22,6 +22,9 @@
         storm; Callisto is landable (shards + beacons). Bundle index-ff3d112.js (111 left in place).
       - ff3dtouch1: phone joystick walks the frog and drives the Cybertruck/vehicles again (broken since 108);
         pinch/twist only count fingers on the canvas, never the joystick thumb. Bundle index-ff3d113.js (112 left in place).
+      - ff3daudio1: sound effects via /games/shared/sfx.js (hops, boarding, launches, landings, pickups, splashes, scene
+        whooshes, mission jingles, vehicle engine hum). Music stays the built-in loop. M or the speaker button mutes all.
+        Bundle index-ff3d114.js (113 left in place).
     -->
     <script>
       (function () {
@@ -56,7 +59,8 @@
     <script src="/games/shared/gamepad.js?v=20261007-ff3dmp1"></script>
     <script src="/games/four-froggies-3d/party.js?v=20261007-padmerge1"></script>
     <link rel="stylesheet" href="/games/four-froggies-3d/party-lobby.css?v=20261006-walkspin1" />
-    <script type="module" crossorigin src="/games/four-froggies-3d/assets/index-ff3d113.js?v=20261007-ff3dtouch1"></script>
+    <script src="/games/shared/sfx.js?v=20261008-audio1"></script>
+    <script type="module" crossorigin src="/games/four-froggies-3d/assets/index-ff3d114.js?v=20261008-ff3daudio1"></script>
     <link rel="stylesheet" crossorigin href="/games/four-froggies-3d/assets/index-B2YYwnbM.css?v=20261001-kidfix1">
   </head>
   <body>
