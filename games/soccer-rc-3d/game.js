@@ -60,9 +60,10 @@ function ensureAudio() {
     if (!AC) return null;
     audioCtx = new AC();
   }
-  if (audioCtx.state === "suspended") {
+  if (audioCtx.state === "suspended" && !allMuted) {
     try { audioCtx.resume(); } catch (_) {}
   }
+  if (allMuted && audioCtx.state === "running") { try { audioCtx.suspend(); } catch (_) {} }
   return audioCtx;
 }
 
@@ -90,6 +91,32 @@ function sfxCrash() {
   playTone(140, 0.12, "triangle", 0.11);
   playTone(220, 0.07, "sine", 0.07);
 }
+
+/* audio1: event jingles + M = mute all (suspends the AudioContext; shared arcade key) */
+let allMuted = false;
+try { allMuted = localStorage.getItem("arcadeAudioMuted") === "1"; } catch (_) {}
+function sfxSeq(notes, step, type, vol) {
+  if (allMuted) return;
+  notes.forEach((f, i) => setTimeout(() => playTone(f, step * 1.6, type || "square", vol || 0.06), i * step * 1000));
+}
+function sfxJump() { if (!allMuted) { playTone(330, 0.1, "square", 0.045); setTimeout(() => playTone(560, 0.12, "square", 0.04), 50); } }
+function sfxGoal() { sfxSeq([523, 659, 784, 1047, 784, 1047], 0.11, "square", 0.07); }
+function sfxCount(go) { if (!allMuted) playTone(go ? 990 : 660, go ? 0.4 : 0.16, "square", 0.07); }
+function sfxLap() { sfxSeq([784, 988, 1175], 0.08, "triangle", 0.09); }
+function sfxWin() { sfxSeq([523, 659, 784, 1047], 0.12, "square", 0.07); }
+function setAllMuted(m) {
+  allMuted = !!m;
+  try { localStorage.setItem("arcadeAudioMuted", allMuted ? "1" : "0"); } catch (_) {}
+  const ctx = ensureAudio();
+  try { if (ctx) allMuted ? ctx.suspend() : ctx.resume(); } catch (_) {}
+  try { showBanner(allMuted ? "Sound off (M)" : "Sound on (M)", "", 0.9); } catch (_) {}
+}
+window.addEventListener("keydown", (e) => {
+  if (e.code !== "KeyM" || e.repeat) return;
+  const t = e.target && e.target.tagName;
+  if (t === "INPUT" || t === "TEXTAREA" || t === "SELECT") return;
+  setAllMuted(!allMuted);
+});
 
 function sfxBallHit(strength) {
   const now = performance.now();
@@ -700,6 +727,7 @@ function kickBall(car, aim) {
     car.vy = JUMP_VY;
     car.onGround = false;
     car.jumpCd = 0.35;
+    sfxJump();
   }
   if (dist > KICK_RANGE) return;
   const nx = dx / (dist || 1);
@@ -893,6 +921,7 @@ function checkGoal() {
     s1El.textContent = String(score[0]);
     freezeT = 1.8;
     showBanner("ORANGE SCORES!", "orange", 1.6);
+    sfxGoal();
     if (netRole === "host") netSend({ type: "banner", text: "ORANGE SCORES!", cls: "orange", secs: 1.6 });
     setTimeout(() => resetBall(0), 900);
   } else if (ball.pos.x < -HALF_X - BALL_R * 0.4) {
@@ -900,6 +929,7 @@ function checkGoal() {
     s2El.textContent = String(score[1]);
     freezeT = 1.8;
     showBanner("BLUE SCORES!", "blue", 1.6);
+    sfxGoal();
     if (netRole === "host") netSend({ type: "banner", text: "BLUE SCORES!", cls: "blue", secs: 1.6 });
     setTimeout(() => resetBall(0), 900);
   }
@@ -1669,9 +1699,11 @@ function tickRace(dt) {
     if (raceState.countdown > 0) {
       const n = Math.ceil(raceState.countdown);
       if (bannerT < 0.15) showBanner(String(n), "", 0.35);
+      if (n !== raceState._sndN && n <= 3) { raceState._sndN = n; sfxCount(false); }
     } else {
       raceState.started = true;
       showBanner("GO!", "", 0.8);
+      sfxCount(true);
     }
     // still allow camera / render pose
     for (const c of cars) {
@@ -1684,7 +1716,9 @@ function tickRace(dt) {
       // No soccer kick in race — strip kick for pad A (optional jump? keep kickBall off)
       inp.kick = false;
       updateCar(cars[i], inp, dt);
+      const lapWas = raceState.racers[i].lap;
       const justFin = updateRaceProgress(cars[i], raceState.racers[i], raceMeta.checkpoints, raceState.laps);
+      if (!justFin && raceState.racers[i].lap > lapWas) sfxLap();
       if (justFin) {
         raceState.racers[i].finishOrder = raceState.finishCount++;
         showBanner(RACE_NAMES[i] + " finishes!", "", 1.4);
@@ -1692,6 +1726,7 @@ function tickRace(dt) {
           raceState.finished = true;
           const winner = rankRacers(raceState)[0];
           showBanner(RACE_NAMES[winner] + " wins!", "", 2.5);
+          sfxWin();
         }
       }
     }
