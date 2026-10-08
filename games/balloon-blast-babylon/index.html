@@ -69,6 +69,7 @@
       </div>
     </div>
     <script src="hark.js"></script>
+    <script src="../shared/sfx.js?v=20261008-audio1"></script>
     <script>
 // Figures picker UI, independent of the 3D engine
 window.XFIG = (function () {
@@ -189,9 +190,13 @@ window.XFIG = (function () {
     w.position.z = i === 0 ? ARENA + 0.5 : i === 2 ? -ARENA - 0.5 : 0;
   }
 
-  // Audio
+  // Audio (audio1: legacy noise shot/pop + shared arcade music/SFX)
   let actx = null;
+  const AUD = window.ArcadeAudio || null;
+  if (AUD) AUD.init({ mood: "party", button: "top-right" });
+  const asfx = (n, s) => { if (AUD) AUD.play(n, s); };
   function sfx(kind) {
+    if (AUD && (AUD.isMuted() || !AUD.isUnlocked())) return;
     try {
       actx = actx || new (window.AudioContext || window.webkitAudioContext)();
       const len = kind === "pop" ? 0.18 : 0.05, buf = actx.createBuffer(1, actx.sampleRate * len, actx.sampleRate), d = buf.getChannelData(0);
@@ -271,6 +276,8 @@ window.XFIG = (function () {
   function pop(p, k) {
     const b = p.balloons[k], at = b.getAbsolutePosition().clone();
     b.dispose(); p.balloons[k] = null; sfx("pop");
+    asfx("pop", p.id === 0 ? 1.2 : Math.max(0.35, 1 - BABYLON.Vector3.Distance(p.node.position, players[0].node.position) / 40));
+    if (p.id === 0) asfx("hurt");
     for (let i = 0; i < 12; i++) {
       const s = BABYLON.MeshBuilder.CreateBox("frag", { size: 0.08 }, scene);
       s.material = bMats[p.id]; s.position.copyFrom(at);
@@ -305,8 +312,8 @@ window.XFIG = (function () {
   function checkEnd() {
     if (!playing) return;
     const alive = players.filter((p) => p.alive);
-    if (!players[0].alive) { playing = false; setTimeout(() => show("Popped!", `You finished in place ${players[0].place} of 4.`, "Play again"), 700); }
-    else if (alive.length === 1) { playing = false; setTimeout(() => show("You win!", "Last one standing with a balloon. Nice shooting.", "Play again"), 700); }
+    if (!players[0].alive) { playing = false; asfx("lose"); setTimeout(() => show("Popped!", `You finished in place ${players[0].place} of 4.`, "Play again"), 700); }
+    else if (alive.length === 1) { playing = false; asfx("win"); setTimeout(() => show("You win!", "Last one standing with a balloon. Nice shooting.", "Play again"), 700); }
   }
   function reset() {
     bullets.forEach((b) => b.m.dispose()); bullets.length = 0; dress();
@@ -317,7 +324,7 @@ window.XFIG = (function () {
     });
     camYaw = players[0].yaw; camPitch = 0.05;
     ammo = 30; reloadT = 0; updateAmmo();
-    updateHud(); playing = true; overlay.hidden = true;
+    updateHud(); playing = true; overlay.hidden = true; asfx("go");
   }
 
   // Input
@@ -326,7 +333,7 @@ window.XFIG = (function () {
   if (isTouch) document.body.classList.add("x-touch"); // mouse input below works regardless
   addEventListener("keydown", (e) => {
     keys[e.code] = true; if (e.code === "Enter" && !overlay.hidden && !go.disabled) start();
-    if (e.code === "KeyR" && playing && reloadT <= 0 && ammo < 30) { reloadT = 1.5; updateAmmo(); }
+    if (e.code === "KeyR" && playing && reloadT <= 0 && ammo < 30) { reloadT = 1.5; updateAmmo(); asfx("reload"); }
   });
   addEventListener("keyup", (e) => (keys[e.code] = false));
   function lock() {
@@ -442,7 +449,7 @@ window.XFIG = (function () {
       if ((g.buttons[7] && g.buttons[7].value > 0.3) || (g.buttons[0] && g.buttons[0].pressed)) wantFire = true;
       if (g.buttons[10] && g.buttons[10].pressed) sprint = true;
       if (g.buttons[6] && g.buttons[6].value > 0.3) padAds = true;
-      if (g.buttons[2] && g.buttons[2].pressed && playing && reloadT <= 0 && ammo < 30) { reloadT = 1.5; updateAmmo(); }
+      if (g.buttons[2] && g.buttons[2].pressed && playing && reloadT <= 0 && ammo < 30) { reloadT = 1.5; updateAmmo(); asfx("reload"); }
       const st = g.buttons[9] && g.buttons[9].pressed;
       if (st && !padStartWas && !overlay.hidden && !go.disabled) start();
       padStartWas = st;
@@ -469,7 +476,7 @@ window.XFIG = (function () {
     const aiming = playing && me.alive && (ads || touchAds || padAds);
     adsT += ((aiming ? 1 : 0) - adsT) * Math.min(1, dt * 12);
     camera.fov = BASE_FOV * (1 - 0.45 * adsT);
-    if (reloadT > 0) { reloadT -= dt; if (reloadT <= 0) { ammo = 30; updateAmmo(); } }
+    if (reloadT > 0) { reloadT -= dt; if (reloadT <= 0) { ammo = 30; updateAmmo(); asfx("reload"); } }
     kick = Math.max(0, kick - dt * 10);
     gun.position.copyFrom(V3.Lerp(HIP, ADS, adsT)).addInPlaceFromFloats(0, kick * 0.015 - (reloadT > 0 ? 0.12 : 0), -kick * 0.05);
     gun.rotation.x = -kick * 0.08 + (reloadT > 0 ? 0.5 : 0);
@@ -486,7 +493,7 @@ window.XFIG = (function () {
       fire(me, origin, shot);
       ammo--; kick = 1; camPitch += 0.006 * (1 - 0.5 * adsT);
       flash.setEnabled(true); flashT = 0.05;
-      if (ammo === 0) reloadT = 1.5;
+      if (ammo === 0) { reloadT = 1.5; asfx("reload"); }
       updateAmmo();
     }
 
