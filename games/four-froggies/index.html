@@ -64,7 +64,9 @@
     .view-row{position:relative;z-index:2;width:min(640px,100%);margin:8px auto 0;display:flex;justify-content:flex-end}
     .view-toggle{font:700 13px Outfit,system-ui,sans-serif;color:#fff;background:rgba(0,0,0,.42);border:2px solid rgba(255,255,255,.3);border-radius:999px;padding:6px 14px;cursor:pointer}
     .view-toggle b{color:#facc15}.view-toggle span{opacity:.6}
-    @media (max-width:800px){.view-row{width:min(420px,100%);justify-content:center}}
+    .view-hint{position:relative;z-index:2;width:min(640px,100%);margin:4px auto 0;text-align:right;font:520 11px Outfit,system-ui,sans-serif;color:rgba(255,255,255,.75)}
+    body.lobby-2d .view-hint{color:#052e16}
+    @media (max-width:800px){.view-row{width:min(420px,100%);justify-content:center}.view-hint{width:min(420px,100%);text-align:center}}
   </style>
 </head>
 <body class="in-title">
@@ -116,6 +118,7 @@
       </button>
     </div>
     <div class="view-row"><button type="button" id="ff3d-view-toggle" class="view-toggle" aria-pressed="true">3D view: <b>Split</b> / <span>Shared</span></button></div>
+    <p class="view-hint" id="ff3d-view-hint">In 3D: right stick turns · stick up/down zooms · hold R3 + stick tilts · R3 twice resets · keys , . PgUp PgDn 0 · pinch / twist</p>
     <p id="invite-cta" class="invite-cta entrance-party">Party: <strong>Host room</strong> → Copy invite / scan QR · friends <strong>Join</strong> · claim James / Jimmy / Bubbles / Rexy · Host picks a mode to start. Solo: claim a froggy and pick 2.5D / 3D (AI fills open seats).</p>
     <div id="party-bar" class="party-bar entrance-party">
       <button type="button" id="btn-host" class="party-btn">Host room</button>
@@ -269,7 +272,7 @@
   <script src="story.js?v=20261001-kidfix1"></script>
   <script src="space.js?v=20261004-marsrover2"></script>
   <script src="engine-boot.js?v=20261007-semitrees1r1"></script>
-  <script src="version-lobby.js?v=20261007-ff3dsplit1"></script>
+  <script src="version-lobby.js?v=20261007-ff3dcam1"></script>
   <script src="main.js?v=20261007-padmerge1"></script>
 </body>
 </html>
