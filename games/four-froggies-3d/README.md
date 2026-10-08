@@ -1,3 +1,11 @@
+# What's new (ff3d109) — ff3dmp1 (couch multiplayer)
+
+- The entrance hands off EVERY couch pad seat to 3D (`&pads=james.0,jimmy.1,…`), not just player 1. `party-lobby.js` merges them into the seat map, so 2–4 pads keep their froggies.
+- In the world, an unbound pad's A (or Start) joins as the next AI froggy. Bound pads still never transfer (walkspin1). The join press does not also board/interact.
+- Entrance: pad X starts 3D (Y still starts 2.5D).
+- Shared `gamepad.js` (ff3dmp1): two same-model Xbox pads count as distinct after two independent-activity events (solo press or a stick move while the other pad was idle), so pad 2 no longer drops out while both players hold the same stick direction. Ghost/mirror merging unchanged.
+- Cache: `?v=20261007-ff3dmp1` · asset `index-ff3d109.js`
+
 # What's new (ff3d102) — cyber3
 
 - Cybertruck body is a stainless exoskeleton again: blunt nearly-vertical nose, short hood, one flat windshield up to a roof peak near the B-pillar, triangular side glass, then a short pickup bed. Not the one-piece wedge.
