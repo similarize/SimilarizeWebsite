@@ -34709,6 +34709,10 @@ var jg = Object.freeze({ __proto__: null, version: Zg, reserveMemory: bg, Vector
 }, PidController: Ng, DynamicRayCastVehicleController: Fg });
 
 // artifacts/drop-lab/main.js
+/* audio1: shared arcade audio (../shared/sfx.js) */
+var AUD = window.ArcadeAudio || null;
+if (AUD) AUD.init({ mood: "chill", button: "top:calc(62px + env(safe-area-inset-top));right:10px;" });
+function sfx(name, s) { if (AUD) AUD.play(name, s); }
 var MAX = 48;
 var SETTINGS_KEY = "droplab-settings-v1";
 var palette = {
@@ -34952,6 +34956,7 @@ function paintCount() {
   countEl.textContent = `${actors.length} / ${MAX} shapes`;
 }
 function spawn(kind) {
+  sfx("pop", 0.8);
   const angle = Math.random() * Math.PI * 2;
   const spread = 0.35 + Math.random() * 1.45;
   const position = [Math.cos(angle) * spread, 5.4 + Math.random() * 1.4, Math.sin(angle) * spread];
@@ -34982,6 +34987,7 @@ function spawn(kind) {
   );
 }
 function dropPile() {
+  sfx("powerup");
   const size = 0.6;
   const step = size + 0.06;
   [3, 2, 1].forEach((n2, li) => {
@@ -35004,6 +35010,7 @@ function dropPile() {
   addActor("cylinder", [0.05, 11.1, 0.05], [0.55, 0.2, 0.35], 0.28, [0.28, 0.46, 0.28], 0.46);
 }
 function clearAll() {
+  if (actors.length) sfx("whoosh", 1.2);
   while (actors.length) removeActor(actors[0]);
 }
 function seed() {
@@ -35077,6 +35084,7 @@ function startDrag(actor, ev) {
   actor.mesh.material.emissiveIntensity = 0.22;
   controls.enabled = false;
   canvas.style.cursor = "grabbing";
+  sfx("click");
 }
 function moveDrag(ev) {
   if (!drag) return;
@@ -35109,7 +35117,11 @@ function endDrag(throwIt) {
   const { actor, vel } = drag;
   drag = null;
   actor.body.setBodyType(jg.RigidBodyType.Dynamic, true);
-  if (throwIt) actor.body.setLinvel(vel, true);
+  if (throwIt) {
+    actor.body.setLinvel(vel, true);
+    const sp = Math.hypot(vel.x, vel.y, vel.z);
+    if (sp > 3) sfx("whoosh", Math.min(1.3, sp / 9));
+  }
   actor.body.setAngvel({ x: 0, y: 0, z: 0 }, true);
   actor.mesh.material.emissive.set("#000000");
   actor.mesh.material.emissiveIntensity = 0;
@@ -35177,8 +35189,20 @@ function frame(now) {
     acc -= step;
   }
   if (guard >= 4) acc = 0;
+  const tNow = now / 1e3;
   for (let i2 = actors.length - 1; i2 >= 0; i2--) {
     const actor = actors[i2];
+    if (AUD) {
+      const v2 = actor.body.linvel(), pv = actor._pv;
+      if (pv && !(drag && drag.actor === actor)) {
+        const dv = Math.hypot(v2.x - pv.x, v2.y - pv.y, v2.z - pv.z);
+        if (dv > 2.2 && tNow - (actor._snd || 0) > 0.12) {
+          actor._snd = tNow;
+          sfx(actor.kind === "sphere" ? "bounce" : "thud", Math.min(1.2, dv / 9));
+        }
+      }
+      actor._pv = { x: v2.x, y: v2.y, z: v2.z };
+    }
     const y2 = actor.body.translation().y;
     if (y2 < -16) removeActor(actor);
     else syncActor(actor);
