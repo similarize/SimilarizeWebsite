@@ -239,10 +239,11 @@ public class RanchJobs : MonoBehaviour
             var lp = new LeafPile();
             var t = new GameObject("Leaf pile").transform;
             t.SetParent(root, false);
-            Mats.Prim(PrimitiveType.Sphere, t, new Vector3(0f, 0.1f, 0f), new Vector3(1.7f, 0.8f, 1.5f), l1);
+            Mats.Prim(PrimitiveType.Sphere, t, new Vector3(0f, 0.28f, 0f), new Vector3(1.5f, 0.9f, 1.3f), l1);
             Mats.Prim(PrimitiveType.Sphere, t, new Vector3(0.45f, 0.12f, 0.3f), new Vector3(0.9f, 0.6f, 0.8f), l2);
             Mats.Prim(PrimitiveType.Sphere, t, new Vector3(-0.5f, 0.1f, -0.3f), new Vector3(0.8f, 0.55f, 0.7f), l3);
-            Mats.Prim(PrimitiveType.Sphere, t, new Vector3(0.1f, 0.42f, -0.1f), new Vector3(0.7f, 0.4f, 0.6f), l2);
+            Mats.Prim(PrimitiveType.Sphere, t, new Vector3(0.1f, 0.62f, -0.1f), new Vector3(0.75f, 0.45f, 0.65f), l2);
+            Mats.Prim(PrimitiveType.Sphere, t, new Vector3(-0.2f, 0.5f, 0.3f), new Vector3(0.6f, 0.4f, 0.5f), l3);
             for (int f = 0; f < 7; f++)
             {
                 float a = f * 0.9f + i, rr = 1.1f + (f % 3) * 0.25f;

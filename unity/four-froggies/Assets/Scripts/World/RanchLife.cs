@@ -1088,6 +1088,7 @@ public class RobotPhone : MonoBehaviour
         user = f; open = true; sel = robot;
         int k = System.Array.IndexOf(Cmds, cmd);
         if (k >= 0) cmdSel = k;
+        msg.text = RanchLife.I.robots[robot].robotName + " selected - " + CmdLabels[cmdSel];
     }
     public void DemoSend() { if (user != null) Send(user); }
 

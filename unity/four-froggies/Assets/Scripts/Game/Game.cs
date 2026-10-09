@@ -256,8 +256,20 @@ public class Game : MonoBehaviour
                     }
                     if (ph == 3) return;     // normal follow camera on the driven robot
                     if (ph == 0 || ph == 4) { pos = new Vector3(-36.5f, Ranch.GY(-36.5f, 28.5f) + 2.5f, 28.5f); look = new Vector3(-29.8f, Ranch.GY(-29.8f, 21f) + 1.3f, 21f); }
-                    else if (ph == 1) { pos = new Vector3(-62f, Ranch.GY(-62f, 26f) + 7.5f, 26f); look = new Vector3(-84f, Ranch.GY(-84f, 43f) + 0.5f, 43f); }
-                    else { pos = new Vector3(-41f, 3.2f, 26.5f); look = new Vector3(-42f, 1.0f, 13.5f); }
+                    else if (ph == 1)
+                    {
+                        // close on the leaf raker, then the mower (camera south-east of the robot, eased)
+                        Vector3 rp = (t < 19.5f ? rl.robots[4] : rl.robots[3]).transform.position;
+                        Vector3 want = rp + new Vector3(5.5f, 3.4f, -6.5f);
+                        demoCamPos = demoCamPos == Vector3.zero || (demoCamPos - want).sqrMagnitude > 100f ? want : Vector3.Lerp(demoCamPos, want, Mathf.Min(1f, Time.unscaledDeltaTime * 2f));
+                        pos = demoCamPos; look = rp + Vector3.up * 1.0f;
+                    }
+                    else
+                    {
+                        // porch: the sweeper on the left of the frame (the phone panel covers the right third)
+                        Vector3 rp = rl.robots[2].transform.position;
+                        pos = new Vector3(rp.x + 3.5f, 3.6f, 25.5f); look = new Vector3(rp.x + 3.2f, 1.0f, 14.5f);
+                    }
                     break;
                 }
             case "lineup":
@@ -376,7 +388,7 @@ public class Game : MonoBehaviour
         if (f.vehicle != null) f.ExitVehicle();
         var rl = RanchLife.I;
         if (rl == null || rl.robots.Count < 7 || RanchJobs.I == null) { Debug.Log("FFDEMO: no robots"); return; }
-        demoPhase = -1;
+        demoPhase = -1; demoCamPos = Vector3.zero;
         var R = rl.robots;   // Optimus, Unitree, Figure 03, Figure 02, Big Figure Two, Atlas HD, Atlas electric
         R[0].DemoStart(Vector3.zero, 0f, -2, 0.3f, 2);
         R[5].DemoStart(Vector3.zero, 0f, -2, 0.45f, 3);
