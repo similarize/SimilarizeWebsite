@@ -194,7 +194,7 @@ public class Game : MonoBehaviour
             case "robot":
                 // the robot line-up (RanchLife: x -36..-52, z 28, facing the house) seen from just past the porch flowers
                 gy = Ranch.GY(-43.8f, 28f);
-                pos = new Vector3(-42.5f, gy + 2.4f, 19.6f); look = new Vector3(-43.8f, gy + 1.4f, 28f); break;
+                pos = new Vector3(-43.8f, gy + 2.4f, 19.4f); look = new Vector3(-43.8f, gy + 1.4f, 28f); break;
             case "truck":
                 gy = Ranch.GY(14f, 44f);
                 pos = new Vector3(20.5f, gy + 2.2f, 50.5f); look = new Vector3(14f, gy + 1f, 44f); break;
@@ -205,8 +205,21 @@ public class Game : MonoBehaviour
                 pos = new Vector3(10f, 9f, -40f); look = new Vector3(70f, -1f, -80f); break;
             case "ranch":
                 pos = new Vector3(45f, 26f, 95f); look = new Vector3(-20f, 0f, 0f); break;
+            case "space":
+                {
+                    // from just outside the Starship's orbit, looking past the ship at Earth (the follow cam faces along
+                    // the orbit, so Earth sits off-screen there)
+                    var sw = SpaceWorld.I;
+                    int ei = sw != null ? sw.Find("earth") : -1;
+                    if (ei < 0 || sw.ship == null) return;
+                    Vector3 e = sw.bodies[ei].pos, s = sw.ship.transform.position, o = s - e;
+                    o.y = 0f;
+                    o = o.sqrMagnitude > 0.01f ? o.normalized : Vector3.forward;
+                    pos = s + o * 26f + Vector3.up * 9f; look = Vector3.Lerp(s, e, 0.4f);
+                }
+                break;
             default:
-                return;   // house / under / space: the normal follow camera
+                return;   // house / under: the normal follow camera
         }
         c.transform.position = pos;
         c.transform.LookAt(look);

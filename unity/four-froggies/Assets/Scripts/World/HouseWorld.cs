@@ -94,7 +94,8 @@ public class HouseWorld : MonoBehaviour
         if (layer != 0) g.layer = layer;
         return g;
     }
-    static Material WallMat { get { return Mats.TexTint("LB/plaster", new Color(1f, 0.97f, 0.9f), 0.05f, 3f); } }
+    // tint 0.9/0.86/0.78 (was 1/0.97/0.9: sunlit wall tops read near-white ~232 in the probe)
+    static Material WallMat { get { return Mats.TexTint("LB/plaster", new Color(0.9f, 0.86f, 0.78f), 0.05f, 3f); } }
     static Material BaseMat { get { return Mats.TexTint("LB/wood", new Color(0.62f, 0.45f, 0.3f), 0.15f, 1.5f); } }
 
     GameObject Prim(PrimitiveType t, Vector3 lp, Vector3 size, Color c, bool col = false)
