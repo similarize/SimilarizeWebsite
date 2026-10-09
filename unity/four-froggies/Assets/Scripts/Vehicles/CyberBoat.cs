@@ -39,7 +39,7 @@ public static class Water
 
 public class CyberBoat : MonoBehaviour
 {
-    public const float EnterDepth = 0.8f, ExitDepth = 0.5f, Tin = 2.0f, Tout = 1.3f;
+    public const float EnterDepth = 0.65f, ExitDepth = 0.45f, Tin = 2.0f, Tout = 1.3f;
     public GroundVehicle v;
     public float k;                 // 0 truck .. 1 boat
     public bool boatTarget;
@@ -295,7 +295,7 @@ public class CyberBoat : MonoBehaviour
         }
         if (wake)
         {
-            sprayT += dt * (6f + spd * 1.6f) * (Look.Mobile ? 0.5f : 1f);
+            sprayT += dt * (8f + spd * 2.2f) * (Look.Mobile ? 0.5f : 1f);
             Vector3 fwd = transform.forward, right = transform.right;
             while (sprayT >= 1f)
             {
@@ -306,14 +306,14 @@ public class CyberBoat : MonoBehaviour
                 {
                     Vector3 bp = pos + fwd * Random.Range(1.2f, 2.4f) + right * s * 1.45f; bp.y = surf + 0.1f;
                     FX.Spray(bp, right * s * Random.Range(2f, 4.5f) * (0.5f + sk) + Vector3.up * Random.Range(1.5f, 3.5f) * (0.4f + sk) - fwd * spd * 0.3f,
-                        Random.Range(0.12f, 0.3f), Random.Range(0.35f, 0.7f), new Color(0.9f, 0.97f, 1f, 0.8f));
+                        Random.Range(0.18f, 0.42f), Random.Range(0.4f, 0.8f), new Color(0.9f, 0.97f, 1f, 0.8f));
                 }
                 // rooster tail from the jet
                 if (v.Throttle01 > 0.1f)
                 {
                     Vector3 jp = jet.TransformPoint(new Vector3(0f, -0.05f, -0.55f)); jp.y = Mathf.Max(jp.y, surf + 0.05f);
                     FX.Spray(jp, -fwd * Random.Range(4f, 8f) * (0.4f + sk) + Vector3.up * Random.Range(2.5f, 5f) * (0.3f + sk) + Random.insideUnitSphere,
-                        Random.Range(0.18f, 0.45f), Random.Range(0.5f, 0.9f), new Color(0.92f, 0.98f, 1f, 0.75f));
+                        Random.Range(0.25f, 0.6f), Random.Range(0.6f, 1.0f), new Color(0.92f, 0.98f, 1f, 0.75f));
                 }
             }
         }
