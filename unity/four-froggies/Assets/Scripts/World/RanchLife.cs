@@ -215,6 +215,8 @@ public class Robot : MonoBehaviour
     int pose, workPose;                  // 0 walk, 1 hold tool, 2 carry, 3 bend, 4 plugged, 5 sweep, 6 rake, 7 water, 8 push
     float bend, fxT, sndT, tagT;
     Material lampM;
+    Transform batBar, batFill;
+    static Material batGreen, batAmber;
     TextMesh tagMesh;
     string tagLine = "";
     AudioSource loop;
@@ -276,11 +278,18 @@ public class Robot : MonoBehaviour
         Mats.Prim(PrimitiveType.Cube, r.body, new Vector3(0f, h * 0.7f, -(bulk * 0.32f + 0.04f)), new Vector3(0.16f, 0.16f, 0.05f), r.lampM);
         Mats.Prim(PrimitiveType.Sphere, r.body, new Vector3(0f, h * 1.02f, 0f), Vector3.one * 0.09f, r.lampM);
         r.carryNode = Mats.Node(r.body, "Carry", new Vector3(0f, h * 0.55f, h * 0.27f + 0.25f));
+        // battery bar over the head while charging / low (billboarded)
+        if (batGreen == null) { batGreen = Mats.Unlit(new Color(0.35f, 1f, 0.4f)); batAmber = Mats.Unlit(new Color(1f, 0.65f, 0.1f)); }
+        r.batBar = Mats.Prim(PrimitiveType.Cube, t, Vector3.up * (h + 0.32f), new Vector3(0.6f, 0.16f, 0.03f), Mats.Unlit(new Color(0.05f, 0.06f, 0.07f))).transform;
+        r.batBar.gameObject.AddComponent<Billboard>();
+        r.batFill = Mats.Prim(PrimitiveType.Cube, r.batBar, new Vector3(0f, 0f, -0.7f), new Vector3(0.9f, 0.62f, 1f), batGreen).transform;
+        Mats.NoShadows(r.batBar.gameObject);
+        r.batBar.gameObject.SetActive(false);
         if (!packed || Look.Mobile) Mats.NoShadows(go);   // the mesh robots cast shadows on desktop (grounds them)
         // name tag (+ status line, refreshed twice a second)
         var tag = new GameObject("Tag");
         tag.transform.SetParent(t, false);
-        tag.transform.localPosition = Vector3.up * (h + 0.55f);
+        tag.transform.localPosition = Vector3.up * (h + 0.75f);
         var tm = tag.AddComponent<TextMesh>();
         tm.text = name + (owner.Length > 0 ? "\n<size=34>(" + owner + "'s)</size>" : "");
         tm.font = UIK.Font; tm.fontSize = 48; tm.characterSize = 0.035f; tm.anchor = TextAnchor.MiddleCenter; tm.alignment = TextAlignment.Center; tm.richText = true;
@@ -371,7 +380,7 @@ public class Robot : MonoBehaviour
         manual = f; f.remote = this;
         mIn = new PIn();
         Sfx.Play(Sfx.Confirm != null ? Sfx.Confirm : Sfx.Pickup, 0.6f);
-        f.Toast("Driving " + robotName + ": stick walk, RT run, A wave. LB / P / PHONE hands it back to auto.", 4f);
+        f.Toast("Now driving " + robotName + " from the phone", 2.5f);
     }
 
     public void ReleaseManual(bool say)
@@ -909,6 +918,17 @@ public class Robot : MonoBehaviour
 
     void Lamp()
     {
+        bool showBat = charging || battery < LowBattery;
+        if (batBar.gameObject.activeSelf != showBat) batBar.gameObject.SetActive(showBat);
+        if (showBat)
+        {
+            float f = Mathf.Clamp(battery, 0.04f, 1f);
+            batFill.localScale = new Vector3(0.9f * f, 0.62f, 1f);
+            batFill.localPosition = new Vector3(-0.45f * (1f - f), 0f, -0.7f);
+            var bm = charging ? batGreen : batAmber;
+            var br = batFill.GetComponent<Renderer>();
+            if (br.sharedMaterial != bm) br.sharedMaterial = bm;
+        }
         Color c;
         if (charging) c = Color.Lerp(new Color(0.1f, 0.5f, 0.15f), new Color(0.5f, 1f, 0.55f), 0.5f + 0.5f * Mathf.Sin(Time.time * 4.5f));
         else if (manual != null) c = new Color(1f, 0.45f, 0.9f);
@@ -950,7 +970,7 @@ public class Robot : MonoBehaviour
     {
         if (tagMesh == null) return;
         string col = charging ? "#8cff8c" : battery < LowBattery ? "#ffc040" : "#9fd8ff";
-        string line = robotName + (owner.Length > 0 ? " <size=30>(" + owner + "'s)</size>" : "") + "\n<size=30><color=" + col + ">" + StatusLine + "  " + Pct + "</color></size>";
+        string line = robotName + (owner.Length > 0 ? " <size=30>(" + owner + "'s)</size>" : "") + "\n<size=36><color=" + col + ">" + StatusLine + "  " + Pct + "</color></size>";
         if (line != tagLine) { tagLine = line; tagMesh.text = line; }
     }
 

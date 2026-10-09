@@ -28,7 +28,7 @@ public class ChargeJack
     public Vector3 socket, normal, stand;
     public float faceYaw;
     public Robot user;            // claimed (walking there or plugged in)
-    public Material glow;
+    public Material glow, pad;
     public Transform cable;
     public int shown = -1;        // 0 free, 1 claimed, 2 charging
 }
@@ -155,13 +155,14 @@ public class RanchJobs : MonoBehaviour
     public readonly int[] busy = new int[Chores.Count];
     public static readonly Vector2 BinP = new Vector2(-31.8f, 36.5f), CratePile = new Vector2(-37f, 45f), CrateDrop = new Vector2(-84f, 46f),
         HayPile = new Vector2(-99f, 92f), HayDrop = new Vector2(-109.5f, 116f);
-    public static readonly Rect MowArea = new Rect(-106f, 32f, 20f, 26f);
+    public static readonly Rect MowArea = new Rect(-106f, 30f, 20f, 24f);
     public int mowLane;
     readonly List<GameObject> crateStack = new List<GameObject>(), hayStack = new List<GameObject>();
     int crates, hay;
     static readonly Rect[] LitterAreas = { new Rect(-80f, 33f, 44f, 28f), new Rect(-26f, 35f, 40f, 10f), new Rect(-96f, -12f, 20f, 38f) };
-    static readonly Rect LeafArea = new Rect(-78f, 47f, 36f, 18f);
+    static readonly Rect LeafArea = new Rect(-82f, 36f, 32f, 16f);
     static readonly Color[] JackIdle = { new Color(0.25f, 0.6f, 1f), new Color(1f, 0.75f, 0.2f) };
+    static readonly Color PadIdle = new Color(0.95f, 0.78f, 0.1f);
 
     public static void Create()
     {
@@ -238,9 +239,15 @@ public class RanchJobs : MonoBehaviour
             var lp = new LeafPile();
             var t = new GameObject("Leaf pile").transform;
             t.SetParent(root, false);
-            Mats.Prim(PrimitiveType.Sphere, t, new Vector3(0f, 0.08f, 0f), new Vector3(1.9f, 0.45f, 1.6f), l1);
-            Mats.Prim(PrimitiveType.Sphere, t, new Vector3(0.35f, 0.14f, 0.2f), new Vector3(1.1f, 0.4f, 1f), l2);
-            Mats.Prim(PrimitiveType.Sphere, t, new Vector3(-0.4f, 0.1f, -0.25f), new Vector3(0.9f, 0.3f, 0.8f), l3);
+            Mats.Prim(PrimitiveType.Sphere, t, new Vector3(0f, 0.1f, 0f), new Vector3(1.7f, 0.8f, 1.5f), l1);
+            Mats.Prim(PrimitiveType.Sphere, t, new Vector3(0.45f, 0.12f, 0.3f), new Vector3(0.9f, 0.6f, 0.8f), l2);
+            Mats.Prim(PrimitiveType.Sphere, t, new Vector3(-0.5f, 0.1f, -0.3f), new Vector3(0.8f, 0.55f, 0.7f), l3);
+            Mats.Prim(PrimitiveType.Sphere, t, new Vector3(0.1f, 0.42f, -0.1f), new Vector3(0.7f, 0.4f, 0.6f), l2);
+            for (int f = 0; f < 7; f++)
+            {
+                float a = f * 0.9f + i, rr = 1.1f + (f % 3) * 0.25f;
+                Mats.Prim(PrimitiveType.Cube, t, new Vector3(Mathf.Cos(a) * rr, 0.02f, Mathf.Sin(a) * rr), new Vector3(0.18f, 0.015f, 0.12f), new Vector3(0f, f * 47f, 0f), f % 2 == 0 ? l1 : l3);
+            }
             Mats.NoShadows(t.gameObject);
             lp.t = t;
             RespawnLeaves(lp);
@@ -264,20 +271,21 @@ public class RanchJobs : MonoBehaviour
         Mats.Prim(PrimitiveType.Cube, go, Vector3.zero, new Vector3(0.46f, 0.66f, 0.07f), plate);
         j.glow = new Material(Mats.Unlit(Color.white));
         j.glow.color = JackIdle[0];
-        var gl = Mats.Prim(PrimitiveType.Cube, go, new Vector3(0f, 0.1f, 0.04f), new Vector3(0.24f, 0.24f, 0.03f), j.glow);
+        var gl = Mats.Prim(PrimitiveType.Cube, go, new Vector3(0f, 0.1f, 0.04f), new Vector3(0.3f, 0.3f, 0.03f), j.glow);
         Mats.Prim(PrimitiveType.Cube, go, new Vector3(0f, 0.1f, 0.055f), new Vector3(0.1f, 0.1f, 0.02f), Mats.Lit(new Color(0.05f, 0.05f, 0.06f)));   // socket hole
         Mats.Prim(PrimitiveType.Cube, go, new Vector3(0f, -0.17f, 0.04f), new Vector3(0.06f, 0.15f, 0.02f), new Vector3(0f, 0f, 22f), Mats.Unlit(new Color(1f, 0.85f, 0.15f)));   // bolt
         float top = 2.9f - (socket.y - Ranch.GY(socket.x, socket.z));
         Mats.Prim(PrimitiveType.Cube, go, new Vector3(0f, 0.33f + top * 0.5f, -0.01f), new Vector3(0.07f, top, 0.05f), plate);   // conduit up the wall
         // floor pad: yellow border, dark centre
         Vector3 pad = j.stand;
-        var pd = Mats.Prim(PrimitiveType.Cube, root, pad + Vector3.up * 0.02f, new Vector3(1.5f, 0.03f, 1.5f), Mats.Unlit(new Color(0.95f, 0.78f, 0.1f)));
+        j.pad = new Material(Mats.Unlit(Color.white));
+        j.pad.color = PadIdle;
+        var pd = Mats.Prim(PrimitiveType.Cube, root, pad + Vector3.up * 0.02f, new Vector3(1.6f, 0.03f, 1.6f), j.pad);
         pd.transform.rotation = q;
         var pi = Mats.Prim(PrimitiveType.Cube, root, pad + Vector3.up * 0.035f, new Vector3(1.25f, 0.03f, 1.25f), Mats.Lit(new Color(0.16f, 0.17f, 0.19f)));
         pi.transform.rotation = q;
         // cable (hangs on the plate when free, stretched to the robot's back when charging)
-        j.cable = Mats.Prim(PrimitiveType.Cylinder, transform, Vector3.zero, Vector3.one, Mats.Lit(new Color(0.06f, 0.06f, 0.07f))).transform;
-        Mats.Prim(PrimitiveType.Cube, j.cable, new Vector3(0f, 1f, 0f), new Vector3(1.6f, 0.06f, 1.6f), Mats.Unlit(new Color(0.3f, 1f, 0.5f)));   // lit plug ring at the robot end
+        j.cable = Mats.Prim(PrimitiveType.Cylinder, transform, Vector3.zero, Vector3.one, Mats.Paint(new Color(0.95f, 0.45f, 0.08f), 0.5f)).transform;   // orange charging lead
         Mats.NoShadows(go.gameObject); Mats.NoShadows(j.cable.gameObject); Mats.NoShadows(pd); Mats.NoShadows(pi);
         HangCable(j);
         jacks.Add(j);
@@ -294,7 +302,7 @@ public class RanchJobs : MonoBehaviour
     static void HangCable(ChargeJack j)
     {
         Vector3 a = j.socket + j.normal * 0.06f + Vector3.up * 0.1f;
-        Stretch(j.cable, a, a - Vector3.up * 0.55f + j.normal * 0.08f, 0.05f);
+        Stretch(j.cable, a, a - Vector3.up * 0.6f + j.normal * 0.1f, 0.08f);
     }
 
     public ChargeJack ClaimJack(Robot r)
@@ -438,9 +446,10 @@ public class RanchJobs : MonoBehaviour
             {
                 float k = 0.5f + 0.5f * Mathf.Sin(t * 4.5f);
                 j.glow.color = Color.Lerp(new Color(0.1f, 0.55f, 0.2f), new Color(0.55f, 1f, 0.6f), k);
-                Stretch(j.cable, JackPlug(j), j.user.PlugPoint, 0.06f);
+                j.pad.color = Color.Lerp(new Color(0.1f, 0.6f, 0.2f), new Color(0.45f, 1f, 0.45f), k);
+                Stretch(j.cable, JackPlug(j), j.user.PlugPoint, 0.09f);
             }
-            else if (st != j.shown) { j.glow.color = JackIdle[st]; HangCable(j); }
+            else if (st != j.shown) { j.glow.color = JackIdle[st]; j.pad.color = PadIdle; HangCable(j); }
             j.shown = st;
         }
     }

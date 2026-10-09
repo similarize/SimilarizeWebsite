@@ -162,7 +162,7 @@ public class Frog : MonoBehaviour
             // ffu12: driving a robot from the phone - the froggy stands still, its input goes to the robot (Game)
             input = new PIn();
             Walk(dt);
-            prompt = remote.robotName + " (remote, " + remote.Pct + "): stick walk, RT run, A wave  |  LB / P / PHONE: back to auto";
+            prompt = "Driving " + remote.robotName + " (" + remote.Pct + "): stick walk, RT run, A wave  |  LB / P / PHONE: back to auto";
             return;
         }
         if (vehicle != null)

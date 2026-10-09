@@ -236,7 +236,7 @@ public class Game : MonoBehaviour
                     // ffu12: charging jacks (garage wall) -> chores in the yard -> porch (sweeping + porch jack) with the
                     // phone open -> P1 drives Unitree from the phone (follow cam) -> hands it back -> jacks again
                     float t = demoPlayT;
-                    int ph = t < 13f ? 0 : t < 26f ? 1 : t < 33f ? 2 : t < 47f ? 3 : 4;
+                    int ph = t < 13f ? 0 : t < 26f ? 1 : t < 38f ? 2 : t < 52f ? 3 : 4;
                     var rl = RanchLife.I;
                     if (ph != demoPhase && rl != null)
                     {
@@ -255,8 +255,8 @@ public class Game : MonoBehaviour
                         Debug.Log(sb.ToString());
                     }
                     if (ph == 3) return;     // normal follow camera on the driven robot
-                    if (ph == 0 || ph == 4) { pos = new Vector3(-39.5f, Ranch.GY(-39.5f, 32.5f) + 3.4f, 32.5f); look = new Vector3(-30.5f, Ranch.GY(-30.5f, 20.5f) + 1.2f, 20.5f); }
-                    else if (ph == 1) { pos = new Vector3(-52f, Ranch.GY(-52f, 72f) + 11f, 72f); look = new Vector3(-80f, Ranch.GY(-80f, 46f) + 0.5f, 46f); }
+                    if (ph == 0 || ph == 4) { pos = new Vector3(-36.5f, Ranch.GY(-36.5f, 28.5f) + 2.5f, 28.5f); look = new Vector3(-29.8f, Ranch.GY(-29.8f, 21f) + 1.3f, 21f); }
+                    else if (ph == 1) { pos = new Vector3(-62f, Ranch.GY(-62f, 26f) + 7.5f, 26f); look = new Vector3(-84f, Ranch.GY(-84f, 43f) + 0.5f, 43f); }
                     else { pos = new Vector3(-41f, 3.2f, 26.5f); look = new Vector3(-42f, 1.0f, 13.5f); }
                     break;
                 }
@@ -386,7 +386,7 @@ public class Game : MonoBehaviour
         R[4].DemoStart(new Vector3(-62f, 0f, 48f), 0f, Chores.Rake, 0.9f);
         R[1].DemoStart(new Vector3(-44f, 0f, 31f), 0f, Chores.Litter, 0.85f);
         // P1 stands on the lawn by the porch steps holding the phone
-        f.DemoPose(new Vector3(-40f, 0f, 24.5f), 180f);
+        f.DemoPose(new Vector3(-34.5f, 0f, 20.5f), 90f);
         Debug.Log("FFDEMO robots seeded");
     }
 
@@ -402,7 +402,7 @@ public class Game : MonoBehaviour
         Vector3 l = Quaternion.Euler(0f, -cy, 0f) * d.normalized;
         o.move = new Vector2(l.x, l.z) * 0.7f;
         o.look.x = Mathf.DeltaAngle(cy, Mathf.Atan2(d.x, d.z) * Mathf.Rad2Deg) * 0.02f;   // camera eases round behind
-        if (demoPlayT > 40f && !demoWaved) { demoWaved = true; o.hop = true; }
+        if (demoPlayT > 45f && !demoWaved) { demoWaved = true; o.hop = true; }
         return o;
     }
 
