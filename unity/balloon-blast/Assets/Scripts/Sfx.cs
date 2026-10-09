@@ -17,7 +17,7 @@ public static class Sfx
     static AudioClip[] shots, shotsFar, pops, stepsGrass, stepsWood, hitWood, hitMetal, hitSoft;
     static AudioClip MyPop, Ding, Slide, Jump, Beep, Go, Click, Wind;
     static AudioClip hitBody, land, magOut, magIn, strap, uiClick, uiJoin, uiStart, uiBack, uiSwitch, uiSelect, uiOpen, uiClose;
-    static AudioClip jGo, jWin, jMatch, jLose, cheer1, cheer2, cheerClap, cheerYay, amb, musLobby, musMatch;
+    static AudioClip jGo, jWin, jMatch, jLose, cheer1, cheer2, cheerClap, cheerYay, amb;
 
     static GameObject host;
     static AudioSource[] pool;
@@ -80,9 +80,9 @@ public static class Sfx
         uiSwitch = Snd.Load("ui_switch"); uiSelect = Snd.Load("ui_select"); uiOpen = Snd.Load("ui_open"); uiClose = Snd.Load("ui_close");
         jGo = Snd.Load("j_go"); jWin = Snd.Load("j_win"); jMatch = Snd.Load("j_match"); jLose = Snd.Load("j_lose");
         cheer1 = Snd.Load("cheer_teens1"); cheer2 = Snd.Load("cheer_teens2"); cheerClap = Snd.Load("cheer_clap"); cheerYay = Snd.Load("cheer_yay");
-        amb = Snd.Load("amb_birds"); musLobby = Snd.Load("mus_lobby"); musMatch = Snd.Load("mus_match");
-        if (musLobby == null) musLobby = musMatch;
-        if (musMatch == null) musMatch = musLobby;
+        amb = Snd.Load("amb_birds");
+        // music is NOT decoded here: MusicClip() decodes only the track that is about to play (mono 24 kHz) and
+        // Tick() destroys the faded-out one, so at most one decoded music track is resident (two during a crossfade)
     }
 
     // ---------------- volume + button ----------------
@@ -137,9 +137,19 @@ public static class Sfx
     {
         if (Unlocked) return;
         Unlocked = true;
-        StartLoop(musA, matchScene ? musMatch : musLobby);
+        StartLoop(musA, MusicClip(matchScene));
         StartLoop(ambSrc, amb);
         StartLoop(windSrc, Wind);
+    }
+
+    static AudioClip MusicClip(bool match)
+    {
+        string want = match ? "mus_match" : "mus_lobby";
+        if (musB != null && musB.clip != null && musB.clip.name == want) return musB.clip;   // fading back to it
+        if (musA != null && musA.clip != null && musA.clip.name == want) return musA.clip;
+        AudioClip c = Snd.Load(want);
+        if (c == null) c = Snd.Load(match ? "mus_lobby" : "mus_match");
+        return c;
     }
 
     static void StartLoop(AudioSource s, AudioClip c)
@@ -156,7 +166,7 @@ public static class Sfx
         matchScene = match;
         if (!Unlocked) return;
         AudioSource from = musA; musA = musB; musB = from;     // musA = the one fading in
-        StartLoop(musA, match ? musMatch : musLobby);
+        StartLoop(musA, MusicClip(match));
     }
 
     public static void Tick(float dt)
@@ -168,6 +178,10 @@ public static class Sfx
         musA.volume = Mathf.MoveTowards(musA.volume, musVol, dt * 0.4f);
         musB.volume = Mathf.MoveTowards(musB.volume, 0f, dt * 0.4f);
         if (musB.isPlaying && musB.volume <= 0.001f) musB.Stop();
+        if (!musB.isPlaying && musB.clip != null && musB.clip != musA.clip)
+        {
+            AudioClip old = musB.clip; musB.clip = null; Object.Destroy(old);   // keep one decoded music track
+        }
         float ambVol = Unlocked ? (matchScene ? 0.32f : 0.12f) : 0f;
         ambSrc.volume = Mathf.MoveTowards(ambSrc.volume, ambVol, dt * 0.3f);
         windSrc.volume = Mathf.MoveTowards(windSrc.volume, Unlocked ? (matchScene ? 0.16f : 0.07f) : 0f, dt * 0.3f);

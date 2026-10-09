@@ -41,6 +41,9 @@ public class Hud
         {
             Vector2 size = (i < 2) ? new Vector2(3, 12) : new Vector2(12, 3);
             crossBars[i] = UIK.Img(r, null, Color.white, new Vector2(0.5f, 0.5f), offs[i], size);
+            // dark edge so the white bars still read against bright sky / clouds (they vanished in portrait screenshots)
+            Outline ol = crossBars[i].gameObject.AddComponent<Outline>();
+            ol.effectColor = new Color(0f, 0f, 0f, 0.65f); ol.effectDistance = new Vector2(1.5f, -1.5f);
         }
         dot = UIK.Img(r, UIK.Circle, new Color(1f, 0.3f, 0.2f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(7, 7));
 
