@@ -78,6 +78,7 @@ public class StoryMech : Vehicle
 
     // demo / probe helpers
     public static float DemoClimb = 1f;
+    public static float DtCap = 0.05f;   // demo / probe: SwiftShader runs ~2 fps, so the mech demos raise this
     public Vector3 HomeOrNow { get { return transform.position; } }
     public void DemoPlace(Vector3 p, float yawDeg)
     {
@@ -211,7 +212,7 @@ public class StoryMech : Vehicle
         shieldGo = sg.transform; shieldGo.gameObject.SetActive(false);
         // health bar + shield countdown float over the head and face each camera (Camera.onPreCull)
         barRoot = Mats.Node(transform, "HealthBar", new Vector3(0f, H * 1.08f + 1.5f, 0f));
-        float w = Mathf.Max(5f, H * 0.5f), h = Mathf.Max(0.6f, H * 0.045f);
+        float w = Mathf.Max(4f, H * 0.36f), h = Mathf.Max(0.45f, H * 0.026f);
         Mats.Prim(PrimitiveType.Cube, barRoot, Vector3.zero, new Vector3(w + h * 0.4f, h * 1.4f, 0.05f), Mats.Unlit(new Color(0.05f, 0.05f, 0.06f)));
         var fp = Mats.Node(barRoot, "FillPivot", new Vector3(-w * 0.5f, 0f, -0.06f));
         var fill = Mats.Prim(PrimitiveType.Cube, fp, new Vector3(w * 0.5f, 0f, 0f), new Vector3(w, h, 0.05f), new Material(Mats.Unlit(new Color(0.3f, 1f, 0.35f))));
@@ -231,9 +232,12 @@ public class StoryMech : Vehicle
         Vector3 cp = c.transform.position;
         foreach (var m in AllMechs)
         {
-            if (m == null || m.barRoot == null || !m.barRoot.gameObject.activeSelf) continue;
+            if (m == null || m.barRoot == null) continue;
             Vector3 d = m.barRoot.position - cp;
-            if (d.sqrMagnitude > 1e-4f) m.barRoot.rotation = Quaternion.LookRotation(d, Vector3.up);
+            // per camera: hidden when this camera is right on top of the mech (its own pilot's view) - the HUD shows it
+            bool show = m.barWanted && d.sqrMagnitude > m.height * m.height * 4.5f;
+            if (m.barRoot.gameObject.activeSelf != show) m.barRoot.gameObject.SetActive(show);
+            if (show && d.sqrMagnitude > 1e-4f) m.barRoot.rotation = Quaternion.LookRotation(d, Vector3.up);
         }
     }
 
@@ -290,6 +294,7 @@ public class StoryMech : Vehicle
         SendNet(true);
     }
     float hitFlash, shieldFlash;
+    bool barWanted;
 
     void KnockOut(Vehicle by)
     {
@@ -372,7 +377,7 @@ public class StoryMech : Vehicle
     // ---------------- per frame ----------------
     void Update()
     {
-        float dt = Mathf.Min(Time.deltaTime, 0.05f);
+        float dt = Mathf.Min(Time.deltaTime, DtCap);
         float H = height;
         TickBar(dt);
         if (wrecked)
@@ -645,7 +650,7 @@ public class StoryMech : Vehicle
             shieldGo.localScale = new Vector3(height * 0.75f, height * 1.12f, height * 0.75f) * (1f + Mathf.Sin(Time.time * 3f) * 0.015f);
         }
         bool show = wrecked || driver != null || hp < maxHp - 0.5f || shieldT > 0f || shieldFlash > 0f;
-        if (barRoot.gameObject.activeSelf != show) barRoot.gameObject.SetActive(show);
+        barWanted = show;
         if (!show) return;
         float k = Mathf.Clamp01(hp / maxHp);
         barFill.localScale = new Vector3(Mathf.Max(0.001f, k), 1f, 1f);

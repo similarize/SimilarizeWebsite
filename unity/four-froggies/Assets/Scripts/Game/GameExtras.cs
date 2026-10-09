@@ -44,12 +44,12 @@ public partial class Game
         demoKeepChars = true;
         if (sc == "mechfight")
         {
-            demoMech.DemoPlace(new Vector3(-96f, 0f, 40f), 270f);
+            demoMech.DemoPlace(new Vector3(-104f, 0f, 38f), 270f);
             demoFoe = FindMech(1, 0);
             Frog foePilot = frogs[1];
             if (demoFoe != null)
             {
-                demoFoe.DemoPlace(new Vector3(-150f, 0f, 40f), 90f);
+                demoFoe.DemoPlace(new Vector3(-138f, 0f, 38f), 90f);
                 if (foePilot.vehicle != null) foePilot.ExitVehicle();
                 if (foePilot.charId != 1) SetSeatChar(1, 1, false);
                 foePilot.EnterVehicle(demoFoe);
@@ -57,7 +57,8 @@ public partial class Game
         }
         f.EnterVehicle(demoMech);
         demoMechT = 0f;
-        if (sc == "mechspace") StoryMech.DemoClimb = 5f;
+        if (sc == "mechspace") StoryMech.DemoClimb = 2.5f;
+        StoryMech.DtCap = 0.3f;   // probe runs at ~2 fps: let game time keep up with wall time
         demoHook = i => DemoMechInput(i, sc);
         Debug.Log("FFDEMO mech start " + sc + " " + demoMech.Title);
     }
@@ -66,6 +67,7 @@ public partial class Game
     {
         float t = demoMechT;
         var o = new PIn(); o.look = i.look;
+        if (demoMech != null) o.look = Vector2.zero;
         if (sc == "mech")
         {
             // walk, turn, jump, rocket with afterburner, land
@@ -90,7 +92,7 @@ public partial class Game
     bool DemoMechCam(Frog f, string sc, out Vector3 pos, out Vector3 look)
     {
         pos = look = Vector3.zero;
-        demoMechT += Mathf.Min(Time.deltaTime, 0.05f);
+        demoMechT += Mathf.Min(Time.deltaTime, StoryMech.DtCap);
         if (demoMech == null) return false;
         StoryMech m = demoMech;
         float H = m.height;
@@ -109,7 +111,7 @@ public partial class Game
         if (sc == "mechfight")
         {
             Vector3 mid = demoFoe != null ? (mp + demoFoe.HomeOrNow) * 0.5f : mp;
-            pos = mid + new Vector3(0f, H * 1.1f, -H * 3.6f); look = mid + Vector3.up * H * 0.45f; return true;
+            pos = mid + new Vector3(4f, H * 0.75f, H * 2.6f); look = mid + Vector3.up * H * 0.4f; return true;
         }
         // mechspace: chase from above-behind so the ranch shrinks below; normal views once in space
         if (f.world != WorldId.Ranch) return false;

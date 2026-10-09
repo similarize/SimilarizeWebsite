@@ -59,7 +59,7 @@ public class MechShot : MonoBehaviour
     void Update()
     {
         if (dead) return;
-        float dt = Mathf.Min(Time.deltaTime, 0.05f);
+        float dt = Mathf.Min(Time.deltaTime, StoryMech.DtCap);
         life += dt;
         if (kind == 2)
         {
