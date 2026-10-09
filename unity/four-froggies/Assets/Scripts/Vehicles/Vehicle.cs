@@ -30,6 +30,7 @@ public abstract class Vehicle : MonoBehaviour
     public static int GroundMask { get { return ~((1 << 2) | (1 << VehicleLayer) | (1 << FrogLayer) | (1 << ProjectileLayer) | (1 << PropLayer)); } }
 
     protected Vector3 kinVel;      // kinematic vehicles (the space Starship) report their own velocity
+    public void NetVel(Vector3 v) { kinVel = v; }   // ffu13: a net-posed (kinematic) vehicle reports the owner's velocity
     public Vector3 Velocity { get { return rb != null && !rb.isKinematic ? rb.velocity : kinVel; } }
     public float Speed { get { Vector3 v = Velocity; v.y = 0f; return v.magnitude; } }
     public float ForwardSpeed { get { return Vector3.Dot(Velocity, transform.forward); } }

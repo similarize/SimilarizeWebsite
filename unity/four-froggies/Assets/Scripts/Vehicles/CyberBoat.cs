@@ -73,6 +73,16 @@ public class CyberBoat : MonoBehaviour
     }
 
     // ---------------- per physics step (called by GroundVehicle.FixedUpdate) ----------------
+    // ffu13: an online player's Cyberboat: the transform progress comes from their device
+    public void NetSetK(float nk)
+    {
+        nk = Mathf.Clamp01(nk);
+        if (nk > 0f && !built) Build();
+        k = nk; boatTarget = nk > 0.5f;
+        Wet = k > 0.6f ? 1f : 0f;
+        if (hullCol != null) hullCol.enabled = k > 0.15f;
+    }
+
     public void Step(float dt, float steer, float throttle)
     {
         Rigidbody rb = v.rb;

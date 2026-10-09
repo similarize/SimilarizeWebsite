@@ -31,6 +31,7 @@ public struct PIn
 
 public static class Kb
 {
+    public static bool typing;     // ffu13: the on-screen keypad is open (letter keys type, they don't toggle things)
     static bool Key(System.Func<Keyboard, bool> f, KeyCode legacy, bool down)
     {
         Keyboard k = Keyboard.current;

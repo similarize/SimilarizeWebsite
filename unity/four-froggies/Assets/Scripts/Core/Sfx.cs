@@ -370,6 +370,6 @@ public class SfxDriver : MonoBehaviour
 {
     void Update()
     {
-        if (Kb.MDown()) Sfx.CycleVolume();
+        if (Kb.MDown() && !Kb.typing) Sfx.CycleVolume();   // ffu13: not while typing a name / room code
     }
 }

@@ -56,7 +56,7 @@ public class LaunchSeq : MonoBehaviour
         if (Game.I != null)
             foreach (Frog o in Game.I.frogs)
             {
-                if (o == null || o == f || o.world != WorldId.Ranch) continue;
+                if (o == null || o == f || o.world != WorldId.Ranch || o.netPuppet) continue;   // ffu13: online froggies launch on their own device
                 bool near = (o.transform.position - Ranch.ShipBase).sqrMagnitude < GatherR * GatherR;
                 if (o.human || near) Add(o);
             }

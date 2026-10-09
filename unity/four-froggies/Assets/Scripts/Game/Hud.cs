@@ -106,11 +106,12 @@ public class ViewHud
             Frog f = frogs[i];
             Vector3 wp = f.FocusPoint + Vector3.up * (f.vehicle != null ? 2.2f : 1.0f);
             Vector3 sp = cam.WorldToScreenPoint(wp);
-            if (sp.z < 0.5f || !cam.pixelRect.Contains(new Vector2(sp.x, sp.y)) || (f == me && f.vehicle == null)) { t.enabled = false; continue; }
+            if (sp.z < 0.5f || sp.z > 500f || !cam.pixelRect.Contains(new Vector2(sp.x, sp.y)) || (f == me && f.vehicle == null) || (me != null && f.world != me.world)) { t.enabled = false; continue; }
             Vector2 lp;
             RectTransformUtility.ScreenPointToLocalPointInRectangle(panel, sp, null, out lp);
             t.enabled = true;
-            t.text = f.nick + (f.human ? "" : " (AI)");
+            bool online = f.netPuppet && Net.I != null && Net.I.remoteHuman[f.id];   // ffu13: another device's player
+            t.text = f.nick + (f.human || online ? "" : " (AI)");
             t.color = f.color;
             t.fontSize = sp.z > 60f ? 15 : 20;
             t.rectTransform.anchoredPosition = lp;

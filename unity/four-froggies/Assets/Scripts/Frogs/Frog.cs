@@ -17,6 +17,11 @@ public class Frog : MonoBehaviour
     public float spaceGravity = 1f;   // low-g worlds (Callisto) set this per frame
     public Vehicle passengerOf;       // riding along (Starship) without driving
     public bool launching;            // aboard the Starship during the ranch blast-off (LaunchSeq)
+    public bool netPuppet;            // ffu13: another device controls this froggy online (Net poses it; no local simulation)
+    public bool Swimming { get { return swimming; } }
+    public bool InScuba { get { return scubaGo != null && scubaGo.activeSelf; } }
+    public void SetScubaNet(bool on) { if (on || scubaGo != null) SetScuba(on); }
+    public void SetChuteNet(bool on) { if (on != chute) SetChute(on); }
 
     public void BoardAsPassenger(Vehicle v)
     {
@@ -142,6 +147,7 @@ public class Frog : MonoBehaviour
     {
         float dt = Mathf.Min(Time.deltaTime, 0.05f);
         if (toastT > 0f) { toastT -= dt; if (toastT <= 0f) toast = ""; }
+        if (netPuppet) { input = new PIn(); return; }   // ffu13: posed by Net from the owner's device
         if (launching)
         {
             prompt = "Starship launch - A / FIRE skips";
@@ -383,7 +389,7 @@ public class Frog : MonoBehaviour
         planar = Vector3.zero; vel = Vector3.zero;
         SetChute(false);
         v.OnEnter();
-        Sfx.Play(Sfx.Door, 0.8f);
+        if (!netPuppet) Sfx.Play(Sfx.Door, 0.8f);
         if (human) Sfx.Play(Sfx.Pick(Sfx.Ribbit), 0.45f, Random.Range(1.0f, 1.2f));
     }
 
@@ -391,6 +397,7 @@ public class Frog : MonoBehaviour
     {
         Vehicle v = vehicle;
         if (v == null) return;
+        if (netPuppet && Net.I != null) Net.I.ReleaseVeh(v);   // ffu13: back to local physics first
         vehicle = null;
         v.driver = null;
         v.OnExit();
@@ -424,7 +431,7 @@ public class Frog : MonoBehaviour
         vel = v.Velocity * 0.5f;
         if (bail) { vel.y = Mathf.Min(vel.y, 0f); SetChute(true); Toast("Parachute! The " + v.Title + " flies itself home.", 3f); }
         exitCool = 0.4f;
-        Sfx.Play(Sfx.Door, 0.8f);
+        if (!netPuppet) Sfx.Play(Sfx.Door, 0.8f);
     }
 
     float aiRibbitT = 5f;

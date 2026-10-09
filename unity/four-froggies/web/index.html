@@ -38,6 +38,17 @@
   <a href="../" title="Back to the arcade">✕ Arcade</a>
 </div>
 <script>
+  // ffu13 online Host / Join: PeerJS (pinned version on jsDelivr) is loaded only when a player hosts or joins (FFNet.jslib)
+  window.FFNetLoadPeer = function (cb) {
+    if (window.Peer) { cb(null); return; }
+    var ex = document.querySelector("script[data-ffpeer]");
+    if (ex) { ex.addEventListener("load", function () { cb(null); }); ex.addEventListener("error", function () { cb("load"); }); return; }
+    var s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js";
+    s.async = true; s.setAttribute("data-ffpeer", "1");
+    s.onload = function () { cb(null); }; s.onerror = function () { cb("load"); };
+    document.head.appendChild(s);
+  };
   var buildUrl = "Build";
   var name = "__BUILD_NAME__";
   var canvas = document.getElementById("unity-canvas");
