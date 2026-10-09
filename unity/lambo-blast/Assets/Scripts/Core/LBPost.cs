@@ -8,7 +8,7 @@ public class LBPost : MonoBehaviour
 {
     static Material mat;
     static bool tried;
-    public float bloom = 0.38f, threshold = 0.9f, vignette = 0.5f;
+    public float bloom = 0.3f, threshold = 0.95f, vignette = 0.5f;
     public float saturation = 1.22f, contrast = 1.12f, warmth = 0.03f, exposure = 0.94f;
     public int levels = 4;
     readonly RenderTexture[] chain = new RenderTexture[6];

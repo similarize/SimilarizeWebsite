@@ -139,7 +139,7 @@ public static class Showroom
             Mats.SetLayer(root.gameObject, Layer);
             thumbCam.backgroundColor = new Color(0.08f, 0.11f, 0.17f);
             thumbCam.fieldOfView = 30f;
-            FitThumb(root, new Vector3(-0.5f, 0.34f, 1.4f), RobotThumbW / (float)RobotThumbH, 1.08f);
+            FitThumb(root, new Vector3(-0.5f, 0.34f, 1.4f), RobotThumbW / (float)RobotThumbH, 1.02f);
             thumbCam.targetTexture = RobotThumbs[r];
             thumbCam.Render();
             root.gameObject.SetActive(false);

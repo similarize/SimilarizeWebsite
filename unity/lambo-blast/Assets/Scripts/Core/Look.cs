@@ -28,8 +28,8 @@ public static class Look
             sun.transform.rotation = Quaternion.Euler(48f, -38f, 0f);
         }
         RenderSettings.ambientMode = AmbientMode.Trilight;
-        RenderSettings.ambientSkyColor = new Color(0.5f, 0.62f, 0.8f);
-        RenderSettings.ambientEquatorColor = new Color(0.56f, 0.56f, 0.52f);
+        RenderSettings.ambientSkyColor = new Color(0.42f, 0.5f, 0.64f);
+        RenderSettings.ambientEquatorColor = new Color(0.5f, 0.5f, 0.46f);
         RenderSettings.ambientGroundColor = new Color(0.42f, 0.36f, 0.28f);
         RenderSettings.fogColor = new Color(0.66f, 0.75f, 0.86f);
         RenderSettings.reflectionIntensity = 1f;

@@ -370,8 +370,8 @@ public static class Track
         var px = new Color32[n * n];
         var r = new System.Random(4);
         float size = gcell * (gn - 1);
-        Color sand = new Color(0.86f, 0.73f, 0.5f), wet = new Color(0.68f, 0.56f, 0.38f), sea = new Color(0.55f, 0.76f, 0.70f),
-              deep = new Color(0.25f, 0.5f, 0.55f), grass = new Color(0.36f, 0.63f, 0.25f), grass2 = new Color(0.27f, 0.52f, 0.2f);
+        Color sand = new Color(0.76f, 0.6f, 0.37f), wet = new Color(0.58f, 0.45f, 0.29f), sea = new Color(0.34f, 0.62f, 0.6f),   // tuned so lit sand stays golden, not white
+              deep = new Color(0.16f, 0.4f, 0.47f), grass = new Color(0.32f, 0.56f, 0.21f), grass2 = new Color(0.24f, 0.46f, 0.17f);
         for (int y = 0; y < n; y++)
             for (int x = 0; x < n; x++)
             {
@@ -388,7 +388,7 @@ public static class Track
                     c = Color.Lerp(c, Color.Lerp(grass, grass2, Mathf.PerlinNoise(wx * 0.09f, wz * 0.09f)), grassAmt);
                 }
                 float sp = (float)r.NextDouble();
-                if (sp < 0.08f) c *= 0.93f; else if (sp > 0.95f) c = Color.Lerp(c, Color.white, 0.15f);
+                if (sp < 0.08f) c *= 0.93f; else if (sp > 0.95f) c = Color.Lerp(c, Color.white, 0.08f);
                 px[y * n + x] = c;
             }
         tex.SetPixels32(px);
@@ -405,7 +405,7 @@ public static class Track
         tex.anisoLevel = 4;
         var r = new System.Random(curbs ? 8 : 9);
         var px = new Color32[w * h];
-        Color baseC = curbs ? new Color(0.72f, 0.6f, 0.43f) : new Color(0.76f, 0.64f, 0.46f);
+        Color baseC = curbs ? new Color(0.66f, 0.53f, 0.36f) : new Color(0.69f, 0.56f, 0.38f);
         for (int y = 0; y < h; y++)
             for (int x = 0; x < w; x++)
             {
@@ -416,8 +416,8 @@ public static class Track
                 if (tr < 0.06f) c *= 0.9f + tr;
                 if (curbs)
                 {
-                    if (u < 0.07f || u > 0.93f) c = ((y / 32) % 2 == 0) ? new Color(0.88f, 0.15f, 0.12f) : new Color(0.97f, 0.97f, 0.95f);
-                    else if (u < 0.09f || u > 0.91f) c = new Color(0.98f, 0.98f, 0.96f);
+                    if (u < 0.07f || u > 0.93f) c = ((y / 32) % 2 == 0) ? new Color(0.88f, 0.15f, 0.12f) : new Color(0.93f, 0.93f, 0.9f);
+                    else if (u < 0.09f || u > 0.91f) c = new Color(0.94f, 0.94f, 0.91f);
                 }
                 else if (u < 0.05f || u > 0.95f) c *= 0.85f;
                 c.a = 1f;
