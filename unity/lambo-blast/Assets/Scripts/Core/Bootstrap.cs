@@ -8,6 +8,8 @@ public class Bootstrap : MonoBehaviour
     public Material fxMat;
     public Material waterMat;
     public Material glassMat;
+    public Material groundMat;
+    public Material roadMat;
     public Light sun;
 
     void Awake()
@@ -30,6 +32,7 @@ public class Bootstrap : MonoBehaviour
         if (sun != null) sun.shadows = LightShadows.Soft;
 
         Mats.Init(litMat, unlitMat, fxMat, waterMat, glassMat);
+        Mats.GroundBase = groundMat; Mats.RoadBase = roadMat;
         Look.Init(sun);
         Showroom.Init(sun);
         Sfx.Init();

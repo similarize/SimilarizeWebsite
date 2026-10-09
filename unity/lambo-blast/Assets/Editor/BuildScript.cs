@@ -171,6 +171,36 @@ public static class BuildScript
         m.renderQueue = 3000;
     }
 
+    static Texture2D LoadTex(string path, bool mips, TextureWrapMode wrapU, TextureWrapMode wrapV, int max)
+    {
+        var imp = AssetImporter.GetAtPath(path) as TextureImporter;
+        if (imp == null) { Debug.LogWarning("LoadTex: no importer for " + path); return AssetDatabase.LoadAssetAtPath<Texture2D>(path); }
+        bool ch = false;
+        if (imp.mipmapEnabled != mips) { imp.mipmapEnabled = mips; ch = true; }
+        if (imp.wrapModeU != wrapU) { imp.wrapModeU = wrapU; ch = true; }
+        if (imp.wrapModeV != wrapV) { imp.wrapModeV = wrapV; ch = true; }
+        if (imp.maxTextureSize != max) { imp.maxTextureSize = max; ch = true; }
+        if (ch) imp.SaveAndReimport();
+        return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+    }
+
+    static Material MakeDetailMat(string file, string detailPath, Vector2 tiling, float gloss)
+    {
+        Material m = MakeMat("Standard", "Diffuse", file);
+        m.SetFloat("_Glossiness", gloss);
+        Texture2D d = LoadTex(detailPath, true, TextureWrapMode.Repeat, TextureWrapMode.Repeat, 512);
+        if (d != null)
+        {
+            m.SetTexture("_DetailAlbedoMap", d);
+            m.SetTextureScale("_DetailAlbedoMap", tiling);
+            m.SetFloat("_UVSec", 0f);
+            m.EnableKeyword("_DETAIL_MULX2");
+        }
+        else Debug.LogWarning("MakeDetailMat: missing " + detailPath);
+        EditorUtility.SetDirty(m);
+        return m;
+    }
+
     static string CreateScene()
     {
         Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
@@ -190,14 +220,50 @@ public static class BuildScript
         glass.SetFloat("_Metallic", 0.2f);
         EditorUtility.SetDirty(water);
         EditorUtility.SetDirty(glass);
-        Material sky = MakeMat("Skybox/Procedural", "Skybox/Procedural", "Sky.mat");
-        sky.SetFloat("_SunSize", 0.045f);
-        sky.SetFloat("_SunSizeConvergence", 5f);
-        sky.SetFloat("_AtmosphereThickness", 0.85f);
-        sky.SetColor("_SkyTint", new Color(0.4f, 0.62f, 0.9f));
-        sky.SetColor("_GroundColor", new Color(0.35f, 0.6f, 0.68f));
-        sky.SetFloat("_Exposure", 1.3f);
+        // sky: Poly Haven CC0 HDRI (Kloofendal 48d partly cloudy, pure sky, tonemapped 2k) on Skybox/Panoramic;
+        // procedural sky if the texture / shader is missing
+        Material sky = null;
+        Texture2D skyTex = LoadTex("Assets/Textures/sky_pano.jpg", false, TextureWrapMode.Repeat, TextureWrapMode.Clamp, 2048);
+        Shader pano = Shader.Find("Skybox/Panoramic");
+        if (skyTex != null && pano != null)
+        {
+            sky = SaveAsset(new Material(pano), "Sky.mat");
+            sky.SetTexture("_MainTex", skyTex);
+            sky.SetFloat("_Mapping", 1f);
+            sky.SetFloat("_ImageType", 0f);
+            sky.SetFloat("_MirrorOnBack", 0f);
+            sky.SetFloat("_Layout", 0f);
+            sky.SetFloat("_Exposure", 1.12f);
+            sky.SetFloat("_Rotation", 18f);      // puts the HDRI sun where our sun light comes from (az ~142 deg, elev 48)
+            sky.EnableKeyword("_MAPPING_LATITUDE_LONGITUDE_LAYOUT");
+            sky.DisableKeyword("_MAPPING_6_FRAMES_LAYOUT");
+            Debug.Log("BuildScript: HDRI sky");
+        }
+        else
+        {
+            Debug.LogWarning("BuildScript: HDRI sky missing (tex " + (skyTex != null) + ", shader " + (pano != null) + ") - procedural");
+            sky = MakeMat("Skybox/Procedural", "Skybox/Procedural", "Sky.mat");
+            sky.SetFloat("_SunSize", 0.045f);
+            sky.SetFloat("_SunSizeConvergence", 5f);
+            sky.SetFloat("_AtmosphereThickness", 0.85f);
+            sky.SetColor("_SkyTint", new Color(0.4f, 0.62f, 0.9f));
+            sky.SetColor("_GroundColor", new Color(0.35f, 0.6f, 0.68f));
+            sky.SetFloat("_Exposure", 1.3f);
+        }
         EditorUtility.SetDirty(sky);
+
+        // ground + road: Standard with a Poly Haven CC0 sand "detail albedo x2" map (keyword variant ships with these assets)
+        Material ground = MakeDetailMat("Ground.mat", "Assets/Textures/sand_detail.png", new Vector2(64f, 64f), 0.06f);
+        Material road = MakeDetailMat("Road.mat", "Assets/Textures/road_detail.png", new Vector2(2f, 2f), 0.1f);
+
+        // sea: custom animated shader (Assets/Shaders/LBWater.shader)
+        Shader ws = Shader.Find("LB/Water");
+        if (ws != null)
+        {
+            water = SaveAsset(new Material(ws), "Water.mat");
+            Debug.Log("BuildScript: LB/Water shader");
+        }
+        else Debug.LogWarning("BuildScript: LB/Water shader missing - Standard water");
         EditorUtility.SetDirty(lit);
 
         try
@@ -216,7 +282,7 @@ public static class BuildScript
         RenderSettings.fog = true;
         RenderSettings.fogMode = FogMode.ExponentialSquared;
         RenderSettings.fogDensity = 0.0022f;
-        RenderSettings.fogColor = new Color(0.72f, 0.84f, 0.92f);
+        RenderSettings.fogColor = new Color(0.66f, 0.74f, 0.84f);
         RenderSettings.ambientMode = AmbientMode.Trilight;
         RenderSettings.ambientSkyColor = new Color(0.62f, 0.70f, 0.82f);
         RenderSettings.ambientEquatorColor = new Color(0.62f, 0.62f, 0.55f);
@@ -241,6 +307,8 @@ public static class BuildScript
         b.fxMat = fx;
         b.waterMat = water;
         b.glassMat = glass;
+        b.groundMat = ground;
+        b.roadMat = road;
         b.sun = sun;
 
         EditorSceneManager.MarkSceneDirty(scene);

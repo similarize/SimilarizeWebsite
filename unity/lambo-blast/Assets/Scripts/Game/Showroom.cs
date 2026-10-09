@@ -79,6 +79,31 @@ public static class Showroom
         return false;
     }
 
+    // frames everything under root (world AABB corners) into the thumb camera: 3/4 view from dir, whole model visible + margin
+    static void FitThumb(Transform root, Vector3 dir, float aspect, float margin)
+    {
+        Bounds bb = new Bounds(root.position + Vector3.up * 0.6f, Vector3.one * 0.5f);
+        bool any = false;
+        foreach (var rr in root.GetComponentsInChildren<Renderer>())
+        {
+            if (!any) { bb = rr.bounds; any = true; } else bb.Encapsulate(rr.bounds);
+        }
+        dir = dir.normalized;
+        Vector3 fwd = -dir, right = Vector3.Cross(Vector3.up, fwd).normalized, up = Vector3.Cross(fwd, right);
+        float tv = Mathf.Tan(thumbCam.fieldOfView * 0.5f * Mathf.Deg2Rad), th = tv * aspect;
+        float d = 0.5f;
+        Vector3 c = bb.center, e = bb.extents;
+        for (int i = 0; i < 8; i++)
+        {
+            Vector3 o = new Vector3((i & 1) == 0 ? -e.x : e.x, (i & 2) == 0 ? -e.y : e.y, (i & 4) == 0 ? -e.z : e.z);
+            float z = Vector3.Dot(o, dir);
+            d = Mathf.Max(d, z + Mathf.Abs(Vector3.Dot(o, right)) * margin / th, z + Mathf.Abs(Vector3.Dot(o, up)) * margin / tv);
+        }
+        thumbCam.transform.position = c + dir * d;
+        thumbCam.transform.rotation = Quaternion.LookRotation(fwd, Vector3.up);
+        thumbCam.farClipPlane = Mathf.Max(40f, d * 3f);
+    }
+
     public static void RenderThumbs()
     {
         if (thumbCam == null) thumbCam = NewCam("ThumbCam", null);
@@ -112,14 +137,9 @@ public static class Showroom
             Transform head = RobotModel.Build(root, root, Vector3.zero, r, false);
             head.localRotation = Quaternion.Euler(0f, -12f, 0f);
             Mats.SetLayer(root.gameObject, Layer);
-            float s = RobotModel.Size(r);
-            float f = s > 1.2f ? s * 0.86f : s;                    // Big Figure Two fills its frame (and a bit more)
-            if (RobotModel.UsesPack(r)) f = s > 1.2f ? 1.3f : 1.04f;
             thumbCam.backgroundColor = new Color(0.08f, 0.11f, 0.17f);
             thumbCam.fieldOfView = 30f;
-            bool pack = RobotModel.UsesPack(r);
-            thumbCam.transform.position = p + (pack ? new Vector3(-1.3f, 1.12f, 1.7f) : new Vector3(-0.55f, 0.66f, 1.45f)) * f;
-            thumbCam.transform.LookAt(p + (pack ? new Vector3(0f, 0.56f, 0.1f) : new Vector3(0f, 0.52f, 0.05f)) * f);
+            FitThumb(root, new Vector3(-0.5f, 0.34f, 1.4f), RobotThumbW / (float)RobotThumbH, 1.08f);
             thumbCam.targetTexture = RobotThumbs[r];
             thumbCam.Render();
             root.gameObject.SetActive(false);

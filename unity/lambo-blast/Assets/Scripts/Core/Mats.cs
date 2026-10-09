@@ -8,6 +8,17 @@ public static class Mats
     static readonly Dictionary<long, Material> cache = new Dictionary<long, Material>();
 
     public static Material Fx { get { return fx; } }
+    public static Material GroundBase, RoadBase;     // Standard + sand detail map (editor-made assets), may be null
+
+    // copy of a detail base material with this main texture (falls back to Tex)
+    public static Material Detail(Material baseMat, Texture2D t, float gloss)
+    {
+        if (baseMat == null) return Tex(t, gloss);
+        var m = new Material(baseMat);
+        m.color = Color.white;
+        m.mainTexture = t;
+        return m;
+    }
     public static Material Water { get { return water; } }
     public static Material Glass { get { return glass; } }
 

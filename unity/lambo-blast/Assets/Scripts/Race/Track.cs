@@ -356,7 +356,7 @@ public static class Track
         go.layer = GroundLayer;
         go.AddComponent<MeshFilter>().sharedMesh = mesh;
         var mr = go.AddComponent<MeshRenderer>();
-        mr.sharedMaterial = Mats.Tex(GroundTex(), 0.05f);
+        mr.sharedMaterial = Mats.Detail(Mats.GroundBase, GroundTex(), 0.05f);
         mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         go.AddComponent<MeshCollider>().sharedMesh = mesh;
     }
@@ -370,7 +370,7 @@ public static class Track
         var px = new Color32[n * n];
         var r = new System.Random(4);
         float size = gcell * (gn - 1);
-        Color sand = new Color(0.9f, 0.8f, 0.6f), wet = new Color(0.74f, 0.63f, 0.45f), sea = new Color(0.55f, 0.76f, 0.70f),
+        Color sand = new Color(0.86f, 0.73f, 0.5f), wet = new Color(0.68f, 0.56f, 0.38f), sea = new Color(0.55f, 0.76f, 0.70f),
               deep = new Color(0.25f, 0.5f, 0.55f), grass = new Color(0.36f, 0.63f, 0.25f), grass2 = new Color(0.27f, 0.52f, 0.2f);
         for (int y = 0; y < n; y++)
             for (int x = 0; x < n; x++)
@@ -405,7 +405,7 @@ public static class Track
         tex.anisoLevel = 4;
         var r = new System.Random(curbs ? 8 : 9);
         var px = new Color32[w * h];
-        Color baseC = curbs ? new Color(0.8f, 0.68f, 0.5f) : new Color(0.84f, 0.73f, 0.54f);
+        Color baseC = curbs ? new Color(0.72f, 0.6f, 0.43f) : new Color(0.76f, 0.64f, 0.46f);
         for (int y = 0; y < h; y++)
             for (int x = 0; x < w; x++)
             {
@@ -477,7 +477,7 @@ public static class Track
         go.layer = GroundLayer;
         go.AddComponent<MeshFilter>().sharedMesh = mesh;
         var mr = go.AddComponent<MeshRenderer>();
-        mr.sharedMaterial = Mats.Tex(tex, 0.08f);
+        mr.sharedMaterial = Mats.Detail(Mats.RoadBase, tex, 0.08f);
         mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         go.AddComponent<MeshCollider>().sharedMesh = mesh;
     }
@@ -492,9 +492,75 @@ public static class Track
         go.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
         go.transform.localScale = new Vector3(2600f, 2600f, 1f);
         var mr = go.GetComponent<MeshRenderer>();
-        mr.sharedMaterial = Mats.Water;
+        Material wm = Mats.Water;
+        if (wm != null && wm.shader != null && wm.shader.name == "LB/Water")
+        {
+            wm = new Material(wm);
+            float size = gcell * (gn - 1);
+            wm.SetTexture("_SeaMap", SeaMap(256, size));
+            wm.SetTexture("_Noise", NoiseTex(128));
+            wm.SetVector("_SeaRect", new Vector4(gx0, gz0, 1f / size, 1f / size));
+        }
+        mr.sharedMaterial = wm;
         mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         mr.receiveShadows = false;
+    }
+
+    // R = depth (0 at the waterline .. 1 at 5 m deep), G = shore foam mask (peaks just off the beach)
+    static Texture2D SeaMap(int n, float size)
+    {
+        var tex = new Texture2D(n, n, TextureFormat.RGBA32, false);
+        tex.wrapMode = TextureWrapMode.Clamp;
+        tex.filterMode = FilterMode.Bilinear;
+        var px = new Color32[n * n];
+        for (int y = 0; y < n; y++)
+            for (int x = 0; x < n; x++)
+            {
+                float wx = gx0 + (x + 0.5f) * size / n, wz = gz0 + (y + 0.5f) * size / n;
+                float h = HeightAt(wx, wz);
+                float depth = Mathf.Clamp01(-h / 5f);
+                float foam = Mathf.Clamp01(1f - Mathf.Abs(h + 0.35f) / 0.65f);
+                px[y * n + x] = new Color(depth, foam, 0f, 1f);
+            }
+        tex.SetPixels32(px);
+        tex.Apply(false);
+        return tex;
+    }
+
+    // tileable value noise, 3 independent channels (water normals + foam break-up)
+    static Texture2D NoiseTex(int n)
+    {
+        var tex = new Texture2D(n, n, TextureFormat.RGBA32, true);
+        tex.wrapMode = TextureWrapMode.Repeat;
+        tex.filterMode = FilterMode.Bilinear;
+        var r = new System.Random(77);
+        var px = new Color[n * n];
+        float[][] g = new float[3][];
+        for (int c = 0; c < 3; c++)
+        {
+            g[c] = new float[n * n];
+            for (int oct = 0; oct < 4; oct++)
+            {
+                int cells = 4 << oct; float amp = 1f / (1 << oct);
+                var lat = new float[cells * cells];
+                for (int i = 0; i < lat.Length; i++) lat[i] = (float)r.NextDouble();
+                for (int y = 0; y < n; y++)
+                    for (int x = 0; x < n; x++)
+                    {
+                        float fx = x * cells / (float)n, fy = y * cells / (float)n;
+                        int x0 = (int)fx, y0 = (int)fy; float tx = fx - x0, ty = fy - y0;
+                        tx = tx * tx * (3 - 2 * tx); ty = ty * ty * (3 - 2 * ty);
+                        int x1 = (x0 + 1) % cells, y1 = (y0 + 1) % cells;
+                        float a = Mathf.Lerp(lat[y0 * cells + x0], lat[y0 * cells + x1], tx);
+                        float b = Mathf.Lerp(lat[y1 * cells + x0], lat[y1 * cells + x1], tx);
+                        g[c][y * n + x] += Mathf.Lerp(a, b, ty) * amp;
+                    }
+            }
+        }
+        for (int i = 0; i < n * n; i++) px[i] = new Color(g[0][i] / 1.875f, g[1][i] / 1.875f, g[2][i] / 1.875f, 1f);
+        tex.SetPixels(px);
+        tex.Apply(true);
+        return tex;
     }
 
     // lowest-curvature sample within +/- window metres of a wanted distance

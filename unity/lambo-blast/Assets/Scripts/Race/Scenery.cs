@@ -39,7 +39,8 @@ public static class Scenery
             }
         }
         // inland grove
-        for (int i = 0; i < 70; i++)
+        int grove = Look.Mobile ? 30 : 70;     // phones: fewer inland palms (each palm ~2.4k tris)
+        for (int i = 0; i < grove; i++)
         {
             Vector3 p = new Vector3(R(Track.Min.x, Track.Max.x), 0f, R(Track.Min.y, Track.Max.y));
             float h = Track.HeightAt(p.x, p.z);
@@ -110,8 +111,19 @@ public static class Scenery
         return true;
     }
 
+    // mesh packs from work/lb-gfx/build_props.py (null -> the primitive versions below)
+    static LBPack PackOr(string n) { return LBPack.Get(n); }
+
     static void Palm(Transform root, Vector3 p, float height)
     {
+        LBPack pk = PackOr(rnd.NextDouble() < 0.5 ? "palm0" : "palm1");
+        if (pk != null)
+        {
+            var g = pk.Spawn("body", root, Vector3.zero, height / 8f, Color.white);
+            g.position = p;
+            g.rotation = Quaternion.Euler(0f, R(0f, 360f), 0f);
+            return;
+        }
         var t = new GameObject("Palm").transform;
         t.SetParent(root, false);
         t.position = p;
@@ -146,6 +158,15 @@ public static class Scenery
 
     static void Rock(Transform root, Vector3 p, float s)
     {
+        LBPack pk = PackOr(rnd.NextDouble() < 0.5 ? "rock0" : "rock1");
+        if (pk != null)
+        {
+            var g = pk.Spawn("body", root, Vector3.zero, 1f, Color.white);
+            g.position = p + Vector3.down * s * 0.15f;
+            g.rotation = Quaternion.Euler(R(-8f, 8f), R(0f, 360f), R(-8f, 8f));
+            g.localScale = new Vector3(s * R(1.1f, 1.7f), s * R(0.8f, 1.2f), s * R(1.1f, 1.5f));
+            return;
+        }
         Mats.Prim(PrimitiveType.Sphere, root, p + Vector3.up * s * 0.2f, new Vector3(s * R(1f, 1.6f), s * R(0.6f, 0.9f), s * R(1f, 1.4f)), new Vector3(R(-10f, 10f), R(0f, 360f), 0f), rock);
     }
 
@@ -168,6 +189,14 @@ public static class Scenery
 
     static void Hut(Transform root, Vector3 p, float yaw)
     {
+        LBPack pk = PackOr("hut");
+        if (pk != null)
+        {
+            var g = pk.Spawn("body", root, Vector3.zero, 1.15f, Color.white);
+            g.position = p;
+            g.rotation = Quaternion.Euler(0f, yaw, 0f);
+            return;
+        }
         var t = new GameObject("Hut").transform;
         t.SetParent(root, false);
         t.position = p;
