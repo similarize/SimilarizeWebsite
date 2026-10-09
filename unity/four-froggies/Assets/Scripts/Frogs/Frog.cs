@@ -73,8 +73,9 @@ public class Frog : MonoBehaviour
     public void Build(int index, Vector3 pos, float yawDeg)
     {
         id = index;
-        nick = Froggies.Names[index];
-        color = Froggies.Color(index);
+        charId = index;
+        nick = Roster.Name(index);
+        color = Roster.Color(index);
         gameObject.name = "Frog " + nick;
         gameObject.layer = 9;
         transform.position = pos;
@@ -90,9 +91,36 @@ public class Frog : MonoBehaviour
         var mg = new GameObject("Model");
         mg.transform.SetParent(transform, false);
         model = mg.AddComponent<FrogModel>();
-        model.Build(color);
+        model.BuildChar(index);
         aiTarget = pos;
         aiTimer = Random.Range(1f, 4f);
+    }
+
+    // ffu14: which roster character this seat is (0..3 frogs, 4..7 cats, 8..9 dogs). Rebuilds the model in place.
+    public int charId;
+    public bool IsPet { get { return !Roster.IsFrog(charId); } }
+    public void SetChar(int c)
+    {
+        if (!Roster.Valid(c) || (c == charId && model != null && model.charId == c)) return;
+        charId = c;
+        color = Roster.Color(c);
+        bool vis = model == null || model.gameObject.activeSelf;
+        if (model != null) { model.gameObject.SetActive(false); Destroy(model.gameObject); }
+        scubaGo = null;   // it hung under the old model
+        if (chuteGo != null) { Destroy(chuteGo); chuteGo = null; chute = false; }
+        var mg = new GameObject("Model");
+        mg.transform.SetParent(transform, false);
+        model = mg.AddComponent<FrogModel>();
+        model.BuildChar(c);
+        mg.SetActive(vis);
+        gameObject.name = "Frog " + Roster.Name(c);
+    }
+    // a little voice: ribbit / meow / bark
+    void Voice(bool mine, Vector3 p, float vol)
+    {
+        AudioClip c = IsPet ? Sfx.AnimalVoice(Roster.KindOf(charId) == Roster.Kind.Cat ? "Cat" : "Dog") : Sfx.Pick(Sfx.Ribbit);
+        if (c == null) return;
+        if (mine) Sfx.Play(c, vol, Random.Range(0.95f, 1.2f)); else Sfx.PlayAt(c, p, vol, 40f, Random.Range(0.9f, 1.15f));
     }
 
     public void SetInput(PIn i, float cameraYaw)
@@ -232,12 +260,12 @@ public class Frog : MonoBehaviour
             wish = cy * new Vector3(input.move.x, 0f, input.move.y);
             if (wish.sqrMagnitude > 1f) wish.Normalize();
         }
-        float spd = swimming ? SwimSpeed : Speed;
+        float spd = swimming ? SwimSpeed : Roster.RunSpeed(charId);
         planar = Vector3.MoveTowards(planar, wish * spd, (cc.isGrounded || swimming ? 40f : 12f) * dt);
         if (wish.sqrMagnitude > 0.01f)
         {
             float target = Mathf.Atan2(wish.x, wish.z) * Mathf.Rad2Deg;
-            yaw = Mathf.MoveTowardsAngle(yaw, target, 720f * dt);
+            yaw = Mathf.MoveTowardsAngle(yaw, target, Roster.TurnRate(charId) * dt);
         }
         transform.rotation = Quaternion.Euler(0f, yaw, 0f);
 
@@ -257,7 +285,7 @@ public class Frog : MonoBehaviour
                 if (vel.y < -2f) vel.y = -2f;
                 vel.x = Mathf.MoveTowards(vel.x, 0f, 30f * dt);
                 vel.z = Mathf.MoveTowards(vel.z, 0f, 30f * dt);
-                if (input.hop && hopCool <= 0f) { vel.y = HopV; hopCool = 0.25f; if (human) { Sfx.Play(Sfx.Hop, 0.6f, Random.Range(0.92f, 1.1f)); if (Random.value < 0.2f) Sfx.Play(Sfx.Pick(Sfx.Ribbit), 0.5f, Random.Range(0.95f, 1.2f)); } else Sfx.PlayAt(Sfx.Hop, transform.position, 0.35f, 25f, Random.Range(1.0f, 1.2f)); }
+                if (input.hop && hopCool <= 0f) { vel.y = Roster.JumpV(charId); hopCool = 0.25f; float hp = IsPet ? 1.35f : 1f; if (human) { Sfx.Play(Sfx.Hop, IsPet ? 0.45f : 0.6f, Random.Range(0.92f, 1.1f) * hp); if (Random.value < 0.2f) Voice(true, transform.position, 0.5f); } else Sfx.PlayAt(Sfx.Hop, transform.position, 0.35f, 25f, Random.Range(1.0f, 1.2f) * hp); }
             }
             else
             {
@@ -390,7 +418,7 @@ public class Frog : MonoBehaviour
         SetChute(false);
         v.OnEnter();
         if (!netPuppet) Sfx.Play(Sfx.Door, 0.8f);
-        if (human) Sfx.Play(Sfx.Pick(Sfx.Ribbit), 0.45f, Random.Range(1.0f, 1.2f));
+        if (human) Voice(true, transform.position, 0.45f);
     }
 
     public void ExitVehicle()
@@ -465,7 +493,7 @@ public class Frog : MonoBehaviour
         if (aiHopT <= 0f) { aiHopT = Random.Range(2f, 6f); i.hop = to.magnitude > 1.5f || Random.value < 0.3f; }
         // ffu10: AI froggies ribbit now and then (heard when a player froggy is near)
         aiRibbitT -= dt;
-        if (aiRibbitT <= 0f) { aiRibbitT = Random.Range(7f, 18f); Sfx.Ribbiting(p + Vector3.up * 0.5f, 0.55f); }
+        if (aiRibbitT <= 0f) { aiRibbitT = Random.Range(7f, 18f); Voice(false, p + Vector3.up * 0.5f, 0.55f); }
         // blocked? hop
         if (cc.isGrounded && to.magnitude > 2f && planar.magnitude < 0.6f && Random.value < dt) i.hop = true;
         input = i;

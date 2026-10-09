@@ -22,7 +22,8 @@ public class StoryMech : Vehicle
 
     public override string HelpLine { get { return "L-stick walk + turn (slow and heavy) | RT / X / click / FIRE omnigun | A climb out"; } }
 
-    public override bool CanEnter(Frog f) { return f.id == owner; }
+    // ffu14: frogs pilot their own mechs; the cats and dogs have none of their own, so they may borrow any
+    public override bool CanEnter(Frog f) { return f.IsPet || f.charId == owner; }
     public override string DeniedLine { get { return Froggies.Names[owner] + "'s " + BandName[band] + " mech - only " + Froggies.Names[owner] + " can pilot it"; } }
 
     protected override bool OutOfWorld(Vector3 p) { return false; }

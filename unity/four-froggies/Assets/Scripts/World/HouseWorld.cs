@@ -471,8 +471,9 @@ public class HouseWorld : MonoBehaviour
             c.area = new Rect(L(s.x, 0, s.z).x - 0.2f, L(s.x, 0, s.z).z - 0.2f, 0.4f, 0.4f);
             c.frozen = true;
             c.skittish = false;
+            if (!c.gameObject.activeSelf) { catFound[i] = true; found++; }   // ffu14: a player is that cat right now
         }
-        Toast("The cats are hiding all over the house! Find all 4 in 90 s");
+        Toast("The cats are hiding all over the house! Find all " + (4 - found) + " in 90 s");
         Sfx.Play(Sfx.Click, 0.8f);
     }
 
@@ -498,6 +499,7 @@ public class HouseWorld : MonoBehaviour
         if (Game.I != null) foreach (Frog f in Game.I.frogs) if (f != null && f.world == WorldId.House) anyone = true;
         if (root.gameObject.activeSelf != anyone) { root.gameObject.SetActive(anyone); foreach (var t in tanks) foreach (var fi in t.fish) fi.t.gameObject.SetActive(anyone); }
         if (!anyone) return;
+        HidePlayedPets();
         float dt = Mathf.Min(Time.deltaTime, 0.05f);
         UpdateFish(dt);
         UpdateFetch(dt);
@@ -558,6 +560,19 @@ public class HouseWorld : MonoBehaviour
         foreach (Tank t in tanks) if (t.flakes.Count > 0) t.fedT = -1f;
     }
 
+    // ffu14: a pet a player is playing as is not also sitting in the parlor
+    void HidePlayedPets()
+    {
+        if (Game.I == null || Time.frameCount % 15 != 0) return;
+        foreach (var a in new List<Animal>(cats) { germy, daisy })
+        {
+            if (a == null) continue;
+            bool played = false;
+            for (int i = 0; i < 4; i++) if (Roster.Name(Game.I.charOf[i]) == a.petName) played = true;
+            if (a.gameObject.activeSelf == played) a.gameObject.SetActive(!played);
+        }
+    }
+
     void UpdateFetch(float dt)
     {
         if (ball == null || ball.isKinematic && carrier == null) return;
@@ -567,6 +582,7 @@ public class HouseWorld : MonoBehaviour
             if (ball.velocity.magnitude < 0.6f) ballIdle += dt;
             foreach (Animal d in new[] { germy, daisy })
             {
+                if (!d.gameObject.activeSelf) continue;
                 Vector3 dd = d.Pos - bp; dd.y = 0f;
                 if (dd.magnitude < 0.6f && ball.velocity.magnitude < 4f)
                 {

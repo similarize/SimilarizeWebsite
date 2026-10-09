@@ -157,6 +157,18 @@ public class Net : MonoBehaviour
         if (role == Role.Guest && connected) Send("host", "C|" + f);
     }
 
+    // ffu14: characters. Guests ask the host (K|char); the host owns Game.charOf and sends it in every L message.
+    public void RequestChar(int c)
+    {
+        if (role == Role.Guest && connected) Send("host", "K|" + c);
+    }
+    public void CharsChanged()
+    {
+        if (role == Role.Host && connected && lobbyT > 0.05f) BroadcastLobby();
+        else if (role == Role.Host) charsDirty = true;
+    }
+    bool charsDirty;
+
     public void LocalChanged()
     {
         // host: its own seat / name changed -> everyone's lobby; guest: tell the host the new name
@@ -180,8 +192,9 @@ public class Net : MonoBehaviour
         {
             if (owner[i].Length == 0) continue;
             if (sb.Length > 0) sb.Append("   ");
-            string n = names[i].Length > 0 ? names[i] : Froggies.Names[i];
-            sb.Append("<color=" + Froggies.Hex[i] + ">" + n + "</color>" + (owner[i] == "host" ? " (host)" : ""));
+            int ch = Game.I != null ? Game.I.charOf[i] : i;
+            string n = names[i].Length > 0 ? names[i] : Roster.Name(ch);
+            sb.Append("<color=" + Roster.UiHex(ch) + ">" + n + "</color>" + (owner[i] == "host" ? " (host)" : ""));
         }
         return sb.ToString();
     }
@@ -210,6 +223,8 @@ public class Net : MonoBehaviour
         var sb = new StringBuilder("L|");
         sb.Append(playing ? 1 : 0).Append('|').Append((int)hostWorld);
         for (int i = 0; i < 4; i++) sb.Append('|').Append(owner[i]).Append('|').Append(names[i]);
+        for (int i = 0; i < 4; i++) sb.Append('|').Append(Game.I != null ? Game.I.charOf[i] : i);   // ffu14 characters
+        charsDirty = false;
         return sb.ToString();
     }
 
@@ -238,7 +253,7 @@ public class Net : MonoBehaviour
                 if (w != hostWorld) { hostWorld = w; if (connected) Send("*", "W|" + (int)w); }
             }
             lobbyT += Time.unscaledDeltaTime;
-            if (lobbyT > 2f) BroadcastLobby();
+            if (lobbyT > 2f || (charsDirty && lobbyT > 0.05f)) BroadcastLobby();
             // silent guests (closed tab without a close event, phone asleep) -> drop
             var drop = new List<string>();
             foreach (var g in guests.Values) if (now - g.lastRx > Silence) drop.Add(g.id);
@@ -309,7 +324,7 @@ public class Net : MonoBehaviour
                     {
                         connected = true; hostLastRx = Time.unscaledTime;
                         var s = LocalSlot;
-                        Send("host", "H|" + LocalName() + "|" + (s != null ? s.frog : -1));
+                        Send("host", "H|" + LocalName() + "|" + (s != null ? s.frog : -1) + "|" + (s != null ? Game.I.charOf[s.frog] : -1));
                         Say("Connected to room " + code + " - waiting for the host");
                         Debug.Log("NET connected to host, room " + code);
                     }
@@ -351,7 +366,7 @@ public class Net : MonoBehaviour
         for (int i = 0; i < 4; i++)
             if (owner[i] == id)
             {
-                n = names[i].Length > 0 ? names[i] : Froggies.Names[i];
+                n = names[i].Length > 0 ? names[i] : Roster.Name(Game.I.charOf[i]);
                 owner[i] = ""; names[i] = ""; remoteHuman[i] = false;
                 SetPuppet(Game.I.frogs[i], false);
             }
@@ -381,10 +396,14 @@ public class Net : MonoBehaviour
                         if (f < 0) { Send(from, "X|full"); FFNet_Drop(from); guests.Remove(from); Debug.Log("NET room full, refused " + from); return; }
                         owner[f] = from; names[f] = nm; remoteHuman[f] = true; g.frog = f; g.name = nm;
                         rem[f].buf.Clear(); rem[f].offset = float.NaN;
-                        string shown = nm.Length > 0 ? nm : Froggies.Names[f];
-                        Debug.Log("NET guest " + from + " joined as " + Froggies.Names[f] + " name='" + nm + "'");
-                        Game.I.ToastLocal(shown + " joined online as " + Froggies.Names[f] + "!", 3.5f);
-                        Send("*!" + from, "T|" + shown + " joined as " + Froggies.Names[f]);
+                        int wc = p.Length > 3 ? ParseI(p[3]) : -1;   // ffu14: the character they picked before joining
+                        if (Roster.Valid(wc) && !Game.I.CharHeldByOther(wc, f)) Game.I.SetSeatChar(f, wc, false);
+                        Game.I.FixAiChars();
+                        string cn = Roster.Name(Game.I.charOf[f]);
+                        string shown = nm.Length > 0 ? nm : cn;
+                        Debug.Log("NET guest " + from + " joined as " + cn + " (seat " + f + ") name='" + nm + "'");
+                        Game.I.ToastLocal(shown + " joined online as " + cn + "!", 3.5f);
+                        Send("*!" + from, "T|" + shown + " joined as " + cn);
                         BroadcastLobby();
                         break;
                     }
@@ -397,6 +416,19 @@ public class Net : MonoBehaviour
                         for (int i = 0; i < 4; i++) if (owner[i] == from) { nm = names[i]; owner[i] = ""; names[i] = ""; remoteHuman[i] = false; }
                         owner[f] = from; names[f] = nm; remoteHuman[f] = true;
                         rem[f].buf.Clear(); rem[f].offset = float.NaN;
+                        BroadcastLobby();
+                        break;
+                    }
+                case "K":
+                    {
+                        int c = p.Length > 1 ? ParseI(p[1]) : -1;
+                        int seat = -1;
+                        for (int i = 0; i < 4; i++) if (owner[i] == from) seat = i;
+                        if (seat >= 0 && Roster.Valid(c) && Game.I.state == Game.State.Lobby && !Game.I.CharHeldByOther(c, seat))
+                        {
+                            Game.I.SetSeatChar(seat, c, true);
+                            Game.I.FixAiChars();
+                        }
                         BroadcastLobby();
                         break;
                     }
@@ -444,11 +476,13 @@ public class Net : MonoBehaviour
                         names[i] = CleanName(p[4 + i * 2]) ?? "";
                         remoteHuman[i] = o.Length > 0;
                     }
+                    if (p.Length >= 15)
+                        for (int i = 0; i < 4; i++) { int c = ParseI(p[11 + i]); if (Roster.Valid(c)) Game.I.SetSeatChar(i, c, Game.I.state == Game.State.Lobby); }
                     int mine = -1;
                     for (int i = 0; i < 4; i++) if (owner[i] == myId && myId.Length > 0) mine = i;
                     var s = LocalSlot;
                     if (mine >= 0 && s != null && s.frog != mine) Game.I.MoveSlot(s, mine);
-                    if (mine >= 0) Say("In room " + code + " as " + Froggies.Names[mine] + (playing ? "" : " - waiting for the host to start"));
+                    if (mine >= 0) Say("In room " + code + " as " + Roster.Name(Game.I.charOf[mine]) + (playing ? "" : " - waiting for the host to start"));
                     if (playing && mine >= 0 && Game.I.state == Game.State.Lobby)
                     {
                         Debug.Log("NET host is playing -> start");

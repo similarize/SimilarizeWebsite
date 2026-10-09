@@ -20,7 +20,7 @@ public class Slot
 
 // Lobby (press A to claim a frog), 1-4 player split-screen or shared camera, input routing, mid-game joins.
 [DefaultExecutionOrder(-50)]
-public class Game : MonoBehaviour
+public partial class Game : MonoBehaviour
 {
     public static Game I;
     public enum State { Lobby, Play }
@@ -40,16 +40,10 @@ public class Game : MonoBehaviour
     Vector3 sharedFocus;
     bool sharedInit, mobileAutoJoined;
 
-    Canvas lobbyCanvas, hudCanvas;
-    Text lobbyStatus, viewText, joinText, helpText;
-    Image viewBar, playBtn, helpBg;
+    Canvas hudCanvas;
+    Text joinText, helpText;
+    Image helpBg;
     float lastTouchTime = -10f;
-    readonly Image[] cards = new Image[4];
-    readonly Text[] cardTexts = new Text[4];
-    readonly Image[] swatches = new Image[4];
-    Image lobbyBg, soundBtn;
-    Text lobbyTitle, lobbySub, lobbyHelp, soundText;
-    int lobbyLayout = -1;      // 0 landscape, 1 portrait
     int hudLayout = -1;
     ViewHud sharedHud;
     Image sepV, sepH;
@@ -86,57 +80,8 @@ public class Game : MonoBehaviour
         return c;
     }
 
-    // ---------------- UI ----------------
-    void BuildLobbyUI()
-    {
-        lobbyCanvas = UIK.MakeCanvas("Lobby", null, 100, true);
-        Transform r = lobbyCanvas.transform;
-        lobbyBg = UIK.Img(r, null, new Color(0.03f, 0.08f, 0.05f, 0.55f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1200, 650));
-        lobbyTitle = UIK.Label(r, "FOUR FROGGIES", 70, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, 262), new Vector2(1100, 90), new Color(0.55f, 1f, 0.45f));
-        lobbySub = UIK.Label(r, "James's ranch: hop around, jump in any vehicle, blow stuff up. 1-4 players: split-screen or online.", 24, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, 200), new Vector2(1100, 40), Color.white);
-        for (int i = 0; i < 4; i++)
-        {
-            Vector2 p = new Vector2(-420 + i * 280, 60);
-            cards[i] = UIK.Img(r, null, new Color(1, 1, 1, 0.12f), new Vector2(0.5f, 0.5f), p, new Vector2(255, 200));
-            swatches[i] = UIK.Img(r, UIK.Circle, Froggies.Color(i), new Vector2(0.5f, 0.5f), p + new Vector2(0, 52), new Vector2(70, 70));
-            cardTexts[i] = UIK.Label(r, "", 24, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), p + new Vector2(0, -38), new Vector2(240, 110), Color.white);
-        }
-        viewBar = UIK.Img(r, null, new Color(0f, 0f, 0f, 0.45f), new Vector2(0.5f, 0.5f), new Vector2(0, -88), new Vector2(620, 44));
-        viewText = UIK.Label(viewBar.transform, "", 22, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(610, 42), Color.white);
-        playBtn = UIK.Img(r, null, new Color(0.2f, 0.65f, 0.25f, 0.85f), new Vector2(0.5f, 0.5f), new Vector2(0, -148), new Vector2(300, 56));
-        playText = UIK.Label(playBtn.transform, "PLAY", 34, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(300, 56), Color.white);
-        lobbyStatus = UIK.Label(r, "", 24, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, -204), new Vector2(1150, 40), new Color(0.7f, 1f, 0.7f));
-        lobbyHelp = UIK.Label(r, "", 19, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, -262), new Vector2(1180, 60), new Color(1, 1, 1, 0.85f));
-        // ffu13: online HOST / JOIN + the player's own NAME
-        hostBtn = UIK.Img(r, null, new Color(0.15f, 0.42f, 0.75f, 0.9f), new Vector2(0.5f, 0.5f), new Vector2(-340, -105), new Vector2(260, 60));
-        hostText = UIK.Label(hostBtn.transform, "", 30, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(260, 60), Color.white);
-        UIK.Stretch(hostText.rectTransform);
-        joinBtn = UIK.Img(r, null, new Color(0.55f, 0.3f, 0.75f, 0.9f), new Vector2(0.5f, 0.5f), new Vector2(340, -105), new Vector2(260, 60));
-        joinBtnText = UIK.Label(joinBtn.transform, "", 30, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(260, 60), Color.white);
-        UIK.Stretch(joinBtnText.rectTransform);
-        nameBtn = UIK.Img(r, null, new Color(0f, 0f, 0f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(330, -42), new Vector2(300, 44));
-        nameText = UIK.Label(nameBtn.transform, "", 22, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(300, 44), Color.white);
-        UIK.Stretch(nameText.rectTransform);
-        netText = UIK.Label(r, "", 26, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, -165), new Vector2(1150, 46), new Color(1f, 0.9f, 0.4f));
-        netText.supportRichText = true;
-        soundBtn = UIK.Img(r, null, new Color(0f, 0f, 0f, 0.45f), new Vector2(0.5f, 0.5f), new Vector2(430, -148), new Vector2(200, 44));
-        soundText = UIK.Label(soundBtn.transform, "", 20, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(200, 42), Color.white);
-        creditsBtn = UIK.Img(r, null, new Color(0f, 0f, 0f, 0.5f), new Vector2(0f, 1f), new Vector2(84, -26), new Vector2(150, 34));
-        var cl = UIK.Label(creditsBtn.transform, "CREDITS (C)", 17, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(150, 34), new Color(0.8f, 0.95f, 1f));
-        UIK.Stretch(cl.rectTransform);
-        creditsPanel = UIK.Img(r, null, new Color(0.01f, 0.05f, 0.03f, 0.95f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1180, 640));
-        var ct = UIK.Label(creditsPanel.transform, CreditsText, 17, TextAnchor.MiddleLeft, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1120, 610), Color.white);
-        ct.supportRichText = true;
-        ct.horizontalOverflow = HorizontalWrapMode.Wrap;
-        UIK.Stretch(ct.rectTransform);
-        ct.rectTransform.offsetMin = new Vector2(30, 14); ct.rectTransform.offsetMax = new Vector2(-30, -14);
-        creditsPanel.gameObject.SetActive(false);
-    }
-
-    Image creditsBtn, creditsPanel;
+    // ---------------- UI ---------------- (lobby: GameLobby.cs)
     bool lobbyLook;
-    Image hostBtn, joinBtn, nameBtn;
-    Text hostText, joinBtnText, nameText, netText, playText;
     Keypad keypad;
     float lastNetBtn = -10f;
     bool urlNetDone;
@@ -176,6 +121,7 @@ public class Game : MonoBehaviour
     System.Func<PIn, PIn> demoHook;
     bool demoWaved;       // demo mode: rewrites P1's input (robot driving moment)
     string demoShot = "", demoCur = "";
+    bool demoCharsDone, demoKeepChars;
     bool DemoLobby()
     {
         if (demoT < 0f)
@@ -187,7 +133,20 @@ public class Game : MonoBehaviour
             if (demoT > 0f) Debug.Log("Four Froggies: demo mode " + demoShot);
         }
         if (demoT <= 0f) return false;
+        if (!demoCharsDone)
+        {
+            demoCharsDone = true;   // &ffchars=4,8,9,5 : seat characters for screenshots (AI seats keep them in demo mode)
+            string fc = UrlParam("ffchars");
+            if (fc != null) { var parts = fc.Split(','); for (int i = 0; i < 4 && i < parts.Length; i++) { int c; if (int.TryParse(parts[i], out c) && Roster.Valid(c)) SetSeatChar(i, c, false); } demoKeepChars = true; }
+        }
         demoT += Time.unscaledDeltaTime;
+        if (demoShot == "lobby")
+        {
+            // ffu14 lobby showcase: P1 joins and steps through the roster (pop + turntable), never starts
+            if (demoT > 3f && slots.Count == 0) { Join(InputKind.Keyboard, null); demoPlayT = 0f; }
+            if (slots.Count > 0 && demoT - demoPlayT > 4f) { demoPlayT = demoT; Cycle(slots[0], 1); Debug.Log("FFDEMO lobby char " + Roster.Name(charOf[slots[0].frog])); }
+            return false;
+        }
         if (demoT > 5f && slots.Count == 0) { Join(InputKind.Keyboard, null); return false; }
         if (demoT > 6f && slots.Count > 0 && !(Net.I != null && Net.I.IsGuest)) { demoT = 0.01f; StartPlay(); demoPlayT = 0f; return true; }
         return false;
@@ -551,160 +510,8 @@ public class Game : MonoBehaviour
             "<b>Online</b> (lobby): HOST (X / H / tap) shows a room code, friends press JOIN (Y / J / tap) and type it. Each device plays one froggy; names over the froggies; stage changes follow the host.\n" +
             "Back / V switches Shared and Split view.  Start / H closes this.  B / Esc here leaves your seat (online: leaves the room)."; } }
 
-    void RefreshLobby()
-    {
-        Net net = Net.I;
-        bool online = net != null && net.Online;
-        for (int i = 0; i < 4; i++)
-        {
-            Slot s = SlotForFrog(i);
-            Color fc = Froggies.Color(i);
-            string fn = "<size=30>" + Froggies.Names[i] + "</size>\n";
-            if (online && s == null && net.TakenByRemote(i))
-            {
-                // ffu13: another device's player (online)
-                string nm = net.names[i].Length > 0 ? net.names[i] : Froggies.Names[i];
-                cards[i].color = new Color(fc.r, fc.g, fc.b, 0.45f);
-                cardTexts[i].text = fn + "<color=#ffe680>" + nm + "</color>\n" + net.OwnerLabel(i);
-            }
-            else if (s != null)
-            {
-                int pn = slots.IndexOf(s) + 1;
-                string dev = s.kind == InputKind.Gamepad ? "Gamepad" : s.kind == InputKind.Keyboard ? "Keyboard" : "Touch";
-                string nm = s.name.Length > 0 ? s.name : Froggies.Names[i];
-                cards[i].color = new Color(fc.r, fc.g, fc.b, 0.6f);
-                cardTexts[i].text = fn + "<color=#ffe680>" + nm + "</color>  <size=18>P" + pn + " " + dev + "</size>\n" + (online ? net.OwnerLabel(i) : "READY");
-            }
-            else
-            {
-                cards[i].color = new Color(1, 1, 1, 0.12f);
-                cardTexts[i].text = fn + (TouchOnly ? "tap to play" : "open seat") + "\n(AI frog)";
-            }
-        }
-        bool touchOnly = TouchOnly;
-        soundText.text = "SOUND: " + Sfx.LevelName + " <size=15>(M / tap)</size>";
-        viewBar.gameObject.SetActive(!touchOnly && !online);
-        {
-            bool solo = !viewBar.gameObject.activeSelf, por = lobbyLayout == 1;
-            nameBtn.rectTransform.anchoredPosition = solo ? new Vector2(0, por ? -95 : -28) : new Vector2(por ? 232 : 330, por ? -95 : -28);
-            nameBtn.rectTransform.sizeDelta = solo ? new Vector2(por ? 380 : 380, por ? 54 : 44) : new Vector2(por ? 220 : 300, por ? 54 : 44);
-        }
-        // HOST / JOIN / NAME buttons: device hints shown under the label
-        string hk = touchOnly ? "" : "\n<size=15>" + (online ? "X / L" : "X / H") + "</size>";
-        hostText.text = (online ? (net.IsHost ? "CLOSE ROOM" : "LEAVE") : "HOST") + hk;
-        hostBtn.color = online ? new Color(0.6f, 0.25f, 0.2f, 0.9f) : new Color(0.15f, 0.42f, 0.75f, 0.9f);
-        joinBtnText.text = "JOIN" + (touchOnly ? "" : "\n<size=15>Y / J</size>");
-        joinBtn.gameObject.SetActive(!online);
-        bool waitHost = online && net.IsGuest;     // guests: the host starts the game
-        playText.text = waitHost ? "WAITING FOR HOST" : "PLAY";
-        playText.fontSize = waitHost ? 22 : 34;
-        playBtn.color = waitHost ? new Color(0.25f, 0.35f, 0.28f, 0.85f) : new Color(0.2f, 0.65f, 0.25f, 0.85f);
-        Slot me = slots.Count > 0 ? slots[0] : null;
-        nameText.text = "NAME: <color=#ffe680>" + (me != null ? (me.name.Length > 0 ? me.name : Froggies.Names[me.frog]) : "-") + "</color> <size=15>" + (touchOnly ? "(tap to change)" : "(RB / N / click)") + "</size>";
-        hostText.fontSize = joinBtnText.fontSize = lobbyLayout == 1 ? 28 : 26;
-        hostText.lineSpacing = joinBtnText.lineSpacing = 0.8f;
-
-        // online status line: the room code is the big thing
-        string nt = "";
-        if (online)
-        {
-            if (net.IsHost && net.connected)
-                nt = "ROOM CODE  <size=40><color=#ffffff>" + net.code + "</color></size>   friends press JOIN and type it" + (net.PlayersLine().Length > 0 ? "\n<size=20>" + net.PlayersLine() + "</size>" : "");
-            else if (net.IsGuest && net.connected)
-                nt = "ROOM <color=#ffffff>" + net.code + "</color>" + (net.PlayersLine().Length > 0 ? "   <size=20>" + net.PlayersLine() + "</size>" : "");
-            else nt = net.info;
-        }
-        else if (net != null && net.info.Length > 0 && Time.unscaledTime - net.infoT < 8f) nt = "<color=#ff8a80>" + net.info + "</color>";
-        netText.text = nt;
-
-        if (online)
-        {
-            lobbyHelp.text = "Online: one player per device. Pick a free froggy (tap it / D-pad < > / Left-Right), NAME is optional.\n" +
-                (net.IsHost ? "When everyone is in, PLAY starts it for all. Friends can also join after you start." : "The host starts the game. Stage changes follow the host.");
-            if (slots.Count == 0) lobbyStatus.text = "Press A / Enter / tap a froggy to take a seat";
-            else lobbyStatus.text = net.IsGuest ? (net.connected ? net.info : "") : (net.connected ? "Ready - PLAY (Start / Enter) when your friends are in" : "");
-            return;
-        }
-        if (touchOnly)
-        {
-            lobbyHelp.text = "Phone = 1 player: tap the frog you want, then PLAY. The other frogs run on AI.\n" +
-                "Play with friends online: HOST shows a room code, friends tap JOIN and type it. Gamepads here = split-screen.";
-            Slot ts = FindSlot(InputKind.Touch);
-            for (int i = 0; i < 4; i++)
-                if (ts == null || ts.frog != i)
-                {
-                    cards[i].color = new Color(1, 1, 1, 0.12f);
-                    cardTexts[i].text = "<size=30>" + Froggies.Names[i] + "</size>\ntap to play\n(AI frog)";
-                }
-            lobbyStatus.text = ts == null ? "Tap a frog to pick it" : "You are " + (ts.name.Length > 0 ? ts.name + " (" + Froggies.Names[ts.frog] + ")" : Froggies.Names[ts.frog]) + " - tap PLAY";
-            return;
-        }
-        lobbyHelp.text = "Each gamepad: A claims a frog (D-pad < > switch, B leave), Start / A again = play.  Keyboard: Enter join / play, Left-Right switch.\n" +
-            "Online with friends: HOST (X / H) shows a room code, JOIN (Y / J) types one.  NAME: RB / N.  Back / V = Shared / Split view.";
-        viewText.text = shared ? "VIEW:   Split   <color=#ffd84a>[ SHARED ]</color>   <size=16>(Back / V / tap)</size>"
-                               : "VIEW:   <color=#ffd84a>[ SPLIT ]</color>   Shared   <size=16>(Back / V / tap)</size>";
-        if (slots.Count == 0) lobbyStatus.text = "Press A on a gamepad, Enter on the keyboard, or tap a frog to join";
-        else lobbyStatus.text = slots.Count + " player" + (slots.Count > 1 ? "s" : "") + " ready - Start / A again / Enter / PLAY to begin" + (autoStartT > 0f ? "  (auto in " + Mathf.CeilToInt(autoStartT) + ")" : "");
-    }
-
     // a phone / tablet with no gamepads: local multiplayer makes no sense, so the lobby is a 1-player picker
     public static bool TouchOnly { get { return Application.isMobilePlatform && Gamepad.all.Count == 0; } }
-
-    void LayoutLobby()
-    {
-        bool portrait = Screen.height > Screen.width;
-        int want = portrait ? 1 : 0;
-        if (want == lobbyLayout) return;
-        lobbyLayout = want;
-        var sc = lobbyCanvas.GetComponent<CanvasScaler>();
-        sc.referenceResolution = portrait ? new Vector2(720, 1280) : new Vector2(1280, 720);
-        sc.matchWidthOrHeight = portrait ? 0f : 0.6f;
-        System.Action<Graphic, Vector2, Vector2> put = (g, p, size) => { g.rectTransform.anchoredPosition = p; g.rectTransform.sizeDelta = size; };
-        if (portrait)
-        {
-            put(lobbyBg, Vector2.zero, new Vector2(700, 1240));
-            put(lobbyTitle, new Vector2(0, 530), new Vector2(680, 80)); lobbyTitle.fontSize = 54;
-            put(lobbySub, new Vector2(0, 462), new Vector2(660, 70)); lobbySub.fontSize = 22;
-            for (int i = 0; i < 4; i++)
-            {
-                Vector2 p = new Vector2(i % 2 == 0 ? -170 : 170, i < 2 ? 280 : 50);
-                put(cards[i], p, new Vector2(310, 205));
-                put(swatches[i], p + new Vector2(0, 55), new Vector2(70, 70));
-                put(cardTexts[i], p + new Vector2(0, -38), new Vector2(300, 110));
-            }
-            put(viewBar, new Vector2(-118, -95), new Vector2(440, 54));
-            put(nameBtn, new Vector2(232, -95), new Vector2(220, 54));
-            put(hostBtn, new Vector2(-238, -190), new Vector2(200, 90));
-            put(playBtn, new Vector2(0, -190), new Vector2(240, 90));
-            put(joinBtn, new Vector2(238, -190), new Vector2(200, 90));
-            put(netText, new Vector2(0, -282), new Vector2(690, 80)); netText.fontSize = 26;
-            put(lobbyStatus, new Vector2(0, -352), new Vector2(680, 56)); lobbyStatus.fontSize = 22;
-            put(soundBtn, new Vector2(0, -415), new Vector2(260, 50));
-            put(lobbyHelp, new Vector2(0, -520), new Vector2(680, 150)); lobbyHelp.fontSize = 19;
-        }
-        else
-        {
-            put(lobbyBg, Vector2.zero, new Vector2(1200, 670));
-            put(lobbyTitle, new Vector2(0, 280), new Vector2(1100, 80)); lobbyTitle.fontSize = 62;
-            put(lobbySub, new Vector2(0, 226), new Vector2(1100, 36)); lobbySub.fontSize = 22;
-            for (int i = 0; i < 4; i++)
-            {
-                Vector2 p = new Vector2(-420 + i * 280, 98);
-                put(cards[i], p, new Vector2(255, 190));
-                put(swatches[i], p + new Vector2(0, 50), new Vector2(64, 64));
-                put(cardTexts[i], p + new Vector2(0, -38), new Vector2(245, 110));
-            }
-            put(viewBar, new Vector2(-170, -28), new Vector2(560, 44));
-            put(nameBtn, new Vector2(330, -28), new Vector2(300, 44));
-            put(hostBtn, new Vector2(-340, -95), new Vector2(260, 66));
-            put(playBtn, new Vector2(0, -95), new Vector2(300, 66));
-            put(joinBtn, new Vector2(340, -95), new Vector2(260, 66));
-            put(netText, new Vector2(0, -168), new Vector2(1160, 70)); netText.fontSize = 24;
-            put(lobbyStatus, new Vector2(0, -222), new Vector2(1150, 36)); lobbyStatus.fontSize = 22;
-            put(soundBtn, new Vector2(490, 280), new Vector2(190, 42));
-            put(lobbyHelp, new Vector2(0, -280), new Vector2(1180, 60)); lobbyHelp.fontSize = 18;
-        }
-    }
 
     void LayoutHud()
     {
@@ -753,10 +560,17 @@ public class Game : MonoBehaviour
         slots.Add(s);
         frogs[frog].human = true;
         if (slots.Count == 1) { string saved = Net.CleanName(PlayerPrefs.GetString("ff.name", "")); if (saved != null) s.name = saved; }   // ffu13: remembered name
+        if (slots.Count == 1 && !(Net.I != null && Net.I.IsGuest))
+        {
+            int sc = PlayerPrefs.GetInt("ff.char", -1);   // ffu14: remembered character
+            if (Roster.Valid(sc) && !CharHeldByHuman(sc, frog)) SetSeatChar(frog, sc, false);
+        }
+        FixAiChars();
+        if (Net.I != null && Net.I.IsHost) Net.I.CharsChanged();
         if (Net.I != null && Net.I.IsGuest) Net.I.RequestFrog(frog);
         if (state == State.Play) { MakeView(s); ApplyLayout(); }
         else autoStartT = 30f;
-        Debug.Log("Join P" + slots.Count + " " + kind + (pad != null ? " " + pad.displayName + " #" + pad.deviceId : "") + " -> " + Froggies.Names[frog]);
+        Debug.Log("Join P" + slots.Count + " " + kind + (pad != null ? " " + pad.displayName + " #" + pad.deviceId : "") + " -> seat " + frog + " " + Roster.Name(charOf[frog]));
         return s;
     }
 
@@ -772,17 +586,6 @@ public class Game : MonoBehaviour
         if (slots.Count == 0) autoStartT = -1f;
         if (slots.Count == 0 && Net.I != null && Net.I.Online) Net.I.Leave(Net.I.IsHost ? "Room closed" : "You left the room");
         if (state == State.Play) ApplyLayout();
-    }
-
-    void Cycle(Slot s, int dir)
-    {
-        if (s == null) return;
-        int f = FreeFrog(s.frog + dir, dir);
-        if (f < 0) return;
-        if (Net.I != null && Net.I.IsGuest) { Net.I.RequestFrog(f); return; }   // ffu13: the host decides
-        frogs[s.frog].human = false;
-        s.frog = f;
-        frogs[f].human = true;
     }
 
     void ToggleView()
@@ -833,7 +636,8 @@ public class Game : MonoBehaviour
         touch.active = state == State.Play && FindSlot(InputKind.Touch) != null && !help;
         if (state == State.Play) ApplyNames();
         if (state == State.Lobby) UpdateLobby(dt);
-        else UpdatePlay(dt);
+        else { FixAiChars(); UpdatePlay(dt); }
+        TickFade(Time.unscaledDeltaTime);
     }
 
     void UpdateLobby(float dt)
@@ -841,6 +645,8 @@ public class Game : MonoBehaviour
         lobbyCanvas.enabled = true;
         hudCanvas.enabled = false;
         LayoutLobby();
+        FixAiChars();
+        TickShowroom(Time.unscaledDeltaTime);
         if (!lobbyLook) { lobbyLook = true; Look.ApplyViews(1, new List<Camera> { overview }); }
         ApplyNames();
         if (keypad != null && keypad.Update(Screen.height > Screen.width)) { OrbitLobby(dt); RefreshLobby(); return; }
@@ -869,6 +675,8 @@ public class Game : MonoBehaviour
             Keyboard k = Keyboard.current;
             if (k != null && (k.leftArrowKey.wasPressedThisFrame)) Cycle(ks, -1);
             if (k != null && (k.rightArrowKey.wasPressedThisFrame)) Cycle(ks, 1);
+            if (k != null && (k.upArrowKey.wasPressedThisFrame)) Cycle(ks, -5);
+            if (k != null && (k.downArrowKey.wasPressedThisFrame)) Cycle(ks, 5);
         }
 
         // gamepads
@@ -881,6 +689,8 @@ public class Game : MonoBehaviour
                 if (pad.buttonEast.wasPressedThisFrame) { Leave(ps); continue; }
                 if (pad.dpad.left.wasPressedThisFrame) Cycle(ps, -1);
                 if (pad.dpad.right.wasPressedThisFrame) Cycle(ps, 1);
+                if (pad.dpad.up.wasPressedThisFrame) Cycle(ps, -5);
+                if (pad.dpad.down.wasPressedThisFrame) Cycle(ps, 5);
             }
             if (pad.selectButton.wasPressedThisFrame && !g) ToggleView();
             if (!pad.buttonSouth.wasPressedThisFrame && !pad.startButton.wasPressedThisFrame) continue;
@@ -906,14 +716,9 @@ public class Game : MonoBehaviour
                 if (FindSlot(InputKind.Touch) == null) Join(InputKind.Touch, null);
                 StartPlay(); return;
             }
+            if (LobbyTilePick(InputKind.Touch, pos)) continue;
             for (int i = 0; i < 4; i++)
-                if (Hit(cards[i], pos))
-                {
-                    Slot ts = FindSlot(InputKind.Touch);
-                    if (ts == null) Join(InputKind.Touch, null, i);
-                    else if (SlotForFrog(i) == null && !Net.I.TakenByRemote(i)) { if (Net.I.IsGuest) Net.I.RequestFrog(i); else { frogs[ts.frog].human = false; ts.frog = i; frogs[i].human = true; } }
-                    Sfx.Play(Sfx.Click, 0.6f);
-                }
+                if (Hit(cards[i], pos) && FindSlot(InputKind.Touch) == null && !HumanSeat(i)) { Join(InputKind.Touch, null, i); Sfx.Play(Sfx.Click, 0.6f); }
         }
         // mouse clicks on the lobby (desktop without a touch screen)
         if (Kb.MouseLeftDown() && Kb.TouchCount() == 0 && now - lastTouchTime > 1f)
@@ -923,13 +728,9 @@ public class Game : MonoBehaviour
             else if (Hit(soundBtn, mp)) Sfx.CycleVolume();
             else if (Hit(viewBar, mp)) ToggleView();
             else if (Hit(playBtn, mp)) { if (FindSlot(InputKind.Keyboard) == null) Join(InputKind.Keyboard, null); StartPlay(); return; }
-            else for (int i = 0; i < 4; i++)
-                    if (Hit(cards[i], mp))
-                    {
-                        Slot k2 = FindSlot(InputKind.Keyboard);
-                        if (k2 == null) Join(InputKind.Keyboard, null, i);
-                        else if (SlotForFrog(i) == null && !Net.I.TakenByRemote(i)) { if (Net.I.IsGuest) Net.I.RequestFrog(i); else { frogs[k2.frog].human = false; k2.frog = i; frogs[i].human = true; } }
-                    }
+            else if (!LobbyTilePick(InputKind.Keyboard, mp))
+                for (int i = 0; i < 4; i++)
+                    if (Hit(cards[i], mp) && FindSlot(InputKind.Keyboard) == null && !HumanSeat(i)) Join(InputKind.Keyboard, null, i);
         }
 
         if (slots.Count > 0 && autoStartT > 0f && !(Net.I != null && Net.I.Online))
@@ -958,7 +759,7 @@ public class Game : MonoBehaviour
     {
         for (int i = 0; i < frogs.Count; i++)
         {
-            string n = Froggies.Names[i];
+            string n = Roster.Name(charOf[i]);
             Slot s = SlotForFrog(i);
             if (s != null) { if (s.name.Length > 0) n = s.name; }
             else if (Net.I != null && Net.I.Online && Net.I.names[i].Length > 0) n = Net.I.names[i];
@@ -1092,8 +893,8 @@ public class Game : MonoBehaviour
     {
         if (urlNetDone || Time.unscaledTime < 1.5f) return;
         urlNetDone = true;
-        string room = UrlParam("room"), host = UrlParam("ffhost"), nm = UrlParam("ffname"), fr = UrlParam("fffrog");
-        if (room == null && host == null && nm == null && fr == null)
+        string room = UrlParam("room"), host = UrlParam("ffhost"), nm = UrlParam("ffname"), fr = UrlParam("fffrog"), fc = UrlParam("ffchar");
+        if (room == null && host == null && nm == null && fr == null && fc == null)
         {
             string saved = PlayerPrefs.GetString("ff.name", "");
             if (slots.Count > 0 && Net.CleanName(saved) != null) slots[0].name = Net.CleanName(saved);
@@ -1104,6 +905,8 @@ public class Game : MonoBehaviour
         if (s == null) return;
         int f;
         if (fr != null && int.TryParse(fr, out f) && f >= 0 && f < 4 && SlotForFrog(f) == null) { frogs[s.frog].human = false; s.frog = f; frogs[f].human = true; }
+        int fci;
+        if (fc != null && int.TryParse(fc, out fci) && Roster.Valid(fci)) PickChar(s, fci);
         if (nm != null) { string c = Net.CleanName(nm); if (c != null) s.name = c; else Debug.Log("NET name rejected: " + nm); }
         else { string saved = Net.CleanName(PlayerPrefs.GetString("ff.name", "")); if (saved != null) s.name = saved; }
         ApplyNames();
@@ -1123,6 +926,9 @@ public class Game : MonoBehaviour
         if (keypad != null && keypad.open) keypad.Close();
         state = State.Play;
         lobbyCanvas.enabled = false;
+        StandsOff();
+        fadeT = 1f;
+        Debug.Log("FF chars: " + string.Join(",", System.Array.ConvertAll(charOf, c => Roster.Name(c))));
         hudCanvas.enabled = true;
         autoStartT = -1f;
         if (slots.Count < 2) shared = false;
@@ -1270,6 +1076,7 @@ public class Game : MonoBehaviour
     void EnterLobby()
     {
         state = State.Lobby;
+        lobbyAge = 0f;
         foreach (var f in frogs) f.human = false;
         sharedCam.enabled = false;
         sharedHud.SetActive(false);

@@ -10,7 +10,7 @@ public static class Froggies
 
 // Procedural frog: squat body, pale belly, big bulging eyes, folded back legs with webbed feet.
 // Built from primitives with no colliders. ~1.25 m tall.
-public class FrogModel : MonoBehaviour
+public partial class FrogModel : MonoBehaviour
 {
     public Transform bob, head, legL, legR, armL, armR;
     float seed;
@@ -107,6 +107,7 @@ public class FrogModel : MonoBehaviour
     public void Animate(float speed, bool air, bool seated, bool swim, float dt)
     {
         if (bob == null) return;
+        if (pet) { AnimatePet(speed, air, seated, swim, dt); return; }
         float t = Time.time + seed;
         if (seated)
         {
