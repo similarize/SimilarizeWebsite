@@ -43,19 +43,19 @@
   var canvas = document.getElementById("unity-canvas");
   var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));
   var config = {
-    dataUrl: buildUrl + "/" + name + ".data?v=202610091459-039479c",
-    frameworkUrl: buildUrl + "/" + name + ".framework.js?v=202610091459-039479c",
-    codeUrl: buildUrl + "/" + name + ".wasm?v=202610091459-039479c",
+    dataUrl: buildUrl + "/" + name + ".data?v=202610091512-f9ad2ba",
+    frameworkUrl: buildUrl + "/" + name + ".framework.js?v=202610091512-f9ad2ba",
+    codeUrl: buildUrl + "/" + name + ".wasm?v=202610091512-f9ad2ba",
     streamingAssetsUrl: "StreamingAssets",
     companyName: "Similarize",
     productName: "Four Froggies",
-    productVersion: "202610091459-039479c",
+    productVersion: "202610091512-f9ad2ba",
     devicePixelRatio: Math.min(window.devicePixelRatio || 1, isMobile ? 1.5 : 2),
     showBanner: function (msg, type) { if (type === "error") { var e = document.getElementById("err"); e.style.display = "block"; e.textContent = msg; } else console.log(msg); }
   };
   var fill = document.getElementById("fill"), pct = document.getElementById("pct"), loader = document.getElementById("loader");
   var script = document.createElement("script");
-  script.src = buildUrl + "/" + name + ".loader.js?v=202610091459-039479c";
+  script.src = buildUrl + "/" + name + ".loader.js?v=202610091512-f9ad2ba";
   script.onload = function () {
     createUnityInstance(canvas, config, function (p) {
       fill.style.width = Math.round(p * 100) + "%";
