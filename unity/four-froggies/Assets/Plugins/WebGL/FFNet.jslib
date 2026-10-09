@@ -55,7 +55,7 @@ mergeInto(LibraryManager.library, {
       var id = 'froggiesu-p' + Math.random().toString(36).slice(2, 10);
       var p;
       try { p = N.peer = new window.Peer(id, { debug: 0 }); } catch (e) { N.push('err|create|' + e); return; }
-      N.timer = setTimeout(function () { if (N.peer === p && !N.host) N.push('err|timeout|'); }, 15000);
+      N.timer = setTimeout(function () { if (N.peer === p && !N.host) N.push('err|timeout|'); }, 30000);
       p.on('open', function (myId) {
         if (N.peer !== p) return;
         N.push('me|' + myId);

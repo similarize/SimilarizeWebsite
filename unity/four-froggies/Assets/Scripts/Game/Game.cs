@@ -596,7 +596,7 @@ public class Game : MonoBehaviour
         joinBtnText.text = "JOIN" + (touchOnly ? "" : "\n<size=15>Y / J</size>");
         joinBtn.gameObject.SetActive(!online);
         Slot me = slots.Count > 0 ? slots[0] : null;
-        nameText.text = "NAME: <color=#ffe680>" + (me != null && me.name.Length > 0 ? me.name : "froggy's") + "</color>" + (touchOnly ? "" : " <size=15>(RB / N)</size>");
+        nameText.text = "NAME: <color=#ffe680>" + (me != null ? (me.name.Length > 0 ? me.name : Froggies.Names[me.frog]) : "-") + "</color> <size=15>" + (touchOnly ? "(tap to change)" : "(RB / N / click)") + "</size>";
         hostText.fontSize = joinBtnText.fontSize = lobbyLayout == 1 ? 28 : 26;
         hostText.lineSpacing = joinBtnText.lineSpacing = 0.8f;
 
@@ -1325,6 +1325,7 @@ public class Game : MonoBehaviour
         foreach (var s in slots)
             if (s.rig != null && s.cam.enabled) s.rig.Update(frogs[s.frog], s.last, dt);
         if (sharedCam.enabled) UpdateShared(dt);
+        if (demoT > 0f) DemoView();     // before the HUD so name tags line up with the pinned demo camera
         if (overview.enabled)
         {
             orbit += dt * 5f;
@@ -1354,7 +1355,6 @@ public class Game : MonoBehaviour
         }
         // Starship blast-off: chase camera, countdown, fade (overrides the views of froggies aboard)
         foreach (var s in slots) if (s.cam != null && s.cam.enabled) LaunchSeq.View(s.cam, s.hud, frogs[s.frog]);
-        if (demoT > 0f) DemoView();
         if (sharedCam.enabled)
         {
             Frog any = null;
