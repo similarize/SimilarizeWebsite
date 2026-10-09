@@ -48,7 +48,7 @@ public class CyberBoat : MonoBehaviour
     public float Wet { get; private set; }
     public static int Transforms;   // demo / log counter
     bool built;
-    float prevK, strobeT, airT, sprayT;
+    float prevK, strobeT, airT, sprayT, toggleCool;
     Transform hull, sponL, sponR, jet, deflector, wing;
     readonly List<Transform> shutters = new List<Transform>();
     Material ledMat, glowMat;
@@ -86,8 +86,13 @@ public class CyberBoat : MonoBehaviour
         float s2, depthAhead;
         bool waterAhead = Water.At(ahead.x, ahead.z, out s2, out depthAhead);
         if (!waterAhead) depthAhead = -1f;
-        if (!boatTarget && water && depth > EnterDepth) Begin(true);
-        else if (boatTarget && (!water || depth < ExitDepth || (Mathf.Abs(fsp) > 1f && depthAhead < 0.3f && depth < EnterDepth + 0.3f))) Begin(false);
+        bool shoreAhead = fsp > 1f && depthAhead < 0.3f;
+        toggleCool -= dt;
+        if (toggleCool <= 0f)
+        {
+            if (!boatTarget && water && depth > EnterDepth && !shoreAhead) Begin(true);
+            else if (boatTarget && (!water || depth < ExitDepth || (shoreAhead && depth < EnterDepth + 0.3f))) Begin(false);
+        }
 
         float speedK = boatTarget ? 1f / Tin : 1f / Tout;
         k = Mathf.MoveTowards(k, boatTarget ? 1f : 0f, speedK * dt);
@@ -96,7 +101,7 @@ public class CyberBoat : MonoBehaviour
         if (hullCol != null) hullCol.enabled = k > 0.5f;
 
         // buoyancy (fades in / out with the sequence), planing lift, banking
-        float buoy = Mathf.Clamp01(k / 0.35f);
+        float buoy = boatTarget ? Mathf.Clamp01(k / 0.06f) : Mathf.Clamp01(k / 0.3f);   // floats as soon as it starts
         float jetK = Mathf.Clamp01((k - 0.3f) / 0.4f);
         float plane = Mathf.Clamp01((Mathf.Abs(fsp) - 5f) / 11f) * jetK;
         float perPoint = rb.mass * 9.81f / Floats.Length;
@@ -110,12 +115,12 @@ public class CyberBoat : MonoBehaviour
             float d = wy - p.y;
             if (!water || d <= 0f) continue;
             wetN++;
-            float kd = Mathf.Min(d / 0.42f, 2.5f);
+            float kd = Mathf.Min(d / 0.26f, 3f);   // rests with the waterline ~0.34 m up the hull
             // bow points lift more as the hull planes, stern less: the nose rises with speed;
             // the inside of a turn sinks a little so the hull banks into it
             float mul = (lp.z > 0f ? 1f + 0.55f * plane : 1f - 0.25f * plane);
             float side = Mathf.Sign(lp.x);
-            mul *= 1f - 0.3f * steer * side * Mathf.Clamp01(Mathf.Abs(fsp) / 10f) * jetK;
+            mul *= 1f - 0.2f * steer * side * Mathf.Clamp01(Mathf.Abs(fsp) / 10f) * jetK;
             Vector3 pv = rb.GetPointVelocity(p);
             rb.AddForceAtPosition(Vector3.up * (perPoint * kd * mul - pv.y * rb.mass * 0.45f) * buoy, p);
         }
@@ -161,6 +166,7 @@ public class CyberBoat : MonoBehaviour
     void Begin(bool toBoat)
     {
         boatTarget = toBoat;
+        toggleCool = 0.8f;
         Transforms++;
         Vector3 p = transform.position;
         Debug.Log("CyberBoat: " + v.Title + (toBoat ? " -> boat" : " -> truck") + " at (" + p.x.ToString("0") + ", " + p.z.ToString("0") + ") t=" + Time.realtimeSinceStartup.ToString("0.0"));
@@ -172,7 +178,7 @@ public class CyberBoat : MonoBehaviour
             for (int i = 0; i < 26; i++)
             {
                 Vector3 d = Random.onUnitSphere; d.y = Mathf.Abs(d.y) * 1.6f + 0.8f;
-                FX.Spray(p + new Vector3(Random.Range(-1.2f, 1.2f), 0.3f, Random.Range(-2.6f, 2.6f)), d * Random.Range(3f, 7f), Random.Range(0.3f, 0.7f), Random.Range(0.6f, 1.2f), new Color(0.88f, 0.96f, 1f, 0.85f));
+                FX.Spray(p + new Vector3(Random.Range(-1.2f, 1.2f), 0.3f, Random.Range(-2.6f, 2.6f)), d * Random.Range(3f, 7f), Random.Range(0.2f, 0.45f), Random.Range(0.6f, 1.2f), new Color(0.88f, 0.96f, 1f, 0.85f));
             }
             if (heard) Sfx.PlayAt(Sfx.SplashBig != null ? Sfx.SplashBig : Sfx.Splash, p, 0.9f, 80f, 0.95f);
             if (v.driver != null && v.driver.human) v.driver.Toast("CYBERBOAT MODE!", 2f);
@@ -300,21 +306,21 @@ public class CyberBoat : MonoBehaviour
                 {
                     Vector3 bp = pos + fwd * Random.Range(1.2f, 2.4f) + right * s * 1.45f; bp.y = surf + 0.1f;
                     FX.Spray(bp, right * s * Random.Range(2f, 4.5f) * (0.5f + sk) + Vector3.up * Random.Range(1.5f, 3.5f) * (0.4f + sk) - fwd * spd * 0.3f,
-                        Random.Range(0.25f, 0.55f), Random.Range(0.35f, 0.7f), new Color(0.9f, 0.97f, 1f, 0.8f));
+                        Random.Range(0.12f, 0.3f), Random.Range(0.35f, 0.7f), new Color(0.9f, 0.97f, 1f, 0.8f));
                 }
                 // rooster tail from the jet
                 if (v.Throttle01 > 0.1f)
                 {
                     Vector3 jp = jet.TransformPoint(new Vector3(0f, -0.05f, -0.55f)); jp.y = Mathf.Max(jp.y, surf + 0.05f);
                     FX.Spray(jp, -fwd * Random.Range(4f, 8f) * (0.4f + sk) + Vector3.up * Random.Range(2.5f, 5f) * (0.3f + sk) + Random.insideUnitSphere,
-                        Random.Range(0.35f, 0.8f), Random.Range(0.5f, 0.9f), new Color(0.92f, 0.98f, 1f, 0.75f));
+                        Random.Range(0.18f, 0.45f), Random.Range(0.5f, 0.9f), new Color(0.92f, 0.98f, 1f, 0.75f));
                 }
             }
         }
         else if (moving && inWater && Random.value < 0.5f)
         {
             Vector3 sp = pos + new Vector3(Random.Range(-1.3f, 1.3f), 0f, Random.Range(-2.6f, 2.6f)); sp.y = surf + 0.1f;
-            FX.Spray(sp, Random.insideUnitSphere * 2f + Vector3.up * 2.5f, Random.Range(0.25f, 0.5f), Random.Range(0.4f, 0.8f), new Color(0.88f, 0.96f, 1f, 0.8f));
+            FX.Spray(sp, Random.insideUnitSphere * 2f + Vector3.up * 2.5f, Random.Range(0.15f, 0.35f), Random.Range(0.4f, 0.8f), new Color(0.88f, 0.96f, 1f, 0.8f));
         }
     }
 
@@ -437,7 +443,7 @@ public class CyberBoat : MonoBehaviour
             tr.widthCurve = new AnimationCurve(new Keyframe(0f, 0.25f), new Keyframe(1f, 1f));
             var gr = new Gradient();
             gr.SetKeys(new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(new Color(0.85f, 0.95f, 1f), 1f) },
-                       new[] { new GradientAlphaKey(0.85f, 0f), new GradientAlphaKey(0.45f, 0.4f), new GradientAlphaKey(0f, 1f) });
+                       new[] { new GradientAlphaKey(0.9f, 0f), new GradientAlphaKey(0.6f, 0.35f), new GradientAlphaKey(0f, 1f) });
             tr.colorGradient = gr;
             tr.sharedMaterial = FoamMat();
             tr.textureMode = LineTextureMode.Stretch;
@@ -467,7 +473,7 @@ public class CyberBoat : MonoBehaviour
         {
             float v = (y + 0.5f) / h;            // across the width
             float e = Mathf.Abs(v - 0.5f) * 2f;  // 0 centre .. 1 edge
-            float a = 0.35f + 0.65f * Mathf.Exp(-Mathf.Pow((e - 0.78f) / 0.14f, 2f));
+            float a = 0.55f + 0.45f * Mathf.Exp(-Mathf.Pow((e - 0.72f) / 0.2f, 2f));
             a *= Mathf.Clamp01((1f - e) / 0.08f);
             for (int x = 0; x < w; x++)
             {

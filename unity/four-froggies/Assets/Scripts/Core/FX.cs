@@ -147,10 +147,52 @@ public static class FX
     }
 
     // ffu11: directed water spray (Cyberboat bow spray, rooster tail, transform burst)
+    // own system with a soft round droplet texture (the shared one draws plain quads)
+    static ParticleSystem spray;
     public static void Spray(Vector3 p, Vector3 v, float size, float life, Color c)
     {
         if (ps == null) return;
-        Emit(p, v, size, life, c);
+        if (spray == null) InitSpray();
+        var ep = new ParticleSystem.EmitParams();
+        ep.position = p; ep.velocity = v; ep.startSize = size; ep.startLifetime = life; ep.startColor = c;
+        ep.rotation = Random.Range(0f, 360f);
+        spray.Emit(ep, 1);
+    }
+    static void InitSpray()
+    {
+        var go = new GameObject("FX Spray");
+        spray = go.AddComponent<ParticleSystem>();
+        spray.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        var main = spray.main;
+        main.loop = true; main.playOnAwake = false; main.simulationSpace = ParticleSystemSimulationSpace.World;
+        main.maxParticles = 1500; main.gravityModifier = 0.9f; main.startSpeed = 0f;
+        var em = spray.emission; em.enabled = false;
+        var sh = spray.shape; sh.enabled = false;
+        var sz = spray.sizeOverLifetime; sz.enabled = true;
+        sz.size = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(new Keyframe(0f, 0.7f), new Keyframe(0.3f, 1f), new Keyframe(1f, 1.8f)));
+        var col = spray.colorOverLifetime; col.enabled = true;
+        var g = new Gradient();
+        g.SetKeys(new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
+                  new[] { new GradientAlphaKey(0.95f, 0f), new GradientAlphaKey(0.7f, 0.5f), new GradientAlphaKey(0f, 1f) });
+        col.color = g;
+        const int n = 32;
+        var tex = new Texture2D(n, n, TextureFormat.RGBA32, false);
+        tex.wrapMode = TextureWrapMode.Clamp;
+        var px = new Color32[n * n];
+        for (int y = 0; y < n; y++)
+            for (int x = 0; x < n; x++)
+            {
+                float dx = (x + 0.5f) / n * 2f - 1f, dy = (y + 0.5f) / n * 2f - 1f;
+                float r = Mathf.Sqrt(dx * dx + dy * dy);
+                float a = Mathf.Clamp01(1f - r); a = a * a * (3f - 2f * a);
+                px[y * n + x] = new Color32(255, 255, 255, (byte)(a * 255f));
+            }
+        tex.SetPixels32(px); tex.Apply();
+        var m = new Material(Mats.Fx); m.mainTexture = tex;
+        var rend = go.GetComponent<ParticleSystemRenderer>();
+        rend.sharedMaterial = m; rend.renderMode = ParticleSystemRenderMode.Billboard;
+        rend.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; rend.receiveShadows = false;
+        spray.Play();
     }
 
     public static void Muzzle(Vector3 p, Vector3 dir)

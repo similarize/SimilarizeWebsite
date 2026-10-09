@@ -209,13 +209,14 @@ public class Game : MonoBehaviour
                     if (demoCyber == null) return;
                     // 3/4 front chase view from the truck's right, low over the water; eased so it doesn't jitter
                     Transform ct = demoCyber.transform;
-                    Vector3 fw = ct.forward; fw.y = 0f; fw.Normalize();
+                    Vector3 fw0 = ct.forward; fw0.y = 0f; fw0.Normalize();
+                    float dtc = Mathf.Min(Time.unscaledDeltaTime, 0.1f);
+                    // the heading is eased (not the position) so the camera keeps up with a 25 m/s boat
+                    demoCamPos = demoCamPos == Vector3.zero ? fw0 : Vector3.Slerp(demoCamPos, fw0, dtc * 2f);
+                    Vector3 fw = demoCamPos; fw.y = 0f; fw.Normalize();
                     Vector3 rt = new Vector3(fw.z, 0f, -fw.x);
                     Vector3 tp = ct.position;
-                    Vector3 want = tp + rt * 8.5f + fw * 6.5f + Vector3.up * 2.6f;
-                    float dtc = Mathf.Min(Time.unscaledDeltaTime, 0.1f);
-                    demoCamPos = demoCamPos == Vector3.zero ? want : Vector3.Lerp(demoCamPos, want, dtc * 2.5f);
-                    pos = demoCamPos; look = tp + Vector3.up * 0.9f + fw * 0.5f;
+                    pos = tp + rt * 7.5f + fw * 6f + Vector3.up * 2.4f; look = tp + Vector3.up * 0.8f - fw * 0.3f;
                     float lg = Mathf.Max(Ranch.GY(pos.x, pos.z), Layout.InPond(pos.x, pos.z) ? Layout.WaterY : -99f) + 0.6f;
                     if (pos.y < lg) pos.y = lg;
                     demoLogT -= Time.unscaledDeltaTime;
