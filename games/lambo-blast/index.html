@@ -43,19 +43,19 @@
   var canvas = document.getElementById("unity-canvas");
   var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));
   var config = {
-    dataUrl: buildUrl + "/" + name + ".data?v=202610090409-e68a687",
-    frameworkUrl: buildUrl + "/" + name + ".framework.js?v=202610090409-e68a687",
-    codeUrl: buildUrl + "/" + name + ".wasm?v=202610090409-e68a687",
+    dataUrl: buildUrl + "/" + name + ".data?v=202610090423-a0deafa",
+    frameworkUrl: buildUrl + "/" + name + ".framework.js?v=202610090423-a0deafa",
+    codeUrl: buildUrl + "/" + name + ".wasm?v=202610090423-a0deafa",
     streamingAssetsUrl: "StreamingAssets",
     companyName: "Similarize",
     productName: "Lambo Blast",
-    productVersion: "202610090409-e68a687",
+    productVersion: "202610090423-a0deafa",
     devicePixelRatio: Math.min(window.devicePixelRatio || 1, isMobile ? 1.5 : 2),
     showBanner: function (msg, type) { if (type === "error") { var e = document.getElementById("err"); e.style.display = "block"; e.textContent = msg; } else console.log(msg); }
   };
   var fill = document.getElementById("fill"), pct = document.getElementById("pct"), loader = document.getElementById("loader");
   var script = document.createElement("script");
-  script.src = buildUrl + "/" + name + ".loader.js?v=202610090409-e68a687";
+  script.src = buildUrl + "/" + name + ".loader.js?v=202610090423-a0deafa";
   script.onload = function () {
     createUnityInstance(canvas, config, function (p) {
       fill.style.width = Math.round(p * 100) + "%";
