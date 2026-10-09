@@ -38,6 +38,8 @@ public class Soldier : MonoBehaviour
     string clipIdle, clipWalk, clipRun, clipSad, curClip;
 
     public Critter critter;
+    public Transform muzzle;        // third-person gun tip (critter blaster / soldier rifle)
+    public Transform viewMuzzle;    // first-person view model tip (humans), set by Game
     public float HSpeed { get { return new Vector2(vel.x, vel.z).magnitude; } }
 
     public bool Reloading { get { return reloadLeft > 0f; } }
@@ -90,13 +92,10 @@ public class Soldier : MonoBehaviour
         Mats.Prim(PrimitiveType.Cube, capsuleBody.transform, new Vector3(0f, 1.66f, 0.15f), new Vector3(0.3f, 0.1f, 0.1f), Mats.Lit(dark), false);
         Mats.Prim(PrimitiveType.Sphere, capsuleBody.transform, new Vector3(0f, 1.74f, 0f), new Vector3(0.4f, 0.18f, 0.4f), Mats.Lit(Color.Lerp(color, Color.black, 0.35f)), false);
 
-        // Third-person rifle (follows pitch)
-        var gun = new GameObject("Gun3P").transform;
-        gun.SetParent(eye, false);
-        gun.localPosition = new Vector3(0.22f, -0.34f, 0.32f);
-        Mats.Prim(PrimitiveType.Cube, gun, Vector3.zero, new Vector3(0.07f, 0.1f, 0.6f), Mats.Lit(dark), false);
-        Mats.Prim(PrimitiveType.Cube, gun, new Vector3(0f, -0.1f, 0.05f), new Vector3(0.05f, 0.14f, 0.07f), Mats.Lit(dark), false);
-        Mats.Prim(PrimitiveType.Cube, gun, new Vector3(0f, 0f, 0.33f), new Vector3(0.075f, 0.075f, 0.07f), Mats.Lit(new Color(1f, 0.45f, 0.05f)), false);
+        // Third-person rifle (follows pitch): the airsoft rifle mesh, accent in the seat colour
+        Transform m3;
+        Gear.Rifle(eye, new Vector3(0.2f, -0.4f, 0.28f), 0.9f, color, false, Color.black, Color.black, out m3);
+        muzzle = m3;
         }
 
         // Three balloons above the shoulders
@@ -104,15 +103,23 @@ public class Soldier : MonoBehaviour
         Color bc = Color.Lerp(color, Color.white, 0.12f);
         for (int k = 0; k < 3; k++)
         {
-            GameObject bg = Mats.Prim(PrimitiveType.Sphere, transform, pos[k], new Vector3(0.42f, 0.5f, 0.42f), Mats.Shiny(bc), true);
-            bg.name = "Balloon" + k;
-            ((SphereCollider)bg.GetComponent<Collider>()).radius = 0.62f;
+            // glossy translucent latex balloon (lathed mesh + BB/Balloon); same transform + collider as the old sphere
+            var bg = new GameObject("Balloon" + k);
+            bg.transform.SetParent(transform, false);
+            bg.transform.localPosition = pos[k];
+            bg.transform.localScale = new Vector3(0.42f, 0.5f, 0.42f);
+            bg.AddComponent<MeshFilter>().sharedMesh = Gear.BalloonMesh;
+            var br = bg.AddComponent<MeshRenderer>();
+            br.sharedMaterial = Mats.Balloon(bc);
+            br.receiveShadows = false;
+            if (Look.Mobile) br.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            bg.AddComponent<SphereCollider>().radius = 0.62f;
             var b = bg.AddComponent<Balloon>();
             b.owner = this; b.index = k; b.basePos = pos[k];
             Vector3 anchor = new Vector3(pos[k].x * 0.45f, 1.45f, -0.05f);
-            Vector3 bottom = pos[k] + Vector3.down * 0.25f;
+            Vector3 bottom = pos[k] + Vector3.down * 0.31f;
             Vector3 d = bottom - anchor;
-            GameObject str = Mats.Prim(PrimitiveType.Cylinder, transform, (anchor + bottom) * 0.5f, new Vector3(0.012f, d.magnitude * 0.5f, 0.012f), Mats.Lit(new Color(0.95f, 0.95f, 0.95f)), false);
+            GameObject str = Mats.Prim(PrimitiveType.Cylinder, transform, (anchor + bottom) * 0.5f, new Vector3(0.01f, d.magnitude * 0.5f, 0.01f), Mats.Lit(new Color(0.95f, 0.95f, 0.95f)), false);
             str.transform.localRotation = Quaternion.FromToRotation(Vector3.up, d.normalized);
             str.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             b.stringObj = str;
@@ -120,6 +127,7 @@ public class Soldier : MonoBehaviour
         }
 
         Mats.SetLayer(gameObject, layer);
+        if (critter != null) muzzle = critter.muzzle;
         if (critter == null) ModelLoader.Request(this);
     }
 
@@ -159,19 +167,21 @@ public class Soldier : MonoBehaviour
 
     IEnumerator FitModel(GameObject holder)
     {
+        // graphics overhaul: glossy team-colour shell + satin dark-metal joints (was flat Lit)
         Color body = Color.Lerp(color, Color.white, 0.1f);
-        Color joints = new Color(0.16f, 0.17f, 0.19f);
+        Color joints = new Color(0.17f, 0.18f, 0.2f);
         foreach (var r in holder.GetComponentsInChildren<Renderer>(true))
         {
             Material[] mats = r.sharedMaterials;
             for (int i = 0; i < mats.Length; i++)
             {
                 string n = ((mats[i] != null ? mats[i].name : "") + " " + r.gameObject.name).ToLowerInvariant();
-                mats[i] = n.Contains("joint") ? Mats.Lit(joints) : Mats.Lit(body);
+                mats[i] = n.Contains("joint") ? Mats.PBR(joints, 0.55f, 0.45f) : Mats.Paint(body, 0.72f);
             }
             r.sharedMaterials = mats;
             var smr = r as SkinnedMeshRenderer;
             if (smr != null) smr.updateWhenOffscreen = true;
+            if (Look.Mobile) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         }
         Mats.SetLayer(holder, layer);
         anim = holder.GetComponentInChildren<Animation>();
@@ -241,7 +251,22 @@ public class Soldier : MonoBehaviour
         }
         if (slot != null && slot.hud != null) slot.hud.ShowHit();
         if (Game.I != null) Game.I.OnPop(by, this);
-        if (BalloonsLeft == 0) GoOut(by);
+        if (BalloonsLeft == 0)
+        {
+            if (Game.Demo) StartCoroutine(DemoRefill());   // screenshot mode: nobody goes out
+            else GoOut(by);
+        }
+    }
+
+    IEnumerator DemoRefill()
+    {
+        yield return new WaitForSeconds(1.2f);
+        foreach (var b in balloons)
+        {
+            b.popped = false;
+            b.gameObject.SetActive(true);
+            if (b.stringObj != null) b.stringObj.SetActive(true);
+        }
     }
 
     void GoOut(Soldier by)
@@ -356,6 +381,8 @@ public class Soldier : MonoBehaviour
         Vector3 dir = eye.rotation * Quaternion.Euler(r.y, r.x, 0f) * Vector3.forward;
         Vector3 origin = eye.position + eye.forward * 0.35f;
         if (BBs.I != null) BBs.I.Fire(origin, dir * BBs.Speed, this);
+        Transform mz = viewMuzzle != null && viewMuzzle.gameObject.activeInHierarchy ? viewMuzzle : muzzle;
+        if (mz != null) FX.Muzzle(mz.position, dir);
         kick = 1f;
         Sfx.OnShot(this);
         pitch -= 0.2f;

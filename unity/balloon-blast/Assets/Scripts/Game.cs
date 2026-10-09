@@ -76,6 +76,17 @@ public class Game : MonoBehaviour
         overview.fieldOfView = 55f;
         touch = gameObject.AddComponent<TouchControls>();
         BuildLobbyUI();
+        Look.ApplyViews(1, new[] { overview });
+        string url = "";
+        try { url = Application.absoluteURL ?? ""; } catch { }
+        Demo = url.Contains("bbdemo");
+        if (Demo)
+        {
+            int k = url.IndexOf("bbshot=");
+            if (k >= 0) { demoShot = url.Substring(k + 7); int e = demoShot.IndexOfAny(new[] { '&', '#' }); if (e >= 0) demoShot = demoShot.Substring(0, e); }
+            if (url.Contains("bbcrit=1")) critterMode = true;
+            Debug.Log("Balloon Blast: demo mode, shot " + demoShot + (critterMode ? ", critters" : ""));
+        }
 #if ENABLE_INPUT_SYSTEM
         Debug.Log("Balloon Blast: ENABLE_INPUT_SYSTEM defined");
 #endif
@@ -107,7 +118,42 @@ public class Game : MonoBehaviour
             UIK.Label(arrowR[i].transform, ">", 34, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(38, 60), Color.white);
         }
         lobbyStatus = UIK.Label(r, "", 30, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, -90), new Vector2(1100, 60), new Color(0.6f, 1f, 0.6f));
+        creditsBtn = UIK.Img(r, null, new Color(0f, 0f, 0f, 0.5f), new Vector2(0f, 1f), new Vector2(84, -26), new Vector2(150, 34));
+        var cl = UIK.Label(creditsBtn.transform, "CREDITS (C)", 17, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(150, 34), new Color(0.8f, 0.95f, 1f));
+        UIK.Stretch(cl.rectTransform);
         lobbyHint = UIK.Label(r, "Gamepad: L-stick move | R-stick look | RT fire | LT aim | A jump | X reload\nKeyboard: WASD | mouse look | click fire | right-click aim | Space jump | R reload\nTouch: left stick | drag right side to look | FIRE / ADS / JUMP / RELOAD\nFigures: Y / F / tap the FIGURES bar.  Critters: pick with D-pad / Left-Right arrows / tap < >.  Sound: M / SOUND button", 20, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, -208), new Vector2(1150, 130), new Color(1, 1, 1, 0.85f));
+    }
+
+    void BuildCredits()
+    {
+        Transform r = lobbyCanvas.transform;
+        creditsPanel = UIK.Img(r, null, new Color(0.02f, 0.04f, 0.07f, 0.95f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1180, 640));
+        var ct = UIK.Label(creditsPanel.transform, CreditsText, 18, TextAnchor.MiddleLeft, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1120, 610), Color.white);
+        ct.supportRichText = true;
+        ct.horizontalOverflow = HorizontalWrapMode.Wrap;
+        UIK.Stretch(ct.rectTransform);
+        ct.rectTransform.offsetMin = new Vector2(30, 14); ct.rectTransform.offsetMax = new Vector2(-30, -14);
+        creditsPanel.gameObject.SetActive(false);
+    }
+
+    Image creditsBtn, creditsPanel;
+    const string CreditsText =
+        "<size=30><color=#ffd84a><b>CREDITS</b></color></size>\n\n" +
+        "<b>Trees, pines, bushes, rocks, grass, ferns, flowers</b>: Stylized Nature MegaKit by Quaternius (quaternius.com), CC0.\n" +
+        "<b>Sky</b> (Kloofendal 48d Partly Cloudy Pure Sky) and <b>grass / dirt / wood / barn / metal roof textures</b>: Poly Haven\n" +
+        "   (polyhaven.com), CC0.\n" +
+        "<b>Soldiers</b>: Mixamo X Bot via the Babylon.js asset library (assets.babylonjs.com, loaded at runtime).\n" +
+        "<b>Airsoft rifle, balloons, frogs / cats / dogs, fort, barn, hay, crates, log</b>: modelled for this game (no logos).\n" +
+        "Sounds and music are synthesised in the game.\n\n" +
+        "Full licence notes: similarize.com/games/balloon-blast-unity/LICENSES.txt\n\n" +
+        "<color=#9fd8ff>Press C, Esc or tap to close</color>";
+
+    void CreditsToggle(bool? on = null)
+    {
+        if (creditsPanel == null) BuildCredits();
+        bool v = on ?? !creditsPanel.gameObject.activeSelf;
+        creditsPanel.gameObject.SetActive(v);
+        creditsPanel.transform.SetAsLastSibling();
     }
 
     void RefreshLobbyUI()
@@ -202,6 +248,17 @@ public class Game : MonoBehaviour
         overview.rect = new Rect(0, 0, 1, 1);
         overview.enabled = true;
 
+        if (Kb.CDown()) CreditsToggle();
+        if (creditsPanel != null && creditsPanel.gameObject.activeSelf)
+        {
+            if (Kb.EscDown() || Kb.TouchesBegan().Count > 0 || Kb.MouseLeftDown()) CreditsToggle(false);
+            RefreshLobbyUI();
+            return;
+        }
+        if (Kb.MouseLeftDown() && Cursor.lockState != CursorLockMode.Locked && Hit(creditsBtn, Kb.MousePos())) { CreditsToggle(true); return; }
+        if (Demo && slots.Count == 0 && Time.timeSinceLevelLoad > 4.5f) { Join(InputKind.Keyboard, null); Cursor.lockState = CursorLockMode.None; }
+        if (Demo && slots.Count > 0 && Time.unscaledTime - slots[0].joinTime > 1f) { StartMatch(); return; }
+
         // keyboard
         if (Kb.EnterDown())
         {
@@ -286,6 +343,7 @@ public class Game : MonoBehaviour
         foreach (Vector2 pos in Kb.TouchesBegan())
         {
             if (Sfx.ButtonHit(pos)) continue;   // SOUND button
+            if (Hit(creditsBtn, pos)) { CreditsToggle(true); continue; }
             if (Hit(figImg, pos)) { ToggleFigures(); continue; }
             bool used = false;
             if (critterMode)
@@ -394,6 +452,7 @@ public class Game : MonoBehaviour
         state = State.Lobby;
         autoStartT = slots.Count > 0 ? 20f : -1f;
         lobbyCanvas.enabled = true;
+        Look.ApplyViews(1, new[] { overview });
     }
 
     void StartMatch()
@@ -437,6 +496,7 @@ public class Game : MonoBehaviour
                 sl.soldier = s;
                 s.slot = sl;
                 SetupCamera(sl);
+                if (Demo) go.AddComponent<BotBrain>();   // demo: P1 plays itself
             }
             else go.AddComponent<BotBrain>();
         }
@@ -459,36 +519,23 @@ public class Game : MonoBehaviour
         cam.cullingMask = mask;
         sl.cam = cam;
 
-        // first-person airsoft rifle
+        // first-person airsoft rifle (mesh + gloved hands; sleeves in the seat colour, or paws / fur for critters)
         var vm = new GameObject("ViewModel").transform;
         vm.SetParent(cg.transform, false);
-        Color dark = new Color(0.16f, 0.17f, 0.19f);
-        Material dm = Mats.Lit(dark);
-        GameObject[] parts =
-        {
-            Mats.Prim(PrimitiveType.Cube, vm, new Vector3(0f, 0f, 0f), new Vector3(0.06f, 0.08f, 0.5f), dm, false),
-            Mats.Prim(PrimitiveType.Cube, vm, new Vector3(0f, -0.08f, -0.05f), new Vector3(0.04f, 0.12f, 0.06f), dm, false),
-            Mats.Prim(PrimitiveType.Cube, vm, new Vector3(0f, -0.07f, 0.1f), new Vector3(0.035f, 0.13f, 0.06f), Mats.Lit(sl.soldier.color), false),
-            Mats.Prim(PrimitiveType.Cube, vm, new Vector3(0f, 0.055f, 0.02f), new Vector3(0.025f, 0.03f, 0.14f), dm, false),
-            Mats.Prim(PrimitiveType.Cube, vm, new Vector3(0f, 0f, 0.27f), new Vector3(0.065f, 0.065f, 0.05f), Mats.Lit(new Color(1f, 0.45f, 0.05f)), false)
-        };
-        foreach (var p in parts)
-        {
-            p.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            p.layer = 24 + sl.index;
-        }
-        vm.gameObject.layer = 24 + sl.index;
-        sl.viewModel = vm;
-
+        Color glove = new Color(0.15f, 0.16f, 0.18f), sleeve = Color.Lerp(sl.soldier.color, new Color(0.3f, 0.32f, 0.3f), 0.35f);
         if (sl.soldier.critter != null)
         {
-            // paw on the grip, tinted like the critter
             CritterDef cd = sl.soldier.critter.def;
-            Color paw = cd.look == CritterLook.Socks ? cd.accent : cd.main;
-            GameObject pw = Mats.Prim(PrimitiveType.Sphere, vm, new Vector3(0.01f, -0.1f, 0.04f), new Vector3(0.1f, 0.09f, 0.11f), Mats.Lit(paw), false);
-            pw.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            pw.layer = 24 + sl.index;
+            glove = cd.look == CritterLook.Socks ? cd.accent : cd.kind == CritterKind.Frog ? Color.Lerp(cd.main, Color.black, 0.14f) : cd.main;
+            sleeve = cd.main;
         }
+        Transform vmMuzzle;
+        Gear.Rifle(vm, Vector3.zero, 1f, sl.soldier.color, true, glove, sleeve, out vmMuzzle);
+        Mats.SetLayer(vm.gameObject, 24 + sl.index);
+        Mats.NoShadows(vm.gameObject);
+        foreach (var rr in vm.GetComponentsInChildren<Renderer>()) rr.receiveShadows = false;
+        sl.viewModel = vm;
+        sl.soldier.viewMuzzle = vmMuzzle;
 
         string hudName = "P" + (sl.index + 1) + (sl.soldier.critter != null ? "  " + sl.soldier.nick : "");
         sl.hud = new Hud(cam, hudName, sl.soldier.color, 10 + sl.index);
@@ -511,6 +558,10 @@ public class Game : MonoBehaviour
         }
         overview.enabled = n == 3;
         overview.rect = new Rect(0.5f, 0f, 0.5f, 0.5f);
+        var cams = new List<Camera>();
+        foreach (var sl in slots) if (sl.cam != null) cams.Add(sl.cam);
+        cams.Add(overview);
+        Look.ApplyViews(n + (n == 3 ? 1 : 0), cams);
     }
 
     void StartRound()
@@ -693,8 +744,12 @@ public class Game : MonoBehaviour
             if (sl.viewModel != null)
             {
                 sl.viewModel.gameObject.SetActive(s.alive && sl.cam.transform.parent == s.eye);
-                Vector3 hip = new Vector3(0.17f, -0.16f, 0.36f), aim = new Vector3(0f, -0.085f, 0.3f);
-                sl.viewModel.localPosition = Vector3.Lerp(hip, aim, s.adsBlend) + new Vector3(0f, 0f, -0.04f * s.kick);
+                Vector3 hip = new Vector3(0.13f, -0.2f, 0.2f), aim = new Vector3(0f, -0.157f, 0.13f);
+                float bob = Mathf.Clamp01(s.HSpeed / 5f) * (1f - s.adsBlend * 0.8f);
+                float tt = Time.time * 9f;
+                Vector3 sway = new Vector3(Mathf.Sin(tt * 0.5f) * 0.008f, Mathf.Abs(Mathf.Sin(tt * 0.5f)) * 0.008f, 0f) * bob;
+                sl.viewModel.localPosition = Vector3.Lerp(hip, aim, s.adsBlend) + sway + new Vector3(0f, 0f, -0.035f * s.kick);
+                sl.viewModel.localRotation = Quaternion.Euler(-2.5f * s.kick, Mathf.Lerp(-2f, 0f, s.adsBlend), 0f);
             }
 
             string top = "ROUND " + round + "  |  " + alive + " LEFT  |  " + clock + "\nWINS  " + WinsLine(s);
@@ -718,6 +773,81 @@ public class Game : MonoBehaviour
                 center = "Click to aim with the mouse";
             sl.hud.Tick(s, top, center, feed, state == State.Playing, dt);
         }
+        if (Demo) DemoCamera(dt);
+    }
+
+    // ---------------- demo / screenshot mode ----------------
+    // ?bbdemo=1 in the page URL: joins keyboard P1 after ~5 s in the lobby, starts, P1 plays itself (BotBrain) and nobody
+    // goes out (popped balloons refill). &bbshot=<scene> pins P1's camera: fp (first person), soldier, pop (close-up of
+    // a bot whose balloons keep popping), field, fort, barn; &bbshot=tour cycles them every 9 s. &bbcrit=1 = Critters.
+    // For work/webgl-probe/probe.py screenshots. Logs "BBDEMO scene <name>" whenever the view changes.
+    public static bool Demo;
+    static string demoShot = "tour";
+    static readonly string[] Tour = { "fp", "soldier", "pop", "field", "fort", "barn" };
+    string demoScene = "";
+    float demoT, demoPopT;
+
+    void DemoCamera(float dt)
+    {
+        if (slots.Count == 0 || slots[0].cam == null || soldiers.Count < 2) return;
+        if (state == State.Countdown) return;
+        demoT += dt;
+        string want = demoShot;
+        if (demoShot == "tour" || demoShot == "") want = Tour[Mathf.FloorToInt(demoT / 9f) % Tour.Length];
+        Camera cam = slots[0].cam;
+        if (want != demoScene) { demoScene = want; demoPopT = 1f; Debug.Log("BBDEMO scene " + want + " t=" + Time.timeSinceLevelLoad.ToString("0.0")); }
+        if (slots[0].hud != null && slots[0].hud.canvas != null) slots[0].hud.canvas.enabled = want == "fp";
+        if (want == "fp")
+        {
+            if (cam.transform.parent != slots[0].soldier.eye)
+            {
+                cam.transform.SetParent(slots[0].soldier.eye, false);
+                cam.transform.localPosition = Vector3.zero; cam.transform.localRotation = Quaternion.identity;
+            }
+            return;
+        }
+        if (cam.transform.parent != null) cam.transform.SetParent(null, true);
+        cam.fieldOfView = 55f;
+        Soldier t = soldiers[1];
+        Vector3 pos = cam.transform.position, look = World.center;
+        switch (want)
+        {
+            case "soldier":
+            case "pop":
+                {
+                    float dist = want == "pop" ? 2.6f : 3.6f;
+                    Vector3 f = t.transform.forward;
+                    pos = t.transform.position + f * dist + t.transform.right * (want == "pop" ? 0.6f : 1.2f) + Vector3.up * (want == "pop" ? 2.2f : 1.7f);
+                    look = want == "pop" ? t.AimPoint() : t.transform.position + Vector3.up * 1.5f;
+                    if (want == "pop")
+                    {
+                        demoPopT -= dt;
+                        if (demoPopT <= 0f)
+                        {
+                            demoPopT = 1.5f;
+                            foreach (var b in t.balloons) if (!b.popped) { t.PopBalloon(b, soldiers[0]); break; }
+                        }
+                    }
+                    break;
+                }
+            case "field":
+                {
+                    Vector3 d = (World.BarnPos - World.FortPos); d.y = 0f; d = d.sqrMagnitude > 1f ? d.normalized : Vector3.forward;
+                    pos = World.FortPos - d * 38f + Vector3.Cross(Vector3.up, d) * 14f + Vector3.up * 16f;
+                    look = Vector3.Lerp(World.FortPos, World.BarnPos, 0.45f) + Vector3.up * 1f;
+                    break;
+                }
+            case "fort":
+                pos = World.FortPos + new Vector3(13f, 5.5f, -12f); look = World.FortPos + Vector3.up * 1f; break;
+            case "barn":
+                {
+                    Quaternion r = Quaternion.Euler(0f, World.BarnYaw, 0f);
+                    pos = World.BarnPos + r * new Vector3(9f, 3.2f, 17f); look = World.BarnPos + Vector3.up * 2.4f; break;
+                }
+        }
+        pos.y = Mathf.Max(pos.y, World.Ground(pos.x, pos.z) + 1.2f);
+        cam.transform.position = pos;
+        cam.transform.rotation = Quaternion.LookRotation(look - pos);
     }
 
     string WinsLine(Soldier me)

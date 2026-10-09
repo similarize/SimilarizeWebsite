@@ -157,6 +157,27 @@ public static class BuildScript
         return SaveAsset(m, file);
     }
 
+    static Texture2D LoadTex(string path, bool mips, TextureWrapMode wrapU, TextureWrapMode wrapV, int max)
+    {
+        var imp = AssetImporter.GetAtPath(path) as TextureImporter;
+        if (imp == null) { Debug.LogWarning("LoadTex: no importer for " + path); return AssetDatabase.LoadAssetAtPath<Texture2D>(path); }
+        bool ch = false;
+        if (imp.mipmapEnabled != mips) { imp.mipmapEnabled = mips; ch = true; }
+        if (imp.wrapModeU != wrapU) { imp.wrapModeU = wrapU; ch = true; }
+        if (imp.wrapModeV != wrapV) { imp.wrapModeV = wrapV; ch = true; }
+        if (imp.maxTextureSize != max) { imp.maxTextureSize = max; ch = true; }
+        if (ch) imp.SaveAndReimport();
+        return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+    }
+
+    static Material ShaderMat(string shader, string file)
+    {
+        Shader sh = Shader.Find(shader);
+        if (sh == null) { Debug.LogWarning("BuildScript: shader missing " + shader); return null; }
+        Debug.Log("BuildScript: " + shader + " shader");
+        return SaveAsset(new Material(sh), file);
+    }
+
     static string CreateScene()
     {
         Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
@@ -165,13 +186,39 @@ public static class BuildScript
         lit.SetFloat("_Glossiness", 0.15f);
         Material unlit = MakeMat("Unlit/Color", "Standard", "Unlit.mat");
         Material fx = MakeMat("Sprites/Default", "Unlit/Color", "Fx.mat");
-        Material sky = MakeMat("Skybox/Procedural", "Skybox/Procedural", "Sky.mat");
-        sky.SetFloat("_SunSize", 0.045f);
-        sky.SetFloat("_SunSizeConvergence", 5f);
-        sky.SetFloat("_AtmosphereThickness", 0.85f);
-        sky.SetColor("_SkyTint", new Color(0.45f, 0.58f, 0.78f));
-        sky.SetColor("_GroundColor", new Color(0.42f, 0.45f, 0.40f));
-        sky.SetFloat("_Exposure", 1.3f);
+        // Poly Haven CC0 HDRI (Kloofendal 48d partly cloudy, tonemapped) on Skybox/Panoramic; procedural fallback
+        Material sky = null;
+        Texture2D skyTex = LoadTex("Assets/Textures/sky_pano.jpg", false, TextureWrapMode.Repeat, TextureWrapMode.Clamp, 2048);
+        Shader pano = Shader.Find("Skybox/Panoramic");
+        if (skyTex != null && pano != null)
+        {
+            sky = SaveAsset(new Material(pano), "Sky.mat");
+            sky.SetTexture("_MainTex", skyTex);
+            sky.SetFloat("_Mapping", 1f);
+            sky.SetFloat("_ImageType", 0f);
+            sky.SetFloat("_MirrorOnBack", 0f);
+            sky.SetFloat("_Layout", 0f);
+            sky.SetFloat("_Exposure", 1.05f);
+            sky.SetFloat("_Rotation", 18f);
+            sky.EnableKeyword("_MAPPING_LATITUDE_LONGITUDE_LAYOUT");
+            sky.DisableKeyword("_MAPPING_6_FRAMES_LAYOUT");
+            Debug.Log("BuildScript: HDRI sky");
+        }
+        else
+        {
+            Debug.LogWarning("BuildScript: HDRI sky missing - procedural");
+            sky = MakeMat("Skybox/Procedural", "Skybox/Procedural", "Sky.mat");
+            sky.SetFloat("_SunSize", 0.045f);
+            sky.SetFloat("_SunSizeConvergence", 5f);
+            sky.SetFloat("_AtmosphereThickness", 0.85f);
+            sky.SetColor("_SkyTint", new Color(0.45f, 0.58f, 0.78f));
+            sky.SetColor("_GroundColor", new Color(0.42f, 0.45f, 0.40f));
+            sky.SetFloat("_Exposure", 1.3f);
+        }
+        // graphics overhaul shaders (Assets/Shaders): critter skin, foliage, balloons
+        Material skin = ShaderMat("FF/Skin", "Skin.mat");
+        Material foliage = ShaderMat("FF/Foliage", "Foliage.mat");
+        Material balloon = ShaderMat("BB/Balloon", "Balloon.mat");
         EditorUtility.SetDirty(sky);
         EditorUtility.SetDirty(lit);
 
@@ -218,6 +265,9 @@ public static class BuildScript
         b.fxMat = fx;
         b.terrain = terrain;
         b.sun = sun;
+        b.skinMat = skin;
+        b.foliageMat = foliage;
+        b.balloonMat = balloon;
 
         EditorSceneManager.MarkSceneDirty(scene);
         if (!EditorSceneManager.SaveScene(scene, ScenePath)) throw new Exception("Failed to save scene");
@@ -293,8 +343,12 @@ public static class BuildScript
             }
         td.SetHeights(0, 0, h);
 
-        Texture2D grass = MakeTex("GrassTex", new Color(0.26f, 0.42f, 0.13f), new Color(0.47f, 0.60f, 0.22f), 7, 0.06f);
-        Texture2D dirt = MakeTex("DirtTex", new Color(0.40f, 0.32f, 0.22f), new Color(0.58f, 0.50f, 0.36f), 11, 0.03f);
+        // Poly Haven CC0 based textures (same as Four Froggies, work/lb-gfx/ff/make_ff_tex.py); generated noise if missing
+        Texture2D grass = LoadTex("Assets/Textures/grass.jpg", true, TextureWrapMode.Repeat, TextureWrapMode.Repeat, 512);
+        Texture2D dirt = LoadTex("Assets/Textures/dirt.jpg", true, TextureWrapMode.Repeat, TextureWrapMode.Repeat, 512);
+        Debug.Log("BuildScript: terrain textures " + (grass != null) + " " + (dirt != null));
+        if (grass == null) grass = MakeTex("GrassTex", new Color(0.26f, 0.42f, 0.13f), new Color(0.47f, 0.60f, 0.22f), 7, 0.06f);
+        if (dirt == null) dirt = MakeTex("DirtTex", new Color(0.40f, 0.32f, 0.22f), new Color(0.58f, 0.50f, 0.36f), 11, 0.03f);
         var gl = new TerrainLayer { diffuseTexture = grass, tileSize = new Vector2(6f, 6f) };
         var dl = new TerrainLayer { diffuseTexture = dirt, tileSize = new Vector2(5f, 5f) };
         SaveAsset(gl, "Grass.terrainlayer");
@@ -305,8 +359,8 @@ public static class BuildScript
         for (int y = 0; y < 128; y++)
             for (int x = 0; x < 128; x++)
             {
-                float d = Mathf.PerlinNoise(x * 0.07f + 3f, y * 0.07f + 7f);
-                float w = Mathf.Clamp01((d - 0.6f) * 4f);
+                float d = Mathf.PerlinNoise(x * 0.07f + 3f, y * 0.07f + 7f) * 0.8f + Mathf.PerlinNoise(x * 0.23f + 1f, y * 0.23f + 5f) * 0.2f;
+                float w = Mathf.Clamp01((d - 0.58f) * 3.5f);
                 am[y, x, 0] = 1f - w;
                 am[y, x, 1] = w;
             }

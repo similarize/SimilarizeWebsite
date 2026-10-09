@@ -122,14 +122,89 @@ public class Critter : MonoBehaviour
         def = d;
         seed = Random.value * 10f;
         bob = Node(transform, "Bob", Vector3.zero);
-        switch (d.kind)
-        {
-            case CritterKind.Frog: BuildFrog(); break;
-            case CritterKind.Cat: BuildCat(); break;
-            default: BuildDog(); break;
-        }
+        if (!BuildMesh())
+            switch (d.kind)
+            {
+                case CritterKind.Frog: BuildFrog(); break;
+                case CritterKind.Cat: BuildCat(); break;
+                default: BuildDog(); break;
+            }
         if (tail != null) tailBase = tail.localRotation;
         if (tail2 != null) tail2Base = tail2.localRotation;
+    }
+
+    // ---------- graphics overhaul: smooth stylised meshes (work/lb-gfx/bb/build_critters.py) ----------
+    public const float GunScale = 0.8f;                                     // same as GUN_SCALE in build_critters.py
+    static readonly Vector3 GripR = new Vector3(0.1f, -0.13f, 0.26f);       // GRIP_R: rifle origin in aim-pivot space
+    static readonly Color Cream = new Color(0.98f, 0.97f, 0.78f);
+    public Transform muzzle;
+
+    string PackName
+    {
+        get
+        {
+            if (def.kind == CritterKind.Frog) return "bbfrog";
+            if (def.kind == CritterKind.Cat) return "bbcat";
+            return def.look == CritterLook.Shepherd ? "bbshepherd" : "bbdachs";
+        }
+    }
+
+    Color EyeColor
+    {
+        get
+        {
+            if (def.kind == CritterKind.Frog) return new Color(0.85f, 0.62f, 0.12f);
+            if (def.kind == CritterKind.Dog) return new Color(0.42f, 0.24f, 0.1f);
+            return def.look == CritterLook.Spots ? new Color(0.35f, 0.65f, 1f) : def.look == CritterLook.Stripes ? new Color(1f, 0.8f, 0.15f) : new Color(0.5f, 0.88f, 0.3f);
+        }
+    }
+
+    Material MeshMat(LBPack.Mat m)
+    {
+        Color main = def.main, acc = def.accent;
+        bool socks = def.look == CritterLook.Socks;
+        switch (m.name)
+        {
+            case "skin": return Mats.Skin(main, 0.45f);
+            case "fur": return Mats.Skin(main, 0.22f);
+            case "belly": return Mats.Skin(Color.Lerp(main, Cream, 0.62f), 0.35f);
+            case "toe": return Mats.Skin(Color.Lerp(main, Color.black, 0.14f), 0.4f);
+            case "paw":
+                if (def.kind == CritterKind.Frog) return Mats.Skin(Color.Lerp(main, Color.black, 0.14f), 0.4f);
+                return Mats.Skin(socks ? acc : Color.Lerp(main, Color.white, 0.08f), 0.22f);
+            case "chest":
+                if (socks) return Mats.Skin(acc, 0.22f);
+                if (def.look == CritterLook.Shepherd) return Mats.Skin(Color.Lerp(main, new Color(1f, 0.88f, 0.62f), 0.55f), 0.22f);
+                return Mats.Skin(Color.Lerp(main, Color.white, 0.6f), 0.22f);
+            case "tailtip": return Mats.Skin(socks || def.look == CritterLook.Spots || def.look == CritterLook.Stripes ? acc : main, 0.22f);
+            case "spot": return Mats.Skin(def.look == CritterLook.Spots ? acc : main, 0.22f);
+            case "stripe": return Mats.Skin(def.look == CritterLook.Stripes ? acc : main, 0.22f);
+            case "saddle": return Mats.Skin(def.look == CritterLook.Shepherd ? acc : Color.Lerp(main, Color.black, 0.3f), 0.25f);
+            case "ear": return Mats.Skin(Color.Lerp(main, Color.black, 0.35f), 0.22f);
+            case "innerear": return Mats.Skin(Pink, 0.3f);
+            case "iris": return Mats.Paint(EyeColor, 0.9f);
+            case "whisker": return Mats.Lit(def.main.grayscale > 0.6f ? new Color(0.25f, 0.22f, 0.22f) : new Color(0.95f, 0.95f, 0.95f));
+            case "nose": return Mats.Skin(def.kind == CritterKind.Dog ? new Color(0.92f, 0.45f, 0.5f) : Pink, 0.6f);
+        }
+        return null;
+    }
+
+    bool BuildMesh()
+    {
+        LBPack p = LBPack.Get(PackName);
+        if (p == null || !p.Has("body") || !p.Has("armR") || !p.Has("armL")) return false;
+        System.Func<LBPack.Mat, Material> mf = MeshMat;
+        p.Spawn("body", bob, Vector3.zero, 1f, def.main, false, mf);
+        legL = p.Spawn("legL", bob, Vector3.zero, 1f, def.main, false, mf);
+        legR = p.Spawn("legR", bob, Vector3.zero, 1f, def.main, false, mf);
+        if (p.Has("tail")) tail = p.Spawn("tail", bob, Vector3.zero, 1f, def.main, false, mf);
+        Vector3 piv = p.parts["armR"].pivot;
+        armPivot = Node(bob, "Arms", piv);
+        p.Spawn("armR", armPivot, -piv, 1f, def.main, false, mf);
+        p.Spawn("armL", armPivot, -piv, 1f, def.main, false, mf);
+        Gear.Rifle(armPivot, GripR, GunScale, s.color, false, Color.black, Color.black, out muzzle);
+        foreach (var r in GetComponentsInChildren<Renderer>()) if (Look.Mobile) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        return true;
     }
 
     void BuildFrog()

@@ -93,6 +93,13 @@ public static class Kb
         try { return Input.GetKeyDown(KeyCode.F); } catch { return false; }
     }
 
+    public static bool CDown()
+    {
+        Keyboard k = Keyboard.current;
+        if (k != null) return k.cKey.wasPressedThisFrame;
+        try { return Input.GetKeyDown(KeyCode.C); } catch { return false; }
+    }
+
     public static bool LeftDown()
     {
         Keyboard k = Keyboard.current;

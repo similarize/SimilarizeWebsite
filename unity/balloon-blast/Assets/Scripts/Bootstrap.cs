@@ -8,35 +8,40 @@ public class Bootstrap : MonoBehaviour
     public Material fxMat;
     public Terrain terrain;
     public Light sun;
+    public Material skinMat, foliageMat, balloonMat;   // graphics overhaul (FF/Skin, FF/Foliage, BB/Balloon); may be null
 
     public static Bootstrap I;
 
     void Awake()
     {
         I = this;
+        Application.targetFrameRate = 60;
         QualitySettings.vSyncCount = 0;
         QualitySettings.shadows = ShadowQuality.All;
         QualitySettings.shadowResolution = ShadowResolution.Medium;
-        QualitySettings.shadowProjection = ShadowProjection.StableFit;
-        QualitySettings.shadowDistance = 70f;
-        QualitySettings.shadowCascades = 2;
-        QualitySettings.pixelLightCount = 1;
-        QualitySettings.antiAliasing = 2;
-        if (Application.isMobilePlatform)
-        {
-            QualitySettings.shadowDistance = 40f;
-            QualitySettings.shadowResolution = ShadowResolution.Low;
-            QualitySettings.antiAliasing = 0;
-        }
+        QualitySettings.shadowDistance = 60f;
+        QualitySettings.lodBias = 1f;
         if (sun != null) sun.shadows = LightShadows.Soft;
         if (terrain == null) terrain = Terrain.activeTerrain;
+        if (terrain != null)
+        {
+            terrain.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            terrain.heightmapPixelError = 5f;
+        }
+        Debug.Log("Balloon Blast: graphics overhaul (skin " + (skinMat != null) + ", foliage " + (foliageMat != null) + ", balloon " + (balloonMat != null) + ")");
 
         Mats.Init(litMat, unlitMat, fxMat);
+        Mats.SkinBase = skinMat; Mats.FoliageBase = foliageMat; Mats.BalloonBase = balloonMat;
+        Look.Init(sun);
+        Look.ApplyViews(1, null);
+        float t0 = Time.realtimeSinceStartup;
         World.Build(terrain, System.Environment.TickCount);
+        Debug.Log("Balloon Blast: field built in " + Mathf.RoundToInt((Time.realtimeSinceStartup - t0) * 1000f) + " ms");
         FX.Init();
         Sfx.Init();
         gameObject.AddComponent<BBs>();
         gameObject.AddComponent<Game>();
         ModelLoader.Begin();
+        StartCoroutine(Look.BuildProbe(World.center));
     }
 }

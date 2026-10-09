@@ -1,0 +1,25 @@
+Balloon Blast Airsoft (Unity) - third-party assets and licences
+================================================================
+
+1. Sky + textures - Poly Haven (https://polyhaven.com), CC0 1.0 (public domain):
+   - HDRI "Kloofendal 48d Partly Cloudy (Pure Sky)" by Greg Zaal and Jarod Guest (sky), tonemapped to a JPG.
+   - Textures sparse_grass + leafy_grass (recoloured field grass), park_dirt (dirt patches), weathered_planks (crates,
+     pallets, fort rails), weathered_plank_siding (barn, painted red), box_profile_metal_sheet (barn roof).
+   https://polyhaven.com/license - "All assets on Poly Haven are licensed as CC0 ... You can use them for any purpose,
+   including commercial work, without attribution." Credited anyway with thanks.
+
+2. Trees, pines, bushes, rocks, grass tufts, ferns, flowers - "Stylized Nature MegaKit" by Quaternius
+   (https://quaternius.com), via https://opengameart.org/content/stylized-nature-megakit.
+   CC0 1.0 Universal (public domain dedication). Decimated and converted for WebGL; textures resized. The fallen log
+   uses the kit's bark texture.
+
+3. Soldier figures - "X Bot" character (Mixamo, Adobe), as hosted in the Babylon.js asset library
+   (https://assets.babylonjs.com/meshes/Xbot.glb), loaded at runtime and recoloured. Unchanged from earlier builds.
+
+4. Modelled for this game (no third-party mesh or texture): the airsoft rifle and gloved hands (no markings), the
+   balloons, the Critters (four frogs, four cats, a German shepherd and a dachshund; the frog follows the Four Froggies
+   frog design), the log fort, barn, sandbag nests, hay bales (generated straw textures), crates, pallets, barrels,
+   tyres, the fallen log and its end-grain texture, the confetti / pop effects. Sounds and music are synthesised in
+   the game at start-up.
+
+CC0 1.0 Universal: https://creativecommons.org/publicdomain/zero/1.0/legalcode
