@@ -51,44 +51,73 @@ public class StoryMech : Vehicle
         Material dark = Mats.Lit(new Color(0.15f, 0.16f, 0.18f));
         Material glow = Mats.Unlit(Color.Lerp(Froggies.Color(owner), Color.white, 0.5f));
         Transform t = go.transform;
-        m.hips = Mats.Node(t, "Hips", new Vector3(0f, H * 0.42f, 0f));
-        for (int s = -1; s <= 1; s += 2)
+        LBPack pk = LBPack.Get("storymech");
+        bool packed = pk != null && pk.Has("hips") && pk.Has("torso") && pk.Has("legL") && pk.Has("armL") && pk.Has("head");
+        if (packed)
         {
-            Transform leg = Mats.Node(m.hips, s < 0 ? "LegL" : "LegR", new Vector3(H * 0.1f * s, 0f, 0f));
-            Mats.Prim(PrimitiveType.Cube, leg, new Vector3(0f, -H * 0.11f, 0f), new Vector3(H * 0.11f, H * 0.22f, H * 0.12f), body);
-            Mats.Prim(PrimitiveType.Cube, leg, new Vector3(0f, -H * 0.23f, H * 0.02f), new Vector3(H * 0.12f, H * 0.05f, H * 0.12f), dark);    // knee
-            Mats.Prim(PrimitiveType.Cube, leg, new Vector3(0f, -H * 0.33f, 0f), new Vector3(H * 0.1f, H * 0.18f, H * 0.11f), trim);
-            Mats.Prim(PrimitiveType.Cube, leg, new Vector3(0f, -H * 0.41f, H * 0.04f), new Vector3(H * 0.14f, H * 0.03f, H * 0.22f), dark);   // foot
-            if (s < 0) m.legL = leg; else m.legR = leg;
+            // ffu9: armoured froggy mech mesh (work/lb-gfx/ff/build_storymech.py), normalised to height 1 and scaled to H.
+            // Animated nodes stay unscaled at the old rig positions; each part's mesh hangs under its node.
+            Color bandC = Mats.Hex(BandHex[band]);
+            System.Func<string, Transform, Transform> P = (part, node) => pk.Spawn(part, node, -pk.parts[part].pivot * H, H, bandC);
+            Vector3 hipsP = pk.parts["hips"].pivot, torsoP = pk.parts["torso"].pivot;
+            m.hips = Mats.Node(t, "Hips", hipsP * H); P("hips", m.hips);
+            m.legL = Mats.Node(m.hips, "LegL", (pk.parts["legL"].pivot - hipsP) * H); P("legL", m.legL);
+            m.legR = Mats.Node(m.hips, "LegR", (pk.parts["legR"].pivot - hipsP) * H); P("legR", m.legR);
+            m.torso = Mats.Node(m.hips, "Torso", (torsoP - hipsP) * H); P("torso", m.torso);
+            m.armL = Mats.Node(m.torso, "ArmL", (pk.parts["armL"].pivot - torsoP) * H); P("armL", m.armL);
+            m.armR = Mats.Node(m.torso, "ArmR", (pk.parts["armR"].pivot - torsoP) * H); P("armR", m.armR);
+            m.head = Mats.Node(m.torso, "Head", (pk.parts["head"].pivot - torsoP) * H); P("head", m.head);
+            // trim in the pilot frog's colour, glow a lighter version of it
+            foreach (var r in go.GetComponentsInChildren<MeshRenderer>())
+            {
+                if (r.gameObject.name == "trim") r.sharedMaterial = trim;
+                else if (r.gameObject.name == "glow") r.sharedMaterial = glow;
+            }
+            // already one mesh per material per part; only the big mechs cast shadows (as the merged box mechs did)
+            if (band < 2) foreach (var r in go.GetComponentsInChildren<MeshRenderer>()) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         }
-        m.torso = Mats.Node(m.hips, "Torso", new Vector3(0f, H * 0.04f, 0f));
-        Mats.Prim(PrimitiveType.Cube, m.torso, new Vector3(0f, H * 0.03f, 0f), new Vector3(H * 0.3f, H * 0.08f, H * 0.18f), dark);
-        Mats.Prim(PrimitiveType.Cube, m.torso, new Vector3(0f, H * 0.2f, 0f), new Vector3(H * 0.38f, H * 0.28f, H * 0.22f), body);
-        Mats.Prim(PrimitiveType.Cube, m.torso, new Vector3(0f, H * 0.22f, H * 0.112f), new Vector3(H * 0.2f, H * 0.12f, H * 0.01f), trim);   // chest plate in the frog colour
-        Mats.Prim(PrimitiveType.Sphere, m.torso, new Vector3(0f, H * 0.22f, H * 0.12f), Vector3.one * H * 0.06f, glow);                      // reactor
-        for (int s = -1; s <= 1; s += 2) Mats.Prim(PrimitiveType.Cube, m.torso, new Vector3(H * 0.22f * s, H * 0.33f, 0f), new Vector3(H * 0.14f, H * 0.08f, H * 0.18f), trim);   // shoulders
-        MeshMerge.Merge(m.torso, band >= 2);   // before the arms / head are parented under it, so they stay animated
-        for (int s = -1; s <= 1; s += 2)
+        else
         {
-            Transform arm = Mats.Node(m.torso, s < 0 ? "ArmL" : "ArmR", new Vector3(H * 0.24f * s, H * 0.3f, 0f));
-            Mats.Prim(PrimitiveType.Cube, arm, new Vector3(0f, -H * 0.12f, 0f), new Vector3(H * 0.08f, H * 0.22f, H * 0.09f), body);
-            Mats.Prim(PrimitiveType.Cube, arm, new Vector3(0f, -H * 0.27f, 0f), new Vector3(H * 0.1f, H * 0.1f, H * 0.11f), dark);   // fist
-            if (s < 0) m.armL = arm; else m.armR = arm;
+            m.hips = Mats.Node(t, "Hips", new Vector3(0f, H * 0.42f, 0f));
+            for (int s = -1; s <= 1; s += 2)
+            {
+                Transform leg = Mats.Node(m.hips, s < 0 ? "LegL" : "LegR", new Vector3(H * 0.1f * s, 0f, 0f));
+                Mats.Prim(PrimitiveType.Cube, leg, new Vector3(0f, -H * 0.11f, 0f), new Vector3(H * 0.11f, H * 0.22f, H * 0.12f), body);
+                Mats.Prim(PrimitiveType.Cube, leg, new Vector3(0f, -H * 0.23f, H * 0.02f), new Vector3(H * 0.12f, H * 0.05f, H * 0.12f), dark);    // knee
+                Mats.Prim(PrimitiveType.Cube, leg, new Vector3(0f, -H * 0.33f, 0f), new Vector3(H * 0.1f, H * 0.18f, H * 0.11f), trim);
+                Mats.Prim(PrimitiveType.Cube, leg, new Vector3(0f, -H * 0.41f, H * 0.04f), new Vector3(H * 0.14f, H * 0.03f, H * 0.22f), dark);   // foot
+                if (s < 0) m.legL = leg; else m.legR = leg;
+            }
+            m.torso = Mats.Node(m.hips, "Torso", new Vector3(0f, H * 0.04f, 0f));
+            Mats.Prim(PrimitiveType.Cube, m.torso, new Vector3(0f, H * 0.03f, 0f), new Vector3(H * 0.3f, H * 0.08f, H * 0.18f), dark);
+            Mats.Prim(PrimitiveType.Cube, m.torso, new Vector3(0f, H * 0.2f, 0f), new Vector3(H * 0.38f, H * 0.28f, H * 0.22f), body);
+            Mats.Prim(PrimitiveType.Cube, m.torso, new Vector3(0f, H * 0.22f, H * 0.112f), new Vector3(H * 0.2f, H * 0.12f, H * 0.01f), trim);   // chest plate in the frog colour
+            Mats.Prim(PrimitiveType.Sphere, m.torso, new Vector3(0f, H * 0.22f, H * 0.12f), Vector3.one * H * 0.06f, glow);                      // reactor
+            for (int s = -1; s <= 1; s += 2) Mats.Prim(PrimitiveType.Cube, m.torso, new Vector3(H * 0.22f * s, H * 0.33f, 0f), new Vector3(H * 0.14f, H * 0.08f, H * 0.18f), trim);   // shoulders
+            MeshMerge.Merge(m.torso, band >= 2);   // before the arms / head are parented under it, so they stay animated
+            for (int s = -1; s <= 1; s += 2)
+            {
+                Transform arm = Mats.Node(m.torso, s < 0 ? "ArmL" : "ArmR", new Vector3(H * 0.24f * s, H * 0.3f, 0f));
+                Mats.Prim(PrimitiveType.Cube, arm, new Vector3(0f, -H * 0.12f, 0f), new Vector3(H * 0.08f, H * 0.22f, H * 0.09f), body);
+                Mats.Prim(PrimitiveType.Cube, arm, new Vector3(0f, -H * 0.27f, 0f), new Vector3(H * 0.1f, H * 0.1f, H * 0.11f), dark);   // fist
+                if (s < 0) m.armL = arm; else m.armR = arm;
+            }
+            m.head = Mats.Node(m.torso, "Head", new Vector3(0f, H * 0.4f, 0f));
+            Mats.Prim(PrimitiveType.Cube, m.head, new Vector3(0f, H * 0.04f, 0f), new Vector3(H * 0.16f, H * 0.1f, H * 0.14f), body);
+            Mats.Prim(PrimitiveType.Cube, m.head, new Vector3(0f, H * 0.05f, H * 0.071f), new Vector3(H * 0.13f, H * 0.03f, H * 0.005f), glow);   // visor
+            // frog eyes on top (it's a froggy mech)
+            for (int s = -1; s <= 1; s += 2) Mats.Prim(PrimitiveType.Sphere, m.head, new Vector3(H * 0.05f * s, H * 0.1f, H * 0.02f), Vector3.one * H * 0.05f, trim);
+
         }
-        m.head = Mats.Node(m.torso, "Head", new Vector3(0f, H * 0.4f, 0f));
-        Mats.Prim(PrimitiveType.Cube, m.head, new Vector3(0f, H * 0.04f, 0f), new Vector3(H * 0.16f, H * 0.1f, H * 0.14f), body);
-        Mats.Prim(PrimitiveType.Cube, m.head, new Vector3(0f, H * 0.05f, H * 0.071f), new Vector3(H * 0.13f, H * 0.03f, H * 0.005f), glow);   // visor
-        // frog eyes on top (it's a froggy mech)
-        for (int s = -1; s <= 1; s += 2) Mats.Prim(PrimitiveType.Sphere, m.head, new Vector3(H * 0.05f * s, H * 0.1f, H * 0.02f), Vector3.one * H * 0.05f, trim);
         m.seat = Mats.Node(m.head, "Seat", Vector3.zero);
         m.seatScale = 0.5f;
         // fewer draw calls: merge each moving part, and cull the small ones when they are tiny on screen
-        foreach (Transform part in new[] { m.legL, m.legR, m.armL, m.armR, m.head }) MeshMerge.Merge(part, band >= 2);
+        if (!packed) foreach (Transform part in new[] { m.legL, m.legR, m.armL, m.armR, m.head }) MeshMerge.Merge(part, band >= 2);
         Mats.SetLayer(go, VehicleLayer);
         // name plate on the chest
         var tag = new GameObject("Plate");
         tag.transform.SetParent(m.torso, false);
-        tag.transform.localPosition = new Vector3(0f, H * 0.12f, H * 0.115f);
+        tag.transform.localPosition = packed ? new Vector3(0f, H * 0.115f, H * 0.088f) : new Vector3(0f, H * 0.12f, H * 0.115f);
         var tm = tag.AddComponent<TextMesh>();
         tm.text = Froggies.Names[owner].ToUpper() + "\n" + BandName[band].ToUpper();
         tm.font = UIK.Font; tm.fontSize = 64; tm.characterSize = H * 0.004f; tm.anchor = TextAnchor.MiddleCenter; tm.alignment = TextAlignment.Center;

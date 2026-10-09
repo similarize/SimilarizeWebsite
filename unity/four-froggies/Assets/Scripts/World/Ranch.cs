@@ -645,7 +645,15 @@ public static class Ranch
         img.raycastTarget = false;
         Text t = UIK.Label(go.transform, text, Mathf.RoundToInt(Mathf.Min(height * 50f * 0.55f, 54f)), TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, rt.sizeDelta * 0.95f, Color.white);
         t.supportRichText = true;
-        // back face so it reads from behind as a plain board
+        // board between the two faces
         var back = Mats.Prim(PrimitiveType.Cube, go.transform, new Vector3(0f, 0f, 3f), new Vector3(width * 50f, height * 50f, 4f), Mats.Lit(Color.Lerp(bg, Color.black, 0.4f)));
+        // ffu9: the same text on the back face, so it never reads mirrored (house FRONT DOOR sign from the follow cam)
+        var backFace = UIK.Rect(go.transform, "Back", new Vector2(0.5f, 0.5f), Vector2.zero, rt.sizeDelta);
+        backFace.localPosition = new Vector3(0f, 0f, 6f);
+        backFace.localRotation = Quaternion.Euler(0f, 180f, 0f);
+        var img2 = UIK.Img(backFace, null, bg, new Vector2(0.5f, 0.5f), Vector2.zero, rt.sizeDelta);
+        img2.raycastTarget = false;
+        Text t2 = UIK.Label(backFace, text, t.fontSize, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, rt.sizeDelta * 0.95f, Color.white);
+        t2.supportRichText = true;
     }
 }

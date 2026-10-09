@@ -5,6 +5,8 @@ using UnityEngine;
 public class Tank : GroundVehicle
 {
     public Transform turret, barrel, muzzle;
+    public float recoilDist = 0.6f;                              // ffu9: the Ripsaw M5's 30 mm gun recoils less
+    public Vector3 missileOffset = new Vector3(0.9f, 1.1f, 0f);  // missile pod (turret space)
     float aimYaw, aimPitch = 4f, shellCool, missileCool, recoil;
     bool aimInit;
 
@@ -45,7 +47,7 @@ public class Tank : GroundVehicle
         if (barrel != null)
         {
             barrel.localRotation = Quaternion.Euler(-aimPitch, 0f, 0f);
-            barrel.GetChild(0).localPosition = new Vector3(0f, 0f, 2.1f - recoil * 0.6f);
+            barrel.GetChild(0).localPosition = new Vector3(0f, 0f, 2.1f - recoil * recoilDist);
         }
     }
 
@@ -65,7 +67,7 @@ public class Tank : GroundVehicle
     {
         if (muzzle == null) return;
         Vector3 dir = Quaternion.AngleAxis(-2f, turret.right) * muzzle.forward;
-        Vector3 from = turret.position + turret.up * 1.1f + turret.right * 0.9f;
+        Vector3 from = turret.position + turret.up * missileOffset.y + turret.right * missileOffset.x + turret.forward * missileOffset.z;
         Projectile.Spawn(true, from + dir * 0.5f, dir * 38f + rb.velocity, this);
         FX.Muzzle(from, dir);
         Sfx.PlayAt(Sfx.Missile, from, 0.8f);

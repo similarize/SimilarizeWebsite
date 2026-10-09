@@ -86,6 +86,6 @@ public class Bootstrap : MonoBehaviour
         VehicleFactory.Drone(new Vector3(-30f, roof, -6f), 90f);
         Vector2 pc = Layout.PondC, pr = Layout.PondR;
         VehicleFactory.BoatAt(new Vector3(pc.x - pr.x + 12f, Layout.WaterY - 0.3f, pc.y + 4f), 90f);
-        VehicleFactory.BoatAt(new Vector3(pc.x - pr.x + 16f, Layout.WaterY - 0.3f, pc.y + 9f), 70f);
+        VehicleFactory.BoatAt(new Vector3(pc.x - pr.x + 16f, Layout.WaterY - 0.3f, pc.y + 9f), 70f, new Color(0.85f, 0.22f, 0.2f));
     }
 }

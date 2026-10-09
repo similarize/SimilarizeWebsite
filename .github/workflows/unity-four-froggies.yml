@@ -70,6 +70,7 @@ jobs:
       - name: Set up Unity Hub (pass 1)
         id: unity-hub-install
         continue-on-error: true
+        timeout-minutes: 6
         uses: RageAgainstThePixel/unity-setup@v2
         with:
           version-file: src/unity/four-froggies/ProjectSettings/ProjectVersion.txt
@@ -148,6 +149,8 @@ jobs:
           if [ -d "$OUT/StreamingAssets" ]; then cp -r "$OUT/StreamingAssets" "$GAME_DIR/"; fi
           sed -e "s/__BUILD_NAME__/$NAME/g" -e "s/__BUILD_VERSION__/$VERSION/g" "$GITHUB_WORKSPACE/src/unity/four-froggies/web/index.html" > "$GAME_DIR/index.html"
           if [ -f "$GITHUB_WORKSPACE/src/unity/four-froggies/web/LICENSES.txt" ]; then cp "$GITHUB_WORKSPACE/src/unity/four-froggies/web/LICENSES.txt" "$GAME_DIR/LICENSES.txt"; fi
+          # ffu10: streamed music + ambience (Ogg Vorbis, loaded per stage by Plugins/FFAudio.jslib)
+          if [ -d "$GITHUB_WORKSPACE/src/unity/four-froggies/web/audio" ]; then rm -rf "$GAME_DIR/audio"; cp -r "$GITHUB_WORKSPACE/src/unity/four-froggies/web/audio" "$GAME_DIR/audio"; fi
           git add -A "$GAME_DIR"
           if git diff --cached --quiet; then echo "nothing to publish"; exit 0; fi
           git commit -m "Publish Four Froggies (Unity WebGL) build $VERSION"

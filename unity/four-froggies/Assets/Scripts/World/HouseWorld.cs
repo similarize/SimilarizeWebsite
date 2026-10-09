@@ -173,7 +173,7 @@ public class HouseWorld : MonoBehaviour
         Box(new Vector3(1.85f, 1.6f, 20.1f), new Vector3(0.3f, 3.2f, 0.5f), new Color(0.35f, 0.22f, 0.12f), true, WallLayer);
         var exit = Interact.Add(L(0f, 0.1f, 20.6f), 1.5f, "back outside", f => Exit(f), true);
         exit.enabled = f => f.world == WorldId.House;
-        Ranch.Sign(L(0f, 3.9f, 19.6f), 180f, "<size=26>FRONT DOOR - back to the ranch</size>", new Color(0.2f, 0.35f, 0.15f), 5f, 0.8f);
+        Ranch.Sign(L(0f, 4.0f, 19.6f), 180f, "FRONT DOOR\n<size=17>back to the ranch</size>", new Color(0.2f, 0.35f, 0.15f), 5f, 1.3f);
 
         LivingRoom();
         KitchenRoom();

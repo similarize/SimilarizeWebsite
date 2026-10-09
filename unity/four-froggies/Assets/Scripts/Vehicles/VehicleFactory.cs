@@ -53,6 +53,70 @@ public static class VehicleFactory
         Mats.SetLayer(v.gameObject, Vehicle.VehicleLayer);
     }
 
+    // ffu9 vehicle packs (Resources/LB/<name>.bytes, built by work/lb-gfx/ff/build_*.py): spawn a part so that the
+    // returned node sits at the part's pivot under `parent` (unscaled parent, pack in vehicle space)
+    static Transform Part(LBPack pk, string part, Transform parent, Vector3 parentPivot, Color tint, bool mirror = false)
+    {
+        return pk.Spawn(part, parent, -parentPivot, 1f, tint, mirror);
+    }
+
+    // wheel visual node at `pos` with the pack part "wheel" (or another part) under it; left side mirrored
+    static Transform PackWheel(LBPack pk, Transform t, Vector3 pos, Color tint, string part = "wheel")
+    {
+        Transform wn = Mats.Node(t, "Wheel", pos);
+        pk.Spawn(part, wn, Vector3.zero, 1f, tint, pos.x < 0f);
+        return wn;
+    }
+
+    // per-instance copies of a part's materials (track belts scroll their texture independently)
+    static Material InstanceMat(Transform part)
+    {
+        if (part == null) return null;
+        var r = part.GetComponentInChildren<MeshRenderer>();
+        if (r == null) return null;
+        var m = new Material(r.sharedMaterial);
+        foreach (var rr in part.GetComponentsInChildren<MeshRenderer>()) rr.sharedMaterial = m;
+        return m;
+    }
+
+    // Ripsaw running gear shared by the EV2 and the M5: 12 sprung road wheels, sprockets, idlers, rollers and two
+    // belts whose texture scrolls with each side's ground speed (skid steer: the outer track runs faster)
+    public const float RipTX = 1.22f, RipTilesPerM = 2.9357f;
+    static readonly float[] RipWZ = { -1.75f, -1.05f, -0.35f, 0.35f, 1.05f, 1.75f };
+    static void RipsawGear(GroundVehicle v, LBPack pk, Color tint)
+    {
+        Transform t = v.transform;
+        pk.Spawn("body", t, Vector3.zero, 1f, tint);
+        Transform bl = pk.Spawn("beltL", t, Vector3.zero, 1f, tint), br = pk.Spawn("beltR", t, Vector3.zero, 1f, tint);
+        Material ml = InstanceMat(bl), mr = InstanceMat(br);
+        foreach (float z in RipWZ)
+            for (int sx = -1; sx <= 1; sx += 2)
+            {
+                Vector3 w = new Vector3(RipTX * sx, 0.36f, z);
+                v.AddWheel(w, 0.36f, PackWheel(pk, t, w, tint), false);
+            }
+        var spin = new List<Transform>();
+        for (int sx = -1; sx <= 1; sx += 2)
+        {
+            spin.Add(PackWheel(pk, t, new Vector3(RipTX * sx, 0.62f, -2.45f), tint, "sprocket"));
+            spin.Add(PackWheel(pk, t, new Vector3(RipTX * sx, 0.72f, 2.42f), tint, "idler"));
+            PackWheel(pk, t, new Vector3(RipTX * sx, 0.98f, -0.85f), tint, "roller");
+            PackWheel(pk, t, new Vector3(RipTX * sx, 0.99f, 0.75f), tint, "roller");
+        }
+        float offL = 0f, offR = 0f, angL = 0f, angR = 0f;
+        v.treadMarks = null;
+        v.animate = (fs, dt) =>
+        {
+            float w = v.rb != null ? Vector3.Dot(v.rb.angularVelocity, v.transform.up) : 0f;
+            float vl = fs + w * RipTX, vr = fs - w * RipTX;
+            offL = Mathf.Repeat(offL - vl * dt * RipTilesPerM, 1f); offR = Mathf.Repeat(offR - vr * dt * RipTilesPerM, 1f);
+            if (ml != null) ml.mainTextureOffset = new Vector2(0f, offL);
+            if (mr != null) mr.mainTextureOffset = new Vector2(0f, offR);
+            angL += vl / 0.38f * Mathf.Rad2Deg * dt; angR += vr / 0.38f * Mathf.Rad2Deg * dt;
+            for (int i = 0; i < spin.Count; i++) spin[i].localRotation = Quaternion.Euler(i < 2 ? angL : angR, 0f, 0f);
+        };
+    }
+
     // ---------------- Cybertruck ----------------
     public static GroundVehicle Cybertruck(string title, Vector3 pos, float yaw, Color accent)
     {
@@ -123,6 +187,20 @@ public static class VehicleFactory
         v.maxSpeed = 26f; v.accel = 12f; v.turnRate = 1.6f; v.grip = 6f;
         v.camDistance = 13f; v.camHeight = 3.5f;
         Transform t = v.transform;
+        LBPack pk = LBPack.Get("monster");
+        float r = 0.95f;
+        if (pk != null && pk.Has("body") && pk.Has("wheel"))
+        {
+            Color lime = Mats.Hex("#c3fc40");
+            pk.Spawn("body", t, Vector3.zero, 1f, lime);
+            foreach (var w in new[] { new Vector3(-1.4f, r, 1.75f), new Vector3(1.4f, r, 1.75f), new Vector3(-1.4f, r, -1.6f), new Vector3(1.4f, r, -1.6f) })
+                v.AddWheel(w, r, PackWheel(pk, t, w, lime), w.z > 0f);
+            v.seat = Mats.Node(t, "Seat", new Vector3(-0.45f, 2.9f, -0.2f));
+            v.seatScale = 0.6f;
+            v.FinishSetup();
+            Done(v);
+            return v;
+        }
         Material paint = Mats.Shiny(Mats.Hex("#c3fc40"));
         Material black = M(new Color(0.07f, 0.07f, 0.08f));
         Box(t, new Vector3(0f, 1.95f, 0f), new Vector3(1.6f, 0.35f, 4.2f), black);              // chassis
@@ -133,7 +211,6 @@ public static class VehicleFactory
         for (int s = -1; s <= 1; s += 2) Box(t, new Vector3(1.06f * s, 3.2f, -0.2f), new Vector3(0.04f, 0.4f, 1.4f), Mats.Glass);
         Box(t, new Vector3(0f, 3.58f, -0.3f), new Vector3(1.6f, 0.12f, 0.3f), Mats.Unlit(new Color(1f, 0.95f, 0.7f)));  // roof lights
         Box(t, new Vector3(0f, 2.3f, 2.66f), new Vector3(2.3f, 0.3f, 0.2f), Mats.Steel(Hub));    // bumper
-        float r = 0.95f;
         foreach (var w in new[] { new Vector3(-1.4f, r, 1.75f), new Vector3(1.4f, r, 1.75f), new Vector3(-1.4f, r, -1.6f), new Vector3(1.4f, r, -1.6f) })
             v.AddWheel(w, r, WheelVis(t, w, r, 0.75f, true), w.z > 0f);
         v.seat = Mats.Node(t, "Seat", new Vector3(-0.45f, 2.75f, -0.2f));
@@ -178,6 +255,20 @@ public static class VehicleFactory
         v.SetupBodyPublic(3200f, new Vector3(0f, 1.15f, 0f), new Vector3(3.3f, 1.0f, 5.4f), new Vector3(0f, 0.5f, 0f));
         v.maxSpeed = 30f; v.accel = 14f; v.turnRate = 2.1f; v.grip = 9f;
         Transform t = v.transform;
+        LBPack pk = LBPack.Get("ripsaw");
+        if (pk != null && pk.Has("body") && pk.Has("beltL"))
+        {
+            // Howe & Howe Ripsaw EV2 look: graphite paint, glass canopy, two seats (frog in the left one)
+            v.Title = "Ripsaw EV2"; v.EnterVerb = "drive the Ripsaw EV2";
+            v.maxSpeed = 28f; v.accel = 13f;
+            RipsawGear(v, pk, new Color(0.13f, 0.14f, 0.15f));
+            v.seat = Mats.Node(t, "Seat", new Vector3(-0.42f, 1.16f, -0.3f));
+            v.seatScale = 0.6f;
+            v.camDistance = 12f; v.camHeight = 3.2f;
+            v.FinishSetup();
+            Done(v);
+            return v;
+        }
         Material paint = Mats.Shiny(Mats.Hex("#407d2b"));
         Material black = M(new Color(0.07f, 0.07f, 0.08f));
         Box(t, new Vector3(0f, 1.05f, -0.2f), new Vector3(2.1f, 0.7f, 4.4f), paint);
@@ -214,6 +305,32 @@ public static class VehicleFactory
         v.maxSpeed = 13f; v.accel = 7f; v.turnRate = 1.1f; v.grip = 10f;
         v.camDistance = 14f; v.camHeight = 3.5f;
         Transform t = v.transform;
+        LBPack pk = LBPack.Get("ripsaw_m5");
+        if (pk != null && pk.Has("body") && pk.Has("turret") && pk.Has("barrel"))
+        {
+            // ffu9: the tank is now a Ripsaw M5 (armed Ripsaw): same shells (RT) + missiles (RB / LT), faster on its tracks
+            v.Title = "Ripsaw M5"; v.EnterVerb = "command the Ripsaw M5";
+            v.body.center = new Vector3(0f, 1.15f, 0f); v.body.size = new Vector3(3.3f, 1.0f, 5.4f);
+            v.rb.mass = 7000f; v.rb.centerOfMass = new Vector3(0f, 0.55f, 0f);
+            v.maxSpeed = 21f; v.accel = 10f; v.turnRate = 1.5f; v.grip = 9.5f;
+            v.camDistance = 12.5f; v.camHeight = 3.6f;
+            RipsawGear(v, pk, Color.white);
+            Vector3 T0 = pk.parts["turret"].pivot, B0 = pk.parts["barrel"].pivot;
+            Transform mTur = Mats.Node(t, "Turret", T0);
+            Part(pk, "turret", mTur, T0, Color.white);
+            Transform mBar = Mats.Node(mTur, "Barrel", B0 - T0);
+            Transform mTube = Mats.Node(mBar, "Tube", new Vector3(0f, 0f, 2.1f));     // Tank.Update slides child 0 back on recoil
+            pk.Spawn("barrel", mTube, -B0 - new Vector3(0f, 0f, 2.1f), 1f, Color.white);
+            Transform mMuz = Mats.Node(mTube, "Muzzle", new Vector3(0f, 0f, -2.1f + 1.85f));
+            v.turret = mTur; v.barrel = mBar; v.muzzle = mMuz;
+            v.recoilDist = 0.25f;
+            v.missileOffset = new Vector3(0.62f, 0.32f, 0.5f);
+            v.seat = Mats.Node(t, "Seat", new Vector3(-0.42f, 1.16f, -0.3f));
+            v.seatScale = 0.6f;
+            v.FinishSetup();
+            Done(v);
+            return v;
+        }
         Color olive = new Color(0.33f, 0.37f, 0.27f);
         Material paint = M(olive);
         Box(t, new Vector3(0f, 1.25f, 0f), new Vector3(3.3f, 0.9f, 6.0f), paint);
@@ -257,6 +374,37 @@ public static class VehicleFactory
         v.maxSpeed = 7f; v.accel = 7f; v.turnRate = 1.6f; v.grip = 10f;
         v.camDistance = 10f; v.camHeight = 3.5f;
         Transform t = v.transform;
+        LBPack opk = LBPack.Get("sr_optimus");
+        if (opk != null && opk.Has("body") && opk.Has("thighL") && opk.Has("uarmL") && opk.Has("head"))
+        {
+            // ffu9: the rideable suit uses the Optimus Gen 2 standing mesh at 3.3 m; the frog rides on its shoulders
+            float hh = 3.3f, sc = hh / Mathf.Max(0.5f, opk.Height());
+            Color wc = new Color(0.92f, 0.92f, 0.93f);
+            Transform bodyN = Mats.Node(t, "Body", Vector3.zero);
+            opk.Spawn("body", bodyN, Vector3.zero, sc, wc);
+            opk.Spawn("head", bodyN, Vector3.zero, sc, wc);
+            Transform[] lg = { SuitLimb(opk, bodyN, "thighL", "shinL", sc, wc), SuitLimb(opk, bodyN, "thighR", "shinR", sc, wc) };
+            Transform[] am = { SuitLimb(opk, bodyN, "uarmL", "farmL", sc, wc), SuitLimb(opk, bodyN, "uarmR", "farmR", sc, wc) };
+            float ph = 0f;
+            v.animate = (fs, dt) =>
+            {
+                float sp = Mathf.Clamp(fs / 6f, -1f, 1f);
+                ph += dt * 7f * Mathf.Abs(sp);
+                float a = Mathf.Sin(ph) * 30f * Mathf.Abs(sp);
+                lg[0].localRotation = Quaternion.Euler(a, 0f, 0f);
+                lg[1].localRotation = Quaternion.Euler(-a, 0f, 0f);
+                am[0].localRotation = Quaternion.Euler(-a * 0.7f, 0f, 0f);
+                am[1].localRotation = Quaternion.Euler(a * 0.7f, 0f, 0f);
+                bodyN.localPosition = new Vector3(0f, Mathf.Abs(Mathf.Sin(ph)) * 0.05f, 0f);
+            };
+            foreach (var w in new[] { new Vector3(-0.45f, 0.3f, 0.35f), new Vector3(0.45f, 0.3f, 0.35f), new Vector3(-0.45f, 0.3f, -0.35f), new Vector3(0.45f, 0.3f, -0.35f) })
+                v.AddWheel(w, 0.3f, null, false);
+            v.seat = Mats.Node(bodyN, "Seat", new Vector3(0f, hh * 0.79f, -0.2f));
+            v.seatScale = 0.5f;
+            v.FinishSetup();
+            Done(v);
+            return v;
+        }
         Material white = Mats.Shiny(new Color(0.88f, 0.88f, 0.9f));
         Material black = Mats.Shiny(new Color(0.06f, 0.06f, 0.07f));
         Transform torso = Mats.Node(t, "Torso", new Vector3(0f, 2.3f, 0f));
@@ -302,6 +450,14 @@ public static class VehicleFactory
         return v;
     }
 
+    static Transform SuitLimb(LBPack pk, Transform body, string upper, string lower, float s, Color c)
+    {
+        Transform u = pk.Spawn(upper, body, Vector3.zero, s, c);
+        if (u == null) return Mats.Node(body, upper, Vector3.zero);
+        pk.Spawn(lower, u, -pk.parts[upper].pivot, 1f, c);
+        return u;
+    }
+
     // ---------------- Helicopter ----------------
     public static Flyer Helicopter(Vector3 pos, float yaw)
     {
@@ -311,6 +467,22 @@ public static class VehicleFactory
         v.maxSpeed = 24f; v.climbSpeed = 8f; v.turnRate = 75f;
         v.camDistance = 15f; v.camHeight = 4f;
         Transform t = v.transform;
+        LBPack hpk = LBPack.Get("heli");
+        if (hpk != null && hpk.Has("body") && hpk.Has("rotor") && hpk.Has("tailrotor"))
+        {
+            hpk.Spawn("body", t, Vector3.zero, 1f, new Color(0.96f, 0.96f, 0.97f));
+            Vector3 R0 = hpk.parts["rotor"].pivot, T0 = hpk.parts["tailrotor"].pivot;
+            Transform rotorN = Mats.Node(t, "Rotor", R0); Part(hpk, "rotor", rotorN, R0, Color.white);
+            v.rotors.Add(rotorN); v.rotorAxes.Add(Vector3.up);
+            Transform tailN = Mats.Node(t, "TailRotor", T0); Part(hpk, "tailrotor", tailN, T0, Color.white);
+            v.tailRotor = tailN;
+            v.ExtraBoxPublic(new Vector3(0f, 0.15f, 0.3f), new Vector3(2.1f, 0.3f, 3.4f));
+            v.ExtraBoxPublic(new Vector3(0f, 1.9f, -3.6f), new Vector3(0.6f, 0.7f, 3.6f));
+            v.seat = Mats.Node(t, "Seat", new Vector3(-0.4f, 1.02f, 0.95f));
+            v.seatScale = 0.62f;
+            Done(v);
+            return v;
+        }
         Material white = Mats.Shiny(Mats.Hex("#f2f2f2"));
         Material stripe = Mats.Shiny(new Color(0.15f, 0.55f, 0.25f));
         Mats.Prim(PrimitiveType.Sphere, t, new Vector3(0f, 1.45f, 0.3f), new Vector3(2.2f, 1.95f, 3.8f), white);
@@ -352,6 +524,29 @@ public static class VehicleFactory
         v.maxSpeed = 18f; v.climbSpeed = 8.5f; v.turnRate = 140f;
         v.camDistance = 11f; v.camHeight = 3f;
         Transform t = v.transform;
+        LBPack dpk = LBPack.Get("drone");
+        if (dpk != null && dpk.Has("body") && dpk.Has("prop"))
+        {
+            // EHang 216-style: 8 arms, coaxial props (16 rotors)
+            dpk.Spawn("body", t, Vector3.zero, 1f, new Color(0.96f, 0.96f, 0.97f));
+            for (int k = 0; k < 8; k++)
+            {
+                float a = (22.5f + k * 45f) * Mathf.Deg2Rad;
+                Vector3 hub = new Vector3(0f, 1.92f, -0.25f) + new Vector3(Mathf.Sin(a), 0f, Mathf.Cos(a)) * 2.05f;
+                for (int lvl = 0; lvl < 2; lvl++)
+                {
+                    Transform pn = Mats.Node(t, "Rotor", hub + Vector3.up * (lvl == 0 ? 0.2f : -0.2f));
+                    dpk.Spawn("prop", pn, Vector3.zero, 1f, Color.white);
+                    pn.localRotation = Quaternion.Euler(0f, k * 37f + lvl * 90f, 0f);
+                    v.rotors.Add(pn); v.rotorAxes.Add(Vector3.up);
+                }
+            }
+            v.ExtraBoxPublic(new Vector3(0f, 0.1f, 0f), new Vector3(1.5f, 0.2f, 1.8f));
+            v.seat = Mats.Node(t, "Seat", new Vector3(-0.33f, 0.82f, 0.15f));
+            v.seatScale = 0.62f;
+            Done(v);
+            return v;
+        }
         Material white = Mats.Shiny(new Color(0.95f, 0.95f, 0.96f));
         Material black = Mats.Shiny(new Color(0.08f, 0.08f, 0.1f));
         Mats.Prim(PrimitiveType.Sphere, t, new Vector3(0f, 1.1f, -0.1f), new Vector3(1.7f, 1.5f, 1.9f), white);
@@ -385,7 +580,9 @@ public static class VehicleFactory
     }
 
     // ---------------- Boat ----------------
-    public static Boat BoatAt(Vector3 pos, float yaw)
+    public static Boat BoatAt(Vector3 pos, float yaw) { return BoatAt(pos, yaw, new Color(0.12f, 0.4f, 0.75f)); }
+
+    public static Boat BoatAt(Vector3 pos, float yaw, Color hullTint)
     {
         var v = Root<Boat>("Boat", pos, yaw);
         v.EnterVerb = "take the Boat";
@@ -395,6 +592,18 @@ public static class VehicleFactory
         v.rb.angularDrag = 2f;
         v.camDistance = 12f; v.camHeight = 3f;
         Transform t = v.transform;
+        LBPack bpk = LBPack.Get("boat");
+        if (bpk != null && bpk.Has("body") && bpk.Has("prop"))
+        {
+            bpk.Spawn("body", t, Vector3.zero, 1f, hullTint);
+            Vector3 P0 = bpk.parts["prop"].pivot;
+            Transform pn = Mats.Node(t, "Prop", P0); Part(bpk, "prop", pn, P0, Color.white);
+            v.prop = pn;
+            v.seat = Mats.Node(t, "Seat", new Vector3(0.45f, 0.66f, -0.22f));
+            v.seatScale = 0.6f;
+            Done(v);
+            return v;
+        }
         Material hull = Mats.Shiny(new Color(0.12f, 0.4f, 0.75f));
         Material white = Mats.Shiny(new Color(0.95f, 0.95f, 0.95f));
         Box(t, new Vector3(0f, 0.38f, -0.5f), new Vector3(2.1f, 0.62f, 4.0f), hull);

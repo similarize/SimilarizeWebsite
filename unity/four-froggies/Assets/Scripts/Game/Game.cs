@@ -147,7 +147,7 @@ public class Game : MonoBehaviour
     // ?ffdemo=1 in the page URL: joins keyboard P1 after ~5 s in the lobby and starts. &ffshot=<scene> pins P1's camera to a
     // showcase view (frog, robot, truck, ranch, barn, pond, house, under, space); &ffshot=tour cycles them every 9 s.
     // For work/webgl-probe/probe.py screenshots. Logs "FFDEMO scene <name>" whenever the view changes.
-    static readonly string[] Tour = { "frog", "robot", "truck", "ranch", "barn", "pond", "house", "under", "space" };
+    static readonly string[] Tour = { "frog", "robot", "truck", "ripsaw", "lineup", "ranch", "barn", "pond", "house", "under", "space" };
     float demoT = -1f, demoPlayT;
     string demoShot = "", demoCur = "";
     bool DemoLobby()
@@ -171,7 +171,8 @@ public class Game : MonoBehaviour
     {
         if (demoShot.Length == 0 || slots.Count == 0 || slots[0].cam == null) return;
         demoPlayT += Time.unscaledDeltaTime;
-        string sc = demoShot == "tour" ? Tour[Mathf.Min(Tour.Length - 1, (int)(demoPlayT / 9f))] : demoShot;
+        string[] list = demoShot == "tour" ? Tour : demoShot.Split(',');   // tour, one scene, or a comma list (9 s each)
+        string sc = list[Mathf.Min(list.Length - 1, (int)(demoPlayT / 9f))];
         Frog f = frogs[slots[0].frog];
         if (sc != demoCur)
         {
@@ -181,6 +182,7 @@ public class Game : MonoBehaviour
             else if (sc == "under" && UnderwaterWorld.I != null) { f.SendTo(WorldId.Ranch, Ranch.FrogSpawn(f.id), 0f); UnderwaterWorld.I.Dive(f); }
             else if (sc == "space") DemoSpace(f);
             else if (sc == "truck") DemoTruck(f);
+            else if (sc == "lineup" || sc == "ripsaw" || sc == "mech") DemoLineup(f, sc);
             else if (f.world != WorldId.Ranch) f.SendTo(WorldId.Ranch, Ranch.FrogSpawn(f.id), 0f);
         }
         Camera c = slots[0].cam;
@@ -198,6 +200,18 @@ public class Game : MonoBehaviour
             case "truck":
                 gy = Ranch.GY(14f, 44f);
                 pos = new Vector3(20.5f, gy + 2.2f, 50.5f); look = new Vector3(14f, gy + 1f, 44f); break;
+            case "lineup":
+                gy = Ranch.GY(0f, 46f);
+                pos = new Vector3(-1f, gy + 12.5f, 76f); look = new Vector3(-1f, gy + 1.2f, 43f); break;
+            case "ripsaw":
+                gy = Ranch.GY(-9f, 50f);
+                pos = new Vector3(-1.2f, gy + 3.4f, 58.5f); look = new Vector3(-9.6f, gy + 1.0f, 49.5f); break;
+            case "mech":
+                {
+                    // the 100-story mech row (z -28) from the lawn, looking up
+                    gy = Ranch.GY(-120f, -6f);
+                    pos = new Vector3(-118f, gy + 6f, 18f); look = new Vector3(-140f, gy + 16f, -28f); break;
+                }
             case "barn":
                 gy = Ranch.GY(-140f, 112f);
                 pos = new Vector3(-118f, gy + 7f, 104f); look = new Vector3(-148f, gy + 1.5f, 124f); break;
@@ -240,6 +254,42 @@ public class Game : MonoBehaviour
         else Debug.Log("FFDEMO: no Cybertruck at (14, 44)");
     }
 
+    // every rideable ranch vehicle parked in two rows in front of the garage (frozen), P1 in the Ripsaw EV2's seat
+    static readonly string[] LineupFront = { "Monster Truck", "Ripsaw M5", "Ripsaw EV2", "James's Cybertruck", "Cybertruck", "Cybertruck", "Optimus mech suit" };
+    static readonly float[] LineupFrontX = { -22f, -14f, -5.5f, 1.5f, 7.5f, 13.5f, 19.5f };
+    static readonly string[] LineupBack = { "Helicopter", "Passenger Drone", "Boat", "Boat" };
+    static readonly float[] LineupBackX = { -19f, -5f, 6.5f, 14f };
+    bool lineupDone;
+    void DemoLineup(Frog f, string sc)
+    {
+        if (f.world != WorldId.Ranch) f.SendTo(WorldId.Ranch, Ranch.FrogSpawn(f.id), 0f);
+        if (lineupDone) return;
+        lineupDone = true;
+        var used = new HashSet<Vehicle>();
+        Vehicle ev2 = null;
+        for (int row = 0; row < 2; row++)
+        {
+            string[] names = row == 0 ? LineupFront : LineupBack;
+            float[] xs = row == 0 ? LineupFrontX : LineupBackX;
+            float z = row == 0 ? 50f : 37f;
+            for (int i = 0; i < names.Length; i++)
+            {
+                Vehicle v = null;
+                foreach (var c in Vehicle.All) if (c != null && !used.Contains(c) && c.Title == names[i] && c.driver == null) { v = c; break; }
+                if (v == null) { Debug.Log("FFDEMO: lineup missing " + names[i]); continue; }
+                used.Add(v);
+                Vector3 p = new Vector3(xs[i], Ranch.GY(xs[i], z), z);
+                Quaternion q = Quaternion.Euler(0f, row == 0 ? 180f - 14f + i * 4f : 160f, 0f);
+                if (v.rb != null) { v.rb.velocity = Vector3.zero; v.rb.angularVelocity = Vector3.zero; v.rb.isKinematic = true; v.rb.position = p; v.rb.rotation = q; }
+                v.transform.SetPositionAndRotation(p, q);
+                if (v.Title == "Ripsaw EV2") ev2 = v;
+                else v.enabled = false;     // frozen for the photo (boats would drift home, flyers would autopilot)
+            }
+        }
+        if (ev2 != null) f.EnterVehicle(ev2);
+        Debug.Log("FFDEMO lineup placed " + used.Count + " vehicles");
+    }
+
     void DemoSpace(Frog f)
     {
         // straight into Earth orbit in the Starship (skips the launch sequence)
@@ -273,10 +323,10 @@ public class Game : MonoBehaviour
     static string HelpBody { get { return
             "<size=34><color=#8cff70>FOUR FROGGIES - CONTROLS</color></size>\n\n" +
             "<b>Gamepad</b>  L-stick move / steer  |  R-stick camera (R3 resets it)  |  A hop, get in / out  |  D-pad up/down zoom\n" +
-            "Cars, Ripsaw, boat: RT gas, LT brake / reverse.   Helicopter + drone: RT up, LT down. Bail out in the air = parachute, it flies home.\n" +
-            "Tank: L-stick drive, R-stick aims the turret, RT fires shells, RB / Y missiles.   Beached boat: RB / Y pushes off.\n\n" +
+            "Cars, Ripsaw EV2, boat: RT gas, LT brake / reverse.   Helicopter + drone: RT up, LT down. Bail out in the air = parachute, it flies home.\n" +
+            "Ripsaw M5 (tank): L-stick drive, R-stick aims the turret, RT fires shells, RB / Y missiles.   Beached boat: RB / Y pushes off.\n\n" +
             "<b>Keyboard + mouse (P1)</b>  WASD move  |  mouse camera (click to lock)  |  Space hop  |  E get in / out  |  0 camera reset\n" +
-            "Fly: Space up, Shift down.  Tank: click shell, right-click missile.  Wheel / Q / X zoom.  V view.  H help.  M sound.\n\n" +
+            "Fly: Space up, Shift down.  Ripsaw M5: click shell, right-click missile.  Wheel / Q / X zoom.  V view.  H help.  M sound.\n\n" +
             "<b>Touch (P1)</b>  left stick  |  drag the free area for camera (double-tap = reset)  |  A  |  FIRE  |  MSL  |  UP / DOWN  |  - / +  |  SND\n\n" +
             "Rally: figure-8 with a bridge, jumps, and a loop lane west of the garage (keep the throttle on).  Pond: boat gate course - start at gate 1.\n" +
             (Worlds.UnderwaterOn ? "Pond dock: A at the submarine dives. Underwater: L-stick drive, RT up, LT down, A swim out in scuba (A / RT up, B / LT down), A by the sub climbs back in, surface + keep rising = ranch.\n" : "") +

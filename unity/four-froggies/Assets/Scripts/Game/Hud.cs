@@ -94,6 +94,11 @@ public class ViewHud
             toast.text = tl;
             status.text = sharedStatus;
         }
+        // ffu9: keep the toast clear of a tall (multi-line) prompt, e.g. the space controls line
+        float ins = Mathf.Max(0f, inset);
+        float ph = prompt.text.Length > 0 ? prompt.preferredHeight : 0f;
+        float ty = Mathf.Max(120f, 64f + ph + 10f) + ins;
+        if (Mathf.Abs(toast.rectTransform.anchoredPosition.y - ty) > 0.5f) toast.rectTransform.anchoredPosition = new Vector2(0f, ty);
         for (int i = 0; i < tags.Length; i++)
         {
             Text t = tags[i];
