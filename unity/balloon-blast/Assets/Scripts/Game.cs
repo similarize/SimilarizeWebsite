@@ -845,6 +845,11 @@ public class Game : MonoBehaviour
             {
                 sl.viewModel.gameObject.SetActive(s.alive && sl.cam.transform.parent == s.eye);
                 Vector3 hip = new Vector3(0.15f, -0.27f, 0.3f), aim = new Vector3(0f, -0.141f, 0.16f);
+                // portrait: the narrow view puts the hip rifle + sleeve across the lower half (behind the touch buttons),
+                // so hold it smaller, lower and nearer the centre; full size again when aiming (red dot alignment)
+                bool tall = sl.cam.aspect < 0.85f;
+                if (tall) hip = new Vector3(0.07f, -0.31f, 0.34f);
+                sl.viewModel.localScale = Vector3.one * (tall ? Mathf.Lerp(0.8f, 1f, s.adsBlend) : 1f);
                 float bob = Mathf.Clamp01(s.HSpeed / 5f) * (1f - s.adsBlend * 0.8f);
                 float tt = Time.time * 9f;
                 Vector3 sway = new Vector3(Mathf.Sin(tt * 0.5f) * 0.008f, Mathf.Abs(Mathf.Sin(tt * 0.5f)) * 0.008f, 0f) * bob;

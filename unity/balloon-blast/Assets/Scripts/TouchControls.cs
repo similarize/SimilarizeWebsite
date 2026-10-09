@@ -205,8 +205,8 @@ public class TouchControls : MonoBehaviour
         fire.img.color = fireDown ? new Color(1f, 0.3f, 0.2f, 0.92f) : fire.col;
         fire.img.rectTransform.localScale = Vector3.one * (fireDown ? 0.94f : 1f);
         ads.img.color = adsOn ? new Color(0.5f, 1f, 0.5f, 0.78f) : ads.col;
-        // "drag here to look" for the first few seconds of a match
-        float ha = Mathf.Clamp01(6f - shownT) * 0.8f;
+        // "drag here to look" for the first ~10 s of a match
+        float ha = Mathf.Clamp01(10f - shownT) * 0.85f;
         hint.enabled = ha > 0.01f;
         hint.color = new Color(1, 1, 1, ha);
     }
