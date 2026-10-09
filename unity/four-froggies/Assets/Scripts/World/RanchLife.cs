@@ -44,15 +44,15 @@ public class RanchLife : MonoBehaviour
     void Build()
     {
         // ---- robots (bible table) ----
-        // lined up on the open lawn west of the garage (x < -29) and north of the house (z > 11), facing the house;
+        // lined up on the open lawn west of the garage (x < -29) and north of the house porch + flower bed (z > 20), facing the house;
         // the old spots (x -36..-20, z 14..22) were inside / against the garage's west bays
-        Add("optimus", "Optimus", "Bubbles", 0xE1E1E1, 2.35f, 0.7f, 7.5f, -35f, 23f);
-        Add("unitree", "Unitree", "", 0x2C2F38, 1.72f, 0.58f, 12f, -37.6f, 23f);
-        Add("figure03", "Figure 03", "", 0xB3B3B3, 2.2f, 0.65f, 9f, -40.2f, 23f);
-        Add("figure02", "Figure 02", "", 0x999999, 2.05f, 0.6f, 8.5f, -42.8f, 23f);
-        Add("figure02big", "Big Figure Two", "", 0x888888, 3.4f, 1.35f, 6.5f, -46f, 24f);
-        Add("atlas_hd", "Atlas HD", "", 0xD2D2D2, 2.45f, 0.72f, 10f, -49.2f, 23f);
-        Add("atlas_el", "Atlas electric", "", 0xBCBCBC, 2.4f, 0.7f, 9.5f, -51.8f, 23f);
+        Add("optimus", "Optimus", "Bubbles", 0xE1E1E1, 2.35f, 0.7f, 7.5f, -36f, 28f);
+        Add("unitree", "Unitree", "", 0x2C2F38, 1.72f, 0.58f, 12f, -38.5f, 28f);
+        Add("figure03", "Figure 03", "", 0xB3B3B3, 2.2f, 0.65f, 9f, -41f, 28f);
+        Add("figure02", "Figure 02", "", 0x999999, 2.05f, 0.6f, 8.5f, -43.5f, 28f);
+        Add("figure02big", "Big Figure Two", "", 0x888888, 3.4f, 1.35f, 6.5f, -46.3f, 28.6f);
+        Add("atlas_hd", "Atlas HD", "", 0xD2D2D2, 2.45f, 0.72f, 10f, -49.1f, 28f);
+        Add("atlas_el", "Atlas electric", "", 0xBCBCBC, 2.4f, 0.7f, 9.5f, -51.6f, 28f);
 
         // ---- pasture: fence + cows + horses ----
         var fence = new GameObject("Pasture fence").transform;

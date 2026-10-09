@@ -204,12 +204,30 @@ public class SpaceWorld : MonoBehaviour
         return t;
     }
 
+    // graphics overhaul stage B: NASA public-domain maps (NASA 3D Resources + SVS CGI Moon Kit) on the main bodies
+    static Material PlanetMat(string id, float gloss = 0.08f)
+    {
+        var t = Resources.Load<Texture2D>("LB/space_" + id);
+        return t != null ? Mats.Tex(t, gloss) : null;
+    }
+
     Transform Visual(Body b)
     {
         var t = new GameObject(b.name).transform;
         t.SetParent(root, false);
         float d = b.r * 2f;
-        switch (b.id)
+        Material pm = (b.id == "earth" || b.id == "mars" || b.id == "jupiter" || b.id == "moon" || b.id == "callisto") ? PlanetMat(b.id, b.id == "earth" ? 0.35f : 0.06f) : null;
+        if (pm != null)
+        {
+            Mats.Prim(PrimitiveType.Sphere, t, Vector3.zero, Vector3.one * d, pm);
+            if (b.id == "earth")
+            {
+                var atm = new Material(Mats.Glass); atm.color = new Color(0.55f, 0.75f, 1f, 0.22f);
+                Mats.Prim(PrimitiveType.Sphere, t, Vector3.zero, Vector3.one * d * 1.035f, atm);
+            }
+            t.localRotation = Quaternion.Euler(b.id == "jupiter" ? 3f : 0f, 0f, b.id == "earth" ? 23.4f : 0f);
+        }
+        else switch (b.id)
         {
             case "sun":
                 Mats.Prim(PrimitiveType.Sphere, t, Vector3.zero, Vector3.one * d, Mats.Unlit(new Color(1f, 0.85f, 0.35f)));
@@ -304,6 +322,27 @@ public class SpaceWorld : MonoBehaviour
 
     void Stars()
     {
+        // stage B: Hipparcos star map (NASA 3D Resources, public domain) on an inside-out sphere that follows the camera
+        var st = Resources.Load<Texture2D>("LB/space_stars");
+        if (st != null && Mats.UnlitTexBase != null)
+        {
+            stars = new GameObject("Stars").transform;
+            stars.SetParent(root, false);
+            var tmp = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            Mesh src = tmp.GetComponent<MeshFilter>().sharedMesh;
+            Object.Destroy(tmp);
+            var inv = new Mesh { name = "StarSphere" };
+            var vv = src.vertices; for (int i = 0; i < vv.Length; i++) vv[i] *= 18000f;   // radius 9000 (far plane 12000)
+            var tt = src.triangles; for (int i = 0; i < tt.Length; i += 3) { int a = tt[i + 1]; tt[i + 1] = tt[i + 2]; tt[i + 2] = a; }
+            inv.vertices = vv; inv.uv = src.uv; inv.triangles = tt;
+            inv.bounds = new Bounds(Vector3.zero, Vector3.one * 20000f);
+            stars.gameObject.AddComponent<MeshFilter>().sharedMesh = inv;
+            var smr = stars.gameObject.AddComponent<MeshRenderer>();
+            smr.sharedMaterial = Mats.UnlitTex(st);
+            smr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            stars.rotation = Quaternion.Euler(60f, 0f, 20f);   // tilt the Milky Way band across the orbit plane
+            return;
+        }
         stars = new GameObject("Stars").transform;
         stars.SetParent(root, false);
         var r = new System.Random(77);

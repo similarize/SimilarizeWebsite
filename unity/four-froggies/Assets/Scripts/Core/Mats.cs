@@ -9,7 +9,7 @@ public static class Mats
 
     public static Material Fx { get { return fx; } }
     // graphics overhaul bases (editor-made assets so the shaders ship); any may be null -> Standard fallbacks
-    public static Material SkinBase, FoliageBase, PondBase, GrassDetailBase;
+    public static Material SkinBase, FoliageBase, PondBase, GrassDetailBase, UnderwaterBase, UnlitTexBase;
     public static Material Water { get { return water; } }
     public static Material Glass { get { return glass; } }
 
@@ -71,14 +71,15 @@ public static class Mats
 
     // textured + tinted (wood, siding, metal sheet), cached per texture + colour + tiling
     static readonly Dictionary<string, Material> texCache = new Dictionary<string, Material>();
-    public static Material TexTint(string res, Color c, float gloss = 0.1f, float tile = 1f)
+    // `metres` = size of one texture repeat: textured cubes made by Prim get box-projected UVs in metres (BoxUV)
+    public static Material TexTint(string res, Color c, float gloss = 0.1f, float metres = 2f)
     {
-        string k = res + ColorUtility.ToHtmlStringRGBA(c) + gloss + "_" + tile;
+        string k = res + ColorUtility.ToHtmlStringRGBA(c) + gloss + "_" + metres;
         Material m;
         if (texCache.TryGetValue(k, out m)) return m;
         var t = Resources.Load<Texture2D>(res);
         if (t == null) m = Lit(c);
-        else { m = Tex(t, gloss); m.color = c; m.mainTextureScale = new Vector2(tile, tile); }
+        else { m = Tex(t, gloss); m.color = c; m.mainTextureScale = new Vector2(1f / metres, 1f / metres); }
         texCache[k] = m;
         return m;
     }
@@ -128,6 +129,7 @@ public static class Mats
         g.transform.localPosition = localPos;
         g.transform.localScale = scale;
         g.GetComponent<Renderer>().sharedMaterial = mat;
+        if (t == PrimitiveType.Cube && mat != null && mat.HasProperty("_MainTex") && mat.mainTexture != null) BoxUV(g);
         if (!keepCollider)
         {
             Collider c = g.GetComponent<Collider>();
@@ -141,6 +143,56 @@ public static class Mats
         GameObject g = Prim(t, parent, localPos, scale, mat, keepCollider);
         g.transform.localRotation = Quaternion.Euler(euler);
         return g;
+    }
+
+    // replaces a cube's 0..1-per-face UVs with box-projected UVs in metres (by its scale), so textures tile instead of
+    // stretching over long walls / rails (the material's texture scale sets metres per repeat)
+    static Mesh cubeMesh;
+    public static void BoxUV(GameObject g)
+    {
+        var mf = g.GetComponent<MeshFilter>();
+        if (mf == null || mf.sharedMesh == null) return;
+        if (cubeMesh == null) cubeMesh = mf.sharedMesh;
+        Vector3 s = g.transform.lossyScale;
+        var src = cubeMesh;
+        var v = src.vertices; var n = src.normals; var uv = new Vector2[v.Length];
+        for (int i = 0; i < v.Length; i++)
+        {
+            Vector3 p = Vector3.Scale(v[i], s), a = n[i];
+            if (Mathf.Abs(a.x) > 0.5f) uv[i] = new Vector2(p.z * Mathf.Sign(a.x), p.y);
+            else if (Mathf.Abs(a.y) > 0.5f) uv[i] = new Vector2(p.x, p.z * Mathf.Sign(a.y));
+            else uv[i] = new Vector2(-p.x * Mathf.Sign(a.z), p.y);
+        }
+        var m = new Mesh { name = "BoxUV" };
+        m.vertices = v; m.normals = n; m.uv = uv; m.triangles = src.triangles; m.tangents = src.tangents;
+        m.RecalculateBounds();
+        mf.sharedMesh = m;
+    }
+
+    // underwater variant of a lit material (FF/Underwater caustics), cached per source material
+    static readonly Dictionary<Material, Material> uwCache = new Dictionary<Material, Material>();
+    public static Material Underwater(Material src, float surfaceY)
+    {
+        if (UnderwaterBase == null || src == null || src.shader == null || src.shader.name != "Standard" || src.renderQueue >= 2450) return src;
+        Material m;
+        if (uwCache.TryGetValue(src, out m)) return m;
+        m = new Material(UnderwaterBase);
+        m.color = src.color;
+        if (src.mainTexture != null) { m.mainTexture = src.mainTexture; m.mainTextureScale = src.mainTextureScale; }
+        var ct = Resources.Load<Texture2D>("LB/caustics");
+        if (ct != null) m.SetTexture("_Caustics", ct);
+        m.SetFloat("_SurfaceY", surfaceY);
+        uwCache[src] = m;
+        return m;
+    }
+
+    // unlit textured (sky spheres / far planets); Unlit/Color tint fallback
+    public static Material UnlitTex(Texture t)
+    {
+        if (UnlitTexBase == null || t == null) return Unlit(Color.white);
+        var m = new Material(UnlitTexBase);
+        m.mainTexture = t;
+        return m;
     }
 
     public static Transform Node(Transform parent, string name, Vector3 localPos)

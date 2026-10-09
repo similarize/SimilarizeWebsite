@@ -99,6 +99,15 @@ public class SurfaceWorlds : MonoBehaviour
         mesh.vertices = v; mesh.uv = uv; mesh.triangles = tri; mesh.RecalculateNormals(); mesh.RecalculateBounds();
         var go = new GameObject(name);
         go.AddComponent<MeshFilter>().sharedMesh = mesh;
+        // stage B: Poly Haven CC0 ground textures (red_sand on Mars, moon_01 on Callisto), tinted to the old palette
+        var gt = Resources.Load<Texture2D>(name.StartsWith("Mars") ? "LB/marsground" : "LB/calground");
+        if (gt != null)
+        {
+            var gm = Mats.Tex(gt, 0.06f); gm.color = Color.Lerp(Color.Lerp(c1, c2, 0.4f) * 1.6f, Color.white, 0.45f);
+            go.AddComponent<MeshRenderer>().sharedMaterial = gm;
+            go.AddComponent<MeshCollider>().sharedMesh = mesh;
+            return go;
+        }
         var tex = new Texture2D(64, 64, TextureFormat.RGBA32, true) { wrapMode = TextureWrapMode.Repeat };
         var r = new System.Random(seed); var px = new Color32[64 * 64];
         for (int i = 0; i < px.Length; i++) px[i] = Color.Lerp(c1, c2, (float)r.NextDouble() * 0.6f + Mathf.PerlinNoise((i % 64) * 0.1f, (i / 64) * 0.1f) * 0.4f);
@@ -297,11 +306,17 @@ public class SurfaceWorlds : MonoBehaviour
         var ret = Interact.Add(C(0f, CalY(0f, 3f), 3f), 5f, "board the Starship (back to Callisto orbit)", f => SpaceWorld.I.ToOrbit(f, "callisto"));
         ret.enabled = f => f.world == WorldId.Callisto;
         // Jupiter fills the sky
-        var jm = new Material(Mats.Unlit(Color.white));
+        var jtex = Resources.Load<Texture2D>("LB/space_jupiter");   // NASA map (stage B)
+        Material jm;
+        if (jtex != null && Mats.UnlitTexBase != null) jm = Mats.UnlitTex(jtex);
+        else
+        {
+        jm = new Material(Mats.Unlit(Color.white));
         var jt = new Texture2D(8, 128, TextureFormat.RGBA32, true) { wrapMode = TextureWrapMode.Clamp };
         for (int y = 0; y < 128; y++) { Color c = Color.Lerp(new Color(0.85f, 0.7f, 0.5f), new Color(0.6f, 0.38f, 0.25f), Mathf.PerlinNoise(y * 0.09f, 7f) * 1.2f); for (int x = 0; x < 8; x++) jt.SetPixel(x, y, c); }
         jt.Apply(true);
         jm.mainTexture = jt;
+        }
         var jup = Mats.Prim(PrimitiveType.Sphere, calRoot, C(150f, 260f, 520f), Vector3.one * 520f, jm);
         jup.transform.rotation = Quaternion.Euler(12f, 0f, 20f);
         // ice spikes for flavour

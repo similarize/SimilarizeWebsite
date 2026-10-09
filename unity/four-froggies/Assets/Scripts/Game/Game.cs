@@ -129,7 +129,8 @@ public class Game : MonoBehaviour
         "   from public photos (no logos).\n" +
         "<b>Trees, bushes, rocks, flowers</b>: Stylized Nature MegaKit by Quaternius (CC0).  <b>Cows, horses, sheep, pig</b>: Farm Animals\n" +
         "   pack by Quaternius (CC0).  <b>Sky</b> (Kloofendal 48d Partly Cloudy) and <b>grass / dirt / sand / wood / barn / metal textures</b>:\n" +
-        "   Poly Haven (polyhaven.com), CC0.\n\n" +
+        "   Poly Haven (polyhaven.com), CC0; also the house floors / walls, seabed and Mars / Callisto ground.\n" +
+        "<b>Planet maps + star map</b>: NASA (NASA 3D Resources; SVS CGI Moon Kit), public domain.\n\n" +
         "Full licence texts: similarize.com/games/four-froggies-unity/LICENSES.txt\n" +
         "Robot and vehicle names describe the real machines only; this fan game is not affiliated with their makers.\n\n" +
         "<color=#9fd8ff>Press C, Esc or tap to close</color>";
@@ -176,7 +177,7 @@ public class Game : MonoBehaviour
         {
             demoCur = sc;
             Debug.Log("FFDEMO scene " + sc + " t=" + Time.realtimeSinceStartup.ToString("0.0"));
-            if (sc == "house") f.SendTo(WorldId.House, HouseWorld.Spawn(f.id), 180f);
+            if (sc == "house") { if (HouseWorld.I != null) HouseWorld.I.Enter(f); }   // Enter builds the interior on first use
             else if (sc == "under" && UnderwaterWorld.I != null) { f.SendTo(WorldId.Ranch, Ranch.FrogSpawn(f.id), 0f); UnderwaterWorld.I.Dive(f); }
             else if (sc == "space") DemoSpace(f);
             else if (sc == "truck") DemoTruck(f);
@@ -191,9 +192,9 @@ public class Game : MonoBehaviour
                 for (int i = 0; i < 3; i++) frogs[i].DemoPose(new Vector3(-12f + i * 1.5f, 0f, 38f), 0f);
                 pos = new Vector3(-10.5f, Ranch.GY(-10.5f, 42.6f) + 1.35f, 42.6f); look = new Vector3(-10.5f, Ranch.GY(-10.5f, 38f) + 0.6f, 38f); break;
             case "robot":
-                // the robot line-up (RanchLife: x -35..-52, z 23, facing the house) seen from the house side
-                gy = Ranch.GY(-43.4f, 23f);
-                pos = new Vector3(-41.5f, gy + 2.3f, 13.2f); look = new Vector3(-43.4f, gy + 1.5f, 23f); break;
+                // the robot line-up (RanchLife: x -36..-52, z 28, facing the house) seen from just past the porch flowers
+                gy = Ranch.GY(-43.8f, 28f);
+                pos = new Vector3(-42.5f, gy + 2.4f, 19.6f); look = new Vector3(-43.8f, gy + 1.4f, 28f); break;
             case "truck":
                 gy = Ranch.GY(14f, 44f);
                 pos = new Vector3(20.5f, gy + 2.2f, 50.5f); look = new Vector3(14f, gy + 1f, 44f); break;

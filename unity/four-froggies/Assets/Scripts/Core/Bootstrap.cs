@@ -11,6 +11,7 @@ public class Bootstrap : MonoBehaviour
     public Terrain terrain;
     public Light sun;
     public Material skinMat, foliageMat, pondMat;   // graphics overhaul (FF/Skin, FF/Foliage, LB/Water); may be null
+    public Material underwaterMat, unlitTexMat;     // stage B (FF/Underwater, Unlit/Texture); may be null
 
     public static Bootstrap I;
 
@@ -47,6 +48,7 @@ public class Bootstrap : MonoBehaviour
 
         Mats.Init(litMat, unlitMat, fxMat, waterMat, glassMat);
         Mats.SkinBase = skinMat; Mats.FoliageBase = foliageMat; Mats.PondBase = pondMat;
+        Mats.UnderwaterBase = underwaterMat; Mats.UnlitTexBase = unlitTexMat;
         Look.Init(sun);   // before Worlds.Init: Worlds captures the ranch fog / ambient it restores per camera
         Sfx.Init();
         FX.Init();

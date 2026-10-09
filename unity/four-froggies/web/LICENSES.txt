@@ -70,7 +70,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 3. Sky + textures - Poly Haven (https://polyhaven.com), CC0 1.0 (public domain):
    - HDRI "Kloofendal 48d Partly Cloudy (Pure Sky)" by Greg Zaal and Jarod Guest (sky).
    - Textures sparse_grass + leafy_grass (recoloured ranch grass), park_dirt, coast_sand_01, weathered_planks (fences),
-     weathered_plank_siding (barn, painted red), box_profile_metal_sheet (barn roof), plastered_wall_02.
+     weathered_plank_siding (barn, painted red), box_profile_metal_sheet (barn roof), plastered_wall_02 (house walls),
+     wood_floor + laminate_floor (house floors), aerial_sand (seabed), red_sand (Mars ground), moon_01 (Callisto ground).
    https://polyhaven.com/license - "All assets on Poly Haven are licensed as CC0 ... You can use them for any purpose,
    including commercial work, without attribution." Credited anyway with thanks.
 
@@ -82,7 +83,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    via https://opengameart.org/content/lowpoly-animated-farm-animal-pack. CC0 1.0 Universal.
    Split into leg / head parts for the walk animation.
 
-6. Modelled for this game (no third-party mesh): the four froggies, Optimus, Figure 02 / Big Figure Two, Figure 03,
+6. Planet and star maps - NASA, public domain ("free and without copyright"; NASA media usage guidelines:
+   https://www.nasa.gov/nasa-brand-center/images-and-media). Earth (A), Mars, Jupiter, Jupiter - Callisto and the
+   Hipparcos Star Map from https://github.com/nasa/NASA-3D-Resources; Moon colour map from the NASA SVS CGI Moon Kit
+   (https://svs.gsfc.nasa.gov/4720, LRO LROC). Resized for WebGL. No NASA endorsement implied.
+
+7. Modelled for this game (no third-party mesh): the four froggies, Optimus, Figure 02 / Big Figure Two, Figure 03,
    Atlas electric (from public photos, no logos), the Cybertruck-style pickup and everything else.
    Robot and vehicle names describe the real machines only; this fan game is not affiliated with their makers.
 

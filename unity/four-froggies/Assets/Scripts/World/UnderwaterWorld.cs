@@ -116,7 +116,17 @@ public class UnderwaterWorld : MonoBehaviour
         Cave();
         Rocks(rnd);
         foreach (var r in root.GetComponentsInChildren<Renderer>()) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        // graphics overhaul stage B: animated caustics on every lit surface (FF/Underwater), merged afterwards
+        int conv = 0;
+        foreach (var r in root.GetComponentsInChildren<Renderer>())
+        {
+            var mats = r.sharedMaterials;
+            for (int i = 0; i < mats.Length; i++) { var nm = Mats.Underwater(mats[i], Worlds.UnderO.y); if (nm != mats[i]) { mats[i] = nm; conv++; } }
+            r.sharedMaterials = mats;
+        }
+        Debug.Log("Underwater: caustics on " + conv + " surfaces");
         MeshMerge.Merge(root, false);
+        Motes();
         Shafts();
         Life(rnd);
         Pearls(rnd);
@@ -149,7 +159,17 @@ public class UnderwaterWorld : MonoBehaviour
         mesh.RecalculateNormals(); mesh.RecalculateBounds();
         var go = new GameObject("Seabed");
         go.AddComponent<MeshFilter>().sharedMesh = mesh;
-        // sandy texture
+        // sandy texture: Poly Haven CC0 aerial sand (Resources/LB/seabed), generated noise if missing
+        var sb = Resources.Load<Texture2D>("LB/seabed");
+        if (sb != null)
+        {
+            var sm = Mats.Tex(sb, 0.05f); sm.color = new Color(0.95f, 0.92f, 0.82f);
+            var smr = go.AddComponent<MeshRenderer>(); smr.sharedMaterial = sm;
+            smr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            go.AddComponent<MeshCollider>().sharedMesh = mesh;
+            go.transform.SetParent(root, true);
+            return;
+        }
         var tex = new Texture2D(64, 64, TextureFormat.RGBA32, true) { wrapMode = TextureWrapMode.Repeat };
         var px = new Color32[64 * 64];
         var r = new System.Random(4);
@@ -285,6 +305,56 @@ public class UnderwaterWorld : MonoBehaviour
             float s = 1.2f + (float)r.NextDouble() * 3f;
             P(PrimitiveType.Sphere, new Vector3(x, SeaY(x, z) + s * 0.2f, z), new Vector3(s * 1.6f, s, s * 1.3f), new Color(0.35f, 0.36f, 0.38f), true, new Vector3(0f, (float)r.NextDouble() * 180f, 0f));
         }
+    }
+
+    // drifting marine snow + tiny bubbles around the reef (one particle system, fewer on phones)
+    void Motes()
+    {
+        var go = new GameObject("Motes");
+        go.transform.SetParent(root, false);
+        go.transform.position = L(0f, -14f, 0f);
+        var ps = go.AddComponent<ParticleSystem>();
+        ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        var main = ps.main;
+        main.loop = true; main.playOnAwake = true;
+        main.startLifetime = new ParticleSystem.MinMaxCurve(10f, 18f);
+        main.startSpeed = new ParticleSystem.MinMaxCurve(0.05f, 0.25f);
+        main.startSize = new ParticleSystem.MinMaxCurve(0.04f, 0.12f);
+        main.startColor = new ParticleSystem.MinMaxGradient(new Color(0.85f, 0.95f, 1f, 0.55f), new Color(1f, 1f, 0.9f, 0.25f));
+        main.maxParticles = Look.Mobile ? 500 : 1400;
+        main.simulationSpace = ParticleSystemSimulationSpace.World;
+        main.gravityModifier = -0.002f;
+        main.prewarm = true;
+        var em = ps.emission; em.rateOverTime = Look.Mobile ? 35f : 95f;
+        var sh = ps.shape; sh.shapeType = ParticleSystemShapeType.Box; sh.scale = new Vector3(170f, 26f, 170f);
+        var nz = ps.noise; nz.enabled = true; nz.strength = 0.15f; nz.frequency = 0.25f;
+        var col = ps.colorOverLifetime; col.enabled = true;
+        var g = new Gradient();
+        g.SetKeys(new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
+                  new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(1f, 0.2f), new GradientAlphaKey(1f, 0.8f), new GradientAlphaKey(0f, 1f) });
+        col.color = g;
+        var pr = go.GetComponent<ParticleSystemRenderer>();
+        var m = new Material(Mats.Fx);
+        m.mainTexture = SoftDot();
+        pr.sharedMaterial = m;
+        pr.renderMode = ParticleSystemRenderMode.Billboard;
+        pr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        ps.Play();
+    }
+
+    static Texture2D SoftDot()
+    {
+        const int n = 32;
+        var t = new Texture2D(n, n, TextureFormat.RGBA32, true) { wrapMode = TextureWrapMode.Clamp };
+        var px = new Color[n * n];
+        for (int y = 0; y < n; y++)
+            for (int x = 0; x < n; x++)
+            {
+                float d = new Vector2(x - n * 0.5f + 0.5f, y - n * 0.5f + 0.5f).magnitude / (n * 0.5f);
+                px[y * n + x] = new Color(1f, 1f, 1f, Mathf.Clamp01(1f - d) * Mathf.Clamp01(1f - d));
+            }
+        t.SetPixels(px); t.Apply(true);
+        return t;
     }
 
     void Shafts()

@@ -245,6 +245,9 @@ public static class BuildScript
         Material skin = ShaderMat("FF/Skin", "Skin.mat");
         Material foliage = ShaderMat("FF/Foliage", "Foliage.mat");
         Material pond = ShaderMat("LB/Water", "Pond.mat");
+        // stage B: underwater caustics surfaces, unlit textured sky spheres (space starfield, Jupiter in Callisto's sky)
+        Material underwater = ShaderMat("FF/Underwater", "Underwater.mat");
+        Material unlitTex = ShaderMat("Unlit/Texture", "UnlitTex.mat");
 
         try
         {
@@ -294,6 +297,8 @@ public static class BuildScript
         b.skinMat = skin;
         b.foliageMat = foliage;
         b.pondMat = pond;
+        b.underwaterMat = underwater;
+        b.unlitTexMat = unlitTex;
 
         EditorSceneManager.MarkSceneDirty(scene);
         if (!EditorSceneManager.SaveScene(scene, ScenePath)) throw new Exception("Failed to save scene");

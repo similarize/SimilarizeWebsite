@@ -87,6 +87,16 @@ public class HouseWorld : MonoBehaviour
         return g;
     }
 
+    // graphics overhaul stage B: textured walls / floors (Poly Haven CC0 plaster, wood floor, laminate, planks)
+    GameObject BoxM(Vector3 lp, Vector3 size, Material m, bool col = true, int layer = 0)
+    {
+        var g = Mats.Prim(PrimitiveType.Cube, root, L(lp.x, lp.y, lp.z), size, Vector3.zero, m, col);
+        if (layer != 0) g.layer = layer;
+        return g;
+    }
+    static Material WallMat { get { return Mats.TexTint("LB/plaster", new Color(1f, 0.97f, 0.9f), 0.05f, 3f); } }
+    static Material BaseMat { get { return Mats.TexTint("LB/wood", new Color(0.62f, 0.45f, 0.3f), 0.15f, 1.5f); } }
+
     GameObject Prim(PrimitiveType t, Vector3 lp, Vector3 size, Color c, bool col = false)
     {
         return Mats.Prim(t, root, L(lp.x, lp.y, lp.z), size, Mats.Lit(c), col);
@@ -119,15 +129,15 @@ public class HouseWorld : MonoBehaviour
         float m = (from + to) * 0.5f, len = to - from;
         if (alongX)
         {
-            Box(new Vector3(m, H * 0.5f, z0), new Vector3(len, H, T), WallC, true, WallLayer);
+            BoxM(new Vector3(m, H * 0.5f, z0), new Vector3(len, H, T), WallMat, true, WallLayer);
             Box(new Vector3(m, H + 0.04f, z0), new Vector3(len + 0.02f, 0.08f, T + 0.08f), Trim, false, WallLayer);
-            Box(new Vector3(m, 0.12f, z0), new Vector3(len, 0.24f, T + 0.06f), Wood, false, WallLayer);
+            BoxM(new Vector3(m, 0.12f, z0), new Vector3(len, 0.24f, T + 0.06f), BaseMat, false, WallLayer);
         }
         else
         {
-            Box(new Vector3(x0, H * 0.5f, m), new Vector3(T, H, len), WallC, true, WallLayer);
+            BoxM(new Vector3(x0, H * 0.5f, m), new Vector3(T, H, len), WallMat, true, WallLayer);
             Box(new Vector3(x0, H + 0.04f, m), new Vector3(T + 0.08f, 0.08f, len + 0.02f), Trim, false, WallLayer);
-            Box(new Vector3(x0, 0.12f, m), new Vector3(T + 0.06f, 0.24f, len), Wood, false, WallLayer);
+            BoxM(new Vector3(x0, 0.12f, m), new Vector3(T + 0.06f, 0.24f, len), BaseMat, false, WallLayer);
         }
     }
 
@@ -181,7 +191,10 @@ public class HouseWorld : MonoBehaviour
 
     void FloorTile(Rect r, Color c)
     {
-        Box(new Vector3(r.center.x, 0.01f, r.center.y), new Vector3(r.width - 0.02f, 0.02f, r.height - 0.02f), c, false);
+        // wood planks in the living rooms, laminate in the kitchen / fish gallery; the room tone tints the texture
+        bool lam = r == Kitchen || r == Fish;
+        Material m = Mats.TexTint(lam ? "LB/laminate" : "LB/woodfloor", Color.Lerp(c, Color.white, lam ? 0.55f : 0.45f), lam ? 0.35f : 0.25f, lam ? 3f : 2.5f);
+        BoxM(new Vector3(r.center.x, 0.01f, r.center.y), new Vector3(r.width - 0.02f, 0.02f, r.height - 0.02f), m, false);
     }
 
     void RoomSign(float x, float z, string text, bool onXWall)
