@@ -237,10 +237,11 @@ public class Frog : MonoBehaviour
         {
             if (cc.isGrounded)
             {
+                if (vel.y < -7f && human) Sfx.Play(Sfx.Land, Mathf.Clamp01(-vel.y / 18f) * 0.6f, Random.Range(0.9f, 1.1f));   // ffu10 landing thump
                 if (vel.y < -2f) vel.y = -2f;
                 vel.x = Mathf.MoveTowards(vel.x, 0f, 30f * dt);
                 vel.z = Mathf.MoveTowards(vel.z, 0f, 30f * dt);
-                if (input.hop && hopCool <= 0f) { vel.y = HopV; hopCool = 0.25f; if (human) Sfx.Play(Sfx.Hop, 0.7f, Random.Range(0.92f, 1.1f)); }
+                if (input.hop && hopCool <= 0f) { vel.y = HopV; hopCool = 0.25f; if (human) { Sfx.Play(Sfx.Hop, 0.6f, Random.Range(0.92f, 1.1f)); if (Random.value < 0.2f) Sfx.Play(Sfx.Pick(Sfx.Ribbit), 0.5f, Random.Range(0.95f, 1.2f)); } else Sfx.PlayAt(Sfx.Hop, transform.position, 0.35f, 25f, Random.Range(1.0f, 1.2f)); }
             }
             else
             {
@@ -372,7 +373,8 @@ public class Frog : MonoBehaviour
         planar = Vector3.zero; vel = Vector3.zero;
         SetChute(false);
         v.OnEnter();
-        Sfx.Play(Sfx.Door, 1f);
+        Sfx.Play(Sfx.Door, 0.8f);
+        if (human) Sfx.Play(Sfx.Pick(Sfx.Ribbit), 0.45f, Random.Range(1.0f, 1.2f));
     }
 
     public void ExitVehicle()
@@ -415,6 +417,7 @@ public class Frog : MonoBehaviour
         Sfx.Play(Sfx.Door, 0.8f);
     }
 
+    float aiRibbitT = 5f;
     // ---------- AI wander ----------
     void Think(float dt)
     {
@@ -443,6 +446,9 @@ public class Frog : MonoBehaviour
         }
         aiHopT -= dt;
         if (aiHopT <= 0f) { aiHopT = Random.Range(2f, 6f); i.hop = to.magnitude > 1.5f || Random.value < 0.3f; }
+        // ffu10: AI froggies ribbit now and then (heard when a player froggy is near)
+        aiRibbitT -= dt;
+        if (aiRibbitT <= 0f) { aiRibbitT = Random.Range(7f, 18f); Sfx.Ribbiting(p + Vector3.up * 0.5f, 0.55f); }
         // blocked? hop
         if (cc.isGrounded && to.magnitude > 2f && planar.magnitude < 0.6f && Random.value < dt) i.hop = true;
         input = i;

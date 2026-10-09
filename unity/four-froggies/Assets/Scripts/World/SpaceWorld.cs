@@ -488,7 +488,7 @@ public class Starship : Vehicle
         v.Title = "Starship";
         v.EnterVerb = "board the Starship";
         v.flyer = true;
-        v.engineKind = 2;
+        v.engineKind = 10;   // rocket roar
         v.showDriver = false;
         v.SetupBodyPublic(5000f, new Vector3(0f, 0f, 0f), new Vector3(3.6f, 3.6f, 16f), Vector3.zero);
         v.rb.isKinematic = true; v.rb.useGravity = false;

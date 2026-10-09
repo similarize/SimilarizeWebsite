@@ -122,6 +122,7 @@ public static class VehicleFactory
     {
         var v = Root<GroundVehicle>(title, pos, yaw);
         v.EnterVerb = "drive the " + title;
+        v.engineKind = 7;   // electric whine
         v.SetupBodyPublic(2300f, new Vector3(0f, 1.2f, 0f), new Vector3(2.15f, 1.1f, 5.7f), new Vector3(0f, 0.55f, 0f));
         v.maxSpeed = 30f; v.accel = 13f; v.turnRate = 1.7f; v.grip = 7.5f;
         Transform t = v.transform;
@@ -182,6 +183,7 @@ public static class VehicleFactory
     {
         var v = Root<GroundVehicle>("Monster Truck", pos, yaw);
         v.EnterVerb = "drive the Monster Truck";
+        v.engineKind = 8;   // supercharged V8
         v.rest = 0.65f;
         v.SetupBodyPublic(2600f, new Vector3(0f, 2.3f, 0f), new Vector3(2.4f, 1.5f, 4.8f), new Vector3(0f, 1.2f, 0f));
         v.maxSpeed = 26f; v.accel = 12f; v.turnRate = 1.6f; v.grip = 6f;
@@ -315,6 +317,7 @@ public static class VehicleFactory
             v.maxSpeed = 21f; v.accel = 10f; v.turnRate = 1.5f; v.grip = 9.5f;
             v.camDistance = 12.5f; v.camHeight = 3.6f;
             RipsawGear(v, pk, Color.white);
+            v.engineKind = 1; v.enginePitch = 0.82f;
             Vector3 T0 = pk.parts["turret"].pivot, B0 = pk.parts["barrel"].pivot;
             Transform mTur = Mats.Node(t, "Turret", T0);
             Part(pk, "turret", mTur, T0, Color.white);

@@ -109,8 +109,22 @@ public class Animal : MonoBehaviour
         Animate(spd, dt);
     }
 
+    // ffu10: an occasional moo / neigh / baa / oink / cluck / bark / meow, positional around the player froggies
+    [System.NonSerialized] public string voice;
+    float voiceT = -1f;
+    void Voice(float dt)
+    {
+        if (voiceT < 0f) voiceT = Random.Range(4f, 25f);
+        voiceT -= dt;
+        if (voiceT > 0f) return;
+        voiceT = Random.Range(14f, 34f);
+        AudioClip c = Sfx.AnimalVoice(voice ?? kind.ToString());
+        if (c != null && Sfx.Near(transform.position) < 45f) Sfx.PlayAt(c, transform.position + Vector3.up, 0.6f, 45f, Random.Range(0.92f, 1.08f));
+    }
+
     void Animate(float s, float dt)
     {
+        Voice(dt);
         float t = Time.time + phase;
         float rate = (kind == Kind.Cow ? 4f : kind == Kind.Horse ? 6f : 9f) * Mathf.Clamp(s / Mathf.Max(0.5f, speed), 0.3f, 2.2f);
         for (int i = 0; i < legs.Count; i++)
@@ -319,7 +333,9 @@ public class Animal : MonoBehaviour
     public static Animal Goat(Vector3 pos)
     {
         // the pasture's small grazers are Quaternius sheep (and a pig) in the overhaul; Kind stays Goat for behaviour
-        var pa = FromPack("Sheep", (Mathf.RoundToInt(pos.z) % 3 == 0) ? "pig" : "sheep", pos, Kind.Goat, 1f);
+        string sp = (Mathf.RoundToInt(pos.z) % 3 == 0) ? "pig" : "sheep";
+        var pa = FromPack("Sheep", sp, pos, Kind.Goat, 1f);
+        if (pa != null) pa.voice = sp;
         if (pa != null) { pa.speed = 0.9f; pa.runSpeed = 4f; return pa; }
         var a = Root("Goat", pos, Kind.Goat);
         a.speed = 0.9f; a.runSpeed = 4f;

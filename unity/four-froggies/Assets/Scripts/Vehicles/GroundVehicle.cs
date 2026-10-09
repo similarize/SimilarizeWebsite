@@ -60,6 +60,7 @@ public class GroundVehicle : Vehicle
         float dt = Time.fixedDeltaTime;
         ComputeControls();
         groundedCount = 0;
+        slipSpeed = 0f;
         Vector3 nsum = Vector3.zero;
         Vector3 up = transform.up;
         int mask = GroundMask;
@@ -123,6 +124,7 @@ public class GroundVehicle : Vehicle
             Vector3 v = rb.velocity;
             float fs = Vector3.Dot(v, fwd);
             float ls = Vector3.Dot(v, right);
+            slipSpeed = ls; groundFrac = wheels.Count > 0 ? groundedCount / (float)wheels.Count : 1f;
 
             float force = 0f;
             if (!driven) force = -fs * 3f;   // parking brake

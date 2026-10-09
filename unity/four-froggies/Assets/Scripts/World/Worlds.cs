@@ -74,7 +74,8 @@ public static class Worlds
             case WorldId.Space:
                 if (SpaceWorld.I != null) SpaceWorld.I.PreCull(c);
                 RenderSettings.fog = false;
-                RenderSettings.ambientSkyColor = new Color(0.12f, 0.12f, 0.16f); RenderSettings.ambientEquatorColor = new Color(0.08f, 0.08f, 0.1f); RenderSettings.ambientGroundColor = new Color(0.03f, 0.03f, 0.04f);
+                // ffu10: brighter fill so the Starship hull / night sides never go pure black when backlit by the Sun
+                RenderSettings.ambientSkyColor = new Color(0.26f, 0.27f, 0.32f); RenderSettings.ambientEquatorColor = new Color(0.2f, 0.2f, 0.24f); RenderSettings.ambientGroundColor = new Color(0.1f, 0.1f, 0.12f);
                 break;
             case WorldId.Mars:
                 if (SurfaceWorlds.InCave(c.transform.position))
@@ -142,7 +143,9 @@ public static class Worlds
         {
             case WorldId.House: return "house";
             case WorldId.Underwater: return "underwater";
-            case WorldId.Space: case WorldId.Mars: case WorldId.Callisto: return "space";
+            case WorldId.Space: return "space";
+            case WorldId.Mars: return "mars";
+            case WorldId.Callisto: return "callisto";
             default: return "ranch";
         }
     }

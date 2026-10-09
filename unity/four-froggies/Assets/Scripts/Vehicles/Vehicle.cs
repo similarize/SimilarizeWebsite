@@ -17,7 +17,6 @@ public abstract class Vehicle : MonoBehaviour
     public float camDistance = 11f, camHeight = 2.5f;
     public bool flyer;
     public int engineKind;   // 0 car, 1 tracks, 2 rotor, 3 drone, 4 boat, 5 mech (footsteps)
-    AudioSource engine;
     float stepT;
 
     protected PIn inp;
@@ -87,36 +86,46 @@ public abstract class Vehicle : MonoBehaviour
     public virtual void OnEnter() { if (rb != null) rb.WakeUp(); }
     public virtual void OnExit() { inp = new PIn(); }
 
+    public float enginePitch = 1f;     // per-vehicle engine pitch (the Ripsaw M5 runs its diesel lower than the EV2)
+    Sfx.EngineVoice voice;
+    float crashCool;
+    // GroundVehicle fills these for the skid layer
+    [System.NonSerialized] public float slipSpeed, groundFrac = 1f;
+
     protected void EngineSound(float dt)
     {
         bool heard = driver != null && driver.human;
         Flyer fl = this as Flyer;
         if (fl != null && fl.returning) heard = true;
         float spd = Speed;
+        crashCool -= dt;
         if (engineKind == 6) return;   // story mechs make their own footsteps
-        if (engineKind == 5)
+        if (engineKind == 5 && heard && spd > 0.8f)
         {
-            if (heard && spd > 0.8f)
-            {
-                stepT -= dt;
-                if (stepT <= 0f) { stepT = Mathf.Clamp(1.4f / spd, 0.3f, 0.7f); Sfx.Play(Sfx.Step, 0.55f, Random.Range(0.9f, 1.05f)); }
-            }
-            return;
+            stepT -= dt;
+            if (stepT <= 0f) { stepT = Mathf.Clamp(1.4f / spd, 0.3f, 0.7f); Sfx.Play(Sfx.StepMetal != null ? Sfx.StepMetal : Sfx.Step, 0.5f, Random.Range(0.85f, 1.05f)); if (Random.value < 0.35f) Sfx.Play(Sfx.Pick(Sfx.Servo), 0.18f, Random.Range(0.9f, 1.2f)); }
         }
-        if (engine == null)
+        if (voice == null)
         {
             if (!heard) return;
-            AudioClip c = engineKind == 1 ? Sfx.EngineTank : engineKind == 2 ? Sfx.Rotor : engineKind == 3 ? Sfx.DroneWhine : engineKind == 4 ? Sfx.BoatMotor : Sfx.EngineCar;
-            if (c == null) return;
-            engine = Sfx.Loop(gameObject, c);
-            engine.Play();
+            voice = new Sfx.EngineVoice(gameObject, engineKind, enginePitch);
         }
-        float target = heard ? (fl != null && fl.returning && driver == null ? 0.12f : 0.32f) : 0f;
-        engine.volume = Mathf.MoveTowards(engine.volume, target, dt * 0.8f);
         float load = Mathf.Clamp01(Mathf.Abs(inp.gas - inp.brake) + Mathf.Abs(inp.move.y) + Mathf.Abs(inp.climb));
-        engine.pitch = Mathf.Lerp(engine.pitch, 0.75f + spd / 28f + load * 0.15f, dt * 3f);
-        if (engine.volume <= 0.001f && engine.isPlaying) engine.Pause();
-        else if (engine.volume > 0.001f && !engine.isPlaying) engine.UnPause();
+        bool on = heard && !(fl != null && fl.returning && driver == null && false);
+        voice.Tick(on, spd, load, slipSpeed, groundFrac, transform.position, dt);
+        if (fl != null && fl.returning && driver == null && voice.main != null) voice.main.volume = Mathf.Min(voice.main.volume, 0.12f);
+    }
+
+    // ffu10: impact sounds (metal crunch for hard hits, soft bump for small ones)
+    protected virtual void OnCollisionEnter(Collision c)
+    {
+        if (rb == null || rb.isKinematic || crashCool > 0f) return;
+        float v = c.relativeVelocity.magnitude;
+        if (v < 3.5f) return;
+        crashCool = 0.25f;
+        Vector3 p = c.contactCount > 0 ? c.GetContact(0).point : transform.position;
+        if (v > 8f) Sfx.PlayAt(Sfx.Pick(Sfx.Crash), p, Mathf.Clamp01(v / 22f) * 0.9f, 60f, Random.Range(0.85f, 1.05f));
+        else Sfx.PlayAt(Sfx.BumpSoft != null ? Sfx.BumpSoft : Sfx.Thud, p, Mathf.Clamp01(v / 10f) * 0.6f, 40f, Random.Range(0.9f, 1.1f));
     }
 
     protected virtual void FixedUpdate()

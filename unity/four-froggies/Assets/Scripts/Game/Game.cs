@@ -130,7 +130,10 @@ public class Game : MonoBehaviour
         "<b>Trees, bushes, rocks, flowers</b>: Stylized Nature MegaKit by Quaternius (CC0).  <b>Cows, horses, sheep, pig</b>: Farm Animals\n" +
         "   pack by Quaternius (CC0).  <b>Sky</b> (Kloofendal 48d Partly Cloudy) and <b>grass / dirt / sand / wood / barn / metal textures</b>:\n" +
         "   Poly Haven (polyhaven.com), CC0; also the house floors / walls, seabed and Mars / Callisto ground.\n" +
-        "<b>Planet maps + star map</b>: NASA (NASA 3D Resources; SVS CGI Moon Kit), public domain.\n\n" +
+        "<b>Planet maps + star map</b>: NASA (NASA 3D Resources; SVS CGI Moon Kit), public domain.\n" +
+        "<b>Sound effects + ambience</b>: BigSoundBank.com by Joseph Sardin (royalty-free, CC0-like) and Kenney (CC0).\n" +
+        "<b>Music</b> (OpenGameArt, CC0): Flowerbed Fields by Zane Little Music; Picnic and Home by heartade; Underwater Theme II -\n" +
+        "   Music by Cleyton Kauffman; Space Adventure by MintoDog; Puppy Playing in the Garden by Spring Spring; Outer Space Loop by wipics.\n\n" +
         "Full licence texts: similarize.com/games/four-froggies-unity/LICENSES.txt\n" +
         "Robot and vehicle names describe the real machines only; this fan game is not affiliated with their makers.\n\n" +
         "<color=#9fd8ff>Press C, Esc or tap to close</color>";
@@ -250,7 +253,8 @@ public class Game : MonoBehaviour
             float d = (v.transform.position - new Vector3(14f, v.transform.position.y, 44f)).sqrMagnitude;
             if (d < bd) { bd = d; best = v; }
         }
-        if (best != null && bd < 25f) f.EnterVehicle(best);
+        if (best != null && bd >= 25f) Debug.Log("FFDEMO: using the nearest free Cybertruck instead of (14, 44)");
+        if (best != null) { if (f.vehicle != null) f.ExitVehicle(); f.EnterVehicle(best); }
         else Debug.Log("FFDEMO: no Cybertruck at (14, 44)");
     }
 
@@ -844,7 +848,7 @@ public class Game : MonoBehaviour
             }
         }
         if (relayout) ApplyLayout();
-        if (slots.Count > 0) Sfx.Music(Worlds.Mood(frogs[slots[0].frog].world));
+        if (slots.Count > 0) { Frog mf = frogs[slots[0].frog]; Sfx.ListenerPos = mf.FocusPoint; Sfx.Music(Worlds.Mood(mf.world)); }
     }
 
     void LateUpdate()

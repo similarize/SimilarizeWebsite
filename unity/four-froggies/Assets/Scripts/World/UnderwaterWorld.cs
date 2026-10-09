@@ -62,7 +62,7 @@ public class UnderwaterWorld : MonoBehaviour
         }
         if (roundStart < 0f) roundStart = Time.time;
         FX.Splash(DockSpot, 20);
-        Sfx.Play(Sfx.Splash, 1f, 0.8f);
+        Sfx.Play(Sfx.SplashBig, 1f, 0.8f);
     }
 
     public void Surface(Frog f)
@@ -71,7 +71,7 @@ public class UnderwaterWorld : MonoBehaviour
         Vector3 d = DockSpot + new Vector3((f.id - 1.5f) * 1.6f, 0f, 0f);
         f.SendTo(WorldId.Ranch, d, 270f);
         f.Toast("Back at the pond dock", 2.5f);
-        Sfx.Play(Sfx.Splash, 0.9f, 1.2f);
+        Sfx.Play(Sfx.SplashBig, 0.9f, 1.2f);
     }
 
     void OnPearl(Frog f)
@@ -515,7 +515,7 @@ public class Submarine : Vehicle
         v.Title = "Submarine";
         v.EnterVerb = "climb into the Submarine";
         v.flyer = true;
-        v.engineKind = 4;
+        v.engineKind = 9;    // submarine hum
         v.SetupBodyPublic(3000f, new Vector3(0f, 0.2f, 0f), new Vector3(2.6f, 2.6f, 7f), Vector3.zero);
         v.rb.useGravity = false; v.rb.freezeRotation = true; v.rb.drag = 0f;
         v.camDistance = 13f; v.camHeight = 3f;

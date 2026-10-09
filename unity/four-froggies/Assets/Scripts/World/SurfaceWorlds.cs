@@ -247,6 +247,7 @@ public class SurfaceWorlds : MonoBehaviour
         var go = new GameObject("Curiosity");
         go.transform.position = pos;
         var v = go.AddComponent<GroundVehicle>();
+        v.engineKind = 7; v.enginePitch = 1.25f;   // electric rover whine
         v.Title = "Curiosity";
         v.EnterVerb = "drive Curiosity";
         v.hasWorldBounds = true; v.worldCenter = Worlds.MarsO; v.worldRadius = 92f;

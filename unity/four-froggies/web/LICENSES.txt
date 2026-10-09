@@ -92,4 +92,23 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    Atlas electric (from public photos, no logos), the Cybertruck-style pickup and everything else.
    Robot and vehicle names describe the real machines only; this fan game is not affiliated with their makers.
 
+8. Sound effects and ambience recordings - BigSoundBank.com by Joseph Sardin (https://bigsoundbank.com),
+   "Royalty-Free Sound License (CC0-like)": free for any use, no attribution required. Credited anyway with thanks.
+   Recordings used (BigSoundBank IDs): 0115 0150 0264 0279 0283 0284 0359 0377 0453 0494 0500 0534 0546 0691 0908
+   0966 1023 1145 1157 1519 1522 1529 1658 1808 1911 2343 2458 2655 2921 2931 2942 2955 3552.
+   Trimmed, looped, pitched and mixed for the game (engines, animals, splashes, servos, ambience beds).
+
+9. Sound effects - Kenney (https://kenney.nl): "Interface Sounds", "Impact Sounds" and "Sci-fi Sounds" packs.
+   CC0 1.0 Universal.
+
+10. Music (all from OpenGameArt.org, all CC0 1.0 Universal; looped / trimmed for the game):
+   - Ranch: "Flowerbed Fields (Loop)" by Zane Little Music - https://opengameart.org/content/flowerbed-fields-loop
+   - Lobby: "Children's Game Music 1 - Picnic" by heartade - https://opengameart.org/content/childrens-game-music-1-picnic
+   - House: "Children's Game Music 3 - Home" by heartade - https://opengameart.org/content/childrens-game-music-3-home
+   - Underwater: "Underwater Theme II" - Music by Cleyton Kauffman - https://opengameart.org/content/underwater-theme-ii
+   - Space: "Space Adventure" by MintoDog - https://opengameart.org/content/space-adventure
+   - Mars: "Puppy Playing in The Garden" by Spring Spring - https://opengameart.org/content/puppy-playing-in-the-garden
+   - Callisto: "Outer Space Loop" by wipics - https://opengameart.org/content/outer-space-loop
+   Everything else (synth engines, rocket roar layers, UI pings) is synthesised for this game.
+
 CC0 1.0 Universal: https://creativecommons.org/publicdomain/zero/1.0/legalcode

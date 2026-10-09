@@ -647,10 +647,19 @@ public static class Ranch
         t.supportRichText = true;
         // board between the two faces
         var back = Mats.Prim(PrimitiveType.Cube, go.transform, new Vector3(0f, 0f, 3f), new Vector3(width * 50f, height * 50f, 4f), Mats.Lit(Color.Lerp(bg, Color.black, 0.4f)));
-        // ffu9: the same text on the back face, so it never reads mirrored (house FRONT DOOR sign from the follow cam)
-        var backFace = UIK.Rect(go.transform, "Back", new Vector2(0.5f, 0.5f), Vector2.zero, rt.sizeDelta);
-        backFace.localPosition = new Vector3(0f, 0f, 6f);
-        backFace.localRotation = Quaternion.Euler(0f, 180f, 0f);
+        // ffu9: the same text on the back face, so it never reads mirrored (house FRONT DOOR sign from the follow cam).
+        // ffu10: the back face is its own world-space Canvas (not a child of the front one): inside one canvas the UI draws
+        // in hierarchy order and the far face's text bled through the near one (mirrored lines over the sign). Separate
+        // canvases are depth-sorted like other transparents, so the near face always draws last over the board.
+        var bgo = new GameObject("SignBack");
+        bgo.transform.SetPositionAndRotation(go.transform.TransformPoint(new Vector3(0f, 0f, 6f)), go.transform.rotation * Quaternion.Euler(0f, 180f, 0f));
+        var bcv = bgo.AddComponent<Canvas>();
+        bcv.renderMode = RenderMode.WorldSpace;
+        var bcs = bgo.AddComponent<CanvasScaler>();
+        bcs.dynamicPixelsPerUnit = 3f;
+        var backFace = (RectTransform)bgo.transform;
+        backFace.sizeDelta = rt.sizeDelta;
+        bgo.transform.localScale = Vector3.one * 0.02f;
         var img2 = UIK.Img(backFace, null, bg, new Vector2(0.5f, 0.5f), Vector2.zero, rt.sizeDelta);
         img2.raycastTarget = false;
         Text t2 = UIK.Label(backFace, text, t.fontSize, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, rt.sizeDelta * 0.95f, Color.white);

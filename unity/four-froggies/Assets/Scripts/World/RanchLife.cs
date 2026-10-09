@@ -169,6 +169,7 @@ public class Robot : MonoBehaviour
 {
     public string id, robotName, owner;
     public float height, maxSpeed;
+    float sndStep, sndServo = 1f;   // ffu10 footsteps + servo whirs
     public string cmd = "idle", status = "standby";
     public Transform follow;
     Vector3 target;
@@ -303,6 +304,14 @@ public class Robot : MonoBehaviour
         if (to.sqrMagnitude > 0.01f && speed > 0.1f) yaw = Mathf.MoveTowardsAngle(yaw, Mathf.Atan2(to.x, to.z) * Mathf.Rad2Deg, 220f * dt);
         if (cmd == "dance") yaw += 220f * dt;
         p += Quaternion.Euler(0f, yaw, 0f) * Vector3.forward * speed * dt;
+        // ffu10: metal footsteps while walking, servo whirs when moving / waving / dancing (positional)
+        if (!flying && speed > 0.3f) { sndStep += speed * dt; if (sndStep > height * 0.38f) { sndStep = 0f; Sfx.PlayAt(Sfx.StepMetal, p, 0.32f, 28f, Random.Range(0.9f, 1.15f) * Mathf.Clamp(1.8f / height, 0.6f, 1.4f)); } }
+        sndServo -= dt;
+        if (sndServo <= 0f && (speed > 0.3f || wave > 0f || cmd == "dance"))
+        {
+            sndServo = Random.Range(0.9f, 2.6f);
+            Sfx.PlayAt(Sfx.Pick(Sfx.Servo), p + Vector3.up * height * 0.7f, 0.28f, 24f, Random.Range(0.85f, 1.2f));
+        }
         // flying to a roof pad: jets on, climb over the house, settle on the pad
         float ground = Ranch.GY(p.x, p.z);
         RaycastHit hit;
