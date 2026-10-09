@@ -39,7 +39,7 @@ public static class Water
 
 public class CyberBoat : MonoBehaviour
 {
-    public const float EnterDepth = 0.65f, ExitDepth = 0.45f, Tin = 2.0f, Tout = 1.3f;
+    public const float EnterDepth = 0.65f, ExitDepth = 0.45f, Tin = 2.0f, Tout = 1.0f;
     public GroundVehicle v;
     public float k;                 // 0 truck .. 1 boat
     public bool boatTarget;
@@ -82,7 +82,7 @@ public class CyberBoat : MonoBehaviour
         // look ahead under the bow (in the direction of travel) so the wheels come down before the hull grounds
         Vector3 fwd = transform.forward; fwd.y = 0f; fwd.Normalize();
         float fsp = Vector3.Dot(rb.velocity, fwd);
-        Vector3 ahead = pos + fwd * Mathf.Sign(fsp + 0.01f) * (3.2f + Mathf.Abs(fsp) * 0.45f);
+        Vector3 ahead = pos + fwd * Mathf.Sign(fsp + 0.01f) * (3.2f + Mathf.Abs(fsp) * 0.7f);
         float s2, depthAhead;
         bool waterAhead = Water.At(ahead.x, ahead.z, out s2, out depthAhead);
         if (!waterAhead) depthAhead = -1f;
@@ -98,7 +98,7 @@ public class CyberBoat : MonoBehaviour
         k = Mathf.MoveTowards(k, boatTarget ? 1f : 0f, speedK * dt);
         if (k > 0f && !built) Build();
         if (k <= 0f) { Wet = 0f; if (hullCol != null) hullCol.enabled = false; return; }
-        if (hullCol != null) hullCol.enabled = k > 0.5f;
+        if (hullCol != null) hullCol.enabled = k > 0.15f;   // the hull carries it until the wheels are back down
 
         // buoyancy (fades in / out with the sequence), planing lift, banking
         float buoy = boatTarget ? Mathf.Clamp01(k / 0.06f) : Mathf.Clamp01(k / 0.3f);   // floats as soon as it starts
