@@ -14,6 +14,7 @@ public class Slot
     public ViewHud hud;
     public PIn last;
     public WorldId world = WorldId.Ranch;
+    public Robot remote;      // ffu12: the robot this slot's froggy drives (camera follows it)
 }
 
 // Lobby (press A to claim a frog), 1-4 player split-screen or shared camera, input routing, mid-game joins.
@@ -152,6 +153,8 @@ public class Game : MonoBehaviour
     // For work/webgl-probe/probe.py screenshots. Logs "FFDEMO scene <name>" whenever the view changes.
     static readonly string[] Tour = { "frog", "robot", "truck", "ripsaw", "lineup", "ranch", "barn", "pond", "house", "under", "space" };
     float demoT = -1f, demoPlayT;
+    System.Func<PIn, PIn> demoHook;
+    bool demoWaved;       // demo mode: rewrites P1's input (robot driving moment)
     string demoShot = "", demoCur = "";
     bool DemoLobby()
     {
@@ -186,6 +189,7 @@ public class Game : MonoBehaviour
             else if (sc == "space") DemoSpace(f);
             else if (sc == "truck") DemoTruck(f);
             else if (sc == "cyberboat") DemoCyber(f);
+            else if (sc == "robots") DemoRobots(f);
             else if (sc == "lineup" || sc == "ripsaw" || sc == "mech") DemoLineup(f, sc);
             else if (f.world != WorldId.Ranch) f.SendTo(WorldId.Ranch, Ranch.FrogSpawn(f.id), 0f);
         }
@@ -225,6 +229,35 @@ public class Game : MonoBehaviour
                         demoLogT = 1f;
                         Debug.Log("FFDEMO cyber phase " + demoPhase + " k=" + demoCyber.amph.k.ToString("0.00") + " v=" + demoCyber.Speed.ToString("0.0") + " pos=(" + tp.x.ToString("0") + ", " + tp.y.ToString("0.00") + ", " + tp.z.ToString("0") + ") t=" + Time.realtimeSinceStartup.ToString("0.0"));
                     }
+                    break;
+                }
+            case "robots":
+                {
+                    // ffu12: charging jacks (garage wall) -> chores in the yard -> porch (sweeping + porch jack) with the
+                    // phone open -> P1 drives Unitree from the phone (follow cam) -> hands it back -> jacks again
+                    float t = demoPlayT;
+                    int ph = t < 13f ? 0 : t < 26f ? 1 : t < 33f ? 2 : t < 47f ? 3 : 4;
+                    var rl = RanchLife.I;
+                    if (ph != demoPhase && rl != null)
+                    {
+                        demoPhase = ph;
+                        Debug.Log("FFDEMO robots phase " + ph + " t=" + Time.realtimeSinceStartup.ToString("0.0"));
+                        if (ph == 2 && RobotPhone.I != null) RobotPhone.I.DemoOpen(f, 1, "drive");
+                        if (ph == 3 && RobotPhone.I != null) { RobotPhone.I.DemoSend(); demoHook = DemoDrive; }
+                        if (ph == 4) { demoHook = null; if (f.remote != null) RobotPhone.I.Toggle(f); }
+                    }
+                    demoLogT -= Time.unscaledDeltaTime;
+                    if (demoLogT <= 0f && rl != null)
+                    {
+                        demoLogT = 2f;
+                        var sb = new System.Text.StringBuilder("FFDEMO robots t=" + Time.realtimeSinceStartup.ToString("0.0") + ":");
+                        foreach (var r in rl.robots) sb.Append(" " + r.robotName + "=" + r.StatusLine + "/" + r.Pct + "@" + r.transform.position.x.ToString("0") + "," + r.transform.position.z.ToString("0"));
+                        Debug.Log(sb.ToString());
+                    }
+                    if (ph == 3) return;     // normal follow camera on the driven robot
+                    if (ph == 0 || ph == 4) { pos = new Vector3(-39.5f, Ranch.GY(-39.5f, 32.5f) + 3.4f, 32.5f); look = new Vector3(-30.5f, Ranch.GY(-30.5f, 20.5f) + 1.2f, 20.5f); }
+                    else if (ph == 1) { pos = new Vector3(-52f, Ranch.GY(-52f, 72f) + 11f, 72f); look = new Vector3(-80f, Ranch.GY(-80f, 46f) + 0.5f, 46f); }
+                    else { pos = new Vector3(-41f, 3.2f, 26.5f); look = new Vector3(-42f, 1.0f, 13.5f); }
                     break;
                 }
             case "lineup":
@@ -336,6 +369,43 @@ public class Game : MonoBehaviour
         return o;
     }
 
+    // ffu12: robots demo - two robots plugged in at the garage wall jacks, one at a porch jack, the rest on chores
+    void DemoRobots(Frog f)
+    {
+        if (f.world != WorldId.Ranch) f.SendTo(WorldId.Ranch, Ranch.FrogSpawn(f.id), 0f);
+        if (f.vehicle != null) f.ExitVehicle();
+        var rl = RanchLife.I;
+        if (rl == null || rl.robots.Count < 7 || RanchJobs.I == null) { Debug.Log("FFDEMO: no robots"); return; }
+        demoPhase = -1;
+        var R = rl.robots;   // Optimus, Unitree, Figure 03, Figure 02, Big Figure Two, Atlas HD, Atlas electric
+        R[0].DemoStart(Vector3.zero, 0f, -2, 0.3f, 2);
+        R[5].DemoStart(Vector3.zero, 0f, -2, 0.45f, 3);
+        R[6].DemoStart(Vector3.zero, 0f, -2, 0.35f, 5);
+        R[2].DemoStart(new Vector3(-50.5f, 0f, 15.2f), 90f, Chores.Sweep, 0.9f);
+        R[3].DemoStart(new Vector3(-94f, 0f, 33f), 0f, Chores.Mow, 0.9f);
+        R[4].DemoStart(new Vector3(-62f, 0f, 48f), 0f, Chores.Rake, 0.9f);
+        R[1].DemoStart(new Vector3(-44f, 0f, 31f), 0f, Chores.Litter, 0.85f);
+        // P1 stands on the lawn by the porch steps holding the phone
+        f.DemoPose(new Vector3(-40f, 0f, 24.5f), 180f);
+        Debug.Log("FFDEMO robots seeded");
+    }
+
+    PIn DemoDrive(PIn i)
+    {
+        var o = new PIn();
+        Frog f = frogs[slots[0].frog];
+        if (f.remote == null) return o;
+        Vector3 rp = f.remote.transform.position, goal = new Vector3(-62f, 0f, 52f), d = goal - rp;
+        d.y = 0f;
+        if (d.magnitude < 2f) return o;
+        float cy = slots[0].rig != null ? slots[0].rig.yaw : 0f;
+        Vector3 l = Quaternion.Euler(0f, -cy, 0f) * d.normalized;
+        o.move = new Vector2(l.x, l.z) * 0.7f;
+        o.look.x = Mathf.DeltaAngle(cy, Mathf.Atan2(d.x, d.z) * Mathf.Rad2Deg) * 0.02f;   // camera eases round behind
+        if (demoPlayT > 40f && !demoWaved) { demoWaved = true; o.hop = true; }
+        return o;
+    }
+
     // every rideable ranch vehicle parked in two rows in front of the garage (frozen), P1 in the Ripsaw EV2's seat
     static readonly string[] LineupFront = { "Monster Truck", "Ripsaw M5", "Ripsaw EV2", "James's Cybertruck", "Cybertruck", "Cybertruck", "Optimus mech suit" };
     static readonly float[] LineupFrontX = { -22f, -14f, -5.5f, 1.5f, 7.5f, 13.5f, 19.5f };
@@ -413,7 +483,7 @@ public class Game : MonoBehaviour
             "Rally: figure-8 with a bridge, jumps, and a loop lane west of the garage (keep the throttle on).  Pond: boat gate course - start at gate 1.\n" +
             (Worlds.UnderwaterOn ? "Pond dock: A at the submarine dives. Underwater: L-stick drive, RT up, LT down, A swim out in scuba (A / RT up, B / LT down), A by the sub climbs back in, surface + keep rising = ranch.\n" : "") +
             (Worlds.SpaceOn ? "Starship pad: A launches (3 s countdown + liftoff; A / FIRE skips). Space: D-pad < > target, X auto-transfer, LB / RB warp, RT boost, LT brake, Y land (Earth, Mars, Callisto).  Keys: T G Z C F.\n" : "") +
-            (Worlds.StageEOn ? "Mechs: every froggy pilots its own 10 + 100-story mech (mech yard west); James & Bubbles also have a 1000-story (south edge); James alone has the trillion-story (north edge); RT / X omnigun.  Robot phone: LB / P / PHONE.\n" : "") +
+            (Worlds.StageEOn ? "Mechs: every froggy pilots its own 10 + 100-story mech (mech yard west); James & Bubbles also have a 1000-story (south edge); James alone has the trillion-story (north edge); RT / X omnigun.\n<b>Robots</b> do chores and charge at the wall jacks on their own.  Robot phone (LB / P / PHONE): pick a robot, give it a chore, send it to charge, or DRIVE IT! (normal controls, LB / P / PHONE gives it back).\n" : "") +
             "House: walk into the front door. Inside, A at a fish tank feeds it, the toy box starts fetch with Germy + Daisy, the cat bed starts hide-and-seek, A near Dad to chat.\n" +
             "Back / V switches Shared and Split view.  Start / H closes this.  B / Esc here leaves your seat."; } }
 
@@ -860,6 +930,15 @@ public class Game : MonoBehaviour
                 Frog pf = frogs[s.frog];
                 if (i.phone && RobotPhone.I != null && pf.world == WorldId.Ranch && pf.vehicle == null) RobotPhone.I.Toggle(pf);
                 if (RobotPhone.I != null && RobotPhone.I.Handle(pf, i)) { Vector2 lk = i.look; bool v = i.view, h = i.help; i = new PIn(); i.look = lk; i.view = v; i.help = h; }
+                if (k == 0 && demoHook != null) i = demoHook(i);
+                if (pf.remote != null && !help)
+                {
+                    // ffu12: this froggy drives a robot from the phone - move / run / wave go to the robot, camera input stays
+                    pf.remote.Manual(i, sharedCam.enabled ? sharedYaw : (s.rig != null ? s.rig.yaw : 0f));
+                    var ci = new PIn();
+                    ci.look = i.look; ci.lookHeld = i.lookHeld; ci.zoom = i.zoom; ci.view = i.view; ci.help = i.help; ci.camReset = i.camReset;
+                    i = ci;
+                }
             }
             if (i.view) viewPressed = true;
             if (i.help) helpPressed = true;
@@ -934,6 +1013,14 @@ public class Game : MonoBehaviour
         if (state != State.Play) return;
         float dt = Time.deltaTime;
         TrackWorlds();
+        foreach (var s in slots)
+        {
+            Frog rf = frogs[s.frog];
+            if (s.remote == rf.remote || s.rig == null) continue;
+            s.remote = rf.remote;     // ffu12: took / released a robot: snap the camera behind the new focus
+            float by = rf.remote != null ? rf.remote.transform.eulerAngles.y : rf.transform.eulerAngles.y;
+            s.rig.Snap(); s.rig.ResetView(by); s.rig.SetYaw(by);
+        }
         foreach (var s in slots)
             if (s.rig != null && s.cam.enabled) s.rig.Update(frogs[s.frog], s.last, dt);
         if (sharedCam.enabled) UpdateShared(dt);

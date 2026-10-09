@@ -11,6 +11,7 @@ public class Frog : MonoBehaviour
     public CharacterController cc;
     public FrogModel model;
     public Vehicle vehicle;
+    public Robot remote;          // ffu12: a ranch robot this froggy is driving from the phone
     public WorldId world = WorldId.Ranch;
     public float autoCool;        // after a doorway / world change, auto hotspots wait
     public float spaceGravity = 1f;   // low-g worlds (Callisto) set this per frame
@@ -61,7 +62,7 @@ public class Frog : MonoBehaviour
     public const float Speed = 6.5f, SwimSpeed = 3.2f, HopV = 8.5f, Gravity = 22f;
 
     public Vector3 Center { get { return transform.position + Vector3.up * 0.7f; } }
-    public Vector3 FocusPoint { get { Vehicle v = vehicle != null ? vehicle : passengerOf; return v != null ? v.transform.position + Vector3.up * 1.2f : transform.position + Vector3.up * 0.9f; } }
+    public Vector3 FocusPoint { get { if (remote != null) return remote.transform.position + Vector3.up * remote.height * 0.6f; Vehicle v = vehicle != null ? vehicle : passengerOf; return v != null ? v.transform.position + Vector3.up * 1.2f : transform.position + Vector3.up * 0.9f; } }
     public float HSpeed { get { return vehicle != null ? vehicle.Speed : new Vector2(planar.x, planar.z).magnitude; } }
 
     public void Build(int index, Vector3 pos, float yawDeg)
@@ -105,6 +106,7 @@ public class Frog : MonoBehaviour
     // move to another world (or another spot in this one) facing yawDeg
     public void SendTo(WorldId w, Vector3 p, float yawDeg)
     {
+        if (remote != null) remote.ReleaseManual(false);
         if (vehicle != null) ExitVehicle();
         LeavePassenger();
         SetChute(false);
@@ -153,6 +155,14 @@ public class Frog : MonoBehaviour
         {
             prompt = "Riding along in the " + passengerOf.Title + (passengerOf.driver != null ? " - " + passengerOf.driver.nick + " is flying" : "");
             input = new PIn();
+            return;
+        }
+        if (remote != null && human && vehicle == null)
+        {
+            // ffu12: driving a robot from the phone - the froggy stands still, its input goes to the robot (Game)
+            input = new PIn();
+            Walk(dt);
+            prompt = remote.robotName + " (remote, " + remote.Pct + "): stick walk, RT run, A wave  |  LB / P / PHONE: back to auto";
             return;
         }
         if (vehicle != null)

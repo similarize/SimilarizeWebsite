@@ -60,6 +60,7 @@ public class CamRig
             }
             else followW = Mathf.MoveTowards(followW, 0f, dt);
         }
+        if (v == null && f.remote != null) { dist = 3.4f + f.remote.height * 1.8f; height = 1.4f; }   // ffu12: driving a robot
         dist = (dist + extraDistance) * zoomMul;
 
         // smooth the player's own input so a finger landing / lifting never jumps the view
