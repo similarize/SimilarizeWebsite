@@ -10,6 +10,7 @@ public class Bootstrap : MonoBehaviour
     public Material glassMat;
     public Terrain terrain;
     public Light sun;
+    public Material skinMat, foliageMat, pondMat;   // graphics overhaul (FF/Skin, FF/Foliage, LB/Water); may be null
 
     public static Bootstrap I;
 
@@ -31,6 +32,7 @@ public class Bootstrap : MonoBehaviour
             QualitySettings.shadowDistance = 30f;
             QualitySettings.shadowResolution = ShadowResolution.Low;
         }
+        Debug.Log("Four Froggies: graphics overhaul (skin " + (skinMat != null) + ", foliage " + (foliageMat != null) + ", pond " + (pondMat != null) + ")");
         if (sun != null) sun.shadows = LightShadows.Soft;
         if (terrain == null) terrain = Terrain.activeTerrain;
         if (terrain != null)
@@ -44,6 +46,8 @@ public class Bootstrap : MonoBehaviour
         Physics.IgnoreLayerCollision(Vehicle.VehicleLayer, Vehicle.FrogLayer, true);
 
         Mats.Init(litMat, unlitMat, fxMat, waterMat, glassMat);
+        Mats.SkinBase = skinMat; Mats.FoliageBase = foliageMat; Mats.PondBase = pondMat;
+        Look.Init(sun);   // before Worlds.Init: Worlds captures the ranch fog / ambient it restores per camera
         Sfx.Init();
         FX.Init();
         Worlds.Init();
@@ -59,6 +63,7 @@ public class Bootstrap : MonoBehaviour
             RanchLife.Create();
         }
         gameObject.AddComponent<Game>();
+        StartCoroutine(Look.BuildProbes(new Vector3(-10f, Ranch.GY(-10f, 20f), 20f), 0));
     }
 
     static Vector3 G(float x, float z, float up) { return new Vector3(x, Ranch.GY(x, z) + up, z); }

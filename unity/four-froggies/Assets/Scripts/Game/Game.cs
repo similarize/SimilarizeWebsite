@@ -105,6 +105,116 @@ public class Game : MonoBehaviour
         lobbyHelp = UIK.Label(r, "", 19, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, -262), new Vector2(1180, 60), new Color(1, 1, 1, 0.85f));
         soundBtn = UIK.Img(r, null, new Color(0f, 0f, 0f, 0.45f), new Vector2(0.5f, 0.5f), new Vector2(430, -148), new Vector2(200, 44));
         soundText = UIK.Label(soundBtn.transform, "", 20, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(200, 42), Color.white);
+        creditsBtn = UIK.Img(r, null, new Color(0f, 0f, 0f, 0.5f), new Vector2(0f, 1f), new Vector2(84, -26), new Vector2(150, 34));
+        var cl = UIK.Label(creditsBtn.transform, "CREDITS (C)", 17, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(150, 34), new Color(0.8f, 0.95f, 1f));
+        UIK.Stretch(cl.rectTransform);
+        creditsPanel = UIK.Img(r, null, new Color(0.01f, 0.05f, 0.03f, 0.95f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1180, 640));
+        var ct = UIK.Label(creditsPanel.transform, CreditsText, 17, TextAnchor.MiddleLeft, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1120, 610), Color.white);
+        ct.supportRichText = true;
+        ct.horizontalOverflow = HorizontalWrapMode.Wrap;
+        UIK.Stretch(ct.rectTransform);
+        ct.rectTransform.offsetMin = new Vector2(30, 14); ct.rectTransform.offsetMax = new Vector2(-30, -14);
+        creditsPanel.gameObject.SetActive(false);
+    }
+
+    Image creditsBtn, creditsPanel;
+    bool lobbyLook;
+    const string CreditsText =
+        "<size=28><color=#8cff70><b>CREDITS</b></color></size>\n" +
+        "<b>Unitree</b> (Unitree H1): Unitree Robotics' official robot model (github.com/unitreerobotics/unitree_mujoco).\n" +
+        "   Copyright (c) 2016-2024 HangZhou YuShu TECHNOLOGY CO.,LTD. (\"Unitree Robotics\"). BSD 3-Clause licence. Logo plate removed.\n" +
+        "<b>Atlas HD</b> (hydraulic DRC Atlas): the MIT Atlas model from RobotLocomotion/models (Drake).\n" +
+        "   Copyright 2012-2022 Robot Locomotion Group @ CSAIL. BSD 3-Clause licence. Team / sponsor logos removed.\n" +
+        "<b>Optimus, Figure 02, Big Figure Two, Figure 03, Atlas electric</b>, the froggies and the Cybertruck: modelled for this game\n" +
+        "   from public photos (no logos).\n" +
+        "<b>Trees, bushes, rocks, flowers</b>: Stylized Nature MegaKit by Quaternius (CC0).  <b>Cows, horses, sheep, pig</b>: Farm Animals\n" +
+        "   pack by Quaternius (CC0).  <b>Sky</b> (Kloofendal 48d Partly Cloudy) and <b>grass / dirt / sand / wood / barn / metal textures</b>:\n" +
+        "   Poly Haven (polyhaven.com), CC0.\n\n" +
+        "Full licence texts: similarize.com/games/four-froggies-unity/LICENSES.txt\n" +
+        "Robot and vehicle names describe the real machines only; this fan game is not affiliated with their makers.\n\n" +
+        "<color=#9fd8ff>Press C, Esc or tap to close</color>";
+
+    void CreditsToggle(bool? on = null)
+    {
+        if (creditsPanel == null) return;
+        bool v = on ?? !creditsPanel.gameObject.activeSelf;
+        creditsPanel.gameObject.SetActive(v);
+        creditsPanel.transform.SetAsLastSibling();
+    }
+
+    // ---------------- demo / screenshot mode ----------------
+    // ?ffdemo=1 in the page URL: joins keyboard P1 after ~5 s in the lobby and starts. &ffshot=<scene> pins P1's camera to a
+    // showcase view (frog, robot, truck, ranch, barn, pond, house, under, space); &ffshot=tour cycles them every 9 s.
+    // For work/webgl-probe/probe.py screenshots. Logs "FFDEMO scene <name>" whenever the view changes.
+    static readonly string[] Tour = { "frog", "robot", "truck", "ranch", "barn", "pond", "house", "under", "space" };
+    float demoT = -1f, demoPlayT;
+    string demoShot = "", demoCur = "";
+    bool DemoLobby()
+    {
+        if (demoT < 0f)
+        {
+            string u = Application.absoluteURL ?? "";
+            demoT = u.Contains("ffdemo") ? 0.01f : 0f;
+            int k = u.IndexOf("ffshot=");
+            if (k >= 0) { demoShot = u.Substring(k + 7); int e = demoShot.IndexOfAny(new[] { '&', '#' }); if (e >= 0) demoShot = demoShot.Substring(0, e); }
+            if (demoT > 0f) Debug.Log("Four Froggies: demo mode " + demoShot);
+        }
+        if (demoT <= 0f) return false;
+        demoT += Time.unscaledDeltaTime;
+        if (demoT > 5f && slots.Count == 0) { Join(InputKind.Keyboard, null); return false; }
+        if (demoT > 6f && slots.Count > 0) { demoT = 0.01f; StartPlay(); demoPlayT = 0f; return true; }
+        return false;
+    }
+
+    void DemoView()
+    {
+        if (demoShot.Length == 0 || slots.Count == 0 || slots[0].cam == null) return;
+        demoPlayT += Time.unscaledDeltaTime;
+        string sc = demoShot == "tour" ? Tour[Mathf.Min(Tour.Length - 1, (int)(demoPlayT / 9f))] : demoShot;
+        Frog f = frogs[slots[0].frog];
+        if (sc != demoCur)
+        {
+            demoCur = sc;
+            Debug.Log("FFDEMO scene " + sc + " t=" + Time.realtimeSinceStartup.ToString("0.0"));
+            if (sc == "house") f.SendTo(WorldId.House, HouseWorld.Spawn(f.id), 180f);
+            else if (sc == "under" && UnderwaterWorld.I != null) { f.SendTo(WorldId.Ranch, Ranch.FrogSpawn(f.id), 0f); UnderwaterWorld.I.Dive(f); }
+            else if (sc == "space") DemoSpace(f);
+            else if (f.world != WorldId.Ranch) f.SendTo(WorldId.Ranch, Ranch.FrogSpawn(f.id), 0f);
+        }
+        Camera c = slots[0].cam;
+        Vector3 pos, look;
+        float gy;
+        switch (sc)
+        {
+            case "frog":
+                for (int i = 0; i < 3; i++) frogs[i].DemoPose(new Vector3(-12f + i * 1.5f, 0f, 38f), 0f);
+                pos = new Vector3(-10.5f, Ranch.GY(-10.5f, 42.6f) + 1.35f, 42.6f); look = new Vector3(-10.5f, Ranch.GY(-10.5f, 38f) + 0.6f, 38f); break;
+            case "robot":
+                gy = Ranch.GY(-30f, 18f);
+                pos = new Vector3(-24f, gy + 2.6f, 27f); look = new Vector3(-31f, gy + 1.4f, 17.5f); break;
+            case "truck":
+                gy = Ranch.GY(14f, 44f);
+                pos = new Vector3(20.5f, gy + 2.2f, 50.5f); look = new Vector3(14f, gy + 1f, 44f); break;
+            case "barn":
+                gy = Ranch.GY(-140f, 112f);
+                pos = new Vector3(-118f, gy + 7f, 104f); look = new Vector3(-148f, gy + 1.5f, 124f); break;
+            case "pond":
+                pos = new Vector3(10f, 9f, -40f); look = new Vector3(70f, -1f, -80f); break;
+            case "ranch":
+                pos = new Vector3(45f, 26f, 95f); look = new Vector3(-20f, 0f, 0f); break;
+            default:
+                return;   // house / under / space: the normal follow camera
+        }
+        c.transform.position = pos;
+        c.transform.LookAt(look);
+    }
+
+    void DemoSpace(Frog f)
+    {
+        // straight into Earth orbit in the Starship (skips the launch sequence)
+        if (SpaceWorld.I == null) { Debug.Log("FFDEMO: no space world"); return; }
+        f.SendTo(WorldId.Ranch, Ranch.FrogSpawn(f.id), 0f);
+        SpaceWorld.I.ToOrbit(f, "earth");
     }
 
     void BuildHudUI()
@@ -367,6 +477,10 @@ public class Game : MonoBehaviour
         lobbyCanvas.enabled = true;
         hudCanvas.enabled = false;
         LayoutLobby();
+        if (!lobbyLook) { lobbyLook = true; Look.ApplyViews(1, new List<Camera> { overview }); }
+        if (Kb.CDown()) CreditsToggle();
+        if (creditsPanel != null && creditsPanel.gameObject.activeSelf && (Kb.EscDown() || Kb.TouchesBegan().Count > 0 || Kb.MouseLeftDown())) { CreditsToggle(false); return; }
+        if (DemoLobby()) return;
         Sfx.Music("lobby");
         overview.enabled = true;
         overview.rect = new Rect(0, 0, 1, 1);
@@ -416,6 +530,7 @@ public class Game : MonoBehaviour
         foreach (Vector2 pos in Kb.TouchesBegan())
         {
             lastTouchTime = now;
+            if (Hit(creditsBtn, pos)) { CreditsToggle(true); continue; }
             if (Hit(soundBtn, pos)) { Sfx.CycleVolume(); continue; }
             if (Hit(viewBar, pos)) { ToggleView(); Sfx.Play(Sfx.Click, 0.6f); continue; }
             if (Hit(playBtn, pos))
@@ -436,7 +551,8 @@ public class Game : MonoBehaviour
         if (Kb.MouseLeftDown() && Kb.TouchCount() == 0 && now - lastTouchTime > 1f)
         {
             Vector2 mp = Mouse.current != null ? Mouse.current.position.ReadValue() : (Vector2)Input.mousePosition;
-            if (Hit(soundBtn, mp)) Sfx.CycleVolume();
+            if (Hit(creditsBtn, mp)) CreditsToggle(true);
+            else if (Hit(soundBtn, mp)) Sfx.CycleVolume();
             else if (Hit(viewBar, mp)) ToggleView();
             else if (Hit(playBtn, mp)) { if (FindSlot(InputKind.Keyboard) == null) Join(InputKind.Keyboard, null); StartPlay(); return; }
             else for (int i = 0; i < 4; i++)
@@ -528,14 +644,11 @@ public class Game : MonoBehaviour
         sepV.enabled = split && (n >= 3 || (n == 2 && !portrait));
         sepH.enabled = split && (n >= 3 || (n == 2 && portrait));
 
-        // performance: fewer shadows the more views we draw (Tesla browser friendly)
+        // performance: fewer shadows the more views we draw, post-fx only in one full-screen view (Look tiers)
         int views = split ? n + (n == 3 ? 1 : 0) : 1;
-        if (views >= 3) QualitySettings.shadows = ShadowQuality.Disable;
-        else
-        {
-            QualitySettings.shadows = ShadowQuality.All;
-            QualitySettings.shadowDistance = views == 2 ? 30f : 45f;
-        }
+        var cams = new List<Camera> { sharedCam, overview };
+        foreach (var sl in slots) if (sl.cam != null) cams.Add(sl.cam);
+        Look.ApplyViews(views, cams);
         Debug.Log("Layout: " + n + " players, " + (split ? "split" : n == 1 ? "single" : "shared"));
     }
 
@@ -690,6 +803,7 @@ public class Game : MonoBehaviour
         }
         // Starship blast-off: chase camera, countdown, fade (overrides the views of froggies aboard)
         foreach (var s in slots) if (s.cam != null && s.cam.enabled) LaunchSeq.View(s.cam, s.hud, frogs[s.frog]);
+        if (demoT > 0f) DemoView();
         if (sharedCam.enabled)
         {
             Frog any = null;

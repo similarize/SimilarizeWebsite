@@ -128,10 +128,13 @@ public static class Ranch
         // flowers by the porch and the west yard
         var r = new System.Random(5);
         Color[] petals = { new Color(1f, 0.4f, 0.55f), new Color(1f, 0.85f, 0.2f), new Color(0.65f, 0.45f, 1f), new Color(1f, 1f, 1f) };
+        LBPack fl = LBPack.Get("flowers0");
         for (int i = 0; i < 40; i++)
         {
+            if (fl != null && i % 3 != 0) continue;
             float x = i < 24 ? Mathf.Lerp(px0, px1, (float)r.NextDouble()) : x0 - 2f - (float)r.NextDouble() * 3f;
             float z = i < 24 ? pz1 + 0.8f + (float)r.NextDouble() * 1.4f : Mathf.Lerp(z0, z1, (float)r.NextDouble());
+            if (fl != null) { fl.SpawnAll(root, new Vector3(x, 0f, z), 0.45f, Color.white, i * 47f); continue; }
             Ball(new Vector3(x, 0.25f, z), new Vector3(0.5f, 0.35f, 0.5f), new Color(0.2f, 0.5f, 0.18f));
             Ball(new Vector3(x, 0.45f, z), Vector3.one * 0.22f, petals[i % petals.Length]);
         }
@@ -229,7 +232,7 @@ public static class Ranch
     static void Pond()
     {
         Vector2 c = Layout.PondC, r = Layout.PondR;
-        var water = Mats.Prim(PrimitiveType.Cylinder, root, new Vector3(c.x, Layout.WaterY, c.y), new Vector3(r.x * 2.5f, 0.01f, r.y * 2.5f), Mats.Water, false);
+        var water = Mats.Prim(PrimitiveType.Cylinder, root, new Vector3(c.x, Layout.WaterY, c.y), new Vector3(r.x * 2.5f, 0.01f, r.y * 2.5f), PondMaterial(), false);
         water.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         water.name = "PondWater";
         water.transform.SetParent(null, true);   // keep separate (not merged, no shadows)
@@ -305,6 +308,75 @@ public static class Ranch
         var dive = Interact.Add(new Vector3(dx1 - 3f, 0.45f, dz - 0.8f), 3.2f, "board the Submarine (dive!)", f => UnderwaterWorld.I.Dive(f));
         dive.enabled = f => f.world == WorldId.Ranch && UnderwaterWorld.I != null;
         B(new Vector3(dx1 - 1f, 1.1f, dz + 1.6f), new Vector3(0.15f, 1.6f, 0.15f), Wood, false);
+    }
+
+    // graphics overhaul: the Lambo Blast animated water shader on the pond (scrolling noise normals, sky reflection from
+    // the ranch probe, sun glint, foam bands on the shore); depth / shore map baked from the pond ellipse + islands.
+    static Material pondMat;
+    public static Material PondMaterial()
+    {
+        if (pondMat != null) return pondMat;
+        if (Mats.PondBase == null) return pondMat = Mats.Water;
+        var m = new Material(Mats.PondBase);
+        Vector2 c = Layout.PondC, r = Layout.PondR;
+        float x0 = c.x - r.x * 1.3f, z0 = c.y - r.y * 1.3f, w = r.x * 2.6f, h = r.y * 2.6f;
+        const int n = 128;
+        var map = new Texture2D(n, n, TextureFormat.RGBA32, false);
+        map.wrapMode = TextureWrapMode.Clamp;
+        var px = new Color[n * n];
+        for (int y = 0; y < n; y++)
+            for (int x = 0; x < n; x++)
+            {
+                float wx = x0 + (x + 0.5f) * w / n, wz = z0 + (y + 0.5f) * h / n;
+                float gy = GY(wx, wz);
+                float depth = Mathf.Clamp01((Layout.WaterY - gy) / 3.5f);
+                float shore = Mathf.Clamp01(1f - (Layout.WaterY - gy) / 0.9f) * (gy < Layout.WaterY + 0.3f ? 1f : 0f);
+                px[y * n + x] = new Color(depth, shore, 0f, 1f);
+            }
+        map.SetPixels(px); map.Apply(false);
+        m.SetTexture("_SeaMap", map);
+        m.SetTexture("_Noise", NoiseTex(128));
+        m.SetVector("_SeaRect", new Vector4(x0, z0, 1f / w, 1f / h));
+        m.SetColor("_Shallow", new Color(0.32f, 0.62f, 0.5f, 0.7f));
+        m.SetColor("_Deep", new Color(0.06f, 0.3f, 0.36f, 0.9f));
+        m.SetFloat("_WaveScale", 0.09f);
+        m.SetFloat("_Speed", 0.8f);
+        return pondMat = m;
+    }
+
+    public static Texture2D NoiseTex(int n)
+    {
+        var tex = new Texture2D(n, n, TextureFormat.RGBA32, true);
+        tex.wrapMode = TextureWrapMode.Repeat;
+        tex.filterMode = FilterMode.Bilinear;
+        var r = new System.Random(77);
+        var px = new Color[n * n];
+        var g = new float[3][];
+        for (int ch = 0; ch < 3; ch++)
+        {
+            g[ch] = new float[n * n];
+            for (int oct = 0; oct < 4; oct++)
+            {
+                int cells = 4 << oct; float amp = 1f / (1 << oct);
+                var lat = new float[cells * cells];
+                for (int i = 0; i < lat.Length; i++) lat[i] = (float)r.NextDouble();
+                for (int y = 0; y < n; y++)
+                    for (int x = 0; x < n; x++)
+                    {
+                        float fx = x * cells / (float)n, fy = y * cells / (float)n;
+                        int xa = (int)fx, ya = (int)fy; float tx = fx - xa, ty = fy - ya;
+                        tx = tx * tx * (3 - 2 * tx); ty = ty * ty * (3 - 2 * ty);
+                        int xb = (xa + 1) % cells, yb = (ya + 1) % cells;
+                        float a = Mathf.Lerp(lat[ya * cells + xa], lat[ya * cells + xb], tx);
+                        float b = Mathf.Lerp(lat[yb * cells + xa], lat[yb * cells + xb], tx);
+                        g[ch][y * n + x] += Mathf.Lerp(a, b, ty) * amp;
+                    }
+            }
+        }
+        for (int i = 0; i < n * n; i++) px[i] = new Color(g[0][i] / 1.875f, g[1][i] / 1.875f, g[2][i] / 1.875f, 1f);
+        tex.SetPixels(px);
+        tex.Apply(true);
+        return tex;
     }
 
     // ---------------- rally track (see RallyTrack.cs) ----------------
@@ -394,8 +466,70 @@ public static class Ranch
     }
 
     // ---------------- trees + rocks ----------------
+    // graphics overhaul: Quaternius Stylized Nature MegaKit trees / pines / bushes / rocks (CC0, Resources/LB); invisible
+    // trunk / rock colliders keep the old collision. Falls back to the primitive trees if the packs are missing.
+    static readonly string[] TreePacks = { "tree0", "tree1", "tree2" }, PinePacks = { "pine0", "pine1" };
+    static bool MeshTrees()
+    {
+        if (LBPack.Get("tree0") == null || LBPack.Get("pine0") == null) return false;
+        var r = new System.Random(42);
+        int want = Look.Mobile ? 95 : 150;
+        int placed = 0;
+        for (int tries = 0; tries < 2000 && placed < want; tries++)
+        {
+            float x = (float)(r.NextDouble() * 2 - 1) * 175f, z = (float)(r.NextDouble() * 2 - 1) * 175f;
+            if (Layout.Flatness(x, z) < 0.6f) continue;
+            if (Layout.PondQ(x, z) < 1.3f) continue;
+            if (Layout.RoadDist(x, z) < Layout.TrackW + 4f) continue;
+            if (x > -30f && x < 30f && z > 30f && z < 70f) continue;
+            if (Worlds.StageEOn && RanchLife.Reserved(x, z)) continue;
+            float gy = GY(x, z);
+            float s = 0.75f + (float)r.NextDouble() * 0.5f;
+            bool conifer = r.NextDouble() < 0.4;
+            string pk = conifer ? PinePacks[r.Next(PinePacks.Length)] : TreePacks[r.Next(TreePacks.Length)];
+            LBPack p = LBPack.Get(pk);
+            if (p == null) continue;
+            p.SpawnAll(root, new Vector3(x, gy - 0.15f, z), s, Color.white, (float)r.NextDouble() * 360f);
+            var col = new GameObject("TreeCol").AddComponent<CapsuleCollider>();
+            col.transform.SetParent(root, false);
+            col.transform.position = new Vector3(x, gy + 2f * s, z);
+            col.radius = 0.35f * s; col.height = 4f * s;
+            placed++;
+        }
+        // bushes (no collision) along the yard edges and between trees
+        LBPack bush = LBPack.Get("bush0");
+        if (bush != null)
+            for (int i = 0, n = 0; i < 600 && n < (Look.Mobile ? 40 : 80); i++)
+            {
+                float x = (float)(r.NextDouble() * 2 - 1) * 170f, z = (float)(r.NextDouble() * 2 - 1) * 170f;
+                if (Layout.Flatness(x, z) < 0.6f || Layout.PondQ(x, z) < 1.15f || Layout.RoadDist(x, z) < Layout.TrackW + 2f) continue;
+                if (x > -60f && x < 30f && z > -30f && z < 70f) continue;
+                if (Worlds.StageEOn && RanchLife.Reserved(x, z)) continue;
+                bush.SpawnAll(root, new Vector3(x, GY(x, z) - 0.1f, z), 0.8f + (float)r.NextDouble() * 0.7f, Color.white, (float)r.NextDouble() * 360f);
+                n++;
+            }
+        string[] rocks = { "qrock0", "qrock1" };
+        for (int i = 0; i < 40; i++)
+        {
+            float x = (float)(r.NextDouble() * 2 - 1) * 170f, z = (float)(r.NextDouble() * 2 - 1) * 170f;
+            if (Layout.Flatness(x, z) < 0.5f || Layout.PondQ(x, z) < 1.2f) continue;
+            float s = 0.35f + (float)r.NextDouble() * 0.6f;
+            LBPack p = LBPack.Get(rocks[i % 2]);
+            if (p == null) continue;
+            float gy = GY(x, z);
+            p.SpawnAll(root, new Vector3(x, gy - 0.25f * s, z), s, Color.white, (float)r.NextDouble() * 360f);
+            var col = new GameObject("RockCol").AddComponent<SphereCollider>();
+            col.transform.SetParent(root, false);
+            col.transform.position = new Vector3(x, gy + 0.3f * s, z);
+            col.radius = 1.1f * s;
+        }
+        Debug.Log("Ranch: " + placed + " mesh trees");
+        return true;
+    }
+
     static void Trees()
     {
+        if (MeshTrees()) return;
         var r = new System.Random(42);
         Color trunk = new Color(0.36f, 0.25f, 0.16f);
         Color[] leaf = { new Color(0.2f, 0.42f, 0.16f), new Color(0.28f, 0.5f, 0.18f), new Color(0.16f, 0.36f, 0.2f) };

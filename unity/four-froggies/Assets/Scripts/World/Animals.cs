@@ -151,6 +151,18 @@ public class Animal : MonoBehaviour
         return a;
     }
 
+    // graphics overhaul: Quaternius CC0 farm animal meshes (Resources/LB/cow|horse|sheep|pig.bytes) with leg / head parts
+    static Animal FromPack(string name, string pack, Vector3 pos, Kind k, float scale)
+    {
+        LBPack p = LBPack.Get(pack);
+        if (p == null || !p.Has("body") || !p.Has("leg0")) return null;
+        var a = Root(name, pos, k);
+        p.Spawn("body", a.body, Vector3.zero, scale, Color.white);
+        if (p.Has("head")) a.head = p.Spawn("head", a.body, Vector3.zero, scale, Color.white);
+        for (int i = 0; i < 4; i++) { var l = p.Spawn("leg" + i, a.body, Vector3.zero, scale, Color.white); if (l != null) a.legs.Add(l); }
+        return a;
+    }
+
     // quadruped: torso length L, height H (to belly), leg thickness w
     static void Quad(Animal a, Color c, Color legC, float L, float H, float W, float thick, float bodyH)
     {
@@ -241,6 +253,8 @@ public class Animal : MonoBehaviour
 
     public static Animal Cow(Vector3 pos, bool spotted)
     {
+        var pa = FromPack("Cow", "cow", pos, Kind.Cow, spotted ? 1f : 0.92f);
+        if (pa != null) { pa.speed = 0.7f; pa.runSpeed = 3.2f; return pa; }
         var a = Root("Cow", pos, Kind.Cow);
         a.speed = 0.7f; a.runSpeed = 3.2f;
         Color w = spotted ? new Color(0.95f, 0.95f, 0.93f) : new Color(0.45f, 0.28f, 0.16f);
@@ -267,6 +281,8 @@ public class Animal : MonoBehaviour
 
     public static Animal Horse(Vector3 pos, Color c, Color mane)
     {
+        var pa = FromPack("Horse", "horse", pos, Kind.Horse, 0.95f + (c.r * 0.1f));
+        if (pa != null) { pa.speed = 1.1f; pa.runSpeed = 6.5f; return pa; }
         var a = Root("Horse", pos, Kind.Horse);
         a.speed = 1.1f; a.runSpeed = 6.5f;
         Quad(a, c, c, 1.8f, 1.0f, 0.7f, 0.17f, 0.75f);
@@ -302,6 +318,9 @@ public class Animal : MonoBehaviour
 
     public static Animal Goat(Vector3 pos)
     {
+        // the pasture's small grazers are Quaternius sheep (and a pig) in the overhaul; Kind stays Goat for behaviour
+        var pa = FromPack("Sheep", (Mathf.RoundToInt(pos.z) % 3 == 0) ? "pig" : "sheep", pos, Kind.Goat, 1f);
+        if (pa != null) { pa.speed = 0.9f; pa.runSpeed = 4f; return pa; }
         var a = Root("Goat", pos, Kind.Goat);
         a.speed = 0.9f; a.runSpeed = 4f;
         Color c = new Color(0.88f, 0.86f, 0.8f);

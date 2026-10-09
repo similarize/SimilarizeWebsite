@@ -8,6 +8,8 @@ public static class Mats
     static readonly Dictionary<long, Material> cache = new Dictionary<long, Material>();
 
     public static Material Fx { get { return fx; } }
+    // graphics overhaul bases (editor-made assets so the shaders ship); any may be null -> Standard fallbacks
+    public static Material SkinBase, FoliageBase, PondBase, GrassDetailBase;
     public static Material Water { get { return water; } }
     public static Material Glass { get { return glass; } }
 
@@ -36,6 +38,8 @@ public static class Mats
         if (kind == 0) m.SetFloat("_Glossiness", 0.12f);
         else if (kind == 1) { m.SetFloat("_Glossiness", 0.72f); m.SetFloat("_Metallic", 0.55f); }
         else if (kind == 3) { m.SetFloat("_Glossiness", 0.82f); m.SetFloat("_Metallic", 0.85f); }
+        else if (kind >= 1000) { int q = kind - 1000; m.SetFloat("_Glossiness", (q / 21) / 20f); m.SetFloat("_Metallic", (q % 21) / 20f); }   // PBR
+        else if (kind >= 10) { m.SetFloat("_Glossiness", (kind - 10) / 20f); m.SetFloat("_Metallic", 0.12f); }   // Paint
         cache[k] = m;
         return m;
     }
@@ -44,6 +48,72 @@ public static class Mats
     public static Material Shiny(Color c) { return Get(c, 1); }
     public static Material Unlit(Color c) { return Get(c, 2); }
     public static Material Steel(Color c) { return Get(c, 3); }
+
+    // glossy / satin painted or moulded surface (robot shells, accents): low metal, smoothness 0..1
+    public static Material Paint(Color c, float gloss = 0.85f) { return Get(c, 10 + Mathf.Clamp(Mathf.RoundToInt(gloss * 20f), 0, 20)); }
+
+    // Standard with chosen smoothness + metallic (quantised to 1/20)
+    public static Material PBR(Color c, float gloss, float metal)
+    {
+        int g = Mathf.Clamp(Mathf.RoundToInt(gloss * 20f), 0, 20), mt = Mathf.Clamp(Mathf.RoundToInt(metal * 20f), 0, 20);
+        return Get(c, 1000 + g * 21 + mt);
+    }
+
+    // a lit (Standard) material with a texture
+    public static Material Tex(Texture t, float gloss = 0.1f)
+    {
+        var m = new Material(lit);
+        m.color = Color.white;
+        m.mainTexture = t;
+        m.SetFloat("_Glossiness", gloss);
+        return m;
+    }
+
+    // textured + tinted (wood, siding, metal sheet), cached per texture + colour + tiling
+    static readonly Dictionary<string, Material> texCache = new Dictionary<string, Material>();
+    public static Material TexTint(string res, Color c, float gloss = 0.1f, float tile = 1f)
+    {
+        string k = res + ColorUtility.ToHtmlStringRGBA(c) + gloss + "_" + tile;
+        Material m;
+        if (texCache.TryGetValue(k, out m)) return m;
+        var t = Resources.Load<Texture2D>(res);
+        if (t == null) m = Lit(c);
+        else { m = Tex(t, gloss); m.color = c; m.mainTextureScale = new Vector2(tile, tile); }
+        texCache[k] = m;
+        return m;
+    }
+
+    // tinted transparent copy of the glass material
+    public static Material GlassTint(Color c)
+    {
+        var m = new Material(glass);
+        m.color = c;
+        return m;
+    }
+
+    // soft stylised skin (FF/Skin: wrapped diffuse, warm terminator, rim, soft highlight) for the frogs
+    static readonly Dictionary<long, Material> skinCache = new Dictionary<long, Material>();
+    public static Material Skin(Color c, float gloss = 0.45f)
+    {
+        long k = Key(c, 77) ^ ((long)Mathf.RoundToInt(gloss * 20f) << 40);
+        Material m;
+        if (skinCache.TryGetValue(k, out m)) return m;
+        if (SkinBase == null) m = Paint(c, gloss * 0.9f);
+        else { m = new Material(SkinBase); m.color = c; m.SetFloat("_Gloss", gloss); }
+        skinCache[k] = m;
+        return m;
+    }
+
+    // alpha-cut, double-sided foliage with a gentle wind sway (FF/Foliage); Standard cutout-less fallback
+    public static Material Foliage(Texture t, Color c)
+    {
+        Material m;
+        if (FoliageBase == null) { m = Tex(t, 0.05f); m.color = c; return m; }
+        m = new Material(FoliageBase);
+        m.mainTexture = t;
+        m.color = c;
+        return m;
+    }
 
     public static Color Hex(string hex)
     {

@@ -63,12 +63,25 @@ public class RanchLife : MonoBehaviour
         Rail(fence, new Vector2(P.xMin, P.yMin), new Vector2(P.xMin, P.yMax), wood);
         Rail(fence, new Vector2(P.xMax, P.yMin), new Vector2(P.xMax, P.center.y - 5f), wood);
         Rail(fence, new Vector2(P.xMax, P.center.y + 5f), new Vector2(P.xMax, P.yMax), wood);
-        // a barn + trough
+        // a barn + trough (graphics overhaul: Poly Haven CC0 plank siding painted barn red, grey metal gable roof, white trim)
         Vector3 barn = new Vector3(P.xMin + 10f, 0f, P.yMax - 10f);
         float by = Ranch.GY(barn.x, barn.z);
-        Mats.Prim(PrimitiveType.Cube, fence, new Vector3(barn.x, by + 3f, barn.z), new Vector3(12f, 6f, 9f), Mats.Lit(new Color(0.7f, 0.15f, 0.12f)), true);
-        Mats.Prim(PrimitiveType.Cube, fence, new Vector3(barn.x, by + 6.6f, barn.z), new Vector3(12.6f, 1.2f, 9.6f), Mats.Lit(new Color(0.3f, 0.3f, 0.32f)), false);
-        Mats.Prim(PrimitiveType.Cube, fence, new Vector3(barn.x, by + 2.2f, barn.z + 4.55f), new Vector3(4f, 4.4f, 0.1f), Mats.Lit(Color.white), false);
+        Material siding = Mats.TexTint("LB/barnred", Color.white, 0.08f), roof = Mats.TexTint("LB/roofmetal", Color.white, 0.35f), trimM = Mats.Lit(new Color(0.95f, 0.94f, 0.9f));
+        Mats.Prim(PrimitiveType.Cube, fence, new Vector3(barn.x, by + 3f, barn.z), new Vector3(12f, 6f, 9f), siding, true);
+        for (int sd = -1; sd <= 1; sd += 2)   // gable roof: two slabs meeting over the ridge
+            Mats.Prim(PrimitiveType.Cube, fence, new Vector3(barn.x + sd * 3.2f, by + 7.35f, barn.z), new Vector3(7.4f, 0.25f, 9.8f), new Vector3(0f, 0f, -sd * 32f), roof, false);
+        for (int ez = -1; ez <= 1; ez += 2)   // gable ends (triangle-ish: stacked boxes)
+            for (int k = 0; k < 4; k++)
+                Mats.Prim(PrimitiveType.Cube, fence, new Vector3(barn.x, by + 6.35f + k * 0.55f, barn.z + ez * 4.48f), new Vector3(9.2f - k * 1.8f, 0.56f, 0.06f), siding, false);
+        Mats.Prim(PrimitiveType.Cube, fence, new Vector3(barn.x, by + 2.2f, barn.z + 4.55f), new Vector3(4f, 4.4f, 0.1f), siding, false);
+        foreach (float a in new[] { 45f, -45f })   // white X braces on the big door
+            Mats.Prim(PrimitiveType.Cube, fence, new Vector3(barn.x, by + 2.2f, barn.z + 4.62f), new Vector3(5.6f, 0.22f, 0.06f), new Vector3(0f, 0f, a), trimM, false);
+        foreach (Vector3 tp in new[] { new Vector3(0f, 4.45f, 0f), new Vector3(0f, 0.05f, 0f), new Vector3(-2.05f, 2.2f, 0f), new Vector3(2.05f, 2.2f, 0f) })
+            Mats.Prim(PrimitiveType.Cube, fence, new Vector3(barn.x, by, barn.z + 4.62f) + tp, tp.x == 0f ? new Vector3(4.3f, 0.2f, 0.07f) : new Vector3(0.2f, 4.5f, 0.07f), trimM, false);
+        for (int cx = -1; cx <= 1; cx += 2)   // corner trim
+            for (int cz = -1; cz <= 1; cz += 2)
+                Mats.Prim(PrimitiveType.Cube, fence, new Vector3(barn.x + cx * 6f, by + 3f, barn.z + cz * 4.5f), new Vector3(0.25f, 6.02f, 0.25f), trimM, false);
+        Mats.Prim(PrimitiveType.Cube, fence, new Vector3(barn.x, by + 4.9f, barn.z + 4.58f), new Vector3(1.6f, 1.2f, 0.08f), Mats.Lit(new Color(0.15f, 0.15f, 0.17f)), false);   // hay loft window
         Mats.Prim(PrimitiveType.Cube, fence, new Vector3(P.center.x, Ranch.GY(P.center.x, P.center.y) + 0.4f, P.center.y), new Vector3(4f, 0.8f, 1.2f), Mats.Lit(new Color(0.45f, 0.45f, 0.5f)), true);
         Ranch.Sign(new Vector3(P.xMax + 1f, Ranch.GY(P.xMax, P.center.y) + 3f, P.center.y + 6f), 90f, "PASTURE", new Color(0.3f, 0.45f, 0.15f), 3.6f, 1f);
         MeshMerge.Merge(fence, true);
@@ -109,7 +122,7 @@ public class RanchLife : MonoBehaviour
 
     static void Post(Transform p, float x, float z, Color c)
     {
-        Mats.Prim(PrimitiveType.Cube, p, new Vector3(x, Ranch.GY(x, z) + 0.7f, z), new Vector3(0.25f, 1.4f, 0.25f), Mats.Lit(c), true);
+        Mats.Prim(PrimitiveType.Cube, p, new Vector3(x, Ranch.GY(x, z) + 0.7f, z), new Vector3(0.25f, 1.4f, 0.25f), Mats.TexTint("LB/wood", Color.Lerp(c, Color.white, 0.55f), 0.08f), true);
     }
 
     static void Rail(Transform p, Vector2 a, Vector2 b, Color c)
@@ -121,7 +134,7 @@ public class RanchLife : MonoBehaviour
             float y = Ranch.GY(m.x, m.y);
             foreach (float h in new[] { 0.6f, 1.15f })
             {
-                var g = Mats.Prim(PrimitiveType.Cube, p, new Vector3(m.x, y + h, m.y), new Vector3(0.1f, 0.12f, (e - s).magnitude + 0.1f), Mats.Lit(c), true);
+                var g = Mats.Prim(PrimitiveType.Cube, p, new Vector3(m.x, y + h, m.y), new Vector3(0.1f, 0.12f, (e - s).magnitude + 0.1f), Mats.TexTint("LB/wood", Color.Lerp(c, Color.white, 0.55f), 0.08f), true);
                 g.transform.rotation = Quaternion.LookRotation(new Vector3(e.x - s.x, 0f, e.y - s.y));
             }
         }

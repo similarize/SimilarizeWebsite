@@ -116,6 +116,16 @@ public class Frog : MonoBehaviour
         exitCool = 0.4f;
     }
 
+    // demo / screenshot mode: hold this frog at a spot, facing yaw
+    public void DemoPose(Vector3 p, float yawDeg)
+    {
+        if (vehicle != null || world != WorldId.Ranch) return;
+        p.y = Ranch.GY(p.x, p.z) + 0.05f;
+        if ((transform.position - p).sqrMagnitude > 0.01f) Teleport(p);
+        yaw = yawDeg;
+        transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+    }
+
     public void Teleport(Vector3 p)
     {
         bool was = cc.enabled;

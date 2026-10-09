@@ -1,0 +1,89 @@
+Four Froggies (Unity) - third-party assets and licences
+=======================================================
+
+1. "Unitree" robot = Unitree H1 robot model
+   Source: https://github.com/unitreerobotics/unitree_mujoco (unitree_robots/h1), converted, posed standing, split into limbs and decimated
+   for this game; the logo plate was left out.
+
+BSD 3-Clause License
+
+Copyright (c) 2016-2024 HangZhou YuShu TECHNOLOGY CO.,LTD. ("Unitree Robotics")
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this
+  list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice,
+  this list of conditions and the following disclaimer in the documentation
+  and/or other materials provided with the distribution.
+
+* Neither the name of the copyright holder nor the names of its
+  contributors may be used to endorse or promote products derived from
+  this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+2. "Atlas HD" robot = MIT DRC Atlas robot model
+   Source: https://github.com/RobotLocomotion/models (atlas/), converted, posed standing, split into limbs and decimated for this game;
+   team / sponsor logos were painted out of the textures.
+
+Copyright 2012-2022 Robot Locomotion Group @ CSAIL
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+Redistributions of source code must retain the above copyright notice,
+this list of conditions and the following disclaimer.  Redistributions
+in binary form must reproduce the above copyright notice, this list of
+conditions and the following disclaimer in the documentation and/or
+other materials provided with the distribution.  Neither the name of
+the Massachusetts Institute of Technology nor the names of its
+contributors may be used to endorse or promote products derived from
+this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+3. Sky + textures - Poly Haven (https://polyhaven.com), CC0 1.0 (public domain):
+   - HDRI "Kloofendal 48d Partly Cloudy (Pure Sky)" by Greg Zaal and Jarod Guest (sky).
+   - Textures sparse_grass + leafy_grass (recoloured ranch grass), park_dirt, coast_sand_01, weathered_planks (fences),
+     weathered_plank_siding (barn, painted red), box_profile_metal_sheet (barn roof), plastered_wall_02.
+   https://polyhaven.com/license - "All assets on Poly Haven are licensed as CC0 ... You can use them for any purpose,
+   including commercial work, without attribution." Credited anyway with thanks.
+
+4. Trees, pines, bushes, rocks, flowers - "Stylized Nature MegaKit" by Quaternius (https://quaternius.com),
+   via https://opengameart.org/content/stylized-nature-megakit. CC0 1.0 Universal (public domain dedication).
+   Decimated and converted for WebGL; leaf / bark textures resized.
+
+5. Cows, horses, sheep, pig - "Farm Animals" pack by Quaternius (https://quaternius.com),
+   via https://opengameart.org/content/lowpoly-animated-farm-animal-pack. CC0 1.0 Universal.
+   Split into leg / head parts for the walk animation.
+
+6. Modelled for this game (no third-party mesh): the four froggies, Optimus, Figure 02 / Big Figure Two, Figure 03,
+   Atlas electric (from public photos, no logos), the Cybertruck-style pickup and everything else.
+   Robot and vehicle names describe the real machines only; this fan game is not affiliated with their makers.
+
+CC0 1.0 Universal: https://creativecommons.org/publicdomain/zero/1.0/legalcode

@@ -31,8 +31,30 @@ public class FrogModel : MonoBehaviour
         g.transform.localRotation = Quaternion.FromToRotation(Vector3.up, d.normalized);
     }
 
+    // graphics overhaul: smooth stylised frog mesh (Resources/LB/frog.bytes, work/lb-gfx/ff/build_frog.py) with the soft
+    // FF/Skin shader; falls back to the primitive frog below if the pack is missing.
+    public const float MeshScale = 1.1f;
+    bool BuildMesh(Color m)
+    {
+        LBPack p = LBPack.Get("frog");
+        if (p == null || !p.Has("body")) return false;
+        seed = Random.value * 10f;
+        bob = Mats.Node(transform, "Bob", Vector3.zero);
+        Transform body = Mats.Node(bob, "Body", Vector3.zero);
+        p.Spawn("body", body, Vector3.zero, MeshScale, m);
+        head = Mats.Node(body, "Head", new Vector3(0f, 0.8f, 0.15f));   // no own mesh: the head is part of the body surface
+        legL = p.Spawn("legL", body, Vector3.zero, MeshScale, m);
+        legR = p.Spawn("legR", body, Vector3.zero, MeshScale, m);
+        armL = p.Spawn("armL", body, Vector3.zero, MeshScale, m);
+        armR = p.Spawn("armR", body, Vector3.zero, MeshScale, m);
+        if (legL == null || legR == null || armL == null || armR == null) { Destroy(bob.gameObject); return false; }
+        Mats.SetLayer(gameObject, 9);
+        return true;
+    }
+
     public void Build(Color m)
     {
+        if (BuildMesh(m)) return;
         seed = Random.value * 10f;
         Color belly = Color.Lerp(m, new Color(1f, 1f, 0.82f), 0.55f);
         Color dark = Color.Lerp(m, Color.black, 0.45f);

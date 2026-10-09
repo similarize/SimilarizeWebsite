@@ -61,6 +61,21 @@ public static class VehicleFactory
         v.SetupBodyPublic(2300f, new Vector3(0f, 1.2f, 0f), new Vector3(2.15f, 1.1f, 5.7f), new Vector3(0f, 0.55f, 0f));
         v.maxSpeed = 30f; v.accel = 13f; v.turnRate = 1.7f; v.grip = 7.5f;
         Transform t = v.transform;
+        float r = 0.48f;
+        // graphics overhaul: faceted stainless body + glass greenhouse + aero wheels (Resources/LB/cybertruck.bytes)
+        LBPack pk = LBPack.Get("cybertruck");
+        if (pk != null && pk.Has("body") && pk.Has("wheel"))
+        {
+            pk.Spawn("body", t, Vector3.zero, 1f, accent);
+            foreach (var w in new[] { new Vector3(-0.98f, r, 1.85f), new Vector3(0.98f, r, 1.85f), new Vector3(-0.98f, r, -1.75f), new Vector3(0.98f, r, -1.75f) })
+            {
+                Transform wn = Mats.Node(t, "Wheel", w);
+                pk.Spawn("wheel", wn, Vector3.zero, 1f, accent, w.x < 0f);
+                v.AddWheel(w, r, wn, w.z > 0f);
+            }
+        }
+        else
+        {
         Material steel = Mats.Steel(new Color(0.74f, 0.76f, 0.78f));
         Material black = M(new Color(0.07f, 0.07f, 0.08f));
         Box(t, new Vector3(0f, 0.98f, 0f), new Vector3(2.12f, 0.62f, 5.7f), steel);
@@ -78,11 +93,11 @@ public static class VehicleFactory
         Box(t, new Vector3(0f, 1.24f, 2.86f), new Vector3(2.0f, 0.05f, 0.04f), Mats.Unlit(Color.white));
         Box(t, new Vector3(0f, 1.36f, -2.86f), new Vector3(2.0f, 0.06f, 0.04f), Mats.Unlit(new Color(1f, 0.1f, 0.1f)));
         Box(t, new Vector3(0f, 1.0f, 0f), new Vector3(2.14f, 0.06f, 4.0f), M(accent));   // froggy stripe
-        float r = 0.48f;
         foreach (var w in new[] { new Vector3(-0.98f, r, 1.85f), new Vector3(0.98f, r, 1.85f), new Vector3(-0.98f, r, -1.75f), new Vector3(0.98f, r, -1.75f) })
             v.AddWheel(w, r, WheelVis(t, w, r, 0.4f, false), w.z > 0f);
-        v.seat = Mats.Node(t, "Seat", new Vector3(-0.45f, 1.05f, 0.25f));
-        v.seatScale = 0.66f;
+        }
+        v.seat = Mats.Node(t, "Seat", new Vector3(-0.45f, 1.3f, -0.08f));
+        v.seatScale = 0.55f;
         v.FinishSetup();
         Done(v);
         return v;

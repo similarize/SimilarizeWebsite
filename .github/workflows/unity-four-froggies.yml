@@ -147,6 +147,7 @@ jobs:
           cp -r "$OUT/Build" "$GAME_DIR/Build"
           if [ -d "$OUT/StreamingAssets" ]; then cp -r "$OUT/StreamingAssets" "$GAME_DIR/"; fi
           sed -e "s/__BUILD_NAME__/$NAME/g" -e "s/__BUILD_VERSION__/$VERSION/g" "$GITHUB_WORKSPACE/src/unity/four-froggies/web/index.html" > "$GAME_DIR/index.html"
+          if [ -f "$GITHUB_WORKSPACE/src/unity/four-froggies/web/LICENSES.txt" ]; then cp "$GITHUB_WORKSPACE/src/unity/four-froggies/web/LICENSES.txt" "$GAME_DIR/LICENSES.txt"; fi
           git add -A "$GAME_DIR"
           if git diff --cached --quiet; then echo "nothing to publish"; exit 0; fi
           git commit -m "Publish Four Froggies (Unity WebGL) build $VERSION"
