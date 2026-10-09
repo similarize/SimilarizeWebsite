@@ -60,7 +60,7 @@ public class Kart : MonoBehaviour
     float aiSkill = 1f;
 
     // visuals
-    Transform body, head;
+    Transform body, head, wheelT;
     Transform[] steerPivots, spinners;
     GameObject shield;
     AudioSource eng, skid;
@@ -91,7 +91,7 @@ public class Kart : MonoBehaviour
         if (body != null) MeshMerge.DestroyWithMeshes(body.gameObject);
         body = new GameObject("Body").transform;
         body.SetParent(transform, false);
-        KartModel.Build(body, car, robot, out steerPivots, out spinners, out head);
+        KartModel.Build(body, car, robot, out steerPivots, out spinners, out head, out wheelT);
         shield = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         Destroy(shield.GetComponent<Collider>());
         shield.name = "Shield";
@@ -440,6 +440,7 @@ public class Kart : MonoBehaviour
         if (steerPivots != null) foreach (var p in steerPivots) if (p != null) p.localRotation = Quaternion.Euler(0f, steerAng, 0f);
         headYaw = Mathf.Lerp(headYaw, LastSteer * 28f + (drifting ? driftDir * 18f : 0f), Mathf.Min(1f, dt * 5f));
         if (head != null) head.localRotation = Quaternion.Euler(0f, headYaw, 0f);
+        if (wheelT != null) wheelT.localRotation = Quaternion.AngleAxis(-steerAng * 2.2f, RobotModel.WheelAxis);
         if (shield != null)
         {
             bool on = shieldT > 0f;

@@ -30,6 +30,7 @@ public class Bootstrap : MonoBehaviour
         if (sun != null) sun.shadows = LightShadows.Soft;
 
         Mats.Init(litMat, unlitMat, fxMat, waterMat, glassMat);
+        Look.Init(sun);
         Showroom.Init(sun);
         Sfx.Init();
         FX.Init();
@@ -39,6 +40,8 @@ public class Bootstrap : MonoBehaviour
         Scenery.Build();
         ItemBox.SpawnAll();
         Debug.Log("Lambo Blast: world built in " + ((Time.realtimeSinceStartup - t0) * 1000f).ToString("F0") + " ms");
+        Vector2 mid = (Track.Min + Track.Max) * 0.5f;
+        StartCoroutine(Look.BuildProbes(new Vector3(mid.x, 0f, mid.y), Showroom.BasePos, Showroom.Mask));
         gameObject.AddComponent<Game>();
     }
 }

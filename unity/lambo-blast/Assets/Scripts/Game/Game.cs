@@ -91,6 +91,13 @@ public class Game : MonoBehaviour
         Sfx.Music("lobby");
     }
 
+    static void SetPost(Camera c, bool on)
+    {
+        if (c == null) return;
+        var p = c.GetComponent<LBPost>();
+        if (p != null && p.enabled != on) p.enabled = on;
+    }
+
     static Camera MakeCam(string name, int depth)
     {
         var g = new GameObject(name);
@@ -101,6 +108,8 @@ public class Game : MonoBehaviour
         c.fieldOfView = 60f;
         c.clearFlags = CameraClearFlags.Skybox;
         c.cullingMask = ~Showroom.Mask;
+        c.allowHDR = false;
+        LBPost.Add(c);
         return c;
     }
 
@@ -663,6 +672,8 @@ public class Game : MonoBehaviour
         overview.rect = new Rect(0, 0, 1, 1);
         overview.orthographic = false;
         overview.fieldOfView = 55f;
+        SetPost(overview, true);
+        Sfx.PlaceButton(true);
         overview.transform.position = c + new Vector3(Mathf.Sin(a) * 30f, 9f, Mathf.Cos(a) * 30f);
         overview.transform.LookAt(c);
         foreach (var k in karts) k.Tick(dt, false, false);
@@ -765,10 +776,13 @@ public class Game : MonoBehaviour
         }
         sepV.enabled = n >= 3 || (n == 2 && !portrait);
         sepH.enabled = n >= 3 || (n == 2 && portrait);
-        // performance: fewer shadows the more views we draw (Tesla browser friendly)
+        // performance: quality tier by device + number of views (shadows, post) - see Look
         int views = n + (n == 3 ? 1 : 0);
-        if (views >= 3) QualitySettings.shadows = ShadowQuality.Disable;
-        else { QualitySettings.shadows = ShadowQuality.All; QualitySettings.shadowDistance = views == 2 ? 30f : 45f; }
+        var cams = new List<Camera>();
+        foreach (var sl in slots) if (sl.cam != null) cams.Add(sl.cam);
+        Look.ApplyViews(views, cams);
+        SetPost(overview, false);
+        Sfx.PlaceButton(false);
         Debug.Log("Layout: " + n + " players");
     }
 
@@ -1066,8 +1080,7 @@ public class Game : MonoBehaviour
             if (s.hud != null) s.hud.SetActive(false);
         }
         overview.orthographic = false;
-        QualitySettings.shadows = ShadowQuality.All;
-        QualitySettings.shadowDistance = 45f;
+        Look.ApplyViews(1, null);
         Assign();
         PlaceGrid();
     }

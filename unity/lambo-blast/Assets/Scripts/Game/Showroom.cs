@@ -10,6 +10,7 @@ public static class Showroom
     public const int Layer = 20;
     public const int Mask = 1 << Layer;
     static readonly Vector3 Base = new Vector3(3200f, 400f, 3200f);
+    public static Vector3 BasePos { get { return Base; } }
     public static readonly RenderTexture[] CarThumbs = new RenderTexture[8];
     public static readonly RenderTexture[] RobotThumbs = new RenderTexture[7];
     public const int CarThumbW = 192, CarThumbH = 112, RobotThumbW = 192, RobotThumbH = 122;
@@ -113,10 +114,12 @@ public static class Showroom
             Mats.SetLayer(root.gameObject, Layer);
             float s = RobotModel.Size(r);
             float f = s > 1.2f ? s * 0.86f : s;                    // Big Figure Two fills its frame (and a bit more)
+            if (RobotModel.UsesPack(r)) f = s > 1.2f ? 1.12f : 1f;
             thumbCam.backgroundColor = new Color(0.08f, 0.11f, 0.17f);
             thumbCam.fieldOfView = 30f;
-            thumbCam.transform.position = p + new Vector3(-0.55f, 0.66f, 1.45f) * f;
-            thumbCam.transform.LookAt(p + new Vector3(0f, 0.52f, 0.05f) * f);
+            bool pack = RobotModel.UsesPack(r);
+            thumbCam.transform.position = p + (pack ? new Vector3(-1.05f, 0.98f, 1.3f) : new Vector3(-0.55f, 0.66f, 1.45f)) * f;
+            thumbCam.transform.LookAt(p + (pack ? new Vector3(0f, 0.5f, 0.12f) : new Vector3(0f, 0.52f, 0.05f)) * f);
             thumbCam.targetTexture = RobotThumbs[r];
             thumbCam.Render();
             root.gameObject.SetActive(false);
@@ -135,7 +138,7 @@ public static class Showroom
         public int car = -1, robot = -1;
         public object owner;
         readonly Transform root, turn;
-        Transform model, head;
+        Transform model, head, wheel;
         Transform[] steer, spin;
         float pop, yaw, t, spinT;
 
@@ -152,6 +155,7 @@ public static class Showroom
             cam.transform.LookAt(root.position + new Vector3(0f, 0.85f, 0f));
             rt = NewRT(448, 256);
             cam.targetTexture = rt;
+            LBPost.Add(cam, true);
             yaw = 150f + idx * 40f;
         }
 
@@ -165,7 +169,7 @@ public static class Showroom
             if (model != null) MeshMerge.DestroyWithMeshes(model.gameObject);
             model = new GameObject("Model").transform;
             model.SetParent(turn, false);
-            KartModel.Build(model, c, r, out steer, out spin, out head);
+            KartModel.Build(model, c, r, out steer, out spin, out head, out wheel);
             Mats.SetLayer(model.gameObject, Layer);
             Color k = Cars.All[c].color;
             cam.backgroundColor = new Color(0.04f + k.r * 0.2f, 0.06f + k.g * 0.2f, 0.09f + k.b * 0.2f);
@@ -195,7 +199,9 @@ public static class Showroom
             turn.localRotation = Quaternion.Euler(0f, yaw, 0f);
             float k = 1f - pop;
             model.localScale = Vector3.one * Mathf.LerpUnclamped(0.8f, 1f, pop > 0f ? EaseOutBack(k) : 1f);
-            if (steer != null) foreach (var s in steer) if (s != null) s.localRotation = Quaternion.Euler(0f, Mathf.Sin(t * 0.7f) * 20f, 0f);
+            float st = Mathf.Sin(t * 0.7f);
+            if (steer != null) foreach (var s in steer) if (s != null) s.localRotation = Quaternion.Euler(0f, st * 20f, 0f);
+            if (wheel != null) wheel.localRotation = Quaternion.AngleAxis(-st * 44f, RobotModel.WheelAxis);
             if (head != null)
             {
                 float hy = Mathf.Sin(t * 0.9f) * 28f;

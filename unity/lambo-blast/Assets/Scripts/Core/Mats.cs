@@ -36,6 +36,7 @@ public static class Mats
         if (kind == 0) m.SetFloat("_Glossiness", 0.12f);
         else if (kind == 1) { m.SetFloat("_Glossiness", 0.72f); m.SetFloat("_Metallic", 0.55f); }
         else if (kind == 3) { m.SetFloat("_Glossiness", 0.82f); m.SetFloat("_Metallic", 0.85f); }
+        else if (kind >= 1000) { int q = kind - 1000; m.SetFloat("_Glossiness", (q / 21) / 20f); m.SetFloat("_Metallic", (q % 21) / 20f); }   // PBR
         else if (kind >= 10) { m.SetFloat("_Glossiness", (kind - 10) / 20f); m.SetFloat("_Metallic", 0.12f); }   // Paint
         cache[k] = m;
         return m;
@@ -47,6 +48,13 @@ public static class Mats
     public static Material Steel(Color c) { return Get(c, 3); }
     // glossy (or satin) painted / moulded surface: low metal, chosen smoothness 0..1 (car paint, robot shells, face screens)
     public static Material Paint(Color c, float gloss = 0.85f) { return Get(c, 10 + Mathf.Clamp(Mathf.RoundToInt(gloss * 20f), 0, 20)); }
+
+    // Standard with chosen smoothness + metallic (quantised to 1/20)
+    public static Material PBR(Color c, float gloss, float metal)
+    {
+        int g = Mathf.Clamp(Mathf.RoundToInt(gloss * 20f), 0, 20), mt = Mathf.Clamp(Mathf.RoundToInt(metal * 20f), 0, 20);
+        return Get(c, 1000 + g * 21 + mt);
+    }
 
     // a lit (Standard) material with a generated texture
     public static Material Tex(Texture2D t, float gloss = 0.1f)

@@ -17,8 +17,14 @@ using UnityEngine;
 // Everything is built from Unity primitives + Geo blocks; the static part merges with the car, the head stays separate.
 public static class RobotModel
 {
+    // mesh packs (Resources/LB): Unitree = Unitree H1 official model (BSD-3), Atlas HD = MIT/Drake DRC Atlas (BSD-3),
+    // the rest procedural offline meshes (work/lb-gfx/build_procbots.py). Big Figure Two = the Figure 02 pack x1.35.
+    static readonly string[] Packs = { "optimus", "unitree", "figure03", "figure02", "figure02", "atlashd", "atlase" };
+    public static bool UsesPack(int r) { return r >= 0 && r < Packs.Length && LBPack.Get(Packs[r]) != null; }
+
     public static float Size(int r)
     {
+        if (UsesPack(r)) return r == 4 ? 1.35f : 1f;
         switch (r)
         {
             case 1: return 0.9f;    // Unitree (thin)
@@ -95,6 +101,33 @@ public static class RobotModel
     // Returns the head transform (separate so it can look into corners / idle in the showroom).
     public static Transform Build(Transform stat, Transform headParent, Vector3 seat, int r, bool drive)
     {
+        Transform w;
+        return Build(stat, headParent, seat, r, drive, out w);
+    }
+
+    // steering axis of the pack wheels (robot space): normal towards the driver, wheel tilted 22 deg
+    public static readonly Vector3 WheelAxis = new Vector3(0f, -0.3746f, -0.9272f);
+
+    public static Transform Build(Transform stat, Transform headParent, Vector3 seat, int r, bool drive, out Transform wheel)
+    {
+        wheel = null;
+        if (UsesPack(r))
+        {
+            LBPack pk = LBPack.Get(Packs[r]);
+            float sz = Size(r);
+            Transform b = pk.Spawn("body", stat, seat, sz, Color.white);
+            if (b != null) b.name = "Robot";
+            Transform h = pk.Spawn("head", headParent, seat, sz, Color.white);
+            if (h == null)
+            {
+                h = new GameObject("Head").transform;
+                h.SetParent(headParent, false);
+                h.localPosition = seat + Vector3.up * 0.75f * sz;
+            }
+            h.name = "Head";
+            wheel = pk.Spawn("wheel", headParent, seat, sz, Color.white);
+            return h;
+        }
         float size = Size(r);
         var rb = new GameObject("Robot").transform;
         rb.SetParent(stat, false);

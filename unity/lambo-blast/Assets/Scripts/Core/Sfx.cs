@@ -61,6 +61,17 @@ public static class Sfx
         RefreshButton();
     }
 
+    // lobby: top-left corner (top centre overlapped the LAMBO BLAST title); race: top centre next to the pause button
+    public static void PlaceButton(bool corner)
+    {
+        if (button == null) return;
+        RectTransform rt = button.rectTransform;
+        Vector2 a = corner ? new Vector2(0f, 1f) : new Vector2(0.5f, 1f);
+        if (rt.anchorMin == a) return;
+        rt.anchorMin = a; rt.anchorMax = a;
+        rt.anchoredPosition = corner ? new Vector2(80, -26) : new Vector2(70, -26);
+    }
+
     public static RectTransform ButtonRect { get { return button != null ? button.rectTransform : null; } }
     public static Canvas ButtonCanvas { get { return canvas; } }
 

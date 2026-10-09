@@ -47,9 +47,56 @@ public static class Robots
 
 public static class KartModel
 {
+    public static readonly Vector3 PackSeat = new Vector3(0f, 0.5f, -0.42f);
+    public const float WheelX = 0.9f;
+
     // Builds the visual car + robot under `body`. Returns wheel steer pivots (FL, FR) and spinning wheels (all 4)
     // and the robot head (turns into corners).
     public static void Build(Transform body, int car, int robot, out Transform[] steer, out Transform[] spin, out Transform head)
+    {
+        Transform sw;
+        Build(body, car, robot, out steer, out spin, out head, out sw);
+    }
+
+    // Same, plus the steering wheel (turns with the steering) when the robot comes from a mesh pack.
+    // The car itself comes from the "car" pack (lofted wedge, see work/lb-gfx/build_car.py); the old primitive car is the fallback.
+    public static void Build(Transform body, int car, int robot, out Transform[] steer, out Transform[] spin, out Transform head, out Transform steeringWheel)
+    {
+        steeringWheel = null;
+        LBPack pk = LBPack.Get("car");
+        if (pk == null || !pk.Has("body") || !pk.Has("wheel"))
+        {
+            BuildPrimitive(body, car, robot, out steer, out spin, out head);
+            return;
+        }
+        CarSpec cs = Cars.All[car];
+        var stat = new GameObject("Static").transform;
+        stat.SetParent(body, false);
+        pk.Spawn("body", stat, Vector3.zero, 1f, cs.color);
+        head = null;
+        if (robot >= 0)
+            head = RobotModel.Build(stat, body, RobotModel.UsesPack(robot) ? PackSeat : new Vector3(0f, 0.6f, -0.35f), robot, true, out steeringWheel);
+        MeshMerge.Merge(stat, true, false);
+        if (head != null) MeshMerge.Merge(head, true, false);
+        steer = new Transform[2];
+        spin = new Transform[4];
+        for (int i = 0; i < 4; i++)
+        {
+            bool front = i < 2;
+            float sx = (i % 2 == 0) ? -1f : 1f;
+            var pivot = new GameObject(front ? "Steer" : "Axle").transform;
+            pivot.SetParent(body, false);
+            pivot.localPosition = new Vector3(sx * WheelX, 0.37f, front ? 1.42f : -1.42f);
+            var sp = new GameObject("Spin").transform;
+            sp.SetParent(pivot, false);
+            pk.Spawn("wheel", sp, Vector3.zero, 1f, cs.color, sx < 0f);
+            MeshMerge.Merge(sp, true, false);
+            if (front) steer[i] = pivot;
+            spin[i] = sp;
+        }
+    }
+
+    static void BuildPrimitive(Transform body, int car, int robot, out Transform[] steer, out Transform[] spin, out Transform head)
     {
         CarSpec cs = Cars.All[car];
         var stat = new GameObject("Static").transform;
