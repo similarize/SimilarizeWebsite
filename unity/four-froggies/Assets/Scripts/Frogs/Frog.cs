@@ -15,6 +15,7 @@ public class Frog : MonoBehaviour
     public float autoCool;        // after a doorway / world change, auto hotspots wait
     public float spaceGravity = 1f;   // low-g worlds (Callisto) set this per frame
     public Vehicle passengerOf;       // riding along (Starship) without driving
+    public bool launching;            // aboard the Starship during the ranch blast-off (LaunchSeq)
 
     public void BoardAsPassenger(Vehicle v)
     {
@@ -129,6 +130,13 @@ public class Frog : MonoBehaviour
     {
         float dt = Mathf.Min(Time.deltaTime, 0.05f);
         if (toastT > 0f) { toastT -= dt; if (toastT <= 0f) toast = ""; }
+        if (launching)
+        {
+            prompt = "Starship launch - A / FIRE skips";
+            if (human && (input.use || input.fire || input.hop)) LaunchSeq.Skip(this);
+            input = new PIn();
+            return;
+        }
         if (!human) Think(dt);
         exitCool -= dt;
         if (passengerOf != null)

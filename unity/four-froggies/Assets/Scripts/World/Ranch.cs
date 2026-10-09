@@ -8,6 +8,9 @@ public static class Ranch
 {
     static Terrain terrain;
     static Transform root;
+    // the Starship stack on the pad lives on its own root so the launch sequence can lift it (LaunchSeq)
+    public static Transform ShipStack, ShipFlames;
+    public static Vector3 ShipBase;
 
     public static float GY(float x, float z)
     {
@@ -347,17 +350,27 @@ public static class Ranch
         Material steel = Mats.Steel(new Color(0.78f, 0.79f, 0.8f));
         Material tile = Mats.Lit(new Color(0.12f, 0.12f, 0.13f));
         float by = top + 5.6f;
-        Mats.Prim(PrimitiveType.Cylinder, root, new Vector3(c.x, by + 17f, c.y), new Vector3(7f, 17f, 7f), Vector3.zero, steel, true);   // booster
-        Mats.Prim(PrimitiveType.Cylinder, root, new Vector3(c.x, by + 35.5f, c.y), new Vector3(7.05f, 1.5f, 7.05f), Vector3.zero, tile, false); // hot-staging ring
-        Mats.Prim(PrimitiveType.Cylinder, root, new Vector3(c.x, by + 49f, c.y), new Vector3(7f, 12f, 7f), Vector3.zero, steel, false);       // ship
-        Mats.Prim(PrimitiveType.Cylinder, root, new Vector3(c.x + 0.6f, by + 49f, c.y), new Vector3(6.2f, 12f, 6.2f), Vector3.zero, tile, false);  // heat shield side
-        Mats.Prim(PrimitiveType.Sphere, root, new Vector3(c.x, by + 61f, c.y), new Vector3(7f, 10f, 7f), Vector3.zero, steel, false);       // nose
+        Transform stack = new GameObject("StarshipStack").transform;   // at the origin: parts use world coords, the launch moves it
+        ShipStack = stack;
+        ShipBase = new Vector3(c.x, by, c.y);
+        Mats.Prim(PrimitiveType.Cylinder, stack, new Vector3(c.x, by + 17f, c.y), new Vector3(7f, 17f, 7f), Vector3.zero, steel, true);   // booster
+        Mats.Prim(PrimitiveType.Cylinder, stack, new Vector3(c.x, by + 35.5f, c.y), new Vector3(7.05f, 1.5f, 7.05f), Vector3.zero, tile, false); // hot-staging ring
+        Mats.Prim(PrimitiveType.Cylinder, stack, new Vector3(c.x, by + 49f, c.y), new Vector3(7f, 12f, 7f), Vector3.zero, steel, false);       // ship
+        Mats.Prim(PrimitiveType.Cylinder, stack, new Vector3(c.x + 0.6f, by + 49f, c.y), new Vector3(6.2f, 12f, 6.2f), Vector3.zero, tile, false);  // heat shield side
+        Mats.Prim(PrimitiveType.Sphere, stack, new Vector3(c.x, by + 61f, c.y), new Vector3(7f, 10f, 7f), Vector3.zero, steel, false);       // nose
         for (int s = -1; s <= 1; s += 2)
         {
-            B(new Vector3(c.x, by + 58f, c.y + 3.8f * s), new Vector3(1.2f, 4f, 2.2f), new Color(0.15f, 0.15f, 0.16f), false);    // forward flaps
-            B(new Vector3(c.x, by + 44f, c.y + 4f * s), new Vector3(1.4f, 5f, 2.8f), new Color(0.15f, 0.15f, 0.16f), false);      // aft flaps
-            B(new Vector3(c.x + 3.8f * s, by + 32f, c.y), new Vector3(2.6f, 2.6f, 0.4f), new Color(0.3f, 0.3f, 0.3f), false);     // grid fins
+            Mats.Prim(PrimitiveType.Cube, stack, new Vector3(c.x, by + 58f, c.y + 3.8f * s), new Vector3(1.2f, 4f, 2.2f), Vector3.zero, Mats.Lit(new Color(0.15f, 0.15f, 0.16f)), false);    // forward flaps
+            Mats.Prim(PrimitiveType.Cube, stack, new Vector3(c.x, by + 44f, c.y + 4f * s), new Vector3(1.4f, 5f, 2.8f), Vector3.zero, Mats.Lit(new Color(0.15f, 0.15f, 0.16f)), false);      // aft flaps
+            Mats.Prim(PrimitiveType.Cube, stack, new Vector3(c.x + 3.8f * s, by + 32f, c.y), new Vector3(2.6f, 2.6f, 0.4f), Vector3.zero, Mats.Lit(new Color(0.3f, 0.3f, 0.3f)), false);     // grid fins
         }
+        MeshMerge.Merge(stack, true);
+        // engine plume (hidden until ignition); pivot at the engine bells so scaling stretches it downward
+        ShipFlames = Mats.Node(stack, "Plume", new Vector3(c.x, by - 0.3f, c.y));
+        var outer = Mats.Prim(PrimitiveType.Sphere, ShipFlames, new Vector3(0f, -9f, 0f), new Vector3(6.5f, 18f, 6.5f), Mats.Unlit(new Color(1f, 0.45f, 0.08f)), false);
+        var inner = Mats.Prim(PrimitiveType.Sphere, ShipFlames, new Vector3(0f, -6f, 0f), new Vector3(3.6f, 12f, 3.6f), Mats.Unlit(new Color(1f, 0.92f, 0.65f)), false);
+        Mats.NoShadows(outer); Mats.NoShadows(inner);
+        ShipFlames.gameObject.SetActive(false);
         // tower + chopsticks
         Vector3 tw = new Vector3(c.x - 10f, top, c.y);
         Color lat = new Color(0.25f, 0.25f, 0.27f);
@@ -375,7 +388,7 @@ public static class Ranch
         }
         for (int s = -1; s <= 1; s += 2) B(tw + new Vector3(5.5f, 52f, 2.6f * s), new Vector3(9f, 0.8f, 0.6f), lat, false, new Vector3(0f, -12f * s, 0f));
         Sign(new Vector3(c.x + 15f, top + 2.8f, c.y), 90f, Worlds.SpaceOn ? "STARSHIP\n<size=28>board it to launch!</size>" : "SPACE WORLD\n<size=30>coming soon</size>", new Color(0.1f, 0.1f, 0.25f), 8f, 2.4f);
-        var launch = Interact.Add(new Vector3(c.x + 9f, top, c.y), 5f, "board the Starship (launch to space!)", f => SpaceWorld.I.Launch(f));
+        var launch = Interact.Add(new Vector3(c.x + 9f, top, c.y), 5f, "board the Starship (launch to space!)", f => LaunchSeq.Begin(f));
         launch.enabled = f => f.world == WorldId.Ranch && SpaceWorld.I != null;
         B(new Vector3(c.x + 15f, top + 1f, c.y), new Vector3(0.2f, 2f, 0.2f), new Color(0.3f, 0.3f, 0.3f), false);
     }

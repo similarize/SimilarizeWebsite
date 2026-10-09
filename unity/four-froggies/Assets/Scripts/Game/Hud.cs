@@ -9,7 +9,7 @@ public class ViewHud
     readonly Text title, prompt, status, center, toast;
     float inset = -1f;
     readonly Text[] tags = new Text[4];
-    readonly Image frame;
+    readonly Image frame, fadeImg;
 
     public ViewHud(Transform canvas, string name)
     {
@@ -20,6 +20,9 @@ public class ViewHud
         var ol = frame.gameObject.AddComponent<Outline>();
         ol.effectColor = new Color(0f, 0f, 0f, 0.8f);
         ol.effectDistance = new Vector2(2f, 2f);
+        fadeImg = UIK.Img(panel, null, new Color(0f, 0f, 0f, 0f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);   // launch fade (under the text)
+        UIK.Stretch(fadeImg.rectTransform);
+        fadeImg.enabled = false;
         title = UIK.Label(panel, "", 24, TextAnchor.UpperLeft, new Vector2(0f, 1f), new Vector2(170f, -26f), new Vector2(320f, 40f), Color.white);
         status = UIK.Label(panel, "", 20, TextAnchor.LowerLeft, new Vector2(0f, 0f), new Vector2(170f, 26f), new Vector2(320f, 40f), Color.white);
         prompt = UIK.Label(panel, "", 22, TextAnchor.LowerCenter, new Vector2(0.5f, 0f), new Vector2(0f, 64f), new Vector2(760f, 70f), new Color(1f, 0.95f, 0.6f));
@@ -42,6 +45,13 @@ public class ViewHud
     }
 
     public void SetCenter(string s) { center.text = s; }
+
+    public void SetFade(float a)
+    {
+        bool on = a > 0.001f;
+        if (fadeImg.enabled != on) fadeImg.enabled = on;
+        if (on) fadeImg.color = new Color(0f, 0f, 0f, Mathf.Clamp01(a));
+    }
 
     // bottom band reserved for touch controls (canvas units); 0 = none
     public void SetBottomInset(float units, float width)

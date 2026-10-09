@@ -23,7 +23,7 @@ public static class Worlds
     static Material ranchSky;
     public static Material spaceSky;    // set by the space world (null = solid black)
     static Color fog0, amb0, amb1, amb2;
-    static float fogD0;
+    static float fogD0, exp0 = -1f;
 
     public static void Init()
     {
@@ -33,6 +33,7 @@ public static class Worlds
         fog0 = RenderSettings.fogColor; fogD0 = RenderSettings.fogDensity;
         amb0 = RenderSettings.ambientSkyColor; amb1 = RenderSettings.ambientEquatorColor; amb2 = RenderSettings.ambientGroundColor;
         if (RenderSettings.sun != null) sunRot0 = RenderSettings.sun.transform.rotation;
+        if (ranchSky != null && ranchSky.HasProperty("_Exposure")) exp0 = ranchSky.GetFloat("_Exposure");
         Camera.onPreCull += PreCull;
     }
 
@@ -62,6 +63,8 @@ public static class Worlds
         WorldId w;
         if (!camWorld.TryGetValue(c, out w)) w = WorldId.Ranch;
         if (w != WorldId.Space && RenderSettings.sun != null) RenderSettings.sun.transform.rotation = sunRot0;
+        float launchDark = w == WorldId.Ranch ? LaunchSeq.SkyDark(c) : 0f;   // Starship climb: the sky darkens
+        if (exp0 >= 0f && ranchSky != null) ranchSky.SetFloat("_Exposure", Mathf.Lerp(exp0, exp0 * 0.06f, launchDark));
         switch (w)
         {
             case WorldId.Underwater:
@@ -93,7 +96,7 @@ public static class Worlds
                 RenderSettings.ambientSkyColor = new Color(0.78f, 0.74f, 0.68f); RenderSettings.ambientEquatorColor = new Color(0.62f, 0.56f, 0.5f); RenderSettings.ambientGroundColor = new Color(0.35f, 0.3f, 0.25f);
                 break;
             default:
-                RenderSettings.fog = true; RenderSettings.fogColor = fog0; RenderSettings.fogDensity = fogD0;
+                RenderSettings.fog = true; RenderSettings.fogColor = Color.Lerp(fog0, new Color(0.02f, 0.03f, 0.08f), launchDark); RenderSettings.fogDensity = fogD0 * (1f - 0.7f * launchDark);
                 RenderSettings.ambientSkyColor = amb0; RenderSettings.ambientEquatorColor = amb1; RenderSettings.ambientGroundColor = amb2;
                 break;
         }
