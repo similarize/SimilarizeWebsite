@@ -132,7 +132,7 @@ public class UnderwaterWorld : MonoBehaviour
         Pearls(rnd);
         sub = Submarine.Build(L(0f, -5f, -62f), 0f);
         // yaw 180: reads the right way round from the sub's start (it was mirrored)
-        Ranch.Sign(L(0f, -2.5f, -55f), 180f, "UNDERWATER\n<size=22>find all the pearls - reef, kelp, shipwreck, cave</size>", new Color(0.05f, 0.3f, 0.55f), 7f, 2f);
+        Ranch.Sign(L(0f, -2.5f, -55f), 180f, "UNDERWATER\n<size=22>find all the pearls - reef, kelp, shipwreck, cave</size>", new Color(0.05f, 0.3f, 0.55f), 11f, 2.6f);   // 7 m wrapped "UNDERWAT/ER"
     }
 
     void Seabed()

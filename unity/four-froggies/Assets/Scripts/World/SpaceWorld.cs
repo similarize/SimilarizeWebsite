@@ -497,7 +497,8 @@ public class Starship : Vehicle
         v.body.isTrigger = true;
         v.camDistance = 34f; v.camHeight = 6f;
         Transform t = go.transform;
-        Material steel = Mats.Steel(new Color(0.78f, 0.79f, 0.8f)), tile = Mats.Lit(new Color(0.12f, 0.12f, 0.13f));
+        // satin paint, not Steel: a fully metallic hull only mirrors the black space sky and read as a black slab (probe 2026-10-09)
+        Material steel = Mats.Paint(new Color(0.8f, 0.81f, 0.83f), 0.75f), tile = Mats.Lit(new Color(0.12f, 0.12f, 0.13f));
         Mats.Prim(PrimitiveType.Cylinder, t, Vector3.zero, new Vector3(3.6f, 6f, 3.6f), new Vector3(90f, 0f, 0f), steel);
         Mats.Prim(PrimitiveType.Cylinder, t, new Vector3(0f, -0.25f, 0f), new Vector3(3.3f, 5.9f, 3.3f), new Vector3(90f, 0f, 0f), tile);
         Mats.Prim(PrimitiveType.Sphere, t, new Vector3(0f, 0f, 6.3f), new Vector3(3.6f, 3.6f, 5.4f), steel);

@@ -16,7 +16,7 @@ public class HouseWorld : MonoBehaviour
     readonly List<System.Action> afterMerge = new List<System.Action>();
     int lizN;
 
-    static readonly Color Floor = new Color(0.66f, 0.5f, 0.34f), WallC = new Color(0.93f, 0.9f, 0.82f), Trim = new Color(0.98f, 0.98f, 0.96f);
+    static readonly Color Floor = new Color(0.66f, 0.5f, 0.34f), WallC = new Color(0.93f, 0.9f, 0.82f), Trim = new Color(0.86f, 0.84f, 0.8f);   // was 0.98 white: sunlit wall caps hit 232 grey-white in the probe
     static readonly Color Wood = new Color(0.5f, 0.34f, 0.2f), Sofa = new Color(0.32f, 0.45f, 0.62f), Rug = new Color(0.75f, 0.3f, 0.28f);
     static readonly Rect Parlor = new Rect(-30f, -20f, 20f, 24f), Fish = new Rect(-10f, -20f, 20f, 24f), Reptile = new Rect(10f, -20f, 20f, 24f);
     static readonly Rect Living = new Rect(-30f, 4f, 24f, 16f), Kitchen = new Rect(6f, 4f, 24f, 16f), Foyer = new Rect(-6f, 4f, 12f, 16f);
