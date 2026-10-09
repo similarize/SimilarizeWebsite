@@ -49,13 +49,13 @@
     streamingAssetsUrl: "StreamingAssets",
     companyName: "Similarize",
     productName: "Lambo Blast",
-    productVersion: "202610090122-f0d5057",
+    productVersion: "202610090219-36715bf",
     devicePixelRatio: Math.min(window.devicePixelRatio || 1, isMobile ? 1.5 : 2),
     showBanner: function (msg, type) { if (type === "error") { var e = document.getElementById("err"); e.style.display = "block"; e.textContent = msg; } else console.log(msg); }
   };
   var fill = document.getElementById("fill"), pct = document.getElementById("pct"), loader = document.getElementById("loader");
   var script = document.createElement("script");
-  script.src = buildUrl + "/" + name + ".loader.js?v=202610090122-f0d5057";
+  script.src = buildUrl + "/" + name + ".loader.js?v=202610090219-36715bf";
   script.onload = function () {
     createUnityInstance(canvas, config, function (p) {
       fill.style.width = Math.round(p * 100) + "%";
