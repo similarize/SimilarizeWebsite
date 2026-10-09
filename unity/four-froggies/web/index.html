@@ -43,9 +43,9 @@
   var canvas = document.getElementById("unity-canvas");
   var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));
   var config = {
-    dataUrl: buildUrl + "/" + name + ".data",
-    frameworkUrl: buildUrl + "/" + name + ".framework.js",
-    codeUrl: buildUrl + "/" + name + ".wasm",
+    dataUrl: buildUrl + "/" + name + ".data?v=__BUILD_VERSION__",
+    frameworkUrl: buildUrl + "/" + name + ".framework.js?v=__BUILD_VERSION__",
+    codeUrl: buildUrl + "/" + name + ".wasm?v=__BUILD_VERSION__",
     streamingAssetsUrl: "StreamingAssets",
     companyName: "Similarize",
     productName: "Four Froggies",
