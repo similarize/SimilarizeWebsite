@@ -11,12 +11,18 @@ import {
   updateRaceProgress,
   rankRacers,
   boundRaceCar,
-  raceArenaFocus,
+  poseRaceCar,
+  raceAiPlan,
+  respawnOnTrack,
+  createRaceCamRig,
+  updateRaceCam,
+  makeCarTag,
+  createSkidMarks,
   RACE_COLORS,
   RACE_NAMES,
-} from "./race-mode.js?v=20261007-soccerrc3d13";
+} from "./race-mode.js?v=20261008-soccerrc3d14";
 
-const CACHE = "20261007-soccerrc3d13";
+const CACHE = "20261008-soccerrc3d14";
 const HALF_X = 22;
 const HALF_Z = 14;
 const WALL_H = 5.5;
@@ -312,6 +318,12 @@ let soccerGroup = null;
 let raceGroup = null;
 let raceMeta = null; // { checkpoints, startSpots, ramps }
 let raceState = null;
+/** Race camera: "chase" (default with one local human) or "overview" (frames humans). */
+const raceCam = createRaceCamRig();
+let raceCamUser = null;
+let raceSkids = null; // instanced race tyre marks (lives in the cached track group)
+let _dbgForceHumans = null, _dbgPaused = false; // ?racedebug=1 QA only // null = auto; "chase" | "overview" once toggled
+const raceCamBtn = document.getElementById("raceCamBtn");
 /** Per-seat binding for Race: { kind, padSlot, padOrd, keys, touch, label } — padOrd indexes connectedIndices */
 let raceSeats = null;
 let _gp2 = null, _gp3 = null;
@@ -957,6 +969,7 @@ function ensureTrackAssets() {
 }
 
 function clearTracks() {
+  if (raceSkids) raceSkids.clear();
   for (const t of tracks) {
     if (t.mesh && t.mesh.parent) t.mesh.parent.remove(t.mesh);
     if (t.mesh) {
@@ -1000,6 +1013,16 @@ function maybeDropTracks(car, dt) {
     car._trackAcc = 0;
     return;
   }
+  // Race: one instanced skid buffer on the (possibly elevated) road; skip ramps/whoops
+  if (gameMode === "race" && raceSkids) {
+    if (Math.abs(car._slope || 0) > 0.04) { car._trackAcc = 0; return; }
+    car._trackAcc = (car._trackAcc || 0) + sp * dt;
+    while (car._trackAcc >= TRACK_SPACING) {
+      car._trackAcc -= TRACK_SPACING;
+      raceSkids.drop(car.pos.x, car.pos.y + 0.02, car.pos.z, car.yaw);
+    }
+    return;
+  }
   car._trackAcc = (car._trackAcc || 0) + sp * dt;
   while (car._trackAcc >= TRACK_SPACING) {
     car._trackAcc -= TRACK_SPACING;
@@ -1008,6 +1031,7 @@ function maybeDropTracks(car, dt) {
 }
 
 function updateTracks(dt) {
+  if (raceSkids && gameMode === "race") raceSkids.update(dt);
   for (let i = tracks.length - 1; i >= 0; i--) {
     const t = tracks[i];
     t.life -= dt;
@@ -1447,6 +1471,9 @@ function syncRaceSeatBindings() {
       raceSeats[i] = { kind: "ai", padSlot: -1, padOrd: -1, keys: null, touch: -1, label: "AI" };
     }
   }
+  if (_dbgForceHumans != null) {
+    for (let i = 0; i < n; i++) raceSeats[i].kind = i < _dbgForceHumans ? "human" : "ai";
+  }
   for (let i = 0; i < cars.length && i < raceSeats.length; i++) {
     cars[i].seatKind = raceSeats[i].kind;
   }
@@ -1461,28 +1488,30 @@ function raceSeatLabel(i) {
 function aiRaceInput(carIndex) {
   const car = cars[carIndex];
   const racer = raceState && raceState.racers[carIndex];
-  const cps = raceMeta && raceMeta.checkpoints;
-  if (!car || !racer || !cps || !cps.length) {
+  if (!car || !racer || !raceMeta || !raceMeta.samples) {
     return { fwd: 0.6, rev: 0, steer: 0, kick: false, boost: false, aimX: 0, aimZ: 0, aimActive: false };
   }
-  const cp = cps[racer.cp % cps.length];
-  // Look slightly ahead for smoother lines
-  const next = cps[(racer.cp + 1) % cps.length];
-  const tx = cp.x * 0.65 + next.x * 0.35;
-  const tz = cp.z * 0.65 + next.z * 0.35;
-  const desired = Math.atan2(tz - car.pos.z, tx - car.pos.x);
+  // Pure pursuit along the sampled racing line; each AI keeps its own lane bias
+  // and skill so the pack spreads out instead of driving in single file.
+  const skill = [1, 0.96, 0.93, 0.9][carIndex] || 0.92;
+  const lane = [0, 1.1, -1.1, 0.5][carIndex] || 0;
+  const plan = raceAiPlan(raceMeta, car, lane);
+  const desired = Math.atan2(plan.tz - car.pos.z, plan.tx - car.pos.x);
   let dyaw = desired - car.yaw;
   while (dyaw > Math.PI) dyaw -= Math.PI * 2;
   while (dyaw < -Math.PI) dyaw += Math.PI * 2;
-  const steer = Math.max(-1, Math.min(1, dyaw * 2.2));
-  const sharp = Math.abs(dyaw) > 0.9;
-  const fwd = sharp ? 0.42 : 0.92;
+  const steer = Math.max(-1, Math.min(1, dyaw * 2.6));
   const sp = Math.hypot(car.vx, car.vz);
-  const boost = !sharp && sp > 9 && Math.abs(dyaw) < 0.28;
+  // Target speed from upcoming corner severity
+  let target = 26 * skill; // boosted straights
+  if (plan.turn > 0.35) target = Math.min(target, (18 - plan.turn * 3) * (0.94 + skill * 0.06));
+  if (plan.maxK > 1 / 12) target = Math.min(target, 12.5);
+  target = Math.max(8, target);
+  let fwd = sp < target ? 1 : sp < target + 1.5 ? 0.35 : 0;
+  if (Math.abs(dyaw) > 1.1) fwd = Math.min(fwd, 0.45);
+  const boost = !plan.jumpAhead && plan.turn < 0.3 && Math.abs(dyaw) < 0.25 && sp > 11 && sp < target && car.boost > 0.3;
   return { fwd, rev: 0, steer, kick: false, boost, aimX: 0, aimZ: 0, aimActive: false };
 }
-
-
 
 /** Mode-forked lighting/fog: race gets readable asphalt; soccer stays as-is. */
 function applyWorldLook(mode) {
@@ -1494,27 +1523,62 @@ function applyWorldLook(mode) {
     hemiLight.intensity = race ? 1.35 : 0.85;
   }
   if (sunLight) {
-    sunLight.color.setHex(race ? 0xfff0d0 : 0xffe2b0);
-    sunLight.intensity = race ? 1.55 : 1.15;
-    // Wider shadow frustum so elevated figure-eight banks stay lit
-    const ext = race ? 55 : 30;
+    sunLight.color.setHex(race ? 0xfff1d6 : 0xffe2b0);
+    sunLight.intensity = race ? 2.1 : 1.15;
+    // Race: shadow box follows the camera (see updateRaceShadow); soccer: fixed arena box
+    const ext = race ? 40 : 30;
     sunLight.shadow.camera.left = -ext;
     sunLight.shadow.camera.right = ext;
     sunLight.shadow.camera.top = ext;
     sunLight.shadow.camera.bottom = -ext;
+    sunLight.shadow.camera.near = race ? 1 : 0.5;
+    sunLight.shadow.camera.far = race ? 140 : 500;
+    sunLight.shadow.bias = race ? -0.0004 : 0;
+    sunLight.shadow.normalBias = race ? 0.04 : 0;
     sunLight.shadow.camera.updateProjectionMatrix();
+    if (!race) {
+      sunLight.position.set(12, 28, 10);
+      sunLight.target.position.set(0, 0, 0);
+      sunLight.target.updateMatrixWorld();
+    }
   }
   if (fillLight) {
     fillLight.color.setHex(race ? 0xa8c4ff : 0x88aaff);
-    fillLight.intensity = race ? 0.55 : 0.25;
+    fillLight.intensity = race ? 0.35 : 0.25;
   }
-  const fogCol = race ? 0x1c2836 : 0x0c1014;
+  // Race = daylight RC yard; soccer/lobby keep the night stadium.
+  const fogCol = race ? 0xcfe3f2 : 0x0c1014;
   renderer.setClearColor(fogCol);
   if (scene.fog) {
     scene.fog.color.setHex(fogCol);
-    scene.fog.near = race ? 70 : 40;
-    scene.fog.far = race ? 150 : 90;
+    scene.fog.near = race ? 110 : 40;
+    scene.fog.far = race ? 230 : 90;
   }
+  if (camera) {
+    camera.near = race ? 0.3 : 0.1;
+    camera.far = race ? 320 : 200;
+    if (!race) camera.fov = 55;
+    camera.updateProjectionMatrix();
+  }
+  if (raceCamBtn) raceCamBtn.hidden = !race;
+  if (camera) onResize();
+}
+
+/** Keep a tight, texel-snapped shadow box around what the race camera sees. */
+function updateRaceShadow(look, dist) {
+  if (!sunLight) return;
+  const ext = Math.max(26, Math.min(60, dist * 0.9));
+  const cam = sunLight.shadow.camera;
+  if (Math.abs(cam.right - ext) > 2) {
+    cam.left = -ext; cam.right = ext; cam.top = ext; cam.bottom = -ext;
+    cam.updateProjectionMatrix();
+  }
+  const texel = (cam.right * 2) / sunLight.shadow.mapSize.x;
+  const sx = Math.round(look.x / texel) * texel;
+  const sz = Math.round(look.z / texel) * texel;
+  sunLight.position.set(sx + 34, 56, sz + 26);
+  sunLight.target.position.set(sx, 0, sz);
+  sunLight.target.updateMatrixWorld();
 }
 
 function setModeUI(mode) {
@@ -1606,13 +1670,9 @@ function startRaceMode(numPlayers, laps) {
   setModeUI("race");
   if (soccerGroup) soccerGroup.visible = false;
   if (ballMesh) ballMesh.visible = false;
-  // Always rebuild so track upgrades ship cleanly
-  if (raceGroup) {
-    try { scene.remove(raceGroup); } catch (_) {}
-    raceGroup = null;
-    raceMeta = null;
-  }
+  // Track is built once and cached (resets reuse it — no GPU leak)
   raceMeta = buildRaceTrack(scene);
+  if (!raceSkids) raceSkids = createSkidMarks(raceMeta.group);
   raceGroup = raceMeta.group;
   raceGroup.visible = true;
   clearSceneCars();
@@ -1626,15 +1686,27 @@ function startRaceMode(numPlayers, laps) {
     scene.add(mesh);
     const c = makeCarState(mesh, sp.x, (sp.y != null ? sp.y : 0) + CAR_HALF.y, sp.z, sp.yaw);
     c.mesh.visible = true;
+    c.mesh.rotation.order = "YXZ";
     c.seatKind = raceSeats[i] ? raceSeats[i].kind : "human";
+    c._meta = raceMeta;
+    c._ti = sp.i;
+    c._stuckT = 0;
+    const isAi = c.seatKind === "ai";
+    c.tag = makeCarTag(isAi ? "CPU" : "P" + (i + 1), RACE_COLORS[i]);
+    c.tag.position.set(0, 1.25, 0);
+    mesh.add(c.tag);
     cars.push(c);
+    boundRaceCar(c, CAR_HALF.y, raceMeta);
+    poseRaceCar(c, 1);
   }
+  raceCam.init = false;
   raceState.started = false;
   raceState.finished = false;
   raceState.countdown = 3.2;
   raceState.finishCount = 0;
   freezeT = 0;
   updateRaceHud();
+  syncRaceCamBtn();
   const humans = raceSeats.filter((s) => s.kind === "human" || s.kind === "remote").length;
   const ais = raceSeats.filter((s) => s.kind === "ai").length;
   const bits = [];
@@ -1643,6 +1715,34 @@ function startRaceMode(numPlayers, laps) {
   showBanner("Race! · " + bits.join(" + "), "", 1.4);
   updateLobbySeatHint();
   syncRacePadClusters();
+}
+
+function raceHumanIdx() {
+  const out = [];
+  for (let i = 0; i < cars.length; i++) {
+    const k = raceSeats && raceSeats[i] ? raceSeats[i].kind : "human";
+    if (k === "human" || k === "remote") out.push(i);
+  }
+  if (_dbgForceHumans === 0) return cars.map((_, i) => i); // QA: all-AI demo frames everyone
+  return out.length ? out : [0];
+}
+
+function raceCamMode() {
+  if (raceCamUser) return raceCamUser;
+  // One local human → chase cam; split-screen-less multiplayer → shared overview
+  return raceHumanIdx().length === 1 ? "chase" : "overview";
+}
+
+function toggleRaceCam() {
+  if (gameMode !== "race") return;
+  raceCamUser = raceCamMode() === "chase" ? "overview" : "chase";
+  raceCam.init = false;
+  syncRaceCamBtn();
+  showBanner(raceCamUser === "chase" ? "Chase cam" : "Overview cam", "", 0.8);
+}
+
+function syncRaceCamBtn() {
+  if (raceCamBtn) raceCamBtn.textContent = raceCamMode() === "chase" ? "Cam: Chase" : "Cam: Overview";
 }
 
 function updateRaceHud() {
@@ -1706,18 +1806,31 @@ function tickRace(dt) {
       sfxCount(true);
     }
     // still allow camera / render pose
-    for (const c of cars) {
-      c.mesh.position.copy(c.pos);
-      c.mesh.rotation.y = -c.yaw;
-    }
+    for (const c of cars) poseRaceCar(c, dt);
   } else if (!raceState.finished) {
+    raceState.t = (raceState.t || 0) + dt;
     for (let i = 0; i < cars.length; i++) {
       const inp = edgeKick(i, readInput(i));
       // No soccer kick in race — strip kick for pad A (optional jump? keep kickBall off)
       inp.kick = false;
       updateCar(cars[i], inp, dt);
+      const car = cars[i];
+      poseRaceCar(car, dt);
+      if (car._launched) { car._launched = false; if (i === 0 || raceHumanIdx().indexOf(i) >= 0) sfxJump(); }
+      if (car._wallHit) { if (car._wallHit > 6) sfxCrash(); car._wallHit = 0; }
+      // AI unstick: barely moving for 1.6 s → respawn a little back on the line
+      const spd = Math.hypot(car.vx, car.vz);
+      if (car.seatKind === "ai" && spd < 2) {
+        car._stuckT = (car._stuckT || 0) + dt;
+        if (car._stuckT > 1.6) respawnOnTrack(raceMeta, car);
+      } else car._stuckT = 0;
       const lapWas = raceState.racers[i].lap;
       const justFin = updateRaceProgress(cars[i], raceState.racers[i], raceMeta.checkpoints, raceState.laps);
+      if (raceState.racers[i].lap > lapWas) {
+        const r = raceState.racers[i];
+        (r.lapTimes || (r.lapTimes = [])).push(+(raceState.t - (r._lapStart || 0)).toFixed(2));
+        r._lapStart = raceState.t;
+      }
       if (!justFin && raceState.racers[i].lap > lapWas) sfxLap();
       if (justFin) {
         raceState.racers[i].finishOrder = raceState.finishCount++;
@@ -1737,6 +1850,7 @@ function tickRace(dt) {
         const dx = B.pos.x - A.pos.x, dz = B.pos.z - A.pos.z;
         const d = Math.hypot(dx, dz);
         const minD = CAR_HALF.x * 2 * 0.9;
+        if (Math.abs(B.pos.y - A.pos.y) > 1.2) continue; // bridge vs road below
         if (d < minD && d > 1e-4) {
           const nx = dx / d, nz = dz / d;
           const push = (minD - d) * 0.5;
@@ -1756,30 +1870,20 @@ function tickRace(dt) {
     // Finished — freeze motion visually
     for (const c of cars) {
       c.vx *= 0.9; c.vz *= 0.9;
-      c.mesh.position.copy(c.pos);
-      c.mesh.rotation.y = -c.yaw;
+      poseRaceCar(c, dt);
     }
   }
 
-  // Arena overview cam — stand above the track; every car stays on-screen
-  const focus = raceArenaFocus(cars);
-  camTarget.lerp(new THREE.Vector3(focus.x, 1.2, focus.z), 1 - Math.pow(0.002, dt));
-  // Pull out with pack span (wider as cars spread); add height for jumps/loop
-  const span = focus.span || 42;
-  const elev = 28 + span * 0.55 + Math.min(12, (focus.maxY || 0) * 0.8);
-  const pull = 8 + span * 0.22;
-  const desired = new THREE.Vector3(
-    camTarget.x * 0.15,
-    elev,
-    camTarget.z * 0.15 + pull
-  );
-  camPos.lerp(desired, 1 - Math.pow(0.04, dt));
-  camera.position.copy(camPos);
-  camera.lookAt(camTarget.x, 1.0, camTarget.z);
-  // FOV widens slightly when pack is spread so edges stay framed
-  const wantFov = 48 + Math.min(16, Math.max(0, span - 40) * 0.35);
-  camera.fov += (wantFov - camera.fov) * Math.min(1, dt * 3);
-  camera.updateProjectionMatrix();
+  // Camera: chase (1 human) or overview framing every human car
+  const mode = raceCamMode();
+  raceCam.mode = mode;
+  const humans = raceHumanIdx();
+  const look = updateRaceCam(raceCam, camera, cars, humans, humans[0], raceMeta, dt);
+  for (let i = 0; i < cars.length; i++) {
+    if (cars[i].tag) cars[i].tag.visible = !(mode === "chase" && i === humans[0]);
+  }
+  if (raceMeta.sky) raceMeta.sky.position.copy(camera.position);
+  updateRaceShadow(look, mode === "chase" ? 34 : raceCam.dist);
 }
 
 function bindModeLobby() {
@@ -1795,6 +1899,10 @@ function bindModeLobby() {
     });
   });
   if (modesBtn) modesBtn.addEventListener("click", () => showLobby());
+  if (raceCamBtn) raceCamBtn.addEventListener("click", (e) => { e.preventDefault(); toggleRaceCam(); });
+  window.addEventListener("keydown", (e) => {
+    if ((e.key === "c" || e.key === "C") && !e.repeat && gameMode === "race") toggleRaceCam();
+  });
   updateLobbySeatHint();
   // Refresh pad count while lobby is open
   setInterval(() => {
@@ -1818,6 +1926,7 @@ function requestReset() {
 
 function tick() {
   const dt = Math.min(0.05, clock.getDelta());
+  if (_dbgPaused) { renderer.render(scene, camera); requestAnimationFrame(tick); return; }
   refreshGamepads();
 
   if (gameMode !== "lobby") {
@@ -1842,6 +1951,7 @@ function tick() {
     camera.position.copy(camPos);
     camera.lookAt(0, 0, 0);
   } else if (gameMode === "race") {
+    if (_gp0 && _gp0.connected && _gp0.buttonsPressed && _gp0.buttonsPressed.y) toggleRaceCam();
     tickRace(dt);
     updateTracks(dt);
     updateMotorAudio();
@@ -1913,7 +2023,8 @@ function onResize() {
   const h = window.innerHeight;
   camera.aspect = w / Math.max(1, h);
   camera.updateProjectionMatrix();
-  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+  // Race caps at 1.5x DPR (busier scene; phones/Tesla keep 60fps); soccer unchanged
+  renderer.setPixelRatio(Math.min(gameMode === "race" ? 1.5 : 2, window.devicePixelRatio || 1));
   renderer.setSize(w, h, false);
 }
 
@@ -2151,3 +2262,57 @@ function init() {
 }
 
 init();
+
+// Test hook (headless QA only): ?racedebug=1 → deterministic stepping + state dump.
+if (/[?&]racedebug=1/.test(location.search)) {
+  window.__raceDebug = {
+    step(sec) {
+      const n = Math.round(sec * 60);
+      for (let k = 0; k < n; k++) {
+        refreshGamepads();
+        if (gameMode === "race") { tickRace(1 / 60); updateTracks(1 / 60); }
+        if (bannerT > 0) { bannerT -= 1 / 60; if (bannerT <= 0) bannerEl.className = ""; }
+      }
+      renderer.render(scene, camera);
+    },
+    setCam(m) { raceCamUser = m; raceCam.init = false; syncRaceCamBtn(); },
+    setHumans(k) { _dbgForceHumans = k; syncRaceSeatBindings(); },
+    pause(p) { _dbgPaused = p !== false; },
+    gl() { return { renderer, scene, camera, raceMeta }; },
+    meta() {
+      const S = raceMeta && raceMeta.samples;
+      if (!S) return null;
+      let top = 0;
+      for (let i = 0; i < S.N; i++) if (S.py[i] > S.py[top]) top = i;
+      let under = 0, ud = 1e9;
+      for (let i = 0; i < S.N; i++) {
+        if (S.py[i] > 1) continue;
+        const d = (S.px[i] - S.px[top]) ** 2 + (S.pz[i] - S.pz[top]) ** 2;
+        if (d < ud) { ud = d; under = i; }
+      }
+      return { under, N: S.N, L: S.L, jump: S.jump.i0, jumpN: S.jump.n, bridgeTop: top, start: S.startIdx, whoops: S.whoops.i0 };
+    },
+    stepUntil(car, lo, hi, maxSec) {
+      for (let k = 0; k < maxSec * 60; k++) {
+        refreshGamepads();
+        tickRace(1 / 60); updateTracks(1 / 60);
+        if (bannerT > 0) { bannerT -= 1 / 60; if (bannerT <= 0) bannerEl.className = ""; }
+        const t = cars[car] && cars[car]._ti;
+        if (k > 30 && t >= lo && t <= hi) break;
+      }
+      renderer.render(scene, camera);
+    },
+    info() {
+      return {
+        mode: gameMode, cam: raceCamMode(), t: raceState && +(raceState.t || 0).toFixed(1),
+        calls: renderer.info.render.calls, tris: renderer.info.render.triangles,
+        cars: cars.map((c, i) => ({
+          i, ti: c._ti, y: +c.pos.y.toFixed(2), sp: +Math.hypot(c.vx, c.vz).toFixed(1),
+          lap: raceState && raceState.racers[i].lap, cp: raceState && raceState.racers[i].cp,
+          laps: raceState && raceState.racers[i].lapTimes, respawns: c._respawns || 0, walls: c._wallHits || 0,
+          fin: raceState && raceState.racers[i].finished,
+        })),
+      };
+    },
+  };
+}

@@ -595,6 +595,15 @@ html, body {
   cursor: pointer;
 }
 .modes-btn[hidden] { display: none !important; }
+.race-cam-btn { top: calc(max(8px, env(safe-area-inset-top)) + 38px); }
+body:not(.mode-race) .race-cam-btn { display: none !important; }
+body.mode-race .race-meta {
+  display: inline-block;
+  color: #e8eef6;
+  background: rgba(12,16,20,.72);
+  border-radius: 999px;
+  padding: 3px 10px;
+}
 body.mode-race .scores,
 body.mode-race .online,
 body.mode-race #soccerBoostRow,

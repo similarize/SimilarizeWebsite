@@ -4,11 +4,11 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <title>Soccer RC 3D</title>
-  <!-- Cache-bust: ?v=20261007-soccerrc3d13 — Race 2P one-pad-one-car seat bind -->
+  <!-- Cache-bust: ?v=20261008-soccerrc3d14 — Race track v2 (RC raceway, chase/overview cam, props) -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560&family=Outfit:wght@400;500;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="./style.css?v=20261007-soccerrc3d13" />
+  <link rel="stylesheet" href="./style.css?v=20261008-soccerrc3d14" />
   <script src="/games/shared/tesla-fullscreen.js?v=tfs1"></script>
   <script src="/games/shared/viewport-fill.js?v=vfs1"></script>
   <script src="/games/shared/gamepad.js?v=20261007-soccerrc3d13"></script>
@@ -50,7 +50,7 @@
           <button type="button" class="lobby-btn race-sm" data-race-players="4">Race · 4P</button>
         </div>
       </div>
-      <p class="lobby-hint" style="margin-top:12px;text-align:center">Race: 3 laps · pick 2/3/4P · one pad = one car · empty seats = AI · double-tap stick = boost</p>
+      <p class="lobby-hint" style="margin-top:12px;text-align:center">Race: 3 laps · pick 2/3/4P · one pad = one car · empty seats = AI · double-tap stick = boost · C / pad Y = camera</p>
       <p class="lobby-hint race-seat-hint" id="raceSeatHint" style="margin-top:6px;text-align:center">Pads detected: —</p>
       <div class="seat-legend" aria-hidden="true">
         <span class="seat-tag seat-human">Human</span>
@@ -64,6 +64,7 @@
     <div class="race-meta"><span id="raceLapLabel">Lap 1/3</span> · <span id="racePosLabel">—</span></div>
   </div>
   <button type="button" id="modesBtn" class="modes-btn" hidden>Modes</button>
+  <button type="button" id="raceCamBtn" class="modes-btn race-cam-btn" hidden title="Switch camera (C / pad Y)">Cam: Chase</button>
   <div class="boost-row" id="soccerBoostRow">
     <div class="boost-card p1">
       <label>Orange boost</label>
@@ -109,6 +110,6 @@
     </div>
   </div>
   <div id="boot">Loading Soccer RC 3D…</div>
-  <script type="module" src="./game.js?v=20261008-audio1"></script>
+  <script type="module" src="./game.js?v=20261008-soccerrc3d14"></script>
 </body>
 </html>
