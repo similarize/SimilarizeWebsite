@@ -292,7 +292,7 @@ public class Robot : MonoBehaviour
         tag.transform.localPosition = Vector3.up * (h + 0.75f);
         var tm = tag.AddComponent<TextMesh>();
         tm.text = name + (owner.Length > 0 ? "\n<size=34>(" + owner + "'s)</size>" : "");
-        tm.font = UIK.Font; tm.fontSize = 48; tm.characterSize = 0.035f; tm.anchor = TextAnchor.MiddleCenter; tm.alignment = TextAlignment.Center; tm.richText = true;
+        tm.font = UIK.Font; tm.fontSize = 48; tm.characterSize = 0.05f;   // ffu14: was 0.035 (hard to read) tm.anchor = TextAnchor.MiddleCenter; tm.alignment = TextAlignment.Center; tm.richText = true;
         tag.GetComponent<MeshRenderer>().sharedMaterial = UIK.Font != null ? UIK.Font.material : null;
         tag.AddComponent<Billboard>();
         r.tagMesh = tm;

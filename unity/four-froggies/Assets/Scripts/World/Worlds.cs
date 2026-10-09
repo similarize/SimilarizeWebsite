@@ -64,6 +64,17 @@ public static class Worlds
         if (!camWorld.TryGetValue(c, out w)) w = WorldId.Ranch;
         if (w != WorldId.Space && RenderSettings.sun != null) RenderSettings.sun.transform.rotation = sunRot0;
         float launchDark = w == WorldId.Ranch ? LaunchSeq.SkyDark(c) : 0f;   // Starship climb: the sky darkens
+        // ffu14: altitude (mech rockets, Starship climb, a high drone): thinner haze, far plane opens up to the horizon,
+        // the sky fades to black towards the edge of space (~2.4 km here); the lobby turntables (layer 20) are skipped
+        float altFog = 1f;
+        if (w == WorldId.Ranch && c.cullingMask != (1 << 20))
+        {
+            float alt = Mathf.Max(0f, c.transform.position.y - 20f);
+            launchDark = Mathf.Max(launchDark, Mathf.Clamp01((alt - 400f) / 2000f));
+            altFog = 1f / (1f + alt / 220f);
+            c.farClipPlane = Mathf.Min(26000f, 900f + alt * 9f);
+            c.nearClipPlane = 0.3f + alt * 0.002f;
+        }
         if (exp0 >= 0f && ranchSky != null) ranchSky.SetFloat("_Exposure", Mathf.Lerp(exp0, exp0 * 0.06f, launchDark));
         switch (w)
         {
@@ -97,7 +108,7 @@ public static class Worlds
                 RenderSettings.ambientSkyColor = new Color(0.78f, 0.74f, 0.68f); RenderSettings.ambientEquatorColor = new Color(0.62f, 0.56f, 0.5f); RenderSettings.ambientGroundColor = new Color(0.35f, 0.3f, 0.25f);
                 break;
             default:
-                RenderSettings.fog = true; RenderSettings.fogColor = Color.Lerp(fog0, new Color(0.02f, 0.03f, 0.08f), launchDark); RenderSettings.fogDensity = fogD0 * (1f - 0.7f * launchDark);
+                RenderSettings.fog = true; RenderSettings.fogColor = Color.Lerp(fog0, new Color(0.02f, 0.03f, 0.08f), launchDark); RenderSettings.fogDensity = fogD0 * (1f - 0.7f * launchDark) * altFog;
                 RenderSettings.ambientSkyColor = amb0; RenderSettings.ambientEquatorColor = amb1; RenderSettings.ambientGroundColor = amb2;
                 break;
         }

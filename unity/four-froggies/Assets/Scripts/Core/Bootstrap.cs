@@ -54,6 +54,7 @@ public class Bootstrap : MonoBehaviour
         FX.Init();
         Worlds.Init();
         Ranch.Build(terrain);
+        Countryside.Build();   // ffu14: fields, woods and hills out to the horizon
         HouseWorld.Create();
         if (Worlds.UnderwaterOn) UnderwaterWorld.Create();
         if (Worlds.SpaceOn) { SpaceWorld.Create(); SurfaceWorlds.Create(); }

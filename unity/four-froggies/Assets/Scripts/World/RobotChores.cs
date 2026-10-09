@@ -228,6 +228,7 @@ public class RanchJobs : MonoBehaviour
             else if (k == 3) { Mats.Prim(PrimitiveType.Cube, t, new Vector3(0f, 0.04f, 0f), new Vector3(0.5f, 0.06f, 0.1f), Mats.Steel(lc[3])); Mats.Prim(PrimitiveType.Cube, t, new Vector3(0.24f, 0.04f, 0f), new Vector3(0.12f, 0.06f, 0.2f), Mats.Steel(lc[3])); }
             else Mats.Prim(PrimitiveType.Cylinder, t, new Vector3(0f, 0.08f, 0f), new Vector3(0.14f, 0.2f, 0.14f), new Vector3(0f, 0f, 90f), Mats.Paint(new Color(0.3f, 0.8f, 0.45f), 0.9f));
             it.t = t;
+            t.localScale = Vector3.one * 1.45f;   // ffu14: easier to spot (was tiny next to the robots)
             Mats.NoShadows(t.gameObject);
             Respawn(it);
             litter.Add(it);

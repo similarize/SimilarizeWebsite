@@ -143,6 +143,7 @@ public class Frog : MonoBehaviour
         if (vehicle != null) ExitVehicle();
         LeavePassenger();
         SetChute(false);
+        if (world != w) { toast = ""; toastT = 0f; }   // ffu14: an old world's toast (space) no longer lingers after the trip
         world = w;
         Teleport(p);
         yaw = yawDeg;

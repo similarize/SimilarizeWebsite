@@ -117,6 +117,47 @@ public partial class Game
         return true;
     }
 
+    // ---------------- ffu14 &ffshot=touch: P1 steps through every control mode (6 s each) for the touch-button shots ----------------
+    static readonly string[] TouchModes = { "foot", "car", "tank", "heli", "boat", "mech", "robot", "sub", "space" };
+    int touchModeIdx = -1;
+    float touchModeT0 = -1f;
+    void DemoTouchModes(Frog f)
+    {
+        if (touchModeT0 < 0f) touchModeT0 = Time.realtimeSinceStartup;
+        int i = Mathf.Min(TouchModes.Length - 1, (int)((Time.realtimeSinceStartup - touchModeT0) / 6f));
+        if (i == touchModeIdx) return;
+        touchModeIdx = i;
+        string m = TouchModes[i];
+        if (f.remote != null && RobotPhone.I != null) RobotPhone.I.Toggle(f);
+        if (f.world != WorldId.Ranch) f.SendTo(WorldId.Ranch, Ranch.FrogSpawn(f.id), 0f);
+        if (f.vehicle != null) f.ExitVehicle();
+        System.Func<System.Func<Vehicle, bool>, Vehicle> near = pred =>
+        {
+            Vehicle best = null; float bd = 1e12f;
+            foreach (var v in Vehicle.All) { if (v == null || v.driver != null || !pred(v)) continue; float d = (v.transform.position - f.transform.position).sqrMagnitude; if (d < bd) { bd = d; best = v; } }
+            return best;
+        };
+        Vehicle pick = null;
+        switch (m)
+        {
+            case "car": pick = near(v => v is GroundVehicle && !(v is Tank) && ((GroundVehicle)v).usesTriggers); break;
+            case "tank": pick = near(v => v is Tank); break;
+            case "heli": pick = near(v => v is Flyer); break;
+            case "boat": pick = near(v => v is Boat); break;
+            case "mech": pick = FindMech(0, 0); if (f.charId != 0) SetSeatChar(f.id, 0, false); break;
+            case "robot": if (RobotPhone.I != null) { RobotPhone.I.DemoOpen(f, 1, "drive"); RobotPhone.I.DemoSend(); } break;
+            case "sub": if (UnderwaterWorld.I != null) UnderwaterWorld.I.Dive(f); break;
+            case "space": if (SpaceWorld.I != null) SpaceWorld.I.ToOrbit(f, "earth"); break;
+        }
+        if (pick != null)
+        {
+            Vector3 p = pick.transform.position + pick.transform.right * 3f;
+            f.Teleport(new Vector3(p.x, Ranch.GY(p.x, p.z) + 0.3f, p.z));
+            f.EnterVehicle(pick);
+        }
+        Debug.Log("FFDEMO touch mode " + m + (pick != null ? " (" + pick.Title + ")" : "") + " t=" + Time.realtimeSinceStartup.ToString("0.0"));
+    }
+
     // shared-screen local multiplayer (one camera for 2+ local players): space trips take everyone along
     public bool SharedScreen { get { return slots.Count > 1 && shared; } }
 

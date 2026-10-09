@@ -13,7 +13,7 @@ using UnityEngine;
 public class LaunchSeq : MonoBehaviour
 {
     public static LaunchSeq I;
-    const float CountT = 3f, IgniteLead = 0.9f, ClimbT = 5f, FadeOutT = 0.6f, SkipFadeT = 0.35f, FadeInT = 0.8f;
+    const float CountT = 3f, IgniteLead = 0.9f, ClimbT = 12f, FadeOutT = 0.6f, SkipFadeT = 0.35f, FadeInT = 0.8f;
     const float GatherR = 45f;
 
     public readonly List<Frog> crew = new List<Frog>();

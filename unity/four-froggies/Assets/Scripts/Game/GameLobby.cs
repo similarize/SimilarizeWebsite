@@ -88,7 +88,7 @@ public partial class Game
             tileName[c] = UIK.Label(t, Roster.Name(c), 14, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, Color.white);
             UIK.Anchor(tileName[c].rectTransform, new Vector2(0f, 0f), new Vector2(1f, 0.25f), new Vector2(7, 6), new Vector2(-7, 0));
             tileName[c].resizeTextForBestFit = true; tileName[c].resizeTextMinSize = 8; tileName[c].resizeTextMaxSize = 15;
-            tileName[c].horizontalOverflow = HorizontalWrapMode.Overflow;
+            tileName[c].horizontalOverflow = HorizontalWrapMode.Wrap;
             tileBadge[c] = UIK.Panel(t, PCol[0], Vector2.zero, Vector2.zero);
             UIK.Anchor(tileBadge[c].rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-46, -30), new Vector2(-4, -4));
             tileBadgeText[c] = UIK.Label(tileBadge[c].transform, "", 15, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, new Color(0.05f, 0.05f, 0.05f));
@@ -118,8 +118,8 @@ public partial class Game
 
         // corner buttons are anchored to the screen corners, outside the centred design
         soundBtn = UIK.Panel(cr, new Color(0f, 0f, 0f, 0.5f), Vector2.zero, new Vector2(176, 38));
-        soundBtn.rectTransform.anchorMin = soundBtn.rectTransform.anchorMax = new Vector2(1f, 1f);
-        soundBtn.rectTransform.anchoredPosition = new Vector2(-100, -28);
+        soundBtn.rectTransform.anchorMin = soundBtn.rectTransform.anchorMax = new Vector2(0f, 1f);   // top-left: the arcade page has its own button top-right
+        soundBtn.rectTransform.anchoredPosition = new Vector2(260, -28);
         soundText = UIK.Label(soundBtn.transform, "", 17, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, Color.white);
         UIK.Stretch(soundText.rectTransform); soundText.supportRichText = true;
         creditsBtn = UIK.Panel(cr, new Color(0f, 0f, 0f, 0.5f), Vector2.zero, new Vector2(150, 38));
@@ -168,24 +168,24 @@ public partial class Game
         if (want == lobbyLayout) return;
         lobbyLayout = want;
         var sc = lobbyCanvas.GetComponent<CanvasScaler>();
-        Vector2 design = portrait ? new Vector2(720, 1460) : new Vector2(1280, 720);
+        Vector2 design = portrait ? new Vector2(780, 1540) : new Vector2(1300, 730);
         sc.referenceResolution = design;
         lobbyRoot.sizeDelta = design;
         System.Action<Graphic, float, float, float, float> put = (g, x, y, w, h) => { g.rectTransform.anchoredPosition = new Vector2(x, y); g.rectTransform.sizeDelta = new Vector2(w, h); };
         if (portrait)
         {
-            put(lobbyKicker, 0, 676, 600, 26); lobbyKicker.fontSize = 18;
-            put(lobbyTitle, 0, 626, 700, 74); lobbyTitle.fontSize = 58;
-            put(lobbySub, 0, 572, 680, 50); lobbySub.fontSize = 18;
-            put(lobbyRule, 0, 542, 260, 3);
-            PlaceCards(new[] { new Vector2(-176, 360), new Vector2(176, 360), new Vector2(-176, 34), new Vector2(176, 34) }, new Vector2(336, 314), 30);
-            for (int c = 0; c < Roster.Count; c++) put(tiles[c], -270 + (c % 5) * 135, -200 - (c / 5) * 135, 126, 126);
-            put(hostBtn, -244, -400, 210, 84);
-            put(playBtn, 0, -400, 250, 84);
-            put(joinBtn, 244, -400, 210, 84);
-            put(netText, 0, -488, 700, 70); netText.fontSize = 24;
-            put(lobbyStatus, 0, -556, 700, 50); lobbyStatus.fontSize = 21;
-            put(lobbyHelp, 0, -680, 690, 90); lobbyHelp.fontSize = 17;
+            put(lobbyKicker, 0, 712, 600, 26); lobbyKicker.fontSize = 18;
+            put(lobbyTitle, 0, 664, 700, 74); lobbyTitle.fontSize = 58;
+            put(lobbySub, 0, 606, 680, 50); lobbySub.fontSize = 18;
+            put(lobbyRule, 0, 578, 260, 3);
+            PlaceCards(new[] { new Vector2(-176, 398), new Vector2(176, 398), new Vector2(-176, 66), new Vector2(176, 66) }, new Vector2(336, 320), 30);
+            for (int c = 0; c < Roster.Count; c++) put(tiles[c], -270 + (c % 5) * 135, -180 - (c / 5) * 135, 126, 126);
+            put(hostBtn, -244, -462, 210, 84);
+            put(playBtn, 0, -462, 250, 84);
+            put(joinBtn, 244, -462, 210, 84);
+            put(netText, 0, -548, 700, 70); netText.fontSize = 24;
+            put(lobbyStatus, 0, -604, 700, 50); lobbyStatus.fontSize = 21;
+            put(lobbyHelp, 0, -730, 690, 80); lobbyHelp.fontSize = 17;
             playText.fontSize = 38;
         }
         else
@@ -216,9 +216,9 @@ public partial class Game
         System.Action<Graphic, float, float, float, float> put = (g, x, y, w, h) => { g.rectTransform.anchoredPosition = new Vector2(x, y); g.rectTransform.sizeDelta = new Vector2(w, h); };
         if (lobbyLayout == 1)
         {
-            if (viewOn) { put(viewBar, -170, -612, 340, 52); put(nameBtn, 180, -612, 320, 52); }
-            else put(nameBtn, 0, -612, 420, 52);
-            put(netText, 0, -488, 700, 70);
+            if (viewOn) { put(viewBar, -170, -664, 340, 52); put(nameBtn, 180, -664, 320, 52); }
+            else put(nameBtn, 0, -664, 420, 52);
+            put(netText, 0, -548, 700, 70);
         }
         else
         {

@@ -122,6 +122,7 @@ public partial class Game : MonoBehaviour
     bool demoWaved;       // demo mode: rewrites P1's input (robot driving moment)
     string demoShot = "", demoCur = "";
     bool demoCharsDone, demoKeepChars;
+    float demoSceneT0 = -1f;
     bool DemoLobby()
     {
         if (demoT < 0f)
@@ -188,8 +189,14 @@ public partial class Game : MonoBehaviour
                 gy = Ranch.GY(-43.8f, 28f);
                 pos = new Vector3(-43.8f, gy + 2.4f, 19.4f); look = new Vector3(-43.8f, gy + 1.4f, 28f); break;
             case "truck":
-                gy = Ranch.GY(14f, 44f);
-                pos = new Vector3(20.5f, gy + 2.2f, 50.5f); look = new Vector3(14f, gy + 1f, 44f); break;
+                {
+                    // ffu14: relative to the truck P1 actually sits in (after "lineup" the fixed spot was inside Optimus)
+                    Transform tt = f.vehicle != null ? f.vehicle.transform : null;
+                    if (tt == null) { gy = Ranch.GY(14f, 44f); pos = new Vector3(20.5f, gy + 2.2f, 50.5f); look = new Vector3(14f, gy + 1f, 44f); break; }
+                    Vector3 tf = tt.forward; tf.y = 0f; tf.Normalize();
+                    Vector3 tr = new Vector3(tf.z, 0f, -tf.x);
+                    pos = tt.position + tr * 6f + tf * 5.5f + Vector3.up * 2.2f; look = tt.position + Vector3.up * 1f; break;
+                }
             case "cyberboat":
                 {
                     if (demoCyber == null) return;
@@ -280,6 +287,29 @@ public partial class Game : MonoBehaviour
             case "mechspace":
                 if (!DemoMechCam(f, sc, out pos, out look)) return;
                 break;
+            case "touch":
+                DemoTouchModes(f);
+                return;      // normal follow camera; the point is the on-screen buttons per mode
+            case "countryside":
+                // ffu14: standing on the ranch's north berm looking out over the fields and woods
+                gy = Ranch.GY(-120f, 196f);
+                pos = new Vector3(-120f, gy + 5f, 196f); look = new Vector3(-230f, gy - 25f, 700f); break;
+            case "ascent":
+                {
+                    // ffu14: the same spot from higher and higher up (the ranch shrinks, haze thins, horizon bends, sky darkens)
+                    float[] alts = { 40f, 350f, 1100f, 2000f, 2800f };
+                    if (demoSceneT0 < 0f) demoSceneT0 = Time.realtimeSinceStartup;
+                    int ai = Mathf.Min(alts.Length - 1, (int)((Time.realtimeSinceStartup - demoSceneT0) / 7f));
+                    if (ai != demoPhase) { demoPhase = ai; Debug.Log("FFDEMO ascent alt " + alts[ai] + " t=" + Time.realtimeSinceStartup.ToString("0.0")); }
+                    float al = alts[ai];
+                    pos = new Vector3(-40f, al, -60f - al * 0.9f); look = new Vector3(-20f, 0f, 60f + al * 0.4f); break;
+                }
+            case "loop":
+                // ffu14: the loop with its new links into the figure-eight (branch at the west lobe, merge before the bridge)
+                pos = new Vector3(-118f, 62f, 18f); look = new Vector3(-52f, 0f, 88f); break;
+            case "loopclose":
+                gy = Ranch.GY(-36f, 71.5f);
+                pos = new Vector3(-44f, gy + 9f, 52f); look = new Vector3(-24f, gy + 1f, 80f); break;
             case "barn":
                 gy = Ranch.GY(-140f, 112f);
                 pos = new Vector3(-118f, gy + 7f, 104f); look = new Vector3(-148f, gy + 1.5f, 124f); break;

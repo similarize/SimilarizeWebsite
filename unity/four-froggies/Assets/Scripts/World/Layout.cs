@@ -41,6 +41,58 @@ public static class Layout
     public static readonly Vector2 LoopC = new Vector2(-70f, 64f);
     public const float LoopR = 7.5f, LoopW = 6f, LoopShift = 7.5f, LoopRun = 34f;
 
+    // ffu14: the loop is part of the circuit. Driving the figure-eight in +t, the LOOP branch leaves the west lobe at
+    // t = EntryT, swings round (south-west) into the loop runway, goes through the loop, and the exit link merges back
+    // into the figure-eight at t = ExitT (just before the bridge ramp starts).
+    public const float EntryT = -2.0f, ExitT = -0.95f;
+    static Vector2[] entryPath, exitPath;
+    static Vector2 T2(float t) { Vector3 p = TrackPoint(t); return new Vector2(p.x, p.z); }
+    public static Vector2 TrackDir(float t) { return (T2(t + 0.002f) - T2(t)).normalized; }
+    static void Bez(System.Collections.Generic.List<Vector2> o, Vector2 a, Vector2 b, Vector2 c, Vector2 d, int n)
+    {
+        for (int i = (o.Count > 0 ? 1 : 0); i <= n; i++)
+        {
+            float u = i / (float)n, v = 1f - u;
+            o.Add(v * v * v * a + 3f * v * v * u * b + 3f * v * u * u * c + u * u * u * d);
+        }
+    }
+    public static Vector2[] LoopEntryPath
+    {
+        get
+        {
+            if (entryPath != null) return entryPath;
+            var o = new System.Collections.Generic.List<Vector2>();
+            Vector2 q0 = T2(EntryT), d0 = TrackDir(EntryT);
+            Vector2 q1 = new Vector2(-100f, 79f), d1 = new Vector2(-0.94f, -0.34f).normalized;
+            Vector2 q2 = LoopC + new Vector2(-LoopRun - 6f, 0f), d2 = Vector2.right;
+            Bez(o, q0, q0 + d0 * 26f, q1 - d1 * 26f, q1, 60);
+            Bez(o, q1, q1 + d1 * 13f, q2 - d2 * 13f, q2, 34);
+            return entryPath = o.ToArray();
+        }
+    }
+    public static Vector2[] LoopExitPath
+    {
+        get
+        {
+            if (exitPath != null) return exitPath;
+            var o = new System.Collections.Generic.List<Vector2>();
+            Vector2 p0 = LoopC + new Vector2(LoopRun, LoopShift), p3 = T2(ExitT), d3 = TrackDir(ExitT);
+            Bez(o, p0, p0 + Vector2.right * 7f, p3 - d3 * 7f, p3, 24);
+            return exitPath = o.ToArray();
+        }
+    }
+    static float PathDist(Vector2 p, Vector2[] path)
+    {
+        float best = 1e9f;
+        for (int i = 0; i < path.Length - 1; i++) best = Mathf.Min(best, SegDist(p, path[i], path[i + 1]));
+        return best;
+    }
+    public static float LoopLinkDist(float x, float z)
+    {
+        Vector2 p = new Vector2(x, z);
+        return Mathf.Min(PathDist(p, LoopEntryPath), PathDist(p, LoopExitPath));
+    }
+
     // Starship on its Stage Zero pad
     public static readonly Vector2 PadC = new Vector2(-105f, -55f);
 
@@ -103,6 +155,7 @@ public static class Layout
         }
         for (int i = 0; i < Spur.Length - 1; i++) best = Mathf.Min(best, SegDist(p, Spur[i], Spur[i + 1]));
         best = Mathf.Min(best, SegDist(p, LoopC + new Vector2(-LoopRun - 6f, 0f), LoopC + new Vector2(LoopRun, LoopShift)) - LoopShift * 0.5f);
+        best = Mathf.Min(best, LoopLinkDist(x, z));
         return best;
     }
 

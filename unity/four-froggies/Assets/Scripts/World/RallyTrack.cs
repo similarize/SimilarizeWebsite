@@ -59,6 +59,7 @@ public static class RallyTrack
         berm = Mats.Lit(new Color(0.42f, 0.33f, 0.22f));
         Figure8(staticRoot);
         Loop(staticRoot);
+        LoopLinks(staticRoot);
     }
 
     // ---------------- figure-eight ----------------
@@ -171,7 +172,7 @@ public static class RallyTrack
                     }
                 }
             }
-            else if (Mathf.Abs(s.bank) > 8f && i % 3 == 0)
+            else if (Mathf.Abs(s.bank) > 8f && i % 3 == 0 && Layout.LoopLinkDist(s.c.x, s.c.z) > Layout.TrackW + 6f)
             {
                 // tyre wall along the outside foot of the banked berm
                 float outer = s.bank > 0f ? 1f : -1f;
@@ -241,6 +242,69 @@ public static class RallyTrack
         var f = Mats.Prim(PrimitiveType.Cube, parent, s.c + s.up * (height * 0.25f) + fwd * (up ? length * 0.25f : -length * 0.25f), new Vector3(Layout.TrackW - 2.2f, height * 0.5f, length * 0.5f), berm, true);
         f.transform.rotation = baseRot;
         f.layer = TrackLayer;
+    }
+
+    // ---------------- ffu14: links that make the loop part of the circuit ----------------
+    // A dirt ribbon (same look + Track layer downforce as the figure-eight) along Layout.LoopEntryPath / LoopExitPath.
+    // At the figure-eight end it blends its height, banking and width into the track sample there and tucks 5 cm under
+    // the track surface (no z-fighting); at the loop end it narrows to the runway width at runway height.
+    static void LoopLinks(Transform staticRoot)
+    {
+        Link("Loop link in", Layout.LoopEntryPath, Layout.EntryT, true);
+        Link("Loop link out", Layout.LoopExitPath, Layout.ExitT, false);
+        // signs at the branch + merge
+        Vector2 b = Layout.LoopEntryPath[8];
+        Ranch.Sign(new Vector3(b.x + 4f, Gy(b.x, b.y) + 3.2f, b.y + 9f), 225f, "LOOP  >\n<size=26>this way</size>", new Color(0.7f, 0.1f, 0.1f), 6f, 2.4f);
+    }
+
+    static void Link(string name, Vector2[] path, float trackT, bool trackAtStart)
+    {
+        int n = path.Length;
+        Sample ts = Eval(trackT);
+        float hwTrack = Layout.TrackW * 0.5f, hwLoop = Layout.LoopW * 0.5f + 0.5f;
+        var sv = new List<Vector3>(); var suv = new List<Vector2>(); var st = new List<int>();
+        var bv = new List<Vector3>(); var bt = new List<int>();
+        float vAcc = 0f;
+        for (int i = 0; i < n; i++)
+        {
+            Vector2 p = path[i];
+            Vector2 d2 = i < n - 1 ? (path[i + 1] - p) : (p - path[i - 1]);
+            d2.Normalize();
+            float u = i / (float)(n - 1);
+            float kTrack = trackAtStart ? 1f - u : u;                       // 1 at the figure-eight end
+            float blend = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((kTrack - 0.72f) / 0.28f));
+            float gy = Gy(p.x, p.y);
+            Vector3 c = new Vector3(p.x, gy + 0.3f, p.y);
+            Vector3 rightFlat = new Vector3(d2.y, 0f, -d2.x);
+            Vector3 right = Vector3.Slerp(rightFlat, ts.right, blend);
+            float y = Mathf.Lerp(c.y, ts.c.y, blend) - 0.05f * blend;
+            c.y = y;
+            float hw = Mathf.Lerp(hwLoop, hwTrack, Mathf.SmoothStep(0f, 1f, kTrack));
+            if (i > 0) vAcc += (path[i] - path[i - 1]).magnitude / 10f;
+            Vector3 L = c - right * hw, R = c + right * hw;
+            sv.Add(L); sv.Add(R);
+            suv.Add(new Vector2(0f, vAcc)); suv.Add(new Vector2(1f, vAcc));
+            Vector3 Lb = new Vector3(L.x - rightFlat.x * 2.5f, Gy(L.x, L.z) - 0.3f, L.z - rightFlat.z * 2.5f);
+            Vector3 Rb = new Vector3(R.x + rightFlat.x * 2.5f, Gy(R.x, R.z) - 0.3f, R.z + rightFlat.z * 2.5f);
+            bv.Add(L); bv.Add(Lb); bv.Add(Rb); bv.Add(R);
+            if (i > 0)
+            {
+                int a = (i - 1) * 2, b = i * 2;
+                st.AddRange(new[] { a, b, a + 1, a + 1, b, b + 1 });
+                int c0 = (i - 1) * 4, d = i * 4;
+                bt.AddRange(new[] { c0, c0 + 1, d, d, c0 + 1, d + 1 });
+                bt.AddRange(new[] { c0 + 3, d + 3, c0 + 2, c0 + 2, d + 3, d + 2 });
+            }
+        }
+        MakeMesh(name, sv, suv, st, dirt, TrackLayer, true);
+        MakeMesh(name + " berms", bv, null, bt, berm, TrackLayer, false);
+        // racing-line dots so it reads as part of the course
+        for (int i = 2; i < n - 2; i += 4)
+        {
+            Vector2 p = path[i];
+            var dot = Mats.Prim(PrimitiveType.Cylinder, root, new Vector3(p.x, sv[i * 2].y * 0.5f + sv[i * 2 + 1].y * 0.5f + 0.04f, p.y), new Vector3(0.35f, 0.01f, 0.35f), Mats.Unlit(new Color(1f, 0.85f, 0.15f)), false);
+        }
+        Debug.Log("RallyTrack: " + name + " " + n + " samples, " + (path[0] - path[n - 1]).magnitude.ToString("0") + " m chord");
     }
 
     // ---------------- loop-the-loop lane ----------------

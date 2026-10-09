@@ -21,9 +21,10 @@ public static class Showroom
         if (inited) return;
         inited = true;
         foreach (Light l in Object.FindObjectsOfType<Light>()) l.cullingMask &= ~Mask;
-        MakeLight("ShowroomKey", new Vector3(0.5f, -0.6f, -0.65f), 1.15f, new Color(1f, 0.96f, 0.9f));
-        MakeLight("ShowroomRim", new Vector3(-0.4f, -0.2f, 0.9f), 0.9f, new Color(0.55f, 0.85f, 1f));
-        MakeLight("ShowroomFill", new Vector3(-0.6f, -0.3f, -0.5f), 0.35f, new Color(1f, 0.85f, 0.95f));
+        // ffu14a probe: 1.15 / 0.9 / 0.35 washed the light coats out (Kitty read white, Tigy yellow) -> softer
+        MakeLight("ShowroomKey", new Vector3(0.5f, -0.6f, -0.65f), 0.78f, new Color(1f, 0.97f, 0.93f));
+        MakeLight("ShowroomRim", new Vector3(-0.4f, -0.2f, 0.9f), 0.55f, new Color(0.6f, 0.85f, 1f));
+        MakeLight("ShowroomFill", new Vector3(-0.6f, -0.3f, -0.5f), 0.18f, new Color(1f, 0.9f, 0.95f));
     }
 
     static void MakeLight(string name, Vector3 dir, float intensity, Color c)
@@ -150,7 +151,7 @@ public static class Showroom
             cam.transform.LookAt(root.position + new Vector3(0f, 0.62f, 0f));
             rt = NewRT(Look.Mobile ? 256 : 320, Look.Mobile ? 240 : 300);
             cam.targetTexture = rt;
-            if (!Look.Mobile) LBPost.Add(cam, true);
+            if (!Look.Mobile) { var pp = LBPost.Add(cam, true); pp.exposure = 0.92f; pp.saturation = 1.1f; pp.bloom = 0.3f; }
             yaw = 200f + idx * 35f;
         }
 
