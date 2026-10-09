@@ -268,7 +268,8 @@ public class Game : MonoBehaviour
                     {
                         // porch: the sweeper on the left of the frame (the phone panel covers the right third)
                         Vector3 rp = rl.robots[2].transform.position;
-                        pos = new Vector3(rp.x + 3.5f, 3.6f, 25.5f); look = new Vector3(rp.x + 3.2f, 1.0f, 14.5f);
+                        // (looking towards -z, +x is screen-left: camera / aim sit at smaller x so the robot lands left of centre)
+                        pos = new Vector3(rp.x - 3.5f, 3.6f, 25.5f); look = new Vector3(rp.x - 3.2f, 1.0f, 14.5f);
                     }
                     break;
                 }
