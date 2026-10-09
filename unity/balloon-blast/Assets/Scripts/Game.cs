@@ -85,6 +85,10 @@ public class Game : MonoBehaviour
             int k = url.IndexOf("bbshot=");
             if (k >= 0) { demoShot = url.Substring(k + 7); int e = demoShot.IndexOfAny(new[] { '&', '#' }); if (e >= 0) demoShot = demoShot.Substring(0, e); }
             if (url.Contains("bbcrit=1")) critterMode = true;
+            demoTouch = url.Contains("bbtouch=1");
+            TouchControls.DemoPress = url.Contains("bbpress=1");
+            int nk = url.IndexOf("bbn=");
+            if (nk >= 0 && nk + 4 < url.Length) int.TryParse(url.Substring(nk + 4, 1), out demoN);
             int tk = url.IndexOf("bbtarget=");
             if (tk >= 0 && tk + 9 < url.Length) int.TryParse(url.Substring(tk + 9, 1), out demoTarget);
             Debug.Log("Balloon Blast: demo mode, shot " + demoShot + (critterMode ? ", critters" : ""));
@@ -102,10 +106,10 @@ public class Game : MonoBehaviour
     {
         lobbyCanvas = UIK.MakeCanvas("Lobby", null, 100, true);
         Transform r = lobbyCanvas.transform;
-        var bg = UIK.Img(r, null, new Color(0.05f, 0.08f, 0.12f, 0.55f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1180, 640));
-        bg.raycastTarget = false;
-        UIK.Label(r, "BALLOON BLAST AIRSOFT", 64, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, 250), new Vector2(1100, 90), new Color(1f, 0.85f, 0.2f));
-        UIK.Label(r, "Pop everyone else's balloons! 3 balloons each - lose them all and you're out.\nLast one standing wins the round. Best of 3. 8 players: empty seats are bots.", 24, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, 182), new Vector2(1100, 70), Color.white);
+        lobbyBg = UIK.Img(r, null, new Color(0.05f, 0.08f, 0.12f, 0.55f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1180, 640));
+        lobbyBg.raycastTarget = false;
+        lobbyTitle = UIK.Label(r, "BALLOON BLAST AIRSOFT", 64, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, 250), new Vector2(1100, 90), new Color(1f, 0.85f, 0.2f));
+        lobbyDesc = UIK.Label(r, "Pop everyone else's balloons! 3 balloons each - lose them all and you're out.\nLast one standing wins the round. Best of 3. 8 players: empty seats are bots.", 24, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, 182), new Vector2(1100, 70), Color.white);
         figImg = UIK.Img(r, null, new Color(0f, 0f, 0f, 0.45f), new Vector2(0.5f, 0.5f), new Vector2(0, 126), new Vector2(640, 46));
         figText = UIK.Label(figImg.transform, "", 24, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(630, 44), Color.white);
         for (int i = 0; i < 4; i++)
@@ -130,15 +134,73 @@ public class Game : MonoBehaviour
     {
         Transform r = lobbyCanvas.transform;
         creditsPanel = UIK.Img(r, null, new Color(0.02f, 0.04f, 0.07f, 0.95f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1180, 640));
-        var ct = UIK.Label(creditsPanel.transform, CreditsText, 18, TextAnchor.MiddleLeft, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1120, 610), Color.white);
+        var ct = creditsText = UIK.Label(creditsPanel.transform, CreditsText, 18, TextAnchor.MiddleLeft, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1120, 610), Color.white);
         ct.supportRichText = true;
         ct.horizontalOverflow = HorizontalWrapMode.Wrap;
         UIK.Stretch(ct.rectTransform);
         ct.rectTransform.offsetMin = new Vector2(30, 14); ct.rectTransform.offsetMax = new Vector2(-30, -14);
         creditsPanel.gameObject.SetActive(false);
+        lobbyLaid = -1;
+    }
+    Text creditsText;
+
+    Image creditsBtn, creditsPanel, lobbyBg;
+    Text lobbyTitle, lobbyDesc;
+    int lobbyLaid = -1;
+
+    static void Pos(Graphic g, Vector2 pos, Vector2 size) { g.rectTransform.anchoredPosition = pos; g.rectTransform.sizeDelta = size; }
+
+    // Landscape = the original 1280x720 design. Portrait (phone held upright) = a 720-wide column: title on two lines,
+    // FIGURES bar, the four seats in a 2x2 grid, status and the controls help below, everything inside the screen.
+    void LayoutLobby()
+    {
+        int want = Page.Portrait ? 1 : 0;
+        if (want == lobbyLaid) return;
+        lobbyLaid = want;
+        CanvasScaler sc = lobbyCanvas.GetComponent<CanvasScaler>();
+        bool p = want == 1;
+        sc.referenceResolution = p ? new Vector2(720, 1280) : new Vector2(1280, 720);
+        sc.screenMatchMode = p ? CanvasScaler.ScreenMatchMode.Expand : CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+        sc.matchWidthOrHeight = 0.6f;
+        if (p)
+        {
+            Pos(lobbyBg, new Vector2(0, -10), new Vector2(700, 1190));
+            Pos(lobbyTitle, new Vector2(0, 470), new Vector2(680, 150)); lobbyTitle.fontSize = 56; lobbyTitle.text = "BALLOON BLAST\nAIRSOFT";
+            Pos(lobbyDesc, new Vector2(0, 350), new Vector2(660, 120)); lobbyDesc.fontSize = 22;
+            Pos(figImg, new Vector2(0, 262), new Vector2(660, 50)); Pos(figText, Vector2.zero, new Vector2(650, 48)); figText.fontSize = 22;
+            for (int i = 0; i < 4; i++)
+            {
+                Vector2 c = new Vector2(i % 2 == 0 ? -168 : 168, i < 2 ? 140 : -36);
+                SeatPos(i, c, new Vector2(320, 160), 140);
+            }
+            Pos(lobbyStatus, new Vector2(0, -175), new Vector2(660, 100)); lobbyStatus.fontSize = 26;
+            Pos(lobbyHint, new Vector2(0, -400), new Vector2(670, 330)); lobbyHint.fontSize = 19;
+        }
+        else
+        {
+            Pos(lobbyBg, Vector2.zero, new Vector2(1180, 640));
+            Pos(lobbyTitle, new Vector2(0, 250), new Vector2(1100, 90)); lobbyTitle.fontSize = 64; lobbyTitle.text = "BALLOON BLAST AIRSOFT";
+            Pos(lobbyDesc, new Vector2(0, 182), new Vector2(1100, 70)); lobbyDesc.fontSize = 24;
+            Pos(figImg, new Vector2(0, 126), new Vector2(640, 46)); Pos(figText, Vector2.zero, new Vector2(630, 44)); figText.fontSize = 24;
+            for (int i = 0; i < 4; i++) SeatPos(i, new Vector2(-405 + i * 270, 22), new Vector2(250, 150), 104);
+            Pos(lobbyStatus, new Vector2(0, -90), new Vector2(1100, 60)); lobbyStatus.fontSize = 30;
+            Pos(lobbyHint, new Vector2(0, -208), new Vector2(1150, 130)); lobbyHint.fontSize = 20;
+        }
+        if (creditsPanel != null)
+        {
+            Pos(creditsPanel, Vector2.zero, p ? new Vector2(700, 1300) : new Vector2(1180, 640));
+            creditsText.fontSize = p ? 19 : 18;
+        }
     }
 
-    Image creditsBtn, creditsPanel;
+    void SeatPos(int i, Vector2 c, Vector2 panel, float arrowX)
+    {
+        Pos(slotPanels[i], c, panel);
+        Pos(slotTexts[i], c, new Vector2(196, 140));
+        Pos(swatches[i], c + new Vector2(0, -64), new Vector2(110, 9));
+        Pos(arrowL[i], c + new Vector2(-arrowX, 0), new Vector2(38, 70));
+        Pos(arrowR[i], c + new Vector2(arrowX, 0), new Vector2(38, 70));
+    }
     const string CreditsText =
         "<size=30><color=#ffd84a><b>CREDITS</b></color></size>\n\n" +
         "<b>Trees, pines, bushes, rocks, grass, ferns, flowers</b>: Stylized Nature MegaKit by Quaternius (quaternius.com), CC0.\n" +
@@ -146,7 +208,10 @@ public class Game : MonoBehaviour
         "   (polyhaven.com), CC0.\n" +
         "<b>Soldiers</b>: Mixamo X Bot via the Babylon.js asset library (assets.babylonjs.com, loaded at runtime).\n" +
         "<b>Airsoft rifle, balloons, frogs / cats / dogs, fort, barn, hay, crates, log</b>: modelled for this game (no logos).\n" +
-        "Sounds and music are synthesised in the game.\n\n" +
+        "<b>Music</b>: \"Happy Clappy Loop\" by OwlishMedia and \"Happy Beat\" by burabotti (OpenGameArt), CC0.\n" +
+        "<b>Sounds</b>: Kenney (kenney.nl) Impact, RPG, Interface + Jingles packs; cheers and countryside ambience from BigSoundBank\n" +
+        "   (DenisChardonnet, Joseph Sardin); applause \"Well Done\" by qubodup and \"Cheers\" by Nocturnal_Vanguard (OpenGameArt). All CC0.\n" +
+        "Shots, balloon pops and jingles for countdown / GO are synthesised in the game.\n\n" +
         "Full licence notes: similarize.com/games/balloon-blast-unity/LICENSES.txt\n\n" +
         "<color=#9fd8ff>Press C, Esc or tap to close</color>";
 
@@ -154,6 +219,7 @@ public class Game : MonoBehaviour
     {
         if (creditsPanel == null) BuildCredits();
         bool v = on ?? !creditsPanel.gameObject.activeSelf;
+        if (v != creditsPanel.gameObject.activeSelf) Sfx.UiPanel(v);
         creditsPanel.gameObject.SetActive(v);
         creditsPanel.transform.SetAsLastSibling();
     }
@@ -201,7 +267,10 @@ public class Game : MonoBehaviour
     void Update()
     {
         float dt = Time.deltaTime;
-        touch.active = FindSlot(InputKind.Touch) != null && state != State.Lobby;
+        Slot tslot = FindSlot(InputKind.Touch);
+        touch.active = tslot != null && state != State.Lobby;
+        if (tslot != null && tslot.cam != null) touch.view = tslot.cam.pixelRect;
+        else touch.view = new Rect(0, 0, Screen.width, Screen.height);
 
         switch (state)
         {
@@ -247,6 +316,8 @@ public class Game : MonoBehaviour
     void UpdateLobby(float dt)
     {
         lobbyCanvas.enabled = true;
+        Page.Refresh();
+        LayoutLobby();
         overview.rect = new Rect(0, 0, 1, 1);
         overview.enabled = true;
 
@@ -258,8 +329,19 @@ public class Game : MonoBehaviour
             return;
         }
         if (Kb.MouseLeftDown() && Cursor.lockState != CursorLockMode.Locked && Hit(creditsBtn, Kb.MousePos())) { CreditsToggle(true); return; }
-        if (Demo && slots.Count == 0 && Time.timeSinceLevelLoad > 4.5f) { Join(InputKind.Keyboard, null); Cursor.lockState = CursorLockMode.None; }
-        if (Demo && slots.Count > 0 && Time.unscaledTime - slots[0].joinTime > 1f) { StartMatch(); return; }
+        if (Demo && slots.Count == 0 && Time.timeSinceLevelLoad > 4.5f)
+        {
+            Join(demoTouch ? InputKind.Touch : InputKind.Keyboard, null);
+            for (int k = 1; k < demoN; k++) Join(k == 1 && !demoTouch ? InputKind.Touch : InputKind.Keyboard, null);
+            Cursor.lockState = CursorLockMode.None;
+        }
+        if (Demo && demoShot == "lobby") autoStartT = -1f;
+        else if (Demo && slots.Count > 0 && Time.unscaledTime - slots[0].joinTime > 1f)
+        {
+            for (int k = slots.Count; k < demoN && k < 4; k++) Join(InputKind.Keyboard, null);
+            Cursor.lockState = CursorLockMode.None;
+            StartMatch(); return;
+        }
 
         // keyboard
         if (Kb.EnterDown())
@@ -370,6 +452,7 @@ public class Game : MonoBehaviour
         if (now - lastFigureToggle < 0.3f) return;   // duplicate/ghost pads report the same press
         lastFigureToggle = now;
         critterMode = !critterMode;
+        Sfx.UiSwitch();
         BumpAutoStart();
         Debug.Log("Figures: " + (critterMode ? "Critters" : "Soldiers"));
     }
@@ -399,6 +482,7 @@ public class Game : MonoBehaviour
             int c = ((sl.critter + dir * k) % n + n) % n;
             if (!CritterTaken(c, sl)) { sl.critter = c; break; }
         }
+        Sfx.UiSelect();
         BumpAutoStart();
     }
 
@@ -422,12 +506,14 @@ public class Game : MonoBehaviour
         slots.Add(s);
         if (kind == InputKind.Keyboard) Cursor.lockState = CursorLockMode.Locked;
         autoStartT = (kind == InputKind.Touch && slots.Count == 1) ? 5f : 20f;
+        Sfx.UiJoin();
         Debug.Log("Joined P" + slots.Count + " via " + kind + (pad != null ? " " + pad.displayName + " #" + pad.deviceId : ""));
     }
 
     void Leave(Slot s)
     {
         if (s == null) return;
+        Sfx.UiBack();
         slots.Remove(s);
         for (int i = 0; i < slots.Count; i++) slots[i].index = i;
         if (slots.Count == 0) autoStartT = -1f;
@@ -452,6 +538,7 @@ public class Game : MonoBehaviour
     {
         ClearMatch();
         state = State.Lobby;
+        Sfx.SetScene(false);
         autoStartT = slots.Count > 0 ? 20f : -1f;
         lobbyCanvas.enabled = true;
         Look.ApplyViews(1, new[] { overview });
@@ -461,6 +548,8 @@ public class Game : MonoBehaviour
     {
         if (slots.Count == 0) return;
         ClearMatch();
+        Sfx.UiStart();
+        Sfx.SetScene(true);
         lobbyCanvas.enabled = false;
         autoStartT = -1f;
         for (int i = 0; i < TotalPlayers; i++) wins[i] = 0;
@@ -541,6 +630,7 @@ public class Game : MonoBehaviour
 
         string hudName = "P" + (sl.index + 1) + (sl.soldier.critter != null ? "  " + sl.soldier.nick : "");
         sl.hud = new Hud(cam, hudName, sl.soldier.color, 10 + sl.index);
+        sl.hud.touchLayout = sl.kind == InputKind.Touch;
     }
 
     void LayoutCameras()
@@ -631,6 +721,7 @@ public class Game : MonoBehaviour
     public void OnOut(Soldier victim, Soldier by)
     {
         AddFeed(victim.nick + " is OUT!");
+        Sfx.OnOut(victim, by);
     }
 
     void AddFeed(string line)
@@ -785,6 +876,8 @@ public class Game : MonoBehaviour
     // For work/webgl-probe/probe.py screenshots. Logs "BBDEMO scene <name>" whenever the view changes.
     public static bool Demo;
     static string demoShot = "tour";
+    static bool demoTouch;      // &bbtouch=1: P1 joins as Touch (on-screen controls drawn) even on desktop
+    static int demoN = 1;       // &bbn=2..4: extra (bot-driven) players -> split-screen
     static readonly string[] Tour = { "fp", "soldier", "pop", "field", "fort", "barn" };
     string demoScene = "";
     static int demoTarget = 1;   // &bbtarget=N: which soldier the soldier / pop shots look at

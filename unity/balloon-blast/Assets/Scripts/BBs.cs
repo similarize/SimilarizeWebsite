@@ -71,7 +71,7 @@ public class BBs : MonoBehaviour
                     RaycastHit h = hits[best];
                     Balloon bal = h.collider.GetComponent<Balloon>();
                     if (bal != null && bal.owner != null) bal.owner.PopBalloon(bal, b.owner);
-                    else FX.Puff(h.point, h.normal);
+                    else { FX.Puff(h.point, h.normal); Sfx.OnImpact(h.point, h.collider); }
                     done = true;
                 }
             }

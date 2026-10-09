@@ -134,7 +134,7 @@ public class Critter : MonoBehaviour
     }
 
     // ---------- graphics overhaul: smooth stylised meshes (work/lb-gfx/bb/build_critters.py) ----------
-    public const float GunScale = 0.8f;                                     // same as GUN_SCALE in build_critters.py
+    public const float GunScale = 1.2f;                                     // same as GUN_SCALE in build_critters.py
     static readonly Vector3 GripR = new Vector3(0.1f, -0.13f, 0.26f);       // GRIP_R: rifle origin in aim-pivot space
     static readonly Color Cream = new Color(0.98f, 0.97f, 0.78f);
     public Transform muzzle;

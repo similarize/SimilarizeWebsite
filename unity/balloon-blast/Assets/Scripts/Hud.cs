@@ -11,10 +11,15 @@ public class Hud
     readonly Text ammo, top, center, pop, label, feed, hit;
     float popT, hitT;
     readonly Color col;
+    readonly Camera cam;
+    public bool touchLayout;          // the touch player's HUD: ammo moves to the top-left, away from the FIRE cluster
+    Vector2 laidOut = new Vector2(-1, -1);
+    bool laidTouch;
 
     public Hud(Camera cam, string name, Color color, int order)
     {
         col = color;
+        this.cam = cam;
         canvas = UIK.MakeCanvas("HUD " + name, cam, order, true);
         Transform r = canvas.transform;
 
@@ -47,6 +52,50 @@ public class Hud
         pop.enabled = false;
     }
 
+    static void Set(Text t, Vector2 anchor, Vector2 pos, Vector2 box, int size, TextAnchor align)
+    {
+        RectTransform rt = t.rectTransform;
+        rt.anchorMin = rt.anchorMax = anchor;
+        rt.anchoredPosition = pos;
+        rt.sizeDelta = box;
+        t.fontSize = size;
+        t.alignment = align;
+    }
+
+    // Lays the HUD out for this view's shape. Landscape keeps the original layout (balloons top-left, round info top
+    // centre, feed top-right, ammo bottom-right); portrait stacks name / ammo / round info / feed down from the top so
+    // nothing runs off the narrow screen or under the page's buttons. The touch player's ammo always goes top-left.
+    void Layout()
+    {
+        CanvasScaler sc = canvas.GetComponent<CanvasScaler>();
+        Rect pr = cam != null ? cam.pixelRect : new Rect(0, 0, Screen.width, Screen.height);
+        bool portrait = pr.height > pr.width * 1.05f;
+        Vector2 refRes = portrait ? new Vector2(720, 1280) : new Vector2(1280, 720);
+        if (sc != null && sc.referenceResolution != refRes)
+        {
+            sc.referenceResolution = refRes;
+            sc.screenMatchMode = portrait ? CanvasScaler.ScreenMatchMode.Expand : CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+        }
+        Vector2 size = ((RectTransform)canvas.transform).rect.size;
+        if (size == laidOut && touchLayout == laidTouch) return;
+        laidOut = size; laidTouch = touchLayout;
+        float W = Mathf.Max(200f, size.x);
+        if (portrait)
+        {
+            Set(top, new Vector2(0.5f, 1), new Vector2(0, -196), new Vector2(W - 30, 70), 22, TextAnchor.UpperCenter);
+            Set(feed, new Vector2(0.5f, 1), new Vector2(0, -290), new Vector2(W - 40, 110), 18, TextAnchor.UpperCenter);
+        }
+        else
+        {
+            Set(top, new Vector2(0.5f, 1), new Vector2(0, -34), new Vector2(Mathf.Min(700, W - 40), 60), 24, TextAnchor.UpperCenter);
+            Set(feed, new Vector2(1, 1), new Vector2(-245, -112), new Vector2(Mathf.Min(470, W * 0.4f), 120), 20, TextAnchor.UpperRight);
+        }
+        if (touchLayout) Set(ammo, new Vector2(0, 1), new Vector2(110, -146), new Vector2(190, 44), 30, TextAnchor.MiddleLeft);
+        else Set(ammo, new Vector2(1, 0), new Vector2(-150, 50), new Vector2(280, 60), 38, TextAnchor.LowerRight);
+        center.rectTransform.sizeDelta = new Vector2(Mathf.Min(1000, W - 40), 240);
+        hit.rectTransform.sizeDelta = new Vector2(Mathf.Min(600, W - 40), 50);
+    }
+
     public void ShowPop() { popT = 0.7f; }
     public void ShowHit() { hitT = 1.2f; }
 
@@ -58,6 +107,7 @@ public class Hud
     public void Tick(Soldier s, string topText, string centerText, string feedText, bool showCross, float dt)
     {
         if (canvas == null) return;
+        Layout();
         for (int i = 0; i < 3; i++)
         {
             bool up = s != null && i < s.balloons.Count && !s.balloons[i].popped;

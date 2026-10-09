@@ -324,7 +324,10 @@ public class Soldier : MonoBehaviour
             }
             vy -= 20f * dt;
             vel = new Vector3(hv.x, vy, hv.z);
+            float fallV = vel.y;
+            bool wasGrounded = cc.isGrounded;
             cc.Move(vel * dt);
+            Footsteps(dt, wasGrounded, fallV);
 
             Vector3 p = transform.position;
             float gy = World.Ground(p.x, p.z);
@@ -372,6 +375,29 @@ public class Soldier : MonoBehaviour
             if (b.popped) continue;
             b.transform.localPosition = b.basePos + new Vector3(Mathf.Sin(t * 1.7f + b.index * 2f) * 0.03f, Mathf.Sin(t * 2.1f + b.index) * 0.04f, 0f);
         }
+    }
+
+    // footsteps every ~0.75 m on the ground (faster when running), a heavier step on landing; surface from what is underfoot
+    float stepDist;
+    void Footsteps(float dt, bool wasGrounded, float fallV)
+    {
+        if (!alive) return;
+        bool g = cc.isGrounded;
+        if (g && !wasGrounded && fallV < -4.5f) { Sfx.OnStep(this, Underfoot(), true); stepDist = 0f; return; }
+        if (!g) return;
+        float sp = HSpeed;
+        if (sp < 0.5f) { stepDist = Mathf.Min(stepDist, 0.4f); return; }
+        stepDist += sp * dt;
+        float stride = sp > 3.8f ? 1.05f : 0.75f;
+        if (stepDist >= stride) { stepDist -= stride; Sfx.OnStep(this, Underfoot(), false); }
+    }
+
+    int Underfoot()
+    {
+        RaycastHit h;
+        if (Physics.Raycast(transform.position + Vector3.up * 0.4f, Vector3.down, out h, 1.4f, ~0, QueryTriggerInteraction.Ignore))
+            return Sfx.Surface(h.collider);
+        return 4;
     }
 
     void Fire()
