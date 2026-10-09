@@ -293,7 +293,7 @@ public partial class Game : MonoBehaviour
             case "countryside":
                 // ffu14: standing on the ranch's north berm looking out over the fields and woods
                 gy = Ranch.GY(-120f, 196f);
-                pos = new Vector3(-120f, gy + 5f, 196f); look = new Vector3(-230f, gy - 25f, 700f); break;
+                pos = new Vector3(-120f, gy + 16f, 192f); look = new Vector3(-230f, gy - 40f, 700f); break;
             case "ascent":
                 {
                     // ffu14: the same spot from higher and higher up (the ranch shrinks, haze thins, horizon bends, sky darkens)

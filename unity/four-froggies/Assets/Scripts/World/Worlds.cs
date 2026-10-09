@@ -63,6 +63,7 @@ public static class Worlds
         WorldId w;
         if (!camWorld.TryGetValue(c, out w)) w = WorldId.Ranch;
         if (w != WorldId.Space && RenderSettings.sun != null) RenderSettings.sun.transform.rotation = sunRot0;
+        Countryside.Show(w == WorldId.Ranch);   // ffu14e: never inside the house / underwater / Mars / Callisto worlds
         float launchDark = w == WorldId.Ranch ? LaunchSeq.SkyDark(c) : 0f;   // Starship climb: the sky darkens
         // ffu14: altitude (mech rockets, Starship climb, a high drone): thinner haze, far plane opens up to the horizon,
         // the sky fades to black towards the edge of space (~2.4 km here); the lobby turntables (layer 20) are skipped

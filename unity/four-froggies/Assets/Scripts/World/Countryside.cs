@@ -16,6 +16,17 @@ public static class Countryside
     public const float Inner = Layout.Half, R = 50000f, FarEdge = 19000f, NearS = 3600f, FarS = 40000f;
     static Transform root;
     static Material groundNear, groundFar, treeMat;
+    // ffu14e: the house / underwater / Mars / Callisto worlds sit 1.4-2.3 km from the ranch, i.e. inside this
+    // countryside: Worlds.PreCull hides it for every camera that isn't in the ranch world (it was slicing through the
+    // underwater seabed). Renderers only - the countryside has no colliders.
+    static readonly List<Renderer> rends = new List<Renderer>();
+    static bool shown = true;
+    public static void Show(bool on)
+    {
+        if (on == shown) return;
+        shown = on;
+        for (int i = 0; i < rends.Count; i++) if (rends[i] != null) rends[i].enabled = on;
+    }
 
     static float Hash(int a, int b) { unchecked { uint h = (uint)(a * 374761393 + b * 668265263); h = (h ^ (h >> 13)) * 1274126177u; return (h ^ (h >> 16)) / 4294967295f; } }
 
@@ -82,6 +93,15 @@ public static class Countryside
             c += new Color(n, n, n * 0.5f);
             if (edge < Mathf.Max(3.5f, texel * 0.6f) && HedgeEdge(cu, cv)) c = Color.Lerp(c, new Color(0.16f, 0.3f, 0.12f), 0.85f);
             else if (fm > 0.64f) c = Color.Lerp(c, new Color(0.2f, 0.33f, 0.15f), (fm - 0.64f) / 0.06f * 0.7f);
+        }
+        // ffu14e: a meadow strip right outside the ranch (close to the ranch grass) so the berm doesn't look out onto
+        // a magnified, blurry patchwork; fields start ~60-260 m out
+        float od = Outside(x, z);
+        if (od < 260f)
+        {
+            float mn = Mathf.PerlinNoise(x * 0.021f + 3.3f, z * 0.021f + 1.7f) * 0.1f - 0.05f;
+            Color meadow = new Color(0.43f + mn, 0.6f + mn, 0.24f + mn * 0.5f);
+            c = Color.Lerp(meadow, c, Mathf.SmoothStep(0f, 1f, (od - 60f) / 200f));
         }
         float ru = Mathf.Abs(u - Mathf.Round(u / RoadU) * RoadU), rv = Mathf.Abs(v - Mathf.Round(v / RoadV) * RoadV);
         float rw = Mathf.Max(3.5f, texel * 0.5f);
@@ -197,6 +217,7 @@ public static class Countryside
         mr.sharedMaterial = m;
         mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         mr.receiveShadows = !bumps;
+        rends.Add(mr);
     }
 
     // ---------------- low-poly trees ----------------
@@ -309,6 +330,7 @@ public static class Countryside
             mr.sharedMaterial = treeMat;
             mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             mr.receiveShadows = false;
+            rends.Add(mr);
             var lod = go.AddComponent<LODGroup>();
             lod.SetLODs(new[] { new LOD(kv.Key % 2 == 0 ? 0.004f : 0.012f, new Renderer[] { mr }) });
         }

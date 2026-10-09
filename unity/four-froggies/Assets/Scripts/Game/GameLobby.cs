@@ -165,10 +165,14 @@ public partial class Game
     {
         bool portrait = Screen.height > Screen.width;
         int want = portrait ? 1 : 0;
-        if (want == lobbyLayout) return;
-        lobbyLayout = want;
         var sc = lobbyCanvas.GetComponent<CanvasScaler>();
         Vector2 design = portrait ? new Vector2(780, 1540) : new Vector2(1300, 730);
+        // ffu14e: fit the whole design inside the screen (match width on screens narrower than the design, e.g. a
+        // 412x915 phone, where match 0.6 pushed HOST / JOIN and the card edges off the sides)
+        float sa = Screen.width / Mathf.Max(1f, (float)Screen.height);
+        sc.matchWidthOrHeight = sa < design.x / design.y ? 0f : 1f;
+        if (want == lobbyLayout) return;
+        lobbyLayout = want;
         sc.referenceResolution = design;
         lobbyRoot.sizeDelta = design;
         System.Action<Graphic, float, float, float, float> put = (g, x, y, w, h) => { g.rectTransform.anchoredPosition = new Vector2(x, y); g.rectTransform.sizeDelta = new Vector2(w, h); };
