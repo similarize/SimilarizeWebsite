@@ -1,8 +1,8 @@
 /*!
  * Similarize "Mountain Hug" mark animation
  * The word "Similarize" -> "imi" is highlighted -> the two i's (people) climb the
- * m (the mountain between them), meet at the top, hug, climb back down,
- * and settle into the Similarize logo.
+ * m (the mountain between them), meet at the top and shake hands, then
+ * dissolve back into the Similarize logo.
  *
  * Pure SVG + JS. No dependencies, no images, no fonts.
  *
@@ -60,13 +60,11 @@
   var T = {
     wordIn: [0.0, 0.7], hilite: [0.7, 1.5], exit: [1.9, 3.0],
     wake: [3.0, 3.5], toWall: [3.5, 4.1], climb: [4.1, 6.4],
-    hug: [6.4, 7.6], heart: [6.55, 7.75], turn: [7.55, 7.85],
-    back: [7.85, 9.9], home: [9.9, 10.45], turnHome: [10.05, 10.35],
-    settle: [10.45, 10.95], end: 11.5
+    shake: [6.3, 8.0], fade: [7.85, 8.85], end: 9.5
   };
-  var U_HUG = 825;   // arc-length position where they stop to hug
+  var U_HUG = 772;   // arc-length position where they meet
   var U_HOME = -164;
-  var MS = 0.58;     // size of the people while on the mountain // ground position of the i's home
+  var MS = 0.58;     // size of the people while on the mountain
 
   // ---------- helpers ----------
   function clamp(x, a, b) { return x < a ? a : x > b ? b : x; }
@@ -148,32 +146,27 @@
       var wedge = el('path', { stroke: 'none' }, g);
       return { g: g, o: o, w: w, wedge: wedge };
     }
+    // the logo's resting i's (fade in at the end) and the travelling people
+    var homeL = makeFigure(), homeR = makeFigure();
     var figL = makeFigure(), figR = makeFigure();
-    var heart = el('path', { d: 'M0 30 C-40 0 -60 -20 -60 -40 C-60 -62 -42 -78 -22 -78 C-10 -78 -3 -72 0 -64 C3 -72 10 -78 22 -78 C42 -78 60 -62 60 -40 C60 -20 40 0 0 30 Z', stroke: 'none' }, svg);
 
     // pose for the LEFT person in the left frame; mirrored for the right one
     function pose(t) {
-      var aWake = easeOut(prog(t, T.wake)), aSettle = prog(t, T.settle);
-      var alive = t < T.settle[0] ? aWake : 1 - ease(aSettle);
+      var alive = easeOut(prog(t, T.wake));
       var u, moving = 0, s;
       var pGround = ease(prog(t, T.toWall)), pClimb = ease(prog(t, T.climb));
-      var pBack = ease(prog(t, T.back)), pHome = ease(prog(t, T.home));
       if (t < T.toWall[1]) { u = lerp(U_HOME, 0, pGround); moving = t > T.toWall[0] ? 1 : 0; }
       else if (t < T.climb[1]) { u = lerp(0, U_HUG, pClimb); moving = 1; }
-      else if (t < T.back[0]) { u = U_HUG; }
-      else if (t < T.back[1]) { u = lerp(U_HUG, 0, pBack); moving = 1; }
-      else { u = lerp(0, U_HOME, pHome); moving = t < T.home[1] ? 1 : 0; }
-      // scale: full size at home, half size on the mountain
-      if (t < T.toWall[0]) s = 1; else if (t < T.home[0]) s = lerp(1, MS, ease(prog(t, T.toWall))); else s = lerp(MS, 1, pHome);
-      // facing: +1 toward the partner
-      var face = 1;
-      if (t > T.turn[0] && t < T.turnHome[1]) face = t < T.turn[1] ? Math.cos(Math.PI * prog(t, T.turn)) : (t < T.turnHome[0] ? -1 : -Math.cos(Math.PI * prog(t, T.turnHome)));
-      var hug = t < T.hug[0] || t > T.hug[1] ? 0 : Math.sin(Math.PI * prog(t, T.hug));
-      hug = smooth(0, 0.5, hug);
-      // little hop on wake + settle
-      var hop = Math.sin(Math.PI * prog(t, [3.0, 3.35])) * 60 + Math.sin(Math.PI * prog(t, [10.45, 10.75])) * 30;
-      return { u: u, s: s, alive: alive, moving: moving, face: face, hug: hug, hop: hop };
+      else u = U_HUG;
+      s = lerp(1, MS, ease(prog(t, T.toWall)));
+      // handshake: reach in, pump twice, hold
+      var ps = prog(t, T.shake);
+      var shake = smooth(0, 0.22, ps);
+      var pump = Math.sin(Math.PI * 2 * 2 * smooth(0.25, 0.75, ps)) * (ps > 0.25 && ps < 0.75 ? 1 : 0);
+      var hop = Math.sin(Math.PI * prog(t, [3.0, 3.35])) * 60;
+      return { u: u, s: s, alive: alive, moving: moving, face: 1, shake: shake, pump: pump, hop: hop };
     }
+    var REST = { u: U_HOME, s: 1, alive: 0, moving: 0, face: 1, shake: 0, pump: 0, hop: 0, t: 0 };
 
     function drawFigure(fig, st, mirror, bg, wedgeAmt, headR, whiteC, outlineOn) {
       var X = function (p) { return mirror ? [2 * AXIS - p[0], p[1]] : p; };
@@ -192,7 +185,7 @@
       var hip = add(rootP, [0, -241 * s]);
       var neck = add(rootP, [0, -532 * s]);
       var shoulder = add(rootP, [0, -470 * s]);
-      var lean = (0.06 * amp * (1 - climb) * dirF) + 0.08 * st.hug;
+      var lean = (0.06 * amp * (1 - climb) * dirF) + 0 * st.shake;
       neck = rot(neck, hip, lean); shoulder = rot(shoulder, hip, lean);
       var headC = rot(add(rootP, [10 * s * st.face, -691 * s]), hip, lean);
       // feet
@@ -209,15 +202,13 @@
       // hands
       var restHand = add(rootP, [0, -260 * s]);
       function hand(sign) {
-        var walkH = add(shoulder, [-sign * Math.sin(phase) * 90 * s * amp * dirF + 18 * s * dirF * a, 200 * s]);
+        var walkH = add(shoulder, [-sign * Math.sin(phase) * 90 * s * amp * dirF + 18 * s * dirF * a, 238 * s]);
         var cu = st.u + 600 * s + sign * Math.sin(phase) * 70 * s;
         var cq = surface(cu);
         var climbH = add(cq.P, sc(cq.N, wl / 2));
         var h = lp(walkH, climbH, climb * amp);
-        // hug: reach around the partner's back
-        var px = 2 * AXIS - (rootP[0]); // partner root x (mirrored)
-        var hugH = [px + 34 * s, shoulder[1] + (sign > 0 ? 40 : 120) * s];
-        h = lp(h, hugH, st.hug);
+        // handshake: right hands meet in the middle, pump
+        if (sign > 0) h = lp(h, [AXIS + 8, shoulder[1] + 150 * s + st.pump * 26 * s], st.shake);
         // waving on wake
         var wave = Math.sin(Math.PI * prog(st.t, [3.05, 3.5]));
         if (sign > 0 && wave > 0) h = lp(h, add(shoulder, [70 * s, -170 * s + Math.sin(st.t * 28) * 30 * s]), wave);
@@ -266,7 +257,7 @@
     // clip paths for the wedges
     var defs = el('defs', {}, svg);
     var uid = 'sm' + Math.random().toString(36).slice(2, 8);
-    [figL, figR].forEach(function (fig, i) {
+    [figL, figR, homeL, homeR].forEach(function (fig, i) {
       fig.clipId = uid + 'c' + i;
       var cp = el('clipPath', { id: fig.clipId }, defs);
       fig.clipC = el('circle', {}, cp);
@@ -306,20 +297,16 @@
       mEl.setAttribute('transform', 'translate(0 ' + f((1 - pIn) * 40) + ')');
       var st = pose(t); st.t = t;
       var headR = lerp(66, 90, pHi);
-      var outlineOn = smooth(T.wake[0], T.wake[1], t) * (1 - smooth(T.settle[0], T.settle[1], t));
-      [figL, figR].forEach(function (fig) { fig.g.setAttribute('opacity', pIn); fig.g.setAttribute('transform', 'translate(0 ' + f((1 - pIn) * 40) + ')'); });
-      var a = drawFigure(figL, st, false, bg, pHi, headR, imiC, outlineOn);
+      var outlineOn = smooth(T.wake[0], T.wake[1], t);
+      // closing dissolve: the people fade on the summit as the logo's i's fade in at home
+      var pf = ease(prog(t, T.fade));
+      var started = t >= T.wake[0];
+      [figL, figR].forEach(function (fig) { fig.g.setAttribute('opacity', f((started ? 1 - pf : pIn) * 1000) / 1000); fig.g.setAttribute('transform', 'translate(0 ' + f((1 - pIn) * 40 - pf * 30) + ')'); });
+      [homeL, homeR].forEach(function (fig) { fig.g.setAttribute('opacity', f(pf * 1000) / 1000); });
+      drawFigure(figL, st, false, bg, pHi, headR, imiC, outlineOn);
       drawFigure(figR, st, true, bg, pHi, headR, imiC, outlineOn);
+      if (pf > 0) { REST.t = t; drawFigure(homeL, REST, false, bg, 1, 90, imiC, 0); drawFigure(homeR, REST, true, bg, 1, 90, imiC, 0); }
 
-      // heart over the hug
-      var ph = prog(t, T.heart);
-      if (ph > 0 && ph < 1) {
-        var hs = Math.sin(Math.PI * Math.min(1, ph * 1.6)) * 0.45 + 0.35 * easeOut(ph);
-        var hy = a.headC[1] - 95 - 60 * easeOut(ph);
-        heart.setAttribute('transform', 'translate(' + AXIS + ' ' + f(hy) + ') scale(' + f(hs * 1000) / 1000 + ')');
-        heart.setAttribute('fill', mixC(HEART, HEART, 0));
-        heart.setAttribute('opacity', f((1 - smooth(0.6, 1, ph)) * 1000) / 1000);
-      } else heart.setAttribute('opacity', 0);
     }
 
     var api = { duration: T.end / speed, svg: svg };
