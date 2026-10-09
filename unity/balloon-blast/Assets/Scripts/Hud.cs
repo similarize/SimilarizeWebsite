@@ -15,6 +15,7 @@ public class Hud
     public bool touchLayout;          // the touch player's HUD: ammo moves to the top-left, away from the FIRE cluster
     Vector2 laidOut = new Vector2(-1, -1);
     bool laidTouch;
+    float laidRow = -1f;
 
     public Hud(Camera cam, string name, Color color, int order)
     {
@@ -77,8 +78,13 @@ public class Hud
             sc.screenMatchMode = portrait ? CanvasScaler.ScreenMatchMode.Expand : CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
         }
         Vector2 size = ((RectTransform)canvas.transform).rect.size;
-        if (size == laidOut && touchLayout == laidTouch) return;
-        laidOut = size; laidTouch = touchLayout;
+        // views touching the top edge keep the kill feed below the page toolbar + SOUND button row
+        bool atTop = pr.yMax >= Screen.height - 2f;
+        float rowPx = atTop ? Mathf.Max(Page.TbH + 6f, Page.T + 58f * Page.Ui) : 0f;
+        if (size == laidOut && touchLayout == laidTouch && Mathf.Abs(rowPx - laidRow) < 1f) return;
+        laidOut = size; laidTouch = touchLayout; laidRow = rowPx;
+        float sf = Mathf.Max(0.05f, canvas.scaleFactor);
+        float feedY = -(Mathf.Max(52f, rowPx / sf + 6f) + 60f);
         float W = Mathf.Max(200f, size.x);
         if (portrait)
         {
@@ -88,7 +94,7 @@ public class Hud
         else
         {
             Set(top, new Vector2(0.5f, 1), new Vector2(0, -34), new Vector2(Mathf.Min(700, W - 40), 60), 24, TextAnchor.UpperCenter);
-            Set(feed, new Vector2(1, 1), new Vector2(-245, -112), new Vector2(Mathf.Min(470, W * 0.4f), 120), 20, TextAnchor.UpperRight);
+            Set(feed, new Vector2(1, 1), new Vector2(-245, feedY), new Vector2(Mathf.Min(470, W * 0.4f), 120), 20, TextAnchor.UpperRight);
         }
         if (touchLayout) Set(ammo, new Vector2(0, 1), new Vector2(110, -146), new Vector2(190, 44), 30, TextAnchor.MiddleLeft);
         else Set(ammo, new Vector2(1, 0), new Vector2(-150, 50), new Vector2(280, 60), 38, TextAnchor.LowerRight);

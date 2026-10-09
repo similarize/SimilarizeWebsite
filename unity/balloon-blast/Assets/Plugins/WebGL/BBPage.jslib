@@ -23,7 +23,7 @@ mergeInto(LibraryManager.library, {
       }
       var fs = document.fullscreenElement || document.webkitFullscreenElement;
       var t = document.querySelector(".tb");
-      if (fs || !t || t.offsetParent === null) return 0;
+      if (fs || !t || window.getComputedStyle(t).display === "none") return 0;   // (offsetParent is null for position:fixed)
       var r = t.getBoundingClientRect();
       if (which === 4) return Math.max(0, Math.round((cr.right - r.left) * k));   // toolbar width incl. its right margin
       if (which === 5) return Math.max(0, Math.round((r.bottom - cr.top) * k));   // toolbar bottom incl. its top margin

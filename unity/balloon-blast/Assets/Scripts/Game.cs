@@ -86,6 +86,7 @@ public class Game : MonoBehaviour
             if (k >= 0) { demoShot = url.Substring(k + 7); int e = demoShot.IndexOfAny(new[] { '&', '#' }); if (e >= 0) demoShot = demoShot.Substring(0, e); }
             if (url.Contains("bbcrit=1")) critterMode = true;
             demoTouch = url.Contains("bbtouch=1");
+            demoDogs = url.Contains("bbdogs=1");
             TouchControls.DemoPress = url.Contains("bbpress=1");
             int nk = url.IndexOf("bbn=");
             if (nk >= 0 && nk + 4 < url.Length) int.TryParse(url.Substring(nk + 4, 1), out demoN);
@@ -127,7 +128,7 @@ public class Game : MonoBehaviour
         creditsBtn = UIK.Img(r, null, new Color(0f, 0f, 0f, 0.5f), new Vector2(0f, 1f), new Vector2(84, -26), new Vector2(150, 34));
         var cl = UIK.Label(creditsBtn.transform, "CREDITS (C)", 17, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(150, 34), new Color(0.8f, 0.95f, 1f));
         UIK.Stretch(cl.rectTransform);
-        lobbyHint = UIK.Label(r, "Gamepad: L-stick move | R-stick look | RT fire | LT aim | A jump | X reload\nKeyboard: WASD | mouse look | click fire | right-click aim | Space jump | R reload\nTouch: left stick | drag right side to look | FIRE / ADS / JUMP / RELOAD\nFigures: Y / F / tap the FIGURES bar.  Critters: pick with D-pad / Left-Right arrows / tap < >.  Sound: M / SOUND button", 20, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, -208), new Vector2(1150, 130), new Color(1, 1, 1, 0.85f));
+        lobbyHint = UIK.Label(r, "Gamepad: L-stick move | R-stick look | RT fire | LT aim | A jump | X reload\nKeyboard: WASD | mouse look | click fire | right-click aim | Space jump | R reload\nTouch: left stick | drag right side to look | FIRE / AIM / JUMP / RELOAD\nFigures: Y / F / tap the FIGURES bar.  Critters: pick with D-pad / Left-Right arrows / tap < >.  Sound: M / SOUND button", 20, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, -208), new Vector2(1150, 130), new Color(1, 1, 1, 0.85f));
     }
 
     void BuildCredits()
@@ -173,8 +174,8 @@ public class Game : MonoBehaviour
                 Vector2 c = new Vector2(i % 2 == 0 ? -168 : 168, i < 2 ? 140 : -36);
                 SeatPos(i, c, new Vector2(320, 160), 140);
             }
-            Pos(lobbyStatus, new Vector2(0, -175), new Vector2(660, 100)); lobbyStatus.fontSize = 26;
-            Pos(lobbyHint, new Vector2(0, -400), new Vector2(670, 330)); lobbyHint.fontSize = 19;
+            Pos(lobbyStatus, new Vector2(0, -175), new Vector2(660, 100)); lobbyStatus.fontSize = 28;
+            Pos(lobbyHint, new Vector2(0, -385), new Vector2(680, 300)); lobbyHint.fontSize = 22;
         }
         else
         {
@@ -563,6 +564,9 @@ public class Game : MonoBehaviour
         {
             for (int c = 0; c < Critters.Count; c++) if (!CritterTaken(c, null)) botCritters.Add(c);
             for (int k = botCritters.Count - 1; k > 0; k--) { int j = Random.Range(0, k + 1); int t = botCritters[k]; botCritters[k] = botCritters[j]; botCritters[j] = t; }
+            if (Demo && demoDogs)   // &bbdogs=1: the first bots are the two dogs (screenshots: bbtarget=1 / soldier2)
+                for (int c = Critters.Count - 1; c >= 0; c--)
+                    if (Critters.All[c].kind == CritterKind.Dog && botCritters.Remove(c)) botCritters.Insert(0, c);
         }
 
         int bot = 0;
@@ -817,6 +821,9 @@ public class Game : MonoBehaviour
             Soldier s = sl.soldier;
             if (s == null || sl.cam == null) continue;
             float baseFov = slots.Count == 2 ? 52f : 68f;
+            // portrait / tall views: widen the vertical FOV so the horizontal view stays ~62 deg (capped at 100 vertical)
+            float asp = sl.cam.aspect;
+            if (asp < 1.2f) baseFov = Mathf.Clamp(2f * Mathf.Atan(Mathf.Tan(31f * Mathf.Deg2Rad) / Mathf.Max(0.3f, asp)) * Mathf.Rad2Deg, baseFov, 100f);
             sl.cam.fieldOfView = Mathf.Lerp(baseFov, baseFov * 0.55f, s.adsBlend);
 
             bool spectating = !s.alive && (state == State.Playing || state == State.RoundOver);
@@ -876,6 +883,7 @@ public class Game : MonoBehaviour
     // For work/webgl-probe/probe.py screenshots. Logs "BBDEMO scene <name>" whenever the view changes.
     public static bool Demo;
     static string demoShot = "tour";
+    static bool demoDogs;
     static bool demoTouch;      // &bbtouch=1: P1 joins as Touch (on-screen controls drawn) even on desktop
     static int demoN = 1;       // &bbn=2..4: extra (bot-driven) players -> split-screen
     static readonly string[] Tour = { "fp", "soldier", "pop", "field", "fort", "barn" };
@@ -905,7 +913,8 @@ public class Game : MonoBehaviour
         }
         if (cam.transform.parent != null) cam.transform.SetParent(null, true);
         cam.fieldOfView = 55f;
-        Soldier t = soldiers[Mathf.Clamp(demoTarget, 1, soldiers.Count - 1)];
+        Soldier t = soldiers[Mathf.Clamp(demoTarget + (want == "soldier2" ? 1 : 0), 1, soldiers.Count - 1)];
+        if (want == "soldier2") want = "soldier";
         Vector3 pos = cam.transform.position, look = World.center;
         switch (want)
         {
