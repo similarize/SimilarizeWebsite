@@ -3,6 +3,7 @@ using UnityEngine;
 // Pond boat: four-point buoyancy, thrust only while the hull is wet, wake spray.
 public class Boat : Vehicle
 {
+    public override string[] TouchSet { get { return new[] { "A", null, "PUSH", "GAS", "BRAKE" }; } }
     public float accel = 9f, maxSpeed = 18f, turnRate = 1.4f;
     public Transform prop;
     readonly Vector3[] floats = { new Vector3(-0.9f, 0f, 1.8f), new Vector3(0.9f, 0f, 1.8f), new Vector3(-0.9f, 0f, -1.9f), new Vector3(0.9f, 0f, -1.9f) };

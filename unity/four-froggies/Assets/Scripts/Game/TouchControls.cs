@@ -13,6 +13,13 @@ public class TouchControls : MonoBehaviour
     public bool active;
     public bool extraButtons;        // worlds can show a 2nd row (PHONE etc.) later
     public static bool spaceMode;    // space: A = next target, FIRE = auto-transfer, MSL = land, UP = burn, DOWN = brake
+    // ffu14: context buttons. Game sets the labels of A / FIRE / MSL / UP / DOWN for the player's current mode every
+    // frame (null = hidden); buttons fade in / out (~0.15 s) and keep their thumb positions. mechMode maps UP / DOWN to
+    // jump-rocket / afterburner and FIRE to the chest cannon.
+    public static readonly string[] want = { "A", null, null, null, null };
+    public static bool mechMode;
+    readonly float[] alpha = { 1f, 0f, 0f, 0f, 0f, 1f, 1f, 1f };
+    public static string ModeKey { get { return string.Join("|", want); } }
     Canvas canvas;
     RectTransform stickBase, stickKnob;
     int stickId = -1, lookId = -1, upId = -1, downId = -1, fireId = -1;
@@ -83,11 +90,23 @@ public class TouchControls : MonoBehaviour
             float rad = Rad[i];
             imgs[i].rectTransform.anchoredPosition = ScreenPos(i) / s;
             imgs[i].rectTransform.sizeDelta = Vector2.one * rad * 2f;
-            labels[i].fontSize = Mathf.RoundToInt((Names[i].Length > 2 ? 0.42f : 0.62f) * rad * (Names[i].Length > 3 ? 0.85f : 1f));
+            if (i >= 5) labels[i].fontSize = Mathf.RoundToInt((Names[i].Length > 2 ? 0.42f : 0.62f) * rad * (Names[i].Length > 3 ? 0.85f : 1f));
+            else if (labels[i].text.Length > 0) { string w = labels[i].text; labels[i].fontSize = Mathf.RoundToInt((w.Length > 2 ? 0.42f : 0.62f) * rad * (w.Length > 4 ? 0.8f : w.Length > 3 ? 0.88f : 1f)); }
             labels[i].rectTransform.sizeDelta = new Vector2(rad * 2.4f, rad);
         }
-        string[] nm = spaceMode ? SpaceNames : Names;
-        for (int i = 0; i < 5; i++) labels[i].text = nm[i];
+        float dt = Mathf.Min(Time.unscaledDeltaTime, 0.05f);
+        for (int i = 0; i < 5; i++)
+        {
+            string w = spaceMode ? SpaceNames[i] : want[i];
+            if (w != null && labels[i].text != w) { labels[i].text = w; labels[i].fontSize = Mathf.RoundToInt((w.Length > 2 ? 0.42f : 0.62f) * Rad[i] * (w.Length > 4 ? 0.8f : w.Length > 3 ? 0.88f : 1f)); }
+            alpha[i] = Mathf.MoveTowards(alpha[i], w != null ? 1f : 0f, dt * 7f);
+            Color c = Cols[i]; c.a *= alpha[i];
+            imgs[i].color = c;
+            labels[i].color = new Color(1f, 1f, 1f, alpha[i]);
+            imgs[i].rectTransform.localScale = Vector3.one * (0.8f + 0.2f * alpha[i]);
+            bool show = alpha[i] > 0.01f;
+            if (imgs[i].gameObject.activeSelf != show) imgs[i].gameObject.SetActive(show);
+        }
         labels[7].text = "SND\n<size=" + Mathf.RoundToInt(Rad[7] * 0.38f) + ">" + Sfx.LevelName + "</size>";
         float sr = StickR;
         stickBase.sizeDelta = Vector2.one * sr * 2.25f;
@@ -98,7 +117,7 @@ public class TouchControls : MonoBehaviour
     {
         float s = Scale;
         for (int i = 0; i < Count; i++)
-            if ((screen - ScreenPos(i)).magnitude < Rad[i] * s * 1.15f) return i;
+            if (alpha[i] > 0.5f && (screen - ScreenPos(i)).magnitude < Rad[i] * s * 1.15f) return i;
         return -1;
     }
 
@@ -216,6 +235,7 @@ public class TouchControls : MonoBehaviour
         i.brake = downId >= 0 ? 1f : 0f;
         i.zoom = zoom;
         i.camReset = resetQ;
+        if (mechMode) { i.upHeld = upId >= 0; i.boostHeld = downId >= 0; i.gunFire = fireQ; i.gunHeld = fireId >= 0; i.gas = i.brake = 0f; i.climb = i.upHeld ? 1f : 0f; }
         if (spaceMode) { i.target = aQ; i.auto = fireQ; i.land = altQ; i.hop = i.use = false; }
         if (spaceMode) { i.move.y = Mathf.Max(i.move.y, upId >= 0 ? 1f : 0f); }
         aQ = fireQ = altQ = resetQ = false;

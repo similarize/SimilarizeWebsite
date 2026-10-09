@@ -169,7 +169,8 @@ public partial class Game : MonoBehaviour
             else if (sc == "truck") DemoTruck(f);
             else if (sc == "cyberboat") DemoCyber(f);
             else if (sc == "robots") DemoRobots(f);
-            else if (sc == "lineup" || sc == "ripsaw" || sc == "mech") DemoLineup(f, sc);
+            else if (sc == "mech" || sc == "mechfight" || sc == "mechspace") DemoMechStart(f, sc);
+            else if (sc == "lineup" || sc == "ripsaw") DemoLineup(f, sc);
             else if (sc == "net") { if (UrlParam("ffwalk") != null) demoHook = DemoWalk; }      // ffu13 online test
             else if (sc == "netcar") { if (Net.I != null && Net.I.IsGuest) { DemoTruck(f); demoHook = DemoCircle; } }
             else if (f.world != WorldId.Ranch) f.SendTo(WorldId.Ranch, Ranch.FrogSpawn(f.id), 0f);
@@ -275,11 +276,10 @@ public partial class Game : MonoBehaviour
                 gy = Ranch.GY(-9f, 50f);
                 pos = new Vector3(-1.2f, gy + 3.4f, 58.5f); look = new Vector3(-9.6f, gy + 1.0f, 49.5f); break;
             case "mech":
-                {
-                    // the 100-story mech row (z -28) from the lawn, looking up
-                    gy = Ranch.GY(-120f, -6f);
-                    pos = new Vector3(-118f, gy + 6f, 18f); look = new Vector3(-140f, gy + 16f, -28f); break;
-                }
+            case "mechfight":
+            case "mechspace":
+                if (!DemoMechCam(f, sc, out pos, out look)) return;
+                break;
             case "barn":
                 gy = Ranch.GY(-140f, 112f);
                 pos = new Vector3(-118f, gy + 7f, 104f); look = new Vector3(-148f, gy + 1.5f, 124f); break;
@@ -1033,6 +1033,7 @@ public partial class Game : MonoBehaviour
                     {
                         Frog tf = frogs[s.frog];
                         TouchControls.spaceMode = tf.world == WorldId.Space && tf.vehicle is Starship;
+                        SetTouchSet(tf);
                     }
                     i = touch.Read();
                     break;
@@ -1172,6 +1173,7 @@ public partial class Game : MonoBehaviour
             foreach (var s in slots) if (LaunchSeq.I != null && LaunchSeq.I.crew.Contains(frogs[s.frog])) { any = frogs[s.frog]; break; }
             LaunchSeq.View(sharedCam, sharedHud, any);
         }
+        AscentViews();
     }
 
     void UpdateShared(float dt)

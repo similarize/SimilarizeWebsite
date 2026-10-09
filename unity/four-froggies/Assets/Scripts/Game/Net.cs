@@ -157,6 +157,39 @@ public class Net : MonoBehaviour
         if (role == Role.Guest && connected) Send("host", "C|" + f);
     }
 
+    // ffu14 mech combat: shots and mech health go to every device (the pilot's device owns its mech's health; an
+    // empty mech belongs to the host). F|key|kind|pos|vel, M|key|hp|wrecked|shield
+    public void SendFire(Vehicle v, int kind, Vector3 p, Vector3 vel)
+    {
+        int key = VehKey(v); if (key == 0) return;
+        string m = "F|" + key + "|" + kind + "|" + F(p.x) + "|" + F(p.y) + "|" + F(p.z) + "|" + F(vel.x) + "|" + F(vel.y) + "|" + F(vel.z);
+        if (role == Role.Host) Send("*", m); else if (role == Role.Guest && connected) Send("host", m);
+    }
+    public void SendMech(StoryMech mech, float hp, bool wrecked, int shield)
+    {
+        int key = VehKey(mech); if (key == 0) return;
+        string m = "M|" + key + "|" + F(hp) + "|" + (wrecked ? 1 : 0) + "|" + shield;
+        if (role == Role.Host) Send("*", m); else if (role == Role.Guest && connected) Send("host", m);
+    }
+    bool CombatMsg(string[] p)
+    {
+        if (p[0] == "F" && p.Length >= 9)
+        {
+            var mech = FindVeh(ParseI(p[1])) as StoryMech;
+            if (mech == null) return true;
+            Vector3 pos = new Vector3(ParseF(p[3]), ParseF(p[4]), ParseF(p[5])), vel = new Vector3(ParseF(p[6]), ParseF(p[7]), ParseF(p[8]));
+            MechShot.Spawn(mech, ParseI(p[2]), pos, vel, null);
+            return true;
+        }
+        if (p[0] == "M" && p.Length >= 5)
+        {
+            var mech = FindVeh(ParseI(p[1])) as StoryMech;
+            if (mech != null) mech.NetState(ParseF(p[2]), p[3] == "1", ParseI(p[4]));
+            return true;
+        }
+        return false;
+    }
+
     // ffu14: characters. Guests ask the host (K|char); the host owns Game.charOf and sends it in every L message.
     public void RequestChar(int c)
     {
@@ -455,6 +488,11 @@ public class Net : MonoBehaviour
                         break;
                     }
                 case "P": break;   // keep-alive
+                case "F":
+                case "M":
+                    CombatMsg(p);
+                    Send("*!" + from, m);
+                    break;
             }
             return;
         }
@@ -509,6 +547,10 @@ public class Net : MonoBehaviour
                 break;
             case "T":
                 Game.I.ToastLocal(p.Length > 1 ? p[1] : "", 3f);
+                break;
+            case "F":
+            case "M":
+                CombatMsg(p);
                 break;
             case "X":
                 Leave("That room is full (4 froggies) - play offline or host your own");

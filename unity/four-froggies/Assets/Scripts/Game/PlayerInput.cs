@@ -27,6 +27,9 @@ public struct PIn
     public bool auto;         // space: auto-transfer (X / G)
     public bool land;         // space: land (Y / F)
     public bool warpUp, warpDown;   // space: RB / LB, C / Z
+    // ffu14 mechs: UP (pad RT / Space / touch JUMP) = tap jump, hold rockets; BOOST (pad LT / Shift / touch BOOST) =
+    // afterburner; chest cannon on pad X / mouse left / touch FIRE (pad RT is the rocket there, not the gun)
+    public bool upHeld, boostHeld, gunFire, gunHeld;
 }
 
 public static class Kb
@@ -168,6 +171,10 @@ public static class Pads
         i.zoom = z;
         i.view = p.selectButton.wasPressedThisFrame;
         i.help = p.startButton.wasPressedThisFrame;
+        i.upHeld = i.gas > 0.3f;
+        i.boostHeld = i.brake > 0.4f;
+        i.gunFire = p.buttonWest.wasPressedThisFrame;
+        i.gunHeld = p.buttonWest.isPressed;
         return i;
     }
 
@@ -204,6 +211,10 @@ public static class Pads
         i.warpDown = Kb.ZDown();
         i.phone = Kb.PDown();
         i.lookHeld = locked ? md.sqrMagnitude > 0.01f : Kb.MouseLeft();
+        i.upHeld = Kb.Space();
+        i.boostHeld = Kb.Shift();
+        i.gunFire = i.fire;
+        i.gunHeld = i.fireHeld;
         return i;
     }
 

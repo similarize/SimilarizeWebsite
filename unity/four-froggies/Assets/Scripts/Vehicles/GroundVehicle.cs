@@ -19,6 +19,7 @@ public class GroundVehicle : Vehicle
     public readonly List<Wheel> wheels = new List<Wheel>();
     public float rest = 0.35f, maxSpeed = 24f, accel = 12f, turnRate = 1.6f, grip = 7f, reverseFrac = 0.45f;
     public bool tracked;
+    public override string[] TouchSet { get { return usesTriggers ? new[] { "A", null, null, "GAS", "BRAKE" } : new[] { "A", null, null, null, null }; } }
     public bool usesTriggers = true;     // tank uses RT to fire, so it drives with the stick only
     public float dustAmount = 0.5f;
     protected float spring, damper;

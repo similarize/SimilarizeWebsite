@@ -504,6 +504,7 @@ public class Submarine : Vehicle
     float yaw, pitchVis, surfaceT;
     Transform prop;
 
+    public override string[] TouchSet { get { return new[] { "A", null, null, "UP", "DOWN" }; } }
     public override string HelpLine { get { return "L-stick drive + turn | RT / Space up | LT / Shift down | A swim out (scuba) | surface + keep rising = ranch"; } }
 
     public static Submarine Build(Vector3 pos, float yawDeg)

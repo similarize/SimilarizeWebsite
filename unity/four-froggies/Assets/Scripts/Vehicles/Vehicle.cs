@@ -35,6 +35,9 @@ public abstract class Vehicle : MonoBehaviour
     public float Speed { get { Vector3 v = Velocity; v.y = 0f; return v.magnitude; } }
     public float ForwardSpeed { get { return Vector3.Dot(Velocity, transform.forward); } }
 
+    // ffu14 touch buttons in this vehicle: labels for A, FIRE, MSL, UP, DOWN (null = hidden)
+    public virtual string[] TouchSet { get { return new[] { "A", null, null, null, null }; } }
+
     public virtual string HelpLine { get { return "L-stick steer | RT gas | LT brake/reverse | A get out"; } }
     // world yaw the camera should hold (tank turret), or NaN to follow the body
     public virtual float AimYaw { get { return float.NaN; } }
@@ -168,6 +171,20 @@ public abstract class Vehicle : MonoBehaviour
     }
 
     public Vector3 HomePos { get { return spawnPos; } }
+
+    // ffu14: wreck state for ordinary vehicles (Combat.cs)
+    VehicleWreck wreck;
+    public VehicleWreck Wreck { get { if (wreck == null) { wreck = gameObject.AddComponent<VehicleWreck>(); wreck.v = this; } return wreck; } }
+    public bool Wrecked { get { StoryMech sm = this as StoryMech; if (sm != null) return sm.wrecked; return wreck != null && wreck.Down; } }
+    public string WreckedLine { get { return Title + " - wrecked, back at its spot in " + Mathf.CeilToInt(wreck != null ? wreck.TimeLeft : 0f) + " s"; } }
+    public void ResetHome()
+    {
+        if (rb == null) return;
+        bool k = rb.isKinematic;
+        if (!k) { rb.velocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
+        rb.position = spawnPos + Vector3.up * 0.5f; rb.rotation = spawnRot;
+        transform.position = spawnPos + Vector3.up * 0.5f; transform.rotation = spawnRot;
+    }
 
     // vehicles that live in another world (Curiosity on Mars...) set a centre + radius
     public bool hasWorldBounds;

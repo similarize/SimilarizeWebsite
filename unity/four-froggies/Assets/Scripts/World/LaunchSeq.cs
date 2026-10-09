@@ -58,11 +58,13 @@ public class LaunchSeq : MonoBehaviour
             {
                 if (o == null || o == f || o.world != WorldId.Ranch || o.netPuppet) continue;   // ffu13: online froggies launch on their own device
                 bool near = (o.transform.position - Ranch.ShipBase).sqrMagnitude < GatherR * GatherR;
-                if (o.human || near) Add(o);
+                // ffu14 (Bill): split-screen players are independent (only AI froggies at the pad hop on); on a shared
+                // screen whoever launches takes every player along
+                if (o.human ? Game.I.SharedScreen : near) Add(o);
             }
         phase = 1; t = 0f; skipAt = -1f; ign = 0f; h = 0f; dark = 0f; fade = 0f; lastCount = 99;
         if (rumble != null) { rumble.volume = 0f; rumble.pitch = 0.8f; rumble.Play(); }
-        foreach (Frog c in crew) c.Toast("Starship countdown!  A / FIRE skips", 3f);
+        foreach (Frog c in crew) c.Toast(Game.I != null && Game.I.SharedScreen && crew.Count > 1 ? f.nick + " is taking everyone to space!  A / FIRE skips" : "Starship countdown!  A / FIRE skips", 3f);
     }
 
     void Add(Frog f)
@@ -202,7 +204,7 @@ public class LaunchSeq : MonoBehaviour
     }
 
     // Worlds.PreCull asks how dark the ranch sky should be for this camera (0 = normal)
-    public static float SkyDark(Camera c) { float k; return camDark.TryGetValue(c, out k) ? k : 0f; }
+    public static float SkyDark(Camera c) { float k; float a = Ascent.Get(c); return Mathf.Max(a, camDark.TryGetValue(c, out k) ? k : 0f); }
 
     // low rocket rumble: brown noise + a couple of sub tones, 1 s seamless loop
     static AudioClip MakeRumble()
@@ -227,4 +229,12 @@ public class LaunchSeq : MonoBehaviour
         c.SetData(d, 0);
         return c;
     }
+}
+
+// ffu14: per-camera "how far up towards space" (mech rocket climb) -> Worlds.PreCull darkens the ranch sky
+public static class Ascent
+{
+    static readonly System.Collections.Generic.Dictionary<Camera, float> k = new System.Collections.Generic.Dictionary<Camera, float>();
+    public static void Set(Camera c, float v) { if (c != null) k[c] = v; }
+    public static float Get(Camera c) { float v; return c != null && k.TryGetValue(c, out v) ? v : 0f; }
 }

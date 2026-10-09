@@ -72,7 +72,7 @@ public class Projectile : MonoBehaviour
     void Explode(Vector3 p)
     {
         dead = true;
-        Boom.At(p, missile ? 9f : 7.5f, missile ? 1.25f : 1f);
+        Boom.At(p, missile ? 9f : 7.5f, missile ? 1.25f : 1f, missile ? 40f : 30f, owner);
         Destroy(gameObject);
     }
 }
@@ -81,9 +81,34 @@ public static class Boom
 {
     static readonly HashSet<Rigidbody> seen = new HashSet<Rigidbody>();
 
-    public static void At(Vector3 p, float radius, float power)
+    public static void At(Vector3 p, float radius, float power) { At(p, radius, power, 0f, null); }
+
+    // ffu14: damage (falls off with distance) to mechs, vehicles and props; froggies only get knocked about
+    static readonly HashSet<Object> hitOnce = new HashSet<Object>();
+    public static void At(Vector3 p, float radius, float power, float damage, Vehicle by, Color? flash = null)
     {
         FX.Boom(p, power);
+        if (flash.HasValue) FX.Sparkle(p, flash.Value, 20);
+        if (damage > 0f)
+        {
+            hitOnce.Clear();
+            foreach (Collider c in Physics.OverlapSphere(p, radius * 1.4f, ~0, QueryTriggerInteraction.Ignore))
+            {
+                Vector3 cp = c.ClosestPoint(p);
+                float k = 1f - Mathf.Clamp01((cp - p).magnitude / (radius * 1.4f));
+                float d = damage * (0.35f + 0.65f * k);
+                StoryMech sm = c.GetComponentInParent<StoryMech>();
+                if (sm != null) { if (hitOnce.Add(sm)) sm.Damage(d, cp, by); continue; }
+                Vehicle v = c.GetComponentInParent<Vehicle>();
+                if (v != null)
+                {
+                    if (v != by && VehicleWreck.Eligible(v) && hitOnce.Add(v)) v.Wreck.Damage(d * 1.6f, cp);
+                    continue;
+                }
+                Wreckable w = c.GetComponent<Wreckable>();
+                if (w != null && hitOnce.Add(w)) w.Blast(p, d);
+            }
+        }
         Sfx.PlayAt(Sfx.Boom, p, Mathf.Clamp(power, 0.5f, 1f), 140f, Random.Range(0.85f, 1.1f));
         var lg = new GameObject("BoomLight");
         lg.transform.position = p + Vector3.up;

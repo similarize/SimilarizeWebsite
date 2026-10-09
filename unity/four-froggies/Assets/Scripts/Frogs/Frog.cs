@@ -230,6 +230,7 @@ public class Frog : MonoBehaviour
         else if (near != null)
         {
             if (near.driver != null) prompt = near.Title + " - " + near.driver.nick + " is driving";
+            else if (near.Wrecked && !(near is StoryMech)) prompt = near.WreckedLine;
             else if (!near.CanEnter(this)) prompt = near.DeniedLine;
             else prompt = "A / E: " + near.EnterVerb;
         }
@@ -239,7 +240,7 @@ public class Frog : MonoBehaviour
             hs.act(this);
             return;
         }
-        if (input.use && hs == null && near != null && near.driver == null && exitCool <= 0f && near.CanEnter(this))
+        if (input.use && hs == null && near != null && near.driver == null && exitCool <= 0f && near.CanEnter(this) && !near.Wrecked)
         {
             EnterVehicle(near);
             return;

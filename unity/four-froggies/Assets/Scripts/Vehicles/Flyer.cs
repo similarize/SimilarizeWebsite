@@ -6,6 +6,7 @@ using UnityEngine;
 // With nobody aboard the rotors spool down and it settles under gravity.
 public class Flyer : Vehicle
 {
+    public override string[] TouchSet { get { return new[] { "A", null, null, "UP", "DOWN" }; } }
     public bool isDrone;
     public float maxSpeed = 22f, climbSpeed = 8f, turnRate = 85f;
     public readonly List<Transform> rotors = new List<Transform>();

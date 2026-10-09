@@ -10,6 +10,7 @@ public class Tank : GroundVehicle
     float aimYaw, aimPitch = 4f, shellCool, missileCool, recoil;
     bool aimInit;
 
+    public override string[] TouchSet { get { return new[] { "A", "FIRE", "MSL", usesTriggers ? "GAS" : null, usesTriggers ? "BRAKE" : null }; } }
     public override string HelpLine { get { return "L-stick drive | R-stick aim turret | RT fire shell | RB/LT missile | A get out"; } }
     public override float AimYaw { get { return turret != null ? turret.eulerAngles.y : float.NaN; } }
 

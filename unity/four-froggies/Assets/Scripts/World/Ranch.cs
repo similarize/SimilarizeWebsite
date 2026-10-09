@@ -625,6 +625,7 @@ public static class Ranch
         rb.drag = 0.05f;
         rb.angularDrag = 0.3f;
         rb.Sleep();
+        g.AddComponent<Wreckable>();   // ffu14: blows apart, comes back
         return g;
     }
 
