@@ -44,13 +44,15 @@ public class RanchLife : MonoBehaviour
     void Build()
     {
         // ---- robots (bible table) ----
-        Add("optimus", "Optimus", "Bubbles", 0xE1E1E1, 2.35f, 0.7f, 7.5f, -30f, 16f);
-        Add("unitree", "Unitree", "", 0x2C2F38, 1.72f, 0.58f, 12f, -28f, 20f);
-        Add("figure03", "Figure 03", "", 0xB3B3B3, 2.2f, 0.65f, 9f, -32f, 18f);
-        Add("figure02", "Figure 02", "", 0x999999, 2.05f, 0.6f, 8.5f, -34f, 14f);
-        Add("figure02big", "Big Figure Two", "", 0x888888, 3.4f, 1.35f, 6.5f, -36f, 22f);
-        Add("atlas_hd", "Atlas HD", "", 0xD2D2D2, 2.45f, 0.72f, 10f, -22f, 16f);
-        Add("atlas_el", "Atlas electric", "", 0xBCBCBC, 2.4f, 0.7f, 9.5f, -20f, 14f);
+        // lined up on the open lawn west of the garage (x < -29) and north of the house (z > 11), facing the house;
+        // the old spots (x -36..-20, z 14..22) were inside / against the garage's west bays
+        Add("optimus", "Optimus", "Bubbles", 0xE1E1E1, 2.35f, 0.7f, 7.5f, -35f, 23f);
+        Add("unitree", "Unitree", "", 0x2C2F38, 1.72f, 0.58f, 12f, -37.6f, 23f);
+        Add("figure03", "Figure 03", "", 0xB3B3B3, 2.2f, 0.65f, 9f, -40.2f, 23f);
+        Add("figure02", "Figure 02", "", 0x999999, 2.05f, 0.6f, 8.5f, -42.8f, 23f);
+        Add("figure02big", "Big Figure Two", "", 0x888888, 3.4f, 1.35f, 6.5f, -46f, 24f);
+        Add("atlas_hd", "Atlas HD", "", 0xD2D2D2, 2.45f, 0.72f, 10f, -49.2f, 23f);
+        Add("atlas_el", "Atlas electric", "", 0xBCBCBC, 2.4f, 0.7f, 9.5f, -51.8f, 23f);
 
         // ---- pasture: fence + cows + horses ----
         var fence = new GameObject("Pasture fence").transform;
@@ -186,28 +188,45 @@ public class Robot : MonoBehaviour
         float w = bulk * 0.6f;
         Transform t = go.transform;
         r.body = Mats.Node(t, "Body", Vector3.zero);
-        for (int s = -1; s <= 1; s += 2)
+        // stage A standing robot meshes (Resources/LB/sr_*.bytes); the old box robot only if a pack is missing
+        LBPack pk = LBPack.Get(PackFor(id));
+        bool packed = pk != null && pk.Has("body") && pk.Has("thighL") && pk.Has("shinL") && pk.Has("uarmL") && pk.Has("farmL") && pk.Has("head");
+        if (packed)
         {
-            Transform leg = Mats.Node(r.body, "Leg", new Vector3(w * 0.32f * s, h * 0.47f, 0f));
-            Mats.Prim(PrimitiveType.Cube, leg, new Vector3(0f, -h * 0.235f, 0f), new Vector3(w * 0.28f, h * 0.47f, w * 0.3f), m);
-            Mats.Prim(PrimitiveType.Cube, leg, new Vector3(0f, -h * 0.46f, w * 0.08f), new Vector3(w * 0.3f, h * 0.03f, w * 0.5f), dark);
-            if (s < 0) r.legL = leg; else r.legR = leg;
-            Transform arm = Mats.Node(r.body, "Arm", new Vector3(w * 0.62f * s, h * 0.8f, 0f));
-            Mats.Prim(PrimitiveType.Cube, arm, new Vector3(0f, -h * 0.17f, 0f), new Vector3(w * 0.2f, h * 0.34f, w * 0.22f), m);
-            Mats.Prim(PrimitiveType.Sphere, arm, new Vector3(0f, -h * 0.36f, 0f), Vector3.one * w * 0.24f, dark);
-            if (s < 0) r.armL = arm; else r.armR = arm;
+            float s = h / Mathf.Max(0.5f, pk.Height());
+            pk.Spawn("body", r.body, Vector3.zero, s, c);
+            r.legL = Limb(pk, r.body, "thighL", "shinL", s, c);
+            r.legR = Limb(pk, r.body, "thighR", "shinR", s, c);
+            r.armL = Limb(pk, r.body, "uarmL", "farmL", s, c);
+            r.armR = Limb(pk, r.body, "uarmR", "farmR", s, c);
+            r.head = pk.Spawn("head", r.body, Vector3.zero, s, c);
+            r.eye = Mats.Node(r.head, "Eye", new Vector3(0f, 0.08f, 0.14f));
         }
-        Mats.Prim(PrimitiveType.Cube, r.body, new Vector3(0f, h * 0.66f, 0f), new Vector3(w, h * 0.34f, w * 0.55f), m);
-        Mats.Prim(PrimitiveType.Cube, r.body, new Vector3(0f, h * 0.5f, 0f), new Vector3(w * 0.7f, h * 0.06f, w * 0.45f), dark);
-        r.head = Mats.Node(r.body, "Head", new Vector3(0f, h * 0.9f, 0f));
-        Mats.Prim(PrimitiveType.Sphere, r.head, Vector3.zero, new Vector3(w * 0.5f, h * 0.13f, w * 0.48f), dark);
-        Mats.Prim(PrimitiveType.Cube, r.head, new Vector3(0f, 0f, w * 0.22f), new Vector3(w * 0.4f, h * 0.04f, 0.02f), visor);
-        r.eye = Mats.Node(r.head, "Eye", new Vector3(0f, 0.05f, w * 0.3f));
+        else
+        {
+            for (int s = -1; s <= 1; s += 2)
+            {
+                Transform leg = Mats.Node(r.body, "Leg", new Vector3(w * 0.32f * s, h * 0.47f, 0f));
+                Mats.Prim(PrimitiveType.Cube, leg, new Vector3(0f, -h * 0.235f, 0f), new Vector3(w * 0.28f, h * 0.47f, w * 0.3f), m);
+                Mats.Prim(PrimitiveType.Cube, leg, new Vector3(0f, -h * 0.46f, w * 0.08f), new Vector3(w * 0.3f, h * 0.03f, w * 0.5f), dark);
+                if (s < 0) r.legL = leg; else r.legR = leg;
+                Transform arm = Mats.Node(r.body, "Arm", new Vector3(w * 0.62f * s, h * 0.8f, 0f));
+                Mats.Prim(PrimitiveType.Cube, arm, new Vector3(0f, -h * 0.17f, 0f), new Vector3(w * 0.2f, h * 0.34f, w * 0.22f), m);
+                Mats.Prim(PrimitiveType.Sphere, arm, new Vector3(0f, -h * 0.36f, 0f), Vector3.one * w * 0.24f, dark);
+                if (s < 0) r.armL = arm; else r.armR = arm;
+            }
+            Mats.Prim(PrimitiveType.Cube, r.body, new Vector3(0f, h * 0.66f, 0f), new Vector3(w, h * 0.34f, w * 0.55f), m);
+            Mats.Prim(PrimitiveType.Cube, r.body, new Vector3(0f, h * 0.5f, 0f), new Vector3(w * 0.7f, h * 0.06f, w * 0.45f), dark);
+            r.head = Mats.Node(r.body, "Head", new Vector3(0f, h * 0.9f, 0f));
+            Mats.Prim(PrimitiveType.Sphere, r.head, Vector3.zero, new Vector3(w * 0.5f, h * 0.13f, w * 0.48f), dark);
+            Mats.Prim(PrimitiveType.Cube, r.head, new Vector3(0f, 0f, w * 0.22f), new Vector3(w * 0.4f, h * 0.04f, 0.02f), visor);
+            r.eye = Mats.Node(r.head, "Eye", new Vector3(0f, 0.05f, w * 0.3f));
+        }
         r.jets = Mats.Node(r.body, "Jets", new Vector3(0f, h * 0.55f, -w * 0.32f));
         var jm = new Material(Mats.Fx); jm.color = new Color(0.4f, 0.8f, 1f, 0.7f);
         for (int s = -1; s <= 1; s += 2) Mats.Prim(PrimitiveType.Sphere, r.jets, new Vector3(w * 0.2f * s, -h * 0.25f, 0f), new Vector3(w * 0.15f, h * 0.25f, w * 0.15f), jm);
         r.jets.gameObject.SetActive(false);
-        Mats.NoShadows(go);
+        if (!packed || Look.Mobile) Mats.NoShadows(go);   // the mesh robots cast shadows on desktop (grounds them)
         // name tag
         var tag = new GameObject("Tag");
         tag.transform.SetParent(t, false);
@@ -218,6 +237,26 @@ public class Robot : MonoBehaviour
         tag.GetComponent<MeshRenderer>().sharedMaterial = UIK.Font != null ? UIK.Font.material : null;
         tag.AddComponent<Billboard>();
         return r;
+    }
+
+    static string PackFor(string id)
+    {
+        switch (id)
+        {
+            case "figure02big": return "sr_figure02";
+            case "atlas_hd": return "sr_atlashd";
+            case "atlas_el": return "sr_atlase";
+            default: return "sr_" + id;
+        }
+    }
+
+    // upper part at its pivot under the body + lower part under it (so the whole limb swings about the hip / shoulder)
+    static Transform Limb(LBPack pk, Transform body, string upper, string lower, float s, Color c)
+    {
+        Transform u = pk.Spawn(upper, body, Vector3.zero, s, c);
+        if (u == null) return Mats.Node(body, upper, Vector3.zero);
+        pk.Spawn(lower, u, -pk.parts[upper].pivot, 1f, c);
+        return u;
     }
 
     // phone orders (3D: come / go / stop / wave / roofHeli / roofDrone; v2 extras: follow / dance)

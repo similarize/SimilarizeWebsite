@@ -179,6 +179,7 @@ public class Game : MonoBehaviour
             if (sc == "house") f.SendTo(WorldId.House, HouseWorld.Spawn(f.id), 180f);
             else if (sc == "under" && UnderwaterWorld.I != null) { f.SendTo(WorldId.Ranch, Ranch.FrogSpawn(f.id), 0f); UnderwaterWorld.I.Dive(f); }
             else if (sc == "space") DemoSpace(f);
+            else if (sc == "truck") DemoTruck(f);
             else if (f.world != WorldId.Ranch) f.SendTo(WorldId.Ranch, Ranch.FrogSpawn(f.id), 0f);
         }
         Camera c = slots[0].cam;
@@ -190,8 +191,9 @@ public class Game : MonoBehaviour
                 for (int i = 0; i < 3; i++) frogs[i].DemoPose(new Vector3(-12f + i * 1.5f, 0f, 38f), 0f);
                 pos = new Vector3(-10.5f, Ranch.GY(-10.5f, 42.6f) + 1.35f, 42.6f); look = new Vector3(-10.5f, Ranch.GY(-10.5f, 38f) + 0.6f, 38f); break;
             case "robot":
-                gy = Ranch.GY(-30f, 18f);
-                pos = new Vector3(-24f, gy + 2.6f, 27f); look = new Vector3(-31f, gy + 1.4f, 17.5f); break;
+                // the robot line-up (RanchLife: x -35..-52, z 23, facing the house) seen from the house side
+                gy = Ranch.GY(-43.4f, 23f);
+                pos = new Vector3(-41.5f, gy + 2.3f, 13.2f); look = new Vector3(-43.4f, gy + 1.5f, 23f); break;
             case "truck":
                 gy = Ranch.GY(14f, 44f);
                 pos = new Vector3(20.5f, gy + 2.2f, 50.5f); look = new Vector3(14f, gy + 1f, 44f); break;
@@ -207,6 +209,21 @@ public class Game : MonoBehaviour
         }
         c.transform.position = pos;
         c.transform.LookAt(look);
+    }
+
+    // P1 takes the driver's seat of the Cybertruck parked at (14, 44) so the seat fit shows in the truck shot
+    void DemoTruck(Frog f)
+    {
+        if (f.world != WorldId.Ranch) f.SendTo(WorldId.Ranch, Ranch.FrogSpawn(f.id), 0f);
+        Vehicle best = null; float bd = 1e9f;
+        foreach (var v in Vehicle.All)
+        {
+            if (v == null || v.driver != null || !(v is GroundVehicle) || !v.name.Contains("Cybertruck")) continue;
+            float d = (v.transform.position - new Vector3(14f, v.transform.position.y, 44f)).sqrMagnitude;
+            if (d < bd) { bd = d; best = v; }
+        }
+        if (best != null && bd < 25f) f.EnterVehicle(best);
+        else Debug.Log("FFDEMO: no Cybertruck at (14, 44)");
     }
 
     void DemoSpace(Frog f)

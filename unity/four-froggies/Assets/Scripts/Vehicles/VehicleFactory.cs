@@ -96,8 +96,18 @@ public static class VehicleFactory
         foreach (var w in new[] { new Vector3(-0.98f, r, 1.85f), new Vector3(0.98f, r, 1.85f), new Vector3(-0.98f, r, -1.75f), new Vector3(0.98f, r, -1.75f) })
             v.AddWheel(w, r, WheelVis(t, w, r, 0.4f, false), w.z > 0f);
         }
-        v.seat = Mats.Node(t, "Seat", new Vector3(-0.45f, 1.3f, -0.08f));
-        v.seatScale = 0.55f;
+        if (pk != null && pk.Has("body") && pk.Has("wheel"))
+        {
+            // mesh cabin: cushion top y 1.46 (z -0.33..0.23), backrest front z -0.26, roof glass ~1.89 above the frog's eyes.
+            // A 0.4 frog (0.46 m tall, 0.39 m deep) sits on the cushion clear of the backrest and the glass.
+            v.seat = Mats.Node(t, "Seat", new Vector3(-0.45f, 1.40f, 0f));
+            v.seatScale = 0.4f;
+        }
+        else
+        {
+            v.seat = Mats.Node(t, "Seat", new Vector3(-0.45f, 1.3f, -0.08f));
+            v.seatScale = 0.55f;
+        }
         v.FinishSetup();
         Done(v);
         return v;
