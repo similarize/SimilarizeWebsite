@@ -12,12 +12,13 @@
    ff3daudio1: shared arcade audio (3D SFX + engine hum, 2.5D SFX). Cache: 20261008-ff3daudio1
    loop1: 3D track loop is a corkscrew (inlet/outlet side by side). FF3D_CACHE: 20261008-loop1
    space1: 3D space fixes (launch rumble, Deorbit, nose-first flight, Star Trek scale). FF3D_CACHE: 20261008-space1
-   space2: Deorbit = free flight; separate Land button (Earth/Mars/Callisto). FF3D_CACHE: 20261008-space2 */
+   space2: Deorbit = free flight; separate Land button (Earth/Mars/Callisto). FF3D_CACHE: 20261008-space2
+   land1: Earth landing outside; hop over indoor rails; indoor unstuck. FF3D_CACHE: 20261008-land1 */
 (function () {
   "use strict";
 
   var CACHE = "20261008-ff3daudio1";
-  var FF3D_CACHE = "20261008-space2";
+  var FF3D_CACHE = "20261008-land1";
   var FROG_ORDER = ["james", "jimmy", "bubbles", "rexy"];
   var FROG_NAME = { james: "James", jimmy: "Jimmy", bubbles: "Bubbles", rexy: "Rexy" };
 
