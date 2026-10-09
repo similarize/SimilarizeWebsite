@@ -1,0 +1,197 @@
+name: Unity WebGL - Lambo Blast
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [unity-src]
+    paths:
+      - 'unity/lambo-blast/**'
+      - '.github/workflows/unity-lambo-blast.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: unity-webgl-lambo-blast
+  cancel-in-progress: true
+
+env:
+  PROJECT_DIR: src/unity/lambo-blast
+  GAME_DIR: games/lambo-blast
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout unity-src
+        uses: actions/checkout@v4
+        with:
+          ref: unity-src
+          path: src
+
+      - name: Prepare log dir
+        run: |
+          mkdir -p "$RUNNER_TEMP/logs"
+          echo "LOG_DIR=$RUNNER_TEMP/logs" >> "$GITHUB_ENV"
+          echo "run ${{ github.run_id }} attempt ${{ github.run_attempt }} event ${{ github.event_name }} sha ${{ github.sha }} started $(date -u +%FT%TZ)" > "$RUNNER_TEMP/logs/status.txt"
+
+      - name: Check Unity secrets
+        id: secrets
+        env:
+          UE: ${{ secrets.UNITY_EMAIL }}
+          UP: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          e=no; p=no
+          [ -n "$UE" ] && e=yes
+          [ -n "$UP" ] && p=yes
+          if [ "$e" != yes ] || [ "$p" != yes ]; then
+            echo "MISSING_SECRETS: UNITY_EMAIL set=$e UNITY_PASSWORD set=$p" | tee -a "$LOG_DIR/status.txt"
+            exit 1
+          fi
+          echo "secrets present" | tee -a "$LOG_DIR/status.txt"
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost || true
+          df -h / | tee -a "$LOG_DIR/status.txt"
+
+      - name: Cache Library
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.PROJECT_DIR }}/Library
+          key: LB-Library-WebGL-${{ hashFiles('src/unity/lambo-blast/Packages/manifest.json', 'src/unity/lambo-blast/ProjectSettings/ProjectVersion.txt') }}-${{ hashFiles('src/unity/lambo-blast/Assets/**') }}
+          restore-keys: |
+            LB-Library-WebGL-${{ hashFiles('src/unity/lambo-blast/Packages/manifest.json', 'src/unity/lambo-blast/ProjectSettings/ProjectVersion.txt') }}-
+            LB-Library-WebGL-
+
+      # Hub 3.20+ installs to /usr/lib/unityhub but unity-setup@v2 still checks /opt/unityhub.
+      # Pass 1 installs the Hub (and fails on that path check), the shim links the dir, pass 2 continues.
+      - name: Set up Unity Hub (pass 1)
+        id: unity-hub-install
+        continue-on-error: true
+        uses: RageAgainstThePixel/unity-setup@v2
+        with:
+          version-file: src/unity/lambo-blast/ProjectSettings/ProjectVersion.txt
+          build-targets: WebGL
+          cache-installation: true
+
+      - name: Unity Hub path shim
+        run: |
+          echo "hub pass1: ${{ steps.unity-hub-install.outcome }}" | tee -a "$LOG_DIR/status.txt"
+          ls -la /usr/lib/unityhub/unityhub /opt/unityhub 2>&1 | tee -a "$LOG_DIR/status.txt" || true
+          if [ ! -e /opt/unityhub/unityhub ]; then
+            if [ -x /usr/lib/unityhub/unityhub ]; then
+              sudo rm -rf /opt/unityhub
+              sudo ln -s /usr/lib/unityhub /opt/unityhub
+            else
+              B=$(readlink -f "$(command -v unityhub)" 2>/dev/null || true)
+              echo "unityhub resolves to: $B" | tee -a "$LOG_DIR/status.txt"
+              [ -n "$B" ] && sudo mkdir -p /opt/unityhub && sudo ln -sf "$B" /opt/unityhub/unityhub
+            fi
+          fi
+          ls -la /opt/unityhub/unityhub 2>&1 | tee -a "$LOG_DIR/status.txt" || true
+
+      - name: Set up Unity + WebGL
+        id: unity-setup
+        uses: RageAgainstThePixel/unity-setup@v2
+        with:
+          version-file: src/unity/lambo-blast/ProjectSettings/ProjectVersion.txt
+          build-targets: WebGL
+          cache-installation: true
+          auto-update-hub: false
+
+      - name: Activate Unity license
+        id: activate
+        uses: RageAgainstThePixel/activate-unity-license@v2
+        with:
+          license: personal
+          username: ${{ secrets.UNITY_EMAIL }}
+          password: ${{ secrets.UNITY_PASSWORD }}
+
+      - name: Build WebGL
+        id: build
+        run: |
+          EDITOR="${UNITY_EDITOR_PATH:-${{ steps.unity-setup.outputs.unity-editor-path }}}"
+          echo "editor: $EDITOR" | tee -a "$LOG_DIR/status.txt"
+          code=0
+          "$EDITOR" -batchmode -nographics -quit \
+            -projectPath "$GITHUB_WORKSPACE/$PROJECT_DIR" \
+            -buildTarget WebGL \
+            -executeMethod BuildScript.BuildWebGL \
+            -logFile "$LOG_DIR/editor.log" || code=$?
+          echo "unity exit code: $code" | tee -a "$LOG_DIR/status.txt"
+          ls -la "$PROJECT_DIR/build/WebGL" "$PROJECT_DIR/build/WebGL/Build" 2>&1 | tee -a "$LOG_DIR/status.txt" || true
+          if [ "$code" != "0" ]; then exit 1; fi
+          ls "$PROJECT_DIR"/build/WebGL/Build/*.loader.js > /dev/null
+
+      - name: Publish to gh-pages
+        id: publish
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          OUT="$GITHUB_WORKSPACE/$PROJECT_DIR/build/WebGL"
+          LOADER=$(ls "$OUT"/Build/*.loader.js | head -n1)
+          NAME=$(basename "$LOADER" .loader.js)
+          VERSION="$(date -u +%Y%m%d%H%M)-${GITHUB_SHA::7}"
+          git clone --depth 1 --branch gh-pages --filter=blob:none --sparse \
+            "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" site
+          cd site
+          git sparse-checkout set "$GAME_DIR"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
+          rm -rf "$GAME_DIR"
+          mkdir -p "$GAME_DIR"
+          cp -r "$OUT/Build" "$GAME_DIR/Build"
+          if [ -d "$OUT/StreamingAssets" ]; then cp -r "$OUT/StreamingAssets" "$GAME_DIR/"; fi
+          sed -e "s/__BUILD_NAME__/$NAME/g" -e "s/__BUILD_VERSION__/$VERSION/g" "$GITHUB_WORKSPACE/src/unity/lambo-blast/web/index.html" > "$GAME_DIR/index.html"
+          git add -A "$GAME_DIR"
+          if git diff --cached --quiet; then echo "nothing to publish"; exit 0; fi
+          git commit -m "Publish Lambo Blast (Unity WebGL) build $VERSION"
+          for i in 1 2 3 4 5; do
+            if git push origin HEAD:gh-pages; then echo "published" | tee -a "$LOG_DIR/status.txt"; exit 0; fi
+            sleep $((i*3))
+            git pull --rebase origin gh-pages
+          done
+          echo "PUBLISH_FAILED" | tee -a "$LOG_DIR/status.txt"
+          exit 1
+
+      - name: Commit build log to unity-src
+        if: always()
+        env:
+          UE: ${{ secrets.UNITY_EMAIL }}
+          UP: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          cd src
+          mkdir -p unity/logs
+          L=unity/logs/lambo-blast-last-build.log
+          {
+            cat "$LOG_DIR/status.txt" 2>/dev/null
+            echo "=== step outcomes: secrets=${{ steps.secrets.outcome }} setup=${{ steps.unity-setup.outcome }} activate=${{ steps.activate.outcome }} build=${{ steps.build.outcome }} publish=${{ steps.publish.outcome }}"
+            for f in $(find "$HOME/.config/unity3d" -maxdepth 3 -name "*.log" 2>/dev/null); do
+              echo "=== $f (tail 60)"; tail -n 60 "$f"
+            done
+            if [ -f "$LOG_DIR/editor.log" ]; then
+              echo "=== error lines"
+              grep -nE "error CS|[Ee]rror:|Exception|BUILD_|BuildScript|Scripts have compiler errors|[Ll]icens|Failed|failed" "$LOG_DIR/editor.log" | grep -vE "Shader.*warning|0 errors" | head -n 250
+              echo "=== editor log tail (400)"
+              tail -n 400 "$LOG_DIR/editor.log"
+            else
+              echo "=== no editor log"
+            fi
+          } > "$L" 2>&1
+          # scrub credentials from the committed log
+          if [ -n "$UE" ]; then perl -pi -e 's/\Q$ENV{UE}\E/[UNITY_EMAIL]/g' "$L"; fi
+          if [ -n "$UP" ]; then perl -pi -e 's/\Q$ENV{UP}\E/[UNITY_PASSWORD]/g' "$L"; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
+          git add "$L"
+          git commit -m "Lambo Blast Unity build log for run ${{ github.run_id }} [skip ci]" || exit 0
+          for i in 1 2 3 4 5; do
+            git push origin HEAD:unity-src && exit 0
+            sleep $((i*2))
+            git pull --rebase origin unity-src || true
+          done
+          exit 0

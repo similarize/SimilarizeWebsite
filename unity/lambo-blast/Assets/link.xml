@@ -1,0 +1,4 @@
+<linker>
+  <assembly fullname="Assembly-CSharp" preserve="all" ignoreIfMissing="1"/>
+  <assembly fullname="Unity.InputSystem" preserve="all" ignoreIfMissing="1"/>
+</linker>
