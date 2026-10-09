@@ -124,8 +124,8 @@ public static class FX
         for (int i = 0; i < 26; i++)
         {
             ep.position = p + Random.insideUnitSphere * 0.15f;
-            ep.velocity = Random.onUnitSphere * Random.Range(2.5f, 6f) + Vector3.up * 1.2f;
-            ep.startSize3D = new Vector3(Random.Range(0.07f, 0.16f), Random.Range(0.05f, 0.11f), 1f);
+            ep.velocity = Random.onUnitSphere * Random.Range(1.8f, 4.2f) + Vector3.up * 1.2f;
+            ep.startSize3D = new Vector3(Random.Range(0.05f, 0.11f), Random.Range(0.04f, 0.08f), 1f);
             ep.startLifetime = Random.Range(1.0f, 2.0f);
             ep.startColor = (i % 4 == 0) ? light : cc;
             ep.rotation3D = new Vector3(Random.Range(0f, 360f), Random.Range(0f, 360f), Random.Range(0f, 360f));

@@ -49,7 +49,7 @@ public static class Sfx
     {
         canvas = UIK.MakeCanvas("SoundButton", null, 200, true);
         Object.DontDestroyOnLoad(canvas.gameObject);
-        button = UIK.Img(canvas.transform, null, new Color(0f, 0f, 0f, 0.5f), new Vector2(1, 1), new Vector2(-78, -28), new Vector2(140, 42));
+        button = UIK.Img(canvas.transform, null, new Color(0f, 0f, 0f, 0.5f), new Vector2(1, 1), new Vector2(-235, -28), new Vector2(140, 42));   // left of the page's fullscreen / Arcade buttons
         buttonText = UIK.Label(button.transform, "", 20, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(140, 40), Color.white);
         RefreshButton();
     }

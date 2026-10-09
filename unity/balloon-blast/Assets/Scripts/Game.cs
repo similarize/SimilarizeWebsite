@@ -85,6 +85,8 @@ public class Game : MonoBehaviour
             int k = url.IndexOf("bbshot=");
             if (k >= 0) { demoShot = url.Substring(k + 7); int e = demoShot.IndexOfAny(new[] { '&', '#' }); if (e >= 0) demoShot = demoShot.Substring(0, e); }
             if (url.Contains("bbcrit=1")) critterMode = true;
+            int tk = url.IndexOf("bbtarget=");
+            if (tk >= 0 && tk + 9 < url.Length) int.TryParse(url.Substring(tk + 9, 1), out demoTarget);
             Debug.Log("Balloon Blast: demo mode, shot " + demoShot + (critterMode ? ", critters" : ""));
         }
 #if ENABLE_INPUT_SYSTEM
@@ -530,7 +532,7 @@ public class Game : MonoBehaviour
             sleeve = cd.main;
         }
         Transform vmMuzzle;
-        Gear.Rifle(vm, Vector3.zero, 1f, sl.soldier.color, true, glove, sleeve, out vmMuzzle);
+        Gear.Rifle(vm, Vector3.zero, 0.9f, sl.soldier.color, true, glove, sleeve, out vmMuzzle);
         Mats.SetLayer(vm.gameObject, 24 + sl.index);
         Mats.NoShadows(vm.gameObject);
         foreach (var rr in vm.GetComponentsInChildren<Renderer>()) rr.receiveShadows = false;
@@ -744,12 +746,12 @@ public class Game : MonoBehaviour
             if (sl.viewModel != null)
             {
                 sl.viewModel.gameObject.SetActive(s.alive && sl.cam.transform.parent == s.eye);
-                Vector3 hip = new Vector3(0.13f, -0.2f, 0.2f), aim = new Vector3(0f, -0.157f, 0.13f);
+                Vector3 hip = new Vector3(0.15f, -0.27f, 0.3f), aim = new Vector3(0f, -0.141f, 0.16f);
                 float bob = Mathf.Clamp01(s.HSpeed / 5f) * (1f - s.adsBlend * 0.8f);
                 float tt = Time.time * 9f;
                 Vector3 sway = new Vector3(Mathf.Sin(tt * 0.5f) * 0.008f, Mathf.Abs(Mathf.Sin(tt * 0.5f)) * 0.008f, 0f) * bob;
                 sl.viewModel.localPosition = Vector3.Lerp(hip, aim, s.adsBlend) + sway + new Vector3(0f, 0f, -0.035f * s.kick);
-                sl.viewModel.localRotation = Quaternion.Euler(-2.5f * s.kick, Mathf.Lerp(-2f, 0f, s.adsBlend), 0f);
+                sl.viewModel.localRotation = Quaternion.Euler(-2.5f * s.kick + Mathf.Lerp(-1.5f, 0f, s.adsBlend), Mathf.Lerp(-3.5f, 0f, s.adsBlend), 0f);
             }
 
             string top = "ROUND " + round + "  |  " + alive + " LEFT  |  " + clock + "\nWINS  " + WinsLine(s);
@@ -769,7 +771,7 @@ public class Game : MonoBehaviour
                     center += "\n<size=24>Press Enter / Start for the lobby</size>";
                     break;
             }
-            if (sl.kind == InputKind.Keyboard && state == State.Playing && s.alive && Cursor.lockState != CursorLockMode.Locked)
+            if (sl.kind == InputKind.Keyboard && state == State.Playing && s.alive && Cursor.lockState != CursorLockMode.Locked && !Demo)
                 center = "Click to aim with the mouse";
             sl.hud.Tick(s, top, center, feed, state == State.Playing, dt);
         }
@@ -785,6 +787,7 @@ public class Game : MonoBehaviour
     static string demoShot = "tour";
     static readonly string[] Tour = { "fp", "soldier", "pop", "field", "fort", "barn" };
     string demoScene = "";
+    static int demoTarget = 1;   // &bbtarget=N: which soldier the soldier / pop shots look at
     float demoT, demoPopT;
 
     void DemoCamera(float dt)
@@ -794,6 +797,7 @@ public class Game : MonoBehaviour
         demoT += dt;
         string want = demoShot;
         if (demoShot == "tour" || demoShot == "") want = Tour[Mathf.FloorToInt(demoT / 9f) % Tour.Length];
+        else if (demoShot.Contains(",")) { string[] l = demoShot.Split(','); want = l[Mathf.FloorToInt(demoT / 9f) % l.Length]; }
         Camera cam = slots[0].cam;
         if (want != demoScene) { demoScene = want; demoPopT = 1f; Debug.Log("BBDEMO scene " + want + " t=" + Time.timeSinceLevelLoad.ToString("0.0")); }
         if (slots[0].hud != null && slots[0].hud.canvas != null) slots[0].hud.canvas.enabled = want == "fp";
@@ -808,7 +812,7 @@ public class Game : MonoBehaviour
         }
         if (cam.transform.parent != null) cam.transform.SetParent(null, true);
         cam.fieldOfView = 55f;
-        Soldier t = soldiers[1];
+        Soldier t = soldiers[Mathf.Clamp(demoTarget, 1, soldiers.Count - 1)];
         Vector3 pos = cam.transform.position, look = World.center;
         switch (want)
         {

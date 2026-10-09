@@ -7,7 +7,7 @@ using UnityEngine.Rendering;
 // in split-screen where every camera draws the whole scene.
 public static class MeshMerge
 {
-    const float CellSize = 60f;
+    const float CellSize = 125f;   // Balloon Blast: 250 m field -> 2-3 cells a side (fewer draw calls per view)
 
     public static void Merge(Transform root, bool castShadows)
     {

@@ -25,7 +25,7 @@ public static class World
     static readonly Color Wood = new Color(0.93f, 0.82f, 0.68f);
     static readonly Color WoodDark = new Color(0.62f, 0.5f, 0.38f);
     static readonly Color Rubber = new Color(0.12f, 0.12f, 0.13f);
-    static readonly Color BarkTint = new Color(0.92f, 0.85f, 0.78f);
+    static readonly Color BarkTint = new Color(0.78f, 0.72f, 0.66f);
     static readonly Color Trim = new Color(0.92f, 0.9f, 0.85f);
 
     public static float Rand(float a, float b) { return a + (float)rnd.NextDouble() * (b - a); }
@@ -186,7 +186,7 @@ public static class World
         const float S = 7.5f;
         placed.Add(new Vector3(p.x, S + 2.5f, p.z));
         Transform g = Group("Fort", p, yaw);
-        Material bark = BarkM(1f, 1.4f);
+        Material bark = BarkM(1.5f, 2.5f);
         for (int side = 0; side < 4; side++)
         {
             Quaternion r = Quaternion.Euler(0f, side * 90f, 0f);
@@ -311,7 +311,7 @@ public static class World
                 Transform dpiv = new GameObject("Door").transform;
                 dpiv.SetParent(g, false);
                 dpiv.localPosition = new Vector3(k * 2f, 0f, z + sg * 0.15f);
-                dpiv.localRotation = Quaternion.Euler(0f, k * sg * -100f, 0f);
+                dpiv.localRotation = Quaternion.Euler(0f, -k * sg * 18f, 0f);   // swung open against the wall, a little ajar
                 P(PrimitiveType.Cube, dpiv, new Vector3(k * 1f, 1.55f, 0f), new Vector3(2f, 3.1f, 0.12f), red, Vector3.zero);
                 P(PrimitiveType.Cube, dpiv, new Vector3(k * 1f, 1.55f, sg * 0.07f), new Vector3(2.0f, 0.16f, 0.04f), trim, new Vector3(0f, 0f, 57f), false);
                 P(PrimitiveType.Cube, dpiv, new Vector3(k * 1f, 1.55f, sg * 0.07f), new Vector3(2.0f, 0.16f, 0.04f), trim, new Vector3(0f, 0f, -57f), false);
