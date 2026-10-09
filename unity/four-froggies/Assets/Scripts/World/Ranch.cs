@@ -664,5 +664,22 @@ public static class Ranch
         img2.raycastTarget = false;
         Text t2 = UIK.Label(backFace, text, t.fontSize, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, rt.sizeDelta * 0.95f, Color.white);
         t2.supportRichText = true;
+        // one-sided, depth-tested faces (see Resources/FFSignText.shader); falls back to the default UI material
+        Material sm = SignMat();
+        if (sm != null) { img.material = sm; t.material = sm; img2.material = sm; t2.material = sm; }
+    }
+
+    static Material signMat; static bool signMatTried;
+    static Material SignMat()
+    {
+        if (!signMatTried)
+        {
+            signMatTried = true;
+            Shader sh = Resources.Load<Shader>("FFSignText");
+            if (sh == null) sh = Shader.Find("FF/SignText");
+            if (sh != null && sh.isSupported) signMat = new Material(sh) { name = "FFSignText" };
+            Debug.Log("Sign: FF/SignText " + (signMat != null ? "on" : "missing (default UI material)"));
+        }
+        return signMat;
     }
 }
