@@ -19,7 +19,21 @@ Balloon Blast Airsoft (Unity) - third-party assets and licences
 4. Modelled for this game (no third-party mesh or texture): the airsoft rifle and gloved hands (no markings), the
    balloons, the Critters (four frogs, four cats, a German shepherd and a dachshund; the frog follows the Four Froggies
    frog design), the log fort, barn, sandbag nests, hay bales (generated straw textures), crates, pallets, barrels,
-   tyres, the fallen log and its end-grain texture, the confetti / pop effects. Sounds and music are synthesised in
-   the game at start-up.
+   tyres, the fallen log and its end-grain texture, the confetti / pop effects. Synthesised in the game at start-up:
+   airsoft shots, balloon pops, hit-confirm ding, reload slide, jump, countdown beeps / GO, "your balloon popped" sting,
+   wind.
+
+5. Sounds and music (all CC0 1.0 / public domain; trimmed, levelled and re-encoded as 4-bit ADPCM for the game):
+   - Kenney (https://kenney.nl), CC0: "Impact Sounds" (footsteps on grass / wood, BB impacts on wood / metal / soft
+     surfaces, landing), "RPG Audio" (magazine latch / click, strap), "Interface Sounds" (menu clicks, join, back,
+     switch, select, open / close), "Music Jingles" (round start, round win, match win, round lost stingers).
+   - Music, lobby: "Happy Clappy Loop" by OwlishMedia, https://opengameart.org/content/happy-clappy-loop (CC0).
+   - Music, match: "Happy Beat" by burabotti, https://opengameart.org/content/happy-beat (CC0).
+   - Cheers: "Shouts and Applauses of Teens #1" and "#2" by DenisChardonnet, BigSoundBank
+     (https://bigsoundbank.com/shouts-and-applauses-of-teens-1-s0236.html, ...-2-s0237.html), CC0.
+   - Applause: "Well Done" by qubodup, https://opengameart.org/content/well-done (CC0 since 2024-10-05).
+   - "Cheers" by Nocturnal_Vanguard (AuraVoice), https://opengameart.org/content/cheers-0 (CC0).
+   - Ambience: "Countryside #2" by Joseph Sardin, BigSoundBank (https://bigsoundbank.com/campaign-2-s0898.html), CC0,
+     cut to a 36 s seamless loop.
 
 CC0 1.0 Universal: https://creativecommons.org/publicdomain/zero/1.0/legalcode
