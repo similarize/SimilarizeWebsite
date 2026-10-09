@@ -7,6 +7,8 @@ public class Kart : MonoBehaviour
     public int id;
     public int car, robot;
     public bool human;
+    // debug / screenshot mode (?lbdemo in the URL): human karts drive themselves
+    public static bool Autopilot;
     public int slot = -1;              // index into Game.slots for humans
     public CarSpec spec;
     public KIn input;
@@ -203,7 +205,7 @@ public class Kart : MonoBehaviour
         if (boostT > 0f) boostT -= dt;
 
         KIn i = new KIn();
-        if (racing && !finished) i = human ? input : AIInput(dt);
+        if (racing && !finished) i = human && !Autopilot ? input : AIInput(dt);
         else if (finished) i = AIInput(dt);          // cruise after the line
         if (countdown)
         {

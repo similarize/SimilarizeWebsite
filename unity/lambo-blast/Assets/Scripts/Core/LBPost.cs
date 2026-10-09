@@ -8,8 +8,8 @@ public class LBPost : MonoBehaviour
 {
     static Material mat;
     static bool tried;
-    public float bloom = 0.6f, threshold = 0.82f, vignette = 0.55f;
-    public float saturation = 1.18f, contrast = 1.08f, warmth = 0.045f, exposure = 1.03f;
+    public float bloom = 0.38f, threshold = 0.9f, vignette = 0.5f;
+    public float saturation = 1.16f, contrast = 1.07f, warmth = 0.03f, exposure = 0.97f;
     public int levels = 4;
     readonly RenderTexture[] chain = new RenderTexture[6];
     Camera cam;
@@ -34,7 +34,7 @@ public class LBPost : MonoBehaviour
     {
         var p = c.gameObject.GetComponent<LBPost>();
         if (p == null) p = c.gameObject.AddComponent<LBPost>();
-        if (small) { p.levels = 3; p.bloom = 0.75f; p.vignette = 0.25f; }
+        if (small) { p.levels = 3; p.bloom = 0.6f; p.vignette = 0.25f; p.exposure = 1.02f; }
         return p;
     }
 

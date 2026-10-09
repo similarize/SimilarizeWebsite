@@ -67,7 +67,7 @@ public class Game : MonoBehaviour
     float previewH, attractT, thumbCheckT;
     Vector2Int lastScreen;
     static readonly Color[] PlayerCol = { new Color(1f, 0.85f, 0.25f), new Color(0.3f, 0.9f, 1f), new Color(1f, 0.45f, 0.85f), new Color(0.55f, 1f, 0.35f) };
-    Image pauseBtn, resumeBtn, restartBtn, quitBtn;
+    Image pauseBtn, resumeBtn, restartBtn, quitBtn, creditsBtn, creditsPanel;
     Image[] resultRows;
     int lobbyLayout = -1;
     float lastTouchTime = -10f;
@@ -262,6 +262,36 @@ public class Game : MonoBehaviour
         UIK.Stretch(pl.rectTransform);
         lobbyStatus = UIK.Label(r, "", 17, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1180, 26), new Color(0.7f, 1f, 0.7f));
         lobbyHelp = UIK.Label(r, "", 12, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1200, 34), new Color(1, 1, 1, 0.85f));
+        creditsBtn = UIK.Img(r, null, new Color(0f, 0f, 0f, 0.55f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(118, 26));
+        var cl = UIK.Label(creditsBtn.transform, "CREDITS (C)", 13, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(118, 26), new Color(0.8f, 0.95f, 1f));
+        UIK.Stretch(cl.rectTransform);
+        creditsPanel = UIK.Img(r, null, new Color(0.01f, 0.04f, 0.08f, 0.94f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1040, 470));
+        var ct = UIK.Label(creditsPanel.transform, CreditsText, 16, TextAnchor.MiddleLeft, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(980, 440), Color.white);
+        ct.supportRichText = true;
+        ct.horizontalOverflow = HorizontalWrapMode.Wrap;
+        UIK.Stretch(ct.rectTransform);
+        ct.rectTransform.offsetMin = new Vector2(30, 14); ct.rectTransform.offsetMax = new Vector2(-30, -14);
+        creditsPanel.gameObject.SetActive(false);
+    }
+
+    const string CreditsText =
+        "<size=26><color=#7dff8a><b>CREDITS</b></color></size>\n" +
+        "<b>Unitree</b> (Unitree H1): Unitree Robotics' official robot model (github.com/unitreerobotics/unitree_mujoco).\n" +
+        "   Copyright (c) 2016-2024 HangZhou YuShu TECHNOLOGY CO.,LTD. (\"Unitree Robotics\"). BSD 3-Clause licence. Logo plate removed.\n" +
+        "<b>Atlas HD</b> (hydraulic DRC Atlas): the MIT Atlas model from RobotLocomotion/models (Drake).\n" +
+        "   Copyright 2012-2022 Robot Locomotion Group @ CSAIL. BSD 3-Clause licence. Team / sponsor logos removed.\n" +
+        "<b>Optimus, Figure 02, Big Figure Two, Figure 03, Atlas electric</b> and the cars: modelled for this game from public photos (no logos).\n" +
+        "<b>Sky</b> (Kloofendal 48d Partly Cloudy, Greg Zaal + Jarod Guest) and <b>sand textures</b>: Poly Haven (polyhaven.com), CC0.\n\n" +
+        "Full licence texts: similarize.com/games/lambo-blast/LICENSES.txt\n" +
+        "Robot names describe the real machines only; this fan game is not affiliated with their makers.\n\n" +
+        "<color=#9fd8ff>Press C, Esc or tap to close</color>";
+
+    void CreditsToggle(bool? on = null)
+    {
+        if (creditsPanel == null) return;
+        bool v = on ?? !creditsPanel.gameObject.activeSelf;
+        creditsPanel.gameObject.SetActive(v);
+        creditsPanel.transform.SetAsLastSibling();
     }
 
     void BuildHudUI()
@@ -344,6 +374,8 @@ public class Game : MonoBehaviour
             put(playBtn, new Vector2(0, -540), new Vector2(340, 54));
             put(lobbyStatus, new Vector2(0, -585), new Vector2(690, 30)); lobbyStatus.fontSize = 15;
             put(lobbyHelp, new Vector2(0, -613), new Vector2(700, 34)); lobbyHelp.fontSize = 11;
+            put(creditsBtn, new Vector2(282, -540), new Vector2(118, 30));
+            put(creditsPanel, Vector2.zero, new Vector2(700, 900));
         }
         else
         {
@@ -357,6 +389,8 @@ public class Game : MonoBehaviour
             put(playBtn, new Vector2(0, -284), new Vector2(260, 44));
             put(lobbyStatus, new Vector2(0, -318), new Vector2(1180, 26)); lobbyStatus.fontSize = 17;
             put(lobbyHelp, new Vector2(0, -344), new Vector2(1200, 32)); lobbyHelp.fontSize = 12;
+            put(creditsBtn, new Vector2(540, -284), new Vector2(118, 28));
+            put(creditsPanel, Vector2.zero, new Vector2(1040, 470));
         }
         // card insides (anchored to the card's top edge)
         float w = cardSize.x, pw = w - 16f, y = -6f;
@@ -596,8 +630,41 @@ public class Game : MonoBehaviour
         return img != null && img.gameObject.activeInHierarchy && RectTransformUtility.RectangleContainsScreenPoint(img.rectTransform, screenPos, null);
     }
 
+    // ?lbdemo in the page URL: join keyboard P1 and start a self-driving race (headless screenshots / attract checks)
+    float demoT = -1f;
+    void DemoCheck()
+    {
+        if (demoT < 0f)
+        {
+            string u = Application.absoluteURL ?? "";
+            demoT = u.Contains("lbdemo") ? 0.01f : 0f;
+            Kart.Autopilot = demoT > 0f;
+            if (demoT > 0f) Debug.Log("Lambo Blast: demo mode");
+        }
+        if (demoT <= 0f) return;
+        demoT += Time.unscaledDeltaTime;
+        if (demoT > 6f && state == State.Lobby)
+        {
+            demoT = 0f;
+            if (slots.Count == 0) Join(InputKind.Keyboard, null);
+            StartRace();
+        }
+    }
+
     void UpdateLobby(float dt)
     {
+        DemoCheck();
+        if (state != State.Lobby) return;
+        if (Kb.CDown()) CreditsToggle();
+        if (creditsPanel != null && creditsPanel.gameObject.activeSelf)
+        {
+            bool close = Kb.EscDown() || Kb.EnterDown() || (Kb.MouseLeftDown() && Kb.TouchCount() == 0);
+            foreach (Vector2 tp in Kb.TouchesBegan()) close = true;
+            foreach (var pd in Gamepad.all) if (pd.buttonEast.wasPressedThisFrame || pd.buttonSouth.wasPressedThisFrame) close = true;
+            if (close) CreditsToggle(false);
+            RefreshLobby(dt);
+            return;
+        }
         lobbyCanvas.enabled = true;
         hudCanvas.enabled = false;
         resultsCanvas.enabled = false;
@@ -683,6 +750,7 @@ public class Game : MonoBehaviour
     // returns true when the race started
     bool LobbyTap(Vector2 pos, InputKind kind)
     {
+        if (Hit(creditsBtn, pos)) { CreditsToggle(true); return false; }
         if (Hit(playBtn, pos))
         {
             if (slots.Count == 0) Join(kind, null);

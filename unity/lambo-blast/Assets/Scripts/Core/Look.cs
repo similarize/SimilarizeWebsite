@@ -23,14 +23,14 @@ public static class Look
         if (sun != null)
         {
             sun.color = new Color(1f, 0.93f, 0.8f);
-            sun.intensity = 1.32f;
+            sun.intensity = 1.18f;
             sun.shadowStrength = 0.72f;
             sun.transform.rotation = Quaternion.Euler(48f, -38f, 0f);
         }
         RenderSettings.ambientMode = AmbientMode.Trilight;
-        RenderSettings.ambientSkyColor = new Color(0.58f, 0.72f, 0.92f);
-        RenderSettings.ambientEquatorColor = new Color(0.66f, 0.66f, 0.6f);
-        RenderSettings.ambientGroundColor = new Color(0.5f, 0.43f, 0.33f);
+        RenderSettings.ambientSkyColor = new Color(0.5f, 0.62f, 0.8f);
+        RenderSettings.ambientEquatorColor = new Color(0.56f, 0.56f, 0.52f);
+        RenderSettings.ambientGroundColor = new Color(0.42f, 0.36f, 0.28f);
         RenderSettings.fogColor = new Color(0.74f, 0.86f, 0.95f);
         RenderSettings.reflectionIntensity = 1f;
         Debug.Log("Look: tier " + (Mobile ? "mobile" : "desktop") + " " + Screen.width + "x" + Screen.height + " dpi " + Screen.dpi);

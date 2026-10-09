@@ -114,12 +114,12 @@ public static class Showroom
             Mats.SetLayer(root.gameObject, Layer);
             float s = RobotModel.Size(r);
             float f = s > 1.2f ? s * 0.86f : s;                    // Big Figure Two fills its frame (and a bit more)
-            if (RobotModel.UsesPack(r)) f = s > 1.2f ? 1.12f : 1f;
+            if (RobotModel.UsesPack(r)) f = s > 1.2f ? 1.3f : 1.04f;
             thumbCam.backgroundColor = new Color(0.08f, 0.11f, 0.17f);
             thumbCam.fieldOfView = 30f;
             bool pack = RobotModel.UsesPack(r);
-            thumbCam.transform.position = p + (pack ? new Vector3(-1.05f, 0.98f, 1.3f) : new Vector3(-0.55f, 0.66f, 1.45f)) * f;
-            thumbCam.transform.LookAt(p + (pack ? new Vector3(0f, 0.5f, 0.12f) : new Vector3(0f, 0.52f, 0.05f)) * f);
+            thumbCam.transform.position = p + (pack ? new Vector3(-1.3f, 1.12f, 1.7f) : new Vector3(-0.55f, 0.66f, 1.45f)) * f;
+            thumbCam.transform.LookAt(p + (pack ? new Vector3(0f, 0.56f, 0.1f) : new Vector3(0f, 0.52f, 0.05f)) * f);
             thumbCam.targetTexture = RobotThumbs[r];
             thumbCam.Render();
             root.gameObject.SetActive(false);

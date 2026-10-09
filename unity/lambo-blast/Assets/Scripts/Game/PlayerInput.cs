@@ -37,6 +37,7 @@ public static class Kb
     public static bool SpaceDown() { return Key(k => k.spaceKey.wasPressedThisFrame, KeyCode.Space, true); }
     public static bool Shift() { return Key(k => k.leftShiftKey.isPressed || k.rightShiftKey.isPressed, KeyCode.LeftShift, false); }
     public static bool MDown() { return Key(k => k.mKey.wasPressedThisFrame, KeyCode.M, true); }
+    public static bool CDown() { return Key(k => k.cKey.wasPressedThisFrame, KeyCode.C, true); }
     public static bool PDown() { return Key(k => k.pKey.wasPressedThisFrame, KeyCode.P, true); }
     public static bool RDown() { return Key(k => k.rKey.wasPressedThisFrame, KeyCode.R, true); }
     public static bool QDown() { return Key(k => k.qKey.wasPressedThisFrame, KeyCode.Q, true); }

@@ -47,7 +47,7 @@ public static class Robots
 
 public static class KartModel
 {
-    public static readonly Vector3 PackSeat = new Vector3(0f, 0.5f, -0.42f);
+    public static readonly Vector3 PackSeat = new Vector3(0f, 0.58f, -0.42f);
     public const float WheelX = 0.9f;
 
     // Builds the visual car + robot under `body`. Returns wheel steer pivots (FL, FR) and spinning wheels (all 4)

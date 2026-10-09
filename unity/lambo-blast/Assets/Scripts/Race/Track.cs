@@ -370,7 +370,7 @@ public static class Track
         var px = new Color32[n * n];
         var r = new System.Random(4);
         float size = gcell * (gn - 1);
-        Color sand = new Color(0.96f, 0.88f, 0.67f), wet = new Color(0.80f, 0.70f, 0.50f), sea = new Color(0.55f, 0.76f, 0.70f),
+        Color sand = new Color(0.9f, 0.8f, 0.6f), wet = new Color(0.74f, 0.63f, 0.45f), sea = new Color(0.55f, 0.76f, 0.70f),
               deep = new Color(0.25f, 0.5f, 0.55f), grass = new Color(0.36f, 0.63f, 0.25f), grass2 = new Color(0.27f, 0.52f, 0.2f);
         for (int y = 0; y < n; y++)
             for (int x = 0; x < n; x++)
@@ -405,7 +405,7 @@ public static class Track
         tex.anisoLevel = 4;
         var r = new System.Random(curbs ? 8 : 9);
         var px = new Color32[w * h];
-        Color baseC = curbs ? new Color(0.86f, 0.75f, 0.55f) : new Color(0.9f, 0.8f, 0.6f);
+        Color baseC = curbs ? new Color(0.8f, 0.68f, 0.5f) : new Color(0.84f, 0.73f, 0.54f);
         for (int y = 0; y < h; y++)
             for (int x = 0; x < w; x++)
             {

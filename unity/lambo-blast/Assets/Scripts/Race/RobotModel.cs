@@ -24,7 +24,7 @@ public static class RobotModel
 
     public static float Size(int r)
     {
-        if (UsesPack(r)) return r == 4 ? 1.35f : 1f;
+        if (UsesPack(r)) return r == 4 ? 1.35f * 1.06f : 1.06f;   // a touch over life size so they read from the chase cam
         switch (r)
         {
             case 1: return 0.9f;    // Unitree (thin)
