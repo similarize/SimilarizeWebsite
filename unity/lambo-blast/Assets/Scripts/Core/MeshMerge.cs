@@ -9,7 +9,11 @@ public static class MeshMerge
 {
     const float CellSize = 60f;
 
-    public static void Merge(Transform root, bool castShadows)
+    public static void Merge(Transform root, bool castShadows) { Merge(root, castShadows, true); }
+
+    public const string MeshName = "LBMerged";
+
+    public static void Merge(Transform root, bool castShadows, bool log)
     {
         var groups = new Dictionary<KeyValuePair<Material, int>, List<CombineInstance>>();
         var filters = root.GetComponentsInChildren<MeshFilter>();
@@ -42,6 +46,7 @@ public static class MeshMerge
                 while (end < all.Count && verts + all[end].mesh.vertexCount < 60000) { verts += all[end].mesh.vertexCount; end++; }
                 if (end == start) end = start + 1;
                 var mesh = new Mesh();
+                mesh.name = MeshName;
                 mesh.indexFormat = IndexFormat.UInt32;
                 mesh.CombineMeshes(all.GetRange(start, end - start).ToArray(), true, true);
                 mesh.RecalculateBounds();
@@ -61,6 +66,15 @@ public static class MeshMerge
             if (mr != null) Object.Destroy(mr);
             Object.Destroy(mf);
         }
-        Debug.Log("MeshMerge " + root.name + ": " + done.Count + " parts -> " + made + " meshes");
+        if (log) Debug.Log("MeshMerge " + root.name + ": " + done.Count + " parts -> " + made + " meshes");
+    }
+
+    // destroys a model built at runtime together with the meshes MeshMerge made for it (no leak on rebuilds)
+    public static void DestroyWithMeshes(GameObject g)
+    {
+        if (g == null) return;
+        foreach (MeshFilter mf in g.GetComponentsInChildren<MeshFilter>(true))
+            if (mf.sharedMesh != null && mf.sharedMesh.name == MeshName) Object.Destroy(mf.sharedMesh);
+        Object.Destroy(g);
     }
 }

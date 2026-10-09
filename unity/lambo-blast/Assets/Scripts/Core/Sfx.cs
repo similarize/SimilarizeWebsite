@@ -12,7 +12,7 @@ public static class Sfx
 {
     public const int Rate = 22050;
     public static AudioClip Beep, Go, Roll, ItemGet, Rocket, Fireball, Oil, Zap, Bowl, Mine, ShieldUp, ShieldPop, Boost, Homing,
-        Boom, Spin, Splash, Land, Bump, DriftPop, Win, Lose, Finish, Click;
+        Boom, Spin, Splash, Land, Bump, DriftPop, Win, Lose, Finish, Click, Pop;
     public static AudioClip Engine, Skid, EngineAI;
 
     static GameObject host;
@@ -202,6 +202,7 @@ public static class Sfx
     {
         Beep = Tone("beep", 0.22f, t => Sq(t * 660f) * 0.35f * Env(t, 0.005f, 0.22f));
         Go = Tone("go", 0.6f, t => (Sq(t * 990f) * 0.3f + Sin(t * 1980f) * 0.15f) * Env(t, 0.005f, 0.6f));
+        Pop = Tone("pop", 0.2f, t => (Sin(t * (480f + t * 2600f)) * 0.45f + Sin(t * (960f + t * 5200f)) * 0.12f) * Env(t, 0.004f, 0.2f));
         Click = Tone("click", 0.04f, t => Sin(t * 1800f) * Env(t, 0.001f, 0.04f) * 0.5f);
         // item roulette tick + "got it" chime
         Roll = Tone("roll", 0.05f, t => Sq(t * 1400f) * 0.18f * Env(t, 0.002f, 0.05f));

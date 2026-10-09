@@ -30,6 +30,7 @@ public class Bootstrap : MonoBehaviour
         if (sun != null) sun.shadows = LightShadows.Soft;
 
         Mats.Init(litMat, unlitMat, fxMat, waterMat, glassMat);
+        Showroom.Init(sun);
         Sfx.Init();
         FX.Init();
         float t0 = Time.realtimeSinceStartup;

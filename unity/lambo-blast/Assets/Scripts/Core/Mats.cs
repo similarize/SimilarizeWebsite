@@ -36,6 +36,7 @@ public static class Mats
         if (kind == 0) m.SetFloat("_Glossiness", 0.12f);
         else if (kind == 1) { m.SetFloat("_Glossiness", 0.72f); m.SetFloat("_Metallic", 0.55f); }
         else if (kind == 3) { m.SetFloat("_Glossiness", 0.82f); m.SetFloat("_Metallic", 0.85f); }
+        else if (kind >= 10) { m.SetFloat("_Glossiness", (kind - 10) / 20f); m.SetFloat("_Metallic", 0.12f); }   // Paint
         cache[k] = m;
         return m;
     }
@@ -44,6 +45,8 @@ public static class Mats
     public static Material Shiny(Color c) { return Get(c, 1); }
     public static Material Unlit(Color c) { return Get(c, 2); }
     public static Material Steel(Color c) { return Get(c, 3); }
+    // glossy (or satin) painted / moulded surface: low metal, chosen smoothness 0..1 (car paint, robot shells, face screens)
+    public static Material Paint(Color c, float gloss = 0.85f) { return Get(c, 10 + Mathf.Clamp(Mathf.RoundToInt(gloss * 20f), 0, 20)); }
 
     // a lit (Standard) material with a generated texture
     public static Material Tex(Texture2D t, float gloss = 0.1f)

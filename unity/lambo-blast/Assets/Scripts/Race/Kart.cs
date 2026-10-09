@@ -88,7 +88,7 @@ public class Kart : MonoBehaviour
         if (body != null && c == car && r == robot) return;
         car = c; robot = r;
         spec = Cars.All[c];
-        if (body != null) Destroy(body.gameObject);
+        if (body != null) MeshMerge.DestroyWithMeshes(body.gameObject);
         body = new GameObject("Body").transform;
         body.SetParent(transform, false);
         KartModel.Build(body, car, robot, out steerPivots, out spinners, out head);

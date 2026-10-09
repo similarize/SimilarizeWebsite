@@ -32,14 +32,16 @@ public static class Cars
 public static class Robots
 {
     public static readonly string[] Names = { "Optimus", "Unitree", "Figure 03", "Figure 02", "Big Figure Two", "Atlas HD", "Atlas electric" };
+    // short real-world look line per robot (lobby card); the models in RobotModel.cs follow these
     public static readonly string[] Looks = {
-        "glossy white, black face visor",
-        "compact charcoal, cyan eye strip",
-        "soft grey, black egg face",
-        "dark body, silver head, light strip",
-        "big + bulky, boxy head",
-        "slim, round lamp head, amber ring",
-        "grey + black joints, white ring, blue eye" };
+        "Tesla Optimus: white panels, black face plate",
+        "Unitree H1: charcoal, thin legs, lidar head",
+        "Figure 03: soft knit cover, black face plate",
+        "Figure 02: matte black, silver head, black visor",
+        "Figure 02, super-sized (x1.35)",
+        "hydraulic Atlas: bulky, blue-grey, sensor head",
+        "electric Atlas: sleek grey, ring-light face" };
+    public static readonly string[] Short = { "Optimus", "Unitree", "Figure 03", "Figure 02", "Big Fig Two", "Atlas HD", "Atlas e" };
     public static int Count { get { return Names.Length; } }
 }
 
@@ -52,11 +54,12 @@ public static class KartModel
         CarSpec cs = Cars.All[car];
         var stat = new GameObject("Static").transform;
         stat.SetParent(body, false);
-        Material paint = Mats.Shiny(cs.color);
+        Material paint = Mats.Paint(cs.color, car == 7 ? 0.95f : 0.9f);
         Material carbon = Mats.Lit(new Color(0.07f, 0.07f, 0.08f));
         Material glass = Mats.Glass;
         Material lamp = Mats.Unlit(new Color(1f, 0.98f, 0.9f));
         Material tail = Mats.Unlit(new Color(1f, 0.12f, 0.1f));
+        Material tailGlow = Mats.Unlit(new Color(1f, 0.32f, 0.26f));
 
         // ---- wedge body ----
         Geo.Block(stat, paint, 0f, 0.85f, 2.3f, 1.96f, 1.78f, 0.2f, 0.74f, 1.8f, 1.5f, 0.22f, 0.42f);      // nose
@@ -89,16 +92,29 @@ public static class KartModel
         Mats.Prim(PrimitiveType.Cube, stat, new Vector3(0f, 1.2f, -2.03f), new Vector3(1.96f, 0.06f, 0.44f), new Vector3(-6f, 0f, 0f), carbon);   // rear wing
         Mats.Prim(PrimitiveType.Cube, stat, new Vector3(0f, 0.795f, 1.55f), new Vector3(0.14f, 0.012f, 1.3f), new Vector3(-12f, 0f, 0f), carbon); // hood stripe
 
-        // ---- robot driver ----
-        head = BuildRobot(body, stat, robot);
+        // full-width glowing taillight bar + front / side intakes
+        Mats.Prim(PrimitiveType.Cube, stat, new Vector3(0f, 0.735f, -2.275f), new Vector3(1.62f, 0.035f, 0.04f), tailGlow);
+        Mats.Prim(PrimitiveType.Cube, stat, new Vector3(0f, 0.7f, -2.27f), new Vector3(1.7f, 0.012f, 0.05f), carbon);
+        for (int s = -1; s <= 1; s += 2)
+        {
+            var fi = Mats.Prim(PrimitiveType.Cube, stat, new Vector3(s * 0.62f, 0.3f, 2.2f), new Vector3(0.5f, 0.13f, 0.12f), carbon);   // front corner intake
+            fi.transform.localRotation = Quaternion.Euler(-14f, s * 12f, s * 8f);
+            Geo.Block(stat, carbon, s * 0.96f, -1.05f, -0.15f, 0.04f, 0.04f, 0.32f, 0.66f, 0.02f, 0.02f, 0.4f, 0.52f);   // big side scoop
+        }
+        Mats.Prim(PrimitiveType.Cube, stat, new Vector3(0f, 0.27f, 2.32f), new Vector3(0.5f, 0.09f, 0.1f), new Vector3(-12f, 0f, 0f), carbon);   // centre intake
 
-        MeshMerge.Merge(stat, true);
+        // ---- robot driver ----
+        head = robot >= 0 ? RobotModel.Build(stat, body, new Vector3(0f, 0.6f, -0.35f), robot, true) : null;
+
+        MeshMerge.Merge(stat, true, false);
+        if (head != null) MeshMerge.Merge(head, true, false);
 
         // ---- wheels ----
         steer = new Transform[2];
         spin = new Transform[4];
         Material tyre = Mats.Lit(new Color(0.08f, 0.08f, 0.09f));
-        Material rim = Mats.Steel(new Color(0.75f, 0.75f, 0.78f));
+        Material rim = Mats.Steel(new Color(0.78f, 0.78f, 0.8f));
+        Material dark = Mats.Steel(new Color(0.12f, 0.12f, 0.13f));
         for (int i = 0; i < 4; i++)
         {
             bool front = i < 2;
@@ -110,116 +126,15 @@ public static class KartModel
             var sp = new GameObject("Spin").transform;
             sp.SetParent(pivot, false);
             Mats.Prim(PrimitiveType.Cylinder, sp, Vector3.zero, new Vector3(0.74f, w * 0.5f, 0.74f), new Vector3(0f, 0f, 90f), tyre);
-            Mats.Prim(PrimitiveType.Cylinder, sp, new Vector3(sx * w * 0.5f, 0f, 0f), new Vector3(0.5f, 0.02f, 0.5f), new Vector3(0f, 0f, 90f), rim);
+            float o = sx * w * 0.5f;
+            Mats.Prim(PrimitiveType.Cylinder, sp, new Vector3(o, 0f, 0f), new Vector3(0.58f, 0.012f, 0.58f), new Vector3(0f, 0f, 90f), rim);              // rim lip
+            Mats.Prim(PrimitiveType.Cylinder, sp, new Vector3(o + sx * 0.006f, 0f, 0f), new Vector3(0.5f, 0.012f, 0.5f), new Vector3(0f, 0f, 90f), dark);  // barrel
+            for (int k = 0; k < 5; k++)                                                                                                                      // 10 spokes
+                Mats.Prim(PrimitiveType.Cube, sp, new Vector3(o + sx * 0.018f, 0f, 0f), new Vector3(0.02f, 0.5f, 0.05f), new Vector3(k * 36f, 0f, 0f), rim);
+            Mats.Prim(PrimitiveType.Cylinder, sp, new Vector3(o + sx * 0.03f, 0f, 0f), new Vector3(0.11f, 0.012f, 0.11f), new Vector3(0f, 0f, 90f), dark);  // centre cap
+            MeshMerge.Merge(sp, true, false);
             if (front) steer[i] = pivot;
             spin[i] = sp;
         }
-    }
-
-    static void Limb(Transform p, Vector3 a, Vector3 b, float th, Material m)
-    {
-        Vector3 d = b - a;
-        var g = Mats.Prim(PrimitiveType.Cube, p, (a + b) * 0.5f, new Vector3(th, th, d.magnitude + th * 0.5f), m);
-        g.transform.localRotation = Quaternion.LookRotation(d.normalized, Vector3.up);
-    }
-
-    // A simple seated robot holding the wheel. Static parts merge with the car; the head stays separate so it
-    // can look into corners. Each robot from the roster has its own simple, recognisable look.
-    static Transform BuildRobot(Transform body, Transform stat, int r)
-    {
-        Color bodyC; Material joint; float size = 1f;
-        Material shiny = null;
-        switch (r)
-        {
-            case 0: bodyC = new Color(0.88f, 0.88f, 0.88f); break;                 // Optimus  E1E1E1
-            case 1: bodyC = new Color(0.17f, 0.18f, 0.22f); size = 0.86f; break;   // Unitree  2C2F38
-            case 2: bodyC = new Color(0.76f, 0.74f, 0.70f); break;                 // Figure 03 (soft grey cover)
-            case 3: bodyC = new Color(0.24f, 0.25f, 0.27f); break;                 // Figure 02 (dark)
-            case 4: bodyC = new Color(0.53f, 0.53f, 0.53f); size = 1.3f; break;    // Big Figure Two 888888
-            case 5: bodyC = new Color(0.82f, 0.82f, 0.82f); break;                 // Atlas HD D2D2D2
-            default: bodyC = new Color(0.74f, 0.74f, 0.74f); break;                // Atlas electric BCBCBC
-        }
-        Material bm = r == 2 ? Mats.Lit(bodyC) : Mats.Shiny(bodyC);
-        joint = Mats.Lit(r == 1 ? new Color(0.08f, 0.08f, 0.1f) : new Color(0.1f, 0.1f, 0.11f));
-        shiny = Mats.Steel(new Color(0.05f, 0.05f, 0.06f));
-
-        var rb = new GameObject("Robot").transform;
-        rb.SetParent(stat, false);
-        rb.localPosition = new Vector3(0f, 0.6f, -0.35f);
-        rb.localScale = Vector3.one * size;
-        float sw = r == 4 ? 0.62f : r == 1 ? 0.44f : r == 5 ? 0.42f : 0.5f;   // shoulder width
-
-        // pelvis + torso
-        Mats.Prim(PrimitiveType.Cube, rb, new Vector3(0f, 0.08f, 0f), new Vector3(0.34f, 0.16f, 0.26f), joint);
-        Geo.Block(rb, bm, 0f, -0.13f, 0.13f, 0.3f, sw * 0.86f, 0.14f, 0.56f, 0.3f, sw * 0.86f, 0.14f, 0.56f);
-        // chest detail per robot
-        switch (r)
-        {
-            case 0: Mats.Prim(PrimitiveType.Cube, rb, new Vector3(0f, 0.42f, 0.135f), new Vector3(0.22f, 0.12f, 0.02f), joint); break;
-            case 1: Mats.Prim(PrimitiveType.Cube, rb, new Vector3(0f, 0.44f, 0.135f), new Vector3(0.14f, 0.03f, 0.02f), Mats.Unlit(new Color(0.3f, 0.95f, 1f))); break;
-            case 3: Mats.Prim(PrimitiveType.Cube, rb, new Vector3(0f, 0.3f, 0.135f), new Vector3(0.04f, 0.28f, 0.02f), Mats.Steel(new Color(0.7f, 0.7f, 0.72f))); break;
-            case 4: Mats.Prim(PrimitiveType.Cube, rb, new Vector3(0f, 0.36f, 0.135f), new Vector3(0.36f, 0.2f, 0.03f), joint); break;
-            case 6: Mats.Prim(PrimitiveType.Cube, rb, new Vector3(0f, 0.25f, 0f), new Vector3(0.31f, 0.06f, 0.27f), joint); break;
-        }
-        // shoulders, arms to the wheel
-        Vector3 wheelC = new Vector3(0f, 0.4f, 0.52f);
-        for (int s = -1; s <= 1; s += 2)
-        {
-            Vector3 sh = new Vector3(s * sw * 0.5f, 0.5f, 0f);
-            Mats.Prim(PrimitiveType.Sphere, rb, sh, Vector3.one * (r == 4 ? 0.2f : 0.14f), r == 6 ? joint : bm);
-            Vector3 elbow = new Vector3(s * (sw * 0.5f + 0.03f), 0.3f, 0.26f);
-            Vector3 hand = wheelC + new Vector3(s * 0.17f, 0.04f, -0.04f);
-            Limb(rb, sh, elbow, r == 4 ? 0.13f : 0.09f, bm);
-            Limb(rb, elbow, hand, r == 4 ? 0.11f : 0.08f, r == 3 ? joint : bm);
-            Mats.Prim(PrimitiveType.Sphere, rb, hand, Vector3.one * 0.08f, joint);
-        }
-        // steering wheel
-        Mats.Prim(PrimitiveType.Cylinder, rb, wheelC, new Vector3(0.36f, 0.015f, 0.36f), new Vector3(70f, 0f, 0f), joint);
-        Mats.Prim(PrimitiveType.Cylinder, rb, wheelC + new Vector3(0f, -0.1f, 0.12f), new Vector3(0.05f, 0.12f, 0.05f), new Vector3(70f, 0f, 0f), joint);
-        // neck
-        Mats.Prim(PrimitiveType.Cylinder, rb, new Vector3(0f, 0.6f, 0f), new Vector3(0.09f, 0.05f, 0.09f), joint);
-
-        // head (separate, not merged)
-        var head = new GameObject("Head").transform;
-        head.SetParent(body, false);
-        head.localPosition = rb.localPosition + new Vector3(0f, 0.74f, 0f) * size;
-        head.localScale = Vector3.one * size;
-        Material face = shiny;
-        switch (r)
-        {
-            case 0:   // Optimus: rounded white head, full black visor
-                Mats.Prim(PrimitiveType.Sphere, head, Vector3.zero, new Vector3(0.24f, 0.28f, 0.26f), bm);
-                Mats.Prim(PrimitiveType.Sphere, head, new Vector3(0f, 0.01f, 0.06f), new Vector3(0.21f, 0.18f, 0.17f), face);
-                break;
-            case 1:   // Unitree: small dark block head, cyan eye strip
-                Mats.Prim(PrimitiveType.Cube, head, Vector3.zero, new Vector3(0.22f, 0.19f, 0.24f), bm);
-                Mats.Prim(PrimitiveType.Cube, head, new Vector3(0f, 0.02f, 0.122f), new Vector3(0.19f, 0.04f, 0.01f), Mats.Unlit(new Color(0.3f, 0.95f, 1f)));
-                break;
-            case 2:   // Figure 03: soft egg head with a black face screen
-                Mats.Prim(PrimitiveType.Sphere, head, new Vector3(0f, 0.01f, 0f), new Vector3(0.24f, 0.3f, 0.25f), bm);
-                Mats.Prim(PrimitiveType.Sphere, head, new Vector3(0f, 0.02f, 0.065f), new Vector3(0.2f, 0.2f, 0.14f), face);
-                break;
-            case 3:   // Figure 02: silver head, black face band with a white light line
-                Mats.Prim(PrimitiveType.Sphere, head, Vector3.zero, new Vector3(0.23f, 0.27f, 0.25f), Mats.Steel(new Color(0.68f, 0.68f, 0.7f)));
-                Mats.Prim(PrimitiveType.Cube, head, new Vector3(0f, 0.02f, 0.1f), new Vector3(0.2f, 0.09f, 0.06f), face);
-                Mats.Prim(PrimitiveType.Cube, head, new Vector3(0f, 0.02f, 0.132f), new Vector3(0.15f, 0.015f, 0.01f), Mats.Unlit(Color.white));
-                break;
-            case 4:   // Big Figure Two: big boxy head, wide black visor
-                Mats.Prim(PrimitiveType.Cube, head, Vector3.zero, new Vector3(0.3f, 0.27f, 0.3f), bm);
-                Mats.Prim(PrimitiveType.Cube, head, new Vector3(0f, 0.02f, 0.15f), new Vector3(0.27f, 0.1f, 0.02f), face);
-                break;
-            case 5:   // Atlas HD: round lamp head, amber ring
-                Mats.Prim(PrimitiveType.Cylinder, head, Vector3.zero, new Vector3(0.3f, 0.07f, 0.3f), new Vector3(90f, 0f, 0f), bm);
-                Mats.Prim(PrimitiveType.Cylinder, head, new Vector3(0f, 0f, 0.07f), new Vector3(0.25f, 0.01f, 0.25f), new Vector3(90f, 0f, 0f), Mats.Unlit(new Color(1f, 0.72f, 0.2f)));
-                Mats.Prim(PrimitiveType.Cylinder, head, new Vector3(0f, 0f, 0.08f), new Vector3(0.17f, 0.01f, 0.17f), new Vector3(90f, 0f, 0f), face);
-                break;
-            default:  // Atlas electric: round lamp head, white ring, blue eye
-                Mats.Prim(PrimitiveType.Cylinder, head, Vector3.zero, new Vector3(0.3f, 0.07f, 0.3f), new Vector3(90f, 0f, 0f), bm);
-                Mats.Prim(PrimitiveType.Cylinder, head, new Vector3(0f, 0f, 0.07f), new Vector3(0.25f, 0.01f, 0.25f), new Vector3(90f, 0f, 0f), Mats.Unlit(new Color(0.95f, 0.97f, 1f)));
-                Mats.Prim(PrimitiveType.Cylinder, head, new Vector3(0f, 0f, 0.08f), new Vector3(0.17f, 0.01f, 0.17f), new Vector3(90f, 0f, 0f), joint);
-                Mats.Prim(PrimitiveType.Cylinder, head, new Vector3(0f, 0f, 0.09f), new Vector3(0.06f, 0.01f, 0.06f), new Vector3(90f, 0f, 0f), Mats.Unlit(new Color(0.25f, 0.6f, 1f)));
-                break;
-        }
-        return head;
     }
 }

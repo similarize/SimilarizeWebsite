@@ -51,9 +51,22 @@ public class Game : MonoBehaviour
     readonly Text[] cardTexts = new Text[4];
     readonly Image[][] bars = new Image[4][];
     readonly Image[] cardSwatch = new Image[4];
-    readonly Image[] swatches = new Image[8];
-    readonly Image[] robotBtns = new Image[7];
-    readonly Text[] robotTexts = new Text[7];
+    readonly Text[] cardHead = new Text[4];
+    readonly RawImage[] cardPreview = new RawImage[4];
+    readonly Image[] cardPreviewFrame = new Image[4];
+    readonly Text[][] barLabs = new Text[4][];
+    readonly Image[][] barBgs = new Image[4][];
+    // thumbnail tiles: 8 car colours + 7 robots (tap / click to pick, highlighted + P1-P4 badges)
+    readonly Image[] carTiles = new Image[8], robotTiles = new Image[7];
+    readonly RawImage[] carThumbs = new RawImage[8], robotThumbs = new RawImage[7];
+    readonly Image[] carStrips = new Image[8];
+    readonly Text[] carNames = new Text[8], robotNames = new Text[7], carBadges = new Text[8], robotBadges = new Text[7];
+    readonly float[] carPop = new float[8], robotPop = new float[7];
+    readonly Showroom.Stand[] stands = new Showroom.Stand[4];
+    Vector2 cardSize, tileCarSize, tileRobotSize;
+    float previewH, attractT, thumbCheckT;
+    Vector2Int lastScreen;
+    static readonly Color[] PlayerCol = { new Color(1f, 0.85f, 0.25f), new Color(0.3f, 0.9f, 1f), new Color(1f, 0.45f, 0.85f), new Color(0.55f, 1f, 0.35f) };
     Image pauseBtn, resumeBtn, restartBtn, quitBtn;
     Image[] resultRows;
     int lobbyLayout = -1;
@@ -69,6 +82,8 @@ public class Game : MonoBehaviour
         for (int i = 0; i < Racers; i++) karts.Add(Kart.Create(i, i, i % Robots.Count));
         Assign();
         PlaceGrid();
+        for (int i = 0; i < 4; i++) stands[i] = new Showroom.Stand(i);
+        StartCoroutine(Showroom.RenderThumbsLater());
         BuildLobbyUI();
         BuildHudUI();
         BuildResultsUI();
@@ -85,6 +100,7 @@ public class Game : MonoBehaviour
         c.farClipPlane = 1400f;
         c.fieldOfView = 60f;
         c.clearFlags = CameraClearFlags.Skybox;
+        c.cullingMask = ~Showroom.Mask;
         return c;
     }
 
@@ -179,41 +195,64 @@ public class Game : MonoBehaviour
     {
         lobbyCanvas = UIK.MakeCanvas("Lobby", null, 100, true);
         Transform r = lobbyCanvas.transform;
-        lobbyBg = UIK.Img(r, null, new Color(0.02f, 0.06f, 0.1f, 0.6f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1240, 690));
-        lobbyTitle = UIK.Label(r, "LAMBO BLAST", 66, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, 300), new Vector2(1100, 80), new Color(0.35f, 1f, 0.45f));
-        lobbySub = UIK.Label(r, "Robot racers on Coconut Cove  ·  8 cars  ·  3 laps  ·  grab the ? boxes and blast them", 22, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, 252), new Vector2(1180, 36), Color.white);
+        lobbyBg = UIK.Img(r, null, new Color(0.02f, 0.06f, 0.1f, 0.62f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1240, 690));
+        lobbyTitle = UIK.Label(r, "LAMBO BLAST", 50, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1100, 60), new Color(0.35f, 1f, 0.45f));
+        lobbySub = UIK.Label(r, "Robot racers on Coconut Cove  ·  8 cars  ·  3 laps  ·  grab the ? boxes and blast them", 17, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1180, 30), Color.white);
+        string[] lab = { "TOP SPEED", "ACCEL", "HANDLING", "WEIGHT" };
         for (int i = 0; i < 4; i++)
         {
-            cards[i] = UIK.Img(r, null, new Color(1, 1, 1, 0.12f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(290, 250));
-            cardSwatch[i] = UIK.Img(cards[i].transform, null, Color.white, new Vector2(0.5f, 1f), new Vector2(0, -12), new Vector2(270, 10));
-            cardTexts[i] = UIK.Label(cards[i].transform, "", 20, TextAnchor.UpperCenter, new Vector2(0.5f, 1f), new Vector2(0, -88), new Vector2(280, 140), Color.white);
-            bars[i] = new Image[4];
-            string[] lab = { "TOP SPEED", "ACCEL", "HANDLING", "WEIGHT" };
+            cards[i] = UIK.Img(r, null, new Color(1, 1, 1, 0.12f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(290, 330));
+            Transform c = cards[i].transform;
+            cardSwatch[i] = UIK.Img(c, null, Color.white, new Vector2(0.5f, 1f), Vector2.zero, new Vector2(270, 8));
+            cardHead[i] = UIK.Label(c, "", 16, TextAnchor.MiddleCenter, new Vector2(0.5f, 1f), Vector2.zero, new Vector2(280, 22), Color.white);
+            cardPreviewFrame[i] = UIK.Img(c, null, new Color(0f, 0f, 0f, 0.6f), new Vector2(0.5f, 1f), Vector2.zero, new Vector2(278, 160));
+            var pr = UIK.Rect(c, "Preview", new Vector2(0.5f, 1f), Vector2.zero, new Vector2(274, 156));
+            cardPreview[i] = pr.gameObject.AddComponent<RawImage>();
+            cardPreview[i].texture = stands[i].rt;
+            cardPreview[i].raycastTarget = false;
+            cardTexts[i] = UIK.Label(c, "", 20, TextAnchor.UpperCenter, new Vector2(0.5f, 1f), Vector2.zero, new Vector2(280, 60), Color.white);
+            bars[i] = new Image[4]; barLabs[i] = new Text[4]; barBgs[i] = new Image[4];
             for (int b = 0; b < 4; b++)
             {
-                float y = -150 - b * 22;
-                UIK.Label(cards[i].transform, lab[b], 14, TextAnchor.MiddleLeft, new Vector2(0.5f, 1f), new Vector2(-70, y), new Vector2(120, 20), new Color(1, 1, 1, 0.8f));
-                UIK.Img(cards[i].transform, null, new Color(0, 0, 0, 0.4f), new Vector2(0.5f, 1f), new Vector2(60, y), new Vector2(140, 12));
-                bars[i][b] = UIK.Img(cards[i].transform, null, Color.white, new Vector2(0.5f, 1f), new Vector2(60, y), new Vector2(140, 12));
+                barLabs[i][b] = UIK.Label(c, lab[b], 13, TextAnchor.MiddleLeft, new Vector2(0.5f, 1f), Vector2.zero, new Vector2(110, 18), new Color(1, 1, 1, 0.8f));
+                barBgs[i][b] = UIK.Img(c, null, new Color(0, 0, 0, 0.4f), new Vector2(0.5f, 1f), Vector2.zero, new Vector2(140, 11));
+                bars[i][b] = UIK.Img(c, null, Color.white, new Vector2(0.5f, 1f), Vector2.zero, new Vector2(140, 11));
                 bars[i][b].rectTransform.pivot = new Vector2(0f, 0.5f);
-                bars[i][b].rectTransform.anchoredPosition = new Vector2(-10, y);
+                barBgs[i][b].rectTransform.pivot = new Vector2(0f, 0.5f);
             }
         }
         for (int i = 0; i < 8; i++)
         {
-            swatches[i] = UIK.Img(r, null, Cars.All[i].color, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(100, 46));
-            var t = UIK.Label(swatches[i].transform, Cars.All[i].name.ToUpper(), 16, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(100, 40), i == 6 || i == 2 ? new Color(0.1f, 0.1f, 0.1f) : Color.white);
-            t.GetComponent<Outline>().enabled = !(i == 6 || i == 2);
+            carTiles[i] = UIK.Img(r, null, new Color(0f, 0f, 0f, 0.55f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(124, 84));
+            Transform t = carTiles[i].transform;
+            var th = UIK.Rect(t, "Thumb", new Vector2(0.5f, 1f), Vector2.zero, new Vector2(118, 64));
+            carThumbs[i] = th.gameObject.AddComponent<RawImage>();
+            carThumbs[i].raycastTarget = false;
+            carThumbs[i].color = new Color(1f, 1f, 1f, 0f);
+            carStrips[i] = UIK.Img(t, null, Cars.All[i].color, new Vector2(0.5f, 0f), Vector2.zero, new Vector2(118, 16));
+            bool darkText = i == 6 || i == 2;
+            carNames[i] = UIK.Label(t, Cars.All[i].name.ToUpper(), 13, TextAnchor.MiddleCenter, new Vector2(0.5f, 0f), Vector2.zero, new Vector2(118, 16), darkText ? new Color(0.1f, 0.1f, 0.1f) : Color.white);
+            carNames[i].GetComponent<Outline>().enabled = !darkText;
+            carBadges[i] = UIK.Label(t, "", 13, TextAnchor.UpperLeft, new Vector2(0f, 1f), Vector2.zero, new Vector2(118, 18), Color.white);
+            carBadges[i].supportRichText = true;
         }
         for (int i = 0; i < 7; i++)
         {
-            robotBtns[i] = UIK.Img(r, null, new Color(0f, 0f, 0f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(156, 40));
-            robotTexts[i] = UIK.Label(robotBtns[i].transform, Robots.Names[i], 17, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(156, 38), Color.white);
+            robotTiles[i] = UIK.Img(r, null, new Color(0f, 0f, 0f, 0.55f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(132, 100));
+            Transform t = robotTiles[i].transform;
+            var th = UIK.Rect(t, "Thumb", new Vector2(0.5f, 1f), Vector2.zero, new Vector2(126, 80));
+            robotThumbs[i] = th.gameObject.AddComponent<RawImage>();
+            robotThumbs[i].raycastTarget = false;
+            robotThumbs[i].color = new Color(1f, 1f, 1f, 0f);
+            robotNames[i] = UIK.Label(t, Robots.Short[i], 13, TextAnchor.MiddleCenter, new Vector2(0.5f, 0f), Vector2.zero, new Vector2(126, 16), Color.white);
+            robotBadges[i] = UIK.Label(t, "", 13, TextAnchor.UpperLeft, new Vector2(0f, 1f), Vector2.zero, new Vector2(126, 18), Color.white);
+            robotBadges[i].supportRichText = true;
         }
-        playBtn = UIK.Img(r, null, new Color(0.15f, 0.65f, 0.25f, 0.9f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(300, 56));
-        UIK.Label(playBtn.transform, "RACE!", 34, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(300, 56), Color.white);
-        lobbyStatus = UIK.Label(r, "", 22, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1180, 34), new Color(0.7f, 1f, 0.7f));
-        lobbyHelp = UIK.Label(r, "", 16, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1200, 60), new Color(1, 1, 1, 0.85f));
+        playBtn = UIK.Img(r, null, new Color(0.15f, 0.65f, 0.25f, 0.9f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(260, 46));
+        var pl = UIK.Label(playBtn.transform, "RACE!", 30, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(260, 46), Color.white);
+        UIK.Stretch(pl.rectTransform);
+        lobbyStatus = UIK.Label(r, "", 17, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1180, 26), new Color(0.7f, 1f, 0.7f));
+        lobbyHelp = UIK.Label(r, "", 12, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1200, 34), new Color(1, 1, 1, 0.85f));
     }
 
     void BuildHudUI()
@@ -269,92 +308,213 @@ public class Game : MonoBehaviour
     // ---------------- lobby ----------------
     public static bool TouchOnly { get { return Application.isMobilePlatform && Gamepad.all.Count == 0; } }
 
+    // static layout (title, tiles, buttons, card insides); re-run when the screen size / orientation changes.
+    // Reference canvas: landscape 1280x720 (fits >= 16:9 by height, narrower by width),
+    // portrait 720x1280 (tall phones by width, squarer screens by height) so nothing ever falls off-screen.
     void LayoutLobby()
     {
+        var now = new Vector2Int(Screen.width, Screen.height);
+        if (now == lastScreen) return;
+        lastScreen = now;
         bool portrait = Screen.height > Screen.width;
-        int want = portrait ? 1 : 0;
-        if (want == lobbyLayout) return;
-        lobbyLayout = want;
+        lobbyLayout = portrait ? 1 : 0;
+        float aspect = Screen.width / (float)Mathf.Max(1, Screen.height);
         var sc = lobbyCanvas.GetComponent<CanvasScaler>();
         sc.referenceResolution = portrait ? new Vector2(720, 1280) : new Vector2(1280, 720);
-        sc.matchWidthOrHeight = portrait ? 0f : 0.6f;
+        sc.matchWidthOrHeight = portrait ? (1f / aspect >= 1.75f ? 0f : 1f) : (aspect >= 1.78f ? 1f : 0f);
         System.Action<Graphic, Vector2, Vector2> put = (g, p, size) => { g.rectTransform.anchoredPosition = p; g.rectTransform.sizeDelta = size; };
         if (portrait)
         {
-            put(lobbyBg, new Vector2(0, -60), new Vector2(710, 1060));
-            put(lobbyTitle, new Vector2(0, 430), new Vector2(680, 70)); lobbyTitle.fontSize = 54;
-            put(lobbySub, new Vector2(0, 380), new Vector2(680, 50)); lobbySub.fontSize = 18;
-            for (int i = 0; i < 4; i++) put(cards[i], new Vector2(i % 2 == 0 ? -175 : 175, i < 2 ? 210 : -50), new Vector2(330, 250));
-            for (int i = 0; i < 8; i++) put(swatches[i], new Vector2(-255 + (i % 4) * 170, -210 - (i / 4) * 56), new Vector2(160, 48));
-            for (int i = 0; i < 7; i++) put(robotBtns[i], new Vector2(i < 4 ? -255 + i * 170 : -170 + (i - 4) * 170, -340 - (i / 4) * 50), new Vector2(160, 42));
-            put(playBtn, new Vector2(0, -470), new Vector2(360, 80));
-            put(lobbyStatus, new Vector2(0, -530), new Vector2(690, 40));
-            put(lobbyHelp, new Vector2(0, -575), new Vector2(690, 60)); lobbyHelp.fontSize = 13;
+            put(lobbyBg, Vector2.zero, new Vector2(712, 1268));
+            put(lobbyTitle, new Vector2(0, 600), new Vector2(680, 52)); lobbyTitle.fontSize = 44;
+            put(lobbySub, new Vector2(0, 558), new Vector2(690, 30)); lobbySub.fontSize = 15;
+            cardSize = new Vector2(345, 0); previewH = 160f;
+            tileCarSize = new Vector2(166, 80); tileRobotSize = new Vector2(166, 92);
+            for (int i = 0; i < 8; i++) put(carTiles[i], new Vector2(-258 + (i % 4) * 172, -182 - (i / 4) * 86), tileCarSize);
+            for (int i = 0; i < 7; i++) put(robotTiles[i], new Vector2(i < 4 ? -258 + i * 172 : -172 + (i - 4) * 172, -362 - (i / 4) * 96), tileRobotSize);
+            put(playBtn, new Vector2(0, -540), new Vector2(340, 54));
+            put(lobbyStatus, new Vector2(0, -585), new Vector2(690, 30)); lobbyStatus.fontSize = 15;
+            put(lobbyHelp, new Vector2(0, -613), new Vector2(700, 34)); lobbyHelp.fontSize = 11;
         }
         else
         {
-            put(lobbyBg, Vector2.zero, new Vector2(1240, 690));
-            put(lobbyTitle, new Vector2(0, 300), new Vector2(1100, 80)); lobbyTitle.fontSize = 66;
-            put(lobbySub, new Vector2(0, 252), new Vector2(1180, 36)); lobbySub.fontSize = 22;
-            for (int i = 0; i < 4; i++) put(cards[i], new Vector2(-456 + i * 304, 98), new Vector2(290, 250));
-            for (int i = 0; i < 8; i++) put(swatches[i], new Vector2(-490 + i * 140, -64), new Vector2(128, 46));
-            for (int i = 0; i < 7; i++) put(robotBtns[i], new Vector2(-504 + i * 168, -120), new Vector2(160, 42));
-            put(playBtn, new Vector2(0, -184), new Vector2(300, 56));
-            put(lobbyStatus, new Vector2(0, -232), new Vector2(1180, 34));
-            put(lobbyHelp, new Vector2(0, -284), new Vector2(1200, 60)); lobbyHelp.fontSize = 16;
+            put(lobbyBg, Vector2.zero, new Vector2(1260, 712));
+            put(lobbyTitle, new Vector2(0, 326), new Vector2(1100, 56)); lobbyTitle.fontSize = 50;
+            put(lobbySub, new Vector2(0, 292), new Vector2(1180, 26)); lobbySub.fontSize = 17;
+            cardSize = new Vector2(290, 0); previewH = 152f;
+            tileCarSize = new Vector2(124, 84); tileRobotSize = new Vector2(132, 100);
+            for (int i = 0; i < 8; i++) put(carTiles[i], new Vector2(-483 + i * 138, -106), tileCarSize);
+            for (int i = 0; i < 7; i++) put(robotTiles[i], new Vector2(-474 + i * 158, -204), tileRobotSize);
+            put(playBtn, new Vector2(0, -284), new Vector2(260, 44));
+            put(lobbyStatus, new Vector2(0, -318), new Vector2(1180, 26)); lobbyStatus.fontSize = 17;
+            put(lobbyHelp, new Vector2(0, -344), new Vector2(1200, 32)); lobbyHelp.fontSize = 12;
+        }
+        // card insides (anchored to the card's top edge)
+        float w = cardSize.x, pw = w - 16f, y = -6f;
+        for (int i = 0; i < 4; i++)
+        {
+            put(cardSwatch[i], new Vector2(0, y), new Vector2(w - 20, 8));
+            put(cardHead[i], new Vector2(0, -21), new Vector2(w - 10, 22));
+            put(cardPreviewFrame[i], new Vector2(0, -32 - previewH * 0.5f), new Vector2(pw + 4, previewH + 4));
+            put(cardPreview[i], new Vector2(0, -32 - previewH * 0.5f), new Vector2(pw, previewH));
+            // crop the 448x256 render to the preview's aspect (no stretching)
+            float ra = 448f / 256f, pa = pw / previewH;
+            cardPreview[i].uvRect = pa > ra ? new Rect(0f, (1f - ra / pa) * 0.5f, 1f, ra / pa) : new Rect((1f - pa / ra) * 0.5f, 0f, pa / ra, 1f);
+            put(cardTexts[i], new Vector2(0, -38 - previewH - 28), new Vector2(w - 8, 56));
+            for (int b = 0; b < 4; b++)
+            {
+                float by = -38 - previewH - 66 - b * 19;
+                put(barLabs[i][b], new Vector2(-w * 0.5f + 70, by), new Vector2(110, 18));
+                barBgs[i][b].rectTransform.anchoredPosition = new Vector2(-w * 0.5f + 122, by);
+                barBgs[i][b].rectTransform.sizeDelta = new Vector2(w - 140, 11);
+                bars[i][b].rectTransform.anchoredPosition = new Vector2(-w * 0.5f + 122, by);
+            }
+        }
+        cardSize.y = 38 + previewH + 66 + 3 * 19 + 16;
+        foreach (var c in cards) c.rectTransform.sizeDelta = cardSize;
+        // tile insides
+        for (int i = 0; i < 8; i++)
+        {
+            Vector2 ts = tileCarSize;
+            put(carThumbs[i], new Vector2(0, -3 - (ts.y - 22) * 0.5f), new Vector2(ts.x - 6, ts.y - 22));
+            CropTo(carThumbs[i], ts.x - 6, ts.y - 22, Showroom.CarThumbW, Showroom.CarThumbH);
+            put(carStrips[i], new Vector2(0, 9), new Vector2(ts.x - 6, 16));
+            put(carNames[i], new Vector2(0, 9), new Vector2(ts.x - 6, 16));
+            put(carBadges[i], new Vector2(4 + (ts.x - 8) * 0.5f, -10), new Vector2(ts.x - 8, 18));
+        }
+        for (int i = 0; i < 7; i++)
+        {
+            Vector2 ts = tileRobotSize;
+            put(robotThumbs[i], new Vector2(0, -3 - (ts.y - 22) * 0.5f), new Vector2(ts.x - 6, ts.y - 22));
+            CropTo(robotThumbs[i], ts.x - 6, ts.y - 22, Showroom.RobotThumbW, Showroom.RobotThumbH);
+            put(robotNames[i], new Vector2(0, 9), new Vector2(ts.x - 6, 16));
+            put(robotBadges[i], new Vector2(4 + (ts.x - 8) * 0.5f, -10), new Vector2(ts.x - 8, 18));
         }
     }
 
-    void RefreshLobby()
+    static void CropTo(RawImage img, float w, float h, int tw, int th)
     {
+        float ra = tw / (float)th, pa = w / Mathf.Max(1f, h);
+        img.uvRect = pa > ra ? new Rect(0f, (1f - ra / pa) * 0.5f, 1f, ra / pa) : new Rect((1f - pa / ra) * 0.5f, 0f, pa / ra, 1f);
+    }
+
+    // card positions: visible cards are centred (1 card in the middle, 2 side by side, 3-4 in a row / 2x2 grid in portrait)
+    Vector2 CardPos(int i, int visible)
+    {
+        if (lobbyLayout == 1)
+        {
+            if (visible == 1) return new Vector2(0, 372);
+            return new Vector2(i % 2 == 0 ? -177 : 177, i < 2 ? 372 : 372 - cardSize.y - 8);
+        }
+        return new Vector2((i - (visible - 1) * 0.5f) * 304f, 104f);
+    }
+
+    void RefreshLobby(float dt)
+    {
+        int visible = Mathf.Max(1, slots.Count);
+        attractT += dt;
         for (int i = 0; i < 4; i++)
         {
             bool on = i < slots.Count;
-            cards[i].gameObject.SetActive(on || (i == 0 && slots.Count == 0));
+            bool show = on || (i == 0 && slots.Count == 0);
+            cards[i].gameObject.SetActive(show);
+            stands[i].Tick(dt, show && state == State.Lobby);
+            if (!show) continue;
+            cards[i].rectTransform.anchoredPosition = CardPos(i, visible);
             if (!on)
             {
+                // nobody in yet: the showroom cycles through every car and robot
+                int k = (int)(attractT / 2.6f);
+                stands[i].Set(k % 8, k % 7, this, false);
                 cards[i].color = new Color(1, 1, 1, 0.1f);
                 cardSwatch[i].color = new Color(1, 1, 1, 0.2f);
-                cardTexts[i].text = "<size=24>JOIN</size>\n\nPress A on a gamepad,\nEnter on the keyboard,\nor tap / click a colour";
+                cardHead[i].text = "JOIN";
+                cardTexts[i].text = "<size=16>Press A on a gamepad, Enter on the keyboard,\nor tap / click a car or a robot below</size>";
                 foreach (var b in bars[i]) b.enabled = false;
+                foreach (var b in barBgs[i]) b.enabled = false;
+                foreach (var b in barLabs[i]) b.enabled = false;
                 continue;
             }
             Slot s = slots[i];
+            if (stands[i].owner == s)
+            {
+                if (stands[i].car != s.car) carPop[s.car] = 1f;
+                if (stands[i].robot != s.robot) robotPop[s.robot] = 1f;
+            }
+            stands[i].Set(s.car, s.robot, s, true);
             CarSpec cs = Cars.All[s.car];
             string dev = s.kind == InputKind.Gamepad ? "Gamepad" : s.kind == InputKind.Keyboard ? "Keyboard" : "Touch";
             cards[i].color = new Color(cs.color.r * 0.5f, cs.color.g * 0.5f, cs.color.b * 0.5f, 0.55f);
             cardSwatch[i].color = cs.color;
-            string nav = s.kind == InputKind.Gamepad ? "D-pad" : s.kind == InputKind.Keyboard ? "arrows" : "tap";
-            cardTexts[i].text = "<size=18>P" + (i + 1) + " · " + dev + "</size>\n<size=26><color=#" + ColorUtility.ToHtmlStringRGB(cs.color == Cars.All[7].color ? new Color(0.7f, 0.7f, 0.75f) : cs.color) + ">" + cs.name.ToUpper() + "</color></size>  <size=15>(" + nav + " < >)</size>\n" +
-                "<size=22>" + Robots.Names[s.robot] + "</size>  <size=15>(" + nav + " ^ v)</size>\n<size=14>" + Robots.Looks[s.robot] + "</size>";
+            cardHead[i].text = "<color=#" + ColorUtility.ToHtmlStringRGB(PlayerCol[i]) + ">P" + (i + 1) + "</color> · " + dev;
+            string nav = s.kind == InputKind.Gamepad ? "D-pad < > car · ^ v robot" : s.kind == InputKind.Keyboard ? "arrows < > car · ^ v robot · or click" : "tap a car / robot below";
+            Color nameCol = s.car == 7 ? new Color(0.7f, 0.7f, 0.75f) : cs.color;
+            cardTexts[i].text = "<size=21><color=#" + ColorUtility.ToHtmlStringRGB(nameCol) + ">" + cs.name.ToUpper() + "</color>  ·  " + Robots.Names[s.robot] + "</size>\n" +
+                "<size=12>" + Robots.Looks[s.robot] + "</size>\n<size=12><color=#bfe6ff>" + nav + "</color></size>";
             float[] v = { Mathf.InverseLerp(27f, 34f, cs.top), Mathf.InverseLerp(9f, 14f, cs.accel), Mathf.InverseLerp(78f, 106f, cs.handling), Mathf.InverseLerp(0.8f, 1.4f, cs.weight) };
+            float bw = cardSize.x - 140f;
             for (int b = 0; b < 4; b++)
             {
-                bars[i][b].enabled = true;
-                bars[i][b].rectTransform.sizeDelta = new Vector2(140f * Mathf.Max(0.08f, v[b]), 12f);
+                bars[i][b].enabled = true; barBgs[i][b].enabled = true; barLabs[i][b].enabled = true;
+                bars[i][b].rectTransform.sizeDelta = new Vector2(bw * Mathf.Max(0.08f, v[b]), 11f);
                 bars[i][b].color = b == 0 && s.car == 0 ? new Color(0.3f, 1f, 0.4f) : new Color(1f, 0.85f, 0.3f);
             }
         }
-        // which picks belong to the touch / mouse player
+        // thumbnails: textures, highlight, badges, pop
+        if (Showroom.ThumbsReady)
+        {
+            thumbCheckT += dt;
+            if (thumbCheckT > 2f) { thumbCheckT = 0f; if (Showroom.ThumbsLost()) Showroom.RenderThumbs(); }
+        }
         Slot ps = FindSlot(InputKind.Touch) ?? FindSlot(InputKind.Keyboard);
         for (int i = 0; i < 8; i++)
         {
-            bool taken = false; foreach (var s in slots) if (s.car == i && s != ps) taken = true;
-            Color c = Cars.All[i].color;
-            swatches[i].color = taken ? new Color(c.r, c.g, c.b, 0.25f) : c;
-            var ol = swatches[i].GetComponent<Outline>();
-            if (ol == null) { ol = swatches[i].gameObject.AddComponent<Outline>(); ol.effectDistance = new Vector2(3, 3); }
-            ol.effectColor = ps != null && ps.car == i ? Color.white : new Color(0, 0, 0, 0.5f);
+            if (Showroom.ThumbsReady && carThumbs[i].texture == null) { carThumbs[i].texture = Showroom.CarThumbs[i]; carThumbs[i].color = Color.white; }
+            bool taken = false; string badge = ""; int firstPick = -1;
+            for (int k = 0; k < slots.Count; k++)
+                if (slots[k].car == i)
+                {
+                    if (slots[k] != ps) taken = true;
+                    if (firstPick < 0) firstPick = k;
+                    badge += "<color=#" + ColorUtility.ToHtmlStringRGB(PlayerCol[k]) + ">P" + (k + 1) + "</color> ";
+                }
+            carBadges[i].text = badge;
+            TileStyle(carTiles[i], carThumbs[i], firstPick, ps != null && ps.car == i, taken, ref carPop[i], dt);
         }
         for (int i = 0; i < 7; i++)
         {
-            bool mine = ps != null && ps.robot == i;
-            robotBtns[i].color = mine ? new Color(0.2f, 0.55f, 0.85f, 0.9f) : new Color(0f, 0f, 0f, 0.5f);
+            if (Showroom.ThumbsReady && robotThumbs[i].texture == null) { robotThumbs[i].texture = Showroom.RobotThumbs[i]; robotThumbs[i].color = Color.white; }
+            bool taken = false; string badge = ""; int firstPick = -1;
+            for (int k = 0; k < slots.Count; k++)
+                if (slots[k].robot == i)
+                {
+                    if (slots[k] != ps) taken = true;
+                    if (firstPick < 0) firstPick = k;
+                    badge += "<color=#" + ColorUtility.ToHtmlStringRGB(PlayerCol[k]) + ">P" + (k + 1) + "</color> ";
+                }
+            robotBadges[i].text = badge;
+            TileStyle(robotTiles[i], robotThumbs[i], firstPick, ps != null && ps.robot == i, taken, ref robotPop[i], dt);
         }
         string top = "<color=#7dff8a>GREEN is the fastest car</color> (" + Cars.All[0].Kmh + " km/h top speed)  ·  ";
         if (slots.Count == 0) lobbyStatus.text = top + "join to pick your car + robot";
         else lobbyStatus.text = top + slots.Count + " player" + (slots.Count > 1 ? "s" : "") + " in  ·  A / Start / Enter / RACE! to go";
         lobbyHelp.text = HelpLines;
+    }
+
+    // tile look: frame in the colour of the (first) player who picked it, white ring for the tap / mouse player's pick,
+    // dimmed when another player holds it, and a short pop when it is picked
+    static void TileStyle(Image tile, RawImage thumb, int pickedBy, bool mine, bool taken, ref float pop, float dt)
+    {
+        pop = Mathf.Max(0f, pop - dt * 3.5f);
+        float s = 1f + 0.16f * Mathf.Sin(pop * Mathf.PI);
+        if (pickedBy >= 0) s += 0.04f;
+        tile.rectTransform.localScale = Vector3.one * s;
+        Color pc = pickedBy >= 0 ? PlayerCol[pickedBy] : new Color(0f, 0f, 0f, 0.55f);
+        tile.color = pickedBy >= 0 ? new Color(pc.r, pc.g, pc.b, 0.95f) : pc;
+        var ol = tile.GetComponent<Outline>();
+        if (ol == null) { ol = tile.gameObject.AddComponent<Outline>(); ol.effectDistance = new Vector2(3, 3); }
+        ol.effectColor = mine ? Color.white : new Color(0, 0, 0, 0.5f);
+        if (thumb.texture != null) thumb.color = taken && !mine ? new Color(1f, 1f, 1f, 0.35f) : Color.white;
     }
 
     Slot FindSlot(InputKind k) { foreach (var s in slots) if (s.kind == k) return s; return null; }
@@ -393,14 +553,14 @@ public class Game : MonoBehaviour
     {
         int c = s.car;
         for (int k = 0; k < 8; k++) { c = ((c + dir) % 8 + 8) % 8; if (CarFree(c, s)) break; }
-        s.car = c; Assign(); Sfx.Play(Sfx.Click, 0.6f);
+        s.car = c; Assign(); Sfx.Play(Sfx.Click, 0.3f);
     }
 
     void CycleRobot(Slot s, int dir)
     {
         int r = s.robot;
         for (int k = 0; k < Robots.Count; k++) { r = ((r + dir) % Robots.Count + Robots.Count) % Robots.Count; if (RobotFree(r, s)) break; }
-        s.robot = r; Assign(); Sfx.Play(Sfx.Click, 0.6f);
+        s.robot = r; Assign(); Sfx.Play(Sfx.Click, 0.3f);
     }
 
     // A pad press is a ghost if another, already-joined pad reported an identical press within 150 ms.
@@ -506,7 +666,7 @@ public class Game : MonoBehaviour
         overview.transform.position = c + new Vector3(Mathf.Sin(a) * 30f, 9f, Mathf.Cos(a) * 30f);
         overview.transform.LookAt(c);
         foreach (var k in karts) k.Tick(dt, false, false);
-        RefreshLobby();
+        RefreshLobby(dt);
     }
 
     // returns true when the race started
@@ -519,19 +679,19 @@ public class Game : MonoBehaviour
             return true;
         }
         for (int i = 0; i < 8; i++)
-            if (Hit(swatches[i], pos))
+            if (Hit(carTiles[i], pos))
             {
                 Slot s = FindSlot(kind);
                 if (s == null) { Join(kind, null, i); return false; }
-                if (CarFree(i, s)) { s.car = i; Assign(); Sfx.Play(Sfx.Click, 0.6f); }
+                if (CarFree(i, s)) { s.car = i; Assign(); Sfx.Play(Sfx.Click, 0.3f); }
                 return false;
             }
         for (int i = 0; i < 7; i++)
-            if (Hit(robotBtns[i], pos))
+            if (Hit(robotTiles[i], pos))
             {
                 Slot s = FindSlot(kind);
                 if (s == null) s = Join(kind, null);
-                if (s != null && RobotFree(i, s)) { s.robot = i; Assign(); Sfx.Play(Sfx.Click, 0.6f); }
+                if (s != null && RobotFree(i, s)) { s.robot = i; Assign(); Sfx.Play(Sfx.Click, 0.3f); }
                 return false;
             }
         return false;
@@ -555,6 +715,7 @@ public class Game : MonoBehaviour
         lobbyCanvas.enabled = false;
         resultsCanvas.enabled = false;
         hudCanvas.enabled = true;
+        foreach (var st in stands) st.Tick(0f, false);
         foreach (var s in slots) MakeView(s);
         ApplyLayout();
         Sfx.Music("beach");
