@@ -27,7 +27,13 @@ public class GroundVehicle : Vehicle
     protected Vector3 groundNormal = Vector3.up;
     public List<Transform> treadMarks;   // optional moving track blocks
     public float treadHalf = 2.6f;
-    public System.Action<float, float> animate;   // (forwardSpeed, dt) for custom visuals like mech legs
+    public System.Action<float, float> animate;
+    public CyberBoat amph;               // ffu11: amphibious Cybertruck (null for everything else)
+    public float Throttle01 { get { return driver != null ? Mathf.Clamp01(throttle) : 0f; } }
+    public override string HelpLine
+    {
+        get { return amph != null && amph.Boat ? "CYBERBOAT! L-stick steer | RT jet | LT reverse | A hop out (swim)" : base.HelpLine; }
+    }   // (forwardSpeed, dt) for custom visuals like mech legs
 
     public void AddWheel(Vector3 center, float radius, Transform visual, bool steers)
     {
@@ -59,6 +65,12 @@ public class GroundVehicle : Vehicle
         base.FixedUpdate();
         float dt = Time.fixedDeltaTime;
         ComputeControls();
+        float ws = 1f;
+        if (amph != null)
+        {
+            amph.Step(dt, steer, throttle);
+            ws = amph.WheelScale;
+        }
         groundedCount = 0;
         slipSpeed = 0f;
         Vector3 nsum = Vector3.zero;
@@ -78,7 +90,7 @@ public class GroundVehicle : Vehicle
                 float vUp = Vector3.Dot(rb.GetPointVelocity(origin), up);
                 float f = spring * comp - damper * vUp;
                 if (f < 0f) f = 0f;
-                rb.AddForceAtPosition(up * f, origin);
+                rb.AddForceAtPosition(up * f * ws, origin);
                 groundedCount++;
                 nsum += hit.normal;
                 int hl = hit.collider.gameObject.layer;
@@ -91,7 +103,7 @@ public class GroundVehicle : Vehicle
                 w.dist = Mathf.MoveTowards(w.dist, len, dt * 3f);
             }
         }
-        float gf = wheels.Count > 0 ? groundedCount / (float)wheels.Count : 0f;
+        float gf = (wheels.Count > 0 ? groundedCount / (float)wheels.Count : 0f) * ws;
         groundNormal = groundedCount > 0 ? nsum.normalized : Vector3.up;
         bool driven = driver != null;
 
@@ -117,7 +129,7 @@ public class GroundVehicle : Vehicle
         }
         else if (onTrack && groundedCount > 0) rb.AddForce(-groundNormal * 4f, ForceMode.Acceleration);
 
-        if (groundedCount > 0)
+        if (groundedCount > 0 && ws > 0f)
         {
             Vector3 fwd = Vector3.ProjectOnPlane(transform.forward, groundNormal).normalized;
             Vector3 right = Vector3.ProjectOnPlane(transform.right, groundNormal).normalized;
@@ -143,9 +155,15 @@ public class GroundVehicle : Vehicle
 
             if (Mathf.Abs(fs) > 4f && dustAmount > 0f)
                 foreach (Wheel w in wheels)
-                    if (w.grounded) FX.Dust(transform.TransformPoint(w.mount) - up * (w.dist), dustAmount * Mathf.Clamp01(Mathf.Abs(fs) / 20f) * 0.25f);
+                    if (w.grounded)
+                    {
+                        Vector3 cp = transform.TransformPoint(w.mount) - up * (w.dist);
+                        // ffu11: wheels churning through the pond shallows throw water, not dust
+                        if (cp.y < Layout.WaterY && Layout.InPond(cp.x, cp.z)) { if (Random.value < 0.35f) FX.Splash(new Vector3(cp.x, Layout.WaterY + 0.1f, cp.z), 1 + Mathf.Abs(fs) * 0.08f); }
+                        else FX.Dust(cp, dustAmount * Mathf.Clamp01(Mathf.Abs(fs) / 20f) * 0.25f);
+                    }
         }
-        else
+        else if (ws > 0f)
         {
             // a little air control so jumps can be levelled
             rb.AddTorque(transform.up * steer * 0.6f * dt, ForceMode.VelocityChange);
@@ -163,7 +181,10 @@ public class GroundVehicle : Vehicle
             w.visual.localPosition = p;
             w.spin += fs / Mathf.Max(0.1f, w.radius) * Mathf.Rad2Deg * dt;
             float st = w.steers ? steer * 28f : 0f;
-            w.visual.localRotation = Quaternion.Euler(0f, st, 0f) * Quaternion.Euler(w.spin, 0f, 0f);
+            Quaternion rot = Quaternion.Euler(0f, st, 0f) * Quaternion.Euler(w.spin, 0f, 0f);
+            if (amph != null) amph.WheelPose(w.mount, ref p, ref rot);
+            w.visual.localPosition = p;
+            w.visual.localRotation = rot;
         }
         if (treadMarks != null)
         {

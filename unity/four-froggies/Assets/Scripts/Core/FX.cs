@@ -146,6 +146,13 @@ public static class FX
         }
     }
 
+    // ffu11: directed water spray (Cyberboat bow spray, rooster tail, transform burst)
+    public static void Spray(Vector3 p, Vector3 v, float size, float life, Color c)
+    {
+        if (ps == null) return;
+        Emit(p, v, size, life, c);
+    }
+
     public static void Muzzle(Vector3 p, Vector3 dir)
     {
         if (ps == null) return;

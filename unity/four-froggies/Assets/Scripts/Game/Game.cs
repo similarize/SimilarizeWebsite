@@ -148,7 +148,7 @@ public class Game : MonoBehaviour
 
     // ---------------- demo / screenshot mode ----------------
     // ?ffdemo=1 in the page URL: joins keyboard P1 after ~5 s in the lobby and starts. &ffshot=<scene> pins P1's camera to a
-    // showcase view (frog, robot, truck, ranch, barn, pond, house, under, space); &ffshot=tour cycles them every 9 s.
+    // showcase view (frog, robot, truck, cyberboat, ranch, barn, pond, house, under, space); &ffshot=tour cycles them every 9 s.
     // For work/webgl-probe/probe.py screenshots. Logs "FFDEMO scene <name>" whenever the view changes.
     static readonly string[] Tour = { "frog", "robot", "truck", "ripsaw", "lineup", "ranch", "barn", "pond", "house", "under", "space" };
     float demoT = -1f, demoPlayT;
@@ -185,6 +185,7 @@ public class Game : MonoBehaviour
             else if (sc == "under" && UnderwaterWorld.I != null) { f.SendTo(WorldId.Ranch, Ranch.FrogSpawn(f.id), 0f); UnderwaterWorld.I.Dive(f); }
             else if (sc == "space") DemoSpace(f);
             else if (sc == "truck") DemoTruck(f);
+            else if (sc == "cyberboat") DemoCyber(f);
             else if (sc == "lineup" || sc == "ripsaw" || sc == "mech") DemoLineup(f, sc);
             else if (f.world != WorldId.Ranch) f.SendTo(WorldId.Ranch, Ranch.FrogSpawn(f.id), 0f);
         }
@@ -203,6 +204,28 @@ public class Game : MonoBehaviour
             case "truck":
                 gy = Ranch.GY(14f, 44f);
                 pos = new Vector3(20.5f, gy + 2.2f, 50.5f); look = new Vector3(14f, gy + 1f, 44f); break;
+            case "cyberboat":
+                {
+                    if (demoCyber == null) return;
+                    // 3/4 front chase view from the truck's right, low over the water; eased so it doesn't jitter
+                    Transform ct = demoCyber.transform;
+                    Vector3 fw = ct.forward; fw.y = 0f; fw.Normalize();
+                    Vector3 rt = new Vector3(fw.z, 0f, -fw.x);
+                    Vector3 tp = ct.position;
+                    Vector3 want = tp + rt * 8.5f + fw * 6.5f + Vector3.up * 2.6f;
+                    float dtc = Mathf.Min(Time.unscaledDeltaTime, 0.1f);
+                    demoCamPos = demoCamPos == Vector3.zero ? want : Vector3.Lerp(demoCamPos, want, dtc * 2.5f);
+                    pos = demoCamPos; look = tp + Vector3.up * 0.9f + fw * 0.5f;
+                    float lg = Mathf.Max(Ranch.GY(pos.x, pos.z), Layout.InPond(pos.x, pos.z) ? Layout.WaterY : -99f) + 0.6f;
+                    if (pos.y < lg) pos.y = lg;
+                    demoLogT -= Time.unscaledDeltaTime;
+                    if (demoLogT <= 0f)
+                    {
+                        demoLogT = 1f;
+                        Debug.Log("FFDEMO cyber phase " + demoPhase + " k=" + demoCyber.amph.k.ToString("0.00") + " v=" + demoCyber.Speed.ToString("0.0") + " pos=(" + tp.x.ToString("0") + ", " + tp.y.ToString("0.00") + ", " + tp.z.ToString("0") + ") t=" + Time.realtimeSinceStartup.ToString("0.0"));
+                    }
+                    break;
+                }
             case "lineup":
                 gy = Ranch.GY(0f, 46f);
                 pos = new Vector3(-1f, gy + 12.5f, 76f); look = new Vector3(-1f, gy + 1.2f, 43f); break;
@@ -256,6 +279,60 @@ public class Game : MonoBehaviour
         if (best != null && bd >= 25f) Debug.Log("FFDEMO: using the nearest free Cybertruck instead of (14, 44)");
         if (best != null) { if (f.vehicle != null) f.ExitVehicle(); f.EnterVehicle(best); }
         else Debug.Log("FFDEMO: no Cybertruck at (14, 44)");
+    }
+
+    // ffu11: P1 drives a Cybertruck from the north lawn straight into the pond (it transforms into the Cyberboat), loops
+    // round to the right and drives back out on the north shore (transforms back). Slow motion while transforming so the
+    // probe catches the sequence. Logs "FFDEMO cyber phase ..." every second and "CyberBoat: ..." on each transform.
+    GroundVehicle demoCyber;
+    int demoPhase;
+    float demoLogT;
+    Vector3 demoCamPos;
+    void DemoCyber(Frog f)
+    {
+        if (f.world != WorldId.Ranch) f.SendTo(WorldId.Ranch, Ranch.FrogSpawn(f.id), 0f);
+        if (f.vehicle != null) f.ExitVehicle();
+        GroundVehicle best = null; float bd = 1e9f;
+        foreach (var v in Vehicle.All)
+        {
+            var g = v as GroundVehicle;
+            if (g == null || g.amph == null || g.driver != null) continue;
+            float d = (v.transform.position - new Vector3(70f, 0f, -6f)).sqrMagnitude;
+            if (d < bd) { bd = d; best = g; }
+        }
+        if (best == null) { Debug.Log("FFDEMO: no Cybertruck for the cyberboat demo"); return; }
+        best.enabled = true;
+        Vector3 p = new Vector3(70f, Ranch.GY(70f, -6f) + 0.7f, -6f);
+        Quaternion q = Quaternion.Euler(0f, 180f, 0f);
+        best.rb.isKinematic = false; best.rb.velocity = Vector3.zero; best.rb.angularVelocity = Vector3.zero;
+        best.rb.position = p; best.rb.rotation = q; best.transform.SetPositionAndRotation(p, q);
+        f.EnterVehicle(best);
+        demoCyber = best; demoPhase = 0; demoCamPos = Vector3.zero;
+        best.inputHook = DemoPilot;
+        Debug.Log("FFDEMO: cyberboat demo in " + best.Title);
+    }
+
+    PIn DemoPilot(PIn i)
+    {
+        var o = new PIn();
+        var c = demoCyber;
+        if (c == null || c.amph == null) return o;
+        float yaw = c.transform.eulerAngles.y, k = c.amph.k;
+        Vector3 p = c.transform.position;
+        float want = 180f;
+        int ph = demoPhase;
+        switch (demoPhase)
+        {
+            case 0: o.gas = 1f; want = 180f; if (k >= 1f && p.z < -62f) demoPhase = 1; break;
+            case 1: o.gas = 1f; o.move.x = 1f; if (Mathf.Abs(Mathf.DeltaAngle(yaw, 0f)) < 25f) demoPhase = 2; break;
+            case 2: o.gas = 1f; want = 0f; if (k <= 0f && p.z > -10f) demoPhase = 3; break;
+            default: want = 0f; if (c.ForwardSpeed > 0.5f) o.brake = 1f; break;
+        }
+        if (demoPhase != 1) o.move.x = Mathf.Clamp(Mathf.DeltaAngle(yaw, want) / 25f, -1f, 1f);
+        if (ph != demoPhase) Debug.Log("FFDEMO cyber -> phase " + demoPhase + " t=" + Time.realtimeSinceStartup.ToString("0.0"));
+        // slow motion while the truck transforms (either way) so the probe screenshots catch it
+        Time.timeScale = k > 0.01f && k < 0.99f ? 0.4f : 1f;
+        return o;
     }
 
     // every rideable ranch vehicle parked in two rows in front of the garage (frozen), P1 in the Ripsaw EV2's seat

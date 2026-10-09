@@ -77,9 +77,10 @@ public abstract class Vehicle : MonoBehaviour
     protected void OnDestroy() { All.Remove(this); }
 
     // called by the driver's Frog.Update every frame
+    public System.Func<PIn, PIn> inputHook;   // demo autopilot (ffshot=cyberboat)
     public virtual void Drive(PIn i, float camYaw, float dt)
     {
-        inp = i;
+        inp = inputHook != null ? inputHook(i) : i;
         camYawIn = camYaw;
     }
 
@@ -91,6 +92,14 @@ public abstract class Vehicle : MonoBehaviour
     float crashCool;
     // GroundVehicle fills these for the skid layer
     [System.NonSerialized] public float slipSpeed, groundFrac = 1f;
+
+    // ffu11: switch the engine voice (the Cybertruck becomes a jet boat); the next tick rebuilds it
+    public void SetEngineKind(int k)
+    {
+        if (k == engineKind) return;
+        engineKind = k;
+        if (voice != null) { voice.Kill(); voice = null; }
+    }
 
     protected void EngineSound(float dt)
     {
@@ -188,6 +197,8 @@ public abstract class Vehicle : MonoBehaviour
             if (!Physics.Raycast(from, Vector3.down, out hit, 60f, GroundMask)) continue;
             Vector3 p = hit.point + Vector3.up * 0.1f;
             if (p.y > c.y + 2.5f) continue;
+            // ffu11: out on the pond (Cyberboat) the froggy hops out into the water beside the hull, not onto the bottom
+            if (Layout.InPond(p.x, p.z) && p.y < Layout.WaterY - 0.6f) p.y = Layout.WaterY - 0.6f;
             if (Physics.CheckCapsule(p + Vector3.up * 0.5f, p + Vector3.up * 1.0f, 0.42f, frogMask, QueryTriggerInteraction.Ignore)) continue;
             return p;
         }

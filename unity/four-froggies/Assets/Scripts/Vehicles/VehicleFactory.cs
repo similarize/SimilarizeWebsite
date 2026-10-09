@@ -174,6 +174,7 @@ public static class VehicleFactory
             v.seatScale = 0.55f;
         }
         v.FinishSetup();
+        CyberBoat.Attach(v);     // ffu11: drives into the pond -> transforms into the Cyberboat
         Done(v);
         return v;
     }

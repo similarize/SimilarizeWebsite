@@ -165,7 +165,7 @@ public static class Sfx
     // (Cybertruck, rover), 8 monster V8, 9 submarine, 10 Starship rocket.
     public class EngineVoice
     {
-        public AudioSource main, layer, skid;
+        public AudioSource main, layer, skid, extra;
         readonly int kind;
         readonly float pitchMul;
         float clankT;
@@ -177,6 +177,18 @@ public static class Sfx
             AudioClip l = kind == 1 ? Tracks : kind == 4 ? Wash : null;
             if (l != null) { layer = Loop(owner, l); layer.Play(); layer.Pause(); }
             if ((kind == 0 || kind == 7 || kind == 8) && Skid != null) { skid = Loop(owner, Skid); skid.Play(); skid.Pause(); }
+            if (kind == 11)
+            {
+                // ffu11 Cyberboat: electric jet-pump whine (main) + water wash (layer) + hull slap / impeller rumble (extra)
+                if (Wash != null) { layer = Loop(owner, Wash); layer.Play(); layer.Pause(); }
+                AudioClip ex = BoatMotor != null ? BoatMotor : EngineCar;
+                if (ex != null) { extra = Loop(owner, ex); extra.Play(); extra.Pause(); }
+            }
+        }
+        public void Kill()
+        {
+            foreach (var s in new[] { main, layer, skid, extra }) if (s != null) Object.Destroy(s);
+            main = layer = skid = extra = null;
         }
         static AudioClip ClipFor(int k)
         {
@@ -191,6 +203,7 @@ public static class Sfx
                 case 8: return EngV8 != null ? EngV8 : EngineCar;
                 case 9: return EngSub != null ? EngSub : BoatMotor;
                 case 10: return EngRocket != null ? EngRocket : Rotor;
+                case 11: return EngEV != null ? EngEV : (DroneWhine != null ? DroneWhine : EngineCar);
                 default: return EngineCar;
             }
         }
@@ -217,6 +230,7 @@ public static class Sfx
                 case 8: v = 0.36f + load * 0.12f; p = 0.78f + spd / 24f + load * 0.25f; break;
                 case 9: v = 0.25f + load * 0.1f; p = 0.8f + spd / 12f; break;
                 case 10: v = 0.22f + load * 0.35f; p = 0.85f + load * 0.25f; break;
+                case 11: v = 0.1f + Mathf.Clamp01(spd / 22f) * 0.26f + load * 0.1f; p = 0.62f + spd / 13f + load * 0.15f; lv = Mathf.Clamp01(spd / 8f) * 0.42f + 0.06f; lp = 0.85f + spd / 40f; break;
                 default: v = 0.28f + load * 0.1f; p = 0.8f + spd / 28f + load * 0.2f; break;
             }
             if (!on) { v = 0f; lv = 0f; }
@@ -224,6 +238,7 @@ public static class Sfx
             Set(layer, lv, lp, dt);
             float sk = on ? Mathf.Clamp01((Mathf.Abs(slip) - 3.5f) / 6f) * ground * Mathf.Clamp01(spd / 5f) * 0.35f : 0f;
             Set(skid, sk, 0.9f + Mathf.Abs(slip) / 30f, dt * 2f);
+            if (extra != null) Set(extra, on ? 0.1f + load * 0.14f : 0f, 0.95f + spd / 18f + load * 0.15f, dt);
             // tracked: metal clanks from the links, faster with speed
             if (kind == 1 && on && spd > 1.2f && ground > 0.3f && Clank != null)
             {
