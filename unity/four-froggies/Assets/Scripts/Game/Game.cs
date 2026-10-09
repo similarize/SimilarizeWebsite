@@ -104,7 +104,7 @@ public class Game : MonoBehaviour
         viewBar = UIK.Img(r, null, new Color(0f, 0f, 0f, 0.45f), new Vector2(0.5f, 0.5f), new Vector2(0, -88), new Vector2(620, 44));
         viewText = UIK.Label(viewBar.transform, "", 22, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(610, 42), Color.white);
         playBtn = UIK.Img(r, null, new Color(0.2f, 0.65f, 0.25f, 0.85f), new Vector2(0.5f, 0.5f), new Vector2(0, -148), new Vector2(300, 56));
-        UIK.Label(playBtn.transform, "PLAY", 34, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(300, 56), Color.white);
+        playText = UIK.Label(playBtn.transform, "PLAY", 34, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(300, 56), Color.white);
         lobbyStatus = UIK.Label(r, "", 24, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, -204), new Vector2(1150, 40), new Color(0.7f, 1f, 0.7f));
         lobbyHelp = UIK.Label(r, "", 19, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, -262), new Vector2(1180, 60), new Color(1, 1, 1, 0.85f));
         // ffu13: online HOST / JOIN + the player's own NAME
@@ -136,7 +136,7 @@ public class Game : MonoBehaviour
     Image creditsBtn, creditsPanel;
     bool lobbyLook;
     Image hostBtn, joinBtn, nameBtn;
-    Text hostText, joinBtnText, nameText, netText;
+    Text hostText, joinBtnText, nameText, netText, playText;
     Keypad keypad;
     float lastNetBtn = -10f;
     bool urlNetDone;
@@ -595,6 +595,10 @@ public class Game : MonoBehaviour
         hostBtn.color = online ? new Color(0.6f, 0.25f, 0.2f, 0.9f) : new Color(0.15f, 0.42f, 0.75f, 0.9f);
         joinBtnText.text = "JOIN" + (touchOnly ? "" : "\n<size=15>Y / J</size>");
         joinBtn.gameObject.SetActive(!online);
+        bool waitHost = online && net.IsGuest;     // guests: the host starts the game
+        playText.text = waitHost ? "WAITING FOR HOST" : "PLAY";
+        playText.fontSize = waitHost ? 22 : 34;
+        playBtn.color = waitHost ? new Color(0.25f, 0.35f, 0.28f, 0.85f) : new Color(0.2f, 0.65f, 0.25f, 0.85f);
         Slot me = slots.Count > 0 ? slots[0] : null;
         nameText.text = "NAME: <color=#ffe680>" + (me != null ? (me.name.Length > 0 ? me.name : Froggies.Names[me.frog]) : "-") + "</color> <size=15>" + (touchOnly ? "(tap to change)" : "(RB / N / click)") + "</size>";
         hostText.fontSize = joinBtnText.fontSize = lobbyLayout == 1 ? 28 : 26;

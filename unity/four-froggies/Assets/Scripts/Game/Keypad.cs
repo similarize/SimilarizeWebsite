@@ -33,9 +33,9 @@ public class Keypad
     {
         root = UIK.Rect(canvas, "Keypad", new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
         UIK.Stretch(root);
-        shade = UIK.Img(root, null, new Color(0f, 0f, 0f, 0.6f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+        shade = UIK.Img(root, null, new Color(0f, 0f, 0f, 0.78f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
         UIK.Stretch(shade.rectTransform);
-        panel = UIK.Img(root, null, new Color(0.03f, 0.1f, 0.06f, 0.96f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1000, 640));
+        panel = UIK.Img(root, null, new Color(0.03f, 0.1f, 0.06f, 1f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1000, 640));
         title = UIK.Label(root, "", 34, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, 270), new Vector2(980, 50), new Color(0.55f, 1f, 0.45f));
         entryBg = UIK.Img(root, null, new Color(0f, 0f, 0f, 0.55f), new Vector2(0.5f, 0.5f), new Vector2(0, 205), new Vector2(420, 72));
         entry = UIK.Label(root, "", 52, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, 205), new Vector2(420, 72), Color.white);

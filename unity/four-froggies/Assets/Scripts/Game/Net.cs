@@ -247,7 +247,7 @@ public class Net : MonoBehaviour
         else if (role == Role.Guest)
         {
             if (connected && now - hostLastRx > Silence) Leave("Lost the host - you're playing offline now");
-            else if (!connected && now - joinStartT > 45f) Leave("Could not reach room " + code + " - check the code and try again");
+            else if (!connected && now - joinStartT > 60f) Leave("Could not reach room " + code + " - check the code and try again");
         }
         // which froggies are puppets of another device
         for (int i = 0; i < 4; i++)
