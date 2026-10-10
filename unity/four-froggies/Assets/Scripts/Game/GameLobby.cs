@@ -184,6 +184,10 @@ public partial class Game
             bool dark = t.color.r + t.color.g + t.color.b < 0.6f;   // dark text on a coloured chip: no shadow
             UIK.Modernize(t, d, dark ? 0f : (d ? 0.4f : 0.5f));
         }
+        // the wider Montserrat face: names must shrink to fit their box (best fit only shrinks with vertical truncate);
+        // "Little White Socks" wrapped onto three lines over the tile / turntable in ffu17a
+        for (int i = 0; i < 4; i++) { cardName[i].verticalOverflow = VerticalWrapMode.Truncate; cardName[i].resizeTextMinSize = 12; }
+        for (int c = 0; c < Roster.Count; c++) { tileName[c].verticalOverflow = VerticalWrapMode.Truncate; tileName[c].resizeTextMinSize = 7; }
         // title: mint -> teal gradient, then a crisp deep-green drop shadow (gradient first so the shadow keeps its colour)
         foreach (var e in lobbyTitle.GetComponents<Shadow>()) Object.DestroyImmediate(e);
         lobbyTitle.color = Color.white;

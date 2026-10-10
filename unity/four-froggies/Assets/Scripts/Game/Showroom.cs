@@ -284,6 +284,7 @@ public static class Showroom
             cam.transform.localPosition = new Vector3(0f, 1.25f, -4.6f);
             cam.transform.LookAt(root.position + new Vector3(0f, 0.62f, 0f));
             cam.farClipPlane = 20f;
+            cam.fieldOfView = 25f;   // ffu17b: the 1:1 target shows the whole window (no crop-zoom any more) -> frame a bit tighter
             Resize(Look.Mobile ? 440 : 520, Look.Mobile ? 300 : 360);
             yaw = 200f + idx * 35f;
         }
