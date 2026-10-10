@@ -26,19 +26,26 @@ public partial class Game
         return best;
     }
 
-    RidingMower demoMower; int demoLane; bool demoUp = true;
+    RidingMower demoMower; int demoLane; bool demoUp = true; float demoStuck, demoBack;
     PIn DemoMowInput(PIn i)
     {
         var m = demoMower;
         if (m == null || m.driver == null) return i;
         Rect a = RanchJobs.MowArea;
         Vector3 p = m.transform.position;
-        if ((demoUp && p.z > a.yMax + 0.5f) || (!demoUp && p.z < a.yMin - 0.5f)) { demoLane = (demoLane + 3) % 12; demoUp = !demoUp; }
+        // ffu26b: turn at the lawn edge (was 0.5 m past it at full throttle -> ran onto the race track and wedged on a sign)
+        if ((demoUp && p.z > a.yMax - 0.5f) || (!demoUp && p.z < a.yMin + 0.5f)) { demoLane = (demoLane + 3) % 12; demoUp = !demoUp; }
         float x = a.xMin + 1f + demoLane * 1.6f, z = demoUp ? a.yMax + 3f : a.yMin - 3f;
         Vector3 fw = m.transform.forward; fw.y = 0f;
         Vector3 to = new Vector3(x - p.x, 0f, z - p.z);
         float ang = Vector3.SignedAngle(fw, to, Vector3.up);
-        i.move = new Vector2(Mathf.Clamp(ang / 35f, -1f, 1f), Mathf.Abs(ang) > 100f ? 0.45f : 0.85f);
+        float edge = demoUp ? a.yMax - p.z : p.z - a.yMin;
+        float thr = Mathf.Abs(ang) > 100f ? 0.4f : Mathf.Lerp(0.35f, 0.8f, Mathf.Clamp01((edge - 1f) / 5f));
+        // stuck (against a fence / sign): back up with the wheel turned the other way
+        if (demoBack > 0f) { demoBack -= Time.deltaTime; i.move = new Vector2(-Mathf.Sign(ang), -0.8f); return i; }
+        if (Mathf.Abs(m.Speed) < 0.4f) demoStuck += Time.deltaTime; else demoStuck = 0f;
+        if (demoStuck > 2f) { demoStuck = 0f; demoBack = 1.4f; }
+        i.move = new Vector2(Mathf.Clamp(ang / 35f, -1f, 1f), thr);
         return i;
     }
 

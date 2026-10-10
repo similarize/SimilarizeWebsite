@@ -601,7 +601,10 @@ public class RobotMechMission
             }
             Transform rk = rocks[pickIdx];
             Vector3 to = rk.position - root.position; to.y = 0f;
-            float want2 = Mathf.Atan2(to.x, to.z) * Mathf.Rad2Deg;
+            // ffu26b: face so the LEFT hand (not the nose) points at the rock - aiming the nose made the stand point
+            // rotate with the body and the mech circled the rock at ~3 m until the timeout
+            float handAng = Mathf.Atan2(craft.reachX, Mathf.Max(0.01f, craft.reachZ)) * Mathf.Rad2Deg;
+            float want2 = Mathf.Atan2(to.x, to.z) * Mathf.Rad2Deg - handAng;
             float yaw = Mathf.MoveTowardsAngle(root.eulerAngles.y, want2, 70f * dt);
             root.rotation = Quaternion.Euler(0f, yaw, 0f);
             // the hand is on the LEFT: stand so the rock sits just ahead of the left hand
@@ -611,7 +614,7 @@ public class RobotMechMission
             float dist = ds.magnitude;
             distLine = RobotNav.Flat(rk.position - root.position);
             bool facing = Mathf.Abs(Mathf.DeltaAngle(yaw, want2)) < 25f;
-            if (dist > 0.4f * sc && csT < 25f)
+            if (dist > 0.4f * sc && csT < 12f)
             {
                 float v = Mathf.Min(S * 0.32f, dist * 2f + 0.5f) * (facing ? 1f : 0.25f);
                 Vector3 np = root.position + ds / Mathf.Max(dist, 1e-4f) * v * dt;
