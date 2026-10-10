@@ -1,0 +1,619 @@
+using System.Collections;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using UnityEngine;
+using UnityEngine.Networking;
+using UnityEngine.UI;
+using UnityEngine.Video;
+
+// ffu18 REAL ROOM: a photoreal room inside James's house. A white door on the living room's west wall ("REAL ROOM")
+// opens into a first-person room built from CC0 scans (Poly Haven furniture + PBR materials + a moonlit-field HDRI),
+// lit by lightmaps baked offline in Blender Cycles (3 groups: moonlight through the window / ceiling lamp / TV, blended
+// live so the switch and the flickering TV really relight the room), box-projected reflection panoramas, an SH probe for
+// moving things, ACES + bloom (desktop) - all in linear light inside the RR shaders.
+// When the door shuts behind him the froggy looks down, his cartoon hands turn into real wet frog hands and a wave turns
+// the whole room real. Inside: pick up / throw the rubber duck (physics), sit in the armchair, flip the light switch,
+// watch the TV (Big Buck Bunny, CC-BY Blender Foundation), and leave through the door back to the cartoon house.
+// Assets stream from web/realroom/ only on the way in (nothing in the Unity build): hi/ (desktop, Xbox: 2K hero
+// textures, bloom) or lo/ (phones, Tesla: 1K textures, shader-side tonemap, no post). URL: ?realroom=1 spawns at the
+// door (realroom=lite / full force a tier); ?ffdemo=1&ffshot=realroom-enter | realroom | realroom-dark | realroom-tv |
+// realroom-throw for the probe.
+public partial class RealRoom : MonoBehaviour
+{
+    public static RealRoom I;
+    public static readonly Vector3 RoomO = new Vector3(0f, -2000f, 1400f);   // under the house world, never in view
+    public const int Layer = 21;
+    const string V = "?v=rr1";
+    const float EyeH = 1.47f;
+
+    // the door in the house (living room west wall), HouseWorld local coordinates
+    static readonly Vector3 HDoor = new Vector3(-29.84f, 0f, 15.8f);
+    public static Vector3 HouseDoorFront { get { return HouseWorld.L(HDoor.x + 1.5f, 0.15f, HDoor.z); } }
+
+    enum St { Idle, Loading, Opening, Intro, Play, Exiting }
+    St st = St.Idle;
+    Frog owner;
+    Slot slot;
+    float stT;          // time in the current state
+    bool wantEnter;
+
+    // tier / loading
+    public static bool Lite;
+    bool loadStarted, loaded, loadFailed;
+    float progress;
+    long bytesDone, bytesTotal = 1;
+    string tierDir = "hi/";
+    readonly Dictionary<string, Texture2D> tex = new Dictionary<string, Texture2D>();
+    byte[] roomBin, handsBin;
+    readonly Dictionary<string, string[]> cfg = new Dictionary<string, string[]>();
+    readonly List<string[]> matLines = new List<string[]>(), objLines = new List<string[]>();
+    float[] tvLight = new float[0];
+
+    // scene
+    Transform root, door, rocker;
+    Transform houseLeaf;
+    Camera cam;
+    RRPostFx post;
+    CharacterController body;
+    Transform yawT, pitchT;
+    float yaw, pitch;
+    Rigidbody duck; Transform duckBlob;
+    Collider chairCol, switchCol, doorCol;
+    readonly List<Collider> duckCols = new List<Collider>();
+    Material screenMat, globeMat, portalMat;
+    VideoPlayer vp; RenderTexture vidRT; bool vidFallback; float vidT0;
+    Vector3 lampPos, tvPos, seatPos, spawnPos, doorPos, switchPos, duckSpawn; float seatYaw;
+
+    // light state
+    bool lightsOn = true;
+    float lampK = 1f, expo = 1.6f;
+    Vector4[] shEnv = new Vector4[9], shLamp = new Vector4[9], shTv = new Vector4[9];
+    readonly Vector4[] sh = new Vector4[9];
+    public const float EnvW = 0.35f, TvBright = 1.6f, ExpOn = 1.45f, ExpOff = 5.5f;
+
+    // interaction
+    bool holding, sitting;
+    float charge, throwAnim = -1f, pokeAnim = -1f, bobT, intakeCool;
+    Vector3 standPos; float standYaw;
+    string hint = "";
+
+    // UI
+    Canvas ui; Image fade, dot; Text hintT, titleT;
+
+    public static void Create()
+    {
+        var go = new GameObject("RealRoom");
+        I = go.AddComponent<RealRoom>();
+    }
+
+    public static bool Captures(Frog f) { return I != null && I.owner == f && I.st != St.Idle && I.st != St.Loading; }
+    public static bool Busy { get { return I != null && I.st != St.Idle; } }
+
+    // ---------------------------------------------------------------- house door
+    // called by HouseWorld.Build: a white panel door with a sign + hotspot on the living room's west wall
+    public static void BuildHouseDoor(Transform houseRoot)
+    {
+        if (I == null) return;
+        Vector3 c = HouseWorld.L(HDoor.x, 0f, HDoor.z);
+        var white = Mats.Lit(new Color(0.94f, 0.93f, 0.9f));
+        var frameC = Mats.Lit(new Color(0.85f, 0.84f, 0.8f));
+        // casing
+        Mats.Prim(PrimitiveType.Cube, houseRoot, c + new Vector3(0.04f, 2.72f, 0f), new Vector3(0.1f, 0.16f, 1.86f), frameC);
+        Mats.Prim(PrimitiveType.Cube, houseRoot, c + new Vector3(0.04f, 1.32f, -0.86f), new Vector3(0.1f, 2.64f, 0.14f), frameC);
+        Mats.Prim(PrimitiveType.Cube, houseRoot, c + new Vector3(0.04f, 1.32f, 0.86f), new Vector3(0.1f, 2.64f, 0.14f), frameC);
+        // leaf on a hinge (z = +0.78 side), opens into the house
+        var hinge = new GameObject("RealRoomDoorHinge").transform;
+        hinge.SetParent(houseRoot, false); hinge.position = c + new Vector3(0.05f, 0f, 0.78f);
+        Mats.Prim(PrimitiveType.Cube, hinge, hinge.position + new Vector3(0.02f, 1.3f, -0.78f), new Vector3(0.06f, 2.6f, 1.56f), white);
+        Mats.Prim(PrimitiveType.Cube, hinge, hinge.position + new Vector3(0.055f, 1.85f, -0.78f), new Vector3(0.02f, 1.0f, 1.1f), frameC);
+        Mats.Prim(PrimitiveType.Cube, hinge, hinge.position + new Vector3(0.055f, 0.7f, -0.78f), new Vector3(0.02f, 0.9f, 1.1f), frameC);
+        Mats.Prim(PrimitiveType.Sphere, hinge, hinge.position + new Vector3(0.1f, 1.25f, -1.4f), new Vector3(0.1f, 0.1f, 0.1f), Mats.Lit(new Color(0.75f, 0.72f, 0.6f)));
+        I.houseLeaf = hinge;
+        Ranch.Sign(c + new Vector3(0.12f, 3.15f, 0f), 90f, "REAL ROOM\n<size=16>step into the real world</size>", new Color(0.08f, 0.08f, 0.1f), 2.6f, 0.75f);
+        var hs = Interact.Add(c + new Vector3(1.3f, 0.1f, 0f), 1.7f, "open the REAL ROOM door", f => I.Request(f));
+        hs.enabled = f => f.world == WorldId.House && f.vehicle == null && (I.st == St.Idle || I.owner == f);
+        hs.dynLabel = f => I.st == St.Loading && I.owner == f ? "REAL ROOM loading " + Mathf.RoundToInt(I.progress * 100f) + "%" : "open the REAL ROOM door";
+    }
+
+    void Request(Frog f)
+    {
+        if (st != St.Idle && owner != f) { f.Toast("Someone is in the REAL ROOM", 2f); return; }
+        if (st != St.Idle && st != St.Loading) return;
+        owner = f;
+        slot = FindSlot(f);
+        if (slot == null) { owner = null; return; }
+        BeginLoad();
+        if (loadFailed) { f.Toast("The REAL ROOM could not load (no connection?)", 3f); owner = null; return; }
+        wantEnter = true;
+        st = loaded ? St.Opening : St.Loading; stT = 0f;
+        if (st == St.Loading) f.Toast("Opening the REAL ROOM...", 2f);
+        Sfx.Play(Sfx.Door, 0.8f);
+    }
+
+    static Slot FindSlot(Frog f)
+    {
+        if (Game.I == null) return null;
+        foreach (var s in Game.I.slots) if (Game.I.frogs[s.frog] == f) return s;
+        return null;
+    }
+
+    // ---------------------------------------------------------------- main loop
+    float nearT;
+    void Update()
+    {
+        float dt = Mathf.Min(Time.deltaTime, 0.05f);
+        stT += dt;
+        UrlTest();
+        Demo(dt);
+        // pre-load when a human froggy walks up to the door (saves a few seconds at the door; nothing loads otherwise)
+        if (!loadStarted && Game.I != null && Game.I.state == Game.State.Play && HouseWorld.I != null)
+        {
+            foreach (var s in Game.I.slots)
+            {
+                Frog f = Game.I.frogs[s.frog];
+                if (f.world == WorldId.House && (f.transform.position - HouseWorld.L(HDoor.x, 0f, HDoor.z)).sqrMagnitude < 64f) { nearT += dt; if (nearT > 0.6f) BeginLoad(); }
+            }
+        }
+        switch (st)
+        {
+            case St.Loading:
+                if (loadFailed) { if (owner != null) owner.Toast("The REAL ROOM could not load", 3f); st = St.Idle; owner = null; break; }
+                if (owner != null && owner.world != WorldId.House) { st = St.Idle; owner = null; break; }
+                if (loaded) { st = St.Opening; stT = 0f; }
+                break;
+            case St.Opening:
+                if (houseLeaf != null) houseLeaf.localRotation = Quaternion.Euler(0f, -Mathf.SmoothStep(0f, 95f, Mathf.Clamp01(stT / 0.6f)), 0f);
+                SetFadeOverlay(Mathf.Clamp01((stT - 0.35f) / 0.35f), Color.black);
+                if (stT > 0.75f) EnterRoom();
+                break;
+            case St.Intro: Intro(dt); break;
+            case St.Play: Play(dt); break;
+            case St.Exiting: Exiting(dt); break;
+        }
+        if (st != St.Opening && st != St.Idle && st != St.Loading && houseLeaf != null) houseLeaf.localRotation = Quaternion.identity;
+        if (st == St.Idle && houseLeaf != null) houseLeaf.localRotation = Quaternion.Slerp(houseLeaf.localRotation, Quaternion.identity, dt * 4f);
+        if (root != null && root.gameObject.activeSelf) Globals(dt);
+    }
+
+    void LateUpdate()
+    {
+        if (st == St.Idle || st == St.Loading || st == St.Opening)
+        {
+            if (st == St.Opening) return;
+            if (fadeBackT > 0f) { fadeBackT -= Time.deltaTime; SetFadeOverlay(Mathf.Clamp01(fadeBackT / 0.6f), Color.white); }
+            else if (fadeA > 0f || ui == null) SetFadeOverlay(0f, Color.black);
+            return;
+        }
+        // a world change from elsewhere (online host moved, respawn ...) ends the visit cleanly
+        if (owner == null || owner.world != WorldId.RealRoom) { EndVisit(false); return; }
+        if (slot != null && slot.cam != null)
+        {
+            slot.cam.enabled = false;
+            if (slot.hud != null) slot.hud.SetActive(false);
+            cam.rect = slot.cam.rect;
+        }
+        LayoutUi();
+    }
+
+    // ---------------------------------------------------------------- enter / exit
+    void EnterRoom()
+    {
+        if (root == null) Build();
+        root.gameObject.SetActive(true);
+        owner.SendTo(WorldId.RealRoom, RoomO + new Vector3(0f, -28f, 0f), 0f);
+        // player at the door, facing it (the door is still swinging shut behind the froggy's back... he turns to see it)
+        body.enabled = false;
+        yawT.position = spawnPos; yaw = 180f; pitch = 4f;
+        body.enabled = true;
+        door.localRotation = Quaternion.Euler(0f, 45f, 0f);
+        holding = false; sitting = false;
+        ResetDuck();
+        lightsOn = true; lampK = 1f; expo = ExpOn;
+        cam.enabled = true;
+        cam.rect = slot.cam.rect;
+        slot.cam.enabled = false;
+        Hands.SetMorph(0f);
+        waveR = 0f; Shader.SetGlobalVector("_RRWaveO", new Vector4(0, 0, 0, 0f));
+        if (!Lite) FFDisplay.Lobby(true);   // full pixel density on desktop while inside
+        QualitySettings.antiAliasing = Lite ? 0 : 4;
+        PlayVideo();
+        Sfx.Play(Sfx.Door, 0.7f, 0.85f);
+        st = St.Intro; stT = 0f;
+        Debug.Log("RealRoom: enter (" + (Lite ? "lite" : "full") + ")");
+    }
+
+    float waveR;
+    void Intro(float dt)
+    {
+        // 0.0-1.1 door swings shut (thud), 1.1-2.1 look down at the cartoon hands, 2.1-3.9 hands turn real,
+        // 3.3-5.5 the realness wave spreads through the room, 4.6-6.4 turn round to face the room
+        float t = stT;
+        SetFadeOverlay(1f - Mathf.Clamp01(t / 0.35f), Color.black);
+        float dk = Mathf.Clamp01(t / 1.0f);
+        door.localRotation = Quaternion.Euler(0f, Mathf.Lerp(45f, 0f, dk * dk), 0f);
+        if (t - dt < 1.0f && t >= 1.0f) Sfx.Play(Sfx.Thud != null ? Sfx.Thud : Sfx.Door, 0.9f, 0.8f);
+        float look = Smooth01((t - 1.1f) / 0.9f) - Smooth01((t - 4.6f) / 1.0f);
+        pitch = Mathf.Lerp(4f, 42f, look);
+        float turn = Smooth01((t - 4.6f) / 1.8f);
+        yaw = Mathf.LerpAngle(180f, 345f, turn);
+        Hands.introPose = look;
+        float morph = Mathf.Clamp01((t - 2.1f) / 1.8f);
+        Hands.SetMorph(morph);
+        if (t - dt < 2.1f && t >= 2.1f) Sfx.Play(Sfx.Pickup, 0.8f, 0.7f);
+        if (t > 3.3f)
+        {
+            waveR = Mathf.Pow(Mathf.Clamp01((t - 3.3f) / 2.2f), 1.6f) * 9f;
+            if (t - dt < 3.3f) Sfx.Play(Sfx.Confirm != null ? Sfx.Confirm : Sfx.Win, 0.7f, 0.8f);
+        }
+        if (t > 5.6f) waveR = 99f;
+        ApplyView();
+        bool skip = t > 1.5f && skipPressed;
+        skipPressed = false;
+        if (t > 6.5f || skip)
+        {
+            Hands.SetMorph(1f); Hands.introPose = 0f; waveR = 99f;
+            door.localRotation = Quaternion.identity;
+            yaw = 345f; pitch = 6f; ApplyView();
+            st = St.Play; stT = 0f;
+        }
+    }
+    bool skipPressed;
+    static float Smooth01(float x) { x = Mathf.Clamp01(x); return x * x * (3f - 2f * x); }
+
+    void StartExit()
+    {
+        if (holding) DropDuck(Vector3.zero);
+        if (sitting) StandUp();
+        st = St.Exiting; stT = 0f;
+        Sfx.Play(Sfx.Door, 0.8f, 1.05f);
+    }
+
+    void Exiting(float dt)
+    {
+        float t = stT;
+        door.localRotation = Quaternion.Euler(0f, Mathf.SmoothStep(0f, 75f, Mathf.Clamp01(t / 0.9f)), 0f);
+        // face the door
+        Vector3 to = doorPos - yawT.position; to.y = 0f;
+        yaw = Mathf.LerpAngle(yaw, Mathf.Atan2(to.x, to.z) * Mathf.Rad2Deg, dt * 4f);
+        pitch = Mathf.Lerp(pitch, 2f, dt * 4f);
+        if (portalMat != null) portalMat.SetFloat("_Glow", 1f + 4f * Mathf.Clamp01(t / 1.0f));
+        // the room turns cartoon again around the froggy, the hands too
+        float back = Mathf.Clamp01((t - 0.5f) / 0.8f);
+        waveR = back > 0f ? Mathf.Lerp(9f, 0f, back) : 99f;
+        Hands.SetMorph(1f - back);
+        SetFade(Mathf.Clamp01((t - 1.1f) / 0.4f), Color.white);
+        ApplyView();
+        if (t > 1.55f) EndVisit(true);
+    }
+
+    void EndVisit(bool toHouse)
+    {
+        if (st == St.Idle) return;
+        Frog f = owner;
+        st = St.Idle;
+        if (vp != null) vp.Pause();
+        cam.enabled = false;
+        root.gameObject.SetActive(false);
+        SetFade(0f, Color.white);
+        if (!Lite) FFDisplay.Lobby(false);
+        FFDisplay.ApplyAA();
+        if (f != null && toHouse)
+        {
+            f.SendTo(WorldId.House, HouseDoorFront, 90f);
+            fadeBackT = 0.6f;
+        }
+        if (slot != null && slot.cam != null && f != null && f.world != WorldId.RealRoom) { slot.cam.enabled = true; if (slot.hud != null) slot.hud.SetActive(true); }
+        owner = null; wantEnter = false;
+        Cursor.lockState = CursorLockMode.None;
+        Debug.Log("RealRoom: exit");
+    }
+    float fadeBackT;
+
+    // ---------------------------------------------------------------- input from Game (this slot's PIn)
+    PIn inp;
+    public static void Feed(Frog f, PIn i) { if (I != null && I.owner == f) { I.inp = i; if (i.use || i.hop || i.fire) I.skipPressed = true; } }
+
+    void Play(float dt)
+    {
+        PIn i = inp; inp = new PIn();
+        bool act = i.use || i.hop;
+        intakeCool -= dt;
+        if (!sitting)
+        {
+            yaw += i.look.x;
+            pitch = Mathf.Clamp(pitch - i.look.y, -80f, 85f);
+            Vector3 fwd = Quaternion.Euler(0f, yaw, 0f) * Vector3.forward, right = Quaternion.Euler(0f, yaw, 0f) * Vector3.right;
+            Vector3 mv = (fwd * i.move.y + right * i.move.x) * 1.45f;
+            mv.y = -4f;
+            body.Move(mv * dt);
+            bobT += new Vector2(i.move.x, i.move.y).magnitude * dt * 8.5f;
+        }
+        else
+        {
+            yaw = Mathf.Clamp(Mathf.DeltaAngle(seatYaw, yaw + i.look.x), -100f, 100f) + seatYaw;
+            pitch = Mathf.Clamp(pitch - i.look.y, -60f, 75f);
+            if (i.move.sqrMagnitude > 0.5f || i.downHeld) StandUp();
+        }
+        // what are we looking at?
+        Ray r = new Ray(cam.transform.position, cam.transform.forward);
+        RaycastHit hit;
+        string target = "";
+        if (Physics.Raycast(r, out hit, 2.3f, 1 << Layer, QueryTriggerInteraction.Collide))
+        {
+            if (duckCols.Contains(hit.collider) && !holding) target = "duck";
+            else if (hit.collider == switchCol) target = "switch";
+            else if (hit.collider == doorCol) target = "door";
+            else if (hit.collider == chairCol && !holding && hit.distance < 2.0f) target = "chair";
+        }
+        if (target == "" && !holding && duck != null && Vector3.Angle(cam.transform.forward, duck.position - cam.transform.position) < 12f && (duck.position - cam.transform.position).magnitude < 2.0f) target = "duck";
+        if (sitting) target = "stand";
+        string pad = Badge();
+        if (holding) hint = pad + "  throw the duck" + (owner.inputKind == InputKind.Touch ? "" : "   (hold to throw harder)");
+        else if (target == "duck") hint = pad + "  pick up the rubber duck";
+        else if (target == "switch") hint = pad + (lightsOn ? "  lights off" : "  lights on");
+        else if (target == "door") hint = pad + "  leave the REAL ROOM";
+        else if (target == "chair") hint = pad + "  sit in the armchair";
+        else if (target == "stand") hint = pad + "  stand up";
+        else hint = "";
+        // hold-to-charge throws (RT / left mouse / A held)
+        if (holding)
+        {
+            bool held = i.fireHeld || i.hopHeld;
+            if (held) charge = Mathf.Min(1f, charge + dt * 1.2f);
+            bool release = (act || i.fire) && charge < 0.05f && !held;
+            if ((!held && charge > 0.05f) || release || (act && owner.inputKind == InputKind.Touch)) { Throw(Mathf.Max(charge, 0.25f)); charge = 0f; }
+        }
+        else if (act && intakeCool <= 0f)
+        {
+            switch (target)
+            {
+                case "duck": PickDuck(); break;
+                case "switch": ToggleLights(); break;
+                case "door": StartExit(); return;
+                case "chair": SitDown(); break;
+                case "stand": StandUp(); break;
+            }
+            intakeCool = 0.25f;
+        }
+        ApplyView();
+    }
+
+    string Badge()
+    {
+        switch (owner != null ? owner.inputKind : InputKind.Keyboard)
+        {
+            case InputKind.Gamepad: return "<b>[A]</b>";
+            case InputKind.Touch: return "<b>[tap A]</b>";
+            default: return "<b>[E / Space]</b>";
+        }
+    }
+
+    void ApplyView()
+    {
+        float bob = (st == St.Play && !sitting) ? Mathf.Sin(bobT) * 0.012f : 0f;
+        yawT.rotation = Quaternion.Euler(0f, yaw, 0f);
+        if (sitting) yawT.position = Vector3.Lerp(yawT.position, seatPos, Time.deltaTime * 5f);
+        float eye = sitting ? 1.08f : EyeH;
+        pitchT.localPosition = new Vector3(0f, eye + bob, 0f);
+        pitchT.localRotation = Quaternion.Euler(pitch, 0f, 0f);
+        Hands.walk = bobT;
+    }
+
+    // ---------------------------------------------------------------- interactions
+    void ToggleLights()
+    {
+        lightsOn = !lightsOn;
+        pokeAnim = 0f;
+        Sfx.Play(Sfx.Click != null ? Sfx.Click : Sfx.Toggle, 0.9f);
+        if (rocker != null) rocker.localRotation = Quaternion.Euler(lightsOn ? -9f : 9f, 0f, 0f);
+    }
+
+    void PickDuck()
+    {
+        holding = true; charge = 0f;
+        duck.isKinematic = true;
+        foreach (var c in duckCols) c.enabled = false;
+        Sfx.Play(Sfx.Pickup, 0.6f, 1.3f);
+    }
+
+    void Throw(float k)
+    {
+        Vector3 v = cam.transform.forward * Mathf.Lerp(3.2f, 8.5f, k) + Vector3.up * 1.2f;
+        DropDuck(v);
+        throwAnim = 0f;
+        Sfx.Play(Sfx.Hop, 0.7f, 1.2f);
+    }
+
+    void DropDuck(Vector3 v)
+    {
+        holding = false;
+        Vector3 p = Hands.HoldPoint;
+        // never release it inside a wall
+        Vector3 eye = cam.transform.position;
+        RaycastHit h;
+        if (Physics.Linecast(eye, p, out h, 1 << Layer, QueryTriggerInteraction.Ignore) && !duckCols.Contains(h.collider)) p = eye + (p - eye).normalized * Mathf.Max(0.05f, h.distance - 0.12f);
+        duck.transform.position = p;
+        duck.isKinematic = false;
+        foreach (var c in duckCols) c.enabled = true;
+        duck.velocity = v;
+        duck.angularVelocity = new Vector3(Random.Range(-6f, 6f), Random.Range(-4f, 4f), Random.Range(-6f, 6f));
+    }
+
+    void ResetDuck()
+    {
+        duck.isKinematic = false;
+        duck.transform.SetPositionAndRotation(duckSpawn + Vector3.up * 0.02f, Quaternion.Euler(0f, 205f, 0f));
+        duck.velocity = Vector3.zero; duck.angularVelocity = Vector3.zero;
+        foreach (var c in duckCols) c.enabled = true;
+    }
+
+    void SitDown()
+    {
+        sitting = true;
+        standPos = yawT.position; standYaw = yaw;
+        body.enabled = false;
+        yaw = seatYaw; pitch = 8f;
+        Sfx.Play(Sfx.BumpSoft != null ? Sfx.BumpSoft : Sfx.Thud, 0.6f, 0.8f);
+    }
+
+    void StandUp()
+    {
+        sitting = false;
+        yawT.position = standPos;
+        body.enabled = true;
+        intakeCool = 0.3f;
+    }
+
+    // duck bounce sounds
+    float lastBonk;
+    public void DuckHit(float speed)
+    {
+        if (speed < 0.8f || Time.time - lastBonk < 0.12f) return;
+        lastBonk = Time.time;
+        Sfx.Play(Sfx.BumpSoft != null ? Sfx.BumpSoft : Sfx.Thud, Mathf.Clamp01(speed / 6f) * 0.7f, Random.Range(1.2f, 1.5f));
+    }
+
+    // ---------------------------------------------------------------- per-frame light + shader globals
+    void Globals(float dt)
+    {
+        lampK = Mathf.MoveTowards(lampK, lightsOn ? 1f : 0f, dt / 0.12f);
+        // TV light = the average colour of the current video frame (precomputed track, 10 Hz) x brightness
+        Vector3 tv = new Vector3(0.3f, 0.34f, 0.36f);
+        float vt = 0f;
+        if (vp != null && vp.isPlaying && !vidFallback) vt = (float)vp.time;
+        else vt = Time.time - vidT0;
+        int n = tvLight.Length / 3;
+        if (n > 0 && !vidFallback)
+        {
+            float fi = Mathf.Repeat(vt * 10f, n);
+            int a = (int)fi, b = (a + 1) % n; float f = fi - a;
+            tv = Vector3.Lerp(new Vector3(tvLight[a * 3], tvLight[a * 3 + 1], tvLight[a * 3 + 2]), new Vector3(tvLight[b * 3], tvLight[b * 3 + 1], tvLight[b * 3 + 2]), f);
+        }
+        else if (vidFallback) { float s = Time.time * 0.15f; tv = new Vector3(0.35f + 0.1f * Mathf.Sin(s), 0.5f, 0.45f + 0.1f * Mathf.Cos(s * 1.3f)) * 0.6f; }
+        tv *= TvBright;
+        Vector3 env = new Vector3(EnvW, EnvW, EnvW);
+        Vector3 lamp = new Vector3(lampK, lampK, lampK);
+        Shader.SetGlobalVector("_RREnvCol", env);
+        Shader.SetGlobalVector("_RRLampCol", lamp);
+        Shader.SetGlobalVector("_RRTvCol", tv);
+        for (int k = 0; k < 9; k++)
+            sh[k] = new Vector4(shEnv[k].x * env.x + shLamp[k].x * lamp.x + shTv[k].x * tv.x,
+                                shEnv[k].y * env.y + shLamp[k].y * lamp.y + shTv[k].y * tv.y,
+                                shEnv[k].z * env.z + shLamp[k].z * lamp.z + shTv[k].z * tv.z, 0f);
+        Shader.SetGlobalVectorArray("_RRSH", sh);
+        // eyes adjust: dark room -> brighter exposure over ~1.5 s
+        float target = Mathf.Lerp(ExpOff, ExpOn, lampK);
+        expo = Mathf.Lerp(expo, target, 1f - Mathf.Exp(-dt * (target > expo ? 1.4f : 3f)));
+        if (demoExpo > 0f) expo = demoExpo;
+        Shader.SetGlobalFloat("_RRExposure", expo);
+        Shader.SetGlobalFloat("_RRDirect", Lite ? 1f : 0f);
+        Shader.SetGlobalFloat("_RRTime", Time.time);
+        Shader.SetGlobalVector("_RRWaveO", new Vector4(Hands.WaveOrigin.x, Hands.WaveOrigin.y, Hands.WaveOrigin.z, waveR > 50f ? -1f : waveR));
+        Shader.SetGlobalVector("_RRWaveCol", new Vector4(0.35f, 1.0f, 0.55f, 1f) * 0.6f);
+        if (post != null) post.exposure = expo;
+        if (globeMat != null) globeMat.SetColor("_Emis", new Color(1f, 0.78f, 0.52f, 2.2f * lampK));
+        Hands.SetLights(lampPos, tvPos);
+        Hands.Tick(dt, holding, charge, ref throwAnim, ref pokeAnim, sitting, st == St.Play);
+        if (holding) { duck.transform.position = Hands.HoldPoint; duck.transform.rotation = Hands.HoldRot; }
+        if (duckBlob != null)
+        {
+            Vector3 d = duck.position;
+            float hgt = Mathf.Max(0f, d.y - RoomO.y);
+            duckBlob.position = new Vector3(d.x, RoomO.y + 0.004f + (FloorUnderDuck(d) - RoomO.y), d.z);
+            float s = Mathf.Lerp(0.36f, 0.6f, Mathf.Clamp01(hgt / 1.5f));
+            duckBlob.localScale = new Vector3(s, s, 1f);
+        }
+    }
+
+    float FloorUnderDuck(Vector3 p)
+    {
+        RaycastHit h;
+        if (Physics.Raycast(p + Vector3.up * 0.05f, Vector3.down, out h, 3f, 1 << Layer, QueryTriggerInteraction.Ignore) && !duckCols.Contains(h.collider)) return h.point.y;
+        return RoomO.y;
+    }
+
+    // ---------------------------------------------------------------- UI (fade, crosshair, hints)
+    void MakeUi()
+    {
+        ui = UIK.MakeCanvas("RealRoomUI", null, 300, true);
+        fade = UIK.Img(ui.transform, null, new Color(0, 0, 0, 0), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.one * 10f);
+        fade.raycastTarget = false;
+        dot = UIK.Img(ui.transform, UIK.Circle, new Color(1, 1, 1, 0.55f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(7f, 7f));
+        dot.raycastTarget = false;
+        hintT = UIK.Label(ui.transform, "", 26, TextAnchor.MiddleCenter, new Vector2(0.5f, 0f), new Vector2(0f, 120f), new Vector2(900f, 60f), Color.white);
+        hintT.raycastTarget = false;
+        if (UIK.ModernFonts) UIK.Modernize(hintT, false);
+        var sh = hintT.gameObject.AddComponent<Shadow>(); sh.effectColor = new Color(0, 0, 0, 0.8f); sh.effectDistance = new Vector2(1.5f, -1.5f);
+        titleT = UIK.Label(ui.transform, "", 30, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(900f, 80f), new Color(1, 1, 1, 0.9f));
+        titleT.raycastTarget = false;
+    }
+
+    void SetFadeOverlay(float a, Color c) { if (ui == null) MakeUi(); fadeA = a; fadeC = c; if (fade != null) fade.color = new Color(c.r, c.g, c.b, a); PlaceOverHouseSlot(); }
+    void SetFade(float a, Color c) { fadeA = a; fadeC = c; if (post != null) post.fade = new Color(c.r, c.g, c.b, a); if (fade != null) fade.color = new Color(c.r, c.g, c.b, Lite || post == null ? a : 0f); }
+    float fadeA; Color fadeC;
+
+    void PlaceOverHouseSlot()
+    {
+        if (fade == null) return;
+        Rect r = slot != null && slot.cam != null ? slot.cam.rect : new Rect(0, 0, 1, 1);
+        var rt = fade.rectTransform;
+        rt.anchorMin = r.min; rt.anchorMax = r.max; rt.offsetMin = rt.offsetMax = Vector2.zero;
+        if (hintT != null && (st == St.Idle || st == St.Loading || st == St.Opening)) { hintT.text = ""; dot.enabled = false; titleT.text = ""; }
+    }
+
+    void LayoutUi()
+    {
+        if (ui == null) MakeUi();
+        Rect r = cam.rect;
+        var rt = fade.rectTransform; rt.anchorMin = r.min; rt.anchorMax = r.max; rt.offsetMin = rt.offsetMax = Vector2.zero;
+        if (st == St.Intro && stT < 0.4f) fade.color = new Color(0, 0, 0, 1f - stT / 0.4f);
+        else if (st == St.Exiting) fade.color = new Color(1, 1, 1, Lite || post == null ? fadeA : 0f);
+        else fade.color = new Color(0, 0, 0, 0f);
+        Vector2 c = r.center;
+        dot.rectTransform.anchorMin = dot.rectTransform.anchorMax = c;
+        dot.enabled = st == St.Play && !sitting;
+        dot.color = new Color(1, 1, 1, hint.Length > 0 ? 0.95f : 0.45f);
+        hintT.rectTransform.anchorMin = hintT.rectTransform.anchorMax = new Vector2(c.x, r.yMin);
+        bool portrait = Screen.height > Screen.width;
+        hintT.rectTransform.anchoredPosition = new Vector2(0f, portrait ? 330f : 110f);
+        hintT.text = st == St.Play ? hint : "";
+        titleT.rectTransform.anchorMin = titleT.rectTransform.anchorMax = new Vector2(c.x, r.yMax);
+        titleT.rectTransform.anchoredPosition = new Vector2(0f, portrait ? -170f : -60f);
+        titleT.text = st == St.Play && stT < 4f ? "<b>REAL ROOM</b>\n<size=18>look around - the duck, the chair, the light switch, the door</size>" : "";
+        titleT.color = new Color(1, 1, 1, Mathf.Clamp01(4f - stT) * 0.9f);
+    }
+}
+
+// HDR post for the room camera (desktop tier): bloom + exposure + ACES + vignette + fade
+public class RRPostFx : MonoBehaviour
+{
+    public Material mat;
+    public float exposure = 1.5f, bloom = 0.9f;
+    public Color fade = new Color(0, 0, 0, 0);
+    readonly RenderTexture[] chain = new RenderTexture[6];
+    void OnRenderImage(RenderTexture src, RenderTexture dst)
+    {
+        if (mat == null) { Graphics.Blit(src, dst); return; }
+        int w = src.width / 2, h = src.height / 2, n = 0;
+        var fmt = SystemInfo.SupportsRenderTextureFormat(RenderTextureFormat.ARGBHalf) ? RenderTextureFormat.ARGBHalf : RenderTextureFormat.Default;
+        mat.SetFloat("_Exposure", exposure);
+        mat.SetFloat("_Threshold", 1.1f);
+        for (; n < chain.Length && w >= 8 && h >= 8; n++, w /= 2, h /= 2) chain[n] = RenderTexture.GetTemporary(w, h, 0, fmt);
+        Graphics.Blit(src, chain[0], mat, 0);
+        for (int i = 1; i < n; i++) Graphics.Blit(chain[i - 1], chain[i], mat, 1);
+        for (int i = n - 1; i > 0; i--) Graphics.Blit(chain[i], chain[i - 1], mat, 2);
+        mat.SetTexture("_Bloom", chain[0]);
+        mat.SetFloat("_BloomK", bloom * 0.12f);
+        mat.SetFloat("_Vignette", 0.32f);
+        mat.SetFloat("_Grain", 0.004f);
+        mat.SetColor("_Fade", fade);
+        Graphics.Blit(src, dst, mat, 3);
+        for (int i = 0; i < n; i++) { RenderTexture.ReleaseTemporary(chain[i]); chain[i] = null; }
+    }
+}
+
+public class RRDuck : MonoBehaviour
+{
+    void OnCollisionEnter(Collision c) { if (RealRoom.I != null) RealRoom.I.DuckHit(c.relativeVelocity.magnitude); }
+}

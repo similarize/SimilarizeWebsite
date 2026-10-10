@@ -283,6 +283,7 @@ public class Net : MonoBehaviour
             if (s != null && Game.I.state == Game.State.Play)
             {
                 WorldId w = Game.I.frogs[s.frog].world;
+                if (w == WorldId.RealRoom) w = WorldId.House;   // ffu18: the REAL ROOM is single-player, guests stay in the house
                 if (w != hostWorld)
                 {
                     hostWorld = w;
@@ -669,7 +670,7 @@ public class Net : MonoBehaviour
         string[] a = r.Split('~');
         if (a.Length < 10) return false;
         fid = ParseI(a[0]);
-        s.world = (WorldId)Mathf.Clamp(ParseI(a[1]), 0, 5);
+        s.world = (WorldId)Mathf.Clamp(ParseI(a[1]), 0, 6);
         s.pos = new Vector3(ParseF(a[2]), ParseF(a[3]), ParseF(a[4]));
         s.yaw = ParseF(a[5]); s.spd = ParseF(a[6]); s.flags = ParseI(a[7]); s.t = ParseF(a[8]); s.veh = ParseI(a[9]);
         if (s.veh == -1) s.veh = 0;

@@ -152,6 +152,7 @@ jobs:
           # ffu10: streamed music + ambience (Ogg Vorbis, loaded per stage by Plugins/FFAudio.jslib)
           if [ -d "$GITHUB_WORKSPACE/src/unity/four-froggies/web/audio" ]; then rm -rf "$GAME_DIR/audio"; cp -r "$GITHUB_WORKSPACE/src/unity/four-froggies/web/audio" "$GAME_DIR/audio"; fi
           if [ -d "$GITHUB_WORKSPACE/src/unity/four-froggies/web/real" ]; then rm -rf "$GAME_DIR/real"; cp -r "$GITHUB_WORKSPACE/src/unity/four-froggies/web/real" "$GAME_DIR/real"; fi
+          if [ -d "$GITHUB_WORKSPACE/src/unity/four-froggies/web/realroom" ]; then rm -rf "$GAME_DIR/realroom"; cp -r "$GITHUB_WORKSPACE/src/unity/four-froggies/web/realroom" "$GAME_DIR/realroom"; fi
           git add -A "$GAME_DIR"
           if git diff --cached --quiet; then echo "nothing to publish"; exit 0; fi
           git commit -m "Publish Four Froggies (Unity WebGL) build $VERSION"

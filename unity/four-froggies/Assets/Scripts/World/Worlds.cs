@@ -5,7 +5,7 @@ using UnityEngine;
 // (house interior, underwater, space, Mars, Callisto) are hidden roots built on demand far away from it,
 // so every split-screen view simply follows its own frog wherever it is. Each camera gets its world's
 // sky / fog / ambient just before it renders (Camera.onPreCull).
-public enum WorldId { Ranch, House, Underwater, Space, Mars, Callisto }
+public enum WorldId { Ranch, House, Underwater, Space, Mars, Callisto, RealRoom }   // ffu18: RealRoom = the photoreal room (World/RealRoom.cs)
 
 public static class Worlds
 {
@@ -132,6 +132,7 @@ public static class Worlds
             case WorldId.House: return HouseO.y - 10f;
             case WorldId.Underwater: return UnderO.y - 80f;
             case WorldId.Space: return -1e9f;
+            case WorldId.RealRoom: return -1e9f;   // ffu18: the froggy is parked under the room while P1 is inside
             case WorldId.Mars: return MarsO.y - 60f;
             case WorldId.Callisto: return CallistoO.y - 60f;
             default: return -30f;
@@ -159,6 +160,7 @@ public static class Worlds
             case WorldId.Space: return "space";
             case WorldId.Mars: return "mars";
             case WorldId.Callisto: return "callisto";
+            case WorldId.RealRoom: return "realroom";
             default: return "ranch";
         }
     }
@@ -172,6 +174,7 @@ public static class Worlds
             case WorldId.Space: return "Space";
             case WorldId.Mars: return "Mars";
             case WorldId.Callisto: return "Callisto";
+            case WorldId.RealRoom: return "REAL ROOM";
             default: return "Ranch";
         }
     }

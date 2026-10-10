@@ -57,6 +57,7 @@ public class HouseWorld : MonoBehaviour
     {
         var go = new GameObject("HouseWorld");
         I = go.AddComponent<HouseWorld>();
+        RealRoom.Create();   // ffu18 photoreal room behind a door in the living room
         // the ranch front door (walk into it) -> inside
         Vector2 c = Layout.HouseC;
         float z1 = c.y + Layout.HouseSize.y * 0.5f;
@@ -176,6 +177,7 @@ public class HouseWorld : MonoBehaviour
         Ranch.Sign(L(0f, 4.0f, 19.6f), 180f, "FRONT DOOR\n<size=17>back to the ranch</size>", new Color(0.2f, 0.35f, 0.15f), 5f, 1.3f);
 
         LivingRoom();
+        RealRoom.BuildHouseDoor(root);   // ffu18: white door on the living room west wall
         KitchenRoom();
         FoyerRoom();
         ParlorRoom();

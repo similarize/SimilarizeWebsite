@@ -120,6 +120,7 @@ public static class Sfx
             case "space": return "mus_space";
             case "mars": return "mus_mars";
             case "callisto": return "mus_callisto";
+            case "realroom": return "mus_house";
             default: return "mus_ranch";
         }
     }
@@ -132,10 +133,11 @@ public static class Sfx
             case "space": case "callisto": return "amb_space";
             case "mars": return "amb_mars";
             case "lobby": return "amb_ranch";
+            case "realroom": return "amb_house";
             default: return Layout.PondQ(ListenerPos.x, ListenerPos.z) < 1.25f ? "amb_pond" : "amb_ranch";
         }
     }
-    static float MusicVol(string m) { return m == "lobby" ? 0.42f : m == "space" ? 0.34f : 0.36f; }
+    static float MusicVol(string m) { if (m == "realroom") return 0.001f; return m == "lobby" ? 0.42f : m == "space" ? 0.34f : 0.36f; }
     static float BedVol(string m) { return m == "lobby" ? 0.25f : m == "underwater" ? 0.55f : m == "space" || m == "callisto" ? 0.45f : 0.5f; }
 
     public static void Music(string m)
