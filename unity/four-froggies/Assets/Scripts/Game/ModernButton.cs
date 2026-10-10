@@ -61,7 +61,8 @@ public class ModernButton
                 if (kind == 0)
                 {
                     // rounded play triangle
-                    float d = Mathf.Max(Mathf.Max(-u - 0.55f, u * 0.866f + Mathf.Abs(v) * 0.5f - 0.42f), Mathf.Abs(v) - 0.95f);
+                    // play triangle: base at u -0.5, apex at u 0.7, half-height 0.72 (distance to the slanted edges ~ normalised)
+                    float d = Mathf.Max(-u - 0.5f, (Mathf.Abs(v) - 0.72f * (0.7f - u) / 1.2f) * 0.86f);
                     a = Mathf.Clamp01(0.5f - d * n * 0.5f);
                 }
                 else if (kind == 1)

@@ -570,12 +570,13 @@ public partial class Starship : Vehicle
         }
         v.engineGlow = glows.ToArray();
         var el = new GameObject("EngineLight"); el.transform.SetParent(vis, false); el.transform.localPosition = new Vector3(0f, 0f, -L * 0.5f - 3f);
-        v.engineLight = el.AddComponent<Light>(); v.engineLight.type = LightType.Point; v.engineLight.color = new Color(1f, 0.62f, 0.3f); v.engineLight.range = 22f; v.engineLight.shadows = LightShadows.None; v.engineLight.enabled = false;
+        v.engineLight = el.AddComponent<Light>(); v.engineLight.type = LightType.Point; v.engineLight.color = new Color(0.7f, 0.75f, 1f); v.engineLight.range = 22f; v.engineLight.shadows = LightShadows.None; v.engineLight.enabled = false;
         // plume: white-hot core + translucent orange sheath, pivot at the bells so it stretches backwards
         v.flame = Mats.Node(vis, "Flame", new Vector3(0f, 0f, -L * 0.5f - 0.9f));
-        var fm = new Material(Mats.Fx); fm.color = new Color(1f, 0.55f, 0.22f, 0.45f);
-        Mats.Prim(PrimitiveType.Sphere, v.flame, new Vector3(0f, 0f, -3.2f), new Vector3(3.4f, 3.4f, 7f), fm);
-        Mats.Prim(PrimitiveType.Sphere, v.flame, new Vector3(0f, 0f, -1.8f), new Vector3(1.6f, 1.6f, 3.8f), Mats.Unlit(new Color(1f, 0.93f, 0.75f)));
+        // methalox vacuum plume: pale blue-violet sheath + white-hot core (not orange, so it never reads as a guide line)
+        var fm = new Material(Mats.Fx); fm.color = new Color(0.55f, 0.62f, 1f, 0.3f);
+        Mats.Prim(PrimitiveType.Sphere, v.flame, new Vector3(0f, 0f, -3.4f), new Vector3(3.6f, 3.6f, 7.5f), fm);
+        Mats.Prim(PrimitiveType.Sphere, v.flame, new Vector3(0f, 0f, -1.6f), new Vector3(1.5f, 1.5f, 3.4f), Mats.Unlit(new Color(0.9f, 0.93f, 1f)));
         v.seat = Mats.Node(t, "Seat", new Vector3(0f, 0.5f, 4f));
         v.seatScale = 0.5f;
         Mats.SetLayer(go, VehicleLayer);

@@ -105,6 +105,25 @@ public class StoryMech : Vehicle
         atSpawn = false;
     }
 
+    // ffu15: depth-tested, one-sided material for the mech TextMeshes (Resources/FFTextMesh3D.shader); the built-in font
+    // material draws on top of everything, so the front plate showed mirrored through the body from behind / below
+    static Material textMat;
+    static bool textHooked;
+    public static Material TextMat
+    {
+        get
+        {
+            if (textMat == null && UIK.Font != null)
+            {
+                Shader sh = Resources.Load<Shader>("FFTextMesh3D");
+                if (sh != null && sh.isSupported) { textMat = new Material(sh) { name = "FFTextMesh3D" }; textMat.mainTexture = UIK.Font.material.mainTexture; Debug.Log("StoryMech: FF/TextMesh3D plates on"); }
+                else { textMat = UIK.Font.material; Debug.Log("StoryMech: FF/TextMesh3D missing - font material"); }
+                if (!textHooked) { textHooked = true; Font.textureRebuilt += f => { if (f == UIK.Font && textMat != null && textMat != f.material) textMat.mainTexture = f.material.mainTexture; }; }
+            }
+            return textMat;
+        }
+    }
+
     public static StoryMech Build(int owner, int band, Vector3 groundPos, float yawDeg)
     {
         float H = BandH[band];
@@ -187,7 +206,7 @@ public class StoryMech : Vehicle
         var tm = tag.AddComponent<TextMesh>();
         tm.text = Froggies.Names[owner].ToUpper() + "\n" + BandName[band].ToUpper();
         tm.font = UIK.Font; tm.fontSize = 64; tm.characterSize = H * 0.004f; tm.anchor = TextAnchor.MiddleCenter; tm.alignment = TextAlignment.Center;
-        tag.GetComponent<MeshRenderer>().sharedMaterial = UIK.Font != null ? UIK.Font.material : null;
+        tag.GetComponent<MeshRenderer>().sharedMaterial = TextMat;
         // and a matching plate on the back (reads correctly from behind)
         var back = Object.Instantiate(tag, m.torso);
         back.name = "PlateBack";
@@ -286,7 +305,7 @@ public class StoryMech : Vehicle
         barFill.GetChild(0).name = "Fill";
         var tg = new GameObject("BarText"); tg.transform.SetParent(barRoot, false); tg.transform.localPosition = new Vector3(0f, h * 1.6f, -0.06f);
         barText = tg.AddComponent<TextMesh>(); barText.font = UIK.Font; barText.fontSize = 64; barText.characterSize = h * 0.08f; barText.anchor = TextAnchor.LowerCenter; barText.alignment = TextAlignment.Center;
-        tg.GetComponent<MeshRenderer>().sharedMaterial = UIK.Font != null ? UIK.Font.material : null;
+        tg.GetComponent<MeshRenderer>().sharedMaterial = TextMat;
         shieldText = barText;
         foreach (var r in barRoot.GetComponentsInChildren<Renderer>()) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         if (!hooked) { hooked = true; Camera.onPreCull += FaceBars; }
@@ -326,7 +345,11 @@ public class StoryMech : Vehicle
         yaw = transform.eulerAngles.y;
         if (shieldT < 0f && atSpawn && hpWasRespawned) shieldT = 20f;   // spawn protection counts from boarding
         hpWasRespawned = false;
-        if (driver != null) driver.Toast(Title + "!  UP = jump / hold rockets, BOOST = afterburner, FIRE / MSL from the chest", 3.5f);
+        if (driver != null)
+        {
+            InputKind ik = driver.inputKind;
+            driver.Toast(Title + "!  " + (ik == InputKind.Gamepad ? "Hold LT to aim the arm cannon, RT fires" : ik == InputKind.Touch ? "Tap AIM to aim the arm cannon, FIRE shoots" : "Hold the RIGHT mouse button to aim the arm cannon, LEFT fires"), 4f);
+        }
     }
     bool hpWasRespawned;
 

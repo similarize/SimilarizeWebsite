@@ -80,6 +80,7 @@ public partial class Starship
             Mats.Prim(PrimitiveType.Cylinder, mechTorso, np + new Vector3(0f, -0.01f * H, 0f), new Vector3(0.05f * H, 0.014f * H, 0.05f * H), nozzle);
             Mats.Prim(PrimitiveType.Cylinder, mechTorso, np + new Vector3(0f, -0.022f * H, 0f), new Vector3(0.036f * H, 0.002f * H, 0.036f * H), core);   // hot throat
             Transform f = Mats.Node(mechTorso, "Flame", np + new Vector3(0f, -0.025f * H, 0f));
+            f.localRotation = Quaternion.Euler(35f, 0f, 0f);   // tilted off the back so the plume clears the legs
             Mats.Prim(PrimitiveType.Capsule, f, new Vector3(0f, -0.5f, 0f), new Vector3(0.62f, 0.55f, 0.62f), outer);
             Mats.Prim(PrimitiveType.Capsule, f, new Vector3(0f, -0.4f, 0f), new Vector3(0.3f, 0.45f, 0.3f), core);
             mechFlames[s] = f;
@@ -143,12 +144,13 @@ public partial class Starship
         f.LeavePassenger();
         if (f.cc != null) f.cc.enabled = false;
         f.jetOf = this;
-        f.jetOff = BayWorld - transform.position + new Vector3(Random.Range(-2f, 2f), 2.5f + f.id * 0.8f, Random.Range(-2f, 2f));
+        f.jetOff = BayWorld - transform.position + new Vector3(Random.Range(-1f, 1f) * 6f, 6f + f.id * 1.2f, Random.Range(-1f, 1f) * 6f);
+        f.jetT = 0f;
         f.transform.position = transform.position + f.jetOff;
         f.transform.localScale = Vector3.one * RiderScale;
         f.SetSuit(true);
         hadJetters = true;
-        FX.Smoke(f.transform.position, 1.5f, new Color(0.95f, 0.97f, 1f, 0.6f));
+        for (int k = 0; k < 6; k++) FX.Spray(f.transform.position, Random.insideUnitSphere * 3f, 1.2f, 0.8f, new Color(0.95f, 0.97f, 1f, 0.6f));
         if (f.human) { Sfx.Play(Sfx.Pickup, 0.5f, 0.7f); f.Toast("Jetpack! Stick to fly, " + (f.inputKind == InputKind.Gamepad ? "A up / B down" : f.inputKind == InputKind.Touch ? "UP / DOWN" : "SPACE up / SHIFT down") + ". Fly back into the bay to re-board.", 4f); }
         Debug.Log("SpaceMech: " + f.nick + " jetpacked out of the bay");
     }
@@ -371,7 +373,7 @@ public class SpaceRadar
         hint.text = ik == InputKind.Gamepad ? "<b>L3 WARP HOME</b>   LB/RB warp   D-pad target   X auto"
                   : ik == InputKind.Touch ? "<b>TAP RADAR = WARP HOME</b>   TGT target   AUTO fly there"
                   : "<b>R WARP HOME</b>   Z/C warp   T target   G auto";
-        legend.text = "<color=#7f94c8>——</color> orbits   <color=#8fe6ff>——</color> your course   <color=#ffd84a>○</color> target ring";
+        legend.text = "<color=#7f94c8>=====</color> orbits   <color=#8fe6ff>=====</color> your course   <color=#ffd84a>( O )</color> target";
         // tap / click the radar = warp home (the pilot's ship)
         bool hit = false;
         foreach (Vector2 tp in Kb.TouchesBegan()) if (RectTransformUtility.RectangleContainsScreenPoint(bg.rectTransform, tp, null)) hit = true;

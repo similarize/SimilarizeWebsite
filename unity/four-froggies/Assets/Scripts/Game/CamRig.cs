@@ -82,10 +82,10 @@ public class CamRig
             // over the right shoulder, tight, aiming where the screen centre points
             float H = sm.height;
             Vector3 rightV = Quaternion.Euler(0f, yaw, 0f) * Vector3.right;
-            Vector3 sh = sm.transform.position + Vector3.up * H * 0.9f + rightV * H * 0.3f;
+            Vector3 sh = sm.transform.position + Vector3.up * H * 1.0f + rightV * H * 0.42f;
             float e = Mathf.SmoothStep(0f, 1f, ak);
             pivot = Vector3.Lerp(pivot, sh, e);
-            dist = Mathf.Lerp(dist, H * 0.5f + 3f, e);
+            dist = Mathf.Lerp(dist, H * 0.8f + 4f, e);
             if (baseFov < 0f) baseFov = cam.fieldOfView;
             cam.fieldOfView = Mathf.Lerp(baseFov, baseFov * 0.78f, e);
         }
