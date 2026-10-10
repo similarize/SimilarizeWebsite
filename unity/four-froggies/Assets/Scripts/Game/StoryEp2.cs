@@ -58,7 +58,7 @@ public partial class Story
         StoryEp2Set.Install(false);
         SurfaceWorlds.Quiet = false;
         Frog.AiGoalHook = null;
-        if (E != null) { E.HideAll(); E.ventsOn = false; }
+        if (E != null) { E.HideAll(); E.ventsOn = false; if (ch >= 8) StoryEp2Set.Show(E.ranchShip, true); }   // finished: the Starship stays on the ranch as a trophy
         Vector3? jpos = jim != null && jim.gameObject.activeSelf && place == Pl.Ranch ? jim.transform.position : (Vector3?)null;
         if (jim != null) { jim.gameObject.SetActive(false); jim.transform.localScale = Vector3.one; }
         foreach (var kv in e2Swap) G.SetSeatChar(kv.Key, kv.Value, false);
@@ -461,7 +461,7 @@ public partial class Story
                 if (new Vector2(l.x + 6f, l.z + 26f).magnitude < 9f) return false;
                 break;
             case Pl.Deep:
-                if (new Vector2(l.x + 9f, l.z - 128f).magnitude < 4f) return false;    // crystal cluster
+                if (new Vector2(l.x + 15f, l.z - 128f).magnitude < 3f) return false;   // crystal cluster
                 break;
         }
         return true;
@@ -611,7 +611,7 @@ public partial class Story
         if (jState == 2) { SetObj(k, "Jimmy's out of fuel - TAG HIM!", null); SetStatus("<b>OUT OF FUEL!</b>   run into Jimmy to tag him"); }
         else
         {
-            SetObj(k, "Catch Jimmy! Get close to make him burn his jetpack fuel", null);
+            SetObj(k, "Catch Jimmy! Get close to burn his fuel", null);
             SetStatus("<b>JIMMY'S FUEL</b>  <size=26>" + FuelBars() + "</size>   ·   boosts left " + dodgesLeft);
         }
     }
@@ -682,7 +682,7 @@ public partial class Story
         Transform tj = E.travelJim;
         tj.position = a + new Vector3(0f, 6f, 170f);
         var tr = tj.GetComponent<TrailRenderer>(); if (tr != null) tr.Clear();
-        Track(() => ship.position + new Vector3(11f, 5f, -28f), () => Vector3.Lerp(ship.position, look, 0.22f), 50f);
+        Track(() => ship.position + new Vector3(15f, 4f, -15f), () => Vector3.Lerp(ship.position, look, 0.18f), 50f);
         bool title = main != null;
         if (title) { ui.titleKick = kick ?? ""; ui.titleText = main; } else ui.bigText = line ?? "";
         yield return FadeTo(0f, 0.7f);
@@ -690,7 +690,7 @@ public partial class Story
         {
             ship.position = Vector3.Lerp(a, b, k);
             tj.position = Vector3.Lerp(a + new Vector3(0f, 6f, 170f), b + new Vector3(30f, 20f, 520f), k * k);
-            StoryEp2Set.ShipFlame(ship, 0.85f);
+            StoryEp2Set.ShipFlame(ship, 0.45f);
             if (E.travelStars != null) E.travelStars.position = CamPos;
             float vis = k < 0.15f ? k / 0.15f : k > 0.82f ? (1f - k) / 0.18f : 1f;
             if (title) ui.titleK = vis; else ui.bigK = vis * 0.95f;
@@ -713,9 +713,9 @@ public partial class Story
         var team = Team();
         foreach (var f in team) if (f.model != null) f.model.gameObject.SetActive(false);
         bool jimOn = jim.gameObject.activeSelf; jim.gameObject.SetActive(false);
-        Vector3 camP = basePt + new Vector3(30f, 7f, 34f);
-        if (p == Pl.Ranch) camP = basePt + new Vector3(26f, 6f, 38f);
-        Track(() => camP, () => ship.position + Vector3.down * 4f, 52f);
+        // camera on the sunlit side of the ship
+        Vector3 camP = basePt + (p == Pl.Mercury ? new Vector3(16f, 7f, 34f) : p == Pl.Enceladus ? new Vector3(-24f, 7f, -30f) : new Vector3(24f, 7f, -31f));
+        Track(() => camP, () => Vector3.Lerp(ship.position + Vector3.down * 4f, basePt + Vector3.up * 6f, 0.6f), 55f);
         ship.position = home + Vector3.up * 80f;
         StoryEp2Set.ShipFlame(ship, 1f);
         yield return FadeTo(0f, 0.6f);
@@ -784,8 +784,8 @@ public partial class Story
         float yaw = YawTo(J, l.transform.position);
         JimAt(J, yaw);
         E2PoseRing(J, 4.5f, yaw);
-        yield return CineOn();
         JimClose();
+        yield return CineOn();
         yield return Say(-3, "Watch this! Three... two... one...");
         var hum = Sfx.Loop(gameObject, Sfx.EngRocket != null ? Sfx.EngRocket : Sfx.Rotor);
         if (hum != null && !skipping) { hum.volume = 0.6f; hum.pitch = 1.5f; hum.Play(); }
@@ -867,11 +867,11 @@ public partial class Story
         JimAt(J, yaw);
         E2PoseRing(J, 2.6f, yaw);
         SetStatus(""); ui.Radar(false, Vector2.zero, "");
+        Vector3 fw = Quaternion.Euler(0f, yaw, 0f) * Vector3.forward, rt = new Vector3(fw.z, 0f, -fw.x);
+        Shot(J + fw * 7.5f + rt * 3f + Vector3.up * 3f, J + Vector3.up * 0.8f, J + fw * 6f + rt * 2.2f + Vector3.up * 2.4f, J + Vector3.up * 0.8f, 4f, 48f);
         yield return CineOn();
         Sfx.Play(Sfx.Win, 0.6f, 1.3f);
         ui.bigText = "TAGGED!"; ui.bigK = 1f;
-        Vector3 fw = Quaternion.Euler(0f, yaw, 0f) * Vector3.forward, rt = new Vector3(fw.z, 0f, -fw.x);
-        Shot(J + fw * 7.5f + rt * 3f + Vector3.up * 3f, J + Vector3.up * 0.8f, J + fw * 6f + rt * 2.2f + Vector3.up * 2.4f, J + Vector3.up * 0.8f, 4f, 48f);
         yield return Wait(1f);
         yield return Anim(0.5f, k => ui.bigK = 1f - k);
         yield return Say(0, GotLine[c]);
@@ -958,11 +958,11 @@ public partial class Story
         JimAt(J, yaw);
         E2PoseRing(J, 2.6f, yaw);
         SetStatus(""); ui.Radar(false, Vector2.zero, "");
+        Vector3 fw = Quaternion.Euler(0f, yaw, 0f) * Vector3.forward, rt = new Vector3(fw.z, 0f, -fw.x);
+        Shot(J + fw * 7f + rt * 3f + Vector3.up * 3f, J + Vector3.up * 0.8f, J + fw * 5.5f + rt * 2f + Vector3.up * 2.4f, J + Vector3.up * 0.8f, 4f, 48f);
         yield return CineOn();
         Sfx.Play(Sfx.Win, 0.6f, 1.3f);
         ui.bigText = "TAGGED!"; ui.bigK = 1f;
-        Vector3 fw = Quaternion.Euler(0f, yaw, 0f) * Vector3.forward, rt = new Vector3(fw.z, 0f, -fw.x);
-        Shot(J + fw * 7f + rt * 3f + Vector3.up * 3f, J + Vector3.up * 0.8f, J + fw * 5.5f + rt * 2f + Vector3.up * 2.4f, J + Vector3.up * 0.8f, 4f, 48f);
         yield return Wait(1f);
         yield return Anim(0.5f, k => ui.bigK = 1f - k);
         yield return Say(0, "Got you! For real this time!");
@@ -990,7 +990,7 @@ public partial class Story
         yield return Say(1, "We're so tired...");
         yield return Say(0, "Maybe... maybe we'll never catch him.");
         ui.bigText = "We'll never catch him...";
-        Shot(c + new Vector3(0f, 5f, -14f), c + Vector3.up, c + new Vector3(0f, 7f, -18f), c + Vector3.up, 7f, 50f);
+        Shot(c + new Vector3(-6f, 4.5f, -8f), c + Vector3.up, c + new Vector3(-8f, 6f, -10f), c + Vector3.up, 7f, 50f);   // ffu24b: stays inside the chamber
         yield return Anim(1.5f, k => ui.bigK = k);
         yield return Wait(3.5f);
         yield return Anim(1.5f, k => ui.bigK = 1f - k);
@@ -1067,7 +1067,7 @@ public partial class Story
         int jinks = 3; float jinkT = 0f, t = 0f, netCool = 0f, msgT = 0f; string msg = "";
         bool caught = false, fuelOut = false;
         advance = false; chaseMove = Vector2.zero; chaseBoost = false;
-        Track(() => ship.position - Quaternion.Euler(0f, yaw, 0f) * Vector3.forward * 26f + Vector3.up * 8f, () => ship.position + Quaternion.Euler(0f, yaw, 0f) * Vector3.forward * 24f - Vector3.up * 3f, 55f);
+        Track(() => ship.position - Quaternion.Euler(0f, yaw, 0f) * Vector3.forward * 24f + Vector3.up * 12f, () => ship.position + Quaternion.Euler(0f, yaw, 0f) * Vector3.forward * 30f - Vector3.up * 9f, 58f);   // ffu24b: higher, more Earth
         Sfx.Override = "story_triumph";
         Debug.Log("FFSTORY ep2 orbit chase start");
         while (!caught)
@@ -1112,7 +1112,7 @@ public partial class Story
             roll = Mathf.Lerp(roll, -mv.x * 28f, dt * 4f);
             ship.position = sp;
             ship.rotation = Quaternion.Euler(0f, yaw, 0f) * Quaternion.Euler(0f, 0f, roll);
-            StoryEp2Set.ShipFlame(ship, 0.4f + (spd - 12f) / 20f * 0.7f);
+            StoryEp2Set.ShipFlame(ship, 0.15f + (spd - 12f) / 20f * 0.35f);
             // Jimmy: flees, jinks sideways three times, then his jetpack gives out
             if (!fuelOut)
             {
@@ -1246,9 +1246,9 @@ public partial class Story
         yield return Say(2, "Welcome home, Jimmy.");
         Shot(c + new Vector3(24f, 8f, -30f), StoryEp2Set.RanchLanding + Vector3.up * 18f, c + new Vector3(16f, 4f, -22f), StoryEp2Set.RanchLanding + Vector3.up * 22f, 18f, 55f);
         ui.SetCredits(Credits2());
-        yield return Anim(1.5f, k => ui.creditsK = k);
+        yield return Anim(1.5f, k => { ui.creditsK = k; ui.dimK = 0.45f * k; });   // ffu24b: dim the busy ranch behind the credits
         yield return Wait(skipping ? 0f : 9f);
-        yield return Anim(1f, k => ui.creditsK = 1f - k);
+        yield return Anim(1f, k => { ui.creditsK = 1f - k; ui.dimK = 0.45f * (1f - k); });
         ui.bigText = "They finally got him back.";
         yield return Anim(1.5f, k => ui.bigK = k);
         yield return Wait(3.5f);

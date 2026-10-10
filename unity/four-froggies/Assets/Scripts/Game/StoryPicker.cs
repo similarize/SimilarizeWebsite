@@ -42,7 +42,7 @@ public class StoryPicker
 
     public StoryPicker()
     {
-        canvas = UIK.MakeCanvas("StoryPicker", null, 96, true);
+        canvas = UIK.MakeCanvas("StoryPicker", null, 150, true);
         canvas.GetComponent<CanvasScaler>().screenMatchMode = CanvasScaler.ScreenMatchMode.Expand;
         root = (RectTransform)canvas.transform;
         dim = UIK.Img(root, UIK.Gradient(new Color(0.01f, 0.03f, 0.05f, 0.92f), new Color(0.02f, 0.05f, 0.07f, 0.8f), new Color(0.01f, 0.02f, 0.04f, 0.94f)), Color.white, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);

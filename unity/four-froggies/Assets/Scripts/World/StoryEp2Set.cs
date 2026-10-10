@@ -280,7 +280,7 @@ public class StoryEp2Set : MonoBehaviour
     {
         mercRoot = new GameObject("StoryMercury").transform;
         var stat = new GameObject("MercStatic").transform; stat.SetParent(mercRoot, false);
-        var g = Ground("Mercury ground", MercY, MercO, -100f, 100f, -100f, 100f, Look.Mobile ? 2.2f : 1.7f, GroundMat("LB/calground", new Color(0.62f, 0.56f, 0.5f), 0.05f), 9f);
+        var g = Ground("Mercury ground", MercY, MercO, -100f, 100f, -100f, 100f, Look.Mobile ? 2.2f : 1.7f, GroundMat("LB/calground", new Color(0.7f, 0.69f, 0.68f), 0.05f), 9f);
         g.transform.SetParent(mercRoot, true);
         g.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         var r = new System.Random(17);
@@ -296,10 +296,9 @@ public class StoryEp2Set : MonoBehaviour
         // the huge sun, low over the horizon, and the stars (no air = black sky)
         Sun(mercRoot, MercO + MercSunDir * -690f, 150f);
         Stars(mercRoot, MercO, 820f);
-        Sign(mercRoot, MercO + new Vector3(6f, MercY(6f, -10f) + 2.4f, -10f), 200f, "MERCURY\n<size=18>closest to the Sun - 430 C by day!</size>", new Color(0.45f, 0.2f, 0.06f), 4.8f, 1.5f);
     }
     // direction the sunlight travels on Mercury (from the sun towards the ground): the sun sits low, north-east
-    public static readonly Vector3 MercSunDir = new Vector3(-0.42f, -0.24f, -0.87f).normalized;
+    public static readonly Vector3 MercSunDir = new Vector3(-0.4f, -0.36f, -0.84f).normalized;
 
     // ---------------- Enceladus ----------------
     void BuildEnceladus()
@@ -332,10 +331,9 @@ public class StoryEp2Set : MonoBehaviour
             }
         MeshMerge.Merge(stat, false);
         // Saturn and its rings fill the sky; the far small sun
-        Saturn(encRoot, EncO + new Vector3(190f, 230f, 420f), 150f, true);
+        Saturn(encRoot, EncO + new Vector3(70f, 175f, 455f), 150f, true);
         var sun = Mats.Prim(PrimitiveType.Sphere, encRoot, EncO + new Vector3(-420f, 260f, -520f), Vector3.one * 26f, Mats.Unlit(new Color(1f, 0.97f, 0.9f))); Mats.NoShadows(sun);
         Stars(encRoot, EncO, 820f);
-        Sign(encRoot, EncO + new Vector3(6f, EncY(6f, -10f) + 2.4f, -10f), 200f, "ENCELADUS\n<size=18>Saturn's icy moon - watch out for geysers!</size>", new Color(0.12f, 0.32f, 0.5f), 4.8f, 1.5f);
     }
     public static readonly Vector3 EncSunDir = new Vector3(0.55f, -0.42f, 0.72f).normalized;
 
@@ -349,7 +347,7 @@ public class StoryEp2Set : MonoBehaviour
         g.transform.SetParent(deepRoot, true);
         g.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         Material rock = Mats.Lit(new Color(0.3f, 0.17f, 0.13f));
-        Color[] glow = { new Color(0.3f, 1f, 0.9f), new Color(0.75f, 0.45f, 1f), new Color(1f, 0.6f, 0.3f) };
+        Color[] glow = { new Color(0.35f, 0.75f, 0.72f), new Color(0.58f, 0.42f, 0.78f), new Color(0.8f, 0.52f, 0.32f) };   // ffu24b: calmer glow
         for (int i = 0; i < 3; i++)
         {
             Vector4 c = Chambers[i];
@@ -357,13 +355,15 @@ public class StoryEp2Set : MonoBehaviour
             // dome (inside-out sphere sunk into the floor; no collider - an inward-facing collider would wall off the tunnels)
             var dome = MeshGo(deepRoot, InSphere(), rock, cp + Vector3.up * 1f, new Vector3((c.z + 4f) * 2f, 26f, (c.z + 4f) * 2f), "Dome" + i);
             var rr = new System.Random(40 + i);
-            for (int k = 0; k < 22; k++)
+            for (int k = 0; k < 14; k++)
             {
-                float a = (float)rr.NextDouble() * Mathf.PI * 2f, d = 4f + (float)rr.NextDouble() * (c.z - 6f);
+                // small crystal clusters along the walls (ffu24b: were big slabs in the middle of the floor)
+                float a = (float)rr.NextDouble() * Mathf.PI * 2f, d = c.z - 2.5f - (float)rr.NextDouble() * 4f;
                 float x = c.x + Mathf.Cos(a) * d, z = c.y + Mathf.Sin(a) * d;
-                if (Mathf.Abs(x) < 4.5f) continue;   // keep the walkway clear
-                float h = 0.6f + (float)rr.NextDouble() * 1.6f;
-                Mats.Prim(PrimitiveType.Cube, stat, DeepO + new Vector3(x, DeepY(x, z) + h * 0.4f, z), new Vector3(0.35f, h, 0.35f), new Vector3(15f, k * 40f, 10f), Mats.Unlit(glow[k % 3]));
+                if (Mathf.Abs(x) < 6f) continue;   // keep the walkway clear
+                float h = 0.4f + (float)rr.NextDouble() * 0.8f;
+                Mats.Prim(PrimitiveType.Cube, stat, DeepO + new Vector3(x, DeepY(x, z) + h * 0.35f, z), new Vector3(0.2f, h, 0.2f), new Vector3(15f, k * 40f, 10f), Mats.Unlit(glow[k % 3]));
+                Mats.Prim(PrimitiveType.Cube, stat, DeepO + new Vector3(x + 0.25f, DeepY(x, z) + h * 0.2f, z + 0.15f), new Vector3(0.14f, h * 0.6f, 0.14f), new Vector3(-20f, k * 40f + 30f, 5f), Mats.Unlit(glow[(k + 1) % 3]));
             }
             // lantern posts along the walls
             for (int k = 0; k < 6; k++)
@@ -419,7 +419,7 @@ public class StoryEp2Set : MonoBehaviour
             Vector3 p = DeepC(2);
             p.y = DeepO.y + DeepY(-9f, 128f);
             for (int k = 0; k < 7; k++)
-                Mats.Prim(PrimitiveType.Cube, stat, DeepO + new Vector3(-9f, DeepY(-9f, 128f), 128f) + new Vector3(Mathf.Cos(k) * 1.2f, 1.6f + (k % 3) * 0.5f, Mathf.Sin(k) * 1.2f), new Vector3(0.8f, 3.2f + k % 3, 0.8f), new Vector3(Mathf.Cos(k) * 22f, k * 51f, Mathf.Sin(k) * 22f), Mats.Unlit(glow[k % 2]));
+                Mats.Prim(PrimitiveType.Cube, stat, DeepO + new Vector3(-15f, DeepY(-15f, 128f), 128f) + new Vector3(Mathf.Cos(k) * 0.8f, 0.9f + (k % 3) * 0.3f, Mathf.Sin(k) * 0.8f), new Vector3(0.45f, 1.8f + (k % 3) * 0.6f, 0.45f), new Vector3(Mathf.Cos(k) * 22f, k * 51f, Mathf.Sin(k) * 22f), Mats.Unlit(glow[k % 2]));
         }
         MeshMerge.Merge(stat, false);
         // the vent shaft: a column of light coming down from a crack in the deepest ceiling
@@ -435,10 +435,7 @@ public class StoryEp2Set : MonoBehaviour
             var c = Mats.Prim(PrimitiveType.Sphere, deepCrumbs, DeepO + new Vector3(x, DeepY(x, z) + 0.25f, z), Vector3.one * 0.32f, crumb);
             Mats.NoShadows(c);
         }
-        // signs
-        Sign(deepRoot, DeepO + new Vector3(5.5f, 3.2f, -14f), 180f, "LEVEL 1 · THE UPPER HALL", new Color(0.35f, 0.15f, 0.1f), 4.6f, 0.9f);
-        Sign(deepRoot, DeepO + new Vector3(5.5f, -14f + 3.2f, 44f), 180f, "LEVEL 2 · THE DOGGY DEN", new Color(0.35f, 0.15f, 0.1f), 4.6f, 0.9f);
-        Sign(deepRoot, DeepO + new Vector3(5.5f, -28f + 3.2f, 105f), 180f, "LEVEL 3 · THE DEEP DEN", new Color(0.35f, 0.15f, 0.1f), 4.6f, 0.9f);
+        // (no world-space signs here: big FFDisplay sign text overflows the dynamic font atlas; the HUD names the level)
         // the people who live down here: Mars froggies (unnamed) and Mars doggies (unnamed)
         var r3 = new System.Random(3);
         int[] frogsPer = { 4, 3, 3 }, dogsPer = { 1, 6, 4 };
@@ -479,7 +476,7 @@ public class StoryEp2Set : MonoBehaviour
         var root = new GameObject("StoryStarship").transform; root.SetParent(parent, false);
         var vis = Mats.Node(root, "Vis", Vector3.zero); vis.localScale = Vector3.one * s;
         const float Rr = 2.1f, L = 13f;
-        Material steel = Mats.Paint(new Color(0.82f, 0.83f, 0.85f), 0.7f), weld = Mats.Paint(new Color(0.62f, 0.63f, 0.66f), 0.6f);
+        Material steel = Mats.PBR(new Color(0.86f, 0.87f, 0.89f), 0.5f, 0.15f), weld = Mats.Lit(new Color(0.66f, 0.67f, 0.7f));   // ffu24b: Paint read black on Mars
         Material tile = Mats.Lit(new Color(0.1f, 0.1f, 0.11f)), flapM = Mats.Lit(new Color(0.13f, 0.13f, 0.14f)), bell = Mats.Steel(new Color(0.42f, 0.38f, 0.34f));
         Mats.Prim(PrimitiveType.Cylinder, vis, Vector3.zero, new Vector3(Rr * 2f, L * 0.5f, Rr * 2f), new Vector3(90f, 0f, 0f), steel);
         for (int k = 0; k < 6; k++) Mats.Prim(PrimitiveType.Cylinder, vis, new Vector3(0f, 0f, -L * 0.5f + 1.2f + k * 2.1f), new Vector3(Rr * 2f + 0.03f, 0.03f, Rr * 2f + 0.03f), new Vector3(90f, 0f, 0f), weld);
@@ -573,7 +570,7 @@ public class StoryEp2Set : MonoBehaviour
         travelJim = new GameObject("TravelJimmy").transform; travelJim.SetParent(travelRoot, false);
         var dot = Mats.Prim(PrimitiveType.Sphere, travelJim, Vector3.zero, Vector3.one * 1.6f, Mats.Unlit(new Color(1f, 0.85f, 0.4f))); Mats.NoShadows(dot);
         var tr = travelJim.gameObject.AddComponent<TrailRenderer>();
-        tr.time = 2.2f; tr.startWidth = 1.4f; tr.endWidth = 0f; tr.sharedMaterial = Fx(new Color(1f, 0.65f, 0.25f, 0.6f));
+        tr.time = 0.35f; tr.startWidth = 0.9f; tr.endWidth = 0f; tr.sharedMaterial = Fx(new Color(1f, 0.65f, 0.25f, 0.6f));
         tr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; tr.receiveShadows = false;
     }
     Transform Node(string id) { var t = new GameObject("Dest " + id).transform; t.SetParent(travelRoot, false); travelDest[id] = t; return t; }
@@ -602,15 +599,24 @@ public class StoryEp2Set : MonoBehaviour
         {
             if (sun != null && sunBase < 0f) { sunBase = sun.intensity; sunCol0 = sun.color; }
             Worlds.StoryHook = PreCull;
+            Worlds.PlaceNameHook = PlaceName;
         }
         else
         {
             Worlds.StoryHook = null;
+            Worlds.PlaceNameHook = null;
             if (sun != null && sunBase >= 0f) { sun.intensity = sunBase; sun.color = sunCol0; }
             sunBase = -1f;
         }
     }
     static bool Near(Vector3 a, Vector3 b, float r) { return (a - b).sqrMagnitude < r * r; }
+    static string PlaceName(WorldId w, Vector3 p)
+    {
+        if (w == WorldId.Callisto && Near(p, MercO, 700f)) return "Mercury";
+        if (w == WorldId.Callisto && Near(p, EncO, 700f)) return "Enceladus (Saturn)";
+        if (w == WorldId.Mars && Near(p, DeepO + new Vector3(0f, -14f, 62f), 260f)) return "Under Mars · Level " + (DeepLevel(p) + 1);
+        return null;
+    }
     static void PreCull(Camera c, WorldId w)
     {
         var sun = RenderSettings.sun;
@@ -620,9 +626,9 @@ public class StoryEp2Set : MonoBehaviour
         if (w == WorldId.Callisto && Near(p, MercO, 700f))
         {
             RenderSettings.fog = false;
-            RenderSettings.ambientSkyColor = new Color(0.42f, 0.4f, 0.38f); RenderSettings.ambientEquatorColor = new Color(0.32f, 0.29f, 0.26f); RenderSettings.ambientGroundColor = new Color(0.14f, 0.12f, 0.1f);
+            RenderSettings.ambientSkyColor = new Color(0.42f, 0.42f, 0.43f); RenderSettings.ambientEquatorColor = new Color(0.33f, 0.32f, 0.32f); RenderSettings.ambientGroundColor = new Color(0.15f, 0.14f, 0.14f);
             c.backgroundColor = new Color(0.01f, 0.01f, 0.015f);
-            if (sun != null) { sun.transform.rotation = Quaternion.LookRotation(MercSunDir); sun.color = new Color(1f, 0.92f, 0.78f); sun.intensity = ib * 1.6f; }
+            if (sun != null) { sun.transform.rotation = Quaternion.LookRotation(MercSunDir); sun.color = new Color(1f, 0.96f, 0.9f); sun.intensity = ib * 1.6f; }
             return;
         }
         if (w == WorldId.Callisto && Near(p, EncO, 700f))
@@ -644,7 +650,7 @@ public class StoryEp2Set : MonoBehaviour
         if (w == WorldId.Mars) c.backgroundColor = new Color(0.55f, 0.36f, 0.25f);   // a Mars camera that was in the deep before
         if (w == WorldId.Space && (Near(p, OrbitV, 9000f) || Near(p, TravelV, 9000f)))
         {
-            if (sun != null) { sun.transform.rotation = Quaternion.LookRotation(new Vector3(0.62f, -0.25f, -0.74f)); sun.color = Color.white; sun.intensity = ib * 1.15f; }
+            if (sun != null) { sun.transform.rotation = Quaternion.LookRotation(Near(p, TravelV, 9000f) ? new Vector3(-0.45f, -0.3f, 0.84f) : new Vector3(0.62f, -0.25f, -0.74f)); sun.color = Color.white; sun.intensity = ib * 1.15f; }
             return;
         }
         if (sun != null) { sun.color = sunCol0; sun.intensity = ib; }

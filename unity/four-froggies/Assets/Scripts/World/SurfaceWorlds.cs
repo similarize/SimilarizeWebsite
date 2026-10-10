@@ -405,6 +405,7 @@ public class SurfaceWorlds : MonoBehaviour
         {
             Animal p = pups[k];
             Vector3 pp = p.transform.position;
+            if (!pupSafe[k] && p.follow == null && beams[k] != null && beams[k].gameObject.activeSelf == Quiet) beams[k].gameObject.SetActive(!Quiet);   // ffu24: no pup beams while the story visits
             if (pupSafe[k]) continue;
             if (p.follow == null)
             {

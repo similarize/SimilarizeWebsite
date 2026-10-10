@@ -118,6 +118,8 @@ public static class Worlds
         if (StoryHook != null) StoryHook(c, w);   // ffu24 story episode 2: Mercury / Enceladus / the Mars chambers / orbit look
     }
     public static System.Action<Camera, WorldId> StoryHook;
+    public static System.Func<WorldId, Vector3, string> PlaceNameHook;   // ffu24: Mercury / Enceladus / Under Mars on the HUD
+    public static string NameAt(WorldId w, Vector3 p) { string s = PlaceNameHook != null ? PlaceNameHook(w, p) : null; return s ?? Name(w); }
 
     public static float MarsFog = 0.006f;
 

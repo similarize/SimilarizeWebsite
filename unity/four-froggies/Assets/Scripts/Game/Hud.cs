@@ -171,7 +171,7 @@ public class ViewHud
                 else if (v.flyer) s += "  alt " + Mathf.RoundToInt(Mathf.Max(0f, v.transform.position.y)) + " m";
                 status.text = s;
             }
-            else status.text = me.world == WorldId.Underwater ? "Scuba  depth " + Mathf.RoundToInt(Mathf.Max(0f, Worlds.UnderO.y - me.transform.position.y)) + " m  |  pearls " + (Pickups.Total("pearls") - Pickups.Remaining("pearls")) + " / " + Pickups.Total("pearls") : (me.world != WorldId.Ranch ? Worlds.Name(me.world) : "");
+            else status.text = me.world == WorldId.Underwater ? "Scuba  depth " + Mathf.RoundToInt(Mathf.Max(0f, Worlds.UnderO.y - me.transform.position.y)) + " m  |  pearls " + (Pickups.Total("pearls") - Pickups.Remaining("pearls")) + " / " + Pickups.Total("pearls") : (me.world != WorldId.Ranch ? Worlds.NameAt(me.world, me.transform.position) : "");
         }
         else
         {
