@@ -15,6 +15,7 @@ public partial class Frog : MonoBehaviour
     public Robot robotPilot;      // ffu20: hidden driver of a vehicle a robot drives (RobotDrive.cs) - fed by the robot's AI
     public WorldId world = WorldId.Ranch;
     public float autoCool;        // after a doorway / world change, auto hotspots wait
+    public static System.Func<Frog, Vector3?> AiGoalHook;   // ffu24: story episode 2 keeps AI crew with the lead
     public float spaceGravity = 1f;   // low-g worlds (Callisto) set this per frame
     public Vehicle passengerOf;       // riding along (Starship) without driving
     public bool launching;            // aboard the Starship during the ranch blast-off (LaunchSeq)
@@ -647,6 +648,7 @@ public partial class Frog : MonoBehaviour
     {
         var i = new PIn();
         if (vehicle != null) { input = i; return; }
+        if (AiGoalHook != null) { Vector3? g = AiGoalHook(this); if (g.HasValue) { aiTarget = g.Value; if (aiTimer > 2f) aiTimer = 2f; } }   // ffu24 story: follow the crew
         aiTimer -= dt;
         Vector3 p = transform.position;
         Vector3 to = aiTarget - p; to.y = 0f;

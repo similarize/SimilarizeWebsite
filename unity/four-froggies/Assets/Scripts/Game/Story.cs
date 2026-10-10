@@ -41,16 +41,21 @@ public partial class Story : MonoBehaviour
 
     void Begin1()
     {
-        StorySet.Ensure();
         if (ui == null) ui = new StoryUI();
         ui.SetVisible(true);
         Active = true;
-        HookOnce();
         string u = Application.absoluteURL ?? "";
         demo = u.Contains("ffdemo");
         int k = u.IndexOf("ffshot=");
         demoShot = "";
         if (k >= 0) { demoShot = u.Substring(k + 7); int e = demoShot.IndexOfAny(new[] { '&', '#' }); if (e >= 0) demoShot = demoShot.Substring(0, e); }
+        // ffu24: which episode - the lobby picker decides; demos / tests use ffshot=ep2... or ?story=2
+        pickMode = PickMode; PickMode = 0;
+        int ep = pickMode != 0 ? Episode : (Param("story") == "2" || demoShot.StartsWith("ep2") ? 2 : 1);
+        if (ep == 2) { Begin2(); return; }
+        episode = 1;
+        StorySet.Ensure();
+        HookOnce();
         int jump = DemoChapter(demoShot);
         string jc = Param("storych");
         int jn;
@@ -60,9 +65,11 @@ public partial class Story : MonoBehaviour
         int sch, sst, sp;
         if (Load(out sch, out sst, out sp) && sch >= 1 && sch <= 8 && !(sch == 1 && sst == 0 && sp == 0))
         {
-            Play(ChoiceCo(sch, sst, sp));
-            return;
+            // ffu24: the picker already asked continue / start over; the old in-game question stays for direct starts
+            if (pickMode == 1) { if (sch >= 8) { parts = 31; StartChapter(7, 0); } else { parts = sp; StartChapter(sch, sch == 2 ? 0 : sst); } return; }
+            if (pickMode == 0) { Play(ChoiceCo(sch, sst, sp)); return; }
         }
+        parts = 0;
         StartChapter(1, 0);
     }
 
@@ -71,6 +78,7 @@ public partial class Story : MonoBehaviour
         if (!Active) return;
         Active = false;
         runner.Clear(); cine = false; modal = false;
+        if (episode == 2) E2Stop();   // ffu24
         Sfx.Override = null;
         Worlds.StormK = 0f; Worlds.Flash = 0f; Worlds.StormReset();
         SunK(1f);
@@ -137,7 +145,7 @@ public partial class Story : MonoBehaviour
     {
         var list = new List<Frog>();
         if (G.slots.Count > 0) list.Add(G.frogs[G.slots[0].frog]);
-        foreach (var f in G.frogs) if (!list.Contains(f)) list.Add(f);
+        foreach (var f in G.frogs) if (!list.Contains(f) && !(episode == 2 && f == e2Hidden)) list.Add(f);   // ffu24: Jimmy's parked seat is not crew
         return list[Mathf.Clamp(k, 0, list.Count - 1)];
     }
     string CastName(int k) { return Roster.Name(Cast(k).charId); }
@@ -147,6 +155,7 @@ public partial class Story : MonoBehaviour
     // ---------------- chapters ----------------
     void StartChapter(int c, int s)
     {
+        if (episode == 2) { E2StartChapter(c, s); return; }   // ffu24
         ch = c; step = s; chTime = 0f;
         runner.Clear(); cine = false; modal = false;
         ResetParts(c >= 3 ? 31 : (c == 2 ? parts : 0), c == 2);
@@ -243,6 +252,7 @@ public partial class Story : MonoBehaviour
         runner.Tick();
         if (!Active) return;   // ffu22 fix: the ending (Stop2) ran inside the tick
         if (!runner.Busy && pendCh > 0) { int pc = pendCh, ps = pendStep; pendCh = -1; StartChapter(pc, ps); }
+        if (episode == 2) { E2Update(dt); return; }   // ffu24 episode 2
         if (!runner.Busy && ch <= 7)
         {
             switch (ch)
@@ -438,7 +448,7 @@ public partial class Story : MonoBehaviour
 
     void OnPickup(Pickups.Item it, Frog f)
     {
-        if (!Active || ch != 2) return;
+        if (!Active || ch != 2 || episode != 1) return;
         switch (it.group)
         {
             case "st_fuel":
@@ -703,7 +713,7 @@ public partial class Story : MonoBehaviour
     }
 
     public void TieRope(int k) { if (k >= 0 && k < 3 && loose[k]) { loose[k] = false; looseT[k] = 0f; saved++; Sfx.Play(Sfx.Confirm != null ? Sfx.Confirm : Sfx.Pickup, 0.8f); FX.Sparkle(S.anchors[k].position + Vector3.up, new Color(0.4f, 1f, 0.5f), 12); } }
-    public bool RopeLoose(int k) { return Active && ch == 4 && step == 1 && !runner.Busy && k >= 0 && k < 3 && loose[k]; }
+    public bool RopeLoose(int k) { return Active && episode == 1 && ch == 4 && step == 1 && !runner.Busy && k >= 0 && k < 3 && loose[k]; }
 
     // ---------------- chapter 5 / 6 ----------------
     void Ch5(float dt) { SetObj("CHAPTER 5 · " + ChTitle[5].ToUpper(), "Launch the rocket at the control panel!", null); SetStatus(""); }
@@ -824,13 +834,13 @@ public partial class Story : MonoBehaviour
         Pickups.Listen(OnPickup);
         var panel = Interact.Add(S.PanelPos, 2.8f, "", f => PanelPress(f));
         panel.pos.y = Ranch.GY(S.PanelPos.x, S.PanelPos.z) + 0.2f;
-        panel.enabled = f => Active && f.world == WorldId.Ranch && !runner.Busy && ((ch == 3 && step == 0) || ch == 5 || (ch == 6 && (step == 1 && !fixedChip || step == 2)));
+        panel.enabled = f => Active && episode == 1 && f.world == WorldId.Ranch && !runner.Busy && ((ch == 3 && step == 0) || ch == 5 || (ch == 6 && (step == 1 && !fixedChip || step == 2)));
         panel.dynLabel = f => ch == 3 ? "start the engine test fire" : ch == 5 ? "LAUNCH!" : ch == 6 && step == 1 ? "reboot the chip (backup flight plan)" : "RELAUNCH - have faith!";
         var tank = Interact.Add(new Vector3(S.TankFixPos.x, Ranch.GY(S.TankFixPos.x, S.TankFixPos.z) + 0.2f, S.TankFixPos.z), 3.2f, "", f => TankPress(f));
-        tank.enabled = f => Active && f.world == WorldId.Ranch && !runner.Busy && ((ch == 3 && step == 1) || (ch == 6 && step == 1 && !fixedTank));
+        tank.enabled = f => Active && episode == 1 && f.world == WorldId.Ranch && !runner.Busy && ((ch == 3 && step == 1) || (ch == 6 && step == 1 && !fixedTank));
         tank.dynLabel = f => ch == 3 ? "repair the fuel tank" : "check your patch on the tank";
         var bench = Interact.Add(new Vector3(S.BenchPos.x, Ranch.GY(S.BenchPos.x, S.BenchPos.z) + 0.2f, S.BenchPos.z), 2.8f, "fit the two spare fins you found", f => FitFins(f));
-        bench.enabled = f => Active && f.world == WorldId.Ranch && !runner.Busy && ch == 6 && step == 1 && !fixedFins;
+        bench.enabled = f => Active && episode == 1 && f.world == WorldId.Ranch && !runner.Busy && ch == 6 && step == 1 && !fixedFins;
         for (int k = 0; k < 3; k++)
         {
             int kk = k;
@@ -839,7 +849,7 @@ public partial class Story : MonoBehaviour
         }
         S.BuildMars(); S.MarsActive(false);
         var rf = Interact.Add(S.RockfallPos + Vector3.up * 0.3f, 4.5f, "clear the rocks", f => ClearRock());
-        rf.enabled = f => Active && ch == 7 && step == 0 && f.world == WorldId.Mars && rocksLeft > 0 && !runner.Busy;
+        rf.enabled = f => Active && episode == 1 && ch == 7 && step == 0 && f.world == WorldId.Mars && rocksLeft > 0 && !runner.Busy;
         rf.dynLabel = f => "clear the rocks (" + rocksLeft + " left)";
     }
 
@@ -933,6 +943,7 @@ public partial class Story : MonoBehaviour
     // the marker target for one froggy (null = none)
     public Vector3? Target(Frog f)
     {
+        if (episode == 2) return E2Target(f);   // ffu24
         if (!Active || cine || f == null) return null;
         Vector3 me = f.FocusPoint;
         switch (ch)

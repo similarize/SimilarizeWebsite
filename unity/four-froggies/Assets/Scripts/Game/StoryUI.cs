@@ -24,6 +24,8 @@ public class StoryUI
     Image mgPanel, mgBar, mgZone, mgNeedle; Text mgTitle, mgInfo;
     Image choiceA, choiceB; Text choiceAT, choiceBT, choiceQ;
     int layout = -1;
+    // ffu24 (episode 2): Jimmy radar (objectives canvas) + a cinema HUD line (orbit chase)
+    RectTransform radar; Image radarBlip, radarMe; Text radarLabel, cineHud;
     public float letterbox, dimK, fadeK, titleK, bigK, creditsK;
     public string bigText = "", titleKick = "", titleText = "";
     public bool portraitMode;
@@ -66,6 +68,18 @@ public class StoryUI
             mkDist[i].rectTransform.anchoredPosition = new Vector2(0, -30);
             mk[i].gameObject.SetActive(false);
         }
+
+        radar = UIK.Rect(o, "Radar", new Vector2(1f, 0.5f), new Vector2(-100, 60), new Vector2(150, 150));
+        UIK.Img(radar, UIK.Circle, new Color(0.02f, 0.06f, 0.08f, 0.55f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(150, 150));
+        UIK.Img(radar, UIK.Ring, new Color(0.7f, 1f, 0.45f, 0.6f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(150, 150));
+        UIK.Img(radar, UIK.Ring, new Color(0.7f, 1f, 0.45f, 0.22f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(78, 78));
+        radarMe = UIK.Img(radar, Arrow(), Color.white, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(18, 18));
+        radarBlip = UIK.Img(radar, Diamond(), new Color(0.75f, 1f, 0.35f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(24, 24));
+        radarLabel = L(radar, "", 15, TextAnchor.MiddleCenter, Color.white, true);
+        radarLabel.rectTransform.sizeDelta = new Vector2(240, 24); radarLabel.rectTransform.anchoredPosition = new Vector2(0, -90);
+        var rt0 = L(radar, "RADAR", 12, TextAnchor.MiddleCenter, new Color(0.75f, 1f, 0.45f, 0.8f), true);
+        rt0.rectTransform.sizeDelta = new Vector2(150, 18); rt0.rectTransform.anchoredPosition = new Vector2(0, 86);
+        radar.gameObject.SetActive(false);
 
         dim = UIK.Img(c, UIK.Gradient(new Color(0f, 0f, 0.02f, 0.75f), new Color(0f, 0f, 0.02f, 0.45f), new Color(0f, 0f, 0.02f, 0.8f)), new Color(1, 1, 1, 0), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
         UIK.Stretch(dim.rectTransform);
@@ -115,6 +129,11 @@ public class StoryUI
         choiceBT = L(choiceB.transform, "", 22, TextAnchor.MiddleCenter, Color.white, true); UIK.Stretch(choiceBT.rectTransform);
         choiceAT.supportRichText = choiceBT.supportRichText = true;
         ShowChoice(null, null, null);
+
+        cineHud = L(c, "", 22, TextAnchor.UpperCenter, Color.white, false);
+        cineHud.rectTransform.anchorMin = cineHud.rectTransform.anchorMax = new Vector2(0.5f, 1f);
+        cineHud.rectTransform.sizeDelta = new Vector2(1100, 90); cineHud.rectTransform.anchoredPosition = new Vector2(0, -95);
+        cineHud.supportRichText = true;
 
         fade = UIK.Img(c, null, new Color(0, 0, 0, 0), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
         UIK.Stretch(fade.rectTransform);
@@ -206,7 +225,24 @@ public class StoryUI
         choiceA.rectTransform.anchoredPosition = new Vector2(0, 20);
         choiceB.rectTransform.anchoredPosition = new Vector2(0, -70);
         choiceA.rectTransform.sizeDelta = choiceB.rectTransform.sizeDelta = new Vector2(p ? 600 : 560, 72);
+        radar.anchoredPosition = p ? new Vector2(-92, 230) : new Vector2(-100, 60);
+        radar.localScale = Vector3.one * (p ? 0.9f : 1f);
+        cineHud.rectTransform.sizeDelta = new Vector2(p ? 680 : 1100, p ? 130 : 90);
+        cineHud.rectTransform.anchoredPosition = new Vector2(0, p ? -150 : -95);
     }
+
+    // ffu24: Jimmy on the radar (rel = -1..1 camera-relative, x right / y ahead)
+    public void Radar(bool on, Vector2 rel, string label)
+    {
+        if (radar.gameObject.activeSelf != on) radar.gameObject.SetActive(on);
+        if (!on) return;
+        Layout();
+        radarBlip.rectTransform.anchoredPosition = rel * 66f;
+        float pulse = 0.8f + 0.2f * Mathf.Sin(Time.unscaledTime * 6f);
+        radarBlip.color = new Color(0.75f, 1f, 0.35f, pulse);
+        if (radarLabel.text != label) radarLabel.text = label;
+    }
+    public void CineHud(string s) { s = s ?? ""; if (cineHud.text != s) cineHud.text = s; cineHud.enabled = s.Length > 0; }
 
     // ---------------- objectives ----------------
     public void SetObjective(string kicker, string text, string list)

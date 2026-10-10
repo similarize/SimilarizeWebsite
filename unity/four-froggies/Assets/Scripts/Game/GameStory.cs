@@ -88,15 +88,56 @@ public partial class Game
         if (s == null) s = Join(kind, pad);
         if (s == null && slots.Count == 0) return;
         Sfx.Play(Sfx.Click, 0.8f);
-        Debug.Log("FFSTORY start from the lobby (" + kind + ", " + slots.Count + " players)");
-        StartPlay();
-        if (state == State.Play) Story.Begin();
+        Debug.Log("FFSTORY picker from the lobby (" + kind + ", " + slots.Count + " players)");
+        pickKind = kind;
+        OpenPicker();   // ffu24: pick the episode first
     }
+
+    // ---------------- ffu24 story picker ----------------
+    StoryPicker picker;
+    InputKind pickKind = InputKind.Keyboard;
+    float pickDemoT;
+    void OpenPicker()
+    {
+        if (picker == null)
+        {
+            picker = new StoryPicker();
+            picker.onPick = (ep, over) =>
+            {
+                Story.Episode = ep; Story.PickMode = over ? 2 : 1;
+                Debug.Log("FFSTORY start episode " + ep + (over ? " from the start" : " (continue)") + " (" + slots.Count + " players)");
+                StartPlay();
+                if (state == State.Play) Story.Begin();
+            };
+        }
+        int pre = UrlParam("story") == "2" ? 1 : (Story.ReadSave(Story.SaveKey).Length > 0 ? 1 : 0);
+        picker.Show(pre);
+        pickDemoT = 0f;
+    }
+    // UpdateLobby: while the picker is open it owns the lobby input
+    bool StoryPickerTick(float dt)
+    {
+        if (picker == null || !picker.IsOpen) return false;
+        InputKind k = Kb.TouchCount() > 0 ? InputKind.Touch : pickKind;
+        if (demoShot == "storypick")
+        {
+            // screenshot demo: show each card in turn, never start
+            pickDemoT += Time.unscaledDeltaTime;
+            if (pickDemoT > 5f) { pickDemoT = 0f; picker.sel = 1 - picker.sel; Debug.Log("FFSTORY picker demo sel " + (picker.sel + 1)); }
+            picker.Tick(Screen.height > Screen.width, InputKind.Keyboard, Time.unscaledDeltaTime);
+            if (!picker.IsOpen) picker.Show(picker.sel);
+            return true;
+        }
+        picker.Tick(Screen.height > Screen.width, k, Time.unscaledDeltaTime);
+        return true;
+    }
+    public float StoryCamYaw() { if (slots.Count == 0) return 0f; return sharedCam.enabled ? sharedYaw : (slots[0].rig != null ? slots[0].rig.yaw : 0f); }
 
     // demo: ffshot=story* presses STORY instead of PLAY
     bool StoryDemoStart()
     {
-        if (!demoShot.StartsWith("story")) return false;
+        if (demoShot == "storypick") { if (picker == null || !picker.IsOpen) { pickKind = InputKind.Keyboard; OpenPicker(); } return true; }   // ffu24
+        if (!demoShot.StartsWith("story") && !demoShot.StartsWith("ep2")) return false;
         StartPlay();
         if (state == State.Play) Story.Begin();
         demoPlayT = 0f;

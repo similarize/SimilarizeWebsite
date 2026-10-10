@@ -12,6 +12,7 @@ using UnityEngine;
 public class SurfaceWorlds : MonoBehaviour
 {
     public static SurfaceWorlds I;
+    public static bool Quiet;   // ffu24: story episode 2 is visiting (no Starship-to-orbit prompts, no dust storms)
     Transform marsRoot, calRoot;
     bool marsBuilt, calBuilt, marsDone, calDone;
     readonly List<Animal> pups = new List<Animal>();
@@ -159,7 +160,7 @@ public class SurfaceWorlds : MonoBehaviour
         g.transform.SetParent(marsRoot, true);
         Rocket(marsRoot, M(0f, MarsY(0f, -30f), -30f));
         var ret = Interact.Add(M(0f, MarsY(0f, -30f), -27f), 5f, "board the Starship (back to Mars orbit)", f => SpaceWorld.I.ToOrbit(f, "mars"));
-        ret.enabled = f => f.world == WorldId.Mars;
+        ret.enabled = f => f.world == WorldId.Mars && !Quiet;
         // dog pen
         penC = M(10f, MarsY(10f, -30f), -30f);
         for (int k = 0; k < 14; k++)
@@ -307,7 +308,7 @@ public class SurfaceWorlds : MonoBehaviour
         g.transform.SetParent(calRoot, true);
         Rocket(calRoot, C(0f, CalY(0f, 0f), 0f));
         var ret = Interact.Add(C(0f, CalY(0f, 3f), 3f), 5f, "board the Starship (back to Callisto orbit)", f => SpaceWorld.I.ToOrbit(f, "callisto"));
-        ret.enabled = f => f.world == WorldId.Callisto;
+        ret.enabled = f => f.world == WorldId.Callisto && !Quiet;
         // Jupiter fills the sky
         var jtex = Resources.Load<Texture2D>("LB/space_jupiter");   // NASA map (stage B)
         Material jm;
@@ -439,7 +440,7 @@ public class SurfaceWorlds : MonoBehaviour
         }
         // dust storm every ~100 s, 20 s long; shelter in the cave
         stormT -= dt;
-        if (stormT <= 0f && storm <= 0f) { storm = 20f; stormT = 100f; Toast(WorldId.Mars, "DUST STORM! Shelter in the cave to the north", 3f); }
+        if (stormT <= 0f && storm <= 0f && !Quiet) { storm = 20f; stormT = 100f; Toast(WorldId.Mars, "DUST STORM! Shelter in the cave to the north", 3f); }
         if (storm > 0f) storm -= dt;
         float want = storm > 0f ? 0.05f : 0.006f;
         Worlds.MarsFog = Mathf.MoveTowards(Worlds.MarsFog, want, dt * 0.02f);

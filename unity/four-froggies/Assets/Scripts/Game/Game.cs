@@ -163,7 +163,7 @@ public partial class Game : MonoBehaviour
     void DemoView()
     {
         if (demoShot.Length == 0 || slots.Count == 0 || slots[0].cam == null) return;
-        if (demoShot.StartsWith("story")) return;   // ffu22: the story scripts its own demo
+        if (demoShot.StartsWith("story") || demoShot.StartsWith("ep2")) return;   // ffu22 / ffu24: the story scripts its own demo
         demoPlayT += Time.unscaledDeltaTime;
         string[] list = demoShot == "tour" ? Tour : demoShot.Split(',');   // tour, one scene, or a comma list (9 s each)
         string sc = list[Mathf.Min(list.Length - 1, (int)(demoPlayT / 9f))];
@@ -715,6 +715,7 @@ public partial class Game : MonoBehaviour
         TickShowroom(Time.unscaledDeltaTime);
         if (!lobbyLook) { lobbyLook = true; Look.ApplyViews(1, new List<Camera> { overview }); }
         ApplyNames();
+        if (StoryPickerTick(dt)) { OrbitLobby(dt); RefreshLobby(); return; }   // ffu24 story episode picker
         if (keypad != null && keypad.Update(Screen.height > Screen.width)) { OrbitLobby(dt); RefreshLobby(); return; }
         UrlNet();
         if (NetButtons()) { OrbitLobby(dt); RefreshLobby(); return; }

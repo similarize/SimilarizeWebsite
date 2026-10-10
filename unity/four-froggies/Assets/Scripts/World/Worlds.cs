@@ -115,7 +115,9 @@ public static class Worlds
         }
         if (Realism.On) Realism.PreCull(w);   // ?realism=1 test: HDRI SH ambient on the ranch
         if (StormK > 0f && w == WorldId.Ranch) StoryWeather(launchDark);   // ffu22 story storm (dark sky, heavy haze, flashes)
+        if (StoryHook != null) StoryHook(c, w);   // ffu24 story episode 2: Mercury / Enceladus / the Mars chambers / orbit look
     }
+    public static System.Action<Camera, WorldId> StoryHook;
 
     public static float MarsFog = 0.006f;
 

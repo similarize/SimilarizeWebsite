@@ -60,6 +60,8 @@ public partial class Story
     public void SlotPress(PIn i)
     {
         if (i.hop || i.use || i.fire || i.gunFire) advance = true;
+        if (i.move.sqrMagnitude > chaseMove.sqrMagnitude) chaseMove = i.move;   // ffu24: the orbit chase steers with the stick
+        if (i.gas > 0.4f || i.boostHeld) chaseBoost = true;
         if (i.help && cine && skippable) skipping = true;
     }
 
@@ -128,6 +130,8 @@ public partial class Story
             }
         }
         else if (who == -1) { name = "THE MARS PUPS  (on the robot phone)"; col = new Color(1f, 0.75f, 0.4f); if (!skipping && Sfx.Bark != null) Sfx.Play(Sfx.Bark, 0.5f, 1.6f); }
+        else if (who == -3) { name = Roster.Name(1); tex = G.StoryPortrait(1); col = Roster.UiColor(1); if (!skipping && jim != null) Sfx.Ribbiting(jim.transform.position, 0.6f); }   // ffu24: Jimmy (episode 2)
+        else if (who == -4) { name = "A MARS DOGGY"; col = new Color(1f, 0.72f, 0.45f); if (!skipping && Sfx.Bark != null) Sfx.Play(Sfx.Bark, 0.5f, 1.4f); }
         else { name = ""; col = Color.white; }
         Debug.Log("FFSTORY say " + name + ": " + text);
         advance = false;
@@ -797,7 +801,7 @@ public partial class Story
     bool fireworks; float fwT;
     void LateUpdate()
     {
-        if (!fireworks || S == null) return;
+        if (!fireworks || S == null || episode != 1) return;
         fwT -= Time.deltaTime;
         if (fwT <= 0f) { fwT = Random.Range(0.35f, 0.8f); S.Firework(P + new Vector3(Random.Range(-30f, 30f), Random.Range(28f, 48f), Random.Range(-20f, 10f))); }
     }
