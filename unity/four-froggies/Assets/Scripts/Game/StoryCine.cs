@@ -202,10 +202,18 @@ public partial class Story
     void Close(int who, float side = 0.8f, float dist = 3.4f)
     {
         Frog f = Cast(who);
-        Vector3 fw = f.transform.forward; fw.y = 0f; fw.Normalize();
+        Vector3 fw = PoseFwd(f);
         Vector3 rt = new Vector3(fw.z, 0f, -fw.x);
         Vector3 p = f.transform.position + Vector3.up * 0.75f;
         Shot(p + fw * dist + rt * side + Vector3.up * 0.55f, p, p + fw * (dist - 0.5f) + rt * side + Vector3.up * 0.5f, p, 3.5f, 42f);
+    }
+
+    // the facing the frog is SHOWN with: its cast pose when posed (applied in CamUpdate), else its transform
+    Vector3 PoseFwd(Frog f)
+    {
+        Vector4 v;
+        Vector3 fw = poses.TryGetValue(f, out v) ? Quaternion.Euler(0f, v.w, 0f) * Vector3.forward : f.transform.forward;
+        fw.y = 0f; return fw.sqrMagnitude > 1e-4f ? fw.normalized : Vector3.forward;
     }
 
     // ---------------- cast poses ----------------
@@ -312,7 +320,7 @@ public partial class Story
         Close(0);
         yield return Say(0, "Who would call us all the way out here? ...Hello?");
         // hologram of the pups above the phone
-        var holo = Hologram(Cast(0).transform.position + Cast(0).transform.forward * 1.3f + Vector3.up * 1.4f);
+        var holo = Hologram(Cast(0).transform.position + PoseFwd(Cast(0)) * 1.3f + Vector3.up * 1.4f);
         Shot(g + new Vector3(4f, 2.6f, 5.5f), holo.position, g + new Vector3(3f, 2.3f, 4.5f), holo.position, 5f, 45f);
         yield return Say(-1, "Woof! Hello? Is this the froggies' ranch? It's us - the Mars pups!");
         yield return Say(-1, "A big dust storm hit, and we're stuck in a cave on Mars. Our ride home blew away!");

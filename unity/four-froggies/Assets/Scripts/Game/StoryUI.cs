@@ -181,7 +181,7 @@ public class StoryUI
             sc.matchWidthOrHeight = p ? 0f : 0.5f;
         }
         objPanel.rectTransform.sizeDelta = p ? new Vector2(560, 104) : new Vector2(620, 92);
-        objPanel.rectTransform.anchoredPosition = p ? new Vector2(0, -150) : new Vector2(0, -62);
+        objPanel.rectTransform.anchoredPosition = p ? new Vector2(0, -200) : new Vector2(0, -62);
         statusLine.rectTransform.anchoredPosition = p ? new Vector2(0, -222) : new Vector2(0, -126);
         dlg.rectTransform.sizeDelta = p ? new Vector2(690, 230) : new Vector2(960, 150);
         float pw = p ? 120 : 118;
