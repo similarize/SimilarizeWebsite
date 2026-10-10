@@ -179,6 +179,7 @@ public partial class Game : MonoBehaviour
             else if (sc == "mechaim" || sc == "mechlook" || sc == "surface" || sc == "spacemap" || sc == "mechspace" || sc == "cargobay") Demo15Start(f, sc);
             else if (sc == "lineup" || sc == "ripsaw") DemoLineup(f, sc);
             else if (sc.StartsWith("realroom")) RealRoom.DemoStart(f, sc);   // ffu18 REAL ROOM shots (own camera)
+            else if (sc.StartsWith("lj-") || sc.StartsWith("loopdrive")) DemoLoopStart(f, sc);   // ffu19 loop joints (GameLoopDemo.cs)
             else if (sc == "net") { if (UrlParam("ffwalk") != null) demoHook = DemoWalk; }      // ffu13 online test
             else if (sc == "netcar") { if (Net.I != null && Net.I.IsGuest) { DemoTruck(f); demoHook = DemoCircle; } }
             else if (f.world != WorldId.Ranch) f.SendTo(WorldId.Ranch, Ranch.FrogSpawn(f.id), 0f);
@@ -186,6 +187,7 @@ public partial class Game : MonoBehaviour
         Camera c = slots[0].cam;
         Vector3 pos, look;
         float gy;
+        if ((sc.StartsWith("lj-") || sc.StartsWith("loopdrive")) && DemoLoopCam(f, sc, c)) return;
         switch (sc)
         {
             case "frog":

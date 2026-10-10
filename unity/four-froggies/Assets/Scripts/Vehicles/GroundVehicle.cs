@@ -30,6 +30,7 @@ public class GroundVehicle : Vehicle
     public float treadHalf = 2.6f;
     public System.Action<float, float> animate;
     public CyberBoat amph;               // ffu11: amphibious Cybertruck (null for everything else)
+    public System.Action<GroundVehicle, int> fixedProbe;   // ffu19: demo physics probe (gets the wheels-on-ground count each step)
     public float Throttle01 { get { return driver != null ? Mathf.Clamp01(throttle) : 0f; } }
     public override string HelpLine
     {
@@ -112,15 +113,29 @@ public class GroundVehicle : Vehicle
         // banked turns get a little extra stick so the trucks can lean on the berms
         bool inLoop = false;
         Bounds zone = default(Bounds);
+        float guideYaw = 0f;
         foreach (Bounds b in RallyTrack.LoopZones) if (b.Contains(rb.position)) { inLoop = true; zone = b; }
         if (inLoop)
         {
             if (groundedCount > 0 && onStunt)
             {
-                rb.AddForce(-groundNormal * 17f, ForceMode.Acceleration);
+                // ffu19: the hold-on force fades in as the loop climbs (none on the flat start of the ease-in), so there is no
+                // sudden squat where the straight turns into the loop
+                float kd = RallyTrack.Legacy ? 1f : Mathf.Clamp01((1f - groundNormal.y) / 0.25f);
+                rb.AddForce(-groundNormal * 17f * kd, ForceMode.Acceleration);
                 Vector3 lf = Vector3.ProjectOnPlane(transform.forward, groundNormal).normalized;
                 float lfs = Vector3.Dot(rb.velocity, lf);
                 if (driven && throttle > -0.1f && lfs < 17f && lfs > -1f) rb.AddForce(lf * 11f, ForceMode.Acceleration);
+                // ffu19: keep the truck on the lane while the loop shifts sideways (yaw toward the lane + gentle centring)
+                Vector3 gt; float glat;
+                if (driven && lfs > 2f && RallyTrack.LoopGuide(rb.position, out gt, out glat))
+                {
+                    Vector3 tn = Vector3.ProjectOnPlane(gt, groundNormal).normalized;
+                    float ang = Vector3.SignedAngle(lf, tn, groundNormal) * Mathf.Deg2Rad;
+                    guideYaw = Mathf.Clamp(ang * 3f - glat * 0.35f, -1.5f, 1.5f);
+                    Vector3 gr = Vector3.Cross(groundNormal, tn).normalized;
+                    rb.AddForce(-gr * Mathf.Clamp(glat, -2f, 2f) * 2.5f, ForceMode.Acceleration);
+                }
             }
             else if (groundedCount == 0)
             {
@@ -152,6 +167,7 @@ public class GroundVehicle : Vehicle
             if (tracked) target = steer * turnRate * (fs < -0.5f ? -1f : 1f);
             else target = steer * turnRate * Mathf.Clamp(fs / 6f, -1f, 1f);
             if (!driven) target = 0f;
+            target += guideYaw;
             rb.AddTorque(transform.up * (target - yr) * Mathf.Min(1f, 8f * dt) * gf, ForceMode.VelocityChange);
 
             if (Mathf.Abs(fs) > 4f && dustAmount > 0f)
@@ -169,6 +185,7 @@ public class GroundVehicle : Vehicle
             // a little air control so jumps can be levelled
             rb.AddTorque(transform.up * steer * 0.6f * dt, ForceMode.VelocityChange);
         }
+        if (fixedProbe != null) fixedProbe(this, groundedCount);
     }
 
     protected virtual void Update()
