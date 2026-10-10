@@ -17,7 +17,10 @@ public class LaunchSeq : MonoBehaviour
     const float GatherR = 45f;
 
     public readonly List<Frog> crew = new List<Frog>();
-    int phase;                 // 0 idle, 1 countdown + climb, 2 fading in (in space)
+    int phase;                 // 0 idle, 1 countdown + climb, 2 fading in (in space), 3 ffu27 landing back on the pad
+    const float LandT = 8f, LandH = 260f, LandHold = 1.4f;
+    readonly List<Vector3> landSpots = new List<Vector3>();
+    bool touched;
     float t, fadeIn, skipAt = -1f, ign, h, dark, fade;
     int lastCount = 99;
     AudioSource rumble;
@@ -82,7 +85,9 @@ public class LaunchSeq : MonoBehaviour
 
     public static void Skip(Frog f)
     {
-        if (I == null || I.phase != 1 || I.skipAt >= 0f || I.t < 0.3f) return;
+        if (I == null || I.skipAt >= 0f || I.t < 0.3f) return;
+        if (I.phase == 3) { if (I.t < LandT) { I.t = LandT; I.skipAt = I.t; } return; }   // ffu27: jump to touchdown
+        if (I.phase != 1) return;
         I.skipAt = I.t;
     }
 
@@ -97,6 +102,7 @@ public class LaunchSeq : MonoBehaviour
             if (fadeIn <= 0f) { phase = 0; crew.Clear(); fade = 0f; }
             return;
         }
+        if (phase == 3) { LandTick(dt); return; }
         if (phase != 1) return;
         t += dt;
 
@@ -168,6 +174,101 @@ public class LaunchSeq : MonoBehaviour
         foreach (Frog f in go) SpaceWorld.I.Launch(f);   // existing flow: first flies, the rest ride along
     }
 
+    // ---------------- ffu27 landing back on the ranch pad ----------------
+    // Bill: "when they head back to Earth, there should be a landing sequence with the rocket, not just suddenly being
+    // there". SpaceWorld.Land("earth") hands the crew (pilot + passengers = James and the tag-along froggies) here: they
+    // are on the ranch at once (cameras / worlds follow) but sit hidden inside the pad Starship, which drops in from
+    // 260 m on its flame (fast, then a slow powered last 40 m: pad smoke + dust, shake, rumble), touches down with a thud,
+    // and then everyone hops out by the hatch. ~9 s; A / FIRE skips to touchdown. Split-screen: each crew member's view
+    // follows the descent (View).
+    public static bool BeginLanding(List<Frog> who, List<Vector3> spots)
+    {
+        if (Ranch.ShipStack == null || who == null || who.Count == 0) return false;
+        Ensure();
+        if (I.phase != 0) return false;
+        I.crew.Clear(); I.landSpots.Clear();
+        for (int k = 0; k < who.Count; k++)
+        {
+            Frog f = who[k];
+            f.SendTo(WorldId.Ranch, spots[k], 90f);   // world switch first (camera + music + per-world look)
+            I.Add(f);
+            I.landSpots.Add(spots[k]);
+        }
+        I.phase = 3; I.touched = false; I.t = 0f; I.skipAt = -1f; I.ign = 1f; I.h = LandH; I.dark = 0.6f; I.fade = 1f;
+        Ranch.ShipStack.position = new Vector3(0f, LandH, 0f);
+        if (I.rumble != null) { I.rumble.volume = 0.5f; I.rumble.pitch = 0.85f; I.rumble.Play(); }
+        Debug.Log("FFLAND begin crew " + who.Count + " t=" + Time.realtimeSinceStartup.ToString("0.0"));
+        return true;
+    }
+
+    void LandTick(float dt)
+    {
+        t += dt;
+        float u = Mathf.Clamp01(t / LandT);
+        // fast drop, then a long slow powered settle onto the pad
+        h = LandH * Mathf.Pow(1f - u, 2.6f);
+        Ranch.ShipStack.position = new Vector3(0f, h, 0f);
+        dark = 0.6f * Mathf.Clamp01(h / LandH * 1.5f);
+        fade = Mathf.Clamp01(1f - t / 0.7f);
+        bool burning = t < LandT;
+        ign = burning ? 1f : Mathf.MoveTowards(ign, 0f, dt * 2f);
+        if (Ranch.ShipFlames != null)
+        {
+            bool on = ign > 0.02f;
+            if (Ranch.ShipFlames.gameObject.activeSelf != on) Ranch.ShipFlames.gameObject.SetActive(on);
+            float fl = 1f + Mathf.Sin(t * 47f) * 0.08f + Random.Range(-0.06f, 0.06f);
+            float len = (0.55f + 0.55f * Mathf.Clamp01(1f - h / 60f)) * ign * fl;
+            Ranch.ShipFlames.localScale = new Vector3(0.8f + 0.2f * ign, Mathf.Max(0.01f, len), 0.8f + 0.2f * ign);
+        }
+        Vector3 b = Ranch.ShipBase;
+        if (burning && h < 70f)
+        {
+            float k = Mathf.Clamp01(1f - h / 70f);
+            int puffs = Mathf.RoundToInt(k * 3f);
+            for (int i = 0; i < puffs; i++)
+            {
+                float a = Random.value * 6.2832f, r = Random.Range(4f, 14f), g = Random.Range(0.6f, 0.9f);
+                FX.Smoke(b + new Vector3(Mathf.Cos(a) * r, Random.Range(-4f, 0f), Mathf.Sin(a) * r), Random.Range(2.5f, 5f), new Color(g, g * 0.95f, g * 0.88f, 0.7f));
+            }
+            if (Random.value < k) FX.Dust(b + new Vector3(Random.Range(-8f, 8f), -3.5f, Random.Range(-8f, 8f)), 2f);
+            Game.Shake(b, k * dt * 1.2f);
+        }
+        if (burning) FX.Flame(b + new Vector3(Random.Range(-2f, 2f), h - 1f, Random.Range(-2f, 2f)), Vector3.down);
+        if (rumble != null) { rumble.volume = burning ? Mathf.Lerp(0.45f, 1f, Mathf.Clamp01(1f - h / 80f)) : Mathf.MoveTowards(rumble.volume, 0f, dt); rumble.pitch = 0.8f + 0.2f * Mathf.Clamp01(1f - h / 80f); }
+        if (t >= LandT && !touched)
+        {
+            touched = true;
+            Ranch.ShipStack.position = Vector3.zero; h = 0f;
+            FX.Dust(b + Vector3.down * 3.5f, 4f); FX.Boom(b + Vector3.down * 3f, 0.5f); Game.Shake(b, 0.4f);
+            Sfx.Play(Sfx.Boom, 0.6f, 0.6f);
+            Debug.Log("FFLAND touchdown t=" + Time.realtimeSinceStartup.ToString("0.0"));
+        }
+        if (t >= LandT + LandHold) LandFinish();
+    }
+
+    void LandFinish()
+    {
+        Ranch.ShipStack.position = Vector3.zero;
+        if (Ranch.ShipFlames != null) Ranch.ShipFlames.gameObject.SetActive(false);
+        if (rumble != null) rumble.Stop();
+        var go = new List<Frog>(crew);
+        for (int k = 0; k < go.Count; k++)
+        {
+            Frog f = go[k];
+            f.transform.SetParent(null, true);
+            f.transform.localScale = Vector3.one;
+            f.model.gameObject.SetActive(true);
+            f.cc.enabled = true;
+            f.launching = false;
+            f.Teleport(landSpots[k]);
+            FX.Dust(landSpots[k], 0.8f);
+            f.Toast("Touchdown at the ranch!", 3f);
+        }
+        Sfx.Play(Sfx.Door, 0.8f);
+        Debug.Log("FFLAND crew out " + go.Count + " t=" + Time.realtimeSinceStartup.ToString("0.0"));
+        crew.Clear(); phase = 0; fade = 0f; dark = 0f; skipAt = -1f;
+    }
+
     // ---------------- views (called from Game.LateUpdate after the normal cameras) ----------------
     public static void View(Camera cam, ViewHud hud, Frog f)
     {
@@ -176,10 +277,14 @@ public class LaunchSeq : MonoBehaviour
         camDark[cam] = 0f;
         if (!mine || I.phase == 0) { if (hud != null) hud.SetFade(0f); return; }
         if (hud != null) hud.SetFade(I.fade);
-        if (I.phase != 1) return;
+        if (I.phase != 1 && I.phase != 3) return;
         camDark[cam] = I.dark;
         I.PoseCam(cam);
-        if (hud != null)
+        if (hud != null && I.phase == 3)
+        {
+            hud.SetCenter((I.t < 2.2f ? "<size=60>RETURNING TO EARTH</size>" : I.t >= LandT && I.t < LandT + LandHold ? "<size=80>TOUCHDOWN!</size>" : "") + (I.skipAt < 0f && I.t < LandT ? "\n<size=20>A / FIRE skips</size>" : ""));
+        }
+        else if (hud != null)
         {
             float tau = I.t - CountT;
             string s = tau < 0f ? "<size=110>" + Mathf.CeilToInt(CountT - I.t) + "</size>\n<size=26>STARSHIP LAUNCH</size>"
@@ -198,6 +303,7 @@ public class LaunchSeq : MonoBehaviour
         Vector3 look = b + Vector3.up * (30f + h);
         float tau = t - CountT;
         float shake = ign * (tau < 1.5f ? 0.35f : 0.35f * Mathf.Clamp01(1f - (tau - 1.5f) / 3f));
+        if (phase == 3) { dist = 60f + h * 0.3f; x = b.x + dir.x * dist; z = b.z + dir.z * dist; pos = new Vector3(x, Ranch.GY(x, z) + 4f + h * 0.45f, z); look = b + Vector3.up * (26f + h); shake = ign * 0.3f * Mathf.Clamp01(1f - h / 40f); }
         pos += Random.insideUnitSphere * shake;
         cam.transform.position = pos;
         cam.transform.rotation = Quaternion.LookRotation(look - pos + Random.insideUnitSphere * shake * 0.8f);

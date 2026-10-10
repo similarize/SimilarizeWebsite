@@ -18,6 +18,7 @@ public static class DestructDemo
     static float nextFire;
     static StoryMech mech;
     static TreeClimb.Tree tree;
+    public static TreeClimb.Tree DemoTree { get { return tree; } }   // ffu27
     static float climbT0 = -1f;            // ffu21c: climb phases count from the moment the froggy grabs the trunk
     static Vector3 camPos, camLook;
 
@@ -53,10 +54,11 @@ public static class DestructDemo
             }
             if (tree != null)
             {
-                Vector3 p = tree.basePos + new Vector3(0f, 0f, -(tree.r + 0.45f));
+                // ffu27: treeclimb starts 3 m out and really WALKS into the trunk slightly off-centre (Game.DemoClimbWalk
+                // steers P1's stick) - the glancing contact that used to slide the froggy round the trunk
+                Vector3 p = tree.basePos + new Vector3(0f, 0f, -(tree.r + (sc == "treeclimb" ? 3f : 0.45f)));
                 f.DemoPose(p, 0f);
-                if (sc == "treeclimb") f.demoPush = true;
-                else f.DemoClimb(tree, 999f, -Mathf.PI * 0.5f);
+                if (sc == "treetop") f.DemoClimb(tree, 999f, -Mathf.PI * 0.5f);
                 Debug.Log("FFDEMO destruct tree at " + tree.basePos.ToString("0") + " top " + tree.TopH.ToString("0.0"));
             }
             d = 0f;
@@ -192,6 +194,8 @@ public static class DestructDemo
                         f.demoClimbMove = ct < 9f ? new Vector2(0.15f, 0.7f) : ct < 15f ? new Vector2(0.9f, 0.05f) : new Vector2(0f, -0.4f);
                     }
                     Vector3 fp = f.transform.position;
+                    if (f.Climbing && ct > 18f && !f.demoTop) { f.demoTop = true; }   // ffu27: then climb on up to the branches
+                    if (f.demoTop) f.demoClimbMove = new Vector2(0f, 1f);
                     pos = tree.basePos + new Vector3(3.2f, 0f, -5.4f) + Vector3.up * Mathf.Max(1.6f, fp.y - tree.basePos.y + 0.8f);
                     look = new Vector3(tree.basePos.x, fp.y + 0.2f, tree.basePos.z);
                     Phase(f.Climbing ? (ct < 9f ? 1 : ct < 15f ? 2 : 3) : 0, f.Climbing ? "climbing h=" + (f.transform.position.y - tree.basePos.y).ToString("0.0") : "push ring " + f.climbProgress.ToString("0.00"));

@@ -186,7 +186,16 @@ public class SurfaceWorlds : MonoBehaviour
             if (Mathf.Abs(p.x) < 4f && p.z < 60f) continue;   // the corridor opening
             Mats.Prim(PrimitiveType.Sphere, marsRoot, M(p.x, MarsY(p.x, p.z) + 2.5f, p.z), new Vector3(5f, 7f, 5f), Mats.Lit(rock), true);
         }
-        Mats.Prim(PrimitiveType.Cylinder, marsRoot, M(0f, MarsY(0f, 68f) + 6.5f, 68f), new Vector3(30f, 0.8f, 30f), Mats.Lit(Color.Lerp(rock, Color.black, 0.3f)), true);
+        var dome = Mats.Prim(PrimitiveType.Cylinder, marsRoot, M(0f, MarsY(0f, 68f) + 6.5f, 68f), new Vector3(30f, 0.8f, 30f), Mats.Lit(Color.Lerp(rock, Color.black, 0.3f)), true);
+        // ffu27 (Bill: "we get to the door, and then it just stops"): a primitive cylinder's collider is a CAPSULE, and a
+        // 30 x 0.8 x 30 capsule collapses to a 15 m SPHERE (radius = 15 > height / 2) centred 6.5 m up = an invisible
+        // ball filling the whole chamber, touching the floor at z ~54.5 (the end of the corridor). The roof only needs a
+        // flat lid: swap it for a box (keeps low-gravity hops from leaving through the roof). &cavedome=old = the bug.
+        if (!(Application.absoluteURL ?? "").Contains("cavedome=old"))
+        {
+            var cap = dome.GetComponent<Collider>(); if (cap != null) Object.Destroy(cap);
+            var lid = dome.AddComponent<BoxCollider>(); lid.size = new Vector3(1f, 2f, 1f);
+        }
         Color[] glow = { new Color(0.3f, 1f, 0.9f), new Color(0.75f, 0.45f, 1f) };
         for (int k = 0; k < 14; k++)
         {

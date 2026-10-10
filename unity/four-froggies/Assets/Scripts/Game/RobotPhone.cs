@@ -17,10 +17,11 @@ public class RobotPhone : MonoBehaviour
     public bool open;
     public Frog user;
     int sel = 1;              // Unitree is the default link, like the 3D phone
-    int tab, cur;             // cur: 0..3 = the tabs, 4.. = items of the tab
+    int tab, cur;             // cur: 0..NT-1 = the tabs, NT.. = items of the tab
+    const int NT = 5;         // ffu27: + CALL
     struct Item { public string label, act; }
-    readonly List<Item>[] tabs = new List<Item>[4];
-    static readonly string[] TabNames = { "CHORES", "ORDERS", "DRIVE", "MISSION" };
+    readonly List<Item>[] tabs = new List<Item>[NT];
+    static readonly string[] TabNames = { "CHORES", "ORDERS", "DRIVE", "MISSION", "CALL" };
     Canvas canvas;
     public Canvas UICanvas { get { return canvas; } }   // ffu22: story cutscenes hide it
     Image panel, btn, card, batBg, batFill;
@@ -83,10 +84,10 @@ public class RobotPhone : MonoBehaviour
         jobT.resizeTextForBestFit = true; jobT.resizeTextMinSize = 10; jobT.resizeTextMaxSize = 15;
         // ---- tabs ----
         float ty = iy - 32f;
-        for (int i = 0; i < 4; i++)
+        for (int i = 0; i < NT; i++)
         {
-            var b = UIK.Img(p, UIK.Round, Color.white, new Vector2(0.5f, 1f), new Vector2(-153f + i * 102f, ty), new Vector2(98f, 28f)); b.type = Image.Type.Sliced;
-            UIK.Label(b.transform, TabNames[i], 13, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(98f, 28f), Color.white);
+            var b = UIK.Img(p, UIK.Round, Color.white, new Vector2(0.5f, 1f), new Vector2(-166f + i * 83f, ty), new Vector2(80f, 28f)); b.type = Image.Type.Sliced;
+            UIK.Label(b.transform, TabNames[i], 13, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(80f, 28f), i == 4 ? new Color(0.6f, 1f, 0.6f) : Color.white);
             tabBtns.Add(b);
         }
         // ---- item grid (max 24 = 8 rows x 3; ffu26: was 7 rows) ----
@@ -127,7 +128,7 @@ public class RobotPhone : MonoBehaviour
 
     void BuildItems()
     {
-        for (int i = 0; i < 4; i++) tabs[i] = new List<Item>();
+        for (int i = 0; i < NT; i++) tabs[i] = new List<Item>();
         void Add(int k, string l, string a) { tabs[k].Add(new Item { label = l, act = a }); }
         Add(0, "Auto chores", "auto"); Add(0, "Go charge", "charge"); Add(0, "DRIVE IT!", "drive");
         string[] ch = { "Sweep porch", "Vacuum garage", "Haul crates", "Haul hay", "Pick up litter", "Mow lawn", "Rake leaves", "Water flowers" };
@@ -228,11 +229,35 @@ public class RobotPhone : MonoBehaviour
     {
         if (f == null) return;
         if (f.remote != null) { f.remote.ReleaseManual(true); return; }
-        if (f.world != WorldId.Ranch) return;
+        if (!Ok(f)) return;
         open = !open || user != f;
         user = f;
+        if (open) { BuildCalls(f); if (f.world != WorldId.Ranch) { tab = 4; cur = 4; msg.text = "CALL a froggy - or everyone - to you"; } }
         Sfx.Play(Sfx.Click, 0.7f);
         if (open) f.Toast("Robot phone: Up/Down robot, Left/Right orders, A send, LB / P close", 3f);
+    }
+
+    // ffu27 (Bill: "wherever James goes, his phone goes with him"): the phone works in every world - Mars, Callisto,
+    // space / orbit, Mercury / Enceladus / the Deep chambers (story places on the Mars / Callisto ids), underwater, the
+    // house - on foot, and off the ranch also inside a vehicle (the Starship in orbit). Not in the REAL ROOM (own camera +
+    // first-person input) and not during the ranch blast-off / landing.
+    public static bool Ok(Frog f)
+    {
+        if (f == null || f.world == WorldId.RealRoom || f.launching) return false;
+        return f.vehicle == null || f.remote != null || f.world != WorldId.Ranch;
+    }
+
+    void BuildCalls(Frog f)
+    {
+        var t = tabs[4]; t.Clear();
+        t.Add(new Item { label = "Call everyone", act = "call:all" });
+        if (Game.I != null)
+            for (int k = 0; k < Game.I.frogs.Count; k++)
+            {
+                var o = Game.I.frogs[k];
+                if (o == null || o == f || !o.gameObject.activeInHierarchy || o.world == WorldId.RealRoom) continue;
+                t.Add(new Item { label = "Call " + o.nick, act = "call:" + k });
+            }
     }
 
     public void Say(string s) { if (msg != null) msg.text = s; if (user != null && s.Length > 0) user.Toast(s, 2.5f); }
@@ -241,23 +266,24 @@ public class RobotPhone : MonoBehaviour
     public void DemoOpen(Frog f, int robot, string act)
     {
         user = f; open = true; sel = robot;
-        for (int k = 0; k < 4; k++)
+        BuildCalls(f);
+        for (int k = 0; k < NT; k++)
         {
             if (TabNames[k] == act) { tab = k; cur = k; return; }
             int j = tabs[k].FindIndex(it => it.act == act);
-            if (j >= 0) { tab = k; cur = 4 + j; msg.text = RanchLife.I.robots[robot].robotName + " selected - " + tabs[k][j].label; return; }
+            if (j >= 0) { tab = k; cur = NT + j; msg.text = RanchLife.I.robots[robot].robotName + " selected - " + tabs[k][j].label; return; }
         }
     }
     public void DemoSend() { if (user != null) Activate(user); }
     public void DemoAct(Frog f, int robot, string act) { DemoOpen(f, robot, act); Activate(f); }
 
-    int Count { get { return 4 + tabs[tab].Count; } }
+    int Count { get { return NT + tabs[tab].Count; } }
 
     // called by Game with the phone user's input; returns true when the phone ate the input
     public bool Handle(Frog f, PIn i)
     {
         if (!open || f != user) return false;
-        if (f.world != WorldId.Ranch || f.vehicle != null || f.remote != null) { open = false; return false; }
+        if (!Ok(f) || f.remote != null) { open = false; return false; }
         stickCool -= Time.unscaledDeltaTime;
         var robots = RanchLife.I.robots;
         float y = i.move.y, x = i.move.x;
@@ -272,7 +298,7 @@ public class RobotPhone : MonoBehaviour
         if (i.use || i.hop || Kb.EnterDown()) Activate(f);
         if (f.inputKind == InputKind.Gamepad)
         {
-            if (i.warpUp) { tab = (tab + 1) % 4; cur = tab; Sfx.Play(Sfx.Click, 0.4f); }          // RB next tab
+            if (i.warpUp) { tab = (tab + 1) % NT; cur = tab; Sfx.Play(Sfx.Click, 0.4f); }          // RB next tab
             if (i.land) Do(f, "feed");                                                          // Y
             if (i.auto) Do(f, "feedfull");                                                      // X
             if (i.cargo) Do(f, "feedcam");                                                      // B
@@ -295,16 +321,32 @@ public class RobotPhone : MonoBehaviour
 
     void Activate(Frog f)
     {
-        if (cur < 4) { tab = cur; Sfx.Play(Sfx.Click, 0.5f); return; }
-        int j = cur - 4;
+        if (cur < NT) { tab = cur; Sfx.Play(Sfx.Click, 0.5f); return; }
+        int j = cur - NT;
         if (j < tabs[tab].Count) Do(f, tabs[tab][j].act);
     }
 
     void Do(Frog f, string a)
     {
+        string say = "";
+        // ffu27 CALL tab: works in every world
+        if (a.StartsWith("call:"))
+        {
+            string w = a.Substring(5);
+            int fi; Frog who = null;
+            if (w != "all" && int.TryParse(w, out fi) && Game.I != null && fi >= 0 && fi < Game.I.frogs.Count) who = Game.I.frogs[fi];
+            say = Frog.Call(f, who);
+            msg.text = say; if (say.Length > 0) f.Toast(say, 2.5f);
+            return;
+        }
+        // robot orders that only make sense on the ranch (the MISSION tab works from anywhere)
+        if (f.world != WorldId.Ranch && (tab <= 2 || a == "drive" || a.StartsWith("veh:") || a.StartsWith("mech:") || a.StartsWith("dmode:") || a == "getout") && !a.StartsWith("feed"))
+        {
+            say = "The robots are back on the ranch - that order works there. CALL and MISSION work from anywhere.";
+            msg.text = say; f.Toast(say, 2.5f); Sfx.Play(Sfx.Click, 0.5f); return;
+        }
         var r = Selected;
         if (r == null) return;
-        string say = "";
         var mm = RobotMechMission.For(r);
         if (mm != null && a != "recall" && a != "abort" && !a.StartsWith("feed"))
         {
@@ -380,8 +422,8 @@ public class RobotPhone : MonoBehaviour
         if (In(arrowL, p)) { Pick(sel - 1); return; }
         if (In(arrowR, p)) { Pick(sel + 1); return; }
         for (int i = 0; i < dots.Count; i++) if (RectTransformUtility.RectangleContainsScreenPoint(dots[i].rectTransform, p, null)) { Pick(i); return; }
-        for (int i = 0; i < 4; i++) if (In(tabBtns[i], p)) { tab = i; cur = i; Sfx.Play(Sfx.Click, 0.5f); return; }
-        for (int i = 0; i < itemBtns.Count; i++) if (In(itemBtns[i], p) && i < tabs[tab].Count) { cur = 4 + i; if (user != null) Do(user, tabs[tab][i].act); return; }
+        for (int i = 0; i < NT; i++) if (In(tabBtns[i], p)) { tab = i; cur = i; Sfx.Play(Sfx.Click, 0.5f); return; }
+        for (int i = 0; i < itemBtns.Count; i++) if (In(itemBtns[i], p) && i < tabs[tab].Count) { cur = NT + i; if (user != null) Do(user, tabs[tab][i].act); return; }
         if (In(card, p)) { dragOn = true; dragX0 = p.x; }
     }
 
@@ -389,7 +431,7 @@ public class RobotPhone : MonoBehaviour
     {
         Slot bs = BtnSlot();
         Frog bf = bs != null ? Game.I.frogs[bs.frog] : null;
-        bool showBtn = Game.I != null && Game.I.state == Game.State.Play && bf != null && bf.world == WorldId.Ranch && (bf.vehicle == null || bf.remote != null) && !Game.I.HelpOpen;
+        bool showBtn = Game.I != null && Game.I.state == Game.State.Play && bf != null && (Ok(bf) || bf.remote != null) && !Game.I.HelpOpen;   // ffu27: every world
         if (btn.gameObject.activeSelf != showBtn) btn.gameObject.SetActive(showBtn);
         if (showBtn) { string k = bs.kind == InputKind.Gamepad ? "LB" : bs.kind == InputKind.Touch ? "TAP" : "P"; if (btnKey.text != k) btnKey.text = k; }
         var mouse = UnityEngine.InputSystem.Mouse.current;
@@ -423,7 +465,7 @@ public class RobotPhone : MonoBehaviour
                 catch { dragOn = false; }
             }
         }
-        if (user != null && (user.world != WorldId.Ranch || Game.I == null || Game.I.state != Game.State.Play)) open = false;
+        if (user != null && (!Ok(user) || Game.I == null || Game.I.state != Game.State.Play)) open = false;
         panel.gameObject.SetActive(open);
         TickStand(Mathf.Min(Time.unscaledDeltaTime, 0.1f));
         if (!open) return;
@@ -444,7 +486,7 @@ public class RobotPhone : MonoBehaviour
         batT.text = (r.Charging ? "+" : "") + r.Pct;
         jobT.text = r.StatusLine;
         for (int i = 0; i < dots.Count; i++) { dots[i].color = i == sel ? new Color(0.5f, 1f, 0.6f) : new Color(1f, 1f, 1f, 0.3f); dots[i].rectTransform.sizeDelta = Vector2.one * (i == sel ? 10f : 7f); }
-        for (int i = 0; i < 4; i++)
+        for (int i = 0; i < NT; i++)
             tabBtns[i].color = i == tab ? (cur == i ? new Color(1f, 0.75f, 0.2f, 0.95f) : new Color(0.2f, 0.6f, 0.4f, 0.9f)) : (cur == i ? new Color(1f, 0.75f, 0.2f, 0.6f) : new Color(1f, 1f, 1f, 0.1f));
         var items = tabs[tab];
         for (int i = 0; i < itemBtns.Count; i++)
@@ -460,7 +502,8 @@ public class RobotPhone : MonoBehaviour
                     : (act.StartsWith("mis") ? new Color(0.7f, 0.32f, 0.12f, 0.82f) : act.StartsWith("mmis") || act == "recall" ? new Color(0.62f, 0.2f, 0.42f, 0.85f) : new Color(0.2f, 0.32f, 0.5f, 0.75f));
             bool picked = (act.StartsWith("veh:") && pickVeh != null && vehicles.IndexOf(pickVeh) == int.Parse(act.Substring(4))) || (act.StartsWith("mech:") && pickBand == int.Parse(act.Substring(5)));
             if (picked) c = new Color(0.1f, 0.75f, 0.85f, 0.95f);
-            if (cur == 4 + i) c = new Color(1f, 0.75f, 0.2f, 0.95f);
+            if (tab == 4) c = act == "call:all" ? new Color(0.15f, 0.6f, 0.3f, 0.85f) : new Color(0.18f, 0.42f, 0.32f, 0.78f);
+            if (cur == NT + i) c = new Color(1f, 0.75f, 0.2f, 0.95f);
             itemBtns[i].color = c;
         }
         InputKind ik = user != null ? user.inputKind : InputKind.Keyboard;

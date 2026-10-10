@@ -182,7 +182,8 @@ public partial class Game : MonoBehaviour
             else if (sc == "mechaim" || sc == "mechlook" || sc == "surface" || sc == "spacemap" || sc == "mechspace" || sc == "cargobay") Demo15Start(f, sc);
             else if (sc == "lineup" || sc == "ripsaw") DemoLineup(f, sc);
             else if (sc.StartsWith("realroom")) RealRoom.DemoStart(f, sc);   // ffu18 REAL ROOM shots (own camera)
-            else if (DestructDemo.Is(sc)) DestructDemo.Start(f, sc);         // ffu21 destruction + tree climbing shots
+            else if (DestructDemo.Is(sc)) { DestructDemo.Start(f, sc); if (sc == "treeclimb") demoHook = DemoClimbWalk; }   // ffu21 destruction + tree climbing shots (ffu27: treeclimb really walks in)
+            else if (Is27(sc)) Demo27Start(f, sc);                           // ffu27 Mars cave / phone CALL / tag-along / landing / treehouse
             else if (sc.StartsWith("lj-") || sc.StartsWith("loopdrive")) DemoLoopStart(f, sc);   // ffu19 loop joints (GameLoopDemo.cs)
             else if (IsRobot20(sc)) DemoRobot20Start(f, sc);   // ffu20 robots drive / missions / phone carousel
             else if (sc == "net") { if (UrlParam("ffwalk") != null) demoHook = DemoWalk; }      // ffu13 online test
@@ -195,6 +196,12 @@ public partial class Game : MonoBehaviour
         if (DestructDemo.Is(sc))
         {
             if (!DestructDemo.Cam(f, sc, out pos, out look)) return;
+            c.transform.position = pos; c.transform.LookAt(look);
+            return;
+        }
+        if (Is27(sc))
+        {
+            if (!Demo27Cam(f, sc, out pos, out look)) return;
             c.transform.position = pos; c.transform.LookAt(look);
             return;
         }
@@ -1116,7 +1123,7 @@ public partial class Game : MonoBehaviour
             {
                 Frog pf = frogs[s.frog];
                 pf.inputKind = s.kind;
-                if (i.phone && RobotPhone.I != null && pf.world == WorldId.Ranch && pf.vehicle == null) RobotPhone.I.Toggle(pf);
+                if (i.phone && RobotPhone.I != null && (RobotPhone.Ok(pf) || pf.remote != null) && !(pf.vehicle != null && s.kind == InputKind.Gamepad)) RobotPhone.I.Toggle(pf);   // ffu27: every world (LB stays boost / warp in vehicles)
                 if (RobotPhone.I != null && RobotPhone.I.Handle(pf, i)) { Vector2 lk = i.look; bool v = i.view, h = i.help; i = new PIn(); i.look = lk; i.view = v; i.help = h; }
                 if (k == 0 && demoHook != null) i = demoHook(i);
                 if (pf.remote != null && !help)

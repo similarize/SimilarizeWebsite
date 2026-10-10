@@ -211,7 +211,7 @@ public partial class Frog : MonoBehaviour
         }
         if (launching)
         {
-            prompt = "Starship launch - A / FIRE skips";
+            prompt = "Starship - A / FIRE skips";
             if (human && (input.use || input.fire || input.hop)) LaunchSeq.Skip(this);
             input = new PIn();
             return;
@@ -646,6 +646,7 @@ public partial class Frog : MonoBehaviour
     // ---------- AI wander ----------
     void Think(float dt)
     {
+        if (FollowThink(dt)) return;   // ffu27: phone CALL + free-play tag-along across worlds (FrogFollow.cs)
         var i = new PIn();
         if (vehicle != null) { input = i; return; }
         if (AiGoalHook != null) { Vector3? g = AiGoalHook(this); if (g.HasValue) { aiTarget = g.Value; if (aiTimer > 2f) aiTimer = 2f; } }   // ffu24 story: follow the crew

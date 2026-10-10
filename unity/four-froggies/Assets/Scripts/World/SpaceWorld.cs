@@ -136,6 +136,19 @@ public class SpaceWorld : MonoBehaviour
             if (ship.driver != null) ship.driver.Toast("Can't land on " + b.name + " - Earth, Mars and Callisto are landable", 3f);
             return;
         }
+        // ffu27: back to Earth = a visible landing on the ranch pad (LaunchSeq phase 3), unless a mech flew up (it lands
+        // as itself) or the pad Starship is missing / busy -> the old instant touchdown
+        if (b.id == "earth" && mech == null && crew.Count > 0)
+        {
+            var spots = new List<Vector3>();
+            for (int j = 0; j < crew.Count; j++)
+            {
+                Vector2 pc = Layout.PadC;
+                float x = pc.x + 16f, z = pc.y - 4.5f + j * 3f;
+                spots.Add(new Vector3(x, Ranch.GY(x, z) + 1.2f, z));
+            }
+            if (LaunchSeq.BeginLanding(crew, spots)) { Sfx.Play(Sfx.Boom, 0.8f, 0.5f); return; }
+        }
         int k = 0;
         foreach (Frog f in crew)
         {

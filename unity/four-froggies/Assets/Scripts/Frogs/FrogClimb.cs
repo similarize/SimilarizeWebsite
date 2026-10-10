@@ -34,7 +34,7 @@ public static class TreeClimb
         bool first = true; Bounds bb = new Bounds();
         foreach (var mr in tg.GetComponentsInChildren<MeshRenderer>()) { if (first) { bb = mr.bounds; first = false; } else bb.Encapsulate(mr.bounds); }
         if (!first) h = Mathf.Max(3f, bb.max.y - basePos.y);
-        tr.topY = basePos.y + Mathf.Clamp(h * (conifer ? 0.45f : 0.55f), 2.4f, 9f);
+        tr.topY = basePos.y + Mathf.Clamp(h * (conifer ? 0.72f : 0.8f), 2.4f, 14f);   // ffu27: up into the top branches (was 55% / 45%, max 9 m)
         tr.branchTop = tr.topY;
         // three walkable branches sticking out of the trunk at the climb top (bark-brown, real box colliders)
         Material bark = Mats.Lit(new Color(0.38f, 0.26f, 0.16f));
@@ -44,7 +44,7 @@ public static class TreeClimb
         {
             float a = (a0 + i * 120f) * Mathf.Deg2Rad;
             Vector3 d = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a));
-            Vector3 c = basePos + d * (trunkR + len * 0.5f - 0.1f) + Vector3.up * (tr.topY - 0.14f);
+            Vector3 c = basePos + d * (trunkR + len * 0.5f - 0.1f) + Vector3.up * (tr.topY - basePos.y - 0.14f);   // ffu27: topY is absolute (was added to basePos.y twice)
             var br = Mats.Prim(PrimitiveType.Cube, tg, Vector3.zero, new Vector3(0.5f, 0.28f, len), bark, true);
             br.name = "Branch";
             br.transform.position = c;
@@ -52,6 +52,15 @@ public static class TreeClimb
             tr.branchDirs.Add(d);
         }
         Trees.Add(tr);
+    }
+
+    // ffu27 treehouse trunk: climbable up to a deck (topY), stepping out onto the deck along `dirs`
+    public static Tree AddClimb(Transform tg, Vector3 basePos, float trunkR, float topY, params Vector3[] dirs)
+    {
+        var tr = new Tree { t = tg, basePos = basePos, r = trunkR, s = 1f, topY = topY, branchTop = topY };
+        foreach (var d in dirs) tr.branchDirs.Add(d.normalized);
+        Trees.Add(tr);
+        return tr;
     }
 
     // nearest standing tree whose trunk surface is within `range` metres (horizontal) of p
@@ -77,9 +86,10 @@ public partial class Frog
     TreeClimb.Tree climbTree, pushTree;
     float climbA, climbH, climbAnim, climbCool, climbSpd;
     public bool Climbing { get { return climbTree != null; } }
-    const float ClimbHold = 0.8f;
+    const float ClimbHold = 0.4f;   // ffu27 (Bill): the progress circle fills in half the time (was 0.8 s)
 
-    string ClimbKey(string pad, string touch, string keys) { return inputKind == InputKind.Gamepad ? pad : inputKind == InputKind.Touch ? touch : keys; }
+    // ffu27: a phone / tablet reads as touch even when its slot is not (the ffu21 treetop toast said SPACE on phones)
+    string ClimbKey(string pad, string touch, string keys) { return inputKind == InputKind.Gamepad ? pad : (inputKind == InputKind.Touch || Look.Mobile) ? touch : keys; }
 
     // after Walk: the "hold toward the tree" detection + hint
     void ClimbDetect(float dt)
@@ -93,8 +103,19 @@ public partial class Frog
         Vector3 wish = Vector3.zero;
         if (input.move.sqrMagnitude > 0.0001f) wish = Quaternion.Euler(0f, camYaw, 0f) * new Vector3(input.move.x, 0f, input.move.y);
         Vector3 to = tree.basePos - p; to.y = 0f;
-        bool pushing = (demoPush && d < 0.9f) || wish.sqrMagnitude > 0.3f && to.sqrMagnitude > 1e-4f && Vector3.Dot(wish.normalized, to.normalized) > 0.75f
-                       && d < 0.8f && cc.isGrounded && p.y < tree.basePos.y + 1.6f;
+        // ffu27 (Bill: "the frog just slides around beside the trunk"): the round trunk collider deflected the walk
+        // sideways, so the old 41-degree cone (dot > 0.75) was lost within a few frames and the hold never completed.
+        // Now: anything within 60 degrees of the trunk counts, from up to 0.6 m off the bark (contact included), and
+        // while pushing the froggy is MAGNETISED to the trunk (slide cancelled, pulled onto the bark).
+        bool toward = wish.sqrMagnitude > 0.09f && to.sqrMagnitude > 1e-4f && Vector3.Dot(wish.normalized, to.normalized) > 0.5f;
+        bool pushing = (demoPush && d < 0.9f) || toward && d < 0.6f + 0.45f && p.y < tree.basePos.y + 1.6f && (cc.isGrounded || d < 0.7f);
+        if (toward && d < 1.3f && cc.enabled)
+        {
+            Vector3 n = to.normalized;
+            planar = n * Mathf.Max(0f, Vector3.Dot(planar, n));                           // no sideways slide round the trunk
+            float gap = d - 0.45f;                                                        // cc radius ~0.42: touching the bark
+            if (gap > 0.01f) cc.Move(n * Mathf.Min(gap, dt * 4f));
+        }
         if (pushing)
         {
             if (pushTree != tree) { pushTree = tree; climbProgress = 0f; }
@@ -148,7 +169,7 @@ public partial class Frog
         {
             Vector3 bd = t.branchDirs[0]; float bestDot = -2f;
             foreach (var d in t.branchDirs) { float k = Vector3.Dot(d, rad); if (k > bestDot) { bestDot = k; bd = d; } }
-            transform.position = t.basePos + bd * (t.r + 0.85f) + Vector3.up * (t.branchTop + 0.1f);
+            transform.position = t.basePos + bd * (t.r + 0.85f) + Vector3.up * (t.branchTop - t.basePos.y + 0.1f);   // ffu27: branchTop is absolute
             yaw = Mathf.Atan2(bd.x, bd.z) * Mathf.Rad2Deg;
             transform.rotation = Quaternion.Euler(0f, yaw, 0f);
             climbTree = null; cc.enabled = true; vel = Vector3.zero; planar = Vector3.zero; climbCool = 0.8f;

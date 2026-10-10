@@ -451,6 +451,7 @@ public static class Ranch
     // graphics overhaul: Quaternius Stylized Nature MegaKit trees / pines / bushes / rocks (CC0, Resources/LB); invisible
     // trunk / rock colliders keep the old collision. Falls back to the primitive trees if the packs are missing.
     static readonly string[] TreePacks = { "tree0", "tree1", "tree2" }, PinePacks = { "pine0", "pine1" };
+    public static readonly System.Collections.Generic.List<Vector2> TreeSpots = new System.Collections.Generic.List<Vector2>();   // ffu27: every mesh tree (treehouses keep clear)
     static bool MeshTrees()
     {
         if (LBPack.Get("tree0") == null || LBPack.Get("pine0") == null) return false;
@@ -479,7 +480,11 @@ public static class Ranch
             col.transform.SetParent(tg, false);
             col.transform.position = new Vector3(x, gy + 2f * s, z);
             col.radius = 0.35f * s; col.height = 4f * s;
-            TreeClimb.AddTree(tg, new Vector3(x, gy, z), 0.35f * s, s, conifer);
+            // ffu27 (Bill: "not every tree should have these boards sticking out of them, just a few random ones"): only
+            // ~18% of trees (fixed hash of the spot = the same trees every load) get the climb branches and are climbable
+            uint hsh = (uint)(Mathf.RoundToInt(x * 10f) * 73856093) ^ (uint)(Mathf.RoundToInt(z * 10f) * 19349663);
+            if (hsh % 100u < 18u) TreeClimb.AddTree(tg, new Vector3(x, gy, z), 0.35f * s, s, conifer);
+            TreeSpots.Add(new Vector2(x, z));
             Destruct.Register(tg.gameObject, BreakKind.Tree);
             placed++;
         }
@@ -512,7 +517,8 @@ public static class Ranch
             col.radius = 1.1f * s;
             Destruct.Register(rg.gameObject, BreakKind.Rock);
         }
-        Debug.Log("Ranch: " + placed + " mesh trees");
+        Debug.Log("Ranch: " + placed + " mesh trees, " + TreeClimb.Trees.Count + " climbable");
+        Treehouse.BuildAll(TreeSpots);   // ffu27
         return true;
     }
 
