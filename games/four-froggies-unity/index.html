@@ -61,20 +61,33 @@
     window.FFDPR = { raw: raw, lobby: Math.min(raw, 2.5), game: Math.min(raw, isMobile ? 1.5 : 2), force: f > 0.4 && f < 4.1 ? f : 0 };
     if (window.FFDPR.force) window.FFDPR.lobby = window.FFDPR.game = window.FFDPR.force;
   })();
+  // ffu17c: Unity 2022 decides the WebGL context's antialias flag itself and the probe showed it false (no MSAA on the
+  // canvas, jagged 3D edges behind the lobby and in game). Ask the browser for an antialiased (MSAA) backbuffer on the
+  // game canvas. ?aa=0 turns it off.
+  (function () {
+    if (/[?&]aa=0/.test(location.search)) return;
+    var orig = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (type, attrs) {
+      if (this.id === "unity-canvas" && (type === "webgl2" || type === "webgl" || type === "experimental-webgl")) {
+        var a = {}; if (attrs) for (var k in attrs) a[k] = attrs[k]; a.antialias = true; attrs = a;
+      }
+      return orig.call(this, type, attrs);
+    };
+  })();
   var config = {
-    dataUrl: buildUrl + "/" + name + ".data?v=202610101220-291417c",
-    frameworkUrl: buildUrl + "/" + name + ".framework.js?v=202610101220-291417c",
-    codeUrl: buildUrl + "/" + name + ".wasm?v=202610101220-291417c",
+    dataUrl: buildUrl + "/" + name + ".data?v=202610101240-2539f80",
+    frameworkUrl: buildUrl + "/" + name + ".framework.js?v=202610101240-2539f80",
+    codeUrl: buildUrl + "/" + name + ".wasm?v=202610101240-2539f80",
     streamingAssetsUrl: "StreamingAssets",
     companyName: "Similarize",
     productName: "Four Froggies",
-    productVersion: "202610101220-291417c",
+    productVersion: "202610101240-2539f80",
     devicePixelRatio: window.FFDPR.lobby,
     showBanner: function (msg, type) { if (type === "error") { var e = document.getElementById("err"); e.style.display = "block"; e.textContent = msg; } else console.log(msg); }
   };
   var fill = document.getElementById("fill"), pct = document.getElementById("pct"), loader = document.getElementById("loader");
   var script = document.createElement("script");
-  script.src = buildUrl + "/" + name + ".loader.js?v=202610101220-291417c";
+  script.src = buildUrl + "/" + name + ".loader.js?v=202610101240-2539f80";
   script.onload = function () {
     createUnityInstance(canvas, config, function (p) {
       fill.style.width = Math.round(p * 100) + "%";
