@@ -384,7 +384,16 @@ public class RobotMechMission
                     Vector3 dir = B - A; dir.y = 0f; float span = dir.magnitude; dir /= Mathf.Max(1f, span);
                     Vector3 side = Vector3.Cross(Vector3.up, dir);
                     Vector3 p0 = A + dir * W.bodies[from].cap, p3 = B - dir * W.bodies[to].cap;
-                    Vector3 p1 = p0 + dir * span * 0.3f - side * span * 0.18f, p2 = p3 - dir * span * 0.3f - side * span * 0.1f;
+                    // ffu26b: bow the path AWAY from the Sun (a fixed side flew the mech straight through the Sun's glow
+                    // when Earth and Mars were on opposite sides of it), wide enough to clear it
+                    int si = W.Find("sun");
+                    Vector3 sunP = si >= 0 ? W.PosAt(si, W.simT) : Vector3.zero;
+                    float sunR = si >= 0 ? W.bodies[si].r : 11f;
+                    Vector3 mid = (A + B) * 0.5f - sunP; mid.y = 0f;
+                    float off = Vector3.Dot(side, mid);
+                    float sg = off >= 0f ? 1f : -1f;
+                    float bow = Mathf.Max(span * 0.16f, (sunR * 9f - Mathf.Abs(off)) / 0.75f);
+                    Vector3 p1 = p0 + dir * span * 0.3f + side * sg * bow * 1.15f, p2 = p3 - dir * span * 0.3f + side * sg * bow * 0.85f;
                     float u = Mathf.Clamp01(t / TransitT), s = u * u * (3f - 2f * u);
                     Vector3 pos = Bez(p0, p1, p2, p3, s), ahead = Bez(p0, p1, p2, p3, Mathf.Min(1f, s + 0.01f)) - pos;
                     craft.transform.position = pos;
