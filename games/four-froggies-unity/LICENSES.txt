@@ -111,4 +111,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    - Callisto: "Outer Space Loop" by wipics - https://opengameart.org/content/outer-space-loop
    Everything else (synth engines, rocket roar layers, UI pings) is synthesised for this game.
 
+11. Realism test (only with ?realism=1 in the URL; streamed from real/, not part of the normal game) - all CC0 1.0:
+   - Sky: "Sunflowers (Pure Sky)" HDRI by Poly Haven - https://polyhaven.com/a/sunflowers_puresky
+     (tonemapped to an LDR panorama; sun direction + ambient lighting derived from it).
+   - Textures by Poly Haven (https://polyhaven.com, CC0): "Dry Ground 01" (dry_ground_01), "Brown Mud Rocks 01"
+     (brown_mud_rocks_01), "Brown Mud 02" (brown_mud_02), "Rock Boulder Dry" (rock_boulder_dry), "Bark Brown 02"
+     (bark_brown_02) - diffuse x ambient occlusion, OpenGL normal maps, resized to 1024 / 512 px.
+   - "Grass 004" by ambientCG (https://ambientcg.com/view?id=Grass004, CC0 1.0) - colour x AO + normal map.
+   - Water ripple normal map and grass clump card: generated for this game.
+
 CC0 1.0 Universal: https://creativecommons.org/publicdomain/zero/1.0/legalcode
