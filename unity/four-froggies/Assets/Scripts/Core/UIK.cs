@@ -164,4 +164,170 @@ public static class UIK
         rt.offsetMin = Vector2.zero;
         rt.offsetMax = Vector2.zero;
     }
+
+    // ---------- ffu17 modern lobby kit ----------
+    // Modern UI fonts (SIL OFL 1.1, Latin subsets in Resources/Fonts): Montserrat ExtraBold for display text, Inter SemiBold
+    // for body text. Dynamic TTF fonts are rasterised by FreeType at the real on-screen pixel size (fontSize x canvas
+    // scale), so with a DPR-correct canvas the glyphs are 1:1 and crisp; the weight is in the face, so no faux bold.
+    static Font display, body;
+    static bool fontsTried;
+    static void LoadFonts()
+    {
+        if (fontsTried) return;
+        fontsTried = true;
+        try { display = Resources.Load<Font>("Fonts/FFDisplay"); } catch { }
+        try { body = Resources.Load<Font>("Fonts/FFBody"); } catch { }
+        Debug.Log("UIK: modern fonts display " + (display != null) + " body " + (body != null));
+    }
+    public static Font Display { get { LoadFonts(); return display != null ? display : Font; } }
+    public static Font Body { get { LoadFonts(); return body != null ? body : Font; } }
+    public static bool ModernFonts { get { LoadFonts(); return display != null && body != null; } }
+
+    // restyle one label: modern face, no faux bold, soft drop shadow instead of the hard retro outline
+    public static void Modernize(Text t, bool displayFace, float shadowA = 0.42f)
+    {
+        if (t == null) return;
+        LoadFonts();
+        Font f = displayFace ? display : body;
+        if (f == null) return;
+        t.font = f;
+        t.fontStyle = FontStyle.Normal;
+        var o = t.GetComponent<Outline>();
+        if (o != null) Object.DestroyImmediate(o);
+        var sh = t.GetComponent<Shadow>();
+        if (sh == null && shadowA > 0f) sh = t.gameObject.AddComponent<Shadow>();
+        if (sh != null) { sh.effectColor = new Color(0f, 0f, 0f, shadowA); sh.effectDistance = new Vector2(0f, -2f); }
+    }
+
+    // hi-res rounded rect (radius 20 design units, 2x texels via pixelsPerUnitMultiplier), stays smooth on 2.5x screens
+    static Sprite round2;
+    public static Sprite Round2
+    {
+        get
+        {
+            if (round2 != null) return round2;
+            const int n = 128; const float R = 40f;
+            var t = new Texture2D(n, n, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
+            var px = new Color32[n * n];
+            for (int y = 0; y < n; y++)
+                for (int x = 0; x < n; x++)
+                {
+                    float cx = Mathf.Clamp(x + 0.5f, R, n - R), cy = Mathf.Clamp(y + 0.5f, R, n - R);
+                    float d = Mathf.Sqrt((x + 0.5f - cx) * (x + 0.5f - cx) + (y + 0.5f - cy) * (y + 0.5f - cy));
+                    px[y * n + x] = new Color32(255, 255, 255, (byte)(Mathf.Clamp01(R - d + 0.5f) * 255));
+                }
+            t.SetPixels32(px); t.Apply();
+            round2 = Sprite.Create(t, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, new Vector4(48, 48, 48, 48));
+            return round2;
+        }
+    }
+    // 1-px-wide (2 texels) rounded outline ring, 9-sliced like Round2 (glass card edge)
+    static Sprite edge2;
+    public static Sprite Edge2
+    {
+        get
+        {
+            if (edge2 != null) return edge2;
+            const int n = 128; const float R = 40f, W = 2.2f;
+            var t = new Texture2D(n, n, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
+            var px = new Color32[n * n];
+            for (int y = 0; y < n; y++)
+                for (int x = 0; x < n; x++)
+                {
+                    float cx = Mathf.Clamp(x + 0.5f, R, n - R), cy = Mathf.Clamp(y + 0.5f, R, n - R);
+                    float d = Mathf.Sqrt((x + 0.5f - cx) * (x + 0.5f - cx) + (y + 0.5f - cy) * (y + 0.5f - cy));
+                    float a = Mathf.Clamp01(R - d + 0.5f) * Mathf.Clamp01(d - (R - W) + 0.5f);
+                    px[y * n + x] = new Color32(255, 255, 255, (byte)(a * 255));
+                }
+            t.SetPixels32(px); t.Apply();
+            edge2 = Sprite.Create(t, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, new Vector4(48, 48, 48, 48));
+            return edge2;
+        }
+    }
+    // feathered rounded rect: soft glow / shadow behind cards (9-sliced, the falloff lives in the border)
+    static Sprite soft;
+    public static Sprite SoftRect
+    {
+        get
+        {
+            if (soft != null) return soft;
+            const int n = 128; const float R = 60f;
+            var t = new Texture2D(n, n, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
+            var px = new Color32[n * n];
+            for (int y = 0; y < n; y++)
+                for (int x = 0; x < n; x++)
+                {
+                    float cx = Mathf.Clamp(x + 0.5f, R + 2f, n - R - 2f), cy = Mathf.Clamp(y + 0.5f, R + 2f, n - R - 2f);
+                    float d = Mathf.Sqrt((x + 0.5f - cx) * (x + 0.5f - cx) + (y + 0.5f - cy) * (y + 0.5f - cy));
+                    float a = Mathf.Clamp01((R - d) / R); a = a * a * (3f - 2f * a);
+                    px[y * n + x] = new Color32(255, 255, 255, (byte)(a * 255));
+                }
+            t.SetPixels32(px); t.Apply();
+            soft = Sprite.Create(t, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, new Vector4(62, 62, 62, 62));
+            return soft;
+        }
+    }
+    // radial soft dot (bokeh / glow), gaussian-ish falloff
+    static Sprite dot;
+    public static Sprite SoftDot
+    {
+        get
+        {
+            if (dot != null) return dot;
+            const int n = 128;
+            var t = new Texture2D(n, n, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
+            var px = new Color32[n * n];
+            float c = (n - 1) * 0.5f;
+            for (int y = 0; y < n; y++)
+                for (int x = 0; x < n; x++)
+                {
+                    float d = Mathf.Sqrt((x - c) * (x - c) + (y - c) * (y - c)) / c;
+                    float a = Mathf.Clamp01(1f - d); a = a * a * (3f - 2f * a);
+                    px[y * n + x] = new Color32(255, 255, 255, (byte)(a * 255));
+                }
+            t.SetPixels32(px); t.Apply();
+            dot = Sprite.Create(t, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 100f);
+            return dot;
+        }
+    }
+    public static Image Glass(Transform parent, Color col, Vector2 pos, Vector2 size)
+    {
+        Image i = Img(parent, Round2, col, new Vector2(0.5f, 0.5f), pos, size);
+        i.type = Image.Type.Sliced;
+        i.pixelsPerUnitMultiplier = 2f;
+        return i;
+    }
+    public static Image Sliced(Transform parent, Sprite sp, Color col, float ppuMul)
+    {
+        Image i = Img(parent, sp, col, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+        i.type = Image.Type.Sliced;
+        i.pixelsPerUnitMultiplier = ppuMul;
+        return i;
+    }
+}
+
+// ffu17: vertical colour gradient over a whole Text / Graphic (top -> bottom), applied to the vertex colours
+public class UIGradient : BaseMeshEffect
+{
+    public Color top = Color.white, bottom = Color.white;
+    readonly System.Collections.Generic.List<UIVertex> verts = new System.Collections.Generic.List<UIVertex>();
+    public override void ModifyMesh(VertexHelper vh)
+    {
+        if (!IsActive() || vh.currentVertCount == 0) return;
+        verts.Clear();
+        vh.GetUIVertexStream(verts);
+        float lo = float.MaxValue, hi = float.MinValue;
+        for (int i = 0; i < verts.Count; i++) { float y = verts[i].position.y; if (y < lo) lo = y; if (y > hi) hi = y; }
+        float h = Mathf.Max(0.001f, hi - lo);
+        for (int i = 0; i < verts.Count; i++)
+        {
+            UIVertex v = verts[i];
+            Color k = Color.Lerp(bottom, top, (v.position.y - lo) / h);
+            Color32 o = v.color;
+            v.color = new Color(k.r, k.g, k.b, k.a * (o.a / 255f));
+            verts[i] = v;
+        }
+        vh.Clear();
+        vh.AddUIVertexTriangleStream(verts);
+    }
 }

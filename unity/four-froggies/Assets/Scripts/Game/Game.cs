@@ -100,6 +100,7 @@ public partial class Game : MonoBehaviour
         "<b>Planet maps + star map</b>: NASA (NASA 3D Resources; SVS CGI Moon Kit), public domain.\n" +
         "<b>Realism test</b> (?realism=1): Sunflowers sky, ground / mud / rock / bark scans (Poly Haven) + Grass 004 (ambientCG), CC0.\n" +
         "<b>Sound effects + ambience</b>: BigSoundBank.com by Joseph Sardin (royalty-free, CC0-like) and Kenney (CC0).\n" +
+        "<b>Fonts</b>: Montserrat (The Montserrat Project Authors) and Inter (The Inter Project Authors), SIL Open Font License 1.1.\n" +
         "<b>Music</b> (OpenGameArt, CC0): Flowerbed Fields by Zane Little Music; Picnic and Home by heartade; Underwater Theme II -\n" +
         "   Music by Cleyton Kauffman; Space Adventure by MintoDog; Puppy Playing in the Garden by Spring Spring; Outer Space Loop by wipics.\n\n" +
         "Full licence texts: similarize.com/games/four-froggies-unity/LICENSES.txt\n" +
@@ -968,6 +969,7 @@ public partial class Game : MonoBehaviour
         if (Net.I != null && Net.I.IsGuest && !byHost) { Net.I.info = "The host starts the game - hang tight"; Net.I.infoT = Time.unscaledTime; return; }
         if (keypad != null && keypad.open) keypad.Close();
         state = State.Play;
+        FFDisplay.Lobby(false);   // ffu17: gameplay pixel density (phones 1.5x, desktop 2x)
         lobbyCanvas.enabled = false;
         StandsOff();
         fadeT = 1f;
@@ -1122,6 +1124,7 @@ public partial class Game : MonoBehaviour
     void EnterLobby()
     {
         state = State.Lobby;
+        FFDisplay.Lobby(true);
         lobbyAge = 0f;
         foreach (var f in frogs) f.human = false;
         sharedCam.enabled = false;

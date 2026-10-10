@@ -27,7 +27,7 @@ public class Bootstrap : MonoBehaviour
         QualitySettings.shadowDistance = 45f;
         QualitySettings.shadowCascades = 1;
         QualitySettings.pixelLightCount = 1;
-        QualitySettings.antiAliasing = 0;
+        QualitySettings.antiAliasing = 4;   // ffu17 (was 0): MSAA; FFDisplay.ApplyAA sets the per-screen value after Look.Init
         QualitySettings.lodBias = 1f;
         if (Application.isMobilePlatform)
         {
@@ -52,7 +52,8 @@ public class Bootstrap : MonoBehaviour
         Mats.UnderwaterBase = underwaterMat; Mats.UnlitTexBase = unlitTexMat;
         Look.Init(sun);   // before Worlds.Init: Worlds captures the ranch fog / ambient it restores per camera
         Realism.TriBase = realTriMat; Realism.WaterBase = realWaterMat; Realism.TerrainNM = realTerrainMat;
-        Realism.Detect(sun);   // ?realism=1 only: HDRI sky / sun / haze / SH ambient (before Worlds.Init captures them)
+        Realism.Detect(sun);
+        FFDisplay.Lobby(true);   // ffu17: lobby at full pixel density + MSAA   // ?realism=1 only: HDRI sky / sun / haze / SH ambient (before Worlds.Init captures them)
         Sfx.Init();
         FX.Init();
         Worlds.Init();

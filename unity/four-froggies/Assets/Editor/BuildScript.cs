@@ -134,6 +134,18 @@ public static class BuildScript
 
         QualitySettings.shadows = ShadowQuality.All;
         QualitySettings.shadowDistance = 45f;
+        // ffu17: Unity WebGL creates its context with antialias only if the startup quality level has MSAA, so give
+        // every level 4x (FFDisplay.ApplyAA picks the runtime value for offscreen / image-effect targets)
+        try
+        {
+            int cur = QualitySettings.GetQualityLevel();
+            string[] names = QualitySettings.names;
+            for (int i = 0; i < names.Length; i++) { QualitySettings.SetQualityLevel(i, false); QualitySettings.antiAliasing = 4; }
+            QualitySettings.SetQualityLevel(cur, false);
+            QualitySettings.antiAliasing = 4;
+            Debug.Log("FF quality: MSAA 4x on " + names.Length + " levels (current " + cur + ")");
+        }
+        catch (Exception e) { Debug.LogWarning("FF quality MSAA: " + e.Message); }
     }
 
     static void EnsureFolder(string parent, string name)

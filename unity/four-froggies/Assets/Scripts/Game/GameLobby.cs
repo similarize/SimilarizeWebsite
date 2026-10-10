@@ -25,6 +25,13 @@ public partial class Game
     readonly Text[] tileName = new Text[Roster.Count], tileBadgeText = new Text[Roster.Count];
     readonly float[] cardPop = new float[4], tilePop = new float[Roster.Count];
     Showroom.Stand[] stands;
+    // ffu17 modern look: glass cards (edge line + soft glow), masked rounded turntables, title glow, bokeh backdrop
+    readonly Image[] cardEdge = new Image[4], cardGlow = new Image[4], tileEdge = new Image[Roster.Count];
+    readonly Color[] cardEdgeT = new Color[4], cardGlowT = new Color[4], tileEdgeT = new Color[Roster.Count];
+    Image titleGlow;
+    RectTransform[] bokeh;
+    Vector4[] bokehSeed;
+    static readonly Color GlassFill = new Color(0.05f, 0.09f, 0.1f, 0.62f), EdgeIdle = new Color(1f, 1f, 1f, 0.14f);
     int lobbyLayout = -1;      // 0 landscape, 1 portrait
     float lobbyAge, fadeT, thumbWait = 2f;
 
@@ -41,26 +48,37 @@ public partial class Game
         // full-screen backdrop: the ranch keeps turning behind a dark green gradient
         lobbyBg = UIK.Img(cr, UIK.Gradient(new Color(0.01f, 0.05f, 0.03f, 0.9f), new Color(0.02f, 0.07f, 0.05f, 0.6f), new Color(0.01f, 0.04f, 0.03f, 0.94f)), Color.white, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
         UIK.Stretch(lobbyBg.rectTransform);
+        BuildBokeh(cr);
         lobbyRoot = UIK.Rect(cr, "LobbyRoot", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1280, 720));
         lobbyGroup = lobbyRoot.gameObject.AddComponent<CanvasGroup>();
         Transform r = lobbyRoot;
 
+        titleGlow = UIK.Img(r, UIK.SoftDot, new Color(0.45f, 1f, 0.6f, 0.2f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(900, 170));
         lobbyKicker = UIK.Label(r, "JAMES'S RANCH", 18, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(600, 26), new Color(1f, 0.85f, 0.4f));
         lobbyTitle = UIK.Label(r, "FOUR FROGGIES", 64, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1100, 80), Mint);
         var sh = lobbyTitle.gameObject.AddComponent<Shadow>(); sh.effectColor = new Color(0f, 0.25f, 0.05f, 0.9f); sh.effectDistance = new Vector2(0, -5);
         lobbySub = UIK.Label(r, "Pick your character  ·  hop in any vehicle  ·  1-4 players, split-screen or online", 19, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1100, 30), new Color(1f, 1f, 1f, 0.82f));
         lobbyRule = UIK.Img(r, null, new Color(0.55f, 1f, 0.5f, 0.55f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(320, 3));
 
+        for (int i = 0; i < 4; i++) cardGlow[i] = UIK.Sliced(r, UIK.SoftRect, new Color(1f, 1f, 1f, 0f), 1f);   // all glows under all cards
         for (int i = 0; i < 4; i++)
         {
-            cards[i] = UIK.Panel(r, Edge, Vector2.zero, new Vector2(270, 300));
+            // ffu17: soft coloured glow behind the card (seat colour when a player holds it), translucent glass body,
+            // thin light edge, top sheen, and the turntable clipped to a rounded window (stencil mask)
+            cards[i] = UIK.Glass(r, GlassFill, Vector2.zero, new Vector2(270, 300));
             Transform c = cards[i].transform;
-            cardInner[i] = UIK.Panel(c, Ink, Vector2.zero, Vector2.zero);
-            UIK.Anchor(cardInner[i].rectTransform, Vector2.zero, Vector2.one, new Vector2(4, 4), new Vector2(-4, -4));
+            cardInner[i] = UIK.Sliced(c, UIK.Round2, new Color(1f, 1f, 1f, 0.05f), 2f);   // top sheen
+            UIK.Anchor(cardInner[i].rectTransform, new Vector2(0f, 0.55f), Vector2.one, new Vector2(1, 0), new Vector2(-1, -1));
+            cardInner[i].gameObject.AddComponent<UIGradient>().bottom = new Color(1f, 1f, 1f, 0f);
+            var win = UIK.Sliced(c, UIK.Round2, Color.white, 2.4f);
+            UIK.Anchor(win.rectTransform, new Vector2(0f, 0.33f), Vector2.one, new Vector2(9, 0), new Vector2(-9, -9));
+            win.gameObject.AddComponent<Mask>().showMaskGraphic = false;
             cardRT[i] = new GameObject("Turntable", typeof(RectTransform)).AddComponent<RawImage>();
-            cardRT[i].rectTransform.SetParent(c, false);
+            cardRT[i].rectTransform.SetParent(win.transform, false);
             cardRT[i].raycastTarget = false;
-            UIK.Anchor(cardRT[i].rectTransform, new Vector2(0f, 0.33f), Vector2.one, new Vector2(9, 0), new Vector2(-9, -9));
+            UIK.Stretch(cardRT[i].rectTransform);
+            cardEdge[i] = UIK.Sliced(c, UIK.Edge2, EdgeIdle, 2f);
+            UIK.Stretch(cardEdge[i].rectTransform);
             cardName[i] = UIK.Label(c, "", 26, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, Color.white);
             UIK.Anchor(cardName[i].rectTransform, new Vector2(0f, 0.2f), new Vector2(1f, 0.33f), new Vector2(6, 0), new Vector2(-6, 0));
             cardName[i].resizeTextForBestFit = true; cardName[i].resizeTextMinSize = 14; cardName[i].resizeTextMaxSize = 28;
@@ -69,7 +87,7 @@ public partial class Game
             cardWho[i] = UIK.Label(c, "", 17, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, Color.white);
             UIK.Anchor(cardWho[i].rectTransform, new Vector2(0f, 0f), new Vector2(1f, 0.12f), new Vector2(6, 4), new Vector2(-6, 0));
             cardWho[i].supportRichText = true;
-            cardChip[i] = UIK.Panel(c, PCol[i], Vector2.zero, new Vector2(66, 30));
+            cardChip[i] = UIK.Glass(c, PCol[i], Vector2.zero, new Vector2(66, 30));
             UIK.Anchor(cardChip[i].rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(14, -42), new Vector2(84, -14));
             cardChipText[i] = UIK.Label(cardChip[i].transform, "", 17, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, new Color(0.05f, 0.05f, 0.05f));
             UIK.Stretch(cardChipText[i].rectTransform);
@@ -77,22 +95,26 @@ public partial class Game
         }
         for (int c = 0; c < Roster.Count; c++)
         {
-            tiles[c] = UIK.Panel(r, Edge, Vector2.zero, new Vector2(100, 100));
+            tiles[c] = UIK.Glass(r, GlassFill, Vector2.zero, new Vector2(100, 100));
             Transform t = tiles[c].transform;
-            var inner = UIK.Panel(t, Ink, Vector2.zero, Vector2.zero);
-            UIK.Anchor(inner.rectTransform, Vector2.zero, Vector2.one, new Vector2(3, 3), new Vector2(-3, -3));
+            var twin = UIK.Sliced(t, UIK.Round2, Color.white, 3f);
+            UIK.Anchor(twin.rectTransform, Vector2.zero, Vector2.one, new Vector2(4, 4), new Vector2(-4, -4));
+            twin.gameObject.AddComponent<Mask>().showMaskGraphic = false;
             tileRT[c] = new GameObject("Thumb", typeof(RectTransform)).AddComponent<RawImage>();
-            tileRT[c].rectTransform.SetParent(t, false);
+            tileRT[c].rectTransform.SetParent(twin.transform, false);
             tileRT[c].raycastTarget = false;
-            UIK.Anchor(tileRT[c].rectTransform, Vector2.zero, Vector2.one, new Vector2(6, 6), new Vector2(-6, -6));
+            UIK.Stretch(tileRT[c].rectTransform);
             tileRT[c].color = new Color(0.1f, 0.12f, 0.12f);
-            var band = UIK.Img(t, null, new Color(0f, 0f, 0f, 0.55f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
-            UIK.Anchor(band.rectTransform, new Vector2(0f, 0f), new Vector2(1f, 0.25f), new Vector2(6, 6), new Vector2(-6, 0));
+            var band = UIK.Img(twin.transform, null, Color.white, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+            UIK.Anchor(band.rectTransform, new Vector2(0f, 0f), new Vector2(1f, 0.36f), Vector2.zero, Vector2.zero);
+            var bg = band.gameObject.AddComponent<UIGradient>(); bg.top = new Color(0f, 0f, 0f, 0f); bg.bottom = new Color(0f, 0f, 0f, 0.72f);
+            tileEdge[c] = UIK.Sliced(t, UIK.Edge2, EdgeIdle, 2f);
+            UIK.Stretch(tileEdge[c].rectTransform);
             tileName[c] = UIK.Label(t, Roster.Name(c), 14, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, Color.white);
             UIK.Anchor(tileName[c].rectTransform, new Vector2(0f, 0f), new Vector2(1f, 0.25f), new Vector2(7, 6), new Vector2(-7, 0));
             tileName[c].resizeTextForBestFit = true; tileName[c].resizeTextMinSize = 8; tileName[c].resizeTextMaxSize = 15;
             tileName[c].horizontalOverflow = HorizontalWrapMode.Wrap;
-            tileBadge[c] = UIK.Panel(t, PCol[0], Vector2.zero, Vector2.zero);
+            tileBadge[c] = UIK.Glass(t, PCol[0], Vector2.zero, Vector2.zero);
             UIK.Anchor(tileBadge[c].rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-46, -30), new Vector2(-4, -4));
             tileBadgeText[c] = UIK.Label(tileBadge[c].transform, "", 15, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, new Color(0.05f, 0.05f, 0.05f));
             UIK.Stretch(tileBadgeText[c].rectTransform);
@@ -106,10 +128,10 @@ public partial class Game
         hostBtn = hostB.root; hostText = hostB.label;
         joinB = new ModernButton(r, "JOIN", 2, new Color(0.56f, 0.34f, 0.92f, 1f));
         joinBtn = joinB.root; joinBtnText = joinB.label;
-        nameBtn = UIK.Panel(r, new Color(1f, 1f, 1f, 0.1f), Vector2.zero, new Vector2(320, 42));
+        nameBtn = UIK.Glass(r, new Color(1f, 1f, 1f, 0.09f), Vector2.zero, new Vector2(320, 42));
         nameText = UIK.Label(nameBtn.transform, "", 20, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, Color.white);
         UIK.Stretch(nameText.rectTransform); nameText.supportRichText = true;
-        viewBar = UIK.Panel(r, new Color(1f, 1f, 1f, 0.1f), Vector2.zero, new Vector2(460, 42));
+        viewBar = UIK.Glass(r, new Color(1f, 1f, 1f, 0.09f), Vector2.zero, new Vector2(460, 42));
         viewText = UIK.Label(viewBar.transform, "", 19, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, Color.white);
         UIK.Stretch(viewText.rectTransform); viewText.supportRichText = true;
         netText = UIK.Label(r, "", 24, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1150, 46), new Color(1f, 0.9f, 0.4f));
@@ -118,17 +140,17 @@ public partial class Game
         lobbyHelp = UIK.Label(r, "", 15, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1200, 44), new Color(1, 1, 1, 0.7f));
 
         // corner buttons are anchored to the screen corners, outside the centred design
-        soundBtn = UIK.Panel(cr, new Color(0f, 0f, 0f, 0.5f), Vector2.zero, new Vector2(176, 38));
+        soundBtn = UIK.Glass(cr, new Color(0.02f, 0.05f, 0.05f, 0.55f), Vector2.zero, new Vector2(176, 38));
         soundBtn.rectTransform.anchorMin = soundBtn.rectTransform.anchorMax = new Vector2(0f, 1f);   // top-left: the arcade page has its own button top-right
         soundBtn.rectTransform.anchoredPosition = new Vector2(260, -28);
         soundText = UIK.Label(soundBtn.transform, "", 17, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, Color.white);
         UIK.Stretch(soundText.rectTransform); soundText.supportRichText = true;
-        creditsBtn = UIK.Panel(cr, new Color(0f, 0f, 0f, 0.5f), Vector2.zero, new Vector2(150, 38));
+        creditsBtn = UIK.Glass(cr, new Color(0.02f, 0.05f, 0.05f, 0.55f), Vector2.zero, new Vector2(150, 38));
         creditsBtn.rectTransform.anchorMin = creditsBtn.rectTransform.anchorMax = new Vector2(0f, 1f);
         creditsBtn.rectTransform.anchoredPosition = new Vector2(87, -28);
         var cl = UIK.Label(creditsBtn.transform, "CREDITS (C)", 16, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, new Color(0.8f, 0.95f, 1f));
         UIK.Stretch(cl.rectTransform);
-        creditsPanel = UIK.Panel(cr, new Color(0.01f, 0.05f, 0.03f, 0.97f), Vector2.zero, new Vector2(1180, 640));
+        creditsPanel = UIK.Glass(cr, new Color(0.01f, 0.05f, 0.04f, 0.97f), Vector2.zero, new Vector2(1180, 640));
         var ct = UIK.Label(creditsPanel.transform, CreditsText, 17, TextAnchor.MiddleLeft, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1120, 610), Color.white);
         ct.supportRichText = true;
         ct.horizontalOverflow = HorizontalWrapMode.Wrap;
@@ -145,6 +167,84 @@ public partial class Game
 
         stands = new Showroom.Stand[4];
         for (int i = 0; i < 4; i++) { stands[i] = new Showroom.Stand(i); stands[i].Set(charOf[i], false); cardRT[i].texture = stands[i].rt; }
+        ModernizeLobbyText();
+    }
+
+    // ffu17: modern faces on every lobby label (Montserrat ExtraBold for headings / names / buttons, Inter SemiBold for
+    // body), soft shadows instead of hard outlines, gradient + glow title
+    void ModernizeLobbyText()
+    {
+        if (!UIK.ModernFonts) return;
+        var display = new System.Collections.Generic.HashSet<Text> { lobbyTitle, lobbyKicker, playText, hostText, joinBtnText };
+        for (int i = 0; i < 4; i++) { display.Add(cardName[i]); display.Add(cardChipText[i]); }
+        for (int c = 0; c < Roster.Count; c++) { display.Add(tileName[c]); display.Add(tileBadgeText[c]); }
+        foreach (var t in lobbyCanvas.GetComponentsInChildren<Text>(true))
+        {
+            bool d = display.Contains(t);
+            bool dark = t.color.r + t.color.g + t.color.b < 0.6f;   // dark text on a coloured chip: no shadow
+            UIK.Modernize(t, d, dark ? 0f : (d ? 0.4f : 0.5f));
+        }
+        // title: mint -> teal gradient, then a crisp deep-green drop shadow (gradient first so the shadow keeps its colour)
+        foreach (var e in lobbyTitle.GetComponents<Shadow>()) Object.DestroyImmediate(e);
+        lobbyTitle.color = Color.white;
+        var g = lobbyTitle.gameObject.AddComponent<UIGradient>();
+        g.top = new Color(0.82f, 1f, 0.55f); g.bottom = new Color(0.25f, 0.9f, 0.62f);
+        var sh = lobbyTitle.gameObject.AddComponent<Shadow>(); sh.effectColor = new Color(0f, 0.16f, 0.08f, 0.85f); sh.effectDistance = new Vector2(0f, -4f);
+        var sh2 = lobbyTitle.gameObject.AddComponent<Shadow>(); sh2.effectColor = new Color(0f, 0f, 0f, 0.25f); sh2.effectDistance = new Vector2(0f, -9f);
+        lobbyKicker.color = new Color(1f, 0.84f, 0.42f);
+    }
+
+    // ffu17: slow drifting bokeh lights + two big colour washes over the dimmed ranch (cheap: 14 UI quads)
+    void BuildBokeh(Transform cr)
+    {
+        const int N = 14;
+        bokeh = new RectTransform[N];
+        bokehSeed = new Vector4[N];
+        var rnd = new System.Random(17);
+        Color[] cols = { new Color(0.45f, 1f, 0.55f), new Color(0.3f, 0.85f, 1f), new Color(1f, 0.85f, 0.45f), new Color(0.75f, 0.55f, 1f) };
+        for (int i = 0; i < N; i++)
+        {
+            bool wash = i < 2;
+            float size = wash ? 1100f : 60f + (float)rnd.NextDouble() * 170f;
+            Color k = wash ? (i == 0 ? new Color(0.2f, 0.85f, 0.55f) : new Color(0.25f, 0.45f, 1f)) : cols[i % cols.Length];
+            k.a = wash ? 0.13f : 0.05f + (float)rnd.NextDouble() * 0.08f;
+            var img = UIK.Img(cr, UIK.SoftDot, k, new Vector2((float)rnd.NextDouble(), (float)rnd.NextDouble()), Vector2.zero, new Vector2(size, size));
+            bokeh[i] = img.rectTransform;
+            bokehSeed[i] = new Vector4((float)rnd.NextDouble(), (float)rnd.NextDouble(), 0.012f + (float)rnd.NextDouble() * 0.025f, (float)rnd.NextDouble() * 6.28f);
+        }
+    }
+
+    void TickBokeh()
+    {
+        if (bokeh == null) return;
+        float t = Time.unscaledTime;
+        for (int i = 0; i < bokeh.Length; i++)
+        {
+            Vector4 sd = bokehSeed[i];
+            float x = Mathf.Repeat(sd.x + t * sd.z, 1.3f) - 0.15f;
+            float y = sd.y + Mathf.Sin(t * 0.21f + sd.w) * (i < 2 ? 0.18f : 0.06f);
+            if (i < 2) x = 0.5f + Mathf.Sin(t * 0.07f + sd.w) * 0.35f;
+            bokeh[i].anchorMin = bokeh[i].anchorMax = new Vector2(x, y);
+        }
+        if (titleGlow != null)
+        {
+            titleGlow.rectTransform.anchoredPosition = lobbyTitle.rectTransform.anchoredPosition;
+            titleGlow.rectTransform.sizeDelta = new Vector2(Mathf.Min(lobbyTitle.preferredWidth + 260f, 1000f), 200f);
+        }
+        if (titleGlow != null) titleGlow.color = new Color(0.45f, 1f, 0.6f, 0.17f + 0.05f * Mathf.Sin(t * 1.3f));
+    }
+
+    // ffu17: every turntable target = its window's real pixel size (canvas scale x rect), so nothing is upscaled
+    void SyncStandSizes()
+    {
+        float k = lobbyCanvas.scaleFactor;
+        for (int i = 0; i < 4; i++)
+        {
+            Rect rr = cardRT[i].rectTransform.rect;
+            int w = Mathf.RoundToInt(rr.width * k), h = Mathf.RoundToInt(rr.height * k);
+            if (w < 8 || h < 8) continue;
+            if (stands[i].Resize(w, h) || cardRT[i].texture != stands[i].rt) { cardRT[i].texture = stands[i].rt; cardRT[i].uvRect = new Rect(0f, 0f, 1f, 1f); }
+        }
     }
 
     // ---------------- layout ----------------
@@ -156,9 +256,9 @@ public partial class Game
             cards[i].rectTransform.sizeDelta = size;
             cardName[i].resizeTextMaxSize = nameSize;
             // crop the turntable texture to the visible area's aspect (no stretching)
-            float w = size.x - 18f, h = size.y * 0.67f - 9f;
-            float ta = stands[i].rt.width / (float)stands[i].rt.height, va = w / Mathf.Max(1f, h);
-            cardRT[i].uvRect = va >= ta ? new Rect(0f, (1f - ta / va) * 0.5f, 1f, ta / va) : new Rect((1f - va / ta) * 0.5f, 0f, va / ta, 1f);
+            cardRT[i].uvRect = new Rect(0f, 0f, 1f, 1f);   // ffu17: the target is resized to the window (SyncStandSizes)
+            cardGlow[i].rectTransform.anchoredPosition = pos[i];
+            cardGlow[i].rectTransform.sizeDelta = size + new Vector2(70f, 70f);
         }
     }
 
@@ -313,12 +413,22 @@ public partial class Game
             tilePop[c] = Mathf.Max(0f, tilePop[c] - dt * 3f);
             tiles[c].rectTransform.localScale = Vector3.one * (1f + Mathf.Sin(tilePop[c] * Mathf.PI) * 0.12f);
         }
+        SyncStandSizes();
+        TickBokeh();
+        float ek = 1f - Mathf.Exp(-dt * 10f);   // smooth colour transitions for selection changes
+        for (int c = 0; c < Roster.Count; c++) tileEdge[c].color = Color.Lerp(tileEdge[c].color, tileEdgeT[c], ek);
+        float pulse = 0.85f + 0.15f * Mathf.Sin(Time.unscaledTime * 2.2f);
         for (int i = 0; i < 4; i++)
         {
             if (stands[i].ch != charOf[i]) stands[i].Set(charOf[i], true);
             stands[i].Tick(dt, true);
             cardPop[i] = Mathf.Max(0f, cardPop[i] - dt * 3f);
-            cards[i].rectTransform.localScale = Vector3.one * (1f + Mathf.Sin(cardPop[i] * Mathf.PI) * 0.05f);
+            float sc = 1f + Mathf.Sin(cardPop[i] * Mathf.PI) * 0.05f;
+            cards[i].rectTransform.localScale = Vector3.one * sc;
+            cardEdge[i].color = Color.Lerp(cardEdge[i].color, cardEdgeT[i], ek);
+            Color gt = cardGlowT[i]; gt.a *= pulse; gt.a += cardPop[i] * 0.3f;
+            cardGlow[i].color = Color.Lerp(cardGlow[i].color, gt, ek);
+            cardGlow[i].rectTransform.localScale = Vector3.one * sc;
         }
     }
 
@@ -356,7 +466,8 @@ public partial class Game
             Color pc = SeatColor(i, out tag);
             bool human = tag != "AI";
             Slot s = SlotForFrog(i);
-            cards[i].color = human ? new Color(pc.r, pc.g, pc.b, 0.95f) : Edge;
+            cardEdgeT[i] = human ? new Color(pc.r, pc.g, pc.b, 0.95f) : EdgeIdle;
+            cardGlowT[i] = human ? new Color(pc.r, pc.g, pc.b, 0.5f) : new Color(pc.r, pc.g, pc.b, 0f);
             cardChip[i].color = human ? pc : new Color(0.32f, 0.35f, 0.37f, 0.95f);
             cardChipText[i].text = tag;
             cardChipText[i].color = human ? new Color(0.05f, 0.05f, 0.05f) : new Color(0.9f, 0.92f, 0.92f);
@@ -379,7 +490,7 @@ public partial class Game
             string tag = "AI";
             Color pc = seat >= 0 ? SeatColor(seat, out tag) : Color.gray;
             bool held = seat >= 0 && tag != "AI";
-            tiles[c].color = held ? pc : Edge;
+            tileEdgeT[c] = held ? new Color(pc.r, pc.g, pc.b, 1f) : EdgeIdle;
             tileBadge[c].gameObject.SetActive(held);
             if (held) { tileBadge[c].color = pc; tileBadgeText[c].text = tag == "YOU" ? "YOU" : tag == "ONLINE" || tag == "HOST" ? "ON" : tag; }
             tileName[c].color = held ? Color.Lerp(pc, Color.white, 0.5f) : Color.white;

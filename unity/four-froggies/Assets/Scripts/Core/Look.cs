@@ -16,7 +16,9 @@ public static class Look
     public static void Init(Light s)
     {
         sun = s;
-        Mobile = Application.isMobilePlatform || (Input.touchSupported && Mathf.Min(Screen.width, Screen.height) < 900 && Screen.dpi > 200f);
+        // ffu17: the lobby now renders at the real pixel density (Screen.width 1030+ on a Pixel 9), so the size test alone
+        // would miss phones; the browser user agent (same test as the page) decides too
+        Mobile = Application.isMobilePlatform || FFDisplay.MobileUA || (Input.touchSupported && Mathf.Min(Screen.width, Screen.height) < 900 && Screen.dpi > 200f);
         QualitySettings.realtimeReflectionProbes = true;
         QualitySettings.softParticles = false;
         QualitySettings.anisotropicFiltering = Mobile ? AnisotropicFiltering.Disable : AnisotropicFiltering.Enable;
