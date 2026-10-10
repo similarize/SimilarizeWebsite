@@ -75,6 +75,8 @@ public static class Worlds
             altFog = 1f / (1f + alt / 220f);
             c.farClipPlane = Mathf.Min(26000f, 900f + alt * 9f);
             c.nearClipPlane = 0.3f + alt * 0.002f;
+            // ffu25b: not the REAL ROOM camera (its 0.03 m near plane keeps the first-person forearms; 0.3 cut them off)
+            if (c.cullingMask == (1 << RealRoom.Layer)) { c.nearClipPlane = 0.03f; c.farClipPlane = 40f; }
         }
         if (exp0 >= 0f && ranchSky != null) ranchSky.SetFloat("_Exposure", Mathf.Lerp(exp0, exp0 * 0.06f, launchDark));
         switch (w)
