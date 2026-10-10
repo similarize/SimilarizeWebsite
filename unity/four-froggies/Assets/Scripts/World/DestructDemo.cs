@@ -33,6 +33,7 @@ public static class DestructDemo
         Destruct.RegenScale = sc == "regen" ? 0.2f : sc == "destroyhouse" || sc == "destroytrack" ? 1f : 0.45f;
         Destruct.RebuildTime = sc == "regen" ? 4.5f : 1.6f;
         StoryMech.DtCap = 0.3f;
+        Destruct.DtCap = 0.35f;
         if (sc == "mechtopple")
         {
             mech = null;

@@ -47,6 +47,7 @@ public class Destruct : MonoBehaviour
     public static float RegenScale = 1f;    // demos shorten the wait
     public static float RebuildTime = 1.6f;
     public static bool On = true;
+    public static float DtCap = 0.1f;      // demos raise it: SwiftShader runs ~2-3 fps
     static bool homesDone;
 
 #if UNITY_WEBGL && !UNITY_EDITOR
@@ -110,7 +111,13 @@ public class Destruct : MonoBehaviour
             if (first) { b.bounds = r.bounds; first = false; } else b.bounds.Encapsulate(r.bounds);
             if (r.sharedMaterial != null && !mats.Contains(r.sharedMaterial) && r.sharedMaterial != Mats.Glass) mats.Add(r.sharedMaterial);
         }
-        foreach (var c in b.cols) if (c != null) { if (first) { b.bounds = c.bounds; first = false; } else b.bounds.Encapsulate(c.bounds); }
+        // colliders only when there is nothing drawn: a collider made this frame and then moved still reports its bounds
+        // at the spot it was created (often the world origin) until physics syncs - that made trees span half the map
+        if (first)
+        {
+            Physics.SyncTransforms();
+            foreach (var c in b.cols) if (c != null && c.enabled) { if (first) { b.bounds = c.bounds; first = false; } else b.bounds.Encapsulate(c.bounds); }
+        }
         if (first) b.bounds = new Bounds(go.transform.position, Vector3.one);
         b.debrisMats = mats.Count > 0 ? mats.ToArray() : new[] { Mats.Lit(Color.gray) };
         foreach (var r in rs)
@@ -246,7 +253,7 @@ public class Destruct : MonoBehaviour
     // ---------------- per frame: burning wrecks, regeneration ----------------
     void Update()
     {
-        float dt = Mathf.Min(Time.deltaTime, 0.1f);
+        float dt = Mathf.Min(Time.deltaTime, Destruct.DtCap);
         if (!homesDone && RanchLife.I != null && RanchLife.I.robots.Count > 0) { homesDone = true; RobotBreak.RememberHomes(); }
         Chunks.Tick(dt);
         int smokeBudget = Low ? 2 : 5;
@@ -629,7 +636,7 @@ public class RobotBreak : MonoBehaviour
     void Update()
     {
         if (r == null) { Destroy(gameObject); return; }
-        float dt = Mathf.Min(Time.deltaTime, 0.1f);
+        float dt = Mathf.Min(Time.deltaTime, Destruct.DtCap);
         if (downT >= 0f)
         {
             downT -= dt;
@@ -688,7 +695,7 @@ public class AnimalBreak : MonoBehaviour
     void Update()
     {
         if (a == null) return;
-        float dt = Mathf.Min(Time.deltaTime, 0.1f);
+        float dt = Mathf.Min(Time.deltaTime, Destruct.DtCap);
         if (downT >= 0f)
         {
             downT -= dt;
