@@ -98,7 +98,8 @@ Shader "FF/RRSkin"
                 float along = saturate((i.rest.z + 0.30) / 0.46);                  // 0 forearm .. 1 fingertips
                 float m = _Morph * 1.7 - (1.0 - along) * 0.7 - d.r * 0.3;
                 float k = smoothstep(0.0, 0.05, m);
-                float edge = (_Morph > 0.001 && _Morph < 0.999) ? exp(-pow((m - 0.02) / 0.05, 2.0)) : 0.0;
+                float e2 = (m - 0.02) / 0.05;   // ffu18c: was pow(negative, 2) = NaN in GLSL
+                float edge = (_Morph > 0.001 && _Morph < 0.999) ? exp(-e2 * e2) : 0.0;
                 float3 col = lerp(toon, real, k) + _RRWaveCol.rgb * edge * 1.6 / max(_RRExposure, 0.05);
                 return RROut(col);
             }
