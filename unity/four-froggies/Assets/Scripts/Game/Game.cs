@@ -179,6 +179,7 @@ public partial class Game : MonoBehaviour
             else if (sc == "mechaim" || sc == "mechlook" || sc == "surface" || sc == "spacemap" || sc == "mechspace" || sc == "cargobay") Demo15Start(f, sc);
             else if (sc == "lineup" || sc == "ripsaw") DemoLineup(f, sc);
             else if (sc.StartsWith("realroom")) RealRoom.DemoStart(f, sc);   // ffu18 REAL ROOM shots (own camera)
+            else if (DestructDemo.Is(sc)) DestructDemo.Start(f, sc);         // ffu21 destruction + tree climbing shots
             else if (sc.StartsWith("lj-") || sc.StartsWith("loopdrive")) DemoLoopStart(f, sc);   // ffu19 loop joints (GameLoopDemo.cs)
             else if (IsRobot20(sc)) DemoRobot20Start(f, sc);   // ffu20 robots drive / missions / phone carousel
             else if (sc == "net") { if (UrlParam("ffwalk") != null) demoHook = DemoWalk; }      // ffu13 online test
@@ -188,6 +189,12 @@ public partial class Game : MonoBehaviour
         Camera c = slots[0].cam;
         Vector3 pos, look;
         float gy;
+        if (DestructDemo.Is(sc))
+        {
+            if (!DestructDemo.Cam(f, sc, out pos, out look)) return;
+            c.transform.position = pos; c.transform.LookAt(look);
+            return;
+        }
         if ((sc.StartsWith("lj-") || sc.StartsWith("loopdrive")) && DemoLoopCam(f, sc, c)) return;
         switch (sc)
         {

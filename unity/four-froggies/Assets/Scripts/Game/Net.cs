@@ -171,8 +171,15 @@ public class Net : MonoBehaviour
         string m = "M|" + key + "|" + F(hp) + "|" + (wrecked ? 1 : 0) + "|" + shield;
         if (role == Role.Host) Send("*", m); else if (role == Role.Guest && connected) Send("host", m);
     }
+    // ffu21 destruction events (house / track / trees / robots / mech limbs), idempotent: D|b|id, D|r|name, D|m|hash|part
+    public void SendDestruct(string payload)
+    {
+        string m = "D|" + payload;
+        if (role == Role.Host) Send("*", m); else if (role == Role.Guest && connected) Send("host", m);
+    }
     bool CombatMsg(string[] p)
     {
+        if (p[0] == "D") { Destruct.OnNet(p); return true; }
         if (p[0] == "F" && p.Length >= 9)
         {
             var mech = FindVeh(ParseI(p[1])) as StoryMech;
@@ -498,6 +505,7 @@ public class Net : MonoBehaviour
                 case "P": break;   // keep-alive
                 case "F":
                 case "M":
+                case "D":
                     CombatMsg(p);
                     Send("*!" + from, m);
                     break;
@@ -560,6 +568,7 @@ public class Net : MonoBehaviour
                 break;
             case "F":
             case "M":
+            case "D":
                 CombatMsg(p);
                 break;
             case "X":

@@ -51,6 +51,62 @@ public class ViewHud
 
     public void SetActive(bool on) { panel.gameObject.SetActive(on); }
 
+    // ffu21: TV static over a mech pilot's view while the mech's head (cockpit cameras) is blown off, and the small
+    // "hold toward the tree" climb progress ring
+    RawImage staticImg; Text staticText;
+    Image climbRing, climbBack;
+    static Texture2D noiseTex;
+    void Ffu21Overlays(Frog me)
+    {
+        StoryMech sm = me != null ? me.vehicle as StoryMech : null;
+        bool blind = sm != null && sm.HeadLost;
+        if (blind && staticImg == null)
+        {
+            if (noiseTex == null)
+            {
+                noiseTex = new Texture2D(128, 128, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Repeat };
+                var px = new Color32[128 * 128];
+                var r = new System.Random(3);
+                for (int i = 0; i < px.Length; i++) { byte v = (byte)r.Next(256); px[i] = new Color32(v, v, v, 255); }
+                noiseTex.SetPixels32(px); noiseTex.Apply();
+            }
+            var go = new GameObject("Static", typeof(RectTransform));
+            go.transform.SetParent(panel, false);
+            go.transform.SetSiblingIndex(2);
+            staticImg = go.AddComponent<RawImage>();
+            staticImg.texture = noiseTex;
+            staticImg.raycastTarget = false;
+            UIK.Stretch(staticImg.rectTransform);
+            staticText = UIK.Label(panel, "COCKPIT CAMERAS DOWN\n<size=20>head blown off - it grows back soon</size>", 30, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.62f), Vector2.zero, new Vector2(700f, 120f), new Color(1f, 0.4f, 0.35f));
+            staticText.supportRichText = true;
+        }
+        if (staticImg != null)
+        {
+            if (staticImg.gameObject.activeSelf != blind) { staticImg.gameObject.SetActive(blind); staticText.gameObject.SetActive(blind); }
+            if (blind)
+            {
+                float w = Mathf.Max(1f, panel.rect.width / 3f), h = Mathf.Max(1f, panel.rect.height / 3f);
+                staticImg.uvRect = new Rect(Random.value, Random.value, w / 128f, h / 128f);
+                staticImg.color = new Color(1f, 1f, 1f, 0.78f + 0.12f * Mathf.Sin(Time.time * 23f));
+                staticText.color = new Color(1f, 0.4f, 0.35f, Mathf.Repeat(Time.time, 1f) < 0.6f ? 1f : 0.35f);
+            }
+        }
+        float cp = me != null ? me.climbProgress : 0f;
+        if (cp > 0.01f && climbRing == null)
+        {
+            climbBack = UIK.Img(panel, UIK.Ring, new Color(0f, 0f, 0f, 0.45f), new Vector2(0.5f, 0.5f), new Vector2(0f, -70f), new Vector2(64f, 64f));
+            climbRing = UIK.Img(panel, UIK.Ring, new Color(0.55f, 1f, 0.55f, 1f), new Vector2(0.5f, 0.5f), new Vector2(0f, -70f), new Vector2(64f, 64f));
+            climbRing.type = Image.Type.Filled; climbRing.fillMethod = Image.FillMethod.Radial360; climbRing.fillOrigin = (int)Image.Origin360.Top; climbRing.fillClockwise = true;
+            climbRing.raycastTarget = climbBack.raycastTarget = false;
+        }
+        if (climbRing != null)
+        {
+            bool on = cp > 0.01f;
+            if (climbRing.gameObject.activeSelf != on) { climbRing.gameObject.SetActive(on); climbBack.gameObject.SetActive(on); }
+            if (on) climbRing.fillAmount = Mathf.Clamp01(cp);
+        }
+    }
+
     public void SetRect(Rect r)
     {
         panel.anchorMin = new Vector2(r.xMin, r.yMin);
@@ -85,6 +141,7 @@ public class ViewHud
     public void Tick(Camera cam, Frog me, string playerTag, List<Frog> frogs, string sharedStatus, string sharedPrompt = null, Frog sharedSpace = null)
     {
         frame.color = new Color(0f, 0f, 0f, 0f);
+        Ffu21Overlays(me);
         // ffu15 reticle: over-the-shoulder aim in a mech (own view only); red over a target, pulses with recoil
         StoryMech am = me != null ? me.vehicle as StoryMech : null;
         bool ret = am != null && am.aimK > 0.25f;

@@ -10,7 +10,7 @@ using UnityEngine;
 // ROCKETS (hold UP) with visible flames + AFTERBURNER (BOOST), climb high enough and it reaches space; CHEST cannon +
 // chest missiles that do real damage; health bar, knock-out (pilot pops out unhurt, mech respawns at its spot with a
 // 20 s spawn shield that starts when the pilot climbs back in and holds while it waits there empty).
-public class StoryMech : Vehicle
+public partial class StoryMech : Vehicle
 {
     public int owner;            // froggy character index (0..3)
     public int band;             // 0..3
@@ -70,16 +70,18 @@ public class StoryMech : Vehicle
     float raiseK, armLen, muzzleFlashT;
     Vector3 lastShotDir = Vector3.forward;
 
-    public override bool CanEnter(Frog f) { return !wrecked && (f.IsPet || f.charId == owner); }
+    public override bool CanEnter(Frog f) { return !wrecked && !PartsBusy && (f.IsPet || f.charId == owner); }
     public override string DeniedLine
     {
         get
         {
             if (wrecked) return Title + " - knocked out, back at its spot in " + Mathf.CeilToInt(wreckT) + " s";
+            if (PartsBusy) return Title + " - " + PartsLine;
             return Froggies.Names[owner] + "'s " + BandName[band] + " mech - only " + Froggies.Names[owner] + " (or a cat or dog) can pilot it";
         }
     }
-    public bool Shielded { get { return wrecked || shieldT > 0f || (shieldT < 0f && driver == null && atSpawn); } }
+    // ffu21: the parked-at-spot shield only holds after a respawn (fresh mechs at game start can be blown apart)
+    public bool Shielded { get { return wrecked || shieldT > 0f || (shieldT < 0f && driver == null && atSpawn && hpWasRespawned); } }
     public string StatusLine
     {
         get
@@ -380,6 +382,7 @@ public class StoryMech : Vehicle
         if (!Authority) return;
         hp = Mathf.Max(0f, hp - d);
         hitFlash = 1f;
+        PartHit(d, at, by);   // ffu21: legs / arms / head take their own damage (MechParts.cs)
         if (driver != null && driver.human) Game.Shake(transform.position + Vector3.up * height * 0.5f, 0.35f);
         if (hp <= 0f) KnockOut(by);
         SendNet(true);
@@ -395,6 +398,7 @@ public class StoryMech : Vehicle
         Vector3 c = transform.position + Vector3.up * height * 0.5f;
         // big kid-friendly kaboom: fireballs, sparks, smoke, debris; the pilot pops out unhurt
         Boom.At(c, height * 0.35f + 4f, Mathf.Clamp(height / 20f, 1f, 3f), 0f, this);
+        Destruct.Blast(c, height * 0.35f + 4f, 40f, this);   // ffu21: the blast flattens what's around it
         for (int i = 0; i < 4; i++) FX.Boom(c + Random.insideUnitSphere * height * 0.3f, Mathf.Clamp(height / 15f, 1f, 4f));
         Sfx.PlayAt(Sfx.Boom, c, 1f, 200f + height * 2f, 0.6f);
         Debris(c);
@@ -434,6 +438,7 @@ public class StoryMech : Vehicle
     void Respawn()
     {
         wrecked = false; hp = maxHp; shieldT = -1f; atSpawn = true; hpWasRespawned = true;
+        ResetParts();
         transform.position = spawnPos; transform.rotation = spawnRot; yaw = spawnRot.eulerAngles.y;
         rb.position = spawnPos; rb.rotation = spawnRot;
         foreach (var r in rends) if (r != null) r.enabled = true;
@@ -479,6 +484,7 @@ public class StoryMech : Vehicle
             if (wreckT <= 0f && Authority) Respawn();
             return;
         }
+        if (TickParts(dt)) return;   // ffu21: toppling / lying down / standing back up
         if (shieldT > 0f) { shieldT -= dt; if (shieldT <= 0f) { shieldT = 0f; if (driver != null) driver.Toast("Spawn shield off - you can be hit now!", 2.5f); } }
         SendNet(false);
 
@@ -552,6 +558,7 @@ public class StoryMech : Vehicle
             for (int i = 0; i < 16 + band * 6; i++) { Vector2 r = Random.insideUnitCircle.normalized * H * Random.Range(0.15f, 0.4f); FX.Dust(p + new Vector3(r.x, 0.5f, r.y), 1f); }
             foreach (Collider c in Physics.OverlapSphere(p, H * 0.3f + 2f, 1 << PropLayer))
                 if (c.attachedRigidbody != null) c.attachedRigidbody.AddExplosionForce(500f + band * 800f, p, H * 0.4f + 3f, 1.5f);
+            if (band >= 1 && hard > 0.3f) Destruct.Stomp(p, H * 0.22f + 2f, 30f + band * 15f, this);
             vy = 0f;
         }
         if (grounded) { p.y = ground; vy = 0f; }
@@ -599,6 +606,7 @@ public class StoryMech : Vehicle
                 for (int i = 0; i < 3 + band * 3; i++) FX.Dust(foot + Random.insideUnitSphere * H * 0.05f, 1f);
                 foreach (Collider c in Physics.OverlapSphere(foot, H * 0.12f + 1f, 1 << PropLayer))
                     if (c.attachedRigidbody != null) c.attachedRigidbody.AddExplosionForce(400f + band * 600f, foot, H * 0.2f + 2f, 1f);
+                if (band >= 1 && driver != null) Destruct.Stomp(foot, H * 0.08f + 1f, 20f + band * 12f, this);   // ffu21: big feet crush things
             }
         }
         else
@@ -724,6 +732,7 @@ public class StoryMech : Vehicle
     {
         fireCool -= dt; missileCool -= dt;
         if (!on || driver.netPuppet) return;
+        if (!ArmOk(3)) { if ((inp.gunFire || inp.mslFire) && fireCool <= 0f) { fireCool = 1.5f; driver.Toast("Your cannon arm got blown off - weapons offline until it grows back (" + PartRegenLeft(3) + " s)", 2.5f); } return; }
         float H = height;
         Vector3 aimDir = Quaternion.Euler(0f, camYawIn, 0f) * Vector3.forward;
         Vector3 from = MuzzlePoint;

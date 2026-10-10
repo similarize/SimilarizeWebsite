@@ -32,7 +32,9 @@ public static class FX
                   new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(0.9f, 0.6f), new GradientAlphaKey(0f, 1f) });
         col.color = g;
         var rend = go.GetComponent<ParticleSystemRenderer>();
-        rend.sharedMaterial = Mats.Fx;
+        // ffu21: soft round puff texture - Mats.Fx (Sprites/Default) has no texture, so every fireball / smoke puff /
+        // dust particle used to draw as a flat grey / orange SQUARE
+        rend.sharedMaterial = SoftMat();
         rend.renderMode = ParticleSystemRenderMode.Billboard;
         rend.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         rend.receiveShadows = false;
@@ -53,9 +55,69 @@ public static class FX
         bcol.color = bg;
         var bn = bubbles.noise; bn.enabled = true; bn.strength = 0.4f; bn.frequency = 0.8f;
         var br = bgo.GetComponent<ParticleSystemRenderer>();
-        br.sharedMaterial = Mats.Fx; br.renderMode = ParticleSystemRenderMode.Billboard;
+        br.sharedMaterial = SoftMat(); br.renderMode = ParticleSystemRenderMode.Billboard;
         br.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; br.receiveShadows = false;
         bubbles.Play();
+    }
+
+    // ffu21: one soft, slightly lumpy round puff (64 px, alpha falls off smoothly; a little value noise so smoke reads
+    // as billowy instead of a perfect disc). Shared by the main FX system and the bubbles.
+    static Material softMat;
+    public static Material SoftMat()
+    {
+        if (softMat != null) return softMat;
+        const int n = 64;
+        var tex = new Texture2D(n, n, TextureFormat.RGBA32, true);
+        tex.wrapMode = TextureWrapMode.Clamp;
+        tex.filterMode = FilterMode.Trilinear;
+        var px = new Color32[n * n];
+        var rnd = new System.Random(7);
+        float[] noise = new float[16 * 16];
+        for (int i = 0; i < noise.Length; i++) noise[i] = (float)rnd.NextDouble();
+        for (int y = 0; y < n; y++)
+            for (int x = 0; x < n; x++)
+            {
+                float dx = (x + 0.5f) / n * 2f - 1f, dy = (y + 0.5f) / n * 2f - 1f;
+                float r = Mathf.Sqrt(dx * dx + dy * dy);
+                // bilinear value noise (16x16 grid) for a lumpy edge + soft inner variation
+                float gx = (x + 0.5f) / n * 15f, gy = (y + 0.5f) / n * 15f;
+                int ix = Mathf.Min(14, (int)gx), iy = Mathf.Min(14, (int)gy);
+                float fx = gx - ix, fy = gy - iy;
+                float nv = Mathf.Lerp(Mathf.Lerp(noise[iy * 16 + ix], noise[iy * 16 + ix + 1], fx), Mathf.Lerp(noise[(iy + 1) * 16 + ix], noise[(iy + 1) * 16 + ix + 1], fx), fy);
+                float edge = r + (nv - 0.5f) * 0.22f;
+                float a = Mathf.Clamp01((1f - edge) / 0.55f); a = a * a * (3f - 2f * a);
+                float v = 0.86f + 0.14f * nv;
+                px[y * n + x] = new Color32((byte)(v * 255f), (byte)(v * 255f), (byte)(v * 255f), (byte)(a * 255f));
+            }
+        tex.SetPixels32(px); tex.Apply(true);
+        softMat = new Material(Mats.Fx) { name = "FX soft puff" };
+        softMat.mainTexture = tex;
+        return softMat;
+    }
+
+    // ffu21: a ring of dust thrown outwards along the ground (mech topple impact shockwave, big landings)
+    public static void Ring(Vector3 p, float radius, int n, float speed, Color c)
+    {
+        if (ps == null) return;
+        for (int i = 0; i < n; i++)
+        {
+            float a = i * Mathf.PI * 2f / n + Random.Range(-0.05f, 0.05f);
+            Vector3 d = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a));
+            Emit(p + d * radius * Random.Range(0.2f, 0.45f) + Vector3.up * Random.Range(0.2f, 1f) * radius * 0.05f,
+                 d * speed * Random.Range(0.75f, 1.2f) + Vector3.up * speed * Random.Range(0.05f, 0.18f),
+                 radius * Random.Range(0.1f, 0.2f), Random.Range(1.4f, 2.6f), c);
+        }
+    }
+
+    // ffu21: a big billowing dust / smoke cloud (collapses, poofs)
+    public static void Cloud(Vector3 p, float size, int n, Color c)
+    {
+        if (ps == null) return;
+        for (int i = 0; i < n; i++)
+        {
+            Vector3 d = Random.insideUnitSphere;
+            Emit(p + d * size * 0.5f, d * size * 0.9f + Vector3.up * size * 0.5f, size * Random.Range(0.5f, 0.9f), Random.Range(1.0f, 2.2f), c);
+        }
     }
 
     public static void Bubble(Vector3 p, int n)

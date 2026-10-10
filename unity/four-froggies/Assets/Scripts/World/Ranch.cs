@@ -52,6 +52,7 @@ public static class Ranch
     {
         terrain = t;
         root = new GameObject("RanchStatic").transform;
+        Destruct.Init();   // ffu21: breakable house / track / trees / rocks / flags
         House();
         Garage();
         Pool();
@@ -80,37 +81,9 @@ public static class Ranch
         Vector2 c = Layout.HouseC, s = Layout.HouseSize;
         float H = Layout.HouseH;
         float x0 = c.x - s.x * 0.5f, x1 = c.x + s.x * 0.5f, z0 = c.y - s.y * 0.5f, z1 = c.y + s.y * 0.5f;
-        // shell (solid, walkable roof)
-        B(new Vector3(c.x, H * 0.25f, c.y), new Vector3(s.x, H * 0.5f, s.y), Cream);
-        B(new Vector3(c.x, H * 0.75f - 0.15f, c.y), new Vector3(s.x - 0.02f, H * 0.5f - 0.3f, s.y - 0.02f), new Color(0.78f, 0.82f, 0.86f));
-        B(new Vector3(c.x, 0.4f, c.y), new Vector3(s.x + 0.2f, 0.8f, s.y + 0.2f), Stone, false);
-        B(new Vector3(c.x, H * 0.5f, c.y), new Vector3(s.x + 0.3f, 0.3f, s.y + 0.3f), Trim, false);
-        // roof slab: top at H + 0.1 is the walk surface (solid collider); nothing else is coplanar with it
-        B(new Vector3(c.x, H - 0.15f, c.y), new Vector3(s.x + 0.4f, 0.5f, s.y + 0.4f), RoofC, true);
-        // parapet (gap on the east side where the ramp lands)
-        float ph = 0.8f, py = H + ph * 0.5f;
-        B(new Vector3(c.x, py, z0), new Vector3(s.x, ph, 0.4f), Trim);
-        B(new Vector3(c.x, py, z1), new Vector3(s.x, ph, 0.4f), Trim);
-        B(new Vector3(x0, py, c.y), new Vector3(0.4f, ph, s.y), Trim);
-        float gapA = 4.5f, gapB = 10.5f; // z range of the gap
-        B(new Vector3(x1, py, (z0 + gapA) * 0.5f), new Vector3(0.4f, ph, gapA - z0), Trim);
-        if (z1 > gapB) B(new Vector3(x1, py, (gapB + z1) * 0.5f), new Vector3(0.4f, ph, z1 - gapB), Trim);
-        // windows on all four faces, two floors
-        for (float x = x0 + 4f; x < x1 - 2f; x += 5f)
-        {
-            bool door = Mathf.Abs(x - c.x) < 3f;
-            foreach (float y in new[] { 2.4f, 6.8f })
-            {
-                if (!(door && y < 4f)) Window(new Vector3(x, y, z1 + 0.07f), true);
-                Window(new Vector3(x, y, z0 - 0.07f), true);
-            }
-        }
-        for (float z = z0 + 4f; z < z1 - 2f; z += 5f)
-            foreach (float y in new[] { 2.4f, 6.8f })
-            {
-                Window(new Vector3(x0 - 0.07f, y, z), false);
-                if (z < 0f) Window(new Vector3(x1 + 0.07f, y, z), false);
-            }
+        // ffu21: shell, roof, parapets, windows are breakable segments around a furnished hollow (RanchBreak.House)
+        RanchBreak.House(root);
+        float gapA = 4.5f, gapB = 10.5f; // z range of the roof parapet gap where the ramp lands
         // front door
         B(new Vector3(c.x, 1.6f, z1 + 0.08f), new Vector3(2.8f, 3.2f, 0.12f), new Color(0.35f, 0.22f, 0.12f), false);
         B(new Vector3(c.x, 3.35f, z1 + 0.1f), new Vector3(3.2f, 0.25f, 0.16f), Trim, false);
@@ -382,7 +355,12 @@ public static class Ranch
     // ---------------- rally track (see RallyTrack.cs) ----------------
     static void Track()
     {
-        RallyTrack.Build(root);
+        // ffu21: rails / tyres / kickers / pillars come in through their own root and become breakable pieces; the track
+        // surface + loop meshes are cut into breakable cells
+        var trackParts = new GameObject("TrackParts").transform;
+        RallyTrack.Build(trackParts);
+        RanchBreak.TrackParts(trackParts, root);
+        RanchBreak.SplitTrackMeshes(GameObject.Find("RallyTrack"));
         Color[] flagC = { new Color(1f, 0.25f, 0.2f), new Color(1f, 0.9f, 0.2f), new Color(0.2f, 0.6f, 1f), Color.white };
         // flags around the outside of both lobes
         for (int i = 0; i < 24; i++)
@@ -398,9 +376,13 @@ public static class Ranch
             Vector3 outward = Vector3.Dot(right, p - lobe) > 0f ? right : -right;
             Vector3 fp = p + outward * (Layout.TrackW * 0.5f + 7f);
             float gy = GY(fp.x, fp.z);
-            Cyl(new Vector3(fp.x, gy + 1.5f, fp.z), new Vector3(0.12f, 1.5f, 0.12f), new Color(0.9f, 0.9f, 0.9f), true);
-            B(new Vector3(fp.x, gy + 2.6f, fp.z) + f * 0.6f, new Vector3(1.2f, 0.7f, 0.04f), flagC[i % flagC.Length], false,
+            Transform keep = root;
+            root = RanchBreak.Group("Flag", new Vector3(fp.x, gy, fp.z));   // ffu21: flags break too (B / Cyl build under root)
+            Cyl(new Vector3(fp.x, gy + 1.5f, fp.z) - root.position, new Vector3(0.12f, 1.5f, 0.12f), new Color(0.9f, 0.9f, 0.9f), true);
+            B(new Vector3(fp.x, gy + 2.6f, fp.z) + f * 0.6f - root.position, new Vector3(1.2f, 0.7f, 0.04f), flagC[i % flagC.Length], false,
               new Vector3(0f, Mathf.Atan2(f.x, f.z) * Mathf.Rad2Deg + 90f, 0f));
+            Destruct.Register(root.gameObject, BreakKind.Flag);
+            root = keep;
         }
         Vector2 sp = Layout.Spur[2];
         Sign(new Vector3(sp.x - 2f, GY(sp.x - 2f, sp.y + 9f) + 3f, sp.y + 9f), 200f, "RALLY TRACK\n<size=24>figure 8 - bridge - jumps</size>", new Color(0.55f, 0.25f, 0.1f), 8f, 2.2f);
@@ -489,11 +471,15 @@ public static class Ranch
             string pk = conifer ? PinePacks[r.Next(PinePacks.Length)] : TreePacks[r.Next(TreePacks.Length)];
             LBPack p = LBPack.Get(pk);
             if (p == null) continue;
-            p.SpawnAll(root, new Vector3(x, gy - 0.15f, z), s, Color.white, (float)r.NextDouble() * 360f);
+            // ffu21: each tree is its own breakable (and climbable) piece
+            Transform tg = RanchBreak.Group("Tree", new Vector3(x, gy - 0.15f, z));
+            p.SpawnAll(tg, Vector3.zero, s, Color.white, (float)r.NextDouble() * 360f);
             var col = new GameObject("TreeCol").AddComponent<CapsuleCollider>();
-            col.transform.SetParent(root, false);
+            col.transform.SetParent(tg, false);
             col.transform.position = new Vector3(x, gy + 2f * s, z);
             col.radius = 0.35f * s; col.height = 4f * s;
+            TreeClimb.AddTree(tg, new Vector3(x, gy, z), 0.35f * s, s, conifer);
+            Destruct.Register(tg.gameObject, BreakKind.Tree);
             placed++;
         }
         // bushes (no collision) along the yard edges and between trees
@@ -517,11 +503,13 @@ public static class Ranch
             LBPack p = LBPack.Get(rocks[i % 2]);
             if (p == null) continue;
             float gy = GY(x, z);
-            p.SpawnAll(root, new Vector3(x, gy - 0.25f * s, z), s, Color.white, (float)r.NextDouble() * 360f);
+            Transform rg = RanchBreak.Group("Rock", new Vector3(x, gy - 0.25f * s, z));   // ffu21: rocks break too
+            p.SpawnAll(rg, Vector3.zero, s, Color.white, (float)r.NextDouble() * 360f);
             var col = new GameObject("RockCol").AddComponent<SphereCollider>();
-            col.transform.SetParent(root, false);
+            col.transform.SetParent(rg, false);
             col.transform.position = new Vector3(x, gy + 0.3f * s, z);
             col.radius = 1.1f * s;
+            Destruct.Register(rg.gameObject, BreakKind.Rock);
         }
         Debug.Log("Ranch: " + placed + " mesh trees");
         return true;

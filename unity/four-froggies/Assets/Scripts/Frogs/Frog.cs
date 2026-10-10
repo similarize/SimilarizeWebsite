@@ -2,7 +2,7 @@ using UnityEngine;
 
 // A froggy on foot: camera-relative hopping movement, swimming, knockback, and getting in / out of vehicles.
 // Humans feed it a PIn each frame; open seats run the built-in wander AI.
-public class Frog : MonoBehaviour
+public partial class Frog : MonoBehaviour
 {
     public int id;
     public string nick;
@@ -247,7 +247,7 @@ public class Frog : MonoBehaviour
             input = new PIn();
             return;
         }
-        Walk(dt);
+        if (!ClimbTick(dt)) { Walk(dt); ClimbDetect(dt); }   // ffu21 tree climbing (FrogClimb.cs)
         input = new PIn();
     }
 

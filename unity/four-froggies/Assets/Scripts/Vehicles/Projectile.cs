@@ -108,6 +108,8 @@ public static class Boom
                 Wreckable w = c.GetComponent<Wreckable>();
                 if (w != null && hitOnce.Add(w)) w.Blast(p, d);
             }
+            // ffu21: house walls / windows / roof / furniture, track pieces, trees, rocks, flags, robots, animals
+            Destruct.Blast(p, radius * 1.4f, damage, by);
         }
         Sfx.PlayAt(Sfx.Boom, p, Mathf.Clamp(power, 0.5f, 1f), 140f, Random.Range(0.85f, 1.1f));
         var lg = new GameObject("BoomLight");

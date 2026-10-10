@@ -112,22 +112,16 @@ public class Wreckable : MonoBehaviour
 
     public void Blast(Vector3 from, float dmg)
     {
-        if (downT >= 0f || dmg < 8f) return;
-        downT = 18f + Random.value * 6f;
+        if (downT >= 0f || dmg < 4f) return;
+        downT = (18f + Random.value * 6f) * Destruct.RegenScale;
         Color c = rend != null && rend.sharedMaterial != null ? rend.sharedMaterial.color : Color.gray;
         Material m = Mats.Lit(Color.Lerp(c, Color.black, 0.35f));
         Vector3 p = transform.position;
         float s = Mathf.Max(transform.lossyScale.x, transform.lossyScale.y) * 0.4f;
+        // ffu21: pooled debris (Chunks) instead of new primitives per blast
         for (int i = 0; i < (Look.Mobile ? 3 : 5); i++)
-        {
-            var g = Mats.Prim(PrimitiveType.Cube, null, p + Random.insideUnitSphere * s, Vector3.one * s * Random.Range(0.4f, 0.8f), m, true);
-            g.layer = Vehicle.PropLayer;
-            var r = g.AddComponent<Rigidbody>(); r.mass = 5f;
-            r.velocity = (p - from).normalized * 9f + Random.insideUnitSphere * 5f + Vector3.up * 7f;
-            r.angularVelocity = Random.insideUnitSphere * 8f;
-            Destroy(g, 7f);
-        }
-        FX.Smoke(p, s * 3f + 1f, new Color(0.25f, 0.25f, 0.25f, 0.7f));
+            Chunks.Spawn(p + Random.insideUnitSphere * s, (p - from).normalized * 9f + Random.insideUnitSphere * 5f + Vector3.up * 7f, Vector3.one * s * Random.Range(0.4f, 0.8f), m, 6f);
+        FX.Cloud(p, s * 1.5f + 0.6f, 6, new Color(0.3f, 0.28f, 0.26f, 0.7f));
         if (rend != null) rend.enabled = false;
         if (col != null) col.enabled = false;
         if (rb != null) { rb.isKinematic = true; }
@@ -151,7 +145,7 @@ public class Wreckable : MonoBehaviour
 public class VehicleWreck : MonoBehaviour
 {
     public Vehicle v;
-    public float hp = 100f;
+    public float hp = 60f;   // ffu21: one missile (or two shells / plasma bolts) wrecks a vehicle
     float downT = -1f;
     Renderer[] rends; Material[][] orig;
     static Material charred;
@@ -168,8 +162,8 @@ public class VehicleWreck : MonoBehaviour
     {
         if (Down || d <= 0f) return;
         hp -= d;
-        if (hp > 0f) { FX.Smoke(at, 1.5f, new Color(0.3f, 0.3f, 0.3f, 0.6f)); return; }
-        downT = 16f;
+        if (hp > 0f) { FX.Smoke(at, 1.5f, new Color(0.3f, 0.3f, 0.3f, 0.6f)); FX.Sparkle(at, new Color(1f, 0.75f, 0.35f), 6); return; }
+        downT = 22f * Destruct.RegenScale;
         Frog drv = v.driver;
         if (drv != null && !drv.netPuppet)
         {
@@ -190,6 +184,18 @@ public class VehicleWreck : MonoBehaviour
         }
         Vector3 c = v.transform.position + Vector3.up;
         FX.Boom(c, 1.6f);
+        FX.Boom(c + Vector3.up * 1.2f, 1.1f);
+        // ffu21: panels / wheels fly off (pooled chunks in the vehicle's own paint, then charred)
+        Bounds vb = v.body != null ? v.body.bounds : new Bounds(c, Vector3.one * 3f);
+        Material paint = null;
+        foreach (var r0 in v.GetComponentsInChildren<MeshRenderer>()) if (r0.sharedMaterial != null) { paint = r0.sharedMaterial; break; }
+        int nch = Destruct.Low ? 4 : 8;
+        for (int i = 0; i < nch; i++)
+        {
+            Vector3 q = vb.center + Vector3.Scale(Random.insideUnitSphere, vb.extents * 0.8f);
+            float s0 = Mathf.Clamp(vb.size.magnitude * Random.Range(0.06f, 0.12f), 0.2f, 1.4f);
+            Chunks.Spawn(q, (q - at).normalized * 8f + Vector3.up * Random.Range(5f, 10f) + Random.insideUnitSphere * 3f, new Vector3(s0, s0 * 0.35f, s0 * 1.2f), i % 2 == 0 || paint == null ? Mats.Lit(new Color(0.09f, 0.08f, 0.08f)) : paint, Random.Range(5f, 7f));
+        }
         Sfx.PlayAt(Sfx.Boom, c, 1f, 160f, 0.8f);
         if (!v.rb.isKinematic) v.rb.AddForce(Vector3.up * 7f + Random.insideUnitSphere * 2f, ForceMode.VelocityChange);
         if (!v.rb.isKinematic) v.rb.AddTorque(Random.insideUnitSphere * 2f, ForceMode.VelocityChange);
@@ -205,9 +211,13 @@ public class VehicleWreck : MonoBehaviour
         if (downT > 6f && Random.value < dt * 10f) FX.Flame(c + Random.insideUnitSphere * 0.6f, Vector3.up);
         if (v.driver != null && !v.driver.netPuppet) v.driver.ExitVehicle();
         if (downT > 0f) return;
-        downT = -1f; hp = 100f;
+        downT = -1f; hp = 60f;
         for (int i = 0; i < rends.Length; i++) if (rends[i] != null && orig[i] != null) rends[i].sharedMaterials = orig[i];
         v.ResetHome();
-        FX.Sparkle(v.transform.position + Vector3.up * 1.5f, new Color(1f, 1f, 0.7f), 16);
+        // ffu21: it re-assembles at its spot (sparkle shell + chime)
+        Vector3 hp0 = v.transform.position + Vector3.up * 1.2f;
+        FX.Sparkle(hp0, new Color(1f, 1f, 0.7f), 16);
+        FX.Sparkle(hp0, new Color(0.55f, 0.95f, 1f), 16);
+        Sfx.PlayAt(Sfx.Confirm ?? Sfx.Pickup, hp0, 0.5f, 60f, 1.1f);
     }
 }
