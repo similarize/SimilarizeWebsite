@@ -1,7 +1,7 @@
 // REAL ROOM TV screen: the video (or a fallback test pattern) as emission + the glossy black glass reflecting the room.
 Shader "FF/RRScreen"
 {
-    Properties { _MainTex ("Video", 2D) = "black" {} _Bright ("Brightness", Float) = 1.6 _On ("On", Float) = 1 _Fallback ("Fallback pattern", Float) = 0 }
+    Properties { _MainTex ("Video", 2D) = "black" {} _Bright ("Brightness", Float) = 1.3 _On ("On", Float) = 1 _Fallback ("Fallback pattern", Float) = 0 }
     SubShader
     {
         Tags { "RenderType"="Opaque" "Queue"="Geometry" }
@@ -30,7 +30,9 @@ Shader "FF/RRScreen"
                 // faint pixel grid up close
                 float2 px = frac(i.uv * float2(960.0, 540.0));
                 float grid = lerp(0.82, 1.0, smoothstep(0.0, 0.18, min(px.x, px.y)));
-                float3 emit = vid * _Bright * _On * grid;
+                // screen content is exposure-compensated so the picture stays legible in the dark room (the light it casts is
+                // driven separately by the light-group weight)
+                float3 emit = vid * _Bright * _On * grid / max(_RRExposure, 0.5);
                 float3 N = normalize(i.nrm), V = normalize(_WorldSpaceCameraPos - i.wpos);
                 float nv = saturate(dot(N, V));
                 float f = 0.04 + 0.96 * pow(1.0 - nv, 5.0);

@@ -86,7 +86,7 @@ Shader "FF/RRSkin"
                 float il = 1.0 / max(dot(Ll, Ll), 0.3), it = 1.0 / max(dot(Lt, Lt), 0.3);
                 float fres = 0.035 + 0.965 * pow(1.0 - saturate(dot(N, V)), 5.0);
                 float3 spec = GGX(N, V, normalize(Ll), rough * rough) * il * _RRLampCol.rgb * float3(1.0, 0.78, 0.55) * 9.0
-                            + GGX(N, V, normalize(Lt), rough * rough) * it * _RRTvCol.rgb * 0.9;
+                            + GGX(N, V, normalize(Lt), rough * rough) * it * _RRTvCol.rgb * 0.25;
                 spec += GGX(N, V, normalize(Ll), 0.012) * il * _RRLampCol.rgb * 1.5;       // tight wet glint
                 spec *= fres * 4.0;
                 float3 R = reflect(-V, N);

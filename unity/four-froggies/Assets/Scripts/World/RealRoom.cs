@@ -67,10 +67,13 @@ public partial class RealRoom : MonoBehaviour
 
     // light state
     bool lightsOn = true;
-    float lampK = 1f, expo = 1.6f;
+    float lampK = 1f, expo = 4f;
     Vector4[] shEnv = new Vector4[9], shLamp = new Vector4[9], shTv = new Vector4[9];
     readonly Vector4[] sh = new Vector4[9];
-    public const float EnvW = 0.35f, TvBright = 1.6f, ExpOn = 1.45f, ExpOff = 5.5f;
+    // light group weights; exposure is automatic from the baked wall irradiance of the current mix (shell medians of
+    // the three lightmaps: lamp 0.256, tv 0.0057 per unit, night 0.0012), so lights-off reads as a dim TV-lit room
+    public const float EnvW = 0.15f, TvLightK = 4f, ExpMin = 1f, ExpMax = 25f;
+    const float RefLamp = 0.256f, RefTv = 0.0057f, RefEnv = 0.0012f;
 
     // interaction
     bool holding, sitting;
@@ -209,7 +212,7 @@ public partial class RealRoom : MonoBehaviour
         door.localRotation = Quaternion.Euler(0f, 45f, 0f);
         holding = false; sitting = false;
         ResetDuck();
-        lightsOn = true; lampK = 1f; expo = ExpOn;
+        lightsOn = true; lampK = 1f; expo = 4f;
         cam.enabled = true;
         cam.rect = slot.cam.rect;
         slot.cam.enabled = false;
@@ -491,7 +494,7 @@ public partial class RealRoom : MonoBehaviour
             tv = Vector3.Lerp(new Vector3(tvLight[a * 3], tvLight[a * 3 + 1], tvLight[a * 3 + 2]), new Vector3(tvLight[b * 3], tvLight[b * 3 + 1], tvLight[b * 3 + 2]), f);
         }
         else if (vidFallback) { float s = Time.time * 0.15f; tv = new Vector3(0.35f + 0.1f * Mathf.Sin(s), 0.5f, 0.45f + 0.1f * Mathf.Cos(s * 1.3f)) * 0.6f; }
-        tv *= TvBright;
+        tv *= TvLightK;
         Vector3 env = new Vector3(EnvW, EnvW, EnvW);
         Vector3 lamp = new Vector3(lampK, lampK, lampK);
         Shader.SetGlobalVector("_RREnvCol", env);
@@ -503,7 +506,8 @@ public partial class RealRoom : MonoBehaviour
                                 shEnv[k].z * env.z + shLamp[k].z * lamp.z + shTv[k].z * tv.z, 0f);
         Shader.SetGlobalVectorArray("_RRSH", sh);
         // eyes adjust: dark room -> brighter exposure over ~1.5 s
-        float target = Mathf.Lerp(ExpOff, ExpOn, lampK);
+        float eref = RefLamp * lampK + RefTv * (0.2126f * tv.x + 0.7152f * tv.y + 0.0722f * tv.z) + RefEnv * EnvW;
+        float target = Mathf.Clamp(1.45f / Mathf.Pow(Mathf.Max(eref, 1e-5f), 0.75f), ExpMin, ExpMax);
         expo = Mathf.Lerp(expo, target, 1f - Mathf.Exp(-dt * (target > expo ? 1.4f : 3f)));
         if (demoExpo > 0f) expo = demoExpo;
         Shader.SetGlobalFloat("_RRExposure", expo);
