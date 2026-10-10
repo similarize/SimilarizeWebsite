@@ -216,7 +216,9 @@ public static class Countryside
         var mr = go.AddComponent<MeshRenderer>();
         mr.sharedMaterial = m;
         mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-        mr.receiveShadows = !bumps;
+        // ffu14e: no shadows on the countryside at all - within the 55 m shadow distance the near ring came out
+        // shadowed (dark with lit holes) when seen from the berm; nothing out here needs them
+        mr.receiveShadows = false;
         rends.Add(mr);
     }
 
