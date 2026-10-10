@@ -3,9 +3,9 @@ using UnityEngine;
 
 // ffu17: pixel density + anti-aliasing per screen. The lobby renders at the screen's real density (capped 2.5x) so the
 // UI text and the character turntables are 1:1 crisp on a Pixel 9 (2.625x) or a high-DPI desktop; gameplay goes back
-// to the previous caps (phones 1.5x, desktop 2x) to keep the frame rate. MSAA: the WebGL context is created with
-// antialias (BuildScript sets every quality level to 4x, which is what Unity reads at startup); cameras with image
-// effects render into an MSAA intermediate sized by QualitySettings.antiAliasing.
+// to the previous caps (phones 1.5x, desktop 2x) to keep the frame rate. MSAA: the page (web/index.html) forces
+// antialias on the canvas context (Unity left it off even with every quality level at 4x); cameras with image effects
+// render into an MSAA intermediate sized by QualitySettings.antiAliasing.
 public static class FFDisplay
 {
 #if UNITY_WEBGL && !UNITY_EDITOR
