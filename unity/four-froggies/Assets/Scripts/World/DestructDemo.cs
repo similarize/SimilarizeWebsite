@@ -18,6 +18,7 @@ public static class DestructDemo
     static float nextFire;
     static StoryMech mech;
     static TreeClimb.Tree tree;
+    static float climbT0 = -1f;            // ffu21c: climb phases count from the moment the froggy grabs the trunk
     static Vector3 camPos, camLook;
 
     public static bool Is(string sc)
@@ -27,7 +28,7 @@ public static class DestructDemo
 
     public static void Start(Frog f, string sc)
     {
-        cur = sc; t0 = Time.realtimeSinceStartup; phase = -1; fired = 0; nextFire = 2f;
+        cur = sc; t0 = Time.realtimeSinceStartup; phase = -1; fired = 0; nextFire = 2f; climbT0 = -1f;
         if (f.world != WorldId.Ranch) f.SendTo(WorldId.Ranch, Ranch.FrogSpawn(f.id), 0f);
         if (f.vehicle != null) f.ExitVehicle();
         Destruct.RegenScale = sc == "regen" ? 0.2f : sc == "destroyhouse" || sc == "destroytrack" ? 1f : 0.45f;
@@ -182,15 +183,18 @@ public static class DestructDemo
             case "treeclimb":
                 {
                     if (tree == null) return false;
+                    float ct = 0f;
                     if (f.Climbing)
                     {
+                        if (climbT0 < 0f) climbT0 = t;
+                        ct = t - climbT0;
                         f.demoPush = false;
-                        f.demoClimbMove = t < 9f ? new Vector2(0.15f, 0.7f) : t < 15f ? new Vector2(0.9f, 0.05f) : new Vector2(0f, -0.4f);
+                        f.demoClimbMove = ct < 9f ? new Vector2(0.15f, 0.7f) : ct < 15f ? new Vector2(0.9f, 0.05f) : new Vector2(0f, -0.4f);
                     }
                     Vector3 fp = f.transform.position;
                     pos = tree.basePos + new Vector3(3.2f, 0f, -5.4f) + Vector3.up * Mathf.Max(1.6f, fp.y - tree.basePos.y + 0.8f);
                     look = new Vector3(tree.basePos.x, fp.y + 0.2f, tree.basePos.z);
-                    Phase(f.Climbing ? (t < 9f ? 1 : t < 15f ? 2 : 3) : 0, f.Climbing ? "climbing" : "push ring " + f.climbProgress.ToString("0.00"));
+                    Phase(f.Climbing ? (ct < 9f ? 1 : ct < 15f ? 2 : 3) : 0, f.Climbing ? "climbing h=" + (f.transform.position.y - tree.basePos.y).ToString("0.0") : "push ring " + f.climbProgress.ToString("0.00"));
                     return true;
                 }
             case "treetop":
@@ -198,7 +202,7 @@ public static class DestructDemo
                     if (tree == null) return false;
                     Vector3 fp = f.transform.position;
                     pos = fp + new Vector3(4.5f, 1.8f, -4.5f); look = fp + Vector3.up * 0.2f;
-                    Phase(f.Climbing ? 1 : 0, "on branch y=" + (fp.y - tree.basePos.y).ToString("0.0"));
+                    Phase(t < 3f ? 0 : f.Climbing ? 1 : 2, "on branch y=" + (fp.y - tree.basePos.y).ToString("0.0"));
                     return true;
                 }
         }

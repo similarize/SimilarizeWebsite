@@ -204,6 +204,9 @@ public partial class Frog
         if (vehicle != null) ExitVehicle();
         StartClimb(t);
         climbA = ang;
+        // ffu21c: put the froggy on the bark at the requested height first - ClimbTick lets go if it is > 3 m from there
+        climbH = Mathf.Clamp(h, 0.3f, t.TopH - 0.55f);
+        transform.position = t.basePos + new Vector3(Mathf.Cos(ang), 0f, Mathf.Sin(ang)) * (t.r + 0.3f) + Vector3.up * climbH;
         if (h >= 999f) { climbH = t.TopH - 0.55f; input.move = new Vector2(0f, 1f); ClimbTick(0.02f); input = new PIn(); return; }
         climbH = Mathf.Clamp(h, 0.3f, t.TopH - 0.55f);
     }
