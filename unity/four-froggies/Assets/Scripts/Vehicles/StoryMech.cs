@@ -476,6 +476,7 @@ public partial class StoryMech : Vehicle
         float dt = Mathf.Min(Time.deltaTime, DtCap);
         float H = height;
         TickBar(dt);
+        CanopyTick();   // ffu26: robot pilot's glass cockpit (StoryMechRobot.cs)
         if (wrecked)
         {
             wreckT -= dt;
@@ -485,6 +486,7 @@ public partial class StoryMech : Vehicle
             return;
         }
         if (TickParts(dt)) return;   // ffu21: toppling / lying down / standing back up
+        if (scripted) { ScriptTick(dt); return; }   // ffu26: a robot mech mission is flying it (StoryMechRobot.cs)
         if (shieldT > 0f) { shieldT -= dt; if (shieldT <= 0f) { shieldT = 0f; if (driver != null) driver.Toast("Spawn shield off - you can be hit now!", 2.5f); } }
         SendNet(false);
 

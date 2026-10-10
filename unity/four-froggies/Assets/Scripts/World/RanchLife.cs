@@ -35,6 +35,7 @@ public class RanchLife : MonoBehaviour
         I = go.AddComponent<RanchLife>();
         I.Build();
         RanchJobs.Create();     // ffu12: charging jacks, chore props, litter
+        RidingMower.Ensure();   // ffu26: the sit-on mower parked by the north-west lawn
         if (Worlds.SpaceOn) MissionSite.Build();   // ffu20: robot mission pad + ship + sample displays
         go.AddComponent<RobotPhone>();
         go.AddComponent<RobotFeed>();
@@ -238,6 +239,9 @@ public class Robot : MonoBehaviour
     public float RunSpeed { get { return Mathf.Min(maxSpeed * 0.5f, 4.6f); } }
     Vector3 extGoal; bool extRouted; float extT, extTimeout;
     public Color tint;
+    // ---- ffu26: riding mower ----
+    public bool riding;                  // on the riding mower (RidingMower.cs)
+    public int mowMode;                  // next mow: 0 auto (~40% riding), 1 riding, 2 push
 
     public float GroundAt(float x, float z)
     {
@@ -361,6 +365,7 @@ public class Robot : MonoBehaviour
     public string DriveOrder(Vehicle v, string mode, Frog from)
     {
         if (mission != null) return robotName + " is on a mission";
+        if (RobotMechMission.For(this) != null) return robotName + " is on a mech mission (MISSION > Recall mech)";
         if (drv != null && (v == null || v == drv.v)) { drv.user = from; drv.SetMode(mode); return robotName + ": " + drv.Status; }
         if (v == null) return robotName + ": pick a vehicle first";
         if (v.driver != null) return v.Title + " is taken (" + v.driver.nick + ")";
@@ -490,6 +495,13 @@ public class Robot : MonoBehaviour
         follow = null; danceT = 0f; landAuto = false;
         bool aloft = transform.position.y > Ranch.GY(transform.position.x, transform.position.z) + 1.5f;
         if (!c.StartsWith("roof")) flying = aloft;
+        if (c == "mow:ride" || c == "mow:push")
+        {
+            forcedChore = Chores.Mow; mowMode = c == "mow:ride" ? 1 : 2; forcedCharge = false; cmd = "auto";
+            if (aloft) Resume();
+            bool busy = mowMode == 1 && RidingMower.I != null && !RidingMower.I.FreeFor(this);
+            return robotName + (mowMode == 1 ? (busy ? ": the riding mower is busy (" + (RidingMower.I.driver != null ? RidingMower.I.driver.nick : "taken") + ") - I'll push-mow" : ": on it - mowing with the riding mower") : ": on it - mowing with the push mower");
+        }
         if (c.StartsWith("chore:"))
         {
             int k = int.Parse(c.Substring(6));
@@ -591,6 +603,8 @@ public class Robot : MonoBehaviour
         if (jack != null) { if (jack.user == this) jack.user = null; jack = null; }
         charging = false;
         if (cargo != null) cargo.SetActive(false);
+        if (riding) DismountMower();
+        MowStripes.End(this);
         SetTool(-1);
         steps.Clear(); stepIdx = 0; stepT = 0f; routed = false;
         pose = 0;
@@ -723,6 +737,11 @@ public class Robot : MonoBehaviour
                 }
             case Chores.Mow:
                 {
+                    // ffu26: ~40% of mow jobs on the riding mower (or as ordered from the phone)
+                    bool ride = mowMode == 1 || (mowMode == 0 && Random.value < 0.4f);
+                    mowMode = 0;
+                    RidingMower.Ensure();
+                    if (ride && RidingMower.I != null && RidingMower.I.FreeFor(this) && RobotNav.Flat(RidingMower.I.transform.position - RobotNav.G(RidingMower.ParkXZ.x, RidingMower.ParkXZ.y)) < 70f && !Layout.InPond(RidingMower.I.transform.position.x, RidingMower.I.transform.position.z)) { BuildRideMow(); break; }
                     SetTool(c);
                     Rect m = RanchJobs.MowArea;
                     int lanes = Mathf.FloorToInt(m.width / 2.2f);
@@ -772,6 +791,60 @@ public class Robot : MonoBehaviour
                     break;
                 }
         }
+    }
+
+    // ffu26: walk to the riding mower, climb on, mow lanes across the lawn (U-turns past the ends), park it, climb off
+    void BuildRideMow()
+    {
+        var M = RidingMower.I;
+        Rect m = RanchJobs.MowArea;
+        float k = Mathf.Clamp(height / RidingMower.BaseH, 0.75f, 2.1f);
+        float sp = RidingMower.DeckW * k * 0.92f;
+        int lanes = Mathf.Max(2, Mathf.FloorToInt((m.width - sp) / sp) + 1);
+        Vector3 ms = M.MountSpot; ms = RobotNav.G(ms.x, ms.z);
+        Walk(ms);
+        Act(0.7f, 0, M.Yaw + 90f, () =>
+        {
+            if (!M.FreeFor(this)) { status = "the riding mower got taken"; AbortPlan(); return; }   // a player hopped on first
+            Vector3 seat = M.transform.position;
+            Vector3 back = transform.position;
+            transform.position = new Vector3(seat.x, GroundAt(seat.x, seat.z), seat.z);
+            yaw = M.Yaw; transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+            if (!M.Attach(this)) { transform.position = back; AbortPlan(); return; }
+            riding = true; status = "mowing (riding mower)";
+        });
+        Act(0.8f, 10, float.NaN);     // settle in, engine starts
+        int start = M.lane;
+        float edge = 1.6f * k;
+        for (int i = 0; i < 5; i++)
+        {
+            int lane = (start + i) % lanes;
+            if (i > 0 && lane == 0) break;          // reached the far side: park after this pass
+            float x = m.xMin + sp * 0.5f + lane * sp;
+            bool up = lane % 2 == 0;
+            float z0 = up ? m.yMin - 0.4f : m.yMax + 0.4f, z1 = up ? m.yMax + 0.4f : m.yMin - 0.4f;
+            Work(RobotNav.G(x, z0), 10, i == 0 ? 2.0f : 1.4f);
+            Work(RobotNav.G(x, z1), 10, 2.6f);
+            // U-turn beyond the end towards the next lane
+            float nx = x + sp * 0.5f;
+            Work(RobotNav.G(nx, z1 + (up ? edge : -edge)), 10, 1.4f);
+            M.lane = (lane + 1) % lanes;
+        }
+        Vector3 park = RobotNav.G(RidingMower.ParkXZ.x, RidingMower.ParkXZ.y + 2.4f);
+        Work(park, 10, 2.0f);
+        Work(RobotNav.G(RidingMower.ParkXZ.x, RidingMower.ParkXZ.y), 10, 0.9f);
+        Act(0.6f, 10, RidingMower.ParkYaw, () => DismountMower());
+    }
+
+    void DismountMower()
+    {
+        var M = RidingMower.I;
+        riding = false;
+        if (M == null || M.rider != this) return;
+        M.Detach(this);
+        Vector3 ms = M.MountSpot;
+        transform.position = new Vector3(ms.x, GroundAt(ms.x, ms.z), ms.z);
+        Sfx.PlayAt(Sfx.Pick(Sfx.Servo), transform.position, 0.3f, 24f, 1.2f);
     }
 
     void Grab(LitterItem it)
@@ -883,6 +956,7 @@ public class Robot : MonoBehaviour
                     break;
                 }
             case 8:
+                if (toolKind == Chores.Mow) MowStripes.Track(this, hp, transform.forward, 0.62f * Mathf.Clamp(height / 1.75f, 0.8f, 1.6f), speed > 0.3f && RidingMower.Mowing(hp));
                 if (toolKind == Chores.Mow && fxT <= 0f && speed > 0.3f) { fxT = 0.12f; FX.Smoke(hp - transform.forward * 0.4f + Vector3.up * 0.1f, 0.3f, new Color(0.35f, 0.65f, 0.2f, 0.85f)); }
                 if (toolKind == Chores.Vacuum && fxT <= 0f && speed > 0.3f) { fxT = 0.5f; FX.Sparkle(hp, new Color(0.5f, 1f, 1f), 2); }
                 break;
@@ -969,6 +1043,7 @@ public class Robot : MonoBehaviour
         goalDir = Vector3.zero; goalSpeed = 0f; faceYaw = float.NaN;
         if (manual != null && (manual.remote != this || !manual.human || manual.world != WorldId.Ranch || manual.vehicle != null)) ReleaseManual(false);
         if (manual != null) ManualTick();
+        else if (RobotMechMission.TickFor(this, dt)) { }    // ffu26: piloting a mech on a mission (RobotMechMission.cs)
         else if (drv != null) drv.Tick(dt);
         else if (mission != null) mission.Tick(dt);
         else if (cmd == "auto") Brain(dt);
@@ -995,7 +1070,7 @@ public class Robot : MonoBehaviour
         Vector3 dir = goalDir;
         if (spd > 0.05f && manual == null && !flying && world == WorldId.Ranch) dir = Avoid(p, dir, ref spd);
         speed = Mathf.MoveTowards(speed, spd, (manual != null ? 14f : 8f) * dt);
-        if (dir.sqrMagnitude > 0.01f && spd > 0.05f) yaw = Mathf.MoveTowardsAngle(yaw, Mathf.Atan2(dir.x, dir.z) * Mathf.Rad2Deg, (manual != null ? 480f : 240f) * dt);
+        if (dir.sqrMagnitude > 0.01f && spd > 0.05f) yaw = Mathf.MoveTowardsAngle(yaw, Mathf.Atan2(dir.x, dir.z) * Mathf.Rad2Deg, (manual != null ? 480f : riding ? 120f : 240f) * dt);
         else if (!float.IsNaN(faceYaw)) yaw = Mathf.MoveTowardsAngle(yaw, faceYaw, 200f * dt);
         if (cmd == "dance" && manual == null) yaw += 220f * dt;
         Vector3 np = p + Quaternion.Euler(0f, yaw, 0f) * Vector3.forward * speed * dt;
@@ -1046,8 +1121,9 @@ public class Robot : MonoBehaviour
     {
         phase += speed * 2.2f / Mathf.Max(0.5f, height) * dt * 3f;
         float sw = Mathf.Sin(phase) * Mathf.Clamp01(speed / 2f) * 30f;
-        legL.localRotation = Quaternion.Euler(pose == 9 ? -82f : sw, 0f, 0f);
-        legR.localRotation = Quaternion.Euler(pose == 9 ? -82f : -sw, 0f, 0f);
+        if (pose == 10) sw = 0f;   // ffu26: riding mower seat
+        legL.localRotation = Quaternion.Euler(pose == 9 ? -82f : pose == 10 ? -64f : sw, 0f, pose == 10 ? -6f : 0f);
+        legR.localRotation = Quaternion.Euler(pose == 9 ? -82f : pose == 10 ? -64f : -sw, 0f, pose == 10 ? 6f : 0f);
         float t = Time.time;
         bend = Mathf.MoveTowards(bend, pose == 3 ? 20f : pose == 6 ? 10f : pose == 5 ? 8f : 0f, 70f * dt);
         Quaternion aL, aR;
@@ -1071,6 +1147,7 @@ public class Robot : MonoBehaviour
                 case 6: { float k = Mathf.Sin(t * 3.2f); aL = aR = Quaternion.Euler(-50f + k * 16f, 0f, 0f); break; }
                 case 7: aL = Quaternion.Euler(-10f, 0f, 0f); aR = Quaternion.Euler(-70f, 0f, 0f); break;
                 case 9: aL = Quaternion.Euler(-55f + Mathf.Sin(t * 1.7f) * 4f, 0f, -6f); aR = Quaternion.Euler(-55f - Mathf.Sin(t * 1.7f) * 4f, 0f, 6f); break;
+                case 10: aL = Quaternion.Euler(-62f + Mathf.Sin(t * 2.1f) * 3f, 0f, 10f); aR = Quaternion.Euler(-62f - Mathf.Sin(t * 2.1f) * 3f, 0f, -10f); break;   // hands on the wheel
                 default: aL = Quaternion.Euler(-sw * 0.8f, 0f, 0f); aR = Quaternion.Euler(sw * 0.8f, 0f, 0f); break;
             }
             if (wave > 0f) aR = Quaternion.Euler(0f, 0f, 160f + Mathf.Sin(t * 12f) * 20f);
@@ -1135,10 +1212,12 @@ public class Robot : MonoBehaviour
             if (manual != null) return "driven by " + manual.nick;
             if (drv != null) return drv.Status;
             if (mission != null) return mission.PhaseLine;
+            var mm = RobotMechMission.For(this);
+            if (mm != null) return mm.PhaseLine;
             if (cmd != "auto") return status;
             if (charging) return "charging";
             if (jack != null) return "to charger";
-            if (chore >= 0) return Chores.Doing[chore];
+            if (chore >= 0) return chore == Chores.Mow && riding ? "mowing (riding mower)" : Chores.Doing[chore];
             return status;
         }
     }

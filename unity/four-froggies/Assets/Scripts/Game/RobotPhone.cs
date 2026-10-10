@@ -89,9 +89,9 @@ public class RobotPhone : MonoBehaviour
             UIK.Label(b.transform, TabNames[i], 13, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(98f, 28f), Color.white);
             tabBtns.Add(b);
         }
-        // ---- item grid (max 21 = 7 rows x 3) ----
+        // ---- item grid (max 24 = 8 rows x 3; ffu26: was 7 rows) ----
         float gy = ty - 36f;
-        for (int i = 0; i < 21; i++)
+        for (int i = 0; i < 24; i++)
         {
             int col = i % 3, row = i / 3;
             var b = UIK.Img(p, UIK.Round, Color.white, new Vector2(0.5f, 1f), new Vector2(-139f + col * 139f, gy - row * 33f), new Vector2(134f, 29f)); b.type = Image.Type.Sliced;
@@ -131,7 +131,11 @@ public class RobotPhone : MonoBehaviour
         void Add(int k, string l, string a) { tabs[k].Add(new Item { label = l, act = a }); }
         Add(0, "Auto chores", "auto"); Add(0, "Go charge", "charge"); Add(0, "DRIVE IT!", "drive");
         string[] ch = { "Sweep porch", "Vacuum garage", "Haul crates", "Haul hay", "Pick up litter", "Mow lawn", "Rake leaves", "Water flowers" };
-        for (int i = 0; i < ch.Length; i++) Add(0, ch[i], "chore:" + i);
+        for (int i = 0; i < ch.Length; i++)
+        {
+            if (i == Chores.Mow) { Add(0, "Mow (riding)", "mow:ride"); Add(0, "Mow (push)", "mow:push"); continue; }   // ffu26 riding mower
+            Add(0, ch[i], "chore:" + i);
+        }
         string[] oc = { "come", "go", "stop", "wave", "roofHeli", "roofDrone", "follow", "dance" };
         string[] ol = { "Come here", "Go (8 m)", "Stop", "Wave", "Roof helipad", "Drone pad", "Follow me", "Dance" };
         for (int i = 0; i < oc.Length; i++) Add(1, ol[i], oc[i]);
@@ -139,8 +143,9 @@ public class RobotPhone : MonoBehaviour
         for (int i = 0; i < vehicles.Count && i < 12; i++) Add(2, vehicles[i].Title, "veh:" + i);
         string[] bands = { "10-story mech", "100-story mech", "1000-story mech", "Trillion mech" };
         for (int b = 0; b < 4; b++) Add(2, bands[b], "mech:" + b);
-        Add(2, "Wander", "dmode:wander"); Add(2, "Follow me", "dmode:follow"); Add(2, "Race track", "dmode:race"); Add(2, "Go to my spot", "dmode:spot"); Add(2, "GET OUT", "getout");
+        Add(2, "Board (stand by)", "dmode:hold"); Add(2, "Walk / wander", "dmode:wander"); Add(2, "Follow me", "dmode:follow"); Add(2, "Race track", "dmode:race"); Add(2, "Go to my spot", "dmode:spot"); Add(2, "GET OUT", "getout");
         Add(3, "Mars rocks x3", "mis:0:3"); Add(3, "Mars rocks x5", "mis:0:5"); Add(3, "Callisto ice x4", "mis:1:4");
+        Add(3, "Mech to Mars rocks", "mmis:0:4"); Add(3, "Mech to Callisto", "mmis:1:3"); Add(3, "Mech space patrol", "mmis:2:0"); Add(3, "Recall mech", "recall");   // ffu26
         Add(3, "Abort mission", "abort"); Add(3, "Watch feed", "feed"); Add(3, "Feed full screen", "feedfull"); Add(3, "Feed cam: drone/eye", "feedcam");
     }
 
@@ -300,6 +305,12 @@ public class RobotPhone : MonoBehaviour
         var r = Selected;
         if (r == null) return;
         string say = "";
+        var mm = RobotMechMission.For(r);
+        if (mm != null && a != "recall" && a != "abort" && !a.StartsWith("feed"))
+        {
+            say = r.robotName + " is flying a mech mission (" + mm.PhaseLine + ") - Recall mech to bring it home";
+            msg.text = say; f.Toast(say, 2.2f); Sfx.Play(Sfx.Click, 0.5f); return;
+        }
         if (a == "drive") { open = false; r.TakeManual(f); msg.text = "Driving " + r.robotName; return; }
         if (a.StartsWith("veh:"))
         {
@@ -322,7 +333,22 @@ public class RobotPhone : MonoBehaviour
             say = RobotMission.Start(r, int.Parse(ps[1]), int.Parse(ps[2]));
             if (r.mission != null && RobotFeed.I != null) RobotFeed.I.Show(r, 1);   // start watching straight away
         }
-        else if (a == "abort") say = r.mission != null ? r.mission.Abort() : r.robotName + " isn't on a mission";
+        else if (a.StartsWith("mmis:"))
+        {
+            // ffu26: the mech the robot is piloting, else the band picked in DRIVE, else the nearest free 10-story
+            var ps = a.Split(':');
+            StoryMech mech = r.drv != null ? r.drv.v as StoryMech : null;
+            if (mech == null) mech = RobotDriver.MechOfBand(pickBand >= 0 ? pickBand : 0, r.transform.position);
+            say = RobotMechMission.Start(r, mech, int.Parse(ps[1]), int.Parse(ps[2]), f);
+            if (RobotMechMission.For(r) != null && RobotFeed.I != null) RobotFeed.I.Show(r, 1);
+        }
+        else if (a == "recall")
+        {
+            if (mm != null) say = mm.Recall();
+            else if (r.drv != null && r.drv.v is StoryMech) { r.drv.user = f; r.drv.SetMode("home"); say = r.robotName + ": walking " + r.drv.v.Title + " home"; }
+            else say = r.robotName + " isn't in a mech";
+        }
+        else if (a == "abort") say = mm != null ? mm.Recall() : r.mission != null ? r.mission.Abort() : r.robotName + " isn't on a mission";
         else if (a == "feed") { if (RobotFeed.I != null) { bool on = RobotFeed.I.mode > 0 && RobotFeed.I.robot == r; RobotFeed.I.Show(r, on ? 0 : 1); say = on ? "Feed off" : "Watching " + r.robotName + "'s camera (O)"; } }
         else if (a == "feedfull") { if (RobotFeed.I != null) { RobotFeed.I.Show(r, RobotFeed.I.mode == 2 && RobotFeed.I.robot == r ? 1 : 2); say = "Feed " + (RobotFeed.I.mode == 2 ? "full screen (Esc / tap to shrink)" : "picture-in-picture"); } }
         else if (a == "feedcam") { if (RobotFeed.I != null) { if (RobotFeed.I.mode == 0) RobotFeed.I.Show(r, 1); RobotFeed.I.ToggleCam(); say = "Feed camera: " + (RobotFeed.I.eye ? "robot's eye" : "drone"); } }
@@ -431,7 +457,7 @@ public class RobotPhone : MonoBehaviour
             Color c = tab == 0 ? (i < 3 ? new Color(0.15f, 0.55f, 0.3f, 0.78f) : new Color(0.12f, 0.45f, 0.5f, 0.72f))
                     : tab == 1 ? new Color(0.2f, 0.35f, 0.7f, 0.65f)
                     : tab == 2 ? (act.StartsWith("dmode") || act == "getout" ? new Color(0.55f, 0.3f, 0.75f, 0.78f) : new Color(0.16f, 0.3f, 0.45f, 0.75f))
-                    : (act.StartsWith("mis") ? new Color(0.7f, 0.32f, 0.12f, 0.82f) : new Color(0.2f, 0.32f, 0.5f, 0.75f));
+                    : (act.StartsWith("mis") ? new Color(0.7f, 0.32f, 0.12f, 0.82f) : act.StartsWith("mmis") || act == "recall" ? new Color(0.62f, 0.2f, 0.42f, 0.85f) : new Color(0.2f, 0.32f, 0.5f, 0.75f));
             bool picked = (act.StartsWith("veh:") && pickVeh != null && vehicles.IndexOf(pickVeh) == int.Parse(act.Substring(4))) || (act.StartsWith("mech:") && pickBand == int.Parse(act.Substring(5)));
             if (picked) c = new Color(0.1f, 0.75f, 0.85f, 0.95f);
             if (cur == 4 + i) c = new Color(1f, 0.75f, 0.2f, 0.95f);

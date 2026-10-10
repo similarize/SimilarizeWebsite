@@ -599,6 +599,7 @@ public class RobotBreak : MonoBehaviour
         Frog drv = r.manual;
         // ffu20: out of the vehicle it was driving, and its space mission is scrubbed (before launch) or cut short (it
         // rebuilds at its spot and carries on home with what it has)
+        var mmb = RobotMechMission.For(r); if (mmb != null) mmb.Eject("got blown up");   // ffu26: out of the mech cockpit first
         if (r.seatedIn != null || r.drv != null) r.EndDrive("got blown up! Rebuilding...");
         if (r.mission != null) { string m = r.mission.Abort(); if (RobotPhone.I != null) RobotPhone.I.Say(m); }
         // release jacks / chores / the phone driver cleanly, then switch the robot off while it is in pieces

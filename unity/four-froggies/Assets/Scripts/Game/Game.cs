@@ -318,6 +318,11 @@ public partial class Game : MonoBehaviour
             case "robotmission":
             case "robotreturn":
             case "phonepick":
+            case "playermow":
+            case "robotmow":          // ffu26 riding mower + robot mech pilots (GameRobots.cs)
+            case "robotmech":
+            case "robotmechspace":
+            case "robotmechphone":
                 if (!DemoRobot20Cam(f, sc, out pos, out look)) return;
                 break;
             case "touch":

@@ -249,6 +249,7 @@ public class RobotMission
     {
         if (MissionSite.ship == null || SpaceWorld.I == null || SurfaceWorlds.I == null) return "No mission ship here";
         if (Active != null) return "The mission ship is busy (" + Active.r.robotName + " - " + Active.PhaseLine + ")";
+        if (RobotMechMission.Active != null) return "One mission at a time - " + RobotMechMission.Active.r.robotName + " is on a mech mission";   // ffu26
         if (r.battery < 0.35f) return r.robotName + " needs a charge first (" + r.Pct + ")";
         if (r.manual != null) r.ReleaseManual(false);
         if (r.drv != null) r.EndDrive(null);

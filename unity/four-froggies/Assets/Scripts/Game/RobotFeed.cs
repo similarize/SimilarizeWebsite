@@ -89,6 +89,7 @@ public class RobotFeed : MonoBehaviour
     {
         if (robot != null) return robot;
         if (RobotMission.Active != null) return RobotMission.Active.r;
+        if (RobotMechMission.Active != null) return RobotMechMission.Active.r;
         if (RobotPhone.I != null && RobotPhone.I.Selected != null) return RobotPhone.I.Selected;
         return RanchLife.I != null && RanchLife.I.robots.Count > 1 ? RanchLife.I.robots[1] : null;
     }
@@ -190,7 +191,9 @@ public class RobotFeed : MonoBehaviour
         if (r.world != camWorldSet) { Worlds.SetCamera(cam, r.world); camWorldSet = r.world; snap = true; }
         Vector3 pos; Quaternion rot;
         var m = r.mission;
+        var mm = RobotMechMission.For(r);
         if (m != null && m.Cam(eye, out pos, out rot)) { cpos = pos; crot = rot; snap = true; }
+        else if (mm != null && mm.Cam(eye, out pos, out rot)) { cpos = pos; crot = rot; snap = true; }   // ffu26 mech missions
         else if (eye && r.eye != null && !r.hidden)
         {
             pos = r.eye.position + r.eye.forward * 0.05f;
@@ -233,7 +236,20 @@ public class RobotFeed : MonoBehaviour
     {
         Robot r = robot;
         var m = r.mission;
-        string head = "<color=#ff6b5e>LIVE</color>  " + r.robotName + "  <color=#9fb4c8>" + (m != null ? m.Name : r.drv != null && r.drv.v != null ? r.drv.v.Title : Worlds.Name(r.world)) + "</color>";
+        var mm = RobotMechMission.For(r);
+        string head = "<color=#ff6b5e>LIVE</color>  " + r.robotName + "  <color=#9fb4c8>" + (m != null ? m.Name : mm != null ? mm.Name + " · " + mm.m.Title : r.drv != null && r.drv.v != null ? r.drv.v.Title : Worlds.Name(r.world)) + "</color>";
+        if (mm != null)
+        {
+            // ffu26: mech mission band - phase, battery, rocket fuel, distance, samples
+            string bc2 = r.battery < Robot.LowBattery ? "#ffb030" : "#ffffff";
+            string fc = mm.fuel < 0.25f ? "#ffb030" : "#8fe3ff";
+            string s2 = "<color=#ffe27a>" + mm.PhaseLine.ToUpper() + "</color>   battery <color=" + bc2 + ">" + r.Pct + "</color>   fuel <color=" + fc + ">" + Mathf.RoundToInt(mm.fuel * 100f) + "%</color>";
+            if (mm.DistLine.Length > 0) s2 += "   " + mm.DistLine + " " + mm.DistWhat;
+            if (mm.kind < 2 && mm.phase >= RobotMechMission.Collect) s2 += "   " + (mm.kind == 0 ? "rocks " : "ice ") + mm.got + "/" + mm.want;
+            if (title.text != head) title.text = head;
+            if (status.text != s2) status.text = s2;
+            return;
+        }
         if (title.text != head) title.text = head;
         string bc = r.Charging ? "#8cff8c" : r.battery < Robot.LowBattery ? "#ffb030" : "#ffffff";
         string s = "<color=#ffe27a>" + (m != null ? m.PhaseLine.ToUpper() : r.StatusLine) + "</color>   battery <color=" + bc + ">" + r.Pct + "</color>";

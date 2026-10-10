@@ -20,8 +20,8 @@ public class RobotDriver
     float wanderT, stuckT, revT, raceT, walkT, exitT;
     bool raceInit, joining;
     float progT; Vector3 progP;
-    public static readonly string[] Modes = { "wander", "follow", "race", "spot" };
-    public static readonly string[] ModeNames = { "wandering", "following", "racing", "going to the spot" };
+    public static readonly string[] Modes = { "wander", "follow", "race", "spot", "hold", "home" };
+    public static readonly string[] ModeNames = { "wandering", "following", "racing", "going to the spot", "standing by", "taking it home" };
 
     public RobotDriver(Robot robot, Vehicle veh, string m, Frog from)
     {
@@ -87,7 +87,8 @@ public class RobotDriver
                 pilot.world = WorldId.Ranch;
                 pilot.EnterVehicle(v);
                 if (pilot.vehicle != v) { r.EndDrive(v.Title + " is taken"); return; }
-                r.SitIn(v);
+                if (v is StoryMech) MechPilot.Seat(r, (StoryMech)v);   // ffu26: visible in the mech's glass cockpit
+                else r.SitIn(v);
                 phase = 1;
                 Sfx.PlayAt(Sfx.Door, v.transform.position, 0.6f, 40f);
             }
@@ -193,6 +194,12 @@ public class RobotDriver
                 }
             case "spot":
                 goal = spot; arrive = 4f * S; maxSp = 14f * Mathf.Sqrt(S); break;
+            case "hold":      // ffu26: boarded, standing by (brakes)
+                goal = p; arrive = 1e6f; maxSp = 0f; break;
+            case "home":      // ffu26 "Recall mech": walk it back to its own spot, then climb out
+                goal = v.HomePos; arrive = 3f * S + 2f; maxSp = 14f * Mathf.Sqrt(S);
+                if (Flat(goal - p) < arrive && Mathf.Abs(v.ForwardSpeed) < 1.5f) GetOut();
+                break;
             case "race":
                 goal = RaceGoal(k, p, S); arrive = 0f; maxSp = 40f * Mathf.Sqrt(S); break;
             default:
@@ -349,7 +356,7 @@ public class RobotDriver
     public static List<Vehicle> List()
     {
         var l = new List<Vehicle>();
-        foreach (var v in Vehicle.All) if (Drivable(v) && !(v is StoryMech)) l.Add(v);
+        foreach (var v in Vehicle.All) if (Drivable(v) && !(v is StoryMech) && !(v is RidingMower)) l.Add(v);   // ffu26: mowers are a chore, not a drive
         return l;
     }
     // the free story mech of a band nearest the robot
