@@ -113,6 +113,7 @@ public static class Worlds
                 RenderSettings.ambientSkyColor = amb0; RenderSettings.ambientEquatorColor = amb1; RenderSettings.ambientGroundColor = amb2;
                 break;
         }
+        if (Realism.On) Realism.PreCull(w);   // ?realism=1 test: HDRI SH ambient on the ranch
     }
 
     public static float MarsFog = 0.006f;

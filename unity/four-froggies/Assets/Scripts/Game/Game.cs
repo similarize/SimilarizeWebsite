@@ -98,6 +98,7 @@ public partial class Game : MonoBehaviour
         "   pack by Quaternius (CC0).  <b>Sky</b> (Kloofendal 48d Partly Cloudy) and <b>grass / dirt / sand / wood / barn / metal textures</b>:\n" +
         "   Poly Haven (polyhaven.com), CC0; also the house floors / walls, seabed and Mars / Callisto ground.\n" +
         "<b>Planet maps + star map</b>: NASA (NASA 3D Resources; SVS CGI Moon Kit), public domain.\n" +
+        "<b>Realism test</b> (?realism=1): Sunflowers sky, ground / mud / rock / bark scans (Poly Haven) + Grass 004 (ambientCG), CC0.\n" +
         "<b>Sound effects + ambience</b>: BigSoundBank.com by Joseph Sardin (royalty-free, CC0-like) and Kenney (CC0).\n" +
         "<b>Music</b> (OpenGameArt, CC0): Flowerbed Fields by Zane Little Music; Picnic and Home by heartade; Underwater Theme II -\n" +
         "   Music by Cleyton Kauffman; Space Adventure by MintoDog; Puppy Playing in the Garden by Spring Spring; Outer Space Loop by wipics.\n\n" +
@@ -324,6 +325,9 @@ public partial class Game : MonoBehaviour
                 pos = new Vector3(-118f, gy + 7f, 104f); look = new Vector3(-148f, gy + 1.5f, 124f); break;
             case "pond":
                 pos = new Vector3(10f, 9f, -40f); look = new Vector3(70f, -1f, -80f); break;
+            case "realpond":
+            case "realpond2":
+                Realism.DemoCam(sc, out pos, out look); break;   // the realism test corner (same view with or without ?realism=1)
             case "ranch":
                 pos = new Vector3(45f, 26f, 95f); look = new Vector3(-20f, 0f, 0f); break;
             case "space":

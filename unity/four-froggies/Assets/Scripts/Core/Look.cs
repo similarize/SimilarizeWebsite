@@ -50,7 +50,7 @@ public static class Look
             ranch.mode = ReflectionProbeMode.Realtime;
             ranch.refreshMode = ReflectionProbeRefreshMode.ViaScripting;
             ranch.timeSlicingMode = ReflectionProbeTimeSlicingMode.NoTimeSlicing;
-            ranch.resolution = Mobile ? 64 : 128;
+            ranch.resolution = Mobile ? 64 : (Realism.On && !Realism.Lite ? 256 : 128);
             ranch.size = new Vector3(900f, 400f, 900f);
             ranch.boxProjection = false;
             ranch.cullingMask = ~excludeMask;
@@ -63,6 +63,14 @@ public static class Look
             Debug.Log("Look: ranch reflection probe rendered");
         }
         catch (System.Exception e) { Debug.LogWarning("Look: probe failed " + e.Message); }
+    }
+
+    // realism test: re-render once the HDRI sky + scans have streamed in
+    public static void RerenderProbe(int res)
+    {
+        if (ranch == null) return;
+        try { ranch.resolution = res; ranch.RenderProbe(); Debug.Log("Look: ranch probe re-rendered " + res); }
+        catch (System.Exception e) { Debug.LogWarning("Look: probe re-render failed " + e.Message); }
     }
 
     public static bool PostAllowed(int views) { return views == 1; }
@@ -94,5 +102,6 @@ public static class Look
                 if (p == null && post) p = LBPost.Add(c);
                 if (p != null) p.enabled = post && c.enabled;
             }
+        if (Realism.On) Realism.ApplyQuality(views, cams);   // ?realism=1 test only
     }
 }

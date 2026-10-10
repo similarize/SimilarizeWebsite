@@ -248,6 +248,9 @@ public static class BuildScript
         // stage B: underwater caustics surfaces, unlit textured sky spheres (space starfield, Jupiter in Callisto's sky)
         Material underwater = ShaderMat("FF/Underwater", "Underwater.mat");
         Material unlitTex = ShaderMat("Unlit/Texture", "UnlitTex.mat");
+        // ?realism=1 test (Realism.cs): triplanar scanned rock / bark, realistic pond water (variants ship via these assets)
+        Material realTri = ShaderMat("FF/RealTri", "RealTri.mat");
+        Material realWater = ShaderMat("FF/RealWater", "RealWater.mat");
 
         try
         {
@@ -299,6 +302,9 @@ public static class BuildScript
         b.pondMat = pond;
         b.underwaterMat = underwater;
         b.unlitTexMat = unlitTex;
+        b.realTriMat = realTri;
+        b.realWaterMat = realWater;
+        b.realTerrainMat = terrainNM;
 
         EditorSceneManager.MarkSceneDirty(scene);
         if (!EditorSceneManager.SaveScene(scene, ScenePath)) throw new Exception("Failed to save scene");
@@ -353,6 +359,7 @@ public static class BuildScript
         return SaveAsset(tex, name + ".asset");
     }
 
+    static Material terrainNM;
     static Terrain CreateTerrain()
     {
         const int res = 513;
@@ -416,6 +423,11 @@ public static class BuildScript
             var tm = new Material(ts);
             SaveAsset(tm, "TerrainMat.mat");
             t.materialTemplate = tm;
+            // realism test: a copy with _NORMALMAP so the normal-mapped terrain variant is in the build
+            terrainNM = new Material(ts);
+            terrainNM.EnableKeyword("_NORMALMAP");
+            SaveAsset(terrainNM, "TerrainMatNM.mat");
+            Debug.Log("BuildScript: terrain NM material");
         }
         t.heightmapPixelError = 6f;
         t.basemapDistance = 300f;
