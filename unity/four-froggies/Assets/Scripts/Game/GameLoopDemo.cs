@@ -125,11 +125,11 @@ public partial class Game
         Vector3 pos, look, up = Vector3.up;
         switch (sc)
         {
-            case "lj-in-side": pos = jin + new Vector3(1f, 3f, -18f); look = jin + new Vector3(1f, 3.5f, 0f); break;
+            case "lj-in-side": pos = jin + new Vector3(2f, 3f, -17f); look = jin + new Vector3(2f, 3.2f, 0f); break;
             case "lj-in-chase": pos = jin + new Vector3(-14f, 2.6f, 0f); look = jin + new Vector3(6f, 2.6f, 0f); break;
-            case "lj-out-side": pos = jout + new Vector3(-1f, 3f, 18f); look = jout + new Vector3(-1f, 3.5f, 0f); break;
+            case "lj-out-side": pos = jout + new Vector3(-2f, 3f, 17f); look = jout + new Vector3(-2f, 3.2f, 0f); break;
             case "lj-out-chase": pos = jout + new Vector3(14f, 2.6f, 0f); look = jout + new Vector3(-6f, 2.6f, 0f); break;
-            case "lj-link": pos = lj + new Vector3(8f, 3.2f, -7f); look = lj + new Vector3(-3f, 0.3f, 2f); break;
+            case "lj-link": pos = lj + new Vector3(-4f, 4f, 10f); look = lj + new Vector3(4f, 0.3f, -1f); break;
             case "lj-fork":
                 {
                     Vector3 a = Layout.TrackPoint(Layout.EntryT - 0.22f), b = Layout.TrackPoint(Layout.EntryT + 0.12f);
@@ -143,7 +143,7 @@ public partial class Game
             case "loopdrive-side":
                 {
                     Vector2 lc = Layout.LoopC;
-                    pos = new Vector3(lc.x, jin.y + 6.5f, lc.y - 30f); look = new Vector3(lc.x, jin.y + 6f, lc.y + 4.5f); break;
+                    pos = new Vector3(lc.x, jin.y + 8f, lc.y - 36f); look = new Vector3(lc.x, jin.y + 7.5f, lc.y + 4.5f); break;
                 }
             case "loopdrive":
                 {

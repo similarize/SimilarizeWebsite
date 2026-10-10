@@ -42,7 +42,7 @@ public static class Layout
     // ffu19: LoopW is the lane width of the whole loop branch (link, runways, loop) and LoopShift the sideways offset of the
     // exit lane; the loop itself is a clothoid-eased teardrop (top radius LoopTopR, ease-in length LoopEase), see RallyTrack.Branch.
     public const float LoopR = 7.5f, LoopW = 7f, LoopShift = 9f, LoopRun = 34f;
-    public const float LoopTopR = 6.5f, LoopEase = 12f;
+    public const float LoopTopR = 8f, LoopEase = 16f;
 
     // ffu14: the loop is part of the circuit. Driving the figure-eight in +t, the LOOP branch leaves the west lobe at
     // t = EntryT, swings round (south-west) into the loop runway, goes through the loop, and the exit link merges back

@@ -151,7 +151,7 @@ public static class RallyTrack
             if (!Legacy)
             {
                 // ffu19: where the loop branch lies over this (right) edge, the berm drops straight down under it (no crease)
-                float cv = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((BranchCover(R) + 0.3f) / 0.6f));
+                float cv = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((BranchCover(R) - 0.3f) / 0.6f));
                 if (cv > 0f) Rb = Vector3.Lerp(Rb, R - Vector3.up * 0.6f, cv);
             }
             bv.Add(L); bv.Add(Lb); bv.Add(Rb); bv.Add(R);
@@ -578,6 +578,9 @@ public static class RallyTrack
                 float bl = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((f.kT - 0.45f) / 0.35f));
                 if (bl > 0f) { L.y = Mathf.Lerp(L.y, TrackYAt(L), bl); R.y = Mathf.Lerp(R.y, TrackYAt(R), bl); }
                 rows[i] = ClipRow(L, R);
+                // the cut edge tucks 0.25 m under the figure-eight, 1.5 cm low: no crack can open along the seam
+                if (rows[i].ok && rows[i].clip == -1) { Vector3 d = (rows[i].L - rows[i].R).normalized; rows[i].L += d * 0.25f; rows[i].L.y -= 0.015f; }
+                if (rows[i].ok && rows[i].clip == 1) { Vector3 d = (rows[i].R - rows[i].L).normalized; rows[i].R += d * 0.25f; rows[i].R.y -= 0.015f; }
             }
             else rows[i] = new BRow { L = L, R = R, ok = true };
         }
@@ -645,12 +648,12 @@ public static class RallyTrack
             float k = f.sec == 1 ? Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((f.p.y - brBaseY - 0.6f) / 1.2f)) : 0f;
             Vector3 rf = new Vector3(f.right.x, 0f, f.right.z);
             rf = rf.sqrMagnitude > 1e-4f ? rf.normalized : f.right;
-            float wl = r.clip == -1 ? 0f : 2.5f, wr = r.clip == 1 ? 0f : 2.5f;
+            float wl = r.clip == -1 ? 0f : 3f, wr = r.clip == 1 ? 0f : 3f;
             if (f.sec != 1 && f.kT > 0.3f && r.clip == 0)
             {
                 int ii;
-                wl = Mathf.Min(wl, Mathf.Clamp((Mathf.Abs(TrackLat(r.L, out ii)) - Layout.TrackW * 0.5f) * 0.9f, 0f, 2.5f));
-                wr = Mathf.Min(wr, Mathf.Clamp((Mathf.Abs(TrackLat(r.R, out ii)) - Layout.TrackW * 0.5f) * 0.9f, 0f, 2.5f));
+                wl = Mathf.Min(wl, Mathf.Clamp((Mathf.Abs(TrackLat(r.L, out ii)) - Layout.TrackW * 0.5f) * 0.9f, 0f, 3f));
+                wr = Mathf.Min(wr, Mathf.Clamp((Mathf.Abs(TrackLat(r.R, out ii)) - Layout.TrackW * 0.5f) * 0.9f, 0f, 3f));
             }
             Vector3 Lb = SkirtPt(r.L, -1, wl, rf, f.up, k), Rb = SkirtPt(r.R, 1, wr, rf, f.up, k);
             int b0 = sv.Count;
@@ -743,7 +746,9 @@ public static class RallyTrack
     {
         if (w <= 0.05f) return E - up * 0.3f;
         Vector3 o = E + rf * w * side;
-        Vector3 flat = new Vector3(o.x, Mathf.Lerp(E.y - 0.3f, Gy(o.x, o.z) - 0.3f, w / 2.5f), o.z);
+        // full width = the figure-eight's own berm (3 m out, 0.2 m into the ground), so where the branch's outer edge runs
+        // into the track edge the two berms coincide instead of leaving a fin
+        Vector3 flat = new Vector3(o.x, Mathf.Lerp(E.y - 0.3f, Gy(o.x, o.z) - 0.2f, w / 3f), o.z);
         return Vector3.Lerp(flat, E - up * 0.45f, k);
     }
 

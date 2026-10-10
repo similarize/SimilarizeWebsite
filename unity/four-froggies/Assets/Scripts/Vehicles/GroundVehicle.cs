@@ -26,6 +26,7 @@ public class GroundVehicle : Vehicle
     protected float throttle, steer;
     protected int groundedCount;
     protected Vector3 groundNormal = Vector3.up;
+    bool loopLoaded;                     // ffu19: last step was on the loop surface (stiffer springs)
     public List<Transform> treadMarks;   // optional moving track blocks
     public float treadHalf = 2.6f;
     public System.Action<float, float> animate;
@@ -79,6 +80,10 @@ public class GroundVehicle : Vehicle
         Vector3 up = transform.up;
         int mask = GroundMask;
         bool onStunt = false, onTrack = false;
+        // ffu19: in the loop the suspension stiffens as the surface tilts (up to 2.5x), so the high-g bottom of the loop
+        // (5 g at 22 m/s) cannot bottom the springs out and drag the body along the surface
+        float sm = 1f, dm = 1f;
+        if (loopLoaded && !RallyTrack.Legacy) { sm = 1f + 1.5f * Mathf.Clamp01((1f - groundNormal.y) / 0.15f); dm = Mathf.Sqrt(sm); }
         foreach (Wheel w in wheels)
         {
             Vector3 origin = transform.TransformPoint(w.mount);
@@ -90,7 +95,7 @@ public class GroundVehicle : Vehicle
                 w.dist = hit.distance;
                 float comp = len - hit.distance;
                 float vUp = Vector3.Dot(rb.GetPointVelocity(origin), up);
-                float f = spring * comp - damper * vUp;
+                float f = spring * sm * comp - damper * dm * vUp;
                 if (f < 0f) f = 0f;
                 rb.AddForceAtPosition(up * f * ws, origin);
                 groundedCount++;
@@ -121,11 +126,14 @@ public class GroundVehicle : Vehicle
             {
                 // ffu19: the hold-on force fades in as the loop climbs (none on the flat start of the ease-in), so there is no
                 // sudden squat where the straight turns into the loop
-                float kd = RallyTrack.Legacy ? 1f : Mathf.Clamp01((1f - groundNormal.y) / 0.25f);
+                // (only on the upper half, where it is needed - lower down it would just add to the spring load)
+                float kd = RallyTrack.Legacy ? 1f : Mathf.Clamp01((0.35f - groundNormal.y) / 0.6f);
                 rb.AddForce(-groundNormal * 17f * kd, ForceMode.Acceleration);
                 Vector3 lf = Vector3.ProjectOnPlane(transform.forward, groundNormal).normalized;
                 float lfs = Vector3.Dot(rb.velocity, lf);
                 if (driven && throttle > -0.1f && lfs < 17f && lfs > -1f) rb.AddForce(lf * 11f, ForceMode.Acceleration);
+                // ffu19: gentle governor above 19 m/s so a flat-out truck does not hit the loop at 6+ g
+                if (!RallyTrack.Legacy && lfs > 19f) rb.AddForce(-lf * Mathf.Min(8f, (lfs - 19f) * 1.5f), ForceMode.Acceleration);
                 // ffu19: keep the truck on the lane while the loop shifts sideways (yaw toward the lane + gentle centring)
                 Vector3 gt; float glat;
                 if (driven && lfs > 2f && RallyTrack.LoopGuide(rb.position, out gt, out glat))
@@ -144,6 +152,7 @@ public class GroundVehicle : Vehicle
             }
         }
         else if (onTrack && groundedCount > 0) rb.AddForce(-groundNormal * 4f, ForceMode.Acceleration);
+        loopLoaded = inLoop && onStunt && groundedCount > 0;
 
         if (groundedCount > 0 && ws > 0f)
         {
