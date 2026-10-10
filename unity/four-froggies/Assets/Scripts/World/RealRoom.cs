@@ -405,7 +405,7 @@ public partial class RealRoom : MonoBehaviour
         float reachD = target == "switch" || target == "duck" || target == "plush" ? (tp - eyeP).magnitude : 9f;
         Hands.nearTarget = tp; Hands.nearW = Mathf.MoveTowards(Hands.nearW, reachD < 0.85f && !Hands.Busy ? 1f : 0f, dt * 3f);
         string pad = Badge();
-        string viewHint = owner.inputKind == InputKind.Touch ? "" : owner.inputKind == InputKind.Gamepad ? "   <b>[View]</b> 3rd person" : "   <b>[V / wheel]</b> 3rd person";
+        string viewHint = owner.inputKind == InputKind.Touch ? "" : owner.inputKind == InputKind.Gamepad ? "   <b>[View]</b> " + (third ? "1st" : "3rd") + " person" : "   <b>[V / wheel]</b> " + (third ? "1st" : "3rd") + " person";   // ffu23b
         if (holding) hint = pad + "  throw the " + (held == plush ? "plush frog" : "duck") + (owner.inputKind == InputKind.Touch ? "" : "   (hold to throw harder)");
         else if (target == "duck") hint = pad + "  pick up the rubber duck";
         else if (target == "plush") hint = pad + "  pick up the plush frog";

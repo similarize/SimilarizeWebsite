@@ -65,13 +65,13 @@ Shader "FF/RRSkin"
                 float pad = i.col.a;
                 // geometry normal + bumps from the warts / pores (surface gradient via screen derivatives)
                 float3 N = normalize(i.nrm);
-                float h = d.b * 0.65 + d2.b * 0.35;
+                float h = d.b * 0.8 + d2.b * 0.2;   // ffu23b: less fine-scale bump = less per-pixel sparkle
                 float3 dpx = ddx(i.wpos), dpy = ddy(i.wpos);
                 float dhx = ddx(h), dhy = ddy(h);
                 float3 r1 = cross(dpy, N), r2 = cross(N, dpx);
                 float det = dot(dpx, r1);
                 float3 grad = (dhx * r1 + dhy * r2) / (abs(det) > 1e-12 ? det : 1e-12);
-                N = normalize(N - grad * 0.0010 * (1.0 - pad * 0.7));
+                N = normalize(N - grad * 0.0006 * (1.0 - pad * 0.7));
                 float dorsal = smoothstep(0.15, 0.85, i.col.r);
                 // olive back: large soft blotches (dark) + fine mottle, a little yellow-green variation
                 float blot = smoothstep(0.52, 0.70, d.g) * dorsal;
@@ -97,7 +97,7 @@ Shader "FF/RRSkin"
                 float fres = 0.035 + 0.965 * pow(1.0 - saturate(dot(N, V)), 5.0);
                 float3 spec = GGX(N, V, normalize(Ll), rough * rough) * il * _RRLampCol.rgb * float3(1.0, 0.78, 0.55) * 9.0
                             + GGX(N, V, normalize(Lt), rough * rough) * it * _RRTvCol.rgb * 0.25;
-                spec += GGX(N, V, normalize(Ll), 0.03) * il * _RRLampCol.rgb * 0.5;        // tight wet glint (ffu23: softer)
+                spec += GGX(N, V, normalize(Ll), 0.10) * il * _RRLampCol.rgb * 0.35;       // wet glint (ffu23b: wider + dimmer, the 0.03 lobe sparkled white per pixel)
                 spec *= fres * 2.6 * lerp(0.7, 1.0, dorsal);
                 float3 R = reflect(-V, N);
                 spec += Pano(BoxProject(R, i.wpos), rough * 0.8) * fres * 0.6;

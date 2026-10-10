@@ -84,6 +84,9 @@ Shader "FF/RRLit"
                 float nv = saturate(dot(N, V)) + 1e-4;
                 float3 R = reflect(-V, N);
                 float3 pre = Pano(BoxProject(R, i.wpos), rough);
+                // ffu23b: the panos are captured right under the bulb, so a reflection pointing straight up (the floor under
+                // the camera, seen in third person) picked up the bulb as a clipped white smear - fade near-vertical reflections
+                pre *= lerp(1.0, 0.18, smoothstep(0.80, 0.97, R.y) * saturate(Ng.y * 2.0 - 1.0));
                 float2 ab = EnvBRDF(rough, nv);
                 float3 F0 = lerp(float3(0.04, 0.04, 0.04), alb, metal);
                 float occ = saturate(Lum(irr) / max(Lum(shN), 1e-5));
