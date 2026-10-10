@@ -413,7 +413,7 @@ public static class Realism
                 if (p.x > 168f || p.z > -6f) continue;
                 if (Layout.RoadDist(p.x, p.z) < Layout.TrackW * 0.5f + 2f) continue;
                 if (Lite && q > 1.5f) continue;
-                Vector3 cp, cl; DemoCam("realpond", out cp, out cl); if ((p - cp).sqrMagnitude < 9f) continue;
+                Vector3 cp, cl; DemoCam("realpond", out cp, out cl); if ((p - cp).sqrMagnitude < 1.2f) continue;   // keep the lens clear (3 m left a visible bald patch)
                 float bank = Mathf.Clamp01(1f - (q - 1.08f) / 0.18f);
                 float h = Mathf.Lerp(0.38f, 0.75f, R()) * (1f + bank * 0.8f);
                 float w = h * (0.9f + R() * 0.4f);
