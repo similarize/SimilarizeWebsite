@@ -8,7 +8,7 @@ public class RealPost : MonoBehaviour
 {
     static Material mat;
     static bool tried;
-    public float bloom = 0.16f, exposure = 0.92f, saturation = 1.04f, vignette = 0.2f, aoStrength = 0.7f, aoRadius = 0.7f;
+    public float bloom = 0.16f, exposure = 0.84f, saturation = 1.0f, vignette = 0.2f, aoStrength = 0.7f, aoRadius = 0.7f;
     readonly RenderTexture[] chain = new RenderTexture[6];
     Camera cam;
 

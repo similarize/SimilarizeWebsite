@@ -10,7 +10,7 @@ Shader "FF/RealWater"
         _SeaRect ("Depth map rect (x0, z0, 1/w, 1/h)", Vector) = (0, 0, 0.002, 0.002)
         _NormalMap ("Ripple normals", 2D) = "bump" {}
         _Shallow ("Shallow", Color) = (0.30, 0.33, 0.2, 1)
-        _Deep ("Deep", Color) = (0.035, 0.09, 0.08, 1)
+        _Deep ("Deep", Color) = (0.03, 0.075, 0.06, 1)
         _Strength ("Ripple strength", Float) = 0.55
         _Speed ("Speed", Float) = 1
         _Detail ("Fine ripples", Float) = 1
@@ -63,13 +63,13 @@ Shader "FF/RealWater"
                 float3 N = normalize(float3(s.x, 1.0, s.y));
                 float3 V = normalize(_WorldSpaceCameraPos - i.wp);
                 half ndv = saturate(dot(N, V));
-                half F = 0.02 + 0.98 * pow(1.0 - ndv, 5.0);
+                half F = 0.02 + 0.76 * pow(1.0 - ndv, 5.0);   // capped: ripples average the grazing mirror down
 
                 float3 R = reflect(-V, N);
                 R.y = max(R.y, 0.02);
                 R = normalize(R);
                 half4 env = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, R, 0.6);
-                half3 refl = DecodeHDR(env, unity_SpecCube0_HDR);
+                half3 refl = DecodeHDR(env, unity_SpecCube0_HDR) * 0.9;
 
                 float2 suv = (i.wp.xz - _SeaRect.xy) * _SeaRect.zw;
                 half depth = tex2D(_SeaMap, saturate(suv) + s * 0.003).r;

@@ -101,6 +101,7 @@ Shader "Hidden/FFRealPost"
         {
             half3 lin = pow(max(c, 0.0), 2.2) * _Grade.y;
             c = pow(ACES(lin), 1.0 / 2.2);
+            c = lerp(c, c * c * (3.0 - 2.0 * c), 0.2);    // a touch more contrast after the filmic curve
         }
         else
         {

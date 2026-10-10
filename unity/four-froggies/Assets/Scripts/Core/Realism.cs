@@ -31,9 +31,9 @@ public static class Realism
     // HDRI (work/real/sky_meta.json): sun at u 0.6003, elevation 43 deg; SunAz = world azimuth we want the sun at
     // (atan2(z, x) in degrees: -135 = south-west, side-light for the shore cameras)
     const float SunU = 0.6003f, SunEl = 42.98f, SunAz = -135f;
-    const float AmbK = 0.42f;            // ambient strength (linear scale of the HDRI table)
+    const float AmbK = 0.3f;             // ambient strength (linear scale of the HDRI table)
     static readonly Color SunCol = new Color(1f, 0.92f, 0.8f);
-    static readonly Color Haze = new Color(0.74f, 0.79f, 0.84f);
+    static readonly Color Haze = new Color(0.70f, 0.77f, 0.85f);
     public static float SkyRot { get { float phiTex = (0.5f - SunU) * 360f; return Mathf.Repeat(SunAz - phiTex, 360f); } }
 
 #if UNITY_WEBGL && !UNITY_EDITOR
@@ -104,7 +104,7 @@ public static class Realism
         RenderSettings.fog = true;
         RenderSettings.fogMode = FogMode.ExponentialSquared;
         RenderSettings.fogColor = Haze;
-        RenderSettings.fogDensity = 0.0036f;
+        RenderSettings.fogDensity = 0.0026f;
         RenderSettings.reflectionIntensity = 1f;
         // ambient: integrate the HDRI table (gamma -> linear x AmbK -> gamma) into an SH probe
         probe = new SphericalHarmonicsL2();
@@ -179,7 +179,7 @@ public static class Realism
 
     static IEnumerator Load(string file, string key, bool mips, bool compress, bool clampV = false)
     {
-        string url = BaseUrl() + file + "?v=r1";
+        string url = BaseUrl() + file + "?v=r2";
         using (var rq = UnityWebRequest.Get(url))
         {
             yield return rq.SendWebRequest();
@@ -218,7 +218,7 @@ public static class Realism
     {
         float t0 = Time.realtimeSinceStartup;
         string sfx = Lite ? "_512" : "";
-        yield return Load(Lite ? "sky_1k.jpg" : "sky_2k.jpg", "sky", false, false, true);
+        yield return Load("sky_2k.jpg", "sky", false, false, true);   // 1k looked blocky in portrait
         if (sky != null && T("sky") != null)
         {
             sky.SetTexture("_MainTex", T("sky"));
@@ -302,7 +302,7 @@ public static class Realism
     static Material rockMat, barkMat;
     static void ApplyMaterials()
     {
-        rockMat = Tri("rock", new Color(0.92f, 0.9f, 0.86f), 2.2f, 0.18f, 1.2f);
+        rockMat = Tri("rock", new Color(0.56f, 0.54f, 0.5f), 2.2f, 0.16f, 1.5f);
         barkMat = Tri("bark", new Color(1f, 0.97f, 0.92f), 1.4f, 0.1f, 1.3f);
         // pond water
         var go = GameObject.Find("PondWater");
@@ -331,8 +331,12 @@ public static class Realism
                     string tn = m.HasProperty("_MainTex") && m.mainTexture != null ? m.mainTexture.name : "";
                     if (tn == "q_bark" && barkMat != null) rep = barkMat;
                     else if (tn == "q_rocks" && rockMat != null) rep = rockMat;
+                    else if (tn == "" && m.shader != null && m.shader.name == "Standard" && Near(m.color, new Color(0.35f, 0.5f, 0.2f)))
+                    { rep = new Material(m); rep.color = new Color(0.24f, 0.27f, 0.13f); }     // pond reeds
+                    else if (tn == "" && m.shader != null && m.shader.name == "Standard" && Near(m.color, new Color(0.25f, 0.55f, 0.2f)))
+                    { rep = new Material(m); rep.color = new Color(0.13f, 0.22f, 0.08f); rep.SetFloat("_Glossiness", 0.45f); }   // lily pads
                     else if ((tn == "q_leaves" || tn == "q_pine" || tn == "q_bushleaf") && m.shader != null && m.shader.name == "FF/Foliage")
-                    { rep = new Material(m); rep.color = m.color * new Color(0.8f, 0.84f, 0.7f); }
+                    { rep = new Material(m); rep.color = m.color * new Color(0.6f, 0.7f, 0.48f); }
                     swap[m] = rep;
                 }
                 if (rep != null) { ms[i] = rep; ch = true; }
@@ -341,6 +345,8 @@ public static class Realism
         }
         Debug.Log("Realism: re-skinned " + n + " renderers (bark / rock / leaves), water " + (go != null));
     }
+
+    static bool Near(Color a, Color b) { return Mathf.Abs(a.r - b.r) + Mathf.Abs(a.g - b.g) + Mathf.Abs(a.b - b.b) < 0.02f; }
 
     // ---------------- the test corner: boulders + grass clumps ----------------
     static Vector3 Shore(float aDeg, float q)
@@ -394,7 +400,7 @@ public static class Realism
         {
             var gm = new Material(Mats.FoliageBase);
             gm.mainTexture = T("clump");
-            gm.color = new Color(0.86f, 0.9f, 0.78f);
+            gm.color = new Color(0.8f, 0.86f, 0.72f);
             if (gm.HasProperty("_Cutoff")) gm.SetFloat("_Cutoff", 0.42f);
             if (gm.HasProperty("_Wind")) gm.SetFloat("_Wind", 0.07f);
             int want = Lite ? 1500 : 5200;
@@ -502,7 +508,7 @@ public static class Realism
         }
         // standing on the east bank (eye height), looking north-west across the corner of the pond
         float gy = Ranch.GY(158f, -69f);
-        pos = new Vector3(158f, gy + 1.75f, -69f); look = new Vector3(125f, gy - 0.6f, -28f);
+        pos = new Vector3(158f, gy + 1.75f, -69f); look = new Vector3(133f, gy - 0.6f, -24f);
     }
 
     // generated from work/real/sky_meta.json (16 x 8 lat-long cells, gamma RGB, sun removed; lower half = ground bounce)
