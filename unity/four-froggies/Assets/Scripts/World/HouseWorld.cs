@@ -411,10 +411,7 @@ public class HouseWorld : MonoBehaviour
         go.transform.localPosition = Vector3.up * (a.kind == Animal.Kind.Dog && a.petName == "Germy" ? 1.3f : 0.95f);
         var tm = go.AddComponent<TextMesh>();
         tm.text = a.petName;
-        tm.font = UIK.Font;
-        go.GetComponent<MeshRenderer>().sharedMaterial = UIK.Font != null ? UIK.Font.material : null;
-        tm.fontSize = 48;
-        tm.characterSize = 0.035f;
+        UIK.WorldText(tm, 48, 0.035f);
         tm.anchor = TextAnchor.MiddleCenter;
         tm.color = Color.white;
         go.AddComponent<Billboard>();
@@ -697,8 +694,7 @@ public class Dad : MonoBehaviour
         tag.transform.SetParent(t, false);
         tag.transform.localPosition = Vector3.up * 2.35f;
         var tm = tag.AddComponent<TextMesh>();
-        tm.text = "Dad"; tm.font = UIK.Font; tm.fontSize = 48; tm.characterSize = 0.04f; tm.anchor = TextAnchor.MiddleCenter;
-        tag.GetComponent<MeshRenderer>().sharedMaterial = UIK.Font != null ? UIK.Font.material : null;
+        tm.text = "Dad"; UIK.WorldText(tm, 48, 0.04f); tm.anchor = TextAnchor.MiddleCenter;
         tag.AddComponent<Billboard>();
         return d;
     }

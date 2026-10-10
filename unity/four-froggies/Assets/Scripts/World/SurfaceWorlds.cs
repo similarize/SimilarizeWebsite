@@ -141,6 +141,9 @@ public class SurfaceWorlds : MonoBehaviour
         foreach (Frog f in Game.I.frogs) if (f != null && f.human && f.world == w) f.Toast(s, t);
     }
 
+    public void EnsureMars() { if (!marsBuilt) BuildMars(); }           // ffu20: robot missions land here
+    public void EnsureCallisto() { if (!calBuilt) BuildCallisto(); }
+
     // ---------------- Mars ----------------
     public static bool InCave(Vector3 p)
     {
@@ -278,8 +281,7 @@ public class SurfaceWorlds : MonoBehaviour
         lab.transform.SetParent(t, false);
         lab.transform.localPosition = Vector3.up * h;
         var tm = lab.AddComponent<TextMesh>();
-        tm.text = s; tm.font = UIK.Font; tm.fontSize = 48; tm.characterSize = 0.035f; tm.anchor = TextAnchor.MiddleCenter;
-        lab.GetComponent<MeshRenderer>().sharedMaterial = UIK.Font != null ? UIK.Font.material : null;
+        tm.text = s; UIK.WorldText(tm, 48, 0.035f); tm.anchor = TextAnchor.MiddleCenter;
         lab.AddComponent<Billboard>();
     }
 
@@ -385,6 +387,8 @@ public class SurfaceWorlds : MonoBehaviour
         if (Game.I == null) return;
         bool onMars = false, onCal = false;
         foreach (Frog f in Game.I.frogs) if (f != null) { if (f.world == WorldId.Mars) onMars = true; if (f.world == WorldId.Callisto) onCal = true; }
+        if (RobotFeed.WatchingWorld(WorldId.Mars)) onMars = true;           // ffu20: robot video feed
+        if (RobotFeed.WatchingWorld(WorldId.Callisto)) onCal = true;
         if (marsBuilt && marsRoot.gameObject.activeSelf != onMars) marsRoot.gameObject.SetActive(onMars);
         if (calBuilt && calRoot.gameObject.activeSelf != onCal) calRoot.gameObject.SetActive(onCal);
         float dt = Time.deltaTime;

@@ -28,8 +28,25 @@ public static class FFDisplay
         int m = on ? 1 : 0;
         if (m == mode) return;
         mode = m;
-        try { FFSetDPR(m); } catch { }
+        try { FFSetDPR(m == 0 && lite ? 2 : m); } catch { }
         ApplyAA();
+    }
+
+    // ffu20: gameplay on phones now renders at 2x (was 1.5x) so the HUD / phone text is close to 1:1 on a Pixel 9;
+    // if the frame rate can't hold ~28 fps over a 6 s window, drop once to the old 1.5x ("game-lite", logged).
+    static bool lite;
+    [RuntimeInitializeOnLoadMethod]
+    static void Hook() { var g = new GameObject("FFDisplayWatch"); Object.DontDestroyOnLoad(g); g.hideFlags = HideFlags.HideInHierarchy; g.AddComponent<FFDisplayWatch>(); }
+    public static void PerfTick(float dt, ref float t, ref float acc, ref int n)
+    {
+        if (mode != 0 || lite || !(Look.Mobile || MobileUA) || ScreenDpr <= 1.55f) { t = 0f; acc = 0f; n = 0; return; }
+        t += dt;
+        if (t < 4f) return;                 // settle after the lobby -> game switch
+        acc += dt; n++;
+        if (t < 10f) return;
+        float avg = acc / Mathf.Max(1, n);
+        if (avg > 1f / 28f) { lite = true; try { FFSetDPR(2); } catch { } Debug.Log("FFDPR game-lite: " + (1f / avg).ToString("0") + " fps at 2x"); }
+        t = 4f; acc = 0f; n = 0;
     }
 
     public static void ApplyAA()
@@ -39,4 +56,10 @@ public static class FFDisplay
         // keep 0 for their offscreen targets (their cameras draw straight into the antialiased backbuffer anyway)
         QualitySettings.antiAliasing = mode == 1 ? 4 : Look.Mobile ? 0 : 2;
     }
+}
+
+public class FFDisplayWatch : MonoBehaviour
+{
+    float t, acc; int n;
+    void Update() { FFDisplay.PerfTick(Mathf.Min(Time.unscaledDeltaTime, 0.5f), ref t, ref acc, ref n); }
 }

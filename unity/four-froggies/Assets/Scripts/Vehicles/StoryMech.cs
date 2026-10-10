@@ -113,12 +113,12 @@ public class StoryMech : Vehicle
     {
         get
         {
-            if (textMat == null && UIK.Font != null)
+            if (textMat == null && UIK.WorldFont != null)
             {
                 Shader sh = Resources.Load<Shader>("FFTextMesh3D");
-                if (sh != null && sh.isSupported) { textMat = new Material(sh) { name = "FFTextMesh3D" }; textMat.mainTexture = UIK.Font.material.mainTexture; Debug.Log("StoryMech: FF/TextMesh3D plates on"); }
-                else { textMat = UIK.Font.material; Debug.Log("StoryMech: FF/TextMesh3D missing - font material"); }
-                if (!textHooked) { textHooked = true; Font.textureRebuilt += f => { if (f == UIK.Font && textMat != null && textMat != f.material) textMat.mainTexture = f.material.mainTexture; }; }
+                if (sh != null && sh.isSupported) { textMat = new Material(sh) { name = "FFTextMesh3D" }; textMat.mainTexture = UIK.WorldFont.material.mainTexture; Debug.Log("StoryMech: FF/TextMesh3D plates on"); }
+                else { textMat = UIK.WorldFont.material; Debug.Log("StoryMech: FF/TextMesh3D missing - font material"); }
+                if (!textHooked) { textHooked = true; Font.textureRebuilt += f => { if (f == UIK.WorldFont && textMat != null && textMat != f.material) textMat.mainTexture = f.material.mainTexture; }; }
             }
             return textMat;
         }
@@ -207,7 +207,7 @@ public class StoryMech : Vehicle
         tag.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
         var tm = tag.AddComponent<TextMesh>();
         tm.text = Froggies.Names[owner].ToUpper() + "\n" + BandName[band].ToUpper();
-        tm.font = UIK.Font; tm.fontSize = 64; tm.characterSize = H * 0.004f; tm.anchor = TextAnchor.MiddleCenter; tm.alignment = TextAlignment.Center;
+        tm.font = UIK.WorldFont; tm.fontSize = 128; tm.characterSize = H * 0.002f; tm.anchor = TextAnchor.MiddleCenter; tm.alignment = TextAlignment.Center;   // ffu20: 2x glyphs, Montserrat
         tag.GetComponent<MeshRenderer>().sharedMaterial = TextMat;
         // and a matching plate on the back (reads correctly from behind)
         var back = Object.Instantiate(tag, m.torso);
@@ -306,7 +306,7 @@ public class StoryMech : Vehicle
         barFill = fp;
         barFill.GetChild(0).name = "Fill";
         var tg = new GameObject("BarText"); tg.transform.SetParent(barRoot, false); tg.transform.localPosition = new Vector3(0f, h * 1.6f, -0.06f);
-        barText = tg.AddComponent<TextMesh>(); barText.font = UIK.Font; barText.fontSize = 64; barText.characterSize = h * 0.08f; barText.anchor = TextAnchor.LowerCenter; barText.alignment = TextAlignment.Center;
+        barText = tg.AddComponent<TextMesh>(); barText.font = UIK.WorldFont; barText.fontSize = 128; barText.characterSize = h * 0.04f; barText.anchor = TextAnchor.LowerCenter; barText.alignment = TextAlignment.Center;
         tg.GetComponent<MeshRenderer>().sharedMaterial = TextMat;
         shieldText = barText;
         foreach (var r in barRoot.GetComponentsInChildren<Renderer>()) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;

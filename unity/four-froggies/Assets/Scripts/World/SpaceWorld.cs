@@ -159,6 +159,8 @@ public class SpaceWorld : MonoBehaviour
         Sfx.Play(Sfx.Boom, 0.8f, 0.5f);
     }
 
+    public void EnsureBuilt() { if (!built) Build(); }   // ffu20: robot missions fly through space
+
     // ---------------- build ----------------
     void Build()
     {
@@ -329,6 +331,7 @@ public class SpaceWorld : MonoBehaviour
         tm.characterSize = Mathf.Clamp(b.r * 0.06f, 0.5f, 3f);
         tm.color = b.id == "sun" ? new Color(1f, 0.9f, 0.5f) : new Color(0.85f, 0.92f, 1f);
         lab.GetComponent<MeshRenderer>().sharedMaterial = UIK.Font != null ? UIK.Font.material : null;
+        UIK.HiRes(tm);   // ffu20
         lab.AddComponent<Billboard>();
         return t;
     }
@@ -408,6 +411,7 @@ public class SpaceWorld : MonoBehaviour
         if (!built) return;
         bool anyone = false;
         if (Game.I != null) foreach (Frog f in Game.I.frogs) if (f != null && f.world == WorldId.Space) anyone = true;
+        if (RobotFeed.WatchingWorld(WorldId.Space)) anyone = true;   // ffu20: a robot's video feed is looking at space
         if (root.gameObject.activeSelf != anyone) root.gameObject.SetActive(anyone);
         if (!anyone) return;
         Tick(Time.deltaTime);

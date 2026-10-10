@@ -7,15 +7,42 @@ public static class UIK
     static Font font;
     static Sprite circle, ring;
 
-    public static Font Font
+    // ffu20 (Bill: "the font throughout the WHOLE game should look modern, smooth, anti-aliased"): every UI Text and
+    // world TextMesh now uses the ffu17 faces - Inter SemiBold (UIK.Font, body) / Montserrat ExtraBold (UIK.Display,
+    // titles >= 24 px and world labels) - with soft drop shadows instead of the hard 2 px outlines. The old built-in
+    // LegacyRuntime font is only the fallback (UIK.LegacyFont) if the TTFs are missing.
+    public static Font Font { get { LoadFonts(); return body != null ? body : LegacyFont; } }
+    public static Font WorldFont { get { LoadFonts(); return display != null ? display : LegacyFont; } }
+
+    // world TextMesh: modern face, glyphs rasterised at k x the size (characterSize / k keeps the world size), bilinear
+    // filtered font atlas; call after fontSize / characterSize are set ("<size=..>" tags must be scaled by k too)
+    public static void HiRes(TextMesh tm, int k = 2)
+    {
+        if (tm == null) return;
+        Font f = WorldFont;
+        tm.font = f;
+        tm.fontStyle = FontStyle.Normal;
+        tm.fontSize = Mathf.Min(256, tm.fontSize * k);
+        tm.characterSize /= k;
+        var mr = tm.GetComponent<MeshRenderer>();
+        if (mr != null && (mr.sharedMaterial == null || mr.sharedMaterial.shader == null || mr.sharedMaterial.shader.name.Contains("GUI/Text") || mr.sharedMaterial.name.Contains("Font"))) mr.sharedMaterial = f.material;
+        if (f.material != null && f.material.mainTexture != null) f.material.mainTexture.filterMode = FilterMode.Bilinear;
+    }
+    public static void WorldText(TextMesh tm, int size, float charSize, int k = 2) { tm.fontSize = size; tm.characterSize = charSize; HiRes(tm, k); }
+
+    static Font legacy;
+    public static Font LegacyFont
     {
         get
         {
+            if (legacy != null) return legacy;
+            Font font = null;
             if (font == null)
             {
                 try { font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"); } catch { }
                 if (font == null) { try { font = Resources.GetBuiltinResource<Font>("Arial.ttf"); } catch { } }
             }
+            legacy = font;
             return font;
         }
     }
@@ -83,18 +110,31 @@ public static class UIK
     {
         RectTransform rt = Rect(parent, "Text", anchor, pos, box);
         var t = rt.gameObject.AddComponent<Text>();
-        t.font = Font;
+        LoadFonts();
+        bool modern = display != null && body != null;
+        t.font = modern ? (size >= 24 ? display : body) : LegacyFont;
         t.fontSize = size;
         t.alignment = align;
         t.color = col;
         t.text = text;
-        t.fontStyle = FontStyle.Bold;
+        t.fontStyle = modern ? FontStyle.Normal : FontStyle.Bold;
         t.horizontalOverflow = HorizontalWrapMode.Wrap;
         t.verticalOverflow = VerticalWrapMode.Overflow;
         t.raycastTarget = false;
-        var o = rt.gameObject.AddComponent<Outline>();
-        o.effectColor = new Color(0, 0, 0, 0.75f);
-        o.effectDistance = new Vector2(2, -2);
+        if (modern)
+        {
+            // ffu20: soft two-layer drop shadow (keeps text readable over the bright ranch without the hard outline)
+            var sh = rt.gameObject.AddComponent<Shadow>();
+            sh.effectColor = new Color(0f, 0f, 0f, 0.5f); sh.effectDistance = new Vector2(0f, -1.5f);
+            var sh2 = rt.gameObject.AddComponent<Shadow>();
+            sh2.effectColor = new Color(0f, 0f, 0f, 0.22f); sh2.effectDistance = new Vector2(1.2f, -3f);
+        }
+        else
+        {
+            var o = rt.gameObject.AddComponent<Outline>();
+            o.effectColor = new Color(0, 0, 0, 0.75f);
+            o.effectDistance = new Vector2(2, -2);
+        }
         return t;
     }
 
@@ -179,8 +219,8 @@ public static class UIK
         try { body = Resources.Load<Font>("Fonts/FFBody"); } catch { }
         Debug.Log("UIK: modern fonts display " + (display != null) + " body " + (body != null));
     }
-    public static Font Display { get { LoadFonts(); return display != null ? display : Font; } }
-    public static Font Body { get { LoadFonts(); return body != null ? body : Font; } }
+    public static Font Display { get { LoadFonts(); return display != null ? display : LegacyFont; } }
+    public static Font Body { get { LoadFonts(); return body != null ? body : LegacyFont; } }
     public static bool ModernFonts { get { LoadFonts(); return display != null && body != null; } }
 
     // restyle one label: modern face, no faux bold, soft drop shadow instead of the hard retro outline
@@ -192,9 +232,8 @@ public static class UIK
         if (f == null) return;
         t.font = f;
         t.fontStyle = FontStyle.Normal;
-        var o = t.GetComponent<Outline>();
-        if (o != null) Object.DestroyImmediate(o);
-        var sh = t.GetComponent<Shadow>();
+        foreach (var o in t.GetComponents<Shadow>()) Object.DestroyImmediate(o);   // Outline derives from Shadow
+        Shadow sh = null;
         if (sh == null && shadowA > 0f) sh = t.gameObject.AddComponent<Shadow>();
         if (sh != null) { sh.effectColor = new Color(0f, 0f, 0f, shadowA); sh.effectDistance = new Vector2(0f, -2f); }
     }

@@ -69,6 +69,10 @@ public static class Kb
     public static bool FDown() { return Key(k => k.fKey.wasPressedThisFrame || k.enterKey.wasPressedThisFrame, KeyCode.F, true); }
     public static bool CDown() { return Key(k => k.cKey.wasPressedThisFrame, KeyCode.C, true); }
     public static bool ZDown() { return Key(k => k.zKey.wasPressedThisFrame, KeyCode.Z, true); }
+    public static bool ODown() { return Key(k => k.oKey.wasPressedThisFrame, KeyCode.O, true); }   // ffu20 robot video feed
+    public static bool IDown() { return Key(k => k.iKey.wasPressedThisFrame, KeyCode.I, true); }
+    public static bool UpDown() { return Key(k => k.upArrowKey.wasPressedThisFrame || k.wKey.wasPressedThisFrame, KeyCode.UpArrow, true); }
+    public static bool DownDown() { return Key(k => k.downArrowKey.wasPressedThisFrame || k.sKey.wasPressedThisFrame, KeyCode.DownArrow, true); }
     public static bool PDown() { return Key(k => k.pKey.wasPressedThisFrame, KeyCode.P, true); }
     public static bool MDown() { return Key(k => k.mKey.wasPressedThisFrame, KeyCode.M, true); }
     public static bool VDown() { return Key(k => k.vKey.wasPressedThisFrame, KeyCode.V, true); }

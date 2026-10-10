@@ -180,6 +180,7 @@ public partial class Game : MonoBehaviour
             else if (sc == "lineup" || sc == "ripsaw") DemoLineup(f, sc);
             else if (sc.StartsWith("realroom")) RealRoom.DemoStart(f, sc);   // ffu18 REAL ROOM shots (own camera)
             else if (sc.StartsWith("lj-") || sc.StartsWith("loopdrive")) DemoLoopStart(f, sc);   // ffu19 loop joints (GameLoopDemo.cs)
+            else if (IsRobot20(sc)) DemoRobot20Start(f, sc);   // ffu20 robots drive / missions / phone carousel
             else if (sc == "net") { if (UrlParam("ffwalk") != null) demoHook = DemoWalk; }      // ffu13 online test
             else if (sc == "netcar") { if (Net.I != null && Net.I.IsGuest) { DemoTruck(f); demoHook = DemoCircle; } }
             else if (f.world != WorldId.Ranch) f.SendTo(WorldId.Ranch, Ranch.FrogSpawn(f.id), 0f);
@@ -302,6 +303,12 @@ public partial class Game : MonoBehaviour
             case "mechspace":
             case "cargobay":
                 if (!Demo15Cam(f, sc, out pos, out look)) return;
+                break;
+            case "robotdrive":
+            case "robotmission":
+            case "robotreturn":
+            case "phonepick":
+                if (!DemoRobot20Cam(f, sc, out pos, out look)) return;
                 break;
             case "touch":
                 DemoTouchModes(f);
@@ -554,7 +561,7 @@ public partial class Game : MonoBehaviour
             "Rally: figure-8 with a bridge, jumps, and a loop lane west of the garage (keep the throttle on).  Pond: boat gate course - start at gate 1.\n" +
             (Worlds.UnderwaterOn ? "Pond dock: A at the submarine dives. Underwater: L-stick drive, RT up, LT down, A swim out in scuba (A / RT up, B / LT down), A by the sub climbs back in, surface + keep rising = ranch.\n" : "") +
             (Worlds.SpaceOn ? "Starship pad: A launches (3 s countdown + liftoff; A / FIRE skips). Space: D-pad < > target, X auto-transfer, LB / RB warp, RT boost, LT brake, Y land (Earth, Mars, Callisto).  Keys: T G Z C F.\n" : "") +
-            (Worlds.StageEOn ? "Mechs: every froggy pilots its own 10 + 100-story mech (mech yard west); James & Bubbles also have a 1000-story (south edge); James alone has the trillion-story (north edge); RT / X omnigun.\n<b>Robots</b> do chores and charge at the wall jacks on their own.  Robot phone (LB / P / PHONE): pick a robot, give it a chore, send it to charge, or DRIVE IT! (normal controls, LB / P / PHONE gives it back).\n" : "") +
+            (Worlds.StageEOn ? "Mechs: every froggy pilots its own 10 + 100-story mech (mech yard west); James & Bubbles also have a 1000-story (south edge); James alone has the trillion-story (north edge); RT / X omnigun.\n<b>Robots</b> do chores and charge at the wall jacks on their own.  Robot phone (LB / P / PHONE): pick a robot, give it a chore, send it to charge, or DRIVE IT! (normal controls, LB / P / PHONE gives it back).  DRIVE tab: pick any vehicle or a mech, then Wander / Follow me / Race track / Go to my spot / GET OUT.  MISSION tab: Mars rock run / Callisto ice run from the robot mission pad (south-west of the house) - watch its live video feed: O (keys) or Y in the phone (pad), I / B = drone or eye camera, X / FULL = full screen.\n" : "") +
             "House: walk into the front door. Inside, A at a fish tank feeds it, the toy box starts fetch with Germy + Daisy, the cat bed starts hide-and-seek, A near Dad to chat.\n" +
             "<b>Online</b> (lobby): HOST (X / H / tap) shows a room code, friends press JOIN (Y / J / tap) and type it. Each device plays one froggy; names over the froggies; stage changes follow the host.\n" +
             "Back / V switches Shared and Split view.  Start / H closes this.  B / Esc here leaves your seat (online: leaves the room)."; } }

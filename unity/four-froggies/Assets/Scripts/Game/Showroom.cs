@@ -15,7 +15,7 @@ public static class Showroom
 {
     public const int Layer = 20;
     public const int Mask = 1 << Layer;
-    static readonly Vector3 Base = new Vector3(4200f, 600f, 4200f);
+    public static readonly Vector3 Base = new Vector3(4200f, 600f, 4200f);
     public static readonly RenderTexture[] Thumbs = new RenderTexture[Roster.Count];
     public const int ThumbSize = 384;   // ffu17: was 160 (upscaled 1.3-1.8x on phones / 2x desktops)
     static Camera thumbCam;
@@ -71,7 +71,7 @@ public static class Showroom
     // ---------- ffu17 studio set pieces ----------
     static Mesh disc, ring;
     // smooth pedestal: top cap + rounded (bevelled) edge + side, 128 segments, normals smooth around the rim
-    static Mesh Disc()
+    public static Mesh Disc()
     {
         if (disc != null) return disc;
         const int N = 128;
@@ -103,7 +103,7 @@ public static class Showroom
         return disc;
     }
     // flat annulus (inner .955 .. outer 1.0), 128 segments: the glowing rim line
-    static Mesh Ring()
+    public static Mesh Ring()
     {
         if (ring != null) return ring;
         const int N = 128;
@@ -122,7 +122,7 @@ public static class Showroom
         ring.vertices = v; ring.triangles = tri; ring.RecalculateNormals(); ring.RecalculateBounds();
         return ring;
     }
-    static GameObject MeshObj(string name, Transform parent, Mesh m, Material mat, Vector3 pos, Vector3 scale)
+    public static GameObject MeshObj(string name, Transform parent, Mesh m, Material mat, Vector3 pos, Vector3 scale)
     {
         var g = new GameObject(name);
         g.transform.SetParent(parent, false);
@@ -133,7 +133,7 @@ public static class Showroom
         return g;
     }
     // soft sprite-textured quad (Sprites/Default, alpha blended): glows, contact shadow, backdrop spot
-    static Material SoftMat(Color c, int queue)
+    public static Material SoftMat(Color c, int queue)
     {
         var m = new Material(Mats.Fx != null ? Mats.Fx : Mats.Unlit(Color.white));
         m.mainTexture = UIK.SoftDot.texture;
@@ -141,7 +141,7 @@ public static class Showroom
         m.renderQueue = queue;
         return m;
     }
-    static Renderer SoftQuad(string name, Transform parent, Vector3 pos, Vector3 euler, float w, float h, Material m)
+    public static Renderer SoftQuad(string name, Transform parent, Vector3 pos, Vector3 euler, float w, float h, Material m)
     {
         var g = GameObject.CreatePrimitive(PrimitiveType.Quad);
         g.name = name;
@@ -242,7 +242,7 @@ public static class Showroom
         Debug.Log("Showroom: thumbnails rendered (" + Thumbs.Length + " characters, " + ThumbSize + " px 4x MSAA + mips)");
     }
 
-    static float EaseOutBack(float x)
+    public static float EaseOutBack(float x)
     {
         const float c1 = 1.70158f, c3 = c1 + 1f;
         float u = x - 1f;

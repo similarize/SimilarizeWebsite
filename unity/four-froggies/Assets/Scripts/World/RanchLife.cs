@@ -25,6 +25,7 @@ public class RanchLife : MonoBehaviour
         if (x < -125f && z > -50f && z < 20f) return true;          // 10 / 100-story rows
         if (z < -145f && x < -30f) return true;                      // 1000-story row
         if (z > 150f && x < -20f) return true;                       // James's trillion-story mech
+        if (MissionSite.Reserved(x, z)) return true;                 // ffu20 robot mission pad
         return false;
     }
 
@@ -34,7 +35,9 @@ public class RanchLife : MonoBehaviour
         I = go.AddComponent<RanchLife>();
         I.Build();
         RanchJobs.Create();     // ffu12: charging jacks, chore props, litter
+        if (Worlds.SpaceOn) MissionSite.Build();   // ffu20: robot mission pad + ship + sample displays
         go.AddComponent<RobotPhone>();
+        go.AddComponent<RobotFeed>();
     }
 
     static Animal Ground(Animal a, Rect r)
@@ -221,6 +224,156 @@ public class Robot : MonoBehaviour
     string tagLine = "";
     AudioSource loop;
     public const float LowBattery = 0.25f;
+
+    // ---- ffu20: driving vehicles, space missions, display turntable ----
+    public WorldId world = WorldId.Ranch;
+    public RobotDriver drv;
+    public RobotMission mission;
+    public bool frozen, hidden, displayOnly;
+    public Vehicle seatedIn;
+    public string Job { get { return StatusLine; } }
+    Frog pilot;
+    public Frog Pilot { get { if (pilot == null) pilot = RobotDriver.MakePilot(this); return pilot; } }
+    public static float DtCap = 0.05f;          // demos raise it (SwiftShader runs ~3 fps)
+    public float RunSpeed { get { return Mathf.Min(maxSpeed * 0.5f, 4.6f); } }
+    Vector3 extGoal; bool extRouted; float extT, extTimeout;
+    public Color tint;
+
+    public float GroundAt(float x, float z)
+    {
+        switch (world)
+        {
+            case WorldId.Mars: return Worlds.MarsO.y + SurfaceWorlds.MarsY(x - Worlds.MarsO.x, z - Worlds.MarsO.z);
+            case WorldId.Callisto: return Worlds.CallistoO.y + SurfaceWorlds.CalY(x - Worlds.CallistoO.x, z - Worlds.CallistoO.z);
+            default: { float g = RobotNav.Floor(x, z); return MissionSite.OnSlab(x, z) ? Mathf.Max(g, MissionSite.PadTop) : g; }
+        }
+    }
+
+    public void ResetForMission()
+    {
+        AbortPlan();
+        follow = null; danceT = 0f; landAuto = false; flying = false; frozen = false;
+        if (jets != null) jets.gameObject.SetActive(false);
+        Vector3 p = transform.position;
+        transform.position = new Vector3(p.x, GroundAt(p.x, p.z), p.z);
+        pose = 0; extRouted = false;
+    }
+
+    // walk towards goal (routed round the ranch buildings; straight elsewhere); true when there
+    public void ExtReset() { extRouted = false; }
+    public bool ExtWalk(Vector3 goal, float spd, float stopR, float dt)
+    {
+        Vector3 p = transform.position;
+        if (!extRouted || new Vector2(goal.x - extGoal.x, goal.z - extGoal.z).sqrMagnitude > 0.5f)
+        {
+            extGoal = goal; extRouted = true; extT = 0f;
+            if (world == WorldId.Ranch) RobotNav.Route(p, goal, route); else { route.Clear(); route.Add(goal); }
+            routeIdx = 0;
+            float len = 0f; Vector3 a = p;
+            foreach (var w in route) { len += RobotNav.Flat(w - a); a = w; }
+            extTimeout = len / Mathf.Max(0.5f, spd) * 2.5f + 8f;
+        }
+        extT += dt;
+        if (routeIdx >= route.Count) return true;
+        Vector3 wp = route[routeIdx];
+        bool last = routeIdx == route.Count - 1;
+        float d = RobotNav.Flat(wp - p);
+        if (d < (last ? stopR : 0.9f))
+        {
+            routeIdx++;
+            if (routeIdx >= route.Count) return true;
+            wp = route[routeIdx]; last = routeIdx == route.Count - 1; d = RobotNav.Flat(wp - p);
+        }
+        Vector3 to = wp - p; to.y = 0f;
+        goalDir = to.normalized;
+        goalSpeed = last ? Mathf.Min(spd, d * 1.6f + 0.25f) : spd;
+        if (extT > extTimeout) { transform.position = new Vector3(goal.x, GroundAt(goal.x, goal.z), goal.z); extRouted = false; return true; }
+        return false;
+    }
+    // phone carousel turntable copy: no brain, no tag / battery bar / sounds, just the idle animation
+    public void PrepareDisplay()
+    {
+        displayOnly = true;
+        if (tagMesh != null) Destroy(tagMesh.gameObject);
+        if (batBar != null) Destroy(batBar.gameObject);
+        if (loop != null) Destroy(loop);
+        tagMesh = null; batBar = null; loop = null;
+        if (jets != null) jets.gameObject.SetActive(false);
+    }
+    public void ExtPose(int ps) { pose = ps; }
+    public void ExtFace(float y) { faceYaw = y; }
+    public void ExtYaw(float y) { yaw = y; transform.rotation = Quaternion.Euler(0f, y, 0f); }
+    public void ExtSpeed(float s) { speed = s; }
+
+    public void SetHidden(bool h)
+    {
+        hidden = h;
+        if (body != null) body.gameObject.SetActive(!h);
+        if (tagMesh != null) tagMesh.gameObject.SetActive(!h && seatedIn == null);
+        if (h && batBar != null) batBar.gameObject.SetActive(false);
+    }
+
+    // in a vehicle seat: scaled like a seated froggy, legs forward, hands on the wheel
+    public void SitIn(Vehicle v)
+    {
+        seatedIn = v;
+        Transform s = v.seat != null ? v.seat : v.transform;
+        transform.SetParent(s, false);
+        float ss = Mathf.Max(0.3f, v.seatScale);
+        float k = ss * 1.15f / height;
+        transform.localScale = Vector3.one * k;
+        transform.localPosition = new Vector3(0f, -0.44f * ss, 0f);
+        transform.localRotation = Quaternion.identity;
+        speed = 0f; pose = 9;
+        SetHidden(!v.showDriver);
+        if (tagMesh != null) tagMesh.gameObject.SetActive(false);
+    }
+
+    public void Unseat(Vector3 at)
+    {
+        transform.SetParent(null, true);
+        transform.localScale = Vector3.one;
+        seatedIn = null;
+        float y = transform.eulerAngles.y;
+        transform.position = new Vector3(at.x, GroundAt(at.x, at.z), at.z);
+        ExtYaw(y);
+        pose = 0;
+        SetHidden(false);
+    }
+
+    public void EndDrive(string why)
+    {
+        if (drv == null) return;
+        if (seatedIn != null)
+        {
+            Frog pl = Pilot;
+            if (pl.vehicle != null) pl.ExitVehicle();
+            pl.cc.enabled = false;
+            Unseat(seatedIn.ExitPoint());
+        }
+        drv = null;
+        cmd = "auto"; forcedChore = -1; extRouted = false;
+        steps.Clear(); stepIdx = 0;
+        if (why != null && RobotPhone.I != null) RobotPhone.I.Say(robotName + ": " + why);
+    }
+
+    // phone: drive:<vehicle index>|<band name>:<mode>, driveMode:<mode>, getout
+    public string DriveOrder(Vehicle v, string mode, Frog from)
+    {
+        if (mission != null) return robotName + " is on a mission";
+        if (drv != null && (v == null || v == drv.v)) { drv.user = from; drv.SetMode(mode); return robotName + ": " + drv.Status; }
+        if (v == null) return robotName + ": pick a vehicle first";
+        if (v.driver != null) return v.Title + " is taken (" + v.driver.nick + ")";
+        if (manual != null) ReleaseManual(false);
+        if (drv != null) EndDrive(null);
+        AbortPlan();
+        if (transform.position.y > GroundAt(transform.position.x, transform.position.z) + 1.5f) transform.position = RobotNav.G(transform.position.x, transform.position.z);
+        flying = false;
+        cmd = "drive";
+        drv = new RobotDriver(this, v, mode, from);
+        extRouted = false;
+        return robotName + ": on my way to the " + v.Title;
+    }
     float WalkSpeed { get { return Mathf.Min(maxSpeed * 0.32f, 2.8f); } }
 
     public static Robot Build(string id, string name, string owner, Color c, float h, float bulk, float maxSp, Vector3 pos)
@@ -229,7 +382,7 @@ public class Robot : MonoBehaviour
         go.transform.position = pos;
         var r = go.AddComponent<Robot>();
         r.id = id; r.robotName = name; r.owner = owner; r.height = h; r.maxSpeed = maxSp; r.bulk = bulk;
-        r.yaw = 180f; r.target = pos;
+        r.yaw = 180f; r.target = pos; r.tint = c;
         Material m = Mats.Shiny(c), dark = Mats.Lit(new Color(0.1f, 0.1f, 0.12f)), visor = Mats.Unlit(id.StartsWith("atlas") ? new Color(1f, 0.85f, 0.4f) : new Color(0.4f, 0.85f, 1f));
         float w = bulk * 0.6f;
         Transform t = go.transform;
@@ -291,9 +444,11 @@ public class Robot : MonoBehaviour
         tag.transform.SetParent(t, false);
         tag.transform.localPosition = Vector3.up * (h + 0.75f);
         var tm = tag.AddComponent<TextMesh>();
-        tm.text = name + (owner.Length > 0 ? "\n<size=34>(" + owner + "'s)</size>" : "");
+        tm.text = name + (owner.Length > 0 ? "\n<size=68>(" + owner + "'s)</size>" : "");
         tm.font = UIK.Font; tm.fontSize = 48; tm.characterSize = 0.05f;   // ffu14: was 0.035 (hard to read) tm.anchor = TextAnchor.MiddleCenter; tm.alignment = TextAlignment.Center; tm.richText = true;
         tag.GetComponent<MeshRenderer>().sharedMaterial = UIK.Font != null ? UIK.Font.material : null;
+        tm.anchor = TextAnchor.MiddleCenter; tm.alignment = TextAlignment.Center; tm.richText = true;
+        UIK.HiRes(tm);   // ffu20: Montserrat at 2x (the "<size>" tags below are doubled to match)
         tag.AddComponent<Billboard>();
         r.tagMesh = tm;
         r.loop = Sfx.EngEV != null ? Sfx.Loop(go, Sfx.EngEV) : null;
@@ -328,6 +483,8 @@ public class Robot : MonoBehaviour
     // Everything except auto ends by itself and the robot goes back to its chores.
     public string Order(string c, Frog from)
     {
+        if (mission != null) return robotName + " is on a mission (abort it from the MISSION tab)";
+        if (drv != null) EndDrive(null);
         if (manual != null) ReleaseManual(false);
         AbortPlan();
         follow = null; danceT = 0f; landAuto = false;
@@ -372,6 +529,8 @@ public class Robot : MonoBehaviour
     public void TakeManual(Frog f)
     {
         if (f == null) return;
+        if (mission != null) { f.Toast(robotName + " is on a mission", 2f); return; }
+        if (drv != null) EndDrive(null);
         if (manual != null && manual != f) manual.remote = null;
         if (RanchLife.I != null) foreach (var o in RanchLife.I.robots) if (o != this && o.manual == f) o.ReleaseManual(false);
         if (cmd != "auto") Resume();
@@ -803,14 +962,29 @@ public class Robot : MonoBehaviour
 
     void Update()
     {
-        float dt = Mathf.Min(Time.deltaTime, 0.05f);
+        float dt = Mathf.Min(Time.deltaTime, DtCap);
+        if (displayOnly) { Animate(dt); return; }
         Vector3 p = transform.position;
         wave = Mathf.Max(0f, wave - dt);
         goalDir = Vector3.zero; goalSpeed = 0f; faceYaw = float.NaN;
         if (manual != null && (manual.remote != this || !manual.human || manual.world != WorldId.Ranch || manual.vehicle != null)) ReleaseManual(false);
         if (manual != null) ManualTick();
+        else if (drv != null) drv.Tick(dt);
+        else if (mission != null) mission.Tick(dt);
         else if (cmd == "auto") Brain(dt);
         else OrderTick(dt, p);
+        if (seatedIn != null || frozen)
+        {
+            // in a vehicle seat / inside the mission ship: the vehicle (or the mission) places the robot
+            if (!charging) battery = Mathf.Max(0f, battery - dt / 900f);
+            if (seatedIn != null) pose = 9;
+            if (frozen) speed = Mathf.MoveTowards(speed, 0f, 8f * dt);
+            Animate(dt); Lamp(); Hum();
+            tagT -= dt;
+            if (tagT <= 0f) { tagT = 0.5f; UpdateTag(); }
+            return;
+        }
+        p = transform.position;
 
         // battery: charges at a jack (~22 s from empty), drains slowly while working (~2.5-3 min of chores)
         if (charging) battery = Mathf.Min(1f, battery + dt / 22f);
@@ -819,13 +993,13 @@ public class Robot : MonoBehaviour
         if (battery <= 0.01f) spd = Mathf.Min(spd, 0.8f);
 
         Vector3 dir = goalDir;
-        if (spd > 0.05f && manual == null && !flying) dir = Avoid(p, dir, ref spd);
+        if (spd > 0.05f && manual == null && !flying && world == WorldId.Ranch) dir = Avoid(p, dir, ref spd);
         speed = Mathf.MoveTowards(speed, spd, (manual != null ? 14f : 8f) * dt);
         if (dir.sqrMagnitude > 0.01f && spd > 0.05f) yaw = Mathf.MoveTowardsAngle(yaw, Mathf.Atan2(dir.x, dir.z) * Mathf.Rad2Deg, (manual != null ? 480f : 240f) * dt);
         else if (!float.IsNaN(faceYaw)) yaw = Mathf.MoveTowardsAngle(yaw, faceYaw, 200f * dt);
         if (cmd == "dance" && manual == null) yaw += 220f * dt;
         Vector3 np = p + Quaternion.Euler(0f, yaw, 0f) * Vector3.forward * speed * dt;
-        if (!flying && RobotNav.Blocked(np.x, np.z) && !RobotNav.Blocked(p.x, p.z))
+        if (!flying && world == WorldId.Ranch && RobotNav.Blocked(np.x, np.z) && !RobotNav.Blocked(p.x, p.z))
         {
             if (!RobotNav.Blocked(np.x, p.z)) np.z = p.z;
             else if (!RobotNav.Blocked(p.x, np.z)) np.x = p.x;
@@ -841,7 +1015,7 @@ public class Robot : MonoBehaviour
             Sfx.PlayAt(Sfx.Pick(Sfx.Servo), p + Vector3.up * height * 0.7f, 0.24f, 24f, Random.Range(0.85f, 1.2f));
         }
         // flying to / from a roof pad: jets on, climb over the house, settle on the pad
-        float ground = RobotNav.Floor(p.x, p.z);
+        float ground = GroundAt(p.x, p.z);
         RaycastHit hit;
         if ((flying || cmd == "parked") && Physics.Raycast(new Vector3(p.x, 60f, p.z), Vector3.down, out hit, 80f, Vehicle.GroundMask, QueryTriggerInteraction.Ignore)) ground = Mathf.Max(ground, hit.point.y);
         if (flying || cmd == "parked")
@@ -872,8 +1046,8 @@ public class Robot : MonoBehaviour
     {
         phase += speed * 2.2f / Mathf.Max(0.5f, height) * dt * 3f;
         float sw = Mathf.Sin(phase) * Mathf.Clamp01(speed / 2f) * 30f;
-        legL.localRotation = Quaternion.Euler(sw, 0f, 0f);
-        legR.localRotation = Quaternion.Euler(-sw, 0f, 0f);
+        legL.localRotation = Quaternion.Euler(pose == 9 ? -82f : sw, 0f, 0f);
+        legR.localRotation = Quaternion.Euler(pose == 9 ? -82f : -sw, 0f, 0f);
         float t = Time.time;
         bend = Mathf.MoveTowards(bend, pose == 3 ? 20f : pose == 6 ? 10f : pose == 5 ? 8f : 0f, 70f * dt);
         Quaternion aL, aR;
@@ -896,6 +1070,7 @@ public class Robot : MonoBehaviour
                 case 5: { float k = Mathf.Sin(t * 5f); aL = Quaternion.Euler(-42f + k * 8f, k * 14f, 0f); aR = Quaternion.Euler(-42f - k * 8f, k * 14f, 0f); break; }
                 case 6: { float k = Mathf.Sin(t * 3.2f); aL = aR = Quaternion.Euler(-50f + k * 16f, 0f, 0f); break; }
                 case 7: aL = Quaternion.Euler(-10f, 0f, 0f); aR = Quaternion.Euler(-70f, 0f, 0f); break;
+                case 9: aL = Quaternion.Euler(-55f + Mathf.Sin(t * 1.7f) * 4f, 0f, -6f); aR = Quaternion.Euler(-55f - Mathf.Sin(t * 1.7f) * 4f, 0f, 6f); break;
                 default: aL = Quaternion.Euler(-sw * 0.8f, 0f, 0f); aR = Quaternion.Euler(sw * 0.8f, 0f, 0f); break;
             }
             if (wave > 0f) aR = Quaternion.Euler(0f, 0f, 160f + Mathf.Sin(t * 12f) * 20f);
@@ -918,7 +1093,7 @@ public class Robot : MonoBehaviour
 
     void Lamp()
     {
-        bool showBat = charging || battery < LowBattery;
+        bool showBat = (charging || battery < LowBattery) && !hidden && seatedIn == null;
         if (batBar.gameObject.activeSelf != showBat) batBar.gameObject.SetActive(showBat);
         if (showBat)
         {
@@ -958,6 +1133,8 @@ public class Robot : MonoBehaviour
         get
         {
             if (manual != null) return "driven by " + manual.nick;
+            if (drv != null) return drv.Status;
+            if (mission != null) return mission.PhaseLine;
             if (cmd != "auto") return status;
             if (charging) return "charging";
             if (jack != null) return "to charger";
@@ -970,7 +1147,7 @@ public class Robot : MonoBehaviour
     {
         if (tagMesh == null) return;
         string col = charging ? "#8cff8c" : battery < LowBattery ? "#ffc040" : "#9fd8ff";
-        string line = robotName + (owner.Length > 0 ? " <size=30>(" + owner + "'s)</size>" : "") + "\n<size=36><color=" + col + ">" + StatusLine + "  " + Pct + "</color></size>";
+        string line = robotName + (owner.Length > 0 ? " <size=60>(" + owner + "'s)</size>" : "") + "\n<size=72><color=" + col + ">" + StatusLine + "  " + Pct + "</color></size>";
         if (line != tagLine) { tagLine = line; tagMesh.text = line; }
     }
 
@@ -1000,214 +1177,3 @@ public class Robot : MonoBehaviour
     }
 }
 
-// James's robot phone: LB (pad) / P (keys) / PHONE (touch) opens it. Up/Down picks a robot, Left/Right an order,
-// A / E / Enter sends it (touch: tap a robot row, then an order). Each row shows what the robot is doing + its battery.
-// ffu12 orders: Auto chores, Go charge, Drive it! (manual control with the normal controls + follow camera; LB / P / PHONE
-// hands it back), the 8 chores, then the 3D orders. A live POV picture-in-picture follows the selected robot.
-public class RobotPhone : MonoBehaviour
-{
-    public static RobotPhone I;
-    public bool open;
-    public Frog user;
-    int sel = 1, cmdSel;     // Unitree is the default link, like the 3D phone
-    static readonly string[] Cmds = { "auto", "charge", "drive", "chore:0", "chore:1", "chore:2", "chore:3", "chore:4", "chore:5", "chore:6", "chore:7",
-                                      "come", "go", "stop", "wave", "roofHeli", "roofDrone", "follow", "dance" };
-    static readonly string[] CmdLabels = { "Auto chores", "Go charge", "DRIVE IT!", "Sweep porch", "Vacuum garage", "Haul crates", "Haul hay", "Pick up litter", "Mow lawn", "Rake leaves", "Water flowers",
-                                           "Come here", "Go (8 m)", "Stop", "Wave", "Roof helipad", "Drone pad", "Follow me", "Dance" };
-    Canvas canvas;
-    Image panel, btn;
-    readonly List<Image> rows = new List<Image>(), cmdBtns = new List<Image>();
-    readonly List<Text> rowNames = new List<Text>(), rowStats = new List<Text>();
-    Text msg, hint, btnKey;
-    Camera pov;
-    float stickCool;
-    const float PW = 430f, PH = 650f;
-
-    static Color CmdColor(int i, bool on)
-    {
-        if (on) return new Color(1f, 0.75f, 0.2f, 0.9f);
-        return i < 3 ? new Color(0.15f, 0.55f, 0.3f, 0.75f) : i < 11 ? new Color(0.12f, 0.45f, 0.5f, 0.7f) : new Color(0.2f, 0.35f, 0.7f, 0.6f);
-    }
-
-    void Awake()
-    {
-        I = this;
-        canvas = UIK.MakeCanvas("Phone", null, 70, true);
-        Transform r = canvas.transform;
-        panel = UIK.Img(r, null, new Color(0.04f, 0.05f, 0.07f, 0.93f), new Vector2(1f, 0.5f), new Vector2(-PW * 0.5f - 12f, 0f), new Vector2(PW, PH));
-        Transform p = panel.transform;
-        UIK.Label(p, "JAMES'S ROBOT PHONE", 21, TextAnchor.MiddleCenter, new Vector2(0.5f, 1f), new Vector2(0f, -20f), new Vector2(PW - 20f, 28f), new Color(0.55f, 1f, 0.45f));
-        var robots = RanchLife.I.robots;
-        for (int i = 0; i < robots.Count; i++)
-        {
-            var row = UIK.Img(p, null, new Color(1f, 1f, 1f, 0.08f), new Vector2(0.5f, 1f), new Vector2(0f, -54f - i * 31f), new Vector2(PW - 20f, 28f));
-            rows.Add(row);
-            var n = UIK.Label(row.transform, robots[i].robotName, 16, TextAnchor.MiddleLeft, new Vector2(0f, 0.5f), new Vector2(76f, 0f), new Vector2(140f, 26f), Color.white);
-            rowNames.Add(n);
-            var st = UIK.Label(row.transform, "", 15, TextAnchor.MiddleRight, new Vector2(1f, 0.5f), new Vector2(-128f, 0f), new Vector2(244f, 26f), Color.white);
-            st.supportRichText = true;
-            rowStats.Add(st);
-        }
-        UIK.Label(p, "ORDERS", 15, TextAnchor.MiddleLeft, new Vector2(0.5f, 1f), new Vector2(0f, -54f - robots.Count * 31f - 6f), new Vector2(PW - 30f, 20f), new Color(0.7f, 0.85f, 0.7f));
-        float gy = -54f - robots.Count * 31f - 32f;
-        for (int i = 0; i < Cmds.Length; i++)
-        {
-            int col = i % 3, rr = i / 3;
-            var b = UIK.Img(p, null, CmdColor(i, false), new Vector2(0.5f, 1f), new Vector2(-136f + col * 136f, gy - rr * 33f), new Vector2(130f, 29f));
-            UIK.Label(b.transform, CmdLabels[i], 14, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(128f, 28f), Color.white);
-            cmdBtns.Add(b);
-        }
-        msg = UIK.Label(p, "Pick a robot, then order it.", 15, TextAnchor.MiddleCenter, new Vector2(0.5f, 0f), new Vector2(0f, 42f), new Vector2(PW - 20f, 26f), new Color(1f, 0.95f, 0.6f));
-        hint = UIK.Label(p, "Up/Down robot   Left/Right order   A / E / Enter / click send   LB / P close", 13, TextAnchor.MiddleCenter, new Vector2(0.5f, 0f), new Vector2(0f, 16f), new Vector2(PW - 16f, 22f), new Color(0.75f, 0.8f, 0.85f));
-        // ffu15: the PHONE button shows on every device now (it was touch-only, so desktop players never saw the phone),
-        // with the key for the player's device as a badge: P (keyboard), LB (gamepad); click / tap it too
-        btn = UIK.Panel(r, new Color(0.08f, 0.1f, 0.13f, 0.82f), new Vector2(0f, 0f), new Vector2(150f, 46f));
-        btn.rectTransform.anchorMin = btn.rectTransform.anchorMax = new Vector2(0f, 1f);
-        btn.rectTransform.anchoredPosition = new Vector2(98f, -76f);
-        UIK.Label(btn.transform, "PHONE", 19, TextAnchor.MiddleLeft, new Vector2(0f, 0.5f), new Vector2(62f, 0f), new Vector2(110f, 40f), new Color(0.6f, 1f, 0.55f));
-        var badge = UIK.Panel(btn.transform, new Color(1f, 1f, 1f, 0.16f), new Vector2(0f, 0f), new Vector2(40f, 26f));
-        badge.rectTransform.anchorMin = badge.rectTransform.anchorMax = new Vector2(1f, 0.5f);
-        badge.rectTransform.anchoredPosition = new Vector2(-26f, 0f);
-        btnKey = UIK.Label(badge.transform, "P", 15, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(40f, 26f), new Color(1f, 0.92f, 0.55f));
-        panel.gameObject.SetActive(false);
-        btn.gameObject.SetActive(false);
-        var cg = new GameObject("Phone POV");
-        pov = cg.AddComponent<Camera>();
-        pov.depth = 40; pov.fieldOfView = 70f; pov.nearClipPlane = 0.1f; pov.farClipPlane = 500f;
-        pov.enabled = false;
-    }
-
-    public void Toggle(Frog f)
-    {
-        if (f == null) return;
-        // driving a robot by hand: the phone button hands it back to the auto brain
-        if (f.remote != null) { f.remote.ReleaseManual(true); return; }
-        if (f.world != WorldId.Ranch) return;
-        open = !open || user != f;
-        user = f;
-        msg.text = open ? "Live POV from the selected robot" : "";
-        Sfx.Play(Sfx.Click, 0.7f);
-        if (open) f.Toast("Robot phone: Up/Down robot, Left/Right order, A send, LB / P close", 3f);
-    }
-
-    // demo / screenshot mode
-    public void DemoOpen(Frog f, int robot, string cmd)
-    {
-        user = f; open = true; sel = robot;
-        int k = System.Array.IndexOf(Cmds, cmd);
-        if (k >= 0) cmdSel = k;
-        msg.text = RanchLife.I.robots[robot].robotName + " selected - " + CmdLabels[cmdSel];
-    }
-    public void DemoSend() { if (user != null) Send(user); }
-
-    // called by Game with the phone user's input; returns true when the phone ate the input
-    public bool Handle(Frog f, PIn i)
-    {
-        if (!open || f != user) return false;
-        if (f.world != WorldId.Ranch || f.vehicle != null || f.remote != null) { open = false; return false; }
-        stickCool -= Time.unscaledDeltaTime;
-        var robots = RanchLife.I.robots;
-        float y = i.move.y, x = i.move.x;
-        if (stickCool <= 0f)
-        {
-            if (y > 0.6f) { sel = (sel + robots.Count - 1) % robots.Count; stickCool = 0.22f; Sfx.Play(Sfx.Click, 0.4f); }
-            else if (y < -0.6f) { sel = (sel + 1) % robots.Count; stickCool = 0.22f; Sfx.Play(Sfx.Click, 0.4f); }
-            else if (x > 0.6f) { cmdSel = (cmdSel + 1) % Cmds.Length; stickCool = 0.18f; Sfx.Play(Sfx.Click, 0.4f); }
-            else if (x < -0.6f) { cmdSel = (cmdSel + Cmds.Length - 1) % Cmds.Length; stickCool = 0.18f; Sfx.Play(Sfx.Click, 0.4f); }
-        }
-        if (Mathf.Abs(x) < 0.3f && Mathf.Abs(y) < 0.3f) stickCool = 0f;
-        if (i.use || i.hop || Kb.EnterDown()) Send(f);
-        return true;
-    }
-
-    void Send(Frog f)
-    {
-        var r = RanchLife.I.robots[sel];
-        string c = Cmds[cmdSel];
-        if (c == "drive")
-        {
-            open = false;
-            r.TakeManual(f);
-            msg.text = "Driving " + r.robotName;
-            return;
-        }
-        msg.text = r.Order(c, f);
-        f.Toast(msg.text, 2f);
-        Sfx.Play(Sfx.Pickup, 0.5f, 1.3f);
-    }
-
-    // the slot the on-screen button / mouse belongs to: touch first, then keyboard, then the first gamepad
-    Slot BtnSlot()
-    {
-        if (Game.I == null) return null;
-        Slot best = null;
-        foreach (var s in Game.I.slots) { if (s.kind == InputKind.Touch) return s; if (s.kind == InputKind.Keyboard && (best == null || best.kind != InputKind.Keyboard)) best = s; else if (best == null) best = s; }
-        return best;
-    }
-
-    // a mouse click here belongs to the phone (Game then leaves the cursor free)
-    public bool Captures(Vector2 mp)
-    {
-        if (btn.gameObject.activeInHierarchy && RectTransformUtility.RectangleContainsScreenPoint(btn.rectTransform, mp, null)) return true;
-        return open && RectTransformUtility.RectangleContainsScreenPoint(panel.rectTransform, mp, null);
-    }
-
-    void Update()
-    {
-        Slot bs = BtnSlot();
-        Frog bf = bs != null ? Game.I.frogs[bs.frog] : null;
-        bool showBtn = Game.I != null && Game.I.state == Game.State.Play && bf != null && bf.world == WorldId.Ranch && (bf.vehicle == null || bf.remote != null) && !Game.I.HelpOpen;
-        if (btn.gameObject.activeSelf != showBtn) btn.gameObject.SetActive(showBtn);
-        if (showBtn) { string k = bs.kind == InputKind.Gamepad ? "LB" : bs.kind == InputKind.Touch ? "TAP" : "P"; if (btnKey.text != k) btnKey.text = k; }
-        // desktop: mouse clicks on the button, the robot rows and the order buttons (cursor free while the phone is open)
-        if (showBtn && bs.kind != InputKind.Touch && UnityEngine.InputSystem.Mouse.current != null)
-        {
-            if (open && user == bf && bs.kind == InputKind.Keyboard && Cursor.lockState == CursorLockMode.Locked) Cursor.lockState = CursorLockMode.None;
-            if (Kb.MouseLeftDown() && Cursor.lockState != CursorLockMode.Locked)
-            {
-                Vector2 mp = UnityEngine.InputSystem.Mouse.current.position.ReadValue();
-                if (RectTransformUtility.RectangleContainsScreenPoint(btn.rectTransform, mp, null)) Toggle(bf);
-                else if (open)
-                {
-                    for (int i = 0; i < rows.Count; i++) if (RectTransformUtility.RectangleContainsScreenPoint(rows[i].rectTransform, mp, null)) { sel = i; Sfx.Play(Sfx.Click, 0.4f); }
-                    for (int i = 0; i < cmdBtns.Count; i++) if (RectTransformUtility.RectangleContainsScreenPoint(cmdBtns[i].rectTransform, mp, null)) { cmdSel = i; if (user != null) Send(user); }
-                }
-            }
-        }
-        if (showBtn)
-            foreach (Vector2 tp in Kb.TouchesBegan())
-            {
-                if (RectTransformUtility.RectangleContainsScreenPoint(btn.rectTransform, tp, null))
-                    foreach (var s in Game.I.slots) if (s.kind == InputKind.Touch) Toggle(Game.I.frogs[s.frog]);
-                if (open)
-                {
-                    for (int i = 0; i < rows.Count; i++) if (RectTransformUtility.RectangleContainsScreenPoint(rows[i].rectTransform, tp, null)) { sel = i; Sfx.Play(Sfx.Click, 0.4f); }
-                    for (int i = 0; i < cmdBtns.Count; i++) if (RectTransformUtility.RectangleContainsScreenPoint(cmdBtns[i].rectTransform, tp, null)) { cmdSel = i; if (user != null) Send(user); }
-                }
-            }
-        if (user != null && (user.world != WorldId.Ranch || Game.I == null || Game.I.state != Game.State.Play)) open = false;
-        panel.gameObject.SetActive(open);
-        pov.enabled = open;
-        if (!open) return;
-        var robots = RanchLife.I.robots;
-        for (int i = 0; i < robots.Count; i++)
-        {
-            var r = robots[i];
-            rows[i].color = i == sel ? new Color(0.3f, 0.8f, 0.35f, 0.5f) : new Color(1f, 1f, 1f, 0.08f);
-            string bc = r.Charging ? "#8cff8c" : r.battery < Robot.LowBattery ? "#ffb030" : "#ffffff";
-            rowStats[i].text = "<color=#9fd8ff>" + r.StatusLine + "</color>  <color=" + bc + ">" + (r.Charging ? "+" : "") + r.Pct + "</color>";
-        }
-        for (int i = 0; i < cmdBtns.Count; i++) cmdBtns[i].color = CmdColor(i, i == cmdSel);
-        // live POV from the selected robot, beside the panel (left of it in landscape, above it in portrait)
-        var rb = robots[sel];
-        pov.transform.position = rb.eye.position;
-        pov.transform.rotation = rb.eye.rotation;
-        var corners = new Vector3[4];
-        panel.rectTransform.GetWorldCorners(corners);   // overlay canvas: world = screen pixels
-        float sw = Screen.width, sh = Screen.height;
-        float left = corners[0].x / sw, top = corners[1].y / sh, bottom = corners[0].y / sh;
-        float w = 0.24f, h = w * sw / sh * 0.62f;
-        if (left > w + 0.03f) pov.rect = new Rect(left - w - 0.01f, Mathf.Clamp(top - h, 0f, 1f - h), w, h);
-        else { w = Mathf.Min(0.9f, left + (1f - left) * 0.9f); h = Mathf.Min(1f - top - 0.01f, w * sw / sh * 0.56f); pov.rect = h > 0.06f ? new Rect(1f - w - 0.02f, top + 0.005f, w, h) : new Rect(0.02f, 0.72f, 0.3f, 0.25f); }
-    }
-}

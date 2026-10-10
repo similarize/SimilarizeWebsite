@@ -107,7 +107,7 @@ public abstract class Vehicle : MonoBehaviour
 
     protected void EngineSound(float dt)
     {
-        bool heard = driver != null && driver.human;
+        bool heard = driver != null && (driver.human || driver.robotPilot != null);   // ffu20: robot-driven vehicles are heard too
         Flyer fl = this as Flyer;
         if (fl != null && fl.returning) heard = true;
         float spd = Speed;
@@ -127,6 +127,12 @@ public abstract class Vehicle : MonoBehaviour
         bool on = heard && !(fl != null && fl.returning && driver == null && false);
         voice.Tick(on, spd, load, slipSpeed, groundFrac, transform.position, dt);
         if (fl != null && fl.returning && driver == null && voice.main != null) voice.main.volume = Mathf.Min(voice.main.volume, 0.12f);
+        if (driver != null && driver.robotPilot != null)
+        {
+            // ffu20: a robot driving it - fade with distance from the nearest player (engine voices are 2D)
+            float k = Mathf.Clamp01(1f - Sfx.Near(transform.position) / 70f); k *= k;
+            foreach (var src in new[] { voice.main, voice.layer, voice.skid, voice.extra }) if (src != null) src.volume = Mathf.Min(src.volume, 0.45f * k);
+        }
     }
 
     // ffu10: impact sounds (metal crunch for hard hits, soft bump for small ones)

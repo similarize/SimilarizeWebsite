@@ -58,7 +58,7 @@
   // for frame rate. The game switches between them through FFSetDPR (FFDisplay.jslib). ?dpr=N forces one value.
   (function () {
     var raw = window.devicePixelRatio || 1, q = /[?&]dpr=([0-9.]+)/.exec(location.search), f = q ? parseFloat(q[1]) : 0;
-    window.FFDPR = { raw: raw, lobby: Math.min(raw, 2.5), game: Math.min(raw, isMobile ? 1.5 : 2), force: f > 0.4 && f < 4.1 ? f : 0 };
+    window.FFDPR = { raw: raw, lobby: Math.min(raw, 2.5), game: Math.min(raw, 2), gameLite: Math.min(raw, 1.5), force: f > 0.4 && f < 4.1 ? f : 0 };
     if (window.FFDPR.force) window.FFDPR.lobby = window.FFDPR.game = window.FFDPR.force;
   })();
   // ffu17c: Unity 2022 decides the WebGL context's antialias flag itself and the probe showed it false (no MSAA on the

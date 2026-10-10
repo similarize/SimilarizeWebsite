@@ -6,9 +6,9 @@ mergeInto(LibraryManager.library, {
     try {
       var c = window.FFDPR || {};
       var raw = window.devicePixelRatio || 1;
-      var v = mode === 1 ? (c.lobby || Math.min(raw, 2.5)) : (c.game || Math.min(raw, 2));
+      var v = mode === 1 ? (c.lobby || Math.min(raw, 2.5)) : mode === 2 ? (c.gameLite || Math.min(raw, 1.5)) : (c.game || Math.min(raw, 2));
       if (c.force) v = c.force;
-      if (Module.devicePixelRatio !== v) { Module.devicePixelRatio = v; console.log("FFDPR " + (mode === 1 ? "lobby" : "game") + " " + v + " (screen " + raw + ")"); }
+      if (Module.devicePixelRatio !== v) { Module.devicePixelRatio = v; console.log("FFDPR " + (mode === 1 ? "lobby" : mode === 2 ? "game-lite" : "game") + " " + v + " (screen " + raw + ")"); }
       return v;
     } catch (e) { return 1; }
   },

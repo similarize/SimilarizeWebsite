@@ -12,6 +12,7 @@ public class Frog : MonoBehaviour
     public FrogModel model;
     public Vehicle vehicle;
     public Robot remote;          // ffu12: a ranch robot this froggy is driving from the phone
+    public Robot robotPilot;      // ffu20: hidden driver of a vehicle a robot drives (RobotDrive.cs) - fed by the robot's AI
     public WorldId world = WorldId.Ranch;
     public float autoCool;        // after a doorway / world change, auto hotspots wait
     public float spaceGravity = 1f;   // low-g worlds (Callisto) set this per frame
@@ -199,6 +200,14 @@ public class Frog : MonoBehaviour
         float dt = Mathf.Min(Time.deltaTime, 0.05f);
         if (toastT > 0f) { toastT -= dt; if (toastT <= 0f) toast = ""; }
         if (netPuppet) { input = new PIn(); return; }   // ffu13: posed by Net from the owner's device
+        if (robotPilot != null)
+        {
+            // ffu20: the robot's AI drives with the froggies' own vehicle code (no walking, no AI wander)
+            if (vehicle != null) vehicle.Drive(input, camYaw, dt);
+            if (model.gameObject.activeSelf) model.gameObject.SetActive(false);
+            input = new PIn();
+            return;
+        }
         if (launching)
         {
             prompt = "Starship launch - A / FIRE skips";
