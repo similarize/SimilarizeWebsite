@@ -5,7 +5,6 @@ using System.IO;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.UI;
-using UnityEngine.Video;
 
 // ffu18 REAL ROOM: a photoreal room inside James's house. A white door on the living room's west wall ("REAL ROOM")
 // opens into a first-person room built from CC0 scans (Poly Haven furniture + PBR materials + a moonlit-field HDRI),
@@ -24,7 +23,7 @@ public partial class RealRoom : MonoBehaviour
     public static RealRoom I;
     public static readonly Vector3 RoomO = new Vector3(0f, -2000f, 1400f);   // under the house world, never in view
     public const int Layer = 21;
-    const string V = "?v=rr1";
+    const string V = "?v=rr2";   // ffu18c: rr.txt + window.jpg changed
     const float EyeH = 1.47f;
 
     // the door in the house (living room west wall), HouseWorld local coordinates
@@ -62,14 +61,19 @@ public partial class RealRoom : MonoBehaviour
     Collider chairCol, switchCol, doorCol;
     readonly List<Collider> duckCols = new List<Collider>();
     Material screenMat, globeMat, portalMat;
-    VideoPlayer vp; RenderTexture vidRT; bool vidFallback; float vidT0;
+    Texture2D vidTex; bool vidFallback, vidOk; float vidT0;
     Vector3 lampPos, tvPos, seatPos, spawnPos, doorPos, switchPos, duckSpawn; float seatYaw;
 
     // light state
     bool lightsOn = true;
     float lampK = 1f, expo = 4f;
     Vector4[] shEnv = new Vector4[9], shLamp = new Vector4[9], shTv = new Vector4[9];
-    readonly Vector4[] sh = new Vector4[9];
+    readonly Vector4[] sh = new Vector4[9], shD = new Vector4[9];
+    // ffu18c: moving things (duck, rocker, door hardware) take the room-centre probe scaled per group (env / lamp / tv);
+    // the probe sits 1.3 m up near the bulb, so unscaled it lit the duck far brighter than the floor it sits on
+    static readonly Vector3 DynK = new Vector3(0.25f, 0.35f, 0.45f);
+    // ffu18c: lamp white balance (the 2700 K bake read strongly sepia)
+    static readonly Vector3 LampWB = new Vector3(0.85f, 1.0f, 1.35f);
     // light group weights; exposure is automatic from the baked wall irradiance of the current mix (shell medians of
     // the three lightmaps: lamp 0.256, tv 0.0057 per unit, night 0.0012), so lights-off reads as a dim TV-lit room
     public const float EnvW = 0.15f, TvLightK = 4f, ExpMin = 1f, ExpMax = 25f;
@@ -295,7 +299,7 @@ public partial class RealRoom : MonoBehaviour
         if (st == St.Idle) return;
         Frog f = owner;
         st = St.Idle;
-        if (vp != null) vp.Pause();
+        StopVideo();
         cam.enabled = false;
         root.gameObject.SetActive(false);
         SetFade(0f, Color.white);
@@ -484,8 +488,9 @@ public partial class RealRoom : MonoBehaviour
         // TV light = the average colour of the current video frame (precomputed track, 10 Hz) x brightness
         Vector3 tv = new Vector3(0.3f, 0.34f, 0.36f);
         float vt = 0f;
-        if (vp != null && vp.isPlaying && !vidFallback) vt = (float)vp.time;
-        else vt = Time.time - vidT0;
+        VideoFrame();
+        float vtm = vidOk ? VideoTime() : -1f;
+        vt = vtm >= 0f ? vtm : Time.time - vidT0;
         int n = tvLight.Length / 3;
         if (n > 0 && !vidFallback)
         {
@@ -496,7 +501,7 @@ public partial class RealRoom : MonoBehaviour
         else if (vidFallback) { float s = Time.time * 0.15f; tv = new Vector3(0.35f + 0.1f * Mathf.Sin(s), 0.5f, 0.45f + 0.1f * Mathf.Cos(s * 1.3f)) * 0.6f; }
         tv *= TvLightK;
         Vector3 env = new Vector3(EnvW, EnvW, EnvW);
-        Vector3 lamp = new Vector3(lampK, lampK, lampK);
+        Vector3 lamp = LampWB * lampK;
         Shader.SetGlobalVector("_RREnvCol", env);
         Shader.SetGlobalVector("_RRLampCol", lamp);
         Shader.SetGlobalVector("_RRTvCol", tv);
@@ -505,6 +510,11 @@ public partial class RealRoom : MonoBehaviour
                                 shEnv[k].y * env.y + shLamp[k].y * lamp.y + shTv[k].y * tv.y,
                                 shEnv[k].z * env.z + shLamp[k].z * lamp.z + shTv[k].z * tv.z, 0f);
         Shader.SetGlobalVectorArray("_RRSH", sh);
+        for (int k = 0; k < 9; k++)
+            shD[k] = new Vector4(shEnv[k].x * env.x * DynK.x + shLamp[k].x * lamp.x * DynK.y + shTv[k].x * tv.x * DynK.z,
+                                 shEnv[k].y * env.y * DynK.x + shLamp[k].y * lamp.y * DynK.y + shTv[k].y * tv.y * DynK.z,
+                                 shEnv[k].z * env.z * DynK.x + shLamp[k].z * lamp.z * DynK.y + shTv[k].z * tv.z * DynK.z, 0f);
+        Shader.SetGlobalVectorArray("_RRSHD", shD);
         // eyes adjust: dark room -> brighter exposure over ~1.5 s
         float eref = RefLamp * lampK + RefTv * (0.2126f * tv.x + 0.7152f * tv.y + 0.0722f * tv.z) + RefEnv * EnvW;
         float target = Mathf.Clamp(1.45f / Mathf.Pow(Mathf.Max(eref, 1e-5f), 0.75f), ExpMin, ExpMax);
@@ -516,7 +526,7 @@ public partial class RealRoom : MonoBehaviour
         Shader.SetGlobalVector("_RRWaveO", new Vector4(Hands.WaveOrigin.x, Hands.WaveOrigin.y, Hands.WaveOrigin.z, waveR > 50f ? -1f : waveR));
         Shader.SetGlobalVector("_RRWaveCol", new Vector4(0.35f, 1.0f, 0.55f, 1f) * 0.6f);
         if (post != null) post.exposure = expo;
-        if (globeMat != null) globeMat.SetColor("_Emis", new Color(1f, 0.78f, 0.52f, 2.2f * lampK));
+        if (globeMat != null) globeMat.SetColor("_Emis", new Color(1f, 0.86f, 0.68f, 2.2f * lampK));   // ffu18c: a touch cooler
         Hands.SetLights(lampPos, tvPos);
         Hands.Tick(dt, holding, charge, ref throwAnim, ref pokeAnim, sitting, st == St.Play);
         if (holding) { duck.transform.position = Hands.HoldPoint; duck.transform.rotation = Hands.HoldRot; }

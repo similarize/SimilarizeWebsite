@@ -129,7 +129,7 @@ public static class Hands
         float bob = Mathf.Sin(walk) * 0.010f, bob2 = Mathf.Abs(Mathf.Cos(walk)) * 0.006f;
         float sway = Mathf.Sin(t * 1.3f) * 0.004f;
         // idle: low in the corners, fingers relaxed
-        var idleR = new Pose { p = new Vector3(0.17f, -0.25f + bob + sway, 0.30f), e = new Vector3(38f, -12f, -20f), curl = 0.3f };
+        var idleR = new Pose { p = new Vector3(0.17f, -0.17f + bob + sway, 0.32f), e = new Vector3(38f, -12f, -20f), curl = 0.3f };
         // intro: both hands raised in front of the chest, backs up, looking down at them
         var introR = new Pose { p = new Vector3(0.085f, -0.20f, 0.30f), e = new Vector3(18f, -22f, -12f), curl = 0.12f + 0.25f * (0.5f + 0.5f * Mathf.Sin(t * 2.2f)) };
         var holdR = new Pose { p = new Vector3(0.13f, -0.17f + bob, 0.33f), e = new Vector3(20f, -18f, -70f), curl = 0.55f };

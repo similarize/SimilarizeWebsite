@@ -19,6 +19,7 @@ Shader "FF/RRLit"
         _SpecK ("Spec scale", Float) = 1
         _Emis ("Emission (rgb x a)", Color) = (0,0,0,0)
         _EmisTex ("Emission uses albedo", Float) = 0
+        _TexK ("Texture contrast (albedo + AO vs their mean)", Float) = 1
     }
     SubShader
     {
@@ -34,7 +35,7 @@ Shader "FF/RRLit"
             #include "RRCommon.cginc"
             sampler2D _MainTex, _BumpMap, _ArmTex;
             float4 _Tint, _Emis;
-            float _UVScale, _Rough, _Metal, _HasNrm, _HasArm, _Dynamic, _NrmK, _SpecK, _EmisTex;
+            float _UVScale, _Rough, _Metal, _HasNrm, _HasArm, _Dynamic, _NrmK, _SpecK, _EmisTex, _TexK;
             struct a2v { float4 vertex : POSITION; float3 normal : NORMAL; float4 tangent : TANGENT; float2 uv0 : TEXCOORD0; float2 uv1 : TEXCOORD1; };
             struct v2f { float4 pos : SV_POSITION; float2 uv0 : TEXCOORD0; float2 uv1 : TEXCOORD1; float3 wpos : TEXCOORD2; float3 nrm : TEXCOORD3; float4 tan : TEXCOORD4; };
             v2f vert (a2v v)
@@ -49,10 +50,13 @@ Shader "FF/RRLit"
             }
             float4 frag (v2f i) : SV_Target
             {
-                float3 alb = SrgbToLin(tex2D(_MainTex, i.uv0).rgb) * _Tint.rgb;
+                float3 alb = SrgbToLin(tex2D(_MainTex, i.uv0).rgb);
+                // ffu18c: _TexK < 1 pulls the scan towards its own mean colour (plaster blotches read as dirt)
+                if (_TexK < 0.999) alb = lerp(SrgbToLin(tex2Dlod(_MainTex, float4(i.uv0, 0, 11)).rgb), alb, _TexK);
+                alb *= _Tint.rgb;
                 float ao = 1.0, rough = _Rough, metal = _Metal;
                 if (_HasArm > 1.5) { rough = tex2D(_ArmTex, i.uv0).g * _Rough; }
-                else if (_HasArm > 0.5) { float3 arm = tex2D(_ArmTex, i.uv0).rgb; ao = arm.r; rough = arm.g * _Rough; metal = arm.b * _Metal; }
+                else if (_HasArm > 0.5) { float3 arm = tex2D(_ArmTex, i.uv0).rgb; ao = lerp(1.0, arm.r, _TexK); rough = arm.g * _Rough; metal = arm.b * _Metal; }
                 rough = clamp(rough, 0.03, 1.0);
                 float3 Ng = normalize(i.nrm);
                 float3 N = Ng;
@@ -67,7 +71,7 @@ Shader "FF/RRLit"
                 float3 V = normalize(_WorldSpaceCameraPos - i.wpos);
                 float3 shN = SHIrr(N);
                 float3 irr;
-                if (_Dynamic > 0.5) irr = shN;
+                if (_Dynamic > 0.5) irr = SHIrrD(N);   // ffu18c: dimmer probe for moving things (the duck glowed)
                 else
                 {
                     irr = DecodeRR(tex2D(_RRLMEnv, i.uv1).rgb, _RRK.x) * _RREnvCol.rgb
@@ -89,7 +93,7 @@ Shader "FF/RRLit"
                 if (w < 0.999)
                 {
                     float3 flat = SrgbToLin(tex2Dlod(_MainTex, float4(i.uv0, 0, 7)).rgb) * _Tint.rgb;
-                    float3 irrS = _Dynamic > 0.5 ? SHIrr(Ng) : irr / clamp(shN / max(SHIrr(Ng), 1e-5), 0.6, 1.5);
+                    float3 irrS = _Dynamic > 0.5 ? SHIrrD(Ng) : irr / clamp(shN / max(SHIrr(Ng), 1e-5), 0.6, 1.5);
                     float3 st = Stylise(flat, irrS) + _Emis.rgb * _Emis.a;
                     col = lerp(st, col, w);
                 }

@@ -16,6 +16,7 @@ sampler2D _RRLMEnv, _RRLMLamp, _RRLMTv;
 sampler2D _RRPanoEnv, _RRPanoLamp, _RRPanoTv;
 float4 _RRBoxMin, _RRBoxMax, _RRProbe;    // world-space room box + probe position (box-projected reflections)
 float4 _RRSH[9];                          // combined SH irradiance / pi (same units as the lightmaps)
+float4 _RRSHD[9];                         // ffu18c: same probe with per-group dynamic scales, for moving objects (RRLit _Dynamic)
 float4 _RRWaveO;                          // xyz origin of the "turning real" wave, w = radius (m); <0 = all real
 float4 _RRWaveCol;                        // edge glow colour
 
@@ -31,6 +32,14 @@ inline float3 SHIrr(float3 n)
     float3 r = _RRSH[0].rgb + _RRSH[1].rgb * n.y + _RRSH[2].rgb * n.z + _RRSH[3].rgb * n.x
              + _RRSH[4].rgb * (n.x * n.y) + _RRSH[5].rgb * (n.y * n.z) + _RRSH[6].rgb * (3.0 * n.z * n.z - 1.0)
              + _RRSH[7].rgb * (n.x * n.z) + _RRSH[8].rgb * (n.x * n.x - n.y * n.y);
+    return max(r, 0.0);
+}
+
+inline float3 SHIrrD(float3 n)
+{
+    float3 r = _RRSHD[0].rgb + _RRSHD[1].rgb * n.y + _RRSHD[2].rgb * n.z + _RRSHD[3].rgb * n.x
+             + _RRSHD[4].rgb * (n.x * n.y) + _RRSHD[5].rgb * (n.y * n.z) + _RRSHD[6].rgb * (3.0 * n.z * n.z - 1.0)
+             + _RRSHD[7].rgb * (n.x * n.z) + _RRSHD[8].rgb * (n.x * n.x - n.y * n.y);
     return max(r, 0.0);
 }
 

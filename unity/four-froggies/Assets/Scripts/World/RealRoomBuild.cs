@@ -4,7 +4,6 @@ using System.Globalization;
 using System.IO;
 using UnityEngine;
 using UnityEngine.Networking;
-using UnityEngine.Video;
 
 // REAL ROOM part 2: streaming the assets (web/realroom/), building the room + colliders + player + camera, the demo
 // shots and the ?realroom=1 test spawn. Formats are written by work/rr/pack.py (rr.txt) and the Blender exporters
@@ -186,6 +185,7 @@ public partial class RealRoom
                     m.SetFloat("_UVScale", F(p[7]));
                     m.SetColor("_Tint", new Color(F(p[8]), F(p[9]), F(p[10])));
                     m.SetFloat("_Rough", F(p[11])); m.SetFloat("_Metal", F(p[12])); m.SetFloat("_SpecK", F(p[13])); m.SetFloat("_NrmK", F(p[14]));
+                    if (p.Length > 15) m.SetFloat("_TexK", F(p[15]));   // ffu18c albedo/AO contrast
                 }
                 m.SetFloat("_Dynamic", dynamic ? 1f : 0f);
                 if (sh == "globe") { m.SetFloat("_EmisTex", 0f); globeMat = m; }
@@ -368,35 +368,53 @@ public partial class RealRoom
         }
     }
 
+#if UNITY_WEBGL && !UNITY_EDITOR
+    [System.Runtime.InteropServices.DllImport("__Internal")] static extern int FFVideoOpen(string url, float vol);
+    [System.Runtime.InteropServices.DllImport("__Internal")] static extern int FFVideoUpdate(int tex);
+    [System.Runtime.InteropServices.DllImport("__Internal")] static extern float FFVideoTime();
+    [System.Runtime.InteropServices.DllImport("__Internal")] static extern void FFVideoPlay(int on);
+    [System.Runtime.InteropServices.DllImport("__Internal")] static extern void FFVideoVolume(float v);
+#else
+    static int FFVideoOpen(string url, float vol) { return 0; }
+    static int FFVideoUpdate(int tex) { return 0; }
+    static float FFVideoTime() { return -1f; }
+    static void FFVideoPlay(int on) { }
+    static void FFVideoVolume(float v) { }
+#endif
+    // TV: an HTML <video> uploaded into vidTex every other frame (Plugins/WebGL/FFVideo.jslib); test pattern until the
+    // first frame arrives / if it never does
     void PlayVideo()
     {
         if (screenMat == null) return;
-        if (vp == null)
+        float vol = Sfx.Level == 0 ? 0.32f : Sfx.Level == 1 ? 0.12f : 0f;
+        if (vidTex == null)
         {
-            vidRT = new RenderTexture(640, 360, 0, RenderTextureFormat.ARGB32); vidRT.name = "RR TV";
-            vp = gameObject.AddComponent<VideoPlayer>();
-            vp.playOnAwake = false; vp.isLooping = true;
-            vp.source = VideoSource.Url; vp.url = BaseUrl() + "tv.mp4" + V;
-            vp.renderMode = VideoRenderMode.RenderTexture; vp.targetTexture = vidRT;
-            vp.audioOutputMode = VideoAudioOutputMode.Direct;
-            vp.errorReceived += (p, msg) => { Debug.LogWarning("RealRoom: video " + msg); vidFallback = true; };
-            vp.prepareCompleted += p => { p.Play(); Debug.Log("RealRoom: video playing"); };
-            screenMat.SetTexture("_MainTex", vidRT);
+            vidTex = new Texture2D(640, 360, TextureFormat.RGBA32, false, false);
+            var px = new Color32[640 * 360]; vidTex.SetPixels32(px); vidTex.Apply(false, false);
+            vidTex.wrapMode = TextureWrapMode.Clamp; vidTex.filterMode = FilterMode.Bilinear; vidTex.name = "RR TV";
+            screenMat.SetTexture("_MainTex", vidTex);
             vidT0 = Time.time;
-            vp.Prepare();
+            int ok = 0;
+            try { ok = FFVideoOpen(BaseUrl() + "tv.mp4" + V, vol); } catch (System.Exception e) { Debug.LogWarning("RealRoom: video " + e.Message); }
+            vidFallback = ok == 0;
         }
-        else vp.Play();
-        try { vp.SetDirectAudioVolume(0, Sfx.Level == 0 ? 0.32f : Sfx.Level == 1 ? 0.12f : 0f); } catch { }
-        StartCoroutine(VideoWatch());
+        else { try { FFVideoPlay(1); FFVideoVolume(vol); } catch { } }
+        screenMat.SetFloat("_Fallback", 1f);   // pattern until a frame arrives
+        vidOk = false;
     }
 
-    IEnumerator VideoWatch()
+    void VideoFrame()
     {
-        float t = 0f;
-        while (t < 9f && vp != null && !vp.isPlaying && !vidFallback) { t += Time.unscaledDeltaTime; yield return null; }
-        if (vp == null || !vp.isPlaying) { vidFallback = true; Debug.Log("RealRoom: video not playing - test pattern"); }
-        if (screenMat != null) screenMat.SetFloat("_Fallback", vidFallback ? 1f : 0f);
+        if (vidTex == null || vidFallback) return;
+        if ((Time.frameCount & 1) == 1 && vidOk) return;
+        int ok = 0;
+        try { ok = FFVideoUpdate((int)vidTex.GetNativeTexturePtr()); } catch { ok = 0; }
+        if (ok == 1 && !vidOk) { vidOk = true; screenMat.SetFloat("_Fallback", 0f); Debug.Log("RealRoom: video playing"); }
+        if (!vidOk && Time.time - vidT0 > 12f) { vidFallback = true; Debug.Log("RealRoom: video not playing - test pattern"); }
     }
+
+    void StopVideo() { try { FFVideoPlay(0); } catch { } }
+    float VideoTime() { float t = -1f; try { t = FFVideoTime(); } catch { } return t; }
 
     // ---------------------------------------------------------------- ?realroom=1 test spawn + demo shots
     bool urlDone;
