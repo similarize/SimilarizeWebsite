@@ -218,3 +218,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    OTHER DEALINGS IN THE FONT SOFTWARE.
 
 CC0 1.0 Universal: https://creativecommons.org/publicdomain/zero/1.0/legalcode
+
+
+13. REAL ROOM (ffu18, streamed from realroom/ only when you enter it)
+   Poly Haven assets (https://polyhaven.com), CC0 1.0 Universal (public domain dedication):
+   models ArmChair_01, sofa_02, modern_coffee_table_01, modern_wooden_cabinet, potted_plant_04, rubber_duck_toy,
+   modern_ceiling_lamp_01, hanging_picture_frame_02, side_table_01, ceramic_vase_01; textures herringbone_parquet,
+   white_plaster_02, poly_wool_herringbone; HDRI kloppenheim_02 (window view + night light).
+   TV picture and sound: excerpt (0:46-1:16) of "Big Buck Bunny" (c) copyright 2008, Blender Foundation,
+   www.bigbuckbunny.org / peach.blender.org, licensed under the Creative Commons Attribution 3.0 licence
+   (https://creativecommons.org/licenses/by/3.0/). Re-encoded to 640x360 with a fade in / out; no other changes.
+   Room shell, TV, door, light switch, frog hands, lighting bake and shaders: made for this game.
