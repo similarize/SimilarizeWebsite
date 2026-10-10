@@ -408,6 +408,7 @@ function mesh(geo, mat, cast = false, recv = true) {
 /* Track build                                                         */
 /* ------------------------------------------------------------------ */
 let _cached = null;
+const STAND_EYE = new THREE.Vector3(-24, 5.3, 47.6);
 
 export function buildRaceTrack(scene) {
   if (_cached) {
@@ -656,6 +657,7 @@ export function buildRaceTrack(scene) {
   }
 
   _cached = {
+    standEye: STAND_EYE.clone(),
     group,
     samples: S,
     sky,
@@ -748,7 +750,10 @@ function addProps(group, S, M) {
 
   // --- Driver stand (outside the main straight, facing the track) ---
   {
-    const cx = -2, cz = 49.5, len = 16, dep = 3.4, ph = 2.3;
+    // Right of the S/F gantry (clear of the bridge sightline) and raised to a 5 m deck
+    // so the Stand cam looks over the gantry, tents and bridge onto the far side.
+    const cx = 22, cz = 49.5, len = 16, dep = 3.4, ph = 5.0;
+    STAND_EYE.set(cx, ph + 0.13 + 1.6, cz - dep / 2 - 0.25);
     place(M.wood, len, 0.25, dep, cx, ph, cz);                       // deck
     for (const dx of [-len / 2 + 0.3, -len / 4, 0, len / 4, len / 2 - 0.3])
       for (const dz of [-dep / 2 + 0.2, dep / 2 - 0.2]) place(M.darkSteel, 0.18, ph, 0.18, cx + dx, ph / 2, cz + dz);
@@ -760,7 +765,8 @@ function addProps(group, S, M) {
     const roof = place(M.white, len + 0.8, 0.15, dep + 1.0, cx, ph + 2.65, cz + 0.2);
     roof.rotation.x = -0.12;
     // stairs
-    for (let s = 0; s < 6; s++) place(M.wood, 1.4, 0.12, 0.45, cx + len / 2 + 0.9, 0.2 + s * 0.38, cz + 1.2 - s * 0.42);
+    const nSteps = Math.ceil(ph / 0.38);
+    for (let s = 0; s < nSteps; s++) place(M.wood, 0.45, 0.12, 1.4, cx + len / 2 + 0.4 + (nSteps - s) * 0.42, 0.2 + s * 0.38, cz + 0.6);
     // drivers with transmitters
     const skin = lam({ color: 0xe0b48c, roughness: 0.8 });
     const shirts = [0xe4572e, 0x3b82f6, 0x34d399, 0xc084fc, 0xf1c40f];
@@ -778,12 +784,12 @@ function addProps(group, S, M) {
     }
   }
 
-  // --- Pit tents + tables (behind the stand, right) ---
+  // --- Pit tents + tables (left of the stand, behind the grid) ---
   {
     const tentCols = [0xe4572e, 0x2f6fd6, 0xf1c40f];
     const roofGeo = new THREE.ConeGeometry(2.4, 1.1, 4, 1);
     for (let t = 0; t < 3; t++) {
-      const x = 16 + t * 6.2, z = 51;
+      const x = -28 + t * 6.2, z = 51;
       for (const dx of [-1.6, 1.6]) for (const dz of [-1.6, 1.6]) place(M.steel, 0.08, 2.2, 0.08, x + dx, 1.1, z + dz, 0, false);
       const r = mesh(roofGeo, lam({ color: tentCols[t], roughness: 0.7 }), true, false);
       r.position.set(x, 2.75, z); r.rotation.y = Math.PI / 4;
@@ -793,7 +799,7 @@ function addProps(group, S, M) {
     }
     // pit sign banner
     const sign = new THREE.Mesh(new THREE.BoxGeometry(6, 1, 0.1), lam({ map: bannerTex("PITS", "#2f6fd6", "#ffffff") }));
-    sign.position.set(28.6, 1.6, 47.6);
+    sign.position.set(-21.8, 1.6, 47.6);
     group.add(sign);
   }
 
@@ -1159,7 +1165,7 @@ export function createRaceCamRig() {
   };
 }
 
-const _v = new THREE.Vector3();
+const _v = new THREE.Vector3(), _v2 = new THREE.Vector3(), _v3 = new THREE.Vector3(), _v4 = new THREE.Vector3(), _v5 = new THREE.Vector3();
 export function updateRaceCam(rig, camera, cars, focusIdx, chaseIdx, meta, dt) {
   const k = (rate) => 1 - Math.exp(-rate * dt);
   if (rig.mode === "chase" && cars[chaseIdx]) {
@@ -1188,6 +1194,50 @@ export function updateRaceCam(rig, camera, cars, focusIdx, chaseIdx, meta, dt) {
     camera.lookAt(rig.look);
     const wantFov = 62;
     camera.fov += (wantFov - camera.fov) * k(4);
+    camera.updateProjectionMatrix();
+    return rig.look;
+  }
+
+  if (rig.mode === "stand" && meta.standEye) {
+    // Driver-stand cam: fixed eye on the stand; "head" pans + zooms to the focus cars.
+    const eye = meta.standEye;
+    let sx = 0, sy = 0, sz = 0, n = 0;
+    for (const i of focusIdx) {
+      const c = cars[i];
+      if (!c) continue;
+      sx += c.pos.x + c.vx * 0.25; sy += c.pos.y; sz += c.pos.z + c.vz * 0.25; n++;
+    }
+    if (!n) { sx = 0; sz = 0; n = 1; }
+    _v.set(sx / n, sy / n + 0.4, sz / n);
+    if (!rig.init) { rig.look.copy(_v); rig.fov = 40; }
+    rig.look.lerp(_v, k(4));
+    // zoom: keep ~14 m of track in view around one car; widen to fit every human
+    const dist = Math.max(8, eye.distanceTo(rig.look));
+    let wantV = 2 * Math.atan(7 / dist);
+    const fwd = _v2.copy(rig.look).sub(eye).normalize();
+    const up = _v3.set(0, 1, 0);
+    const right = _v4.crossVectors(fwd, up).normalize();
+    const camUp = up.crossVectors(right, fwd).normalize();
+    let needH = 0, needV = 0;
+    for (const i of focusIdx) {
+      const c = cars[i];
+      if (!c) continue;
+      const d = _v5.copy(c.pos).sub(eye);
+      const z = Math.max(1, d.dot(fwd));
+      needH = Math.max(needH, Math.abs(Math.atan(d.dot(right) / z)));
+      needV = Math.max(needV, Math.abs(Math.atan((d.dot(camUp) + 0.4) / z)));
+    }
+    const aspect = camera.aspect || 1.6;
+    const vFromH = 2 * Math.atan(Math.tan(needH * 1.25 + 0.05) / aspect);
+    wantV = Math.max(wantV, vFromH, needV * 2.5 + 0.06);
+    const wantFov = Math.max(9, Math.min(70, THREE.MathUtils.radToDeg(wantV)));
+    rig.fov += (wantFov - rig.fov) * k(2.5);
+    rig.pos.copy(eye);
+    rig.init = true;
+    rig.dist = Math.min(60, dist * Math.tan(THREE.MathUtils.degToRad(rig.fov) / 2) * 2);
+    camera.position.copy(eye);
+    camera.lookAt(rig.look);
+    camera.fov = rig.fov;
     camera.updateProjectionMatrix();
     return rig.look;
   }

@@ -695,3 +695,13 @@ body.mode-race #pads.solo-guest .stick-base {
   padding: 1px 5px;
 }
 .race-seat-hint b { color: var(--fg); }
+
+/* Driver-stand cam first-time hint */
+.stand-hint {
+  position: absolute; left: 50%; bottom: max(110px, calc(env(safe-area-inset-bottom) + 100px));
+  transform: translateX(-50%); z-index: 9; max-width: min(520px, 88vw);
+  padding: 10px 14px; border-radius: 12px; background: rgba(12,16,20,.86);
+  color: #fff; font: 600 14px/1.35 var(--sans); text-align: center;
+  opacity: 0; transition: opacity .35s; pointer-events: none;
+}
+.stand-hint.show { opacity: 1; }

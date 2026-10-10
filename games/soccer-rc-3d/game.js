@@ -20,9 +20,9 @@ import {
   createSkidMarks,
   RACE_COLORS,
   RACE_NAMES,
-} from "./race-mode.js?v=20261008-soccerrc3d14";
+} from "./race-mode.js?v=20261010-soccerrc3d15";
 
-const CACHE = "20261008-soccerrc3d14";
+const CACHE = "20261010-soccerrc3d15";
 const HALF_X = 22;
 const HALF_Z = 14;
 const WALL_H = 5.5;
@@ -322,7 +322,7 @@ let raceState = null;
 const raceCam = createRaceCamRig();
 let raceCamUser = null;
 let raceSkids = null; // instanced race tyre marks (lives in the cached track group)
-let _dbgForceHumans = null, _dbgPaused = false; // ?racedebug=1 QA only // null = auto; "chase" | "overview" once toggled
+let _dbgForceHumans = null, _dbgPaused = false, _dbgFocusN = 0; // ?racedebug=1 QA only // null = auto; "chase" | "overview" once toggled
 const raceCamBtn = document.getElementById("raceCamBtn");
 /** Per-seat binding for Race: { kind, padSlot, padOrd, keys, touch, label } — padOrd indexes connectedIndices */
 let raceSeats = null;
@@ -1718,6 +1718,7 @@ function startRaceMode(numPlayers, laps) {
 }
 
 function raceHumanIdx() {
+  if (_dbgFocusN) return cars.map((_, i) => i).slice(0, _dbgFocusN); // QA: frame first N cars
   const out = [];
   for (let i = 0; i < cars.length; i++) {
     const k = raceSeats && raceSeats[i] ? raceSeats[i].kind : "human";
@@ -1735,14 +1736,38 @@ function raceCamMode() {
 
 function toggleRaceCam() {
   if (gameMode !== "race") return;
-  raceCamUser = raceCamMode() === "chase" ? "overview" : "chase";
+  // Cycle: Chase → Overview → Stand
+  const order = ["chase", "overview", "stand"];
+  raceCamUser = order[(order.indexOf(raceCamMode()) + 1) % order.length];
   raceCam.init = false;
   syncRaceCamBtn();
-  showBanner(raceCamUser === "chase" ? "Chase cam" : "Overview cam", "", 0.8);
+  if (raceCamUser === "stand") {
+    let seen = false;
+    try { seen = localStorage.getItem("soccerRc3dStandHint") === "1"; localStorage.setItem("soccerRc3dStandHint", "1"); } catch (_) {}
+    showStandHint(!seen);
+  }
+  showBanner(raceCamUser === "chase" ? "Chase cam" : raceCamUser === "overview" ? "Overview cam" : "Driver stand cam", "", 0.8);
 }
 
 function syncRaceCamBtn() {
-  if (raceCamBtn) raceCamBtn.textContent = raceCamMode() === "chase" ? "Cam: Chase" : "Cam: Overview";
+  const m = raceCamMode();
+  if (raceCamBtn) raceCamBtn.textContent = m === "chase" ? "Cam: Chase" : m === "overview" ? "Cam: Overview" : "Cam: Stand";
+}
+
+/** First-time Stand toast: steering stays car-relative like a real RC. */
+function showStandHint(first) {
+  if (!first) return;
+  let el = document.getElementById("standHint");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "standHint";
+    el.className = "stand-hint";
+    document.body.appendChild(el);
+  }
+  el.textContent = "Driver stand: steering is car-relative, like a real RC. When your car drives toward you, left and right feel reversed!";
+  el.classList.add("show");
+  clearTimeout(showStandHint._t);
+  showStandHint._t = setTimeout(() => el.classList.remove("show"), 5000);
 }
 
 function updateRaceHud() {
@@ -1881,9 +1906,14 @@ function tickRace(dt) {
   const look = updateRaceCam(raceCam, camera, cars, humans, humans[0], raceMeta, dt);
   for (let i = 0; i < cars.length; i++) {
     if (cars[i].tag) cars[i].tag.visible = !(mode === "chase" && i === humans[0]);
+    if (cars[i].tag) {
+      // Non-attenuated sprites grow as the Stand cam zooms in; keep tags a constant size
+      const zs = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) / Math.tan(THREE.MathUtils.degToRad(50) / 2);
+      cars[i].tag.scale.set(0.075 * zs, 0.0375 * zs, 1);
+    }
   }
   if (raceMeta.sky) raceMeta.sky.position.copy(camera.position);
-  updateRaceShadow(look, mode === "chase" ? 34 : raceCam.dist);
+  updateRaceShadow(look, mode === "chase" ? 34 : mode === "stand" ? Math.max(30, raceCam.dist) : raceCam.dist);
 }
 
 function bindModeLobby() {
@@ -2278,6 +2308,7 @@ if (/[?&]racedebug=1/.test(location.search)) {
     setCam(m) { raceCamUser = m; raceCam.init = false; syncRaceCamBtn(); },
     setHumans(k) { _dbgForceHumans = k; syncRaceSeatBindings(); },
     pause(p) { _dbgPaused = p !== false; },
+    focus(n) { _dbgFocusN = n; },
     gl() { return { renderer, scene, camera, raceMeta }; },
     meta() {
       const S = raceMeta && raceMeta.samples;
