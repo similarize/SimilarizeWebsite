@@ -263,6 +263,13 @@ public partial class RealRoom
                 parent = rockPivot;
             }
             else if (doorPart) for (int i = 0; i < nv; i++) pos[i] -= doorPivot.localPosition;
+            if (mname == "rr_windowview")
+            {
+                // ffu18c: the view plane sits 0.6 m behind the wall and was too small for grazing looks through the window
+                // (the cartoon world showed past its edge). It is mapped by view direction, so just make it 4x larger.
+                Vector3 c = mn + ext * 0.5f;
+                for (int i = 0; i < nv; i++) { Vector3 d = pos[i] - c; pos[i] = c + new Vector3(d.x, d.y * 4f, d.z * 4f); }
+            }
             var mesh = new Mesh { name = oname };
             if (nv >= 65536) mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
             mesh.vertices = pos; mesh.normals = nrm; mesh.uv = uv0;

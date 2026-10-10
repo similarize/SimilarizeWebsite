@@ -11,6 +11,23 @@ public static class Hands
     static Transform[] bR, bL;
     static Quaternion[] restR, restL;
     static Material matR, matL;
+    class CpuSkin { public Mesh mesh; public Vector3[] pos, nrm, outP, outN; public BoneWeight[] bw; public Matrix4x4[] bind, m; public Transform[] bones; public Transform root; }
+    static CpuSkin skinR, skinL;
+    static bool loggedView;
+    static void Skin(CpuSkin k)
+    {
+        if (k == null) return;
+        Matrix4x4 w2r = k.root.worldToLocalMatrix;
+        for (int b = 0; b < k.bones.Length; b++) k.m[b] = w2r * k.bones[b].localToWorldMatrix * k.bind[b];
+        for (int i = 0; i < k.pos.Length; i++)
+        {
+            BoneWeight w = k.bw[i]; Vector3 v = k.pos[i], n = k.nrm[i];
+            Matrix4x4 a = k.m[w.boneIndex0], b1 = k.m[w.boneIndex1], c = k.m[w.boneIndex2];
+            k.outP[i] = a.MultiplyPoint3x4(v) * w.weight0 + b1.MultiplyPoint3x4(v) * w.weight1 + c.MultiplyPoint3x4(v) * w.weight2;
+            k.outN[i] = a.MultiplyVector(n) * w.weight0 + b1.MultiplyVector(n) * w.weight1 + c.MultiplyVector(n) * w.weight2;
+        }
+        k.mesh.vertices = k.outP; k.mesh.normals = k.outN;
+    }
     static string[] names;
     public static float introPose, walk;
     static float morph = 1f;
@@ -83,18 +100,24 @@ public static class Hands
                 restN[i] = new Vector3(nrm[i].x * mx, nrm[i].y, nrm[i].z);
             }
             var mesh = new Mesh { name = go.name };
-            mesh.vertices = pos; mesh.normals = nrm; mesh.triangles = tri; mesh.boneWeights = bw; mesh.bindposes = bind; mesh.colors = col;
+            mesh.vertices = pos; mesh.normals = nrm; mesh.triangles = tri; mesh.colors = col;
             mesh.SetUVs(2, rest); mesh.SetUVs(3, restN);
             mesh.RecalculateBounds();
-            var smr = go.AddComponent<SkinnedMeshRenderer>();
-            smr.sharedMesh = mesh; smr.bones = bones; smr.rootBone = bones[0];
-            smr.updateWhenOffscreen = true;
-            smr.localBounds = new Bounds(Vector3.zero, Vector3.one * 2f);
+            // ffu18c: skinned on the CPU into a plain MeshRenderer (the SkinnedMeshRenderer hands never showed up in the
+            // WebGL build - no other SkinnedMeshRenderer in the game; 2 x 3k verts x 3 bones per frame is cheap)
+            mesh.MarkDynamic();
+            mesh.bounds = new Bounds(Vector3.zero, Vector3.one * 2f);
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            var smr = go.AddComponent<MeshRenderer>();
             smr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; smr.receiveShadows = false;
+            smr.lightProbeUsage = UnityEngine.Rendering.LightProbeUsage.Off; smr.reflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Off;
             var m = new Material(sh); m.name = go.name;
+            if (!sh.isSupported) Debug.LogWarning("RealRoom: FF/RRSkin not supported here");
             if (skin != null) m.SetTexture("_SkinTex", skin);
             m.SetColor("_Toon", new Color(toon.r, toon.g, toon.b, 1f));
             smr.sharedMaterial = m;
+            var ck = new CpuSkin { mesh = mesh, pos = pos, nrm = nrm, bw = bw, bind = bind, bones = bones, root = root, outP = new Vector3[nv], outN = new Vector3[nv], m = new Matrix4x4[nb] };
+            if (side == 0) skinR = ck; else skinL = ck;
             var restQ = new Quaternion[nb]; for (int i = 0; i < nb; i++) restQ[i] = bones[i].localRotation;
             if (side == 0) { rootR = root; bR = bones; restR = restQ; matR = m; } else { rootL = root; bL = bones; restL = restQ; matL = m; }
         }
@@ -160,6 +183,13 @@ public static class Hands
         curR = Lerp(curR, tR, s); curL = Lerp(curL, tL, s);
         Apply(rootR, bR, restR, curR, t);
         Apply(rootL, bL, restL, curL, t + 0.7f);
+        Skin(skinR); Skin(skinL);
+        if (play && !loggedView)
+        {
+            loggedView = true;
+            var cam = eye != null ? eye.GetComponentInChildren<Camera>() : null;
+            if (cam != null) Debug.Log("RealRoom: hands at viewport R " + cam.WorldToViewportPoint(rootR.position).ToString("F2") + " L " + cam.WorldToViewportPoint(rootL.position).ToString("F2"));
+        }
         WaveOrigin = (rootR.position + rootL.position) * 0.5f + eye.forward * 0.08f;
     }
 

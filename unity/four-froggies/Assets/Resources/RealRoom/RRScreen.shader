@@ -8,6 +8,7 @@ Shader "FF/RRScreen"
         Pass
         {
             Tags { "LightMode"="Always" }
+            Offset -1, -4   // ffu18c: the screen sits 0.5 mm in front of the TV body; it z-fought into polygons from across the room
             CGPROGRAM
             #pragma vertex vert
             #pragma fragment frag
