@@ -238,7 +238,7 @@ public class HouseWorld : MonoBehaviour
         Plant(-4.8f, 18.8f); Plant(4.8f, 18.8f);
         Box(new Vector3(-5.2f, 0.9f, 15f), new Vector3(0.8f, 1.8f, 2.4f), Wood);   // shoe bench + coats
         // ffu14: off to the side and lower, so it no longer overlaps the FISH GALLERY room sign above the doorway
-        Ranch.Sign(L(3.4f, 1.9f, 5.6f), 0f, "FOUR FROGGIES\n<size=22>James - Jimmy - Bubbles - Rexy</size>", new Color(0.12f, 0.35f, 0.15f), 3.6f, 1.2f);
+        Ranch.Sign(L(3.4f, 1.9f, 5.6f), 0f, "<size=24>FOUR FROGGIES</size>\n<size=17>James - Jimmy - Bubbles - Rexy</size>", new Color(0.12f, 0.35f, 0.15f), 4.6f, 1.2f);   // ffu15: wider + sized so the title never wraps "FROGGIE/S"
     }
 
     void Plant(float x, float z)

@@ -19,10 +19,14 @@ public class CamRig
     public CamRig(Camera c) { cam = c; }
 
     public void AddShake(float t) { trauma = Mathf.Min(1.2f, trauma + t); }
+    // ffu15: recoil kick (degrees, view pitches up then settles) + over-the-shoulder aim state
+    float kick, baseFov = -1f;
+    public void Kick(float deg) { kick = Mathf.Min(kick + deg, 9f); }
 
     public void Snap() { init = false; }
 
     public void SetYaw(float y) { yaw = yawT = y; }
+    public void SetPitch(float p) { pitch = pitchT = p; }
 
     public void ResetView(float behindYaw)
     {
@@ -36,10 +40,12 @@ public class CamRig
         bool tank = v != null && !float.IsNaN(v.AimYaw);
         if (!init) { yawT = yaw; pitchT = pitch; }
         if (i.camReset) ResetView(v != null ? v.transform.eulerAngles.y : f.transform.eulerAngles.y);
-        if (!tank) yawT += i.look.x;
-        pitchT = Mathf.Clamp(pitchT - i.look.y * (tank ? 0.3f : 1f), minPitch, maxPitch);
+        StoryMech sm = f.vehicle as StoryMech;
+        float ak = sm != null ? sm.aimK : 0f;
+        if (!tank) yawT += i.look.x * (ak > 0.5f ? 0.7f : 1f);
+        pitchT = Mathf.Clamp(pitchT - i.look.y * (tank ? 0.3f : 1f), Mathf.Lerp(minPitch, -38f, ak), maxPitch);
         bool touching = i.lookHeld || i.look.sqrMagnitude > 0.0001f;
-        if (touching) { manualT = 0f; followW = 0f; } else manualT += dt;
+        if (touching || ak > 0.05f) { manualT = 0f; followW = 0f; } else manualT += dt;
         zoomMul = Mathf.Clamp(zoomMul * (1f + i.zoom * 1.4f * dt), 0.45f, 3.2f);
 
         float dist = 8f, height = 1.6f;
@@ -71,6 +77,21 @@ public class CamRig
         focus = Vector3.Lerp(focus, target, Mathf.Min(1f, dt * 10f));
         Quaternion rot = Quaternion.Euler(pitch, yaw, 0f);
         Vector3 pivot = focus + Vector3.up * height * 0.5f;
+        if (ak > 0.001f)
+        {
+            // over the right shoulder, tight, aiming where the screen centre points
+            float H = sm.height;
+            Vector3 rightV = Quaternion.Euler(0f, yaw, 0f) * Vector3.right;
+            Vector3 sh = sm.transform.position + Vector3.up * H * 0.9f + rightV * H * 0.3f;
+            float e = Mathf.SmoothStep(0f, 1f, ak);
+            pivot = Vector3.Lerp(pivot, sh, e);
+            dist = Mathf.Lerp(dist, H * 0.5f + 3f, e);
+            if (baseFov < 0f) baseFov = cam.fieldOfView;
+            cam.fieldOfView = Mathf.Lerp(baseFov, baseFov * 0.78f, e);
+        }
+        else if (baseFov > 0f) { cam.fieldOfView = baseFov; baseFov = -1f; }
+        kick = Mathf.MoveTowards(kick, 0f, dt * Mathf.Max(6f, kick * 7f));
+        rot = Quaternion.Euler(pitch - kick, yaw, 0f);
         Vector3 back = rot * Vector3.back;
         float allowed = dist;
         RaycastHit hit;
@@ -87,5 +108,19 @@ public class CamRig
         Vector3 shake = trauma > 0f ? Random.insideUnitSphere * trauma * trauma * 0.6f : Vector3.zero;
         cam.transform.position = want + shake;
         cam.transform.rotation = Quaternion.LookRotation((pivot - want).normalized + shake * 0.02f);
+        if (kick > 0.01f) cam.transform.rotation = cam.transform.rotation * Quaternion.Euler(-kick * 0.6f, 0f, 0f);
+        // the pilot's aim point: what the screen centre looks at (skipping the mech itself)
+        if (sm != null && ak > 0.2f && sm.driver == f)
+        {
+            Ray ray = new Ray(cam.transform.position, cam.transform.forward);
+            Vector3 best = ray.origin + ray.direction * 800f; float bd = 1e9f; bool onT = false;
+            foreach (RaycastHit h in Physics.RaycastAll(ray, 1500f, ~((1 << 9) | (1 << 10)), QueryTriggerInteraction.Ignore))
+            {
+                if (h.collider.transform.IsChildOf(sm.transform)) continue;
+                if (h.distance < sm.height * 0.4f) continue;
+                if (h.distance < bd) { bd = h.distance; best = h.point; onT = h.collider.GetComponentInParent<Vehicle>() != null; }
+            }
+            sm.aimPoint = best; sm.aimPointValid = true; sm.aimOnTarget = onT;
+        }
     }
 }

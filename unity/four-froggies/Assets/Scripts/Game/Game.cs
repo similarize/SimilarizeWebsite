@@ -30,6 +30,7 @@ public partial class Game : MonoBehaviour
     public readonly List<Slot> slots = new List<Slot>();
     public bool shared;            // Shared camera vs split-screen
     bool help;
+    public bool HelpOpen { get { return help; } }
 
     readonly HashSet<int> ghosts = new HashSet<int>();
     readonly Dictionary<int, float> pressTimes = new Dictionary<int, float>();
@@ -170,7 +171,8 @@ public partial class Game : MonoBehaviour
             else if (sc == "truck") DemoTruck(f);
             else if (sc == "cyberboat") DemoCyber(f);
             else if (sc == "robots") DemoRobots(f);
-            else if (sc == "mech" || sc == "mechfight" || sc == "mechspace") DemoMechStart(f, sc);
+            else if (sc == "mech" || sc == "mechfight") DemoMechStart(f, sc);
+            else if (sc == "mechaim" || sc == "mechlook" || sc == "surface" || sc == "spacemap" || sc == "mechspace" || sc == "cargobay") Demo15Start(f, sc);
             else if (sc == "lineup" || sc == "ripsaw") DemoLineup(f, sc);
             else if (sc == "net") { if (UrlParam("ffwalk") != null) demoHook = DemoWalk; }      // ffu13 online test
             else if (sc == "netcar") { if (Net.I != null && Net.I.IsGuest) { DemoTruck(f); demoHook = DemoCircle; } }
@@ -284,8 +286,15 @@ public partial class Game : MonoBehaviour
                 pos = new Vector3(-1.2f, gy + 3.4f, 58.5f); look = new Vector3(-9.6f, gy + 1.0f, 49.5f); break;
             case "mech":
             case "mechfight":
-            case "mechspace":
                 if (!DemoMechCam(f, sc, out pos, out look)) return;
+                break;
+            case "mechaim":
+            case "mechlook":
+            case "surface":
+            case "spacemap":
+            case "mechspace":
+            case "cargobay":
+                if (!Demo15Cam(f, sc, out pos, out look)) return;
                 break;
             case "touch":
                 DemoTouchModes(f);
@@ -1055,7 +1064,8 @@ public partial class Game : MonoBehaviour
                     if (help && s.pad.buttonEast.wasPressedThisFrame) { help = false; Leave(s); continue; }
                     break;
                 case InputKind.Keyboard:
-                    if (Kb.MouseLeftDown() && Cursor.lockState != CursorLockMode.Locked && !help) Cursor.lockState = CursorLockMode.Locked;
+                    // ffu15: right mouse (mech aim) locks too; clicks on the robot phone / space radar keep the cursor free
+                    if ((Kb.MouseLeftDown() || Kb.MouseRightDown()) && Cursor.lockState != CursorLockMode.Locked && !help && !UiUnderMouse()) Cursor.lockState = CursorLockMode.Locked;
                     i = Pads.ReadKeyboard(dt);
                     if (help && Kb.EscDown()) { help = false; Leave(s); continue; }
                     break;
@@ -1070,6 +1080,7 @@ public partial class Game : MonoBehaviour
             }
             {
                 Frog pf = frogs[s.frog];
+                pf.inputKind = s.kind;
                 if (i.phone && RobotPhone.I != null && pf.world == WorldId.Ranch && pf.vehicle == null) RobotPhone.I.Toggle(pf);
                 if (RobotPhone.I != null && RobotPhone.I.Handle(pf, i)) { Vector2 lk = i.look; bool v = i.view, h = i.help; i = new PIn(); i.look = lk; i.view = v; i.help = h; }
                 if (k == 0 && demoHook != null) i = demoHook(i);
@@ -1193,7 +1204,10 @@ public partial class Game : MonoBehaviour
                 Frog f = frogs[slots[k].frog];
                 lines.Add("<color=#" + ColorUtility.ToHtmlStringRGB(f.color) + ">P" + (k + 1) + " " + f.nick + "</color>  " + (f.vehicle != null ? f.vehicle.Title : "") + (f.prompt.Length > 0 && f.vehicle == null ? "  " + f.prompt : ""));
             }
-            sharedHud.Tick(sharedCam, null, "", frogs, string.Join("\n", lines.ToArray()));
+            // ffu15: the shared view shows the first pilot's control line (mech / Starship hints) and the space radar
+            string sp = null; Frog spaceF = null;
+            foreach (var s2 in slots) { Frog f2 = frogs[s2.frog]; if (sp == null && f2.vehicle != null && f2.prompt.Length > 0) sp = f2.prompt; if (spaceF == null && f2.world == WorldId.Space) spaceF = f2; }
+            sharedHud.Tick(sharedCam, null, "", frogs, string.Join("\n", lines.ToArray()), sp, spaceF);
         }
         // Starship blast-off: chase camera, countdown, fade (overrides the views of froggies aboard)
         foreach (var s in slots) if (s.cam != null && s.cam.enabled) LaunchSeq.View(s.cam, s.hud, frogs[s.frog]);
@@ -1204,6 +1218,7 @@ public partial class Game : MonoBehaviour
             LaunchSeq.View(sharedCam, sharedHud, any);
         }
         AscentViews();
+        TickRumble();
     }
 
     void UpdateShared(float dt)

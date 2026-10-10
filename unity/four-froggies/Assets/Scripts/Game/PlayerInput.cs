@@ -30,6 +30,10 @@ public struct PIn
     // ffu14 mechs: UP (pad RT / Space / touch JUMP) = tap jump, hold rockets; BOOST (pad LT / Shift / touch BOOST) =
     // afterburner; chest cannon on pad X / mouse left / touch FIRE (pad RT is the rocket there, not the gun)
     public bool upHeld, boostHeld, gunFire, gunHeld;
+    // ffu15: mech arm cannon. AIM (pad LT / hold right mouse / touch AIM toggle) = over-the-shoulder aim; missiles
+    // (pad RB or Y / key F / touch MSL); BOOST moved to pad LB. cargo = mech-in-space bay doors (pad B / key B / touch BAY);
+    // warpHome = space: target Earth + auto-transfer (pad L3 / key R / tap the radar)
+    public bool aimHeld, mslFire, cargo, warpHome;
 }
 
 public static class Kb
@@ -87,6 +91,17 @@ public static class Kb
         if (m != null) return m.leftButton.wasPressedThisFrame;
         try { return Input.GetMouseButtonDown(0); } catch { return false; }
     }
+
+    public static bool MouseRight()
+    {
+        Mouse m = Mouse.current;
+        if (m != null) return m.rightButton.isPressed;
+        try { return Input.GetMouseButton(1); } catch { return false; }
+    }
+
+    public static bool BDown() { return Key(k => k.bKey.wasPressedThisFrame, KeyCode.B, true); }
+    public static bool RDown() { return Key(k => k.rKey.wasPressedThisFrame, KeyCode.R, true); }
+    public static bool FKeyDown() { return Key(k => k.fKey.wasPressedThisFrame, KeyCode.F, true); }
 
     public static bool MouseRightDown()
     {
@@ -171,10 +186,15 @@ public static class Pads
         i.zoom = z;
         i.view = p.selectButton.wasPressedThisFrame;
         i.help = p.startButton.wasPressedThisFrame;
-        i.upHeld = i.gas > 0.3f;
-        i.boostHeld = i.brake > 0.4f;
-        i.gunFire = p.buttonWest.wasPressedThisFrame;
-        i.gunHeld = p.buttonWest.isPressed;
+        // ffu15 mech mapping: LT aim (RT fires while aiming), RT jump / rockets otherwise, LB afterburner, X fire, RB / Y missiles
+        i.aimHeld = i.brake > 0.4f;
+        i.upHeld = i.gas > 0.3f && !i.aimHeld;
+        i.boostHeld = p.leftShoulder.isPressed;
+        i.gunFire = p.buttonWest.wasPressedThisFrame || (i.aimHeld && p.rightTrigger.wasPressedThisFrame);
+        i.gunHeld = p.buttonWest.isPressed || (i.aimHeld && i.gas > 0.5f);
+        i.mslFire = p.rightShoulder.wasPressedThisFrame || p.buttonNorth.wasPressedThisFrame;
+        i.cargo = p.buttonEast.wasPressedThisFrame;
+        i.warpHome = p.leftStickButton.wasPressedThisFrame;
         return i;
     }
 
@@ -215,6 +235,12 @@ public static class Pads
         i.boostHeld = Kb.Shift();
         i.gunFire = i.fire;
         i.gunHeld = i.fireHeld;
+        // ffu15: hold right mouse = mech aim (right click is still the tank missile / boat push elsewhere); F = mech missiles
+        i.aimHeld = Kb.MouseRight();
+        if (i.aimHeld && !locked) i.look = md * 0.12f;
+        i.mslFire = Kb.FKeyDown();
+        i.cargo = Kb.BDown();
+        i.warpHome = Kb.RDown();
         return i;
     }
 

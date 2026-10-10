@@ -16,31 +16,32 @@ public class TouchControls : MonoBehaviour
     // ffu14: context buttons. Game sets the labels of A / FIRE / MSL / UP / DOWN for the player's current mode every
     // frame (null = hidden); buttons fade in / out (~0.15 s) and keep their thumb positions. mechMode maps UP / DOWN to
     // jump-rocket / afterburner and FIRE to the chest cannon.
-    public static readonly string[] want = { "A", null, null, null, null };
+    public static readonly string[] want = { "A", null, null, null, null, null };   // ffu15: [5] = 6th context button (AIM in a mech, BAY in a space mech)
     public static bool mechMode;
-    readonly float[] alpha = { 1f, 0f, 0f, 0f, 0f, 1f, 1f, 1f };
+    readonly float[] alpha = { 1f, 0f, 0f, 0f, 0f, 1f, 1f, 1f, 0f };
+    public static bool aimLatched;   // ffu15: touch AIM is a toggle
     public static string ModeKey { get { return string.Join("|", want); } }
     Canvas canvas;
     RectTransform stickBase, stickKnob;
     int stickId = -1, lookId = -1, upId = -1, downId = -1, fireId = -1;
     Vector2 stickOrigin, stickVec, lookAcc, lookLast;
-    bool aQ, fireQ, altQ, resetQ;
+    bool aQ, fireQ, altQ, resetQ, sixQ;
     float zoom, lastLookTap = -10f;
-    const int Count = 8;
+    const int Count = 9;
     readonly Image[] imgs = new Image[Count];
     readonly Text[] labels = new Text[Count];
     public static bool Portrait { get { return Screen.height > Screen.width; } }
 
-    static readonly string[] Names = { "A", "FIRE", "MSL", "UP", "DOWN", "-", "+", "SND" };
-    static readonly string[] SpaceNames = { "TGT", "AUTO", "LAND", "BURN", "BRAKE", "-", "+", "SND" };
+    static readonly string[] Names = { "A", "FIRE", "MSL", "UP", "DOWN", "-", "+", "SND", "AIM" };
+    static readonly string[] SpaceNames = { "TGT", "AUTO", "LAND", "BURN", "BRAKE", "-", "+", "SND", null };
     // anchor 0 = bottom-right, 1 = top-right, 2 = top-left of the safe area; offsets in canvas units
-    static readonly int[] Anchor = { 0, 0, 0, 0, 0, 1, 1, 2 };
-    static readonly Vector2[] PosL = { new Vector2(-120, 150), new Vector2(-270, 90), new Vector2(-280, 220), new Vector2(-75, 300), new Vector2(-175, 300), new Vector2(-150, -92), new Vector2(-70, -92), new Vector2(60, -150) };   // ffu14e: - / + were touching the page toolbar
-    static readonly float[] RadL = { 80, 58, 44, 44, 44, 30, 30, 30 };
+    static readonly int[] Anchor = { 0, 0, 0, 0, 0, 1, 1, 2, 0 };
+    static readonly Vector2[] PosL = { new Vector2(-120, 150), new Vector2(-270, 90), new Vector2(-280, 220), new Vector2(-75, 300), new Vector2(-175, 300), new Vector2(-150, -92), new Vector2(-70, -92), new Vector2(60, -150), new Vector2(-400, 150) };   // ffu14e: - / + were touching the page toolbar
+    static readonly float[] RadL = { 80, 58, 44, 44, 44, 30, 30, 30, 44 };
     // portrait: compact cluster, checked for overlap (A r50 / FIRE r38 / MSL r32 / UP r32 / DOWN r32)
-    static readonly Vector2[] PosP = { new Vector2(-82, 100), new Vector2(-190, 74), new Vector2(-190, 172), new Vector2(-82, 210), new Vector2(-290, 120), new Vector2(-130, -118), new Vector2(-60, -118), new Vector2(55, -150) };
-    static readonly float[] RadP = { 50, 38, 32, 32, 32, 26, 26, 26 };
-    static readonly Color[] Cols = { new Color(0.3f, 0.85f, 0.35f, 0.6f), new Color(1f, 0.35f, 0.25f, 0.6f), new Color(1f, 0.7f, 0.2f, 0.55f), new Color(0.4f, 0.8f, 1f, 0.5f), new Color(0.4f, 0.8f, 1f, 0.5f), new Color(1f, 1f, 1f, 0.35f), new Color(1f, 1f, 1f, 0.35f), new Color(1f, 1f, 1f, 0.3f) };
+    static readonly Vector2[] PosP = { new Vector2(-82, 100), new Vector2(-190, 74), new Vector2(-190, 172), new Vector2(-82, 210), new Vector2(-290, 120), new Vector2(-130, -118), new Vector2(-60, -118), new Vector2(55, -150), new Vector2(-290, 214) };
+    static readonly float[] RadP = { 50, 38, 32, 32, 32, 26, 26, 26, 32 };
+    static readonly Color[] Cols = { new Color(0.3f, 0.85f, 0.35f, 0.6f), new Color(1f, 0.35f, 0.25f, 0.6f), new Color(1f, 0.7f, 0.2f, 0.55f), new Color(0.4f, 0.8f, 1f, 0.5f), new Color(0.4f, 0.8f, 1f, 0.5f), new Color(1f, 1f, 1f, 0.35f), new Color(1f, 1f, 1f, 0.35f), new Color(1f, 1f, 1f, 0.3f), new Color(0.75f, 0.45f, 1f, 0.55f) };
     static readonly Vector2 StickHomeL = new Vector2(170, 170), StickHomeP = new Vector2(112, 118);
 
     Vector2[] Pos { get { return Portrait ? PosP : PosL; } }
@@ -90,7 +91,7 @@ public class TouchControls : MonoBehaviour
             float rad = Rad[i];
             imgs[i].rectTransform.anchoredPosition = ScreenPos(i) / s;
             imgs[i].rectTransform.sizeDelta = Vector2.one * rad * 2f;
-            if (i >= 5) labels[i].fontSize = Mathf.RoundToInt((Names[i].Length > 2 ? 0.42f : 0.62f) * rad * (Names[i].Length > 3 ? 0.85f : 1f));
+            if (i >= 5 && i < 8) labels[i].fontSize = Mathf.RoundToInt((Names[i].Length > 2 ? 0.42f : 0.62f) * rad * (Names[i].Length > 3 ? 0.85f : 1f));
             else if (labels[i].text.Length > 0) { string w = labels[i].text; labels[i].fontSize = Mathf.RoundToInt((w.Length > 2 ? 0.42f : 0.62f) * rad * (w.Length > 4 ? 0.8f : w.Length > 3 ? 0.88f : 1f)); }
             labels[i].rectTransform.sizeDelta = new Vector2(rad * 2.4f, rad);
         }
@@ -106,6 +107,18 @@ public class TouchControls : MonoBehaviour
             imgs[i].rectTransform.localScale = Vector3.one * (0.8f + 0.2f * alpha[i]);
             bool show = alpha[i] > 0.01f;
             if (imgs[i].gameObject.activeSelf != show) imgs[i].gameObject.SetActive(show);
+        }
+        {
+            // ffu15: 6th context button (index 8): AIM toggle (lit while latched) / BAY
+            string w = want[5];
+            if (!mechMode) aimLatched = false;
+            if (w != null && labels[8].text != w) { labels[8].text = w; labels[8].fontSize = Mathf.RoundToInt(0.42f * Rad[8]); }
+            alpha[8] = Mathf.MoveTowards(alpha[8], w != null ? 1f : 0f, dt * 7f);
+            Color c = Cols[8]; if (aimLatched && mechMode) c = new Color(1f, 0.3f, 0.3f, 0.75f); c.a *= alpha[8];
+            imgs[8].color = c;
+            labels[8].color = new Color(1f, 1f, 1f, alpha[8]);
+            bool show = alpha[8] > 0.01f;
+            if (imgs[8].gameObject.activeSelf != show) imgs[8].gameObject.SetActive(show);
         }
         labels[7].text = "SND\n<size=" + Mathf.RoundToInt(Rad[7] * 0.38f) + ">" + Sfx.LevelName + "</size>";
         float sr = StickR;
@@ -134,7 +147,8 @@ public class TouchControls : MonoBehaviour
     {
         stickId = lookId = upId = downId = fireId = -1;
         stickVec = lookAcc = Vector2.zero;
-        aQ = fireQ = altQ = resetQ = false;
+        aQ = fireQ = altQ = resetQ = sixQ = false;
+        aimLatched = false;
         zoom = 0f;
     }
 
@@ -166,6 +180,7 @@ public class TouchControls : MonoBehaviour
                         else if (b == 4) downId = t.fingerId;
                         else if (b == 5 || b == 6) { }
                         else if (b == 7) Sfx.CycleVolume();
+                        else if (b == 8) { sixQ = true; if (mechMode) { aimLatched = !aimLatched; Sfx.Play(Sfx.Click, 0.5f); } }
                         else if (InStickZone(t.position) && stickId < 0) { stickId = t.fingerId; stickOrigin = t.position; stickVec = Vector2.zero; stickSeen = true; }
                         else if (lookId < 0 && !InStickZone(t.position))
                         {
@@ -235,10 +250,12 @@ public class TouchControls : MonoBehaviour
         i.brake = downId >= 0 ? 1f : 0f;
         i.zoom = zoom;
         i.camReset = resetQ;
-        if (mechMode) { i.upHeld = upId >= 0; i.boostHeld = downId >= 0; i.gunFire = fireQ; i.gunHeld = fireId >= 0; i.gas = i.brake = 0f; i.climb = i.upHeld ? 1f : 0f; }
+        i.downHeld = downId >= 0;
+        if (mechMode) { i.upHeld = upId >= 0; i.boostHeld = downId >= 0; i.gunFire = fireQ; i.gunHeld = fireId >= 0; i.gas = i.brake = 0f; i.climb = i.upHeld ? 1f : 0f; i.aimHeld = aimLatched; i.mslFire = altQ; i.downHeld = false; }
+        if (spaceMode) i.cargo = sixQ;
         if (spaceMode) { i.target = aQ; i.auto = fireQ; i.land = altQ; i.hop = i.use = false; }
         if (spaceMode) { i.move.y = Mathf.Max(i.move.y, upId >= 0 ? 1f : 0f); }
-        aQ = fireQ = altQ = resetQ = false;
+        aQ = fireQ = altQ = resetQ = sixQ = false;
         return i;
     }
 }

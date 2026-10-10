@@ -74,6 +74,43 @@ public class UnderwaterWorld : MonoBehaviour
         Sfx.Play(Sfx.SplashBig, 0.9f, 1.2f);
     }
 
+    // ffu15: a scuba froggy swims up through the surface -> floats in the ranch pond above the same spot of the reef
+    // (the reef maps onto the pond 1:1 around its centre); hold DOWN / DIVE there to come back down here
+    public void SurfaceSwim(Frog f)
+    {
+        Vector3 rel = f.transform.position - Worlds.UnderO;
+        Vector2 c = Layout.PondC, r = Layout.PondR;
+        Vector3 spot = Vector3.zero; bool ok = false;
+        for (int k = 0; k < 12 && !ok; k++)
+        {
+            float shrink = 1f - k * 0.08f;
+            float x = c.x + Mathf.Clamp(rel.x, -r.x * 0.8f, r.x * 0.8f) * shrink, z = c.y + Mathf.Clamp(rel.z, -r.y * 0.8f, r.y * 0.8f) * shrink;
+            float surf, depth;
+            if (Water.At(x, z, out surf, out depth) && depth > 1.6f) { spot = new Vector3(x, Layout.WaterY - 0.6f, z); ok = true; }
+        }
+        if (!ok) spot = DockSpot + new Vector3(6f, Layout.WaterY - 0.6f - DockSpot.y, (f.id - 1.5f) * 1.6f);
+        f.SendTo(WorldId.Ranch, spot, f.transform.eulerAngles.y);
+        FX.Splash(spot + Vector3.up * 0.6f, 18);
+        Sfx.Play(Sfx.SplashBig, 0.8f, 1.2f);
+        f.Toast("Surfaced in the pond!  Hold " + (f.inputKind == InputKind.Gamepad ? "B" : f.inputKind == InputKind.Touch ? "DIVE" : "SHIFT") + " to dive back down, or swim to shore", 4f);
+        Debug.Log("Scuba: " + f.nick + " surfaced in the pond at (" + spot.x.ToString("0") + ", " + spot.z.ToString("0") + ")");
+    }
+
+    public void DiveFromPond(Frog f)
+    {
+        if (!built) Build();
+        Vector2 c = Layout.PondC;
+        Vector3 p = f.transform.position;
+        float x = Mathf.Clamp(p.x - c.x, -85f, 85f), z = Mathf.Clamp(p.z - c.y, -85f, 85f);
+        float y = Mathf.Max(SeaY(x, z) + 3f, -6f);
+        f.SendTo(WorldId.Underwater, Worlds.UnderO + new Vector3(x, Mathf.Min(y, -2.2f), z), f.transform.eulerAngles.y);
+        if (roundStart < 0f) roundStart = Time.time;
+        FX.Splash(p + Vector3.up * 0.5f, 16);
+        Sfx.Play(Sfx.SplashBig, 0.8f, 0.9f);
+        f.Toast("Dive! Back down to the reef - swim up to the top to surface again", 3f);
+        Debug.Log("Scuba: " + f.nick + " dived from the pond");
+    }
+
     void OnPearl(Frog f)
     {
         int left = Pickups.Remaining(Group), total = Pickups.Total(Group);

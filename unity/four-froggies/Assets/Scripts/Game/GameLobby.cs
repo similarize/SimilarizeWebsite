@@ -14,6 +14,7 @@ public partial class Game
     Canvas lobbyCanvas, fadeCanvas;
     RectTransform lobbyRoot;
     CanvasGroup lobbyGroup;
+    ModernButton playB, hostB, joinB;
     Image lobbyBg, lobbyRule, fader, viewBar, playBtn, soundBtn, creditsBtn, creditsPanel, hostBtn, joinBtn, nameBtn;
     Text lobbyTitle, lobbyKicker, lobbySub, lobbyHelp, lobbyStatus, soundText, viewText, hostText, joinBtnText, nameText, netText, playText;
     readonly Image[] cards = new Image[4], cardInner = new Image[4], cardChip = new Image[4];
@@ -98,15 +99,13 @@ public partial class Game
             Object.Destroy(tileBadgeText[c].GetComponent<Outline>());
         }
 
-        playBtn = UIK.Panel(r, new Color(0.22f, 0.7f, 0.28f, 0.95f), Vector2.zero, new Vector2(300, 62));
-        playText = UIK.Label(playBtn.transform, "PLAY", 34, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, Color.white);
-        UIK.Stretch(playText.rectTransform);
-        hostBtn = UIK.Panel(r, new Color(0.15f, 0.42f, 0.75f, 0.95f), Vector2.zero, new Vector2(240, 62));
-        hostText = UIK.Label(hostBtn.transform, "", 26, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, Color.white);
-        UIK.Stretch(hostText.rectTransform);
-        joinBtn = UIK.Panel(r, new Color(0.5f, 0.3f, 0.75f, 0.95f), Vector2.zero, new Vector2(240, 62));
-        joinBtnText = UIK.Label(joinBtn.transform, "", 26, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, Color.white);
-        UIK.Stretch(joinBtnText.rectTransform);
+        // ffu15: modern pill buttons (gradient, glow, shadow, icon, key badges, hover / press / focus) - see ModernButton
+        playB = new ModernButton(r, "PLAY", 0, new Color(0.18f, 0.72f, 0.32f, 1f));
+        playBtn = playB.root; playText = playB.label;
+        hostB = new ModernButton(r, "HOST", 1, new Color(0.2f, 0.48f, 0.92f, 1f));
+        hostBtn = hostB.root; hostText = hostB.label;
+        joinB = new ModernButton(r, "JOIN", 2, new Color(0.56f, 0.34f, 0.92f, 1f));
+        joinBtn = joinB.root; joinBtnText = joinB.label;
         nameBtn = UIK.Panel(r, new Color(1f, 1f, 1f, 0.1f), Vector2.zero, new Vector2(320, 42));
         nameText = UIK.Label(nameBtn.transform, "", 20, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, Color.white);
         UIK.Stretch(nameText.rectTransform); nameText.supportRichText = true;
@@ -182,13 +181,13 @@ public partial class Game
             put(lobbyRule, 0, 578, 260, 3);
             PlaceCards(new[] { new Vector2(-176, 398), new Vector2(176, 398), new Vector2(-176, 66), new Vector2(176, 66) }, new Vector2(336, 320), 30);
             for (int c = 0; c < Roster.Count; c++) put(tiles[c], -270 + (c % 5) * 135, -180 - (c / 5) * 135, 126, 126);
-            put(hostBtn, -244, -462, 210, 84);
-            put(playBtn, 0, -462, 250, 84);
-            put(joinBtn, 244, -462, 210, 84);
+            put(hostBtn, -250, -462, 224, 96);
+            put(playBtn, 0, -462, 252, 96);
+            put(joinBtn, 250, -462, 224, 96);
             put(netText, 0, -548, 700, 70); netText.fontSize = 24;
             put(lobbyStatus, 0, -604, 700, 50); lobbyStatus.fontSize = 21;
             put(lobbyHelp, 0, -730, 690, 80); lobbyHelp.fontSize = 17;
-            playText.fontSize = 38;
+
         }
         else
         {
@@ -198,12 +197,12 @@ public partial class Game
             put(lobbyRule, 0, 229, 320, 3);
             PlaceCards(new[] { new Vector2(-441, 74), new Vector2(-147, 74), new Vector2(147, 74), new Vector2(441, 74) }, new Vector2(278, 290), 28);
             for (int c = 0; c < Roster.Count; c++) put(tiles[c], -495 + c * 110, -132, 102, 102);
-            put(hostBtn, -320, -226, 230, 60);
-            put(playBtn, 0, -226, 290, 60);
-            put(joinBtn, 320, -226, 230, 60);
+            put(hostBtn, -330, -228, 270, 70);
+            put(playBtn, 0, -228, 330, 70);
+            put(joinBtn, 330, -228, 270, 70);
             put(lobbyStatus, 0, -322, 1150, 28); lobbyStatus.fontSize = 19;
             put(lobbyHelp, 0, -350, 1200, 24); lobbyHelp.fontSize = 14;
-            playText.fontSize = 34;
+
         }
         lastNetRow = -1;
     }
@@ -389,18 +388,22 @@ public partial class Game
         bool viewOn = !touchOnly && !online;
         viewBar.gameObject.SetActive(viewOn);
         LayoutNetRow(viewOn, online);
-        string hk = touchOnly ? "" : "\n<size=14>" + (online ? "X / L" : "X / H") + "</size>";
-        hostText.text = (online ? (net.IsHost ? "CLOSE ROOM" : "LEAVE") : "HOST") + hk;
-        hostBtn.color = online ? new Color(0.62f, 0.26f, 0.2f, 0.95f) : new Color(0.15f, 0.42f, 0.75f, 0.95f);
-        joinBtnText.text = "JOIN" + (touchOnly ? "" : "\n<size=14>Y / J</size>");
-        hostText.supportRichText = joinBtnText.supportRichText = true;
-        hostText.lineSpacing = joinBtnText.lineSpacing = 0.85f;
+        hostText.text = online ? (net.IsHost ? "CLOSE ROOM" : "LEAVE") : "HOST";
+        hostB.SetBadge(touchOnly ? "" : online ? "X · L" : "X · H");
+        hostB.SetTint(online ? new Color(0.85f, 0.32f, 0.26f, 1f) : new Color(0.2f, 0.48f, 0.92f, 1f));
+        joinBtnText.text = "JOIN";
+        joinB.SetBadge(touchOnly ? "" : "Y · J");
         joinBtn.gameObject.SetActive(!online);
         bool waitHost = online && net.IsGuest;
         playText.text = waitHost ? "WAITING FOR HOST" : "PLAY";
-        playText.fontSize = waitHost ? 21 : (lobbyLayout == 1 ? 38 : 34);
-        float pulse = waitHost || slots.Count == 0 ? 0f : 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 4f);
-        playBtn.color = waitHost ? new Color(0.25f, 0.35f, 0.28f, 0.9f) : Color.Lerp(new Color(0.2f, 0.66f, 0.26f, 0.95f), new Color(0.3f, 0.82f, 0.34f, 1f), pulse);
+        playB.SetBadge(touchOnly || waitHost ? "" : "A · ENTER");
+        playB.SetTint(waitHost ? new Color(0.25f, 0.35f, 0.28f, 0.95f) : new Color(0.18f, 0.72f, 0.32f, 1f));
+        // gamepad focus: PLAY is the default action once someone has joined; X / Y held highlight HOST / JOIN
+        bool xHeld = false, yHeld = false;
+        foreach (var gp in UnityEngine.InputSystem.Gamepad.all) if (gp != null && gp.added) { xHeld |= gp.buttonWest.isPressed; yHeld |= gp.buttonNorth.isPressed; }
+        playB.focus = slots.Count > 0 && !waitHost; hostB.focus = xHeld; joinB.focus = yHeld;
+        bool mouseOk = !touchOnly && Kb.TouchCount() == 0;
+        playB.Tick(mouseOk); hostB.Tick(mouseOk); joinB.Tick(mouseOk);
         Slot me = slots.Count > 0 ? slots[0] : null;
         nameText.text = "NAME  <color=#ffe680>" + (me != null ? (me.name.Length > 0 ? me.name : Roster.Name(charOf[me.frog])) : "-") + "</color>  <size=13>" + (touchOnly ? "tap to change" : "RB / N / click") + "</size>";
 

@@ -1018,7 +1018,7 @@ public class RobotPhone : MonoBehaviour
     Image panel, btn;
     readonly List<Image> rows = new List<Image>(), cmdBtns = new List<Image>();
     readonly List<Text> rowNames = new List<Text>(), rowStats = new List<Text>();
-    Text msg, hint;
+    Text msg, hint, btnKey;
     Camera pov;
     float stickCool;
     const float PW = 430f, PH = 650f;
@@ -1058,9 +1058,17 @@ public class RobotPhone : MonoBehaviour
             cmdBtns.Add(b);
         }
         msg = UIK.Label(p, "Pick a robot, then order it.", 15, TextAnchor.MiddleCenter, new Vector2(0.5f, 0f), new Vector2(0f, 42f), new Vector2(PW - 20f, 26f), new Color(1f, 0.95f, 0.6f));
-        hint = UIK.Label(p, "Up/Down robot   Left/Right order   A / E / Enter send   LB / P close", 13, TextAnchor.MiddleCenter, new Vector2(0.5f, 0f), new Vector2(0f, 16f), new Vector2(PW - 16f, 22f), new Color(0.75f, 0.8f, 0.85f));
-        btn = UIK.Img(r, null, new Color(0.1f, 0.12f, 0.15f, 0.75f), new Vector2(0f, 1f), new Vector2(150f, -150f), new Vector2(110f, 44f));
-        UIK.Label(btn.transform, "PHONE", 20, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(110f, 42f), Color.white);
+        hint = UIK.Label(p, "Up/Down robot   Left/Right order   A / E / Enter / click send   LB / P close", 13, TextAnchor.MiddleCenter, new Vector2(0.5f, 0f), new Vector2(0f, 16f), new Vector2(PW - 16f, 22f), new Color(0.75f, 0.8f, 0.85f));
+        // ffu15: the PHONE button shows on every device now (it was touch-only, so desktop players never saw the phone),
+        // with the key for the player's device as a badge: P (keyboard), LB (gamepad); click / tap it too
+        btn = UIK.Panel(r, new Color(0.08f, 0.1f, 0.13f, 0.82f), new Vector2(0f, 0f), new Vector2(150f, 46f));
+        btn.rectTransform.anchorMin = btn.rectTransform.anchorMax = new Vector2(0f, 1f);
+        btn.rectTransform.anchoredPosition = new Vector2(98f, -76f);
+        UIK.Label(btn.transform, "PHONE", 19, TextAnchor.MiddleLeft, new Vector2(0f, 0.5f), new Vector2(62f, 0f), new Vector2(110f, 40f), new Color(0.6f, 1f, 0.55f));
+        var badge = UIK.Panel(btn.transform, new Color(1f, 1f, 1f, 0.16f), new Vector2(0f, 0f), new Vector2(40f, 26f));
+        badge.rectTransform.anchorMin = badge.rectTransform.anchorMax = new Vector2(1f, 0.5f);
+        badge.rectTransform.anchoredPosition = new Vector2(-26f, 0f);
+        btnKey = UIK.Label(badge.transform, "P", 15, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(40f, 26f), new Color(1f, 0.92f, 0.55f));
         panel.gameObject.SetActive(false);
         btn.gameObject.SetActive(false);
         var cg = new GameObject("Phone POV");
@@ -1128,11 +1136,44 @@ public class RobotPhone : MonoBehaviour
         Sfx.Play(Sfx.Pickup, 0.5f, 1.3f);
     }
 
+    // the slot the on-screen button / mouse belongs to: touch first, then keyboard, then the first gamepad
+    Slot BtnSlot()
+    {
+        if (Game.I == null) return null;
+        Slot best = null;
+        foreach (var s in Game.I.slots) { if (s.kind == InputKind.Touch) return s; if (s.kind == InputKind.Keyboard && (best == null || best.kind != InputKind.Keyboard)) best = s; else if (best == null) best = s; }
+        return best;
+    }
+
+    // a mouse click here belongs to the phone (Game then leaves the cursor free)
+    public bool Captures(Vector2 mp)
+    {
+        if (btn.gameObject.activeInHierarchy && RectTransformUtility.RectangleContainsScreenPoint(btn.rectTransform, mp, null)) return true;
+        return open && RectTransformUtility.RectangleContainsScreenPoint(panel.rectTransform, mp, null);
+    }
+
     void Update()
     {
-        bool showBtn = Game.I != null && Game.I.state == Game.State.Play && Application.isMobilePlatform;
-        if (showBtn) foreach (var s in Game.I.slots) if (s.kind == InputKind.Touch) { Frog f = Game.I.frogs[s.frog]; showBtn = f.world == WorldId.Ranch && f.vehicle == null; }
-        btn.gameObject.SetActive(showBtn);
+        Slot bs = BtnSlot();
+        Frog bf = bs != null ? Game.I.frogs[bs.frog] : null;
+        bool showBtn = Game.I != null && Game.I.state == Game.State.Play && bf != null && bf.world == WorldId.Ranch && (bf.vehicle == null || bf.remote != null) && !Game.I.HelpOpen;
+        if (btn.gameObject.activeSelf != showBtn) btn.gameObject.SetActive(showBtn);
+        if (showBtn) { string k = bs.kind == InputKind.Gamepad ? "LB" : bs.kind == InputKind.Touch ? "TAP" : "P"; if (btnKey.text != k) btnKey.text = k; }
+        // desktop: mouse clicks on the button, the robot rows and the order buttons (cursor free while the phone is open)
+        if (showBtn && bs.kind != InputKind.Touch && UnityEngine.InputSystem.Mouse.current != null)
+        {
+            if (open && user == bf && bs.kind == InputKind.Keyboard && Cursor.lockState == CursorLockMode.Locked) Cursor.lockState = CursorLockMode.None;
+            if (Kb.MouseLeftDown() && Cursor.lockState != CursorLockMode.Locked)
+            {
+                Vector2 mp = UnityEngine.InputSystem.Mouse.current.position.ReadValue();
+                if (RectTransformUtility.RectangleContainsScreenPoint(btn.rectTransform, mp, null)) Toggle(bf);
+                else if (open)
+                {
+                    for (int i = 0; i < rows.Count; i++) if (RectTransformUtility.RectangleContainsScreenPoint(rows[i].rectTransform, mp, null)) { sel = i; Sfx.Play(Sfx.Click, 0.4f); }
+                    for (int i = 0; i < cmdBtns.Count; i++) if (RectTransformUtility.RectangleContainsScreenPoint(cmdBtns[i].rectTransform, mp, null)) { cmdSel = i; if (user != null) Send(user); }
+                }
+            }
+        }
         if (showBtn)
             foreach (Vector2 tp in Kb.TouchesBegan())
             {

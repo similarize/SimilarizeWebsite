@@ -44,14 +44,31 @@ public class StoryMech : Vehicle
     Light jetLight;
     AudioSource jetLoop;
 
+    // ffu15: control hints per device (the pilot's slot), keys shown as badges
+    static string K(string k) { return "<color=#ffe680>" + k + "</color>"; }
     public override string HelpLine
     {
         get
         {
-            return "L-stick walk | UP tap jump, hold ROCKETS | BOOST afterburner | FIRE chest cannon | MSL chest missiles | A climb out";
+            InputKind ik = driver != null ? driver.inputKind : InputKind.Keyboard;
+            string top = aimK > 0.5f ? "<color=#ff8a7a>AIMING</color>  " : "";
+            if (ik == InputKind.Gamepad)
+                return top + K("RT") + " tap jump / hold ROCKETS  ·  " + K("LB") + " afterburner  ·  " + K("LT") + " hold AIM (" + K("RT") + " fires)  ·  " + K("X") + " fire  ·  " + K("RB") + "/" + K("Y") + " missiles  ·  " + K("A") + " climb out";
+            if (ik == InputKind.Touch)
+                return top + K("JUMP") + " tap jump / hold ROCKETS  ·  " + K("BOOST") + " afterburner  ·  " + K("AIM") + " aim mode  ·  " + K("FIRE") + " cannon  ·  " + K("MSL") + " missiles";
+            return top + K("WASD") + " walk  ·  " + K("SPACE") + " tap jump / hold ROCKETS  ·  " + K("SHIFT") + " afterburner  ·  " + K("RMB") + " hold AIM  ·  " + K("LMB") + " fire  ·  " + K("F") + " missiles  ·  " + K("E") + " climb out";
         }
     }
     public override string[] TouchSet { get { return new[] { "A", "FIRE", "MSL", "JUMP", "BOOST" }; } }
+
+    // ffu15 arm cannon + aim mode
+    public float aimK, recoilK;
+    public Vector3 aimPoint;          // set every frame by the pilot's CamRig while aiming (camera-centre ray)
+    public bool aimPointValid, aimOnTarget;
+    Transform muzzle;
+    Light muzzleLight;
+    float raiseK, armLen, muzzleFlashT;
+    Vector3 lastShotDir = Vector3.forward;
 
     public override bool CanEnter(Frog f) { return !wrecked && (f.IsPet || f.charId == owner); }
     public override string DeniedLine
@@ -164,10 +181,20 @@ public class StoryMech : Vehicle
         var tag = new GameObject("Plate");
         tag.transform.SetParent(m.torso, false);
         tag.transform.localPosition = packed ? new Vector3(0f, H * 0.115f, H * 0.088f) : new Vector3(0f, H * 0.12f, H * 0.115f);
+        // ffu15: a TextMesh reads correctly when seen looking along its +z, so the chest plate (on the +z front) is turned
+        // 180 deg to face outwards; it was mirrored from the front and only read right from "inside" the mech
+        tag.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
         var tm = tag.AddComponent<TextMesh>();
         tm.text = Froggies.Names[owner].ToUpper() + "\n" + BandName[band].ToUpper();
         tm.font = UIK.Font; tm.fontSize = 64; tm.characterSize = H * 0.004f; tm.anchor = TextAnchor.MiddleCenter; tm.alignment = TextAlignment.Center;
         tag.GetComponent<MeshRenderer>().sharedMaterial = UIK.Font != null ? UIK.Font.material : null;
+        // and a matching plate on the back (reads correctly from behind)
+        var back = Object.Instantiate(tag, m.torso);
+        back.name = "PlateBack";
+        back.transform.localPosition = new Vector3(0f, (packed ? H * 0.2f : H * 0.24f), packed ? -H * 0.135f : -H * 0.115f);
+        back.transform.localRotation = Quaternion.identity;
+        back.GetComponent<TextMesh>().characterSize = H * 0.003f;
+        m.BuildCannon(packed);
         m.BuildJets(packed);
         m.BuildShieldAndBar();
         m.rends = go.GetComponentsInChildren<Renderer>(true);
@@ -175,6 +202,45 @@ public class StoryMech : Vehicle
         AllMechs.Add(m);
         return m;
     }
+
+    // ---------- ffu15 arm cannon: the right forearm IS the cannon (barrel past the fist, glowing muzzle, missile pod) ----------
+    static float LimbLength(Transform limb)
+    {
+        float minY = 0f;
+        foreach (var mf in limb.GetComponentsInChildren<MeshFilter>())
+        {
+            if (mf.sharedMesh == null) continue;
+            Bounds b = mf.sharedMesh.bounds;
+            for (int i = 0; i < 8; i++)
+            {
+                Vector3 c = b.center + Vector3.Scale(b.extents, new Vector3((i & 1) == 0 ? -1 : 1, (i & 2) == 0 ? -1 : 1, (i & 4) == 0 ? -1 : 1));
+                minY = Mathf.Min(minY, limb.InverseTransformPoint(mf.transform.TransformPoint(c)).y);
+            }
+        }
+        return -minY;
+    }
+
+    void BuildCannon(bool packed)
+    {
+        float H = height;
+        armLen = Mathf.Clamp(LimbLength(armR), H * 0.18f, H * 0.42f);
+        Material gun = Mats.Steel(new Color(0.22f, 0.23f, 0.26f)), dark = Mats.Lit(new Color(0.1f, 0.1f, 0.12f));
+        Material glowM = Mats.Unlit(Color.Lerp(Froggies.Color(owner), new Color(0.6f, 0.95f, 1f), 0.6f));
+        var bar = Mats.Prim(PrimitiveType.Cylinder, armR, new Vector3(0f, -armLen - 0.035f * H, 0.005f * H), new Vector3(0.05f * H, 0.07f * H, 0.05f * H), gun);
+        bar.name = "CannonBarrel";
+        Mats.Prim(PrimitiveType.Cylinder, armR, new Vector3(0f, -armLen * 0.78f, 0.005f * H), new Vector3(0.075f * H, 0.05f * H, 0.075f * H), dark);   // forearm sleeve
+        var ring = Mats.Prim(PrimitiveType.Cylinder, armR, new Vector3(0f, -armLen - 0.1f * H, 0.005f * H), new Vector3(0.055f * H, 0.006f * H, 0.055f * H), glowM);
+        ring.name = "MuzzleGlow";
+        var pod = Mats.Prim(PrimitiveType.Cube, armR, new Vector3(0.055f * H, -armLen * 0.7f, 0f), new Vector3(0.035f * H, 0.12f * H, 0.06f * H), gun);
+        pod.name = "MissilePod";
+        for (int k = 0; k < 2; k++) Mats.Prim(PrimitiveType.Cylinder, armR, new Vector3(0.055f * H, -armLen * 0.7f - 0.061f * H, (k - 0.5f) * 0.025f * H), new Vector3(0.016f * H, 0.003f * H, 0.016f * H), Mats.Unlit(new Color(1f, 0.55f, 0.15f)));
+        foreach (var r in armR.GetComponentsInChildren<Renderer>()) if (band < 2) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        muzzle = Mats.Node(armR, "Muzzle", new Vector3(0f, -armLen - 0.115f * H, 0.005f * H));
+        var lg = new GameObject("MuzzleLight"); lg.transform.SetParent(muzzle, false);
+        muzzleLight = lg.AddComponent<Light>();
+        muzzleLight.type = LightType.Point; muzzleLight.color = new Color(0.6f, 0.9f, 1f); muzzleLight.range = H * 0.9f + 6f; muzzleLight.intensity = 0f; muzzleLight.shadows = LightShadows.None; muzzleLight.enabled = false;
+    }
+    public Vector3 MuzzlePoint { get { return muzzle != null ? muzzle.position : ChestPoint; } }
 
     // ---------- back rockets: two nozzles on the back pack, flame cones (outer orange, inner white-yellow core) ----------
     void BuildJets(bool packed)
@@ -403,8 +469,22 @@ public class StoryMech : Vehicle
         float acc = (Mathf.Abs(wantSp) > Mathf.Abs(speed) ? 2.2f : 3.2f) * maxSp;
         speed = Mathf.MoveTowards(speed, wantSp, acc * dt);
         float turnRate = (95f - band * 12f) * (grounded ? 1f : 0.8f);
-        turnVel = Mathf.MoveTowards(turnVel, on ? inp.move.x * turnRate : 0f, turnRate * 6f * dt);
-        yaw += turnVel * dt;
+        // ffu15 aim mode: the body squares up to the camera (the aim), the stick strafes instead of turning
+        bool aiming = on && inp.aimHeld && !driver.netPuppet;
+        aimK = Mathf.MoveTowards(aimK, aiming ? 1f : 0f, dt * 5f);
+        if (!aiming) aimPointValid = false;
+        float strafe = 0f;
+        if (aimK > 0.3f)
+        {
+            turnVel = 0f;
+            yaw = Mathf.MoveTowardsAngle(yaw, camYawIn, 260f * dt);
+            strafe = inp.move.x * maxSp * 0.6f;
+        }
+        else
+        {
+            turnVel = Mathf.MoveTowards(turnVel, on ? inp.move.x * turnRate : 0f, turnRate * 6f * dt);
+            yaw += turnVel * dt;
+        }
         Vector3 fwd = Quaternion.Euler(0f, yaw, 0f) * Vector3.forward;
 
         // jump (tap UP on the ground) / rockets (hold UP) / afterburner (BOOST)
@@ -419,8 +499,9 @@ public class StoryMech : Vehicle
             for (int i = 0; i < 8 + band * 4; i++) FX.Dust(pos + Random.insideUnitSphere * H * 0.2f, 1f);
         }
         rocketing = !grounded && up && (upHeldT > 0.18f || vy < 0f);
-        float climbMax = (18f + H * 0.25f) * (1f + boostK) * (1f + Mathf.Max(0f, Altitude - 300f) / 400f) * DemoClimb;
-        if (rocketing) vy = Mathf.MoveTowards(vy, climbMax, g * 2.2f * dt);
+        // ffu15: faster climb so every mech (10-story to trillion-story) reaches space in ~15-25 s of holding UP
+        float climbMax = (24f + H * 0.25f) * (1f + boostK) * (1f + Mathf.Max(0f, Altitude - 200f) / 180f) * DemoClimb;
+        if (rocketing) vy = Mathf.MoveTowards(vy, climbMax, Mathf.Max(g * 2.2f, climbMax * 0.8f) * dt);
         else if (!grounded)
         {
             vy -= g * dt;
@@ -429,7 +510,7 @@ public class StoryMech : Vehicle
         }
         flameK = Mathf.MoveTowards(flameK, rocketing ? 1f + boostK : (boost && !grounded ? 0.6f + boostK * 0.4f : boost ? 0.35f * boostK : 0f), dt * 6f);
 
-        Vector3 p = pos + fwd * speed * dt;
+        Vector3 p = pos + fwd * speed * dt + Quaternion.Euler(0f, yaw, 0f) * Vector3.right * strafe * dt;
         p.y += vy * dt;
         p.x = Mathf.Clamp(p.x, -Layout.Half + H * 0.2f, Layout.Half - H * 0.2f);
         p.z = Mathf.Clamp(p.z, -Layout.Half + H * 0.2f, Layout.Half - H * 0.2f);
@@ -459,6 +540,7 @@ public class StoryMech : Vehicle
         transform.rotation = Quaternion.Euler(0f, yaw, 0f);
 
         Animate(dt, maxSp);
+        ArmAim(dt);
         Jets(dt);
         Weapons(dt, on, fwd);
         if (on && Altitude >= SpaceAlt && SpaceWorld.I != null) ReachSpace();
@@ -571,68 +653,192 @@ public class StoryMech : Vehicle
         return best;
     }
 
+    // ffu15: raise the cannon arm at the reticle (aim mode) or briefly towards each shot; recoil kicks it up
+    void ArmAim(float dt)
+    {
+        recoilK = Mathf.MoveTowards(recoilK, 0f, dt * 4.5f);
+        raiseK = Mathf.MoveTowards(raiseK, 0f, dt * 1.6f);
+        muzzleFlashT -= dt;
+        if (muzzleLight != null) { bool lit = muzzleFlashT > 0f && !Look.Mobile; if (muzzleLight.enabled != lit) muzzleLight.enabled = lit; if (lit) muzzleLight.intensity = muzzleFlashT * 40f; }
+        float k = Mathf.Max(aimK, Mathf.Clamp01(raiseK * 1.6f));
+        if (k <= 0.001f || armR == null) return;
+        Vector3 dir;
+        if (aimK > 0.05f)
+        {
+            Vector3 at = aimPointValid ? aimPoint : armR.position + Quaternion.Euler(0f, camYawIn, 0f) * Vector3.forward * 200f;
+            dir = (at - armR.position).normalized;
+        }
+        else dir = lastShotDir;
+        // never point back into the body
+        Vector3 f = transform.forward;
+        if (Vector3.Dot(dir, f) < 0.15f) dir = (dir + f * (0.15f - Vector3.Dot(dir, f)) * 1.2f).normalized;
+        Quaternion want = Quaternion.LookRotation(dir, transform.up) * Quaternion.Euler(-90f - recoilK * 30f, 0f, 0f);
+        armR.rotation = Quaternion.Slerp(armR.rotation, want, k);
+        if (recoilK > 0.01f) torso.localRotation *= Quaternion.Euler(-recoilK * 5f, recoilK * 3f, 0f);
+        if (aimK > 0.05f && armL != null) armL.localRotation = Quaternion.Slerp(armL.localRotation, Quaternion.Euler(-35f, 0f, -12f), aimK);   // brace arm
+    }
+
+    void Recoil(float power, bool missile)
+    {
+        recoilK = 1f; raiseK = 1f; muzzleFlashT = 0.12f;
+        Vector3 mp = MuzzlePoint;
+        FX.Muzzle(mp, lastShotDir);
+        FX.Sparkle(mp, missile ? new Color(1f, 0.6f, 0.2f) : new Color(0.6f, 0.95f, 1f), 6);
+        for (int i = 0; i < 3; i++) FX.Smoke(mp - lastShotDir * height * 0.02f * i, height * 0.02f + 0.6f, new Color(0.85f, 0.85f, 0.9f, 0.35f));
+        float pitch = Mathf.Lerp(1.15f, 0.6f, band / 3f);
+        if (driver != null && driver.human && !driver.netPuppet)
+        {
+            Sfx.Play(missile ? Sfx.Missile : Sfx.Shell, 0.95f, pitch * Random.Range(0.95f, 1.05f));
+            Sfx.Play(Sfx.Boom, missile ? 0.35f : 0.28f, 1.7f * pitch);          // the punch
+            if (Game.I != null) Game.I.PilotKick(driver, power, missile);
+        }
+        else Sfx.PlayAt(missile ? Sfx.Missile : Sfx.Shell, mp, 0.8f, 150f + height * 2f, pitch);
+    }
+
     void Weapons(float dt, bool on, Vector3 fwd)
     {
         fireCool -= dt; missileCool -= dt;
         if (!on || driver.netPuppet) return;
         float H = height;
         Vector3 aimDir = Quaternion.Euler(0f, camYawIn, 0f) * Vector3.forward;
-        Vector3 from = ChestPoint;
+        Vector3 from = MuzzlePoint;
+        bool precise = aimK > 0.5f && aimPointValid;
         if ((inp.gunFire || inp.gunHeld) && fireCool <= 0f)
         {
             fireCool = 0.32f;
-            Vehicle t = AimTarget(from, aimDir, 22f);
             Vector3 dir;
-            if (t != null) dir = (t.body.bounds.center - from).normalized;
+            if (precise)
+            {
+                dir = (aimPoint - from).normalized;
+                Vehicle t = AimTarget(from, dir, 3.5f);                  // tiny assist only
+                if (t != null) dir = (t.body.bounds.center - from).normalized;
+            }
             else
             {
-                // no target: aim at the ground ~3 heights ahead so shots land where the kid is looking
-                Vector3 aimAt = transform.position + aimDir * (H * 3f + 15f);
-                aimAt.y = Ranch.GY(aimAt.x, aimAt.z) + 1f;
-                if (Altitude > H) aimAt = from + aimDir * 60f + Vector3.down * 20f;
-                dir = (aimAt - from).normalized;
+                Vehicle t = AimTarget(from, aimDir, 22f);
+                if (t != null) dir = (t.body.bounds.center - from).normalized;
+                else
+                {
+                    // no target: aim at the ground ~3 heights ahead so shots land where the kid is looking
+                    Vector3 aimAt = transform.position + aimDir * (H * 3f + 15f);
+                    aimAt.y = Ranch.GY(aimAt.x, aimAt.z) + 1f;
+                    if (Altitude > H) aimAt = from + aimDir * 60f + Vector3.down * 20f;
+                    dir = (aimAt - from).normalized;
+                }
             }
+            lastShotDir = dir;
             Vector3 vel = dir * (90f + H * 0.4f);
-            MechShot.Spawn(this, 1, from + dir * H * 0.05f, vel, null);
-            if (Net.I != null && Net.I.Online) Net.I.SendFire(this, 1, from + dir * H * 0.05f, vel);
+            MechShot.Spawn(this, 1, from + dir * H * 0.02f, vel, null);
+            if (Net.I != null && Net.I.Online) Net.I.SendFire(this, 1, from + dir * H * 0.02f, vel);
+            Recoil(0.55f + band * 0.12f, false);
         }
-        if (inp.alt && missileCool <= 0f)
+        if (inp.mslFire && missileCool <= 0f)
         {
             missileCool = 1.4f;
-            Vehicle t = AimTarget(from, aimDir, 40f);
-            for (int s = -1; s <= 1; s += 2)
+            Vector3 baseDir = precise ? (aimPoint - from).normalized : aimDir;
+            Vehicle t = AimTarget(from, baseDir, precise ? 12f : 40f);
+            Vector3 podP = muzzle != null ? armR.TransformPoint(new Vector3(0.055f * H, -armLen * 0.7f - 0.07f * H, 0f)) : from;
+            for (int s2 = -1; s2 <= 1; s2 += 2)
             {
-                Vector3 side = torso.right * s * H * 0.06f;
-                Vector3 dir = (aimDir * 2f + Vector3.up * 0.35f + torso.right * s * 0.25f).normalized;
+                Vector3 side = armR.forward * s2 * H * 0.015f;
+                Vector3 dir = precise ? (baseDir * 3f + Vector3.up * 0.12f + transform.right * s2 * 0.1f).normalized : (aimDir * 2f + Vector3.up * 0.35f + transform.right * s2 * 0.25f).normalized;
                 Vector3 vel = dir * (35f + H * 0.2f);
-                MechShot.Spawn(this, 2, from + side, vel, t);
-                if (Net.I != null && Net.I.Online) Net.I.SendFire(this, 2, from + side, vel);
+                MechShot.Spawn(this, 2, podP + side, vel, t);
+                if (Net.I != null && Net.I.Online) Net.I.SendFire(this, 2, podP + side, vel);
             }
+            lastShotDir = baseDir;
+            Recoil(0.9f + band * 0.15f, true);
         }
     }
 
     // ---------------- space ----------------
+    // ffu15: the MECH itself flies into space (it no longer swaps the pilot into the Starship). In space the shared flight
+    // model (Starship class: orbit / free flight / auto-transfer / warp / targets / landing) carries a space-scale copy of
+    // this mech in a Superman pose, back rockets as main engines. Shared screen: the other froggies ride on its shoulders
+    // in spacesuits and can jetpack out of the cargo bay. Split-screen: only the pilot goes.
+    public void GoToSpace() { ReachSpace(); }
     void ReachSpace()
     {
         Frog pilot = driver;
-        if (pilot == null) return;
+        if (pilot == null || SpaceWorld.I == null) return;
         bool takeAll = Game.I != null && Game.I.SharedScreen;
         string who = pilot.nick;
-        pilot.SendTo(WorldId.Ranch, pilot.transform.position, 0f);   // out of the mech first
-        SpaceWorld.I.Launch(pilot);
-        pilot.Toast("Your mech broke into SPACE! The Starship docked and picked you up.", 4.5f);
+        pilot.SendTo(WorldId.Ranch, pilot.transform.position, 0f);   // out of the ranch mech first
+        SpaceWorld.I.LaunchMech(pilot, this);
+        pilot.Toast(Title + " broke into SPACE!  Stick steer + thrust, RT / W boost, " + (pilot.inputKind == InputKind.Gamepad ? "B" : pilot.inputKind == InputKind.Touch ? "BAY" : "B") + " cargo bay", 5f);
         if (takeAll)
             foreach (Frog f in Game.I.frogs)
                 if (f != null && f != pilot && f.human && !f.netPuppet && f.world != WorldId.Space)
                 {
                     SpaceWorld.I.Launch(f);
-                    f.Toast(who + " is taking everyone to space!", 4f);
+                    f.Toast(who + " is flying everyone to space - hold on to the shoulders!", 4f);
                 }
-        if (takeAll) pilot.Toast(who + " is taking everyone to space!", 4f);
         Debug.Log("Mech reached space: " + Title + (takeAll ? " (shared screen: everyone along)" : ""));
-        // the mech flies itself home and waits at its spot
+        // the ranch mech waits at its spot; landing back on Earth puts the pilot back in it
         transform.position = spawnPos; transform.rotation = spawnRot; yaw = spawnRot.eulerAngles.y;
-        vy = 0f; grounded = true; Altitude = 0f; speed = 0f; flameK = 0f;
+        rb.position = spawnPos; rb.rotation = spawnRot;
+        vy = 0f; grounded = true; Altitude = 0f; speed = 0f; flameK = 0f; aimK = 0f;
+    }
+
+    // back from space (landed on Earth): park beside the Starship pad and climb back in
+    public void ReturnFromSpace(Frog pilot)
+    {
+        if (wrecked || pilot == null) return;
+        Vector2 pc = Layout.PadC;
+        Vector3 p = new Vector3(pc.x + 30f + height * 0.3f, 0f, pc.y + 10f);
+        DemoPlace(p, 90f);
+        vy = 0f; grounded = true; Altitude = 0f;
+        if (driver == null && CanEnter(pilot)) pilot.EnterVehicle(this);
+    }
+
+    // ffu15: the same armoured body (no colliders, no logic) for the space-scale copy; returns hips, legL, legR, torso,
+    // armL, armR, head
+    public static Transform[] BuildBodyCopy(Transform t, int owner, int band, float H)
+    {
+        LBPack pk = LBPack.Get("storymech");
+        Color bandC = Mats.Hex(BandHex[band]);
+        Material trim = Mats.Shiny(Froggies.Color(owner));
+        Material glow = Mats.Unlit(Color.Lerp(Froggies.Color(owner), Color.white, 0.5f));
+        var o = new Transform[7];
+        if (pk != null && pk.Has("hips") && pk.Has("torso") && pk.Has("legL") && pk.Has("armL") && pk.Has("head"))
+        {
+            System.Func<string, Transform, Transform> P = (part, node) => pk.Spawn(part, node, -pk.parts[part].pivot * H, H, bandC);
+            Vector3 hipsP = pk.parts["hips"].pivot, torsoP = pk.parts["torso"].pivot;
+            o[0] = Mats.Node(t, "Hips", hipsP * H); P("hips", o[0]);
+            o[1] = Mats.Node(o[0], "LegL", (pk.parts["legL"].pivot - hipsP) * H); P("legL", o[1]);
+            o[2] = Mats.Node(o[0], "LegR", (pk.parts["legR"].pivot - hipsP) * H); P("legR", o[2]);
+            o[3] = Mats.Node(o[0], "Torso", (torsoP - hipsP) * H); P("torso", o[3]);
+            o[4] = Mats.Node(o[3], "ArmL", (pk.parts["armL"].pivot - torsoP) * H); P("armL", o[4]);
+            o[5] = Mats.Node(o[3], "ArmR", (pk.parts["armR"].pivot - torsoP) * H); P("armR", o[5]);
+            o[6] = Mats.Node(o[3], "Head", (pk.parts["head"].pivot - torsoP) * H); P("head", o[6]);
+            foreach (var r in t.GetComponentsInChildren<MeshRenderer>())
+            {
+                if (r.gameObject.name == "trim") r.sharedMaterial = trim;
+                else if (r.gameObject.name == "glow") r.sharedMaterial = glow;
+            }
+        }
+        else
+        {
+            Material body = Mats.Shiny(bandC);
+            o[0] = Mats.Node(t, "Hips", new Vector3(0f, H * 0.42f, 0f));
+            for (int s = -1; s <= 1; s += 2)
+            {
+                Transform leg = Mats.Node(o[0], s < 0 ? "LegL" : "LegR", new Vector3(H * 0.1f * s, 0f, 0f));
+                Mats.Prim(PrimitiveType.Cube, leg, new Vector3(0f, -H * 0.2f, 0f), new Vector3(H * 0.11f, H * 0.4f, H * 0.12f), body);
+                o[s < 0 ? 1 : 2] = leg;
+            }
+            o[3] = Mats.Node(o[0], "Torso", new Vector3(0f, H * 0.04f, 0f));
+            Mats.Prim(PrimitiveType.Cube, o[3], new Vector3(0f, H * 0.2f, 0f), new Vector3(H * 0.38f, H * 0.32f, H * 0.22f), body);
+            for (int s = -1; s <= 1; s += 2)
+            {
+                Transform arm = Mats.Node(o[3], s < 0 ? "ArmL" : "ArmR", new Vector3(H * 0.24f * s, H * 0.3f, 0f));
+                Mats.Prim(PrimitiveType.Cube, arm, new Vector3(0f, -H * 0.15f, 0f), new Vector3(H * 0.08f, H * 0.3f, H * 0.09f), body);
+                o[s < 0 ? 4 : 5] = arm;
+            }
+            o[6] = Mats.Node(o[3], "Head", new Vector3(0f, H * 0.4f, 0f));
+            Mats.Prim(PrimitiveType.Cube, o[6], new Vector3(0f, H * 0.04f, 0f), new Vector3(H * 0.16f, H * 0.12f, H * 0.14f), body);
+        }
+        return o;
     }
 
     // ---------------- health bar / shield visuals ----------------

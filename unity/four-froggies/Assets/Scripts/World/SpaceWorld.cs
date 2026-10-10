@@ -31,7 +31,7 @@ public class SpaceWorld : MonoBehaviour
     public Starship ship;
     bool built;
     readonly List<LineRenderer> orbitLines = new List<LineRenderer>();
-    LineRenderer path, targetRing, targetArrow, progradeLine;
+    LineRenderer path, targetRing;
 
     public static Vector3 O { get { return Worlds.SpaceO; } }
 
@@ -68,6 +68,7 @@ public class SpaceWorld : MonoBehaviour
         Sfx.Play(Sfx.Boom, 0.9f, 0.6f);
         if (ship.driver == null)
         {
+            ship.SetMechForm(null);   // ffu15: the pad launch is always the Starship
             int earth = Find("earth"), st = Find("station");
             float sAng = Mathf.Atan2((PosAt(st, simT) - PosAt(earth, simT)).z, (PosAt(st, simT) - PosAt(earth, simT)).x);
             ship.EnterOrbit(earth, bodies[st].a, sAng - 0.18f);
@@ -83,6 +84,21 @@ public class SpaceWorld : MonoBehaviour
         }
     }
 
+    // ffu15: a story mech rocketed past 2.4 km: it flies on in space as itself (same flight model as the Starship)
+    public void LaunchMech(Frog f, StoryMech m)
+    {
+        if (!built) Build();
+        Sfx.Play(Sfx.Boom, 0.9f, 0.5f);
+        if (ship.driver != null) { Launch(f); return; }   // someone (split-screen) is already flying: ride along
+        int earth = Find("earth"), st = Find("station");
+        float sAng = Mathf.Atan2((PosAt(st, simT) - PosAt(earth, simT)).z, (PosAt(st, simT) - PosAt(earth, simT)).x);
+        ship.EnterOrbit(earth, bodies[st].a, sAng - 0.18f);
+        ship.SetTarget(Find("moon"));
+        ship.SetMechForm(m);
+        f.SendTo(WorldId.Space, ship.transform.position, 0f);
+        f.EnterVehicle(ship);
+    }
+
     // back to orbit from a surface (Mars / Callisto) via the Starship standing there
     public void ToOrbit(Frog f, string bodyId)
     {
@@ -90,6 +106,7 @@ public class SpaceWorld : MonoBehaviour
         int b = Find(bodyId);
         if (ship.driver == null)
         {
+            ship.SetMechForm(null);
             ship.EnterOrbit(b, bodies[b].cap, Random.value * 6.28f);
             f.SendTo(WorldId.Space, ship.transform.position, 0f);
             f.EnterVehicle(ship);
@@ -108,6 +125,9 @@ public class SpaceWorld : MonoBehaviour
     public void Land(int bodyIdx)
     {
         Body b = bodies[bodyIdx];
+        if (b.landable) ship.ReboardAll();   // ffu15: jetpacking froggies come back in before touchdown
+        StoryMech mech = ship.mechForm;
+        Frog pilot = ship.driver;
         var crew = new List<Frog>();
         if (ship.driver != null) crew.Add(ship.driver);
         if (Game.I != null) foreach (Frog f in Game.I.frogs) if (f != null && f.passengerOf == ship) crew.Add(f);
@@ -129,6 +149,12 @@ public class SpaceWorld : MonoBehaviour
             else if (b.id == "mars") SurfaceWorlds.LandMars(f, k);
             else SurfaceWorlds.LandCallisto(f, k);
             k++;
+        }
+        // ffu15: a mech that flew to space lands back as itself: on Earth the pilot climbs straight back into it
+        if (mech != null)
+        {
+            ship.SetMechForm(null);
+            if (b.id == "earth" && pilot != null) mech.ReturnFromSpace(pilot);
         }
         Sfx.Play(Sfx.Boom, 0.8f, 0.5f);
     }
@@ -160,13 +186,15 @@ public class SpaceWorld : MonoBehaviour
         {
             Body b = bodies[i];
             if (b.kind == "station") continue;
-            var lr = Line(b.kind == "moon" ? new Color(0.5f, 0.6f, 0.8f, 0.25f) : new Color(0.55f, 0.65f, 0.9f, 0.3f), b.kind == "moon" ? 0.6f : 2.5f, 128, true);
+            var lr = Line(b.kind == "moon" ? new Color(0.5f, 0.58f, 0.78f, 0.2f) : new Color(0.5f, 0.58f, 0.78f, 0.22f), b.kind == "moon" ? 0.4f : 1.6f, 128, true);
             orbitLines.Add(lr);
         }
-        path = Line(new Color(0.6f, 0.9f, 1f, 0.7f), 1.2f, 90, false);
-        targetRing = Line(new Color(1f, 0.85f, 0.2f, 0.9f), 1.5f, 48, true);
-        targetArrow = Line(new Color(1f, 0.85f, 0.2f, 0.95f), 1.8f, 2, false);
-        progradeLine = Line(new Color(0.3f, 1f, 0.4f, 0.9f), 1.4f, 2, false);
+        // ffu15: the thick gold "orange lines" Bill saw were the target ring (drawn at the ORBIT radius when the target was
+        // the body being orbited, so it ran straight through the ship) + the gold target-arrow rod and the green prograde
+        // rod sticking out of the ship. Now: the arrow + prograde rods are gone (the radar shows target / home), the ring
+        // is thin and hidden for the body you orbit, the course line is a thin cyan, and the radar has a legend.
+        path = Line(new Color(0.55f, 0.9f, 1f, 0.5f), 0.45f, 90, false);
+        targetRing = Line(new Color(1f, 0.85f, 0.3f, 0.6f), 0.5f, 64, true);
         ship = Starship.Build(this);
         ship.EnterOrbit(Find("earth"), bodies[Find("earth")].cap, 0f);
         foreach (var r in root.GetComponentsInChildren<Renderer>()) { r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; r.receiveShadows = false; }
@@ -420,36 +448,29 @@ public class SpaceWorld : MonoBehaviour
         // predicted path
         var pts = ship.Predict(path.positionCount);
         for (int k = 0; k < pts.Length; k++) path.SetPosition(k, pts[k]);
-        // target ring + arrow
+        // target ring (not for the body we are orbiting: the course line already circles it)
         int ti = ship.target;
-        if (ti >= 0)
+        if (ti >= 0 && !(ship.mode == Starship.Mode.Orbit && ship.OrbitBody == ti))
         {
             Body b = bodies[ti];
             float rr = Mathf.Max(b.r * 1.6f, b.cap > 0 ? b.cap : b.r * 2f, 8f);
             targetRing.enabled = true;
             for (int k = 0; k < targetRing.positionCount; k++) { float a = k * Mathf.PI * 2f / targetRing.positionCount; targetRing.SetPosition(k, b.pos + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * rr); }
-            Vector3 sp = ship.transform.position;
-            Vector3 dir = (b.pos - sp).normalized;
-            targetArrow.SetPosition(0, sp + dir * 10f);
-            targetArrow.SetPosition(1, sp + dir * 26f);
         }
         else targetRing.enabled = false;
-        Vector3 v = ship.Vel;
-        Vector3 rel = v - ship.RefVel;
-        Vector3 pv = rel.sqrMagnitude > 0.01f ? rel.normalized : ship.transform.forward;
-        progradeLine.SetPosition(0, ship.transform.position + pv * 9f);
-        progradeLine.SetPosition(1, ship.transform.position + pv * 22f);
     }
 }
 
 // The Starship in space. Kinematic: the flight model below moves it (planar, in the plane of the orbits).
-public class Starship : Vehicle
+public partial class Starship : Vehicle
 {
     SpaceWorld W;
     public enum Mode { Orbit, Free, Transfer }
+    Transform[] engineGlow; Light engineLight; float engineGlowK;
     public Mode mode = Mode.Orbit;
     public int target = -1;
     int orbitBody = -1;
+    public int OrbitBody { get { return orbitBody; } }
     float orbitR, orbitAng, orbitW = 0.42f, burnT;
     Vector3 pos, vel;
     float heading;
@@ -474,9 +495,15 @@ public class Starship : Vehicle
             string t = target >= 0 ? W.bodies[target].name : "-";
             float dist = target >= 0 ? (W.bodies[target].pos - pos).magnitude : 0f;
             string m = mode == Mode.Orbit ? "ORBIT " + W.bodies[orbitBody].name : mode == Mode.Transfer ? "AUTO-TRANSFER  ETA " + Mathf.CeilToInt(tDur - tEl) + " s" : "FREE FLIGHT";
-            string land = mode == Mode.Orbit && W.bodies[orbitBody].landable ? "  |  Y / F LAND" : "";
+            InputKind ik = driver != null ? driver.inputKind : InputKind.Keyboard;
+            bool pad = ik == InputKind.Gamepad, touch = ik == InputKind.Touch;
+            bool canLand = mode == Mode.Orbit && W.bodies[orbitBody].landable;
+            string land = canLand ? "  |  " + (pad ? "Y" : touch ? "LAND" : "F") + " LAND" : "";
+            string ctl = pad ? "D-pad < > target  X auto  LB RB warp  L3 warp home  L-stick turn + thrust  RT boost  LT brake" + (mechForm != null ? "  B cargo bay" : "")
+                       : touch ? "TGT target  AUTO fly there  BURN / BRAKE  tap radar = warp home" + (mechForm != null ? "  BAY cargo bay" : "")
+                       : "T target  G auto  Z C warp  R warp home  A/D turn  W thrust  S brake" + (mechForm != null ? "  SHIFT afterburner  B cargo bay" : "");
             return m + "  |  target " + t + " " + Mathf.RoundToInt(dist) + " m  |  warp x" + Mathf.RoundToInt(SimRate) +
-                   "\n<size=17>D-pad < > target  X / G auto  LB RB / Z C warp  L-stick turn + thrust  RT boost  LT brake" + land + "</size>";
+                   "\n<size=17>" + ctl + land + "</size>";
         }
     }
 
@@ -485,7 +512,7 @@ public class Starship : Vehicle
         var go = new GameObject("Starship (space)");
         var v = go.AddComponent<Starship>();
         v.W = w;
-        v.Title = "Starship";
+        v.Title = "Starship"; v.shipTitle = "Starship";
         v.EnterVerb = "board the Starship";
         v.flyer = true;
         v.engineKind = 10;   // rocket roar
@@ -497,20 +524,58 @@ public class Starship : Vehicle
         v.body.isTrigger = true;
         v.camDistance = 34f; v.camHeight = 6f;
         Transform t = go.transform;
-        // satin paint, not Steel: a fully metallic hull only mirrors the black space sky and read as a black slab (probe 2026-10-09)
-        Material steel = Mats.Paint(new Color(0.8f, 0.81f, 0.83f), 0.75f), tile = Mats.Lit(new Color(0.12f, 0.12f, 0.13f));
-        Mats.Prim(PrimitiveType.Cylinder, t, Vector3.zero, new Vector3(3.6f, 6f, 3.6f), new Vector3(90f, 0f, 0f), steel);
-        Mats.Prim(PrimitiveType.Cylinder, t, new Vector3(0f, -0.25f, 0f), new Vector3(3.3f, 5.9f, 3.3f), new Vector3(90f, 0f, 0f), tile);
-        Mats.Prim(PrimitiveType.Sphere, t, new Vector3(0f, 0f, 6.3f), new Vector3(3.6f, 3.6f, 5.4f), steel);
+        // ffu15: rebuilt to match the ground stack: stainless body with weld rings, black heat-shield tiles on the belly,
+        // nose cone, two forward + two aft flaps hinged flush on the hull sides (nothing pokes out at odd angles), six
+        // engine bells set INSIDE the skirt with hot glowing throats, a layered plume and an engine light.
+        // Satin paint, not Steel: a fully metallic hull only mirrors the black sky and read as a black slab (probe 2026-10-09).
+        Transform vis = Mats.Node(t, "Vis", Vector3.zero);
+        const float Rr = 2.1f, L = 13f;
+        Material steel = Mats.Paint(new Color(0.82f, 0.83f, 0.85f), 0.7f), weld = Mats.Paint(new Color(0.62f, 0.63f, 0.66f), 0.6f);
+        Material tile = Mats.Lit(new Color(0.1f, 0.1f, 0.11f)), flapM = Mats.Lit(new Color(0.13f, 0.13f, 0.14f));
+        Material bell = Mats.Steel(new Color(0.42f, 0.38f, 0.34f)), hot = Mats.Unlit(new Color(1f, 0.78f, 0.45f));
+        Mats.Prim(PrimitiveType.Cylinder, vis, Vector3.zero, new Vector3(Rr * 2f, L * 0.5f, Rr * 2f), new Vector3(90f, 0f, 0f), steel);
+        for (int k = 0; k < 6; k++) Mats.Prim(PrimitiveType.Cylinder, vis, new Vector3(0f, 0f, -L * 0.5f + 1.2f + k * 2.1f), new Vector3(Rr * 2f + 0.03f, 0.03f, Rr * 2f + 0.03f), new Vector3(90f, 0f, 0f), weld);
+        // belly tiles: a band of curved strips on the lower half (sits 2 cm proud of the hull)
+        for (int k = -3; k <= 3; k++)
+        {
+            float ang = k * 22f;   // around the bottom
+            Vector3 n = Quaternion.Euler(0f, 0f, ang) * Vector3.down;
+            Mats.Prim(PrimitiveType.Cube, vis, n * (Rr + 0.02f), new Vector3(0.84f, 0.05f, L - 0.4f), new Vector3(0f, 0f, ang), tile);
+        }
+        // nose cone (ogive-ish: sphere + slimmer tip), tiles continue under it
+        Mats.Prim(PrimitiveType.Sphere, vis, new Vector3(0f, 0f, L * 0.5f), new Vector3(Rr * 2f, Rr * 2f, 6.4f), steel);
+        Mats.Prim(PrimitiveType.Sphere, vis, new Vector3(0f, 0f, L * 0.5f + 1.8f), new Vector3(Rr * 1.3f, Rr * 1.3f, 3.6f), steel);
+        Mats.Prim(PrimitiveType.Sphere, vis, new Vector3(0f, -0.45f, L * 0.5f + 0.4f), new Vector3(Rr * 1.85f, Rr * 1.6f, 5.6f), tile);
+        // flaps: thin, flush on the hull sides at the tile line, swept slightly
         for (int s = -1; s <= 1; s += 2)
         {
-            Mats.Prim(PrimitiveType.Cube, t, new Vector3(2.1f * s, 0f, 5.2f), new Vector3(1.2f, 0.15f, 2.2f), tile);
-            Mats.Prim(PrimitiveType.Cube, t, new Vector3(2.3f * s, 0f, -4.6f), new Vector3(1.6f, 0.15f, 2.8f), tile);
+            Mats.Prim(PrimitiveType.Cube, vis, new Vector3(s * (Rr + 0.48f), -0.35f, L * 0.5f - 0.6f), new Vector3(1.0f, 0.1f, 2.0f), new Vector3(0f, -s * 8f, s * -6f), flapM);
+            Mats.Prim(PrimitiveType.Cube, vis, new Vector3(s * (Rr + 0.75f), -0.35f, -L * 0.5f + 1.7f), new Vector3(1.55f, 0.12f, 3.0f), new Vector3(0f, s * 4f, s * -6f), flapM);
+            Mats.Prim(PrimitiveType.Cube, vis, new Vector3(s * (Rr + 0.06f), -0.35f, -L * 0.5f + 1.7f), new Vector3(0.18f, 0.3f, 2.6f), flapM);   // hinge fairing
+            Mats.Prim(PrimitiveType.Cube, vis, new Vector3(s * (Rr + 0.06f), -0.35f, L * 0.5f - 0.6f), new Vector3(0.16f, 0.26f, 1.8f), flapM);
         }
-        for (int k = 0; k < 3; k++) Mats.Prim(PrimitiveType.Cylinder, t, Quaternion.Euler(0f, 0f, k * 120f) * new Vector3(0f, 0.9f, 0f) + new Vector3(0f, 0f, -6.3f), new Vector3(1f, 0.5f, 1f), new Vector3(90f, 0f, 0f), Mats.Steel(new Color(0.35f, 0.33f, 0.3f)));
-        v.flame = Mats.Node(t, "Flame", new Vector3(0f, 0f, -8.5f));
-        var fm = new Material(Mats.Fx); fm.color = new Color(1f, 0.6f, 0.2f, 0.75f);
-        Mats.Prim(PrimitiveType.Sphere, v.flame, Vector3.zero, new Vector3(2.2f, 2.2f, 6f), fm);
+        // crew windows near the nose (top side)
+        for (int k = 0; k < 4; k++) Mats.Prim(PrimitiveType.Cube, vis, new Vector3(-0.75f + k * 0.5f, Rr - 0.02f, L * 0.5f - 1.6f), new Vector3(0.28f, 0.06f, 0.22f), Mats.Unlit(new Color(0.55f, 0.8f, 1f)));
+        // aft skirt + engines inside it: 3 sea-level (inner ring) + 3 vacuum bells (outer ring), all within the hull radius
+        Mats.Prim(PrimitiveType.Cylinder, vis, new Vector3(0f, 0f, -L * 0.5f - 0.05f), new Vector3(Rr * 2f - 0.1f, 0.05f, Rr * 2f - 0.1f), new Vector3(90f, 0f, 0f), tile);
+        var glows = new List<Transform>();
+        for (int k = 0; k < 6; k++)
+        {
+            bool vac = k >= 3;
+            float rr = vac ? 1.32f : 0.6f, br = vac ? 0.62f : 0.42f;
+            Vector3 c = Quaternion.Euler(0f, 0f, k * 120f + (vac ? 60f : 0f)) * new Vector3(0f, rr, 0f) + new Vector3(0f, 0f, -L * 0.5f - 0.45f);
+            Mats.Prim(PrimitiveType.Cylinder, vis, c, new Vector3(br * 2f, 0.42f, br * 2f), new Vector3(90f, 0f, 0f), bell);
+            var g = Mats.Prim(PrimitiveType.Cylinder, vis, c + new Vector3(0f, 0f, -0.43f), new Vector3(br * 1.7f, 0.01f, br * 1.7f), new Vector3(90f, 0f, 0f), hot);
+            glows.Add(g.transform);
+        }
+        v.engineGlow = glows.ToArray();
+        var el = new GameObject("EngineLight"); el.transform.SetParent(vis, false); el.transform.localPosition = new Vector3(0f, 0f, -L * 0.5f - 3f);
+        v.engineLight = el.AddComponent<Light>(); v.engineLight.type = LightType.Point; v.engineLight.color = new Color(1f, 0.62f, 0.3f); v.engineLight.range = 22f; v.engineLight.shadows = LightShadows.None; v.engineLight.enabled = false;
+        // plume: white-hot core + translucent orange sheath, pivot at the bells so it stretches backwards
+        v.flame = Mats.Node(vis, "Flame", new Vector3(0f, 0f, -L * 0.5f - 0.9f));
+        var fm = new Material(Mats.Fx); fm.color = new Color(1f, 0.55f, 0.22f, 0.45f);
+        Mats.Prim(PrimitiveType.Sphere, v.flame, new Vector3(0f, 0f, -3.2f), new Vector3(3.4f, 3.4f, 7f), fm);
+        Mats.Prim(PrimitiveType.Sphere, v.flame, new Vector3(0f, 0f, -1.8f), new Vector3(1.6f, 1.6f, 3.8f), Mats.Unlit(new Color(1f, 0.93f, 0.75f)));
         v.seat = Mats.Node(t, "Seat", new Vector3(0f, 0.5f, 4f));
         v.seatScale = 0.5f;
         Mats.SetLayer(go, VehicleLayer);
@@ -567,6 +632,8 @@ public class Starship : Vehicle
         if (i.target) Cycle(1);
         if (i.targetPrev) Cycle(-1);
         if (i.auto) StartTransfer();
+        if (i.warpHome) WarpHome();
+        if (i.cargo) ToggleBay();
         if (i.land) { if (mode == Mode.Orbit) W.Land(orbitBody); else if (driver != null) driver.Toast("Get into orbit first (auto-transfer or slow down near a planet), then land", 2.5f); }
         if (mode == Mode.Free)
         {
@@ -722,10 +789,11 @@ public class Starship : Vehicle
                     {
                         Vector3 a = Accel(pos, true);
                         if (on && thrustIn > 0.02f) a += fwd * (8f * Mathf.Clamp01(inp.move.y) + 22f * inp.gas);
+                        if (on && mechForm != null && inp.boostHeld && driver.inputKind != InputKind.Gamepad) a += fwd * 30f;   // pad: LB is warp in space, RT boosts   // ffu15: the mech's afterburner
                         vel += a * h;
                         pos += vel * h;
                     }
-                    flameOn = on && thrustIn > 0.05f;
+                    flameOn = on && (thrustIn > 0.05f || (mechForm != null && inp.boostHeld));
                     int n = Nearest();
                     if (n >= 0)
                     {
@@ -760,7 +828,8 @@ public class Starship : Vehicle
                 }
         }
         kinVel = vel - RefVel;
-        if (flame != null) { flame.gameObject.SetActive(flameOn); if (flameOn) flame.localScale = new Vector3(1f, 1f, 0.8f + Random.value * 0.5f); }
+        if (flame != null) { bool fo = flameOn && mechForm == null; flame.gameObject.SetActive(fo); if (fo) flame.localScale = new Vector3(1f, 1f, 0.8f + Random.value * 0.5f); }
+        if (engineGlow != null) { float g = mechForm != null ? 0f : flameOn ? 1f : 0.25f; engineGlowK = Mathf.MoveTowards(engineGlowK, g, dt * 4f); foreach (var e in engineGlow) if (e != null) e.localScale = new Vector3(1f, 1f, 1f) * (0.6f + 0.4f * engineGlowK); if (engineLight != null) { engineLight.enabled = engineGlowK > 0.3f && !Look.Mobile; engineLight.intensity = engineGlowK * 2f; } }
     }
 
     // dotted prediction: orbit circle, transfer arc, or a short free-flight integration

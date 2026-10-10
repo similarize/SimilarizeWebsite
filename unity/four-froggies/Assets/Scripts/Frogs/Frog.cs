@@ -18,6 +18,11 @@ public class Frog : MonoBehaviour
     public Vehicle passengerOf;       // riding along (Starship) without driving
     public bool launching;            // aboard the Starship during the ranch blast-off (LaunchSeq)
     public bool netPuppet;            // ffu13: another device controls this froggy online (Net poses it; no local simulation)
+    public InputKind inputKind = InputKind.Keyboard;   // ffu15: the device of this froggy's slot (control hints per device)
+    public Starship jetOf;            // ffu15: jetpacking outside a mech flying in space (position = ship + jetOff)
+    public Vector3 jetOff;
+    bool scubaSurface;                // ffu15: swam up from the reef - floating in the pond in scuba gear
+    float diveHoldT;
     public bool Swimming { get { return swimming; } }
     public bool InScuba { get { return scubaGo != null && scubaGo.activeSelf; } }
     public void SetScubaNet(bool on) { if (on || scubaGo != null) SetScuba(on); }
@@ -34,9 +39,22 @@ public class Frog : MonoBehaviour
         model.gameObject.SetActive(false);
     }
 
+    // ffu15: riding on a space mech's shoulder in a spacesuit (visible, scaled up to read next to the mech)
+    public void RideShoulder(Transform seat, float scale)
+    {
+        if (transform.parent != seat) transform.SetParent(seat, false);
+        transform.localPosition = Vector3.zero;
+        transform.localRotation = Quaternion.identity;
+        transform.localScale = Vector3.one * scale;
+        if (!model.gameObject.activeSelf) model.gameObject.SetActive(true);
+        SetSuit(true);
+        model.Animate(0f, false, true, false, Time.deltaTime);
+    }
+
     public void LeavePassenger()
     {
         if (passengerOf == null) return;
+        SetSuit(false);
         passengerOf = null;
         transform.SetParent(null, true);
         transform.localScale = Vector3.one;
@@ -106,7 +124,7 @@ public class Frog : MonoBehaviour
         color = Roster.Color(c);
         bool vis = model == null || model.gameObject.activeSelf;
         if (model != null) { model.gameObject.SetActive(false); Destroy(model.gameObject); }
-        scubaGo = null;   // it hung under the old model
+        scubaGo = null; suitGo = null; finL = finR = null;   // they hung under the old model
         if (chuteGo != null) { Destroy(chuteGo); chuteGo = null; chute = false; }
         var mg = new GameObject("Model");
         mg.transform.SetParent(transform, false);
@@ -142,6 +160,9 @@ public class Frog : MonoBehaviour
         if (remote != null) remote.ReleaseManual(false);
         if (vehicle != null) ExitVehicle();
         LeavePassenger();
+        if (jetOf != null) { jetOf = null; transform.localScale = Vector3.one; }
+        SetSuit(false);
+        if (cc != null && !cc.enabled && vehicle == null && passengerOf == null) cc.enabled = true;
         SetChute(false);
         if (world != w) { toast = ""; toastT = 0f; }   // ffu14: an old world's toast (space) no longer lingers after the trip
         world = w;
@@ -188,10 +209,17 @@ public class Frog : MonoBehaviour
         exitCool -= dt;
         if (passengerOf != null)
         {
-            prompt = "Riding along in the " + passengerOf.Title + (passengerOf.driver != null ? " - " + passengerOf.driver.nick + " is flying" : "");
+            Starship st = passengerOf as Starship;
+            if (st != null && st.mechForm != null && st.BayOpen)
+            {
+                prompt = "Bay doors open - " + (inputKind == InputKind.Gamepad ? "A" : inputKind == InputKind.Touch ? "OUT" : "SPACE / E") + ": jetpack out into space";
+                if (human && (input.hop || input.use)) { st.ExitToJet(this); input = new PIn(); return; }
+            }
+            else prompt = "Riding along in the " + passengerOf.Title + (passengerOf.driver != null ? " - " + passengerOf.driver.nick + " is flying" : "");
             input = new PIn();
             return;
         }
+        if (jetOf != null) { Jetpack(dt); input = new PIn(); return; }
         if (remote != null && human && vehicle == null)
         {
             // ffu12: driving a robot from the phone - the froggy stands still, its input goes to the robot (Game)
@@ -248,12 +276,22 @@ public class Frog : MonoBehaviour
         }
 
         if (world == WorldId.Underwater) { Scuba(dt); return; }
+        if (world == WorldId.Space && SpaceWorld.I != null && SpaceWorld.I.ship != null) { SpaceWorld.I.ship.AdoptStray(this); return; }
         spaceGravity = world == WorldId.Mars ? 0.45f : world == WorldId.Callisto ? 0.22f : 1f;
-        SetScuba(false);
         Vector3 p = transform.position;
         swimming = world == WorldId.Ranch && Layout.InPond(p.x, p.z) && p.y < Layout.WaterY - 0.35f;
         if (swimming && !wasSwim) { FX.Splash(p + Vector3.up * 0.5f, 14); if (human) Sfx.Play(Sfx.Splash, 0.9f); }
         wasSwim = swimming;
+        // ffu15: floating at the pond surface - hold DOWN / DIVE to dive back down to the reef (underwater world)
+        if (!swimming) scubaSurface = false;
+        SetScuba(swimming && scubaSurface);
+        if (swimming && human && UnderwaterWorld.I != null)
+        {
+            if (prompt.Length == 0) prompt = (inputKind == InputKind.Gamepad ? "Hold B" : inputKind == InputKind.Touch ? "Hold DIVE" : "Hold SHIFT") + ": dive down to the reef   |   swim to shore to climb out";
+            diveHoldT = input.downHeld ? diveHoldT + dt : 0f;
+            if (diveHoldT > 0.3f) { diveHoldT = 0f; scubaSurface = false; UnderwaterWorld.I.DiveFromPond(this); return; }
+        }
+        else diveHoldT = 0f;
 
         Vector3 wish = Vector3.zero;
         if (input.move.sqrMagnitude > 0.0001f)
@@ -309,21 +347,68 @@ public class Frog : MonoBehaviour
     }
 
     // ---------- scuba (underwater world) ----------
+    // ffu15: real scuba kit - twin yellow tanks with valves + harness, regulator hose to the mouth, framed mask with a
+    // head strap, orange snorkel, big flippers that kick, and a bubble stream (plus a burst on every breath out)
     GameObject scubaGo;
-    float bubbleT, surfaceT;
+    Transform finL, finR;
+    float bubbleT, surfaceT, breathT;
     void SetScuba(bool on)
     {
         if (on && scubaGo == null)
         {
             scubaGo = new GameObject("Scuba");
-            scubaGo.transform.SetParent(model.transform, false);
-            Mats.Prim(PrimitiveType.Capsule, scubaGo.transform, new Vector3(0f, 0.75f, -0.42f), new Vector3(0.28f, 0.3f, 0.28f), Mats.Steel(new Color(0.95f, 0.8f, 0.1f)));
-            Mats.Prim(PrimitiveType.Cube, scubaGo.transform, new Vector3(0f, 1.15f, 0.42f), new Vector3(0.55f, 0.22f, 0.12f), Mats.Glass);
-            Mats.Prim(PrimitiveType.Cube, scubaGo.transform, new Vector3(0f, 1.15f, 0.36f), new Vector3(0.6f, 0.06f, 0.06f), Mats.Lit(Color.black));
-            for (int s = -1; s <= 1; s += 2) Mats.Prim(PrimitiveType.Cube, scubaGo.transform, new Vector3(0.12f * s, 0.15f, -0.45f), new Vector3(0.16f, 0.03f, 0.4f), Mats.Lit(new Color(0.1f, 0.3f, 0.9f)));
+            Transform g = scubaGo.transform;
+            g.SetParent(model.transform, false);
+            Material tank = Mats.Shiny(new Color(1f, 0.82f, 0.08f)), steel = Mats.Steel(new Color(0.75f, 0.76f, 0.78f));
+            Material black = Mats.Lit(new Color(0.06f, 0.06f, 0.07f)), orange = Mats.Shiny(new Color(1f, 0.45f, 0.08f));
+            Material fin = Mats.Shiny(new Color(0.1f, 0.35f, 1f));
+            for (int k = -1; k <= 1; k += 2)
+            {
+                Mats.Prim(PrimitiveType.Capsule, g, new Vector3(0.11f * k, 0.78f, -0.47f), new Vector3(0.2f, 0.27f, 0.2f), tank);
+                Mats.Prim(PrimitiveType.Cylinder, g, new Vector3(0.11f * k, 1.08f, -0.47f), new Vector3(0.07f, 0.05f, 0.07f), steel);
+            }
+            Mats.Prim(PrimitiveType.Cube, g, new Vector3(0f, 1.1f, -0.47f), new Vector3(0.3f, 0.05f, 0.06f), steel);              // manifold
+            Mats.Prim(PrimitiveType.Cube, g, new Vector3(0f, 0.78f, -0.36f), new Vector3(0.5f, 0.45f, 0.04f), black);             // back plate
+            Mats.Prim(PrimitiveType.Cube, g, new Vector3(0f, 0.62f, 0.02f), new Vector3(0.78f, 0.07f, 0.86f), black);             // waist belt
+            for (int k = -1; k <= 1; k += 2)
+            {
+                var st = Mats.Prim(PrimitiveType.Cube, g, new Vector3(0.2f * k, 0.86f, 0.05f), new Vector3(0.07f, 0.05f, 0.82f), black);
+                st.transform.localRotation = Quaternion.Euler(-28f, 0f, 0f);                                                     // shoulder straps
+            }
+            // regulator hose (two segments) + mouthpiece
+            var h1 = Mats.Prim(PrimitiveType.Cylinder, g, new Vector3(0.24f, 1.1f, -0.2f), new Vector3(0.05f, 0.24f, 0.05f), black);
+            h1.transform.localRotation = Quaternion.Euler(70f, 0f, -20f);
+            var h2 = Mats.Prim(PrimitiveType.Cylinder, g, new Vector3(0.18f, 0.95f, 0.3f), new Vector3(0.05f, 0.2f, 0.05f), black);
+            h2.transform.localRotation = Quaternion.Euler(120f, 0f, 30f);
+            Mats.Prim(PrimitiveType.Sphere, g, new Vector3(0f, 0.86f, 0.5f), new Vector3(0.16f, 0.12f, 0.12f), black);
+            // mask: black frame + tinted glass across both eyes + head strap + snorkel
+            Mats.Prim(PrimitiveType.Cube, g, new Vector3(0f, 1.16f, 0.4f), new Vector3(0.66f, 0.28f, 0.08f), black);
+            Mats.Prim(PrimitiveType.Cube, g, new Vector3(0f, 1.16f, 0.45f), new Vector3(0.56f, 0.2f, 0.04f), Mats.GlassTint(new Color(0.55f, 0.85f, 1f, 0.45f)));
+            for (int k = -1; k <= 1; k += 2) Mats.Prim(PrimitiveType.Cube, g, new Vector3(0.34f * k, 1.15f, 0.08f), new Vector3(0.04f, 0.08f, 0.66f), black);
+            Mats.Prim(PrimitiveType.Cube, g, new Vector3(0f, 1.15f, -0.25f), new Vector3(0.7f, 0.08f, 0.04f), black);
+            Mats.Prim(PrimitiveType.Cylinder, g, new Vector3(-0.38f, 1.38f, 0.32f), new Vector3(0.06f, 0.26f, 0.06f), orange);
+            // flippers (kick in Scuba)
+            finL = Mats.Node(g, "FinL", new Vector3(-0.2f, 0.2f, -0.42f));
+            finR = Mats.Node(g, "FinR", new Vector3(0.2f, 0.2f, -0.42f));
+            foreach (Transform f in new[] { finL, finR })
+            {
+                Mats.Prim(PrimitiveType.Cube, f, new Vector3(0f, 0f, -0.3f), new Vector3(0.3f, 0.035f, 0.62f), fin);
+                Mats.Prim(PrimitiveType.Cube, f, new Vector3(0f, 0.03f, -0.02f), new Vector3(0.22f, 0.08f, 0.2f), black);
+            }
             Mats.SetLayer(scubaGo, 9);
         }
         if (scubaGo != null && scubaGo.activeSelf != on) scubaGo.SetActive(on);
+    }
+
+    void ScubaFx(float dt, float kick)
+    {
+        float t = Time.time * (3f + kick * 4f) + id;
+        if (finL != null) { finL.localRotation = Quaternion.Euler(Mathf.Sin(t) * 26f + 10f, 0f, 0f); finR.localRotation = Quaternion.Euler(-Mathf.Sin(t) * 26f + 10f, 0f, 0f); }
+        Vector3 mouth = transform.TransformPoint(new Vector3(0f, 0.95f, 0.5f) * transform.localScale.x);
+        bubbleT -= dt;
+        if (bubbleT <= 0f) { bubbleT = Random.Range(0.12f, 0.3f); FX.Bubble(mouth, Random.Range(1, 3)); }
+        breathT -= dt;
+        if (breathT <= 0f) { breathT = Random.Range(1.4f, 2.0f); FX.Bubble(mouth + Vector3.up * 0.1f, 9); }
     }
 
     void Scuba(float dt)
@@ -343,13 +428,92 @@ public class Frog : MonoBehaviour
         if (wish.sqrMagnitude > 0.01f) yaw = Mathf.MoveTowardsAngle(yaw, Mathf.Atan2(wish.x, wish.z) * Mathf.Rad2Deg, 360f * dt);
         transform.rotation = Quaternion.Euler(0f, yaw, 0f);
         cc.Move((planar + vel) * dt + VehiclePush(dt));
-        bubbleT -= dt;
-        if (bubbleT <= 0f) { bubbleT = Random.Range(0.35f, 0.9f) / (1f + planar.magnitude * 0.3f); FX.Bubble(transform.position + Vector3.up * 1.15f + transform.forward * 0.4f, Random.Range(2, 5)); }
-        // swim to the surface and keep rising -> climb out at the pond dock
+        ScubaFx(dt, planar.magnitude / 4.6f);
+        // ffu15: swim up to the surface and keep rising -> pop up FLOATING in the ranch pond (hold DOWN there to dive again)
         if (p.y > top - 0.3f && up > 0.3f) surfaceT += dt; else surfaceT = 0f;
-        if (human && surfaceT > 0.3f && surfaceT - dt <= 0.3f) Toast("At the surface - keep rising to climb out at the dock", 1.6f);
-        if (surfaceT > 1.5f && UnderwaterWorld.I != null) { surfaceT = 0f; UnderwaterWorld.I.Surface(this); return; }
+        if (human && surfaceT > 0.3f && surfaceT - dt <= 0.3f) Toast("At the surface - keep rising to pop up in the pond", 1.6f);
+        if (surfaceT > 1.0f && UnderwaterWorld.I != null) { surfaceT = 0f; scubaSurface = true; UnderwaterWorld.I.SurfaceSwim(this); return; }
+        prompt = prompt.Length > 0 ? prompt : (inputKind == InputKind.Gamepad ? "A / RT up   B / LT down" : inputKind == InputKind.Touch ? "UP / DOWN to swim up and down" : "SPACE up   SHIFT down") + "   |   swim to the top to surface";
         model.Animate(planar.magnitude, false, false, true, dt);
+    }
+
+    // ---------- ffu15 spacesuit + jetpack (outside a mech flying in space) ----------
+    GameObject suitGo;
+    Transform[] jetNoz = new Transform[2];
+    public void SetSuit(bool on)
+    {
+        if (on && suitGo == null)
+        {
+            suitGo = new GameObject("Spacesuit");
+            Transform g = suitGo.transform;
+            g.SetParent(model.transform, false);
+            Material white = Mats.Shiny(new Color(0.94f, 0.95f, 0.97f)), dark = Mats.Lit(new Color(0.12f, 0.13f, 0.15f));
+            Material stripe = Mats.Shiny(new Color(1f, 0.5f, 0.1f));
+            var helm = Mats.Prim(PrimitiveType.Sphere, g, new Vector3(0f, 1.0f, 0.12f), new Vector3(1.02f, 0.92f, 1.0f), Mats.GlassTint(new Color(0.7f, 0.9f, 1f, 0.28f)));
+            helm.name = "Helmet";
+            Mats.Prim(PrimitiveType.Cylinder, g, new Vector3(0f, 0.6f, 0.08f), new Vector3(0.82f, 0.05f, 0.82f), white);        // collar ring
+            Mats.Prim(PrimitiveType.Cube, g, new Vector3(0f, 0.78f, -0.47f), new Vector3(0.56f, 0.6f, 0.3f), white);           // life-support pack
+            Mats.Prim(PrimitiveType.Cube, g, new Vector3(0f, 0.95f, -0.63f), new Vector3(0.5f, 0.08f, 0.03f), stripe);
+            Mats.Prim(PrimitiveType.Sphere, g, new Vector3(0.12f, 0.75f, 0.47f), new Vector3(0.1f, 0.1f, 0.05f), Mats.Unlit(new Color(0.4f, 1f, 0.6f)));   // chest light
+            for (int k = 0; k < 2; k++)
+            {
+                var nz = Mats.Prim(PrimitiveType.Cylinder, g, new Vector3(k == 0 ? -0.17f : 0.17f, 0.42f, -0.52f), new Vector3(0.13f, 0.1f, 0.13f), dark);
+                jetNoz[k] = nz.transform;
+            }
+            Mats.SetLayer(suitGo, 9);
+        }
+        if (suitGo != null && suitGo.activeSelf != on) suitGo.SetActive(on);
+    }
+
+    void Jetpack(float dt)
+    {
+        Starship st = jetOf;
+        if (st == null || world != WorldId.Space) { jetOf = null; SetSuit(false); transform.localScale = Vector3.one; return; }
+        SetSuit(true);
+        float S = Starship.RiderScale;
+        if (transform.localScale.x != S) transform.localScale = Vector3.one * S;
+        Vector3 wish;
+        float up;
+        if (human)
+        {
+            Quaternion cy = Quaternion.Euler(0f, camYaw, 0f);
+            wish = cy * new Vector3(input.move.x, 0f, input.move.y);
+            up = Mathf.Clamp(input.climb + (input.hopHeld ? 1f : 0f) - (input.downHeld ? 1f : 0f), -1f, 1f);
+        }
+        else
+        {
+            // AI / demo froggies: lazy loops around the bay
+            float t = Time.time * 0.35f + id * 2.1f;
+            Vector3 goal = st.BayWorld - st.transform.position + new Vector3(Mathf.Cos(t) * 9f, 3.5f + Mathf.Sin(t * 1.7f) * 2.5f, Mathf.Sin(t) * 9f);
+            Vector3 d = goal - jetOff;
+            wish = new Vector3(d.x, 0f, d.z) * 0.25f; up = Mathf.Clamp(d.y * 0.3f, -1f, 1f);
+        }
+        if (wish.sqrMagnitude > 1f) wish.Normalize();
+        planar = Vector3.MoveTowards(planar, wish * 7f, 9f * dt);
+        vel.y = Mathf.MoveTowards(vel.y, up * 5f, 8f * dt);
+        jetOff += (planar + Vector3.up * vel.y) * dt;
+        if (jetOff.magnitude > 70f) jetOff = jetOff.normalized * 70f;   // tethered: never drift away from the mech
+        transform.position = st.transform.position + jetOff;
+        if (wish.sqrMagnitude > 0.01f) yaw = Mathf.MoveTowardsAngle(yaw, Mathf.Atan2(wish.x, wish.z) * Mathf.Rad2Deg, 240f * dt);
+        transform.rotation = Quaternion.Euler(Mathf.Clamp(planar.magnitude * 3f, 0f, 20f), yaw, 0f);
+        // jet puffs from the backpack nozzles
+        float thrust = Mathf.Clamp01(planar.magnitude / 7f + Mathf.Abs(vel.y) / 5f) * 0.8f + 0.2f;
+        for (int k = 0; k < 2; k++)
+            if (jetNoz[k] != null && Random.value < dt * (8f + thrust * 30f))
+            {
+                Vector3 np = jetNoz[k].position;
+                FX.Smoke(np - transform.up * 0.3f * S, 0.35f * S, new Color(0.95f, 0.97f, 1f, 0.55f));
+                if (thrust > 0.45f) FX.Flame(np, -transform.up);
+            }
+        model.Animate(0.5f, true, false, false, dt);
+        // re-board: fly back into the open bay
+        if (st.BayOpen)
+        {
+            float d = (transform.position - st.BayWorld).magnitude;
+            prompt = d < 6f ? (inputKind == InputKind.Gamepad ? "A" : inputKind == InputKind.Touch ? "A" : "SPACE / E") + ": climb back into the bay" : "Jetpack: stick move, " + (inputKind == InputKind.Gamepad ? "A up / B down" : inputKind == InputKind.Touch ? "UP / DOWN" : "SPACE up / SHIFT down") + "  |  fly back to the open bay to re-board";
+            if (d < 3.2f * S || (d < 6f && human && input.use)) st.Reboard(this);
+        }
+        else prompt = "The bay is closed - wait for " + (st.driver != null ? st.driver.nick : "the pilot") + " to open it";
     }
 
     void SetChute(bool on)

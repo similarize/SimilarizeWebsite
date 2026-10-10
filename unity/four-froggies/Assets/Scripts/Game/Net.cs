@@ -283,7 +283,14 @@ public class Net : MonoBehaviour
             if (s != null && Game.I.state == Game.State.Play)
             {
                 WorldId w = Game.I.frogs[s.frog].world;
-                if (w != hostWorld) { hostWorld = w; if (connected) Send("*", "W|" + (int)w); }
+                if (w != hostWorld)
+                {
+                    hostWorld = w;
+                    // ffu15: a host flying a MECH in space tells guests which one (each device flies its own copy)
+                    string mech = "";
+                    if (w == WorldId.Space && SpaceWorld.I != null && SpaceWorld.I.ship != null && SpaceWorld.I.ship.mechForm != null) mech = "|" + SpaceWorld.I.ship.mechForm.owner + "|" + SpaceWorld.I.ship.mechForm.band;
+                    if (connected) Send("*", "W|" + (int)w + mech);
+                }
             }
             lobbyT += Time.unscaledDeltaTime;
             if (lobbyT > 2f || (charsDirty && lobbyT > 0.05f)) BroadcastLobby();
@@ -533,6 +540,8 @@ public class Net : MonoBehaviour
             case "W":
                 {
                     hostWorld = (WorldId)ParseI(p.Length > 1 ? p[1] : "0");
+                    followMech = null;
+                    if (p.Length > 3) { int mo = ParseI(p[2]), mb = ParseI(p[3]); foreach (var sm2 in StoryMech.AllMechs) if (sm2 != null && sm2.owner == mo && sm2.band == mb) followMech = sm2; }
                     if (Game.I.state == Game.State.Play) Follow(hostWorld);
                     break;
                 }
@@ -562,6 +571,7 @@ public class Net : MonoBehaviour
     static float ParseF(string s) { float v; return float.TryParse(s, NumberStyles.Float, Inv, out v) ? v : 0f; }
 
     // ---------------- stage follow (guest) ----------------
+    StoryMech followMech;
     void Follow(WorldId w)
     {
         var s = LocalSlot;
@@ -574,7 +584,7 @@ public class Net : MonoBehaviour
         {
             case WorldId.House: if (HouseWorld.I != null) HouseWorld.I.Enter(f); break;
             case WorldId.Underwater: if (UnderwaterWorld.I != null) UnderwaterWorld.I.Dive(f); break;
-            case WorldId.Space: if (SpaceWorld.I != null) SpaceWorld.I.Launch(f); break;
+            case WorldId.Space: if (SpaceWorld.I != null) { if (followMech != null) SpaceWorld.I.LaunchMech(f, followMech); else SpaceWorld.I.Launch(f); } break;
             case WorldId.Mars: if (SurfaceWorlds.I != null) SurfaceWorlds.LandMars(f, f.id); break;
             case WorldId.Callisto: if (SurfaceWorlds.I != null) SurfaceWorlds.LandCallisto(f, f.id); break;
             default: f.SendTo(WorldId.Ranch, Ranch.FrogSpawn(f.id), 0f); break;

@@ -152,7 +152,9 @@ public static class Countryside
         edgeH = Ranch.GY(Inner - 1f, 0f);
         groundNear = Mat(MakeTex(Look.Mobile ? 512 : 1024, NearS), Color.white);
         groundFar = Mat(MakeTex(Look.Mobile ? 256 : 512, FarS), Color.white);
+        if (groundNear.HasProperty("_FarTex")) { groundNear.SetTexture("_FarTex", groundFar.mainTexture); groundFar.SetTexture("_FarTex", groundFar.mainTexture); }
         treeMat = Mat(Texture2D.whiteTexture, Color.white);
+        if (treeMat.HasProperty("_FarTex")) treeMat.SetTexture("_FarTex", Texture2D.whiteTexture);
         BuildGround();
         int trees = BuildTrees(Look.Mobile ? 1400 : 2800);
         Debug.Log("Countryside: built in " + ((Time.realtimeSinceStartup - t0) * 1000f).ToString("0") + " ms, " + trees + " trees, shader " + (treeMat.shader != null ? treeMat.shader.name : "?"));
@@ -172,7 +174,7 @@ public static class Countryside
     static void BuildRing(string name, int A, int r0, int r1, Material m, float uvSize, bool bumps)
     {
         int nr = r1 - r0;
-        var v = new Vector3[A * nr]; var uv = new Vector2[A * nr]; var col = new Color[A * nr];
+        var v = new Vector3[A * nr]; var uv = new Vector2[A * nr]; var uv2 = new Vector2[A * nr]; var col = new Color[A * nr];
         for (int a = 0; a < A; a++)
         {
             float th = a * Mathf.PI * 2f / A;
@@ -187,7 +189,9 @@ public static class Countryside
                 int i = a * nr + r;
                 v[i] = new Vector3(p.x, y, p.y);
                 uv[i] = new Vector2(p.x / uvSize + 0.5f, p.y / uvSize + 0.5f);
-                col[i] = Color.white;
+                uv2[i] = new Vector2(p.x / FarS + 0.5f, p.y / FarS + 0.5f);
+                // ffu15: alpha = how much of the far texture shows: 0 near the ranch, 1 at the near/far join (1650 m)
+                col[i] = new Color(1f, 1f, 1f, bumps ? 1f : Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((d - 700f) / 950f)));
             }
         }
         var tri = new List<int>(A * nr * 6);
@@ -203,7 +207,7 @@ public static class Countryside
         }
         var mesh = new Mesh { name = name };
         mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
-        mesh.vertices = v; mesh.uv = uv; mesh.colors = col;
+        mesh.vertices = v; mesh.uv = uv; mesh.uv2 = uv2; mesh.colors = col;
         mesh.SetTriangles(tri, 0);
         mesh.RecalculateNormals();
         // winding check: normals must point up

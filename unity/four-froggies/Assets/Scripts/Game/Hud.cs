@@ -10,6 +10,10 @@ public class ViewHud
     float inset = -1f;
     readonly Text[] tags = new Text[4];
     readonly Image frame, fadeImg;
+    // ffu15: mech aim reticle + space radar
+    readonly RectTransform reticle;
+    readonly Image[] retParts = new Image[6];
+    readonly SpaceRadar radar;
 
     public ViewHud(Transform canvas, string name)
     {
@@ -32,6 +36,17 @@ public class ViewHud
         {
             tags[i] = UIK.Label(panel, "", 20, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(200f, 30f), Color.white);
         }
+        prompt.supportRichText = true;
+        reticle = UIK.Rect(panel, "Reticle", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(80f, 80f));
+        retParts[0] = UIK.Img(reticle, UIK.Ring, new Color(1f, 1f, 1f, 0.9f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(46f, 46f));
+        retParts[1] = UIK.Img(reticle, UIK.Circle, new Color(1f, 1f, 1f, 1f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(6f, 6f));
+        retParts[2] = UIK.Img(reticle, null, Color.white, new Vector2(0.5f, 0.5f), new Vector2(0f, 33f), new Vector2(3f, 16f));
+        retParts[3] = UIK.Img(reticle, null, Color.white, new Vector2(0.5f, 0.5f), new Vector2(0f, -33f), new Vector2(3f, 16f));
+        retParts[4] = UIK.Img(reticle, null, Color.white, new Vector2(0.5f, 0.5f), new Vector2(33f, 0f), new Vector2(16f, 3f));
+        retParts[5] = UIK.Img(reticle, null, Color.white, new Vector2(0.5f, 0.5f), new Vector2(-33f, 0f), new Vector2(16f, 3f));
+        foreach (var im in retParts) { var sh = im.gameObject.AddComponent<Shadow>(); sh.effectColor = new Color(0f, 0f, 0f, 0.7f); sh.effectDistance = new Vector2(1.5f, -1.5f); }
+        reticle.gameObject.SetActive(false);
+        radar = new SpaceRadar(panel);
     }
 
     public void SetActive(bool on) { panel.gameObject.SetActive(on); }
@@ -67,9 +82,23 @@ public class ViewHud
     }
 
     // me == null: shared view (list every player in the status corner)
-    public void Tick(Camera cam, Frog me, string playerTag, List<Frog> frogs, string sharedStatus)
+    public void Tick(Camera cam, Frog me, string playerTag, List<Frog> frogs, string sharedStatus, string sharedPrompt = null, Frog sharedSpace = null)
     {
         frame.color = new Color(0f, 0f, 0f, 0f);
+        // ffu15 reticle: over-the-shoulder aim in a mech (own view only); red over a target, pulses with recoil
+        StoryMech am = me != null ? me.vehicle as StoryMech : null;
+        bool ret = am != null && am.aimK > 0.25f;
+        if (reticle.gameObject.activeSelf != ret) reticle.gameObject.SetActive(ret);
+        if (ret)
+        {
+            Color rc = am.aimOnTarget ? new Color(1f, 0.3f, 0.25f, 1f) : new Color(1f, 1f, 1f, 0.95f);
+            rc.a *= Mathf.Clamp01((am.aimK - 0.25f) * 3f);
+            foreach (var im in retParts) im.color = rc;
+            float sp = 1f + am.recoilK * 0.5f;
+            reticle.localScale = Vector3.one * sp;
+            for (int k = 2; k < 6; k++) { Vector2 d = k == 2 ? Vector2.up : k == 3 ? Vector2.down : k == 4 ? Vector2.right : Vector2.left; retParts[k].rectTransform.anchoredPosition = d * (33f + am.recoilK * 10f); }
+        }
+        radar.Tick(me != null ? me : sharedSpace, cam, panel.rect.width < 900f);
         if (me != null)
         {
             title.text = playerTag + "  " + me.nick;
@@ -90,7 +119,7 @@ public class ViewHud
         else
         {
             title.text = "";
-            prompt.text = "";
+            prompt.text = sharedPrompt ?? "";
             string tl = "";
             foreach (Frog f in frogs) if (f != null && f.human && f.toastT > 0f) tl += (tl.Length > 0 ? "\n" : "") + "<color=#" + ColorUtility.ToHtmlStringRGB(f.color) + ">" + f.nick + "</color>: " + f.toast;
             toast.text = tl;
