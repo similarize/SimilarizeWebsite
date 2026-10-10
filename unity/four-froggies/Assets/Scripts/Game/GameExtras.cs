@@ -110,8 +110,13 @@ public partial class Game
         }
         if (sc == "mechfight")
         {
-            Vector3 mid = demoFoe != null ? (mp + demoFoe.HomeOrNow) * 0.5f : mp;
-            pos = mid + new Vector3(4f, H * 0.75f, H * 2.6f); look = mid + Vector3.up * H * 0.4f; return true;
+            // ffu14e: over James's shoulder towards the foe; mech fire aims along the camera RIG yaw, which the demo never
+            // set, so every shot went into the parked mechs instead of the foe - point the rig at the foe
+            Vector3 fp = demoFoe != null ? demoFoe.HomeOrNow : mp + fw * H * 3f;
+            Vector3 tf = fp - mp; tf.y = 0f; tf = tf.sqrMagnitude > 1f ? tf.normalized : fw;
+            Vector3 tr = new Vector3(tf.z, 0f, -tf.x);
+            if (slots.Count > 0 && slots[0].rig != null) slots[0].rig.SetYaw(Mathf.Atan2(tf.x, tf.z) * Mathf.Rad2Deg);   // the aim yaw
+            pos = mp - tf * H * 1.5f + tr * H * 0.55f + Vector3.up * H * 1.0f; look = fp + Vector3.up * H * 0.45f; return true;
         }
         // mechspace: chase from above-behind so the ranch shrinks below; normal views once in space
         if (f.world != WorldId.Ranch) return false;

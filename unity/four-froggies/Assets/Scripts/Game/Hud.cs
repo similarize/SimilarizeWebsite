@@ -59,7 +59,8 @@ public class ViewHud
         if (Mathf.Abs(units - inset) < 0.5f) return;
         inset = units;
         prompt.rectTransform.anchoredPosition = new Vector2(0f, 64f + units);
-        prompt.rectTransform.sizeDelta = new Vector2(Mathf.Min(760f, width - 20f), 70f);
+        // ffu14e: on a full-width landscape view keep the (long, mech) prompt clear of the status corner (x 10..330)
+        prompt.rectTransform.sizeDelta = new Vector2(width >= 1100f ? Mathf.Min(760f, width - 680f) : Mathf.Min(760f, width - 20f), 70f);
         toast.rectTransform.anchoredPosition = new Vector2(0f, 120f + units);
         toast.rectTransform.sizeDelta = new Vector2(Mathf.Min(760f, width - 20f), 80f);
         status.rectTransform.anchoredPosition = new Vector2(170f, 26f + units);

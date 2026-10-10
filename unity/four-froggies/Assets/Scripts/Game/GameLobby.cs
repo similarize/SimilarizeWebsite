@@ -33,7 +33,9 @@ public partial class Game
     {
         lobbyCanvas = UIK.MakeCanvas("Lobby", null, 100, true);
         var sc = lobbyCanvas.GetComponent<CanvasScaler>();
-        sc.screenMatchMode = CanvasScaler.ScreenMatchMode.Shrink;   // the whole design always fits, centred
+        // ffu14e: Expand (= min of the width / height ratios) so the whole design always fits, centred. Shrink is the
+        // max ratio and cropped the sides on a 412x915 phone (HOST / JOIN and the card edges were cut off)
+        sc.screenMatchMode = CanvasScaler.ScreenMatchMode.Expand;
         Transform cr = lobbyCanvas.transform;
         // full-screen backdrop: the ranch keeps turning behind a dark green gradient
         lobbyBg = UIK.Img(cr, UIK.Gradient(new Color(0.01f, 0.05f, 0.03f, 0.9f), new Color(0.02f, 0.07f, 0.05f, 0.6f), new Color(0.01f, 0.04f, 0.03f, 0.94f)), Color.white, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
@@ -167,10 +169,6 @@ public partial class Game
         int want = portrait ? 1 : 0;
         var sc = lobbyCanvas.GetComponent<CanvasScaler>();
         Vector2 design = portrait ? new Vector2(780, 1540) : new Vector2(1300, 730);
-        // ffu14e: fit the whole design inside the screen (match width on screens narrower than the design, e.g. a
-        // 412x915 phone, where match 0.6 pushed HOST / JOIN and the card edges off the sides)
-        float sa = Screen.width / Mathf.Max(1f, (float)Screen.height);
-        sc.matchWidthOrHeight = sa < design.x / design.y ? 0f : 1f;
         if (want == lobbyLayout) return;
         lobbyLayout = want;
         sc.referenceResolution = design;

@@ -35,10 +35,10 @@ public class TouchControls : MonoBehaviour
     static readonly string[] SpaceNames = { "TGT", "AUTO", "LAND", "BURN", "BRAKE", "-", "+", "SND" };
     // anchor 0 = bottom-right, 1 = top-right, 2 = top-left of the safe area; offsets in canvas units
     static readonly int[] Anchor = { 0, 0, 0, 0, 0, 1, 1, 2 };
-    static readonly Vector2[] PosL = { new Vector2(-120, 150), new Vector2(-270, 90), new Vector2(-280, 220), new Vector2(-75, 300), new Vector2(-175, 300), new Vector2(-150, -60), new Vector2(-70, -60), new Vector2(60, -150) };
+    static readonly Vector2[] PosL = { new Vector2(-120, 150), new Vector2(-270, 90), new Vector2(-280, 220), new Vector2(-75, 300), new Vector2(-175, 300), new Vector2(-150, -92), new Vector2(-70, -92), new Vector2(60, -150) };   // ffu14e: - / + were touching the page toolbar
     static readonly float[] RadL = { 80, 58, 44, 44, 44, 30, 30, 30 };
     // portrait: compact cluster, checked for overlap (A r50 / FIRE r38 / MSL r32 / UP r32 / DOWN r32)
-    static readonly Vector2[] PosP = { new Vector2(-82, 100), new Vector2(-190, 74), new Vector2(-190, 172), new Vector2(-82, 210), new Vector2(-290, 120), new Vector2(-130, -70), new Vector2(-60, -70), new Vector2(55, -150) };
+    static readonly Vector2[] PosP = { new Vector2(-82, 100), new Vector2(-190, 74), new Vector2(-190, 172), new Vector2(-82, 210), new Vector2(-290, 120), new Vector2(-130, -118), new Vector2(-60, -118), new Vector2(55, -150) };
     static readonly float[] RadP = { 50, 38, 32, 32, 32, 26, 26, 26 };
     static readonly Color[] Cols = { new Color(0.3f, 0.85f, 0.35f, 0.6f), new Color(1f, 0.35f, 0.25f, 0.6f), new Color(1f, 0.7f, 0.2f, 0.55f), new Color(0.4f, 0.8f, 1f, 0.5f), new Color(0.4f, 0.8f, 1f, 0.5f), new Color(1f, 1f, 1f, 0.35f), new Color(1f, 1f, 1f, 0.35f), new Color(1f, 1f, 1f, 0.3f) };
     static readonly Vector2 StickHomeL = new Vector2(170, 170), StickHomeP = new Vector2(112, 118);
