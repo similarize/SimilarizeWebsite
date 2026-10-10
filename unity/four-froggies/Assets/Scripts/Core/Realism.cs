@@ -179,7 +179,7 @@ public static class Realism
 
     static IEnumerator Load(string file, string key, bool mips, bool compress, bool clampV = false)
     {
-        string url = BaseUrl() + file + "?v=r2";
+        string url = BaseUrl() + file + "?v=r3";
         using (var rq = UnityWebRequest.Get(url))
         {
             yield return rq.SendWebRequest();
@@ -231,7 +231,7 @@ public static class Realism
             yield return Load(s + "_n" + sfx + ".jpg", s + "_n", true, !Lite);
         }
         yield return Load("water_n.png", "water_n", true, false);
-        yield return Load("clump.png", "clump", true, false);
+        yield return Load("clump.png", "clump", true, false, true);   // clamp V: Repeat bled the blade bases onto the card tops (dark dashes)
         try { ApplyTerrain(terrain); } catch (System.Exception e) { Debug.LogWarning("Realism: terrain " + e); }
         try { ApplyMaterials(); } catch (System.Exception e) { Debug.LogWarning("Realism: materials " + e); }
         try { BuildArea(); } catch (System.Exception e) { Debug.LogWarning("Realism: area " + e); }
@@ -302,7 +302,7 @@ public static class Realism
     static Material rockMat, barkMat;
     static void ApplyMaterials()
     {
-        rockMat = Tri("rock", new Color(0.56f, 0.54f, 0.5f), 2.2f, 0.16f, 1.5f);
+        rockMat = Tri("rock", new Color(0.42f, 0.41f, 0.39f), 2.2f, 0.16f, 1.5f);
         barkMat = Tri("bark", new Color(1f, 0.97f, 0.92f), 1.4f, 0.1f, 1.3f);
         // pond water
         var go = GameObject.Find("PondWater");
@@ -315,6 +315,9 @@ public static class Realism
             m.SetFloat("_Detail", Lite ? 0f : 1f);
             go.GetComponent<Renderer>().sharedMaterial = m;
         }
+        // pond reeds + lily pads (Ranch.Cyl -> shared Mats.Lit instances): natural, darker colours
+        Mats.Lit(new Color(0.35f, 0.5f, 0.2f)).color = new Color(0.24f, 0.27f, 0.13f);
+        var pad = Mats.Lit(new Color(0.25f, 0.55f, 0.2f)); pad.color = new Color(0.13f, 0.22f, 0.08f); pad.SetFloat("_Glossiness", 0.45f);
         // bark scan on trunks, rock scan on the Quaternius rocks, natural (less saturated) leaf tint
         var swap = new Dictionary<Material, Material>();
         int n = 0;
@@ -331,10 +334,6 @@ public static class Realism
                     string tn = m.HasProperty("_MainTex") && m.mainTexture != null ? m.mainTexture.name : "";
                     if (tn == "q_bark" && barkMat != null) rep = barkMat;
                     else if (tn == "q_rocks" && rockMat != null) rep = rockMat;
-                    else if (tn == "" && m.shader != null && m.shader.name == "Standard" && Near(m.color, new Color(0.35f, 0.5f, 0.2f)))
-                    { rep = new Material(m); rep.color = new Color(0.24f, 0.27f, 0.13f); }     // pond reeds
-                    else if (tn == "" && m.shader != null && m.shader.name == "Standard" && Near(m.color, new Color(0.25f, 0.55f, 0.2f)))
-                    { rep = new Material(m); rep.color = new Color(0.13f, 0.22f, 0.08f); rep.SetFloat("_Glossiness", 0.45f); }   // lily pads
                     else if ((tn == "q_leaves" || tn == "q_pine" || tn == "q_bushleaf") && m.shader != null && m.shader.name == "FF/Foliage")
                     { rep = new Material(m); rep.color = m.color * new Color(0.6f, 0.7f, 0.48f); }
                     swap[m] = rep;
