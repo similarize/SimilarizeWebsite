@@ -36,7 +36,13 @@ public static class Hands
     // hand-space reference points (metres, frog.bin hand scale 1.22): index tip when pointing, palm centre (underside)
     static readonly Vector3 IndexTip = new Vector3(-0.026f, -0.010f, 0.168f);
     static readonly Vector3 PalmC = new Vector3(0.0f, -0.024f, 0.058f);
-    const float UpperLen = 0.30f, ForeLen = 0.317f;
+    // ffu25: elbow moved back to the forearm's round end (hand z -0.30 x 1.22) + an upper-arm bone ("upper", frog.bin
+    // rr6, work/rr/frog/fparm.py) that is aimed at the shoulder and stretched to reach past it, so the arm always runs
+    // off-screen (Bill, ffu23: "the hands are cut off ... the arms should go off screen so there's no invisible body")
+    const float UpperLen = 0.30f, ForeLen = 0.366f, UpperMesh = 0.422f;
+    static int upR = -1, upL = -1;
+    static readonly Vector3[] wl = new Vector3[2];          // smoothed wrist in EYE space (ffu25)
+    static readonly Quaternion[] ql = new Quaternion[2];    // smoothed hand rotation in eye space
     static readonly Vector3 ShoulderE = new Vector3(0.19f, -0.29f, -0.06f);   // eye space (right; left mirrored)
 
     // current smoothed state per hand: wrist (world), hand rotation (world), finger curls
@@ -71,7 +77,7 @@ public static class Hands
             var rig = FrogAsset.Build(hand, eyeT, m.name, m, k == 1, RealRoom.Layer);
             fb[k] = new int[12];
             for (int i = 0; i < 4; i++) for (int j = 0; j < 3; j++) fb[k][i * 3 + j] = rig.Find("f" + i + "_" + j);
-            if (k == 0) { R = rig; matR = m; palR = rig.Find("palm"); } else { L = rig; matL = m; palL = rig.Find("palm"); }
+            if (k == 0) { R = rig; matR = m; palR = rig.Find("palm"); upR = rig.Find("upper"); } else { L = rig; matL = m; palL = rig.Find("palm"); upL = rig.Find("upper"); }
         }
         Debug.Log("RealRoom: frog hands " + hand.bone.Length + " bones, " + hand.pos.Length + " verts");
     }
@@ -236,10 +242,14 @@ public static class Hands
                 if (actT >= actDur) act = Act.None;
             }
             // smoothing (fast enough to keep IK reaches crisp, slow enough to hide pose switches)
-            if (!init) { wrist[k] = tw; hrot[k] = tq; for (int i = 0; i < 4; i++) curl[k][i] = tc[i]; }
+            // ffu25: smoothed in eye space (was world space: walking / crouching / the crouch pitch dragged a lagging hand
+            // away from the body - the lone floating left hand in the crouch-grab); the look-lag spring above still trails turns
+            Vector3 twl = eye.InverseTransformPoint(tw); Quaternion tql = Quaternion.Inverse(eye.rotation) * tq;
+            if (!init) { wl[k] = twl; ql[k] = tql; for (int i = 0; i < 4; i++) curl[k][i] = tc[i]; }
             float s1 = 1f - Mathf.Exp(-dt * (act != Act.None && k == 0 ? 22f : 12f));
-            wrist[k] = Vector3.Lerp(wrist[k], tw, s1);
-            hrot[k] = Quaternion.Slerp(hrot[k], tq, s1);
+            wl[k] = Vector3.Lerp(wl[k], twl, s1);
+            ql[k] = Quaternion.Slerp(ql[k], tql, s1);
+            wrist[k] = eye.TransformPoint(wl[k]); hrot[k] = eye.rotation * ql[k];
             for (int i = 0; i < 4; i++) curl[k][i] = Mathf.Lerp(curl[k][i], tc[i], 1f - Mathf.Exp(-dt * 16f));
             ApplyIK(k == 0 ? R : L, k, sx);
         }
@@ -259,14 +269,31 @@ public static class Hands
     {
         Vector3 sh = E(new Vector3(ShoulderE.x * sx, ShoulderE.y, ShoulderE.z));
         Vector3 pole = ED(new Vector3(0.75f * sx, -1f, -0.35f));
-        Vector3 elbow = FrogAsset.SolveJoint(sh, wrist[k], UpperLen, ForeLen, pole);
-        Vector3 fdir = (wrist[k] - elbow).normalized;
+        // ffu25: never further than arm's length from the shoulder (a far target left the hand floating on its own)
+        Vector3 wr = wrist[k], wv = wr - sh; float reach = (UpperLen + ForeLen) * 0.995f;
+        if (wv.sqrMagnitude > reach * reach) wr = sh + wv.normalized * reach;
+        Vector3 elbow = FrogAsset.SolveJoint(sh, wr, UpperLen, ForeLen, pole);
+        Vector3 fdir = (wr - elbow).normalized;
         Vector3 up = hrot[k] * Vector3.up;
         up -= fdir * Vector3.Dot(up, fdir);
         if (up.sqrMagnitude < 1e-6f) up = ED(Vector3.up);
         // the root is the wrist frame: origin at the wrist, +z along the forearm
         r.root.rotation = Quaternion.LookRotation(fdir, up.normalized);
-        r.root.position = wrist[k];
+        r.root.position = wr;
+        // ffu25: upper arm from the elbow (its rest position under the forearm bone) to just past the shoulder
+        int ub = k == 0 ? upR : upL;
+        if (ub >= 0)
+        {
+            Transform ut = r.b[ub];
+            Vector3 toS = sh - ut.position; float dS = toS.magnitude;
+            if (dS > 1e-4f)
+            {
+                Vector3 uu = r.root.up - toS * (Vector3.Dot(r.root.up, toS) / (dS * dS));
+                if (uu.sqrMagnitude < 1e-6f) uu = ED(Vector3.up);
+                ut.rotation = Quaternion.LookRotation(toS / dS, uu.normalized);
+                ut.localScale = new Vector3(1f, 1f, Mathf.Clamp((dS + 0.08f) / UpperMesh, 0.3f, 3f));
+            }
+        }
         int p = k == 0 ? palR : palL;
         if (p >= 0)
         {

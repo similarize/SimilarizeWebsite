@@ -23,7 +23,7 @@ public partial class RealRoom : MonoBehaviour
     public static RealRoom I;
     public static readonly Vector3 RoomO = new Vector3(0f, -2000f, 1400f);   // under the house world, never in view
     public const int Layer = 21;
-    const string V = "?v=rr5";   // ffu23: frog.bin (hands + body + plush), rr.txt mats, night window; rr5 = ffu23b closed forearm
+    const string V = "?v=rr6";   // ffu23: frog.bin (hands + body + plush), rr.txt mats, night window; rr5 = ffu23b closed forearm
     const float EyeH = 1.47f;
 
     // the door in the house (living room west wall), HouseWorld local coordinates
