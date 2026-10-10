@@ -630,6 +630,12 @@ public static class Ranch
     }
 
     // ---------------- signs ----------------
+    static void FitSign(Text t)
+    {
+        t.resizeTextForBestFit = true; t.resizeTextMaxSize = t.fontSize; t.resizeTextMinSize = Mathf.Max(8, t.fontSize / 3);
+        t.horizontalOverflow = HorizontalWrapMode.Wrap; t.verticalOverflow = VerticalWrapMode.Truncate;
+    }
+
     public static void Sign(Vector3 pos, float yaw, string text, Color bg, float width, float height)
     {
         var go = new GameObject("Sign");
@@ -638,7 +644,7 @@ public static class Ranch
         var cv = go.AddComponent<Canvas>();
         cv.renderMode = RenderMode.WorldSpace;
         var cs = go.AddComponent<CanvasScaler>();
-        cs.dynamicPixelsPerUnit = 3f;
+        cs.dynamicPixelsPerUnit = 6f;
         var rt = (RectTransform)go.transform;
         rt.sizeDelta = new Vector2(width * 50f, height * 50f);
         go.transform.localScale = Vector3.one * 0.02f;
@@ -646,6 +652,7 @@ public static class Ranch
         img.raycastTarget = false;
         Text t = UIK.Label(go.transform, text, Mathf.RoundToInt(Mathf.Min(height * 50f * 0.55f, 54f)), TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, rt.sizeDelta * 0.95f, Color.white);
         t.supportRichText = true;
+        FitSign(t);   // ffu20: the wider modern face never spills off the board
         // board between the two faces
         var back = Mats.Prim(PrimitiveType.Cube, go.transform, new Vector3(0f, 0f, 3f), new Vector3(width * 50f, height * 50f, 4f), Mats.Lit(Color.Lerp(bg, Color.black, 0.4f)));
         // ffu9: the same text on the back face, so it never reads mirrored (house FRONT DOOR sign from the follow cam).
@@ -657,7 +664,7 @@ public static class Ranch
         var bcv = bgo.AddComponent<Canvas>();
         bcv.renderMode = RenderMode.WorldSpace;
         var bcs = bgo.AddComponent<CanvasScaler>();
-        bcs.dynamicPixelsPerUnit = 3f;
+        bcs.dynamicPixelsPerUnit = 6f;
         var backFace = (RectTransform)bgo.transform;
         backFace.sizeDelta = rt.sizeDelta;
         bgo.transform.localScale = Vector3.one * 0.02f;
@@ -665,6 +672,7 @@ public static class Ranch
         img2.raycastTarget = false;
         Text t2 = UIK.Label(backFace, text, t.fontSize, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, rt.sizeDelta * 0.95f, Color.white);
         t2.supportRichText = true;
+        FitSign(t2);
         // one-sided, depth-tested faces (see Resources/FFSignText.shader); falls back to the default UI material
         Material sm = SignMat();
         if (sm != null) { img.material = sm; t.material = sm; img2.material = sm; t2.material = sm; }

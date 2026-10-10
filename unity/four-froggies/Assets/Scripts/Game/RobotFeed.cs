@@ -49,10 +49,12 @@ public class RobotFeed : MonoBehaviour
         status = UIK.Label(band.transform, "", 16, TextAnchor.MiddleLeft, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, Color.white);
         UIK.Anchor(status.rectTransform, Vector2.zero, Vector2.one, new Vector2(10f, 0f), new Vector2(-8f, 0f));
         status.supportRichText = true; status.verticalOverflow = VerticalWrapMode.Truncate;
+        status.resizeTextForBestFit = true; status.resizeTextMinSize = 9; status.resizeTextMaxSize = 16;
         dot = UIK.Img(box, UIK.Circle, new Color(1f, 0.25f, 0.2f), new Vector2(0f, 1f), new Vector2(14f, -17f), new Vector2(11f, 11f));
         title = UIK.Label(box, "", 16, TextAnchor.MiddleLeft, new Vector2(0f, 1f), Vector2.zero, Vector2.zero, Color.white);
         UIK.Anchor(title.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(26f, -34f), new Vector2(-170f, 0f));
-        title.supportRichText = true; title.horizontalOverflow = HorizontalWrapMode.Overflow;
+        title.supportRichText = true; title.horizontalOverflow = HorizontalWrapMode.Wrap; title.verticalOverflow = VerticalWrapMode.Truncate;
+        title.resizeTextForBestFit = true; title.resizeTextMinSize = 9; title.resizeTextMaxSize = 16;
         camBtn = Btn("CAM", -132f, out camLbl);
         fullBtn = Btn("FULL", -74f, out fullLbl);
         Text x; closeBtn = Btn("X", -22f, out x);
@@ -153,6 +155,11 @@ public class RobotFeed : MonoBehaviour
             box.anchoredPosition = new Vector2(14f, portrait ? -112f : -110f);
             frameImg.color = new Color(0.03f, 0.04f, 0.06f, 0.92f);
         }
+        float bx = mode == 2 ? -170f : 0f, by = mode == 2 ? -6f : 0f;   // full screen: clear of the page toolbar (top-right)
+        camBtn.rectTransform.anchoredPosition = new Vector2(-132f + bx, -17f + by);
+        fullBtn.rectTransform.anchoredPosition = new Vector2(-74f + bx, -17f + by);
+        closeBtn.rectTransform.anchoredPosition = new Vector2(-22f + bx, -17f + by);
+        title.rectTransform.offsetMax = new Vector2(-170f + bx, 0f);
         fullLbl.text = mode == 2 ? "PIP" : "FULL";
         camLbl.text = eye ? "EYE" : "DRONE";
         // render target = the picture's real on-screen pixels (phones capped at 960 wide)

@@ -29,7 +29,7 @@ public class RobotPhone : MonoBehaviour
     readonly List<Text> itemLbls = new List<Text>();
     Image arrowL, arrowR;
     float stickCool;
-    const float PW = 440f, PH = 700f, CardH = 214f;
+    const float PW = 440f, PH = 664f, CardH = 196f;
     List<Vehicle> vehicles = new List<Vehicle>();
     Vehicle pickVeh; int pickBand = -1;
     // carousel turntable
@@ -51,13 +51,13 @@ public class RobotPhone : MonoBehaviour
         BuildItems();
         canvas = UIK.MakeCanvas("Phone", null, 70, true);
         Transform r = canvas.transform;
-        panel = UIK.Img(r, UIK.Round, new Color(0.035f, 0.045f, 0.065f, 0.95f), new Vector2(1f, 0.5f), new Vector2(-PW * 0.5f - 12f, 0f), new Vector2(PW, PH));
+        panel = UIK.Img(r, UIK.Round, new Color(0.035f, 0.045f, 0.065f, 0.95f), new Vector2(1f, 0.5f), new Vector2(-PW * 0.5f - 12f, -24f), new Vector2(PW, PH));   // ffu20: clear of the page toolbar
         panel.type = Image.Type.Sliced;
         Transform p = panel.transform;
         var head = UIK.Label(p, "ROBOT PHONE", 18, TextAnchor.MiddleLeft, new Vector2(0.5f, 1f), new Vector2(0f, -22f), new Vector2(PW - 36f, 26f), new Color(0.55f, 1f, 0.6f));
         UIK.Modernize(head, true);
         // ---- carousel card ----
-        card = UIK.Img(p, UIK.Round, new Color(1f, 1f, 1f, 0.06f), new Vector2(0.5f, 1f), new Vector2(0f, -44f - CardH * 0.5f), new Vector2(PW - 24f, CardH));
+        card = UIK.Img(p, UIK.Round, new Color(1f, 1f, 1f, 0.06f), new Vector2(0.5f, 1f), new Vector2(0f, -40f - CardH * 0.5f), new Vector2(PW - 24f, CardH));
         card.type = Image.Type.Sliced;
         var mask = card.gameObject.AddComponent<Mask>(); mask.showMaskGraphic = true;
         stage = new GameObject("Turntable", typeof(RectTransform)).AddComponent<RawImage>();
@@ -70,9 +70,9 @@ public class RobotPhone : MonoBehaviour
         ownerT = UIK.Label(card.transform, "", 14, TextAnchor.UpperLeft, new Vector2(0f, 0f), new Vector2(160f, 11f), new Vector2(290f, 20f), new Color(0.75f, 0.85f, 0.95f));
         arrowL = Arrow(card.transform, -1); arrowR = Arrow(card.transform, 1);
         int n = RanchLife.I != null ? RanchLife.I.robots.Count : 7;
-        for (int i = 0; i < n; i++) dots.Add(UIK.Img(p, UIK.Circle, Color.white, new Vector2(0.5f, 1f), new Vector2((i - (n - 1) * 0.5f) * 16f, -44f - CardH - 11f), new Vector2(8f, 8f)));
+        for (int i = 0; i < n; i++) dots.Add(UIK.Img(p, UIK.Circle, Color.white, new Vector2(0.5f, 1f), new Vector2((i - (n - 1) * 0.5f) * 16f, -40f - CardH - 11f), new Vector2(8f, 8f)));
         // ---- battery + job ----
-        float iy = -44f - CardH - 34f;
+        float iy = -40f - CardH - 34f;
         batBg = UIK.Img(p, UIK.Round, new Color(1f, 1f, 1f, 0.12f), new Vector2(0f, 1f), new Vector2(18f + 45f, iy), new Vector2(90f, 14f)); batBg.type = Image.Type.Sliced;
         batFill = UIK.Img(batBg.transform, UIK.Round, new Color(0.4f, 1f, 0.5f), new Vector2(0f, 0.5f), Vector2.zero, new Vector2(90f, 14f)); batFill.type = Image.Type.Sliced;
         batFill.rectTransform.pivot = new Vector2(0f, 0.5f);
@@ -161,8 +161,13 @@ public class RobotPhone : MonoBehaviour
         Showroom.SoftQuad("Backdrop", standRoot, new Vector3(0f, 1.1f, 4.5f), Vector3.zero, 9f, 5.2f, spotMat);
         Mats.SetLayer(standRoot.gameObject, Showroom.Layer);
         standCam = Showroom.NewCam("PhoneStandCam", standRoot);
-        standCam.transform.localPosition = new Vector3(0f, 1.25f, -5.6f);
-        standCam.transform.LookAt(standRoot.position + new Vector3(0f, 0.85f, 0f));
+        standCam.transform.localPosition = new Vector3(0f, 1.15f, -4.3f);
+        standCam.transform.LookAt(standRoot.position + new Vector3(0f, 0.9f, 0f));
+        // a soft key light of its own (layer 20 only, short range: the lobby stands are 60+ m away)
+        var kl = new GameObject("PhoneStandKey").AddComponent<Light>();
+        kl.transform.SetParent(standRoot, false); kl.transform.localPosition = new Vector3(1.6f, 2.6f, -2.4f);
+        kl.type = LightType.Point; kl.range = 9f; kl.intensity = 1.6f; kl.color = new Color(1f, 0.97f, 0.92f);
+        kl.cullingMask = Showroom.Mask; kl.shadows = LightShadows.None; kl.renderMode = LightRenderMode.ForcePixel;
         standCam.fieldOfView = 26f;
         standCam.farClipPlane = 25f;
     }

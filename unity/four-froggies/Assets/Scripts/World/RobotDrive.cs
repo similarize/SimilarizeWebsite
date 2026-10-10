@@ -18,7 +18,8 @@ public class RobotDriver
     public int phase;                // 0 walking to it, 1 driving, 2 getting out
     Vector3 spot, wanderGoal;
     float wanderT, stuckT, revT, raceT, walkT, exitT;
-    bool raceInit;
+    bool raceInit, joining;
+    float progT; Vector3 progP;
     public static readonly string[] Modes = { "wander", "follow", "race", "spot" };
     public static readonly string[] ModeNames = { "wandering", "following", "racing", "going to the spot" };
 
@@ -277,7 +278,7 @@ public class RobotDriver
         i.move.x = steer;
         i.move.y = thr;
         // stuck: pushing but not moving -> back up with the wheel turned the other way
-        if (thr > 0.3f && Mathf.Abs(fs) < 0.7f) stuckT += Time.deltaTime; else stuckT = Mathf.Max(0f, stuckT - Time.deltaTime);
+        if (thr > 0.15f && Mathf.Abs(fs) < 0.7f) stuckT += Time.deltaTime; else stuckT = Mathf.Max(0f, stuckT - Time.deltaTime);
         if (stuckT > 2.2f) { stuckT = 0f; revT = 1.6f; }
         return i;
     }
@@ -294,15 +295,23 @@ public class RobotDriver
         }
         if (!raceInit)
         {
-            raceInit = true;
+            // join the track at the nearest point OFF the crossover bridge ramps (driving at the raised deck from the side
+            // ended under it against the pillars - ffu20a probe)
+            raceInit = true; progT = 0f; progP = p;
             float best = 1e9f;
             for (int n = 0; n < 160; n++)
             {
                 float t = n * Mathf.PI * 2f / 160f;
+                if (Layout.TrackH(t) > 0.3f) continue;
                 float dd = Flat(Layout.TrackPoint(t) - p);
                 if (dd < best) { best = dd; raceT = t; }
             }
+            joining = best > 14f;
         }
+        // no progress for 6 s (stuck on a pillar / rail): back up and aim further along
+        progT += Time.deltaTime;
+        if (progT > 6f) { if (Flat(p - progP) < 4f) { raceT += 0.35f; revT = 1.8f; } progT = 0f; progP = p; }
+        if (joining) { Vector3 j = Layout.TrackPoint(raceT); if (Flat(j - p) < 12f * Mathf.Min(S, 3f)) joining = false; else return j; }
         for (int g = 0; g < 8 && Flat(Layout.TrackPoint(raceT) - p) < 13f * Mathf.Min(S, 3f); g++) raceT += 0.06f;
         if (raceT > Mathf.PI * 2f) raceT -= Mathf.PI * 2f;
         return Layout.TrackPoint(raceT + 0.12f * Mathf.Min(S, 2.5f));
