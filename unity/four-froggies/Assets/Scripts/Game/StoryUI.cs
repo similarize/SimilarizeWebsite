@@ -191,7 +191,7 @@ public class StoryUI
         if (p) UIK.Anchor(dlgText.rectTransform, new Vector2(0, 0), new Vector2(1, 1), new Vector2(20, 24), new Vector2(-20, -150));
         dlgText.fontSize = p ? 25 : 24;
         UIK.Anchor(dlgHint.rectTransform, new Vector2(0, 0), new Vector2(1, 0), new Vector2(20, 6), new Vector2(-16, 26));
-        skipBtn.rectTransform.anchoredPosition = p ? new Vector2(-95, -120) : new Vector2(-95, -72);
+        skipBtn.rectTransform.anchoredPosition = p ? new Vector2(-95, -84) : new Vector2(-95, -52);
         titleKicker.rectTransform.sizeDelta = new Vector2(p ? 680 : 1100, 34);
         titleMain.rectTransform.sizeDelta = new Vector2(p ? 700 : 1200, 80);
         titleMain.fontSize = p ? 44 : 56;

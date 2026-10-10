@@ -348,7 +348,7 @@ public class StorySet : MonoBehaviour
         // control panel (front right) + workbench (front left) + blueprint board (front)
         PanelPos = Pad + new Vector3(9f, 0f, 8.5f);
         BenchPos = Pad + new Vector3(-9f, 0f, 8.5f);
-        BoardPos = Pad + new Vector3(0f, 0f, 13.5f);
+        BoardPos = Pad + new Vector3(-14f, 0f, 13f);   // ffu22 fix: was (0, 0, 13.5), in every pad-cast camera's way
         TankFixPos = Pad + new Vector3(4.6f, 0f, 1.5f);
         GatherPos = new Vector3(-26f, 0f, -52f); GatherPos.y = GY(GatherPos.x, GatherPos.z);
         Vector3 pp = G(PanelPos.x, PanelPos.z);

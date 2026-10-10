@@ -22,6 +22,7 @@ public class RobotPhone : MonoBehaviour
     readonly List<Item>[] tabs = new List<Item>[4];
     static readonly string[] TabNames = { "CHORES", "ORDERS", "DRIVE", "MISSION" };
     Canvas canvas;
+    public Canvas UICanvas { get { return canvas; } }   // ffu22: story cutscenes hide it
     Image panel, btn, card, batBg, batFill;
     RawImage stage;
     Text nameT, ownerT, jobT, batT, msg, hint, btnKey;

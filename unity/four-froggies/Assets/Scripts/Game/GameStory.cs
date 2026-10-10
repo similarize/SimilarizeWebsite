@@ -167,6 +167,7 @@ public partial class Game
             sharedCam.enabled = false; overview.enabled = false;
             foreach (var s in slots) if (s.cam != null) s.cam.enabled = false;
             hudCanvas.enabled = false;
+            if (RobotPhone.I != null && RobotPhone.I.UICanvas != null) RobotPhone.I.UICanvas.enabled = false;
             Sfx.ListenerPos = st.CamPos;
         }
         else if (storyCamOn)
@@ -174,6 +175,7 @@ public partial class Game
             storyCamOn = false;
             if (storyCam != null) storyCam.enabled = false;
             hudCanvas.enabled = true;
+            if (RobotPhone.I != null && RobotPhone.I.UICanvas != null) RobotPhone.I.UICanvas.enabled = true;
             ApplyLayout();
         }
         if (!Story.Active || st == null || st.ui == null) return;

@@ -471,6 +471,7 @@ public static class Ranch
             string pk = conifer ? PinePacks[r.Next(PinePacks.Length)] : TreePacks[r.Next(TreePacks.Length)];
             LBPack p = LBPack.Get(pk);
             if (p == null) continue;
+            if ((new Vector2(x, z) - StorySet.PadXZ).sqrMagnitude < 20f * 20f) { r.NextDouble(); continue; }   // ffu22: keep the story launch pad clear
             // ffu21: each tree is its own breakable (and climbable) piece
             Transform tg = RanchBreak.Group("Tree", new Vector3(x, gy - 0.15f, z));
             p.SpawnAll(tg, Vector3.zero, s, Color.white, (float)r.NextDouble() * 360f);

@@ -241,6 +241,7 @@ public partial class Story : MonoBehaviour
         hintT -= dt;
         PollRawInput();
         runner.Tick();
+        if (!Active) return;   // ffu22 fix: the ending (Stop2) ran inside the tick
         if (!runner.Busy && pendCh > 0) { int pc = pendCh, ps = pendStep; pendCh = -1; StartChapter(pc, ps); }
         if (!runner.Busy && ch <= 7)
         {
