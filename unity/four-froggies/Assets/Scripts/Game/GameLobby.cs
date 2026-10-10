@@ -128,6 +128,7 @@ public partial class Game
         hostBtn = hostB.root; hostText = hostB.label;
         joinB = new ModernButton(r, "JOIN", 2, new Color(0.56f, 0.34f, 0.92f, 1f));
         joinBtn = joinB.root; joinBtnText = joinB.label;
+        BuildStoryButton(r);   // ffu22 story mode
         nameBtn = UIK.Glass(r, new Color(1f, 1f, 1f, 0.09f), Vector2.zero, new Vector2(320, 42));
         nameText = UIK.Label(nameBtn.transform, "", 20, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, Color.white);
         UIK.Stretch(nameText.rectTransform); nameText.supportRichText = true;
@@ -308,6 +309,7 @@ public partial class Game
             put(lobbyHelp, 0, -350, 1200, 24); lobbyHelp.fontSize = 14;
 
         }
+        StoryRelayout(portrait);   // ffu22: four buttons (STORY)
         lastNetRow = -1;
     }
 
@@ -331,6 +333,7 @@ public partial class Game
             else if (online) { put(nameBtn, 410, -284, 300, 40); put(netText, -150, -284, 860, 44); }
             else { put(nameBtn, 0, -284, 380, 40); put(netText, 0, -322, 1150, 30); }
         }
+        StoryNetRow();   // ffu22
     }
 
     // ---------------- characters ----------------
@@ -519,6 +522,7 @@ public partial class Game
         playB.focus = slots.Count > 0 && !waitHost; hostB.focus = xHeld; joinB.focus = yHeld;
         bool mouseOk = !touchOnly && Kb.TouchCount() == 0;
         playB.Tick(mouseOk); hostB.Tick(mouseOk); joinB.Tick(mouseOk);
+        TickStoryButton(mouseOk, touchOnly, online);   // ffu22
         Slot me = slots.Count > 0 ? slots[0] : null;
         nameText.text = "NAME  <color=#ffe680>" + (me != null ? (me.name.Length > 0 ? me.name : Roster.Name(charOf[me.frog])) : "-") + "</color>  <size=13>" + (touchOnly ? "tap to change" : "RB / N / click") + "</size>";
 
@@ -546,13 +550,13 @@ public partial class Game
         }
         if (touchOnly)
         {
-            lobbyHelp.text = "Tap a character, then PLAY. Empty seats are AI froggies.\nWith friends: HOST shows a room code, they tap JOIN and type it.";
+            lobbyHelp.text = "Tap a character, then PLAY - or STORY for The Big Launch. Empty seats are AI froggies.\nWith friends: HOST shows a room code, they tap JOIN and type it.";
             Slot ts = FindSlot(InputKind.Touch);
             lobbyStatus.text = ts == null ? "Tap a character to pick it" : "You are <color=" + Roster.UiHex(charOf[ts.frog]) + ">" + (ts.name.Length > 0 ? ts.name + " (" + Roster.Name(charOf[ts.frog]) + ")" : Roster.Name(charOf[ts.frog])) + "</color> - tap PLAY";
             if (err.Length > 0) lobbyStatus.text = err;
             return;
         }
-        lobbyHelp.text = "Gamepad: A join · D-pad pick (left/right, up/down) · B leave · Start play     Keyboard: Enter join/play · arrows pick · Esc leave     Mouse/touch: click a character";
+        lobbyHelp.text = "Gamepad: A join · D-pad pick · B leave · Start play · LB story     Keyboard: Enter join/play · arrows pick · S story · Esc leave     Mouse/touch: click a character";
         viewText.text = shared ? "VIEW   Split   <color=#ffd84a>[ SHARED ]</color>  <size=13>(Back / V)</size>"
                                : "VIEW   <color=#ffd84a>[ SPLIT ]</color>   Shared  <size=13>(Back / V)</size>";
         if (slots.Count == 0) lobbyStatus.text = "Press A on a gamepad, Enter on the keyboard, or click a character to join";

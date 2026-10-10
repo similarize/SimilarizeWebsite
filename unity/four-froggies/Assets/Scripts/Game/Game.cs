@@ -102,6 +102,7 @@ public partial class Game : MonoBehaviour
         "<b>REAL ROOM</b> (James's house): furniture, rubber duck, lamp, picture + parquet / plaster / wool textures and the Kloppenheim 02\n" +
         "   night sky: Poly Haven (CC0). TV: Big Buck Bunny (c) Blender Foundation, peach.blender.org, CC BY 3.0.\n" +
         "<b>Sound effects + ambience</b>: BigSoundBank.com by Joseph Sardin (royalty-free, CC0-like) and Kenney (CC0).\n" +
+        "<b>Story mode</b> (The Big Launch): story, rocket and score made for this game (synthesised, no samples).\n" +
         "<b>Fonts</b>: Montserrat (The Montserrat Project Authors) and Inter (The Inter Project Authors), SIL Open Font License 1.1.\n" +
         "<b>Music</b> (OpenGameArt, CC0): Flowerbed Fields by Zane Little Music; Picnic and Home by heartade; Underwater Theme II -\n" +
         "   Music by Cleyton Kauffman; Space Adventure by MintoDog; Puppy Playing in the Garden by Spring Spring; Outer Space Loop by wipics.\n\n" +
@@ -154,13 +155,14 @@ public partial class Game : MonoBehaviour
             return false;
         }
         if (demoT > 5f && slots.Count == 0) { Join(InputKind.Keyboard, null); return false; }
-        if (demoT > 6f && slots.Count > 0 && !(Net.I != null && Net.I.IsGuest)) { demoT = 0.01f; StartPlay(); demoPlayT = 0f; return true; }
+        if (demoT > 6f && slots.Count > 0 && !(Net.I != null && Net.I.IsGuest)) { demoT = 0.01f; if (!StoryDemoStart()) StartPlay(); demoPlayT = 0f; return true; }
         return false;
     }
 
     void DemoView()
     {
         if (demoShot.Length == 0 || slots.Count == 0 || slots[0].cam == null) return;
+        if (demoShot.StartsWith("story")) return;   // ffu22: the story scripts its own demo
         demoPlayT += Time.unscaledDeltaTime;
         string[] list = demoShot == "tour" ? Tour : demoShot.Split(',');   // tour, one scene, or a comma list (9 s each)
         string sc = list[Mathf.Min(list.Length - 1, (int)(demoPlayT / 9f))];
@@ -696,7 +698,7 @@ public partial class Game : MonoBehaviour
     void Update()
     {
         float dt = Time.deltaTime;
-        touch.active = state == State.Play && FindSlot(InputKind.Touch) != null && !help;
+        touch.active = state == State.Play && FindSlot(InputKind.Touch) != null && !help && !StoryBlocksTouch;
         if (state == State.Play) ApplyNames();
         if (state == State.Lobby) UpdateLobby(dt);
         else { FixAiChars(); UpdatePlay(dt); }
@@ -715,6 +717,7 @@ public partial class Game : MonoBehaviour
         if (keypad != null && keypad.Update(Screen.height > Screen.width)) { OrbitLobby(dt); RefreshLobby(); return; }
         UrlNet();
         if (NetButtons()) { OrbitLobby(dt); RefreshLobby(); return; }
+        if (StoryLobbyInput()) return;   // ffu22 STORY button
         if (Kb.CDown()) CreditsToggle();
         if (creditsPanel != null && creditsPanel.gameObject.activeSelf && (Kb.EscDown() || Kb.TouchesBegan().Count > 0 || Kb.MouseLeftDown())) { CreditsToggle(false); return; }
         if (DemoLobby()) return;
@@ -1118,6 +1121,7 @@ public partial class Game : MonoBehaviour
                     i = ci;
                 }
             }
+            i = StoryFilter(s, frogs[s.frog], i);   // ffu22: cutscenes / repair meter take the input
             if (i.view) viewPressed = true;
             if (i.help) helpPressed = true;
             if (help) i = new PIn();
@@ -1144,6 +1148,7 @@ public partial class Game : MonoBehaviour
     void EnterLobby()
     {
         state = State.Lobby;
+        if (Story.I != null) Story.I.Stop();   // ffu22
         FFDisplay.Lobby(true);
         lobbyAge = 0f;
         foreach (var f in frogs) f.human = false;
@@ -1246,6 +1251,7 @@ public partial class Game : MonoBehaviour
         }
         AscentViews();
         TickRumble();
+        StoryLate();   // ffu22: story camera + objective markers
     }
 
     void UpdateShared(float dt)

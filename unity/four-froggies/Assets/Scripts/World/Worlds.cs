@@ -114,9 +114,31 @@ public static class Worlds
                 break;
         }
         if (Realism.On) Realism.PreCull(w);   // ?realism=1 test: HDRI SH ambient on the ranch
+        if (StormK > 0f && w == WorldId.Ranch) StoryWeather(launchDark);   // ffu22 story storm (dark sky, heavy haze, flashes)
     }
 
     public static float MarsFog = 0.006f;
+
+    // ffu22 story mode: 0 = normal sky, 1 = full storm (dark slate sky + haze, dim ambient); Flash = lightning (0..1)
+    public static float StormK, Flash;
+    static void StoryWeather(float launchDark)
+    {
+        float k = StormK, fl = Flash;
+        Color fogStorm = new Color(0.2f, 0.23f, 0.27f);
+        RenderSettings.fogColor = Color.Lerp(Color.Lerp(RenderSettings.fogColor, fogStorm, k), new Color(0.8f, 0.85f, 1f), fl * 0.6f);
+        RenderSettings.fogDensity = Mathf.Lerp(RenderSettings.fogDensity, Mathf.Max(RenderSettings.fogDensity, 0.012f), k);
+        float a = Mathf.Lerp(1f, 0.42f, k) + fl * 1.2f;
+        RenderSettings.ambientSkyColor = Color.Lerp(amb0 * a, new Color(0.25f, 0.28f, 0.34f) * a, k * 0.5f);
+        RenderSettings.ambientEquatorColor = amb1 * a; RenderSettings.ambientGroundColor = amb2 * a;
+        Material sky = RenderSettings.skybox;
+        if (sky == null || !sky.HasProperty("_Exposure")) return;
+        if (sky != stormSky) { stormSky = sky; stormExp0 = sky == ranchSky && exp0 >= 0f ? exp0 : sky.GetFloat("_Exposure"); }
+        float baseExp = sky == ranchSky ? sky.GetFloat("_Exposure") : stormExp0;   // the ranch sky was just set for this camera
+        sky.SetFloat("_Exposure", Mathf.Lerp(baseExp, stormExp0 * 0.28f, k) + fl * stormExp0 * 0.8f);
+    }
+    static Material stormSky; static float stormExp0 = 1f;
+    // story ends: put a non-ranch (realism) sky back to its own exposure
+    public static void StormReset() { if (stormSky != null && stormSky != ranchSky && stormSky.HasProperty("_Exposure")) stormSky.SetFloat("_Exposure", stormExp0); }
 
     // ground height for camera clamps etc.; outside the ranch square there is no terrain
     public static float FloorUnder(Vector3 p)

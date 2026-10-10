@@ -46,11 +46,11 @@ public class ModernButton
         return sp;
     }
 
-    // icons drawn once into small alpha textures: 0 play, 1 host (broadcast), 2 join (arrow in), 3 none
-    static readonly Sprite[] icons = new Sprite[3];
+    // icons drawn once into small alpha textures: 0 play, 1 host (broadcast), 2 join (arrow in), 3 story (rocket, ffu22), else none
+    static readonly Sprite[] icons = new Sprite[4];
     public static Sprite Icon(int kind)
     {
-        if (kind < 0 || kind > 2) return null;
+        if (kind < 0 || kind > 3) return null;
         if (icons[kind] != null) return icons[kind];
         const int n = 64;
         var t = new Texture2D(n, n, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
@@ -74,6 +74,16 @@ public class ModernButton
                     float arc1 = ang < 50f ? Mathf.Clamp01((0.075f - Mathf.Abs(r - 0.48f)) * n * 0.5f) : 0f;
                     float arc2 = ang < 50f ? Mathf.Clamp01((0.075f - Mathf.Abs(r - 0.86f)) * n * 0.5f) : 0f;
                     a = Mathf.Max(dot, Mathf.Max(arc1, arc2));
+                }
+                else if (kind == 3)
+                {
+                    // ffu22 story: a little rocket leaning right - pointed body, window hole, two fins, flame
+                    float ru = u * 0.8f + v * 0.6f, rv = -u * 0.6f + v * 0.8f;      // rotate -37 deg
+                    float body = (Mathf.Abs(ru) < 0.22f * Mathf.Clamp01((0.78f - rv) / 0.3f) && rv > -0.45f && rv < 0.78f) ? 1f : 0f;
+                    float win = (ru * ru + (rv - 0.22f) * (rv - 0.22f) < 0.0075f) ? 1f : 0f;
+                    float fin = (rv > -0.55f && rv < -0.12f && Mathf.Abs(ru) < 0.42f - (rv + 0.55f) * 0.45f && Mathf.Abs(ru) > 0.18f) ? 1f : 0f;
+                    float fl = (rv < -0.5f && rv > -0.92f && Mathf.Abs(ru) < 0.13f * (rv + 0.92f) / 0.42f) ? 0.85f : 0f;
+                    a = Mathf.Max(Mathf.Max(body * (1f - win), fin), fl);
                 }
                 else
                 {

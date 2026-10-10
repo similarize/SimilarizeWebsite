@@ -121,6 +121,8 @@ public static class Sfx
             case "mars": return "mus_mars";
             case "callisto": return "mus_callisto";
             case "realroom": return "mus_house";
+            case "story": case "story_storm": case "story_somber": case "story_faith": case "story_triumph": return "mus_" + m;   // ffu22 story score
+            case "story_tense": return "mus_story_storm";
             default: return "mus_ranch";
         }
     }
@@ -134,16 +136,22 @@ public static class Sfx
             case "mars": return "amb_mars";
             case "lobby": return "amb_ranch";
             case "realroom": return "amb_house";
+            case "story_storm": return "amb_storm";   // ffu22 story: rain + wind
             default: return Layout.PondQ(ListenerPos.x, ListenerPos.z) < 1.25f ? "amb_pond" : "amb_ranch";
         }
     }
     static float MusicVol(string m) { if (m == "realroom") return 0.001f; return m == "lobby" ? 0.42f : m == "space" ? 0.34f : 0.36f; }
     static float BedVol(string m) { return m == "lobby" ? 0.25f : m == "underwater" ? 0.55f : m == "space" || m == "callisto" ? 0.45f : 0.5f; }
 
+    // ffu22: story mode picks the score (somber / faith / triumph ...) whatever world P1 is in; null = normal moods
+    public static string Override;
+
     public static void Music(string m)
     {
         if (pool == null) return;
-        string b = Bed(m);
+        string world = m;
+        if (Override != null) m = Override;
+        string b = Bed(m == "story_storm" ? m : world);   // story score over the real world's ambience (rain in the storm)
         if (m == mood && b == amb) return;
         try
         {
