@@ -149,6 +149,14 @@ public partial class Game
                 {
                     if (ldCar == null) return false;
                     Transform t = ldCar.transform;
+                    Vector3 bp, bf, br2, bu; float arc;
+                    if (!RallyTrack.Legacy && RallyTrack.BranchNearest(t.position, out bp, out bf, out br2, out bu, out arc))
+                    {
+                        // chase along the road itself (inside the loop a straight-back offset would end up outside it)
+                        Vector3 cf, cu;
+                        Vector3 cp = RallyTrack.BranchFrameAt(arc - 7f, out cf, out cu);
+                        pos = cp + cu * 2.6f; look = t.position + t.up * 0.9f + t.forward * 2f; up = cu; break;
+                    }
                     pos = t.position - t.forward * 9f + t.up * 3.2f; look = t.position + t.forward * 3f + t.up * 1f; up = t.up; break;
                 }
             default: return false;

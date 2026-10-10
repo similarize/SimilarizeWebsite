@@ -832,6 +832,14 @@ public static class RallyTrack
         for (int i = 1; i < br.Length; i++) if (br[i].arc >= arc) { fwd = br[i].fwd; return br[i].p; }
         fwd = br[br.Length - 1].fwd; return br[br.Length - 1].p;
     }
+    public static Vector3 BranchFrameAt(float arc, out Vector3 fwd, out Vector3 up)
+    {
+        fwd = Vector3.right; up = Vector3.up;
+        if (br == null) return Vector3.zero;
+        int i = 1;
+        while (i < br.Length - 1 && br[i].arc < arc) i++;
+        fwd = br[i].fwd; up = br[i].up; return br[i].p;
+    }
     public static float LoopArcA { get { return br != null ? br[loopA].arc : 0f; } }
     public static float LoopArcB { get { return br != null ? br[loopB].arc : 0f; } }
     public static float BranchArcEnd { get { return br != null ? br[br.Length - 1].arc : 0f; } }

@@ -120,6 +120,14 @@ public class GroundVehicle : Vehicle
         Bounds zone = default(Bounds);
         float guideYaw = 0f;
         foreach (Bounds b in RallyTrack.LoopZones) if (b.Contains(rb.position)) { inLoop = true; zone = b; }
+        // ffu19: continuous collision sweeps the body box along a straight line each step; inside the loop that line runs
+        // into the surface curving up ahead and PhysX stops the truck dead (seen in the loopdrive probe: 16 -> 4 m/s at the
+        // vertical). Discrete contacts in the loop zone (springs keep the body ~0.4 m off the surface), continuous elsewhere.
+        if (!RallyTrack.Legacy && !rb.isKinematic)
+        {
+            var want = inLoop ? CollisionDetectionMode.Discrete : CollisionDetectionMode.Continuous;
+            if (rb.collisionDetectionMode != want) rb.collisionDetectionMode = want;
+        }
         if (inLoop)
         {
             if (groundedCount > 0 && onStunt)
