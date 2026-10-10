@@ -379,17 +379,17 @@ public class Frog : MonoBehaviour
             Mats.Prim(PrimitiveType.Cube, g, new Vector3(0f, 0.94f, -0.64f), new Vector3(0.3f, 0.04f, 0.05f), steel);              // manifold
             Mats.Prim(PrimitiveType.Cube, g, new Vector3(0f, 0.55f, 0.535f), new Vector3(0.5f, 0.045f, 0.04f), black);             // chest strap
             // regulator hose round the right cheek to the mouthpiece
-            Vector3 v0 = new Vector3(0.12f, 0.95f, -0.64f), v1 = new Vector3(0.46f, 0.86f, -0.12f), v2 = new Vector3(0.3f, 0.74f, 0.42f), v3 = new Vector3(0.06f, 0.72f, 0.54f);
+            Vector3 v0 = new Vector3(0.12f, 0.95f, -0.64f), v1 = new Vector3(0.44f, 0.7f, -0.12f), v2 = new Vector3(0.3f, 0.6f, 0.42f), v3 = new Vector3(0.06f, 0.62f, 0.54f);
             Tube(v0, v1, 0.055f, black); Tube(v1, v2, 0.055f, black); Tube(v2, v3, 0.055f, black);
-            Mats.Prim(PrimitiveType.Sphere, g, new Vector3(0f, 0.72f, 0.55f), new Vector3(0.15f, 0.1f, 0.08f), black);           // mouthpiece
+            Mats.Prim(PrimitiveType.Sphere, g, new Vector3(0f, 0.62f, 0.55f), new Vector3(0.15f, 0.1f, 0.08f), black);           // mouthpiece
             // mask: open frame round both eyes + tinted lens + head strap
-            Mats.Prim(PrimitiveType.Cube, g, new Vector3(0f, 1.15f, 0.38f), new Vector3(0.74f, 0.05f, 0.07f), black);
-            Mats.Prim(PrimitiveType.Cube, g, new Vector3(0f, 0.84f, 0.38f), new Vector3(0.74f, 0.05f, 0.07f), black);
-            for (int k = -1; k <= 1; k += 2) Mats.Prim(PrimitiveType.Cube, g, new Vector3(0.37f * k, 1.0f, 0.38f), new Vector3(0.05f, 0.36f, 0.07f), black);
-            Mats.Prim(PrimitiveType.Cube, g, new Vector3(0f, 1.0f, 0.4f), new Vector3(0.7f, 0.28f, 0.02f), Mats.GlassTint(new Color(0.55f, 0.85f, 1f, 0.35f)));
-            for (int k = -1; k <= 1; k += 2) Mats.Prim(PrimitiveType.Cube, g, new Vector3(0.42f * k, 1.0f, 0.06f), new Vector3(0.04f, 0.06f, 0.64f), black);
-            Mats.Prim(PrimitiveType.Cube, g, new Vector3(0f, 1.0f, -0.24f), new Vector3(0.86f, 0.06f, 0.04f), black);
-            Mats.Prim(PrimitiveType.Cylinder, g, new Vector3(-0.46f, 1.24f, 0.22f), new Vector3(0.06f, 0.24f, 0.06f), orange);    // snorkel
+            // (ffu15c: 0.13 lower - the first fit sat on the forehead above the eyes; side straps removed, they stuck out)
+            Mats.Prim(PrimitiveType.Cube, g, new Vector3(0f, 1.02f, 0.4f), new Vector3(0.74f, 0.05f, 0.07f), black);
+            Mats.Prim(PrimitiveType.Cube, g, new Vector3(0f, 0.72f, 0.42f), new Vector3(0.7f, 0.05f, 0.07f), black);
+            for (int k = -1; k <= 1; k += 2) Mats.Prim(PrimitiveType.Cube, g, new Vector3(0.37f * k, 0.87f, 0.4f), new Vector3(0.05f, 0.34f, 0.07f), black);
+            Mats.Prim(PrimitiveType.Cube, g, new Vector3(0f, 0.87f, 0.42f), new Vector3(0.7f, 0.27f, 0.02f), Mats.GlassTint(new Color(0.55f, 0.85f, 1f, 0.35f)));
+            Mats.Prim(PrimitiveType.Cube, g, new Vector3(0f, 0.9f, -0.22f), new Vector3(0.84f, 0.06f, 0.04f), black);              // strap round the back
+            Mats.Prim(PrimitiveType.Cylinder, g, new Vector3(-0.42f, 1.08f, 0.24f), new Vector3(0.06f, 0.24f, 0.06f), orange);    // snorkel
             // flippers on the feet (kick in ScubaFx)
             finL = Mats.Node(g, "FinL", new Vector3(-0.36f, 0.05f, 0.02f));
             finR = Mats.Node(g, "FinR", new Vector3(0.36f, 0.05f, 0.02f));

@@ -55,7 +55,7 @@ public class StoryMech : Vehicle
             if (ik == InputKind.Gamepad)
                 return top + K("RT") + " tap jump / hold ROCKETS  ·  " + K("LB") + " afterburner  ·  " + K("LT") + " hold AIM (" + K("RT") + " fires)  ·  " + K("X") + " fire  ·  " + K("RB") + "/" + K("Y") + " missiles  ·  " + K("A") + " climb out";
             if (ik == InputKind.Touch)
-                return top + K("JUMP") + " tap jump / hold ROCKETS  ·  " + K("BOOST") + " afterburner  ·  " + K("AIM") + " aim mode  ·  " + K("FIRE") + " cannon  ·  " + K("MSL") + " missiles";
+                return top + K("JUMP") + " hold: rockets  ·  " + K("BOOST") + "  ·  " + K("AIM") + "  ·  " + K("FIRE") + "  ·  " + K("MSL");
             return top + K("WASD") + " walk  ·  " + K("SPACE") + " tap jump / hold ROCKETS  ·  " + K("SHIFT") + " afterburner  ·  " + K("RMB") + " hold AIM  ·  " + K("LMB") + " fire  ·  " + K("F") + " missiles  ·  " + K("E") + " climb out";
         }
     }
@@ -199,7 +199,9 @@ public class StoryMech : Vehicle
         // name plate on the chest
         var tag = new GameObject("Plate");
         tag.transform.SetParent(m.torso, false);
-        tag.transform.localPosition = packed ? new Vector3(0f, H * 0.115f, H * 0.088f) : new Vector3(0f, H * 0.12f, H * 0.115f);
+        // ffu15c: 0.1 H forward (was 0.088): with depth-tested text the plate sat inside the chest armour and vanished
+        // when looked at from below / close
+        tag.transform.localPosition = packed ? new Vector3(0f, H * 0.115f, H * 0.1f) : new Vector3(0f, H * 0.12f, H * 0.12f);
         // ffu15: a TextMesh reads correctly when seen looking along its +z, so the chest plate (on the +z front) is turned
         // 180 deg to face outwards; it was mirrored from the front and only read right from "inside" the mech
         tag.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);

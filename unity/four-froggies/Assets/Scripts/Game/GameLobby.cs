@@ -197,9 +197,9 @@ public partial class Game
             put(lobbyRule, 0, 229, 320, 3);
             PlaceCards(new[] { new Vector2(-441, 74), new Vector2(-147, 74), new Vector2(147, 74), new Vector2(441, 74) }, new Vector2(278, 290), 28);
             for (int c = 0; c < Roster.Count; c++) put(tiles[c], -495 + c * 110, -132, 102, 102);
-            put(hostBtn, -330, -228, 270, 70);
-            put(playBtn, 0, -228, 330, 70);
-            put(joinBtn, 330, -228, 270, 70);
+            put(hostBtn, -330, -224, 270, 64);
+            put(playBtn, 0, -224, 330, 64);
+            put(joinBtn, 330, -224, 270, 64);
             put(lobbyStatus, 0, -322, 1150, 28); lobbyStatus.fontSize = 19;
             put(lobbyHelp, 0, -350, 1200, 24); lobbyHelp.fontSize = 14;
 
