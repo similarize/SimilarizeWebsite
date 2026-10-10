@@ -23,7 +23,7 @@ public partial class RealRoom : MonoBehaviour
     public static RealRoom I;
     public static readonly Vector3 RoomO = new Vector3(0f, -2000f, 1400f);   // under the house world, never in view
     public const int Layer = 21;
-    const string V = "?v=rr3";   // ffu18c: rr.txt + window.jpg changed
+    const string V = "?v=rr4";   // ffu23: frog.bin (hands + body + plush), rr.txt mats, night window
     const float EyeH = 1.47f;
 
     // the door in the house (living room west wall), HouseWorld local coordinates
@@ -44,7 +44,7 @@ public partial class RealRoom : MonoBehaviour
     long bytesDone, bytesTotal = 1;
     string tierDir = "hi/";
     readonly Dictionary<string, Texture2D> tex = new Dictionary<string, Texture2D>();
-    byte[] roomBin, handsBin;
+    byte[] roomBin, frogBin;
     readonly Dictionary<string, string[]> cfg = new Dictionary<string, string[]>();
     readonly List<string[]> matLines = new List<string[]>(), objLines = new List<string[]>();
     float[] tvLight = new float[0];
@@ -58,6 +58,9 @@ public partial class RealRoom : MonoBehaviour
     Transform yawT, pitchT;
     float yaw, pitch;
     Rigidbody duck; Transform duckBlob;
+    Rigidbody plush; Transform plushBlob; Vector3 plushSpawn; float plushYaw;
+    readonly List<Collider> plushCols = new List<Collider>();
+    Rigidbody held; float heldR = 0.06f;      // ffu23: what the right hand carries (duck or plush)
     Collider chairCol, switchCol, doorCol;
     readonly List<Collider> duckCols = new List<Collider>();
     Material screenMat, globeMat, portalMat;
@@ -81,7 +84,14 @@ public partial class RealRoom : MonoBehaviour
 
     // interaction
     bool holding, sitting;
-    float charge, throwAnim = -1f, pokeAnim = -1f, bobT, intakeCool;
+    float charge, bobT, intakeCool;
+    // ffu23: reaching. An action on something out of arm's reach first walks the froggy up to it (and crouches for
+    // things on the floor), then the IK hand does the work: poke the switch, grab the duck / plush, throw.
+    string pending = ""; Vector3 pendingP; float pendingT, crouch, crouchT;
+    Vector3 armrestR, armrestL; bool armrestOk;
+    // ffu23: third person (V / Back / touch VIEW toggles, mouse wheel / Q Z zooms; below 0.45 m it snaps to first person)
+    float camDist, camDistT, camOrbit; bool third;   // camOrbit: demo only (swing round to the front)
+    Collider chairMeshCol;
     Vector3 standPos; float standYaw;
     string hint = "";
 
@@ -214,8 +224,10 @@ public partial class RealRoom : MonoBehaviour
         yawT.position = spawnPos; yaw = 180f; pitch = 4f;
         body.enabled = true;
         door.localRotation = Quaternion.Euler(0f, 45f, 0f);
-        holding = false; sitting = false;
-        ResetDuck();
+        holding = false; sitting = false; held = null; pending = ""; crouch = 0f; crouchT = 0f;
+        Hands.ResetPose();
+        ResetDuck(); ResetPlush();
+        camDist = camDistT = 0f; third = false; FrogBody.SetVisible(false); Hands.SetVisible(true);
         lightsOn = true; lampK = 1f; expo = 4f;
         cam.enabled = true;
         cam.rect = slot.cam.rect;
@@ -270,8 +282,9 @@ public partial class RealRoom : MonoBehaviour
 
     void StartExit()
     {
-        if (holding) DropDuck(Vector3.zero);
+        if (holding) DropHeld(Vector3.zero);
         if (sitting) StandUp();
+        pending = ""; Hands.Cancel(); camDistT = 0f;
         st = St.Exiting; stT = 0f;
         Sfx.Play(Sfx.Door, 0.8f, 1.05f);
     }
@@ -326,15 +339,38 @@ public partial class RealRoom : MonoBehaviour
         PIn i = inp; inp = new PIn();
         bool act = i.use || i.hop;
         intakeCool -= dt;
+        // first / third person
+        if (i.view) camDistT = camDistT > 0.3f ? 0f : 2.1f;
+        if (Mathf.Abs(i.zoom) > 0.001f) { camDistT = Mathf.Clamp(camDistT + i.zoom * dt * 2.5f, 0f, 3.2f); if (camDistT < 0.45f && i.zoom < 0f) camDistT = 0f; else if (camDistT < 0.45f) camDistT = 0.9f; }
+        float moveK = 0f;
         if (!sitting)
         {
             yaw += i.look.x;
             pitch = Mathf.Clamp(pitch - i.look.y, -80f, 85f);
             Vector3 fwd = Quaternion.Euler(0f, yaw, 0f) * Vector3.forward, right = Quaternion.Euler(0f, yaw, 0f) * Vector3.right;
             Vector3 mv = (fwd * i.move.y + right * i.move.x) * 1.45f;
+            if (i.move.sqrMagnitude > 0.2f && pending != "") pending = "";   // walking away cancels a reach
+            // auto-approach: walk up to what we are about to touch
+            if (pending != "")
+            {
+                pendingT += dt;
+                Vector3 to = pendingP - yawT.position; to.y = 0f;
+                float stopAt = pending == "switch" ? (third ? 0.42f : 0.50f) : (third ? 0.40f : 0.42f);
+                if (to.magnitude > stopAt && pendingT < 2.5f) mv += to.normalized * Mathf.Min(1.3f, (to.magnitude - stopAt) * 4f + 0.3f);
+                // face it
+                float want = Mathf.Atan2(to.x, to.z) * Mathf.Rad2Deg;
+                yaw = Mathf.LerpAngle(yaw, want, 1f - Mathf.Exp(-dt * 7f));
+                if (to.magnitude <= stopAt + 0.03f || pendingT > 2.5f)
+                {
+                    bool ok = pending == "switch" ? Hands.Poke(pendingP) : Hands.Grab(pendingP, pending == "plush" ? 0.11f : 0.075f);
+                    if (ok && pending != "switch") grabRb = pending == "plush" ? plush : duck;
+                    if (ok) { if (pending != "switch") crouchT = Mathf.Clamp(1.05f - (pendingP.y - RoomO.y), 0f, 0.8f); pending = ""; }
+                }
+            }
+            moveK = new Vector2(mv.x, mv.z).magnitude / 1.45f;
             mv.y = -4f;
             body.Move(mv * dt);
-            bobT += new Vector2(i.move.x, i.move.y).magnitude * dt * 8.5f;
+            bobT += moveK * dt * 8.5f;
         }
         else
         {
@@ -342,49 +378,73 @@ public partial class RealRoom : MonoBehaviour
             pitch = Mathf.Clamp(pitch - i.look.y, -60f, 75f);
             if (i.move.sqrMagnitude > 0.5f || i.downHeld) StandUp();
         }
-        // what are we looking at?
-        Ray r = new Ray(cam.transform.position, cam.transform.forward);
+        FrogBody.speed = Mathf.MoveTowards(FrogBody.speed, Mathf.Clamp01(moveK), dt * 4f);
+        // crouch back up once the hand has the thing (or gave up)
+        if (!Hands.Busy && pending == "") crouchT = 0f;
+        crouch = Mathf.MoveTowards(crouch, crouchT, dt * 2.2f);
+        // what are we looking at? (from the eyes, along the camera, in either view)
+        Vector3 eyeP = pitchT.position, look = cam.transform.forward;
+        Ray r = new Ray(eyeP, look);
         RaycastHit hit;
-        string target = "";
-        if (Physics.Raycast(r, out hit, 2.3f, 1 << Layer, QueryTriggerInteraction.Collide))
+        string target = ""; Vector3 tp = Vector3.zero;
+        if (Physics.Raycast(r, out hit, 2.3f, (1 << Layer) | (1 << ChairLayer), QueryTriggerInteraction.Collide))
         {
-            if (duckCols.Contains(hit.collider) && !holding) target = "duck";
-            else if (hit.collider == switchCol) target = "switch";
+            if (duckCols.Contains(hit.collider) && held != duck) { target = "duck"; tp = duck.worldCenterOfMass; }
+            else if (plushCols.Contains(hit.collider) && held != plush) { target = "plush"; tp = plush.worldCenterOfMass; }
+            else if (hit.collider == switchCol) { target = "switch"; tp = SwitchFace(); }
             else if (hit.collider == doorCol) target = "door";
-            else if (hit.collider == chairCol && !holding && hit.distance < 2.0f) target = "chair";
+            else if ((hit.collider == chairCol || hit.collider == chairMeshCol) && !holding && hit.distance < 2.0f) target = "chair";
         }
-        if (target == "" && !holding && duck != null && Vector3.Angle(cam.transform.forward, duck.position - cam.transform.position) < 12f && (duck.position - cam.transform.position).magnitude < 2.0f) target = "duck";
+        if (target == "" && !holding)
+        {
+            if (duck != null && Vector3.Angle(look, duck.position - eyeP) < 12f && (duck.position - eyeP).magnitude < 2.0f) { target = "duck"; tp = duck.worldCenterOfMass; }
+            else if (plush != null && Vector3.Angle(look, plush.position - eyeP) < 12f && (plush.position - eyeP).magnitude < 2.0f) { target = "plush"; tp = plush.worldCenterOfMass; }
+        }
         if (sitting) target = "stand";
+        // anticipation: the hand drifts toward a reachable switch / toy in view
+        float reachD = target == "switch" || target == "duck" || target == "plush" ? (tp - eyeP).magnitude : 9f;
+        Hands.nearTarget = tp; Hands.nearW = Mathf.MoveTowards(Hands.nearW, reachD < 0.85f && !Hands.Busy ? 1f : 0f, dt * 3f);
         string pad = Badge();
-        if (holding) hint = pad + "  throw the duck" + (owner.inputKind == InputKind.Touch ? "" : "   (hold to throw harder)");
+        string viewHint = owner.inputKind == InputKind.Touch ? "" : owner.inputKind == InputKind.Gamepad ? "   <b>[View]</b> 3rd person" : "   <b>[V / wheel]</b> 3rd person";
+        if (holding) hint = pad + "  throw the " + (held == plush ? "plush frog" : "duck") + (owner.inputKind == InputKind.Touch ? "" : "   (hold to throw harder)");
         else if (target == "duck") hint = pad + "  pick up the rubber duck";
+        else if (target == "plush") hint = pad + "  pick up the plush frog";
         else if (target == "switch") hint = pad + (lightsOn ? "  lights off" : "  lights on");
         else if (target == "door") hint = pad + "  leave the REAL ROOM";
         else if (target == "chair") hint = pad + "  sit in the armchair";
         else if (target == "stand") hint = pad + "  stand up";
-        else hint = "";
+        else hint = stT < 12f ? viewHint.Trim() : "";
         // hold-to-charge throws (RT / left mouse / A held)
         if (holding)
         {
-            bool held = i.fireHeld || i.hopHeld;
-            if (held) charge = Mathf.Min(1f, charge + dt * 1.2f);
-            bool release = (act || i.fire) && charge < 0.05f && !held;
-            if ((!held && charge > 0.05f) || release || (act && owner.inputKind == InputKind.Touch)) { Throw(Mathf.Max(charge, 0.25f)); charge = 0f; }
+            bool heldBtn = i.fireHeld || i.hopHeld;
+            if (heldBtn) charge = Mathf.Min(1f, charge + dt * 1.2f);
+            bool release = (act || i.fire) && charge < 0.05f && !heldBtn;
+            if (!Hands.Busy && ((!heldBtn && charge > 0.05f) || release || (act && owner.inputKind == InputKind.Touch))) { throwK = Mathf.Max(charge, 0.25f); Hands.Throw(); Sfx.Play(Sfx.Hop, 0.5f, 1.4f); }
+            Hands.charge = charge;
         }
-        else if (act && intakeCool <= 0f)
+        else if (act && intakeCool <= 0f && !Hands.Busy)
         {
             switch (target)
             {
-                case "duck": PickDuck(); break;
-                case "switch": ToggleLights(); break;
+                case "duck": pending = "duck"; pendingP = tp; pendingT = 0f; break;
+                case "plush": pending = "plush"; pendingP = tp; pendingT = 0f; break;
+                case "switch": pending = "switch"; pendingP = tp; pendingT = 0f; break;
                 case "door": StartExit(); return;
                 case "chair": SitDown(); break;
                 case "stand": StandUp(); break;
             }
             intakeCool = 0.25f;
         }
+        // keep the reach aimed at a toy that is still rolling
+        if (pending == "duck") pendingP = duck.worldCenterOfMass; else if (pending == "plush") pendingP = plush.worldCenterOfMass;
         ApplyView();
     }
+    float throwK; Rigidbody grabRb;
+    public const int ChairLayer = 22;   // ffu23: armchair mesh collider (armrest raycasts, physics)
+
+    // the switch rocker's front face (the finger pad lands here)
+    Vector3 SwitchFace() { return switchPos + new Vector3(0f, -0.005f, 0.012f); }
 
     string Badge()
     {
@@ -401,51 +461,74 @@ public partial class RealRoom : MonoBehaviour
         float bob = (st == St.Play && !sitting) ? Mathf.Sin(bobT) * 0.012f : 0f;
         yawT.rotation = Quaternion.Euler(0f, yaw, 0f);
         if (sitting) yawT.position = Vector3.Lerp(yawT.position, seatPos, Time.deltaTime * 5f);
-        float eye = sitting ? 1.08f : EyeH;
+        float eye = sitting ? 1.08f : EyeH - crouch;
         pitchT.localPosition = new Vector3(0f, eye + bob, 0f);
-        pitchT.localRotation = Quaternion.Euler(pitch, 0f, 0f);
+        pitchT.localRotation = Quaternion.Euler(pitch + crouch * 25f, 0f, 0f);
         Hands.walk = bobT;
+        // third person: orbit behind the head, pulled in by the walls
+        camDist = Mathf.Lerp(camDist, camDistT, 1f - Mathf.Exp(-Time.deltaTime * 6f));
+        if (camDist < 0.02f && camDistT == 0f) camDist = 0f;
+        bool tp = camDist > 0.35f;
+        if (tp != third) { third = tp; Hands.SetVisible(!tp); FrogBody.SetVisible(tp); }
+        float d = camDist;
+        if (d > 0.01f)
+        {
+            Vector3 piv = pitchT.position + Vector3.up * 0.08f;
+            Quaternion cr = Quaternion.Euler(pitch, yaw + camOrbit, 0f);
+            Vector3 want = piv + cr * new Vector3(0.18f * Mathf.Clamp01(d) * (camOrbit != 0f ? 0f : 1f), 0.04f, -d);
+            Vector3 dir = want - piv; float len = dir.magnitude;
+            RaycastHit h;
+            if (len > 1e-3f && Physics.SphereCast(piv, 0.12f, dir / len, out h, len, (1 << Layer) | (1 << ChairLayer), QueryTriggerInteraction.Ignore) && h.collider != body)
+                want = piv + dir / len * Mathf.Max(0.25f, h.distance - 0.05f);
+            cam.transform.position = want;
+            cam.transform.rotation = camOrbit != 0f ? Quaternion.LookRotation(piv - Vector3.up * 0.55f - want) : cr;
+        }
+        else { cam.transform.localPosition = Vector3.zero; cam.transform.localRotation = Quaternion.identity; }
     }
 
     // ---------------------------------------------------------------- interactions
     void ToggleLights()
     {
         lightsOn = !lightsOn;
-        pokeAnim = 0f;
         Sfx.Play(Sfx.Click != null ? Sfx.Click : Sfx.Toggle, 0.9f);
         if (rocker != null) rocker.localRotation = Quaternion.Euler(lightsOn ? -9f : 9f, 0f, 0f);
     }
 
-    void PickDuck()
+    void Attach(Rigidbody rb)
     {
-        holding = true; charge = 0f;
-        duck.isKinematic = true;
-        foreach (var c in duckCols) c.enabled = false;
-        Sfx.Play(Sfx.Pickup, 0.6f, 1.3f);
+        held = rb; holding = true; charge = 0f;
+        heldR = rb == plush ? 0.11f : 0.075f;
+        Hands.holding = true; Hands.objR = heldR;
+        rb.isKinematic = true;
+        foreach (var c in rb == duck ? duckCols : plushCols) c.enabled = false;
+        Sfx.Play(Sfx.Pickup, 0.6f, rb == plush ? 0.9f : 1.3f);
     }
 
-    void Throw(float k)
+    void DropHeld(Vector3 v)
     {
-        Vector3 v = cam.transform.forward * Mathf.Lerp(3.2f, 8.5f, k) + Vector3.up * 1.2f;
-        DropDuck(v);
-        throwAnim = 0f;
-        Sfx.Play(Sfx.Hop, 0.7f, 1.2f);
-    }
-
-    void DropDuck(Vector3 v)
-    {
-        holding = false;
-        Vector3 p = Hands.HoldPoint;
+        if (held == null) { holding = false; Hands.holding = false; return; }
+        var rb = held;
+        holding = false; held = null; Hands.holding = false; Hands.charge = 0f; charge = 0f;
+        Vector3 p = HeldPoint();
         // never release it inside a wall
-        Vector3 eye = cam.transform.position;
+        Vector3 eye = pitchT.position;
         RaycastHit h;
-        if (Physics.Linecast(eye, p, out h, 1 << Layer, QueryTriggerInteraction.Ignore) && !duckCols.Contains(h.collider)) p = eye + (p - eye).normalized * Mathf.Max(0.05f, h.distance - 0.12f);
-        duck.transform.position = p;
-        duck.isKinematic = false;
-        foreach (var c in duckCols) c.enabled = true;
-        duck.velocity = v;
-        duck.angularVelocity = new Vector3(Random.Range(-6f, 6f), Random.Range(-4f, 4f), Random.Range(-6f, 6f));
+        if (Physics.Linecast(eye, p, out h, 1 << Layer, QueryTriggerInteraction.Ignore) && !duckCols.Contains(h.collider) && !plushCols.Contains(h.collider) && h.collider != body)
+            p = eye + (p - eye).normalized * Mathf.Max(0.05f, h.distance - 0.14f);
+        rb.transform.position = p - (rb.worldCenterOfMass - rb.transform.position);
+        rb.isKinematic = false;
+        foreach (var c in rb == duck ? duckCols : plushCols) c.enabled = true;
+        rb.velocity = v;
+        rb.angularVelocity = new Vector3(Random.Range(-6f, 6f), Random.Range(-4f, 4f), Random.Range(-6f, 6f)) * (rb == plush ? 0.5f : 1f);
     }
+
+    // where the carried thing sits: under the first-person palm, or in the third-person body's hand
+    Vector3 HeldPoint()
+    {
+        if (third) return FrogBody.PalmPoint(0, new Vector3(0f, -0.024f - heldR / 1.45f * 0.95f, 0.07f));
+        return Hands.HoldPoint;
+    }
+    Quaternion HeldRot() { return third ? Quaternion.Euler(0f, yaw + 160f, 0f) : Hands.HoldRot; }
 
     void ResetDuck()
     {
@@ -455,12 +538,23 @@ public partial class RealRoom : MonoBehaviour
         foreach (var c in duckCols) c.enabled = true;
     }
 
+    void ResetPlush()
+    {
+        if (plush == null) return;
+        plush.isKinematic = false;
+        plush.transform.SetPositionAndRotation(plushSpawn + Vector3.up * 0.01f, Quaternion.Euler(0f, plushYaw, 0f));
+        plush.velocity = Vector3.zero; plush.angularVelocity = Vector3.zero;
+        foreach (var c in plushCols) c.enabled = true;
+    }
+
     void SitDown()
     {
         sitting = true;
         standPos = yawT.position; standYaw = yaw;
         body.enabled = false;
         yaw = seatYaw; pitch = 8f;
+        FindArmrests();
+        Hands.sitting = true; FrogBody.sitting = true;
         Sfx.Play(Sfx.BumpSoft != null ? Sfx.BumpSoft : Sfx.Thud, 0.6f, 0.8f);
     }
 
@@ -470,6 +564,35 @@ public partial class RealRoom : MonoBehaviour
         yawT.position = standPos;
         body.enabled = true;
         intakeCool = 0.3f;
+        Hands.sitting = false; FrogBody.sitting = false;
+    }
+
+    // the armchair's real armrest tops: ray down onto its mesh collider either side of the seat
+    void FindArmrests()
+    {
+        armrestOk = false;
+        Vector3 right = Quaternion.Euler(0f, seatYaw, 0f) * Vector3.right, fwd = Quaternion.Euler(0f, seatYaw, 0f) * Vector3.forward;
+        bool okR = Armrest(right, fwd, out armrestR), okL = Armrest(-right, fwd, out armrestL);
+        armrestOk = okR && okL;
+        Hands.armrestR = armrestR; Hands.armrestL = armrestL; Hands.armrestOk = armrestOk;
+        Debug.Log("RealRoom: armrests " + (armrestOk ? (armrestR - RoomO).ToString("F2") + " " + (armrestL - RoomO).ToString("F2") : "not found"));
+    }
+
+    bool Armrest(Vector3 side, Vector3 fwd, out Vector3 p)
+    {
+        p = Vector3.zero; float best = -1f;
+        for (float o = 0.26f; o <= 0.46f; o += 0.02f)
+            for (float f = -0.05f; f <= 0.16f; f += 0.07f)
+            {
+                Vector3 a = seatPos + side * o + fwd * f + Vector3.up * 1.3f;
+                RaycastHit h;
+                if (Physics.Raycast(a, Vector3.down, out h, 1.2f, 1 << ChairLayer, QueryTriggerInteraction.Ignore))
+                {
+                    float y = h.point.y - RoomO.y;
+                    if (y > 0.45f && y < 0.9f && y > best + 0.01f) { best = y; p = h.point; }
+                }
+            }
+        return best > 0f;
     }
 
     // duck bounce sounds
@@ -527,9 +650,45 @@ public partial class RealRoom : MonoBehaviour
         Shader.SetGlobalVector("_RRWaveCol", new Vector4(0.35f, 1.0f, 0.55f, 1f) * 0.6f);
         if (post != null) post.exposure = expo;
         if (globeMat != null) globeMat.SetColor("_Emis", new Color(1f, 0.86f, 0.68f, 2.2f * lampK));   // ffu18c: a touch cooler
-        Hands.SetLights(lampPos, tvPos);
-        Hands.Tick(dt, holding, charge, ref throwAnim, ref pokeAnim, sitting, st == St.Play);
-        if (holding) { duck.transform.position = Hands.HoldPoint; duck.transform.rotation = Hands.HoldRot; }
+        Hands.SetLights(lampPos, tvPos); FrogBody.SetLights(lampPos, tvPos);
+        Hands.Tick(dt, st == St.Play);
+        if (Hands.PokeContact) { if (demoShot == "realroom-reach") { Sfx.Play(Sfx.Click != null ? Sfx.Click : Sfx.Toggle, 0.9f); if (rocker != null) rocker.localRotation = Quaternion.Euler(9f, 0f, 0f); } else ToggleLights(); }
+        if (Hands.GrabAttach && grabRb != null) { Attach(grabRb); grabRb = null; }
+        if (Hands.ThrowRelease && holding)
+        {
+            Vector3 v = cam.transform.forward * Mathf.Lerp(3.2f, 8.5f, throwK) * (held == plush ? 0.8f : 1f) + Vector3.up * 1.2f;
+            DropHeld(v); charge = 0f;
+        }
+        // third-person body: same hand targets as the first-person IK (wrist + palm), hanging otherwise
+        if (third)
+        {
+            bool armR = Hands.Busy || holding || sitting || Hands.nearW > 0.01f;
+            FrogBody.handT[0] = Hands.Wrist(0); FrogBody.handR[0] = Hands.HandRot(0);
+            FrogBody.handW[0] = Mathf.MoveTowards(FrogBody.handW[0], armR ? 1f : 0f, dt * 5f);
+            FrogBody.handT[1] = Hands.Wrist(1); FrogBody.handR[1] = Hands.HandRot(1);
+            FrogBody.handW[1] = Mathf.MoveTowards(FrogBody.handW[1], sitting ? 1f : 0f, dt * 5f);
+            for (int k = 0; k < 2; k++) System.Array.Copy(Hands.Curls(k), FrogBody.curl[k], 4);
+            FrogBody.lookPitch = pitch;
+            if (FrogBody.Root != null)
+            {
+                FrogBody.Root.position = sitting ? new Vector3(yawT.position.x, RoomO.y + 0.0f, yawT.position.z) : yawT.position;
+                FrogBody.Root.rotation = Quaternion.Euler(0f, sitting ? seatYaw : yaw, 0f);
+            }
+            FrogBody.Tick(dt, bobT);
+        }
+        if (holding && held != null)
+        {
+            held.transform.rotation = HeldRot();
+            held.transform.position = HeldPoint() - (held.worldCenterOfMass - held.transform.position);
+        }
+        if (plushBlob != null && plush != null)
+        {
+            Vector3 d = plush.position;
+            float hgt = Mathf.Max(0f, d.y - RoomO.y);
+            plushBlob.position = new Vector3(d.x, RoomO.y + 0.004f + (FloorUnderDuck(d) - RoomO.y), d.z);
+            float s = Mathf.Lerp(0.42f, 0.7f, Mathf.Clamp01(hgt / 1.5f));
+            plushBlob.localScale = new Vector3(s, s, 1f);
+        }
         if (duckBlob != null)
         {
             Vector3 d = duck.position;
@@ -543,7 +702,7 @@ public partial class RealRoom : MonoBehaviour
     float FloorUnderDuck(Vector3 p)
     {
         RaycastHit h;
-        if (Physics.Raycast(p + Vector3.up * 0.05f, Vector3.down, out h, 3f, 1 << Layer, QueryTriggerInteraction.Ignore) && !duckCols.Contains(h.collider)) return h.point.y;
+        if (Physics.Raycast(p + Vector3.up * 0.05f, Vector3.down, out h, 3f, 1 << Layer, QueryTriggerInteraction.Ignore) && !duckCols.Contains(h.collider) && !plushCols.Contains(h.collider) && h.collider != body) return h.point.y;
         return RoomO.y;
     }
 
@@ -594,7 +753,7 @@ public partial class RealRoom : MonoBehaviour
         hintT.text = st == St.Play ? hint : "";
         titleT.rectTransform.anchorMin = titleT.rectTransform.anchorMax = new Vector2(c.x, r.yMax);
         titleT.rectTransform.anchoredPosition = new Vector2(0f, portrait ? -170f : -60f);
-        titleT.text = st == St.Play && stT < 4f ? "<b>REAL ROOM</b>\n<size=18>look around - the duck, the chair, the light switch, the door</size>" : "";
+        titleT.text = st == St.Play && stT < 4f ? "<b>REAL ROOM</b>\n<size=18>look around - the duck, the plush frog, the chair, the light switch, the door</size>" : "";
         titleT.color = new Color(1, 1, 1, Mathf.Clamp01(4f - stT) * 0.9f);
     }
 }

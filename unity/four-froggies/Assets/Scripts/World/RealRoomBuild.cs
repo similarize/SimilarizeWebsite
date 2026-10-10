@@ -115,7 +115,7 @@ public partial class RealRoom
         // geometry + lighting first, then the materials' textures (4 at a time)
         var jobs = new List<IEnumerator>();
         jobs.Add(Fetch("room.bin", d => roomBin = d));
-        jobs.Add(Fetch("hands.bin", d => handsBin = d));
+        jobs.Add(Fetch("frog.bin", d => frogBin = d));   // ffu23: hands + body + eyes + plush (work/rr/frog)
         foreach (var g in new[] { "env", "lamp", "tv" })
         {
             jobs.Add(LoadTex("lm_" + g + ".jpg", "lm_" + g, false, false, true));
@@ -134,7 +134,7 @@ public partial class RealRoom
             StartCoroutine(Run(j, () => running--));
         }
         while (running > 0) yield return null;
-        if (loadFailed || roomBin == null || handsBin == null) { loadFailed = true; yield break; }
+        if (loadFailed || roomBin == null || frogBin == null) { loadFailed = true; yield break; }
         progress = 1f;
         Build();
         loaded = true;
@@ -223,8 +223,11 @@ public partial class RealRoom
         park.transform.position = RoomO + new Vector3(0f, -29f, 0f);
         park.AddComponent<BoxCollider>().size = new Vector3(12f, 1f, 12f);
         BuildPlayer();
-        Hands.Build(handsBin, pitchT, T("skin"), owner != null ? owner.color : new Color(0.3f, 0.75f, 0.2f));
-        handsBin = null; roomBin = null;
+        var frog = FrogAsset.Parse(frogBin);
+        Hands.Build(frog["hand"], pitchT, T("skin"), owner != null ? owner.color : new Color(0.3f, 0.75f, 0.2f));
+        FrogBody.Build(frog["body"], frog["eye"], root, T("skin"), Layer);
+        BuildPlush(frog["plush"]);
+        frogBin = null; roomBin = null;
         Debug.Log("RealRoom: built");
     }
 
@@ -277,6 +280,13 @@ public partial class RealRoom
             mesh.triangles = tri;
             mesh.RecalculateTangents();
             mesh.RecalculateBounds();
+            if (oname == "ArmChair_01")
+            {
+                // ffu23: exact collider for the armrest raycasts (sitting hands) + the toys bouncing off it
+                var cm = new Mesh { name = "ArmChairCol" }; cm.vertices = pos; cm.triangles = tri;
+                var cg = new GameObject("col ArmChair mesh"); cg.layer = ChairLayer; cg.transform.SetParent(parent, false);
+                chairMeshCol = cg.AddComponent<MeshCollider>(); ((MeshCollider)chairMeshCol).sharedMesh = cm;
+            }
             mesh.UploadMeshData(true);
             var go = new GameObject(oname + "|" + mname); go.layer = Layer;
             go.transform.SetParent(parent, false);
@@ -298,6 +308,7 @@ public partial class RealRoom
         var s2 = duckGo.AddComponent<SphereCollider>(); s2.center = new Vector3(0f, 0.125f, -0.045f); s2.radius = 0.042f; s2.material = pm;
         duckCols.Add(s1); duckCols.Add(s2);
         duckGo.AddComponent<RRDuck>();
+        duckGo.transform.localScale = Vector3.one * 0.72f;   // ffu23: a real bath duck is ~12 cm (the scan is 17 cm)
         // soft contact shadow
         var blob = GameObject.CreatePrimitive(PrimitiveType.Quad);
         Destroy(blob.GetComponent<Collider>());
@@ -305,6 +316,35 @@ public partial class RealRoom
         blob.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
         blob.GetComponent<MeshRenderer>().sharedMaterial = new Material(Shader.Find("FF/RRBlob"));
         duckBlob = blob.transform;
+    }
+
+    // ffu23: the plush frog toy on the rug (FF/RRPlush fleece, vertex colours), a physics toy like the duck
+    void BuildPlush(FrogAsset.Set s)
+    {
+        var go = new GameObject("PlushFrog"); go.layer = Layer; go.transform.SetParent(root, false);
+        go.AddComponent<MeshFilter>().sharedMesh = FrogAsset.StaticMesh(s);
+        var mr = go.AddComponent<MeshRenderer>();
+        var m = new Material(Shader.Find("FF/RRPlush")) { name = "RR plush" };
+        if (T("skin") != null) m.SetTexture("_FuzzTex", T("skin"));
+        mr.sharedMaterial = m;
+        mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; mr.receiveShadows = false;
+        plush = go.AddComponent<Rigidbody>();
+        plush.mass = 0.18f; plush.drag = 0.6f; plush.angularDrag = 1.2f;
+        plush.interpolation = RigidbodyInterpolation.Interpolate;
+        plush.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+        var pm = new PhysicMaterial("plush") { bounciness = 0.08f, dynamicFriction = 0.9f, staticFriction = 1f, bounceCombine = PhysicMaterialCombine.Minimum, frictionCombine = PhysicMaterialCombine.Maximum };
+        var a = go.AddComponent<SphereCollider>(); a.center = new Vector3(0f, 0.08f, 0.01f); a.radius = 0.082f; a.material = pm;
+        var b = go.AddComponent<SphereCollider>(); b.center = new Vector3(0f, 0.17f, 0.012f); b.radius = 0.085f; b.material = pm;
+        var c = go.AddComponent<BoxCollider>(); c.center = new Vector3(0f, 0.03f, 0.07f); c.size = new Vector3(0.22f, 0.05f, 0.14f); c.material = pm;
+        plushCols.Add(a); plushCols.Add(b); plushCols.Add(c);
+        go.AddComponent<RRDuck>();
+        plushSpawn = RoomO + new Vector3(0.30f, 0f, -0.62f); plushYaw = 150f;
+        var blob = GameObject.CreatePrimitive(PrimitiveType.Quad);
+        Destroy(blob.GetComponent<Collider>());
+        blob.layer = Layer; blob.transform.SetParent(root, false);
+        blob.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+        blob.GetComponent<MeshRenderer>().sharedMaterial = new Material(Shader.Find("FF/RRBlob"));
+        plushBlob = blob.transform;
     }
 
     static string Str(BinaryReader r) { int n = r.ReadByte(); return System.Text.Encoding.UTF8.GetString(r.ReadBytes(n)); }
@@ -474,18 +514,24 @@ public partial class RealRoom
                 case "realroom": Pose(new Vector3(1.55f, 0f, -1.85f), -25f, 9f); break;
                 case "realroom-dark": Pose(new Vector3(1.55f, 0f, -1.85f), -25f, 9f); lightsOn = false; if (rocker != null) rocker.localRotation = Quaternion.Euler(9f, 0f, 0f); break;
                 case "realroom-tv": SitDown(); yaw = seatYaw; pitch = 6f; break;
-                case "realroom-throw": Pose(new Vector3(0.9f, 0f, -0.75f), 15f, 25f); PickDuck(); break;
+                case "realroom-throw": Pose(new Vector3(0.9f, 0f, -0.75f), 15f, 25f); Attach(duck); break;
+                case "realroom-hands": Pose(new Vector3(1.55f, 0f, -1.85f), -25f, 14f); break;
+                case "realroom-reach": Pose(new Vector3(0.74f, 0f, -2.02f), 180f, 26f); Hands.demoHold = true; pending = "switch"; pendingP = SwitchFace(); pendingT = 0f; break;
+                case "realroom-grab": Pose(new Vector3(0.62f, 0f, -1.02f), 320f, 30f); pending = "plush"; pendingP = plush.worldCenterOfMass; pendingT = 0f; break;
+                case "realroom-body": Pose(new Vector3(1.2f, 0f, -0.1f), 180f, 12f); camDistT = camDist = 2.2f; camOrbit = 160f; break;
             }
         }
         if (demoPhase == 2)
         {
             if (demoShot == "realroom-dark") { lightsOn = false; }
             if (demoShot == "realroom-tv") { yaw = seatYaw - 8f; pitch = 5f; }
+            if (demoShot == "realroom-grab" && holding) { pitch = Mathf.Lerp(pitch, 16f, dt * 2f); }
+            if (demoShot == "realroom-body") { FrogBody.speed = 0f; }
             if (demoShot == "realroom-throw")
             {
-                if (demoT > 3f && holding) { Throw(0.6f); }
+                if (demoT > 3f && holding && !Hands.Busy) { throwK = 0.6f; Hands.Throw(); }
                 if (demoT > 3f) { yaw = Mathf.Lerp(yaw, 15f, dt); pitch = Mathf.Lerp(pitch, 10f, dt); }
-                if (demoT > 9f && !holding && demoT < 9.2f) { ResetDuck(); duck.transform.position = Hands.HoldPoint; PickDuck(); demoT = 0.5f; }
+                if (demoT > 9f && !holding && demoT < 9.2f) { ResetDuck(); duck.transform.position = Hands.HoldPoint; Attach(duck); demoT = 0.5f; }
             }
             ApplyView();
         }

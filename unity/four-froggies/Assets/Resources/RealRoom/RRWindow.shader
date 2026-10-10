@@ -24,7 +24,12 @@ Shader "FF/RRWindow"
                 float u = atan2(d.z, -d.x) * 0.15915494 + 0.5;    // Blender world mapping of the HDRI
                 float v = asin(clamp(d.y, -1.0, 1.0)) * 0.31830989 + 0.5;
                 float2 uv = float2((u - _Crop.x) / (_Crop.y - _Crop.x), (v - _Crop.z) / (_Crop.w - _Crop.z));
-                float3 c = DecodeRR(tex2D(_MainTex, saturate(uv)).rgb, _K) * _RREnvCol.rgb;
+                // ffu23: mirror past the crop edges (clamping smeared the edge column into a bright vertical strip at
+                // the right side of the sash when looking across the window)
+                uv = 1.0 - abs(1.0 - 2.0 * frac(uv * 0.5));
+                float3 c = DecodeRR(tex2D(_MainTex, uv).rgb, _K) * _RREnvCol.rgb;
+                // ffu23: the eye only partly adapts to the dark room - keep the night outside night-dark
+                c *= sqrt(saturate(4.0 / max(_RRExposure, 1.0)));
                 float w = Realness(i.wpos);
                 float3 st = lerp(float3(0.05, 0.08, 0.16), float3(0.1, 0.16, 0.06), step(uv.y, 0.55)) * Lum(_RREnvCol.rgb) * 1.5;
                 return RROut(lerp(st, c, w));

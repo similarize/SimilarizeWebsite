@@ -229,3 +229,8 @@ CC0 1.0 Universal: https://creativecommons.org/publicdomain/zero/1.0/legalcode
    www.bigbuckbunny.org / peach.blender.org, licensed under the Creative Commons Attribution 3.0 licence
    (https://creativecommons.org/licenses/by/3.0/). Re-encoded to 640x360 with a fade in / out; no other changes.
    Room shell, TV, door, light switch, frog hands, lighting bake and shaders: made for this game.
+
+   ffu23 additions to the REAL ROOM: the realistic frog body, first-person frog hands, eyes and the plush frog toy
+   (realroom/frog.bin) were modelled for this game from code (signed-distance shapes, work/rr/frog in the build
+   pipeline) - no third-party model. The window view is the same Poly Haven kloppenheim_02 crop (CC0), colour-graded
+   to night.

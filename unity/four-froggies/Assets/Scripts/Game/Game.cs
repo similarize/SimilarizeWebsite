@@ -101,6 +101,7 @@ public partial class Game : MonoBehaviour
         "<b>Realism test</b> (?realism=1): Sunflowers sky, ground / mud / rock / bark scans (Poly Haven) + Grass 004 (ambientCG), CC0.\n" +
         "<b>REAL ROOM</b> (James's house): furniture, rubber duck, lamp, picture + parquet / plaster / wool textures and the Kloppenheim 02\n" +
         "   night sky: Poly Haven (CC0). TV: Big Buck Bunny (c) Blender Foundation, peach.blender.org, CC BY 3.0.\n" +
+        "   Frog body, hands + plush frog: modelled for this game (procedural, no third-party model).\n" +
         "<b>Sound effects + ambience</b>: BigSoundBank.com by Joseph Sardin (royalty-free, CC0-like) and Kenney (CC0).\n" +
         "<b>Story mode</b> (The Big Launch): story, rocket and score made for this game (synthesised, no samples).\n" +
         "<b>Fonts</b>: Montserrat (The Montserrat Project Authors) and Inter (The Inter Project Authors), SIL Open Font License 1.1.\n" +

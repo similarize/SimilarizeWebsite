@@ -11,6 +11,9 @@ Shader "FF/RealTri"
         _Scale ("Metres per tile", Float) = 2
         _Gloss ("Smoothness", Range(0, 1)) = 0.2
         _BumpScale ("Normal strength", Float) = 1
+        _TopTint ("Top-facing tint", Color) = (1, 1, 1, 1)
+        _TopK ("Top tint amount", Float) = 0
+        _Desat ("Desaturate", Float) = 0
     }
     SubShader
     {
@@ -22,7 +25,8 @@ Shader "FF/RealTri"
         #include "UnityPBSLighting.cginc"
         sampler2D _MainTex, _BumpMap;
         fixed4 _Color;
-        half _Scale, _Gloss, _BumpScale;
+        half _Scale, _Gloss, _BumpScale, _TopK, _Desat;
+        fixed4 _TopTint;
 
         struct SurfaceOutputRT
         {
@@ -66,7 +70,8 @@ Shader "FF/RealTri"
             float3 p = IN.worldPos / _Scale;
             float2 ux = p.zy, uy = p.xz, uz = p.xy;
             fixed4 c = tex2D(_MainTex, ux) * bl.x + tex2D(_MainTex, uy) * bl.y + tex2D(_MainTex, uz) * bl.z;
-            o.Albedo = c.rgb * _Color.rgb;
+            fixed3 cc = lerp(c.rgb, dot(c.rgb, fixed3(0.3, 0.59, 0.11)).xxx, _Desat);
+            o.Albedo = cc * _Color.rgb * lerp(fixed3(1, 1, 1), _TopTint.rgb, saturate(wn.y * 1.4 - 0.2) * _TopK);   // ffu23: sun-bleached boulder tops read sandy
             half3 nx = Unpack(ux), ny = Unpack(uy), nz = Unpack(uz);
             nx = half3(nx.xy + wn.zy, abs(nx.z) * wn.x);
             ny = half3(ny.xy + wn.xz, abs(ny.z) * wn.y);

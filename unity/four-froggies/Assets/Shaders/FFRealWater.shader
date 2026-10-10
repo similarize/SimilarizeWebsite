@@ -63,13 +63,13 @@ Shader "FF/RealWater"
                 float3 N = normalize(float3(s.x, 1.0, s.y));
                 float3 V = normalize(_WorldSpaceCameraPos - i.wp);
                 half ndv = saturate(dot(N, V));
-                half F = 0.02 + 0.76 * pow(1.0 - ndv, 5.0);   // capped: ripples average the grazing mirror down
+                half F = 0.02 + 0.46 * pow(1.0 - ndv, 4.0);   // ffu23: lower cap - the low-angle view was a grey mirror
 
                 float3 R = reflect(-V, N);
-                R.y = max(R.y, 0.02);
+                R.y = max(R.y, 0.07);   // ffu23: skip the hazy grey horizon band of the probe
                 R = normalize(R);
                 half4 env = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, R, 0.6);
-                half3 refl = DecodeHDR(env, unity_SpecCube0_HDR) * 0.9;
+                half3 refl = DecodeHDR(env, unity_SpecCube0_HDR) * 0.78 * half3(0.86, 0.93, 0.97);
 
                 float2 suv = (i.wp.xz - _SeaRect.xy) * _SeaRect.zw;
                 half depth = tex2D(_SeaMap, saturate(suv) + s * 0.003).r;

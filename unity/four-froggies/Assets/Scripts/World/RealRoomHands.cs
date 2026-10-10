@@ -1,114 +1,91 @@
-using System.IO;
 using UnityEngine;
 
-// REAL ROOM first-person frog hands: two skinned meshes (hands.bin "RRS1": a procedural frog forelimb built in Blender
-// with a skin modifier + subdivision - forearm, palm, four slender fingers with round adhesive toe pads - and 14 bones,
-// weights by distance to the bone segments). Procedural poses: idle sway + walk bob, the intro "look at my hands"
-// (fingers flex while they turn real), reach / poke (light switch), hold + throw (duck), resting on the armrests.
+// ffu23 REAL ROOM first-person frog hands (rewritten). The hand set of frog.bin (RealRoomFrog.cs): a muscular forelimb,
+// broad palm and four webbed fingers with round adhesive toe pads, wet olive-green skin (FF/RRSkin, dorsal / belly
+// mask baked per vertex). Each hand is driven by a two-bone IK chain from a virtual shoulder below the camera, so the
+// forearm swings naturally as the wrist goes where it is sent; the wrist then turns the palm (clamped) and the fingers
+// curl per finger. Motion: idle breathing, walk bob (figure eight), lag behind the look (mouse / stick), anticipation
+// towards whatever is in reach, poke (index finger on the light switch), grab (reach, close round the duck / plush,
+// carry it), wind-up + throw, palms on the armrests when sitting, and the intro "look at my hands".
 public static class Hands
 {
-    static Transform rootR, rootL;
-    static Transform[] bR, bL;
-    static Quaternion[] restR, restL;
+    static FrogAsset.Rig R, L;
+    static readonly int[][] fb = new int[2][];
     static Material matR, matL;
-    static bool loggedView;
-    static string[] names;
-    public static float introPose, walk;
-    static float morph = 1f;
-    public static Vector3 WaveOrigin = Vector3.zero;
-    public static Vector3 HoldPoint { get { return rootR != null ? rootR.TransformPoint(new Vector3(0.01f, -0.05f, 0.105f)) : Vector3.zero; } }
-    public static Quaternion HoldRot { get { return rootR != null ? rootR.rotation * Quaternion.Euler(-10f, 200f, 0f) : Quaternion.identity; } }
     static Transform eye;
+    public static float introPose, walk;
+    public static Vector3 WaveOrigin = Vector3.zero;
+    static bool loggedView, visible = true;
 
-    public static void Build(byte[] data, Transform eyeT, Texture2D skin, Color frogColor)
+    // ---- inputs from RealRoom (world space) ----
+    public static Vector3 nearTarget; public static float nearW;        // anticipation: something reachable in view
+    public static bool sitting; public static Vector3 armrestR, armrestL; public static bool armrestOk;
+    public static float charge;                                          // throw wind-up 0..1
+    public static bool holding; public static float objR = 0.06f;
+    public static float crouch;                                          // eye lowered (m) for reaching low things
+
+    // ---- actions ----
+    enum Act { None, Poke, Grab, Throw }
+    static Act act = Act.None; static float actT, actDur;
+    static Vector3 actP; static float actR;
+    public static bool PokeContact, GrabAttach, ThrowRelease;
+    public static bool demoHold;   // probe shot: freeze the poke with the finger on the switch
+    public static bool Busy { get { return act != Act.None; } }
+    public static float ActProgress { get { return act == Act.None ? 0f : Mathf.Clamp01(actT / actDur); } }
+
+    // hand-space reference points (metres, frog.bin hand scale 1.22): index tip when pointing, palm centre (underside)
+    static readonly Vector3 IndexTip = new Vector3(-0.026f, -0.010f, 0.168f);
+    static readonly Vector3 PalmC = new Vector3(0.0f, -0.024f, 0.058f);
+    const float UpperLen = 0.30f, ForeLen = 0.317f;
+    static readonly Vector3 ShoulderE = new Vector3(0.19f, -0.29f, -0.06f);   // eye space (right; left mirrored)
+
+    // current smoothed state per hand: wrist (world), hand rotation (world), finger curls
+    static readonly Vector3[] wrist = new Vector3[2];
+    static readonly Quaternion[] hrot = new Quaternion[2];
+    static readonly float[][] curl = { new float[4], new float[4] };
+    static bool init;
+    static Vector2 lag, lagV;
+    static float lastYaw, lastPitch;
+
+    public static Vector3 HoldPoint { get { return R != null ? R.b[pal(0)].TransformPoint(PalmC + new Vector3(0f, -objR * 0.95f - 0.006f, 0.012f)) : Vector3.zero; } }
+    // the toy stays upright and turned toward the froggy (a palm-relative rotation laid it on its side)
+    public static Quaternion HoldRot { get { if (eye == null) return Quaternion.identity; Vector3 f = Vector3.ProjectOnPlane(-eye.forward, Vector3.up); if (f.sqrMagnitude < 1e-4f) f = -eye.up; return Quaternion.LookRotation(f.normalized, Vector3.up) * Quaternion.Euler(-8f, -28f, 0f); } }
+    public static Vector3 Wrist(int k) { return wrist[k]; }
+    public static Quaternion HandRot(int k) { return hrot[k]; }
+    public static float[] Curls(int k) { return curl[k]; }
+    static int palR, palL;
+    static int pal(int k) { return k == 0 ? palR : palL; }
+
+    public static void Build(FrogAsset.Set hand, Transform eyeT, Texture2D skin, Color frogColor)
     {
         eye = eyeT;
-        var r = new BinaryReader(new MemoryStream(data));
-        r.ReadBytes(4);
-        int nb = r.ReadInt32(), nm = r.ReadInt32();
-        names = new string[nb];
-        var par = new int[nb]; var head = new Vector3[nb]; var tail = new Vector3[nb];
-        for (int i = 0; i < nb; i++)
-        {
-            int l = r.ReadByte(); names[i] = System.Text.Encoding.UTF8.GetString(r.ReadBytes(l));
-            par[i] = r.ReadInt32();
-            head[i] = new Vector3(r.ReadSingle(), r.ReadSingle(), r.ReadSingle());
-            tail[i] = new Vector3(r.ReadSingle(), r.ReadSingle(), r.ReadSingle());
-        }
         var sh = Shader.Find("FF/RRSkin");
+        if (!sh.isSupported) Debug.LogWarning("RealRoom: FF/RRSkin not supported here");
         Color toon = frogColor.linear;
-        for (int side = 0; side < 2 && side < nm; side++)
+        for (int k = 0; k < 2; k++)
         {
-            int nv = r.ReadInt32(), nt = r.ReadInt32();
-            var pos = new Vector3[nv]; var nrm = new Vector3[nv];
-            for (int i = 0; i < nv; i++) pos[i] = new Vector3(r.ReadSingle(), r.ReadSingle(), r.ReadSingle());
-            for (int i = 0; i < nv; i++) nrm[i] = new Vector3(r.ReadSingle(), r.ReadSingle(), r.ReadSingle());
-            var idx = new byte[nv * 3]; for (int i = 0; i < idx.Length; i++) idx[i] = r.ReadByte();
-            var w = new float[nv * 3]; for (int i = 0; i < w.Length; i++) w[i] = r.ReadSingle();
-            var tri = new int[nt * 3];
-            for (int i = 0; i < tri.Length; i++) tri[i] = nv < 65536 ? r.ReadUInt16() : (int)r.ReadUInt32();
-            float mx = side == 1 ? -1f : 1f;
-            // bones (mirrored for the left hand): local +z along the bone, x horizontal, so curling = +x rotation
-            var go = new GameObject(side == 0 ? "FrogHandR" : "FrogHandL"); go.layer = RealRoom.Layer;
-            var root = go.transform; root.SetParent(eyeT, false);
-            var bones = new Transform[nb];
-            for (int i = 0; i < nb; i++)
-            {
-                var t = new GameObject(names[i]).transform;
-                Vector3 h = new Vector3(head[i].x * mx, head[i].y, head[i].z), tl = new Vector3(tail[i].x * mx, tail[i].y, tail[i].z);
-                Vector3 d = tl - h; if (d.sqrMagnitude < 1e-8) d = Vector3.forward;
-                t.SetParent(par[i] >= 0 ? bones[par[i]] : root, false);
-                t.position = root.TransformPoint(h);
-                t.rotation = root.rotation * Quaternion.LookRotation(d.normalized, Vector3.up);
-                bones[i] = t;
-            }
-            var bind = new Matrix4x4[nb];
-            for (int i = 0; i < nb; i++) bind[i] = bones[i].worldToLocalMatrix * root.localToWorldMatrix;
-            var bw = new BoneWeight[nv];
-            var col = new Color[nv];
-            var rest = new System.Collections.Generic.List<Vector3>(pos);
-            var restN = new System.Collections.Generic.List<Vector3>(nrm);
-            for (int i = 0; i < nv; i++)
-            {
-                bw[i] = new BoneWeight { boneIndex0 = idx[i * 3], weight0 = w[i * 3], boneIndex1 = idx[i * 3 + 1], weight1 = w[i * 3 + 1], boneIndex2 = idx[i * 3 + 2], weight2 = w[i * 3 + 2] };
-                // toe pads = near the tip of each last finger bone
-                float pad = 0f;
-                for (int b = 0; b < nb; b++)
-                    if (names[b].EndsWith("_2"))
-                    {
-                        Vector3 tp = new Vector3(tail[b].x * mx, tail[b].y, tail[b].z);
-                        pad = Mathf.Max(pad, Mathf.Clamp01(1f - ((pos[i] - tp).magnitude - 0.006f) / 0.008f));
-                    }
-                col[i] = new Color(1, 1, 1, pad);
-                rest[i] = new Vector3(pos[i].x * mx, pos[i].y, pos[i].z);    // same skin pattern on both hands
-                restN[i] = new Vector3(nrm[i].x * mx, nrm[i].y, nrm[i].z);
-            }
-            var mesh = new Mesh { name = go.name };
-            mesh.vertices = pos; mesh.normals = nrm; mesh.triangles = tri; mesh.boneWeights = bw; mesh.bindposes = bind; mesh.colors = col;
-            mesh.SetUVs(2, rest); mesh.SetUVs(3, restN);
-            mesh.RecalculateBounds();
-            var smr = go.AddComponent<SkinnedMeshRenderer>();
-            smr.sharedMesh = mesh; smr.bones = bones; smr.rootBone = bones[0];
-            smr.updateWhenOffscreen = true;
-            smr.localBounds = new Bounds(Vector3.zero, Vector3.one * 2f);
-            smr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; smr.receiveShadows = false;
-            var m = new Material(sh); m.name = go.name;
-            if (!sh.isSupported) Debug.LogWarning("RealRoom: FF/RRSkin not supported here");
+            var m = new Material(sh) { name = k == 0 ? "FrogHandR" : "FrogHandL" };
             if (skin != null) m.SetTexture("_SkinTex", skin);
             m.SetColor("_Toon", new Color(toon.r, toon.g, toon.b, 1f));
-            smr.sharedMaterial = m;
-            var restQ = new Quaternion[nb]; for (int i = 0; i < nb; i++) restQ[i] = bones[i].localRotation;
-            if (side == 0) { rootR = root; bR = bones; restR = restQ; matR = m; } else { rootL = root; bL = bones; restL = restQ; matL = m; }
+            m.SetFloat("_TexScale", 15f);
+            var rig = FrogAsset.Build(hand, eyeT, m.name, m, k == 1, RealRoom.Layer);
+            fb[k] = new int[12];
+            for (int i = 0; i < 4; i++) for (int j = 0; j < 3; j++) fb[k][i * 3 + j] = rig.Find("f" + i + "_" + j);
+            if (k == 0) { R = rig; matR = m; palR = rig.Find("palm"); } else { L = rig; matL = m; palL = rig.Find("palm"); }
         }
-        Debug.Log("RealRoom: frog hands " + nb + " bones");
+        Debug.Log("RealRoom: frog hands " + hand.bone.Length + " bones, " + hand.pos.Length + " verts");
+    }
+
+    public static void SetVisible(bool on)
+    {
+        visible = on;
+        if (R != null) { R.smr.enabled = on; L.smr.enabled = on; }
     }
 
     public static void SetMorph(float k)
     {
-        morph = k;
-        if (matR != null) matR.SetFloat("_Morph", k);
-        if (matL != null) matL.SetFloat("_Morph", k);
-        if (rootR != null) WaveOrigin = (rootR.position + rootL.position) * 0.5f;
+        if (matR != null) { matR.SetFloat("_Morph", k); matL.SetFloat("_Morph", k); }
+        if (R != null) WaveOrigin = (R.root.position + L.root.position) * 0.5f;
     }
 
     public static void SetLights(Vector3 lamp, Vector3 tv)
@@ -118,74 +95,191 @@ public static class Hands
         matR.SetVector("_TvPos", tv); matL.SetVector("_TvPos", tv);
     }
 
-    // pose of one hand in eye space: position, euler, finger curl (0 open .. 1 fist), index finger extra (-1 pointing)
-    struct Pose { public Vector3 p, e; public float curl, index; }
-    static Pose Lerp(Pose a, Pose b, float t) { return new Pose { p = Vector3.Lerp(a.p, b.p, t), e = new Vector3(Mathf.LerpAngle(a.e.x, b.e.x, t), Mathf.LerpAngle(a.e.y, b.e.y, t), Mathf.LerpAngle(a.e.z, b.e.z, t)), curl = Mathf.Lerp(a.curl, b.curl, t), index = Mathf.Lerp(a.index, b.index, t) }; }
-    static Pose curR, curL;
-    static bool init;
+    public static void ResetPose() { init = false; act = Act.None; holding = false; charge = 0f; }
 
-    public static void Tick(float dt, bool holding, float charge, ref float throwT, ref float pokeT, bool sitting, bool play)
+    public static bool Poke(Vector3 p) { if (act != Act.None) return false; act = Act.Poke; actT = 0f; actDur = 0.85f; actP = p; return true; }
+    public static bool Grab(Vector3 c, float r) { if (act != Act.None) return false; act = Act.Grab; actT = 0f; actDur = 0.95f; actP = c; actR = r; return true; }
+    public static void Throw() { act = Act.Throw; actT = 0f; actDur = 0.55f; }
+    public static void Cancel() { act = Act.None; }
+
+    static Vector3 E(Vector3 p) { return eye.TransformPoint(p); }
+    static Vector3 ED(Vector3 d) { return eye.TransformDirection(d); }
+    static Quaternion ER(Vector3 fwd, Vector3 up) { return Quaternion.LookRotation(ED(fwd), ED(up)); }
+    static Vector3 Mir(Vector3 v) { return new Vector3(-v.x, v.y, v.z); }
+
+    // eye-space pose -> world wrist + rotation (left hand mirrored)
+    static void PoseE(int k, Vector3 p, Vector3 fwd, Vector3 up, out Vector3 w, out Quaternion q)
     {
-        if (rootR == null) return;
+        if (k == 1) { p = Mir(p); fwd = Mir(fwd); up = Mir(up); }
+        w = E(p); q = ER(fwd, up);
+    }
+
+    public static void Tick(float dt, bool play)
+    {
+        if (R == null) return;
         float t = Time.time;
-        float bob = Mathf.Sin(walk) * 0.010f, bob2 = Mathf.Abs(Mathf.Cos(walk)) * 0.006f;
-        float sway = Mathf.Sin(t * 1.3f) * 0.004f;
-        // idle: low in the corners, fingers relaxed
-        var idleR = new Pose { p = new Vector3(0.17f, -0.17f + bob + sway, 0.32f), e = new Vector3(38f, -12f, -20f), curl = 0.3f };
-        // intro: both hands raised in front of the chest, backs up, looking down at them
-        var introR = new Pose { p = new Vector3(0.085f, -0.20f, 0.30f), e = new Vector3(18f, -22f, -12f), curl = 0.12f + 0.25f * (0.5f + 0.5f * Mathf.Sin(t * 2.2f)) };
-        var holdR = new Pose { p = new Vector3(0.13f, -0.17f + bob, 0.33f), e = new Vector3(20f, -18f, -70f), curl = 0.55f };
-        var sitR = new Pose { p = new Vector3(0.24f, -0.33f, 0.24f), e = new Vector3(55f, -6f, -10f), curl = 0.35f };
-        Pose tR = sitting ? sitR : holding ? holdR : idleR;
-        tR = Lerp(tR, introR, introPose);
-        if (holding && charge > 0f) tR.p += new Vector3(0.03f, 0.05f, -0.10f) * charge;   // wind up
-        if (throwT >= 0f)
+        PokeContact = GrabAttach = ThrowRelease = false;
+        // look lag: the hands trail behind fast turns and catch up (spring)
+        float yaw = eye.eulerAngles.y, pitch = eye.eulerAngles.x;
+        if (!init) { lastYaw = yaw; lastPitch = pitch; }
+        float dy = Mathf.DeltaAngle(lastYaw, yaw), dp = Mathf.DeltaAngle(lastPitch, pitch);
+        lastYaw = yaw; lastPitch = pitch;
+        Vector2 kick = new Vector2(-dy, dp) * 0.0011f;
+        lagV += kick / Mathf.Max(dt, 1e-3f) * 0.016f;
+        lagV += (-lag * 90f - lagV * 13f) * dt;
+        lag += lagV * dt;
+        lag = Vector2.ClampMagnitude(lag, 0.06f);
+        float bobX = Mathf.Sin(walk) * 0.011f, bobY = Mathf.Abs(Mathf.Cos(walk)) * 0.012f - 0.006f;
+        float breath = Mathf.Sin(t * 1.9f) * 0.0035f;
+
+        for (int k = 0; k < 2; k++)
         {
-            throwT += dt;
-            float k = Mathf.Sin(Mathf.Clamp01(throwT / 0.35f) * Mathf.PI);
-            tR.p += new Vector3(-0.03f, 0.06f, 0.16f) * k; tR.e += new Vector3(-30f, 0f, 0f) * k; tR.curl = Mathf.Lerp(tR.curl, 0.05f, k);
-            if (throwT > 0.4f) throwT = -1f;
+            float sx = k == 0 ? 1f : -1f;
+            Vector3 tw; Quaternion tq; float[] tc = new float[4];
+            // idle: low in the lower corners, backs of the hands up, fingers relaxed + slightly spread
+            // (ffu23 framing, checked with work/rr/frog/simfp.py: backs of the hands + spread webbed fingers in the corners)
+            Vector3 ip = new Vector3(0.16f, -0.155f, 0.31f) + new Vector3(bobX * sx + lag.x, bobY + breath + lag.y, 0f);
+            PoseE(k, ip, new Vector3(-0.6f, 0.55f, 0.6f), new Vector3(0.35f, 0.55f, -0.75f), out tw, out tq);
+            for (int i = 0; i < 4; i++) tc[i] = 0.08f + i * 0.025f;   // relaxed (the rest pose is already slightly curled)
+            // anticipation: the right hand drifts toward something reachable in view
+            if (k == 0 && nearW > 0.001f && act == Act.None && !holding && !sitting)
+            {
+                Vector3 toward = Vector3.Lerp(tw, nearTarget - ED(new Vector3(0.02f, 0.02f, 0.2f)), 0.22f * nearW);
+                tw = Vector3.Lerp(tw, toward, nearW);
+                for (int i = 0; i < 4; i++) tc[i] = Mathf.Lerp(tc[i], -0.05f, nearW * 0.6f);   // fingers open up
+            }
+            if (sitting)
+            {
+                Vector3 ar = k == 0 ? armrestR : armrestL;
+                if (armrestOk)
+                {
+                    Vector3 f = Vector3.ProjectOnPlane(eye.forward, Vector3.up).normalized;
+                    Quaternion q = Quaternion.LookRotation(Vector3.Lerp(f, eye.right * -sx, 0.15f).normalized, Vector3.up);
+                    tw = ar + Vector3.up * 0.032f - q * new Vector3(0f, 0f, 0.07f);
+                    tq = q;
+                    for (int i = 0; i < 4; i++) tc[i] = 0.38f + 0.05f * i;   // fingers draped over the front of the armrest
+                }
+                else PoseE(k, new Vector3(0.24f, -0.33f, 0.24f), new Vector3(-0.1f, -0.4f, 1f), new Vector3(0.2f, 1f, 0.2f), out tw, out tq);
+            }
+            if (holding && k == 0)
+            {
+                // carry: lower right, palm down round the object; wind-up pulls it back over the shoulder
+                // palm turned in toward the middle, the toy held against it (lower right of the view)
+                PoseE(0, new Vector3(0.21f + lag.x, -0.20f + bobY + lag.y, 0.40f), new Vector3(-0.25f, 0.45f, 0.85f), new Vector3(0.95f, 0.15f, 0.1f), out tw, out tq);
+                for (int i = 0; i < 4; i++) tc[i] = objR > 0.09f ? 0.42f : 0.58f;   // round the plush / the duck
+                if (charge > 0f)
+                {
+                    Vector3 wp; Quaternion wq;
+                    PoseE(0, new Vector3(0.26f, -0.02f, 0.14f), new Vector3(-0.2f, 0.85f, 0.4f), new Vector3(0.4f, 0.1f, -1f), out wp, out wq);
+                    float c = Mathf.SmoothStep(0f, 1f, charge);
+                    tw = Vector3.Lerp(tw, wp, c); tq = Quaternion.Slerp(tq, wq, c);
+                }
+            }
+            if (introPose > 0f)
+            {
+                // "look at my hands": raised in front of the chest, backs up, fingers slowly flexing
+                Vector3 p; Quaternion q;
+                PoseE(k, new Vector3(0.085f, -0.11f, 0.34f), new Vector3(-0.25f, 0.65f, 0.7f), new Vector3(0.3f, 0.5f, -0.8f), out p, out q);
+                tw = Vector3.Lerp(tw, p, introPose); tq = Quaternion.Slerp(tq, q, introPose);
+                float fl = 0.02f + 0.30f * (0.5f + 0.5f * Mathf.Sin(t * 2.2f + k));
+                for (int i = 0; i < 4; i++) tc[i] = Mathf.Lerp(tc[i], fl + 0.05f * i, introPose);
+            }
+            // actions (right hand)
+            if (k == 0 && act != Act.None)
+            {
+                actT += dt;
+                if (demoHold && act == Act.Poke && actT > actDur * 0.47f) actT = actDur * 0.47f;
+                float u = Mathf.Clamp01(actT / actDur);
+                Vector3 sh = E(ShoulderE);
+                if (act == Act.Poke)
+                {
+                    // approach 0-.42, press .42-.58 (contact at .45), return .58-1
+                    Vector3 dir = (actP - sh).normalized;
+                    Quaternion q = Quaternion.LookRotation(Vector3.Lerp(dir, eye.forward, 0.3f).normalized, Vector3.Lerp(Vector3.up, -eye.right, 0.25f));
+                    Vector3 touch = actP - q * (IndexTip + new Vector3(0f, 0f, 0.004f));
+                    Vector3 press = touch + q * new Vector3(0f, 0f, 0.012f);
+                    float a = Smooth((u - 0.0f) / 0.42f), b = Smooth((u - 0.42f) / 0.08f) - Smooth((u - 0.5f) / 0.08f), back = Smooth((u - 0.58f) / 0.42f);
+                    Vector3 reach = Vector3.Lerp(touch, press, b);
+                    float w = a * (1f - back);
+                    tw = Vector3.Lerp(tw, reach, w); tq = Quaternion.Slerp(tq, q, w);
+                    // index straight, the rest curled in
+                    tc[0] = Mathf.Lerp(tc[0], 0.95f, w); tc[1] = Mathf.Lerp(tc[1], -0.12f, w); tc[2] = Mathf.Lerp(tc[2], 0.95f, w); tc[3] = Mathf.Lerp(tc[3], 0.95f, w);
+                    if (actT - dt < actDur * 0.45f && actT >= actDur * 0.45f) PokeContact = true;
+                }
+                else if (act == Act.Grab)
+                {
+                    // reach over the object (fingers open), lower round it and close, lift it back into the carry pose
+                    Vector3 f = Vector3.ProjectOnPlane(actP - sh, Vector3.up); if (f.sqrMagnitude < 1e-4f) f = eye.forward; f.Normalize();
+                    Quaternion q = Quaternion.LookRotation((f * 0.75f - Vector3.up * 0.65f).normalized, (f * 0.6f + Vector3.up * 0.8f).normalized);
+                    Vector3 over = actP + Vector3.up * (actR + 0.09f) - q * PalmC;
+                    Vector3 on = actP + Vector3.up * (actR * 0.85f + 0.012f) - q * PalmC;
+                    float a = Smooth(u / 0.40f), down = Smooth((u - 0.38f) / 0.16f), close = Smooth((u - 0.48f) / 0.14f), lift = Smooth((u - 0.62f) / 0.38f);
+                    Vector3 grabP = Vector3.Lerp(over, on, down);
+                    float w = a * (1f - lift);
+                    tw = Vector3.Lerp(tw, grabP, w); tq = Quaternion.Slerp(tq, q, w);
+                    for (int i = 0; i < 4; i++) tc[i] = Mathf.Lerp(Mathf.Lerp(tc[i], -0.08f, a), actR > 0.09f ? 0.42f : 0.58f, close);
+                    if (actT - dt < actDur * 0.6f && actT >= actDur * 0.6f) GrabAttach = true;
+                }
+                else if (act == Act.Throw)
+                {
+                    // fast over-arm swing from the wind-up to arm's length, release at .35, follow-through, back
+                    Vector3 p0, p1; Quaternion q0, q1;
+                    PoseE(0, new Vector3(0.26f, -0.02f, 0.14f), new Vector3(-0.2f, 0.85f, 0.4f), new Vector3(0.4f, 0.1f, -1f), out p0, out q0);
+                    PoseE(0, new Vector3(0.05f, -0.10f, 0.60f), new Vector3(-0.1f, -0.2f, 1f), new Vector3(0.1f, 1f, 0.2f), out p1, out q1);
+                    float s = Smooth(u / 0.38f), back = Smooth((u - 0.5f) / 0.5f);
+                    Vector3 arc = Vector3.Lerp(p0, p1, s) + ED(Vector3.up) * Mathf.Sin(s * Mathf.PI) * 0.06f;
+                    float w = 1f - back;
+                    tw = Vector3.Lerp(tw, arc, w); tq = Quaternion.Slerp(tq, Quaternion.Slerp(q0, q1, s), w);
+                    for (int i = 0; i < 4; i++) tc[i] = Mathf.Lerp(tc[i], u < 0.35f ? 0.5f : -0.06f, w);
+                    if (actT - dt < actDur * 0.35f && actT >= actDur * 0.35f) ThrowRelease = true;
+                }
+                if (actT >= actDur) act = Act.None;
+            }
+            // smoothing (fast enough to keep IK reaches crisp, slow enough to hide pose switches)
+            if (!init) { wrist[k] = tw; hrot[k] = tq; for (int i = 0; i < 4; i++) curl[k][i] = tc[i]; }
+            float s1 = 1f - Mathf.Exp(-dt * (act != Act.None && k == 0 ? 22f : 12f));
+            wrist[k] = Vector3.Lerp(wrist[k], tw, s1);
+            hrot[k] = Quaternion.Slerp(hrot[k], tq, s1);
+            for (int i = 0; i < 4; i++) curl[k][i] = Mathf.Lerp(curl[k][i], tc[i], 1f - Mathf.Exp(-dt * 16f));
+            ApplyIK(k == 0 ? R : L, k, sx);
         }
-        if (pokeT >= 0f)
-        {
-            pokeT += dt;
-            float k = Mathf.Sin(Mathf.Clamp01(pokeT / 0.45f) * Mathf.PI);
-            tR.p += new Vector3(-0.06f, 0.12f, 0.2f) * k; tR.e += new Vector3(-35f, 0f, 0f) * k; tR.index = -k; tR.curl = Mathf.Lerp(tR.curl, 0.8f, k);
-            if (pokeT > 0.5f) pokeT = -1f;
-        }
-        Pose tL = sitting ? sitR : idleR; tL = Lerp(tL, introR, introPose);
-        tL.p.x = -tL.p.x; tL.e.y = -tL.e.y; tL.e.z = -tL.e.z;
-        tL.p.y += Mathf.Sin(walk + Mathf.PI) * 0.010f - bob;
-        if (!play && introPose <= 0f && !sitting) { }
-        if (!init) { curR = tR; curL = tL; init = true; }
-        float s = 1f - Mathf.Exp(-dt * 14f);
-        curR = Lerp(curR, tR, s); curL = Lerp(curL, tL, s);
-        Apply(rootR, bR, restR, curR, t);
-        Apply(rootL, bL, restL, curL, t + 0.7f);
+        init = true;
         if (play && !loggedView)
         {
             loggedView = true;
             var cam = eye != null ? eye.GetComponentInChildren<Camera>() : null;
-            if (cam != null) Debug.Log("RealRoom: hands at viewport R " + cam.WorldToViewportPoint(rootR.position).ToString("F2") + " L " + cam.WorldToViewportPoint(rootL.position).ToString("F2"));
+            if (cam != null) Debug.Log("RealRoom: hands at viewport R " + cam.WorldToViewportPoint(R.root.position).ToString("F2") + " L " + cam.WorldToViewportPoint(L.root.position).ToString("F2"));
         }
-        WaveOrigin = (rootR.position + rootL.position) * 0.5f + eye.forward * 0.08f;
+        WaveOrigin = (R.root.position + L.root.position) * 0.5f + eye.forward * 0.12f;
     }
 
-    static void Apply(Transform root, Transform[] b, Quaternion[] rest, Pose p, float t)
+    // two-bone IK from the virtual shoulder: the forearm (static in the hand root) points elbow -> wrist, the palm bone
+    // turns toward the wanted hand rotation within wrist limits, then the fingers curl
+    static void ApplyIK(FrogAsset.Rig r, int k, float sx)
     {
-        root.localPosition = p.p;
-        root.localRotation = Quaternion.Euler(p.e);
-        for (int i = 0; i < b.Length; i++)
+        Vector3 sh = E(new Vector3(ShoulderE.x * sx, ShoulderE.y, ShoulderE.z));
+        Vector3 pole = ED(new Vector3(0.75f * sx, -1f, -0.35f));
+        Vector3 elbow = FrogAsset.SolveJoint(sh, wrist[k], UpperLen, ForeLen, pole);
+        Vector3 fdir = (wrist[k] - elbow).normalized;
+        Vector3 up = hrot[k] * Vector3.up;
+        up -= fdir * Vector3.Dot(up, fdir);
+        if (up.sqrMagnitude < 1e-6f) up = ED(Vector3.up);
+        // the root is the wrist frame: origin at the wrist, +z along the forearm
+        r.root.rotation = Quaternion.LookRotation(fdir, up.normalized);
+        r.root.position = wrist[k];
+        int p = k == 0 ? palR : palL;
+        if (p >= 0)
         {
-            string n = names[i];
-            // ffu18c: fingers only (f<finger>_<joint>) - "forearm" also starts with 'f' and was being curled ~100 deg, which
-            // swung both hands up out of view (they never showed)
-            if (n.Length != 4 || n[0] != 'f' || n[2] != '_' || !char.IsDigit(n[1]) || !char.IsDigit(n[3])) continue;
-            int finger = n[1] - '0', j = n[3] - '0';
-            float c = p.curl + Mathf.Sin(t * 1.7f + finger) * 0.03f;
-            if (finger == 1 && p.index < 0f) c = Mathf.Lerp(c, -0.15f, -p.index);
-            float ang = c * (j == 0 ? 38f : j == 1 ? 55f : 40f) + finger * 1.5f;
-            b[i].localRotation = rest[i] * Quaternion.Euler(ang, 0f, 0f);
+            Quaternion want = hrot[k];
+            Quaternion restW = r.b[p].parent.rotation * r.rest[p];
+            Quaternion rel = Quaternion.Inverse(restW) * want;
+            float ang; Vector3 ax; rel.ToAngleAxis(out ang, out ax);
+            if (ang > 180f) ang -= 360f;
+            ang = Mathf.Clamp(ang, -82f, 82f);
+            r.b[p].localRotation = r.rest[p] * Quaternion.AngleAxis(ang, ax);
         }
+        FrogAsset.Curl(r, fb[k], curl[k], Time.time + k * 0.7f, 0.025f);
     }
+
+    static float Smooth(float x) { x = Mathf.Clamp01(x); return x * x * (3f - 2f * x); }
 }

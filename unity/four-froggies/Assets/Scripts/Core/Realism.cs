@@ -24,6 +24,9 @@ public static class Realism
     public static bool On { get; private set; }
     public static bool Lite { get; private set; }
     public static bool Ready { get; private set; }
+    // ffu23: on by default; Guard = the default lite tier (phones / Tesla) watches its frame rate and sheds the extras
+    public static bool Guard { get; private set; }
+    public static bool Degraded { get; private set; }
     public static Material TriBase, WaterBase, TerrainNM;     // editor-made (BuildScript) so their shader variants ship
 
     // test area: pond shore arc between these angles (degrees on the PondC / PondR ellipse)
@@ -64,12 +67,14 @@ public static class Realism
     {
         string u = Application.absoluteURL ?? "";
         string v = Param(u, "realism");
-        On = v != null && v != "0" && v != "off" && v != "false";
+        // ffu23: the realistic pond is part of the game now - on unless ?realism=0 (off / false)
+        On = v == null || (v != "0" && v != "off" && v != "false");
         if (!On) return;
         string ua = "";
         try { ua = FFRealUA() ?? ""; } catch (System.Exception) { }
         bool tesla = ua.Contains("Tesla") || ua.Contains("QtCarBrowser");
         Lite = v == "lite" || (v != "full" && (Look.Mobile || tesla));
+        Guard = Lite && (v == null || v == "1" || v == "on");
         Debug.Log("Realism: ON tier " + (Lite ? "lite" : "full") + (tesla ? " (Tesla UA)" : "") + " skyRot " + SkyRot.ToString("0.0"));
         ApplyEnvironment(sun);
     }
@@ -139,7 +144,7 @@ public static class Realism
     // Look.ApplyViews hook: RealPost replaces LBPost; HDR + SSAO on the full tier; shadows by tier
     public static void ApplyQuality(int views, IEnumerable<Camera> cams)
     {
-        bool post = Look.PostAllowed(views);
+        bool post = Look.PostAllowed(views) && !Degraded;
         if (!Lite && views <= 1)
         {
             QualitySettings.shadows = ShadowQuality.All;
@@ -211,7 +216,25 @@ public static class Realism
     public static void Begin(MonoBehaviour host, Terrain terrain)
     {
         if (!On || host == null) return;
+        host0 = host;
         host.StartCoroutine(Run(terrain));
+    }
+
+    static MonoBehaviour host0;
+    // ffu23: default lite tier on phones / Tesla: if the ranch runs under ~24 fps once the scans are in, drop the grass
+    // clumps, the bloom post and the soft shadows (the scanned ground, sky, water and boulders stay)
+    static IEnumerator PerfGuard()
+    {
+        yield return new WaitForSecondsRealtime(3f);
+        float t0 = Time.realtimeSinceStartup; int n = 0;
+        while (Time.realtimeSinceStartup - t0 < 6f) { n++; yield return null; }
+        float fps = n / Mathf.Max(0.01f, Time.realtimeSinceStartup - t0);
+        Debug.Log("Realism: lite guard " + fps.ToString("0.0") + " fps" + (fps < 24f ? " - shedding grass clumps / bloom / soft shadows" : " - ok"));
+        if (fps >= 24f) yield break;
+        Degraded = true;
+        foreach (var r in Object.FindObjectsOfType<MeshRenderer>()) if (r.gameObject.name.StartsWith("RealGrass")) r.enabled = false;
+        foreach (var c in Camera.allCameras) { var rp = c.GetComponent<RealPost>(); if (rp != null) rp.enabled = false; }
+        QualitySettings.shadows = ShadowQuality.HardOnly; QualitySettings.shadowDistance = Mathf.Min(QualitySettings.shadowDistance, 32f);
     }
 
     static IEnumerator Run(Terrain terrain)
@@ -238,6 +261,7 @@ public static class Realism
         yield return null;
         Look.RerenderProbe(Lite ? 64 : 256);
         Ready = true;
+        if (Guard) host0.StartCoroutine(PerfGuard());
         Debug.Log("Realism: ready in " + (Time.realtimeSinceStartup - t0).ToString("0.0") + " s, " + tex.Count + " textures, " + (bytes / 1024) + " KB streamed");
     }
 
@@ -302,7 +326,8 @@ public static class Realism
     static Material rockMat, barkMat;
     static void ApplyMaterials()
     {
-        rockMat = Tri("rock", new Color(0.42f, 0.41f, 0.39f), 2.2f, 0.16f, 1.5f);
+        rockMat = Tri("rock", new Color(0.37f, 0.37f, 0.36f), 2.2f, 0.16f, 1.5f);
+        if (rockMat != null) { rockMat.SetColor("_TopTint", new Color(0.56f, 0.6f, 0.52f)); rockMat.SetFloat("_TopK", 0.7f); rockMat.SetFloat("_Desat", 0.45f); }   // ffu23: sandy tops
         barkMat = Tri("bark", new Color(1f, 0.97f, 0.92f), 1.4f, 0.1f, 1.3f);
         // pond water
         var go = GameObject.Find("PondWater");
@@ -318,6 +343,22 @@ public static class Realism
         // pond reeds + lily pads (Ranch.Cyl -> shared Mats.Lit instances): natural, darker colours
         Mats.Lit(new Color(0.35f, 0.5f, 0.2f)).color = new Color(0.24f, 0.27f, 0.13f);
         var pad = Mats.Lit(new Color(0.25f, 0.55f, 0.2f)); pad.color = new Color(0.13f, 0.22f, 0.08f); pad.SetFloat("_Glossiness", 0.45f);
+        // ffu23: one pad in the probe shot never took that recolour (cause not found), so sweep every thin flat renderer
+        // sitting on the pond surface and give it its own dark, satin lily-pad material
+        var padM = new Material(Mats.Lit(Color.white)) { name = "RealLilyPad" };
+        padM.color = new Color(0.10f, 0.17f, 0.06f); padM.SetFloat("_Glossiness", 0.28f); padM.SetFloat("_Metallic", 0f);
+        int pads = 0;
+        foreach (var r in Object.FindObjectsOfType<MeshRenderer>())
+        {
+            if (r.gameObject.name == "PondWater" || r.sharedMaterials.Length != 1) continue;
+            var b = r.bounds;
+            if (b.size.y > 0.08f || Mathf.Max(b.size.x, b.size.z) < 0.5f) continue;
+            if (Mathf.Abs(b.center.y - (Layout.WaterY + 0.03f)) > 0.05f || Layout.PondQ(b.center.x, b.center.z) > 1.05f) continue;
+            var m0 = r.sharedMaterial; if (m0 == null || m0.shader == null || m0.shader.name != "Standard") continue;
+            if (m0.color.g < m0.color.r || m0.color.g < m0.color.b) continue;     // greenish only
+            r.sharedMaterial = padM; pads++;
+        }
+        Debug.Log("Realism: lily pads re-skinned " + pads);
         // bark scan on trunks, rock scan on the Quaternius rocks, natural (less saturated) leaf tint
         var swap = new Dictionary<Material, Material>();
         int n = 0;
