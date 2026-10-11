@@ -267,7 +267,7 @@ public class Orbs : MonoBehaviour
         readonly CanvasGroup cg;
         public OrbRow(RectTransform panel)
         {
-            root = UIK.Rect(panel, "Orb row", new Vector2(0f, 1f), new Vector2(200f, -66f), new Vector2(380f, 30f));
+            root = UIK.Rect(panel, "Orb row", new Vector2(0f, 1f), new Vector2(388f, -76f), new Vector2(380f, 30f)   /* right of the PHONE button (x 23..173) */);
             cg = root.gameObject.AddComponent<CanvasGroup>();
             cg.alpha = 0f; cg.blocksRaycasts = false; cg.interactable = false;
             var bg = UIK.Img(root, UIK.SoftRect, new Color(0f, 0f, 0f, 0.35f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(390f, 34f));

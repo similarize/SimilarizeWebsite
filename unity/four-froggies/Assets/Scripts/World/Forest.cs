@@ -253,7 +253,11 @@ public static class Forest
             var mesh = new Mesh { name = "Ferns " + k };
             mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
             mesh.SetVertices(sets[k].Item1); mesh.SetTriangles(sets[k].Item2, 0);
-            mesh.RecalculateNormals(); mesh.RecalculateBounds();
+            // both faces share the vertices, so RecalculateNormals sums to ~zero (NaN shading: black fronds + bloom halos in
+            // ffu33a) - give every vertex an up-ish normal instead (soft, evenly lit fronds from either side)
+            var fn = new Vector3[sets[k].Item1.Count];
+            for (int v = 0; v < fn.Length; v++) fn[v] = Vector3.up;
+            mesh.normals = fn; mesh.RecalculateBounds();
             var go = new GameObject("Ferns " + k);
             go.transform.SetParent(Root, false);
             go.AddComponent<MeshFilter>().sharedMesh = mesh;

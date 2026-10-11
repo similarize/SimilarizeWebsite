@@ -260,6 +260,8 @@ public class JetBase : MonoBehaviour
             line1 = UIK.Label(root, "", 26, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0f, 18f), new Vector2(620f, 36f), new Color(0.6f, 1f, 0.6f));
             line2 = UIK.Label(root, "", 18, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0f, -10f), new Vector2(620f, 28f), Color.white);
             line1.supportRichText = line2.supportRichText = true;
+            // the HYPER line (speed, Mach, alt, earth lap, km, laps) wrapped at 1280 px in ffu33a: shrink to fit on one line
+            line2.resizeTextForBestFit = true; line2.resizeTextMinSize = 11; line2.resizeTextMaxSize = 18; line2.horizontalOverflow = HorizontalWrapMode.Wrap; line2.verticalOverflow = VerticalWrapMode.Truncate;
             barBg = UIK.Img(root, null, new Color(1f, 1f, 1f, 0.18f), new Vector2(0.5f, 0.5f), new Vector2(0f, -32f), new Vector2(300f, 6f));
             bar = UIK.Img(root, null, new Color(0.5f, 1f, 0.5f, 0.9f), new Vector2(0.5f, 0.5f), new Vector2(-150f, -32f), new Vector2(0f, 6f));
             bar.rectTransform.pivot = new Vector2(0f, 0.5f);

@@ -84,8 +84,9 @@ public class Ffu33 : MonoBehaviour
         Vector2 mn = JetLayout.ForestMin;
         if (shot == "forestorbs")
         {
-            Vector3 p = new Vector3(mn.x + 3f, 0f, mn.y + 2f);
-            f.DemoPose(new Vector3(p.x, Ranch.GY(p.x, p.y) + 0.2f, p.z), 30f);
+            // 8 m in from the south-west corner, so the follow cam starts clear of the entrance sign (mn + (3, -1.5))
+            Vector3 p = new Vector3(mn.x + 8f, 0f, mn.y + 8f);
+            f.DemoPose(new Vector3(p.x, Ranch.GY(p.x, p.z) + 0.2f, p.z), 30f);
             Game.I.Demo33Hook(OrbWalk);
         }
         else
@@ -138,7 +139,7 @@ public class Ffu33 : MonoBehaviour
     void OrbsTick(Frog f, float t)
     {
         Vector2 mn = JetLayout.ForestMin, mx = JetLayout.ForestMax;
-        int ph = t < 30f ? 0 : t < 42f ? 1 : 2;
+        int ph = t < 18f ? 0 : t < 25f ? 1 : 2;   // short phases: SwiftShader runs the demo at ~0.12 s per real s
         if (ph != phase)
         {
             phase = ph; camInit = false;
