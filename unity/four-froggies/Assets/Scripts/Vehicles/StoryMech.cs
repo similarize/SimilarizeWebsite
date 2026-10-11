@@ -554,9 +554,8 @@ public partial class StoryMech : Vehicle
             // touchdown: a big thud, dust ring, shake
             p.y = ground; grounded = true; landCool = 0.25f;
             float hard = Mathf.Clamp01(-vy / (20f + H * 0.4f));
-            Game.Shake(p, Mathf.Clamp(0.5f + band * 0.3f, 0.4f, 1.6f) * (0.4f + hard));
-            Sfx.PlayAt(Sfx.Land != null ? Sfx.Land : Sfx.Thud, p, 0.9f, 120f + H * 2f, Mathf.Lerp(0.9f, 0.4f, band / 3f));
-            Sfx.PlayAt(Sfx.Step, p, 0.8f, 120f + H * 2f, 0.5f);
+            MechStomp.Foot(p, H, 1.3f + hard * 1.2f, false);   // ffu28: both feet slam down - bigger boom + quake
+            if (Sfx.Land != null) Sfx.PlayAt(Sfx.Land, p, 0.5f, 120f + H * 3f, Mathf.Lerp(0.9f, 0.4f, band / 3f));
             for (int i = 0; i < 16 + band * 6; i++) { Vector2 r = Random.insideUnitCircle.normalized * H * Random.Range(0.15f, 0.4f); FX.Dust(p + new Vector3(r.x, 0.5f, r.y), 1f); }
             foreach (Collider c in Physics.OverlapSphere(p, H * 0.3f + 2f, 1 << PropLayer))
                 if (c.attachedRigidbody != null) c.attachedRigidbody.AddExplosionForce(500f + band * 800f, p, H * 0.4f + 3f, 1.5f);
@@ -596,16 +595,23 @@ public partial class StoryMech : Vehicle
             legR.localRotation = Quaternion.Euler(-sw * amp, 0f, 0f);
             armL.localRotation = Quaternion.Euler(-sw * amp * 0.7f + (fireCool > 0.15f ? -25f : 0f), 0f, 0f);
             armR.localRotation = Quaternion.Euler(sw * amp * 0.7f + (fireCool > 0.15f ? -25f : 0f), 0f, 0f);
-            hips.localPosition = new Vector3(hips.localPosition.x * 0f + Mathf.Sin(phase) * H * 0.01f * amp / 30f, HipY - Mathf.Abs(Mathf.Cos(phase)) * H * 0.02f * amp / 30f, hips.localPosition.z);
+            // ffu28: feet on the ground through the whole stride. The legs are straight and swing about the hip, so a leg at
+            // angle a only reaches HipY*cos(a) below the hip: the hips drop by HipY*(1-cos a) (lowest at the heel strike,
+            // both feet down), full height at mid-stance (leg vertical). (Before: the hips dropped 2% of H at MID-stance,
+            // pushing both feet 0.24 m (10-story) .. 3.2 m (trillion) into the ground, and floated them at the strike.)
+            // On slopes the body rises to the higher planted foot (FootLift) instead of burying the uphill foot.
+            float aRad = sw * amp * Mathf.Deg2Rad;
+            float drop = HipY * (1f - Mathf.Cos(aRad));
+            hips.localPosition = new Vector3(Mathf.Sin(phase) * H * 0.01f * amp / 30f, HipY - drop + FootLift(dt, aRad), hips.localPosition.z);
             torso.localRotation = Quaternion.Euler(Mathf.Clamp(speed / maxSp, -1f, 1f) * 6f, 0f, Mathf.Sin(phase) * 3f * amp / 30f - turnVel * 0.05f);
             float side = Mathf.Sign(Mathf.Cos(phase));
             if (amp > 4f && side != stepSide)
             {
                 stepSide = side;
-                Vector3 foot = transform.TransformPoint(new Vector3(H * 0.1f * side, 0f, H * 0.05f));
-                Game.Shake(foot, Mathf.Clamp(0.2f + band * 0.22f, 0.2f, 0.9f));
-                Sfx.PlayAt(Sfx.Step, foot, 0.5f + band * 0.15f, 80f + H * 2f, Mathf.Lerp(1.1f, 0.45f, band / 3f));
-                for (int i = 0; i < 3 + band * 3; i++) FX.Dust(foot + Random.insideUnitSphere * H * 0.05f, 1f);
+                // ffu28: the foot that just struck = the one swung forward (legR when sin(phase) = +1, i.e. side turned -1)
+                Vector3 foot = transform.TransformPoint(new Vector3(-H * 0.1f * side, 0f, HipY * Mathf.Sin(amp * Mathf.Deg2Rad)));
+                foot.y = Ranch.GY(foot.x, foot.z);
+                MechStomp.Foot(foot, H, 1f, false);   // boom + crunch, ground quake, dust cloud (Core/MechStomp.cs)
                 foreach (Collider c in Physics.OverlapSphere(foot, H * 0.12f + 1f, 1 << PropLayer))
                     if (c.attachedRigidbody != null) c.attachedRigidbody.AddExplosionForce(400f + band * 600f, foot, H * 0.2f + 2f, 1f);
                 if (band >= 1 && driver != null) Destruct.Stomp(foot, H * 0.08f + 1f, 20f + band * 12f, this);   // ffu21: big feet crush things
@@ -623,6 +629,21 @@ public partial class StoryMech : Vehicle
             hips.localPosition = new Vector3(0f, HipY, hips.localPosition.z);
         }
         if (head != null) head.localRotation = Quaternion.Euler(0f, Mathf.Clamp(Mathf.DeltaAngle(yaw, camYawIn), -40f, 40f) * (driver != null ? 0.5f : 0f), 0f);
+    }
+    // ffu28: how far the body must rise so neither planted foot sinks into a slope (ranch terrain is Ranch.GY; the
+    // mech's root sits on the terrain under its centre). Each foot's ground height is sampled where the walk cycle puts
+    // it; the higher one wins, capped at 12% of H, eased so it never pops.
+    float footLift;
+    float FootLift(float dt, float aRad)
+    {
+        float H = height;
+        Vector3 c = transform.position;
+        float gc = Ranch.GY(c.x, c.z);
+        float zf = HipY * Mathf.Sin(aRad);
+        Vector3 fl = transform.TransformPoint(new Vector3(-H * 0.1f, 0f, -zf)), fr = transform.TransformPoint(new Vector3(H * 0.1f, 0f, zf));
+        float want = Mathf.Clamp(Mathf.Max(Ranch.GY(fl.x, fl.z), Ranch.GY(fr.x, fr.z)) - gc, 0f, H * 0.12f);
+        footLift = Mathf.Lerp(footLift, want, Mathf.Min(1f, dt * 10f));
+        return footLift;
     }
     float hipY0 = -1f;
     float HipY { get { if (hipY0 < 0f) hipY0 = hips.localPosition.y; return hipY0; } }

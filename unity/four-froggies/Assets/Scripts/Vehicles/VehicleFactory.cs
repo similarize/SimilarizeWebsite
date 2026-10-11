@@ -389,20 +389,76 @@ public static class VehicleFactory
             opk.Spawn("head", bodyN, Vector3.zero, sc, wc);
             Transform[] lg = { SuitLimb(opk, bodyN, "thighL", "shinL", sc, wc), SuitLimb(opk, bodyN, "thighR", "shinR", sc, wc) };
             Transform[] am = { SuitLimb(opk, bodyN, "uarmL", "farmL", sc, wc), SuitLimb(opk, bodyN, "uarmR", "farmR", sc, wc) };
-            float ph = 0f;
+            Transform[] kn = { lg[0].Find("LB shinL"), lg[1].Find("LB shinR") };
+            // ffu28 sinking fix. Root cause: the ffu9 mesh has its soles at the root (y 0) but the four spring rays were
+            // set up for the old box robot (feet 0.4 m up): mount y 1.2, reach 1.2, resting 0.4 m compressed -> the root (and
+            // the soles) sat 0.4 m under the ground, and any hard drop compressed the springs past their 1.2 m origin: the
+            // rays then started UNDER the terrain, missed, the springs and the drive force switched off (drive scales with
+            // wheels-on-ground) and the suit sank onto its body box (bottom 1.4 m up) = buried to the knees and stuck for good.
+            // Now: ray origins 1.5 m up (inside the hips), reach 1.9 m, resting compression puts the soles exactly on the
+            // surface; walker = bump stop + upright assist + lift back out if it is ever under the terrain (GroundVehicle).
+            float hipH = opk.parts["thighL"].pivot.y * sc;   // hip pivot above the soles (1.8 m)
+            float footLocal = -opk.parts["thighL"].pivot.y;  // the sole in thigh space (pack units; the thigh node carries sc)
+            float ph = 0f, lift = 0f, airT = 0f, minVy = 0f; int lastStrike = int.MinValue;
+            v.walker = true; v.syncedSteps = true;
             v.animate = (fs, dt) =>
             {
-                float sp = Mathf.Clamp(fs / 6f, -1f, 1f);
-                ph += dt * 7f * Mathf.Abs(sp);
-                float a = Mathf.Sin(ph) * 30f * Mathf.Abs(sp);
+                float sp = Mathf.Clamp(fs / 6f, -1f, 1f), asp = Mathf.Abs(sp);
+                ph += dt * 7f * asp;
+                float s0 = Mathf.Sin(ph), c0 = Mathf.Cos(ph);
+                float a = s0 * 30f * asp;                       // + = leg 0 swings back, leg 1 forward
                 lg[0].localRotation = Quaternion.Euler(a, 0f, 0f);
                 lg[1].localRotation = Quaternion.Euler(-a, 0f, 0f);
+                // the leg swinging forward bends its knee (shin folds back) so it clears the ground; straight at the strike
+                if (kn[0] != null) kn[0].localRotation = Quaternion.Euler(Mathf.Max(0f, -c0) * 55f * asp, 0f, 0f);
+                if (kn[1] != null) kn[1].localRotation = Quaternion.Euler(Mathf.Max(0f, c0) * 55f * asp, 0f, 0f);
                 am[0].localRotation = Quaternion.Euler(-a * 0.7f, 0f, 0f);
                 am[1].localRotation = Quaternion.Euler(a * 0.7f, 0f, 0f);
-                bodyN.localPosition = new Vector3(0f, Mathf.Abs(Mathf.Sin(ph)) * 0.05f, 0f);
+                // straight stance legs reach hipH*cos(a) below the hip: drop the body by the difference (feet stay down)
+                float drop = hipH * (1f - Mathf.Cos(a * Mathf.Deg2Rad));
+                bodyN.localPosition = new Vector3(0f, -drop + lift, 0f);
+                // slopes: raise the body until neither foot is under the surface (eased, max 0.6 m)
+                float pen = -9f;
+                for (int i = 0; i < 2; i++)
+                {
+                    Vector3 fw = lg[i].TransformPoint(new Vector3(0f, footLocal, 0f));
+                    RaycastHit h;
+                    if (Physics.Raycast(fw + Vector3.up * 1.4f, Vector3.down, out h, 2.8f, Vehicle.GroundMask, QueryTriggerInteraction.Ignore))
+                        pen = Mathf.Max(pen, h.point.y - fw.y);
+                }
+                float wantLift = pen > -8f ? Mathf.Clamp(lift + pen, 0f, 0.6f) : 0f;
+                lift = Mathf.Lerp(lift, wantLift, Mathf.Min(1f, dt * 12f));
+                // footfall at the heel strike: leg 1 forward at sin = +1, leg 0 forward at sin = -1
+                int strike = Mathf.FloorToInt((ph - Mathf.PI * 0.5f) / Mathf.PI);
+                if (lastStrike == int.MinValue) lastStrike = strike;
+                int gcount = 0; foreach (var w in v.wheels) if (w.grounded) gcount++;
+                if (strike != lastStrike)
+                {
+                    lastStrike = strike;
+                    if (asp > 0.15f && gcount > 0 && v.driver != null)
+                    {
+                        int leg = (strike & 1) == 0 ? 1 : 0;
+                        Vector3 foot = lg[leg].TransformPoint(new Vector3(0f, footLocal, 0f));
+                        RaycastHit h;
+                        if (Physics.Raycast(foot + Vector3.up * 1.4f, Vector3.down, out h, 2.8f, Vehicle.GroundMask, QueryTriggerInteraction.Ignore)) foot = h.point;
+                        MechStomp.Foot(foot, hh, 0.6f + asp * 0.4f);
+                        if (Sfx.StepMetal != null) Sfx.PlayAt(Sfx.StepMetal, foot, 0.3f, 40f, Random.Range(0.8f, 0.95f));
+                        if (Random.value < 0.3f) Sfx.PlayAt(Sfx.Pick(Sfx.Servo), foot, 0.15f, 40f, Random.Range(0.9f, 1.2f));
+                    }
+                }
+                // landing from a fall / jump: both feet slam down
+                float vy = v.rb != null ? v.rb.velocity.y : 0f;
+                if (gcount == 0) { airT += dt; minVy = Mathf.Min(minVy, vy); }
+                else
+                {
+                    if (airT > 0.25f && minVy < -3f) MechStomp.Foot(v.transform.position, hh, Mathf.Clamp(1f + (-minVy - 3f) * 0.12f, 1f, 2.2f));
+                    airT = 0f; minVy = 0f;
+                }
             };
-            foreach (var w in new[] { new Vector3(-0.45f, 0.3f, 0.35f), new Vector3(0.45f, 0.3f, 0.35f), new Vector3(-0.45f, 0.3f, -0.35f), new Vector3(0.45f, 0.3f, -0.35f) })
-                v.AddWheel(w, 0.3f, null, false);
+            // spring rays: centre y 0.595, radius 1.0 -> origin 1.495 m up, reach 1.9 m; at rest compression (0.405 m) the
+            // ray meets the ground exactly at the soles (root y 0)
+            foreach (var w in new[] { new Vector3(-0.45f, 0.595f, 0.35f), new Vector3(0.45f, 0.595f, 0.35f), new Vector3(-0.45f, 0.595f, -0.35f), new Vector3(0.45f, 0.595f, -0.35f) })
+                v.AddWheel(w, 1.0f, null, false);
             v.seat = Mats.Node(bodyN, "Seat", new Vector3(0f, hh * 0.79f, -0.2f));
             v.seatScale = 0.5f;
             v.FinishSetup();

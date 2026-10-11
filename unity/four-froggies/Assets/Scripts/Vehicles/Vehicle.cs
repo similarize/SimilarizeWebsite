@@ -18,6 +18,7 @@ public abstract class Vehicle : MonoBehaviour
     public bool flyer;
     public int engineKind;   // 0 car, 1 tracks, 2 rotor, 3 drone, 4 boat, 5 mech (footsteps)
     float stepT;
+    public bool syncedSteps;   // ffu28: footfalls come from the walk cycle (MechStomp), not the engineKind-5 step timer
 
     protected PIn inp;
     protected float camYawIn;
@@ -113,7 +114,7 @@ public abstract class Vehicle : MonoBehaviour
         float spd = Speed;
         crashCool -= dt;
         if (engineKind == 6) return;   // story mechs make their own footsteps
-        if (engineKind == 5 && heard && spd > 0.8f)
+        if (engineKind == 5 && heard && spd > 0.8f && !syncedSteps)
         {
             stepT -= dt;
             if (stepT <= 0f) { stepT = Mathf.Clamp(1.4f / spd, 0.3f, 0.7f); Sfx.Play(Sfx.StepMetal != null ? Sfx.StepMetal : Sfx.Step, 0.5f, Random.Range(0.85f, 1.05f)); if (Random.value < 0.35f) Sfx.Play(Sfx.Pick(Sfx.Servo), 0.18f, Random.Range(0.9f, 1.2f)); }

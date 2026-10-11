@@ -19,6 +19,25 @@ public class CamRig
     public CamRig(Camera c) { cam = c; }
 
     public void AddShake(float t) { trauma = Mathf.Min(1.2f, trauma + t); }
+    // ffu28: ground quake from giant footfalls - a short low-frequency vertical bounce + a little pitch / roll, sized by
+    // camera distance so it reads the same for a 3 m suit and a 160 m mech (positional jitter alone vanishes at 190 m)
+    float quake, quakeSeed;
+    public float QuakeK { get { return quake; } }
+    public void AddQuake(float q) { quake = Mathf.Min(1f, Mathf.Max(quake, q) + q * 0.25f); quakeSeed += 13.7f; }
+    public Vector3 QuakePos(float camDist)
+    {
+        if (quake <= 0.001f) return Vector3.zero;
+        float t = Time.time * 17f + quakeSeed, q2 = quake * quake;
+        float amp = q2 * (0.12f + camDist * 0.012f);
+        return new Vector3((Mathf.PerlinNoise(t, 1.3f) - 0.5f) * amp * 0.6f, (Mathf.PerlinNoise(2.7f, t) - 0.5f) * amp * 2f, 0f);
+    }
+    public Quaternion QuakeRot()
+    {
+        if (quake <= 0.001f) return Quaternion.identity;
+        float t = Time.time * 15f + quakeSeed, q2 = quake * quake;
+        return Quaternion.Euler((Mathf.PerlinNoise(t, 5.1f) - 0.5f) * q2 * 3.2f, 0f, (Mathf.PerlinNoise(7.3f, t) - 0.5f) * q2 * 2.4f);
+    }
+    public void TickQuake(float dt) { quake = Mathf.MoveTowards(quake, 0f, dt * (1.4f + quake * 1.6f)); }
     // ffu15: recoil kick (degrees, view pitches up then settles) + over-the-shoulder aim state
     float kick, baseFov = -1f;
     public void Kick(float deg) { kick = Mathf.Min(kick + deg, 9f); }
@@ -106,8 +125,9 @@ public class CamRig
 
         trauma = Mathf.MoveTowards(trauma, 0f, dt * 1.6f);
         Vector3 shake = trauma > 0f ? Random.insideUnitSphere * trauma * trauma * 0.6f : Vector3.zero;
-        cam.transform.position = want + shake;
-        cam.transform.rotation = Quaternion.LookRotation((pivot - want).normalized + shake * 0.02f);
+        TickQuake(dt);
+        cam.transform.position = want + shake + QuakePos(curDist);
+        cam.transform.rotation = Quaternion.LookRotation((pivot - want).normalized + shake * 0.02f) * QuakeRot();
         if (kick > 0.01f) cam.transform.rotation = cam.transform.rotation * Quaternion.Euler(-kick * 0.6f, 0f, 0f);
         // the pilot's aim point: what the screen centre looks at (skipping the mech itself)
         if (sm != null && ak > 0.2f && sm.driver == f)

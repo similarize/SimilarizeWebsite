@@ -184,6 +184,7 @@ public partial class Game : MonoBehaviour
             else if (sc.StartsWith("realroom")) RealRoom.DemoStart(f, sc);   // ffu18 REAL ROOM shots (own camera)
             else if (DestructDemo.Is(sc)) { DestructDemo.Start(f, sc); if (sc == "treeclimb") demoHook = DemoClimbWalk; }   // ffu21 destruction + tree climbing shots (ffu27: treeclimb really walks in)
             else if (Is27(sc)) Demo27Start(f, sc);                           // ffu27 Mars cave / phone CALL / tag-along / landing / treehouse
+            else if (IsStompDemo(sc)) StompDemoStart(f, sc);                 // ffu28 mech footfalls / Optimus suit on a slope (GameStomp.cs)
             else if (sc.StartsWith("lj-") || sc.StartsWith("loopdrive")) DemoLoopStart(f, sc);   // ffu19 loop joints (GameLoopDemo.cs)
             else if (IsRobot20(sc)) DemoRobot20Start(f, sc);   // ffu20 robots drive / missions / phone carousel
             else if (sc == "net") { if (UrlParam("ffwalk") != null) demoHook = DemoWalk; }      // ffu13 online test
@@ -206,6 +207,7 @@ public partial class Game : MonoBehaviour
             return;
         }
         if ((sc.StartsWith("lj-") || sc.StartsWith("loopdrive")) && DemoLoopCam(f, sc, c)) return;
+        if (IsStompDemo(sc)) { if (!StompDemoCam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }
         switch (sc)
         {
             case "frog":

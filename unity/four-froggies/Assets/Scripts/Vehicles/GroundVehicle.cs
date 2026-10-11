@@ -32,6 +32,11 @@ public class GroundVehicle : Vehicle
     public System.Action<float, float> animate;
     public CyberBoat amph;               // ffu11: amphibious Cybertruck (null for everything else)
     public System.Action<GroundVehicle, int> fixedProbe;   // ffu19: demo physics probe (gets the wheels-on-ground count each step)
+    // ffu28: walkers (the Optimus mech suit): bump stop near the end of travel, stay upright, and if the body ever ends up
+    // with its spring origins under the terrain (rays start below the surface and miss -> no spring, no drive -> the old
+    // "stuck in the floor up to the knees" bug) lift it back onto the surface
+    public bool walker;
+    float sinkT;
     public float Throttle01 { get { return driver != null ? Mathf.Clamp01(throttle) : 0f; } }
     public override string HelpLine
     {
@@ -96,6 +101,7 @@ public class GroundVehicle : Vehicle
                 float comp = len - hit.distance;
                 float vUp = Vector3.Dot(rb.GetPointVelocity(origin), up);
                 float f = spring * sm * comp - damper * dm * vUp;
+                if (walker && comp > rest * 0.85f) f += spring * 5f * (comp - rest * 0.85f);   // ffu28 bump stop
                 if (f < 0f) f = 0f;
                 rb.AddForceAtPosition(up * f * ws, origin);
                 groundedCount++;
@@ -110,6 +116,7 @@ public class GroundVehicle : Vehicle
                 w.dist = Mathf.MoveTowards(w.dist, len, dt * 3f);
             }
         }
+        if (walker && !rb.isKinematic) WalkerAssist(dt);
         float gf = (wheels.Count > 0 ? groundedCount / (float)wheels.Count : 0f) * ws;
         groundNormal = groundedCount > 0 ? nsum.normalized : Vector3.up;
         bool driven = driver != null;
@@ -203,6 +210,28 @@ public class GroundVehicle : Vehicle
             rb.AddTorque(transform.up * steer * 0.6f * dt, ForceMode.VelocityChange);
         }
         if (fixedProbe != null) fixedProbe(this, groundedCount);
+    }
+
+    void WalkerAssist(float dt)
+    {
+        // stand upright like a person (no leaning into slopes / tipping onto the body box)
+        Vector3 tilt = Vector3.Cross(transform.up, Vector3.up);
+        Vector3 w = rb.angularVelocity; Vector3 wh = w - Vector3.up * w.y;
+        rb.AddTorque(tilt * 14f - wh * 3f, ForceMode.Acceleration);
+        // sunk: the feet (root) more than 0.35 m under the ranch terrain, or no spring ray finding ground while the root
+        // is below the terrain -> lift onto the surface (Ranch.GY = the terrain itself, never a roof above)
+        Vector3 p = rb.position;
+        if (Mathf.Abs(p.x) > Layout.Half + 25f || Mathf.Abs(p.z) > Layout.Half + 25f || p.y < -60f) return;   // ranch only (other worlds sit 1.4+ km away)
+        float gy = Ranch.GY(p.x, p.z);
+        bool sunk = p.y < gy - 0.35f || (groundedCount == 0 && p.y < gy - 0.05f);
+        sinkT = sunk ? sinkT + dt : 0f;
+        if (sinkT > 0.1f)
+        {
+            sinkT = 0f;
+            rb.position = new Vector3(p.x, gy + 0.15f, p.z);
+            Vector3 v = rb.velocity; if (v.y < 0f) v.y = 0f; rb.velocity = v;
+            Debug.Log("GroundVehicle: " + Title + " was " + (gy - p.y).ToString("0.00") + " m under the terrain - lifted");
+        }
     }
 
     protected virtual void Update()

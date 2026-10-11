@@ -142,6 +142,9 @@ public static class FX
         for (int i = 0; i < n; i++) Emit(p, Random.insideUnitSphere * 3f + Vector3.up * 2f, Random.Range(0.15f, 0.35f), Random.Range(0.4f, 0.8f), c);
     }
 
+    // ffu28: one soft dust puff of any size (mech footfall clouds)
+    public static void Puff(Vector3 p, Vector3 v, float size, float life, Color c) { if (ps != null) Emit(p, v, size, life, c); }
+
     static void Emit(Vector3 p, Vector3 v, float size, float life, Color c)
     {
         var ep = new ParticleSystem.EmitParams();
