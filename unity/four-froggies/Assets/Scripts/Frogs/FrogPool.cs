@@ -56,7 +56,7 @@ public partial class Frog
             }
             for (int i = 0; i < 2; i++) Mats.Prim(PrimitiveType.Cube, root, new Vector3(-0.32f, 0.12f + i * 0.2f, 0f), new Vector3(0.12f, 0.03f, 0.6f), steel, false);
             // a floating ring (lounger) drifting in the deep end, just for the look
-            var ring = Mats.Prim(PrimitiveType.Cylinder, null, new Vector3(c.x - 4.5f, y + 0.14f, c.y - 1.5f), new Vector3(1.1f, 0.05f, 1.1f), Mats.Shiny(new Color(1f, 0.42f, 0.35f)), false);
+            var ring = Mats.Prim(PrimitiveType.Cylinder, null, new Vector3(c.x - 4.5f, y + 0.14f, c.y - 1.5f), new Vector3(0.8f, 0.06f, 0.8f), Mats.Shiny(new Color(1f, 0.42f, 0.35f)), false);
             ring.name = "PoolFloatie";
             var hole = Mats.Prim(PrimitiveType.Cylinder, ring.transform, new Vector3(0f, 0.6f, 0f), new Vector3(0.5f, 0.5f, 0.5f), Mats.Lit(new Color(0.3f, 0.75f, 0.85f)), false);
             hole.name = "Hole";
@@ -171,7 +171,7 @@ public partial class Frog
         {
             float bobY = Mathf.Sin(t * 1.25f) * 0.035f;
             model.transform.localRotation = Quaternion.Euler(-78f + Mathf.Sin(t * 0.8f) * 2f, 0f, Mathf.Sin(t * 0.6f) * 4f);
-            model.transform.localPosition = new Vector3(0f, (WaterY - q.y) - 0.1f + bobY, 0.55f);
+            model.transform.localPosition = new Vector3(0f, (WaterY - q.y) - 0.18f + bobY, 0.55f);
             model.AnimateFloat(strokeT, Mathf.Clamp01(sp / FloatSpeed), t);
         }
         // a soft swish + a ripple each half stroke (one arm enters the water)

@@ -33,7 +33,7 @@ public static class Showroom
         RenderSettings.ambientSkyColor = new Color(0.17f, 0.19f, 0.24f);
         RenderSettings.ambientEquatorColor = new Color(0.1f, 0.1f, 0.115f);
         RenderSettings.ambientGroundColor = new Color(0.035f, 0.035f, 0.04f);
-        RenderSettings.reflectionIntensity = 0.32f;
+        RenderSettings.reflectionIntensity = 0.5f;   // ffu29b: 0.32 lost the pedestal's sheen
         RenderSettings.fog = false;
     }
     static void StudioPostRender(Camera c)
@@ -89,7 +89,7 @@ public static class Showroom
         // ffu29 studio: dark ambient for layer-20 cameras + a real three-point rig (key ~4:1 over fill, rims carve the silhouette)
         Camera.onPreCull += StudioPreCull;
         Camera.onPostRender += StudioPostRender;
-        MakeLight("ShowroomKey", new Vector3(0.5f, -0.6f, -0.62f), 1.0f, new Color(1f, 0.95f, 0.88f));
+        MakeLight("ShowroomKey", new Vector3(0.5f, -0.6f, -0.62f), 0.92f, new Color(1f, 0.95f, 0.88f));
         MakeLight("ShowroomRim", new Vector3(-0.55f, -0.3f, 0.78f), 1.05f, new Color(0.66f, 0.84f, 1f));
         MakeLight("ShowroomRim2", new Vector3(0.62f, -0.18f, 0.76f), 0.55f, new Color(1f, 0.84f, 0.68f));
         MakeLight("ShowroomFill", new Vector3(-0.7f, -0.15f, -0.7f), 0.16f, new Color(0.85f, 0.9f, 1f));
@@ -215,7 +215,7 @@ public static class Showroom
     }
     public static Color SpotColor(int ch, float a)
     {
-        if (!OldLook) a *= 0.55f;   // ffu29: dimmer coloured spill (pool / backdrop / thumb spot)
+        if (!OldLook) a *= 0.75f;   // ffu29: dimmer coloured spill (pool / backdrop / thumb spot)
         Color k = Color.Lerp(Roster.UiColor(ch), Color.white, 0.15f);
         return new Color(k.r, k.g, k.b, a);
     }
@@ -239,7 +239,7 @@ public static class Showroom
     public static Color Backdrop(int ch)
     {
         Color k = Roster.UiColor(ch);
-        if (!OldLook) return new Color(0.012f + k.r * 0.05f, 0.016f + k.g * 0.05f, 0.022f + k.b * 0.05f);   // ffu29: near-black studio
+        if (!OldLook) return new Color(0.022f + k.r * 0.085f, 0.027f + k.g * 0.085f, 0.034f + k.b * 0.085f);   // ffu29: near-black studio
         return new Color(0.04f + k.r * 0.16f, 0.06f + k.g * 0.16f, 0.08f + k.b * 0.16f);
     }
 
@@ -337,7 +337,7 @@ public static class Showroom
             root.position = Base + new Vector3(idx * 60f, 0f, 0f);
             turn = Mats.Node(root, "Turn", Vector3.zero);
             // glossy dark pedestal (smooth mesh), turning with the character so its highlight slides
-            var ped = new Material(Mats.PBR(new Color(0.06f, 0.07f, 0.09f), 0.82f, 0.35f));
+            var ped = new Material(Mats.PBR(OldLook ? new Color(0.06f, 0.07f, 0.09f) : new Color(0.13f, 0.14f, 0.17f), 0.82f, 0.35f));   // ffu29b: lighter so it reads on the dark set
             MeshObj("Pedestal", turn, Disc(), ped, Vector3.zero, new Vector3(1.25f, 1f, 1.25f));
             ringMat = new Material(Mats.Unlit(new Color(0.4f, 1f, 0.55f)));
             MeshObj("Rim", root, Ring(), ringMat, new Vector3(0f, 0.004f, 0f), new Vector3(1.255f, 1f, 1.255f));

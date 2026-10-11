@@ -9,7 +9,7 @@ public class ShowroomGrade : MonoBehaviour
     static Material mat;
     static bool tried;
     public float vignette = 0.6f;
-    public static float Exposure = 1.0f, Contrast = 1.06f, Saturation = 1.0f;
+    public static float Exposure = 1.0f, Contrast = 1.06f, Saturation = 0.94f;   // ffu29b: the frog greens / yellows read a touch neon
 
     static Material Mat
     {
