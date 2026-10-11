@@ -185,7 +185,7 @@ public static class Layout
     {
         float n = (Mathf.PerlinNoise(x * 0.012f + 31.7f, z * 0.012f + 11.3f) - 0.5f) * 3.2f
                 + (Mathf.PerlinNoise(x * 0.04f + 5.1f, z * 0.04f + 9.9f) - 0.5f) * 0.8f;
-        float y = n * Flatness(x, z);
+        float y = n * Flatness(x, z) * JetLayout.Flat(x, z);   // ffu33: flat under James's hangar + runway
         // pond basin
         float q = PondQ(x, z);
         if (q < 1.25f)
