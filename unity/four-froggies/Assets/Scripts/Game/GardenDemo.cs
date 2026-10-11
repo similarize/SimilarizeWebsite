@@ -11,11 +11,11 @@ using UnityEngine;
 public partial class Game
 {
     public static bool IsGardenDemo(string sc) { return sc == "garden" || sc == "horseride"; }
-    float gdT, gdLog, gdExp = -1f; int gdPhase; Vector3 gdCam; Horse gdHorse;
+    float gdT, gdLog, gdExp = -1f; int gdPhase, gdFired; Vector3 gdCam; Horse gdHorse;
 
     void GardenDemoStart(Frog f, string sc)
     {
-        gdT = 0f; gdLog = 0f; gdPhase = -1; gdCam = Vector3.zero; demoHook = null;
+        gdT = 0f; gdLog = 0f; gdPhase = -1; gdFired = 0; gdCam = Vector3.zero; demoHook = null;
         if (f.world != WorldId.Ranch) f.SendTo(WorldId.Ranch, Ranch.FrogSpawn(f.id), 0f);
         if (f.vehicle != null) f.ExitVehicle();
         for (int i = 0; i < 4; i++) if (frogs[i] != null && frogs[i].charId != i) SetSeatChar(i, i, false);   // the four froggies
@@ -72,14 +72,18 @@ public partial class Game
         if (sky != null && sky.HasProperty("_Tint")) sky.SetColor("_Tint", new Color(0.62f, 0.45f, 0.4f));
     }
 
+    // ffu32b: each scripted press fires exactly once, the first time gdT crosses its time (SwiftShader frames can be
+    // longer than a 0.2 s window, so a window test skipped presses)
+    bool GdPress(int bit, float at) { if (gdT < at || (gdFired & (1 << bit)) != 0) return false; gdFired |= 1 << bit; return true; }
+
     PIn GardenDemoInput(PIn i)
     {
         var o = new PIn();
         float t = gdT;
-        if (t > 2f && t < 2.2f && gdPhase < 1) { o.use = true; }                  // light the fire (hotspot)
+        if (gdPhase < 1 && GdPress(0, 2f)) o.use = true;                        // light the fire (hotspot)
         if (t > 23f && t < 31f) o.move = new Vector2(Mathf.Sin(t * 2.4f), 0f);    // rock the hammock
-        if (t > 42.6f && t < 42.8f) o.hop = true;                                 // hop out
-        if (t > 46.5f && t < 46.7f) o.use = true;                                 // douse
+        if (GdPress(1, 42.6f)) o.hop = true;                                // hop out
+        if (GdPress(2, 46.5f)) o.use = true;                                // douse
         return o;
     }
 
@@ -101,8 +105,8 @@ public partial class Game
         else if (t < 29f) { o.move.y = 1f; o.boostHeld = true; }   // gallop
         else if (t < 32f) o.move.y = 0.9f;
         else if (t < 36f) o.move.y = 0f;           // slow to a stop
-        if (t > 26.5f && t < 26.7f) o.hop = true;  // jump at the gallop
-        if (t > 37f && t < 37.2f) o.hop = true;    // rear + whinny (standing)
+        if (GdPress(3, 26.5f)) o.hop = true;  // jump at the gallop
+        if (GdPress(4, 37f)) o.hop = true;    // rear + whinny (standing)
         return o;
     }
 

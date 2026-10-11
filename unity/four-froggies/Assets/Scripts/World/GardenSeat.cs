@@ -25,8 +25,8 @@ public class GardenSeat : Vehicle
             InputKind k = driver != null ? driver.inputKind : InputKind.Keyboard;
             string push = k == InputKind.Gamepad ? "L-stick" : k == InputKind.Touch ? "stick" : "WASD";
             string outK = k == InputKind.Gamepad ? "A" : k == InputKind.Touch ? "A" : "SPACE / E";
-            return kind == Kind.Hammock ? "Relaxing in the hammock - " + push + " rocks it  |  " + outK + ": hop out"
-                                        : "Swinging by the fire - " + push + " pushes the swing  |  " + outK + ": hop off";
+            return kind == Kind.Hammock ? "Hammock - " + push + ": rock  |  " + outK + ": hop out"
+                                        : "Porch swing - " + push + ": swing  |  " + outK + ": hop off";
         }
     }
     public override string HudStatus { get { return kind == Kind.Hammock ? "Hammock" : "Porch swing" + (Campfire.I != null && Campfire.I.Lit ? "  -  the fire is crackling" : ""); } }

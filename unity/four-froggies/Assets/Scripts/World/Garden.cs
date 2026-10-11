@@ -59,8 +59,27 @@ public class Garden : MonoBehaviour
         I.Yaw = Mathf.Round(I.Yaw / 15f) * 15f;
         go.transform.position = I.C;
         go.transform.rotation = Quaternion.Euler(0f, I.Yaw, 0f);
+        I.ClearTrees();
         I.Make();
         Debug.Log("Garden: built at " + I.C.ToString("0.0") + " yaw " + I.Yaw.ToString("0") + " (" + I.hammocks.Count + " hammocks, " + I.swings.Count + " swings, campfire)");
+    }
+
+    // ffu32b: hide any tree / rock inside the garden circle (the Prefer site at (60, 32) had two pines inside), the way
+    // TrailerBarn.ClearTrees does it
+    void ClearTrees()
+    {
+        int n = 0;
+        foreach (var col in Physics.OverlapSphere(C + Vector3.up * 3f, 21.5f))
+        {
+            if (col is TerrainCollider || col.isTrigger || col.attachedRigidbody != null) continue;
+            Transform t = col.transform;
+            while (t.parent != null && t.parent.name != "RanchStatic" && t.parent.parent != null) t = t.parent;
+            if (t.name.StartsWith("Tree") || t.name.StartsWith("Rock") || col.name.StartsWith("TreeCol") || col.name.StartsWith("RockCol"))
+            {
+                if (t.gameObject.activeSelf) { t.gameObject.SetActive(false); n++; }
+            }
+        }
+        if (n > 0) Debug.Log("Garden: cleared " + n + " trees / rocks inside the garden");
     }
 
     // rotation-agnostic check on a circle that covers the garden (r 21 m) + the samples inside it
