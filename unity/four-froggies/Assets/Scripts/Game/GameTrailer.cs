@@ -128,24 +128,22 @@ public partial class Game
         return o;
     }
 
-    // along the spur road, then round the figure-eight (track points ahead of the truck)
+    // the rig on the figure-eight at track parameter t, pointing along +t
+    void PlaceOnTrack(float t)
+    {
+        Vector3 a = Layout.TrackPoint(t), b = Layout.TrackPoint(t + 0.02f);
+        PlaceRig(a, Quaternion.LookRotation(new Vector3(b.x - a.x, 0f, b.z - a.z)).eulerAngles.y);
+    }
+
+    // round the figure-eight (track points ahead of the truck)
     PIn SpurDrive(float speed)
     {
         {
             Vector3 tp = ttTruck.transform.position;
-            Vector2[] wps = { new Vector2(35f, 60f), new Vector2(65f, 70f), new Vector2(93f, 77f) };
-            if (ttWp < wps.Length)
-            {
-                Vector3 w = new Vector3(wps[ttWp].x, tp.y, wps[ttWp].y);
-                if ((new Vector2(tp.x, tp.z) - wps[ttWp]).magnitude < 8f) ttWp++;
-                return TtDrive(w, speed);
-            }
             float best = 1e9f, bt = 0f;
             for (int k = 0; k < 256; k++) { float tt = k * Mathf.PI * 2f / 256f; Vector3 q = Layout.TrackPoint(tt); float dd = (new Vector2(q.x - tp.x, q.z - tp.z)).sqrMagnitude; if (dd < best) { best = dd; bt = tt; } }
-            Vector3 ahead = Layout.TrackPoint(bt + 0.16f), behind = Layout.TrackPoint(bt - 0.16f);
-            Vector3 fw = ttTruck.transform.forward;
-            Vector3 tgt = Vector3.Dot(ahead - behind, fw) > 0f ? ahead : behind;
-            return TtDrive(new Vector3(tgt.x, tp.y, tgt.z), speed + 1f);
+            Vector3 tgt = Layout.TrackPoint(bt + 0.12f);   // always +t (the way PlaceOnTrack points the rig)
+            return TtDrive(new Vector3(tgt.x, tp.y, tgt.z), speed);
         }
     }
 
@@ -199,9 +197,7 @@ public partial class Game
         if (ph == 3)
         {
             ttWp = 0;
-            // on the spur, clear of the Cybertruck parked on the drive at (14, 44)
-            Vector3 a = new Vector3(10f, 0f, 46f), b = new Vector3(35f, 0f, 60f);
-            PlaceRig(Vector3.Lerp(a, b, 0.8f), Quaternion.LookRotation(b - a).eulerAngles.y);
+            PlaceOnTrack(1.25f);   // the east lobe of the figure-eight, heading for the underpass jumps
             ttCam = Vector3.zero;
         }
         if (ph == 5)
@@ -248,10 +244,9 @@ public partial class Game
         }
         if (ttPhase == 6 && !ttRig6 && f.vehicle == ttTruck && ttTrailer.rampK < 0.02f && t > 69.5f)
         {
-            // tow the bike out along the spur road (cargo rides along in the bay)
+            // tow the bike off round the track (cargo rides along in the bay)
             ttRig6 = true; ttWp = 0; ttCam = Vector3.zero;
-            Vector3 a = new Vector3(10f, 0f, 46f), b = new Vector3(35f, 0f, 60f);
-            PlaceRig(Vector3.Lerp(a, b, 0.8f), Quaternion.LookRotation(b - a).eulerAngles.y);
+            PlaceOnTrack(1.25f);
         }
         if (ttPhase == 7 && ttTruck.Speed < 0.5f && t > 84f && !ttUnloadStarted)
         {
@@ -294,6 +289,16 @@ public partial class Game
                 }
             default:
                 {
+                    if (ttPhase == 7 && ttUnloadStarted && ttBike != null && !ttBike.stowed && ttTrailer.move == null)
+                    {
+                        // ridden out: chase the bike away from the trailer
+                        Transform bt = ttBike.transform;
+                        Vector3 bf = bt.forward; bf.y = 0f; bf.Normalize();
+                        Vector3 want = bt.position - bf * 5.5f + new Vector3(bf.z, 0f, -bf.x) * 2.5f + Vector3.up * 2.2f;
+                        ttCam = ttCam == Vector3.zero ? want : Vector3.Lerp(ttCam, want, dtc * 3f);
+                        pos = ttCam; look = bt.position + Vector3.up * 0.8f;
+                        break;
+                    }
                     // the ramp from the side: rider, bike, ramp, bay
                     Vector3 foot = ttTrailer.RampFoot(0f);
                     Vector3 side = tr.right; side.y = 0f; side.Normalize();
@@ -308,7 +313,7 @@ public partial class Game
         {
             ttLog = 0.5f;
             float err = ttTrailer.Hitched ? (Trailer.HitchWorld(ttTruck) - ttTrailer.BallWorld).magnitude : -1f;
-            Debug.Log("FFDEMO trailer t=" + t.ToString("0.0") + " ph=" + ttPhase + " hitched=" + ttTrailer.Hitched + " ang=" + ttTrailer.hitchAngle.ToString("0") + " v=" + ttTruck.Speed.ToString("0.0") + " tv=" + ttTrailer.Speed.ToString("0.0") + " err=" + err.ToString("0.00") + " up=" + ttTrailer.uprightNow.ToString("0.00") + " ramp=" + ttTrailer.rampK.ToString("0.00") + " stowed=" + ttTrailer.Stowed + " bike=" + (ttBike != null ? (ttBike.stowed ? "in" : ttTrailer.InBay(ttBike.transform.position) ? "bay" : "out") + (ttBike.driver != null ? "+rider" : "") : "-") + " prompt='" + f.prompt + "' det=" + Trailer.Detaches + "/" + Trailer.SafeDetaches + " last=" + ttTrailer.lastDetach + " tpos=" + tr.position.ToString("0.0") + " " + ttNote);
+            Debug.Log("FFDEMO trailer t=" + t.ToString("0.0") + " ph=" + ttPhase + " hitched=" + ttTrailer.Hitched + " ang=" + ttTrailer.hitchAngle.ToString("0") + " v=" + ttTruck.Speed.ToString("0.0") + " tv=" + ttTrailer.Speed.ToString("0.0") + " err=" + err.ToString("0.00") + " up=" + ttTrailer.uprightNow.ToString("0.00") + " ramp=" + ttTrailer.rampK.ToString("0.00") + " stowed=" + ttTrailer.Stowed + " bike=" + (ttBike != null ? (ttBike.stowed ? "in" : ttTrailer.InBay(ttBike.transform.position) ? "bay" : "out") + (ttBike.driver != null ? "+rider" : "") : "-") + " prompt='" + f.prompt + "' det=" + Trailer.Detaches + "/" + Trailer.SafeDetaches + " last=" + ttTrailer.lastDetach + " tpos=" + tr.position.ToString("0.0") + (ttBike != null ? " bpos=" + ttBike.transform.position.ToString("0.0") + " bv=" + ttBike.Speed.ToString("0.0") + " bkin=" + ttBike.rb.isKinematic : "") + " " + ttNote);
         }
         return true;
     }

@@ -281,7 +281,12 @@ public class Trailer : MonoBehaviour
             float latA = Mathf.Clamp(-ls * 9f, -8.5f, 8.5f);
             rb.AddForceAtPosition(right * latA * rb.mass * gf, axle);
             float longA;
-            if (!Hitched) longA = Mathf.Clamp(-fs * 4f, -7f, 7f);          // parking brake
+            if (!Hitched)
+            {
+                longA = Mathf.Clamp(-fs * 12f, -9f, 9f);                     // parking brake
+                // parked: no creep (the jack + springs used to walk it ~5 cm/s)
+                if (rb.velocity.sqrMagnitude < 0.09f && rb.angularVelocity.sqrMagnitude < 0.04f) { Vector3 v0 = rb.velocity; rb.velocity = new Vector3(v0.x * 0.8f, v0.y, v0.z * 0.8f); }
+            }
             else
             {
                 longA = -fs * 0.06f;                                          // rolling resistance
@@ -663,6 +668,8 @@ public class Trailer : MonoBehaviour
                 Freeze(m.v, false);
                 m.v.transform.SetPositionAndRotation(pos, Quaternion.Euler(0f, m.v.transform.eulerAngles.y, 0f));
                 m.v.rb.position = pos; m.v.rb.rotation = m.v.transform.rotation;
+                m.v.rb.velocity = m.v.transform.forward * 1.2f;   // rolling, not dropped
+                Debug.Log("Trailer: unloaded at " + pos.ToString("0.0") + " yaw " + m.v.transform.eulerAngles.y.ToString("0"));
                 if (m.rider != null && m.rider.human) m.rider.Toast("Out of the " + spec.shortName + " - ride on!", 2f);
                 Debug.Log("Trailer: " + m.v.Title + " unloaded from " + Title);
             }

@@ -87,7 +87,7 @@ public static class TrailerBarn
         FloorY = top + 0.15f;
         lowY = low;
         Centre = new Vector3(bestC.x, FloorY, bestC.z);
-        Debug.Log("TrailerBarn: site " + bestC.ToString("0") + " relief " + best.ToString("0.00") + (found ? "" : " (fallback, trees cleared)"));
+        Debug.Log("TrailerBarn: site " + bestC.ToString("0") + " relief " + best.ToString("0.00") + (found ? "" : " (fallback: first candidate, nothing removed)"));
     }
     static float lowY;
 
@@ -184,9 +184,6 @@ public static class TrailerBarn
         // gable trim + loft door + hay hood on the front
         for (int k = -1; k <= 1; k += 2)
             B(new Vector3(k * hw * 0.5f, WallH + RidgeH * 0.5f, hd + 0.2f), new Vector3(Mathf.Sqrt(hw * hw + RidgeH * RidgeH), 0.22f, 0.08f), white, false, new Vector3(0f, 0f, -k * Mathf.Atan2(RidgeH, hw) * Mathf.Rad2Deg));
-        B(new Vector3(0f, WallH + 1.4f, hd + 0.12f), new Vector3(2.0f, 2.0f, 0.08f), Mats.Lit(RedD), false);
-        B(new Vector3(0f, WallH + 1.4f, hd + 0.17f), new Vector3(2.2f, 0.12f, 0.06f), white, false, new Vector3(0f, 0f, 45f));
-        B(new Vector3(0f, WallH + 1.4f, hd + 0.17f), new Vector3(2.2f, 0.12f, 0.06f), white, false, new Vector3(0f, 0f, -45f));
         // door rail on the front + four big sliding doors, slid wide open past both corners
         B(new Vector3(0f, WallH - 0.05f, hd + 0.35f), new Vector3(Wd + 14f, 0.16f, 0.16f), Mats.Steel(new Color(0.3f, 0.3f, 0.32f)), false);
         for (int k = -1; k <= 1; k += 2)
@@ -215,7 +212,7 @@ public static class TrailerBarn
             B(new Vector3(BayX[i] + 3.2f, 1.25f, -hd + 1.36f), new Vector3(0.16f, 0.1f, 0.02f), glow, false);
         }
         // sign on the front gable
-        Ranch.Sign(W(0f, WallH + 3.0f, hd + 0.35f), Yaw + 180f, "TRAILER BARN\n<size=22>back a truck up to a hitch</size>", new Color(0.1f, 0.18f, 0.12f), 9f, 2.2f);
+        Ranch.Sign(W(0f, WallH + 1.6f, hd + 0.35f), Yaw + 180f, "TRAILER BARN\n<size=22>back a truck up to a hitch</size>", new Color(0.1f, 0.18f, 0.12f), 7.5f, 1.9f);
     }
 
     static void Door(Vector3 c, Color red, Color white)
