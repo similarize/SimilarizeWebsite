@@ -143,6 +143,23 @@ public class RcCar : Vehicle
     public override bool CanEnter(Frog f) { return f.world == WorldId.Ranch && base.CanEnter(f); }
     public Vector3 ExitSpot { get { return seat.position - seat.forward * 0.5f + Vector3.up * 0.08f; } }
 
+    float beachT, autoT;
+    public int recovers;
+    public void Recover()
+    {
+        if (track == null) return;
+        Vector2 lp = new Vector2(transform.position.x - RcTrack.C.x, transform.position.z - RcTrack.C.y);
+        float d; int i = track.NearestFast(lp, out d);
+        var q = track.path[i];
+        Vector3 p = track.W3(q.p, 0.3f);
+        rb.velocity = Vector3.zero; rb.angularVelocity = Vector3.zero;
+        rb.position = p; rb.rotation = Quaternion.LookRotation(new Vector3(q.t.x, 0f, q.t.y));
+        transform.position = p; transform.rotation = rb.rotation;
+        aiIdx = i; recovers++;
+        FX.Puff(p, Vector3.up, 0.5f, 0.6f, new Color(0.65f, 0.55f, 0.4f, 0.6f));
+        if (driver != null && driver.human) driver.Toast("Back on the track!", 1.2f);
+    }
+
     public void Park(Vector3 p, float yaw)
     {
         rb.velocity = Vector3.zero; rb.angularVelocity = Vector3.zero;
@@ -261,6 +278,12 @@ public class RcCar : Vehicle
             FX.Puff(transform.position, Vector3.up, 0.5f, 0.6f, new Color(0.65f, 0.55f, 0.4f, 0.6f));
             Sfx.PlayAt(Sfx.Hop, transform.position, 0.4f, 30f, 1.6f);
         }
+        // ffu30b beached (on its side against the fence, high-centred, wheels in the air) and not moving: back onto the
+        // track at the nearest point, facing the way round
+        bool beached = (ground == 0 || transform.up.y < 0.6f) && rb.velocity.magnitude < 0.6f && !Parked;
+        beachT = beached ? beachT + dt : 0f;
+        if (beachT > 1.2f) { beachT = 0f; Recover(); }
+        if (driven) autoT += dt; else autoT = 0f;
         // fell off the world / far off the pad: back to the grid
         Vector3 rp = rb.position;
         if (track != null && (rp.y < track.BaseY - 8f || new Vector2(rp.x - RcTrack.C.x, rp.z - RcTrack.C.y).magnitude > 70f))
@@ -329,6 +352,7 @@ public class RcCar : Vehicle
         if (hmax > 0.3f) vt = Mathf.Min(vt, 8.5f * skill);
         if (hmax > 0.08f && hmax < 0.2f) vt = Mathf.Min(vt, 9.5f * skill);
         float th = Mathf.Clamp((vt - fs) * 0.6f + 0.25f, -1f, 1f);
+        if (autoT < index * 0.45f && laps == 0) th = -0.2f;   // ffu30b: staggered start (no four-wide pile-up into turn 1)
         // stuck against a pipe / car: back out
         if (revT > 0f) { revT -= dt; o.move = new Vector2(-st, 0f); o.brake = 1f; return o; }
         if (Mathf.Abs(fs) < 0.35f && th > 0.3f && !Parked) stuckT += dt; else stuckT = 0f;

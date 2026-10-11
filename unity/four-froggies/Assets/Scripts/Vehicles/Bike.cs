@@ -29,7 +29,7 @@ public class Bike : Vehicle
     public int crashes, wheelies;
     bool inWheelie;
     // AI ride (BikeAI)
-    public Frog aiRider; public int aiPhase; public float aiAng, aiTurned, aiT;
+    public Frog aiRider; public int aiPhase; public float aiAng, aiTurned, aiT, aiStuck;
     public System.Func<PIn, PIn> demoHook;
 
     public static void SpawnAll()
@@ -300,8 +300,8 @@ public class Bike : Vehicle
             // wheelies
             float pitchUp = Mathf.Asin(Mathf.Clamp(Vector3.Dot(transform.forward, n), -1f, 1f)) * Mathf.Rad2Deg;
             wheelieDeg = rw.grounded && !fw.grounded ? pitchUp : 0f;
-            if (driven && rw.grounded && throttle > 0.75f && fs > -0.3f && fs < 11f && pitchUp < 34f)
-                rb.AddTorque(-transform.right * 15f * throttle * (1f - fs / 11f), ForceMode.Acceleration);
+            if (driven && rw.grounded && throttle > 0.75f && fs > -0.3f && fs < 13f && pitchUp < 34f)
+                rb.AddTorque(-transform.right * 26f * throttle * (1f - fs / 13f), ForceMode.Acceleration);
             if (!fw.grounded && pitchUp > 40f) rb.AddTorque(transform.right * 30f, ForceMode.Acceleration);
             bool wh = !fw.grounded && rw.grounded && pitchUp > 8f;
             if (wh && !inWheelie) wheelies++;
@@ -538,6 +538,9 @@ public class BikeAI : MonoBehaviour
         float fs = b.ForwardSpeed;
         if (vt > fs) o.gas = Mathf.Clamp01((vt - fs) * 0.3f + 0.2f); else o.brake = Mathf.Clamp01((fs - vt) * 0.4f);
         if (f == null || f.vehicle != b) b.aiRider = null;
+        // stuck against a tree / wall: give up, hop off (the bike goes home later)
+        if (Mathf.Abs(fs) < 0.3f && o.gas > 0.2f) b.aiStuck += dt; else b.aiStuck = 0f;
+        if (b.aiStuck > 3f) { b.aiStuck = 0f; b.aiRider = null; if (f != null && f.vehicle == b) f.ExitVehicle(); }
         return o;
     }
 }

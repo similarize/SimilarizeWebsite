@@ -321,9 +321,38 @@ public class RcTrack : MonoBehaviour
                 go.transform.SetParent(root, false);
                 go.AddComponent<MeshFilter>().sharedMesh = mesh;
                 go.AddComponent<MeshRenderer>().sharedMaterial = col == 0 ? red : white;
-                go.AddComponent<MeshCollider>().sharedMesh = mesh;
             }
+            Fence(side);
         }
+    }
+
+    // ffu30b: the pipes have no collider of their own (the cars' wheel rays climbed them and the cars high-centred on top);
+    // an invisible 0.5 m fence on its own layer (FenceLayer: only vehicles hit it, not froggies / camera / projectiles)
+    // bounces the cars off instead
+    public const int FenceLayer = 27;
+    void Fence(int side)
+    {
+        var V = new List<Vector3>(); var T = new List<int>();
+        int m = path.Count;
+        for (int i = 0; i < m; i += 2)
+        {
+            Vector3 a, b; if (!EdgePt(i, side, out a) || !EdgePt((i + 2) % m, side, out b)) continue;
+            int b0 = V.Count;
+            V.Add(a - Vector3.up * 0.25f); V.Add(b - Vector3.up * 0.25f); V.Add(a + Vector3.up * 0.42f); V.Add(b + Vector3.up * 0.42f);
+            T.Add(b0); T.Add(b0 + 2); T.Add(b0 + 1); T.Add(b0 + 1); T.Add(b0 + 2); T.Add(b0 + 3);
+            T.Add(b0); T.Add(b0 + 1); T.Add(b0 + 2); T.Add(b0 + 1); T.Add(b0 + 3); T.Add(b0 + 2);
+        }
+        if (V.Count == 0) return;
+        var mesh = new Mesh(); mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+        mesh.SetVertices(V); mesh.SetTriangles(T, 0); mesh.RecalculateBounds();
+        var go = new GameObject("RC Fence");
+        go.transform.SetParent(root, false);
+        go.layer = FenceLayer;
+        go.AddComponent<MeshCollider>().sharedMesh = mesh;
+        Physics.IgnoreLayerCollision(FenceLayer, Vehicle.FrogLayer, true);
+        Physics.IgnoreLayerCollision(FenceLayer, Vehicle.ProjectileLayer, true);
+        Physics.IgnoreLayerCollision(FenceLayer, Vehicle.PropLayer, true);
+        Physics.IgnoreLayerCollision(FenceLayer, Destruct.DebrisLayer, true);
     }
     bool EdgePt(int i, int side, out Vector3 w)
     {
@@ -360,7 +389,6 @@ public class RcTrack : MonoBehaviour
                 Mats.Prim(PrimitiveType.Cylinder, st, new Vector3(0f, 0.09f + k * 0.18f, 0f), new Vector3(0.62f, 0.09f, 0.62f), tyre);
                 Mats.Prim(PrimitiveType.Cylinder, st, new Vector3(0f, 0.09f + k * 0.18f, 0f), new Vector3(0.36f, 0.092f, 0.36f), k == 2 ? rim : tyre);
             }
-            var cc = st.gameObject.AddComponent<CapsuleCollider>(); cc.radius = 0.31f; cc.height = 0.6f; cc.center = new Vector3(0f, 0.3f, 0f);
             placed++;
         }
     }

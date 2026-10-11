@@ -10,18 +10,19 @@ using UnityEngine;
 //                chase cam + a side tracking shot; logs speed, lean, wheelie angle, air time, crashes, voice levels
 public partial class Game
 {
-    public static bool Is30(string sc) { return sc == "rctrack" || sc == "rcwide" || sc == "rcclose" || sc == "cybersound" || sc == "dirtbike"; }
+    public static bool Is30(string sc) { return sc == "rctrack" || sc == "rcwide" || sc == "rcclose" || sc == "rcstand" || sc == "cybersound" || sc == "dirtbike"; }
     float d30T, d30Log;
     Vehicle d30V;
     RcCar d30Rc;
     Bike d30Bike;
     float d30Track;
+    bool d30Back;
 
     void Demo30Start(Frog f, string sc)
     {
         if (f.world != WorldId.Ranch) f.SendTo(WorldId.Ranch, Ranch.FrogSpawn(f.id), 0f);
         if (f.vehicle != null) f.ExitVehicle();
-        d30T = 0f; d30Log = 0f; d30V = null; d30Rc = null; d30Bike = null;
+        d30T = 0f; d30Log = 0f; d30V = null; d30Rc = null; d30Bike = null; d30Back = false;
         if (sc.StartsWith("rc"))
         {
             if (RcTrack.I == null) { Debug.Log("FFDEMO rc: no track"); return; }
@@ -98,7 +99,8 @@ public partial class Game
         Vector2 c = RcTrack.MxC;
         float fs = d30Bike.ForwardSpeed;
         // keep to the jump line (z = c.y) heading east, then turn round and come back over the rollers (z = c.y - 6)
-        bool back = p.x > c.x + 22f || t > 18f;
+        if (p.x > c.x + 14f || t > 10f) d30Back = true;   // past the tabletop: wide U-turn back to the roller line
+        bool back = d30Back;
         float zt = back ? c.y - 6f : c.y;
         Vector3 aim = back ? new Vector3(p.x - 6f, 0f, zt) : new Vector3(p.x + 6f, 0f, zt);
         Vector3 tg = aim - p; tg.y = 0f;
@@ -106,7 +108,7 @@ public partial class Game
         float ang = Vector3.SignedAngle(fw, tg, Vector3.up);
         o.move = new Vector2(Mathf.Clamp(ang / 28f, -1f, 1f), 0f);
         if (d30Bike.airborne) { o.move.y = 0f; return o; }
-        float vt = back ? 9f : (p.x < c.x - 24f ? 14f : 13f);
+        float vt = back ? (Mathf.Abs(p.z - zt) > 2f ? 6f : 9f) : (p.x < c.x - 24f ? 14f : 13f);
         if (t < 1.6f) o.gas = 1f;                                  // launch wheelie
         else if (vt > fs) o.gas = Mathf.Clamp01((vt - fs) * 0.35f + 0.3f);
         else o.brake = Mathf.Clamp01((fs - vt) * 0.3f);
@@ -125,7 +127,7 @@ public partial class Game
             {
                 var sb = new System.Text.StringBuilder("FFDEMO rc t=" + d30T.ToString("0.0"));
                 foreach (RcCar c in RcTrack.I.cars)
-                    sb.Append(" | " + c.index + ":" + (c.driver != null ? c.driver.nick : "auto") + " v=" + c.Speed.ToString("0.0") + " lap=" + c.laps + (c.airborne ? " AIR" : "") + " up=" + c.transform.up.y.ToString("0.00") + " d=" + RcTrack.I.OnTrackDist(c.transform.position).ToString("0.0"));
+                    sb.Append(" | " + c.index + ":" + (c.driver != null ? c.driver.nick : "auto") + " rec=" + c.recovers + " v=" + c.Speed.ToString("0.0") + " lap=" + c.laps + (c.airborne ? " AIR" : "") + " up=" + c.transform.up.y.ToString("0.00") + " d=" + RcTrack.I.OnTrackDist(c.transform.position).ToString("0.0"));
                 Debug.Log(sb.ToString());
                 if (d30Rc != null) Debug.Log("FFDEMO rc voice " + d30Rc.VoiceLevels);
             }
@@ -138,7 +140,7 @@ public partial class Game
         {
             if (RcTrack.I == null) return false;
             Vector2 C = RcTrack.C; float by = RcTrack.I.BaseY;
-            int ph = sc == "rcwide" ? 1 : sc == "rcclose" ? 2 : (d30T < 12f ? 0 : d30T < 24f ? 1 : d30T < 34f ? 2 : d30T < 42f ? 3 : 0);
+            int ph = sc == "rcwide" ? 1 : sc == "rcclose" ? 2 : sc == "rcstand" ? 3 : (d30T < 12f ? 0 : d30T < 24f ? 1 : d30T < 34f ? 2 : d30T < 42f ? 3 : 0);
             if (ph == 0) return false;   // the normal chase cam
             if (ph == 1) { pos = new Vector3(C.x - 20f, by + 13f, C.y - 26f); look = new Vector3(C.x + 1f, by, C.y - 1f); return true; }
             if (ph == 2)
