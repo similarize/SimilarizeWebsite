@@ -97,7 +97,8 @@ public class RanchLife : MonoBehaviour
         Rect inner = new Rect(P.xMin + 1.5f, P.yMin + 1.5f, P.width - 3f, P.height - 3f);
         for (int i = 0; i < 6; i++) Ground(Animal.Cow(new Vector3(P.xMin + 12f + i * 7f, 0f, P.yMin + 20f + (i % 3) * 9f), i % 2 == 0), inner);
         Color[] hc = { new Color(0.45f, 0.28f, 0.15f), new Color(0.95f, 0.93f, 0.9f), new Color(0.15f, 0.12f, 0.1f) };
-        for (int i = 0; i < 3; i++) Ground(Animal.Horse(new Vector3(P.xMin + 20f + i * 10f, 0f, P.yMax - 22f), hc[i], i == 1 ? new Color(0.8f, 0.8f, 0.78f) : new Color(0.1f, 0.08f, 0.06f)), inner);
+        for (int i = 0; i < 3; i++) Horse.Make(Ground(Animal.Horse(new Vector3(P.xMin + 20f + i * 10f, 0f, P.yMax - 22f), hc[i], i == 1 ? new Color(0.8f, 0.8f, 0.78f) : new Color(0.1f, 0.08f, 0.06f)), inner), i);   // ffu32: rideable (Horse.cs)
+        PastureGate.Build(P);   // ffu32: swinging gate in the east gap
         for (int i = 0; i < 3; i++) Ground(Animal.Goat(new Vector3(P.xMax - 10f, 0f, P.yMin + 10f + i * 4f)), inner);
         // chickens by a coop near the barn
         Rect coop = new Rect(P.xMin + 2f, P.yMax - 24f, 14f, 10f);

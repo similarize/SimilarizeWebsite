@@ -522,6 +522,7 @@ public static class Ranch
         }
         Debug.Log("Ranch: " + placed + " mesh trees, " + TreeClimb.Trees.Count + " climbable");
         Treehouse.BuildAll(TreeSpots);   // ffu27
+        if (Worlds.StageEOn) Garden.Build(TreeSpots);   // ffu32 garden retreat (hammocks, campfire, swings)
         return true;
     }
 

@@ -649,6 +649,7 @@ public partial class Frog : MonoBehaviour
     // ---------- AI wander ----------
     void Think(float dt)
     {
+        if (GardenThink(dt)) return;   // ffu32: relax in the garden / ride a horse (FrogGarden.cs)
         if (FollowThink(dt)) return;   // ffu27: phone CALL + free-play tag-along across worlds (FrogFollow.cs)
         var i = new PIn();
         if (vehicle != null) { input = i; return; }

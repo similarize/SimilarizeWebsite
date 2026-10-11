@@ -45,6 +45,7 @@ public class Animal : MonoBehaviour
     }
 
     public void Scare(Vector3 from) { fleeFrom = from; fleeT = 1.6f; }
+    public void SyncYaw() { yaw = transform.eulerAngles.y; spd = 0f; fleeT = 0f; PickTarget(); }   // ffu32: a horse handed back after a ride
 
     void Update()
     {
@@ -59,9 +60,9 @@ public class Animal : MonoBehaviour
         {
             float r = kind == Kind.Cow || kind == Kind.Horse ? 7f : 3.2f;
             foreach (Frog f in Game.I.frogs)
-                if (f != null && (f.FocusPoint - p).sqrMagnitude < (f.vehicle != null ? r * r * 4f : r * r)) { Scare(f.FocusPoint); break; }
+                if (f != null && (f.FocusPoint - p).sqrMagnitude < (f.vehicle != null && !(f.vehicle is Horse && f.vehicle.Speed < 6f) && !(f.vehicle is GardenSeat) ? r * r * 4f : r * r)) { Scare(f.FocusPoint); break; }
             foreach (Vehicle v in Vehicle.All)
-                if (v != null && v.Speed > 2f && (v.transform.position - p).sqrMagnitude < r * r * 6f) { Scare(v.transform.position); break; }
+                if (v != null && v.Speed > (v is Horse ? 6f : 2f) && (v.transform.position - p).sqrMagnitude < r * r * 6f) { Scare(v.transform.position); break; }   // ffu32: a horse at a walk / trot doesn't scatter the herd
         }
 
         if (fleeT > 0f)

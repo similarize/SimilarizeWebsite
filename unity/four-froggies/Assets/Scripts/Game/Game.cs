@@ -186,6 +186,7 @@ public partial class Game : MonoBehaviour
             else if (Is27(sc)) Demo27Start(f, sc);                           // ffu27 Mars cave / phone CALL / tag-along / landing / treehouse
             else if (IsPoolDemo(sc)) PoolDemoStart(f, sc);                   // ffu29 backyard pool float (GamePoolDemo.cs)
             else if (IsStompDemo(sc)) StompDemoStart(f, sc);                 // ffu28 mech footfalls / Optimus suit on a slope (GameStomp.cs)
+            else if (IsGardenDemo(sc)) GardenDemoStart(f, sc);               // ffu32 garden retreat / horse riding (GardenDemo.cs)
             else if (IsTrailerDemo(sc)) TrailerDemoStart(f, sc);             // ffu31 trailer barn / hitch / tow / bike in the toy hauler (GameTrailer.cs)
             else if (Is30(sc)) Demo30Start(f, sc);                           // ffu30 RC raceway / Cybertruck EV voice / dirt bike (Game30Demo.cs)
             else if (sc.StartsWith("lj-") || sc.StartsWith("loopdrive")) DemoLoopStart(f, sc);   // ffu19 loop joints (GameLoopDemo.cs)
@@ -211,6 +212,7 @@ public partial class Game : MonoBehaviour
         }
         if ((sc.StartsWith("lj-") || sc.StartsWith("loopdrive")) && DemoLoopCam(f, sc, c)) return;
         if (IsStompDemo(sc)) { if (!StompDemoCam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }
+        if (IsGardenDemo(sc)) { if (!GardenDemoCam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }
         if (IsTrailerDemo(sc)) { if (!TrailerDemoCam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }
         if (Is30(sc)) { if (!Demo30Cam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }   // ffu30
         if (IsPoolDemo(sc)) { if (!PoolDemoCam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }

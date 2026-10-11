@@ -40,6 +40,7 @@ public abstract class Vehicle : MonoBehaviour
     // ffu14 touch buttons in this vehicle: labels for A, FIRE, MSL, UP, DOWN (null = hidden)
     public virtual string[] TouchSet { get { return new[] { "A", null, null, null, null }; } }
 
+    public virtual string HudStatus { get { return null; } }   // ffu32: replaces the HUD's "Title NN km/h" line when set (hammock, swing, horse)
     public virtual string HelpLine { get { return "L-stick steer | RT gas | LT brake/reverse | A get out"; } }
     // world yaw the camera should hold (tank turret), or NaN to follow the body
     public virtual float AimYaw { get { return float.NaN; } }

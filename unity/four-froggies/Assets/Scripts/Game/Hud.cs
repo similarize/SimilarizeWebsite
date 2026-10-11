@@ -165,7 +165,7 @@ public class ViewHud
             Vehicle v = me.vehicle != null ? me.vehicle : me.passengerOf;
             if (v != null)
             {
-                string s = v.Title + "  " + Mathf.RoundToInt(v.Speed * 3.6f) + " km/h";
+                string s = v.HudStatus ?? (v.Title + "  " + Mathf.RoundToInt(v.Speed * 3.6f) + " km/h");
                 if (me.world == WorldId.Underwater) s += "  depth " + Mathf.RoundToInt(Mathf.Max(0f, Worlds.UnderO.y - v.transform.position.y)) + " m";
                 else if (v is StoryMech) s += "  " + ((StoryMech)v).StatusLine;
                 else if (v.flyer) s += "  alt " + Mathf.RoundToInt(Mathf.Max(0f, v.transform.position.y)) + " m";
