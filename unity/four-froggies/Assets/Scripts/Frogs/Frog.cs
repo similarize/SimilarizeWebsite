@@ -248,6 +248,7 @@ public partial class Frog : MonoBehaviour
             input = new PIn();
             return;
         }
+        if (PoolTick(dt)) { input = new PIn(); return; }   // ffu29 backyard pool float (FrogPool.cs)
         if (!ClimbTick(dt)) { Walk(dt); ClimbDetect(dt); }   // ffu21 tree climbing (FrogClimb.cs)
         input = new PIn();
     }
@@ -666,6 +667,7 @@ public partial class Frog : MonoBehaviour
                 aiTarget = t; break;
             }
             if (Random.value < 0.3f) aiTarget = p; // sit a while
+            if (world == WorldId.Ranch && AiGoalHook == null && Random.value < 0.07f) aiTarget = PoolPoint();   // ffu29: now and then, a float in the pool
         }
         if (to.magnitude > 1.5f)
         {

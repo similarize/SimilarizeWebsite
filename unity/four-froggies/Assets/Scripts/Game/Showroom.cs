@@ -11,8 +11,57 @@ using UnityEngine;
 // 4x MSAA 384 px and resolved into a mip-mapped texture (supersampled when shown at ~200 px), and the stage is a studio
 // set: smooth 128-segment glossy pedestal, glowing rim ring, soft contact shadow, light pool on the floor and a
 // spotlight backdrop in the character's colour, lit by key / two rims / fill.
+// ffu29 (Bill: "overexposed ... too lit up ... more contrast / clarity ... looks unprofessional"): the turntables were lit
+// by the ranch's own ambient (realism-by-default HDRI SH + trilight ~0.5) and sky reflections on top of four studio lights,
+// FF/Skin's wide wrap (0.5) + built-in rim, coloured light-pool / backdrop quads at 40-50% and a bright tinted clear colour:
+// flat, clipped characters (Bubbles a cyan blob, Spotty / Kitty white) on a washed backdrop. Now: a dark studio ambient +
+// dim sky reflections only for layer-20 cameras (Camera.onPreCull after Worlds'), a real key / cool rim / warm kicker /
+// faint fill rig, narrower skin wrap + less fake rim on showroom models (property block), darker backdrop + a deep soft
+// contact shadow / AO blob, and a ShowroomGrade pass on every stand / thumb camera: HDR buffer (desktop) -> ACES filmic,
+// gentle contrast, natural saturation, vignette. Phones (Look.Mobile) keep LDR + the same grade (no float targets).
+// &lobbylight=old restores the ffu17-28 look exactly.
 public static class Showroom
 {
+    static bool oldK, oldRead;
+    public static bool OldLook { get { if (!oldRead) { oldRead = true; string u = Application.absoluteURL ?? ""; oldK = u.Contains("lobbylight=old"); if (oldK) Debug.Log("Showroom: lobbylight=old (ffu28 look)"); } return oldK; } }
+    static float reflSaved = -1f;
+    static void StudioPreCull(Camera c)
+    {
+        if (c == null || c.cullingMask != Mask) return;
+        reflSaved = RenderSettings.reflectionIntensity;
+        RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
+        RenderSettings.ambientSkyColor = new Color(0.17f, 0.19f, 0.24f);
+        RenderSettings.ambientEquatorColor = new Color(0.1f, 0.1f, 0.115f);
+        RenderSettings.ambientGroundColor = new Color(0.035f, 0.035f, 0.04f);
+        RenderSettings.reflectionIntensity = 0.32f;
+        RenderSettings.fog = false;
+    }
+    static void StudioPostRender(Camera c)
+    {
+        if (c == null || c.cullingMask != Mask || reflSaved < 0f) return;
+        RenderSettings.reflectionIntensity = reflSaved; reflSaved = -1f;   // the next world camera's PreCull resets ambient / fog itself
+    }
+    static MaterialPropertyBlock skinBlock;
+    // ffu29: showroom models only - narrower wrap + less fake rim on FF/Skin (the studio rim lights do that job now)
+    static void StudioSkin(GameObject g)
+    {
+        if (OldLook) return;
+        if (skinBlock == null) { skinBlock = new MaterialPropertyBlock(); skinBlock.SetFloat("_Wrap", 0.22f); skinBlock.SetFloat("_Rim", 0.16f); }
+        foreach (var r in g.GetComponentsInChildren<Renderer>(true))
+        {
+            var m = r.sharedMaterial;
+            if (m != null && m.HasProperty("_Wrap")) r.SetPropertyBlock(skinBlock);
+        }
+    }
+    public static void Grade(Camera c, bool thumb)
+    {
+        if (OldLook || c == null) return;
+        bool hdr = !Look.Mobile && SystemInfo.SupportsRenderTextureFormat(RenderTextureFormat.DefaultHDR);
+        c.allowHDR = hdr;
+        var g = c.GetComponent<ShowroomGrade>(); if (g == null) g = c.gameObject.AddComponent<ShowroomGrade>();
+        g.vignette = thumb ? 0.35f : 0.6f;
+    }
+
     public const int Layer = 20;
     public const int Mask = 1 << Layer;
     public static readonly Vector3 Base = new Vector3(4200f, 600f, 4200f);
@@ -27,12 +76,24 @@ public static class Showroom
         if (inited) return;
         inited = true;
         foreach (Light l in Object.FindObjectsOfType<Light>()) l.cullingMask &= ~Mask;
+        if (OldLook)
+        {
         // ffu14a probe: 1.15 / 0.9 / 0.35 washed the light coats out (Kitty read white, Tigy yellow) -> softer
         // ffu17 studio rig: warm key high front-right, cool rim back-left, warm rim back-right, soft fill front-left
         MakeLight("ShowroomKey", new Vector3(0.45f, -0.62f, -0.64f), 0.8f, new Color(1f, 0.96f, 0.9f));
         MakeLight("ShowroomRim", new Vector3(-0.5f, -0.25f, 0.85f), 0.7f, new Color(0.62f, 0.86f, 1f));
         MakeLight("ShowroomRim2", new Vector3(0.6f, -0.2f, 0.8f), 0.38f, new Color(1f, 0.85f, 0.7f));
         MakeLight("ShowroomFill", new Vector3(-0.6f, -0.3f, -0.5f), 0.2f, new Color(0.95f, 0.92f, 1f));
+            return;
+        }
+        // ffu29 studio: dark ambient for layer-20 cameras + a real three-point rig (key ~4:1 over fill, rims carve the silhouette)
+        Camera.onPreCull += StudioPreCull;
+        Camera.onPostRender += StudioPostRender;
+        MakeLight("ShowroomKey", new Vector3(0.5f, -0.6f, -0.62f), 1.0f, new Color(1f, 0.95f, 0.88f));
+        MakeLight("ShowroomRim", new Vector3(-0.55f, -0.3f, 0.78f), 1.05f, new Color(0.66f, 0.84f, 1f));
+        MakeLight("ShowroomRim2", new Vector3(0.62f, -0.18f, 0.76f), 0.55f, new Color(1f, 0.84f, 0.68f));
+        MakeLight("ShowroomFill", new Vector3(-0.7f, -0.15f, -0.7f), 0.16f, new Color(0.85f, 0.9f, 1f));
+        Debug.Log("Showroom: ffu29 studio lighting (ACES grade, " + (!Look.Mobile && SystemInfo.SupportsRenderTextureFormat(RenderTextureFormat.DefaultHDR) ? "HDR" : "LDR") + ")");
     }
 
     static void MakeLight(string name, Vector3 dir, float intensity, Color c)
@@ -154,6 +215,7 @@ public static class Showroom
     }
     public static Color SpotColor(int ch, float a)
     {
+        if (!OldLook) a *= 0.55f;   // ffu29: dimmer coloured spill (pool / backdrop / thumb spot)
         Color k = Color.Lerp(Roster.UiColor(ch), Color.white, 0.15f);
         return new Color(k.r, k.g, k.b, a);
     }
@@ -177,6 +239,7 @@ public static class Showroom
     public static Color Backdrop(int ch)
     {
         Color k = Roster.UiColor(ch);
+        if (!OldLook) return new Color(0.012f + k.r * 0.05f, 0.016f + k.g * 0.05f, 0.022f + k.b * 0.05f);   // ffu29: near-black studio
         return new Color(0.04f + k.r * 0.16f, 0.06f + k.g * 0.16f, 0.08f + k.b * 0.16f);
     }
 
@@ -188,6 +251,7 @@ public static class Showroom
         m.BuildChar(ch);
         Mats.SetLayer(g, Layer);
         foreach (var r in g.GetComponentsInChildren<Renderer>()) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        StudioSkin(g);
         return m;
     }
 
@@ -202,7 +266,7 @@ public static class Showroom
     public static void RenderThumbs()
     {
         Init();
-        if (thumbCam == null) thumbCam = NewCam("ThumbCam", null);
+        if (thumbCam == null) { thumbCam = NewCam("ThumbCam", null); Grade(thumbCam, true); }
         Vector3 p = Base + new Vector3(-300f, 0f, 0f);
         var tmp = NewRT(ThumbSize, ThumbSize);   // 4x MSAA, resolved into the mip-mapped thumb below
         var spotMat = SoftMat(Color.white, 2990);
@@ -242,6 +306,9 @@ public static class Showroom
         Debug.Log("Showroom: thumbnails rendered (" + Thumbs.Length + " characters, " + ThumbSize + " px 4x MSAA + mips)");
     }
 
+    // ffu29: rim line in the character colour without the near-white wash (it read as a blown-out halo)
+    static Color RingBase(int c) { return OldLook ? Color.Lerp(Roster.UiColor(c), Color.white, 0.35f) : Color.Lerp(Roster.UiColor(c), Color.white, 0.1f) * 0.85f; }
+
     public static float EaseOutBack(float x)
     {
         const float c1 = 1.70158f, c3 = c1 + 1f;
@@ -257,6 +324,8 @@ public static class Showroom
         public int ch = -1;
         readonly Transform root, turn;
         readonly Material ringMat, poolMat, spotMat, shadowMat;
+        Material aoMat;
+        float shadowA { get { return OldLook ? 0.6f : 0.85f; } }
         FrogModel model;
         float pop, yaw, t;
         int rw, rh;
@@ -277,6 +346,12 @@ public static class Showroom
             SoftQuad("Pool", root, new Vector3(0f, -0.125f, 0f), new Vector3(90f, 0f, 0f), 4.6f, 4.6f, poolMat);
             shadowMat = SoftMat(new Color(0f, 0f, 0f, 0.6f), 2985);
             SoftQuad("Contact", root, new Vector3(0f, 0.006f, 0f), new Vector3(90f, 0f, 0f), 1.5f, 1.5f, shadowMat);
+            if (!OldLook)
+            {
+                // ffu29: tight occlusion blob right under the feet (AO) on top of the wide soft contact shadow
+                aoMat = SoftMat(new Color(0f, 0f, 0f, 0.7f), 2986);
+                SoftQuad("ContactAO", root, new Vector3(0f, 0.008f, 0.02f), new Vector3(90f, 0f, 0f), 0.95f, 0.8f, aoMat);
+            }
             spotMat = SoftMat(Color.white, 2970);
             SoftQuad("Backdrop", root, new Vector3(0f, 1.1f, 4.5f), Vector3.zero, 7.5f, 5.2f, spotMat);
             Mats.SetLayer(root.gameObject, Layer);
@@ -284,6 +359,7 @@ public static class Showroom
             cam.transform.localPosition = new Vector3(0f, 1.25f, -4.6f);
             cam.transform.LookAt(root.position + new Vector3(0f, 0.62f, 0f));
             cam.farClipPlane = 20f;
+            Grade(cam, false);
             cam.fieldOfView = 25f;   // ffu17b: the 1:1 target shows the whole window (no crop-zoom any more) -> frame a bit tighter
             Resize(Look.Mobile ? 440 : 520, Look.Mobile ? 300 : 360);
             yaw = 200f + idx * 35f;
@@ -312,7 +388,7 @@ public static class Showroom
             if (model != null) { model.gameObject.SetActive(false); Object.Destroy(model.gameObject); }
             model = MakeModel(turn, c);
             cam.backgroundColor = Backdrop(c);
-            ringMat.color = Color.Lerp(Roster.UiColor(c), Color.white, 0.35f);
+            ringMat.color = RingBase(c);
             poolMat.color = SpotColor(c, 0.5f);
             spotMat.color = SpotColor(c, 0.38f);
             if (had && fx) pop = 1f;
@@ -331,8 +407,9 @@ public static class Showroom
             model.transform.localScale = Vector3.one * Mathf.LerpUnclamped(0.75f, 1f, pop > 0f ? EaseOutBack(1f - pop) : 1f);
             float hop = pop > 0f ? Mathf.Sin((1f - pop) * Mathf.PI) * 0.25f : 0f;
             model.transform.localPosition = new Vector3(0f, hop, 0f);   // a little hop
-            shadowMat.color = new Color(0f, 0f, 0f, 0.6f * (1f - hop * 1.6f));
-            ringMat.color = Color.Lerp(Color.Lerp(Roster.UiColor(ch), Color.white, 0.35f), Color.white, pop * 0.6f);
+            shadowMat.color = new Color(0f, 0f, 0f, shadowA * (1f - hop * 1.6f));
+            if (aoMat != null) aoMat.color = new Color(0f, 0f, 0f, 0.7f * Mathf.Clamp01(1f - hop * 3f));
+            ringMat.color = Color.Lerp(RingBase(ch), Color.white, pop * 0.6f);
             model.ShowIdle(t);
             if (!rt.IsCreated()) rt.Create();
         }
