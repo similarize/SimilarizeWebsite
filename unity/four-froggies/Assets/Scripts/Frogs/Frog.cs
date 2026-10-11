@@ -656,7 +656,8 @@ public partial class Frog : MonoBehaviour
         if (aiTimer <= 0f || to.magnitude < 1.5f)
         {
             aiTimer = Random.Range(4f, 10f);
-            for (int k = 0; k < 10; k++)
+            if (world != WorldId.Ranch) aiTarget = p + new Vector3(Random.Range(-8f, 8f), 0f, Random.Range(-8f, 8f));   // ffu27: off the ranch, wander locally (the ranch spots are km away)
+            else for (int k = 0; k < 10; k++)
             {
                 Vector3 c = Random.value < 0.6f ? new Vector3(-10f, 0f, 40f) : new Vector3(-40f, 0f, 20f);
                 Vector3 t = c + new Vector3(Random.Range(-45f, 45f), 0f, Random.Range(-30f, 30f));

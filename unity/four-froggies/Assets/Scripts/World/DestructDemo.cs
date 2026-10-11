@@ -191,11 +191,11 @@ public static class DestructDemo
                         if (climbT0 < 0f) climbT0 = t;
                         ct = t - climbT0;
                         f.demoPush = false;
-                        f.demoClimbMove = ct < 9f ? new Vector2(0.15f, 0.7f) : ct < 15f ? new Vector2(0.9f, 0.05f) : new Vector2(0f, -0.4f);
+                        f.demoTop = true;   // ffu27: stop the walk-in; go round a little, then straight up and out onto a branch
+                        f.demoClimbMove = ct > 4f && ct < 7f ? new Vector2(0.9f, 0.05f) : new Vector2(0f, 1f);
                     }
+                    else if (f.demoTop) f.demoClimbMove = Vector2.zero;
                     Vector3 fp = f.transform.position;
-                    if (f.Climbing && ct > 18f && !f.demoTop) { f.demoTop = true; }   // ffu27: then climb on up to the branches
-                    if (f.demoTop) f.demoClimbMove = new Vector2(0f, 1f);
                     pos = tree.basePos + new Vector3(3.2f, 0f, -5.4f) + Vector3.up * Mathf.Max(1.6f, fp.y - tree.basePos.y + 0.8f);
                     look = new Vector3(tree.basePos.x, fp.y + 0.2f, tree.basePos.z);
                     Phase(f.Climbing ? (ct < 9f ? 1 : ct < 15f ? 2 : 3) : 0, f.Climbing ? "climbing h=" + (f.transform.position.y - tree.basePos.y).ToString("0.0") : "push ring " + f.climbProgress.ToString("0.00"));

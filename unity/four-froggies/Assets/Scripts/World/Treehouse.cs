@@ -9,7 +9,7 @@ using UnityEngine;
 // away from trees, roads, the pond, the house, the pads and the robot zones (same every load).
 public static class Treehouse
 {
-    public const float DeckY = 3.55f;
+    public const float DeckY = 3.55f, HouseX = 0.8f;   // house parts are built at local x 1.2..5.2 under a child at +HouseX
     public static readonly List<Vector3> Spots = new List<Vector3>();       // trunk base (world)
     public static readonly List<TreeClimb.Tree> Climbs = new List<TreeClimb.Tree>();
     static readonly Vector2[] Prefer = { new Vector2(30f, -60f), new Vector2(-80f, 60f), new Vector2(80f, 40f), new Vector2(-20f, 110f), new Vector2(60f, -110f) };
@@ -72,17 +72,20 @@ public static class Treehouse
         for (float y = 0.45f; y < D - 0.2f; y += 0.36f) B(new Vector3(-0.52f, y, 0f), new Vector3(0.1f, 0.07f, 0.62f), plankD, false);
         for (int s = -1; s <= 1; s += 2) B(new Vector3(-0.5f, D * 0.5f, 0.33f * s), new Vector3(0.08f, D, 0.08f), plankD, false);
         // deck + joists + railing
-        B(new Vector3(1.5f, D - 0.15f, 0f), new Vector3(8f, 0.3f, 6.4f), plank);
-        for (int s = -1; s <= 1; s += 2) B(new Vector3(1.5f, D - 0.45f, 2.6f * s), new Vector3(8f, 0.3f, 0.2f), plankD, false);
+        B(new Vector3(2f, D - 0.15f, 0f), new Vector3(9f, 0.3f, 6.4f), plank);
+        for (int s = -1; s <= 1; s += 2) B(new Vector3(2f, D - 0.45f, 2.6f * s), new Vector3(9f, 0.3f, 0.2f), plankD, false);
         for (int s = -1; s <= 1; s += 2)
         {
-            B(new Vector3(1.5f, D + 0.65f, 3.15f * s), new Vector3(8f, 0.1f, 0.1f), trim);
-            B(new Vector3(1.5f, D + 0.3f, 3.15f * s), new Vector3(8f, 0.6f, 0.06f), plankD, true);
+            B(new Vector3(2f, D + 0.65f, 3.15f * s), new Vector3(9f, 0.1f, 0.1f), trim);
+            B(new Vector3(2f, D + 0.3f, 3.15f * s), new Vector3(9f, 0.6f, 0.06f), plankD, true);
         }
         B(new Vector3(-2.45f, D + 0.65f, 0f), new Vector3(0.1f, 0.1f, 6.4f), trim);
         B(new Vector3(-2.45f, D + 0.3f, 0f), new Vector3(0.06f, 0.6f, 6.4f), plankD, true);
-        B(new Vector3(5.45f, D + 0.65f, 0f), new Vector3(0.1f, 0.1f, 6.4f), trim);
-        B(new Vector3(5.45f, D + 0.3f, 0f), new Vector3(0.06f, 0.6f, 6.4f), plankD, true);
+        B(new Vector3(6.45f, D + 0.65f, 0f), new Vector3(0.1f, 0.1f, 6.4f), trim);
+        B(new Vector3(6.45f, D + 0.3f, 0f), new Vector3(0.06f, 0.6f, 6.4f), plankD, true);
+        // ffu27b: the house sits 0.8 m further from the trunk (local x 2.0..6.0) - at 1.2 the trunk + front wall left a
+        // 0.68 m gap, too narrow for a froggy (0.84 m) to reach the doorway
+        var hold = root; var house = new GameObject("House").transform; house.SetParent(root, false); house.localPosition = new Vector3(HouseX, 0f, 0f); root = house;
         // house: x 1.2..5.2, z -2.2..2.2, walls 2.4 m; doorway in the trunk-side wall, windows in the other three
         float wy = D;
         // back wall (x 5.2) with a window z -0.6..0.6
@@ -116,6 +119,7 @@ public static class Treehouse
         // inside: a little table + a toy chest
         B(new Vector3(3.6f, D + 0.35f, 0.8f), new Vector3(1f, 0.08f, 0.7f), plankD, false);
         B(new Vector3(4.6f, D + 0.25f, -1.4f), new Vector3(0.7f, 0.5f, 0.5f), new Color(0.3f, 0.5f, 0.85f));
+        root = hold;
         // leafy crown above the roof (no collision)
         Color[] leaf = { new Color(0.22f, 0.45f, 0.18f), new Color(0.28f, 0.52f, 0.2f), new Color(0.18f, 0.4f, 0.2f) };
         Vector3[] cr = { new Vector3(0f, 10f, 0f), new Vector3(-2.2f, 9f, 1.8f), new Vector3(-1.8f, 9.4f, -2f), new Vector3(2.6f, 10.2f, -0.8f), new Vector3(0.8f, 11f, 1.6f) };

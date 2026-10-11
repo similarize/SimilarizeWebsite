@@ -107,15 +107,16 @@ public partial class Game
         }
         if (d27Phase == 2)
         {
-            Vector3[] wp = { b + new Vector3(0.4f, 0f, 0f), b + new Vector3(3.3f, 0f, 0.2f) };
-            Vector3 g = wp[Mathf.Min(d27Wp, 1)]; Vector3 to = g - p; to.y = 0f;
-            if (to.magnitude < 0.6f) { if (d27Wp == 0) d27Wp = 1; else { d27Phase = 3; d27T = 0f; Debug.Log("FFDEMO treehouse inside y=" + up.ToString("0.0") + " t=" + Time.realtimeSinceStartup.ToString("0.0")); } }
+            float sd = p.z >= b.z ? 1f : -1f;
+            Vector3[] wp = { b + new Vector3(1.05f, 0f, 1.15f * sd), b + new Vector3(1.4f, 0f, 0f), b + new Vector3(4.1f, 0f, 0.2f) };
+            Vector3 g = wp[Mathf.Min(d27Wp, 2)]; Vector3 to = g - p; to.y = 0f;
+            if (to.magnitude < 0.5f || (d27T > 40f && d27Wp < 2)) { if (d27Wp < 2) { d27Wp++; if (d27T > 40f) d27T = 0f; } else { d27Phase = 3; d27T = 0f; Debug.Log("FFDEMO treehouse inside y=" + up.ToString("0.0") + " t=" + Time.realtimeSinceStartup.ToString("0.0")); } }
             else o.move = StickTo(f, to, 0.55f);
         }
-        if (d27Phase == 3 && d27T > 9f)
+        if (d27Phase == 3 && d27T > 12f)
         {
             // demo shortcut to the roof (players hop crate -> crate -> roof)
-            f.Teleport(b + new Vector3(2.4f, Treehouse.DeckY + 3.9f, 0.4f));
+            f.Teleport(b + new Vector3(3.6f, Treehouse.DeckY + 3.9f, 0.4f));
             d27Phase = 4; d27T = 0f; Debug.Log("FFDEMO treehouse roof (teleport) t=" + Time.realtimeSinceStartup.ToString("0.0"));
         }
         if (d27Phase == 4)
@@ -183,8 +184,8 @@ public partial class Game
                     if (log) Debug.Log("FFDEMO treehouse phase " + d27Phase + " h=" + (fp.y - b.y).ToString("0.00") + " climbing=" + f.Climbing + " t=" + Time.realtimeSinceStartup.ToString("0.0"));
                     if (d27Phase <= 1) { pos = b + new Vector3(-5.5f, Mathf.Max(1.6f, fp.y - b.y + 1.2f), -4.5f); look = fp + Vector3.up * 0.3f; }
                     else if (d27Phase == 2) { pos = b + new Vector3(-4.5f, Treehouse.DeckY + 2.4f, -5f); look = fp; }
-                    else if (d27Phase == 3) { pos = b + new Vector3(3.2f, Treehouse.DeckY + 1.35f, -4.6f); look = b + new Vector3(3.3f, Treehouse.DeckY + 0.6f, 0.2f); }
-                    else { pos = b + new Vector3(10f, Treehouse.DeckY + 5f, -8f); look = b + new Vector3(2.8f, Treehouse.DeckY + 2.4f, 0f); }
+                    else if (d27Phase == 3) { pos = b + new Vector3(4.0f, Treehouse.DeckY + 1.35f, -4.6f); look = b + new Vector3(4.1f, Treehouse.DeckY + 0.6f, 0.2f); }
+                    else { pos = b + new Vector3(11f, Treehouse.DeckY + 5f, -8f); look = b + new Vector3(3.6f, Treehouse.DeckY + 2.4f, 0f); }
                     return true;
                 }
         }

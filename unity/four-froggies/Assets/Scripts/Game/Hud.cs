@@ -194,7 +194,7 @@ public class ViewHud
             Frog f = frogs[i];
             Vector3 wp = f.FocusPoint + Vector3.up * (f.vehicle != null ? 2.2f : 1.0f);
             Vector3 sp = cam.WorldToScreenPoint(wp);
-            if (sp.z < 0.5f || sp.z > 500f || !cam.pixelRect.Contains(new Vector2(sp.x, sp.y)) || (f == me && f.vehicle == null) || (me != null && f.world != me.world)) { t.enabled = false; continue; }
+            if (sp.z < 0.5f || sp.z > 500f || !cam.pixelRect.Contains(new Vector2(sp.x, sp.y)) || (f == me && f.vehicle == null) || (me != null && f.world != me.world) || f.launching || f.passengerOf != null) { t.enabled = false; continue; }   // ffu27: no tags for froggies hidden inside the Starship
             Vector2 lp;
             RectTransformUtility.ScreenPointToLocalPointInRectangle(panel, sp, null, out lp);
             t.enabled = true;
