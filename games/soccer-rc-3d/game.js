@@ -20,9 +20,9 @@ import {
   createSkidMarks,
   RACE_COLORS,
   RACE_NAMES,
-} from "./race-mode.js?v=20261010-soccerrc3d15";
+} from "./race-mode.js?v=20261010-soccerrc3d16";
 
-const CACHE = "20261010-soccerrc3d15";
+const CACHE = "20261010-soccerrc3d16";
 const HALF_X = 22;
 const HALF_Z = 14;
 const WALL_H = 5.5;
@@ -417,18 +417,27 @@ function makeCarMesh(colorHex) {
   nose.position.set(0.75, 0.32, 0);
   g.add(nose);
 
+  // Axle along local Z (car width) so wheels roll toward the nose (+X)
   const wheelGeo = new THREE.CylinderGeometry(0.28, 0.28, 0.22, 12);
-  wheelGeo.rotateZ(Math.PI / 2);
+  wheelGeo.rotateX(Math.PI / 2);
+  const hubMat = new THREE.MeshStandardMaterial({ color: 0xc9ced6, metalness: 0.4, roughness: 0.5 });
+  const hubGeo = new THREE.BoxGeometry(0.34, 0.08, 0.235); // spoke bar: makes the roll visible
+  const wheels = [];
   const spots = [
     [0.55, 0.28, 0.55], [0.55, 0.28, -0.55],
     [-0.55, 0.28, 0.55], [-0.55, 0.28, -0.55],
   ];
   for (const [x, y, z] of spots) {
+    const pivot = new THREE.Group(); // yaw (steer) on pivot, roll on the wheel
+    pivot.position.set(x, y, z);
     const w = new THREE.Mesh(wheelGeo, dark);
-    w.position.set(x, y, z);
     w.castShadow = true;
-    g.add(w);
+    w.add(new THREE.Mesh(hubGeo, hubMat));
+    pivot.add(w);
+    g.add(pivot);
+    wheels.push({ pivot, w, front: x > 0 });
   }
+  g.userData.wheels = wheels;
 
   // Boost flame (hidden until boosting)
   const flame = new THREE.Mesh(
@@ -1046,7 +1055,21 @@ function updateTracks(dt) {
   }
 }
 
+function animateWheels(car, inp, dt) {
+  const ws = car.mesh && car.mesh.userData.wheels;
+  if (!ws) return;
+  const along = car.vx * Math.cos(car.yaw) + car.vz * Math.sin(car.yaw);
+  const roll = -(along * dt) / 0.28;
+  const target = -(inp.steer || 0) * 0.45; // mesh yaw is -car.yaw, so steer right = -Y
+  car._steerVis = (car._steerVis || 0) + (target - (car._steerVis || 0)) * Math.min(1, dt * 14);
+  for (const wh of ws) {
+    wh.w.rotation.z += roll;
+    if (wh.front) wh.pivot.rotation.y = car._steerVis;
+  }
+}
+
 function updateCar(car, inp, dt) {
+  animateWheels(car, inp, dt);
   if (car.jumpCd > 0) car.jumpCd -= dt;
   if (car.autoKickCd > 0) car.autoKickCd -= dt;
   car._holdingFwd = inp.fwd > 0.04;
@@ -1728,6 +1751,54 @@ function raceHumanIdx() {
   return out.length ? out : [0];
 }
 
+/* ---- User camera zoom (Race): pinch on touch, wheel / +- on desktop ---- */
+const CAM_ZOOM_MIN = 0.5, CAM_ZOOM_MAX = 4;
+let camZoom = 1, camZoomCur = 1;
+function setCamZoom(z) { camZoom = Math.max(CAM_ZOOM_MIN, Math.min(CAM_ZOOM_MAX, z)); }
+function initCamZoom() {
+  const surf = renderer.domElement;
+  surf.addEventListener("wheel", (e) => {
+    if (gameMode !== "race") return;
+    e.preventDefault();
+    setCamZoom(camZoom * Math.exp(Math.max(-1, Math.min(1, e.deltaY / 100)) * 0.12));
+  }, { passive: false });
+  window.addEventListener("keydown", (e) => {
+    if (gameMode !== "race" || e.ctrlKey || e.metaKey || e.altKey) return;
+    const t = e.target;
+    if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA")) return;
+    if (e.key === "+" || e.key === "=" || e.code === "NumpadAdd") { setCamZoom(camZoom / 1.2); e.preventDefault(); }
+    else if (e.key === "-" || e.key === "_" || e.code === "NumpadSubtract") { setCamZoom(camZoom * 1.2); e.preventDefault(); }
+  });
+  // Pinch: only two-finger gestures that START on the 3D view (never on stick / buttons)
+  let pinch = null;
+  const onView = (t) => t.target === surf;
+  const dist = (a, b) => Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+  const viewTouches = (e) => Array.from(e.touches).filter(onView);
+  surf.addEventListener("touchstart", (e) => {
+    if (gameMode !== "race") return;
+    const vt = viewTouches(e);
+    if (vt.length === 2) { pinch = { d0: dist(vt[0], vt[1]), z0: camZoom, ids: [vt[0].identifier, vt[1].identifier] }; e.preventDefault(); }
+  }, { passive: false });
+  surf.addEventListener("touchmove", (e) => {
+    if (!pinch) return;
+    const a = Array.from(e.touches).find((t) => t.identifier === pinch.ids[0]);
+    const b = Array.from(e.touches).find((t) => t.identifier === pinch.ids[1]);
+    if (!a || !b) return;
+    e.preventDefault();
+    const d = Math.max(10, dist(a, b));
+    setCamZoom(pinch.z0 * (pinch.d0 / d)); // spread fingers = zoom in
+  }, { passive: false });
+  const end = (e) => {
+    if (!pinch) return;
+    const ids = Array.from(e.touches).map((t) => t.identifier);
+    if (!ids.includes(pinch.ids[0]) || !ids.includes(pinch.ids[1])) pinch = null;
+  };
+  surf.addEventListener("touchend", end);
+  surf.addEventListener("touchcancel", end);
+  // iOS Safari page-zoom gesture events
+  for (const ev of ["gesturestart", "gesturechange"]) document.addEventListener(ev, (e) => e.preventDefault(), { passive: false });
+}
+
 function raceCamMode() {
   if (raceCamUser) return raceCamUser;
   // One local human → chase cam; split-screen-less multiplayer → shared overview
@@ -1902,6 +1973,9 @@ function tickRace(dt) {
   // Camera: chase (1 human) or overview framing every human car
   const mode = raceCamMode();
   raceCam.mode = mode;
+  // Smooth user zoom (pinch / wheel / +-): multiplier on distance / field of view
+  camZoomCur += (camZoom - camZoomCur) * Math.min(1, dt * 8);
+  raceCam.zoom = camZoomCur;
   const humans = raceHumanIdx();
   const look = updateRaceCam(raceCam, camera, cars, humans, humans[0], raceMeta, dt);
   for (let i = 0; i < cars.length; i++) {
@@ -2224,6 +2298,7 @@ function bindTouch() {
 
 function init() {
   renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+  initCamZoom();
   renderer.setClearColor(0x0c1014);
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -2309,6 +2384,7 @@ if (/[?&]racedebug=1/.test(location.search)) {
     setHumans(k) { _dbgForceHumans = k; syncRaceSeatBindings(); },
     pause(p) { _dbgPaused = p !== false; },
     focus(n) { _dbgFocusN = n; },
+    zoom(z) { if (z == null) return { camZoom, camZoomCur }; setCamZoom(z); camZoomCur = camZoom; },
     gl() { return { renderer, scene, camera, raceMeta }; },
     meta() {
       const S = raceMeta && raceMeta.samples;

@@ -752,11 +752,13 @@ function addProps(group, S, M) {
   {
     // Right of the S/F gantry (clear of the bridge sightline) and raised to a 5 m deck
     // so the Stand cam looks over the gantry, tents and bridge onto the far side.
-    const cx = 22, cz = 49.5, len = 16, dep = 3.4, ph = 5.0;
+    // Elevated driver tower (9 m deck) so tyre walls / barriers never hide the cars.
+    const cx = 22, cz = 49.5, len = 16, dep = 3.4, ph = 9.0;
     STAND_EYE.set(cx, ph + 0.13 + 1.6, cz - dep / 2 - 0.25);
     place(M.wood, len, 0.25, dep, cx, ph, cz);                       // deck
     for (const dx of [-len / 2 + 0.3, -len / 4, 0, len / 4, len / 2 - 0.3])
-      for (const dz of [-dep / 2 + 0.2, dep / 2 - 0.2]) place(M.darkSteel, 0.18, ph, 0.18, cx + dx, ph / 2, cz + dz);
+      for (const dz of [-dep / 2 + 0.2, dep / 2 - 0.2]) place(M.darkSteel, 0.24, ph, 0.24, cx + dx, ph / 2, cz + dz);
+    for (const yy of [ph * 0.33, ph * 0.66]) place(M.darkSteel, len, 0.12, 0.12, cx, yy, cz + dep / 2 - 0.2, 0, false); // tower bracing
     place(M.steel, len, 0.07, 0.07, cx, ph + 1.05, cz - dep / 2 + 0.1, 0, false); // railing
     place(M.steel, len, 0.07, 0.07, cx, ph + 0.6, cz - dep / 2 + 0.1, 0, false);
     for (let dx = -len / 2 + 0.2; dx <= len / 2; dx += 2) place(M.steel, 0.06, 1.05, 0.06, cx + dx, ph + 0.52, cz - dep / 2 + 0.1, 0, false);
@@ -1183,7 +1185,8 @@ export function updateRaceCam(rig, camera, cars, focusIdx, chaseIdx, meta, dt) {
     while (dy < -Math.PI) dy += Math.PI * 2;
     rig.yaw += dy * k(3.2);
     const fx = Math.cos(rig.yaw), fz = Math.sin(rig.yaw);
-    const back = 8.5 + Math.min(3, sp * 0.08), up = 4.3;
+    const zm = Math.max(0.6, Math.min(3, rig.zoom || 1)); // user zoom (pinch / wheel / +-)
+    const back = (8.5 + Math.min(3, sp * 0.08)) * zm, up = 4.3 * zm;
     const groundY = c.onGround ? c.pos.y : Math.min(c.pos.y, rig.look.y + 1);
     _v.set(c.pos.x - fx * back, groundY + up, c.pos.z - fz * back);
     if (!rig.init) { rig.pos.copy(_v); rig.look.set(c.pos.x + fx * 7, groundY + 0.6, c.pos.z + fz * 7); rig.init = true; }
@@ -1210,6 +1213,10 @@ export function updateRaceCam(rig, camera, cars, focusIdx, chaseIdx, meta, dt) {
     if (!n) { sx = 0; sz = 0; n = 1; }
     _v.set(sx / n, sy / n + 0.4, sz / n);
     if (!rig.init) { rig.look.copy(_v); rig.fov = 40; }
+    // Zoomed far out: drift the gaze toward the middle of the yard (whole-track view)
+    const zmS = Math.max(0.4, Math.min(4, rig.zoom || 1));
+    const wide = Math.max(0, Math.min(1, (zmS - 1.5) / 2.5));
+    if (wide > 0) _v.lerp(_v5.set(-8, 0, 0), wide);
     rig.look.lerp(_v, k(4));
     // zoom: keep ~14 m of track in view around one car; widen to fit every human
     const dist = Math.max(8, eye.distanceTo(rig.look));
@@ -1230,7 +1237,8 @@ export function updateRaceCam(rig, camera, cars, focusIdx, chaseIdx, meta, dt) {
     const aspect = camera.aspect || 1.6;
     const vFromH = 2 * Math.atan(Math.tan(needH * 1.25 + 0.05) / aspect);
     wantV = Math.max(wantV, vFromH, needV * 2.5 + 0.06);
-    const wantFov = Math.max(9, Math.min(70, THREE.MathUtils.radToDeg(wantV)));
+    wantV = 2 * Math.atan(Math.min(Math.tan(1.45 / 2) * 1.0, Math.tan(wantV / 2) * zmS));
+    const wantFov = Math.max(6, Math.min(83, THREE.MathUtils.radToDeg(wantV)));
     rig.fov += (wantFov - rig.fov) * k(2.5);
     rig.pos.copy(eye);
     rig.init = true;
@@ -1263,7 +1271,8 @@ export function updateRaceCam(rig, camera, cars, focusIdx, chaseIdx, meta, dt) {
   const needX = spanX / 2 / Math.tan(hfov / 2);
   const needZ = (spanZ * Math.sin(pitch)) / 2 / Math.tan(vfov / 2);
   const MIN_D = 24, MAX_D = 62; // MAX_D = cars never shrink below ~readable size
-  const want = Math.max(MIN_D, Math.min(MAX_D, Math.max(needX, needZ)));
+  const zmO = Math.max(0.5, Math.min(3.2, rig.zoom || 1));
+  const want = Math.max(MIN_D, Math.min(MAX_D, Math.max(needX, needZ))) * zmO;
   if (!rig.init) { rig.dist = want; rig.look.set(cx, sy / n, cz); }
   rig.dist += (want - rig.dist) * k(want > rig.dist ? 2.5 : 1.2);
   _v.set(cx, Math.max(0, sy / n) * 0.6, cz);
