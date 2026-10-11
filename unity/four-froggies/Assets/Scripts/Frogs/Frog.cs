@@ -88,7 +88,7 @@ public partial class Frog : MonoBehaviour
     public const float Speed = 6.5f, SwimSpeed = 3.2f, HopV = 8.5f, Gravity = 22f;
 
     public Vector3 Center { get { return transform.position + Vector3.up * 0.7f; } }
-    public Vector3 FocusPoint { get { if (remote != null) return remote.transform.position + Vector3.up * remote.height * 0.6f; Vehicle v = vehicle != null ? vehicle : passengerOf; return v != null ? v.transform.position + Vector3.up * 1.2f : transform.position + Vector3.up * 0.9f; } }
+    public Vector3 FocusPoint { get { if (remote != null) return remote.transform.position + Vector3.up * remote.height * 0.6f; Vehicle v = vehicle != null ? vehicle : passengerOf; if (v is RcCar) return v.transform.position + Vector3.up * 0.3f; return v != null ? v.transform.position + Vector3.up * 1.2f : transform.position + Vector3.up * 0.9f; } }
     public float HSpeed { get { return vehicle != null ? vehicle.Speed : new Vector2(planar.x, planar.z).magnitude; } }
 
     public void Build(int index, Vector3 pos, float yawDeg)
@@ -632,6 +632,7 @@ public partial class Frog : MonoBehaviour
             if (Physics.CheckCapsule(spot + Vector3.up * 0.5f, spot + Vector3.up * 1.0f, 0.42f, Vehicle.GroundMask, QueryTriggerInteraction.Ignore))
                 spot = v.transform.position + Vector3.up * 2.2f;
         }
+        else if (v is RcCar) spot = ((RcCar)v).ExitSpot;   // ffu30: hand back the remote, stay on the driver's stand
         else spot = v.ExitPoint();
         transform.rotation = Quaternion.Euler(0f, v.transform.eulerAngles.y, 0f);
         yaw = v.transform.eulerAngles.y;

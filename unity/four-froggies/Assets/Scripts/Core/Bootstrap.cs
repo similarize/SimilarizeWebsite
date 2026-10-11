@@ -93,5 +93,7 @@ public class Bootstrap : MonoBehaviour
         Vector2 pc = Layout.PondC, pr = Layout.PondR;
         VehicleFactory.BoatAt(new Vector3(pc.x - pr.x + 12f, Layout.WaterY - 0.3f, pc.y + 4f), 90f);
         VehicleFactory.BoatAt(new Vector3(pc.x - pr.x + 16f, Layout.WaterY - 0.3f, pc.y + 9f), 70f, new Color(0.85f, 0.22f, 0.2f));
+        RcTrack.Build();   // ffu30 FROGGY RC RACEWAY + its 4 RC cars (east of the ranch)
+        try { Bike.SpawnAll(); } catch (System.Exception e) { Debug.LogWarning("Bike: spawn failed " + e); }   // ffu30 garage motorbikes + MX jump line
     }
 }

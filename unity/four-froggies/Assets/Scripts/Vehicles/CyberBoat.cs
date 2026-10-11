@@ -246,7 +246,7 @@ public class CyberBoat : MonoBehaviour
         if (partsRoot.activeSelf != show) partsRoot.SetActive(show);
         // sounds at the steps of the sequence (both directions)
         if (Heard()) Cue(prevK, k);
-        if (k > 0.5f != prevK > 0.5f) v.SetEngineKind(k > 0.5f ? 11 : 7);
+        if (k > 0.5f != prevK > 0.5f) v.SetEngineKind(k > 0.5f ? 11 : 12);   // ffu30: 12 = cyber EV voice on wheels
         prevK = k;
         if (!show) { foreach (var tr in trails) tr.emitting = false; return; }
 

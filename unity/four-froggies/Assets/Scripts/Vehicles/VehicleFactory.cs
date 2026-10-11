@@ -122,7 +122,7 @@ public static class VehicleFactory
     {
         var v = Root<GroundVehicle>(title, pos, yaw);
         v.EnterVerb = "drive the " + title;
-        v.engineKind = 7;   // electric whine
+        v.engineKind = 12;   // ffu30: synthesised cyber EV voice (whine + hum + road + regen, SfxSynth.cs)
         v.SetupBodyPublic(2300f, new Vector3(0f, 1.2f, 0f), new Vector3(2.15f, 1.1f, 5.7f), new Vector3(0f, 0.55f, 0f));
         v.maxSpeed = 30f; v.accel = 13f; v.turnRate = 1.7f; v.grip = 7.5f;
         Transform t = v.transform;

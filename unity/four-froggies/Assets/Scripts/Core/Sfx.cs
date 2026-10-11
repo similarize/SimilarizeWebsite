@@ -172,16 +172,19 @@ public static class Sfx
     // One voice per vehicle: the main loop pitched / levelled from speed + throttle, plus an optional second layer
     // (track rattle, boat wash) and a tyre-skid layer for wheeled vehicles. Kinds: 0 petrol car, 1 tracked diesel
     // (Ripsaw EV2 / M5), 2 helicopter, 3 passenger drone, 4 boat, 5 mech suit (servo hum; steps elsewhere), 7 electric
-    // (Cybertruck, rover), 8 monster V8, 9 submarine, 10 Starship rocket.
+    // (rover), 8 monster V8, 9 submarine, 10 Starship rocket; ffu30 12 Cybertruck EV, 13 RC car, 14 2-stroke bike,
+    // 15 electric motorbike, 16 4-stroke bike (synthesised, SfxSynth.cs).
     public class EngineVoice
     {
         public AudioSource main, layer, skid, extra;
+        public SynthVoice syn;   // ffu30
         readonly int kind;
         readonly float pitchMul;
         float clankT;
         public EngineVoice(GameObject owner, int kind, float pitchMul)
         {
             this.kind = kind; this.pitchMul = pitchMul;
+            if (kind >= 12) { syn = new SynthVoice(owner, kind, pitchMul); main = syn.a; layer = syn.b; skid = syn.c; extra = syn.d; return; }   // ffu30 synthesised EV / bike voices (SfxSynth.cs)
             AudioClip c = ClipFor(kind);
             if (c != null) { main = Loop(owner, c); main.Play(); main.Pause(); }
             AudioClip l = kind == 1 ? Tracks : kind == 4 ? Wash : null;
@@ -228,6 +231,7 @@ public static class Sfx
         // on: someone aboard (or an autopilot); spd m/s; load 0..1 throttle / climb; slip m/s sideways; ground 0..1
         public void Tick(bool on, float spd, float load, float slip, float ground, Vector3 pos, float dt)
         {
+            if (syn != null) { syn.Tick(on, spd, load, slip, ground, dt); return; }   // ffu30
             float v = 0f, p = 1f, lv = 0f, lp = 1f;
             switch (kind)
             {

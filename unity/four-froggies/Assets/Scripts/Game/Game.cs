@@ -186,6 +186,7 @@ public partial class Game : MonoBehaviour
             else if (Is27(sc)) Demo27Start(f, sc);                           // ffu27 Mars cave / phone CALL / tag-along / landing / treehouse
             else if (IsPoolDemo(sc)) PoolDemoStart(f, sc);                   // ffu29 backyard pool float (GamePoolDemo.cs)
             else if (IsStompDemo(sc)) StompDemoStart(f, sc);                 // ffu28 mech footfalls / Optimus suit on a slope (GameStomp.cs)
+            else if (Is30(sc)) Demo30Start(f, sc);                           // ffu30 RC raceway / Cybertruck EV voice / dirt bike (Game30Demo.cs)
             else if (sc.StartsWith("lj-") || sc.StartsWith("loopdrive")) DemoLoopStart(f, sc);   // ffu19 loop joints (GameLoopDemo.cs)
             else if (IsRobot20(sc)) DemoRobot20Start(f, sc);   // ffu20 robots drive / missions / phone carousel
             else if (sc == "net") { if (UrlParam("ffwalk") != null) demoHook = DemoWalk; }      // ffu13 online test
@@ -209,6 +210,7 @@ public partial class Game : MonoBehaviour
         }
         if ((sc.StartsWith("lj-") || sc.StartsWith("loopdrive")) && DemoLoopCam(f, sc, c)) return;
         if (IsStompDemo(sc)) { if (!StompDemoCam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }
+        if (Is30(sc)) { if (!Demo30Cam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }   // ffu30
         if (IsPoolDemo(sc)) { if (!PoolDemoCam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }
         switch (sc)
         {
