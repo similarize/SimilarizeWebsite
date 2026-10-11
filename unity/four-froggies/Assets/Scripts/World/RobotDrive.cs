@@ -49,7 +49,7 @@ public class RobotDriver
     // ---------- which vehicles a robot can take (every ranch vehicle a froggy can drive) ----------
     public static bool Drivable(Vehicle v)
     {
-        if (v == null || v.body == null || v is Starship) return false;
+        if (v == null || v.body == null || v is Starship || v.stowed) return false;   // ffu31: not a bike locked in a toy hauler
         Vector3 p = v.transform.position;
         return Mathf.Abs(p.x) < Layout.Half + 40f && Mathf.Abs(p.z) < Layout.Half + 40f && p.y > -60f && p.y < 900f;   // the ranch only (not the sub / Curiosity / space)
     }

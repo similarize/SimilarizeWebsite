@@ -482,7 +482,7 @@ public class BikeAI : MonoBehaviour
         for (int i = 0; i < Bike.AllBikes.Count; i++)
         {
             Bike b = Bike.AllBikes[i];
-            if (b.driver != null || (b.transform.position - b.HomePos).magnitude < 2f) { idle[i] = 0f; continue; }
+            if (b.driver != null || b.stowed || (b.transform.position - b.HomePos).magnitude < 2f) { idle[i] = 0f; continue; }   // ffu31: a bike riding in a toy hauler stays there
             idle[i] = Sfx.Near(b.transform.position) > 30f ? idle[i] + dt : 0f;
             if (idle[i] > 20f) { idle[i] = 0f; b.ResetHome(); }
         }

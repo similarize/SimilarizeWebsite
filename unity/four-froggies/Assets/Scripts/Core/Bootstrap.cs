@@ -63,6 +63,7 @@ public class Bootstrap : MonoBehaviour
         if (Worlds.UnderwaterOn) UnderwaterWorld.Create();
         if (Worlds.SpaceOn) { SpaceWorld.Create(); SurfaceWorlds.Create(); }
         SpawnVehicles();
+        try { TrailerBarn.Build(); } catch (System.Exception e) { Debug.LogWarning("TrailerBarn: build failed " + e); }   // ffu31: the trailer barn + four towable camper trailers
         if (Worlds.StageEOn)
         {
             // the walking Optimus robot now lives by the garage, so the rideable bay-5 suit gets a clearer name

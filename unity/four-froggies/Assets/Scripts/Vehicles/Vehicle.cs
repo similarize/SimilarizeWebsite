@@ -19,6 +19,7 @@ public abstract class Vehicle : MonoBehaviour
     public int engineKind;   // 0 car, 1 tracks, 2 rotor, 3 drone, 4 boat, 5 mech (footsteps)
     float stepT;
     public bool syncedSteps;   // ffu28: footfalls come from the walk cycle (MechStomp), not the engineKind-5 step timer
+    public bool stowed;        // ffu31: locked in a toy hauler's bay (kinematic cargo) - nobody can board it until it rides out
 
     protected PIn inp;
     protected float camYawIn;
@@ -236,7 +237,7 @@ public abstract class Vehicle : MonoBehaviour
         float bd = 2.6f;
         foreach (Vehicle v in All)
         {
-            if (v == null || v.body == null) continue;
+            if (v == null || v.body == null || v.stowed) continue;
             Vector3 cp = v.body.ClosestPoint(p + Vector3.up * 0.6f);
             float d = (cp - (p + Vector3.up * 0.6f)).magnitude;
             if (d < bd) { bd = d; best = v; }

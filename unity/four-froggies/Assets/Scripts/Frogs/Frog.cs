@@ -242,6 +242,7 @@ public partial class Frog : MonoBehaviour
         if (vehicle != null)
         {
             prompt = vehicle.HelpLine;
+            if (human && exitCool <= 0f && TrailerTow.DriverTick(this, input)) { input.use = false; input.land = false; exitCool = 0.35f; }   // ffu31 hitch / unhitch / load a bike
             if (input.use && exitCool <= 0f && vehicle.CanExit(this)) ExitVehicle();
             else vehicle.Drive(input, camYaw, dt);
             model.Animate(0f, false, true, false, dt);
@@ -563,7 +564,7 @@ public partial class Frog : MonoBehaviour
         Vector3 c = Center;
         foreach (Vehicle v in Vehicle.All)
         {
-            if (v == null || v.body == null || v.driver == this) continue;
+            if (v == null || v.body == null || v.driver == this || v.stowed) continue;
             Vector3 cp = v.body.ClosestPoint(c);
             Vector3 d = c - cp;
             float dist = d.magnitude;
