@@ -76,7 +76,13 @@ public class Garden : MonoBehaviour
             while (t.parent != null && t.parent.name != "RanchStatic" && t.parent.parent != null) t = t.parent;
             if (t.name.StartsWith("Tree") || t.name.StartsWith("Rock") || col.name.StartsWith("TreeCol") || col.name.StartsWith("RockCol"))
             {
-                if (t.gameObject.activeSelf) { t.gameObject.SetActive(false); n++; }
+                if (!t.gameObject.activeSelf) continue;
+                // ffu32c: trees / rocks are Breakables drawn through BreakBatch (their own renderers are disabled), so
+                // SetActive alone only hid the collider. Mark the piece broken (state 1, never queued for regen: it is not
+                // in Destruct's active list) and re-flush its batch cells so it drops out of the combined mesh too.
+                var b = t.GetComponent<Breakable>();
+                if (b != null) { b.state = 1; b.hp = 0f; BreakBatch.Dirty(b); }
+                t.gameObject.SetActive(false); n++;
             }
         }
         if (n > 0) Debug.Log("Garden: cleared " + n + " trees / rocks inside the garden");

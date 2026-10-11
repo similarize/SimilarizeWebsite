@@ -40,7 +40,7 @@ public class Horse : Vehicle
             InputKind k = driver != null ? driver.inputKind : InputKind.Keyboard;
             if (k == InputKind.Gamepad) return GaitName.ToUpper() + "  |  L-stick ride  RT / LB gallop  |  X / Y jump  |  A get off";
             if (k == InputKind.Touch) return GaitName.ToUpper() + "  |  stick ride (push far = faster)  |  JUMP  |  A get off";
-            return GaitName.ToUpper() + "  |  W ride on (hold = faster)  SHIFT gallop  A / D rein  |  SPACE jump  |  E get off";
+            return GaitName.ToUpper() + "  |  W ride  SHIFT gallop  A / D rein  |  SPACE jump  |  E off";   // ffu32c: one line at 1280 px
         }
     }
     public override string HudStatus { get { return "Horse - " + GaitName + "  " + Mathf.RoundToInt(Speed * 3.6f) + " km/h"; } }

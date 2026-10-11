@@ -151,7 +151,7 @@ public partial class Game
                         pos = h.position + h.right * 3.2f + h.forward * -1.2f + Vector3.up * 2.4f; look = h.position + Vector3.up * 0.9f; break;
                     }
                 case 3: pos = fire + Quaternion.Euler(0f, g.Yaw, 0f) * new Vector3(0f, 2.6f, -8.2f); look = fire + Vector3.up * 0.8f; break;
-                default: pos = fire + Quaternion.Euler(0f, g.Yaw + 30f, 0f) * new Vector3(0f, 2.2f, -5.5f); look = fire + Vector3.up * 0.5f; break;
+                default: pos = fire + Quaternion.Euler(0f, g.Yaw + 30f, 0f) * new Vector3(0f, 4.6f, -6.5f); look = fire + Vector3.up * 0.4f; break;   // ffu32c: higher, over the swing frames
             }
             if (gdLog <= 0f)
             {
