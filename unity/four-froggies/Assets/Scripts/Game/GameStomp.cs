@@ -53,7 +53,7 @@ public partial class Game
         {
             StoryMech m = FindMech(0, 0);
             if (m == null) { Debug.Log("FFDEMO stomp: no mech"); return; }
-            m.DemoPlace(new Vector3(-62f, 0f, 40f), 270f);    // heading west along z 40 (open yard north of the 10-story row)
+            m.DemoPlace(new Vector3(-100f, 0f, 40f), 270f);   // heading west along z 40 (open yard north of the 10-story row)
             stompV = m;
             StoryMech.DtCap = 0.3f;
             f.EnterVehicle(m);
@@ -83,17 +83,17 @@ public partial class Game
         if (sc == "mechstomp")
         {
             o.move = t < 15f ? new Vector2(0f, 0.45f) : Vector2.zero;
-            o.upHeld = t > 17f && t < 17.15f;          // a hop -> landing quake
+            o.upHeld = t > 17f && t < 17.45f;          // a hop (+ a puff of rockets) -> landing quake
             if (t > 22f && t < 34f) o.move = new Vector2(0.35f, 0.7f);
         }
         else
         {
             // up the berm (east), along the side slope (north), turn round, back down the slope (west)
-            if (t < 7f) o.move = new Vector2(0f, 0.5f);
-            else if (t < 8f) o.move = new Vector2(-1f, 0.2f);
-            else if (t < 19f) o.move = new Vector2(0f, 0.5f);
-            else if (t < 20f) o.move = new Vector2(-1f, 0.2f);
-            else o.move = new Vector2(0f, 0.5f);
+            if (t < 5.5f) o.move = new Vector2(0f, 0.5f);
+            else if (t < 7.3f) o.move = new Vector2(-1f, 0.15f);
+            else if (t < 17f) o.move = new Vector2(0f, 0.45f);
+            else if (t < 18.8f) o.move = new Vector2(-1f, 0.15f);
+            else o.move = new Vector2(0f, 0.45f);
         }
         return o;
     }
@@ -111,8 +111,10 @@ public partial class Game
         if (sc == "mechstomp")
         {
             StoryMech m = (StoryMech)stompV;
-            pos = stompCam;
-            look = vp + Vector3.up * m.height * 0.42f;
+            // a spectator on the grass walking alongside, a little ahead, 13 m south of the path, eye level 1.7 m
+            float cx = vp.x - 7f, cz = vp.z - 13f;
+            pos = new Vector3(cx, Ranch.GY(cx, cz) + 1.7f, cz);
+            look = vp + Vector3.up * m.height * 0.45f;
             float cd = (vp - pos).magnitude;
             if (stompLogT <= 0f)
             {

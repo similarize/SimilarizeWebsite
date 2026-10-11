@@ -37,7 +37,8 @@ public class CamRig
         float t = Time.time * 15f + quakeSeed, q2 = quake * quake;
         return Quaternion.Euler((Mathf.PerlinNoise(t, 5.1f) - 0.5f) * q2 * 3.2f, 0f, (Mathf.PerlinNoise(7.3f, t) - 0.5f) * q2 * 2.4f);
     }
-    public void TickQuake(float dt) { quake = Mathf.MoveTowards(quake, 0f, dt * (1.4f + quake * 1.6f)); }
+    // (dt capped at 0.05: a slow frame (phone hiccup, 3 fps SwiftShader probe) must not swallow the whole quake in one step)
+    public void TickQuake(float dt) { quake = Mathf.MoveTowards(quake, 0f, Mathf.Min(dt, 0.05f) * (1.4f + quake * 1.6f)); }
     // ffu15: recoil kick (degrees, view pitches up then settles) + over-the-shoulder aim state
     float kick, baseFov = -1f;
     public void Kick(float deg) { kick = Mathf.Min(kick + deg, 9f); }
