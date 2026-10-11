@@ -112,9 +112,9 @@ public partial class Game
         {
             StoryMech m = (StoryMech)stompV;
             // a spectator on the grass walking alongside, a little ahead, 13 m south of the path, eye level 1.7 m
-            float cx = vp.x - 7f, cz = vp.z - 13f;
-            pos = new Vector3(cx, Ranch.GY(cx, cz) + 1.7f, cz);
-            look = vp + Vector3.up * m.height * 0.45f;
+            float cx = vp.x - 7f, cz = vp.z - 15f;
+            pos = new Vector3(cx, Ranch.GY(cx, cz) + 2.2f, cz);
+            look = vp + Vector3.up * m.height * 0.32f;   // feet sit above the HUD hint line
             float cd = (vp - pos).magnitude;
             if (stompLogT <= 0f)
             {

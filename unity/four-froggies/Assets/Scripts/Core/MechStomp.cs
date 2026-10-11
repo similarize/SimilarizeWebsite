@@ -90,7 +90,7 @@ public static class MechStomp
         // --- dust cloud at the foot + loose props jump
         if (budget-- > 0)
         {
-            float r = Mathf.Max(0.6f, size * 0.07f);
+            float r = size < 6f ? Mathf.Max(0.6f, size * 0.07f) : size * 0.15f;   // suit ~0.6 m puffs, 10-story ~1.8 m, trillion ~24 m
             int n = Mathf.RoundToInt((Look.Mobile ? 5f : 9f) * Mathf.Clamp(power, 0.6f, 2f));
             for (int i = 0; i < n; i++)
             {
