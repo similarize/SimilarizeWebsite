@@ -104,6 +104,7 @@ public static class BuildScript
         SetInputHandler();
         ConfigurePlayer();
         ConfigureWindows();
+        ApplyIcons(false);
         EnsureFolder("Assets", "Generated");
         EnsureFolder("Assets", "Scenes");
         ImportNativeMusic();
@@ -174,6 +175,7 @@ public static class BuildScript
         SetInputHandler();
         ConfigurePlayer();
         ConfigureAndroid();
+        ApplyIcons(true);
         EnsureFolder("Assets", "Generated");
         EnsureFolder("Assets", "Scenes");
         ImportNativeMusic();
@@ -239,6 +241,69 @@ public static class BuildScript
         }
         else { PlayerSettings.Android.useCustomKeystore = false; Debug.Log("BuildScript: Android signing with the Unity debug key"); }
         Debug.Log("BuildScript: Android player settings (IL2CPP ARM64, GLES3, landscape, com.similarize.fourfroggies, versionCode " + vc + ")");
+    }
+
+    // ffu35 icon: James the froggy as the app icon (instead of Unity's default) for the Windows .exe and the Android APK.
+    // Assets/Icons/ff_icon_1024.png = full square icon (default / Standalone / Android legacy + round);
+    // ff_icon_background.png + ff_icon_foreground.png = Android adaptive layers (frog inside the 66/108 safe zone).
+    // Import settings are forced here (uncompressed, readable, no mips, 1024 max) so no hand-written .meta is needed.
+    const string IconDir = "Assets/Icons/";
+    static Texture2D LoadIcon(string file, bool alpha)
+    {
+        string path = IconDir + file;
+        var ti = AssetImporter.GetAtPath(path) as TextureImporter;
+        if (ti == null) { AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate); ti = AssetImporter.GetAtPath(path) as TextureImporter; }
+        if (ti == null) { Debug.LogWarning("FF icon: missing " + path); return null; }
+        bool dirty = ti.textureType != TextureImporterType.Default || !ti.isReadable || ti.mipmapEnabled
+            || ti.textureCompression != TextureImporterCompression.Uncompressed || ti.npotScale != TextureImporterNPOTScale.None
+            || ti.maxTextureSize != 1024 || ti.alphaIsTransparency != alpha;
+        if (dirty)
+        {
+            ti.textureType = TextureImporterType.Default;
+            ti.isReadable = true;
+            ti.mipmapEnabled = false;
+            ti.textureCompression = TextureImporterCompression.Uncompressed;
+            ti.npotScale = TextureImporterNPOTScale.None;
+            ti.maxTextureSize = 1024;
+            ti.alphaIsTransparency = alpha;
+            ti.wrapMode = TextureWrapMode.Clamp;
+            ti.SaveAndReimport();
+        }
+        return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+    }
+
+    static void ApplyIcons(bool android)
+    {
+        try
+        {
+            Texture2D full = LoadIcon("ff_icon_1024.png", false);
+            if (full == null) return;
+            PlayerSettings.SetIconsForTargetGroup(BuildTargetGroup.Unknown, new[] { full });
+            int n = PlayerSettings.GetIconSizesForTargetGroup(BuildTargetGroup.Standalone).Length;
+            var st = new Texture2D[Math.Max(1, n)];
+            for (int i = 0; i < st.Length; i++) st[i] = full;
+            PlayerSettings.SetIconsForTargetGroup(BuildTargetGroup.Standalone, st);
+            Debug.Log("FF icon: default + Standalone (" + st.Length + " sizes) set to " + full.name + " " + full.width + "x" + full.height);
+            if (!android) return;
+            Texture2D bg = LoadIcon("ff_icon_background.png", false);
+            Texture2D fg = LoadIcon("ff_icon_foreground.png", true);
+            // AndroidPlatformIconKind lives in the Android editor extension; go through the generic kinds so this
+            // file still compiles for WebGL / Windows editors that have no Android module.
+            foreach (PlatformIconKind kind in PlayerSettings.GetSupportedIconKindsForPlatform(BuildTargetGroup.Android))
+            {
+                PlatformIcon[] icons = PlayerSettings.GetPlatformIcons(BuildTargetGroup.Android, kind);
+                string k = kind.ToString();
+                bool adaptive = k.IndexOf("Adaptive", StringComparison.OrdinalIgnoreCase) >= 0;
+                foreach (PlatformIcon ic in icons)
+                {
+                    if (adaptive && bg != null && fg != null && ic.maxLayerCount >= 2) ic.SetTextures(bg, fg);
+                    else ic.SetTexture(full);
+                }
+                PlayerSettings.SetPlatformIcons(BuildTargetGroup.Android, kind, icons);
+                Debug.Log("FF icon: Android " + k + " x" + icons.Length + (adaptive ? " (adaptive bg+fg)" : ""));
+            }
+        }
+        catch (Exception e) { Debug.LogWarning("FF icon: " + e); }
     }
 
     // web/audio/*.ogg is copied to Assets/Resources/FFMusic by the Windows workflow only: stream them from disk
