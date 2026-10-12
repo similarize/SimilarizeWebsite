@@ -1,0 +1,240 @@
+name: Unity Android APK - Four Froggies
+
+# ffu35: sideloadable Android APK (IL2CPP ARM64) of unity/four-froggies for Bill's Pixel 9 - no Play Store, no AAB.
+# Published as a GitHub Release asset. Same precautions as the Windows workflow (ffu34):
+#  - shares the WebGL workflow's concurrency group with cancel-in-progress off: it queues behind a running WebGL build and
+#    never runs alongside it (dispatch it only when no WebGL run is queued);
+#  - started by hand (workflow_dispatch) or by a push that changes only this file / unity/logs/ff-android-request.txt.
+# Signing: repo secrets FF_ANDROID_KEYSTORE_B64 (+ FF_ANDROID_KEYSTORE_PASS, FF_ANDROID_KEY_ALIAS) when set; otherwise a
+# self-generated sideload keystore kept in the repo at unity/four-froggies/android/ff-sideload.keystore (made on the first
+# run and committed with the build log), so later APKs install as updates over earlier ones.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g. ff-android-ffu35)'
+        required: false
+        default: 'ff-android-ffu35'
+  push:
+    branches: [unity-src]
+    paths:
+      - '.github/workflows/unity-four-froggies-android.yml'
+      - 'unity/logs/ff-android-request.txt'
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: unity-webgl-four-froggies
+  cancel-in-progress: false
+
+env:
+  PROJECT_DIR: src/unity/four-froggies
+  TAG: ${{ github.event.inputs.tag || 'ff-android-ffu35' }}
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 170
+    steps:
+      - name: Checkout unity-src
+        uses: actions/checkout@v4
+        with:
+          ref: unity-src
+          path: src
+
+      - name: Prepare log dir
+        run: |
+          mkdir -p "$RUNNER_TEMP/logs"
+          echo "LOG_DIR=$RUNNER_TEMP/logs" >> "$GITHUB_ENV"
+          echo "ANDROID run ${{ github.run_id }} attempt ${{ github.run_attempt }} event ${{ github.event_name }} sha ${{ github.sha }} tag $TAG started $(date -u +%FT%TZ)" > "$RUNNER_TEMP/logs/status.txt"
+
+      - name: Check Unity secrets
+        id: secrets
+        env:
+          UE: ${{ secrets.UNITY_EMAIL }}
+          UP: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          if [ -z "$UE" ] || [ -z "$UP" ]; then echo "MISSING_SECRETS" | tee -a "$LOG_DIR/status.txt"; exit 1; fi
+          echo "secrets present" | tee -a "$LOG_DIR/status.txt"
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost /usr/local/.ghcup || true
+          df -h / | tee -a "$LOG_DIR/status.txt"
+
+      - name: Restore Library (from WebGL cache, read-only)
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.PROJECT_DIR }}/Library
+          key: FF-Library-Android-none
+          restore-keys: |
+            FF-Library-WebGL-
+
+      - name: Native assets (StreamingAssets inside the APK + music clips)
+        run: |
+          mkdir -p "$PROJECT_DIR/Assets/Resources/FFMusic" "$PROJECT_DIR/Assets/StreamingAssets"
+          cp "$PROJECT_DIR"/web/audio/*.ogg "$PROJECT_DIR/Assets/Resources/FFMusic/"
+          for d in real realroom; do
+            if [ -d "$PROJECT_DIR/web/$d" ]; then cp -r "$PROJECT_DIR/web/$d" "$PROJECT_DIR/Assets/StreamingAssets/$d"; fi
+          done
+          du -sh "$PROJECT_DIR/Assets/StreamingAssets"/* "$PROJECT_DIR/Assets/Resources/FFMusic" 2>&1 | tee -a "$LOG_DIR/status.txt"
+
+      - name: Set up Unity Hub (pass 1)
+        id: unity-hub-install
+        continue-on-error: true
+        timeout-minutes: 6
+        uses: RageAgainstThePixel/unity-setup@v2
+        with:
+          version-file: src/unity/four-froggies/ProjectSettings/ProjectVersion.txt
+          build-targets: Android
+          cache-installation: false
+
+      - name: Unity Hub path shim
+        run: |
+          echo "hub pass1: ${{ steps.unity-hub-install.outcome }}" | tee -a "$LOG_DIR/status.txt"
+          if [ ! -e /opt/unityhub/unityhub ]; then
+            if [ -x /usr/lib/unityhub/unityhub ]; then
+              sudo rm -rf /opt/unityhub
+              sudo ln -s /usr/lib/unityhub /opt/unityhub
+            else
+              B=$(readlink -f "$(command -v unityhub)" 2>/dev/null || true)
+              [ -n "$B" ] && sudo mkdir -p /opt/unityhub && sudo ln -sf "$B" /opt/unityhub/unityhub
+            fi
+          fi
+          ls -la /opt/unityhub/unityhub 2>&1 | tee -a "$LOG_DIR/status.txt" || true
+
+      - name: Set up Unity + Android module (SDK / NDK / OpenJDK)
+        id: unity-setup
+        uses: RageAgainstThePixel/unity-setup@v2
+        with:
+          version-file: src/unity/four-froggies/ProjectSettings/ProjectVersion.txt
+          build-targets: Android
+          cache-installation: false
+          auto-update-hub: false
+
+      - name: Android toolchain check + signing key
+        id: keys
+        env:
+          KS_B64: ${{ secrets.FF_ANDROID_KEYSTORE_B64 }}
+          KS_PASS: ${{ secrets.FF_ANDROID_KEYSTORE_PASS }}
+          KS_ALIAS: ${{ secrets.FF_ANDROID_KEY_ALIAS }}
+        run: |
+          EDITOR="${UNITY_EDITOR_PATH:-${{ steps.unity-setup.outputs.unity-editor-path }}}"
+          AP="$(dirname "$EDITOR")/Data/PlaybackEngines/AndroidPlayer"
+          echo "AP=$AP" >> "$GITHUB_ENV"
+          { echo "android player: $AP"; ls "$AP" 2>&1; ls "$AP/SDK/build-tools" "$AP/SDK/platforms" "$AP/NDK" 2>&1 | head -20; } | tee -a "$LOG_DIR/status.txt"
+          KT="$AP/OpenJDK/bin/keytool"; [ -x "$KT" ] || KT=$(command -v keytool)
+          mkdir -p "$PROJECT_DIR/android"
+          if [ -n "$KS_B64" ]; then
+            echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/ff.keystore"
+            echo "FF_KEYSTORE=$RUNNER_TEMP/ff.keystore" >> "$GITHUB_ENV"
+            echo "FF_KEYSTORE_PASS=$KS_PASS" >> "$GITHUB_ENV"
+            echo "FF_KEY_ALIAS=${KS_ALIAS:-fourfroggies}" >> "$GITHUB_ENV"
+            echo "signing: repo secret keystore" | tee -a "$LOG_DIR/status.txt"
+          else
+            K="$GITHUB_WORKSPACE/$PROJECT_DIR/android/ff-sideload.keystore"
+            if [ ! -f "$K" ]; then
+              "$KT" -genkeypair -v -keystore "$K" -storetype JKS -alias fourfroggies -keyalg RSA -keysize 2048 -validity 10000 \
+                -storepass fourfroggies -keypass fourfroggies -dname "CN=Four Froggies, O=Similarize, C=US" 2>&1 | tail -n 3 | tee -a "$LOG_DIR/status.txt"
+              echo "NEW_KEYSTORE=1" >> "$GITHUB_ENV"
+            fi
+            echo "FF_KEYSTORE=$K" >> "$GITHUB_ENV"
+            echo "FF_KEYSTORE_PASS=fourfroggies" >> "$GITHUB_ENV"
+            echo "FF_KEY_ALIAS=fourfroggies" >> "$GITHUB_ENV"
+            echo "signing: repo sideload keystore (android/ff-sideload.keystore)" | tee -a "$LOG_DIR/status.txt"
+          fi
+
+      - name: Activate Unity license
+        id: activate
+        uses: RageAgainstThePixel/activate-unity-license@v2
+        with:
+          license: personal
+          username: ${{ secrets.UNITY_EMAIL }}
+          password: ${{ secrets.UNITY_PASSWORD }}
+
+      - name: Build Android APK
+        id: build
+        run: |
+          EDITOR="${UNITY_EDITOR_PATH:-${{ steps.unity-setup.outputs.unity-editor-path }}}"
+          echo "editor: $EDITOR" | tee -a "$LOG_DIR/status.txt"
+          code=0
+          "$EDITOR" -batchmode -nographics -quit \
+            -projectPath "$GITHUB_WORKSPACE/$PROJECT_DIR" \
+            -buildTarget Android \
+            -executeMethod BuildScript.BuildAndroid \
+            -logFile "$LOG_DIR/editor.log" || code=$?
+          echo "unity exit code: $code" | tee -a "$LOG_DIR/status.txt"
+          ls -la "$PROJECT_DIR/build/Android" 2>&1 | tee -a "$LOG_DIR/status.txt" || true
+          if [ "$code" != "0" ]; then exit 1; fi
+          test -f "$PROJECT_DIR/build/Android/FourFroggies.apk"
+          A="$GITHUB_WORKSPACE/$PROJECT_DIR/build/Android/FourFroggies-$TAG.apk"
+          cp "$PROJECT_DIR/build/Android/FourFroggies.apk" "$A"
+          echo "APK=$A" >> "$GITHUB_ENV"
+          echo "APK_SIZE: $(stat -c %s "$A")" | tee -a "$LOG_DIR/status.txt"
+
+      - name: Inspect APK (aapt badging + apksigner verify)
+        id: inspect
+        continue-on-error: true
+        run: |
+          BT=$(ls -d "$AP"/SDK/build-tools/* 2>/dev/null | sort -V | tail -n 1)
+          JAVA_HOME="$AP/OpenJDK"; export JAVA_HOME; export PATH="$JAVA_HOME/bin:$PATH"
+          {
+            echo "=== aapt dump badging ($BT)"
+            "$BT/aapt" dump badging "$APK" 2>&1 | grep -E "^package|sdkVersion|targetSdk|application-label|launchable-activity|native-code|uses-feature|orientation|densities" | head -n 30
+            echo "=== apksigner verify"
+            "$BT/apksigner" verify --verbose --print-certs "$APK" 2>&1 | grep -vE "^WARNING" | head -n 20
+            echo "=== apk contents (top)"
+            unzip -l "$APK" | sort -k1 -n -r | head -n 15
+          } | tee -a "$LOG_DIR/status.txt"
+
+      - name: Publish GitHub Release
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          NOTES="Four Froggies for Android ($TAG, unity-src ${GITHUB_SHA::7}) - sideload APK, 64-bit ARM (Pixel 9 and other recent phones). On the phone: open this page, tap the .apk, allow installs from this source when Android asks (Settings > Apps > Special app access > Install unknown apps), then Install. Touch controls, or pair a Bluetooth Xbox controller (one controller = one froggy). Built by run ${{ github.run_id }}."
+          if gh release view "$TAG" --repo "${{ github.repository }}" > /dev/null 2>&1; then
+            gh release upload "$TAG" "$APK" --clobber --repo "${{ github.repository }}"
+          else
+            gh release create "$TAG" "$APK" --repo "${{ github.repository }}" --target "${{ github.sha }}" --title "Four Froggies for Android ($TAG)" --notes "$NOTES"
+          fi
+          URL=$(gh release view "$TAG" --repo "${{ github.repository }}" --json url -q .url)
+          echo "RELEASE_URL: $URL" | tee -a "$LOG_DIR/status.txt"
+
+      - name: Commit build log (and a new sideload keystore) to unity-src
+        if: always()
+        env:
+          UE: ${{ secrets.UNITY_EMAIL }}
+          UP: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          cd src
+          mkdir -p unity/logs
+          L=unity/logs/four-froggies-android-last-build.log
+          {
+            cat "$LOG_DIR/status.txt" 2>/dev/null
+            echo "=== step outcomes: secrets=${{ steps.secrets.outcome }} setup=${{ steps.unity-setup.outcome }} keys=${{ steps.keys.outcome }} activate=${{ steps.activate.outcome }} build=${{ steps.build.outcome }} inspect=${{ steps.inspect.outcome }} release=${{ steps.release.outcome }}"
+            if [ -f "$LOG_DIR/editor.log" ]; then
+              echo "=== error lines"
+              grep -nE "error CS|[Ee]rror:|Exception|BUILD_|BuildScript|Scripts have compiler errors|[Ll]icens|Gradle|FAILURE|Failed|failed|NDK|SDK" "$LOG_DIR/editor.log" | grep -vE "Shader.*warning|0 errors" | head -n 300
+              echo "=== editor log tail (300)"
+              tail -n 300 "$LOG_DIR/editor.log"
+            else
+              echo "=== no editor log"
+            fi
+          } > "$L" 2>&1
+          if [ -n "$UE" ]; then perl -pi -e 's/\Q$ENV{UE}\E/[UNITY_EMAIL]/g' "$L"; fi
+          if [ -n "$UP" ]; then perl -pi -e 's/\Q$ENV{UP}\E/[UNITY_PASSWORD]/g' "$L"; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
+          git add "$L"
+          if [ "${NEW_KEYSTORE:-0}" = "1" ] && [ "${{ steps.build.outcome }}" = "success" ]; then git add unity/four-froggies/android/ff-sideload.keystore; fi
+          git commit -m "Four Froggies Android build log for run ${{ github.run_id }} [skip ci]" || exit 0
+          for i in 1 2 3 4 5; do
+            git push origin HEAD:unity-src && exit 0
+            sleep $((i*2))
+            git pull --rebase origin unity-src || true
+          done
+          exit 0
