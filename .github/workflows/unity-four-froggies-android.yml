@@ -81,6 +81,17 @@ jobs:
           done
           du -sh "$PROJECT_DIR/Assets/StreamingAssets"/* "$PROJECT_DIR/Assets/Resources/FFMusic" 2>&1 | tee -a "$LOG_DIR/status.txt"
 
+      # unity-setup's Android check reads ProjectSettings/ProjectSettings.asset (AndroidTargetSdkVersion); this project
+      # generates its settings in code and doesn't commit that file -> a placeholder for the setup steps only (target 0 =
+      # skip the check; Unity's own SDK from the android module is used). Removed again before the editor opens.
+      - name: Placeholder ProjectSettings.asset (setup only)
+        run: |
+          if [ ! -f "$PROJECT_DIR/ProjectSettings/ProjectSettings.asset" ]; then
+            printf '%%YAML 1.1\nPlayerSettings:\n  AndroidTargetSdkVersion: 0\n' > "$PROJECT_DIR/ProjectSettings/ProjectSettings.asset"
+            echo "PLACEHOLDER_PS=1" >> "$GITHUB_ENV"
+            echo "placeholder ProjectSettings.asset for unity-setup" | tee -a "$LOG_DIR/status.txt"
+          fi
+
       - name: Set up Unity Hub (pass 1)
         id: unity-hub-install
         continue-on-error: true
@@ -113,6 +124,11 @@ jobs:
           build-targets: Android
           cache-installation: false
           auto-update-hub: false
+
+      - name: Remove placeholder ProjectSettings.asset
+        if: always()
+        run: |
+          if [ "${PLACEHOLDER_PS:-0}" = "1" ]; then rm -f "$PROJECT_DIR/ProjectSettings/ProjectSettings.asset"; echo "placeholder removed" | tee -a "$LOG_DIR/status.txt"; fi
 
       - name: Android toolchain check + signing key
         id: keys
