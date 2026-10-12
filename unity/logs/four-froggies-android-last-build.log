@@ -1,0 +1,11 @@
+ANDROID run 38198237217 attempt 1 event push sha 3562d3668405800c49cc6168f2c639c174c3bc7c tag ff-android-ffu35 started 2026-10-12T03:03:29Z
+secrets present
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/root       145G   37G  108G  26% /
+6.4M	src/unity/four-froggies/Assets/StreamingAssets/real
+23M	src/unity/four-froggies/Assets/StreamingAssets/realroom
+11M	src/unity/four-froggies/Assets/Resources/FFMusic
+hub pass1: failure
+-rwxrwxrwx 1 root root 1272 Oct  2 20:00 /opt/unityhub/unityhub
+=== step outcomes: secrets=success setup=failure keys=skipped activate=skipped build=skipped inspect=skipped release=skipped
+=== no editor log
