@@ -59,8 +59,14 @@ public static class FFPlatform
     {
         if (Native)
         {
+#if UNITY_ANDROID
+            // ffu35 Android: StreamingAssets live inside the APK ("jar:file:///...base.apk!/assets") - UnityWebRequest reads
+            // that URL as is; don't run it through System.Uri
+            return Application.streamingAssetsPath.TrimEnd('/') + "/" + sub.Trim('/') + "/";
+#else
             string p = System.IO.Path.Combine(Application.streamingAssetsPath, sub.TrimEnd('/'));
             try { return new System.Uri(p).AbsoluteUri + "/"; } catch { return "file:///" + p.Replace('\\', '/') + "/"; }
+#endif
         }
         string u = Application.absoluteURL ?? "";
         int q = u.IndexOfAny(new[] { '?', '#' }); if (q >= 0) u = u.Substring(0, q);
@@ -75,6 +81,19 @@ public static class FFPlatform
     public static void NativeDisplayInit()
     {
         if (!Native) return;
+        if (Application.isMobilePlatform)
+        {
+            // ffu35 Android (sideloaded APK): landscape only, full screen, 60 fps, the screen never dims mid-game
+            Screen.orientation = ScreenOrientation.AutoRotation;
+            Screen.autorotateToPortrait = false; Screen.autorotateToPortraitUpsideDown = false;
+            Screen.autorotateToLandscapeLeft = true; Screen.autorotateToLandscapeRight = true;
+            Screen.fullScreen = true;
+            Screen.sleepTimeout = SleepTimeout.NeverSleep;
+            QualitySettings.vSyncCount = 0;
+            Application.targetFrameRate = 60;
+            Debug.Log("FFPlatform: native mobile display " + Screen.width + "x" + Screen.height + " (landscape, 60 fps)");
+            return;
+        }
         bool windowed = HasArg("-windowed") || HasArg("-screen-fullscreen") || HasArg("-popupwindow");
         Resolution r = Screen.currentResolution;
         if (!windowed && r.width > 0 && r.height > 0) Screen.SetResolution(r.width, r.height, FullScreenMode.FullScreenWindow);
@@ -89,7 +108,7 @@ public static class FFPlatform
     // movement so a controller player never sees it over the game
     public static void NativeDisplayTick(float dt)
     {
-        if (!Native) return;
+        if (!Native || Application.isMobilePlatform) return;
         Keyboard k = Keyboard.current;
         if (k != null && k.f11Key.wasPressedThisFrame)
         {

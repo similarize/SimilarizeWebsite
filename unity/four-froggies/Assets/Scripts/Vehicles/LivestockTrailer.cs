@@ -295,10 +295,13 @@ public class LivestockTrailer : MonoBehaviour
             if (cows >= 4) return false;
             for (int i = 0; i < Rows; i++) if (used[i] == 1 && !horseRow[i]) { row = i; x = -cowX[i]; return true; }
         }
-        for (int i = 0; i < Rows; i++) if (used[i] == 0) { row = i; x = horse ? 0f : 0.5f; return true; }
+        for (int i = 0; i < Rows; i++) if (used[i] == 0) { row = i; x = horse ? 0f : 0.46f; return true; }
         return false;
     }
-    Vector3 SlotLocal(int row, float x) { float zf = Spec.len * 0.5f - 0.2f; return new Vector3(x, deck, zf - 2.33f * (row + 0.5f)); }
+    // rows of 2.2 m from just behind the nose; cows ride a touch smaller (Scale) so two fit side by side inside the slats
+    Vector3 SlotLocal(int row, float x) { float zf = Spec.len * 0.5f - 0.45f; return new Vector3(x, deck, zf - 2.2f * (row + 0.5f)); }
+    const float CowScale = 0.8f, HorseScale = 0.92f;
+    readonly Dictionary<Animal, Vector3> scale0 = new Dictionary<Animal, Vector3>();
 
     public Animal NearestFree(Vector3 p, float maxD)
     {
@@ -348,6 +351,8 @@ public class LivestockTrailer : MonoBehaviour
         if (leading.ContainsKey(a)) StopLead(a, "loading");
         var r = new Rider { a = a, h = h, row = row, x = x };
         riders.Add(r);
+        if (!scale0.ContainsKey(a)) scale0[a] = a.transform.localScale;
+        a.transform.localScale = scale0[a] * (h != null ? HorseScale : CowScale);
         a.enabled = false;
         if (h != null) { h.stowed = true; HorseCols(h, false); }
         var w = new Walker { r = r, a = a, h = h, unload = false, speed = 1.6f, phase = Random.value * 6f, yaw = a.transform.eulerAngles.y };
@@ -435,6 +440,7 @@ public class LivestockTrailer : MonoBehaviour
     {
         riders.Remove(r);
         Animal a = r.a;
+        Vector3 sc0; if (scale0.TryGetValue(a, out sc0)) { a.transform.localScale = sc0; scale0.Remove(a); }
         if (a.transform.parent != null) a.transform.SetParent(null, true);
         Vector3 p = a.transform.position; p.y = Ground(p); a.transform.position = p;
         a.transform.rotation = Quaternion.Euler(0f, a.transform.eulerAngles.y, 0f);
@@ -526,7 +532,7 @@ public class LivestockTrailer : MonoBehaviour
     // ---------------- per frame ----------------
     void Update()
     {
-        float dt = Mathf.Min(Time.deltaTime, 0.1f);
+        float dt = Mathf.Min(Time.deltaTime, 0.34f);
         if (tr == null) return;
         // gate: closes itself when the truck pulls away (animals still walking are put where they were going)
         if (gateWant > 0.5f && !Parked && (tr.Speed > 1.5f || (tr.Hitched && tr.tower != null && tr.tower.Speed > 1.5f)))

@@ -151,6 +151,96 @@ public static class BuildScript
         Debug.Log("BuildScript: Windows player settings (Mono, D3D11 + GLCore, fullscreen window at native resolution)");
     }
 
+    // ffu35: Android APK for sideloading (Bill's Pixel 9) - Unity -batchmode -buildTarget Android -executeMethod
+    // BuildScript.BuildAndroid. IL2CPP + ARM64 only (Pixel 9 runs 64-bit apps only; Mono can't target ARM64), OpenGL ES 3
+    // (the same shader path as WebGL 2), landscape, package com.similarize.fourfroggies, "Four Froggies". Signed with the
+    // keystore named by FF_KEYSTORE / FF_KEYSTORE_PASS / FF_KEY_ALIAS (set by the workflow), else Unity's debug key.
+    // Output build/Android/FourFroggies.apk (the workflow copies web/real, realroom, audio into Assets/StreamingAssets and
+    // web/audio/*.ogg into Assets/Resources/FFMusic first).
+    public static void BuildAndroid()
+    {
+        int code = 1;
+        try { code = RunAndroid(); }
+        catch (Exception e) { Debug.LogError("BUILD_SCRIPT_EXCEPTION: " + e); code = 2; }
+        Debug.Log("BUILD_SCRIPT_EXIT: " + code);
+        EditorApplication.Exit(code);
+    }
+
+    static int RunAndroid()
+    {
+        Debug.Log("BuildScript: Android start, Unity " + Application.unityVersion);
+        if (EditorUserBuildSettings.activeBuildTarget != BuildTarget.Android)
+            EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.Android, BuildTarget.Android);
+        SetInputHandler();
+        ConfigurePlayer();
+        ConfigureAndroid();
+        EnsureFolder("Assets", "Generated");
+        EnsureFolder("Assets", "Scenes");
+        ImportNativeMusic();
+        string scene = CreateScene();
+        EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(scene, true) };
+        AssetDatabase.SaveAssets();
+        EditorUserBuildSettings.buildAppBundle = false;
+        EditorUserBuildSettings.exportAsGoogleAndroidProject = false;
+        var opts = new BuildPlayerOptions
+        {
+            scenes = new[] { scene },
+            locationPathName = "build/Android/FourFroggies.apk",
+            target = BuildTarget.Android,
+            targetGroup = BuildTargetGroup.Android,
+            options = BuildOptions.None
+        };
+        BuildReport report = BuildPipeline.BuildPlayer(opts);
+        BuildSummary s = report.summary;
+        Debug.Log("BUILD_RESULT: " + s.result + " target=Android errors=" + s.totalErrors + " warnings=" + s.totalWarnings + " size=" + s.totalSize + " time=" + s.totalTime);
+        if (s.result != BuildResult.Succeeded)
+        {
+            foreach (var step in report.steps)
+                foreach (var m in step.messages)
+                    if (m.type == LogType.Error || m.type == LogType.Exception)
+                        Debug.Log("BUILD_ERROR: " + m.content);
+            return 1;
+        }
+        return 0;
+    }
+
+    static void ConfigureAndroid()
+    {
+        PlayerSettings.productName = "Four Froggies";
+        PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.Android, "com.similarize.fourfroggies");
+        PlayerSettings.SetScriptingBackend(BuildTargetGroup.Android, ScriptingImplementation.IL2CPP);
+        PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
+        PlayerSettings.SetManagedStrippingLevel(BuildTargetGroup.Android, ManagedStrippingLevel.Low);   // same as the WebGL (IL2CPP) build
+        PlayerSettings.SetUseDefaultGraphicsAPIs(BuildTarget.Android, false);
+        PlayerSettings.SetGraphicsAPIs(BuildTarget.Android, new[] { GraphicsDeviceType.OpenGLES3 });
+        PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel26;
+        PlayerSettings.Android.targetSdkVersion = AndroidSdkVersions.AndroidApiLevelAuto;
+        PlayerSettings.defaultInterfaceOrientation = UIOrientation.AutoRotation;
+        PlayerSettings.allowedAutorotateToPortrait = false;
+        PlayerSettings.allowedAutorotateToPortraitUpsideDown = false;
+        PlayerSettings.allowedAutorotateToLandscapeLeft = true;
+        PlayerSettings.allowedAutorotateToLandscapeRight = true;
+        PlayerSettings.Android.startInFullscreen = true;
+        PlayerSettings.Android.forceInternetPermission = true;
+        PlayerSettings.runInBackground = false;
+        string run = Environment.GetEnvironmentVariable("GITHUB_RUN_NUMBER");
+        int vc; if (!int.TryParse(run, out vc)) vc = 1;
+        PlayerSettings.Android.bundleVersionCode = vc;
+        PlayerSettings.bundleVersion = "1.0." + vc;
+        string ks = Environment.GetEnvironmentVariable("FF_KEYSTORE");
+        if (!string.IsNullOrEmpty(ks) && System.IO.File.Exists(ks))
+        {
+            PlayerSettings.Android.useCustomKeystore = true;
+            PlayerSettings.Android.keystoreName = ks;
+            PlayerSettings.Android.keystorePass = Environment.GetEnvironmentVariable("FF_KEYSTORE_PASS") ?? "";
+            PlayerSettings.Android.keyaliasName = Environment.GetEnvironmentVariable("FF_KEY_ALIAS") ?? "fourfroggies";
+            PlayerSettings.Android.keyaliasPass = Environment.GetEnvironmentVariable("FF_KEYSTORE_PASS") ?? "";
+            Debug.Log("BuildScript: Android signing with keystore " + System.IO.Path.GetFileName(ks) + " alias " + PlayerSettings.Android.keyaliasName);
+        }
+        else { PlayerSettings.Android.useCustomKeystore = false; Debug.Log("BuildScript: Android signing with the Unity debug key"); }
+        Debug.Log("BuildScript: Android player settings (IL2CPP ARM64, GLES3, landscape, com.similarize.fourfroggies, versionCode " + vc + ")");
+    }
+
     // web/audio/*.ogg is copied to Assets/Resources/FFMusic by the Windows workflow only: stream them from disk
     static void ImportNativeMusic()
     {

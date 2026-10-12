@@ -595,7 +595,8 @@ public partial class Game : MonoBehaviour
             "Rally: figure-8 with a bridge, jumps, and a loop lane west of the garage (keep the throttle on).  Pond: boat gate course - start at gate 1.\n" +
             (Worlds.UnderwaterOn ? "Pond dock: A at the submarine dives. Underwater: L-stick drive, RT up, LT down, A swim out in scuba (A / RT up, B / LT down), A by the sub climbs back in, surface + keep rising = ranch.\n" : "") +
             (Worlds.SpaceOn ? "Starship pad: A launches (3 s countdown + liftoff; A / FIRE skips). Space: D-pad < > target, X auto-transfer, LB / RB warp, RT boost, LT brake, Y land (Earth, Mars, Callisto).  Keys: T G Z C F.\n" : "") +
-            (Worlds.StageEOn ? "Mechs: every froggy pilots its own 10 + 100-story mech (mech yard west); James & Bubbles also have a 1000-story (south edge); James alone has the trillion-story (north edge); RT / X omnigun.\n<b>Robots</b> do chores and charge at the wall jacks on their own.  Robot phone (LB / P / PHONE): pick a robot, give it a chore, send it to charge, or DRIVE IT! (normal controls, LB / P / PHONE gives it back).  DRIVE tab: pick any vehicle or a mech, then Wander / Follow me / Race track / Go to my spot / GET OUT.  MISSION tab: Mars rock run / Callisto ice run from the robot mission pad (south-west of the house) - watch its live video feed: O (keys) or Y in the phone (pad), I / B = drone or eye camera, X / FULL = full screen.\n" : "") +
+            (Worlds.StageEOn ? "Mechs: every froggy pilots its own 10 + 100-story mech (mech yard west); James & Bubbles also have a 1000-story (south edge); James alone has the trillion-story (north edge); RT / X omnigun.\n<b>Robots</b> do chores and charge at the wall jacks on their own.  Robot phone (LB / P / PHONE): pick a robot, give it a chore, send it to charge, or DRIVE IT! (normal controls, LB / P / PHONE gives it back).  DRIVE tab: pick any vehicle or a mech, then Wander / Follow me / Race track / Go to my spot / GET OUT.  MISSION tab: Mars rock run / Callisto ice run from the robot mission pad (south-west of the house) - watch its live video feed: O (keys) or Y in the phone (pad), I = drone or eye camera, X / FULL = full screen; on a pad the feed's VIEW closes it, RB makes it bigger. LB or B closes the phone.\n" : "") +
+            "Stock trailer (by the pasture fence): A at its gate opens it, then loads the nearest cow or horse; A next to a cow = lead it; ride a horse to the gate + A. Tow it anywhere, open the gate - they graze there.\n" +
             "House: walk into the front door. Inside, A at a fish tank feeds it, the toy box starts fetch with Germy + Daisy, the cat bed starts hide-and-seek, A near Dad to chat.\n" +
             "<b>Online</b> (lobby): HOST (X / H / tap) shows a room code, friends press JOIN (Y / J / tap) and type it. Each device plays one froggy; names over the froggies; stage changes follow the host.\n" +
             "Back / V switches Shared and Split view.  Start / H closes this.  B / Esc here leaves your seat (online: leaves the room)."; } }
@@ -690,8 +691,7 @@ public partial class Game : MonoBehaviour
     bool IsGhostDev(Gamepad pad) { return pad == null || ghosts.Contains(pad.deviceId) || PadGuard.IsAlias(pad); }
 
     // ffu35: accepted join presses (PadGuard: an explicit A / Start, 150 ms after the press, not a mirror). A froggy whose
-    // pad was lost is re-bound first (same model preferred); a same-model pad that appears while a bound pad has gone
-    // silent re-binds that froggy (a reconnect under a new id) instead of adding a second froggy.
+    // pad was lost (removed / disconnected) is re-bound first (same model preferred) instead of adding a second froggy.
     void PadJoins()
     {
         Gamepad jp;
@@ -700,10 +700,8 @@ public partial class Game : MonoBehaviour
             if (FindPad(jp) != null) continue;
             Slot orphan = null;
             foreach (var s in slots) if (s.kind == InputKind.Gamepad && PadGuard.IsRemoved(s.pad) && (orphan == null || PadGuard.SameModel(s.pad, jp))) orphan = s;
-            if (orphan == null)
-                foreach (var s in slots)
-                    if (s.kind == InputKind.Gamepad && s.pad != null && s.pad != jp && PadGuard.SameModel(s.pad, jp) && PadGuard.AddedAt(jp) > s.joinTime
-                        && PadGuard.SilentSince(s.pad, PadGuard.AddedAt(jp), 3f)) { orphan = s; break; }
+            // (ffu35a also re-bound a froggy whose same-model pad had merely gone quiet - that let a second identical Xbox
+            // pad steal an idle player's froggy, so only a pad the browser really dropped counts as lost now)
             if (orphan != null) { Rebind(orphan, jp, "join press from a new device"); continue; }
             PadGuard.Log("join " + PadGuard.Describe(jp) + " (" + state + ")");
             Join(InputKind.Gamepad, jp);

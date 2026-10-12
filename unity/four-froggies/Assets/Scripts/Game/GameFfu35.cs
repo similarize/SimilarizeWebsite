@@ -47,13 +47,13 @@ public partial class Game
         var st = LivestockTrailer.I;
         if (st == null) { if (Time.frameCount % 120 == 0) Debug.Log("FFDEMO stock: no trailer yet"); return false; }
         if (!sfStarted) { sfStarted = true; StockSetup(f, st); }
-        float dt = Mathf.Min(Time.deltaTime, 0.1f);
+        float dt = Mathf.Min(Time.deltaTime, 0.34f);   // SwiftShader runs ~1 fps: let the demo clock keep up
         sfT += dt;
         float t = sfT;
         Transform tt = st.tr.transform;
         Vector3 back = -tt.forward; back.y = 0f; back.Normalize();
         Vector3 side = new Vector3(back.z, 0f, -back.x);
-        int ph = t < 1.5f ? 0 : t < 14f ? 1 : t < 17f ? 2 : t < 18f ? 3 : t < 27f ? 4 : t < 29f ? 5 : 6;
+        int ph = t < 1.5f ? 0 : t < 18f ? 1 : t < 21f ? 2 : t < 22f ? 3 : t < 31f ? 4 : t < 33f ? 5 : 6;
         if (ph != sfPhase)
         {
             sfPhase = ph;
@@ -178,7 +178,7 @@ public partial class Game
         var o = new PIn();
         if (sfTruck == null || sfPhase != 4) return o;
         float fs = sfTruck.ForwardSpeed;
-        if (sfT > 25.5f) { o.brake = fs > 0.3f ? 1f : 0f; return o; }
+        if (sfT > 29.5f) { o.brake = fs > 0.3f ? 1f : 0f; return o; }
         float e = 5f - fs;
         o.gas = Mathf.Clamp(e * 0.35f, 0f, 1f); o.brake = Mathf.Clamp(-e * 0.3f, 0f, 1f);
         return o;
@@ -189,8 +189,9 @@ public partial class Game
     {
         demoHook = null;
         if (sfTruck == null) return;
-        Vector3 dest = TrailerBarn.Built ? TrailerBarn.Centre + new Vector3(10f, 0f, -(TrailerBarn.Dp * 0.5f + 13f)) : st.tr.transform.position + new Vector3(60f, 0f, 0f);
-        SfPlace(sfTruck, dest, 90f);
+        // truck facing west on the apron, so the trailer (and the drop spot behind its gate) is east of the barn, clear of the track
+        Vector3 dest = TrailerBarn.Built ? TrailerBarn.Centre + new Vector3(6f, 0f, -(TrailerBarn.Dp * 0.5f + 12f)) : st.tr.transform.position + new Vector3(60f, 0f, 0f);
+        SfPlace(sfTruck, dest, 270f);
         if (st.tr.Hitched) st.tr.PlaceBehind(sfTruck);
         Physics.SyncTransforms();
         sfDest = dest; sfMoved = true;
@@ -244,8 +245,12 @@ public partial class Game
         Check("mirror pressing A with pad A (same frame x3): no extra froggy", PadSlots() == basePads + 1 && FindPad(M) == null, "pad slots " + PadSlots() + " mirrorAlias " + PadGuard.IsAlias(M));
         yield return Press(A, GamepadButton.South, M, 2);
         yield return Settle(0.4f);
-        yield return Press(A, GamepadButton.Start, M, 1);
+        yield return Press(A, GamepadButton.Start, M, 1);   // Start on the real pad opens the pause / help menu ...
         yield return Settle(0.4f);
+        bool helpOnce = help;
+        yield return Press(A, GamepadButton.Start);          // ... and Start closes it again (the mirror's Start didn't double-toggle it)
+        yield return Settle(0.4f);
+        Check("pause menu: Start opens, Start closes (mirror didn't double-toggle)", helpOnce && !help);
         yield return Press(A, GamepadButton.LeftShoulder, M, 0);   // phone open + close by the same physical press stays sane
         yield return Settle(0.3f);
         if (RobotPhone.I != null && RobotPhone.I.open) RobotPhone.I.Close(null, "test reset");
