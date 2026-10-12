@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.InputSystem;
 
 // ffu20: live video feed from a robot (Bill: "we should be able to watch their video feed as they're doing that").
 // A render-texture camera (sized to the panel's real on-screen pixels, capped lower on phones) shows the robot's own
@@ -7,7 +8,10 @@ using UnityEngine.UI;
 // picture-in-picture panel top-left or full screen, with the mission status (phase, battery, distance) overlaid.
 // DRONE cam = chase camera (ship hull / chase cam during the flight), EYE cam = the robot's head / cockpit window.
 // Keys: O = feed off / PiP / full screen, I = drone / eye cam, Esc = back to PiP. Gamepad: in the phone, Y watch,
-// X full screen, B camera. Touch / mouse: CAM, FULL, X on the panel; tap the picture = full screen / back.
+// X full screen. Touch / mouse: CAM, FULL, X on the panel; tap the picture = full screen / back.
+// ffu35 pad controls on the panel itself, for ANY player's pad: View (Back) tap = close, RB = bigger / smaller (on foot /
+// full screen; in a vehicle RB keeps its vehicle job, so hold View 0.5 s = bigger / smaller there), full screen: B = back
+// to the small panel, X = drone / eye camera. The hint under the panel shows pad glyphs when a pad player is in.
 public class RobotFeed : MonoBehaviour
 {
     public static RobotFeed I;
@@ -25,6 +29,10 @@ public class RobotFeed : MonoBehaviour
     WorldId camWorldSet = (WorldId)(-1);
     Vector3 cpos; Quaternion crot; bool snap = true;
     Robot lastRobot;
+    Text hintT; Image hintBg;
+    Gamepad viewPad; float viewDownT; int viewDownF; bool viewHoldDone;
+    public static int PadCloses, PadSizes;
+    public string HintText { get { return hintT != null ? hintT.text : ""; } }
 
     public static bool Watching(Robot r) { return I != null && I.mode > 0 && I.robot == r; }
     public static bool WatchingWorld(WorldId w) { return I != null && I.mode > 0 && I.robot != null && I.robot.world == w; }
@@ -59,6 +67,14 @@ public class RobotFeed : MonoBehaviour
         fullBtn = Btn("FULL", -74f, out fullLbl);
         Text x; closeBtn = Btn("X", -22f, out x);
         closeBtn.rectTransform.sizeDelta = new Vector2(34f, 26f);
+        hintBg = UIK.Img(box, UIK.Round, new Color(0f, 0f, 0f, 0.6f), new Vector2(0f, 0f), new Vector2(0f, -18f), new Vector2(400f, 26f));
+        hintBg.type = Image.Type.Sliced;
+        hintBg.rectTransform.anchorMin = new Vector2(0f, 0f); hintBg.rectTransform.anchorMax = new Vector2(1f, 0f);
+        hintBg.rectTransform.pivot = new Vector2(0.5f, 1f);
+        hintBg.rectTransform.offsetMin = new Vector2(0f, -32f); hintBg.rectTransform.offsetMax = new Vector2(0f, -6f);
+        hintT = UIK.Label(hintBg.transform, "", 14, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, Color.white);
+        UIK.Stretch(hintT.rectTransform);
+        hintT.supportRichText = true; hintT.resizeTextForBestFit = true; hintT.resizeTextMinSize = 9; hintT.resizeTextMaxSize = 14;
         box.gameObject.SetActive(false);
         var cg = new GameObject("Robot feed cam");
         cam = cg.AddComponent<Camera>();
@@ -98,6 +114,53 @@ public class RobotFeed : MonoBehaviour
     public void ToggleFull() { Show(DefaultRobot(), mode == 2 ? 1 : 2); }
     public void ToggleCam() { eye = !eye; snap = true; Sfx.Play(Sfx.Click, 0.5f); }
 
+    // ffu35: a pad player's buttons on the open feed (called by Game for every gamepad slot, before the phone / vehicles
+    // see the input). Returns the input with the buttons it used taken out.
+    public PIn PadFilter(Slot s, Frog f, PIn i)
+    {
+        if (mode == 0 || s == null || s.pad == null || f == null) { if (s != null && viewPad == s.pad) viewPad = null; return i; }
+        if (RobotPhone.I != null && RobotPhone.I.open && RobotPhone.I.user == f) return i;   // the phone drives the feed (Y / X)
+        Gamepad p = s.pad;
+        float now = Time.unscaledTime;
+        if (p.selectButton.wasPressedThisFrame) { viewPad = p; viewDownT = now; viewDownF = Time.frameCount; viewHoldDone = false; }
+        if (viewPad == p)
+        {
+            if (p.selectButton.isPressed && !viewHoldDone && now - viewDownT > 0.5f && Time.frameCount - viewDownF >= 4) { viewHoldDone = true; ToggleFull(); PadSizes++; Debug.Log("RobotFeed: pad hold View -> " + ModeName); }
+            if (!p.selectButton.isPressed) { if (!viewHoldDone) { Show(null, 0); PadCloses++; Debug.Log("RobotFeed: closed by pad View (" + f.nick + ")"); } viewPad = null; }
+        }
+        i.view = false;   // View belongs to the feed while it is up (no split / shared toggle)
+        bool full = mode == 2;
+        if ((full || f.vehicle == null) && p.rightShoulder.wasPressedThisFrame)
+        {
+            ToggleFull(); PadSizes++; Debug.Log("RobotFeed: pad RB -> " + ModeName);
+            i.warpUp = false; i.alt = false; i.mslFire = false;
+        }
+        if (full)
+        {
+            if (p.buttonEast.wasPressedThisFrame) { Show(null, 1); i.cargo = false; i.downHeld = false; Debug.Log("RobotFeed: pad B -> small"); }
+            if (p.buttonWest.wasPressedThisFrame) { ToggleCam(); i.auto = false; i.fire = false; i.gunFire = false; }
+        }
+        return i;
+    }
+    public string ModeName { get { return mode == 0 ? "closed" : mode == 1 ? "small" : "full screen"; } }
+
+    void Hint()
+    {
+        bool pad = false, touch = false;
+        if (Game.I != null) foreach (var s in Game.I.slots) { if (s.kind == InputKind.Gamepad) pad = true; if (s.kind == InputKind.Touch) touch = true; }
+        const string G = "<color=#ffe27a>", E = "</color>";
+        string h;
+        if (pad) h = mode == 2 ? G + "VIEW" + E + " close   " + G + "RB" + E + " / " + G + "B" + E + " smaller   " + G + "X" + E + " camera"
+                               : G + "VIEW" + E + " close   " + G + "RB" + E + " bigger  (in a vehicle: hold " + G + "VIEW" + E + ")";
+        else if (touch) h = "tap " + G + "X" + E + " close   tap the picture: " + (mode == 2 ? "smaller" : "bigger");
+        else h = mode == 2 ? G + "O" + E + " close   " + G + "Esc" + E + " smaller   " + G + "I" + E + " camera   click " + G + "X" + E + " close"
+                           : G + "O" + E + " bigger   " + G + "I" + E + " camera   click " + G + "X" + E + " close";
+        if (hintT.text != h) hintT.text = h;
+        // full screen: the hint sits on the bottom band (inside the box)
+        hintBg.rectTransform.offsetMin = mode == 2 ? new Vector2(160f, 52f) : new Vector2(0f, -32f);
+        hintBg.rectTransform.offsetMax = mode == 2 ? new Vector2(-160f, 78f) : new Vector2(0f, -6f);
+    }
+
     public bool Captures(Vector2 mp)
     {
         return mode > 0 && box.gameObject.activeInHierarchy && RectTransformUtility.RectangleContainsScreenPoint(box, mp, null);
@@ -132,6 +195,7 @@ public class RobotFeed : MonoBehaviour
             Click(UnityEngine.InputSystem.Mouse.current.position.ReadValue());
         foreach (Vector2 tp in Kb.TouchesBegan()) if (Captures(tp)) Click(tp);
         DoLayout();
+        Hint();
         PoseCamera();
         Status();
     }

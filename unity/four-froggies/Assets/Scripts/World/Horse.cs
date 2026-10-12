@@ -218,6 +218,20 @@ public class Horse : Vehicle
 
     public bool InPasture { get { Vector3 p = transform.position; return home.Contains(new Vector2(p.x, p.z)); } }
 
+    // ffu35 stock trailer: a horse dropped off somewhere else makes that spot its home (it grazes there, and walks back
+    // there - not to the pasture - if a rider leaves it out); dropped back in the pasture = the pasture again
+    Rect pastureHome; bool homeMoved;
+    public bool HomeIsPasture { get { return !homeMoved; } }
+    public Rect HomeRect { get { return home; } }
+    public void SetHome(Rect r, bool pasture)
+    {
+        if (!homeMoved && pastureHome.width <= 0f) pastureHome = home;
+        homeMoved = !pasture;
+        home = pasture && pastureHome.width > 0f ? pastureHome : r;
+        homeWalk = false; idleT = 0f;
+        Debug.Log("Horse " + index + ": home is now " + (pasture ? "the pasture" : "at " + home.center.ToString("0")));
+    }
+
     float Ground(Vector3 p)
     {
         RaycastHit h;
@@ -332,6 +346,7 @@ public class Horse : Vehicle
         float dt = Mathf.Min(Time.deltaTime, 0.05f);
         if (driver == null)
         {
+            if (stowed) return;   // ffu35: riding in the stock trailer
             aiNoMount -= dt;
             // a horse left out on the ranch grazes a while, then walks itself home through the gate
             if (!homeWalk && !InPasture && anim.enabled) { idleT += dt; if (idleT > 25f) StartHomeWalk(); }
@@ -357,10 +372,11 @@ public class Horse : Vehicle
         var o = new PIn();
         Vector3 p = transform.position;
         Vector3 gateOut = PastureGate.Outside, gateIn = PastureGate.Inside;
+        if (homeMoved) { Vector2 hc = home.center; gateOut = gateIn = new Vector3(hc.x, p.y, hc.y); homeLeg = 1; }   // ffu35: a moved home - straight there
         Vector3 goal = homeLeg == 0 ? gateOut : gateIn;
         Vector3 to = goal - p; to.y = 0f;
         if (homeLeg == 0 && to.magnitude < 2.5f) homeLeg = 1;
-        if (homeLeg == 1 && (to.magnitude < 2f || InPasture && (p.x < home.xMax - 4f)))
+        if (homeLeg == 1 && (to.magnitude < 2f || InPasture && (homeMoved || p.x < home.xMax - 4f)))
         {
             homeWalk = false;
             rb.velocity = Vector3.zero; rb.isKinematic = true; rb.interpolation = RigidbodyInterpolation.None;
@@ -560,7 +576,7 @@ public class Horse : Vehicle
         Horse best = null; float bd = maxDist * maxDist;
         foreach (var h in Herd)
         {
-            if (h == null || h.driver != null || h.rearT >= 0f || h.aiNoMount > 0f) continue;
+            if (h == null || h.driver != null || h.rearT >= 0f || h.aiNoMount > 0f || h.stowed) continue;
             float d = (h.transform.position - p).sqrMagnitude;
             if (d < bd) { bd = d; best = h; }
         }

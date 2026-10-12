@@ -187,6 +187,7 @@ public partial class Game : MonoBehaviour
             else if (IsPoolDemo(sc)) PoolDemoStart(f, sc);                   // ffu29 backyard pool float (GamePoolDemo.cs)
             else if (IsStompDemo(sc)) StompDemoStart(f, sc);                 // ffu28 mech footfalls / Optimus suit on a slope (GameStomp.cs)
             else if (IsGardenDemo(sc)) GardenDemoStart(f, sc);               // ffu32 garden retreat / horse riding (GardenDemo.cs)
+            else if (Is35(sc)) Demo35Start(f, sc);                             // ffu35 stock trailer / pad tests (GameFfu35.cs)
             else if (IsTrailerDemo(sc)) TrailerDemoStart(f, sc);             // ffu31 trailer barn / hitch / tow / bike in the toy hauler (GameTrailer.cs)
             else if (Is30(sc)) Demo30Start(f, sc);                           // ffu30 RC raceway / Cybertruck EV voice / dirt bike (Game30Demo.cs)
             else if (sc.StartsWith("lj-") || sc.StartsWith("loopdrive")) DemoLoopStart(f, sc);   // ffu19 loop joints (GameLoopDemo.cs)
@@ -213,6 +214,7 @@ public partial class Game : MonoBehaviour
         if ((sc.StartsWith("lj-") || sc.StartsWith("loopdrive")) && DemoLoopCam(f, sc, c)) return;
         if (IsStompDemo(sc)) { if (!StompDemoCam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }
         if (IsGardenDemo(sc)) { if (!GardenDemoCam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }
+        if (Is35(sc)) { if (!Demo35Cam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }
         if (IsTrailerDemo(sc)) { if (!TrailerDemoCam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }
         if (Is30(sc)) { if (!Demo30Cam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }   // ffu30
         if (IsPoolDemo(sc)) { if (!PoolDemoCam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }
@@ -684,6 +686,61 @@ public partial class Game : MonoBehaviour
         if (state == State.Play) ApplyLayout();
     }
 
+    // ffu35: a pad to ignore in menus: the old same-press ghost flag, or a PadGuard mirror of another device
+    bool IsGhostDev(Gamepad pad) { return pad == null || ghosts.Contains(pad.deviceId) || PadGuard.IsAlias(pad); }
+
+    // ffu35: accepted join presses (PadGuard: an explicit A / Start, 150 ms after the press, not a mirror). A froggy whose
+    // pad was lost is re-bound first (same model preferred); a same-model pad that appears while a bound pad has gone
+    // silent re-binds that froggy (a reconnect under a new id) instead of adding a second froggy.
+    void PadJoins()
+    {
+        Gamepad jp;
+        while ((jp = PadGuard.TakeJoin()) != null)
+        {
+            if (FindPad(jp) != null) continue;
+            Slot orphan = null;
+            foreach (var s in slots) if (s.kind == InputKind.Gamepad && PadGuard.IsRemoved(s.pad) && (orphan == null || PadGuard.SameModel(s.pad, jp))) orphan = s;
+            if (orphan == null)
+                foreach (var s in slots)
+                    if (s.kind == InputKind.Gamepad && s.pad != null && s.pad != jp && PadGuard.SameModel(s.pad, jp) && PadGuard.AddedAt(jp) > s.joinTime
+                        && PadGuard.SilentSince(s.pad, PadGuard.AddedAt(jp), 3f)) { orphan = s; break; }
+            if (orphan != null) { Rebind(orphan, jp, "join press from a new device"); continue; }
+            PadGuard.Log("join " + PadGuard.Describe(jp) + " (" + state + ")");
+            Join(InputKind.Gamepad, jp);
+        }
+    }
+
+    void Rebind(Slot s, Gamepad pad, string why)
+    {
+        PadGuard.Log("REBIND P" + (slots.IndexOf(s) + 1) + " (" + frogs[s.frog].nick + ") from " + PadGuard.Describe(s.pad) + " to " + PadGuard.Describe(pad) + " - " + why);
+        s.pad = pad;
+        s.joinTime = Time.unscaledTime;
+        frogs[s.frog].Toast("Controller reconnected", 2f);
+    }
+
+    // ffu35: per-frame pad housekeeping - a removed pad's mirror takes over its froggy; a mirror that somehow got its
+    // own froggy (both playing) gives it up
+    void PadTick()
+    {
+        Gamepad now, old, alias, root;
+        while (PadGuard.TakePromotion(out now, out old))
+        {
+            Slot s = FindPad(old);
+            if (s != null && FindPad(now) == null) Rebind(s, now, "old device removed, its mirror lives on");
+        }
+        while (PadGuard.TakeMerge(out alias, out root))
+        {
+            Slot sa = FindPad(alias), sr = FindPad(root);
+            if (sa != null && sr != null)
+            {
+                PadGuard.Log("MERGE: P" + (slots.IndexOf(sa) + 1) + " (" + frogs[sa.frog].nick + ") was driven by a mirror of P" + (slots.IndexOf(sr) + 1) + "'s controller - removed");
+                frogs[sr.frog].Toast("Same controller seen twice - merged into one froggy", 3f);
+                Leave(sa);
+            }
+            else if (sa != null && sr == null) { sa.pad = root; PadGuard.Log("MERGE: P" + (slots.IndexOf(sa) + 1) + " now reads the root device #" + root.deviceId); }
+        }
+    }
+
     // A pad press is a ghost if another, already-joined pad reported an identical press within 150 ms.
     bool IsGhostPress(Gamepad pad)
     {
@@ -721,6 +778,10 @@ public partial class Game : MonoBehaviour
     void Update()
     {
         float dt = Time.deltaTime;
+        PadGuard.Assigned = p => FindPad(p) != null;   // ffu35: ghost / duplicate pad guard, before anybody reads a pad
+        PadGuard.GraceOn = state == State.Play;
+        PadGuard.Tick();
+        PadTick();
         touch.active = state == State.Play && FindSlot(InputKind.Touch) != null && !help && !StoryBlocksTouch;
         if (state == State.Play) ApplyNames();
         if (state == State.Lobby) UpdateLobby(dt);
@@ -774,7 +835,7 @@ public partial class Game : MonoBehaviour
         foreach (Gamepad pad in Gamepad.all)
         {
             Slot ps = FindPad(pad);
-            bool g = ghosts.Contains(pad.deviceId);
+            bool g = IsGhostDev(pad);
             if (ps != null && !g)
             {
                 if (pad.buttonEast.wasPressedThisFrame) { Leave(ps); continue; }
@@ -786,9 +847,10 @@ public partial class Game : MonoBehaviour
             if (pad.selectButton.wasPressedThisFrame && !g) ToggleView();
             if (!pad.buttonSouth.wasPressedThisFrame && !pad.startButton.wasPressedThisFrame) continue;
             if (IsGhostPress(pad) && ps == null) continue;
-            if (ps == null) Join(InputKind.Gamepad, pad);
-            else if (now - ps.joinTime > 0.4f) { StartPlay(); return; }
+            if (ps == null) continue;   // ffu35: joins go through PadGuard (order-independent mirror check, PadJoins below)
+            if (!g && now - ps.joinTime > 0.4f) { StartPlay(); return; }
         }
+        PadJoins();
 
         // touch
         if (Application.isMobilePlatform && !mobileAutoJoined && FindSlot(InputKind.Touch) == null && slots.Count == 0)
@@ -897,7 +959,7 @@ public partial class Game : MonoBehaviour
     {
         foreach (Gamepad pad in Gamepad.all)
         {
-            if (pad == null || ghosts.Contains(pad.deviceId)) continue;
+            if (pad == null || IsGhostDev(pad)) continue;
             if (which == 1 && pad.buttonEast.wasPressedThisFrame) return true;
             if (which == 2 && pad.rightStickButton.wasPressedThisFrame) return true;
             if (which == 3 && pad.leftStickButton.wasPressedThisFrame) return true;
@@ -948,7 +1010,7 @@ public partial class Game : MonoBehaviour
     {
         foreach (Gamepad pad in Gamepad.all)
         {
-            if (pad == null || ghosts.Contains(pad.deviceId)) continue;
+            if (pad == null || IsGhostDev(pad)) continue;
             if (pad.buttonWest.wasPressedThisFrame) { PressHost(InputKind.Gamepad, pad); return true; }
             if (pad.buttonNorth.wasPressedThisFrame) { PressJoin(InputKind.Gamepad, pad); return true; }
             if (pad.rightShoulder.wasPressedThisFrame) { PressName(InputKind.Gamepad, pad); return true; }
@@ -1106,14 +1168,9 @@ public partial class Game : MonoBehaviour
         float now = Time.unscaledTime;
         bool viewPressed = false, helpPressed = false;
 
-        // mid-game joins: an unbound pad presses A / Start, Enter on the keyboard, a tap on a touch screen
-        foreach (Gamepad pad in Gamepad.all)
-        {
-            if (FindPad(pad) != null) continue;
-            if (!pad.buttonSouth.wasPressedThisFrame && !pad.startButton.wasPressedThisFrame) continue;
-            if (IsGhostPress(pad)) continue;
-            Join(InputKind.Gamepad, pad);
-        }
+        // mid-game joins: an unbound pad presses A / Start (ffu35: through PadGuard - never a mirror of a playing pad,
+        // never just because a device connected; a lost pad's froggy is re-bound instead), Enter, a tap on a touch screen
+        PadJoins();
         if (FindSlot(InputKind.Keyboard) == null && Kb.EnterDown()) Join(InputKind.Keyboard, null);
         if (FindSlot(InputKind.Touch) == null && Kb.TouchesBegan().Count > 0 && Application.isMobilePlatform) Join(InputKind.Touch, null);
 
@@ -1128,6 +1185,7 @@ public partial class Game : MonoBehaviour
                     if (s.pad.buttonSouth.wasPressedThisFrame || s.pad.startButton.wasPressedThisFrame) IsGhostPress(s.pad);
                     i = Pads.Read(s.pad, dt);
                     if (help && s.pad.buttonEast.wasPressedThisFrame) { help = false; Leave(s); continue; }
+                    if (RobotFeed.I != null && !help) i = RobotFeed.I.PadFilter(s, frogs[s.frog], i);   // ffu35: live feed on the pad (View / RB / B)
                     break;
                 case InputKind.Keyboard:
                     // ffu15: right mouse (mech aim) locks too; clicks on the robot phone / space radar keep the cursor free
@@ -1147,7 +1205,13 @@ public partial class Game : MonoBehaviour
             {
                 Frog pf = frogs[s.frog];
                 pf.inputKind = s.kind;
-                if (i.phone && RobotPhone.I != null && (RobotPhone.Ok(pf) || pf.remote != null) && !(pf.vehicle != null && s.kind == InputKind.Gamepad)) RobotPhone.I.Toggle(pf);   // ffu27: every world (LB stays boost / warp in vehicles)
+                if (i.phone && RobotPhone.I != null)
+                {
+                    // ffu35: closing the phone always works for its user (LB / P / PHONE; B too, in Handle) - in a vehicle,
+                    // in every world, in split screen. Opening stays on foot for pads (LB is boost / warp in vehicles).
+                    if (RobotPhone.I.open && RobotPhone.I.user == pf) RobotPhone.I.Close(pf, s.kind == InputKind.Gamepad ? "LB" : "P");
+                    else if ((RobotPhone.Ok(pf) || pf.remote != null) && !(pf.vehicle != null && s.kind == InputKind.Gamepad && pf.remote == null)) RobotPhone.I.Toggle(pf);
+                }
                 if (RobotPhone.I != null && RobotPhone.I.Handle(pf, i)) { Vector2 lk = i.look; bool v = i.view, h = i.help; i = new PIn(); i.look = lk; i.view = v; i.help = h; }
                 if (k == 0 && demoHook != null) i = demoHook(i);
                 if (pf.remote != null && !help)

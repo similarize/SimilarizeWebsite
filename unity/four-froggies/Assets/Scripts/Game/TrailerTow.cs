@@ -27,6 +27,7 @@ public static class TrailerTow
     {
         Vehicle v = f.vehicle;
         if (v == null || Trailer.All.Count == 0 || f.world != WorldId.Ranch) return false;
+        if (LivestockTrailer.DriverTick(f, input)) return true;   // ffu35: ride a horse to the stock trailer gate -> load it
         bool press = input.use || input.land;
         Trailer towing = TowedBy(v);
         if (towing != null)

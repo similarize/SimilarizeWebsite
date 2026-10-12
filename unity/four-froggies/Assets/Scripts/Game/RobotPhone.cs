@@ -225,16 +225,35 @@ public class RobotPhone : MonoBehaviour
     }
 
     // ---------- open / close ----------
+    int toggleFrame = -1;
+    public static int Opens, Closes;
     public void Toggle(Frog f)
     {
         if (f == null) return;
+        // ffu35: one phone press per frame. Two slots fed by one physical pad (a mirrored "ghost" pad) used to toggle it
+        // twice in one frame - open for the ghost froggy, then open again for the real one - so LB never closed it.
+        if (Time.frameCount == toggleFrame) return;
+        toggleFrame = Time.frameCount;
         if (f.remote != null) { f.remote.ReleaseManual(true); return; }
         if (!Ok(f)) return;
+        if (open && user == f) { Close(f, "toggle"); return; }
         open = !open || user != f;
+        if (open) Opens++;
+        Debug.Log("RobotPhone: open for " + f.nick + " (" + f.inputKind + ")");
         user = f;
         if (open) { BuildCalls(f); if (f.world != WorldId.Ranch) { tab = 4; cur = 4; msg.text = "CALL a froggy - or everyone - to you"; } }
         Sfx.Play(Sfx.Click, 0.7f);
-        if (open) f.Toast("Robot phone: Up/Down robot, Left/Right orders, A send, LB / P close", 3f);
+        if (open) f.Toast(f.inputKind == InputKind.Gamepad ? "Robot phone: stick picks, A sends - LB or B closes" : f.inputKind == InputKind.Touch ? "Robot phone: tap PHONE to close" : "Robot phone: W/S robot, A/D order, E send - P closes", 3f);
+    }
+
+    // ffu35: always closes for its user, whatever world / vehicle / split screen (LB, B, P, the PHONE button)
+    public void Close(Frog f, string why)
+    {
+        if (!open) return;
+        toggleFrame = Time.frameCount;
+        open = false; Closes++;
+        Sfx.Play(Sfx.Click, 0.6f, 0.9f);
+        Debug.Log("RobotPhone: closed (" + why + ") by " + (f != null ? f.nick : "?"));
     }
 
     // ffu27 (Bill: "wherever James goes, his phone goes with him"): the phone works in every world - Mars, Callisto,
@@ -301,7 +320,7 @@ public class RobotPhone : MonoBehaviour
             if (i.warpUp) { tab = (tab + 1) % NT; cur = tab; Sfx.Play(Sfx.Click, 0.4f); }          // RB next tab
             if (i.land) Do(f, "feed");                                                          // Y
             if (i.auto) Do(f, "feedfull");                                                      // X
-            if (i.cargo) Do(f, "feedcam");                                                      // B
+            if (i.cargo) { Close(f, "B"); return true; }                                        // ffu35: B closes (was feed camera)
         }
         return true;
     }
@@ -507,7 +526,7 @@ public class RobotPhone : MonoBehaviour
             itemBtns[i].color = c;
         }
         InputKind ik = user != null ? user.inputKind : InputKind.Keyboard;
-        string h = ik == InputKind.Gamepad ? "Up/Down robot · Left/Right order · A send · RB tab · Y feed · X full · B cam · LB close"
+        string h = ik == InputKind.Gamepad ? "Up/Down robot · Left/Right order · A send · RB tab · Y feed · X full · LB / B close"
                  : ik == InputKind.Touch ? "Swipe the robot · tap a tab, then an order · PHONE closes"
                  : "W/S robot · A/D order · E/Enter/click send · O feed · I cam · P close";
         if (hint.text != h) hint.text = h;

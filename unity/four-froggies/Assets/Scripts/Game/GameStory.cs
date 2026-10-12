@@ -72,7 +72,7 @@ public partial class Game
         if (storyBtn == null || !storyBtn.gameObject.activeInHierarchy) return false;
         if (Net.I != null && Net.I.Online) return false;
         foreach (Gamepad pad in Gamepad.all)
-            if (pad != null && !ghosts.Contains(pad.deviceId) && pad.leftShoulder.wasPressedThisFrame) { PressStory(InputKind.Gamepad, pad); return true; }
+            if (pad != null && !IsGhostDev(pad) && pad.leftShoulder.wasPressedThisFrame) { PressStory(InputKind.Gamepad, pad); return true; }
         var k = Keyboard.current;
         if (k != null && !Kb.typing && k.sKey.wasPressedThisFrame) { PressStory(InputKind.Keyboard, null); return true; }
         foreach (Vector2 pos in Kb.TouchesBegan()) if (Hit(storyBtn, pos)) { lastTouchTime = Time.unscaledTime; PressStory(InputKind.Touch, null); return true; }
