@@ -388,7 +388,7 @@ public partial class Game
         if (state == State.Play) return;
         SetSeatChar(s.frog, c, true);
         Sfx.Play(Sfx.Select, 0.6f, 0.9f + c * 0.03f);
-        if (slots.IndexOf(s) == 0) PlayerPrefs.SetInt("ff.char", c);
+        if (slots.IndexOf(s) == 0) SaveStore.SetInt("ff.char", c);
         FixAiChars();
         if (Net.I != null && Net.I.IsHost) Net.I.CharsChanged();
     }

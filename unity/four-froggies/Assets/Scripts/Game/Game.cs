@@ -134,7 +134,7 @@ public partial class Game : MonoBehaviour
     {
         if (demoT < 0f)
         {
-            string u = Application.absoluteURL ?? "";
+            string u = FFPlatform.PageUrl;
             demoT = u.Contains("ffdemo") ? 0.01f : 0f;
             int k = u.IndexOf("ffshot=");
             if (k >= 0) { demoShot = u.Substring(k + 7); int e = demoShot.IndexOfAny(new[] { '&', '#' }); if (e >= 0) demoShot = demoShot.Substring(0, e); }
@@ -647,10 +647,10 @@ public partial class Game : MonoBehaviour
         var s = new Slot { kind = kind, pad = pad, frog = frog, joinTime = Time.unscaledTime };
         slots.Add(s);
         frogs[frog].human = true;
-        if (slots.Count == 1) { string saved = Net.CleanName(PlayerPrefs.GetString("ff.name", "")); if (saved != null) s.name = saved; }   // ffu13: remembered name
+        if (slots.Count == 1) { string saved = Net.CleanName(SaveStore.GetString("ff.name", "")); if (saved != null) s.name = saved; }   // ffu13: remembered name
         if (slots.Count == 1 && !(Net.I != null && Net.I.IsGuest))
         {
-            int sc = PlayerPrefs.GetInt("ff.char", -1);   // ffu14: remembered character
+            int sc = SaveStore.GetInt("ff.char", -1);   // ffu14: remembered character
             if (Roster.Valid(sc) && !CharHeldByHuman(sc, frog)) SetSeatChar(frog, sc, false);
         }
         FixAiChars();
@@ -742,8 +742,9 @@ public partial class Game : MonoBehaviour
         UrlNet();
         if (NetButtons()) { OrbitLobby(dt); RefreshLobby(); return; }
         if (StoryLobbyInput()) return;   // ffu22 STORY button
-        if (Kb.CDown()) CreditsToggle();
-        if (creditsPanel != null && creditsPanel.gameObject.activeSelf && (Kb.EscDown() || Kb.TouchesBegan().Count > 0 || Kb.MouseLeftDown())) { CreditsToggle(false); return; }
+        if (Kb.CDown() || LobbyPadPressed(2)) CreditsToggle();
+        if (creditsPanel != null && creditsPanel.gameObject.activeSelf && (Kb.EscDown() || Kb.TouchesBegan().Count > 0 || Kb.MouseLeftDown() || LobbyPadPressed(1))) { CreditsToggle(false); return; }
+        if (LobbyPadPressed(3)) Sfx.CycleVolume();   // ffu34: L3 = SOUND on a controller (M key / SOUND button elsewhere)
         if (DemoLobby()) return;
         Sfx.Music("lobby");
         overview.enabled = true;
@@ -891,6 +892,19 @@ public partial class Game : MonoBehaviour
         return s;
     }
 
+    // ffu34 controller-first lobby: 1 = B (closes CREDITS), 2 = R3 (CREDITS), 3 = L3 (SOUND), on any real pad
+    bool LobbyPadPressed(int which)
+    {
+        foreach (Gamepad pad in Gamepad.all)
+        {
+            if (pad == null || ghosts.Contains(pad.deviceId)) continue;
+            if (which == 1 && pad.buttonEast.wasPressedThisFrame) return true;
+            if (which == 2 && pad.rightStickButton.wasPressedThisFrame) return true;
+            if (which == 3 && pad.leftStickButton.wasPressedThisFrame) return true;
+        }
+        return false;
+    }
+
     void PressHost(InputKind kind, Gamepad pad)
     {
         if (Time.unscaledTime - lastNetBtn < 0.4f) return;
@@ -923,7 +937,7 @@ public partial class Game : MonoBehaviour
         keypad.Open(true, s.name, n =>
         {
             s.name = n;
-            PlayerPrefs.SetString("ff.name", n);
+            SaveStore.SetString("ff.name", n);
             ApplyNames();
             if (Net.I != null) Net.I.LocalChanged();
         }, null);
@@ -966,7 +980,7 @@ public partial class Game : MonoBehaviour
 
     static string UrlParam(string key)
     {
-        string u = Application.absoluteURL ?? "";
+        string u = FFPlatform.PageUrl;
         int q = u.IndexOf('?');
         if (q < 0) return null;
         foreach (string kv in u.Substring(q + 1).Split('&', '#'))
@@ -986,7 +1000,7 @@ public partial class Game : MonoBehaviour
         string room = UrlParam("room"), host = UrlParam("ffhost"), nm = UrlParam("ffname"), fr = UrlParam("fffrog"), fc = UrlParam("ffchar");
         if (room == null && host == null && nm == null && fr == null && fc == null)
         {
-            string saved = PlayerPrefs.GetString("ff.name", "");
+            string saved = SaveStore.GetString("ff.name", "");
             if (slots.Count > 0 && Net.CleanName(saved) != null) slots[0].name = Net.CleanName(saved);
             return;
         }
@@ -998,7 +1012,7 @@ public partial class Game : MonoBehaviour
         int fci;
         if (fc != null && int.TryParse(fc, out fci) && Roster.Valid(fci)) PickChar(s, fci);
         if (nm != null) { string c = Net.CleanName(nm); if (c != null) s.name = c; else Debug.Log("NET name rejected: " + nm); }
-        else { string saved = Net.CleanName(PlayerPrefs.GetString("ff.name", "")); if (saved != null) s.name = saved; }
+        else { string saved = Net.CleanName(SaveStore.GetString("ff.name", "")); if (saved != null) s.name = saved; }
         ApplyNames();
         if (host != null) Net.I.Host(host);
         else if (room != null) Net.I.Join(room);

@@ -65,7 +65,7 @@ public static class Realism
     // Bootstrap, right after Look.Init (needs Look.Mobile) and before Worlds.Init (which captures sky / fog / sun)
     public static void Detect(Light sun)
     {
-        string u = Application.absoluteURL ?? "";
+        string u = FFPlatform.PageUrl;
         string v = Param(u, "realism");
         // ffu23: the realistic pond is part of the game now - on unless ?realism=0 (off / false)
         On = v == null || (v != "0" && v != "off" && v != "false");
@@ -174,17 +174,11 @@ public static class Realism
     }
 
     // ---------------- streaming the scans ----------------
-    static string BaseUrl()
-    {
-        string u = Application.absoluteURL ?? "";
-        int q = u.IndexOfAny(new[] { '?', '#' }); if (q >= 0) u = u.Substring(0, q);
-        int s = u.LastIndexOf('/'); if (s >= 0) u = u.Substring(0, s + 1);
-        return u + "real/";
-    }
+    static string BaseUrl() { return FFPlatform.AssetBase("real/"); }   // ffu34: StreamingAssets in a native player
 
     static IEnumerator Load(string file, string key, bool mips, bool compress, bool clampV = false)
     {
-        string url = BaseUrl() + file + "?v=r3";
+        string url = BaseUrl() + file + FFPlatform.Bust("?v=r3");
         using (var rq = UnityWebRequest.Get(url))
         {
             yield return rq.SendWebRequest();

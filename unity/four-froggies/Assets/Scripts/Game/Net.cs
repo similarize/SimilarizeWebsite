@@ -104,6 +104,7 @@ public class Net : MonoBehaviour
 
     public void Host(string wantCode)
     {
+        if (!FFPlatform.OnlineAvailable) { Say("Online rooms are in the web version - this build is local play: up to 4 controllers, one froggy each"); Debug.Log("NET: native player, online disabled"); return; }   // ffu34
         Leave(null);
         role = Role.Host; connected = false; playing = Game.I != null && Game.I.state == Game.State.Play;
         code = CleanCode(wantCode);
@@ -115,6 +116,7 @@ public class Net : MonoBehaviour
 
     public void Join(string c)
     {
+        if (!FFPlatform.OnlineAvailable) { Say("Online rooms are in the web version - this build is local play: up to 4 controllers, one froggy each"); Debug.Log("NET: native player, online disabled"); return; }   // ffu34
         Leave(null);
         c = CleanCode(c);
         if (c.Length < 3) { Say("Type the 4-character room code from the host's screen"); return; }

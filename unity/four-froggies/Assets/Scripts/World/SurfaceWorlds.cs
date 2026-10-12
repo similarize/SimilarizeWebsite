@@ -191,7 +191,7 @@ public class SurfaceWorlds : MonoBehaviour
         // 30 x 0.8 x 30 capsule collapses to a 15 m SPHERE (radius = 15 > height / 2) centred 6.5 m up = an invisible
         // ball filling the whole chamber, touching the floor at z ~54.5 (the end of the corridor). The roof only needs a
         // flat lid: swap it for a box (keeps low-gravity hops from leaving through the roof). &cavedome=old = the bug.
-        if (!(Application.absoluteURL ?? "").Contains("cavedome=old"))
+        if (!FFPlatform.PageUrl.Contains("cavedome=old"))
         {
             var cap = dome.GetComponent<Collider>(); if (cap != null) Object.Destroy(cap);
             var lid = dome.AddComponent<BoxCollider>(); lid.size = new Vector3(1f, 2f, 1f);

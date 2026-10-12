@@ -80,8 +80,12 @@ public class Bootstrap : MonoBehaviour
     static void SpawnVehicles()
     {
         float bz = Layout.GarageC.y;
-        VehicleFactory.Cybertruck("James's Cybertruck", G(Layout.BayX(0), bz, 0.6f), 0f, Froggies.Color(0));
-        VehicleFactory.Cybertruck("Cybertruck", G(Layout.BayX(1), bz, 0.6f), 0f, Froggies.Color(2));
+        // ffu34 canon: bay 0 = James's Cybertruck, bay 1 = Dad's (title kept "Cybertruck" for the lineup / demos);
+        // either can borrow the other's by asking first when it isn't in use (Vehicle.ownerName, Frog prompt + toast)
+        var jamesTruck = VehicleFactory.Cybertruck("James's Cybertruck", G(Layout.BayX(0), bz, 0.6f), 0f, Froggies.Color(0));
+        if (jamesTruck != null) { jamesTruck.ownerName = "James"; jamesTruck.ownerChar = 0; }
+        var dadTruck = VehicleFactory.Cybertruck("Cybertruck", G(Layout.BayX(1), bz, 0.6f), 0f, Froggies.Color(2));
+        if (dadTruck != null) dadTruck.ownerName = "Dad";
         VehicleFactory.Monster(G(Layout.BayX(2), bz, 0.8f), 0f);
         VehicleFactory.TankAt(G(Layout.BayX(3), bz, 0.6f), 0f);
         VehicleFactory.Ripsaw(G(Layout.BayX(4), bz, 0.6f), 0f);

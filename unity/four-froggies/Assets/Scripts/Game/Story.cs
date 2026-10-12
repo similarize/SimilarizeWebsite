@@ -44,7 +44,7 @@ public partial class Story : MonoBehaviour
         if (ui == null) ui = new StoryUI();
         ui.SetVisible(true);
         Active = true;
-        string u = Application.absoluteURL ?? "";
+        string u = FFPlatform.PageUrl;
         demo = u.Contains("ffdemo");
         int k = u.IndexOf("ffshot=");
         demoShot = "";
@@ -103,7 +103,7 @@ public partial class Story : MonoBehaviour
 
     static string Param(string key)
     {
-        string u = Application.absoluteURL ?? "";
+        string u = FFPlatform.PageUrl;
         int q = u.IndexOf('?');
         if (q < 0) return null;
         foreach (string kv in u.Substring(q + 1).Split('&', '#'))
@@ -119,8 +119,8 @@ public partial class Story : MonoBehaviour
     [System.Runtime.InteropServices.DllImport("__Internal")] static extern int FFStorySave(string k, string v);
     [System.Runtime.InteropServices.DllImport("__Internal")] static extern string FFStoryLoad(string k);
 #else
-    static int FFStorySave(string k, string v) { PlayerPrefs.SetString(k, v); return 1; }
-    static string FFStoryLoad(string k) { return PlayerPrefs.GetString(k, ""); }
+    static int FFStorySave(string k, string v) { SaveStore.SetString(k, v); return 1; }
+    static string FFStoryLoad(string k) { return SaveStore.GetString(k, ""); }
 #endif
     void Save()
     {

@@ -40,10 +40,11 @@ public static class Sfx
     [DllImport("__Internal")] static extern void FFAudio_Master(float v);
     [DllImport("__Internal")] static extern void FFAudio_Lowpass(float hz);
 #else
-    static void FFAudio_Init() { }
-    static void FFAudio_Play(int chan, string url, float vol, float fade) { }
-    static void FFAudio_Master(float v) { }
-    static void FFAudio_Lowpass(float hz) { }
+    // ffu34: native players (Windows) play web/audio from Resources/FFMusic (FFPlatform.cs); the editor stays silent
+    static void FFAudio_Init() { FFLocalMusic.Init(); }
+    static void FFAudio_Play(int chan, string url, float vol, float fade) { FFLocalMusic.Play(chan, url, vol, fade); }
+    static void FFAudio_Master(float v) { }   // AudioListener.volume already carries the SOUND level
+    static void FFAudio_Lowpass(float hz) { FFLocalMusic.Lowpass(hz); }
 #endif
 
     public static void Init()
@@ -55,7 +56,7 @@ public static class Sfx
         pool = new AudioSource[16];
         for (int i = 0; i < pool.Length; i++) { pool[i] = host.AddComponent<AudioSource>(); pool[i].playOnAwake = false; pool[i].spatialBlend = 0f; }
         host.AddComponent<SfxDriver>();
-        Level = Mathf.Clamp(PlayerPrefs.GetInt("ff.sound", 0), 0, 2);
+        Level = Mathf.Clamp(SaveStore.GetInt("ff.sound", 0), 0, 2);
         AudioListener.volume = Levels[Level];
         try { FFAudio_Init(); FFAudio_Master(Levels[Level]); } catch (System.Exception e) { Debug.LogWarning("FFAudio init failed: " + e.Message); }
         LoadAll();
@@ -67,7 +68,7 @@ public static class Sfx
     {
         Level = (Level + 1) % 3;
         AudioListener.volume = Levels[Level];
-        PlayerPrefs.SetInt("ff.sound", Level);
+        SaveStore.SetInt("ff.sound", Level);
         try { FFAudio_Master(Levels[Level]); } catch { }
         Play(Toggle != null ? Toggle : Click, 1f);
     }

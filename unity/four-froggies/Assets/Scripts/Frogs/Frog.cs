@@ -274,7 +274,7 @@ public partial class Frog : MonoBehaviour
             if (near.driver != null) prompt = near.Title + " - " + near.driver.nick + " is driving";
             else if (near.Wrecked && !(near is StoryMech)) prompt = near.WreckedLine;
             else if (!near.CanEnter(this)) prompt = near.DeniedLine;
-            else prompt = "A / E: " + near.EnterVerb;
+            else prompt = "A / E: " + (near.OwnedBy(this) ? near.EnterVerb : "ask " + near.ownerName + " to borrow the " + near.Title);   // ffu34 canon
         }
         if (input.use && hs != null && exitCool <= 0f)
         {
@@ -599,6 +599,7 @@ public partial class Frog : MonoBehaviour
         planar = Vector3.zero; vel = Vector3.zero;
         SetChute(false);
         v.OnEnter();
+        if (human && !netPuppet && !v.OwnedBy(this)) Toast(nick + " asked " + v.ownerName + " to borrow it - \"Sure, it's free. Drive safe!\"", 3f);   // ffu34 canon
         if (!netPuppet) Sfx.Play(Sfx.Door, 0.8f);
         if (human) Voice(true, transform.position, 0.45f);
     }

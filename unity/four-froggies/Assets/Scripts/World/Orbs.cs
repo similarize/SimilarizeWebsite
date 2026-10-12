@@ -10,7 +10,7 @@ using UnityEngine.UI;
 //  * a human froggy (on foot or in a vehicle) touching one collects it: chime (each colour its own pentatonic note),
 //    coloured sparkle burst, per-colour counter on that player's HUD (a row of coloured dots under the name);
 //    golden = fanfare + big gold burst + toast;
-//  * progress saved in PlayerPrefs (ff.orbs.n = lifetime count per colour, ff.orbs.t = which orbs are gone and when they
+//  * progress saved through SaveStore (PlayerPrefs) (ff.orbs.n = lifetime count per colour, ff.orbs.t = which orbs are gone and when they
 //    come back, wall-clock), orbs respawn after 150 s (golden 420 s);
 //  * cheap: no physics, distance checks only while a human froggy is on the ranch, animation only within 90 m.
 public class Orbs : MonoBehaviour
@@ -133,9 +133,9 @@ public class Orbs : MonoBehaviour
     {
         try
         {
-            string n = PlayerPrefs.GetString("ff.orbs.n", "");
+            string n = SaveStore.GetString("ff.orbs.n", "");
             if (n.Length > 0) { var p = n.Split(','); for (int i = 0; i < counts.Length && i < p.Length; i++) int.TryParse(p[i], out counts[i]); }
-            string t = PlayerPrefs.GetString("ff.orbs.t", "");
+            string t = SaveStore.GetString("ff.orbs.t", "");
             double now = Now;
             foreach (string e in t.Split(';'))
             {
@@ -153,9 +153,9 @@ public class Orbs : MonoBehaviour
     {
         var sb = new System.Text.StringBuilder();
         for (int i = 0; i < orbs.Count; i++) if (orbs[i].taken) sb.Append(i).Append(':').Append(orbs[i].back.ToString("0", System.Globalization.CultureInfo.InvariantCulture)).Append(';');
-        PlayerPrefs.SetString("ff.orbs.t", sb.ToString());
-        PlayerPrefs.SetString("ff.orbs.n", string.Join(",", System.Array.ConvertAll(counts, x => x.ToString())));
-        PlayerPrefs.Save();
+        SaveStore.SetString("ff.orbs.t", sb.ToString());
+        SaveStore.SetString("ff.orbs.n", string.Join(",", System.Array.ConvertAll(counts, x => x.ToString())));
+        SaveStore.Flush();
     }
 
     void Update()

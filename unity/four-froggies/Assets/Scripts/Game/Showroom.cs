@@ -23,7 +23,7 @@ using UnityEngine;
 public static class Showroom
 {
     static bool oldK, oldRead;
-    public static bool OldLook { get { if (!oldRead) { oldRead = true; string u = Application.absoluteURL ?? ""; oldK = u.Contains("lobbylight=old"); if (oldK) Debug.Log("Showroom: lobbylight=old (ffu28 look)"); } return oldK; } }
+    public static bool OldLook { get { if (!oldRead) { oldRead = true; string u = FFPlatform.PageUrl; oldK = u.Contains("lobbylight=old"); if (oldK) Debug.Log("Showroom: lobbylight=old (ffu28 look)"); } return oldK; } }
     static float reflSaved = -1f;
     static void StudioPreCull(Camera c)
     {

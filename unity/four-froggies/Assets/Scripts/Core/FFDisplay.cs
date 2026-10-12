@@ -36,7 +36,7 @@ public static class FFDisplay
     // if the frame rate can't hold ~28 fps over a 6 s window, drop once to the old 1.5x ("game-lite", logged).
     static bool lite;
     [RuntimeInitializeOnLoadMethod]
-    static void Hook() { var g = new GameObject("FFDisplayWatch"); Object.DontDestroyOnLoad(g); g.hideFlags = HideFlags.HideInHierarchy; g.AddComponent<FFDisplayWatch>(); }
+    static void Hook() { FFPlatform.NativeDisplayInit(); var g = new GameObject("FFDisplayWatch"); Object.DontDestroyOnLoad(g); g.hideFlags = HideFlags.HideInHierarchy; g.AddComponent<FFDisplayWatch>(); }
     public static void PerfTick(float dt, ref float t, ref float acc, ref int n)
     {
         if (mode != 0 || lite || !(Look.Mobile || MobileUA) || ScreenDpr <= 1.55f) { t = 0f; acc = 0f; n = 0; return; }
@@ -61,5 +61,5 @@ public static class FFDisplay
 public class FFDisplayWatch : MonoBehaviour
 {
     float t, acc; int n;
-    void Update() { FFDisplay.PerfTick(Mathf.Min(Time.unscaledDeltaTime, 0.5f), ref t, ref acc, ref n); }
+    void Update() { FFDisplay.PerfTick(Mathf.Min(Time.unscaledDeltaTime, 0.5f), ref t, ref acc, ref n); FFPlatform.NativeDisplayTick(Time.unscaledDeltaTime); }   // ffu34: F11 / cursor auto-hide (native only)
 }

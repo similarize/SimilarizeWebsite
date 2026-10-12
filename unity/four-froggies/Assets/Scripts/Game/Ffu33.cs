@@ -29,7 +29,7 @@ public class Ffu33 : MonoBehaviour
 
     public static string Url(string key)
     {
-        string u = Application.absoluteURL ?? "";
+        string u = FFPlatform.PageUrl;
         int q = u.IndexOf('?'); if (q < 0) return null;
         foreach (string kv in u.Substring(q + 1).Split('&', '#'))
         {

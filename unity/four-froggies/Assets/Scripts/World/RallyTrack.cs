@@ -59,7 +59,7 @@ public static class RallyTrack
         dirt = TexMat(tex, Color.white);
         dirtDark = TexMat(tex, new Color(0.8f, 0.72f, 0.62f));
         berm = Mats.Lit(new Color(0.42f, 0.33f, 0.22f));
-        string url = Application.absoluteURL ?? "";
+        string url = FFPlatform.PageUrl;
         Legacy = url.Contains("loopold=1");
         if (Legacy)
         {

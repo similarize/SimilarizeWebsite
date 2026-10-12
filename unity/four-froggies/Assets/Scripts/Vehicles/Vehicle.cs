@@ -20,6 +20,12 @@ public abstract class Vehicle : MonoBehaviour
     float stepT;
     public bool syncedSteps;   // ffu28: footfalls come from the walk cycle (MechStomp), not the engineKind-5 step timer
     public bool stowed;        // ffu31: locked in a toy hauler's bay (kinematic cargo) - nobody can board it until it rides out
+    // ffu34 canon (CANON.md): James and Dad each own a Cybertruck and may borrow the other's by asking first when it isn't
+    // in use (the in-use check is the usual driver check). ownerName != null = an owned ordinary vehicle; ownerChar = the
+    // owner's roster id when the owner is a playable froggy (-1 = not playable, e.g. Dad). Mechs keep their hard lock.
+    public string ownerName;
+    public int ownerChar = -1;
+    public bool OwnedBy(Frog f) { return ownerName == null || (ownerChar >= 0 && f != null && f.charId == ownerChar); }
 
     protected PIn inp;
     protected float camYawIn;

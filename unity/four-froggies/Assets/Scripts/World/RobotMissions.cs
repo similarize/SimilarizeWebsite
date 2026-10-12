@@ -8,7 +8,7 @@ using UnityEngine;
 //   walk to the pad -> up the ramp -> countdown -> ascent over the ranch -> auto-transfer through the real space world
 //   (Earth -> Mars / Callisto, live planet positions) -> powered landing beside the Mars / Callisto Starship -> walk out,
 //   collect N visible samples into a sample case -> back aboard -> launch -> transfer home -> land on the pad -> carry the
-//   case to the display tables and tip the samples onto the pile (counter, saved in PlayerPrefs).
+//   case to the display tables and tip the samples onto the pile (counter, saved through SaveStore).
 // Runs in the background with the same robot / ship logic whether anyone watches or not; worlds are only rendered (kept
 // active) while a player is there or the phone video feed (RobotFeed) is looking at them. Local per device (not synced).
 public class MissionShip : MonoBehaviour
@@ -141,7 +141,7 @@ public static class MissionSite
             tm.color = k == 0 ? new Color(1f, 0.62f, 0.42f) : new Color(0.6f, 0.92f, 1f);
             tg.AddComponent<Billboard>();
             counter[k] = tm;
-            count[k] = PlayerPrefs.GetInt(k == 0 ? "ff.marsRocks" : "ff.callistoIce", 0);
+            count[k] = SaveStore.GetInt(k == 0 ? "ff.marsRocks" : "ff.callistoIce", 0);
             for (int i = 0; i < Mathf.Min(count[k], 60); i++) AddToPile(k, Sample(k, null, i), false);
             UpdateCounter(k);
         }
@@ -210,7 +210,7 @@ public static class MissionSite
     public static void Deposit(int k)
     {
         count[k]++;
-        PlayerPrefs.SetInt(k == 0 ? "ff.marsRocks" : "ff.callistoIce", count[k]);
+        SaveStore.SetInt(k == 0 ? "ff.marsRocks" : "ff.callistoIce", count[k]);
         UpdateCounter(k);
     }
     public static int PileCount(int k) { return pile[k].Count; }

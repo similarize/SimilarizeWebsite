@@ -77,6 +77,101 @@ public static class BuildScript
         return 0;
     }
 
+    // ffu34: Windows x64 Standalone (Mono) - Unity -batchmode -buildTarget Win64 -executeMethod BuildScript.BuildWindows
+    // Same generated scene as WebGL; output build/Win64/FourFroggies.exe (the workflow adds StreamingAssets + zips it).
+    public static void BuildWindows()
+    {
+        int code = 1;
+        try
+        {
+            code = RunWindows();
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("BUILD_SCRIPT_EXCEPTION: " + e);
+            code = 2;
+        }
+        Debug.Log("BUILD_SCRIPT_EXIT: " + code);
+        EditorApplication.Exit(code);
+    }
+
+    static int RunWindows()
+    {
+        Debug.Log("BuildScript: Windows x64 start, Unity " + Application.unityVersion);
+        if (EditorUserBuildSettings.activeBuildTarget != BuildTarget.StandaloneWindows64)
+            EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.Standalone, BuildTarget.StandaloneWindows64);
+
+        SetInputHandler();
+        ConfigurePlayer();
+        ConfigureWindows();
+        EnsureFolder("Assets", "Generated");
+        EnsureFolder("Assets", "Scenes");
+        ImportNativeMusic();
+
+        string scene = CreateScene();
+        EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(scene, true) };
+        AssetDatabase.SaveAssets();
+
+        var opts = new BuildPlayerOptions
+        {
+            scenes = new[] { scene },
+            locationPathName = "build/Win64/FourFroggies.exe",
+            target = BuildTarget.StandaloneWindows64,
+            targetGroup = BuildTargetGroup.Standalone,
+            options = BuildOptions.None
+        };
+        BuildReport report = BuildPipeline.BuildPlayer(opts);
+        BuildSummary s = report.summary;
+        Debug.Log("BUILD_RESULT: " + s.result + " target=Win64 errors=" + s.totalErrors + " warnings=" + s.totalWarnings + " size=" + s.totalSize + " time=" + s.totalTime);
+        if (s.result != BuildResult.Succeeded)
+        {
+            foreach (var step in report.steps)
+                foreach (var m in step.messages)
+                    if (m.type == LogType.Error || m.type == LogType.Exception)
+                        Debug.Log("BUILD_ERROR: " + m.content);
+            return 1;
+        }
+        return 0;
+    }
+
+    static void ConfigureWindows()
+    {
+        PlayerSettings.SetScriptingBackend(BuildTargetGroup.Standalone, ScriptingImplementation.Mono2x);
+        PlayerSettings.SetManagedStrippingLevel(BuildTargetGroup.Standalone, ManagedStrippingLevel.Disabled);
+        PlayerSettings.SetUseDefaultGraphicsAPIs(BuildTarget.StandaloneWindows64, false);
+        // D3D11 first; OpenGL Core as a fallback (also lets the CI smoke test run it under wine with -force-glcore)
+        PlayerSettings.SetGraphicsAPIs(BuildTarget.StandaloneWindows64, new[] { GraphicsDeviceType.Direct3D11, GraphicsDeviceType.OpenGLCore });
+        PlayerSettings.fullScreenMode = FullScreenMode.FullScreenWindow;
+        PlayerSettings.defaultIsNativeResolution = true;
+        PlayerSettings.resizableWindow = true;
+        PlayerSettings.allowFullscreenSwitch = true;
+        PlayerSettings.visibleInBackground = true;
+        PlayerSettings.usePlayerLog = true;
+        PlayerSettings.forceSingleInstance = false;
+        Debug.Log("BuildScript: Windows player settings (Mono, D3D11 + GLCore, fullscreen window at native resolution)");
+    }
+
+    // web/audio/*.ogg is copied to Assets/Resources/FFMusic by the Windows workflow only: stream them from disk
+    static void ImportNativeMusic()
+    {
+        const string dir = "Assets/Resources/FFMusic";
+        if (!AssetDatabase.IsValidFolder(dir)) { Debug.Log("BuildScript: no " + dir + " (native music off)"); return; }
+        int n = 0;
+        foreach (string guid in AssetDatabase.FindAssets("t:AudioClip", new[] { dir }))
+        {
+            var imp = AssetImporter.GetAtPath(AssetDatabase.GUIDToAssetPath(guid)) as AudioImporter;
+            if (imp == null) continue;
+            AudioImporterSampleSettings st = imp.defaultSampleSettings;
+            st.loadType = AudioClipLoadType.Streaming;
+            st.compressionFormat = AudioCompressionFormat.Vorbis;
+            st.quality = 0.7f;
+            imp.defaultSampleSettings = st;
+            imp.SaveAndReimport();
+            n++;
+        }
+        Debug.Log("BuildScript: native music clips " + n + " (streaming)");
+    }
+
     public static void SetInputHandler()
     {
         UnityEngine.Object ps = null;

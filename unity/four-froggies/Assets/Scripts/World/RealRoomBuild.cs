@@ -10,17 +10,11 @@ using UnityEngine.Networking;
 // (/tmp/rr/bl/export.py -> room.bin "RRM1", hands.py -> hands.bin "RRS1").
 public partial class RealRoom
 {
-    static string BaseUrl()
-    {
-        string u = Application.absoluteURL ?? "";
-        int q = u.IndexOfAny(new[] { '?', '#' }); if (q >= 0) u = u.Substring(0, q);
-        int s = u.LastIndexOf('/'); if (s >= 0) u = u.Substring(0, s + 1);
-        return u + "realroom/";
-    }
+    static string BaseUrl() { return FFPlatform.AssetBase("realroom/"); }   // ffu34: StreamingAssets in a native player
 
     static string Param(string key)
     {
-        string u = Application.absoluteURL ?? "";
+        string u = FFPlatform.PageUrl;
         int q = u.IndexOf('?'); if (q < 0) return null;
         foreach (var kv in u.Substring(q + 1).Split('&', '#'))
         {
@@ -45,7 +39,7 @@ public partial class RealRoom
 
     IEnumerator Fetch(string file, System.Action<byte[]> done)
     {
-        using (var rq = UnityWebRequest.Get(BaseUrl() + file + V))
+        using (var rq = UnityWebRequest.Get(BaseUrl() + file + FFPlatform.Bust(V)))
         {
             var op = rq.SendWebRequest();
             long last = 0;
