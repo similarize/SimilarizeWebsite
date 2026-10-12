@@ -1,0 +1,257 @@
+name: Unity Windows x64 - Four Froggies
+
+# ffu34: native Windows x64 build (Mono) of unity/four-froggies, published as a GitHub Release asset (zip).
+# Never touches gh-pages and never runs at the same time as the WebGL workflow (unity-four-froggies.yml):
+#  - it shares the WebGL workflow's concurrency group with cancel-in-progress off, so it queues behind a running WebGL
+#    build; a WebGL build pushed while this one runs cancels this one (WebGL has priority - just dispatch again).
+#  - it is started by hand (workflow_dispatch) or by a push that changes only this file / unity/logs/ff-win-request.txt.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g. ff-win-ffu35)'
+        required: false
+        default: 'ff-win-ffu34'
+      smoke:
+        description: 'Run the wine/xvfb smoke test (true/false)'
+        required: false
+        default: 'true'
+  push:
+    branches: [unity-src]
+    paths:
+      - '.github/workflows/unity-four-froggies-windows.yml'
+      - 'unity/logs/ff-win-request.txt'
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: unity-webgl-four-froggies
+  cancel-in-progress: false
+
+env:
+  PROJECT_DIR: src/unity/four-froggies
+  TAG: ${{ github.event.inputs.tag || 'ff-win-ffu34' }}
+  SMOKE: ${{ github.event.inputs.smoke || 'true' }}
+
+jobs:
+  windows:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - name: Checkout unity-src
+        uses: actions/checkout@v4
+        with:
+          ref: unity-src
+          path: src
+
+      - name: Prepare log dir
+        run: |
+          mkdir -p "$RUNNER_TEMP/logs"
+          echo "LOG_DIR=$RUNNER_TEMP/logs" >> "$GITHUB_ENV"
+          echo "WIN64 run ${{ github.run_id }} attempt ${{ github.run_attempt }} event ${{ github.event_name }} sha ${{ github.sha }} tag $TAG started $(date -u +%FT%TZ)" > "$RUNNER_TEMP/logs/status.txt"
+
+      - name: Check Unity secrets
+        id: secrets
+        env:
+          UE: ${{ secrets.UNITY_EMAIL }}
+          UP: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          if [ -z "$UE" ] || [ -z "$UP" ]; then echo "MISSING_SECRETS" | tee -a "$LOG_DIR/status.txt"; exit 1; fi
+          echo "secrets present" | tee -a "$LOG_DIR/status.txt"
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost || true
+          df -h / | tee -a "$LOG_DIR/status.txt"
+
+      # Read-only head start from the WebGL Library cache (scripts / shaders); nothing is saved, so the WebGL caches
+      # are never evicted or overwritten by this workflow.
+      - name: Restore Library (from WebGL cache, read-only)
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.PROJECT_DIR }}/Library
+          key: FF-Library-Win64-none
+          restore-keys: |
+            FF-Library-WebGL-
+
+      - name: Native assets (StreamingAssets source + music clips)
+        run: |
+          # web/audio -> Resources/FFMusic (imported as streaming AudioClips, Windows build only)
+          mkdir -p "$PROJECT_DIR/Assets/Resources/FFMusic"
+          cp "$PROJECT_DIR"/web/audio/*.ogg "$PROJECT_DIR/Assets/Resources/FFMusic/"
+          ls -la "$PROJECT_DIR/Assets/Resources/FFMusic" | tee -a "$LOG_DIR/status.txt"
+
+      - name: Set up Unity Hub (pass 1)
+        id: unity-hub-install
+        continue-on-error: true
+        timeout-minutes: 6
+        uses: RageAgainstThePixel/unity-setup@v2
+        with:
+          version-file: src/unity/four-froggies/ProjectSettings/ProjectVersion.txt
+          modules: windows-mono
+          cache-installation: false
+
+      - name: Unity Hub path shim
+        run: |
+          echo "hub pass1: ${{ steps.unity-hub-install.outcome }}" | tee -a "$LOG_DIR/status.txt"
+          if [ ! -e /opt/unityhub/unityhub ]; then
+            if [ -x /usr/lib/unityhub/unityhub ]; then
+              sudo rm -rf /opt/unityhub
+              sudo ln -s /usr/lib/unityhub /opt/unityhub
+            else
+              B=$(readlink -f "$(command -v unityhub)" 2>/dev/null || true)
+              [ -n "$B" ] && sudo mkdir -p /opt/unityhub && sudo ln -sf "$B" /opt/unityhub/unityhub
+            fi
+          fi
+          ls -la /opt/unityhub/unityhub 2>&1 | tee -a "$LOG_DIR/status.txt" || true
+
+      - name: Set up Unity + Windows Mono module
+        id: unity-setup
+        uses: RageAgainstThePixel/unity-setup@v2
+        with:
+          version-file: src/unity/four-froggies/ProjectSettings/ProjectVersion.txt
+          modules: windows-mono
+          cache-installation: false
+          auto-update-hub: false
+
+      - name: Activate Unity license
+        id: activate
+        uses: RageAgainstThePixel/activate-unity-license@v2
+        with:
+          license: personal
+          username: ${{ secrets.UNITY_EMAIL }}
+          password: ${{ secrets.UNITY_PASSWORD }}
+
+      - name: Build Windows x64
+        id: build
+        run: |
+          EDITOR="${UNITY_EDITOR_PATH:-${{ steps.unity-setup.outputs.unity-editor-path }}}"
+          echo "editor: $EDITOR" | tee -a "$LOG_DIR/status.txt"
+          code=0
+          "$EDITOR" -batchmode -nographics -quit \
+            -projectPath "$GITHUB_WORKSPACE/$PROJECT_DIR" \
+            -buildTarget Win64 \
+            -executeMethod BuildScript.BuildWindows \
+            -logFile "$LOG_DIR/editor.log" || code=$?
+          echo "unity exit code: $code" | tee -a "$LOG_DIR/status.txt"
+          ls -la "$PROJECT_DIR/build/Win64" 2>&1 | tee -a "$LOG_DIR/status.txt" || true
+          if [ "$code" != "0" ]; then exit 1; fi
+          test -f "$PROJECT_DIR/build/Win64/FourFroggies.exe"
+
+      - name: StreamingAssets + zip
+        id: zip
+        run: |
+          set -e
+          OUT="$GITHUB_WORKSPACE/$PROJECT_DIR/build/Win64"
+          SA="$OUT/FourFroggies_Data/StreamingAssets"
+          mkdir -p "$SA"
+          for d in real realroom audio; do
+            if [ -d "$GITHUB_WORKSPACE/$PROJECT_DIR/web/$d" ]; then rm -rf "$SA/$d"; cp -r "$GITHUB_WORKSPACE/$PROJECT_DIR/web/$d" "$SA/$d"; fi
+          done
+          cp "$GITHUB_WORKSPACE/$PROJECT_DIR/web/LICENSES.txt" "$OUT/LICENSES.txt" 2>/dev/null || true
+          cp "$GITHUB_WORKSPACE/$PROJECT_DIR/CANON.md" "$OUT/CANON.md" 2>/dev/null || true
+          printf 'Four Froggies (Windows x64)\r\n\r\nUnzip anywhere and run FourFroggies.exe. Opens fullscreen at your monitor resolution (F11 or Alt+Enter toggles a window).\r\nXbox controller: plug in or pair before or after launch. A = join / play, D-pad = pick a character, B = leave.\r\nUp to 4 controllers, one froggy each. Online rooms are only in the web version (similarize.com/games).\r\nBuild: %s (%s)\r\n' "$TAG" "${GITHUB_SHA::7}" > "$OUT/README.txt"
+          rm -rf "$OUT"/*_BurstDebugInformation_DoNotShip "$OUT"/*_BackUpThisFolder_ButDontShipItWithYourGame || true
+          cd "$OUT/.."
+          ZIP="FourFroggies-Win64-$TAG.zip"
+          rm -f "$ZIP"
+          mv Win64 FourFroggies
+          zip -qr -9 "$ZIP" FourFroggies
+          mv FourFroggies Win64
+          ls -la "$ZIP" | tee -a "$LOG_DIR/status.txt"
+          echo "ZIP=$PWD/$ZIP" >> "$GITHUB_ENV"
+          echo "WIN_ZIP_SIZE: $(stat -c %s "$ZIP")" | tee -a "$LOG_DIR/status.txt"
+
+      - name: Publish GitHub Release
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          NOTES="Four Froggies native Windows x64 build ($TAG, unity-src ${GITHUB_SHA::7}). Download the zip, unzip, run FourFroggies.exe. Xbox controller: A to join and play. Built by run ${{ github.run_id }}."
+          if gh release view "$TAG" --repo "${{ github.repository }}" > /dev/null 2>&1; then
+            gh release upload "$TAG" "$ZIP" --clobber --repo "${{ github.repository }}"
+          else
+            gh release create "$TAG" "$ZIP" --repo "${{ github.repository }}" --target "${{ github.sha }}" --title "Four Froggies for Windows ($TAG)" --notes "$NOTES"
+          fi
+          URL=$(gh release view "$TAG" --repo "${{ github.repository }}" --json url -q .url)
+          echo "RELEASE_URL: $URL" | tee -a "$LOG_DIR/status.txt"
+
+      # Best-effort: run the exe under wine (OpenGL Core via Mesa llvmpipe) on a virtual display and grab screenshots.
+      - name: Smoke test (wine + xvfb)
+        id: smoke
+        if: success() && env.SMOKE == 'true'
+        continue-on-error: true
+        timeout-minutes: 14
+        run: |
+          set +e
+          sudo apt-get update -qq > /dev/null 2>&1
+          sudo apt-get install -y -qq wine64 xvfb imagemagick libgl1-mesa-dri > /dev/null 2>&1
+          which wine wine64 Xvfb import | tee -a "$LOG_DIR/status.txt"
+          WINE=$(command -v wine || command -v wine64)
+          mkdir -p "$RUNNER_TEMP/smoke"; S="$RUNNER_TEMP/smoke"
+          Xvfb :99 -screen 0 1280x720x24 > /dev/null 2>&1 &
+          XV=$!; sleep 3
+          export DISPLAY=:99 WINEDEBUG=-all WINEPREFIX="$RUNNER_TEMP/wp"
+          "$WINE" wineboot -i > /dev/null 2>&1; sleep 5
+          EXE="$GITHUB_WORKSPACE/$PROJECT_DIR/build/Win64/FourFroggies.exe"
+          run_one () {   # $1 name, $2 seconds, $3 shot times, rest = extra args
+            n=$1; secs=$2; shots=$3; shift 3
+            "$WINE" "$EXE" -force-glcore -screen-fullscreen 0 -screen-width 1280 -screen-height 720 -logFile "$S/$n-player.log" "$@" > /dev/null 2>&1 &
+            P=$!; t=0
+            for st in $shots; do sleep $((st - t)); t=$st; import -window root "$S/$n-t$st.png" 2>/dev/null; done
+            kill $P 2>/dev/null; sleep 2; pkill -f FourFroggies.exe 2>/dev/null; "$WINE"server -k 2>/dev/null; sleep 2
+            echo "=== $n player log (grep)" >> "$LOG_DIR/status.txt"
+            grep -E "FFPlatform|FFLocalMusic|Sfx:|Realism|Showroom|FFDEMO|Exception|ERROR|GfxDevice|OpenGL|Renderer" "$S/$n-player.log" 2>/dev/null | head -n 60 >> "$LOG_DIR/status.txt"
+          }
+          run_one lobby 75 "35 55 75"
+          run_one ranch 150 "60 100 150" -ffurl "?ffdemo=1&ffshot=frog"
+          kill $XV 2>/dev/null
+          ls -la "$S" | tee -a "$LOG_DIR/status.txt"
+          echo "SMOKE_DONE" | tee -a "$LOG_DIR/status.txt"
+
+      - name: Upload smoke artifacts
+        if: always() && steps.smoke.outcome != 'skipped'
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: ff-win-smoke
+          path: ${{ runner.temp }}/smoke
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Commit build log to unity-src
+        if: always()
+        env:
+          UE: ${{ secrets.UNITY_EMAIL }}
+          UP: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          cd src
+          mkdir -p unity/logs
+          L=unity/logs/four-froggies-win64-last-build.log
+          {
+            cat "$LOG_DIR/status.txt" 2>/dev/null
+            echo "=== step outcomes: secrets=${{ steps.secrets.outcome }} setup=${{ steps.unity-setup.outcome }} activate=${{ steps.activate.outcome }} build=${{ steps.build.outcome }} zip=${{ steps.zip.outcome }} release=${{ steps.release.outcome }} smoke=${{ steps.smoke.outcome }}"
+            if [ -f "$LOG_DIR/editor.log" ]; then
+              echo "=== error lines"
+              grep -nE "error CS|[Ee]rror:|Exception|BUILD_|BuildScript|Scripts have compiler errors|[Ll]icens|Failed|failed" "$LOG_DIR/editor.log" | grep -vE "Shader.*warning|0 errors" | head -n 250
+              echo "=== editor log tail (300)"
+              tail -n 300 "$LOG_DIR/editor.log"
+            else
+              echo "=== no editor log"
+            fi
+          } > "$L" 2>&1
+          if [ -n "$UE" ]; then perl -pi -e 's/\Q$ENV{UE}\E/[UNITY_EMAIL]/g' "$L"; fi
+          if [ -n "$UP" ]; then perl -pi -e 's/\Q$ENV{UP}\E/[UNITY_PASSWORD]/g' "$L"; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
+          git add "$L"
+          git commit -m "Four Froggies Windows x64 build log for run ${{ github.run_id }} [skip ci]" || exit 0
+          for i in 1 2 3 4 5; do
+            git push origin HEAD:unity-src && exit 0
+            sleep $((i*2))
+            git pull --rebase origin unity-src || true
+          done
+          exit 0
