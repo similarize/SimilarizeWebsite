@@ -208,6 +208,7 @@ public static class Ranch
         var water = Mats.Prim(PrimitiveType.Cylinder, root, new Vector3(c.x, Layout.WaterY, c.y), new Vector3(r.x * 2.5f, 0.01f, r.y * 2.5f), PondMaterial(), false);
         water.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         water.name = "PondWater";
+        Ripples.Register(water);   // ffw: displacement surge + ripples
         water.transform.SetParent(null, true);   // keep separate (not merged, no shadows)
         // dock on the west shore
         float dz = c.y, dx0 = c.x - r.x - 10f, dx1 = c.x - r.x + 9f;

@@ -79,6 +79,7 @@ public partial class Frog : MonoBehaviour
     float yaw;
     float hopCool;
     bool swimming, wasSwim;
+    Vector3 wakeP; float wakeT;   // ffw pond wakes
     float exitCool;
 
     // AI
@@ -295,6 +296,14 @@ public partial class Frog : MonoBehaviour
         swimming = world == WorldId.Ranch && Layout.InPond(p.x, p.z) && p.y < Layout.WaterY - 0.35f;
         if (swimming && !wasSwim) { FX.Splash(p + Vector3.up * 0.5f, 14); if (human) Sfx.Play(Sfx.Splash, 0.9f); }
         wasSwim = swimming;
+        // ffw: gentle wakes while a froggy wades / swims through the pond
+        if (world == WorldId.Ranch && p.y < Layout.WaterY + 0.15f && Layout.InPond(p.x, p.z))
+        {
+            float mv = new Vector2(p.x - wakeP.x, p.z - wakeP.z).magnitude;
+            wakeT -= dt;
+            if (mv > 0.02f && wakeT <= 0f) { wakeT = 0.35f; Ripples.Ring(p, 1.6f + Mathf.Min(mv / Mathf.Max(dt, 0.001f), 6f) * 0.2f, 0.5f); }
+        }
+        wakeP = p;
         // ffu15: floating at the pond surface - hold DOWN / DIVE to dive back down to the reef (underwater world)
         if (!swimming) scubaSurface = false;
         SetScuba(swimming && scubaSurface);

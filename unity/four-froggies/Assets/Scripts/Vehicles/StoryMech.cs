@@ -564,7 +564,9 @@ public partial class StoryMech : Vehicle
             for (int i = 0; i < 16 + band * 6; i++) { Vector2 r = Random.insideUnitCircle.normalized * H * Random.Range(0.15f, 0.4f); FX.Dust(p + new Vector3(r.x, 0.5f, r.y), 1f); }
             foreach (Collider c in Physics.OverlapSphere(p, H * 0.3f + 2f, 1 << PropLayer))
                 if (c.attachedRigidbody != null) c.attachedRigidbody.AddExplosionForce(500f + band * 800f, p, H * 0.4f + 3f, 1.5f);
-            if (band >= 1 && hard > 0.3f) Destruct.Stomp(p, H * 0.22f + 2f, 30f + band * 15f, this);
+            if (hard > 0.3f) Destruct.Stomp(p, H * 0.22f + 2f, 30f + band * 15f, this);
+            FX.Ring(p, H * 0.3f, Look.Mobile ? 10 : 18, Mathf.Clamp(H * 0.25f, 4f, 30f), new Color(0.62f, 0.53f, 0.40f, 0.5f));   // ffw dust ring
+            Ripples.Footfall(p, H * 1.3f);
             vy = 0f;
         }
         if (grounded && wd > 0f && ground < pos.y - (0.6f + H * 0.04f)) { grounded = false; vy = Mathf.Min(vy, 0f); }   // ffu37: the bed drops away -> settle down slowly
@@ -662,7 +664,9 @@ public partial class StoryMech : Vehicle
                 MechStomp.Foot(foot, H, 1f, false);   // boom + crunch, ground quake, dust cloud (Core/MechStomp.cs)
                 foreach (Collider c in Physics.OverlapSphere(foot, H * 0.12f + 1f, 1 << PropLayer))
                     if (c.attachedRigidbody != null) c.attachedRigidbody.AddExplosionForce(400f + band * 600f, foot, H * 0.2f + 2f, 1f);
-                if (band >= 1 && driver != null) Destruct.Stomp(foot, H * 0.08f + 1f, 20f + band * 12f, this);   // ffu21: big feet crush things
+                // ffw: every mech crushes (the 10-story too), radius scales with size; pond steps ripple + splash
+                if (driver != null) Destruct.Stomp(foot, H * 0.09f + 1.2f, 22f + band * 14f, this);
+                Ripples.Footfall(foot, H);
             }
         }
         else
