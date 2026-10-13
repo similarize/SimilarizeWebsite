@@ -240,6 +240,7 @@ public class UnderwaterWorld : MonoBehaviour
         {
             float a = (float)r.NextDouble() * 6.283f, d = Mathf.Sqrt((float)r.NextDouble()) * 40f;
             float x = Mathf.Cos(a) * d, z = Mathf.Sin(a) * d, y = SeaY(x, z);
+            if (y > -4.5f) continue;   // ffu37: not on the island tops (they reach 2.5 m under the surface)
             Color c = cols[r.Next(cols.Length)];
             float s = 0.6f + (float)r.NextDouble() * 1.8f;
             switch (i % 5)
@@ -274,6 +275,8 @@ public class UnderwaterWorld : MonoBehaviour
         {
             float x = -40f + ((float)r.NextDouble() - 0.5f) * 36f, z = -35f + ((float)r.NextDouble() - 0.5f) * 36f, y = SeaY(x, z);
             float h = 6f + (float)r.NextDouble() * 10f;
+            h = Mathf.Min(h, -1.5f - y);   // ffu37: kelp on an island cone stays under the surface
+            if (h < 2f) continue;
             var k = new GameObject("Kelp").transform;
             k.position = L(x, y, z);
             for (int s = 0; s < 5; s++)
@@ -346,6 +349,7 @@ public class UnderwaterWorld : MonoBehaviour
             float x = ((float)r.NextDouble() - 0.5f) * 180f, z = ((float)r.NextDouble() - 0.5f) * 180f;
             if (new Vector2(x, z).magnitude < 30f) continue;
             float s = 1.2f + (float)r.NextDouble() * 3f;
+            if (SeaY(x, z) > -6f) continue;   // ffu37: not poking out of an island top
             P(PrimitiveType.Sphere, new Vector3(x, SeaY(x, z) + s * 0.2f, z), new Vector3(s * 1.6f, s, s * 1.3f), new Color(0.35f, 0.36f, 0.38f), true, new Vector3(0f, (float)r.NextDouble() * 180f, 0f));
         }
     }

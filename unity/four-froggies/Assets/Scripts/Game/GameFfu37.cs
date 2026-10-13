@@ -7,9 +7,9 @@ using UnityEngine;
 //              water once it's deep). Logs "FFDEMO pondsink t ... mech y / bed / depth / subMax ..." every 0.5 s.
 //   pondtruck  P1 drives James's Cybertruck off the north lawn into the pond at full throttle (no Cyberboat), it sinks to
 //              the bed, crawls on, turns round and climbs back out up the bank. Logs "FFDEMO pondtruck ...".
-//   breach     P1 in the submarine deep on the reef under the pond's west half (local -25, -10), full UP: the ballast
+//   breach     P1 in the submarine deep on the reef under the pond's west half (local -30, 12), full UP: the ballast
 //              blow builds the climb to ~11 m/s, it breaches in the ranch pond, arcs, falls back, sinks back down.
-//              Slow motion (x0.35) while breaching; side camera on the ranch pond. Twice (2nd from 12 m for a lower one).
+//              Slow motion (x0.35) while breaching; side camera on the ranch pond. Twice (2nd from ~8 m for a lower one).
 //              Logs "FFDEMO breach ..." and the Submarine: BREACH / re-entry / breach over lines (max height above water).
 public partial class Game
 {
@@ -28,7 +28,7 @@ public partial class Game
         if (f.vehicle != null) f.ExitVehicle();
         if (!Roster.IsFrog(f.charId) || f.charId != 0) SetSeatChar(f.id, 0, false);
         demoKeepChars = true;
-        p7T = 0f; p7Log = 0f; p7Round = 0; p7RoundT = 0f; p7Dropped = false; p7Cam = Vector3.zero;
+        p7T = 0f; p7Log = 0f; p7Round = 0; p7Phase = 0; after = false; p7RoundT = 0f; p7Dropped = false; p7Cam = Vector3.zero;
         p7MaxDepthMech = p7MaxDepthTruck = p7MaxDepthSuit = 0f;
         Debug.Log("FFDEMO " + sc + " start; pond: WaterY " + Layout.WaterY + ", deepest bed " + DeepestBed().ToString("0.0") + " m");
         if (sc == "breach")
@@ -37,7 +37,7 @@ public partial class Game
             if (f.world != WorldId.Ranch) f.SendTo(WorldId.Ranch, Ranch.FrogSpawn(f.id), 0f);
             UnderwaterWorld.I.Dive(f);
             p7Sub = UnderwaterWorld.I.sub;
-            BreachPlace(-25f, -10f, -1.5f);
+            BreachPlace(-30f, 12f, -1.5f);
             demoHook = BreachInput;
             return;
         }
@@ -87,25 +87,33 @@ public partial class Game
     PIn PondSinkInput(PIn i)
     {
         var o = new PIn();
-        float t = p7T;
-        if (t > 2f && t < 26f) o.move = new Vector2(0f, 1f);          // south into the pond
-        else if (t >= 30f && t < 33.2f) o.move = new Vector2(1f, 0f);  // turn round on the bed
-        else if (t >= 33.2f) o.move = new Vector2(0f, 1f);            // north, up the bank and out
+        if (p7Mech == null || p7T < 2f) return o;
+        Vector3 mp = p7Mech.transform.position;
+        float yaw = p7Mech.transform.eulerAngles.y;
+        // south into the deep middle, stand on the bed for 4 s, turn round (heading control), walk back out north
+        if (p7Phase == 0) { o.move = new Vector2(Mathf.Clamp(Mathf.DeltaAngle(yaw, 180f) / 30f, -1f, 1f), 1f); if (mp.z < -72f) { p7Phase = 1; p7PhaseT = p7T; Debug.Log("FFDEMO pondsink: mech on the deep bed, standing"); } }
+        else if (p7Phase == 1) { if (p7T - p7PhaseT > 4f) { p7Phase = 2; Debug.Log("FFDEMO pondsink: turning round"); } }
+        else if (p7Phase == 2) { float d = Mathf.DeltaAngle(yaw, 0f); o.move = new Vector2(Mathf.Clamp(d / 30f, -1f, 1f), 0f); if (Mathf.Abs(d) < 8f) { p7Phase = 3; Debug.Log("FFDEMO pondsink: walking out north"); } }
+        else o.move = new Vector2(Mathf.Clamp(Mathf.DeltaAngle(yaw, 0f) / 30f, -1f, 1f), mp.z < -4f ? 1f : 0f);
         return o;
     }
+    int p7Phase; float p7PhaseT;
 
     // ---------------- pondtruck ----------------
     PIn PondTruckInput(PIn i)
     {
         var o = new PIn();
-        float t = p7T;
         var v = p7Truck;
-        if (v == null) return o;
+        if (v == null || p7T < 1.5f) return o;
         float yaw = v.transform.eulerAngles.y;
-        if (t < 1.5f) return o;
-        if (t < 26f) { o.gas = 1f; o.move.x = Mathf.Clamp(Mathf.DeltaAngle(yaw, 180f) / 25f, -1f, 1f); }
-        else if (t < 34f && Mathf.Abs(Mathf.DeltaAngle(yaw, 0f)) > 20f) { o.gas = 0.8f; o.move.x = 1f; }
-        else { o.gas = 1f; o.move.x = Mathf.Clamp(Mathf.DeltaAngle(yaw, 0f) / 25f, -1f, 1f); }
+        Vector3 p = v.transform.position;
+        int ph = p7Phase;
+        // full throttle south off the lawn into the deep middle, turn round on the bed, drive back out up the north bank
+        if (p7Phase == 0) { o.gas = 1f; o.move.x = Mathf.Clamp(Mathf.DeltaAngle(yaw, 180f) / 25f, -1f, 1f); if (p.z < -66f) p7Phase = 1; }
+        else if (p7Phase == 1) { o.gas = 0.8f; o.move.x = 1f; if (Mathf.Abs(Mathf.DeltaAngle(yaw, 0f)) < 20f) p7Phase = 2; }
+        else if (p7Phase == 2) { o.gas = 1f; o.move.x = Mathf.Clamp(Mathf.DeltaAngle(yaw, 0f) / 25f, -1f, 1f); if (p.z > -12f) p7Phase = 3; }
+        else { if (v.ForwardSpeed > 0.5f) o.brake = 1f; }
+        if (ph != p7Phase) Debug.Log("FFDEMO pondtruck -> phase " + p7Phase + " t=" + p7T.ToString("0.0") + " pos=(" + p.x.ToString("0") + "," + p.y.ToString("0.0") + "," + p.z.ToString("0") + ")");
         return o;
     }
 
@@ -212,7 +220,7 @@ public partial class Game
         if (!s.Breaching && Submarine.Breaches > p7Round)
         {
             if (!after) { after = true; p7RoundT = 0f; }
-            else if (p7RoundT > 8f && p7Round == 0) { p7Round = 1; after = false; BreachPlace(-25f, -10f, 7.5f); }
+            else if (p7RoundT > 8f && p7Round == 0) { p7Round = 1; after = false; BreachPlace(-30f, 12f, 11.5f); }   // ~8 m deep: a lower breach
         }
         if (!s.Breaching) return false;   // under water: the normal follow camera
         Vector3 sp = Submarine.LastSpot;

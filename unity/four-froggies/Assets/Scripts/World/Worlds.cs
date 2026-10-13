@@ -120,6 +120,13 @@ public static class Worlds
         if (StoryHook != null) StoryHook(c, w);   // ffu24 story episode 2: Mercury / Enceladus / the Mars chambers / orbit look
         if (w == WorldId.Ranch) PondUnder(c);    // ffu37: a camera under the ranch pond surface sees murky green-blue water
     }
+    static bool sunDimmed, postHooked; static float sunSavedI, sunSavedS;
+    static void PondUnderRestore(Camera c)
+    {
+        if (!sunDimmed) return;
+        sunDimmed = false;
+        if (RenderSettings.sun != null) { RenderSettings.sun.intensity = sunSavedI; RenderSettings.sun.shadowStrength = sunSavedS; }
+    }
     static void PondUnder(Camera c)
     {
         Vector3 cp = c.transform.position;
@@ -127,7 +134,15 @@ public static class Worlds
         float dk = Mathf.Clamp01((Layout.WaterY - cp.y) / 24f);
         RenderSettings.fog = true;
         RenderSettings.fogColor = Color.Lerp(new Color(0.13f, 0.36f, 0.38f), new Color(0.03f, 0.13f, 0.18f), dk);
-        RenderSettings.fogDensity = RenderSettings.fogMode == FogMode.ExponentialSquared ? 0.032f : 0.05f;
+        RenderSettings.fogDensity = RenderSettings.fogMode == FogMode.ExponentialSquared ? 0.045f : 0.07f;
+        // the sun loses most of its punch under water (less light, softer shadows) - put back after this camera renders
+        Light sun = RenderSettings.sun;
+        if (sun != null && !sunDimmed)
+        {
+            if (!postHooked) { postHooked = true; Camera.onPostRender += PondUnderRestore; }
+            sunSavedI = sun.intensity; sunSavedS = sun.shadowStrength; sunDimmed = true;
+            sun.intensity = sunSavedI * Mathf.Lerp(0.6f, 0.3f, dk); sun.shadowStrength = sunSavedS * 0.45f;
+        }
         float a = Mathf.Lerp(0.9f, 0.45f, dk);
         if (Realism.On) RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;   // Realism.PreCull sets it back per camera
         RenderSettings.ambientSkyColor = new Color(0.35f, 0.6f, 0.65f) * a; RenderSettings.ambientEquatorColor = new Color(0.2f, 0.4f, 0.42f) * a; RenderSettings.ambientGroundColor = new Color(0.1f, 0.18f, 0.2f) * a;

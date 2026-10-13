@@ -216,6 +216,13 @@ public static class Layout
         y -= trench * 9f;                                        // a deep trench to the south
         float edge = Mathf.Max(Mathf.Abs(x), Mathf.Abs(z));
         y += Mathf.SmoothStep(0f, 1f, (edge - 92f) / 16f) * 24f;  // walls at the edge
+        // ffu37: the pond's three islands stand on rocky cones (~48 deg) that the sub sees too; their tops stay 2.5 m under
+        // the surface here (the beach above the water only exists on the ranch side, PondBedY)
+        for (int i = 0; i < Islands.Length; i++)
+        {
+            float d = new Vector2(x - (Islands[i].x - PondC.x), z - (Islands[i].y - PondC.y)).magnitude;
+            y = Mathf.Max(y, -2.5f - Mathf.Max(0f, d - Islands[i].z * 1.35f) * 1.1f);
+        }
         return y;
     }
 
@@ -227,13 +234,7 @@ public static class Layout
         float shelf = -4.2f + q * 1.5f;                                   // the old shallow basin (shore band)
         float deep = WaterY + SubSeaY(x - PondC.x, z - PondC.y);           // the submarine's seabed
         float bottom = Mathf.Min(shelf, Mathf.Lerp(deep, shelf, Mathf.SmoothStep(0f, 1f, (q - DeepQ) / (ShelfQ - DeepQ))));
-        // islands: a skirt up to shelf depth (~2.5 x radius), then the old beach slope up out of the water
-        for (int i = 0; i < Islands.Length; i++)
-        {
-            float d = new Vector2(x - Islands[i].x, z - Islands[i].y).magnitude / Islands[i].z;
-            float sk = Mathf.SmoothStep(0f, 1f, (2.7f - d) / 1.35f);
-            if (sk > 0f) bottom = Mathf.Max(bottom, Mathf.Lerp(bottom, WaterY - 3f, sk));
-        }
+        // islands: their underwater cones come with the seabed (SubSeaY); the beach rises out of the water here
         int wi;
         float ik = IslandK(x, z, out wi);
         if (ik > 0f) bottom = Mathf.Max(bottom, Mathf.Lerp(bottom, WaterY + 1.1f, Mathf.SmoothStep(0f, 1f, ik / 0.55f)));
