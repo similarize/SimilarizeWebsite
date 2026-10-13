@@ -286,6 +286,9 @@ public class Kart : MonoBehaviour
 
         // ---- where are we on the track ----
         Track.Proj pm = Track.Nearest(pos, hint, 24);
+        // off the main road (a long shortcut skips far more than the search window): full search so s, laps,
+        // the AI target and the soft walls follow the kart to where it rejoins
+        if (pm.dist > Track.HalfW + Track.Wall) pm = Track.Nearest(pos, -1, 0);
         hint = pm.i;
         Track.Proj ps = Track.NearestShortcut(pos);
         bool scGap = ps.s > Track.ScGapA && ps.s < Track.ScGapB;
@@ -355,8 +358,8 @@ public class Kart : MonoBehaviour
         }
         if (!grounded)
         {
+            pos.y += vy * dt - 12f * dt * dt;      // exact ballistic step: same arc at 20 fps as at 60
             vy -= 24f * dt;
-            pos.y += vy * dt;
             gNormal = Vector3.Slerp(gNormal, Vector3.up, Mathf.Min(1f, dt * 2f));
             airT += dt;
             // big air off a ramp: a barrel roll, and a stunt boost when it lands
@@ -403,8 +406,9 @@ public class Kart : MonoBehaviour
             }
         }
         // boost pads (full width before every gap)
-        if (grounded && padCool <= 0f && Track.Pads.Count > 0 && Track.PadAt(pm.s, pm.lat, ps.s, ps.lat, onSc && ps.dist < pm.dist))
+        if ((grounded || pos.y - gy < 2.5f) && padCool <= 0f && Track.Pads.Count > 0 && Track.PadAt(s, pm.s, pm.lat, lastScS, ps.s, ps.lat, ps.dist < pm.dist && ps.dist < Track.ScHalf + 1f))
         {
+            if (Autopilot) Debug.Log("LB pad k" + id + " s " + pm.s.ToString("F0") + " v " + speed.ToString("F1"));
             StartBoost(1.7f, 1.35f);
             padCool = 1f;
             Sfx.PlayAt(Sfx.Boost, pos, 0.7f);

@@ -152,15 +152,25 @@ public static partial class Track
         return null;
     }
 
-    public static bool PadAt(float s, float lat, float scS, float scLat, bool onSc)
+    // on (or, on a slow frame, driven right across) a boost pad since the last frame?
+    public static bool PadAt(float prevS, float s, float lat, float prevScS, float scS, float scLat, bool onSc)
     {
         foreach (var p in Pads)
         {
-            if (p.sc) { if (onSc && scS >= p.s0 && scS <= p.s1 && Mathf.Abs(scLat) < ScHalf + 0.6f) return true; }
+            if (p.sc)
+            {
+                if (!onSc || Mathf.Abs(scLat) >= ScHalf + 0.6f) continue;
+                float lo = Mathf.Min(prevScS < 0f ? scS : prevScS, scS), hi = Mathf.Max(prevScS < 0f ? scS : prevScS, scS);
+                if (hi - lo > 40f) lo = hi = scS;
+                if (hi >= p.s0 && lo <= p.s1) return true;
+            }
             else
             {
-                float d = WrapD(s - p.s0);
-                if (d >= 0f && d <= p.s1 - p.s0 && Mathf.Abs(lat) < HalfW + 0.6f) return true;
+                if (Mathf.Abs(lat) >= HalfW + 0.6f) continue;
+                float d1 = WrapD(s - p.s0), d0 = WrapD(prevS - p.s0);
+                if (Mathf.Abs(d1 - d0) > 40f) d0 = d1;
+                float lo = Mathf.Min(d0, d1), hi = Mathf.Max(d0, d1);
+                if (hi >= 0f && lo <= p.s1 - p.s0) return true;
             }
         }
         return false;
