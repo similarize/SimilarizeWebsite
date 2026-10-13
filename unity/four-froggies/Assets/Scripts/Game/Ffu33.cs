@@ -47,6 +47,7 @@ public class Ffu33 : MonoBehaviour
             if (Bootstrap.I == null || Game.I == null) return;
             built = true;
             try { Forest.Build(); } catch (System.Exception e) { Debug.LogError("ffu33 forest: " + e); }
+            try { ForestOuter.Build(); } catch (System.Exception e) { Debug.LogError("ffw forest outer: " + e); }
             try { Orbs.Create(); } catch (System.Exception e) { Debug.LogError("ffu33 orbs: " + e); }
             try { JetBase.Create(); } catch (System.Exception e) { Debug.LogError("ffu33 jet base: " + e); }
             shot = Url("ffdemo") != null ? (Url("ffshot") ?? "") : "";

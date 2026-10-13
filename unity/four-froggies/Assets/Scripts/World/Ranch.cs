@@ -208,6 +208,7 @@ public static class Ranch
         var water = Mats.Prim(PrimitiveType.Cylinder, root, new Vector3(c.x, Layout.WaterY, c.y), new Vector3(r.x * 2.5f, 0.01f, r.y * 2.5f), PondMaterial(), false);
         water.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         water.name = "PondWater";
+        Ripples.Register(water);   // ffw: displacement surge + ripples
         water.transform.SetParent(null, true);   // keep separate (not merged, no shadows)
         // dock on the west shore
         float dz = c.y, dx0 = c.x - r.x - 10f, dx1 = c.x - r.x + 9f;
@@ -310,8 +311,8 @@ public static class Ranch
         m.SetTexture("_SeaMap", map);
         m.SetTexture("_Noise", NoiseTex(128));
         m.SetVector("_SeaRect", new Vector4(x0, z0, 1f / w, 1f / h));
-        m.SetColor("_Shallow", new Color(0.32f, 0.62f, 0.5f, 0.7f));
-        m.SetColor("_Deep", new Color(0.06f, 0.3f, 0.36f, 0.9f));
+        m.SetColor("_Shallow", new Color(0.32f, 0.62f, 0.5f, 0.55f));   // ffw: was 0.7 / 0.9 - see divers + the floor
+        m.SetColor("_Deep", new Color(0.06f, 0.3f, 0.36f, 0.68f));
         m.SetFloat("_WaveScale", 0.09f);
         m.SetFloat("_Speed", 0.8f);
         return pondMat = m;

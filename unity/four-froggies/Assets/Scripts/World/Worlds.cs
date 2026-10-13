@@ -130,7 +130,7 @@ public static class Worlds
     static void PondUnder(Camera c)
     {
         Vector3 cp = c.transform.position;
-        if (cp.y > Layout.WaterY - 0.08f || Mathf.Abs(cp.x) > Layout.Half || Mathf.Abs(cp.z) > Layout.Half || !Layout.InPond(cp.x, cp.z)) return;
+        if (cp.y > Ripples.SurfaceY - 0.08f || Mathf.Abs(cp.x) > Layout.Half || Mathf.Abs(cp.z) > Layout.Half || !Layout.InPond(cp.x, cp.z)) return;
         float dk = Mathf.Clamp01((Layout.WaterY - cp.y) / 24f);
         RenderSettings.fog = true;
         RenderSettings.fogColor = Color.Lerp(new Color(0.13f, 0.36f, 0.38f), new Color(0.03f, 0.13f, 0.18f), dk);

@@ -42,7 +42,8 @@ public partial class StoryMech : Vehicle
     Material shieldMat;
     readonly Transform[] flames = new Transform[2];
     Light jetLight;
-    AudioSource jetLoop;
+    AudioSource jetLoop, jetRumble;   // ffw: roar + rumble layers (fixed pitch)
+    bool jetLit;
 
     // ffu15: control hints per device (the pilot's slot), keys shown as badges
     static string K(string k) { return "<color=#ffe680>" + k + "</color>"; }
@@ -361,6 +362,8 @@ public partial class StoryMech : Vehicle
     {
         base.OnExit();
         if (jetLoop != null) jetLoop.volume = 0f;
+        if (jetRumble != null) jetRumble.volume = 0f;
+        jetLit = false;
     }
 
     // ---------------- damage ----------------
@@ -564,7 +567,9 @@ public partial class StoryMech : Vehicle
             for (int i = 0; i < 16 + band * 6; i++) { Vector2 r = Random.insideUnitCircle.normalized * H * Random.Range(0.15f, 0.4f); FX.Dust(p + new Vector3(r.x, 0.5f, r.y), 1f); }
             foreach (Collider c in Physics.OverlapSphere(p, H * 0.3f + 2f, 1 << PropLayer))
                 if (c.attachedRigidbody != null) c.attachedRigidbody.AddExplosionForce(500f + band * 800f, p, H * 0.4f + 3f, 1.5f);
-            if (band >= 1 && hard > 0.3f) Destruct.Stomp(p, H * 0.22f + 2f, 30f + band * 15f, this);
+            if (hard > 0.3f) Destruct.Stomp(p, H * 0.22f + 2f, 30f + band * 15f, this);
+            FX.Ring(p, H * 0.3f, Look.Mobile ? 10 : 18, Mathf.Clamp(H * 0.25f, 4f, 30f), new Color(0.62f, 0.53f, 0.40f, 0.5f));   // ffw dust ring
+            Ripples.Footfall(p, H * 1.3f);
             vy = 0f;
         }
         if (grounded && wd > 0f && ground < pos.y - (0.6f + H * 0.04f)) { grounded = false; vy = Mathf.Min(vy, 0f); }   // ffu37: the bed drops away -> settle down slowly
@@ -590,7 +595,7 @@ public partial class StoryMech : Vehicle
     public static float PondWade(Vector3 feet, float H)
     {
         if (Mathf.Abs(feet.x) > Layout.Half || Mathf.Abs(feet.z) > Layout.Half || !Layout.InPond(feet.x, feet.z)) return 0f;
-        return Mathf.Clamp01((Layout.WaterY - feet.y) / (H * 0.6f));
+        return Mathf.Clamp01((Ripples.SurfaceY - feet.y) / (H * 0.6f));
     }
     public static float SinkMax(float H) { return 2.6f + H * 0.025f; }
     float pondFxT;
@@ -662,7 +667,9 @@ public partial class StoryMech : Vehicle
                 MechStomp.Foot(foot, H, 1f, false);   // boom + crunch, ground quake, dust cloud (Core/MechStomp.cs)
                 foreach (Collider c in Physics.OverlapSphere(foot, H * 0.12f + 1f, 1 << PropLayer))
                     if (c.attachedRigidbody != null) c.attachedRigidbody.AddExplosionForce(400f + band * 600f, foot, H * 0.2f + 2f, 1f);
-                if (band >= 1 && driver != null) Destruct.Stomp(foot, H * 0.08f + 1f, 20f + band * 12f, this);   // ffu21: big feet crush things
+                // ffw: every mech crushes (the 10-story too), radius scales with size; pond steps ripple + splash
+                if (driver != null) Destruct.Stomp(foot, H * 0.09f + 1.2f, 22f + band * 14f, this);
+                Ripples.Footfall(foot, H);
             }
         }
         else
@@ -719,14 +726,28 @@ public partial class StoryMech : Vehicle
             jetLight.enabled = k > 0.02f && !Look.Mobile;
             jetLight.intensity = k * 2.2f * (0.9f + Random.value * 0.2f);
         }
-        // rocket roar: the synthesised launch rumble, pitched by the afterburner
+        // ffw jetpack thrust: punchy ignition, steady roar + rumble while held, quick tail. Throttle moves volume and the
+        // roar/rumble balance (brighter when boosting) - pitch stays put, no cartoon slides. Sfx level (M key) still rules
+        // via AudioListener.volume.
         bool heard = driver != null && driver.human;
-        if (jetLoop == null && heard && k > 0.02f) jetLoop = Sfx.Loop(gameObject, Sfx.EngRocket != null ? Sfx.EngRocket : Sfx.Rotor);
+        float th = Mathf.Clamp01(k / 2f);                        // flameK runs 0..2 (rocketing + boost)
+        if (heard && k > 0.08f && !jetLit) { jetLit = true; Sfx.Play(Sfx.JetIgnite, 0.55f + 0.25f * th); }
+        if (k < 0.03f) jetLit = false;
+        if (jetLoop == null && heard && k > 0.02f)
+        {
+            jetLoop = Sfx.Loop(gameObject, Sfx.JetRoar != null ? Sfx.JetRoar : Sfx.EngRocket);
+            jetRumble = Sfx.Loop(gameObject, Sfx.JetRumble != null ? Sfx.JetRumble : Sfx.EngRocket);
+            jetLoop.pitch = jetRumble.pitch = 1f;
+        }
         if (jetLoop != null)
         {
-            jetLoop.volume = Mathf.MoveTowards(jetLoop.volume, heard ? Mathf.Clamp01(k) * 0.75f : 0f, dt * 3f);
-            jetLoop.pitch = 0.65f + 0.25f * boostK + 0.1f * Mathf.Clamp01(k);
-            if (!jetLoop.isPlaying && jetLoop.volume > 0f) jetLoop.Play();
+            float on = heard && k > 0.02f ? 1f : 0f;
+            float roarT = on * (0.28f + 0.42f * th), rumT = on * (0.45f + 0.25f * th);
+            float rate = on > 0f ? 6f : 2.2f;                    // fast attack, ~0.3 s tail
+            jetLoop.volume = Mathf.MoveTowards(jetLoop.volume, roarT, dt * rate);
+            jetRumble.volume = Mathf.MoveTowards(jetRumble.volume, rumT, dt * rate);
+            if (!jetLoop.isPlaying && jetLoop.volume > 0f) { jetLoop.Play(); jetRumble.Play(); }
+            if (jetLoop.isPlaying && jetLoop.volume <= 0f && jetRumble.volume <= 0f) { jetLoop.Stop(); jetRumble.Stop(); }
         }
         // ground blast under the rockets near the ground
         if (k > 0.3f && Altitude < H * 1.2f && Random.value < dt * 20f)

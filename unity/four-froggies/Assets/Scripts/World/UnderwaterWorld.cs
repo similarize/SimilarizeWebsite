@@ -107,8 +107,10 @@ public class UnderwaterWorld : MonoBehaviour
         Vector2 c = Layout.PondC;
         Vector3 p = f.transform.position;
         float x = Mathf.Clamp(p.x - c.x, -85f, 85f), z = Mathf.Clamp(p.z - c.y, -85f, 85f);
-        float y = Mathf.Max(SeaY(x, z) + 3f, -6f);
-        f.SendTo(WorldId.Underwater, Worlds.UnderO + new Vector3(x, Mathf.Min(y, -2.2f), z), f.transform.eulerAngles.y);
+        // ffu37 merge: one depth truth - the reef is the pond seen from below, so the froggy arrives at the depth it dived
+        // to in the pond (ffw pond dive: hold on the floor), just above the seabed there (was: at most 6 m down)
+        float y = Mathf.Clamp(p.y - Layout.WaterY, SeaY(x, z) + 1.2f, -2.2f);
+        f.SendTo(WorldId.Underwater, Worlds.UnderO + new Vector3(x, y, z), f.transform.eulerAngles.y);
         if (roundStart < 0f) roundStart = Time.time;
         FX.Splash(p + Vector3.up * 0.5f, 16);
         Sfx.Play(Sfx.SplashBig, 0.8f, 0.9f);

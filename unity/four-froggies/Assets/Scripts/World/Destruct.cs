@@ -210,6 +210,7 @@ public class Destruct : MonoBehaviour
             case BreakKind.TrackSurface: n = 12; break;
             default: n = Mathf.Clamp(Mathf.RoundToInt(size * 1.6f), 4, 10); break;
         }
+        if (crushing) n = Mathf.Clamp(n / 2 + 1, 2, 5);   // ffw: a squash = a few chunky pieces
         if (Low) n = Mathf.Max(2, n / 2);
         if (far) n = Mathf.Min(n, 2);
         float chunk = Mathf.Clamp(Mathf.Pow(s.x * s.y * s.z / Mathf.Max(1, n), 1f / 3f) * 0.75f, 0.12f, 2.6f);
@@ -218,12 +219,21 @@ public class Destruct : MonoBehaviour
             Vector3 q = new Vector3(c.x + Random.Range(-0.45f, 0.45f) * s.x, c.y + Random.Range(-0.45f, 0.45f) * s.y, c.z + Random.Range(-0.45f, 0.45f) * s.z);
             Vector3 dir = (q - from); dir.y = Mathf.Abs(dir.y) + 0.4f;
             Vector3 v = dir.normalized * Random.Range(5f, 11f) + Random.insideUnitSphere * 3f + Vector3.up * Random.Range(2f, 6f);
+            if (crushing) { dir.y = 0.15f; v = dir.normalized * Random.Range(2.5f, 5f) + Vector3.up * Random.Range(1f, 2.5f); }   // tumble out sideways
             Material m = b.debrisMats[Random.Range(0, b.debrisMats.Length)];
             Vector3 sz = b.kind == BreakKind.Window ? new Vector3(chunk * 1.3f, chunk * 1.1f, 0.05f)
                        : new Vector3(chunk * Random.Range(0.6f, 1.2f), chunk * Random.Range(0.5f, 1.1f), chunk * Random.Range(0.6f, 1.2f));
             Chunks.Spawn(q, v, sz, b.kind == BreakKind.Window ? GlassShard : m, far ? 3f : Random.Range(5f, 7.5f));
         }
         if (far) { FX.Smoke(c, size * 0.5f, new Color(0.4f, 0.38f, 0.35f, 0.7f)); return; }
+        if (crushing)
+        {
+            // squash: a flat dust skirt + a crunchy (pitched-down, not explosive) crack; trees add a leaf puff
+            FX.Ring(new Vector3(c.x, b.bounds.min.y + 0.2f, c.z), Mathf.Clamp(size, 1f, 6f), Low ? 6 : 10, Mathf.Clamp(size * 1.2f, 2f, 7f), new Color(0.6f, 0.53f, 0.42f, 0.6f));
+            if (b.kind == BreakKind.Tree) FX.Cloud(c + Vector3.up * s.y * 0.2f, Mathf.Clamp(size * 0.3f, 1f, 2.5f), Low ? 5 : 8, new Color(0.35f, 0.55f, 0.22f, 0.8f));
+            Sfx.PlayAt(Sfx.Pick(Sfx.Crash) ?? Sfx.Clank ?? Sfx.Thud, c, 0.55f, 90f, Random.Range(0.55f, 0.7f));
+            return;
+        }
         switch (b.kind)
         {
             case BreakKind.Window:
@@ -248,7 +258,56 @@ public class Destruct : MonoBehaviour
     static Material GlassShard { get { if (glassShard == null) glassShard = Mats.Shiny(new Color(0.7f, 0.85f, 0.95f)); return glassShard; } }
 
     // mech feet / a toppling mech crush what they land on
-    public static void Stomp(Vector3 p, float radius, float damage, Vehicle by) { Blast(p, radius, damage, by); }
+    // ffw: a foot is a CRUSH, not an explosion: breakables under it squash (chunky pieces tumble out low, crunch), robots
+    // take the hit as before, and froggies / pets / animals are never hurt - they get bumped gently out from under the foot.
+    public static void Stomp(Vector3 p, float radius, float damage, Vehicle by)
+    {
+        if (!On || damage <= 0f) return;
+        float r2 = radius * radius;
+        for (int i = 0; i < All.Count; i++)
+        {
+            Breakable b = All[i];
+            if (b == null || b.state != 0) continue;
+            float d2 = b.bounds.SqrDistance(p);
+            if (d2 > r2) continue;
+            float k = 1f - Mathf.Sqrt(d2) / radius;
+            b.hp -= damage * (0.5f + 0.5f * k) * (b.kind == BreakKind.Tree || b.kind == BreakKind.Flag || b.kind == BreakKind.Furniture ? 2f : 1f);
+            if (b.hp <= 0f) { crushing = true; Break(b, p, damage, false); crushing = false; }
+            else if (b.kind != BreakKind.Window) FX.Smoke(b.bounds.ClosestPoint(p), 0.8f + damage * 0.04f, new Color(0.35f, 0.33f, 0.3f, 0.6f));   // as Blast did
+        }
+        if (RanchLife.I != null)
+            foreach (var rb in RanchLife.I.robots)
+            {
+                if (rb == null || !rb.gameObject.activeInHierarchy) continue;
+                if (rb.displayOnly || rb.world != WorldId.Ranch || ((rb.frozen || rb.hidden) && rb.seatedIn == null)) continue;
+                Vector3 c = rb.transform.position + Vector3.up * rb.height * 0.5f;
+                float dist = Mathf.Max(0f, (c - p).magnitude - rb.height * 0.4f);
+                if (dist <= radius) RobotBreak.Hit(rb, p, damage * (0.4f + 0.6f * (1f - dist / radius)), false);
+            }
+        float bump = radius * 1.4f;
+        for (int i = Animal.All.Count - 1; i >= 0; i--)
+        {
+            Animal a = Animal.All[i];
+            if (a == null || !a.isActiveAndEnabled) continue;
+            Vector3 d = a.Pos - p; d.y = 0f;
+            if (d.sqrMagnitude > bump * bump) continue;
+            Vector3 dir = d.sqrMagnitude > 0.01f ? d.normalized : Random.onUnitSphere; dir.y = 0f; dir.Normalize();
+            float push = Mathf.Max(0f, bump - d.magnitude) + 1f;
+            Vector3 np = a.Pos + dir * push; np.y = Ranch.GY(np.x, np.z);
+            a.transform.position = np;   // scoot clear of the foot
+            FX.Sparkle(np + Vector3.up * 0.8f, Color.white, 4);
+        }
+        if (Game.I != null)
+            foreach (var f in Game.I.frogs)
+            {
+                if (f == null || f.vehicle != null) continue;
+                Vector3 d = f.transform.position - p; d.y = 0f;
+                if (d.sqrMagnitude > bump * bump) continue;
+                Vector3 dir = d.sqrMagnitude > 0.01f ? d.normalized : Vector3.forward;
+                f.Knock(dir * 5f + Vector3.up * 4f);   // a gentle hop away, never damage
+            }
+    }
+    static bool crushing;
 
     // ---------------- per frame: burning wrecks, regeneration ----------------
     void Update()

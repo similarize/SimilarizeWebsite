@@ -17,6 +17,7 @@ public static class Sfx
     // ffu10 sound set
     public static AudioClip SplashBig, Select, Confirm, Toggle, StepMetal, Land, BumpSoft, Bonk, Skid, Clank, Tracks, Wash;
     public static AudioClip EngEV, EngV8, EngDiesel, EngSub, EngRocket, EngServo;
+    public static AudioClip JetRoar, JetRumble, JetIgnite;   // ffw: mech jetpack thrust (synthesised, see BuildJetpack)
     public static AudioClip[] Ribbit = new AudioClip[0], Foot = new AudioClip[0], Crash = new AudioClip[0], Servo = new AudioClip[0];
     public static AudioClip Moo, Neigh, Bleat, Baa, Cluck, Rooster, Bark, Meow, Oink;
 
@@ -61,6 +62,7 @@ public static class Sfx
         try { FFAudio_Init(); FFAudio_Master(Levels[Level]); } catch (System.Exception e) { Debug.LogWarning("FFAudio init failed: " + e.Message); }
         LoadAll();
         BuildFallback();
+        BuildJetpack();
         Debug.Log("Sfx: " + loaded + " PCM clips loaded, " + fallback + " synthesised fallbacks");
     }
 
@@ -346,6 +348,57 @@ public static class Sfx
         if (BoatMotor == null) BoatMotor = LoopClip("boat", (t) => Sq(t * 72f) * 0.35f + Saw(t * 36f) * 0.3f + N() * 0.12f, 0.45f, true);
         if (Bubbles == null) Bubbles = LoopClip("bubbles", (t) => { float b = Mathf.Sin(t * 6.2832f * (400f + 300f * Mathf.Sin(t * 6.2832f * 3f))) * Mathf.Pow(Mathf.Max(0f, Mathf.Sin(t * 6.2832f * 6f)), 6f); return b * 0.5f + N() * 0.04f; }, 0.4f);
         if (EngServo == null) EngServo = DroneWhine;
+    }
+
+    // ---------------- ffw jetpack thrust (Four Froggies World) ----------------
+    // The mechs used to loop eng_rocket (the 2 s launch-pad rumble): almost all of it sits under 100 Hz, it opens with a
+    // 0.75 peak but ends near 0 so the loop seam clicks every 2 s ("putt... putt"), and the mech then pitched it 0.65-1.0
+    // with boost = a cartoon slide. These are made for a held jetpack: seamless (crossfaded) filtered-noise loops, no tones
+    // that slide, no harsh highs. ~0.2 MB of floats total, built once at boot.
+    static AudioClip SeamlessNoise(string name, float secs, System.Func<float> sample)
+    {
+        int n = Mathf.RoundToInt(secs * Rate), x = Mathf.RoundToInt(0.25f * Rate);
+        var raw = new float[n + x];
+        for (int i = 0; i < raw.Length; i++) raw[i] = sample();
+        var d = new float[n];
+        for (int i = 0; i < n; i++)
+        {
+            float v = raw[i + x];
+            if (i < x) { float a = i / (float)x; v = raw[i + x] * Mathf.Sqrt(a) + raw[i + n] * Mathf.Sqrt(1f - a); }
+            d[i] = v;
+        }
+        float pk = 0.0001f; for (int i = 0; i < n; i++) pk = Mathf.Max(pk, Mathf.Abs(d[i]));
+        for (int i = 0; i < n; i++) d[i] = Mathf.Clamp(d[i] / pk * 0.8f, -1f, 1f);
+        return Clip(name, d);
+    }
+
+    static void BuildJetpack()
+    {
+        // roar: pink-ish noise through two one-pole low-passes (~1.6 kHz), a touch of soft crackle on top
+        float a = 0f, b = 0f, c1 = 0f, c2 = 0f, br = 0f; int crk = 0; float crkV = 0f;
+        JetRoar = SeamlessNoise("jet_roar", 2.5f, () =>
+        {
+            float w = N();
+            br = Mathf.Clamp(br + w * 0.06f, -1f, 1f) * 0.995f;          // brown body
+            a += (w - a) * 0.38f; b += (a - b) * 0.38f;                     // low-passed hiss
+            if (crk <= 0 && rnd.NextDouble() < 0.0015) { crk = 60 + rnd.Next(120); crkV = N(); }
+            float ck = 0f; if (crk > 0) { crk--; c1 += (crkV * (crk % 7 < 3 ? 1f : -1f) - c1) * 0.25f; ck = c1 * 0.25f; }
+            c2 += (b * 0.7f + br * 0.9f + ck - c2) * 0.55f;                 // final soften = no harsh top
+            return c2;
+        });
+        // rumble: deep brown noise, the body you feel under the roar
+        float r1 = 0f, r2 = 0f;
+        JetRumble = SeamlessNoise("jet_rumble", 3f, () => { r1 = Mathf.Clamp(r1 + N() * 0.04f, -1f, 1f) * 0.997f; r2 += (r1 - r2) * 0.05f; return r2; });
+        // ignition: a short "fwump" - noise burst that opens then settles, with a low punch
+        var d = Buf(0.45f); float l = 0f, l2 = 0f;
+        for (int i = 0; i < d.Length; i++)
+        {
+            float t = i / (float)Rate;
+            float env = t < 0.012f ? t / 0.012f : Mathf.Exp(-(t - 0.012f) * 7f);
+            l += (N() - l) * Mathf.Lerp(0.5f, 0.12f, Mathf.Clamp01(t / 0.3f)); l2 += (l - l2) * 0.5f;
+            d[i] = Mathf.Clamp((l2 * 1.6f + Mathf.Sin(t * 6.2832f * 62f) * 0.55f * Mathf.Exp(-t * 14f)) * env, -1f, 1f) * 0.85f;
+        }
+        JetIgnite = Clip("jet_ignite", d);
     }
 
     static AudioClip LoopClip(string name, System.Func<float, float> f, float vol, bool smooth = false)

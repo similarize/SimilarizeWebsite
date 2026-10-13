@@ -33,7 +33,7 @@ public static class PondPhysics
         if (Mathf.Abs(p.x) > Layout.Half || Mathf.Abs(p.z) > Layout.Half || !Layout.InPond(p.x, p.z)) return 0f;
         if (v.body != null) { Bounds b = v.body.bounds; top = b.max.y; bottom = b.min.y; }
         float h = Mathf.Max(0.5f, top - bottom);
-        return Mathf.Clamp01((Layout.WaterY - bottom) / h);
+        return Mathf.Clamp01((Ripples.SurfaceY - bottom) / h);
     }
 
     public static void Step(Vehicle v, float dt)
