@@ -42,7 +42,8 @@ public partial class StoryMech : Vehicle
     Material shieldMat;
     readonly Transform[] flames = new Transform[2];
     Light jetLight;
-    AudioSource jetLoop;
+    AudioSource jetLoop, jetRumble;   // ffw: roar + rumble layers (fixed pitch)
+    bool jetLit;
 
     // ffu15: control hints per device (the pilot's slot), keys shown as badges
     static string K(string k) { return "<color=#ffe680>" + k + "</color>"; }
@@ -361,6 +362,8 @@ public partial class StoryMech : Vehicle
     {
         base.OnExit();
         if (jetLoop != null) jetLoop.volume = 0f;
+        if (jetRumble != null) jetRumble.volume = 0f;
+        jetLit = false;
     }
 
     // ---------------- damage ----------------
@@ -719,14 +722,28 @@ public partial class StoryMech : Vehicle
             jetLight.enabled = k > 0.02f && !Look.Mobile;
             jetLight.intensity = k * 2.2f * (0.9f + Random.value * 0.2f);
         }
-        // rocket roar: the synthesised launch rumble, pitched by the afterburner
+        // ffw jetpack thrust: punchy ignition, steady roar + rumble while held, quick tail. Throttle moves volume and the
+        // roar/rumble balance (brighter when boosting) - pitch stays put, no cartoon slides. Sfx level (M key) still rules
+        // via AudioListener.volume.
         bool heard = driver != null && driver.human;
-        if (jetLoop == null && heard && k > 0.02f) jetLoop = Sfx.Loop(gameObject, Sfx.EngRocket != null ? Sfx.EngRocket : Sfx.Rotor);
+        float th = Mathf.Clamp01(k / 2f);                        // flameK runs 0..2 (rocketing + boost)
+        if (heard && k > 0.08f && !jetLit) { jetLit = true; Sfx.Play(Sfx.JetIgnite, 0.55f + 0.25f * th); }
+        if (k < 0.03f) jetLit = false;
+        if (jetLoop == null && heard && k > 0.02f)
+        {
+            jetLoop = Sfx.Loop(gameObject, Sfx.JetRoar != null ? Sfx.JetRoar : Sfx.EngRocket);
+            jetRumble = Sfx.Loop(gameObject, Sfx.JetRumble != null ? Sfx.JetRumble : Sfx.EngRocket);
+            jetLoop.pitch = jetRumble.pitch = 1f;
+        }
         if (jetLoop != null)
         {
-            jetLoop.volume = Mathf.MoveTowards(jetLoop.volume, heard ? Mathf.Clamp01(k) * 0.75f : 0f, dt * 3f);
-            jetLoop.pitch = 0.65f + 0.25f * boostK + 0.1f * Mathf.Clamp01(k);
-            if (!jetLoop.isPlaying && jetLoop.volume > 0f) jetLoop.Play();
+            float on = heard && k > 0.02f ? 1f : 0f;
+            float roarT = on * (0.28f + 0.42f * th), rumT = on * (0.45f + 0.25f * th);
+            float rate = on > 0f ? 6f : 2.2f;                    // fast attack, ~0.3 s tail
+            jetLoop.volume = Mathf.MoveTowards(jetLoop.volume, roarT, dt * rate);
+            jetRumble.volume = Mathf.MoveTowards(jetRumble.volume, rumT, dt * rate);
+            if (!jetLoop.isPlaying && jetLoop.volume > 0f) { jetLoop.Play(); jetRumble.Play(); }
+            if (jetLoop.isPlaying && jetLoop.volume <= 0f && jetRumble.volume <= 0f) { jetLoop.Stop(); jetRumble.Stop(); }
         }
         // ground blast under the rockets near the ground
         if (k > 0.3f && Altitude < H * 1.2f && Random.value < dt * 20f)
