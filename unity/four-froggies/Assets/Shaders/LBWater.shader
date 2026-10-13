@@ -87,7 +87,7 @@ Shader "LB/Water"
                 half foam = shore * (0.55 + wave * 0.6) - brk * 0.5;
                 foam = smoothstep(0.18, 0.5, foam);
                 col = lerp(col, _FoamColor.rgb, foam * 0.9);
-                half fm = smoothstep(0.12, 0.75, rip.z * 1.25 - brk * 0.55) * 0.75;
+                half fm = smoothstep(0.08, 0.6, rip.z * 1.4 - brk * 0.5) * 0.85;
                 col = lerp(col, _FoamColor.rgb * 0.92, fm * 0.85);
                 foam = max(foam, fm * 0.85);
 

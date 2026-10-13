@@ -96,9 +96,15 @@ public partial class Game
             Vector3 want = mp + new Vector3(H * 1.15f, H * 0.45f, H * 0.55f);
             float gy = Ranch.GY(want.x, want.z) + 1.5f; if (want.y < gy) want.y = gy;
             if (want.y < wy + 1.2f) want.y = wy + 1.2f;
+            Vector3 lk = mp + Vector3.up * H * 0.45f;
+            if (lk.y < wy - H * 0.1f) lk.y = wy - H * 0.1f;
+            // once it's deep (circling): rise and pull back to look down on the ring / wake round it on the water
+            float up = Mathf.Clamp01((p8Phase >= 1 ? p8T - p8PhT + (p8Phase > 1 ? 99f : 0f) : 0f) / 3f);
+            Vector3 hi = new Vector3(mp.x + H * 1.3f, wy + H * 0.6f + 2f, mp.z + H * 0.75f);
+            want = Vector3.Lerp(want, hi, up);
+            lk = Vector3.Lerp(lk, new Vector3(mp.x, wy, mp.z), up * 0.8f);
             p8Cam = p8Cam == Vector3.zero ? want : Vector3.Lerp(p8Cam, want, Mathf.Min(1f, Time.unscaledDeltaTime * 2f));
-            pos = p8Cam; look = mp + Vector3.up * H * 0.45f;
-            if (look.y < wy - H * 0.1f) look.y = wy - H * 0.1f;
+            pos = p8Cam; look = lk;
             if (p8Log <= 0f)
             {
                 p8Log = 0.5f;
@@ -108,13 +114,12 @@ public partial class Game
         }
         if (p8Truck == null) return false;
         Transform tt = p8Truck.transform;
-        Vector3 fw = tt.forward; fw.y = 0f; fw.Normalize();
-        Vector3 rt = new Vector3(fw.z, 0f, -fw.x);
         Vector3 tp = tt.position;
-        Vector3 w2 = tp - fw * 8f + rt * 6f + Vector3.up * 3.5f;
-        float g2 = Mathf.Max(Ranch.GY(w2.x, w2.z) + 1.2f, wy + 1.4f); if (w2.y < g2) w2.y = g2;
-        p8Cam = p8Cam == Vector3.zero ? w2 : Vector3.Lerp(p8Cam, w2, Mathf.Min(1f, Time.unscaledDeltaTime * 2.5f));
-        pos = p8Cam; look = tp + Vector3.up * 0.8f; if (look.y < wy) look.y = wy;
+        // fixed, raised side view of where it drives in (no camera clipping into buoys / ramps on the way)
+        pos = new Vector3(70f, wy + 9f, -14f);
+        Vector3 aim = new Vector3(tp.x, Mathf.Max(tp.y, wy), tp.z);
+        if (aim.z < -40f) aim.z = -40f;
+        look = Vector3.Lerp(new Vector3(56f, wy, -30f), aim, 0.5f);
         if (p8Log <= 0f)
         {
             p8Log = 0.5f;
