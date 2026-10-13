@@ -97,7 +97,7 @@ public static class Ripples
         float under = Mathf.Clamp01((SurfaceY - p.y) / (mechH * 0.9f));
         float kk = Mathf.Lerp(1f, 0.45f, under);
         Vector3 sp = new Vector3(p.x, SurfaceY, p.z);
-        bool simmed = Kick(sp, Mathf.Clamp(mechH * 0.07f, 0.8f, 9f), Mathf.Clamp(0.05f + mechH * 0.005f, 0.08f, 0.5f) * kk, 0.6f * kk, Mathf.Clamp(mechH * 0.09f, 0.9f, 10f), 1f);   // ffu39: a foot on the bed = a mud cloud
+        bool simmed = Kick(sp, Mathf.Clamp(mechH * 0.07f, 0.8f, 9f), Mathf.Clamp(0.05f + mechH * 0.005f, 0.08f, 0.5f) * kk, 0.6f * kk * (1f - under) * (1f - under), Mathf.Clamp(mechH * 0.09f, 0.9f, 10f), 1f);   // ffu39b: white spray only when the foot lands near the surface   // ffu39: a foot on the bed = a mud cloud
         Swell(sp, Mathf.Clamp(mechH * 0.9f, 7f, 70f), Mathf.Clamp(0.03f + mechH * 0.004f, 0.06f, 0.5f) * Mathf.Lerp(1f, 0.6f, under), mechH * 0.12f);
         if (!simmed) { Ring(p, r, 1.2f); if (mechH > 40f) Ring(p, r * 0.55f, 0.8f); }
         Surge(mechH);

@@ -94,7 +94,9 @@ public static class RoofBreak
     }
 
     // per frame: break roofs the mech's legs / body pass through. p = mech root (feet), vel = its velocity
-    public static void MechTick(StoryMech m, Vector3 p, Vector3 vel, float H, int band, bool standingOnRoof)
+    // prevY: the mech's height last frame - a fast fall (or a low frame rate) can carry the feet from above a roof to the
+    // ground in one step, so the test is swept over [p.y, prevY]
+    public static void MechTick(StoryMech m, Vector3 p, Vector3 vel, float H, int band, bool standingOnRoof, float prevY)
     {
         if (Pieces.Count == 0 || m == null) return;
         float r = H * 0.14f;
@@ -104,7 +106,8 @@ public static class RoofBreak
             Breakable b = Pieces[i];
             if (b == null || b.state != 0) continue;
             Bounds bb = b.bounds;
-            if (p.y + H < bb.min.y || p.y > bb.max.y - 0.3f) continue;   // all above it / below it
+            float lo = Mathf.Min(p.y, prevY);
+            if (lo + H < bb.min.y || lo > bb.max.y - 0.3f) continue;   // all above it / below it (swept)
             if (!OverXZ(bb, p, r)) continue;
             if (standingOnRoof && band == 0 && p.y >= bb.max.y - 0.5f) continue;   // the small mech on top of it
             // legs / body through the roof: big mechs always punch through; the 10-story too unless it stands on top
@@ -118,7 +121,7 @@ public static class RoofBreak
     {
         bool broke = false;
         float r = H * (power > 1.2f ? 0.16f : 0.09f) + 0.8f;
-        float e = (band == 0 ? 1f : 6f + band * 6f) * (4f + fallSpeed * 1.4f) * power;   // size x fall speed
+        float e = (band == 0 ? 0.6f : 6f + band * 6f) * (4f + fallSpeed * 1.4f) * power;   // size x fall speed (the 10-story: a soft landing / steps crack, a hop or a hard landing breaks)
         for (int i = 0; i < Pieces.Count; i++)
         {
             Breakable b = Pieces[i];

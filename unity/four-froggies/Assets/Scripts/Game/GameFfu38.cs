@@ -12,7 +12,7 @@ public partial class Game
 {
     static bool Is38(string sc) { return sc == "mechwade"; }
     StoryMech p8Mech; Vehicle p8Truck; Frog p8Frog;
-    int p8Phase; float p8T, p8PhT, p8Log, p8Hold; Vector3 p8Cam; float p8Deep;
+    int p8Phase; float p8T, p8PhT, p8Log, p8Hold, p8HoldT; Vector3 p8Cam; float p8Deep;
 
     void Demo38Start(Frog f, string sc)
     {
@@ -50,6 +50,8 @@ public partial class Game
             {
                 // same as ffu37 pondsink phase 0: south (heading 180) at full stick
                 o.move = new Vector2(Mathf.Clamp(Mathf.DeltaAngle(yaw, 180f) / 30f, -1f, 1f), 1f);
+                // ffu39 &mwhold=1: stop ~1.2-2.5 m deep at the shore entry for 10 s (legs in the water - meniscus, silt, rings)
+                if (UrlParam("mwhold") != null && depth > 1.2f && p8HoldT < 10f) { p8HoldT += Mathf.Min(Time.deltaTime, 0.34f); o.move = Vector2.zero; if (p8HoldT < 0.4f) Debug.Log("FFDEMO mechwade shore hold depth=" + depth.ToString("0.0") + " pos=(" + mp.x.ToString("0") + "," + mp.z.ToString("0") + ")"); }
                 if (depth >= p8Deep || mp.z < -72f) P8Phase(1);
             }
             else if (p8Phase == 1) { o.move = new Vector2(0.75f, 0.7f); if (p8T - p8PhT > 16f) P8Phase(2); }   // trudge round in circles
@@ -106,7 +108,7 @@ public partial class Game
             p8Cam = p8Cam == Vector3.zero ? want : Vector3.Lerp(p8Cam, want, Mathf.Min(1f, Time.unscaledDeltaTime * 2f));
             pos = p8Cam; look = lk;
             // ffu39 &mwclose=1: a fixed low camera at the shore entry (legs meeting the water, meniscus, silt plume)
-            if (UrlParam("mwclose") != null) { pos = new Vector3(51f, wy + 2.6f, -21f); look = new Vector3(40f, wy + 0.8f, -31f); }
+            if (UrlParam("mwclose") != null) { pos = new Vector3(48f, wy + 2.2f, -24f); look = new Vector3(mp.x, wy + 0.6f, mp.z); }
             if (p8Log <= 0f)
             {
                 p8Log = 0.5f;
