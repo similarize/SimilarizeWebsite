@@ -171,7 +171,9 @@ public abstract class Vehicle : MonoBehaviour
                 if (rb != null && c.attachedRigidbody == rb) { if (Physics.Raycast(h.point - Vector3.up * 0.05f, Vector3.down, out h, 3f, ~0, QueryTriggerInteraction.Ignore)) c = h.collider; else c = null; }
                 terrain = c == null || c is TerrainCollider;
             }
-            if (!terrain) v = 0f;
+            bool road = Layout.RoadDist(p.x, p.z) < Layout.TrackW * 0.5f + 0.5f;
+            if (!terrain && road && p.y < Ranch.GY(p.x, p.z) + 1.5f) v = 1f;   // ffu39c: the dirt figure-8 / spur has its own collider surface - still dirt
+            else if (!terrain) v = 0f;
             else if (Mathf.Abs(p.x - Layout.GarageC.x) < Layout.GarageSize.x * 0.5f + 4f && Mathf.Abs(p.z - Layout.GarageC.y) < Layout.GarageSize.y * 0.5f + 10f) v = 0.15f;   // garage apron
             else if (Layout.RoadDist(p.x, p.z) < Layout.TrackW * 0.5f + 0.5f) v = 1f;   // dirt / gravel roads
             else v = 0.6f;   // grass

@@ -558,6 +558,10 @@ public partial class StoryMech : Vehicle
         ground = MechGround(p, pos.y);
         float terrainY = Ranch.GY(p.x, p.z);
         landCool -= dt;
+        // ffu39c: legs / body through a roof first (swept from last frame), so a fast fall breaks the roof itself instead of
+        // passing through it and only crushing what is at ground level
+        RoofBreak.MechTick(this, p, (p - pos) / Mathf.Max(dt, 1e-4f), H, band, grounded && ground > terrainY + 0.3f, pos.y);
+        ground = MechGround(p, pos.y);
         // ffu39: a landing on a roof: size x fall speed decides whether it holds (the 10-story, softly) or gives way - then
         // the mech keeps falling through the hole onto the floor / ground
         if (!grounded && p.y <= ground && vy <= 0f && ground > terrainY + 0.3f)
@@ -575,7 +579,7 @@ public partial class StoryMech : Vehicle
             for (int i = 0; i < 16 + band * 6; i++) { Vector2 r = Random.insideUnitCircle.normalized * H * Random.Range(0.15f, 0.4f); FX.Dust(p + new Vector3(r.x, 0.5f, r.y), 1f); }
             foreach (Collider c in Physics.OverlapSphere(p, H * 0.3f + 2f, 1 << PropLayer))
                 if (c.attachedRigidbody != null) c.attachedRigidbody.AddExplosionForce(500f + band * 800f, p, H * 0.4f + 3f, 1.5f);
-            if (hard > 0.3f) Destruct.Stomp(p, H * 0.22f + 2f, 30f + band * 15f, this);
+            if (hard > 0.3f && ground <= terrainY + 0.3f) Destruct.Stomp(p, H * 0.22f + 2f, 30f + band * 15f, this);   // ffu39c: on a roof, RoofBreak decides
             FX.Ring(p, H * 0.3f, Look.Mobile ? 10 : 18, Mathf.Clamp(H * 0.25f, 4f, 30f), new Color(0.62f, 0.53f, 0.40f, 0.5f));   // ffw dust ring
             Ripples.Footfall(p, H * 1.3f);
             vy = 0f;
@@ -583,7 +587,6 @@ public partial class StoryMech : Vehicle
         if (grounded && wd > 0f && ground < pos.y - (0.6f + H * 0.04f)) { grounded = false; vy = Mathf.Min(vy, 0f); }   // ffu37: the bed drops away -> settle down slowly
         if (grounded && wd <= 0f && ground < pos.y - (0.6f + H * 0.04f)) { grounded = false; vy = Mathf.Min(vy, 0f); }   // ffu39: the roof under it gave way / walked off a roof -> fall
         if (grounded) { p.y = wd > 0f ? Mathf.Max(ground, pos.y - SinkMax(H) * dt) : ground; vy = 0f; }   // ffu37: never drops faster than it sinks
-        RoofBreak.MechTick(this, p, (p - pos) / Mathf.Max(dt, 1e-4f), H, band, grounded && ground > terrainY + 0.3f, pos.y);   // ffu39: legs / body through a roof break it
         PondFx(pos, p, H, wd);
         MechWater(p, (p - pos) / Mathf.Max(dt, 1e-4f), H, dt);   // ffu38: legs / body push real waves + foam (StoryMechWater.cs)
         Altitude = Mathf.Max(0f, p.y - ground);
@@ -683,12 +686,13 @@ public partial class StoryMech : Vehicle
                 // ffu28: the foot that just struck = the one swung forward (legR when sin(phase) = +1, i.e. side turned -1)
                 Vector3 foot = transform.TransformPoint(new Vector3(-H * 0.1f * side, 0f, HipY * Mathf.Sin(amp * Mathf.Deg2Rad)));
                 foot.y = MechGround(foot, transform.position.y);
-                if (foot.y > Ranch.GY(foot.x, foot.z) + 0.3f) RoofBreak.Impact(this, foot, H, band, 0f, 1f);   // ffu39: a step on a roof cracks it
+                bool onRoof = foot.y > Ranch.GY(foot.x, foot.z) + 0.3f;
+                if (onRoof) RoofBreak.Impact(this, foot, H, band, 0f, 1f);   // ffu39: a step on a roof cracks it
                 MechStomp.Foot(foot, H, 1f, false);   // boom + crunch, ground quake, dust cloud (Core/MechStomp.cs)
                 foreach (Collider c in Physics.OverlapSphere(foot, H * 0.12f + 1f, 1 << PropLayer))
                     if (c.attachedRigidbody != null) c.attachedRigidbody.AddExplosionForce(400f + band * 600f, foot, H * 0.2f + 2f, 1f);
                 // ffw: every mech crushes (the 10-story too), radius scales with size; pond steps ripple + splash
-                if (driver != null) Destruct.Stomp(foot, H * 0.09f + 1.2f, 22f + band * 14f, this);
+                if (driver != null && !onRoof) Destruct.Stomp(foot, H * 0.09f + 1.2f, 22f + band * 14f, this);   // ffu39c: not the roof it stands on
                 Ripples.Footfall(foot, H);
             }
         }
