@@ -68,6 +68,11 @@ public class Game : MonoBehaviour
     Vector2Int lastScreen;
     static readonly Color[] PlayerCol = { new Color(1f, 0.85f, 0.25f), new Color(0.3f, 0.9f, 1f), new Color(1f, 0.45f, 0.85f), new Color(0.55f, 1f, 0.35f) };
     Image pauseBtn, resumeBtn, restartBtn, quitBtn, creditsBtn, creditsPanel;
+    // track picker (lobby): < NAME > box; T / Shift+T, LB / RB, tap the arrows or the box
+    Image trackBox, trackPrev, trackNext;
+    Text trackName, trackInfo;
+    int pendingTrack = -1;
+    float pendingT, trackPop;
     Image[] resultRows;
     int lobbyLayout = -1;
     float lastTouchTime = -10f;
@@ -257,6 +262,15 @@ public class Game : MonoBehaviour
             robotBadges[i] = UIK.Label(t, "", 13, TextAnchor.UpperLeft, new Vector2(0f, 1f), Vector2.zero, new Vector2(126, 18), Color.white);
             robotBadges[i].supportRichText = true;
         }
+        trackBox = UIK.Img(r, null, new Color(0f, 0f, 0f, 0.6f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(300, 46));
+        trackName = UIK.Label(trackBox.transform, "", 21, TextAnchor.UpperCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(300, 46), new Color(1f, 0.85f, 0.3f));
+        UIK.Stretch(trackName.rectTransform); trackName.rectTransform.offsetMax = new Vector2(0, -3);
+        trackInfo = UIK.Label(trackBox.transform, "", 11, TextAnchor.LowerCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(300, 46), new Color(1f, 1f, 1f, 0.8f));
+        UIK.Stretch(trackInfo.rectTransform); trackInfo.rectTransform.offsetMin = new Vector2(0, 3);
+        trackPrev = UIK.Img(r, null, new Color(0.1f, 0.35f, 0.55f, 0.9f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(46, 46));
+        var tpl = UIK.Label(trackPrev.transform, "<", 30, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(46, 46), Color.white); UIK.Stretch(tpl.rectTransform);
+        trackNext = UIK.Img(r, null, new Color(0.1f, 0.35f, 0.55f, 0.9f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(46, 46));
+        var tnl = UIK.Label(trackNext.transform, ">", 30, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(46, 46), Color.white); UIK.Stretch(tnl.rectTransform);
         playBtn = UIK.Img(r, null, new Color(0.15f, 0.65f, 0.25f, 0.9f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(260, 46));
         var pl = UIK.Label(playBtn.transform, "RACE!", 30, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(260, 46), Color.white);
         UIK.Stretch(pl.rectTransform);
@@ -371,10 +385,14 @@ public class Game : MonoBehaviour
             tileCarSize = new Vector2(166, 80); tileRobotSize = new Vector2(166, 92);
             for (int i = 0; i < 8; i++) put(carTiles[i], new Vector2(-258 + (i % 4) * 172, -182 - (i / 4) * 86), tileCarSize);
             for (int i = 0; i < 7; i++) put(robotTiles[i], new Vector2(i < 4 ? -258 + i * 172 : -172 + (i - 4) * 172, -362 - (i / 4) * 96), tileRobotSize);
-            put(playBtn, new Vector2(0, -540), new Vector2(340, 54));
+            put(playBtn, new Vector2(128, -540), new Vector2(226, 54));
+            put(trackBox, new Vector2(-150, -540), new Vector2(224, 54));
+            put(trackPrev, new Vector2(-292, -540), new Vector2(44, 54));
+            put(trackNext, new Vector2(-8, -540), new Vector2(44, 54));
+            trackName.fontSize = 17;
             put(lobbyStatus, new Vector2(0, -585), new Vector2(690, 30)); lobbyStatus.fontSize = 15;
             put(lobbyHelp, new Vector2(0, -613), new Vector2(700, 34)); lobbyHelp.fontSize = 11;
-            put(creditsBtn, new Vector2(282, -540), new Vector2(118, 30));
+            put(creditsBtn, new Vector2(300, -540), new Vector2(98, 30));
             put(creditsPanel, Vector2.zero, new Vector2(700, 900));
         }
         else
@@ -387,6 +405,10 @@ public class Game : MonoBehaviour
             for (int i = 0; i < 8; i++) put(carTiles[i], new Vector2(-483 + i * 138, -106), tileCarSize);
             for (int i = 0; i < 7; i++) put(robotTiles[i], new Vector2(-474 + i * 158, -204), tileRobotSize);
             put(playBtn, new Vector2(0, -284), new Vector2(260, 44));
+            put(trackBox, new Vector2(-370, -284), new Vector2(300, 46));
+            put(trackPrev, new Vector2(-548, -284), new Vector2(46, 46));
+            put(trackNext, new Vector2(-192, -284), new Vector2(46, 46));
+            trackName.fontSize = 21;
             put(lobbyStatus, new Vector2(0, -318), new Vector2(1180, 26)); lobbyStatus.fontSize = 17;
             put(lobbyHelp, new Vector2(0, -344), new Vector2(1200, 32)); lobbyHelp.fontSize = 12;
             put(creditsBtn, new Vector2(540, -284), new Vector2(118, 28));
@@ -538,6 +560,12 @@ public class Game : MonoBehaviour
             robotBadges[i].text = badge;
             TileStyle(robotTiles[i], robotThumbs[i], firstPick, ps != null && ps.robot == i, taken, ref robotPop[i], dt);
         }
+        int tshow = pendingTrack >= 0 ? pendingTrack : Track.Id;
+        trackPop = Mathf.Max(0f, trackPop - dt * 3.5f);
+        trackBox.rectTransform.localScale = Vector3.one * (1f + 0.12f * Mathf.Sin(trackPop * Mathf.PI));
+        trackName.text = (lobbyLayout == 1 ? "" : "TRACK ") + (tshow + 1) + "/" + Track.Count + (lobbyLayout == 1 ? "  " : ":  ") + Track.NameOf(tshow).ToUpper();
+        trackInfo.text = pendingTrack >= 0 ? "building track..." : (lobbyLayout == 1 ? "tap < > · T · LB RB" : "tap < >  ·  T / Shift+T  ·  pad LB / RB");
+        lobbySub.text = Track.NameOf(tshow) + ":  " + Track.BlurbOf(tshow) + "  ·  8 cars  ·  3 laps  ·  grab the ? boxes";
         string top = "<color=#7dff8a>GREEN is the fastest car</color> (" + Cars.All[0].Kmh + " km/h top speed)  ·  ";
         if (slots.Count == 0) lobbyStatus.text = top + "join to pick your car + robot";
         else lobbyStatus.text = top + slots.Count + " player" + (slots.Count > 1 ? "s" : "") + " in  ·  A / Start / Enter / RACE! to go";
@@ -673,6 +701,20 @@ public class Game : MonoBehaviour
         Sfx.Music("lobby");
         float now = Time.unscaledTime;
 
+        // track picker
+        if (Kb.TDown()) PickTrack(Kb.Shift() ? -1 : 1);
+        foreach (Gamepad pad in Gamepad.all)
+        {
+            if (ghosts.Contains(pad.deviceId)) continue;
+            if (pad.rightShoulder.wasPressedThisFrame) PickTrack(1);
+            if (pad.leftShoulder.wasPressedThisFrame) PickTrack(-1);
+        }
+        if (pendingTrack >= 0)
+        {
+            pendingT -= Time.unscaledDeltaTime;
+            if (pendingT <= 0f) { int id = pendingTrack; pendingTrack = -1; RebuildTrack(id); }
+        }
+
         // keyboard
         Slot ks = FindSlot(InputKind.Keyboard);
         if (Kb.EnterDown())
@@ -751,6 +793,8 @@ public class Game : MonoBehaviour
     bool LobbyTap(Vector2 pos, InputKind kind)
     {
         if (Hit(creditsBtn, pos)) { CreditsToggle(true); return false; }
+        if (Hit(trackPrev, pos)) { PickTrack(-1); return false; }
+        if (Hit(trackNext, pos) || Hit(trackBox, pos)) { PickTrack(1); return false; }
         if (Hit(playBtn, pos))
         {
             if (slots.Count == 0) Join(kind, null);
@@ -776,10 +820,37 @@ public class Game : MonoBehaviour
         return false;
     }
 
+    // ---------------- track choice ----------------
+    void PickTrack(int dir)
+    {
+        int cur = pendingTrack >= 0 ? pendingTrack : Track.Id;
+        pendingTrack = ((cur + dir) % Track.Count + Track.Count) % Track.Count;
+        if (pendingTrack == Track.Id) pendingTrack = -1;
+        pendingT = 0.45f;          // wait for the player to stop flicking through before rebuilding the world
+        trackPop = 1f;
+        Sfx.Play(Sfx.Click, 0.4f);
+    }
+
+    void RebuildTrack(int id)
+    {
+        Bootstrap.BuildWorld(id);
+        if (mapTex != null) Destroy(mapTex);
+        mapTex = Track.MiniMapTex(256);
+        foreach (var s in slots) if (s.hud != null) s.hud.SetMap(mapTex);
+        Assign();
+        PlaceGrid();
+        PlayerPrefs.SetInt("lb.track", Track.Id);
+        PlayerPrefs.Save();
+        Vector2 mid = (Track.Min + Track.Max) * 0.5f;
+        Look.RefreshIsland(new Vector3(mid.x, 0f, mid.y));
+        Sfx.Play(Sfx.ItemGet, 0.5f);
+    }
+
     // ---------------- race flow ----------------
     void StartRace()
     {
         if (slots.Count == 0) return;
+        if (pendingTrack >= 0) { int id = pendingTrack; pendingTrack = -1; RebuildTrack(id); }
         Assign();
         PlaceGrid();
         state = State.Countdown;
@@ -916,6 +987,7 @@ public class Game : MonoBehaviour
     void Update()
     {
         float dt = Time.deltaTime;
+        Track.Tick(Time.time);
         touch.active = (state == State.Countdown || state == State.Race) && FindSlot(InputKind.Touch) != null && !paused;
         switch (state)
         {
@@ -1007,7 +1079,7 @@ public class Game : MonoBehaviour
         {
             countdownT -= dt;
             int num = Mathf.CeilToInt(countdownT);
-            if (num > 3) centre = "<size=80>READY?</size>";
+            if (num > 3) centre = "<size=44><color=#ffd84a>" + Track.Name.ToUpper() + "</color></size>\n<size=80>READY?</size>";
             else if (num >= 1)
             {
                 centre = "<size=150>" + num + "</size>";
@@ -1092,7 +1164,7 @@ public class Game : MonoBehaviour
         Sfx.Play(bestHuman <= 3 ? Sfx.Win : Sfx.Lose, 0.9f);
         Sfx.Duck(3f);
         var sb = new System.Text.StringBuilder();
-        sb.Append("<size=46><color=#7dff8a>RACE RESULTS</color></size>\n\n");
+        sb.Append("<size=46><color=#7dff8a>RACE RESULTS</color></size>  <size=24>" + Track.Name + "</size>\n\n");
         for (int i = 0; i < order.Count; i++)
         {
             Kart k = order[i];

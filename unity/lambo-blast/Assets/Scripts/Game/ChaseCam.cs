@@ -37,7 +37,7 @@ public class ChaseCam
         // keep above the ground / water
         float gy; Vector3 n;
         Track.Ground(pos, out gy, out n);
-        float floor = Mathf.Max(gy, Track.WaterY) + 1.0f;
+        float floor = Mathf.Max(gy, Track.SurfaceFloor) + 1.0f;
         if (pos.y < floor) pos.y = floor;
         Vector3 lookAt = basePos + Vector3.up * 1.2f + rot * Vector3.forward * 3f;
         look = Vector3.Lerp(look, lookAt, Mathf.Min(1f, dt * 14f));

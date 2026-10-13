@@ -80,7 +80,7 @@ public static class FX
         for (int i = 0; i < n; i++) Emit(p, Random.insideUnitSphere * 3f + Vector3.up * 2f, Random.Range(0.15f, 0.35f), Random.Range(0.4f, 0.8f), c);
     }
 
-    static void Emit(Vector3 p, Vector3 v, float size, float life, Color c)
+    public static void Emit(Vector3 p, Vector3 v, float size, float life, Color c)
     {
         var ep = new ParticleSystem.EmitParams();
         ep.position = p;

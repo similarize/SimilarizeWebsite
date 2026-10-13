@@ -72,6 +72,47 @@ public static class Look
         catch (System.Exception e) { Debug.LogWarning("Look: probes failed " + e.Message); }
     }
 
+    // per-track lighting: sun, ambient, fog and sky tint (0 = Coconut Cove's original look)
+    static Material skyMat;
+    static float skyExposure = -1f;
+    public static void SetTheme(int th)
+    {
+        if (skyMat == null && RenderSettings.skybox != null)
+        {
+            skyMat = new Material(RenderSettings.skybox);
+            RenderSettings.skybox = skyMat;
+            if (skyMat.HasProperty("_Exposure")) skyExposure = skyMat.GetFloat("_Exposure");
+        }
+        Color sunC = new Color(1f, 0.93f, 0.8f), sky = new Color(0.42f, 0.5f, 0.64f), eq = new Color(0.5f, 0.5f, 0.46f), gr = new Color(0.42f, 0.36f, 0.28f);
+        Color fog = new Color(0.66f, 0.75f, 0.86f), tint = new Color(0.5f, 0.5f, 0.5f);
+        float sunI = 1.1f, fogD = 0.0022f, exp = 1f; Vector3 sunE = new Vector3(48f, -38f, 0f);
+        switch (th)
+        {
+            case 1: sunC = new Color(1f, 0.87f, 0.68f); sunI = 1.15f; sunE = new Vector3(40f, -60f, 0f); sky = new Color(0.5f, 0.48f, 0.52f); eq = new Color(0.58f, 0.46f, 0.36f); gr = new Color(0.5f, 0.32f, 0.22f); fog = new Color(0.86f, 0.72f, 0.58f); fogD = 0.0016f; tint = new Color(0.56f, 0.5f, 0.44f); break;
+            case 2: sunC = new Color(1f, 0.58f, 0.38f); sunI = 0.95f; sunE = new Vector3(26f, 30f, 0f); sky = new Color(0.3f, 0.22f, 0.24f); eq = new Color(0.42f, 0.26f, 0.2f); gr = new Color(0.55f, 0.22f, 0.08f); fog = new Color(0.32f, 0.2f, 0.16f); fogD = 0.0028f; tint = new Color(0.4f, 0.24f, 0.2f); exp = 0.75f; break;
+            case 3: sunC = new Color(0.96f, 0.97f, 1f); sunI = 1.1f; sunE = new Vector3(36f, -20f, 0f); sky = new Color(0.46f, 0.54f, 0.68f); eq = new Color(0.52f, 0.56f, 0.62f); gr = new Color(0.5f, 0.52f, 0.58f); fog = new Color(0.8f, 0.85f, 0.92f); fogD = 0.0024f; tint = new Color(0.5f, 0.53f, 0.58f); exp = 1.1f; break;
+            case 4: sunC = new Color(1f, 0.95f, 0.8f); sunI = 1.05f; sunE = new Vector3(55f, -70f, 0f); sky = new Color(0.4f, 0.5f, 0.52f); eq = new Color(0.4f, 0.48f, 0.36f); gr = new Color(0.26f, 0.32f, 0.2f); fog = new Color(0.55f, 0.66f, 0.56f); fogD = 0.0032f; tint = new Color(0.46f, 0.52f, 0.46f); break;
+            case 5: sunC = new Color(1f, 0.9f, 0.8f); sunI = 1.1f; sunE = new Vector3(32f, -110f, 0f); sky = new Color(0.44f, 0.5f, 0.64f); eq = new Color(0.5f, 0.5f, 0.52f); gr = new Color(0.35f, 0.35f, 0.38f); fog = new Color(0.72f, 0.78f, 0.88f); fogD = 0.0011f; tint = new Color(0.5f, 0.52f, 0.56f); exp = 1.05f; break;
+        }
+        if (sun != null) { sun.color = sunC; sun.intensity = sunI; sun.transform.rotation = Quaternion.Euler(sunE); }
+        RenderSettings.ambientSkyColor = sky; RenderSettings.ambientEquatorColor = eq; RenderSettings.ambientGroundColor = gr;
+        RenderSettings.fogColor = fog; RenderSettings.fogDensity = fogD;
+        if (skyMat != null)
+        {
+            if (skyMat.HasProperty("_Tint")) skyMat.SetColor("_Tint", tint);
+            if (skyMat.HasProperty("_Exposure") && skyExposure > 0f) skyMat.SetFloat("_Exposure", skyExposure * exp);
+        }
+        Debug.Log("Look: theme " + th);
+    }
+
+    // re-render the island probe after a track rebuild
+    public static void RefreshIsland(Vector3 centre)
+    {
+        if (island == null) return;
+        island.transform.position = centre + Vector3.up * 14f;
+        island.RenderProbe();
+    }
+
     public static bool PostAllowed(int views) { return views == 1; }
 
     // called whenever the number of views changes (lobby = 0 player views)

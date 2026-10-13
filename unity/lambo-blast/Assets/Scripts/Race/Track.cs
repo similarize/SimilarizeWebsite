@@ -8,15 +8,16 @@ using UnityEngine;
 //    a lagoon gap (too slow = splash + respawn).
 //  * Ground: one height-field mesh (beach, inland hills, sea floor) under a transparent sea plane.
 // All drivable surfaces are colliders on layer 8 (Ground); karts and projectiles ray-cast down onto them.
-public static class Track
+// Track id 0. The five generated adventure tracks live in TrackGen.cs / TrackDefs.cs (Track.Build(id) picks one).
+public static partial class Track
 {
     public const int GroundLayer = 8;
     public const int GroundMask = 1 << GroundLayer;
-    public const float HalfW = 7.5f;      // main road half width
-    public const float ScHalf = 4.5f;     // shortcut half width
-    public const float Wall = 9f;         // invisible soft wall this far beyond the road edge
-    public const float WaterY = 0f;
-    public const float Scale = 0.85f;
+    public static float HalfW = 7.5f;      // main road half width
+    public static float ScHalf = 4.5f;     // shortcut half width
+    public static float Wall = 9f;         // invisible soft wall this far beyond the road edge
+    public static float WaterY = 0f;       // -999 = no water on this track
+    public static float Scale = 0.85f;
     public const int Laps = 3;
 
     public static Vector3[] C, T, Rt;     // main centre line (road surface height), tangents, right vectors
@@ -61,41 +62,15 @@ public static class Track
     // dense Catmull-Rom, then resample at an even spacing
     static List<Vector3> Spline(Vector3[] ctrl, bool closed, float step)
     {
-        var dense = new List<Vector3>();
-        int n = ctrl.Length;
-        int segs = closed ? n : n - 1;
-        for (int i = 0; i < segs; i++)
-        {
-            Vector3 p0 = W(ctrl[closed ? (i - 1 + n) % n : Mathf.Max(0, i - 1)]);
-            Vector3 p1 = W(ctrl[i]);
-            Vector3 p2 = W(ctrl[(i + 1) % n]);
-            Vector3 p3 = W(ctrl[closed ? (i + 2) % n : Mathf.Min(n - 1, i + 2)]);
-            for (int k = 0; k < 40; k++) dense.Add(CR(p0, p1, p2, p3, k / 40f));
-        }
-        if (!closed) dense.Add(W(ctrl[n - 1]));
-        else dense.Add(dense[0]);
-        var cum = new float[dense.Count];
-        for (int i = 1; i < dense.Count; i++) cum[i] = cum[i - 1] + Flat(dense[i] - dense[i - 1]).magnitude;
-        float total = cum[cum.Length - 1];
-        int count = Mathf.Max(4, Mathf.RoundToInt(total / step));
-        var outp = new List<Vector3>();
-        int j = 0;
-        int last = closed ? count : count + 1;
-        for (int k = 0; k < last; k++)
-        {
-            float s = total * k / count;
-            while (j < cum.Length - 2 && cum[j + 1] < s) j++;
-            float seg = Mathf.Max(1e-4f, cum[j + 1] - cum[j]);
-            outp.Add(Vector3.Lerp(dense[j], dense[j + 1], Mathf.Clamp01((s - cum[j]) / seg)));
-        }
-        return outp;
+        var w = new List<Vector3>();
+        foreach (var c in ctrl) w.Add(W(c));
+        return SplinePts(w, closed, step);
     }
 
     public static Vector3 Flat(Vector3 v) { v.y = 0f; return v; }
 
-    public static void Build()
+    static void BuildCove()
     {
-        Root = new GameObject("Track").transform;
         var main = Spline(Ctrl, true, 3f);
         int n = main.Count;
         C = main.ToArray();
@@ -347,7 +322,7 @@ public static class Track
                 tris[k++] = a; tris[k++] = c; tris[k++] = b;
                 tris[k++] = b; tris[k++] = c; tris[k++] = d;
             }
-        var mesh = new Mesh();
+        var mesh = Own(new Mesh());
         mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
         mesh.vertices = verts; mesh.uv = uv; mesh.triangles = tris;
         mesh.RecalculateNormals(); mesh.RecalculateBounds();
@@ -356,7 +331,7 @@ public static class Track
         go.layer = GroundLayer;
         go.AddComponent<MeshFilter>().sharedMesh = mesh;
         var mr = go.AddComponent<MeshRenderer>();
-        mr.sharedMaterial = Mats.Detail(Mats.GroundBase, GroundTex(), 0.05f);
+        mr.sharedMaterial = Own(Mats.Detail(Mats.GroundBase, Own(GroundTex()), 0.05f));
         mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         go.AddComponent<MeshCollider>().sharedMesh = mesh;
     }
@@ -462,7 +437,7 @@ public static class Track
             }
             prevOk = ok;
         }
-        var mesh = new Mesh();
+        var mesh = Own(new Mesh());
         mesh.SetVertices(verts); mesh.SetUVs(0, uvs); mesh.SetTriangles(tris, 0);
         mesh.RecalculateNormals(); mesh.RecalculateBounds();
         // make sure the road faces up
@@ -477,7 +452,7 @@ public static class Track
         go.layer = GroundLayer;
         go.AddComponent<MeshFilter>().sharedMesh = mesh;
         var mr = go.AddComponent<MeshRenderer>();
-        mr.sharedMaterial = Mats.Detail(Mats.RoadBase, tex, 0.08f);
+        mr.sharedMaterial = Own(Mats.Detail(Mats.RoadBase, Own(tex), 0.08f));
         mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         go.AddComponent<MeshCollider>().sharedMesh = mesh;
     }
@@ -495,10 +470,10 @@ public static class Track
         Material wm = Mats.Water;
         if (wm != null && wm.shader != null && wm.shader.name == "LB/Water")
         {
-            wm = new Material(wm);
+            wm = Own(new Material(wm));
             float size = gcell * (gn - 1);
-            wm.SetTexture("_SeaMap", SeaMap(256, size));
-            wm.SetTexture("_Noise", NoiseTex(128));
+            wm.SetTexture("_SeaMap", Own(SeaMap(256, size)));
+            wm.SetTexture("_Noise", Own(NoiseTex(128)));
             wm.SetVector("_SeaRect", new Vector4(gx0, gz0, 1f / size, 1f / size));
         }
         mr.sharedMaterial = wm;
@@ -518,8 +493,8 @@ public static class Track
             {
                 float wx = gx0 + (x + 0.5f) * size / n, wz = gz0 + (y + 0.5f) * size / n;
                 float h = HeightAt(wx, wz);
-                float depth = Mathf.Clamp01(-h / 5f);
-                float foam = Mathf.Clamp01(1f - Mathf.Abs(h + 0.35f) / 0.65f);
+                float depth = Mathf.Clamp01((WaterY - h) / 5f);
+                float foam = Mathf.Clamp01(1f - Mathf.Abs(h - WaterY + 0.35f) / 0.65f);
                 px[y * n + x] = new Color(depth, foam, 0f, 1f);
             }
         tex.SetPixels32(px);
@@ -582,7 +557,7 @@ public static class Track
         go.layer = GroundLayer;
         go.transform.position = basePos;
         go.transform.rotation = Quaternion.LookRotation(Flat(dir).normalized, Vector3.up);
-        Mesh m = Geo.Wedge(w, len, h);
+        Mesh m = Own(Geo.Wedge(w, len, h));
         go.AddComponent<MeshFilter>().sharedMesh = m;
         go.AddComponent<MeshRenderer>().sharedMaterial = Mats.Lit(col);
         go.AddComponent<MeshCollider>().sharedMesh = m;
@@ -681,7 +656,7 @@ public static class Track
         };
         foreach (var p in C) dot(p, n / 64f + 1.6f, new Color32(20, 20, 30, 200));
         foreach (var p in SC) dot(p, n / 90f + 1f, new Color32(20, 20, 30, 170));
-        foreach (var p in C) dot(p, n / 64f, new Color32(250, 235, 200, 255));
+        for (int i = 0; i < C.Length; i++) dot(C[i], n / 64f, InGap(S[i], 0f) ? new Color32(255, 80, 60, 255) : new Color32(250, 235, 200, 255));
         for (int i = 0; i < SC.Length; i++)
         {
             float s = SCS[i];

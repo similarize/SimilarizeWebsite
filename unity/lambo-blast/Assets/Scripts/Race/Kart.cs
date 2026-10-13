@@ -57,7 +57,10 @@ public class Kart : MonoBehaviour
 
     // AI
     float aiLane, aiLaneTarget, aiLaneT, aiItemT, stuckT;
-    bool aiShortcut, aiLikesShortcut;
+    bool aiShortcut, aiLikesShortcut, aiJump;
+    // boost pads, big-air stunts
+    float padCool, airT, trickT, trickRoll;
+    bool bigAir;
     public float aiTopMul = 1f;
     float aiSkill = 1f;
 
@@ -126,6 +129,8 @@ public class Kart : MonoBehaviour
         Track.Proj p = Track.Nearest(pos, -1, 0);
         hint = p.i; s = p.s; lastGoodS = s; lastGoodHint = hint;
         aiShortcut = false; aiItemT = 0f; stuckT = 0f; gasHeldT = 0f;
+        aiLikesShortcut = Random.value < (Track.Def != null ? Track.Def.aiShortcut : 0.4f);
+        aiJump = false; padCool = 0f; airT = 0f; trickT = 0f; trickRoll = 0f; bigAir = false;
         ApplyTransform(0f);
     }
 
@@ -219,7 +224,9 @@ public class Kart : MonoBehaviour
         if (i.fire) Fire();
 
         Vector3 pos = transform.position;
-        float top = spec.top * (boostT > 0f ? boostPower : 1f) * (shrinkT > 0f ? 0.72f : 1f) * (onRoad ? 1f : 0.78f) * (inWater ? 0.85f : 1f) * (human ? 1f : aiTopMul * aiSkill);
+        // AI ignores the rubber band on a jump approach so it always reaches full boost speed at the lip
+        float top = spec.top * (boostT > 0f ? boostPower : 1f) * (shrinkT > 0f ? 0.72f : 1f) * (onRoad ? 1f : 0.78f) * (inWater ? 0.85f : 1f) * (human || aiJump ? 1f : aiTopMul * aiSkill);
+        if (padCool > 0f) padCool -= dt;
         float accel = spec.accel * (boostT > 0f ? 2.4f : 1f);
 
         // ---- longitudinal ----
@@ -281,7 +288,7 @@ public class Kart : MonoBehaviour
         hint = pm.i;
         Track.Proj ps = Track.NearestShortcut(pos);
         bool scGap = ps.s > Track.ScGapA && ps.s < Track.ScGapB;
-        bool onMain = pm.dist < Track.HalfW + 0.8f;
+        bool onMain = (pm.dist < Track.HalfW + 0.8f || (pm.dist < Track.HalfW + 5f && Track.InPipe(pm.s))) && !Track.InGap(pm.s, 0f);
         bool onSc = ps.dist < Track.ScHalf + 0.8f && !scGap && ps.s > 0.5f && ps.s < Track.ScLength - 0.5f;
         onRoad = onMain || onSc;
 
@@ -315,6 +322,13 @@ public class Kart : MonoBehaviour
             {
                 grounded = false;
                 vy = Mathf.Clamp(lastClimb, -3f, 14f);
+                airT = 0f; trickT = 0f;
+                bigAir = vy > 6f;
+                if (bigAir && human && Track.Def != null)
+                {
+                    string gname = Track.GapNameNear(pm.s, onSc ? ps.s : -1f);
+                    if (gname != null) Toast(gname.ToUpper() + "!", 1.4f);
+                }
             }
             else
             {
@@ -329,12 +343,24 @@ public class Kart : MonoBehaviour
             vy -= 24f * dt;
             pos.y += vy * dt;
             gNormal = Vector3.Slerp(gNormal, Vector3.up, Mathf.Min(1f, dt * 2f));
+            airT += dt;
+            // big air off a ramp: a barrel roll, and a stunt boost when it lands
+            if (bigAir && airT > 0.25f && spinT <= 0f) trickT += dt;
+            trickRoll = trickT > 0f ? 360f * Smooth01(trickT / 0.7f) : 0f;
             if (pos.y <= gy)
             {
                 if (vy < -7f) { Sfx.PlayAt(Sfx.Land, pos, Mathf.Clamp01(-vy / 18f)); bounce = Mathf.Clamp(-vy * 0.012f, 0f, 0.18f); for (int d = 0; d < 6; d++) FX.Dust(pos, 1f); }
                 pos.y = gy; vy = 0f; grounded = true; lastClimb = 0f;
+                if (bigAir && trickT >= 0.7f && spinT <= 0f && gy > Track.WaterY - 0.5f)
+                {
+                    StartBoost(0.9f, 1.25f);
+                    Sfx.PlayAt(Sfx.DriftPop, pos, 0.8f, 60f, 1.3f);
+                    if (human) Toast("STUNT BOOST!", 1.2f);
+                }
+                bigAir = false; trickT = 0f; trickRoll = 0f;
             }
         }
+        else { trickRoll = 0f; }
         inWater = grounded && gy < Track.WaterY - 0.05f;
         transform.position = pos;
 
@@ -346,7 +372,29 @@ public class Kart : MonoBehaviour
             Sfx.PlayAt(Sfx.Splash, pos, 0.9f);
             if (human) Toast("Splash! Back on the track...", 1.5f);
         }
-        if (onMain && !inWater) { lastGoodS = pm.s; lastGoodHint = pm.i; }
+        // generated tracks: fell into a chasm / off the skyway / into the lava
+        if (Track.Def != null && !respawning)
+        {
+            bool useSc = ps.dist < pm.dist && ps.s > 0.5f && ps.s < Track.ScLength - 0.5f;
+            float refY = useSc ? ps.point.y : pm.point.y;
+            bool lava = Track.Lava && pos.y < Track.LavaY + 0.6f;
+            if (lava || (!grounded && pos.y < refY - 14f) || (grounded && gy < refY - 5f))
+            {
+                respawning = true; respawnT = 1.1f;
+                if (lava) { FX.Boom(new Vector3(pos.x, Track.LavaY + 0.5f, pos.z), 0.8f); Sfx.PlayAt(Sfx.Boom, pos, 0.7f); }
+                else Sfx.PlayAt(Sfx.Spin, pos, 0.6f);
+                if (human) Toast(lava ? "Toasted in the lava! Back on the track..." : "Too short! Hit the boost pad and try again...", 1.8f);
+            }
+        }
+        // boost pads (full width before every gap)
+        if (grounded && padCool <= 0f && Track.Pads.Count > 0 && Track.PadAt(pm.s, pm.lat, ps.s, ps.lat, onSc && ps.dist < pm.dist))
+        {
+            StartBoost(1.7f, 1.35f);
+            padCool = 1f;
+            Sfx.PlayAt(Sfx.Boost, pos, 0.7f);
+            if (human) Game.Shake(this, 0.15f);
+        }
+        if (onMain && !inWater && grounded && !Track.InGap(pm.s, 3f)) { lastGoodS = pm.s; lastGoodHint = pm.i; }
 
         // ---- laps ----
         float prevS = s;
@@ -409,16 +457,17 @@ public class Kart : MonoBehaviour
         speed = 0f; lat = 0f;
         if (respawnT > 0f) return;
         respawning = false;
-        float rs = lastGoodS;
+        float rs = Track.SafeRespawnS(lastGoodS);
         Vector3 p = Track.PointAt(rs, 0f);
         float y; Vector3 n;
         Track.Ground(p, out y, out n);
         transform.position = new Vector3(p.x, y + 0.5f, p.z);
         Vector3 t = Track.TangentAt(rs);
         yaw = Mathf.Atan2(t.x, t.z) * Mathf.Rad2Deg;
-        hint = lastGoodHint;
+        hint = Track.IndexAt(rs);
         vy = 0f; grounded = false; drifting = false; spinT = 0f;
-        speed = 6f;
+        speed = Track.Def != null ? 12f : 6f;
+        bigAir = false; trickT = 0f; trickRoll = 0f;
         aiShortcut = false;
     }
 
@@ -432,7 +481,7 @@ public class Kart : MonoBehaviour
         if (spinT > 0f) { float k = 1f - spinT / spinTotal; spinAngle = 720f * (1f - (1f - k) * (1f - k)); } else spinAngle = 0f;
         bounce = Mathf.MoveTowards(bounce, 0f, dt * 0.8f);
         float roll = -steerVisual * Mathf.Clamp01(Mathf.Abs(speed) / 20f) * 3f - (drifting ? driftDir * 3f : 0f);
-        body.localRotation = Quaternion.Euler(0f, driftVisual + spinAngle, roll);
+        body.localRotation = Quaternion.Euler(0f, driftVisual + spinAngle, roll + trickRoll);
         body.localPosition = new Vector3(0f, -bounce, 0f);
         float sc = shrinkT > 0f ? 0.7f : 1f;
         body.localScale = Vector3.MoveTowards(body.localScale, Vector3.one * sc, dt * 2f);
@@ -452,6 +501,7 @@ public class Kart : MonoBehaviour
     }
 
     float lastSteer;
+    static float Smooth01(float t) { t = Mathf.Clamp01(t); return t * t * (3f - 2f * t); }
     float LastSteer { get { return lastSteer; } }
 
     void TickAudio(KIn i)
@@ -494,14 +544,30 @@ public class Kart : MonoBehaviour
             else target = Track.ShortcutPoint(ps.s + look);
         }
         else target = Track.PointAt(s + look, aiLane);
+        // jump ahead (generated tracks): line up on the centre, full gas, no brakes, no rubber band
+        float jz = -1f;
+        if (Track.Def != null && !finished)
+        {
+            float scS = -1f;
+            if (aiShortcut) scS = Track.NearestShortcut(pos).s;
+            jz = Track.JumpAhead(s, scS, 130f);
+        }
+        aiJump = jz >= 0f;
+        if (aiJump)
+        {
+            aiLaneTarget = 0f; aiLane = Mathf.MoveTowards(aiLane, 0f, dt * 5f);
+            if (!aiShortcut) target = Track.PointAt(s + look, aiLane);
+        }
         Vector3 to = Track.Flat(target - pos);
         float ang = Vector3.SignedAngle(fwd, to, Vector3.up);
         i.steer = Mathf.Clamp(ang / 26f, -1f, 1f);
         float bend = aiShortcut ? 0f : Track.Bend(s, 20f + Mathf.Abs(speed) * 0.9f);
         float want = spec.top * (bend > 70f ? 0.6f : bend > 50f ? 0.72f : bend > 32f ? 0.86f : 1.05f);
+        if (boostT > 0f) want *= boostPower;
         if (Mathf.Abs(ang) > 60f) want = Mathf.Min(want, 12f);
         i.gas = speed < want ? 1f : 0f;
         i.brake = speed > want + 4f ? 0.7f : 0f;
+        if (aiJump) { i.gas = 1f; i.brake = 0f; }
         if (finished) { i.gas = speed < 14f ? 0.6f : 0f; return i; }
 
         // items
@@ -530,6 +596,8 @@ public class Kart : MonoBehaviour
                     }
                 }
                 else if (item == Item.Boost && bend > 30f) use = false;
+                else if (item == Item.Boost && jz > 20f && jz < 70f) use = true;      // save the boost for a jump
+                else if (item == Item.Boost && Track.Def != null && jz < 0f && Track.Gaps.Count > 0 && aiItemT > -4f) use = false;
                 else if (item == Item.Lightning && place <= 1) use = false;
             }
             if (use) i.fire = true;

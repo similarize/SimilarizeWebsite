@@ -40,6 +40,7 @@ public static class Kb
     public static bool CDown() { return Key(k => k.cKey.wasPressedThisFrame, KeyCode.C, true); }
     public static bool PDown() { return Key(k => k.pKey.wasPressedThisFrame, KeyCode.P, true); }
     public static bool RDown() { return Key(k => k.rKey.wasPressedThisFrame, KeyCode.R, true); }
+    public static bool TDown() { return Key(k => k.tKey.wasPressedThisFrame, KeyCode.T, true); }
     public static bool QDown() { return Key(k => k.qKey.wasPressedThisFrame, KeyCode.Q, true); }
     public static bool AnyKeyDown() { return Key(k => k.anyKey.wasPressedThisFrame, KeyCode.Space, true); }
 

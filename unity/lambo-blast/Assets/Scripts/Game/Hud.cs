@@ -16,6 +16,8 @@ public class ViewHud
     Rect vp;
     public float bottomInset;
 
+    public void SetMap(Texture2D t) { if (map != null) map.texture = t; }
+
     public ViewHud(Transform canvas, string name, Texture2D mapTex)
     {
         panel = UIK.Rect(canvas, "View " + name, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);

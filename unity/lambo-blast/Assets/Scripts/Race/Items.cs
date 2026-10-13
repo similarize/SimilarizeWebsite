@@ -314,9 +314,16 @@ public class ItemBox : MonoBehaviour
     float hiddenT;
     float phase;
 
+    static Material shell;
+    public static void ClearAll()
+    {
+        foreach (var b in All) if (b != null) Destroy(b.gameObject);
+        All.Clear();
+    }
+
     public static void SpawnAll()
     {
-        Material shell = Mats.GlassTint(new Color(0.55f, 0.85f, 1f, 0.45f));
+        if (shell == null) shell = Mats.GlassTint(new Color(0.55f, 0.85f, 1f, 0.45f));
         Material gold = Mats.Shiny(new Color(1f, 0.78f, 0.15f));
         Material q = Mats.Unlit(Color.white);
         foreach (var kv in Track.BoxSpots)
