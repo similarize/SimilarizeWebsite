@@ -118,6 +118,19 @@ public static class Worlds
         if (Realism.On) Realism.PreCull(w);   // ?realism=1 test: HDRI SH ambient on the ranch
         if (StormK > 0f && w == WorldId.Ranch) StoryWeather(launchDark);   // ffu22 story storm (dark sky, heavy haze, flashes)
         if (StoryHook != null) StoryHook(c, w);   // ffu24 story episode 2: Mercury / Enceladus / the Mars chambers / orbit look
+        if (w == WorldId.Ranch) PondUnder(c);    // ffu37: a camera under the ranch pond surface sees murky green-blue water
+    }
+    static void PondUnder(Camera c)
+    {
+        Vector3 cp = c.transform.position;
+        if (cp.y > Layout.WaterY - 0.08f || Mathf.Abs(cp.x) > Layout.Half || Mathf.Abs(cp.z) > Layout.Half || !Layout.InPond(cp.x, cp.z)) return;
+        float dk = Mathf.Clamp01((Layout.WaterY - cp.y) / 24f);
+        RenderSettings.fog = true;
+        RenderSettings.fogColor = Color.Lerp(new Color(0.13f, 0.36f, 0.38f), new Color(0.03f, 0.13f, 0.18f), dk);
+        RenderSettings.fogDensity = RenderSettings.fogMode == FogMode.ExponentialSquared ? 0.032f : 0.05f;
+        float a = Mathf.Lerp(0.9f, 0.45f, dk);
+        if (Realism.On) RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;   // Realism.PreCull sets it back per camera
+        RenderSettings.ambientSkyColor = new Color(0.35f, 0.6f, 0.65f) * a; RenderSettings.ambientEquatorColor = new Color(0.2f, 0.4f, 0.42f) * a; RenderSettings.ambientGroundColor = new Color(0.1f, 0.18f, 0.2f) * a;
     }
     public static System.Action<Camera, WorldId> StoryHook;
     public static System.Func<WorldId, Vector3, string> PlaceNameHook;   // ffu24: Mercury / Enceladus / Under Mars on the HUD
@@ -163,7 +176,7 @@ public static class Worlds
             case WorldId.RealRoom: return -1e9f;   // ffu18: the froggy is parked under the room while P1 is inside
             case WorldId.Mars: return MarsO.y - 60f;
             case WorldId.Callisto: return CallistoO.y - 60f;
-            default: return -30f;
+            default: return -45f;   // ffu37: the pond bed reaches ~-27 m
         }
     }
 

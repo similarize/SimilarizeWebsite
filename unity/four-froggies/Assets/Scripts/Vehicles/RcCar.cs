@@ -180,6 +180,7 @@ public class RcCar : Vehicle
     protected override void FixedUpdate()
     {
         float dt = Time.fixedDeltaTime;
+        PondPhysics.Step(this, dt);   // ffu37: sinks to the real pond bed
         bool auto = track != null && (track.AutoFor(this) || demoAuto);
         PIn ip = auto ? AiInput(dt) : (driver != null ? inp : new PIn());
         steer = Mathf.Clamp(ip.move.x, -1f, 1f);

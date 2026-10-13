@@ -19,7 +19,7 @@ public class GroundVehicle : Vehicle
     public readonly List<Wheel> wheels = new List<Wheel>();
     public float rest = 0.35f, maxSpeed = 24f, accel = 12f, turnRate = 1.6f, grip = 7f, reverseFrac = 0.45f;
     public bool tracked;
-    public override string[] TouchSet { get { return usesTriggers ? new[] { "A", null, null, "GAS", "BRAKE" } : new[] { "A", null, null, null, null }; } }
+    public override string[] TouchSet { get { return usesTriggers ? new[] { "A", null, amph != null ? (amph.Boat ? "TRUCK" : "BOAT") : null, "GAS", "BRAKE" } : new[] { "A", null, null, null, null }; } }
     public bool usesTriggers = true;     // tank uses RT to fire, so it drives with the stick only
     public float dustAmount = 0.5f;
     protected float spring, damper;
@@ -37,10 +37,11 @@ public class GroundVehicle : Vehicle
     // "stuck in the floor up to the knees" bug) lift it back onto the surface
     public bool walker;
     float sinkT;
+    public float ThrottleRaw { get { return driver != null ? throttle : 0f; } }
     public float Throttle01 { get { return driver != null ? Mathf.Clamp01(throttle) : 0f; } }
     public override string HelpLine
     {
-        get { return amph != null && amph.Boat ? "CYBERBOAT! L-stick steer | RT jet | LT reverse | A hop out (swim)" : base.HelpLine; }
+        get { return amph != null && amph.Boat ? "CYBERBOAT! L-stick steer | RT jet | LT reverse | Y / F truck mode | A hop out (swim)" : amph != null ? base.HelpLine + " | Y / F Cyberboat mode" : base.HelpLine; }
     }   // (forwardSpeed, dt) for custom visuals like mech legs
 
     public void AddWheel(Vector3 center, float radius, Transform visual, bool steers)
@@ -76,6 +77,7 @@ public class GroundVehicle : Vehicle
         float ws = 1f;
         if (amph != null)
         {
+            if (driver != null && (inp.alt || inp.land)) amph.button = true;   // ffu37: BOAT button
             amph.Step(dt, steer, throttle);
             ws = amph.WheelScale;
         }
@@ -183,6 +185,7 @@ public class GroundVehicle : Vehicle
             else if (throttle > 0.02f) force = fs < maxSpeed ? accel * throttle * Mathf.Clamp01(1.15f - fs / maxSpeed) : 0f;
             else if (throttle < -0.02f) force = fs > 1f ? -accel * 1.6f * -throttle : (fs > -maxSpeed * reverseFrac ? accel * 0.7f * throttle : 0f);
             else force = -fs * 0.8f;
+            if (pondSub > 0f) { force *= 1f - 0.5f * pondSub; if (driven && throttle > 0.02f) { float lim = maxSpeed * Mathf.Lerp(1f, 0.22f, pondSub); if (fs > lim) force = Mathf.Min(force, 0f); } }   // ffu37: crawling on the pond bed
             rb.AddForce(fwd * force * rb.mass * gf, ForceMode.Force);
             rb.AddForce(-right * ls * grip * rb.mass * gf, ForceMode.Force);
 
@@ -200,7 +203,8 @@ public class GroundVehicle : Vehicle
                     {
                         Vector3 cp = transform.TransformPoint(w.mount) - up * (w.dist);
                         // ffu11: wheels churning through the pond shallows throw water, not dust
-                        if (cp.y < Layout.WaterY && Layout.InPond(cp.x, cp.z)) { if (Random.value < 0.35f) FX.Splash(new Vector3(cp.x, Layout.WaterY + 0.1f, cp.z), 1 + Mathf.Abs(fs) * 0.08f); }
+                        if (cp.y < Layout.WaterY - 1.5f && Layout.InPond(cp.x, cp.z)) { if (Random.value < 0.25f) FX.Bubble(cp + Vector3.up * 0.3f, 2); }   // ffu37: on the deep bed: silt bubbles
+                        else if (cp.y < Layout.WaterY && Layout.InPond(cp.x, cp.z)) { if (Random.value < 0.35f) FX.Splash(new Vector3(cp.x, Layout.WaterY + 0.1f, cp.z), 1 + Mathf.Abs(fs) * 0.08f); }
                         else FX.Dust(cp, dustAmount * Mathf.Clamp01(Mathf.Abs(fs) / 20f) * 0.25f);
                     }
         }

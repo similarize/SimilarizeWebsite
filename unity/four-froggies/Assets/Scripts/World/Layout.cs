@@ -6,8 +6,10 @@ using UnityEngine;
 public static class Layout
 {
     public const float Half = 200f;          // terrain spans -Half..Half on x and z
-    public const float TerrainY = -6f;       // terrain transform y
-    public const float TerrainH = 30f;       // terrain height range
+    // ffu37: the terrain reaches down to the deep pond bed (the submarine's seabed, ~-27 m), so the range starts lower;
+    // the top stays at +24 (was -6 .. +24)
+    public const float TerrainY = -34f;      // terrain transform y
+    public const float TerrainH = 58f;       // terrain height range
     public const float WaterY = -0.55f;      // pond surface
 
     // James's house (two storeys, flat roof with helipad + drone pad)
@@ -186,20 +188,55 @@ public static class Layout
         float n = (Mathf.PerlinNoise(x * 0.012f + 31.7f, z * 0.012f + 11.3f) - 0.5f) * 3.2f
                 + (Mathf.PerlinNoise(x * 0.04f + 5.1f, z * 0.04f + 9.9f) - 0.5f) * 0.8f;
         float y = n * Flatness(x, z) * JetLayout.Flat(x, z);   // ffu33: flat under James's hangar + runway
-        // pond basin
+        // pond basin (ffu37: the bed is the submarine's seabed - see PondBedY)
         float q = PondQ(x, z);
         if (q < 1.25f)
         {
             float k = Mathf.SmoothStep(0f, 1f, (1.25f - q) / 0.45f);
-            float bottom = -4.2f + q * 1.5f;
-            y = Mathf.Lerp(y, bottom, k);
-            int wi;
-            float ik = IslandK(x, z, out wi);
-            if (ik > 0f) y = Mathf.Max(y, Mathf.Lerp(bottom, WaterY + 1.1f, Mathf.SmoothStep(0f, 1f, ik / 0.55f)));
+            y = Mathf.Lerp(y, PondBedY(x, z), k);
         }
         // edge berm
         float edge = Mathf.Max(Mathf.Abs(x), Mathf.Abs(z)) / Half;
         y += Mathf.SmoothStep(0f, 1f, (edge - 0.86f) / 0.14f) * 12f;
         return y;
+    }
+
+    // ---------------- ffu37: ONE pond bed for everything ----------------
+    // The underwater world (the submarine) is the truth: its seabed SubSeaY (local metres around the pond centre, 0 = the
+    // water surface) maps 1:1 onto the ranch pond (UnderwaterWorld.SurfaceSwim / DiveFromPond use the same mapping).
+    // Ranch pond bed = that seabed over the middle of the pond (q < 0.42), rising through a drop-off to the old shallow
+    // shelf by the shore (q 0.92 .. 1.25 unchanged), islands stand on skirts. The baked terrain, Ranch.GY, vehicles,
+    // mechs, frogs and the sub all read this one surface.
+    public static float SubSeaY(float x, float z)
+    {
+        float y = -22f + (Mathf.PerlinNoise(x * 0.03f + 3f, z * 0.03f + 7f) - 0.5f) * 8f + (Mathf.PerlinNoise(x * 0.11f, z * 0.11f) - 0.5f) * 1.6f;
+        float reef = Mathf.Clamp01(1f - new Vector2(x, z).magnitude / 38f);
+        y += reef * reef * 7f;                                  // shallow reef mound in the middle
+        float trench = Mathf.Clamp01(1f - Mathf.Abs(z + 70f) / 14f);
+        y -= trench * 9f;                                        // a deep trench to the south
+        float edge = Mathf.Max(Mathf.Abs(x), Mathf.Abs(z));
+        y += Mathf.SmoothStep(0f, 1f, (edge - 92f) / 16f) * 24f;  // walls at the edge
+        return y;
+    }
+
+    public const float DeepQ = 0.42f, ShelfQ = 0.92f;
+    // world height of the ranch pond bed at (x, z) (only meaningful for PondQ < 1.25)
+    public static float PondBedY(float x, float z)
+    {
+        float q = PondQ(x, z);
+        float shelf = -4.2f + q * 1.5f;                                   // the old shallow basin (shore band)
+        float deep = WaterY + SubSeaY(x - PondC.x, z - PondC.y);           // the submarine's seabed
+        float bottom = Mathf.Min(shelf, Mathf.Lerp(deep, shelf, Mathf.SmoothStep(0f, 1f, (q - DeepQ) / (ShelfQ - DeepQ))));
+        // islands: a skirt up to shelf depth (~2.5 x radius), then the old beach slope up out of the water
+        for (int i = 0; i < Islands.Length; i++)
+        {
+            float d = new Vector2(x - Islands[i].x, z - Islands[i].y).magnitude / Islands[i].z;
+            float sk = Mathf.SmoothStep(0f, 1f, (2.7f - d) / 1.35f);
+            if (sk > 0f) bottom = Mathf.Max(bottom, Mathf.Lerp(bottom, WaterY - 3f, sk));
+        }
+        int wi;
+        float ik = IslandK(x, z, out wi);
+        if (ik > 0f) bottom = Mathf.Max(bottom, Mathf.Lerp(bottom, WaterY + 1.1f, Mathf.SmoothStep(0f, 1f, ik / 0.55f)));
+        return bottom;
     }
 }

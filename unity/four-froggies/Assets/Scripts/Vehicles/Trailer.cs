@@ -341,7 +341,7 @@ public class Trailer : MonoBehaviour
             if (rb.angularVelocity.magnitude > 8f) why = "it was spinning";
             if (rb.velocity.magnitude > 48f || (rb.velocity - v.rb.velocity).magnitude > 18f) why = "it got thrown";
             if (transform.up.y < 0.25f) why = "it rolled over";
-            if (Mathf.Abs(tp.x) > Layout.Half + 10f || Mathf.Abs(tp.z) > Layout.Half + 10f || tp.y < -30f) why = "off the ranch";
+            if (Mathf.Abs(tp.x) > Layout.Half + 10f || Mathf.Abs(tp.z) > Layout.Half + 10f || tp.y < -45f) why = "off the ranch";
             // jackknife: the joint's yaw is free; a soft stop from 68 deg (equal and opposite torque on both), pin pulled
             // only if it is folded right past 100 deg
             Vector3 tf = v.transform.forward; tf.y = 0f; Vector3 mf = transform.forward; mf.y = 0f;

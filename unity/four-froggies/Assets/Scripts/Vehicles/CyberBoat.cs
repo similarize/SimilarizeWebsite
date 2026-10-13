@@ -43,6 +43,11 @@ public class CyberBoat : MonoBehaviour
     public GroundVehicle v;
     public float k;                 // 0 truck .. 1 boat
     public bool boatTarget;
+    // ffu37: Cyberboat mode is a choice now. Driven into the pond the Cybertruck sinks to the bed like every other truck
+    // (PondPhysics); the BOAT button (pad Y / RB, key F / right click, touch BOAT) arms it - in deep water it transforms
+    // right away and the hull floats it up to the surface; on land it transforms on reaching deep water. In boat mode the
+    // button switches back to the truck (in deep water = it sinks). Reaching the shore still turns it back on its own.
+    public bool armed, button;
     public bool Boat { get { return k > 0.5f; } }
     public float WheelScale { get { return Mathf.Clamp01((0.4f - k) / 0.2f); } }
     public float Wet { get; private set; }
@@ -98,10 +103,22 @@ public class CyberBoat : MonoBehaviour
         if (!waterAhead) depthAhead = -1f;
         bool shoreAhead = fsp > 1f && depthAhead < 0.3f;
         toggleCool -= dt;
+        if (button && toggleCool <= 0f)
+        {
+            if (boatTarget) { armed = false; Begin(false); }
+            else
+            {
+                armed = !armed; toggleCool = 0.3f;
+                bool deep = water && depth > EnterDepth;
+                if (v.driver != null && v.driver.human && !deep) v.driver.Toast(armed ? "Cyberboat mode ARMED - drive into the pond" : "Cyberboat mode off", 2f);
+                Debug.Log("CyberBoat: " + v.Title + (armed ? " armed" : " disarmed"));
+            }
+        }
+        button = false;
         if (toggleCool <= 0f)
         {
-            if (!boatTarget && water && depth > EnterDepth && !shoreAhead) Begin(true);
-            else if (boatTarget && (!water || depth < ExitDepth || (shoreAhead && depth < EnterDepth + 0.3f))) Begin(false);
+            if (!boatTarget && armed && water && depth > EnterDepth && !shoreAhead) Begin(true);
+            else if (boatTarget && (!water || depth < ExitDepth || (shoreAhead && depth < EnterDepth + 0.3f))) { armed = false; Begin(false); }
         }
 
         float speedK = boatTarget ? 1f / Tin : 1f / Tout;
@@ -193,7 +210,7 @@ public class CyberBoat : MonoBehaviour
             if (heard) Sfx.PlayAt(Sfx.SplashBig != null ? Sfx.SplashBig : Sfx.Splash, p, 0.9f, 80f, 0.95f);
             if (v.driver != null && v.driver.human) v.driver.Toast("CYBERBOAT MODE!", 2f);
         }
-        else if (v.driver != null && v.driver.human) v.driver.Toast("Shore ahead - back to truck mode", 1.6f);
+        else if (v.driver != null && v.driver.human) v.driver.Toast(Water.At(p.x, p.z, out float _s, out float dd) && dd > 2f ? "Truck mode - sinking to the pond bed!" : "Shore ahead - back to truck mode", 1.6f);
         if (heard) Sfx.PlayAt(Whoosh(), p, 0.75f, 70f, toBoat ? 1f : 0.85f);
     }
 

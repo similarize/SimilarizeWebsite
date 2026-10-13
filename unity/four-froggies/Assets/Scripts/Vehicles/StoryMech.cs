@@ -495,6 +495,10 @@ public partial class StoryMech : Vehicle
         float ground = Ranch.GY(pos.x, pos.z);
         // walk / turn: quick for kids (~8 m/s for the 10-story up to ~30 m/s for the trillion-story)
         float maxSp = 8f + H * 0.14f;
+        // ffu37: in the pond the mech wades / walks along the real bed (the submarine's seabed): slower with depth, sinks
+        // slowly when the bed drops away under it (buoyancy + drag), splashes going in, bubbles from the head under water
+        float wd = PondWade(pos, H);
+        maxSp *= Mathf.Lerp(1f, 0.4f, wd);
         float stick = on ? Mathf.Clamp(inp.move.y, -0.6f, 1f) : 0f;
         bool boost = on && inp.boostHeld;
         boostK = Mathf.MoveTowards(boostK, boost ? 1f : 0f, dt * 4f);
@@ -537,10 +541,11 @@ public partial class StoryMech : Vehicle
         if (rocketing) vy = Mathf.MoveTowards(vy, climbMax, Mathf.Max(g * 2.2f, climbMax * 0.8f) * dt);
         else if (!grounded)
         {
-            vy -= g * dt;
+            vy -= g * (1f - 0.7f * wd) * dt;
             if (boost) vy = Mathf.Max(vy, -H * 0.4f);   // afterburner alone glides
-            vy = Mathf.Max(vy, -(30f + H * 0.6f));
+            vy = Mathf.Max(vy, -Mathf.Lerp(30f + H * 0.6f, SinkMax(H), wd));
         }
+        if (wd > 0f && !rocketing) vy *= Mathf.Clamp01(1f - 1.4f * wd * dt);   // ffu37: water drag
         flameK = Mathf.MoveTowards(flameK, rocketing ? 1f + boostK : (boost && !grounded ? 0.6f + boostK * 0.4f : boost ? 0.35f * boostK : 0f), dt * 6f);
 
         Vector3 p = pos + fwd * speed * dt + Quaternion.Euler(0f, yaw, 0f) * Vector3.right * strafe * dt;
@@ -562,7 +567,9 @@ public partial class StoryMech : Vehicle
             if (band >= 1 && hard > 0.3f) Destruct.Stomp(p, H * 0.22f + 2f, 30f + band * 15f, this);
             vy = 0f;
         }
-        if (grounded) { p.y = ground; vy = 0f; }
+        if (grounded && wd > 0f && ground < pos.y - (0.6f + H * 0.04f)) { grounded = false; vy = Mathf.Min(vy, 0f); }   // ffu37: the bed drops away -> settle down slowly
+        if (grounded) { p.y = wd > 0f ? Mathf.Max(ground, pos.y - SinkMax(H) * dt) : ground; vy = 0f; }   // ffu37: never drops faster than it sinks
+        PondFx(pos, p, H, wd);
         Altitude = Mathf.Max(0f, p.y - ground);
         if (Altitude > 1f) atSpawn = false;
         if ((new Vector2(p.x, p.z) - new Vector2(spawnPos.x, spawnPos.z)).sqrMagnitude > 4f) atSpawn = false;
@@ -577,6 +584,47 @@ public partial class StoryMech : Vehicle
         Jets(dt);
         Weapons(dt, on, fwd);
         if (on && Altitude >= SpaceAlt && SpaceWorld.I != null) ReachSpace();
+    }
+
+    // ffu37: 0 = dry, 1 = deep under (the water reaches 60% of the mech's height above its feet) - ranch pond only
+    public static float PondWade(Vector3 feet, float H)
+    {
+        if (Mathf.Abs(feet.x) > Layout.Half || Mathf.Abs(feet.z) > Layout.Half || !Layout.InPond(feet.x, feet.z)) return 0f;
+        return Mathf.Clamp01((Layout.WaterY - feet.y) / (H * 0.6f));
+    }
+    public static float SinkMax(float H) { return 2.6f + H * 0.025f; }
+    float pondFxT;
+    void PondFx(Vector3 from, Vector3 to, float H, float wd)
+    {
+        if (!Layout.InPond(to.x, to.z) || Mathf.Abs(to.x) > Layout.Half) return;
+        float wy = Layout.WaterY;
+        Vector3 wl = new Vector3(to.x, wy + 0.1f, to.z);
+        if (from.y >= wy - 0.05f && to.y < wy - 0.05f)
+        {
+            // feet into the water from above (a jump / rocket landing in the pond) or the first wading step
+            float e = Mathf.Clamp01((from.y - to.y) / Mathf.Max(0.001f, Time.deltaTime) / 20f + 0.3f);
+            FX.Splash(wl, 20 + e * 10f);
+            for (int i = 0; i < 16 + (int)(e * 30f); i++)
+            {
+                Vector2 r = Random.insideUnitCircle * H * 0.12f;
+                FX.Spray(wl + new Vector3(r.x, 0f, r.y), new Vector3(r.x, Random.Range(4f, 8f + e * 10f), r.y), Random.Range(0.4f, 0.9f) + H * 0.01f, Random.Range(0.9f, 1.6f), new Color(0.9f, 0.96f, 1f, 0.8f));
+            }
+            Sfx.PlayAt(Sfx.SplashBig, to, 0.9f, 120f + H * 2f, Mathf.Lerp(0.85f, 0.55f, band / 3f));
+            Debug.Log("StoryMech: " + Title + " into the pond, bed " + (Ranch.GY(to.x, to.z) - wy).ToString("0.0") + " m");
+        }
+        pondFxT -= Time.deltaTime;
+        if (pondFxT > 0f) return;
+        pondFxT = 0.12f;
+        float sp = new Vector2(to.x - from.x, to.z - from.z).magnitude / Mathf.Max(0.001f, Time.deltaTime);
+        bool headUnder = to.y + H * 0.9f < wy;
+        if (to.y < wy && !headUnder && sp > 0.5f)
+            for (int i = 0; i < 3; i++) { Vector2 r = Random.insideUnitCircle * H * 0.12f; FX.Splash(wl + new Vector3(r.x, 0f, r.y), 3 + sp * 0.3f); }   // wading wash at the waterline
+        if (wd > 0.2f)
+        {
+            Vector3 head = to + Vector3.up * Mathf.Min(H * 0.85f, wy - to.y - 0.3f);
+            FX.Bubble(head + Random.insideUnitSphere * H * 0.08f, 2 + Random.Range(0, 3));
+            if (!grounded) FX.Bubble(to + Vector3.up * H * 0.3f + Random.insideUnitSphere * H * 0.1f, 3);
+        }
     }
 
     void Animate(float dt, float maxSp)

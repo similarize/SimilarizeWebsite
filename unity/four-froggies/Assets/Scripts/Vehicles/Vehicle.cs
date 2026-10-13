@@ -19,6 +19,9 @@ public abstract class Vehicle : MonoBehaviour
     public int engineKind;   // 0 car, 1 tracks, 2 rotor, 3 drone, 4 boat, 5 mech (footsteps)
     float stepT;
     public bool syncedSteps;   // ffu28: footfalls come from the walk cycle (MechStomp), not the engineKind-5 step timer
+    // ffu37: pond water state (PondPhysics) - submerged fraction, seconds under, seconds stuck, toast shown
+    public float pondSub, pondUnderT, pondStuckT;
+    public bool pondToasted;
     public bool stowed;        // ffu31: locked in a toy hauler's bay (kinematic cargo) - nobody can board it until it rides out
     // ffu34 canon (CANON.md): James and Dad each own a Cybertruck and may borrow the other's by asking first when it isn't
     // in use (the in-use check is the usual driver check). ownerName != null = an owned ordinary vehicle; ownerChar = the
@@ -176,6 +179,7 @@ public abstract class Vehicle : MonoBehaviour
                 rb.rotation = Quaternion.Euler(0f, transform.eulerAngles.y, 0f);
             }
         }
+        PondPhysics.Step(this, Time.fixedDeltaTime);   // ffu37: sink to the real pond bed (buoyancy + drag)
         if (OutOfWorld(rb.position))
         {
             rb.velocity = Vector3.zero;

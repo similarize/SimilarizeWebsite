@@ -23,18 +23,8 @@ public class UnderwaterWorld : MonoBehaviour
 
     public static Vector3 L(float x, float y, float z) { return Worlds.UnderO + new Vector3(x, y, z); }
 
-    // seabed height (local)
-    public static float SeaY(float x, float z)
-    {
-        float y = -22f + (Mathf.PerlinNoise(x * 0.03f + 3f, z * 0.03f + 7f) - 0.5f) * 8f + (Mathf.PerlinNoise(x * 0.11f, z * 0.11f) - 0.5f) * 1.6f;
-        float reef = Mathf.Clamp01(1f - new Vector2(x, z).magnitude / 38f);
-        y += reef * reef * 7f;                                  // shallow reef mound in the middle
-        float trench = Mathf.Clamp01(1f - Mathf.Abs(z + 70f) / 14f);
-        y -= trench * 9f;                                        // a deep trench to the south
-        float edge = Mathf.Max(Mathf.Abs(x), Mathf.Abs(z));
-        y += Mathf.SmoothStep(0f, 1f, (edge - 92f) / 16f) * 24f;  // walls at the edge
-        return y;
-    }
+    // seabed height (local). ffu37: the shared pond-bed truth lives in Layout.SubSeaY (the ranch pond bed uses it too)
+    public static float SeaY(float x, float z) { return Layout.SubSeaY(x, z); }
 
     public static void Create()
     {
@@ -94,6 +84,21 @@ public class UnderwaterWorld : MonoBehaviour
         Sfx.Play(Sfx.SplashBig, 0.8f, 1.2f);
         f.Toast("Surfaced in the pond!  Hold " + (f.inputKind == InputKind.Gamepad ? "B" : f.inputKind == InputKind.Touch ? "DIVE" : "SHIFT") + " to dive back down, or swim to shore", 4f);
         Debug.Log("Scuba: " + f.nick + " surfaced in the pond at (" + spot.x.ToString("0") + ", " + spot.z.ToString("0") + ")");
+    }
+
+    // ffu37: the ranch pond spot above a reef-local position (1:1 around the pond centre), pulled in towards the centre
+    // until the pond there is at least minDepth deep (same mapping as SurfaceSwim)
+    public static Vector3 PondSpot(Vector3 rel, float minDepth, out bool ok)
+    {
+        Vector2 c = Layout.PondC, r = Layout.PondR;
+        for (int k = 0; k < 14; k++)
+        {
+            float shrink = 1f - k * 0.07f;
+            float x = c.x + Mathf.Clamp(rel.x, -r.x * 0.85f, r.x * 0.85f) * shrink, z = c.y + Mathf.Clamp(rel.z, -r.y * 0.85f, r.y * 0.85f) * shrink;
+            if (Layout.WaterY - Ranch.GY(x, z) > minDepth) { ok = true; return new Vector3(x, Layout.WaterY, z); }
+        }
+        ok = false;
+        return new Vector3(c.x - 20f, Layout.WaterY, c.y);
     }
 
     public void DiveFromPond(Frog f)
@@ -536,13 +541,13 @@ public class UnderwaterWorld : MonoBehaviour
 
 // The submarine: hovers neutrally buoyant, left stick drives + turns, RT rises, LT sinks, A = swim out.
 // At the surface keep rising to pop up at the pond dock (back to the ranch).
-public class Submarine : Vehicle
+public partial class Submarine : Vehicle
 {
     float yaw, pitchVis, surfaceT;
     Transform prop;
 
     public override string[] TouchSet { get { return new[] { "A", null, null, "UP", "DOWN" }; } }
-    public override string HelpLine { get { return "L-stick drive + turn | RT / Space up | LT / Shift down | A swim out (scuba) | surface + keep rising = ranch"; } }
+    public override string HelpLine { get { return "L-stick drive + turn | RT / Space up | LT / Shift down | A swim out (scuba) | surface + keep rising = ranch | from deep, hold UP all the way = BREACH!"; } }
 
     public static Submarine Build(Vector3 pos, float yawDeg)
     {
@@ -583,6 +588,7 @@ public class Submarine : Vehicle
 
     protected override bool OutOfWorld(Vector3 p)
     {
+        if (breach) return false;   // ffu37: in the air over the ranch pond
         Vector3 l = p - Worlds.UnderO;
         return Mathf.Abs(l.x) > 130f || Mathf.Abs(l.z) > 130f || l.y < -60f || l.y > 20f;
     }
@@ -593,6 +599,7 @@ public class Submarine : Vehicle
     {
         base.FixedUpdate();
         float dt = Time.fixedDeltaTime;
+        if (breach) { BreachStep(dt); return; }   // ffu37
         bool on = driver != null;
         Vector3 v = rb.velocity;
         Vector3 local = transform.position - Worlds.UnderO;
@@ -600,14 +607,28 @@ public class Submarine : Vehicle
         if (on) yaw += inp.move.x * 55f * dt;
         Vector3 fwd = Quaternion.Euler(0f, yaw, 0f) * Vector3.forward;
         Vector3 wishH = on ? fwd * inp.move.y * 11f : Vector3.zero;
-        float wishV = climb * 5f + (on ? 0f : Mathf.Sin(Time.time * 0.6f) * 0.2f);
+        // ffu37: EMERGENCY BLOW - full UP held (RT / Space / touch UP) for 0.6 s (or with full throttle) blows the ballast:
+        // the climb builds from 5 up to ~11.5 m/s, so from deep down the sub hits the surface fast enough to BREACH
+        bool full = on && climb > 0.85f && local.y < -2.6f;
+        blowT = full ? blowT + dt : 0f;
+        float blowWant = full && (blowT > 0.6f || inp.move.y > 0.6f) ? 1f : 0f;
+        blowK = Mathf.MoveTowards(blowK, blowWant, dt * (blowWant > blowK ? 0.8f : 2f));
+        float wishV = climb * 5f + blowK * 6.5f + (on ? 0f : Mathf.Sin(Time.time * 0.6f) * 0.2f);
         Vector3 hv = Vector3.MoveTowards(new Vector3(v.x, 0f, v.z), wishH, 6f * dt);
-        float vy = Mathf.MoveTowards(v.y, wishV, 5f * dt);
-        if (local.y > -1.6f && vy > 0f) { vy = 0f; }
+        float vy = Mathf.MoveTowards(v.y, wishV, (5f + blowK * 2f) * dt);
+        if (on && local.y > -2.4f && vy > BreachMin && UnderwaterWorld.I != null)
+        {
+            rb.velocity = new Vector3(hv.x, vy, hv.z);
+            StartBreach();
+            return;
+        }
+        if (local.y > -1.6f && vy > 0f) { vy = 0f; blowK = 0f; }
         rb.velocity = new Vector3(hv.x, vy, hv.z);
-        pitchVis = Mathf.Lerp(pitchVis, -vy * 3f, dt * 3f);
+        pitchVis = Mathf.Lerp(pitchVis, Mathf.Clamp(-vy * (3f + blowK * 2.5f), -55f, 30f), dt * 3f);
         rb.MoveRotation(Quaternion.Euler(pitchVis, yaw, -inp.move.x * 5f));
-        // surfacing: at the top and still rising -> pop up at the ranch dock
+        if (blowK > 0.05f && Random.value < blowK * 0.8f) FX.Bubble(transform.TransformPoint(new Vector3(Random.Range(-1.3f, 1.3f), 0.6f, Random.Range(-2.5f, 2.5f))), 3);
+        if (on && driver.human && blowK > 0.02f && blowT - dt < 0.6f && blowT >= 0.6f) driver.Toast("BLOW THE BALLAST! Keep holding UP...", 1.6f);
+        // surfacing: at the top and still rising -> pop up at the pond dock (back to the ranch)
         if (on && local.y > -2.2f && climb > 0.3f) surfaceT += dt; else surfaceT = 0f;
         if (on && driver.human && surfaceT > 0.25f && surfaceT - dt <= 0.25f) driver.Toast("Surfacing... keep rising to head back to the ranch", 1.5f);
         if (on && surfaceT > 1.2f && UnderwaterWorld.I != null)

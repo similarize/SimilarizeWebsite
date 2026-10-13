@@ -221,6 +221,7 @@ public class Bike : Vehicle
     protected override void FixedUpdate()
     {
         float dt = Time.fixedDeltaTime;
+        PondPhysics.Step(this, dt);   // ffu37: sinks to the real pond bed
         PIn ip = driver != null ? inp : new PIn();
         if (demoHook != null && driver != null) ip = demoHook(ip);
         if (aiRider != null && driver == aiRider) ip = BikeAI.Ride(this, dt);
