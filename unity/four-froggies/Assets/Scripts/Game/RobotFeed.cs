@@ -305,7 +305,7 @@ public class RobotFeed : MonoBehaviour
         if (mm != null)
         {
             // ffu26: mech mission band - phase, battery, rocket fuel, distance, samples
-            string bc2 = r.battery < Robot.LowBattery ? "#ffb030" : "#ffffff";
+            string bc2 = r.battery < r.lowAt ? "#ffb030" : "#ffffff";
             string fc = mm.fuel < 0.25f ? "#ffb030" : "#8fe3ff";
             string s2 = "<color=#ffe27a>" + mm.PhaseLine.ToUpper() + "</color>   battery <color=" + bc2 + ">" + r.Pct + "</color>   fuel <color=" + fc + ">" + Mathf.RoundToInt(mm.fuel * 100f) + "%</color>";
             if (mm.DistLine.Length > 0) s2 += "   " + mm.DistLine + " " + mm.DistWhat;
@@ -315,7 +315,7 @@ public class RobotFeed : MonoBehaviour
             return;
         }
         if (title.text != head) title.text = head;
-        string bc = r.Charging ? "#8cff8c" : r.battery < Robot.LowBattery ? "#ffb030" : "#ffffff";
+        string bc = r.Charging ? "#8cff8c" : r.battery < r.lowAt ? "#ffb030" : "#ffffff";
         string s = "<color=#ffe27a>" + (m != null ? m.PhaseLine.ToUpper() : r.StatusLine) + "</color>   battery <color=" + bc + ">" + r.Pct + "</color>";
         if (m != null && m.DistLine.Length > 0) s += "   " + m.DistLine + " " + m.DistWhat;
         if (m != null && (m.phase >= 7)) s += "   " + (m.kind == 0 ? "rocks " : "ice ") + m.got + "/" + m.want;

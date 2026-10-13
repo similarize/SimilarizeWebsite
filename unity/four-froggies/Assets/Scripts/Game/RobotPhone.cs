@@ -501,7 +501,7 @@ public class RobotPhone : MonoBehaviour
         if (ownerT.text != ow) ownerT.text = ow;
         float b = Mathf.Clamp01(r.battery);
         batFill.rectTransform.sizeDelta = new Vector2(Mathf.Max(10f, 90f * b), 14f);
-        batFill.color = r.Charging ? new Color(0.45f, 1f, 0.5f) : b < Robot.LowBattery ? new Color(1f, 0.62f, 0.15f) : new Color(0.55f, 0.9f, 1f);
+        batFill.color = r.Charging ? new Color(0.45f, 1f, 0.5f) : b < r.lowAt ? new Color(1f, 0.62f, 0.15f) : new Color(0.55f, 0.9f, 1f);
         batT.text = (r.Charging ? "+" : "") + r.Pct;
         jobT.text = r.StatusLine;
         for (int i = 0; i < dots.Count; i++) { dots[i].color = i == sel ? new Color(0.5f, 1f, 0.6f) : new Color(1f, 1f, 1f, 0.3f); dots[i].rectTransform.sizeDelta = Vector2.one * (i == sel ? 10f : 7f); }

@@ -31,6 +31,11 @@ public class ChargeJack
     public Material glow, pad;
     public Transform cable;
     public int shown = -1;        // 0 free, 1 claimed, 2 charging
+    // ffu40: Figure 03's own wireless (inductive) pad - no cable / wall socket; only robot `only` may use it
+    public bool wireless;
+    public string only;
+    public Material ring;
+    public float fxT;
 }
 
 public class LitterItem { public Transform t; public bool active; public Robot claim; public float respawn; }
@@ -155,6 +160,12 @@ public class RanchJobs : MonoBehaviour
     public readonly int[] busy = new int[Chores.Count];
     public static readonly Vector2 BinP = new Vector2(-31.8f, 36.5f), CratePile = new Vector2(-37f, 45f), CrateDrop = new Vector2(-84f, 46f),
         HayPile = new Vector2(-99f, 92f), HayDrop = new Vector2(-109.5f, 116f);
+    // ffu40: Figure 03's own wireless charging pad, outside the garage's west wall north of the ROBOT CHARGING jacks
+    // (the real Figure 03 charges inductively through coils in its feet by stepping onto a pad - no cable)
+    public static readonly Vector2 FigPadP = new Vector2(-31.2f, 28.3f);
+    public const float FigPadR = 0.9f, FigPadTop = 0.08f;
+    public ChargeJack figPad;
+    public static bool OnFigPad(float x, float z) { float dx = x - FigPadP.x, dz = z - FigPadP.y; return dx * dx + dz * dz < FigPadR * FigPadR; }
     public static readonly Rect MowArea = new Rect(-106f, 30f, 20f, 24f);
     public int mowLane;
     readonly List<GameObject> crateStack = new List<GameObject>(), hayStack = new List<GameObject>();
@@ -184,6 +195,7 @@ public class RanchJobs : MonoBehaviour
         Jack(st, "house porch", new Vector3(-49f, 1.45f, 11.08f), Vector3.forward);
         Jack(st, "house porch", new Vector3(-35f, 1.45f, 11.08f), Vector3.forward);
         Ranch.Sign(new Vector3(-29.35f, gx + 3.3f, 21.45f), -90f, "ROBOT CHARGING", new Color(0.1f, 0.35f, 0.55f), 4.6f, 0.75f);
+        FigurePad(st);   // ffu40
 
         // wheelie bin for litter
         Vector3 bp = RobotNav.G(BinP.x, BinP.y);
@@ -256,7 +268,7 @@ public class RanchJobs : MonoBehaviour
             leaves.Add(lp);
         }
         MeshMerge.Merge(st, false);
-        Debug.Log("RanchJobs: " + jacks.Count + " charging jacks, " + litter.Count + " litter items, " + leaves.Count + " leaf piles");
+        Debug.Log("RanchJobs: " + (jacks.Count - (figPad != null ? 1 : 0)) + " charging jacks + Figure 03 wireless pad at (" + FigPadP.x + ", " + FigPadP.y + "), " + litter.Count + " litter items, " + leaves.Count + " leaf piles");
     }
 
     void Jack(Transform root, string label, Vector3 socket, Vector3 n)
@@ -293,6 +305,64 @@ public class RanchJobs : MonoBehaviour
         jacks.Add(j);
     }
 
+    // ffu40: low slab + glowing coil rings + foot coil marks + a FIGURE 03 name plate; the robot stands on it upright
+    void FigurePad(Transform st)
+    {
+        Vector3 c = RobotNav.G(FigPadP.x, FigPadP.y);
+        var j = new ChargeJack { label = "Figure 03 wireless pad", wireless = true, only = "figure03", normal = Vector3.left, faceYaw = -90f };
+        j.stand = c; j.socket = c + Vector3.up * (FigPadTop + 0.05f);
+        var go = new GameObject("Figure 03 wireless pad").transform;
+        go.SetParent(st, false); go.position = c;
+        Material rim = Mats.Steel(new Color(0.55f, 0.57f, 0.6f)), slab = Mats.Paint(new Color(0.12f, 0.13f, 0.15f), 0.55f);
+        Mats.Prim(PrimitiveType.Cylinder, go, new Vector3(0f, 0.035f, 0f), new Vector3(FigPadR * 2f, 0.035f, FigPadR * 2f), rim);
+        Mats.Prim(PrimitiveType.Cylinder, go, new Vector3(0f, 0.05f, 0f), new Vector3(FigPadR * 2f - 0.14f, 0.03f, FigPadR * 2f - 0.14f), slab);   // top at FigPadTop
+        j.ring = new Material(Mats.Unlit(Color.white)); j.ring.color = FigIdle;
+        j.pad = new Material(Mats.Unlit(Color.white)); j.pad.color = FigIdle * 0.8f;
+        // two coil rings (segmented) on the top face
+        foreach (var rr in new[] { 0.66f, 0.42f })
+        {
+            int n = rr > 0.5f ? 30 : 20;
+            float seg = 2f * Mathf.PI * rr / n * 0.82f;
+            for (int i = 0; i < n; i++)
+            {
+                float a = i * Mathf.PI * 2f / n;
+                var g = Mats.Prim(PrimitiveType.Cube, go, new Vector3(Mathf.Cos(a) * rr, FigPadTop + 0.004f, Mathf.Sin(a) * rr), new Vector3(0.045f, 0.012f, seg), j.ring);
+                g.transform.localRotation = Quaternion.Euler(0f, -a * Mathf.Rad2Deg, 0f);
+            }
+        }
+        // foot coil marks (he faces -x, feet side by side along z)
+        for (int s = -1; s <= 1; s += 2)
+            Mats.Prim(PrimitiveType.Cube, go, new Vector3(0f, FigPadTop + 0.005f, s * 0.17f), new Vector3(0.32f, 0.012f, 0.13f), j.pad);
+        // name plate on a short pedestal at the back (wall side), readable from the west / the yard
+        Mats.Prim(PrimitiveType.Cube, go, new Vector3(FigPadR + 0.12f, 0.3f, 0f), new Vector3(0.14f, 0.6f, 0.46f), rim);
+        Mats.Prim(PrimitiveType.Cube, go, new Vector3(FigPadR + 0.045f, 0.5f, 0f), new Vector3(0.02f, 0.035f, 1.16f), j.ring);   // glow strip under the plate
+        Ranch.Sign(c + new Vector3(FigPadR + 0.06f, 0.74f, 0f), -90f, "FIGURE 03", new Color(0.1f, 0.12f, 0.15f), 1.25f, 0.34f);
+        Mats.NoShadows(go.gameObject);
+        jacks.Add(j); figPad = j;
+    }
+    static readonly Color FigIdle = new Color(0.45f, 0.75f, 1f), FigClaim = new Color(0.55f, 0.95f, 1f);
+
+    void FigPadTick(ChargeJack j, bool chg, int st, float t, float dt)
+    {
+        if (chg)
+        {
+            float k = 0.5f + 0.5f * Mathf.Sin(t * 3.2f);
+            j.ring.color = Color.Lerp(new Color(0.08f, 0.45f, 0.16f), new Color(0.5f, 1f, 0.55f), k);
+            j.pad.color = Color.Lerp(new Color(0.1f, 0.55f, 0.2f), new Color(0.6f, 1f, 0.65f), 1f - k * 0.6f);
+            // soft charge sparkle rising round his feet / legs
+            j.fxT -= dt;
+            if (j.fxT <= 0f)
+            {
+                j.fxT = 0.28f;
+                Vector2 rc = Random.insideUnitCircle * 0.55f;
+                float h = j.user != null ? j.user.height : 2f;
+                Vector3 sp = j.stand + new Vector3(rc.x, FigPadTop + Random.Range(0.02f, h * 0.45f), rc.y);
+                FX.Puff(sp, Vector3.up * Random.Range(0.35f, 0.7f) + Random.insideUnitSphere * 0.08f, Random.Range(0.05f, 0.11f), Random.Range(0.8f, 1.3f), new Color(0.55f, 1f, 0.6f, 0.85f));
+            }
+        }
+        else if (st != j.shown) { j.ring.color = st == 1 ? FigClaim : FigIdle; j.pad.color = (st == 1 ? FigClaim : FigIdle) * 0.8f; }
+    }
+
     static void Stretch(Transform c, Vector3 a, Vector3 b, float thick)
     {
         Vector3 d = b - a;
@@ -310,8 +380,15 @@ public class RanchJobs : MonoBehaviour
     public ChargeJack ClaimJack(Robot r)
     {
         ChargeJack best = null; float bd = 1e9f;
+        // ffu40: Figure 03 only ever uses his own wireless pad; nobody else claims it
+        if (figPad != null && r.id == figPad.only)
+        {
+            if (figPad.user != null && figPad.user != r) return null;
+            figPad.user = r; return figPad;
+        }
         foreach (var j in jacks)
         {
+            if (j.wireless) continue;
             if (j.user != null && j.user != r) continue;
             float d = RobotNav.Flat(j.stand - r.transform.position);
             if (d < bd) { bd = d; best = j; }
@@ -444,6 +521,7 @@ public class RanchJobs : MonoBehaviour
         {
             bool chg = j.user != null && j.user.Charging && j.user.jack == j;
             int st = chg ? 2 : j.user != null ? 1 : 0;
+            if (j.wireless) { FigPadTick(j, chg, st, t, dt); j.shown = st; continue; }
             if (chg)
             {
                 float k = 0.5f + 0.5f * Mathf.Sin(t * 4.5f);

@@ -172,6 +172,7 @@ public class RanchLife : MonoBehaviour
         // ffu12: mixed starting charge so a couple head straight for the jacks while the rest pick chores
         float[] start = { 0.2f, 0.85f, 0.62f, 0.95f, 0.22f, 0.74f, 0.5f };
         r.battery = start[robots.Count % start.Length];
+        if (id == "figure03") r.TwoHourBattery();   // ffu40: his own wireless pad + a ~2 h battery
         robots.Add(r);
     }
 }
@@ -226,6 +227,19 @@ public class Robot : MonoBehaviour
     string tagLine = "";
     AudioSource loop;
     public const float LowBattery = 0.25f;
+    // ffu40: per-robot battery model. Defaults = the ffu12 numbers (full ~2.5-3 min of chores, ~22 s charge from empty).
+    // Figure 03: drain x Fig03Drain so a full battery lasts ~2 h of normal chores (est. ~60% walking / ~35% working:
+    // 1/420 + 0.6/300 + 0.35/320 = 1/182.6 per s at x1 -> x0.02536 = 1/7200), charge 0 -> 100% in 4 min on his pad.
+    public const float Fig03Drain = 182.6f / 7200f, Fig03ChargeSecs = 240f;
+    public float drainMul = 1f, chargeSecs = 22f, lowAt = LowBattery, flatAt = 0.1f, topUpBelow = 0.97f;
+    public bool OwnPad { get { return RanchJobs.I != null && RanchJobs.I.figPad != null && RanchJobs.I.figPad.only == id; } }
+    public void TwoHourBattery()
+    {
+        drainMul = Fig03Drain; chargeSecs = Fig03ChargeSecs;
+        lowAt = 0.1f;        // ~12 min of chores left when he heads for the pad (pad is <~90 m from any chore)
+        flatAt = 0.04f;      // ~5 min left: drops a chore mid-way
+        topUpBelow = 0.85f;  // nothing free to do: tops up only when below 85% (else he'd stand on the pad most of the day)
+    }
 
     // ---- ffu20: driving vehicles, space missions, display turntable ----
     public WorldId world = WorldId.Ranch;
@@ -250,7 +264,7 @@ public class Robot : MonoBehaviour
         {
             case WorldId.Mars: return Worlds.MarsO.y + SurfaceWorlds.MarsY(x - Worlds.MarsO.x, z - Worlds.MarsO.z);
             case WorldId.Callisto: return Worlds.CallistoO.y + SurfaceWorlds.CalY(x - Worlds.CallistoO.x, z - Worlds.CallistoO.z);
-            default: { float g = RobotNav.Floor(x, z); return MissionSite.OnSlab(x, z) ? Mathf.Max(g, MissionSite.PadTop) : g; }
+            default: { float g = RobotNav.Floor(x, z); if (RanchJobs.OnFigPad(x, z)) g += RanchJobs.FigPadTop; return MissionSite.OnSlab(x, z) ? Mathf.Max(g, MissionSite.PadTop) : g; }
         }
     }
 
@@ -513,7 +527,7 @@ public class Robot : MonoBehaviour
         switch (c)
         {
             case "auto": cmd = "auto"; forcedChore = -1; forcedCharge = false; if (aloft) Resume(); return robotName + ": back to chores (auto)";
-            case "charge": cmd = "auto"; forcedChore = -1; forcedCharge = true; if (aloft) Resume(); return robotName + ": going to a charging jack (" + Pct + ")";
+            case "charge": cmd = "auto"; forcedChore = -1; forcedCharge = true; if (aloft) Resume(); return robotName + (OwnPad ? ": walking to my wireless pad (" : ": going to a charging jack (") + Pct + ")";
             case "come": cmd = "come"; target = from.transform.position; status = "coming"; return robotName + ": coming to you";
             case "go": cmd = "go"; target = transform.position + transform.forward * 8f; status = "moving"; return robotName + ": moving out";
             case "stop": cmd = "idle"; speed = 0f; status = "standby"; resumeT = 15f; return robotName + ": stopped (chores again in 15 s)";
@@ -638,13 +652,13 @@ public class Robot : MonoBehaviour
         AbortPlan();
         var J = RanchJobs.I;
         if (J == null) return;
-        if ((forcedCharge || battery < LowBattery) && PlanCharge()) return;
+        if ((forcedCharge || battery < lowAt) && PlanCharge()) return;
         int c = forcedChore >= 0 ? forcedChore : J.PickChore(this, lastChore);
         forcedChore = -1;
         if (c < 0)
         {
             // nothing free: top up at a jack, else stroll back towards the robot line
-            if (battery < 0.97f && PlanCharge()) return;
+            if (battery < topUpBelow && PlanCharge()) return;
             Walk(RobotNav.G(-44f + Random.Range(-8f, 8f), 30f + Random.Range(-1.5f, 3f)));
             Act(Random.Range(2f, 4f), 0, float.NaN);
             status = "looking for work";
@@ -664,6 +678,17 @@ public class Robot : MonoBehaviour
         jack = j; forcedCharge = false;
         status = "to charger";
         Walk(j.stand);
+        if (j.wireless)
+        {
+            // ffu40: wireless pad - step onto the middle, stand still upright facing out, charge through the foot coils
+            status = "to his pad";
+            var w = Add(1, j.stand, 0); w.spd = 0.6f;
+            Act(0.8f, 0, j.faceYaw, () => { charging = true; status = "charging on his pad"; Sfx.PlayAt(Sfx.Confirm != null ? Sfx.Confirm : Sfx.Click, j.stand + Vector3.up * 0.3f, 0.35f, 30f, 1.15f); FX.Sparkle(j.stand + Vector3.up * 0.15f, new Color(0.5f, 1f, 0.6f), 6); });
+            var ws = Add(3, j.stand, 11);
+            ws.face = j.faceYaw;
+            ws.done = () => { charging = false; Sfx.PlayAt(Sfx.Click, j.stand + Vector3.up * 0.3f, 0.3f, 30f, 1.4f); if (jack != null && jack.user == this) jack.user = null; jack = null; status = "charged"; };
+            return true;
+        }
         Act(0.6f, 0, j.faceYaw, () => { charging = true; status = "charging"; Sfx.PlayAt(Sfx.Confirm != null ? Sfx.Confirm : Sfx.Click, PlugPoint, 0.45f, 30f, 0.9f); FX.Sparkle(J.JackPlug(j), new Color(0.5f, 1f, 0.6f), 8); });
         var s = Add(3, j.stand, 4);
         s.face = j.faceYaw;
@@ -876,7 +901,7 @@ public class Robot : MonoBehaviour
             if (steps.Count == 0) return;
         }
         // nearly flat in the middle of a chore: drop it and go charge
-        if (!charging && jack == null && battery < 0.1f && chore >= 0) { AbortPlan(); if (!PlanCharge()) { Walk(transform.position); } }
+        if (!charging && jack == null && battery < flatAt && chore >= 0) { AbortPlan(); if (!PlanCharge()) { Walk(transform.position); } }
         if (stepIdx >= steps.Count) return;
         var st = steps[stepIdx];
         stepT += dt;
@@ -925,9 +950,9 @@ public class Robot : MonoBehaviour
                 if (stepT >= st.t) NextStep();
                 break;
             case 3:
-                pose = 4;
+                pose = jack != null && jack.wireless ? 11 : 4;   // ffu40: 11 = standing still upright on the wireless pad
                 faceYaw = st.face;
-                status = "charging";
+                status = pose == 11 ? "charging on his pad" : "charging";
                 if (battery >= 0.995f && stepT > 3f) NextStep();
                 break;
         }
@@ -1052,7 +1077,7 @@ public class Robot : MonoBehaviour
         if (seatedIn != null || frozen)
         {
             // in a vehicle seat / inside the mission ship: the vehicle (or the mission) places the robot
-            if (!charging) battery = Mathf.Max(0f, battery - dt / 900f);
+            if (!charging) battery = Mathf.Max(0f, battery - dt / 900f * drainMul);
             if (seatedIn != null) pose = 9;
             if (frozen) speed = Mathf.MoveTowards(speed, 0f, 8f * dt);
             Animate(dt); Lamp(); Hum();
@@ -1063,8 +1088,9 @@ public class Robot : MonoBehaviour
         p = transform.position;
 
         // battery: charges at a jack (~22 s from empty), drains slowly while working (~2.5-3 min of chores)
-        if (charging) battery = Mathf.Min(1f, battery + dt / 22f);
-        else battery = Mathf.Max(0f, battery - dt * (1f / 420f + (speed > 0.3f ? 1f / 300f : 0f) + (pose >= 5 ? 1f / 320f : 0f) + (flying ? 1f / 60f : 0f)));
+        // ffu40: per-robot drainMul / chargeSecs (Figure 03 ~2 h / 4 min, see TwoHourBattery)
+        if (charging) battery = Mathf.Min(1f, battery + dt / chargeSecs);
+        else battery = Mathf.Max(0f, battery - dt * drainMul * (1f / 420f + (speed > 0.3f ? 1f / 300f : 0f) + (pose >= 5 && pose != 11 ? 1f / 320f : 0f) + (flying ? 1f / 60f : 0f)));
         float spd = goalSpeed;
         if (battery <= 0.01f) spd = Mathf.Min(spd, 0.8f);
 
@@ -1085,7 +1111,7 @@ public class Robot : MonoBehaviour
         // ffu10: metal footsteps while walking, servo whirs when moving / waving / dancing (positional)
         if (!flying && speed > 0.3f) { sndStep += speed * dt; if (sndStep > height * 0.38f) { sndStep = 0f; Sfx.PlayAt(Sfx.StepMetal, p, 0.32f, 28f, Random.Range(0.9f, 1.15f) * Mathf.Clamp(1.8f / height, 0.6f, 1.4f)); } }
         sndServo -= dt;
-        if (sndServo <= 0f && (speed > 0.3f || wave > 0f || cmd == "dance" || pose >= 5))
+        if (sndServo <= 0f && (speed > 0.3f || wave > 0f || cmd == "dance" || (pose >= 5 && pose != 11)))
         {
             sndServo = Random.Range(1.2f, 3.2f);
             Sfx.PlayAt(Sfx.Pick(Sfx.Servo), p + Vector3.up * height * 0.7f, 0.24f, 24f, Random.Range(0.85f, 1.2f));
@@ -1143,6 +1169,7 @@ public class Robot : MonoBehaviour
                 case 1: case 8: aL = aR = Quaternion.Euler(-45f + sw * 0.15f, 0f, 0f); break;
                 case 2: aL = Quaternion.Euler(-78f, 0f, -8f); aR = Quaternion.Euler(-78f, 0f, 8f); break;
                 case 3: { float k = Mathf.Sin(t * 3f) * 6f; aL = Quaternion.Euler(-62f + k, 0f, 0f); aR = Quaternion.Euler(-62f - k, 0f, 0f); hx = 20f; break; }
+                case 11: aL = Quaternion.Euler(-2f, 0f, -3f); aR = Quaternion.Euler(-2f, 0f, 3f); hx = 0f; break;   // ffu40: upright on the pad
                 case 4: aL = Quaternion.Euler(-6f, 0f, -4f); aR = Quaternion.Euler(-6f, 0f, 4f); hx = 14f + Mathf.Sin(t * 1.2f) * 3f; break;
                 case 5: { float k = Mathf.Sin(t * 5f); aL = Quaternion.Euler(-42f + k * 8f, k * 14f, 0f); aR = Quaternion.Euler(-42f - k * 8f, k * 14f, 0f); break; }
                 case 6: { float k = Mathf.Sin(t * 3.2f); aL = aR = Quaternion.Euler(-50f + k * 16f, 0f, 0f); break; }
@@ -1171,7 +1198,7 @@ public class Robot : MonoBehaviour
 
     void Lamp()
     {
-        bool showBat = (charging || battery < LowBattery) && !hidden && seatedIn == null;
+        bool showBat = (charging || battery < lowAt) && !hidden && seatedIn == null;
         if (batBar.gameObject.activeSelf != showBat) batBar.gameObject.SetActive(showBat);
         if (showBat)
         {
@@ -1186,7 +1213,7 @@ public class Robot : MonoBehaviour
         if (charging) c = Color.Lerp(new Color(0.1f, 0.5f, 0.15f), new Color(0.5f, 1f, 0.55f), 0.5f + 0.5f * Mathf.Sin(Time.time * 4.5f));
         else if (manual != null) c = new Color(1f, 0.45f, 0.9f);
         else if (battery < 0.05f) c = new Color(1f, 0.15f, 0.1f);
-        else if (battery < LowBattery) c = new Color(1f, 0.7f, 0.15f);
+        else if (battery < lowAt) c = new Color(1f, 0.7f, 0.15f);
         else c = new Color(0.3f, 0.7f, 1f);
         if (lampM.color != c) lampM.color = c;
     }
@@ -1216,8 +1243,8 @@ public class Robot : MonoBehaviour
             var mm = RobotMechMission.For(this);
             if (mm != null) return mm.PhaseLine;
             if (cmd != "auto") return status;
-            if (charging) return "charging";
-            if (jack != null) return "to charger";
+            if (charging) return jack != null && jack.wireless ? "charging on his pad" : "charging";
+            if (jack != null) return jack.wireless ? "to his pad" : "to charger";
             if (chore >= 0) return chore == Chores.Mow && riding ? "mowing (riding mower)" : Chores.Doing[chore];
             return status;
         }
@@ -1226,7 +1253,7 @@ public class Robot : MonoBehaviour
     void UpdateTag()
     {
         if (tagMesh == null) return;
-        string col = charging ? "#8cff8c" : battery < LowBattery ? "#ffc040" : "#9fd8ff";
+        string col = charging ? "#8cff8c" : battery < lowAt ? "#ffc040" : "#9fd8ff";
         string line = robotName + (owner.Length > 0 ? " <size=60>(" + owner + "'s)</size>" : "") + "\n<size=72><color=" + col + ">" + StatusLine + "  " + Pct + "</color></size>";
         if (line != tagLine) { tagLine = line; tagMesh.text = line; }
     }
@@ -1249,7 +1276,7 @@ public class Robot : MonoBehaviour
             j.user = this; jack = j;
             transform.position = j.stand; yaw = j.faceYaw;
             Act(0.3f, 0, j.faceYaw, () => { charging = true; status = "charging"; });
-            var s = Add(3, j.stand, 4); s.face = j.faceYaw;
+            var s = Add(3, j.stand, j.wireless ? 11 : 4); s.face = j.faceYaw;
             s.done = () => { charging = false; if (jack != null && jack.user == this) jack.user = null; jack = null; };
             return;
         }
