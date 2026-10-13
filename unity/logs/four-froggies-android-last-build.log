@@ -1,13 +1,13 @@
-ANDROID run 38352968595 attempt 1 event workflow_dispatch sha 9553f86d2d5ffa8f0ecd17192d61fab249d56860 tag ff-android-ffu38 started 2026-10-13T05:44:55Z
+ANDROID run 38473215545 attempt 1 event workflow_dispatch sha cfbb6fa65633be690c309918f2e3159c10d38fa3 tag ff-android-ffu39 started 2026-10-13T21:47:46Z
 secrets present
 Filesystem      Size  Used Avail Use% Mounted on
-/dev/root       145G   37G  108G  26% /
+/dev/root       145G   38G  107G  27% /
 6.4M	src/unity/four-froggies/Assets/StreamingAssets/real
 23M	src/unity/four-froggies/Assets/StreamingAssets/realroom
 11M	src/unity/four-froggies/Assets/Resources/FFMusic
 placeholder ProjectSettings.asset for unity-setup
 hub pass1: failure
--rwxrwxrwx 1 root root 1272 Oct  2 20:00 /opt/unityhub/unityhub
+-rwxrwxrwx 1 root root 1272 Oct 13 19:47 /opt/unityhub/unityhub
 placeholder removed
 android player: /home/runner/Unity/Hub/Editor/2022.3.62f3/Editor/Data/PlaybackEngines/AndroidPlayer
 AndroidPlayerBuildProgram.Data.dll
@@ -56,13 +56,13 @@ wrap.sh
 signing: repo sideload keystore (android/ff-sideload.keystore)
 editor: /home/runner/Unity/Hub/Editor/2022.3.62f3/Editor/Unity
 unity exit code: 0
-total 68700
-drwxr-xr-x 2 runner runner     4096 Oct 13 06:00 .
-drwxr-xr-x 3 runner runner     4096 Oct 13 06:00 ..
--rw-r--r-- 1 runner runner 70337141 Oct 13 06:00 FourFroggies.apk
-APK_SIZE: 70337141
+total 68720
+drwxr-xr-x 2 runner runner     4096 Oct 13 22:00 .
+drwxr-xr-x 3 runner runner     4096 Oct 13 22:00 ..
+-rw-r--r-- 1 runner runner 70358657 Oct 13 22:00 FourFroggies.apk
+APK_SIZE: 70358657
 === aapt dump badging (/home/runner/Unity/Hub/Editor/2022.3.62f3/Editor/Data/PlaybackEngines/AndroidPlayer/SDK/build-tools/34.0.0)
-package: name='com.similarize.fourfroggies' versionCode='6' versionName='1.0.6' platformBuildVersionName='16' platformBuildVersionCode='36' compileSdkVersion='36' compileSdkVersionCodename='16'
+package: name='com.similarize.fourfroggies' versionCode='7' versionName='1.0.7' platformBuildVersionName='16' platformBuildVersionCode='36' compileSdkVersion='36' compileSdkVersionCodename='16'
 sdkVersion:'26'
 targetSdkVersion:'36'
 application-label:'Four Froggies'
@@ -91,32 +91,32 @@ Signer #1 public key SHA-256 digest: c08b531641ebba0385f751e055171b6594c158fae7c
 Signer #1 public key SHA-1 digest: 621cfa177287811c625c6ac07de4fe93fa9a35fa
 Signer #1 public key MD5 digest: 551141428bb75f48c53de6f59f799a40
 === apk contents (top)
-122791544                     340 files
- 31455944  1981-01-01 01:01   lib/arm64-v8a/libil2cpp.so
+122854416                     340 files
+ 31508840  1981-01-01 01:01   lib/arm64-v8a/libil2cpp.so
  25176264  1981-01-01 01:01   lib/arm64-v8a/libunity.so
-  4658940  1981-01-01 01:01   assets/bin/Data/Managed/Metadata/global-metadata.dat
+  4666288  1981-01-01 01:01   assets/bin/Data/Managed/Metadata/global-metadata.dat
   1741029  1981-01-01 01:01   assets/realroom/tv.mp4
   1642887  1981-01-01 01:01   assets/realroom/frog.bin
   1538858  1981-01-01 01:01   assets/realroom/room.bin
   1491203  1981-01-01 01:01   assets/realroom/hi/Armchair_01_nor_gl.jpg
   1398392  1981-01-01 01:01   assets/bin/Data/2a0969a5524091bf88abee6ea0fb556f
   1354677  1981-01-01 01:01   assets/realroom/hi/white_plaster_02_diff.jpg
-  1211520  1981-01-01 01:01   assets/bin/Data/541fef0575408922aa9e279ba582c7d9.resource
+  1211520  1981-01-01 01:01   assets/bin/Data/67a3691306517733ea843c4f5df15522.resource
   1188940  1981-01-01 01:01   assets/realroom/hi/poly_wool_herringbone_nor_gl.jpg
   1121184  1981-01-01 01:01   assets/bin/Data/unity default resources
   1076812  1981-01-01 01:01   assets/realroom/hi/white_plaster_02_nor_gl.jpg
   1072611  1981-01-01 01:01   assets/realroom/hi/poly_wool_herringbone_diff.jpg
-RELEASE_URL: https://github.com/similarize/SimilarizeWebsite/releases/tag/ff-android-ffu38
+RELEASE_URL: https://github.com/similarize/SimilarizeWebsite/releases/tag/ff-android-ffu39
 === step outcomes: secrets=success setup=success keys=success activate=success build=success inspect=success release=success
 === error lines
 10:[Licensing::Module] Trying to connect to existing licensing client channel...
 11:[Licensing::IpcConnector] Channel LicenseClient-runner doesn't exist
-12:[Licensing::Module] Successfully launched the LicensingClient (PId: 5743)
-13:[Licensing::IpcConnector] Successfully connected to: "LicenseClient-runner" at "2026-10-13T05:51:40.22445Z"
+12:[Licensing::Module] Successfully launched the LicensingClient (PId: 5505)
+13:[Licensing::IpcConnector] Successfully connected to: "LicenseClient-runner" at "2026-10-13T21:55:07.206631Z"
 15:[Licensing::Client] Handshaking with LicensingClient:
-21:[Licensing::Module] Successfully connected to LicensingClient on channel: "LicenseClient-runner" (connect: 0.57s, validation: 0.05s, handshake: 0.00s)
-22:[Licensing::IpcConnector] Successfully connected to: "LicenseClient-runner-notifications" at "2026-10-13T05:51:40.276028Z"
-23:[Licensing::Module] Connected to LicensingClient (PId: 5743, launch time: 0.00, total connection time: 0.62s)
+21:[Licensing::Module] Successfully connected to LicensingClient on channel: "LicenseClient-runner" (connect: 0.38s, validation: 0.04s, handshake: 0.00s)
+22:[Licensing::IpcConnector] Successfully connected to: "LicenseClient-runner-notifications" at "2026-10-13T21:55:07.243489Z"
+23:[Licensing::Module] Connected to LicensingClient (PId: 5505, launch time: 0.00, total connection time: 0.41s)
 24:[Licensing::Module] Error: Access token is unavailable; failed to update
 25:[Licensing::Client] Successfully updated license
 26:[Licensing::Client] Successfully resolved entitlement details
@@ -140,275 +140,275 @@ RELEASE_URL: https://github.com/similarize/SimilarizeWebsite/releases/tag/ff-and
 222:[Licensing::Client] Successfully resolved entitlement details
 223:[Licensing::Client] Successfully resolved entitlement details
 257:[ 65/143    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/Unity.Android.GradleProject.dll_609724D772CFC58A.mvfrm
-282:[114/143    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/Unity.Android.Gradle.dll_D365A5DDCFB730DB.mvfrm
-662:Start importing Assets/Editor/BuildScript.cs using Guid(6f57f5f635a5c27cf9831812c1e1dcd1) Importer(-1,00000000000000000000000000000000) [PhysX] Initialized MultithreadedTaskDispatcher with 4 workers.
-682:BuildScript:SetInputHandler () (at Assets/Editor/BuildScript.cs:349)
-683:InputHandlerSetter:.cctor () (at Assets/Editor/BuildScript.cs:16)
-687:(Filename: Assets/Editor/BuildScript.cs Line: 349)
-1645:[Licensing::Client] Successfully resolved entitlement details
-1657:BuildScript: Android start, Unity 2022.3.62f3
-1662:BuildScript:RunAndroid () (at Assets/Editor/BuildScript.cs:172)
-1663:BuildScript:BuildAndroid () (at Assets/Editor/BuildScript.cs:164)
-1665:(Filename: Assets/Editor/BuildScript.cs Line: 172)
-1674:BuildScript:SetStatic (System.Type,string,object) (at Assets/Editor/BuildScript.cs:358)
-1675:BuildScript:ConfigurePlayer () (at Assets/Editor/BuildScript.cs:382)
-1676:BuildScript:RunAndroid () (at Assets/Editor/BuildScript.cs:176)
-1677:BuildScript:BuildAndroid () (at Assets/Editor/BuildScript.cs:164)
-1679:(Filename: Assets/Editor/BuildScript.cs Line: 358)
-1686:BuildScript:SetStatic (System.Type,string,object) (at Assets/Editor/BuildScript.cs:358)
-1687:BuildScript:ConfigurePlayer () (at Assets/Editor/BuildScript.cs:383)
-1688:BuildScript:RunAndroid () (at Assets/Editor/BuildScript.cs:176)
-1689:BuildScript:BuildAndroid () (at Assets/Editor/BuildScript.cs:164)
-1691:(Filename: Assets/Editor/BuildScript.cs Line: 358)
-1698:BuildScript:ConfigurePlayer () (at Assets/Editor/BuildScript.cs:396)
-1699:BuildScript:RunAndroid () (at Assets/Editor/BuildScript.cs:176)
-1700:BuildScript:BuildAndroid () (at Assets/Editor/BuildScript.cs:164)
-1702:(Filename: Assets/Editor/BuildScript.cs Line: 396)
-1706:BuildScript: Android signing with keystore ff-sideload.keystore alias fourfroggies
-1711:BuildScript:ConfigureAndroid () (at Assets/Editor/BuildScript.cs:240)
-1712:BuildScript:RunAndroid () (at Assets/Editor/BuildScript.cs:177)
-1713:BuildScript:BuildAndroid () (at Assets/Editor/BuildScript.cs:164)
-1715:(Filename: Assets/Editor/BuildScript.cs Line: 240)
-1717:BuildScript: Android player settings (IL2CPP ARM64, GLES3, landscape, com.similarize.fourfroggies, versionCode 6)
-1722:BuildScript:ConfigureAndroid () (at Assets/Editor/BuildScript.cs:243)
-1723:BuildScript:RunAndroid () (at Assets/Editor/BuildScript.cs:177)
-1724:BuildScript:BuildAndroid () (at Assets/Editor/BuildScript.cs:164)
-1726:(Filename: Assets/Editor/BuildScript.cs Line: 243)
-1738:BuildScript:ApplyIcons (bool) (at Assets/Editor/BuildScript.cs:286)
-1739:BuildScript:RunAndroid () (at Assets/Editor/BuildScript.cs:178)
-1740:BuildScript:BuildAndroid () (at Assets/Editor/BuildScript.cs:164)
-1742:(Filename: Assets/Editor/BuildScript.cs Line: 286)
-1759:BuildScript:ApplyIcons (bool) (at Assets/Editor/BuildScript.cs:303)
-1760:BuildScript:RunAndroid () (at Assets/Editor/BuildScript.cs:178)
-1761:BuildScript:BuildAndroid () (at Assets/Editor/BuildScript.cs:164)
-1763:(Filename: Assets/Editor/BuildScript.cs Line: 303)
-1770:BuildScript:ApplyIcons (bool) (at Assets/Editor/BuildScript.cs:303)
-1771:BuildScript:RunAndroid () (at Assets/Editor/BuildScript.cs:178)
-1772:BuildScript:BuildAndroid () (at Assets/Editor/BuildScript.cs:164)
-1774:(Filename: Assets/Editor/BuildScript.cs Line: 303)
-1781:BuildScript:ApplyIcons (bool) (at Assets/Editor/BuildScript.cs:303)
-1782:BuildScript:RunAndroid () (at Assets/Editor/BuildScript.cs:178)
-1783:BuildScript:BuildAndroid () (at Assets/Editor/BuildScript.cs:164)
-1785:(Filename: Assets/Editor/BuildScript.cs Line: 303)
-2500:BuildScript: native music clips 19 (streaming)
-2505:BuildScript:ImportNativeMusic () (at Assets/Editor/BuildScript.cs:327)
-2506:BuildScript:RunAndroid () (at Assets/Editor/BuildScript.cs:181)
-2507:BuildScript:BuildAndroid () (at Assets/Editor/BuildScript.cs:164)
-2509:(Filename: Assets/Editor/BuildScript.cs Line: 327)
-2580:BuildScript: HDRI sky
-2585:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:491)
-2586:BuildScript:RunAndroid () (at Assets/Editor/BuildScript.cs:182)
-2587:BuildScript:BuildAndroid () (at Assets/Editor/BuildScript.cs:164)
-2589:(Filename: Assets/Editor/BuildScript.cs Line: 491)
-2591:BuildScript: FF/Skin shader
-2596:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
-2597:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:507)
-2598:BuildScript:RunAndroid () (at Assets/Editor/BuildScript.cs:182)
-2599:BuildScript:BuildAndroid () (at Assets/Editor/BuildScript.cs:164)
-2601:(Filename: Assets/Editor/BuildScript.cs Line: 453)
-2606:BuildScript: FF/Foliage shader
-2611:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
-2612:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:508)
-2613:BuildScript:RunAndroid () (at Assets/Editor/BuildScript.cs:182)
-2614:BuildScript:BuildAndroid () (at Assets/Editor/BuildScript.cs:164)
-2616:(Filename: Assets/Editor/BuildScript.cs Line: 453)
-2621:BuildScript: LB/Water shader
-2626:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
-2627:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:509)
-2628:BuildScript:RunAndroid () (at Assets/Editor/BuildScript.cs:182)
-2629:BuildScript:BuildAndroid () (at Assets/Editor/BuildScript.cs:164)
-2631:(Filename: Assets/Editor/BuildScript.cs Line: 453)
-2636:BuildScript: FF/Underwater shader
-2641:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
-2642:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:511)
-2643:BuildScript:RunAndroid () (at Assets/Editor/BuildScript.cs:182)
-2644:BuildScript:BuildAndroid () (at Assets/Editor/BuildScript.cs:164)
-2646:(Filename: Assets/Editor/BuildScript.cs Line: 453)
-2651:BuildScript: Unlit/Texture shader
-2656:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
-2657:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:512)
-2658:BuildScript:RunAndroid () (at Assets/Editor/BuildScript.cs:182)
-2659:BuildScript:BuildAndroid () (at Assets/Editor/BuildScript.cs:164)
-2661:(Filename: Assets/Editor/BuildScript.cs Line: 453)
-2666:BuildScript: FF/RealTri shader
-2671:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
-2672:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:514)
-2673:BuildScript:RunAndroid () (at Assets/Editor/BuildScript.cs:182)
-2674:BuildScript:BuildAndroid () (at Assets/Editor/BuildScript.cs:164)
-2676:(Filename: Assets/Editor/BuildScript.cs Line: 453)
-2681:BuildScript: FF/RealWater shader
-2686:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
-2687:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:515)
-2688:BuildScript:RunAndroid () (at Assets/Editor/BuildScript.cs:182)
-2689:BuildScript:BuildAndroid () (at Assets/Editor/BuildScript.cs:164)
-2691:(Filename: Assets/Editor/BuildScript.cs Line: 453)
-2714:BuildScript: terrain textures True True True
-2719:BuildScript:CreateTerrain () (at Assets/Editor/BuildScript.cs:646)
-2720:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:551)
-2721:BuildScript:RunAndroid () (at Assets/Editor/BuildScript.cs:182)
-2722:BuildScript:BuildAndroid () (at Assets/Editor/BuildScript.cs:164)
-2724:(Filename: Assets/Editor/BuildScript.cs Line: 646)
-2746:BuildScript: terrain NM material
-2751:BuildScript:CreateTerrain () (at Assets/Editor/BuildScript.cs:692)
-2752:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:551)
-2753:BuildScript:RunAndroid () (at Assets/Editor/BuildScript.cs:182)
-2754:BuildScript:BuildAndroid () (at Assets/Editor/BuildScript.cs:164)
-2756:(Filename: Assets/Editor/BuildScript.cs Line: 692)
-2780:BuildScript: scene saved Assets/Scenes/Main.unity
-2785:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:574)
-2786:BuildScript:RunAndroid () (at Assets/Editor/BuildScript.cs:182)
-2787:BuildScript:BuildAndroid () (at Assets/Editor/BuildScript.cs:164)
-2789:(Filename: Assets/Editor/BuildScript.cs Line: 574)
-2801:[Licensing::Client] Successfully resolved entitlement details
-2817:BuildScript:RunAndroid () (at Assets/Editor/BuildScript.cs:195)
-2818:BuildScript:BuildAndroid () (at Assets/Editor/BuildScript.cs:164)
-2825:DisplayProgressbar: Detecting Android SDK
-2826:AndroidSDKTools:
-2828:	root          : /home/runner/Unity/Hub/Editor/2022.3.62f3/Editor/Data/PlaybackEngines/AndroidPlayer/SDK
-2829:	cmdline-tools : /home/runner/Unity/Hub/Editor/2022.3.62f3/Editor/Data/PlaybackEngines/AndroidPlayer/SDK/cmdline-tools/6.0
-2830:	platform-tools: /home/runner/Unity/Hub/Editor/2022.3.62f3/Editor/Data/PlaybackEngines/AndroidPlayer/SDK/platform-tools
-2831:	build-tools   : /home/runner/Unity/Hub/Editor/2022.3.62f3/Editor/Data/PlaybackEngines/AndroidPlayer/SDK/build-tools/34.0.0
-2833:	adb           : /home/runner/Unity/Hub/Editor/2022.3.62f3/Editor/Data/PlaybackEngines/AndroidPlayer/SDK/platform-tools/adb
-2835:Android PostProcess task "Detecting Android SDK" took 2670.7417 ms
-2836:DisplayProgressbar: Detect Android NDK
-2837:Android PostProcess task "Detect Android NDK" took 2.3015 ms
-3006:[Licensing::Client] Successfully resolved entitlement details
-3007:[Licensing::Client] Successfully resolved entitlement details
-3029:BuildScript:RunAndroid () (at Assets/Editor/BuildScript.cs:195)
-3030:BuildScript:BuildAndroid () (at Assets/Editor/BuildScript.cs:164)
-5615:[204/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/jniLibs/arm64-v8a/libmain.so
-5616:[205/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/jniLibs/arm64-v8a/libunity.so
-5618:[207/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/90a832325f411cf40a926979d87b6a45
-5619:[208/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/e347cb244c198b832b5e817ab819118e
-5620:[209/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/982185545fe6bad9cac9f84a679f1827
-5621:[210/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/eabb3fa3c52e2d8ed8b1c904c2ccffdb
-5622:[211/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/db9056b280d1b2dd2a534737756794e0
-5623:[212/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/ee931ff115db8aa89a0326d3ecb4fed3
-5624:[213/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/hanging_picture_frame_02_artwork_nor_gl.jpg
-5625:[214/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/modern_coffee_table_01_nor_gl.jpg
-5626:[215/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/00b1a9eab16710b099d932f446a45987
-5627:[216/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/934abc16e081c53a09bbfddd7bd8d662
-5628:[217/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/aad10351b27932029a9ef5169e891a59
-5629:[218/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/modern_ceiling_lamp_01_nor_gl.jpg
-5630:[219/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/ScriptingAssemblies.json
-5631:[220/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/824bc6c1234c2bf1ca613f7c80c815ea
-5632:[221/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/9669faa37d797f8da9804e6f4e0d6aa8.resource
-5633:[222/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/8543ef26e3367614da42c1e7cb6c371d
-5634:[223/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/f0a78f9e2648e0597aea936b67d55080
-5635:[224/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/potted_plant_04_nor_gl.jpg
-5636:[225/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/RuntimeInitializeOnLoads.json
-5637:[226/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/side_table_01_diff.jpg
-5638:[227/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/958e49261a7c2f93b89e4477832508d0
-5639:[228/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/78df8cf90b657e2d3b5a2b6132584e64
-5640:[229/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/95d522d6546e70735bce1f01f3f90038
-5641:[230/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/a864901fdb4f3df8999df88e69d07549
-5642:[231/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/9669faa37d797f8da9804e6f4e0d6aa8
-5643:[232/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/rubber_duck_toy_nor_gl.jpg
-5644:[233/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/Resources/unity_builtin_extra
-5645:[234/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/7e99589fe50bc4c87809bc73a9de06bd.resource
-5646:[235/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/side_table_01_nor_gl.jpg
-5647:[236/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/white_plaster_02_arm.jpg
-5648:[237/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/side_table_01_arm.jpg
-5649:[238/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/sofa_02_nor_gl.jpg
-5650:[239/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/sofa_02_diff.jpg
-5651:[240/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/white_plaster_02_nor_gl.jpg
-5652:[241/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/9a29127e270b63c989053f7d601feee3
-5653:[242/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/hanging_picture_frame_02_artwork_roughness.jpg
-5654:[243/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/a3dcb170b191f9eaabc71fab49d836a1
-5655:[244/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/780af06e3f1dc8801abc02becb00d932
-5656:[245/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/7030cfcc06c71d8a8b117ae78ffca32c
-5657:[246/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/af35211eac52cf63c9d5940e1f9dfe8a.resource
-5658:[247/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/f52ec6e8d00a9754e9c314af99ace900
-5659:[248/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/modern_ceiling_lamp_01_arm.jpg
-5660:[249/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/e388a8778c50c7c8e83a69ddf6385500
-5661:[250/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/e972f47488f17d0609c7ff2c2a9b51b7
-5662:[251/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/7d7ce82833df33b4facc8a164637c7b5
-5663:[252/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/7030cfcc06c71d8a8b117ae78ffca32c.resource
-5664:[253/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/a4a2d5138c7fead7186f638c9ddb7ede.resource
-5665:[254/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/a56aa469117f85604b53eaa8e2b1636e
-5666:[255/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/be10ad08378e02de6819d3af4dd3a08c
-5667:[256/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/50147e89be60341d3b11a3af3a543c02
-5668:[257/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/4db374ba8d95ac4609ec50845ed43ff0
-5669:[258/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/herringbone_parquet_diff.jpg
-5670:[259/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/hanging_picture_frame_02_artwork_diff.jpg
-5671:[260/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/hanging_picture_frame_02_arm.jpg
-5672:[261/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/ceramic_vase_01_nor_gl.jpg
-5673:[262/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/ceramic_vase_01_diff.jpg
-5674:[263/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/ceramic_vase_01_arm.jpg
-5675:[264/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/Armchair_01_nor_gl.jpg
-5676:[265/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/Armchair_01_diff.jpg
-5677:[266/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/7e99589fe50bc4c87809bc73a9de06bd
-5678:[267/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/c4a2add357fe1ae2bad58c1b0fe5786e
-5679:[268/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/90a832325f411cf40a926979d87b6a45.resource
-5680:[269/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/c5e185d6ea0d5b794964b38dd709a7c6
-5681:[270/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/6b96924482c5607d8bc935f2e9da0563
-5682:[271/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/af35211eac52cf63c9d5940e1f9dfe8a
-5683:[272/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/white_plaster_02_diff.jpg
-5684:[273/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/b361b39382ae93cdb891e3f6f2571bcd
-5685:[274/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/b3e1ce09653b9d91ab5f0ca4fb959f7b
-5686:[275/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/b5bda4f2b4b7c6108a7c534bfd3a8887
-5687:[276/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/4faaa437986c9353584299896f591b15
-5688:[277/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/a56aa469117f85604b53eaa8e2b1636e.resource
-5689:[278/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/87ac0a324542c46a89732ef2dc113563
-5690:[279/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/c56742e336510d229bce2179a1000299
-5691:[280/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/e97717ae9786530cfae8201c70a43f48
-5692:[281/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/c6bcb512c11ce2e0ca4c68a8419397b8
-5693:[282/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/ca9a16c321b278992bfa6df157022034
-5694:[283/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/cd293431ea75fa4be860e84479271e7b
-5695:[284/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/ce7627e3349d846d6980a3c54cbeaab3
-5696:[285/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/ce7627e3349d846d6980a3c54cbeaab3.resource
-5697:[286/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/d6936a62a610bc8fd908aca3817bc37b
-5698:[287/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/d6c19a60d030816028994855cbf30978
-5699:[288/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/db494174a0cd38395a287aedfac0ee3a
-5700:[289/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/poly_wool_herringbone_diff.jpg
-5701:[290/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/modern_wooden_cabinet_nor_gl.jpg
-5702:[291/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/modern_wooden_cabinet_arm.jpg
-5703:[292/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/rubber_duck_toy_arm.jpg
-5704:[293/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/potted_plant_04_diff.jpg
-5706:[295/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/poly_wool_herringbone_arm.jpg
-5707:[296/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/poly_wool_herringbone_nor_gl.jpg
-5708:[297/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/aba19e0034f4f4c3289f1c2a3eb5e3b3
-5709:[298/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/modern_wooden_cabinet_diff.jpg
-5710:[299/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/0bd1ffe017298d7e5ab6efc8ddb4e205.resource
-5711:[300/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/dd7f40157743b454a8ad7ab838ad8e84
-5712:[301/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/62083ea084c181b258b3cc8d2fe80640
-5713:[302/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/636b7f8735d095cc8aea3335213f6dff
-5714:[303/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/66af3a44fb8c61af3903632ecd384060
-5715:[304/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/67311c28f3eb5155ebb904ac215e1425
-5716:[305/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/6737c5c9c71d088b1b7538200b9fb1b3
-5717:[306/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/69f316102daa5b36b8927a97b3bec044
-5718:[307/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/5ee150b51769a9c90a1fb94ba482fc82
-5719:[308/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/5f168c7ff3562d13597f269e609e5549
-5720:[309/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/01a75640dcc09d48f9bd7fb087667ce1
-5721:[310/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/146d4cc0b48464f40af82b7729ecb2f7
-5722:[311/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/541fef0575408922aa9e279ba582c7d9.resource
-5723:[312/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/2a0969a5524091bf88abee6ea0fb556f
-5724:[313/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/5fecac6a74b82a585997c7af465be28d
-5725:[314/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/232a371146195ad858362fe8d6ad876d
-5726:[315/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/1f5a398cd8cb3f7698d0fa7369881b83
-5727:[316/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/1d39ac6a5eca14177a87b100138cbefb
-5728:[317/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/5fecac6a74b82a585997c7af465be28d.resource
-5729:[318/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/61165070cce373af18a0898fa9e05e02
-5730:[319/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/1922e84028b036f53bd3a05af37f90e8
-5731:[320/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/rubber_duck_toy_diff.jpg
-5732:[321/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/8a66bf43a50e8cf7195b284f64206a9b
-5733:[322/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/8a891b5dc471d2cf18de511b46c5a38f
-5734:[323/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/efd242b68c906b495b088be7e9ffd56d
-5735:[324/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/8dca55a345d026e3e90a8e0f2f39ee8b
-5736:[325/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/dbf9a6a7567b07298bb0df0a3074e0dc
-5737:[326/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/8e967755d177e0823b6362bcb1e285ae
-5738:[327/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/fba7545806dbcd96d8f60caeeab67908
-5739:[328/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/8ecd4921ea87589f8866e2041a769304
-5740:[329/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/7511499c303625f02a7af6e7cca14087
-5741:[330/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/ae769b52b2bb0fa85a599a7de90184fe.resource
-5742:[331/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/potted_plant_04_arm.jpg
-5743:[332/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/0bd1ffe017298d7e5ab6efc8ddb4e205
-5744:[333/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/0b5f62026179f7283920b5c7749cd774
-5745:[334/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/0b3b4afd614fdc0949fdc1c014537e19
-5746:[335/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/0b93f2d5a915031178f47d242ae3fe06
-5747:[336/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/0aad598b5905cf9a9a3dc5d6788fda22
-5748:[337/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/69669f794d1fe527d9dc22497ea80128
-5749:[338/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/07dcf127a97a062db9921687aafa23a2
+281:[113/143    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/Unity.Android.Gradle.dll_D365A5DDCFB730DB.mvfrm
+670:Start importing Assets/Editor/BuildScript.cs using Guid(6f57f5f635a5c27cf9831812c1e1dcd1) Importer(-1,00000000000000000000000000000000) [PhysX] Initialized MultithreadedTaskDispatcher with 4 workers.
+690:BuildScript:SetInputHandler () (at Assets/Editor/BuildScript.cs:349)
+691:InputHandlerSetter:.cctor () (at Assets/Editor/BuildScript.cs:16)
+695:(Filename: Assets/Editor/BuildScript.cs Line: 349)
+1653:[Licensing::Client] Successfully resolved entitlement details
+1665:BuildScript: Android start, Unity 2022.3.62f3
+1670:BuildScript:RunAndroid () (at Assets/Editor/BuildScript.cs:172)
+1671:BuildScript:BuildAndroid () (at Assets/Editor/BuildScript.cs:164)
+1673:(Filename: Assets/Editor/BuildScript.cs Line: 172)
+1682:BuildScript:SetStatic (System.Type,string,object) (at Assets/Editor/BuildScript.cs:358)
+1683:BuildScript:ConfigurePlayer () (at Assets/Editor/BuildScript.cs:382)
+1684:BuildScript:RunAndroid () (at Assets/Editor/BuildScript.cs:176)
+1685:BuildScript:BuildAndroid () (at Assets/Editor/BuildScript.cs:164)
+1687:(Filename: Assets/Editor/BuildScript.cs Line: 358)
+1694:BuildScript:SetStatic (System.Type,string,object) (at Assets/Editor/BuildScript.cs:358)
+1695:BuildScript:ConfigurePlayer () (at Assets/Editor/BuildScript.cs:383)
+1696:BuildScript:RunAndroid () (at Assets/Editor/BuildScript.cs:176)
+1697:BuildScript:BuildAndroid () (at Assets/Editor/BuildScript.cs:164)
+1699:(Filename: Assets/Editor/BuildScript.cs Line: 358)
+1706:BuildScript:ConfigurePlayer () (at Assets/Editor/BuildScript.cs:396)
+1707:BuildScript:RunAndroid () (at Assets/Editor/BuildScript.cs:176)
+1708:BuildScript:BuildAndroid () (at Assets/Editor/BuildScript.cs:164)
+1710:(Filename: Assets/Editor/BuildScript.cs Line: 396)
+1714:BuildScript: Android signing with keystore ff-sideload.keystore alias fourfroggies
+1719:BuildScript:ConfigureAndroid () (at Assets/Editor/BuildScript.cs:240)
+1720:BuildScript:RunAndroid () (at Assets/Editor/BuildScript.cs:177)
+1721:BuildScript:BuildAndroid () (at Assets/Editor/BuildScript.cs:164)
+1723:(Filename: Assets/Editor/BuildScript.cs Line: 240)
+1725:BuildScript: Android player settings (IL2CPP ARM64, GLES3, landscape, com.similarize.fourfroggies, versionCode 7)
+1730:BuildScript:ConfigureAndroid () (at Assets/Editor/BuildScript.cs:243)
+1731:BuildScript:RunAndroid () (at Assets/Editor/BuildScript.cs:177)
+1732:BuildScript:BuildAndroid () (at Assets/Editor/BuildScript.cs:164)
+1734:(Filename: Assets/Editor/BuildScript.cs Line: 243)
+1746:BuildScript:ApplyIcons (bool) (at Assets/Editor/BuildScript.cs:286)
+1747:BuildScript:RunAndroid () (at Assets/Editor/BuildScript.cs:178)
+1748:BuildScript:BuildAndroid () (at Assets/Editor/BuildScript.cs:164)
+1750:(Filename: Assets/Editor/BuildScript.cs Line: 286)
+1767:BuildScript:ApplyIcons (bool) (at Assets/Editor/BuildScript.cs:303)
+1768:BuildScript:RunAndroid () (at Assets/Editor/BuildScript.cs:178)
+1769:BuildScript:BuildAndroid () (at Assets/Editor/BuildScript.cs:164)
+1771:(Filename: Assets/Editor/BuildScript.cs Line: 303)
+1778:BuildScript:ApplyIcons (bool) (at Assets/Editor/BuildScript.cs:303)
+1779:BuildScript:RunAndroid () (at Assets/Editor/BuildScript.cs:178)
+1780:BuildScript:BuildAndroid () (at Assets/Editor/BuildScript.cs:164)
+1782:(Filename: Assets/Editor/BuildScript.cs Line: 303)
+1789:BuildScript:ApplyIcons (bool) (at Assets/Editor/BuildScript.cs:303)
+1790:BuildScript:RunAndroid () (at Assets/Editor/BuildScript.cs:178)
+1791:BuildScript:BuildAndroid () (at Assets/Editor/BuildScript.cs:164)
+1793:(Filename: Assets/Editor/BuildScript.cs Line: 303)
+2508:BuildScript: native music clips 19 (streaming)
+2513:BuildScript:ImportNativeMusic () (at Assets/Editor/BuildScript.cs:327)
+2514:BuildScript:RunAndroid () (at Assets/Editor/BuildScript.cs:181)
+2515:BuildScript:BuildAndroid () (at Assets/Editor/BuildScript.cs:164)
+2517:(Filename: Assets/Editor/BuildScript.cs Line: 327)
+2588:BuildScript: HDRI sky
+2593:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:491)
+2594:BuildScript:RunAndroid () (at Assets/Editor/BuildScript.cs:182)
+2595:BuildScript:BuildAndroid () (at Assets/Editor/BuildScript.cs:164)
+2597:(Filename: Assets/Editor/BuildScript.cs Line: 491)
+2599:BuildScript: FF/Skin shader
+2604:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
+2605:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:507)
+2606:BuildScript:RunAndroid () (at Assets/Editor/BuildScript.cs:182)
+2607:BuildScript:BuildAndroid () (at Assets/Editor/BuildScript.cs:164)
+2609:(Filename: Assets/Editor/BuildScript.cs Line: 453)
+2614:BuildScript: FF/Foliage shader
+2619:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
+2620:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:508)
+2621:BuildScript:RunAndroid () (at Assets/Editor/BuildScript.cs:182)
+2622:BuildScript:BuildAndroid () (at Assets/Editor/BuildScript.cs:164)
+2624:(Filename: Assets/Editor/BuildScript.cs Line: 453)
+2629:BuildScript: LB/Water shader
+2634:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
+2635:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:509)
+2636:BuildScript:RunAndroid () (at Assets/Editor/BuildScript.cs:182)
+2637:BuildScript:BuildAndroid () (at Assets/Editor/BuildScript.cs:164)
+2639:(Filename: Assets/Editor/BuildScript.cs Line: 453)
+2644:BuildScript: FF/Underwater shader
+2649:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
+2650:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:511)
+2651:BuildScript:RunAndroid () (at Assets/Editor/BuildScript.cs:182)
+2652:BuildScript:BuildAndroid () (at Assets/Editor/BuildScript.cs:164)
+2654:(Filename: Assets/Editor/BuildScript.cs Line: 453)
+2659:BuildScript: Unlit/Texture shader
+2664:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
+2665:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:512)
+2666:BuildScript:RunAndroid () (at Assets/Editor/BuildScript.cs:182)
+2667:BuildScript:BuildAndroid () (at Assets/Editor/BuildScript.cs:164)
+2669:(Filename: Assets/Editor/BuildScript.cs Line: 453)
+2674:BuildScript: FF/RealTri shader
+2679:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
+2680:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:514)
+2681:BuildScript:RunAndroid () (at Assets/Editor/BuildScript.cs:182)
+2682:BuildScript:BuildAndroid () (at Assets/Editor/BuildScript.cs:164)
+2684:(Filename: Assets/Editor/BuildScript.cs Line: 453)
+2689:BuildScript: FF/RealWater shader
+2694:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
+2695:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:515)
+2696:BuildScript:RunAndroid () (at Assets/Editor/BuildScript.cs:182)
+2697:BuildScript:BuildAndroid () (at Assets/Editor/BuildScript.cs:164)
+2699:(Filename: Assets/Editor/BuildScript.cs Line: 453)
+2722:BuildScript: terrain textures True True True
+2727:BuildScript:CreateTerrain () (at Assets/Editor/BuildScript.cs:646)
+2728:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:551)
+2729:BuildScript:RunAndroid () (at Assets/Editor/BuildScript.cs:182)
+2730:BuildScript:BuildAndroid () (at Assets/Editor/BuildScript.cs:164)
+2732:(Filename: Assets/Editor/BuildScript.cs Line: 646)
+2754:BuildScript: terrain NM material
+2759:BuildScript:CreateTerrain () (at Assets/Editor/BuildScript.cs:692)
+2760:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:551)
+2761:BuildScript:RunAndroid () (at Assets/Editor/BuildScript.cs:182)
+2762:BuildScript:BuildAndroid () (at Assets/Editor/BuildScript.cs:164)
+2764:(Filename: Assets/Editor/BuildScript.cs Line: 692)
+2788:BuildScript: scene saved Assets/Scenes/Main.unity
+2793:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:574)
+2794:BuildScript:RunAndroid () (at Assets/Editor/BuildScript.cs:182)
+2795:BuildScript:BuildAndroid () (at Assets/Editor/BuildScript.cs:164)
+2797:(Filename: Assets/Editor/BuildScript.cs Line: 574)
+2824:BuildScript:RunAndroid () (at Assets/Editor/BuildScript.cs:195)
+2825:BuildScript:BuildAndroid () (at Assets/Editor/BuildScript.cs:164)
+2832:DisplayProgressbar: Detecting Android SDK
+2833:AndroidSDKTools:
+2835:	root          : /home/runner/Unity/Hub/Editor/2022.3.62f3/Editor/Data/PlaybackEngines/AndroidPlayer/SDK
+2836:	cmdline-tools : /home/runner/Unity/Hub/Editor/2022.3.62f3/Editor/Data/PlaybackEngines/AndroidPlayer/SDK/cmdline-tools/6.0
+2837:	platform-tools: /home/runner/Unity/Hub/Editor/2022.3.62f3/Editor/Data/PlaybackEngines/AndroidPlayer/SDK/platform-tools
+2838:	build-tools   : /home/runner/Unity/Hub/Editor/2022.3.62f3/Editor/Data/PlaybackEngines/AndroidPlayer/SDK/build-tools/34.0.0
+2840:	adb           : /home/runner/Unity/Hub/Editor/2022.3.62f3/Editor/Data/PlaybackEngines/AndroidPlayer/SDK/platform-tools/adb
+2842:Android PostProcess task "Detecting Android SDK" took 1790.9678 ms
+2843:DisplayProgressbar: Detect Android NDK
+2844:Android PostProcess task "Detect Android NDK" took 1.5611 ms
+3034:BuildScript:RunAndroid () (at Assets/Editor/BuildScript.cs:195)
+3035:BuildScript:BuildAndroid () (at Assets/Editor/BuildScript.cs:164)
+5620:[204/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/jniLibs/arm64-v8a/libmain.so
+5621:[205/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/jniLibs/arm64-v8a/libunity.so
+5623:[207/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/boot.config
+5624:[208/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/e972f47488f17d0609c7ff2c2a9b51b7
+5625:[209/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/b2cadb966ead6ae059facb4f3fe7cdc2
+5626:[210/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/b2cadb966ead6ae059facb4f3fe7cdc2.resource
+5627:[211/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/be10ad08378e02de6819d3af4dd3a08c
+5628:[212/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/e347cb244c198b832b5e817ab819118e
+5629:[213/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/f0a78f9e2648e0597aea936b67d55080
+5630:[214/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/hanging_picture_frame_02_artwork_nor_gl.jpg
+5631:[215/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/modern_coffee_table_01_nor_gl.jpg
+5632:[216/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/7bb226191f6820c6b85b6d81a99c4812.resource
+5633:[217/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/aad10351b27932029a9ef5169e891a59
+5634:[218/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/9a29127e270b63c989053f7d601feee3
+5635:[219/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/modern_ceiling_lamp_01_nor_gl.jpg
+5636:[220/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/8a66bf43a50e8cf7195b284f64206a9b
+5637:[221/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/a864901fdb4f3df8999df88e69d07549
+5638:[222/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/a3dcb170b191f9eaabc71fab49d836a1
+5639:[223/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/8e967755d177e0823b6362bcb1e285ae
+5640:[224/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/f0ab268beeab437a888613c4a29598c9.resource
+5641:[225/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/potted_plant_04_nor_gl.jpg
+5642:[226/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/ee931ff115db8aa89a0326d3ecb4fed3
+5643:[227/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/white_plaster_02_arm.jpg
+5644:[228/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/8543ef26e3367614da42c1e7cb6c371d
+5645:[229/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/a2c40925c149f7f13ac7ed73f25fe2fd
+5646:[230/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/b7677022dcbcbc3c5890cf8b10d103a9
+5647:[231/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/a2c40925c149f7f13ac7ed73f25fe2fd.resource
+5648:[232/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/00b1a9eab16710b099d932f446a45987
+5649:[233/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/aba19e0034f4f4c3289f1c2a3eb5e3b3
+5650:[234/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/824bc6c1234c2bf1ca613f7c80c815ea
+5651:[235/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/RuntimeInitializeOnLoads.json
+5652:[236/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/white_plaster_02_diff.jpg
+5653:[237/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/side_table_01_arm.jpg
+5654:[238/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/sofa_02_nor_gl.jpg
+5655:[239/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/rubber_duck_toy_nor_gl.jpg
+5656:[240/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/sofa_02_diff.jpg
+5657:[241/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/white_plaster_02_nor_gl.jpg
+5658:[242/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/Resources/unity_builtin_extra
+5659:[243/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/hanging_picture_frame_02_artwork_roughness.jpg
+5660:[244/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/b33352907b8ca42649171882e91940b1
+5661:[245/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/9098eea54f664760090c1d8093cc9e21
+5662:[246/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/side_table_01_nor_gl.jpg
+5663:[247/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/c5e185d6ea0d5b794964b38dd709a7c6
+5664:[248/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/ScriptingAssemblies.json
+5665:[249/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/modern_ceiling_lamp_01_arm.jpg
+5666:[250/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/e97717ae9786530cfae8201c70a43f48
+5667:[251/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/eabb3fa3c52e2d8ed8b1c904c2ccffdb
+5668:[252/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/86eb7b3e4e6fb64fa97878cb659fe030
+5669:[253/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/7d7ce82833df33b4facc8a164637c7b5
+5670:[254/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/b361b39382ae93cdb891e3f6f2571bcd
+5671:[255/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/b3e1ce09653b9d91ab5f0ca4fb959f7b
+5672:[256/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/cd293431ea75fa4be860e84479271e7b
+5673:[257/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/59e2b64c63395ba3881c98b5a4ff153d.resource
+5674:[258/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/57ee58315d60c24dfb7be4ae28e0d344
+5675:[259/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/herringbone_parquet_diff.jpg
+5676:[260/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/hanging_picture_frame_02_artwork_diff.jpg
+5677:[261/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/hanging_picture_frame_02_arm.jpg
+5678:[262/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/ceramic_vase_01_nor_gl.jpg
+5679:[263/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/ceramic_vase_01_diff.jpg
+5680:[264/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/ceramic_vase_01_arm.jpg
+5681:[265/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/Armchair_01_nor_gl.jpg
+5682:[266/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/Armchair_01_diff.jpg
+5683:[267/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/87ac0a324542c46a89732ef2dc113563
+5684:[268/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/cf30f0f0579a33ce4b9eec82fc6e1e08
+5685:[269/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/bffb2060a89a42782930a8d35ca7afe9
+5686:[270/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/d6936a62a610bc8fd908aca3817bc37b
+5687:[271/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/7b35488abadddc090a80c118615d8fe4.resource
+5688:[272/559    0s] ActionGenerateProjectFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/build.gradle (+7 others)
+5689:[273/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/c56742e336510d229bce2179a1000299
+5690:[274/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/c6bcb512c11ce2e0ca4c68a8419397b8
+5691:[275/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/side_table_01_diff.jpg
+5692:[276/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/ca9a16c321b278992bfa6df157022034
+5693:[277/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/cc50687f8426f8684aeb559dfdced065
+5694:[278/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/b5bda4f2b4b7c6108a7c534bfd3a8887
+5695:[279/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/59e2b64c63395ba3881c98b5a4ff153d
+5696:[280/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/ec65de2b08acdaa7988e286e6084171a
+5697:[281/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/f52ec6e8d00a9754e9c314af99ace900
+5698:[282/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/cf30f0f0579a33ce4b9eec82fc6e1e08.resource
+5699:[283/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/d6c19a60d030816028994855cbf30978
+5700:[284/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/d6f31e05045d85e228107ba82e6d9232
+5701:[285/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/db9056b280d1b2dd2a534737756794e0
+5702:[286/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/db494174a0cd38395a287aedfac0ee3a
+5703:[287/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/dbc681e981bf2a672855cb5fb0b13179
+5704:[288/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/dbf9a6a7567b07298bb0df0a3074e0dc
+5705:[289/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/dd7f40157743b454a8ad7ab838ad8e84
+5706:[290/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/e25c89b3a9db3af0ba4698c25c88e331.resource
+5707:[291/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/poly_wool_herringbone_diff.jpg
+5708:[292/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/modern_wooden_cabinet_arm.jpg
+5709:[293/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/rubber_duck_toy_arm.jpg
+5710:[294/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/potted_plant_04_diff.jpg
+5711:[295/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/modern_wooden_cabinet_nor_gl.jpg
+5712:[296/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/poly_wool_herringbone_nor_gl.jpg
+5713:[297/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/poly_wool_herringbone_arm.jpg
+5714:[298/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/modern_wooden_cabinet_diff.jpg
+5715:[299/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/146d4cc0b48464f40af82b7729ecb2f7
+5716:[300/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/8dca55a345d026e3e90a8e0f2f39ee8b
+5717:[301/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/e816b31a65e4679de94c7a479cb18637.resource
+5718:[302/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/69f316102daa5b36b8927a97b3bec044
+5719:[303/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/6b96924482c5607d8bc935f2e9da0563
+5720:[304/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/7511499c303625f02a7af6e7cca14087
+5721:[305/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/780af06e3f1dc8801abc02becb00d932
+5722:[306/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/7b35488abadddc090a80c118615d8fe4
+5724:[308/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/67a3691306517733ea843c4f5df15522
+5725:[309/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/6fe367a16eff9c561a6cf25c44ce2f68
+5726:[310/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/01a932d2f737dfbb984d0961991bb120
+5727:[311/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/1d39ac6a5eca14177a87b100138cbefb
+5728:[312/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/2e238a81ef523ab28b4ee08bc91b8f3e
+5729:[313/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/5e1818ed0bb14db52bb7819d405995fd
+5730:[314/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/2ceb26d0b31242888bac92a54a4f79f1
+5731:[315/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/67a3691306517733ea843c4f5df15522.resource
+5732:[316/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/683f41d87537edf2da177224e37064f0.resource
+5733:[317/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/683f41d87537edf2da177224e37064f0
+5734:[318/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/232a371146195ad858362fe8d6ad876d
+5735:[319/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/69669f794d1fe527d9dc22497ea80128
+5736:[320/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/1f5a398cd8cb3f7698d0fa7369881b83
+5737:[321/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/rubber_duck_toy_diff.jpg
+5738:[322/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/2a0969a5524091bf88abee6ea0fb556f
+5739:[323/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/f0ab268beeab437a888613c4a29598c9
+5740:[324/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/934abc16e081c53a09bbfddd7bd8d662
+5741:[325/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/93e827ee001bf2cf29e34eb9b05fb7c7
+5742:[326/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/e816b31a65e4679de94c7a479cb18637
+5743:[327/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/93e827ee001bf2cf29e34eb9b05fb7c7.resource
+5744:[328/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/958e49261a7c2f93b89e4477832508d0
+5745:[329/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/7f3c1714bedbab71fb2bc6b1874aa6ea
+5746:[330/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/fba7545806dbcd96d8f60caeeab67908
+5747:[331/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/95d522d6546e70735bce1f01f3f90038
+5748:[332/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/realroom/hi/potted_plant_04_arm.jpg
+5749:[333/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/b33352907b8ca42649171882e91940b1.resource
+5750:[334/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/0d79d08bb6ac066d58a64fb376517a0f
+5751:[335/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/0d0f33ac5b8a82ba79ceb2cba537fe3b
+5752:[336/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/0b93f2d5a915031178f47d242ae3fe06
+5753:[337/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/0c122f974bd1f1d6eb6782c95cc2237b
+5754:[338/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/0b5f62026179f7283920b5c7749cd774
+5755:[339/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/0b3b4afd614fdc0949fdc1c014537e19
+5756:[340/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/089ee4b5685df2312b634587a4cc8892
+5757:[341/559    0s] CopyFiles /home/runner/work/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/assets/bin/Data/78df8cf90b657e2d3b5a2b6132584e64
 grep: write error: Broken pipe
 grep: write error: Broken pipe
 === editor log tail (300)
@@ -416,7 +416,7 @@ grep: write error: Broken pipe
       Overflow Count 0
     [ALLOC_TEMP_MAIN]
       Initial Block Size 16.0 MB
-      Current Block Size 45.4 MB
+      Current Block Size 45.6 MB
       Peak Allocated Bytes 43.4 MB
       Overflow Count 0
     [ALLOC_TEMP_Background Job.Worker 8]
@@ -607,7 +607,7 @@ grep: write error: Broken pipe
 [ALLOC_MEMORYPROFILER]
   Requested Block Size 1.0 MB
   Peak Block count 1
-  Peak Allocated memory 163.8 KB
+  Peak Allocated memory 164.1 KB
   Peak Large allocation bytes 0 B
 [ALLOC_DEFAULT] Dual Thread Allocator
   Peak main deferred allocation count 86
@@ -670,8 +670,8 @@ grep: write error: Broken pipe
     [ALLOC_CACHEOBJECTS_MAIN]
       Requested Block Size 4.0 MB
       Peak Block count 7
-      Peak Allocated memory 38.6 MB
-      Peak Large allocation bytes 18.7 MB
+      Peak Allocated memory 36.6 MB
+      Peak Large allocation bytes 14.7 MB
     [ALLOC_CACHEOBJECTS_THREAD]
       Requested Block Size 4.0 MB
       Peak Block count 1
@@ -691,17 +691,17 @@ grep: write error: Broken pipe
     [ALLOC_TYPETREE_THREAD]
       Requested Block Size 2.0 MB
       Peak Block count 1
-      Peak Allocated memory 60.9 KB
+      Peak Allocated memory 59.7 KB
       Peak Large allocation bytes 0 B
 [ALLOC_PROFILER]
   Requested Block Size 16.0 MB
   Peak Block count 1
-  Peak Allocated memory 429.8 KB
+  Peak Allocated memory 464.3 KB
   Peak Large allocation bytes 0 B
     [ALLOC_PROFILER_BUCKET]
       Large Block size 32.0 MB
       Used Block count 1
-      Peak Allocated bytes 4.1 KB
+      Peak Allocated bytes 4.2 KB
 [ALLOC_PROFILER_EDITOR]
   Requested Block Size 1.0 MB
   Peak Block count 0
@@ -710,5 +710,5 @@ grep: write error: Broken pipe
     [ALLOC_PROFILER_BUCKET]
       Large Block size 32.0 MB
       Used Block count 1
-      Peak Allocated bytes 4.1 KB
-##utp:{"type":"MemoryLeaks","version":2,"phase":"Immediate","time":1791871226259,"processId":5737,"allocatedMemory":9038598,"memoryLabels":[{"Default":20071},{"Permanent":16353},{"Thread":1083236},{"Manager":19908},{"VertexData":12},{"Geometry":280},{"Texture":328},{"Shader":78279},{"Material":24},{"GfxDevice":36336},{"Animation":360},{"Audio":3976},{"Font":104211},{"FontEngine":336},{"Physics":513},{"Serialization":732},{"Input":26816},{"JobScheduler":54312},{"Mono":40},{"ScriptingNativeRuntime":191920},{"BaseObject":1620804},{"Resource":1064},{"Renderer":2352},{"Transform":48},{"File":3717},{"WebCam":40},{"Culling":40},{"Terrain":1025},{"Wind":24},{"String":35138},{"DynamicArray":64603},{"HashMap":73234},{"Utility":2659526},{"Curl":1112},{"PoolAlloc":1496},{"AI":72},{"TypeTree":5061},{"ScriptManager":640},{"RuntimeInitializeOnLoadManager":80},{"SpriteAtlas":128},{"GI":3632},{"Director":7928},{"CloudService":8072},{"WebRequest":720},{"VR":45769},{"SceneManager":600},{"Video":72},{"LazyScriptCache":40},{"NativeArray":12},{"Camera":25},{"Secure":5337},{"SerializationCache":1576},{"APIUpdating":11856},{"Subsystems":392},{"VirtualTexturing":57560},{"StaticSafetyDebugInfo":327680},{"EditorGui":56},{"EditorUtility":10367},{"VersionControl":4},{"Undo":736},{"AssetDatabase":2399465},{"RestService":1518},{"EditorGi":376},{"License":3584},{"UnityConnect":25496},{"Collab":641},{"Upm":1856},{"DrivenProperties":96},{"LocalIPC":216},{"ProfilerEditor":10951},{"CoreBusinessMetrics":3638},{"AssetReference":40},{"IPCStream":40}]}
+      Peak Allocated bytes 4.2 KB
+##utp:{"type":"MemoryLeaks","version":2,"phase":"Immediate","time":1791928841931,"processId":5499,"allocatedMemory":9039224,"memoryLabels":[{"Default":20071},{"Permanent":16353},{"Thread":1083236},{"Manager":19908},{"VertexData":12},{"Geometry":280},{"Texture":328},{"Shader":78279},{"Material":24},{"GfxDevice":36336},{"Animation":360},{"Audio":3976},{"Font":104211},{"FontEngine":336},{"Physics":513},{"Serialization":732},{"Input":26816},{"JobScheduler":54568},{"Mono":40},{"ScriptingNativeRuntime":191920},{"BaseObject":1620804},{"Resource":1064},{"Renderer":2352},{"Transform":48},{"File":3717},{"WebCam":40},{"Culling":40},{"Terrain":1025},{"Wind":24},{"String":35156},{"DynamicArray":64603},{"HashMap":73234},{"Utility":2659526},{"Curl":1112},{"PoolAlloc":1496},{"AI":72},{"TypeTree":5061},{"ScriptManager":640},{"RuntimeInitializeOnLoadManager":80},{"SpriteAtlas":128},{"GI":3632},{"Director":7928},{"CloudService":8072},{"WebRequest":720},{"VR":45769},{"SceneManager":600},{"Video":72},{"LazyScriptCache":40},{"NativeArray":12},{"Camera":25},{"Secure":5337},{"SerializationCache":1576},{"APIUpdating":11856},{"Subsystems":392},{"VirtualTexturing":57560},{"StaticSafetyDebugInfo":327680},{"EditorGui":56},{"EditorUtility":10367},{"VersionControl":4},{"Undo":736},{"AssetDatabase":2399817},{"RestService":1518},{"EditorGi":376},{"License":3584},{"UnityConnect":25496},{"Collab":641},{"Upm":1856},{"DrivenProperties":96},{"LocalIPC":216},{"ProfilerEditor":10951},{"CoreBusinessMetrics":3638},{"AssetReference":40},{"IPCStream":40}]}
