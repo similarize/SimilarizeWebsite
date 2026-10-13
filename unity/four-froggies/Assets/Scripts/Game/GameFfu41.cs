@@ -11,11 +11,11 @@ using UnityEngine;
 public partial class Game
 {
     static bool Is41(string sc) { return sc == "moon"; }
-    Frog m41F; int m41Phase = -1; float m41T, m41PhT, m41Log, m41MaxH, m41HopY0;
+    Frog m41F; int m41Phase = -1, m41Tries; float m41T, m41PhT, m41Log, m41MaxH, m41HopY0, m41TryT = -99f;
 
     void Demo41Start(Frog f, string sc)
     {
-        m41F = f; m41Phase = 0; m41T = 0f; m41PhT = 0f; m41Log = 0f; m41MaxH = 0f;
+        m41F = f; m41Phase = 0; m41Tries = 0; m41TryT = -99f; m41T = 0f; m41PhT = 0f; m41Log = 0f; m41MaxH = 0f;
         if (f.vehicle != null) f.ExitVehicle();
         demoHook = MoonInput;
         Debug.Log("FFDEMO moon start");
@@ -44,12 +44,18 @@ public partial class Game
                 if (m41T > 1f)
                 {
                     sw.ToOrbit(f, "earth");
-                    sw.ship.DemoAutoTransfer(moon);
                     m41Phase = 1; m41PhT = m41T;
                     Debug.Log("FFDEMO moon -> phase 1 auto-transfer Earth orbit -> Moon t=" + m41T.ToString("0.0"));
                 }
                 break;
             case 1:
+                // start the auto-transfer a frame after boarding (ship placed in Earth orbit first); retry if it didn't take
+                if (!sw.ship.InOrbitOf(moon) && sw.ship.mode != Starship.Mode.Transfer && m41T - m41PhT > 1.5f && m41Tries < 3 && m41T - m41TryT > 6f)
+                {
+                    m41Tries++; m41TryT = m41T;
+                    try { sw.ship.DemoAutoTransfer(moon); Debug.Log("FFDEMO moon auto-transfer try " + m41Tries + " -> mode " + sw.ship.mode); }
+                    catch (System.Exception e) { Debug.Log("FFDEMO moon auto-transfer try " + m41Tries + " threw " + e); }
+                }
                 if (sw.ship.InOrbitOf(moon)) { m41Phase = 2; m41PhT = m41T; Debug.Log("FFDEMO moon -> phase 2 in Moon orbit t=" + m41T.ToString("0.0") + " ship-moon " + (sw.ship.transform.position - sw.bodies[moon].pos).magnitude.ToString("0.0") + " m"); }
                 else if (m41T - m41PhT > 70f) { sw.ToOrbit(f, "moon"); Debug.Log("FFDEMO moon: transfer timeout - placed in Moon orbit"); }
                 break;
@@ -77,7 +83,8 @@ public partial class Game
                         Debug.Log("FFDEMO moon -> phase 4 buggy: driver " + (mw.buggy.driver != null ? mw.buggy.driver.nick : "-") + " aboard " + mw.Aboard);
                     }
                     Vector3 fp = f.transform.position;
-                    pos = fp + new Vector3(7.5f, 2.2f, -1.5f); look = fp + new Vector3(0f, 1.2f, 1.5f);
+                    if (m41T - m41PhT < 5f) { pos = fp + new Vector3(2.5f, 1.4f, -6f); look = fp + MoonWorld.EarthDir * 60f; }   // the Earth over the lander / base
+                    else { pos = fp + new Vector3(7.5f, 2.2f, -1.5f); look = fp + new Vector3(0f, 1.2f, 1.5f); }
                     break;
                 }
             case 4:

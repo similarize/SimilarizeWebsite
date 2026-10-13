@@ -40,6 +40,7 @@ public class MoonWorld : MonoBehaviour
         new Vector3(-8f, 20f, 4f), new Vector3(36f, 14f, 3.5f), new Vector3(-36f, -6f, 4.5f), new Vector3(20f, -48f, 5f),
     };
 
+    public static readonly Vector3 EarthDir = new Vector3(-0.32f, 0.36f, 0.88f).normalized;
     public static Vector3 L(float x, float y, float z) { return Worlds.MoonO + new Vector3(x, y, z); }
 
     public static float Y(float x, float z)
@@ -239,7 +240,7 @@ public class MoonWorld : MonoBehaviour
         // the Earth hanging in the black sky (NASA map)
         var et = Resources.Load<Texture2D>("LB/space_earth");
         Material em = et != null && Mats.UnlitTexBase != null ? Mats.UnlitTex(et) : Mats.Unlit(new Color(0.3f, 0.5f, 0.9f));
-        var earth = Mats.Prim(PrimitiveType.Sphere, root, Worlds.MoonO + new Vector3(-0.32f, 0.36f, 0.88f).normalized * 640f, Vector3.one * 92f, em);
+        var earth = Mats.Prim(PrimitiveType.Sphere, root, Worlds.MoonO + EarthDir * 640f, Vector3.one * 92f, em);
         earth.transform.rotation = Quaternion.Euler(-20f, 150f, 23f);
         var halo = new Material(Mats.Fx); halo.color = new Color(0.45f, 0.65f, 1f, 0.16f);
         Mats.Prim(PrimitiveType.Sphere, root, earth.transform.position, Vector3.one * 98f, halo);
@@ -569,7 +570,7 @@ public class MoonBuggy : GroundVehicle
         int n = Mathf.Max(1, wheels.Count);
         float perWheel = rb.mass * MoonWorld.Gms / n;
         spring = perWheel / (rest * 0.5f);                                   // sag ~half the travel under moon weight
-        damper = 2f * Mathf.Sqrt(spring * rb.mass / n) * 0.16f;              // under-damped: it keeps bouncing
+        damper = 2f * Mathf.Sqrt(spring * rb.mass / n) * 0.28f;              // under-damped: it bounces (ffu41b: 0.16 -> 0.28, crater rims launched it 11 m)
     }
     protected override void FixedUpdate()
     {
