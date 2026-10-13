@@ -59,6 +59,8 @@
             house LOS nudge; one pad = one froggy (lobby party.js).
    groundmusic1: green floor under forest + pull trees in; ranch BGM; pinch zoom fix.
    semitrees1: semi scoops ALL ranch trees (yard + perimeter forest ring).
+   forest1: Deep Woods — forest zone out to 2.4x (walk clamp), 6 depth layers oak/pine/birch,
+            trails + clearings, floor/skirt 3.6x, lite density on Tesla/phones; trees scoopable.
    earth1: space shows procedural Earth (home) — not ranch grounds in vacuum.
    solarsys1: Solar System layout — Sun center; Moon+station orbit Earth; planet gravity wells;
    spacefix1: dark ground plane; orbit cam locks on planet; ranch pad on Earth surface;
@@ -2769,7 +2771,7 @@
     scene.position.set(0, 0, 0);
     scene.background = new THREE.Color(0x7eb8d4);
     /* view3: softer haze — trees stay readable; was flat green wall at 48–145 */
-    scene.fog = new THREE.Fog(0x8eb89a, 110, 420); /* groundmusic1: farther fog for overview zoom */
+    scene.fog = new THREE.Fog(0x8eb89a, 130, 480); /* groundmusic1: farther fog for overview zoom */
 
     // Fixed-angle isometric-ish camera — orbit LOCKED (no free-fly)
     var aspect = window.innerWidth / Math.max(1, window.innerHeight);
@@ -2795,7 +2797,7 @@
     var halfH = C.MAP_H * 0.01;
     /* groundmusic1: big green skirt past forest so trees never sit in blue void/sky.
        walkspin1 2.05× still left outer canopy against clearColor 0x7eb8d4 when zoomed. */
-    var floorPad = 2.85;
+    var floorPad = 3.6; /* forest1: green floor past 2.75x backdrop trees */
     var floorShape = new THREE.Shape();
     floorShape.moveTo(-halfW * floorPad, -halfH * floorPad);
     floorShape.lineTo(halfW * floorPad, -halfH * floorPad);
@@ -2947,6 +2949,103 @@
           );
         }
       }
+      /* forest1: Deep Woods — forest zone pushed out ~1.55x -> 2.4x with extra
+         parallax-style depth layers (oak / pine / birch / bush), winding trails and
+         clearings to roam. Shared geometry; far layers skip shadows; lighter on Tesla/phones. */
+      (function buildDeepWoods() {
+        var ua = (typeof navigator !== "undefined" && navigator.userAgent) || "";
+        var lite = /Tesla|QtCarBrowser|Mobi|Android|iPhone|iPad|OculusBrowser|Quest/i.test(ua) ||
+          (window.innerWidth || 800) <= 900;
+        var dens = lite ? 0.55 : 1;
+        var gTrunk = new THREE.CylinderGeometry(0.08, 0.12, 0.9, 6);
+        var gBall = new THREE.SphereGeometry(0.6, 7, 5);
+        var gCone = new THREE.ConeGeometry(0.55, 1.1, 7);
+        var gBush = new THREE.SphereGeometry(0.22, 6, 4);
+        var mBirch = new THREE.MeshStandardMaterial({ color: 0xe7e5e4, roughness: 0.8 });
+        var mPine = [
+          new THREE.MeshStandardMaterial({ color: 0x14532d, roughness: 0.9 }),
+          new THREE.MeshStandardMaterial({ color: 0x166534, roughness: 0.9 }),
+        ];
+        var mBirchLeaf = new THREE.MeshStandardMaterial({ color: 0x84cc16, roughness: 0.85 });
+        var mBush = new THREE.MeshStandardMaterial({ color: 0x4d7c0f, roughness: 0.9 });
+        var seed = 917;
+        function rnd() { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }
+        function addTree(x, z, s, kind, shadow) {
+          var g = new THREE.Group();
+          var tr = new THREE.Mesh(gTrunk, kind === 2 ? mBirch : trunkMat);
+          tr.scale.set(s, s * (kind === 1 ? 1.15 : 1), s);
+          tr.position.y = 0.45 * s * (kind === 1 ? 1.15 : 1);
+          tr.castShadow = shadow;
+          g.add(tr);
+          var top;
+          if (kind === 1) {
+            /* pine: two stacked cones */
+            top = new THREE.Mesh(gCone, mPine[(rnd() * 2) | 0]);
+            top.scale.set(s, s, s); top.position.y = 1.15 * s;
+            var top2 = new THREE.Mesh(gCone, top.material);
+            top2.scale.set(s * 0.72, s * 0.8, s * 0.72); top2.position.y = 1.7 * s;
+            top2.castShadow = shadow; g.add(top2);
+          } else if (kind === 2) {
+            top = new THREE.Mesh(gBall, mBirchLeaf);
+            top.scale.set(s * 0.85, s * 1.1, s * 0.85); top.position.y = 1.15 * s;
+          } else {
+            top = new THREE.Mesh(gBall, canopyMats[(rnd() * 3) | 0]);
+            top.scale.set(s, s * 0.9, s); top.position.y = 1.05 * s;
+          }
+          top.castShadow = shadow;
+          g.add(top);
+          g.rotation.y = rnd() * 6.28;
+          g.position.set(x, 0, z);
+          scene.add(g);
+          state.forestRing.push(g);
+          /* semitrees1 kept: deep-woods trees scoop / blast like the rest */
+          var wxy = threeToWorld(x, z);
+          var n = (state._forestTreeSeq = (state._forestTreeSeq || 0) + 1);
+          state.ranchBlastables.push({
+            id: "forest-tree-" + n, kind: "tree", x: wxy.x, y: wxy.y,
+            r: Math.max(18, 14 * s * 1.2), meshes: [g], boom: 2.4, forest: true
+          });
+        }
+        /* Depth layers: rScale = ellipse multiple of map half-size (clamp now 2.4) */
+        var layers = [
+          { r0: 1.56, r1: 1.70, n: 110, s0: 0.9, s1: 1.35, shadow: true },
+          { r0: 1.70, r1: 1.86, n: 120, s0: 1.0, s1: 1.5, shadow: true },
+          { r0: 1.86, r1: 2.02, n: 120, s0: 1.05, s1: 1.65, shadow: false },
+          { r0: 2.02, r1: 2.20, n: 116, s0: 1.1, s1: 1.8, shadow: false },
+          { r0: 2.20, r1: 2.38, n: 104, s0: 1.2, s1: 2.0, shadow: false },
+          /* backdrop wall past the walk limit so the edge always reads as forest */
+          { r0: 2.45, r1: 2.75, n: 120, s0: 1.6, s1: 2.6, shadow: false },
+        ];
+        for (var li = 0; li < layers.length; li++) {
+          var L = layers[li];
+          var cnt = Math.round(L.n * (li === layers.length - 1 ? Math.max(0.7, dens) : dens));
+          for (var i = 0; i < cnt; i++) {
+            var ang = rnd() * Math.PI * 2;
+            var rr = L.r0 + rnd() * (L.r1 - L.r0);
+            /* winding trails (4 spokes that wiggle) + a few clearings stay open */
+            if (li < 5) {
+              var trail = Math.abs(Math.sin(ang * 2 + Math.sin(rr * 6) * 0.35));
+              if (trail < 0.07) continue;
+              var cl = Math.abs(Math.sin(ang * 5 + 1.3)) < 0.12 && rr > 1.8 && rr < 2.15;
+              if (cl) continue;
+            }
+            var x = Math.cos(ang) * halfW * rr;
+            var z = Math.sin(ang) * halfH * rr;
+            var kr = rnd();
+            var kind = kr < 0.45 ? 1 : kr < 0.62 ? 2 : 0;
+            var s = L.s0 + rnd() * (L.s1 - L.s0);
+            addTree(x, z, s, kind, L.shadow && !lite);
+            if (rnd() < 0.3 * dens) {
+              var b = new THREE.Mesh(gBush, mBush);
+              var bs = 0.7 + rnd() * 0.9;
+              b.scale.set(bs, bs * 0.8, bs);
+              b.position.set(x + (rnd() - 0.5) * 1.6, 0.15, z + (rnd() - 0.5) * 1.6);
+              scene.add(b);
+              state.forestRing.push(b);
+            }
+          }
+        }
+      })();
     })();
 
     // Soft grid — lifted + no depth write (was z-fighting ground → floor shudder)
@@ -7232,8 +7331,9 @@ state.zLift = 0;
 
     // Clamp ranch bounds — groundmusic1: playable green out to ~1.55× (trees sit inside)
     if (state.mode === "ranch") {
-      var halfW = C.MAP_W * 0.01 * 1.55;
-      var halfH = C.MAP_H * 0.01 * 1.55;
+      /* forest1: walk the Deep Woods — limit 1.55x -> 2.4x (floor green to 3.6x) */
+      var halfW = C.MAP_W * 0.01 * 2.4;
+      var halfH = C.MAP_H * 0.01 * 2.4;
       state.player.position.x = Math.max(-halfW + 0.5, Math.min(halfW - 0.5, state.player.position.x));
       state.player.position.z = Math.max(-halfH + 0.5, Math.min(halfH - 0.5, state.player.position.z));
     } else {
