@@ -5,7 +5,7 @@ using UnityEngine;
 // (house interior, underwater, space, Mars, Callisto) are hidden roots built on demand far away from it,
 // so every split-screen view simply follows its own frog wherever it is. Each camera gets its world's
 // sky / fog / ambient just before it renders (Camera.onPreCull).
-public enum WorldId { Ranch, House, Underwater, Space, Mars, Callisto, RealRoom }   // ffu18: RealRoom = the photoreal room (World/RealRoom.cs)
+public enum WorldId { Ranch, House, Underwater, Space, Mars, Callisto, RealRoom, Moon }   // ffu41: Moon (World/MoonWorld.cs), appended so net ids keep their values   // ffu18: RealRoom = the photoreal room (World/RealRoom.cs)
 
 public static class Worlds
 {
@@ -17,6 +17,7 @@ public static class Worlds
     public static readonly Vector3 SpaceO = new Vector3(0f, 0f, -30000f);
     public static readonly Vector3 MarsO = new Vector3(-1600f, 0f, 0f);
     public static readonly Vector3 CallistoO = new Vector3(-1600f, 0f, 1600f);
+    public static readonly Vector3 MoonO = new Vector3(-1600f, 0f, -1600f);   // ffu41
 
     static readonly Dictionary<Camera, WorldId> camWorld = new Dictionary<Camera, WorldId>();
     static bool hooked;
@@ -49,6 +50,8 @@ public static class Worlds
                 c.clearFlags = CameraClearFlags.SolidColor; c.backgroundColor = new Color(0.05f, 0.28f, 0.38f); c.farClipPlane = 260f; c.nearClipPlane = 0.2f; break;
             case WorldId.House:
                 c.clearFlags = CameraClearFlags.Skybox; c.farClipPlane = 400f; c.nearClipPlane = 0.15f; break;
+            case WorldId.Moon:   // ffu41: black sky, room for the stars + the Earth
+                c.clearFlags = CameraClearFlags.SolidColor; c.backgroundColor = Color.black; c.farClipPlane = 1400f; c.nearClipPlane = 0.25f; break;
             case WorldId.Mars:
             case WorldId.Callisto:
                 c.clearFlags = CameraClearFlags.SolidColor; c.backgroundColor = w == WorldId.Mars ? new Color(0.55f, 0.36f, 0.25f) : new Color(0.02f, 0.02f, 0.04f); c.farClipPlane = 900f; c.nearClipPlane = 0.25f; break;
@@ -105,6 +108,10 @@ public static class Worlds
             case WorldId.Callisto:
                 RenderSettings.fog = false;
                 RenderSettings.ambientSkyColor = new Color(0.3f, 0.32f, 0.38f); RenderSettings.ambientEquatorColor = new Color(0.22f, 0.22f, 0.26f); RenderSettings.ambientGroundColor = new Color(0.1f, 0.1f, 0.12f);
+                break;
+            case WorldId.Moon:   // ffu41: no air - no haze, a dim fill so the shadows stay stark
+                RenderSettings.fog = false;
+                RenderSettings.ambientSkyColor = new Color(0.2f, 0.2f, 0.23f); RenderSettings.ambientEquatorColor = new Color(0.16f, 0.16f, 0.17f); RenderSettings.ambientGroundColor = new Color(0.1f, 0.1f, 0.1f);
                 break;
             case WorldId.House:
                 RenderSettings.fog = false;
@@ -191,6 +198,7 @@ public static class Worlds
             case WorldId.RealRoom: return -1e9f;   // ffu18: the froggy is parked under the room while P1 is inside
             case WorldId.Mars: return MarsO.y - 60f;
             case WorldId.Callisto: return CallistoO.y - 60f;
+            case WorldId.Moon: return MoonO.y - 60f;
             default: return -45f;   // ffu37: the pond bed reaches ~-27 m
         }
     }
@@ -202,6 +210,7 @@ public static class Worlds
             case WorldId.House: f.SendTo(WorldId.House, HouseWorld.Spawn(f.id), 180f); break;
             case WorldId.Mars: SurfaceWorlds.LandMars(f, f.id); break;
             case WorldId.Callisto: SurfaceWorlds.LandCallisto(f, f.id); break;
+            case WorldId.Moon: MoonWorld.Land(f, f.id); break;
             case WorldId.Underwater: f.SendTo(WorldId.Underwater, UnderwaterWorld.I.sub.transform.position + Vector3.up * 3f, 0f); break;
             default: f.SendTo(WorldId.Ranch, Ranch.FrogSpawn(f.id), 0f); break;
         }
@@ -216,6 +225,7 @@ public static class Worlds
             case WorldId.Space: return "space";
             case WorldId.Mars: return "mars";
             case WorldId.Callisto: return "callisto";
+            case WorldId.Moon: return "callisto";   // ffu41: same quiet space music + ambience
             case WorldId.RealRoom: return "realroom";
             default: return "ranch";
         }
@@ -230,6 +240,7 @@ public static class Worlds
             case WorldId.Space: return "Space";
             case WorldId.Mars: return "Mars";
             case WorldId.Callisto: return "Callisto";
+            case WorldId.Moon: return "The Moon";
             case WorldId.RealRoom: return "REAL ROOM";
             default: return "Ranch";
         }

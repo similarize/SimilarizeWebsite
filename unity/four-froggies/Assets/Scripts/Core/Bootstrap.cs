@@ -61,7 +61,7 @@ public class Bootstrap : MonoBehaviour
         Countryside.Build();   // ffu14: fields, woods and hills out to the horizon
         HouseWorld.Create();
         if (Worlds.UnderwaterOn) UnderwaterWorld.Create();
-        if (Worlds.SpaceOn) { SpaceWorld.Create(); SurfaceWorlds.Create(); }
+        if (Worlds.SpaceOn) { SpaceWorld.Create(); SurfaceWorlds.Create(); MoonWorld.Create(); }   // ffu41: the Moon
         SpawnVehicles();
         try { TrailerBarn.Build(); } catch (System.Exception e) { Debug.LogWarning("TrailerBarn: build failed " + e); }   // ffu31: the trailer barn + four towable camper trailers
         if (Worlds.StageEOn)

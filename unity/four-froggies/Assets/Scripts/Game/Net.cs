@@ -599,6 +599,7 @@ public class Net : MonoBehaviour
             case WorldId.Space: if (SpaceWorld.I != null) { if (followMech != null) SpaceWorld.I.LaunchMech(f, followMech); else SpaceWorld.I.Launch(f); } break;
             case WorldId.Mars: if (SurfaceWorlds.I != null) SurfaceWorlds.LandMars(f, f.id); break;
             case WorldId.Callisto: if (SurfaceWorlds.I != null) SurfaceWorlds.LandCallisto(f, f.id); break;
+            case WorldId.Moon: MoonWorld.Land(f, f.id); break;   // ffu41
             default: f.SendTo(WorldId.Ranch, Ranch.FrogSpawn(f.id), 0f); break;
         }
         f.Toast("Following the host: " + Worlds.Name(w), 3f);

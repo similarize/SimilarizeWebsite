@@ -98,6 +98,7 @@ public partial class Game : MonoBehaviour
         "   pack by Quaternius (CC0).  <b>Sky</b> (Kloofendal 48d Partly Cloudy) and <b>grass / dirt / sand / wood / barn / metal textures</b>:\n" +
         "   Poly Haven (polyhaven.com), CC0; also the house floors / walls, seabed and Mars / Callisto ground.\n" +
         "<b>Planet maps + star map</b>: NASA (NASA 3D Resources; SVS CGI Moon Kit), public domain.\n" +
+        "<b>Moon surface</b>: regolith from NASA Apollo 11 photo AS11-40-5877 (images.nasa.gov), public domain; Earth in the Moon sky: NASA map.\n" +
         "<b>Realism test</b> (?realism=1): Sunflowers sky, ground / mud / rock / bark scans (Poly Haven) + Grass 004 (ambientCG), CC0.\n" +
         "<b>REAL ROOM</b> (James's house): furniture, rubber duck, lamp, picture + parquet / plaster / wool textures and the Kloppenheim 02\n" +
         "   night sky: Poly Haven (CC0). TV: Big Buck Bunny (c) Blender Foundation, peach.blender.org, CC BY 3.0.\n" +
@@ -189,6 +190,7 @@ public partial class Game : MonoBehaviour
             else if (IsPoolDemo(sc)) PoolDemoStart(f, sc);                   // ffu29 backyard pool float (GamePoolDemo.cs)
             else if (IsStompDemo(sc)) StompDemoStart(f, sc);                 // ffu28 mech footfalls / Optimus suit on a slope (GameStomp.cs)
             else if (IsGardenDemo(sc)) GardenDemoStart(f, sc);               // ffu32 garden retreat / horse riding (GardenDemo.cs)
+            else if (Is41(sc)) Demo41Start(f, sc);                             // ffu41 the Moon: orbit, land, hop, buggy (GameFfu41.cs)
             else if (Is40(sc)) Demo40Start(f, sc);                             // ffu40 Figure 03 wireless pad (GameFfu40.cs)
             else if (Is39(sc)) Demo39Start(f, sc);                             // ffu39 roof stomp / pond edge / shore close-up (GameFfu39.cs)
             else if (Is35(sc)) Demo35Start(f, sc);
@@ -220,6 +222,7 @@ public partial class Game : MonoBehaviour
         if ((sc.StartsWith("lj-") || sc.StartsWith("loopdrive")) && DemoLoopCam(f, sc, c)) return;
         if (IsStompDemo(sc)) { if (!StompDemoCam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }
         if (IsGardenDemo(sc)) { if (!GardenDemoCam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }
+        if (Is41(sc)) { if (!Demo41Cam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }
         if (Is40(sc)) { if (!Demo40Cam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }
         if (Is39(sc)) { if (!Demo39Cam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }
         if (Is35(sc)) { if (!Demo35Cam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }
@@ -605,7 +608,7 @@ public partial class Game : MonoBehaviour
             "<b>Touch (P1)</b>  left stick  |  drag the free area for camera (double-tap = reset)  |  A  |  FIRE  |  MSL  |  UP / DOWN  |  - / +  |  SND\n\n" +
             "Rally: figure-8 with a bridge, jumps, and a loop lane west of the garage (keep the throttle on).  Pond: boat gate course - start at gate 1.  Swim: B / SHIFT / DIVE hold to dive, A / SPACE swim up, let go to float up.\n" +
             (Worlds.UnderwaterOn ? "Pond dock: A at the submarine dives. Underwater: L-stick drive, RT up, LT down, A swim out in scuba (A / RT up, B / LT down), A by the sub climbs back in, surface + keep rising = ranch.\n" : "") +
-            (Worlds.SpaceOn ? "Starship pad: A launches (3 s countdown + liftoff; A / FIRE skips). Space: D-pad < > target, X auto-transfer, LB / RB warp, RT boost, LT brake, Y land (Earth, Mars, Callisto).  Keys: T G Z C F.\n" : "") +
+            (Worlds.SpaceOn ? "Starship pad: A launches (3 s countdown + liftoff; A / FIRE skips). Space: D-pad < > target, X auto-transfer, LB / RB warp, RT boost, LT brake, Y land (Earth, Moon, Mars, Callisto).  Keys: T G Z C F.\n" : "") +
             (Worlds.StageEOn ? "Mechs: every froggy pilots its own 10 + 100-story mech (mech yard west); James & Bubbles also have a 1000-story (south edge); James alone has the trillion-story (north edge); RT / X omnigun.\n<b>Robots</b> do chores and charge at the wall jacks on their own.  Robot phone (LB / P / PHONE): pick a robot, give it a chore, send it to charge, or DRIVE IT! (normal controls, LB / P / PHONE gives it back).  DRIVE tab: pick any vehicle or a mech, then Wander / Follow me / Race track / Go to my spot / GET OUT.  MISSION tab: Mars rock run / Callisto ice run from the robot mission pad (south-west of the house) - watch its live video feed: O (keys) or Y in the phone (pad), I = drone or eye camera, X / FULL = full screen; on a pad the feed's VIEW closes it, RB makes it bigger. LB or B closes the phone.\n" : "") +
             "Stock trailer (by the pasture fence): A at its gate opens it, then loads the nearest cow or horse; A next to a cow = lead it; ride a horse to the gate + A. Tow it anywhere, open the gate - they graze there.\n" +
             "House: walk into the front door. Inside, A at a fish tank feeds it, the toy box starts fetch with Germy + Daisy, the cat bed starts hide-and-seek, A near Dad to chat.\n" +

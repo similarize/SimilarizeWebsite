@@ -54,6 +54,17 @@ public partial class Frog : MonoBehaviour
         model.Animate(0f, false, true, false, Time.deltaTime);
     }
 
+    // ffu41: a visible rider seat (moon buggy jump seats), no spacesuit
+    public void RideSeat(Transform seat, float scale)
+    {
+        if (transform.parent != seat) transform.SetParent(seat, false);
+        transform.localPosition = Vector3.zero;
+        transform.localRotation = Quaternion.identity;
+        transform.localScale = Vector3.one * scale;
+        if (!model.gameObject.activeSelf) model.gameObject.SetActive(true);
+        model.Animate(0f, false, true, false, Time.deltaTime);
+    }
+
     public void LeavePassenger()
     {
         if (passengerOf == null) return;
@@ -222,6 +233,14 @@ public partial class Frog : MonoBehaviour
         exitCool -= dt;
         if (passengerOf != null)
         {
+            if (passengerOf is MoonBuggy)
+            {
+                // ffu41: riding along in the moon buggy (MoonWorld keeps us in a rider seat); A / E / OUT hops off
+                prompt = "Riding the moon buggy" + (passengerOf.driver != null ? " - " + passengerOf.driver.nick + " is driving" : "") + " - " + (inputKind == InputKind.Gamepad ? "A" : inputKind == InputKind.Touch ? "OUT" : "E") + ": hop off";
+                if (human && (input.use || input.hop) && exitCool <= 0f) MoonWorld.HopOff(this);
+                input = new PIn();
+                return;
+            }
             Starship st = passengerOf as Starship;
             if (st != null && st.mechForm != null && st.BayOpen)
             {
@@ -292,7 +311,7 @@ public partial class Frog : MonoBehaviour
 
         if (world == WorldId.Underwater) { Scuba(dt); return; }
         if (world == WorldId.Space && SpaceWorld.I != null && SpaceWorld.I.ship != null) { SpaceWorld.I.ship.AdoptStray(this); return; }
-        spaceGravity = world == WorldId.Mars ? 0.45f : world == WorldId.Callisto ? 0.22f : 1f;
+        spaceGravity = world == WorldId.Mars ? 0.45f : world == WorldId.Callisto ? 0.22f : world == WorldId.Moon ? MoonWorld.G : 1f;   // ffu41: Moon 1.62 m/s2 = 1/6 g
         Vector3 p = transform.position;
         // ffw: float higher (body above the line) and dive in the pond itself. Swimming = deep enough water under us and
         // the feet at / below the surface (hysteresis so the higher float doesn't flicker in and out).
@@ -378,7 +397,7 @@ public partial class Frog : MonoBehaviour
                 if (vel.y < -2f) vel.y = -2f;
                 vel.x = Mathf.MoveTowards(vel.x, 0f, 30f * dt);
                 vel.z = Mathf.MoveTowards(vel.z, 0f, 30f * dt);
-                if (input.hop && hopCool <= 0f) { vel.y = Roster.JumpV(charId); hopCool = 0.25f; float hp = IsPet ? 1.35f : 1f; if (human) { Sfx.Play(Sfx.Hop, IsPet ? 0.45f : 0.6f, Random.Range(0.92f, 1.1f) * hp); if (Random.value < 0.2f) Voice(true, transform.position, 0.5f); } else Sfx.PlayAt(Sfx.Hop, transform.position, 0.35f, 25f, Random.Range(1.0f, 1.2f) * hp); }
+                if (input.hop && hopCool <= 0f) { vel.y = Roster.JumpV(charId) * (world == WorldId.Moon ? MoonWorld.HopK : 1f); hopCool = 0.25f; float hp = IsPet ? 1.35f : 1f; if (human) { Sfx.Play(Sfx.Hop, IsPet ? 0.45f : 0.6f, Random.Range(0.92f, 1.1f) * hp); if (Random.value < 0.2f) Voice(true, transform.position, 0.5f); } else Sfx.PlayAt(Sfx.Hop, transform.position, 0.35f, 25f, Random.Range(1.0f, 1.2f) * hp); }
             }
             else
             {

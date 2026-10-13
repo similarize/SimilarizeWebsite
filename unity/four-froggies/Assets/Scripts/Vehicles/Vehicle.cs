@@ -159,7 +159,7 @@ public abstract class Vehicle : MonoBehaviour
         Vector3 p = transform.position;
         WorldId w = driver != null ? driver.world : WorldId.Ranch;
         float v;
-        if (w == WorldId.Mars || w == WorldId.Callisto) v = 1f;
+        if (w == WorldId.Mars || w == WorldId.Callisto || w == WorldId.Moon) v = 1f;
         else if (w != WorldId.Ranch) v = 0f;
         else
         {

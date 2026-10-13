@@ -133,7 +133,7 @@ public class SpaceWorld : MonoBehaviour
         if (Game.I != null) foreach (Frog f in Game.I.frogs) if (f != null && f.passengerOf == ship) crew.Add(f);
         if (!b.landable)
         {
-            if (ship.driver != null) ship.driver.Toast("Can't land on " + b.name + " - Earth, Mars and Callisto are landable", 3f);
+            if (ship.driver != null) ship.driver.Toast("Can't land on " + b.name + " - Earth, the Moon, Mars and Callisto are landable", 3f);
             return;
         }
         // ffu27: back to Earth = a visible landing on the ranch pad (LaunchSeq phase 3), unless a mech flew up (it lands
@@ -160,6 +160,7 @@ public class SpaceWorld : MonoBehaviour
                 f.Toast("Touchdown at the ranch!", 3f);
             }
             else if (b.id == "mars") SurfaceWorlds.LandMars(f, k);
+            else if (b.id == "moon") MoonWorld.Land(f, k);   // ffu41
             else SurfaceWorlds.LandCallisto(f, k);
             k++;
         }
@@ -189,7 +190,7 @@ public class SpaceWorld : MonoBehaviour
         AddBody("uranus", "Uranus", "planet", 0, 250f, 1f, 569.72f, true, 2.6f, 10f, 5.6f, false);
         AddBody("neptune", "Neptune", "planet", 0, 295f, 3.4f, 730.27f, true, 2.5f, 10f, 5.4f, false);
         AddBody("pluto", "Pluto", "dwarf", 0, 335f, 5.9f, 883.73f, true, 0.9f, 6f, 2.8f, false);
-        AddBody("moon", "Moon", "moon", Find("earth"), 18f, 0.8f, 0.07f, false, 0.72f, 6f, 2.6f, false);
+        AddBody("moon", "Moon", "moon", Find("earth"), 18f, 0.8f, 0.07f, false, 0.72f, 6f, 2.6f, true);   // ffu41: landable (World/MoonWorld.cs)
         AddBody("callisto", "Callisto", "moon", Find("jupiter"), 24f, 2.2f, 0.045f, false, 0.8f, 6f, 2.7f, true);
         AddBody("station", "Station", "station", Find("earth"), 5.4f, 2.4f, 0.55f, false, 0.5f, 0f, 0f, false);
         foreach (string id in new[] { "mercury", "venus", "earth", "station", "moon", "mars", "jupiter", "callisto", "saturn", "uranus", "neptune", "pluto" }) targets.Add(Find(id));
