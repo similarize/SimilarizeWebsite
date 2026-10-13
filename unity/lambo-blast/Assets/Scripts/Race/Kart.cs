@@ -61,6 +61,7 @@ public class Kart : MonoBehaviour
     // boost pads, big-air stunts
     float padCool, airT, trickT, trickRoll;
     bool bigAir;
+    float lastScS = -1f;
     public float aiTopMul = 1f;
     float aiSkill = 1f;
 
@@ -130,7 +131,7 @@ public class Kart : MonoBehaviour
         hint = p.i; s = p.s; lastGoodS = s; lastGoodHint = hint;
         aiShortcut = false; aiItemT = 0f; stuckT = 0f; gasHeldT = 0f;
         aiLikesShortcut = Random.value < (Track.Def != null ? Track.Def.aiShortcut : 0.4f);
-        aiJump = false; padCool = 0f; airT = 0f; trickT = 0f; trickRoll = 0f; bigAir = false;
+        aiJump = false; padCool = 0f; airT = 0f; trickT = 0f; trickRoll = 0f; bigAir = false; lastScS = -1f;
         ApplyTransform(0f);
     }
 
@@ -315,6 +316,20 @@ public class Kart : MonoBehaviour
         // ---- vertical ----
         float gy; Vector3 gn;
         Track.Ground(pos, out gy, out gn);
+        // generated tracks: crossing a ramp lip launches at the ramp's real angle (frame-rate independent)
+        if (grounded && Track.Def != null && speed > 5f)
+        {
+            float yTop, slope; string gname;
+            if (Track.LipCross(s, pm.s, pm.lat, lastScS, ps.s, ps.dist, out yTop, out slope, out gname))
+            {
+                grounded = false;
+                vy = Mathf.Min(14f, speed * slope);
+                pos.y = Mathf.Max(pos.y, yTop);
+                airT = 0f; trickT = 0f; bigAir = vy > 6f;
+                if (human && gname != null) Toast(gname.ToUpper() + "!", 1.4f);
+                if (Autopilot) Debug.Log("LB launch k" + id + " " + gname + " v " + speed.ToString("F1") + " vy " + vy.ToString("F1"));
+            }
+        }
         if (grounded)
         {
             float predicted = pos.y + lastClimb * dt;
@@ -381,6 +396,7 @@ public class Kart : MonoBehaviour
             if (lava || (!grounded && pos.y < refY - 14f) || (grounded && gy < refY - 5f))
             {
                 respawning = true; respawnT = 1.1f;
+                if (Autopilot) Debug.Log("LB fell k" + id + " s " + pm.s.ToString("F0") + (useSc ? " (shortcut " + ps.s.ToString("F0") + ")" : "") + " v " + speed.ToString("F1") + (lava ? " lava" : ""));
                 if (lava) { FX.Boom(new Vector3(pos.x, Track.LavaY + 0.5f, pos.z), 0.8f); Sfx.PlayAt(Sfx.Boom, pos, 0.7f); }
                 else Sfx.PlayAt(Sfx.Spin, pos, 0.6f);
                 if (human) Toast(lava ? "Toasted in the lava! Back on the track..." : "Too short! Hit the boost pad and try again...", 1.8f);
@@ -395,6 +411,7 @@ public class Kart : MonoBehaviour
             if (human) Game.Shake(this, 0.15f);
         }
         if (onMain && !inWater && grounded && !Track.InGap(pm.s, 3f)) { lastGoodS = pm.s; lastGoodHint = pm.i; }
+        lastScS = ps.s;
 
         // ---- laps ----
         float prevS = s;
@@ -437,6 +454,7 @@ public class Kart : MonoBehaviour
 
     void OnLap()
     {
+        if (Autopilot && Game.I != null) Debug.Log("LB lap k" + id + " lap " + lap + " t " + Game.I.RaceTime.ToString("F1") + (human ? " P1" : ""));
         if (lap >= Track.Laps)
         {
             finished = true;

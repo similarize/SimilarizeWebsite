@@ -868,6 +868,20 @@ public class Game : MonoBehaviour
         foreach (var st in stands) st.Tick(0f, false);
         foreach (var s in slots) MakeView(s);
         ApplyLayout();
+        // demo screenshots: &lbgap=K puts P1 150 m before gap K (0-based) of a generated track
+        string u = Application.absoluteURL ?? "";
+        int gi = u.IndexOf("lbgap=");
+        if (Kart.Autopilot && gi >= 0 && gi + 6 < u.Length && char.IsDigit(u[gi + 6]) && Track.Gaps.Count > 0 && slots.Count > 0)
+        {
+            var g = Track.Gaps[Mathf.Clamp(u[gi + 6] - '0', 0, Track.Gaps.Count - 1)];
+            float s0 = Track.Wrap(g.a - 150f);
+            Vector3 p = Track.PointAt(s0, 0f); float y; Vector3 nn;
+            Track.Ground(p, out y, out nn);
+            Vector3 t = Track.TangentAt(s0);
+            slots[0].kart.Place(new Vector3(p.x, y, p.z), Mathf.Atan2(t.x, t.z) * Mathf.Rad2Deg);
+            slots[0].rig.Reset();
+            Debug.Log("Demo: P1 placed before " + g.name);
+        }
         Sfx.Music("beach");
         Sfx.Play(Sfx.Click, 0.8f);
     }

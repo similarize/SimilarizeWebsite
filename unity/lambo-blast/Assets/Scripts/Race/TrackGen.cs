@@ -19,7 +19,7 @@ public static partial class Track
     public static bool Lava;
     public static float LavaY = -999f;
     public static float[] Bank;                         // per main sample: tan(bank); surface y = centre y - lat * Bank
-    public struct Gap { public float a, b, yA, yB, rampLen; public string name; public bool sc; }
+    public struct Gap { public float a, b, yA, yB, rampLen, rampH; public string name; public bool sc; }
     public static readonly List<Gap> Gaps = new List<Gap>();          // main road gaps (lip a -> landing b)
     public static Gap ScGap;
     public struct PadZone { public bool sc; public float s0, s1; }
@@ -126,6 +126,23 @@ public static partial class Track
             if (WrapD(s - g.a) > 0f && WrapD(s - g.a) < g.b - g.a + 4f) best = 0f;
         }
         return best;
+    }
+
+    // did a kart driving along the road just cross a ramp lip? (frame-rate independent launch: the kart leaves at the
+    // ramp's exact angle instead of whatever the per-frame climb estimate was - matters on slow devices)
+    public static bool LipCross(float prevS, float curS, float lat, float prevScS, float curScS, float scDist, out float yTop, out float slope, out string name)
+    {
+        yTop = 0f; slope = 0f; name = null;
+        foreach (var g in Gaps)
+        {
+            float d0 = WrapD(prevS - g.a), d1 = WrapD(curS - g.a);
+            if (d0 < 0f && d0 > -(g.rampLen + 18f) && d1 >= -0.5f && d1 < 12f && Mathf.Abs(lat) < HalfW + 1f)
+            { yTop = g.yA + g.rampH; slope = g.rampH / Mathf.Max(1f, g.rampLen); name = g.name; return true; }
+        }
+        var sg = ScGap;
+        if (sg.b > sg.a && scDist < ScHalf + 1f && prevScS < sg.a && prevScS > sg.a - (sg.rampLen + 18f) && curScS >= sg.a - 0.5f && curScS < sg.a + 12f)
+        { yTop = sg.yA + sg.rampH; slope = sg.rampH / Mathf.Max(1f, sg.rampLen); name = sg.name; return true; }
+        return false;
     }
 
     public static string GapNameNear(float s, float scS)
@@ -244,7 +261,7 @@ public static partial class Track
         switch (th)
         {
             case 1: return new ThemeCols { road = new Color(0.66f, 0.42f, 0.28f), curbA = new Color(0.85f, 0.2f, 0.12f), curbB = new Color(0.95f, 0.92f, 0.85f), shoulder = new Color(0.62f, 0.36f, 0.22f), cliff = new Color(0.58f, 0.3f, 0.18f), ramp = new Color(1f, 0.6f, 0.15f) };
-            case 2: return new ThemeCols { road = new Color(0.2f, 0.19f, 0.19f), curbA = new Color(0.95f, 0.75f, 0.1f), curbB = new Color(0.08f, 0.08f, 0.08f), shoulder = new Color(0.16f, 0.14f, 0.13f), cliff = new Color(0.13f, 0.11f, 0.1f), ramp = new Color(0.95f, 0.35f, 0.08f) };
+            case 2: return new ThemeCols { road = new Color(0.32f, 0.29f, 0.28f), curbA = new Color(0.95f, 0.75f, 0.1f), curbB = new Color(0.08f, 0.08f, 0.08f), shoulder = new Color(0.27f, 0.24f, 0.22f), cliff = new Color(0.22f, 0.19f, 0.17f), ramp = new Color(0.95f, 0.35f, 0.08f) };
             case 3: return new ThemeCols { road = new Color(0.78f, 0.82f, 0.88f), curbA = new Color(0.15f, 0.4f, 0.9f), curbB = new Color(0.97f, 0.97f, 1f), shoulder = new Color(0.66f, 0.8f, 0.92f), cliff = new Color(0.55f, 0.62f, 0.7f), ramp = new Color(0.25f, 0.65f, 1f) };
             case 4: return new ThemeCols { road = new Color(0.5f, 0.5f, 0.42f), curbA = new Color(0.2f, 0.6f, 0.2f), curbB = new Color(0.9f, 0.88f, 0.75f), shoulder = new Color(0.42f, 0.44f, 0.34f), cliff = new Color(0.4f, 0.42f, 0.34f), ramp = new Color(0.95f, 0.75f, 0.2f) };
             default: return new ThemeCols { road = new Color(0.24f, 0.25f, 0.27f), curbA = new Color(0.9f, 0.15f, 0.15f), curbB = new Color(0.95f, 0.95f, 0.95f), shoulder = new Color(0.45f, 0.46f, 0.48f), cliff = new Color(0.4f, 0.42f, 0.46f), ramp = new Color(0.95f, 0.85f, 0.15f) };
@@ -327,7 +344,7 @@ public static partial class Track
         for (int k = 0; k + 3 < d.gaps.Length; k += 4)
         {
             float a = d.gaps[k], G = d.gaps[k + 1];
-            Gaps.Add(new Gap { a = a, b = a + G, yA = Prof(d.keys, a, Length, true), yB = Prof(d.keys, a + G, Length, true), rampLen = d.gaps[k + 2],
+            Gaps.Add(new Gap { a = a, b = a + G, yA = Prof(d.keys, a, Length, true), yB = Prof(d.keys, a + G, Length, true), rampLen = d.gaps[k + 2], rampH = d.gaps[k + 3],
                 name = k / 4 < d.gapNames.Length ? d.gapNames[k / 4] : "Gap" });
         }
         for (int k = 0; k + 1 < d.pipes.Length; k += 2) PipeZones.Add(new Vector2(d.pipes[k], d.pipes[k + 1]));
@@ -346,7 +363,7 @@ public static partial class Track
         ScLength = SCS[SC.Length - 1];
         for (int i = 0; i < SC.Length; i++) SC[i].y = Prof(d.scKeys, SCS[i], ScLength, false);
         ScGapA = d.scGapA; ScGapB = d.scGapA + d.scGapLen;
-        ScGap = new Gap { a = ScGapA, b = ScGapB, yA = Prof(d.scKeys, ScGapA, ScLength, false), yB = Prof(d.scKeys, ScGapB, ScLength, false), rampLen = d.scRampLen, name = d.scName, sc = true };
+        ScGap = new Gap { a = ScGapA, b = ScGapB, yA = Prof(d.scKeys, ScGapA, ScLength, false), yB = Prof(d.scKeys, ScGapB, ScLength, false), rampLen = d.scRampLen, rampH = d.scRampH, name = d.scName, sc = true };
         ScEnterS = Nearest(SC[0], -1, 0).s;
         ScExitS = Nearest(SC[SC.Length - 1], -1, 0).s;
 
@@ -499,7 +516,7 @@ public static partial class Track
                     }
                     case 2:
                     {
-                        Color ash = new Color(0.3f, 0.27f, 0.25f), basalt = new Color(0.14f, 0.12f, 0.12f), glow = new Color(0.95f, 0.35f, 0.05f);
+                        Color ash = new Color(0.44f, 0.4f, 0.37f), basalt = new Color(0.24f, 0.21f, 0.2f), glow = new Color(0.95f, 0.35f, 0.05f);
                         c = Color.Lerp(ash, basalt, Mathf.Clamp01(slope * 1.6f + (nz - 0.5f)));
                         c = Color.Lerp(c, glow, Mathf.Clamp01((LavaY + 2.5f - h) / 2.5f) * 0.85f);
                         break;
