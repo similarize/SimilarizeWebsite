@@ -41,6 +41,7 @@ public class MoonWorld : MonoBehaviour
     };
 
     public static readonly Vector3 EarthDir = new Vector3(-0.32f, 0.36f, 0.88f).normalized;
+    public static Vector3 EarthPos { get { return Worlds.MoonO + EarthDir * 640f; } }   // ffu41c
     public static Vector3 L(float x, float y, float z) { return Worlds.MoonO + new Vector3(x, y, z); }
 
     public static float Y(float x, float z)
@@ -240,7 +241,7 @@ public class MoonWorld : MonoBehaviour
         // the Earth hanging in the black sky (NASA map)
         var et = Resources.Load<Texture2D>("LB/space_earth");
         Material em = et != null && Mats.UnlitTexBase != null ? Mats.UnlitTex(et) : Mats.Unlit(new Color(0.3f, 0.5f, 0.9f));
-        var earth = Mats.Prim(PrimitiveType.Sphere, root, Worlds.MoonO + EarthDir * 640f, Vector3.one * 92f, em);
+        var earth = Mats.Prim(PrimitiveType.Sphere, root, EarthPos, Vector3.one * 92f, em);
         earth.transform.rotation = Quaternion.Euler(-20f, 150f, 23f);
         var halo = new Material(Mats.Fx); halo.color = new Color(0.45f, 0.65f, 1f, 0.16f);
         Mats.Prim(PrimitiveType.Sphere, root, earth.transform.position, Vector3.one * 98f, halo);
@@ -572,10 +573,29 @@ public class MoonBuggy : GroundVehicle
         spring = perWheel / (rest * 0.5f);                                   // sag ~half the travel under moon weight
         damper = 2f * Mathf.Sqrt(spring * rb.mass / n) * 0.28f;              // under-damped: it bounces (ffu41b: 0.16 -> 0.28, crater rims launched it 11 m)
     }
+    // ffu41c: crater rims still launched it ~8.5 m (ffu41b probe: 9-10 m/s over a rim with a ~0.5 slope = ~5 m/s up, which
+    // at 1.62 m/s2 is a 7-8 m ballistic arc). The terrain itself throws it. Now the body may only rise faster than the
+    // ground under it climbs by MaxPop (1.9 m/s = a ~1.1 m hop at 1/6 g): excess upward speed is bled off at up to
+    // 30 m/s2 (no hard clamp). Climbing a slope is untouched (the ground rate is looked up ahead along the velocity).
+    public const float MaxPop = 1.9f;
+    public static float MaxAir;   // demo stat: highest the body got above the ground
     protected override void FixedUpdate()
     {
         base.FixedUpdate();
-        if (rb != null && !rb.isKinematic) rb.AddForce(Vector3.down * MoonWorld.Gms, ForceMode.Acceleration);
+        if (rb == null || rb.isKinematic) return;
+        rb.AddForce(Vector3.down * MoonWorld.Gms, ForceMode.Acceleration);
+        Vector3 p = rb.position, v = rb.velocity, vh = new Vector3(v.x, 0f, v.z);
+        float g0 = MoonWorld.GY(p), h = p.y - g0;
+        if (h > MaxAir) MaxAir = h;
+        if (h > 6f) return;   // stowing / teleports: leave alone
+        const float look = 0.12f;
+        float gRate = (MoonWorld.GY(p + vh * look) - g0) / look;
+        float allow = Mathf.Max(0f, gRate) + MaxPop;
+        if (v.y > allow)
+        {
+            float cut = Mathf.Min(v.y - allow, 30f * Time.fixedDeltaTime);
+            rb.velocity = new Vector3(v.x, v.y - cut, v.z);
+        }
     }
     public override string HelpLine { get { return "MOON BUGGY: L-stick steer | RT gas | LT brake / reverse | A get out | friends: walk up + A to ride (4 seats) | park on the BUGGY BAY to fly back up"; } }
 }

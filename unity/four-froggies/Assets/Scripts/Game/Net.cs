@@ -682,7 +682,7 @@ public class Net : MonoBehaviour
         string[] a = r.Split('~');
         if (a.Length < 10) return false;
         fid = ParseI(a[0]);
-        s.world = (WorldId)Mathf.Clamp(ParseI(a[1]), 0, 6);
+        s.world = (WorldId)Mathf.Clamp(ParseI(a[1]), 0, (int)WorldId.Moon);   // ffu41c: was 0..6, so a froggy on the Moon showed up in the REAL ROOM on the other device
         s.pos = new Vector3(ParseF(a[2]), ParseF(a[3]), ParseF(a[4]));
         s.yaw = ParseF(a[5]); s.spd = ParseF(a[6]); s.flags = ParseI(a[7]); s.t = ParseF(a[8]); s.veh = ParseI(a[9]);
         if (s.veh == -1) s.veh = 0;

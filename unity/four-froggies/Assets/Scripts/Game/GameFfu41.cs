@@ -44,6 +44,7 @@ public partial class Game
                 if (m41T > 1f)
                 {
                     sw.ToOrbit(f, "earth");
+                    moon = sw.Find("moon");   // ffu41c: ToOrbit builds space on first use - before it Find("moon") was -1 and the log line below threw ArgumentOutOfRange (bodies[-1])
                     m41Phase = 1; m41PhT = m41T;
                     Debug.Log("FFDEMO moon -> phase 1 auto-transfer Earth orbit -> Moon t=" + m41T.ToString("0.0"));
                 }
@@ -79,11 +80,11 @@ public partial class Game
                         Debug.Log("FFDEMO moon hops: max height above ground " + m41MaxH.ToString("0.00") + " m (Earth hop ~" + (Roster.JumpV(f.charId) * Roster.JumpV(f.charId) / (2f * Frog.Gravity)).ToString("0.00") + " m)");
                         mw.DemoBoardDriver(f);
                         foreach (Frog g in frogs) if (g != null && g != f && g.world == WorldId.Moon) mw.Ride(g);
-                        m41Phase = 4; m41PhT = m41T;
+                        m41Phase = 4; m41PhT = m41T; MoonBuggy.MaxAir = 0f;
                         Debug.Log("FFDEMO moon -> phase 4 buggy: driver " + (mw.buggy.driver != null ? mw.buggy.driver.nick : "-") + " aboard " + mw.Aboard);
                     }
                     Vector3 fp = f.transform.position;
-                    if (m41T - m41PhT < 5f) { pos = fp + new Vector3(2.5f, 1.4f, -6f); look = fp + MoonWorld.EarthDir * 60f; }   // the Earth over the lander / base
+                    if (m41T - m41PhT < 8f) { pos = fp + new Vector3(2.5f, 1.4f, -6f); look = fp + MoonWorld.EarthDir * 60f; }   // the Earth over the lander / base
                     else { pos = fp + new Vector3(7.5f, 2.2f, -1.5f); look = fp + new Vector3(0f, 1.2f, 1.5f); }
                     break;
                 }
@@ -93,7 +94,7 @@ public partial class Game
                     Vector3 bp = b.transform.position, fw = b.transform.forward; fw.y = 0f; fw.Normalize();
                     Vector3 rt = Vector3.Cross(Vector3.up, fw);
                     pos = bp - fw * 7.5f + rt * 4.5f + Vector3.up * 3.2f; look = bp + fw * 1.5f + Vector3.up * 0.8f;
-                    if (m41T - m41PhT > 34f) { m41Phase = 5; m41PhT = m41T; mw.DemoParkInBay(); Debug.Log("FFDEMO moon -> phase 5 park in the BUGGY BAY t=" + m41T.ToString("0.0")); }
+                    if (m41T - m41PhT > 34f) { Debug.Log("FFDEMO moon buggy: max body height above ground " + MoonBuggy.MaxAir.ToString("0.00") + " m (MaxPop " + MoonBuggy.MaxPop + " m/s)"); m41Phase = 5; m41PhT = m41T; mw.DemoParkInBay(); Debug.Log("FFDEMO moon -> phase 5 park in the BUGGY BAY t=" + m41T.ToString("0.0")); }
                     break;
                 }
             case 5:
@@ -112,7 +113,20 @@ public partial class Game
             Vector3 fp = f.transform.position;
             string s = "FFDEMO moon t=" + m41T.ToString("0.0") + " phase " + m41Phase + " P1 " + f.world + " (" + fp.x.ToString("0.0") + ", " + fp.y.ToString("0.0") + ", " + fp.z.ToString("0.0") + ")";
             if (f.world == WorldId.Moon) s += " h " + (fp.y - MoonWorld.GY(fp)).ToString("0.00") + " g x" + f.spaceGravity.ToString("0.000");
-            if (f.world == WorldId.Space && sw.ship != null) s += " | ship mode " + sw.ship.mode + " moonOrbit " + sw.ship.InOrbitOf(moon) + " d(moon) " + (sw.ship.transform.position - sw.bodies[moon].pos).magnitude.ToString("0");
+            if (f.world == WorldId.Space && sw.ship != null && moon >= 0) s += " | ship mode " + sw.ship.mode + " moonOrbit " + sw.ship.InOrbitOf(moon) + " d(moon) " + (sw.ship.transform.position - sw.bodies[moon].pos).magnitude.ToString("0");
+            if (f.world == WorldId.Moon && mw != null && m41Phase >= 3)
+            {
+                // ffu41c: is the Earth in the demo camera's view? (viewport x / y in 0..1 and z > 0 = on screen, + terrain line of sight)
+                Camera dc = Camera.main;
+                foreach (Camera cc in Camera.allCameras) if (cc.enabled && cc.targetTexture == null && (dc == null || cc.depth > dc.depth)) dc = cc;
+                if (dc != null)
+                {
+                    Vector3 ep = MoonWorld.EarthPos, vp = dc.WorldToViewportPoint(ep);
+                    bool onScr = vp.z > 0f && vp.x > -0.05f && vp.x < 1.05f && vp.y > -0.05f && vp.y < 1.05f;
+                    bool blocked = Physics.Linecast(dc.transform.position, ep - (ep - dc.transform.position).normalized * 60f);
+                    s += " | earth vp (" + vp.x.ToString("0.00") + ", " + vp.y.ToString("0.00") + ", " + vp.z.ToString("0") + ") " + (onScr ? (blocked ? "BEHIND TERRAIN" : "ON SCREEN") : "off screen") + " far " + dc.farClipPlane.ToString("0");
+                }
+            }
             if (mw != null && mw.buggy != null && f.world == WorldId.Moon) s += " | buggy v " + mw.buggy.Speed.ToString("0.0") + " y " + (mw.buggy.transform.position.y - MoonWorld.GY(mw.buggy.transform.position)).ToString("0.00") + " wheels " + mw.buggy.Grounded + " aboard " + mw.Aboard;
             Debug.Log(s);
         }
