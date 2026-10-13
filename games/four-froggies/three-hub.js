@@ -59,6 +59,7 @@
             house LOS nudge; one pad = one froggy (lobby party.js).
    groundmusic1: green floor under forest + pull trees in; ranch BGM; pinch zoom fix.
    semitrees1: semi scoops ALL ranch trees (yard + perimeter forest ring).
+   mtruck1: shared ALL ABOARD Cybertruck parks + drives as MONSTER TRUCK (big wheels, label).
    forest1: Deep Woods — forest zone out to 2.4x (walk clamp), 6 depth layers oak/pine/birch,
             trails + clearings, floor/skirt 3.6x, lite density on Tesla/phones; trees scoopable.
    earth1: space shows procedural Earth (home) — not ranch grounds in vacuum.
@@ -2692,6 +2693,25 @@
     ));
   }
 
+  var MONSTER_PARK_WS = 2.0;
+  /* mtruck1: boarding the shared monster truck brings big wheels (only if wheels are stock);
+     leaving restores the previous size unless the WHEELS slider was changed meanwhile. */
+  function tickMonsterWheels() {
+    if (!C.getWheelScale || !C.setWheelScale) return;
+    var inMonster = !!(state.inTruck && (state.truckId === "truck-shared" || state.truckMode === "shared") &&
+      (!state.vehicleStyle || state.vehicleStyle === "cybertruck" || state.vehicleStyle === "monster"));
+    if (inMonster && !state._mtOn) {
+      state._mtOn = true;
+      state._mtPrev = C.getWheelScale();
+      state._mtSet = null;
+      if (state._mtPrev < 1.35) state._mtSet = C.setWheelScale(MONSTER_PARK_WS);
+    } else if (!inMonster && state._mtOn) {
+      state._mtOn = false;
+      if (state._mtSet != null && C.getWheelScale() === state._mtSet) C.setWheelScale(state._mtPrev);
+      state._mtSet = null;
+    }
+  }
+
   function buildTrucks() {
     state.parkedTrucks = [];
     var spots = C.TRUCK_SPOTS || [];
@@ -2708,7 +2728,10 @@
       truck.position.set(p.x, spotDeck, p.z);
       truck.rotation.y = -Math.PI / 2; /* polish11: nose +Z like idle frogs, not sideways +X */
       scene.add(truck);
-      var label = s.id === "shared" ? "★ ALL ABOARD · 4"
+      /* mtruck1: the shared ALL ABOARD Cybertruck parks as the MONSTER TRUCK (big wheels)
+         so it is visible in the hub; canon: Monster = Cybertruck with big live wheels (track3). */
+      if (s.id === "shared") applyTruckWheelScale(truck, MONSTER_PARK_WS);
+      var label = s.id === "shared" ? "★ MONSTER TRUCK · ALL ABOARD · 4"
         : style === "ripsaw" ? "Ripsaw · shared"
         : style === "tank" ? "Tank · shared"
         : ("Cybertruck · " + (C.FROG_DEFS[s.id] || {}).name);
@@ -7009,10 +7032,12 @@ state.zLift = 0;
           if (state.parkedSemis[psi]) state.parkedSemis[psi].visible = true;
         }
       }
+      if (!state.inTruck && state._mtOn) tickMonsterWheels();
       if (state.driveTruck) {
         state.driveTruck.visible = !!state.inTruck || !!state.driveTruck.userData.parkedSemi;
         if (state.inTruck) {
           /* truck2: zLift already three-Y — was *0.08 (invisible hills) */
+          tickMonsterWheels();
           var wsVis = C.getWheelScale ? C.getWheelScale() : 1;
           if (typeof applyTruckWheelScale === "function") applyTruckWheelScale(state.driveTruck, wsVis);
           var wLift = state.driveTruck.userData.wheelLift || 0;
@@ -7187,6 +7212,11 @@ state.zLift = 0;
             var dTruck = Math.hypot(state.player.position.x - pt.mesh.position.x, state.player.position.z - pt.mesh.position.z);
             var nearT = dTruck < 2.4;
             pt.mesh.position.y = nearT ? 0.06 + Math.abs(Math.sin(state.bob * 1.5)) * 0.08 : 0;
+            /* mtruck1: parked shared truck keeps monster wheels + ride height */
+            if (pt.spot.id === "shared") {
+              applyTruckWheelScale(pt.mesh, MONSTER_PARK_WS);
+              pt.mesh.position.y += pt.mesh.userData.wheelLift || 0;
+            }
             var pts = pt.mesh.userData.truckScale || ((C.TRUCK_VIS && C.TRUCK_VIS.threeScale) || 2.05);
             pt.mesh.scale.setScalar(pts * (nearT ? 1.06 : 1));
           }
