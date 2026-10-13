@@ -5,13 +5,14 @@ using UnityEngine;
 //             (40, -12), heading south, same side camera, so the first ~25 s compare 1:1 with the ffu37 build), wades off
 //             the beach down the drop-off until the water is ~60% up it, then circles there, stands still, and P1 hops
 //             out into James's Cybertruck parked on the north lawn and drives it into the pond past the mech.
-//             The camera never dips under the surface (pondsink's did once the mech was deep).
+//             The camera never dips under the surface (pondsink's did once the mech was deep). The walk waits for the
+//             realistic water (Realism.Ready, max 40 s). &mwstart=truck skips straight to the Cybertruck drive-in.
 //             Logs "FFDEMO mechwade t ... phase / depth / speed / steps" every 0.5 s.
 public partial class Game
 {
     static bool Is38(string sc) { return sc == "mechwade"; }
     StoryMech p8Mech; Vehicle p8Truck; Frog p8Frog;
-    int p8Phase; float p8T, p8PhT, p8Log; Vector3 p8Cam; float p8Deep;
+    int p8Phase; float p8T, p8PhT, p8Log, p8Hold; Vector3 p8Cam; float p8Deep;
 
     void Demo38Start(Frog f, string sc)
     {
@@ -21,9 +22,10 @@ public partial class Game
         if (f.world != WorldId.Ranch) f.SendTo(WorldId.Ranch, Ranch.FrogSpawn(f.id), 0f);
         int band = 0; string b = UrlParam("mwband"); if (b != null) int.TryParse(b, out band); band = Mathf.Clamp(band, 0, 3);
         p8Mech = FindMech(0, band);
-        p8Phase = 0; p8T = 0f; p8PhT = 0f; p8Log = 0f; p8Cam = Vector3.zero;
+        p8Phase = 0; p8T = 0f; p8PhT = 0f; p8Log = 0f; p8Hold = 0f; p8Cam = Vector3.zero;
         if (p8Mech == null) { Debug.Log("FFDEMO mechwade: no mech"); return; }
-        p8Deep = Mathf.Min(0.6f * p8Mech.height, 18f);
+        p8Deep = Mathf.Min(0.45f * p8Mech.height, 18f);
+        if (UrlParam("mwstart") == "truck") p8Phase = 3;   // straight to the Cybertruck drive-in
         StoryMech.DtCap = 0.3f;
         p8Mech.DemoPlace(new Vector3(40f, 0f, -12f), 180f);
         f.EnterVehicle(p8Mech);
@@ -81,7 +83,8 @@ public partial class Game
     {
         pos = look = Vector3.zero;
         float dt = Mathf.Min(Time.deltaTime, 0.34f);
-        p8T += dt;
+        // hold at the start (standing ankle-deep: the idle contact foam) until the realistic water is in, max 40 s
+        if (Realism.Ready || !Realism.On || p8Hold > 40f) p8T += dt; else p8Hold += dt;
         p8Log -= Time.unscaledDeltaTime;
         if (p8Mech == null) return false;
         float wy = Ripples.SurfaceY;

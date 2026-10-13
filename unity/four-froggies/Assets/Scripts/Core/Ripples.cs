@@ -40,7 +40,9 @@ public static class Ripples
     {
         if (muteHook || !WaveSim.Active || Mathf.Abs(p.y - SurfaceY) > 1.5f || !InWater(p)) return;
         float k = Mathf.Clamp(amount, 1f, 30f);
-        Kick(p, 0.35f + k * 0.045f, Mathf.Min(0.012f * k, 0.3f), Mathf.Min(0.15f + k * 0.03f, 0.9f), 0.4f + k * 0.05f);
+        // small splashes (wading wash, a boat's stern, a frog paddling) only leave foam; big ones (an entry, a breach) ring
+        float amt = k < 6f ? 0f : Mathf.Min(0.005f * k, 0.15f);
+        Kick(p, 0.35f + k * 0.04f, amt, Mathf.Min(0.08f + k * 0.02f, 0.6f), 0.4f + k * 0.05f);
     }
 
     public static bool InWater(Vector3 p) { return Layout.InPond(p.x, p.z) && Ranch.GY(p.x, p.z) < Layout.WaterY - 0.02f; }
@@ -91,8 +93,8 @@ public static class Ripples
         float under = Mathf.Clamp01((SurfaceY - p.y) / (mechH * 0.9f));
         float kk = Mathf.Lerp(1f, 0.45f, under);
         Vector3 sp = new Vector3(p.x, SurfaceY, p.z);
-        bool simmed = Kick(sp, Mathf.Clamp(mechH * 0.07f, 0.8f, 9f), Mathf.Clamp(0.12f + mechH * 0.012f, 0.15f, 0.9f) * kk, 0.85f * kk, Mathf.Clamp(mechH * 0.09f, 0.9f, 10f));
-        Swell(sp, Mathf.Clamp(mechH * 0.9f, 7f, 70f), Mathf.Clamp(0.05f + mechH * 0.006f, 0.08f, 0.7f) * Mathf.Lerp(1f, 0.6f, under), mechH * 0.12f);
+        bool simmed = Kick(sp, Mathf.Clamp(mechH * 0.07f, 0.8f, 9f), Mathf.Clamp(0.05f + mechH * 0.005f, 0.08f, 0.5f) * kk, 0.6f * kk, Mathf.Clamp(mechH * 0.09f, 0.9f, 10f));
+        Swell(sp, Mathf.Clamp(mechH * 0.9f, 7f, 70f), Mathf.Clamp(0.03f + mechH * 0.004f, 0.06f, 0.5f) * Mathf.Lerp(1f, 0.6f, under), mechH * 0.12f);
         if (!simmed) { Ring(p, r, 1.2f); if (mechH > 40f) Ring(p, r * 0.55f, 0.8f); }
         Surge(mechH);
         Vector3 s = new Vector3(p.x, Layout.WaterY + 0.2f, p.z);

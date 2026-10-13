@@ -43,8 +43,8 @@ public partial class StoryMech
             Vector3 lv = had ? (c - prev) / dt : vel;
             if (lv.sqrMagnitude > 400f) lv = lv.normalized * 20f;
             float ls = lv.magnitude;
-            float depth = Mathf.Min((0.035f + 0.03f * ls) * Mathf.Lerp(0.55f, 1f, footDeep) * scale * (0.8f + 0.2f * breathe), 0.45f);
-            float foam = Mathf.Clamp01(0.5f + ls * 0.12f) * Mathf.Lerp(0.7f, 1f, footDeep);
+            float depth = Mathf.Min((0.02f + 0.016f * ls) * Mathf.Lerp(0.55f, 1f, footDeep) * scale * (0.8f + 0.2f * breathe), 0.3f);
+            float foam = Mathf.Clamp01(0.4f + ls * 0.08f) * Mathf.Lerp(0.7f, 1f, footDeep);
             Ripples.Press(id + i, c, lv, legRad * 1.1f, depth, foam, legRad * 1.3f, 0.55f);
             // spray flicked off a leg swinging through the water
             if (ls > 1.2f && Random.value < dt * Mathf.Min(ls * 3f, 14f) * (Look.Mobile ? 0.5f : 1f))
@@ -61,10 +61,10 @@ public partial class StoryMech
         {
             float bodyR = H * 0.17f;
             float subK = Mathf.Clamp01((wy - hipsY) / (H * 0.2f) + 0.35f);
-            float depth = Mathf.Min((0.05f + 0.035f * sp) * subK * scale * (0.72f + 0.28f * breathe), 0.9f);
+            float depth = Mathf.Min((0.025f + 0.02f * sp) * subK * scale * (0.7f + 0.3f * breathe), 0.6f);
             Vector3 c = new Vector3(to.x, wy, to.z);
-            Ripples.Press(id + 2, c, vel, bodyR, depth, Mathf.Clamp01(0.3f + sp * 0.1f) * subK, bodyR * 1.08f, 0.45f);
-            if (sp > 0.8f) Ripples.Swell(c, Mathf.Clamp(H * 0.9f, 7f, 70f), Mathf.Clamp(0.04f + H * 0.005f, 0.07f, 0.6f) * Mathf.Clamp01(sp / 4f) * subK, bodyR);
+            Ripples.Press(id + 2, c, vel, bodyR, depth, Mathf.Clamp01(0.3f + sp * 0.07f) * subK, bodyR * 1.08f, 0.45f);
+            if (sp > 0.8f) Ripples.Swell(c, Mathf.Clamp(H * 0.9f, 7f, 70f), Mathf.Clamp(0.03f + H * 0.004f, 0.06f, 0.5f) * Mathf.Clamp01(sp / 4f) * subK, bodyR);
             // bow spray at the chest
             if (sp > 1.6f && Random.value < dt * Mathf.Min(sp * 2.5f, 12f) * (Look.Mobile ? 0.5f : 1f))
             {

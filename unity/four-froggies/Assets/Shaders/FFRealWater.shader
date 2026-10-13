@@ -95,15 +95,16 @@ Shader "FF/RealWater"
                 float3 H = normalize(L + V);
                 half nh = saturate(dot(N, H));
                 half3 sun = _LightColor0.rgb * (pow(nh, 900.0) * 30.0 + pow(nh, 120.0) * 0.8) * saturate(L.y * 3.0);
+                sun *= 1.0 / (1.0 + dot(rip.xy, rip.xy) * 60.0);   // ffu38: steep sim waves would smear the glint into blobs
 
                 half3 col = body * aBody * (1.0 - F) + refl * F + sun;
                 half a = 1.0 - (1.0 - aBody) * (1.0 - F);
                 // ffu38: foam (contact lines round legs / hulls, wakes, whitecaps), broken up into lacy patches
-                half fn = tex2D(_NormalMap, w * 0.37 + float2(t * 0.013, -t * 0.009)).r;
-                half fm = saturate(rip.z * 1.7 - fn * 0.65) * saturate(rip.z * 4.0);
-                half3 foamC = half3(0.86, 0.9, 0.9) * (amb * 0.9 + _LightColor0.rgb * saturate(L.y) * 0.75);
-                col = lerp(col, foamC, fm * 0.9);
-                a = max(a, fm * 0.9);
+                half fn = tex2D(_NormalMap, w * 0.61 + float2(t * 0.013, -t * 0.009)).r * 0.6 + tex2D(_NormalMap, w * 1.7 - float2(t * 0.02, t * 0.011)).g * 0.4;
+                half fm = smoothstep(0.12, 0.75, rip.z * 1.25 - fn * 0.55) * 0.75;
+                half3 foamC = half3(0.84, 0.88, 0.88) * (amb * 0.85 + _LightColor0.rgb * saturate(L.y) * 0.6);
+                col = lerp(col, foamC, fm);
+                a = max(a, fm);
                 half edge = saturate(depth * 16.0);            // soft shoreline
                 col *= edge; a *= edge;
                 UNITY_APPLY_FOG_COLOR(i.fogCoord, col, half4(unity_FogColor.rgb * a, 1));

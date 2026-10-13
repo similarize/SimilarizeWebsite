@@ -56,8 +56,8 @@ public static class PondPhysics
         float halfL = Mathf.Abs(Vector3.Dot(b.extents, new Vector3(Mathf.Abs(f.x), 0f, Mathf.Abs(f.z))));
         float halfW = Mathf.Abs(Vector3.Dot(b.extents, new Vector3(Mathf.Abs(rt.x), 0f, Mathf.Abs(rt.z))));
         float r = Mathf.Clamp(halfW, 0.35f, 4f);
-        float depth = Mathf.Min((0.04f + 0.03f * sp) * hk * Mathf.Sqrt(r), 0.5f);
-        float foam = Mathf.Clamp01(0.35f + sp * 0.06f) * hk;
+        float depth = Mathf.Min((0.025f + 0.018f * sp) * hk * Mathf.Sqrt(r), 0.35f);
+        float foam = Mathf.Clamp01(0.3f + sp * 0.04f) * hk;
         int id = v.GetInstanceID() * 2;
         Vector3 c = new Vector3(b.center.x, wy, b.center.z);
         if (halfL > halfW * 1.4f)

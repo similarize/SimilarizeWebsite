@@ -64,11 +64,11 @@ public class WaveSim : MonoBehaviour
         float dx = Size / Res, dt = 1f / Rate;
         float k = Mathf.Min(0.45f, WaveC * WaveC * dt * dt / (dx * dx));
         sim.SetVector("_Shift", new Vector4(0f, 0f, k, 0.9955f));
-        sim.SetVector("_Foam", new Vector4(0.982f, 0.18f, 0.16f, 3f));
+        sim.SetVector("_Foam", new Vector4(0.976f, 0.2f, 0.3f, 2f));
         ok = true;
         Shader.SetGlobalTexture("_FFRipTex", a);
         Shader.SetGlobalVector("_FFRipRect", Vector4.zero);
-        Shader.SetGlobalVector("_FFRipP", new Vector4(1f / Res, dx, 0f, 1.6f));
+        Shader.SetGlobalVector("_FFRipP", new Vector4(1f / Res, dx, 0f, 1.25f));
         Debug.Log("WaveSim: on " + Res + " px / " + Size + " m (" + dx.ToString("0.00") + " m/px), k " + k.ToString("0.000") + (mobile ? " (lite)" : ""));
     }
 
