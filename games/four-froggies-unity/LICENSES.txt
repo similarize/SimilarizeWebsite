@@ -110,6 +110,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    - Mars: "Puppy Playing in The Garden" by Spring Spring - https://opengameart.org/content/puppy-playing-in-the-garden
    - Callisto: "Outer Space Loop" by wipics - https://opengameart.org/content/outer-space-loop
    Everything else (synth engines, rocket roar layers, UI pings) is synthesised for this game.
+   Cybertruck EV voice (ffu39): fully synthesised in code (Core/SfxSynth.cs) - motor whine, low-speed pedestrian-warning
+   tone, tyre roll, gravel grit, wind, regen whine. No recording is used. Reference only (not included): Tesla's
+   Cybertruck "Normal Operating Sounds" page (https://service.tesla.com/docs/Public/diy/cybertruck/en_us/GUID-AA58ED67-9C93-4EE6-8B19-9FDABE018787.html).
+   No CC0 Cybertruck recording was found; the one free drive-by video on Wikimedia Commons is CC BY-SA 4.0 and was not used.
 
 11. Realism test (only with ?realism=1 in the URL; streamed from real/, not part of the normal game) - all CC0 1.0:
    - Sky: "Sunflowers (Pure Sky)" HDRI by Poly Haven - https://polyhaven.com/a/sunflowers_puresky
