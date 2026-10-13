@@ -11,6 +11,38 @@ public static class Ripples
     static readonly Color Foam = new Color(0.92f, 0.97f, 1f, 0.55f);
     static readonly Color Spray = new Color(0.85f, 0.93f, 1f, 0.7f);
 
+    // ---------------- ffu38: the wave sim (Core/WaveSim.cs) ----------------
+    // Press: a leg / hull / body crossing the surface at p (y ignored), moving at vel. depth = how far it pushes the water
+    // down (m), foam 0..1 on its contact line (ring radius ring m, 0 = a disc), str 0..1 how hard it holds the water.
+    // Call every frame with a stable key while it is in the water (it expires 0.15 s after the last call).
+    public static void Press(int key, Vector3 p, Vector3 vel, float radius, float depth, float foam, float ring, float str = 0.5f)
+    {
+        if (WaveSim.I != null && Layout.InPond(p.x, p.z)) WaveSim.I.AddPress(key, p, vel, radius, depth, foam, ring, str);
+    }
+    // Kick: a one-off impulse (footfall, splash): amount m of upwelling (negative = a hole) over radius, with foam
+    public static bool Kick(Vector3 p, float radius, float amount, float foam, float ring = 0f)
+    {
+        if (!WaveSim.Active || !WaveSim.I.Inside(p, radius) || !Layout.InPond(p.x, p.z)) return false;
+        WaveSim.I.AddKick(p, radius, amount, foam, ring);
+        return true;
+    }
+    // Swell: a big slow ring of swell (wavelength lambda m, amp m) from a mech's body radius r0 - whole pond, analytic
+    static float swellT;
+    public static void Swell(Vector3 p, float lambda, float amp, float r0)
+    {
+        if (!Layout.InPond(p.x, p.z) || Time.time < swellT) return;
+        swellT = Time.time + Mathf.Clamp(lambda / Mathf.Sqrt(9.81f * lambda / (2f * Mathf.PI)) * 0.8f, 1.2f, 6f);   // ~one per wave period
+        WaveSim.AddSwell(p, lambda, amp, r0);
+    }
+    // FX.Splash hook: any splash at the pond surface also kicks the sim (boats, Cyberboat, sub breach, frogs, shells)
+    static bool muteHook;
+    public static void SplashHook(Vector3 p, float amount)
+    {
+        if (muteHook || !WaveSim.Active || Mathf.Abs(p.y - SurfaceY) > 1.5f || !InWater(p)) return;
+        float k = Mathf.Clamp(amount, 1f, 30f);
+        Kick(p, 0.35f + k * 0.045f, Mathf.Min(0.012f * k, 0.3f), Mathf.Min(0.15f + k * 0.03f, 0.9f), 0.4f + k * 0.05f);
+    }
+
     public static bool InWater(Vector3 p) { return Layout.InPond(p.x, p.z) && Ranch.GY(p.x, p.z) < Layout.WaterY - 0.02f; }
     // ffu37 merge: the one pond surface (the plane + the displacement surge) - PondPhysics, mechs and the under-water view use it
     public static float SurfaceY { get { return Layout.WaterY + Rise; } }
@@ -24,7 +56,10 @@ public static class Ripples
     // radius = how far the ring travels (m); strength 0..1 controls particle count / opacity
     public static void Ring(Vector3 p, float radius, float strength = 1f)
     {
-        if (!InWater(p) || !Budget()) return;
+        if (!InWater(p)) return;
+        // ffu38: real ripples in the sim instead of the flat particle ring (particles stay as the fallback)
+        if (Kick(p, Mathf.Clamp(radius * 0.1f, 0.35f, 6f), Mathf.Clamp(0.03f + radius * 0.012f, 0.03f, 0.5f) * Mathf.Clamp(strength, 0.3f, 1.5f), 0.35f * Mathf.Clamp01(strength), Mathf.Clamp(radius * 0.12f, 0.4f, 7f))) return;
+        if (!Budget()) return;
         float y = Layout.WaterY + Rise + 0.06f;
         int n = Mathf.Clamp(Mathf.RoundToInt((Look.Mobile ? 8f : 14f) * Mathf.Clamp(strength, 0.3f, 1.5f)), 5, Look.Mobile ? 12 : 22);
         float life = Mathf.Clamp(0.9f + radius * 0.05f, 0.9f, 2.4f);
@@ -51,16 +86,24 @@ public static class Ripples
             return;
         }
         float r = Mathf.Clamp(mechH * 0.35f, 3f, 60f);
-        Ring(p, r, 1.2f);
+        // ffu38: a footfall in water this deep relative to the mech: shallow = sharp splash + ring, deeper = a softer
+        // upwelling (the foot is further below the surface); big slow swell rings from every mech step
+        float under = Mathf.Clamp01((SurfaceY - p.y) / (mechH * 0.9f));
+        float kk = Mathf.Lerp(1f, 0.45f, under);
+        Vector3 sp = new Vector3(p.x, SurfaceY, p.z);
+        bool simmed = Kick(sp, Mathf.Clamp(mechH * 0.07f, 0.8f, 9f), Mathf.Clamp(0.12f + mechH * 0.012f, 0.15f, 0.9f) * kk, 0.85f * kk, Mathf.Clamp(mechH * 0.09f, 0.9f, 10f));
+        Swell(sp, Mathf.Clamp(mechH * 0.9f, 7f, 70f), Mathf.Clamp(0.05f + mechH * 0.006f, 0.08f, 0.7f) * Mathf.Lerp(1f, 0.6f, under), mechH * 0.12f);
+        if (!simmed) { Ring(p, r, 1.2f); if (mechH > 40f) Ring(p, r * 0.55f, 0.8f); }
         Surge(mechH);
-        if (mechH > 40f) Ring(p, r * 0.55f, 0.8f);
         Vector3 s = new Vector3(p.x, Layout.WaterY + 0.2f, p.z);
-        FX.Splash(s, Mathf.Clamp(mechH * 0.4f, 8f, Look.Mobile ? 16f : 30f));
+        muteHook = true;
+        FX.Splash(s, Mathf.Clamp(mechH * 0.4f, 8f, Look.Mobile ? 16f : 30f) * kk);
+        muteHook = false;
         int n = Look.Mobile ? 4 : 8; float h = Mathf.Clamp(mechH * 0.08f, 1f, 12f);
         for (int i = 0; i < n; i++)
         {
             Vector2 u = Random.insideUnitCircle * 0.4f;
-            FX.Puff(s, new Vector3(u.x, 1f, u.y) * h * Random.Range(1.2f, 2f), h * 0.18f, Random.Range(0.6f, 1.1f), Spray);
+            FX.Spray(s, new Vector3(u.x, 1f, u.y) * h * Random.Range(1.2f, 2f) * kk, h * 0.16f, Random.Range(0.6f, 1.1f), Spray);   // ffu38: soft droplets, not flat quads
         }
     }
 
@@ -73,7 +116,7 @@ public static class Ripples
     public static float Rise { get; private set; }
     static float amp, t = 99f, dur = 2.5f, shoreT;
 
-    public static void Register(GameObject water) { Water = water.transform; water.AddComponent<RippleDriver>(); }
+    public static void Register(GameObject water) { Water = water.transform; water.AddComponent<RippleDriver>(); WaveSim.Init(water); }
 
     public static void Surge(float mechH)
     {

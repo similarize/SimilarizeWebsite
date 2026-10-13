@@ -27,8 +27,10 @@ Shader "LB/Water"
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_fog
+            #pragma target 3.0
             #include "UnityCG.cginc"
             #include "Lighting.cginc"
+            #include "FFRipple.cginc"
 
             sampler2D _SeaMap, _Noise;
             float4 _Shallow, _Deep, _FoamColor, _SeaRect;
@@ -58,7 +60,8 @@ Shader "LB/Water"
                 half3 n1 = tex2D(_Noise, w + float2(t * 0.021, t * 0.013)).rgb * 2.0 - 1.0;
                 half3 n2 = tex2D(_Noise, w * 2.3 + float2(-t * 0.017, t * 0.027)).rgb * 2.0 - 1.0;
                 half2 nn = (n1.xy + n2.yx * 0.7) * 0.32;
-                float3 N = normalize(float3(nn.x, 1.0, nn.y));
+                float4 rip = FFRipple(i.wp.xz);   // ffu38 wave sim ripples + swells
+                float3 N = normalize(float3(nn.x - rip.x, 1.0, nn.y - rip.y));
                 float3 V = normalize(_WorldSpaceCameraPos - i.wp);
 
                 float2 suv = (i.wp.xz - _SeaRect.xy) * _SeaRect.zw;
@@ -84,6 +87,9 @@ Shader "LB/Water"
                 half foam = shore * (0.55 + wave * 0.6) - brk * 0.5;
                 foam = smoothstep(0.18, 0.5, foam);
                 col = lerp(col, _FoamColor.rgb, foam * 0.9);
+                half fm = saturate(rip.z * 1.7 - brk * 0.65) * saturate(rip.z * 4.0);
+                col = lerp(col, _FoamColor.rgb * 0.92, fm * 0.85);
+                foam = max(foam, fm * 0.85);
 
                 half a = lerp(_Shallow.a, _Deep.a, depth);
                 a = saturate(max(a + fres * 0.25, foam));

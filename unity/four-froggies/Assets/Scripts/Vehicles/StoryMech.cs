@@ -575,6 +575,7 @@ public partial class StoryMech : Vehicle
         if (grounded && wd > 0f && ground < pos.y - (0.6f + H * 0.04f)) { grounded = false; vy = Mathf.Min(vy, 0f); }   // ffu37: the bed drops away -> settle down slowly
         if (grounded) { p.y = wd > 0f ? Mathf.Max(ground, pos.y - SinkMax(H) * dt) : ground; vy = 0f; }   // ffu37: never drops faster than it sinks
         PondFx(pos, p, H, wd);
+        MechWater(p, (p - pos) / Mathf.Max(dt, 1e-4f), H, dt);   // ffu38: legs / body push real waves + foam (StoryMechWater.cs)
         Altitude = Mathf.Max(0f, p.y - ground);
         if (Altitude > 1f) atSpawn = false;
         if ((new Vector2(p.x, p.z) - new Vector2(spawnPos.x, spawnPos.z)).sqrMagnitude > 4f) atSpawn = false;

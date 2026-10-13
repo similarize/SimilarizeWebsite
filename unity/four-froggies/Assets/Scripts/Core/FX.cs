@@ -203,6 +203,7 @@ public static class FX
     public static void Splash(Vector3 p, float amount)
     {
         if (ps == null) return;
+        Ripples.SplashHook(p, amount);   // ffu38: splashes on the pond also ripple the wave sim
         int n = Mathf.Clamp(Mathf.RoundToInt(amount), 1, 30);
         for (int i = 0; i < n; i++)
         {

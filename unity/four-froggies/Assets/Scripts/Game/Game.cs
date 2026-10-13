@@ -188,6 +188,7 @@ public partial class Game : MonoBehaviour
             else if (IsStompDemo(sc)) StompDemoStart(f, sc);                 // ffu28 mech footfalls / Optimus suit on a slope (GameStomp.cs)
             else if (IsGardenDemo(sc)) GardenDemoStart(f, sc);               // ffu32 garden retreat / horse riding (GardenDemo.cs)
             else if (Is35(sc)) Demo35Start(f, sc);
+            else if (Is38(sc)) Demo38Start(f, sc);                             // ffu38 mech wading waves (GameFfu38.cs)
             else if (Is37(sc)) Demo37Start(f, sc);                             // ffu37 pond bed sinking / submarine breach (GameFfu37.cs)                             // ffu35 stock trailer / pad tests (GameFfu35.cs)
             else if (IsTrailerDemo(sc)) TrailerDemoStart(f, sc);             // ffu31 trailer barn / hitch / tow / bike in the toy hauler (GameTrailer.cs)
             else if (Is30(sc)) Demo30Start(f, sc);                           // ffu30 RC raceway / Cybertruck EV voice / dirt bike (Game30Demo.cs)
@@ -216,6 +217,7 @@ public partial class Game : MonoBehaviour
         if (IsStompDemo(sc)) { if (!StompDemoCam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }
         if (IsGardenDemo(sc)) { if (!GardenDemoCam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }
         if (Is35(sc)) { if (!Demo35Cam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }
+        if (Is38(sc)) { if (!Demo38Cam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }
         if (Is37(sc)) { if (!Demo37Cam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }
         if (IsTrailerDemo(sc)) { if (!TrailerDemoCam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }
         if (Is30(sc)) { if (!Demo30Cam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }   // ffu30

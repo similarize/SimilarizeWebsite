@@ -36,8 +36,42 @@ public static class PondPhysics
         return Mathf.Clamp01((Ripples.SurfaceY - bottom) / h);
     }
 
+    // ffu38: anything with a rigidbody that floats / wades / sinks through the ranch pond surface presses the wave sim
+    // (Core/WaveSim.cs): one press for a round body, two (bow + stern) for a long one, so it leaves a bow wave and a V
+    // wake; strength ~ speed x how much of the hull is at the waterline, and it fades once the whole thing is under.
+    static void Wake(Vehicle v)
+    {
+        if (v.rb == null || v.stowed || v is StoryMech || !WaveSim.Active) return;
+        Vector3 p = v.rb.position;
+        if (Mathf.Abs(p.x) > Layout.Half || Mathf.Abs(p.z) > Layout.Half || !Layout.InPond(p.x, p.z)) return;
+        float wy = Ripples.SurfaceY;
+        Bounds b = v.body != null ? v.body.bounds : new Bounds(p, new Vector3(2f, 2f, 2f));
+        if (b.min.y > wy + 0.05f || b.max.y < wy - 0.25f) return;   // clear of the water / all under
+        if (v.flyer && b.min.y > wy - 0.3f && v.rb.velocity.y > 1f) return;
+        float hk = Mathf.Clamp01((wy - b.min.y) / 0.35f) * Mathf.Clamp01((b.max.y - wy) / 0.3f + 0.25f);
+        Vector3 vel = v.rb.velocity; vel.y = 0f;
+        float sp = Mathf.Min(vel.magnitude, 25f);
+        Vector3 f = v.transform.forward; f.y = 0f; if (f.sqrMagnitude < 1e-4f) f = Vector3.forward; f.Normalize();
+        Vector3 rt = new Vector3(f.z, 0f, -f.x);
+        float halfL = Mathf.Abs(Vector3.Dot(b.extents, new Vector3(Mathf.Abs(f.x), 0f, Mathf.Abs(f.z))));
+        float halfW = Mathf.Abs(Vector3.Dot(b.extents, new Vector3(Mathf.Abs(rt.x), 0f, Mathf.Abs(rt.z))));
+        float r = Mathf.Clamp(halfW, 0.35f, 4f);
+        float depth = Mathf.Min((0.04f + 0.03f * sp) * hk * Mathf.Sqrt(r), 0.5f);
+        float foam = Mathf.Clamp01(0.35f + sp * 0.06f) * hk;
+        int id = v.GetInstanceID() * 2;
+        Vector3 c = new Vector3(b.center.x, wy, b.center.z);
+        if (halfL > halfW * 1.4f)
+        {
+            float o = halfL - r * 0.8f;
+            Ripples.Press(id, c + f * o, vel, r, depth, foam, r * 1.15f, 0.5f);
+            Ripples.Press(id + 1, c - f * o, vel, r, depth * 0.8f, foam * 0.9f, r * 1.15f, 0.5f);
+        }
+        else Ripples.Press(id, c, vel, r, depth, foam, r * 1.15f, 0.5f);
+    }
+
     public static void Step(Vehicle v, float dt)
     {
+        Wake(v);   // ffu38: hulls / bodies crossing the surface push real waves + foam (boats and the Cyberboat too)
         if (!Applies(v)) { v.pondSub = 0f; return; }
         var gv = v as GroundVehicle;
         bool boatMode = gv != null && gv.amph != null && gv.amph.k > 0.02f;

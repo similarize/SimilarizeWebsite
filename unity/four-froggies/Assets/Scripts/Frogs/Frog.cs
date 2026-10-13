@@ -307,6 +307,9 @@ public partial class Frog : MonoBehaviour
             float mv = new Vector2(p.x - wakeP.x, p.z - wakeP.z).magnitude;
             wakeT -= dt;
             if (mv > 0.02f && wakeT <= 0f) { wakeT = 0.35f; Ripples.Ring(p, 1.6f + Mathf.Min(mv / Mathf.Max(dt, 0.001f), 6f) * 0.2f, 0.5f); }
+            // ffu38: a swimming / wading froggy presses the wave sim too (tiny bow wave + V wake, foam ring round it)
+            Vector3 fv = (p - wakeP) / Mathf.Max(dt, 0.001f); fv.y = 0f; if (fv.sqrMagnitude > 64f) fv = fv.normalized * 8f;
+            if (p.y > Ripples.SurfaceY - 1.2f) Ripples.Press(GetInstanceID() * 4 + 3, p, fv, 0.42f, 0.02f + 0.012f * fv.magnitude, Mathf.Clamp01(0.15f + fv.magnitude * 0.08f), 0.5f, 0.45f);
         }
         wakeP = p;
         // ffu15: floating at the pond surface - hold DOWN / DIVE to dive back down to the reef (underwater world)

@@ -14,6 +14,7 @@ Shader "FF/RealWater"
         _Strength ("Ripple strength", Float) = 0.55
         _Speed ("Speed", Float) = 1
         _Detail ("Fine ripples", Float) = 1
+        _Patch ("ffu38 ripple patch mesh (vertex displacement)", Float) = 0
     }
     SubShader
     {
@@ -31,10 +32,11 @@ Shader "FF/RealWater"
             #pragma target 3.0
             #include "UnityCG.cginc"
             #include "Lighting.cginc"
+            #include "FFRipple.cginc"
 
             sampler2D _SeaMap, _NormalMap;
             float4 _SeaRect, _Shallow, _Deep;
-            float _Strength, _Speed, _Detail;
+            float _Strength, _Speed, _Detail, _Patch;
 
             struct v2f { float4 pos : SV_POSITION; float3 wp : TEXCOORD0; UNITY_FOG_COORDS(1) };
 
@@ -42,6 +44,8 @@ Shader "FF/RealWater"
             {
                 v2f o;
                 float4 wp = mul(unity_ObjectToWorld, v.vertex);
+                // ffu38: the patch mesh near the view really moves with the wave sim + swells
+                if (_Patch > 0.5) wp.y += FFRippleH(wp.xz);
                 o.wp = wp.xyz;
                 o.pos = UnityWorldToClipPos(wp.xyz);
                 UNITY_TRANSFER_FOG(o, o.pos);
@@ -52,15 +56,22 @@ Shader "FF/RealWater"
 
             half4 frag(v2f i) : SV_Target
             {
+                // ffu38: the big flat plane leaves the window to the displaced patch mesh (no double layer)
+                if (_Patch < 0.5 && _FFRipP.z > 0.5)
+                {
+                    float2 pu = FFRipUV(i.wp.xz);
+                    if (pu.x > 0.0 && pu.y > 0.0 && pu.x < 1.0 && pu.y < 1.0) discard;
+                }
                 float t = _Time.y * _Speed;
                 float2 w = i.wp.xz;
+                float4 rip = FFRipple(w);
                 float dist = length(_WorldSpaceCameraPos - i.wp);
                 float near = saturate(1.0 - dist / 160.0);
                 half2 s = Rip(w * 0.045 + float2(t * 0.006, t * 0.004)) * 0.8
                         + Rip(w * 0.13 + float2(-t * 0.011, t * 0.015)) * 0.6
                         + Rip(w * 0.41 + float2(t * 0.027, -t * 0.019)) * 0.35 * near * _Detail;
                 s *= _Strength * lerp(0.45, 1.0, near);
-                float3 N = normalize(float3(s.x, 1.0, s.y));
+                float3 N = normalize(float3(s.x - rip.x, 1.0, s.y - rip.y));
                 float3 V = normalize(_WorldSpaceCameraPos - i.wp);
                 half ndv = saturate(dot(N, V));
                 half F = 0.02 + 0.46 * pow(1.0 - ndv, 4.0);   // ffu23: lower cap - the low-angle view was a grey mirror
@@ -87,6 +98,12 @@ Shader "FF/RealWater"
 
                 half3 col = body * aBody * (1.0 - F) + refl * F + sun;
                 half a = 1.0 - (1.0 - aBody) * (1.0 - F);
+                // ffu38: foam (contact lines round legs / hulls, wakes, whitecaps), broken up into lacy patches
+                half fn = tex2D(_NormalMap, w * 0.37 + float2(t * 0.013, -t * 0.009)).r;
+                half fm = saturate(rip.z * 1.7 - fn * 0.65) * saturate(rip.z * 4.0);
+                half3 foamC = half3(0.86, 0.9, 0.9) * (amb * 0.9 + _LightColor0.rgb * saturate(L.y) * 0.75);
+                col = lerp(col, foamC, fm * 0.9);
+                a = max(a, fm * 0.9);
                 half edge = saturate(depth * 16.0);            // soft shoreline
                 col *= edge; a *= edge;
                 UNITY_APPLY_FOG_COLOR(i.fogCoord, col, half4(unity_FogColor.rgb * a, 1));
