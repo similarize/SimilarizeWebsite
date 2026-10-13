@@ -273,6 +273,7 @@ public class Destruct : MonoBehaviour
             float k = 1f - Mathf.Sqrt(d2) / radius;
             b.hp -= damage * (0.5f + 0.5f * k) * (b.kind == BreakKind.Tree || b.kind == BreakKind.Flag || b.kind == BreakKind.Furniture ? 2f : 1f);
             if (b.hp <= 0f) { crushing = true; Break(b, p, damage, false); crushing = false; }
+            else if (b.kind != BreakKind.Window) FX.Smoke(b.bounds.ClosestPoint(p), 0.8f + damage * 0.04f, new Color(0.35f, 0.33f, 0.3f, 0.6f));   // as Blast did
         }
         if (RanchLife.I != null)
             foreach (var rb in RanchLife.I.robots)

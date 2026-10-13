@@ -80,6 +80,7 @@ public partial class Frog : MonoBehaviour
     float hopCool;
     bool swimming, wasSwim;
     Vector3 wakeP; float wakeT;   // ffw pond wakes
+    bool diving; float bottomT;   // ffw pond dive
     float exitCool;
 
     // AI
@@ -293,11 +294,15 @@ public partial class Frog : MonoBehaviour
         if (world == WorldId.Space && SpaceWorld.I != null && SpaceWorld.I.ship != null) { SpaceWorld.I.ship.AdoptStray(this); return; }
         spaceGravity = world == WorldId.Mars ? 0.45f : world == WorldId.Callisto ? 0.22f : 1f;
         Vector3 p = transform.position;
-        swimming = world == WorldId.Ranch && Layout.InPond(p.x, p.z) && p.y < Layout.WaterY - 0.35f;
+        // ffw: float higher (body above the line) and dive in the pond itself. Swimming = deep enough water under us and
+        // the feet at / below the surface (hysteresis so the higher float doesn't flicker in and out).
+        bool deepHere = world == WorldId.Ranch && Layout.InPond(p.x, p.z) && Ranch.GY(p.x, p.z) < Layout.WaterY - 0.6f;
+        swimming = deepHere && (p.y < Layout.WaterY - 0.35f || (wasSwim && p.y < Layout.WaterY + Ripples.Rise + 0.1f) || diving);
+        if (!swimming) { diving = false; bottomT = 0f; }
         if (swimming && !wasSwim) { FX.Splash(p + Vector3.up * 0.5f, 14); if (human) Sfx.Play(Sfx.Splash, 0.9f); }
         wasSwim = swimming;
         // ffw: gentle wakes while a froggy wades / swims through the pond
-        if (world == WorldId.Ranch && p.y < Layout.WaterY + 0.15f && Layout.InPond(p.x, p.z))
+        if (world == WorldId.Ranch && !diving && p.y < Layout.WaterY + 0.15f && Layout.InPond(p.x, p.z))
         {
             float mv = new Vector2(p.x - wakeP.x, p.z - wakeP.z).magnitude;
             wakeT -= dt;
@@ -306,14 +311,25 @@ public partial class Frog : MonoBehaviour
         wakeP = p;
         // ffu15: floating at the pond surface - hold DOWN / DIVE to dive back down to the reef (underwater world)
         if (!swimming) scubaSurface = false;
-        SetScuba(swimming && scubaSurface);
-        if (swimming && human && UnderwaterWorld.I != null)
+        SetScuba(swimming && (scubaSurface || diving));
+        // ffw: hold B / SHIFT / DIVE (the same dive button as before) = swim down in the pond; stick moves; A / SPACE swims
+        // up; let go and you float back up. Keep holding on the pond floor ~1.2 s = the old trip down to the reef.
+        if (swimming)
         {
-            if (prompt.Length == 0) prompt = (inputKind == InputKind.Gamepad ? "Hold B" : inputKind == InputKind.Touch ? "Hold DIVE" : "Hold SHIFT") + ": dive down to the reef   |   swim to shore to climb out";
-            diveHoldT = input.downHeld ? diveHoldT + dt : 0f;
-            if (diveHoldT > 0.3f) { diveHoldT = 0f; scubaSurface = false; UnderwaterWorld.I.DiveFromPond(this); return; }
+            if (input.downHeld && !diving) { diving = true; FX.Bubble(p + Vector3.up * 0.4f, 8); if (human) Sfx.Play(Sfx.Splash, 0.5f, 0.8f); }
+            if (diving && !input.downHeld && p.y > Layout.WaterY + Ripples.Rise - 0.45f) diving = false;   // back at the top
+            if (human && prompt.Length == 0)
+            {
+                string dv = inputKind == InputKind.Gamepad ? "Hold B" : inputKind == InputKind.Touch ? "Hold DIVE" : "Hold SHIFT";
+                string up = inputKind == InputKind.Gamepad ? "A" : inputKind == InputKind.Touch ? "A" : "SPACE";
+                prompt = diving ? dv + ": swim down (hold on the floor for the reef)   |   " + up + ": swim up   |   let go: float up"
+                                : dv + ": dive   |   swim to shore to climb out";
+            }
+            bool onFloor = diving && cc.isGrounded;
+            bottomT = onFloor && input.downHeld ? bottomT + dt : 0f;
+            if (bottomT > 1.2f && human && UnderwaterWorld.I != null) { bottomT = 0f; diving = false; scubaSurface = false; UnderwaterWorld.I.DiveFromPond(this); return; }
         }
-        else diveHoldT = 0f;
+        diveHoldT = 0f;
 
         Vector3 wish = Vector3.zero;
         if (input.move.sqrMagnitude > 0.0001f)
@@ -334,10 +350,22 @@ public partial class Frog : MonoBehaviour
         hopCool -= dt;
         if (swimming)
         {
-            float wantY = Layout.WaterY - 0.55f;
-            vel.y = Mathf.Lerp(vel.y, (wantY - p.y) * 4f, dt * 5f);
-            if (input.hop) { vel.y = HopV * 0.8f; FX.Splash(p + Vector3.up * 0.5f, 10); if (human) Sfx.Play(Sfx.Splash, 0.8f); }
-            if (Random.value < planar.magnitude * dt * 2f) FX.Splash(p + Vector3.up * 0.4f, 1);
+            if (diving)
+            {
+                // underwater: B down, A up, released = gentle rise; the CharacterController stops us on the pond floor
+                float vy = input.downHeld ? -2.6f : 1.8f;
+                if (input.hopHeld || input.hop) vy = 3.2f;
+                vel.y = Mathf.Lerp(vel.y, vy, dt * 4f);
+                ScubaFx(dt, planar.magnitude / SwimSpeed);
+            }
+            else
+            {
+                // ffw: float with head + body above the line (was -0.55 = only the eyes showed), gentle bob, rides the surge
+                float wantY = Layout.WaterY + Ripples.Rise - 0.3f + Mathf.Sin(Time.time * 2.2f + id) * 0.05f;
+                vel.y = Mathf.Lerp(vel.y, (wantY - p.y) * 4f, dt * 5f);
+                if (input.hop) { vel.y = HopV * 0.8f; FX.Splash(p + Vector3.up * 0.5f, 10); if (human) Sfx.Play(Sfx.Splash, 0.8f); }
+                if (Random.value < planar.magnitude * dt * 2f) FX.Splash(p + Vector3.up * 0.4f, 1);
+            }
         }
         else
         {
