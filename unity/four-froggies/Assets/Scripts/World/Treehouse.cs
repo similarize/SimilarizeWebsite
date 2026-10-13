@@ -108,7 +108,7 @@ public static class Treehouse
         // pitched roof (ridge along x at 1.2 m above the walls), walkable slabs, gable fill
         float ang = Mathf.Atan2(1.2f, 2.4f) * Mathf.Rad2Deg, top = wy + H;
         for (int s = -1; s <= 1; s += 2)
-            B(new Vector3(3.2f, top + 0.62f, 1.3f * s), new Vector3(4.7f, 0.14f, 2.95f), roofC, true, ang * s);
+            RoofBreak.Add(B(new Vector3(3.2f, top + 0.62f, 1.3f * s), new Vector3(4.7f, 0.14f, 2.95f), roofC, true, ang * s), 1, 1);   // ffu39: breakable
         for (int k = 0; k < 3; k++)
             for (int e = 0; e < 2; e++)
                 B(new Vector3(e == 0 ? 1.2f : 5.2f, top + 0.2f + k * 0.4f, 0f), new Vector3(0.14f, 0.4f, 4.2f * (1f - k / 3f)), plankD, false);

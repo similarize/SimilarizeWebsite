@@ -60,7 +60,10 @@ Shader "LB/Water"
                 half3 n1 = tex2D(_Noise, w + float2(t * 0.021, t * 0.013)).rgb * 2.0 - 1.0;
                 half3 n2 = tex2D(_Noise, w * 2.3 + float2(-t * 0.017, t * 0.027)).rgb * 2.0 - 1.0;
                 half2 nn = (n1.xy + n2.yx * 0.7) * 0.32;
-                float4 rip = FFRipple(i.wp.xz);   // ffu38 wave sim ripples + swells
+                half pmask = FFPondMask(i.wp.xz);   // ffu39: masked to the shoreline ellipse
+                if (pmask <= 0.001) discard;
+                float silt;
+                float4 rip = FFRippleS(i.wp.xz, silt);   // ffu38 wave sim ripples + swells (ffu39: + silt)
                 float3 N = normalize(float3(nn.x - rip.x, 1.0, nn.y - rip.y));
                 float3 V = normalize(_WorldSpaceCameraPos - i.wp);
 
@@ -85,14 +88,16 @@ Shader "LB/Water"
                 half wave = sin(depth * 46.0 - t * 2.1 + n1.z * 2.5) * 0.5 + 0.5;
                 half brk = tex2D(_Noise, i.wp.xz * 0.21 + float2(t * 0.03, -t * 0.02)).b;
                 half foam = shore * (0.55 + wave * 0.6) - brk * 0.5;
-                foam = smoothstep(0.18, 0.5, foam);
+                foam = smoothstep(0.18, 0.5, foam) * 0.12;   // ffu39: a pond barely foams at the shore
                 col = lerp(col, _FoamColor.rgb, foam * 0.9);
-                half fm = smoothstep(0.08, 0.6, rip.z * 1.4 - brk * 0.5) * 0.85;
+                half sl = saturate(silt * 1.6);              // ffu39: muddy silt plume
+                col = lerp(col, half3(0.3, 0.26, 0.15), sl * 0.8);
+                half fm = smoothstep(0.25, 0.75, rip.z * 1.3 - brk * 0.5) * 0.7;   // brief spray only
                 col = lerp(col, _FoamColor.rgb * 0.92, fm * 0.85);
-                foam = max(foam, fm * 0.85);
+                foam = max(foam, max(fm * 0.85, sl * 0.6));
 
                 half a = lerp(_Shallow.a, _Deep.a, depth);
-                a = saturate(max(a + fres * 0.25, foam));
+                a = saturate(max(a + fres * 0.25, foam)) * pmask;
                 UNITY_APPLY_FOG(i.fogCoord, col);
                 return half4(col, a);
             }

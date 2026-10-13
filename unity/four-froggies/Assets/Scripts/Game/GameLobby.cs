@@ -571,6 +571,7 @@ public partial class Game
         {
             if (!Hit(tiles[c], pos)) continue;
             Slot s = FindSlot(kind);
+            if (s == null && kind != InputKind.Gamepad && slots.Count > 0) s = slots[0];   // ffu39: a tap picks for the seated pad player
             if (s == null) s = Join(kind, null);
             if (s != null) PickChar(s, c);
             return true;

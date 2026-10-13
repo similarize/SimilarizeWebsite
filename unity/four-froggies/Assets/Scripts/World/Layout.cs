@@ -107,7 +107,7 @@ public static class Layout
         return Mathf.Sqrt(dx * dx + dz * dz);
     }
 
-    public static bool InPond(float x, float z) { return PondQ(x, z) < 1.08f; }
+    public static bool InPond(float x, float z) { return PondQ(x, z) < 1.045f; }   // ffu39: was 1.08 - the shoreline is the ellipse now (PondRim)
 
     // 0 outside every island, 1 at an island's centre
     public static float IslandK(float x, float z, out int which)
@@ -195,6 +195,7 @@ public static class Layout
             float k = Mathf.SmoothStep(0f, 1f, (1.25f - q) / 0.45f);
             y = Mathf.Lerp(y, PondBedY(x, z), k);
         }
+        y = PondRim(x, z, y);   // ffu39: a natural bank all round the pond - no lawn below the water line outside it
         // edge berm
         float edge = Mathf.Max(Mathf.Abs(x), Mathf.Abs(z)) / Half;
         y += Mathf.SmoothStep(0f, 1f, (edge - 0.86f) / 0.14f) * 12f;
@@ -224,6 +225,35 @@ public static class Layout
             y = Mathf.Max(y, -2.5f - Mathf.Max(0f, d - Islands[i].z * 1.35f) * 1.1f);
         }
         return y;
+    }
+
+    // ---------------- ffu39: pond rim ----------------
+    // Before: from q 1.0 out to the water plane's edge (q 1.25) the ground only blended from the shelf back to the Perlin
+    // lawn, so wherever the lawn noise dipped (down to ~2 m under WaterY) the pond plane covered grass = "flooding" up to
+    // 20 m past the reeds (and its hard elliptical edge showed). Now the shoreline is the pond ellipse itself: the bed
+    // rises through q 0.985..1.045 to a low grassy bank RimTop (32 cm above the water), the ground never sits below that
+    // bank out to q 1.3, then eases down at ~1:2 to whatever the lawn does further out (a hollow there holds no water - the
+    // plane ends at ShoreQMax). PondRimLow(x, z) says where the old ground would have flooded (rocks / logs go there).
+    public const float ShoreQ = 1.0f, ShoreQMax = 1.06f, RimTop = 0.32f;
+    public static float PondRim(float x, float z, float y)
+    {
+        float q = PondQ(x, z);
+        if (q < 0.985f || q > 2.2f) return y;
+        int wi;
+        if (IslandK(x, z, out wi) > 0f) return y;
+        float rise = Mathf.SmoothStep(0f, 1f, (q - 0.985f) / 0.06f);
+        float floorY = Mathf.Lerp(WaterY - 0.35f, WaterY + RimTop, rise) - Mathf.Max(0f, q - 1.3f) * Mathf.Min(PondR.x, PondR.y) * 0.5f;
+        return Mathf.Max(y, floorY);
+    }
+    // how far under the water line the pre-ffu39 ground was just outside the shore (> 0 = it flooded there)
+    public static float PondRimLow(float x, float z)
+    {
+        float n = (Mathf.PerlinNoise(x * 0.012f + 31.7f, z * 0.012f + 11.3f) - 0.5f) * 3.2f
+                + (Mathf.PerlinNoise(x * 0.04f + 5.1f, z * 0.04f + 9.9f) - 0.5f) * 0.8f;
+        float y = n * Flatness(x, z) * JetLayout.Flat(x, z);
+        float q = PondQ(x, z);
+        if (q < 1.25f) { float k = Mathf.SmoothStep(0f, 1f, (1.25f - q) / 0.45f); y = Mathf.Lerp(y, PondBedY(x, z), k); }
+        return WaterY - y;
     }
 
     public const float DeepQ = 0.42f, ShelfQ = 0.92f;

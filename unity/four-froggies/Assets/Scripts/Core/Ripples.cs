@@ -9,21 +9,25 @@ public static class Ripples
     public const int MaxSources = 16;
     static float winT; static int used;
     static readonly Color Foam = new Color(0.92f, 0.97f, 1f, 0.55f);
+    static readonly Color Sheet = new Color(0.55f, 0.6f, 0.58f, 0.14f);   // ffu39: a thin water sheet up the bank, not foam
     static readonly Color Spray = new Color(0.85f, 0.93f, 1f, 0.7f);
 
     // ---------------- ffu38: the wave sim (Core/WaveSim.cs) ----------------
     // Press: a leg / hull / body crossing the surface at p (y ignored), moving at vel. depth = how far it pushes the water
     // down (m), foam 0..1 on its contact line (ring radius ring m, 0 = a disc), str 0..1 how hard it holds the water.
     // Call every frame with a stable key while it is in the water (it expires 0.15 s after the last call).
-    public static void Press(int key, Vector3 p, Vector3 vel, float radius, float depth, float foam, float ring, float str = 0.5f)
+    // ffu39: "foam" is now how much the contact churns the water: muddy SILT where the body reaches the bed (silt 0..1, -1 =
+    // auto from the bed depth under it), never white foam - real pond water barely foams.
+    public static void Press(int key, Vector3 p, Vector3 vel, float radius, float depth, float foam, float ring, float str = 0.5f, float silt = -1f)
     {
-        if (WaveSim.I != null && Layout.InPond(p.x, p.z)) WaveSim.I.AddPress(key, p, vel, radius, depth, foam, ring, str);
+        if (WaveSim.I != null && Layout.InPond(p.x, p.z)) WaveSim.I.AddPress(key, p, vel, radius, depth, foam, ring, str, silt);
     }
     // Kick: a one-off impulse (footfall, splash): amount m of upwelling (negative = a hole) over radius, with foam
-    public static bool Kick(Vector3 p, float radius, float amount, float foam, float ring = 0f)
+    // ffu39: foam = brief white SPRAY (fades in ~1 s) + silt (-1 = auto from the bed depth)
+    public static bool Kick(Vector3 p, float radius, float amount, float foam, float ring = 0f, float silt = -1f)
     {
         if (!WaveSim.Active || !WaveSim.I.Inside(p, radius) || !Layout.InPond(p.x, p.z)) return false;
-        WaveSim.I.AddKick(p, radius, amount, foam, ring);
+        WaveSim.I.AddKick(p, radius, amount, foam, ring, silt);
         return true;
     }
     // Swell: a big slow ring of swell (wavelength lambda m, amp m) from a mech's body radius r0 - whole pond, analytic
@@ -42,7 +46,7 @@ public static class Ripples
         float k = Mathf.Clamp(amount, 1f, 30f);
         // small splashes (wading wash, a boat's stern, a frog paddling) only leave foam; big ones (an entry, a breach) ring
         float amt = k < 6f ? 0f : Mathf.Min(0.005f * k, 0.15f);
-        Kick(p, 0.35f + k * 0.04f, amt, Mathf.Min(0.08f + k * 0.02f, 0.6f), 0.4f + k * 0.05f);
+        Kick(p, 0.35f + k * 0.04f, amt, k < 6f ? 0f : Mathf.Min(0.08f + k * 0.02f, 0.6f), 0.4f + k * 0.05f, 0f);   // ffu39: small splashes leave no white at all
     }
 
     public static bool InWater(Vector3 p) { return Layout.InPond(p.x, p.z) && Ranch.GY(p.x, p.z) < Layout.WaterY - 0.02f; }
@@ -93,7 +97,7 @@ public static class Ripples
         float under = Mathf.Clamp01((SurfaceY - p.y) / (mechH * 0.9f));
         float kk = Mathf.Lerp(1f, 0.45f, under);
         Vector3 sp = new Vector3(p.x, SurfaceY, p.z);
-        bool simmed = Kick(sp, Mathf.Clamp(mechH * 0.07f, 0.8f, 9f), Mathf.Clamp(0.05f + mechH * 0.005f, 0.08f, 0.5f) * kk, 0.6f * kk, Mathf.Clamp(mechH * 0.09f, 0.9f, 10f));
+        bool simmed = Kick(sp, Mathf.Clamp(mechH * 0.07f, 0.8f, 9f), Mathf.Clamp(0.05f + mechH * 0.005f, 0.08f, 0.5f) * kk, 0.6f * kk, Mathf.Clamp(mechH * 0.09f, 0.9f, 10f), 1f);   // ffu39: a foot on the bed = a mud cloud
         Swell(sp, Mathf.Clamp(mechH * 0.9f, 7f, 70f), Mathf.Clamp(0.03f + mechH * 0.004f, 0.06f, 0.5f) * Mathf.Lerp(1f, 0.6f, under), mechH * 0.12f);
         if (!simmed) { Ring(p, r, 1.2f); if (mechH > 40f) Ring(p, r * 0.55f, 0.8f); }
         Surge(mechH);
@@ -157,7 +161,7 @@ public static class Ripples
             Vector3 e = new Vector3(c.x, 0f, c.y) + d * Random.Range(0.97f, 1.03f);
             e.y = Mathf.Max(Ranch.GY(e.x, e.z), Layout.WaterY) + 0.08f;
             Vector3 dir = d.normalized;
-            FX.Puff(e, dir * push, 0.8f + k * 1.4f, Random.Range(0.8f, 1.3f), Foam);                    // foam / water sheet
+            FX.Puff(e, dir * push, 0.8f + k * 1.4f, Random.Range(0.8f, 1.3f), Sheet);                   // ffu39: thin water sheet (no foam)
             if (out_ && Random.value < 0.5f)
                 FX.Puff(e + dir * (1f + k * 3f), Vector3.zero, 1.2f + k * 2f, Random.Range(3f, 5f), WetC); // wet ground, fades
         }

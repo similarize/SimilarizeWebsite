@@ -177,7 +177,7 @@ public static class TrailerBarn
         float run = hw + 0.8f, rise = RidgeH * run / hw;
         float rl = Mathf.Sqrt(run * run + rise * rise), ra = Mathf.Atan2(rise, run) * Mathf.Rad2Deg;
         for (int k = -1; k <= 1; k += 2)
-            B(new Vector3(k * run * 0.5f, WallH + rise * 0.5f - 0.8f * RidgeH / hw + 0.12f, 0f), new Vector3(rl, 0.18f, Dp + 1.6f), roof, true, new Vector3(0f, 0f, -k * ra));
+            RoofBreak.Add(B(new Vector3(k * run * 0.5f, WallH + rise * 0.5f - 0.8f * RidgeH / hw + 0.12f, 0f), new Vector3(rl, 0.18f, Dp + 1.6f), roof, true, new Vector3(0f, 0f, -k * ra)), 1, 4);   // ffu39: breakable
         B(new Vector3(0f, WallH + RidgeH + 0.1f, 0f), new Vector3(0.5f, 0.2f, Dp + 1.7f), roof, false);   // ridge cap
         // gable ends (triangles, both faces)
         for (int k = -1; k <= 1; k += 2) Gable(new Vector3(0f, WallH, hd * k + 0.02f * k), hw, RidgeH, red);

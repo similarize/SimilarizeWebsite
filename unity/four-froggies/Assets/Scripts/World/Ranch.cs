@@ -162,7 +162,7 @@ public static class Ranch
         B(new Vector3(c.x, H * 0.5f, z0 + 0.25f), new Vector3(s.x, H, 0.5f), Cream);
         B(new Vector3(x0 + 0.25f, H * 0.5f, c.y), new Vector3(0.5f, H, s.y), Cream);
         B(new Vector3(x1 - 0.25f, H * 0.5f, c.y), new Vector3(0.5f, H, s.y), Cream);
-        B(new Vector3(c.x, H + 0.2f, c.y), new Vector3(s.x + 0.6f, 0.4f, s.y + 0.6f), RoofC);
+        RoofBreak.Add(B(new Vector3(c.x, H + 0.2f, c.y), new Vector3(s.x + 0.6f, 0.4f, s.y + 0.6f), RoofC), 6, 2);   // ffu39: breakable roof panels
         B(new Vector3(c.x, H - 0.6f, z1 - 0.3f), new Vector3(s.x, 1.2f, 0.6f), Cream);   // header over the bays
         B(new Vector3(c.x, H - 1.25f, z1 - 0.2f), new Vector3(s.x, 0.1f, 0.7f), Trim, false);
         B(new Vector3(c.x, 0.03f, c.y), new Vector3(s.x - 1f, 0.06f, s.y - 1f), Concrete, false);
@@ -205,7 +205,11 @@ public static class Ranch
     static void Pond()
     {
         Vector2 c = Layout.PondC, r = Layout.PondR;
-        var water = Mats.Prim(PrimitiveType.Cylinder, root, new Vector3(c.x, Layout.WaterY, c.y), new Vector3(r.x * 2.5f, 0.01f, r.y * 2.5f), PondMaterial(), false);
+        // ffu39: the plane only reaches the shoreline (q 1.06, was 1.25); shaders also mask it to the ellipse (FFPondMask)
+        var water = Mats.Prim(PrimitiveType.Cylinder, root, new Vector3(c.x, Layout.WaterY, c.y), new Vector3(r.x * 2f * Layout.ShoreQMax, 0.01f, r.y * 2f * Layout.ShoreQMax), PondMaterial(), false);
+        Shader.SetGlobalVector("_FFPond", new Vector4(c.x, c.y, 1f / r.x, 1f / r.y));
+        Shader.SetGlobalVector("_FFPondQ", new Vector4(Layout.ShoreQ + 0.012f, Layout.ShoreQ + 0.045f, 0f, 0f));
+        PondRimDecor();
         water.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         water.name = "PondWater";
         Ripples.Register(water);   // ffw: displacement surge + ripples
@@ -282,6 +286,62 @@ public static class Ranch
         var dive = Interact.Add(new Vector3(dx1 - 3f, 0.45f, dz - 0.8f), 3.2f, "board the Submarine (dive!)", f => UnderwaterWorld.I.Dive(f));
         dive.enabled = f => f.world == WorldId.Ranch && UnderwaterWorld.I != null;
         B(new Vector3(dx1 - 1f, 1.1f, dz + 1.6f), new Vector3(0.15f, 1.6f, 0.15f), Wood, false);
+    }
+
+    // ffu39: rock edging, a few fallen logs and extra reeds on the new bank where the old ground used to sit under the water
+    // line (Layout.PondRimLow > 0) - colliders on rocks + logs so vehicles roll over / bump them, Destruct-registered rocks
+    static void PondRimDecor()
+    {
+        Vector2 c = Layout.PondC, r = Layout.PondR;
+        var rnd = new System.Random(39);
+        string[] rocks = { "qrock0", "qrock1" };
+        int nRock = 0, nLog = 0, nReed = 0, low = 0;
+        const int N = 120;
+        for (int i = 0; i < N; i++)
+        {
+            float a = i * Mathf.PI * 2f / N + (float)rnd.NextDouble() * 0.02f;
+            float ca = Mathf.Cos(a), sa = Mathf.Sin(a);
+            float lowK = Layout.PondRimLow(c.x + ca * r.x * 1.12f, c.y + sa * r.y * 1.12f);
+            float x = c.x + ca * r.x * 1.035f, z = c.y + sa * r.y * 1.035f;
+            int wi;
+            if (Layout.IslandK(x, z, out wi) > 0f) continue;
+            if (x < c.x && Mathf.Abs(z - c.y) < 7f) continue;   // the dock
+            if (lowK > -0.05f) low++;
+            float roll = (float)rnd.NextDouble();
+            if (lowK > -0.05f && roll < 0.55f)
+            {
+                LBPack p = LBPack.Get(rocks[i % 2]);
+                float sc = 0.3f + (float)rnd.NextDouble() * 0.35f;
+                float gy = Layout.WaterY + Layout.RimTop * 0.6f;
+                Transform rg = RanchBreak.Group("RimRock", new Vector3(x, gy - 0.25f * sc, z));
+                if (p != null) p.SpawnAll(rg, Vector3.zero, sc, Color.white, (float)rnd.NextDouble() * 360f);
+                else Mats.Prim(PrimitiveType.Sphere, rg, new Vector3(x, gy, z), new Vector3(1.3f, 0.7f, 1.0f) * sc * 1.6f, new Vector3(0f, (float)rnd.NextDouble() * 180f, 0f), Mats.Lit(Stone), false);
+                var col = new GameObject("RimRockCol").AddComponent<SphereCollider>();
+                col.transform.SetParent(rg, false);
+                col.transform.position = new Vector3(x, gy + 0.1f * sc, z);
+                col.radius = 0.9f * sc;
+                Destruct.Register(rg.gameObject, BreakKind.Rock);
+                nRock++;
+            }
+            else if (lowK > -0.05f && roll < 0.68f)
+            {
+                // a fallen log lying along the shore (tangent), half sunk in the bank
+                float yaw = -a * Mathf.Rad2Deg;
+                float len = 3f + (float)rnd.NextDouble() * 3f;
+                Vector3 lp = new Vector3(c.x + ca * r.x * 1.045f, Layout.WaterY + Layout.RimTop * 0.7f, c.y + sa * r.y * 1.045f);
+                var lg = Cyl(lp, new Vector3(0.45f, len * 0.5f, 0.45f), new Color(0.36f, 0.27f, 0.18f), true, new Vector3(90f, yaw, 0f));
+                lg.name = "RimLog";
+                nLog++;
+            }
+            if (roll > 0.4f)
+            {
+                float gy = GY(x, z);
+                for (int k = 0; k < 3; k++)
+                    Cyl(new Vector3(x + k * 0.22f, gy + 0.8f, z + (k % 2) * 0.18f), new Vector3(0.07f, 0.9f + k * 0.2f, 0.07f), new Color(0.35f, 0.5f, 0.2f));
+                nReed++;
+            }
+        }
+        Debug.Log("Ranch: pond rim - " + low + "/" + N + " shore spots were below the water line before ffu39; " + nRock + " rocks, " + nLog + " logs, " + nReed + " reed clumps");
     }
 
     // graphics overhaul: the Lambo Blast animated water shader on the pond (scrolling noise normals, sky reflection from

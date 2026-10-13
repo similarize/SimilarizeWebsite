@@ -130,12 +130,21 @@ public static class Kb
 
     public static int TouchCount()
     {
+        if (fakeTapF == Time.frameCount) return fakeTaps.Count;   // ffu39 probe taps
         try { return Input.touchCount; } catch { return 0; }
     }
+
+    // ffu39: a phone / tablet (or the probe's seattest forcing the phone path); fake taps = synthetic touch for the probe
+    public static bool TestMobile;
+    public static bool Mobile { get { return Application.isMobilePlatform || TestMobile; } }
+    static readonly System.Collections.Generic.List<Vector2> fakeTaps = new System.Collections.Generic.List<Vector2>();
+    static int fakeTapF = -1;
+    public static void FakeTap(Vector2 screenPos) { if (fakeTapF != Time.frameCount + 1) fakeTaps.Clear(); fakeTapF = Time.frameCount + 1; fakeTaps.Add(screenPos); }
 
     public static System.Collections.Generic.List<Vector2> TouchesBegan()
     {
         var l = new System.Collections.Generic.List<Vector2>();
+        if (fakeTapF == Time.frameCount) { l.AddRange(fakeTaps); return l; }
         try
         {
             for (int i = 0; i < Input.touchCount; i++)

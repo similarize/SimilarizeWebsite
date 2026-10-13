@@ -45,7 +45,7 @@ public partial class StoryMech
             float ls = lv.magnitude;
             float depth = Mathf.Min((0.02f + 0.016f * ls) * Mathf.Lerp(0.55f, 1f, footDeep) * scale * (0.8f + 0.2f * breathe), 0.3f);
             float foam = Mathf.Clamp01(0.4f + ls * 0.08f) * Mathf.Lerp(0.7f, 1f, footDeep);
-            Ripples.Press(id + i, c, lv, legRad * 1.1f, depth, foam, legRad * 1.3f, 0.55f);
+            Ripples.Press(id + i, c, lv, legRad * 1.1f, depth, foam, legRad * 1.3f, 0.55f, 1f);   // ffu39: legs on the bed churn silt
             // spray flicked off a leg swinging through the water
             if (ls > 1.2f && Random.value < dt * Mathf.Min(ls * 3f, 14f) * (Look.Mobile ? 0.5f : 1f))
             {
@@ -63,7 +63,7 @@ public partial class StoryMech
             float subK = Mathf.Clamp01((wy - hipsY) / (H * 0.2f) + 0.35f);
             float depth = Mathf.Min((0.025f + 0.02f * sp) * subK * scale * (0.7f + 0.3f * breathe), 0.6f);
             Vector3 c = new Vector3(to.x, wy, to.z);
-            Ripples.Press(id + 2, c, vel, bodyR, depth, Mathf.Clamp01(0.45f + sp * 0.08f) * subK, bodyR * 1.08f, 0.45f);
+            Ripples.Press(id + 2, c, vel, bodyR, depth, Mathf.Clamp01(0.45f + sp * 0.08f) * subK, bodyR * 1.08f, 0.45f, 0.35f);
             if (sp > 0.8f) Ripples.Swell(c, Mathf.Clamp(H * 0.9f, 7f, 70f), Mathf.Clamp(0.03f + H * 0.004f, 0.06f, 0.5f) * Mathf.Clamp01(sp / 4f) * subK, bodyR);
             // bow spray at the chest
             if (sp > 1.6f && Random.value < dt * Mathf.Min(sp * 2.5f, 12f) * (Look.Mobile ? 0.5f : 1f))

@@ -103,6 +103,7 @@ public partial class Game : MonoBehaviour
         "   night sky: Poly Haven (CC0). TV: Big Buck Bunny (c) Blender Foundation, peach.blender.org, CC BY 3.0.\n" +
         "   Frog body, hands + plush frog: modelled for this game (procedural, no third-party model).\n" +
         "<b>Sound effects + ambience</b>: BigSoundBank.com by Joseph Sardin (royalty-free, CC0-like) and Kenney (CC0).\n" +
+        "<b>Cybertruck sound</b>: synthesised for this game (motor whine, pedestrian-warning tone, tyres, wind, regen) - no recordings used; modelled on Tesla's published Cybertruck operating sounds.\n" +
         "<b>Story mode</b> (The Big Launch): story, rocket and score made for this game (synthesised, no samples).\n" +
         "<b>Fonts</b>: Montserrat (The Montserrat Project Authors) and Inter (The Inter Project Authors), SIL Open Font License 1.1.\n" +
         "<b>Music</b> (OpenGameArt, CC0): Flowerbed Fields by Zane Little Music; Picnic and Home by heartade; Underwater Theme II -\n" +
@@ -148,6 +149,7 @@ public partial class Game : MonoBehaviour
             if (fc != null) { var parts = fc.Split(','); for (int i = 0; i < 4 && i < parts.Length; i++) { int c; if (int.TryParse(parts[i], out c) && Roster.Valid(c)) SetSeatChar(i, c, false); } demoKeepChars = true; }
         }
         demoT += Time.unscaledDeltaTime;
+        if (demoShot == "seattest") { SeatTestLobby(); return false; }   // ffu39: pad select + touch tap on PLAY (GameSeats.cs)
         if (demoShot == "lobby")
         {
             // ffu14 lobby showcase: P1 joins and steps through the roster (pop + turntable), never starts
@@ -187,6 +189,7 @@ public partial class Game : MonoBehaviour
             else if (IsPoolDemo(sc)) PoolDemoStart(f, sc);                   // ffu29 backyard pool float (GamePoolDemo.cs)
             else if (IsStompDemo(sc)) StompDemoStart(f, sc);                 // ffu28 mech footfalls / Optimus suit on a slope (GameStomp.cs)
             else if (IsGardenDemo(sc)) GardenDemoStart(f, sc);               // ffu32 garden retreat / horse riding (GardenDemo.cs)
+            else if (Is39(sc)) Demo39Start(f, sc);                             // ffu39 roof stomp / pond edge / shore close-up (GameFfu39.cs)
             else if (Is35(sc)) Demo35Start(f, sc);
             else if (Is38(sc)) Demo38Start(f, sc);                             // ffu38 mech wading waves (GameFfu38.cs)
             else if (Is37(sc)) Demo37Start(f, sc);                             // ffu37 pond bed sinking / submarine breach (GameFfu37.cs)                             // ffu35 stock trailer / pad tests (GameFfu35.cs)
@@ -216,6 +219,7 @@ public partial class Game : MonoBehaviour
         if ((sc.StartsWith("lj-") || sc.StartsWith("loopdrive")) && DemoLoopCam(f, sc, c)) return;
         if (IsStompDemo(sc)) { if (!StompDemoCam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }
         if (IsGardenDemo(sc)) { if (!GardenDemoCam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }
+        if (Is39(sc)) { if (!Demo39Cam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }
         if (Is35(sc)) { if (!Demo35Cam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }
         if (Is38(sc)) { if (!Demo38Cam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }
         if (Is37(sc)) { if (!Demo37Cam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }
@@ -607,7 +611,7 @@ public partial class Game : MonoBehaviour
             "Back / V switches Shared and Split view.  Start / H closes this.  B / Esc here leaves your seat (online: leaves the room)."; } }
 
     // a phone / tablet with no gamepads: local multiplayer makes no sense, so the lobby is a 1-player picker
-    public static bool TouchOnly { get { return Application.isMobilePlatform && Gamepad.all.Count == 0; } }
+    public static bool TouchOnly { get { return Kb.Mobile && Gamepad.all.Count == 0; } }
 
     void LayoutHud()
     {
@@ -648,6 +652,10 @@ public partial class Game : MonoBehaviour
 
     Slot Join(InputKind kind, Gamepad pad, int frog = -1)
     {
+        // ffu39 one controller = one view: touch / keyboard only ever seat a player when nobody is seated yet, and a pad
+        // joining takes over an implicitly seated touch / keyboard player (GameSeats.cs)
+        Slot seat;
+        if (SeatGate(kind, pad, out seat)) return seat;
         if (slots.Count >= 4) return null;
         if (Net.I != null && Net.I.Online && slots.Count >= 1) { Net.I.info = "Online: one player per device"; Net.I.infoT = Time.unscaledTime; return null; }
         if (frog < 0 || SlotForFrog(frog) != null || (Net.I != null && Net.I.TakenByRemote(frog))) frog = FreeFrog(0, 1);
@@ -785,6 +793,7 @@ public partial class Game : MonoBehaviour
         PadGuard.GraceOn = state == State.Play;
         PadGuard.Tick();
         PadTick();
+        SeatTick();   // ffu39
         touch.active = state == State.Play && FindSlot(InputKind.Touch) != null && !help && !StoryBlocksTouch;
         if (state == State.Play) ApplyNames();
         if (state == State.Lobby) UpdateLobby(dt);
@@ -819,6 +828,7 @@ public partial class Game : MonoBehaviour
         Slot ks = FindSlot(InputKind.Keyboard);
         if (Kb.EnterDown())
         {
+            if (ks == null && slots.Count > 0 && now - slots[0].joinTime > 0.3f) { StartPlay(); return; }   // ffu39: Enter = PLAY for the seated pad player
             if (ks == null) Join(InputKind.Keyboard, null);
             else if (now - ks.joinTime > 0.3f) { StartPlay(); return; }
         }
@@ -856,7 +866,7 @@ public partial class Game : MonoBehaviour
         PadJoins();
 
         // touch
-        if (Application.isMobilePlatform && !mobileAutoJoined && FindSlot(InputKind.Touch) == null && slots.Count == 0)
+        if (Kb.Mobile && !mobileAutoJoined && FindSlot(InputKind.Touch) == null && slots.Count == 0)
         {
             mobileAutoJoined = true;
             Join(InputKind.Touch, null);
@@ -950,6 +960,7 @@ public partial class Game : MonoBehaviour
     Slot DeviceSlot(InputKind kind, Gamepad pad, bool online)
     {
         Slot s = kind == InputKind.Gamepad ? FindPad(pad) : FindSlot(kind);
+        if (s == null && kind != InputKind.Gamepad && slots.Count > 0) s = slots[0];   // ffu39: a tap / key acts for the seated (pad) player
         if (s == null && !(Net.I != null && Net.I.Online && slots.Count > 0)) s = Join(kind, pad);
         if (online && s != null)
             for (int i = slots.Count - 1; i >= 0; i--) if (slots[i] != s) Leave(slots[i]);
@@ -1025,7 +1036,7 @@ public partial class Game : MonoBehaviour
             if (k.jKey.wasPressedThisFrame) { PressJoin(InputKind.Keyboard, null); return true; }
             if (k.nKey.wasPressedThisFrame) { PressName(InputKind.Keyboard, null); return true; }
         }
-        InputKind tk = Application.isMobilePlatform || Kb.TouchCount() > 0 ? InputKind.Touch : InputKind.Keyboard;
+        InputKind tk = Kb.Mobile || Kb.TouchCount() > 0 ? InputKind.Touch : InputKind.Keyboard;
         foreach (Vector2 pos in Kb.TouchesBegan())
         {
             lastTouchTime = Time.unscaledTime;
@@ -1164,6 +1175,8 @@ public partial class Game : MonoBehaviour
         foreach (var sl in slots) if (sl.cam != null) cams.Add(sl.cam);
         Look.ApplyViews(views, cams);
         Debug.Log("Layout: " + n + " players, " + (split ? "split" : n == 1 ? "single" : "shared"));
+        LastViews = split ? n : 1;
+        SeatLog("layout " + (split ? "SPLIT " + n : n == 1 ? "single full-screen" : "shared full-screen (" + n + " players)") + " | " + SeatList());
     }
 
     void UpdatePlay(float dt)
@@ -1175,7 +1188,7 @@ public partial class Game : MonoBehaviour
         // never just because a device connected; a lost pad's froggy is re-bound instead), Enter, a tap on a touch screen
         PadJoins();
         if (FindSlot(InputKind.Keyboard) == null && Kb.EnterDown()) Join(InputKind.Keyboard, null);
-        if (FindSlot(InputKind.Touch) == null && Kb.TouchesBegan().Count > 0 && Application.isMobilePlatform) Join(InputKind.Touch, null);
+        if (FindSlot(InputKind.Touch) == null && Kb.TouchesBegan().Count > 0 && Kb.Mobile && slots.Count == 0) Join(InputKind.Touch, null);   // ffu39: never a second seat
 
         for (int k = slots.Count - 1; k >= 0; k--)
         {

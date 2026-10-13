@@ -85,10 +85,11 @@ public class JetBase : MonoBehaviour
         // roof: fixed outer strips, two middle panels slide out over them
         float ry = fy + H + 0.15f;
         for (int s = -1; s <= 1; s += 2)
-            Box(hs, new Vector3(hc.x, ry, hc.y + s * (D * 0.5f - 3.75f)), new Vector3(W + 0.6f, 0.3f, 7.5f + 0.4f), roofM);
+            RoofBreak.Add(Box(hs, new Vector3(hc.x, ry, hc.y + s * (D * 0.5f - 3.75f)), new Vector3(W + 0.6f, 0.3f, 7.5f + 0.4f), roofM), 3, 1);   // ffu39: breakable
         roofA = Box(hroot, new Vector3(hc.x, ry + 0.3f, hc.y - 2.75f), new Vector3(W + 0.4f, 0.28f, 5.6f), roofM).transform;
         roofB = Box(hroot, new Vector3(hc.x, ry + 0.3f, hc.y + 2.75f), new Vector3(W + 0.4f, 0.28f, 5.6f), roofM).transform;
         roofA0 = roofA.localPosition; roofB0 = roofB.localPosition;
+        RoofBreak.Add(roofA.gameObject, 1, 1, false, false); RoofBreak.Add(roofB.gameObject, 1, 1, false, false);   // ffu39: sliding panels break in place (solo renderers)
         Box(hs, new Vector3(hc.x, ry + 0.25f, hc.y), new Vector3(W + 0.6f, 0.2f, 0.25f), frame, false);
         // ceiling lights (unlit panels) + big J-1 on the back wall
         Material lamp = new Material(Mats.Unlit(Color.white)) { name = "Hangar lamp" }; lamp.color = new Color(1.4f, 1.38f, 1.3f);

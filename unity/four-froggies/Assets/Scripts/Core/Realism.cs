@@ -291,8 +291,9 @@ public static class Realism
                 float worn = Mathf.Clamp01((Mathf.PerlinNoise(wx * 0.11f + 17f, wz * 0.11f + 4f) - 0.62f) * 2.2f) * 0.45f;
                 float q = Layout.PondQ(wx, wz);
                 float jag = (Mathf.PerlinNoise(wx * 0.18f, wz * 0.18f) - 0.5f) * 0.06f;
-                float shore = Mathf.Clamp01((1.09f + jag - q) / 0.05f);
-                float mud = Mathf.Clamp01((1.2f + jag * 1.5f - q) / 0.07f) * (1f - shore);
+                // ffu39: the shoreline is the pond ellipse now (Layout.PondRim): wet sand / mud only on the bank's lip, grass above
+                float shore = Mathf.Clamp01((1.03f + jag - q) / 0.04f);
+                float mud = Mathf.Clamp01((1.1f + jag * 1.5f - q) / 0.06f) * (1f - shore);
                 float d = Mathf.Max(road, Mathf.Max(patch, worn)) * (1f - shore - mud);
                 float g = Mathf.Clamp01(1f - d - shore - mud);
                 am[y, x, 0] = g; am[y, x, 1] = d; am[y, x, 2] = shore; am[y, x, 3] = mud;

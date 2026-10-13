@@ -666,7 +666,7 @@ public static class BuildScript
                 if (wx > Layout.GarageC.x - 30f && wx < Layout.GarageC.x + 28f && wz > 30f && wz < 40f) road = Mathf.Max(road, 0.8f);
                 float patch = Mathf.Clamp01((Mathf.PerlinNoise(wx * 0.03f + 3f, wz * 0.03f + 7f) - 0.68f) * 3f) * 0.7f;
                 float q = Layout.PondQ(wx, wz);
-                float shore = Mathf.Clamp01((1.3f - q) / 0.2f);
+                float shore = Mathf.Clamp01((1.1f - q) / 0.08f);   // ffu39: sand only on the bank lip (Layout.PondRim), grass above
                 float d = Mathf.Max(road, patch) * (1f - shore);
                 am[y, x, 0] = Mathf.Clamp01(1f - d - shore);
                 am[y, x, 1] = d;

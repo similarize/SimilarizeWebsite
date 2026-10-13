@@ -495,7 +495,7 @@ public partial class StoryMech : Vehicle
 
         bool on = driver != null;
         Vector3 pos = transform.position;
-        float ground = Ranch.GY(pos.x, pos.z);
+        float ground = MechGround(pos, pos.y);   // ffu39: the small mech can stand on a roof (World/RoofBreak.cs)
         // walk / turn: quick for kids (~8 m/s for the 10-story up to ~30 m/s for the trillion-story)
         float maxSp = 8f + H * 0.14f;
         // ffu37: in the pond the mech wades / walks along the real bed (the submarine's seabed): slower with depth, sinks
@@ -555,8 +555,16 @@ public partial class StoryMech : Vehicle
         p.y += vy * dt;
         p.x = Mathf.Clamp(p.x, -Layout.Half + H * 0.2f, Layout.Half - H * 0.2f);
         p.z = Mathf.Clamp(p.z, -Layout.Half + H * 0.2f, Layout.Half - H * 0.2f);
-        ground = Ranch.GY(p.x, p.z);
+        ground = MechGround(p, pos.y);
+        float terrainY = Ranch.GY(p.x, p.z);
         landCool -= dt;
+        // ffu39: a landing on a roof: size x fall speed decides whether it holds (the 10-story, softly) or gives way - then
+        // the mech keeps falling through the hole onto the floor / ground
+        if (!grounded && p.y <= ground && vy <= 0f && ground > terrainY + 0.3f)
+        {
+            float hard0 = Mathf.Clamp01(-vy / (20f + H * 0.4f));
+            if (RoofBreak.Impact(this, new Vector3(p.x, ground, p.z), H, band, -vy, 1.3f + hard0 * 1.2f)) { ground = MechGround(p, -1e9f); vy *= 0.6f; }
+        }
         if (!grounded && p.y <= ground && vy <= 0f)
         {
             // touchdown: a big thud, dust ring, shake
@@ -573,7 +581,9 @@ public partial class StoryMech : Vehicle
             vy = 0f;
         }
         if (grounded && wd > 0f && ground < pos.y - (0.6f + H * 0.04f)) { grounded = false; vy = Mathf.Min(vy, 0f); }   // ffu37: the bed drops away -> settle down slowly
+        if (grounded && wd <= 0f && ground < pos.y - (0.6f + H * 0.04f)) { grounded = false; vy = Mathf.Min(vy, 0f); }   // ffu39: the roof under it gave way / walked off a roof -> fall
         if (grounded) { p.y = wd > 0f ? Mathf.Max(ground, pos.y - SinkMax(H) * dt) : ground; vy = 0f; }   // ffu37: never drops faster than it sinks
+        RoofBreak.MechTick(this, p, (p - pos) / Mathf.Max(dt, 1e-4f), H, band, grounded && ground > terrainY + 0.3f);   // ffu39: legs / body through a roof break it
         PondFx(pos, p, H, wd);
         MechWater(p, (p - pos) / Mathf.Max(dt, 1e-4f), H, dt);   // ffu38: legs / body push real waves + foam (StoryMechWater.cs)
         Altitude = Mathf.Max(0f, p.y - ground);
@@ -633,6 +643,14 @@ public partial class StoryMech : Vehicle
         }
     }
 
+    // ffu39: terrain, or an intact roof the small mech is standing on (RoofBreak.SupportY)
+    float MechGround(Vector3 p, float curY)
+    {
+        float g = Ranch.GY(p.x, p.z);
+        float r = RoofBreak.SupportY(p, height, band, curY);
+        return r > g ? r : g;
+    }
+
     void Animate(float dt, float maxSp)
     {
         float H = height;
@@ -664,7 +682,8 @@ public partial class StoryMech : Vehicle
                 stepSide = side;
                 // ffu28: the foot that just struck = the one swung forward (legR when sin(phase) = +1, i.e. side turned -1)
                 Vector3 foot = transform.TransformPoint(new Vector3(-H * 0.1f * side, 0f, HipY * Mathf.Sin(amp * Mathf.Deg2Rad)));
-                foot.y = Ranch.GY(foot.x, foot.z);
+                foot.y = MechGround(foot, transform.position.y);
+                if (foot.y > Ranch.GY(foot.x, foot.z) + 0.3f) RoofBreak.Impact(this, foot, H, band, 0f, 1f);   // ffu39: a step on a roof cracks it
                 MechStomp.Foot(foot, H, 1f, false);   // boom + crunch, ground quake, dust cloud (Core/MechStomp.cs)
                 foreach (Collider c in Physics.OverlapSphere(foot, H * 0.12f + 1f, 1 << PropLayer))
                     if (c.attachedRigidbody != null) c.attachedRigidbody.AddExplosionForce(400f + band * 600f, foot, H * 0.2f + 2f, 1f);

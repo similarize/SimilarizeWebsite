@@ -105,6 +105,8 @@ public partial class Game
             lk = Vector3.Lerp(lk, new Vector3(mp.x, wy, mp.z), up * 0.8f);
             p8Cam = p8Cam == Vector3.zero ? want : Vector3.Lerp(p8Cam, want, Mathf.Min(1f, Time.unscaledDeltaTime * 2f));
             pos = p8Cam; look = lk;
+            // ffu39 &mwclose=1: a fixed low camera at the shore entry (legs meeting the water, meniscus, silt plume)
+            if (UrlParam("mwclose") != null) { pos = new Vector3(51f, wy + 2.6f, -21f); look = new Vector3(40f, wy + 0.8f, -31f); }
             if (p8Log <= 0f)
             {
                 p8Log = 0.5f;

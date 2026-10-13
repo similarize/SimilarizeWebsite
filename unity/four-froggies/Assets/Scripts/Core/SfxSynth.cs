@@ -2,8 +2,15 @@ using UnityEngine;
 
 // ffu30 synthesised engine voices (no assets, built once on first use, 22.05 kHz mono loops, every partial a whole number
 // of cycles per loop so the loops are seamless at any AudioSource.pitch):
-//  kind 12 Cybertruck EV (Bill: "it should have a cyber electric sound"): inverter / motor whine pitched with speed,
-//          a futuristic hum chord, soft tyre / road layer, regen whir while slowing down. No gears, no exhaust.
+//  kind 12 Cybertruck EV. ffu39 rework (Bill: "way too loud and doesn't sound like a Cybertruck"), modelled on Tesla's own
+//          "Normal Operating Sounds" clips + owner reports (a faint high-pitched whine while accelerating, the pedestrian
+//          warning whir in Drive at low speed, tyres + wind dominating at speed): six quiet layers, nearly silent overall
+//          (peak sum ~0.1, far under music / frogs / effects): CtWhine smooth high motor whine (pitch ~ speed, louder on
+//          throttle), CtAvas soft synthetic pedestrian-warning tone (moving under ~20 mph, fades out 7-9.5 m/s), CtRegen
+//          subtle regen whine while slowing, Road tyre roll (rises with speed), CtWind (above ~12 m/s), CtCrunch gravel /
+//          grass grit (SynthVoice.surface: 0 pavement .. 1 gravel). No hum chord, no combustion rumble, no buzz. No CC0
+//          Cybertruck recording was found (the only free drive-by, Wikimedia Commons "Tesla cybertruck - yurakucho", is a
+//          CC BY-SA street video), so this stays synthesised.
 //  kind 13 RC car: high brushless motor whine + small-tyre gravel hiss (RcCar drives its own voice, distance-scaled).
 //  kind 14 2-stroke dirt bike (ring-ding brap), kind 16 4-stroke dirt bike (thump brap): RPM model with gear bands, so
 //          the note rises with throttle, drops at each shift and free-revs in the air.
@@ -11,7 +18,7 @@ using UnityEngine;
 public static class SfxSynth
 {
     const int R = 22050;
-    public static AudioClip EvWhine, EvHum, Road, Regen, RcWhine, RcGravel, Bike2s, Bike4s, Intake, Belt;
+    public static AudioClip CtWhine, CtAvas, CtRegen, CtWind, CtCrunch, EvWhine, EvHum, Road, Regen, RcWhine, RcGravel, Bike2s, Bike4s, Intake, Belt;
     static bool built;
     static System.Random rnd = new System.Random(30);
     static float N() { return (float)(rnd.NextDouble() * 2.0 - 1.0); }
@@ -136,20 +143,64 @@ public static class SfxSynth
             for (int i = 0; i < m; i++) { float t = i / (float)R; float w = N(); a += (w - a) * 0.45f; b += (a - b) * 0.08f; raw[i] = (a - b) * 0.8f + S(1100f, t) * 0.12f; }
             d = Seamless(raw, n); Norm(d, 0.55f); Belt = Mk("syn_belt", d);
         }
-        Debug.Log("SfxSynth: built EV / RC / bike loops");
+        // ---- ffu39 Cybertruck layers ----
+        // motor whine: 1 kHz fundamental (pitch 0.3..2.4 -> 300 Hz..2.4 kHz), gentle 2nd + a faint gear-mesh 3rd, no vibrato
+        d = new float[n];
+        for (int i = 0; i < n; i++) { float t = i / (float)R; d[i] = S(1000f, t) * 0.8f + S(2000f, t) * 0.12f + S(3000f, t) * 0.05f; }
+        Norm(d, 0.6f); CtWhine = Mk("syn_ct_whine", d);
+        // pedestrian warning (AVAS): soft open fifth + octave with a slow breathing swell and a soft band-noise whir
+        {
+            int m = n + R / 4; var raw = new float[m]; float a = 0f, b = 0f;
+            for (int i = 0; i < m; i++)
+            {
+                float t = i / (float)R; float sw = 0.75f + 0.25f * S(0.5f, t);
+                float w = N(); a += (w - a) * 0.12f; b += (a - b) * 0.12f;
+                raw[i] = (S(330f, t) * 0.4f + S(495f, t) * 0.24f + S(660f, t) * 0.12f + S(990f, t) * 0.04f) * sw + (a - b) * 0.5f;
+            }
+            d = Seamless(raw, n); Norm(d, 0.55f); CtAvas = Mk("syn_ct_avas", d);
+        }
+        // regen whine: a slightly lower, purer tone than the drive whine (720 Hz + soft 3rd)
+        d = new float[n];
+        for (int i = 0; i < n; i++) { float t = i / (float)R; d[i] = S(720f, t) * 0.85f + S(2160f, t) * 0.07f; }
+        Norm(d, 0.55f); CtRegen = Mk("syn_ct_regen", d);
+        // wind: broadband rush (band-passed noise) with slow gusts (0.5 / 1 Hz, whole cycles)
+        {
+            int m = n + R / 4; var raw = new float[m]; float a = 0f, b = 0f;
+            for (int i = 0; i < m; i++)
+            {
+                float t = i / (float)R; float w = N(); a += (w - a) * 0.35f; b += (a - b) * 0.04f;
+                raw[i] = (a - b) * (0.8f + 0.12f * S(0.5f, t) + 0.08f * S(1f, t));
+            }
+            d = Seamless(raw, n); Norm(d, 0.55f); CtWind = Mk("syn_ct_wind", d);
+        }
+        // gravel / grass grit: crackle grains (short decaying clicks) over a soft hiss
+        {
+            int m = n + R / 4; var raw = new float[m]; float lo = 0f, g = 0f, gd = 0f;
+            for (int i = 0; i < m; i++)
+            {
+                float w = N(); lo += (w - lo) * 0.25f;
+                if (rnd.NextDouble() < 0.0025) { g = N() * (0.6f + 0.4f * (float)rnd.NextDouble()); gd = 0.82f + 0.12f * (float)rnd.NextDouble(); }
+                g *= gd;
+                raw[i] = (w - lo) * 0.18f + g * w * 1.6f;
+            }
+            d = Seamless(raw, n); Norm(d, 0.55f); CtCrunch = Mk("syn_ct_crunch", d);
+        }
+        Debug.Log("SfxSynth: built EV / RC / bike loops + ffu39 Cybertruck layers");
     }
 }
 
 // One synthesised voice: four looping sources (a, b, c, d) levelled + pitched every tick.
 public class SynthVoice
 {
-    public AudioSource a, b, c, d;
+    public AudioSource a, b, c, d, e, f;   // e, f: ffu39 Cybertruck wind + crunch
     public readonly int kind;
     readonly float pm;
     float lastSpd = -1f, dvS, rpm = 0.2f, gearLo, gearHi = 7f;
     public float gain = 1f;
     public int gear;
-    public readonly float[] vol = new float[4], pit = new float[4];
+    public readonly float[] vol = new float[6], pit = new float[6];
+    public float surface = 0.6f;   // ffu39 Cybertruck: 0 pavement / concrete .. 0.6 grass .. 1 gravel / dirt (Vehicle sets it)
+    public float extCap = 1f;      // ffu39: cap for e / f (robot-driven distance fade, Vehicle.EngineSound)
     public float decel;
     public static SynthVoice LastCyber, LastBike;
 
@@ -164,9 +215,10 @@ public class SynthVoice
             case 14: ca = SfxSynth.Bike2s; cb = SfxSynth.Intake; cc = SfxSynth.RcGravel; cd = null; break;
             case 16: ca = SfxSynth.Bike4s; cb = SfxSynth.Intake; cc = SfxSynth.RcGravel; cd = null; break;
             case 15: ca = SfxSynth.EvWhine; cb = SfxSynth.Belt; cc = SfxSynth.Regen; cd = SfxSynth.Road; break;
-            default: ca = SfxSynth.EvWhine; cb = SfxSynth.EvHum; cc = SfxSynth.Regen; cd = SfxSynth.Road; break;
+            default: ca = SfxSynth.CtWhine; cb = SfxSynth.CtAvas; cc = SfxSynth.CtRegen; cd = SfxSynth.Road; break;   // ffu39
         }
         a = Src(owner, ca); b = Src(owner, cb); c = Src(owner, cc); d = Src(owner, cd);
+        if (kind == 12) { e = Src(owner, SfxSynth.CtWind); f = Src(owner, SfxSynth.CtCrunch); }
         if (kind == 12) LastCyber = this;
         if (kind == 14 || kind == 15 || kind == 16) LastBike = this;
     }
@@ -176,7 +228,7 @@ public class SynthVoice
         var s = Sfx.Loop(o, clip); s.Play(); s.Pause();
         return s;
     }
-    public void Kill() { foreach (var s in new[] { a, b, c, d }) if (s != null) Object.Destroy(s); a = b = c = d = null; }
+    public void Kill() { foreach (var s in new[] { a, b, c, d, e, f }) if (s != null) Object.Destroy(s); a = b = c = d = e = f = null; }
 
     void Set(int i, AudioSource s, float v, float p, float dt, float rate = 1.2f)
     {
@@ -231,13 +283,23 @@ public class SynthVoice
                 Set(3, d, k * Mathf.Clamp01(spd / 18f) * 0.12f * ground, 0.85f + spd / 40f, dt);
                 break;
             }
-            default:   // 12 Cybertruck EV
+            default:   // 12 Cybertruck EV (ffu39: nearly silent - every layer well under music / frogs / effects)
             {
-                float sp = Mathf.Clamp01(spd / 12f);
-                Set(0, a, k * (0.03f + sp * 0.2f + load * 0.08f), (0.3f + spd / 14f + load * 0.06f) * pm, dt);
-                Set(1, b, k * (0.09f + load * 0.05f + sp * 0.03f), (0.86f + spd / 90f) * pm, dt);
-                Set(2, c, k * decel * Mathf.Clamp01(spd / 6f) * 0.24f, (0.35f + spd / 18f) * pm, dt, 2f);
-                Set(3, d, k * Mathf.Clamp01(spd / 18f) * 0.24f * ground, 0.7f + spd / 40f, dt);
+                float mph = spd * 2.237f;
+                float sp = Mathf.Clamp01(spd / 30f);
+                // motor whine: faint, smooth, high; pitch 300 Hz .. ~2.4 kHz with speed, a little louder on throttle
+                Set(0, a, k * (0.004f + 0.014f * sp + 0.018f * load * Mathf.Clamp01(spd / 4f)), (0.3f + spd / 14f + load * 0.04f) * pm, dt, 0.5f);
+                // pedestrian warning tone: on while rolling under ~20 mph (fades in from walking pace, out 15-21 mph)
+                float avas = Mathf.Clamp01((spd - 0.15f) / 0.6f) * (1f - Mathf.Clamp01((mph - 15f) / 6f));
+                Set(1, b, k * avas * 0.03f, (0.92f + spd / 40f) * pm, dt, 0.4f);
+                // regen whine while slowing (no throttle, decelerating)
+                Set(2, c, k * decel * Mathf.Clamp01(spd / 5f) * 0.02f, (0.4f + spd / 15f) * pm, dt, 0.8f);
+                // tyre roll + wind + surface grit
+                float gr = Mathf.Clamp01(ground);
+                Set(3, d, k * gr * (0.008f + 0.05f * Mathf.Pow(sp, 0.8f)) * Mathf.Clamp01(spd / 1.5f) * (1f - 0.35f * surface), 0.55f + spd / 45f + surface * 0.1f, dt, 0.6f);
+                float wind = Mathf.Clamp01((spd - 11f) / 22f);
+                Set(4, e, Mathf.Min(extCap, k * wind * wind * 0.06f), 0.8f + spd / 60f, dt, 0.4f);
+                Set(5, f, Mathf.Min(extCap, k * gr * surface * Mathf.Clamp01(spd / 3f) * (0.012f + 0.035f * Mathf.Sqrt(sp))), 0.8f + spd / 35f, dt, 0.8f);
                 break;
             }
         }
@@ -246,8 +308,9 @@ public class SynthVoice
     public string Levels()
     {
         System.Text.StringBuilder sb = new System.Text.StringBuilder();
-        string[] nm = kind == 13 ? new[] { "whine", "gravel", "-", "-" } : (kind == 14 || kind == 16) ? new[] { "engine", "intake", "dirt", "-" } : kind == 15 ? new[] { "whine", "belt", "regen", "road" } : new[] { "whine", "hum", "regen", "road" };
-        for (int i = 0; i < 4; i++) if (nm[i] != "-") sb.Append(nm[i]).Append('=').Append(vol[i].ToString("0.00")).Append('@').Append(pit[i].ToString("0.00")).Append(' ');
+        string[] nm = kind == 13 ? new[] { "whine", "gravel", "-", "-", "-", "-" } : (kind == 14 || kind == 16) ? new[] { "engine", "intake", "dirt", "-", "-", "-" } : kind == 15 ? new[] { "whine", "belt", "regen", "road", "-", "-" } : new[] { "whine", "avas", "regen", "road", "wind", "crunch" };
+        for (int i = 0; i < 6; i++) if (nm[i] != "-") sb.Append(nm[i]).Append('=').Append(vol[i].ToString("0.00")).Append('@').Append(pit[i].ToString("0.00")).Append(' ');
+        if (kind == 12) { float sum = 0f; for (int i = 0; i < 6; i++) sum += vol[i]; sb.Append("sum=").Append(sum.ToString("0.000")).Append(" surf=").Append(surface.ToString("0.0")).Append(' '); }
         if (kind == 14 || kind == 16) sb.Append("rpm=").Append(rpm.ToString("0.00")).Append(" gear=").Append(gear);
         return sb.ToString();
     }

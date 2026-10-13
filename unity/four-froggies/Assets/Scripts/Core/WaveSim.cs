@@ -11,6 +11,11 @@ using UnityEngine;
 //  * The water shaders (FF/RealWater, LB/Water via Shaders/FFRipple.cginc) read it for normals + foam; with the realistic
 //    water a dense patch mesh (128 x 128 desktop / 72 x 72 phones) over the window displaces its vertices for real and
 //    the big flat pond plane skips that square.
+//  * ffu39 real-pond look (Bill: "looks like foam"): B is now SILT (muddy sediment stirred up where legs / wheels / feet
+//    reach the bed: spreads, settles over ~10 s, tints the water brown-green), A is brief white SPRAY (only real splashes
+//    and footfalls, gone in ~1 s); no whitecaps, no contact foam. Wave heights ~half of ffu38 (AmpK) - a wading person
+//    makes 2-5 cm ripples, a 10-story mech tens of cm, not metres. Contact circles (_FFCont) give the water shader a thin
+//    meniscus + wet dark line round each leg / hull.
 //  * Fallback: no half-float render textures (or ?waves=0) -> no sim; the particle rings / splashes of ffw / ffu37 stay.
 //    The window is idle (no steps, no patch) whenever it doesn't touch the pond.
 public class WaveSim : MonoBehaviour
@@ -27,12 +32,14 @@ public class WaveSim : MonoBehaviour
     GameObject patch; Material patchSrc, patchMat;
     Renderer plane;
 
-    struct Src { public Vector2 p, v; public float r, amt, foam, ring, str; public int mode; public float seen; }
+    struct Src { public Vector2 p, v; public float r, amt, foam, ring, str, silt; public int mode; public float seen; }
+    public const float AmpK = 0.5f;   // ffu39: real-water wave heights (see header)
     readonly Dictionary<int, Src> press = new Dictionary<int, Src>();
     readonly List<Src> kicks = new List<Src>();
     readonly List<int> drop = new List<int>();
     const int MaxSrc = 20;
-    readonly Vector4[] sa = new Vector4[MaxSrc], sb = new Vector4[MaxSrc];
+    readonly Vector4[] sa = new Vector4[MaxSrc], sb = new Vector4[MaxSrc], sc = new Vector4[MaxSrc];
+    readonly Vector4[] cont = new Vector4[8];   // ffu39: contact circles for the meniscus (x, z, r, k)
     // swells
     readonly Vector4[] sw = new Vector4[4], swk = new Vector4[4];
     readonly float[] swAge = new float[4], swC = new float[4], swAmp = new float[4];
@@ -64,11 +71,12 @@ public class WaveSim : MonoBehaviour
         float dx = Size / Res, dt = 1f / Rate;
         float k = Mathf.Min(0.45f, WaveC * WaveC * dt * dt / (dx * dx));
         sim.SetVector("_Shift", new Vector4(0f, 0f, k, 0.9955f));
-        sim.SetVector("_Foam", new Vector4(0.976f, 0.2f, 0.3f, 2f));
+        sim.SetVector("_Foam", new Vector4(0.9972f, 0.3f, 0.9f, 0f));   // ffu39: silt settle / spread per step, spray decay per step
         ok = true;
         Shader.SetGlobalTexture("_FFRipTex", a);
         Shader.SetGlobalVector("_FFRipRect", Vector4.zero);
         Shader.SetGlobalVector("_FFRipP", new Vector4(1f / Res, dx, 0f, 1.25f));
+        Shader.SetGlobalVectorArray("_FFCont", cont);
         Debug.Log("WaveSim: on " + Res + " px / " + Size + " m (" + dx.ToString("0.00") + " m/px), k " + k.ToString("0.000") + (mobile ? " (lite)" : ""));
     }
 
@@ -82,15 +90,15 @@ public class WaveSim : MonoBehaviour
     static void Clear(RenderTexture r) { var o = RenderTexture.active; RenderTexture.active = r; GL.Clear(false, true, Color.clear); RenderTexture.active = o; }
 
     // ---------------- sources ----------------
-    public void AddPress(int key, Vector3 p, Vector3 v, float r, float depth, float foam, float ring, float str)
+    public void AddPress(int key, Vector3 p, Vector3 v, float r, float depth, float foam, float ring, float str, float silt = -1f)
     {
-        var s = new Src { p = new Vector2(p.x, p.z), v = new Vector2(v.x, v.z), r = r, amt = -depth, foam = foam, ring = ring, str = str, mode = 1, seen = Time.time };
+        var s = new Src { p = new Vector2(p.x, p.z), v = new Vector2(v.x, v.z), r = r, amt = -depth * AmpK, foam = foam, ring = ring, str = str, silt = silt, mode = 1, seen = Time.time };
         press[key] = s;
     }
-    public void AddKick(Vector3 p, float r, float amt, float foam, float ring)
+    public void AddKick(Vector3 p, float r, float amt, float foam, float ring, float silt = -1f)
     {
         if (kicks.Count >= 12) return;
-        kicks.Add(new Src { p = new Vector2(p.x, p.z), r = r, amt = amt, foam = foam, ring = ring, mode = 0 });
+        kicks.Add(new Src { p = new Vector2(p.x, p.z), r = r, amt = amt * AmpK, foam = foam, ring = ring, silt = silt, mode = 0 });
     }
     public bool Inside(Vector3 p, float margin = 4f)
     {
@@ -137,7 +145,7 @@ public class WaveSim : MonoBehaviour
         foreach (int k in drop) press.Remove(k);
         if (!want)
         {
-            if (on) { on = false; Clear(a); Clear(b); Shader.SetGlobalVector("_FFRipRect", Vector4.zero); ShowPatch(false); }
+            if (on) { on = false; Clear(a); Clear(b); Shader.SetGlobalVector("_FFRipRect", Vector4.zero); ShowPatch(false); for (int i = 0; i < 8; i++) cont[i] = Vector4.zero; Shader.SetGlobalVectorArray("_FFCont", cont); }
             kicks.Clear();
             return;
         }
@@ -162,7 +170,7 @@ public class WaveSim : MonoBehaviour
                 Pack(m++, p, q);
             }
             if (s == 0) foreach (var q in kicks) { if (m >= MaxSrc) break; Pack(m++, q.p, q); }
-            sim.SetVectorArray("_SrcA", sa); sim.SetVectorArray("_SrcB", sb); sim.SetFloat("_SrcN", m);
+            sim.SetVectorArray("_SrcA", sa); sim.SetVectorArray("_SrcB", sb); sim.SetVectorArray("_SrcC", sc); sim.SetFloat("_SrcN", m);
             Vector4 sh = sim.GetVector("_Shift"); sh.x = s == 0 ? shift.x : 0f; sh.y = s == 0 ? shift.y : 0f; sim.SetVector("_Shift", sh);
             Graphics.Blit(a, b, sim);
             var t = a; a = b; b = t;
@@ -171,13 +179,29 @@ public class WaveSim : MonoBehaviour
         if (n > 0) kicks.Clear();
         Shader.SetGlobalTexture("_FFRipTex", a);
         Shader.SetGlobalVector("_FFRipRect", new Vector4(origin.x, origin.y, 1f / Size, 1f));
+        // ffu39 meniscus: the 8 biggest live contacts (legs / hulls; frogs too)
+        int nc = 0;
+        for (int i = 0; i < 8; i++) cont[i] = Vector4.zero;
+        foreach (var kv in press)
+        {
+            Src q = kv.Value; float rr = q.ring > 0f ? q.ring : q.r;
+            int slot = nc < 8 ? nc++ : -1;
+            if (slot < 0) { int w = 0; for (int i = 1; i < 8; i++) if (cont[i].z < cont[w].z) w = i; if (cont[w].z >= rr) continue; slot = w; }
+            cont[slot] = new Vector4(q.p.x, q.p.y, rr, 1f);
+        }
+        Shader.SetGlobalVectorArray("_FFCont", cont);
         UpdatePatch();
     }
 
     void Pack(int i, Vector2 p, Src q)
     {
         sa[i] = new Vector4((p.x - origin.x) / Size, (p.y - origin.y) / Size, q.r / Size, q.amt);
-        sb[i] = new Vector4(q.mode, q.foam, q.ring / Size, q.str);
+        // ffu39: silt only where the thing can reach the bed (auto: bed within ~2.5-5.5 m of the surface), spray only from
+        // kicks (real splashes / footfalls)
+        float sk = q.silt;
+        if (sk < 0f) { float bed = Layout.WaterY - Ranch.GY(p.x, p.y); sk = Mathf.Clamp01(1f - (bed - 2.5f) / 3f); }
+        sb[i] = new Vector4(q.mode, q.foam * sk, q.ring / Size, q.str);
+        sc[i] = new Vector4(q.mode == 0 ? q.foam : 0f, 0f, 0f, 0f);
     }
 
     void TickSwells(float dt)

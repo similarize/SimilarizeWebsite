@@ -102,14 +102,14 @@ public static class RanchBreak
         }
         // roof: south part (helipad + drone pad) solid, north strip in 4 breakable sections
         float split = 2f;
-        Box(staticRoot, new Vector3(c.x, H - 0.15f, (z0 - 0.2f + split) * 0.5f), new Vector3(s.x + 0.4f, 0.5f, split - (z0 - 0.2f)), Mats.Lit(RoofC), true);
+        foreach (var rb in RoofBreak.Add(Box(staticRoot, new Vector3(c.x, H - 0.15f, (z0 - 0.2f + split) * 0.5f), new Vector3(s.x + 0.4f, 0.5f, split - (z0 - 0.2f)), Mats.Lit(RoofC), true), 4, 1)) HousePieces.Add(rb);   // ffu39: the south roof breaks too
         for (int i = 0; i < 4; i++)
         {
             float xa = x0 - 0.2f + (s.x + 0.4f) * i / 4f, xb = x0 - 0.2f + (s.x + 0.4f) * (i + 1) / 4f;
             Vector3 p = new Vector3((xa + xb) * 0.5f, H - 0.15f, (split + z1 + 0.2f) * 0.5f);
             var g = Group("HouseRoof", p);
             Box(g, p, new Vector3(xb - xa - 0.01f, 0.5f, z1 + 0.2f - split), Mats.Lit(RoofC), true);
-            HousePieces.Add(Destruct.Register(g.gameObject, BreakKind.Roof));
+            var hb = Destruct.Register(g.gameObject, BreakKind.Roof); HousePieces.Add(hb); RoofBreak.Track(hb);
         }
         // parapets: north + west breakable segments, south + east solid (the ramp lands on the east side)
         float ph = 0.8f, py = H + ph * 0.5f;

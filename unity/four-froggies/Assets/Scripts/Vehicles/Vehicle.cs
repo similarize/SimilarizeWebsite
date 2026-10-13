@@ -136,6 +136,7 @@ public abstract class Vehicle : MonoBehaviour
             voice = new Sfx.EngineVoice(gameObject, engineKind, enginePitch);
         }
         float load = Mathf.Clamp01(Mathf.Abs(inp.gas - inp.brake) + Mathf.Abs(inp.move.y) + Mathf.Abs(inp.climb));
+        if (engineKind == 12 && voice.syn != null) voice.syn.surface = CtSurface();   // ffu39 Cybertruck tyre grit by surface
         bool on = heard && !(fl != null && fl.returning && driver == null && false);
         voice.Tick(on, spd, load, slipSpeed, groundFrac, transform.position, dt);
         if (fl != null && fl.returning && driver == null && voice.main != null) voice.main.volume = Mathf.Min(voice.main.volume, 0.12f);
@@ -144,7 +145,39 @@ public abstract class Vehicle : MonoBehaviour
             // ffu20: a robot driving it - fade with distance from the nearest player (engine voices are 2D)
             float k = Mathf.Clamp01(1f - Sfx.Near(transform.position) / 70f); k *= k;
             foreach (var src in new[] { voice.main, voice.layer, voice.skid, voice.extra }) if (src != null) src.volume = Mathf.Min(src.volume, 0.45f * k);
+            if (voice.syn != null) voice.syn.extCap = 0.45f * k;
         }
+    }
+
+    // ffu39: what the Cybertruck's tyres roll on, 0 pavement / concrete .. 0.6 grass .. 1 gravel / dirt road. Anything that
+    // is not the ranch terrain under the wheels (garage floor, bridges, the loop, decks, ramps) counts as pavement.
+    float ctSurfT, ctSurfV = 0.6f;
+    float CtSurface()
+    {
+        if (Time.time < ctSurfT) return ctSurfV;
+        ctSurfT = Time.time + 0.3f;
+        Vector3 p = transform.position;
+        WorldId w = driver != null ? driver.world : WorldId.Ranch;
+        float v;
+        if (w == WorldId.Mars || w == WorldId.Callisto) v = 1f;
+        else if (w != WorldId.Ranch) v = 0f;
+        else
+        {
+            RaycastHit h;
+            bool terrain = true;
+            if (Physics.Raycast(p + Vector3.up * 1.5f, Vector3.down, out h, 4f, ~0, QueryTriggerInteraction.Ignore))
+            {
+                var c = h.collider;
+                if (rb != null && c.attachedRigidbody == rb) { if (Physics.Raycast(h.point - Vector3.up * 0.05f, Vector3.down, out h, 3f, ~0, QueryTriggerInteraction.Ignore)) c = h.collider; else c = null; }
+                terrain = c == null || c is TerrainCollider;
+            }
+            if (!terrain) v = 0f;
+            else if (Mathf.Abs(p.x - Layout.GarageC.x) < Layout.GarageSize.x * 0.5f + 4f && Mathf.Abs(p.z - Layout.GarageC.y) < Layout.GarageSize.y * 0.5f + 10f) v = 0.15f;   // garage apron
+            else if (Layout.RoadDist(p.x, p.z) < Layout.TrackW * 0.5f + 0.5f) v = 1f;   // dirt / gravel roads
+            else v = 0.6f;   // grass
+        }
+        ctSurfV = v;
+        return v;
     }
 
     // ffu10: impact sounds (metal crunch for hard hits, soft bump for small ones)
