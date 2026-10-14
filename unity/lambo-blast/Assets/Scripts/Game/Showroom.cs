@@ -322,7 +322,10 @@ public static class Showroom
             Transform head = RobotModel.Build(root, root, Vector3.zero, r, false);
             head.localRotation = Quaternion.Euler(0f, -12f, 0f);
             Mats.SetLayer(root.gameObject, Layer);
-            thumbCam.backgroundColor = new Color(0.03f, 0.036f, 0.05f);
+            thumbCam.backgroundColor = new Color(0.07f, 0.08f, 0.105f);
+            spotMat.color = new Color(0.75f, 0.85f, 1f, 0.35f);
+            var back = SoftQuad("ThumbSpot", root, new Vector3(0f, 1.0f, -1.2f), Vector3.zero, 3.4f, 3.4f, spotMat);
+            Mats.SetLayer(back.gameObject, Layer);
             thumbCam.fieldOfView = 28f;
             FitThumb(root, new Vector3(-0.5f, 0.34f, 1.4f), RobotThumbW / (float)RobotThumbH, 1.04f);
             thumbCam.targetTexture = RobotThumbs[r];

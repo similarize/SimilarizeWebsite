@@ -375,7 +375,7 @@ public class ItemBox : MonoBehaviour
         if (Game.I == null || Game.I.state != Game.State.Race) return;
         foreach (Kart k in Game.I.karts)
         {
-            if (k == null || k.respawning) continue;
+            if (k == null || k.respawning || k.netPuppet) continue;      // lambo8: puppets pick boxes on their own device
             Vector3 d = k.transform.position + Vector3.up * 0.8f - transform.position;
             if (Mathf.Abs(d.y) > 2.4f) continue;
             d.y = 0f;

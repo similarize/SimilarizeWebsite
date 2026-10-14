@@ -16,6 +16,7 @@ public struct KIn
 
 public static class Kb
 {
+    public static bool typing;     // lambo8: the on-screen keypad is open (letter keys type, they don't toggle things)
     static bool Key(System.Func<Keyboard, bool> f, KeyCode legacy, bool down)
     {
         Keyboard k = Keyboard.current;
@@ -40,6 +41,9 @@ public static class Kb
     public static bool CDown() { return Key(k => k.cKey.wasPressedThisFrame, KeyCode.C, true); }
     public static bool PDown() { return Key(k => k.pKey.wasPressedThisFrame, KeyCode.P, true); }
     public static bool RDown() { return Key(k => k.rKey.wasPressedThisFrame, KeyCode.R, true); }
+    public static bool HDown() { return Key(k => k.hKey.wasPressedThisFrame, KeyCode.H, true); }
+    public static bool JDown() { return Key(k => k.jKey.wasPressedThisFrame, KeyCode.J, true); }
+    public static bool LDown() { return Key(k => k.lKey.wasPressedThisFrame, KeyCode.L, true); }
     public static bool TDown() { return Key(k => k.tKey.wasPressedThisFrame, KeyCode.T, true); }
     public static bool QDown() { return Key(k => k.qKey.wasPressedThisFrame, KeyCode.Q, true); }
     public static bool AnyKeyDown() { return Key(k => k.anyKey.wasPressedThisFrame, KeyCode.Space, true); }

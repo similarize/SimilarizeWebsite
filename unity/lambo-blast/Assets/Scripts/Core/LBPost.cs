@@ -19,12 +19,12 @@ public class LBPost : MonoBehaviour
 
     // per theme: saturation, contrast, warmth, filmic exposure, bloom
     static readonly float[,] Theme = {
-        { 1.14f, 1.08f, 0.03f, 1.06f, 0.26f },   // 0 Coconut Cove
-        { 1.10f, 1.10f, 0.06f, 1.04f, 0.24f },   // 1 Canyon Leap
-        { 1.12f, 1.14f, 0.07f, 1.00f, 0.36f },   // 2 Volcano Rim (lava glow blooms more)
-        { 1.02f, 1.07f, -0.035f, 0.98f, 0.22f }, // 3 Snowy Summit
-        { 1.12f, 1.08f, 0.0f, 1.05f, 0.24f },    // 4 Jungle Ruins
-        { 1.08f, 1.10f, -0.01f, 1.03f, 0.30f },  // 5 Sky City
+        { 1.18f, 1.14f, 0.03f, 1.02f, 0.26f },   // 0 Coconut Cove
+        { 1.16f, 1.17f, 0.05f, 0.98f, 0.22f },   // 1 Canyon Leap
+        { 1.16f, 1.18f, 0.06f, 0.98f, 0.34f },   // 2 Volcano Rim (lava glow blooms more)
+        { 1.10f, 1.16f, -0.035f, 0.94f, 0.2f },  // 3 Snowy Summit (snow + sky clip fast: lower exposure, more contrast)
+        { 1.16f, 1.14f, 0.0f, 1.0f, 0.22f },     // 4 Jungle Ruins
+        { 1.14f, 1.16f, -0.01f, 0.98f, 0.28f },  // 5 Sky City
     };
     static int theme;
     public static void SetTheme(int th) { theme = Mathf.Clamp(th, 0, Theme.GetLength(0) - 1); }

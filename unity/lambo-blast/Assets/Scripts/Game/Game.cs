@@ -90,6 +90,7 @@ public partial class Game : MonoBehaviour
         for (int i = 0; i < 4; i++) stands[i] = new Showroom.Stand(i);
         StartCoroutine(Showroom.RenderThumbsLater());
         BuildLobbyUI();
+        BuildNetUI();      // lambo8 online
         BuildHudUI();
         BuildResultsUI();
         BuildPauseUI();
@@ -123,6 +124,7 @@ public partial class Game : MonoBehaviour
     // (all 7 robots are used before one drives a second time).
     void Assign()
     {
+        if (AssignOnline()) return;     // lambo8: the room's line-up decides who drives which kart
         var usedCar = new bool[Cars.All.Length];
         var robotUses = new int[Robots.Count];
         for (int i = 0; i < slots.Count; i++)
@@ -155,9 +157,9 @@ public partial class Game : MonoBehaviour
     // AI in front, humans at the back of the grid (like Beach Buggy Blast)
     void PlaceGrid()
     {
-        int g = 0;
-        for (int i = slots.Count; i < karts.Count; i++) { Vector3 p; float y; Track.GridSpot(g++, out p, out y); karts[i].Place(p, y); }
-        for (int i = 0; i < slots.Count; i++) { Vector3 p; float y; Track.GridSpot(g++, out p, out y); karts[i].Place(p, y); }
+        int g = 0, h = Mathf.Min(HumanKarts, karts.Count);
+        for (int i = h; i < karts.Count; i++) { Vector3 p; float y; Track.GridSpot(g++, out p, out y); karts[i].Place(p, y); }
+        for (int i = 0; i < h; i++) { Vector3 p; float y; Track.GridSpot(g++, out p, out y); karts[i].Place(p, y); }
         Shot.ClearAll();
         ItemBox.ResetAll();
     }
@@ -294,6 +296,7 @@ public partial class Game : MonoBehaviour
         Slot seat;
         if (SeatGate(kind, pad, out seat)) return seat;
         if (slots.Count >= 4) return null;
+        if (LBNet.On && slots.Count >= 1) { NetToast("Online: one player per device"); return null; }
         var s = new Slot { kind = kind, pad = pad, joinTime = Time.unscaledTime };
         if (car < 0 || !CarFree(car, null)) { car = 0; while (!CarFree(car, null)) car++; }
         int robot = slots.Count % Robots.Count;
@@ -321,14 +324,15 @@ public partial class Game : MonoBehaviour
     {
         int c = s.car;
         for (int k = 0; k < 8; k++) { c = ((c + dir) % 8 + 8) % 8; if (CarFree(c, s)) break; }
-        s.car = c; Assign(); Sfx.Play(Sfx.Click, 0.3f);
+        s.car = c; NetPicks(s); Assign(); Sfx.Play(Sfx.Click, 0.3f);
     }
+    void NetPicks(Slot s) { if (LBNet.On && slots.Count > 0 && s == slots[0]) LBNet.I.PicksChanged(s.car, s.robot); }
 
     void CycleRobot(Slot s, int dir)
     {
         int r = s.robot;
         for (int k = 0; k < Robots.Count; k++) { r = ((r + dir) % Robots.Count + Robots.Count) % Robots.Count; if (RobotFree(r, s)) break; }
-        s.robot = r; Assign(); Sfx.Play(Sfx.Click, 0.3f);
+        s.robot = r; NetPicks(s); Assign(); Sfx.Play(Sfx.Click, 0.3f);
     }
 
     // A pad press is a ghost if another, already-joined pad reported an identical press within 150 ms.
@@ -371,8 +375,10 @@ public partial class Game : MonoBehaviour
         demoT += Time.unscaledDeltaTime;
         if (demoT > 6f && state == State.Lobby)
         {
-            demoT = 0f;
             if (slots.Count == 0) Join(InputKind.Keyboard, null);
+            bool guest = LBNet.On && LBNet.I.IsGuest, hostWaiting = LBNet.On && LBNet.I.IsHost && LBNet.I.players.Count < 2 && demoT < 90f;
+            if (guest || hostWaiting || (Application.absoluteURL ?? "").Contains("room=") && !LBNet.On && demoT < 20f) return;   // online demo: the host starts once a guest is in
+            demoT = 0f;
             StartRace();
         }
     }
@@ -396,14 +402,17 @@ public partial class Game : MonoBehaviour
         resultsCanvas.enabled = false;
         pauseBtn.gameObject.SetActive(false);
         LayoutLobby();
+        if (NetLobbyInput()) { RefreshLobby(dt); return; }     // lambo8: HOST / JOIN / keypad
         Sfx.Music("lobby");
         float now = Time.unscaledTime;
 
         // track picker
-        if (Kb.TDown()) PickTrack(Kb.Shift() ? -1 : 1);
+        bool netGuest = LBNet.On && LBNet.I.IsGuest;
+        if (Kb.TDown() && !netGuest) PickTrack(Kb.Shift() ? -1 : 1);
         foreach (Gamepad pad in Gamepad.all)
         {
             if (IsGhostDev(pad) || FindPad(pad) == null && slots.Count > 0 && PadGuard.IsAlias(pad)) continue;
+            if (netGuest) continue;
             if (pad.rightShoulder.wasPressedThisFrame) PickTrack(1);
             if (pad.leftShoulder.wasPressedThisFrame) PickTrack(-1);
         }
@@ -490,8 +499,9 @@ public partial class Game : MonoBehaviour
     bool LobbyTap(Vector2 pos, InputKind kind)
     {
         if (Hit(creditsBtn, pos)) { CreditsToggle(true); return false; }
-        if (Hit(trackPrev, pos)) { PickTrack(-1); return false; }
-        if (Hit(trackNext, pos) || Hit(trackBox, pos)) { PickTrack(1); return false; }
+        bool netGuest = LBNet.On && LBNet.I.IsGuest;
+        if (Hit(trackPrev, pos)) { if (!netGuest) PickTrack(-1); return false; }
+        if (Hit(trackNext, pos) || Hit(trackBox, pos)) { if (!netGuest) PickTrack(1); return false; }
         if (Hit(playBtn, pos))
         {
             if (slots.Count == 0) Join(kind, null);
@@ -504,7 +514,7 @@ public partial class Game : MonoBehaviour
             {
                 Slot s = FindSlot(kind);
                 if (s == null) { s = Join(kind, null, i); if (s == null || s.car == i) return false; }   // gated: acts for the seated player
-                if (CarFree(i, s)) { s.car = i; Assign(); Sfx.Play(Sfx.Click, 0.3f); }
+                if (CarFree(i, s)) { s.car = i; NetPicks(s); Assign(); Sfx.Play(Sfx.Click, 0.3f); }
                 return false;
             }
         for (int i = 0; i < 7; i++)
@@ -512,7 +522,7 @@ public partial class Game : MonoBehaviour
             {
                 Slot s = FindSlot(kind);
                 if (s == null) s = Join(kind, null);
-                if (s != null && RobotFree(i, s)) { s.robot = i; Assign(); Sfx.Play(Sfx.Click, 0.3f); }
+                if (s != null && RobotFree(i, s)) { s.robot = i; NetPicks(s); Assign(); Sfx.Play(Sfx.Click, 0.3f); }
                 return false;
             }
         return false;
@@ -546,12 +556,16 @@ public partial class Game : MonoBehaviour
     }
 
     // ---------------- race flow ----------------
-    void StartRace()
+    void StartRace() { StartRace(false); }
+    void StartRace(bool fromHost)
     {
         if (slots.Count == 0) return;
+        if (LBNet.On && LBNet.I.IsGuest && !fromHost) { NetToast("The host starts the race"); return; }
+        hostFinishCount = 0;
         if (pendingTrack >= 0) { int id = pendingTrack; pendingTrack = -1; RebuildTrack(id); }
         Assign();
         PlaceGrid();
+        if (LBNet.On && LBNet.I.IsHost) LBNet.I.HostStart(Track.Id);     // lambo8: everybody in the room starts now
         state = State.Countdown;
         countdownT = 3.8f;
         lastBeep = 4f;
@@ -643,7 +657,8 @@ public partial class Game : MonoBehaviour
 
     public void OnFinish(Kart k)
     {
-        finishCount++;
+        if (LBNet.On && LBNet.I.IsHost) { hostFinishCount = Mathf.Max(hostFinishCount, finishCount) + 1; finishCount = hostFinishCount; k.hostPlaced = true; LBNet.I.HostFinish(k.id, finishCount, k.finishTime); }
+        else finishCount++;
         k.place = finishCount;
         if (k.human)
         {
@@ -674,6 +689,7 @@ public partial class Game : MonoBehaviour
             {
                 Kart a = karts[i], b = karts[j];
                 if (a.respawning || b.respawning) continue;
+                if (a.netPuppet && b.netPuppet) continue;     // lambo8: both posed by the network
                 Vector3 pa = a.transform.position, pb = b.transform.position;
                 if (Mathf.Abs(pa.y - pb.y) > 1.6f) continue;
                 Vector3 d = Track.Flat(pb - pa);
@@ -681,7 +697,7 @@ public partial class Game : MonoBehaviour
                 const float R = 2.5f;
                 if (dist >= R || dist < 0.001f) continue;
                 Vector3 n = d / dist;
-                float wa = a.spec.weight, wb = b.spec.weight;
+                float wa = a.netPuppet ? 1000f : a.spec.weight, wb = b.netPuppet ? 1000f : b.spec.weight;
                 float over = R - dist;
                 a.transform.position -= n * over * wb / (wa + wb);
                 b.transform.position += n * over * wa / (wa + wb);
@@ -922,12 +938,13 @@ public partial class Game : MonoBehaviour
         }
         if (Kb.TouchesBegan().Count > 0) again = true;
         if (Kb.MouseLeftDown() && Kb.TouchCount() == 0 && !Sfx.ButtonHit(Kb.MousePos())) again = true;
-        if (lobby) ToLobby();
+        if (lobby) { if (LBNet.On && LBNet.I.IsGuest) LBNet.I.Leave("You left the room"); ToLobby(); }
         else if (again) StartRace();
     }
 
     void ToLobby()
     {
+        if (LBNet.On && LBNet.I.IsHost) LBNet.I.HostBackToLobby();
         state = State.Lobby;
         LBDisplay.Lobby(true);
         resultsCanvas.enabled = false;

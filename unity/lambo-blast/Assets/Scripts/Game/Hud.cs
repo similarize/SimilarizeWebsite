@@ -216,7 +216,7 @@ public class ViewHud
             Vector2 lp;
             RectTransformUtility.ScreenPointToLocalPointInRectangle(inner, sp, null, out lp);
             t.enabled = true;
-            t.text = (k.human ? "P" + (k.slot + 1) + " " : "") + Robots.Names[k.robot];
+            t.text = (k.netName != null ? k.netName + " " : k.human ? "P" + (k.slot + 1) + " " : "") + Robots.Names[k.robot];
             Color kc = k.Color == Cars.All[7].color ? new Color(0.78f, 0.8f, 0.86f) : Color.Lerp(k.Color, Color.white, 0.2f);
             t.color = new Color(kc.r, kc.g, kc.b, Mathf.Clamp01(1.4f - d / 90f));
             t.fontSize = d > 45f ? 13 : 16;

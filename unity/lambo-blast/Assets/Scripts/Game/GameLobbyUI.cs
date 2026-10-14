@@ -164,18 +164,18 @@ public partial class Game
         {
             put(lobbyTitle, new Vector2(0, 598), new Vector2(680, 52)); lobbyTitle.fontSize = 42;
             put(lobbySub, new Vector2(0, 558), new Vector2(690, 28)); lobbySub.fontSize = 14;
-            if (visible == 1) { cardSize = new Vector2(680, 0); previewH = 300f; } else { cardSize = new Vector2(346, 0); previewH = 168f; }
-            cardTop = 532f;
-            tileCarSize = new Vector2(166, 80); tileRobotSize = new Vector2(166, 92);
-            for (int i = 0; i < 8; i++) put(carTiles[i], new Vector2(-258 + (i % 4) * 172, -186 - (i / 4) * 86), tileCarSize);
-            for (int i = 0; i < 7; i++) put(robotTiles[i], new Vector2(i < 4 ? -258 + i * 172 : -172 + (i - 4) * 172, -366 - (i / 4) * 98), tileRobotSize);
-            put(trackBox, new Vector2(-118, -540), new Vector2(330, 64));
-            put(trackPrev, new Vector2(-312, -540), new Vector2(46, 64));
-            put(trackNext, new Vector2(76, -540), new Vector2(46, 64));
-            put(playBtn, new Vector2(214, -528), new Vector2(240, 54));
-            put(creditsBtn, new Vector2(214, -572), new Vector2(120, 24));
-            put(lobbyStatus, new Vector2(0, -600), new Vector2(690, 26)); lobbyStatus.fontSize = 13;
-            put(lobbyHelp, new Vector2(0, -626), new Vector2(700, 30)); lobbyHelp.fontSize = 10;
+            if (visible == 1) { cardSize = new Vector2(680, 0); previewH = 370f; } else { cardSize = new Vector2(346, 0); previewH = 168f; }
+            cardTop = 534f;
+            tileCarSize = new Vector2(166, 78); tileRobotSize = new Vector2(166, 88);
+            for (int i = 0; i < 8; i++) put(carTiles[i], new Vector2(-258 + (i % 4) * 172, -158 - (i / 4) * 84), tileCarSize);
+            for (int i = 0; i < 7; i++) put(robotTiles[i], new Vector2(i < 4 ? -258 + i * 172 : -172 + (i - 4) * 172, -334 - (i / 4) * 94), tileRobotSize);
+            put(trackBox, new Vector2(-118, -518), new Vector2(330, 60));
+            put(trackPrev, new Vector2(-312, -518), new Vector2(46, 60));
+            put(trackNext, new Vector2(76, -518), new Vector2(46, 60));
+            put(playBtn, new Vector2(214, -518), new Vector2(240, 56));
+            put(creditsBtn, new Vector2(266, -568), new Vector2(120, 26));
+            put(lobbyStatus, new Vector2(0, -598), new Vector2(690, 24)); lobbyStatus.fontSize = 13;
+            put(lobbyHelp, new Vector2(0, -622), new Vector2(700, 28)); lobbyHelp.fontSize = 10;
             put(creditsPanel, Vector2.zero, new Vector2(700, 940));
         }
         else
@@ -195,8 +195,8 @@ public partial class Game
             put(trackNext, new Vector2(-192, -286), new Vector2(44, 62));
             put(playBtn, new Vector2(0, -286), new Vector2(250, 52));
             put(creditsBtn, new Vector2(548, -286), new Vector2(112, 28));
-            put(lobbyStatus, new Vector2(0, -326), new Vector2(1180, 22)); lobbyStatus.fontSize = 14;
-            put(lobbyHelp, new Vector2(0, -350), new Vector2(1220, 30)); lobbyHelp.fontSize = 11;
+            put(lobbyStatus, new Vector2(0, -324), new Vector2(1180, 22)); lobbyStatus.fontSize = 14;
+            put(lobbyHelp, new Vector2(0, -346), new Vector2(1220, 26)); lobbyHelp.fontSize = 10;
             put(creditsPanel, Vector2.zero, new Vector2(1060, 500));
         }
         playGlow.rectTransform.anchoredPosition = playBtn.rectTransform.anchoredPosition;
@@ -207,7 +207,9 @@ public partial class Game
         put(trackThumbWin, new Vector2(6 + thW * 0.5f, 0), new Vector2(thW, thH));
         put(trackName, new Vector2(14 + thW + (tb.x - thW - 20) * 0.5f, 10), new Vector2(tb.x - thW - 20, 24));
         put(trackInfo, new Vector2(14 + thW + (tb.x - thW - 20) * 0.5f, -14), new Vector2(tb.x - thW - 20, 30));
-        trackName.fontSize = 15;
+        trackName.fontSize = 16;
+        trackName.horizontalOverflow = HorizontalWrapMode.Overflow;
+        trackInfo.fontSize = lobbyLayout == 1 ? 10 : 11;
         // card insides (anchored to the card's top edge)
         float w = cardSize.x, pw = w - 20f, y = -10f;
         for (int i = 0; i < 4; i++)
@@ -423,8 +425,8 @@ public partial class Game
         int tshow = pendingTrack >= 0 ? pendingTrack : Track.Id;
         trackPop = Mathf.Max(0f, trackPop - dt * 3.5f);
         trackBox.rectTransform.localScale = Vector3.one * (1f + 0.06f * Mathf.Sin(trackPop * Mathf.PI));
-        trackName.text = "TRACK " + (tshow + 1) + "/" + Track.Count + "  " + Track.NameOf(tshow).ToUpper();
-        trackInfo.text = pendingTrack >= 0 ? "building track..." : (lobbyLayout == 1 ? "tap < >  ·  T  ·  LB / RB" : "tap < >  ·  T / Shift+T  ·  pad LB / RB");
+        trackName.text = Track.NameOf(tshow).ToUpper();
+        trackInfo.text = "TRACK " + (tshow + 1) + " / " + Track.Count + "\n" + (pendingTrack >= 0 ? "building track..." : (LBNet.On && LBNet.I.IsGuest ? "the host picks the track" : lobbyLayout == 1 ? "tap < >  ·  T  ·  LB / RB" : "tap < >  ·  T  ·  pad LB / RB"));
         trackThumb.color = Color.Lerp(trackThumb.color, pendingTrack >= 0 ? new Color(1f, 1f, 1f, 0.35f) : Color.white, Mathf.Min(1f, dt * 8f));
         lobbySub.text = Track.NameOf(tshow).ToUpper() + "   ·   " + Track.BlurbOf(tshow) + "   ·   8 cars  ·  3 laps  ·  grab the ? boxes";
         // RACE: breathing glow
@@ -433,6 +435,8 @@ public partial class Game
         string top = "<color=#7dff9a>GREEN is the fastest car</color> (" + Cars.All[0].Kmh + " km/h)   ·   ";
         if (slots.Count == 0) lobbyStatus.text = top + "join to pick your car + robot";
         else lobbyStatus.text = top + slots.Count + " player" + (slots.Count > 1 ? "s" : "") + " in   ·   A / Start / Enter / RACE to go";
+        string ns = NetStatus();
+        if (ns != null) lobbyStatus.text = ns;
         lobbyHelp.text = HelpLines;
     }
 

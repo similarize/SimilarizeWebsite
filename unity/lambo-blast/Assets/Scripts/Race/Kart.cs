@@ -57,6 +57,11 @@ public class Kart : MonoBehaviour
     public bool towing;                // current respawn is a tow (fade, no sink)
     float towS = -1f, respawnTotal = 1f, fadeInT;
     public float FadeA { get { if (respawning && towing) return Mathf.Clamp01(1f - respawnT / Mathf.Max(0.01f, respawnTotal)) ; return Mathf.Clamp01(fadeInT / 0.45f); } }
+    // lambo8 online: a kart driven by another device is a puppet (posed from the network, no local physics)
+    public bool netPuppet;
+    public string netName;            // online player's name for tags / results (null = local or AI)
+    bool netApplyHit;
+    public bool hostPlaced;          // host: this kart's finishing place has been given out
     public static bool OffDemo;        // &lboff=1: P1 autopilot drives off the track (probe of the tow-back)
     bool FreeRoam { get { return human && (!Autopilot || OffDemo); } }
     public float RaceDist { get { return finished ? Track.Laps + 10f - place * 0.01f : lap + s / Track.Length; } }
@@ -136,7 +141,7 @@ public class Kart : MonoBehaviour
         grounded = true; gNormal = Vector3.up; lastClimb = 0f;
         drifting = false; driftCharge = 0f; boostT = 0f; spinT = 0f; shrinkT = 0f; shieldT = 0f;
         respawning = false; item = Item.None; rollT = 0f;
-        lap = -1; cp = true; finished = false; finishTime = 0f; wrongT = 0f; toastT = 0f; offT = 0f; towing = false; towS = -1f; fadeInT = 0f;
+        lap = -1; cp = true; finished = false; finishTime = 0f; wrongT = 0f; toastT = 0f; offT = 0f; towing = false; towS = -1f; fadeInT = 0f; hostPlaced = false;
         Track.Proj p = Track.Nearest(pos, -1, 0);
         hint = p.i; s = p.s; lastGoodS = s; lastGoodHint = hint;
         aiShortcut = false; aiItemT = 0f; stuckT = 0f; gasHeldT = 0f;
@@ -164,8 +169,17 @@ public class Kart : MonoBehaviour
         if (!human) aiItemT = Random.Range(1.2f, 5f);
     }
 
+    // online: the hit goes through the shooter's device; this device applies it only for karts it owns
+    public void NetHit(Item type, Kart from) { netApplyHit = true; try { Hit(type, from); } finally { netApplyHit = false; } }
+
     public void Hit(Item type, Kart from)
     {
+        if (LBNet.On && !netApplyHit)
+        {
+            bool shooterLocal = from == null ? !netPuppet : !from.netPuppet;
+            if (!shooterLocal) return;                                   // the shooter's device decides
+            if (netPuppet) { if (!finished && !respawning && shieldT <= 0f) LBNet.I.SendHit(this, type, from); return; }   // the victim lives on another device
+        }
         if (finished || respawning) return;
         if (shieldT > 0f)
         {
@@ -203,11 +217,44 @@ public class Kart : MonoBehaviour
         Item it = item;
         item = Item.None;
         Items.Use(this, it);
+        if (LBNet.On) LBNet.I.SendFire(this, it);
     }
 
     // ------------------------------------------------------------------
+    // online puppet: pose from the network (LBNet.PosePuppets, ~0.1 s behind, interpolated)
+    public void NetPose(Vector3 p, float yawDeg, float spd, float latV, float vyV, int lapN, float sN, int flags, float fin)
+    {
+        transform.position = p; yaw = yawDeg; speed = spd; lat = latV; vy = vyV; lap = lapN; s = sN;
+        if (flags < 0) return;
+        drifting = (flags & 1) != 0;
+        if ((flags & 2) != 0) boostT = Mathf.Max(boostT, 0.1f);
+        if ((flags & 4) != 0 && spinT <= 0f) { spinT = spinTotal = 1f; }
+        shieldT = (flags & 8) != 0 ? Mathf.Max(shieldT, 0.5f) : 0f;
+        respawning = (flags & 16) != 0;
+        grounded = (flags & 32) != 0;
+        if ((flags & 64) != 0 && !finished) { finished = true; finishTime = fin; }
+    }
+
+    void TickPuppet(float dt)
+    {
+        if (toastT > 0f) toastT -= dt;
+        if (spinT > 0f) spinT -= dt;
+        if (boostT > 0f) boostT -= dt;
+        if (shieldT > 0f) shieldT -= dt;
+        Vector3 pos = transform.position;
+        float gy; Vector3 gn;
+        Track.Ground(pos, out gy, out gn);
+        gNormal = Vector3.Slerp(gNormal, grounded && pos.y - gy < 0.6f ? gn : Vector3.up, Mathf.Min(1f, dt * 8f));
+        Vector3 fwd = Forward;
+        if (boostT > 0f) FX.Flame(transform.TransformPoint(new Vector3(0f, 0.47f, -2.4f)), -fwd);
+        if (drifting && grounded) FX.Spark(transform.TransformPoint(new Vector3(0.95f, 0.1f, -1.5f)), -fwd, new Color(0.35f, 0.65f, 1f));
+        ApplyTransform(dt);
+        lastSteer = Mathf.Lerp(lastSteer, 0f, 0.3f);
+    }
+
     public void Tick(float dt, bool racing, bool countdown)
     {
+        if (netPuppet) { TickPuppet(dt); return; }
         if (toastT > 0f) toastT -= dt;
         if (fadeInT > 0f) fadeInT -= dt;
         if (rollT > 0f)

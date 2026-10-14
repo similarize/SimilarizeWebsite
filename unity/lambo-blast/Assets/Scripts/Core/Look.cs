@@ -82,8 +82,10 @@ public static class Look
     static Texture skyBase;
     public static int Theme;
     // sky exposure / rotation per theme (sun azimuth of each panorama vs the theme's sun light)
-    static readonly float[] SkyExp = { 1f, 0.95f, 0.92f, 0.98f, 0.95f, 0.98f };
-    static readonly float[] SkyRot = { 18f, 354f, 76f, 34f, 31f, 304f };   // R = sunAz - (u_sun - 0.25) * 360 (measured, lb-gfx/make_theme_tex.py)
+    static readonly float[] SkyExp = { 1f, 0.8f, 0.85f, 0.78f, 0.85f, 0.82f };   // lambo7b: the new panoramas read washed-out at 1.0 under the filmic grade
+    // lambo7b: +180 on the new skies - with the sky sun matched to the sun light the start straights looked straight into a
+    // white sun glow (probe A-T1 / A-T3); the panorama sun now sits behind the grid, the sky in view stays blue
+    static readonly float[] SkyRot = { 18f, 174f, 256f, 214f, 211f, 124f };   // R = sunAz - (u_sun - 0.25) * 360 (measured, lb-gfx/make_theme_tex.py)
     static float skyExposure = -1f;
     public static void SetTheme(int th)
     {
