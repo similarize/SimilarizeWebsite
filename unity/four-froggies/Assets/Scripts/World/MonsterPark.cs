@@ -17,7 +17,10 @@ public class MonsterPark : MonoBehaviour
     public static MonsterPark I;
     public static readonly Rect Area = new Rect(-172f, -143f, 76f, 86f);     // x -172..-96, z -143..-57
     public static readonly Rect PadCut = new Rect(-122f, -72f, 30f, 20f);    // the Starship pad's corner stays out
-    public const float BowlX = -150f, BowlZ = -124f, BowlR0 = 7f, BowlCurve = 4.5f, BowlWallTop = 7f;
+    // ffu44: bigger, gentler bowl (ffu43 R 7 + 4.5 curve: the Cybertruck's nose dug into the tight curve and stalled at 1.7 m)
+    public const float BowlX = -150f, BowlZ = -124f, BowlR0 = 8f, BowlCurve = 6f, BowlWallTop = 7f;
+    public const float BowlGap = 56f, BowlTaperIn = 110f, BowlTaperOut = 40f;   // opening (north) + the wall's two ramps
+    public const float LeadHalfW = 4.5f;   // ffu44: clear lead-in lane through the rock garden, x BowlX +- this
     public const float HpX = -110f, HpZ0 = -126f, HpZ1 = -99f;
     public const float CrushX = -164f, CrushZ0 = -64f;
     static Transform root;
@@ -183,7 +186,7 @@ public class MonsterPark : MonoBehaviour
     {
         var v = new List<Vector3>(); var t = new List<int>();
         Vector3 c = new Vector3(BowlX, gy0, BowlZ);
-        const float gap = 60f, taper = 40f;
+        const float gap = BowlGap;
         int segs = 120;
         var prof = new List<Vector2>();
         for (int k = 0; k <= 10; k++) { float a = k / 10f * Mathf.PI * 0.5f; prof.Add(new Vector2(BowlR0 + BowlCurve * Mathf.Sin(a), BowlCurve - BowlCurve * Mathf.Cos(a))); }
@@ -193,7 +196,9 @@ public class MonsterPark : MonoBehaviour
         for (int i = 0; i <= segs; i++)
         {
             float u = i / (float)segs, ang = (a0 + span * u) * Mathf.Deg2Rad;
-            float deg = span * u, k = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(Mathf.Min(deg, span - deg) / taper));
+            // ffu44: asymmetric ramps - anticlockwise riders (enter, turn right / west) climb a long 110 deg ramp; the far end
+            // drops back down over 40 deg into the opening
+            float deg = span * u, k = Mathf.SmoothStep(0f, 1f, Mathf.Min(Mathf.Clamp01(deg / BowlTaperIn), Mathf.Clamp01((span - deg) / BowlTaperOut)));
             Vector3 dir = new Vector3(Mathf.Cos(ang), 0f, Mathf.Sin(ang));
             for (int j = 0; j < pn; j++)
             {
@@ -216,7 +221,7 @@ public class MonsterPark : MonoBehaviour
         for (int i = 0; i < 36; i++)
         {
             float deg = span * (i + 0.5f) / 36f, ang = (a0 + deg) * Mathf.Deg2Rad;
-            float k = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(Mathf.Min(deg, span - deg) / taper));
+            float k = Mathf.SmoothStep(0f, 1f, Mathf.Min(Mathf.Clamp01(deg / BowlTaperIn), Mathf.Clamp01((span - deg) / BowlTaperOut)));
             if (k < 0.95f) continue;
             Vector3 dir = new Vector3(Mathf.Cos(ang), 0f, Mathf.Sin(ang));
             var s = Mats.Prim(PrimitiveType.Cube, root, c + dir * (BowlR0 + BowlCurve + 0.75f) + Vector3.up * (BowlWallTop - 0.6f), new Vector3(0.06f, 0.9f, 2f * Mathf.PI * (BowlR0 + BowlCurve) / 36f * (span / 360f) + 0.05f), i % 2 == 0 ? red : white, false);
@@ -277,6 +282,7 @@ public class MonsterPark : MonoBehaviour
         {
             float x = -167f + (float)r.NextDouble() * 26f, z = -93f - (float)r.NextDouble() * 13f;
             float rad = 0.35f + (float)r.NextDouble() * 0.75f;
+            if (Mathf.Abs(x - BowlX) < LeadHalfW + rad) continue;   // ffu44: wall-of-death lead-in lane stays clear
             var g = Mats.Prim(PrimitiveType.Sphere, root, new Vector3(x, gy0 + rad * 0.3f, z), Vector3.one * rad * 2f, i % 3 == 0 ? stone2 : stone, true);
             g.name = "Rock garden boulder"; rocks++;
         }
@@ -284,7 +290,9 @@ public class MonsterPark : MonoBehaviour
         {
             float x = -165f + i * 2.9f + (float)r.NextDouble() * 1.2f, z = -99.5f + ((float)r.NextDouble() - 0.5f) * 8f;
             float rad = 0.22f + (float)r.NextDouble() * 0.25f, len = 3.5f + (float)r.NextDouble() * 3f;
-            var g = Mats.Prim(PrimitiveType.Cylinder, root, new Vector3(x, gy0 + rad, z), new Vector3(rad * 2f, len * 0.5f, rad * 2f), new Vector3(90f, (float)r.NextDouble() * 60f - 30f, 0f), bark, true);
+            float yawL = (float)r.NextDouble() * 60f - 30f;
+            if (Mathf.Abs(x - BowlX) < LeadHalfW + 2f) continue;   // ffu44: lead-in lane
+            var g = Mats.Prim(PrimitiveType.Cylinder, root, new Vector3(x, gy0 + rad, z), new Vector3(rad * 2f, len * 0.5f, rad * 2f), new Vector3(90f, yawL, 0f), bark, true);
             g.name = "Rock garden log"; logs++;
         }
         AddZone("rock garden", new Vector3(-154f, 0f, -99.5f), new Vector3(30f, 8f, 17f), new Vector3(-170f, 0f, -99.5f), 90f, true);

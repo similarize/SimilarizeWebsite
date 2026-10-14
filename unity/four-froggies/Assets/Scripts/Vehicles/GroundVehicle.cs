@@ -192,6 +192,12 @@ public class GroundVehicle : Vehicle
             rb.AddForce(-groundNormal * 14f * steep * Mathf.Clamp01((spd - 4f) / 5f), ForceMode.Acceleration);
         }
         loopLoaded = inLoop && onStunt && groundedCount > 0;
+        // ffu44: U-turn braking zone on the loop branch (RallyTrack.UTurnBrake)
+        if (driven && groundedCount > 0 && (onTrack || onStunt) && !rb.isKinematic)
+        {
+            float ub = RallyTrack.UTurnBrake(rb.position, rb.velocity);
+            if (ub > 0f) rb.AddForce(-rb.velocity.normalized * ub, ForceMode.Acceleration);
+        }
 
         if (groundedCount > 0 && ws > 0f)
         {

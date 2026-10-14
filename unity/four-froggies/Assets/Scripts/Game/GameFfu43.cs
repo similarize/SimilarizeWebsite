@@ -66,7 +66,8 @@ public partial class Game
         {
             case 0: { Vector3 p = RallyTrack.BranchFrameAt(6f, out fw, out up); M43Place(p, fw, 9f); break; }
             case 1: { Vector3 p = RallyTrack.BranchFrameAt(RallyTrack.BranchArcEnd - 6f, out fw, out up); M43Place(p, -fw, 9f); break; }
-            case 2: M43Place(new Vector3(MonsterPark.BowlX, Ranch.GY(MonsterPark.BowlX, MonsterPark.BowlZ + 18f), MonsterPark.BowlZ + 18f), Vector3.back, 6f); break;
+            // ffu44: start up the cleared lead-in lane through the rock garden (z -94), ~16 m run-up to the opening
+            case 2: M43Place(new Vector3(MonsterPark.BowlX, Ranch.GY(MonsterPark.BowlX, MonsterPark.BowlZ + 30f), MonsterPark.BowlZ + 30f), Vector3.back, 6f); break;
             case 3:
                 BigWheels.Set(3f, "demo");
                 M43Place(new Vector3(MonsterPark.CrushX, Ranch.GY(MonsterPark.CrushX, MonsterPark.CrushZ0 + 9f), MonsterPark.CrushZ0 + 9f), Vector3.back, 0f);
@@ -143,24 +144,26 @@ public partial class Game
         }
         if (m43Phase == 2)
         {
-            // ffu43b: circle the bowl anticlockwise (seen from above) ~1.3 m inside the wall top. ffu43a drove at the centre
-            // first and met the far wall head-on at 16 m/s (stalled, towed back, then flew out over the rim). Now: aim at a
-            // point on the target circle ~50 deg ahead (a tangent entry from outside, a gentle spiral from inside), slow
-            // entry (9 m/s) until a quarter lap is done, then 14 m/s.
+            // ffu44: drive in down the lead-in lane onto the flat floor, then turn right (west = anticlockwise from above) and
+            // SPIRAL out onto the curve: the aim point sits 40 deg ahead at (current radius + 2.5 m), capped at the riding line
+            // ~1.5 m inside the wall top. ffu43c aimed straight at the riding line from the middle (nose into the curve, stalled
+            // at 1.7 m) and, after a tow, kept its 'in the bowl' flag and hit the outside of the ring.
             Vector3 cc = new Vector3(MonsterPark.BowlX, pos.y, MonsterPark.BowlZ);
             Vector3 rad = pos - cc; rad.y = 0f;
             float r = Mathf.Max(rad.magnitude, 0.5f);
-            float target = MonsterPark.BowlR0 + MonsterPark.BowlCurve - 1.3f;
-            float a0 = Mathf.Atan2(rad.z, rad.x), ahead = 50f * Mathf.Deg2Rad;
-            Vector3 tp = cc + new Vector3(Mathf.Cos(a0 + ahead), 0f, Mathf.Sin(a0 + ahead)) * target;   // +angle = anticlockwise from above
-            // ffu43c: in through the opening to the flat floor first (ffu43b turned early and hung on the opening's side)
-            if (r < MonsterPark.BowlR0 - 1f) m43InBowl = true;
+            float rOut = MonsterPark.BowlR0 + MonsterPark.BowlCurve;
+            float target = rOut - 1.5f;
+            if (r > rOut + 2f) m43InBowl = false;                 // outside (start / after a tow): back in through the opening
+            if (r < MonsterPark.BowlR0 - 2f) m43InBowl = true;
+            float a0 = Mathf.Atan2(rad.z, rad.x), ahead = 40f * Mathf.Deg2Rad;
+            float rt = Mathf.Min(target, r + 2.5f);
+            Vector3 tp = cc + new Vector3(Mathf.Cos(a0 + ahead), 0f, Mathf.Sin(a0 + ahead)) * rt;   // +angle = anticlockwise from above
             if (!m43InBowl) tp = cc;
             Vector3 aim = tp - pos; aim.y = 0f; aim.Normalize();
             Vector3 hf = c.transform.forward; hf.y = 0f;
             float ang = Vector3.SignedAngle(hf, aim, Vector3.up);
-            o.move.x = Mathf.Clamp(ang / 20f, -1f, 1f);
-            float wantW = !m43InBowl ? 7f : m43Laps < 90f ? 9f : 14f;
+            o.move.x = Mathf.Clamp(ang / 20f, -1f, 1f); m43Steer = o.move.x;
+            float wantW = !m43InBowl ? 8f : m43Laps < 120f ? 10f : 13f;
             o.gas = spd < wantW ? 1f : 0.15f;
             if (spd > wantW + 2f) o.brake = 0.3f;
             return o;
@@ -209,7 +212,7 @@ public partial class Game
             float ang = Mathf.Atan2(rad.z, rad.x) * Mathf.Rad2Deg;
             if (!float.IsNaN(m43LastAng) && rad.magnitude > 4f) m43Laps += Mathf.Abs(Mathf.DeltaAngle(m43LastAng, ang));
             m43LastAng = ang;
-            if (m43PhT > 22f) M43Phase(3);
+            if (m43PhT > 28f) M43Phase(3);   // ffu44: 28 s (longer lead-in)
             pos = cc + new Vector3(0f, 13f, 20f); look = cc + Vector3.up * 2f;
         }
         else if (m43Phase == 3)

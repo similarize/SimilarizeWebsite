@@ -361,6 +361,7 @@ public class Bike : Vehicle
 
     // ---------------- ffu42 big wheels (BigWheels.cs): monster bike ----------------
     [System.NonSerialized] public float bigK = 1f;
+    const float BikeComCut = 1.12f;   // ffu44 (trucks keep BigWheels.ComCut 0.9)
     bool bigReady; float rest0, spring0, damper0, cam0, camH0, pitch0, zc0, gap0, rmax0; Vector3 com0;
     void BigTick(float dt)
     {
@@ -388,8 +389,11 @@ public class Bike : Vehicle
         }
         bigLift = bigK > 1.0001f ? lift : 0f; bigPad = Mathf.Max(0f, (fw.r - fw.r0) * 0.3f); bigBack = Mathf.Max(0f, zr1 - zrK);
         float rr = rest0 / Mathf.Max(0.01f, restK);
-        spring = spring0 * rr; damper = damper0 * Mathf.Sqrt(rr);
-        rb.centerOfMass = com0 - Vector3.up * bigLift * BigWheels.ComCut;
+        // ffu44: calmer monster bike (ffu42 probe: 2 flips at 4x over the boulder + thick log) - more damping as the tyres
+        // grow (4x = 1.9x), centre of mass a little BELOW its stock height off the ground, more angular drag
+        spring = spring0 * rr; damper = damper0 * Mathf.Sqrt(rr) * (1f + 0.3f * (bigK - 1f));
+        rb.centerOfMass = com0 - Vector3.up * bigLift * BikeComCut;
+        rb.angularDrag = 1.2f + 0.6f * (bigK - 1f);
         camDistance = cam0 * (1f + (bigK - 1f) * 0.25f); camHeight = camH0 + bigLift * 0.8f;
         rb.WakeUp();
     }

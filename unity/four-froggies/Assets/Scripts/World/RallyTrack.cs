@@ -798,6 +798,7 @@ public static class RallyTrack
         Ranch.Sign(new Vector3(b.x + 6f, Gy(b.x, b.y) + 3.2f, b.y + 9f), 225f, "LOOP  >\n<size=26>this way</size>", new Color(0.7f, 0.1f, 0.1f), 6f, 2.4f);
         Vector2[] ex = Layout.LoopExitPath; Vector2 e = ex[ex.Length - 8];
         Ranch.Sign(new Vector3(e.x + 2f, Gy(e.x, e.y) + 3.2f, e.y + 10f), 120f, "<  LOOP\n<size=26>this way too</size>", new Color(0.7f, 0.1f, 0.1f), 6f, 2.4f);
+        UTurnMarks(staticRoot);
         Debug.Log("RallyTrack: loop branch built (surface " + (loopA + 1) + "+" + (loopB - loopA) + "+" + (m - loopB) + " rows, curbs " + (ct[0].Count + ct[1].Count) / 3 + " tris, rails " + (rt[0].Count + rt[1].Count) / 3 + " tris)");
     }
 
@@ -902,6 +903,80 @@ public static class RallyTrack
         while (i < br.Length - 1 && br[i].arc < arc) i++;
         fwd = br[i].fwd; up = br[i].up; return br[i].p;
     }
+    // ---------------- ffu44: U-turn braking zone ----------------
+    // The reverse loop drops you onto the approach at ~26 m/s with only ~16 m before the R 10.8 m U-turn (ffu43 probes ran off
+    // there). Driving TOWARD the U-turn (either side), a driven truck above the speed it could still brake down from gets a
+    // firm auto-brake: vmax = sqrt(UTurnV^2 + 2 x UTurnDecel x distance-to-the-turn). Yellow chevrons + SLOW boards mark it.
+    public const float UTurnV = 10f, UTurnDecel = 9f, UTurnMaxBrake = 13f;
+    static float uTurnA = -1f, uTurnB = -1f;
+    public static float UTurnArcA { get { UTurnArcs(); return uTurnA; } }
+    public static float UTurnArcB { get { UTurnArcs(); return uTurnB; } }
+    static void UTurnArcs()
+    {
+        if (br == null || uTurnA >= 0f) return;
+        Vector3 pa = new Vector3(Layout.ApproachX, 0f, Layout.LoopC.y + Layout.UTurnD), pb = new Vector3(Layout.ApproachX, 0f, Layout.LoopC.y);
+        float da = 1e18f, db = 1e18f;
+        for (int i = 0; i < br.Length; i++)
+        {
+            if (br[i].sec == 1) continue;
+            Vector3 q = br[i].p; q.y = 0f;
+            float a = (q - pa).sqrMagnitude, b = (q - pb).sqrMagnitude;
+            if (a < da) { da = a; uTurnA = br[i].arc; }
+            if (b < db) { db = b; uTurnB = br[i].arc; }
+        }
+    }
+    // deceleration (m/s2, >= 0) to apply against the velocity
+    public static float UTurnBrake(Vector3 pos, Vector3 vel)
+    {
+        if (Legacy || br == null) return 0f;
+        Vector2 c = Layout.LoopC;
+        if (pos.x < Layout.ApproachX - 30f || pos.x > c.x + 2f || pos.z < c.y - 10f || pos.z > c.y + Layout.UTurnD + 10f) return 0f;
+        UTurnArcs();
+        Vector3 p, f, r, u; float arc;
+        if (!BranchNearest(pos, out p, out f, out r, out u, out arc)) return 0f;
+        Vector3 d = pos - p;
+        if (d.sqrMagnitude > 81f || Mathf.Abs(Vector3.Dot(d, u)) > 3f) return 0f;   // off the road / airborne
+        if (arc > LoopArcA + 12f || u.y < 0.95f) return 0f;                          // in the loop proper
+        float vs = Vector3.Dot(vel, f), dist;
+        if (arc >= uTurnB) { if (vs > -1f) return 0f; dist = arc - uTurnB; }
+        else if (arc <= uTurnA) { if (vs < 1f) return 0f; dist = uTurnA - arc; }
+        else dist = 0f;
+        if (dist > 45f) return 0f;
+        float spd = vel.magnitude, vmax = Mathf.Sqrt(UTurnV * UTurnV + 2f * UTurnDecel * dist);
+        if (spd <= vmax) return 0f;
+        return Mathf.Min(dist > 0f ? UTurnMaxBrake : 6f, (spd - vmax) * 3f);
+    }
+    static void UTurnMarks(Transform parent)
+    {
+        UTurnArcs();
+        if (uTurnA < 0f) return;
+        var yel = Mats.Lit(new Color(0.95f, 0.8f, 0.1f));
+        int n = 0;
+        // westbound on the approach (reverse exit -> U-turn): chevrons point toward smaller arc; eastbound on the top straight
+        for (float a = uTurnB + 3f; a < LoopArcA - 1f; a += 3.5f) { Chevron(parent, a, -1f, yel); n++; }
+        for (float a = uTurnA - 22f; a < uTurnA - 2f; a += 3.5f) { Chevron(parent, a, 1f, yel); n++; }
+        Vector3 fw, up;
+        Vector3 s1 = BranchFrameAt(uTurnB + 8f, out fw, out up);
+        Ranch.Sign(new Vector3(s1.x, Gy(s1.x, s1.z - 9f) + 3f, s1.z - 9f), 90f, "SLOW!\n<size=26>U-turn ahead</size>", new Color(0.75f, 0.55f, 0.05f), 5f, 2.2f);
+        Vector3 s2 = BranchFrameAt(uTurnA - 10f, out fw, out up);
+        Ranch.Sign(new Vector3(s2.x, Gy(s2.x, s2.z + 9f) + 3f, s2.z + 9f), 90f, "SLOW!\n<size=26>U-turn ahead</size>", new Color(0.75f, 0.55f, 0.05f), 5f, 2.2f);
+        Debug.Log("RallyTrack: ffu44 U-turn braking zone arcs " + uTurnA.ToString("0") + ".." + uTurnB.ToString("0") + " (loop " + LoopArcA.ToString("0") + "), " + n + " chevrons");
+    }
+    static void Chevron(Transform parent, float arc, float dirSign, Material m)
+    {
+        Vector3 f, u; Vector3 p = BranchFrameAt(arc, out f, out u);
+        Vector3 df = f * dirSign, rt = Vector3.Cross(u, f).normalized;
+        Vector3 tip = p + df * 0.9f + u * 0.04f;
+        for (int s = -1; s <= 1; s += 2)
+        {
+            Vector3 end = p - df * 0.7f + rt * s * 1.8f + u * 0.04f, arm = tip - end;
+            var g = Mats.Prim(PrimitiveType.Cube, parent, (tip + end) * 0.5f, new Vector3(0.45f, 0.03f, arm.magnitude), m, false);
+            g.transform.rotation = Quaternion.LookRotation(arm.normalized, u);
+            g.name = "U-turn chevron";
+            Mats.NoShadows(g);
+        }
+    }
+
     public static float LoopArcA { get { return br != null ? br[loopA].arc : 0f; } }
     public static float LoopArcB { get { return br != null ? br[loopB].arc : 0f; } }
     public static float BranchArcEnd { get { return br != null ? br[br.Length - 1].arc : 0f; } }
