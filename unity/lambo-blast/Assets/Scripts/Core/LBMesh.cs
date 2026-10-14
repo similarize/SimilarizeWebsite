@@ -106,7 +106,7 @@ public class LBPack
     {
         Mat m = mats[i];
         if (m.emit) return Mats.Unlit(m.color);
-        if (m.paint) return Mats.Paint(tint, tint.r + tint.g + tint.b < 0.5f ? 0.95f : 0.92f);
+        if (m.paint) return Mats.CarPaint(tint);
         if (m.alpha)
         {
             string k = "glass" + ColorUtility.ToHtmlStringRGBA(m.color);

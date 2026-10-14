@@ -101,7 +101,7 @@ public static class KartModel
         CarSpec cs = Cars.All[car];
         var stat = new GameObject("Static").transform;
         stat.SetParent(body, false);
-        Material paint = Mats.Paint(cs.color, car == 7 ? 0.95f : 0.9f);
+        Material paint = Mats.CarPaint(cs.color);
         Material carbon = Mats.Lit(new Color(0.07f, 0.07f, 0.08f));
         Material glass = Mats.Glass;
         Material lamp = Mats.Unlit(new Color(1f, 0.98f, 0.9f));

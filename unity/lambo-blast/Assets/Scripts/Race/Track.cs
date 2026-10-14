@@ -36,6 +36,8 @@ public static partial class Track
     static float[] hgrid;
     static int gn;
     static float gx0, gz0, gcell;
+    // lambo7: playable terrain square (the height grid), for the free-roam limit off the road
+    public static Rect TerrainRect { get { return new Rect(gx0, gz0, gcell * (gn - 1), gcell * (gn - 1)); } }
 
     // control points (x, z, road height) before scaling
     static readonly Vector3[] Ctrl = {
@@ -324,14 +326,14 @@ public static partial class Track
             }
         var mesh = Own(new Mesh());
         mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
-        mesh.vertices = verts; mesh.uv = uv; mesh.triangles = tris;
-        mesh.RecalculateNormals(); mesh.RecalculateBounds();
+        mesh.vertices = verts; mesh.uv = uv; mesh.uv2 = uv; mesh.triangles = tris;   // lambo7: uv2 = colour map, uv = tiled ground detail
+        mesh.RecalculateNormals(); mesh.RecalculateTangents(); mesh.RecalculateBounds();
         var go = new GameObject("Island");
         go.transform.SetParent(Root, false);
         go.layer = GroundLayer;
         go.AddComponent<MeshFilter>().sharedMesh = mesh;
         var mr = go.AddComponent<MeshRenderer>();
-        mr.sharedMaterial = Own(Mats.Detail(Mats.GroundBase, Own(GroundTex()), 0.05f));
+        mr.sharedMaterial = Own(Mats.Ground(Own(GroundTex()), 0, gcell * (gn - 1), 0.07f));
         mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         go.AddComponent<MeshCollider>().sharedMesh = mesh;
     }

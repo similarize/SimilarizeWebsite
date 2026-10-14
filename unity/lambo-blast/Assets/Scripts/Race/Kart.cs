@@ -49,6 +49,16 @@ public class Kart : MonoBehaviour
     public float finishTime;
     public int place = 8;
     public float wrongT;
+    // lambo7 free roam (human drivers only; AI keep the old 9 m soft walls): drive up to OffMax m off the road into the
+    // terrain, slower grip there; far off course (OffFar m) for OffTowT s, or the wrong way for WrongTowT s, warns and then
+    // fades + tows you back to the nearest track point facing the right way. Water, lava and big falls respawn as before.
+    public const float OffMax = 55f, OffFar = 14f, OffWarnT = 3f, OffTowT = 5.5f, WrongWarnT = 2.5f, WrongTowT = 5.5f;
+    public float offT;                 // seconds far off course
+    public bool towing;                // current respawn is a tow (fade, no sink)
+    float towS = -1f, respawnTotal = 1f, fadeInT;
+    public float FadeA { get { if (respawning && towing) return Mathf.Clamp01(1f - respawnT / Mathf.Max(0.01f, respawnTotal)) ; return Mathf.Clamp01(fadeInT / 0.45f); } }
+    public static bool OffDemo;        // &lboff=1: P1 autopilot drives off the track (probe of the tow-back)
+    bool FreeRoam { get { return human && (!Autopilot || OffDemo); } }
     public float RaceDist { get { return finished ? Track.Laps + 10f - place * 0.01f : lap + s / Track.Length; } }
 
     // messages for this car's player
@@ -126,7 +136,7 @@ public class Kart : MonoBehaviour
         grounded = true; gNormal = Vector3.up; lastClimb = 0f;
         drifting = false; driftCharge = 0f; boostT = 0f; spinT = 0f; shrinkT = 0f; shieldT = 0f;
         respawning = false; item = Item.None; rollT = 0f;
-        lap = -1; cp = true; finished = false; finishTime = 0f; wrongT = 0f; toastT = 0f;
+        lap = -1; cp = true; finished = false; finishTime = 0f; wrongT = 0f; toastT = 0f; offT = 0f; towing = false; towS = -1f; fadeInT = 0f;
         Track.Proj p = Track.Nearest(pos, -1, 0);
         hint = p.i; s = p.s; lastGoodS = s; lastGoodHint = hint;
         aiShortcut = false; aiItemT = 0f; stuckT = 0f; gasHeldT = 0f;
@@ -199,6 +209,7 @@ public class Kart : MonoBehaviour
     public void Tick(float dt, bool racing, bool countdown)
     {
         if (toastT > 0f) toastT -= dt;
+        if (fadeInT > 0f) fadeInT -= dt;
         if (rollT > 0f)
         {
             rollT -= dt;
@@ -212,6 +223,7 @@ public class Kart : MonoBehaviour
 
         KIn i = new KIn();
         if (racing && !finished) i = human && !Autopilot ? input : AIInput(dt);
+        if (OffDemo && human && racing && !finished && Game.I != null) i = OffDemoInput(i, Game.I.RaceTime);
         else if (finished) i = AIInput(dt);          // cruise after the line
         if (countdown)
         {
@@ -225,8 +237,9 @@ public class Kart : MonoBehaviour
         if (i.fire) Fire();
 
         Vector3 pos = transform.position;
+        bool farOff = FreeRoam && lastOffDist > Track.HalfW + OffFar;
         // AI ignores the rubber band on a jump approach so it always reaches full boost speed at the lip
-        float top = spec.top * (boostT > 0f ? boostPower : 1f) * (shrinkT > 0f ? 0.72f : 1f) * (onRoad ? 1f : 0.78f) * (inWater ? 0.85f : 1f) * (human || aiJump ? 1f : aiTopMul * aiSkill);
+        float top = spec.top * (boostT > 0f ? boostPower : 1f) * (shrinkT > 0f ? 0.72f : 1f) * (onRoad ? 1f : farOff ? 0.62f : 0.78f) * (inWater ? 0.85f : 1f) * (human || aiJump ? 1f : aiTopMul * aiSkill);
         if (padCool > 0f) padCool -= dt;
         float accel = spec.accel * (boostT > 0f ? 2.4f : 1f);
 
@@ -278,7 +291,8 @@ public class Kart : MonoBehaviour
 
         // lateral slip (drift slides outwards, normal driving grips)
         float latT = drifting ? -driftDir * Mathf.Abs(speed) * 0.17f : 0f;
-        lat = Mathf.Lerp(lat, latT, Mathf.Min(1f, dt * (drifting ? 4f : grounded ? 9f : 1f)));
+        lat = Mathf.Lerp(lat, latT, Mathf.Min(1f, dt * (drifting ? 4f : grounded ? (onRoad || !FreeRoam ? 9f : farOff ? 3.2f : 5f) : 1f)));
+        if (!onRoad && FreeRoam && grounded && Mathf.Abs(speed) > 2f) speed = Mathf.MoveTowards(speed, 0f, (farOff ? 2.2f : 1.2f) * dt);   // rough ground drags
 
         // ---- move ----
         Vector3 fwd = Forward, right = Right;
@@ -289,6 +303,7 @@ public class Kart : MonoBehaviour
         // off the main road (a long shortcut skips far more than the search window): full search so s, laps,
         // the AI target and the soft walls follow the kart to where it rejoins
         if (pm.dist > Track.HalfW + Track.Wall) pm = Track.Nearest(pos, -1, 0);
+        lastOffDist = pm.dist;
         hint = pm.i;
         Track.Proj ps = Track.NearestShortcut(pos);
         bool scGap = ps.s > Track.ScGapA && ps.s < Track.ScGapB;
@@ -297,8 +312,9 @@ public class Kart : MonoBehaviour
         onRoad = onMain || onSc;
 
         // soft walls
-        float overM = pm.dist - (Track.HalfW + Track.Wall);
-        float overS = ps.dist - (Track.ScHalf + 5.5f);
+        float wallM = FreeRoam ? OffMax : Track.Wall, wallS = FreeRoam ? OffMax : 5.5f;
+        float overM = pm.dist - (Track.HalfW + wallM);
+        float overS = ps.dist - (Track.ScHalf + wallS);
         if (overM > 0f && overS > 0f)
         {
             bool toMain = overM < overS;
@@ -316,9 +332,26 @@ public class Kart : MonoBehaviour
             }
         }
 
+        // free roam: the edge of the terrain square is a soft wall too
+        if (FreeRoam)
+        {
+            Rect tr = Track.TerrainRect;
+            float m = 18f;
+            Vector3 cl = new Vector3(Mathf.Clamp(pos.x, tr.xMin + m, tr.xMax - m), pos.y, Mathf.Clamp(pos.z, tr.yMin + m, tr.yMax - m));
+            if ((cl - pos).sqrMagnitude > 0.0001f) { pos = cl; speed *= 0.95f; }
+        }
         // ---- vertical ----
         float gy; Vector3 gn;
         Track.Ground(pos, out gy, out gn);
+        // free roam off the road: a cliff face (> 1.6 m up in one step or a very steep wall) stops you like a natural wall
+        if (FreeRoam && !onRoad && grounded && (gy - transform.position.y > 1.6f || (gn.y < 0.5f && gy > transform.position.y + 0.2f)))
+        {
+            Vector3 back = transform.position;
+            pos = new Vector3(back.x, pos.y, back.z);
+            if (speed > 4f) { Sfx.PlayAt(Sfx.Bump, pos, 0.5f); Game.Shake(this, 0.25f); }
+            speed = -Mathf.Sign(speed) * Mathf.Min(3f, Mathf.Abs(speed) * 0.2f); lat = 0f;
+            Track.Ground(pos, out gy, out gn);
+        }
         // generated tracks: crossing a ramp lip launches at the ramp's real angle (frame-rate independent)
         if (grounded && Track.Def != null && speed > 5f)
         {
@@ -367,7 +400,7 @@ public class Kart : MonoBehaviour
             trickRoll = trickT > 0f ? 360f * Smooth01(trickT / 0.7f) : 0f;
             if (pos.y <= gy)
             {
-                if (vy < -7f) { Sfx.PlayAt(Sfx.Land, pos, Mathf.Clamp01(-vy / 18f)); bounce = Mathf.Clamp(-vy * 0.012f, 0f, 0.18f); for (int d = 0; d < 6; d++) FX.Dust(pos, 1f); }
+                if (vy < -7f) { Sfx.PlayAt(Sfx.Land, pos, Mathf.Clamp01(-vy / 18f)); bounce = Mathf.Clamp(-vy * 0.012f, 0f, 0.18f); for (int d = 0; d < 8; d++) FX.ThemeDust(pos + Random.insideUnitSphere * 1.2f, Forward, Track.Theme, 1f); }
                 pos.y = gy; vy = 0f; grounded = true; lastClimb = 0f;
                 if (bigAir && trickT >= 0.7f && spinT <= 0f && gy > Track.WaterY - 0.5f)
                 {
@@ -385,7 +418,7 @@ public class Kart : MonoBehaviour
         // fell into the sea / the lagoon gap
         if (grounded && gy < Track.WaterY - 1.0f)
         {
-            respawning = true; respawnT = 1.3f;
+            respawning = true; respawnT = respawnTotal = 1.3f; towing = false;
             FX.Splash(new Vector3(pos.x, Track.WaterY, pos.z), 30);
             Sfx.PlayAt(Sfx.Splash, pos, 0.9f);
             if (human) Toast("Splash! Back on the track...", 1.5f);
@@ -396,9 +429,13 @@ public class Kart : MonoBehaviour
             bool useSc = ps.dist < pm.dist && ps.s > 0.5f && ps.s < Track.ScLength - 0.5f;
             float refY = useSc ? ps.point.y : pm.point.y;
             bool lava = Track.Lava && pos.y < Track.LavaY + 0.6f;
-            if (lava || (!grounded && pos.y < refY - 14f) || (grounded && gy < refY - 5f))
+            // free roam far from the road: natural terrain below the road is fine, only a real drop (off the skyway, into a
+            // chasm) counts; near the road + over the gaps the old rules stand
+            bool near = !FreeRoam || Mathf.Min(pm.dist, useSc ? ps.dist : 1e9f) < Track.HalfW + Track.Wall + 2f || Track.InGap(pm.s, 30f);
+            bool fell = near ? ((!grounded && pos.y < refY - 14f) || (grounded && gy < refY - 5f)) : ((!grounded && pos.y < refY - 30f) || (grounded && gy < refY - 28f));
+            if (lava || fell)
             {
-                respawning = true; respawnT = 1.1f;
+                respawning = true; respawnT = respawnTotal = 1.1f; towing = false;
                 if (Autopilot) Debug.Log("LB fell k" + id + " s " + pm.s.ToString("F0") + (useSc ? " (shortcut " + ps.s.ToString("F0") + ")" : "") + " v " + speed.ToString("F1") + (lava ? " lava" : ""));
                 if (lava) { FX.Boom(new Vector3(pos.x, Track.LavaY + 0.5f, pos.z), 0.8f); Sfx.PlayAt(Sfx.Boom, pos, 0.7f); }
                 else Sfx.PlayAt(Sfx.Spin, pos, 0.6f);
@@ -430,13 +467,24 @@ public class Kart : MonoBehaviour
 
         // wrong way (ignored on the shortcut)
         Vector3 tan = onSc && ps.dist < pm.dist ? ps.tan : pm.tan;
-        if (racing && !finished && Vector3.Dot(fwd, tan) < -0.3f && Mathf.Abs(speed) > 4f && speed > 0f) wrongT += dt; else wrongT = 0f;
+        if (racing && !finished && Vector3.Dot(fwd, tan) < -0.3f && Mathf.Abs(speed) > 4f && speed > 0f) wrongT += dt;
+        else if (FreeRoam && racing && !finished && Vector3.Dot(fwd, tan) < -0.3f && Mathf.Abs(speed) <= 4f) { }   // stopped / turning: hold the timer
+        else wrongT = 0f;
+        if (FreeRoam && racing && !finished)
+        {
+            bool far = pm.dist > Track.HalfW + OffFar && !(onSc || ps.dist < Track.ScHalf + OffFar);
+            offT = far ? offT + dt : Mathf.MoveTowards(offT, 0f, dt * 2f);
+            if (OffDemo && (int)(Game.I.RaceTime) != offLogSec) { offLogSec = (int)Game.I.RaceTime; Debug.Log("LB off k" + id + " t " + offLogSec + " dist " + pm.dist.ToString("F0") + " onRoad " + onRoad + " offT " + offT.ToString("F1") + " wrongT " + wrongT.ToString("F1") + " v " + speed.ToString("F1") + " y " + pos.y.ToString("F1")); }
+            if (!respawning && (offT > OffTowT || wrongT > WrongTowT)) StartTow(pm.s, offT > OffTowT ? "Back to the track..." : "Turned around - back on track...");
+        }
+        else offT = 0f;
 
         // AI stuck -> respawn
-        if (!human && racing && Mathf.Abs(speed) < 2f && spinT <= 0f) { stuckT += dt; if (stuckT > 3f) { respawning = true; respawnT = 0.2f; stuckT = 0f; } } else stuckT = 0f;
+        if (!human && racing && Mathf.Abs(speed) < 2f && spinT <= 0f) { stuckT += dt; if (stuckT > 3f) { respawning = true; respawnT = respawnTotal = 0.2f; towing = false; stuckT = 0f; } } else stuckT = 0f;
 
         // effects
-        if (grounded && Mathf.Abs(speed) > 10f && !onRoad && !inWater) FX.Dust(pos - fwd * 2f, 0.35f);
+        if (grounded && Mathf.Abs(speed) > 8f && !onRoad && !inWater) { float amt = Mathf.Clamp01(Mathf.Abs(speed) / 30f) * (Look.Mobile ? 0.4f : 0.75f); FX.ThemeDust(pos - fwd * 2f + Right * 0.9f, fwd, Track.Theme, amt); FX.ThemeDust(pos - fwd * 2f - Right * 0.9f, fwd, Track.Theme, amt); }
+        else if (grounded && Track.Theme == 3 && Mathf.Abs(speed) > 18f && !inWater) FX.ThemeDust(pos - fwd * 2.2f, fwd, 3, 0.15f);   // snow spray even on the road
         if (inWater && Mathf.Abs(speed) > 4f && Random.value < 0.6f) FX.Splash(new Vector3(pos.x, Track.WaterY + 0.1f, pos.z) - fwd * 1.5f + right * Random.Range(-1f, 1f), 2);
         if (boostT > 0f) FX.Flame(transform.TransformPoint(new Vector3(0f, 0.47f, -2.4f)), -fwd);
         if (drifting && grounded && driftCharge > 1.1f)
@@ -472,14 +520,26 @@ public class Kart : MonoBehaviour
         }
     }
 
+    // smooth fade + tow to the nearest track point (free roam)
+    void StartTow(float nearS, string msg)
+    {
+        respawning = true; towing = true; respawnT = respawnTotal = 0.75f; towS = nearS;
+        if (Autopilot || OffDemo) Debug.Log("LB tow k" + id + " off " + offT.ToString("F1") + " s wrong " + wrongT.ToString("F1") + " s -> s " + nearS.ToString("F0"));
+        offT = 0f; wrongT = 0f;
+        Toast(msg, 1.6f);
+    }
+
     void TickRespawn(float dt)
     {
         respawnT -= dt;
-        transform.position += Vector3.down * dt * 1.5f;
-        speed = 0f; lat = 0f;
+        if (towing) speed = Mathf.MoveTowards(speed, 0f, 40f * dt);
+        else { transform.position += Vector3.down * dt * 1.5f; speed = 0f; }
+        lat = 0f;
+        if (towing) { transform.position += Forward * speed * dt; }
         if (respawnT > 0f) return;
         respawning = false;
-        float rs = Track.SafeRespawnS(lastGoodS);
+        float rs = Track.SafeRespawnS(towing && towS >= 0f ? towS : lastGoodS);
+        if (towing) { fadeInT = 0.45f; towing = false; towS = -1f; }
         Vector3 p = Track.PointAt(rs, 0f);
         float y; Vector3 n;
         Track.Ground(p, out y, out n);
@@ -522,7 +582,7 @@ public class Kart : MonoBehaviour
         }
     }
 
-    float lastSteer;
+    float lastSteer, lastOffDist;
     static float Smooth01(float t) { t = Mathf.Clamp01(t); return t * t * (3f - 2f * t); }
     float LastSteer { get { return lastSteer; } }
 
@@ -540,6 +600,23 @@ public class Kart : MonoBehaviour
         if (sk && !skid.isPlaying) skid.Play();
         skid.volume = Mathf.MoveTowards(skid.volume, sk ? 0.22f * hs : 0f, Time.deltaTime * 2f);
         if (!sk && skid.volume < 0.01f && skid.isPlaying) skid.Stop();
+    }
+
+    // &lboff=1 probe: P1 leaves the road at race t 5 s and drives straight into the terrain (expect a tow at ~far + 5.5 s),
+    // then at t 26 s turns round and drives the wrong way along the road (expect WRONG WAY, then a tow)
+    int offLogSec = -1;
+    bool aiBackwards; float offDemoYaw = 999f;
+    KIn OffDemoInput(KIn ai, float t)
+    {
+        aiBackwards = t > 26f && t < 45f;
+        if (t > 5f && t < 22f)
+        {
+            if (offDemoYaw > 900f) offDemoYaw = yaw + 70f;
+            float d = Mathf.DeltaAngle(yaw, offDemoYaw);
+            return new KIn { gas = 1f, steer = Mathf.Clamp(d / 20f, -1f, 1f) };
+        }
+        if (t >= 26f && t < 27.5f && !aiBackwards) return ai;
+        return ai;
     }
 
     // ------------------------------------------------------------------ AI
@@ -566,6 +643,7 @@ public class Kart : MonoBehaviour
             else target = Track.ShortcutPoint(ps.s + look);
         }
         else target = Track.PointAt(s + look, aiLane);
+        if (aiBackwards) target = Track.PointAt(s - look, 0f);
         // jump ahead (generated tracks): line up on the centre, full gas, no brakes, no rubber band
         float jz = -1f;
         if (Track.Def != null && !finished)

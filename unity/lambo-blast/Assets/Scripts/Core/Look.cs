@@ -15,7 +15,7 @@ public static class Look
     public static void Init(Light s)
     {
         sun = s;
-        Mobile = Application.isMobilePlatform || (Input.touchSupported && Mathf.Min(Screen.width, Screen.height) < 900 && Screen.dpi > 200f);
+        Mobile = Application.isMobilePlatform || LBDisplay.MobileUA || (Input.touchSupported && Mathf.Min(Screen.width, Screen.height) < 900 && Screen.dpi > 200f);
         QualitySettings.realtimeReflectionProbes = true;
         QualitySettings.softParticles = false;
         QualitySettings.anisotropicFiltering = Mobile ? AnisotropicFiltering.Disable : AnisotropicFiltering.Enable;
@@ -63,9 +63,14 @@ public static class Look
         yield return null;
         try
         {
-            island = MakeProbe("IslandProbe", islandCentre + Vector3.up * 14f, new Vector3(2400f, 900f, 2400f), ~excludeMask, Mobile ? 64 : 128);
+            island = MakeProbe("IslandProbe", islandCentre + Vector3.up * 14f, new Vector3(2400f, 900f, 2400f), ~excludeMask, Mobile ? 128 : 256);
             island.RenderProbe();
-            showroom = MakeProbe("ShowroomProbe", showroomBase + Vector3.up * 30f, new Vector3(1200f, 600f, 1200f), 0, 64);
+            // lambo7: the showroom probe sees the studio (softbox panels + dark set on layer 20) so the paint reflects it
+            showroom = MakeProbe("ShowroomProbe", Showroom.EnvPos + new Vector3(0f, 1.6f, 0f), new Vector3(1200f, 600f, 1200f), excludeMask, Mobile ? 128 : 256);
+            showroom.clearFlags = ReflectionProbeClearFlags.SolidColor;
+            showroom.backgroundColor = new Color(0.035f, 0.04f, 0.05f);
+            showroom.nearClipPlane = 0.3f;
+            showroom.farClipPlane = 60f;
             showroom.RenderProbe();
             Debug.Log("Look: reflection probes rendered");
         }
@@ -74,6 +79,11 @@ public static class Look
 
     // per-track lighting: sun, ambient, fog and sky tint (0 = Coconut Cove's original look)
     static Material skyMat;
+    static Texture skyBase;
+    public static int Theme;
+    // sky exposure / rotation per theme (sun azimuth of each panorama vs the theme's sun light)
+    static readonly float[] SkyExp = { 1f, 0.95f, 0.92f, 0.98f, 0.95f, 0.98f };
+    static readonly float[] SkyRot = { 18f, 354f, 76f, 34f, 31f, 304f };   // R = sunAz - (u_sun - 0.25) * 360 (measured, lb-gfx/make_theme_tex.py)
     static float skyExposure = -1f;
     public static void SetTheme(int th)
     {
@@ -97,12 +107,21 @@ public static class Look
         if (sun != null) { sun.color = sunC; sun.intensity = sunI; sun.transform.rotation = Quaternion.Euler(sunE); }
         RenderSettings.ambientSkyColor = sky; RenderSettings.ambientEquatorColor = eq; RenderSettings.ambientGroundColor = gr;
         RenderSettings.fogColor = fog; RenderSettings.fogDensity = fogD;
+        // lambo7: each theme gets its own Poly Haven CC0 sky panorama (Resources/LBSky/sky<th>.jpg; the cove keeps the
+        // original Kloofendal sky), so the tint is gentler than before; rotation lines the sun up with the light
+        Texture2D sk = th >= 1 && th <= 5 ? Resources.Load<Texture2D>("LBSky/sky" + th) : null;
         if (skyMat != null)
         {
+            if (skyBase == null && skyMat.HasProperty("_MainTex")) skyBase = skyMat.GetTexture("_MainTex");
+            if (skyMat.HasProperty("_MainTex")) skyMat.SetTexture("_MainTex", sk != null ? sk : skyBase);
+            if (sk != null) tint = Color.Lerp(new Color(0.5f, 0.5f, 0.5f), tint, 0.35f);
             if (skyMat.HasProperty("_Tint")) skyMat.SetColor("_Tint", tint);
-            if (skyMat.HasProperty("_Exposure") && skyExposure > 0f) skyMat.SetFloat("_Exposure", skyExposure * exp);
+            if (skyMat.HasProperty("_Exposure") && skyExposure > 0f) skyMat.SetFloat("_Exposure", skyExposure * exp * (sk != null ? SkyExp[th] : 1f));
+            if (skyMat.HasProperty("_Rotation")) skyMat.SetFloat("_Rotation", sk != null ? SkyRot[th] : 18f);
         }
-        Debug.Log("Look: theme " + th);
+        LBPost.SetTheme(th);
+        Theme = th;
+        Debug.Log("Look: theme " + th + (sk != null ? " sky " + sk.name + " " + sk.width + "x" + sk.height : ""));
     }
 
     // re-render the island probe after a track rebuild
@@ -115,10 +134,19 @@ public static class Look
 
     public static bool PostAllowed(int views) { return views == 1; }
 
+    // re-apply the per-level settings (LBDisplay governor / ?lbq) to the current views
+    static List<Camera> lastCams;
+    public static void ApplyLevel()
+    {
+        LBPost.Cheap = LBDisplay.Level >= 2;
+        if (Views > 0) ApplyViews(Views, lastCams);
+    }
+
     // called whenever the number of views changes (lobby = 0 player views)
     public static void ApplyViews(int views, List<Camera> playerCams)
     {
         Views = views;
+        if (playerCams != null) lastCams = playerCams;
         if (views >= 3) QualitySettings.shadows = ShadowQuality.Disable;
         else if (Mobile)
         {
@@ -128,10 +156,12 @@ public static class Look
         }
         else
         {
-            QualitySettings.shadows = views <= 1 ? ShadowQuality.All : ShadowQuality.HardOnly;
-            QualitySettings.shadowResolution = views <= 1 ? ShadowResolution.High : ShadowResolution.Medium;
-            QualitySettings.shadowDistance = views <= 1 ? 55f : 30f;
+            // lambo7: crisper, longer shadows on desktop / Tesla in one view (VeryHigh 4k map, 70 m)
+            QualitySettings.shadows = views <= 1 && LBDisplay.Level < 2 ? ShadowQuality.All : ShadowQuality.HardOnly;
+            QualitySettings.shadowResolution = views <= 1 ? (LBDisplay.Level == 0 ? ShadowResolution.VeryHigh : ShadowResolution.High) : ShadowResolution.Medium;
+            QualitySettings.shadowDistance = views <= 1 ? (LBDisplay.Level == 0 ? 70f : 50f) : 30f;
         }
+        if (Mobile && views == 1 && LBDisplay.Level == 0) { QualitySettings.shadowResolution = ShadowResolution.Medium; QualitySettings.shadowDistance = 40f; }
         QualitySettings.lodBias = Mobile || views >= 2 ? 0.7f : 1f;
         bool post = PostAllowed(views);
         if (playerCams != null)

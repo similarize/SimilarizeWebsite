@@ -5,18 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#06202a">
+<meta name="theme-color" content="#07090d">
 <title>Lambo Blast (Unity)</title>
 <style>
-  html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #06202a; color: #fff;
+  html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #07090d; color: #fff;
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; touch-action: none; -webkit-user-select: none; user-select: none; overscroll-behavior: none; }
-  #unity-canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100dvh; display: block; background: #06202a; outline: none; }
+  #unity-canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100dvh; display: block; background: #07090d; outline: none; }
   #loader { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
-    background: radial-gradient(ellipse at center, #0f5566 0%, #06202a 70%); z-index: 5; transition: opacity .4s; }
-  #loader h1 { margin: 0; font-size: clamp(26px, 6vw, 54px); letter-spacing: 2px; color: #5dff7a; text-shadow: 0 3px 0 #0b6b4a; text-align: center; }
-  #loader .balloons { font-size: clamp(30px, 8vw, 60px); }
-  #bar { width: min(80vw, 520px); height: 18px; border-radius: 10px; background: rgba(255,255,255,.12); overflow: hidden; border: 2px solid rgba(255,255,255,.25); }
-  #fill { height: 100%; width: 0%; background: linear-gradient(90deg, #3fbf3f, #a6d832, #2fb3c4, #f2582a); transition: width .2s; }
+    background: radial-gradient(ellipse at 50% 40%, #1b2433 0%, #0a0d14 65%, #050608 100%); z-index: 5; transition: opacity .4s; }
+  #loader h1 { margin: 0; font: 800 clamp(28px, 6vw, 58px)/1.05 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; letter-spacing: .06em;
+    background: linear-gradient(180deg, #ffffff 0%, #9fe8ff 100%); -webkit-background-clip: text; background-clip: text; color: transparent; text-align: center; }
+  #loader .balloons { font-size: clamp(30px, 8vw, 56px); filter: drop-shadow(0 6px 18px rgba(0,0,0,.6)); }
+  #bar { width: min(80vw, 460px); height: 6px; border-radius: 6px; background: rgba(255,255,255,.1); overflow: hidden; }
+  #fill { height: 100%; width: 0%; background: linear-gradient(90deg, #36d6ff, #7c5cff, #ff4fa3); box-shadow: 0 0 16px rgba(80,200,255,.7); transition: width .2s; }
   #pct { font-size: 15px; opacity: .8; }
   #err { color: #ff8a80; max-width: 80vw; text-align: center; display: none; }
   .tb { position: fixed; top: 8px; right: 8px; z-index: 10; display: flex; gap: 6px; }
@@ -42,6 +43,25 @@
   var name = "__BUILD_NAME__";
   var canvas = document.getElementById("unity-canvas");
   var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));
+  // lambo7: render at the screen's real pixel density. Lobby (showroom, menus): up to 2.5x so text and the turntable cars
+  // are 1:1 crisp (Pixel 9 is 2.625x); racing: up to 2x on desktops and phones, with lighter fallbacks the game drops to
+  // by itself when the frame rate can't keep up (LBDisplay.jslib / Core/LBDisplay.cs). ?dpr=N forces one value.
+  (function () {
+    var raw = window.devicePixelRatio || 1, q = /[?&]dpr=([0-9.]+)/.exec(location.search), f = q ? parseFloat(q[1]) : 0;
+    window.LBDPR = { raw: raw, lobby: Math.min(raw, 2.5), game: Math.min(raw, 2), gameLite: Math.min(raw, 1.5), gameLow: Math.min(raw, 1.0), force: f > 0.4 && f < 4.1 ? f : 0 };
+    if (window.LBDPR.force) window.LBDPR.lobby = window.LBDPR.game = window.LBDPR.force;
+  })();
+  // lambo7: ask the browser for an antialiased (MSAA) backbuffer on the game canvas (Unity 2022 leaves it off). ?aa=0 = off.
+  (function () {
+    if (/[?&]aa=0/.test(location.search)) return;
+    var orig = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (type, attrs) {
+      if (this.id === "unity-canvas" && (type === "webgl2" || type === "webgl" || type === "experimental-webgl")) {
+        var a = {}; if (attrs) for (var k in attrs) a[k] = attrs[k]; a.antialias = true; attrs = a;
+      }
+      return orig.call(this, type, attrs);
+    };
+  })();
   var config = {
     dataUrl: buildUrl + "/" + name + ".data?v=__BUILD_VERSION__",
     frameworkUrl: buildUrl + "/" + name + ".framework.js?v=__BUILD_VERSION__",
@@ -50,7 +70,7 @@
     companyName: "Similarize",
     productName: "Lambo Blast",
     productVersion: "__BUILD_VERSION__",
-    devicePixelRatio: Math.min(window.devicePixelRatio || 1, isMobile ? 1.5 : 2),
+    devicePixelRatio: window.LBDPR.lobby,
     showBanner: function (msg, type) { if (type === "error") { var e = document.getElementById("err"); e.style.display = "block"; e.textContent = msg; } else console.log(msg); }
   };
   var fill = document.getElementById("fill"), pct = document.getElementById("pct"), loader = document.getElementById("loader");

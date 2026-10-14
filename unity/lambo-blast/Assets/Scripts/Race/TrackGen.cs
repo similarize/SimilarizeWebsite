@@ -482,15 +482,15 @@ public static partial class Track
             }
         var mesh = Own(new Mesh());
         mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
-        mesh.vertices = verts; mesh.uv = uv; mesh.triangles = tris;
-        mesh.RecalculateNormals(); mesh.RecalculateBounds();
+        mesh.vertices = verts; mesh.uv = uv; mesh.uv2 = uv; mesh.triangles = tris;   // lambo7: uv2 = colour map, uv = tiled ground detail
+        mesh.RecalculateNormals(); mesh.RecalculateTangents(); mesh.RecalculateBounds();
         var go = new GameObject("Ground");
         go.transform.SetParent(Root, false);
         go.layer = GroundLayer;
         go.AddComponent<MeshFilter>().sharedMesh = mesh;
         var mr = go.AddComponent<MeshRenderer>();
         Texture2D gt = Own(GroundTexGeneric(th));
-        mr.sharedMaterial = Own(th == 1 || th == 4 ? Mats.Detail(Mats.GroundBase, gt, 0.05f) : Mats.Tex(gt, th == 3 ? 0.25f : 0.08f));
+        mr.sharedMaterial = Own(Mats.Ground(gt, th, gcell * (gn - 1), th == 3 ? 0.32f : th == 5 ? 0.12f : 0.06f));
         mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         go.AddComponent<MeshCollider>().sharedMesh = mesh;
     }

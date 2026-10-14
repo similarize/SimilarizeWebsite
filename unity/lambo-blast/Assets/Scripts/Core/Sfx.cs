@@ -56,8 +56,8 @@ public static class Sfx
     {
         canvas = UIK.MakeCanvas("SoundButton", null, 200, true);
         Object.DontDestroyOnLoad(canvas.gameObject);
-        button = UIK.Img(canvas.transform, null, new Color(0f, 0f, 0f, 0.5f), new Vector2(0.5f, 1f), new Vector2(70, -26), new Vector2(136, 40));
-        buttonText = UIK.Label(button.transform, "", 19, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(136, 38), Color.white);
+        button = UIK.RoundImg(canvas.transform, UIK.Round2, new Color(0.05f, 0.06f, 0.085f, 0.6f), new Vector2(0.5f, 1f), new Vector2(70, -26), new Vector2(136, 40), 2f);   // lambo7 glass pill
+        buttonText = UIK.Label(button.transform, "", 15, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(136, 38), Color.white);
         RefreshButton();
     }
 

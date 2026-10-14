@@ -8,7 +8,8 @@ public static class Mats
     static readonly Dictionary<long, Material> cache = new Dictionary<long, Material>();
 
     public static Material Fx { get { return fx; } }
-    public static Material GroundBase, RoadBase;     // Standard + sand detail map (editor-made assets), may be null
+    public static Material GroundBase, RoadBase;
+    public static Material FxAdd;                    // lambo7: additive particle material (editor-made), may be null     // Standard + sand detail map (editor-made assets), may be null
 
     // copy of a detail base material with this main texture (falls back to Tex)
     public static Material Detail(Material baseMat, Texture2D t, float gloss)
@@ -19,6 +20,35 @@ public static class Mats
         m.mainTexture = t;
         return m;
     }
+    // lambo7 ground: Standard (editor-made base with _NORMALMAP + _DETAIL_MULX2, so the variant ships) with the theme's
+    // Poly Haven CC0 grain as the tiled main map (grey, centred on 0.5) + its normal map, and the generated colour map
+    // (rock / sand / snow / grass by height and slope) as the x2 detail on uv2 over the whole terrain square.
+    public static Material Ground(Texture2D colourMap, int theme, float worldSize, float gloss)
+    {
+        Texture2D d = Resources.Load<Texture2D>("LBTex/g" + theme + "_d"), n = Resources.Load<Texture2D>("LBTex/g" + theme + "_n");
+        if (GroundBase == null || d == null || !GroundBase.IsKeywordEnabled("_DETAIL_MULX2")) return Tex(colourMap, gloss);
+        var m = new Material(GroundBase);
+        m.color = Color.white;
+        m.mainTexture = d;
+        float rep = worldSize / (theme == 5 ? 10f : 7f);
+        m.mainTextureScale = new Vector2(rep, rep);
+        if (n != null) m.SetTexture("_BumpMap", n);
+        m.SetFloat("_BumpScale", theme == 3 ? 0.6f : 0.9f);
+        m.SetTexture("_DetailAlbedoMap", colourMap);
+        m.SetTextureScale("_DetailAlbedoMap", Vector2.one);
+        m.SetTextureOffset("_DetailAlbedoMap", Vector2.zero);
+        m.SetFloat("_UVSec", 1f);
+        m.SetFloat("_Glossiness", gloss);
+        return m;
+    }
+
+    // lambo7 car paint: glossy clear-coat look (high smoothness + some metal so the reflection probe reads as a lacquer)
+    public static Material CarPaint(Color c)
+    {
+        bool dark = c.r + c.g + c.b < 0.5f, white = c.r + c.g + c.b > 2.6f;
+        return PBR(c, dark ? 0.97f : 0.94f, white ? 0.12f : dark ? 0.45f : 0.32f);
+    }
+
     public static Material Water { get { return water; } }
     public static Material Glass { get { return glass; } }
 

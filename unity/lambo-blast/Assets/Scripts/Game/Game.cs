@@ -18,7 +18,7 @@ public class Slot
 
 // Lobby (pick a colour car + robot driver), 1-4 local split-screen, 3-2-1-GO, race, results, pause.
 [DefaultExecutionOrder(-50)]
-public class Game : MonoBehaviour
+public partial class Game : MonoBehaviour
 {
     public static Game I;
     public enum State { Lobby, Countdown, Race, Results }
@@ -205,89 +205,6 @@ public class Game : MonoBehaviour
     }
 
     // ---------------- UI construction ----------------
-    void BuildLobbyUI()
-    {
-        lobbyCanvas = UIK.MakeCanvas("Lobby", null, 100, true);
-        Transform r = lobbyCanvas.transform;
-        lobbyBg = UIK.Img(r, null, new Color(0.02f, 0.06f, 0.1f, 0.62f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1240, 690));
-        lobbyTitle = UIK.Label(r, "LAMBO BLAST", 50, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1100, 60), new Color(0.35f, 1f, 0.45f));
-        lobbySub = UIK.Label(r, "Robot racers on Coconut Cove  ·  8 cars  ·  3 laps  ·  grab the ? boxes and blast them", 17, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1180, 30), Color.white);
-        string[] lab = { "TOP SPEED", "ACCEL", "HANDLING", "WEIGHT" };
-        for (int i = 0; i < 4; i++)
-        {
-            cards[i] = UIK.Img(r, null, new Color(1, 1, 1, 0.12f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(290, 330));
-            Transform c = cards[i].transform;
-            cardSwatch[i] = UIK.Img(c, null, Color.white, new Vector2(0.5f, 1f), Vector2.zero, new Vector2(270, 8));
-            cardHead[i] = UIK.Label(c, "", 16, TextAnchor.MiddleCenter, new Vector2(0.5f, 1f), Vector2.zero, new Vector2(280, 22), Color.white);
-            cardPreviewFrame[i] = UIK.Img(c, null, new Color(0f, 0f, 0f, 0.6f), new Vector2(0.5f, 1f), Vector2.zero, new Vector2(278, 160));
-            var pr = UIK.Rect(c, "Preview", new Vector2(0.5f, 1f), Vector2.zero, new Vector2(274, 156));
-            cardPreview[i] = pr.gameObject.AddComponent<RawImage>();
-            cardPreview[i].texture = stands[i].rt;
-            cardPreview[i].raycastTarget = false;
-            cardTexts[i] = UIK.Label(c, "", 20, TextAnchor.UpperCenter, new Vector2(0.5f, 1f), Vector2.zero, new Vector2(280, 60), Color.white);
-            bars[i] = new Image[4]; barLabs[i] = new Text[4]; barBgs[i] = new Image[4];
-            for (int b = 0; b < 4; b++)
-            {
-                barLabs[i][b] = UIK.Label(c, lab[b], 13, TextAnchor.MiddleLeft, new Vector2(0.5f, 1f), Vector2.zero, new Vector2(110, 18), new Color(1, 1, 1, 0.8f));
-                barBgs[i][b] = UIK.Img(c, null, new Color(0, 0, 0, 0.4f), new Vector2(0.5f, 1f), Vector2.zero, new Vector2(140, 11));
-                bars[i][b] = UIK.Img(c, null, Color.white, new Vector2(0.5f, 1f), Vector2.zero, new Vector2(140, 11));
-                bars[i][b].rectTransform.pivot = new Vector2(0f, 0.5f);
-                barBgs[i][b].rectTransform.pivot = new Vector2(0f, 0.5f);
-            }
-        }
-        for (int i = 0; i < 8; i++)
-        {
-            carTiles[i] = UIK.Img(r, null, new Color(0f, 0f, 0f, 0.55f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(124, 84));
-            Transform t = carTiles[i].transform;
-            var th = UIK.Rect(t, "Thumb", new Vector2(0.5f, 1f), Vector2.zero, new Vector2(118, 64));
-            carThumbs[i] = th.gameObject.AddComponent<RawImage>();
-            carThumbs[i].raycastTarget = false;
-            carThumbs[i].color = new Color(1f, 1f, 1f, 0f);
-            carStrips[i] = UIK.Img(t, null, Cars.All[i].color, new Vector2(0.5f, 0f), Vector2.zero, new Vector2(118, 16));
-            bool darkText = i == 6 || i == 2;
-            carNames[i] = UIK.Label(t, Cars.All[i].name.ToUpper(), 13, TextAnchor.MiddleCenter, new Vector2(0.5f, 0f), Vector2.zero, new Vector2(118, 16), darkText ? new Color(0.1f, 0.1f, 0.1f) : Color.white);
-            carNames[i].GetComponent<Outline>().enabled = !darkText;
-            carBadges[i] = UIK.Label(t, "", 13, TextAnchor.UpperLeft, new Vector2(0f, 1f), Vector2.zero, new Vector2(118, 18), Color.white);
-            carBadges[i].supportRichText = true;
-        }
-        for (int i = 0; i < 7; i++)
-        {
-            robotTiles[i] = UIK.Img(r, null, new Color(0f, 0f, 0f, 0.55f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(132, 100));
-            Transform t = robotTiles[i].transform;
-            var th = UIK.Rect(t, "Thumb", new Vector2(0.5f, 1f), Vector2.zero, new Vector2(126, 80));
-            robotThumbs[i] = th.gameObject.AddComponent<RawImage>();
-            robotThumbs[i].raycastTarget = false;
-            robotThumbs[i].color = new Color(1f, 1f, 1f, 0f);
-            robotNames[i] = UIK.Label(t, Robots.Short[i], 13, TextAnchor.MiddleCenter, new Vector2(0.5f, 0f), Vector2.zero, new Vector2(126, 16), Color.white);
-            robotBadges[i] = UIK.Label(t, "", 13, TextAnchor.UpperLeft, new Vector2(0f, 1f), Vector2.zero, new Vector2(126, 18), Color.white);
-            robotBadges[i].supportRichText = true;
-        }
-        trackBox = UIK.Img(r, null, new Color(0f, 0f, 0f, 0.6f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(300, 46));
-        trackName = UIK.Label(trackBox.transform, "", 21, TextAnchor.UpperCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(300, 46), new Color(1f, 0.85f, 0.3f));
-        UIK.Stretch(trackName.rectTransform); trackName.rectTransform.offsetMax = new Vector2(0, -3);
-        trackInfo = UIK.Label(trackBox.transform, "", 11, TextAnchor.LowerCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(300, 46), new Color(1f, 1f, 1f, 0.8f));
-        UIK.Stretch(trackInfo.rectTransform); trackInfo.rectTransform.offsetMin = new Vector2(0, 3);
-        trackPrev = UIK.Img(r, null, new Color(0.1f, 0.35f, 0.55f, 0.9f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(46, 46));
-        var tpl = UIK.Label(trackPrev.transform, "<", 30, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(46, 46), Color.white); UIK.Stretch(tpl.rectTransform);
-        trackNext = UIK.Img(r, null, new Color(0.1f, 0.35f, 0.55f, 0.9f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(46, 46));
-        var tnl = UIK.Label(trackNext.transform, ">", 30, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(46, 46), Color.white); UIK.Stretch(tnl.rectTransform);
-        playBtn = UIK.Img(r, null, new Color(0.15f, 0.65f, 0.25f, 0.9f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(260, 46));
-        var pl = UIK.Label(playBtn.transform, "RACE!", 30, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(260, 46), Color.white);
-        UIK.Stretch(pl.rectTransform);
-        lobbyStatus = UIK.Label(r, "", 17, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1180, 26), new Color(0.7f, 1f, 0.7f));
-        lobbyHelp = UIK.Label(r, "", 12, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1200, 34), new Color(1, 1, 1, 0.85f));
-        creditsBtn = UIK.Img(r, null, new Color(0f, 0f, 0f, 0.55f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(118, 26));
-        var cl = UIK.Label(creditsBtn.transform, "CREDITS (C)", 13, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(118, 26), new Color(0.8f, 0.95f, 1f));
-        UIK.Stretch(cl.rectTransform);
-        creditsPanel = UIK.Img(r, null, new Color(0.01f, 0.04f, 0.08f, 0.94f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1040, 470));
-        var ct = UIK.Label(creditsPanel.transform, CreditsText, 16, TextAnchor.MiddleLeft, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(980, 440), Color.white);
-        ct.supportRichText = true;
-        ct.horizontalOverflow = HorizontalWrapMode.Wrap;
-        UIK.Stretch(ct.rectTransform);
-        ct.rectTransform.offsetMin = new Vector2(30, 14); ct.rectTransform.offsetMax = new Vector2(-30, -14);
-        creditsPanel.gameObject.SetActive(false);
-    }
-
     const string CreditsText =
         "<size=26><color=#7dff8a><b>CREDITS</b></color></size>\n" +
         "<b>Unitree</b> (Unitree H1): Unitree Robotics' official robot model (github.com/unitreerobotics/unitree_mujoco).\n" +
@@ -295,7 +212,9 @@ public class Game : MonoBehaviour
         "<b>Atlas HD</b> (hydraulic DRC Atlas): the MIT Atlas model from RobotLocomotion/models (Drake).\n" +
         "   Copyright 2012-2022 Robot Locomotion Group @ CSAIL. BSD 3-Clause licence. Team / sponsor logos removed.\n" +
         "<b>Optimus, Figure 02, Big Figure Two, Figure 03, Atlas electric</b> and the cars: modelled for this game from public photos (no logos).\n" +
-        "<b>Sky</b> (Kloofendal 48d Partly Cloudy, Greg Zaal + Jarod Guest) and <b>sand textures</b>: Poly Haven (polyhaven.com), CC0.\n\n" +
+        "<b>Skies</b> (Poly Haven, CC0): Kloofendal 48d Partly Cloudy, Syferfontein 18d Clear, Industrial Sunset 02, Pizzo Pernice, Kloofendal 28d Misty, Qwantani Late Afternoon (all Pure Sky).\n" +
+        "<b>Ground textures</b> (Poly Haven, CC0): Aerial Beach 01, Coast Sand 01, Red Sand, Burned Ground 01, Snow 02, Forest Leaves 02, Aerial Asphalt 01, Asphalt 02.\n" +
+        "<b>Fonts</b>: Montserrat (The Montserrat Project Authors) + Inter (The Inter Project Authors), SIL Open Font License 1.1.\n\n" +
         "Full licence texts: similarize.com/games/lambo-blast/LICENSES.txt\n" +
         "Robot names describe the real machines only; this fan game is not affiliated with their makers.\n\n" +
         "<color=#9fd8ff>Press C, Esc or tap to close</color>";
@@ -319,7 +238,7 @@ public class Game : MonoBehaviour
         hudCanvas.enabled = false;
         // pause button next to the SOUND button (top centre), always on top
         topCanvas = UIK.MakeCanvas("PauseButton", null, 199, true);
-        pauseBtn = UIK.Img(topCanvas.transform, null, new Color(0f, 0f, 0f, 0.5f), new Vector2(0.5f, 1f), new Vector2(-40, -26), new Vector2(64, 40));
+        pauseBtn = UIK.RoundImg(topCanvas.transform, UIK.Round2, new Color(0.05f, 0.06f, 0.085f, 0.6f), new Vector2(0.5f, 1f), new Vector2(-40, -26), new Vector2(64, 40), 2f);
         UIK.Label(pauseBtn.transform, "II", 22, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(64, 38), Color.white);
         pauseBtn.gameObject.SetActive(false);
     }
@@ -328,9 +247,10 @@ public class Game : MonoBehaviour
     {
         resultsCanvas = UIK.MakeCanvas("Results", null, 120, true);
         Transform r = resultsCanvas.transform;
-        UIK.Img(r, null, new Color(0f, 0.04f, 0.08f, 0.78f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(900, 640));
+        UIK.RoundImg(r, UIK.SoftRect, new Color(0f, 0f, 0f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(980, 720), 1f);
+        UIK.RoundImg(r, UIK.Round2, new Color(0.05f, 0.06f, 0.085f, 0.9f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(900, 640), 2f);
         resultRows = new Image[8];
-        for (int i = 0; i < 8; i++) resultRows[i] = UIK.Img(r, null, new Color(1f, 1f, 1f, 0.06f), new Vector2(0.5f, 0.5f), new Vector2(0, 170 - i * 50), new Vector2(820, 44));
+        for (int i = 0; i < 8; i++) resultRows[i] = UIK.RoundImg(r, UIK.Round2, new Color(1f, 1f, 1f, 0.06f), new Vector2(0.5f, 0.5f), new Vector2(0, 170 - i * 50), new Vector2(820, 44), 3f);
         resultsText = UIK.Label(r, "", 24, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(860, 620), Color.white);
         resultsCanvas.enabled = false;
     }
@@ -339,7 +259,7 @@ public class Game : MonoBehaviour
     {
         pauseCanvas = UIK.MakeCanvas("Pause", null, 150, true);
         Transform r = pauseCanvas.transform;
-        UIK.Img(r, null, new Color(0f, 0f, 0f, 0.7f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(4000, 4000));
+        UIK.Img(r, null, new Color(0.01f, 0.012f, 0.02f, 0.78f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(4000, 4000));
         pauseText = UIK.Label(r, "", 22, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, 110), new Vector2(1180, 420), Color.white);
         resumeBtn = Button(r, "RESUME", new Vector2(-230, -170), new Color(0.15f, 0.6f, 0.25f, 0.9f));
         restartBtn = Button(r, "RESTART", new Vector2(0, -170), new Color(0.75f, 0.5f, 0.1f, 0.9f));
@@ -349,7 +269,7 @@ public class Game : MonoBehaviour
 
     static Image Button(Transform r, string label, Vector2 pos, Color c)
     {
-        Image b = UIK.Img(r, null, c, new Vector2(0.5f, 0.5f), pos, new Vector2(200, 60));
+        Image b = UIK.RoundImg(r, UIK.Round2, c, new Vector2(0.5f, 0.5f), pos, new Vector2(200, 60), 1.4f);
         UIK.Label(b.transform, label, 26, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(200, 58), Color.white);
         return b;
     }
@@ -361,233 +281,6 @@ public class Game : MonoBehaviour
     // ---------------- lobby ----------------
     public static bool TouchOnly { get { return Application.isMobilePlatform && Gamepad.all.Count == 0; } }
 
-    // static layout (title, tiles, buttons, card insides); re-run when the screen size / orientation changes.
-    // Reference canvas: landscape 1280x720 (fits >= 16:9 by height, narrower by width),
-    // portrait 720x1280 (tall phones by width, squarer screens by height) so nothing ever falls off-screen.
-    void LayoutLobby()
-    {
-        var now = new Vector2Int(Screen.width, Screen.height);
-        if (now == lastScreen) return;
-        lastScreen = now;
-        bool portrait = Screen.height > Screen.width;
-        lobbyLayout = portrait ? 1 : 0;
-        float aspect = Screen.width / (float)Mathf.Max(1, Screen.height);
-        var sc = lobbyCanvas.GetComponent<CanvasScaler>();
-        sc.referenceResolution = portrait ? new Vector2(720, 1280) : new Vector2(1280, 720);
-        sc.matchWidthOrHeight = portrait ? (1f / aspect >= 1.75f ? 0f : 1f) : (aspect >= 1.78f ? 1f : 0f);
-        System.Action<Graphic, Vector2, Vector2> put = (g, p, size) => { g.rectTransform.anchoredPosition = p; g.rectTransform.sizeDelta = size; };
-        if (portrait)
-        {
-            put(lobbyBg, Vector2.zero, new Vector2(712, 1268));
-            put(lobbyTitle, new Vector2(0, 600), new Vector2(680, 52)); lobbyTitle.fontSize = 44;
-            put(lobbySub, new Vector2(0, 558), new Vector2(690, 30)); lobbySub.fontSize = 15;
-            cardSize = new Vector2(345, 0); previewH = 160f;
-            tileCarSize = new Vector2(166, 80); tileRobotSize = new Vector2(166, 92);
-            for (int i = 0; i < 8; i++) put(carTiles[i], new Vector2(-258 + (i % 4) * 172, -182 - (i / 4) * 86), tileCarSize);
-            for (int i = 0; i < 7; i++) put(robotTiles[i], new Vector2(i < 4 ? -258 + i * 172 : -172 + (i - 4) * 172, -362 - (i / 4) * 96), tileRobotSize);
-            put(playBtn, new Vector2(128, -540), new Vector2(226, 54));
-            put(trackBox, new Vector2(-150, -540), new Vector2(224, 54));
-            put(trackPrev, new Vector2(-292, -540), new Vector2(44, 54));
-            put(trackNext, new Vector2(-8, -540), new Vector2(44, 54));
-            trackName.fontSize = 17;
-            put(lobbyStatus, new Vector2(0, -585), new Vector2(690, 30)); lobbyStatus.fontSize = 15;
-            put(lobbyHelp, new Vector2(0, -613), new Vector2(700, 34)); lobbyHelp.fontSize = 11;
-            put(creditsBtn, new Vector2(300, -540), new Vector2(98, 30));
-            put(creditsPanel, Vector2.zero, new Vector2(700, 900));
-        }
-        else
-        {
-            put(lobbyBg, Vector2.zero, new Vector2(1260, 712));
-            put(lobbyTitle, new Vector2(0, 326), new Vector2(1100, 56)); lobbyTitle.fontSize = 50;
-            put(lobbySub, new Vector2(0, 292), new Vector2(1180, 26)); lobbySub.fontSize = 17;
-            cardSize = new Vector2(290, 0); previewH = 152f;
-            tileCarSize = new Vector2(124, 84); tileRobotSize = new Vector2(132, 100);
-            for (int i = 0; i < 8; i++) put(carTiles[i], new Vector2(-483 + i * 138, -106), tileCarSize);
-            for (int i = 0; i < 7; i++) put(robotTiles[i], new Vector2(-474 + i * 158, -204), tileRobotSize);
-            put(playBtn, new Vector2(0, -284), new Vector2(260, 44));
-            put(trackBox, new Vector2(-370, -284), new Vector2(300, 46));
-            put(trackPrev, new Vector2(-548, -284), new Vector2(46, 46));
-            put(trackNext, new Vector2(-192, -284), new Vector2(46, 46));
-            trackName.fontSize = 21;
-            put(lobbyStatus, new Vector2(0, -318), new Vector2(1180, 26)); lobbyStatus.fontSize = 17;
-            put(lobbyHelp, new Vector2(0, -344), new Vector2(1200, 32)); lobbyHelp.fontSize = 12;
-            put(creditsBtn, new Vector2(540, -284), new Vector2(118, 28));
-            put(creditsPanel, Vector2.zero, new Vector2(1040, 470));
-        }
-        // card insides (anchored to the card's top edge)
-        float w = cardSize.x, pw = w - 16f, y = -6f;
-        for (int i = 0; i < 4; i++)
-        {
-            put(cardSwatch[i], new Vector2(0, y), new Vector2(w - 20, 8));
-            put(cardHead[i], new Vector2(0, -21), new Vector2(w - 10, 22));
-            put(cardPreviewFrame[i], new Vector2(0, -32 - previewH * 0.5f), new Vector2(pw + 4, previewH + 4));
-            put(cardPreview[i], new Vector2(0, -32 - previewH * 0.5f), new Vector2(pw, previewH));
-            // crop the 448x256 render to the preview's aspect (no stretching)
-            float ra = 448f / 256f, pa = pw / previewH;
-            cardPreview[i].uvRect = pa > ra ? new Rect(0f, (1f - ra / pa) * 0.5f, 1f, ra / pa) : new Rect((1f - pa / ra) * 0.5f, 0f, pa / ra, 1f);
-            put(cardTexts[i], new Vector2(0, -38 - previewH - 28), new Vector2(w - 8, 56));
-            for (int b = 0; b < 4; b++)
-            {
-                float by = -38 - previewH - 66 - b * 19;
-                put(barLabs[i][b], new Vector2(-w * 0.5f + 70, by), new Vector2(110, 18));
-                barBgs[i][b].rectTransform.anchoredPosition = new Vector2(-w * 0.5f + 122, by);
-                barBgs[i][b].rectTransform.sizeDelta = new Vector2(w - 140, 11);
-                bars[i][b].rectTransform.anchoredPosition = new Vector2(-w * 0.5f + 122, by);
-            }
-        }
-        cardSize.y = 38 + previewH + 66 + 3 * 19 + 16;
-        foreach (var c in cards) c.rectTransform.sizeDelta = cardSize;
-        // tile insides
-        for (int i = 0; i < 8; i++)
-        {
-            Vector2 ts = tileCarSize;
-            put(carThumbs[i], new Vector2(0, -3 - (ts.y - 22) * 0.5f), new Vector2(ts.x - 6, ts.y - 22));
-            CropTo(carThumbs[i], ts.x - 6, ts.y - 22, Showroom.CarThumbW, Showroom.CarThumbH);
-            put(carStrips[i], new Vector2(0, 9), new Vector2(ts.x - 6, 16));
-            put(carNames[i], new Vector2(0, 9), new Vector2(ts.x - 6, 16));
-            put(carBadges[i], new Vector2(4 + (ts.x - 8) * 0.5f, -10), new Vector2(ts.x - 8, 18));
-        }
-        for (int i = 0; i < 7; i++)
-        {
-            Vector2 ts = tileRobotSize;
-            put(robotThumbs[i], new Vector2(0, -3 - (ts.y - 22) * 0.5f), new Vector2(ts.x - 6, ts.y - 22));
-            CropTo(robotThumbs[i], ts.x - 6, ts.y - 22, Showroom.RobotThumbW, Showroom.RobotThumbH);
-            put(robotNames[i], new Vector2(0, 9), new Vector2(ts.x - 6, 16));
-            put(robotBadges[i], new Vector2(4 + (ts.x - 8) * 0.5f, -10), new Vector2(ts.x - 8, 18));
-        }
-    }
-
-    static void CropTo(RawImage img, float w, float h, int tw, int th)
-    {
-        float ra = tw / (float)th, pa = w / Mathf.Max(1f, h);
-        img.uvRect = pa > ra ? new Rect(0f, (1f - ra / pa) * 0.5f, 1f, ra / pa) : new Rect((1f - pa / ra) * 0.5f, 0f, pa / ra, 1f);
-    }
-
-    // card positions: visible cards are centred (1 card in the middle, 2 side by side, 3-4 in a row / 2x2 grid in portrait)
-    Vector2 CardPos(int i, int visible)
-    {
-        if (lobbyLayout == 1)
-        {
-            if (visible == 1) return new Vector2(0, 372);
-            return new Vector2(i % 2 == 0 ? -177 : 177, i < 2 ? 372 : 372 - cardSize.y - 8);
-        }
-        return new Vector2((i - (visible - 1) * 0.5f) * 304f, 104f);
-    }
-
-    void RefreshLobby(float dt)
-    {
-        int visible = Mathf.Max(1, slots.Count);
-        attractT += dt;
-        for (int i = 0; i < 4; i++)
-        {
-            bool on = i < slots.Count;
-            bool show = on || (i == 0 && slots.Count == 0);
-            cards[i].gameObject.SetActive(show);
-            stands[i].Tick(dt, show && state == State.Lobby);
-            if (!show) continue;
-            cards[i].rectTransform.anchoredPosition = CardPos(i, visible);
-            if (!on)
-            {
-                // nobody in yet: the showroom cycles through every car and robot
-                int k = (int)(attractT / 2.6f);
-                stands[i].Set(k % 8, k % 7, this, false);
-                cards[i].color = new Color(1, 1, 1, 0.1f);
-                cardSwatch[i].color = new Color(1, 1, 1, 0.2f);
-                cardHead[i].text = "JOIN";
-                cardTexts[i].text = "<size=16>Press A on a gamepad, Enter on the keyboard,\nor tap / click a car or a robot below</size>";
-                foreach (var b in bars[i]) b.enabled = false;
-                foreach (var b in barBgs[i]) b.enabled = false;
-                foreach (var b in barLabs[i]) b.enabled = false;
-                continue;
-            }
-            Slot s = slots[i];
-            if (stands[i].owner == s)
-            {
-                if (stands[i].car != s.car) carPop[s.car] = 1f;
-                if (stands[i].robot != s.robot) robotPop[s.robot] = 1f;
-            }
-            stands[i].Set(s.car, s.robot, s, true);
-            CarSpec cs = Cars.All[s.car];
-            string dev = s.kind == InputKind.Gamepad ? "Gamepad" : s.kind == InputKind.Keyboard ? "Keyboard" : "Touch";
-            cards[i].color = new Color(cs.color.r * 0.5f, cs.color.g * 0.5f, cs.color.b * 0.5f, 0.55f);
-            cardSwatch[i].color = cs.color;
-            cardHead[i].text = "<color=#" + ColorUtility.ToHtmlStringRGB(PlayerCol[i]) + ">P" + (i + 1) + "</color> · " + dev;
-            string nav = s.kind == InputKind.Gamepad ? "D-pad < > car · ^ v robot" : s.kind == InputKind.Keyboard ? "arrows < > car · ^ v robot · or click" : "tap a car / robot below";
-            Color nameCol = s.car == 7 ? new Color(0.7f, 0.7f, 0.75f) : cs.color;
-            cardTexts[i].text = "<size=21><color=#" + ColorUtility.ToHtmlStringRGB(nameCol) + ">" + cs.name.ToUpper() + "</color>  ·  " + Robots.Names[s.robot] + "</size>\n" +
-                "<size=12>" + Robots.Looks[s.robot] + "</size>\n<size=12><color=#bfe6ff>" + nav + "</color></size>";
-            float[] v = { Mathf.InverseLerp(27f, 34f, cs.top), Mathf.InverseLerp(9f, 14f, cs.accel), Mathf.InverseLerp(78f, 106f, cs.handling), Mathf.InverseLerp(0.8f, 1.4f, cs.weight) };
-            float bw = cardSize.x - 140f;
-            for (int b = 0; b < 4; b++)
-            {
-                bars[i][b].enabled = true; barBgs[i][b].enabled = true; barLabs[i][b].enabled = true;
-                bars[i][b].rectTransform.sizeDelta = new Vector2(bw * Mathf.Max(0.08f, v[b]), 11f);
-                bars[i][b].color = b == 0 && s.car == 0 ? new Color(0.3f, 1f, 0.4f) : new Color(1f, 0.85f, 0.3f);
-            }
-        }
-        // thumbnails: textures, highlight, badges, pop
-        if (Showroom.ThumbsReady)
-        {
-            thumbCheckT += dt;
-            if (thumbCheckT > 2f) { thumbCheckT = 0f; if (Showroom.ThumbsLost()) Showroom.RenderThumbs(); }
-        }
-        Slot ps = FindSlot(InputKind.Touch) ?? FindSlot(InputKind.Keyboard);
-        for (int i = 0; i < 8; i++)
-        {
-            if (Showroom.ThumbsReady && carThumbs[i].texture == null) { carThumbs[i].texture = Showroom.CarThumbs[i]; carThumbs[i].color = Color.white; }
-            bool taken = false; string badge = ""; int firstPick = -1;
-            for (int k = 0; k < slots.Count; k++)
-                if (slots[k].car == i)
-                {
-                    if (slots[k] != ps) taken = true;
-                    if (firstPick < 0) firstPick = k;
-                    badge += "<color=#" + ColorUtility.ToHtmlStringRGB(PlayerCol[k]) + ">P" + (k + 1) + "</color> ";
-                }
-            carBadges[i].text = badge;
-            TileStyle(carTiles[i], carThumbs[i], firstPick, ps != null && ps.car == i, taken, ref carPop[i], dt);
-        }
-        for (int i = 0; i < 7; i++)
-        {
-            if (Showroom.ThumbsReady && robotThumbs[i].texture == null) { robotThumbs[i].texture = Showroom.RobotThumbs[i]; robotThumbs[i].color = Color.white; }
-            bool taken = false; string badge = ""; int firstPick = -1;
-            for (int k = 0; k < slots.Count; k++)
-                if (slots[k].robot == i)
-                {
-                    if (slots[k] != ps) taken = true;
-                    if (firstPick < 0) firstPick = k;
-                    badge += "<color=#" + ColorUtility.ToHtmlStringRGB(PlayerCol[k]) + ">P" + (k + 1) + "</color> ";
-                }
-            robotBadges[i].text = badge;
-            TileStyle(robotTiles[i], robotThumbs[i], firstPick, ps != null && ps.robot == i, taken, ref robotPop[i], dt);
-        }
-        int tshow = pendingTrack >= 0 ? pendingTrack : Track.Id;
-        trackPop = Mathf.Max(0f, trackPop - dt * 3.5f);
-        trackBox.rectTransform.localScale = Vector3.one * (1f + 0.12f * Mathf.Sin(trackPop * Mathf.PI));
-        trackName.text = (lobbyLayout == 1 ? "" : "TRACK ") + (tshow + 1) + "/" + Track.Count + (lobbyLayout == 1 ? "  " : ":  ") + Track.NameOf(tshow).ToUpper();
-        trackInfo.text = pendingTrack >= 0 ? "building track..." : (lobbyLayout == 1 ? "tap < > · T · LB RB" : "tap < >  ·  T / Shift+T  ·  pad LB / RB");
-        lobbySub.text = Track.NameOf(tshow) + ":  " + Track.BlurbOf(tshow) + "  ·  8 cars  ·  3 laps  ·  grab the ? boxes";
-        string top = "<color=#7dff8a>GREEN is the fastest car</color> (" + Cars.All[0].Kmh + " km/h top speed)  ·  ";
-        if (slots.Count == 0) lobbyStatus.text = top + "join to pick your car + robot";
-        else lobbyStatus.text = top + slots.Count + " player" + (slots.Count > 1 ? "s" : "") + " in  ·  A / Start / Enter / RACE! to go";
-        lobbyHelp.text = HelpLines;
-    }
-
-    // tile look: frame in the colour of the (first) player who picked it, white ring for the tap / mouse player's pick,
-    // dimmed when another player holds it, and a short pop when it is picked
-    static void TileStyle(Image tile, RawImage thumb, int pickedBy, bool mine, bool taken, ref float pop, float dt)
-    {
-        pop = Mathf.Max(0f, pop - dt * 3.5f);
-        float s = 1f + 0.16f * Mathf.Sin(pop * Mathf.PI);
-        if (pickedBy >= 0) s += 0.04f;
-        tile.rectTransform.localScale = Vector3.one * s;
-        Color pc = pickedBy >= 0 ? PlayerCol[pickedBy] : new Color(0f, 0f, 0f, 0.55f);
-        tile.color = pickedBy >= 0 ? new Color(pc.r, pc.g, pc.b, 0.95f) : pc;
-        var ol = tile.GetComponent<Outline>();
-        if (ol == null) { ol = tile.gameObject.AddComponent<Outline>(); ol.effectDistance = new Vector2(3, 3); }
-        ol.effectColor = mine ? Color.white : new Color(0, 0, 0, 0.5f);
-        if (thumb.texture != null) thumb.color = taken && !mine ? new Color(1f, 1f, 1f, 0.35f) : Color.white;
-    }
-
     Slot FindSlot(InputKind k) { foreach (var s in slots) if (s.kind == k) return s; return null; }
     Slot FindPad(Gamepad p) { foreach (var s in slots) if (s.kind == InputKind.Gamepad && s.pad == p) return s; return null; }
 
@@ -596,6 +289,10 @@ public class Game : MonoBehaviour
 
     Slot Join(InputKind kind, Gamepad pad, int car = -1)
     {
+        // lambo7 one controller = one view (GameSeats.cs): touch / keyboard only seat a player when nobody is seated yet,
+        // and a pad joining takes over an implicitly seated touch / keyboard player
+        Slot seat;
+        if (SeatGate(kind, pad, out seat)) return seat;
         if (slots.Count >= 4) return null;
         var s = new Slot { kind = kind, pad = pad, joinTime = Time.unscaledTime };
         if (car < 0 || !CarFree(car, null)) { car = 0; while (!CarFree(car, null)) car++; }
@@ -667,6 +364,7 @@ public class Game : MonoBehaviour
             string u = Application.absoluteURL ?? "";
             demoT = u.Contains("lbdemo") ? 0.01f : 0f;
             Kart.Autopilot = demoT > 0f;
+            Kart.OffDemo = demoT > 0f && u.Contains("lboff");
             if (demoT > 0f) Debug.Log("Lambo Blast: demo mode");
         }
         if (demoT <= 0f) return;
@@ -705,7 +403,7 @@ public class Game : MonoBehaviour
         if (Kb.TDown()) PickTrack(Kb.Shift() ? -1 : 1);
         foreach (Gamepad pad in Gamepad.all)
         {
-            if (ghosts.Contains(pad.deviceId)) continue;
+            if (IsGhostDev(pad) || FindPad(pad) == null && slots.Count > 0 && PadGuard.IsAlias(pad)) continue;
             if (pad.rightShoulder.wasPressedThisFrame) PickTrack(1);
             if (pad.leftShoulder.wasPressedThisFrame) PickTrack(-1);
         }
@@ -719,8 +417,8 @@ public class Game : MonoBehaviour
         Slot ks = FindSlot(InputKind.Keyboard);
         if (Kb.EnterDown())
         {
-            if (ks == null) Join(InputKind.Keyboard, null);
-            else if (now - ks.joinTime > 0.3f) { StartRace(); return; }
+            if (slots.Count == 0) Join(InputKind.Keyboard, null);
+            else if (now - slots[0].joinTime > 0.3f) { StartRace(); return; }      // Enter starts for whoever is seated
         }
         ks = FindSlot(InputKind.Keyboard);
         if (ks != null)
@@ -735,11 +433,11 @@ public class Game : MonoBehaviour
             }
         }
 
-        // gamepads
+        // gamepads (joins: PadJoins via PadGuard in SeatsUpdate - an explicit A / Start, never a mirror)
         foreach (Gamepad pad in Gamepad.all)
         {
             Slot ps = FindPad(pad);
-            bool g = ghosts.Contains(pad.deviceId);
+            bool g = IsGhostDev(pad);
             if (ps != null && !g)
             {
                 if (pad.buttonEast.wasPressedThisFrame) { Leave(ps); continue; }
@@ -753,9 +451,8 @@ public class Game : MonoBehaviour
                 ps.stickHeldY = Mathf.Abs(st.y) > 0.3f;
             }
             if (!pad.buttonSouth.wasPressedThisFrame && !pad.startButton.wasPressedThisFrame) continue;
-            if (IsGhostPress(pad) && ps == null) continue;
-            if (ps == null) Join(InputKind.Gamepad, pad);
-            else if (now - ps.joinTime > 0.4f) { StartRace(); return; }
+            if (ps == null || g) continue;
+            if (now - ps.joinTime > 0.4f) { StartRace(); return; }
         }
 
         // touch: a phone with no pads joins P1 straight away
@@ -798,6 +495,7 @@ public class Game : MonoBehaviour
         if (Hit(playBtn, pos))
         {
             if (slots.Count == 0) Join(kind, null);
+            if (slots.Count == 0) return false;
             StartRace();
             return true;
         }
@@ -805,7 +503,7 @@ public class Game : MonoBehaviour
             if (Hit(carTiles[i], pos))
             {
                 Slot s = FindSlot(kind);
-                if (s == null) { Join(kind, null, i); return false; }
+                if (s == null) { s = Join(kind, null, i); if (s == null || s.car == i) return false; }   // gated: acts for the seated player
                 if (CarFree(i, s)) { s.car = i; Assign(); Sfx.Play(Sfx.Click, 0.3f); }
                 return false;
             }
@@ -843,6 +541,7 @@ public class Game : MonoBehaviour
         PlayerPrefs.Save();
         Vector2 mid = (Track.Min + Track.Max) * 0.5f;
         Look.RefreshIsland(new Vector3(mid.x, 0f, mid.y));
+        if (trackThumb != null) trackThumb.texture = null;    // lambo7: re-render the track card preview
         Sfx.Play(Sfx.ItemGet, 0.5f);
     }
 
@@ -865,6 +564,7 @@ public class Game : MonoBehaviour
         lobbyCanvas.enabled = false;
         resultsCanvas.enabled = false;
         hudCanvas.enabled = true;
+        LBDisplay.Lobby(false);   // lambo7: racing density + 2x MSAA (governor may lighten it)
         foreach (var st in stands) st.Tick(0f, false);
         foreach (var s in slots) MakeView(s);
         ApplyLayout();
@@ -936,7 +636,9 @@ public class Game : MonoBehaviour
         Look.ApplyViews(views, cams);
         SetPost(overview, false);
         Sfx.PlaceButton(false);
+        LastViews = views;
         Debug.Log("Layout: " + n + " players");
+        SeatLog("layout " + n + " player(s), " + views + " view(s) | " + SeatList());
     }
 
     public void OnFinish(Kart k)
@@ -1001,6 +703,7 @@ public class Game : MonoBehaviour
     void Update()
     {
         float dt = Time.deltaTime;
+        SeatsUpdate();   // lambo7: ghost / mirrored pad guard + one controller = one view, before anybody reads input
         Track.Tick(Time.time);
         touch.active = (state == State.Countdown || state == State.Race) && FindSlot(InputKind.Touch) != null && !paused;
         switch (state)
@@ -1021,7 +724,6 @@ public class Game : MonoBehaviour
             {
                 case InputKind.Gamepad:
                     if (s.pad == null || !s.pad.added) { i = new KIn(); break; }
-                    if (Pads.AnyButtonDown(s.pad)) IsGhostPress(s.pad);
                     i = Pads.Read(s.pad);
                     break;
                 case InputKind.Keyboard: i = Kb.Read(); break;
@@ -1134,6 +836,7 @@ public class Game : MonoBehaviour
         foreach (var s in slots)
         {
             s.rig.Update(s.kart, dt, fov);
+            if (slots.Count <= 2 && s.cam != null) FX.Ambient(s.cam.transform.position, s.cam.transform.forward, Track.Theme, dt / slots.Count);
             s.hud.bottomInset = s.kind == InputKind.Touch ? touch.BottomBand : 0f;
             s.hud.Tick(s.cam, s.kart, this, centre);
         }
@@ -1226,6 +929,7 @@ public class Game : MonoBehaviour
     void ToLobby()
     {
         state = State.Lobby;
+        LBDisplay.Lobby(true);
         resultsCanvas.enabled = false;
         hudCanvas.enabled = false;
         foreach (var s in slots)

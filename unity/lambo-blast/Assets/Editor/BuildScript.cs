@@ -184,6 +184,34 @@ public static class BuildScript
         return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
     }
 
+    static Texture2D LoadNormal(string path)
+    {
+        var imp = AssetImporter.GetAtPath(path) as TextureImporter;
+        if (imp == null) { Debug.LogWarning("LoadNormal: no importer for " + path); return null; }
+        if (imp.textureType != TextureImporterType.NormalMap || imp.maxTextureSize != 512 || imp.wrapMode != TextureWrapMode.Repeat)
+        {
+            imp.textureType = TextureImporterType.NormalMap; imp.mipmapEnabled = true; imp.wrapMode = TextureWrapMode.Repeat; imp.maxTextureSize = 512; imp.anisoLevel = 4;
+            imp.SaveAndReimport();
+        }
+        return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+    }
+
+    // lambo7: per-theme skies + ground grain / normal maps in Resources (loaded at runtime by Look / Mats.Ground)
+    static void ImportThemeTextures()
+    {
+        int n = 0;
+        for (int t = 1; t <= 5; t++) if (LoadTex("Assets/Resources/LBSky/sky" + t + ".jpg", false, TextureWrapMode.Repeat, TextureWrapMode.Clamp, 2048) != null) n++;
+        for (int t = 0; t <= 5; t++)
+        {
+            Texture2D d = LoadTex("Assets/Resources/LBTex/g" + t + "_d.png", true, TextureWrapMode.Repeat, TextureWrapMode.Repeat, 512);
+            var imp = AssetImporter.GetAtPath("Assets/Resources/LBTex/g" + t + "_d.png") as TextureImporter;
+            if (imp != null && imp.anisoLevel != 4) { imp.anisoLevel = 4; imp.SaveAndReimport(); }
+            if (d != null && LoadNormal("Assets/Resources/LBTex/g" + t + "_n.png") != null) n++;
+        }
+        LoadNormal("Assets/Resources/LBTex/road_n.png");
+        Debug.Log("BuildScript: lambo7 theme textures imported (" + n + " / 11)");
+    }
+
     static Material MakeDetailMat(string file, string detailPath, Vector2 tiling, float gloss)
     {
         Material m = MakeMat("Standard", "Diffuse", file);
@@ -253,8 +281,25 @@ public static class BuildScript
         EditorUtility.SetDirty(sky);
 
         // ground + road: Standard with a Poly Haven CC0 sand "detail albedo x2" map (keyword variant ships with these assets)
-        Material ground = MakeDetailMat("Ground.mat", "Assets/Textures/sand_detail.png", new Vector2(64f, 64f), 0.06f);
-        Material road = MakeDetailMat("Road.mat", "Assets/Textures/road_detail.png", new Vector2(2f, 2f), 0.1f);
+        // lambo7: ground base also has _NORMALMAP (theme grain + normal map tiled on uv0, colour map as the x2 detail on uv1)
+        ImportThemeTextures();
+        Material ground = MakeDetailMat("Ground.mat", "Assets/Textures/sand_detail.png", new Vector2(1f, 1f), 0.06f);
+        Texture2D g1d = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Resources/LBTex/g1_d.png");
+        Texture2D g1n = LoadNormal("Assets/Resources/LBTex/g1_n.png");
+        if (g1d != null && g1n != null)
+        {
+            ground.mainTexture = g1d;
+            ground.SetTexture("_BumpMap", g1n);
+            ground.EnableKeyword("_NORMALMAP");
+            ground.SetFloat("_UVSec", 1f);
+            EditorUtility.SetDirty(ground);
+            Debug.Log("BuildScript: lambo7 ground base (normal map + detail on uv1)");
+        }
+        else Debug.LogWarning("BuildScript: lambo7 ground textures missing - old ground");
+        bool asph = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Resources/LBTex/road_d.png") != null;
+        Material road = MakeDetailMat("Road.mat", asph ? "Assets/Resources/LBTex/road_d.png" : "Assets/Textures/road_detail.png", new Vector2(2f, 2f), 0.12f);
+        // lambo7: additive particles (sparks, flames, embers, boost) - editor-made so the shader ships
+        Material fxAdd = MakeMat("Legacy Shaders/Particles/Additive", "Sprites/Default", "FxAdd.mat");
 
         // sea: custom animated shader (Assets/Shaders/LBWater.shader)
         Shader ws = Shader.Find("LB/Water");
@@ -309,6 +354,7 @@ public static class BuildScript
         b.glassMat = glass;
         b.groundMat = ground;
         b.roadMat = road;
+        b.fxAddMat = fxAdd;
         b.sun = sun;
 
         EditorSceneManager.MarkSceneDirty(scene);

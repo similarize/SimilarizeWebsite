@@ -10,6 +10,7 @@ public class Bootstrap : MonoBehaviour
     public Material glassMat;
     public Material groundMat;
     public Material roadMat;
+    public Material fxAddMat;      // lambo7: additive particles
     public Light sun;
 
     void Awake()
@@ -21,7 +22,7 @@ public class Bootstrap : MonoBehaviour
         QualitySettings.shadowProjection = ShadowProjection.StableFit;
         QualitySettings.shadowDistance = 45f;
         QualitySettings.shadowCascades = 1;
-        QualitySettings.pixelLightCount = 1;
+        QualitySettings.pixelLightCount = 4;      // lambo7: the showroom rig's four lights are per-pixel (island = sun only)
         QualitySettings.antiAliasing = 0;
         QualitySettings.lodBias = 1f;
         if (Application.isMobilePlatform)
@@ -32,7 +33,8 @@ public class Bootstrap : MonoBehaviour
         if (sun != null) sun.shadows = LightShadows.Soft;
 
         Mats.Init(litMat, unlitMat, fxMat, waterMat, glassMat);
-        Mats.GroundBase = groundMat; Mats.RoadBase = roadMat;
+        Mats.GroundBase = groundMat; Mats.RoadBase = roadMat; Mats.FxAdd = fxAddMat;
+        LBDisplay.Init();
         Look.Init(sun);
         Showroom.Init(sun);
         Sfx.Init();
@@ -41,6 +43,7 @@ public class Bootstrap : MonoBehaviour
         Vector2 mid = (Track.Min + Track.Max) * 0.5f;
         StartCoroutine(Look.BuildProbes(new Vector3(mid.x, 0f, mid.y), Showroom.BasePos, Showroom.Mask));
         gameObject.AddComponent<Game>();
+        LBDisplay.Lobby(true);
     }
 
     // ?lbtrack=N in the page URL (0 = Coconut Cove .. 5 = Sky City) wins; else the last track picked in the lobby
