@@ -18,6 +18,7 @@ using UnityEngine;
 public static class SfxSynth
 {
     const int R = 22050;
+    public static AudioClip SkateRoll, SkateHum;   // ffu46
     public static AudioClip CtWhine, CtAvas, CtRegen, CtWind, CtCrunch, EvWhine, EvHum, Road, Regen, RcWhine, RcGravel, Bike2s, Bike4s, Intake, Belt;
     static bool built;
     static System.Random rnd = new System.Random(30);
@@ -185,7 +186,24 @@ public static class SfxSynth
             }
             d = Seamless(raw, n); Norm(d, 0.55f); CtCrunch = Mk("syn_ct_crunch", d);
         }
-        Debug.Log("SfxSynth: built EV / RC / bike loops + ffu39 Cybertruck layers");
+        // ---- ffu46 skateboard: urethane roll (low, hollow rumble with a deck resonance ~190 Hz and a faint seam clack twice a
+        // loop) + bearing hum (a pure 880 Hz + 1760 Hz whir, higher and thinner than any engine voice) ----
+        {
+            int m = n + R / 4; var raw = new float[m]; float a = 0f, b = 0f, rz = 0f, rv = 0f;
+            for (int i = 0; i < m; i++)
+            {
+                float t = i / (float)R; float w = N(); a += (w - a) * 0.14f; b += (a - b) * 0.18f;
+                // a resonator at 190 Hz driven by the rumble (the deck / hollow trucks)
+                float f0 = 190f * 6.2831853f / R; rv += (b * 0.6f - rz * f0 * f0 - rv * 0.02f); rz += rv;
+                float ph = Mathf.Repeat(t, 1f); float clack = ph < 0.012f ? Mathf.Exp(-ph * 420f) * Mathf.Sin(ph * 6.2831853f * 1400f) * 0.8f : 0f;
+                raw[i] = b * 1.4f + rz * 0.35f + clack;
+            }
+            d = Seamless(raw, n); Norm(d, 0.7f); SkateRoll = Mk("syn_skate_roll", d);
+        }
+        d = new float[n];
+        for (int i = 0; i < n; i++) { float t = i / (float)R; d[i] = S(880f, t) * 0.6f + S(1760f, t) * 0.18f + S(2640f, t) * 0.05f; }
+        Norm(d, 0.5f); SkateHum = Mk("syn_skate_hum", d);
+        Debug.Log("SfxSynth: built EV / RC / bike loops + ffu39 Cybertruck layers + ffu46 skateboard");
     }
 }
 
@@ -215,6 +233,7 @@ public class SynthVoice
             case 14: ca = SfxSynth.Bike2s; cb = SfxSynth.Intake; cc = SfxSynth.RcGravel; cd = null; break;
             case 16: ca = SfxSynth.Bike4s; cb = SfxSynth.Intake; cc = SfxSynth.RcGravel; cd = null; break;
             case 15: ca = SfxSynth.EvWhine; cb = SfxSynth.Belt; cc = SfxSynth.Regen; cd = SfxSynth.Road; break;
+            case 17: ca = SfxSynth.SkateRoll; cb = SfxSynth.SkateHum; cc = SfxSynth.RcGravel; cd = null; break;   // ffu46 skateboard
             default: ca = SfxSynth.CtWhine; cb = SfxSynth.CtAvas; cc = SfxSynth.CtRegen; cd = SfxSynth.Road; break;   // ffu39
         }
         a = Src(owner, ca); b = Src(owner, cb); c = Src(owner, cc); d = Src(owner, cd);
@@ -274,6 +293,14 @@ public class SynthVoice
                 Set(2, c, k * Mathf.Clamp01(spd / 10f) * 0.12f * ground, 0.55f + spd / 40f, dt, 2f);
                 break;
             }
+            case 17:   // ffu46 skateboard: roll (speed, wheels down; ground = 1 off the half-pipe concrete = a little dirt grit) + bearing hum
+            {
+                float sp = Mathf.Clamp01(spd / 9f);
+                Set(0, a, k * ground * Mathf.Clamp01(spd / 0.6f) * (0.06f + 0.22f * sp), 0.55f + spd / 10f, dt, 4f);
+                Set(1, b, k * Mathf.Clamp01(spd / 2f) * (0.025f + 0.04f * sp) * (ground > 0.5f ? 1f : 0.6f), (0.62f + spd / 16f) * pm, dt, 2f);
+                Set(2, c, k * ground * Mathf.Clamp01(spd / 3f) * 0.05f * Mathf.Clamp01(slip), 0.8f + spd / 30f, dt, 2f);
+                break;
+            }
             case 15:   // electric motorbikes: the EV voice, higher
             {
                 float sp = Mathf.Clamp01(spd / 14f);
@@ -308,7 +335,7 @@ public class SynthVoice
     public string Levels()
     {
         System.Text.StringBuilder sb = new System.Text.StringBuilder();
-        string[] nm = kind == 13 ? new[] { "whine", "gravel", "-", "-", "-", "-" } : (kind == 14 || kind == 16) ? new[] { "engine", "intake", "dirt", "-", "-", "-" } : kind == 15 ? new[] { "whine", "belt", "regen", "road", "-", "-" } : new[] { "whine", "avas", "regen", "road", "wind", "crunch" };
+        string[] nm = kind == 13 ? new[] { "whine", "gravel", "-", "-", "-", "-" } : (kind == 14 || kind == 16) ? new[] { "engine", "intake", "dirt", "-", "-", "-" } : kind == 15 ? new[] { "whine", "belt", "regen", "road", "-", "-" } : kind == 17 ? new[] { "roll", "bearings", "grit", "-", "-", "-" } : new[] { "whine", "avas", "regen", "road", "wind", "crunch" };
         for (int i = 0; i < 6; i++) if (nm[i] != "-") sb.Append(nm[i]).Append('=').Append(vol[i].ToString("0.00")).Append('@').Append(pit[i].ToString("0.00")).Append(' ');
         if (kind == 12) { float sum = 0f; for (int i = 0; i < 6; i++) sum += vol[i]; sb.Append("sum=").Append(sum.ToString("0.000")).Append(" surf=").Append(surface.ToString("0.0")).Append(' '); }
         if (kind == 14 || kind == 16) sb.Append("rpm=").Append(rpm.ToString("0.00")).Append(" gear=").Append(gear);

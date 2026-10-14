@@ -60,6 +60,8 @@ public abstract class Vehicle : MonoBehaviour
 
     public virtual string HudStatus { get { return null; } }   // ffu32: replaces the HUD's "Title NN km/h" line when set (hammock, swing, horse)
     public virtual string HelpLine { get { return "L-stick steer | RT gas | LT brake/reverse | A get out"; } }
+    // ffu46: device-specific control rows "binding::what it does|..." for the help screen + hints (null = derive from HelpLine)
+    public virtual string HelpFor(InputKind k) { return null; }
     // world yaw the camera should hold (tank turret), or NaN to follow the body
     public virtual float AimYaw { get { return float.NaN; } }
 

@@ -12,6 +12,7 @@ public partial class Game
         if (UnityEngine.InputSystem.Mouse.current == null) return false;
         Vector2 mp = UnityEngine.InputSystem.Mouse.current.position.ReadValue();
         if (RobotPhone.I != null && RobotPhone.I.Captures(mp)) return true;
+        if (hpMenuChip != null && hpMenuChip.gameObject.activeInHierarchy && Hit(hpMenuChip, mp, 4f)) return true;   // ffu46 help chip
         if (RobotFeed.I != null && RobotFeed.I.Captures(mp)) return true;   // ffu20 video feed buttons
         return false;
     }

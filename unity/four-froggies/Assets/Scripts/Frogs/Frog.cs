@@ -76,6 +76,7 @@ public partial class Frog : MonoBehaviour
         cc.enabled = true;
     }
     public string prompt = "";
+    public float vehT; public bool vehFirst;   // ffu46 hints: time in this vehicle, first time ever in this kind
     public string toast = "";
     public float toastT;
     public bool chute;            // parachute after bailing out of a flyer in the air
@@ -273,7 +274,9 @@ public partial class Frog : MonoBehaviour
         {
             prompt = vehicle.HelpLine;
             if (human && exitCool <= 0f && TrailerTow.DriverTick(this, input)) { input.use = false; input.land = false; exitCool = 0.35f; }   // ffu31 hitch / unhitch / load a bike
-            if (input.use && exitCool <= 0f && vehicle.CanExit(this)) ExitVehicle();
+            vehT += dt;   // ffu46 hints: seconds since getting in
+            bool wantOut = vehicle is Skateboard ? ((Skateboard)vehicle).WantsOff(input) : input.use;   // ffu46: on a board A / Space is the ollie
+            if (wantOut && exitCool <= 0f && vehicle.CanExit(this)) ExitVehicle();
             else vehicle.Drive(input, camYaw, dt);
             model.Animate(0f, false, true, false, dt);
             input = new PIn();
@@ -666,6 +669,7 @@ public partial class Frog : MonoBehaviour
         exitCool = 0.4f;
         planar = Vector3.zero; vel = Vector3.zero;
         SetChute(false);
+        vehT = 0f; vehFirst = human && Game.FirstUse(v);   // ffu46 hints
         v.OnEnter();
         if (human && !netPuppet && !v.OwnedBy(this)) Toast(nick + " asked " + v.ownerName + " to borrow it - \"Sure, it's free. Drive safe!\"", 3f);   // ffu34 canon
         if (!netPuppet) Sfx.Play(Sfx.Door, 0.8f);

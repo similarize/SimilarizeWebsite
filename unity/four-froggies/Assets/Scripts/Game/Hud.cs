@@ -160,7 +160,7 @@ public class ViewHud
         {
             title.text = playerTag + "  " + me.nick;
             title.color = me.color;
-            prompt.text = me.prompt;
+            prompt.text = Game.HintPrompt(me);   // ffu46: device bindings, timed vehicle hints
             toast.text = me.toastT > 0f ? me.toast : "";
             Vehicle v = me.vehicle != null ? me.vehicle : me.passengerOf;
             if (v != null)

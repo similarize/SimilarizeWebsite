@@ -356,7 +356,7 @@ public class RobotDriver
     public static List<Vehicle> List()
     {
         var l = new List<Vehicle>();
-        foreach (var v in Vehicle.All) if (Drivable(v) && !(v is StoryMech) && !(v is RidingMower) && !(v is GardenSeat) && !(v is Horse)) l.Add(v);   // ffu26: mowers are a chore, not a drive
+        foreach (var v in Vehicle.All) if (Drivable(v) && !(v is StoryMech) && !(v is Skateboard) && !(v is RidingMower) && !(v is GardenSeat) && !(v is Horse)) l.Add(v);   // ffu26: mowers are a chore, not a drive
         return l;
     }
     // the free story mech of a band nearest the robot

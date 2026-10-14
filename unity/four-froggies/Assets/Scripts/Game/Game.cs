@@ -195,6 +195,7 @@ public partial class Game : MonoBehaviour
             else if (IsPoolDemo(sc)) PoolDemoStart(f, sc);                   // ffu29 backyard pool float (GamePoolDemo.cs)
             else if (IsStompDemo(sc)) StompDemoStart(f, sc);                 // ffu28 mech footfalls / Optimus suit on a slope (GameStomp.cs)
             else if (IsGardenDemo(sc)) GardenDemoStart(f, sc);               // ffu32 garden retreat / horse riding (GardenDemo.cs)
+            else if (Is46(sc)) Demo46Start(f, sc);                             // ffu46 skateboards + helper hints (GameFfu46.cs)
             else if (Is45(sc)) Demo45Start(f, sc);                             // ffu45 barn motorbikes / per-vehicle wheels / help screen (GameFfu45.cs)
             else if (Is43(sc)) Demo43Start(f, sc);                             // ffu43 loop both ways + Monster Park (GameFfu43.cs)
             else if (Is42(sc)) Demo42Start(f, sc);                             // ffu42 big wheels: Cybertruck + bike at 1x / max over logs + rocks (GameFfu42.cs)
@@ -230,6 +231,7 @@ public partial class Game : MonoBehaviour
         if ((sc.StartsWith("lj-") || sc.StartsWith("loopdrive")) && DemoLoopCam(f, sc, c)) return;
         if (IsStompDemo(sc)) { if (!StompDemoCam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }
         if (IsGardenDemo(sc)) { if (!GardenDemoCam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }
+        if (Is46(sc)) { if (!Demo46Cam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }
         if (Is45(sc)) { if (!Demo45Cam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }
         if (Is43(sc)) { if (!Demo43Cam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }
         if (Is42(sc)) { if (!Demo42Cam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }
@@ -1412,7 +1414,7 @@ public partial class Game : MonoBehaviour
             }
             // ffu15: the shared view shows the first pilot's control line (mech / Starship hints) and the space radar
             string sp = null; Frog spaceF = null;
-            foreach (var s2 in slots) { Frog f2 = frogs[s2.frog]; if (sp == null && f2.vehicle != null && f2.prompt.Length > 0) sp = f2.prompt; if (spaceF == null && f2.world == WorldId.Space) spaceF = f2; }
+            foreach (var s2 in slots) { Frog f2 = frogs[s2.frog]; if (sp == null && f2.vehicle != null && f2.prompt.Length > 0) sp = HintPrompt(f2); if (spaceF == null && f2.world == WorldId.Space) spaceF = f2; }
             sharedHud.Tick(sharedCam, null, "", frogs, string.Join("\n", lines.ToArray()), sp, spaceF);
         }
         // Starship blast-off: chase camera, countdown, fade (overrides the views of froggies aboard)

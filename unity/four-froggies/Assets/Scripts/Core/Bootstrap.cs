@@ -101,5 +101,6 @@ public class Bootstrap : MonoBehaviour
         RcTrack.Build();   // ffu30 FROGGY RC RACEWAY + its 4 RC cars (east of the ranch)
         try { MonsterPark.Build(); } catch (System.Exception e) { Debug.LogWarning("MonsterPark: build failed " + e); }   // ffu43 monster-truck park (south-west)
         try { Bike.SpawnAll(); } catch (System.Exception e) { Debug.LogWarning("Bike: spawn failed " + e); }   // ffu30 garage motorbikes + MX jump line
+        try { Skateboard.SpawnAll(); } catch (System.Exception e) { Debug.LogWarning("Skateboard: spawn failed " + e); }   // ffu46 skateboards (half-pipe rack + garage)
     }
 }

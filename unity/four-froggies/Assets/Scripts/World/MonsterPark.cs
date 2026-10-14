@@ -22,6 +22,9 @@ public class MonsterPark : MonoBehaviour
     public const float BowlGap = 56f, BowlTaperIn = 110f, BowlTaperOut = 40f;   // opening (north) + the wall's two ramps
     public const float LeadHalfW = 4.5f;   // ffu44: clear lead-in lane through the rock garden, x BowlX +- this
     public const float HpX = -110f, HpZ0 = -126f, HpZ1 = -99f;
+    // ffu46: the half-pipe cross-section (HalfPipe() builds it from these numbers too; Skateboard uses them for smooth normals)
+    public const float HpHalf = 2.5f, HpR = 4f, HpVert = 0.8f, HpDeck = 1.6f;
+    public static float FloorY { get { return gy0; } }
     public const float CrushX = -164f, CrushZ0 = -64f;
     static Transform root;
     static float gy0;
@@ -239,7 +242,7 @@ public class MonsterPark : MonoBehaviour
     static void HalfPipe()
     {
         // cross-section (u across, y): deck, vertical, quarter pipe R 4, 5 m flat bottom, mirrored
-        const float half = 2.5f, R = 4f, vert = 0.8f, deck = 1.6f;
+        const float half = HpHalf, R = HpR, vert = HpVert, deck = HpDeck;
         var cs = new List<Vector2>();
         cs.Add(new Vector2(-(half + R + deck), R + vert)); cs.Add(new Vector2(-(half + R), R + vert));
         for (int k = 0; k <= 10; k++) { float a = (1f - k / 10f) * Mathf.PI * 0.5f; cs.Add(new Vector2(-(half + R * Mathf.Sin(a)), R - R * Mathf.Cos(a))); }

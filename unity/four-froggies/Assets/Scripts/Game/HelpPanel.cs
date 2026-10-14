@@ -22,7 +22,7 @@ using UnityEngine.InputSystem;
 public partial class Game
 {
     RectTransform hpRoot, hpSafe, hpCard, hpView, hpContent, hpSettings, hpClose, hpBar, hpBarThumb, hpMenuChip;
-    Image hpDim; Text hpTitle, hpSub, hpCloseT, hpFoot, hpSound, hpWheelHint, hpScrollHint;
+    Image hpDim; Text hpTitle, hpSub, hpCloseT, hpFoot, hpSound, hpWheelHint, hpScrollHint, hpHints;
     Slot helpBy;
     string hpSig = "";
     float hpScroll, hpMaxScroll, hpFs = 1f;
@@ -86,6 +86,8 @@ public partial class Game
         UIK.Modernize(hpWheelHint, false, 0f);
         hpSound = UIK.Label(hpSettings, "", 16, TextAnchor.MiddleLeft, new Vector2(0f, 1f), Vector2.zero, new Vector2(600f, 24f), new Color(0.9f, 0.92f, 0.95f));
         UIK.Modernize(hpSound, false, 0f);
+        hpHints = UIK.Label(hpSettings, "", 16, TextAnchor.MiddleLeft, new Vector2(0f, 1f), Vector2.zero, new Vector2(600f, 24f), new Color(0.9f, 0.92f, 0.95f));   // ffu46 HINTS On / Off
+        UIK.Modernize(hpHints, false, 0f);
         hpFoot = UIK.Label(hpCard, "", 14, TextAnchor.MiddleLeft, new Vector2(0f, 0f), Vector2.zero, new Vector2(800f, 20f), new Color(1f, 1f, 1f, 0.55f));
         UIK.Modernize(hpFoot, false, 0f);
         // touch: a small MENU chip (opens this screen)
@@ -93,6 +95,7 @@ public partial class Game
         hpMenuChip = mc.rectTransform; hpMenuChip.anchorMin = hpMenuChip.anchorMax = new Vector2(0.5f, 1f); hpMenuChip.pivot = new Vector2(0.5f, 1f);
         var mt = UIK.Label(hpMenuChip, "MENU", 16, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(92f, 40f), Color.white);
         UIK.Stretch(mt.rectTransform); UIK.Modernize(mt, true, 0.2f);
+        ChipBuild(mt);   // ffu46: the chip shows on every device (H key cap / pad Menu glyph / MENU) + the first-time tips card
         hpMenuChip.gameObject.SetActive(false);
         hpRoot.gameObject.SetActive(false);
     }
@@ -101,14 +104,19 @@ public partial class Game
     // returns true when the help screen wants to be closed by a tap / click on CLOSE
     void HelpTick(float dt)
     {
-        // touch MENU chip (play, help closed)
-        bool chip = state == State.Play && touch != null && touch.active && !help;
+        // ffu46: help chip for every device (play, help closed): tap (touch) / click (desktop) opens the help screen
+        bool chip = state == State.Play && slots.Count > 0 && !help;
         if (hpMenuChip.gameObject.activeSelf != chip) hpMenuChip.gameObject.SetActive(chip);
         if (chip)
         {
+            ChipTick(ChipKind);
             PlaceInSafe(hpMenuChip, new Vector2(0f, -12f));
-            foreach (Vector2 tp in Kb.TouchesBegan()) if (Hit(hpMenuChip, tp, 10f)) { help = true; helpBy = FindSlot(InputKind.Touch); Sfx.Play(Sfx.Click, 0.7f); hpScroll = 0f; break; }
+            foreach (Vector2 tp in Kb.TouchesBegan()) if (Hit(hpMenuChip, tp, 10f)) { help = true; helpBy = FindSlot(InputKind.Touch) ?? slots[0]; Sfx.Play(Sfx.Click, 0.7f); hpScroll = 0f; break; }
+            var cm = Mouse.current;
+            if (!help && cm != null && Kb.MouseLeftDown() && Cursor.lockState != CursorLockMode.Locked && Hit(hpMenuChip, cm.position.ReadValue(), 4f))
+            { help = true; helpBy = FindSlot(InputKind.Keyboard) ?? slots[0]; Cursor.lockState = CursorLockMode.None; Sfx.Play(Sfx.Click, 0.7f); hpScroll = 0f; Debug.Log("HINTS: help opened from the chip (mouse)"); }
         }
+        TipsTick(dt);
         if (hpRoot.gameObject.activeSelf != help) { hpRoot.gameObject.SetActive(help); if (help) { hpSig = ""; hpScroll = 0f; } }
         if (!help) { hpDragging = false; return; }
         if (helpBy == null || !slots.Contains(helpBy)) helpBy = slots.Count > 0 ? slots[0] : null;
@@ -127,6 +135,7 @@ public partial class Game
         string sig = kind + "|" + (v != null ? v.Title : "-") + "|" + Screen.width + "x" + Screen.height + "|" + sa + "|" + Worlds.SpaceOn + Worlds.StageEOn;
         if (sig != hpSig) { hpSig = sig; HelpRebuild(kind, v, f); }
         HelpSettingsDraw(kind, v);
+        HintsSettingsInput();
         HelpScrollInput(kind, dt);
         // CLOSE: tap / click
         bool closeHit = false;
@@ -183,7 +192,17 @@ public partial class Game
         var L = new List<HSec>();
         if (v != null)
         {
-            var s = new HSec("NOW DRIVING  ·  " + v.Title.ToUpperInvariant(), true);
+            var s = new HSec((v is Skateboard ? "NOW RIDING  ·  " : "NOW DRIVING  ·  ") + v.Title.ToUpperInvariant(), true);
+            string hf = v.HelpFor(kind);   // ffu46: device-specific rows ("binding::action|...")
+            if (hf != null)
+                foreach (string row in hf.Split('|'))
+                {
+                    int c = row.IndexOf("::"); if (c < 0) continue;
+                    string k0 = row.Substring(0, c).Trim();
+                    s.R(pad ? Pk(k0) : k0, row.Substring(c + 2).Trim());
+                }
+            if (v is Skateboard) s.R("Wheels", "stock skateboard wheels (no wheel size)");
+            if (hf == null)
             foreach (string part in v.HelpLine.Split('|'))
             {
                 string p = part.Trim(); if (p.Length == 0) continue;
@@ -206,6 +225,7 @@ public partial class Game
         else vh.R("A", "get in / out").R("GAS  /  BRAKE", "drive").R("UP  /  DOWN", "fly").R("FIRE  /  MSL", "weapons");
         vh.R("Back up to a hitch", "trucks tow the barn trailers (" + (pad ? G("A") + " / " + G("Y") : keys ? "E" : "tap") + ")");
         vh.R("Bikes", "garage + trailer barn; ride into a toy hauler to stow");
+        vh.R("Skateboards", "rack at the Monster Park half-pipe + 2 in the garage  ·  " + (pad ? G("A") + " ollie, " + G("B") + " step off" : keys ? "Space ollie, E step off" : "OLLIE / OFF"));
         L.Add(vh);
         var ac = new HSec("ACTIONS");
         string use = pad ? G("A") : keys ? "E" : "A";
@@ -293,7 +313,7 @@ public partial class Game
         hpCloseT.text = kind == InputKind.Gamepad ? "CLOSE  ·  Start" : kind == InputKind.Touch ? "CLOSE" : "CLOSE  ·  H";
         float headH = pad + tsz + 8f + 26f + 10f;
         // settings block (pinned at the bottom) + footer
-        float setH = narrow ? 168f : 92f, footH = 24f;
+        float setH = narrow ? 198f : 118f, footH = 24f;   // ffu46: + the HINTS row
         hpSettings.anchorMin = hpSettings.anchorMax = new Vector2(0f, 0f); hpSettings.pivot = new Vector2(0f, 0f);
         hpSettings.anchoredPosition = new Vector2(pad, pad + footH); hpSettings.sizeDelta = new Vector2(W - pad * 2f, setH);
         Place(hpFoot.rectTransform, new Vector2(0f, 0f), new Vector2(pad, pad), new Vector2(W - pad * 2f, 20f), new Vector2(0f, 0f));
@@ -337,6 +357,8 @@ public partial class Game
         hpWheelHint.fontSize = narrow ? 15 : 14;
         Place(hpSound.rectTransform, new Vector2(0f, 1f), narrow ? new Vector2(sx, sy - 110f) : new Vector2(cw * 0.64f, sy - 30f), new Vector2(narrow ? cw - 32f : cw * 0.36f - 16f, 22f));
         hpSound.fontSize = narrow ? 17 : 16;
+        Place(hpHints.rectTransform, new Vector2(0f, 1f), narrow ? new Vector2(sx, sy - 140f) : new Vector2(cw * 0.64f, sy - 56f), new Vector2(narrow ? cw - 32f : cw * 0.36f - 16f, 24f));
+        hpHints.fontSize = narrow ? 17 : 16;
     }
 
     static void Place(RectTransform rt, Vector2 anchor, Vector2 pos, Vector2 size, Vector2? pivot = null)
@@ -458,11 +480,13 @@ public partial class Game
         if (wheelLabel.text != l) wheelLabel.text = l;
         wheelLabel.color = on ? new Color(1f, 0.9f, 0.5f) : new Color(0.65f, 0.67f, 0.7f);
         string how = kind == InputKind.Gamepad ? "D-pad < > or LB / RB" : kind == InputKind.Touch ? "drag the bar" : "arrow keys / - = or drag the bar";
-        string hint = !on ? "Get in a vehicle to resize its wheels" : hv.Title + " only  ·  1x - 4x  ·  " + how + (BigWheels.Capped(hv) && k > 1.001f ? "  ·  stock size indoors, grows outside" : "");
+        string hint = !on ? (v is Skateboard ? "Skateboards keep their stock wheels" : "Get in a vehicle to resize its wheels") : hv.Title + " only  ·  1x - 4x  ·  " + how + (BigWheels.Capped(hv) && k > 1.001f ? "  ·  stock size indoors, grows outside" : "");
         if (hpWheelHint.text != hint) hpWheelHint.text = hint;
         hpWheelHint.color = on ? new Color(0.8f, 0.84f, 0.9f) : new Color(1f, 0.8f, 0.45f);
         string snd = "SOUND  <color=#8cff70>" + Sfx.LevelName + "</color>   " + (kind == InputKind.Gamepad ? G("Y") + " cycles" : kind == InputKind.Touch ? "SND button cycles" : "M cycles") + " on / low / off";
         if (hpSound.text != snd) hpSound.text = snd;
+        string hn = "HINTS  " + (HintsOn ? "<color=#8cff70>On</color>" : "<color=#ff8a70>Off</color>") + "   " + (kind == InputKind.Gamepad ? G("X") + " toggles" : kind == InputKind.Touch ? "tap to toggle" : "N or click toggles") + "  ·  tips + control prompts";
+        if (hpHints.text != hn) hpHints.text = hn;
     }
 
     void HelpScrollInput(InputKind kind, float dt)
