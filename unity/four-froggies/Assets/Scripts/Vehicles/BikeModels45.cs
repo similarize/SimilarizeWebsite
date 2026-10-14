@@ -42,8 +42,9 @@ public partial class Bike
             Vector3 p = TrailerBarn.W(BarnX[i], 0.15f, BarnZ);
             p.y = TrailerBarn.FloorY + 0.15f;
             Bike b = Spawn(BarnNames[i], p, TrailerBarn.Yaw, 4 + i);
-            Vector3 w0 = TrailerBarn.W(-6.9f, 0f, -2.5f), w1 = TrailerBarn.W(-6.9f, 0f, 9f), w2 = TrailerBarn.W(-6.9f, 0f, 15f), lc = TrailerBarn.W(0f, 0f, 25f);
-            b.aiExit = new[] { new Vector2(w0.x, w0.z), new Vector2(w1.x, w1.z), new Vector2(w2.x, w2.z) };
+            // straight out of the row, across behind the trailers into the lane (Silver Bullet | Teardrop), out of the doors
+            Vector3 wa = TrailerBarn.W(BarnX[i], 0f, -2.2f), w0 = TrailerBarn.W(-6.9f, 0f, -1.8f), w1 = TrailerBarn.W(-6.9f, 0f, 9f), w2 = TrailerBarn.W(-6.9f, 0f, 15f), lc = TrailerBarn.W(0f, 0f, 25f);
+            b.aiExit = new[] { new Vector2(wa.x, wa.z), new Vector2(w0.x, w0.z), new Vector2(w1.x, w1.z), new Vector2(w2.x, w2.z) };
             b.aiLoopC = new Vector2(lc.x, lc.z); b.aiLoopR = 9f;
         }
         Debug.Log("Bike: 5 barn bikes parked at the back of the trailer barn (" + TrailerBarn.Centre.ToString("0") + ")");

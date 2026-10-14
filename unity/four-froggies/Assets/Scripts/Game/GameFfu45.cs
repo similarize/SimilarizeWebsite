@@ -80,10 +80,15 @@ public partial class Game
     }
     static float Flat45(Vector3 d) { d.y = 0f; return d.magnitude; }
 
-    Vector2[] D45Path()
+    // barn-local waypoints: 3 m straight out of the parking row, across behind the trailers to the lane between the Silver
+    // Bullet and the Teardrop (x -6.9), down the lane, out of the doors, a straight, a left turn
+    static readonly float[] D45Z = { -2.2f, -1.8f, 9f, 15f, 23f, 28f };
+    Vector2[] D45Path(float lx0)
     {
-        Vector3 a = TrailerBarn.W(-6.9f, 0f, -2.5f), b = TrailerBarn.W(-6.9f, 0f, 9f), c = TrailerBarn.W(-6.9f, 0f, 16f), d = TrailerBarn.W(-6.9f, 0f, 32f), e = TrailerBarn.W(9f, 0f, 40f);
-        return new[] { new Vector2(a.x, a.z), new Vector2(b.x, b.z), new Vector2(c.x, c.z), new Vector2(d.x, d.z), new Vector2(e.x, e.z) };
+        float[] xs = { lx0, -6.9f, -6.9f, -6.9f, -6.9f, 6f };
+        var o = new Vector2[xs.Length];
+        for (int i = 0; i < xs.Length; i++) { Vector3 w = TrailerBarn.W(xs[i], 0f, D45Z[i]); o[i] = new Vector2(w.x, w.z); }
+        return o;
     }
 
     void D45Phase(int ph)
@@ -91,7 +96,7 @@ public partial class Game
         if (d45Ph >= 1 && d45Ph <= 5 && d45Bike != null)
         {
             Debug.Log("FFDEMO motos summary " + d45Bike.Title + ": max " + d45MaxV.ToString("0.0") + " m/s | max lean " + d45MaxLean.ToString("0") + " deg | max wheelie " + d45MaxWh.ToString("0") + " deg, wheelies " + (d45Bike.wheelies - d45Wh0) +
-                      " | hops " + (Bike.Hops - d45Hops0) + " | max air " + d45MaxAir.ToString("0.00") + " s | crashes " + (d45Bike.crashes - d45Cr0) + " | waypoint " + d45Wp + "/5 | out of the barn " + d45Out + (d45Bike.type == 8 ? " | sidecar passenger seen " + d45Pax : "") + " | wheels " + d45Bike.bigK.ToString("0.00"));
+                      " | hops " + (Bike.Hops - d45Hops0) + " | max air " + d45MaxAir.ToString("0.00") + " s | crashes " + (d45Bike.crashes - d45Cr0) + " | waypoint " + d45Wp + "/6 | out of the barn " + d45Out + (d45Bike.type == 8 ? " | sidecar passenger seen " + d45Pax : "") + " | wheels " + d45Bike.bigK.ToString("0.00"));
             if (d45Bike.passenger != null) d45Bike.SidecarOut(d45Bike.passenger);
             if (d45F.vehicle != null) d45F.ExitVehicle();
         }
@@ -128,64 +133,73 @@ public partial class Game
             return o;
         }
         if (d45Sc != "motos" || d45Ph < 1 || d45Ph > 5 || d45Bike == null || d45F.vehicle != d45Bike) return o;
-        var path = D45Path();
         Vector3 bp = d45Bike.transform.position; Vector2 p2 = new Vector2(bp.x, bp.z);
+        Vector3 bl = Quaternion.Euler(0f, -TrailerBarn.Yaw, 0f) * (d45Bike.HomePos - TrailerBarn.Centre);
+        var path = D45Path(bl.x);
         int k = Mathf.Min(d45Wp, path.Length - 1);
         Vector2 tgt = path[k];
-        if ((tgt - p2).magnitude < (k < 2 ? 1.8f : 3.5f) && d45Wp < path.Length) d45Wp++;
-        float vt = k < 2 ? 4.5f : k == 2 ? 7f : d45Bike.type == 4 ? 24f : d45Bike.type == 5 ? 15f : d45Bike.type == 6 ? 15f : d45Bike.type == 7 ? 8f : 12f;
+        // passed once the bike is level with a waypoint (barn-local z), the lane entry once it is lined up on the lane - no orbiting
+        Vector3 lb = Quaternion.Euler(0f, -TrailerBarn.Yaw, 0f) * (bp - TrailerBarn.Centre);
+        bool pass = k == 0 ? lb.z > D45Z[0] - 0.6f : k == 1 ? Mathf.Abs(lb.x + 6.9f) < 1.2f || (tgt - p2).magnitude < 2f : k < 5 ? lb.z > D45Z[k] - 0.6f : (tgt - p2).magnitude < 3.5f;
+        if (d45Wp < path.Length && pass) d45Wp++;
+        k = Mathf.Min(d45Wp, path.Length - 1); tgt = path[k];
+        float vt = k < 3 ? 3.5f : k == 3 ? 6f : d45Bike.type == 4 ? 15f : d45Bike.type == 5 ? 10f : d45Bike.type == 6 ? 11f : d45Bike.type == 7 ? 7f : 9f;
         if (d45Wp >= path.Length) vt = 0f;
         Vector2 fw = new Vector2(d45Bike.transform.forward.x, d45Bike.transform.forward.z).normalized, to = (tgt - p2).normalized;
         float ang = Mathf.Atan2(fw.x * to.y - fw.y * to.x, Vector2.Dot(fw, to)) * Mathf.Rad2Deg;
         o.move = new Vector2(Mathf.Clamp(-ang / 30f, -1f, 1f), 0f);
         float fs = d45Bike.ForwardSpeed;
         if (vt > fs) o.gas = Mathf.Clamp01((vt - fs) * 0.3f + 0.2f); else o.brake = Mathf.Clamp01((fs - vt) * 0.4f);
-        if (d45Bike.type == 7 && k >= 3)
+        if (d45Bike.type == 7 && k >= 4)
         {
             // trials tricks: full throttle from slow = wheelie, hop every 1.6 s
             if (fs < 7f) o.gas = 1f;
             d45HopT += Time.fixedDeltaTime;
             if (d45HopT > 1.6f) { d45HopT = 0f; o.fire = true; }
         }
-        if (d45Bike.type == 4 && k >= 3) o.gas = Mathf.Max(o.gas, 0.9f);
+        if (d45Bike.type == 4 && k >= 4) o.gas = Mathf.Max(o.gas, 0.9f);
         return o;
     }
 
     // ---------------- berm45 ----------------
     static readonly string[] B45Names = { "truck-berm", "bike-berm", "truck-mound", "done" };
+    float b45Stall;
     Vector3 b45Start, b45Fw, b45Right, b45Edge; float b45Yaw, b45RoadY, b45H0 = -1f, b45MaxOff, b45MaxClimb, b45MaxSink, b45MinUp; int b45Solid, b45Samples; bool b45Stop;
     Vehicle B45Veh { get { return d45Ph == 1 ? (Vehicle)d45Bike : d45Ct; } }
     void B45Run(int ph)
     {
         if (d45Ph >= 0 && d45Ph <= 2 && d45Sc == "berm45" && d45T > 0.1f)
             Debug.Log("FFDEMO berm45 summary " + B45Names[d45Ph] + ": max past the edge " + b45MaxOff.ToString("0.0") + " m | max climb over the road " + b45MaxClimb.ToString("0.00") + " m | max sink below the drawn berm " + b45MaxSink.ToString("0.00") +
-                      " m | on a solid berm collider " + b45Solid + "/" + b45Samples + " samples | min upright " + b45MinUp.ToString("0.00"));
-        d45Ph = ph; d45PhT = 0f; b45H0 = -1f; b45MaxOff = -9f; b45MaxClimb = -9f; b45MaxSink = -9f; b45MinUp = 1f; b45Solid = 0; b45Samples = 0; b45Stop = false;
+                      " m | on a solid berm collider " + b45Solid + "/" + b45Samples + " samples | stalled on the slope " + b45Stall.ToString("0.0") + " s | min upright " + b45MinUp.ToString("0.00") +
+                      (d45Ph <= 1 ? " | made it onto the road " + (b45MaxOff > 1.5f) : " | onto the top " + (b45MaxOff > 3.5f)));
+        d45Ph = ph; d45PhT = 0f; b45H0 = -1f; b45MaxOff = -9f; b45MaxClimb = -9f; b45MaxSink = -9f; b45MinUp = 1f; b45Stall = 0f; b45Solid = 0; b45Samples = 0; b45Stop = false;
         if (d45F.vehicle != null) d45F.ExitVehicle();
         Debug.Log("FFDEMO berm45 phase " + ph + " " + B45Names[ph] + " t=" + d45T.ToString("0.0"));
         if (ph > 2) return;
         Vehicle v = B45Veh; if (v == null) return;
         if (ph <= 1)
         {
-            // a straight link section of the loop branch, on the ground: start on the road, aim 35 deg at the right berm
-            float arc = 40f; Vector3 L = Vector3.zero, R = Vector3.zero; int sec = -1;
-            for (float a = 30f; a < 80f; a += 2f) { if (RallyTrack.BranchEdges(a, out L, out R, out sec) && sec == 0 && Mathf.Abs(L.y - R.y) < 0.15f && R.y - Ranch.GY(R.x, R.z) < 0.6f) { arc = a; break; } }
-            Vector3 up; Vector3 c = RallyTrack.BranchFrameAt(arc, out b45Fw, out up);
+            // ffu45b: the tallest straight-ish berm of the loop branch links (section 0, both edges level, its 3 m foot clear
+            // of the figure-eight); start out in the field and drive UP the berm onto the road at 35 deg to the berm line
+            float arc = 40f, bestH = -1f; Vector3 L, R; int sec;
+            for (float a = 12f; a < 84f; a += 1f)
+            {
+                if (!RallyTrack.BranchEdges(a, out L, out R, out sec) || sec != 0 || Mathf.Abs(L.y - R.y) > 0.2f) continue;
+                Vector3 rt0 = R - L; rt0.y = 0f; rt0.Normalize();
+                Vector3 foot = R + rt0 * 3f, far = R + rt0 * 12f;
+                if (Layout.RoadDist(foot.x, foot.z) < Layout.TrackW * 0.5f + 3f || Layout.RoadDist(far.x, far.z) < Layout.TrackW * 0.5f + 2f) continue;
+                float hR = R.y - Ranch.GY(foot.x, foot.z);
+                if (hR > bestH) { bestH = hR; arc = a; }
+            }
+            RallyTrack.BranchEdges(arc, out L, out R, out sec);
+            Vector3 up; RallyTrack.BranchFrameAt(arc, out b45Fw, out up);
             b45Fw.y = 0f; b45Fw.Normalize(); b45Right = (R - L); b45Right.y = 0f; b45Right.Normalize();
-            b45Edge = R; b45RoadY = (L.y + R.y) * 0.5f;
-            Vector3 dir = (Quaternion.AngleAxis(35f * Mathf.Sign(Vector3.Dot(Vector3.Cross(b45Fw, b45Right), Vector3.up)), Vector3.up) * b45Fw).normalized;
-            b45Start = (L + R) * 0.5f - dir * 7f; b45Start.y = b45RoadY;
+            b45Edge = R; b45RoadY = R.y;
+            Vector3 dir = (b45Fw * Mathf.Cos(35f * Mathf.Deg2Rad) - b45Right * Mathf.Sin(35f * Mathf.Deg2Rad)).normalized;
+            Vector3 foot0 = R + b45Right * 3f;
+            b45Start = foot0 - dir * 10f; b45Start.y = Ranch.GY(b45Start.x, b45Start.z);
             b45Yaw = Quaternion.LookRotation(dir).eulerAngles.y;
-            Debug.Log("FFDEMO berm45 " + B45Names[ph] + " at branch arc " + arc + " road half width " + ((R - L).magnitude * 0.5f).ToString("0.0") + " edge " + R.ToString("0.0") + " ground at edge " + Ranch.GY(R.x, R.z).ToString("0.00"));
-        }
-        else
-        {
-            // Monster Park tabletop (x -131, z -64..-86, 8 m wide, 2.2 m top): come at its east flank at 35 deg
-            float gx = -131f + 4f + 3.08f, gz = -76f;   // the flank foot (1.4 x 2.2 m out from the top edge)
-            b45Fw = Vector3.back; b45Right = Vector3.left; b45Edge = new Vector3(gx, Ranch.GY(gx, gz), gz); b45RoadY = b45Edge.y;
-            Vector3 dir = (Quaternion.AngleAxis(-35f, Vector3.up) * Vector3.left).normalized;
-            b45Start = b45Edge - dir * 9f; b45Start.y = Ranch.GY(b45Start.x, b45Start.z);
-            b45Yaw = Quaternion.LookRotation(dir).eulerAngles.y;
+            Debug.Log("FFDEMO berm45 " + B45Names[ph] + " at branch arc " + arc + ": road edge " + bestH.ToString("0.00") + " m above the berm foot, half width " + ((R - L).magnitude * 0.5f).ToString("0.0") + " m, edge " + R.ToString("0.0") + ", approach 35 deg up the berm from the field");
         }
         Quaternion q = Quaternion.Euler(0f, b45Yaw, 0f);
         Vector3 p = b45Start + Vector3.up * (0.6f + v.bigLift);
@@ -200,36 +214,51 @@ public partial class Game
         Vehicle v = B45Veh;
         if (v == null || d45Ph > 2 || d45PhT < 1.5f || d45F.vehicle != v) return o;
         o.move.x = Mathf.Clamp(Mathf.DeltaAngle(v.transform.eulerAngles.y, b45Yaw) / 25f, -1f, 1f);
-        if (b45Stop) { o.brake = 0.7f; return o; }
-        o.gas = v.Speed < (d45Ph == 1 ? 6f : 6.5f) ? 0.55f : 0.15f;
+        if (b45Stop) { if (v.ForwardSpeed > 0.3f) o.brake = 0.7f; return o; }   // brake = reverse below that: just coast
+        o.gas = v.Speed < (d45Ph == 1 ? 5f : 5.5f) ? 0.55f : 0.12f;
         return o;
     }
 
     bool Berm45Tick(out Vector3 pos, out Vector3 look)
     {
         Vehicle v = B45Veh;
-        pos = b45Edge - b45Fw * 11f - b45Right * 3f + Vector3.up * 3.2f; look = b45Edge + Vector3.up * 0.4f;
+        // side-on camera down the berm line (the vehicle climbs it from the right of the frame)
+        pos = b45Edge + b45Right * 1.5f - b45Fw * 11f + Vector3.up * 2.4f; look = b45Edge + b45Right * 1.5f + b45Fw * 2f + Vector3.up * 0.2f;
+        if (d45Ph == 2) { pos = b45Edge + Vector3.right * 4f + Vector3.forward * 12f + Vector3.up * 3.5f; look = b45Edge + Vector3.left * 2f + Vector3.up * 1f; }
         if (d45Ph > 2) { if (d45PhT < 0.05f) Debug.Log("FFDEMO berm45 done"); return true; }
         if (v == null) { B45Run(d45Ph + 1); return true; }
         Vector3 p = v.transform.position;
-        float off = Vector3.Dot(p - b45Edge, b45Right);   // > 0 = past the road edge, onto the berm
-        if (b45H0 < 0f && d45PhT > 1.2f) b45H0 = p.y - b45RoadY;   // ride height on the road
+        float off;
+        if (d45Ph <= 1)
+        {
+            // the local road edge (nearest branch row), > 0 = out on the berm / field side
+            Vector3 lp, lf, lr, lu; float arc; Vector3 L, R; int sec;
+            if (RallyTrack.BranchNearest(p, out lp, out lf, out lr, out lu, out arc) && RallyTrack.BranchEdges(arc, out L, out R, out sec))
+            { b45Edge = R; b45RoadY = R.y; Vector3 rr = R - L; rr.y = 0f; if (rr.sqrMagnitude > 0.01f) b45Right = rr.normalized; }
+            off = Vector3.Dot(p - b45Edge, b45Right);
+        }
+        else off = Vector3.Dot(p - b45Edge, b45Right);
+        if (b45H0 < 0f && d45PhT > 1.2f) b45H0 = p.y - Ranch.GY(p.x, p.z);   // ride height on the field
         if (b45H0 >= 0f)
         {
             float gy = Ranch.GY(p.x, p.z);
             // drawn berm: straight from the road edge down to 0.2 m under the ground 3 m out (RallyTrack.SkirtPt); tabletop flank 1.4 x 2.2 m
-            float surf = d45Ph <= 1 ? (off <= 0f ? b45RoadY : off < 3f ? Mathf.Lerp(b45RoadY, gy - 0.2f, off / 3f) : gy)
-                                    : (off <= 0f ? gy : off < 3.08f ? gy + 2.2f * (off / 3.08f) : gy + 2.2f);
-            float sink = surf + b45H0 - p.y;
-            b45MaxOff = Mathf.Max(b45MaxOff, off); b45MaxClimb = Mathf.Max(b45MaxClimb, p.y - b45H0 - b45RoadY); b45MinUp = Mathf.Min(b45MinUp, v.transform.up.y);
-            if (off > 0.3f && off < 2.7f) b45MaxSink = Mathf.Max(b45MaxSink, sink);
+            Vector3 footP = b45Edge + b45Right * 3f; float gyF = Ranch.GY(footP.x, footP.z);
+            float surf = d45Ph <= 1 ? (off <= 0f ? b45RoadY : off < 3f ? Mathf.Lerp(b45RoadY, gyF - 0.2f, off / 3f) : gy)
+                                    : gy + 2.2f * Mathf.Clamp01(Mathf.Min(off, 14.16f - off) / 3.08f);   // flank, 8 m top, far flank
+            float sink = Mathf.Max(surf, gy) + b45H0 - p.y;
+            // berm runs: off = distance past the edge (positive = still on the field side); climb = height gained over the field
+            b45MaxOff = d45Ph <= 1 ? Mathf.Max(b45MaxOff, -off) : Mathf.Max(b45MaxOff, off); b45MaxClimb = Mathf.Max(b45MaxClimb, p.y - b45H0 - Ranch.GY(b45Start.x, b45Start.z)); b45MinUp = Mathf.Min(b45MinUp, v.transform.up.y);
+            bool onSlope = d45Ph <= 1 ? off > 0.3f && off < 2.7f : off > 0.3f && off < 2.8f;
+            if (onSlope) b45MaxSink = Mathf.Max(b45MaxSink, sink);
+            if (onSlope && v.Speed < 0.4f && d45PhT > 3f) b45Stall += Time.deltaTime;
             string under = "-"; RaycastHit h;
             if (Physics.Raycast(p + Vector3.up * 2f, Vector3.down, out h, 6f + v.bigLift, Vehicle.GroundMask, QueryTriggerInteraction.Ignore))
             {
                 under = h.collider.name;
-                if (off > 0.3f && off < 2.7f) { b45Samples++; if (under.Contains("solid") || under.Contains("Tabletop")) b45Solid++; }
+                if (onSlope) { b45Samples++; if (under.Contains("solid") || under.Contains("Tabletop")) b45Solid++; }
             }
-            if (off > (d45Ph <= 1 ? 4.5f : 5f) || d45PhT > 12f) b45Stop = true;
+            if ((d45Ph <= 1 ? off < -3f : off > 5f) || d45PhT > 12f) b45Stop = true;
             if (d45Log <= 0f)
             {
                 d45Log = 0.25f;
@@ -251,7 +280,7 @@ public partial class Game
         if (sc == "wheels45") return Wheels45Tick(f, out pos, out look);
         // ---- motos ----
         if (d45Ph == 0 && (d45PhT > 8f || (d45From > 0 && d45PhT > 0.5f))) D45Phase(Mathf.Max(1, d45From));
-        else if (d45Ph >= 1 && d45Ph <= 5 && (d45PhT > 15f || d45Bike == null || (d45Wp >= 5 && d45Bike.Speed < 0.6f))) D45Phase(d45Ph + 1 > d45To ? 6 : d45Ph + 1);
+        else if (d45Ph >= 1 && d45Ph <= 5 && (d45PhT > 15f || d45Bike == null || (d45Wp >= 6 && d45Bike.Speed < 0.6f))) D45Phase(d45Ph + 1 > d45To ? 6 : d45Ph + 1);
         if (d45Ph == 0)
         {
             if (d45PhT < 4f) { pos = TrailerBarn.W(2.2f, 2.6f, -8.6f); look = TrailerBarn.W(-8.5f, 0.6f, -4.8f); }
@@ -267,7 +296,7 @@ public partial class Game
             look = t.position + fwd * 2f + Vector3.up * (0.7f + d45Bike.bigLift * 0.5f);
             d45MaxV = Mathf.Max(d45MaxV, d45Bike.Speed); d45MaxLean = Mathf.Max(d45MaxLean, Mathf.Abs(d45Bike.Lean)); d45MaxWh = Mathf.Max(d45MaxWh, d45Bike.WheelieDeg);
             d45MaxAir = Mathf.Max(d45MaxAir, d45Bike.airT); if (d45Bike.passenger != null) d45Pax = true;
-            if (!inside && d45Wp >= 3) d45Out = true;
+            if (!inside && d45Wp >= 4) d45Out = true;
             if (d45Log <= 0f)
             {
                 d45Log = 0.5f;

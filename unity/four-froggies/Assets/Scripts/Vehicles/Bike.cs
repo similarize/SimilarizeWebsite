@@ -599,7 +599,7 @@ public class BikeAI : MonoBehaviour
             else
             {
                 int k = Mathf.Clamp(b.aiWp, 0, b.aiExit.Length - 1);
-                tgt = b.aiExit[k]; vt = 5.5f;
+                tgt = b.aiExit[k]; vt = k < 2 ? 3.5f : 5.5f;
                 if ((tgt - p2).magnitude < 2.2f) b.aiWp++;
                 if (b.aiWp >= b.aiExit.Length || b.aiT > 25f) { b.aiPhase = 1; b.aiAng = Mathf.Atan2(p.z - lc.y, p.x - lc.x); }
             }
