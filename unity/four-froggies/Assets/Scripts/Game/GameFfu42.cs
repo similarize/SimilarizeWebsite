@@ -3,8 +3,9 @@ using UnityEngine;
 // ffu42 demo shot for the probe (?ffdemo=1&ffshot=bigwheels): the wheel-size setting on a Cybertruck and a dirt bike.
 //   A test lane on the south lawn (x 6 -> 46, z -6 truck / -1 bike) with a log across both lanes at x 22, a boulder in
 //   each lane at x 30 and a second, thicker log at x 37 (all with colliders).
-//   phase 0 "park1x"  0-7 s : both parked side by side at the start, wheels 1x, fixed side camera (comparison frame A)
-//   phase 1 "park4x"  7-14 s: wheel size set to 4x, tyres inflate, same camera (comparison frame B)
+//   phase 0 "park1x"  0-5 s : both parked side by side at the start, wheels 1x, fixed side camera (comparison frame A)
+//   phase 1 "park4x"  5-11 s: wheel size set to 4x, tyres inflate, same camera (comparison frame B)
+//   runs wait 2.8 s for the tyres, then drive; a run ends past x 46 or after 17 s. &bwonly=truck / bike skips the other runs.
 //   phase 2 "truck1x"        : back to 1x, P1 drives the Cybertruck down the lane (gas 0.55, straight) over log / rock / log
 //   phase 3 "truck4x"        : truck reset to the start, 4x, same run
 //   phase 4 "bike1x" / 5 "bike4x": the same two runs on the 2-stroke dirt bike
@@ -16,7 +17,7 @@ public partial class Game
     static bool Is42(string sc) { return sc == "bigwheels"; }
     GroundVehicle b42Truck; Bike b42Bike; Frog b42F;
     float b42T, b42PhaseT, b42Log, b42Max = 4f;
-    int b42Phase = -1;
+    int b42Phase = -1, b42Only;   // &bwonly=truck (1) / bike (2): skip the other runs
     float b42RunMaxH, b42RunMinUp, b42RunMaxX; int b42Flips; bool b42WasUp;
     const float B42X0 = 8f, B42X1 = 46f, B42ZT = -6f, B42ZB = -1f;
     static readonly string[] B42Names = { "park1x", "park4x", "truck1x", "truck4x", "bike1x", "bike4x", "done" };
@@ -27,6 +28,7 @@ public partial class Game
         if (f.world != WorldId.Ranch) f.SendTo(WorldId.Ranch, Ranch.FrogSpawn(f.id), 0f);
         b42F = f; b42T = 0f; b42Log = 0f;
         string mx = UrlParam("bwmax"); float m; if (mx != null && float.TryParse(mx, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out m)) b42Max = Mathf.Clamp(m, 1f, BigWheels.Max);
+        string on = UrlParam("bwonly"); b42Only = on == "truck" ? 1 : on == "bike" ? 2 : 0;
         foreach (var v in Vehicle.All)
         {
             var gv = v as GroundVehicle;
@@ -87,7 +89,7 @@ public partial class Game
         Debug.Log("FFDEMO bigwheels phase " + ph + " " + B42Names[ph] + " t=" + b42T.ToString("0.0"));
         switch (ph)
         {
-            case 0: BigWheels.Set(1f, "demo"); B42Park(b42Truck, B42X0, B42ZT); B42Park(b42Bike, B42X0 + 1f, B42ZB + 1.6f); break;
+            case 0: BigWheels.Set(1f, "demo"); B42Park(b42Truck, B42X0 - 2f, B42ZT + 2f); B42Park(b42Bike, B42X0 + 5f, B42ZT - 1f); break;
             case 1: BigWheels.Set(b42Max, "demo"); break;
             case 2: case 3:
                 BigWheels.Set(ph == 2 ? 1f : b42Max, "demo");
@@ -103,7 +105,7 @@ public partial class Game
                 break;
             case 6:
                 BigWheels.Set(b42Max, "demo");
-                B42Park(b42Truck, B42X1 - 4f, B42ZT); B42Park(b42Bike, B42X1 - 3f, B42ZB + 1.6f);
+                B42Park(b42Truck, B42X1 - 6f, B42ZT + 2f); B42Park(b42Bike, B42X1 + 1f, B42ZT - 1f);
                 break;
         }
     }
@@ -114,7 +116,7 @@ public partial class Game
         var o = new PIn();
         if (b42Phase < 2 || b42Phase > 5) return o;
         Vehicle v = B42Veh;
-        if (v == null || b42PhaseT < 4f) { o.brake = 0.4f; return o; }
+        if (v == null || b42PhaseT < 2.8f) return o;   // tyres resize first (no brake: brake = reverse)
         float yaw = v.transform.eulerAngles.y;
         float z = v.transform.position.z, zl = b42Phase >= 4 ? B42ZB : B42ZT;
         float want = 90f + Mathf.Clamp((z - zl) * 6f, -25f, 25f);   // steer back onto the lane line (+z is left when heading +x)
@@ -140,15 +142,15 @@ public partial class Game
             if (up < 0.2f && b42WasUp) b42Flips++;
             b42WasUp = up > 0.5f;
         }
-        if (b42Phase == 0 && b42PhaseT > 7f) B42Phase(1);
-        else if (b42Phase == 1 && b42PhaseT > 7f) B42Phase(2);
-        else if (run && v != null && (v.transform.position.x > B42X1 || b42PhaseT > 26f)) B42Phase(b42Phase + 1);
+        if (b42Phase == 0 && b42PhaseT > 5f) B42Phase(1);
+        else if (b42Phase == 1 && b42PhaseT > 6f) B42Phase(b42Only == 2 ? 4 : 2);
+        else if (run && v != null && (v.transform.position.x > B42X1 || b42PhaseT > 17f)) B42Phase(b42Phase == 3 && b42Only == 1 ? 6 : b42Phase + 1);
         // camera
         if (b42Phase <= 1)
         {
-            Vector3 c = new Vector3(B42X0 + 0.5f, Ranch.GY(B42X0, -3f), (B42ZT + B42ZB) * 0.5f);
-            pos = c + new Vector3(-6.5f, 4f, -15f);   // one camera for both comparison frames
-            look = c + new Vector3(0.4f, 1.8f, 0f);
+            Vector3 c = new Vector3(B42X0 + 1.5f, Ranch.GY(B42X0 + 1.5f, B42ZT), B42ZT);
+            pos = c + new Vector3(-2.5f, 4.2f, -17f);   // one camera for both comparison frames (truck left, bike right)
+            look = c + new Vector3(0.5f, 1.6f, 0f);
         }
         else if (run && v != null)
         {
