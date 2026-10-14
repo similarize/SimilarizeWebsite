@@ -13,7 +13,7 @@ public class RcCar : Vehicle
     public RcTrack track;
     public int index;
     public bool Parked { get; private set; }
-    class W { public Vector3 mount; public float r, dist; public bool grounded, front; public Transform vis, shock, arm; public float spin; public Vector3 tower; }
+    class W { public Vector3 mount; public float r, dist; public bool grounded, front; public Transform vis, shock, arm; public float spin; public Vector3 tower; public Vector3 axle0, vs0; public float r0, extra, sr, wrest; }
     readonly W[] wh = new W[4];
     float rest = 0.14f, spring, damper;
     public float vmax = 13.5f, accel = 15f, latCap = 13f, turnMax = 3.4f;
@@ -194,15 +194,20 @@ public class RcCar : Vehicle
         foreach (W w in wh)
         {
             Vector3 o = transform.TransformPoint(w.mount);
-            float len = rest + w.r;
-            RaycastHit h;
-            if (Physics.Raycast(o, -up, out h, len, GroundMask, QueryTriggerInteraction.Ignore))
+            bool big = bigK > 1.0001f;
+            float wr = big ? w.wrest : rest;
+            float len = wr + w.r + (big ? w.extra : 0f);
+            RaycastHit h; float hd; bool hitOk;
+            if (big) hitOk = BigWheels.Cast(o, up, len, w.sr, GroundMask, out h, out hd);   // ffu42: sphere-cast tyre
+            else { hitOk = Physics.Raycast(o, -up, out h, len, GroundMask, QueryTriggerInteraction.Ignore); hd = hitOk ? h.distance : len; }
+            if (hitOk)
             {
-                w.grounded = true; w.dist = h.distance;
-                float comp = len - h.distance;
+                w.grounded = true; w.dist = hd;
+                float comp = len - hd;
+                if (big) comp = Mathf.Min(comp, wr * 1.35f);
                 float vUp = Vector3.Dot(rb.GetPointVelocity(o), up);
                 float f = spring * comp - damper * vUp;
-                if (comp > rest * 0.9f) f += spring * 6f * (comp - rest * 0.9f);   // bump stop
+                if (comp > wr * 0.9f) f += spring * 6f * (comp - wr * 0.9f);   // bump stop
                 if (f > 0f) rb.AddForceAtPosition(up * f, o);
                 ground++; nsum += h.normal;
                 if (w.front) frontDown = true; else rearDown = true;
@@ -365,9 +370,45 @@ public class RcCar : Vehicle
     static void Samp(System.Collections.Generic.List<RcTrack.Samp> path, int i, out Vector2 p, out Vector2 t) { p = path[i].p; t = path[i].t; }
 
     // ---------------- visuals ----------------
+    // ---------------- ffu42 big wheels (BigWheels.cs): monster RC ----------------
+    [System.NonSerialized] public float bigK = 1f;
+    bool bigReady; float rest0, spring0, damper0, cam0, camH0, zc0, gap0, rmax0; Vector3 com0;
+    void BigTick(float dt)
+    {
+        if (rb == null || wh[0] == null) return;
+        if (!bigReady)
+        {
+            bigReady = true;
+            rest0 = rest; spring0 = spring; damper0 = damper; com0 = rb.centerOfMass; cam0 = camDistance; camH0 = camHeight;
+            var ax = new System.Collections.Generic.List<Vector3>();
+            foreach (W w in wh) { w.axle0 = w.mount - Vector3.up * rest; w.r0 = w.r; w.vs0 = w.vis != null ? w.vis.localScale : Vector3.one; w.wrest = rest; zc0 += w.axle0.z * 0.25f; ax.Add(w.axle0); rmax0 = Mathf.Max(rmax0, w.r); }
+            gap0 = BigWheels.MinGap(ax);
+        }
+        float t = rb.isKinematic ? 1f : BigWheels.S;
+        float k = BigWheels.Ease(bigK, t, dt);
+        if (Mathf.Abs(k - bigK) < 1e-5f) return;
+        bigK = k;
+        float fz = BigWheels.ZFactor(bigK, rmax0, gap0), lift = 0f, restK = 0f;
+        foreach (W w in wh)
+        {
+            var g = BigWheels.Wheel(bigK, w.axle0, w.r0, rest0, zc0, fz);
+            w.r = g.r; w.mount = g.mount; w.extra = g.extra; w.sr = g.sr; w.wrest = g.rest;
+            BigWheels.Vis(w.vis, w.vs0, g);
+            lift += g.lift * 0.25f; restK += g.rest * 0.25f;
+            if (!w.grounded) w.dist = g.rest + g.r + g.extra;
+        }
+        bigLift = bigK > 1.0001f ? lift : 0f; bigPad = Mathf.Max(0f, (wh[0].r - wh[0].r0) * 0.6f);
+        float rr = rest0 / Mathf.Max(0.01f, restK);
+        spring = spring0 * rr; damper = damper0 * Mathf.Sqrt(rr);
+        rb.centerOfMass = com0 - Vector3.up * bigLift * BigWheels.ComCut;
+        camDistance = cam0 * (1f + (bigK - 1f) * 0.25f); camHeight = camH0 + bigLift * 0.8f;
+        rb.WakeUp();
+    }
+
     protected virtual void Update()
     {
         float dt = Time.deltaTime;
+        BigTick(Mathf.Min(dt, 0.1f));
         float fs = ForwardSpeed;
         foreach (W w in wh)
         {
@@ -394,7 +435,7 @@ public class RcCar : Vehicle
         if (airborne) { rollT = 0f; pitchT = 0f; }
         Spring(ref shellRoll, ref shellRollV, rollT, dt, 90f, 9f);
         Spring(ref shellPitch, ref shellPitchV, pitchT, dt, 90f, 9f);
-        float comp = 0f; foreach (W w in wh) comp += (rest + w.r - w.dist); comp /= 4f;
+        float comp = 0f; foreach (W w in wh) comp += ((bigK > 1.0001f ? w.wrest + w.extra : rest) + w.r - w.dist); comp /= 4f;
         shell.localPosition = new Vector3(0f, -comp * 0.35f, 0f);
         shell.localRotation = Quaternion.Euler(shellPitch, 0f, -shellRoll);
         Spring(ref antX, ref antXV, Mathf.Clamp(accLocal.z * 2.5f, -30f, 30f), dt, 60f, 3f);

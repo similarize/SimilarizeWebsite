@@ -14,6 +14,11 @@ public class GroundVehicle : Vehicle
         public float dist;          // last hit distance
         public bool grounded;
         public float spin;
+        // ffu42 big wheels: stock axle / radius / visual scale, front flag, and the current extra ray length, sphere
+        // radius and travel (BigWheels.Wheel)
+        public Vector3 axle0, vs0 = Vector3.one;
+        public float r0, extra, sr, wrest;
+        public bool front;
     }
 
     public readonly List<Wheel> wheels = new List<Wheel>();
@@ -46,7 +51,7 @@ public class GroundVehicle : Vehicle
 
     public void AddWheel(Vector3 center, float radius, Transform visual, bool steers)
     {
-        wheels.Add(new Wheel { mount = center + Vector3.up * rest, radius = radius, visual = visual, steers = steers, dist = rest + radius });
+        wheels.Add(new Wheel { mount = center + Vector3.up * rest, radius = radius, visual = visual, steers = steers, dist = rest + radius, r0 = radius, vs0 = visual != null ? visual.localScale : Vector3.one });
     }
 
     public void FinishSetup()
@@ -95,12 +100,19 @@ public class GroundVehicle : Vehicle
         {
             Vector3 origin = transform.TransformPoint(w.mount);
             RaycastHit hit;
-            float len = rest + w.radius;
-            if (Physics.Raycast(origin, -up, out hit, len, mask, QueryTriggerInteraction.Ignore))
+            bool big = bigK > 1.0001f;
+            float wr = big ? w.wrest : rest;
+            float len = wr + w.radius + (big ? w.extra : 0f);
+            float hd;
+            bool hitOk;
+            if (big) hitOk = BigWheels.Cast(origin, up, len, w.sr, mask, out hit, out hd);   // ffu42: sphere-cast tyre
+            else { hitOk = Physics.Raycast(origin, -up, out hit, len, mask, QueryTriggerInteraction.Ignore); hd = hitOk ? hit.distance : len; }
+            if (hitOk)
             {
                 w.grounded = true;
-                w.dist = hit.distance;
-                float comp = len - hit.distance;
+                w.dist = hd;
+                float comp = len - hd;
+                if (big) comp = Mathf.Min(comp, wr * 1.35f);   // a rock under the tyre lifts it, never a launch
                 float vUp = Vector3.Dot(rb.GetPointVelocity(origin), up);
                 float f = spring * sm * comp - damper * dm * vUp;
                 if (walker && comp > rest * 0.85f) f += spring * 5f * (comp - rest * 0.85f);   // ffu28 bump stop
@@ -119,6 +131,7 @@ public class GroundVehicle : Vehicle
             }
         }
         if (walker && !rb.isKinematic) WalkerAssist(dt);
+        if (bigK > 1.01f && !rb.isKinematic) BigAntiRoll(dt);
         float gf = (wheels.Count > 0 ? groundedCount / (float)wheels.Count : 0f) * ws;
         groundNormal = groundedCount > 0 ? nsum.normalized : Vector3.up;
         bool driven = driver != null;
@@ -238,9 +251,80 @@ public class GroundVehicle : Vehicle
         }
     }
 
+    // ---------------- ffu42 big wheels ----------------
+    [System.NonSerialized] public float bigK = 1f;
+    bool bigReady;
+    float rest0, spring0, damper0, cam0, camH0, pitch0, zc0, gap0, rmax0;
+    Vector3 com0;
+    public virtual bool BigOk { get { return !tracked && !walker && wheels.Count > 0; } }
+    protected virtual float BigTarget()
+    {
+        if (!BigOk || stowed) return 1f;
+        float t = BigWheels.S;
+        if (amph != null) t = Mathf.Lerp(t, 1f, Mathf.Clamp01(amph.k * 2f));   // the Cyberboat tucks stock-size wheels away
+        return t;
+    }
+    // called every frame (GroundVehicle.Update, RidingMower.Update); snap = jump straight to the target
+    public void BigTick(float dt, bool snap = false)
+    {
+        if (rb == null || wheels.Count == 0) return;
+        if (!bigReady)
+        {
+            bigReady = true;
+            rest0 = rest; spring0 = spring; damper0 = damper; com0 = rb.centerOfMass;
+            cam0 = camDistance; camH0 = camHeight; pitch0 = enginePitch;
+            float zc = 0f;
+            var ax = new List<Vector3>();
+            foreach (Wheel w in wheels) { w.axle0 = w.mount - Vector3.up * rest; zc += w.axle0.z; ax.Add(w.axle0); rmax0 = Mathf.Max(rmax0, w.r0); }
+            zc /= wheels.Count; zc0 = zc; gap0 = BigWheels.MinGap(ax);
+            foreach (Wheel w in wheels) { w.front = w.axle0.z > zc; w.wrest = rest; }
+        }
+        float t = BigTarget();
+        float k = snap ? t : BigWheels.Ease(bigK, t, dt);
+        if (Mathf.Abs(k - bigK) < 1e-5f) return;
+        bigK = k;
+        ApplyBig();
+    }
+    void ApplyBig()
+    {
+        float lift = 0f, restK = 0f, pad = 0f, zrK = 1e9f, zr1 = 1e9f;
+        float bodyHalf = body != null ? body.size.x * 0.5f : 1f;
+        float fz = BigWheels.ZFactor(bigK, rmax0, gap0);
+        foreach (Wheel w in wheels)
+        {
+            var g = BigWheels.Wheel(bigK, w.axle0, w.r0, rest0, zc0, fz);
+            w.radius = g.r; w.mount = g.mount; w.extra = g.extra; w.sr = g.sr; w.wrest = g.rest;
+            BigWheels.Vis(w.visual, w.vs0, g);
+            lift += g.lift; restK += g.rest;
+            Vector3 a = g.mount - Vector3.up * g.rest;
+            pad = Mathf.Max(pad, Mathf.Abs(a.x) + g.r * 0.25f - Mathf.Max(bodyHalf, Mathf.Abs(w.axle0.x) + w.r0 * 0.25f));
+            zrK = Mathf.Min(zrK, a.z - g.r); zr1 = Mathf.Min(zr1, w.axle0.z - w.r0);
+        }
+        lift /= wheels.Count; restK /= wheels.Count;
+        bigLift = bigK > 1.0001f ? lift : 0f; bigPad = Mathf.Max(0f, pad); bigBack = Mathf.Max(0f, zr1 - zrK);
+        float rr = rest0 / Mathf.Max(0.01f, restK);
+        spring = spring0 * rr; damper = damper0 * Mathf.Sqrt(rr);   // same sag fraction on the longer travel
+        if (!walker) rb.centerOfMass = com0 - Vector3.up * bigLift * BigWheels.ComCut;
+        camDistance = cam0 * (1f + (bigK - 1f) * 0.22f); camHeight = camH0 + bigLift * 0.75f;
+        if (Mathf.Abs(bigK - BigTarget()) < 0.001f) RetuneEngine(BigWheels.PitchFor(pitch0, bigK));   // once settled (rebuilds the voice)
+        foreach (Wheel w in wheels) if (!w.grounded) w.dist = w.wrest + w.radius + w.extra;
+        rb.WakeUp();
+    }
+    // big tyres: anti-roll bar (roll toward the ground plane, damped) + a little self-levelling in the air
+    void BigAntiRoll(float dt)
+    {
+        float b = Mathf.Clamp01((bigK - 1f) / 1.5f);
+        Vector3 n = groundedCount > 0 ? groundNormal : Vector3.up;
+        float roll = Vector3.Dot(Vector3.Cross(transform.up, n), transform.forward);
+        float rr = Vector3.Dot(rb.angularVelocity, transform.forward);
+        float kk = groundedCount > 0 ? 9f : 3f;
+        rb.AddTorque(transform.forward * (roll * kk - rr * 2.2f) * b, ForceMode.Acceleration);
+    }
+
     protected virtual void Update()
     {
         float dt = Time.deltaTime;
+        BigTick(Mathf.Min(dt, 0.1f));
         float fs = ForwardSpeed;
         foreach (Wheel w in wheels)
         {

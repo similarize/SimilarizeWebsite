@@ -18,10 +18,10 @@ public class RobotPhone : MonoBehaviour
     public Frog user;
     int sel = 1;              // Unitree is the default link, like the 3D phone
     int tab, cur;             // cur: 0..NT-1 = the tabs, NT.. = items of the tab
-    const int NT = 5;         // ffu27: + CALL
+    const int NT = 6;         // ffu27: + CALL; ffu42: + WHEELS (the wheel-size setting)
     struct Item { public string label, act; }
     readonly List<Item>[] tabs = new List<Item>[NT];
-    static readonly string[] TabNames = { "CHORES", "ORDERS", "DRIVE", "MISSION", "CALL" };
+    static readonly string[] TabNames = { "CHORES", "ORDERS", "DRIVE", "MISSION", "CALL", "WHEELS" };
     Canvas canvas;
     public Canvas UICanvas { get { return canvas; } }   // ffu22: story cutscenes hide it
     Image panel, btn, card, batBg, batFill;
@@ -86,8 +86,9 @@ public class RobotPhone : MonoBehaviour
         float ty = iy - 32f;
         for (int i = 0; i < NT; i++)
         {
-            var b = UIK.Img(p, UIK.Round, Color.white, new Vector2(0.5f, 1f), new Vector2(-166f + i * 83f, ty), new Vector2(80f, 28f)); b.type = Image.Type.Sliced;
-            UIK.Label(b.transform, TabNames[i], 13, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(80f, 28f), i == 4 ? new Color(0.6f, 1f, 0.6f) : Color.white);
+            var b = UIK.Img(p, UIK.Round, Color.white, new Vector2(0.5f, 1f), new Vector2(-175f + i * 70f, ty), new Vector2(67f, 28f)); b.type = Image.Type.Sliced;
+            var tl = UIK.Label(b.transform, TabNames[i], 12, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(66f, 28f), i == 4 ? new Color(0.6f, 1f, 0.6f) : i == 5 ? new Color(1f, 0.88f, 0.45f) : Color.white);
+            tl.resizeTextForBestFit = true; tl.resizeTextMinSize = 9; tl.resizeTextMaxSize = 12;
             tabBtns.Add(b);
         }
         // ---- item grid (max 24 = 8 rows x 3; ffu26: was 7 rows) ----
@@ -147,6 +148,9 @@ public class RobotPhone : MonoBehaviour
         Add(2, "Board (stand by)", "dmode:hold"); Add(2, "Walk / wander", "dmode:wander"); Add(2, "Follow me", "dmode:follow"); Add(2, "Race track", "dmode:race"); Add(2, "Go to my spot", "dmode:spot"); Add(2, "GET OUT", "getout");
         Add(3, "Mars rocks x3", "mis:0:3"); Add(3, "Mars rocks x5", "mis:0:5"); Add(3, "Callisto ice x4", "mis:1:4");
         Add(3, "Mech to Mars rocks", "mmis:0:4"); Add(3, "Mech to Callisto", "mmis:1:3"); Add(3, "Mech space patrol", "mmis:2:0"); Add(3, "Recall mech", "recall");   // ffu26
+        // ffu42 WHEELS tab: the global wheel-size setting (BigWheels), works in every world
+        Add(5, "Smaller  -", "wheels:-"); Add(5, "Stock 1x", "wheels:1"); Add(5, "Bigger  +", "wheels:+");
+        Add(5, "2x", "wheels:2"); Add(5, "3x", "wheels:3"); Add(5, "4x MONSTER", "wheels:4");
         Add(3, "Abort mission", "abort"); Add(3, "Watch feed", "feed"); Add(3, "Feed full screen", "feedfull"); Add(3, "Feed cam: drone/eye", "feedcam");
     }
 
@@ -358,6 +362,15 @@ public class RobotPhone : MonoBehaviour
             msg.text = say; if (say.Length > 0) f.Toast(say, 2.5f);
             return;
         }
+        if (a.StartsWith("wheels:"))
+        {
+            string w = a.Substring(7);
+            if (w == "-") BigWheels.Nudge(-1, "phone"); else if (w == "+") BigWheels.Nudge(1, "phone");
+            else { float fv; if (float.TryParse(w, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out fv)) BigWheels.Set(fv, "phone"); }
+            say = "Wheel size " + BigWheels.Label + " - every truck, Cybertruck, bike, mower, RC car and buggy";
+            msg.text = say; f.Toast("Wheel size " + BigWheels.Label, 1.6f); Sfx.Play(Sfx.Pickup, 0.45f, 0.8f + BigWheels.Frac * 0.6f);
+            return;
+        }
         // robot orders that only make sense on the ranch (the MISSION tab works from anywhere)
         if (f.world != WorldId.Ranch && (tab <= 2 || a == "drive" || a.StartsWith("veh:") || a.StartsWith("mech:") || a.StartsWith("dmode:") || a == "getout") && !a.StartsWith("feed"))
         {
@@ -522,9 +535,11 @@ public class RobotPhone : MonoBehaviour
             bool picked = (act.StartsWith("veh:") && pickVeh != null && vehicles.IndexOf(pickVeh) == int.Parse(act.Substring(4))) || (act.StartsWith("mech:") && pickBand == int.Parse(act.Substring(5)));
             if (picked) c = new Color(0.1f, 0.75f, 0.85f, 0.95f);
             if (tab == 4) c = act == "call:all" ? new Color(0.15f, 0.6f, 0.3f, 0.85f) : new Color(0.18f, 0.42f, 0.32f, 0.78f);
+            if (tab == 5) { float wv; bool now = act.Length == 8 && float.TryParse(act.Substring(7), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out wv) && Mathf.Abs(wv - BigWheels.S) < 0.01f; c = now ? new Color(0.1f, 0.75f, 0.85f, 0.95f) : new Color(0.5f, 0.38f, 0.12f, 0.8f); }
             if (cur == NT + i) c = new Color(1f, 0.75f, 0.2f, 0.95f);
             itemBtns[i].color = c;
         }
+        if (tab == 5) { string wl = "WHEEL SIZE " + BigWheels.Label + "  (1x - 4x)"; if (msg.text != wl && !msg.text.StartsWith("Wheel size")) msg.text = wl; }
         InputKind ik = user != null ? user.inputKind : InputKind.Keyboard;
         string h = ik == InputKind.Gamepad ? "Up/Down robot · Left/Right order · A send · RB tab · Y feed · X full · LB / B close"
                  : ik == InputKind.Touch ? "Swipe the robot · tap a tab, then an order · PHONE closes"

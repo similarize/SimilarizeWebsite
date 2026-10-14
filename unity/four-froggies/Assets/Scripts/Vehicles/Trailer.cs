@@ -106,7 +106,8 @@ public class Trailer : MonoBehaviour
     {
         BoxCollider b = v.body;
         float back = b != null ? b.center.z - b.size.z * 0.5f : -2.8f;
-        return new Vector3(0f, 0.55f, back - 0.22f);
+        // ffu42 big wheels: a drop hitch - the ball stays at stock height off the ground and behind the big rear tyres
+        return new Vector3(0f, 0.55f - v.bigLift, back - 0.22f - v.bigBack);
     }
     public static Vector3 HitchWorld(Vehicle v) { return v.transform.TransformPoint(HitchLocal(v)); }
 
@@ -335,6 +336,7 @@ public class Trailer : MonoBehaviour
             lastTowerPos = tp;
             if (gv != null && gv.amph != null && gv.amph.Boat) why = "Cyberboat mode!";
             foreach (Bounds b in RallyTrack.LoopZones) if (b.Contains(tp) || b.Contains(rb.position)) why = "no trailers in the loop!";
+            if (joint != null) { Vector3 hl = HitchLocal(v); if ((joint.connectedAnchor - hl).sqrMagnitude > 1e-4f) joint.connectedAnchor = hl; }   // ffu42: tyres resized while towing
             float err = (HitchWorld(v) - BallWorld).magnitude;
             stretchN = err > 0.6f ? stretchN + 1 : 0;
             if (stretchN > 3) why = "the hitch was stretched";

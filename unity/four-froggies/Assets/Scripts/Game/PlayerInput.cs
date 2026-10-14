@@ -74,6 +74,13 @@ public static class Kb
     public static bool UpDown() { return Key(k => k.upArrowKey.wasPressedThisFrame || k.wKey.wasPressedThisFrame, KeyCode.UpArrow, true); }
     public static bool DownDown() { return Key(k => k.downArrowKey.wasPressedThisFrame || k.sKey.wasPressedThisFrame, KeyCode.DownArrow, true); }
     public static bool PDown() { return Key(k => k.pKey.wasPressedThisFrame, KeyCode.P, true); }
+    // ffu42 wheel-size slider in the help / pause menu: left / right arrows, - / =, comma / period
+    public static int WheelNudge()
+    {
+        if (Key(k => k.leftArrowKey.wasPressedThisFrame || k.minusKey.wasPressedThisFrame || k.commaKey.wasPressedThisFrame, KeyCode.LeftArrow, true)) return -1;
+        if (Key(k => k.rightArrowKey.wasPressedThisFrame || k.equalsKey.wasPressedThisFrame || k.periodKey.wasPressedThisFrame, KeyCode.RightArrow, true)) return 1;
+        return 0;
+    }
     public static bool MDown() { return Key(k => k.mKey.wasPressedThisFrame, KeyCode.M, true); }
     public static bool VDown() { return Key(k => k.vKey.wasPressedThisFrame, KeyCode.V, true); }
     public static bool HDown() { return Key(k => k.hKey.wasPressedThisFrame || k.f1Key.wasPressedThisFrame, KeyCode.H, true); }

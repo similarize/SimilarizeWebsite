@@ -137,6 +137,8 @@ public class RidingMower : GroundVehicle
         if (driver == null) { pl.world = WorldId.Ranch; pl.EnterVehicle(this); }
         if (driver != pl) return false;
         rider = r; robotRide = true;
+        BigTick(0f, true);   // ffu42: stock wheels under a robot (it carries the mower kinematically)
+        for (int i = 0; i < 4 && i < wheels.Count; i++) if (wheelVis[i] != null) wheelVis[i].localPosition = wheels[i].mount - Vector3.up * rest;
         rb.isKinematic = true;
         transform.SetParent(r.transform, false);
         float k = Mathf.Clamp(r.height / BaseH, 0.75f, 2.1f);
@@ -164,10 +166,15 @@ public class RidingMower : GroundVehicle
         MowStripes.End(this);
     }
 
-    void Update()
+    // ffu42: a robot's mower keeps stock wheels; a player's mower gets the wheel-size setting
+    protected override float BigTarget() { return robotRide ? 1f : base.BigTarget(); }
+
+    protected override void Update()
     {
         float dt = Mathf.Min(Time.deltaTime, 0.1f);
         if (rider != null && rider.transform != transform.parent) Detach(rider);
+        if (!robotRide) base.Update();   // ffu42: wheel suspension / spin visuals + big-wheel tick (was hidden by this Update)
+        else BigTick(dt);
         Vector3 p = transform.position;
         Vector3 d = p - lastPos; d.y = 0f;
         float sp = Mathf.Min(20f, d.magnitude / Mathf.Max(dt, 1e-4f));

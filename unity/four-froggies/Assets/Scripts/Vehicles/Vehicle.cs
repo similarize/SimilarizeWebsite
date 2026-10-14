@@ -28,6 +28,15 @@ public abstract class Vehicle : MonoBehaviour
     // owner's roster id when the owner is a playable froggy (-1 = not playable, e.g. Dad). Mechs keep their hard lock.
     public string ownerName;
     public int ownerChar = -1;
+    // ffu42 big wheels (BigWheels.cs): how far the body rides above its stock height, how far the tyres stick out past the
+    // body sideways, and how much further back the rear tyres reach (the hitch drops / extends by these)
+    [System.NonSerialized] public float bigLift, bigPad, bigBack;
+    public void RetuneEngine(float p)
+    {
+        if (Mathf.Abs(p - enginePitch) < 0.005f) return;
+        enginePitch = p;
+        if (voice != null) { voice.Kill(); voice = null; }
+    }
     public bool OwnedBy(Frog f) { return ownerName == null || (ownerChar >= 0 && f != null && f.charId == ownerChar); }
 
     protected PIn inp;
@@ -257,7 +266,7 @@ public abstract class Vehicle : MonoBehaviour
     public Vector3 ExitPoint()
     {
         Vector3 c = transform.position;
-        float hw = body.size.x * 0.5f + 1.3f, hl = body.size.z * 0.5f + 1.6f;
+        float hw = body.size.x * 0.5f + 1.3f + bigPad, hl = body.size.z * 0.5f + 1.6f + bigBack;   // ffu42: clear of big tyres
         Vector3 right = transform.right; right.y = 0f; right.Normalize();
         Vector3 fwd = transform.forward; fwd.y = 0f; fwd.Normalize();
         Vector3[] cands = { c - right * hw, c + right * hw, c - fwd * hl, c + fwd * hl, c - right * (hw + 2f), c + right * (hw + 2f) };
@@ -268,7 +277,7 @@ public abstract class Vehicle : MonoBehaviour
             Vector3 from = q + Vector3.up * 4f;
             if (!Physics.Raycast(from, Vector3.down, out hit, 60f, GroundMask)) continue;
             Vector3 p = hit.point + Vector3.up * 0.1f;
-            if (p.y > c.y + 2.5f) continue;
+            if (p.y > c.y + 2.5f + bigLift) continue;
             // ffu11: out on the pond (Cyberboat) the froggy hops out into the water beside the hull, not onto the bottom
             if (Layout.InPond(p.x, p.z) && p.y < Layout.WaterY - 0.6f) p.y = Layout.WaterY - 0.6f;
             if (Physics.CheckCapsule(p + Vector3.up * 0.5f, p + Vector3.up * 1.0f, 0.42f, frogMask, QueryTriggerInteraction.Ignore)) continue;
@@ -286,6 +295,14 @@ public abstract class Vehicle : MonoBehaviour
             if (v == null || v.body == null || v.stowed) continue;
             Vector3 cp = v.body.ClosestPoint(p + Vector3.up * 0.6f);
             float d = (cp - (p + Vector3.up * 0.6f)).magnitude;
+            if (v.bigLift > 0.05f)
+            {
+                // ffu42: a body riding high on big tyres - reach it from the ground beside / under it
+                Vector3 q = p + Vector3.up * (0.6f + Mathf.Min(v.bigLift, 4.5f));
+                Vector3 cq = v.body.ClosestPoint(q);
+                Vector3 dq = cq - q; dq.y *= 0.5f;
+                d = Mathf.Min(d, dq.magnitude - Mathf.Min(1.2f, v.bigPad));
+            }
             if (d < bd) { bd = d; best = v; }
         }
         return best;
