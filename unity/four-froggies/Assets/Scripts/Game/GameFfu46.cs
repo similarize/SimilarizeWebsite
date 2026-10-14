@@ -17,7 +17,7 @@ public partial class Game
     Frog d46F, d46Ai; Skateboard d46B, d46AiB; float d46T, d46PhT, d46Log, d46RunT, d46BailT = -1f; int d46Ph = -1; string d46Sc = "";
     readonly List<Skateboard> d46Rack = new List<Skateboard>();
     readonly HashSet<string> d46Surf = new HashSet<string>();
-    float d46MaxOver, d46MinNy = 1f; int d46Bails0, d46Kicks0, d46Ollies0, d46Airs0, d46PipeAirs0, d46AiAirs; bool d46AiRode;
+    float d46MaxOver, d46MinNy = 1f, d46LastBailT = -99f; int d46BailsSeen; int d46Bails0, d46Kicks0, d46Ollies0, d46Airs0, d46PipeAirs0, d46AiAirs; bool d46AiRode;
 
     void Demo46Start(Frog f, string sc)
     {
@@ -98,6 +98,7 @@ public partial class Game
         }
         // ---- stats + log ----
         Skateboard lb = d46Ph == 4 || d46Ph == 5 ? d46AiB : d46B;
+        if (d46B != null && d46B.bails != d46BailsSeen) { d46BailsSeen = d46B.bails; d46LastBailT = d46T; }
         if (lb != null && lb.driver != null)
         {
             d46Surf.Add(lb.lastSurface);
@@ -117,6 +118,13 @@ public partial class Game
         Skateboard cb = lb != null ? lb : d46B;
         if (d46Ph == 4 && d46Ai != null && !d46AiRode) { Vector3 ap = d46Ai.transform.position; pos = ap + new Vector3(4f, 3f, 6f); look = ap + Vector3.up * 0.6f; return true; }
         if (cb == null) { pos = rc + new Vector3(0f, 5f, 12f); look = rc; return true; }
+        // ffu46c: right after a bail, frame the tumbling froggy + the loose board (the end-on pipe view lost them)
+        if ((d46Ph == 2 || d46Ph == 3) && d46F.vehicle == null && d46B != null && d46B.bails > d46Bails0 && d46T - d46LastBailT < 6f)
+        {
+            Vector3 fp = d46F.transform.position, mid = (fp + d46B.transform.position) * 0.5f;
+            pos = new Vector3(MonsterPark.HpX + Mathf.Sign(MonsterPark.HpX - mid.x + 0.01f) * 1.5f, MonsterPark.FloorY + 3.6f, mid.z + 7.5f); look = mid + Vector3.up * 0.4f;
+            return true;
+        }
         Vector3 bp = cb.transform.position;
         bool inPipe = bp.z < MonsterPark.HpZ1 - 0.5f;
         if (d46Ph == 1 && !inPipe)
@@ -127,8 +135,8 @@ public partial class Game
             return true;
         }
         // the classic end-on half-pipe view, following the rider down the pipe
-        float cz = Mathf.Clamp(bp.z, MonsterPark.HpZ0 + 2f, MonsterPark.HpZ1) + 12.5f;
-        pos = new Vector3(MonsterPark.HpX + 1.2f, gy + 4.3f, cz); look = new Vector3(MonsterPark.HpX, gy + 2.9f, cz - 12.5f);   // ffu46b: under the HALF-PIPE board (5.1 m+)
+        float cz = Mathf.Clamp(bp.z, MonsterPark.HpZ0 + 2f, MonsterPark.HpZ1) + 10f;
+        pos = new Vector3(MonsterPark.HpX + 1.2f, gy + 4.3f, cz); look = new Vector3(MonsterPark.HpX, gy + 3.1f, cz - 10f);   // ffu46b: under the HALF-PIPE board (5.1 m+)
         return true;
     }
 

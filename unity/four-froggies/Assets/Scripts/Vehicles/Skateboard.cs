@@ -37,7 +37,7 @@ public class Skateboard : Vehicle
     SynthVoice voice;
     public System.Func<PIn, PIn> demoHook;
     // AI ride (SkateAI / demo)
-    public Frog aiRider; public int aiPhase; public float aiT, aiStuck; public float aiSpinGoal = 180f, aiRunSecs = 40f; public bool aiOllie, aiOllied;
+    public Frog aiRider; public int aiPhase; public float aiT, aiStuck; public float aiSpinGoal = 180f, aiRunSecs = 40f, aiAirGoal = -1f; public bool aiOllie, aiOllied;
 
     const float WheelR = 0.028f, DeckY = 0.1f;
     const float PushMax = 7.2f, PumpMax = 11.5f;
@@ -198,6 +198,7 @@ public class Skateboard : Vehicle
     public Vector3 Normal { get { return n; } }
     public Vector3 Head { get { return head; } }
     public float SpinDeg { get { return spin; } }
+    public float VelY { get { return vel.y; } }
 
     Vector3 SmoothN(RaycastHit h)
     {
@@ -644,12 +645,19 @@ public class SkateAI : MonoBehaviour
         }
         if (b.mode == Skateboard.Mode.PipeAir)
         {
-            // spin toward the goal (180 = lands forward; the demo's 90 = bail)
+            // spin toward the goal (180 = lands forward; the demo's 90 = bail). ffu46c: decided once per air from the air
+            // time it will get (2 vy / g) - a short air with no time for the turn lands fakie instead (ffu46b bailed at 89 deg)
+            if (b.airT < 0.03f || b.aiAirGoal < 0f)
+            {
+                float T = 2f * Mathf.Max(0f, b.VelY) / 9.81f;
+                b.aiAirGoal = 330f * T * 0.85f >= b.aiSpinGoal ? b.aiSpinGoal : 0f;
+            }
             float sp = Mathf.Abs(b.SpinDeg);
-            o.move.x = sp < b.aiSpinGoal - 8f ? 1f : 0f;
+            o.move.x = sp < b.aiAirGoal - 8f ? 1f : 0f;
             o.gas = 0f;
             return o;
         }
+        b.aiAirGoal = -1f;
         if (b.mode == Skateboard.Mode.Air) { o.gas = 0f; return o; }
         Vector3 tw = Vector3.ProjectOnPlane(want, n);
         if (tw.sqrMagnitude > 1e-4f)

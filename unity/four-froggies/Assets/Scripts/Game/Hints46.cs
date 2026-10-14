@@ -102,7 +102,7 @@ public partial class Game
             if (outPart != null) parts.Add(outPart);
         }
         if (BigWheels.Resizable(v)) parts.Add(k == InputKind.Gamepad ? Cap("View + D-pad", k) + " wheel size" : k == InputKind.Keyboard ? Cap("[  ]", k) + " wheel size" : Cap("PHONE", k) + " wheels tab");
-        parts.Add(Cap(MenuKey(k), k) + " help");
+        // (the menu key is on the top chip, so the line stays one row: 3 controls + get off [+ wheel size])
         return string.Join("   ", parts.ToArray());
     }
 
