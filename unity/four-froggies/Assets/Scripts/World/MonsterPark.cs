@@ -203,7 +203,8 @@ public class MonsterPark : MonoBehaviour
             for (int j = 0; j < pn; j++)
             {
                 Vector2 p = prof[j];
-                float r = BowlR0 + (p.x - BowlR0) * Mathf.Lerp(0.35f, 1f, k);
+                float r = p.x;   // ffu44b: ramps keep the full ring radius (ffu44a pulled the ends in to r 8..10 and a rider
+                                 // crossing the opening at r 12.5 went round the OUTSIDE of the ring)
                 v.Add(c + dir * r + Vector3.up * (p.y * k));
             }
         }

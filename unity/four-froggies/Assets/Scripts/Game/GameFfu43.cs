@@ -16,7 +16,7 @@ public partial class Game
     GroundVehicle m43Car; Frog m43F;
     int m43Phase = -1, m43Only = -1;
     float m43T, m43PhT, m43Log, m43MinLoopV, m43MaxY, m43WallH, m43Ang, m43Laps, m43LastAng;
-    bool m43Top, m43InLoop, m43Done, m43LeftLoop;
+    bool m43Top, m43InLoop, m43Done, m43LeftLoop, m43Full;
     int m43Crush0;
     float m43Steer; bool m43InBowl;   // ffu43c: last autopilot steer (logged)
     static readonly string[] M43Names = { "loopF", "loopR", "wall", "crusher", "done" };
@@ -34,6 +34,7 @@ public partial class Game
         }
         string on = UrlParam("mtonly");
         if (on != null) m43Only = System.Array.IndexOf(M43Names, on);
+        m43Full = UrlParam("mtfull") == "1";
         Debug.Log("FFDEMO mtrack start: truck " + (m43Car != null ? m43Car.Title : "NONE") + " branch " + RallyTrack.BranchArcEnd.ToString("0") + " m, loop arcs " + RallyTrack.LoopArcA.ToString("0") + ".." + RallyTrack.LoopArcB.ToString("0") +
             " | U-turn R " + Layout.UTurnR.ToString("0.0") + " | park zones " + MonsterPark.Zones.Count);
         if (m43Car == null) return;
@@ -81,7 +82,7 @@ public partial class Game
         string s = "FFDEMO mtrack summary " + M43Names[m43Phase] + ":";
         if (m43Phase <= 1)
             s += " reached the top " + m43Top + " | min speed in the loop " + (m43MinLoopV < 1e8f ? m43MinLoopV.ToString("0.0") : "-") + " m/s | came out the other side " + m43LeftLoop + " | finished the branch " + m43Done + " | max y " + m43MaxY.ToString("0.0");
-        else if (m43Phase == 2) s += " max height on the wall " + m43WallH.ToString("0.0") + " m | laps " + (m43Laps / 360f).ToString("0.00");
+        else if (m43Phase == 2) s += " max height on the wall " + m43WallH.ToString("0.0") + " m | laps on the wall " + (m43Laps / 360f).ToString("0.00");
         else if (m43Phase == 3) s += " cars crushed " + (MonsterPark.Crushes - m43Crush0) + " | wheel size " + BigWheels.Label + " | tows " + MonsterPark.Tows;
         s += " | t " + m43PhT.ToString("0.0") + " s";
         Debug.Log(s);
@@ -122,6 +123,7 @@ public partial class Game
                     fp = f1; dp = d;
                 }
                 if (minR < 1e8f) want = Mathf.Clamp(Mathf.Sqrt(5f * minR), 6f, want);
+                if (m43Full) want = 30f;   // ffu44b &mtfull=1: flat out, never brakes for the bends (tests the U-turn braking zone)
             }
             o.gas = spd < want ? 1f : 0f;
             if (spd > want + 1f) o.brake = Mathf.Clamp01((spd - want) * 0.25f);
@@ -137,7 +139,7 @@ public partial class Game
                 float ang = Vector3.SignedAngle(hf, to, Vector3.up);
                 o.move.x = Mathf.Clamp(ang / 12f, -1f, 1f);
                 float off = Vector3.Dot(pos - lp, lr);
-                if (Mathf.Abs(off) > 2.5f && !nearLoop) { o.gas = spd < 5f ? 0.6f : 0f; if (spd > 7f) o.brake = 0.5f; }
+                if (Mathf.Abs(off) > 2.5f && !nearLoop && !m43Full) { o.gas = spd < 5f ? 0.6f : 0f; if (spd > 7f) o.brake = 0.5f; }
                 m43Steer = o.move.x;
             }
             return o;
@@ -154,7 +156,7 @@ public partial class Game
             float rOut = MonsterPark.BowlR0 + MonsterPark.BowlCurve;
             float target = rOut - 1.5f;
             if (r > rOut + 2f) m43InBowl = false;                 // outside (start / after a tow): back in through the opening
-            if (r < MonsterPark.BowlR0 - 2f) m43InBowl = true;
+            if (r < MonsterPark.BowlR0 + 1f) m43InBowl = true;   // ffu44b: turn right as soon as you are through the opening
             float a0 = Mathf.Atan2(rad.z, rad.x), ahead = 40f * Mathf.Deg2Rad;
             float rt = Mathf.Min(target, r + 2.5f);
             Vector3 tp = cc + new Vector3(Mathf.Cos(a0 + ahead), 0f, Mathf.Sin(a0 + ahead)) * rt;   // +angle = anticlockwise from above
@@ -163,9 +165,11 @@ public partial class Game
             Vector3 hf = c.transform.forward; hf.y = 0f;
             float ang = Vector3.SignedAngle(hf, aim, Vector3.up);
             o.move.x = Mathf.Clamp(ang / 20f, -1f, 1f); m43Steer = o.move.x;
-            float wantW = !m43InBowl ? 8f : m43Laps < 120f ? 10f : 13f;
-            o.gas = spd < wantW ? 1f : 0.15f;
-            if (spd > wantW + 2f) o.brake = 0.3f;
+            // ffu44b: 7 m/s in (ffu44a ran in at 12 and ploughed across the middle), ~10.5 m/s on the wall: the balance speed
+            // at the riding line (r 12.5, ~48 deg) is ~11.7 m/s; ffu44a's 13-14.5 climbed to the lip, slowed and fell off
+            float wantW = !m43InBowl ? 7f : 10.5f;
+            o.gas = spd < wantW ? 1f : 0f;
+            if (spd > wantW + 1f) o.brake = Mathf.Clamp01((spd - wantW) * 0.2f);
             return o;
         }
         // crusher: straight south down the lane
@@ -210,7 +214,7 @@ public partial class Game
             float h = p.y - cc.y; m43WallH = Mathf.Max(m43WallH, h);
             Vector3 rad = p - cc; rad.y = 0f;
             float ang = Mathf.Atan2(rad.z, rad.x) * Mathf.Rad2Deg;
-            if (!float.IsNaN(m43LastAng) && rad.magnitude > 4f) m43Laps += Mathf.Abs(Mathf.DeltaAngle(m43LastAng, ang));
+            if (!float.IsNaN(m43LastAng) && rad.magnitude > 4f && h > 0.8f) m43Laps +=   // ffu44b: only laps ON the wall count Mathf.Abs(Mathf.DeltaAngle(m43LastAng, ang));
             m43LastAng = ang;
             if (m43PhT > 28f) M43Phase(3);   // ffu44: 28 s (longer lead-in)
             pos = cc + new Vector3(0f, 13f, 20f); look = cc + Vector3.up * 2f;
