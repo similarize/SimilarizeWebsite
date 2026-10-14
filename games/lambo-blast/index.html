@@ -63,19 +63,19 @@
     };
   })();
   var config = {
-    dataUrl: buildUrl + "/" + name + ".data?v=202610140451-229b166",
-    frameworkUrl: buildUrl + "/" + name + ".framework.js?v=202610140451-229b166",
-    codeUrl: buildUrl + "/" + name + ".wasm?v=202610140451-229b166",
+    dataUrl: buildUrl + "/" + name + ".data?v=202610140519-19d4525",
+    frameworkUrl: buildUrl + "/" + name + ".framework.js?v=202610140519-19d4525",
+    codeUrl: buildUrl + "/" + name + ".wasm?v=202610140519-19d4525",
     streamingAssetsUrl: "StreamingAssets",
     companyName: "Similarize",
     productName: "Lambo Blast",
-    productVersion: "202610140451-229b166",
+    productVersion: "202610140519-19d4525",
     devicePixelRatio: window.LBDPR.lobby,
     showBanner: function (msg, type) { if (type === "error") { var e = document.getElementById("err"); e.style.display = "block"; e.textContent = msg; } else console.log(msg); }
   };
   var fill = document.getElementById("fill"), pct = document.getElementById("pct"), loader = document.getElementById("loader");
   var script = document.createElement("script");
-  script.src = buildUrl + "/" + name + ".loader.js?v=202610140451-229b166";
+  script.src = buildUrl + "/" + name + ".loader.js?v=202610140519-19d4525";
   script.onload = function () {
     createUnityInstance(canvas, config, function (p) {
       fill.style.width = Math.round(p * 100) + "%";
