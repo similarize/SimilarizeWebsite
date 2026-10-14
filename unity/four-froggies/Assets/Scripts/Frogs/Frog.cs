@@ -241,6 +241,15 @@ public partial class Frog : MonoBehaviour
                 input = new PIn();
                 return;
             }
+            Bike scb = passengerOf as Bike;
+            if (scb != null)
+            {
+                // ffu45: riding in the Cyber sidecar e-bike's chair; A / E / OUT hops out
+                prompt = "In the sidecar" + (scb.driver != null ? " - " + scb.driver.nick + " is riding" : "") + " - " + (inputKind == InputKind.Gamepad ? "A" : inputKind == InputKind.Touch ? "OUT" : "E") + ": hop out";
+                if (human && (input.use || input.hop) && exitCool <= 0f) scb.SidecarOut(this);
+                input = new PIn();
+                return;
+            }
             Starship st = passengerOf as Starship;
             if (st != null && st.mechForm != null && st.BayOpen)
             {

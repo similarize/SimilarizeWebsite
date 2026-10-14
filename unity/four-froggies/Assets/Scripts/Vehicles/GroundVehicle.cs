@@ -275,7 +275,7 @@ public class GroundVehicle : Vehicle
     protected virtual float BigTarget()
     {
         if (!BigOk || stowed) return 1f;
-        float t = BigWheels.S;
+        float t = BigWheels.Target(this, bigK, rmax0);   // ffu45: this vehicle's own size (building cap + clearance)
         if (amph != null) t = Mathf.Lerp(t, 1f, Mathf.Clamp01(amph.k * 2f));   // the Cyberboat tucks stock-size wheels away
         return t;
     }

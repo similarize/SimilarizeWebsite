@@ -210,6 +210,7 @@ public partial class Game
         string[] w;
         TouchControls.mechMode = false;
         if (f.launching) w = new string[] { null, null, null, null, null };
+        else if (f.passengerOf is Bike) w = new[] { "OUT", null, null, null, null };   // ffu45 sidecar
         else if (f.passengerOf != null) w = f.passengerOf is Starship && ((Starship)f.passengerOf).BayOpen ? new[] { "OUT", null, null, null, null } : new string[] { null, null, null, null, null };
         else if (f.jetOf != null) w = new[] { "A", null, null, "UP", "DOWN" };
         else if (f.remote != null) w = new[] { "WAVE", null, null, "RUN", null };

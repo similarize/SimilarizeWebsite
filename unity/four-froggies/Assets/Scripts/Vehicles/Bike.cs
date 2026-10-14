@@ -12,11 +12,16 @@ using UnityEngine;
 // Voices: SynthVoice 14 (2-stroke brap) / 16 (4-stroke thump) with an RPM + gear-band model, 15 (electric whine, higher
 // than the Cybertruck's). AI froggies take a bike out for a few laps of the front yard now and then (BikeAI).
 // Jump line ("MX") just south of the RC raceway: kicker + landing and a tabletop (BuildMx).
-public class Bike : Vehicle
+public partial class Bike : Vehicle
 {
     public static readonly List<Bike> AllBikes = new List<Bike>();
-    public int type;                 // 0 2-stroke dirt, 1 4-stroke dirt, 2 electric dirt, 3 electric street
-    public bool Electric { get { return type >= 2; } }
+    public int type;                 // 0 2-stroke dirt, 1 4-stroke dirt, 2 electric dirt, 3 electric street; ffu45 barn bikes: 4 sport, 5 cruiser, 6 adventure, 7 trials, 8 sidecar e-bike
+    public bool Electric { get { return type == 2 || type == 3 || type == 8; } }
+    public bool StreetTyres { get { return type == 3 || type == 4 || type == 5 || type == 8; } }   // ffu45: no roost / power-drift
+    // ffu45 per-type handling (garage bikes keep the ffu30 values)
+    public float leanMax = 44f, wheelieK = 26f, wheelieV = 13f, wheelieMax = 34f, slopeAssist = 0f, driftK = 0.65f;
+    public bool canHop;
+    float hopCool;
     class Wh { public Vector3 mount; public float r, dist, spin; public bool grounded; public Transform vis; public Vector3 axle0, vs0; public float r0, extra, sr, wrest; }
     readonly Wh fw = new Wh(), rw = new Wh();
     float rest, spring, damper;
@@ -44,12 +49,14 @@ public class Bike : Vehicle
             Spawn(names[i], p, 0f, i);
         }
         BuildMx();
+        try { SpawnBarn(); } catch (System.Exception e) { Debug.LogWarning("Bike: barn bikes failed " + e); }   // ffu45: 5 more in the trailer barn
         new GameObject("Bike AI").AddComponent<BikeAI>();
         Debug.Log("Bike: " + AllBikes.Count + " bikes in the garage, MX jump line at " + RcTrack.MxC);
     }
 
     static Bike Spawn(string title, Vector3 pos, float yaw, int type)
     {
+        if (type >= 4) return Spawn45(title, pos, yaw, type);   // ffu45 barn bikes (BikeModels45.cs)
         var go = new GameObject(title);
         go.transform.position = pos; go.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
         var b = go.AddComponent<Bike>();
@@ -196,10 +203,10 @@ public class Bike : Vehicle
         if (Look.Mobile) Mats.NoShadows(gameObject);
     }
 
-    public override string[] TouchSet { get { return new[] { "A", null, null, "GAS", "BRAKE" }; } }
+    public override string[] TouchSet { get { return canHop ? new[] { "A", "HOP", null, "GAS", "BRAKE" } : new[] { "A", null, null, "GAS", "BRAKE" }; } }
     public override string HelpLine
     {
-        get { return Title + ": L-stick steer | RT throttle (hard from slow = wheelie!) | LT brake | in the air stick pitches | A get off"; }
+        get { return type >= 4 ? Help45 : Title + ": L-stick steer | RT throttle (hard from slow = wheelie!) | LT brake | in the air stick pitches | A get off"; }
     }
 
     protected override void OnCollisionEnter(Collision c)
@@ -299,7 +306,7 @@ public class Bike : Vehicle
             else force = -fs * 0.5f;
             float gf = g / 2f;
             rb.AddForce(fwd * force * rb.mass * gf, ForceMode.Force);
-            float cap = latCap * (driven && throttle > 0.7f && Mathf.Abs(steer) > 0.5f && fs > 4f && type != 3 ? 0.65f : 1f);
+            float cap = latCap * (driven && throttle > 0.7f && Mathf.Abs(steer) > 0.5f && fs > 4f && !StreetTyres ? driftK : 1f);
             rb.AddForce(right * Mathf.Clamp(-ls * 8f, -cap, cap) * rb.mass * gf, ForceMode.Force);
             slipSpeed = ls; groundFrac = gf;
             float yr = YawRate(rb, transform);
@@ -310,15 +317,16 @@ public class Bike : Vehicle
             // wheelies
             float pitchUp = Mathf.Asin(Mathf.Clamp(Vector3.Dot(transform.forward, n), -1f, 1f)) * Mathf.Rad2Deg;
             wheelieDeg = rw.grounded && !fw.grounded ? pitchUp : 0f;
-            if (driven && rw.grounded && throttle > 0.75f && fs > -0.3f && fs < 13f && pitchUp < 34f)
-                rb.AddTorque(-transform.right * 26f * throttle * (1f - fs / 13f), ForceMode.Acceleration);
-            if (!fw.grounded && pitchUp > 40f) rb.AddTorque(transform.right * 30f, ForceMode.Acceleration);
+            if (driven && wheelieK > 0f && rw.grounded && throttle > 0.75f && fs > -0.3f && fs < wheelieV && pitchUp < wheelieMax)
+                rb.AddTorque(-transform.right * wheelieK * throttle * (1f - fs / wheelieV), ForceMode.Acceleration);
+            if (!fw.grounded && pitchUp > wheelieMax + 6f) rb.AddTorque(transform.right * 30f, ForceMode.Acceleration);
+            Extra45(ip, dt, driven, fwd, fs, pitchUp);   // ffu45: trials hop + wheelie balance, adventure hill assist, sidecar pull
             bool wh = !fw.grounded && rw.grounded && pitchUp > 8f;
             if (wh && !inWheelie) wheelies++;
             inWheelie = wh;
             // roost from the rear tyre
             roostT -= dt;
-            if (roostT <= 0f && rw.grounded && driven && (throttle > 0.4f || Mathf.Abs(ls) > 2f) && type != 3)
+            if (roostT <= 0f && rw.grounded && driven && (throttle > 0.4f || Mathf.Abs(ls) > 2f) && !StreetTyres)
             {
                 roostT = 0.04f;
                 Vector3 cp = transform.TransformPoint(rw.mount) - up * rw.dist;
@@ -340,7 +348,7 @@ public class Bike : Vehicle
         if (flipT > 0.35f) { flipT = 0f; Crash("Wipeout! "); }
         // lean the model into the turn (lean from speed x yaw rate), a little extra with the stick at low speed
         float yawRate = YawRate(rb, transform);
-        float leanT2 = airborne ? lean * 0.98f : Mathf.Clamp(Mathf.Atan2(fs * yawRate, 9.81f) * Mathf.Rad2Deg, -44f, 44f);
+        float leanT2 = airborne ? lean * 0.98f : Mathf.Clamp(Mathf.Atan2(fs * yawRate, 9.81f) * Mathf.Rad2Deg, -leanMax, leanMax);
         leanV += ((leanT2 - lean) * 70f - leanV * 11f) * dt; lean += leanV * dt;
         // fell off the world
         if (OutOfWorld(rb.position)) ResetHome();
@@ -373,7 +381,7 @@ public class Bike : Vehicle
             foreach (var w in new[] { fw, rw }) { w.axle0 = w.mount - Vector3.up * rest; w.r0 = w.r; w.vs0 = w.vis != null ? w.vis.localScale : Vector3.one; w.wrest = rest; rmax0 = Mathf.Max(rmax0, w.r); }
             zc0 = (fw.axle0.z + rw.axle0.z) * 0.5f; gap0 = Mathf.Abs(fw.axle0.z - rw.axle0.z);
         }
-        float t = stowed || move3 ? 1f : BigWheels.S;
+        float t = stowed || move3 ? 1f : BigWheels.Target(this, bigK, rmax0);   // ffu45 per vehicle
         float k = BigWheels.Ease(bigK, t, dt);
         if (Mathf.Abs(k - bigK) < 1e-5f) return;
         bigK = k;
@@ -398,6 +406,7 @@ public class Bike : Vehicle
         rb.WakeUp();
     }
     float swingLen0;
+    Vector3 shockTop = new Vector3(0f, 0.98f, -0.22f);
     bool onStuntB;
     bool move3 { get { return rb != null && rb.isKinematic; } }   // ffu31 ramp ride / bay: kinematic cargo keeps stock wheels
 
@@ -405,6 +414,7 @@ public class Bike : Vehicle
     {
         float dt = Time.deltaTime;
         BigTick(Mathf.Min(dt, 0.1f));
+        if (type >= 4) Update45(dt);   // ffu45: sidecar passenger + wheel, extra parts
         if (leanT != null) leanT.localRotation = Quaternion.Euler(0f, 0f, -lean);
         float fs = ForwardSpeed;
         foreach (var w in new[] { fw, rw })
@@ -432,7 +442,7 @@ public class Bike : Vehicle
         if (swingLen0 <= 0f) swingLen0 = Mathf.Max(0.1f, sa.magnitude);
         float sk = bigK > 1.0001f ? sa.magnitude / swingLen0 : 1f;   // ffu42: the arm reaches a big, set-back rear hub
         swing.localScale = new Vector3(1f + (sk - 1f) * 0.6f, 1f + (sk - 1f) * 0.6f, sk);
-        Vector3 top = new Vector3(0f, 0.98f, -0.22f), bot = swing.localPosition + sa * 0.45f + Vector3.up * 0.04f;
+        Vector3 top = shockTop, bot = swing.localPosition + sa * 0.45f + Vector3.up * 0.04f;
         Vector3 sd = top - bot; float sl = sd.magnitude;
         rshock.localPosition = (top + bot) * 0.5f; rshock.localRotation = Quaternion.FromToRotation(Vector3.up, sd / sl); rshock.localScale = new Vector3(1f, sl * 0.5f, 1f);
     }
@@ -443,6 +453,7 @@ public class Bike : Vehicle
         if (driver == null) return;
         var m = driver.model;
         if (m == null) return;
+        if (type >= 4) { Pose45(m); return; }   // ffu45
         bool street = type == 3;
         if (m.legL != null) m.legL.localRotation = Quaternion.Euler(-38f, 0f, -8f);
         if (m.legR != null) m.legR.localRotation = Quaternion.Euler(-38f, 0f, 8f);
@@ -510,7 +521,7 @@ public class BikeAI : MonoBehaviour
     Bike target; Frog goer; float walkT;
     static readonly Vector2 LoopC = new Vector2(-8f, 54f);
     const float LoopR = 10f;
-    float[] idle = new float[8];
+    float[] idle = new float[16];   // ffu45: 9 bikes now
 
     void Update()
     {
@@ -528,7 +539,7 @@ public class BikeAI : MonoBehaviour
                 if ((goer.transform.position - target.transform.position).magnitude < 2.6f)
                 {
                     goer.EnterVehicle(target);
-                    target.aiRider = goer; target.aiPhase = 0; target.aiTurned = 0f; target.aiT = 0f;
+                    target.aiRider = goer; target.aiPhase = 0; target.aiTurned = 0f; target.aiT = 0f; target.aiWp = 0;
                     Debug.Log("BikeAI: " + goer.nick + " rides the " + target.Title);
                     goer = null; target = null;
                 }
@@ -547,17 +558,27 @@ public class BikeAI : MonoBehaviour
         t = Random.Range(40f, 80f);
         foreach (Bike b in Bike.AllBikes) if (b.aiRider != null) return;   // one AI rider at a time
         if (Random.value > 0.45f) return;
+        // ffu45: the garage bikes or the trailer-barn bikes, whichever an idle froggy is near (70 m)
         var cands = new List<Frog>();
-        foreach (Frog f in g.frogs) if (f != null && f.AiIdleOnRanch && (f.transform.position - new Vector3(Layout.GarageC.x, f.transform.position.y, Layout.GarageC.y)).magnitude < 70f) cands.Add(f);
+        foreach (Frog f in g.frogs) if (f != null && f.AiIdleOnRanch && NearBikes(f.transform.position)) cands.Add(f);
         if (cands.Count == 0) return;
+        goer = cands[Random.Range(0, cands.Count)];
         var free = new List<Bike>();
-        foreach (Bike b in Bike.AllBikes) if (b.driver == null && !b.Wrecked && (b.transform.position - b.HomePos).magnitude < 3f) free.Add(b);
-        if (free.Count == 0) return;
-        goer = cands[Random.Range(0, cands.Count)]; target = free[Random.Range(0, free.Count)]; walkT = 0f;
+        foreach (Bike b in Bike.AllBikes) if (b.driver == null && b.passenger == null && !b.Wrecked && !b.stowed && (b.transform.position - b.HomePos).magnitude < 3f && Flat(b.HomePos - goer.transform.position) < 70f) free.Add(b);
+        if (free.Count == 0) { goer = null; return; }
+        target = free[Random.Range(0, free.Count)]; walkT = 0f;
         Debug.Log("BikeAI: " + goer.nick + " heads for the " + target.Title);
     }
 
+    static float Flat(Vector3 d) { d.y = 0f; return d.magnitude; }
+    static bool NearBikes(Vector3 p)
+    {
+        foreach (Bike b in Bike.AllBikes) if (Flat(b.HomePos - p) < 70f) return true;
+        return false;
+    }
+
     // the AI's riding: out of the garage (north), 2 laps round the front yard, stop, hop off
+    // ffu45: per bike - exit waypoints (barn bikes: down the lane between the trailers, out of the doors) + its own loop
     public static PIn Ride(Bike b, float dt)
     {
         var o = new PIn();
@@ -567,18 +588,29 @@ public class BikeAI : MonoBehaviour
         Vector2 p2 = new Vector2(p.x, p.z);
         Vector2 tgt;
         float vt = 8f;
+        Vector2 lc = b.aiExit != null ? b.aiLoopC : LoopC; float lr = b.aiExit != null ? b.aiLoopR : LoopR;
         if (b.aiPhase == 0)
         {
-            tgt = new Vector2(b.HomePos.x, 40f);
-            if (p.z > 37f || b.aiT > 15f) { b.aiPhase = 1; b.aiAng = Mathf.Atan2(p.z - LoopC.y, p.x - LoopC.x); }
+            if (b.aiExit == null)
+            {
+                tgt = new Vector2(b.HomePos.x, 40f);
+                if (p.z > 37f || b.aiT > 15f) { b.aiPhase = 1; b.aiAng = Mathf.Atan2(p.z - LoopC.y, p.x - LoopC.x); }
+            }
+            else
+            {
+                int k = Mathf.Clamp(b.aiWp, 0, b.aiExit.Length - 1);
+                tgt = b.aiExit[k]; vt = 5.5f;
+                if ((tgt - p2).magnitude < 2.2f) b.aiWp++;
+                if (b.aiWp >= b.aiExit.Length || b.aiT > 25f) { b.aiPhase = 1; b.aiAng = Mathf.Atan2(p.z - lc.y, p.x - lc.x); }
+            }
         }
         else if (b.aiPhase == 1)
         {
-            float a = Mathf.Atan2(p.z - LoopC.y, p.x - LoopC.x);
+            float a = Mathf.Atan2(p.z - lc.y, p.x - lc.x);
             float da = Mathf.DeltaAngle(b.aiAng * Mathf.Rad2Deg, a * Mathf.Rad2Deg) * Mathf.Deg2Rad;
             b.aiTurned += Mathf.Abs(da); b.aiAng = a;
             float ahead = a + 0.6f;   // counter-clockwise
-            tgt = LoopC + new Vector2(Mathf.Cos(ahead), Mathf.Sin(ahead)) * LoopR;
+            tgt = lc + new Vector2(Mathf.Cos(ahead), Mathf.Sin(ahead)) * lr;
             vt = 10f;
             if (b.aiTurned > Mathf.PI * 4f || b.aiT > 70f) b.aiPhase = 2;
         }

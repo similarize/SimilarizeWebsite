@@ -384,7 +384,7 @@ public class RcCar : Vehicle
             foreach (W w in wh) { w.axle0 = w.mount - Vector3.up * rest; w.r0 = w.r; w.vs0 = w.vis != null ? w.vis.localScale : Vector3.one; w.wrest = rest; zc0 += w.axle0.z * 0.25f; ax.Add(w.axle0); rmax0 = Mathf.Max(rmax0, w.r); }
             gap0 = BigWheels.MinGap(ax);
         }
-        float t = rb.isKinematic ? 1f : BigWheels.S;
+        float t = rb.isKinematic ? 1f : BigWheels.Target(this, bigK, rmax0);   // ffu45 per vehicle
         float k = BigWheels.Ease(bigK, t, dt);
         if (Mathf.Abs(k - bigK) < 1e-5f) return;
         bigK = k;

@@ -50,11 +50,14 @@ public partial class Game
             r.transform.localScale = new Vector3(1.5f, 0.95f, 1.3f);
             r.GetComponent<Renderer>().sharedMaterial = stone;
         }
-        Debug.Log("FFDEMO bigwheels start: truck " + (b42Truck != null ? b42Truck.Title : "NONE") + ", bike " + (b42Bike != null ? b42Bike.Title : "NONE") + ", max " + b42Max + "x, saved setting was " + BigWheels.Label);
-        BigWheels.Set(1f, "demo");
+        Debug.Log("FFDEMO bigwheels start: truck " + (b42Truck != null ? b42Truck.Title : "NONE") + ", bike " + (b42Bike != null ? b42Bike.Title : "NONE") + ", max " + b42Max + "x, truck saved size was " + BigWheels.LabelFor(b42Truck));
+        B42Size(1f);
         B42Phase(0);
         demoHook = Demo42Drive;
     }
+
+    // ffu45: sizes are per vehicle now - the demo sets both demo vehicles (not saved)
+    void B42Size(float k) { BigWheels.SetFor(b42Truck, k, "demo", false); BigWheels.SetFor(b42Bike, k, "demo", false); }
 
     static void B42Log(Transform root, float x, float r, Material m)
     {
@@ -89,22 +92,22 @@ public partial class Game
         Debug.Log("FFDEMO bigwheels phase " + ph + " " + B42Names[ph] + " t=" + b42T.ToString("0.0"));
         switch (ph)
         {
-            case 0: BigWheels.Set(1f, "demo"); B42Park(b42Truck, B42X0 - 2f, B42ZT + 2f); B42Park(b42Bike, B42X0 + 5f, B42ZT - 1f); break;
-            case 1: BigWheels.Set(b42Max, "demo"); break;
+            case 0: B42Size(1f); B42Park(b42Truck, B42X0 - 2f, B42ZT + 2f); B42Park(b42Bike, B42X0 + 5f, B42ZT - 1f); break;
+            case 1: B42Size(b42Max); break;
             case 2: case 3:
-                BigWheels.Set(ph == 2 ? 1f : b42Max, "demo");
+                B42Size(ph == 2 ? 1f : b42Max);
                 B42Park(b42Bike, B42X0 - 10f, B42ZB + 6f);
                 B42Park(b42Truck, B42X0, B42ZT);
                 if (b42Truck != null) b42F.EnterVehicle(b42Truck);
                 break;
             case 4: case 5:
-                BigWheels.Set(ph == 4 ? 1f : b42Max, "demo");
+                B42Size(ph == 4 ? 1f : b42Max);
                 B42Park(b42Truck, B42X0 - 12f, B42ZT - 7f);
                 B42Park(b42Bike, B42X0, B42ZB);
                 if (b42Bike != null) b42F.EnterVehicle(b42Bike);
                 break;
             case 6:
-                BigWheels.Set(b42Max, "demo");
+                B42Size(b42Max);
                 B42Park(b42Truck, B42X1 - 6f, B42ZT + 2f); B42Park(b42Bike, B42X1 + 1f, B42ZT - 1f);
                 break;
         }
@@ -168,7 +171,7 @@ public partial class Game
         if (b42Log <= 0f)
         {
             b42Log = 0.5f;
-            string s = "FFDEMO bigwheels t=" + b42T.ToString("0.0") + " phase " + B42Names[b42Phase] + " setting " + BigWheels.Label;
+            string s = "FFDEMO bigwheels t=" + b42T.ToString("0.0") + " phase " + B42Names[b42Phase] + " truck " + BigWheels.LabelFor(b42Truck) + " bike " + BigWheels.LabelFor(b42Bike);
             foreach (Vehicle w in new Vehicle[] { b42Truck, b42Bike })
             {
                 if (w == null) continue;

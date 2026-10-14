@@ -38,7 +38,7 @@ public partial class Game
         Debug.Log("FFDEMO mtrack start: truck " + (m43Car != null ? m43Car.Title : "NONE") + " branch " + RallyTrack.BranchArcEnd.ToString("0") + " m, loop arcs " + RallyTrack.LoopArcA.ToString("0") + ".." + RallyTrack.LoopArcB.ToString("0") +
             " | U-turn R " + Layout.UTurnR.ToString("0.0") + " | park zones " + MonsterPark.Zones.Count);
         if (m43Car == null) return;
-        BigWheels.Set(1f, "demo");
+        BigWheels.SetFor(m43Car, 1f, "demo", false);
         M43Phase(m43Only >= 0 ? m43Only : 0);
         demoHook = Demo43Drive;
     }
@@ -70,7 +70,7 @@ public partial class Game
             // ffu44: start up the cleared lead-in lane through the rock garden (z -94), ~16 m run-up to the opening
             case 2: M43Place(new Vector3(MonsterPark.BowlX, Ranch.GY(MonsterPark.BowlX, MonsterPark.BowlZ + 30f), MonsterPark.BowlZ + 30f), Vector3.back, 6f); break;
             case 3:
-                BigWheels.Set(3f, "demo");
+                BigWheels.SetFor(m43Car, 3f, "demo", false);
                 M43Place(new Vector3(MonsterPark.CrushX, Ranch.GY(MonsterPark.CrushX, MonsterPark.CrushZ0 + 9f), MonsterPark.CrushZ0 + 9f), Vector3.back, 0f);
                 m43Crush0 = MonsterPark.Crushes; break;
             case 4: if (m43F.vehicle != null) m43F.ExitVehicle(); break;
@@ -83,7 +83,7 @@ public partial class Game
         if (m43Phase <= 1)
             s += " reached the top " + m43Top + " | min speed in the loop " + (m43MinLoopV < 1e8f ? m43MinLoopV.ToString("0.0") : "-") + " m/s | came out the other side " + m43LeftLoop + " | finished the branch " + m43Done + " | max y " + m43MaxY.ToString("0.0");
         else if (m43Phase == 2) s += " max height on the wall " + m43WallH.ToString("0.0") + " m | laps on the wall " + (m43Laps / 360f).ToString("0.00");
-        else if (m43Phase == 3) s += " cars crushed " + (MonsterPark.Crushes - m43Crush0) + " | wheel size " + BigWheels.Label + " | tows " + MonsterPark.Tows;
+        else if (m43Phase == 3) s += " cars crushed " + (MonsterPark.Crushes - m43Crush0) + " | wheel size " + BigWheels.LabelFor(m43Car) + " | tows " + MonsterPark.Tows;
         s += " | t " + m43PhT.ToString("0.0") + " s";
         Debug.Log(s);
     }

@@ -235,6 +235,8 @@ public abstract class Vehicle : MonoBehaviour
     }
 
     public Vector3 HomePos { get { return spawnPos; } }
+    // ffu45: stable id for per-vehicle settings (wheel size): title @ spawn x, z (spawns are deterministic)
+    public string WheelId { get { return Title + "@" + Mathf.RoundToInt(spawnPos.x) + "," + Mathf.RoundToInt(spawnPos.z); } }
 
     // ffu14: wreck state for ordinary vehicles (Combat.cs)
     VehicleWreck wreck;

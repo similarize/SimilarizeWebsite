@@ -195,6 +195,7 @@ public partial class Game : MonoBehaviour
             else if (IsPoolDemo(sc)) PoolDemoStart(f, sc);                   // ffu29 backyard pool float (GamePoolDemo.cs)
             else if (IsStompDemo(sc)) StompDemoStart(f, sc);                 // ffu28 mech footfalls / Optimus suit on a slope (GameStomp.cs)
             else if (IsGardenDemo(sc)) GardenDemoStart(f, sc);               // ffu32 garden retreat / horse riding (GardenDemo.cs)
+            else if (Is45(sc)) Demo45Start(f, sc);                             // ffu45 barn motorbikes / per-vehicle wheels / help screen (GameFfu45.cs)
             else if (Is43(sc)) Demo43Start(f, sc);                             // ffu43 loop both ways + Monster Park (GameFfu43.cs)
             else if (Is42(sc)) Demo42Start(f, sc);                             // ffu42 big wheels: Cybertruck + bike at 1x / max over logs + rocks (GameFfu42.cs)
             else if (Is41(sc)) Demo41Start(f, sc);                             // ffu41 the Moon: orbit, land, hop, buggy (GameFfu41.cs)
@@ -229,6 +230,7 @@ public partial class Game : MonoBehaviour
         if ((sc.StartsWith("lj-") || sc.StartsWith("loopdrive")) && DemoLoopCam(f, sc, c)) return;
         if (IsStompDemo(sc)) { if (!StompDemoCam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }
         if (IsGardenDemo(sc)) { if (!GardenDemoCam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }
+        if (Is45(sc)) { if (!Demo45Cam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }
         if (Is43(sc)) { if (!Demo43Cam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }
         if (Is42(sc)) { if (!Demo42Cam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }
         if (Is41(sc)) { if (!Demo41Cam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }
@@ -598,18 +600,7 @@ public partial class Game : MonoBehaviour
         sepH.rectTransform.anchorMin = new Vector2(0f, 0.5f); sepH.rectTransform.anchorMax = new Vector2(1f, 0.5f);
         sepH.rectTransform.sizeDelta = new Vector2(0f, 4f);
         joinText = UIK.Label(r, "Press A / Start to join", 28, TextAnchor.MiddleCenter, new Vector2(0.75f, 0.25f), Vector2.zero, new Vector2(500, 60), Color.white);
-        helpBg = UIK.Img(r, null, new Color(0f, 0f, 0f, 0.75f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1200, 590));
-        helpText = UIK.Label(r, "", 21, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1150, 560), Color.white);
-        wheelTrack = UIK.Img(r, UIK.Round, new Color(1f, 1f, 1f, 0.16f), new Vector2(0.5f, 0.5f), new Vector2(0f, -278f), new Vector2(560f, 26f));
-        wheelTrack.type = Image.Type.Sliced;
-        wheelFill = UIK.Img(wheelTrack.transform, UIK.Round, new Color(0.55f, 1f, 0.44f, 0.95f), new Vector2(0f, 0.5f), Vector2.zero, new Vector2(26f, 26f));
-        wheelFill.type = Image.Type.Sliced; wheelFill.rectTransform.pivot = new Vector2(0f, 0.5f);
-        wheelKnob = UIK.Img(wheelTrack.transform, UIK.Circle, Color.white, new Vector2(0f, 0.5f), Vector2.zero, new Vector2(40f, 40f));
-        wheelLabel = UIK.Label(r, "", 20, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0f, -248f), new Vector2(1100f, 28f), new Color(1f, 0.9f, 0.5f));
-        wheelTrack.gameObject.SetActive(false); wheelLabel.enabled = false;
-        helpBg.enabled = false;
-        helpText.text = HelpBody;
-        helpText.enabled = false;
+        HelpBuild(r);   // ffu45: the redesigned help / pause screen (HelpPanel.cs) owns the WHEEL SIZE slider now
         joinText.enabled = false;
         hudCanvas.enabled = false;
     }
@@ -645,17 +636,7 @@ public partial class Game : MonoBehaviour
             var sc = hudCanvas.GetComponent<CanvasScaler>();
             sc.referenceResolution = portrait ? new Vector2(720, 1280) : new Vector2(1280, 720);
             sc.matchWidthOrHeight = portrait ? 0f : 0.6f;
-            float w = portrait ? 720f : 1280f;
-            helpBg.rectTransform.sizeDelta = portrait ? new Vector2(700, 1190) : new Vector2(1200, 660);
-            helpBg.rectTransform.anchoredPosition = Vector2.zero;
-            helpText.rectTransform.sizeDelta = portrait ? new Vector2(680, 1080) : new Vector2(1150, 560);
-            helpText.rectTransform.anchoredPosition = new Vector2(0f, portrait ? 45f : 40f);   // ffu42: room for the wheel slider under it
-            wheelTrack.rectTransform.anchoredPosition = new Vector2(0f, portrait ? -555f : -298f);
-            wheelTrack.rectTransform.sizeDelta = new Vector2(portrait ? 520f : 560f, 26f);
-            wheelLabel.rectTransform.anchoredPosition = new Vector2(0f, portrait ? -520f : -266f);
-            wheelLabel.rectTransform.sizeDelta = new Vector2(portrait ? 680f : 1100f, 28f);
-            wheelLabel.fontSize = portrait ? 17 : 20;
-            helpText.fontSize = portrait ? 19 : 21;
+            // ffu45: the help screen lays itself out (HelpPanel.cs: safe area, columns, auto-scaled text)
         }
         float inset = touchUi ? (portrait ? 290f : 120f) : 0f;
         float width = portrait ? 720f : 1280f;
@@ -1246,6 +1227,7 @@ public partial class Game : MonoBehaviour
                     i = touch.Read();
                     break;
             }
+            i = WheelShortcut(s, i);   // ffu45: View + D-pad up / down, [ / ]: this vehicle's wheel size (View alone toggles on release)
             {
                 Frog pf = frogs[s.frog];
                 pf.inputKind = s.kind;
@@ -1269,7 +1251,7 @@ public partial class Game : MonoBehaviour
             }
             i = StoryFilter(s, frogs[s.frog], i);   // ffu22: cutscenes / repair meter take the input
             if (i.view) viewPressed = true;
-            if (i.help) helpPressed = true;
+            if (i.help) { helpPressed = true; helpBy = s; }
             if (help) i = new PIn();
             s.last = i;
             Frog f = frogs[s.frog];
@@ -1283,30 +1265,28 @@ public partial class Game : MonoBehaviour
         {
             // sound level from the help / pause menu: Y on any joined pad (M works everywhere)
             foreach (var s in slots) if (s.kind == InputKind.Gamepad && s.pad != null && s.pad.added && s.pad.buttonNorth.wasPressedThisFrame) { Sfx.CycleVolume(); break; }
-            helpText.text = HelpBody + "\n<color=#8cff70>Sound: " + Sfx.LevelName + "</color>  (Y here / M key / SND button cycles ON - LOW - OFF)";
             WheelSliderTick();
         }
         else wheelDrag = false;
         LayoutHud();
-        helpText.enabled = help;
-        helpBg.enabled = help;
-        if (wheelTrack.gameObject.activeSelf != help) wheelTrack.gameObject.SetActive(help);
-        wheelLabel.enabled = help;
-        if (help) WheelSliderDraw();
+        HelpTick(dt);   // ffu45 HelpPanel.cs: safe-area card, sections, settings rows, CLOSE, touch MENU chip
         if (state == State.Play && slots.Count == 0) EnterLobby();
     }
 
-    // ffu42: the WHEEL SIZE slider - every joined pad (D-pad < > / LB RB), keys, mouse, touch
+    // ffu42: the WHEEL SIZE slider - every joined pad (D-pad < > / LB RB), keys, mouse, touch. ffu45: it resizes the
+    // vehicle the player who opened the menu is IN (HelpVehicle); greyed out on foot.
     void WheelSliderTick()
     {
+        Vehicle hv = HelpVehicle;
+        if (hv == null) { wheelDrag = false; return; }
         foreach (var s in slots)
         {
             if (s.kind != InputKind.Gamepad || s.pad == null || !s.pad.added || IsGhostDev(s.pad)) continue;
-            if (s.pad.dpad.left.wasPressedThisFrame || s.pad.leftShoulder.wasPressedThisFrame) { BigWheels.Nudge(-1, "pad"); Sfx.Play(Sfx.Click, 0.5f, 0.9f); break; }
-            if (s.pad.dpad.right.wasPressedThisFrame || s.pad.rightShoulder.wasPressedThisFrame) { BigWheels.Nudge(1, "pad"); Sfx.Play(Sfx.Click, 0.5f, 1.1f); break; }
+            if (s.pad.dpad.left.wasPressedThisFrame || s.pad.leftShoulder.wasPressedThisFrame) { BigWheels.NudgeFor(hv, -1, "pad"); Sfx.Play(Sfx.Click, 0.5f, 0.9f); break; }
+            if (s.pad.dpad.right.wasPressedThisFrame || s.pad.rightShoulder.wasPressedThisFrame) { BigWheels.NudgeFor(hv, 1, "pad"); Sfx.Play(Sfx.Click, 0.5f, 1.1f); break; }
         }
         int kn = Kb.WheelNudge();
-        if (kn != 0) { BigWheels.Nudge(kn, "keys"); Sfx.Play(Sfx.Click, 0.5f, kn > 0 ? 1.1f : 0.9f); }
+        if (kn != 0) { BigWheels.NudgeFor(hv, kn, "keys"); Sfx.Play(Sfx.Click, 0.5f, kn > 0 ? 1.1f : 0.9f); }
         var mouse = UnityEngine.InputSystem.Mouse.current;
         bool held = false; Vector2 hp = Vector2.zero;
         if (mouse != null && Cursor.lockState != CursorLockMode.Locked)
@@ -1323,9 +1303,9 @@ public partial class Game : MonoBehaviour
             RectTransform rt = wheelTrack.rectTransform;
             if (RectTransformUtility.ScreenPointToLocalPointInRectangle(rt, hp, null, out lp))
             {
-                float w = rt.rect.width, before = BigWheels.S;
-                BigWheels.SetFrac((lp.x + w * 0.5f) / w, "drag");
-                if (BigWheels.S != before) Sfx.Play(Sfx.Click, 0.35f, 0.8f + BigWheels.Frac * 0.5f);
+                float w = rt.rect.width, before = BigWheels.Want(hv);
+                BigWheels.SetFracFor(hv, (lp.x - rt.rect.xMin) / w, "drag");
+                if (BigWheels.Want(hv) != before) Sfx.Play(Sfx.Click, 0.35f, 0.8f + BigWheels.FracOf(BigWheels.Want(hv)) * 0.5f);
             }
         }
         else wheelDrag = false;
@@ -1335,16 +1315,8 @@ public partial class Game : MonoBehaviour
         RectTransform rt = wheelTrack.rectTransform;
         Vector2 lp;
         if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(rt, p, null, out lp)) return false;
-        return Mathf.Abs(lp.x) < rt.rect.width * 0.5f + 30f && Mathf.Abs(lp.y) < 34f;   // generous for fingers
-    }
-    void WheelSliderDraw()
-    {
-        float w = wheelTrack.rectTransform.rect.width, f = BigWheels.Frac;
-        wheelFill.rectTransform.sizeDelta = new Vector2(Mathf.Max(26f, w * f), 26f);
-        wheelKnob.rectTransform.anchoredPosition = new Vector2(w * f, 0f);
-        wheelKnob.color = wheelDrag ? new Color(1f, 0.85f, 0.3f) : Color.white;
-        string l = "<b>WHEEL SIZE  " + BigWheels.Label + "</b>   (1x - 4x: D-pad < > / LB RB, arrow keys, or drag the bar)";
-        if (wheelLabel.text != l) wheelLabel.text = l;
+        Rect r = rt.rect;
+        return lp.x > r.xMin - 30f && lp.x < r.xMax + 30f && Mathf.Abs(lp.y - r.center.y) < 34f;   // generous for fingers
     }
 
     void EnterLobby()
