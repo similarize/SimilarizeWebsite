@@ -54,7 +54,7 @@ public partial class Game
         d46B = b;
         d46Bails0 = b.bails; d46Kicks0 = b.pushes; d46Ollies0 = b.ollies; d46Airs0 = b.airs; d46PipeAirs0 = b.pipeAirs; b.maxAirH = 0f;
         d46F.EnterVehicle(b);
-        b.aiRider = d46F; b.aiPhase = 0; b.aiT = 0f; b.aiSpinGoal = 180f; b.aiOllie = true; b.aiRunSecs = 999f;
+        b.aiRider = d46F; b.aiPhase = 0; b.aiT = 0f; b.aiSpinGoal = 180f; b.aiOllie = true; b.aiOllied = false; b.aiRunSecs = 999f;
         Debug.Log("FFDEMO skate46 ride " + b.name + " | touch set " + string.Join(",", b.TouchSet) + " | wheels resizable " + BigWheels.Resizable(b));
     }
 
@@ -113,7 +113,7 @@ public partial class Game
                       (d46F != null && d46F.GetComponent<FrogTumble>() != null && d46F.GetComponent<FrogTumble>().Active ? " TUMBLE frog y " + (d46F.transform.position.y - gy).ToString("0.00") : ""));
         }
         // ---- camera ----
-        if (d46Ph == 0) { pos = rc + new Vector3(3.6f, 1.9f, 4.4f); look = rc + new Vector3(0f, 0.15f, 0f); return true; }
+        if (d46Ph == 0) { pos = rc + new Vector3(-2.6f, 1.7f, 3.6f); look = rc + new Vector3(0.4f, 0.1f, -0.3f); return true; }
         Skateboard cb = lb != null ? lb : d46B;
         if (d46Ph == 4 && d46Ai != null && !d46AiRode) { Vector3 ap = d46Ai.transform.position; pos = ap + new Vector3(4f, 3f, 6f); look = ap + Vector3.up * 0.6f; return true; }
         if (cb == null) { pos = rc + new Vector3(0f, 5f, 12f); look = rc; return true; }
@@ -128,7 +128,7 @@ public partial class Game
         }
         // the classic end-on half-pipe view, following the rider down the pipe
         float cz = Mathf.Clamp(bp.z, MonsterPark.HpZ0 + 2f, MonsterPark.HpZ1) + 12.5f;
-        pos = new Vector3(MonsterPark.HpX + 1.2f, gy + 5.4f, cz); look = new Vector3(MonsterPark.HpX, gy + 2.6f, cz - 12.5f);
+        pos = new Vector3(MonsterPark.HpX + 1.2f, gy + 4.3f, cz); look = new Vector3(MonsterPark.HpX, gy + 2.9f, cz - 12.5f);   // ffu46b: under the HALF-PIPE board (5.1 m+)
         return true;
     }
 

@@ -37,7 +37,7 @@ public class Skateboard : Vehicle
     SynthVoice voice;
     public System.Func<PIn, PIn> demoHook;
     // AI ride (SkateAI / demo)
-    public Frog aiRider; public int aiPhase; public float aiT, aiStuck; public float aiSpinGoal = 180f, aiRunSecs = 40f; public bool aiOllie;
+    public Frog aiRider; public int aiPhase; public float aiT, aiStuck; public float aiSpinGoal = 180f, aiRunSecs = 40f; public bool aiOllie, aiOllied;
 
     const float WheelR = 0.028f, DeckY = 0.1f;
     const float PushMax = 7.2f, PumpMax = 11.5f;
@@ -151,9 +151,12 @@ public class Skateboard : Vehicle
             Mats.Prim(PrimitiveType.Cube, root, new Vector3(x, 0.09f, -0.1f), new Vector3(0.03f, 0.18f, 0.7f), dark);          // slot dividers
         }
         Mats.Prim(PrimitiveType.Cube, root, new Vector3(0f, 0.36f, -0.48f), new Vector3(3.9f, 0.06f, 0.1f), wood);             // top bar
-        Ranch.Sign(c + new Vector3(0f, 1.25f, 0.9f), RackYaw + 180f, "SKATEBOARDS\n<size=18>grab one - ride the half-pipe!</size>", new Color(0.12f, 0.32f, 0.55f), 3.6f, 0.9f);
+        // ffu46b: one-line board beside the rack (east), readable from the north (the two-line 0.9 m board best-fit to garbage)
+        Vector3 sc = c + new Vector3(3.1f, 1.05f, 0f);
+        Ranch.Sign(sc, 0f, "SKATEBOARDS", new Color(0.12f, 0.32f, 0.55f), 2.4f, 0.6f);
+        var legs = new GameObject("Skateboard sign legs").transform;
         for (int s = -1; s <= 1; s += 2)
-            Mats.Prim(PrimitiveType.Cylinder, root, new Vector3(s * 1.7f, 0.42f, -0.9f), new Vector3(0.07f, 0.42f, 0.07f), dark);   // sign legs (no collider)
+            Mats.Prim(PrimitiveType.Cylinder, legs, new Vector3(sc.x + s * 1.0f, (c.y + sc.y - 0.3f) * 0.5f, sc.z + 0.06f), new Vector3(0.06f, (sc.y - 0.3f - c.y) * 0.5f, 0.06f), dark);   // sign legs (no collider)
     }
 
     // ---------------- controls / help ----------------
@@ -263,6 +266,7 @@ public class Skateboard : Vehicle
         float sp = Mathf.Abs(s);
         s = Mathf.MoveTowards(s, 0f, (0.16f + 0.0032f * sp * sp) * dt);   // rolling resistance + air
         if (brake > 0.1f) s = Mathf.MoveTowards(s, 0f, 5f * brake * dt);
+        if (!ridden) s = Mathf.MoveTowards(s, 0f, 1.1f * dt);   // ffu46b: a loose board slows down sooner (ffu46a rolled 30 m)
         // push (kick) on flat-ish ground, below push speed
         if (ridden && push > 0.3f && n.y > 0.9f && kickT <= 0f && s > -0.6f && s < PushMax)
         {
@@ -615,8 +619,10 @@ public class SkateAI : MonoBehaviour
             o.gas = s < 4.5f ? 1f : 0f;
             if (p.z < -104f) { b.aiPhase = 1; b.aiT = 0f; }
         }
-        else if (b.aiPhase == 1)
+        else if (b.aiPhase == 1 || n.y < 0.95f)
         {
+            // ffu46b: also while rolling out (phase 2) but still on a wall - steering for the exit on a wall turned the board
+            // along the wall, and a 180 out of the coping then landed it sideways (Jimmy's ffu46a bail at spin 175)
             // runs: across the pipe (+x first), drift kept between z -121 and -104
             // keep the board's travel in the pipe's cross-section (x / y) with a small z drift; slow on the flat = head east
             Vector3 v = head * s;
@@ -626,7 +632,7 @@ public class SkateAI : MonoBehaviour
             float zb = p.z < -119f ? 0.22f : p.z > -105f ? -0.22f : (Mathf.Repeat(b.aiT, 20f) < 10f ? -0.06f : 0.06f);
             want = wv + new Vector3(0f, 0f, zb);
             o.gas = 1f;
-            if (b.aiT > b.aiRunSecs && n.y > 0.95f) b.aiPhase = 2;
+            if (b.aiPhase == 1 && b.aiT > b.aiRunSecs && n.y > 0.95f) b.aiPhase = 2;
         }
         else
         {
@@ -653,7 +659,7 @@ public class SkateAI : MonoBehaviour
             float ang = Vector3.SignedAngle(head, hw, n);
             o.move.x = Mathf.Clamp(ang / 22f, -1f, 1f);
         }
-        if (b.aiOllie && b.aiPhase == 0 && n.y > 0.98f && s > 3.5f && Mathf.Repeat(b.aiT, 3f) < dt) o.hop = true;
+        if (b.aiOllie && !b.aiOllied && b.aiPhase == 0 && n.y > 0.98f && s > 2.6f && b.aiT > 0.8f) { o.hop = true; b.aiOllied = true; }
         if (f == null || f.vehicle != b) b.aiRider = null;
         if (Mathf.Abs(s) < 0.2f && o.gas > 0.5f && n.y > 0.9f && b.kickT <= 0f) b.aiStuck += dt; else b.aiStuck = 0f;
         if (b.aiStuck > 4f || b.aiT > b.aiRunSecs + 50f) { b.aiStuck = 0f; b.aiRider = null; if (f != null && f.vehicle == b) f.ExitVehicle(); }

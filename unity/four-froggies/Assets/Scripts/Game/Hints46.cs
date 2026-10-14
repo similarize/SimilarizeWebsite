@@ -102,8 +102,8 @@ public partial class Game
             if (outPart != null) parts.Add(outPart);
         }
         if (BigWheels.Resizable(v)) parts.Add(k == InputKind.Gamepad ? Cap("View + D-pad", k) + " wheel size" : k == InputKind.Keyboard ? Cap("[  ]", k) + " wheel size" : Cap("PHONE", k) + " wheels tab");
-        parts.Add(Cap(MenuKey(k), k) + " all controls");
-        return string.Join("     ", parts.ToArray());
+        parts.Add(Cap(MenuKey(k), k) + " help");
+        return string.Join("   ", parts.ToArray());
     }
 
     // ---------------- top-centre chip + first-time tips ----------------
@@ -189,8 +189,8 @@ public partial class Game
         bool narrow = NarrowHud, keys = tipsKind == InputKind.Keyboard, pad = tipsKind == InputKind.Gamepad;
         string sep = "<color=#7f8a96>   ·   </color>";
         string body;
-        if (pad) body = Cap("L-stick", tipsKind) + " move" + sep + Cap("R-stick", tipsKind) + " look" + sep + Cap("A", tipsKind) + " hop" + (narrow ? "\n" : sep) + Cap("A", tipsKind) + " get in / on (near a vehicle)" + sep + Cap("RT / LT", tipsKind) + " gas / brake\n" + Cap("LB", tipsKind) + " robot phone" + sep + Cap("Start", tipsKind) + " help + every control";
-        else if (keys) body = Cap("W A S D", tipsKind) + " move" + sep + Cap("Mouse", tipsKind) + " look (click to lock)" + (narrow ? "\n" : sep) + Cap("Space", tipsKind) + " hop" + sep + Cap("E", tipsKind) + " get in / on (near a vehicle)\n" + Cap("P", tipsKind) + " robot phone" + sep + Cap("H", tipsKind) + " help + every control";
+        if (pad) body = Cap("L-stick", tipsKind) + " move" + sep + Cap("R-stick", tipsKind) + " look" + sep + Cap("A", tipsKind) + " hop" + (narrow ? "\n" : sep) + Cap("A", tipsKind) + " get in / on" + sep + Cap("RT / LT", tipsKind) + " gas / brake\n" + Cap("LB", tipsKind) + " robot phone" + sep + Cap("Start", tipsKind) + " help + every control";
+        else if (keys) body = Cap("W A S D", tipsKind) + " move" + sep + Cap("Mouse", tipsKind) + " look (click to lock)" + (narrow ? "\n" : sep) + Cap("Space", tipsKind) + " hop" + sep + Cap("E", tipsKind) + " get in / on\n" + Cap("P", tipsKind) + " robot phone" + sep + Cap("H", tipsKind) + " help + every control";
         else body = Cap("Left stick", tipsKind) + " move" + sep + Cap("drag", tipsKind) + " look" + (narrow ? "\n" : sep) + Cap("A", tipsKind) + " hop / get in" + sep + Cap("PHONE", tipsKind) + " robots\n" + Cap("MENU", tipsKind) + " (top) help + every control";
         if (tipsBody.text != body) tipsBody.text = body;
         tipsFoot.text = "Turn hints off: " + MenuKey(tipsKind) + "  ›  SETTINGS  ›  HINTS";

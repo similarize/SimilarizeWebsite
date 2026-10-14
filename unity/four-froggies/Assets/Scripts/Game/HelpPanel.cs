@@ -485,7 +485,7 @@ public partial class Game
         hpWheelHint.color = on ? new Color(0.8f, 0.84f, 0.9f) : new Color(1f, 0.8f, 0.45f);
         string snd = "SOUND  <color=#8cff70>" + Sfx.LevelName + "</color>   " + (kind == InputKind.Gamepad ? G("Y") + " cycles" : kind == InputKind.Touch ? "SND button cycles" : "M cycles") + " on / low / off";
         if (hpSound.text != snd) hpSound.text = snd;
-        string hn = "HINTS  " + (HintsOn ? "<color=#8cff70>On</color>" : "<color=#ff8a70>Off</color>") + "   " + (kind == InputKind.Gamepad ? G("X") + " toggles" : kind == InputKind.Touch ? "tap to toggle" : "N or click toggles") + "  ·  tips + control prompts";
+        string hn = "HINTS  " + (HintsOn ? "<color=#8cff70>On</color>" : "<color=#ff8a70>Off</color>") + "   " + (kind == InputKind.Gamepad ? G("X") + " toggles" : kind == InputKind.Touch ? "tap to toggle" : "N / click toggles");
         if (hpHints.text != hn) hpHints.text = hn;
     }
 
