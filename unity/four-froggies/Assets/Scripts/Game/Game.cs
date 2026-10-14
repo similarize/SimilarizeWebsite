@@ -1314,7 +1314,7 @@ public partial class Game : MonoBehaviour
             if (wheelDrag && Kb.MouseLeft()) { held = true; hp = mp; }
         }
         foreach (Vector2 tp in Kb.TouchesBegan()) if (OnWheelBar(tp)) { wheelDrag = true; held = true; hp = tp; }
-        if (!held && wheelDrag && Kb.TouchCount() > 0) { try { var t = Input.GetTouch(0); hp = t.position; held = t.phase != TouchPhase.Ended && t.phase != TouchPhase.Canceled; } catch { } }
+        if (!held && wheelDrag && Kb.TouchCount() > 0) { try { var t = Input.GetTouch(0); hp = t.position; held = t.phase != UnityEngine.TouchPhase.Ended && t.phase != UnityEngine.TouchPhase.Canceled; } catch { } }
         if (held)
         {
             Vector2 lp;
