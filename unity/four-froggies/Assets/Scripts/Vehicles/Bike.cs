@@ -251,7 +251,7 @@ public class Bike : Vehicle
         }
 
         Vector3 up = transform.up;
-        int g = 0; Vector3 ns = Vector3.zero;
+        int g = 0; Vector3 ns = Vector3.zero; onStuntB = false;
         foreach (var w in new[] { fw, rw })
         {
             Vector3 o = transform.TransformPoint(w.mount);
@@ -271,14 +271,18 @@ public class Bike : Vehicle
                 if (comp > wr * 0.88f) f += spring * 6f * (comp - wr * 0.88f);
                 if (f > 0f) rb.AddForceAtPosition(up * f, o);
                 g++; ns += h.normal;
+                if (RallyTrack.IsStunt(h.collider.gameObject.layer)) onStuntB = true;
             }
             else { w.grounded = false; w.dist = Mathf.MoveTowards(w.dist, len, dt * 2.5f); }
         }
         airborne = g == 0;
         if (airborne) airT += dt; else { if (airT > 0.35f) { lastAir = airT; if (airT > 0.6f && driver != null && driver.human) driver.Toast("AIR TIME " + airT.ToString("0.0") + " s!", 1.2f); } airT = 0f; }
         Vector3 n = g > 0 ? ns.normalized : Vector3.up;
-        // body upright about its long axis (the model leans instead)
-        Vector3 tilt = Vector3.Project(Vector3.Cross(up, Vector3.up), transform.forward);
+        // body upright about its long axis (the model leans instead); ffu43: on a stunt wall "upright" = the surface normal,
+        // and the bike sticks to it while it has speed
+        Vector3 upRef = onStuntB && g > 0 ? n : Vector3.up;
+        if (onStuntB && g > 0) rb.AddForce(-n * 14f * Mathf.Clamp01((1f - n.y) / 0.6f) * Mathf.Clamp01((v.magnitude - 4f) / 5f), ForceMode.Acceleration);
+        Vector3 tilt = Vector3.Project(Vector3.Cross(up, upRef), transform.forward);
         float rollRate = Vector3.Dot(rb.angularVelocity, transform.forward);
         rb.AddTorque(tilt * 60f - transform.forward * rollRate * 9f, ForceMode.Acceleration);
 
@@ -332,7 +336,7 @@ public class Bike : Vehicle
             rb.AddTorque(transform.right * ip.move.y * 7f + transform.up * steer * 3.5f, ForceMode.Acceleration);
         }
         // crashes: on its back / standing on its nose for a moment, or a hard landing far off level -> soft crash
-        if (up.y < 0.2f) flipT += dt; else flipT = 0f;
+        if (up.y < 0.2f && !(onStuntB && v.magnitude > 5f)) flipT += dt; else flipT = 0f;   // ffu43: not while riding a wall
         if (flipT > 0.35f) { flipT = 0f; Crash("Wipeout! "); }
         // lean the model into the turn (lean from speed x yaw rate), a little extra with the stick at low speed
         float yawRate = YawRate(rb, transform);
@@ -390,6 +394,7 @@ public class Bike : Vehicle
         rb.WakeUp();
     }
     float swingLen0;
+    bool onStuntB;
     bool move3 { get { return rb != null && rb.isKinematic; } }   // ffu31 ramp ride / bay: kinematic cargo keeps stock wheels
 
     void Update()

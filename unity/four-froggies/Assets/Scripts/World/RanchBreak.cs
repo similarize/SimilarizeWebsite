@@ -280,7 +280,7 @@ public static class RanchBreak
         {
             Mesh m = mf.sharedMesh;
             if (m == null || !m.isReadable || m.subMeshCount > 1) continue;
-            bool stunt = mf.gameObject.layer == RallyTrack.StuntLayer;
+            bool stunt = RallyTrack.IsStunt(mf.gameObject.layer);   // ffu43: + the loop surface layer
             float cx = stunt ? 7f : 22f, cy = stunt ? 7f : 5f;
             Vector3[] v = m.vertices;
             int[] tr = m.triangles;

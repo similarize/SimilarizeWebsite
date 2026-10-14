@@ -536,6 +536,7 @@ public static class Ranch
             if ((new Vector2(x, z) - StorySet.PadXZ).sqrMagnitude < 20f * 20f) { r.NextDouble(); continue; }   // ffu22: keep the story launch pad clear
             if (JetLayout.Reserved(x, z)) { r.NextDouble(); continue; }   // ffu33: James's hangar + runway (same draws, every other tree keeps its place)
             if (RcTrack.Reserved(x, z)) { r.NextDouble(); continue; }   // ffu30: RC raceway + bike jump line
+            if (MonsterPark.Reserved(x, z)) { r.NextDouble(); continue; }   // ffu43 Monster Park
             // ffu21: each tree is its own breakable (and climbable) piece
             Transform tg = RanchBreak.Group("Tree", new Vector3(x, gy - 0.15f, z));
             p.SpawnAll(tg, Vector3.zero, s, Color.white, (float)r.NextDouble() * 360f);
@@ -562,6 +563,7 @@ public static class Ranch
                 if (Worlds.StageEOn && RanchLife.Reserved(x, z)) continue;
                 if (JetLayout.Reserved(x, z)) { r.NextDouble(); r.NextDouble(); continue; }   // ffu33
                 if (RcTrack.Reserved(x, z)) continue;   // ffu30
+                if (MonsterPark.Reserved(x, z)) continue;   // ffu43
                 bush.SpawnAll(root, new Vector3(x, GY(x, z) - 0.1f, z), 0.8f + (float)r.NextDouble() * 0.7f, Color.white, (float)r.NextDouble() * 360f);
                 n++;
             }
@@ -571,6 +573,7 @@ public static class Ranch
             float x = (float)(r.NextDouble() * 2 - 1) * 170f, z = (float)(r.NextDouble() * 2 - 1) * 170f;
             if (Layout.Flatness(x, z) < 0.5f || Layout.PondQ(x, z) < 1.2f) continue;
             if (RcTrack.Reserved(x, z)) { r.NextDouble(); r.NextDouble(); continue; }   // ffu30
+            if (MonsterPark.Reserved(x, z)) { r.NextDouble(); r.NextDouble(); continue; }   // ffu43
             float s = 0.35f + (float)r.NextDouble() * 0.6f;
             LBPack p = LBPack.Get(rocks[i % 2]);
             if (p == null) continue;

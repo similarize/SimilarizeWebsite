@@ -34,7 +34,7 @@ public partial class Game
         }
         if (best == null) { Debug.Log("FFDEMO loopdrive: no free Cybertruck"); return; }
         best.enabled = true;
-        Vector3 p = RallyTrack.LinkJoin + new Vector3(2f, 0.9f, 0f);
+        Vector3 p = new Vector3(Layout.ApproachX + 2f, RallyTrack.LinkJoin.y + 0.9f, Layout.LoopC.y);   // ffu43: the approach now starts at ApproachX
         Quaternion q = Quaternion.LookRotation(Vector3.right, Vector3.up);
         best.rb.isKinematic = false; best.rb.angularVelocity = Vector3.zero;
         best.rb.position = p; best.rb.rotation = q; best.transform.SetPositionAndRotation(p, q);
@@ -129,6 +129,7 @@ public partial class Game
             case "lj-in-chase": pos = jin + new Vector3(-14f, 2.6f, 0f); look = jin + new Vector3(6f, 2.6f, 0f); break;
             case "lj-out-side": pos = jout + new Vector3(-2f, 3f, 17f); look = jout + new Vector3(-2f, 3.2f, 0f); break;
             case "lj-out-chase": pos = jout + new Vector3(14f, 2.6f, 0f); look = jout + new Vector3(-6f, 2.6f, 0f); break;
+            case "lj-turn": pos = new Vector3(-72f, RallyTrack.LinkJoin.y + 34f, 108f); look = new Vector3(-98f, RallyTrack.LinkJoin.y, 74f); break;   // ffu43 overhead of the entry U-turn
             case "lj-link": pos = lj + new Vector3(-4f, 4f, 10f); look = lj + new Vector3(4f, 0.3f, -1f); break;
             case "lj-fork":
                 {

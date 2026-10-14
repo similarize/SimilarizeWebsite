@@ -8,6 +8,11 @@ using UnityEngine;
 public static class RallyTrack
 {
     public const int TrackLayer = 12, StuntLayer = 13;
+    // ffu43: the loop's driving surface sits on its own layer that vehicle BODIES ignore (wheel rays / sphere casts still
+    // see it). ffu19 probes: the 5.7 m body box touched the R 8 m surface ahead under load on both vertical sides and
+    // stopped the truck dead (16 -> 4 m/s in 0.26 s). The springs carry the vehicle; a bump stop keeps them from bottoming.
+    public const int LoopSurfLayer = 24;
+    public static bool IsStunt(int layer) { return layer == StuntLayer || layer == LoopSurfLayer; }
     public static readonly List<Bounds> LoopZones = new List<Bounds>();
     // ffu19: ?loopold=1 builds the ffu18 loop (separate runways + circle + links, banked west lobe) for before/after shots
     public static bool Legacy;
@@ -61,6 +66,12 @@ public static class RallyTrack
         berm = Mats.Lit(new Color(0.42f, 0.33f, 0.22f));
         string url = FFPlatform.PageUrl;
         Legacy = url.Contains("loopold=1");
+        if (!Legacy)
+        {
+            Physics.IgnoreLayerCollision(Vehicle.VehicleLayer, LoopSurfLayer, true);
+            Physics.IgnoreLayerCollision(Trailer.TrailerLayer, LoopSurfLayer, true);
+            berm = TexMat(tex, new Color(0.74f, 0.64f, 0.52f));   // ffu43: textured berms (the flat dark berm read as a dark wedge at the merge)
+        }
         if (Legacy)
         {
             Figure8(staticRoot);
@@ -123,7 +134,9 @@ public static class RallyTrack
         if (Legacy) return 1f;
         t = Mathf.Atan2(Mathf.Sin(t), Mathf.Cos(t));
         if (t > 0f) return 1f;
-        return Mathf.Max(1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((t + 3.0f) / 0.7f)), Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((t + 0.9f) / 0.3f)));
+        // ffu43: half bank (~10 deg) instead of flat between the forks; the branch rows still blend onto the banked plane
+        float flat = Mathf.Max(1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((t + 3.0f) / 0.7f)), Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((t + 0.9f) / 0.3f)));
+        return Mathf.Lerp(0.5f, 1f, flat);
     }
 
     static void Figure8(Transform staticRoot)
@@ -292,10 +305,10 @@ public static class RallyTrack
 
     static void LoopLinks(Transform staticRoot)
     {
-        Link("Loop link in", Layout.LoopEntryPath, Layout.EntryT, true);
+        Link("Loop link in", Layout.LegacyEntryPath(), Layout.EntryT, true);
         Link("Loop link out", LegacyExitPath(), Layout.ExitT, false);
         // signs at the branch + merge
-        Vector2 b = Layout.LoopEntryPath[8];
+        Vector2 b = Layout.LegacyEntryPath()[8];
         Ranch.Sign(new Vector3(b.x + 4f, Gy(b.x, b.y) + 3.2f, b.y + 9f), 225f, "LOOP  >\n<size=26>this way</size>", new Color(0.7f, 0.1f, 0.1f), 6f, 2.4f);
     }
 
@@ -555,15 +568,54 @@ public static class RallyTrack
                 float bl = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((br[i].kT - 0.55f) / 0.45f));
                 if (bl > 0f) br[i].p.y = Mathf.Lerp(br[i].p.y, TrackYAt(br[i].p), bl);
             }
+        // ffu43: banked + widened links. Signed plan curvature (smoothed over +-3 m; the U-turn is clothoid-eased, so the
+        // bank eases in with it): bank = 220 deg x curvature (m^-1), max 16 deg, faded out near the forks (kT); the lane
+        // widens by up to 4 m in the turns (11 m in the U-turn: inner edge radius ~5 m, nothing folds); the centre lifts
+        // so the inner edge stays on the ground.
+        var kap = new float[m];
+        for (int i = 0; i < m; i++)
+        {
+            if (br[i].sec == 1) continue;
+            int i0 = Mathf.Max(0, i - 2), i1 = Mathf.Min(m - 1, i + 2);
+            if (br[i0].sec == 1 || br[i1].sec == 1) continue;
+            Vector3 a0 = br[i0].p, a1 = br[i].p, a2 = br[i1].p; a0.y = a1.y = a2.y = 0f;
+            Vector3 u0 = (a1 - a0).normalized, u1 = (a2 - a1).normalized;
+            float ds = Mathf.Max(0.05f, ((a1 - a0).magnitude + (a2 - a1).magnitude) * 0.5f);
+            kap[i] = -Vector3.Cross(u0, u1).y / ds;   // + = left turn (Unity: y up, left-handed)
+        }
+        var kS = new float[m];
+        for (int i = 0; i < m; i++)
+        {
+            float sum = 0f; int cnt = 0;
+            for (int j = i - 6; j <= i + 6; j++) if (j >= 0 && j < m && br[j].sec == br[i].sec) { sum += kap[j]; cnt++; }
+            kS[i] = br[i].sec == 1 ? 0f : sum / Mathf.Max(1, cnt);
+        }
+        var bankA = new float[m]; var widen = new float[m];
+        float maxBank = 0f;
+        for (int i = 0; i < m; i++)
+        {
+            if (br[i].sec == 1) continue;
+            float fade = 1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((br[i].kT - 0.2f) / 0.35f));
+            bankA[i] = Mathf.Clamp(kS[i] * 220f, -16f, 16f) * fade;
+            widen[i] = 4f * Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(Mathf.Abs(kS[i]) / 0.07f)) * fade;
+            maxBank = Mathf.Max(maxBank, Mathf.Abs(bankA[i]));
+        }
         float arc = 0f;
         for (int i = 0; i < m; i++)
         {
             Vector3 a = br[Mathf.Max(0, i - 1)].p, b = br[Mathf.Min(m - 1, i + 1)].p;
             Vector3 fw = (b - a).normalized;
             Vector3 up = br[i].sec == 1 ? br[i].up : Vector3.up;
+            if (br[i].sec != 1 && Mathf.Abs(bankA[i]) > 0.01f)
+            {
+                // left turn: the surface tilts toward the centre (left) - the right / outer edge rises
+                Vector3 rf0 = Vector3.Cross(Vector3.up, new Vector3(fw.x, 0f, fw.z).normalized).normalized;
+                up = (Vector3.up - rf0 * Mathf.Tan(bankA[i] * Mathf.Deg2Rad)).normalized;
+            }
             Vector3 r = Vector3.Cross(up, fw).normalized;
             br[i].fwd = fw; br[i].right = r; br[i].up = Vector3.Cross(fw, r).normalized;
-            br[i].hw = W * 0.5f + (Layout.TrackW * 0.5f - W * 0.5f) * Mathf.SmoothStep(0f, 1f, br[i].kT);
+            br[i].hw = W * 0.5f + (Layout.TrackW * 0.5f - W * 0.5f) * Mathf.SmoothStep(0f, 1f, br[i].kT) + widen[i] * 0.5f;
+            if (br[i].sec != 1) br[i].p.y += Mathf.Abs(Mathf.Sin(bankA[i] * Mathf.Deg2Rad)) * br[i].hw;   // inner edge stays down
             if (i > 0) arc += (br[i].p - br[i - 1].p).magnitude;
             br[i].arc = arc;
         }
@@ -585,7 +637,8 @@ public static class RallyTrack
             else rows[i] = new BRow { L = L, R = R, ok = true };
         }
         JointIn = br[loopA].p; JointOut = br[loopB].p;
-        LinkJoin = new Vector3(c.x - Layout.LoopRun - 6f, brBaseY, c.y);
+        LinkJoin = new Vector3(c.x - Layout.LoopRun - 6f, brBaseY, c.y);   // (demo cameras: same world spot as before ffu43)
+        Debug.Log("RallyTrack: ffu43 entry U-turn R " + Layout.UTurnR.ToString("0.0") + " m, links banked up to " + maxBank.ToString("0.0") + " deg, lane up to " + (W + 4f).ToString("0") + " m");
         Debug.Log("RallyTrack: loop branch " + m + " frames, " + arc.ToString("0") + " m, loop " + S.ToString("0.0") + " m (top R " + Layout.LoopTopR + ", ease " + Lt + " m), height " + top.z.ToString("0.0") + " m, x " + Xs.ToString("0.0") + ".." + Xe.ToString("0.0"));
     }
 
@@ -635,7 +688,7 @@ public static class RallyTrack
         // --- driving surface: Track layer on the links/straights, Stunt layer on the loop; they share the boundary rows
         // and their normals come from the frame, so the split is invisible
         SurfaceMesh("Loop branch in", 0, loopA, TrackLayer);
-        SurfaceMesh("Loop", loopA, loopB, StuntLayer);
+        SurfaceMesh("Loop", loopA, loopB, LoopSurfLayer);   // ffu43: bodies ignore it (wheels see it)
         SurfaceMesh("Loop branch out", loopB, m - 1, TrackLayer);
 
         // --- skirts: berm slopes to the ground on the flat, closing into a 0.45 m thick shell once the road leaves the ground
@@ -735,10 +788,16 @@ public static class RallyTrack
         var zone = new Bounds(new Vector3(c.x, cy, c.y + Layout.LoopShift * 0.5f), new Vector3(hx * 2f, hy * 2f, Layout.LoopShift + Layout.LoopW + 4f));
         LoopZones.Add(zone);
 
-        float gy0 = Gy(c.x - Layout.LoopRun - 4f, c.y);
-        Ranch.Sign(new Vector3(c.x - Layout.LoopRun - 4f, gy0 + 3f, c.y - hw - 2.6f), 270f, "LOOP!\n<size=26>full throttle</size>", new Color(0.7f, 0.1f, 0.1f), 6f, 2.4f);
-        Vector2 b = Layout.LoopEntryPath[8];
-        Ranch.Sign(new Vector3(b.x + 4f, Gy(b.x, b.y) + 3.2f, b.y + 9f), 225f, "LOOP  >\n<size=26>this way</size>", new Color(0.7f, 0.1f, 0.1f), 6f, 2.4f);
+        // ffu43: signs for both directions (the loop goes either way): approach (eastbound) + exit lane (westbound), the
+        // fork (+t) and the merge (-t, coming down off the bridge)
+        float sx = Layout.ApproachX + 3f, gy0 = Gy(sx, c.y);
+        Ranch.Sign(new Vector3(sx, gy0 + 3f, c.y - hw - 5f), 270f, "LOOP!\n<size=26>full throttle</size>", new Color(0.7f, 0.1f, 0.1f), 6f, 2.4f);
+        float sx2 = c.x + Layout.ExitBendX - 4f;
+        Ranch.Sign(new Vector3(sx2, Gy(sx2, c.y + Layout.LoopShift) + 3f, c.y + Layout.LoopShift + hw + 3.5f), 90f, "LOOP!\n<size=26>either way - full throttle</size>", new Color(0.7f, 0.1f, 0.1f), 6f, 2.4f);
+        Vector2 b = Layout.LoopEntryPath[10];
+        Ranch.Sign(new Vector3(b.x + 6f, Gy(b.x, b.y) + 3.2f, b.y + 9f), 225f, "LOOP  >\n<size=26>this way</size>", new Color(0.7f, 0.1f, 0.1f), 6f, 2.4f);
+        Vector2[] ex = Layout.LoopExitPath; Vector2 e = ex[ex.Length - 8];
+        Ranch.Sign(new Vector3(e.x + 2f, Gy(e.x, e.y) + 3.2f, e.y + 10f), 120f, "<  LOOP\n<size=26>this way too</size>", new Color(0.7f, 0.1f, 0.1f), 6f, 2.4f);
         Debug.Log("RallyTrack: loop branch built (surface " + (loopA + 1) + "+" + (loopB - loopA) + "+" + (m - loopB) + " rows, curbs " + (ct[0].Count + ct[1].Count) / 3 + " tris, rails " + (rt[0].Count + rt[1].Count) / 3 + " tris)");
     }
 
@@ -805,7 +864,9 @@ public static class RallyTrack
 
     // ffu19: nearest loop-section frame (GroundVehicle steers the truck along the lane through the sideways shift;
     // the loopdrive demo pilot uses BranchNearest over the whole branch)
-    public static bool LoopGuide(Vector3 pos, out Vector3 tangent, out float lateral)
+    public static bool LoopGuide(Vector3 pos, out Vector3 tangent, out float lateral) { return LoopGuide(pos, Vector3.zero, out tangent, out lateral); }
+    // ffu43: dir = the vehicle's heading; driving the loop backwards (from the exit lane) flips the tangent + lateral
+    public static bool LoopGuide(Vector3 pos, Vector3 dir, out Vector3 tangent, out float lateral)
     {
         tangent = Vector3.forward; lateral = 0f;
         if (Legacy || br == null) return false;
@@ -813,6 +874,7 @@ public static class RallyTrack
         for (int i = loopA; i <= loopB; i++) { float d = (br[i].p - pos).sqrMagnitude; if (d < bd) { bd = d; bi = i; } }
         if (bi < 0) return false;
         tangent = br[bi].fwd; lateral = Vector3.Dot(pos - br[bi].p, br[bi].right);
+        if (Vector3.Dot(dir, tangent) < 0f) { tangent = -tangent; lateral = -lateral; }
         return true;
     }
 

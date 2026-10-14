@@ -50,6 +50,7 @@ public static class Layout
     // t = EntryT, swings round (south-west) into the loop runway, goes through the loop, and the exit link merges back
     // into the figure-eight at t = ExitT (just before the bridge ramp starts).
     public const float EntryT = -2.0f, ExitT = -0.95f;
+    public const float ExitBendX = 10f;   // ffu43: loop exit straight ends at LoopC.x + 10 (was LoopRun = 34)
     static Vector2[] entryPath, exitPath;
     static Vector2 T2(float t) { Vector3 p = TrackPoint(t); return new Vector2(p.x, p.z); }
     public static Vector2 TrackDir(float t) { return (T2(t + 0.002f) - T2(t)).normalized; }
@@ -61,6 +62,14 @@ public static class Layout
             o.Add(v * v * v * a + 3f * v * v * u * b + 3f * v * u * u * c + u * u * u * d);
         }
     }
+    // ffu43 (Bill: "improve the turn that goes into the loop ... a bank there"): the ffu14 entry link ran a 160 deg hairpin
+    // in ~18 m (1.9 m minimum radius < the lane's half width -> the inner curb folded over itself). Now: a gentle 55 deg
+    // right sweep from the fork (min R ~55 m) to a westbound straight at z = LoopC.y + UTurnD, then a 180 deg LEFT U-turn
+    // built from clothoids (curvature eased 0 -> 1/R over UTurnEase x R, arc, eased back) that ends heading east on the
+    // approach straight at x = ApproachX. RallyTrack.BranchFrames banks it (up to 16 deg) and widens it (lane 11 m).
+    // The U-turn stays clear of the pasture fence corner (-114, 86) and the stock trailer (-101, 102).
+    public const float ApproachX = -94f, UTurnD = 22f, UTurnEase = 0.6f;   // R ~10.8 m, centreline 9.2 m from the fence corner
+    public static float UTurnR;   // set by the path builder (m)
     public static Vector2[] LoopEntryPath
     {
         get
@@ -68,12 +77,43 @@ public static class Layout
             if (entryPath != null) return entryPath;
             var o = new System.Collections.Generic.List<Vector2>();
             Vector2 q0 = T2(EntryT), d0 = TrackDir(EntryT);
-            Vector2 q1 = new Vector2(-100f, 79f), d1 = new Vector2(-0.94f, -0.34f).normalized;
-            Vector2 q2 = LoopC + new Vector2(-LoopRun - 6f, 0f), d2 = Vector2.right;
-            Bez(o, q0, q0 + d0 * 26f, q1 - d1 * 26f, q1, 60);
-            Bez(o, q1, q1 + d1 * 13f, q2 - d2 * 13f, q2, 34);
+            Vector2 A = new Vector2(ApproachX, LoopC.y + UTurnD), dA = Vector2.left;
+            Bez(o, q0, q0 + d0 * 30f, A - dA * 30f, A, 80);
+            // clothoid U-turn: integrate a unit shape (R = 1), then scale it so its sideways drop is exactly UTurnD
+            float le = UTurnEase, la = Mathf.PI - le;   // each clothoid turns le / 2 rad (R = 1)
+            float S = 2f * le + la;
+            System.Func<float, float> K = u => u < le ? u / le : (u < le + la ? 1f : Mathf.Max(0f, (S - u) / le));
+            var pts = new System.Collections.Generic.List<Vector2> { Vector2.zero };
+            int n = 400; float h = S / n, x = 0f, z = 0f, th = Mathf.PI;   // heading west
+            for (int i = 0; i < n; i++)
+            {
+                float u0 = i * h;
+                float thm = th + (K(u0) + K(u0 + h * 0.5f)) * 0.25f * h;
+                x += Mathf.Cos(thm) * h; z += Mathf.Sin(thm) * h;
+                th += (K(u0) + 4f * K(u0 + h * 0.5f) + K(u0 + h)) / 6f * h;   // left turn: heading angle grows (CCW in x-z)
+                pts.Add(new Vector2(x, z));
+            }
+            // heading angle from +x toward +z: west (pi) -> south (-z, 3pi/2) -> east (2pi); the driver's left is -z here
+            float drop = Mathf.Abs(pts[n].y);
+            UTurnR = UTurnD / Mathf.Max(0.01f, drop);
+            for (int i = 4; i <= n; i += 4) o.Add(A + pts[i] * UTurnR);
+            // tiny closing correction: the U-turn ends at (ApproachX, LoopC.y) heading east (symmetric turn: dx ~ 0)
+            Vector2 err = new Vector2(ApproachX, LoopC.y) - o[o.Count - 1];
+            int m0 = o.Count - n / 4;
+            for (int i = m0; i < o.Count; i++) o[i] += err * ((i - m0 + 1f) / (o.Count - m0));
             return entryPath = o.ToArray();
         }
+    }
+    // the ffu14..ffu42 entry link (legacy ?loopold=1 build only)
+    public static Vector2[] LegacyEntryPath()
+    {
+        var o = new System.Collections.Generic.List<Vector2>();
+        Vector2 q0 = T2(EntryT), d0 = TrackDir(EntryT);
+        Vector2 q1 = new Vector2(-100f, 79f), d1 = new Vector2(-0.94f, -0.34f).normalized;
+        Vector2 q2 = LoopC + new Vector2(-LoopRun - 6f, 0f), d2 = Vector2.right;
+        Bez(o, q0, q0 + d0 * 26f, q1 - d1 * 26f, q1, 60);
+        Bez(o, q1, q1 + d1 * 13f, q2 - d2 * 13f, q2, 34);
+        return o.ToArray();
     }
     public static Vector2[] LoopExitPath
     {
@@ -81,8 +121,10 @@ public static class Layout
         {
             if (exitPath != null) return exitPath;
             var o = new System.Collections.Generic.List<Vector2>();
-            Vector2 p0 = LoopC + new Vector2(LoopRun, LoopShift), p3 = T2(ExitT), d3 = TrackDir(ExitT);
-            Bez(o, p0, p0 + Vector2.right * 7f, p3 - d3 * 7f, p3, 24);
+            // ffu43: the merge S-bend starts 10 m earlier with 18 m handles (min R ~15 m, was 4.1 m) so it can be banked and
+            // driven both ways
+            Vector2 p0 = LoopC + new Vector2(ExitBendX, LoopShift), p3 = T2(ExitT), d3 = TrackDir(ExitT);
+            Bez(o, p0, p0 + Vector2.right * 18f, p3 - d3 * 18f, p3, 48);
             return exitPath = o.ToArray();
         }
     }
@@ -179,6 +221,7 @@ public static class Layout
         d = Mathf.Min(d, RoadDist(x, z) - TrackW * 0.5f - 6f);
         d = Mathf.Min(d, RectDist(x, z, LoopC + new Vector2(-6f, LoopShift * 0.5f), new Vector2(LoopRun * 2f + 24f, LoopShift + LoopW + 14f)));
         d = Mathf.Min(d, RectDist(x, z, new Vector2(TrackC.x, TrackC.y), new Vector2(TrackAx * 2f + 20f, TrackAz * 2f + 24f)) );
+        d = Mathf.Min(d, MonsterPark.FlatDist(x, z));   // ffu43 Monster Park: flat arena
         return Mathf.Clamp01(d / 18f);
     }
 

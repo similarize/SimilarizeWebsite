@@ -212,6 +212,7 @@ public abstract class Vehicle : MonoBehaviour
         {
             bool loop = false;
             foreach (Bounds b in RallyTrack.LoopZones) if (b.Contains(rb.position)) loop = true;
+            if (!loop && MonsterPark.OnWall(rb.position)) loop = true;   // ffu43: riding the wall of death / half-pipe
             if (!loop && Vector3.Dot(transform.up, Vector3.up) < 0.35f && rb.velocity.magnitude < 3f) flipT += Time.fixedDeltaTime;
             else flipT = 0f;
             if (flipT > 1.6f)

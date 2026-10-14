@@ -116,12 +116,13 @@ public class GroundVehicle : Vehicle
                 float vUp = Vector3.Dot(rb.GetPointVelocity(origin), up);
                 float f = spring * sm * comp - damper * dm * vUp;
                 if (walker && comp > rest * 0.85f) f += spring * 5f * (comp - rest * 0.85f);   // ffu28 bump stop
+                else if (loopLoaded && comp > wr * 0.85f) f += spring * 4f * (comp - wr * 0.85f);   // ffu43: the loop surface no longer holds the body - springs must not bottom out
                 if (f < 0f) f = 0f;
                 rb.AddForceAtPosition(up * f * ws, origin);
                 groundedCount++;
                 nsum += hit.normal;
                 int hl = hit.collider.gameObject.layer;
-                if (hl == RallyTrack.StuntLayer) onStunt = true;
+                if (RallyTrack.IsStunt(hl)) onStunt = true;
                 else if (hl == RallyTrack.TrackLayer) onTrack = true;
             }
             else
@@ -166,7 +167,7 @@ public class GroundVehicle : Vehicle
                 if (!RallyTrack.Legacy && lfs > 19f) rb.AddForce(-lf * Mathf.Min(8f, (lfs - 19f) * 1.5f), ForceMode.Acceleration);
                 // ffu19: keep the truck on the lane while the loop shifts sideways (yaw toward the lane + gentle centring)
                 Vector3 gt; float glat;
-                if (driven && lfs > 2f && RallyTrack.LoopGuide(rb.position, out gt, out glat))
+                if (driven && lfs > 2f && RallyTrack.LoopGuide(rb.position, lf, out gt, out glat))   // ffu43: either direction
                 {
                     Vector3 tn = Vector3.ProjectOnPlane(gt, groundNormal).normalized;
                     float ang = Vector3.SignedAngle(lf, tn, groundNormal) * Mathf.Deg2Rad;
@@ -182,6 +183,14 @@ public class GroundVehicle : Vehicle
             }
         }
         else if (onTrack && groundedCount > 0) rb.AddForce(-groundNormal * 4f, ForceMode.Acceleration);
+        else if (onStunt && groundedCount > 0)
+        {
+            // ffu43 Monster Park stunt surfaces (wall of death, half-pipe): stick to the surface while there is speed, scaled
+            // by how steep it is; slow down and gravity wins (you slide / fall off). Lateral tyre grip below holds the wall.
+            float spd = rb.velocity.magnitude;
+            float steep = Mathf.Clamp01((1f - groundNormal.y) / 0.6f);
+            rb.AddForce(-groundNormal * 14f * steep * Mathf.Clamp01((spd - 4f) / 5f), ForceMode.Acceleration);
+        }
         loopLoaded = inLoop && onStunt && groundedCount > 0;
 
         if (groundedCount > 0 && ws > 0f)
