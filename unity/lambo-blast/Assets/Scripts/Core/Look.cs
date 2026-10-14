@@ -82,7 +82,7 @@ public static class Look
     static Texture skyBase;
     public static int Theme;
     // sky exposure / rotation per theme (sun azimuth of each panorama vs the theme's sun light)
-    static readonly float[] SkyExp = { 1f, 0.8f, 0.85f, 0.78f, 0.85f, 0.82f };   // lambo7b: the new panoramas read washed-out at 1.0 under the filmic grade
+    static readonly float[] SkyExp = { 1f, 0.8f, 0.85f, 0.78f, 0.85f, 0.82f };   // lambo7c: sky jpgs also de-haloed (lbgfx2/sky7b/dehalo.py); lambo7b: the new panoramas read washed-out at 1.0 under the filmic grade
     // lambo7b: +180 on the new skies - with the sky sun matched to the sun light the start straights looked straight into a
     // white sun glow (probe A-T1 / A-T3); the panorama sun now sits behind the grid, the sky in view stays blue
     static readonly float[] SkyRot = { 18f, 174f, 256f, 214f, 211f, 124f };   // R = sunAz - (u_sun - 0.25) * 360 (measured, lb-gfx/make_theme_tex.py)
@@ -100,10 +100,10 @@ public static class Look
         float sunI = 1.1f, fogD = 0.0022f, exp = 1f; Vector3 sunE = new Vector3(48f, -38f, 0f);
         switch (th)
         {
-            case 1: sunC = new Color(1f, 0.87f, 0.68f); sunI = 1.15f; sunE = new Vector3(40f, -60f, 0f); sky = new Color(0.5f, 0.48f, 0.52f); eq = new Color(0.58f, 0.46f, 0.36f); gr = new Color(0.5f, 0.32f, 0.22f); fog = new Color(0.86f, 0.72f, 0.58f); fogD = 0.0016f; tint = new Color(0.56f, 0.5f, 0.44f); break;
+            case 1: sunC = new Color(1f, 0.87f, 0.68f); sunI = 1.15f; sunE = new Vector3(40f, -60f, 0f); sky = new Color(0.5f, 0.48f, 0.52f); eq = new Color(0.58f, 0.46f, 0.36f); gr = new Color(0.5f, 0.32f, 0.22f); fog = new Color(0.8f, 0.64f, 0.5f); fogD = 0.0013f; tint = new Color(0.56f, 0.5f, 0.44f); break;
             case 2: sunC = new Color(1f, 0.68f, 0.48f); sunI = 1.2f; sunE = new Vector3(34f, 30f, 0f); sky = new Color(0.46f, 0.36f, 0.36f); eq = new Color(0.52f, 0.36f, 0.28f); gr = new Color(0.6f, 0.28f, 0.1f); fog = new Color(0.42f, 0.28f, 0.22f); fogD = 0.0022f; tint = new Color(0.44f, 0.3f, 0.26f); exp = 0.9f; break;
-            case 3: sunC = new Color(0.96f, 0.97f, 1f); sunI = 1.1f; sunE = new Vector3(36f, -20f, 0f); sky = new Color(0.46f, 0.54f, 0.68f); eq = new Color(0.52f, 0.56f, 0.62f); gr = new Color(0.5f, 0.52f, 0.58f); fog = new Color(0.8f, 0.85f, 0.92f); fogD = 0.0024f; tint = new Color(0.5f, 0.53f, 0.58f); exp = 1.1f; break;
-            case 4: sunC = new Color(1f, 0.95f, 0.8f); sunI = 1.05f; sunE = new Vector3(55f, -70f, 0f); sky = new Color(0.4f, 0.5f, 0.52f); eq = new Color(0.4f, 0.48f, 0.36f); gr = new Color(0.26f, 0.32f, 0.2f); fog = new Color(0.55f, 0.66f, 0.56f); fogD = 0.0032f; tint = new Color(0.46f, 0.52f, 0.46f); break;
+            case 3: sunC = new Color(0.96f, 0.97f, 1f); sunI = 1.1f; sunE = new Vector3(36f, -20f, 0f); sky = new Color(0.46f, 0.54f, 0.68f); eq = new Color(0.52f, 0.56f, 0.62f); gr = new Color(0.5f, 0.52f, 0.58f); fog = new Color(0.68f, 0.77f, 0.9f); fogD = 0.0016f; tint = new Color(0.5f, 0.53f, 0.58f); exp = 1.1f; break;
+            case 4: sunC = new Color(1f, 0.95f, 0.8f); sunI = 1.05f; sunE = new Vector3(55f, -70f, 0f); sky = new Color(0.4f, 0.5f, 0.52f); eq = new Color(0.4f, 0.48f, 0.36f); gr = new Color(0.26f, 0.32f, 0.2f); fog = new Color(0.5f, 0.62f, 0.54f); fogD = 0.0025f; tint = new Color(0.46f, 0.52f, 0.46f); break;
             case 5: sunC = new Color(1f, 0.9f, 0.8f); sunI = 1.1f; sunE = new Vector3(32f, -110f, 0f); sky = new Color(0.44f, 0.5f, 0.64f); eq = new Color(0.5f, 0.5f, 0.52f); gr = new Color(0.35f, 0.35f, 0.38f); fog = new Color(0.72f, 0.78f, 0.88f); fogD = 0.0011f; tint = new Color(0.5f, 0.52f, 0.56f); exp = 1.05f; break;
         }
         if (sun != null) { sun.color = sunC; sun.intensity = sunI; sun.transform.rotation = Quaternion.Euler(sunE); }
