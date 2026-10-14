@@ -18,6 +18,7 @@ public partial class Game
     float m43T, m43PhT, m43Log, m43MinLoopV, m43MaxY, m43WallH, m43Ang, m43Laps, m43LastAng;
     bool m43Top, m43InLoop, m43Done, m43LeftLoop;
     int m43Crush0;
+    float m43Steer; bool m43InBowl;   // ffu43c: last autopilot steer (logged)
     static readonly string[] M43Names = { "loopF", "loopR", "wall", "crusher", "done" };
 
     void Demo43Start(Frog f, string sc)
@@ -57,7 +58,7 @@ public partial class Game
     {
         if (m43Phase >= 0 && m43Phase < 4) M43Summary();
         if (m43Only >= 0 && ph != m43Only) ph = 4;
-        m43Phase = ph; m43PhT = 0f; m43Top = false; m43InLoop = false; m43Done = false; m43LeftLoop = false;
+        m43Phase = ph; m43PhT = 0f; m43Top = false; m43InLoop = false; m43Done = false; m43LeftLoop = false; m43InBowl = false;
         m43MinLoopV = 1e9f; m43MaxY = -1e9f; m43WallH = 0f; m43Laps = 0f; m43LastAng = float.NaN;
         Debug.Log("FFDEMO mtrack phase " + ph + " " + M43Names[ph] + " t=" + m43T.ToString("0.0"));
         Vector3 fw, up;
@@ -123,15 +124,20 @@ public partial class Game
             }
             o.gas = spd < want ? 1f : 0f;
             if (spd > want + 1f) o.brake = Mathf.Clamp01((spd - want) * 0.25f);
-            if (lu.y > 0.9f)
+            // ffu43c: steer everywhere except inside the loop itself (ffu43a/b gated on the surface normal and barely turned
+            // into the banked U-turn); stronger gain, 6 m look-ahead, slow right down when well off the centreline
+            bool inLoopArc = arc > RallyTrack.LoopArcA + 2f && arc < RallyTrack.LoopArcB - 2f;
+            if (!inLoopArc)
             {
-                // steer onto the centreline a few metres ahead
-                Vector3 ap, af, au; float la = arc + (fwd ? 5f : -5f);
+                Vector3 ap, af, au; float la = arc + (fwd ? 6f : -6f);
                 ap = RallyTrack.BranchFrameAt(la, out af, out au);
                 Vector3 to = ap - pos; to.y = 0f;
                 Vector3 hf = c.transform.forward; hf.y = 0f;
                 float ang = Vector3.SignedAngle(hf, to, Vector3.up);
-                o.move.x = Mathf.Clamp(ang / 22f, -1f, 1f);
+                o.move.x = Mathf.Clamp(ang / 12f, -1f, 1f);
+                float off = Vector3.Dot(pos - lp, lr);
+                if (Mathf.Abs(off) > 2.5f && !nearLoop) { o.gas = spd < 5f ? 0.6f : 0f; if (spd > 7f) o.brake = 0.5f; }
+                m43Steer = o.move.x;
             }
             return o;
         }
@@ -145,13 +151,16 @@ public partial class Game
             Vector3 rad = pos - cc; rad.y = 0f;
             float r = Mathf.Max(rad.magnitude, 0.5f);
             float target = MonsterPark.BowlR0 + MonsterPark.BowlCurve - 1.3f;
-            float a0 = Mathf.Atan2(rad.z, rad.x), ahead = (r > target + 3f ? 35f : 50f) * Mathf.Deg2Rad;
+            float a0 = Mathf.Atan2(rad.z, rad.x), ahead = 50f * Mathf.Deg2Rad;
             Vector3 tp = cc + new Vector3(Mathf.Cos(a0 + ahead), 0f, Mathf.Sin(a0 + ahead)) * target;   // +angle = anticlockwise from above
+            // ffu43c: in through the opening to the flat floor first (ffu43b turned early and hung on the opening's side)
+            if (r < MonsterPark.BowlR0 - 1f) m43InBowl = true;
+            if (!m43InBowl) tp = cc;
             Vector3 aim = tp - pos; aim.y = 0f; aim.Normalize();
             Vector3 hf = c.transform.forward; hf.y = 0f;
             float ang = Vector3.SignedAngle(hf, aim, Vector3.up);
             o.move.x = Mathf.Clamp(ang / 20f, -1f, 1f);
-            float wantW = m43Laps < 90f ? 9f : 14f;
+            float wantW = !m43InBowl ? 7f : m43Laps < 90f ? 9f : 14f;
             o.gas = spd < wantW ? 1f : 0.15f;
             if (spd > wantW + 2f) o.brake = 0.3f;
             return o;
@@ -217,7 +226,7 @@ public partial class Game
             m43Log = 0.5f;
             int g = 0; foreach (var w in c.wheels) if (w.grounded) g++;
             Debug.Log("FFDEMO mtrack t=" + m43T.ToString("0.0") + " " + M43Names[m43Phase] + " pos (" + p.x.ToString("0.0") + ", " + p.y.ToString("0.0") + ", " + p.z.ToString("0.0") + ") arc " + arc.ToString("0") +
-                " v " + c.Velocity.magnitude.ToString("0.0") + " wheels " + g + " up " + c.transform.up.y.ToString("0.00") + " k " + c.bigK.ToString("0.00") + (m43Phase == 2 ? " wallH " + (p.y - Ranch.GY(MonsterPark.BowlX, MonsterPark.BowlZ)).ToString("0.0") : "") +
+                " v " + c.Velocity.magnitude.ToString("0.0") + " wheels " + g + " up " + c.transform.up.y.ToString("0.00") + " k " + c.bigK.ToString("0.00") + " st " + m43Steer.ToString("0.00") + (m43Phase == 2 ? " wallH " + (p.y - Ranch.GY(MonsterPark.BowlX, MonsterPark.BowlZ)).ToString("0.0") : "") +
                 (m43Phase == 3 ? " crushed " + (MonsterPark.Crushes - m43Crush0) : "") + " teeter " + MonsterPark.TeeterAngle.ToString("0"));
         }
         return true;
