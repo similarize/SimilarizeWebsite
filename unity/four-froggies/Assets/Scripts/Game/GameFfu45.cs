@@ -9,11 +9,17 @@ using UnityEngine;
 //  ?ffdemo=1&ffshot=wheels45 : per-vehicle wheel size - P1 in the Monster Truck in its garage bay, sets ITS wheels to 4x
 //                               (held at stock inside the garage), drives out north, the tyres grow outside; logs the
 //                               Monster Truck and Dad's Cybertruck (must stay 1x). "FFDEMO wheels45 summary: ..."
+//  ?ffdemo=1&ffshot=berm45   : solid berms - Dad's Cybertruck, then the 2-stroke dirt bike, drive into the loop branch's
+//                               right-hand berm at 35 deg (side camera), then the Cybertruck into the Monster Park tabletop's
+//                               sloped flank. &bermsolid=0 switches the ffu45 berm colliders off (= the ffu44 before shot).
+//                               Logs lateral offset past the road edge, height over the visual berm surface ("sink" > 0 =
+//                               below the drawn berm), the collider under the vehicle; "FFDEMO berm45 summary <run>: ..."
 //  ?ffdemo=1&ffshot=help45   : the redesigned help screen: open on foot (4 s), in James's Cybertruck (10 s, 2x wheels),
 //                               scrolled to the end (20 s). &helpdev=pad|keys|touch forces the listed device.
 public partial class Game
 {
-    static bool Is45(string sc) { return sc == "motos" || sc == "wheels45" || sc == "help45"; }
+    static bool Is45(string sc) { return sc == "motos" || sc == "wheels45" || sc == "help45" || sc == "berm45"; }
+    int d45From = 0, d45To = 5;
     Frog d45F; float d45T, d45PhT, d45Log; int d45Ph = -1, d45Wp; string d45Sc = "";
     Bike d45Bike; Vehicle d45Mt, d45Ct;
     float d45MaxV, d45MaxLean, d45MaxWh, d45MaxAir, d45HopT; int d45Hops0, d45Wh0, d45Cr0; bool d45Pax, d45Out;
@@ -27,6 +33,10 @@ public partial class Game
         var ai = FindObjectOfType<BikeAI>(); if (ai != null) ai.enabled = false;
         if (sc == "motos")
         {
+            // &mfrom=N (1..5) skips the parked shot and starts at bike N, &mto=M ends after bike M (probe length cap)
+            string mf = UrlParam("mfrom"), mt = UrlParam("mto"); int iv;
+            if (mf != null && int.TryParse(mf, out iv)) d45From = Mathf.Clamp(iv, 1, 5);
+            if (mt != null && int.TryParse(mt, out iv)) d45To = Mathf.Clamp(iv, 1, 5);
             int n = 0; foreach (var b in Bike.AllBikes) if (b.type >= 4) n++;
             Debug.Log("FFDEMO motos start: barn " + TrailerBarn.Built + " at " + TrailerBarn.Centre.ToString("0.0") + ", barn bikes " + n);
             foreach (var b in Bike.AllBikes)
@@ -51,6 +61,15 @@ public partial class Game
             BigWheels.SetFor(d45Ct, 1f, "demo", false);
             f.EnterVehicle(d45Mt);
             BigWheels.SetFor(d45Mt, BigWheels.Max, "demo (P1 in the Monster Truck)", false);
+        }
+        else if (sc == "berm45")
+        {
+            foreach (var v in Vehicle.All) if (v != null && v.Title == "Cybertruck") d45Ct = v;
+            foreach (var b in Bike.AllBikes) if (b.type == 0) d45Bike = b;
+            bool solid = UrlParam("bermsolid") != "0";
+            if (!solid) foreach (var g in RallyTrack.Solids) if (g != null) g.SetActive(false);
+            Debug.Log("FFDEMO berm45 start: solid berms " + solid + " (" + RallyTrack.SolidInfo + ") truck " + (d45Ct != null) + " bike " + (d45Bike != null));
+            B45Run(0);
         }
         else
         {
@@ -97,6 +116,7 @@ public partial class Game
 
     PIn Demo45Drive(PIn i)
     {
+        if (d45Sc == "berm45") return B45Drive();
         var o = new PIn();
         if (d45Sc == "wheels45")
         {
@@ -131,17 +151,107 @@ public partial class Game
         return o;
     }
 
+    // ---------------- berm45 ----------------
+    static readonly string[] B45Names = { "truck-berm", "bike-berm", "truck-mound", "done" };
+    Vector3 b45Start, b45Fw, b45Right, b45Edge; float b45Yaw, b45RoadY, b45H0 = -1f, b45MaxOff, b45MaxClimb, b45MaxSink, b45MinUp; int b45Solid, b45Samples; bool b45Stop;
+    Vehicle B45Veh { get { return d45Ph == 1 ? (Vehicle)d45Bike : d45Ct; } }
+    void B45Run(int ph)
+    {
+        if (d45Ph >= 0 && d45Ph <= 2 && d45Sc == "berm45" && d45T > 0.1f)
+            Debug.Log("FFDEMO berm45 summary " + B45Names[d45Ph] + ": max past the edge " + b45MaxOff.ToString("0.0") + " m | max climb over the road " + b45MaxClimb.ToString("0.00") + " m | max sink below the drawn berm " + b45MaxSink.ToString("0.00") +
+                      " m | on a solid berm collider " + b45Solid + "/" + b45Samples + " samples | min upright " + b45MinUp.ToString("0.00"));
+        d45Ph = ph; d45PhT = 0f; b45H0 = -1f; b45MaxOff = -9f; b45MaxClimb = -9f; b45MaxSink = -9f; b45MinUp = 1f; b45Solid = 0; b45Samples = 0; b45Stop = false;
+        if (d45F.vehicle != null) d45F.ExitVehicle();
+        Debug.Log("FFDEMO berm45 phase " + ph + " " + B45Names[ph] + " t=" + d45T.ToString("0.0"));
+        if (ph > 2) return;
+        Vehicle v = B45Veh; if (v == null) return;
+        if (ph <= 1)
+        {
+            // a straight link section of the loop branch, on the ground: start on the road, aim 35 deg at the right berm
+            float arc = 40f; Vector3 L = Vector3.zero, R = Vector3.zero; int sec = -1;
+            for (float a = 30f; a < 80f; a += 2f) { if (RallyTrack.BranchEdges(a, out L, out R, out sec) && sec == 0 && Mathf.Abs(L.y - R.y) < 0.15f && R.y - Ranch.GY(R.x, R.z) < 0.6f) { arc = a; break; } }
+            Vector3 up; Vector3 c = RallyTrack.BranchFrameAt(arc, out b45Fw, out up);
+            b45Fw.y = 0f; b45Fw.Normalize(); b45Right = (R - L); b45Right.y = 0f; b45Right.Normalize();
+            b45Edge = R; b45RoadY = (L.y + R.y) * 0.5f;
+            Vector3 dir = (Quaternion.AngleAxis(35f * Mathf.Sign(Vector3.Dot(Vector3.Cross(b45Fw, b45Right), Vector3.up)), Vector3.up) * b45Fw).normalized;
+            b45Start = (L + R) * 0.5f - dir * 7f; b45Start.y = b45RoadY;
+            b45Yaw = Quaternion.LookRotation(dir).eulerAngles.y;
+            Debug.Log("FFDEMO berm45 " + B45Names[ph] + " at branch arc " + arc + " road half width " + ((R - L).magnitude * 0.5f).ToString("0.0") + " edge " + R.ToString("0.0") + " ground at edge " + Ranch.GY(R.x, R.z).ToString("0.00"));
+        }
+        else
+        {
+            // Monster Park tabletop (x -131, z -64..-86, 8 m wide, 2.2 m top): come at its east flank at 35 deg
+            float gx = -131f + 4f + 3.08f, gz = -76f;   // the flank foot (1.4 x 2.2 m out from the top edge)
+            b45Fw = Vector3.back; b45Right = Vector3.left; b45Edge = new Vector3(gx, Ranch.GY(gx, gz), gz); b45RoadY = b45Edge.y;
+            Vector3 dir = (Quaternion.AngleAxis(-35f, Vector3.up) * Vector3.left).normalized;
+            b45Start = b45Edge - dir * 9f; b45Start.y = Ranch.GY(b45Start.x, b45Start.z);
+            b45Yaw = Quaternion.LookRotation(dir).eulerAngles.y;
+        }
+        Quaternion q = Quaternion.Euler(0f, b45Yaw, 0f);
+        Vector3 p = b45Start + Vector3.up * (0.6f + v.bigLift);
+        v.rb.velocity = Vector3.zero; v.rb.angularVelocity = Vector3.zero; v.rb.position = p; v.rb.rotation = q; v.transform.SetPositionAndRotation(p, q);
+        BigWheels.SetFor(v, 1f, "demo", false);
+        d45F.EnterVehicle(v);
+    }
+
+    PIn B45Drive()
+    {
+        var o = new PIn();
+        Vehicle v = B45Veh;
+        if (v == null || d45Ph > 2 || d45PhT < 1.5f || d45F.vehicle != v) return o;
+        o.move.x = Mathf.Clamp(Mathf.DeltaAngle(v.transform.eulerAngles.y, b45Yaw) / 25f, -1f, 1f);
+        if (b45Stop) { o.brake = 0.7f; return o; }
+        o.gas = v.Speed < (d45Ph == 1 ? 6f : 6.5f) ? 0.55f : 0.15f;
+        return o;
+    }
+
+    bool Berm45Tick(out Vector3 pos, out Vector3 look)
+    {
+        Vehicle v = B45Veh;
+        pos = b45Edge - b45Fw * 11f - b45Right * 3f + Vector3.up * 3.2f; look = b45Edge + Vector3.up * 0.4f;
+        if (d45Ph > 2) { if (d45PhT < 0.05f) Debug.Log("FFDEMO berm45 done"); return true; }
+        if (v == null) { B45Run(d45Ph + 1); return true; }
+        Vector3 p = v.transform.position;
+        float off = Vector3.Dot(p - b45Edge, b45Right);   // > 0 = past the road edge, onto the berm
+        if (b45H0 < 0f && d45PhT > 1.2f) b45H0 = p.y - b45RoadY;   // ride height on the road
+        if (b45H0 >= 0f)
+        {
+            float gy = Ranch.GY(p.x, p.z);
+            // drawn berm: straight from the road edge down to 0.2 m under the ground 3 m out (RallyTrack.SkirtPt); tabletop flank 1.4 x 2.2 m
+            float surf = d45Ph <= 1 ? (off <= 0f ? b45RoadY : off < 3f ? Mathf.Lerp(b45RoadY, gy - 0.2f, off / 3f) : gy)
+                                    : (off <= 0f ? gy : off < 3.08f ? gy + 2.2f * (off / 3.08f) : gy + 2.2f);
+            float sink = surf + b45H0 - p.y;
+            b45MaxOff = Mathf.Max(b45MaxOff, off); b45MaxClimb = Mathf.Max(b45MaxClimb, p.y - b45H0 - b45RoadY); b45MinUp = Mathf.Min(b45MinUp, v.transform.up.y);
+            if (off > 0.3f && off < 2.7f) b45MaxSink = Mathf.Max(b45MaxSink, sink);
+            string under = "-"; RaycastHit h;
+            if (Physics.Raycast(p + Vector3.up * 2f, Vector3.down, out h, 6f + v.bigLift, Vehicle.GroundMask, QueryTriggerInteraction.Ignore))
+            {
+                under = h.collider.name;
+                if (off > 0.3f && off < 2.7f) { b45Samples++; if (under.Contains("solid") || under.Contains("Tabletop")) b45Solid++; }
+            }
+            if (off > (d45Ph <= 1 ? 4.5f : 5f) || d45PhT > 12f) b45Stop = true;
+            if (d45Log <= 0f)
+            {
+                d45Log = 0.25f;
+                Debug.Log("FFDEMO berm45 t=" + d45T.ToString("0.0") + " " + B45Names[d45Ph] + " past edge " + off.ToString("0.00") + " m | height over road " + (p.y - b45H0 - b45RoadY).ToString("0.00") + " | sink " + sink.ToString("0.00") + " | v " + v.Speed.ToString("0.0") + " | up " + v.transform.up.y.ToString("0.00") + " | under " + under);
+            }
+        }
+        if ((b45Stop && v.Speed < 0.4f && d45PhT > 4f) || d45PhT > 15f) B45Run(d45Ph + 1);
+        return true;
+    }
+
     bool Demo45Cam(Frog f, string sc, out Vector3 pos, out Vector3 look)
     {
         pos = look = Vector3.zero;
         if (d45Ph < 0) return false;
         float dt = Mathf.Min(Time.deltaTime, 0.4f);
         d45T += dt; d45PhT += dt; d45Log -= dt;
+        if (sc == "berm45") return Berm45Tick(out pos, out look);
         if (sc == "help45") return Help45Tick(f, out pos, out look);
         if (sc == "wheels45") return Wheels45Tick(f, out pos, out look);
         // ---- motos ----
-        if (d45Ph == 0 && d45PhT > 8f) D45Phase(1);
-        else if (d45Ph >= 1 && d45Ph <= 5 && (d45PhT > 15f || d45Bike == null || (d45Wp >= 5 && d45Bike.Speed < 0.6f))) D45Phase(d45Ph + 1);
+        if (d45Ph == 0 && (d45PhT > 8f || (d45From > 0 && d45PhT > 0.5f))) D45Phase(Mathf.Max(1, d45From));
+        else if (d45Ph >= 1 && d45Ph <= 5 && (d45PhT > 15f || d45Bike == null || (d45Wp >= 5 && d45Bike.Speed < 0.6f))) D45Phase(d45Ph + 1 > d45To ? 6 : d45Ph + 1);
         if (d45Ph == 0)
         {
             if (d45PhT < 4f) { pos = TrailerBarn.W(2.2f, 2.6f, -8.6f); look = TrailerBarn.W(-8.5f, 0.6f, -4.8f); }

@@ -76,11 +76,11 @@ public class MonsterPark : MonoBehaviour
         Lane("Gap jump landing", -142f, -79.3f, 7f, new[] { V(0, 0), V(0.3f, 1.8f), V(2.5f, 1.8f), V(9.5f, 0f) }, wood, 0, false);
         AddZone("gap jump", new Vector3(-142f, 0f, -76f), new Vector3(12f, 8f, 26f), new Vector3(-142f, 0f, -60f), 180f, true);
         // tabletop
-        Lane("Tabletop", -131f, -64f, 8f, new[] { V(0, 0), V(2, 0.25f), V(7, 2.2f), V(15, 2.2f), V(22, 0) }, dirt, 0, false);
+        Lane("Tabletop", -131f, -64f, 8f, new[] { V(0, 0), V(2, 0.25f), V(7, 2.2f), V(15, 2.2f), V(22, 0) }, dirt, 0, false, 1.4f);   // ffu45: sloped solid flanks
         // whoops / rollers: six 0.65 m humps, 4.4 m apart
         var wp = new List<Vector2>();
         for (int i = 0; i <= 6 * 16; i++) { float d = i * 4.4f / 16f; wp.Add(V(d, 0.325f * (1f - Mathf.Cos(2f * Mathf.PI * d / 4.4f)))); }
-        Lane("Whoops", -131f, -95f, 7f, wp.ToArray(), dirt, 0, false);
+        Lane("Whoops", -131f, -95f, 7f, wp.ToArray(), dirt, 0, false, 1.6f);   // ffu45: sloped solid flanks
         RockGarden();
         Teeter(-122f, -101f);
         WallOfDeath();
@@ -116,9 +116,9 @@ public class MonsterPark : MonoBehaviour
     }
 
     // a solid along -z (southbound) from (x, z0): profile (d along the lane, height), width w
-    static GameObject Lane(string name, float x, float z0, float w, Vector2[] prof, Material m, int layer, bool stunt)
+    static GameObject Lane(string name, float x, float z0, float w, Vector2[] prof, Material m, int layer, bool stunt, float flank = 0f)
     {
-        return Extrude(name, new Vector3(x, gy0, z0), Vector3.back, w, prof, m, stunt ? RallyTrack.StuntLayer : layer);
+        return Extrude(name, new Vector3(x, gy0, z0), Vector3.back, w, prof, m, stunt ? RallyTrack.StuntLayer : layer, flank);
     }
     // a solid along +x (eastbound)
     static GameObject LaneX(string name, float x0, float z, float w, Vector2[] prof, Material m)
@@ -127,7 +127,9 @@ public class MonsterPark : MonoBehaviour
     }
 
     // closed prism: top follows the profile, flat sides, base 0.4 m under the ground
-    static GameObject Extrude(string name, Vector3 o, Vector3 dir, float w, Vector2[] prof, Material m, int layer)
+    // ffu45: flank > 0 = the dirt mounds get sloped, solid sides (flank m of run per m of height) instead of vertical walls:
+    // a truck / bike that comes at a mound from the side climbs it instead of hitting a wall
+    static GameObject Extrude(string name, Vector3 o, Vector3 dir, float w, Vector2[] prof, Material m, int layer, float flank = 0f)
     {
         Vector3 rt = Vector3.Cross(Vector3.up, dir).normalized * (w * 0.5f);
         var v = new List<Vector3>(); var t = new List<int>();
@@ -140,8 +142,8 @@ public class MonsterPark : MonoBehaviour
         for (int s = -1; s <= 1; s += 2)
         {
             int b0 = v.Count;
-            for (int i = 0; i < n; i++) { Vector3 c = o + dir * prof[i].x; v.Add(c + rt * s + Vector3.up * prof[i].y); v.Add(c + rt * s + Vector3.up * baseY); }
-            for (int i = 0; i < n - 1; i++) { int a = b0 + i * 2; Tri(t, v, a, a + 2, a + 1, rt * s); Tri(t, v, a + 1, a + 2, a + 3, rt * s); }
+            for (int i = 0; i < n; i++) { Vector3 c = o + dir * prof[i].x; v.Add(c + rt * s + Vector3.up * prof[i].y); v.Add(flank > 0f ? c + rt * s + rt.normalized * s * (prof[i].y * flank) - Vector3.up * 0.05f : c + rt * s + Vector3.up * baseY); }
+            for (int i = 0; i < n - 1; i++) { int a = b0 + i * 2; Vector3 wn = flank > 0f ? rt * s + Vector3.up * w * 0.5f : rt * s; Tri(t, v, a, a + 2, a + 1, wn); Tri(t, v, a + 1, a + 2, a + 3, wn); }
         }
         // end caps
         for (int e = 0; e < 2; e++)

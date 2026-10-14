@@ -42,6 +42,8 @@ public partial class Game
     {
         hpRoot = UIK.Rect(r, "HelpScreen", new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
         UIK.Stretch(hpRoot);
+        // its own sorting layer above the HUD, the per-view HUDs and the name tags (they used to draw over the panel)
+        var hc = hpRoot.gameObject.AddComponent<Canvas>(); hc.overrideSorting = true; hc.sortingOrder = 400;
         hpDim = UIK.Img(hpRoot, null, new Color(0f, 0.02f, 0.04f, 0.62f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
         UIK.Stretch(hpDim.rectTransform);
         hpSafe = UIK.Rect(hpRoot, "Safe", new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
@@ -188,7 +190,7 @@ public partial class Game
                 string k, d; SplitBinding(p, out k, out d);
                 if (v.Title.Length > 0 && d.StartsWith(v.Title + ":")) d = d.Substring(v.Title.Length + 1).Trim();
                 if (k.Length == 0 && p.StartsWith(v.Title + ":")) { string q = p.Substring(v.Title.Length + 1).Trim(); SplitBinding(q, out k, out d); }
-                s.R(pad ? Pk(k) : MapKey(k, kind), d);
+                s.R(pad ? Pk(k.IndexOf(" | ") >= 0 ? k.Substring(0, k.IndexOf(" | ")) : k) : MapKey(k, kind), d);
             }
             if (BigWheels.Resizable(v)) s.R(pad ? "View + D-pad up / down" : keys ? "[  /  ]" : "WHEELS tab", "this vehicle's wheel size (now " + BigWheels.LabelFor(v) + ")");
             L.Add(s);
@@ -237,6 +239,9 @@ public partial class Game
             n++;
         }
         while (n > 0 && (w[n - 1] == "/" || w[n - 1] == "+")) n--;
+        // "Y / F Cyberboat mode": a pad button + its keyboard key ("/ F") -> keep both in the binding ("Y | F")
+        if (n > 0 && n + 1 < w.Length && w[n] == "/" && w[n + 1].Length <= 3 && w[n + 1].ToUpperInvariant() == w[n + 1] && System.Array.IndexOf(PadTok, w[n + 1]) < 0 && n + 2 < w.Length)
+        { k = string.Join(" ", w, 0, n) + " | " + w[n + 1]; d = string.Join(" ", w, n + 2, w.Length - n - 2); return; }
         if (n == 0 || n == w.Length) { k = ""; d = p; return; }
         k = string.Join(" ", w, 0, n); d = string.Join(" ", w, n, w.Length - n);
     }
@@ -244,6 +249,8 @@ public partial class Game
     {
         if (k.Length == 0) return "";
         bool keys = kind == InputKind.Keyboard;
+        int bar = k.IndexOf(" | ");
+        if (bar >= 0) { if (keys) return k.Substring(bar + 3); k = k.Substring(0, bar); }
         var w = k.Split(' ');
         for (int i = 0; i < w.Length; i++)
         {
@@ -286,7 +293,7 @@ public partial class Game
         hpCloseT.text = kind == InputKind.Gamepad ? "CLOSE  ·  Start" : kind == InputKind.Touch ? "CLOSE" : "CLOSE  ·  H";
         float headH = pad + tsz + 8f + 26f + 10f;
         // settings block (pinned at the bottom) + footer
-        float setH = narrow ? 168f : 112f, footH = 24f;
+        float setH = narrow ? 168f : 92f, footH = 24f;
         hpSettings.anchorMin = hpSettings.anchorMax = new Vector2(0f, 0f); hpSettings.pivot = new Vector2(0f, 0f);
         hpSettings.anchoredPosition = new Vector2(pad, pad + footH); hpSettings.sizeDelta = new Vector2(W - pad * 2f, setH);
         Place(hpFoot.rectTransform, new Vector2(0f, 0f), new Vector2(pad, pad), new Vector2(W - pad * 2f, 20f), new Vector2(0f, 0f));
@@ -300,14 +307,14 @@ public partial class Game
         Place(hpScrollHint.rectTransform, new Vector2(1f, 0f), new Vector2(-pad, pad + footH + setH + 2f), new Vector2(420f, 18f), new Vector2(1f, 0f));
         // columns + font scale: shrink until the sections fit (wide), never below 0.7x; narrow = one column at full size, scrolls
         float cw = W - pad * 2f;
-        int cols = cw >= 1040f ? 3 : cw >= 660f ? 2 : 1;
+        int cols = narrow ? 1 : cw >= 1040f ? 3 : cw >= 660f ? 2 : 1;   // phone portrait = one scrolling column
         var secs = HelpSections(kind, v, f);
         float fs = base0, contentH = 0f;
         for (int it = 0; it < 8; it++)
         {
             contentH = HelpPlace(secs, cols, cw, fs, false);
-            if (contentH <= viewH || cols == 1 || fs <= 0.7f) break;
-            fs = Mathf.Max(0.7f, fs - 0.06f);
+            if (contentH <= viewH || cols == 1 || fs <= 0.78f) break;
+            fs = Mathf.Max(0.78f, fs - 0.05f);
         }
         hpFs = fs;
         contentH = HelpPlace(secs, cols, cw, fs, true);
@@ -326,9 +333,9 @@ public partial class Game
         wheelTrack.rectTransform.anchorMin = wheelTrack.rectTransform.anchorMax = new Vector2(0f, 1f);
         wheelTrack.rectTransform.pivot = new Vector2(0f, 1f);
         wheelTrack.rectTransform.anchoredPosition = new Vector2(tx, ty); wheelTrack.rectTransform.sizeDelta = new Vector2(tw, 22f);
-        Place(hpWheelHint.rectTransform, new Vector2(0f, 1f), new Vector2(sx, narrow ? sy - 82f : sy - 34f), new Vector2(cw - 32f, 20f));
+        Place(hpWheelHint.rectTransform, new Vector2(0f, 1f), new Vector2(sx, narrow ? sy - 82f : sy - 32f), new Vector2(narrow ? cw - 32f : cw * 0.62f, 20f));
         hpWheelHint.fontSize = narrow ? 15 : 14;
-        Place(hpSound.rectTransform, new Vector2(0f, 1f), new Vector2(sx, narrow ? sy - 110f : sy - 58f), new Vector2(cw - 32f, 22f));
+        Place(hpSound.rectTransform, new Vector2(0f, 1f), narrow ? new Vector2(sx, sy - 110f) : new Vector2(cw * 0.64f, sy - 30f), new Vector2(narrow ? cw - 32f : cw * 0.36f - 16f, 22f));
         hpSound.fontSize = narrow ? 17 : 16;
     }
 
@@ -373,7 +380,7 @@ public partial class Game
             }
             y += headFs + 12f;
             // rows: two-column (binding | action) when the section is wide enough, else stacked
-            float kw = span ? Mathf.Min(260f, w * 0.26f) : keyW;
+            float kw = span ? Mathf.Min(cols == 1 ? keyW : 170f, w * 0.3f) : keyW;
             int perRow = span && w > 900f ? 2 : 1;
             float cellW = (w - ip * 2f - (perRow - 1) * 18f) / perRow;
             for (int r = 0; r < s.rows.Count; r += perRow)

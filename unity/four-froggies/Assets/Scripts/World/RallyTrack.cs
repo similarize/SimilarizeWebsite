@@ -352,7 +352,8 @@ public static class RallyTrack
             }
         }
         MakeMesh(name, sv, suv, st, dirt, TrackLayer, true);
-        MakeMesh(name + " berms", bv, null, bt, berm, TrackLayer, false);
+        MakeMesh(name + " berms", bv, null, bt, berm, TrackLayer, true);   // ffu45: solid (legacy &loopold=1 links)
+        SolidLog("legacy " + name + " berms " + bt.Count / 3 + " tris");
         // racing-line dots so it reads as part of the course
         for (int i = 2; i < n - 2; i += 4)
         {
@@ -693,7 +694,8 @@ public static class RallyTrack
 
         // --- skirts: berm slopes to the ground on the flat, closing into a 0.45 m thick shell once the road leaves the ground
         var sv = new List<Vector3>(); var st = new List<int>();
-        int sp = -1;
+        var cbv = new List<Vector3>(); var cbt = new List<int>();   // ffu45: solid berm slopes (collider only)
+        int sp = -1, spSec = -1;
         for (int i = 0; i < m; i++)
         {
             if (!rows[i].ok) { sp = -1; continue; }
@@ -716,10 +718,23 @@ public static class RallyTrack
                 Quad(st, sv, sp, sp + 1, b0, b0 + 1, -f.right);
                 Quad(st, sv, sp + 3, sp + 2, b0 + 3, b0 + 2, f.right);
                 Quad(st, sv, sp + 4, sp + 5, b0 + 4, b0 + 5, -f.up);
+                // ffu45: the berm slopes are SOLID off the loop itself (the loop section keeps its ffu43 surface-only
+                // collision): wheel rays + bodies climb them instead of sinking through. Only the two outward slopes, no
+                // shell / underside, so nothing new sits under or inside the loop.
+                if (f.sec != 1 && spSec != 1)
+                {
+                    int c0 = cbv.Count;
+                    cbv.Add(sv[sp]); cbv.Add(sv[sp + 1]); cbv.Add(sv[b0]); cbv.Add(sv[b0 + 1]);
+                    Quad(cbt, cbv, c0, c0 + 1, c0 + 2, c0 + 3, -f.right + f.up);
+                    int c1 = cbv.Count;
+                    cbv.Add(sv[sp + 3]); cbv.Add(sv[sp + 2]); cbv.Add(sv[b0 + 3]); cbv.Add(sv[b0 + 2]);
+                    Quad(cbt, cbv, c1, c1 + 1, c1 + 2, c1 + 3, f.right + f.up);
+                }
             }
-            sp = b0;
+            sp = b0; spSec = f.sec;
         }
         MakeMesh("Loop branch skirts", sv, null, st, berm, TrackLayer, false);
+        ColMesh("Loop branch berms (solid)", cbv, cbt, TrackLayer);
 
         // --- red / white curbs along both edges, all the way through the loop (visual only, 7 cm)
         Material red = Mats.Lit(new Color(0.82f, 0.12f, 0.1f)), white = Mats.Lit(new Color(0.93f, 0.93f, 0.9f));
@@ -741,6 +756,22 @@ public static class RallyTrack
         }
         MakeMesh("Loop curbs red", cv[0], null, ct[0], red, TrackLayer, false);
         MakeMesh("Loop curbs white", cv[1], null, ct[1], white, TrackLayer, false);
+        // ffu45: the curbs are solid (a 7 cm bump for the wheels) on the links / straights; inside the loop they stay
+        // visual (the loop keeps its ffu43 layer-24 surface, nothing for a body to snag on)
+        {
+            var kv = new List<Vector3>(); var kt = new List<int>();
+            for (int side = -1; side <= 1; side += 2)
+                for (int i = 0; i < m - 1; i++)
+                {
+                    if (!rows[i].ok || !rows[i + 1].ok || rows[i].clip == side || rows[i + 1].clip == side || br[i].sec == 1 || br[i + 1].sec == 1) continue;
+                    Vector3[] A = CurbSection(i, side, br[0].arc, br[m - 1].arc), B = CurbSection(i + 1, side, br[0].arc, br[m - 1].arc);
+                    Vector3 up = br[i].up, outv = br[i].right * side;
+                    Vector3[] want = { outv, up, up - outv * 0.3f };
+                    for (int k = 0; k < 3; k++) { int bq = kv.Count; kv.Add(A[k]); kv.Add(A[k + 1]); kv.Add(B[k]); kv.Add(B[k + 1]); Quad(kt, kv, bq, bq + 1, bq + 2, bq + 3, want[k]); }
+                }
+            ColMesh("Loop curbs (solid)", kv, kt, TrackLayer);
+            SolidLog("loop branch berms " + cbt.Count / 3 + " tris, curbs " + kt.Count / 3 + " tris (off the loop section)");
+        }
 
         // --- guard rails: rise out of the ground 16 m before the loop, run through it, sink back 16 m after
         float a0 = br[loopA].arc - 16f, a1 = br[loopB].arc + 16f;
@@ -1073,6 +1104,35 @@ public static class RallyTrack
         }
         MakeMesh("Runway", v, uv, t, dirt, StuntLayer, true);
     }
+
+    // ffu45: collider-only mesh (solid berms / curbs whose look is drawn by another mesh)
+    static GameObject ColMesh(string name, List<Vector3> v, List<int> t, int layer)
+    {
+        if (t.Count == 0) return null;
+        var mesh = new Mesh();
+        mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+        mesh.SetVertices(v); mesh.SetTriangles(t, 0);
+        mesh.RecalculateNormals(); mesh.RecalculateBounds();
+        var go = new GameObject(name);
+        go.transform.SetParent(root, false);
+        go.layer = layer;
+        go.AddComponent<MeshCollider>().sharedMesh = mesh;
+        Solids.Add(go);
+        return go;
+    }
+    public static readonly List<GameObject> Solids = new List<GameObject>();   // ffu45 (demo &bermsolid=0 turns them off for a before shot)
+    // ffu45: the branch's road edges at an arc (left / right edge points, section 0 in / 1 loop / 2 out, half width)
+    public static bool BranchEdges(float arc, out Vector3 L, out Vector3 R, out int sec)
+    {
+        L = R = Vector3.zero; sec = -1;
+        if (br == null || rows == null) return false;
+        int i = 1;
+        while (i < br.Length - 1 && br[i].arc < arc) i++;
+        if (!rows[i].ok) return false;
+        L = rows[i].L; R = rows[i].R; sec = br[i].sec; return true;
+    }
+    public static string SolidInfo = "";
+    static void SolidLog(string s) { SolidInfo += (SolidInfo.Length > 0 ? "; " : "") + s; Debug.Log("RallyTrack: ffu45 solid " + s); }
 
     static GameObject MakeMesh(string name, List<Vector3> v, List<Vector2> uv, List<int> t, Material m, int layer, bool collider)
     {

@@ -52,6 +52,7 @@ public static class TrailerBarn
         // a hitch receiver + ball on every truck that can tow (the Monster Truck gets a drop bar down to ball height)
         foreach (var v in Vehicle.All) if (v != null && TrailerTow.CanTow(v)) Receiver(v);
         Built = true;
+        try { Bike.SpawnBarn(); } catch (System.Exception e) { Debug.LogWarning("Bike: barn bikes failed " + e); }   // ffu45: the 5 barn motorcycles
         Debug.Log("TrailerBarn: built at " + Centre.ToString("0.0") + " yaw " + Yaw + " floor " + FloorY.ToString("0.00") + ", " + Trailers.Count + " trailers");
     }
 

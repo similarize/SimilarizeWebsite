@@ -30,9 +30,13 @@ public partial class Bike
     public const float BarnZ = -5f;
     public static int Hops;
 
-    static void SpawnBarn()
+    static bool barnDone;
+    // called from SpawnAll and again at the end of TrailerBarn.Build (Bootstrap spawns the garage bikes before the barn)
+    public static void SpawnBarn()
     {
-        if (!TrailerBarn.Built) { Debug.Log("Bike: no trailer barn - barn bikes skipped"); return; }
+        if (barnDone) return;
+        if (!TrailerBarn.Built) { Debug.Log("Bike: trailer barn not built yet - barn bikes wait for it"); return; }
+        barnDone = true;
         for (int i = 0; i < 5; i++)
         {
             Vector3 p = TrailerBarn.W(BarnX[i], 0.15f, BarnZ);
