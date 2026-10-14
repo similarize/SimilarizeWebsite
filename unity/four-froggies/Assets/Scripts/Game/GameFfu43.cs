@@ -101,8 +101,28 @@ public partial class Game
             if (!fwd) { lf = -lf; lr = -lr; }
             bool nearLoop = arc > RallyTrack.LoopArcA - 26f && arc < RallyTrack.LoopArcB + 26f;
             float want = nearLoop ? 30f : 13f;
+            {
+                // ffu43b: slow for the bends like a driver would (ffu43a probe: 11-13 m/s into the R 10.8 m U-turn flew
+                // off its outer edge). Sharpest heading change over the next 4..34 m (samples inside the loop itself are
+                // skipped - its plan heading flips) -> radius -> speed for ~5 m/s2 of side grip.
+                float sg = fwd ? 1f : -1f, minR = 1e9f, la0 = RallyTrack.LoopArcA - 3f, la1 = RallyTrack.LoopArcB + 3f;
+                Vector3 f0, u0, fp, up0; RallyTrack.BranchFrameAt(arc + sg * 4f, out f0, out u0); fp = f0; float dp = 4f;
+                for (float d = 8f; d <= 34f; d += 4f)
+                {
+                    float sa = arc + sg * d;
+                    Vector3 f1, u1; RallyTrack.BranchFrameAt(sa, out f1, out u1);
+                    bool inL = sa > la0 && sa < la1;
+                    if (!inL && !(arc + sg * dp > la0 && arc + sg * dp < la1))
+                    {
+                        float rad = Vector3.Angle(new Vector3(fp.x, 0f, fp.z), new Vector3(f1.x, 0f, f1.z)) * Mathf.Deg2Rad;
+                        if (rad > 0.02f) minR = Mathf.Min(minR, (d - dp) / rad);
+                    }
+                    fp = f1; dp = d;
+                }
+                if (minR < 1e8f) want = Mathf.Clamp(Mathf.Sqrt(5f * minR), 6f, want);
+            }
             o.gas = spd < want ? 1f : 0f;
-            if (spd > want + 3f) o.brake = 0.4f;
+            if (spd > want + 1f) o.brake = Mathf.Clamp01((spd - want) * 0.25f);
             if (lu.y > 0.9f)
             {
                 // steer onto the centreline a few metres ahead
@@ -117,19 +137,23 @@ public partial class Game
         }
         if (m43Phase == 2)
         {
-            // circle the bowl anticlockwise (seen from above) on the curve / wall, ~1.5 m inside the wall
+            // ffu43b: circle the bowl anticlockwise (seen from above) ~1.3 m inside the wall top. ffu43a drove at the centre
+            // first and met the far wall head-on at 16 m/s (stalled, towed back, then flew out over the rim). Now: aim at a
+            // point on the target circle ~50 deg ahead (a tangent entry from outside, a gentle spiral from inside), slow
+            // entry (9 m/s) until a quarter lap is done, then 14 m/s.
             Vector3 cc = new Vector3(MonsterPark.BowlX, pos.y, MonsterPark.BowlZ);
             Vector3 rad = pos - cc; rad.y = 0f;
-            float r = rad.magnitude;
-            Vector3 tang = Vector3.Cross(Vector3.up, rad.normalized);   // left-handed: up x radial = clockwise from above... flip below
-            tang = -tang;
+            float r = Mathf.Max(rad.magnitude, 0.5f);
             float target = MonsterPark.BowlR0 + MonsterPark.BowlCurve - 1.3f;
-            Vector3 aim = r > 2f ? (tang - rad.normalized * Mathf.Clamp((target - r) * 0.25f, -0.6f, 0.6f)).normalized : Vector3.back;
-            if (m43PhT < 2.5f || r > target + 4f) aim = (cc - pos).normalized;   // drive in through the opening first
+            float a0 = Mathf.Atan2(rad.z, rad.x), ahead = (r > target + 3f ? 35f : 50f) * Mathf.Deg2Rad;
+            Vector3 tp = cc + new Vector3(Mathf.Cos(a0 + ahead), 0f, Mathf.Sin(a0 + ahead)) * target;   // +angle = anticlockwise from above
+            Vector3 aim = tp - pos; aim.y = 0f; aim.Normalize();
             Vector3 hf = c.transform.forward; hf.y = 0f;
-            float ang = Vector3.SignedAngle(hf, aim, c.transform.up);
+            float ang = Vector3.SignedAngle(hf, aim, Vector3.up);
             o.move.x = Mathf.Clamp(ang / 20f, -1f, 1f);
-            o.gas = spd < 17f ? 1f : 0.2f;
+            float wantW = m43Laps < 90f ? 9f : 14f;
+            o.gas = spd < wantW ? 1f : 0.15f;
+            if (spd > wantW + 2f) o.brake = 0.3f;
             return o;
         }
         // crusher: straight south down the lane
