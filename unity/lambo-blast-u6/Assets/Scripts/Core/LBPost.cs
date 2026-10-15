@@ -23,12 +23,15 @@ public class LBPost : MonoBehaviour
         { 1.08f, 1.12f, 0.01f, 0.97f, 0.2f },    // 4 Jungle Ruins
         { 1.14f, 1.16f, -0.01f, 0.98f, 0.28f },  // 5 Sky City
     };
+    // lambou6c: extra post exposure (EV) per theme on top of U6.ExpBias - Volcano Rim and Sky City read darker / hazier than lambo9 in
+    // Linear + ACES (probe E: u6exp 0.95 vs 0.55 on those two looked right, the other tracks look right at 0.55)
+    static readonly float[] U6Ev = { 0f, 0f, 0.35f, 0f, 0f, 0.4f };
     static int theme;
     public static void SetTheme(int th) { theme = Mathf.Clamp(th, 0, Theme.GetLength(0) - 1); Apply(); }
 
     public static void Apply()
     {
-        U6.Grade(Theme[theme, 0], Theme[theme, 1], Theme[theme, 2], Theme[theme, 3], Theme[theme, 4], 0.42f, cheap);
+        U6.Grade(Theme[theme, 0], Theme[theme, 1], Theme[theme, 2], Theme[theme, 3] * Mathf.Pow(2f, U6Ev[theme]), Theme[theme, 4], 0.42f, cheap);
     }
 
     public static LBPost Add(Camera c, bool small = false)
