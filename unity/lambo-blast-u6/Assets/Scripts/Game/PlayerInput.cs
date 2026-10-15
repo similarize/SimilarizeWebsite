@@ -12,6 +12,7 @@ public struct KIn
     public bool fire;        // fire / drop the held item (pressed this frame)
     public bool drift;       // drift held
     public bool pause;       // Start / Esc
+    public bool analog;      // u6g: gas / brake came from a trigger (expert mode follows its travel; keys / touch ramp up)
 }
 
 public static class Kb
@@ -41,6 +42,7 @@ public static class Kb
     public static bool CDown() { return Key(k => k.cKey.wasPressedThisFrame, KeyCode.C, true); }
     public static bool PDown() { return Key(k => k.pKey.wasPressedThisFrame, KeyCode.P, true); }
     public static bool RDown() { return Key(k => k.rKey.wasPressedThisFrame, KeyCode.R, true); }
+    public static bool GDown() { return Key(k => k.gKey.wasPressedThisFrame, KeyCode.G, true); }     // u6g driving mode
     public static bool HDown() { return Key(k => k.hKey.wasPressedThisFrame, KeyCode.H, true); }
     public static bool JDown() { return Key(k => k.jKey.wasPressedThisFrame, KeyCode.J, true); }
     public static bool LDown() { return Key(k => k.lKey.wasPressedThisFrame, KeyCode.L, true); }
@@ -114,6 +116,7 @@ public static class Pads
         if (p.dpad.left.isPressed) i.steer = -1f;
         if (p.dpad.right.isPressed) i.steer = 1f;
         i.gas = Mathf.Max(p.rightTrigger.ReadValue(), p.buttonSouth.isPressed ? 1f : 0f);
+        i.analog = !p.buttonSouth.isPressed && !p.buttonEast.isPressed;
         i.brake = Mathf.Max(p.leftTrigger.ReadValue(), p.buttonEast.isPressed ? 1f : 0f);
         i.fire = p.buttonWest.wasPressedThisFrame || p.rightShoulder.wasPressedThisFrame;
         i.drift = p.leftShoulder.isPressed;

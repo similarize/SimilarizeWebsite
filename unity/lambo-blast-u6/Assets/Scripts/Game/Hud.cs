@@ -149,7 +149,7 @@ public class ViewHud
         string gu = Mathf.Abs(me.speed) < 0.3f && me.gasS < 0.05f ? "N" : me.speed < -0.5f ? "R" : me.gear.ToString();
         if (gu != gearShown) { gearShown = gu; speedU.text = "KM/H   <b>" + gu + "</b>"; }
         if (me.drifting) { driftT.text = me.driftCharge >= 2.3f ? "DRIFT  <color=#ff9a1a>MAX</color>" : me.driftCharge >= 1.1f ? "DRIFT  <color=#5aa8ff>BOOST</color>" : "DRIFT"; }
-        else driftT.text = me.boostT > 0f ? "<color=#5dff9a>BOOST</color>" : (me.shieldT > 0f ? "<color=#6fe0ff>SHIELD</color>" : "");
+        else driftT.text = me.boostT > 0f ? "<color=#5dff9a>BOOST</color>" : (me.shieldT > 0f ? "<color=#6fe0ff>SHIELD</color>" : me.expert ? (me.wheelSpin ? "<color=#ff5a3a>WHEELSPIN</color>" : "<color=#ff8a5a>EXPERT</color>") : "");   // u6g
         // item slot
         Item show = me.rollT > 0f ? me.rollShow : me.item;
         if (show == Item.None) { itemIcon.enabled = false; itemName.text = ""; itemHint.text = ""; itemRing.color = new Color(1f, 1f, 1f, 0.12f); }

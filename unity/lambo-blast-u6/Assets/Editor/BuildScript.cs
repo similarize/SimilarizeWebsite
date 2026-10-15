@@ -3,6 +3,8 @@ using System.Reflection;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
+using UnityEditor.Rendering;
+using System.Collections.Generic;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -17,6 +19,27 @@ public static class InputHandlerSetter
     {
         try { BuildScript.SetInputHandler(); }
         catch (Exception e) { Debug.LogWarning("InputHandlerSetter: " + e.Message); }
+    }
+}
+
+// u6g: u6e's "Keep All" instancing kept INSTANCING_ON variants of every shader that declares instancing (URP's own included).
+// Only LB/GrassI + LB/Tri are drawn instanced (Graphics.RenderMeshInstanced) -> strip INSTANCING_ON everywhere else
+// (same set as the default "Strip Unused" gave before u6e, plus the two instanced shaders).
+class U6GStripInstancing : IPreprocessShaders
+{
+    public static int stripped, kept;
+    public int callbackOrder { get { return 10; } }
+    static readonly ShaderKeyword Inst = new ShaderKeyword("INSTANCING_ON");
+    public void OnProcessShader(Shader shader, ShaderSnippetData snippet, IList<ShaderCompilerData> data)
+    {
+        if (shader == null) return;
+        bool keep = shader.name == "LB/GrassI" || shader.name == "LB/Tri";
+        for (int i = data.Count - 1; i >= 0; i--)
+        {
+            if (!data[i].shaderKeywordSet.IsEnabled(Inst)) continue;
+            if (keep) { kept++; continue; }
+            data.RemoveAt(i); stripped++;
+        }
     }
 }
 
@@ -245,6 +268,7 @@ public static class BuildScript
         };
         BuildReport report = BuildPipeline.BuildPlayer(opts);
         BuildSummary s = report.summary;
+        Debug.Log("BuildScript: u6g INSTANCING_ON variants stripped " + U6GStripInstancing.stripped + ", kept (LB/GrassI + LB/Tri) " + U6GStripInstancing.kept);
         Debug.Log("BUILD_RESULT: " + s.result + " errors=" + s.totalErrors + " warnings=" + s.totalWarnings + " size=" + s.totalSize + " time=" + s.totalTime);
         if (s.result != BuildResult.Succeeded)
         {

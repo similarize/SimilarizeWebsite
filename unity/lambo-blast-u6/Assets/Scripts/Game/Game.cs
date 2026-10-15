@@ -14,6 +14,7 @@ public class Slot
     public ViewHud hud;
     public Kart kart;
     public bool stickHeldX, stickHeldY;
+    public bool expert;          // u6g driving mode: false = KID (default, the lambo9b handling), true = EXPERT
 }
 
 // Lobby (pick a colour car + robot driver), 1-4 local split-screen, 3-2-1-GO, race, results, pause.
@@ -281,6 +282,8 @@ public partial class Game : MonoBehaviour
     static string HelpLines { get { return
         "<b>Xbox pad</b>: RT / A gas · LT / B brake + reverse · L-stick steer · X / RB fire item · LB drift (hold, release = boost) · Start pause\n" +
         "<b>Keyboard</b>: WASD / arrows drive · Space fire · Shift drift · Esc pause · M sound      <b>Phone</b>: left stick steer · GAS · BRAKE · FIRE · DRIFT"; } }
+    // u6g: driving-mode help (pause screen + the lobby MODE button)
+    const string ModeHelp = "<b>Driving mode</b> (lobby: G · pad Back · tap MODE): KID = easy grip   ·   EXPERT = squeeze the throttle (keys / GAS build up), too much spins the rear tyres, no assists, faster - brake before the bends";
 
     // ---------------- lobby ----------------
     public static bool TouchOnly { get { return Application.isMobilePlatform && Gamepad.all.Count == 0; } }
@@ -304,6 +307,7 @@ public partial class Game : MonoBehaviour
         int robot = slots.Count % Robots.Count;
         while (!RobotFree(robot, null)) robot = (robot + 1) % Robots.Count;
         s.car = car; s.robot = robot;
+        s.expert = DriveModeSaved(kind);      // u6g: last mode picked on this kind of controller
         slots.Add(s);
         Assign(); PlaceGrid();
         Sfx.Play(Sfx.ItemGet, 0.6f);
@@ -390,6 +394,7 @@ public partial class Game : MonoBehaviour
         DemoCheck();
         if (state != State.Lobby) return;
         if (Kb.CDown()) CreditsToggle();
+        if (Kb.GDown() && !Kb.typing) ToggleDriveMode(FindSlot(InputKind.Keyboard) ?? (slots.Count > 0 ? slots[0] : null));     // u6g
         if (creditsPanel != null && creditsPanel.gameObject.activeSelf)
         {
             bool close = Kb.EscDown() || Kb.EnterDown() || (Kb.MouseLeftDown() && Kb.TouchCount() == 0);
@@ -461,6 +466,7 @@ public partial class Game : MonoBehaviour
                 ps.stickHeldX = Mathf.Abs(st.x) > 0.3f;
                 ps.stickHeldY = Mathf.Abs(st.y) > 0.3f;
             }
+            if (ps != null && !g && pad.selectButton.wasPressedThisFrame) ToggleDriveMode(ps);     // u6g: Back / View = driving mode
             if (!pad.buttonSouth.wasPressedThisFrame && !pad.startButton.wasPressedThisFrame) continue;
             if (ps == null || g) continue;
             if (now - ps.joinTime > 0.4f) { StartRace(); return; }
@@ -501,6 +507,14 @@ public partial class Game : MonoBehaviour
     bool LobbyTap(Vector2 pos, InputKind kind)
     {
         if (Hit(creditsBtn, pos)) { CreditsToggle(true); return false; }
+        if (modeBtn != null && Hit(modeBtn, pos))     // u6g: driving mode for the player on this input (or P1)
+        {
+            Slot ms = FindSlot(kind);
+            if (ms == null && slots.Count == 0) ms = Join(kind, null);
+            if (ms == null && slots.Count > 0) ms = slots[0];
+            ToggleDriveMode(ms);
+            return false;
+        }
         bool netGuest = LBNet.On && LBNet.I.IsGuest;
         if (Hit(trackPrev, pos)) { if (!netGuest) PickTrack(-1); return false; }
         if (Hit(trackNext, pos) || Hit(trackBox, pos)) { if (!netGuest) PickTrack(1); return false; }
@@ -566,6 +580,7 @@ public partial class Game : MonoBehaviour
         hostFinishCount = 0;
         if (pendingTrack >= 0) { int id = pendingTrack; pendingTrack = -1; RebuildTrack(id); }
         Assign();
+        ApplyDriveModes();     // u6g
         PlaceGrid();
         if (LBNet.On && LBNet.I.IsHost) LBNet.I.HostStart(Track.Id);     // lambo8: everybody in the room starts now
         state = State.Countdown;
@@ -598,8 +613,8 @@ public partial class Game : MonoBehaviour
             slots[0].rig.Reset();
             Debug.Log("Demo: P1 placed before " + g.name);
         }
-        Sfx.Music("beach");
         Sfx.Play(Sfx.Click, 0.8f);
+        WarmBegin();     // u6g: loading overlay until the race view is on screen (starts the music, then the countdown)
     }
 
     void MakeView(Slot s)
@@ -770,7 +785,7 @@ public partial class Game : MonoBehaviour
         Time.timeScale = p ? 0f : 1f;
         AudioListener.pause = p;
         pauseCanvas.enabled = p;
-        if (p) pauseText.text = "<size=48><color=#7dff8a>PAUSED</color></size>\n\n" + HelpLines.Replace(" · Start pause", "") +
+        if (p) pauseText.text = "<size=48><color=#7dff8a>PAUSED</color></size>\n\n" + HelpLines.Replace(" · Start pause", "") + "\n" + ModeHelp + DriveModesNow() +
             "\n\n<b>Pad</b>: Start / A resume · Y restart · B lobby      <b>Keys</b>: Esc / Enter resume · R restart · Q lobby";
     }
 
@@ -809,7 +824,9 @@ public partial class Game : MonoBehaviour
         ReadInputs();
         bool countdown = state == State.Countdown;
         string centre = "";
-        if (countdown)
+        if (countdown && !WarmTick())
+            centre = "";     // u6g: the LOADING TRACK overlay covers the view; the countdown waits
+        else if (countdown)
         {
             countdownT -= dt;
             int num = Mathf.CeilToInt(countdownT);
@@ -948,6 +965,7 @@ public partial class Game : MonoBehaviour
     {
         if (LBNet.On && LBNet.I.IsHost) LBNet.I.HostBackToLobby();
         state = State.Lobby;
+        WarmCancel();
         LBDisplay.Lobby(true);
         resultsCanvas.enabled = false;
         hudCanvas.enabled = false;

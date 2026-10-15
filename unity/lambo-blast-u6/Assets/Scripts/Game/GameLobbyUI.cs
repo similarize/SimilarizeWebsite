@@ -134,6 +134,7 @@ public partial class Game
         creditsBtn = Glass(r, new Color(0.12f, 0.15f, 0.2f, 0.85f), new Vector2(0.5f, 0.5f));
         var cl = UIK.Label(creditsBtn.transform, "CREDITS  C", 11, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(118, 26), new Color(0.8f, 0.9f, 1f));
         UIK.Stretch(cl.rectTransform);
+        MakeModeButton(r);     // u6g driving mode
         creditsPanel = Glass(r, new Color(0.03f, 0.04f, 0.06f, 0.96f), new Vector2(0.5f, 0.5f));
         // u6d: + the scanned CC0 surfaces line, licence link to this build's LICENSES.txt
         string credits = CreditsText.Replace("<b>Made for this game</b>", Gfx6.CreditLine + "<b>Made for this game</b>").Replace("games/lambo-blast/LICENSES.txt", "games/lambo-blast-u6/LICENSES.txt");
@@ -176,6 +177,7 @@ public partial class Game
             put(trackNext, new Vector2(76, -518), new Vector2(46, 60));
             put(playBtn, new Vector2(214, -518), new Vector2(240, 56));
             put(creditsBtn, new Vector2(266, -568), new Vector2(120, 26));
+            put(modeBtn, new Vector2(40, -566), new Vector2(220, 34));
             put(lobbyStatus, new Vector2(0, -598), new Vector2(690, 24)); lobbyStatus.fontSize = 13;
             put(lobbyHelp, new Vector2(0, -622), new Vector2(700, 28)); lobbyHelp.fontSize = 10;
             put(creditsPanel, Vector2.zero, new Vector2(700, 940));
@@ -197,6 +199,7 @@ public partial class Game
             put(trackNext, new Vector2(-192, -286), new Vector2(44, 62));
             put(playBtn, new Vector2(0, -286), new Vector2(250, 52));
             put(creditsBtn, new Vector2(548, -286), new Vector2(112, 28));
+            put(modeBtn, new Vector2(398, -286), new Vector2(150, 48));
             put(lobbyStatus, new Vector2(0, -324), new Vector2(1180, 22)); lobbyStatus.fontSize = 14;
             put(lobbyHelp, new Vector2(0, -346), new Vector2(1220, 26)); lobbyHelp.fontSize = 10;
             put(creditsPanel, Vector2.zero, new Vector2(1060, 500));
@@ -440,6 +443,7 @@ public partial class Game
         string ns = NetStatus();
         if (ns != null) lobbyStatus.text = ns;
         lobbyHelp.text = HelpLines;
+        RefreshModeButton();
     }
 
     // tile look: glass tile, frame in the colour of the (first) player who picked it, white frame for the tap / mouse

@@ -7,6 +7,10 @@ public class Kart : MonoBehaviour
     public int id;
     public int car, robot;
     public bool human;
+    // u6g EXPERT driving mode (per player; Kid = false = the lambo9b handling, unchanged). Only ever set on human karts.
+    public bool expert;
+    public float slipRatio;          // u6g expert: rear wheel slip (0 = gripping, 1 = spinning hard)
+    float slipLogT;
     // debug / screenshot mode (?lbdemo in the URL): human karts drive themselves
     public static bool Autopilot;
     public int slot = -1;              // index into Game.slots for humans
@@ -319,7 +323,18 @@ public class Kart : MonoBehaviour
         }
 
         // ---- lambo9 vehicle model (longitudinal + lateral + yaw) ----
+        if (expert && human) { top *= 1.15f; accel *= 1.1f; }      // u6g expert: more power, higher top speed (Kid: untouched)
         Drive(i, dt, top, accel, farOff);
+        if (expert && human && Autopilot && racing)
+        {
+            slipLogT -= dt;
+            if (slipLogT <= 0f) { slipLogT = 0.5f; Debug.Log("LB slip k" + id + " EXPERT sr " + slipRatio.ToString("F2") + " gas " + gasS.ToString("F2") + " g " + gear + " v " + speed.ToString("F1") + " beta " + (Mathf.Atan2(lat, Mathf.Max(1f, Mathf.Abs(speed))) * Mathf.Rad2Deg).ToString("F0") + (wheelSpin ? " SPIN" : "")); }
+        }
+        else if (human && Autopilot && racing && (Application.absoluteURL ?? "").Contains("lbslip"))
+        {
+            slipLogT -= dt;
+            if (slipLogT <= 0f) { slipLogT = 0.5f; Debug.Log("LB slip k" + id + " KID gas " + gasS.ToString("F2") + " g " + gear + " v " + speed.ToString("F1") + (wheelSpin ? " SPIN" : "")); }
+        }
         if (grounded && speed > top) speed = Mathf.MoveTowards(speed, top, (boostT > 0f ? 4f : 10f) * dt);
         if (!onRoad && FreeRoam && grounded && Mathf.Abs(speed) > 2f) speed = Mathf.MoveTowards(speed, 0f, (farOff ? 2.2f : 1.2f) * dt);   // rough ground drags
 
@@ -545,6 +560,7 @@ public class Kart : MonoBehaviour
     public float gasS, brakeS, steerS;     // ramped pedals / steering
     float shiftT;
     Vector3 driveDisp;
+    static readonly float[] ExGear = { 1.45f, 1.15f, 0.95f, 0.8f, 0.68f, 0.58f };   // u6g expert: wheel torque per gear
     static readonly float[] GearTop = { 0.26f, 0.4f, 0.54f, 0.68f, 0.84f, 1.0f };   // share of (top x 1.4) each gear reaches at the redline
 
     float SurfaceMu(bool farOff)
@@ -577,8 +593,24 @@ public class Kart : MonoBehaviour
     void Drive(KIn i, float dt, float top, float accel, bool farOff)
     {
         // pedal / steering ramps (a key press is a gradual squeeze, not a step)
-        gasS = Mathf.MoveTowards(gasS, Mathf.Clamp01(i.gas), dt * (i.gas > gasS ? 3.4f : 6f));
-        brakeS = Mathf.MoveTowards(brakeS, Mathf.Clamp01(i.brake), dt * (i.brake > brakeS ? 5f : 8f));
+        bool ex = expert && human;
+        if (!ex)
+        {
+            gasS = Mathf.MoveTowards(gasS, Mathf.Clamp01(i.gas), dt * (i.gas > gasS ? 3.4f : 6f));
+            brakeS = Mathf.MoveTowards(brakeS, Mathf.Clamp01(i.brake), dt * (i.brake > brakeS ? 5f : 8f));
+        }
+        else if (i.analog)
+        {
+            // u6g expert, trigger: the pedal follows the trigger travel
+            gasS = Mathf.MoveTowards(gasS, Mathf.Clamp01(i.gas), dt * 10f);
+            brakeS = Mathf.MoveTowards(brakeS, Mathf.Clamp01(i.brake), dt * 12f);
+        }
+        else
+        {
+            // u6g expert, keys / touch GAS: hold to build throttle (~1.1 s to full), lift = off quickly; tap to feather
+            gasS = Mathf.MoveTowards(gasS, Mathf.Clamp01(i.gas), dt * (i.gas > gasS ? 0.9f : 6f));
+            brakeS = Mathf.MoveTowards(brakeS, Mathf.Clamp01(i.brake), dt * (i.brake > brakeS ? 2.2f : 8f));
+        }
         bool outwards = Mathf.Abs(i.steer) > Mathf.Abs(steerS) && (steerS == 0f || Mathf.Sign(i.steer) == Mathf.Sign(steerS));
         steerS = Mathf.MoveTowards(steerS, Mathf.Clamp(i.steer, -1f, 1f), dt * (outwards ? 3.8f : 6.5f));
         braking = brakeS > 0.1f && speed > 1f;
@@ -587,6 +619,7 @@ public class Kart : MonoBehaviour
         if (onRoad && Track.Bank != null && hint >= 0 && hint < Track.Bank.Length) bankB = Mathf.Abs(Track.Bank[hint]) * 0.9f;
         float m = 1450f * spec.weight, Iz = m * 1.15f * CgA * CgB;
         float assist = human && !Autopilot ? 0.35f : 1.1f;          // gentle stability assist (AI: firmer)
+        if (ex) assist = 0f;                                           // u6g expert: no stability assist
         int n = Mathf.Clamp(Mathf.CeilToInt(dt * 120f), 1, 40);
         float h = dt / n;
         driveDisp = Vector3.zero;
@@ -602,22 +635,44 @@ public class Kart : MonoBehaviour
                 float fzR = Mathf.Max(0.2f * m * Grav, m * Grav * CgA / WB + m * accLong * CgH / WB);
                 // longitudinal
                 float drive = 0f, brk = 0f;
-                if (gasS > 0.02f && u > -0.5f && u < top) drive = accel * gasS * (1.2f - 0.6f * Mathf.Clamp01(u / top)) * TorqueK();
-                float tracMax = muE * Grav;
-                if (drive > tracMax) { spinAny = true; drive = tracMax; }
+                float spinK = 0f;
+                if (!ex)
+                {
+                    if (gasS > 0.02f && u > -0.5f && u < top) drive = accel * gasS * (1.2f - 0.6f * Mathf.Clamp01(u / top)) * TorqueK();
+                    float tracMax = muE * Grav;
+                    if (drive > tracMax) { spinAny = true; drive = tracMax; }
+                }
+                else
+                {
+                    // u6g expert: rear-wheel drive, torque multiplied by the gear (1st / 2nd can light the tyres up), no traction
+                    // control: torque past the rear axle's grip spins the wheels (slip ratio builds / decays), a spinning tyre
+                    // pushes less and loses most of its side grip -> wheelspin off the line, power oversteer out of corners
+                    if (gasS > 0.02f && u > -0.5f && u < top) drive = accel * gasS * ExGear[gear - 1] * (1.15f - 0.5f * Mathf.Clamp01(u / top)) * TorqueK();
+                    float tracR = muE * 1.12f * fzR / m;
+                    float want = drive > tracR ? Mathf.Clamp((drive - tracR) / Mathf.Max(tracR, 0.5f), 0f, 1.5f) : 0f;
+                    slipRatio = Mathf.MoveTowards(slipRatio, want, h * (want > slipRatio ? 5f : 2.5f));
+                    if (drive > tracR || slipRatio > 0.04f)
+                    {
+                        spinAny = slipRatio > 0.04f;
+                        drive = Mathf.Min(drive, tracR * (1f - 0.3f * Mathf.Clamp01(slipRatio)));
+                    }
+                    spinK = Mathf.Clamp01(slipRatio * 1.6f);
+                }
                 if (brakeS > 0.02f && u > 0.5f) brk = Mathf.Min(13.5f * brakeS, muE * Grav * 1.05f);
                 // friction circles: what the tyres spend on drive / braking they can't spend on cornering
                 float fxR = (drive * 0.6f + brk * 0.3f) * m, fxF = (drive * 0.4f + brk * 0.7f) * m;   // 70 % front brake bias
+                if (ex) { fxR = (drive + brk * 0.3f) * m; fxF = brk * 0.7f * m; }     // u6g expert: all the drive on the rear axle
                 float muR = muE * (drifting ? 0.7f : 1.12f);           // wider rear tyres: a stable, slightly understeering car
                 float capF = muE * 0.95f * fzF, capR = muR * fzR;
                 float fyFmax = Mathf.Sqrt(Mathf.Max(capF * capF * 0.0625f, capF * capF - fxF * fxF));
                 float fyRmax = Mathf.Sqrt(Mathf.Max(capR * capR * 0.0625f, capR * capR - fxR * fxR));
-                if (spinAny) fyRmax *= 0.8f;
+                if (ex) fyRmax *= 1f - 0.6f * spinK;                  // u6g expert: spinning rears let go sideways
+                else if (spinAny) fyRmax *= 0.8f;
                 float delta = steerS * SteerLock(au);
                 float uA = Mathf.Max(au, 2.5f);
                 float aF = Mathf.Atan2(v + CgA * r, uA) - delta;
                 float aR = Mathf.Atan2(v - CgB * r, uA);
-                float fyF = -fyFmax * Pac(aF), fyR = -fyRmax * (drifting ? Pac(aR) : PacR(aR));
+                float fyF = -fyFmax * Pac(aF), fyR = -fyRmax * (drifting || ex ? Pac(aR) : PacR(aR));   // u6g expert: real rear fall-off past the peak
                 float cd = Mathf.Cos(delta), sd = Mathf.Sin(delta);
                 float vdot = (fyF * cd + fyR) / m - u * r;
                 float rdot = (CgA * fyF * cd - CgB * fyR) / Iz;
@@ -627,7 +682,7 @@ public class Kart : MonoBehaviour
                     float rl = muE * Grav / Mathf.Max(au, 5f) * 1.05f, rt = Mathf.Clamp(u * Mathf.Tan(delta) / WB, -rl, rl);
                     rdot -= assist * (r - rt) * Mathf.Clamp01(Mathf.Abs(bb) / 0.12f);
                 }
-                if (drifting && Mathf.Abs(bb) > 0.42f) rdot += 9f * (Mathf.Abs(bb) - 0.42f) * Mathf.Sign(bb);   // drift assist: holds ~20-35 deg
+                if (drifting && !ex && Mathf.Abs(bb) > 0.42f) rdot += 9f * (Mathf.Abs(bb) - 0.42f) * Mathf.Sign(bb);   // drift assist: holds ~20-35 deg
                 float udot = drive - brk * Mathf.Sign(u) - fyF * sd / m + v * r;
                 udot -= 0.00042f * u * au;                                   // aero drag
                 float kin = u < 0f ? 0f : Mathf.Clamp01((au - 2f) / 4f);                 // parking speeds: plain kinematic steering
@@ -717,7 +772,7 @@ public class Kart : MonoBehaviour
 
     void ResetDrive()
     {
-        yawRate = 0f; accLong = 0f; slipRear = 0f; gear = 1; rpm = Idle; shiftT = 0f; gasS = brakeS = steerS = 0f; wheelSpin = false; braking = false;
+        yawRate = 0f; accLong = 0f; slipRear = 0f; gear = 1; rpm = Idle; shiftT = 0f; gasS = brakeS = steerS = 0f; wheelSpin = false; braking = false; slipRatio = 0f;
         driveDisp = Vector3.zero; barInit = false;
     }
 
