@@ -70,7 +70,7 @@ public static class Arenas
         {
             var ls = t.terrainData.terrainLayers;
             for (int i = 0; i < ls.Length && i < layerTex.Length; i++)
-                if (ls[i] != null) ls[i].diffuseTexture = (Texture2D)(ground != null ? ground : layerTex[i]);
+                if (ls[i] != null) { ls[i].diffuseTexture = (Texture2D)(ground != null ? ground : layerTex[i]); ls[i].smoothness = 0f; ls[i].metallic = 0f; ls[i].specular = Color.black; }
             t.terrainData.terrainLayers = ls;
         }
     }
