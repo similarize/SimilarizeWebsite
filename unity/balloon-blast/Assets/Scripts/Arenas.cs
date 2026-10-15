@@ -75,6 +75,26 @@ public static class Arenas
         return tex;
     }
 
+
+    // bb6: Kenney CC0 model (LB pack converted from glTF), scaled to height h, with a box collider + cover points
+    static bool Model(string pack, Vector3 p, float h, float coverR)
+    {
+        var pk = LBPack.Get(pack);
+        if (pk == null) return false;
+        float s = h / Mathf.Max(0.02f, pk.Height());
+        Transform g = World.Group(pack, p, 0f);
+        pk.SpawnAll(g, Vector3.zero, s, Color.white);
+        var b = new Bounds(g.position + Vector3.up * h * 0.5f, Vector3.zero);
+        bool any = false;
+        foreach (var r in g.GetComponentsInChildren<Renderer>()) { if (!any) { b = r.bounds; any = true; } else b.Encapsulate(r.bounds); }
+        var bc = g.gameObject.AddComponent<BoxCollider>();
+        bc.center = b.center - g.position; bc.size = b.size;
+        g.rotation = Quaternion.Euler(0f, R(0f, 360f), 0f);
+        foreach (var t in g.GetComponentsInChildren<Transform>()) t.gameObject.isStatic = true;
+        if (coverR > 0f) World.AddCover(g, coverR);
+        return true;
+    }
+
     // ---------------- Candy Carnival ----------------
     static readonly Color[] Cols = {
         new Color(1f, 0.42f, 0.62f), new Color(0.45f, 0.82f, 1f), new Color(1f, 0.85f, 0.3f),
@@ -83,10 +103,13 @@ public static class Arenas
     public static void Candy(bool mob)
     {
         Vector3 q;
-        for (int i = 0; i < 18; i++) if (World.TryPlace(2.2f, 0f, 100f, out q)) Lollipop(q);
-        for (int i = 0; i < 20; i++) if (World.TryPlace(2.0f, 0f, 100f, out q)) Gumdrops(q);
-        for (int i = 0; i < 14; i++) if (World.TryPlace(1.6f, 0f, 100f, out q)) CandyCane(q);
-        for (int i = 0; i < 12; i++) if (World.TryPlace(2.4f, 0f, 100f, out q)) Cupcake(q);
+        for (int i = 0; i < 18; i++) if (World.TryPlace(2.2f, 0f, 100f, out q) && !Model("k_lollypop", q, R(4f, 5.5f), 0.8f)) Lollipop(q);
+        for (int i = 0; i < 10; i++) if (World.TryPlace(2.0f, 0f, 100f, out q)) Gumdrops(q);
+        for (int i = 0; i < 14; i++) if (World.TryPlace(1.6f, 0f, 100f, out q) && !Model("k_candy-cane-red", q, R(3.2f, 4f), 0.6f)) CandyCane(q);
+        for (int i = 0; i < 12; i++) if (World.TryPlace(2.4f, 0f, 100f, out q) && !Model("k_cupcake", q, R(2.2f, 2.8f), 1.4f)) Cupcake(q);
+        string[] treats = { "k_cake", "k_muffin", "k_ice-cream", "k_popsicle", "k_donut-sprinkles", "k_cookie-chocolate", "k_gingerbread-man", "k_present-a-cube" };
+        float[] th = { 2.2f, 2.0f, 3.6f, 3.6f, 1.0f, 0.7f, 3.0f, 1.5f };
+        for (int i = 0; i < 22; i++) if (World.TryPlace(2.4f, 0f, 100f, out q)) { int k = World.rnd.Next(treats.Length); Model(treats[k], q, th[k] * R(0.9f, 1.15f), 1.3f); }
         for (int i = 0; i < 8; i++) if (World.TryPlace(3.2f, 10f, 95f, out q)) Tent(q);
         for (int i = 0; i < 12; i++) if (World.TryPlace(1.4f, 0f, 100f, out q)) World.Crates(q);
         int outer = mob ? 30 : 48;
@@ -165,14 +188,18 @@ public static class Arenas
     public static void Snow(bool mob)
     {
         Vector3 q;
-        for (int i = 0; i < 16; i++) if (World.TryPlace(1.6f, 0f, 100f, out q)) Snowman(q);
+        for (int i = 0; i < 16; i++) if (World.TryPlace(1.6f, 0f, 100f, out q) && !Model(World.rnd.Next(2) == 0 ? "k_snowman" : "k_snowman-hat", q, R(2.3f, 2.8f), 0.8f)) Snowman(q);
+        string[] gifts = { "k_present-a-cube", "k_present-b-round", "k_sled", "k_lantern", "k_gingerbread-man" };
+        float[] gh = { 1.4f, 1.2f, 1.1f, 3.2f, 2.6f };
+        for (int i = 0; i < 16; i++) if (World.TryPlace(1.8f, 0f, 100f, out q)) { int k = World.rnd.Next(gifts.Length); Model(gifts[k], q, gh[k] * R(0.9f, 1.15f), 1.0f); }
         for (int i = 0; i < 16; i++) if (World.TryPlace(2.6f, 0f, 100f, out q)) IceWall(q);
         for (int i = 0; i < 22; i++) if (World.TryPlace(2.4f, 0f, 105f, out q)) Drift(q);
         for (int i = 0; i < 12; i++) if (World.TryPlace(2.0f, 0f, 100f, out q)) World.Logs(q);
         for (int i = 0; i < 10; i++) if (World.TryPlace(2.2f, 0f, 105f, out q)) World.Rock(q, R(1.1f, 2.0f));
-        for (int i = 0; i < 18; i++) if (World.TryPlace(2.5f, 15f, 95f, out q)) Pine(q, 1f);
+        string[] pines = { "k_tree-snow-a", "k_tree-snow-b", "k_tree-snow-c" };
+        for (int i = 0; i < 18; i++) if (World.TryPlace(2.5f, 15f, 95f, out q) && !Model(pines[World.rnd.Next(3)], q, R(6f, 8f), 0.8f)) Pine(q, 1f);
         int outer = mob ? 40 : 64;
-        for (int i = 0; i < outer; i++) if (World.TryPlace(2.5f, 100f, 132f, out q)) Pine(q, 1.4f);
+        for (int i = 0; i < outer; i++) if (World.TryPlace(2.5f, 100f, 132f, out q) && !Model(pines[World.rnd.Next(3)], q, R(8f, 11f), 0f)) Pine(q, 1.4f);
     }
 
     static Material SnowM { get { return Mats.Paint(new Color(0.96f, 0.98f, 1f), 0.35f); } }

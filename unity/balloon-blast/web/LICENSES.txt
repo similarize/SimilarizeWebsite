@@ -37,3 +37,5 @@ Balloon Blast Airsoft (Unity) - third-party assets and licences
      cut to a 36 s seamless loop.
 
 CC0 1.0 Universal: https://creativecommons.org/publicdomain/zero/1.0/legalcode
+
+Kenney Food Kit 2.0 and Holiday Kit (www.kenney.nl) - CC0 1.0. Converted to LBM1 packs: Resources/LB/k_*.bytes

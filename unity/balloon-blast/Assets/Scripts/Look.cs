@@ -95,13 +95,18 @@ public static class Look
             QualitySettings.shadowDistance = views <= 1 ? 60f : 32f;
         }
         QualitySettings.lodBias = Mobile || views >= 2 ? 0.7f : 1f;
+        var urp = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline as UnityEngine.Rendering.Universal.UniversalRenderPipelineAsset;
+        if (urp != null) urp.shadowDistance = Mobile ? 34f : views <= 1 ? 70f : 36f;
         bool post = PostAllowed(views);
         if (cams != null)
             foreach (var c in cams)
             {
                 if (c == null) continue;
+                // bb6 URP: post comes from the global Volume (bloom, ACES, grade, vignette); LBPost stays off
+                var ucd = UnityEngine.Rendering.Universal.CameraExtensions.GetUniversalAdditionalCameraData(c);
+                if (ucd != null) { ucd.renderPostProcessing = post; ucd.antialiasing = post ? UnityEngine.Rendering.Universal.AntialiasingMode.FastApproximateAntialiasing : UnityEngine.Rendering.Universal.AntialiasingMode.None; }
+                c.allowHDR = true;
                 var p = c.GetComponent<LBPost>();
-                if (p == null && post) p = LBPost.Add(c);
                 if (p != null) p.enabled = post && c.enabled;
             }
         Debug.Log("Look: " + views + " view(s), shadows " + QualitySettings.shadows + ", post " + post);
