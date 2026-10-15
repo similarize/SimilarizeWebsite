@@ -391,6 +391,7 @@ public partial class Game : MonoBehaviour
 
     void UpdateLobby(float dt)
     {
+        lobbyDt = Mathf.Lerp(lobbyDt, Mathf.Min(Time.unscaledDeltaTime, 30f), 0.1f);     // u6g (RaceWarm calm threshold)
         DemoCheck();
         if (state != State.Lobby) return;
         if (Kb.CDown()) CreditsToggle();
