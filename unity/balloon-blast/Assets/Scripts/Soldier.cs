@@ -21,6 +21,28 @@ public class Soldier : MonoBehaviour
     // bb6: pop combos + on-screen callouts
     public int comboN; public float lastPopTime = -99f;
     public string callout = ""; public float calloutT;
+    // bb6: power-ups (seconds left)
+    public float shieldT, speedT, magnetT;
+    public GameObject shieldBubble;
+    public bool Regrow()
+    {
+        foreach (var b in balloons)
+            if (b.popped)
+            {
+                b.popped = false; b.gameObject.SetActive(true);
+                if (b.stringObj != null) b.stringObj.SetActive(true);
+                return true;
+            }
+        return false;
+    }
+    public string PowerLine()
+    {
+        string l = "";
+        if (shieldT > 0f) l += "  <color=#7fd4ff>SHIELD " + Mathf.CeilToInt(shieldT) + "</color>";
+        if (speedT > 0f) l += "  <color=#8dff7a>SPEED " + Mathf.CeilToInt(speedT) + "</color>";
+        if (magnetT > 0f) l += "  <color=#d79bff>MAGNET " + Mathf.CeilToInt(magnetT) + "</color>";
+        return l;
+    }
     public void Callout(string t, float secs) { callout = t; calloutT = secs; }
 
     // inputs
@@ -137,7 +159,7 @@ public class Soldier : MonoBehaviour
 
     public void ResetForRound(Vector3 pos, float yawDeg)
     {
-        comboN = 0; calloutT = 0f; lastPopTime = -99f;
+        comboN = 0; calloutT = 0f; lastPopTime = -99f; shieldT = speedT = magnetT = 0f;
         cc.enabled = false;
         transform.position = pos + Vector3.up * 0.15f;
         cc.enabled = true;
@@ -244,6 +266,12 @@ public class Soldier : MonoBehaviour
     public void PopBalloon(Balloon b, Soldier by)
     {
         if (!alive || b.popped) return;
+        if (shieldT > 0f)
+        {
+            FX.Puff(b.transform.position, Vector3.up);
+            if (by != null && by.slot != null) by.Callout("<color=#7fd4ff>SHIELDED!</color>", 0.8f);
+            return;
+        }
         b.popped = true;
         FX.Pop(b.transform.position, color);
         Sfx.OnPop(b.transform.position, this, by);
@@ -328,7 +356,7 @@ public class Soldier : MonoBehaviour
                 wish = transform.right * inMove.x + transform.forward * inMove.y;
                 wish = Vector3.ClampMagnitude(wish, 1f);
             }
-            float spd = Mathf.Lerp(5.4f, 2.6f, adsBlend);
+            float spd = Mathf.Lerp(5.4f, 2.6f, adsBlend) * (speedT > 0f ? 1.5f : 1f);
             Vector3 hv = new Vector3(vel.x, 0f, vel.z);
             hv = Vector3.MoveTowards(hv, wish * spd, (cc.isGrounded ? 45f : 10f) * dt);
             float vy = vel.y;

@@ -35,12 +35,16 @@ public class Bootstrap : MonoBehaviour
         Look.Init(sun);
         Look.ApplyViews(1, null);
         float t0 = Time.realtimeSinceStartup;
+        string url = Application.absoluteURL ?? "";
+        int ai = url.IndexOf("arena=");
+        if (ai >= 0 && ai + 6 < url.Length && char.IsDigit(url[ai + 6])) World.arena = (url[ai + 6] - '0') % World.ArenaNames.Length;
         World.Build(terrain, System.Environment.TickCount);
         Debug.Log("Balloon Blast: field built in " + Mathf.RoundToInt((Time.realtimeSinceStartup - t0) * 1000f) + " ms");
         FX.Init();
         Sfx.Init();
         gameObject.AddComponent<BBs>();
         gameObject.AddComponent<Game>();
+        gameObject.AddComponent<PowerUps>();
         ModelLoader.Begin();
         StartCoroutine(Look.BuildProbe(World.center));
     }

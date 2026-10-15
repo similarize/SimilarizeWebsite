@@ -91,7 +91,7 @@ public static class Look
         else
         {
             QualitySettings.shadows = views <= 1 ? ShadowQuality.All : ShadowQuality.HardOnly;
-            QualitySettings.shadowResolution = views <= 1 ? ShadowResolution.High : ShadowResolution.Medium;
+            QualitySettings.shadowResolution = views <= 1 ? ShadowResolution.VeryHigh : ShadowResolution.Medium;
             QualitySettings.shadowDistance = views <= 1 ? 60f : 32f;
         }
         QualitySettings.lodBias = Mobile || views >= 2 ? 0.7f : 1f;

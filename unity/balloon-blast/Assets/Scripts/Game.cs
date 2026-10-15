@@ -256,6 +256,7 @@ public class Game : MonoBehaviour
             ? "FIGURES:   Soldiers   <color=#ffd84a>[ CRITTERS ]</color>     <size=18>(Y / F / tap)</size>"
             : "FIGURES:   <color=#ffd84a>[ SOLDIERS ]</color>   Critters     <size=18>(Y / F / tap)</size>";
         string model = critterMode || ModelLoader.Ready ? "" : ModelLoader.Failed ? "  (using simple soldiers)" : "  (loading soldiers...)";
+        model += "\nArena: " + World.ArenaName + "  (N / Select to change)";
         if (slots.Count == 0) lobbyStatus.text = "Press A on a gamepad or Enter on the keyboard to join" + model;
         else
         {
@@ -323,6 +324,10 @@ public class Game : MonoBehaviour
         overview.enabled = true;
 
         if (Kb.CDown()) CreditsToggle();
+        // bb6: N / gamepad Select cycles the arena in the lobby
+        bool nextArena = (UnityEngine.InputSystem.Keyboard.current != null && UnityEngine.InputSystem.Keyboard.current.nKey.wasPressedThisFrame);
+        foreach (var gp in UnityEngine.InputSystem.Gamepad.all) if (gp.selectButton.wasPressedThisFrame) nextArena = true;
+        if (nextArena) { World.Rebuild(World.arena + 1); Sfx.UiSwitch(); RefreshLobbyUI(); }
         if (creditsPanel != null && creditsPanel.gameObject.activeSelf)
         {
             if (Kb.EscDown() || Kb.TouchesBegan().Count > 0 || Kb.MouseLeftDown()) CreditsToggle(false);
@@ -524,6 +529,7 @@ public class Game : MonoBehaviour
     void ClearMatch()
     {
         if (BBs.I != null) BBs.I.ClearAll();
+        if (PowerUps.I != null) PowerUps.I.ClearAll();
         foreach (var sl in slots)
         {
             if (sl.hud != null) sl.hud.Destroy();
@@ -543,7 +549,10 @@ public class Game : MonoBehaviour
         autoStartT = slots.Count > 0 ? 20f : -1f;
         lobbyCanvas.enabled = true;
         Look.ApplyViews(1, new[] { overview });
+        if (matchesPlayed > 0) World.Rebuild(World.arena + 1);   // bb6: arenas rotate after every match
     }
+    int matchesPlayed;
+    public void Feed(string line) { AddFeed(line); }
 
     void StartMatch()
     {
@@ -555,6 +564,7 @@ public class Game : MonoBehaviour
         autoStartT = -1f;
         for (int i = 0; i < TotalPlayers; i++) wins[i] = 0;
         round = 0;
+        matchesPlayed++;
         matchWinner = null;
         feedLines.Clear(); feedTimes.Clear();
 
@@ -664,6 +674,7 @@ public class Game : MonoBehaviour
     {
         round++;
         if (BBs.I != null) BBs.I.ClearAll();
+        if (PowerUps.I != null) PowerUps.I.ClearAll();
         var order = new List<int>();
         for (int i = 0; i < World.spawns.Count; i++) order.Add(i);
         for (int i = order.Count - 1; i > 0; i--) { int j = Random.Range(0, i + 1); int t = order[i]; order[i] = order[j]; order[j] = t; }
@@ -858,11 +869,11 @@ public class Game : MonoBehaviour
                 sl.viewModel.localRotation = Quaternion.Euler(-2.5f * s.kick + Mathf.Lerp(-1.5f, 0f, s.adsBlend), Mathf.Lerp(-3.5f, 0f, s.adsBlend), 0f);
             }
 
-            string top = "ROUND " + round + "  |  " + alive + " LEFT  |  " + clock + "\nWINS  " + WinsLine(s);
+            string top = "ROUND " + round + "  |  " + alive + " LEFT  |  " + clock + "\nWINS  " + WinsLine(s) + s.PowerLine();
             string center = "";
             switch (state)
             {
-                case State.Countdown: center = "ROUND " + round + "\n" + Mathf.CeilToInt(stateT); break;
+                case State.Countdown: center = "<size=26>" + World.ArenaName + "</size>\nROUND " + round + "\n" + Mathf.CeilToInt(stateT); break;
                 case State.Playing:
                     if (s.alive && roundClock > RoundLength - 0.9f) center = "<size=72>GO!</size>";
                     if (s.alive && center == "" && s.calloutT > 0f) center = "<size=54><color=#ffd84a>" + s.callout + "</color></size>";
