@@ -23,7 +23,7 @@ public class LBPost : MonoBehaviour
         { 1.16f, 1.17f, 0.05f, 0.92f, 0.2f },    // 1 Canyon Leap (7c: lower exposure)
         { 1.16f, 1.18f, 0.06f, 0.98f, 0.34f },   // 2 Volcano Rim (lava glow blooms more)
         { 1.12f, 1.18f, -0.035f, 0.85f, 0.16f }, // 3 Snowy Summit (snow + sky clip fast: lower exposure, more contrast; 7c lower again)
-        { 1.16f, 1.14f, 0.0f, 1.0f, 0.22f },     // 4 Jungle Ruins
+        { 1.08f, 1.12f, 0.01f, 0.97f, 0.2f },    // 4 Jungle Ruins (lambo8b: less saturation - the grass read neon)
         { 1.14f, 1.16f, -0.01f, 0.98f, 0.28f },  // 5 Sky City
     };
     static int theme;

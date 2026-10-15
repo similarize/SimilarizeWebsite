@@ -366,8 +366,8 @@ public static class BuildScript
         sun.intensity = 1.25f;
         sun.shadows = LightShadows.Soft;
         sun.shadowStrength = 0.65f;
-        sun.shadowBias = 0.04f;          // lambo8: a touch tighter (contact shadows under the karts), normal bias keeps acne off slopes
-        sun.shadowNormalBias = 0.35f;
+        sun.shadowBias = 0.05f;
+        sun.shadowNormalBias = 0.4f;     // lambo8b: back to the lambo7 values (0.04 / 0.35 showed acne dots in the cockpits on phones)
         sunGo.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
         RenderSettings.sun = sun;
 

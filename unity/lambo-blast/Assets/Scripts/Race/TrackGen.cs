@@ -535,7 +535,7 @@ public static partial class Track
                     }
                     case 3:
                     {
-                        Color snow = new Color(0.92f, 0.94f, 0.98f), rock = new Color(0.42f, 0.44f, 0.5f), ice = new Color(0.65f, 0.8f, 0.92f);
+                        Color snow = new Color(0.84f, 0.87f, 0.92f), rock = new Color(0.42f, 0.44f, 0.5f), ice = new Color(0.65f, 0.8f, 0.92f);
                         c = Color.Lerp(snow, rock, Mathf.Clamp01((slope - 0.55f) * 2.5f));
                         c = Color.Lerp(c, snow * 0.93f, nz * 0.4f);
                         if (slope < 0.3f && h < 10f) c = Color.Lerp(c, ice, 0.3f);
@@ -543,7 +543,7 @@ public static partial class Track
                     }
                     case 4:
                     {
-                        Color g1 = new Color(0.22f, 0.45f, 0.16f), g2 = new Color(0.16f, 0.36f, 0.12f), mud = new Color(0.4f, 0.3f, 0.2f), moss = new Color(0.33f, 0.38f, 0.26f);
+                        Color g1 = new Color(0.25f, 0.38f, 0.15f), g2 = new Color(0.19f, 0.31f, 0.12f), mud = new Color(0.4f, 0.3f, 0.2f), moss = new Color(0.33f, 0.38f, 0.26f);
                         c = Color.Lerp(g1, g2, nz);
                         c = Color.Lerp(c, moss, Mathf.Clamp01((slope - 0.4f) * 2.5f));
                         if (h < WaterY + 1.5f) c = Color.Lerp(c, mud, Mathf.Clamp01((WaterY + 1.5f - h) / 1.5f));
@@ -693,7 +693,7 @@ public static partial class Track
         {
             // lambo8: hi-res marked tarmac (theme tint), CC0 asphalt grain + damp patches; triplanar gravel / snow / concrete shoulders
             Color asph = new Color(0.36f, 0.36f, 0.37f);
-            Color rc = Theme == 2 || Theme == 5 ? tc.road : Theme == 3 ? Color.Lerp(tc.road, asph, 0.3f) : Color.Lerp(asph, tc.road, 0.42f);
+            Color rc = Theme == 2 || Theme == 5 ? tc.road : Theme == 3 ? new Color(0.46f, 0.5f, 0.56f) : Color.Lerp(asph, tc.road, 0.42f);   // 8b: snow road darker (read as white snow)
             Texture2D map = Own(Gfx.RoadMap(rc, tc.curbA, tc.curbB, half > 6f, half > 6f, 8 + Theme));
             roadMat = Own(Gfx.Road(map, Theme));
             if (Gfx.Tri)

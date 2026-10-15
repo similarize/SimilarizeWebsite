@@ -64,8 +64,8 @@ public static class LBDisplay
 
     public static void ApplyAA()
     {
-        // lambo8: desktop / Tesla race at 4x MSAA in level 0 (phones 2x); the governor drops it when frames run long
-        QualitySettings.antiAliasing = mode == 1 ? 4 : Level == 0 ? (Look.Mobile || MobileUA ? 2 : 4) : 0;
+        // lambo8b: race stays 2x MSAA in level 0 (at 1.5-2x density that is 6-8 samples per CSS pixel; 4x cost too much fill rate)
+        QualitySettings.antiAliasing = mode == 1 ? 4 : Level == 0 ? 2 : 0;
     }
 
     static void Downgrade(float fps)
