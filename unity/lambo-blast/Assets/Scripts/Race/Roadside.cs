@@ -43,7 +43,7 @@ public static class Roadside
             if (Mathf.Abs(k[i]) > 1f / 160f)
                 for (int j = -grow; j <= grow; j++) { int q = (i + j + n) % n; int sd = k[i] > 0f ? -1 : 1; if (mark[q] == 0 || Mathf.Abs(k[i]) > 1f / 300f) mark[q] = sd; }
         for (int i = 0; i < n; i++) if (mark[i] != 0 && Excluded(Track.S[i])) mark[i] = 0;
-        Material steel = Mats.Steel(new Color(0.7f, 0.72f, 0.74f)), post = Mats.Lit(new Color(0.3f, 0.31f, 0.33f));
+        Material steel = Mats.PBR(new Color(0.78f, 0.8f, 0.82f), 0.55f, 0.45f), post = Mats.Lit(new Color(0.3f, 0.31f, 0.33f));
         Material tyre = Mats.Lit(new Color(0.07f, 0.07f, 0.075f)), tyreR = Mats.Lit(new Color(0.8f, 0.12f, 0.1f)), tyreW = Mats.Lit(new Color(0.88f, 0.88f, 0.86f));
         Material pole = Mats.Steel(new Color(0.55f, 0.56f, 0.58f)), lamp = Mats.Unlit(new Color(1f, 0.97f, 0.88f));
         Material board = Mats.Lit(new Color(0.92f, 0.92f, 0.9f)), stripe = Mats.Lit(new Color(0.08f, 0.08f, 0.1f));
@@ -66,7 +66,7 @@ public static class Roadside
                 barriers++;
                 // the sharpest corners get a tyre wall behind the armco, every run gets floodlights behind it
                 float kmax = 0f; for (int j = 0; j < len; j++) kmax = Mathf.Max(kmax, Mathf.Abs(k[(i + j) % n]));
-                if (kmax > 1f / 85f && tyres < 520) tyres += TyreWall(root, sa + len * sp * 0.25f, sa + len * sp * 0.8f, side, lat + 1.1f, tyre, tyreR, tyreW);
+                if (kmax > 1f / 85f && tyres < 420) tyres += TyreWall(root, sa + len * sp * 0.25f, sa + len * sp * 0.8f, side, lat + 1.1f, tyre, tyreR, tyreW);
                 if (th != 4 && poles < 34) for (float s = sa + 20f; s < sb - 10f && poles < 34; s += 55f) { Pole(root, s, side, lat + 1.4f, pole, lamp); poles++; }
                 // braking boards 150 / 100 / 50 m before the corner (3 / 2 / 1 stripes) on the approach side
                 if (kmax > 1f / 110f && boards < 30)
@@ -117,6 +117,7 @@ public static class Roadside
         {
             Vector3 g = GroundAt(s, side * lat);
             if (g.y < Track.SurfaceFloor + 0.2f) continue;
+            if (n > 170) break;
             for (int h = 0; h < 3; h++)
             {
                 Material m = h == 2 ? (((int)(s / 0.72f)) % 2 == 0 ? red : white) : tyre;

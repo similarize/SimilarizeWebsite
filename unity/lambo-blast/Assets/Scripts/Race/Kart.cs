@@ -391,6 +391,7 @@ public class Kart : MonoBehaviour
             {
                 grounded = false;
                 vy = Mathf.Min(14f, speed * slope);
+                lat *= 0.3f; yawRate *= 0.3f;           // lambo9b: the ramp lines the car up (a slide at the lip used to carry sideways over the gap)
                 pos.y = Mathf.Max(pos.y, yTop);
                 airT = 0f; trickT = 0f; bigAir = vy > 6f;
                 if (human && gname != null) Toast(gname.ToUpper() + "!", 1.4f);
@@ -536,7 +537,7 @@ public class Kart : MonoBehaviour
     // input ramps (keys + touch buttons are on/off) and a 6-speed box (rpm drives the engine sound + torque ripple).
     // Integrated in <= 1/120 s substeps so it behaves the same at 15 fps as at 60. No rigidbody: the vertical
     // (ground following, ramps, ballistic jumps) stays as it was, so every gap still flies exactly as designed.
-    public const float WB = 2.84f, CgA = 1.30f, CgB = 1.54f, CgH = 0.5f, Grav = 9.81f, Redline = 8400f, Idle = 1050f;
+    public const float WB = 2.84f, CgA = 1.30f, CgB = 1.54f, CgH = 0.42f, Grav = 9.81f, Redline = 8400f, Idle = 1050f;
     public float yawRate;                  // rad/s, + = turning right (yaw grows)
     public float rpm = Idle, accLong, slipRear;
     public int gear = 1;
@@ -550,7 +551,8 @@ public class Kart : MonoBehaviour
     {
         int th = Track.Theme;
         if (inWater) return 0.6f;
-        if (onRoad) return th == 3 ? 1.14f : 1.3f;
+        // lambo9b: track-tyre grip (8a's 1.3 couldn't take the designed post-landing bends at jump speed), + jump-zone grip
+        if (onRoad) return (th == 3 ? 1.32f : 1.5f) * (Track.Def != null && Track.NearJump(s) ? 1.35f : 1f);
         float m = th == 3 ? 0.52f : th == 0 ? 0.66f : th == 5 ? 0.92f : th == 2 ? 0.7f : 0.75f;
         return farOff ? m * 0.92f : m;
     }
@@ -605,7 +607,7 @@ public class Kart : MonoBehaviour
                 if (drive > tracMax) { spinAny = true; drive = tracMax; }
                 if (brakeS > 0.02f && u > 0.5f) brk = Mathf.Min(13.5f * brakeS, muE * Grav * 1.05f);
                 // friction circles: what the tyres spend on drive / braking they can't spend on cornering
-                float fxR = (drive * 0.6f + brk * 0.4f) * m, fxF = (drive * 0.4f + brk * 0.6f) * m;
+                float fxR = (drive * 0.6f + brk * 0.3f) * m, fxF = (drive * 0.4f + brk * 0.7f) * m;   // 70 % front brake bias
                 float muR = muE * (drifting ? 0.7f : 1.12f);           // wider rear tyres: a stable, slightly understeering car
                 float capF = muE * 0.95f * fzF, capR = muR * fzR;
                 float fyFmax = Mathf.Sqrt(Mathf.Max(capF * capF * 0.0625f, capF * capF - fxF * fxF));
@@ -935,7 +937,7 @@ public class Kart : MonoBehaviour
         i.steer = au < 6f ? Mathf.Clamp(ang / 26f, -1f, 1f) : Mathf.Clamp(dReq / SteerLock(au), -1f, 1f);
         float bend = aiShortcut ? 0f : Track.Bend(s, 20f + au * 0.9f);
         // corner speed from the road's curvature ahead (grip-limited) and a braking distance at ~1 g
-        float muA = (Track.Theme == 3 ? 1.14f : 1.3f) * 0.86f * aiSkill;
+        float muA = (Track.Theme == 3 ? 1.32f : 1.5f) * 0.86f * aiSkill;
         float want = spec.top * 1.05f;
         if (!aiShortcut)
             for (float d = 6f; d <= 120f; d += 16f)
@@ -944,14 +946,15 @@ public class Kart : MonoBehaviour
                 if (c < 0.002f) continue;
                 int bi = Track.IndexAt(s + d);
                 float bk = Track.Bank != null && bi < Track.Bank.Length ? Mathf.Abs(Track.Bank[bi]) * 0.9f : 0f;
-                float vs = Mathf.Sqrt((muA + bk) * Grav / c);
+                float jk = Track.Def != null && Track.NearJump(s + d) ? 1.35f : 1f;
+                float vs = Mathf.Sqrt((muA * jk + bk) * Grav / c);
                 want = Mathf.Min(want, Mathf.Sqrt(vs * vs + 2f * 10f * Mathf.Max(0f, d - au * 0.3f)));
             }
         if (boostT > 0f) want = Mathf.Max(want, Mathf.Min(want * boostPower, spec.top * boostPower));
         if (Mathf.Abs(ang) > 60f) want = Mathf.Min(want, 12f);
         i.gas = speed < want - 0.5f ? 1f : speed < want + 1f ? 0.35f : 0f;
         i.brake = speed > want + 1.5f ? Mathf.Clamp((speed - want) / 5f, 0.3f, 1f) : 0f;
-        if (aiJump && (jz < 75f || speed < want + 3f)) { i.gas = 1f; i.brake = 0f; }   // last 75 m before a lip: flat out, no brakes
+        if (aiJump && (jz < 56f || speed < want + 3f)) { i.gas = 1f; i.brake = 0f; }   // approach: flat out unless a bend needs braking; past the pad: no brakes
         if (finished) { i.gas = speed < 14f ? 0.6f : 0f; return i; }
 
         // items

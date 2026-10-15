@@ -123,10 +123,10 @@ public class CarDress
             for (int i = 0; i < 2; i++)
             {
                 float sx = i == 0 ? -1f : 1f;
-                d.tails[i] = Sprite(d.quad, sprung, glowMat, new Vector3(sx * 0.64f, 0.68f, -2.33f), new Vector3(0.75f, 0.32f, 1f), 180f);
+                d.tails[i] = Sprite(d.quad, sprung, glowMat, new Vector3(sx * 0.62f, 0.75f, -2.34f), new Vector3(1.05f, 0.46f, 1f), 180f);
                 d.heads[i] = Sprite(d.quad, sprung, glowMat, new Vector3(sx * 0.62f, 0.45f, 2.3f), new Vector3(0.6f, 0.26f, 1f), 0f);
             }
-            d.tails[2] = Sprite(d.quad, sprung, glowMat, new Vector3(0f, 0.74f, -2.31f), new Vector3(1.9f, 0.16f, 1f), 180f);   // full-width light bar
+            d.tails[2] = Sprite(d.quad, sprung, glowMat, new Vector3(0f, 0.85f, -2.33f), new Vector3(2.0f, 0.22f, 1f), 180f);   // full-width light bar
             d.Tint(d.heads[0], new Color(0.42f, 0.4f, 0.34f, 1f)); d.Tint(d.heads[1], new Color(0.42f, 0.4f, 0.34f, 1f));
         }
         return d;
@@ -149,11 +149,11 @@ public class CarDress
             if (Mathf.Abs(nb - brakeK) > 0.001f || Time.frameCount % 30 == (k.id % 30))
             {
                 brakeK = nb;
-                Color c = Color.Lerp(new Color(0.34f, 0.035f, 0.03f, 1f), new Color(0.95f, 0.1f, 0.07f, 1f), brakeK);
+                Color c = Color.Lerp(new Color(0.6f, 0.07f, 0.05f, 1f), new Color(1f, 0.2f, 0.12f, 1f), brakeK);   // lambo9b: brighter (8a halos were faint)
                 Tint(tails[0], c); Tint(tails[1], c);
                 Tint(tails[2], c * (0.55f + 0.25f * brakeK));
-                float sc = 1f + 0.35f * brakeK;
-                tails[0].transform.localScale = tails[1].transform.localScale = new Vector3(0.75f * sc, 0.32f * sc, 1f);
+                float sc = 1f + 0.5f * brakeK;
+                tails[0].transform.localScale = tails[1].transform.localScale = new Vector3(1.05f * sc, 0.46f * sc, 1f);
             }
         }
         if (blob != null)

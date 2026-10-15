@@ -93,6 +93,13 @@ public static partial class Track
         return false;
     }
 
+    // lambo9b: the run-up to a lip (130 m) and the landing run-out (90 m) - grippier ramp-run surface (Kart.SurfaceMu)
+    public static bool NearJump(float s)
+    {
+        foreach (var g in Gaps) { float d = WrapD(s - g.a); if (d > -130f && d < g.b - g.a + 90f) return true; }
+        return false;
+    }
+
     public static bool InPipe(float s)
     {
         foreach (var p in PipeZones) { float d = WrapD(s - p.x); if (d >= 0f && d <= p.y - p.x) return true; }
@@ -808,7 +815,7 @@ public static partial class Track
         go.transform.rotation = Quaternion.LookRotation(Flat(dir).normalized, Vector3.up);
         Mesh m = Own(Geo.Wedge(w, len, h));
         go.AddComponent<MeshFilter>().sharedMesh = m;
-        go.AddComponent<MeshRenderer>().sharedMaterial = Gfx.Surf(col, Gfx.K.Concrete);     // lambo8: painted concrete, not a flat slab
+        go.AddComponent<MeshRenderer>().sharedMaterial = Gfx.Surf(Color.Lerp(col, new Color(0.52f, 0.52f, 0.5f), 0.6f), Gfx.K.Concrete);     // lambo8: painted concrete; lambo9b: weathered paint (was a neon slab)
         go.AddComponent<MeshCollider>().sharedMesh = m;
         float ang = Mathf.Atan2(h, len) * Mathf.Rad2Deg;
         for (int i = 0; i < 4; i++)
