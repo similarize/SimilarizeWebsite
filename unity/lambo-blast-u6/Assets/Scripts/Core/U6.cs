@@ -113,6 +113,9 @@ public static class U6
         var a = Asset; if (a == null) return;
         string mode = AaForce.Length > 0 ? AaForce : (racing && allowTemporal && WebGPU ? "stp" : "msaa");
         if (!racing && (mode == "stp" || mode == "taa")) mode = "msaa";     // lobby: plain MSAA (RT showroom cameras)
+        // lambou6b: STP's compute passes write R8 / RG8 / RGB10A2 storage textures; core WebGPU (no texture-formats-tier1) can't,
+        // RenderTexture.Create fails and the render graph throws every frame -> fall back to TAA (pixel shader) there
+        if (mode == "stp" && !StpOk) mode = "taa";
         int m = mode == "msaa" ? Mathf.Max(1, msaa) : 1;
         a.msaaSampleCount = m;
 #pragma warning disable 618
@@ -124,6 +127,25 @@ public static class U6
         if (cams != null) foreach (var c in cams) { var d = Data(c); if (d != null) d.antialiasing = cm; }
         string tag = mode + " msaa " + m;
         if (tag != lastAa) { lastAa = tag; Debug.Log("U6: AA " + tag + (racing ? " (race)" : " (lobby)")); }
+    }
+
+    static int stpOk = -1;
+    public static bool StpOk
+    {
+        get
+        {
+            if (stpOk < 0)
+            {
+                var u = UnityEngine.Experimental.Rendering.GraphicsFormatUsage.LoadStore;
+                bool ok = SystemInfo.supportsComputeShaders
+                    && SystemInfo.IsFormatSupported(UnityEngine.Experimental.Rendering.GraphicsFormat.R8_UNorm, u)
+                    && SystemInfo.IsFormatSupported(UnityEngine.Experimental.Rendering.GraphicsFormat.R8G8_UNorm, u)
+                    && SystemInfo.IsFormatSupported(UnityEngine.Experimental.Rendering.GraphicsFormat.A2B10G10R10_UNormPack32, u);
+                stpOk = ok ? 1 : 0;
+                Debug.Log("U6: STP storage formats " + (ok ? "ok" : "missing -> TAA"));
+            }
+            return stpOk == 1;
+        }
     }
 
     static bool upTried; static System.Reflection.PropertyInfo upProp;
