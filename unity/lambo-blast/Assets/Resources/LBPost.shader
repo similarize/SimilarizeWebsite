@@ -43,7 +43,14 @@ Shader "Hidden/LBPost"
 
     half4 fragFinal(v2f_img i) : SV_Target
     {
-        half3 c = tex2D(_MainTex, i.uv).rgb;
+        // lambo9 heat haze (Canyon / Volcano): a faint shimmer in the band around the horizon (_Look.w = strength)
+        float2 uv = i.uv;
+        if (_Look.w > 0.0)
+        {
+            float band = smoothstep(0.36, 0.47, uv.y) * (1.0 - smoothstep(0.5, 0.64, uv.y));
+            uv.x += sin(uv.y * 260.0 + _Time.y * 6.0) * cos(uv.x * 37.0 + _Time.y * 2.3) * 0.0011 * _Look.w * band;
+        }
+        half3 c = tex2D(_MainTex, uv).rgb;
         c += tex2D(_Bloom, i.uv).rgb * _Params.z;
         if (_Look.x > 0.0)
         {

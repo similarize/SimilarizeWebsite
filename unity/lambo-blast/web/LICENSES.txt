@@ -187,6 +187,9 @@ Created using these ambientCG assets (downscaled to 512 / 1024 px, colour maps n
   Asphalt031 (road asphalt)   https://ambientcg.com/a/Asphalt031
   Lava004 (lava)              https://ambientcg.com/a/Lava004
 The trees, grass, grandstands, skid marks and road markings are procedural (made in code for this game).
+lambo9: the armco barriers, tyre walls, floodlights, braking boards, distant mountain ring, car clear-coat paint,
+contact shadows, lamp glows, tyre smoke, road wear and the synthesised V10 engine sound are also procedural / self-made
+(no new third-party assets).
 
 All other models (Optimus, Figure 02, Big Figure Two, Figure 03, Atlas electric, the cars, palms, huts, rocks)
 were made for this game. Robot names only describe the real machines; this fan game is not affiliated with

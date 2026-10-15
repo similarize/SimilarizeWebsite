@@ -16,6 +16,7 @@ public class ViewHud
     readonly Image[] dots = new Image[8];
     readonly Text[] tags = new Text[8];
     float scale = 1f, speedShown, centerPop;
+    string gearShown = "";
     string lastCenter = "";
     Rect vp;
     public float bottomInset;
@@ -141,9 +142,12 @@ public class ViewHud
         float kmh = Mathf.Abs(me.speed) * 3.6f;
         speedShown = Mathf.Lerp(speedShown, kmh, Mathf.Min(1f, dt * 12f));
         speedT.text = Mathf.RoundToInt(speedShown).ToString();
-        float frac = Mathf.Clamp01(speedShown / (me.spec.top * 3.6f * 1.35f));
+        // lambo9: the bar is a rev counter (gearbox rpm, red at the shift light) + the gear beside KM/H
+        float frac = me.netPuppet ? Mathf.Clamp01(speedShown / (me.spec.top * 3.6f * 1.35f)) : Mathf.Clamp01((me.rpm - Kart.Idle) / (Kart.Redline - Kart.Idle));
         speedBar.rectTransform.sizeDelta = new Vector2(Mathf.Max(6f, 204f * frac), 6f);
-        speedBar.color = me.boostT > 0f ? new Color(0.5f, 1f, 0.6f) : Color.white;
+        speedBar.color = me.boostT > 0f ? new Color(0.5f, 1f, 0.6f) : frac > 0.9f ? new Color(1f, 0.32f, 0.25f) : Color.white;
+        string gu = Mathf.Abs(me.speed) < 0.3f && me.gasS < 0.05f ? "N" : me.speed < -0.5f ? "R" : me.gear.ToString();
+        if (gu != gearShown) { gearShown = gu; speedU.text = "KM/H   <b>" + gu + "</b>"; }
         if (me.drifting) { driftT.text = me.driftCharge >= 2.3f ? "DRIFT  <color=#ff9a1a>MAX</color>" : me.driftCharge >= 1.1f ? "DRIFT  <color=#5aa8ff>BOOST</color>" : "DRIFT"; }
         else driftT.text = me.boostT > 0f ? "<color=#5dff9a>BOOST</color>" : (me.shieldT > 0f ? "<color=#6fe0ff>SHIELD</color>" : "");
         // item slot

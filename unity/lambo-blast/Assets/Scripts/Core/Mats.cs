@@ -43,10 +43,34 @@ public static class Mats
     }
 
     // lambo7 car paint: glossy clear-coat look (high smoothness + some metal so the reflection probe reads as a lacquer)
+    // lambo9: LB/Paint (Resources/LBPaint.shader) = metallic base + clear-coat fresnel reflection + sun glint; ?gfx=low keeps lambo7's
+    static Shader paintS; static bool paintTried;
+    static readonly Dictionary<long, Material> paintCache = new Dictionary<long, Material>();
     public static Material CarPaint(Color c)
     {
         bool dark = c.r + c.g + c.b < 0.5f, white = c.r + c.g + c.b > 2.6f;
-        return PBR(c, dark ? 0.97f : 0.94f, white ? 0.12f : dark ? 0.45f : 0.32f);
+        if (!paintTried)
+        {
+            paintTried = true;
+            if (!(Application.absoluteURL ?? "").Contains("gfx=low"))
+            {
+                paintS = Resources.Load<Shader>("LBPaint");
+                if (paintS == null) paintS = Shader.Find("LB/Paint");
+                if (paintS != null && !paintS.isSupported) paintS = null;
+            }
+            Debug.Log("Mats: lambo9 paint " + (paintS != null ? "clear-coat" : "standard"));
+        }
+        if (paintS == null) return PBR(c, dark ? 0.97f : 0.94f, white ? 0.12f : dark ? 0.45f : 0.32f);
+        long k = Key(c, 77);
+        Material m;
+        if (paintCache.TryGetValue(k, out m) && m != null) return m;
+        m = new Material(paintS) { name = "LB9 paint" };
+        m.color = c;
+        m.SetFloat("_Glossiness", dark ? 0.86f : 0.74f);
+        m.SetFloat("_Metallic", white ? 0.1f : dark ? 0.4f : 0.42f);
+        m.SetFloat("_Clear", 1f);
+        paintCache[k] = m;
+        return m;
     }
 
     public static Material Water { get { return water; } }

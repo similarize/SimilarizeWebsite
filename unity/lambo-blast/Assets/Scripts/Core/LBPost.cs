@@ -60,7 +60,8 @@ public class LBPost : MonoBehaviour
         float sat = saturation, con = contrast, warm = warmth, film = filmic, bl = bloom;
         if (themed) { sat = Theme[theme, 0]; con = Theme[theme, 1]; warm = Theme[theme, 2]; film = Theme[theme, 3]; bl = Theme[theme, 4]; }
         m.SetVector("_Grade", new Vector4(sat, con, warm, exposure));
-        m.SetVector("_Look", new Vector4(film, vigInner, 0f, 0f));
+        float haze = themed && !Cheap ? (theme == 2 ? 1.4f : theme == 1 ? 1f : 0f) : 0f;   // lambo9 heat shimmer
+        m.SetVector("_Look", new Vector4(film, vigInner, 0f, haze));
         if (Cheap)
         {
             m.SetVector("_Params", new Vector4(threshold, 0.25f, 0f, vignette));

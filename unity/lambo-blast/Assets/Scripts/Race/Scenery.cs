@@ -100,6 +100,7 @@ public static class Scenery
         StartArch(root);
         ThemeScenery.StandAt(root, new Color(0.15f, 0.6f, 0.85f));   // lambo8
         MeshMerge.Merge(root, true);
+        Roadside.Build();                                           // lambo9
         Gfx.Grass(Track.Root, 0);                                   // lambo8: dune grass tufts
     }
 

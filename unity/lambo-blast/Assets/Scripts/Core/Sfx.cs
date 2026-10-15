@@ -263,7 +263,15 @@ public static class Sfx
             Finish = Tone("finish", 0.7f, t => { int k = Mathf.Min(2, (int)(t / 0.12f)); float f = k == 0 ? 784f : k == 1 ? 988f : 1175f; return Sq(t * f) * 0.22f * Env(t - k * 0.12f, 0.004f, k == 2 ? 0.45f : 0.12f); });
         }
         // loops (integer cycles per second so they loop cleanly)
-        Engine = LoopClip("engine", t => Saw(t * 60f) * 0.45f + Saw(t * 120f) * 0.25f + Sq(t * 30f) * 0.15f + Sin(t * 240f) * 0.1f, 0.5f);
+        // lambo9 V10-ish engine (pitch follows the gearbox rpm in Kart.TickAudio): 120 Hz firing tone at pitch 1 with a
+        // half-order crank rumble, odd harmonics, a little firing-pulse rasp (noise gated by the firing phase)
+        Engine = LoopClip("engine", t =>
+        {
+            float ph = Mathf.Repeat(t * 120f, 1f);
+            float pulse = Mathf.Exp(-ph * 7f);
+            return Saw(t * 120f) * 0.32f + Sin(t * 60f) * 0.22f + Saw(t * 240f) * 0.12f + Sin(t * 360f) * 0.1f + Sin(t * 600f) * 0.04f
+                 + N() * 0.16f * pulse + Sq(t * 30f) * 0.05f;
+        }, 0.55f);
         EngineAI = LoopClip("engineai", t => Saw(t * 70f) * 0.35f + Saw(t * 73f) * 0.35f + Saw(t * 140f) * 0.15f, 0.45f);
         {
             var d = Buf(1f); float lp = 0f;

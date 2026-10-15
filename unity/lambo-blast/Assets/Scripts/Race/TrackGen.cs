@@ -60,7 +60,7 @@ public static partial class Track
         }
         foreach (var o in owned) if (o != null) Object.Destroy(o);
         owned.Clear();
-        BoxSpots.Clear(); RampS.Clear(); Gaps.Clear(); Pads.Clear(); PipeZones.Clear();
+        BoxSpots.Clear(); RampS.Clear(); Gaps.Clear(); Pads.Clear(); PipeZones.Clear(); Barriers.Clear();
         hgrid = null; Bank = null; Lava = false; LavaY = -999f; PadMat = null; LavaMat = null; apron = false;
         ScGap = new Gap();
         Physics.SyncTransforms();
@@ -78,6 +78,8 @@ public static partial class Track
     }
 
     // ---------------------------------------------------------------- queries
+    public static float WrapDist(float d) { return WrapD(d); }
+    public static readonly List<Roadside.Barrier> Barriers = new List<Roadside.Barrier>();   // lambo9 solid armco runs
     static float WrapD(float d) { float L = Length; d %= L; if (d > L * 0.5f) d -= L; if (d < -L * 0.5f) d += L; return d; }
 
     // inside a main-road gap (+/- pad metres)?
@@ -284,10 +286,16 @@ public static partial class Track
         float p2 = Mathf.PerlinNoise(x * 0.02f + 1.3f, z * 0.02f + 5.1f);
         switch (th)
         {
-            case 1:   // desert: plain with flat-topped mesas (stepped)
+            case 1:   // desert: plain with flat-topped mesas (stepped) - lambo9: eroded ledges, buttes, rock fins
             {
                 float mesa = Smooth((p1 - 0.5f) / 0.05f) * 30f + Smooth((p1 - 0.66f) / 0.04f) * 16f;
-                return 1f + 3f * p2 + mesa;
+                float p3 = Mathf.PerlinNoise(x * 0.011f + 8.3f, z * 0.011f + 1.9f);
+                float butte = Smooth((p3 - 0.7f) / 0.03f) * 22f * (1f - Smooth((p1 - 0.5f) / 0.05f));
+                float h = 1f + 3f * p2 + mesa + butte;
+                float ledge = Mathf.Repeat(h, 5.5f);
+                h += (Smooth(ledge / 5.5f) * 5.5f - ledge) * 0.55f * Mathf.Clamp01((h - 6f) / 6f);        // strata terraces on the walls
+                h += 1.6f * Ridged(x * 0.045f, z * 0.045f) * Mathf.Clamp01((h - 4f) / 10f);
+                return h;
             }
             case 2:   // volcano cone with a lava crater + lava pools on the plain
             {
@@ -295,6 +303,7 @@ public static partial class Track
                 float d = (new Vector2(x, z) - c).magnitude;
                 float cone = 95f * Mathf.Pow(Mathf.Max(0f, 1f - d / 270f), 1.5f);
                 float h = 3f + 5f * p2 + cone;
+                h += 4.5f * Ridged(x * 0.028f + 2f, z * 0.028f) * Mathf.Clamp01(d / 120f) + 2f * Ridged(x * 0.08f, z * 0.08f);   // lambo9: rough lava fields
                 if (d < 55f) h = Mathf.Lerp(h, LavaY - 4f, Smooth((55f - d) / 22f));
                 float pool = Mathf.PerlinNoise(x * 0.012f + 9f, z * 0.012f + 2f);
                 h -= 12f * Smooth((pool - 0.68f) / 0.08f) * Mathf.Clamp01((d - 120f) / 60f);
@@ -303,14 +312,22 @@ public static partial class Track
             case 3:   // mountains: big ridged peaks
             {
                 float r = 1f - Mathf.Abs(2f * Mathf.PerlinNoise(x * 0.006f + 4f, z * 0.006f + 8f) - 1f);
-                return 8f + 75f * p1 * p1 + 45f * r * r + 3f * p2;
+                float baseH = 8f + 75f * p1 * p1 + 45f * r * r + 3f * p2;
+                // lambo9: jagged ridgelines + rock outcrops, stronger the higher it gets
+                float hi = Mathf.Clamp01((baseH - 20f) / 50f);
+                return baseH + (16f * Ridged(x * 0.017f + 1f, z * 0.017f + 3f) + 6f * Ridged(x * 0.05f, z * 0.05f + 7f)) * (0.25f + 0.75f * hi);
             }
-            case 4:   // rolling jungle hills
-                return 7f + 18f * p1 + 4f * p2;
+            case 4:   // rolling jungle hills - lambo9: steep karst knolls between them
+            {
+                float kk = Mathf.PerlinNoise(x * 0.016f + 5f, z * 0.016f + 2f);
+                return 7f + 18f * p1 + 4f * p2 + 26f * Smooth((kk - 0.66f) / 0.12f) + 2.5f * Ridged(x * 0.04f, z * 0.04f);
+            }
             default:  // city: flat streets
                 return 0f;
         }
     }
+
+    static float Ridged(float x, float z) { float r = 1f - Mathf.Abs(2f * Mathf.PerlinNoise(x, z) - 1f); return r * r; }
 
     static float GapFloor(int th, float yA, float yB)
     {
@@ -428,7 +445,7 @@ public static partial class Track
         float margin = 170f;
         gx0 = Min.x - margin; gz0 = Min.y - margin;
         float size = Mathf.Max(Max.x - Min.x, Max.y - Min.y) + margin * 2f;
-        gn = 161;
+        gn = 225;                         // lambo9: 225^2 (was 161^2) -> ~5 m cells, real hill / ridge silhouettes
         gcell = size / (gn - 1);
         hgrid = new float[gn * gn];
         var allGaps = new List<Gap>(Gaps);
@@ -443,8 +460,10 @@ public static partial class Track
                     var p = new Vector3(wx, 0f, wz);
                     Proj pm = NearestFast(p);
                     Proj ps = NearestShortcut(p);
-                    float roadY = pm.point.y - Mathf.Clamp(pm.lat, -HalfW - 1.4f, HalfW + 1.4f) * BankAt(pm) - 0.4f;
-                    float wM = Smooth((pm.dist - (HalfW + Wall + 2f)) / 26f);
+                    // lambo9: half-pipes get a wider, deeper bed so the coarse terrain can't poke through the pipe walls
+                    float pk = PipeW(pm.s);
+                    float roadY = pm.point.y - Mathf.Clamp(pm.lat, -HalfW - 1.4f, HalfW + 1.4f) * BankAt(pm) - 0.4f - 1.8f * pk;
+                    float wM = Smooth((pm.dist - (HalfW + Wall + 2f + 10f * pk)) / (26f + 8f * pk));
                     float wS = Smooth((ps.dist - (ScHalf + Wall + 1f)) / 22f);
                     float scY = ps.point.y - 0.4f;
                     if (ps.dist < pm.dist) { h = Mathf.Lerp(roadY, h, wM); h = Mathf.Lerp(scY, h, wS); }
@@ -692,8 +711,8 @@ public static partial class Track
         if (!Gfx.Low)
         {
             // lambo8: hi-res marked tarmac (theme tint), CC0 asphalt grain + damp patches; triplanar gravel / snow / concrete shoulders
-            Color asph = new Color(0.36f, 0.36f, 0.37f);
-            Color rc = Theme == 2 || Theme == 5 ? tc.road : Theme == 3 ? new Color(0.46f, 0.5f, 0.56f) : Color.Lerp(asph, tc.road, 0.42f);   // 8b: snow road darker (read as white snow)
+            Color asph = new Color(0.26f, 0.26f, 0.27f);            // lambo9: darker, real asphalt (lambo8 read washed out)
+            Color rc = Theme == 2 || Theme == 5 ? tc.road * 0.85f : Theme == 3 ? new Color(0.31f, 0.33f, 0.37f) : Color.Lerp(asph, tc.road, 0.25f);   // 8b: snow road darker (read as white snow)
             Texture2D map = Own(Gfx.RoadMap(rc, tc.curbA, tc.curbB, half > 6f, half > 6f, 8 + Theme));
             roadMat = Own(Gfx.Road(map, Theme));
             if (Gfx.Tri)

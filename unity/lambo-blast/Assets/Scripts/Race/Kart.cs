@@ -24,7 +24,7 @@ public class Kart : MonoBehaviour
     public bool drifting;
     int driftDir;
     public float driftCharge;
-    float driftVisual, steerVisual, spinAngle, wheelRot, headYaw, bounce;
+    float steerVisual, spinAngle, wheelRot, headYaw, bounce;
     public float boostT, boostPower = 1.35f;
     public float spinT, spinTotal = 1f, shrinkT, shieldT;
     public bool respawning;
@@ -113,6 +113,14 @@ public class Kart : MonoBehaviour
         body = new GameObject("Body").transform;
         body.SetParent(transform, false);
         KartModel.Build(body, car, robot, out steerPivots, out spinners, out head, out wheelT);
+        // lambo9: everything but the wheels rides on a sprung node (body roll / pitch over the planted wheels)
+        sprung = new GameObject("Sprung").transform;
+        sprung.SetParent(body, false);
+        var kids = new System.Collections.Generic.List<Transform>();
+        foreach (Transform ch in body) if (ch != sprung && ch.name != "Steer" && ch.name != "Axle") kids.Add(ch);
+        foreach (var ch in kids) ch.SetParent(sprung, false);
+        if (dress != null) dress.Destroy();
+        dress = CarDress.Attach(transform, sprung, Cars.All[c].color);
         shield = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         Destroy(shield.GetComponent<Collider>());
         shield.name = "Shield";
@@ -139,7 +147,7 @@ public class Kart : MonoBehaviour
         yaw = yawDeg;
         speed = lat = vy = 0f;
         grounded = true; gNormal = Vector3.up; lastClimb = 0f;
-        drifting = false; driftCharge = 0f; boostT = 0f; spinT = 0f; shrinkT = 0f; shieldT = 0f;
+        drifting = false; driftCharge = 0f; boostT = 0f; spinT = 0f; shrinkT = 0f; shieldT = 0f; ResetDrive();
         respawning = false; item = Item.None; rollT = 0f;
         lap = -1; cp = true; finished = false; finishTime = 0f; wrongT = 0f; toastT = 0f; offT = 0f; towing = false; towS = -1f; fadeInT = 0f; hostPlaced = false;
         Track.Proj p = Track.Nearest(pos, -1, 0);
@@ -203,6 +211,7 @@ public class Kart : MonoBehaviour
         spinT = spinTotal = spin;
         drifting = false; driftCharge = 0f; boostT = 0f;
         speed *= type == Item.Oil ? 0.55f : 0.3f;
+        yawRate *= 0.3f; lat *= 0.3f;
         if (launch > 0f) { vy = launch; grounded = false; }
         if (type != Item.Lightning && type != Item.Oil && type != Item.Fireball) FX.Boom(transform.position + Vector3.up * 0.6f, 0.6f);
         Sfx.PlayAt(Sfx.Spin, transform.position, 0.7f);
@@ -290,60 +299,33 @@ public class Kart : MonoBehaviour
         if (padCool > 0f) padCool -= dt;
         float accel = spec.accel * (boostT > 0f ? 2.4f : 1f);
 
-        // ---- longitudinal ----
-        if (grounded)
-        {
-            if (i.gas > 0.05f && speed > -0.5f)
-            {
-                if (speed < top) speed = Mathf.Min(top, speed + accel * i.gas * dt * (1.2f - 0.6f * Mathf.Clamp01(speed / top)));
-            }
-            if (speed > top) speed = Mathf.MoveTowards(speed, top, (boostT > 0f ? 4f : 10f) * dt);
-            if (i.brake > 0.05f)
-            {
-                if (speed > 0.5f) speed -= 30f * i.brake * dt;
-                else speed = Mathf.Max(-10f, speed - 12f * i.brake * dt);
-            }
-            if (i.gas <= 0.05f && i.brake <= 0.05f) speed = Mathf.MoveTowards(speed, 0f, 4.5f * dt);
-            if (i.gas > 0.05f && speed < -0.5f) speed = Mathf.MoveTowards(speed, 0f, 25f * dt);
-            if (spinT > 0f) speed = Mathf.MoveTowards(speed, 0f, 20f * dt);
-        }
-        else speed = Mathf.MoveTowards(speed, 0f, 1f * dt);
-
-        // ---- steering + drift ----
-        float speedF = Mathf.Clamp01(Mathf.Abs(speed) / 7f);
-        float turn = i.steer * spec.handling * speedF * (1f - 0.22f * Mathf.Clamp01(speed / spec.top));
-        if (speed < 0f) turn = -turn;
+        // ---- lambo9 drift: a clutch kick (yaw kick + the rear lets go while held), held with counter-steer + throttle ----
+        float beta = Mathf.Atan2(lat, Mathf.Max(1f, Mathf.Abs(speed)));
         if (!drifting && i.drift && grounded && Mathf.Abs(i.steer) > 0.3f && speed > 12f && spinT <= 0f)
         {
             drifting = true; driftDir = i.steer > 0f ? 1 : -1; driftCharge = 0f;
-            vy = 2.6f; grounded = false;    // little hop into the drift
+            yawRate += driftDir * 0.6f;
         }
         if (drifting)
         {
-            if (!i.drift || speed < 9f || spinT > 0f)
+            if (!i.drift || speed < 9f || spinT > 0f || Mathf.Abs(beta) > 1.25f)
             {
                 drifting = false;
                 if (driftCharge >= 2.3f) { StartBoost(1.3f, 1.3f); Sfx.PlayAt(Sfx.DriftPop, transform.position, 0.8f, 60f, 1.15f); }
                 else if (driftCharge >= 1.1f) { StartBoost(0.7f, 1.22f); Sfx.PlayAt(Sfx.DriftPop, transform.position, 0.7f); }
                 driftCharge = 0f;
             }
-            else
-            {
-                float k = 0.78f + 0.48f * i.steer * driftDir;      // steer into the drift = tighter, against = wider
-                turn = driftDir * spec.handling * Mathf.Clamp(k, 0.3f, 1.3f);
-                if (grounded) driftCharge += dt * (0.75f + 0.55f * Mathf.Abs(i.steer));
-            }
+            else if (grounded && Mathf.Abs(beta) > 0.08f) driftCharge += dt * (0.75f + 0.55f * Mathf.Abs(i.steer)) * Mathf.Clamp01(Mathf.Abs(beta) / 0.22f);
         }
-        yaw += turn * dt * (grounded ? 1f : 0.5f);
 
-        // lateral slip (drift slides outwards, normal driving grips)
-        float latT = drifting ? -driftDir * Mathf.Abs(speed) * 0.17f : 0f;
-        lat = Mathf.Lerp(lat, latT, Mathf.Min(1f, dt * (drifting ? 4f : grounded ? (onRoad || !FreeRoam ? 9f : farOff ? 3.2f : 5f) : 1f)));
+        // ---- lambo9 vehicle model (longitudinal + lateral + yaw) ----
+        Drive(i, dt, top, accel, farOff);
+        if (grounded && speed > top) speed = Mathf.MoveTowards(speed, top, (boostT > 0f ? 4f : 10f) * dt);
         if (!onRoad && FreeRoam && grounded && Mathf.Abs(speed) > 2f) speed = Mathf.MoveTowards(speed, 0f, (farOff ? 2.2f : 1.2f) * dt);   // rough ground drags
 
         // ---- move ----
         Vector3 fwd = Forward, right = Right;
-        pos += (fwd * speed + right * lat) * dt;
+        pos += driveDisp;
 
         // ---- where are we on the track ----
         Track.Proj pm = Track.Nearest(pos, hint, 24);
@@ -375,6 +357,7 @@ public class Kart : MonoBehaviour
                 v -= nrm * o * 1.2f;
                 speed = Vector3.Dot(v, fwd) * 0.97f;
                 lat = Vector3.Dot(v, right);
+                yawRate *= 0.5f;
                 if (o > 7f) { Sfx.PlayAt(Sfx.Bump, pos, 0.6f); if (human) Game.Shake(this, 0.3f); }
             }
         }
@@ -387,6 +370,7 @@ public class Kart : MonoBehaviour
             Vector3 cl = new Vector3(Mathf.Clamp(pos.x, tr.xMin + m, tr.xMax - m), pos.y, Mathf.Clamp(pos.z, tr.yMin + m, tr.yMax - m));
             if ((cl - pos).sqrMagnitude > 0.0001f) { pos = cl; speed *= 0.95f; }
         }
+        BarrierCheck(ref pos, pm);
         // ---- vertical ----
         float gy; Vector3 gn;
         Track.Ground(pos, out gy, out gn);
@@ -544,6 +528,197 @@ public class Kart : MonoBehaviour
         TickAudio(i);
     }
 
+    // ------------------------------------------------------------------ lambo9 vehicle model
+    // Planar two-axle ("bicycle") car: front / rear slip angles through a Pacejka-style grip curve (peak ~11 deg, falls off
+    // past it), static + dynamic load transfer (braking loads the nose -> trail-brake oversteer, throttle loads the tail),
+    // a friction circle per axle (power / brake eat into cornering grip, wheel spin on loose ground), speed-sensitive
+    // steering lock, a little downforce, grip from the road's banking, surface grip (tarmac / dirt / snow / water),
+    // input ramps (keys + touch buttons are on/off) and a 6-speed box (rpm drives the engine sound + torque ripple).
+    // Integrated in <= 1/120 s substeps so it behaves the same at 15 fps as at 60. No rigidbody: the vertical
+    // (ground following, ramps, ballistic jumps) stays as it was, so every gap still flies exactly as designed.
+    public const float WB = 2.84f, CgA = 1.30f, CgB = 1.54f, CgH = 0.5f, Grav = 9.81f, Redline = 8400f, Idle = 1050f;
+    public float yawRate;                  // rad/s, + = turning right (yaw grows)
+    public float rpm = Idle, accLong, slipRear;
+    public int gear = 1;
+    public bool wheelSpin, braking;
+    public float gasS, brakeS, steerS;     // ramped pedals / steering
+    float shiftT;
+    Vector3 driveDisp;
+    static readonly float[] GearTop = { 0.26f, 0.4f, 0.54f, 0.68f, 0.84f, 1.0f };   // share of (top x 1.4) each gear reaches at the redline
+
+    float SurfaceMu(bool farOff)
+    {
+        int th = Track.Theme;
+        if (inWater) return 0.6f;
+        if (onRoad) return th == 3 ? 1.14f : 1.3f;
+        float m = th == 3 ? 0.52f : th == 0 ? 0.66f : th == 5 ? 0.92f : th == 2 ? 0.7f : 0.75f;
+        return farOff ? m * 0.92f : m;
+    }
+
+    public static float SteerLock(float u) { return 0.52f / (1f + u * u / 240f); }   // rad: ~30 deg parked, ~7 deg at 30 m/s
+
+    static float Pac(float a)
+    {
+        float x = 11f * a;
+        return Mathf.Sin(1.45f * Mathf.Atan(x - 0.3f * (x - Mathf.Atan(x))));
+    }
+
+    static float PacR(float a) { return Mathf.Abs(a) > 0.2f ? Mathf.Sign(a) * Mathf.Max(Mathf.Abs(Pac(a)), 0.96f) : Pac(a); }   // rear: no fall-off past the peak (no snap spins)
+
+    float TorqueK()
+    {
+        if (shiftT > 0f) return 0.2f;
+        float n = Mathf.Clamp01((rpm - Idle) / (Redline - Idle));
+        return 0.86f + 0.24f * Mathf.Sin(n * Mathf.PI);
+    }
+
+    void Drive(KIn i, float dt, float top, float accel, bool farOff)
+    {
+        // pedal / steering ramps (a key press is a gradual squeeze, not a step)
+        gasS = Mathf.MoveTowards(gasS, Mathf.Clamp01(i.gas), dt * (i.gas > gasS ? 3.4f : 6f));
+        brakeS = Mathf.MoveTowards(brakeS, Mathf.Clamp01(i.brake), dt * (i.brake > brakeS ? 5f : 8f));
+        bool outwards = Mathf.Abs(i.steer) > Mathf.Abs(steerS) && (steerS == 0f || Mathf.Sign(i.steer) == Mathf.Sign(steerS));
+        steerS = Mathf.MoveTowards(steerS, Mathf.Clamp(i.steer, -1f, 1f), dt * (outwards ? 3.8f : 6.5f));
+        braking = brakeS > 0.1f && speed > 1f;
+        float mu = SurfaceMu(farOff);
+        float bankB = 0f;
+        if (onRoad && Track.Bank != null && hint >= 0 && hint < Track.Bank.Length) bankB = Mathf.Abs(Track.Bank[hint]) * 0.9f;
+        float m = 1450f * spec.weight, Iz = m * 1.15f * CgA * CgB;
+        float assist = human && !Autopilot ? 0.35f : 1.1f;          // gentle stability assist (AI: firmer)
+        int n = Mathf.Clamp(Mathf.CeilToInt(dt * 120f), 1, 40);
+        float h = dt / n;
+        driveDisp = Vector3.zero;
+        bool spinAny = false; float slipR = 0f;
+        for (int k = 0; k < n; k++)
+        {
+            float u = speed, v = lat, r = yawRate, au = Mathf.Abs(u);
+            if (grounded)
+            {
+                float df = Mathf.Clamp01(au / 40f);
+                float muE = mu * (1f + 0.22f * df * df) + bankB;
+                float fzF = Mathf.Max(0.2f * m * Grav, m * Grav * CgB / WB - m * accLong * CgH / WB);
+                float fzR = Mathf.Max(0.2f * m * Grav, m * Grav * CgA / WB + m * accLong * CgH / WB);
+                // longitudinal
+                float drive = 0f, brk = 0f;
+                if (gasS > 0.02f && u > -0.5f && u < top) drive = accel * gasS * (1.2f - 0.6f * Mathf.Clamp01(u / top)) * TorqueK();
+                float tracMax = muE * Grav;
+                if (drive > tracMax) { spinAny = true; drive = tracMax; }
+                if (brakeS > 0.02f && u > 0.5f) brk = Mathf.Min(13.5f * brakeS, muE * Grav * 1.05f);
+                // friction circles: what the tyres spend on drive / braking they can't spend on cornering
+                float fxR = (drive * 0.6f + brk * 0.4f) * m, fxF = (drive * 0.4f + brk * 0.6f) * m;
+                float muR = muE * (drifting ? 0.7f : 1.12f);           // wider rear tyres: a stable, slightly understeering car
+                float capF = muE * 0.95f * fzF, capR = muR * fzR;
+                float fyFmax = Mathf.Sqrt(Mathf.Max(capF * capF * 0.0625f, capF * capF - fxF * fxF));
+                float fyRmax = Mathf.Sqrt(Mathf.Max(capR * capR * 0.0625f, capR * capR - fxR * fxR));
+                if (spinAny) fyRmax *= 0.8f;
+                float delta = steerS * SteerLock(au);
+                float uA = Mathf.Max(au, 2.5f);
+                float aF = Mathf.Atan2(v + CgA * r, uA) - delta;
+                float aR = Mathf.Atan2(v - CgB * r, uA);
+                float fyF = -fyFmax * Pac(aF), fyR = -fyRmax * (drifting ? Pac(aR) : PacR(aR));
+                float cd = Mathf.Cos(delta), sd = Mathf.Sin(delta);
+                float vdot = (fyF * cd + fyR) / m - u * r;
+                float rdot = (CgA * fyF * cd - CgB * fyR) / Iz;
+                float bb = Mathf.Atan2(v, Mathf.Max(au, 1f));
+                if (!drifting && au > 4f)
+                {
+                    float rl = muE * Grav / Mathf.Max(au, 5f) * 1.05f, rt = Mathf.Clamp(u * Mathf.Tan(delta) / WB, -rl, rl);
+                    rdot -= assist * (r - rt) * Mathf.Clamp01(Mathf.Abs(bb) / 0.12f);
+                }
+                if (drifting && Mathf.Abs(bb) > 0.42f) rdot += 9f * (Mathf.Abs(bb) - 0.42f) * Mathf.Sign(bb);   // drift assist: holds ~20-35 deg
+                float udot = drive - brk * Mathf.Sign(u) - fyF * sd / m + v * r;
+                udot -= 0.00042f * u * au;                                   // aero drag
+                float kin = u < 0f ? 0f : Mathf.Clamp01((au - 2f) / 4f);                 // parking speeds: plain kinematic steering
+                float rK = u * Mathf.Tan(steerS * 0.52f) / WB;
+                r = Mathf.Lerp(rK, r + rdot * h, kin);
+                v = Mathf.Lerp(v * Mathf.Max(0f, 1f - 10f * h), v + vdot * h, kin);
+                u += udot * h;
+                // rolling resistance + engine braking off the throttle, reverse, gas while rolling back, spin-out scrub
+                bool coast = gasS <= 0.05f && brakeS <= 0.05f;
+                u = Mathf.MoveTowards(u, 0f, (0.35f + (coast ? 2.3f : 0f)) * h);
+                if (brakeS > 0.02f && u <= 0.5f) u = Mathf.Max(-10f, u - 9f * brakeS * h);
+                if (gasS > 0.05f && u < -0.5f) u = Mathf.MoveTowards(u, 0f, 16f * h);
+                if (spinT > 0f) { u = Mathf.MoveTowards(u, 0f, 20f * h); r *= Mathf.Max(0f, 1f - 6f * h); v *= Mathf.Max(0f, 1f - 6f * h); }
+                accLong = Mathf.Lerp(accLong, Mathf.Clamp(udot - v * r, -6f, 6f), Mathf.Min(1f, 18f * h));   // tyre force / m (not the v*r kinematic term)
+                slipR = aR;
+            }
+            else
+            {
+                u = Mathf.MoveTowards(u, 0f, 1f * h);
+                v *= Mathf.Max(0f, 1f - 0.6f * h);
+                r = Mathf.Lerp(r, steerS * 0.9f, Mathf.Min(1f, 2f * h));    // a little air control
+                accLong = Mathf.Lerp(accLong, 0f, Mathf.Min(1f, 6f * h));
+            }
+            speed = u; lat = v; yawRate = Mathf.Clamp(r, -4f, 4f);
+            yaw += yawRate * h * Mathf.Rad2Deg;
+            driveDisp += (Forward * speed + Right * lat) * h;
+        }
+        wheelSpin = spinAny && grounded;
+        slipRear = slipR;
+        // 6-speed box: rpm from road speed in the current gear (free revs in the air / spinning wheels)
+        float gTop = spec.top * 1.4f * GearTop[gear - 1];
+        float rpmT = Idle + (Redline - Idle) * Mathf.Clamp01(Mathf.Abs(speed) / gTop);
+        if (!grounded || wheelSpin) rpmT = Mathf.Max(rpmT, Mathf.Lerp(rpmT, Redline * 0.97f, gasS * 0.6f));
+        if (Mathf.Abs(speed) < 1f) rpmT = Idle + gasS * 3800f;
+        rpm = Mathf.Lerp(rpm, rpmT, Mathf.Min(1f, dt * (shiftT > 0f ? 9f : 14f)));
+        if (shiftT > 0f) shiftT -= dt;
+        else if (gear < GearTop.Length && rpm > 8000f && gasS > 0.3f && grounded)
+        {
+            gear++; shiftT = 0.15f;
+            if (human && gasS > 0.8f && Random.value < 0.6f) { FX.Flame(transform.TransformPoint(new Vector3(0f, 0.47f, -2.4f)), -Forward); Sfx.PlayAt(Sfx.Bump, transform.position, 0.14f, 40f, 0.55f); }
+        }
+        else if (gear > 1 && rpm < 4300f) { gear--; shiftT = 0.09f; }
+        if (Mathf.Abs(speed) < 0.5f && gear > 1 && shiftT <= 0f) gear = 1;
+    }
+
+    // lambo9 solid armco (Roadside): a kart crossing a barrier's line from either side is pushed back and bounces off
+    // (restitution 0.3, scrub, sparks), unless it is flying over it
+    float barLat = 0f; bool barInit;
+    void BarrierCheck(ref Vector3 pos, Track.Proj pm)
+    {
+        float prev = barLat;
+        barLat = pm.lat;
+        if (!barInit) { barInit = true; return; }
+        if (Track.Barriers.Count == 0 || pos.y - pm.point.y > 1.6f || pm.dist > Track.HalfW + 8f) return;
+        foreach (var b in Track.Barriers)
+        {
+            float d = Track.WrapDist(pm.s - b.a);
+            if (d < 0f || d > b.b - b.a) continue;
+            float L = b.lat, sideLat = pm.lat * b.side, prevSide = prev * b.side;
+            const float half = 1.05f;
+            bool fromIn = prevSide <= L - half + 0.05f && sideLat > L - half, fromOut = prevSide >= L + half - 0.05f && sideLat < L + half;
+            if (!fromIn && !fromOut) continue;
+            float target = fromIn ? L - half : L + half;
+            Vector3 nrm = pm.right * b.side * (fromIn ? 1f : -1f);     // direction into the barrier
+            pos += pm.right * b.side * (target - sideLat);
+            Vector3 v = Forward * speed + Right * lat;
+            float o = Vector3.Dot(v, nrm);
+            if (o > 0f)
+            {
+                v -= nrm * o * 1.3f;
+                Vector3 tv = v - nrm * Vector3.Dot(v, nrm);
+                v -= tv * Mathf.Clamp01(0.012f * o);
+                speed = Vector3.Dot(v, Forward); lat = Vector3.Dot(v, Right);
+                yawRate *= 0.55f;
+                if (o > 3f)
+                {
+                    Vector3 cp = pos + nrm * half;
+                    for (int q = 0; q < 6; q++) FX.Spark(cp + Vector3.up * 0.5f, -nrm + Random.insideUnitSphere * 0.5f, new Color(1f, 0.75f, 0.35f));
+                    Sfx.PlayAt(Sfx.Bump, pos, Mathf.Clamp01(o / 14f));
+                    if (human) Game.Shake(this, Mathf.Clamp(o * 0.03f, 0.1f, 0.4f));
+                }
+            }
+            barLat = Vector3.Dot(Track.Flat(pos - pm.point), pm.right);
+            break;
+        }
+    }
+
+    void ResetDrive()
+    {
+        yawRate = 0f; accLong = 0f; slipRear = 0f; gear = 1; rpm = Idle; shiftT = 0f; gasS = brakeS = steerS = 0f; wheelSpin = false; braking = false;
+        driveDisp = Vector3.zero; barInit = false;
+    }
+
     // called at GO
     public void LaunchStart()
     {
@@ -594,41 +769,76 @@ public class Kart : MonoBehaviour
         Vector3 t = Track.TangentAt(rs);
         yaw = Mathf.Atan2(t.x, t.z) * Mathf.Rad2Deg;
         hint = Track.IndexAt(rs);
-        vy = 0f; grounded = false; drifting = false; spinT = 0f;
+        vy = 0f; grounded = false; drifting = false; spinT = 0f; ResetDrive(); gear = 2;
         speed = Track.Def != null ? 12f : 6f;
         bigAir = false; trickT = 0f; trickRoll = 0f;
         aiShortcut = false;
     }
 
+    // lambo9 visuals: measured accelerations drive a sprung body (roll / pitch / dive on a damped spring), the steered
+    // wheels show the real lock (counter-steer in a slide), skids + tyre smoke from the real rear slip / wheel spin,
+    // brake lights, a soft contact shadow under the car
+    float visYaw, visSpeed, visAx, visAy, rollA, rollV, pitchA, pitchV;
+    Transform sprung;
+    CarDress dress;
     void ApplyTransform(float dt)
     {
         transform.rotation = Quaternion.FromToRotation(Vector3.up, gNormal) * Quaternion.Euler(0f, yaw, 0f);
-        // lambo8: rear-tyre skid marks while drifting / sliding hard on the ground
-        if (grounded && !respawning && (drifting || Mathf.Abs(lat) > 4.5f) && Mathf.Abs(speed) > 6f)
+        if (dt > 0f)
+        {
+            float yr = Mathf.DeltaAngle(visYaw, yaw) * Mathf.Deg2Rad / dt, al = (speed - visSpeed) / dt;
+            if (respawning || Mathf.Abs(yr) > 8f) { yr = 0f; al = 0f; }
+            visAy = Mathf.Lerp(visAy, Mathf.Clamp(speed * yr, -20f, 20f), Mathf.Min(1f, dt * 8f));
+            visAx = Mathf.Lerp(visAx, Mathf.Clamp(al, -16f, 16f), Mathf.Min(1f, dt * 8f));
+        }
+        visYaw = yaw; visSpeed = speed;
+        float beta = Mathf.Atan2(lat, Mathf.Max(1f, Mathf.Abs(speed)));
+        float str = 0f;
+        if (grounded && !respawning && Mathf.Abs(speed) > 5f)
+        {
+            str = drifting ? 0.85f : Mathf.Max(Mathf.Clamp01((Mathf.Abs(beta) - 0.1f) / 0.2f), Mathf.Clamp01((Mathf.Abs(lat) - 4.5f) / 4f));
+            if (wheelSpin) str = Mathf.Max(str, 0.6f);
+        }
+        if (str > 0.05f)
         {
             Vector3 rt = transform.right;
-            float str = drifting ? 0.8f : Mathf.Clamp01((Mathf.Abs(lat) - 4.5f) / 4f);
-            Skids.Mark(id * 2, transform.TransformPoint(new Vector3(-0.85f, 0f, -1.35f)), gNormal, rt, str);
-            Skids.Mark(id * 2 + 1, transform.TransformPoint(new Vector3(0.85f, 0f, -1.35f)), gNormal, rt, str);
+            Vector3 wl = transform.TransformPoint(new Vector3(-0.85f, 0f, -1.35f)), wr = transform.TransformPoint(new Vector3(0.85f, 0f, -1.35f));
+            Skids.Mark(id * 2, wl, gNormal, rt, str);
+            Skids.Mark(id * 2 + 1, wr, gNormal, rt, str);
+            if (onRoad && !inWater && str > 0.25f && Random.value < str * (Look.Mobile ? 0.35f : 0.7f) && !Gfx.Low)
+                FX.TyreSmoke(Random.value < 0.5f ? wl : wr, Velocity * 0.25f, str);
         }
         if (body == null) return;
-        float wantDrift = drifting ? driftDir * 24f : 0f;
-        driftVisual = Mathf.Lerp(driftVisual, wantDrift, Mathf.Min(1f, dt * 8f));
         steerVisual = Mathf.Lerp(steerVisual, input.steer * (human ? 1f : 0.6f), Mathf.Min(1f, dt * 10f));
         if (spinT > 0f) { float k = 1f - spinT / spinTotal; spinAngle = 720f * (1f - (1f - k) * (1f - k)); } else spinAngle = 0f;
         bounce = Mathf.MoveTowards(bounce, 0f, dt * 0.8f);
-        float roll = -steerVisual * Mathf.Clamp01(Mathf.Abs(speed) / 20f) * 3f - (drifting ? driftDir * 3f : 0f);
-        body.localRotation = Quaternion.Euler(0f, driftVisual + spinAngle, roll + trickRoll);
+        // sprung body: + roll = leans to the outside of a right turn, + pitch = nose dives (braking), - = squat (throttle)
+        float rollT = grounded ? Mathf.Clamp(visAy * 0.36f, -5f, 5f) : 0f, pitchT = grounded ? Mathf.Clamp(-visAx * 0.28f, -3.2f, 3.6f) : 0f;
+        int ns = Mathf.Clamp(Mathf.CeilToInt(dt / 0.01f), 1, 12);
+        float hs = dt / ns;
+        for (int q = 0; q < ns; q++)
+        {
+            rollV += (95f * (rollT - rollA) - 10f * rollV) * hs; rollA += rollV * hs;
+            pitchV += (110f * (pitchT - pitchA) - 11f * pitchV) * hs; pitchA += pitchV * hs;
+        }
+        rollA = Mathf.Clamp(rollA, -7f, 7f); pitchA = Mathf.Clamp(pitchA, -5f, 5f);
+        body.localRotation = Quaternion.Euler(0f, spinAngle, trickRoll);
         body.localPosition = new Vector3(0f, -bounce, 0f);
+        if (sprung != null)
+        {
+            sprung.localRotation = Quaternion.Euler(pitchA, 0f, rollA);
+            sprung.localPosition = new Vector3(0f, -bounce * 0.6f - Mathf.Abs(rollA) * 0.004f, 0f);
+        }
         float sc = shrinkT > 0f ? 0.7f : 1f;
         body.localScale = Vector3.MoveTowards(body.localScale, Vector3.one * sc, dt * 2f);
-        wheelRot += speed * dt / 0.37f * Mathf.Rad2Deg;
+        wheelRot += speed * dt / 0.37f * Mathf.Rad2Deg * (wheelSpin ? 1.6f : 1f);
         if (spinners != null) foreach (var w in spinners) if (w != null) w.localRotation = Quaternion.Euler(wheelRot, 0f, 0f);
-        float steerAng = (drifting ? -driftDir * 10f : 0f) + LastSteer * 26f;
+        float steerAng = netPuppet ? LastSteer * 20f : steerS * SteerLock(Mathf.Abs(speed)) * Mathf.Rad2Deg * 1.15f;
         if (steerPivots != null) foreach (var p in steerPivots) if (p != null) p.localRotation = Quaternion.Euler(0f, steerAng, 0f);
         headYaw = Mathf.Lerp(headYaw, LastSteer * 28f + (drifting ? driftDir * 18f : 0f), Mathf.Min(1f, dt * 5f));
         if (head != null) head.localRotation = Quaternion.Euler(0f, headYaw, 0f);
-        if (wheelT != null) wheelT.localRotation = Quaternion.AngleAxis(-steerAng * 2.2f, RobotModel.WheelAxis);
+        if (wheelT != null) wheelT.localRotation = Quaternion.AngleAxis(-(netPuppet ? steerAng : steerS * 30f) * 2.2f, RobotModel.WheelAxis);
+        if (dress != null) dress.Tick(this, braking || (netPuppet && visAx < -4f), boostT > 0f);
         if (shield != null)
         {
             bool on = shieldT > 0f;
@@ -649,9 +859,12 @@ public class Kart : MonoBehaviour
         if (!eng.isPlaying) eng.Play();
         float hs = Game.I != null ? Game.I.HumanVolumeScale : 1f;
         float sp = Mathf.Abs(speed) / spec.top;
-        eng.pitch = 0.55f + sp * 1.15f + i.gas * 0.12f + (boostT > 0f ? 0.15f : 0f) + (grounded ? 0f : 0.15f * i.gas);
-        eng.volume = (0.16f + 0.22f * i.gas + 0.12f * sp) * hs;
-        bool sk = drifting && grounded;
+        // lambo9: pitch follows the gearbox rpm (drops on every upshift), louder + harsher under load
+        float rn = Mathf.Clamp01((rpm - Idle) / (Redline - Idle));
+        eng.pitch = Mathf.Lerp(eng.pitch, 0.6f + rn * 1.7f + (boostT > 0f ? 0.08f : 0f), 0.5f);
+        eng.volume = (0.13f + 0.2f * gasS + 0.1f * rn + 0.05f * sp) * hs;
+        float bt = Mathf.Abs(Mathf.Atan2(lat, Mathf.Max(1f, Mathf.Abs(speed))));
+        bool sk = grounded && Mathf.Abs(speed) > 5f && (drifting || bt > 0.13f || wheelSpin) && !inWater;
         if (sk && !skid.isPlaying) skid.Play();
         skid.volume = Mathf.MoveTowards(skid.volume, sk ? 0.22f * hs : 0f, Time.deltaTime * 2f);
         if (!sk && skid.volume < 0.01f && skid.isPlaying) skid.Stop();
@@ -715,14 +928,30 @@ public class Kart : MonoBehaviour
         }
         Vector3 to = Track.Flat(target - pos);
         float ang = Vector3.SignedAngle(fwd, to, Vector3.up);
-        i.steer = Mathf.Clamp(ang / 26f, -1f, 1f);
-        float bend = aiShortcut ? 0f : Track.Bend(s, 20f + Mathf.Abs(speed) * 0.9f);
-        float want = spec.top * (bend > 70f ? 0.6f : bend > 50f ? 0.72f : bend > 32f ? 0.86f : 1.05f);
-        if (boostT > 0f) want *= boostPower;
+        // lambo9: pure-pursuit steering through the real steering lock (the car model has a speed-sensitive lock + grip limits)
+        float au = Mathf.Abs(speed);
+        float kap = 2f * Mathf.Sin(ang * Mathf.Deg2Rad) / Mathf.Max(5f, to.magnitude);
+        float dReq = Mathf.Atan(WB * kap) * 1.1f - lat * 0.012f;
+        i.steer = au < 6f ? Mathf.Clamp(ang / 26f, -1f, 1f) : Mathf.Clamp(dReq / SteerLock(au), -1f, 1f);
+        float bend = aiShortcut ? 0f : Track.Bend(s, 20f + au * 0.9f);
+        // corner speed from the road's curvature ahead (grip-limited) and a braking distance at ~1 g
+        float muA = (Track.Theme == 3 ? 1.14f : 1.3f) * 0.86f * aiSkill;
+        float want = spec.top * 1.05f;
+        if (!aiShortcut)
+            for (float d = 6f; d <= 120f; d += 16f)
+            {
+                float c = Track.Bend(s + d - 8f, 16f) * Mathf.Deg2Rad / 16f;
+                if (c < 0.002f) continue;
+                int bi = Track.IndexAt(s + d);
+                float bk = Track.Bank != null && bi < Track.Bank.Length ? Mathf.Abs(Track.Bank[bi]) * 0.9f : 0f;
+                float vs = Mathf.Sqrt((muA + bk) * Grav / c);
+                want = Mathf.Min(want, Mathf.Sqrt(vs * vs + 2f * 10f * Mathf.Max(0f, d - au * 0.3f)));
+            }
+        if (boostT > 0f) want = Mathf.Max(want, Mathf.Min(want * boostPower, spec.top * boostPower));
         if (Mathf.Abs(ang) > 60f) want = Mathf.Min(want, 12f);
-        i.gas = speed < want ? 1f : 0f;
-        i.brake = speed > want + 4f ? 0.7f : 0f;
-        if (aiJump) { i.gas = 1f; i.brake = 0f; }
+        i.gas = speed < want - 0.5f ? 1f : speed < want + 1f ? 0.35f : 0f;
+        i.brake = speed > want + 1.5f ? Mathf.Clamp((speed - want) / 5f, 0.3f, 1f) : 0f;
+        if (aiJump && (jz < 75f || speed < want + 3f)) { i.gas = 1f; i.brake = 0f; }   // last 75 m before a lip: flat out, no brakes
         if (finished) { i.gas = speed < 14f ? 0.6f : 0f; return i; }
 
         // items

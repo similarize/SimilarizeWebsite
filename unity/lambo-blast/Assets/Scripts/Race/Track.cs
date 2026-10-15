@@ -107,7 +107,7 @@ public static partial class Track
         BuildGround();
         // lambo8: grey beach tarmac with lines + curbs (hi-res map, LB/Road); ?gfx=low keeps the lambo7 sand road
         bool r8 = !Gfx.Low;
-        BuildRoad(C, T, true, HalfW, r8 ? Gfx.RoadMap(new Color(0.42f, 0.41f, 0.39f), new Color(0.86f, 0.16f, 0.12f), new Color(0.93f, 0.93f, 0.9f), true, true, 8) : RoadTex(true), "Road", 0f, 0f);
+        BuildRoad(C, T, true, HalfW, r8 ? Gfx.RoadMap(new Color(0.29f, 0.29f, 0.3f), new Color(0.86f, 0.16f, 0.12f), new Color(0.93f, 0.93f, 0.9f), true, true, 8) : RoadTex(true), "Road", 0f, 0f);
         BuildRoad(SC, SCT, false, ScHalf, r8 ? Gfx.RoadMap(new Color(0.5f, 0.45f, 0.38f), Color.white, Color.white, false, false, 9) : RoadTex(false), "Shortcut", ScGapA, ScGapB);
         BuildWater();
         Physics.SyncTransforms();

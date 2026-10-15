@@ -223,16 +223,24 @@ public static class FX
         for (int i = 0; i < 18; i++)
         {
             Vector3 d = Random.insideUnitSphere;
-            float g = Random.Range(0.18f, 0.38f);
-            Emit(p + d * scale, d * 3f * scale + Vector3.up * 3.5f, Random.Range(1.6f, 3f) * scale, Random.Range(1.2f, 2.2f), new Color(g, g, g, 0.8f));
+            float g = Random.Range(0.42f, 0.6f) + (Track.Theme == 3 ? 0.2f : 0f);   // lambo9: lighter smoke (dark blobs floated over Snowy)
+            Emit(p + d * scale, d * 3f * scale + Vector3.up * 3.5f, Random.Range(1.6f, 3f) * scale, Random.Range(0.9f, 1.6f), new Color(g, g, g * 1.02f, 0.5f));
         }
         // sparks / debris
         for (int i = 0; i < 24; i++)
         {
             Vector3 d = Random.onUnitSphere; d.y = Mathf.Abs(d.y) + 0.3f;
-            if (i % 3 == 0) Emit(p, d * Random.Range(8f, 16f) * scale, Random.Range(0.12f, 0.25f), Random.Range(0.5f, 1.1f), new Color(0.25f, 0.2f, 0.15f));
-            else EmitAdd(p, d * Random.Range(8f, 16f) * scale, Random.Range(0.1f, 0.2f), Random.Range(0.5f, 1.1f), new Color(1f, 0.7f, 0.25f));
+            EmitAdd(p, d * Random.Range(8f, 16f) * scale, Random.Range(0.1f, 0.2f), Random.Range(0.5f, 1.1f), new Color(1f, 0.7f, 0.25f));
         }
+    }
+
+    // lambo9 tyre smoke from a sliding / spinning rear wheel on tarmac: pale, soft, grows and lingers
+    public static void TyreSmoke(Vector3 p, Vector3 carVel, float str)
+    {
+        if (ps == null) return;
+        float g = Track.Theme == 2 ? 0.62f : 0.86f;
+        Emit(p + Vector3.up * 0.25f + Random.insideUnitSphere * 0.2f, carVel + Random.insideUnitSphere * 0.7f + Vector3.up * Random.Range(0.4f, 1.1f),
+             Random.Range(0.9f, 1.7f) * (0.6f + 0.6f * str), Random.Range(1.1f, 1.9f), new Color(g, g, g * 1.02f, 0.18f + 0.22f * str));
     }
 
     public static void Smoke(Vector3 p, float size, Color c)

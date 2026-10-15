@@ -57,7 +57,7 @@ public static class Gfx
         if (lite) Shader.EnableKeyword("LB_LITE"); else Shader.DisableKeyword("LB_LITE");
         if (grassMat != null)
         {
-            Vector4 f = level == 0 ? (mobile ? new Vector4(26f, 46f, 0f, 0f) : new Vector4(42f, 72f, 0f, 0f)) : level == 1 ? new Vector4(20f, 36f, 0f, 0f) : new Vector4(0f, 0f, 0f, 0f);
+            Vector4 f = level == 0 ? (mobile ? new Vector4(30f, 54f, 0f, 0f) : new Vector4(58f, 100f, 0f, 0f)) : level == 1 ? new Vector4(22f, 40f, 0f, 0f) : new Vector4(0f, 0f, 0f, 0f);   // lambo9: grass reaches further
             grassMat.SetVector("_Fade", f);
             foreach (var g in grassRoots) if (g != null) g.SetActive(level < 2);
         }
@@ -166,6 +166,14 @@ public static class Gfx
         var r = new System.Random(seed);
         var px = new Color32[w * h];
         Color paint = new Color(0.92f, 0.92f, 0.88f);
+        // lambo9 wear: tyre streaks (braking / sliding marks that run along the road, wavy) + resurfacing patches + tar seams
+        int ns = 7;
+        var su = new float[ns]; var sw = new float[ns]; var sv0 = new float[ns]; var sv1 = new float[ns]; var sa = new float[ns]; var sk = new float[ns];
+        for (int i = 0; i < ns; i++)
+        {
+            su[i] = 0.15f + 0.7f * (float)r.NextDouble(); sw[i] = 0.006f + 0.006f * (float)r.NextDouble();
+            sv0[i] = (float)r.NextDouble() * 24f; sv1[i] = sv0[i] + 4f + 10f * (float)r.NextDouble(); sa[i] = 0.55f + 0.25f * (float)r.NextDouble(); sk[i] = ((float)r.NextDouble() - 0.5f) * 0.012f;
+        }
         for (int y = 0; y < h; y++)
         {
             float vm = y * 32f / h;                       // metres along
@@ -173,9 +181,20 @@ public static class Gfx
             {
                 float u = (x + 0.5f) / w;
                 float n = Mathf.PerlinNoise(u * 9f + seed, vm * 0.35f) - 0.5f;
-                Color c = asphalt * (1f + n * 0.12f);
+                Color c = asphalt * (1f + n * 0.14f);
                 float lane = Mathf.Min(Mathf.Abs(u - 0.3f), Mathf.Abs(u - 0.7f));
-                c *= 0.9f + Mathf.Clamp01(lane / 0.08f) * 0.1f;          // darker rubbered racing lanes
+                c *= 0.82f + Mathf.Clamp01(lane / 0.08f) * 0.18f;          // darker rubbered racing lanes
+                float pt = Mathf.PerlinNoise(u * 2.2f + seed * 0.3f, vm * 0.09f + 5f);
+                if (pt > 0.7f) c *= pt > 0.705f ? 0.86f : 0.7f;              // darker resurfaced patch with a tar edge
+                else if (pt < 0.2f) c *= 1.08f;                               // older, sun-bleached stretch
+                for (int i = 0; i < ns; i++)
+                {
+                    if (vm < sv0[i] || vm > sv1[i]) continue;
+                    float tt = (vm - sv0[i]) / (sv1[i] - sv0[i]);
+                    float cu = su[i] + sk[i] * (vm - sv0[i]) + 0.004f * Mathf.Sin(vm * 0.9f + i);
+                    float dd = Mathf.Abs(u - cu) / sw[i];
+                    if (dd < 1f) c *= 1f - (1f - dd * dd) * (1f - sa[i]) * Mathf.Sin(tt * Mathf.PI);
+                }
                 float a = 0f;
                 if (curbs)
                 {
@@ -250,6 +269,7 @@ public static class Gfx
         grassRoots.RemoveAll(g => g == null);
         if (Low || grassS == null) return;
         int want = theme == 4 ? 11000 : theme == 0 ? 6500 : theme == 1 ? 4200 : theme == 2 ? 1400 : theme == 3 ? 1800 : 0;
+        want = want * 16 / 10;                                   // lambo9: 1.6x denser (headroom on desktop + Pixel 9)
         if (Look.Mobile) want = want * 6 / 10;
         if (want == 0) return;
         if (grassMat == null) { grassMat = new Material(grassS); grassMat.name = "LB8 grass"; }
@@ -267,7 +287,7 @@ public static class Gfx
         System.Func<float> R = () => (float)rnd.NextDouble();
         var cells = new Dictionary<int, List<Vector4>>();     // xyz root + seed
         int placed = 0;
-        float bandIn = Track.HalfW + 0.9f, bandOut = Track.HalfW + Track.Wall + 34f;
+        float bandIn = Track.HalfW + 0.9f, bandOut = Track.HalfW + Track.Wall + 48f;
         for (int tries = 0; tries < want * 4 && placed < want; tries++)
         {
             float s = R() * Track.Length;

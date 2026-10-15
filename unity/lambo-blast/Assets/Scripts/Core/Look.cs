@@ -65,7 +65,7 @@ public static class Look
         yield return null;
         try
         {
-            island = MakeProbe("IslandProbe", islandCentre + Vector3.up * 14f, new Vector3(2400f, 900f, 2400f), ~excludeMask, Mobile ? 128 : 256);
+            island = MakeProbe("IslandProbe", islandCentre + Vector3.up * 14f, new Vector3(2400f, 900f, 2400f), ~excludeMask, Mobile ? 256 : 512);   // lambo9: sharper clear-coat reflections
             island.RenderProbe();
             // lambo7: the showroom probe sees the studio (softbox panels + dark set on layer 20) so the paint reflects it
             showroom = MakeProbe("ShowroomProbe", Showroom.EnvPos + new Vector3(0f, 1.6f, 0f), new Vector3(1200f, 600f, 1200f), excludeMask, Mobile ? 128 : 256);

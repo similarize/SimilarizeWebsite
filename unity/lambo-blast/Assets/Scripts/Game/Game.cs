@@ -217,6 +217,7 @@ public partial class Game : MonoBehaviour
         "<b>Skies</b> (Poly Haven, CC0): Kloofendal 48d Partly Cloudy, Syferfontein 18d Clear, Industrial Sunset 02, Pizzo Pernice, Kloofendal 28d Misty, Qwantani Late Afternoon (all Pure Sky).\n" +
         "<b>Ground textures</b> (Poly Haven, CC0): Aerial Beach 01, Coast Sand 01, Red Sand, Burned Ground 01, Snow 02, Forest Leaves 02, Aerial Asphalt 01, Asphalt 02.\n" +
         "<b>Surfaces</b> (ambientCG.com, CC0 1.0): Rock029, Rock030, Rock051, Rock063, Rock064, Bark012, Grass004, Snow006, Gravel042, Concrete034, Asphalt031, Lava004.\n" +
+        "<b>Made for this game</b>: barriers, tyre walls, floodlights, distant mountains, car paint + lights, tyre smoke, road wear, engine sound (procedural).\n" +
         "<b>Fonts</b>: Montserrat (The Montserrat Project Authors) + Inter (The Inter Project Authors), SIL Open Font License 1.1.\n\n" +
         "Full licence texts: similarize.com/games/lambo-blast/LICENSES.txt\n" +
         "Robot names describe the real machines only; this fan game is not affiliated with their makers.\n\n" +

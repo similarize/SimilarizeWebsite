@@ -27,6 +27,7 @@ public static class ThemeScenery
         GapSigns();
         StartArch();
         MeshMerge.Merge(root, true);
+        Roadside.Build();               // lambo9: armco / tyre walls / poles / boards + distant horizon
         Gfx.Grass(Track.Root, th);      // lambo8: blade tufts (own chunk meshes, not merged)
     }
 
