@@ -272,11 +272,11 @@ public static class Sfx
     }
 
     // 0 wood, 1 metal, 2 hay / sandbags, 3 a figure, 4 ground
-    static readonly Dictionary<int, int> surfaceCache = new Dictionary<int, int>();
+    static readonly Dictionary<Collider, int> surfaceCache = new Dictionary<Collider, int>();
     public static int Surface(Collider col)
     {
         if (col == null) return 4;
-        int id = col.GetInstanceID(), v;
+        Collider id = col; int v;
         if (surfaceCache.TryGetValue(id, out v)) return v;
         v = 0;
         if (col is TerrainCollider) v = 4;
