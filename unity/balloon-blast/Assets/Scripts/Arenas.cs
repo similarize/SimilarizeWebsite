@@ -33,7 +33,7 @@ public static class Arenas
             RenderSettings.ambientSkyColor = new Color(0.62f, 0.55f, 0.72f);
             RenderSettings.ambientEquatorColor = new Color(0.66f, 0.55f, 0.6f);
             RenderSettings.ambientGroundColor = new Color(0.42f, 0.32f, 0.36f);
-            if (candyTex == null) candyTex = Noise(new Color(0.55f, 0.9f, 0.7f), new Color(0.98f, 0.75f, 0.85f), 7);
+            if (candyTex == null) candyTex = Noise(new Color(0.3f, 0.66f, 0.48f), new Color(0.82f, 0.45f, 0.62f), 7);
             ground = candyTex;
         }
         else if (arena == 2)
