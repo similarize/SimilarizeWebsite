@@ -55,6 +55,16 @@ public static class Gfx6
         return e.t;
     }
     static Color M(string n) { Color c; return Mean.TryGetValue(n, out c) ? c : new Color(0.3f, 0.3f, 0.3f); }
+    // u6f: u6e's SetVector did nothing (Material.SetVector on a Color-typed property is SetColor, and Unity converts Color props
+    // gamma->linear in Linear colour space) -> hand Unity the gamma-space value so the shader receives the linear mean.
+    static bool loggedLin;
+    static void SetLin(Material m, string p, Color lin)
+    {
+        Color c = QualitySettings.activeColorSpace == ColorSpace.Linear ? lin.gamma : lin;
+        c.a = 1f;
+        m.SetColor(p, c);
+        if (!loggedLin) { loggedLin = true; Debug.Log("U6F: linear means via gamma SetColor (" + p + " " + lin.r.ToString("0.0000") + " -> " + c.r.ToString("0.0000") + ")"); }
+    }
 
     // a world rebuild starts (first ground material) / ends (Look.SetTheme): unload the scans the new track does not use
     static void BeginWorld() { gen++; }
@@ -123,7 +133,7 @@ public static class Gfx6
         if (rd != null) m.SetTexture("_RData", rd);
         // u6e: the means are LINEAR values -> SetVector (SetColor gamma->linear converts them again in Linear space: ~10x too small,
         // so scan / mean blew the road and ground up to near white in u6d)
-        m.SetVector("_AMean", (Vector4)M(a)); m.SetVector("_BMean", (Vector4)M(b)); m.SetVector("_RMean", (Vector4)M(r));
+        SetLin(m, "_AMean", M(a)); SetLin(m, "_BMean", M(b)); SetLin(m, "_RMean", M(r));
         m.SetVector("_BMask", BMask[th]);
         m.SetFloat("_ARep", worldSize / ATile[th]);
         m.SetFloat("_BRep", worldSize / BTile[th]);
@@ -142,7 +152,7 @@ public static class Gfx6
         }
         catch (System.Exception e) { Debug.LogWarning("U6D: colour map mean " + e.Message); }
         mm.a = 1f;
-        m.SetVector("_MapMean", (Vector4)mm);                // u6e: linear -> SetVector
+        SetLin(m, "_MapMean", mm);                // u6f: linear value into a Color property
         // old (u6c) props stay set for the LB_LITE fallback-free path; log what took
         Debug.Log("U6D terrain " + th + ": " + a + " / " + b + " / " + r + " tex " + (ac != null && ad != null) + (bc != null && bd != null) + (rc != null && rd != null) +
             " map mean " + mm.r.ToString("F3") + "," + mm.g.ToString("F3") + "," + mm.b.ToString("F3"));
@@ -154,7 +164,7 @@ public static class Gfx6
         Texture2D c = Tex("asphalt_c"), d = Tex("asphalt_d");
         if (c != null) m.SetTexture("_Grain", c);
         if (d != null) m.SetTexture("_GrainData", d);
-        m.SetVector("_GrainMean", (Vector4)M("asphalt"));   // u6e: linear -> SetVector
+        SetLin(m, "_GrainMean", M("asphalt"));   // u6f
         m.SetFloat("_GrainCon", th == 3 ? 0.7f : 0.85f);
         m.SetVector("_GrainRep", new Vector4(6f, 12.8f, 0f, 0f));
         m.SetFloat("_BumpScale", 1f);
@@ -184,7 +194,7 @@ public static class Gfx6
         if (c == null || d == null) return;
         m.mainTexture = c;
         m.SetTexture("_DataMap", d);
-        m.SetVector("_Mean", (Vector4)M(n));                  // u6e: linear -> SetVector
+        SetLin(m, "_Mean", M(n));                  // u6f
         m.SetFloat("_Full", 1f);
         m.SetFloat("_TintK", k == Gfx.K.Snow || k == Gfx.K.Concrete ? 0.5f : 0.65f);
         m.SetFloat("_BumpScale", 1.1f);
