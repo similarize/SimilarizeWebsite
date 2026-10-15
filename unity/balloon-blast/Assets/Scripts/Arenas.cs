@@ -54,7 +54,7 @@ public static class Arenas
         {
             var ls = t.terrainData.terrainLayers;
             for (int i = 0; i < ls.Length && i < layerTex.Length; i++)
-                if (ls[i] != null) ls[i].diffuseTexture = ground != null ? ground : layerTex[i];
+                if (ls[i] != null) ls[i].diffuseTexture = (Texture2D)(ground != null ? ground : layerTex[i]);
             t.terrainData.terrainLayers = ls;
         }
     }
