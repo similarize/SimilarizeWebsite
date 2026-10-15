@@ -90,7 +90,7 @@ public partial class Game
             f.SendTo(WorldId.Ranch, new Vector3(-92f, 0f, 14f) + Vector3.up * Ranch.GY(-92f, 14f), 270f);
             if (slots.Count > 0 && slots[0].rig != null) slots[0].rig.SetYaw(270f);
             d47Ais.Clear();
-            Vector3[] at = { new Vector3(-112f, 0f, -2f), new Vector3(-114f, 0f, 14f), new Vector3(-110f, 0f, 24f) };
+            Vector3[] at = { new Vector3(-134f, 0f, 2f), new Vector3(-125f, 0f, 12f), new Vector3(-118f, 0f, 22f) };   // ~10-15 m from their 10-story mechs
             for (int i = 0; i < 3; i++)
             {
                 Frog a = D47Ai(i); if (a == null) continue;
@@ -104,7 +104,8 @@ public partial class Game
         else
         {
             MechAI.Paused = true; CritterPals.Paused = false;
-            D47Critters(0);
+            int from; if (!int.TryParse(UrlParam("critfrom") ?? "", out from)) from = 0;   // &critfrom=3 starts at the pasture
+            D47Critters(Mathf.Clamp(from, 0, 5));
         }
     }
 
@@ -144,8 +145,8 @@ public partial class Game
                 if (t > 1.6f && t < 3.2f) o.move.x = -1f;
                 else if (t > 4.4f && t < 6.2f) o.move.x = 1f;
                 else if (t > 6.6f && t < 7.8f) o.move.y = 1f;   // speed bar
-                if (f.glideAgl < 3.3f) o.move = new Vector2(0f, -1f);   // FLARE
-                o.brake = f.glideAgl < 3.3f ? 1f : 0f;
+                if (f.glideAgl < 2.4f) o.move = new Vector2(0f, -1f);   // FLARE
+                o.brake = f.glideAgl < 2.4f ? 1f : 0f;
             }
             return o;
         }
@@ -198,6 +199,10 @@ public partial class Game
             Debug.Log("FFDEMO chute47 summary: James lands " + f.glideLands + " soft " + f.glideSoft + " vy " + f.glideLandVy.ToString("0.00") + " fwd " + f.glideLandFwd.ToString("0.0") + " flares " + f.glideFlares + " | " + (ai != null ? ai.nick + " lands " + ai.glideLands + " soft " + ai.glideSoft + " vy " + ai.glideLandVy.ToString("0.00") + " fwd " + ai.glideLandFwd.ToString("0.0") + " flares " + ai.glideFlares : "no AI") + " | jet homing " + (j != null && j.homing) + " jet at " + (j != null ? j.transform.position.ToString("0") : "-") + " chute flag now " + f.chute);
             Debug.Log("FFDEMO chute47 done");
         }
+        // demo slow-mo for the flare + touchdown + pack-up (SwiftShader screenshots are ~20 s apart)
+        bool slow = !Frog.ChuteOld && ((f.GlideFlying && f.glideAgl < 5f) || f.glidePh == 4 || (d47Ph == 2 && ai != null && ((ai.GlideFlying && ai.glideAgl < 5f) || ai.glidePh == 4)));
+        float ts = d47Ph >= 3 ? 1f : slow ? 0.3f : 1f;
+        if (Time.timeScale != ts) { Time.timeScale = ts; Debug.Log("FFDEMO chute47 slow-mo " + ts + " t=" + d47T.ToString("0.0")); }
         if (d47Log <= 0f)
         {
             d47Log = 0.5f;
@@ -245,7 +250,7 @@ public partial class Game
         }
         if (d47Ph == 1 && mai != null)
         {
-            foreach (var j in mai.jobs) if (j.phase >= 1 && j.dur > 36f) { j.dur = j.f == d47Ais[0] ? 24f : 60f; if (j.fireT > 3f) j.fireT = 3f; }
+            foreach (var j in mai.jobs) if (j.phase >= 1 && j.dur > 36f) { j.dur = j.f == d47Ais[0] ? 16f : 60f; if (j.fireT > 3f) j.fireT = 3f; }
             if (MechAI.Boardings > 0 && d47Ph0Boards == 0) { d47Ph0Boards = MechAI.Boardings; Debug.Log("FFDEMO mechai47 first boarding t=" + d47T.ToString("0.0")); }
             if (d47PhT > 120f || (MechAI.Exits > 0 && d47PhT > 70f)) { d47Ph = 2; Debug.Log("FFDEMO mechai47 summary: boardings " + MechAI.Boardings + " shots " + MechAI.Shots + " exits " + MechAI.Exits + " min mech-James " + d47MinD.ToString("0.0") + " m min mech-house-edge " + d47MinHouse.ToString("0.0") + " m jobs " + mai.jobs.Count); Debug.Log("FFDEMO mechai47 done"); }
         }
@@ -282,7 +287,9 @@ public partial class Game
         }
         Vector3 mc = n > 0 ? c / n : new Vector3(-145f, 0f, 6f);
         Vector3 dir = mc - fp; dir.y = 0f; dir = dir.sqrMagnitude > 1f ? dir.normalized : Vector3.left;
-        pos = fp - dir * 14f + Vector3.up * 9f + Vector3.Cross(Vector3.up, dir) * 8f; look = new Vector3(mc.x, Ranch.GY(mc.x, mc.z) + 9f, mc.z);
+        // a wide view across the field: the AI mechs + James (on foot, kept clear) in one frame
+        Vector3 mid = (mc + fp) * 0.5f;
+        pos = mid + Vector3.Cross(Vector3.up, dir) * 44f + Vector3.up * 16f - dir * 6f; look = new Vector3(mid.x, Ranch.GY(mid.x, mid.z) + 6f, mid.z);
         return true;
     }
 
@@ -321,7 +328,8 @@ public partial class Game
             pos = c + new Vector3(4.5f, 2.6f, -5.5f); look = c + Vector3.up * 0.9f; return true;
         }
         Vector3 fw = who.transform.forward, rt = who.transform.right;
-        pos = fp + fw * 2.3f + rt * 1.5f + Vector3.up * 1.45f; look = fp + Vector3.up * 0.7f;
+        // 3/4 view from behind the shoulder so riders on the shoulders / back / legs read (the eyes hid them from the front)
+        pos = fp + fw * 0.9f + rt * 2.1f + Vector3.up * 1.7f; look = fp + Vector3.up * 0.75f - fw * 0.15f;
         if (d47Ph == 4) { pos = fp + fw * 2.0f - rt * 1.6f + Vector3.up * 1.5f; look = fp + Vector3.up * 0.8f + rt * 0.3f; }
         return true;
     }

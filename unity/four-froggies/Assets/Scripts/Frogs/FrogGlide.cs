@@ -255,13 +255,14 @@ public partial class Frog
         glideBar = Mathf.MoveTowards(glideBar, bar * (1f - glideBrake), 2f * dt);
         glideYaw += glideTurn * (52f + 26f * glideBrake) * dt;
         float vT = Mathf.Lerp(9.2f, 4.2f, glideBrake) + glideBar * 2.3f;
-        float prev = glideFwd;
         float open = glidePh == 2 ? Mathf.Clamp01(glidePhT / 0.75f) : 1f;
-        glideFwd = Mathf.MoveTowards(glideFwd, vT, (glideFwd > vT ? 5f : 2.4f + (glidePh == 2 ? 6f : 0f)) * dt);
-        float sink = Mathf.Lerp(1.75f, 1.3f, Mathf.Clamp01(glideBrake * 1.7f)) + Mathf.Max(0f, glideBrake - 0.85f) * 6f + glideBar * 0.9f
+        glideFwd = Mathf.MoveTowards(glideFwd, vT, (glidePh == 2 ? (glideFwd > vT ? 5f : 8.4f) : glideFwd > vT ? 2.5f : 2.4f) * dt);
+        float sink = Mathf.Lerp(1.75f, 1.05f, Mathf.Clamp01(glideBrake * 1.7f)) + glideBar * 0.9f
                    + Mathf.Abs(glideTurn) * (0.45f + 8f * glideBar);   // hard turn + speed bar = spiral dive
-        float lift = glidePh == 3 ? Mathf.Max(0f, prev - glideFwd) * 0.95f : 0f;   // the flare: speed traded for lift
-        float vy = Mathf.MoveTowards(vel.y, -sink, (glidePh == 2 ? 26f : 2.6f) * dt) + lift;
+        // the flare: while the brakes bleed off speed (forward speed above the braked trim) the wing turns it into lift,
+        // so the sink goes to ~0 for a moment; flared ~1-2 m up = touchdown at ~1 m/s and ~4 m/s instead of 1.75 / 9
+        if (glidePh == 3) sink = Mathf.Max(0f, sink - Mathf.Max(0f, glideFwd - vT) * 0.7f);
+        float vy = Mathf.MoveTowards(vel.y, -sink, (glidePh == 2 ? 26f : 4f) * dt);
         vel.y = Mathf.Min(vy, 0.6f);
         planar = Vector3.MoveTowards(planar, Vector3.zero, 3f * dt);
         if (glidePh == 2 && glidePhT > 0.75f) { glidePh = 3; glidePhT = 0f; Debug.Log("FFDEMO chute open " + nick + " fwd " + glideFwd.ToString("0.0") + " vy " + vel.y.ToString("0.0") + " agl " + glideAgl.ToString("0.0")); }
@@ -290,7 +291,7 @@ public partial class Frog
     void GlideLand(float gy, bool pond)
     {
         glideLandVy = vel.y; glideLandFwd = glideFwd; glideLands++;
-        glideSoft = glideLandVy > -2.4f && glideLandFwd < 6.8f;
+        glideSoft = glideLandVy > -1.6f && glideLandFwd < 6.8f;
         Vector3 p = transform.position;
         Debug.Log("FFDEMO chute land " + nick + " vy " + glideLandVy.ToString("0.00") + " fwd " + glideLandFwd.ToString("0.0") + " soft " + glideSoft + " flares " + glideFlares + " pond " + pond + " at " + p.ToString("0.0") + " after " + glideT.ToString("0.0") + " s");
         if (pond)
@@ -365,7 +366,7 @@ public partial class Frog
         // too high for the distance left: circle (S-turns) to burn height
         if (d < glideAgl * 3.2f && glideAgl > 6f) want = glideYaw + 60f * Mathf.Sign(Mathf.Sin(glideT * 0.35f + id));
         turn = Mathf.Clamp(Mathf.DeltaAngle(glideYaw, want) / 35f, -1f, 1f) * 0.8f;
-        if (glideAgl < 3.3f) { brake = 1f; turn *= 0.2f; }
+        if (glideAgl < 2.2f) { brake = 1f; turn *= 0.2f; }
         else if (glideAgl < 6f) turn *= 0.4f;
     }
 

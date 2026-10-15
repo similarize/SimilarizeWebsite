@@ -111,8 +111,8 @@ public class CritterPals : MonoBehaviour
         Vector3 v;
         switch (s)
         {
-            case 0: v = new Vector3(-0.43f, 0.95f, -0.08f); break;
-            case 1: v = new Vector3(0.43f, 0.95f, -0.08f); break;
+            case 0: v = new Vector3(-0.45f, 0.98f, -0.14f); break;
+            case 1: v = new Vector3(0.45f, 0.98f, -0.14f); break;
             case 2: v = new Vector3(0f, 1.2f, 0.02f); break;
             case 3: v = new Vector3(0f, 0.86f, -0.36f); break;
             case 4: v = new Vector3(-0.4f, 0.42f, 0.12f); break;
