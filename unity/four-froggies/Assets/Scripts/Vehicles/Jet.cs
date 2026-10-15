@@ -121,7 +121,8 @@ public class Jet : Vehicle
     public override bool CanExit(Frog f)
     {
         if (agl < 2.6f && vel.magnitude < 7f && mode != Mode.Hyper) return true;
-        f.Toast("Land first (or hover low) to hop out", 1.6f);
+        if (!Frog.ChuteOld && agl > 6f && mode != Mode.Hyper) return true;   // ffu47: eject + paraglider, the jet flies itself home
+        f.Toast(mode == Mode.Hyper ? "Leave HYPER first (B / Y), then you can eject" : "Land first (or hover low) to hop out", 1.6f);
         return false;
     }
     protected override bool OutOfWorld(Vector3 p) { return false; }
@@ -137,8 +138,34 @@ public class Jet : Vehicle
         base.OnExit();
         throttle = 0f; afterburner = false;
         if (mode == Mode.Hyper) mode = Mode.Jet;
-        // passengers hop out with the pilot
-        foreach (Frog p in Passengers()) { p.LeavePassenger(); p.Teleport(ExitPoint()); }
+        bool air = agl > 4f && !Frog.ChuteOld;
+        if (air) { homing = true; homeT = 0f; Debug.Log("FFDEMO jet ejected at agl " + agl.ToString("0") + " - flying itself home"); }
+        // passengers hop out with the pilot (ffu47: in the air they eject too and glide down)
+        int k = 0;
+        foreach (Frog p in Passengers())
+        {
+            p.LeavePassenger();
+            if (air) { k++; p.BeginBail(Title, pos + rot * new Vector3((k % 2 == 0 ? 1f : -1f) * (2.5f + k), 3.5f, -3f * k), vel * 0.5f + Vector3.up * 8f, true); }
+            else p.Teleport(ExitPoint());
+        }
+    }
+
+    // ffu47: nobody aboard after an ejection - climb to a safe height, fly back over the VTOL pad, descend and park
+    public bool homing; float homeT;
+    void HomeTick(float dt)
+    {
+        homeT += dt;
+        vtol = true; nz = Mathf.MoveTowards(nz, 1f, dt * 1.5f); throttle = 0f; afterburner = false; mode = Mode.Hover;
+        Vector3 to = homePos - pos; to.y = 0f;
+        float d = to.magnitude;
+        float cruise = Mathf.Max(groundY + 40f, homePos.y + 30f);
+        Vector3 want;
+        if (d > 8f) want = to.normalized * Mathf.Min(32f, d * 0.6f + 4f) + Vector3.up * Mathf.Clamp((cruise - pos.y) * 0.5f, -6f, 10f);
+        else want = to * 0.8f + Vector3.up * (pos.y - homePos.y > 3f ? -5f : -1.5f);
+        vel = Vector3.MoveTowards(vel, want, 14f * dt);
+        if (to.sqrMagnitude > 1f) heading = Mathf.MoveTowardsAngle(heading, Mathf.Atan2(to.x, to.z) * Mathf.Rad2Deg, 50f * dt);
+        rot = Quaternion.Slerp(rot, Quaternion.Euler(Mathf.Clamp(vel.magnitude * 0.25f, 0f, 8f), heading, 0f), Mathf.Min(1f, dt * 3f));
+        if ((d < 2.5f && pos.y - homePos.y < 2.5f) || homeT > 90f) { homing = false; ResetToPad(); Debug.Log("FFDEMO jet home on its pad after " + homeT.ToString("0") + " s"); }
     }
 
     public List<Frog> Passengers()
@@ -269,6 +296,8 @@ public class Jet : Vehicle
             if (!onGround) { vel.x = Mathf.MoveTowards(vel.x, 0f, 4f * dt); vel.z = Mathf.MoveTowards(vel.z, 0f, 4f * dt); vel.y = Mathf.MoveTowards(vel.y, -3f, 6f * dt); vtol = true; }
             else { vel = Vector3.MoveTowards(vel, Vector3.zero, 10f * dt); if (vel.sqrMagnitude < 0.01f) mode = Mode.Parked; }
         }
+        if (driver != null) homing = false;
+        if (driver == null && homing) { HomeTick(dt); Integrate(dt); Effects(dt); Audio(dt); return; }
         toggleCool -= dt; boomCool -= dt;
         if (ji.toggle && toggleCool <= 0f)
         {
@@ -538,6 +567,15 @@ public class Jet : Vehicle
         if (trailL != null) { trailL.Clear(); trailR.Clear(); trailE.Clear(); }
         foreach (Slot sl in RiderSlots()) if (sl.rig != null) sl.rig.Snap();
         if (Wrecked) { /* VehicleWreck runs its own timer; it ends with ResetHome */ }
+    }
+
+    // ffu47 demo: hovering at p, heading yaw, drifting forward
+    public void DemoHover(Vector3 p, float yawDeg, float fwd)
+    {
+        pos = p; heading = yawDeg; rot = Quaternion.Euler(0f, yawDeg, 0f);
+        vel = rot * Vector3.forward * fwd; kinVel = vel;
+        vtol = true; nz = 1f; throttle = 0f; onGround = false; gearDown = false; mode = Mode.Hover; homing = false;
+        transform.position = pos; transform.rotation = rot; rb.position = pos; rb.rotation = rot;
     }
 
     // demo: start in the air in jet mode (jetat=hyper)

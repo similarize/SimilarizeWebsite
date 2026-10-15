@@ -79,8 +79,9 @@ public partial class Frog : MonoBehaviour
     public float vehT; public bool vehFirst;   // ffu46 hints: time in this vehicle, first time ever in this kind
     public string toast = "";
     public float toastT;
-    public bool chute;            // parachute after bailing out of a flyer in the air
-    GameObject chuteGo;
+    public bool chute;            // parachute after bailing out of a flyer in the air (ffu47: the paraglider wing is open, FrogGlide.cs)
+    public static float DtCap = 0.05f;   // ffu47 demos raise it (SwiftShader frames are slow)
+    public bool Sprinting;        // ffu47: hold SHIFT / pad B while walking (critter riders hop off)
 
     public void Toast(string s, float secs = 2.5f) { toast = s; toastT = secs; }
 
@@ -142,7 +143,7 @@ public partial class Frog : MonoBehaviour
         bool vis = model == null || model.gameObject.activeSelf;
         if (model != null) { model.gameObject.SetActive(false); Destroy(model.gameObject); }
         scubaGo = null; suitGo = null; finL = finR = null;   // they hung under the old model
-        if (chuteGo != null) { Destroy(chuteGo); chuteGo = null; chute = false; }
+        if (chuteGo != null) { Destroy(chuteGo); chuteGo = null; chute = false; glidePh = 0; flapL.Clear(); flapR.Clear(); flapBase.Clear(); } if (packT != null) { Destroy(packT.gameObject); packT = null; }
         var mg = new GameObject("Model");
         mg.transform.SetParent(transform, false);
         model = mg.AddComponent<FrogModel>();
@@ -180,7 +181,8 @@ public partial class Frog : MonoBehaviour
         if (jetOf != null) { jetOf = null; transform.localScale = Vector3.one; }
         SetSuit(false);
         if (cc != null && !cc.enabled && vehicle == null && passengerOf == null) cc.enabled = true;
-        SetChute(false);
+        GlideStop();
+        CritterPals.ShakeOff(this, "world");
         if (world != w) { toast = ""; toastT = 0f; }   // ffu14: an old world's toast (space) no longer lingers after the trip
         world = w;
         Teleport(p);
@@ -212,9 +214,9 @@ public partial class Frog : MonoBehaviour
 
     void Update()
     {
-        float dt = Mathf.Min(Time.deltaTime, 0.05f);
+        float dt = Mathf.Min(Time.deltaTime, DtCap);
         if (toastT > 0f) { toastT -= dt; if (toastT <= 0f) toast = ""; }
-        if (netPuppet) { input = new PIn(); return; }   // ffu13: posed by Net from the owner's device
+        if (netPuppet) { GlidePuppetTick(); input = new PIn(); return; }   // ffu13: posed by Net from the owner's device
         if (robotPilot != null)
         {
             // ffu20: the robot's AI drives with the froggies' own vehicle code (no walking, no AI wander)
@@ -282,6 +284,7 @@ public partial class Frog : MonoBehaviour
             input = new PIn();
             return;
         }
+        if (GlideOn && GlideTick(dt)) { input = new PIn(); return; }   // ffu47 paraglider (FrogGlide.cs)
         if (PoolTick(dt)) { input = new PIn(); return; }   // ffu29 backyard pool float (FrogPool.cs)
         if (!ClimbTick(dt)) { Walk(dt); ClimbDetect(dt); }   // ffu21 tree climbing (FrogClimb.cs)
         input = new PIn();
@@ -308,6 +311,14 @@ public partial class Frog : MonoBehaviour
             else if (near.Wrecked && !(near is StoryMech)) prompt = near.WreckedLine;
             else if (!near.CanEnter(this)) prompt = near.DeniedLine;
             else prompt = "A / E: " + (near.OwnedBy(this) ? near.EnterVerb : "ask " + near.ownerName + " to borrow the " + near.Title);   // ffu34 canon
+        }
+        int pals = CritterPals.Riders(this);   // ffu47: small animals riding on this froggy (CritterPals.cs)
+        if (pals > 0 && prompt.Length == 0) prompt = "A / E: shake off " + CritterPals.RiderLabel(this);
+        if (pals > 0 && input.use && exitCool <= 0f && hs == null && (near == null || near.driver != null || !near.CanEnter(this)))
+        {
+            exitCool = 0.35f;
+            CritterPals.ShakeOff(this, "shake");
+            return;
         }
         if (input.use && hs != null && exitCool <= 0f)
         {
@@ -373,6 +384,8 @@ public partial class Frog : MonoBehaviour
             if (wish.sqrMagnitude > 1f) wish.Normalize();
         }
         float spd = swimming ? SwimSpeed : Roster.RunSpeed(charId);
+        Sprinting = !swimming && cc.isGrounded && input.downHeld && wish.sqrMagnitude > 0.25f && world != WorldId.Underwater;   // ffu47 sprint (SHIFT / pad B)
+        if (Sprinting) spd *= 1.45f;
         planar = Vector3.MoveTowards(planar, wish * spd, (cc.isGrounded || swimming ? 40f : 12f) * dt);
         if (wish.sqrMagnitude > 0.01f)
         {
@@ -417,17 +430,18 @@ public partial class Frog : MonoBehaviour
                 vel.z = Mathf.MoveTowards(vel.z, 0f, 3f * dt);
             }
             vel.y -= Gravity * spaceGravity * dt;
-            if (chute)
+            if (chute && ChuteOld)
             {
+                // the ffu46 chute (&chuteold=1 only): cc.isGrounded here is still last frame's (or, right after a bail,
+                // the one from before getting in) -> it cut the chute on the first frame
                 if (vel.y < -4f) vel.y = Mathf.MoveTowards(vel.y, -4f, 40f * dt);
-                if (cc.isGrounded) SetChute(false);
+                if (cc.isGrounded) { SetChute(false); Debug.Log("FFDEMO chute OLD cut by stale isGrounded, y " + transform.position.y.ToString("0.0")); }
             }
         }
         if (swimming && chute) SetChute(false);
         cc.Move((planar + vel) * dt + VehiclePush(dt));
         if (transform.position.y < Worlds.KillY(world)) Worlds.Respawn(this);
         model.Animate(new Vector2(planar.x, planar.z).magnitude, !cc.isGrounded && !swimming, false, swimming, dt);
-        if (chuteGo != null && chute) chuteGo.transform.localRotation = Quaternion.Euler(Mathf.Sin(Time.time * 2f) * 6f, 0f, Mathf.Sin(Time.time * 1.3f) * 8f);
     }
 
     // ---------- scuba (underwater world) ----------
@@ -603,28 +617,6 @@ public partial class Frog : MonoBehaviour
         else prompt = "The bay is closed - wait for " + (st.driver != null ? st.driver.nick : "the pilot") + " to open it";
     }
 
-    void SetChute(bool on)
-    {
-        chute = on;
-        if (on && chuteGo == null)
-        {
-            chuteGo = new GameObject("Chute");
-            chuteGo.transform.SetParent(transform, false);
-            chuteGo.transform.localPosition = new Vector3(0f, 1.2f, 0f);
-            Color c = Color.Lerp(color, Color.white, 0.35f);
-            Mats.Prim(PrimitiveType.Sphere, chuteGo.transform, new Vector3(0f, 2.4f, 0f), new Vector3(3.2f, 1.2f, 3.2f), Mats.Lit(c));
-            Mats.Prim(PrimitiveType.Sphere, chuteGo.transform, new Vector3(0f, 2.15f, 0f), new Vector3(3.0f, 0.9f, 3.0f), Mats.Lit(Color.white));
-            for (int k = 0; k < 4; k++)
-            {
-                Vector3 e = Quaternion.Euler(0f, 45f + k * 90f, 0f) * new Vector3(0f, 2.1f, 1.3f);
-                var g = Mats.Prim(PrimitiveType.Cube, chuteGo.transform, e * 0.5f, new Vector3(0.03f, e.magnitude, 0.03f), Mats.Lit(Color.white));
-                g.transform.localRotation = Quaternion.FromToRotation(Vector3.up, e.normalized);
-            }
-            Mats.SetLayer(chuteGo, 9);
-        }
-        if (chuteGo != null) chuteGo.SetActive(on);
-    }
-
     // Frogs and vehicles don't physically collide (layer 8/9 ignored), so keep frogs out of vehicle bodies
     // here, and bonk them into the air when a vehicle hits them at speed.
     float bonkCool;
@@ -668,7 +660,8 @@ public partial class Frog : MonoBehaviour
         model.gameObject.SetActive(v.showDriver);
         exitCool = 0.4f;
         planar = Vector3.zero; vel = Vector3.zero;
-        SetChute(false);
+        GlideStop();
+        CritterPals.ShakeOff(this, "vehicle");   // ffu47: riders hop off
         vehT = 0f; vehFirst = human && Game.FirstUse(v);   // ffu46 hints
         v.OnEnter();
         if (human && !netPuppet && !v.OwnedBy(this)) Toast(nick + " asked " + v.ownerName + " to borrow it - \"Sure, it's free. Drive safe!\"", 3f);   // ffu34 canon
@@ -690,7 +683,22 @@ public partial class Frog : MonoBehaviour
         Vector3 spot;
         bool bail = false;
         Flyer fl = v as Flyer;
-        if (fl != null && fl.AltitudeAboveGround > 2.5f)
+        Jet jt = v as Jet;
+        StoryMech smx = v as StoryMech;
+        bool eject = false;
+        if (jt != null && jt.agl > 4f)
+        {
+            // ffu47: ejection seat - up out of the cockpit, then the paraglider
+            bail = true; eject = true;
+            spot = v.transform.position + v.transform.up * 3.2f + Vector3.up * 1f;
+        }
+        else if (smx != null && smx.Altitude > 8f)
+        {
+            bail = true;
+            Vector3 side = v.transform.right; side.y = 0f; side.Normalize();
+            spot = v.transform.position + Vector3.up * smx.height * 0.8f + side * (smx.height * 0.3f + 2.5f);
+        }
+        else if (fl != null && fl.AltitudeAboveGround > 2.5f)
         {
             // bail out beside the aircraft and float down under a parachute
             bail = true;
@@ -713,7 +721,7 @@ public partial class Frog : MonoBehaviour
         cc.enabled = true;
         Teleport(spot);
         vel = v.Velocity * 0.5f;
-        if (bail) { vel.y = Mathf.Min(vel.y, 0f); SetChute(true); Toast("Parachute! The " + v.Title + " flies itself home.", 3f); }
+        if (bail) BeginBail(v.Title, spot, v.Velocity * 0.5f + (eject ? Vector3.up * 9f : Vector3.zero), eject);   // ffu47 paraglider
         exitCool = 0.4f;
         if (!netPuppet) Sfx.Play(Sfx.Door, 0.8f);
     }
@@ -722,10 +730,11 @@ public partial class Frog : MonoBehaviour
     // ---------- AI wander ----------
     void Think(float dt)
     {
+        if (GlideOn) { input = new PIn(); return; }   // ffu47: the glide steers itself (AiGlide)
         if (GardenThink(dt)) return;   // ffu32: relax in the garden / ride a horse (FrogGarden.cs)
         if (FollowThink(dt)) return;   // ffu27: phone CALL + free-play tag-along across worlds (FrogFollow.cs)
         var i = new PIn();
-        if (vehicle != null) { input = i; return; }
+        if (vehicle != null) { input = MechAI.Pilots(this) ? MechAI.Pilot(this, dt, ref camYaw) : i; return; }   // ffu47 AI mech pilots
         if (AiGoalHook != null) { Vector3? g = AiGoalHook(this); if (g.HasValue) { aiTarget = g.Value; if (aiTimer > 2f) aiTimer = 2f; } }   // ffu24 story: follow the crew
         aiTimer -= dt;
         Vector3 p = transform.position;
@@ -757,6 +766,7 @@ public partial class Frog : MonoBehaviour
         if (aiRibbitT <= 0f) { aiRibbitT = Random.Range(7f, 18f); Voice(false, p + Vector3.up * 0.5f, 0.55f); }
         // blocked? hop
         if (cc.isGrounded && to.magnitude > 2f && planar.magnitude < 0.6f && Random.value < dt) i.hop = true;
+        if (CritterPals.Riders(this) > 0) { i.move *= 0.4f; i.hop = false; }   // ffu47: carrying a lizard / rabbit - gentle steps, no hops
         input = i;
         camYaw = 0f;
     }

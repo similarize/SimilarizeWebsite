@@ -21,6 +21,10 @@ public class Animal : MonoBehaviour
     public float followDist = 1.6f;
     public bool frozen;                // hide-and-seek pose
     public bool holdPosition;
+    public bool pal;                   // ffu47: CritterPals is moving this animal (climbing on / nuzzling a froggy)
+    public bool Fleeing { get { return fleeT > 0f; } }
+    public void PalAnimate(float s, float dt) { Animate(s, dt); }
+    public float Ground(float x, float z) { return groundFn != null ? groundFn(x, z) : floorY; }
     float timer, phase, grazeT, spd, yaw, fleeT;
     Vector3 fleeFrom;
     public static readonly List<Animal> All = new List<Animal>();
@@ -54,13 +58,14 @@ public class Animal : MonoBehaviour
         float want = 0f;
         Vector3 to = Vector3.zero;
         if (frozen) { Animate(0f, dt); return; }
+        if (pal) return;   // ffu47: posed by CritterPals
 
         // react to frogs / vehicles that come close (ranch animals bolt, pets just trot aside)
         if (skittish && fleeT <= 0f && Game.I != null && Time.frameCount % 6 == (GetInstanceID() & 5))
         {
             float r = kind == Kind.Cow || kind == Kind.Horse ? 7f : 3.2f;
             foreach (Frog f in Game.I.frogs)
-                if (f != null && (f.FocusPoint - p).sqrMagnitude < (f.vehicle != null && !(f.vehicle is Horse && f.vehicle.Speed < 6f) && !(f.vehicle is GardenSeat) ? r * r * 4f : r * r)) { Scare(f.FocusPoint); break; }
+                if (f != null && !(petName.Length == 0 && !CritterPals.Paused && f.vehicle == null && f.HSpeed < 3.5f && !f.Sprinting) && (f.FocusPoint - p).sqrMagnitude < (f.vehicle != null && !(f.vehicle is Horse && f.vehicle.Speed < 6f) && !(f.vehicle is GardenSeat) ? r * r * 4f : r * r)) { Scare(f.FocusPoint); break; }
             foreach (Vehicle v in Vehicle.All)
                 if (v != null && v.Speed > (v is Horse ? 6f : 2f) && (v.transform.position - p).sqrMagnitude < r * r * 6f) { Scare(v.transform.position); break; }   // ffu32: a horse at a walk / trot doesn't scatter the herd
         }

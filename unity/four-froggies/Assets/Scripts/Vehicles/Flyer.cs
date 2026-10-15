@@ -52,8 +52,8 @@ public class Flyer : Vehicle
     {
         get
         {
-            return isDrone ? "L-stick fly (camera-relative) | RT/Space up | LT/Shift down | A get out (in the air: parachute, it flies home)"
-                           : "L-stick fly + turn | RT/Space up | LT/Shift down | A get out (in the air: parachute, it flies home)";
+            return isDrone ? "L-stick fly (camera-relative) | RT/Space up | LT/Shift down | A get out (in the air: paraglider, it flies home)"
+                           : "L-stick fly + turn | RT/Space up | LT/Shift down | A get out (in the air: paraglider, it flies home)";
         }
     }
 

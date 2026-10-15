@@ -195,6 +195,7 @@ public partial class Game : MonoBehaviour
             else if (IsPoolDemo(sc)) PoolDemoStart(f, sc);                   // ffu29 backyard pool float (GamePoolDemo.cs)
             else if (IsStompDemo(sc)) StompDemoStart(f, sc);                 // ffu28 mech footfalls / Optimus suit on a slope (GameStomp.cs)
             else if (IsGardenDemo(sc)) GardenDemoStart(f, sc);               // ffu32 garden retreat / horse riding (GardenDemo.cs)
+            else if (Is47(sc)) Demo47Start(f, sc);                             // ffu47 paraglider / mech AI / critter pals (GameFfu47.cs)
             else if (Is46(sc)) Demo46Start(f, sc);                             // ffu46 skateboards + helper hints (GameFfu46.cs)
             else if (Is45(sc)) Demo45Start(f, sc);                             // ffu45 barn motorbikes / per-vehicle wheels / help screen (GameFfu45.cs)
             else if (Is43(sc)) Demo43Start(f, sc);                             // ffu43 loop both ways + Monster Park (GameFfu43.cs)
@@ -231,6 +232,7 @@ public partial class Game : MonoBehaviour
         if ((sc.StartsWith("lj-") || sc.StartsWith("loopdrive")) && DemoLoopCam(f, sc, c)) return;
         if (IsStompDemo(sc)) { if (!StompDemoCam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }
         if (IsGardenDemo(sc)) { if (!GardenDemoCam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }
+        if (Is47(sc)) { if (!Demo47Cam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }
         if (Is46(sc)) { if (!Demo46Cam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }
         if (Is45(sc)) { if (!Demo45Cam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }
         if (Is43(sc)) { if (!Demo43Cam(f, sc, out pos, out look)) return; c.transform.position = pos; c.transform.LookAt(look); return; }

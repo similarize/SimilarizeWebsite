@@ -19,6 +19,7 @@ public class CamRig
     public CamRig(Camera c) { cam = c; }
 
     public void AddShake(float t) { trauma = Mathf.Min(1.2f, trauma + t); }
+    public void Bump(float deg) { kick = Mathf.Max(kick, deg); }   // ffu47: a little nudge (a cow's lick)
     // ffu28: ground quake from giant footfalls - a short low-frequency vertical bounce + a little pitch / roll, sized by
     // camera distance so it reads the same for a 3 m suit and a 160 m mech (positional jitter alone vanishes at 190 m)
     float quake, quakeSeed;
@@ -87,6 +88,14 @@ public class CamRig
             else followW = Mathf.MoveTowards(followW, 0f, dt);
         }
         if (v == null && f.remote != null) { dist = 3.4f + f.remote.height * 1.8f; height = 1.4f; }   // ffu12: driving a robot
+        if (v == null && f.GlideCamK > 0.001f)
+        {
+            // ffu47 paraglider: pull back + up so the wing (4.5 m over the harness) and the froggy are both in frame, and
+            // ease in behind the flight direction when the player isn't looking around
+            float gk = Mathf.SmoothStep(0f, 1f, f.GlideCamK);
+            dist = Mathf.Lerp(dist, 14.5f, gk); height = Mathf.Lerp(height, 5.4f, gk);
+            if (f.GlideFlying && manualT > 1.5f) yawT = Mathf.LerpAngle(yawT, f.glideYaw, Mathf.Min(1f, dt * 1.4f));
+        }
         dist = (dist + extraDistance) * zoomMul;
 
         // smooth the player's own input so a finger landing / lifting never jumps the view

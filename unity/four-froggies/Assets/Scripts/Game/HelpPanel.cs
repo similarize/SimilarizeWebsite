@@ -215,8 +215,8 @@ public partial class Game
             L.Add(s);
         }
         var mv = new HSec("MOVE");
-        if (pad) mv.R("L-stick", "walk / steer").R("R-stick", "look around (R3 resets)").R(G("A"), "hop  ·  swim up").R("Hold " + G("B"), "dive when swimming").R("D-pad up / down", "zoom");
-        else if (keys) mv.R("W A S D", "walk / steer").R("Mouse", "look around (click to lock)").R("Space", "hop  ·  swim up").R("Shift", "dive when swimming").R("Wheel  /  Q  /  X", "zoom").R("0", "reset the camera");
+        if (pad) mv.R("L-stick", "walk / steer").R("R-stick", "look around (R3 resets)").R(G("A"), "hop  ·  swim up").R("Hold " + G("B"), "sprint  ·  dive when swimming").R("D-pad up / down", "zoom");
+        else if (keys) mv.R("W A S D", "walk / steer").R("Mouse", "look around (click to lock)").R("Space", "hop  ·  swim up").R("Shift", "sprint  ·  dive when swimming").R("Wheel  /  Q  /  X", "zoom").R("0", "reset the camera");
         else mv.R("Left stick", "walk / steer").R("Drag", "look around (double-tap resets)").R("A", "hop  ·  swim up").R("DIVE", "dive when swimming").R("-  /  +", "zoom");
         L.Add(mv);
         var vh = new HSec("VEHICLES");
@@ -227,13 +227,23 @@ public partial class Game
         vh.R("Bikes", "garage + trailer barn; ride into a toy hauler to stow");
         vh.R("Skateboards", "rack at the Monster Park half-pipe + 2 in the garage  ·  " + (pad ? G("A") + " ollie, " + G("B") + " step off" : keys ? "Space ollie, E step off" : "OLLIE / OFF"));
         L.Add(vh);
+        // ffu47 paraglider
+        bool gl = f != null && f.GlideOn;
+        var pg = new HSec(gl ? "NOW FLYING  ·  PARAGLIDER" : "PARAGLIDER", gl);
+        pg.R(pad ? G("A") + " in the air" : keys ? "E in the air" : "A in the air", "bail out / eject (jet, helicopter, drone, a high mech) - the wing opens by itself (" + (pad ? G("A") : keys ? "Space" : "A") + " = now)");
+        pg.R(pad ? "L-stick" : keys ? "A  /  D" : "Stick", "steer - the wing banks, you swing out");
+        pg.R(pad ? "LT  /  stick back" : keys ? "S" : "Stick back", "brakes; pull just before touchdown to FLARE (soft landing)");
+        pg.R(pad ? "Stick up" : keys ? "W" : "Stick up", "speed bar; with a hard turn = spiral down from high up");
+        pg.R("Landing", "the wing packs itself up; in the pond it's cut away");
+        if (gl) L.Insert(0, pg); else L.Add(pg);
         var ac = new HSec("ACTIONS");
         string use = pad ? G("A") : keys ? "E" : "A";
         ac.R(use, "at a prompt: doors, gates, fish tanks, ramps, chat");
         ac.R("Rally", "figure-8, bridge, jumps, loop lane west of the garage");
         ac.R("Pond", "boat gate course from gate 1; sub at the dock");
         if (Worlds.SpaceOn) ac.R("Starship pad", use + " launches (Earth, Moon, Mars, Callisto)");
-        if (Worlds.StageEOn) ac.R("Mech yard", "every froggy has its own mech" + (pad ? "  ·  RT / " + G("X") + " omnigun" : ""));
+        if (Worlds.StageEOn) ac.R("Mech yard", "every froggy has its own mech" + (pad ? "  ·  RT / " + G("X") + " omnigun" : "") + "  ·  AI froggies hop in theirs when you come over");
+        ac.R("Animal pens", "lizards + bunnies climb onto you, cows + horses lick hello  ·  " + use + " shake off, sprint / hop and they hop down");   // ffu47 critter pals
         ac.R("House", "walk into the front door");
         L.Add(ac);
         var pc = new HSec("PHONE + CAMERA");

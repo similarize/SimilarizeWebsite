@@ -65,8 +65,23 @@ public partial class Game
             if (f.vehT > show) return "";
             return VehicleHint(v, k);
         }
+        if (f.GlideOn && f.human) return HintsOn ? GlideHint(f, k) : (p == "glide" ? "" : p);   // ffu47 paraglider
         if (p.StartsWith("A / E: ")) return Cap(UseKey(k), k) + "  " + Up1(p.Substring(7));
         return p;
+    }
+
+    // ffu47: the paraglider line (freefall / flying / packing) in the device's own keys + glyphs
+    public static string GlideHint(Frog f, InputKind k)
+    {
+        bool pad = k == InputKind.Gamepad, touch = k == InputKind.Touch;
+        string sep = "   ";
+        if (f.glidePh == 1) return Cap(pad || touch ? "A" : "Space", k) + "  Open the wing now";
+        if (f.glidePh == 4) return "Packing up the wing...";
+        string s = Cap(pad ? "L-stick" : touch ? "Stick" : "A  D", k) + " steer" + sep
+                 + Cap(pad ? "LT" : touch ? "Stick back" : "S", k) + " brake" + (f.glideAgl < 6f ? " - <color=#ffd34d>FLARE NOW</color>" : " / flare to land") + sep
+                 + Cap(pad ? "Stick up" : touch ? "Stick up" : "W", k) + " speed bar";
+        if (f.glideAgl > 60f) s += sep + "turn + speed bar = spiral down";
+        return s;
     }
 
     public static string VehicleHint(Vehicle v, InputKind k)
