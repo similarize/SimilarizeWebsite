@@ -1,0 +1,196 @@
+using System.Collections.Generic;
+using UnityEngine;
+
+// Material cache + primitive helpers (copied from Four Froggies Unity). Base materials come from editor-made assets (so their shader variants ship).
+public static class Mats
+{
+    static Material lit, unlit, fx, water, glass;
+    static readonly Dictionary<long, Material> cache = new Dictionary<long, Material>();
+
+    public static Material Fx { get { return fx; } }
+    public static Material GroundBase, RoadBase;
+    public static Material FxAdd;                    // lambo7: additive particle material (editor-made), may be null     // Standard + sand detail map (editor-made assets), may be null
+
+    // copy of a detail base material with this main texture (falls back to Tex)
+    public static Material Detail(Material baseMat, Texture2D t, float gloss)
+    {
+        if (baseMat == null) return Tex(t, gloss);
+        var m = new Material(baseMat);
+        m.color = Color.white;
+        m.mainTexture = t;
+        return m;
+    }
+    // lambo7 ground: Standard (editor-made base with _NORMALMAP + _DETAIL_MULX2, so the variant ships) with the theme's
+    // Poly Haven CC0 grain as the tiled main map (grey, centred on 0.5) + its normal map, and the generated colour map
+    // (rock / sand / snow / grass by height and slope) as the x2 detail on uv2 over the whole terrain square.
+    public static Material Ground(Texture2D colourMap, int theme, float worldSize, float gloss)
+    {
+        Texture2D d = Resources.Load<Texture2D>("LBTex/g" + theme + "_d"), n = Resources.Load<Texture2D>("LBTex/g" + theme + "_n");
+        if (GroundBase == null || d == null || !GroundBase.IsKeywordEnabled("_DETAIL_MULX2")) return Tex(colourMap, gloss);
+        var m = new Material(GroundBase);
+        m.color = Color.white;
+        m.mainTexture = d;
+        float rep = worldSize / (theme == 5 ? 10f : 7f);
+        m.mainTextureScale = new Vector2(rep, rep);
+        if (n != null) m.SetTexture("_BumpMap", n);
+        m.SetFloat("_BumpScale", theme == 3 ? 0.6f : 0.9f);
+        m.SetTexture("_DetailAlbedoMap", colourMap);
+        m.SetTextureScale("_DetailAlbedoMap", Vector2.one);
+        m.SetTextureOffset("_DetailAlbedoMap", Vector2.zero);
+        m.SetFloat("_UVSec", 1f);
+        m.SetFloat("_Glossiness", gloss);
+        return m;
+    }
+
+    // lambo7 car paint: glossy clear-coat look (high smoothness + some metal so the reflection probe reads as a lacquer)
+    // lambo9: LB/Paint (Resources/LBPaint.shader) = metallic base + clear-coat fresnel reflection + sun glint; ?gfx=low keeps lambo7's
+    static Shader paintS; static bool paintTried;
+    static readonly Dictionary<long, Material> paintCache = new Dictionary<long, Material>();
+    public static Material CarPaint(Color c)
+    {
+        bool dark = c.r + c.g + c.b < 0.5f, white = c.r + c.g + c.b > 2.6f;
+        if (!paintTried)
+        {
+            paintTried = true;
+            if (!(Application.absoluteURL ?? "").Contains("gfx=low"))
+            {
+                paintS = Resources.Load<Shader>("LBPaint");
+                if (paintS == null) paintS = Shader.Find("LB/Paint");
+                if (paintS != null && !paintS.isSupported) paintS = null;
+            }
+            Debug.Log("Mats: lambo9 paint " + (paintS != null ? "clear-coat" : "standard"));
+        }
+        if (paintS == null) return PBR(c, dark ? 0.97f : 0.94f, white ? 0.12f : dark ? 0.45f : 0.32f);
+        long k = Key(c, 77);
+        Material m;
+        if (paintCache.TryGetValue(k, out m) && m != null) return m;
+        m = new Material(paintS) { name = "LB9 paint" };
+        m.color = c;
+        m.SetFloat("_Glossiness", dark ? 0.86f : 0.74f);
+        m.SetFloat("_Metallic", white ? 0.1f : dark ? 0.4f : 0.42f);
+        m.SetFloat("_Clear", 1f);
+        paintCache[k] = m;
+        return m;
+    }
+
+    public static Material Water { get { return water; } }
+    public static Material Glass { get { return glass; } }
+
+    public static void Init(Material litMat, Material unlitMat, Material fxMat, Material waterMat, Material glassMat)
+    {
+        lit = litMat != null ? litMat : new Material(Shader.Find("LB/Std"));
+        unlit = unlitMat != null ? unlitMat : lit;
+        fx = fxMat != null ? fxMat : unlit;
+        water = waterMat != null ? waterMat : Lit(new Color(0.2f, 0.45f, 0.6f));
+        glass = glassMat != null ? glassMat : Shiny(new Color(0.2f, 0.3f, 0.4f));
+    }
+
+    static long Key(Color c, int kind)
+    {
+        Color32 k = c;
+        return ((long)kind << 32) | ((long)k.r << 24) | ((long)k.g << 16) | ((long)k.b << 8) | k.a;
+    }
+
+    static Material Get(Color c, int kind)
+    {
+        long k = Key(c, kind);
+        Material m;
+        if (cache.TryGetValue(k, out m)) return m;
+        m = new Material(kind == 2 ? unlit : lit);
+        m.color = c;
+        if (kind == 0) m.SetFloat("_Glossiness", 0.12f);
+        else if (kind == 1) { m.SetFloat("_Glossiness", 0.72f); m.SetFloat("_Metallic", 0.55f); }
+        else if (kind == 3) { m.SetFloat("_Glossiness", 0.82f); m.SetFloat("_Metallic", 0.85f); }
+        else if (kind >= 1000) { int q = kind - 1000; m.SetFloat("_Glossiness", (q / 21) / 20f); m.SetFloat("_Metallic", (q % 21) / 20f); }   // PBR
+        else if (kind >= 10) { m.SetFloat("_Glossiness", (kind - 10) / 20f); m.SetFloat("_Metallic", 0.12f); }   // Paint
+        cache[k] = m;
+        return m;
+    }
+
+    public static Material Lit(Color c) { return Get(c, 0); }
+    public static Material Shiny(Color c) { return Get(c, 1); }
+    public static Material Unlit(Color c) { return Get(c, 2); }
+    public static Material Steel(Color c) { return Get(c, 3); }
+    // glossy (or satin) painted / moulded surface: low metal, chosen smoothness 0..1 (car paint, robot shells, face screens)
+    public static Material Paint(Color c, float gloss = 0.85f) { return Get(c, 10 + Mathf.Clamp(Mathf.RoundToInt(gloss * 20f), 0, 20)); }
+
+    // Standard with chosen smoothness + metallic (quantised to 1/20)
+    public static Material PBR(Color c, float gloss, float metal)
+    {
+        int g = Mathf.Clamp(Mathf.RoundToInt(gloss * 20f), 0, 20), mt = Mathf.Clamp(Mathf.RoundToInt(metal * 20f), 0, 20);
+        return Get(c, 1000 + g * 21 + mt);
+    }
+
+    // a lit (Standard) material with a generated texture
+    public static Material Tex(Texture2D t, float gloss = 0.1f)
+    {
+        var m = new Material(lit);
+        m.color = Color.white;
+        m.mainTexture = t;
+        m.SetFloat("_Glossiness", gloss);
+        return m;
+    }
+
+    // tinted transparent copy of the glass material (shield bubble)
+    public static Material GlassTint(Color c)
+    {
+        var m = new Material(glass);
+        m.color = c;
+        return m;
+    }
+
+    public static Color Hex(string hex)
+    {
+        Color c;
+        return ColorUtility.TryParseHtmlString(hex, out c) ? c : Color.magenta;
+    }
+
+    public static GameObject Prim(PrimitiveType t, Transform parent, Vector3 localPos, Vector3 scale, Material mat, bool keepCollider = false)
+    {
+        GameObject g = GameObject.CreatePrimitive(t);
+        g.transform.SetParent(parent, false);
+        g.transform.localPosition = localPos;
+        g.transform.localScale = scale;
+        g.GetComponent<Renderer>().sharedMaterial = mat;
+        if (!keepCollider)
+        {
+            Collider c = g.GetComponent<Collider>();
+            if (c != null) Object.Destroy(c);
+        }
+        return g;
+    }
+
+    public static GameObject Prim(PrimitiveType t, Transform parent, Vector3 localPos, Vector3 scale, Vector3 euler, Material mat, bool keepCollider = false)
+    {
+        GameObject g = Prim(t, parent, localPos, scale, mat, keepCollider);
+        g.transform.localRotation = Quaternion.Euler(euler);
+        return g;
+    }
+
+    public static Transform Node(Transform parent, string name, Vector3 localPos)
+    {
+        var t = new GameObject(name).transform;
+        t.SetParent(parent, false);
+        t.localPosition = localPos;
+        return t;
+    }
+
+    public static void SetLayer(GameObject g, int layer)
+    {
+        g.layer = layer;
+        // lambou6: URP lights honour rendering layers, not the Built-in light culling mask -> showroom renderers (layer 20) only
+        // take the studio lights (rendering layer 2), island renderers keep the default rendering layer (bit 0) = the sun
+        if (layer == Showroom.Layer) { var r = g.GetComponent<Renderer>(); if (r != null) r.renderingLayerMask = U6Layers.StudioBit; }
+        foreach (Transform t in g.transform) SetLayer(t.gameObject, layer);
+    }
+
+    public static void NoShadows(GameObject g)
+    {
+        foreach (var r in g.GetComponentsInChildren<Renderer>()) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+    }
+
+    public static void NoReceive(GameObject g)
+    {
+        foreach (var r in g.GetComponentsInChildren<Renderer>()) r.receiveShadows = false;
+    }
+}
