@@ -714,6 +714,7 @@ public class Game : MonoBehaviour
         if (wins[w.id] >= WinsNeeded) { matchWinner = w; state = State.MatchOver; stateT = 9f; }
         else { state = State.RoundOver; stateT = 4.5f; }
         Sfx.RoundEnd(w.human, state == State.MatchOver);
+        FX.Celebrate(w.transform.position + Vector3.up * 1.5f, w.color, state == State.MatchOver ? 1.6f : 1f);
     }
 
     public void OnPop(Soldier by, Soldier victim)
@@ -864,6 +865,7 @@ public class Game : MonoBehaviour
                 case State.Countdown: center = "ROUND " + round + "\n" + Mathf.CeilToInt(stateT); break;
                 case State.Playing:
                     if (s.alive && roundClock > RoundLength - 0.9f) center = "<size=72>GO!</size>";
+                    if (s.alive && center == "" && s.calloutT > 0f) center = "<size=54><color=#ffd84a>" + s.callout + "</color></size>";
                     if (!s.alive) center = "YOU'RE OUT!\n<size=24>Spectating " + (target != null ? target.nick : "") + " - press JUMP to switch</size>";
                     break;
                 case State.RoundOver:
@@ -876,6 +878,7 @@ public class Game : MonoBehaviour
             }
             if (sl.kind == InputKind.Keyboard && state == State.Playing && s.alive && Cursor.lockState != CursorLockMode.Locked && !Demo)
                 center = "Click to aim with the mouse";
+            if (s.calloutT > 0f) s.calloutT -= dt;
             sl.hud.Tick(s, top, center, feed, state == State.Playing, dt);
         }
         if (Demo) DemoCamera(dt);

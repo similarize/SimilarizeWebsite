@@ -18,6 +18,10 @@ public class Soldier : MonoBehaviour
     public bool alive = true;
     public float yaw, pitch;
     public int pops;
+    // bb6: pop combos + on-screen callouts
+    public int comboN; public float lastPopTime = -99f;
+    public string callout = ""; public float calloutT;
+    public void Callout(string t, float secs) { callout = t; calloutT = secs; }
 
     // inputs
     public Vector2 inMove, inLook;
@@ -133,6 +137,7 @@ public class Soldier : MonoBehaviour
 
     public void ResetForRound(Vector3 pos, float yawDeg)
     {
+        comboN = 0; calloutT = 0f; lastPopTime = -99f;
         cc.enabled = false;
         transform.position = pos + Vector3.up * 0.15f;
         cc.enabled = true;
@@ -247,10 +252,20 @@ public class Soldier : MonoBehaviour
         if (by != null)
         {
             by.pops++;
+            by.comboN = (Time.time - by.lastPopTime < 4f) ? by.comboN + 1 : 1;
+            by.lastPopTime = Time.time;
+            if (by.comboN >= 2)
+            {
+                string[] names = { "", "", "DOUBLE POP!", "TRIPLE POP!", "MEGA POP!", "ULTRA POP!" };
+                by.Callout(by.comboN < names.Length ? names[by.comboN] : "POP-TASTIC x" + by.comboN + "!", 1.6f);
+                FX.Combo(b.transform.position, by.comboN);
+            }
             if (by.slot != null && by.slot.hud != null) by.slot.hud.ShowPop();
         }
         if (slot != null && slot.hud != null) slot.hud.ShowHit();
         if (Game.I != null) Game.I.OnPop(by, this);
+        if (BalloonsLeft == 1 && !Game.Demo) Callout("<color=#ff6a5a>LAST BALLOON!</color>", 2f);
+        if (BalloonsLeft == 0 && !Game.Demo) FX.Celebrate(transform.position + Vector3.up * 1.2f, color, 0.6f);
         if (BalloonsLeft == 0)
         {
             if (Game.Demo) StartCoroutine(DemoRefill());   // screenshot mode: nobody goes out

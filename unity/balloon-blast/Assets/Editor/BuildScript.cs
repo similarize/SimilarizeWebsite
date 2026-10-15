@@ -118,7 +118,7 @@ public static class BuildScript
         PlayerSettings.colorSpace = ColorSpace.Gamma;
         PlayerSettings.runInBackground = true;
         PlayerSettings.stripEngineCode = false;
-        PlayerSettings.SetManagedStrippingLevel(BuildTargetGroup.WebGL, ManagedStrippingLevel.Low);
+        PlayerSettings.SetManagedStrippingLevel(UnityEditor.Build.NamedBuildTarget.WebGL, ManagedStrippingLevel.Low);
         PlayerSettings.SetUseDefaultGraphicsAPIs(BuildTarget.WebGL, false);
         PlayerSettings.SetGraphicsAPIs(BuildTarget.WebGL, new[] { GraphicsDeviceType.OpenGLES3 });
 
@@ -127,7 +127,6 @@ public static class BuildScript
         PlayerSettings.WebGL.exceptionSupport = WebGLExceptionSupport.ExplicitlyThrownExceptionsOnly;
         PlayerSettings.WebGL.dataCaching = true;
         PlayerSettings.WebGL.nameFilesAsHashes = false;
-        PlayerSettings.WebGL.linkerTarget = WebGLLinkerTarget.Wasm;
         // Moderate memory (property names differ between Unity versions, so set them by reflection)
         SetStatic(typeof(PlayerSettings.WebGL), "initialMemorySize", 128);
         SetStatic(typeof(PlayerSettings.WebGL), "maximumMemorySize", 1024);

@@ -23,7 +23,8 @@ public static class Look
         QualitySettings.antiAliasing = Mobile ? 0 : 2;
         QualitySettings.shadowCascades = Mobile ? 1 : 2;
         QualitySettings.shadowProjection = ShadowProjection.StableFit;
-        QualitySettings.pixelLightCount = 1;
+        QualitySettings.pixelLightCount = Mobile ? 1 : 2;
+        QualitySettings.shadowResolution = Mobile ? ShadowResolution.Medium : ShadowResolution.VeryHigh;
         if (sun != null)
         {
             sun.color = new Color(1f, 0.94f, 0.82f);
@@ -31,6 +32,7 @@ public static class Look
             sun.shadowStrength = 0.7f;
             sun.shadowBias = 0.05f;
             sun.shadowNormalBias = 0.4f;
+            sun.shadows = LightShadows.Soft;   // bb6: soft PCF shadows (WebGL2-safe)
             sun.transform.rotation = Quaternion.Euler(46f, -38f, 0f);
         }
         RenderSettings.ambientMode = AmbientMode.Trilight;
