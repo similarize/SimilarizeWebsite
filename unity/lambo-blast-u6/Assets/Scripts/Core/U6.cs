@@ -46,7 +46,7 @@ public static class U6
         // a touch of bloom on the HDR highlights; ?u6sexp=<EV> overrides
         if (show != null)
         {
-            float sx = 1.2f;
+            float sx = 0.9f;     // u6e: 1.2 -> 0.9 (paint read washed out with the brighter u6d rig)
             string q = Q("u6sexp"); if (q != null) float.TryParse(q, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out sx);
             ColorAdjustments sca;
             if (show.TryGet(out sca)) { sca.active = true; sca.postExposure.Override(sx); sca.contrast.Override(2f); sca.saturation.Override(0f); }

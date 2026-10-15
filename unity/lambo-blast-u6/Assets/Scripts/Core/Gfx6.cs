@@ -121,7 +121,9 @@ public static class Gfx6
         if (bd != null) m.SetTexture("_BData", bd);
         if (rc != null) m.SetTexture("_RCol", rc);
         if (rd != null) m.SetTexture("_RData", rd);
-        m.SetColor("_AMean", M(a)); m.SetColor("_BMean", M(b)); m.SetColor("_RMean", M(r));
+        // u6e: the means are LINEAR values -> SetVector (SetColor gamma->linear converts them again in Linear space: ~10x too small,
+        // so scan / mean blew the road and ground up to near white in u6d)
+        m.SetVector("_AMean", (Vector4)M(a)); m.SetVector("_BMean", (Vector4)M(b)); m.SetVector("_RMean", (Vector4)M(r));
         m.SetVector("_BMask", BMask[th]);
         m.SetFloat("_ARep", worldSize / ATile[th]);
         m.SetFloat("_BRep", worldSize / BTile[th]);
@@ -140,7 +142,7 @@ public static class Gfx6
         }
         catch (System.Exception e) { Debug.LogWarning("U6D: colour map mean " + e.Message); }
         mm.a = 1f;
-        m.SetColor("_MapMean", mm);
+        m.SetVector("_MapMean", (Vector4)mm);                // u6e: linear -> SetVector
         // old (u6c) props stay set for the LB_LITE fallback-free path; log what took
         Debug.Log("U6D terrain " + th + ": " + a + " / " + b + " / " + r + " tex " + (ac != null && ad != null) + (bc != null && bd != null) + (rc != null && rd != null) +
             " map mean " + mm.r.ToString("F3") + "," + mm.g.ToString("F3") + "," + mm.b.ToString("F3"));
@@ -152,7 +154,7 @@ public static class Gfx6
         Texture2D c = Tex("asphalt_c"), d = Tex("asphalt_d");
         if (c != null) m.SetTexture("_Grain", c);
         if (d != null) m.SetTexture("_GrainData", d);
-        m.SetColor("_GrainMean", M("asphalt"));
+        m.SetVector("_GrainMean", (Vector4)M("asphalt"));   // u6e: linear -> SetVector
         m.SetFloat("_GrainCon", th == 3 ? 0.7f : 0.85f);
         m.SetVector("_GrainRep", new Vector4(6f, 12.8f, 0f, 0f));
         m.SetFloat("_BumpScale", 1f);
@@ -182,7 +184,7 @@ public static class Gfx6
         if (c == null || d == null) return;
         m.mainTexture = c;
         m.SetTexture("_DataMap", d);
-        m.SetColor("_Mean", M(n));
+        m.SetVector("_Mean", (Vector4)M(n));                  // u6e: linear -> SetVector
         m.SetFloat("_Full", 1f);
         m.SetFloat("_TintK", k == Gfx.K.Snow || k == Gfx.K.Concrete ? 0.5f : 0.65f);
         m.SetFloat("_BumpScale", 1.1f);

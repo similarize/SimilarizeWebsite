@@ -107,7 +107,8 @@ public static class Showroom
         var root = new GameObject("ShowroomEnv").transform;
         root.position = EnvPos;
         // u6d: HDR softboxes (the probe is HDR now) -> bright studio highlights in the clear coat
-        Material box = Mats.Unlit(new Color(2.6f, 2.65f, 2.8f)), warm = Mats.Unlit(new Color(2.4f, 2f, 1.6f)), cool = Mats.Unlit(new Color(1.2f, 1.7f, 2.4f));
+        // u6e: ~25% dimmer (u6d: 2.6 / 2.4 / 2.4 washed the paint out and lit the glossy floor up white at grazing angles)
+        Material box = Mats.Unlit(new Color(1.95f, 2f, 2.1f)), warm = Mats.Unlit(new Color(1.8f, 1.5f, 1.2f)), cool = Mats.Unlit(new Color(0.9f, 1.28f, 1.8f));
         Material floor = Mats.Unlit(new Color(0.09f, 0.095f, 0.11f));
         Mats.Prim(PrimitiveType.Cube, root, new Vector3(0f, 7f, 0f), new Vector3(9f, 0.1f, 2.4f), box);          // overhead strip
         Mats.Prim(PrimitiveType.Cube, root, new Vector3(0f, 7f, 4f), new Vector3(9f, 0.1f, 1.2f), box);
@@ -384,7 +385,8 @@ public static class Showroom
             ringMat = new Material(Mats.Unlit(Color.white));
             MeshObj("Rim", root, Ring(), ringMat, new Vector3(0f, -0.028f, 0f), new Vector3(3.36f, 1f, 3.36f));
             // studio floor + soft pools of light
-            MeshObj("Floor", root, Mirror ? Annulus() : Disc(), Mats.PBR(new Color(0.11f, 0.115f, 0.13f), 0.75f, 0.1f), new Vector3(0f, -0.13f, 0f), new Vector3(17f, 1f, 17f));
+            // u6e: darker, satin floor (u6d gloss 0.75 reflected the HDR softboxes at grazing angles -> white floor)
+            MeshObj("Floor", root, Mirror ? Annulus() : Disc(), Mats.PBR(new Color(0.06f, 0.063f, 0.072f), 0.35f, 0f), new Vector3(0f, -0.13f, 0f), new Vector3(17f, 1f, 17f));
             poolMat = SoftMat(new Color(1f, 1f, 1f, 0.25f), 2950);
             SoftQuad("Pool", root, new Vector3(0f, -0.125f, 0f), new Vector3(90f, 0f, 0f), 10f, 10f, poolMat);
             if (!Mirror) SoftQuad("Contact", root, new Vector3(0f, 0.006f, 0f), new Vector3(90f, 0f, 0f), 5.2f, 2.8f, SoftMat(new Color(0f, 0f, 0f, 0.8f), 2960));
@@ -442,7 +444,7 @@ public static class Showroom
             Color k = Cars.All[c].color;
             cam.backgroundColor = Backdrop(k);
             ringMat.color = Color.Lerp(k, Color.white, 0.35f) * 0.9f;
-            poolMat.color = Spot(k, 0.2f);
+            poolMat.color = Spot(k, 0.12f);     // u6e: was 0.2
             backMat.color = Spot(k, 0.16f);
             if (fx)
             {

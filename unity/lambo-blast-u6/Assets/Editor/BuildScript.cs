@@ -199,6 +199,21 @@ public static class BuildScript
         return a;
     }
 
+    // u6e: Graphics.RenderMeshInstanced draws (LB/GrassI tufts, LB/Tri foliage) use materials made at runtime, so with the default
+    // "Instancing Variants: Strip Unused" no build material had GPU instancing on -> INSTANCING_ON variants stripped -> the u6d
+    // instanced grass / trees never showed. Keep All (only LB/GrassI + LB/Tri declare multi_compile_instancing).
+    static void KeepInstancingVariants()
+    {
+        try
+        {
+            var gso = new SerializedObject(GraphicsSettings.GetGraphicsSettings());
+            var pr = gso.FindProperty("m_InstancingStripping");
+            if (pr != null) { pr.intValue = 2; gso.ApplyModifiedPropertiesWithoutUndo(); EditorUtility.SetDirty(GraphicsSettings.GetGraphicsSettings()); AssetDatabase.SaveAssets(); }
+            Debug.Log("BuildScript: u6e instancing stripping " + (pr != null ? "Keep All (" + pr.intValue + ")" : "property m_InstancingStripping not found"));
+        }
+        catch (Exception e) { Debug.LogWarning("BuildScript: u6e instancing stripping " + e.Message); }
+    }
+
     static int Run()
     {
         Debug.Log("BuildScript: start, Unity " + Application.unityVersion);
@@ -214,6 +229,7 @@ public static class BuildScript
             Debug.LogWarning("BuildScript: no URP asset active (setup pass missing?) - making it now");
             MakeURP();
         }
+        KeepInstancingVariants();
         Debug.Log("BuildScript: pipeline " + GraphicsSettings.defaultRenderPipeline.name + " colour " + PlayerSettings.colorSpace + " apis " + string.Join(",", PlayerSettings.GetGraphicsAPIs(BuildTarget.WebGL)));
 
         string scene = CreateScene();
