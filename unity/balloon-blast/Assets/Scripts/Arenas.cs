@@ -50,6 +50,22 @@ public static class Arenas
             RenderSettings.fogColor = fogC; RenderSettings.fogDensity = fogD;
             RenderSettings.ambientSkyColor = ambS; RenderSettings.ambientEquatorColor = ambE; RenderSettings.ambientGroundColor = ambG;
         }
+        // bb6: per-arena sun + sky so each arena reads at a glance (golden farm, pink candy, crisp blue snow)
+        Light sun = RenderSettings.sun;
+        Material sky = RenderSettings.skybox;
+        Color skyTint = new Color(0.5f, 0.5f, 0.5f);
+        if (sun != null)
+        {
+            if (arena == 1) { sun.color = new Color(1f, 0.86f, 0.9f); sun.intensity = 1.5f; sun.transform.rotation = Quaternion.Euler(52f, -20f, 0f); skyTint = new Color(0.62f, 0.45f, 0.58f); }
+            else if (arena == 2) { sun.color = new Color(0.86f, 0.93f, 1f); sun.intensity = 1.35f; sun.transform.rotation = Quaternion.Euler(28f, -60f, 0f); skyTint = new Color(0.42f, 0.5f, 0.62f); }
+            else { sun.color = new Color(1f, 0.85f, 0.62f); sun.intensity = 1.7f; sun.transform.rotation = Quaternion.Euler(34f, -38f, 0f); skyTint = new Color(0.56f, 0.5f, 0.42f); }
+        }
+        if (sky != null && sky.HasProperty("_Tint")) sky.SetColor("_Tint", skyTint);
+        if (arena == 0)
+        {
+            RenderSettings.ambientSkyColor = ambS * 0.8f; RenderSettings.ambientEquatorColor = ambE * 0.8f; RenderSettings.ambientGroundColor = ambG * 0.7f;
+            RenderSettings.fogColor = new Color(0.86f, 0.8f, 0.7f);
+        }
         if (t != null && t.terrainData != null && layerTex != null)
         {
             var ls = t.terrainData.terrainLayers;

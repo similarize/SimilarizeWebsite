@@ -28,8 +28,8 @@ public static class Look
         if (sun != null)
         {
             sun.color = new Color(1f, 0.94f, 0.82f);
-            sun.intensity = 1.08f;
-            sun.shadowStrength = 0.7f;
+            sun.intensity = 1.55f;
+            sun.shadowStrength = 0.88f;
             sun.shadowBias = 0.05f;
             sun.shadowNormalBias = 0.4f;
             sun.shadows = LightShadows.Soft;   // bb6: soft PCF shadows (WebGL2-safe)

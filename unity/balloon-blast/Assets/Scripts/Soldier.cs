@@ -126,20 +126,23 @@ public class Soldier : MonoBehaviour
 
         // Three balloons above the shoulders
         Vector3[] pos = { new Vector3(-0.36f, 2.2f, -0.08f), new Vector3(0f, 2.42f, -0.12f), new Vector3(0.36f, 2.2f, -0.08f) };
-        Color bc = Color.Lerp(color, Color.white, 0.12f);
+        Color bc = color;
         for (int k = 0; k < 3; k++)
         {
             // glossy translucent latex balloon (lathed mesh + BB/Balloon); same transform + collider as the old sphere
             var bg = new GameObject("Balloon" + k);
             bg.transform.SetParent(transform, false);
             bg.transform.localPosition = pos[k];
-            bg.transform.localScale = new Vector3(0.42f, 0.5f, 0.42f);
+            bg.transform.localScale = new Vector3(0.48f, 0.57f, 0.48f);
             bg.AddComponent<MeshFilter>().sharedMesh = Gear.BalloonMesh;
             var br = bg.AddComponent<MeshRenderer>();
             br.sharedMaterial = Mats.Balloon(bc);
             br.receiveShadows = false;
             if (Look.Mobile) br.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             bg.AddComponent<SphereCollider>().radius = 0.62f;
+            // bb6: cartoon shine highlight so balloons read glossy from far away
+            var shine = Mats.Prim(PrimitiveType.Sphere, bg.transform, new Vector3(-0.17f, 0.2f, -0.2f), new Vector3(0.12f, 0.17f, 0.06f), Mats.Unlit(new Color(1f, 1f, 1f)), false);
+            shine.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             var b = bg.AddComponent<Balloon>();
             b.owner = this; b.index = k; b.basePos = pos[k];
             Vector3 anchor = new Vector3(pos[k].x * 0.45f, 1.45f, -0.05f);
@@ -210,6 +213,20 @@ public class Soldier : MonoBehaviour
             if (smr != null) smr.updateWhenOffscreen = true;
             if (Look.Mobile) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         }
+        // bb6: toy-soldier helmet with a dark visor on the X-Bot head (reads as a team figure from far away)
+        foreach (var tr in holder.GetComponentsInChildren<Transform>(true))
+            if (tr.name.EndsWith("Head") && !tr.name.Contains("Top"))
+            {
+                var piv = new GameObject("Helmet").transform;
+                piv.SetParent(tr, false);
+                float ls = Mathf.Max(0.0001f, tr.lossyScale.x);
+                piv.localScale = Vector3.one / ls;
+                piv.localPosition = Vector3.zero;
+                Mats.Prim(PrimitiveType.Sphere, piv, new Vector3(0f, 0.11f, 0.005f), new Vector3(0.26f, 0.2f, 0.28f), Mats.Paint(color, 0.9f), false);
+                Mats.Prim(PrimitiveType.Cylinder, piv, new Vector3(0f, 0.07f, 0.02f), new Vector3(0.29f, 0.012f, 0.31f), Mats.Paint(Color.Lerp(color, Color.black, 0.35f), 0.7f), false);
+                Mats.Prim(PrimitiveType.Sphere, piv, new Vector3(0f, 0.08f, 0.11f), new Vector3(0.2f, 0.07f, 0.08f), Mats.PBR(new Color(0.08f, 0.1f, 0.14f), 0.95f, 0.6f), false);
+                break;
+            }
         Mats.SetLayer(holder, layer);
         anim = holder.GetComponentInChildren<Animation>();
         if (anim != null)

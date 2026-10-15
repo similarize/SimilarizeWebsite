@@ -319,7 +319,7 @@ public static class BuildScript
                 so.ApplyModifiedPropertiesWithoutUndo();
             }
             SetSer(ao, "m_Settings.Downsample", true);
-            SetSer(ao, "m_Settings.Intensity", 1.6f);
+            SetSer(ao, "m_Settings.Intensity", 2.2f);
             SetSer(ao, "m_Settings.Radius", 0.6f);
             EditorUtility.SetDirty(rd);
             Debug.Log("URP: SSAO feature added");
@@ -349,11 +349,11 @@ public static class BuildScript
         var prof = ScriptableObject.CreateInstance<VolumeProfile>();
         SaveAsset(prof, "PostProfile.asset");
         var bloom = prof.Add<Bloom>(true);
-        bloom.intensity.Override(0.9f); bloom.threshold.Override(0.95f); bloom.scatter.Override(0.65f);
+        bloom.intensity.Override(0.45f); bloom.threshold.Override(1.1f); bloom.scatter.Override(0.5f);
         var tm = prof.Add<Tonemapping>(true);
         tm.mode.Override(TonemappingMode.ACES);
         var ca = prof.Add<ColorAdjustments>(true);
-        ca.postExposure.Override(0.35f); ca.saturation.Override(18f); ca.contrast.Override(12f);
+        ca.postExposure.Override(0.15f); ca.saturation.Override(28f); ca.contrast.Override(22f);
         var wb = prof.Add<WhiteBalance>(true);
         wb.temperature.Override(6f);
         var vg = prof.Add<Vignette>(true);

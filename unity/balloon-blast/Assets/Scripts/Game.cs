@@ -87,6 +87,7 @@ public class Game : MonoBehaviour
             if (url.Contains("bbcrit=1")) critterMode = true;
             demoTouch = url.Contains("bbtouch=1");
             demoDogs = url.Contains("bbdogs=1");
+            demoAds = url.Contains("bbads=1");
             TouchControls.DemoPress = url.Contains("bbpress=1");
             int nk = url.IndexOf("bbn=");
             if (nk >= 0 && nk + 4 < url.Length) int.TryParse(url.Substring(nk + 4, 1), out demoN);
@@ -802,7 +803,7 @@ public class Game : MonoBehaviour
         s.inMove = mv;
         s.inLook = lk;
         s.inFire = fire;
-        s.inAds = ads;
+        s.inAds = ads || (Demo && demoAds);
         if (jump) s.inJump = true;
         if (reload) s.inReload = true;
         if (!s.alive && next) sl.spectate++;
@@ -836,7 +837,18 @@ public class Game : MonoBehaviour
             // portrait / tall views: widen the vertical FOV so the horizontal view stays ~62 deg (capped at 100 vertical)
             float asp = sl.cam.aspect;
             if (asp < 1.2f) baseFov = Mathf.Clamp(2f * Mathf.Atan(Mathf.Tan(31f * Mathf.Deg2Rad) / Mathf.Max(0.3f, asp)) * Mathf.Rad2Deg, baseFov, 100f);
-            sl.cam.fieldOfView = Mathf.Lerp(baseFov, baseFov * 0.55f, s.adsBlend);
+            sl.cam.fieldOfView = Mathf.Lerp(baseFov, baseFov * 0.42f, s.adsBlend);
+            // bb6 aim fix: aiming uses a sharp view (no bloom / SSAO-blur / FXAA on this camera) and a HUD scope instead of
+            // the near-eye rifle sight, which under URP smeared the whole zoomed image
+            bool aimView = s.alive && s.adsBlend > 0.35f;
+            var ucd = UnityEngine.Rendering.Universal.CameraExtensions.GetUniversalAdditionalCameraData(sl.cam);
+            if (ucd != null)
+            {
+                bool wantPost = Look.PostAllowed(Look.Views) && !aimView;
+                if (ucd.renderPostProcessing != wantPost) ucd.renderPostProcessing = wantPost;
+                var aa = aimView ? UnityEngine.Rendering.Universal.AntialiasingMode.None : (wantPost ? UnityEngine.Rendering.Universal.AntialiasingMode.SubpixelMorphologicalAntiAliasing : UnityEngine.Rendering.Universal.AntialiasingMode.None);
+                if (ucd.antialiasing != aa) ucd.antialiasing = aa;
+            }
 
             bool spectating = !s.alive && (state == State.Playing || state == State.RoundOver);
             Soldier target = null;
@@ -855,7 +867,7 @@ public class Game : MonoBehaviour
             }
             if (sl.viewModel != null)
             {
-                sl.viewModel.gameObject.SetActive(s.alive && sl.cam.transform.parent == s.eye);
+                sl.viewModel.gameObject.SetActive(s.alive && sl.cam.transform.parent == s.eye && s.adsBlend < 0.8f);
                 Vector3 hip = new Vector3(0.15f, -0.27f, 0.3f), aim = new Vector3(0f, -0.141f, 0.16f);
                 // portrait: the narrow view puts the hip rifle + sleeve across the lower half (behind the touch buttons),
                 // so hold it smaller, lower and nearer the centre; full size again when aiming (red dot alignment)
@@ -903,6 +915,7 @@ public class Game : MonoBehaviour
     public static bool Demo;
     static string demoShot = "tour";
     static bool demoDogs;
+    public static bool demoAds;      // &bbads=1: P1 (bot) always aims, for aim/scope screenshots
     static bool demoTouch;      // &bbtouch=1: P1 joins as Touch (on-screen controls drawn) even on desktop
     static int demoN = 1;       // &bbn=2..4: extra (bot-driven) players -> split-screen
     static readonly string[] Tour = { "fp", "soldier", "pop", "field", "fort", "barn" };
