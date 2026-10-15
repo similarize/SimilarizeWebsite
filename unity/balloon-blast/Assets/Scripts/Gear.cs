@@ -45,12 +45,22 @@ public static class Gear
     }
 
     static Mesh balloon;
+    public static Mesh PackMesh(string pack)
+    {
+        var pk = LBPack.Get(pack);
+        if (pk == null) return null;
+        foreach (var p in pk.parts.Values) if (p.chunks.Count > 0) return p.chunks[0].mesh;
+        return null;
+    }
     // unit balloon matching the old sphere primitive (radius 0.5, centre at 0) with a knot hanging to y -0.6
     public static Mesh BalloonMesh
     {
         get
         {
             if (balloon != null) return balloon;
+            // bb6: CC0 balloon model (loafbrr "Balloons", OpenGameArt) converted to an LB pack, smoothed; lathed mesh = fallback
+            Mesh m = PackMesh("bal_round");
+            if (m != null) { balloon = m; return balloon; }
             const int seg = 28, rings = 26;
             var prof = new Vector2[rings + 5];   // (radius, y) from the top down
             for (int i = 0; i <= rings; i++)

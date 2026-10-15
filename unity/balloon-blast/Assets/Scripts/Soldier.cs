@@ -190,13 +190,30 @@ public class Soldier : MonoBehaviour
     }
 
     // ---------- model ----------
-    public void AttachModel(GameObject holder)
+    public void AttachModel(GameObject holder, bool kenney = false, Texture2D tex = null)
     {
-        StartCoroutine(FitModel(holder));
+        StartCoroutine(FitModel(holder, kenney, tex));
     }
 
-    IEnumerator FitModel(GameObject holder)
+    IEnumerator FitModel(GameObject holder, bool kenney, Texture2D tex)
     {
+        if (kenney)
+        {
+            // Kenney Mini Characters: keep their own palette texture on our URP Lit base (soft satin), add a team-colour cap
+            Material km = tex != null ? Mats.Tex(tex, 0.25f) : Mats.Paint(color, 0.4f);
+            if (tex != null) tex.filterMode = FilterMode.Bilinear;
+            foreach (var r in holder.GetComponentsInChildren<Renderer>(true))
+            {
+                var ms = r.sharedMaterials;
+                for (int i = 0; i < ms.Length; i++) ms[i] = km;
+                r.sharedMaterials = ms;
+                var smr = r as SkinnedMeshRenderer;
+                if (smr != null) smr.updateWhenOffscreen = true;
+                if (Look.Mobile) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            }
+        }
+        else
+        {
         // graphics overhaul: glossy team-colour shell + satin dark-metal joints (was flat Lit)
         Color body = Color.Lerp(color, Color.white, 0.1f);
         Color joints = new Color(0.17f, 0.18f, 0.2f);
@@ -213,9 +230,10 @@ public class Soldier : MonoBehaviour
             if (smr != null) smr.updateWhenOffscreen = true;
             if (Look.Mobile) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         }
+        }
         // bb6: toy-soldier helmet with a dark visor on the X-Bot head (reads as a team figure from far away)
         foreach (var tr in holder.GetComponentsInChildren<Transform>(true))
-            if (tr.name.EndsWith("Head") && !tr.name.Contains("Top"))
+            if (!kenney && tr.name.EndsWith("Head") && !tr.name.Contains("Top"))
             {
                 var piv = new GameObject("Helmet").transform;
                 piv.SetParent(tr, false);
@@ -234,6 +252,14 @@ public class Soldier : MonoBehaviour
             foreach (AnimationState st in anim)
             {
                 string n = st.name.ToLowerInvariant();
+                if (kenney)
+                {
+                    if (n == "holding-both") clipIdle = st.name;
+                    else if (n == "walk") clipWalk = st.name;
+                    else if (n == "sprint") clipRun = st.name;
+                    else if (n == "die") clipSad = st.name;
+                    continue;
+                }
                 if (clipIdle == null && n.Contains("idle")) clipIdle = st.name;
                 else if (clipWalk == null && n.Contains("walk")) clipWalk = st.name;
                 else if (clipRun == null && n.Contains("run")) clipRun = st.name;
@@ -250,7 +276,7 @@ public class Soldier : MonoBehaviour
         Bounds b; bool has = Measure(holder, out b);
         if (has && b.size.y > 0.05f)
         {
-            float k = 1.78f / b.size.y;
+            float k = (kenney ? 1.7f : 1.78f) / b.size.y;
             holder.transform.localScale = holder.transform.localScale * k;
             yield return null;
             has = Measure(holder, out b);
@@ -258,7 +284,28 @@ public class Soldier : MonoBehaviour
         }
         modelRoot = holder.transform;
         capsuleBody.SetActive(false);
-        Debug.Log("Soldier " + nick + ": X-Bot attached, clips idle=" + clipIdle + " walk=" + clipWalk + " run=" + clipRun);
+        if (kenney)
+        {
+            // team-colour cap on the (big chibi) head, sized from the head mesh after scaling
+            Renderer hr = null; Transform hb = null;
+            foreach (var r in holder.GetComponentsInChildren<Renderer>(true)) if (r.name == "head-mesh") hr = r;
+            foreach (var t in holder.GetComponentsInChildren<Transform>(true)) if (t.name == "head") hb = t;
+            if (hr != null && hb != null)
+            {
+                Bounds hbnd = hr.bounds;
+                var cap = Mats.Prim(PrimitiveType.Sphere, null, Vector3.zero, Vector3.one, Mats.Paint(color, 0.85f), false);
+                cap.transform.position = new Vector3(hbnd.center.x, hbnd.max.y - hbnd.size.y * 0.18f, hbnd.center.z);
+                cap.transform.localScale = new Vector3(hbnd.size.x * 1.08f, hbnd.size.y * 0.5f, hbnd.size.z * 1.08f);
+                cap.transform.SetParent(hb, true);
+                var brim = Mats.Prim(PrimitiveType.Cylinder, null, Vector3.zero, Vector3.one, Mats.Paint(Color.Lerp(color, Color.black, 0.3f), 0.7f), false);
+                brim.transform.position = new Vector3(hbnd.center.x, hbnd.max.y - hbnd.size.y * 0.3f, hbnd.center.z) + transform.forward * hbnd.size.z * 0.3f;
+                brim.transform.rotation = transform.rotation;
+                brim.transform.localScale = new Vector3(hbnd.size.x * 0.9f, hbnd.size.y * 0.02f, hbnd.size.z * 0.9f);
+                brim.transform.SetParent(hb, true);
+                Mats.SetLayer(cap, layer); Mats.SetLayer(brim, layer);
+            }
+        }
+        Debug.Log("Soldier " + nick + ": " + (kenney ? "Kenney character" : "X-Bot") + " attached, clips idle=" + clipIdle + " walk=" + clipWalk + " run=" + clipRun);
     }
 
     static bool Measure(GameObject g, out Bounds b)

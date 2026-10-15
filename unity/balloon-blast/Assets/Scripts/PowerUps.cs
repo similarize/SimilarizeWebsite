@@ -25,7 +25,10 @@ public class PowerBalloon : MonoBehaviour
         var bg = new GameObject("Body");
         bg.transform.SetParent(transform, false);
         bg.transform.localScale = new Vector3(0.75f, 0.9f, 0.75f) * sc;
-        bg.AddComponent<MeshFilter>().sharedMesh = Gear.BalloonMesh;
+        string[] shapes = { "bal_heart", "bal_dog", "bal_poodle", "bal_star" };   // CC0 balloon-art shapes per power
+        Mesh shape = Gear.PackMesh(shapes[(int)k]);
+        if (shape != null) bg.transform.localScale = Vector3.one * 1.25f * sc;
+        bg.AddComponent<MeshFilter>().sharedMesh = shape != null ? shape : Gear.BalloonMesh;
         bg.AddComponent<MeshRenderer>().sharedMaterial = k == PowerKind.Golden ? Mats.PBR(Col[3], 0.95f, 0.85f) : Mats.Balloon(Col[(int)k]);
         var col = gameObject.AddComponent<SphereCollider>();
         col.radius = 0.55f * sc; col.isTrigger = true;

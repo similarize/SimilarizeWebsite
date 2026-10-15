@@ -39,3 +39,7 @@ Balloon Blast Airsoft (Unity) - third-party assets and licences
 CC0 1.0 Universal: https://creativecommons.org/publicdomain/zero/1.0/legalcode
 
 Kenney Food Kit 2.0 and Holiday Kit (www.kenney.nl) - CC0 1.0. Converted to LBM1 packs: Resources/LB/k_*.bytes
+
+Kenney Mini Characters (www.kenney.nl) - CC0 1.0. Soldiers: StreamingAssets/chars/*.glb (texture embedded, otherwise unchanged).
+"Balloons" by loafbrr (https://opengameart.org/content/balloons-2) - CC0 1.0. Round, heart, star, dog and poodle balloons
+converted to LB packs (Resources/LB/bal_*.bytes); the round one is smoothed (loop subdivision).
