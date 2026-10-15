@@ -191,6 +191,29 @@ lambo9: the armco barriers, tyre walls, floodlights, braking boards, distant mou
 contact shadows, lamp glows, tyre smoke, road wear and the synthesised V10 engine sound are also procedural / self-made
 (no new third-party assets).
 
+u6d (Unity 6.6 build, scanned PBR surfaces): ambientCG.com, Creative Commons CC0 1.0 Universal
+(public domain, https://docs.ambientcg.com/license/ - free for any use, no attribution required; credited anyway).
+Created using these ambientCG assets (1K-JPG sets: colour map kept as a 1024 px albedo; roughness, normal (GL) and
+ambient occlusion packed into one data map, 512 / 1024 px):
+  Asphalt025C (road asphalt, all tracks)        https://ambientcg.com/a/Asphalt025C
+  Ground080 (beach sand, Coconut Cove)          https://ambientcg.com/a/Ground080
+  Grass004 (dune grass, Coconut Cove)           https://ambientcg.com/a/Grass004
+  Rock051 (grey rock, Coconut Cove)             https://ambientcg.com/a/Rock051
+  Ground079L (desert sand, Canyon Leap)         https://ambientcg.com/a/Ground079L
+  Rock029 (red sandstone, Canyon Leap)          https://ambientcg.com/a/Rock029
+  Ground110 (volcanic ash, Volcano Rim)         https://ambientcg.com/a/Ground110
+  Gravel040 (dark gravel, Canyon / Volcano)     https://ambientcg.com/a/Gravel040
+  Rock035 (basalt, Volcano Rim)                 https://ambientcg.com/a/Rock035
+  Snow010A (snow, Snowy Summit)                 https://ambientcg.com/a/Snow010A
+  Snow015 (snowy ground, Snowy Summit)          https://ambientcg.com/a/Snow015
+  Rock050 (alpine rock, Snowy Summit)           https://ambientcg.com/a/Rock050
+  Grass001 (jungle grass, Jungle Ruins)         https://ambientcg.com/a/Grass001
+  Ground037 (forest dirt, Jungle Ruins)         https://ambientcg.com/a/Ground037
+  Rock063 (mossy rock, Jungle Ruins)            https://ambientcg.com/a/Rock063
+  Concrete042A (concrete, Sky City)             https://ambientcg.com/a/Concrete042A
+The instanced grass tufts, pines, broadleaf trees and bushes, the height fog / god rays / heat haze and the studio
+lighting are procedural (made in code / shaders for this game).
+
 All other models (Optimus, Figure 02, Big Figure Two, Figure 03, Atlas electric, the cars, palms, huts, rocks)
 were made for this game. Robot names only describe the real machines; this fan game is not affiliated with
 Tesla, Unitree, Figure AI, Boston Dynamics or Automobili Lamborghini.
