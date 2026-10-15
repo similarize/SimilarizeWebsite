@@ -78,7 +78,7 @@ Shader "LB/Water"
                 col = lerp(col, _FoamColor.rgb, foam * 0.9);
                 half a = lerp(_Shallow.a, _Deep.a, depth);
                 a = saturate(max(a + fres * 0.25, foam));
-                col = MixFog(col, d.fogCoord);
+                col = LBFog(col, i.positionWS, d.fogCoord);
                 return half4(col, a);
             }
             ENDHLSL

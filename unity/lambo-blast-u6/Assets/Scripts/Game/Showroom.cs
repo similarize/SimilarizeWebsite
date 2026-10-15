@@ -41,15 +41,20 @@ public static class Showroom
         // lambou6: URP has no Camera.onPreCull / onPostRender; the per-camera studio ambient swap runs on the SRP callbacks
         RenderPipelineManager.beginCameraRendering += (ctx, c) => StudioPreCull(c);
         RenderPipelineManager.endCameraRendering += (ctx, c) => StudioPostRender(c);
-        MakeLight("ShowroomKey", new Vector3(0.5f, -0.62f, -0.6f), 1.0f, new Color(1f, 0.95f, 0.88f));
-        MakeLight("ShowroomRim", new Vector3(-0.55f, -0.3f, 0.78f), 1.15f, new Color(0.62f, 0.82f, 1f));
-        MakeLight("ShowroomKicker", new Vector3(0.62f, -0.18f, 0.76f), 0.6f, new Color(1f, 0.82f, 0.64f));
-        MakeLight("ShowroomFill", new Vector3(-0.7f, -0.2f, -0.68f), 0.2f, new Color(0.85f, 0.9f, 1f));
+        // u6d: the lambo7 rig was tuned for Gamma; in Linear + ACES it read crushed on real phones -> ~2.4x key / fill, a front
+        // fill from the camera side, brighter ambient + backdrop, HDR on every device, studio exposure +0.75 EV (U6.ShowroomExposure)
+        MakeLight("ShowroomKey", new Vector3(0.5f, -0.62f, -0.6f), 2.5f * SK, new Color(1f, 0.95f, 0.88f));
+        MakeLight("ShowroomRim", new Vector3(-0.55f, -0.3f, 0.78f), 2.2f * SK, new Color(0.62f, 0.82f, 1f));
+        MakeLight("ShowroomKicker", new Vector3(0.62f, -0.18f, 0.76f), 1.3f * SK, new Color(1f, 0.82f, 0.64f));
+        MakeLight("ShowroomFill", new Vector3(-0.7f, -0.2f, -0.68f), 0.9f * SK, new Color(0.85f, 0.9f, 1f));
+        MakeLight("ShowroomFront", new Vector3(0.1f, -0.35f, -0.93f), 1.1f * SK, new Color(1f, 0.98f, 0.95f));
         BuildEnvironment();
         Debug.Log("Showroom: lambo7 studio (ACES grade, " + (Hdr ? "HDR" : "LDR") + ", mirror floor " + Mirror + ")");
     }
 
-    static bool Hdr { get { return !Look.Mobile && SystemInfo.SupportsRenderTextureFormat(RenderTextureFormat.DefaultHDR); } }
+    static bool Hdr { get { return SystemInfo.SupportsRenderTextureFormat(RenderTextureFormat.DefaultHDR); } }   // u6d: phones too (LDR + ACES crushed the blacks)
+    // u6d: studio light scale (?u6slight=) for tuning without a rebuild
+    static float SK { get { string s = U6.Q("u6slight"); float f; return s != null && float.TryParse(s, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out f) ? f : 1f; } }
 
     // ---------- studio ambient for layer-20 cameras only ----------
     static float reflSaved = -1f;
@@ -63,9 +68,10 @@ public static class Showroom
             sGr = RenderSettings.ambientGroundColor; sFog = RenderSettings.fog; sMode = RenderSettings.ambientMode;
         }
         RenderSettings.ambientMode = AmbientMode.Trilight;
-        RenderSettings.ambientSkyColor = new Color(0.17f, 0.19f, 0.24f);
-        RenderSettings.ambientEquatorColor = new Color(0.10f, 0.10f, 0.12f);
-        RenderSettings.ambientGroundColor = new Color(0.035f, 0.035f, 0.04f);
+        RenderSettings.ambientSkyColor = new Color(0.42f, 0.45f, 0.52f);      // u6d: was 0.17 / 0.10 / 0.035 (Gamma-tuned)
+        RenderSettings.ambientEquatorColor = new Color(0.3f, 0.3f, 0.33f);
+        RenderSettings.ambientGroundColor = new Color(0.13f, 0.13f, 0.14f);
+        Gfx6.StudioBegin();
         RenderSettings.reflectionIntensity = 1f;      // the probe now holds the studio (softboxes), not the sky
         RenderSettings.fog = false;
         if (!probeSaved) { savedProbe = RenderSettings.ambientProbe; probeSaved = true; }
@@ -78,6 +84,7 @@ public static class Showroom
         RenderSettings.reflectionIntensity = reflSaved; RenderSettings.ambientSkyColor = sSky; RenderSettings.ambientEquatorColor = sEq;
         RenderSettings.ambientGroundColor = sGr; RenderSettings.fog = sFog; RenderSettings.ambientMode = sMode;
         if (probeSaved) { RenderSettings.ambientProbe = savedProbe; probeSaved = false; }
+        Gfx6.StudioEnd();
         reflSaved = -1f;
     }
 
@@ -99,8 +106,9 @@ public static class Showroom
     {
         var root = new GameObject("ShowroomEnv").transform;
         root.position = EnvPos;
-        Material box = Mats.Unlit(new Color(0.95f, 0.96f, 1f)), warm = Mats.Unlit(new Color(1f, 0.86f, 0.7f)), cool = Mats.Unlit(new Color(0.55f, 0.75f, 1f));
-        Material floor = Mats.Unlit(new Color(0.03f, 0.033f, 0.04f));
+        // u6d: HDR softboxes (the probe is HDR now) -> bright studio highlights in the clear coat
+        Material box = Mats.Unlit(new Color(2.6f, 2.65f, 2.8f)), warm = Mats.Unlit(new Color(2.4f, 2f, 1.6f)), cool = Mats.Unlit(new Color(1.2f, 1.7f, 2.4f));
+        Material floor = Mats.Unlit(new Color(0.09f, 0.095f, 0.11f));
         Mats.Prim(PrimitiveType.Cube, root, new Vector3(0f, 7f, 0f), new Vector3(9f, 0.1f, 2.4f), box);          // overhead strip
         Mats.Prim(PrimitiveType.Cube, root, new Vector3(0f, 7f, 4f), new Vector3(9f, 0.1f, 1.2f), box);
         Mats.Prim(PrimitiveType.Cube, root, new Vector3(-9f, 3f, 0f), new Vector3(0.1f, 3.5f, 7f), cool);        // side softboxes
@@ -133,7 +141,7 @@ public static class Showroom
         if (parent != null) c.transform.SetParent(parent, false);
         c.cullingMask = Mask;
         c.clearFlags = CameraClearFlags.SolidColor;
-        c.backgroundColor = new Color(0.02f, 0.025f, 0.032f);
+        c.backgroundColor = new Color(0.1f, 0.11f, 0.13f);
         c.fieldOfView = 30f;
         c.nearClipPlane = 0.2f;
         c.farClipPlane = 40f;
@@ -247,7 +255,7 @@ public static class Showroom
         r.shadowCastingMode = ShadowCastingMode.Off; r.receiveShadows = false;
         return r;
     }
-    static Color Backdrop(Color k) { return new Color(0.018f + k.r * 0.05f, 0.022f + k.g * 0.05f, 0.03f + k.b * 0.05f); }
+    static Color Backdrop(Color k) { return new Color(0.1f + k.r * 0.09f, 0.11f + k.g * 0.09f, 0.13f + k.b * 0.09f); }   // u6d: was 0.02 + k 0.05 (near black)
     static Color Spot(Color k, float a) { Color c = Color.Lerp(k, Color.white, 0.2f); return new Color(c.r, c.g, c.b, a); }
 
     // ---------- thumbnails (rendered once, re-rendered if the GPU drops the textures) ----------
@@ -372,15 +380,15 @@ public static class Showroom
                 top.GetComponent<Renderer>().sharedMaterial.SetFloat("_Glossiness", 0.93f);
                 MeshObj("PedestalBase", root, Disc(), Mats.PBR(new Color(0.02f, 0.022f, 0.026f), 0.6f, 0.3f), new Vector3(0f, -2.4f, 0f), new Vector3(3.6f, 1f, 3.6f));
             }
-            else MeshObj("Pedestal", turn, Disc(), Mats.PBR(new Color(0.05f, 0.055f, 0.065f), 0.88f, 0.25f), Vector3.zero, new Vector3(3.3f, 1f, 3.3f));
+            else MeshObj("Pedestal", turn, Disc(), Mats.PBR(new Color(0.13f, 0.14f, 0.16f), 0.88f, 0.25f), Vector3.zero, new Vector3(3.3f, 1f, 3.3f));
             ringMat = new Material(Mats.Unlit(Color.white));
             MeshObj("Rim", root, Ring(), ringMat, new Vector3(0f, -0.028f, 0f), new Vector3(3.36f, 1f, 3.36f));
             // studio floor + soft pools of light
-            MeshObj("Floor", root, Mirror ? Annulus() : Disc(), Mats.PBR(new Color(0.03f, 0.033f, 0.04f), 0.75f, 0.1f), new Vector3(0f, -0.13f, 0f), new Vector3(17f, 1f, 17f));
+            MeshObj("Floor", root, Mirror ? Annulus() : Disc(), Mats.PBR(new Color(0.11f, 0.115f, 0.13f), 0.75f, 0.1f), new Vector3(0f, -0.13f, 0f), new Vector3(17f, 1f, 17f));
             poolMat = SoftMat(new Color(1f, 1f, 1f, 0.25f), 2950);
             SoftQuad("Pool", root, new Vector3(0f, -0.125f, 0f), new Vector3(90f, 0f, 0f), 10f, 10f, poolMat);
             if (!Mirror) SoftQuad("Contact", root, new Vector3(0f, 0.006f, 0f), new Vector3(90f, 0f, 0f), 5.2f, 2.8f, SoftMat(new Color(0f, 0f, 0f, 0.8f), 2960));
-            backMat = SoftMat(new Color(1f, 1f, 1f, 0.2f), 2900);
+            backMat = SoftMat(new Color(1f, 1f, 1f, 0.34f), 2900);
             SoftQuad("Backdrop", root, new Vector3(0f, 1.6f, -9f), Vector3.zero, 18f, 9f, backMat);
             Mats.SetLayer(root.gameObject, Layer);
             cam = NewCam("StandCam " + idx, root);

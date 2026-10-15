@@ -66,11 +66,13 @@ public static class Look
         try
         {
             island = MakeProbe("IslandProbe", islandCentre + Vector3.up * 14f, new Vector3(2400f, 900f, 2400f), ~excludeMask, Mobile ? 256 : 512);   // lambo9: sharper clear-coat reflections
+            island.hdr = Gfx6.On && !Mobile;                                             // u6d: HDR sky / sun in the paint
             island.RenderProbe();
             // lambo7: the showroom probe sees the studio (softbox panels + dark set on layer 20) so the paint reflects it
             showroom = MakeProbe("ShowroomProbe", Showroom.EnvPos + new Vector3(0f, 1.6f, 0f), new Vector3(1200f, 600f, 1200f), excludeMask, Mobile ? 128 : 256);
             showroom.clearFlags = ReflectionProbeClearFlags.SolidColor;
-            showroom.backgroundColor = new Color(0.035f, 0.04f, 0.05f);
+            showroom.backgroundColor = new Color(0.08f, 0.09f, 0.1f);     // u6d: brighter studio (was 0.035)
+            showroom.hdr = true;                                             // u6d: HDR softboxes -> real highlights in the clear coat
             showroom.nearClipPlane = 0.3f;
             showroom.farClipPlane = 60f;
             showroom.RenderProbe();
@@ -125,6 +127,7 @@ public static class Look
         }
         LBPost.SetTheme(th);
         Theme = th;
+        Gfx6.Atmos(th, fog, fogD);                                                       // u6d: height fog + sun scattering, shafts / haze
         Debug.Log("Look: theme " + th + (sk != null ? " sky " + sk.name + " " + sk.width + "x" + sk.height : ""));
     }
 
@@ -178,6 +181,7 @@ public static class Look
                 if (p != null) p.enabled = post;
             }
         LBDisplay.ApplyAA();
+        Gfx6.ApplyViews(views, LBDisplay.Level, Mobile);                                 // u6d: god rays / heat haze, car probe
         Debug.Log("U6: views " + views + " level " + LBDisplay.Level + " shadows " + (shadows ? (soft ? "soft " : "hard ") + res + " / " + dist + " m" : "off") + " post " + post);
     }
 

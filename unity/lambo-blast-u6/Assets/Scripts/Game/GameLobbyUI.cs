@@ -135,7 +135,9 @@ public partial class Game
         var cl = UIK.Label(creditsBtn.transform, "CREDITS  C", 11, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(118, 26), new Color(0.8f, 0.9f, 1f));
         UIK.Stretch(cl.rectTransform);
         creditsPanel = Glass(r, new Color(0.03f, 0.04f, 0.06f, 0.96f), new Vector2(0.5f, 0.5f));
-        var ct = UIK.Label(creditsPanel.transform, CreditsText, 15, TextAnchor.MiddleLeft, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(980, 440), Color.white);
+        // u6d: + the scanned CC0 surfaces line, licence link to this build's LICENSES.txt
+        string credits = CreditsText.Replace("<b>Made for this game</b>", Gfx6.CreditLine + "<b>Made for this game</b>").Replace("games/lambo-blast/LICENSES.txt", "games/lambo-blast-u6/LICENSES.txt");
+        var ct = UIK.Label(creditsPanel.transform, credits, 14, TextAnchor.MiddleLeft, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(980, 440), Color.white);
         ct.supportRichText = true;
         ct.horizontalOverflow = HorizontalWrapMode.Wrap;
         UIK.Stretch(ct.rectTransform);

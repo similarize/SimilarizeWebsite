@@ -9,6 +9,7 @@ Shader "LB/Paint"
         _Metallic ("Metal flake", Range(0, 1)) = 0.35
         _Clear ("Clear coat", Range(0, 1)) = 1
         _ClearSmooth ("Clear coat smoothness", Range(0, 1)) = 0.94
+        _Rim ("u6d rim light", Range(0, 2)) = 1
         [HideInInspector] _Cull ("Cull", Float) = 2
     }
     SubShader
@@ -20,7 +21,7 @@ Shader "LB/Paint"
         #include "Assets/Shaders/LBURP.hlsl"
         CBUFFER_START(UnityPerMaterial)
             half4 _Color;
-            half _Glossiness, _Metallic, _Clear, _ClearSmooth, _Cull;
+            half _Glossiness, _Metallic, _Clear, _ClearSmooth, _Rim, _Cull;
         CBUFFER_END
         #include "Assets/Shaders/LBPasses.hlsl"
         ENDHLSL
@@ -47,6 +48,10 @@ Shader "LB/Paint"
                 Light L = GetMainLight();
                 half glint = pow(saturate(dot(N, normalize(L.direction + V))), 700.0) * 2.5;
                 half3 em = L.color * glint * 0.5 * _Clear;
+                // u6d: rim light (sky-coloured fresnel edge, stronger on the sun side) so the silhouette reads against the scene
+                half ndv = saturate(dot(N, V));
+                half rim = pow(1.0 - ndv, 4.0) * (0.35 + 0.65 * saturate(dot(N, L.direction) + 0.4));
+                em += (LBTrilight(N) * 0.5 + L.color * 0.25) * rim * _Rim;
                 return LBShade(i, _Color.rgb, _Metallic, _Glossiness, N, em, 1, _Clear, _ClearSmooth);
             }
             ENDHLSL

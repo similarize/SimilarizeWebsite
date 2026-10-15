@@ -83,10 +83,70 @@ InputData LBInputData(LBVary i, float3 normalWS)
     return d;
 }
 
-// full URP PBR lighting + fog. albedo linear.
-half4 LBShade(LBVary i, half3 albedo, half metallic, half smoothness, float3 normalWS, half3 emission, half alpha, half clearCoat, half clearCoatSmooth)
+// ---------------------------------------------------------------- u6d atmosphere (globals set by Gfx6.Atmos per track)
+// _LBAtmos: x on (0 = Unity fog via MixFog), y density / m, z height falloff / m, w base height
+// _LBAtmosCol: rgb fog colour (linear), a max opacity;  _LBAtmosSun: rgb in-scatter colour (x sun colour), a HG g
+float4 _LBAtmos, _LBAtmosCol, _LBAtmosSun;
+// own trilight ambient for instanced draws (Gfx6 sets it from RenderSettings; no per-draw SH needed)
+float4 _LBAmbSky, _LBAmbEq, _LBAmbGr;
+
+half3 LBTrilight(float3 n)
+{
+    half up = n.y;
+    return up >= 0 ? lerp(_LBAmbEq.rgb, _LBAmbSky.rgb, up) : lerp(_LBAmbEq.rgb, _LBAmbGr.rgb, -up);
+}
+
+// exponential height fog integrated along the view ray + Henyey-Greenstein sun in-scattering
+half LBFogAmount(float3 posWS, out half3 fogCol)
+{
+    float3 v = posWS - _WorldSpaceCameraPos;
+    float d = max(length(v), 1e-3);
+    float3 dir = v / d;
+    float k = max(_LBAtmos.z, 1e-4);
+    float h0 = _WorldSpaceCameraPos.y - _LBAtmos.w;
+    float kd = clamp(k * dir.y * d, -20.0, 20.0);
+    float shape = abs(kd) > 1e-3 ? (1.0 - exp(-kd)) / kd : 1.0;
+    float integ = _LBAtmos.y * exp(clamp(-k * h0, -20.0, 20.0)) * d * shape;
+    half f = (half)(saturate(1.0 - exp(-integ)) * _LBAtmosCol.a);
+    Light L = GetMainLight();
+    half mu = (half)dot(dir, L.direction);
+    half g = _LBAtmosSun.a;
+    half ph = (1.0 - g * g) / pow(max(1.0 + g * g - 2.0 * g * mu, 1e-3), 1.5) * 0.0796;
+    fogCol = _LBAtmosCol.rgb + _LBAtmosSun.rgb * L.color * ph;
+    return f;
+}
+
+half3 LBFog(half3 c, float3 posWS, half fogCoord)
+{
+    if (_LBAtmos.x < 0.5) return MixFog(c, fogCoord);
+    half3 fc;
+    half f = LBFogAmount(posWS, fc);
+    return lerp(c, fc, f);
+}
+
+// a scanned albedo sample tinted toward a palette colour: k = 0 keeps the scan's own colour (brightness matched to the tint),
+// k = 1 = tint x scan / mean (scan detail, palette colour). All linear.
+half3 LBTintScan(half3 s, half3 mean, half3 tint, half k)
+{
+    half3 m = max(mean, half3(1e-3, 1e-3, 1e-3));
+    half lt = dot(tint, half3(0.2126, 0.7152, 0.0722)), lm = dot(m, half3(0.2126, 0.7152, 0.0722));
+    half3 own = s * (lt / lm);
+    half3 tin = tint * s / m;
+    return min(lerp(own, tin, k), half3(1, 1, 1));
+}
+
+// u6d packed data map (linear): r roughness, g normal Y, b AO, a normal X
+half3 LBDataNormal(half4 d, half scale)
+{
+    half2 xy = (half2(d.a, d.g) * 2.0 - 1.0) * scale;
+    return half3(xy, sqrt(saturate(1.0 - dot(xy, xy))));
+}
+
+// full URP PBR lighting + fog. albedo linear. ownAmb = trilight ambient instead of SH (instanced foliage)
+half4 LBShade2(LBVary i, half3 albedo, half metallic, half smoothness, float3 normalWS, half3 emission, half alpha, half clearCoat, half clearCoatSmooth, half occlusion, half ownAmb)
 {
     InputData d = LBInputData(i, normalWS);
+    if (ownAmb > 0.5) d.bakedGI = LBTrilight(d.normalWS);
     SurfaceData s = (SurfaceData)0;
     s.albedo = albedo;
     s.specular = half3(0, 0, 0);
@@ -94,14 +154,19 @@ half4 LBShade(LBVary i, half3 albedo, half metallic, half smoothness, float3 nor
     s.smoothness = smoothness;
     s.normalTS = half3(0, 0, 1);
     s.emission = emission;
-    s.occlusion = 1.0;
+    s.occlusion = occlusion;
     s.alpha = alpha;
     s.clearCoatMask = clearCoat;
     s.clearCoatSmoothness = clearCoatSmooth;
     half4 c = UniversalFragmentPBR(d, s);
-    c.rgb = MixFog(c.rgb, d.fogCoord);
+    c.rgb = LBFog(c.rgb, i.positionWS, d.fogCoord);
     c.a = alpha;
     return c;
+}
+
+half4 LBShade(LBVary i, half3 albedo, half metallic, half smoothness, float3 normalWS, half3 emission, half alpha, half clearCoat, half clearCoatSmooth)
+{
+    return LBShade2(i, albedo, metallic, smoothness, normalWS, emission, alpha, clearCoat, clearCoatSmooth, 1.0, 0.0);
 }
 
 // diffuse-only (old surface "Lambert"): main light with shadows + SH ambient + fog
@@ -111,7 +176,7 @@ half4 LBLambert(LBVary i, half3 albedo, float3 normalWS)
     Light L = GetMainLight(d.shadowCoord, d.positionWS, d.shadowMask);
     half ndl = saturate(dot(d.normalWS, L.direction));
     half3 c = albedo * (L.color * (ndl * L.shadowAttenuation * L.distanceAttenuation) + d.bakedGI);
-    c = MixFog(c, d.fogCoord);
+    c = LBFog(c, i.positionWS, d.fogCoord);
     return half4(c, 1);
 }
 

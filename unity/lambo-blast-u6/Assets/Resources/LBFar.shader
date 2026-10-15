@@ -34,7 +34,9 @@ Shader "LB/Far"
                 half lit = 0.62 + 0.38 * abs(dot(normalize(i.normalWS), L.direction));
                 half3 c = LB_TOLIN(i.color.rgb) * LB_F(lit) * L.color * 1.1;
                 half h = saturate(_Haze * (1.25 - 0.55 * i.color.a));
-                c = lerp(c, unity_FogColor.rgb, h);
+                half3 hc = unity_FogColor.rgb;
+                if (_LBAtmos.x > 0.5) { half3 fc; LBFogAmount(i.positionWS, fc); hc = fc; }     // u6d: same sun-scattered haze as the scene fog
+                c = lerp(c, hc, h);
                 return half4(c, 1);
             }
             ENDHLSL

@@ -55,6 +55,7 @@ public static class Gfx
     {
         bool lite = Low || level >= 2 || (mobile && level >= 1);
         if (lite) Shader.EnableKeyword("LB_LITE"); else Shader.DisableKeyword("LB_LITE");
+        Gfx6.ApplyLevel(level, mobile);                                                  // u6d: instanced grass / foliage density + distance
         if (grassMat != null)
         {
             Vector4 f = level == 0 ? (mobile ? new Vector4(30f, 54f, 0f, 0f) : new Vector4(58f, 100f, 0f, 0f)) : level == 1 ? new Vector4(22f, 40f, 0f, 0f) : new Vector4(0f, 0f, 0f, 0f);   // lambo9: grass reaches further
@@ -72,8 +73,9 @@ public static class Gfx
         bool snow = th == 3 && k != K.Concrete && k != K.Snow;
         Color32 cc = c;
         long key = ((long)k << 40) | ((long)(snow ? 1 : 0) << 36) | ((long)cc.r << 24) | ((long)cc.g << 16) | ((long)cc.b << 8);
+        if (Gfx6.On && Gfx6.SurfName(k, th) != null) key |= (long)(th + 1) << 48;     // u6d: per-track scanned rock sets
         Material m;
-        if (surf.TryGetValue(key, out m) && m != null) return m;
+        if (surf.TryGetValue(key, out m) && m != null) { Gfx6.Surf(m, k, th); return m; }   // u6d: re-touch (per-track scans are unloaded between tracks)
         Texture2D d = T(KTex[(int)k]), n = T(KTex[(int)k] + "_n");
         if (d == null) return Mats.Lit(c);
         m = new Material(triS);
@@ -86,6 +88,7 @@ public static class Gfx
         m.SetFloat("_Glossiness", KGloss[(int)k]);
         m.SetFloat("_Snow", snow ? 0.62f : 0f);
         m.SetFloat("_AO", k == K.Leaf || k == K.Bark ? 1f : 0f);
+        Gfx6.Surf(m, k, th);                                                             // u6d: scanned CC0 PBR rock / snow / concrete
         surf[key] = m;
         return m;
     }
@@ -132,6 +135,7 @@ public static class Gfx
         m.SetFloat("_RockSlope", theme == 1 ? 0.3f : theme == 3 ? 0.38f : 0.34f);
         m.SetFloat("_BumpScale", theme == 3 ? 0.6f : 0.9f);
         m.SetFloat("_Glossiness", gloss);
+        Gfx6.Terrain(m, colourMap, theme, worldSize);                                    // u6d: scanned CC0 ground layers
         return m;
     }
 
@@ -151,6 +155,7 @@ public static class Gfx
         m.SetFloat("_Glossiness", theme == 3 ? 0.55f : theme == 1 ? 0.22f : 0.32f);
         m.SetFloat("_Wet", theme == 1 ? 0.15f : theme == 3 ? 0.7f : theme == 2 ? 0.3f : 0.55f);
         m.SetFloat("_BumpScale", 0.8f);
+        Gfx6.Road(m, theme);                                                             // u6d: scanned CC0 asphalt
         return m;
     }
 
@@ -267,6 +272,7 @@ public static class Gfx
     public static void Grass(Transform parent, int theme)
     {
         grassRoots.RemoveAll(g => g == null);
+        if (Gfx6.Grass(theme)) return;                                                   // u6d: GPU-instanced grass + foliage instead
         if (Low || grassS == null) return;
         int want = theme == 4 ? 11000 : theme == 0 ? 6500 : theme == 1 ? 4200 : theme == 2 ? 1400 : theme == 3 ? 1800 : 0;
         want = want * 16 / 10;                                   // lambo9: 1.6x denser (headroom on desktop + Pixel 9)
@@ -451,13 +457,18 @@ public static class Gfx
     }
 
     // broadleaf canopy: 5-7 noise-displaced blobs around the crown, AO darker underneath and toward the core
-    static Mesh BroadFoliage(int seed)
+    static Mesh BroadFoliage(int seed) { return BroadFoliage(seed, 2); }
+    // u6d: public mesh access for the instanced foliage (sub 1 = 4x fewer canopy triangles)
+    public static Mesh PineMesh(int seed) { return PineFoliage(seed); }
+    public static Mesh BroadMesh(int seed, int sub) { return BroadFoliage(seed, sub); }
+    public static Mesh TrunkMesh(float r0, float r1, float y1, float lean, int seed) { return Trunk(r0, r1, y1, lean, seed); }
+    static Mesh BroadFoliage(int seed, int sub)
     {
         var v = new List<Vector3>(); var c = new List<Color>(); var t = new List<int>();
         Vector3 crown = new Vector3(0f, 0.74f, 0f);
         int blobs = 5 + seed % 3;
         Vector3[] ico; int[] tri;
-        Ico(2, out ico, out tri);
+        Ico(sub, out ico, out tri);
         for (int b = 0; b < blobs; b++)
         {
             float a = b / (float)blobs * Mathf.PI * 2f + Hash(seed * 13 + b);

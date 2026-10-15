@@ -16,6 +16,9 @@ public class Bootstrap : MonoBehaviour
     // lambou6: URP post profiles + the SSAO renderer feature (editor-made assets, BuildScript)
     public UnityEngine.Rendering.VolumeProfile raceProfile, showroomProfile;
     public UnityEngine.Rendering.Universal.ScriptableRendererFeature ssaoFeature;
+    // u6d: god rays / heat haze full-screen pass (URP FullScreenPassRendererFeature + LB/Shafts material, BuildScript)
+    public UnityEngine.Rendering.Universal.ScriptableRendererFeature shaftsFeature;
+    public Material shaftsMat;
 
     void Awake()
     {
@@ -31,6 +34,7 @@ public class Bootstrap : MonoBehaviour
         LBDisplay.Init();
         Gfx.Init();
         Look.Init(sun);
+        Gfx6.Init(shaftsMat, shaftsFeature, sun);
         Showroom.Init(sun);
         Sfx.Init();
         FX.Init();

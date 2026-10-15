@@ -97,6 +97,10 @@ public class CarDress
         return r;
     }
 
+    // u6d: HDR multipliers on the additive lamp sprites (1 = lambo9 / u6c); off under ?gfx=low / ?u6d=0
+    static float HeadGlow { get { return Gfx6.On ? 1.9f : 1f; } }
+    static float TailGlow { get { return Gfx6.On ? 2.3f : 1f; } }
+
     public static CarDress Attach(Transform kart, Transform sprung, Color paint)
     {
         InitShared();
@@ -127,7 +131,8 @@ public class CarDress
                 d.heads[i] = Sprite(d.quad, sprung, glowMat, new Vector3(sx * 0.62f, 0.45f, 2.3f), new Vector3(0.6f, 0.26f, 1f), 0f);
             }
             d.tails[2] = Sprite(d.quad, sprung, glowMat, new Vector3(0f, 0.85f, -2.33f), new Vector3(2.0f, 0.22f, 1f), 180f);   // full-width light bar
-            d.Tint(d.heads[0], new Color(0.42f, 0.4f, 0.34f, 1f)); d.Tint(d.heads[1], new Color(0.42f, 0.4f, 0.34f, 1f));
+            // u6d: HDR lamp glows (x Glow) so URP bloom catches head- and taillights
+            Color hg = new Color(0.42f * HeadGlow, 0.4f * HeadGlow, 0.34f * HeadGlow, 1f); d.Tint(d.heads[0], hg); d.Tint(d.heads[1], hg);
         }
         return d;
     }
@@ -150,6 +155,7 @@ public class CarDress
             {
                 brakeK = nb;
                 Color c = Color.Lerp(new Color(0.6f, 0.07f, 0.05f, 1f), new Color(1f, 0.2f, 0.12f, 1f), brakeK);   // lambo9b: brighter (8a halos were faint)
+                c *= TailGlow; c.a = 1f;
                 Tint(tails[0], c); Tint(tails[1], c);
                 Tint(tails[2], c * (0.55f + 0.25f * brakeK));
                 float sc = 1f + 0.5f * brakeK;

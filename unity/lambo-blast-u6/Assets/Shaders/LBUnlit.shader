@@ -33,7 +33,7 @@ Shader "LB/Unlit"
             half4 UnlitFrag(LBVary i) : SV_Target
             {
                 half4 c = _Color * SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv.xy * _MainTex_ST.xy + _MainTex_ST.zw);
-                c.rgb = MixFog(c.rgb, InitializeInputDataFog(float4(i.positionWS, 1.0), i.fogFactor));
+                c.rgb = LBFog(c.rgb, i.positionWS, InitializeInputDataFog(float4(i.positionWS, 1.0), i.fogFactor));
                 return half4(c.rgb, 1);
             }
             ENDHLSL

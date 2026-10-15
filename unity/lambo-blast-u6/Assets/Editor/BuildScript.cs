@@ -70,6 +70,7 @@ public static class BuildScript
     }
 
     const string UrpPath = Gen + "/LB_URP.asset", UrpRendererPath = Gen + "/LB_URP_Renderer.asset";
+    const string ShaftsMatPath = Gen + "/LBShafts.mat";
 
     static void SetProp(SerializedObject so, string name, Action<SerializedProperty> set)
     {
@@ -116,10 +117,33 @@ public static class BuildScript
         sso.ApplyModifiedPropertiesWithoutUndo();
         long lid = 0; string guid;
         AssetDatabase.TryGetGUIDAndLocalFileIdentifier(ssao, out guid, out lid);
+        // u6d: god rays + heat haze = URP's FullScreenPassRendererFeature with the LB/Shafts material, before post (off by default;
+        // Gfx6.ApplyViews turns it on for one desktop view at level 0 with temporal AA)
+        FullScreenPassRendererFeature shaft = null; long lid2 = 0;
+        Shader shs = Shader.Find("LB/Shafts");
+        if (shs != null)
+        {
+            if (AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(ShaftsMatPath) != null) AssetDatabase.DeleteAsset(ShaftsMatPath);
+            var sm = new Material(shs) { name = "LBShafts" };
+            AssetDatabase.CreateAsset(sm, ShaftsMatPath);
+            shaft = ScriptableObject.CreateInstance<FullScreenPassRendererFeature>();
+            shaft.name = "LB Shafts";
+            shaft.injectionPoint = FullScreenPassRendererFeature.InjectionPoint.BeforeRenderingPostProcessing;
+            shaft.requirements = ScriptableRenderPassInput.Depth;
+            shaft.fetchColorBuffer = true;
+            shaft.passMaterial = sm;
+            shaft.passIndex = 0;
+            shaft.SetActive(false);
+            AssetDatabase.AddObjectToAsset(shaft, data);
+            AssetDatabase.TryGetGUIDAndLocalFileIdentifier(shaft, out guid, out lid2);
+        }
+        else Debug.LogWarning("URPSETUP: LB/Shafts shader missing - no god rays feature");
         sod = new SerializedObject(data);
-        SetProp(sod, "m_RendererFeatures", p => { p.arraySize = 1; p.GetArrayElementAtIndex(0).objectReferenceValue = ssao; });
-        SetProp(sod, "m_RendererFeatureMap", p => { p.arraySize = 1; p.GetArrayElementAtIndex(0).longValue = lid; });
+        int nf = shaft != null ? 2 : 1;
+        SetProp(sod, "m_RendererFeatures", p => { p.arraySize = nf; p.GetArrayElementAtIndex(0).objectReferenceValue = ssao; if (shaft != null) p.GetArrayElementAtIndex(1).objectReferenceValue = shaft; });
+        SetProp(sod, "m_RendererFeatureMap", p => { p.arraySize = nf; p.GetArrayElementAtIndex(0).longValue = lid; if (shaft != null) p.GetArrayElementAtIndex(1).longValue = lid2; });
         sod.ApplyModifiedPropertiesWithoutUndo();
+        Debug.Log("URPSETUP: u6d shafts feature " + (shaft != null) + " lid " + lid2);
         EditorUtility.SetDirty(data);
 
         UniversalRenderPipelineAsset a = UniversalRenderPipelineAsset.Create(data);
@@ -412,6 +436,49 @@ public static class BuildScript
         return p;
     }
 
+    // u6d: the god rays feature (sub-asset of the renderer, made in pass 1)
+    static ScriptableRendererFeature FindShafts()
+    {
+        foreach (var o in AssetDatabase.LoadAllAssetsAtPath(UrpRendererPath))
+            if (o is FullScreenPassRendererFeature) return (ScriptableRendererFeature)o;
+        Debug.LogWarning("BuildScript: u6d shafts feature not found in " + UrpRendererPath);
+        return null;
+    }
+
+    // u6d: scanned CC0 PBR sets in Resources/U6T (ambientCG; lambou6/u6d/prep_tex6.py): <name>_c.jpg albedo (sRGB, DXT1),
+    // <name>_d.png packed data (linear: r roughness, g normal Y, b AO, a normal X; DXT5). Mipmapped, repeat, trilinear, aniso 8.
+    static void ImportU6DTextures()
+    {
+        int nc = 0, nd = 0;
+        foreach (string guid in AssetDatabase.FindAssets("t:Texture2D", new[] { "Assets/Resources/U6T" }))
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            var imp = AssetImporter.GetAtPath(path) as TextureImporter;
+            if (imp == null) continue;
+            bool data = path.EndsWith("_d.png");
+            if (imp.userData == "u6d1") { if (data) nd++; else nc++; continue; }   // already imported with these settings (Library cache)
+            imp.userData = "u6d1";
+            imp.textureType = TextureImporterType.Default;
+            imp.sRGBTexture = !data;
+            imp.alphaSource = data ? TextureImporterAlphaSource.FromInput : TextureImporterAlphaSource.None;
+            imp.mipmapEnabled = true;
+            imp.wrapMode = TextureWrapMode.Repeat;
+            imp.filterMode = FilterMode.Trilinear;
+            imp.anisoLevel = 8;
+            imp.maxTextureSize = 1024;
+            imp.textureCompression = TextureImporterCompression.Compressed;
+            var ps = imp.GetPlatformTextureSettings("WebGL");
+            ps.overridden = true;
+            ps.maxTextureSize = 1024;
+            ps.format = data ? TextureImporterFormat.DXT5 : TextureImporterFormat.DXT1;
+            imp.SetPlatformTextureSettings(ps);
+            imp.SaveAndReimport();
+            if (data) nd++; else nc++;
+        }
+        Debug.Log("BuildScript: u6d U6T scans imported (" + nc + " albedo DXT1, " + nd + " data DXT5); shaders LB/GrassI " + (Shader.Find("LB/GrassI") != null) +
+            " LB/Shafts " + (Shader.Find("LB/Shafts") != null));
+    }
+
     static ScriptableRendererFeature FindSsao()
     {
         foreach (var o in AssetDatabase.LoadAllAssetsAtPath(UrpRendererPath))
@@ -475,6 +542,7 @@ public static class BuildScript
         // lambo7: ground base also has _NORMALMAP (theme grain + normal map tiled on uv0, colour map as the x2 detail on uv1)
         ImportThemeTextures();
         ImportLB8Textures();
+        ImportU6DTextures();
         Material ground = MakeDetailMat("Ground.mat", "Assets/Textures/sand_detail.png", new Vector2(1f, 1f), 0.06f);
         Texture2D g1d = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Resources/LBTex/g1_d.png");
         Texture2D g1n = LoadNormal("Assets/Resources/LBTex/g1_n.png");
@@ -551,6 +619,9 @@ public static class BuildScript
         b.raceProfile = MakeProfile("RaceVolume.asset", false);
         b.showroomProfile = MakeProfile("ShowroomVolume.asset", true);
         b.ssaoFeature = FindSsao();
+        b.shaftsFeature = FindShafts();
+        b.shaftsMat = AssetDatabase.LoadAssetAtPath<Material>(ShaftsMatPath);
+        Debug.Log("BuildScript: u6d shafts feature " + (b.shaftsFeature != null) + " material " + (b.shaftsMat != null));
         Debug.Log("BuildScript: lambou6 volumes race " + (b.raceProfile != null) + " showroom " + (b.showroomProfile != null) + " ssao " + (b.ssaoFeature != null) +
             " shaders LB/Std " + (Shader.Find("LB/Std") != null) + " LB/Unlit " + (Shader.Find("LB/Unlit") != null) + " LB/FxAdd " + (Shader.Find("LB/FxAdd") != null) +
             " LB/Paint " + (Shader.Find("LB/Paint") != null) + " LB/Blob " + (Shader.Find("LB/Blob") != null) + " LB/Far " + (Shader.Find("LB/Far") != null));

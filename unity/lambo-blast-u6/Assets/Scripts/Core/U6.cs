@@ -42,6 +42,19 @@ public static class U6
             " | profiles " + (race != null) + "/" + (show != null) + " | exp bias " + ExpBias + " tm " + Tm + (AaForce.Length > 0 ? " aa " + AaForce : ""));
         if (race != null) raceVol = MakeVolume("LBRaceVolume", race, 0);
         if (show != null) showVol = MakeVolume("LBShowroomVolume", show, ShowroomVolumeLayer);
+        // u6d: the studio grade (asset: +0.45 EV, contrast 6, sat -6) read too dark on real phones -> +1.2 EV, softer contrast,
+        // a touch of bloom on the HDR highlights; ?u6sexp=<EV> overrides
+        if (show != null)
+        {
+            float sx = 1.2f;
+            string q = Q("u6sexp"); if (q != null) float.TryParse(q, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out sx);
+            ColorAdjustments sca;
+            if (show.TryGet(out sca)) { sca.active = true; sca.postExposure.Override(sx); sca.contrast.Override(2f); sca.saturation.Override(0f); }
+            Tonemapping stm; if (show.TryGet(out stm)) { stm.active = true; stm.mode.Override(TonemappingMode.ACES); }
+            Bloom sbl; if (show.TryGet(out sbl)) { sbl.active = true; sbl.intensity.Override(0.45f); sbl.threshold.Override(1.1f); }
+            Vignette svg; if (show.TryGet(out svg)) svg.intensity.Override(0.22f);
+            Debug.Log("U6: showroom exposure " + sx + " EV");
+        }
         if (a != null) { a.shadowCascadeCount = 2; a.cascade2Split = 0.25f; }
     }
 
