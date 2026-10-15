@@ -109,7 +109,7 @@ public partial class Game : MonoBehaviour
         var g = new GameObject(name);
         Camera c = g.AddComponent<Camera>();
         c.depth = depth;
-        c.nearClipPlane = 0.3f;
+        c.nearClipPlane = 0.5f;      // lambo8: 0.3 -> 0.5 m (more depth precision far away: no z-fighting on decals / curbs)
         c.farClipPlane = 1400f;
         c.fieldOfView = 60f;
         c.clearFlags = CameraClearFlags.Skybox;
@@ -216,6 +216,7 @@ public partial class Game : MonoBehaviour
         "<b>Optimus, Figure 02, Big Figure Two, Figure 03, Atlas electric</b> and the cars: modelled for this game from public photos (no logos).\n" +
         "<b>Skies</b> (Poly Haven, CC0): Kloofendal 48d Partly Cloudy, Syferfontein 18d Clear, Industrial Sunset 02, Pizzo Pernice, Kloofendal 28d Misty, Qwantani Late Afternoon (all Pure Sky).\n" +
         "<b>Ground textures</b> (Poly Haven, CC0): Aerial Beach 01, Coast Sand 01, Red Sand, Burned Ground 01, Snow 02, Forest Leaves 02, Aerial Asphalt 01, Asphalt 02.\n" +
+        "<b>Surfaces</b> (ambientCG.com, CC0 1.0): Rock029, Rock030, Rock051, Rock063, Rock064, Bark012, Grass004, Snow006, Gravel042, Concrete034, Asphalt031, Lava004.\n" +
         "<b>Fonts</b>: Montserrat (The Montserrat Project Authors) + Inter (The Inter Project Authors), SIL Open Font License 1.1.\n\n" +
         "Full licence texts: similarize.com/games/lambo-blast/LICENSES.txt\n" +
         "Robot names describe the real machines only; this fan game is not affiliated with their makers.\n\n" +

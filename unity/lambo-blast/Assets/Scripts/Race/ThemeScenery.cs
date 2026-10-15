@@ -27,6 +27,7 @@ public static class ThemeScenery
         GapSigns();
         StartArch();
         MeshMerge.Merge(root, true);
+        Gfx.Grass(Track.Root, th);      // lambo8: blade tufts (own chunk meshes, not merged)
     }
 
     // ---------------------------------------------------------------- helpers
@@ -64,13 +65,14 @@ public static class ThemeScenery
             var g = pk.Spawn("body", root, Vector3.zero, 1f, tint);
             if (g != null)
             {
+                Gfx.Reskin(g, tint * 0.75f, Gfx.RockFor(Track.Theme));     // lambo8: triplanar CC0 rock
                 g.position = p + Vector3.down * s * 0.15f;
                 g.rotation = Quaternion.Euler(R(-8f, 8f), R(0f, 360f), R(-8f, 8f));
                 g.localScale = new Vector3(s * R(1.1f, 1.7f), s * R(0.8f, 1.3f), s * R(1.1f, 1.5f));
                 return;
             }
         }
-        Mats.Prim(PrimitiveType.Sphere, root, p + Vector3.up * s * 0.2f, new Vector3(s * R(1f, 1.6f), s * R(0.6f, 0.9f), s * R(1f, 1.4f)), new Vector3(R(-10f, 10f), R(0f, 360f), 0f), Mats.Lit(tint * 0.6f));
+        Mats.Prim(PrimitiveType.Sphere, root, p + Vector3.up * s * 0.2f, new Vector3(s * R(1f, 1.6f), s * R(0.6f, 0.9f), s * R(1f, 1.4f)), new Vector3(R(-10f, 10f), R(0f, 360f), 0f), Gfx.Surf(tint * 0.6f, Gfx.RockFor(Track.Theme)));
     }
 
     static Transform Node(Vector3 p, float yaw)
@@ -92,6 +94,7 @@ public static class ThemeScenery
 
     static void Pine(Vector3 p, float h, Material leaf, Material snow, Material trunk)
     {
+        if (Gfx.Pine(root, p, h * 1.1f, new Color(0.16f, 0.3f, 0.17f), new Color(0.36f, 0.27f, 0.2f), rnd.Next())) return;   // lambo8
         var t = Node(p, R(0f, 360f));
         Mats.Prim(PrimitiveType.Cylinder, t, new Vector3(0f, h * 0.12f, 0f), new Vector3(h * 0.07f, h * 0.12f, h * 0.07f), trunk);
         for (int i = 0; i < 3; i++)
@@ -144,6 +147,23 @@ public static class ThemeScenery
         Mats.Prim(PrimitiveType.Cube, t, new Vector3(0f, 6.4f, 0f), new Vector3(x * 2f, 1.5f, 0.35f), chk);
         Mats.Prim(PrimitiveType.Cube, t, new Vector3(0f, 0.05f, 0f), new Vector3(Track.HalfW * 2f, 0.02f, 2.2f), chk);
         Mats.Prim(PrimitiveType.Cube, t, new Vector3(0f, 5.45f, 0f), new Vector3(x * 2f, 0.3f, 0.5f), dark);
+        if (!Track.Apron) StandAt(root, cols[Mathf.Clamp(Track.Theme, 0, 5)]);
+    }
+
+    // lambo8: a covered grandstand beside the start straight, just outside the soft wall (visual only, like every prop)
+    public static void StandAt(Transform parent, Color accent)
+    {
+        float s = Track.Length - 38f;
+        for (int side = 1; side >= -1; side -= 2)
+        {
+            Vector3 c0 = Track.PointAt(s, 0f), p = Track.PointAt(s, side * (Track.HalfW + Track.Wall + 6f));
+            Track.Proj sc = Track.NearestShortcut(p);
+            if (sc.dist < Track.ScHalf + 12f) continue;
+            p.y = Mathf.Max(Track.HeightAt(p.x, p.z), c0.y - 2.5f) - 0.2f;
+            Vector3 away = Track.Flat(p - c0).normalized;
+            Gfx.Grandstand(parent, p, Quaternion.LookRotation(away, Vector3.up), 34f, accent);
+            return;
+        }
     }
 
     static Material checkerMat;
@@ -166,7 +186,7 @@ public static class ThemeScenery
     static void Canyon()
     {
         Color[] bands = { new Color(0.66f, 0.33f, 0.2f), new Color(0.76f, 0.45f, 0.28f), new Color(0.58f, 0.28f, 0.17f), new Color(0.8f, 0.55f, 0.36f) };
-        Material cactus = Mats.Lit(new Color(0.3f, 0.5f, 0.24f));
+        Material cactus = Gfx.Surf(new Color(0.3f, 0.5f, 0.24f), Gfx.K.Leaf);
         // hoodoos / rock spires: stacked tapered blocks in sandstone bands
         for (int i = 0, made = 0; i < 160 && made < 34; i++)
         {
@@ -178,10 +198,10 @@ public static class ThemeScenery
             for (int k = 0; k < parts; k++)
             {
                 float hh = R(4f, 9f), w2 = w * R(0.7f, 0.95f);
-                Geo.Block(t, Mats.Lit(bands[(k + made) % bands.Length]), 0f, -w * 0.45f, w * 0.45f, w, w2, y, y + hh, w, w2, y, y + hh);
+                Geo.Block(t, Gfx.Surf(bands[(k + made) % bands.Length], Gfx.K.SandRock), 0f, -w * 0.45f, w * 0.45f, w, w2, y, y + hh, w, w2, y, y + hh);
                 y += hh; w = w2;
             }
-            Geo.Block(t, Mats.Lit(bands[3]), 0f, -w * 0.6f, w * 0.6f, w * 1.3f, w * 1.2f, y, y + 1.6f, w * 1.3f, w * 1.2f, y, y + 1.6f);
+            Geo.Block(t, Gfx.Surf(bands[3], Gfx.K.SandRock), 0f, -w * 0.6f, w * 0.6f, w * 1.3f, w * 1.2f, y, y + 1.6f, w * 1.3f, w * 1.2f, y, y + 1.6f);
             made++;
         }
         // saguaro cacti
@@ -205,7 +225,7 @@ public static class ThemeScenery
         if (Track.Gaps.Count > 3)
         {
             var g = Track.Gaps[3];
-            Material wood = Mats.Lit(new Color(0.45f, 0.32f, 0.2f)), steel = Mats.Lit(new Color(0.3f, 0.3f, 0.32f));
+            Material wood = Gfx.Surf(new Color(0.45f, 0.32f, 0.2f), Gfx.K.Wood), steel = Mats.PBR(new Color(0.3f, 0.3f, 0.32f), 0.5f, 0.7f);
             for (int e = 0; e < 2; e++)
             {
                 float s = e == 0 ? g.a - 1f : g.b + 1f;
@@ -220,7 +240,7 @@ public static class ThemeScenery
             }
         }
         // moving: tumbleweeds across the road, vultures circling, a hot-air balloon
-        Material weed = Mats.Lit(new Color(0.6f, 0.48f, 0.3f));
+        Material weed = Gfx.Surf(new Color(0.6f, 0.48f, 0.3f), Gfx.K.Wood);
         for (int i = 0; i < 4; i++)
         {
             float s = Track.Length * (0.15f + i * 0.23f);
@@ -251,7 +271,7 @@ public static class ThemeScenery
     // ---------------------------------------------------------------- Volcano Rim
     static void Volcano()
     {
-        Material basalt = Mats.Lit(new Color(0.12f, 0.1f, 0.1f)), glow = Mats.Unlit(new Color(1f, 0.45f, 0.08f)), dead = Mats.Lit(new Color(0.2f, 0.16f, 0.13f));
+        Material basalt = Gfx.Surf(new Color(0.16f, 0.14f, 0.13f), Gfx.K.Basalt), glow = Mats.Unlit(new Color(1f, 0.45f, 0.08f)), dead = Gfx.Surf(new Color(0.22f, 0.17f, 0.14f), Gfx.K.Bark);
         for (int i = 0, made = 0; i < 160 && made < 40; i++)
         {
             Vector3 p;
@@ -352,7 +372,7 @@ public static class ThemeScenery
     static void Jungle()
     {
         Material trunk = Mats.Lit(new Color(0.36f, 0.27f, 0.18f)), leafA = Mats.Lit(new Color(0.15f, 0.42f, 0.14f)), leafB = Mats.Lit(new Color(0.22f, 0.52f, 0.18f));
-        Material stone = Mats.Lit(new Color(0.5f, 0.52f, 0.44f)), moss = Mats.Lit(new Color(0.32f, 0.42f, 0.24f));
+        Material stone = Gfx.Surf(new Color(0.52f, 0.53f, 0.46f), Gfx.K.Stone), moss = Gfx.Surf(new Color(0.36f, 0.44f, 0.28f), Gfx.K.MossRock);
         int trees = Look.Mobile ? 60 : 110;
         for (int i = 0, made = 0; i < trees * 3 && made < trees; i++)
         {
@@ -367,6 +387,11 @@ public static class ThemeScenery
                     var g = pk.Spawn("body", root, Vector3.zero, R(7f, 11f) / 8f, Color.white);
                     if (g != null) { g.position = p + Vector3.down * 0.1f; g.rotation = Quaternion.Euler(0f, R(0f, 360f), 0f); made++; continue; }
                 }
+            }
+            {
+                float h8 = R(11f, 19f);
+                Color lc = Color.Lerp(new Color(0.13f, 0.36f, 0.12f), new Color(0.24f, 0.5f, 0.17f), R(0f, 1f));
+                if (Gfx.Broadleaf(root, p + Vector3.down * 0.2f, h8, lc, new Color(0.4f, 0.32f, 0.24f), rnd.Next())) { made++; continue; }   // lambo8
             }
             var t = Node(p, R(0f, 360f));
             float h = R(9f, 16f);
@@ -410,7 +435,7 @@ public static class ThemeScenery
         if (Track.Gaps.Count > 0)
         {
             var g = Track.Gaps[0];
-            Material plank = Mats.Lit(new Color(0.5f, 0.36f, 0.22f)), rope = Mats.Lit(new Color(0.55f, 0.48f, 0.32f));
+            Material plank = Gfx.Surf(new Color(0.5f, 0.36f, 0.22f), Gfx.K.Wood), rope = Mats.Lit(new Color(0.55f, 0.48f, 0.32f));
             for (int e = 0; e < 2; e++)
             {
                 float s = e == 0 ? g.a : g.b;
@@ -473,8 +498,36 @@ public static class ThemeScenery
                         tex.SetPixel(x, y, c);
                     }
                 tex.Apply(true);
-                facades[f] = Mats.Tex(tex, 0.5f);
-                facades[f].mainTextureScale = new Vector2(3f, 6f);
+                facades[f] = Gfx.Tri ? null : Mats.Tex(tex, 0.5f);
+                if (facades[f] != null) { facades[f].mainTextureScale = new Vector2(3f, 6f); continue; }
+                // lambo8: 128 px curtain-wall facade (mullions, spandrels, sky-tinted glass, a few lit / blind windows) projected
+                // in world space -> 3.5 m windows on every tower whatever its size (the old map stretched with each cube)
+                const int q = 128;
+                var t2 = new Texture2D(q, q, TextureFormat.RGB24, true) { wrapMode = TextureWrapMode.Repeat, filterMode = FilterMode.Trilinear, anisoLevel = 8 };
+                var px = new Color32[q * q];
+                for (int y = 0; y < q; y++)
+                    for (int x = 0; x < q; x++)
+                    {
+                        int cx = x % 16, cy = y % 16, wx = x / 16, wy = y / 16;
+                        float h1 = Mathf.Abs(Mathf.Sin(wx * 12.9898f + wy * 78.233f + f * 3.1f) * 43758.5453f) % 1f;
+                        Color c;
+                        if (cx < 2 || cy < 3) c = wall[f] * (cx == 0 || cy == 0 ? 0.8f : 1f);              // mullion / spandrel
+                        else
+                        {
+                            float g = (cy - 3) / 13f;
+                            Color glassC = Color.Lerp(new Color(0.34f, 0.46f, 0.6f), new Color(0.14f, 0.2f, 0.3f), g) * (0.85f + 0.3f * h1);
+                            if (h1 > 0.9f) glassC = new Color(1f, 0.88f, 0.62f) * (0.9f + 0.1f * g);          // lit office
+                            else if (h1 < 0.12f) glassC = new Color(0.66f, 0.66f, 0.62f) * (0.8f + 0.2f * g); // blinds down
+                            c = glassC;
+                        }
+                        c.a = 1f;
+                        px[y * q + x] = c;
+                    }
+                t2.SetPixels32(px);
+                t2.Apply(true);
+                Object.Destroy(tex);
+                facades[f] = Gfx.Projected(t2, 1f / 28f, 0.62f);
+                if (facades[f] == null) { facades[f] = Mats.Tex(t2, 0.5f); facades[f].mainTextureScale = new Vector2(3f, 6f); }
             }
         }
         return facades[k % 3];
@@ -482,7 +535,7 @@ public static class ThemeScenery
 
     static void Sky()
     {
-        Material roof = Mats.Lit(new Color(0.4f, 0.41f, 0.43f)), ac = Mats.Lit(new Color(0.75f, 0.76f, 0.78f)), red = Mats.Unlit(new Color(1f, 0.15f, 0.1f));
+        Material roof = Gfx.Surf(new Color(0.42f, 0.43f, 0.45f), Gfx.K.Concrete), ac = Gfx.Surf(new Color(0.75f, 0.76f, 0.78f), Gfx.K.Concrete), red = Mats.Unlit(new Color(1f, 0.15f, 0.1f));
         // buildings under the skyway: a block every 12 m, never across a gap (the gaps are the alleys between towers)
         for (int i = 0; i < Track.C.Length; i += 4)
         {

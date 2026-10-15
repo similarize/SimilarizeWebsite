@@ -212,6 +212,31 @@ public static class BuildScript
         Debug.Log("BuildScript: lambo7 theme textures imported (" + n + " / 11)");
     }
 
+    // lambo8: CC0 ambientCG surfaces in Resources/LB8 (loaded at runtime by Gfx): mipmapped, repeat, trilinear, aniso 8;
+    // *_n = normal maps. Up to 1024 px (asphalt), the rest 512.
+    static void ImportLB8Textures()
+    {
+        int n = 0, nn = 0;
+        foreach (string guid in AssetDatabase.FindAssets("t:Texture2D", new[] { "Assets/Resources/LB8" }))
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            var imp = AssetImporter.GetAtPath(path) as TextureImporter;
+            if (imp == null) continue;
+            bool nrm = path.EndsWith("_n.png");
+            bool ch = false;
+            if (nrm && imp.textureType != TextureImporterType.NormalMap) { imp.textureType = TextureImporterType.NormalMap; ch = true; }
+            if (!imp.mipmapEnabled) { imp.mipmapEnabled = true; ch = true; }
+            if (imp.wrapMode != TextureWrapMode.Repeat) { imp.wrapMode = TextureWrapMode.Repeat; ch = true; }
+            if (imp.filterMode != FilterMode.Trilinear) { imp.filterMode = FilterMode.Trilinear; ch = true; }
+            if (imp.anisoLevel != 8) { imp.anisoLevel = 8; ch = true; }
+            if (imp.maxTextureSize != 1024) { imp.maxTextureSize = 1024; ch = true; }
+            if (ch) imp.SaveAndReimport();
+            n++; if (nrm) nn++;
+        }
+        Debug.Log("BuildScript: lambo8 LB8 textures imported (" + n + ", " + nn + " normal maps); shaders LB/Tri " + (Shader.Find("LB/Tri") != null) +
+            " LB/Terrain " + (Shader.Find("LB/Terrain") != null) + " LB/Road " + (Shader.Find("LB/Road") != null) + " LB/Grass " + (Shader.Find("LB/Grass") != null));
+    }
+
     static Material MakeDetailMat(string file, string detailPath, Vector2 tiling, float gloss)
     {
         Material m = MakeMat("Standard", "Diffuse", file);
@@ -283,6 +308,7 @@ public static class BuildScript
         // ground + road: Standard with a Poly Haven CC0 sand "detail albedo x2" map (keyword variant ships with these assets)
         // lambo7: ground base also has _NORMALMAP (theme grain + normal map tiled on uv0, colour map as the x2 detail on uv1)
         ImportThemeTextures();
+        ImportLB8Textures();
         Material ground = MakeDetailMat("Ground.mat", "Assets/Textures/sand_detail.png", new Vector2(1f, 1f), 0.06f);
         Texture2D g1d = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Resources/LBTex/g1_d.png");
         Texture2D g1n = LoadNormal("Assets/Resources/LBTex/g1_n.png");
@@ -340,8 +366,8 @@ public static class BuildScript
         sun.intensity = 1.25f;
         sun.shadows = LightShadows.Soft;
         sun.shadowStrength = 0.65f;
-        sun.shadowBias = 0.05f;
-        sun.shadowNormalBias = 0.4f;
+        sun.shadowBias = 0.04f;          // lambo8: a touch tighter (contact shadows under the karts), normal bias keeps acne off slopes
+        sun.shadowNormalBias = 0.35f;
         sunGo.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
         RenderSettings.sun = sun;
 

@@ -105,8 +105,10 @@ public static partial class Track
         foreach (var p in SC) { Min = Vector2.Min(Min, new Vector2(p.x, p.z)); Max = Vector2.Max(Max, new Vector2(p.x, p.z)); }
 
         BuildGround();
-        BuildRoad(C, T, true, HalfW, RoadTex(true), "Road", 0f, 0f);
-        BuildRoad(SC, SCT, false, ScHalf, RoadTex(false), "Shortcut", ScGapA, ScGapB);
+        // lambo8: grey beach tarmac with lines + curbs (hi-res map, LB/Road); ?gfx=low keeps the lambo7 sand road
+        bool r8 = !Gfx.Low;
+        BuildRoad(C, T, true, HalfW, r8 ? Gfx.RoadMap(new Color(0.42f, 0.41f, 0.39f), new Color(0.86f, 0.16f, 0.12f), new Color(0.93f, 0.93f, 0.9f), true, true, 8) : RoadTex(true), "Road", 0f, 0f);
+        BuildRoad(SC, SCT, false, ScHalf, r8 ? Gfx.RoadMap(new Color(0.5f, 0.45f, 0.38f), Color.white, Color.white, false, false, 9) : RoadTex(false), "Shortcut", ScGapA, ScGapB);
         BuildWater();
         Physics.SyncTransforms();
         BuildRamps();
@@ -333,17 +335,19 @@ public static partial class Track
         go.layer = GroundLayer;
         go.AddComponent<MeshFilter>().sharedMesh = mesh;
         var mr = go.AddComponent<MeshRenderer>();
-        mr.sharedMaterial = Own(Mats.Ground(Own(GroundTex()), 0, gcell * (gn - 1), 0.07f));
+        Texture2D gt = Own(GroundTex());
+        mr.sharedMaterial = Own(Gfx.Terrain(gt, 0, gcell * (gn - 1), 0.07f)) ?? Own(Mats.Ground(gt, 0, gcell * (gn - 1), 0.07f));
         mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         go.AddComponent<MeshCollider>().sharedMesh = mesh;
     }
 
     static Texture2D GroundTex()
     {
-        const int n = 512;
+        int n = Gfx.Low ? 512 : 1024;     // lambo8: 1024 (~1.3 m per texel) - the 512 map read as blurry smears up close
         var tex = new Texture2D(n, n, TextureFormat.RGB24, true);
         tex.wrapMode = TextureWrapMode.Clamp;
-        tex.filterMode = FilterMode.Bilinear;
+        tex.filterMode = FilterMode.Trilinear;
+        tex.anisoLevel = 8;
         var px = new Color32[n * n];
         var r = new System.Random(4);
         float size = gcell * (gn - 1);
@@ -422,7 +426,7 @@ public static partial class Track
             bool ok = !(gapB > gapA && dist > gapA && dist < gapB);
             Vector3 rt = new Vector3(t[i].z, 0f, -t[i].x);
             Vector3 p = c[i] + Vector3.up * 0.03f;
-            float v = dist / 16f;
+            float v = dist / (Gfx.Low ? 16f : 32f);     // lambo8 road map covers 32 m
             int b = verts.Count;
             verts.Add(p - rt * (half + 1.4f) + Vector3.down * 0.5f); uvs.Add(new Vector2(0.01f, v));
             verts.Add(p - rt * half); uvs.Add(new Vector2(0f, v));
@@ -454,7 +458,9 @@ public static partial class Track
         go.layer = GroundLayer;
         go.AddComponent<MeshFilter>().sharedMesh = mesh;
         var mr = go.AddComponent<MeshRenderer>();
-        mr.sharedMaterial = Own(Mats.Detail(Mats.RoadBase, Own(tex), 0.08f));
+        mesh.RecalculateTangents();
+        Own(tex);
+        mr.sharedMaterial = Own(Gfx.Road(tex, 0)) ?? Own(Mats.Detail(Mats.RoadBase, tex, 0.08f));
         mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         go.AddComponent<MeshCollider>().sharedMesh = mesh;
     }

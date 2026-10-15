@@ -38,6 +38,7 @@ public static class LBDisplay
         string u = Application.absoluteURL ?? "";
         int i = u.IndexOf("lbq=");
         if (i >= 0 && i + 4 < u.Length && char.IsDigit(u[i + 4])) { Level = Mathf.Clamp(u[i + 4] - '0', 0, 2); Forced = true; }
+        if (u.Contains("gfx=low")) { Level = 2; Forced = true; }     // lambo8: ?gfx=low = lambo7 look at the lightest level
         var g = new GameObject("LBDisplayWatch");
         Object.DontDestroyOnLoad(g);
         g.hideFlags = HideFlags.HideInHierarchy;
@@ -63,7 +64,8 @@ public static class LBDisplay
 
     public static void ApplyAA()
     {
-        QualitySettings.antiAliasing = mode == 1 ? 4 : Level == 0 ? 2 : 0;
+        // lambo8: desktop / Tesla race at 4x MSAA in level 0 (phones 2x); the governor drops it when frames run long
+        QualitySettings.antiAliasing = mode == 1 ? 4 : Level == 0 ? (Look.Mobile || MobileUA ? 2 : 4) : 0;
     }
 
     static void Downgrade(float fps)

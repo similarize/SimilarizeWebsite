@@ -603,6 +603,14 @@ public class Kart : MonoBehaviour
     void ApplyTransform(float dt)
     {
         transform.rotation = Quaternion.FromToRotation(Vector3.up, gNormal) * Quaternion.Euler(0f, yaw, 0f);
+        // lambo8: rear-tyre skid marks while drifting / sliding hard on the ground
+        if (grounded && !respawning && (drifting || Mathf.Abs(lat) > 4.5f) && Mathf.Abs(speed) > 6f)
+        {
+            Vector3 rt = transform.right;
+            float str = drifting ? 0.8f : Mathf.Clamp01((Mathf.Abs(lat) - 4.5f) / 4f);
+            Skids.Mark(id * 2, transform.TransformPoint(new Vector3(-0.85f, 0f, -1.35f)), gNormal, rt, str);
+            Skids.Mark(id * 2 + 1, transform.TransformPoint(new Vector3(0.85f, 0f, -1.35f)), gNormal, rt, str);
+        }
         if (body == null) return;
         float wantDrift = drifting ? driftDir * 24f : 0f;
         driftVisual = Mathf.Lerp(driftVisual, wantDrift, Mathf.Min(1f, dt * 8f));

@@ -35,6 +35,7 @@ public class Bootstrap : MonoBehaviour
         Mats.Init(litMat, unlitMat, fxMat, waterMat, glassMat);
         Mats.GroundBase = groundMat; Mats.RoadBase = roadMat; Mats.FxAdd = fxAddMat;
         LBDisplay.Init();
+        Gfx.Init();
         Look.Init(sun);
         Showroom.Init(sun);
         Sfx.Init();
@@ -60,12 +61,14 @@ public class Bootstrap : MonoBehaviour
     {
         float t0 = Time.realtimeSinceStartup;
         Shot.ClearAll();
+        Skids.Clear();
         ItemBox.ClearAll();
         Track.Build(id);
         Physics.SyncTransforms();
         if (Track.Def == null) Scenery.Build(); else ThemeScenery.Build();
         ItemBox.SpawnAll();
         Look.SetTheme(Track.Theme);
+        Gfx.ApplyLevel(LBDisplay.Level, Look.Mobile);
         Debug.Log("Lambo Blast: world built in " + ((Time.realtimeSinceStartup - t0) * 1000f).ToString("F0") + " ms (track " + Track.Id + " " + Track.Name + ")");
     }
 }

@@ -15,8 +15,8 @@ public static class Scenery
         rnd = new System.Random(42);
         trunkA = Mats.Lit(new Color(0.55f, 0.42f, 0.28f)); trunkB = Mats.Lit(new Color(0.47f, 0.35f, 0.23f));
         leafA = Mats.Lit(new Color(0.22f, 0.6f, 0.2f)); leafB = Mats.Lit(new Color(0.32f, 0.7f, 0.25f));
-        coco = Mats.Lit(new Color(0.35f, 0.25f, 0.12f)); rock = Mats.Lit(new Color(0.55f, 0.53f, 0.5f));
-        wood = Mats.Lit(new Color(0.58f, 0.4f, 0.22f)); thatch = Mats.Lit(new Color(0.82f, 0.68f, 0.4f));
+        coco = Mats.Lit(new Color(0.35f, 0.25f, 0.12f)); rock = Gfx.Surf(new Color(0.55f, 0.53f, 0.5f), Gfx.K.GreyRock);
+        wood = Gfx.Surf(new Color(0.58f, 0.4f, 0.22f), Gfx.K.Wood); thatch = Mats.Lit(new Color(0.82f, 0.68f, 0.4f));
         white = Mats.Lit(new Color(0.96f, 0.96f, 0.94f)); flame = Mats.Unlit(new Color(1f, 0.6f, 0.15f));
         dark = Mats.Lit(new Color(0.15f, 0.15f, 0.17f));
 
@@ -98,7 +98,9 @@ public static class Scenery
             else Buoy(root, q, i % 2 == 0 ? new Color(1f, 0.35f, 0.15f) : new Color(1f, 0.9f, 0.2f));
         }
         StartArch(root);
+        ThemeScenery.StandAt(root, new Color(0.15f, 0.6f, 0.85f));   // lambo8
         MeshMerge.Merge(root, true);
+        Gfx.Grass(Track.Root, 0);                                   // lambo8: dune grass tufts
     }
 
     // keep props off the drivable band (road + soft wall) and off the shortcut
@@ -162,6 +164,7 @@ public static class Scenery
         if (pk != null)
         {
             var g = pk.Spawn("body", root, Vector3.zero, 1f, Color.white);
+            Gfx.Reskin(g, new Color(0.6f, 0.57f, 0.52f), Gfx.K.GreyRock);    // lambo8
             g.position = p + Vector3.down * s * 0.15f;
             g.rotation = Quaternion.Euler(R(-8f, 8f), R(0f, 360f), R(-8f, 8f));
             g.localScale = new Vector3(s * R(1.1f, 1.7f), s * R(0.8f, 1.2f), s * R(1.1f, 1.5f));

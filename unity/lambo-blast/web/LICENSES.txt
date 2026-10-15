@@ -170,6 +170,24 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
    OTHER DEALINGS IN THE FONT SOFTWARE.
 
+----------------------------------------------------------------------------------------------------
+Surface textures (lambo8 scenery upgrade): ambientCG.com, Creative Commons CC0 1.0 Universal
+(https://docs.ambientcg.com/license/ , https://creativecommons.org/publicdomain/zero/1.0/).
+Created using these ambientCG assets (downscaled to 512 / 1024 px, colour maps normalised to grey detail maps):
+  Rock029 (canyon sandstone)  https://ambientcg.com/a/Rock029
+  Rock030 (volcanic basalt)   https://ambientcg.com/a/Rock030
+  Rock051 (grey layered rock) https://ambientcg.com/a/Rock051
+  Rock063 (mossy rock)        https://ambientcg.com/a/Rock063
+  Rock064 (ruin stone blocks) https://ambientcg.com/a/Rock064
+  Bark012 (tree bark / wood)  https://ambientcg.com/a/Bark012
+  Grass004 (foliage)          https://ambientcg.com/a/Grass004
+  Snow006 (snow)              https://ambientcg.com/a/Snow006
+  Gravel042 (road shoulders)  https://ambientcg.com/a/Gravel042
+  Concrete034 (concrete)      https://ambientcg.com/a/Concrete034
+  Asphalt031 (road asphalt)   https://ambientcg.com/a/Asphalt031
+  Lava004 (lava)              https://ambientcg.com/a/Lava004
+The trees, grass, grandstands, skid marks and road markings are procedural (made in code for this game).
+
 All other models (Optimus, Figure 02, Big Figure Two, Figure 03, Atlas electric, the cars, palms, huts, rocks)
 were made for this game. Robot names only describe the real machines; this fan game is not affiliated with
 Tesla, Unitree, Figure AI, Boston Dynamics or Automobili Lamborghini.

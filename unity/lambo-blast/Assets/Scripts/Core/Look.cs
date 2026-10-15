@@ -18,7 +18,9 @@ public static class Look
         Mobile = Application.isMobilePlatform || LBDisplay.MobileUA || (Input.touchSupported && Mathf.Min(Screen.width, Screen.height) < 900 && Screen.dpi > 200f);
         QualitySettings.realtimeReflectionProbes = true;
         QualitySettings.softParticles = false;
-        QualitySettings.anisotropicFiltering = Mobile ? AnisotropicFiltering.Disable : AnisotropicFiltering.Enable;
+        // lambo8: anisotropic filtering everywhere (road / ground at grazing angles were the worst blur + shimmer); phones per texture
+        QualitySettings.anisotropicFiltering = Mobile ? AnisotropicFiltering.Enable : AnisotropicFiltering.ForceEnable;
+        Texture.SetGlobalAnisotropicFilteringLimits(Mobile ? 4 : 8, 16);
         // warm late-morning sun, saturated sky / sea bounce
         if (sun != null)
         {
@@ -141,6 +143,7 @@ public static class Look
     public static void ApplyLevel()
     {
         LBPost.Cheap = LBDisplay.Level >= 2;
+        Gfx.ApplyLevel(LBDisplay.Level, Mobile);
         if (Views > 0) ApplyViews(Views, lastCams);
     }
 
@@ -161,8 +164,11 @@ public static class Look
             // lambo7: crisper, longer shadows on desktop / Tesla in one view (VeryHigh 4k map, 70 m)
             QualitySettings.shadows = views <= 1 && LBDisplay.Level < 2 ? ShadowQuality.All : ShadowQuality.HardOnly;
             QualitySettings.shadowResolution = views <= 1 ? (LBDisplay.Level == 0 ? ShadowResolution.VeryHigh : ShadowResolution.High) : ShadowResolution.Medium;
-            QualitySettings.shadowDistance = views <= 1 ? (LBDisplay.Level == 0 ? 70f : 50f) : 30f;
+            QualitySettings.shadowDistance = views <= 1 ? (LBDisplay.Level == 0 ? 80f : 50f) : 30f;
         }
+        // lambo8: two cascades in one full-screen view on desktop / Tesla level 0 (crisp contact shadows near the car, still 80 m)
+        QualitySettings.shadowCascades = !Mobile && views <= 1 && LBDisplay.Level == 0 ? 2 : 1;
+        QualitySettings.shadowCascade2Split = 0.25f;
         if (Mobile && views == 1 && LBDisplay.Level == 0) { QualitySettings.shadowResolution = ShadowResolution.Medium; QualitySettings.shadowDistance = 40f; }
         QualitySettings.lodBias = Mobile || views >= 2 ? 0.7f : 1f;
         bool post = PostAllowed(views);

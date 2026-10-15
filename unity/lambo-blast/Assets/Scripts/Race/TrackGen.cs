@@ -237,7 +237,7 @@ public static partial class Track
     }
 
     // nearest main sample for build-time work (coarse scan, then a fine window)
-    static Proj NearestFast(Vector3 p)
+    public static Proj NearestFast(Vector3 p)
     {
         int n = C.Length, best = 0; float bd = 1e18f;
         for (int i = 0; i < n; i += 5) { float d = Flat(p - C[i]).sqrMagnitude; if (d < bd) { bd = d; best = i; } }
@@ -490,17 +490,19 @@ public static partial class Track
         go.AddComponent<MeshFilter>().sharedMesh = mesh;
         var mr = go.AddComponent<MeshRenderer>();
         Texture2D gt = Own(GroundTexGeneric(th));
-        mr.sharedMaterial = Own(Mats.Ground(gt, th, gcell * (gn - 1), th == 3 ? 0.32f : th == 5 ? 0.12f : 0.06f));
+        float gg = th == 3 ? 0.32f : th == 5 ? 0.12f : 0.06f;
+        mr.sharedMaterial = Own(Gfx.Terrain(gt, th, gcell * (gn - 1), gg)) ?? Own(Mats.Ground(gt, th, gcell * (gn - 1), gg));
         mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         go.AddComponent<MeshCollider>().sharedMesh = mesh;
     }
 
     static Texture2D GroundTexGeneric(int th)
     {
-        const int n = 512;
+        int n = Gfx.Low ? 512 : 1024;     // lambo8: 1024 colour map (~1.6 m per texel instead of ~3.2 m)
         var tex = new Texture2D(n, n, TextureFormat.RGB24, true);
         tex.wrapMode = TextureWrapMode.Clamp;
-        tex.filterMode = FilterMode.Bilinear;
+        tex.filterMode = FilterMode.Trilinear;
+        tex.anisoLevel = 8;
         var px = new Color32[n * n];
         var r = new System.Random(11 + th);
         float size = gcell * (gn - 1), e = size / n;
@@ -668,8 +670,9 @@ public static partial class Track
                 sv.Add(p + r * lat[j] + Vector3.up * y);
                 suv.Add(new Vector2(lat[j] / 4f, dist / 4f));
             }
-            rv.Add(p - r * half + Vector3.up * (half * bk)); ruv.Add(new Vector2(0f, dist / 16f));
-            rv.Add(p + r * half - Vector3.up * (half * bk)); ruv.Add(new Vector2(1f, dist / 16f));
+            float rvv = dist / (Gfx.Low ? 16f : 32f);    // lambo8 road map covers 32 m
+            rv.Add(p - r * half + Vector3.up * (half * bk)); ruv.Add(new Vector2(0f, rvv));
+            rv.Add(p + r * half - Vector3.up * (half * bk)); ruv.Add(new Vector2(1f, rvv));
             if (k > 0 && ok && prevOk)
             {
                 int a = sb - cols;
@@ -685,12 +688,27 @@ public static partial class Track
             }
             prevOk = ok;
         }
-        Material roadMat = Own(Mats.Detail(Mats.RoadBase, Own(RoadTexT(tc, half > 6f, 8 + Theme)), 0.08f));
-        Material shMat = Own(Mats.Tex(Own(NoiseColTex(tc.shoulder, tc.shoulder * 0.8f, 30 + Theme, 0.08f)), Theme == 3 ? 0.4f : 0.1f));
-        if (pipes && PipeZones.Count > 0)
+        Material roadMat = null, shMat = null;
+        if (!Gfx.Low)
         {
-            // pipe walls get the curb colours so they read as a half-pipe
-            shMat = Own(Mats.Tex(Own(NoiseColTex(tc.shoulder, Color.Lerp(tc.shoulder, tc.curbB, 0.5f), 31 + Theme, 0.06f)), Theme == 3 ? 0.5f : 0.15f));
+            // lambo8: hi-res marked tarmac (theme tint), CC0 asphalt grain + damp patches; triplanar gravel / snow / concrete shoulders
+            Color asph = new Color(0.36f, 0.36f, 0.37f);
+            Color rc = Theme == 2 || Theme == 5 ? tc.road : Theme == 3 ? Color.Lerp(tc.road, asph, 0.3f) : Color.Lerp(asph, tc.road, 0.42f);
+            Texture2D map = Own(Gfx.RoadMap(rc, tc.curbA, tc.curbB, half > 6f, half > 6f, 8 + Theme));
+            roadMat = Own(Gfx.Road(map, Theme));
+            if (Gfx.Tri)
+                shMat = pipes && PipeZones.Count > 0 ? Gfx.Surf(Color.Lerp(tc.shoulder, tc.curbB, 0.35f), Theme == 3 ? Gfx.K.Snow : Gfx.K.Concrete)
+                                                     : Gfx.Surf(tc.shoulder, Theme == 3 ? Gfx.K.Snow : Theme == 5 ? Gfx.K.Concrete : Gfx.K.Gravel);
+        }
+        if (roadMat == null) roadMat = Own(Mats.Detail(Mats.RoadBase, Own(RoadTexT(tc, half > 6f, 8 + Theme)), 0.08f));
+        if (shMat == null)
+        {
+            shMat = Own(Mats.Tex(Own(NoiseColTex(tc.shoulder, tc.shoulder * 0.8f, 30 + Theme, 0.08f)), Theme == 3 ? 0.4f : 0.1f));
+            if (pipes && PipeZones.Count > 0)
+            {
+                // pipe walls get the curb colours so they read as a half-pipe
+                shMat = Own(Mats.Tex(Own(NoiseColTex(tc.shoulder, Color.Lerp(tc.shoulder, tc.curbB, 0.5f), 31 + Theme, 0.06f)), Theme == 3 ? 0.5f : 0.15f));
+            }
         }
         MakeRibbon(name, rv, ruv, rt, roadMat, 0);
         MakeRibbon(name + " shoulders", sv, suv, st, shMat, 7);
@@ -709,6 +727,7 @@ public static partial class Track
             mesh.SetTriangles(tris, 0);
             mesh.RecalculateNormals();
         }
+        mesh.RecalculateTangents();     // lambo8: LB/Road normal map
         var go = new GameObject(name);
         go.transform.SetParent(Root, false);
         go.layer = GroundLayer;
@@ -734,7 +753,8 @@ public static partial class Track
         m.RecalculateNormals(); m.RecalculateBounds();
         go.AddComponent<MeshFilter>().sharedMesh = m;
         var mr = go.AddComponent<MeshRenderer>();
-        Texture2D lt = Own(NoiseColTex(new Color(1f, 0.85f, 0.25f), new Color(0.75f, 0.12f, 0.02f), 5, 0.09f));
+        Texture2D lt = Gfx.Low ? null : Gfx.T("lava");     // lambo8: CC0 ambientCG Lava004 photo
+        if (lt == null) lt = Own(NoiseColTex(new Color(1f, 0.85f, 0.25f), new Color(0.75f, 0.12f, 0.02f), 5, 0.09f));
         LavaMat = Own(new Material(Mats.Fx));
         LavaMat.mainTexture = lt;
         LavaMat.color = Color.white;
@@ -769,7 +789,7 @@ public static partial class Track
         go.transform.rotation = Quaternion.LookRotation(Flat(dir).normalized, Vector3.up);
         Mesh m = Own(Geo.Wedge(w, len, h));
         go.AddComponent<MeshFilter>().sharedMesh = m;
-        go.AddComponent<MeshRenderer>().sharedMaterial = Mats.Lit(col);
+        go.AddComponent<MeshRenderer>().sharedMaterial = Gfx.Surf(col, Gfx.K.Concrete);     // lambo8: painted concrete, not a flat slab
         go.AddComponent<MeshCollider>().sharedMesh = m;
         float ang = Mathf.Atan2(h, len) * Mathf.Rad2Deg;
         for (int i = 0; i < 4; i++)
@@ -832,7 +852,7 @@ public static partial class Track
     // rock / ice / stone faces under the lip and the landing of every gap (visual only)
     static void BuildAbutments(int th, ThemeCols tc)
     {
-        Material m = Mats.Lit(tc.cliff);
+        Material m = Gfx.Surf(tc.cliff, Gfx.RockFor(th));     // lambo8: triplanar CC0 rock faces
         var list = new List<Gap>(Gaps);
         list.Add(ScGap);
         foreach (var g in list)
