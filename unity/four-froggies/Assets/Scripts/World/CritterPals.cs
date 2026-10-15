@@ -35,7 +35,6 @@ public class CritterPals : MonoBehaviour
     readonly Dictionary<Animal, float> cool = new Dictionary<Animal, float>();
     readonly Dictionary<Frog, float> lastY = new Dictionary<Frog, float>(), heightK = new Dictionary<Frog, float>();
     readonly Dictionary<Frog, Vector3> lastP = new Dictionary<Frog, Vector3>();
-    int scanI;
     static AudioClip slurp;
 
     public static void Ensure() { if (I == null) new GameObject("Critter Pals").AddComponent<CritterPals>(); }
@@ -112,8 +111,8 @@ public class CritterPals : MonoBehaviour
         Vector3 v;
         switch (s)
         {
-            case 0: v = new Vector3(-0.34f, 0.92f, -0.04f); break;
-            case 1: v = new Vector3(0.34f, 0.92f, -0.04f); break;
+            case 0: v = new Vector3(-0.43f, 0.95f, -0.08f); break;
+            case 1: v = new Vector3(0.43f, 0.95f, -0.08f); break;
             case 2: v = new Vector3(0f, 1.2f, 0.02f); break;
             case 3: v = new Vector3(0f, 0.86f, -0.36f); break;
             case 4: v = new Vector3(-0.4f, 0.42f, 0.12f); break;
@@ -173,13 +172,12 @@ public class CritterPals : MonoBehaviour
         if (Paused) return;
         // ---- scan a few animals per frame for a nearby froggy ----
         var all = Animal.All;
-        int n = Mathf.Min(all.Count, 6);
-        for (int k = 0; k < n; k++)
+        for (int k = 0; k < all.Count; k++)
         {
-            scanI = (scanI + 1) % Mathf.Max(1, all.Count);
-            Animal a = all[scanI];
+            Animal a = all[k];
             if (!AnimalOk(a) || a.pal || a.Fleeing || PalOf(a) != null) continue;
             float c; if (cool.TryGetValue(a, out c) && c > 0f) continue;
+            cool[a] = 0.8f;   // look around about once a second
             bool small = Small(a.kind);
             Vector3 ap = a.transform.position;
             Frog best = null; float bd = 1e9f;
@@ -193,22 +191,22 @@ public class CritterPals : MonoBehaviour
                 if (interested && d < bd) { bd = d; best = f; }
             }
             if (best == null) continue;
-            if (Random.value > (small ? 0.5f : 0.3f)) { cool[a] = Random.Range(3f, 8f); continue; }
+            if (Random.value > (small ? 0.45f : 0.3f)) { cool[a] = Random.Range(1f, 3f); continue; }
             if (small)
             {
                 int slot = PickSlot(best, a.kind);
                 if (slot < 0) continue;
-                Start(a, best, St.Approach, slot);
+                Begin(a, best, St.Approach, slot);
             }
             else
             {
                 if (Count(best, true) >= 2) continue;
-                Start(a, best, St.Approach, -1);
+                Begin(a, best, St.Approach, -1);
             }
         }
     }
 
-    public Pal Start(Animal a, Frog f, St st, int slot)
+    public Pal Begin(Animal a, Frog f, St st, int slot)
     {
         var p = new Pal { a = a, f = f, st = st, slot = slot, t = 0f, scale0 = a.transform.localScale };
         p.raised = a.Ground(a.transform.position.x, a.transform.position.z) > f.transform.position.y + 0.45f;
@@ -442,9 +440,10 @@ public class CritterPals : MonoBehaviour
         string k = why; int c; OffWhy.TryGetValue(k, out c); OffWhy[k] = c + 1;
         bool on = p.st == St.Climb || p.st == St.Ride;
         if (p.tongue != null) { Destroy(p.tongue.gameObject); p.tongue = null; }
-        if (!on)
+        if (!on || why == "world")
         {
             cool[p.a] = Random.Range(25f, 50f);
+            if (on) { HopOffs++; Debug.Log("CritterPals: the " + KindName(p.a.kind) + " stays home - " + p.f.nick + " left for another place"); }
             Release(p, true); pals.Remove(p);
             return;
         }

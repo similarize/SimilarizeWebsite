@@ -104,7 +104,7 @@ public class MechAI : MonoBehaviour
     {
         var g = Game.I;
         if (g == null || g.state != Game.State.Play) return;
-        float dt = Mathf.Min(Time.deltaTime, Mathf.Max(0.05f, Frog.DtCap));
+        float dt = Mathf.Min(Time.deltaTime, Mathf.Max(0.05f, StoryMech.DtCap));   // the mechs' own clock (demos raise it)
         foreach (var k in new List<Frog>(cool.Keys)) cool[k] -= dt;
         for (int i = jobs.Count - 1; i >= 0; i--)
         {

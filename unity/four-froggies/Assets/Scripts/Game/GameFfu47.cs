@@ -31,7 +31,7 @@ public partial class Game
 
     static bool Is47(string sc) { return sc == "chute47" || sc == "mechai47" || sc == "critters47"; }
     Frog d47F, d47Ai; float d47T, d47PhT, d47Log; int d47Ph = -1; string d47Sc = "";
-    Vehicle d47V; float d47MinD = 1e9f, d47MinHouse = 1e9f; int d47Ph0Boards;
+    Vehicle d47V; Vector3 d47P0; float d47MinD = 1e9f, d47MinHouse = 1e9f; int d47Ph0Boards;
     readonly List<Frog> d47Ais = new List<Frog>();
 
     Frog D47Ai(int i)
@@ -47,13 +47,14 @@ public partial class Game
         if (f.vehicle != null) f.ExitVehicle();
         SkateAI.Paused = true;
         var bai = FindObjectOfType<BikeAI>(); if (bai != null) bai.enabled = false;
-        Frog.DtCap = 0.15f; Frog.GlideDtCap = 0.2f; CritterPals.DtCap = 0.15f;
+        Frog.DtCap = 0.15f; Frog.GlideDtCap = 0.3f; CritterPals.DtCap = 0.3f;
         demoHook = Demo47Input;
         if (sc == "chute47")
         {
             MechAI.Paused = true; CritterPals.Paused = true;
             d47Ai = D47Ai(0);
-            Vector3 p0 = new Vector3(10f, 0f, -4f); p0.y = Ranch.GY(p0.x, p0.z) + 28f;
+            float alt; if (!float.TryParse(UrlParam("chutealt") ?? "", out alt)) alt = 20f;   // &chutealt=28 = higher
+            Vector3 p0 = new Vector3(10f, 0f, -4f); p0.y = Ranch.GY(p0.x, p0.z) + alt; d47P0 = p0;
             if (Frog.ChuteOld)
             {
                 Flyer heli = null;
@@ -63,8 +64,7 @@ public partial class Game
                 {
                     heli.transform.position = p0; heli.transform.rotation = Quaternion.Euler(0f, 90f, 0f);
                     if (heli.rb != null) { heli.rb.position = p0; heli.rb.rotation = heli.transform.rotation; heli.rb.velocity = Vector3.zero; }
-                    f.SendTo(WorldId.Ranch, p0 + Vector3.down * 26f, 90f);   // stand under it first (the stale isGrounded comes from here)
-                    f.EnterVehicle(heli);
+                    f.SendTo(WorldId.Ranch, new Vector3(p0.x - 3f, Ranch.GY(p0.x - 3f, p0.z) + 0.1f, p0.z), 90f);   // stand on the ground first (walks a second, then gets in: the stale isGrounded comes from here)
                 }
                 Debug.Log("FFDEMO chute47 start OLD (ffu46 path): helicopter " + (heli != null ? heli.Title : "none") + " at " + p0.ToString("0"));
             }
@@ -115,7 +115,7 @@ public partial class Game
         Frog f = d47F;
         if (ph == 0) f.SendTo(WorldId.Ranch, Gp(-70.5f, -11.6f), 180f);
         else if (ph == 1) f.SendTo(WorldId.Ranch, Gp(-69f, -32.5f), 0f);
-        else if (ph == 3) f.SendTo(WorldId.Ranch, Gp(-141f, 116f), 0f);
+        else if (ph == 3) f.SendTo(WorldId.Ranch, Gp(-148f, 109f), 30f);   // beside (not on) the trough
         else if (ph == 4)
         {
             if (HouseWorld.I != null) HouseWorld.I.Enter(f);
@@ -141,9 +141,9 @@ public partial class Game
             if (f.GlideFlying)
             {
                 float t = f.glideT;
-                if (t > 2.5f && t < 4.3f) o.move.x = -1f;
-                else if (t > 6.5f && t < 8.8f) o.move.x = 1f;
-                else if (t > 9.5f && t < 11.5f) o.move.y = 1f;   // speed bar
+                if (t > 1.6f && t < 3.2f) o.move.x = -1f;
+                else if (t > 4.4f && t < 6.2f) o.move.x = 1f;
+                else if (t > 6.6f && t < 7.8f) o.move.y = 1f;   // speed bar
                 if (f.glideAgl < 3.3f) o.move = new Vector2(0f, -1f);   // FLARE
                 o.brake = f.glideAgl < 3.3f ? 1f : 0f;
             }
@@ -173,7 +173,14 @@ public partial class Game
     {
         pos = look = Vector3.zero;
         Frog ai = d47Ai;
-        if (d47Ph == 0 && d47PhT > 3f && f.vehicle != null)
+        if (d47Ph == 0 && Frog.ChuteOld && f.vehicle == null && d47PhT > 1.2f && d47V != null)
+        {
+            Flyer h = (Flyer)d47V;
+            h.transform.position = d47P0; if (h.rb != null) { h.rb.position = d47P0; h.rb.velocity = Vector3.zero; }
+            f.EnterVehicle(h);
+            Debug.Log("FFDEMO chute47 OLD: James got in the helicopter after standing " + d47PhT.ToString("0.0") + " s, grounded " + f.cc.isGrounded);
+        }
+        if (d47Ph == 0 && d47PhT > (Frog.ChuteOld ? 3.5f : 3f) && f.vehicle != null)
         {
             d47Ph = 1; d47PhT = 0f;
             Debug.Log("FFDEMO chute47 EJECT t=" + d47T.ToString("0.0") + " canExit " + f.vehicle.CanExit(f) + " agl " + (f.vehicle is Jet ? ((Jet)f.vehicle).agl.ToString("0.0") : (f.vehicle is Flyer ? ((Flyer)f.vehicle).AltitudeAboveGround.ToString("0.0") : "?")));
@@ -238,7 +245,7 @@ public partial class Game
         }
         if (d47Ph == 1 && mai != null)
         {
-            foreach (var j in mai.jobs) if (j.phase >= 1 && j.dur > 36f) { j.dur = j.f == d47Ais[0] ? 32f : 60f; if (j.fireT > 3f) j.fireT = 3f; }
+            foreach (var j in mai.jobs) if (j.phase >= 1 && j.dur > 36f) { j.dur = j.f == d47Ais[0] ? 24f : 60f; if (j.fireT > 3f) j.fireT = 3f; }
             if (MechAI.Boardings > 0 && d47Ph0Boards == 0) { d47Ph0Boards = MechAI.Boardings; Debug.Log("FFDEMO mechai47 first boarding t=" + d47T.ToString("0.0")); }
             if (d47PhT > 120f || (MechAI.Exits > 0 && d47PhT > 70f)) { d47Ph = 2; Debug.Log("FFDEMO mechai47 summary: boardings " + MechAI.Boardings + " shots " + MechAI.Shots + " exits " + MechAI.Exits + " min mech-James " + d47MinD.ToString("0.0") + " m min mech-house-edge " + d47MinHouse.ToString("0.0") + " m jobs " + mai.jobs.Count); Debug.Log("FFDEMO mechai47 done"); }
         }
@@ -282,7 +289,7 @@ public partial class Game
     bool Critters47(Frog f, out Vector3 pos, out Vector3 look)
     {
         pos = look = Vector3.zero;
-        float[] dur = { 26f, 22f, 6f, 26f, 26f, 26f };
+        float[] dur = { 20f, 18f, 5f, 20f, 22f, 22f };
         if (d47Ph >= 0 && d47Ph <= 5 && d47PhT > dur[d47Ph])
         {
             Debug.Log("FFDEMO critters47 end of phase " + d47Ph + " riders on James " + CritterPals.Riders(f) + " (" + CritterPals.RiderLabel(f) + ")" + (d47Ai != null ? " riders on " + d47Ai.nick + " " + CritterPals.Riders(d47Ai) + " (" + CritterPals.RiderLabel(d47Ai) + ")" : "") + " | climbs " + CritterPals.Climbs + " rides " + CritterPals.Rides + " nuzzles " + CritterPals.Nuzzles + " licks " + CritterPals.Licks + " hopoffs " + CritterPals.HopOffs);
