@@ -132,7 +132,7 @@ public static class BuildScript
         SetStatic(typeof(PlayerSettings.WebGL), "initialMemorySize", 128);
         SetStatic(typeof(PlayerSettings.WebGL), "maximumMemorySize", 1024);
 
-        QualitySettings.shadows = ShadowQuality.All;
+        QualitySettings.shadows = UnityEngine.ShadowQuality.All;
         QualitySettings.shadowDistance = 70f;
     }
 
