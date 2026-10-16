@@ -631,6 +631,10 @@ public partial class Frog : MonoBehaviour
         foreach (Vehicle v in Vehicle.All)
         {
             if (v == null || v.body == null || v.driver == this || v.stowed || v.body.isTrigger) continue;   // ffu50: trigger-only bodies (the carrier helm) never shove a froggy
+            // ffu50 ROOT CAUSE of Bill's carrier bug: in carrier mode Spotty's Tourer has its colliders DISABLED (it is the stern
+            // drive pod) and a disabled BoxCollider's ClosestPoint returns the query point itself -> dist 0 -> every froggy on the
+            // ranch got a 0.33 m-per-frame shove away from the bike (towards the bow on the deck). Disabled / inactive bodies never push.
+            if (!v.body.enabled || !v.body.gameObject.activeInHierarchy) continue;
             Vector3 cp = v.body.ClosestPoint(c);
             Vector3 d = c - cp;
             float dist = d.magnitude;
@@ -718,6 +722,7 @@ public partial class Frog : MonoBehaviour
                 spot = v.transform.position + Vector3.up * 2.2f;
         }
         else if (v is RcCar) spot = ((RcCar)v).ExitSpot;   // ffu30: hand back the remote, stay on the driver's stand
+        else if (v is CarrierHelm && ((CarrierHelm)v).rig != null) spot = ((CarrierHelm)v).rig.DeckPoint(-0.6f, 0.7f) + Vector3.up * 0.1f;   // ffu50b: off the helm = always onto the deck by the island door (moving or not)
         else spot = v.ExitPoint();
         transform.rotation = Quaternion.Euler(0f, v.transform.eulerAngles.y, 0f);
         yaw = v.transform.eulerAngles.y;

@@ -484,7 +484,8 @@ public class Arrow50 : MonoBehaviour
                 Debug.Log("ARROW50: HIT cow at " + got.Pos.ToString("0.0") + " after " + life.ToString("0.00") + " s");
                 FX.Sparkle(p, new Color(1f, 0.9f, 0.4f), 8);
                 TipOver50.Tip(got);
-                Destroy(gameObject);
+                foreach (var rr in GetComponentsInChildren<Renderer>()) rr.enabled = false;   // ffu50b: hide, keep the object (the hunt reads .hit)
+                stuckT = 4f;   // gone in ~2 s
                 return;
             }
             if (p.y < Ranch.GY(p.x, p.z) + 0.05f || life > 4f)
@@ -789,11 +790,11 @@ public class Fig50 : MonoBehaviour
         Mats.Prim(PrimitiveType.Cylinder, b, new Vector3(1.35f, 0.38f, 0.1f), new Vector3(0.5f, 0.38f, 0.5f), woodD, true);
         Mats.Prim(PrimitiveType.Cylinder, b, new Vector3(1.35f, 0.62f, 0.1f), new Vector3(0.52f, 0.02f, 0.52f), iron);
         quiverVis = Mats.Node(b, "QuiverArrows", new Vector3(1.35f, 0.76f, 0.1f));
-        Ranch.Sign(pos + q * new Vector3(0f, 2.1f, -0.5f), yaw + 180f, "WORKBENCH\n<size=22>space rocks > arrowheads > arrows</size>", new Color(0.32f, 0.2f, 0.1f), 4.2f, 1.4f);
+        Ranch.Sign(pos + q * new Vector3(0f, 1.75f, -0.55f), yaw, "WORKBENCH\n<size=20>rocks - arrowheads - arrows</size>", new Color(0.32f, 0.2f, 0.1f), 2.6f, 0.8f);   // ffu50b: faces the bench front, smaller
         Mats.NoShadows(b.gameObject);
         BenchFront = RobotNav.G((pos + q * new Vector3(0f, 0f, 1.25f)).x, (pos + q * new Vector3(0f, 0f, 1.25f)).z);
         var h = Interact.Add(BenchFront, 2.4f, "workbench", f => BenchAct(f));
-        h.enabled = f => f.vehicle == null && f.world == WorldId.Ranch;
+        h.enabled = f => f.vehicle == null && f.world == WorldId.Ranch && !(HeldKind(f) == 3 && NearFig(f));   // ffu50b: arrows in hand + Figure 03 right here = hand them to him
         h.dynLabel = f =>
         {
             if (crafter != null) return crafter == f ? "crafting..." : "workbench busy (" + crafter.nick + ")";
@@ -853,6 +854,7 @@ public class Fig50 : MonoBehaviour
         Sfx.PlayAt(Sfx.Pickup, fig.transform.position, 0.5f, 30f, 1.3f);
     }
 
+    static bool NearFig(Frog f) { return fig != null && !fig.hidden && fig.mission == null && fig.world == WorldId.Ranch && RobotNav.Flat(fig.transform.position - f.transform.position) < 2.6f; }
     public static bool UsesFire(Frog f) { return f != null && (HeldKind(f) == 4 || (cookFor == f && cookT >= 0f)); }
     static void FireAct(Frog f)
     {
