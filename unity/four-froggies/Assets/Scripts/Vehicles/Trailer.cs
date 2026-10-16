@@ -45,6 +45,7 @@ public class Trailer : MonoBehaviour
     public float sinceHitch;
     int towerIters = -1, towerVelIters = -1;
     public static int Hitches, Detaches, SafeDetaches;
+    public bool carrierMode;          // ffu48: Spotty's Carrier Camper floating as the carrier (CarrierRig runs the physics)
     public float uprightNow { get { return transform.up.y; } }
 
     // toy hauler
@@ -104,6 +105,8 @@ public class Trailer : MonoBehaviour
     // ---------------- hitching ----------------
     public static Vector3 HitchLocal(Vehicle v)
     {
+        Bike bk = v as Bike;
+        if (bk != null && bk.spotty) return bk.HitchPoint;   // ffu48: Spotty's Tourer - ball on an arm behind the rear tyre
         BoxCollider b = v.body;
         float back = b != null ? b.center.z - b.size.z * 0.5f : -2.8f;
         // ffu42 big wheels: a drop hitch - the ball stays at stock height off the ground and behind the big rear tyres
@@ -165,6 +168,14 @@ public class Trailer : MonoBehaviour
         joint.projectionDistance = 0.08f; joint.projectionAngle = 4f;
         joint.enableCollision = false;
         joint.enablePreprocessing = false;
+        if (v is Bike)
+        {
+            // ffu48: a motorbike leans (its model) but its body is held upright - let the camper roll freely about the
+            // tongue so it never twists the bike, a little more pitch room for the bank down to the pond
+            joint.angularZMotion = ConfigurableJointMotion.Free;
+            joint.lowAngularXLimit = new SoftJointLimit { limit = -40f };
+            joint.highAngularXLimit = new SoftJointLimit { limit = 40f };
+        }
         joint.breakForce = spec.mass * 9.81f * 45f;
         joint.breakTorque = Mathf.Infinity;
         transform.SetPositionAndRotation(p0, r0); rb.position = p0; rb.rotation = r0;
@@ -221,7 +232,7 @@ public class Trailer : MonoBehaviour
     void FixedUpdate()
     {
         float dt = Time.fixedDeltaTime;
-        if (rb == null || rb.isKinematic) return;
+        if (rb == null || rb.isKinematic || carrierMode) return;
         if (joint == null && tower != null) { Vehicle v = tower; tower = null; tower = v; Detach("hitch lost", true); }
         if (Hitched) { sinceHitch += dt; if (Watchdog(dt)) return; }
 

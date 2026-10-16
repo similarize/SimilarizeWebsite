@@ -45,6 +45,18 @@ Dad (James's dad) is a non-playable character: he lives in the house (kitchen) a
   - James and Bubbles also have **1000-story** mechs.
   - Only James has the **trillion-story** mech.
 - **The VTOL jet is James-only** for now (`Jet.CanEnter`), until Four Froggies World says otherwise.
+- **Spotty's Tourer motorcycle + Carrier Camper** (ffu48, Bill 2026-10-15): Spotty (the white cat with dark spots)
+  owns an adventure-tourer motorcycle and a solar-roofed camper trailer ("Spotty's Carrier Camper", white with black
+  spots and a pink stripe), parked at **Spotty's Spot** on the pond's north shore. Anyone else may use them **if they ask
+  Spotty first and they aren't in use** (same ask-to-borrow rule as the Cybertrucks; `ownerName` "Spotty", roster id 4).
+  - The motorcycle tows the camper. Ridden into the pond, the rig transforms into **Spotty's Carrier**, a small aircraft
+    carrier: the motorcycle tips onto its side and becomes the stern drive pod, the camper is the cabin below the flight
+    deck, the helm is up on the island's flying bridge. Driving back to the shore turns it into bike + camper again.
+  - James's VTOL jet may land on and take off from the carrier's deck (the jet itself stays James-only).
+  - AI froggies don't take Spotty's motorcycle out on their own.
+- **Story episode 3 "Spotty's Surprise"** (ffu48): Spotty surprises the froggies with the carrier at the pond; James is
+  the most surprised of all. In episode 3 Spotty is played by the story itself (a player who picked Spotty plays another
+  free roster character for the episode).
 
 ## Rules of play
 - **One controller = exactly one froggy.**

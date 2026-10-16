@@ -110,7 +110,7 @@ public partial class Game
                 if (state == State.Play) Story.Begin();
             };
         }
-        int pre = UrlParam("story") == "2" ? 1 : (Story.ReadSave(Story.SaveKey).Length > 0 ? 1 : 0);
+        int pre = UrlParam("story") == "3" ? 2 : UrlParam("story") == "2" ? 1 : (Story.ReadSave(Story.SaveKey).Length > 0 ? 1 : 0);
         picker.Show(pre);
         pickDemoT = 0f;
     }
@@ -123,7 +123,7 @@ public partial class Game
         {
             // screenshot demo: show each card in turn, never start
             pickDemoT += Time.unscaledDeltaTime;
-            if (pickDemoT > 5f) { pickDemoT = 0f; picker.sel = 1 - picker.sel; Debug.Log("FFSTORY picker demo sel " + (picker.sel + 1)); }
+            if (pickDemoT > 5f) { pickDemoT = 0f; picker.sel = (picker.sel + 1) % 3; Debug.Log("FFSTORY picker demo sel " + (picker.sel + 1)); }
             picker.Tick(Screen.height > Screen.width, InputKind.Keyboard, Time.unscaledDeltaTime);
             if (!picker.IsOpen) picker.Show(picker.sel);
             return true;
@@ -137,7 +137,7 @@ public partial class Game
     bool StoryDemoStart()
     {
         if (demoShot == "storypick") { if (picker == null || !picker.IsOpen) { pickKind = InputKind.Keyboard; OpenPicker(); } return true; }   // ffu24
-        if (!demoShot.StartsWith("story") && !demoShot.StartsWith("ep2")) return false;
+        if (!demoShot.StartsWith("story") && !demoShot.StartsWith("ep2") && !demoShot.StartsWith("ep3")) return false;
         StartPlay();
         if (state == State.Play) Story.Begin();
         demoPlayT = 0f;

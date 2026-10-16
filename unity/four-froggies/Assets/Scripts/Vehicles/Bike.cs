@@ -228,11 +228,13 @@ public partial class Bike : Vehicle
     protected override void FixedUpdate()
     {
         float dt = Time.fixedDeltaTime;
+        if (carried) { Voice(dt, false, 0f, 0f); return; }   // ffu48: part of Spotty's carrier (kinematic, lying in the stern pod)
         PondPhysics.Step(this, dt);   // ffu37: sinks to the real pond bed
         PIn ip = driver != null ? inp : new PIn();
         if (demoHook != null && driver != null) ip = demoHook(ip);
+        if (driver == null && ghostHook != null) ip = ghostHook(ip);   // ffu48: story / demo pilot (Spotty NPC)
         if (aiRider != null && driver == aiRider) ip = BikeAI.Ride(this, dt);
-        bool driven = driver != null;
+        bool driven = driver != null || ghostHook != null;
         steer = Mathf.Clamp(ip.move.x, -1f, 1f);
         throttle = Mathf.Clamp(ip.move.y + ip.gas - ip.brake, -1f, 1f);
         if (ip.gas > 0.1f) throttle = Mathf.Max(throttle, ip.gas);

@@ -471,6 +471,7 @@ public class Jet : Vehicle
             }
         }
         pos += step;
+        if (onGround) pos += CarrierRig.Carry(pos, dt);   // ffu48: parked on Spotty's carrier deck - ride along
         // inside the hangar with the roof (still) shut: stay under the ceiling (the roof slides open for a VTOL lift-off)
         Vector2 hc = JetLayout.HangarC;
         if (JetBase.I != null && Mathf.Abs(pos.x - hc.x) < JetLayout.HangarW * 0.5f && Mathf.Abs(pos.z - hc.y) < JetLayout.HangarD * 0.5f && pos.y < JetBase.FloorY + JetLayout.HangarH + 1f && JetBase.I.RoofK < 0.97f)

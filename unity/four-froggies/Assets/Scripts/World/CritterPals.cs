@@ -58,7 +58,13 @@ public class CritterPals : MonoBehaviour
     public static void ShakeOff(Frog f, string why)
     {
         if (I == null || f == null) return;
-        foreach (var p in I.pals) if (p.f == f && (p.st == St.Climb || p.st == St.Ride || p.st == St.Approach || p.st == St.Nuzzle)) I.HopOff(p, why);
+        // ffu47d (shipped in ffu48): HopOff removes not-riding pals (and every pal on a world change) from the list -> walk it backwards, never foreach
+        for (int i = I.pals.Count - 1; i >= 0; i--)
+        {
+            if (i >= I.pals.Count) continue;
+            var p = I.pals[i];
+            if (p.f == f && (p.st == St.Climb || p.st == St.Ride || p.st == St.Approach || p.st == St.Nuzzle)) I.HopOff(p, why);
+        }
     }
     static string KindName(Animal.Kind k) { return k == Animal.Kind.Goat ? "sheep" : k.ToString().ToLowerInvariant(); }
     static bool Small(Animal.Kind k) { return k == Animal.Kind.Lizard || k == Animal.Kind.Rabbit || k == Animal.Kind.Cat || k == Animal.Kind.Chicken; }

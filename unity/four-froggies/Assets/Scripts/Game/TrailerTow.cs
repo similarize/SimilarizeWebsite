@@ -8,6 +8,7 @@ public static class TrailerTow
     // trucks only: the Cybertrucks, the Monster Truck, and any later "semi" / "pickup" / "truck" ground vehicle
     public static bool CanTow(Vehicle v)
     {
+        if (CarrierRig.IsSpottyBike(v)) return true;   // ffu48: Spotty's Tourer tows her Carrier Camper
         GroundVehicle gv = v as GroundVehicle;
         if (gv == null || gv is StoryMech || gv is Tank || gv is RidingMower || gv.walker || gv.tracked || v.body == null) return false;
         if (Trailer.Loadable(v)) return false;
@@ -32,7 +33,7 @@ public static class TrailerTow
         Trailer towing = TowedBy(v);
         if (towing != null)
         {
-            f.prompt = "Towing the " + towing.spec.shortName + "  |  " + Btn + ": Unhitch  |  RT gas  LT brake/reverse";
+            f.prompt = "Towing the " + towing.spec.shortName + "  |  " + Btn + ": Unhitch  |  RT gas  LT brake/reverse" + CarrierRig.TowExtra(v);
             if (press)
             {
                 towing.Detach("unhitched", false);
@@ -47,7 +48,7 @@ public static class TrailerTow
             Trailer near = null; float nd = 6f;
             foreach (var t in Trailer.All)
             {
-                if (t == null) continue;
+                if (t == null || !CarrierRig.CanPair(v, t)) continue;
                 if (t.CanHitch(v, out d)) { if (d < bd) { bd = d; best = t; } }
                 else if (!t.Hitched)
                 {

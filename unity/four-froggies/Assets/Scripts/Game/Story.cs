@@ -51,8 +51,9 @@ public partial class Story : MonoBehaviour
         if (k >= 0) { demoShot = u.Substring(k + 7); int e = demoShot.IndexOfAny(new[] { '&', '#' }); if (e >= 0) demoShot = demoShot.Substring(0, e); }
         // ffu24: which episode - the lobby picker decides; demos / tests use ffshot=ep2... or ?story=2
         pickMode = PickMode; PickMode = 0;
-        int ep = pickMode != 0 ? Episode : (Param("story") == "2" || demoShot.StartsWith("ep2") ? 2 : 1);
+        int ep = pickMode != 0 ? Episode : (Param("story") == "2" || demoShot.StartsWith("ep2") ? 2 : Param("story") == "3" || demoShot.StartsWith("ep3") ? 3 : 1);
         if (ep == 2) { Begin2(); return; }
+        if (ep == 3) { Begin3(); return; }   // ffu48 Spotty's Surprise
         episode = 1;
         StorySet.Ensure();
         HookOnce();
@@ -79,6 +80,7 @@ public partial class Story : MonoBehaviour
         Active = false;
         runner.Clear(); cine = false; modal = false;
         if (episode == 2) E2Stop();   // ffu24
+        if (episode == 3) E3Stop();   // ffu48
         Sfx.Override = null;
         Worlds.StormK = 0f; Worlds.Flash = 0f; Worlds.StormReset();
         SunK(1f);
@@ -156,6 +158,7 @@ public partial class Story : MonoBehaviour
     void StartChapter(int c, int s)
     {
         if (episode == 2) { E2StartChapter(c, s); return; }   // ffu24
+        if (episode == 3) { E3StartChapter(c, s); return; }   // ffu48
         ch = c; step = s; chTime = 0f;
         runner.Clear(); cine = false; modal = false;
         ResetParts(c >= 3 ? 31 : (c == 2 ? parts : 0), c == 2);
@@ -253,6 +256,7 @@ public partial class Story : MonoBehaviour
         if (!Active) return;   // ffu22 fix: the ending (Stop2) ran inside the tick
         if (!runner.Busy && pendCh > 0) { int pc = pendCh, ps = pendStep; pendCh = -1; StartChapter(pc, ps); }
         if (episode == 2) { E2Update(dt); return; }   // ffu24 episode 2
+        if (episode == 3) { E3Update(dt); return; }   // ffu48 episode 3
         if (!runner.Busy && ch <= 7)
         {
             switch (ch)
@@ -944,6 +948,7 @@ public partial class Story : MonoBehaviour
     public Vector3? Target(Frog f)
     {
         if (episode == 2) return E2Target(f);   // ffu24
+        if (episode == 3) return E3Target(f);   // ffu48
         if (!Active || cine || f == null) return null;
         Vector3 me = f.FocusPoint;
         switch (ch)

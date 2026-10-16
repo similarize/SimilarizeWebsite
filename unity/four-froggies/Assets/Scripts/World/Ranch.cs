@@ -537,6 +537,7 @@ public static class Ranch
             if (JetLayout.Reserved(x, z)) { r.NextDouble(); continue; }   // ffu33: James's hangar + runway (same draws, every other tree keeps its place)
             if (RcTrack.Reserved(x, z)) { r.NextDouble(); continue; }   // ffu30: RC raceway + bike jump line
             if (MonsterPark.Reserved(x, z)) { r.NextDouble(); continue; }   // ffu43 Monster Park
+            if (CarrierLayout.Reserved(x, z)) { r.NextDouble(); continue; }   // ffu48 Spotty's Spot + the drive down to the pond
             // ffu21: each tree is its own breakable (and climbable) piece
             Transform tg = RanchBreak.Group("Tree", new Vector3(x, gy - 0.15f, z));
             p.SpawnAll(tg, Vector3.zero, s, Color.white, (float)r.NextDouble() * 360f);

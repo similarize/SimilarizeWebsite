@@ -23,7 +23,8 @@ public class StoryPicker
     readonly RectTransform root;
     readonly Image dim, backBtn;
     readonly Text head, sub, hints, backT;
-    readonly Card[] cards = new Card[2];
+    readonly Card[] cards = new Card[N];
+    const int N = 3;   // ffu48: episode 3 Spotty's Surprise
     int layout = -1;
     public bool IsOpen { get; private set; }
     public int sel;
@@ -31,14 +32,15 @@ public class StoryPicker
     public System.Action<int, bool> onPick;     // episode (1 / 2), startOver
     public System.Action onClose;
 
-    static readonly string[] Kick = { "EPISODE 1", "EPISODE 2" };
-    static readonly string[] Name = { "The Big Launch", Story.Ep2Name };
+    static readonly string[] Kick = { "EPISODE 1", "EPISODE 2", "EPISODE 3" };
+    static readonly string[] Name = { "The Big Launch", Story.Ep2Name, Story.Ep3Name };
     static readonly string[] Blurb =
     {
         "The Mars pups are stuck in a cave! Build a rocket from parts all over the ranch - and never give up.",
-        "Jimmy's new jetpack flies REALLY far. Chase him from Mars to Callisto, Mercury, Saturn and deep under Mars!"
+        "Jimmy's new jetpack flies REALLY far. Chase him from Mars to Callisto, Mercury, Saturn and deep under Mars!",
+        "Spotty rides her motorcycle and camper straight into the pond... and it turns into an aircraft carrier!"
     };
-    static readonly Color[] Accent = { new Color(0.98f, 0.55f, 0.16f), new Color(0.65f, 0.86f, 0.2f) };
+    static readonly Color[] Accent = { new Color(0.98f, 0.55f, 0.16f), new Color(0.65f, 0.86f, 0.2f), new Color(0.98f, 0.45f, 0.68f) };
 
     public StoryPicker()
     {
@@ -55,7 +57,7 @@ public class StoryPicker
         backBtn = UIK.Glass(root, new Color(1f, 1f, 1f, 0.12f), Vector2.zero, new Vector2(130, 46));
         backT = L(backBtn.transform, "BACK", 18, TextAnchor.MiddleCenter, Color.white, true);
         UIK.Stretch(backT.rectTransform);
-        for (int i = 0; i < 2; i++) cards[i] = MakeCard(i);
+        for (int i = 0; i < N; i++) cards[i] = MakeCard(i);
         canvas.enabled = false;
     }
 
@@ -94,27 +96,30 @@ public class StoryPicker
         c.btnAT = L(c.btnA.transform, "CONTINUE", 19, TextAnchor.MiddleCenter, Color.white, true); UIK.Stretch(c.btnAT.rectTransform);
         c.btnB = UIK.Glass(c.rt, new Color(1f, 1f, 1f, 0.14f), Vector2.zero, new Vector2(210, 56));
         c.btnBT = L(c.btnB.transform, "START OVER", 19, TextAnchor.MiddleCenter, Color.white, true); UIK.Stretch(c.btnBT.rectTransform);
+        foreach (var bt in new[] { c.btnAT, c.btnBT }) { bt.resizeTextForBestFit = true; bt.resizeTextMinSize = 11; bt.resizeTextMaxSize = 19; }
         return c;
     }
 
     // read both saves (episode 1 "bl1|ch|step|parts", episode 2 "cj1|ch|step")
     void ReadSaves()
     {
-        for (int i = 0; i < 2; i++)
+        for (int i = 0; i < N; i++)
         {
             var c = cards[i];
-            string v = Story.ReadSave(i == 0 ? Story.SaveKey : Story.SaveKey2);
+            string v = Story.ReadSave(i == 0 ? Story.SaveKey : i == 1 ? Story.SaveKey2 : Story.SaveKey3);
             var a = v.Split('|');
             int ch = 0, st = 0, pt = 0;
-            bool ok = a.Length >= 3 && a[0] == (i == 0 ? "bl1" : "cj1") && int.TryParse(a[1], out ch) && int.TryParse(a[2], out st);
+            int nch = Story.EpChapters[i + 1];
+            c.info.text = nch + " chapters";
+            bool ok = a.Length >= 3 && a[0] == (i == 0 ? "bl1" : i == 1 ? "cj1" : "sc1") && int.TryParse(a[1], out ch) && int.TryParse(a[2], out st);
             if (ok && i == 0 && a.Length >= 4) int.TryParse(a[3], out pt);
             if (ok && ch == 1 && st == 0 && pt == 0) ok = false;
-            c.hasSave = ok && ch >= 1; c.done = ok && ch >= 8; c.ch = ch;
-            string[] titles = i == 0 ? Story.ChTitle : Story.ChTitle2;
+            c.hasSave = ok && ch >= 1; c.done = ok && ch >= nch + 1; c.ch = ch;
+            string[] titles = i == 0 ? Story.ChTitle : i == 1 ? Story.ChTitle2 : Story.ChTitle3;
             if (!c.hasSave) c.prog.text = "<color=#ffffffaa>Not started yet</color>";
-            else if (c.done) c.prog.text = "<color=#b6ff5a>COMPLETED!</color>  <color=#ffffffaa>all 7 chapters</color>";
-            else c.prog.text = "Chapter " + ch + " of 7  ·  <color=#ffffffcc>" + titles[Mathf.Clamp(ch, 1, 7)] + "</color>";
-            float k = !c.hasSave ? 0f : c.done ? 1f : (ch - 1) / 7f;
+            else if (c.done) c.prog.text = "<color=#b6ff5a>COMPLETED!</color>  <color=#ffffffaa>all " + nch + " chapters</color>";
+            else c.prog.text = "Chapter " + ch + " of " + nch + "  ·  <color=#ffffffcc>" + titles[Mathf.Clamp(ch, 1, nch)] + "</color>";
+            float k = !c.hasSave ? 0f : c.done ? 1f : (ch - 1) / (float)nch;
             c.k01 = Mathf.Max(k, c.hasSave ? 0.03f : 0f);
             c.barFill.enabled = c.hasSave;
             c.btnAT.text = !c.hasSave ? "START" : c.done ? "REPLAY FINALE" : "CONTINUE";
@@ -126,7 +131,7 @@ public class StoryPicker
     public void Show(int preselect)
     {
         ReadSaves();
-        sel = Mathf.Clamp(preselect, 0, 1);
+        sel = Mathf.Clamp(preselect, 0, N - 1);
         IsOpen = true; canvas.enabled = true; openT = 0f; popK = 0f; layout = -1;
         Debug.Log("FFSTORY picker open (sel " + (sel + 1) + ")");
     }
@@ -145,9 +150,9 @@ public class StoryPicker
         {
             put(head.rectTransform, 0, 540, 680, 64); head.fontSize = 44;
             put(sub.rectTransform, 0, 492, 680, 30);
-            put(hints.rectTransform, 0, -560, 680, 60);
+            put(hints.rectTransform, 0, -624, 680, 30);
             put(backBtn.rectTransform, -270, 600, 130, 46);
-            for (int i = 0; i < 2; i++) put(cards[i].rt, 0, i == 0 ? 220 : -230, 640, 410);
+            for (int i = 0; i < N; i++) put(cards[i].rt, 0, 290 - i * 360, 640, 352);
         }
         else
         {
@@ -155,9 +160,9 @@ public class StoryPicker
             put(sub.rectTransform, 0, 248, 900, 30);
             put(hints.rectTransform, 0, -312, 1200, 30);
             put(backBtn.rectTransform, -560, 300, 130, 46);
-            for (int i = 0; i < 2; i++) put(cards[i].rt, i == 0 ? -280 : 280, -16, 520, 410);
+            for (int i = 0; i < N; i++) put(cards[i].rt, -418 + i * 418, -16, 404, 410);
         }
-        for (int i = 0; i < 2; i++)
+        for (int i = 0; i < N; i++)
         {
             var c = cards[i];
             float w = c.rt.sizeDelta.x, half = w * 0.5f;
@@ -173,7 +178,7 @@ public class StoryPicker
 
     void LayoutButtons()
     {
-        for (int i = 0; i < 2; i++)
+        for (int i = 0; i < N; i++)
         {
             var c = cards[i];
             float w = c.rt.sizeDelta.x;
@@ -231,7 +236,7 @@ public class StoryPicker
             foreach (var p in pts)
             {
                 if (Hit(backBtn, p)) { back = true; break; }
-                for (int i = 0; i < 2; i++)
+                for (int i = 0; i < N; i++)
                 {
                     var c = cards[i];
                     if (Hit(c.btnA, p)) { sel = i; go = true; break; }
@@ -240,10 +245,10 @@ public class StoryPicker
                 }
             }
         }
-        if (dir != 0) { int ns = Mathf.Clamp(sel + dir, 0, 1); if (ns != sel) { sel = ns; popK = 0.6f; Sfx.Play(Sfx.Click, 0.5f, 1.2f); Debug.Log("FFSTORY picker sel " + (sel + 1)); } }
+        if (dir != 0) { int ns = Mathf.Clamp(sel + dir, 0, N - 1); if (ns != sel) { sel = ns; popK = 0.6f; Sfx.Play(Sfx.Click, 0.5f, 1.2f); Debug.Log("FFSTORY picker sel " + (sel + 1)); } }
         // look: the selected card glows in its colour and pops forward
         float t = Time.unscaledTime;
-        for (int i = 0; i < 2; i++)
+        for (int i = 0; i < N; i++)
         {
             var c = cards[i];
             bool on = i == sel;

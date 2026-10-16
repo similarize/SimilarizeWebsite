@@ -131,6 +131,7 @@ public partial class Story
         }
         else if (who == -1) { name = "THE MARS PUPS  (on the robot phone)"; col = new Color(1f, 0.75f, 0.4f); if (!skipping && Sfx.Bark != null) Sfx.Play(Sfx.Bark, 0.5f, 1.6f); }
         else if (who == -3) { name = Roster.Name(1); tex = G.StoryPortrait(1); col = Roster.UiColor(1); if (!skipping && jim != null) Sfx.Ribbiting(jim.transform.position, 0.6f); }   // ffu24: Jimmy (episode 2)
+        else if (who == -5) { name = Roster.Name(4); tex = G.StoryPortrait(4); col = Roster.UiColor(4); if (!skipping) { var cv = Sfx.AnimalVoice("Cat"); if (cv != null) Sfx.Play(cv, 0.5f, 1.15f); } }   // ffu48: Spotty (episode 3)
         else if (who == -4) { name = "A MARS DOGGY"; col = new Color(1f, 0.72f, 0.45f); if (!skipping && Sfx.Bark != null) Sfx.Play(Sfx.Bark, 0.5f, 1.4f); }
         else { name = ""; col = Color.white; }
         Debug.Log("FFSTORY say " + name + ": " + text);
@@ -270,6 +271,7 @@ public partial class Story
             f.model.transform.localRotation = Quaternion.Slerp(f.model.transform.localRotation, want, Mathf.Min(1f, Time.deltaTime * 3f));
             if (s && f != talkFrog) f.model.transform.localPosition = Vector3.Lerp(f.model.transform.localPosition, new Vector3(0f, -0.08f, 0f), Time.deltaTime * 3f);
         }
+        if (episode == 3) E3ReactApply();   // ffu48 surprised hops (James's backflip)
     }
     void Slump(Frog f, bool on)
     {

@@ -225,6 +225,7 @@ public partial class Game
         else vh.R("A", "get in / out").R("GAS  /  BRAKE", "drive").R("UP  /  DOWN", "fly").R("FIRE  /  MSL", "weapons");
         vh.R("Back up to a hitch", "trucks tow the barn trailers (" + (pad ? G("A") + " / " + G("Y") : keys ? "E" : "tap") + ")");
         vh.R("Bikes", "garage + trailer barn; ride into a toy hauler to stow");
+        vh.R("Spotty's carrier", "her Tourer motorcycle + Carrier Camper on the pond's north shore (ask Spotty)  ·  ride the rig into the pond = CARRIER MODE; drive it back to the shore = bike + camper");   // ffu48
         vh.R("Skateboards", "rack at the Monster Park half-pipe + 2 in the garage  ·  " + (pad ? G("A") + " ollie, " + G("B") + " step off" : keys ? "Space ollie, E step off" : "OLLIE / OFF"));
         L.Add(vh);
         // ffu47 paraglider

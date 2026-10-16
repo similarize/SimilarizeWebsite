@@ -439,7 +439,7 @@ public partial class Frog : MonoBehaviour
             }
         }
         if (swimming && chute) SetChute(false);
-        cc.Move((planar + vel) * dt + VehiclePush(dt));
+        cc.Move((planar + vel) * dt + VehiclePush(dt) + CarrierRig.Carry(transform.position, dt));   // ffu48: ride along on Spotty's carrier deck
         if (transform.position.y < Worlds.KillY(world)) Worlds.Respawn(this);
         model.Animate(new Vector2(planar.x, planar.z).magnitude, !cc.isGrounded && !swimming, false, swimming, dt);
     }

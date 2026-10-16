@@ -128,6 +128,7 @@ public static class TrailerModels
             case 0: SilverBullet(tr, shell, s); break;
             case 1: Teardrop(tr, shell, s); break;
             case 2: ToyHauler(tr, shell, s); break;
+            case 4: CarrierModels.Camper(tr, shell, s); break;   // ffu48 Spotty's Carrier Camper
             default: Cyber(tr, shell, s); break;
         }
 

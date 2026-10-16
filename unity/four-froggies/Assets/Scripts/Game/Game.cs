@@ -171,7 +171,7 @@ public partial class Game : MonoBehaviour
     void DemoView()
     {
         if (demoShot.Length == 0 || slots.Count == 0 || slots[0].cam == null) return;
-        if (demoShot.StartsWith("story") || demoShot.StartsWith("ep2")) return;   // ffu22 / ffu24: the story scripts its own demo
+        if (demoShot.StartsWith("story") || demoShot.StartsWith("ep2") || demoShot.StartsWith("ep3")) return;   // ffu22 / ffu24: the story scripts its own demo
         demoPlayT += Time.unscaledDeltaTime;
         string[] list = demoShot == "tour" ? Tour : demoShot.Split(',');   // tour, one scene, or a comma list (9 s each)
         string sc = list[Mathf.Min(list.Length - 1, (int)(demoPlayT / 9f))];
