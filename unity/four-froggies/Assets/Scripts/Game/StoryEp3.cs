@@ -337,6 +337,7 @@ public partial class Story
             Vector3 c = tp + o; c.y = Ripples.SurfaceY + 0.7f;
             int wi;
             if (!Layout.InPond(c.x, c.z) || Layout.IslandK(c.x, c.z, out wi) > 0f) continue;
+            if (RiseCamCrowded(rig, c)) continue;   // ffu48d: a ray that starts INSIDE the boat-jump ramp sees nothing
             Vector3 d = tp - c; float dist = d.magnitude;
             bool blocked = false;
             foreach (var h in Physics.RaycastAll(c, d / dist, Mathf.Max(0f, dist - 14f)))
@@ -344,6 +345,33 @@ public partial class Story
             if (!blocked) { Debug.Log("FFSTORY ep3 rise camera offset " + o.ToString("0")); return o; }
         }
         return offs[0];
+    }
+
+    // ffu48d: a camera spot too close to something solid above the water (the boat-jump ramp + its pillars, which have no collider).
+    // The pond bed / terrain and the rig itself do not count (every pond spot touches the bed under a 3.5 m sphere).
+    bool RiseCamCrowded(CarrierRig rig, Vector3 c)
+    {
+        Vector2 pc = Layout.PondC;
+        Vector3 ramp = new Vector3(pc.x - 22f + 1.5f, Ripples.SurfaceY, pc.y + 18f);   // Ranch: boat jump ramp (9 m long along x, pillars +3.15 m east)
+        Vector3 dr = c - ramp; dr.y = 0f;
+        if (dr.magnitude < 11f) return true;
+        foreach (var h in Physics.OverlapSphere(c, 3.5f, ~0, QueryTriggerInteraction.Ignore))
+        {
+            if (h is TerrainCollider || h.transform.IsChildOf(rig.transform)) continue;
+            if (h.bounds.max.y < Ripples.SurfaceY + 0.2f) continue;   // under water (pond bed, seabed)
+            return true;
+        }
+        return false;
+    }
+
+    // ffu48d: a reaction close-up that follows the frog's model up through a React hop (same framing as the 48c big-line shot)
+    void CloseHop(int who)
+    {
+        Frog f = Cast(who);
+        Vector3 fw = PoseFwd(f), rt = new Vector3(fw.z, 0f, -fw.x);
+        Vector3 cam = f.transform.position + fw * 3.4f + rt * 0.6f + Vector3.up * 1.3f;
+        Transform m = f.model != null ? f.model.transform : f.transform;
+        Track(() => cam, () => m.position + Vector3.up * 0.75f, 46f);
     }
 
     // close shot on one cast member, tighter + lower for a reaction (fov punch for the big one)
@@ -457,7 +485,7 @@ public partial class Story
         Shot(br + rfw * 9f - rrt * 3f + up * 2.2f, br + up * 0.6f, br + rfw * 5.5f - rrt * 1.5f + up * 1.7f, br + up * 0.7f, 5f, 44f);   // ffu48c: above the parapet (was - up 2.5: the island wall hid Spotty)
         if (Sfx.Confirm != null && !skipping) Sfx.Play(Sfx.Confirm, 0.5f, 0.9f);
         yield return Say(-5, "Surprise! Meet my Carrier Camper. Want to come aboard?");
-        CloseR(jc, 2.2f, 38f);
+        CloseHop(jc);   // ffu48d: tracks his model through the hop (CloseR clipped his head)
         React(Cast(jc), 0.4f);
         yield return Say(jc, "Does it have room for my JET?!");
         Shot(br + rfw * 6f - rrt * 2f + up * 1.8f, br + up * 0.6f, br + rfw * 5f - rrt * 1.5f + up * 1.6f, br + up * 0.7f, 4f, 42f);
@@ -520,13 +548,13 @@ public partial class Story
         Vector3 cam = rig.transform.position + rrt * -26f + rfw * 18f + Vector3.up * 10f;
         Track(() => cam, () => j.transform.position, 50f);
         if (!skipping && Sfx.Confirm != null) Sfx.Play(Sfx.Confirm, 0.4f, 1.2f);
-        yield return Anim(7f, k => { float e = k * k * (3f - 2f * k); j.DemoHover(Vector3.Lerp(a, h, e), yaw, 0f); });
-        yield return Anim(4f, k => j.DemoHover(Vector3.Lerp(h, spot + Vector3.up * 0.6f, k), yaw, 0f));
+        yield return Anim(7f, k => { float e = k * k * (3f - 2f * k); j.DemoHover(Vector3.Lerp(a, rig.LandingSpot + Vector3.up * 9f, e), yaw, 0f); });   // ffu48d: follow the (drifting) carrier
+        yield return Anim(4f, k => j.DemoHover(Vector3.Lerp(rig.LandingSpot + Vector3.up * 9f, rig.LandingSpot + Vector3.up * 0.6f, k), yaw, 0f));
         float w = 0f;
         while (!j.onGround && w < 6f && !skipping) { w += Time.deltaTime; yield return null; }
-        if (!j.onGround) j.DemoHover(spot + Vector3.up * 0.05f, yaw, 0f);
+        if (!j.onGround) j.DemoHover(rig.LandingSpot + Vector3.up * 0.05f, yaw, 0f);
         Debug.Log("FFSTORY ep3 jet on the deck: onGround " + j.onGround + " parked " + rig.JetParked());
-        if (jf != null) PoseDeck(jf, spot + rrt * -5.5f + Vector3.up * 0.1f, yaw + 90f);
+        if (jf != null) PoseDeck(jf, rig.LandingSpot + rrt * -5.5f + Vector3.up * 0.1f, yaw + 90f);
         yield return Wait(1f);
         yield return CineOff();
         step = 2;
@@ -548,7 +576,7 @@ public partial class Story
         ReactAll(0.6f);
         rig.npcWave = true;
         yield return Say(-5, "Perfect landing, James! Welcome to the Carrier Camper.");
-        CloseR(JamesCast, 2.2f, 38f);
+        CloseHop(JamesCast);   // ffu48d: tracks his model through the hop (CloseR clipped his head)
         React(Cast(JamesCast), 0.8f);
         yield return Say(JamesCast, "Best. Day. EVER!");
         Shot(c + rrt * 40f + rfw * 30f + Vector3.up * 22f, c, c + rrt * 30f + rfw * 24f + Vector3.up * 16f, c, 14f, 55f);

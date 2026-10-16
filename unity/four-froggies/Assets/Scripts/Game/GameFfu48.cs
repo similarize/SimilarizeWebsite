@@ -15,6 +15,7 @@ public class Ffu48 : MonoBehaviour
     Vector3 camPos, camLook; bool camInit;
     Frog f; Vector3 entry;
     float turned; float yaw0;
+    int tf0; bool reLogged;   // ffu48d
     static float minK = 9f, maxK = -1f; static int deckFrames;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -90,6 +91,7 @@ public class Ffu48 : MonoBehaviour
                 }
                 break;
             case 7:
+                if (rig.toCarrier && phT > 0.5f && !reLogged) { reLogged = true; Debug.Log("FFDEMO carrier BUG re-transformed right after the shore revert at " + rig.transform.position.ToString("0.0")); }
                 {
                     Vector2 s = CarrierLayout.Site;
                     float d = new Vector2(b.transform.position.x - s.x, b.transform.position.z - s.y).magnitude;
@@ -102,7 +104,22 @@ public class Ffu48 : MonoBehaviour
                 }
                 break;
             case 8:
-                if (phT > 4f) { Next(9); Debug.Log("FFDEMO carrier48 done: transforms " + CarrierRig.Transforms + " bike at " + b.transform.position.ToString("0.0") + " wet " + Water.At(b.transform.position.x, b.transform.position.z, out float _a, out float _b) + " hitched " + (rig.trailer.Hitched && rig.trailer.tower == b) + " deckFrames " + deckFrames + " t=" + t.ToString("0")); }
+                if (phT > 4f)
+                {
+                    Next(9); Debug.Log("FFDEMO carrier48 done: transforms " + CarrierRig.Transforms + " bike at " + b.transform.position.ToString("0.0") + " wet " + Water.At(b.transform.position.x, b.transform.position.z, out float _a, out float _b) + " hitched " + (rig.trailer.Hitched && rig.trailer.tower == b) + " deckFrames " + deckFrames + " t=" + t.ToString("0"));
+                    // ffu48d: then ride back in - it must transform again normally
+                    tf0 = CarrierRig.Transforms;
+                    b.demoHook = i => DriveTo(b, entry, 7f);
+                    Debug.Log("FFDEMO carrier ride back in (2nd)");
+                }
+                break;
+            case 9:
+                if (rig.k > 0f) { Next(10); Debug.Log("FFDEMO carrier 2nd transform begins at " + rig.transform.position.ToString("0.0")); }
+                else if (phT > 60f) { Next(11); Debug.Log("FFDEMO carrier 2nd FAIL: never transformed again (rearm?) bike at " + b.transform.position.ToString("0.0")); }
+                break;
+            case 10:
+                if (rig.Carrier) { Next(11); rig.helm.demoHook = i => new PIn(); Debug.Log("FFDEMO carrier 2nd CARRIER MODE at " + rig.transform.position.ToString("0.0") + " transforms " + CarrierRig.Transforms + " (was " + tf0 + ")"); }
+                else if (phT > 90f) { Next(11); Debug.Log("FFDEMO carrier 2nd FAIL: stuck transforming k " + rig.k.ToString("0.00")); }
                 break;
         }
         if (Time.unscaledTime > logT)

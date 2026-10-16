@@ -286,10 +286,13 @@ public class CarrierRig : MonoBehaviour
         Vector3 bf = bike.transform.position + bike.transform.forward * 0.8f;
         Vector3 tp = trailer.transform.position;
         float s1, d1, s2, d2;
-        if (!Water.At(bf.x, bf.z, out s1, out d1) || !Water.At(tp.x, tp.z, out s2, out d2)) return;
+        if (!Water.At(bf.x, bf.z, out s1, out d1) || !Water.At(tp.x, tp.z, out s2, out d2)) { rearm = true; return; }
+        if (!rearm) { if (d1 < 0.5f) rearm = true; return; }   // ffu48d: after a shore revert in deep-ish water, touch the shallows first (no instant re-transform)
         if (d1 > 1.0f && d2 > 0.45f) Begin(true);
     }
     float abandonT, clearWait, stuckT;
+    bool rearm = true;
+    public bool AfterRevert { get { return !rearm && !toCarrier && k <= 0f; } }   // ffu48d: back to bike + camper in the water, not re-armed yet (a normal sinking bike again)
     bool holding;
     bool RoomToGrow()
     {
@@ -521,6 +524,7 @@ public class CarrierRig : MonoBehaviour
         helm.stowed = true;
         seatNode.localPosition = RoofSpot;
         if (parts != null) parts.SetActive(false);
+        rearm = false;
         Debug.Log("Carrier48: back to bike + camper at " + transform.position.ToString("0"));
     }
 
@@ -583,6 +587,7 @@ public class CarrierRig : MonoBehaviour
         Physics.SyncTransforms();
         trailer.Hitch(bike);
         if (npc != null) { npc.transform.SetParent(bike.seat, false); npc.transform.localPosition = Vector3.zero; npc.transform.localRotation = Quaternion.identity; npc.transform.localScale = Vector3.one * 0.66f; }
+        rearm = true;   // ffu48d: parked on Spotty's Spot (dry) = armed
     }
 
     // ---------------- visuals ----------------
