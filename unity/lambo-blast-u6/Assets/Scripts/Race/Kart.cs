@@ -261,7 +261,7 @@ public partial class Kart : MonoBehaviour
         Track.Ground(pos, out gy, out gn);
         gNormal = Vector3.Slerp(gNormal, grounded && pos.y - gy < 0.6f ? gn : Vector3.up, Mathf.Min(1f, dt * 8f));
         Vector3 fwd = Forward;
-        if (boostT > 0f && IsRoadster) { Vector3 vv = Velocity; foreach (var mn in Main) if (Random.value < 0.6f) FX.ColdGas(transform.TransformPoint(mn), -fwd, vv, 0.8f); }   // u6i: cold gas, no flame
+        if (boostT > 0f && IsRoadster) { Vector3 vv = Velocity; foreach (var mn in Main) if (Random.value < Mathf.Min(1f, 10f * dt)) FX.ColdGas(transform.TransformPoint(mn), -fwd, vv, 0.8f); }   // u6i: cold gas, no flame
         else if (boostT > 0f) FX.Flame(transform.TransformPoint(new Vector3(0f, 0.47f, -2.4f)), -fwd);
         if (drifting && grounded) FX.Spark(transform.TransformPoint(new Vector3(0.95f, 0.1f, -1.5f)), -fwd, new Color(0.35f, 0.65f, 1f));
         ApplyTransform(dt);
@@ -544,7 +544,7 @@ public partial class Kart : MonoBehaviour
         if (grounded && Mathf.Abs(speed) > 8f && !onRoad && !inWater) { float amt = Mathf.Clamp01(Mathf.Abs(speed) / 30f) * (Look.Mobile ? 0.4f : 0.75f); FX.ThemeDust(pos - fwd * 2f + Right * 0.9f, fwd, Track.Theme, amt); FX.ThemeDust(pos - fwd * 2f - Right * 0.9f, fwd, Track.Theme, amt); }
         else if (grounded && Track.Theme == 3 && Mathf.Abs(speed) > 18f && !inWater) FX.ThemeDust(pos - fwd * 2.2f, fwd, 3, 0.15f);   // snow spray even on the road
         if (inWater && Mathf.Abs(speed) > 4f && Random.value < 0.6f) FX.Splash(new Vector3(pos.x, Track.WaterY + 0.1f, pos.z) - fwd * 1.5f + right * Random.Range(-1f, 1f), 2);
-        if (boostT > 0f && IsRoadster) { Vector3 vv = Velocity; foreach (var mn in Main) if (Random.value < 0.6f) FX.ColdGas(transform.TransformPoint(mn), -fwd, vv, 0.8f); }   // u6i: cold gas, no flame
+        if (boostT > 0f && IsRoadster) { Vector3 vv = Velocity; foreach (var mn in Main) if (Random.value < Mathf.Min(1f, 10f * dt)) FX.ColdGas(transform.TransformPoint(mn), -fwd, vv, 0.8f); }   // u6i: cold gas, no flame
         else if (boostT > 0f) FX.Flame(transform.TransformPoint(new Vector3(0f, 0.47f, -2.4f)), -fwd);
         if (drifting && grounded && driftCharge > 1.1f)
         {

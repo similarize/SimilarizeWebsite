@@ -254,15 +254,19 @@ public static class FX
     public static void ColdGas(Vector3 p, Vector3 dir, Vector3 carVel, float strength)
     {
         if (ps == null || strength <= 0f) return;
-        int n = strength > 0.7f ? 2 : 1;
-        if (Look.Mobile && Random.value < 0.4f) n = 1;
+        // u6i2: the jets used to fire straight into the road (gone in a frame) - now a short bright jet + a vapour cloud that
+        // billows out along the ground / behind the car and lingers, big enough to read from the chase cam
+        bool down = dir.y < -0.5f;
+        int n = Look.Mobile ? 2 : 3;
         for (int i = 0; i < n; i++)
         {
-            float g = Random.Range(0.88f, 0.98f);
-            Emit(p + dir * Random.Range(0f, 0.25f) + Random.insideUnitSphere * 0.08f, carVel * 0.55f + dir * Random.Range(5f, 9f) * strength + Random.insideUnitSphere * 0.8f,
-                 Random.Range(0.45f, 0.8f) * (0.6f + 0.6f * strength), Random.Range(0.45f, 0.8f), new Color(g, g, g * 1.02f, 0.35f + 0.3f * strength));
+            float g = Random.Range(0.9f, 1f);
+            Vector3 spread = Random.insideUnitSphere; spread.y = Mathf.Abs(spread.y) * 0.4f;
+            Vector3 v = carVel * 0.45f + (down ? new Vector3(spread.x * 4f, Random.Range(0.3f, 1.4f), spread.z * 4f) : dir * Random.Range(3f, 6f) * strength + spread * 1.2f);
+            Vector3 at = p + (down ? dir * Random.Range(0.05f, 0.25f) : dir * Random.Range(0.1f, 0.5f));
+            Emit(at, v, Random.Range(0.9f, 1.6f) * (0.7f + 0.5f * strength), Random.Range(0.7f, 1.2f), new Color(g, g, g * 1.02f, 0.5f + 0.35f * strength));
         }
-        if (Random.value < 0.25f * strength) EmitAdd(p, dir * 3f + carVel * 0.5f, Random.Range(0.12f, 0.22f), 0.09f, new Color(0.75f, 0.85f, 1f));   // cold flash at the throat
+        if (Random.value < 0.5f * strength) EmitAdd(p, dir * 2f + carVel * 0.5f, Random.Range(0.25f, 0.4f), 0.12f, new Color(0.8f, 0.9f, 1f));   // cold flash at the throat
     }
 
     public static void Flame(Vector3 p, Vector3 dir)

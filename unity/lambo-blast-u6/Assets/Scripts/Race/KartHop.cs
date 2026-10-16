@@ -68,7 +68,7 @@ public partial class Kart
         speed += (HopExpert ? 20f : 16f) * dt;           // with the tyres + fans: ~0-27 m/s in about a second
         thrustAir = Mathf.Max(0f, thrustAir - dt * 0.35f);
         Vector3 back = -Forward, v = Velocity;
-        foreach (var m in Main) if (Random.value < 0.8f) FX.ColdGas(transform.TransformPoint(m), back, v, 1f);
+        foreach (var m in Main) if (Random.value < Mathf.Min(1f, 18f * dt)) FX.ColdGas(transform.TransformPoint(m), back, v, 1f);   // u6i2: rate per second, not per frame
     }
 
     bool HopWants(KIn i) { return IsRoadster && i.jump && HopReady && (grounded || airT < 0.12f) && !hopping; }
@@ -112,7 +112,7 @@ public partial class Kart
         if (burn || hopT < 0.18f)
         {
             Vector3 v = Velocity; float st = hopT < 0.18f ? 1f : 0.6f;
-            for (int k = 0; k < Corner.Length; k++) if (Random.value < 0.55f) FX.ColdGas(transform.TransformPoint(Corner[k]), Vector3.down, v, st);
+            for (int k = 0; k < Corner.Length; k++) if (Random.value < Mathf.Min(1f, 14f * dt)) FX.ColdGas(transform.TransformPoint(Corner[k]), Vector3.down, v, st);
         }
         // probe evidence: passed over another car
         if ((Autopilot || hopLog) && Game.I != null)
