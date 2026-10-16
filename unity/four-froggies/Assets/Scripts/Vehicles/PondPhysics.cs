@@ -118,7 +118,7 @@ public static class PondPhysics
         if (sub > 0.6f && top < Layout.WaterY + 0.2f && Random.value < dt * (5f + Mathf.Max(0f, -vel.y) * 3f))
             FX.Bubble(new Vector3(p.x, top, p.z) + Random.insideUnitSphere * 0.6f, 2 + Random.Range(0, 3));
         // toast + recovery
-        if (sub > 0.6f && !boatMode)
+        if (sub > 0.6f && !boatMode && !(v is CarrierHelm))   // ffu48c: Spotty's camper sinking on purpose (the transform) is not a drowned car
         {
             v.pondUnderT += dt;
             Frog d = v.driver;

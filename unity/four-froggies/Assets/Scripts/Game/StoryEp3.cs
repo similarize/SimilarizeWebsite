@@ -327,6 +327,25 @@ public partial class Story
         foreach (var f in done) reacts.Remove(f);
     }
 
+    // ffu48c: the rise camera offset (relative to the rig, which keeps gliding out): the first one over open water with a clear
+    // line to the hull (the boat jump ramp + island used to block the fixed shot)
+    Vector3 RiseCamOff(CarrierRig rig, Vector3[] offs)
+    {
+        Vector3 tp = rig.transform.position; tp.y = Ripples.SurfaceY + 2f;
+        foreach (var o in offs)
+        {
+            Vector3 c = tp + o; c.y = Ripples.SurfaceY + 0.7f;
+            int wi;
+            if (!Layout.InPond(c.x, c.z) || Layout.IslandK(c.x, c.z, out wi) > 0f) continue;
+            Vector3 d = tp - c; float dist = d.magnitude;
+            bool blocked = false;
+            foreach (var h in Physics.RaycastAll(c, d / dist, Mathf.Max(0f, dist - 14f)))
+                if (!h.collider.isTrigger && !h.collider.transform.IsChildOf(rig.transform)) { blocked = true; break; }
+            if (!blocked) { Debug.Log("FFSTORY ep3 rise camera offset " + o.ToString("0")); return o; }
+        }
+        return offs[0];
+    }
+
     // close shot on one cast member, tighter + lower for a reaction (fov punch for the big one)
     void CloseR(int who, float dist, float fov)
     {
@@ -390,8 +409,9 @@ public partial class Story
         // 5 - rumble... and it RISES
         camShake = 0.3f;
         rig.holdAt = -1f;
-        Vector3 low = rig.transform.position + rt * 30f + fw * 10f; low.y = Ripples.SurfaceY + 0.7f;
-        Track(() => low, () => rig.transform.position + up * (1.5f + 4f * Mathf.Clamp01((rig.k - 0.6f) / 0.4f)), 52f);
+        // ffu48c: the camera rides along with the rig (it still glides out to deep water while it rises), so the rise stays framed
+        Vector3 lowOff = RiseCamOff(rig, new[] { rt * 30f + fw * 10f, fw * 34f + rt * 10f, fw * 34f - rt * 10f, -rt * 30f + fw * 10f, rt * 30f - fw * 6f });
+        Track(() => { Vector3 l = rig.transform.position + lowOff; l.y = Ripples.SurfaceY + 0.7f; return l; }, () => rig.transform.position + up * (1.5f + 4f * Mathf.Clamp01((rig.k - 0.6f) / 0.4f)), 52f);
         w = 0f;
         while (!rig.Carrier && w < 22f && !skipping) { w += Time.deltaTime; if (rig.k > 0.72f && rig.k < 0.9f) camShake = Mathf.Max(camShake, 0.18f); yield return null; }
         if (!rig.Carrier) { float ws, wd; bool wet = Water.At(rig.transform.position.x, rig.transform.position.z, out ws, out wd) && wd > 2.5f; rig.ForceCarrier(wet ? rig.transform.position : Anchor3, wet ? rig.transform.eulerAngles.y : CarrierLayout.Yaw); }
@@ -412,7 +432,14 @@ public partial class Story
         if (bb != jc && bb != rx) { CloseR(bb, 2.2f, 38f); React(Cast(bb), 0.5f); yield return Say(bb, "No WAY!"); }
         if (jm != jc && jm != rx && jm != bb) { CloseR(jm, 2.2f, 38f); React(Cast(jm), 0.5f); yield return Say(jm, "It's a boat! No - it's a SHIP!"); }
         // James: the biggest one - a super close-up with a fov punch and a backflip-hop
-        CloseR(jc, 1.7f, 30f);
+        // ffu48c: the camera follows James's model up through the big backflip-hop (a fixed 30-degree close-up lost him above the frame)
+        {
+            Frog jf = Cast(jc);
+            Vector3 jfw = PoseFwd(jf), jrt = new Vector3(jfw.z, 0f, -jfw.x);
+            Vector3 jcam = jf.transform.position + jfw * 3.4f + jrt * 0.6f + up * 1.3f;
+            Transform jm2 = jf.model != null ? jf.model.transform : jf.transform;
+            Track(() => jcam, () => jm2.position + up * 0.75f, 46f);
+        }
         React(Cast(jc), 1f);
         camShake = 0.12f;
         yield return Wait(0.8f);
@@ -427,13 +454,13 @@ public partial class Story
         Vector3 br = rig.BridgeWorld;
         Vector3 rfw = rig.transform.forward; rfw.y = 0f; rfw.Normalize();
         Vector3 rrt = new Vector3(rfw.z, 0f, -rfw.x);
-        Shot(br + rfw * 9f - rrt * 3f - up * 2.5f, br + up * 0.6f, br + rfw * 5.5f - rrt * 1.5f - up * 0.6f, br + up * 0.7f, 5f, 44f);
+        Shot(br + rfw * 9f - rrt * 3f + up * 2.2f, br + up * 0.6f, br + rfw * 5.5f - rrt * 1.5f + up * 1.7f, br + up * 0.7f, 5f, 44f);   // ffu48c: above the parapet (was - up 2.5: the island wall hid Spotty)
         if (Sfx.Confirm != null && !skipping) Sfx.Play(Sfx.Confirm, 0.5f, 0.9f);
         yield return Say(-5, "Surprise! Meet my Carrier Camper. Want to come aboard?");
         CloseR(jc, 2.2f, 38f);
         React(Cast(jc), 0.4f);
         yield return Say(jc, "Does it have room for my JET?!");
-        Shot(br + rfw * 6f - rrt * 2f - up * 1f, br + up * 0.6f, br + rfw * 5f - rrt * 1.5f - up * 0.8f, br + up * 0.7f, 4f, 42f);
+        Shot(br + rfw * 6f - rrt * 2f + up * 1.8f, br + up * 0.6f, br + rfw * 5f - rrt * 1.5f + up * 1.6f, br + up * 0.7f, 4f, 42f);
         yield return Say(-5, "That's what the flight deck is for! Swim on out!");
         rig.npcWave = false;
         rig.speedK = 1f;
