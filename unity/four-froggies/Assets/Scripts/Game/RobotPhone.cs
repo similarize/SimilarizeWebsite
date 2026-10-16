@@ -141,6 +141,7 @@ public class RobotPhone : MonoBehaviour
         string[] oc = { "come", "go", "stop", "wave", "roofHeli", "roofDrone", "follow", "dance" };
         string[] ol = { "Come here", "Go (8 m)", "Stop", "Wave", "Roof helipad", "Drone pad", "Follow me", "Dance" };
         for (int i = 0; i < oc.Length; i++) Add(1, ol[i], oc[i]);
+        Add(1, "Fly your rocket", "rocket"); Add(1, "Hunt (bow)", "hunt");   // ffu50: Figure 03 only (Fig03Rocket50.cs)
         vehicles = RobotDriver.List();
         for (int i = 0; i < vehicles.Count && i < 12; i++) Add(2, vehicles[i].Title, "veh:" + i);
         string[] bands = { "10-story mech", "100-story mech", "1000-story mech", "Trillion mech" };
@@ -151,6 +152,7 @@ public class RobotPhone : MonoBehaviour
         // ffu42 WHEELS tab; ffu45: resizes the wheels of the vehicle the phone's user is IN (per vehicle), works in every world
         Add(5, "Smaller  -", "wheels:-"); Add(5, "Stock 1x", "wheels:1"); Add(5, "Bigger  +", "wheels:+");
         Add(5, "2x", "wheels:2"); Add(5, "3x", "wheels:3"); Add(5, "4x MONSTER", "wheels:4");
+        Add(3, "Stash", "stash");   // ffu50: shared materials / arrows count (label is live, see Refresh)
         Add(3, "Abort mission", "abort"); Add(3, "Watch feed", "feed"); Add(3, "Feed full screen", "feedfull"); Add(3, "Feed cam: drone/eye", "feedcam");
     }
 
@@ -424,6 +426,9 @@ public class RobotPhone : MonoBehaviour
             else if (r.drv != null && r.drv.v is StoryMech) { r.drv.user = f; r.drv.SetMode("home"); say = r.robotName + ": walking " + r.drv.v.Title + " home"; }
             else say = r.robotName + " isn't in a mech";
         }
+        else if (a == "rocket") say = Fig50.PhoneRocket(r, f);   // ffu50: owner-locked to Figure 03
+        else if (a == "hunt") say = Fig50.PhoneHunt(r, f);
+        else if (a == "stash") say = "Stash: " + Stash50.Line;
         else if (a == "abort") say = mm != null ? mm.Recall() : r.mission != null ? r.mission.Abort() : r.robotName + " isn't on a mission";
         else if (a == "feed") { if (RobotFeed.I != null) { bool on = RobotFeed.I.mode > 0 && RobotFeed.I.robot == r; RobotFeed.I.Show(r, on ? 0 : 1); say = on ? "Feed off" : "Watching " + r.robotName + "'s camera (O)"; } }
         else if (a == "feedfull") { if (RobotFeed.I != null) { RobotFeed.I.Show(r, RobotFeed.I.mode == 2 && RobotFeed.I.robot == r ? 1 : 2); say = "Feed " + (RobotFeed.I.mode == 2 ? "full screen (Esc / tap to shrink)" : "picture-in-picture"); } }
@@ -529,7 +534,8 @@ public class RobotPhone : MonoBehaviour
             if (itemBtns[i].gameObject.activeSelf != has) itemBtns[i].gameObject.SetActive(has);
             if (!has) continue;
             string act = items[i].act;
-            if (itemLbls[i].text != items[i].label) itemLbls[i].text = items[i].label;
+            string lbl = act == "stash" ? Stash50.Short : act == "hunt" && r.id == Fig03Rocket.Owner ? "Hunt (bow, " + Fig50.ArrowsFor(r) + " arrows)" : items[i].label;   // ffu50 live labels
+            if (itemLbls[i].text != lbl) itemLbls[i].text = lbl;
             Color c = tab == 0 ? (i < 3 ? new Color(0.15f, 0.55f, 0.3f, 0.78f) : new Color(0.12f, 0.45f, 0.5f, 0.72f))
                     : tab == 1 ? new Color(0.2f, 0.35f, 0.7f, 0.65f)
                     : tab == 2 ? (act.StartsWith("dmode") || act == "getout" ? new Color(0.55f, 0.3f, 0.75f, 0.78f) : new Color(0.16f, 0.3f, 0.45f, 0.75f))

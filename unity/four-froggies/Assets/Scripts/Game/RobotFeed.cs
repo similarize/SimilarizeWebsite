@@ -105,6 +105,7 @@ public class RobotFeed : MonoBehaviour
     {
         if (robot != null) return robot;
         if (RobotMission.Active != null) return RobotMission.Active.r;
+        if (RobotMission.FigActive != null) return RobotMission.FigActive.r;   // ffu50 Figure 03's rocket
         if (RobotMechMission.Active != null) return RobotMechMission.Active.r;
         if (RobotPhone.I != null && RobotPhone.I.Selected != null) return RobotPhone.I.Selected;
         return RanchLife.I != null && RanchLife.I.robots.Count > 1 ? RanchLife.I.robots[1] : null;

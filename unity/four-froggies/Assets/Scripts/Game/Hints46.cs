@@ -73,6 +73,7 @@ public partial class Game
         }
         if (f.GlideOn && f.human) return HintsOn ? GlideHint(f, k) : (p == "glide" ? "" : p);   // ffu47 paraglider
         if (p.StartsWith("A / E: ")) return Cap(UseKey(k), k) + "  " + Up1(p.Substring(7));
+        if (p.Length == 0 && HintsOn && f.human) { string hl = Fig50.HeldHint(f); if (hl != null) return hl; }   // ffu50: what to do with what you're carrying (materials / arrows / drumstick)
         return p;
     }
 

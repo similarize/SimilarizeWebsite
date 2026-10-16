@@ -234,6 +234,20 @@ public class CarrierRig : MonoBehaviour
         if (!deck && !bridge) return Vector3.zero;
         return I.trailer.rb.GetPointVelocity(p) * dt;
     }
+    // ffu50 (Bill: after E off the carrier the frog kept getting sent one way): a froggy on the deck follows the deck's real
+    // motion since the last frame (transform delta of the deck point), not rb velocity x a capped frame dt - at low frame rates
+    // (dt above Frog.DtCap) the old way fell behind the moving deck and dragged the froggy towards the stern.
+    Matrix4x4 prevW2L; bool prevOk;
+    public static Vector3 CarryFrame(Vector3 p)
+    {
+        if (I == null || !I.toCarrier || I.k < 0.9f || !I.prevOk) return Vector3.zero;
+        Vector3 l = I.prevW2L.MultiplyPoint3x4(p);
+        bool deck = Mathf.Abs(l.x) < CarrierLayout.HalfW + 0.3f && l.z > CarrierLayout.Z0 - 0.3f && l.z < CarrierLayout.Z1 + 2.5f && l.y > CarrierLayout.DeckY - 0.4f && l.y < CarrierLayout.DeckY + 1.2f;
+        bool bridge = Mathf.Abs(l.x - BridgeSpot.x) < 1.6f && Mathf.Abs(l.z - (BridgeSpot.z - 1.2f)) < 2.2f && l.y > BridgeSpot.y - 0.5f && l.y < BridgeSpot.y + 1.2f;
+        if (!deck && !bridge) return Vector3.zero;
+        Vector3 d = I.transform.TransformPoint(l) - p;
+        return d.sqrMagnitude > 25f ? Vector3.zero : d;   // a teleport / reset of the carrier is not a carry
+    }
     public static bool OnDeck(Vector3 p)
     {
         if (I == null || !I.Carrier) return false;
@@ -907,6 +921,7 @@ public class CarrierRig : MonoBehaviour
 
     void LateUpdate()
     {
+        prevW2L = transform.worldToLocalMatrix; prevOk = true;   // ffu50 CarryFrame
         if (!built) return;
         float wy = Ripples.SurfaceY;
         for (int i = 0; i < spots.Count; i++)

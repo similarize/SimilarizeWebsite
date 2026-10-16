@@ -245,6 +245,8 @@ public class Robot : MonoBehaviour
     public WorldId world = WorldId.Ranch;
     public RobotDriver drv;
     public RobotMission mission;
+    public FigHunt50 hunt;                  // ffu50: Figure 03 out hunting with his bow (Fig03Rocket50.cs)
+    public void ExtWave(float s) { wave = s; }
     public bool frozen, hidden, displayOnly;
     public Vehicle seatedIn;
     public string Job { get { return StatusLine; } }
@@ -264,7 +266,7 @@ public class Robot : MonoBehaviour
         {
             case WorldId.Mars: return Worlds.MarsO.y + SurfaceWorlds.MarsY(x - Worlds.MarsO.x, z - Worlds.MarsO.z);
             case WorldId.Callisto: return Worlds.CallistoO.y + SurfaceWorlds.CalY(x - Worlds.CallistoO.x, z - Worlds.CallistoO.z);
-            default: { float g = RobotNav.Floor(x, z); if (RanchJobs.OnFigPad(x, z)) g += RanchJobs.FigPadTop; return MissionSite.OnSlab(x, z) ? Mathf.Max(g, MissionSite.PadTop) : g; }
+            default: { float g = RobotNav.Floor(x, z); if (RanchJobs.OnFigPad(x, z)) g += RanchJobs.FigPadTop; if (Fig03Rocket.OnSlab(x, z)) g = Mathf.Max(g, Fig03Rocket.PadTop); return MissionSite.OnSlab(x, z) ? Mathf.Max(g, MissionSite.PadTop) : g; }
         }
     }
 
@@ -504,6 +506,7 @@ public class Robot : MonoBehaviour
     public string Order(string c, Frog from)
     {
         if (mission != null) return robotName + " is on a mission (abort it from the MISSION tab)";
+        if (hunt != null) hunt.Stop(null);   // ffu50
         if (drv != null) EndDrive(null);
         if (manual != null) ReleaseManual(false);
         AbortPlan();
@@ -557,6 +560,7 @@ public class Robot : MonoBehaviour
     {
         if (f == null) return;
         if (mission != null) { f.Toast(robotName + " is on a mission", 2f); return; }
+        if (hunt != null) hunt.Stop(null);   // ffu50
         if (drv != null) EndDrive(null);
         if (manual != null && manual != f) manual.remote = null;
         if (RanchLife.I != null) foreach (var o in RanchLife.I.robots) if (o != this && o.manual == f) o.ReleaseManual(false);
@@ -583,6 +587,8 @@ public class Robot : MonoBehaviour
 
     void ManualTick()
     {
+        if (Fig50.ManualUse(this, ref mIn)) { if (manual == null) return; }   // ffu50: Figure 03 boards his rocket / shoots his bow (A / E)
+        if (manual == null) return;
         Vector3 m = new Vector3(mIn.move.x, 0f, mIn.move.y);
         if (m.sqrMagnitude > 0.01f)
         {
@@ -1072,6 +1078,7 @@ public class Robot : MonoBehaviour
         else if (RobotMechMission.TickFor(this, dt)) { }    // ffu26: piloting a mech on a mission (RobotMechMission.cs)
         else if (drv != null) drv.Tick(dt);
         else if (mission != null) mission.Tick(dt);
+        else if (hunt != null) hunt.Tick(dt);   // ffu50: Figure 03 hunting with his bow
         else if (cmd == "auto") Brain(dt);
         else OrderTick(dt, p);
         if (seatedIn != null || frozen)
@@ -1240,6 +1247,7 @@ public class Robot : MonoBehaviour
             if (manual != null) return "driven by " + manual.nick;
             if (drv != null) return drv.Status;
             if (mission != null) return mission.PhaseLine;
+            if (hunt != null) return hunt.Line;   // ffu50
             var mm = RobotMechMission.For(this);
             if (mm != null) return mm.PhaseLine;
             if (cmd != "auto") return status;

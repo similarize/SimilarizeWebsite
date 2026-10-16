@@ -84,6 +84,8 @@ public partial class Frog : MonoBehaviour
     public bool Sprinting;        // ffu47: hold SHIFT / pad B while walking (critter riders hop off)
 
     public void Toast(string s, float secs = 2.5f) { toast = s; toastT = secs; }
+    [System.NonSerialized] public Vector3 dbgPush, dbgCarry;   // ffu50 probe: last frame's vehicle shove + deck carry
+    [System.NonSerialized] public float exitT; [System.NonSerialized] public Vehicle exitFrom;
 
     PIn input;
     float camYaw;
@@ -269,7 +271,7 @@ public partial class Frog : MonoBehaviour
             // ffu12: driving a robot from the phone - the froggy stands still, its input goes to the robot (Game)
             input = new PIn();
             Walk(dt);
-            prompt = "Driving " + remote.robotName + " (" + remote.Pct + "): stick walk, RT run, A wave  |  LB / P / PHONE: back to auto";
+            prompt = "Driving " + remote.robotName + " (" + remote.Pct + "): stick walk, RT run, " + Fig50.ManualPrompt(remote) + "  |  LB / P / PHONE: back to auto";   // ffu50: Figure 03 rocket / bow
             return;
         }
         if (vehicle != null)
@@ -439,7 +441,8 @@ public partial class Frog : MonoBehaviour
             }
         }
         if (swimming && chute) SetChute(false);
-        cc.Move((planar + vel) * dt + VehiclePush(dt) + CarrierRig.Carry(transform.position, dt));   // ffu48: ride along on Spotty's carrier deck
+        dbgPush = VehiclePush(dt); dbgCarry = swimming ? Vector3.zero : CarrierRig.CarryFrame(transform.position);   // ffu50: exact deck follow (was rb velocity x capped dt)
+        cc.Move((planar + vel) * dt + dbgPush + dbgCarry);   // ffu48: ride along on Spotty's carrier deck
         if (transform.position.y < Worlds.KillY(world)) Worlds.Respawn(this);
         model.Animate(new Vector2(planar.x, planar.z).magnitude, !cc.isGrounded && !swimming, false, swimming, dt);
     }
@@ -627,14 +630,14 @@ public partial class Frog : MonoBehaviour
         Vector3 c = Center;
         foreach (Vehicle v in Vehicle.All)
         {
-            if (v == null || v.body == null || v.driver == this || v.stowed) continue;
+            if (v == null || v.body == null || v.driver == this || v.stowed || v.body.isTrigger) continue;   // ffu50: trigger-only bodies (the carrier helm) never shove a froggy
             Vector3 cp = v.body.ClosestPoint(c);
             Vector3 d = c - cp;
             float dist = d.magnitude;
             if (dist > 0.55f) continue;
             if (dist < 0.001f) d = c - v.transform.position;
             d.y = 0f;
-            if (d.sqrMagnitude < 0.0001f) d = Vector3.forward;
+            if (d.sqrMagnitude < 0.0004f) continue;   // ffu50: standing on top of / under it - no sideways shove (was a fixed +z push every frame)
             d.Normalize();
             push += d * Mathf.Max(0.55f - dist, 0.05f) * 0.6f;
             if (v.Speed > 4f && bonkCool <= 0f)
@@ -721,6 +724,8 @@ public partial class Frog : MonoBehaviour
         cc.enabled = true;
         Teleport(spot);
         vel = v.Velocity * 0.5f;
+        if (CarrierRig.OnDeck(spot) || v is CarrierHelm) { vel = Vector3.zero; planar = Vector3.zero; }   // ffu50: off the helm onto the deck = stand still (the deck carry moves you with the ship)
+        exitT = 1.0f; exitFrom = v;
         if (bail) BeginBail(v.Title, spot, v.Velocity * 0.5f + (eject ? Vector3.up * 9f : Vector3.zero), eject);   // ffu47 paraglider
         exitCool = 0.4f;
         if (!netPuppet) Sfx.Play(Sfx.Door, 0.8f);

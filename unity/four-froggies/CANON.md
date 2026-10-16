@@ -59,6 +59,17 @@ Dad (James's dad) is a non-playable character: he lives in the house (kitchen) a
   it lives in James's garage (bay 1, next to Dad's Cybertruck) and anyone may use it **if they ask first and it isn't
   already in use** (same ask-to-borrow + in-use check as the Cybertrucks; in game `ownerName` "the family", no playable
   owner). Four Froggies World may name an owner later.
+- **Figure 03's rocket** (ffu50, Bill 2026-10-16): Figure 03 has his **very own rocket** (cream knit-look body, dark grey
+  nose / fins / legs, a dark visor band with a glowing ring, a glowing strip, "FIGURE 03" name plates) on its own small pad
+  near the robot mission pad. **Owner-locked to Figure 03** (like the mechs, not ask-to-borrow): any froggy, player, pet or
+  other robot is told "Only Figure 03 can fly this rocket" and can't board. Figure 03 boards it from the robot phone ("Fly
+  your rocket" / any MISSION) or when a player drives him with DRIVE IT!; it flies the usual robot space mission (Mars /
+  Callisto) and lands back on his pad.
+- **Space materials, arrows and Figure 03's bow** (ffu50, Bill 2026-10-16): robot missions bring back Mars rock, Callisto
+  ice and meteorite metal (a shared stash, bins at the pads). Froggies craft arrowheads and arrows at the garden workbench;
+  Figure 03 has a bow and uses them (phone "Hunt" or DRIVE IT!). **Kid-friendly and cartoony, no blood:** an arrow makes a
+  ranch cow tip over with stars and go POOF into a cartoon drumstick (the cow pops back in its pen later); froggies cook it
+  on the garden campfire and eat it with a happy hop.
 - **Story episode 3 "Spotty's Surprise"** (ffu48): Spotty surprises the froggies with the carrier at the pond; James is
   the most surprised of all. In episode 3 Spotty is played by the story itself (a player who picked Spotty plays another
   free roster character for the episode).

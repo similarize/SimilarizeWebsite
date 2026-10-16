@@ -11,7 +11,7 @@ using UnityEngine;
 //   case to the display tables and tip the samples onto the pile (counter, saved through SaveStore).
 // Runs in the background with the same robot / ship logic whether anyone watches or not; worlds are only rendered (kept
 // active) while a player is there or the phone video feed (RobotFeed) is looking at them. Local per device (not synced).
-public class MissionShip : MonoBehaviour
+public partial class MissionShip : MonoBehaviour
 {
     public Transform plume, ramp, vis;
     Light glow;
@@ -220,7 +220,10 @@ public static class MissionSite
 public class RobotMission
 {
     public static RobotMission Active;
+    public static RobotMission FigActive;   // ffu50: Figure 03's own rocket (Fig03Rocket50.cs) flies alongside the shared ship
     public readonly Robot r;
+    public readonly MissionShip ship;       // ffu50: the shared robot mission ship, or Figure 03's own rocket
+    public readonly bool own;               // ffu50: true = Figure 03's rocket (own pad, delivers into his materials bin)
     public readonly int kind;           // 0 Mars rocks, 1 Callisto ice
     public readonly int want;
     public int got;
@@ -233,7 +236,9 @@ public class RobotMission
     Vector3 site;                       // landing spot on Mars / Callisto
     float distLine;
     bool aborted;
-    MissionShip S { get { return MissionSite.ship; } }
+    MissionShip S { get { return ship; } }
+    Vector3 HomeBase { get { return own ? Fig03Rocket.Base : MissionSite.ShipBase; } }
+    float HomeYaw { get { return own ? Fig03Rocket.Yaw : 0f; } }
     public string Name { get { return kind == 0 ? "MARS ROCK RUN" : "CALLISTO ICE RUN"; } }
     public string Dest { get { return kind == 0 ? "Mars" : "Callisto"; } }
     WorldId DestWorld { get { return kind == 0 ? WorldId.Mars : WorldId.Callisto; } }
@@ -243,21 +248,26 @@ public class RobotMission
               Board2 = 9, Count2 = 10, Ascent2 = 11, TransitBack = 12, Descent2 = 13, Exit2 = 14, Deliver = 15;
     const float TransitT = 22f, AscentT = 12f, Ascent2T = 8f, DescentT = 9f, Descent2T = 10f;
 
-    RobotMission(Robot robot, int k, int n) { r = robot; kind = k; want = n; }
+    RobotMission(Robot robot, int k, int n, MissionShip sh, bool mine) { r = robot; kind = k; want = n; ship = sh; own = mine; }
 
     public static string Start(Robot r, int kind, int n)
     {
-        if (MissionSite.ship == null || SpaceWorld.I == null || SurfaceWorlds.I == null) return "No mission ship here";
-        if (Active != null) return "The mission ship is busy (" + Active.r.robotName + " - " + Active.PhaseLine + ")";
+        bool mine = Fig03Rocket.ship != null && r.id == Fig03Rocket.Owner;   // ffu50: Figure 03 always flies his own rocket
+        if ((!mine && MissionSite.ship == null) || SpaceWorld.I == null || SurfaceWorlds.I == null) return "No mission ship here";
+        if (mine && FigActive != null) return r.robotName + " is already flying his rocket (" + FigActive.PhaseLine + ")";
+        if (!mine && Active != null) return "The mission ship is busy (" + Active.r.robotName + " - " + Active.PhaseLine + ")";
         if (RobotMechMission.Active != null) return "One mission at a time - " + RobotMechMission.Active.r.robotName + " is on a mech mission";   // ffu26
         if (r.battery < 0.35f) return r.robotName + " needs a charge first (" + r.Pct + ")";
         if (r.manual != null) r.ReleaseManual(false);
         if (r.drv != null) r.EndDrive(null);
+        r.hunt = null;   // ffu50
         r.ResetForMission();
-        var m = new RobotMission(r, kind, n);
-        Active = m; r.mission = m; r.cmd = "mission";
+        var m = new RobotMission(r, kind, n, mine ? Fig03Rocket.ship : MissionSite.ship, mine);
+        if (mine) FigActive = m; else Active = m;
+        r.mission = m; r.cmd = "mission";
+        if (mine) Debug.Log("FIG03ROCKET: " + r.robotName + " boards his own rocket - " + m.Name + " x" + n);
         Sfx.Play(Sfx.Confirm != null ? Sfx.Confirm : Sfx.Pickup, 0.6f);
-        return r.robotName + ": " + m.Name + " - bringing back " + n + " " + m.Unit + "!";
+        return r.robotName + ": " + (mine ? "flying my rocket! " : "") + m.Name + " - bringing back " + n + " " + m.Unit + "!";
     }
 
     public string Abort()
@@ -375,10 +385,10 @@ public class RobotMission
                 {
                     HideIn();
                     float T = phase == Ascent ? AscentT : Ascent2T;
-                    Vector3 b = phase == Ascent ? MissionSite.ShipBase : site;
+                    Vector3 b = phase == Ascent ? HomeBase : site;
                     float h = 3.2f * t * t + 1.5f * t;
                     S.transform.position = b + Vector3.up * h + new Vector3(0.012f, 0f, 0.006f) * h * h / 40f;
-                    S.transform.rotation = Quaternion.Euler(Mathf.Clamp(h / 60f, 0f, 12f), 0f, 0f);
+                    S.transform.rotation = Quaternion.Euler(0f, phase == Ascent ? HomeYaw : 0f, 0f) * Quaternion.Euler(Mathf.Clamp(h / 60f, 0f, 12f), 0f, 0f);
                     S.flame = 1f;
                     distLine = h;
                     if (h < 40f && Random.value < 0.7f) FX.Smoke(b + new Vector3(Random.Range(-6f, 6f), 0.5f, Random.Range(-6f, 6f)), 3.5f, new Color(0.85f, 0.83f, 0.8f, 0.6f));
@@ -432,11 +442,11 @@ public class RobotMission
                 {
                     HideIn();
                     float T = phase == Descent ? DescentT : Descent2T, H0 = phase == Descent ? 160f : 420f;
-                    Vector3 b = phase == Descent ? site : MissionSite.ShipBase;
+                    Vector3 b = phase == Descent ? site : HomeBase;
                     float u = Mathf.Clamp01(t / T), k = 1f - u;
                     float h = H0 * k * k * k;
                     S.transform.position = b + Vector3.up * h;
-                    S.transform.rotation = Quaternion.Euler(0f, phase == Descent ? 150f : 0f, 0f);
+                    S.transform.rotation = Quaternion.Euler(0f, phase == Descent ? 150f : HomeYaw, 0f);
                     S.flame = h > 0.05f ? 0.55f + 0.45f * (1f - Mathf.Clamp01(h / 40f)) : 0f;
                     distLine = h;
                     if (h < 25f && Random.value < 0.6f) FX.Dust(b + new Vector3(Random.Range(-5f, 5f), 0.3f, Random.Range(-5f, 5f)), 2.5f);
@@ -528,7 +538,7 @@ public class RobotMission
                 {
                     r.frozen = false;
                     r.world = WorldId.Ranch;
-                    Vector3 tf = MissionSite.TableFront(kind);
+                    Vector3 tf = own ? Fig03Rocket.BinFront : MissionSite.TableFront(kind);
                     distLine = RobotNav.Flat(tf - r.transform.position);
                     if (pickT <= 0f)
                     {
@@ -539,19 +549,25 @@ public class RobotMission
                     {
                         pickT += dt;
                         r.ExtPose(3);
-                        r.ExtFace(180f);
+                        r.ExtFace(own ? Fig03Rocket.BinFace : 180f);
                         if (carried.Count > 0 && pickT > 0.45f)
                         {
                             pickT = 0.001f;
                             Transform s = carried[0]; carried.RemoveAt(0);
-                            MissionSite.AddToPile(kind, s, true);
-                            MissionSite.Deposit(kind);
-                            MissionSite.Trim(kind);
+                            if (own) Fig03Rocket.IntoBin(kind, s);   // ffu50: Figure 03 tips his samples into his materials bin
+                            else
+                            {
+                                MissionSite.AddToPile(kind, s, true);
+                                MissionSite.Deposit(kind);
+                                MissionSite.Trim(kind);
+                            }
+                            Stash50.Add(kind, 1, own ? "Figure 03's bin" : "mission pad");   // ffu50: every sample is also a crafting material
                             Sfx.PlayAt(Sfx.Thud, s.position, 0.4f, 40f, 1.4f);
                         }
                         if (carried.Count == 0 && pickT > 0.6f)
                         {
-                            ToastRanch(r.robotName + " is back from " + Dest + " with " + got + " " + Unit + "! (" + MissionSite.count[kind] + " on display)");
+                            Stash50.Add(2, 1, "meteorite");   // ffu50: every trip also brings home one chunk of meteorite metal
+                            ToastRanch(r.robotName + " is back from " + Dest + " with " + got + " " + Unit + " + a meteorite chunk! (" + Stash50.Line + ")");
                             Sfx.Play(Sfx.Win, 0.5f);
                             End(false);
                         }
@@ -611,18 +627,21 @@ public class RobotMission
         if (crate != null) { foreach (var c in carried) if (c != null) Object.Destroy(c.gameObject); Object.Destroy(crate.gameObject); }
         foreach (var s in samples) if (s != null) Object.Destroy(s.gameObject);
         samples.Clear(); carried.Clear();
-        MissionSite.ParkOnPad();
+        if (own) Fig03Rocket.Park(); else MissionSite.ParkOnPad();
         r.frozen = false; r.SetHidden(false); r.world = WorldId.Ranch;
-        if (scrubbed) r.transform.position = RobotNav.G(MissionSite.ship.RampFoot.x, MissionSite.ship.RampFoot.z);
+        if (scrubbed) r.transform.position = RobotNav.G(S.RampFoot.x, S.RampFoot.z);
         r.mission = null; r.cmd = "auto"; r.ExtReset();
         if (Active == this) Active = null;
+        if (FigActive == this) FigActive = null;
+        if (own) Debug.Log("FIG03ROCKET: mission " + (scrubbed ? "scrubbed" : "done") + " - rocket parked on his pad, " + Stash50.Line);
     }
 
     // demo / screenshot mode: start a mission and jump straight to a phase ("collect" on the surface, "return" =
     // descending onto the ranch pad with a full sample case)
     public static void Demo(Robot r, int kind, int n, string at)
     {
-        if (Active != null) Active.End(true);
+        if (r.mission != null) r.mission.End(true);
+        else if (Active != null && !(Fig03Rocket.ship != null && r.id == Fig03Rocket.Owner)) Active.End(true);
         Start(r, kind, n);
         var m = r.mission;
         if (m == null) { Debug.Log("FFDEMO mission failed to start: battery " + r.Pct); r.battery = 1f; Start(r, kind, n); m = r.mission; if (m == null) return; }
