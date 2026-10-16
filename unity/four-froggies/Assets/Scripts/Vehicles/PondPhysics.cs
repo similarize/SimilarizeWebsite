@@ -122,7 +122,8 @@ public static class PondPhysics
         {
             v.pondUnderT += dt;
             Frog d = v.driver;
-            if (d != null && d.human && !v.pondToasted)
+            bool spottyRig = CarrierRig.IsSpottyBike(v) && CarrierRig.I != null && CarrierRig.I.trailer != null && CarrierRig.I.trailer.Hitched;   // ffu48d: driving out after a shore revert - recovery yes, toast no
+            if (d != null && d.human && !v.pondToasted && !spottyRig)
             {
                 v.pondToasted = true;
                 string boat = gv != null && gv.amph != null ? "  (" + (d.inputKind == InputKind.Gamepad ? "Y" : d.inputKind == InputKind.Touch ? "BOAT" : "F") + " = Cyberboat mode)" : "";

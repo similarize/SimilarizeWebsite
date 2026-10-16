@@ -15,7 +15,7 @@ public class Ffu48 : MonoBehaviour
     Vector3 camPos, camLook; bool camInit;
     Frog f; Vector3 entry;
     float turned; float yaw0;
-    int tf0; bool reLogged;   // ffu48d
+    int tf0, leg; bool reLogged; float stuck9;   // ffu48d
     static float minK = 9f, maxK = -1f; static int deckFrames;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -96,7 +96,9 @@ public class Ffu48 : MonoBehaviour
                     Vector2 s = CarrierLayout.Site;
                     float d = new Vector2(b.transform.position.x - s.x, b.transform.position.z - s.y).magnitude;
                     float sd, dd; bool wet = Water.At(b.transform.position.x, b.transform.position.z, out sd, out dd);
-                    if ((!wet && phT > 6f && d < 30f) || phT > 40f)
+                    Vector3 tp7 = rig.trailer.transform.position; float ts, td;
+                    bool tWet = Water.At(tp7.x, tp7.z, out ts, out td) && td > 0.2f;   // ffu48d: the camper must be out too (it jammed on the bank turning)
+                    if ((!wet && !tWet && phT > 6f && d < 14f) || phT > 60f)
                     {
                         b.demoHook = i => { var o = new PIn(); o.brake = 1f; return o; };
                         Next(8);
@@ -108,14 +110,22 @@ public class Ffu48 : MonoBehaviour
                 {
                     Next(9); Debug.Log("FFDEMO carrier48 done: transforms " + CarrierRig.Transforms + " bike at " + b.transform.position.ToString("0.0") + " wet " + Water.At(b.transform.position.x, b.transform.position.z, out float _a, out float _b) + " hitched " + (rig.trailer.Hitched && rig.trailer.tower == b) + " deckFrames " + deckFrames + " t=" + t.ToString("0"));
                     // ffu48d: then ride back in - it must transform again normally
-                    tf0 = CarrierRig.Transforms;
-                    b.demoHook = i => DriveTo(b, entry, 7f);
-                    Debug.Log("FFDEMO carrier ride back in (2nd)");
+                    tf0 = CarrierRig.Transforms; leg = 0; stuck9 = 0f;
+                    Vector2 s9 = CarrierLayout.Site; Vector3 pad = new Vector3(s9.x, 0f, s9.y);
+                    // ffu48d: back round over Spotty's Spot first (a wide loop on dry land), then straight in like the first time
+                    b.demoHook = i => DriveTo(b, leg == 0 ? pad : entry, 6f);
+                    Debug.Log("FFDEMO carrier ride back in (2nd) from " + b.transform.position.ToString("0.0"));
                 }
                 break;
             case 9:
+                {
+                    Vector2 s9 = CarrierLayout.Site;
+                    if (leg == 0 && new Vector2(b.transform.position.x - s9.x, b.transform.position.z - s9.y).magnitude < 7f) { leg = 1; Debug.Log("FFDEMO carrier 2nd: round the pad, heading in"); }
+                    stuck9 = Mathf.Abs(b.ForwardSpeed) < 0.3f ? stuck9 + Time.deltaTime : 0f;
+                    if (stuck9 > 15f && rig.k <= 0f) { stuck9 = 0f; Debug.Log("FFDEMO carrier 2nd: rig stuck at " + b.transform.position.ToString("0.0") + " - sent home, riding in from the pad"); rig.ResetHome(); if (f.vehicle != null) f.ExitVehicle(); f.SendTo(WorldId.Ranch, b.transform.position - b.transform.right * 1.3f + Vector3.up * 0.2f, b.transform.eulerAngles.y); f.EnterVehicle(b); leg = 1; b.demoHook = i => DriveTo(b, entry, 7f); }
+                }
                 if (rig.k > 0f) { Next(10); Debug.Log("FFDEMO carrier 2nd transform begins at " + rig.transform.position.ToString("0.0")); }
-                else if (phT > 60f) { Next(11); Debug.Log("FFDEMO carrier 2nd FAIL: never transformed again (rearm?) bike at " + b.transform.position.ToString("0.0")); }
+                else if (phT > 150f) { Next(11); Debug.Log("FFDEMO carrier 2nd FAIL: never transformed again (rearm?) bike at " + b.transform.position.ToString("0.0")); }
                 break;
             case 10:
                 if (rig.Carrier) { Next(11); rig.helm.demoHook = i => new PIn(); Debug.Log("FFDEMO carrier 2nd CARRIER MODE at " + rig.transform.position.ToString("0.0") + " transforms " + CarrierRig.Transforms + " (was " + tf0 + ")"); }
