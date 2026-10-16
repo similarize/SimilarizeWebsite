@@ -54,6 +54,11 @@ Dad (James's dad) is a non-playable character: he lives in the house (kitchen) a
     deck, the helm is up on the island's flying bridge. Driving back to the shore turns it into bike + camper again.
   - James's VTOL jet may land on and take off from the carrier's deck (the jet itself stays James-only).
   - AI froggies don't take Spotty's motorcycle out on their own.
+- **The Roadster** (ffu49, Bill 2026-10-15): a white, low two-seater sports car with suction fans and cold-gas thrusters
+  (it can stick to walls / ceilings, hop onto roofs and barrel-roll). **Owner TBD** - for now it is the **family car**:
+  it lives in James's garage (bay 1, next to Dad's Cybertruck) and anyone may use it **if they ask first and it isn't
+  already in use** (same ask-to-borrow + in-use check as the Cybertrucks; in game `ownerName` "the family", no playable
+  owner). Four Froggies World may name an owner later.
 - **Story episode 3 "Spotty's Surprise"** (ffu48): Spotty surprises the froggies with the carrier at the pond; James is
   the most surprised of all. In episode 3 Spotty is played by the story itself (a player who picked Spotty plays another
   free roster character for the episode).

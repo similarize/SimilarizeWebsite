@@ -58,6 +58,12 @@ public partial class Game
         string p = f.prompt ?? "";
         InputKind k = HintKind(f);
         Vehicle v = f.vehicle;
+        if (v is Roadster49 && p == v.HelpLine && HintsOn && f.human)
+        {
+            // ffu49: the Roadster's live line (in the air: attitude / thrusters / roll; crawling on a wall / ceiling; out of air)
+            string rh = ((Roadster49)v).ContextHint(k, key => Cap(key, k));
+            if (rh != null) return rh;
+        }
         if (v != null && p == v.HelpLine)
         {
             if (!HintsOn || !f.human) return "";

@@ -64,6 +64,8 @@ public abstract class Vehicle : MonoBehaviour
     public virtual string HelpFor(InputKind k) { return null; }
     // world yaw the camera should hold (tank turret), or NaN to follow the body
     public virtual float AimYaw { get { return float.NaN; } }
+    // ffu49: true while the vehicle holds itself in an odd attitude on purpose (Roadster suction fans / thrusters): no flip rescue
+    public virtual bool HoldsOn { get { return false; } }
 
     protected void SetupBody(float mass, Vector3 center, Vector3 size, Vector3 com)
     {
@@ -210,7 +212,7 @@ public abstract class Vehicle : MonoBehaviour
         EngineSound(Time.fixedDeltaTime);
         if (driver == null) inp = new PIn();
         // self-righting when flipped and slow
-        if (!flyer)
+        if (!flyer && !HoldsOn)   // ffu49: the Roadster's fans / thrusters hold it (upside down on purpose)
         {
             bool loop = false;
             foreach (Bounds b in RallyTrack.LoopZones) if (b.Contains(rb.position)) loop = true;
