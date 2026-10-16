@@ -20,7 +20,7 @@
   #fill { height: 100%; width: 0%; background: linear-gradient(90deg, #36d6ff, #7c5cff, #ff4fa3); box-shadow: 0 0 16px rgba(80,200,255,.7); transition: width .2s; }
   #pct { font-size: 15px; opacity: .8; }
   #err { color: #ff8a80; max-width: 80vw; text-align: center; display: none; }
-  .tb { position: fixed; top: 8px; right: 8px; z-index: 10; display: flex; gap: 6px; }
+  .tb { position: fixed; top: calc(8px + env(safe-area-inset-top, 0px)); right: calc(8px + env(safe-area-inset-right, 0px)); z-index: 10; display: flex; gap: 6px; }
   .tb a, .tb button { font: 600 13px system-ui, sans-serif; color: #fff; background: rgba(0,0,0,.45); border: 1px solid rgba(255,255,255,.3);
     border-radius: 8px; padding: 6px 10px; text-decoration: none; cursor: pointer; }
 </style>

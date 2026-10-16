@@ -393,6 +393,7 @@ public partial class Game : MonoBehaviour
     {
         lobbyDt = Mathf.Lerp(lobbyDt, Mathf.Min(Time.unscaledDeltaTime, 30f), 0.1f);     // u6g (RaceWarm calm threshold)
         DemoCheck();
+        ProbeSeats();      // u6h ?lbseats=N (lobby layout probes)
         if (state != State.Lobby) return;
         if (Kb.CDown()) CreditsToggle();
         if (Kb.GDown() && !Kb.typing) ToggleDriveMode(FindSlot(InputKind.Keyboard) ?? (slots.Count > 0 ? slots[0] : null));     // u6g
@@ -508,6 +509,8 @@ public partial class Game : MonoBehaviour
     bool LobbyTap(Vector2 pos, InputKind kind)
     {
         if (Hit(creditsBtn, pos)) { CreditsToggle(true); return false; }
+        for (int i = 0; i < 4 && i < slots.Count; i++)
+            if (Hit(cardMode[i], pos)) { ToggleDriveMode(slots[i]); return false; }     // u6h: per-player MODE chip (2-4 players)
         if (modeBtn != null && Hit(modeBtn, pos))     // u6g: driving mode for the player on this input (or P1)
         {
             Slot ms = FindSlot(kind);

@@ -21,6 +21,26 @@ mergeInto(LibraryManager.library, {
     var ua = (typeof navigator !== "undefined" && navigator.userAgent) ? navigator.userAgent : "";
     return /Tesla|QtCarBrowser/i.test(ua) ? 1 : 0;
   },
+  // u6h: safe-area insets (notch / home bar; the page uses viewport-fit=cover) as a fraction of the canvas edge
+  // (side 0 top, 1 right, 2 bottom, 3 left). ?lbsafe=T,R,B,L (CSS px) simulates insets for probes.
+  LBSafeInset: function (side) {
+    try {
+      var d = window.__lbSafeDiv;
+      if (!d) {
+        d = document.createElement("div");
+        d.style.cssText = "position:fixed;left:0;top:0;width:0;height:0;visibility:hidden;pointer-events:none;" +
+          "padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)";
+        document.body.appendChild(d); window.__lbSafeDiv = d;
+      }
+      var cs = getComputedStyle(d);
+      var px = parseFloat([cs.paddingTop, cs.paddingRight, cs.paddingBottom, cs.paddingLeft][side]) || 0;
+      var q = /[?&]lbsafe=([0-9.,]+)/.exec(location.search);
+      if (q) { var a = q[1].split(","); px = Math.max(px, parseFloat(a[side]) || 0); }
+      var c = (typeof Module !== "undefined" && Module.canvas) ? Module.canvas : document.getElementById("unity-canvas");
+      var r = c.getBoundingClientRect(), dim = (side % 2 === 0) ? r.height : r.width;
+      return dim > 0 ? Math.min(0.3, px / dim) : 0;
+    } catch (e) { return 0; }
+  },
   LBContextAA: function () {
     // lambou6: never call getContext here (on WebGPU that would steal the canvas); only read an existing WebGL context
     try { var g = (typeof GLctx !== "undefined" && GLctx) ? GLctx : (Module.ctx && Module.ctx.getContextAttributes ? Module.ctx : null); if (!g) return -2; var a = g.getContextAttributes(); return a && a.antialias ? (g.getParameter(g.SAMPLES) || 1) : 0; } catch (e) { return -1; }

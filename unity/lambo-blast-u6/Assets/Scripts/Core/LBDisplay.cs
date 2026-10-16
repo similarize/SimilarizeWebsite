@@ -16,12 +16,14 @@ public static class LBDisplay
     [DllImport("__Internal")] static extern int LBIsMobileUA();
     [DllImport("__Internal")] static extern int LBIsTeslaUA();
     [DllImport("__Internal")] static extern int LBContextAA();
+    [DllImport("__Internal")] static extern float LBSafeInset(int side);
 #else
     static float LBSetDPR(int mode) { return 1f; }
     static float LBScreenDPR() { return 1f; }
     static int LBIsMobileUA() { return 0; }
     static int LBIsTeslaUA() { return 0; }
     static int LBContextAA() { return 0; }
+    static float LBSafeInset(int side) { return 0f; }
 #endif
     static int mode = -1;
     public static int Level { get; private set; }          // 0 full, 1 lighter, 2 lightest
@@ -32,6 +34,35 @@ public static class LBDisplay
     public static bool TeslaUA { get { try { return LBIsTeslaUA() == 1; } catch { return false; } } }
     public static float ScreenDpr { get { try { return LBScreenDPR(); } catch { return 1f; } } }
     public static int ContextSamples { get { try { return LBContextAA(); } catch { return -1; } } }
+
+    // u6h: the screen area free of notches / rounded corners / the home bar, in Unity screen pixels (origin bottom-left).
+    // WebGL: the page's CSS env(safe-area-inset-*) (viewport-fit=cover) read by LBSafeInset, re-read every 0.5 s; elsewhere
+    // Screen.safeArea. Lobby UI (GameLobbyUI) is fitted inside it; the sound button keeps clear of it.
+    static Rect safeRect; static float safeT = -10f; static Vector2Int safeScr;
+    public static Rect SafeRect
+    {
+        get
+        {
+            var scr = new Vector2Int(Screen.width, Screen.height);
+            if (Time.unscaledTime - safeT < 0.5f && scr == safeScr) return safeRect;
+            safeT = Time.unscaledTime; safeScr = scr;
+            Rect r = new Rect(0, 0, Screen.width, Screen.height);
+            try
+            {
+#if UNITY_WEBGL && !UNITY_EDITOR
+                float t = LBSafeInset(0), rt = LBSafeInset(1), b = LBSafeInset(2), l = LBSafeInset(3);
+                r = new Rect(l * Screen.width, b * Screen.height, Screen.width * (1f - l - rt), Screen.height * (1f - t - b));
+#else
+                r = Screen.safeArea;
+#endif
+            }
+            catch { }
+            if (r.width < Screen.width * 0.5f || r.height < Screen.height * 0.5f) r = new Rect(0, 0, Screen.width, Screen.height);
+            if (r != safeRect) Debug.Log("U6H: safe area " + r.x.ToString("0") + "," + r.y.ToString("0") + " " + r.width.ToString("0") + "x" + r.height.ToString("0") + " of " + Screen.width + "x" + Screen.height);
+            safeRect = r;
+            return r;
+        }
+    }
 
     public static void Init()
     {

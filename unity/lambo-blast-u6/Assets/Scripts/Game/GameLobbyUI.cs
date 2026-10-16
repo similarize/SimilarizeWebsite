@@ -19,6 +19,12 @@ public partial class Game
     readonly Color[] carTileCol = new Color[8], robotTileCol = new Color[7];
     readonly float[] cardFade = new float[4];
     int lastVisible = -1;
+    // u6h: every lobby control lives under lobbyRoot, a rect fitted to the safe area (notch / home bar); per-player MODE chips
+    RectTransform lobbyRoot;
+    Rect lastSafe;
+    readonly Image[] cardMode = new Image[4];
+    readonly Text[] cardModeLbl = new Text[4];
+    float rectLogAt = -1f;
     RenderTexture trackRT;
     Camera trackCam;
     float lobbyT;
@@ -35,6 +41,8 @@ public partial class Game
         UIK.Stretch(lobbyBg.rectTransform); lobbyBg.rectTransform.offsetMin = new Vector2(-60, -60); lobbyBg.rectTransform.offsetMax = new Vector2(60, 60);
         lobbyGlowA = UIK.Img(r, UIK.SoftDot, new Color(0.2f, 0.65f, 1f, 0.16f), new Vector2(0f, 1f), new Vector2(160, -120), new Vector2(900, 700));
         lobbyGlowB = UIK.Img(r, UIK.SoftDot, new Color(1f, 0.25f, 0.6f, 0.11f), new Vector2(1f, 0f), new Vector2(-140, 120), new Vector2(900, 700));
+        lobbyRoot = UIK.Rect(r, "LobbySafe", new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);     // u6h
+        r = lobbyRoot;
         lobbyTitle = UIK.Label(r, "LAMBO BLAST", 46, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1100, 60), Color.white);
         UIK.Modernize(lobbyTitle, true, 0.55f);
         var tg = lobbyTitle.gameObject.AddComponent<UIGradient>(); tg.top = Color.white; tg.bottom = new Color(0.55f, 0.88f, 1f);
@@ -57,6 +65,13 @@ public partial class Game
             cardPreview[i] = pr.gameObject.AddComponent<RawImage>();
             cardPreview[i].texture = stands[i].rt;
             cardPreview[i].raycastTarget = false;
+            cardHead[i].resizeTextForBestFit = true; cardHead[i].resizeTextMinSize = 8; cardHead[i].resizeTextMaxSize = 14;      // u6h: one line, never under the chip
+            cardHead[i].verticalOverflow = VerticalWrapMode.Truncate;
+            cardMode[i] = UIK.RoundImg(c, UIK.Round2, new Color(0.16f, 0.2f, 0.27f, 0.95f), new Vector2(0.5f, 1f), Vector2.zero, new Vector2(88, 24), 2f);   // u6h per-player MODE chip
+            cardModeLbl[i] = UIK.Label(cardMode[i].transform, "KID", 11, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(88, 24), Color.white);
+            cardModeLbl[i].supportRichText = true;
+            UIK.Stretch(cardModeLbl[i].rectTransform);
+            cardMode[i].gameObject.SetActive(false);
             cardTexts[i] = UIK.Label(c, "", 20, TextAnchor.UpperLeft, new Vector2(0.5f, 1f), Vector2.zero, new Vector2(280, 60), Color.white);
             cardTexts[i].supportRichText = true;
             bars[i] = new Image[4]; barLabs[i] = new Text[4]; barBgs[i] = new Image[4];
@@ -147,21 +162,31 @@ public partial class Game
     }
 
     // ---------------- layout ----------------
-    // Landscape ref 1280x720 (match height when aspect >= 1.78, else width); portrait ref 720x1280. Card size follows the
-    // number of visible cards (1-2 big cinematic windows, 3-4 compact), re-laid out on resize / join / leave.
+    // Landscape ref 1280x720, portrait ref 720x1280, fitted (whole ref box visible) inside the safe area (u6h: was the full
+    // screen; same scale as before when there are no insets). Card size follows the number of visible cards (1-2 big
+    // cinematic windows, 3-4 compact), re-laid out on resize / join / leave / safe-area change.
+    // u6h: no two controls overlap at any aspect (u6g put MODE on top of JOIN / HOST in landscape, so a tap opened the
+    // JOIN keypad); the bottom row is RACE | MODE | HOST | JOIN | CREDITS left to right after the track picker.
     float cardTop;
     void LayoutLobby()
     {
         var now = new Vector2Int(Screen.width, Screen.height);
         int visible = Mathf.Max(1, slots.Count);
-        if (now == lastScreen && visible == lastVisible) return;
-        lastScreen = now; lastVisible = visible;
+        Rect safe = LBDisplay.SafeRect;
+        if (now == lastScreen && visible == lastVisible && safe == lastSafe) return;
+        lastScreen = now; lastVisible = visible; lastSafe = safe;
         bool portrait = Screen.height > Screen.width;
         lobbyLayout = portrait ? 1 : 0;
-        float aspect = Screen.width / (float)Mathf.Max(1, Screen.height);
+        Vector2 refRes = portrait ? new Vector2(720, 1280) : new Vector2(1280, 720);
         var sc = lobbyCanvas.GetComponent<CanvasScaler>();
-        sc.referenceResolution = portrait ? new Vector2(720, 1280) : new Vector2(1280, 720);
-        sc.matchWidthOrHeight = portrait ? (1f / aspect >= 1.75f ? 0f : 1f) : (aspect >= 1.78f ? 1f : 0f);
+        sc.referenceResolution = refRes;
+        sc.uiScaleMode = CanvasScaler.ScaleMode.ConstantPixelSize;
+        sc.scaleFactor = Mathf.Max(0.05f, Mathf.Min(safe.width / refRes.x, safe.height / refRes.y));
+        float sw = Mathf.Max(1, Screen.width), sh = Mathf.Max(1, Screen.height);
+        lobbyRoot.anchorMin = new Vector2(safe.xMin / sw, safe.yMin / sh);
+        lobbyRoot.anchorMax = new Vector2(safe.xMax / sw, safe.yMax / sh);
+        lobbyRoot.offsetMin = Vector2.zero; lobbyRoot.offsetMax = Vector2.zero;
+        rectLogAt = Time.unscaledTime + 3f;
         System.Action<Graphic, Vector2, Vector2> put = (g, p, size) => { g.rectTransform.anchoredPosition = p; g.rectTransform.sizeDelta = size; };
         if (portrait)
         {
@@ -172,14 +197,15 @@ public partial class Game
             tileCarSize = new Vector2(166, 78); tileRobotSize = new Vector2(166, 88);
             for (int i = 0; i < 8; i++) put(carTiles[i], new Vector2(-258 + (i % 4) * 172, -158 - (i / 4) * 84), tileCarSize);
             for (int i = 0; i < 7; i++) put(robotTiles[i], new Vector2(i < 4 ? -258 + i * 172 : -172 + (i - 4) * 172, -334 - (i / 4) * 94), tileRobotSize);
-            put(trackBox, new Vector2(-118, -518), new Vector2(330, 60));
-            put(trackPrev, new Vector2(-312, -518), new Vector2(46, 60));
-            put(trackNext, new Vector2(76, -518), new Vector2(46, 60));
-            put(playBtn, new Vector2(214, -518), new Vector2(240, 56));
-            put(creditsBtn, new Vector2(266, -568), new Vector2(120, 26));
-            put(modeBtn, new Vector2(40, -566), new Vector2(220, 34));
-            put(lobbyStatus, new Vector2(0, -598), new Vector2(690, 24)); lobbyStatus.fontSize = 13;
-            put(lobbyHelp, new Vector2(0, -622), new Vector2(700, 28)); lobbyHelp.fontSize = 10;
+            // u6h: row 1 = track picker + RACE (RACE no longer touches >), row 2 = HOST JOIN MODE CREDITS, all 44 tall (was 26-34)
+            put(trackBox, new Vector2(-118, -508), new Vector2(330, 60));
+            put(trackPrev, new Vector2(-312, -508), new Vector2(46, 60));
+            put(trackNext, new Vector2(76, -508), new Vector2(46, 60));
+            put(playBtn, new Vector2(228, -508), new Vector2(224, 58));
+            put(creditsBtn, new Vector2(266, -568), new Vector2(140, 44));
+            put(modeBtn, new Vector2(40, -568), new Vector2(230, 44));
+            put(lobbyStatus, new Vector2(0, -606), new Vector2(690, 20)); lobbyStatus.fontSize = 13;
+            put(lobbyHelp, new Vector2(0, -628), new Vector2(700, 24)); lobbyHelp.fontSize = 10;
             put(creditsPanel, Vector2.zero, new Vector2(700, 940));
         }
         else
@@ -194,14 +220,15 @@ public partial class Game
             tileCarSize = new Vector2(126, 76); tileRobotSize = new Vector2(136, 88);
             for (int i = 0; i < 8; i++) put(carTiles[i], new Vector2(-483 + i * 138, -122), tileCarSize);
             for (int i = 0; i < 7; i++) put(robotTiles[i], new Vector2(-474 + i * 158, -210), tileRobotSize);
-            put(trackBox, new Vector2(-388, -286), new Vector2(330, 62));
-            put(trackPrev, new Vector2(-584, -286), new Vector2(44, 62));
-            put(trackNext, new Vector2(-192, -286), new Vector2(44, 62));
-            put(playBtn, new Vector2(0, -286), new Vector2(250, 52));
-            put(creditsBtn, new Vector2(548, -286), new Vector2(112, 28));
-            put(modeBtn, new Vector2(398, -286), new Vector2(150, 48));
-            put(lobbyStatus, new Vector2(0, -324), new Vector2(1180, 22)); lobbyStatus.fontSize = 14;
-            put(lobbyHelp, new Vector2(0, -346), new Vector2(1220, 26)); lobbyHelp.fontSize = 10;
+            // u6h: one row, left to right: < TRACK > | RACE | MODE | HOST | JOIN | CREDITS, no overlaps, all inside +-632
+            put(trackBox, new Vector2(-392, -284), new Vector2(330, 62));
+            put(trackPrev, new Vector2(-588, -284), new Vector2(44, 62));
+            put(trackNext, new Vector2(-196, -284), new Vector2(44, 62));
+            put(playBtn, new Vector2(0, -284), new Vector2(250, 52));
+            put(modeBtn, new Vector2(222, -284), new Vector2(170, 52));
+            put(creditsBtn, new Vector2(588, -284), new Vector2(88, 44));
+            put(lobbyStatus, new Vector2(0, -326), new Vector2(1180, 20)); lobbyStatus.fontSize = 14;
+            put(lobbyHelp, new Vector2(0, -348), new Vector2(1220, 24)); lobbyHelp.fontSize = 10;
             put(creditsPanel, Vector2.zero, new Vector2(1060, 500));
         }
         playGlow.rectTransform.anchoredPosition = playBtn.rectTransform.anchoredPosition;
@@ -221,7 +248,8 @@ public partial class Game
         {
             cardSwatch[i].rectTransform.pivot = new Vector2(0f, 0.5f);
             put(cardSwatch[i], new Vector2(14, -17), new Vector2(26, 5));
-            put(cardHead[i], new Vector2(0, -17), new Vector2(w - 92, 20));
+            put(cardHead[i], new Vector2(-24, -17), new Vector2(w - 150, 20));     // u6h: room for the MODE chip on the right
+            put(cardMode[i], new Vector2(w * 0.5f - 54, -17), new Vector2(88, 24));
             put(cardPreviewFrame[i], new Vector2(0, -30 - previewH * 0.5f), new Vector2(pw, previewH));
             put(cardTexts[i], new Vector2(0, -30 - previewH - 8 - 22), new Vector2(w - 28, 46));
             for (int b = 0; b < 4; b++)
@@ -256,7 +284,45 @@ public partial class Game
             put(robotNames[i], new Vector2(0, 11), new Vector2(ts.x - 6, 16));
             put(robotBadges[i], new Vector2(6 + (ts.x - 8) * 0.5f, -12), new Vector2(ts.x - 8, 18));
         }
-        SeatLog("lobby layout " + (portrait ? "portrait" : "landscape") + " " + Screen.width + "x" + Screen.height + " cards " + visible);
+        SeatLog("lobby layout " + (portrait ? "portrait" : "landscape") + " " + Screen.width + "x" + Screen.height + " cards " + visible + " scale " + sc.scaleFactor.ToString("0.000") + " safe " + safe.x.ToString("0") + "," + safe.y.ToString("0") + " " + safe.width.ToString("0") + "x" + safe.height.ToString("0"));
+    }
+
+    // u6h: probe / self-check. A few seconds after a layout, log every tappable lobby control as a fraction of the screen
+    // (origin top-left; 'mode=' is what probes tap) plus any pair that overlaps and any control outside the safe area.
+    void LogLobbyRects()
+    {
+        var names = new System.Collections.Generic.List<string>();
+        var rects = new System.Collections.Generic.List<Rect>();
+        float k = lobbyCanvas.scaleFactor;
+        System.Action<string, Image> add = (n, img) =>
+        {
+            if (img == null || !img.gameObject.activeInHierarchy) return;
+            var rt = img.rectTransform;
+            Vector3 c = rt.TransformPoint(rt.rect.center);
+            Vector2 size = rt.rect.size * k;
+            names.Add(n); rects.Add(new Rect(c.x - size.x * 0.5f, c.y - size.y * 0.5f, size.x, size.y));
+        };
+        add("mode", modeBtn); add("race", playBtn); add("credits", creditsBtn); add("host", hostBtn); add("join", joinBtn);
+        add("prev", trackPrev); add("next", trackNext); add("track", trackBox);
+        for (int i = 0; i < 8; i++) add("car" + i, carTiles[i]);
+        for (int i = 0; i < 7; i++) add("robot" + i, robotTiles[i]);
+        for (int i = 0; i < 4; i++) add("chip" + (i + 1), cardMode[i]);
+        float W = Mathf.Max(1, Screen.width), H = Mathf.Max(1, Screen.height);
+        var sb = new System.Text.StringBuilder("U6H: lobby rects " + Screen.width + "x" + Screen.height + " cards " + Mathf.Max(1, slots.Count));
+        for (int i = 0; i < rects.Count; i++)
+        {
+            Rect q = rects[i];
+            if (i < 5 || names[i].StartsWith("chip")) sb.Append(" " + names[i] + "=" + (q.xMin / W).ToString("0.0000") + "," + ((H - q.yMax) / H).ToString("0.0000") + "," + (q.width / W).ToString("0.0000") + "," + (q.height / H).ToString("0.0000"));
+        }
+        string ov = "", off = "";
+        for (int i = 0; i < rects.Count; i++)
+        {
+            for (int j = i + 1; j < rects.Count; j++) if (rects[i].Overlaps(rects[j])) ov += names[i] + "/" + names[j] + " ";
+            Rect sa = lastSafe;
+            if (rects[i].xMin < sa.xMin - 0.5f || rects[i].yMin < sa.yMin - 0.5f || rects[i].xMax > sa.xMax + 0.5f || rects[i].yMax > sa.yMax + 0.5f) off += names[i] + " ";
+        }
+        sb.Append(" | overlaps " + (ov.Length == 0 ? "none" : ov.Trim()) + " | outside safe " + (off.Length == 0 ? "none" : off.Trim()));
+        Debug.Log(sb.ToString());
     }
 
     static void CropTo(RawImage img, float w, float h, int tw, int th)
@@ -444,6 +510,14 @@ public partial class Game
         if (ns != null) lobbyStatus.text = ns;
         lobbyHelp.text = HelpLines;
         RefreshModeButton();
+        // u6h: per-player MODE chips (2-4 players: tap a chip to switch that player; pads: Back / View)
+        for (int i = 0; i < 4; i++)
+        {
+            bool chip = slots.Count >= 2 && i < slots.Count && cards[i].gameObject.activeSelf;
+            if (cardMode[i].gameObject.activeSelf != chip) cardMode[i].gameObject.SetActive(chip);
+            if (chip) cardModeLbl[i].text = slots[i].expert ? "<color=#ff8a5a><b>EXPERT</b></color>" : "<color=#7dff9a><b>KID</b></color>";
+        }
+        if (rectLogAt > 0f && Time.unscaledTime > rectLogAt) { rectLogAt = -1f; LogLobbyRects(); }
     }
 
     // tile look: glass tile, frame in the colour of the (first) player who picked it, white frame for the tap / mouse

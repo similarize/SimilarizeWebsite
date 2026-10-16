@@ -44,6 +44,29 @@ public partial class Game
         Debug.Log("U6G: P" + (slots.IndexOf(s) + 1) + " driving mode " + (s.expert ? "EXPERT" : "KID"));
     }
 
+    // u6h probe knob: ?lbseats=N (2-4) seats N controller players with no device, in the lobby only, so headless probes can
+    // check the split-screen lobby (cards, per-player MODE chips). SeatTick leaves those device-less seats alone. Not for racing.
+    static bool probeSeats; bool probeSeatsDone;
+    void ProbeSeats()
+    {
+        if (probeSeatsDone || state != State.Lobby) return;
+        probeSeatsDone = true;
+        string u = Application.absoluteURL ?? "";
+        int i = u.IndexOf("lbseats=");
+        if (i < 0 || i + 8 >= u.Length || !char.IsDigit(u[i + 8])) return;
+        int n = Mathf.Clamp(u[i + 8] - '0', 2, 4);
+        probeSeats = true;
+        while (slots.Count > 0) Leave(slots[slots.Count - 1]);
+        for (int k = 0; k < n; k++)
+        {
+            int car = 0; while (!CarFree(car, null)) car++;
+            int robot = slots.Count % Robots.Count; while (!RobotFree(robot, null)) robot = (robot + 1) % Robots.Count;
+            slots.Add(new Slot { kind = InputKind.Gamepad, pad = null, joinTime = Time.unscaledTime, car = car, robot = robot, expert = false });
+        }
+        Assign(); PlaceGrid();
+        Debug.Log("U6H: probe seats " + n + " (device-less controller players, lobby only)");
+    }
+
     string DriveModesNow()
     {
         if (slots.Count == 0) return "";

@@ -22,7 +22,7 @@ public partial class Game
     void BuildNetUI()
     {
         gameObject.AddComponent<LBNet>();
-        Transform r = lobbyCanvas.transform;
+        Transform r = lobbyRoot != null ? (Transform)lobbyRoot : lobbyCanvas.transform;     // u6h: inside the safe-area root
         hostBtn = Glass(r, new Color(0.12f, 0.15f, 0.2f, 0.9f), new Vector2(0.5f, 0.5f));
         hostLbl = UIK.Label(hostBtn.transform, "HOST", 13, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(110, 30), new Color(0.75f, 0.92f, 1f));
         UIK.Stretch(hostLbl.rectTransform);
@@ -38,13 +38,15 @@ public partial class Game
         if (hostBtn == null) return;
         if (portrait)
         {
-            hostBtn.rectTransform.anchoredPosition = new Vector2(-268, -568); hostBtn.rectTransform.sizeDelta = new Vector2(112, 26);
-            joinBtn.rectTransform.anchoredPosition = new Vector2(-148, -568); joinBtn.rectTransform.sizeDelta = new Vector2(112, 26);
+            // u6h: 44 tall (was 26), clear of MODE (GameLobbyUI.LayoutLobby)
+            hostBtn.rectTransform.anchoredPosition = new Vector2(-292, -568); hostBtn.rectTransform.sizeDelta = new Vector2(124, 44);
+            joinBtn.rectTransform.anchoredPosition = new Vector2(-160, -568); joinBtn.rectTransform.sizeDelta = new Vector2(124, 44);
         }
         else
         {
-            hostBtn.rectTransform.anchoredPosition = new Vector2(300, -286); hostBtn.rectTransform.sizeDelta = new Vector2(104, 40);
-            joinBtn.rectTransform.anchoredPosition = new Vector2(414, -286); joinBtn.rectTransform.sizeDelta = new Vector2(104, 40);
+            // u6h: u6g's MODE (398, 150 wide) sat on top of HOST + JOIN -> MODE now 137..307, HOST 320..424, JOIN 432..536
+            hostBtn.rectTransform.anchoredPosition = new Vector2(372, -284); hostBtn.rectTransform.sizeDelta = new Vector2(104, 44);
+            joinBtn.rectTransform.anchoredPosition = new Vector2(484, -284); joinBtn.rectTransform.sizeDelta = new Vector2(104, 44);
         }
         var cs = keypadCanvas.GetComponent<CanvasScaler>();
         float aspect = Screen.width / (float)Mathf.Max(1, Screen.height);

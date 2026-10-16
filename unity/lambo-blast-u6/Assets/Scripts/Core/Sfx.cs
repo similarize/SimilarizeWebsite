@@ -67,9 +67,14 @@ public static class Sfx
         if (button == null) return;
         RectTransform rt = button.rectTransform;
         Vector2 a = corner ? new Vector2(0f, 1f) : new Vector2(0.5f, 1f);
-        if (rt.anchorMin == a) return;
+        // u6h: keep clear of the notch / rounded corner (safe area, in canvas units)
+        Rect sa = LBDisplay.SafeRect;
+        float k = canvas != null && canvas.scaleFactor > 0.01f ? canvas.scaleFactor : 1f;
+        Vector2 nudge = new Vector2(corner ? sa.xMin / k : 0f, -(Screen.height - sa.yMax) / k);
+        Vector2 p = (corner ? new Vector2(80, -26) : new Vector2(70, -26)) + nudge;
+        if (rt.anchorMin == a && rt.anchoredPosition == p) return;
         rt.anchorMin = a; rt.anchorMax = a;
-        rt.anchoredPosition = corner ? new Vector2(80, -26) : new Vector2(70, -26);
+        rt.anchoredPosition = p;
     }
 
     public static RectTransform ButtonRect { get { return button != null ? button.rectTransform : null; } }

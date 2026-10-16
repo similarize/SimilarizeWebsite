@@ -97,7 +97,7 @@ public partial class Game
                 for (int j = 0; j < i; j++)
                     if (slots[j].kind == InputKind.Gamepad && slots[j].pad != null && (slots[j].pad == s.pad || PadGuard.RootOf(slots[j].pad) == root)) why = "same controller as P" + (j + 1);
             }
-            if (why == null && s.kind == InputKind.Gamepad && (s.pad == null || PadGuard.IsRemoved(s.pad)))
+            if (why == null && s.kind == InputKind.Gamepad && !(probeSeats && s.pad == null) && (s.pad == null || PadGuard.IsRemoved(s.pad)))
             {
                 float t0;
                 if (!seatDeadSince.TryGetValue(s, out t0)) { seatDeadSince[s] = now; t0 = now; }
