@@ -66,19 +66,19 @@
   // lambou6: say which path the browser offers (Unity picks WebGPU first, WebGL2 as the fallback)
   try { console.log("LBU6 page: navigator.gpu " + (navigator.gpu ? "present" : "absent") + ", isSecureContext " + window.isSecureContext); } catch (e) {}
   var config = {
-    dataUrl: buildUrl + "/" + name + ".data?v=202610160433-afdd0be",
-    frameworkUrl: buildUrl + "/" + name + ".framework.js?v=202610160433-afdd0be",
-    codeUrl: buildUrl + "/" + name + ".wasm?v=202610160433-afdd0be",
+    dataUrl: buildUrl + "/" + name + ".data?v=202610160532-b2a4c61",
+    frameworkUrl: buildUrl + "/" + name + ".framework.js?v=202610160532-b2a4c61",
+    codeUrl: buildUrl + "/" + name + ".wasm?v=202610160532-b2a4c61",
     streamingAssetsUrl: "StreamingAssets",
     companyName: "Similarize",
     productName: "Lambo Blast",
-    productVersion: "202610160433-afdd0be",
+    productVersion: "202610160532-b2a4c61",
     devicePixelRatio: window.LBDPR.lobby,
     showBanner: function (msg, type) { if (type === "error") { var e = document.getElementById("err"); e.style.display = "block"; e.textContent = msg; } else console.log(msg); }
   };
   var fill = document.getElementById("fill"), pct = document.getElementById("pct"), loader = document.getElementById("loader");
   var script = document.createElement("script");
-  script.src = buildUrl + "/" + name + ".loader.js?v=202610160433-afdd0be";
+  script.src = buildUrl + "/" + name + ".loader.js?v=202610160532-b2a4c61";
   script.onload = function () {
     createUnityInstance(canvas, config, function (p) {
       fill.style.width = Math.round(p * 100) + "%";
