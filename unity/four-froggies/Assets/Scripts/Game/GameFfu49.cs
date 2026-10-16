@@ -109,12 +109,12 @@ public class Ffu49 : MonoBehaviour
     // ---------------- roof hop ----------------
     void Roof(float t)
     {
-        const float lane = 8f;
+        const float lane = 8.6f;   // clear of the chimney (z 5..7) and the north parapet (z 10.8)
         switch (ph)
         {
             case 0:
                 if (t < 4f) break;
-                Enter(new Vector3(42f, Ranch.GY(42f, lane) + 0.5f, lane), Quaternion.Euler(0f, 270f, 0f), 0f);
+                Enter(new Vector3(66f, Ranch.GY(66f, lane) + 0.5f, lane), Quaternion.Euler(0f, 270f, 0f), 0f);
                 car.inputHook = i => { var o = Pilot(car, 99f, new Vector3(0f, 0f, lane), Vector3.left); o.gas = 1f; o.brake = 0f; return o; };
                 Next(1); Debug.Log("FFDEMO roadster roof start: launch from " + car.transform.position.ToString("0.0") + " heading west on z " + lane);
                 break;
@@ -127,7 +127,7 @@ public class Ffu49 : MonoBehaviour
                 }
                 break;
             case 2:
-                if (car.transform.position.x <= -2f)
+                if (car.transform.position.x <= -2f && car.ForwardSpeed < 9f)
                 {
                     Next(3); hopFrom = car.transform.position; Time.timeScale = 0.45f;
                     Debug.Log("FFDEMO roadster HOP: thrusters at " + hopFrom.ToString("0.0") + " fs " + car.ForwardSpeed.ToString("0.0"));
@@ -135,10 +135,10 @@ public class Ffu49 : MonoBehaviour
                 break;
             case 3:
                 {
-                    // hold thrusters 1.0 s of game time
+                    // hold thrusters 0.9 s of game time
                     float gt = phT;   // phT counts scaled time
-                    car.inputHook = i => { var o = new PIn(); o.upHeld = gt < 1.0f; return o; };
-                    if (phT > 1.2f && car.grounded > 0) { Next(4); car.inputHook = i => { var o = new PIn(); o.brake = 1f; return o; }; }
+                    car.inputHook = i => { var o = new PIn(); o.upHeld = gt < 0.9f; return o; };
+                    if (phT > 1.2f && car.grounded > 0) { Next(4); car.inputHook = i => { var o = new PIn(); if (car.ForwardSpeed > 0.5f) o.brake = 1f; return o; }; }
                     else if (phT > 12f) { Next(4); Debug.Log("FFDEMO roadster HOP never landed"); }
                 }
                 break;
@@ -196,7 +196,7 @@ public class Ffu49 : MonoBehaviour
                 }
                 break;
             case 3:
-                if (!car.rolling && phT > 0.3f && car.grounded > 0) { Next(4); car.inputHook = i => { var o = new PIn(); o.brake = 1f; return o; }; }
+                if (!car.rolling && phT > 0.3f && car.grounded > 0) { Next(4); car.inputHook = i => { var o = new PIn(); if (car.ForwardSpeed > 0.5f) o.brake = 1f; return o; }; }
                 else if (phT > 20f) Next(4);
                 break;
             case 4:
@@ -225,7 +225,7 @@ public class Ffu49 : MonoBehaviour
                 if (phT > 1.9f) { car.DemoRoll(1f); Next(3); }
                 break;
             case 3:
-                if (!car.rolling && phT > 0.3f && car.grounded > 0) { Next(4); car.inputHook = i => { var o = new PIn(); o.brake = 1f; return o; }; }
+                if (!car.rolling && phT > 0.3f && car.grounded > 0) { Next(4); car.inputHook = i => { var o = new PIn(); if (car.ForwardSpeed > 0.5f) o.brake = 1f; return o; }; }
                 else if (phT > 20f) Next(4);
                 break;
             case 4:
@@ -258,7 +258,7 @@ public class Ffu49 : MonoBehaviour
                 if (car.crawl) car.demoCrawl = 3.5f; else car.demoCrawl = -1f;
                 if (inverted && car.transform.up.y > 0.9f && car.transform.position.x > RallyTrack.JointOut.x + 6f)
                 {
-                    Next(2); car.demoCrawl = -1f; car.inputHook = i => { var o = new PIn(); o.brake = 1f; return o; };
+                    Next(2); car.demoCrawl = -1f; car.inputHook = i => { var o = new PIn(); if (car.ForwardSpeed > 0.5f) o.brake = 1f; return o; };
                     Debug.Log("FFDEMO roadster LOOP pass: upside down (up < -0.9, wheels on) for " + invT.ToString("0.0") + " s, speed there " + invVmin.ToString("0.0") + ".." + invVmax.ToString("0.0") + " m/s (" + (invVmax * 3.6f).ToString("0") + " km/h max), min wheels on " + invGmin + ", min up " + minUp.ToString("0.00") + ", out at " + car.transform.position.ToString("0.0"));
                 }
                 else if (phT > 150f) { Next(2); Debug.Log("FFDEMO roadster LOOP FAIL: no complete pass (inverted " + inverted + " min up " + minUp.ToString("0.00") + ") at " + car.transform.position.ToString("0.0")); }

@@ -64,10 +64,10 @@ public class Roadster49 : Vehicle
     {
         get
         {
-            int n = Mathf.RoundToInt(air / TankL * 12f);
-            string bar = "<color=#8fe3ff>" + new string('|', n) + "</color><color=#4a5560>" + new string('|', 12 - n) + "</color>";
-            string s = "ROADSTER  " + Mathf.RoundToInt(Speed * 3.6f) + " km/h   AIR " + bar + " " + Mathf.RoundToInt(air) + " L";
-            s += fansOn ? "   FANS " + (sucK > 0.5f ? "<color=#9fe0ff>HOLDING</color>" : "on") : "   fans off";
+            int n = Mathf.RoundToInt(air / TankL * 10f);
+            string bar = "<color=#8fe3ff>" + new string('|', n) + "</color><color=#4a5560>" + new string('|', 10 - n) + "</color>";
+            string s = "ROADSTER " + Mathf.RoundToInt(Velocity.magnitude * 3.6f) + " km/h  AIR " + bar + " " + Mathf.RoundToInt(air) + " L";
+            s += fansOn ? "  FANS " + (sucK > 0.5f ? "<color=#9fe0ff>HOLDING</color>" : "on") : "   fans off";
             if (crawl) s += "   CRAWL " + Mathf.RoundToInt(Mathf.Abs(crawlV) * 3.6f) + " km/h";
             if (refilling) s += "   <color=#9fe0ff>refilling...</color>";
             if (grounded == 0 && agl < 90f) s += "   alt " + Mathf.RoundToInt(agl) + " m";
@@ -498,8 +498,8 @@ public class Roadster49 : Vehicle
 
     static float LaunchA(float fs)
     {
-        if (fs < 26f) return 34f;                         // 0-60 mph in ~0.8 s
-        return 34f * Mathf.Clamp01((60f - fs) / 34f);     // tops out ~216 km/h
+        if (fs < 26f) return 36f;                         // 0-60 mph in ~0.8 s
+        return 36f * Mathf.Clamp01((60f - fs) / 34f);     // tops out ~216 km/h
     }
 
     void Puff(float vol)
@@ -709,48 +709,79 @@ public static class CRamp49
         return g;
     }
 
+    // ffu49b: candidates on a 6 m grid round the loop (nearest first, 4 headings); geometric checks, then nothing solid in the
+    // footprint. If no spot is fully clear, the best one blocked only by a few small static props (trees / bushes / rocks:
+    // no rigidbody, not a vehicle / prop / track layer, < 5 m) gets those props hidden. Rejection counts are logged.
+    static readonly int[] why = new int[8];
     static bool PickSite(out Vector2 site, out float yaw)
     {
-        Vector2 lc = Layout.LoopC;
+        Vector2 lc = Layout.LoopC + new Vector2(0f, Layout.LoopShift * 0.5f);
         var cands = new List<Vector3>();
-        for (int ring = 1; ring <= 4; ring++)
-            for (int a = 0; a < 12; a++)
-            {
-                float ang = a * 30f * Mathf.Deg2Rad, r = 22f + ring * 12f;
-                Vector2 c = lc + new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)) * r;
-                foreach (float y in new[] { 90f, 270f, 0f, 180f }) cands.Add(new Vector3(c.x, y, c.y));
-            }
+        for (float x = -136f; x <= -16f; x += 6f)
+            for (float z = 10f; z <= 118f; z += 6f)
+                foreach (float y in new[] { 90f, 270f, 0f, 180f }) cands.Add(new Vector3(x, y, z));
+        cands.Sort((a, b) => (new Vector2(a.x, a.z) - lc).sqrMagnitude.CompareTo((new Vector2(b.x, b.z) - lc).sqrMagnitude));
+        System.Array.Clear(why, 0, why.Length);
+        Vector3 bestSoft = Vector3.zero; List<Collider> bestBlock = null; int logged = 0;
         foreach (var c in cands)
         {
             Vector2 s = new Vector2(c.x, c.z);
-            if (Clear(s, c.y)) { site = s; yaw = c.y; return true; }
+            List<Collider> block;
+            int r = Clear(s, c.y, out block);
+            if (r == 0) { site = s; yaw = c.y; LogWhy("clear"); return true; }
+            why[r]++;
+            if (r == 6)
+            {
+                if (logged < 3) { logged++; string n = ""; for (int i = 0; i < block.Count && i < 4; i++) n += block[i].name + "(" + LayerMask.LayerToName(block[i].gameObject.layer) + "/" + block[i].gameObject.layer + ") "; Debug.Log("CRamp49: " + s.ToString("0") + " yaw " + c.y + " blocked by " + block.Count + ": " + n); }
+                if (bestBlock == null || block.Count < bestBlock.Count)
+                {
+                    bool soft = block.Count <= 6;
+                    foreach (var b in block) if (b.attachedRigidbody != null || b.gameObject.layer != 0 || b.bounds.size.magnitude > 9f || b is MeshCollider) soft = false;
+                    if (soft) { bestBlock = block; bestSoft = c; }
+                }
+            }
         }
+        if (bestBlock != null)
+        {
+            string n = "";
+            foreach (var b in bestBlock) { n += b.name + " "; Transform t = b.transform; while (t.parent != null && t.parent.GetComponent<Collider>() == null && t.parent.childCount == 1) t = t.parent; t.gameObject.SetActive(false); }
+            site = new Vector2(bestSoft.x, bestSoft.z); yaw = bestSoft.y; LogWhy("cleared " + bestBlock.Count + " small props (" + n.Trim() + ")"); return true;
+        }
+        LogWhy("none");
         site = Vector2.zero; yaw = 0f; return false;
     }
-    static bool Clear(Vector2 c, float yaw)
+    static void LogWhy(string res) { Debug.Log("CRamp49: site pick " + res + " | rejected: bounds " + why[1] + " road " + why[2] + " pond " + why[3] + " reserved " + why[4] + " buildings " + why[5] + " solid " + why[6] + " slope " + why[7]); }
+    // 0 ok, 1 bounds, 2 road, 3 pond, 4 reserved, 5 house / garage / pads, 6 something solid there, 7 too sloped
+    static int Clear(Vector2 c, float yaw, out List<Collider> block)
     {
+        block = null;
         Quaternion q = Quaternion.Euler(0f, yaw, 0f);
         float lo = 1e9f, hi = -1e9f;
-        for (float u = -5f; u <= 5f; u += 2.5f)
-            for (float v = -Lead - 34f; v <= R + 3f; v += 3f)
+        const float runUp = 20f;
+        for (float u = -5f; u <= 5f; u += 5f)
+            for (float v = -Lead - runUp; v <= R + 3f; v += 4f)
             {
                 Vector3 w = new Vector3(c.x, 0f, c.y) + q * new Vector3(u, 0f, v);
-                if (Mathf.Abs(w.x) > 170f || Mathf.Abs(w.z) > 170f) return false;
-                if (Layout.RoadDist(w.x, w.z) < Layout.TrackW * 0.5f + 3f) return false;
-                if (Layout.PondQ(w.x, w.z) < 1.25f) return false;
-                if (JetLayout.Reserved(w.x, w.z) || RcTrack.Reserved(w.x, w.z) || MonsterPark.Reserved(w.x, w.z) || CarrierLayout.Reserved(w.x, w.z) || MissionSite.Reserved(w.x, w.z)) return false;
-                if ((new Vector2(w.x, w.z) - StorySet.PadXZ).magnitude < 25f) return false;
-                if ((new Vector2(w.x, w.z) - Layout.PadC).magnitude < 30f) return false;
-                if (Mathf.Abs(w.x - Layout.HouseC.x) < Layout.HouseSize.x * 0.5f + 10f && Mathf.Abs(w.z - Layout.HouseC.y) < Layout.HouseSize.y * 0.5f + 10f) return false;
-                if (Mathf.Abs(w.x - Layout.GarageC.x) < Layout.GarageSize.x * 0.5f + 10f && Mathf.Abs(w.z - Layout.GarageC.y) < Layout.GarageSize.y * 0.5f + 16f) return false;
+                if (Mathf.Abs(w.x) > 170f || Mathf.Abs(w.z) > 170f) return 1;
+                if (Layout.RoadDist(w.x, w.z) < Layout.TrackW * 0.5f + 1.5f) return 2;
+                if (Layout.PondQ(w.x, w.z) < 1.25f) return 3;
+                if (JetLayout.Reserved(w.x, w.z) || RcTrack.Reserved(w.x, w.z) || MonsterPark.Reserved(w.x, w.z) || CarrierLayout.Reserved(w.x, w.z) || MissionSite.Reserved(w.x, w.z)) return 4;
+                if (Worlds.StageEOn && RanchLife.Reserved(w.x, w.z)) return 4;
+                if ((new Vector2(w.x, w.z) - StorySet.PadXZ).magnitude < 25f || (new Vector2(w.x, w.z) - Layout.PadC).magnitude < 30f) return 5;
+                if (Mathf.Abs(w.x - Layout.HouseC.x) < Layout.HouseSize.x * 0.5f + 8f && Mathf.Abs(w.z - Layout.HouseC.y) < Layout.HouseSize.y * 0.5f + 8f) return 5;
+                if (Mathf.Abs(w.x - Layout.GarageC.x) < Layout.GarageSize.x * 0.5f + 8f && Mathf.Abs(w.z - Layout.GarageC.y) < Layout.GarageSize.y * 0.5f + 14f) return 5;
                 float g = Ranch.GY(w.x, w.z);
                 if (v > -Lead - 6f) { lo = Mathf.Min(lo, g); hi = Mathf.Max(hi, g); }
             }
-        if (hi - lo > 1.4f) return false;
-        // nothing built there already (trees, fences, props...): the footprint + run-up, 16 m up
-        Vector3 ctr = new Vector3(c.x, (lo + hi) * 0.5f + 8f, c.y) + q * new Vector3(0f, 0f, (-Lead - 34f + R + 3f) * 0.5f);
-        var hits = Physics.OverlapBox(ctr, new Vector3(6f, 7.8f, (Lead + 34f + R + 3f) * 0.5f), q, ~((1 << 2) | (1 << Vehicle.FrogLayer)), QueryTriggerInteraction.Ignore);
-        foreach (var h in hits) if (!(h is TerrainCollider)) return false;
-        return true;
+        if (hi - lo > 1.6f) return 7;
+        // nothing built there already: the structure footprint (+1 m), 0.3 .. 15 m above the ground
+        Vector3 ctr = new Vector3(c.x, lo + 7.8f, c.y) + q * new Vector3(0f, 0f, (-Lead - 6f + R + 1f) * 0.5f);
+        var hits = Physics.OverlapBox(ctr, new Vector3(W * 0.5f + 1.6f, 7.4f, (Lead + 6f + R + 1f) * 0.5f), q, ~((1 << 2) | (1 << Vehicle.FrogLayer)), QueryTriggerInteraction.Ignore);
+        foreach (var h in hits) if (!(h is TerrainCollider)) { if (block == null) block = new List<Collider>(); block.Add(h); }
+        // and the run-up lane in front of it, low (fences / props)
+        Vector3 rc = new Vector3(c.x, lo + 1.2f, c.y) + q * new Vector3(0f, 0f, -Lead - 6f - runUp * 0.5f);
+        foreach (var h in Physics.OverlapBox(rc, new Vector3(2f, 0.9f, runUp * 0.5f), q, ~((1 << 2) | (1 << Vehicle.FrogLayer)), QueryTriggerInteraction.Ignore))
+            if (!(h is TerrainCollider)) { if (block == null) block = new List<Collider>(); block.Add(h); }
+        return block != null ? 6 : 0;
     }
 }
