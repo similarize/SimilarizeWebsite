@@ -149,6 +149,7 @@ jobs:
           mkdir -p "$GAME_DIR"
           cp -r "$OUT/Build" "$GAME_DIR/Build"
           if [ -d "$OUT/StreamingAssets" ]; then cp -r "$OUT/StreamingAssets" "$GAME_DIR/"; fi
+          cp "$GITHUB_WORKSPACE/$PROJECT_DIR/web/LICENSES.txt" "$GAME_DIR/LICENSES.txt" || true
           sed -e "s/__BUILD_NAME__/$NAME/g" -e "s/__BUILD_VERSION__/$VERSION/g" -e 's#href="../"#href="/games/"#' -e 's#<head>#<head><meta name="robots" content="noindex,nofollow">#' "$GITHUB_WORKSPACE/src/unity/web/index.html" > "$GAME_DIR/index.html"
           git add -A "$GAME_DIR"
           if git diff --cached --quiet; then echo "nothing to publish"; exit 0; fi

@@ -40,8 +40,9 @@ public class Game : MonoBehaviour
     bool mobileAutoJoined;
     int lastBeep = -1;
 
-    // Figures: false = Soldiers (X-Bot), true = Critters
-    public static bool critterMode;
+    // U6 (Hark): the cast is always the Four Froggies + friends (Critters.cs); the old soldier figures are gone.
+    // The lobby bar (Y / F / tap) now picks the BOTS roster (Critters.Roster). critterMode stays true.
+    public static bool critterMode = true;
     float lastFigureToggle = -10f;
     Image figImg;
     Text figText;
@@ -79,12 +80,14 @@ public class Game : MonoBehaviour
         Look.ApplyViews(1, new[] { overview });
         string url = "";
         try { url = Application.absoluteURL ?? ""; } catch { }
+        Critters.Roster = Mathf.Clamp(PlayerPrefs.GetInt("bb.roster", 0), 0, Critters.RosterNames.Length - 1);
         Demo = url.Contains("bbdemo");
         if (Demo)
         {
             int k = url.IndexOf("bbshot=");
             if (k >= 0) { demoShot = url.Substring(k + 7); int e = demoShot.IndexOfAny(new[] { '&', '#' }); if (e >= 0) demoShot = demoShot.Substring(0, e); }
-            if (url.Contains("bbcrit=1")) critterMode = true;
+            int rk = url.IndexOf("bbroster=");
+            if (rk >= 0 && rk + 9 < url.Length && char.IsDigit(url[rk + 9])) Critters.Roster = (url[rk + 9] - '0') % Critters.RosterNames.Length;
             demoTouch = url.Contains("bbtouch=1");
             demoDogs = url.Contains("bbdogs=1");
             demoAds = url.Contains("bbads=1");
@@ -93,7 +96,7 @@ public class Game : MonoBehaviour
             if (nk >= 0 && nk + 4 < url.Length) int.TryParse(url.Substring(nk + 4, 1), out demoN);
             int tk = url.IndexOf("bbtarget=");
             if (tk >= 0 && tk + 9 < url.Length) int.TryParse(url.Substring(tk + 9, 1), out demoTarget);
-            Debug.Log("Balloon Blast: demo mode, shot " + demoShot + (critterMode ? ", critters" : ""));
+            Debug.Log("Balloon Blast: demo mode, shot " + demoShot + ", bots " + Critters.RosterNames[Critters.Roster]);
         }
 #if ENABLE_INPUT_SYSTEM
         Debug.Log("Balloon Blast: ENABLE_INPUT_SYSTEM defined");
@@ -129,7 +132,7 @@ public class Game : MonoBehaviour
         creditsBtn = UIK.Img(r, null, new Color(0f, 0f, 0f, 0.5f), new Vector2(0f, 1f), new Vector2(84, -26), new Vector2(150, 34));
         var cl = UIK.Label(creditsBtn.transform, "CREDITS (C)", 17, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(150, 34), new Color(0.8f, 0.95f, 1f));
         UIK.Stretch(cl.rectTransform);
-        lobbyHint = UIK.Label(r, "Gamepad: L-stick move | R-stick look | RT fire | LT aim | A jump | X reload\nKeyboard: WASD | mouse look | click fire | right-click aim | Space jump | R reload\nTouch: left stick | drag right side to look | FIRE / AIM / JUMP / RELOAD\nFigures: Y / F / tap the FIGURES bar.  Critters: pick with D-pad / Left-Right arrows / tap < >.  Sound: M / SOUND button", 20, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, -208), new Vector2(1150, 130), new Color(1, 1, 1, 0.85f));
+        lobbyHint = UIK.Label(r, "Gamepad: L-stick move | R-stick look | RT fire | LT aim | A jump | X reload\nKeyboard: WASD | mouse look | click fire | right-click aim | Space jump | R reload\nTouch: left stick | drag right side to look | FIRE / AIM / JUMP / RELOAD\nBots roster: Y / F / tap the BOTS bar.  Pick your character: D-pad / Left-Right arrows / tap < >.  Sound: M / SOUND button", 20, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, -208), new Vector2(1150, 130), new Color(1, 1, 1, 0.85f));
     }
 
     void BuildCredits()
@@ -208,8 +211,12 @@ public class Game : MonoBehaviour
         "<b>Trees, pines, bushes, rocks, grass, ferns, flowers</b>: Stylized Nature MegaKit by Quaternius (quaternius.com), CC0.\n" +
         "<b>Sky</b> (Kloofendal 48d Partly Cloudy Pure Sky) and <b>grass / dirt / wood / barn / metal roof textures</b>: Poly Haven\n" +
         "   (polyhaven.com), CC0.\n" +
-        "<b>Soldiers</b>: Mixamo X Bot via the Babylon.js asset library (assets.babylonjs.com, loaded at runtime).\n" +
-        "<b>Airsoft rifle, balloons, frogs / cats / dogs, fort, barn, hay, crates, log</b>: modelled for this game (no logos).\n" +
+        "<b>The Four Froggies</b> (James, Jimmy, Bubbles, Rexy), <b>cats</b> (Spotty, Tigy, Kitty, Little White Socks), <b>dogs</b> (Germy, Daisy):\n" +
+        "   Four Froggies characters, modelled for this game. <b>Robots</b>: Four Froggies robot models - Unitree H1 (Unitree Robotics,\n" +
+        "   BSD 3-Clause), Atlas HD (MIT Robot Locomotion Group DRC Atlas, BSD 3-Clause), Optimus / Figure 02 / Figure 03 / Atlas electric\n" +
+        "   modelled for the game from public photos (no logos; not affiliated with their makers).\n" +
+        "<b>Candy / holiday props</b>: Kenney Food Kit + Holiday Kit, CC0. <b>Balloon shapes</b>: \"Balloons\" by loafbrr (OpenGameArt), CC0.\n" +
+        "<b>Airsoft rifle, balloons, fort, barn, hay, crates, log</b>: modelled for this game (no logos).\n" +
         "<b>Music</b>: \"Happy Clappy Loop\" by OwlishMedia and \"Happy Beat\" by burabotti (OpenGameArt), CC0.\n" +
         "<b>Sounds</b>: Kenney (kenney.nl) Impact, RPG, Interface + Jingles packs; cheers and countryside ambience from BigSoundBank\n" +
         "   (DenisChardonnet, Joseph Sardin); applause \"Well Done\" by qubodup and \"Cheers\" by Nocturnal_Vanguard (OpenGameArt). All CC0.\n" +
@@ -253,11 +260,8 @@ public class Game : MonoBehaviour
             arrowL[i].gameObject.SetActive(pick);
             arrowR[i].gameObject.SetActive(pick);
         }
-        figText.text = critterMode
-            ? "FIGURES:   Soldiers   <color=#ffd84a>[ CRITTERS ]</color>     <size=18>(Y / F / tap)</size>"
-            : "FIGURES:   <color=#ffd84a>[ SOLDIERS ]</color>   Critters     <size=18>(Y / F / tap)</size>";
-        string model = critterMode || ModelLoader.Ready ? "" : ModelLoader.Failed ? "  (using simple soldiers)" : "  (loading soldiers...)";
-        model += "\nArena: " + World.ArenaName + "  (N / Select to change)";
+        figText.text = "BOTS:  <color=#ffd84a>" + Critters.RosterNames[Critters.Roster].ToUpper() + "</color>   <size=18>(Y / F / tap to change)</size>";
+        string model = "\nArena: " + World.ArenaName + "  (N / Select to change)";
         if (slots.Count == 0) lobbyStatus.text = "Press A on a gamepad or Enter on the keyboard to join" + model;
         else
         {
@@ -458,10 +462,11 @@ public class Game : MonoBehaviour
         float now = Time.unscaledTime;
         if (now - lastFigureToggle < 0.3f) return;   // duplicate/ghost pads report the same press
         lastFigureToggle = now;
-        critterMode = !critterMode;
+        Critters.Roster = (Critters.Roster + 1) % Critters.RosterNames.Length;
+        PlayerPrefs.SetInt("bb.roster", Critters.Roster);
         Sfx.UiSwitch();
         BumpAutoStart();
-        Debug.Log("Figures: " + (critterMode ? "Critters" : "Soldiers"));
+        Debug.Log("Bots roster: " + Critters.RosterNames[Critters.Roster]);
     }
 
     void BumpAutoStart()
@@ -569,12 +574,23 @@ public class Game : MonoBehaviour
         matchWinner = null;
         feedLines.Clear(); feedTimes.Clear();
 
-        // Critters mode: humans keep their picks, bots get different random critters
+        // Humans keep their picks. Bots: every froggy nobody picked first (James, Jimmy, Bubbles, Rexy always play), then the
+        // BOTS roster's other characters in random order (pets / robots / everyone), then anyone left if seats remain.
         var botCritters = new List<int>();
         if (critterMode)
         {
-            for (int c = 0; c < Critters.Count; c++) if (!CritterTaken(c, null)) botCritters.Add(c);
-            for (int k = botCritters.Count - 1; k > 0; k--) { int j = Random.Range(0, k + 1); int t = botCritters[k]; botCritters[k] = botCritters[j]; botCritters[j] = t; }
+            var extra = new List<int>(); var rest = new List<int>();
+            for (int c = 0; c < Critters.Count; c++)
+            {
+                if (CritterTaken(c, null)) continue;
+                CritterDef cd = Critters.All[c];
+                if (cd.kind == CritterKind.Frog) botCritters.Add(c);
+                else if (Critters.InRoster(cd, Critters.Roster)) extra.Add(c);
+                else rest.Add(c);
+            }
+            for (int k = extra.Count - 1; k > 0; k--) { int j = Random.Range(0, k + 1); int t = extra[k]; extra[k] = extra[j]; extra[j] = t; }
+            botCritters.AddRange(extra); botCritters.AddRange(rest);
+            Debug.Log("Bots roster " + Critters.RosterNames[Critters.Roster] + ": " + string.Join(", ", botCritters.ConvertAll(c => Critters.All[c].name).ToArray()));
             if (Demo && demoDogs)   // &bbdogs=1: the first bots are the two dogs (screenshots: bbtarget=1 / soldier2)
                 for (int c = Critters.Count - 1; c >= 0; c--)
                     if (Critters.All[c].kind == CritterKind.Dog && botCritters.Remove(c)) botCritters.Insert(0, c);

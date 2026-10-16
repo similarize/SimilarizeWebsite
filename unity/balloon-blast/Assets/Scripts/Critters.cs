@@ -1,8 +1,12 @@
 using UnityEngine;
 
-// "Critters" figure mode: ten named frogs, cats and dogs built procedurally from primitives.
-public enum CritterKind { Frog, Cat, Dog }
-public enum CritterLook { Plain, Spots, Stripes, Socks, Shepherd, Dachshund }
+// The cast (U6, Hark 2026-10-15): the Four Froggies (James, Jimmy, Bubbles, Rexy) are always in the match; the cats
+// (Spotty, Tigy, Kitty, Little White Socks), the dogs (Germy, Daisy) and James's robots (Four Froggies robot table:
+// Optimus, Unitree, Figure 03, Figure 02, Atlas HD, Atlas electric) fill the other seats by the lobby BOTS roster and can be
+// picked by any player. Names / colours = Four Froggies CANON.md. Frog / cat / dog meshes = Resources/LB/bb*.bytes
+// (work/lb-gfx/bb, Four Froggies frog design, outward winding); robots = the Four Froggies sr_*.bytes standing packs.
+public enum CritterKind { Frog, Cat, Dog, Robot }
+public enum CritterLook { Plain, Spots, Stripes, Socks, Shepherd, Dachshund, Robot }
 
 public class CritterDef
 {
@@ -11,14 +15,17 @@ public class CritterDef
     public CritterLook look;
     public Color main, accent;
 
-    public CritterDef(string name, CritterKind kind, CritterLook look, string main, string accent)
+    public string pack;      // robots: Four Froggies standing pack (Resources/LB/sr_*.bytes)
+    public float height = 1.8f;
+
+    public CritterDef(string name, CritterKind kind, CritterLook look, string main, string accent, string pack = null, float height = 1.8f)
     {
-        this.name = name; this.kind = kind; this.look = look;
+        this.name = name; this.kind = kind; this.look = look; this.pack = pack; this.height = height;
         this.main = Critters.Hex(main);
         this.accent = accent != null ? Critters.Hex(accent) : this.main;
     }
 
-    public string KindName { get { return kind == CritterKind.Frog ? "Frog" : kind == CritterKind.Cat ? "Cat" : look == CritterLook.Shepherd ? "German shepherd" : "Dachshund"; } }
+    public string KindName { get { return kind == CritterKind.Frog ? "Frog" : kind == CritterKind.Cat ? "Cat" : kind == CritterKind.Robot ? "Robot" : look == CritterLook.Shepherd ? "German shepherd" : "Dachshund"; } }
 }
 
 public static class Critters
@@ -35,9 +42,29 @@ public static class Critters
         new CritterDef("Little White Socks", CritterKind.Cat, CritterLook.Socks, "#34343a", "#ffffff"),
         new CritterDef("Germy", CritterKind.Dog, CritterLook.Shepherd, "#b47a3c", "#1e1a18"),
         new CritterDef("Daisy", CritterKind.Dog, CritterLook.Dachshund, "#a0482a", null),
+        // James's robots (Four Froggies RanchLife robot table; Big Figure Two left out: it is a 3.4 m giant)
+        new CritterDef("Optimus", CritterKind.Robot, CritterLook.Robot, "#f1f1ef", "#141416", "sr_optimus", 1.8f),
+        new CritterDef("Unitree", CritterKind.Robot, CritterLook.Robot, "#2a2d33", "#111214", "sr_unitree", 1.8f),
+        new CritterDef("Figure 03", CritterKind.Robot, CritterLook.Robot, "#e6e2da", "#8e8a83", "sr_figure03", 1.75f),
+        new CritterDef("Figure 02", CritterKind.Robot, CritterLook.Robot, "#3b3e43", "#0e0e10", "sr_figure02", 1.75f),
+        new CritterDef("Atlas HD", CritterKind.Robot, CritterLook.Robot, "#d2d2d2", "#3a3c40", "sr_atlashd", 1.9f),
+        new CritterDef("Atlas electric", CritterKind.Robot, CritterLook.Robot, "#c9ccd0", "#34363a", "sr_atlase", 1.7f),
     };
 
     public static int Count { get { return All.Length; } }
+
+    // Lobby BOTS roster (Y / F / tap the BOTS bar; saved in PlayerPrefs bb.roster; demo &bbroster=N).
+    // The four froggies always play (bots take any frog no player picked); the roster decides who fills the other seats.
+    public static readonly string[] RosterNames = { "Froggies + Pets", "Froggies + Robots", "Everyone" };
+    public static int Roster;
+
+    public static bool InRoster(CritterDef d, int roster)
+    {
+        if (d.kind == CritterKind.Frog) return true;
+        if (roster == 0) return d.kind == CritterKind.Cat || d.kind == CritterKind.Dog;
+        if (roster == 1) return d.kind == CritterKind.Robot;
+        return true;
+    }
 
     public static Color Hex(string h)
     {
@@ -122,7 +149,8 @@ public class Critter : MonoBehaviour
         def = d;
         seed = Random.value * 10f;
         bob = Node(transform, "Bob", Vector3.zero);
-        if (!BuildMesh())
+        if (d.kind == CritterKind.Robot) { if (!BuildRobot()) BuildFrog(); }
+        else if (!BuildMesh())
             switch (d.kind)
             {
                 case CritterKind.Frog: BuildFrog(); break;
@@ -203,6 +231,39 @@ public class Critter : MonoBehaviour
         p.Spawn("armR", armPivot, -piv, 1f, def.main, false, mf);
         p.Spawn("armL", armPivot, -piv, 1f, def.main, false, mf);
         Gear.Rifle(armPivot, GripR, GunScale, s.color, false, Color.black, Color.black, out muzzle);
+        foreach (var r in GetComponentsInChildren<Renderer>()) if (Look.Mobile) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        return true;
+    }
+
+    // ---------- robots: Four Froggies standing packs (body, head, thigh/shin, upper/fore arm parts with joint pivots) ----------
+    static readonly Vector3 RobotGrip = new Vector3(0.04f, -0.13f, 0.42f);   // rifle origin in arm-pivot space (between the hands)
+
+    static Transform RobotLimb(LBPack pk, Transform parent, Vector3 origin, string upper, string lower, float s)
+    {
+        Transform u = pk.Spawn(upper, parent, origin, s, Color.white);
+        if (u == null) return Node(parent, upper, origin);
+        pk.Spawn(lower, u, -pk.parts[upper].pivot, 1f, Color.white);
+        return u;
+    }
+
+    bool BuildRobot()
+    {
+        LBPack p = LBPack.Get(def.pack);
+        if (p == null || !p.Has("body") || !p.Has("head") || !p.Has("uarmL") || !p.Has("uarmR") || !p.Has("thighL") || !p.Has("thighR")) return false;
+        float k = def.height / Mathf.Max(0.5f, p.Height());
+        p.Spawn("body", bob, Vector3.zero, k, Color.white);
+        headPivot = p.Spawn("head", bob, Vector3.zero, k, Color.white);
+        legL = RobotLimb(p, bob, Vector3.zero, "thighL", "shinL", k);
+        legR = RobotLimb(p, bob, Vector3.zero, "thighR", "shinR", k);
+        // both arms forward on one pivot at shoulder height (follows aim pitch), FF "carry" pose (-78 deg, hands in a bit)
+        Vector3 shL = p.parts["uarmL"].pivot * k, shR = p.parts["uarmR"].pivot * k;
+        Vector3 piv = new Vector3(0f, (shL.y + shR.y) * 0.5f, (shL.z + shR.z) * 0.5f);
+        armPivot = Node(bob, "Arms", piv);
+        Transform aL = RobotLimb(p, armPivot, -piv, "uarmL", "farmL", k);
+        Transform aR = RobotLimb(p, armPivot, -piv, "uarmR", "farmR", k);
+        aL.localRotation = Quaternion.Euler(-80f, 0f, 9f);
+        aR.localRotation = Quaternion.Euler(-80f, 0f, -9f);
+        Gear.Rifle(armPivot, RobotGrip, GunScale, s.color, false, Color.black, Color.black, out muzzle);
         foreach (var r in GetComponentsInChildren<Renderer>()) if (Look.Mobile) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         return true;
     }
@@ -421,6 +482,7 @@ public class Critter : MonoBehaviour
         moveBlend = Mathf.MoveTowards(moveBlend, s.alive && spd > 0.4f ? 1f : 0f, dt * 5f);
         flop = Mathf.MoveTowards(flop, s.alive ? 0f : 1f, dt * (s.alive ? 4f : 2.2f));
         bool frog = def.kind == CritterKind.Frog;
+        bool robot = def.kind == CritterKind.Robot;
 
         phase += dt * (frog ? 7.5f : 11f) * Mathf.Clamp(spd / 5.4f, 0.35f, 1.3f) * (moveBlend > 0.01f ? 1f : 0f);
         float sn = Mathf.Sin(phase);
@@ -436,12 +498,12 @@ public class Critter : MonoBehaviour
         else
         {
             yOff = Mathf.Abs(sn) * 0.06f * moveBlend;
-            roll = sn * 7f * moveBlend;
+            roll = sn * (robot ? 2f : 7f) * moveBlend;
             tilt = 4f * moveBlend;
             legA = sn * 32f * moveBlend;
             legB = -legA;
         }
-        if (airborne && s.alive) { legA = legB = frog ? 30f : 20f; }
+        if (airborne && s.alive) { legA = legB = frog ? 30f : robot ? 12f : 20f; }
 
         // idle sway + breathing
         float idle = 1f - moveBlend;

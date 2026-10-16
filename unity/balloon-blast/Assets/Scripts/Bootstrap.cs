@@ -45,7 +45,7 @@ public class Bootstrap : MonoBehaviour
         gameObject.AddComponent<BBs>();
         gameObject.AddComponent<Game>();
         gameObject.AddComponent<PowerUps>();
-        ModelLoader.Begin();
+        // U6 (Hark): no soldier models any more (the cast is the Four Froggies + friends), so ModelLoader is not started.
         StartCoroutine(Look.BuildProbe(World.center));
     }
 }
