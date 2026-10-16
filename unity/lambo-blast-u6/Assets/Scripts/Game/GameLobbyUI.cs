@@ -221,14 +221,15 @@ public partial class Game
             for (int i = 0; i < 8; i++) put(carTiles[i], new Vector2(-483 + i * 138, -122), tileCarSize);
             for (int i = 0; i < 7; i++) put(robotTiles[i], new Vector2(-474 + i * 158, -210), tileRobotSize);
             // u6h: one row, left to right: < TRACK > | RACE | MODE | HOST | JOIN | CREDITS, no overlaps, all inside +-632
-            put(trackBox, new Vector2(-392, -284), new Vector2(330, 62));
-            put(trackPrev, new Vector2(-588, -284), new Vector2(44, 62));
-            put(trackNext, new Vector2(-196, -284), new Vector2(44, 62));
-            put(playBtn, new Vector2(0, -284), new Vector2(250, 52));
-            put(modeBtn, new Vector2(222, -284), new Vector2(170, 52));
-            put(creditsBtn, new Vector2(588, -284), new Vector2(88, 44));
-            put(lobbyStatus, new Vector2(0, -326), new Vector2(1180, 20)); lobbyStatus.fontSize = 14;
-            put(lobbyHelp, new Vector2(0, -348), new Vector2(1220, 24)); lobbyHelp.fontSize = 10;
+            // (u6h2: row at -288 / track 60 tall so it clears the robot tiles (bottom -254) by 4)
+            put(trackBox, new Vector2(-392, -288), new Vector2(330, 60));
+            put(trackPrev, new Vector2(-588, -288), new Vector2(44, 60));
+            put(trackNext, new Vector2(-196, -288), new Vector2(44, 60));
+            put(playBtn, new Vector2(0, -288), new Vector2(250, 52));
+            put(modeBtn, new Vector2(222, -288), new Vector2(170, 52));
+            put(creditsBtn, new Vector2(588, -288), new Vector2(88, 44));
+            put(lobbyStatus, new Vector2(0, -328), new Vector2(1180, 20)); lobbyStatus.fontSize = 14;
+            put(lobbyHelp, new Vector2(0, -349), new Vector2(1220, 22)); lobbyHelp.fontSize = 10;
             put(creditsPanel, Vector2.zero, new Vector2(1060, 500));
         }
         playGlow.rectTransform.anchoredPosition = playBtn.rectTransform.anchoredPosition;
@@ -442,6 +443,7 @@ public partial class Game
             cardEdge[i].color = Color.Lerp(new Color(pc.r, pc.g, pc.b, 0.35f), new Color(pc.r, pc.g, pc.b, 0.75f), breathe);
             cardGlow[i].color = new Color(pc.r, pc.g, pc.b, (0.14f + 0.1f * breathe) * e);
             string nav = s.kind == InputKind.Gamepad ? "D-pad < > car  ·  ^ v robot" : s.kind == InputKind.Keyboard ? "arrows < > car  ·  ^ v robot  ·  or click" : "tap a car / robot below";
+            if (cardSize.x < 400f) nav = "";     // u6h2: 3-4 compact cards: the hint wrapped under the swatch; keep the header to one line
             cardHead[i].text = "<color=#" + ColorUtility.ToHtmlStringRGB(pc) + ">P" + (i + 1) + "</color>  ·  " + dev + "   <color=#7f93ab>" + nav + "</color>";
             Color nameCol = s.car == 7 ? new Color(0.78f, 0.8f, 0.86f) : Color.Lerp(cs.color, Color.white, 0.15f);
             cardTexts[i].text = "<size=19><color=#" + ColorUtility.ToHtmlStringRGB(nameCol) + ">" + cs.name.ToUpper() + "</color></size>  <size=14><color=#c9d6e6>· " + Robots.Names[s.robot] + "</color></size>\n" +

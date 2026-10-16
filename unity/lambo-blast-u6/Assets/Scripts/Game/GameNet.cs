@@ -45,8 +45,8 @@ public partial class Game
         else
         {
             // u6h: u6g's MODE (398, 150 wide) sat on top of HOST + JOIN -> MODE now 137..307, HOST 320..424, JOIN 432..536
-            hostBtn.rectTransform.anchoredPosition = new Vector2(372, -284); hostBtn.rectTransform.sizeDelta = new Vector2(104, 44);
-            joinBtn.rectTransform.anchoredPosition = new Vector2(484, -284); joinBtn.rectTransform.sizeDelta = new Vector2(104, 44);
+            hostBtn.rectTransform.anchoredPosition = new Vector2(372, -288); hostBtn.rectTransform.sizeDelta = new Vector2(104, 44);
+            joinBtn.rectTransform.anchoredPosition = new Vector2(484, -288); joinBtn.rectTransform.sizeDelta = new Vector2(104, 44);
         }
         var cs = keypadCanvas.GetComponent<CanvasScaler>();
         float aspect = Screen.width / (float)Mathf.Max(1, Screen.height);
