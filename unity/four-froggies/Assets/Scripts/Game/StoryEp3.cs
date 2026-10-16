@@ -30,6 +30,7 @@ public partial class Story
         episode = 3;
         E3Cast();
         Frog.AiGoalHook = E3AiGoal;
+        if (Rig == null) { try { CarrierRig.Spawn(); } catch (System.Exception e) { Debug.LogError("FFSTORY ep3: carrier spawn " + e); } }   // ffu48b: the story can start before Ffu48's first Update
         int jump = demoShot == "ep3intro" ? 1 : demoShot == "ep3board" ? 2 : demoShot == "ep3land" ? 3 : 0;
         string jc = Param("storych"); int jn;
         if (jc != null && int.TryParse(jc, out jn)) jump = Mathf.Clamp(jn, 1, 3);

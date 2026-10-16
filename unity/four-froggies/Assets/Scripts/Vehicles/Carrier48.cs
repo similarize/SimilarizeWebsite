@@ -254,8 +254,11 @@ public class CarrierRig : MonoBehaviour
         float want = toCarrier ? 1f : 0f;
         float nk = Mathf.MoveTowards(k, want, rate * dt);
         if (toCarrier && holdAt >= 0f && k <= holdAt) nk = Mathf.Min(nk, holdAt);
-        // the hull grows to 28 m: keep gliding out until the stern + bow have deep water under them (max 12 s)
-        if (toCarrier && nk > 0.66f && k <= 0.66f && clearWait < 12f && !RoomToGrow()) { nk = 0.66f; clearWait += dt; }
+        // the hull grows to 28 m: keep sinking + gliding out until the stern + bow have deep water under them (ffu48b: hold
+        // at the end of the sinking beat, before anything unfolds; max 16 s; a last check before the colliders come on)
+        if (toCarrier && nk > 0.3f && k <= 0.3f && clearWait < 16f && !RoomToGrow()) { nk = 0.3f; clearWait += dt; holding = true; }
+        else if (toCarrier && nk > 0.66f && k <= 0.66f && clearWait < 22f && !RoomToGrow()) { nk = 0.66f; clearWait += dt; holding = true; }
+        else holding = false;
         if (!toCarrier) clearWait = 0f;
         k = nk;
         Physics_(dt);
@@ -286,7 +289,8 @@ public class CarrierRig : MonoBehaviour
         if (!Water.At(bf.x, bf.z, out s1, out d1) || !Water.At(tp.x, tp.z, out s2, out d2)) return;
         if (d1 > 1.0f && d2 > 0.45f) Begin(true);
     }
-    float abandonT, clearWait;
+    float abandonT, clearWait, stuckT;
+    bool holding;
     bool RoomToGrow()
     {
         foreach (float z in new[] { -13.5f, -6f, 8f, 16.5f })
@@ -315,8 +319,8 @@ public class CarrierRig : MonoBehaviour
             foreach (float z in FZ)
             {
                 Vector3 p = transform.TransformPoint(new Vector3(x, 0f, z));
-                float sy;
-                if (!Water.At(p.x, p.z, out sy, out float dd)) continue;
+                // a virtual hull: every float point uses the pond surface, also the ones still over the bank (the carrier's
+                // colliders stay off until it has risen, so nothing digs into the shore)
                 float wy = surf + Water.Wave(p.x, p.z, t);
                 float d = wy - p.y;
                 if (d <= -0.5f) continue;
@@ -355,6 +359,16 @@ public class CarrierRig : MonoBehaviour
                 float target = steer * 0.42f * Mathf.Clamp(0.35f + Mathf.Abs(fs) / 5f, 0f, 1f) * (fs < -0.5f ? -1f : 1f);
                 float yr = Vector3.Dot(rb.angularVelocity, Vector3.up);
                 rb.AddTorque(Vector3.up * (target - yr) * Mathf.Min(1f, 3f * dt), ForceMode.VelocityChange);
+                // ffu48b: aground with the throttle on -> push off toward open water (and give up into bike + camper if
+                // it is really high and dry)
+                Vector3 hv = vel; hv.y = 0f;
+                stuckT = Mathf.Abs(thr) > 0.3f && hv.magnitude < 0.5f ? stuckT + dt : 0f;
+                if (stuckT > 1.2f)
+                {
+                    Vector3 open = new Vector3(Layout.PondC.x - pos.x, 0f, Layout.PondC.y - pos.z).normalized;
+                    rb.AddForce((open * 2f - hv) * Mathf.Min(1f, 3f * dt) + Vector3.up * 0.05f, ForceMode.VelocityChange);
+                }
+                if (stuckT > 6f && depth < 1.6f && !JetParked()) { stuckT = 0f; Begin(false); }
             }
             else if (Carrier)
             {
@@ -366,8 +380,10 @@ public class CarrierRig : MonoBehaviour
             else
             {
                 // transforming: the rig keeps gliding gently out (into) the water it was driven into
-                float want = toCarrier ? (k < 0.75f ? (clearWait > 0f ? 2.6f : 1.6f) : 0f) : 2.2f;
-                rb.AddForce(fwd * (want - fs) * 0.8f * b, ForceMode.Acceleration);
+                // ffu48b: a velocity target (VelocityChange) - the ffu48a acceleration lost to the camper's friction on the bed
+                float want = toCarrier ? (k < 0.75f ? (holding || !RoomToGrow() ? 3.2f : 1.6f) : 0f) : 2.2f;
+                Vector3 hv = vel; hv.y = 0f;
+                rb.AddForce((fwd * want - hv) * Mathf.Min(1f, 6f * dt), ForceMode.VelocityChange);
                 float yr = Vector3.Dot(rb.angularVelocity, Vector3.up);
                 rb.AddTorque(-Vector3.up * yr * Mathf.Min(1f, 2f * dt), ForceMode.VelocityChange);
             }
