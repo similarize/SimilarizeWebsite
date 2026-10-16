@@ -343,7 +343,7 @@ public class Ffu50 : MonoBehaviour
                 break;
             case 1:
                 if (Meat50.All.Count > 0) { meatAt = Meat50.All[0].transform.position; Debug.Log("FFDEMO ffu50 hunt50: drumstick at " + meatAt.ToString("0.0") + " after " + phT.ToString("0.0") + " s"); Next(2); }
-                else if (fig.hunt == null && phT > 3f) { Debug.Log("FFDEMO ffu50 hunt50: hunt ended without a drumstick (" + fig.StatusLine + ")"); Done(); }
+                else if (fig.hunt == null && phT > 40f) { Debug.Log("FFDEMO ffu50 hunt50: hunt ended without a drumstick (" + fig.StatusLine + ")"); Done(); }
                 else if (phT > 120f) Done();
                 break;
             case 2:
@@ -411,13 +411,13 @@ public class Ffu50 : MonoBehaviour
                 Next(2);
                 break;
             case 2:   // E (parked, or moving after leg 2)
-                if (phT < (leg == "parked" ? 3f : 9f)) break;
+                if (phT < (leg == "parked" ? 3f : 3.5f) || (leg == "moving" && rig.trailer.rb.velocity.magnitude < 1.5f && phT < 6f)) break;   // ffu50c: E while really under way, well before the shore turns it back into bike + camper
                 if (leg == "moving") rig.helm.demoHook = null;
                 Debug.Log("FFDEMO ffu50 carrierexit [" + leg + "] E at carrier speed " + rig.trailer.rb.velocity.magnitude.ToString("0.0") + " m/s");
                 press = true; Next(3);
                 break;
             case 3:
-                if (f.vehicle != null) { if (phT > 2f) { press = true; phT = 1f; } break; }
+                if (f.vehicle != null) { if (phT > 2f) { Debug.Log("FFDEMO ffu50 carrierexit [" + leg + "] still at the helm, canExit " + f.vehicle.CanExit(f) + " -> E again"); press = true; phT = 1f; } break; }
                 if (phT < 0.4f) break;
                 l0 = lp; w0 = f.transform.position; idleT = 0f;
                 Debug.Log("FFDEMO ffu50 carrierexit [" + leg + "] off the helm at deck-local " + lp.ToString("0.00") + " onDeck " + CarrierRig.OnDeck(f.transform.position) + " vel0 " + f.HSpeed.ToString("0.00"));
