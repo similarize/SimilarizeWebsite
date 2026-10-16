@@ -23,14 +23,16 @@ public static class Look
         QualitySettings.antiAliasing = Mobile ? 0 : 2;
         QualitySettings.shadowCascades = Mobile ? 1 : 2;
         QualitySettings.shadowProjection = ShadowProjection.StableFit;
-        QualitySettings.pixelLightCount = 1;
+        QualitySettings.pixelLightCount = Mobile ? 1 : 2;
+        QualitySettings.shadowResolution = Mobile ? ShadowResolution.Medium : ShadowResolution.VeryHigh;
         if (sun != null)
         {
             sun.color = new Color(1f, 0.94f, 0.82f);
-            sun.intensity = 1.08f;
-            sun.shadowStrength = 0.7f;
+            sun.intensity = 1.55f;
+            sun.shadowStrength = 0.88f;
             sun.shadowBias = 0.05f;
             sun.shadowNormalBias = 0.4f;
+            sun.shadows = LightShadows.Soft;   // bb6: soft PCF shadows (WebGL2-safe)
             sun.transform.rotation = Quaternion.Euler(46f, -38f, 0f);
         }
         RenderSettings.ambientMode = AmbientMode.Trilight;
@@ -89,17 +91,22 @@ public static class Look
         else
         {
             QualitySettings.shadows = views <= 1 ? ShadowQuality.All : ShadowQuality.HardOnly;
-            QualitySettings.shadowResolution = views <= 1 ? ShadowResolution.High : ShadowResolution.Medium;
+            QualitySettings.shadowResolution = views <= 1 ? ShadowResolution.VeryHigh : ShadowResolution.Medium;
             QualitySettings.shadowDistance = views <= 1 ? 60f : 32f;
         }
         QualitySettings.lodBias = Mobile || views >= 2 ? 0.7f : 1f;
+        var urp = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline as UnityEngine.Rendering.Universal.UniversalRenderPipelineAsset;
+        if (urp != null) urp.shadowDistance = Mobile ? 34f : views <= 1 ? 70f : 36f;
         bool post = PostAllowed(views);
         if (cams != null)
             foreach (var c in cams)
             {
                 if (c == null) continue;
+                // bb6 URP: post comes from the global Volume (bloom, ACES, grade, vignette); LBPost stays off
+                var ucd = UnityEngine.Rendering.Universal.CameraExtensions.GetUniversalAdditionalCameraData(c);
+                if (ucd != null) { ucd.renderPostProcessing = post; ucd.antialiasing = post ? UnityEngine.Rendering.Universal.AntialiasingMode.FastApproximateAntialiasing : UnityEngine.Rendering.Universal.AntialiasingMode.None; }
+                c.allowHDR = true;
                 var p = c.GetComponent<LBPost>();
-                if (p == null && post) p = LBPost.Add(c);
                 if (p != null) p.enabled = post && c.enabled;
             }
         Debug.Log("Look: " + views + " view(s), shadows " + QualitySettings.shadows + ", post " + post);
