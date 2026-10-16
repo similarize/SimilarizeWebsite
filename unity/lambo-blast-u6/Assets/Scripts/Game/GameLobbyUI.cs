@@ -15,8 +15,8 @@ public partial class Game
     Image lobbyGlowA, lobbyGlowB, playGlow, trackThumbWin;
     RawImage trackThumb;
     readonly Image[] cardEdge = new Image[4], cardGlow = new Image[4];
-    readonly Image[] carWin = new Image[8], robotWin = new Image[7], carFrames = new Image[8], robotFrames = new Image[7];
-    readonly Color[] carTileCol = new Color[8], robotTileCol = new Color[7];
+    readonly Image[] carWin = new Image[NCars], robotWin = new Image[7], carFrames = new Image[NCars], robotFrames = new Image[7];
+    readonly Color[] carTileCol = new Color[NCars], robotTileCol = new Color[7];
     readonly float[] cardFade = new float[4];
     int lastVisible = -1;
     // u6h: every lobby control lives under lobbyRoot, a rect fitted to the safe area (notch / home bar); per-player MODE chips
@@ -85,7 +85,7 @@ public partial class Game
                 barBgs[i][b].rectTransform.pivot = new Vector2(0f, 0.5f);
             }
         }
-        for (int i = 0; i < 8; i++)
+        for (int i = 0; i < NCars; i++)
         {
             carTiles[i] = Glass(r, TileCol, new Vector2(0.5f, 0.5f));
             Transform t = carTiles[i].transform;
@@ -194,8 +194,9 @@ public partial class Game
             put(lobbySub, new Vector2(0, 558), new Vector2(690, 28)); lobbySub.fontSize = 14;
             if (visible == 1) { cardSize = new Vector2(680, 0); previewH = 370f; } else { cardSize = new Vector2(346, 0); previewH = 168f; }
             cardTop = 534f;
-            tileCarSize = new Vector2(166, 78); tileRobotSize = new Vector2(166, 88);
-            for (int i = 0; i < 8; i++) put(carTiles[i], new Vector2(-258 + (i % 4) * 172, -158 - (i / 4) * 84), tileCarSize);
+            // u6i: 9 cars = 5 + 4 (was 4 + 4)
+            tileCarSize = new Vector2(132, 78); tileRobotSize = new Vector2(166, 88);
+            for (int i = 0; i < NCars; i++) put(carTiles[i], i < 5 ? new Vector2(-276 + i * 138, -158) : new Vector2(-207 + (i - 5) * 138, -242), tileCarSize);
             for (int i = 0; i < 7; i++) put(robotTiles[i], new Vector2(i < 4 ? -258 + i * 172 : -172 + (i - 4) * 172, -334 - (i / 4) * 94), tileRobotSize);
             // u6h: row 1 = track picker + RACE (RACE no longer touches >), row 2 = HOST JOIN MODE CREDITS, all 44 tall (was 26-34)
             put(trackBox, new Vector2(-118, -508), new Vector2(330, 60));
@@ -217,8 +218,9 @@ public partial class Game
             else if (visible == 3) { cardSize = new Vector2(392, 0); previewH = 176f; }
             else { cardSize = new Vector2(302, 0); previewH = 150f; }
             cardTop = 270f;
-            tileCarSize = new Vector2(126, 76); tileRobotSize = new Vector2(136, 88);
-            for (int i = 0; i < 8; i++) put(carTiles[i], new Vector2(-483 + i * 138, -122), tileCarSize);
+            // u6i: 9 cars in the row (was 8 at 138 / 126 wide): 124 apart, 114 wide -> -553..553
+            tileCarSize = new Vector2(114, 76); tileRobotSize = new Vector2(136, 88);
+            for (int i = 0; i < NCars; i++) put(carTiles[i], new Vector2(-496 + i * 124, -122), tileCarSize);
             for (int i = 0; i < 7; i++) put(robotTiles[i], new Vector2(-474 + i * 158, -210), tileRobotSize);
             // u6h: one row, left to right: < TRACK > | RACE | MODE | HOST | JOIN | CREDITS, no overlaps, all inside +-632
             // (u6h2: row at -288 / track 60 tall so it clears the robot tiles (bottom -254) by 4)
@@ -268,7 +270,7 @@ public partial class Game
         cardSize.y = 30 + previewH + 62 + 20 + 22;
         for (int i = 0; i < 4; i++) { cards[i].rectTransform.sizeDelta = cardSize; cardGlow[i].rectTransform.sizeDelta = cardSize + new Vector2(70, 70); }
         // tile insides
-        for (int i = 0; i < 8; i++)
+        for (int i = 0; i < NCars; i++)
         {
             Vector2 ts = tileCarSize;
             put(carWin[i], new Vector2(0, -4 - (ts.y - 24) * 0.5f), new Vector2(ts.x - 8, ts.y - 24));
@@ -305,7 +307,7 @@ public partial class Game
         };
         add("mode", modeBtn); add("race", playBtn); add("credits", creditsBtn); add("host", hostBtn); add("join", joinBtn);
         add("prev", trackPrev); add("next", trackNext); add("track", trackBox);
-        for (int i = 0; i < 8; i++) add("car" + i, carTiles[i]);
+        for (int i = 0; i < NCars; i++) add("car" + i, carTiles[i]);
         for (int i = 0; i < 7; i++) add("robot" + i, robotTiles[i]);
         for (int i = 0; i < 4; i++) add("chip" + (i + 1), cardMode[i]);
         float W = Mathf.Max(1, Screen.width), H = Mathf.Max(1, Screen.height);
@@ -313,7 +315,7 @@ public partial class Game
         for (int i = 0; i < rects.Count; i++)
         {
             Rect q = rects[i];
-            if (i < 5 || names[i].StartsWith("chip")) sb.Append(" " + names[i] + "=" + (q.xMin / W).ToString("0.0000") + "," + ((H - q.yMax) / H).ToString("0.0000") + "," + (q.width / W).ToString("0.0000") + "," + (q.height / H).ToString("0.0000"));
+            if (i < 5 || names[i].StartsWith("chip") || names[i].StartsWith("car")) sb.Append(" " + names[i] + "=" + (q.xMin / W).ToString("0.0000") + "," + ((H - q.yMax) / H).ToString("0.0000") + "," + (q.width / W).ToString("0.0000") + "," + (q.height / H).ToString("0.0000"));
         }
         string ov = "", off = "";
         for (int i = 0; i < rects.Count; i++)
@@ -417,7 +419,7 @@ public partial class Game
             {
                 // nobody in yet: the showroom cycles through every car and robot
                 int k = (int)(attractT / 2.6f);
-                stands[i].Set(k % 8, k % 7, this, false);
+                stands[i].Set(k % NCars, k % 7, this, false);
                 cardSwatch[i].color = new Color(1f, 1f, 1f, 0.35f);
                 cardEdge[i].color = new Color(1f, 1f, 1f, 0.1f);
                 cardGlow[i].color = new Color(0.4f, 0.7f, 1f, 0.12f * e);
@@ -447,7 +449,7 @@ public partial class Game
             cardHead[i].text = "<color=#" + ColorUtility.ToHtmlStringRGB(pc) + ">P" + (i + 1) + "</color>  ·  " + dev + "   <color=#7f93ab>" + nav + "</color>";
             Color nameCol = s.car == 7 ? new Color(0.78f, 0.8f, 0.86f) : Color.Lerp(cs.color, Color.white, 0.15f);
             cardTexts[i].text = "<size=19><color=#" + ColorUtility.ToHtmlStringRGB(nameCol) + ">" + cs.name.ToUpper() + "</color></size>  <size=14><color=#c9d6e6>· " + Robots.Names[s.robot] + "</color></size>\n" +
-                "<size=11><color=#8fa3ba>" + Robots.Looks[s.robot] + "</color></size>";
+                "<size=11><color=#8fa3ba>" + (Cars.IsRoadster(s.car) ? "<color=#ffd27a>THRUSTER HOP</color>  J / E · pad Y · tap JUMP  ·  suction fans" : Robots.Looks[s.robot]) + "</color></size>";
             float[] v = { Mathf.InverseLerp(27f, 34f, cs.top), Mathf.InverseLerp(9f, 14f, cs.accel), Mathf.InverseLerp(78f, 106f, cs.handling), Mathf.InverseLerp(0.8f, 1.4f, cs.weight) };
             for (int b = 0; b < 4; b++)
             {
@@ -467,7 +469,7 @@ public partial class Game
         }
         if (trackThumb.texture == null || (trackRT != null && !trackRT.IsCreated())) RenderTrackThumb();
         Slot ps = FindSlot(InputKind.Touch) ?? FindSlot(InputKind.Keyboard) ?? (slots.Count == 1 ? slots[0] : null);
-        for (int i = 0; i < 8; i++)
+        for (int i = 0; i < NCars; i++)
         {
             if (Showroom.ThumbsReady && carThumbs[i].texture == null) { carThumbs[i].texture = Showroom.CarThumbs[i]; carThumbs[i].color = Color.white; }
             bool taken = false; string badge = ""; int firstPick = -1;
@@ -501,7 +503,7 @@ public partial class Game
         trackName.text = Track.NameOf(tshow).ToUpper();
         trackInfo.text = "TRACK " + (tshow + 1) + " / " + Track.Count + "\n" + (pendingTrack >= 0 ? "building track..." : (LBNet.On && LBNet.I.IsGuest ? "the host picks the track" : lobbyLayout == 1 ? "tap < >  ·  T  ·  LB / RB" : "tap < >  ·  T  ·  pad LB / RB"));
         trackThumb.color = Color.Lerp(trackThumb.color, pendingTrack >= 0 ? new Color(1f, 1f, 1f, 0.35f) : Color.white, Mathf.Min(1f, dt * 8f));
-        lobbySub.text = Track.NameOf(tshow).ToUpper() + "   ·   " + Track.BlurbOf(tshow) + "   ·   8 cars  ·  3 laps  ·  grab the ? boxes";
+        lobbySub.text = Track.NameOf(tshow).ToUpper() + "   ·   " + Track.BlurbOf(tshow) + "   ·   9 cars  ·  3 laps  ·  grab the ? boxes";
         // RACE: breathing glow
         playGlow.color = new Color(0.25f, 1f, 0.65f, 0.18f + 0.22f * breathe);
         playBtn.rectTransform.localScale = Vector3.one * (1f + 0.015f * breathe);

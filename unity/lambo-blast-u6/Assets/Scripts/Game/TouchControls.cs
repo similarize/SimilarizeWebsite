@@ -9,19 +9,22 @@ public class TouchControls : MonoBehaviour
     public bool active;
     Canvas canvas;
     RectTransform stickBase, stickKnob;
-    int stickId = -1, gasId = -1, brakeId = -1, driftId = -1;
+    int stickId = -1, gasId = -1, brakeId = -1, driftId = -1, jumpId = -1;
+    public bool jumpOn;      // u6i: the touch player drives the Roadster -> show the JUMP (thruster hop) button
+    bool jumpQ, jumpLogged;
     Vector2 stickOrigin, stickVec;
     bool fireQ;
-    const int Count = 4;
+    const int Count = 5;
     readonly Image[] imgs = new Image[Count];
     readonly Text[] labels = new Text[Count];
-    static readonly string[] Names = { "GAS", "BRAKE", "FIRE", "DRIFT" };
-    static readonly Color[] Cols = { new Color(0.25f, 0.85f, 0.3f, 0.55f), new Color(0.95f, 0.3f, 0.25f, 0.5f), new Color(1f, 0.6f, 0.15f, 0.6f), new Color(0.35f, 0.75f, 1f, 0.5f) };
+    static readonly string[] Names = { "GAS", "BRAKE", "FIRE", "DRIFT", "JUMP" };
+    static readonly Color[] Cols = { new Color(0.25f, 0.85f, 0.3f, 0.55f), new Color(0.95f, 0.3f, 0.25f, 0.5f), new Color(1f, 0.6f, 0.15f, 0.6f), new Color(0.35f, 0.75f, 1f, 0.5f), new Color(0.92f, 0.95f, 1f, 0.5f) };
     // offsets from the bottom-right of the safe area (canvas units)
-    static readonly Vector2[] PosL = { new Vector2(-115, 125), new Vector2(-285, 80), new Vector2(-265, 235), new Vector2(-110, 300) };
-    static readonly float[] RadL = { 88, 54, 62, 52 };
-    static readonly Vector2[] PosP = { new Vector2(-90, 110), new Vector2(-235, 70), new Vector2(-215, 200), new Vector2(-85, 250) };
-    static readonly float[] RadP = { 70, 46, 52, 44 };
+    // u6i: JUMP (Roadster only) sits left of BRAKE / FIRE, clear of the stick zone (left 45 %)
+    static readonly Vector2[] PosL = { new Vector2(-115, 125), new Vector2(-285, 80), new Vector2(-265, 235), new Vector2(-110, 300), new Vector2(-430, 160) };
+    static readonly float[] RadL = { 88, 54, 62, 52, 56 };
+    static readonly Vector2[] PosP = { new Vector2(-90, 110), new Vector2(-235, 70), new Vector2(-215, 200), new Vector2(-85, 250), new Vector2(-345, 150) };
+    static readonly float[] RadP = { 70, 46, 52, 44, 48 };
     public static bool Portrait { get { return Screen.height > Screen.width; } }
     Vector2[] Pos { get { return Portrait ? PosP : PosL; } }
     float[] Rad { get { return Portrait ? RadP : RadL; } }
@@ -62,6 +65,7 @@ public class TouchControls : MonoBehaviour
         canvas.scaleFactor = s;
         for (int i = 0; i < Count; i++)
         {
+            if (i == 4 && imgs[4].gameObject.activeSelf != jumpOn) imgs[4].gameObject.SetActive(jumpOn);
             float rad = Rad[i];
             imgs[i].rectTransform.anchoredPosition = ScreenPos(i) / s;
             imgs[i].rectTransform.sizeDelta = Vector2.one * rad * 2f;
@@ -71,6 +75,12 @@ public class TouchControls : MonoBehaviour
         imgs[0].color = gasId >= 0 ? new Color(0.35f, 1f, 0.4f, 0.8f) : Cols[0];
         imgs[1].color = brakeId >= 0 ? new Color(1f, 0.4f, 0.35f, 0.8f) : Cols[1];
         imgs[3].color = driftId >= 0 ? new Color(0.5f, 0.85f, 1f, 0.8f) : Cols[3];
+        imgs[4].color = jumpId >= 0 ? new Color(1f, 1f, 1f, 0.85f) : Cols[4];
+        if (jumpOn && !jumpLogged)
+        {
+            jumpLogged = true; Vector2 jp = ScreenPos(4);
+            Debug.Log("U6I: touch JUMP=" + (jp.x / Screen.width).ToString("0.0000") + "," + (1f - jp.y / Screen.height).ToString("0.0000") + " r " + (Rad[4] * s / Screen.width).ToString("0.0000") + " (fraction, origin top-left) " + Screen.width + "x" + Screen.height);
+        }
         stickBase.sizeDelta = Vector2.one * StickR * 2.25f;
         stickKnob.sizeDelta = Vector2.one * StickR * 1.05f;
     }
@@ -81,6 +91,7 @@ public class TouchControls : MonoBehaviour
         int best = -1; float bd = 1e9f;
         for (int i = 0; i < Count; i++)
         {
+            if (i == 4 && !jumpOn) continue;
             float d = (screen - ScreenPos(i)).magnitude;
             if (d < Rad[i] * s * 1.2f && d < bd) { bd = d; best = i; }
         }
@@ -96,9 +107,9 @@ public class TouchControls : MonoBehaviour
 
     void ResetState()
     {
-        stickId = gasId = brakeId = driftId = -1;
+        stickId = gasId = brakeId = driftId = jumpId = -1;
         stickVec = Vector2.zero;
-        fireQ = false;
+        fireQ = false; jumpQ = false;
     }
 
     void Update()
@@ -125,6 +136,7 @@ public class TouchControls : MonoBehaviour
                         else if (b == 1) brakeId = t.fingerId;
                         else if (b == 2) fireQ = true;
                         else if (b == 3) driftId = t.fingerId;
+                        else if (b == 4) { jumpId = t.fingerId; jumpQ = true; }
                         else if (InStickZone(t.position) && stickId < 0) { stickId = t.fingerId; stickOrigin = t.position; stickVec = Vector2.zero; stickSeen = true; }
                         break;
                     }
@@ -145,11 +157,12 @@ public class TouchControls : MonoBehaviour
                     if (t.fingerId == gasId) gasId = -1;
                     if (t.fingerId == brakeId) brakeId = -1;
                     if (t.fingerId == driftId) driftId = -1;
+                    if (t.fingerId == jumpId) jumpId = -1;
                     break;
             }
         }
         if (stickId >= 0 && !stickSeen && !FingerDown(stickId)) { stickId = -1; stickVec = Vector2.zero; }
-        if (count == 0) { stickId = gasId = brakeId = driftId = -1; stickVec = Vector2.zero; }
+        if (count == 0) { stickId = gasId = brakeId = driftId = jumpId = -1; stickVec = Vector2.zero; }
         LayoutControls();
         Vector2 home = stickId >= 0 ? stickOrigin / s : StickHomeScreen / s;
         stickBase.anchoredPosition = home;
@@ -172,7 +185,8 @@ public class TouchControls : MonoBehaviour
         i.brake = brakeId >= 0 ? 1f : 0f;
         i.fire = fireQ;
         i.drift = driftId >= 0;
-        fireQ = false;
+        i.jump = jumpQ; i.jumpHeld = jumpId >= 0;     // u6i
+        fireQ = false; jumpQ = false;
         return i;
     }
 }

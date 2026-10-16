@@ -58,11 +58,13 @@ public partial class Game : MonoBehaviour
     readonly Text[][] barLabs = new Text[4][];
     readonly Image[][] barBgs = new Image[4][];
     // thumbnail tiles: 8 car colours + 7 robots (tap / click to pick, highlighted + P1-P4 badges)
-    readonly Image[] carTiles = new Image[8], robotTiles = new Image[7];
-    readonly RawImage[] carThumbs = new RawImage[8], robotThumbs = new RawImage[7];
-    readonly Image[] carStrips = new Image[8];
-    readonly Text[] carNames = new Text[8], robotNames = new Text[7], carBadges = new Text[8], robotBadges = new Text[7];
-    readonly float[] carPop = new float[8], robotPop = new float[7];
+    // u6i: 9 cars (the 8 Lambo colours + the 2026 Roadster)
+    const int NCars = 9;
+    readonly Image[] carTiles = new Image[NCars], robotTiles = new Image[7];
+    readonly RawImage[] carThumbs = new RawImage[NCars], robotThumbs = new RawImage[7];
+    readonly Image[] carStrips = new Image[NCars];
+    readonly Text[] carNames = new Text[NCars], robotNames = new Text[7], carBadges = new Text[NCars], robotBadges = new Text[7];
+    readonly float[] carPop = new float[NCars], robotPop = new float[7];
     readonly Showroom.Stand[] stands = new Showroom.Stand[4];
     Vector2 cardSize, tileCarSize, tileRobotSize;
     float previewH, attractT, thumbCheckT;
@@ -218,7 +220,7 @@ public partial class Game : MonoBehaviour
         "<b>Skies</b> (Poly Haven, CC0): Kloofendal 48d Partly Cloudy, Syferfontein 18d Clear, Industrial Sunset 02, Pizzo Pernice, Kloofendal 28d Misty, Qwantani Late Afternoon (all Pure Sky).\n" +
         "<b>Ground textures</b> (Poly Haven, CC0): Aerial Beach 01, Coast Sand 01, Red Sand, Burned Ground 01, Snow 02, Forest Leaves 02, Aerial Asphalt 01, Asphalt 02.\n" +
         "<b>Surfaces</b> (ambientCG.com, CC0 1.0): Rock029, Rock030, Rock051, Rock063, Rock064, Bark012, Grass004, Snow006, Gravel042, Concrete034, Asphalt031, Lava004.\n" +
-        "<b>Made for this game</b>: barriers, tyre walls, floodlights, distant mountains, car paint + lights, tyre smoke, road wear, engine sound (procedural).\n" +
+        "<b>Made for this game</b>: barriers, tyre walls, floodlights, distant mountains, car paint + lights, tyre smoke, road wear, engine sound (procedural); the 2026 Roadster model (original, from published photos' proportions, no logos).\n" +
         "<b>Fonts</b>: Montserrat (The Montserrat Project Authors) + Inter (The Inter Project Authors), SIL Open Font License 1.1.\n\n" +
         "Full licence texts: similarize.com/games/lambo-blast/LICENSES.txt\n" +
         "Robot names describe the real machines only; this fan game is not affiliated with their makers.\n\n" +
@@ -282,6 +284,8 @@ public partial class Game : MonoBehaviour
     static string HelpLines { get { return
         "<b>Xbox pad</b>: RT / A gas · LT / B brake + reverse · L-stick steer · X / RB fire item · LB drift (hold, release = boost) · Start pause\n" +
         "<b>Keyboard</b>: WASD / arrows drive · Space fire · Shift drift · Esc pause · M sound      <b>Phone</b>: left stick steer · GAS · BRAKE · FIRE · DRIFT"; } }
+    // u6i: Roadster help (pause screen; the lobby card shows the short version)
+    const string RoadsterHelp = "<b>Roadster</b> thruster hop: J / E · pad Y (or R3) · phone JUMP - clears a car, refills on the ground; EXPERT: hold it to hover + brake the landing";
     // u6g: driving-mode help (pause screen + the lobby MODE button)
     const string ModeHelp = "<b>Driving mode</b> (lobby: G · pad Back · tap MODE): KID = easy grip   ·   EXPERT = squeeze the throttle (keys / GAS build up), too much spins the rear tyres, no assists, faster - brake before the bends";
 
@@ -329,7 +333,8 @@ public partial class Game : MonoBehaviour
     void CycleCar(Slot s, int dir)
     {
         int c = s.car;
-        for (int k = 0; k < 8; k++) { c = ((c + dir) % 8 + 8) % 8; if (CarFree(c, s)) break; }
+        int nc = Cars.Count;
+        for (int k = 0; k < nc; k++) { c = ((c + dir) % nc + nc) % nc; if (CarFree(c, s)) break; }
         s.car = c; NetPicks(s); Assign(); Sfx.Play(Sfx.Click, 0.3f);
     }
     void NetPicks(Slot s) { if (LBNet.On && slots.Count > 0 && s == slots[0]) LBNet.I.PicksChanged(s.car, s.robot); }
@@ -381,7 +386,7 @@ public partial class Game : MonoBehaviour
         demoT += Time.unscaledDeltaTime;
         if (demoT > 6f && state == State.Lobby)
         {
-            if (slots.Count == 0) Join(InputKind.Keyboard, null);
+            if (slots.Count == 0) Join(InputKind.Keyboard, null, DemoCar());
             bool guest = LBNet.On && LBNet.I.IsGuest, hostWaiting = LBNet.On && LBNet.I.IsHost && LBNet.I.players.Count < 2 && demoT < 90f;
             if (guest || hostWaiting || (Application.absoluteURL ?? "").Contains("room=") && !LBNet.On && demoT < 20f) return;   // online demo: the host starts once a guest is in
             demoT = 0f;
@@ -389,10 +394,28 @@ public partial class Game : MonoBehaviour
         }
     }
 
+    // u6i probe knob: ?lbcar=N picks P1's car in the demo (8 = Roadster)
+    static int DemoCar()
+    {
+        string u = Application.absoluteURL ?? ""; int k = u.IndexOf("lbcar=");
+        if (k < 0) return -1;
+        int c; return int.TryParse(u.Substring(k + 6, 1), out c) && c >= 0 && c < Cars.Count ? c : -1;
+    }
+
+    float carProbeT = -1f;
+    void LobbyCarProbe()
+    {
+        if (carProbeT < 0f) carProbeT = DemoCar() >= 0 && !(Application.absoluteURL ?? "").Contains("lbdemo") ? 0.01f : 0f;
+        if (carProbeT <= 0f) return;
+        carProbeT += Time.unscaledDeltaTime;
+        if (carProbeT > 5f && slots.Count == 0) { Join(InputKind.Keyboard, null, DemoCar()); carProbeT = 0f; Debug.Log("U6I: lobby probe P1 on car " + DemoCar() + " (" + Cars.All[DemoCar()].name + ")"); }
+    }
+
     void UpdateLobby(float dt)
     {
         lobbyDt = Mathf.Lerp(lobbyDt, Mathf.Min(Time.unscaledDeltaTime, 30f), 0.1f);     // u6g (RaceWarm calm threshold)
         DemoCheck();
+        LobbyCarProbe();   // u6i ?lbcar=N (no lbdemo): seat a keyboard P1 on car N for showroom shots
         ProbeSeats();      // u6h ?lbseats=N (lobby layout probes)
         if (state != State.Lobby) return;
         if (Kb.CDown()) CreditsToggle();
@@ -529,7 +552,7 @@ public partial class Game : MonoBehaviour
             StartRace();
             return true;
         }
-        for (int i = 0; i < 8; i++)
+        for (int i = 0; i < NCars; i++)
             if (Hit(carTiles[i], pos))
             {
                 Slot s = FindSlot(kind);
@@ -743,6 +766,7 @@ public partial class Game : MonoBehaviour
         SeatsUpdate();   // lambo7: ghost / mirrored pad guard + one controller = one view, before anybody reads input
         Track.Tick(Time.time);
         touch.active = (state == State.Countdown || state == State.Race) && FindSlot(InputKind.Touch) != null && !paused;
+        { Slot ts = FindSlot(InputKind.Touch); touch.jumpOn = ts != null && ts.kart != null && ts.kart.IsRoadster; }     // u6i JUMP button
         switch (state)
         {
             case State.Lobby: UpdateLobby(dt); break;
@@ -789,7 +813,7 @@ public partial class Game : MonoBehaviour
         Time.timeScale = p ? 0f : 1f;
         AudioListener.pause = p;
         pauseCanvas.enabled = p;
-        if (p) pauseText.text = "<size=48><color=#7dff8a>PAUSED</color></size>\n\n" + HelpLines.Replace(" · Start pause", "") + "\n" + ModeHelp + DriveModesNow() +
+        if (p) pauseText.text = "<size=48><color=#7dff8a>PAUSED</color></size>\n\n" + HelpLines.Replace(" · Start pause", "") + "\n" + ModeHelp + "\n" + RoadsterHelp + DriveModesNow() +
             "\n\n<b>Pad</b>: Start / A resume · Y restart · B lobby      <b>Keys</b>: Esc / Enter resume · R restart · Q lobby";
     }
 

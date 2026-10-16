@@ -159,12 +159,12 @@ public class LBNet : MonoBehaviour
     // players' karts: host = kart 0, guests 1.. in join order; a clash of car / robot is resolved to a free one (host wins)
     void ResolveLineup()
     {
-        var usedC = new bool[8]; var usedR = new bool[Robots.Count];
+        var usedC = new bool[Cars.Count]; var usedR = new bool[Robots.Count];
         for (int i = 0; i < players.Count; i++)
         {
             var p = players[i];
             p.kart = i;
-            if (usedC[p.car]) { for (int c = 0; c < 8; c++) if (!usedC[c]) { p.car = c; break; } }
+            if (usedC[p.car]) { for (int c = 0; c < Cars.Count; c++) if (!usedC[c]) { p.car = c; break; } }
             usedC[p.car] = true;
             if (usedR[p.robot]) { for (int r = 0; r < Robots.Count; r++) if (!usedR[r]) { p.robot = r; break; } }
             usedR[p.robot] = true;
@@ -419,7 +419,7 @@ public class LBNet : MonoBehaviour
                     BroadcastLineup();
                     break;
                 case "C":
-                    if (pl != null && p.Length >= 3 && !raceOn) { pl.car = Mathf.Clamp(PI(p[1]), 0, 7); pl.robot = Mathf.Clamp(PI(p[2]), 0, Robots.Count - 1); BroadcastLineup(); }
+                    if (pl != null && p.Length >= 3 && !raceOn) { pl.car = Mathf.Clamp(PI(p[1]), 0, Cars.Count - 1); pl.robot = Mathf.Clamp(PI(p[2]), 0, Robots.Count - 1); BroadcastLineup(); }
                     break;
                 case "S":
                     if (pl == null) break;

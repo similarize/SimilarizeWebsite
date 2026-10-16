@@ -2,7 +2,7 @@ using UnityEngine;
 
 // One racer: arcade car physics (no rigidbody: ray-cast ground following, jumps off ramps, soft walls),
 // drift + mini-turbo, items, spin-outs, lap counting, and the AI driver.
-public class Kart : MonoBehaviour
+public partial class Kart : MonoBehaviour
 {
     public int id;
     public int car, robot;
@@ -124,7 +124,8 @@ public class Kart : MonoBehaviour
         foreach (Transform ch in body) if (ch != sprung && ch.name != "Steer" && ch.name != "Axle") kids.Add(ch);
         foreach (var ch in kids) ch.SetParent(sprung, false);
         if (dress != null) dress.Destroy();
-        dress = CarDress.Attach(transform, sprung, Cars.All[c].color);
+        dress = CarDress.Attach(transform, sprung, Cars.All[c].color, c);
+        HopSetup();     // u6i Roadster wing
         shield = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         Destroy(shield.GetComponent<Collider>());
         shield.name = "Shield";
@@ -159,6 +160,7 @@ public class Kart : MonoBehaviour
         aiShortcut = false; aiItemT = 0f; stuckT = 0f; gasHeldT = 0f;
         aiLikesShortcut = Random.value < (Track.Def != null ? Track.Def.aiShortcut : 0.4f);
         aiJump = false; padCool = 0f; airT = 0f; trickT = 0f; trickRoll = 0f; bigAir = false; lastScS = -1f;
+        HopReset();     // u6i
         ApplyTransform(0f);
     }
 
@@ -259,7 +261,8 @@ public class Kart : MonoBehaviour
         Track.Ground(pos, out gy, out gn);
         gNormal = Vector3.Slerp(gNormal, grounded && pos.y - gy < 0.6f ? gn : Vector3.up, Mathf.Min(1f, dt * 8f));
         Vector3 fwd = Forward;
-        if (boostT > 0f) FX.Flame(transform.TransformPoint(new Vector3(0f, 0.47f, -2.4f)), -fwd);
+        if (boostT > 0f && IsRoadster) { Vector3 vv = Velocity; foreach (var mn in Main) if (Random.value < 0.6f) FX.ColdGas(transform.TransformPoint(mn), -fwd, vv, 0.8f); }   // u6i: cold gas, no flame
+        else if (boostT > 0f) FX.Flame(transform.TransformPoint(new Vector3(0f, 0.47f, -2.4f)), -fwd);
         if (drifting && grounded) FX.Spark(transform.TransformPoint(new Vector3(0.95f, 0.1f, -1.5f)), -fwd, new Color(0.35f, 0.65f, 1f));
         ApplyTransform(dt);
         lastSteer = Mathf.Lerp(lastSteer, 0f, 0.3f);
@@ -295,6 +298,7 @@ public class Kart : MonoBehaviour
         if (spinT > 0f) { spinT -= dt; i = new KIn(); }
         if (respawning) { TickRespawn(dt); ApplyTransform(dt); return; }
         if (i.fire) Fire();
+        HopTick(dt, i);     // u6i Roadster air gauge
 
         Vector3 pos = transform.position;
         bool farOff = FreeRoam && lastOffDist > Track.HalfW + OffFar;
@@ -325,6 +329,7 @@ public class Kart : MonoBehaviour
         // ---- lambo9 vehicle model (longitudinal + lateral + yaw) ----
         if (expert && human) { top *= 1.15f; accel *= 1.1f; }      // u6g expert: more power, higher top speed (Kid: untouched)
         Drive(i, dt, top, accel, farOff);
+        HopLaunch(i, dt);   // u6i Roadster rear thrusters off the line
         if (expert && human && Autopilot && racing)
         {
             slipLogT -= dt;
@@ -413,6 +418,7 @@ public class Kart : MonoBehaviour
                 if (Autopilot) Debug.Log("LB launch k" + id + " " + gname + " v " + speed.ToString("F1") + " vy " + vy.ToString("F1"));
             }
         }
+        if (HopWants(i)) StartHop(ref pos);     // u6i Roadster thruster hop
         if (grounded)
         {
             float predicted = pos.y + lastClimb * dt;
@@ -438,8 +444,12 @@ public class Kart : MonoBehaviour
         }
         if (!grounded)
         {
-            pos.y += vy * dt - 12f * dt * dt;      // exact ballistic step: same arc at 20 fps as at 60
-            vy -= 24f * dt;
+            if (hopping) HopAir(ref pos, gy, i, dt);     // u6i: thrusted hop
+            else
+            {
+                pos.y += vy * dt - 12f * dt * dt;      // exact ballistic step: same arc at 20 fps as at 60
+                vy -= 24f * dt;
+            }
             gNormal = Vector3.Slerp(gNormal, Vector3.up, Mathf.Min(1f, dt * 2f));
             airT += dt;
             // big air off a ramp: a barrel roll, and a stunt boost when it lands
@@ -447,6 +457,7 @@ public class Kart : MonoBehaviour
             trickRoll = trickT > 0f ? 360f * Smooth01(trickT / 0.7f) : 0f;
             if (pos.y <= gy)
             {
+                if (hopping) HopLand(pos);     // u6i
                 if (vy < -7f) { Sfx.PlayAt(Sfx.Land, pos, Mathf.Clamp01(-vy / 18f)); bounce = Mathf.Clamp(-vy * 0.012f, 0f, 0.18f); for (int d = 0; d < 8; d++) FX.ThemeDust(pos + Random.insideUnitSphere * 1.2f, Forward, Track.Theme, 1f); }
                 pos.y = gy; vy = 0f; grounded = true; lastClimb = 0f;
                 if (bigAir && trickT >= 0.7f && spinT <= 0f && gy > Track.WaterY - 0.5f)
@@ -533,7 +544,8 @@ public class Kart : MonoBehaviour
         if (grounded && Mathf.Abs(speed) > 8f && !onRoad && !inWater) { float amt = Mathf.Clamp01(Mathf.Abs(speed) / 30f) * (Look.Mobile ? 0.4f : 0.75f); FX.ThemeDust(pos - fwd * 2f + Right * 0.9f, fwd, Track.Theme, amt); FX.ThemeDust(pos - fwd * 2f - Right * 0.9f, fwd, Track.Theme, amt); }
         else if (grounded && Track.Theme == 3 && Mathf.Abs(speed) > 18f && !inWater) FX.ThemeDust(pos - fwd * 2.2f, fwd, 3, 0.15f);   // snow spray even on the road
         if (inWater && Mathf.Abs(speed) > 4f && Random.value < 0.6f) FX.Splash(new Vector3(pos.x, Track.WaterY + 0.1f, pos.z) - fwd * 1.5f + right * Random.Range(-1f, 1f), 2);
-        if (boostT > 0f) FX.Flame(transform.TransformPoint(new Vector3(0f, 0.47f, -2.4f)), -fwd);
+        if (boostT > 0f && IsRoadster) { Vector3 vv = Velocity; foreach (var mn in Main) if (Random.value < 0.6f) FX.ColdGas(transform.TransformPoint(mn), -fwd, vv, 0.8f); }   // u6i: cold gas, no flame
+        else if (boostT > 0f) FX.Flame(transform.TransformPoint(new Vector3(0f, 0.47f, -2.4f)), -fwd);
         if (drifting && grounded && driftCharge > 1.1f)
         {
             Color sc = driftCharge >= 2.3f ? new Color(1f, 0.55f, 0.1f) : new Color(0.35f, 0.65f, 1f);
@@ -630,7 +642,7 @@ public class Kart : MonoBehaviour
             if (grounded)
             {
                 float df = Mathf.Clamp01(au / 40f);
-                float muE = mu * (1f + 0.22f * df * df) + bankB;
+                float muE = mu * (1f + 0.22f * df * df) + bankB + FanMu(mu);     // u6i: + Roadster suction fans
                 float fzF = Mathf.Max(0.2f * m * Grav, m * Grav * CgB / WB - m * accLong * CgH / WB);
                 float fzR = Mathf.Max(0.2f * m * Grav, m * Grav * CgA / WB + m * accLong * CgH / WB);
                 // longitudinal
@@ -648,7 +660,7 @@ public class Kart : MonoBehaviour
                     // control: torque past the rear axle's grip spins the wheels (slip ratio builds / decays), a spinning tyre
                     // pushes less and loses most of its side grip -> wheelspin off the line, power oversteer out of corners
                     if (gasS > 0.02f && u > -0.5f && u < top) drive = accel * gasS * ExGear[gear - 1] * (1.15f - 0.5f * Mathf.Clamp01(u / top)) * TorqueK();
-                    float tracR = muE * 1.12f * fzR / m;
+                    float tracR = IsRoadster ? muE * Grav * 1.05f : muE * 1.12f * fzR / m;     // u6i: the Roadster is all-wheel drive
                     float want = drive > tracR ? Mathf.Clamp((drive - tracR) / Mathf.Max(tracR, 0.5f), 0f, 1.5f) : 0f;
                     slipRatio = Mathf.MoveTowards(slipRatio, want, h * (want > slipRatio ? 5f : 2.5f));
                     if (drive > tracR || slipRatio > 0.04f)
@@ -661,7 +673,7 @@ public class Kart : MonoBehaviour
                 if (brakeS > 0.02f && u > 0.5f) brk = Mathf.Min(13.5f * brakeS, muE * Grav * 1.05f);
                 // friction circles: what the tyres spend on drive / braking they can't spend on cornering
                 float fxR = (drive * 0.6f + brk * 0.3f) * m, fxF = (drive * 0.4f + brk * 0.7f) * m;   // 70 % front brake bias
-                if (ex) { fxR = (drive + brk * 0.3f) * m; fxF = brk * 0.7f * m; }     // u6g expert: all the drive on the rear axle
+                if (ex && !IsRoadster) { fxR = (drive + brk * 0.3f) * m; fxF = brk * 0.7f * m; }     // u6g expert: all the drive on the rear axle (u6i: not the AWD Roadster)
                 float muR = muE * (drifting ? 0.7f : 1.12f);           // wider rear tyres: a stable, slightly understeering car
                 float capF = muE * 0.95f * fzF, capR = muR * fzR;
                 float fyFmax = Mathf.Sqrt(Mathf.Max(capF * capF * 0.0625f, capF * capF - fxF * fxF));
@@ -722,7 +734,7 @@ public class Kart : MonoBehaviour
         else if (gear < GearTop.Length && rpm > 8000f && gasS > 0.3f && grounded)
         {
             gear++; shiftT = 0.15f;
-            if (human && gasS > 0.8f && Random.value < 0.6f) { FX.Flame(transform.TransformPoint(new Vector3(0f, 0.47f, -2.4f)), -Forward); Sfx.PlayAt(Sfx.Bump, transform.position, 0.14f, 40f, 0.55f); }
+            if (human && gasS > 0.8f && Random.value < 0.6f && !IsRoadster) { FX.Flame(transform.TransformPoint(new Vector3(0f, 0.47f, -2.4f)), -Forward); Sfx.PlayAt(Sfx.Bump, transform.position, 0.14f, 40f, 0.55f); }
         }
         else if (gear > 1 && rpm < 4300f) { gear--; shiftT = 0.09f; }
         if (Mathf.Abs(speed) < 0.5f && gear > 1 && shiftT <= 0f) gear = 1;
@@ -781,6 +793,7 @@ public class Kart : MonoBehaviour
     {
         if (gasHeldT > 0.05f && gasHeldT < 1.1f) { StartBoost(1.2f, 1.3f); if (human) Toast("Rocket start!", 1.2f); }
         gasHeldT = 0f;
+        HopArmLaunch();     // u6i Roadster: rear thrusters on the first squeeze of the throttle
     }
 
     void OnLap()
@@ -829,6 +842,7 @@ public class Kart : MonoBehaviour
         vy = 0f; grounded = false; drifting = false; spinT = 0f; ResetDrive(); gear = 2;
         speed = Track.Def != null ? 12f : 6f;
         bigAir = false; trickT = 0f; trickRoll = 0f;
+        hopping = false; launchT = 0f;     // u6i
         aiShortcut = false;
     }
 
@@ -895,6 +909,7 @@ public class Kart : MonoBehaviour
         headYaw = Mathf.Lerp(headYaw, LastSteer * 28f + (drifting ? driftDir * 18f : 0f), Mathf.Min(1f, dt * 5f));
         if (head != null) head.localRotation = Quaternion.Euler(0f, headYaw, 0f);
         if (wheelT != null) wheelT.localRotation = Quaternion.AngleAxis(-(netPuppet ? steerAng : steerS * 30f) * 2.2f, RobotModel.WheelAxis);
+        HopVisual(dt);     // u6i Roadster wing
         if (dress != null) dress.Tick(this, braking || (netPuppet && visAx < -4f), boostT > 0f);
         if (shield != null)
         {
@@ -1011,6 +1026,7 @@ public class Kart : MonoBehaviour
         i.brake = speed > want + 1.5f ? Mathf.Clamp((speed - want) / 5f, 0.3f, 1f) : 0f;
         if (aiJump && (jz < 56f || speed < want + 3f)) { i.gas = 1f; i.brake = 0f; }   // approach: flat out unless a bend needs braking; past the pad: no brakes
         if (finished) { i.gas = speed < 14f ? 0.6f : 0f; return i; }
+        if (IsRoadster) { i.jump = AIHop(); i.jumpHeld = hopping; }     // u6i: hop a car it is about to hit
 
         // items
         if (item != Item.None && rollT <= 0f)

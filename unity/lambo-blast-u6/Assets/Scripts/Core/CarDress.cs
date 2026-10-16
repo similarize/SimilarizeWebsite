@@ -14,6 +14,7 @@ public class CarDress
     Mesh quad;
     MaterialPropertyBlock mpb;
     float brakeK, blobK = 1f;
+    bool rd;
 
     static void InitShared()
     {
@@ -101,8 +102,12 @@ public class CarDress
     static float HeadGlow { get { return Gfx6.On ? 1.9f : 1f; } }
     static float TailGlow { get { return Gfx6.On ? 2.3f : 1f; } }
 
-    public static CarDress Attach(Transform kart, Transform sprung, Color paint)
+    public static CarDress Attach(Transform kart, Transform sprung, Color paint) { return Attach(kart, sprung, paint, -1); }
+
+    // u6i: the Roadster has a full-width front light bar + a full-width tail bar (no separate lamps) and a shorter tail
+    public static CarDress Attach(Transform kart, Transform sprung, Color paint, int car)
     {
+        bool rd = Cars.IsRoadster(car);
         InitShared();
         var d = new CarDress { kart = kart, mpb = new MaterialPropertyBlock() };
         d.quad = Quad();
@@ -127,10 +132,20 @@ public class CarDress
             for (int i = 0; i < 2; i++)
             {
                 float sx = i == 0 ? -1f : 1f;
-                d.tails[i] = Sprite(d.quad, sprung, glowMat, new Vector3(sx * 0.62f, 0.75f, -2.34f), new Vector3(1.05f, 0.46f, 1f), 180f);
-                d.heads[i] = Sprite(d.quad, sprung, glowMat, new Vector3(sx * 0.62f, 0.45f, 2.3f), new Vector3(0.6f, 0.26f, 1f), 0f);
+                if (rd)
+                {
+                    d.tails[i] = Sprite(d.quad, sprung, glowMat, new Vector3(sx * 0.7f, 0.805f, -2.2f), new Vector3(0.9f, 0.2f, 1f), 180f);
+                    d.heads[i] = Sprite(d.quad, sprung, glowMat, new Vector3(sx * 0.4f, 0.42f, 2.27f), new Vector3(0.95f, 0.12f, 1f), 0f);
+                }
+                else
+                {
+                    d.tails[i] = Sprite(d.quad, sprung, glowMat, new Vector3(sx * 0.62f, 0.75f, -2.34f), new Vector3(1.05f, 0.46f, 1f), 180f);
+                    d.heads[i] = Sprite(d.quad, sprung, glowMat, new Vector3(sx * 0.62f, 0.45f, 2.3f), new Vector3(0.6f, 0.26f, 1f), 0f);
+                }
             }
-            d.tails[2] = Sprite(d.quad, sprung, glowMat, new Vector3(0f, 0.85f, -2.33f), new Vector3(2.0f, 0.22f, 1f), 180f);   // full-width light bar
+            d.tails[2] = rd ? Sprite(d.quad, sprung, glowMat, new Vector3(0f, 0.805f, -2.19f), new Vector3(2.0f, 0.12f, 1f), 180f)
+                            : Sprite(d.quad, sprung, glowMat, new Vector3(0f, 0.85f, -2.33f), new Vector3(2.0f, 0.22f, 1f), 180f);   // full-width light bar
+            d.rd = rd;
             // u6d: HDR lamp glows (x Glow) so URP bloom catches head- and taillights
             Color hg = new Color(0.42f * HeadGlow, 0.4f * HeadGlow, 0.34f * HeadGlow, 1f); d.Tint(d.heads[0], hg); d.Tint(d.heads[1], hg);
         }
@@ -159,7 +174,7 @@ public class CarDress
                 Tint(tails[0], c); Tint(tails[1], c);
                 Tint(tails[2], c * (0.55f + 0.25f * brakeK));
                 float sc = 1f + 0.5f * brakeK;
-                tails[0].transform.localScale = tails[1].transform.localScale = new Vector3(1.05f * sc, 0.46f * sc, 1f);
+                tails[0].transform.localScale = tails[1].transform.localScale = rd ? new Vector3(0.9f * sc, 0.2f * sc, 1f) : new Vector3(1.05f * sc, 0.46f * sc, 1f);
             }
         }
         if (blob != null)

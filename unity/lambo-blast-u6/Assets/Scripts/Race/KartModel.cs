@@ -23,8 +23,14 @@ public static class Cars
         new CarSpec("Blue",   new Color(0.18f, 0.45f, 1.00f), 29.5f, 12.5f,  98f, 0.95f),
         new CarSpec("Purple", new Color(0.58f, 0.30f, 1.00f), 29.0f, 13.0f, 100f, 0.90f),
         new CarSpec("White",  new Color(0.95f, 0.95f, 0.95f), 28.5f, 13.5f, 104f, 0.90f),
-        new CarSpec("Black",  new Color(0.10f, 0.10f, 0.12f), 29.0f, 10.5f,  90f, 1.35f) };
+        new CarSpec("Black",  new Color(0.10f, 0.10f, 0.12f), 29.0f, 10.5f,  90f, 1.35f),
+        // u6i: the 2026 Tesla Roadster (own lofted model, Resources/LB/roadster.bytes): savage launch (0-60 mph ~0.8 s in real life ->
+        // the highest accel here), suction-fan grip, a cold-gas thruster hop (Kart.TickHop). Top speed stays under Green's.
+        new CarSpec("Roadster", new Color(0.94f, 0.94f, 0.93f), 32.5f, 15.5f, 100f, 0.95f) };
     public const float MaxTop = 33.5f, MinTop = 28.5f;
+    public const int Roadster = 8;                       // u6i
+    public static bool IsRoadster(int c) { return c == Roadster; }
+    public static int Count { get { return All.Length; } }
 }
 
 // The robot roster from the Four Froggies bible (ff3d112 robot table). Names are never invented;
@@ -63,6 +69,7 @@ public static class KartModel
     public static void Build(Transform body, int car, int robot, out Transform[] steer, out Transform[] spin, out Transform head, out Transform steeringWheel)
     {
         steeringWheel = null;
+        if (Cars.IsRoadster(car) && BuildRoadster(body, car, robot, out steer, out spin, out head, out steeringWheel)) return;
         LBPack pk = LBPack.Get("car");
         if (pk == null || !pk.Has("body") || !pk.Has("wheel"))
         {
@@ -94,6 +101,58 @@ public static class KartModel
             if (front) steer[i] = pivot;
             spin[i] = sp;
         }
+    }
+
+    // u6i: 2026 Roadster. Driver on the left (LHD), robot scaled to fit under the low canopy, the robot pack's round wheel is
+    // swapped for the steer-by-wire yoke, the retractable wing is its own node ("Wing", rides on the sprung body; Kart deploys it).
+    public static readonly Vector3 RoadsterSeat = new Vector3(-0.31f, 0.36f, -0.42f);
+    public const float RoadsterRoof = 1.12f;   // robot head must stay under this (canopy is 1.165 at the centre, ~1.15 over the driver)
+    static bool BuildRoadster(Transform body, int car, int robot, out Transform[] steer, out Transform[] spin, out Transform head, out Transform steeringWheel)
+    {
+        steer = null; spin = null; head = null; steeringWheel = null;
+        LBPack pk = LBPack.Get("roadster");
+        if (pk == null || !pk.Has("body") || !pk.Has("wheel")) return false;
+        CarSpec cs = Cars.All[car];
+        var stat = new GameObject("Static").transform;
+        stat.SetParent(body, false);
+        pk.Spawn("body", stat, Vector3.zero, 1f, cs.color);
+        if (robot >= 0)
+        {
+            head = RobotModel.Build(stat, body, RoadsterSeat, robot, true, out steeringWheel, RoadsterRoof);
+            if (steeringWheel != null && pk.Has("yoke"))
+            {
+                // keep the pack wheel's pivot (the robot's hands are on it), swap its meshes for the yoke
+                var kids = new System.Collections.Generic.List<Transform>();
+                foreach (Transform ch in steeringWheel) kids.Add(ch);
+                foreach (var ch in kids) Object.Destroy(ch.gameObject);
+                Transform y = pk.Spawn("yoke", steeringWheel, Vector3.zero, 1f, cs.color);
+                if (y != null) y.localPosition = Vector3.zero;
+            }
+        }
+        MeshMerge.Merge(stat, true, false);
+        if (head != null) MeshMerge.Merge(head, true, false);
+        if (pk.Has("wing"))
+        {
+            Transform w = pk.Spawn("wing", body, Vector3.zero, 1f, cs.color);
+            if (w != null) { w.name = "Wing"; MeshMerge.Merge(w, true, false); }
+        }
+        steer = new Transform[2];
+        spin = new Transform[4];
+        for (int i = 0; i < 4; i++)
+        {
+            bool front = i < 2;
+            float sx = (i % 2 == 0) ? -1f : 1f;
+            var pivot = new GameObject(front ? "Steer" : "Axle").transform;
+            pivot.SetParent(body, false);
+            pivot.localPosition = new Vector3(sx * WheelX, 0.37f, front ? 1.42f : -1.42f);
+            var sp = new GameObject("Spin").transform;
+            sp.SetParent(pivot, false);
+            pk.Spawn("wheel", sp, Vector3.zero, 1f, cs.color, sx < 0f);
+            MeshMerge.Merge(sp, true, false);
+            if (front) steer[i] = pivot;
+            spin[i] = sp;
+        }
+        return true;
     }
 
     static void BuildPrimitive(Transform body, int car, int robot, out Transform[] steer, out Transform[] spin, out Transform head)

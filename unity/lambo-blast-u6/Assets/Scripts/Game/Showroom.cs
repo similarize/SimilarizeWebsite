@@ -24,7 +24,7 @@ public static class Showroom
     static readonly Vector3 Base = new Vector3(3200f, 400f, 3200f);
     public static Vector3 BasePos { get { return Base; } }
     public static Vector3 EnvPos { get { return Base + new Vector3(-150f, 0f, 0f); } }
-    public static readonly RenderTexture[] CarThumbs = new RenderTexture[8];
+    public static readonly RenderTexture[] CarThumbs = new RenderTexture[9];     // u6i: + the Roadster
     public static readonly RenderTexture[] RobotThumbs = new RenderTexture[7];
     public const int CarThumbW = 384, CarThumbH = 224, RobotThumbW = 384, RobotThumbH = 244;
     static Camera thumbCam;
@@ -350,7 +350,7 @@ public static class Showroom
         }
         thumbCam.targetTexture = null;
         ThumbsReady = true;
-        Debug.Log("Showroom: thumbnails rendered (8 cars, 7 robots) " + CarThumbW + "x" + CarThumbH + " MSAA 4");
+        Debug.Log("Showroom: thumbnails rendered (" + CarThumbs.Length + " cars, 7 robots) " + CarThumbW + "x" + CarThumbH + " MSAA 4");
     }
 
     // ---------- per-player turntable ----------

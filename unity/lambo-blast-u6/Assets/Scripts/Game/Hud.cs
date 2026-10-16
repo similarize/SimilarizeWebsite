@@ -11,6 +11,7 @@ public class ViewHud
     public RectTransform panel;
     readonly RectTransform inner;
     readonly Text pos, posOf, lapT, timeT, speedT, speedU, center, toast, itemName, itemHint, driftT, warnT;
+    Image airBar, airBg; Text airLab;      // u6i Roadster thruster air gauge
     readonly Image itemBg, itemRing, itemIcon, speedBar, speedBarBg, posPanel, speedPanel, fade, warnBg, toastBg;
     readonly RawImage map;
     readonly Image[] dots = new Image[8];
@@ -55,6 +56,11 @@ public class ViewHud
         speedBar = UIK.RoundImg(speedPanel.transform, UIK.Round2, Color.white, new Vector2(0f, 0.5f), new Vector2(16f, -24f), new Vector2(10f, 6f), 10f);
         speedBar.rectTransform.pivot = new Vector2(0f, 0.5f);
         var sg = speedBar.gameObject.AddComponent<UIGradient>(); sg.top = new Color(0.5f, 0.95f, 1f); sg.bottom = new Color(0.2f, 0.6f, 1f);
+        // u6i: compressed-air gauge for the Roadster's thruster hop (hidden for the other cars)
+        airLab = UIK.Label(speedPanel.transform, "AIR", 10, TextAnchor.MiddleLeft, new Vector2(0f, 0.5f), new Vector2(34f, -36f), new Vector2(40f, 14f), new Color(0.75f, 0.9f, 1f, 0.9f));
+        airBg = UIK.RoundImg(speedPanel.transform, UIK.Round2, new Color(1f, 1f, 1f, 0.1f), new Vector2(0f, 0.5f), new Vector2(132f, -36f), new Vector2(176f, 5f), 10f);
+        airBar = UIK.RoundImg(speedPanel.transform, UIK.Round2, new Color(0.8f, 0.95f, 1f), new Vector2(0f, 0.5f), new Vector2(44f, -36f), new Vector2(10f, 5f), 10f);
+        airBar.rectTransform.pivot = new Vector2(0f, 0.5f);
         driftT = UIK.Label(r, "", 20, TextAnchor.LowerLeft, new Vector2(0f, 0f), new Vector2(150f, 126f), new Vector2(260f, 32f), Color.white);
         UIK.Modernize(driftT, true, 0.5f);
         // centre / warnings / toast
@@ -149,7 +155,17 @@ public class ViewHud
         string gu = Mathf.Abs(me.speed) < 0.3f && me.gasS < 0.05f ? "N" : me.speed < -0.5f ? "R" : me.gear.ToString();
         if (gu != gearShown) { gearShown = gu; speedU.text = "KM/H   <b>" + gu + "</b>"; }
         if (me.drifting) { driftT.text = me.driftCharge >= 2.3f ? "DRIFT  <color=#ff9a1a>MAX</color>" : me.driftCharge >= 1.1f ? "DRIFT  <color=#5aa8ff>BOOST</color>" : "DRIFT"; }
+        else if (me.IsRoadster && me.hopping) driftT.text = "<color=#e8f6ff>THRUSTERS</color>";     // u6i
         else driftT.text = me.boostT > 0f ? "<color=#5dff9a>BOOST</color>" : (me.shieldT > 0f ? "<color=#6fe0ff>SHIELD</color>" : me.expert ? (me.wheelSpin ? "<color=#ff5a3a>WHEELSPIN</color>" : "<color=#ff8a5a>EXPERT</color>") : "");   // u6g
+        // u6i: thruster air gauge (Roadster only); bright when a hop is ready
+        bool rd = me.IsRoadster && !me.netPuppet;
+        if (airBar.gameObject.activeSelf != rd) { airBar.gameObject.SetActive(rd); airBg.gameObject.SetActive(rd); airLab.gameObject.SetActive(rd); }
+        if (rd)
+        {
+            airBar.rectTransform.sizeDelta = new Vector2(Mathf.Max(5f, 176f * Mathf.Clamp01(me.thrustAir)), 5f);
+            airBar.color = me.HopReady ? new Color(0.8f, 0.95f, 1f) : new Color(0.45f, 0.55f, 0.65f);
+            airLab.text = me.HopReady ? "HOP" : "AIR";
+        }
         // item slot
         Item show = me.rollT > 0f ? me.rollShow : me.item;
         if (show == Item.None) { itemIcon.enabled = false; itemName.text = ""; itemHint.text = ""; itemRing.color = new Color(1f, 1f, 1f, 0.12f); }

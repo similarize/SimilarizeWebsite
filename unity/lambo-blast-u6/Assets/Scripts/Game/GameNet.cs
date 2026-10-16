@@ -251,7 +251,7 @@ public partial class Game
             for (int i = 0; i < n.players.Count; i++)
             {
                 var p = n.players[i];
-                Color c = Cars.All[Mathf.Clamp(p.car, 0, 7)].color;
+                Color c = Cars.All[Mathf.Clamp(p.car, 0, Cars.Count - 1)].color;
                 sb.Append(i > 0 ? ", " : "").Append("<color=#").Append(ColorUtility.ToHtmlStringRGB(Color.Lerp(c, Color.white, 0.25f))).Append(">")
                   .Append(p.id == "host" ? "HOST" : p.name).Append(p.id == n.myId || (n.IsHost && p.id == "host") ? " (you)" : "").Append("</color>");
             }

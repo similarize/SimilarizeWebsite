@@ -13,6 +13,8 @@ public struct KIn
     public bool drift;       // drift held
     public bool pause;       // Start / Esc
     public bool analog;      // u6g: gas / brake came from a trigger (expert mode follows its travel; keys / touch ramp up)
+    public bool jump;        // u6i: Roadster thruster hop (pressed this frame)
+    public bool jumpHeld;    // u6i: hop button held (Expert: holding it keeps the thrusters lit = hover / soft landing)
 }
 
 public static class Kb
@@ -47,6 +49,8 @@ public static class Kb
     public static bool JDown() { return Key(k => k.jKey.wasPressedThisFrame, KeyCode.J, true); }
     public static bool LDown() { return Key(k => k.lKey.wasPressedThisFrame, KeyCode.L, true); }
     public static bool TDown() { return Key(k => k.tKey.wasPressedThisFrame, KeyCode.T, true); }
+    public static bool JHeld() { return Key(k => k.jKey.isPressed || k.eKey.isPressed, KeyCode.J, false); }     // u6i hop (J or E)
+    public static bool JumpDown() { return Key(k => k.jKey.wasPressedThisFrame || k.eKey.wasPressedThisFrame, KeyCode.J, true); }
     public static bool QDown() { return Key(k => k.qKey.wasPressedThisFrame, KeyCode.Q, true); }
     public static bool AnyKeyDown() { return Key(k => k.anyKey.wasPressedThisFrame, KeyCode.Space, true); }
 
@@ -93,6 +97,7 @@ public static class Kb
         i.fire = SpaceDown();
         i.drift = Shift();
         i.pause = EscDown() || PDown();
+        i.jump = JumpDown(); i.jumpHeld = JHeld();
         return i;
     }
 }
@@ -106,7 +111,7 @@ public static class Pads
         return v.normalized * Mathf.Clamp01((m - dz) / (1f - dz));
     }
 
-    // Xbox layout: RT gas, LT brake / reverse, left stick steer, A also gas, B brake, X / RB fire, LB drift, Start pause
+    // Xbox layout: RT gas, LT brake / reverse, left stick steer, A also gas, B brake, X / RB fire, LB drift, Y / R3 Roadster hop, Start pause
     public static KIn Read(Gamepad p)
     {
         var i = new KIn();
@@ -121,6 +126,8 @@ public static class Pads
         i.fire = p.buttonWest.wasPressedThisFrame || p.rightShoulder.wasPressedThisFrame;
         i.drift = p.leftShoulder.isPressed;
         i.pause = p.startButton.wasPressedThisFrame;
+        i.jump = p.buttonNorth.wasPressedThisFrame || p.rightStickButton.wasPressedThisFrame;     // u6i: Y (or R3) = thruster hop
+        i.jumpHeld = p.buttonNorth.isPressed || p.rightStickButton.isPressed;
         return i;
     }
 

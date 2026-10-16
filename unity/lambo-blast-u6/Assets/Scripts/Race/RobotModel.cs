@@ -108,13 +108,43 @@ public static class RobotModel
     // steering axis of the pack wheels (robot space): normal towards the driver, wheel tilted 22 deg
     public static readonly Vector3 WheelAxis = new Vector3(0f, -0.3746f, -0.9272f);
 
+    // u6i: highest point of a pack robot (body + head parts, robot space at size 1) - the Roadster scales its driver to fit the canopy
+    static readonly System.Collections.Generic.Dictionary<int, Vector2> extent = new System.Collections.Generic.Dictionary<int, Vector2>();
+    static Vector2 PackExtent(int r)
+    {
+        Vector2 e;
+        if (extent.TryGetValue(r, out e)) return e;
+        e = new Vector2(-0.35f, 0.95f);
+        LBPack pk = UsesPack(r) ? LBPack.Get(Packs[r]) : null;
+        if (pk != null)
+        {
+            float lo = 9f, hi = -9f;
+            foreach (var pn in new[] { "body", "head" })
+            {
+                LBPack.Part part;
+                if (!pk.parts.TryGetValue(pn, out part)) continue;
+                foreach (var ch in part.chunks) { Bounds b = ch.mesh.bounds; lo = Mathf.Min(lo, b.min.y + part.pivot.y); hi = Mathf.Max(hi, b.max.y + part.pivot.y); }
+            }
+            if (hi > lo) e = new Vector2(lo, hi);
+        }
+        extent[r] = e;
+        return e;
+    }
+
     public static Transform Build(Transform stat, Transform headParent, Vector3 seat, int r, bool drive, out Transform wheel)
+    {
+        return Build(stat, headParent, seat, r, drive, out wheel, 0f);
+    }
+
+    // roof > 0 (u6i Roadster): shrink the robot so its head stays under y = roof (car space)
+    public static Transform Build(Transform stat, Transform headParent, Vector3 seat, int r, bool drive, out Transform wheel, float roof)
     {
         wheel = null;
         if (UsesPack(r))
         {
             LBPack pk = LBPack.Get(Packs[r]);
             float sz = Size(r);
+            if (roof > 0f) { Vector2 ex = PackExtent(r); sz = Mathf.Min(sz, Mathf.Max(0.5f, (roof - seat.y) / Mathf.Max(0.3f, ex.y))); }
             Transform b = pk.Spawn("body", stat, seat, sz, Color.white);
             if (b != null) b.name = "Robot";
             Transform h = pk.Spawn("head", headParent, seat, sz, Color.white);
@@ -129,6 +159,7 @@ public static class RobotModel
             return h;
         }
         float size = Size(r);
+        if (roof > 0f) size = Mathf.Min(size, Mathf.Max(0.5f, (roof - seat.y) / 0.95f));
         var rb = new GameObject("Robot").transform;
         rb.SetParent(stat, false);
         rb.localPosition = seat;

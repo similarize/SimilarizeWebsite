@@ -249,6 +249,22 @@ public static class FX
         Emit(p + Random.insideUnitSphere * 0.1f, Random.insideUnitSphere * 0.4f + Vector3.up * 0.6f, size, Random.Range(0.6f, 1.1f), c);
     }
 
+    // u6i Roadster cold-gas thruster puff: dense white vapour jet out of a nozzle (dir = jet direction, world), grows + fades;
+    // carVel keeps the cloud moving with the car for a moment (no flame, it is compressed air)
+    public static void ColdGas(Vector3 p, Vector3 dir, Vector3 carVel, float strength)
+    {
+        if (ps == null || strength <= 0f) return;
+        int n = strength > 0.7f ? 2 : 1;
+        if (Look.Mobile && Random.value < 0.4f) n = 1;
+        for (int i = 0; i < n; i++)
+        {
+            float g = Random.Range(0.88f, 0.98f);
+            Emit(p + dir * Random.Range(0f, 0.25f) + Random.insideUnitSphere * 0.08f, carVel * 0.55f + dir * Random.Range(5f, 9f) * strength + Random.insideUnitSphere * 0.8f,
+                 Random.Range(0.45f, 0.8f) * (0.6f + 0.6f * strength), Random.Range(0.45f, 0.8f), new Color(g, g, g * 1.02f, 0.35f + 0.3f * strength));
+        }
+        if (Random.value < 0.25f * strength) EmitAdd(p, dir * 3f + carVel * 0.5f, Random.Range(0.12f, 0.22f), 0.09f, new Color(0.75f, 0.85f, 1f));   // cold flash at the throat
+    }
+
     public static void Flame(Vector3 p, Vector3 dir)
     {
         if (ps == null) return;
