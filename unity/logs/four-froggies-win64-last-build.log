@@ -1,44 +1,44 @@
-WIN64 run 38841477460 attempt 1 event workflow_dispatch sha 94b6f5f1604ebac93d87e4d0a3a4e7d63d6173a4 tag ff-win-ffu48 started 2026-10-16T02:38:56Z
+WIN64 run 38856687721 attempt 1 event workflow_dispatch sha 7320a93fb684026404a57571558c9372eaf53124 tag ff-win-ffu48d started 2026-10-16T05:37:05Z
 secrets present
 Filesystem      Size  Used Avail Use% Mounted on
 /dev/root       145G   41G  104G  29% /
 total 11192
-drwxr-xr-x 2 runner runner    4096 Oct 16 02:40 .
-drwxr-xr-x 7 runner runner    4096 Oct 16 02:40 ..
--rw-r--r-- 1 runner runner  435290 Oct 16 02:40 amb_house.ogg
--rw-r--r-- 1 runner runner  344903 Oct 16 02:40 amb_mars.ogg
--rw-r--r-- 1 runner runner  374871 Oct 16 02:40 amb_pond.ogg
--rw-r--r-- 1 runner runner  526014 Oct 16 02:40 amb_ranch.ogg
--rw-r--r-- 1 runner runner  386328 Oct 16 02:40 amb_space.ogg
--rw-r--r-- 1 runner runner  426184 Oct 16 02:40 amb_storm.ogg
--rw-r--r-- 1 runner runner  211023 Oct 16 02:40 amb_under.ogg
--rw-r--r-- 1 runner runner  541106 Oct 16 02:40 mus_callisto.ogg
--rw-r--r-- 1 runner runner  834648 Oct 16 02:40 mus_house.ogg
--rw-r--r-- 1 runner runner  314353 Oct 16 02:40 mus_lobby.ogg
--rw-r--r-- 1 runner runner  760025 Oct 16 02:40 mus_mars.ogg
--rw-r--r-- 1 runner runner 1128804 Oct 16 02:40 mus_ranch.ogg
--rw-r--r-- 1 runner runner 1715693 Oct 16 02:40 mus_space.ogg
--rw-r--r-- 1 runner runner  484373 Oct 16 02:40 mus_story.ogg
--rw-r--r-- 1 runner runner  436437 Oct 16 02:40 mus_story_faith.ogg
--rw-r--r-- 1 runner runner  380759 Oct 16 02:40 mus_story_somber.ogg
--rw-r--r-- 1 runner runner  331485 Oct 16 02:40 mus_story_storm.ogg
--rw-r--r-- 1 runner runner  472724 Oct 16 02:40 mus_story_triumph.ogg
--rw-r--r-- 1 runner runner 1308731 Oct 16 02:40 mus_under.ogg
+drwxr-xr-x 2 runner runner    4096 Oct 16 05:39 .
+drwxr-xr-x 7 runner runner    4096 Oct 16 05:39 ..
+-rw-r--r-- 1 runner runner  435290 Oct 16 05:39 amb_house.ogg
+-rw-r--r-- 1 runner runner  344903 Oct 16 05:39 amb_mars.ogg
+-rw-r--r-- 1 runner runner  374871 Oct 16 05:39 amb_pond.ogg
+-rw-r--r-- 1 runner runner  526014 Oct 16 05:39 amb_ranch.ogg
+-rw-r--r-- 1 runner runner  386328 Oct 16 05:39 amb_space.ogg
+-rw-r--r-- 1 runner runner  426184 Oct 16 05:39 amb_storm.ogg
+-rw-r--r-- 1 runner runner  211023 Oct 16 05:39 amb_under.ogg
+-rw-r--r-- 1 runner runner  541106 Oct 16 05:39 mus_callisto.ogg
+-rw-r--r-- 1 runner runner  834648 Oct 16 05:39 mus_house.ogg
+-rw-r--r-- 1 runner runner  314353 Oct 16 05:39 mus_lobby.ogg
+-rw-r--r-- 1 runner runner  760025 Oct 16 05:39 mus_mars.ogg
+-rw-r--r-- 1 runner runner 1128804 Oct 16 05:39 mus_ranch.ogg
+-rw-r--r-- 1 runner runner 1715693 Oct 16 05:39 mus_space.ogg
+-rw-r--r-- 1 runner runner  484373 Oct 16 05:39 mus_story.ogg
+-rw-r--r-- 1 runner runner  436437 Oct 16 05:39 mus_story_faith.ogg
+-rw-r--r-- 1 runner runner  380759 Oct 16 05:39 mus_story_somber.ogg
+-rw-r--r-- 1 runner runner  331485 Oct 16 05:39 mus_story_storm.ogg
+-rw-r--r-- 1 runner runner  472724 Oct 16 05:39 mus_story_triumph.ogg
+-rw-r--r-- 1 runner runner 1308731 Oct 16 05:39 mus_under.ogg
 hub pass1: failure
 -rwxrwxrwx 1 root root 1272 Oct 13 19:47 /opt/unityhub/unityhub
 editor: /home/runner/Unity/Hub/Editor/2022.3.62f3/Editor/Unity
 unity exit code: 0
 total 32200
-drwxr-xr-x 4 runner runner     4096 Oct 16 02:49 .
-drwxr-xr-x 3 runner runner     4096 Oct 16 02:49 ..
--rwxrwxrwx 1 runner runner   666624 Oct 16 02:49 FourFroggies.exe
-drwxr-xr-x 4 runner runner     4096 Oct 16 02:49 FourFroggies_Data
-drwxr-xr-x 4 runner runner     4096 Oct 16 02:49 MonoBleedingEdge
--rwxrwxrwx 1 runner runner  1185192 Oct 16 02:49 UnityCrashHandler64.exe
--rw-rw-rw- 1 runner runner 31100848 Oct 16 02:49 UnityPlayer.dll
--rw-r--r-- 1 runner runner 86021088 Oct 16 02:49 FourFroggies-Win64-ff-win-ffu48.zip
-WIN_ZIP_SIZE: 86021088
-RELEASE_URL: https://github.com/similarize/SimilarizeWebsite/releases/tag/ff-win-ffu48
+drwxr-xr-x 4 runner runner     4096 Oct 16 05:45 .
+drwxr-xr-x 3 runner runner     4096 Oct 16 05:45 ..
+-rwxrwxrwx 1 runner runner   666624 Oct 16 05:45 FourFroggies.exe
+drwxr-xr-x 4 runner runner     4096 Oct 16 05:45 FourFroggies_Data
+drwxr-xr-x 4 runner runner     4096 Oct 16 05:45 MonoBleedingEdge
+-rwxrwxrwx 1 runner runner  1185192 Oct 16 05:45 UnityCrashHandler64.exe
+-rw-rw-rw- 1 runner runner 31100848 Oct 16 05:45 UnityPlayer.dll
+-rw-r--r-- 1 runner runner 86021875 Oct 16 05:46 FourFroggies-Win64-ff-win-ffu48d.zip
+WIN_ZIP_SIZE: 86021875
+RELEASE_URL: https://github.com/similarize/SimilarizeWebsite/releases/tag/ff-win-ffu48d
 /usr/bin/wine
 /usr/bin/Xvfb
 /usr/bin/import
@@ -60,7 +60,7 @@ Realism: terrain layers (grass / dirt / shore / mud with normal maps, NM materia
 Realism: lily pads re-skinned 9
 Realism: re-skinned 750 renderers (bark / rock / leaves), water True
 Realism: area built (5200 grass clumps, 2 meshes)
-Realism: ready in 26.5 s, 15 textures, 5211 KB streamed
+Realism: ready in 21.0 s, 15 textures, 5211 KB streamed
 === ranch player log (grep)
 Forcing GfxDevice: OpenGL Core
 GfxDevice: creating device client; threaded=1; jobified=1
@@ -76,34 +76,34 @@ FFPlatform: native display windowed 1280x720
 Realism: runtime compression -> DXT1
 ShowroomGrade: shader ok
 Showroom: thumbnails rendered (10 characters, 384 px 4x MSAA + mips)
-FFDEMO scene frog t=8.2
+FFDEMO scene frog t=7.0
 Realism: terrain layers (grass / dirt / shore / mud with normal maps, NM material)
 Realism: lily pads re-skinned 9
 Realism: re-skinned 750 renderers (bark / rock / leaves), water True
 Realism: area built (5200 grass clumps, 2 meshes)
-Realism: ready in 14.0 s, 15 textures, 5211 KB streamed
-total 5428
-drwxr-xr-x 2 runner runner    4096 Oct 16 02:53 .
-drwxr-xr-x 8 runner runner    4096 Oct 16 02:49 ..
--rw-r--r-- 1 runner runner  201102 Oct 16 02:51 lobby-player.log
--rw-r--r-- 1 runner runner  629388 Oct 16 02:50 lobby-t35.png
--rw-r--r-- 1 runner runner  633933 Oct 16 02:51 lobby-t55.png
--rw-r--r-- 1 runner runner  643180 Oct 16 02:51 lobby-t75.png
--rw-r--r-- 1 runner runner  201026 Oct 16 02:53 ranch-player.log
--rw-r--r-- 1 runner runner 1071413 Oct 16 02:53 ranch-t100.png
--rw-r--r-- 1 runner runner 1073224 Oct 16 02:54 ranch-t150.png
--rw-r--r-- 1 runner runner 1073624 Oct 16 02:52 ranch-t60.png
+Realism: ready in 11.5 s, 15 textures, 5211 KB streamed
+total 5420
+drwxr-xr-x 2 runner runner    4096 Oct 16 05:50 .
+drwxr-xr-x 8 runner runner    4096 Oct 16 05:46 ..
+-rw-r--r-- 1 runner runner  199382 Oct 16 05:47 lobby-player.log
+-rw-r--r-- 1 runner runner  640720 Oct 16 05:47 lobby-t35.png
+-rw-r--r-- 1 runner runner  648494 Oct 16 05:47 lobby-t55.png
+-rw-r--r-- 1 runner runner  643914 Oct 16 05:48 lobby-t75.png
+-rw-r--r-- 1 runner runner  162556 Oct 16 05:50 ranch-player.log
+-rw-r--r-- 1 runner runner 1078592 Oct 16 05:49 ranch-t100.png
+-rw-r--r-- 1 runner runner 1076381 Oct 16 05:50 ranch-t150.png
+-rw-r--r-- 1 runner runner 1075267 Oct 16 05:49 ranch-t60.png
 SMOKE_DONE
 === step outcomes: secrets=success setup=success activate=success build=success zip=success release=success smoke=success
 === error lines
 10:[Licensing::Module] Trying to connect to existing licensing client channel...
 11:[Licensing::IpcConnector] Channel LicenseClient-runner doesn't exist
-12:[Licensing::Module] Successfully launched the LicensingClient (PId: 5820)
-13:[Licensing::IpcConnector] Successfully connected to: "LicenseClient-runner" at "2026-10-16T02:45:55.522356Z"
+12:[Licensing::Module] Successfully launched the LicensingClient (PId: 5504)
+13:[Licensing::IpcConnector] Successfully connected to: "LicenseClient-runner" at "2026-10-16T05:43:20.061132Z"
 15:[Licensing::Client] Handshaking with LicensingClient:
-21:[Licensing::Module] Successfully connected to LicensingClient on channel: "LicenseClient-runner" (connect: 0.57s, validation: 0.06s, handshake: 0.00s)
-22:[Licensing::IpcConnector] Successfully connected to: "LicenseClient-runner-notifications" at "2026-10-16T02:45:55.577803Z"
-23:[Licensing::Module] Connected to LicensingClient (PId: 5820, launch time: 0.00, total connection time: 0.62s)
+21:[Licensing::Module] Successfully connected to LicensingClient on channel: "LicenseClient-runner" (connect: 0.57s, validation: 0.05s, handshake: 0.00s)
+22:[Licensing::IpcConnector] Successfully connected to: "LicenseClient-runner-notifications" at "2026-10-16T05:43:20.112419Z"
+23:[Licensing::Module] Connected to LicensingClient (PId: 5504, launch time: 0.00, total connection time: 0.62s)
 24:[Licensing::Module] Error: Access token is unavailable; failed to update
 25:[Licensing::Client] Successfully updated license
 26:[Licensing::Client] Successfully resolved entitlement details
@@ -229,7 +229,7 @@ SMOKE_DONE
 2699:BuildScript:RunWindows () (at Assets/Editor/BuildScript.cs:124)
 2700:BuildScript:BuildWindows () (at Assets/Editor/BuildScript.cs:87)
 7412: 0.1 kb	 0.0% Packages/com.unity.inputsystem/InputSystem/Utilities/ExceptionHelpers.cs
-7772:BUILD_RESULT: Succeeded target=Win64 errors=0 warnings=19 size=99859390 time=00:02:04.5860179
+7772:BUILD_RESULT: Succeeded target=Win64 errors=0 warnings=19 size=99862974 time=00:01:35.2730236
 7777:BuildScript:RunWindows () (at Assets/Editor/BuildScript.cs:126)
 7778:BuildScript:BuildWindows () (at Assets/Editor/BuildScript.cs:87)
 7780:(Filename: Assets/Editor/BuildScript.cs Line: 126)
@@ -238,8 +238,8 @@ SMOKE_DONE
 7789:(Filename: Assets/Editor/BuildScript.cs Line: 94)
 7795:[Licensing::IpcConnector] LicenseClient-runner-notifications channel disconnected successfully.
 7796:[Licensing::IpcConnector] LicenseClient-runner channel disconnected successfully.
-7874:[Performance] Application.ReadLicenseInfo                                                                                    :        1 samples, Peak.  11.9 ms (1.0x), Avg.  11.9 ms, Total. 11.86 ms (0.0%)
-8293:##utp:{"type":"MemoryLeaks","version":2,"phase":"Immediate","time":1792118956530,"processId":5814,"allocatedMemory":8049742,"memoryLabels":[{"Default":20071},{"Permanent":16353},{"Thread":1083236},{"Manager":19940},{"VertexData":12},{"Geometry":280},{"Texture":328},{"Shader":78279},{"Material":24},{"GfxDevice":36336},{"Animation":360},{"Audio":3976},{"Font":104211},{"FontEngine":336},{"Physics":513},{"Serialization":732},{"Input":26816},{"JobScheduler":51280},{"Mono":40},{"ScriptingNativeRuntime":191920},{"BaseObject":1620804},{"Resource":1064},{"Renderer":2352},{"Transform":48},{"File":3717},{"WebCam":40},{"Culling":40},{"Terrain":1025},{"Wind":24},{"String":32750},{"DynamicArray":63421},{"HashMap":73122},{"Utility":2659526},{"Curl":1112},{"PoolAlloc":1496},{"AI":72},{"TypeTree":5061},{"ScriptManager":640},{"RuntimeInitializeOnLoadManager":80},{"SpriteAtlas":128},{"GI":3632},{"Director":7928},{"CloudService":7232},{"WebRequest":720},{"VR":45769},{"SceneManager":600},{"Video":72},{"LazyScriptCache":40},{"NativeArray":12},{"Camera":25},{"Secure":5337},{"SerializationCache":1576},{"APIUpdating":11856},{"Subsystems":392},{"VirtualTexturing":57560},{"StaticSafetyDebugInfo":327680},{"EditorGui":56},{"EditorUtility":10367},{"VersionControl":4},{"Undo":736},{"AssetDatabase":1418131},{"RestService":1518},{"EditorGi":376},{"License":3584},{"UnityConnect":25496},{"Collab":641},{"Upm":1856},{"DrivenProperties":96},{"LocalIPC":216},{"ProfilerEditor":10951},{"CoreBusinessMetrics":3638},{"AssetReference":40},{"IPCStream":40}]}
+7874:[Performance] Application.ReadLicenseInfo                                                                                    :        1 samples, Peak.  11.8 ms (1.0x), Avg.  11.8 ms, Total. 11.85 ms (0.0%)
+8293:##utp:{"type":"MemoryLeaks","version":2,"phase":"Immediate","time":1792129560562,"processId":5498,"allocatedMemory":8049643,"memoryLabels":[{"Default":20071},{"Permanent":16353},{"Thread":1083236},{"Manager":19940},{"VertexData":12},{"Geometry":280},{"Texture":328},{"Shader":78279},{"Material":24},{"GfxDevice":36336},{"Animation":360},{"Audio":3976},{"Font":104211},{"FontEngine":336},{"Physics":513},{"Serialization":732},{"Input":26816},{"JobScheduler":51176},{"Mono":40},{"ScriptingNativeRuntime":191920},{"BaseObject":1620804},{"Resource":1064},{"Renderer":2352},{"Transform":48},{"File":3717},{"WebCam":40},{"Culling":40},{"Terrain":1025},{"Wind":24},{"String":32755},{"DynamicArray":63421},{"HashMap":73122},{"Utility":2659526},{"Curl":1112},{"PoolAlloc":1496},{"AI":72},{"TypeTree":5061},{"ScriptManager":640},{"RuntimeInitializeOnLoadManager":80},{"SpriteAtlas":128},{"GI":3632},{"Director":7928},{"CloudService":7232},{"WebRequest":720},{"VR":45769},{"SceneManager":600},{"Video":72},{"LazyScriptCache":40},{"NativeArray":12},{"Camera":25},{"Secure":5337},{"SerializationCache":1576},{"APIUpdating":11856},{"Subsystems":392},{"VirtualTexturing":57560},{"StaticSafetyDebugInfo":327680},{"EditorGui":56},{"EditorUtility":10367},{"VersionControl":4},{"Undo":736},{"AssetDatabase":1418131},{"RestService":1518},{"EditorGi":376},{"License":3584},{"UnityConnect":25496},{"Collab":641},{"Upm":1856},{"DrivenProperties":96},{"LocalIPC":216},{"ProfilerEditor":10951},{"CoreBusinessMetrics":3638},{"AssetReference":40},{"IPCStream":40}]}
 === editor log tail (300)
       Peak Allocated Bytes 0 B
       Overflow Count 0
@@ -439,7 +439,7 @@ SMOKE_DONE
   Peak Allocated memory 165.8 KB
   Peak Large allocation bytes 0 B
 [ALLOC_DEFAULT] Dual Thread Allocator
-  Peak main deferred allocation count 85
+  Peak main deferred allocation count 90
     [ALLOC_BUCKET]
       Large Block size 32.0 MB
       Used Block count 1
@@ -452,7 +452,7 @@ SMOKE_DONE
     [ALLOC_DEFAULT_THREAD]
       Requested Block Size 16.0 MB
       Peak Block count 1
-      Peak Allocated memory 6.0 MB
+      Peak Allocated memory 6.1 MB
       Peak Large allocation bytes 0 B
 [ALLOC_TEMP_JOB_1_FRAME]
   Initial Block Size 2.0 MB
@@ -525,12 +525,12 @@ SMOKE_DONE
 [ALLOC_PROFILER]
   Requested Block Size 16.0 MB
   Peak Block count 1
-  Peak Allocated memory 399.0 KB
+  Peak Allocated memory 464.4 KB
   Peak Large allocation bytes 0 B
     [ALLOC_PROFILER_BUCKET]
       Large Block size 32.0 MB
       Used Block count 1
-      Peak Allocated bytes 4.0 KB
+      Peak Allocated bytes 4.2 KB
 [ALLOC_PROFILER_EDITOR]
   Requested Block Size 1.0 MB
   Peak Block count 0
@@ -539,5 +539,5 @@ SMOKE_DONE
     [ALLOC_PROFILER_BUCKET]
       Large Block size 32.0 MB
       Used Block count 1
-      Peak Allocated bytes 4.0 KB
-##utp:{"type":"MemoryLeaks","version":2,"phase":"Immediate","time":1792118956530,"processId":5814,"allocatedMemory":8049742,"memoryLabels":[{"Default":20071},{"Permanent":16353},{"Thread":1083236},{"Manager":19940},{"VertexData":12},{"Geometry":280},{"Texture":328},{"Shader":78279},{"Material":24},{"GfxDevice":36336},{"Animation":360},{"Audio":3976},{"Font":104211},{"FontEngine":336},{"Physics":513},{"Serialization":732},{"Input":26816},{"JobScheduler":51280},{"Mono":40},{"ScriptingNativeRuntime":191920},{"BaseObject":1620804},{"Resource":1064},{"Renderer":2352},{"Transform":48},{"File":3717},{"WebCam":40},{"Culling":40},{"Terrain":1025},{"Wind":24},{"String":32750},{"DynamicArray":63421},{"HashMap":73122},{"Utility":2659526},{"Curl":1112},{"PoolAlloc":1496},{"AI":72},{"TypeTree":5061},{"ScriptManager":640},{"RuntimeInitializeOnLoadManager":80},{"SpriteAtlas":128},{"GI":3632},{"Director":7928},{"CloudService":7232},{"WebRequest":720},{"VR":45769},{"SceneManager":600},{"Video":72},{"LazyScriptCache":40},{"NativeArray":12},{"Camera":25},{"Secure":5337},{"SerializationCache":1576},{"APIUpdating":11856},{"Subsystems":392},{"VirtualTexturing":57560},{"StaticSafetyDebugInfo":327680},{"EditorGui":56},{"EditorUtility":10367},{"VersionControl":4},{"Undo":736},{"AssetDatabase":1418131},{"RestService":1518},{"EditorGi":376},{"License":3584},{"UnityConnect":25496},{"Collab":641},{"Upm":1856},{"DrivenProperties":96},{"LocalIPC":216},{"ProfilerEditor":10951},{"CoreBusinessMetrics":3638},{"AssetReference":40},{"IPCStream":40}]}
+      Peak Allocated bytes 4.2 KB
+##utp:{"type":"MemoryLeaks","version":2,"phase":"Immediate","time":1792129560562,"processId":5498,"allocatedMemory":8049643,"memoryLabels":[{"Default":20071},{"Permanent":16353},{"Thread":1083236},{"Manager":19940},{"VertexData":12},{"Geometry":280},{"Texture":328},{"Shader":78279},{"Material":24},{"GfxDevice":36336},{"Animation":360},{"Audio":3976},{"Font":104211},{"FontEngine":336},{"Physics":513},{"Serialization":732},{"Input":26816},{"JobScheduler":51176},{"Mono":40},{"ScriptingNativeRuntime":191920},{"BaseObject":1620804},{"Resource":1064},{"Renderer":2352},{"Transform":48},{"File":3717},{"WebCam":40},{"Culling":40},{"Terrain":1025},{"Wind":24},{"String":32755},{"DynamicArray":63421},{"HashMap":73122},{"Utility":2659526},{"Curl":1112},{"PoolAlloc":1496},{"AI":72},{"TypeTree":5061},{"ScriptManager":640},{"RuntimeInitializeOnLoadManager":80},{"SpriteAtlas":128},{"GI":3632},{"Director":7928},{"CloudService":7232},{"WebRequest":720},{"VR":45769},{"SceneManager":600},{"Video":72},{"LazyScriptCache":40},{"NativeArray":12},{"Camera":25},{"Secure":5337},{"SerializationCache":1576},{"APIUpdating":11856},{"Subsystems":392},{"VirtualTexturing":57560},{"StaticSafetyDebugInfo":327680},{"EditorGui":56},{"EditorUtility":10367},{"VersionControl":4},{"Undo":736},{"AssetDatabase":1418131},{"RestService":1518},{"EditorGi":376},{"License":3584},{"UnityConnect":25496},{"Collab":641},{"Upm":1856},{"DrivenProperties":96},{"LocalIPC":216},{"ProfilerEditor":10951},{"CoreBusinessMetrics":3638},{"AssetReference":40},{"IPCStream":40}]}
