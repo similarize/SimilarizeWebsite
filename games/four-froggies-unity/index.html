@@ -75,19 +75,19 @@
     };
   })();
   var config = {
-    dataUrl: buildUrl + "/" + name + ".data?v=202610171312-bb52030",
-    frameworkUrl: buildUrl + "/" + name + ".framework.js?v=202610171312-bb52030",
-    codeUrl: buildUrl + "/" + name + ".wasm?v=202610171312-bb52030",
+    dataUrl: buildUrl + "/" + name + ".data?v=202610171336-d4c3be4",
+    frameworkUrl: buildUrl + "/" + name + ".framework.js?v=202610171336-d4c3be4",
+    codeUrl: buildUrl + "/" + name + ".wasm?v=202610171336-d4c3be4",
     streamingAssetsUrl: "StreamingAssets",
     companyName: "Similarize",
     productName: "Four Froggies",
-    productVersion: "202610171312-bb52030",
+    productVersion: "202610171336-d4c3be4",
     devicePixelRatio: window.FFDPR.lobby,
     showBanner: function (msg, type) { if (type === "error") { var e = document.getElementById("err"); e.style.display = "block"; e.textContent = msg; } else console.log(msg); }
   };
   var fill = document.getElementById("fill"), pct = document.getElementById("pct"), loader = document.getElementById("loader");
   var script = document.createElement("script");
-  script.src = buildUrl + "/" + name + ".loader.js?v=202610171312-bb52030";
+  script.src = buildUrl + "/" + name + ".loader.js?v=202610171336-d4c3be4";
   script.onload = function () {
     createUnityInstance(canvas, config, function (p) {
       fill.style.width = Math.round(p * 100) + "%";
