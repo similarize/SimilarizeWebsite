@@ -37,7 +37,20 @@ public class Ffu57 : MonoBehaviour
     void Next(string what) { ph++; step = 0; phW = Time.realtimeSinceStartup; camOn = false; camFollow = null; Animals57.DemoSteer = null; Debug.Log("FFDEMO animals57 ph " + ph + " " + (ph < order.Length ? order[ph] : "end") + " " + what + (Animals57.On ? " (ffu57 animals)" : " (OLD animals)") + " " + Stats()); }
     void Cam(Vector3 p, Vector3 look) { camPos = p; camLook = look; camOn = true; camFollow = null; }
     void CamOn(Transform t, Vector3 off, float lookUp) { camFollow = t; camOff = off; camLook = Vector3.up * lookUp; camOn = true; }
-    static Animal Pet(string n) { foreach (var a in Animal.All) if (a != null && a.petName == n) return a; return null; }
+    // Animal.All drops animals whose world root is inactive (the house pets while nobody is in the house), so the demo also
+    // looks them up among inactive scene objects (cached, at most once a second).
+    static readonly Dictionary<string, Animal> petCache = new Dictionary<string, Animal>(); static float petFindT;
+    static Animal Pet(string n)
+    {
+        foreach (var a in Animal.All) if (a != null && a.petName == n) return a;
+        Animal c;
+        if (petCache.TryGetValue(n, out c) && c != null) return c;
+        if (Time.unscaledTime < petFindT) return null;
+        petFindT = Time.unscaledTime + 1f;
+        foreach (var a in Resources.FindObjectsOfTypeAll<Animal>())
+            if (a != null && a.gameObject.scene.IsValid() && a.petName.Length > 0) petCache[a.petName] = a;
+        return petCache.TryGetValue(n, out c) ? c : null;
+    }
     static Vector3 Beside(Animal a, float d) { return a.transform.position - a.transform.forward * 0.2f + a.transform.right * d; }
 
     void Update()
