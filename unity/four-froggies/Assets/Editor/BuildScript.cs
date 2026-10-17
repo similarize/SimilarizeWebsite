@@ -502,9 +502,8 @@ public static class BuildScript
             sky.SetFloat("_Exposure", 1.3f);
         }
         EditorUtility.SetDirty(sky);
-        // ffu60: GPU instancing on the base Standard / Unlit materials (every runtime Mats.* clone inherits it): repeated
-        // primitives / LBPack parts with one material draw as one instanced call; a scene material keeps the variants in the build
-        lit.enableInstancing = true; unlit.enableInstancing = true; EditorUtility.SetDirty(unlit);
+        // ffu60b: no GPU instancing on the base Standard / Unlit materials (60a had it: it stopped Unity's dynamic batching,
+        // the ~40-cube batches became single / 2-4 instance draws = more draw calls). Left as before ffu60.
         EditorUtility.SetDirty(lit);
         // graphics overhaul shaders (Assets/Shaders): frog skin, foliage, animated pond water
         Material skin = ShaderMat("FF/Skin", "Skin.mat");
