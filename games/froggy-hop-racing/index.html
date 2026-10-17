@@ -1065,15 +1065,18 @@ holdBtn("b-jump", () => { if (state === "race" && kbPl()) kbPl().frog.input.jump
 holdBtn("b-brake", () => (touch.brk = 1), () => (touch.brk = 0));
 holdBtn("b-item", () => { if (state === "race" && kbPl()) kbPl().frog.input.item = true; });
 holdBtn("b-pause", togglePause);
-// gamepads: drop null/disconnected, prefer standard mapping, alias ghost duplicates by press coincidence
+// gamepads: drop null/disconnected, prefer standard mapping, alias ghost duplicates by press coincidence (lobby/menu only — fhr7)
 const padPrev = {}, pressT = {}, aT = {}, alias = {}, coinc = {}, alone = {}, pend = {};
 let padList = [], padPress = {}, seats = [], lastPadN = -1;
 const btnOn = (b) => !!b && (b.pressed || b.value > 0.5);
-function note(s) { if (state === "lobby") { $("l-msg").textContent = s; setTimeout(() => { if ($("l-msg").textContent === s) $("l-msg").textContent = ""; }, 2500); } else toast(s, 2); }
+function note(s) { (window.__fhrNotes = window.__fhrNotes || []).push({ s, state, t: performance.now() }); if (state === "lobby") { $("l-msg").textContent = s; setTimeout(() => { if ($("l-msg").textContent === s) $("l-msg").textContent = ""; }, 2500); } else toast(s, 2); }
+window.__fhrProbe = () => ({ state, alias: Object.assign({}, alias), padN: padList.length, seatN: seats.length, players: players.map((p) => ({ pad: p.pad, auto: !!p.frog.auto, tag: p.tag, thr: p.frog.input.thr, v: p.frog.v })), notes: (window.__fhrNotes || []).slice() });
+// fhr7: only merge ghost duplicate pads in lobby/menu — never mid-race (two humans mashing gas at GO must stay distinct)
 function setAlias(hi, lo) {
-  if (alias[hi] != null) return; alias[hi] = lo; alone[hi] = 0; pend[hi] = 0;
+  if (alias[hi] != null) return;
+  if (state !== "lobby" && state !== "menu") return; // seats locked once countdown/race starts
+  alias[hi] = lo; alone[hi] = 0; pend[hi] = 0;
   const s = seats.findIndex((x) => x.src === hi); if (s >= 0 && state === "lobby") seats.splice(s, 1);
-  const pl = players.find((p) => p.pad === hi); if (pl && state !== "lobby" && state !== "menu") pl.frog.auto = true;
   note("Merged duplicate controller"); if (state === "lobby") drawLobby();
 }
 function scanPads() {
@@ -1088,12 +1091,15 @@ function scanPads() {
   });
   const idx = Object.keys(padPress).map(Number).sort((a, b) => a - b);
   if (idx.length) auInit();
+  const allowMerge = state === "lobby" || state === "menu";
   idx.forEach((i) => {
     const isA = padPress[i].includes(0);
-    for (const k in pressT) {
-      const j = +k, lo = Math.min(i, j), hi = Math.max(i, j), key = lo + "," + hi; if (j === i) continue;
-      if (now - pressT[j] < 80 && (coinc[key] = (coinc[key] || 0) + 1) >= 2) setAlias(hi, lo);
-      if (isA && aT[j] != null && now - aT[j] < 120) setAlias(hi, lo);
+    if (allowMerge) {
+      for (const k in pressT) {
+        const j = +k, lo = Math.min(i, j), hi = Math.max(i, j), key = lo + "," + hi; if (j === i) continue;
+        if (now - pressT[j] < 80 && (coinc[key] = (coinc[key] || 0) + 1) >= 2) setAlias(hi, lo);
+        if (isA && aT[j] != null && now - aT[j] < 120) setAlias(hi, lo);
+      }
     }
     pressT[i] = now; if (isA) aT[i] = now;
     if (alias[i] != null && !pend[i]) pend[i] = now;
