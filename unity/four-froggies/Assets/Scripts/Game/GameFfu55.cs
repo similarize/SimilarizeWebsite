@@ -90,7 +90,7 @@ public class Ffu55 : MonoBehaviour
                 else Next("cars done");
                 break;
             case "houseout":
-                Cam(G(hc.x + 16f, hz1 + 22f) + Vector3.up * 3.2f, new Vector3(hc.x, 3.6f, hz1));
+                Cam(G(hc.x - 13f, hz1 + 21f) + Vector3.up * 3.2f, new Vector3(hc.x + 2f, 3.4f, hz1));   // 55b: west of the garage (was inside its wall)
                 if (w > 22f) Next("house outside done");
                 break;
             case "housein":

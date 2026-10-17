@@ -52,7 +52,7 @@ public static class Light55
             case WorldId.Callisto: return 0.45f;
             case WorldId.Moon: return 1.12f;
             case WorldId.Underwater: return 0.55f;
-            case WorldId.House: return 0.26f;
+            case WorldId.House: return 0.18f;
             default: return 1f;
         }
     }
@@ -85,12 +85,13 @@ public static class Light55
         if (w == WorldId.House)
         {
             // indoors: the ranch sky's light (same time of day) through the windows + the room lamps (Light55House)
-            float lit = Light55House.LitFrac;
+            // 55b: the lamp fill follows the switch of the room the camera is in (one global ambient, so per camera)
+            float lit = Light55House.I != null ? Light55House.I.LitAt(c.transform.position) : 1f;
             RenderSettings.ambientMode = AmbientMode.Trilight;
-            Color lamp = new Color(0.30f, 0.26f, 0.20f) * lit;
-            RenderSettings.ambientSkyColor = amb0 * 0.42f + lamp;
-            RenderSettings.ambientEquatorColor = amb1 * 0.42f + lamp * 0.9f;
-            RenderSettings.ambientGroundColor = amb2 * 0.5f + lamp * 0.6f;
+            Color lamp = new Color(0.36f, 0.31f, 0.24f) * lit;
+            RenderSettings.ambientSkyColor = amb0 * 0.32f + lamp;
+            RenderSettings.ambientEquatorColor = amb1 * 0.32f + lamp * 0.9f;
+            RenderSettings.ambientGroundColor = amb2 * 0.4f + lamp * 0.6f;
         }
         else if (w == WorldId.Mars)
         {
@@ -286,7 +287,7 @@ public class Light55House : MonoBehaviour
         var lg = new GameObject("Lamp " + name); lg.transform.SetParent(transform, false); lg.transform.position = c;
         rm.lamp = lg.AddComponent<Light>();
         rm.lamp.type = LightType.Point; rm.lamp.shadows = LightShadows.None; rm.lamp.renderMode = LightRenderMode.ForcePixel;
-        rm.lamp.range = Mathf.Max(r.width, r.height) * 0.78f; rm.lamp.intensity = 1.25f; rm.lamp.color = new Color(1f, 0.88f, 0.72f);
+        rm.lamp.range = Mathf.Max(r.width, r.height) * 0.78f; rm.lamp.intensity = 1.7f; rm.lamp.color = new Color(1f, 0.88f, 0.72f);
         // flush ceiling light (disc) + its rim
         var b = Mats.Prim(PrimitiveType.Cylinder, transform, o + new Vector3(r.center.x, H - 0.05f, r.center.y), new Vector3(1.4f, 0.04f, 1.4f), bulbOn);
         Mats.NoShadows(b); rm.bulb = b.GetComponent<Renderer>();
@@ -338,6 +339,13 @@ public class Light55House : MonoBehaviour
         if (best == null) return "no light switch here";
         Flip(best, f);
         return best.on ? "lights on in the " + best.name + "!" : "lights off in the " + best.name + " - spooky!";
+    }
+    // 1 = the room around p has its lamp on, 0 = off (outside every room: the share of lit rooms)
+    public float LitAt(Vector3 p)
+    {
+        Vector3 l = p - Worlds.HouseO;
+        foreach (var r in rooms) if (r.r.Contains(new Vector2(l.x, l.z))) return r.on ? 1f : 0f;
+        return LitFrac;
     }
     public bool AnyOff { get { foreach (var r in rooms) if (!r.on) return true; return false; } }
     // demo / probe
