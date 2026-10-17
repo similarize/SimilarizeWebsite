@@ -60,7 +60,8 @@ public class Ffu52 : MonoBehaviour
             }
             if (ct == null) { Debug.LogError("FFDEMO cars52: no yard Cybertruck"); shot = ""; return; }
             CarFeel52.Log = true;
-            Park(rd, RdSpot, 300f); Park(ct, CtSpot, 300f);
+            Vector3 cs = ClearSpot(CtSpot);
+            Park(rd, RdSpot, 300f); Park(ct, cs, 300f);
             Next(0, "parked: Roadster at " + rd.transform.position.ToString("0.0") + ", Cybertruck at " + ct.transform.position.ToString("0.0") + " mass rd " + rd.rb.mass + " ct " + ct.rb.mass);
             shot = "cars52";
         }
@@ -101,6 +102,33 @@ public class Ffu52 : MonoBehaviour
                 + " | ct v " + (ct.ForwardSpeed * 3.6f).ToString("0") + " km/h roll " + (cc != null ? cc.Roll.ToString("0.00") + " max " + cc.MaxRoll.ToString("0.00") + " pitch " + cc.Pitch.ToString("0.00") : "-")
                 + " | ct y " + ct.transform.position.y.ToString("0.00") + " rd y " + rd.transform.position.y.ToString("0.00"));
         }
+    }
+
+    // 52c: the yard truck's photo spot is PICKED, not guessed (52a (32,22) = garage wall + hay bales, 52b (40,12) = in a tree):
+    // flat lawn, no tree trunk within 8 m (trees have no trunk collider), no other collider within 4.5 m, 10 m from the Roadster,
+    // dry; nearest such grid point to the wanted spot.
+    Vector3 ClearSpot(Vector3 want)
+    {
+        Vector3 best = want; float bd = 1e9f;
+        for (float x = 26f; x <= 72f; x += 2f)
+            for (float z = -14f; z <= 24f; z += 2f)
+            {
+                var c = new Vector2(x, z);
+                if ((c - new Vector2(RdSpot.x, RdSpot.z)).magnitude < 10f) continue;
+                float sf, dp; if (Water.At(x, z, out sf, out dp)) continue;
+                bool ok = true;
+                foreach (var t in TreeClimb.Trees) if (t != null && (new Vector2(t.basePos.x, t.basePos.z) - c).magnitude < 8f) { ok = false; break; }
+                if (!ok) continue;
+                float y0 = Ranch.GY(x, z);
+                if (Mathf.Abs(Ranch.GY(x + 3f, z) - y0) > 0.2f || Mathf.Abs(Ranch.GY(x, z + 3f) - y0) > 0.2f || Mathf.Abs(Ranch.GY(x - 3f, z) - y0) > 0.2f || Mathf.Abs(Ranch.GY(x, z - 3f) - y0) > 0.2f) continue;
+                foreach (var col in Physics.OverlapSphere(new Vector3(x, y0 + 1.3f, z), 4.5f, ~0, QueryTriggerInteraction.Ignore))
+                    if (!(col is TerrainCollider) && col.gameObject.layer != Vehicle.VehicleLayer) { ok = false; break; }
+                if (!ok) continue;
+                float d = (c - new Vector2(want.x, want.z)).sqrMagnitude;
+                if (d < bd) { bd = d; best = new Vector3(x, 0f, z); }
+            }
+        Debug.Log("FFDEMO cars52 clear spot for the Cybertruck: " + best.ToString("0.0") + (bd > 1e8f ? " (none found, using the wanted spot)" : ""));
+        return best;
     }
 
     void Enter(Vehicle v, Vector3 spot, float yaw)
