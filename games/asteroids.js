@@ -306,7 +306,10 @@
   function splitRock(rock, index) {
     rocks.splice(index, 1);
     score += rock.tier === 3 ? 20 : rock.tier === 2 ? 50 : 100;
-    burst(rock.x, rock.y, 8, "#ddd");
+    burst(rock.x, rock.y, 8 + rock.tier * 6, "#ffd9a8");
+    burst(rock.x, rock.y, 4 + rock.tier * 2, "#9fe7ff");
+    rings.push({ x: rock.x, y: rock.y, r: rock.radius * 0.4, max: rock.radius * 2.2, life: 0.5 });
+    shake = Math.min(14, shake + rock.tier * 3);
     beep(180 + rock.tier * 40, 0.08, "triangle", 0.05);
     sfx("explode", rock.tier === 3 ? 0.9 : rock.tier === 2 ? 0.6 : 0.35);
     if (rock.tier > 1) {
@@ -446,23 +449,58 @@
     ctx.lineTo(-7, 0);
     ctx.lineTo(-12, -10);
     ctx.closePath();
-    ctx.strokeStyle = ship.color;
-    ctx.lineWidth = 2;
-    ctx.stroke();
+    ctx.fillStyle = "rgba(10,14,30,0.85)"; ctx.fill();
+    neon(ship.color, 2);
     if (ship.thrusting && ship.active) {
       ctx.beginPath();
       ctx.moveTo(-8, 4);
       ctx.lineTo(-18 - Math.random() * 8, 0);
       ctx.lineTo(-8, -4);
-      ctx.strokeStyle = "#fbbf24";
-      ctx.stroke();
+      neon("#fbbf24", 2);
     }
     ctx.restore();
   }
 
+  // ast2: deep-space backdrop (parallax stars + soft nebula), neon vectors, shockwaves, shake
+  const rings = [];
+  let shake = 0, stars = null, nebula = null, starW = 0;
+  function makeSky() {
+    starW = w;
+    stars = [];
+    for (let i = 0; i < Math.round((w * h) / 2600); i++) stars.push({ x: Math.random() * w, y: Math.random() * h, z: 0.2 + Math.random() * 0.8, t: Math.random() * 6 });
+    nebula = document.createElement("canvas"); nebula.width = Math.max(1, w >> 2); nebula.height = Math.max(1, h >> 2);
+    const n = nebula.getContext("2d");
+    const blobs = [["rgba(80,40,160,0.35)", 0.25, 0.3], ["rgba(0,120,200,0.28)", 0.75, 0.65], ["rgba(144,0,0,0.22)", 0.55, 0.15]];
+    for (const [c, bx, by] of blobs) { const g = n.createRadialGradient(bx * nebula.width, by * nebula.height, 0, bx * nebula.width, by * nebula.height, nebula.width * 0.45); g.addColorStop(0, c); g.addColorStop(1, "rgba(0,0,0,0)"); n.fillStyle = g; n.fillRect(0, 0, nebula.width, nebula.height); }
+  }
+  function neon(color, width) {
+    ctx.strokeStyle = color; ctx.globalAlpha = 0.22; ctx.lineWidth = width * 4; ctx.stroke();
+    ctx.globalAlpha = 1; ctx.lineWidth = width; ctx.stroke();
+  }
   function draw() {
-    ctx.fillStyle = "#000";
-    ctx.fillRect(0, 0, w, h);
+    if (!stars || starW !== w) makeSky();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = "#03040a";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    { const k = canvas.width / (w || 1); ctx.setTransform(k, 0, 0, k, 0, 0); }
+    ctx.drawImage(nebula, 0, 0, w, h);
+    const tnow = performance.now() / 1000, lead = ships.find((sh) => sh.active) || { vx: 0, vy: 0 };
+    for (const st of stars) {
+      st.x -= (lead.vx || 0) * st.z * 0.004; st.y -= (lead.vy || 0) * st.z * 0.004;
+      if (st.x < 0) st.x += w; if (st.x > w) st.x -= w; if (st.y < 0) st.y += h; if (st.y > h) st.y -= h;
+      ctx.globalAlpha = 0.35 + st.z * 0.5 + Math.sin(tnow * 2 + st.t) * 0.12;
+      ctx.fillStyle = st.z > 0.85 ? "#cfe8ff" : "#fff";
+      ctx.fillRect(st.x, st.y, st.z * 1.8, st.z * 1.8);
+    }
+    ctx.globalAlpha = 1;
+    ctx.save();
+    if (shake > 0.2) { ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake); shake *= 0.88; } else shake = 0;
+    for (let i = rings.length - 1; i >= 0; i--) {
+      const g = rings[i]; g.life -= 1 / 60; g.r += (g.max - g.r) * 0.18;
+      if (g.life <= 0) { rings.splice(i, 1); continue; }
+      ctx.beginPath(); ctx.arc(g.x, g.y, g.r, 0, Math.PI * 2);
+      ctx.globalAlpha = g.life * 1.6; ctx.strokeStyle = "#ffcf8a"; ctx.lineWidth = 2; ctx.stroke(); ctx.globalAlpha = 1;
+    }
     for (const r of rocks) {
       ctx.save();
       ctx.translate(r.x, r.y);
@@ -475,14 +513,19 @@
         else ctx.lineTo(x, y);
       });
       ctx.closePath();
-      ctx.strokeStyle = "#fff";
-      ctx.lineWidth = 2;
-      ctx.stroke();
+      const rg = ctx.createRadialGradient(-r.radius * 0.35, -r.radius * 0.35, r.radius * 0.1, 0, 0, r.radius * 1.1);
+      rg.addColorStop(0, "rgba(120,110,130,0.55)"); rg.addColorStop(1, "rgba(20,18,30,0.75)");
+      ctx.fillStyle = rg; ctx.fill();
+      neon("#e8e4ff", 1.6);
+      ctx.globalAlpha = 0.35; ctx.fillStyle = "#0a0a14";
+      for (let k = 0; k < r.tier; k++) { const cx = r.shape[k * 3 % r.shape.length]; ctx.beginPath(); ctx.arc(cx[0] * r.radius * 0.45, cx[1] * r.radius * 0.45, r.radius * 0.14, 0, Math.PI * 2); ctx.fill(); }
+      ctx.globalAlpha = 1;
       ctx.restore();
     }
     for (const s of shots) {
-      ctx.fillStyle = s.color || "#fff";
-      ctx.fillRect(s.x - 1.5, s.y - 1.5, 3, 3);
+      const sp = Math.hypot(s.vx || 0, s.vy || 0) || 1;
+      ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(s.x - (s.vx || 0) / sp * 12, s.y - (s.vy || 0) / sp * 12);
+      ctx.lineCap = "round"; neon(s.color || "#fff", 2.5); ctx.lineCap = "butt";
     }
     for (const p of particles) {
       ctx.globalAlpha = Math.max(0, p.life / 0.45);
@@ -491,6 +534,7 @@
       ctx.globalAlpha = 1;
     }
     for (const ship of ships) drawShip(ship);
+    ctx.restore();
   }
 
   function frame(now) {
@@ -567,4 +611,5 @@
     : "P1 arrows+Space · P2 WASD+F · P3 IJKL+H · P4 numpad 8460 (or T/G/Y/R). Pads 0–3 → P1–P4. Shared score/lives; each ship respawns. ")
     + "Move in first 10s to join · idle ships fade";
   requestAnimationFrame(frame);
+  if (new URLSearchParams(location.search).get("demo") === "play") setTimeout(() => { try { start(); } catch (e) { console.warn(e); } }, 300);
 })();
