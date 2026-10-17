@@ -1,44 +1,44 @@
-WIN64 run 39040286501 attempt 1 event workflow_dispatch sha de208aa64d773ae817cd698756e9f0b8691f46eb tag ff-win-ffu58 started 2026-10-17T14:20:13Z
+WIN64 run 39053128773 attempt 1 event workflow_dispatch sha 95cbd7113f22cea8e458a9d055a2c2bd0ab2bafa tag ff-win-ffu59 started 2026-10-17T17:18:05Z
 secrets present
 Filesystem      Size  Used Avail Use% Mounted on
 /dev/root       145G   41G  104G  29% /
 total 11192
-drwxr-xr-x 2 runner runner    4096 Oct 17 14:21 .
-drwxr-xr-x 7 runner runner    4096 Oct 17 14:21 ..
--rw-r--r-- 1 runner runner  435290 Oct 17 14:21 amb_house.ogg
--rw-r--r-- 1 runner runner  344903 Oct 17 14:21 amb_mars.ogg
--rw-r--r-- 1 runner runner  374871 Oct 17 14:21 amb_pond.ogg
--rw-r--r-- 1 runner runner  526014 Oct 17 14:21 amb_ranch.ogg
--rw-r--r-- 1 runner runner  386328 Oct 17 14:21 amb_space.ogg
--rw-r--r-- 1 runner runner  426184 Oct 17 14:21 amb_storm.ogg
--rw-r--r-- 1 runner runner  211023 Oct 17 14:21 amb_under.ogg
--rw-r--r-- 1 runner runner  541106 Oct 17 14:21 mus_callisto.ogg
--rw-r--r-- 1 runner runner  834648 Oct 17 14:21 mus_house.ogg
--rw-r--r-- 1 runner runner  314353 Oct 17 14:21 mus_lobby.ogg
--rw-r--r-- 1 runner runner  760025 Oct 17 14:21 mus_mars.ogg
--rw-r--r-- 1 runner runner 1128804 Oct 17 14:21 mus_ranch.ogg
--rw-r--r-- 1 runner runner 1715693 Oct 17 14:21 mus_space.ogg
--rw-r--r-- 1 runner runner  484373 Oct 17 14:21 mus_story.ogg
--rw-r--r-- 1 runner runner  436437 Oct 17 14:21 mus_story_faith.ogg
--rw-r--r-- 1 runner runner  380759 Oct 17 14:21 mus_story_somber.ogg
--rw-r--r-- 1 runner runner  331485 Oct 17 14:21 mus_story_storm.ogg
--rw-r--r-- 1 runner runner  472724 Oct 17 14:21 mus_story_triumph.ogg
--rw-r--r-- 1 runner runner 1308731 Oct 17 14:21 mus_under.ogg
+drwxr-xr-x 2 runner runner    4096 Oct 17 17:19 .
+drwxr-xr-x 7 runner runner    4096 Oct 17 17:19 ..
+-rw-r--r-- 1 runner runner  435290 Oct 17 17:19 amb_house.ogg
+-rw-r--r-- 1 runner runner  344903 Oct 17 17:19 amb_mars.ogg
+-rw-r--r-- 1 runner runner  374871 Oct 17 17:19 amb_pond.ogg
+-rw-r--r-- 1 runner runner  526014 Oct 17 17:19 amb_ranch.ogg
+-rw-r--r-- 1 runner runner  386328 Oct 17 17:19 amb_space.ogg
+-rw-r--r-- 1 runner runner  426184 Oct 17 17:19 amb_storm.ogg
+-rw-r--r-- 1 runner runner  211023 Oct 17 17:19 amb_under.ogg
+-rw-r--r-- 1 runner runner  541106 Oct 17 17:19 mus_callisto.ogg
+-rw-r--r-- 1 runner runner  834648 Oct 17 17:19 mus_house.ogg
+-rw-r--r-- 1 runner runner  314353 Oct 17 17:19 mus_lobby.ogg
+-rw-r--r-- 1 runner runner  760025 Oct 17 17:19 mus_mars.ogg
+-rw-r--r-- 1 runner runner 1128804 Oct 17 17:19 mus_ranch.ogg
+-rw-r--r-- 1 runner runner 1715693 Oct 17 17:19 mus_space.ogg
+-rw-r--r-- 1 runner runner  484373 Oct 17 17:19 mus_story.ogg
+-rw-r--r-- 1 runner runner  436437 Oct 17 17:19 mus_story_faith.ogg
+-rw-r--r-- 1 runner runner  380759 Oct 17 17:19 mus_story_somber.ogg
+-rw-r--r-- 1 runner runner  331485 Oct 17 17:19 mus_story_storm.ogg
+-rw-r--r-- 1 runner runner  472724 Oct 17 17:19 mus_story_triumph.ogg
+-rw-r--r-- 1 runner runner 1308731 Oct 17 17:19 mus_under.ogg
 hub pass1: failure
 -rwxrwxrwx 1 root root 1272 Oct 13 19:47 /opt/unityhub/unityhub
 editor: /home/runner/Unity/Hub/Editor/2022.3.62f3/Editor/Unity
 unity exit code: 0
 total 32200
-drwxr-xr-x 4 runner runner     4096 Oct 17 14:30 .
-drwxr-xr-x 3 runner runner     4096 Oct 17 14:30 ..
--rwxrwxrwx 1 runner runner   666624 Oct 17 14:30 FourFroggies.exe
-drwxr-xr-x 4 runner runner     4096 Oct 17 14:30 FourFroggies_Data
-drwxr-xr-x 4 runner runner     4096 Oct 17 14:30 MonoBleedingEdge
--rwxrwxrwx 1 runner runner  1185192 Oct 17 14:30 UnityCrashHandler64.exe
--rw-rw-rw- 1 runner runner 31100848 Oct 17 14:30 UnityPlayer.dll
--rw-r--r-- 1 runner runner 90928465 Oct 17 14:30 FourFroggies-Win64-ff-win-ffu58.zip
-WIN_ZIP_SIZE: 90928465
-RELEASE_URL: https://github.com/similarize/SimilarizeWebsite/releases/tag/ff-win-ffu58
+drwxr-xr-x 4 runner runner     4096 Oct 17 17:28 .
+drwxr-xr-x 3 runner runner     4096 Oct 17 17:28 ..
+-rwxrwxrwx 1 runner runner   666624 Oct 17 17:28 FourFroggies.exe
+drwxr-xr-x 4 runner runner     4096 Oct 17 17:28 FourFroggies_Data
+drwxr-xr-x 4 runner runner     4096 Oct 17 17:28 MonoBleedingEdge
+-rwxrwxrwx 1 runner runner  1185192 Oct 17 17:28 UnityCrashHandler64.exe
+-rw-rw-rw- 1 runner runner 31100848 Oct 17 17:28 UnityPlayer.dll
+-rw-r--r-- 1 runner runner 90937855 Oct 17 17:28 FourFroggies-Win64-ff-win-ffu59.zip
+WIN_ZIP_SIZE: 90937855
+RELEASE_URL: https://github.com/similarize/SimilarizeWebsite/releases/tag/ff-win-ffu59
 /usr/bin/wine
 /usr/bin/Xvfb
 /usr/bin/import
@@ -60,7 +60,7 @@ Realism: terrain layers (grass / dirt / shore / mud with normal maps, NM materia
 Realism: lily pads re-skinned 9
 Realism: re-skinned 750 renderers (bark / rock / leaves), water True
 Realism: area built (5200 grass clumps, 2 meshes)
-Realism: ready in 26.2 s, 15 textures, 5211 KB streamed
+Realism: ready in 27.2 s, 15 textures, 5211 KB streamed
 === ranch player log (grep)
 Forcing GfxDevice: OpenGL Core
 GfxDevice: creating device client; threaded=1; jobified=1
@@ -76,34 +76,34 @@ FFPlatform: native display windowed 1280x720
 Realism: runtime compression -> DXT1
 ShowroomGrade: shader ok
 Showroom: thumbnails rendered (10 characters, 384 px 4x MSAA + mips)
-FFDEMO scene frog t=7.8
+FFDEMO scene frog t=8.0
 Realism: terrain layers (grass / dirt / shore / mud with normal maps, NM material)
 Realism: lily pads re-skinned 9
 Realism: re-skinned 750 renderers (bark / rock / leaves), water True
 Realism: area built (5200 grass clumps, 2 meshes)
-Realism: ready in 13.9 s, 15 textures, 5211 KB streamed
-total 5804
-drwxr-xr-x 2 runner runner    4096 Oct 17 14:34 .
-drwxr-xr-x 8 runner runner    4096 Oct 17 14:30 ..
--rw-r--r-- 1 runner runner   19244 Oct 17 14:32 lobby-player.log
--rw-r--r-- 1 runner runner  643832 Oct 17 14:31 lobby-t35.png
--rw-r--r-- 1 runner runner  642815 Oct 17 14:31 lobby-t55.png
--rw-r--r-- 1 runner runner  667695 Oct 17 14:32 lobby-t75.png
--rw-r--r-- 1 runner runner   19783 Oct 17 14:33 ranch-player.log
--rw-r--r-- 1 runner runner 1305081 Oct 17 14:34 ranch-t100.png
--rw-r--r-- 1 runner runner 1309226 Oct 17 14:34 ranch-t150.png
--rw-r--r-- 1 runner runner 1312891 Oct 17 14:33 ranch-t60.png
+Realism: ready in 14.2 s, 15 textures, 5211 KB streamed
+total 5788
+drwxr-xr-x 2 runner runner    4096 Oct 17 17:33 .
+drwxr-xr-x 8 runner runner    4096 Oct 17 17:29 ..
+-rw-r--r-- 1 runner runner   19244 Oct 17 17:30 lobby-player.log
+-rw-r--r-- 1 runner runner  639273 Oct 17 17:29 lobby-t35.png
+-rw-r--r-- 1 runner runner  644399 Oct 17 17:30 lobby-t55.png
+-rw-r--r-- 1 runner runner  656561 Oct 17 17:30 lobby-t75.png
+-rw-r--r-- 1 runner runner   19978 Oct 17 17:32 ranch-player.log
+-rw-r--r-- 1 runner runner 1301548 Oct 17 17:32 ranch-t100.png
+-rw-r--r-- 1 runner runner 1308400 Oct 17 17:33 ranch-t150.png
+-rw-r--r-- 1 runner runner 1313545 Oct 17 17:31 ranch-t60.png
 SMOKE_DONE
 === step outcomes: secrets=success setup=success activate=success build=success zip=success release=success smoke=success
 === error lines
 10:[Licensing::Module] Trying to connect to existing licensing client channel...
 11:[Licensing::IpcConnector] Channel LicenseClient-runner doesn't exist
-12:[Licensing::Module] Successfully launched the LicensingClient (PId: 5590)
-13:[Licensing::IpcConnector] Successfully connected to: "LicenseClient-runner" at "2026-10-17T14:26:52.564226Z"
+12:[Licensing::Module] Successfully launched the LicensingClient (PId: 5757)
+13:[Licensing::IpcConnector] Successfully connected to: "LicenseClient-runner" at "2026-10-17T17:24:57.110232Z"
 15:[Licensing::Client] Handshaking with LicensingClient:
-21:[Licensing::Module] Successfully connected to LicensingClient on channel: "LicenseClient-runner" (connect: 0.57s, validation: 0.05s, handshake: 0.00s)
-22:[Licensing::IpcConnector] Successfully connected to: "LicenseClient-runner-notifications" at "2026-10-17T14:26:52.611617Z"
-23:[Licensing::Module] Connected to LicensingClient (PId: 5590, launch time: 0.00, total connection time: 0.62s)
+21:[Licensing::Module] Successfully connected to LicensingClient on channel: "LicenseClient-runner" (connect: 0.57s, validation: 0.06s, handshake: 0.00s)
+22:[Licensing::IpcConnector] Successfully connected to: "LicenseClient-runner-notifications" at "2026-10-17T17:24:57.171866Z"
+23:[Licensing::Module] Connected to LicensingClient (PId: 5757, launch time: 0.00, total connection time: 0.63s)
 24:[Licensing::Module] Error: Access token is unavailable; failed to update
 25:[Licensing::Client] Successfully updated license
 26:[Licensing::Client] Successfully resolved entitlement details
@@ -124,140 +124,140 @@ SMOKE_DONE
 127:FMOD failed to initialize the output device.: "Error initializing output device. " (60)
 168:[Licensing::Client] Successfully resolved entitlement details
 220:[Licensing::Client] Successfully resolved entitlement details
-606:Start importing Assets/Editor/BuildScript.cs using Guid(096ec0670aa3976b5af4df9043046ea4) Importer(-1,00000000000000000000000000000000) [PhysX] Initialized MultithreadedTaskDispatcher with 4 workers.
-778:BuildScript:SetInputHandler () (at Assets/Editor/BuildScript.cs:349)
-779:InputHandlerSetter:.cctor () (at Assets/Editor/BuildScript.cs:16)
-783:(Filename: Assets/Editor/BuildScript.cs Line: 349)
-1498:[Licensing::Client] Successfully resolved entitlement details
-1510:BuildScript: Windows x64 start, Unity 2022.3.62f3
-1515:BuildScript:RunWindows () (at Assets/Editor/BuildScript.cs:100)
-1516:BuildScript:BuildWindows () (at Assets/Editor/BuildScript.cs:87)
-1518:(Filename: Assets/Editor/BuildScript.cs Line: 100)
-1527:BuildScript:SetStatic (System.Type,string,object) (at Assets/Editor/BuildScript.cs:358)
-1528:BuildScript:ConfigurePlayer () (at Assets/Editor/BuildScript.cs:382)
-1529:BuildScript:RunWindows () (at Assets/Editor/BuildScript.cs:105)
-1530:BuildScript:BuildWindows () (at Assets/Editor/BuildScript.cs:87)
-1532:(Filename: Assets/Editor/BuildScript.cs Line: 358)
-1539:BuildScript:SetStatic (System.Type,string,object) (at Assets/Editor/BuildScript.cs:358)
-1540:BuildScript:ConfigurePlayer () (at Assets/Editor/BuildScript.cs:383)
-1541:BuildScript:RunWindows () (at Assets/Editor/BuildScript.cs:105)
-1542:BuildScript:BuildWindows () (at Assets/Editor/BuildScript.cs:87)
-1544:(Filename: Assets/Editor/BuildScript.cs Line: 358)
-1551:BuildScript:ConfigurePlayer () (at Assets/Editor/BuildScript.cs:396)
-1552:BuildScript:RunWindows () (at Assets/Editor/BuildScript.cs:105)
-1553:BuildScript:BuildWindows () (at Assets/Editor/BuildScript.cs:87)
-1555:(Filename: Assets/Editor/BuildScript.cs Line: 396)
-1559:BuildScript: Windows player settings (Mono, D3D11 + GLCore, fullscreen window at native resolution)
-1564:BuildScript:ConfigureWindows () (at Assets/Editor/BuildScript.cs:152)
-1565:BuildScript:RunWindows () (at Assets/Editor/BuildScript.cs:106)
-1566:BuildScript:BuildWindows () (at Assets/Editor/BuildScript.cs:87)
-1568:(Filename: Assets/Editor/BuildScript.cs Line: 152)
-1580:BuildScript:ApplyIcons (bool) (at Assets/Editor/BuildScript.cs:286)
-1581:BuildScript:RunWindows () (at Assets/Editor/BuildScript.cs:107)
-1582:BuildScript:BuildWindows () (at Assets/Editor/BuildScript.cs:87)
-1584:(Filename: Assets/Editor/BuildScript.cs Line: 286)
-2299:BuildScript: native music clips 19 (streaming)
-2304:BuildScript:ImportNativeMusic () (at Assets/Editor/BuildScript.cs:327)
-2305:BuildScript:RunWindows () (at Assets/Editor/BuildScript.cs:110)
-2306:BuildScript:BuildWindows () (at Assets/Editor/BuildScript.cs:87)
-2308:(Filename: Assets/Editor/BuildScript.cs Line: 327)
-2347:BuildScript: HDRI sky
-2352:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:491)
-2353:BuildScript:RunWindows () (at Assets/Editor/BuildScript.cs:112)
-2354:BuildScript:BuildWindows () (at Assets/Editor/BuildScript.cs:87)
-2356:(Filename: Assets/Editor/BuildScript.cs Line: 491)
-2358:BuildScript: FF/Skin shader
-2363:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
-2364:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:507)
-2365:BuildScript:RunWindows () (at Assets/Editor/BuildScript.cs:112)
-2366:BuildScript:BuildWindows () (at Assets/Editor/BuildScript.cs:87)
-2368:(Filename: Assets/Editor/BuildScript.cs Line: 453)
-2373:BuildScript: FF/Foliage shader
-2378:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
-2379:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:508)
-2380:BuildScript:RunWindows () (at Assets/Editor/BuildScript.cs:112)
-2381:BuildScript:BuildWindows () (at Assets/Editor/BuildScript.cs:87)
-2383:(Filename: Assets/Editor/BuildScript.cs Line: 453)
-2388:BuildScript: LB/Water shader
-2393:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
-2394:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:509)
-2395:BuildScript:RunWindows () (at Assets/Editor/BuildScript.cs:112)
-2396:BuildScript:BuildWindows () (at Assets/Editor/BuildScript.cs:87)
-2398:(Filename: Assets/Editor/BuildScript.cs Line: 453)
-2403:BuildScript: FF/Underwater shader
-2408:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
-2409:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:511)
-2410:BuildScript:RunWindows () (at Assets/Editor/BuildScript.cs:112)
-2411:BuildScript:BuildWindows () (at Assets/Editor/BuildScript.cs:87)
-2413:(Filename: Assets/Editor/BuildScript.cs Line: 453)
-2418:BuildScript: Unlit/Texture shader
-2423:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
-2424:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:512)
-2425:BuildScript:RunWindows () (at Assets/Editor/BuildScript.cs:112)
-2426:BuildScript:BuildWindows () (at Assets/Editor/BuildScript.cs:87)
-2428:(Filename: Assets/Editor/BuildScript.cs Line: 453)
-2433:BuildScript: FF/RealTri shader
-2438:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
-2439:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:514)
-2440:BuildScript:RunWindows () (at Assets/Editor/BuildScript.cs:112)
-2441:BuildScript:BuildWindows () (at Assets/Editor/BuildScript.cs:87)
-2443:(Filename: Assets/Editor/BuildScript.cs Line: 453)
-2448:BuildScript: FF/RealWater shader
-2453:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
-2454:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:515)
-2455:BuildScript:RunWindows () (at Assets/Editor/BuildScript.cs:112)
-2456:BuildScript:BuildWindows () (at Assets/Editor/BuildScript.cs:87)
-2458:(Filename: Assets/Editor/BuildScript.cs Line: 453)
-2463:BuildScript: FF/Grass56 shader
-2468:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
-2469:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:517)
-2470:BuildScript:RunWindows () (at Assets/Editor/BuildScript.cs:112)
-2471:BuildScript:BuildWindows () (at Assets/Editor/BuildScript.cs:87)
-2473:(Filename: Assets/Editor/BuildScript.cs Line: 453)
-2480:BuildScript: FF/Skin57 shader
-2485:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
-2486:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:520)
-2487:BuildScript:RunWindows () (at Assets/Editor/BuildScript.cs:112)
-2488:BuildScript:BuildWindows () (at Assets/Editor/BuildScript.cs:87)
-2490:(Filename: Assets/Editor/BuildScript.cs Line: 453)
-2513:BuildScript: terrain textures True True True
-2518:BuildScript:CreateTerrain () (at Assets/Editor/BuildScript.cs:653)
-2519:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:556)
-2520:BuildScript:RunWindows () (at Assets/Editor/BuildScript.cs:112)
-2521:BuildScript:BuildWindows () (at Assets/Editor/BuildScript.cs:87)
-2523:(Filename: Assets/Editor/BuildScript.cs Line: 653)
-2545:BuildScript: terrain NM material
-2550:BuildScript:CreateTerrain () (at Assets/Editor/BuildScript.cs:699)
-2551:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:556)
-2552:BuildScript:RunWindows () (at Assets/Editor/BuildScript.cs:112)
-2553:BuildScript:BuildWindows () (at Assets/Editor/BuildScript.cs:87)
-2555:(Filename: Assets/Editor/BuildScript.cs Line: 699)
-2581:BuildScript: scene saved Assets/Scenes/Main.unity
-2586:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:581)
-2587:BuildScript:RunWindows () (at Assets/Editor/BuildScript.cs:112)
-2588:BuildScript:BuildWindows () (at Assets/Editor/BuildScript.cs:87)
-2590:(Filename: Assets/Editor/BuildScript.cs Line: 581)
-2777:[Licensing::Client] Successfully resolved entitlement details
-2799:BuildScript:RunWindows () (at Assets/Editor/BuildScript.cs:124)
-2800:BuildScript:BuildWindows () (at Assets/Editor/BuildScript.cs:87)
-7579: 0.1 kb	 0.0% Packages/com.unity.inputsystem/InputSystem/Utilities/ExceptionHelpers.cs
-7958:BUILD_RESULT: Succeeded target=Win64 errors=0 warnings=21 size=101047713 time=00:01:57.7110001
-7963:BuildScript:RunWindows () (at Assets/Editor/BuildScript.cs:126)
-7964:BuildScript:BuildWindows () (at Assets/Editor/BuildScript.cs:87)
-7966:(Filename: Assets/Editor/BuildScript.cs Line: 126)
-7968:BUILD_SCRIPT_EXIT: 0
-7973:BuildScript:BuildWindows () (at Assets/Editor/BuildScript.cs:94)
-7975:(Filename: Assets/Editor/BuildScript.cs Line: 94)
-7981:[Licensing::IpcConnector] LicenseClient-runner-notifications channel disconnected successfully.
-7982:[Licensing::IpcConnector] LicenseClient-runner channel disconnected successfully.
-8060:[Performance] Application.ReadLicenseInfo                                                                                    :        1 samples, Peak.  11.6 ms (1.0x), Avg.  11.6 ms, Total. 11.60 ms (0.0%)
-8479:##utp:{"type":"MemoryLeaks","version":2,"phase":"Immediate","time":1792247408332,"processId":5584,"allocatedMemory":9186162,"memoryLabels":[{"Default":20071},{"Permanent":16353},{"Thread":1083236},{"Manager":19940},{"VertexData":12},{"Geometry":280},{"Texture":328},{"Shader":79063},{"Material":24},{"GfxDevice":36336},{"Animation":360},{"Audio":3976},{"Font":104211},{"FontEngine":336},{"Physics":513},{"Serialization":732},{"Input":26816},{"JobScheduler":54760},{"Mono":40},{"ScriptingNativeRuntime":191920},{"BaseObject":1620020},{"Resource":1064},{"Renderer":2352},{"Transform":48},{"File":3717},{"WebCam":40},{"Culling":40},{"Terrain":1025},{"Wind":24},{"String":32762},{"DynamicArray":63773},{"HashMap":73122},{"Utility":2659526},{"Curl":1112},{"PoolAlloc":1496},{"AI":72},{"TypeTree":5061},{"ScriptManager":640},{"RuntimeInitializeOnLoadManager":80},{"SpriteAtlas":128},{"GI":3632},{"Director":7928},{"CloudService":7232},{"WebRequest":720},{"VR":45769},{"SceneManager":600},{"Video":72},{"LazyScriptCache":40},{"NativeArray":12},{"Camera":25},{"Secure":5337},{"SerializationCache":1576},{"APIUpdating":11856},{"Subsystems":392},{"VirtualTexturing":57560},{"StaticSafetyDebugInfo":327680},{"EditorGui":56},{"EditorUtility":10367},{"VersionControl":4},{"Undo":736},{"AssetDatabase":2550707},{"RestService":1518},{"EditorGi":376},{"License":3584},{"UnityConnect":25496},{"Collab":641},{"Upm":1856},{"DrivenProperties":96},{"LocalIPC":216},{"ProfilerEditor":10951},{"CoreBusinessMetrics":3638},{"AssetReference":40},{"IPCStream":40}]}
+608:Start importing Assets/Editor/BuildScript.cs using Guid(096ec0670aa3976b5af4df9043046ea4) Importer(-1,00000000000000000000000000000000) [PhysX] Initialized MultithreadedTaskDispatcher with 4 workers.
+780:BuildScript:SetInputHandler () (at Assets/Editor/BuildScript.cs:349)
+781:InputHandlerSetter:.cctor () (at Assets/Editor/BuildScript.cs:16)
+785:(Filename: Assets/Editor/BuildScript.cs Line: 349)
+1500:[Licensing::Client] Successfully resolved entitlement details
+1512:BuildScript: Windows x64 start, Unity 2022.3.62f3
+1517:BuildScript:RunWindows () (at Assets/Editor/BuildScript.cs:100)
+1518:BuildScript:BuildWindows () (at Assets/Editor/BuildScript.cs:87)
+1520:(Filename: Assets/Editor/BuildScript.cs Line: 100)
+1529:BuildScript:SetStatic (System.Type,string,object) (at Assets/Editor/BuildScript.cs:358)
+1530:BuildScript:ConfigurePlayer () (at Assets/Editor/BuildScript.cs:382)
+1531:BuildScript:RunWindows () (at Assets/Editor/BuildScript.cs:105)
+1532:BuildScript:BuildWindows () (at Assets/Editor/BuildScript.cs:87)
+1534:(Filename: Assets/Editor/BuildScript.cs Line: 358)
+1541:BuildScript:SetStatic (System.Type,string,object) (at Assets/Editor/BuildScript.cs:358)
+1542:BuildScript:ConfigurePlayer () (at Assets/Editor/BuildScript.cs:383)
+1543:BuildScript:RunWindows () (at Assets/Editor/BuildScript.cs:105)
+1544:BuildScript:BuildWindows () (at Assets/Editor/BuildScript.cs:87)
+1546:(Filename: Assets/Editor/BuildScript.cs Line: 358)
+1553:BuildScript:ConfigurePlayer () (at Assets/Editor/BuildScript.cs:396)
+1554:BuildScript:RunWindows () (at Assets/Editor/BuildScript.cs:105)
+1555:BuildScript:BuildWindows () (at Assets/Editor/BuildScript.cs:87)
+1557:(Filename: Assets/Editor/BuildScript.cs Line: 396)
+1561:BuildScript: Windows player settings (Mono, D3D11 + GLCore, fullscreen window at native resolution)
+1566:BuildScript:ConfigureWindows () (at Assets/Editor/BuildScript.cs:152)
+1567:BuildScript:RunWindows () (at Assets/Editor/BuildScript.cs:106)
+1568:BuildScript:BuildWindows () (at Assets/Editor/BuildScript.cs:87)
+1570:(Filename: Assets/Editor/BuildScript.cs Line: 152)
+1582:BuildScript:ApplyIcons (bool) (at Assets/Editor/BuildScript.cs:286)
+1583:BuildScript:RunWindows () (at Assets/Editor/BuildScript.cs:107)
+1584:BuildScript:BuildWindows () (at Assets/Editor/BuildScript.cs:87)
+1586:(Filename: Assets/Editor/BuildScript.cs Line: 286)
+2301:BuildScript: native music clips 19 (streaming)
+2306:BuildScript:ImportNativeMusic () (at Assets/Editor/BuildScript.cs:327)
+2307:BuildScript:RunWindows () (at Assets/Editor/BuildScript.cs:110)
+2308:BuildScript:BuildWindows () (at Assets/Editor/BuildScript.cs:87)
+2310:(Filename: Assets/Editor/BuildScript.cs Line: 327)
+2349:BuildScript: HDRI sky
+2354:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:491)
+2355:BuildScript:RunWindows () (at Assets/Editor/BuildScript.cs:112)
+2356:BuildScript:BuildWindows () (at Assets/Editor/BuildScript.cs:87)
+2358:(Filename: Assets/Editor/BuildScript.cs Line: 491)
+2360:BuildScript: FF/Skin shader
+2365:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
+2366:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:507)
+2367:BuildScript:RunWindows () (at Assets/Editor/BuildScript.cs:112)
+2368:BuildScript:BuildWindows () (at Assets/Editor/BuildScript.cs:87)
+2370:(Filename: Assets/Editor/BuildScript.cs Line: 453)
+2375:BuildScript: FF/Foliage shader
+2380:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
+2381:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:508)
+2382:BuildScript:RunWindows () (at Assets/Editor/BuildScript.cs:112)
+2383:BuildScript:BuildWindows () (at Assets/Editor/BuildScript.cs:87)
+2385:(Filename: Assets/Editor/BuildScript.cs Line: 453)
+2390:BuildScript: LB/Water shader
+2395:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
+2396:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:509)
+2397:BuildScript:RunWindows () (at Assets/Editor/BuildScript.cs:112)
+2398:BuildScript:BuildWindows () (at Assets/Editor/BuildScript.cs:87)
+2400:(Filename: Assets/Editor/BuildScript.cs Line: 453)
+2405:BuildScript: FF/Underwater shader
+2410:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
+2411:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:511)
+2412:BuildScript:RunWindows () (at Assets/Editor/BuildScript.cs:112)
+2413:BuildScript:BuildWindows () (at Assets/Editor/BuildScript.cs:87)
+2415:(Filename: Assets/Editor/BuildScript.cs Line: 453)
+2420:BuildScript: Unlit/Texture shader
+2425:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
+2426:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:512)
+2427:BuildScript:RunWindows () (at Assets/Editor/BuildScript.cs:112)
+2428:BuildScript:BuildWindows () (at Assets/Editor/BuildScript.cs:87)
+2430:(Filename: Assets/Editor/BuildScript.cs Line: 453)
+2435:BuildScript: FF/RealTri shader
+2440:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
+2441:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:514)
+2442:BuildScript:RunWindows () (at Assets/Editor/BuildScript.cs:112)
+2443:BuildScript:BuildWindows () (at Assets/Editor/BuildScript.cs:87)
+2445:(Filename: Assets/Editor/BuildScript.cs Line: 453)
+2450:BuildScript: FF/RealWater shader
+2455:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
+2456:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:515)
+2457:BuildScript:RunWindows () (at Assets/Editor/BuildScript.cs:112)
+2458:BuildScript:BuildWindows () (at Assets/Editor/BuildScript.cs:87)
+2460:(Filename: Assets/Editor/BuildScript.cs Line: 453)
+2465:BuildScript: FF/Grass56 shader
+2470:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
+2471:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:517)
+2472:BuildScript:RunWindows () (at Assets/Editor/BuildScript.cs:112)
+2473:BuildScript:BuildWindows () (at Assets/Editor/BuildScript.cs:87)
+2475:(Filename: Assets/Editor/BuildScript.cs Line: 453)
+2482:BuildScript: FF/Skin57 shader
+2487:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
+2488:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:520)
+2489:BuildScript:RunWindows () (at Assets/Editor/BuildScript.cs:112)
+2490:BuildScript:BuildWindows () (at Assets/Editor/BuildScript.cs:87)
+2492:(Filename: Assets/Editor/BuildScript.cs Line: 453)
+2515:BuildScript: terrain textures True True True
+2520:BuildScript:CreateTerrain () (at Assets/Editor/BuildScript.cs:653)
+2521:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:556)
+2522:BuildScript:RunWindows () (at Assets/Editor/BuildScript.cs:112)
+2523:BuildScript:BuildWindows () (at Assets/Editor/BuildScript.cs:87)
+2525:(Filename: Assets/Editor/BuildScript.cs Line: 653)
+2547:BuildScript: terrain NM material
+2552:BuildScript:CreateTerrain () (at Assets/Editor/BuildScript.cs:699)
+2553:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:556)
+2554:BuildScript:RunWindows () (at Assets/Editor/BuildScript.cs:112)
+2555:BuildScript:BuildWindows () (at Assets/Editor/BuildScript.cs:87)
+2557:(Filename: Assets/Editor/BuildScript.cs Line: 699)
+2583:BuildScript: scene saved Assets/Scenes/Main.unity
+2588:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:581)
+2589:BuildScript:RunWindows () (at Assets/Editor/BuildScript.cs:112)
+2590:BuildScript:BuildWindows () (at Assets/Editor/BuildScript.cs:87)
+2592:(Filename: Assets/Editor/BuildScript.cs Line: 581)
+2779:[Licensing::Client] Successfully resolved entitlement details
+2801:BuildScript:RunWindows () (at Assets/Editor/BuildScript.cs:124)
+2802:BuildScript:BuildWindows () (at Assets/Editor/BuildScript.cs:87)
+7581: 0.1 kb	 0.0% Packages/com.unity.inputsystem/InputSystem/Utilities/ExceptionHelpers.cs
+7960:BUILD_RESULT: Succeeded target=Win64 errors=0 warnings=21 size=101072801 time=00:02:09.8079458
+7965:BuildScript:RunWindows () (at Assets/Editor/BuildScript.cs:126)
+7966:BuildScript:BuildWindows () (at Assets/Editor/BuildScript.cs:87)
+7968:(Filename: Assets/Editor/BuildScript.cs Line: 126)
+7970:BUILD_SCRIPT_EXIT: 0
+7975:BuildScript:BuildWindows () (at Assets/Editor/BuildScript.cs:94)
+7977:(Filename: Assets/Editor/BuildScript.cs Line: 94)
+7983:[Licensing::IpcConnector] LicenseClient-runner-notifications channel disconnected successfully.
+7984:[Licensing::IpcConnector] LicenseClient-runner channel disconnected successfully.
+8062:[Performance] Application.ReadLicenseInfo                                                                                    :        1 samples, Peak.  12.0 ms (1.0x), Avg.  12.0 ms, Total. 12.04 ms (0.0%)
+8481:##utp:{"type":"MemoryLeaks","version":2,"phase":"Immediate","time":1792258102987,"processId":5751,"allocatedMemory":9185791,"memoryLabels":[{"Default":20071},{"Permanent":16353},{"Thread":1083236},{"Manager":19940},{"VertexData":12},{"Geometry":280},{"Texture":328},{"Shader":79063},{"Material":24},{"GfxDevice":36336},{"Animation":360},{"Audio":3976},{"Font":104211},{"FontEngine":336},{"Physics":513},{"Serialization":732},{"Input":26816},{"JobScheduler":54312},{"Mono":40},{"ScriptingNativeRuntime":191920},{"BaseObject":1620020},{"Resource":1064},{"Renderer":2352},{"Transform":48},{"File":3717},{"WebCam":40},{"Culling":40},{"Terrain":1025},{"Wind":24},{"String":32753},{"DynamicArray":63773},{"HashMap":73122},{"Utility":2659526},{"Curl":1112},{"PoolAlloc":1496},{"AI":72},{"TypeTree":5061},{"ScriptManager":640},{"RuntimeInitializeOnLoadManager":80},{"SpriteAtlas":128},{"GI":3632},{"Director":7928},{"CloudService":7232},{"WebRequest":720},{"VR":45769},{"SceneManager":600},{"Video":72},{"LazyScriptCache":40},{"NativeArray":12},{"Camera":25},{"Secure":5337},{"SerializationCache":1576},{"APIUpdating":11856},{"Subsystems":392},{"VirtualTexturing":57560},{"StaticSafetyDebugInfo":327680},{"EditorGui":56},{"EditorUtility":10367},{"VersionControl":4},{"Undo":736},{"AssetDatabase":2550793},{"RestService":1518},{"EditorGi":376},{"License":3584},{"UnityConnect":25496},{"Collab":641},{"Upm":1856},{"DrivenProperties":96},{"LocalIPC":216},{"ProfilerEditor":10951},{"CoreBusinessMetrics":3638},{"AssetReference":40},{"IPCStream":40}]}
 === editor log tail (300)
       Peak Allocated Bytes 0 B
       Overflow Count 0
     [ALLOC_TEMP_MAIN]
       Initial Block Size 16.0 MB
-      Current Block Size 45.7 MB
+      Current Block Size 45.9 MB
       Peak Allocated Bytes 43.7 MB
       Overflow Count 0
     [ALLOC_TEMP_Background Job.Worker 8]
@@ -451,7 +451,7 @@ SMOKE_DONE
   Peak Allocated memory 167.7 KB
   Peak Large allocation bytes 0 B
 [ALLOC_DEFAULT] Dual Thread Allocator
-  Peak main deferred allocation count 90
+  Peak main deferred allocation count 87
     [ALLOC_BUCKET]
       Large Block size 32.0 MB
       Used Block count 1
@@ -537,7 +537,7 @@ SMOKE_DONE
 [ALLOC_PROFILER]
   Requested Block Size 16.0 MB
   Peak Block count 1
-  Peak Allocated memory 415.4 KB
+  Peak Allocated memory 449.0 KB
   Peak Large allocation bytes 0 B
     [ALLOC_PROFILER_BUCKET]
       Large Block size 32.0 MB
@@ -552,4 +552,4 @@ SMOKE_DONE
       Large Block size 32.0 MB
       Used Block count 1
       Peak Allocated bytes 4.1 KB
-##utp:{"type":"MemoryLeaks","version":2,"phase":"Immediate","time":1792247408332,"processId":5584,"allocatedMemory":9186162,"memoryLabels":[{"Default":20071},{"Permanent":16353},{"Thread":1083236},{"Manager":19940},{"VertexData":12},{"Geometry":280},{"Texture":328},{"Shader":79063},{"Material":24},{"GfxDevice":36336},{"Animation":360},{"Audio":3976},{"Font":104211},{"FontEngine":336},{"Physics":513},{"Serialization":732},{"Input":26816},{"JobScheduler":54760},{"Mono":40},{"ScriptingNativeRuntime":191920},{"BaseObject":1620020},{"Resource":1064},{"Renderer":2352},{"Transform":48},{"File":3717},{"WebCam":40},{"Culling":40},{"Terrain":1025},{"Wind":24},{"String":32762},{"DynamicArray":63773},{"HashMap":73122},{"Utility":2659526},{"Curl":1112},{"PoolAlloc":1496},{"AI":72},{"TypeTree":5061},{"ScriptManager":640},{"RuntimeInitializeOnLoadManager":80},{"SpriteAtlas":128},{"GI":3632},{"Director":7928},{"CloudService":7232},{"WebRequest":720},{"VR":45769},{"SceneManager":600},{"Video":72},{"LazyScriptCache":40},{"NativeArray":12},{"Camera":25},{"Secure":5337},{"SerializationCache":1576},{"APIUpdating":11856},{"Subsystems":392},{"VirtualTexturing":57560},{"StaticSafetyDebugInfo":327680},{"EditorGui":56},{"EditorUtility":10367},{"VersionControl":4},{"Undo":736},{"AssetDatabase":2550707},{"RestService":1518},{"EditorGi":376},{"License":3584},{"UnityConnect":25496},{"Collab":641},{"Upm":1856},{"DrivenProperties":96},{"LocalIPC":216},{"ProfilerEditor":10951},{"CoreBusinessMetrics":3638},{"AssetReference":40},{"IPCStream":40}]}
+##utp:{"type":"MemoryLeaks","version":2,"phase":"Immediate","time":1792258102987,"processId":5751,"allocatedMemory":9185791,"memoryLabels":[{"Default":20071},{"Permanent":16353},{"Thread":1083236},{"Manager":19940},{"VertexData":12},{"Geometry":280},{"Texture":328},{"Shader":79063},{"Material":24},{"GfxDevice":36336},{"Animation":360},{"Audio":3976},{"Font":104211},{"FontEngine":336},{"Physics":513},{"Serialization":732},{"Input":26816},{"JobScheduler":54312},{"Mono":40},{"ScriptingNativeRuntime":191920},{"BaseObject":1620020},{"Resource":1064},{"Renderer":2352},{"Transform":48},{"File":3717},{"WebCam":40},{"Culling":40},{"Terrain":1025},{"Wind":24},{"String":32753},{"DynamicArray":63773},{"HashMap":73122},{"Utility":2659526},{"Curl":1112},{"PoolAlloc":1496},{"AI":72},{"TypeTree":5061},{"ScriptManager":640},{"RuntimeInitializeOnLoadManager":80},{"SpriteAtlas":128},{"GI":3632},{"Director":7928},{"CloudService":7232},{"WebRequest":720},{"VR":45769},{"SceneManager":600},{"Video":72},{"LazyScriptCache":40},{"NativeArray":12},{"Camera":25},{"Secure":5337},{"SerializationCache":1576},{"APIUpdating":11856},{"Subsystems":392},{"VirtualTexturing":57560},{"StaticSafetyDebugInfo":327680},{"EditorGui":56},{"EditorUtility":10367},{"VersionControl":4},{"Undo":736},{"AssetDatabase":2550793},{"RestService":1518},{"EditorGi":376},{"License":3584},{"UnityConnect":25496},{"Collab":641},{"Upm":1856},{"DrivenProperties":96},{"LocalIPC":216},{"ProfilerEditor":10951},{"CoreBusinessMetrics":3638},{"AssetReference":40},{"IPCStream":40}]}
