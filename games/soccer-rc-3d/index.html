@@ -4,11 +4,11 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <title>Soccer RC 3D</title>
-  <!-- Cache-bust: ?v=20261016-soccerrc3d17 — Race: wheel fix + steer, driver tower, pinch/wheel/+- zoom -->
+  <!-- Cache-bust: ?v=20261016-soccerrc3d18 — Race: wheel fix + steer, driver tower, pinch/wheel/+- zoom -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560&family=Outfit:wght@400;500;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="./style.css?v=20261016-soccerrc3d17" />
+  <link rel="stylesheet" href="./style.css?v=20261016-soccerrc3d18" />
   <script src="/games/shared/tesla-fullscreen.js?v=tfs1"></script>
   <script src="/games/shared/viewport-fill.js?v=vfs1"></script>
   <script src="/games/shared/gamepad.js?v=20261007-soccerrc3d13"></script>
@@ -44,6 +44,8 @@
       <p class="lobby-sub">Pick a mode</p>
       <div class="lobby-actions">
         <button type="button" id="pickSoccer" class="lobby-btn soccer">Soccer</button>
+        <button type="button" id="pickSoccerAi" class="lobby-btn soccer">Soccer · 1P vs AI</button>
+        <button type="button" id="pickSoccerCoop" class="lobby-btn soccer">Soccer · Co-op 2v2 vs AI</button>
         <button type="button" id="pickRace" class="lobby-btn race">Race Track · 2P</button>
         <div class="race-player-row">
           <button type="button" class="lobby-btn race-sm" data-race-players="3">Race · 3P</button>
@@ -110,6 +112,6 @@
     </div>
   </div>
   <div id="boot">Loading Soccer RC 3D…</div>
-  <script type="module" src="./game.js?v=20261016-soccerrc3d17"></script>
+  <script type="module" src="./game.js?v=20261016-soccerrc3d18"></script>
 </body>
 </html>

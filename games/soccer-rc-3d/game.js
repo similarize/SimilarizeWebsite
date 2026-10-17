@@ -20,9 +20,9 @@ import {
   createSkidMarks,
   RACE_COLORS,
   RACE_NAMES,
-} from "./race-mode.js?v=20261016-soccerrc3d17";
+} from "./race-mode.js?v=20261016-soccerrc3d18";
 
-const CACHE = "20261016-soccerrc3d17";
+const CACHE = "20261016-soccerrc3d18";
 const HALF_X = 22;
 const HALF_Z = 14;
 const WALL_H = 5.5;
@@ -379,14 +379,8 @@ function resetMatch() {
   score[0] = 0; score[1] = 0;
   s1El.textContent = "0";
   s2El.textContent = "0";
-  cars[0].pos.set(-8, CAR_HALF.y, 0);
-  cars[0].yaw = 0;
-  cars[0].vx = cars[0].vz = cars[0].vy = 0;
-  cars[0].boost = 1;
-  cars[1].pos.set(8, CAR_HALF.y, 0);
-  cars[1].yaw = Math.PI;
-  cars[1].vx = cars[1].vz = cars[1].vy = 0;
-  cars[1].boost = 1;
+  { const spots = gameMode === "soccer" ? soccerKickoffSpots() : KICKOFF;
+    cars.forEach((c, k) => { const sp = spots[k] || KICKOFF[k % 2]; c.pos.set(sp[0], CAR_HALF.y, sp[1]); c.yaw = sp[2]; c.vx = c.vz = c.vy = 0; c.boost = 1; }); }
   resetBall(0);
   clearTracks();
   if (cars[0]) cars[0]._trackAcc = 0;
@@ -818,7 +812,9 @@ function collideCarBall(car) {
 }
 
 function collideCars() {
-  const a = cars[0], b = cars[1];
+  for (let i = 0; i < cars.length; i++) for (let j = i + 1; j < cars.length; j++) collidePair(cars[i], cars[j]);
+}
+function collidePair(a, b) {
   const dx = b.pos.x - a.pos.x;
   const dz = b.pos.z - a.pos.z;
   const minD = CAR_HALF.x * 2 * 0.95;
@@ -1664,7 +1660,48 @@ function showLobby() {
   showBanner("Pick a mode", "", 1.2);
 }
 
-function startSoccerMode() {
+// s3d18: soccer AI + co-op. soccerAi = "off" (1v1 humans) | "vs" (P1 vs AI) | "coop" (P1+P2 orange vs 2 AI blue)
+let soccerAi = "off";
+const KICKOFF = [[-8, 0, 0], [8, 0, Math.PI], [-8, 0, 0], [8, 0, Math.PI]];
+function soccerKickoffSpots() {
+  if (soccerAi === "coop") return [[-8, -4, 0], [-8, 4, 0], [8, -4, Math.PI], [8, 4, Math.PI]];
+  return KICKOFF.slice(0, 2);
+}
+function aiSoccerInput(i) {
+  const car = cars[i];
+  const team = car.team; // 0 orange attacks +x, 1 blue attacks -x
+  const atkX = team === 0 ? HALF_X : -HALF_X, ownX = -atkX;
+  const mates = cars.filter((c) => c.team === team);
+  const dBall = (c) => Math.hypot(ball.pos.x - c.pos.x, ball.pos.z - c.pos.z);
+  const attacker = mates.reduce((a, b) => (dBall(a) <= dBall(b) ? a : b));
+  let tx, tz, wantKick = false;
+  const gx = atkX - ball.pos.x, gz = -ball.pos.z, gl = Math.hypot(gx, gz) || 1;
+  if (car === attacker || mates.length === 1) {
+    // get behind the ball on the line to the goal, then drive through it
+    const bx = ball.pos.x - (gx / gl) * 2.2, bz = ball.pos.z - (gz / gl) * 2.2;
+    const behind = (car.pos.x - ball.pos.x) * (gx / gl) + (car.pos.z - ball.pos.z) * (gz / gl) < -0.6;
+    if (behind) { tx = ball.pos.x + (ball.vx || 0) * 0.15; tz = ball.pos.z + (ball.vz || 0) * 0.15; }
+    else { tx = bx; tz = bz + (Math.abs(car.pos.z - ball.pos.z) < 1.2 ? (car.pos.z > ball.pos.z ? 2 : -2) : 0); }
+    const fx = Math.cos(car.yaw), fz = Math.sin(car.yaw);
+    wantKick = behind && dBall(car) < KICK_RANGE * 0.95 && fx * (gx / gl) + fz * (gz / gl) > 0.55;
+  } else {
+    // defender: sit between ball and own goal, a bit off the line
+    tx = ownX + (ball.pos.x - ownX) * 0.35; tz = ball.pos.z * 0.5;
+  }
+  const desired = Math.atan2(tz - car.pos.z, tx - car.pos.x);
+  let dyaw = desired - car.yaw;
+  while (dyaw > Math.PI) dyaw -= Math.PI * 2;
+  while (dyaw < -Math.PI) dyaw += Math.PI * 2;
+  const dist = Math.hypot(tx - car.pos.x, tz - car.pos.z);
+  const skill = car.skill || 0.85;
+  let fwd = dist > 0.6 ? (Math.abs(dyaw) > 1.4 ? 0.35 : 1) * skill : 0;
+  let rev = 0;
+  if (Math.abs(dyaw) > 2.4 && dist < 4) { fwd = 0; rev = 0.8; }
+  const boost = Math.abs(dyaw) < 0.2 && dist > 10 && car.boost > 0.4;
+  return { fwd, rev, steer: Math.max(-1, Math.min(1, (rev ? -dyaw : dyaw) * 2.4)), kick: wantKick, boost, aimX: 0, aimZ: 0, aimActive: false };
+}
+function startSoccerMode(aiMode) {
+  soccerAi = aiMode || "off";
   gameMode = "soccer";
   setModeUI("soccer");
   if (raceGroup) raceGroup.visible = false;
@@ -1673,13 +1710,15 @@ function startSoccerMode() {
   // Ensure 2 soccer cars
   clearSceneCars();
   clearTracks();
-  const mesh0 = makeCarMesh(0xe4572e);
-  const mesh1 = makeCarMesh(0x3b82f6);
-  scene.add(mesh0, mesh1);
-  cars = [
-    makeCarState(mesh0, -8, CAR_HALF.y, 0, 0),
-    makeCarState(mesh1, 8, CAR_HALF.y, 0, Math.PI),
-  ];
+  const coop = soccerAi === "coop";
+  const cols = coop ? [0xe4572e, 0xf59e0b, 0x3b82f6, 0x22d3ee] : [0xe4572e, 0x3b82f6];
+  const spots = soccerKickoffSpots();
+  cars = cols.map((col, k) => { const m = makeCarMesh(col); scene.add(m); const c = makeCarState(m, spots[k][0], CAR_HALF.y, spots[k][1], spots[k][2]); return c; });
+  cars.forEach((c, k) => {
+    c.team = coop ? (k < 2 ? 0 : 1) : k;
+    c.ai = coop ? k >= 2 : soccerAi === "vs" && k === 1;
+    c.skill = coop ? (k === 2 ? 0.88 : 0.8) : 0.86;
+  });
   for (const c of cars) c.mesh.visible = true;
   if (!ball) ball = { pos: new THREE.Vector3(0, BALL_R, 0), vx: 0, vy: 0, vz: 0 };
   resetMatch();
@@ -1994,6 +2033,9 @@ function bindModeLobby() {
   const pickSoccer = document.getElementById("pickSoccer");
   const pickRace = document.getElementById("pickRace");
   if (pickSoccer) pickSoccer.addEventListener("click", () => startSoccerMode());
+  const pickSoccerAi = document.getElementById("pickSoccerAi"), pickSoccerCoop = document.getElementById("pickSoccerCoop");
+  if (pickSoccerAi) pickSoccerAi.addEventListener("click", () => startSoccerMode("vs"));
+  if (pickSoccerCoop) pickSoccerCoop.addEventListener("click", () => startSoccerMode("coop"));
   // Race Track = 2P; 3P / 4P via data-race-players buttons (empty seats → AI)
   if (pickRace) pickRace.addEventListener("click", () => startRaceMode(2, 3));
   document.querySelectorAll("[data-race-players]").forEach((btn) => {
@@ -2086,10 +2128,11 @@ function tick() {
     if (freezeT > 0) {
       freezeT -= dt;
     } else if (cars.length >= 2) {
-      const inp0 = readInput(0);
-      const inp1 = readInput(1);
-      updateCar(cars[0], edgeKick(0, inp0), dt);
-      updateCar(cars[1], edgeKick(1, inp1), dt);
+      for (let i = 0; i < cars.length; i++) {
+        const c = cars[i];
+        const inp = c.ai ? aiSoccerInput(i) : readInput(i);
+        updateCar(c, c.ai ? inp : edgeKick(i, inp), dt);
+      }
       collideCars();
       for (const c of cars) collideCarBall(c);
       updateBall(dt);
@@ -2384,6 +2427,8 @@ function init() {
   console.info("[Soccer RC 3D]", CACHE, "lobby ready");
   // arcade-upgrade: ?demo=soccer|race auto-starts (used for previews / screenshots)
   const demo = new URLSearchParams(location.search).get("demo");
+  window.__s3dDebug = () => ({ mode: gameMode, soccerAi, score: score.slice(), ball: ball && [ball.pos.x, ball.pos.z].map((v) => +v.toFixed(2)), cars: cars.map((c) => ({ ai: !!c.ai, team: c.team, x: +c.pos.x.toFixed(2), z: +c.pos.z.toFixed(2) })) });
+  if (demo === "coop") setTimeout(() => { try { startSoccerMode("coop"); } catch (e) { console.warn(e); } }, 300);
   if (demo === "soccer") setTimeout(() => { try { startSoccerMode(); } catch (e) { console.warn(e); } }, 300);
   if (demo === "race") setTimeout(() => { try { startRaceMode(2, 3); } catch (e) { console.warn(e); } }, 300);
 }
