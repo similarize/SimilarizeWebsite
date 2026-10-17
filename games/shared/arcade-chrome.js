@@ -1,9 +1,11 @@
-/*! Similarize Arcade chrome (ac1) — consistent "← Arcade" Exit + fullscreen toggle for every cabinet.
+/*! Similarize Arcade chrome (ac3) — consistent "← Arcade" Exit + fullscreen toggle for every cabinet.
  * <script src="/games/shared/arcade-chrome.js?v=ac2" data-pos="top:8px;left:8px"></script>
  * Skips the Exit pill if the page already has a link back to /games/. Esc-free: B/Select on a pad is left to the game.
  */
 (function () {
   "use strict";
+  // inside an arcade card's live preview there is nothing to exit or fullscreen
+  if (window.self !== window.top && /[?&]preview=1/.test(location.search)) return;
   var me = document.currentScript, pos = (me && me.getAttribute("data-pos")) || "top:8px;left:8px";
   function css() {
     if (document.getElementById("ac1-css")) return;
