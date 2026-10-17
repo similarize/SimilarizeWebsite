@@ -12,7 +12,7 @@ using UnityEngine;
 public class Ffu53 : MonoBehaviour
 {
     public static Ffu53 I;
-    bool started; int ph = -1; float phW, logT;
+    bool started, subPlaced; int ph = -1; float phW, logT;
     Vector3 camPos, camLook; bool camOn;
     Frog f; Vehicle truck, suit;
     static Vector3 Lc(float x, float y, float z) { return Worlds.UnderO + new Vector3(x, y, z); }
@@ -65,7 +65,7 @@ public class Ffu53 : MonoBehaviour
         {
             f.SendTo(WorldId.Ranch, Campfire.I.Pos + new Vector3(1.4f, 0.2f, 0f), 270f);
             Eat50.Begin(f);
-            float d; Hotspot h = Interact.Nearest(f.transform.position, f, out d);
+            float d; Hotspot h = Interact.Nearest(Campfire.I.Pos + new Vector3(1.4f, 0f, 0f), f, out d);
             string lab = h != null ? h.Label(f) : "none";
             Debug.Log("ONESEA CHECK C5 eating by the campfire -> prompt '" + lab + "'" + (lab.Contains("put out") ? " FAIL" : " PASS"));
         }
@@ -112,7 +112,7 @@ public class Ffu53 : MonoBehaviour
             case 2:
                 {
                     var s = UnderwaterWorld.I.sub;
-                    if (w < 1f) { Vector3 p = Lc(Spot.x, -10f, Spot.y - 4f); Place(s, p, 0f); }
+                    if (!subPlaced && s.driver == f) { subPlaced = true; Vector3 p = Lc(Spot.x, -10f, Spot.y - 4f); Place(s, p, 0f); Debug.Log("FFDEMO onesea sub moved to the wreck spot " + p.ToString("0.0")); }
                     Behind(s.transform, 11f, 2.5f, wreck);
                     if (w > Hold) { f.ExitVehicle(); f.SendTo(WorldId.Underwater, UnderwaterWorld.ChestPos + new Vector3(0f, 2.2f, -2.6f), 0f); Next(3, "scuba to the wreck's chest (world " + f.world + ")"); }
                 }
@@ -130,10 +130,14 @@ public class Ffu53 : MonoBehaviour
                 break;
             case 4:
                 Behind(suit.transform, 10f, 3.5f, wreck);
-                if (w > Hold) { Next(5, "done"); Debug.Log("FFDEMO onesea done chest opens " + UnderwaterWorld.ChestOpens + " last by " + UnderwaterWorld.ChestBy); }
+                if (w > Hold) { f.ExitVehicle(); f.SendTo(WorldId.Ranch, UnderwaterWorld.Mooring + new Vector3(-6f, 1.5f, 3f), 90f); Next(6, "ranch shore view from the dock (nothing pokes out of the water)"); }
+                break;
+            case 6:
+                camPos = UnderwaterWorld.Mooring + new Vector3(-8f, 7f, 0f); camLook = UnderwaterWorld.Mooring + new Vector3(30f, -2f, 0f); camOn = true;
+                if (w > 20f) { Next(5, "done"); Debug.Log("FFDEMO onesea done chest opens " + UnderwaterWorld.ChestOpens + " last by " + UnderwaterWorld.ChestBy); }
                 break;
         }
-        if (Time.unscaledTime > logT && ph >= 1 && ph < 5)
+        if (Time.unscaledTime > logT && ph >= 1 && ph != 5)
         {
             logT = Time.unscaledTime + 2f;
             Vector3 p = f.vehicle != null ? f.vehicle.transform.position : f.transform.position;

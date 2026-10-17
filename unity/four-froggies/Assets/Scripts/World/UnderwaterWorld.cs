@@ -46,6 +46,7 @@ public class UnderwaterWorld : MonoBehaviour
         float k = qMax / Mathf.Sqrt(q);
         return new Vector3(local.x * k, local.y, local.z * k);
     }
+    float caveX0 = -64f;
     Transform chestLid, motes; Vector3 chestPos; bool chestOpen; float chestShut;
     public static Vector3 Mooring { get { return Ranch.SubMooring != Vector3.zero ? Ranch.SubMooring : L(-74f, -0.4f, -3.9f); } }
 
@@ -334,7 +335,7 @@ public class UnderwaterWorld : MonoBehaviour
         B(new Vector3(0f, 0.6f, -10.2f), new Vector3(5.2f, 3.6f, 0.4f), wood, true);      // stern
         B(new Vector3(0f, 2.5f, -6f), new Vector3(5f, 0.3f, 8f), wood, true);             // half deck
         B(new Vector3(0f, 3.8f, -7f), new Vector3(3f, 2.4f, 3.5f), dark, true);           // cabin
-        Mats.Prim(PrimitiveType.Cylinder, hull, new Vector3(0f, 6f, 1f), new Vector3(0.4f, 4f, 0.4f), Mats.Lit(dark), true);   // broken mast
+        Mats.Prim(PrimitiveType.Cylinder, hull, new Vector3(0f, 4.5f, 1f), new Vector3(0.4f, 2.5f, 0.4f), Mats.Lit(dark), true);   // broken mast (53b: shorter - it stays under the pond surface)
         Mats.Prim(PrimitiveType.Cylinder, hull, new Vector3(4f, -0.6f, 3f), new Vector3(0.35f, 3f, 0.35f), Vector3.zero + new Vector3(0f, 0f, 80f), Mats.Lit(dark), false);
         // treasure chest inside
         B(new Vector3(0f, -0.4f, 4f), new Vector3(1.4f, 0.9f, 0.9f), new Color(0.55f, 0.35f, 0.15f), true);
@@ -354,9 +355,19 @@ public class UnderwaterWorld : MonoBehaviour
         // rock tunnel along x at (-58, z 30): rings of boulders, open at both ends, glowing crystals inside
         Color rock = new Color(0.32f, 0.32f, 0.35f);
         float cz = -2f;   // ffu53: inside the pond (was x -72..-43, z 30 = under the bank), mouth towards the dock
+        // 53b: on the real pond bed the west end is a shallow shelf - start the tunnel where all of it stays under water
+        float x0 = -64f;
+        for (; x0 < -30f; x0 += 2f)
+        {
+            bool deep = true;
+            for (int k = 0; k <= 12 && deep; k++) if (SeaY(x0 + k * 2.4f, cz) + 8.3f > -2f) deep = false;
+            if (deep) break;
+        }
+        caveX0 = x0;
+        Debug.Log("Underwater: cave tunnel x " + x0.ToString("0") + ".." + (x0 + 28.8f).ToString("0") + " (pond-local, z " + cz + ")");
         for (int k = 0; k <= 12; k++)
         {
-            float x = -64f + k * 2.4f;
+            float x = x0 + k * 2.4f;
             float y0 = SeaY(x, cz);
             for (int j = 0; j < 9; j++)
             {
@@ -371,7 +382,7 @@ public class UnderwaterWorld : MonoBehaviour
                 Mats.Prim(PrimitiveType.Cube, root, L(x + 0.4f, y0 + 0.4f, cz - 3.6f), new Vector3(0.3f, 0.8f, 0.3f), new Vector3(-12f, 10f, -18f), Mats.Unlit(glow), false);
             }
         }
-        Ranch.Sign(L(-66f, SeaY(-66f, cz) + 8.5f, cz), 270f, "CAVE", new Color(0.2f, 0.2f, 0.3f), 3f, 1f);
+        Ranch.Sign(L(x0 - 2f, Mathf.Min(SeaY(x0 - 2f, cz) + 8.5f, -2f), cz), 270f, "CAVE", new Color(0.2f, 0.2f, 0.3f), 3f, 1f);
     }
 
     void Rocks(System.Random r)
@@ -514,7 +525,7 @@ public class UnderwaterWorld : MonoBehaviour
         spots.Add(new Vector3(-30f, SeaY(-30f, 26f) + 4f, 26f));
         spots.Add(new Vector3(-35f, SeaY(-35f, 20f) + 6f, 20f));
         spots.Add(new Vector3(-23f, SeaY(-23f, 36f) + 3f, 36f));
-        for (int i = 0; i < 5; i++) { float x = -62f + i * 5f; spots.Add(new Vector3(x, SeaY(x, -2f) + 1.6f, -2f)); }
+        for (int i = 0; i < 5; i++) { float x = caveX0 + 2f + i * 5f; spots.Add(new Vector3(x, SeaY(x, -2f) + 1.6f, -2f)); }
         spots.Add(new Vector3(0f, SeaY(0f, -40f) + 2f, -40f));
         spots.Add(new Vector3(30f, SeaY(30f, -38f) + 2f, -38f));
         var holder = new GameObject("Pearls").transform; holder.SetParent(transform, false);

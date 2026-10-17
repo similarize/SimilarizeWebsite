@@ -3,7 +3,8 @@ using UnityEngine;
 // ffu53 CONSISTENCY (audit C9): ONE ownership table, read by every way of getting into a vehicle (a froggy on foot, a
 // robot sent from the phone, the borrow toast). Rules are CANON.md "Vehicles and ownership", unchanged - only applied the
 // same way everywhere now:
-//   OwnerOnly  mechs (StoryMech.CanEnter: each froggy pilots its own), the VTOL jet (James only, Jet.CanEnter)
+//   OwnerOnly  mechs (StoryMech.CanEnter: each froggy pilots its own), the VTOL jet (James only, Jet.CanEnter);
+//              Figure 03's rocket is owner-locked too but is not a Vehicle (its own ramp check in Fig03Rocket50.cs)
 //   AskFirst   any vehicle with an ownerName: James's / Dad's Cybertrucks, Spotty's Tourer + Carrier helm, the family
 //              Roadster - anyone may use it after asking the owner, if nobody is in it
 //   Free       everything else on the ranch (ranch toys / work vehicles: tank, buggies, bikes, boats, RC cars, mower...)
