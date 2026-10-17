@@ -386,32 +386,35 @@ public class CyberBoat : MonoBehaviour
         ledMat = new Material(Mats.Unlit(new Color(0.35f, 0.95f, 1f)));
         glowMat = new Material(Mats.Unlit(new Color(0.4f, 0.9f, 1f)));
 
+        bool ct52 = v.transform.Find("Sprung") != null && v.wheels.Count >= 4;
+        // ffu58 C10: on the photo-matched truck (ct52: nose +2.842, tail -2.841, slab half width 1.012, sill bottom 0.40) the
+        // hull, strakes and sponsons are fitted to ITS body instead of the old truck's (the old bow stuck 0.14 m out past the nose)
+        bool c10 = ct52 && Behave58.On;
         // V-hull: pivot at the belly (y 0.56), grows downward
         hull = Mats.Node(R, "Hull", new Vector3(0f, 0.56f, 0f));
         var hullGo = new GameObject("HullMesh");
         hullGo.transform.SetParent(hull, false);
         hullGo.transform.localPosition = new Vector3(0f, -0.56f, 0f);
-        hullGo.AddComponent<MeshFilter>().sharedMesh = HullMesh();
+        hullGo.AddComponent<MeshFilter>().sharedMesh = c10 ? HullMesh58() : HullMesh();
         hullGo.AddComponent<MeshRenderer>().sharedMaterial = steel;
         // black chine strakes along the hull
         for (int s = -1; s <= 1; s += 2)
-            Mats.Prim(PrimitiveType.Cube, hullGo.transform, new Vector3(s * 0.99f, 0.3f, -0.2f), new Vector3(0.06f, 0.05f, 4.9f), dark);
+            Mats.Prim(PrimitiveType.Cube, hullGo.transform, c10 ? new Vector3(s * 1.0f, 0.3f, -0.1f) : new Vector3(s * 0.99f, 0.3f, -0.2f), new Vector3(0.06f, 0.05f, c10 ? 5.0f : 4.9f), dark);
 
         // arch shutters: stainless plates that roll down over the wheel openings (pivot at the arch top)
         // ffu52: the photo-matched truck (HeroCars52) has its axles at 1.963 / -1.672 and taller arches
-        bool ct52 = v.transform.Find("Sprung") != null && v.wheels.Count >= 4;
         float shY = ct52 ? 1.04f : 0.985f, shH = ct52 ? 0.6f : 0.48f, shL = ct52 ? 1.48f : 1.5f;
         foreach (float z in ct52 ? new[] { v.wheels[0].mount.z, v.wheels[3].mount.z } : new[] { 1.85f, -1.75f })
             for (int s = -1; s <= 1; s += 2)
             {
-                Transform n = Mats.Node(R, "Shutter", new Vector3(s * 1.03f, shY, z));
+                Transform n = Mats.Node(R, "Shutter", new Vector3(s * (c10 ? 1.06f : 1.03f), shY, z));   // ffu58: outside the ct52 flares
                 Mats.Prim(PrimitiveType.Cube, n, new Vector3(0f, -shH * 0.5f, 0f), new Vector3(0.03f, shH, shL), steel);
                 Mats.Prim(PrimitiveType.Cube, n, new Vector3(s * 0.012f, -shH + 0.02f, 0f), new Vector3(0.02f, 0.035f, shL), dark);
                 shutters.Add(n);
             }
 
         // sponsons
-        Mesh spm = SponsonMesh();
+        Mesh spm = c10 ? SponsonMesh58() : SponsonMesh();
         for (int i = 0; i < 2; i++)
         {
             float sx = i == 0 ? -1f : 1f;
@@ -580,6 +583,40 @@ public class CyberBoat : MonoBehaviour
         rings.Add(ring(2.75f, 0.75f, 0.7f, 0.58f, 0.5f));
         rings.Add(ring(2.98f, 0.95f, 0.4f, 0.88f, 0.84f));
         return Loft(rings, false, true, false, z => new Vector3(0f, 0.7f, Mathf.Clamp(z, -2.5f, 2.5f)));
+    }
+
+    // ffu58 C10: the hull fitted to the ct52 body: stern at the tail (-2.82), bow tucked under the front bumper (ends at
+    // +2.83, its top 0.31 m = the bumper's bottom edge), sides at the slab's half width 1.012
+    static Mesh HullMesh58()
+    {
+        var rings = new List<Vector3[]>();
+        System.Func<float, float, float, float, float, Vector3[]> ring = (z, top, wc, yc, yk) => new[]
+        {
+            new Vector3(-1.012f, top, z), new Vector3(-wc, yc, z), new Vector3(-wc * 0.45f, (yc + yk) * 0.5f - 0.02f, z), new Vector3(0f, yk, z),
+            new Vector3(wc * 0.45f, (yc + yk) * 0.5f - 0.02f, z), new Vector3(wc, yc, z), new Vector3(1.012f, top, z)
+        };
+        rings.Add(ring(-2.82f, 0.62f, 1.0f, 0.3f, 0.1f));
+        rings.Add(ring(-1.2f, 0.58f, 1.0f, 0.28f, 0.06f));
+        rings.Add(ring(1.0f, 0.58f, 1.0f, 0.28f, 0.06f));
+        rings.Add(ring(2.05f, 0.58f, 0.94f, 0.33f, 0.16f));
+        rings.Add(ring(2.6f, 0.56f, 0.8f, 0.4f, 0.32f));
+        rings.Add(ring(2.83f, 0.52f, 0.55f, 0.47f, 0.44f));
+        return Loft(rings, false, true, false, z => new Vector3(0f, 0.7f, Mathf.Clamp(z, -2.5f, 2.5f)));
+    }
+    // sponsons for the ct52 truck: same section, bow raked back to stay inside the nose line (2.70)
+    static Mesh SponsonMesh58()
+    {
+        var rings = new List<Vector3[]>();
+        System.Func<float, float, float, Vector3[]> ring = (z, s, lift) => new[]
+        {
+            new Vector3(-0.23f * s, 0.42f, z), new Vector3(0.23f * s, 0.42f, z), new Vector3(0.26f * s, lift + (0.22f - lift) * s, z),
+            new Vector3(0.1f * s, lift + (0f - lift) * s, z), new Vector3(-0.1f * s, lift + (0f - lift) * s, z), new Vector3(-0.26f * s, lift + (0.22f - lift) * s, z)
+        };
+        rings.Add(ring(-2.6f, 1f, 0.3f));
+        rings.Add(ring(1.35f, 1f, 0.3f));
+        rings.Add(ring(2.2f, 0.62f, 0.34f));
+        rings.Add(ring(2.7f, 0.12f, 0.38f));
+        return Loft(rings, true, true, true, z => new Vector3(0f, 0.25f, Mathf.Clamp(z, -2.3f, 2.4f)));
     }
 
     // sponson: faceted float, 0.5 wide, 0.42 tall (local y 0..0.42), pointed raked bow, flat transom

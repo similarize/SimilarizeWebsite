@@ -494,10 +494,22 @@ public partial class Robot
             float gy = world == WorldId.Space ? goal.y : WaterOrGround(goal.x, goal.z, p.y);
             Vector3 to = goal - p; to.y = 0f;
             float d = to.magnitude;
-            float sp = Mathf.Min(14f, d * 1.2f + 1.5f);
+            float sp, wantY;
+            if (Behave58.On)
+            {
+                // ffu58: a real jet-pack approach: fast cruise, a glide path that loses height with the distance left
+                // (about 1 m down per 2 m forward), a short hover-flare over the spot, then touch down (~4 s instead of ~12 s)
+                sp = Mathf.Min(20f, d * 1.6f + 1.2f);
+                wantY = gy + Mathf.Min(p.y - gy, d * 0.5f);
+                yOver = Mathf.MoveTowards(p.y, wantY, Mathf.Clamp(Mathf.Abs(p.y - wantY) * 3f, 1.2f, 10f) * dt);
+            }
+            else
+            {
+                sp = Mathf.Min(14f, d * 1.2f + 1.5f);
+                wantY = d > 8f ? Mathf.Max(gy + 6f, p.y - 4f * dt) : gy;
+                yOver = Mathf.MoveTowards(p.y, wantY, (d > 8f ? 4f : 5f) * dt);
+            }
             Vector3 np = d > 0.05f ? p + to / d * Mathf.Min(d, sp * dt) : p;
-            float wantY = d > 8f ? Mathf.Max(gy + 6f, p.y - 4f * dt) : gy;
-            yOver = Mathf.MoveTowards(p.y, wantY, (d > 8f ? 4f : 5f) * dt);
             transform.position = new Vector3(np.x, yOver, np.z);
             if (d > 0.1f) ExtYaw(Mathf.MoveTowardsAngle(transform.eulerAngles.y, Mathf.Atan2(to.x, to.z) * Mathf.Rad2Deg, 200f * dt));
             jetsOn = true;

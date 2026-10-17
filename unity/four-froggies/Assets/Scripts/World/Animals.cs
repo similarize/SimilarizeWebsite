@@ -210,7 +210,9 @@ public partial class Animal : MonoBehaviour
         a.petName = name;
         a.speed = 1.2f; a.runSpeed = 4.2f;
         Quad(a, fur, socks ? Color.white : fur, 0.62f, 0.2f, 0.26f, 0.07f, 0.24f);
-        if (stripes) { for (int k = 0; k < 5; k++) P(PrimitiveType.Cube, a.body, new Vector3(0f, 0.425f, -0.22f + k * 0.11f), new Vector3(0.24f, 0.035f, 0.035f), patch, new Vector3(0f, 0f, 0f)); }
+        if (stripes && Behave58.On)   // ffu58: tabby stripes hug the back (thin flattened bands), not slabs standing up on it
+        { for (int k = 0; k < 5; k++) P(PrimitiveType.Sphere, a.body, new Vector3(0f, 0.405f, -0.22f + k * 0.11f), new Vector3(0.235f, 0.075f, 0.045f), patch, new Vector3(0f, 0f, 0f)); }
+        else if (stripes) { for (int k = 0; k < 5; k++) P(PrimitiveType.Cube, a.body, new Vector3(0f, 0.425f, -0.22f + k * 0.11f), new Vector3(0.24f, 0.035f, 0.035f), patch, new Vector3(0f, 0f, 0f)); }
         else         P(PrimitiveType.Sphere, a.body, new Vector3(0.05f, 0.42f, -0.05f), new Vector3(0.2f, 0.12f, 0.24f), patch);
         a.head = Mats.Node(a.body, "Head", new Vector3(0f, 0.46f, 0.36f));
         P(PrimitiveType.Sphere, a.head, Vector3.zero, new Vector3(0.24f, 0.21f, 0.22f), fur);

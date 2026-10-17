@@ -294,7 +294,17 @@ public class Animals57 : MonoBehaviour
 
     // ------------------------------------------------------------------ actions (frogs AND robots)
     static Vector3 Who(St s) { return s.r != null ? s.r.transform.position : s.f != null ? s.f.transform.position : s.a.transform.position; }
-    static void Say(St s, string line, float secs = 2.2f) { if (s.r != null) { if (s.r.visit != null && s.r.visit.lead != null) s.r.visit.lead.Toast(s.r.robotName + ": " + line, secs); } else if (s.f != null) s.f.Toast(line, secs); }
+    // ffu58: a line that already starts with the robot's name ("Unitree gives the cow some hay") is not prefixed again
+    static void Say(St s, string line, float secs = 2.2f)
+    {
+        if (s.r != null)
+        {
+            string t = Behave58.On && line.StartsWith(s.r.robotName) ? line : s.r.robotName + ": " + line;
+            if (s.r.visit != null && s.r.visit.lead != null) s.r.visit.lead.Toast(t, secs);
+            if (Behave58.On) Debug.Log("ANIMALS57 robot says '" + t + "'");
+        }
+        else if (s.f != null) s.f.Toast(line, secs);
+    }
     void Take(St s) { s.a.pal = true; if (s.mode == Mode.None || s.mode == Mode.Follow) s.home = s.a.transform.position; }
     // who acts: a froggy (f) or a robot (r); a pet that was following keeps its lead froggy in f and goes back to following
     bool Begin(St s, Frog f, Robot r, Mode m)
@@ -444,6 +454,7 @@ public class Animals57 : MonoBehaviour
                 {
                     Frog f = s.f;
                     if (f == null || !f.isActiveAndEnabled) { Stay(s); break; }
+                    if (Behave58.On && Behave58.FollowTick(this, s, f, dt)) break;   // ffu58: truck-bed ride / waits on the shore / own slot
                     Vector3 lp = f.transform.position;
                     float d = Flat(lp - p);
                     if (d > 40f || Mathf.Abs(lp.y - p.y) > 12f && f.vehicle == null) { Arrive(s, false); break; }
@@ -539,6 +550,7 @@ public class Animals57 : MonoBehaviour
         if (a.transform.parent != null) a.transform.SetParent(null, true);
         Vector3 fw = f.transform.forward; fw.y = 0f; fw = fw.sqrMagnitude > 0.01f ? fw.normalized : Vector3.forward;
         Vector3 at = f.transform.position - fw * 1.6f + Vector3.Cross(Vector3.up, fw) * 0.9f;
+        if (Behave58.On) at = Behave58.FollowSlot(f, a, FollowIndex(s), fw);   // ffu58: each pet its own spot behind James (no pile-up)
         at.y = f.world == WorldId.Space ? f.transform.position.y : G57(at.x, at.z, f.transform.position.y);
         a.transform.position = at;
         a.transform.rotation = Quaternion.LookRotation(fw);
@@ -547,6 +559,16 @@ public class Animals57 : MonoBehaviour
         if (newWorld) f.Toast(Nm(a) + " came along to " + Robot.WorldName(Robot.TargetWorld(f)) + "!", 2.2f);
         Debug.Log("ANIMALS57 arrive " + Nm(a) + " with " + f.nick + " in " + f.world + (newWorld ? " (new world)" : " (caught up)") + " at " + at.ToString("0.0"));
     }
+
+    // ffu58: which follower this is (0, 1, 2 ...) among the pets following the same froggy, and the followers list
+    public int FollowIndex(St me)
+    {
+        int i = 0;
+        foreach (var s in st.Values) { if (s == me) return i; if (s.a != null && s.f == me.f && s.mode == Mode.Follow) i++; }
+        return i;
+    }
+    public List<St> Followers(Frog f) { var l = new List<St>(); foreach (var s in st.Values) if (s.a != null && s.f == f && s.mode == Mode.Follow) l.Add(s); return l; }
+    public void ArrivePublic(St s, bool newWorld) { Arrive(s, newWorld); }
 
     // ------------------------------------------------------------------ helpers
     static float Sq(float x) { return x * x; }
@@ -598,7 +620,7 @@ public class Animals57 : MonoBehaviour
         a.transform.rotation = Quaternion.RotateTowards(a.transform.rotation, Quaternion.LookRotation(d), 220f * dt);
     }
     // walk / run towards 'to' until 'stop' metres away; returns the remaining flat distance
-    static float Move(Animal a, Vector3 to, float speed, float dt, float stop, float fixY = float.NaN)
+    public static float Move(Animal a, Vector3 to, float speed, float dt, float stop, float fixY = float.NaN)
     {
         Vector3 p = a.transform.position, d = to - p; d.y = 0f;
         float dist = d.magnitude;
@@ -703,6 +725,17 @@ public partial class Animal
                 if (sit && !hind) ang = 6f;
             }
             legs[i].localPosition = g57Leg[i] + Vector3.up * lift;
+            if (Behave58.On && gait == 0 && lie && g57Low > 0.01f)
+            {
+                // ffu58: lying = legs folded UNDER the body (a cat's loaf, a dog's sphinx front paws), not stuck out flat
+                // front / back (that read as an animal tipped over on its side, Tigy in the ffu57 shots)
+                bool hindL = i >= 2; float k = g57Low;
+                float fold = kind == Kind.Dog && !hindL ? 70f : hindL ? -30f : 30f;
+                legs[i].localRotation = Quaternion.Euler(fold * k, 0f, 0f);
+                legs[i].localScale = new Vector3(1f, Mathf.Lerp(1f, kind == Kind.Dog && !hindL ? 0.85f : 0.3f, k), 1f);
+                continue;
+            }
+            if (Behave58.On && legs[i].localScale.y != 1f) legs[i].localScale = Vector3.one;
             legs[i].localRotation = Quaternion.Euler(ang, 0f, 0f);
         }
         if (body != null)

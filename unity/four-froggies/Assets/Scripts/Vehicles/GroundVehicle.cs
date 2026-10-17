@@ -209,7 +209,16 @@ public class GroundVehicle : Vehicle
             slipSpeed = ls; groundFrac = wheels.Count > 0 ? groundedCount / (float)wheels.Count : 1f;
 
             float force = 0f;
-            if (!driven) force = -fs * 3f;   // parking brake
+            if (!driven && Behave58.On)
+            {
+                // ffu58: a parked car HOLDS on a slope (park pawl + brakes = static friction): cancel the slope's pull
+                // along and across the car and damp what is left, instead of a viscous -fs * 3 that let a parked
+                // Cybertruck creep at ~1 km/h down the ranch's gentle slopes
+                float gsF = Vector3.Dot(Physics.gravity, fwd), gsR = Vector3.Dot(Physics.gravity, right);
+                force = -fs * 8f - gsF;
+                if (Mathf.Abs(fs) < 0.6f && Mathf.Abs(ls) < 0.6f) rb.AddForce(-right * gsR * rb.mass * gf, ForceMode.Force);
+            }
+            else if (!driven) force = -fs * 3f;   // parking brake
             else if (throttle > 0.02f) force = fs < maxSpeed ? accel * throttle * Mathf.Clamp01(1.15f - fs / maxSpeed) : 0f;
             else if (throttle < -0.02f) force = fs > 1f ? -accel * 1.6f * -throttle : (fs > -maxSpeed * reverseFrac ? accel * 0.7f * throttle : 0f);
             else force = -fs * 0.8f;
