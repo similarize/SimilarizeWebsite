@@ -132,7 +132,7 @@ public class LBPack
                 var tx = Resources.Load<Texture2D>("LB/" + m.texName);
                 if (tx == null) t = Mats.PBR(m.color, m.gloss, m.metal);
                 else if (leaf) t = Mats.Foliage(tx, m.color);
-                else { t = Mats.Tex(tx, m.gloss); t.color = m.color; }
+                else { t = Mats.Tex(tx, m.gloss); t.color = m.color; if (m.metal > 0.5f) t.SetFloat("_Metallic", m.metal); }   // ffu52: brushed stainless
                 matCache[k] = t;
             }
             return t;

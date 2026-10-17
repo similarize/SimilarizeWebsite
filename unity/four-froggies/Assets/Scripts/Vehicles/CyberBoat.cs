@@ -389,12 +389,15 @@ public class CyberBoat : MonoBehaviour
             Mats.Prim(PrimitiveType.Cube, hullGo.transform, new Vector3(s * 0.99f, 0.3f, -0.2f), new Vector3(0.06f, 0.05f, 4.9f), dark);
 
         // arch shutters: stainless plates that roll down over the wheel openings (pivot at the arch top)
-        foreach (float z in new[] { 1.85f, -1.75f })
+        // ffu52: the photo-matched truck (HeroCars52) has its axles at 1.963 / -1.672 and taller arches
+        bool ct52 = v.transform.Find("Sprung") != null && v.wheels.Count >= 4;
+        float shY = ct52 ? 1.04f : 0.985f, shH = ct52 ? 0.6f : 0.48f, shL = ct52 ? 1.48f : 1.5f;
+        foreach (float z in ct52 ? new[] { v.wheels[0].mount.z, v.wheels[3].mount.z } : new[] { 1.85f, -1.75f })
             for (int s = -1; s <= 1; s += 2)
             {
-                Transform n = Mats.Node(R, "Shutter", new Vector3(s * 1.03f, 0.985f, z));
-                Mats.Prim(PrimitiveType.Cube, n, new Vector3(0f, -0.24f, 0f), new Vector3(0.03f, 0.48f, 1.5f), steel);
-                Mats.Prim(PrimitiveType.Cube, n, new Vector3(s * 0.012f, -0.46f, 0f), new Vector3(0.02f, 0.035f, 1.5f), dark);
+                Transform n = Mats.Node(R, "Shutter", new Vector3(s * 1.03f, shY, z));
+                Mats.Prim(PrimitiveType.Cube, n, new Vector3(0f, -shH * 0.5f, 0f), new Vector3(0.03f, shH, shL), steel);
+                Mats.Prim(PrimitiveType.Cube, n, new Vector3(s * 0.012f, -shH + 0.02f, 0f), new Vector3(0.02f, 0.035f, shL), dark);
                 shutters.Add(n);
             }
 

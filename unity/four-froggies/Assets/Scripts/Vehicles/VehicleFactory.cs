@@ -123,6 +123,32 @@ public static class VehicleFactory
         var v = Root<GroundVehicle>(title, pos, yaw);
         v.EnterVerb = "drive the " + title;
         v.engineKind = 12;   // ffu30: synthesised cyber EV voice (whine + hum + road + regen, SfxSynth.cs)
+        // ffu52: the photo-matched truck at Tesla's published size + weight (HeroCars52.cs); ?ffcars=old = the old one below
+        LBPack p52 = HeroCars52.Pack("cybertruck52");
+        if (p52 != null && p52.Has("body") && p52.Has("wheel"))
+        {
+            v.SetupBodyPublic(3010f, new Vector3(0f, 1.18f, -0.02f), new Vector3(2.03f, 1.12f, 5.66f), new Vector3(0f, 0.6f, 0.08f));
+            v.maxSpeed = 30f; v.accel = 13f; v.turnRate = 1.65f; v.grip = 7.5f;
+            Transform t52 = v.transform;
+            Transform sprung = Mats.Node(t52, "Sprung", Vector3.zero);
+            p52.Spawn("body", sprung, Vector3.zero, 1f, accent);
+            const float r52 = 0.439f;
+            float wy = r52 - v.rest * 0.45f;    // mount so the static spring sag puts the tyres exactly in the arches
+            foreach (var w in new[] { new Vector3(-0.886f, wy, 1.963f), new Vector3(0.886f, wy, 1.963f), new Vector3(-0.886f, wy, -1.672f), new Vector3(0.886f, wy, -1.672f) })
+            {
+                Transform wn = Mats.Node(t52, "Wheel", w);
+                p52.Spawn("wheel", wn, Vector3.zero, 1f, accent, w.x < 0f);
+                v.AddWheel(w, r52, wn, w.z > 0f);
+            }
+            // cabin: left front cushion top y ~1.22 (z -0.28..0.24), roof glass ~1.7 above it: a 0.4 frog sits clear of both
+            v.seat = Mats.Node(sprung, "Seat", new Vector3(-0.45f, 1.21f, -0.02f));
+            v.seatScale = 0.4f;
+            v.FinishSetup();
+            CarFeel52.Attach(v, sprung, new Vector3(0f, 0.55f, 0.15f), 0.21f, 0.3f, 1.25f, 5.68f, 2.03f);
+            CyberBoat.Attach(v);
+            Done(v);
+            return v;
+        }
         v.SetupBodyPublic(2300f, new Vector3(0f, 1.2f, 0f), new Vector3(2.15f, 1.1f, 5.7f), new Vector3(0f, 0.55f, 0f));
         v.maxSpeed = 30f; v.accel = 13f; v.turnRate = 1.7f; v.grip = 7.5f;
         Transform t = v.transform;

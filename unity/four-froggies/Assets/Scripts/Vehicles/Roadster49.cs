@@ -85,16 +85,18 @@ public class Roadster49 : Vehicle
         v.Title = "Roadster"; v.EnterVerb = "drive the Roadster";
         v.ownerName = "the family"; v.ownerChar = -1;   // CANON: the family car - ask first, not if in use
         v.engineKind = 12; v.enginePitch = 1.3f;
-        v.SetupBodyPublic(1350f, new Vector3(0f, 0.55f, 0f), new Vector3(1.96f, 0.62f, 4.35f), new Vector3(0f, 0.3f, 0f));
+        bool p52 = HeroCars52.Pack("roadster52") != null;   // ffu52: photo-matched model + real ~1700 kg
+        v.SetupBodyPublic(p52 ? 1700f : 1350f, new Vector3(0f, 0.55f, 0f), new Vector3(1.96f, 0.62f, 4.35f), new Vector3(0f, 0.3f, 0f));
         v.ExtraBoxPublic(new Vector3(0f, 0.95f, -0.15f), new Vector3(1.1f, 0.3f, 1.9f));   // canopy
         v.rb.angularDrag = 0.6f;
         v.camDistance = 8.5f; v.camHeight = 2.0f;
         v.Build();
-        v.seat = Mats.Node(go.transform, "Seat", new Vector3(-0.28f, 0.74f, -0.2f));
+        v.seat = p52 ? Mats.Node(v.sprung52, "Seat", new Vector3(-0.30f, 0.45f, -0.30f)) : Mats.Node(go.transform, "Seat", new Vector3(-0.28f, 0.74f, -0.2f));
         v.seatScale = 0.3f;
         float m = v.rb.mass;
         v.spring0 = m * 9.81f / 4f / (Rest * 0.45f);
         v.damper0 = 2f * Mathf.Sqrt(v.spring0 * m / 4f) * 0.42f;
+        if (p52 && v.sprung52 != null) CarFeel52.Attach(v, v.sprung52, new Vector3(0f, 0.45f, 0.05f), 0.11f, 0.16f, 1.6f, 4.36f, 1.98f);
         Mats.SetLayer(go, VehicleLayer);
         I = v;
         Debug.Log("Roadster49: spawned at " + pos.ToString("0.0") + " yaw " + yaw.ToString("0") + " (family car, ask to borrow)");
@@ -182,8 +184,66 @@ public class Roadster49 : Vehicle
         return g;
     }
 
+    [System.NonSerialized] public Transform sprung52;
+    // ffu52: the photo-matched 2026 Roadster (work/lb-gfx/ff/build_roadster52.py -> Resources/LB/roadster52.bytes): body, gold
+    // canopy, cabin, pop-up wing, yoke and 295/30R20 + 335/30R21 wheels from the pack; fans + thruster nozzles + sounds here.
+    void BuildPack52(LBPack pk)
+    {
+        Transform t = transform;
+        sprung52 = Mats.Node(t, "Sprung", Vector3.zero);
+        pk.Spawn("body", sprung52, Vector3.zero, 1f, HeroCars52.AnoWhite);
+        Material blk = Mats.PBR(new Color(0.05f, 0.05f, 0.06f), 0.45f, 0.1f);
+        Material rim = Mats.PBR(new Color(0.22f, 0.23f, 0.25f), 0.75f, 0.85f);
+        // suction fans spinning in the rear ducts (pack: ducts at (+-0.40, 0.22, -2.09))
+        for (int s = -1; s <= 1; s += 2)
+        {
+            Transform f = Mats.Node(sprung52, "Fan", new Vector3(0.40f * s, 0.22f, -2.075f));
+            for (int k = 0; k < 6; k++)
+            {
+                var b = Mats.Prim(PrimitiveType.Cube, f, Quaternion.Euler(0f, 0f, k * 60f) * new Vector3(0f, 0.065f, 0f), new Vector3(0.04f, 0.11f, 0.008f), rim);
+                b.transform.localRotation = Quaternion.Euler(0f, 18f, k * 60f);
+            }
+            Mats.Prim(PrimitiveType.Cylinder, f, Vector3.zero, new Vector3(0.05f, 0.01f, 0.05f), new Vector3(90f, 0f, 0f), blk);
+            if (s < 0) fanL = f; else fanR = f;
+        }
+        wing = Mats.Node(sprung52, "Wing", new Vector3(0f, 0.9f, -1.98f));
+        pk.Spawn("wing", wing, Vector3.zero, 1f, HeroCars52.AnoWhite);
+        // wheels: mounts set so the static sag (Rest * 0.45) leaves the tyres centred in the arches; rears 335/30R21 (x1.07)
+        float wy = WR - Rest * 0.45f;
+        Vector3[] wp = { new Vector3(-0.84f, wy, 1.42f), new Vector3(0.84f, wy, 1.42f), new Vector3(-0.84f, wy, -1.38f), new Vector3(0.84f, wy, -1.38f) };
+        for (int i = 0; i < 4; i++)
+        {
+            Transform n = Mats.Node(t, "Wheel", wp[i]);
+            bool rear = wp[i].z < 0f;
+            float k = rear ? 0.367f / 0.343f : 1f;
+            Transform w = pk.Spawn("wheel", n, rear ? new Vector3(0f, 0.367f - 0.343f, 0f) : Vector3.zero, k, Color.white, wp[i].x < 0f);
+            wh[i] = new Wh { mount = wp[i] + Vector3.up * Rest, vis = n, steer = wp[i].z > 0f, dist = Rest * 0.55f + WR };
+        }
+        yoke = Mats.Node(sprung52, "Yoke", new Vector3(-0.30f, 0.62f, 0.10f));
+        if (pk.Has("yoke")) pk.Spawn("yoke", yoke, Vector3.zero, 1f, Color.white);
+        // 10 perimeter cold-gas thrusters along the sills (small dark nozzles; puffs come out of them)
+        foreach (float z in new[] { 1.85f, 1.0f, 0.05f, -0.95f, -1.85f })
+            for (int s = -1; s <= 1; s += 2)
+            {
+                Vector3 p = new Vector3(0.975f * s, 0.215f, z);
+                nozP.Add(p);
+                Mats.Prim(PrimitiveType.Cylinder, sprung52, p, new Vector3(0.05f, 0.012f, 0.05f), new Vector3(0f, 0f, 90f * s), blk);
+            }
+        foreach (var r in GetComponentsInChildren<Renderer>())
+        {
+            if (r.shadowCastingMode == UnityEngine.Rendering.ShadowCastingMode.Off) continue;   // glass / lamps (LBPack)
+            bool main = r.transform.parent != null && r.transform.parent.name == "LB body";
+            r.shadowCastingMode = Look.Mobile && !main ? UnityEngine.Rendering.ShadowCastingMode.Off : UnityEngine.Rendering.ShadowCastingMode.On;
+        }
+        if (hissClip == null) MakeClips();
+        hissSrc = Sfx.Loop(gameObject, hissClip); fanSrc = Sfx.Loop(gameObject, fanClip);
+        Debug.Log("Roadster49: ffu52 photo-matched model (" + pk.tris + " tris)");
+    }
+
     void Build()
     {
+        LBPack pk52 = HeroCars52.Pack("roadster52");
+        if (pk52 != null && pk52.Has("body") && pk52.Has("wheel")) { BuildPack52(pk52); return; }
         Transform t = transform;
         Material white = Mats.Paint(new Color(0.95f, 0.955f, 0.95f), 0.9f);
         Material blk = Mats.PBR(new Color(0.05f, 0.05f, 0.06f), 0.45f, 0.1f);
