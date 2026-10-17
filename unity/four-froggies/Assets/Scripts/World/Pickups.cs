@@ -25,6 +25,27 @@ public class Pickups : MonoBehaviour
         return it;
     }
 
+    // ffu54: nearest item a robot can fetch (story items excluded), and collecting it for a froggy
+    public static Item Nearest(WorldId w, Vector3 p, float maxD, string group)
+    {
+        Item best = null; float bd = maxD * maxD;
+        foreach (var it in I.items)
+        {
+            if (it.taken || !SameSpace(w, it.world) || it.group.StartsWith("st_") || (group != null && it.group != group)) continue;
+            float d = (it.basePos - p).sqrMagnitude;
+            if (d < bd) { bd = d; best = it; }
+        }
+        return best;
+    }
+    public static void CollectFor(Item it, Frog f)
+    {
+        if (it == null || it.taken) return;
+        it.taken = true;
+        it.t.gameObject.SetActive(false);
+        FX.Sparkle(it.basePos, new Color(1f, 0.95f, 0.6f), 14);
+        Sfx.Play(Sfx.Pickup, 0.7f, Random.Range(0.95f, 1.15f));
+        if (f != null) foreach (var h in handlers) h(it, f);
+    }
     public static int Remaining(string group) { int n = 0; foreach (var it in I.items) if (it.group == group && !it.taken) n++; return n; }
     public static int Total(string group) { int n = 0; foreach (var it in I.items) if (it.group == group) n++; return n; }
 

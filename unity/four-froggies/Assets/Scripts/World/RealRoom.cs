@@ -107,6 +107,11 @@ public partial class RealRoom : MonoBehaviour
 
     public static bool Captures(Frog f) { return I != null && I.owner == f && I.st != St.Idle && I.st != St.Loading; }
     public static bool Busy { get { return I != null && I.st != St.Idle; } }
+    // ffu54: a robot visits the Real Room (World/RobotVisit54.cs)
+    public static Vector3 PlayerFeet { get { return I != null && I.yawT != null ? I.yawT.position : RoomO; } }
+    public static float PlayerYaw { get { return I != null && I.yawT != null ? I.yawT.eulerAngles.y : 0f; } }
+    public static Vector3 DoorIn { get { return I != null && I.loaded ? I.spawnPos + (I.spawnPos - I.doorPos).normalized * 0.2f : RoomO; } }
+    public static Rigidbody Plush { get { return I != null && I.loaded && I.held != I.plush ? I.plush : null; } }
 
     // ---------------------------------------------------------------- house door
     // called by HouseWorld.Build: a white panel door with a sign + hotspot on the living room's west wall

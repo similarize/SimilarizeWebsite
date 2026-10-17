@@ -70,6 +70,12 @@ Dad (James's dad) is a non-playable character: he lives in the house (kitchen) a
   Figure 03 has a bow and uses them (phone "Hunt" or DRIVE IT!). **Kid-friendly and cartoony, no blood:** an arrow makes a
   ranch cow tip over with stars and go POOF into a cartoon drumstick (the cow pops back in its pen later); froggies cook it
   on the garden campfire and eat it with a happy hop.
+- **Figure 03's bow is ask-to-borrow for the other robots** (ffu54, Bill 2026-10-16: "the robot should be able to do
+  anything a froggy can do"): any robot sent hunting asks Figure 03 first, and he lends it unless he is using it (same
+  ask-first idea as the Cybertrucks). His rocket stays owner-locked.
+- **Robots everywhere** (ffu54, Bill 2026-10-16): James's robots come when called from the phone in every world (ranch,
+  house, Real Room, Mars, Callisto, Moon, space, the pond, the forest), say hi, and do whatever James asks there; left
+  alone they keep doing chores. James's request always wins. Vehicle ownership rules apply to robots too.
 - **Story episode 3 "Spotty's Surprise"** (ffu48): Spotty surprises the froggies with the carrier at the pond; James is
   the most surprised of all. In episode 3 Spotty is played by the story itself (a player who picked Spotty plays another
   free roster character for the episode).

@@ -17,6 +17,7 @@ public class GardenSeat : Vehicle
     float period, idleAmp, maxAmp;
     public float aiPush;               // AI riders: a gentle self-push amount (0..1)
     public float occupiedT;            // seconds the current rider has been in
+    public void Push(float k) { amp = Mathf.Min(maxAmp, amp + k * 6f); }   // ffu54: a robot pushes the swing
 
     public override string HelpLine
     {

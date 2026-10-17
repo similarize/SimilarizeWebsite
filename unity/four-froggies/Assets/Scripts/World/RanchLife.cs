@@ -179,7 +179,7 @@ public class RanchLife : MonoBehaviour
 
 // One of James's robots: kinematic humanoid that walks on the terrain. ffu12: always working - an auto brain runs chores
 // and charging (World/RobotChores.cs); phone orders interrupt it and it resumes on its own; a froggy can drive it by hand.
-public class Robot : MonoBehaviour
+public partial class Robot : MonoBehaviour   // ffu54: partial - visits / PLAY verbs in World/RobotVisit54.cs
 {
     public string id, robotName, owner;
     public float height, maxSpeed, bulk;
@@ -266,6 +266,8 @@ public class Robot : MonoBehaviour
         {
             case WorldId.Mars: return Worlds.MarsO.y + SurfaceWorlds.MarsY(x - Worlds.MarsO.x, z - Worlds.MarsO.z);
             case WorldId.Callisto: return Worlds.CallistoO.y + SurfaceWorlds.CalY(x - Worlds.CallistoO.x, z - Worlds.CallistoO.z);
+            case WorldId.Moon: return MoonWorld.GY(new Vector3(x, 0f, z));                       // ffu54 robots everywhere
+            case WorldId.House: case WorldId.RealRoom: case WorldId.Space: return RayY(x, z, transform.position.y);
             default: { float g = RobotNav.Floor(x, z); if (RanchJobs.OnFigPad(x, z)) g += RanchJobs.FigPadTop; if (Fig03Rocket.OnSlab(x, z)) g = Mathf.Max(g, Fig03Rocket.PadTop); return MissionSite.OnSlab(x, z) ? Mathf.Max(g, MissionSite.PadTop) : g; }
         }
     }
@@ -508,6 +510,14 @@ public class Robot : MonoBehaviour
     public string Order(string c, Frog from)
     {
         if (mission != null) return robotName + " is on a mission (abort it from the MISSION tab)";
+        // ffu54: orders about the caller work wherever the caller is (PLAY verbs); ranch-place orders fly the robot home first
+        if (from != null && (visit != null || from.world != WorldId.Ranch || world != WorldId.Ranch))
+        {
+            string pv = c == "come" ? "with" : c == "follow" ? "follow" : c == "wave" ? "wave" : c == "dance" ? "dance" : c == "stop" || c == "go" ? "stay" : null;
+            if (pv == "with") return Call(from, null);
+            if (pv != null) return Play(pv, from);
+            ComeHomeFor(c);
+        }
         if (hunt != null) hunt.Stop(null);   // ffu50
         if (drv != null) EndDrive(null);
         if (manual != null) ReleaseManual(false);
@@ -1045,7 +1055,7 @@ public class Robot : MonoBehaviour
         if (Game.I != null)
             foreach (var f in Game.I.frogs)
             {
-                if (f == null || f.world != WorldId.Ranch || f.vehicle != null) continue;
+                if (f == null || f.world != WorldId.Ranch || f.vehicle != null || f.piggyOf != null) continue;   // ffu54: not its own piggyback rider
                 Vector3 d = p - f.transform.position; d.y = 0f;
                 float m = d.magnitude;
                 if (m >= 1.8f || m < 0.001f) continue;
@@ -1075,19 +1085,20 @@ public class Robot : MonoBehaviour
         Vector3 p = transform.position;
         wave = Mathf.Max(0f, wave - dt);
         goalDir = Vector3.zero; goalSpeed = 0f; faceYaw = float.NaN;
-        if (manual != null && (manual.remote != this || !manual.human || manual.world != WorldId.Ranch || manual.vehicle != null)) ReleaseManual(false);
+        if (manual != null && (manual.remote != this || !manual.human || !Pickups.SameSpace(manual.world, world) || manual.vehicle != null)) ReleaseManual(false);   // ffu54: DRIVE IT! in every world
         if (manual != null) ManualTick();
         else if (RobotMechMission.TickFor(this, dt)) { }    // ffu26: piloting a mech on a mission (RobotMechMission.cs)
         else if (drv != null) drv.Tick(dt);
         else if (mission != null) mission.Tick(dt);
         else if (hunt != null) hunt.Tick(dt);   // ffu50: Figure 03 hunting with his bow
+        else if (visit != null) VisitTick(dt);   // ffu54: called to the caller's world / PLAY verbs
         else if (cmd == "auto") Brain(dt);
         else OrderTick(dt, p);
-        if (seatedIn != null || frozen)
+        if (seatedIn != null || frozen || rideOf != null)
         {
             // in a vehicle seat / inside the mission ship: the vehicle (or the mission) places the robot
             if (!charging) battery = Mathf.Max(0f, battery - dt / 900f * drainMul);
-            if (seatedIn != null) pose = 9;
+            if (seatedIn != null || rideOf != null) pose = seatedIn is GardenSeat && ((GardenSeat)seatedIn).kind == GardenSeat.Kind.Hammock ? 14 : 9;   // ffu54: hammock nap lies down
             if (frozen) speed = Mathf.MoveTowards(speed, 0f, 8f * dt);
             Animate(dt); Lamp(); Hum();
             tagT -= dt;
@@ -1099,7 +1110,7 @@ public class Robot : MonoBehaviour
         // battery: charges at a jack (~22 s from empty), drains slowly while working (~2.5-3 min of chores)
         // ffu40: per-robot drainMul / chargeSecs (Figure 03 ~2 h / 4 min, see TwoHourBattery)
         if (charging) battery = Mathf.Min(1f, battery + dt / chargeSecs);
-        else battery = Mathf.Max(0f, battery - dt * drainMul * (1f / 420f + (speed > 0.3f ? 1f / 300f : 0f) + (pose >= 5 && pose != 11 ? 1f / 320f : 0f) + (flying ? 1f / 60f : 0f)));
+        else battery = Mathf.Max(0f, battery - dt * drainMul * (visit != null ? 0.25f : 1f) * (1f / 420f + (speed > 0.3f ? 1f / 300f : 0f) + (pose >= 5 && pose != 11 ? 1f / 320f : 0f) + (flying ? 1f / 60f : 0f)));
         float spd = goalSpeed;
         if (battery <= 0.01f) spd = Mathf.Min(spd, 0.8f);
 
@@ -1110,10 +1121,10 @@ public class Robot : MonoBehaviour
         else if (!float.IsNaN(faceYaw)) yaw = Mathf.MoveTowardsAngle(yaw, faceYaw, 200f * dt);
         if (cmd == "dance" && manual == null) yaw += 220f * dt;
         Vector3 np = p + Quaternion.Euler(0f, yaw, 0f) * Vector3.forward * speed * dt;
-        if (!flying && world == WorldId.Ranch && RobotNav.Blocked(np.x, np.z) && !RobotNav.Blocked(p.x, p.z))
+        if (!flying && world == WorldId.Ranch && Blk(np.x, np.z) && !Blk(p.x, p.z))
         {
-            if (!RobotNav.Blocked(np.x, p.z)) np.z = p.z;
-            else if (!RobotNav.Blocked(p.x, np.z)) np.x = p.x;
+            if (!Blk(np.x, p.z)) np.z = p.z;
+            else if (!Blk(p.x, np.z)) np.x = p.x;
             else { np.x = p.x; np.z = p.z; }
         }
         p.x = np.x; p.z = np.z;
@@ -1140,9 +1151,9 @@ public class Robot : MonoBehaviour
         }
         else
         {
-            p.y = ground;
+            p.y = float.IsNaN(yOver) ? ground : yOver;   // ffu54: visits swim / jet / hop / float
             alt = p.y;
-            if (jets.gameObject.activeSelf) jets.gameObject.SetActive(false);
+            if (jets.gameObject.activeSelf != jetsOn) jets.gameObject.SetActive(jetsOn);
         }
         transform.position = p;
         transform.rotation = Quaternion.Euler(0f, yaw, 0f);
@@ -1157,7 +1168,9 @@ public class Robot : MonoBehaviour
     {
         phase += speed * 2.2f / Mathf.Max(0.5f, height) * dt * 3f;
         float sw = Mathf.Sin(phase) * Mathf.Clamp01(speed / 2f) * 30f;
-        if (pose == 10) sw = 0f;   // ffu26: riding mower seat
+        if (pose == 10 || pose == 14) sw = 0f;   // ffu26: riding mower seat
+        if (pose == 12) sw = Mathf.Sin(Time.time * 9f) * 24f;          // ffu54 swim kick
+        else if (pose == 13) sw = Mathf.Sin(Time.time * 5f) * 32f;     // ffu54 climb
         legL.localRotation = Quaternion.Euler(pose == 9 ? -82f : pose == 10 ? -64f : sw, 0f, pose == 10 ? -6f : 0f);
         legR.localRotation = Quaternion.Euler(pose == 9 ? -82f : pose == 10 ? -64f : -sw, 0f, pose == 10 ? 6f : 0f);
         float t = Time.time;
@@ -1185,13 +1198,21 @@ public class Robot : MonoBehaviour
                 case 7: aL = Quaternion.Euler(-10f, 0f, 0f); aR = Quaternion.Euler(-70f, 0f, 0f); break;
                 case 9: aL = Quaternion.Euler(-55f + Mathf.Sin(t * 1.7f) * 4f, 0f, -6f); aR = Quaternion.Euler(-55f - Mathf.Sin(t * 1.7f) * 4f, 0f, 6f); break;
                 case 10: aL = Quaternion.Euler(-62f + Mathf.Sin(t * 2.1f) * 3f, 0f, 10f); aR = Quaternion.Euler(-62f - Mathf.Sin(t * 2.1f) * 3f, 0f, -10f); break;   // hands on the wheel
+                case 12: { float k = t * 4.5f; aL = Quaternion.Euler(-180f + Mathf.Sin(k) * 70f, 0f, -10f); aR = Quaternion.Euler(-180f + Mathf.Sin(k + Mathf.PI) * 70f, 0f, 10f); hx = -40f; break; }   // ffu54 swim stroke
+                case 13: { float k = Mathf.Sin(t * 5f) * 18f; aL = Quaternion.Euler(-165f + k, 0f, -8f); aR = Quaternion.Euler(-165f - k, 0f, 8f); hx = -10f; break; }      // climb
+                case 14: aL = Quaternion.Euler(-10f, 0f, -14f); aR = Quaternion.Euler(-170f, 0f, 20f); hx = -20f; break;                                                     // hammock: lying back, a hand behind the head
+                case 15: aL = Quaternion.Euler(35f, 0f, -25f); aR = Quaternion.Euler(35f, 0f, 25f); break;                                                                    // piggyback: hands behind
+                case 16: aL = Quaternion.Euler(-40f, 0f, -10f); aR = Quaternion.Euler(-165f, 0f, 10f); break;                                                                 // throw wind-up
+                case 17: aL = Quaternion.Euler(-30f, 0f, -10f); aR = Quaternion.Euler(-70f, 0f, 6f); break;                                                                   // throw follow-through
+                case 18: { float k = Mathf.Sin(t * 7f) * 10f; aL = Quaternion.Euler(-30f, 0f, -6f); aR = Quaternion.Euler(-125f + k, 0f, 28f); hx = 8f + k * 0.3f; break; }    // pretend eating
+                case 21: aL = Quaternion.Euler(-120f, 0f, -30f); aR = Quaternion.Euler(-120f, 0f, 30f); break;                                                                // hop: arms up
                 default: aL = Quaternion.Euler(-sw * 0.8f, 0f, 0f); aR = Quaternion.Euler(sw * 0.8f, 0f, 0f); break;
             }
             if (wave > 0f) aR = Quaternion.Euler(0f, 0f, 160f + Mathf.Sin(t * 12f) * 20f);
         }
         armL.localRotation = aL;
         armR.localRotation = aR;
-        body.localRotation = Quaternion.Euler(bend, 0f, 0f);
+        body.localRotation = Quaternion.Euler(bend + extPitch, 0f, extRoll);   // ffu54: swim / lie lean
         head.localRotation = Quaternion.Euler(hx, pose >= 1 && pose != 4 ? 0f : Mathf.Sin(t * 0.6f + height) * 20f, 0f);
         // tool motion
         if (tool != null)

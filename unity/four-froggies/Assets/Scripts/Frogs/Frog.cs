@@ -266,6 +266,7 @@ public partial class Frog : MonoBehaviour
             return;
         }
         if (jetOf != null) { Jetpack(dt); input = new PIn(); return; }
+        if (piggyOf != null && PiggyTick(dt)) return;   // ffu54: riding on a robot's back (World/RobotVisit54.cs)
         if (remote != null && human && vehicle == null)
         {
             // ffu12: driving a robot from the phone - the froggy stands still, its input goes to the robot (Game)

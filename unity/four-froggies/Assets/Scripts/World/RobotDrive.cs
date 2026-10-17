@@ -51,6 +51,7 @@ public class RobotDriver
     {
         if (v == null || v.body == null || v is Starship || v.stowed) return false;   // ffu31: not a bike locked in a toy hauler
         Vector3 p = v.transform.position;
+        if (Near(v)) return true;   // ffu54: a vehicle next to the phone's user in any world (Mars rover, moon buggy...)
         return Mathf.Abs(p.x) < Layout.Half + 40f && Mathf.Abs(p.z) < Layout.Half + 40f && p.y > -60f && p.y < 900f;   // the ranch only (not the sub / Curiosity / space)
     }
 
@@ -83,8 +84,8 @@ public class RobotDriver
             float d = new Vector2(cp.x - r.transform.position.x, cp.z - r.transform.position.z).magnitude;
             if (there || d < 2.6f || walkT > 60f)
             {
+                pilot.world = r.world;   // ffu54: the robot's world (vehicles off the ranch too) - before CanEnter (horses check it)
                 if (!v.CanEnter(pilot)) { r.EndDrive("can't get into the " + v.Title); return; }
-                pilot.world = WorldId.Ranch;
                 pilot.EnterVehicle(v);
                 if (pilot.vehicle != v) { r.EndDrive(v.Title + " is taken"); return; }
                 if (v is StoryMech) MechPilot.Seat(r, (StoryMech)v);   // ffu26: visible in the mech's glass cockpit
@@ -188,7 +189,7 @@ public class RobotDriver
                 {
                     Frog f = user;
                     Vector3 fp = f != null ? (f.vehicle != null ? f.vehicle.transform.position : f.transform.position) : p;
-                    if (f != null && f.world != WorldId.Ranch) fp = p;
+                    if (f != null && Robot.TargetWorld(f) != r.world) fp = p;   // ffu54
                     goal = fp; arrive = 9f * S + (k == Kind.Heli || k == Kind.Drone ? 6f : 0f); maxSp = 18f * Mathf.Sqrt(S);
                     break;
                 }
@@ -326,6 +327,13 @@ public class RobotDriver
 
     Vector3 PickWander(Kind k)
     {
+        if (r.world != WorldId.Ranch)   // ffu54: off the ranch, wander round the caller
+        {
+            Vector3 c = user != null ? Robot.LeadPos(user) : v.transform.position;
+            Vector3 q = c + new Vector3(Random.Range(-45f, 45f), 0f, Random.Range(-45f, 45f));
+            q.y = r.GroundAt(q.x, q.z);
+            return q;
+        }
         for (int tries = 0; tries < 30; tries++)
         {
             float x, z;
@@ -352,6 +360,22 @@ public class RobotDriver
         return Layout.TrackPoint(Random.value * 6.283f);
     }
 
+    // ffu54: vehicles near a froggy that is off the ranch (the phone lists them first)
+    public static Frog NearUser;
+    static bool Near(Vehicle v)
+    {
+        if (NearUser == null || NearUser.world == WorldId.Ranch || NearUser.world == WorldId.Underwater) return false;
+        return (v.transform.position - Robot.LeadPos(NearUser)).sqrMagnitude < 400f * 400f;
+    }
+    public static List<Vehicle> ListFor(Frog f)
+    {
+        NearUser = f;
+        var l = new List<Vehicle>();
+        if (f != null && f.world != WorldId.Ranch && f.world != WorldId.Underwater)
+            foreach (var v in Vehicle.All) if (v != null && v.isActiveAndEnabled && Near(v) && Drivable(v) && !(v is GardenSeat)) l.Add(v);
+        foreach (var v in List()) if (!l.Contains(v)) l.Add(v);
+        return l;
+    }
     // phone list: every drivable ranch vehicle (story mechs grouped by band)
     public static List<Vehicle> List()
     {

@@ -70,6 +70,12 @@ public static class RobotNav
     public static bool InGarage(Vector3 p) { return GarageIn.Contains(new Vector2(p.x, p.z)); }
     public static bool InPorch(Vector3 p) { return Porch.Contains(new Vector2(p.x, p.z)); }
 
+    public static bool WallBlocked(float x, float z)   // ffu54: walls only (visiting robots may swim in the pond)
+    {
+        var v = new Vector2(x, z);
+        for (int i = 0; i < Walls.Length; i++) if (Walls[i].Contains(v)) return true;
+        return false;
+    }
     public static bool Blocked(float x, float z)
     {
         var v = new Vector2(x, z);

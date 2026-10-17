@@ -370,6 +370,7 @@ public class FigHunt50
         if (r.hunt == this) r.hunt = null;
         r.cmd = "auto"; r.ExtReset(); r.ExtPose(0);
         Fig50.Bow(r, false);
+        if (Fig50.bowBorrower == r) { Fig50.bowBorrower = null; Fig50.ReturnBow(r); }   // ffu54: hand the bow back
         if (say != null)
         {
             Debug.Log("FIGHUNT50 end: " + say);
@@ -380,13 +381,13 @@ public class FigHunt50
     public void Tick(float dt)
     {
         t += dt; total += dt;
-        if (total > 150f) { Stop("Figure 03: the cows are too quick today - back to chores"); return; }
+        if (total > 150f) { Stop(r.robotName + ": the cows are too quick today - back to chores"); return; }
         Vector3 p = r.transform.position;
         switch (ph)
         {
             case 0:
                 cow = Fig50.NearestCow(p);
-                if (cow == null) { Stop("Figure 03: no cows to hunt right now"); return; }
+                if (cow == null) { Stop(r.robotName + ": no cows to hunt right now"); return; }
                 ph = 1; t = 0f; r.ExtReset(); line = "stalking a cow";
                 Debug.Log("FIGHUNT50: target cow at " + cow.Pos.ToString("0.0") + " dist " + RobotNav.Flat(cow.Pos - p).ToString("0.0") + " arrows " + Fig50.ArrowsFor(r));
                 break;
@@ -402,7 +403,7 @@ public class FigHunt50
                     r.ExtPose(0);
                     r.ExtWalk(goal, r.RunSpeed * 0.75f, 0.6f, dt);
                     line = "stalking a cow (" + Mathf.RoundToInt(d) + " m)";
-                    if (t > 75f) { Stop("Figure 03: couldn't get close to a cow"); return; }
+                    if (t > 75f) { Stop(r.robotName + ": couldn't get close to a cow"); return; }
                     break;
                 }
             case 2:
@@ -422,11 +423,11 @@ public class FigHunt50
                 {
                     if (arrow != null && arrow.hit) { ph = 4; t = 0f; line = "got one!"; r.ExtWave(1.6f); Fig50.Bow(r, false); }
                     else if (shots < 3 && Fig50.ArrowsFor(r) > 0) { ph = cow != null && Fig50.Huntable(cow) ? 1 : 0; t = 0f; line = "missed - trying again"; Debug.Log("FIGHUNT50: miss, shot " + shots); }
-                    else { Stop(Fig50.ArrowsFor(r) > 0 ? "Figure 03: missed three times - back to chores" : "Figure 03: out of arrows - craft more at the garden workbench"); return; }
+                    else { Stop(Fig50.ArrowsFor(r) > 0 ? r.robotName + ": missed three times - back to chores" : r.robotName + ": out of arrows - craft more at the garden workbench"); return; }
                 }
                 break;
             case 4:
-                if (t > 1.6f) { Stop("Figure 03: got one! A drumstick is waiting by the cows - cook it on the garden campfire"); return; }
+                if (t > 1.6f) { Stop(r.robotName + ": got one! A drumstick is waiting by the cows - cook it on the garden campfire"); return; }
                 break;
         }
     }
@@ -899,13 +900,17 @@ public class Fig50 : MonoBehaviour
     }
 
     // ---- Figure 03: bow, arrows, hunting, rocket ----
-    public static int ArrowsFor(Robot r) { return r != null && r.id == Fig03Rocket.Owner ? Stash50.figArrows + Stash50.arrows : 0; }
+    public static int ArrowsFor(Robot r) { return r != null && (r.id == Fig03Rocket.Owner || r == bowBorrower) ? Stash50.figArrows + Stash50.arrows : 0; }
+    public static Robot bowBorrower;   // ffu54: another robot borrowed Figure 03's bow (asked first)
+    public static bool Bowed(Robot r) { Transform b; return r != null && bows.TryGetValue(r, out b) && b != null && b.gameObject.activeSelf && r.id != Fig03Rocket.Owner; }
     static void UseArrow() { if (Stash50.figArrows > 0) Stash50.figArrows--; else if (Stash50.arrows > 0) Stash50.arrows--; Stash50.Save(); }
 
+    public static void ReturnBow(Robot r) { Transform b; if (r != null && r.id != Fig03Rocket.Owner && bows.TryGetValue(r, out b) && b != null) b.gameObject.SetActive(false); }
     public static void Bow(Robot r, bool inHand)
     {
         if (r == null || r.Body == null) return;
         Transform b;
+        if (bows.TryGetValue(r, out b) && b != null && !b.gameObject.activeSelf) b.gameObject.SetActive(true);
         if (!bows.TryGetValue(r, out b) || b == null)
         {
             b = new GameObject("Bow").transform; b.SetParent(r.Body, false);
@@ -964,16 +969,27 @@ public class Fig50 : MonoBehaviour
     }
     public static string PhoneHunt(Robot r, Frog f)
     {
-        if (r.id != Fig03Rocket.Owner) return "Only Figure 03 has a bow - pick Figure 03";
+        string ask = "";
+        if (r.id != Fig03Rocket.Owner)
+        {
+            // ffu54 (robot parity): the bow is Figure 03's - others ask him first; he says yes unless he is using it
+            Robot fig = null;
+            if (RanchLife.I != null) foreach (var o in RanchLife.I.robots) if (o.id == Fig03Rocket.Owner) fig = o;
+            if (fig != null && (fig.hunt != null || fig.mission != null)) return r.robotName + " asked Figure 03 to borrow his bow - \"Sorry, I'm using it right now!\"";
+            if (bowBorrower != null && bowBorrower != r && bowBorrower.hunt != null) return bowBorrower.robotName + " has Figure 03's bow right now";
+            bowBorrower = r;
+            ask = r.robotName + " asked Figure 03 to borrow his bow - \"Sure! Be gentle with the cows.\" ";
+            Debug.Log("FIGHUNT50: " + ask);
+        }
         if (r.mission != null) return r.robotName + " is on a mission";
-        if (ArrowsFor(r) <= 0) return "Figure 03: no arrows yet - craft some at the garden workbench (space materials from a mission bin)";
+        if (ArrowsFor(r) <= 0) { if (bowBorrower == r) bowBorrower = null; return ask + r.robotName + ": no arrows yet - craft some at the garden workbench (space materials from a mission bin)"; }
         if (r.drv != null) r.EndDrive(null);
         if (r.manual != null) r.ReleaseManual(false);
         r.ResetForMission();
         r.cmd = "hunt";
         r.hunt = new FigHunt50(r, f);
         Debug.Log("FIGHUNT50: phone order Hunt from " + (f != null ? f.nick : "-") + ", arrows " + ArrowsFor(r));
-        return "Figure 03: going hunting (" + ArrowsFor(r) + " arrows) - kid-friendly: a hit makes a cow go POOF";
+        return ask + r.robotName + ": going hunting (" + ArrowsFor(r) + " arrows) - kid-friendly: a hit makes a cow go POOF";
     }
 
     static bool NearRamp(Robot r) { return Fig03Rocket.Parked && RobotNav.Flat(r.transform.position - Fig03Rocket.RampFoot) < 3.4f; }
