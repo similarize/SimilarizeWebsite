@@ -245,6 +245,9 @@ public partial class Game
         if (Worlds.SpaceOn) ac.R("Starship pad", use + " launches (Earth, Moon, Mars, Callisto)");
         if (Worlds.StageEOn) ac.R("Mech yard", "every froggy has its own mech" + (pad ? "  ·  RT / " + G("X") + " omnigun" : "") + "  ·  AI froggies hop in theirs when you come over");
         ac.R("Animal pens", "lizards + bunnies climb onto you, cows + horses lick hello  ·  " + use + " shake off, sprint / hop and they hop down");   // ffu47 critter pals
+        ac.R("Workbench", "garden, by the campfire: space materials (mission bins) -> arrowheads -> arrows -> the quiver");   // ffu61
+        ac.R("Froggy bow", "take one from the rack by the workbench  ·  " + (pad ? "LT aim  ·  RT / " + G("X") + " shoot" : keys ? "hold right mouse aim  ·  click / F shoot" : "AIM  ·  SHOOT") + "  ·  a hit cow goes POOF -> drumstick -> cook it on the campfire, eat  ·  " + use + " picks up missed arrows");
+        ac.R("Robots hunt too", "phone > PLAY > Hunt (bow) - they ask Figure 03 to borrow his bow");
         ac.R("House", "walk into the front door");
         if (Light55.On) ac.R("Light switch", "by each room's door in the house: lights on / off (robots too: PLAY > Lights)");   // ffu55
         L.Add(ac);

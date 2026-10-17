@@ -34,6 +34,8 @@ public struct PIn
     // (pad RB or Y / key F / touch MSL); BOOST moved to pad LB. cargo = mech-in-space bay doors (pad B / key B / touch BAY);
     // warpHome = space: target Earth + auto-transfer (pad L3 / key R / tap the radar)
     public bool aimHeld, mslFire, cargo, warpHome;
+    // ffu61 froggy bow: shoot = pad RT / X, left click (locked, or while aiming with right mouse) / F, touch SHOOT; aim = aimHeld
+    public bool bowFire;
 }
 
 public static class Kb
@@ -215,6 +217,7 @@ public static class Pads
         i.mslFire = p.rightShoulder.wasPressedThisFrame || p.buttonNorth.wasPressedThisFrame;
         i.cargo = p.buttonEast.wasPressedThisFrame;
         i.warpHome = p.leftStickButton.wasPressedThisFrame;
+        i.bowFire = i.fire;   // ffu61: RT / X
         return i;
     }
 
@@ -261,6 +264,7 @@ public static class Pads
         i.mslFire = Kb.FKeyDown();
         i.cargo = Kb.BDown();
         i.warpHome = Kb.RDown();
+        i.bowFire = (Kb.MouseLeftDown() && (locked || i.aimHeld)) || Kb.FKeyDown();   // ffu61
         return i;
     }
 

@@ -380,6 +380,7 @@ public partial class Frog : MonoBehaviour
         }
         diveHoldT = 0f;
 
+        float bowK = Bow61.Tick(this, input, dt);   // ffu61 froggy bow (World/Bow61.cs)
         Vector3 wish = Vector3.zero;
         if (input.move.sqrMagnitude > 0.0001f)
         {
@@ -390,12 +391,14 @@ public partial class Frog : MonoBehaviour
         float spd = swimming ? SwimSpeed : Roster.RunSpeed(charId);
         Sprinting = !swimming && cc.isGrounded && input.downHeld && wish.sqrMagnitude > 0.25f && world != WorldId.Underwater;   // ffu47 sprint (SHIFT / pad B)
         if (Sprinting) spd *= 1.45f;
+        if (bowK > 0.01f) { Sprinting = false; spd *= Mathf.Lerp(1f, 0.45f, bowK); }   // ffu61: aiming = slow strafe
         planar = Vector3.MoveTowards(planar, wish * spd, (cc.isGrounded || swimming ? 40f : 12f) * dt);
         if (wish.sqrMagnitude > 0.01f)
         {
             float target = Mathf.Atan2(wish.x, wish.z) * Mathf.Rad2Deg;
             yaw = Mathf.MoveTowardsAngle(yaw, target, Roster.TurnRate(charId) * dt);
         }
+        if (bowK > 0.3f) yaw = Mathf.MoveTowardsAngle(yaw, camYaw, 720f * dt);   // ffu61: face the aim
         transform.rotation = Quaternion.Euler(0f, yaw, 0f);
 
         hopCool -= dt;

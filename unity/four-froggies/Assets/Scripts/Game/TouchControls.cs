@@ -18,6 +18,7 @@ public class TouchControls : MonoBehaviour
     // jump-rocket / afterburner and FIRE to the chest cannon.
     public static readonly string[] want = { "A", null, null, null, null, null };   // ffu15: [5] = 6th context button (AIM in a mech, BAY in a space mech)
     public static bool mechMode;
+    public static bool bowMode;      // ffu61: holding a froggy bow on foot - AIM toggles, FIRE (SHOOT) shoots
     readonly float[] alpha = { 1f, 0f, 0f, 0f, 0f, 1f, 1f, 1f, 0f };
     public static bool aimLatched;   // ffu15: touch AIM is a toggle
     public static string ModeKey { get { return string.Join("|", want); } }
@@ -111,10 +112,10 @@ public class TouchControls : MonoBehaviour
         {
             // ffu15: 6th context button (index 8): AIM toggle (lit while latched) / BAY
             string w = want[5];
-            if (!mechMode) aimLatched = false;
+            if (!mechMode && !bowMode) aimLatched = false;
             if (w != null && labels[8].text != w) { labels[8].text = w; labels[8].fontSize = Mathf.RoundToInt(0.42f * Rad[8]); }
             alpha[8] = Mathf.MoveTowards(alpha[8], w != null ? 1f : 0f, dt * 7f);
-            Color c = Cols[8]; if (aimLatched && mechMode) c = new Color(1f, 0.3f, 0.3f, 0.75f); c.a *= alpha[8];
+            Color c = Cols[8]; if (aimLatched && (mechMode || bowMode)) c = new Color(1f, 0.3f, 0.3f, 0.75f); c.a *= alpha[8];
             imgs[8].color = c;
             labels[8].color = new Color(1f, 1f, 1f, alpha[8]);
             bool show = alpha[8] > 0.01f;
@@ -180,7 +181,7 @@ public class TouchControls : MonoBehaviour
                         else if (b == 4) downId = t.fingerId;
                         else if (b == 5 || b == 6) { }
                         else if (b == 7) Sfx.CycleVolume();
-                        else if (b == 8) { sixQ = true; if (mechMode) { aimLatched = !aimLatched; Sfx.Play(Sfx.Click, 0.5f); } }
+                        else if (b == 8) { sixQ = true; if (mechMode || bowMode) { aimLatched = !aimLatched; Sfx.Play(Sfx.Click, 0.5f); } }
                         else if (InStickZone(t.position) && stickId < 0) { stickId = t.fingerId; stickOrigin = t.position; stickVec = Vector2.zero; stickSeen = true; }
                         else if (lookId < 0 && !InStickZone(t.position))
                         {
@@ -234,8 +235,11 @@ public class TouchControls : MonoBehaviour
         return false;
     }
 
+    public static bool TestAim, TestFire;   // ffu61 probe: a tap on AIM / SHOOT
     public PIn Read()
     {
+        if (TestAim) { TestAim = false; if (mechMode || bowMode) aimLatched = !aimLatched; }
+        if (TestFire) { TestFire = false; fireQ = true; }
         var i = new PIn();
         i.move = stickVec;
         i.look = lookAcc * 0.22f;
@@ -252,6 +256,7 @@ public class TouchControls : MonoBehaviour
         i.camReset = resetQ;
         i.downHeld = downId >= 0;
         if (mechMode) { i.upHeld = upId >= 0; i.boostHeld = downId >= 0; i.gunFire = fireQ; i.gunHeld = fireId >= 0; i.gas = i.brake = 0f; i.climb = i.upHeld ? 1f : 0f; i.aimHeld = aimLatched; i.mslFire = altQ; i.downHeld = false; }
+        if (bowMode) { i.aimHeld = aimLatched; i.bowFire = fireQ; }   // ffu61
         if (spaceMode) i.cargo = sixQ;
         if (spaceMode) { i.target = aQ; i.auto = fireQ; i.land = altQ; i.hop = i.use = false; }
         if (spaceMode) { i.move.y = Mathf.Max(i.move.y, upId >= 0 ? 1f : 0f); }

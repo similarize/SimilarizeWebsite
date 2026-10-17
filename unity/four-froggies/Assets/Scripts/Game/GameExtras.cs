@@ -210,6 +210,7 @@ public partial class Game
     {
         string[] w;
         TouchControls.mechMode = false;
+        TouchControls.bowMode = false;
         if (f.launching) w = new string[] { null, null, null, null, null };
         else if (f.passengerOf is Bike) w = new[] { "OUT", null, null, null, null };   // ffu45 sidecar
         else if (f.passengerOf != null) w = f.passengerOf is Starship && ((Starship)f.passengerOf).BayOpen ? new[] { "OUT", null, null, null, null } : new string[] { null, null, null, null, null };
@@ -222,8 +223,10 @@ public partial class Game
         }
         else if (f.world == WorldId.Underwater) w = new[] { "A", null, null, "UP", "DOWN" };
         else if (f.Swimming && f.world == WorldId.Ranch) w = new[] { "A", null, null, null, "DIVE" };
+        else if (Bow61.Has(f) && f.world == WorldId.Ranch && Fig50.HeldKind(f) == 0 && !f.Climbing) { w = new[] { "A", "SHOOT", null, null, null }; TouchControls.bowMode = true; }   // ffu61 froggy bow
         else w = new[] { "A", null, null, null, null };
         for (int i = 0; i < 6; i++) TouchControls.want[i] = i < w.Length ? w[i] : null;
+        if (TouchControls.bowMode) TouchControls.want[5] = "AIM";
         // ffu15: 6th button - AIM in a mech, BAY in a mech flying in space
         if (f.vehicle is StoryMech) TouchControls.want[5] = "AIM";
         else if (f.vehicle is Starship && ((Starship)f.vehicle).mechForm != null) TouchControls.want[5] = "BAY";

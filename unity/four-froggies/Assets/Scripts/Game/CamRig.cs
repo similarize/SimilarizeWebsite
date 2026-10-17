@@ -63,10 +63,11 @@ public class CamRig
         if (i.camReset) ResetView(v != null ? v.transform.eulerAngles.y : f.transform.eulerAngles.y);
         StoryMech sm = f.vehicle as StoryMech;
         float ak = sm != null ? sm.aimK : 0f;
+        float bk = sm == null && v == null ? Bow61.AimK(f) : 0f;   // ffu61 froggy bow aim
         if (!tank) yawT += i.look.x * (ak > 0.5f ? 0.7f : 1f);
-        pitchT = Mathf.Clamp(pitchT - i.look.y * (tank ? 0.3f : 1f), Mathf.Lerp(minPitch, -38f, ak), maxPitch);
+        pitchT = Mathf.Clamp(pitchT - i.look.y * (tank ? 0.3f : 1f) * (bk > 0.5f ? 0.7f : 1f), Mathf.Lerp(minPitch, -38f, Mathf.Max(ak, bk * 0.6f)), maxPitch);
         bool touching = i.lookHeld || i.look.sqrMagnitude > 0.0001f;
-        if (touching || ak > 0.05f) { manualT = 0f; followW = 0f; } else manualT += dt;
+        if (touching || ak > 0.05f || bk > 0.05f) { manualT = 0f; followW = 0f; } else manualT += dt;
         zoomMul = Mathf.Clamp(zoomMul * (1f + i.zoom * 1.4f * dt), 0.45f, 3.2f);
 
         float dist = 8f, height = 1.6f;
@@ -117,6 +118,17 @@ public class CamRig
             dist = Mathf.Lerp(dist, H * 0.8f + 4f, e);
             if (baseFov < 0f) baseFov = cam.fieldOfView;
             cam.fieldOfView = Mathf.Lerp(baseFov, baseFov * 0.78f, e);
+        }
+        else if (bk > 0.001f)
+        {
+            // ffu61: froggy bow - over the right shoulder, close, a little zoom (same idea as the mech arm cannon)
+            Vector3 rightV = Quaternion.Euler(0f, yaw, 0f) * Vector3.right;
+            Vector3 sh = f.transform.position + Vector3.up * 1.15f + rightV * 0.55f;
+            float e = Mathf.SmoothStep(0f, 1f, bk);
+            pivot = Vector3.Lerp(pivot, sh, e);
+            dist = Mathf.Lerp(dist, 2.6f, e);
+            if (baseFov < 0f) baseFov = cam.fieldOfView;
+            cam.fieldOfView = Mathf.Lerp(baseFov, baseFov * 0.82f, e);
         }
         else if (baseFov > 0f) { cam.fieldOfView = baseFov; baseFov = -1f; }
         kick = Mathf.MoveTowards(kick, 0f, dt * Mathf.Max(6f, kick * 7f));

@@ -434,11 +434,24 @@ public class FigHunt50
 }
 
 // a flying arrow (ballistic, swept hit test against the ranch cows)
+// ffu61: player froggies shoot it too (shooter), it stops on walls / roofs / vehicles (bonk + drop), bonks off any other
+// animal harmlessly, and a MISSED arrow stays stuck in the ground / floats on the pond: A / E picks it up (back into the
+// shared quiver); left alone it goes back to the quiver by itself after 2 minutes.
 public class Arrow50 : MonoBehaviour
 {
     public bool done, hit;
+    public Frog shooter;
     Vector3 v; float life, stuckT = -1f;
+    Hotspot spot;
+    public static readonly List<Arrow50> Stuck = new List<Arrow50>();
     public static Arrow50 Fire(Vector3 from, Vector3 target)
+    {
+        const float speed = 30f;
+        Vector3 d = target - from; float hd = new Vector2(d.x, d.z).magnitude;
+        float T = Mathf.Max(0.12f, hd / speed);
+        return FireV(from, d / T + Vector3.up * (0.5f * 9.81f * T));
+    }
+    public static Arrow50 FireV(Vector3 from, Vector3 vel)
     {
         var go = new GameObject("Arrow");
         go.transform.position = from;
@@ -449,19 +462,23 @@ public class Arrow50 : MonoBehaviour
         Mats.Prim(PrimitiveType.Cube, go.transform, new Vector3(0f, 0f, -0.36f), new Vector3(0.01f, 0.12f, 0.12f), fl);
         Mats.NoShadows(go);
         var a = go.AddComponent<Arrow50>();
-        const float speed = 30f;
-        Vector3 d = target - from; float hd = new Vector2(d.x, d.z).magnitude;
-        float T = Mathf.Max(0.12f, hd / speed);
-        a.v = d / T + Vector3.up * (0.5f * 9.81f * T);
+        a.v = vel;
         go.transform.rotation = Quaternion.LookRotation(a.v);
         Sfx.PlayAt(Sfx.Pick(Sfx.Servo), from, 0.5f, 40f, 1.8f);
         return a;
     }
 
+    static int Mask { get { return ~((1 << 2) | (1 << 9) | (1 << 10)); } }
     void Update()
     {
         float dt = Mathf.Min(Time.deltaTime, 0.25f);
-        if (stuckT >= 0f) { stuckT += dt; if (stuckT > 6f) Destroy(gameObject); return; }
+        if (stuckT >= 0f)
+        {
+            stuckT += dt;
+            if (hit) { if (stuckT > 6f) Destroy(gameObject); return; }
+            if (stuckT > 120f) { BackToQuiver("timeout"); }
+            return;
+        }
         life += dt;
         Vector3 p = transform.position;
         int n = Mathf.CeilToInt(dt / 0.02f);
@@ -471,37 +488,105 @@ public class Arrow50 : MonoBehaviour
             Vector3 a = p;
             v.y -= 9.81f * h;
             p += v * h;
-            Animal got = null;
+            Animal got = null, bonk = null;
             foreach (var c in Animal.All)
             {
-                if (!Fig50.Huntable(c)) continue;
-                Vector3 cc = c.Pos + Vector3.up * 0.85f;
+                if (c == null || !c.enabled) continue;
+                bool cowOk = Fig50.Huntable(c);
+                Vector3 cc = c.Pos + Vector3.up * (cowOk ? 0.85f : 0.4f);
+                float rr = cowOk ? 1.15f : 0.55f;
                 Vector3 ab = p - a; float k = Mathf.Clamp01(Vector3.Dot(cc - a, ab) / Mathf.Max(1e-5f, ab.sqrMagnitude));
-                if ((a + ab * k - cc).sqrMagnitude < 1.15f * 1.15f) { got = c; break; }
+                if ((a + ab * k - cc).sqrMagnitude < rr * rr) { if (cowOk) { got = c; break; } if (shooter != null) { bonk = c; break; } }   // robot arrows fly on (ffu50 flight)
             }
             if (got != null)
             {
                 done = hit = true;
-                Debug.Log("ARROW50: HIT cow at " + got.Pos.ToString("0.0") + " after " + life.ToString("0.00") + " s");
+                Debug.Log("ARROW50: HIT cow at " + got.Pos.ToString("0.0") + " after " + life.ToString("0.00") + " s" + (shooter != null ? " (shot by " + shooter.nick + ")" : ""));
                 FX.Sparkle(p, new Color(1f, 0.9f, 0.4f), 8);
                 TipOver50.Tip(got);
+                if (shooter != null) Bow61.Hit(shooter);
                 foreach (var rr in GetComponentsInChildren<Renderer>()) rr.enabled = false;   // ffu50b: hide, keep the object (the hunt reads .hit)
                 stuckT = 4f;   // gone in ~2 s
                 return;
             }
-            if (p.y < Ranch.GY(p.x, p.z) + 0.05f || life > 4f)
+            if (bonk != null)
             {
-                done = true; stuckT = 0f;
+                // ffu61: any other animal (horse, pet, chicken...): a harmless bonk, the arrow drops beside it
+                FX.Sparkle(p, new Color(1f, 1f, 1f), 5);
+                Sfx.PlayAt(Sfx.BumpSoft != null ? Sfx.BumpSoft : Sfx.Thud, p, 0.4f, 30f, 1.4f);
+                Debug.Log("ARROW50: bonked off " + (bonk.petName.Length > 0 ? bonk.petName : bonk.kind.ToString()) + " (harmless) at " + p.ToString("0.0"));
+                Settle(new Vector3(p.x, Ranch.GY(p.x, p.z) + 0.05f, p.z), false);
+                return;
+            }
+            RaycastHit rh;
+            Vector3 seg = p - a;
+            // player arrows only (robot hunts keep the ffu50 flight): tall things stop it (walls, buildings, vehicles, big
+            // trees); low fences / troughs / tables are flown over (kid-friendly - a pen fence never eats the shot)
+            if (shooter != null && life > 0.04f && seg.sqrMagnitude > 1e-6f && Physics.Raycast(a, seg.normalized, out rh, seg.magnitude, Mask, QueryTriggerInteraction.Ignore)
+                && rh.collider.GetComponentInParent<Robot>() == null && rh.collider.GetComponentInParent<Animal>() == null
+                && (rh.collider is TerrainCollider || rh.collider is MeshCollider || rh.collider.bounds.max.y > Ranch.GY(rh.point.x, rh.point.z) + 1.8f))
+            {
+                bool floor = rh.normal.y > 0.6f && rh.collider.attachedRigidbody == null;
+                if (floor) Settle(rh.point, true);
+                else
+                {
+                    // walls / fences / vehicles: bonk, drop to the ground below
+                    FX.Dust(rh.point, 0.3f);
+                    Sfx.PlayAt(Sfx.Clank != null ? Sfx.Clank : Sfx.Thud, rh.point, 0.35f, 30f, 1.6f);
+                    Vector3 q = rh.point + rh.normal * 0.3f;
+                    RaycastHit dn; float gy = Ranch.GY(q.x, q.z);
+                    if (Physics.Raycast(q + Vector3.up * 0.1f, Vector3.down, out dn, 30f, Mask, QueryTriggerInteraction.Ignore) && dn.collider.attachedRigidbody == null) gy = Mathf.Max(gy, dn.point.y);
+                    Settle(new Vector3(q.x, gy + 0.05f, q.z), false);
+                }
+                return;
+            }
+            if (p.y < Ranch.GY(p.x, p.z) + 0.05f || life > 5f || (Layout.InPond(p.x, p.z) && p.y < Layout.WaterY))
+            {
                 p.y = Mathf.Max(p.y, Ranch.GY(p.x, p.z) + 0.05f);
-                transform.position = p;
-                FX.Dust(p, 0.6f);
-                Debug.Log("ARROW50: miss, landed at " + p.ToString("0.0"));
+                if (Layout.InPond(p.x, p.z) && p.y < Layout.WaterY) { p.y = Layout.WaterY + 0.02f; FX.Splash(p, 4); Settle(p, false); }
+                else Settle(p, true);
                 return;
             }
         }
         transform.position = p;
         if (v.sqrMagnitude > 0.01f) transform.rotation = Quaternion.LookRotation(v);
     }
+
+    // a miss: stuck in the ground (pointing in, half buried) or lying flat (bonk / pond); A / E picks it up
+    void Settle(Vector3 p, bool stuckIn)
+    {
+        done = true; stuckT = 0f;
+        Vector3 dir = v.sqrMagnitude > 0.01f ? v.normalized : transform.forward;
+        if (stuckIn) { transform.rotation = Quaternion.LookRotation(dir); transform.position = p - dir * 0.18f; FX.Dust(p, 0.6f); }
+        else { Vector3 fl = dir; fl.y = 0f; if (fl.sqrMagnitude < 0.01f) fl = Vector3.forward; transform.rotation = Quaternion.LookRotation(fl.normalized); transform.position = p + Vector3.up * 0.03f; }
+        Debug.Log("ARROW50: miss, " + (stuckIn ? "stuck in the ground" : "lying") + " at " + p.ToString("0.0") + " - A / E picks it up");
+        Stuck.Add(this);
+        while (Stuck.Count > 16) { var o = Stuck[0]; if (o != null) o.BackToQuiver("too many"); else Stuck.RemoveAt(0); }
+        spot = Interact.Add(new Vector3(p.x, p.y, p.z), 1.7f, "pick up the arrow", f => PickUp(f));
+        spot.enabled = f => f.vehicle == null && f.world == WorldId.Ranch;
+        spot.dynLabel = f => "pick up the arrow (quiver " + Stash50.arrows + ")";
+    }
+    void PickUp(Frog f)
+    {
+        Bow61.Picked++;
+        Stash50.arrows++; Stash50.Save();
+        if (f != null) { f.Toast("Picked up the arrow - back in the quiver (" + Stash50.arrows + ")", 2f); Sfx.PlayAt(Sfx.Pickup, transform.position, 0.45f, 25f, 1.4f); }
+        Debug.Log("ARROW50: " + (f != null ? f.nick : "-") + " picked up a missed arrow -> quiver " + Stash50.arrows);
+        Remove();
+    }
+    void BackToQuiver(string why)
+    {
+        Stash50.arrows++; Stash50.Save();
+        Debug.Log("ARROW50: a missed arrow went back to the quiver (" + why + ") -> " + Stash50.arrows);
+        Remove();
+    }
+    void Remove()
+    {
+        Stuck.Remove(this);
+        if (spot != null) { Interact.All.Remove(spot); spot = null; }
+        Destroy(gameObject);
+    }
+    void OnDestroy() { Stuck.Remove(this); if (spot != null) Interact.All.Remove(spot); }
 }
 
 // the cartoon tip-over: the cow rolls onto its side with circling stars, then POOFs (AnimalBreak: back in its pen later)
@@ -805,6 +890,7 @@ public class Fig50 : MonoBehaviour
             if (k == 2) return "make " + hh.n + " arrow" + (hh.n == 1 ? "" : "s") + " (arrowhead + stick)";
             if (k == 3) return "put " + hh.n + " arrow" + (hh.n == 1 ? "" : "s") + " in the shared quiver (" + Stash50.arrows + ")";
             if (k == 4) return "workbench (cook the drumstick on the campfire)";
+            if (Stash50.arrows > 0 && !Bow61.OldHints) return "Quiver: " + Stash50.arrows + " arrow" + (Stash50.arrows == 1 ? "" : "s") + " - grab a froggy bow from the rack to hunt, or phone a robot: PLAY > Hunt (bow)";   // ffu61: the next step
             return "workbench - bring space materials from a mission bin (quiver: " + Stash50.arrows + " arrows)";
         };
         // the campfire: cook / eat (the light / douse hotspot steps aside while you use the fire for food, Campfire.cs)
@@ -836,7 +922,7 @@ public class Fig50 : MonoBehaviour
         if (k == 3)
         {
             Stash50.arrows += h.n; Stash50.Save();
-            f.Toast(h.n + " arrows in the shared quiver (" + Stash50.arrows + ") - Figure 03 uses them for hunting", 3f);
+            f.Toast(Bow61.OldHints ? h.n + " arrows in the shared quiver (" + Stash50.arrows + ") - Figure 03 uses them for hunting" : h.n + " arrows in the quiver (" + Stash50.arrows + ") - grab a froggy bow from the rack to hunt, or phone a robot: PLAY > Hunt (bow)", Bow61.OldHints ? 3f : 4.5f);   // ffu61
             Debug.Log("FFU50 bench: " + f.nick + " put " + h.n + " arrows in the shared quiver -> " + Stash50.Line);
             Drop(f); Sfx.PlayAt(Sfx.Thud, BenchPos, 0.4f, 30f, 1.5f);
             return;
@@ -893,7 +979,7 @@ public class Fig50 : MonoBehaviour
         {
             case 1: return "Carrying " + h.n + " space materials - chip arrowheads at the garden workbench (by the campfire)";
             case 2: return h.n + " arrowheads - add sticks at the workbench to make arrows";
-            case 3: return h.n + " arrows - hand them to Figure 03, or drop them in the workbench quiver";
+            case 3: return Bow61.OldHints ? h.n + " arrows - hand them to Figure 03, or drop them in the workbench quiver" : h.n + " arrows - drop them in the workbench quiver, then grab a froggy bow to hunt (or hand them to Figure 03)";   // ffu61
             case 4: return "A drumstick! Cook it on the garden campfire";
         }
         return null;

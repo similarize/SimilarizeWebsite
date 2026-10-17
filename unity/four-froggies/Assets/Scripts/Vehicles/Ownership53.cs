@@ -8,6 +8,8 @@ using UnityEngine;
 //   AskFirst   any vehicle with an ownerName: James's / Dad's Cybertrucks, Spotty's Tourer + Carrier helm, the family
 //              Roadster - anyone may use it after asking the owner, if nobody is in it
 //   Free       everything else on the ranch (ranch toys / work vehicles: tank, buggies, bikes, boats, RC cars, mower...)
+// Not vehicles, same rules: the ffu61 FROGGY BOWS at the garden workbench rack are Free shared kit for every froggy (pets
+// can't hold one; World/Bow61.cs); Figure 03's own bow is AskFirst for the other robots (Fig50.PhoneHunt, ffu54).
 // Before ffu53 the ask step only existed for a human froggy on foot; a robot sent from the phone took Spotty's motorcycle
 // (or Dad's truck) without asking. Now the robot asks the owner for James, the same words, on the phone.
 public static class Ownership

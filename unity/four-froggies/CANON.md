@@ -73,12 +73,23 @@ Dad (James's dad) is a non-playable character: he lives in the house (kitchen) a
 - **Figure 03's bow is ask-to-borrow for the other robots** (ffu54, Bill 2026-10-16: "the robot should be able to do
   anything a froggy can do"): any robot sent hunting asks Figure 03 first, and he lends it unless he is using it (same
   ask-first idea as the Cybertrucks). His rocket stays owner-locked.
+- **Froggy bows** (ffu61, Bill 2026-10-17): a rack of four kid-sized froggy bows (green, lime, teal, orange) stands by the
+  garden workbench. They are shared ranch kit: any froggy may take one (free, like the ranch toys); pets can't (paws).
+  Arrows come from the shared quiver at the workbench; Figure 03's own bow and the arrows handed to him stay his (robots
+  still ask to borrow his bow). Same kid-friendly rule: a hit cow tips over with stars, POOFs into a cartoon drumstick and
+  pops back in its pen later - no blood. Missed arrows can be picked up again.
 - **Robots everywhere** (ffu54, Bill 2026-10-16): James's robots come when called from the phone in every world (ranch,
   house, Real Room, Mars, Callisto, Moon, space, the pond, the forest), say hi, and do whatever James asks there; left
   alone they keep doing chores. James's request always wins. Vehicle ownership rules apply to robots too.
 - **Story episode 3 "Spotty's Surprise"** (ffu48): Spotty surprises the froggies with the carrier at the pond; James is
   the most surprised of all. In episode 3 Spotty is played by the story itself (a player who picked Spotty plays another
   free roster character for the episode).
+
+## Places
+- **Apollo 11 landing site** (ffu61, Bill 2026-10-17): on the Moon world, what the real July 1969 mission left behind - the
+  Lunar Module descent stage (gold foil, four legs, ladder + the plaque "Here men from the planet Earth first set foot upon
+  the Moon, July 1969 A.D. We came in peace for all mankind"), the American flag on its crossbar, the laser reflector,
+  the seismometer and bootprints. Real history, shown with respect; the froggies' own flag at their lander is separate.
 
 ## Rules of play
 - **One controller = exactly one froggy.**

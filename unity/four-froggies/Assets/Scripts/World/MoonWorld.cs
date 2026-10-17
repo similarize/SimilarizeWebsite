@@ -56,6 +56,7 @@ public class MoonWorld : MonoBehaviour
         // flat landing / base area round the pad, bay, lander and tee
         float flat = Mathf.Clamp01(new Vector2(x - 2f, z + 22f).magnitude / 18f);
         y *= Mathf.SmoothStep(0f, 1f, flat);
+        y *= Apollo61.FlatK(x, z);   // ffu61: the Apollo 11 site sits on a flat patch
         float edge = new Vector2(x, z).magnitude;
         y += Mathf.SmoothStep(0f, 1f, (edge - 80f) / 14f) * 20f;
         return y;
@@ -95,6 +96,7 @@ public class MoonWorld : MonoBehaviour
         Mats.Prim(PrimitiveType.Cylinder, st, bp + Vector3.up * 0.05f, new Vector3(6.3f, 0.03f, 6.3f), Mats.Lit(new Color(0.3f, 0.3f, 0.32f)));
         Ranch.Sign(bp + new Vector3(0f, 2.4f, 3.8f), 180f, "BUGGY BAY", new Color(0.35f, 0.3f, 0.1f), 2.8f, 0.7f);
         Lander(st, L(LanderP.x, Y(LanderP.x, LanderP.y), LanderP.y));
+        try { Apollo61.Build(st); } catch (System.Exception e) { Debug.LogError("APOLLO61: " + e); }   // ffu61: Tranquility Base (World/Apollo61.cs)
         Rocks(st);
         Sky();
         foreach (var rr in root.GetComponentsInChildren<Renderer>()) rr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
@@ -218,6 +220,7 @@ public class MoonWorld : MonoBehaviour
         {
             float x = ((float)r.NextDouble() - 0.5f) * 160f, z = ((float)r.NextDouble() - 0.5f) * 160f;
             if (new Vector2(x - 2f, z + 22f).magnitude < 19f) continue;   // keep the base clear
+            if (Apollo61.Near(x, z, 15f)) continue;   // ffu61: and the Apollo 11 site
             bool big = i % 9 == 0;
             float s = big ? 1.6f + (float)r.NextDouble() * 2.2f : 0.25f + (float)r.NextDouble() * 0.7f;
             Mats.Prim(PrimitiveType.Sphere, st, L(x, Y(x, z) + s * 0.25f, z), new Vector3(s * (0.9f + (float)r.NextDouble() * 0.5f), s * 0.7f, s), new Vector3((float)r.NextDouble() * 30f, (float)r.NextDouble() * 180f, (float)r.NextDouble() * 30f), rm[i % 3], big);
