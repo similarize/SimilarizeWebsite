@@ -8272,6 +8272,8 @@ state.zLift = 0;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.setSize(hostW, hostH, false);
     renderer.shadowMap.enabled = true;
+    /* arcade-upgrade ffup1: soft shadows (look only; no gameplay/canon change) */
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.setClearColor(0x7eb8d4, 1);
     host.appendChild(renderer.domElement);
     renderer.domElement.style.display = "block";
