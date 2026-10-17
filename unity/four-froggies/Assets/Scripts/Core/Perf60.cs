@@ -179,7 +179,7 @@ public static class Perf60
 public class Perf60Runner : MonoBehaviour
 {
     float acc, win, lowT, highT, settle = 4f, upWait = 20f, lastUp = -999f, censusT = 25f, logT;
-    int n;
+    int n, slowN;
     string text = "";
     GUIStyle style;
     bool wasPlay;
@@ -189,11 +189,25 @@ public class Perf60Runner : MonoBehaviour
         float dt = Time.unscaledDeltaTime;
         bool play = Game.I != null && Game.I.state == Game.State.Play;
         if (play != wasPlay) { wasPlay = play; settle = 4f; lowT = highT = 0f; }
-        if (dt > 0.5f) { acc = 0f; n = 0; win = 0f; return; }   // a hitch / hidden tab / loading: not a frame-rate reading
-        acc += dt; n++; win += dt;
-        if (win < 1f) return;
-        Perf60.Fps = n / Mathf.Max(0.001f, acc); Perf60.Ms = 1000f * acc / Mathf.Max(1, n);
-        win = 0f; acc = 0f; n = 0;
+        bool crawl = false;
+        if (dt > 0.5f)
+        {
+            // one slow frame = a hitch / hidden tab / loading (not a reading); ffu60b: THREE in a row (each under 10 s)
+            // = a device running under 2 fps - a reading that counts as 3 s low at once (it never read before)
+            acc = 0f; n = 0; win = 0f;
+            bool streaming = (Realism.On && !Realism.Ready) || (Terrain56.On && !Terrain56.Ready);   // the scans still loading in
+            slowN = dt < 10f && !streaming ? slowN + 1 : 0;
+            if (slowN < 3) return;
+            slowN = 0; crawl = true; Perf60.Fps = 1f / dt; Perf60.Ms = 1000f * dt;
+        }
+        else
+        {
+            slowN = 0;
+            acc += dt; n++; win += dt;
+            if (win < 1f) return;
+            Perf60.Fps = n / Mathf.Max(0.001f, acc); Perf60.Ms = 1000f * acc / Mathf.Max(1, n);
+            win = 0f; acc = 0f; n = 0;
+        }
         if (Perf60.ShowFps)
             text = Perf60.Fps.ToString("0") + " fps  " + Perf60.Ms.ToString("0.0") + " ms\n" + Perf60.TierName + (Perf60.Forced ? " (fixed)" : "") + "  dpr " + FFDisplay.CurrentDpr.ToString("0.0#") + "  views " + Perf60.Views +
                    "\nshadow " + QualitySettings.shadowDistance.ToString("0") + "m x" + QualitySettings.shadowCascades + (Grass56.I != null ? "  grass " + Grass56.I.DrawnInfo : "") + "\nculled " + Cull60.Culled + "/" + Cull60.Tracked + (Perf60.AO ? "  AO" : "");
@@ -207,7 +221,7 @@ public class Perf60Runner : MonoBehaviour
         if (!play || Perf60.Forced) { lowT = highT = 0f; return; }
         if (settle > 0f) { settle -= 1f; return; }
         float fps = Perf60.Fps;
-        if (fps < 50f) { lowT += 1f; highT = 0f; }
+        if (fps < 50f) { lowT += crawl ? 3f : 1f; highT = 0f; }
         else if (fps >= 57f) { highT += 1f; lowT = 0f; }
         else { lowT = 0f; }
         if (lowT >= 3f && Perf60.Tier > 0)
