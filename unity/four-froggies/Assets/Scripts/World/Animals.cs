@@ -4,7 +4,7 @@ using UnityEngine;
 // James's animals. Named pets use the roster only: cats Spotty, Tigy, Kitty, Little White Socks;
 // dogs Germy (German shepherd) and Daisy (dachshund). Everything else (rabbits, lizards, snakes, fish,
 // cows, horses...) stays unnamed. Models are primitives with no colliders; motion is kinematic.
-public class Animal : MonoBehaviour
+public partial class Animal : MonoBehaviour
 {
     public enum Kind { Cat, Dog, Rabbit, Lizard, Cow, Horse, Chicken, Goat }
     public Kind kind;
@@ -131,6 +131,7 @@ public class Animal : MonoBehaviour
     void Animate(float s, float dt)
     {
         Voice(dt);
+        if (Gait57(s, dt)) return;   // ffu57 gaits + idle behaviours (Core/Animals57.cs; ?animals=old = the leg swing below)
         float t = Time.time + phase;
         float rate = (kind == Kind.Cow ? 4f : kind == Kind.Horse ? 6f : 9f) * Mathf.Clamp(s / Mathf.Max(0.5f, speed), 0.3f, 2.2f);
         for (int i = 0; i < legs.Count; i++)
@@ -199,11 +200,18 @@ public class Animal : MonoBehaviour
 
     public static Animal Cat(string name, Vector3 pos, Color fur, Color patch, bool socks)
     {
+        bool stripes = false;
+        if (Animals57.On)   // ffu57 consistency: a named cat wears its Roster coat (the same as the playable / AI one)
+        {
+            int ri = Animals57.RosterIndex(name);
+            if (ri >= 0) { var d = Roster.All[ri]; fur = Mats.Hex(d.hex); socks = d.look == Roster.Look.Socks; stripes = d.look == Roster.Look.Stripes; patch = d.markHex != null && !socks ? Mats.Hex(d.markHex) : fur; }
+        }
         var a = Root(name.Length > 0 ? "Cat " + name : "Cat", pos, Kind.Cat);
         a.petName = name;
         a.speed = 1.2f; a.runSpeed = 4.2f;
         Quad(a, fur, socks ? Color.white : fur, 0.62f, 0.2f, 0.26f, 0.07f, 0.24f);
-        P(PrimitiveType.Sphere, a.body, new Vector3(0.05f, 0.42f, -0.05f), new Vector3(0.2f, 0.12f, 0.24f), patch);
+        if (stripes) { for (int k = 0; k < 5; k++) P(PrimitiveType.Cube, a.body, new Vector3(0f, 0.425f, -0.22f + k * 0.11f), new Vector3(0.24f, 0.035f, 0.035f), patch, new Vector3(0f, 0f, 0f)); }
+        else         P(PrimitiveType.Sphere, a.body, new Vector3(0.05f, 0.42f, -0.05f), new Vector3(0.2f, 0.12f, 0.24f), patch);
         a.head = Mats.Node(a.body, "Head", new Vector3(0f, 0.46f, 0.36f));
         P(PrimitiveType.Sphere, a.head, Vector3.zero, new Vector3(0.24f, 0.21f, 0.22f), fur);
         for (int s = -1; s <= 1; s += 2)
@@ -225,6 +233,11 @@ public class Animal : MonoBehaviour
         a.skittish = false;
         Color tan = shepherd ? new Color(0.72f, 0.5f, 0.26f) : new Color(0.55f, 0.28f, 0.12f);
         Color dark = shepherd ? new Color(0.12f, 0.1f, 0.09f) : new Color(0.35f, 0.16f, 0.07f);
+        if (Animals57.On)   // ffu57 consistency: Germy / Daisy wear their Roster coats
+        {
+            int ri = Animals57.RosterIndex(name);
+            if (ri >= 0) { var d = Roster.All[ri]; tan = Mats.Hex(d.hex); dark = d.markHex != null ? Mats.Hex(d.markHex) : Color.Lerp(tan, Color.black, 0.45f); }
+        }
         float L = shepherd ? 0.95f : 0.8f, H = shepherd ? 0.42f : 0.13f, W = shepherd ? 0.34f : 0.24f;
         a.speed = shepherd ? 1.8f : 1.3f; a.runSpeed = shepherd ? 6.5f : 4.5f;
         Quad(a, tan, shepherd ? tan : dark, L, H, W, shepherd ? 0.1f : 0.08f, shepherd ? 0.36f : 0.25f);

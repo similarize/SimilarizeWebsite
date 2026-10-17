@@ -11,6 +11,26 @@ public class Tracks56 : MonoBehaviour
 {
     public static Tracks56 I;
     public static int Prints, TyreMarks, FrogPrints, RobotPrints, AnimalPrints;
+    public static int MechPrints;   // ffu57
+    Vector3 lastMech; float lastMechT;
+    // ffu57: a mech foot plant (MechStomp.Foot): a big boot print, heading from the previous plant, sized by the mech
+    public static void MechFoot(Vector3 p, float size)
+    {
+        if (I == null || !Animals57.On) return;
+        I.MechPut(p, size);
+    }
+    void MechPut(Vector3 p, float size)
+    {
+        float up = Mathf.Clamp(size * 0.2f, 1f, 30f);
+        RaycastHit h; if (!Ground(p, up, out h)) return;
+        Color c; float lk; float soft = Soft(h.point, h, out c, out lk); if (soft <= 0f) return;
+        Vector3 d = p - lastMech; d.y = 0f;
+        Vector3 fwd = (Time.time - lastMechT < 3f && d.sqrMagnitude > 0.04f && d.sqrMagnitude < size * size * 4f) ? d.normalized : Vector3.forward;
+        lastMech = p; lastMechT = Time.time;
+        float w = Mathf.Clamp(size * 0.24f, 0.55f, 40f), l = w * 1.55f;
+        Put(h.point, h.normal, fwd, w, l, 1, c * 0.85f, Mathf.Clamp01(0.75f * soft + 0.2f), 40f * lk);
+        MechPrints++;
+    }
     int N;
     Vector3[] v; Vector2[] uv; Color32[] col; float[] born, life, a0;
     int head; bool dirtyV, dirtyC; float fadeT;

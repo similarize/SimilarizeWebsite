@@ -70,6 +70,7 @@ public static class MechStomp
     {
         if (clips == null) Build();
         Count++;
+        Tracks56.MechFoot(p, size);   // ffu57: mechs leave footprints too (same ground rules as everyone)
         float k = SizeK(size);
         // FX budget: 16 mechs + robots could all step at once; sound + quake always, dust capped
         if (Time.unscaledTime > budgetT) { budgetT = Time.unscaledTime + 0.1f; budget = Look.Mobile ? 3 : 6; }

@@ -516,6 +516,8 @@ public static class BuildScript
         // ffu56: instanced ranch grass (FF/Grass56); enableInstancing on a scene material keeps the instancing variants in the build
         Material grass56 = ShaderMat("FF/Grass56", "Grass56.mat");
         if (grass56 != null) { grass56.enableInstancing = true; EditorUtility.SetDirty(grass56); }
+        // ffu57: one skin shader for every animal + froggy (fur / wet skin); a scene material keeps it in the build
+        Material skin57 = ShaderMat("FF/Skin57", "Skin57.mat");
 
         try
         {
@@ -571,6 +573,7 @@ public static class BuildScript
         b.realWaterMat = realWater;
         b.realTerrainMat = terrainNM;
         b.grass56Mat = grass56;
+        b.skin57Mat = skin57;
 
         EditorSceneManager.MarkSceneDirty(scene);
         if (!EditorSceneManager.SaveScene(scene, ScenePath)) throw new Exception("Failed to save scene");

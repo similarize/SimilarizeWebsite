@@ -13,6 +13,7 @@ public class Bootstrap : MonoBehaviour
     public Material skinMat, foliageMat, pondMat;   // graphics overhaul (FF/Skin, FF/Foliage, LB/Water); may be null
     public Material underwaterMat, unlitTexMat;     // stage B (FF/Underwater, Unlit/Texture); may be null
     public Material grass56Mat;   // ffu56 FF/Grass56 (instancing on)
+    public Material skin57Mat;    // ffu57 FF/Skin57 (fur + wet skin, Core/Animals57.cs)
     public Material realTriMat, realWaterMat, realTerrainMat;   // ?realism=1 test (FF/RealTri, FF/RealWater, terrain + _NORMALMAP)
 
     public static Bootstrap I;
@@ -55,6 +56,7 @@ public class Bootstrap : MonoBehaviour
         Realism.TriBase = realTriMat; Realism.WaterBase = realWaterMat; Realism.TerrainNM = realTerrainMat;
         Realism.Detect(sun);
         Terrain56.GrassBase = grass56Mat;   // ffu56
+        Animals57.Base = skin57Mat;         // ffu57
         FFDisplay.Lobby(true);   // ffu17: lobby at full pixel density + MSAA   // ?realism=1 only: HDRI sky / sun / haze / SH ambient (before Worlds.Init captures them)
         Sfx.Init();
         FX.Init();
