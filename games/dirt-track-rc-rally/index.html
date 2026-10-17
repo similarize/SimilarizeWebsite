@@ -104,7 +104,7 @@
         .x-panel { max-width: 520px; font-size: var(--size-heading); } .x-panel .btn { min-height: 64px; font-size: var(--size-heading); }
       }
     </style>
-  <script src="/games/shared/arcade-chrome.js?v=ac2" data-pos="top:8px;left:50%;transform:translateX(-50%)" defer></script>
+  <script src="/games/shared/arcade-chrome.js?v=ac2" data-pos="bottom:8px;left:8px" defer></script>
 </head>
   <body>
     <canvas id="c"></canvas>
@@ -260,8 +260,20 @@
           this.stuck = sp < 25 ? (this.stuck || 0) + dt : Math.max(0, (this.stuck || 0) - dt);
           if (this.stuck > 1.2) { this.rev = 0.7; this.stuck = 0; }
           if (this.rev > 0) { this.rev -= dt; this.input = { steer: -Math.sign(diff), gas: 0, brake: 1 }; return; }
-          const brake = sp > 230 && Math.abs(fdiff) > 0.8;
-          this.input = { steer: clamp(diff * 2.2, -1, 1), gas: brake ? 0 : 1, brake: brake ? 1 : 0 };
+          // dirt3 smarter AI: corner speed from upcoming curvature, overtaking lane shift
+          let curv = 0; for (let k = 4; k <= 14; k += 2) { const a0 = sAt(this.wi + k - 2), a1 = sAt(this.wi + k), a2 = sAt(this.wi + k + 2);
+            curv = Math.max(curv, Math.abs(angNorm(Math.atan2(a2[1] - a1[1], a2[0] - a1[0]) - Math.atan2(a1[1] - a0[1], a1[0] - a0[0])))); }
+          let vmax = 420 - curv * 520;
+          if (typeof cars !== "undefined") {
+            let ahead = null, ad = 1e9;
+            for (const o of cars) { if (!o || o === this) continue; const dx = o.x - this.x, dy = o.y - this.y, fw = dx * Math.cos(this.a) + dy * Math.sin(this.a), d = Math.hypot(dx, dy);
+              if (fw > 0 && d < 160 && d < ad) { ad = d; ahead = o; } }
+            if (ahead) { const side = -(ahead.x - this.x) * Math.sin(this.a) + (ahead.y - this.y) * Math.cos(this.a); this.passT = (side > 0 ? -1 : 1) * 45; }
+            else this.passT = 0;
+            this.offset += ((this.baseOff === undefined ? (this.baseOff = this.offset) : this.baseOff) + (this.passT || 0) - this.offset) * Math.min(1, dt * 2);
+          }
+          const brake = (sp > Math.max(150, vmax) && curv > 0.25) || (sp > 230 && Math.abs(fdiff) > 0.8);
+          this.input = { steer: clamp(diff * 2.2, -1, 1), gas: brake ? 0 : sp > vmax ? 0.6 : 1, brake: brake ? 1 : 0 };
         }
         update(dt) {
           if (this.spin > -1) this.spin -= dt;
@@ -969,8 +981,8 @@
       requestAnimationFrame(frame);
     </script>
     <script src="hark.js"></script>
-    <script src="../shared/sfx.js?v=20261016-dirt2"></script>
-    <script src="audio.js?v=20261016-dirt2"></script>
+    <script src="../shared/sfx.js?v=20261016-dirt3"></script>
+    <script src="audio.js?v=20261016-dirt3"></script>
     <script async src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script>
       // ---------- online play (PeerJS): host simulates, clients send input and render snapshots ----------
