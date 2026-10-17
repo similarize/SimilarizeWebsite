@@ -513,6 +513,9 @@ public static class BuildScript
         // ?realism=1 test (Realism.cs): triplanar scanned rock / bark, realistic pond water (variants ship via these assets)
         Material realTri = ShaderMat("FF/RealTri", "RealTri.mat");
         Material realWater = ShaderMat("FF/RealWater", "RealWater.mat");
+        // ffu56: instanced ranch grass (FF/Grass56); enableInstancing on a scene material keeps the instancing variants in the build
+        Material grass56 = ShaderMat("FF/Grass56", "Grass56.mat");
+        if (grass56 != null) { grass56.enableInstancing = true; EditorUtility.SetDirty(grass56); }
 
         try
         {
@@ -567,6 +570,7 @@ public static class BuildScript
         b.realTriMat = realTri;
         b.realWaterMat = realWater;
         b.realTerrainMat = terrainNM;
+        b.grass56Mat = grass56;
 
         EditorSceneManager.MarkSceneDirty(scene);
         if (!EditorSceneManager.SaveScene(scene, ScenePath)) throw new Exception("Failed to save scene");

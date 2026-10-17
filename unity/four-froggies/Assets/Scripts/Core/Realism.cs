@@ -205,6 +205,10 @@ public static class Realism
     }
 
     static Texture2D T(string k) { Texture2D t; return tex.TryGetValue(k, out t) ? t : null; }
+    // ffu56: Terrain56 streams its own scans through the same loader / cache
+    public static Texture2D Tex(string k) { return T(k); }
+    public static IEnumerator LoadTex(string file, string key, bool mips, bool compress, bool clampV = false) { return Load(file, key, mips, compress, clampV); }
+    public static Material MakeTri(string k, Color c, float metres, float gloss, float bump) { return Tri(k, c, metres, gloss, bump); }
 
     // Bootstrap, after the ranch is built
     public static void Begin(MonoBehaviour host, Terrain terrain)

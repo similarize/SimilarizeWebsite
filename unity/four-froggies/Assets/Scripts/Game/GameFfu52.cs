@@ -117,8 +117,8 @@ public class Ffu52 : MonoBehaviour
                 if ((c - new Vector2(RdSpot.x, RdSpot.z)).magnitude < 10f) continue;
                 float sf, dp; if (Water.At(x, z, out sf, out dp)) continue;
                 bool ok = true;
-                foreach (var t in TreeClimb.Trees) if (t != null && (new Vector2(t.basePos.x, t.basePos.z) - c).magnitude < 8f) { ok = false; break; }
-                if (!ok) continue;
+                // ffu56: EVERY tree (decorative ones too, not only the ~18% climbable TreeClimb trees the picker used to check)
+                if (Terrain56.NearTree(x, z, 8f)) continue;
                 float y0 = Ranch.GY(x, z);
                 if (Mathf.Abs(Ranch.GY(x + 3f, z) - y0) > 0.2f || Mathf.Abs(Ranch.GY(x, z + 3f) - y0) > 0.2f || Mathf.Abs(Ranch.GY(x - 3f, z) - y0) > 0.2f || Mathf.Abs(Ranch.GY(x, z - 3f) - y0) > 0.2f) continue;
                 foreach (var col in Physics.OverlapSphere(new Vector3(x, y0 + 1.3f, z), 4.5f, ~0, QueryTriggerInteraction.Ignore))

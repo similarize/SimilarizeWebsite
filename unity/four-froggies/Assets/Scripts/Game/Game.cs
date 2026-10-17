@@ -105,6 +105,8 @@ public partial class Game : MonoBehaviour
         "<b>Planet maps + star map</b>: NASA (NASA 3D Resources; SVS CGI Moon Kit), public domain.\n" +
         "<b>Moon surface</b>: regolith from NASA Apollo 11 photo AS11-40-5877 (images.nasa.gov), public domain; Earth in the Moon sky: NASA map.\n" +
         "<b>Realism test</b> (?realism=1): Sunflowers sky, ground / mud / rock / bark scans (Poly Haven) + Grass 004 (ambientCG), CC0.\n" +
+        "<b>Ranch paths, forest floor, bark, leaves, siding, planks, roof shingles</b> (ffu56): ambientCG (ambientcg.com) Ground037, Ground048,\n" +
+        "   Bark014, Leaf001, WoodSiding008, Planks023A, RoofingTiles013A, CC0. Grass, tracks, tree fort + bugs: made for this game.\n" +
         "<b>REAL ROOM</b> (James's house): furniture, rubber duck, lamp, picture + parquet / plaster / wool textures and the Kloppenheim 02\n" +
         "   night sky: Poly Haven (CC0). TV: Big Buck Bunny (c) Blender Foundation, peach.blender.org, CC BY 3.0.\n" +
         "   Frog body, hands + plush frog: modelled for this game (procedural, no third-party model).\n" +

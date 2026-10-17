@@ -91,13 +91,13 @@ public class RobotPhone : MonoBehaviour
             tl.resizeTextForBestFit = true; tl.resizeTextMinSize = 9; tl.resizeTextMaxSize = 12;
             tabBtns.Add(b);
         }
-        // ---- item grid (max 24 = 8 rows x 3; ffu26: was 7 rows) ----
-        float gy = ty - 36f;
-        for (int i = 0; i < 24; i++)
+        // ---- item grid (max 27 = 9 rows x 3; ffu26: was 7 rows; ffu56: 9 rows in the same height for the tree fort + bug hunt) ----
+        float gy = ty - 36f + 1.5f;
+        for (int i = 0; i < 27; i++)
         {
             int col = i % 3, row = i / 3;
-            var b = UIK.Img(p, UIK.Round, Color.white, new Vector2(0.5f, 1f), new Vector2(-139f + col * 139f, gy - row * 33f), new Vector2(134f, 29f)); b.type = Image.Type.Sliced;
-            var t = UIK.Label(b.transform, "", 13, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(130f, 28f), Color.white);
+            var b = UIK.Img(p, UIK.Round, Color.white, new Vector2(0.5f, 1f), new Vector2(-139f + col * 139f, gy - row * 29.3f), new Vector2(134f, 26f)); b.type = Image.Type.Sliced;
+            var t = UIK.Label(b.transform, "", 13, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(130f, 25f), Color.white);
             t.resizeTextForBestFit = true; t.resizeTextMinSize = 9; t.resizeTextMaxSize = 13; t.verticalOverflow = VerticalWrapMode.Truncate; t.horizontalOverflow = HorizontalWrapMode.Wrap;
             itemBtns.Add(b); itemLbls.Add(t);
         }
@@ -155,8 +155,8 @@ public class RobotPhone : MonoBehaviour
         Add(3, "Stash", "stash");   // ffu50: shared materials / arrows count (label is live, see Refresh)
         Add(3, "Abort mission", "abort"); Add(3, "Watch feed", "feed"); Add(3, "Feed full screen", "feedfull"); Add(3, "Feed cam: drone/eye", "feedcam");
         // ffu54 PLAY: everything a froggy can do, in whatever world the phone's user is in (World/RobotVisit54.cs)
-        string[] pv = { "follow", "tag", "hop", "swim", "dive", "climb", "horse", "skate", "bike", "ridewith", "catch", "hunt", "cook", "swing", "hammock", "collect", "dance", "piggy", "build", "race", "wave", "lights", "stay", "home" };
-        string[] pl = { "Follow me", "Play tag", "Hop / bounce", "Swim with me", "Dive for pearls", "Climb a tree", "Ride a horse", "Skateboard", "Ride a bike", "Ride with me", "Play catch", "Hunt (bow)", "Cook + eat", "Push my swing", "Hammock nap", "Collect stuff", "Dance", "Piggyback!", "Build a castle", "Race me!", "Wave hi", "Lights on / off", "Stay here", "Go home (chores)" };
+        string[] pv = { "follow", "tag", "hop", "swim", "dive", "climb", "horse", "skate", "bike", "ridewith", "catch", "hunt", "cook", "swing", "hammock", "collect", "dance", "piggy", "build", "race", "wave", "lights", "fort", "bugs", "stay", "home" };
+        string[] pl = { "Follow me", "Play tag", "Hop / bounce", "Swim with me", "Dive for pearls", "Climb a tree", "Ride a horse", "Skateboard", "Ride a bike", "Ride with me", "Play catch", "Hunt (bow)", "Cook + eat", "Push my swing", "Hammock nap", "Collect stuff", "Dance", "Piggyback!", "Build a castle", "Race me!", "Wave hi", "Lights on / off", "Build the tree fort", "Bug hunt (jar)", "Stay here", "Go home (chores)" };
         for (int i = 0; i < pv.Length; i++) Add(6, pl[i], "play:" + pv[i]);
     }
 

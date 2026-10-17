@@ -12,6 +12,7 @@ public class Bootstrap : MonoBehaviour
     public Light sun;
     public Material skinMat, foliageMat, pondMat;   // graphics overhaul (FF/Skin, FF/Foliage, LB/Water); may be null
     public Material underwaterMat, unlitTexMat;     // stage B (FF/Underwater, Unlit/Texture); may be null
+    public Material grass56Mat;   // ffu56 FF/Grass56 (instancing on)
     public Material realTriMat, realWaterMat, realTerrainMat;   // ?realism=1 test (FF/RealTri, FF/RealWater, terrain + _NORMALMAP)
 
     public static Bootstrap I;
@@ -53,6 +54,7 @@ public class Bootstrap : MonoBehaviour
         Look.Init(sun);   // before Worlds.Init: Worlds captures the ranch fog / ambient it restores per camera
         Realism.TriBase = realTriMat; Realism.WaterBase = realWaterMat; Realism.TerrainNM = realTerrainMat;
         Realism.Detect(sun);
+        Terrain56.GrassBase = grass56Mat;   // ffu56
         FFDisplay.Lobby(true);   // ffu17: lobby at full pixel density + MSAA   // ?realism=1 only: HDRI sky / sun / haze / SH ambient (before Worlds.Init captures them)
         Sfx.Init();
         FX.Init();
@@ -72,7 +74,8 @@ public class Bootstrap : MonoBehaviour
         }
         gameObject.AddComponent<Game>();
         StartCoroutine(Look.BuildProbes(new Vector3(-10f, Ranch.GY(-10f, 20f), 20f), 0));
-        Realism.Begin(this, terrain);   // ?realism=1 only: streams the scans, then the pond corner
+        Realism.Begin(this, terrain);
+        Terrain56.Begin(this, terrain);   // ffu56: ground / grass / trees / buildings / tracks (waits for Realism.Ready; ?terrain=old = off)   // ?realism=1 only: streams the scans, then the pond corner
     }
 
     static Vector3 G(float x, float z, float up) { return new Vector3(x, Ranch.GY(x, z) + up, z); }
