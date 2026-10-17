@@ -159,7 +159,8 @@ public partial class Game : MonoBehaviour
         }
         demoT += Time.unscaledDeltaTime;
         if (demoShot == "seattest") { SeatTestLobby(); return false; }
-        if (demoShot == "lobby59") { Lobby59TestLobby(); return false; }   // ffu59: A joins only, LT starts (GameFfu59.cs)   // ffu39: pad select + touch tap on PLAY (GameSeats.cs)
+        if (demoShot == "lobby59") { Lobby59TestLobby(); return false; }
+        if (demoShot == "phone59") { Phone59TestLobby(); return false; }   // ffu59b: 4-player split, own phones, FULL in one viewport   // ffu59: A joins only, LT starts (GameFfu59.cs)   // ffu39: pad select + touch tap on PLAY (GameSeats.cs)
         if (demoShot == "lobby")
         {
             // ffu14 lobby showcase: P1 joins and steps through the roster (pop + turntable), never starts
@@ -304,7 +305,7 @@ public partial class Game : MonoBehaviour
                         Debug.Log("FFDEMO robots phase " + ph + " t=" + Time.realtimeSinceStartup.ToString("0.0"));
                         if (ph == 2 && RobotPhone.I != null) RobotPhone.I.DemoOpen(f, 1, "drive");
                         if (ph == 3 && RobotPhone.I != null) { RobotPhone.I.DemoSend(); demoHook = DemoDrive; }
-                        if (ph == 4) { demoHook = null; if (f.remote != null) RobotPhone.I.Toggle(f); }
+                        if (ph == 4) { demoHook = null; if (f.remote != null) RobotPhone.Of(f).Toggle(f); }
                     }
                     demoLogT -= Time.unscaledDeltaTime;
                     if (demoLogT <= 0f && rl != null)
@@ -1253,14 +1254,15 @@ public partial class Game : MonoBehaviour
             {
                 Frog pf = frogs[s.frog];
                 pf.inputKind = s.kind;
-                if (i.phone && RobotPhone.I != null)
+                RobotPhone myPh = RobotPhone.I != null ? RobotPhone.Of(pf) : null;   // ffu59b: this seat's own phone
+                if (i.phone && myPh != null)
                 {
                     // ffu35: closing the phone always works for its user (LB / P / PHONE; B too, in Handle) - in a vehicle,
                     // in every world, in split screen. Opening stays on foot for pads (LB is boost / warp in vehicles).
-                    if (RobotPhone.I.open && RobotPhone.I.user == pf) RobotPhone.I.Close(pf, s.kind == InputKind.Gamepad ? "LB" : "P");
-                    else if ((RobotPhone.Ok(pf) || pf.remote != null) && !(pf.vehicle != null && s.kind == InputKind.Gamepad && pf.remote == null)) RobotPhone.I.Toggle(pf);
+                    if (myPh.open && myPh.user == pf) myPh.Close(pf, s.kind == InputKind.Gamepad ? "LB" : "P");
+                    else if ((RobotPhone.Ok(pf) || pf.remote != null) && !(pf.vehicle != null && s.kind == InputKind.Gamepad && pf.remote == null)) myPh.Toggle(pf);
                 }
-                if (RobotPhone.I != null && RobotPhone.I.Handle(pf, i)) { Vector2 lk = i.look; bool v = i.view, h = i.help; i = new PIn(); i.look = lk; i.view = v; i.help = h; }
+                if (myPh != null && myPh.Handle(pf, i)) { Vector2 lk = i.look; bool v = i.view, h = i.help; i = new PIn(); i.look = lk; i.view = v; i.help = h; }
                 if (k == 0 && demoHook != null) i = demoHook(i);
                 if (pf.remote != null && !help)
                 {

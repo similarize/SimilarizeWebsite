@@ -11,7 +11,7 @@ public partial class Game
     {
         if (UnityEngine.InputSystem.Mouse.current == null) return false;
         Vector2 mp = UnityEngine.InputSystem.Mouse.current.position.ReadValue();
-        if (RobotPhone.I != null && RobotPhone.I.Captures(mp)) return true;
+        if (RobotPhone.I != null && RobotPhone.AnyCaptures(mp)) return true;
         if (hpMenuChip != null && hpMenuChip.gameObject.activeInHierarchy && Hit(hpMenuChip, mp, 4f)) return true;   // ffu46 help chip
         if (RobotFeed.I != null && RobotFeed.I.Captures(mp)) return true;   // ffu20 video feed buttons
         return false;
@@ -172,7 +172,7 @@ public partial class Game
         if (i == touchModeIdx) return;
         touchModeIdx = i;
         string m = TouchModes[i];
-        if (f.remote != null && RobotPhone.I != null) RobotPhone.I.Toggle(f);
+        if (f.remote != null && RobotPhone.I != null) RobotPhone.Of(f).Toggle(f);
         if (f.world != WorldId.Ranch) f.SendTo(WorldId.Ranch, Ranch.FrogSpawn(f.id), 0f);
         if (f.vehicle != null) f.ExitVehicle();
         System.Func<System.Func<Vehicle, bool>, Vehicle> near = pred =>

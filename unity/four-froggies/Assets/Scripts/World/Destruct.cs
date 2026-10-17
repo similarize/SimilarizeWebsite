@@ -660,7 +660,7 @@ public class RobotBreak : MonoBehaviour
         // rebuilds at its spot and carries on home with what it has)
         var mmb = RobotMechMission.For(r); if (mmb != null) mmb.Eject("got blown up");   // ffu26: out of the mech cockpit first
         if (r.seatedIn != null || r.drv != null) r.EndDrive("got blown up! Rebuilding...");
-        if (r.mission != null) { string m = r.mission.Abort(); if (RobotPhone.I != null) RobotPhone.I.Say(m); }
+        if (r.mission != null) { string m = r.mission.Abort(); RobotPhone.SayAll(m); }
         // release jacks / chores / the phone driver cleanly, then switch the robot off while it is in pieces
         r.DemoStart(r.transform.position, r.transform.eulerAngles.y, -1, r.battery);
         r.status = "blown up - rebuilding";

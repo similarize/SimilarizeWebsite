@@ -154,7 +154,7 @@ public partial class Story
     IEnumerator CineOn(bool canSkip = true)
     {
         cine = true; skippable = canSkip;
-        if (RobotPhone.I != null) RobotPhone.I.open = false;
+        RobotPhone.CloseAll();
         float a0 = ui.letterbox;
         yield return Anim(0.45f, k => ui.letterbox = Mathf.Lerp(a0, 1f, k));
     }

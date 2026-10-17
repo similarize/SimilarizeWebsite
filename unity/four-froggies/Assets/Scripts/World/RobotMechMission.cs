@@ -753,7 +753,7 @@ public class RobotMechMission
     void Fail(string why)
     {
         ToastAll(r.robotName + ": " + why, 3f);
-        if (RobotPhone.I != null) RobotPhone.I.Say(r.robotName + ": " + why);
+        RobotPhone.SayAll(r.robotName + ": " + why);
         End(false, true);
     }
 

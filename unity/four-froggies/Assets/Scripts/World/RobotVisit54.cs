@@ -549,14 +549,14 @@ public partial class Robot
         Greets++;
         string hi = robotName + ": Hi " + v.lead.nick + "! " + (world == WorldId.Mars ? "Mars is so red! " : world == WorldId.Space ? "Look at all the stars! " : world == WorldId.Callisto ? "Brrr, icy! " : world == WorldId.Moon ? "Look, Earth! " : InWater(transform.position) ? "Blub blub! " : "") + "What should we do?";
         v.lead.Toast(hi, 3.5f);
-        if (RobotPhone.I != null && RobotPhone.I.user == v.lead) RobotPhone.I.Say(hi);
+        RobotPhone.SayTo(v.lead, hi);
         Sfx.PlayAt(Sfx.Pick(Sfx.Servo), transform.position + Vector3.up * height, 0.5f, 40f, 1.25f);
         FX.Sparkle(transform.position + Vector3.up * (height + 0.3f), new Color(0.6f, 1f, 0.7f), 10);
         v.line = "says hi to " + v.lead.nick;
         Debug.Log("ROBOTS54 arrive+wave " + robotName + " in " + world + " via " + v.how + " d " + RobotNav.Flat(lp - transform.position).ToString("0.0") + " t " + v.total.ToString("0.0") + " swim " + v.swimming);
         if (v.pod != null) { var pod = v.pod; v.pod = null; v.prop = null; PodLeave(pod); }
         if (v.onArrive != null) { var a = v.onArrive; v.onArrive = null; a(); }
-        else if (v.queued != null) { string q = v.queued; v.queued = null; string s = StartVerb(q); if (s.Length > 0) v.lead.Toast(s, 2.5f); if (RobotPhone.I != null && RobotPhone.I.user == v.lead) RobotPhone.I.Say(s); }
+        else if (v.queued != null) { string q = v.queued; v.queued = null; string s = StartVerb(q); if (s.Length > 0) v.lead.Toast(s, 2.5f); RobotPhone.SayTo(v.lead, s); }
     }
 
     // the empty pod lifts off again after a few seconds (back up to the carrier sky)

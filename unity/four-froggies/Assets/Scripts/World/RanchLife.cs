@@ -378,7 +378,7 @@ public partial class Robot : MonoBehaviour   // ffu54: partial - visits / PLAY v
         drv = null;
         cmd = "auto"; forcedChore = -1; extRouted = false;
         steps.Clear(); stepIdx = 0;
-        if (why != null && RobotPhone.I != null) RobotPhone.I.Say(robotName + ": " + why);
+        if (why != null) RobotPhone.SayAll(robotName + ": " + why);
     }
 
     // phone: drive:<vehicle index>|<band name>:<mode>, driveMode:<mode>, getout

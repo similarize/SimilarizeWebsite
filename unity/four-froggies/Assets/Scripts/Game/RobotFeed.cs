@@ -17,6 +17,7 @@ public class RobotFeed : MonoBehaviour
     public static RobotFeed I;
     public Robot robot;
     public int mode;          // 0 off, 1 picture-in-picture, 2 full screen
+    public Frog viewer;       // ffu59b: the player who opened it - in split-screen PiP / FULL live inside THEIR viewport only
     public bool eye;
     Camera cam;
     RenderTexture rt;
@@ -29,6 +30,7 @@ public class RobotFeed : MonoBehaviour
     WorldId camWorldSet = (WorldId)(-1);
     Vector3 cpos; Quaternion crot; bool snap = true;
     Robot lastRobot;
+    string lastLayout = "";
     Text hintT; Image hintBg;
     Gamepad viewPad; float viewDownT; int viewDownF; bool viewHoldDone;
     public static int PadCloses, PadSizes;
@@ -94,6 +96,21 @@ public class RobotFeed : MonoBehaviour
         return b;
     }
 
+    public void ShowFor(Robot r, int m, Frog who)
+    {
+        if (who != null && who != viewer) { viewer = who; snap = true; Debug.Log("RobotFeed: now " + who.nick + "'s feed"); }
+        Show(r, m);
+    }
+    Slot ViewerSlot()
+    {
+        if (Game.I == null) return null;
+        if (viewer != null) { int k = Game.I.frogs.IndexOf(viewer); var s = k >= 0 ? Game.I.SlotOfSeat(k) : null; if (s != null) return s; }
+        return Game.I.slots.Count > 0 ? Game.I.slots[0] : null;
+    }
+    public Rect BoxAnchors { get { return new Rect(box.anchorMin, box.anchorMax - box.anchorMin); } }
+    public bool InSplit { get { return Game.I != null && Game.I.slots.Count > 1; } }
+    public Rect ViewRect { get { var s = ViewerSlot(); var ph = s != null ? RobotPhone.Of(Game.I.frogs[s.frog]) : RobotPhone.I; return ph != null ? ph.ViewRect(s) : new Rect(0f, 0f, 1f, 1f); } }
+
     public void Show(Robot r, int m)
     {
         if (r != null) { if (r != robot) snap = true; robot = r; }
@@ -107,7 +124,8 @@ public class RobotFeed : MonoBehaviour
         if (RobotMission.Active != null) return RobotMission.Active.r;
         if (RobotMission.FigActive != null) return RobotMission.FigActive.r;   // ffu50 Figure 03's rocket
         if (RobotMechMission.Active != null) return RobotMechMission.Active.r;
-        if (RobotPhone.I != null && RobotPhone.I.Selected != null) return RobotPhone.I.Selected;
+        var vph = viewer != null ? RobotPhone.Of(viewer) : RobotPhone.I;
+        if (vph != null && vph.Selected != null) return vph.Selected;
         return RanchLife.I != null && RanchLife.I.robots.Count > 1 ? RanchLife.I.robots[1] : null;
     }
 
@@ -120,7 +138,8 @@ public class RobotFeed : MonoBehaviour
     public PIn PadFilter(Slot s, Frog f, PIn i)
     {
         if (mode == 0 || s == null || s.pad == null || f == null) { if (s != null && viewPad == s.pad) viewPad = null; return i; }
-        if (RobotPhone.I != null && RobotPhone.I.open && RobotPhone.I.user == f) return i;   // the phone drives the feed (Y / X)
+        if (viewer != null && f != viewer && ViewerSlot() != null) return i;   // ffu59b: only the feed's own player drives it
+        if (RobotPhone.OpenFor(f) != null) return i;   // the phone drives the feed (Y / X)
         Gamepad p = s.pad;
         float now = Time.unscaledTime;
         if (p.selectButton.wasPressedThisFrame) { viewPad = p; viewDownT = now; viewDownF = Time.frameCount; viewHoldDone = false; }
@@ -148,7 +167,8 @@ public class RobotFeed : MonoBehaviour
     void Hint()
     {
         bool pad = false, touch = false;
-        if (Game.I != null) foreach (var s in Game.I.slots) { if (s.kind == InputKind.Gamepad) pad = true; if (s.kind == InputKind.Touch) touch = true; }
+        Slot vs = ViewerSlot();   // ffu59b: the feed's own player's device
+        if (vs != null) { pad = vs.kind == InputKind.Gamepad; touch = vs.kind == InputKind.Touch; }
         const string G = "<color=#ffe27a>", E = "</color>";
         string h;
         if (pad) h = mode == 2 ? G + "VIEW" + E + " close   " + G + "RB" + E + " / " + G + "B" + E + " smaller   " + G + "X" + E + " camera"
@@ -158,8 +178,9 @@ public class RobotFeed : MonoBehaviour
                            : G + "O" + E + " bigger   " + G + "I" + E + " camera   click " + G + "X" + E + " close";
         if (hintT.text != h) hintT.text = h;
         // full screen: the hint sits on the bottom band (inside the box)
-        hintBg.rectTransform.offsetMin = mode == 2 ? new Vector2(160f, 52f) : new Vector2(0f, -32f);
-        hintBg.rectTransform.offsetMax = mode == 2 ? new Vector2(-160f, 78f) : new Vector2(0f, -6f);
+        float hx = InSplit && mode == 2 ? 10f : 160f;   // ffu59b: a split viewport is narrow
+        hintBg.rectTransform.offsetMin = mode == 2 ? new Vector2(hx, 52f) : new Vector2(0f, -32f);
+        hintBg.rectTransform.offsetMax = mode == 2 ? new Vector2(-hx, 78f) : new Vector2(0f, -6f);
     }
 
     public bool Captures(Vector2 mp)
@@ -182,7 +203,7 @@ public class RobotFeed : MonoBehaviour
         bool playing = Game.I != null && Game.I.state == Game.State.Play;
         if (playing && !Kb.typing)
         {
-            if (Kb.ODown()) Cycle();
+            if (Kb.ODown()) { if (Game.I != null) { var ks = Game.I.KeyboardSlot(); if (ks != null && Game.I.frogs[ks.frog] != viewer) { viewer = Game.I.frogs[ks.frog]; snap = true; } } Cycle(); }
             if (Kb.IDown() && mode > 0) ToggleCam();
             if (mode == 2 && Kb.EscDown()) Show(null, 1);
         }
@@ -204,29 +225,35 @@ public class RobotFeed : MonoBehaviour
     void DoLayout()
     {
         var cr = (RectTransform)canvas.transform;
-        float cw = cr.rect.width, ch = cr.rect.height;
+        // ffu59b: in split-screen the feed lives in its player's viewport - FULL fills only that viewport
+        Rect vr = ViewRect;
+        bool whole = vr.width > 0.99f && vr.height > 0.99f;
+        float cw = cr.rect.width * vr.width, ch = cr.rect.height * vr.height;
         bool portrait = ch > cw;
         if (mode == 2)
         {
-            box.anchorMin = Vector2.zero; box.anchorMax = Vector2.one; box.pivot = new Vector2(0.5f, 0.5f);
+            box.anchorMin = vr.min; box.anchorMax = vr.max; box.pivot = new Vector2(0.5f, 0.5f);
             box.offsetMin = new Vector2(0f, 0f); box.offsetMax = new Vector2(0f, 0f);
             frameImg.color = new Color(0f, 0f, 0f, 1f);
         }
         else
         {
-            float w = portrait ? Mathf.Min(330f, cw - 24f) : 420f;
+            float w = whole ? (portrait ? Mathf.Min(330f, cw - 24f) : 420f) : Mathf.Min(420f, cw * 0.5f);
             float h = w * 9f / 16f + 34f;
-            box.anchorMin = box.anchorMax = new Vector2(0f, 1f); box.pivot = new Vector2(0f, 1f);
+            box.anchorMin = box.anchorMax = new Vector2(vr.xMin, vr.yMax); box.pivot = new Vector2(0f, 1f);
             box.sizeDelta = new Vector2(w, h);
-            box.anchoredPosition = new Vector2(14f, portrait ? -112f : -110f);
+            box.anchoredPosition = whole ? new Vector2(14f, portrait ? -112f : -110f) : new Vector2(8f, -Mathf.Min(110f, ch * 0.2f));
             frameImg.color = new Color(0.03f, 0.04f, 0.06f, 0.92f);
         }
-        float bx = mode == 2 ? -170f : 0f, by = mode == 2 ? -6f : 0f;   // full screen: clear of the page toolbar (top-right)
+        bool topRight = vr.xMax > 0.99f && vr.yMax > 0.99f;
+        float bx = mode == 2 && topRight ? -170f : 0f, by = mode == 2 && topRight ? -6f : 0f;   // full screen: clear of the page toolbar (top-right)
         camBtn.rectTransform.anchoredPosition = new Vector2(-132f + bx, -17f + by);
         fullBtn.rectTransform.anchoredPosition = new Vector2(-74f + bx, -17f + by);
         closeBtn.rectTransform.anchoredPosition = new Vector2(-22f + bx, -17f + by);
         title.rectTransform.offsetMax = new Vector2(-170f + bx, 0f);
         fullLbl.text = mode == 2 ? "PIP" : "FULL";
+        string lk = mode + "|" + vr;
+        if (lk != lastLayout) { lastLayout = lk; Debug.Log("RobotFeed: " + ModeName + " in " + (whole ? "the whole screen" : (viewer != null ? viewer.nick : "?") + "'s viewport " + vr.ToString("0.00"))); }
         camLbl.text = eye ? "EYE" : "DRONE";
         // render target = the picture's real on-screen pixels (phones capped at 960 wide)
         Vector3[] c = new Vector3[4];

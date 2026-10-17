@@ -23,6 +23,10 @@ public partial class Game
     public static int LtSuppressed;
 
     void Lobby59Log(string s) { Debug.Log("LOBBY59: " + s); }
+    // ffu59b per-seat phone helpers
+    public Slot SlotOfSeat(int frog) { return SlotForFrog(frog); }
+    public Slot KeyboardSlot() { return FindSlot(InputKind.Keyboard); }
+    public static string PlayerHex(int pn) { return PHex(pn); }
 
     // a seated player pressed their join key again: a nudge, never a start
     void Lobby59Again(Slot s, string key)
@@ -200,5 +204,80 @@ public partial class Game
         L59Check("tap START: the game STARTS with 1 seat", state == State.Play && slots.Count == 1);
         L59Result("touch");
         Kb.TestMobile = false;
+    }
+
+    // ---------------- probe: ?ffdemo=1&ffshot=phone59 (ffu59b per-seat phones) ----------------
+    // 4 synthetic pads join (A each) + LT starts = 4-way split; P1 + P3 open their phones (LB); P1 RB changes only P1's tab;
+    // P3 Y = feed, X = FULL -> the feed fills only P3's viewport; P2's phone sends "Call this robot" for P2's froggy;
+    // then P2..P4 leave -> single player: FULL = whole screen. Phase lines "FFDEMO phone59 ph N <name>" (probe59.py shots).
+    bool p59On;
+    void Phone59TestLobby() { if (p59On) return; p59On = true; StartCoroutine(P59()); }
+    void P59Ph(int n, string name) { Debug.Log("FFDEMO phone59 ph " + n + " " + name); }
+    string PhLine()
+    {
+        var sb = new System.Text.StringBuilder();
+        for (int k = 0; k < 4; k++) { var p = RobotPhone.Seat[k]; if (p == null) continue; sb.Append("seat").Append(k + 1).Append(p.open ? " OPEN" : " closed").Append(" user ").Append(p.user != null ? p.user.nick : "-").Append(" tab ").Append(p.Tab).Append(" scale ").Append(p.PanelScale.ToString("0.00")).Append(p.Compact ? " compact" : "").Append("; "); }
+        return sb.ToString();
+    }
+    IEnumerator P59()
+    {
+        Debug.Log("LOBBY59 start phone59");
+        yield return L59Settle(2f);
+        var pads = new Gamepad[4];
+        for (int k = 0; k < 4; k++)
+        {
+            pads[k] = InputSystem.AddDevice<Gamepad>("FFTestPad59");
+            yield return L59Settle(1f);
+            yield return L59Press(pads[k], GamepadButton.South);
+            yield return L59Settle(0.6f);
+        }
+        L59Check("4 pads pressed A: P1..P4 seated, still in the lobby", state == State.Lobby && slots.Count == 4);
+        L59Trigger(pads[0], 1f); yield return L59Frames(3); L59Trigger(pads[0], 0f);
+        yield return L59Settle(4f);
+        L59Check("LT starts a 4-way split", state == State.Play && slots.Count == 4 && LastViews == 4, "views " + LastViews);
+        Frog f1 = frogs[slots[0].frog], f2 = frogs[slots[1].frog], f3 = frogs[slots[2].frog];
+        P59Ph(1, "split");
+        yield return L59Settle(2f);
+        yield return L59Press(pads[0], GamepadButton.LeftShoulder);
+        yield return L59Settle(0.8f);
+        yield return L59Press(pads[2], GamepadButton.LeftShoulder);
+        yield return L59Settle(1.2f);
+        var p1 = RobotPhone.OpenFor(f1); var p3 = RobotPhone.OpenFor(f3);
+        L59Check("P1 + P3 opened their OWN phones (LB each)", p1 != null && p3 != null && p1 != p3, PhLine());
+        int t3 = p3 != null ? p3.Tab : -1;
+        yield return L59Press(pads[0], GamepadButton.RightShoulder);
+        yield return L59Settle(0.8f);
+        L59Check("P1 RB changes only P1's tab", p1 != null && p3 != null && p1.Tab == 1 && p3.Tab == t3, PhLine());
+        L59Check("phones fit a quarter viewport (compact, scaled 0.6-1)", p1 != null && p1.Compact && p1.PanelScale > 0.6f && p1.PanelScale <= 1f, PhLine());
+        P59Ph(2, "twophones");
+        yield return L59Settle(6f);
+        yield return L59Press(pads[2], GamepadButton.North);   // Y = feed
+        yield return L59Settle(1f);
+        yield return L59Press(pads[2], GamepadButton.West);    // X = FULL
+        yield return L59Settle(1.5f);
+        var fd = RobotFeed.I;
+        Rect want = slots[2].cam != null ? slots[2].cam.rect : new Rect();
+        Rect got = fd != null ? fd.BoxAnchors : new Rect();
+        L59Check("P3's feed FULL fills only P3's viewport", fd != null && fd.mode == 2 && fd.viewer == f3 && Mathf.Abs(got.x - want.x) < 0.01f && Mathf.Abs(got.y - want.y) < 0.01f && Mathf.Abs(got.width - want.width) < 0.01f && Mathf.Abs(got.height - want.height) < 0.01f,
+            "feed " + (fd != null ? fd.ModeName : "-") + " box " + got.ToString("0.00") + " P3 view " + want.ToString("0.00"));
+        P59Ph(3, "full");
+        yield return L59Settle(6f);
+        var p2 = RobotPhone.Of(f2);
+        string t1 = f1.toast ?? "";
+        p2.DemoAct(f2, 1, "rcall:sel");
+        yield return L59Settle(0.8f);
+        L59Check("P2's phone acts for P2's froggy (Call this robot)", p2.user == f2 && (f2.toast ?? "").Length > 0 && (f1.toast ?? "") == t1 && RobotPhone.OpenFor(f1) == p1, "P2 toast '" + f2.toast + "' | " + PhLine());
+        P59Ph(4, "threephones");
+        yield return L59Settle(5f);
+        for (int k = slots.Count - 1; k >= 1; k--) Leave(slots[k]);
+        yield return L59Settle(2f);
+        if (fd != null && RanchLife.I != null) fd.ShowFor(RanchLife.I.robots[1], 2, f1);
+        yield return L59Settle(1.5f);
+        got = fd != null ? fd.BoxAnchors : new Rect();
+        L59Check("single player: feed FULL = the whole screen", slots.Count == 1 && LastViews == 1 && fd != null && fd.mode == 2 && got.width > 0.99f && got.height > 0.99f, "box " + got.ToString("0.00"));
+        P59Ph(5, "single");
+        yield return L59Settle(6f);
+        L59Result("phone59");
+        Debug.Log("FFDEMO phone59 done");
     }
 }

@@ -11,9 +11,16 @@ using UnityEngine.UI;
 //    Callisto ice run, abort, and the live video feed: watch / full screen / camera).
 // Controls: Up/Down (stick, D-pad, W/S, arrows) robot, Left/Right move along the tabs + orders, A / E / Enter / click /
 // tap sends; pad RB = next tab, Y feed on/off, X feed full screen, B feed camera; LB / P / PHONE closes.
+// ffu59b (Bill): in split-screen every player has their OWN phone - one RobotPhone per seat (Seat[0..3], seat = frog
+// index; I = seat 0, the one the demos drive), each with its own robot pick / tab / orders / calls acting for that seat's
+// froggy, opened from that player's own controller / keys / touch. Each phone (and its PHONE button) lives inside its
+// player's split viewport and scales to fit; small viewports (quarter screen) use a compact layout (no turntable card).
 public class RobotPhone : MonoBehaviour
 {
     public static RobotPhone I;
+    public static readonly RobotPhone[] Seat = new RobotPhone[4];
+    static int nextSeat;
+    public int seat;
     public bool open;
     public Frog user;
     int sel = 1;              // Unitree is the default link, like the 3D phone
@@ -47,16 +54,51 @@ public class RobotPhone : MonoBehaviour
 
     public Robot Selected { get { var r = RanchLife.I != null ? RanchLife.I.robots : null; return r != null && r.Count > 0 ? r[Mathf.Clamp(sel, 0, r.Count - 1)] : null; } }
 
+    RectTransform vp;           // ffu59b: this seat's viewport (anchors = its camera rect)
+    Text head;
+    readonly List<RectTransform> shiftRT = new List<RectTransform>();
+    readonly List<Vector2> shiftPos = new List<Vector2>();
+    int layoutKey = -1;
+    public int Tab { get { return tab; } }
+    public float PanelScale { get { return panel.rectTransform.localScale.x; } }
+    public bool Compact { get { return !card.gameObject.activeSelf; } }
+
+    // the phone of the seat this froggy sits in (made on first use)
+    public static RobotPhone Of(Frog f)
+    {
+        if (f == null || Game.I == null) return I;
+        int k = Game.I.frogs.IndexOf(f);
+        if (k < 0 || k > 3) return I;
+        if (Seat[k] == null && I != null)
+        {
+            nextSeat = k;
+            Seat[k] = new GameObject("RobotPhone" + (k + 1)).AddComponent<RobotPhone>();
+            nextSeat = 0;
+        }
+        return Seat[k] != null ? Seat[k] : I;
+    }
+    public static RobotPhone OpenFor(Frog f) { foreach (var p in Seat) if (p != null && p.open && p.user == f) return p; return null; }
+    public static bool AnyCaptures(Vector2 mp) { foreach (var p in Seat) if (p != null && p.Captures(mp)) return true; return false; }
+    public static void ShowAll(bool on) { foreach (var p in Seat) if (p != null && p.canvas != null) p.canvas.enabled = on; }
+    public static void CloseAll() { foreach (var p in Seat) if (p != null) p.open = false; }
+    public static void SayAll(string s) { foreach (var p in Seat) if (p != null && (p.user != null || p == I)) p.Say(s); }
+    public static void SayTo(Frog f, string s) { foreach (var p in Seat) if (p != null && p.user == f) p.Say(s); }
+    static RobotPhone demoPh;
+
     void Awake()
     {
-        I = this;
+        seat = nextSeat;
+        if (seat == 0) I = this;
+        Seat[seat] = this;
         BuildItems();
-        canvas = UIK.MakeCanvas("Phone", null, 70, true);
-        Transform r = canvas.transform;
+        canvas = UIK.MakeCanvas("Phone" + (seat > 0 ? (seat + 1).ToString() : ""), null, 70 + seat, true);
+        vp = UIK.Rect(canvas.transform, "PhoneViewport", new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+        vp.anchorMin = Vector2.zero; vp.anchorMax = Vector2.one; vp.offsetMin = vp.offsetMax = Vector2.zero;
+        Transform r = vp;
         panel = UIK.Img(r, UIK.Round, new Color(0.035f, 0.045f, 0.065f, 0.95f), new Vector2(1f, 0.5f), new Vector2(-PW * 0.5f - 12f, -24f), new Vector2(PW, PH));   // ffu20: clear of the page toolbar
         panel.type = Image.Type.Sliced;
         Transform p = panel.transform;
-        var head = UIK.Label(p, "ROBOT PHONE", 18, TextAnchor.MiddleLeft, new Vector2(0.5f, 1f), new Vector2(0f, -22f), new Vector2(PW - 36f, 26f), new Color(0.55f, 1f, 0.6f));
+        head = UIK.Label(p, "ROBOT PHONE", 18, TextAnchor.MiddleLeft, new Vector2(0.5f, 1f), new Vector2(0f, -22f), new Vector2(PW - 36f, 26f), new Color(0.55f, 1f, 0.6f));
         UIK.Modernize(head, true);
         // ---- carousel card ----
         card = UIK.Img(p, UIK.Round, new Color(1f, 1f, 1f, 0.06f), new Vector2(0.5f, 1f), new Vector2(0f, -40f - CardH * 0.5f), new Vector2(PW - 24f, CardH));
@@ -104,6 +146,12 @@ public class RobotPhone : MonoBehaviour
         msg = UIK.Label(p, "Pick a robot, then an order.", 14, TextAnchor.MiddleCenter, new Vector2(0.5f, 0f), new Vector2(0f, 42f), new Vector2(PW - 24f, 24f), new Color(1f, 0.93f, 0.6f));
         msg.horizontalOverflow = HorizontalWrapMode.Wrap; msg.resizeTextForBestFit = true; msg.resizeTextMinSize = 10; msg.resizeTextMaxSize = 14;
         hint = UIK.Label(p, "", 12, TextAnchor.MiddleCenter, new Vector2(0.5f, 0f), new Vector2(0f, 17f), new Vector2(PW - 16f, 22f), new Color(0.72f, 0.78f, 0.84f));
+        hint.resizeTextForBestFit = true; hint.resizeTextMinSize = 9; hint.resizeTextMaxSize = 12;
+        // ffu59b compact layout: these move up by the card's height when the card is hidden
+        shiftRT.Add(batBg.rectTransform); shiftRT.Add(batT.rectTransform); shiftRT.Add(jobT.rectTransform);
+        foreach (var b in tabBtns) shiftRT.Add(b.rectTransform);
+        foreach (var b in itemBtns) shiftRT.Add(b.rectTransform);
+        foreach (var t in shiftRT) shiftPos.Add(t.anchoredPosition);
         // ffu15: the PHONE button on every device, with the key for the player's device as a badge
         btn = UIK.Panel(r, new Color(0.08f, 0.1f, 0.13f, 0.82f), new Vector2(0f, 0f), new Vector2(150f, 46f));
         btn.rectTransform.anchorMin = btn.rectTransform.anchorMax = new Vector2(0f, 1f);
@@ -178,7 +226,7 @@ public class RobotPhone : MonoBehaviour
     {
         Showroom.Init();
         standRoot = new GameObject("PhoneStand").transform;
-        standRoot.position = Showroom.Base + new Vector3(0f, 0f, 260f);
+        standRoot.position = Showroom.Base + new Vector3(seat * 40f, 0f, 260f);   // ffu59b: one studio stand per seat, 40 m apart
         turn = Mats.Node(standRoot, "Turn", Vector3.zero);
         var ped = new Material(Mats.PBR(new Color(0.06f, 0.07f, 0.09f), 0.82f, 0.35f));
         Showroom.MeshObj("Pedestal", turn, Showroom.Disc(), ped, Vector3.zero, new Vector3(1.05f, 1f, 1.05f));
@@ -224,8 +272,8 @@ public class RobotPhone : MonoBehaviour
 
     void TickStand(float dt)
     {
-        standCam.enabled = open;
-        if (!open) return;
+        standCam.enabled = open && card.gameObject.activeSelf;
+        if (!standCam.enabled) return;
         // render target = the card's real on-screen pixels, 4x MSAA (like the ffu17 lobby turntables)
         Vector3[] c = new Vector3[4];
         stage.rectTransform.GetWorldCorners(c);
@@ -253,6 +301,7 @@ public class RobotPhone : MonoBehaviour
     public void Toggle(Frog f)
     {
         if (f == null) return;
+        { var mine = Of(f); if (mine != null && mine != this) { mine.Toggle(f); return; } }   // ffu59b: every seat has its own phone
         // ffu35: one phone press per frame. Two slots fed by one physical pad (a mirrored "ghost" pad) used to toggle it
         // twice in one frame - open for the ghost froggy, then open again for the real one - so LB never closed it.
         if (Time.frameCount == toggleFrame) return;
@@ -262,7 +311,7 @@ public class RobotPhone : MonoBehaviour
         if (open && user == f) { Close(f, "toggle"); return; }
         open = !open || user != f;
         if (open) Opens++;
-        Debug.Log("RobotPhone: open for " + f.nick + " (" + f.inputKind + ")");
+        Debug.Log("RobotPhone: " + (open ? "open" : "closed") + " for " + f.nick + " (" + f.inputKind + ", seat " + (seat + 1) + " phone)");
         user = f;
         if (open) { BuildCalls(f); BuildDrive(f); if (f.world != WorldId.Ranch) { tab = 4; cur = NT; msg.text = "CALL a robot or a froggy to " + Robot.WorldName(Robot.TargetWorld(f)) + " - every order works here"; } }
         Sfx.Play(Sfx.Click, 0.7f);
@@ -310,6 +359,8 @@ public class RobotPhone : MonoBehaviour
     // demo / screenshot mode: robot index + an action string (or a tab name)
     public void DemoOpen(Frog f, int robot, string act)
     {
+        { var mine = Of(f); if (mine != null && mine != this) { mine.DemoOpen(f, robot, act); return; } }   // ffu59b
+        demoPh = this;
         user = f; open = true; sel = robot;
         BuildCalls(f); BuildDrive(f);
         for (int k = 0; k < NT; k++)
@@ -319,7 +370,7 @@ public class RobotPhone : MonoBehaviour
             if (j >= 0) { tab = k; cur = NT + j; msg.text = RanchLife.I.robots[robot].robotName + " selected - " + tabs[k][j].label; return; }
         }
     }
-    public void DemoSend() { if (user != null) Activate(user); }
+    public void DemoSend() { var p = demoPh != null ? demoPh : this; if (p.user != null) p.Activate(p.user); }
     public void DemoAct(Frog f, int robot, string act) { DemoOpen(f, robot, act); Activate(f); }
 
     int Count { get { return NT + tabs[tab].Count; } }
@@ -340,7 +391,7 @@ public class RobotPhone : MonoBehaviour
             else if (x < -0.6f) { Move(-1); stickCool = 0.16f; }
         }
         if (Mathf.Abs(x) < 0.3f && Mathf.Abs(y) < 0.3f) stickCool = 0f;
-        if (i.use || i.hop || Kb.EnterDown()) Activate(f);
+        if (i.use || i.hop || (f.inputKind == InputKind.Keyboard && Kb.EnterDown())) Activate(f);
         if (f.inputKind == InputKind.Gamepad)
         {
             if (i.warpUp) { tab = (tab + 1) % NT; cur = tab; Sfx.Play(Sfx.Click, 0.4f); }          // RB next tab
@@ -454,7 +505,7 @@ public class RobotPhone : MonoBehaviour
         {
             var ps = a.Split(':');
             say = RobotMission.Start(r, int.Parse(ps[1]), int.Parse(ps[2]));
-            if (r.mission != null && RobotFeed.I != null) RobotFeed.I.Show(r, 1);   // start watching straight away
+            if (r.mission != null && RobotFeed.I != null) RobotFeed.I.ShowFor(r, 1, f);   // start watching straight away
         }
         else if (a.StartsWith("mmis:"))
         {
@@ -463,7 +514,7 @@ public class RobotPhone : MonoBehaviour
             StoryMech mech = r.drv != null ? r.drv.v as StoryMech : null;
             if (mech == null) mech = RobotDriver.MechOfBand(pickBand >= 0 ? pickBand : 0, r.transform.position);
             say = RobotMechMission.Start(r, mech, int.Parse(ps[1]), int.Parse(ps[2]), f);
-            if (RobotMechMission.For(r) != null && RobotFeed.I != null) RobotFeed.I.Show(r, 1);
+            if (RobotMechMission.For(r) != null && RobotFeed.I != null) RobotFeed.I.ShowFor(r, 1, f);
         }
         else if (a == "recall")
         {
@@ -475,21 +526,20 @@ public class RobotPhone : MonoBehaviour
         else if (a == "hunt") say = Fig50.PhoneHunt(r, f);
         else if (a == "stash") say = "Stash: " + Stash50.Line;
         else if (a == "abort") say = mm != null ? mm.Recall() : r.mission != null ? r.mission.Abort() : r.robotName + " isn't on a mission";
-        else if (a == "feed") { if (RobotFeed.I != null) { bool on = RobotFeed.I.mode > 0 && RobotFeed.I.robot == r; RobotFeed.I.Show(r, on ? 0 : 1); say = on ? "Feed off" : "Watching " + r.robotName + "'s camera (O)"; } }
-        else if (a == "feedfull") { if (RobotFeed.I != null) { RobotFeed.I.Show(r, RobotFeed.I.mode == 2 && RobotFeed.I.robot == r ? 1 : 2); say = "Feed " + (RobotFeed.I.mode == 2 ? "full screen (Esc / tap to shrink)" : "picture-in-picture"); } }
-        else if (a == "feedcam") { if (RobotFeed.I != null) { if (RobotFeed.I.mode == 0) RobotFeed.I.Show(r, 1); RobotFeed.I.ToggleCam(); say = "Feed camera: " + (RobotFeed.I.eye ? "robot's eye" : "drone"); } }
+        else if (a == "feed") { if (RobotFeed.I != null) { bool on = RobotFeed.I.mode > 0 && RobotFeed.I.robot == r && RobotFeed.I.viewer == f; RobotFeed.I.ShowFor(r, on ? 0 : 1, f); say = on ? "Feed off" : "Watching " + r.robotName + "'s camera (O)"; } }
+        else if (a == "feedfull") { if (RobotFeed.I != null) { RobotFeed.I.ShowFor(r, RobotFeed.I.mode == 2 && RobotFeed.I.robot == r && RobotFeed.I.viewer == f ? 1 : 2, f); say = "Feed " + (RobotFeed.I.mode == 2 ? (RobotFeed.I.InSplit ? "fills your screen (Esc / tap to shrink)" : "full screen (Esc / tap to shrink)") : "picture-in-picture"); } }
+        else if (a == "feedcam") { if (RobotFeed.I != null) { if (RobotFeed.I.mode == 0) RobotFeed.I.ShowFor(r, 1, f); RobotFeed.I.ToggleCam(); say = "Feed camera: " + (RobotFeed.I.eye ? "robot's eye" : "drone"); } }
         else say = r.Order(a, f);
         msg.text = say;
         if (say.Length > 0) f.Toast(say, 2.2f);
         Sfx.Play(Sfx.Pickup, 0.5f, 1.3f);
     }
 
+    // ffu59b: the PHONE button of THIS seat's player (each split view shows its own)
     Slot BtnSlot()
     {
         if (Game.I == null) return null;
-        Slot best = null;
-        foreach (var s in Game.I.slots) { if (s.kind == InputKind.Touch) return s; if (s.kind == InputKind.Keyboard && (best == null || best.kind != InputKind.Keyboard)) best = s; else if (best == null) best = s; }
-        return best;
+        return Game.I.SlotOfSeat(seat);
     }
 
     public bool Captures(Vector2 mp)
@@ -534,8 +584,7 @@ public class RobotPhone : MonoBehaviour
         {
             foreach (Vector2 tp in Kb.TouchesBegan())
             {
-                if (RectTransformUtility.RectangleContainsScreenPoint(btn.rectTransform, tp, null))
-                    foreach (var s in Game.I.slots) if (s.kind == InputKind.Touch) Toggle(Game.I.frogs[s.frog]);
+                if (RectTransformUtility.RectangleContainsScreenPoint(btn.rectTransform, tp, null) && bs.kind == InputKind.Touch) Toggle(bf);
                 if (open) Press(tp);
             }
             // swipe on the turntable card
@@ -550,10 +599,50 @@ public class RobotPhone : MonoBehaviour
             }
         }
         if (user != null && (!Ok(user) || Game.I == null || Game.I.state != Game.State.Play)) open = false;
+        if (open && (bs == null || bf != user)) open = false;   // ffu59b: the seat's player left / changed
         panel.gameObject.SetActive(open);
+        if (open || showBtn) FitViewport(bs);
         TickStand(Mathf.Min(Time.unscaledDeltaTime, 0.1f));
         if (!open) return;
         Refresh();
+    }
+
+    // ffu59b: the phone + PHONE button sit inside this player's viewport: the camera rect in split-screen, a column of
+    // the screen in shared view with several phones, else the whole screen (single player = unchanged look)
+    public Rect ViewRect(Slot bs)
+    {
+        if (Game.I == null || bs == null) return new Rect(0f, 0f, 1f, 1f);
+        int n = Game.I.slots.Count;
+        if (n <= 1) return new Rect(0f, 0f, 1f, 1f);
+        if (bs.cam != null && bs.cam.enabled && Game.LastViews > 1) return bs.cam.rect;
+        int k = Mathf.Max(0, Game.I.slots.IndexOf(bs));
+        return new Rect(k / (float)n, 0f, 1f / n, 1f);   // shared camera: one column each
+    }
+
+    void FitViewport(Slot bs)
+    {
+        Rect vr = ViewRect(bs);
+        vp.anchorMin = vr.min; vp.anchorMax = vr.max; vp.offsetMin = vp.offsetMax = Vector2.zero;
+        var cr = (RectTransform)canvas.transform;
+        float vw = cr.rect.width * vr.width, vh = cr.rect.height * vr.height;
+        bool full = vr.width > 0.99f && vr.height > 0.99f;
+        bool compact = !full && vh < 560f;
+        float shift = compact ? CardH + 22f : 0f;
+        float ph = PH - shift;
+        float sc = Mathf.Min(1f, (vh - (full ? 60f : 12f)) / ph, (vw - 16f) / PW);
+        int key = (compact ? 1 : 0) + Mathf.RoundToInt(sc * 1000f) * 2 + Mathf.RoundToInt(vw) * 4000 + Mathf.RoundToInt(vh) * 9000000;
+        if (key == layoutKey) return;
+        layoutKey = key;
+        card.gameObject.SetActive(!compact);
+        foreach (var d in dots) d.gameObject.SetActive(!compact);
+        for (int i = 0; i < shiftRT.Count; i++) shiftRT[i].anchoredPosition = shiftPos[i] + new Vector2(0f, shift);
+        panel.rectTransform.sizeDelta = new Vector2(PW, ph);
+        panel.rectTransform.localScale = Vector3.one * sc;
+        panel.rectTransform.anchoredPosition = new Vector2(-PW * sc * 0.5f - (full ? 12f : 6f), full ? -24f : 0f);
+        float bsc = full ? 1f : Mathf.Clamp(sc * 1.1f, 0.6f, 1f);
+        btn.rectTransform.localScale = Vector3.one * bsc;
+        btn.rectTransform.anchoredPosition = full ? new Vector2(98f, -76f) : new Vector2(75f * bsc + 8f, -(23f * bsc + 8f) - (vr.yMax > 0.99f ? 40f : 0f));
+        Debug.Log("RobotPhone: seat " + (seat + 1) + " layout " + (full ? "full screen" : "viewport " + vr.ToString("0.00")) + (compact ? " compact" : "") + " scale " + sc.ToString("0.00") + " (" + vw.ToString("0") + "x" + vh.ToString("0") + " canvas units)");
     }
 
     void Refresh()
@@ -562,6 +651,11 @@ public class RobotPhone : MonoBehaviour
         var r = robots[sel];
         string nm = r.robotName;
         if (nameT.text != nm) nameT.text = nm;
+        // ffu59b: whose phone it is (split) + the picked robot in the header when the card is hidden (compact)
+        bool many = Game.I != null && Game.I.slots.Count > 1;
+        int pn = Game.I != null && user != null ? Game.I.slots.IndexOf(Game.I.SlotOfSeat(seat)) : -1;
+        string hd = (many && pn >= 0 ? "<color=" + Game.PlayerHex(pn) + ">P" + (pn + 1) + "</color>  " : "") + "ROBOT PHONE" + (!card.gameObject.activeSelf ? "  <color=#ffffff>·  " + nm + "</color>" : "");
+        if (head.text != hd) { head.supportRichText = true; head.text = hd; }
         string ow = (r.owner.Length > 0 ? r.owner + "'s robot" : "Ranch robot") + "  ·  " + r.height.ToString("0.0") + " m";
         if (ownerT.text != ow) ownerT.text = ow;
         float b = Mathf.Clamp01(r.battery);
