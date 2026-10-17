@@ -259,7 +259,8 @@
     .hud-exit {
       position: absolute;
       top: calc(10px + env(safe-area-inset-top));
-      left: 12px;
+      left: 50%;
+      transform: translateX(-50%); /* rally23: no longer covers the score card */
       z-index: 8;
       margin-top: 0;
       pointer-events: auto;
@@ -505,6 +506,7 @@
   </div>
   <script src="../shared/gamepad.js?v=gp1"></script>
   <script src="../shared/sfx.js?v=20261008-audio1"></script>
-  <script type="module" src="./standalone-rally22.js"></script>
+  <script src="../shared/reword-cta.js?v=cta1"></script>
+  <script type="module" src="./standalone-rally23.js?v=cta1sh2"></script>
 </body>
 </html>

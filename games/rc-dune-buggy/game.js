@@ -7,7 +7,7 @@
 import * as THREE from "three";
 import { createNet, fillQr } from "./net.js?v=20261007-dune2";
 
-const CACHE = "20261007-dune2";
+const CACHE = "20261016-dune4";
 const LAPS = 3;
 const N_CARS = 4;
 const COLORS = [0xe85d2a, 0x3b82f6, 0xf2c21b, 0x2fa84f];
@@ -204,6 +204,10 @@ function buildTerrain() {
     const sand = surfaceSand(x, z);
     tmp.copy(cHard).lerp(cSand, sand);
     if (sand > 0.7) tmp.lerp(cDune, 0.4);
+    // dune3: wind ripples + low-frequency tone variation for realistic sand
+    const rip = Math.sin(x * 1.9 + z * 0.7 + Math.sin(z * 0.35) * 2.2) * 0.5 + 0.5;
+    const tone = Math.sin(x * 0.13 + 1.1) * Math.cos(z * 0.11) * 0.5 + 0.5;
+    tmp.multiplyScalar(0.9 + rip * 0.07 * (0.4 + sand) + tone * 0.06);
     colors[i * 3] = tmp.r; colors[i * 3 + 1] = tmp.g; colors[i * 3 + 2] = tmp.b;
   }
   geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
@@ -242,9 +246,39 @@ function buildTerrain() {
   bar.position.set(p.x, y + 3.1, p.z);
   scene.add(bar);
 
-  // sky / fog
-  scene.background = new THREE.Color(0xd4a574);
-  scene.fog = new THREE.Fog(0xd4a574, 55, 110);
+  // dune3: desert sky dome (gradient + sun glow) instead of a flat tan backdrop
+  const skyMat = new THREE.ShaderMaterial({ side: THREE.BackSide, depthWrite: false, fog: false,
+    vertexShader: "varying vec3 vD; void main(){ vD = normalize(position); gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0);}",
+    fragmentShader: "varying vec3 vD; void main(){ float h=clamp(vD.y,0.0,1.0); vec3 c=mix(vec3(0.93,0.78,0.6), vec3(0.36,0.6,0.86), pow(h,0.55)); float s=max(dot(vD,normalize(vec3(0.5,0.6,0.35))),0.0); c+=vec3(1.0,0.85,0.6)*pow(s,24.0)*0.8; gl_FragColor=vec4(c,1.0);}" });
+  const sky = new THREE.Mesh(new THREE.SphereGeometry(150, 32, 16), skyMat);
+  sky.renderOrder = -1; scene.add(sky);
+  scene.background = new THREE.Color(0xedc79a);
+  scene.fog = new THREE.Fog(0xedc79a, 60, 140);
+  // dune3: saguaro cacti + dry shrubs off the racing line (instanced, cheap)
+  const cacMat = new THREE.MeshStandardMaterial({ color: 0x5c7a3a, roughness: 0.8 });
+  const shrubMat = new THREE.MeshStandardMaterial({ color: 0x8a7a4a, roughness: 1, flatShading: true });
+  let seed = 7; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const far = (x, z) => { let d = 1e9; for (const q of trackCenter) d = Math.min(d, Math.hypot(q.x - x, q.z - z)); return d; };
+  for (let k = 0, made = 0; k < 400 && made < 22; k++) {
+    const x = (rnd() - 0.5) * WORLD * 0.95, z = (rnd() - 0.5) * WORLD * 0.95;
+    if (far(x, z) < 9) continue;
+    made++;
+    const y = sampleHeight(x, z), hgt = 1.6 + rnd() * 1.6, cg = new THREE.Group();
+    const trunk = new THREE.Mesh(new THREE.CapsuleGeometry(0.28, hgt, 4, 8), cacMat); trunk.position.y = hgt / 2 + 0.2; trunk.castShadow = true; cg.add(trunk);
+    for (const sd of [-1, 1]) if (rnd() > 0.3) {
+      const ah = 0.5 + rnd() * 0.7, arm = new THREE.Mesh(new THREE.CapsuleGeometry(0.18, ah, 4, 8), cacMat);
+      arm.position.set(sd * 0.5, hgt * (0.45 + rnd() * 0.25) + ah / 2, 0); arm.castShadow = true;
+      const elbow = new THREE.Mesh(new THREE.CapsuleGeometry(0.18, 0.3, 4, 8), cacMat); elbow.rotation.z = Math.PI / 2; elbow.position.set(sd * 0.3, arm.position.y - ah / 2, 0);
+      cg.add(arm, elbow);
+    }
+    cg.position.set(x, y, z); cg.rotation.y = rnd() * 6; cg.scale.setScalar(1.7); scene.add(cg);
+  }
+  for (let k = 0, made = 0; k < 400 && made < 40; k++) {
+    const x = (rnd() - 0.5) * WORLD * 0.95, z = (rnd() - 0.5) * WORLD * 0.95;
+    if (far(x, z) < 5.5) continue; made++;
+    const m = new THREE.Mesh(new THREE.IcosahedronGeometry(0.35 + rnd() * 0.35, 0), shrubMat);
+    m.position.set(x, sampleHeight(x, z) + 0.2, z); m.scale.y = 0.6; m.castShadow = true; scene.add(m);
+  }
 }
 
 function placeRock(x, z, mat, s) {
@@ -280,13 +314,27 @@ function makeBuggy(colorHex) {
   roll.position.set(-0.15, 1.05, 0);
   g.add(roll);
 
-  const wheelGeo = new THREE.CylinderGeometry(0.38, 0.38, 0.28, 10);
+  // dune3: detail kit — driver helmet, spoiler wing, headlights, exhaust, bumper, knobby tyres + rims
+  const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.2, 14, 10), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3, metalness: 0.1 }));
+  helmet.position.set(-0.25, 0.98, 0); helmet.castShadow = true; g.add(helmet);
+  const visor = new THREE.Mesh(new THREE.SphereGeometry(0.205, 14, 10, -0.9, 1.8, 1.1, 0.7), new THREE.MeshStandardMaterial({ color: 0x111820, roughness: 0.1, metalness: 0.6 }));
+  visor.position.copy(helmet.position); g.add(visor);
+  const wing = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.05, 1.3), bodyMat); wing.position.set(-0.95, 1.08, 0); wing.castShadow = true; g.add(wing);
+  for (const sz of [-0.4, 0.4]) { const st = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.42, 0.05), dark); st.position.set(-0.9, 0.85, sz); g.add(st); }
+  const lampMat = new THREE.MeshStandardMaterial({ color: 0xfff6d0, emissive: 0xfff0b0, emissiveIntensity: 1.6 });
+  for (const sz of [-0.32, 0.32]) { const l = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.06, 12), lampMat); l.rotation.z = Math.PI / 2; l.position.set(0.93, 0.7, sz); g.add(l); }
+  const bump = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.2, 8), chrome); bump.rotation.x = Math.PI / 2; bump.position.set(1.0, 0.42, 0); g.add(bump);
+  const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 0.4, 8), chrome); pipe.rotation.z = Math.PI / 2 - 0.3; pipe.position.set(-1.05, 0.6, 0.3); g.add(pipe);
+  const wheelGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.3, 14);
+  { const p = wheelGeo.attributes.position; for (let i = 0; i < p.count; i++) { const ang = Math.atan2(p.getZ(i), p.getX(i)), r = Math.hypot(p.getX(i), p.getZ(i)); if (r > 0.39) { const k = (Math.round(ang / (Math.PI / 7)) % 2 ? 1 : 0.92); p.setX(i, p.getX(i) * k); p.setZ(i, p.getZ(i) * k); } } wheelGeo.computeVertexNormals(); }
+  const rimGeo = new THREE.CylinderGeometry(0.2, 0.2, 0.32, 10);
   const wheels = [];
   [[0.65, 0.55], [0.65, -0.55], [-0.7, 0.55], [-0.7, -0.55]].forEach(([x, z], i) => {
     const w = new THREE.Mesh(wheelGeo, dark);
     w.rotation.x = Math.PI / 2; // axle across the car
     w.position.set(x, 0.38, z);
     w.castShadow = true;
+    w.add(new THREE.Mesh(rimGeo, chrome));
     g.add(w);
     wheels.push(w);
   });
@@ -398,7 +446,7 @@ function makeDust() {
   for (let i = 0; i < N; i++) { pos[i * 3 + 1] = -99; life[i] = 0; }
   geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
   const mat = new THREE.PointsMaterial({
-    color: 0xc9b08a, size: 0.45, transparent: true, opacity: 0.55,
+    color: 0xd9c09a, size: 0.9, transparent: true, opacity: 0.5, map: (() => { const cv = document.createElement("canvas"); cv.width = cv.height = 32; const g = cv.getContext("2d"), r = g.createRadialGradient(16, 16, 0, 16, 16, 16); r.addColorStop(0, "#fff"); r.addColorStop(1, "rgba(255,255,255,0)"); g.fillStyle = r; g.fillRect(0, 0, 32, 32); return new THREE.CanvasTexture(cv); })(),
     depthWrite: false, sizeAttenuation: true,
   });
   const pts = new THREE.Points(geo, mat);
@@ -940,6 +988,8 @@ async function tryEnterXR() {
       optionalFeatures: ["local-floor", "bounded-floor"],
     });
     renderer.xr.enabled = true;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.2;
     await renderer.xr.setSession(session);
     xrSession = session;
     // overhead spectator in XR: lift reference
@@ -1051,7 +1101,8 @@ function init() {
   const sun = new THREE.DirectionalLight(0xfff0d8, 1.15);
   sun.position.set(30, 50, 20);
   sun.castShadow = true;
-  sun.shadow.mapSize.set(1024, 1024);
+  sun.shadow.mapSize.set(innerWidth < 700 ? 1024 : 2048, innerWidth < 700 ? 1024 : 2048);
+  sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.03;
   sun.shadow.camera.left = -40;
   sun.shadow.camera.right = 40;
   sun.shadow.camera.top = 40;

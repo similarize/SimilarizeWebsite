@@ -110,7 +110,9 @@
       .x-slot b { font-size: 20px; font-weight: 600; }
       #l-msg { min-height: 1.4em; margin: 0 0 8px; }
     </style>
-  </head>
+  <script src="/games/shared/reword-cta.js?v=cta1"></script>
+<script src="/games/shared/arcade-chrome.js?v=ac3" data-pos="top:205px;right:10px" defer></script>
+</head>
   <body>
     <div class="page" id="top">
       <div class="x-game" id="game">
@@ -218,6 +220,7 @@
           return true;
         }
         window.xBootNow = boot;
+        if (new URLSearchParams(location.search).get("demo") === "race") setTimeout(function () { boot(); var p = document.getElementById("b-play"); if (p) p.click(); }, 1500);
         var play = document.getElementById("b-play");
         play.addEventListener("click", function (e) { if (boot() && play.onclick) { e.stopImmediatePropagation(); play.onclick(e); } });
         addEventListener("keydown", function (e) { if (!window.xBooted && e.code === "Enter" && !(document.activeElement && document.activeElement.tagName === "BUTTON")) { boot(); if (play.onclick) play.onclick(e); } });
@@ -391,6 +394,21 @@ if (TT.grass != null) {
 const water = new THREE.Mesh(new THREE.PlaneGeometry(4000, 4000), new THREE.MeshPhongMaterial({ color: TT.water, specular: 0x88bbcc, shininess: 90 }));
 const waterHSL = water.material.color.getHSL({});
 water.rotation.x = -Math.PI / 2; water.position.y = -0.35; water.receiveShadow = true; scene.add(water);
+// fhr5: living water — sun glints + caustic shimmer + gentle colour swell (shader patch, no textures)
+const waterU = { uT: { value: 0 } };
+if (!TT.lava) water.material.onBeforeCompile = (sh) => {
+  sh.uniforms.uT = waterU.uT;
+  sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying vec3 vWP;").replace("#include <worldpos_vertex>", "#include <worldpos_vertex>\nvWP = (modelMatrix * vec4(transformed,1.0)).xyz;");
+  sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nuniform float uT; varying vec3 vWP;").replace("#include <dithering_fragment>",
+    "float w1 = sin(vWP.x*0.55 + uT*1.3) * cos(vWP.z*0.47 - uT*1.1);\nfloat w2 = sin((vWP.x+vWP.z)*1.3 - uT*2.1);\nfloat c = pow(abs(sin(vWP.x*0.9 + w1*1.6 + uT*0.7) * sin(vWP.z*0.9 - w2*1.2 - uT*0.6)), 6.0);\ngl_FragColor.rgb += vec3(0.85,0.95,1.0) * (c*0.22 + max(w1*w2,0.0)*0.07);\n#include <dithering_fragment>");
+};
+// fhr5: expanding splash rings
+const ringGeo = new THREE.RingGeometry(0.55, 0.75, 28); ringGeo.rotateX(-Math.PI / 2);
+const rings = [];
+for (let i = 0; i < 16; i++) { const m = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false })); m.visible = false; scene.add(m); rings.push({ m, life: 0 }); }
+let ringI = 0;
+function splashRing(x, z, big) { for (let k = 0; k < (big ? 2 : 1); k++) { const r = rings[ringI++ % rings.length]; r.m.position.set(x, 0.12 + groundXZ(x, z) * 0, z); r.life = 1 + k * 0.35; r.big = big ? 1.6 : 1; r.m.visible = true; } }
+function updRings(dt) { waterU.uT.value += dt; for (const r of rings) if (r.life > 0) { r.life -= dt * 1.4; const k = Math.max(0, Math.min(1, 1 - r.life)); r.m.scale.setScalar((0.6 + k * 3.2) * r.big); r.m.material.opacity = Math.max(0, Math.min(1, r.life)) * 0.75; if (r.life <= 0) r.m.visible = false; } }
 // lagoons beside bridge and shallows (lava under the bridge on the volcano)
 const lagMat = new THREE.MeshPhongMaterial({ color: TT.lagoon, specular: 0x88bbcc, shininess: 90, emissive: TT.lagEm || 0, emissiveIntensity: TT.lava ? 0.9 : 0 });
 const lagGeo = new THREE.CircleGeometry(13, 18);
@@ -492,6 +510,7 @@ function puff(x, y, z, color, n, sp, up) {
   }
 }
 function updParts(dt) {
+  updRings(dt);
   for (const p of parts) if (p.life > 0) {
     p.life -= dt * 1.8; p.vy -= 6 * dt;
     p.m.position.x += p.vx * dt; p.m.position.y = Math.max(p.fl || 0.05, p.m.position.y + p.vy * dt); p.m.position.z += p.vz * dt;
@@ -895,7 +914,7 @@ function updFrog(f, dt) {
         const pad = lilies.some((l) => (l.x - f.x) ** 2 + (l.z - f.z) ** 2 < 2.4);
         const mine = !!humanOf(f);
         if (pad) { f.bounce = true; puff(f.x, 0.3, f.z, 0x5fd06a, 5, 2, 3); if (mine) SFX.bloop(); }
-        else { if (!isFrog) { f.m = Math.min(f.m, 0.5); f.groundT += 0.08; } puff(f.x, 0.3, f.z, 0xe8fbff, isFrog ? 4 : 9, 2.5, 5); if (mine) SFX.splash(); }
+        else { if (!isFrog) { f.m = Math.min(f.m, 0.5); f.groundT += 0.08; } puff(f.x, 0.3, f.z, 0xe8fbff, isFrog ? 4 : 9, 2.5, 5); splashRing(f.x, f.z, !isFrog); if (mine) SFX.splash(); }
       } else puff(f.x, 0.2, f.z, seg === "bridge" ? 0xc9a27a : 0xf3dfb0, f.kind === "cat" ? 1 : 6, 2.2, 2);
     }
   }
@@ -973,9 +992,15 @@ function animFrog(f, dt) {
 function aiThink(f, dt, leader) {
   const inp = f.input, la = 9 + Math.floor(Math.abs(f.v) * 0.25), j = (f.idx + la) % N;
   f.aiLineT -= dt; if (f.aiLineT < 0) { f.aiLineT = rnd(1.5, 4); f.aiLine = rnd(-HW + 2.5, HW - 2.5); }
-  const tx = P[j].x + R[j].x * f.aiLine, tz = P[j].z + R[j].z * f.aiLine;
+  // fhr6 smarter AI: hug the inside of the coming bend, step out to pass the frog in front, ease off in tight turns
+  const j2 = (f.idx + 34) % N, bend = wrapA(TH[j2] - TH[f.idx]);
+  const inside = Math.sign((P[j2].x - P[f.idx].x) * R[f.idx].x + (P[j2].z - P[f.idx].z) * R[f.idx].z);
+  let line = Math.abs(bend) > 0.22 ? inside * (HW - 2.8) * Math.min(1, Math.abs(bend) * 1.6) : f.aiLine;
+  for (const o of frogs) { if (o === f) continue; const dp = o.prog - f.prog; if (dp > 0 && dp < 6) { const lat = (o.x - P[o.idx].x) * R[o.idx].x + (o.z - P[o.idx].z) * R[o.idx].z; if (Math.abs(lat - line) < 1.8) line = lat + (lat > 0 ? -2.6 : 2.6); } }
+  f.aiLs = (f.aiLs === undefined ? line : f.aiLs + (line - f.aiLs) * Math.min(1, dt * 2.2));
+  const tx = P[j].x + R[j].x * f.aiLs, tz = P[j].z + R[j].z * f.aiLs;
   const diff = wrapA(Math.atan2(tx - f.x, tz - f.z) - f.h);
-  inp.steer = clamp(-diff * 2.6, -1, 1); inp.thr = 1; inp.brk = 0;
+  inp.steer = clamp(-diff * 2.6, -1, 1); inp.thr = Math.abs(diff) > 0.6 ? 0.75 : 1; inp.brk = 0;
   if (f.ai) f.band = 1 + clamp((leader.prog - f.prog) / 180, -1, 1) * 0.15;
   if (f.jcd <= 0 && !f.air && Math.abs(diff) < 0.1 && Math.abs(wrapA(TH[j] - TH[f.idx])) < 0.08 && Math.random() < dt * 0.3) inp.jump = true;
   if (f.item) {
@@ -1206,6 +1231,14 @@ function updHud(dt) {
 }
 function showFinish() {
   const order = racePlaces(), me = players[0].frog, multi = players.length > 1;
+  try { if (window.SimilarizeCTA) SimilarizeCTA.attach($("f-table").parentElement); } catch (_) {}
+  // fhr6 co-op: with 2+ players, everyone also races as one team — points 10/8/6/4/2/1 summed
+  const PTS = [10, 8, 6, 4, 2, 1];
+  if (multi) setTimeout(() => {
+    const team = players.reduce((n, p) => n + (PTS[p.frog.place - 1] || 0), 0), cpu = order.filter((o) => !humanOf(o)).reduce((n, o) => n + (PTS[o.place - 1] || 0), 0);
+    let el = $("f-team"); if (!el) { el = document.createElement("p"); el.id = "f-team"; el.className = "x-shadow"; el.style.cssText = "font:700 20px system-ui,sans-serif;margin:10px 0 0;text-align:center"; $("f-table").after(el); }
+    el.textContent = team > cpu ? `Team Froggies ${team} – CPU ${cpu} · Team win! 🎉` : `Team Froggies ${team} – CPU ${cpu} · So close, again?`;
+  }, 0);
   const best = players.slice().sort((a, b) => a.frog.place - b.frog.place)[0], bp = best.frog.place;
   $("f-title").textContent = multi ? (bp === 1 ? `${best.tag} wins! 🏆` : `${best.tag} best, ${bp}${ORD[bp - 1]}`) : me.place === 1 ? "You win! 🏆" : `You finished ${me.place}${ORD[me.place - 1]}`;
   $("f-table").innerHTML = order.map((o) => { const h = humanOf(o); return `<tr class="${h ? "is-you" : ""}"><td>${o.place}${ORD[o.place - 1]}</td><td>${h && multi ? `<i class="x-tag" style="background:${hexC(o.id)}">${h.tag}</i>` : ""}<span class="x-sw" style="background:${hexC(o.id)}"></span>${nm(o)}</td><td>${o.finished ? fmt(o.finishTime) : "racing…"}</td></tr>`; }).join("");
@@ -1245,6 +1278,7 @@ function resize() {
 addEventListener("resize", resize); resize();
 resetRace(); state = "menu"; $("s-start").classList.add("is-on"); $("hud").style.display = "none";
 booted = true;
+if (new URLSearchParams(location.search).get("demo") === "race") setTimeout(() => { try { $("b-play").click(); } catch (e) { console.warn(e); } }, 300);
 let last = performance.now(), t0 = 0;
 function loop(now) {
   requestAnimationFrame(loop);

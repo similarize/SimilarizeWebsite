@@ -104,7 +104,8 @@
         .x-panel { max-width: 520px; font-size: var(--size-heading); } .x-panel .btn { min-height: 64px; font-size: var(--size-heading); }
       }
     </style>
-  </head>
+  <script src="/games/shared/arcade-chrome.js?v=ac3" data-pos="bottom:8px;left:8px" defer></script>
+</head>
   <body>
     <canvas id="c"></canvas>
     <div class="x-hud" id="hud"><span id="hLap">Lap 1/3</span><span id="hPos">Pos 4/4</span><span id="hTime">0:00.0</span></div>
@@ -259,8 +260,20 @@
           this.stuck = sp < 25 ? (this.stuck || 0) + dt : Math.max(0, (this.stuck || 0) - dt);
           if (this.stuck > 1.2) { this.rev = 0.7; this.stuck = 0; }
           if (this.rev > 0) { this.rev -= dt; this.input = { steer: -Math.sign(diff), gas: 0, brake: 1 }; return; }
-          const brake = sp > 230 && Math.abs(fdiff) > 0.8;
-          this.input = { steer: clamp(diff * 2.2, -1, 1), gas: brake ? 0 : 1, brake: brake ? 1 : 0 };
+          // dirt3 smarter AI: corner speed from upcoming curvature, overtaking lane shift
+          let curv = 0; for (let k = 4; k <= 14; k += 2) { const a0 = sAt(this.wi + k - 2), a1 = sAt(this.wi + k), a2 = sAt(this.wi + k + 2);
+            curv = Math.max(curv, Math.abs(angNorm(Math.atan2(a2[1] - a1[1], a2[0] - a1[0]) - Math.atan2(a1[1] - a0[1], a1[0] - a0[0])))); }
+          let vmax = 420 - curv * 520;
+          if (typeof cars !== "undefined") {
+            let ahead = null, ad = 1e9;
+            for (const o of cars) { if (!o || o === this) continue; const dx = o.x - this.x, dy = o.y - this.y, fw = dx * Math.cos(this.a) + dy * Math.sin(this.a), d = Math.hypot(dx, dy);
+              if (fw > 0 && d < 160 && d < ad) { ad = d; ahead = o; } }
+            if (ahead) { const side = -(ahead.x - this.x) * Math.sin(this.a) + (ahead.y - this.y) * Math.cos(this.a); this.passT = (side > 0 ? -1 : 1) * 45; }
+            else this.passT = 0;
+            this.offset += ((this.baseOff === undefined ? (this.baseOff = this.offset) : this.baseOff) + (this.passT || 0) - this.offset) * Math.min(1, dt * 2);
+          }
+          const brake = (sp > Math.max(150, vmax) && curv > 0.25) || (sp > 230 && Math.abs(fdiff) > 0.8);
+          this.input = { steer: clamp(diff * 2.2, -1, 1), gas: brake ? 0 : sp > vmax ? 0.6 : 1, brake: brake ? 1 : 0 };
         }
         update(dt) {
           if (this.spin > -1) this.spin -= dt;
@@ -968,8 +981,8 @@
       requestAnimationFrame(frame);
     </script>
     <script src="hark.js"></script>
-    <script src="../shared/sfx.js?v=20261008-audio1"></script>
-    <script src="audio.js?v=20261008-audio1"></script>
+    <script src="../shared/sfx.js?v=20261016-dirt3"></script>
+    <script src="audio.js?v=20261016-dirt3"></script>
     <script async src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script>
       // ---------- online play (PeerJS): host simulates, clients send input and render snapshots ----------
@@ -1464,6 +1477,41 @@
           if (cdEl.textContent !== txt) { cdEl.textContent = txt; cdEl.classList.toggle("go", n <= 0); }
         }
 
+        // dirt2: tyre ruts that build up where cars slide, fading slowly (the track "remembers" the race)
+        const SKN = 900, skM = new T.InstancedMesh(new T.PlaneGeometry(1, 1).rotateX(-Math.PI / 2),
+          new T.MeshBasicMaterial({ color: 0x4a3018, transparent: true, opacity: 0.42, depthWrite: false }), SKN);
+        skM.instanceMatrix.setUsage(T.DynamicDrawUsage); skM.renderOrder = 1; skM.frustumCulled = false;
+        const skO = new T.Object3D(), skLife = new Float32Array(SKN); let skI = 0;
+        skO.scale.set(0, 0, 0); skO.updateMatrix(); for (let i = 0; i < SKN; i++) skM.setMatrixAt(i, skO.matrix);
+        scene.add(skM);
+        const skLast = [];
+        // brake/tail glow per car model
+        const tailMat = new T.MeshBasicMaterial({ color: 0xff2a1a });
+        function dirtSkids(dt) {
+          cars.forEach((c, i) => {
+            if (!c) return;
+            const g = models[i];
+            if (g && !g.userData.tail) { const tl = new T.Mesh(new T.BoxGeometry(2, 3, 14), tailMat.clone()); tl.position.set(-40, 10, 0); g.add(tl); g.userData.tail = tl; }
+            const fwd = c.vx * Math.cos(c.a) + c.vy * Math.sin(c.a), lat = -c.vx * Math.sin(c.a) + c.vy * Math.cos(c.a);
+            const braking = c.input && (c.input.brake || c.input.throttle < 0);
+            if (g && g.userData.tail) { const m = g.userData.tail.material; m.color.setHex(braking ? 0xff3020 : 0x701008); g.userData.tail.scale.setScalar(braking ? 1.4 : 1); }
+            const slide = Math.abs(lat) > 55 || (braking && Math.abs(fwd) > 120);
+            const L = skLast[i];
+            if (slide && !(c.air > 0) && L) {
+              const dx = c.x - L[0], dz = c.y - L[1], d = Math.hypot(dx, dz);
+              if (d > 6) {
+                for (const sd of [-1, 1]) {
+                  const ox = -Math.sin(c.a) * 14 * sd, oz = Math.cos(c.a) * 14 * sd;
+                  skO.position.set((c.x + L[0]) / 2 + ox, 2.6, (c.y + L[1]) / 2 + oz);
+                  skO.rotation.set(0, -Math.atan2(dz, dx), 0); skO.scale.set(d, 1, 6); skO.updateMatrix();
+                  skM.setMatrixAt(skI, skO.matrix); skLife[skI] = 1; skI = (skI + 1) % SKN;
+                }
+                skLast[i] = [c.x, c.y];
+              }
+            } else skLast[i] = [c.x, c.y];
+          });
+          skM.instanceMatrix.needsUpdate = true;
+        }
         let lastT = 0;
         renderAll = function () {
           const t = performance.now() / 1000, dt = Math.min(0.1, Math.max(0.001, t - (lastT || t))); lastT = t;
@@ -1484,6 +1532,7 @@
             mk.visible = u.ring.visible = !!c.owner && state !== "title"; mk.position.set(c.x, h + 120 + Math.sin(t * 4 + i) * 5, c.y); mk.rotation.y = t * 2;
             u.ring.position.set(c.x, 2.5, c.y); u.ring.scale.setScalar(1 + Math.sin(t * 5 + i) * 0.06);
           });
+          dirtSkids(dt);
           updateCam(); drawMini(); drawEdges();
           const n = Math.min(dust.length, PMAX);
           for (let i = 0; i < n; i++) {
@@ -1494,6 +1543,8 @@
           R.render(scene, cam); drawHud();
         };
       })();
+      // dirt2: ?demo=race starts an all-AI race (for arcade previews)
+      if (new URLSearchParams(location.search).get("demo") === "race") setTimeout(() => { try { startRace(); } catch (e) { console.warn(e); } }, 400);
     </script>
   </body>
 </html>

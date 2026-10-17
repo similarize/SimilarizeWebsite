@@ -5,7 +5,7 @@
   "use strict";
 
   var C = global.FroggiesCanon;
-  var CACHE = "20261013-mtruck1";
+  var CACHE = "20261016-ffup1";
   var CDN = {
     three: "https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js",
   };

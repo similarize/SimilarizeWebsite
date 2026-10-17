@@ -8272,6 +8272,10 @@ state.zLift = 0;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.setSize(hostW, hostH, false);
     renderer.shadowMap.enabled = true;
+    /* arcade-upgrade ffup1: soft shadows (look only; no gameplay/canon change) */
+    var ffLiteUA = /Tesla|QtCarBrowser|Mobi|Android|iPhone|iPad|OculusBrowser|Quest/i.test(navigator.userAgent || "") ||
+      (navigator.deviceMemory && navigator.deviceMemory <= 4) || ("ontouchstart" in window && (window.innerWidth || 800) <= 900);
+    renderer.shadowMap.type = ffLiteUA ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap; /* soft on desktop only */
     renderer.setClearColor(0x7eb8d4, 1);
     host.appendChild(renderer.domElement);
     renderer.domElement.style.display = "block";
