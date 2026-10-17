@@ -17,7 +17,7 @@ public class UnderwaterWorld : MonoBehaviour
     Transform root;
     bool built;
     // ffu60: the sea (reef / wreck / cave / sand / light shafts) only renders for a camera near or under the pond, the
-    // fish / turtles / rays / jellies / whale / kelp only for one under (or right at) the water - per camera, so in
+    // fish / turtles / rays / jellies / whale / kelp with the same gate since ffu60d (they show through the water from shore) - per camera, so in
     // split-screen a diver sees it while the player on the porch doesn't pay for it. Their animation pauses meanwhile.
     Renderer[] gateSea, gateLife; bool seaShown = true, lifeShown = true; int lifeFrame = -100;
     static readonly HashSet<int> owned = new HashSet<int>();
@@ -238,7 +238,7 @@ public class UnderwaterWorld : MonoBehaviour
             float q = Layout.PondQ(p.x, p.z), h = p.y - Layout.WaterY;
             bool under = h < 0.35f && q < 1.12f;
             sea = under || (q < 1.5f && h < 24f);
-            life = under || (q < 1.2f && h < 9f);
+            life = sea;   // ffu60d: the jellies / fish show through the water from the shore too (60a hid them above 9 m)
         }
         if (life) u.lifeFrame = Time.frameCount;
         if (sea != u.seaShown) { u.seaShown = sea; foreach (var r in u.gateSea) if (r != null) r.forceRenderingOff = !sea; }
