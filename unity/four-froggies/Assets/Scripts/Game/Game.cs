@@ -16,6 +16,7 @@ public class Slot
     public WorldId world = WorldId.Ranch;
     public Robot remote;      // ffu12: the robot this slot's froggy drives (camera follows it)
     public string name = "";  // ffu13: the player's own name (A-Z, max 4); "" = the froggy's name
+    public bool ltHold;       // ffu59: LT started the game from the lobby and is still held - ignored in play until released
 }
 
 // Lobby (press A to claim a frog), 1-4 player split-screen or shared camera, input routing, mid-game joins.
@@ -157,7 +158,8 @@ public partial class Game : MonoBehaviour
             if (fc != null) { var parts = fc.Split(','); for (int i = 0; i < 4 && i < parts.Length; i++) { int c; if (int.TryParse(parts[i], out c) && Roster.Valid(c)) SetSeatChar(i, c, false); } demoKeepChars = true; }
         }
         demoT += Time.unscaledDeltaTime;
-        if (demoShot == "seattest") { SeatTestLobby(); return false; }   // ffu39: pad select + touch tap on PLAY (GameSeats.cs)
+        if (demoShot == "seattest") { SeatTestLobby(); return false; }
+        if (demoShot == "lobby59") { Lobby59TestLobby(); return false; }   // ffu59: A joins only, LT starts (GameFfu59.cs)   // ffu39: pad select + touch tap on PLAY (GameSeats.cs)
         if (demoShot == "lobby")
         {
             // ffu14 lobby showcase: P1 joins and steps through the roster (pop + turntable), never starts
@@ -839,13 +841,18 @@ public partial class Game : MonoBehaviour
         overview.rect = new Rect(0, 0, 1, 1);
         float now = Time.unscaledTime;
 
-        // keyboard
+        // keyboard (ffu59: Space = join, Enter = START. The join key never starts; Enter / START are the only keyboard starts,
+        // and seat the keyboard player first only when nobody is seated - SeatGate still never adds a 2nd touch / keyboard seat)
         Slot ks = FindSlot(InputKind.Keyboard);
+        if (!Kb.typing && Kb.SpaceDown())
+        {
+            if (ks == null && slots.Count == 0) { Join(InputKind.Keyboard, null); Lobby59Log("Space -> keyboard joins as P1 (no start)"); }
+            else Lobby59Again(ks != null ? ks : slots[0], "Space");
+        }
         if (Kb.EnterDown())
         {
-            if (ks == null && slots.Count > 0 && now - slots[0].joinTime > 0.3f) { StartPlay(); return; }   // ffu39: Enter = PLAY for the seated pad player
-            if (ks == null) Join(InputKind.Keyboard, null);
-            else if (now - ks.joinTime > 0.3f) { StartPlay(); return; }
+            if (slots.Count == 0) Join(InputKind.Keyboard, null);
+            if (slots.Count > 0) { Lobby59Log("Enter -> START (" + slots.Count + " seated)"); StartPlay(); return; }
         }
         if (Kb.EscDown()) Leave(ks);
         if (Kb.VDown()) ToggleView();
@@ -873,10 +880,17 @@ public partial class Game : MonoBehaviour
                 if (pad.dpad.down.wasPressedThisFrame) Cycle(ps, 5);
             }
             if (pad.selectButton.wasPressedThisFrame && !g) ToggleView();
+            // ffu59 (Bill, Xbox pad: "A joins, A again started the game"): LT = START from any seated controller; A / Start
+            // only ever join (through PadGuard below) - pressed again by a seated pad they do nothing but a nudge
+            if (pad.leftTrigger.wasPressedThisFrame)
+            {
+                if (ps != null && !g && now - ps.joinTime > 0.25f) { Lobby59Log("LT on P" + (slots.IndexOf(ps) + 1) + " " + PadGuard.Describe(pad) + " -> START (" + slots.Count + " seated)"); StartPlay(); return; }
+                if (ps == null && !g) Lobby59Log("LT on an unseated controller " + PadGuard.Describe(pad) + " ignored - press A to join first");
+            }
             if (!pad.buttonSouth.wasPressedThisFrame && !pad.startButton.wasPressedThisFrame) continue;
             if (IsGhostPress(pad) && ps == null) continue;
             if (ps == null) continue;   // ffu35: joins go through PadGuard (order-independent mirror check, PadJoins below)
-            if (!g && now - ps.joinTime > 0.4f) { StartPlay(); return; }
+            if (!g) Lobby59Again(ps, pad.buttonSouth.wasPressedThisFrame ? "A" : "Start");   // never starts
         }
         PadJoins();
 
@@ -1128,6 +1142,7 @@ public partial class Game : MonoBehaviour
         hudCanvas.enabled = true;
         autoStartT = -1f;
         if (slots.Count < 2) shared = false;
+        Lobby59LatchLT();   // ffu59: an LT still held from the lobby is not an aim / brake in the first frames of play
         Sfx.Play(Sfx.Click, 0.8f);
         Sfx.Music("ranch");
         for (int i = 0; i < frogs.Count; i++)
@@ -1215,6 +1230,7 @@ public partial class Game : MonoBehaviour
                     if (s.pad == null || !s.pad.added) { i = new PIn(); break; }
                     if (s.pad.buttonSouth.wasPressedThisFrame || s.pad.startButton.wasPressedThisFrame) IsGhostPress(s.pad);
                     i = Pads.Read(s.pad, dt);
+                    if (s.ltHold) i = LtLatch(s, i);   // ffu59
                     if (help && s.pad.buttonEast.wasPressedThisFrame) { help = false; Leave(s); continue; }
                     if (RobotFeed.I != null && !help) i = RobotFeed.I.PadFilter(s, frogs[s.frog], i);   // ffu35: live feed on the pad (View / RB / B)
                     break;

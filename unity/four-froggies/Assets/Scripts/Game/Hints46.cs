@@ -211,7 +211,7 @@ public partial class Game
         bool narrow = NarrowHud, keys = tipsKind == InputKind.Keyboard, pad = tipsKind == InputKind.Gamepad;
         string sep = "<color=#7f8a96>   ·   </color>";
         string body;
-        if (pad) body = Cap("L-stick", tipsKind) + " move" + sep + Cap("R-stick", tipsKind) + " look" + sep + Cap("A", tipsKind) + " hop" + (narrow ? "\n" : sep) + Cap("A", tipsKind) + " get in / on" + sep + Cap("RT / LT", tipsKind) + " gas / brake\n" + Cap("LB", tipsKind) + " robot phone" + sep + Cap("Start", tipsKind) + " help + every control";
+        if (pad) body = Cap("L-stick", tipsKind) + " move" + sep + Cap("R-stick", tipsKind) + " look" + sep + Cap("A", tipsKind) + " hop" + (narrow ? "\n" : sep) + Cap("A", tipsKind) + " get in / on" + sep + Cap("RT / LT", tipsKind) + " gas / brake\n" + Cap("LB", tipsKind) + " robot phone" + sep + Cap("Start", tipsKind) + " help + every control" + (slots.Count < 4 ? sep + Cap("A", tipsKind) + " on another pad: join" : "");
         else if (keys) body = Cap("W A S D", tipsKind) + " move" + sep + Cap("Mouse", tipsKind) + " look (click to lock)" + (narrow ? "\n" : sep) + Cap("Space", tipsKind) + " hop" + sep + Cap("E", tipsKind) + " get in / on\n" + Cap("P", tipsKind) + " robot phone" + sep + Cap("H", tipsKind) + " help + every control";
         else body = Cap("Left stick", tipsKind) + " move" + sep + Cap("drag", tipsKind) + " look" + (narrow ? "\n" : sep) + Cap("A", tipsKind) + " hop / get in" + sep + Cap("PHONE", tipsKind) + " robots\n" + Cap("MENU", tipsKind) + " (top) help + every control";
         if (tipsBody.text != body) tipsBody.text = body;
@@ -230,6 +230,52 @@ public partial class Game
         bool touchPortrait = touch != null && touch.active && cs.y > cs.x;
         PlaceInSafe(tipsCard, new Vector2(0f, touchPortrait ? -200f : -64f));
         HintInfo = "tips " + tipsKind + " card " + w.ToString("0") + "x" + tipsCard.sizeDelta.y.ToString("0") + " at " + tipsCard.anchoredPosition.ToString("0") + " canvas " + cs.ToString("0");
+    }
+
+    // ---------------- ffu59 lobby lines, in the device's own keys / glyphs ----------------
+    // Bill (Xbox pad): A only joins (each controller pressing A becomes P1..P4), LT starts the game from any joined
+    // controller; keyboard Space joins / Enter starts; touch / mouse: tap a character to join, START starts.
+    InputKind LobbyDevice()
+    {
+        if (HintForce >= 0) return (InputKind)HintForce;
+        foreach (var gp in UnityEngine.InputSystem.Gamepad.all) if (gp != null && gp.added && !PadGuard.IsAlias(gp)) return InputKind.Gamepad;
+        foreach (var s in slots) if (s.kind == InputKind.Gamepad) return InputKind.Gamepad;
+        return TouchOnly || Kb.Mobile ? InputKind.Touch : InputKind.Keyboard;
+    }
+    static string LobbyStartKey(InputKind k)
+    {
+        return k == InputKind.Gamepad ? Cap("LT", k) : k == InputKind.Keyboard ? Cap("Enter", k) + " / " + Cap("START", k) : Cap("START", k);
+    }
+    string SeatRange(int from) { return from >= 4 ? "" : from == 3 ? "P4" : "P" + (from + 1) + "-P4"; }
+    string LobbyJoinLine(InputKind k)
+    {
+        string sep = "<color=#7f8a96>   ·   </color>";
+        int n = slots.Count;
+        if (k == InputKind.Gamepad)
+        {
+            if (n == 0) return Cap("A", k) + ": join as P1-P4" + sep + Cap("LT", k) + ": start game";
+            return n + " player" + (n > 1 ? "s" : "") + " in" + (n < 4 ? sep + Cap("A", k) + " on another controller: join as " + SeatRange(n) : "") + sep + Cap("LT", k) + ": start game";
+        }
+        if (k == InputKind.Keyboard)
+        {
+            if (n == 0) return Cap("Space", k) + ": join" + sep + Cap("Enter", k) + " / " + Cap("START", k) + ": start game" + sep + "or click a character";
+            return n + " player" + (n > 1 ? "s" : "") + " in" + sep + Cap("Enter", k) + " / " + Cap("START", k) + ": start game" + sep + "controllers: " + Cap("A", InputKind.Gamepad) + " joins";
+        }
+        return n == 0 ? "Tap a character to join" + sep + Cap("START", k) + ": start game" : "Tap " + Cap("START", k) + " to start the game";
+    }
+    string LobbyStatusLine()
+    {
+        InputKind k = LobbyDevice();
+        if (lobbyAgainSeat >= 0 && Time.unscaledTime - lobbyAgainT < 2.5f && lobbyAgainSeat < slots.Count)
+            return "<color=" + PHex(lobbyAgainSeat) + ">P" + (lobbyAgainSeat + 1) + "</color> is already in" + "<color=#7f8a96>   ·   </color>" + LobbyStartKey(lobbyAgainKind) + ": start game";
+        return LobbyJoinLine(k);
+    }
+    string LobbyHelpLine()
+    {
+        string pad = "Gamepad: " + Cap("A", InputKind.Gamepad) + " join as P1-P4 · " + Cap("LT", InputKind.Gamepad) + " start game · D-pad pick · " + Cap("B", InputKind.Gamepad) + " leave · LB story";
+        string keys = "Keyboard: Space join · Enter start · arrows pick · S story · Esc leave";
+        string touchL = "Mouse/touch: click a character · START";
+        return pad + "     " + keys + "     " + touchL;
     }
 
     // help screen SETTINGS: HINTS On / Off (N / pad X / click / tap on the row)

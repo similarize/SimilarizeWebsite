@@ -252,6 +252,10 @@ public partial class Game
         if (pad) pc.R("LB (on foot)", "robot phone: chores, drive, missions, call, wheels, play - in every world").R(G("Y") + " (phone)", "robot video feed").R("View", "shared / split screen").R("Start", "this menu").R(G("B") + " here", "leave your seat");
         else if (keys) pc.R("P", "robot phone: chores, drive, missions, call, wheels, play - in every world").R("O  ·  I", "robot video feed  ·  feed camera").R("V", "shared / split screen").R("H", "this menu").R("M", "sound on / low / off").R("Esc here", "leave your seat");
         else pc.R("PHONE", "robot phone: chores, drive, missions, call, wheels, play - in every world").R("SND", "sound on / low / off").R("MENU", "this menu");
+        // ffu59: who joins / who starts (lobby + mid-game)
+        if (pad) pc.R(G("A") + " (lobby / new pad)", "join as P1-P4: each controller pressing " + G("A") + " is the next player  ·  " + G("A") + " again does nothing").R("LT (lobby)", "start the game, from any joined controller");
+        else if (keys) pc.R("Space  ·  Enter (lobby)", "join  ·  start the game (START does too); controllers join with A, start with LT");
+        else pc.R("START (lobby)", "start the game; tap a character to join");
         pc.R("Online", "lobby: HOST shows a code, friends JOIN with it");
         L.Add(pc);
         return L;

@@ -122,7 +122,7 @@ public partial class Game
         }
 
         // ffu15: modern pill buttons (gradient, glow, shadow, icon, key badges, hover / press / focus) - see ModernButton
-        playB = new ModernButton(r, "PLAY", 0, new Color(0.18f, 0.72f, 0.32f, 1f));
+        playB = new ModernButton(r, "START", 0, new Color(0.18f, 0.72f, 0.32f, 1f));
         playBtn = playB.root; playText = playB.label;
         hostB = new ModernButton(r, "HOST", 1, new Color(0.2f, 0.48f, 0.92f, 1f));
         hostBtn = hostB.root; hostText = hostB.label;
@@ -139,6 +139,7 @@ public partial class Game
         netText.supportRichText = true;
         lobbyStatus = UIK.Label(r, "", 20, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1150, 30), new Color(0.75f, 1f, 0.72f));
         lobbyHelp = UIK.Label(r, "", 15, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1200, 44), new Color(1, 1, 1, 0.7f));
+        lobbyHelp.supportRichText = true;   // ffu59: coloured pad glyphs
 
         // corner buttons are anchored to the screen corners, outside the centred design
         soundBtn = UIK.Glass(cr, new Color(0.02f, 0.05f, 0.05f, 0.55f), Vector2.zero, new Vector2(176, 38));
@@ -513,13 +514,13 @@ public partial class Game
         joinB.SetBadge(touchOnly ? "" : "Y · J");
         joinBtn.gameObject.SetActive(!online);
         bool waitHost = online && net.IsGuest;
-        playText.text = waitHost ? "WAITING FOR HOST" : "PLAY";
-        playB.SetBadge(touchOnly || waitHost ? "" : "A · ENTER");
+        playText.text = waitHost ? "WAITING FOR HOST" : "START";
+        playB.SetBadge(touchOnly || waitHost ? "" : "LT · ENTER");   // ffu59: LT starts on a pad (A only joins)
         playB.SetTint(waitHost ? new Color(0.25f, 0.35f, 0.28f, 0.95f) : new Color(0.18f, 0.72f, 0.32f, 1f));
-        // gamepad focus: PLAY is the default action once someone has joined; X / Y held highlight HOST / JOIN
-        bool xHeld = false, yHeld = false;
-        foreach (var gp in UnityEngine.InputSystem.Gamepad.all) if (gp != null && gp.added) { xHeld |= gp.buttonWest.isPressed; yHeld |= gp.buttonNorth.isPressed; }
-        playB.focus = slots.Count > 0 && !waitHost; hostB.focus = xHeld; joinB.focus = yHeld;
+        // gamepad focus: START glows once someone has joined (and brighter while LT is held); X / Y held highlight HOST / JOIN
+        bool xHeld = false, yHeld = false, ltHeld = false;
+        foreach (var gp in UnityEngine.InputSystem.Gamepad.all) if (gp != null && gp.added) { xHeld |= gp.buttonWest.isPressed; yHeld |= gp.buttonNorth.isPressed; ltHeld |= gp.leftTrigger.isPressed; }
+        playB.focus = (slots.Count > 0 || ltHeld) && !waitHost; hostB.focus = xHeld; joinB.focus = yHeld;
         bool mouseOk = !touchOnly && Kb.TouchCount() == 0;
         playB.Tick(mouseOk); hostB.Tick(mouseOk); joinB.Tick(mouseOk);
         TickStoryButton(mouseOk, touchOnly, online);   // ffu22
@@ -543,24 +544,23 @@ public partial class Game
         if (online)
         {
             lobbyHelp.text = "Online: one player per device. Pick any free character (tap it / D-pad / arrows). NAME is optional.  " +
-                (net.IsHost ? "PLAY starts it for everyone; friends can join later too." : "The host starts the game.");
-            if (slots.Count == 0) lobbyStatus.text = "Press A / Enter or tap a character to take a seat";
-            else lobbyStatus.text = net.IsGuest ? (net.connected ? net.info : "") : (net.connected ? "Ready - PLAY when your friends are in" : "");
+                (net.IsHost ? "START (LT / Enter) starts it for everyone; friends can join later too." : "The host starts the game.");
+            if (slots.Count == 0) lobbyStatus.text = LobbyJoinLine(LobbyDevice());
+            else lobbyStatus.text = net.IsGuest ? (net.connected ? net.info : "") : (net.connected ? "Ready - " + LobbyStartKey(LobbyDevice()) + " when your friends are in" : "");
             return;
         }
         if (touchOnly)
         {
-            lobbyHelp.text = "Tap a character, then PLAY - or STORY for The Big Launch. Empty seats are AI froggies.\nWith friends: HOST shows a room code, they tap JOIN and type it.";
+            lobbyHelp.text = "Tap a character to join, then START - or STORY for The Big Launch. Empty seats are AI froggies.\nWith friends: HOST shows a room code, they tap JOIN and type it.";
             Slot ts = FindSlot(InputKind.Touch);
-            lobbyStatus.text = ts == null ? "Tap a character to pick it" : "You are <color=" + Roster.UiHex(charOf[ts.frog]) + ">" + (ts.name.Length > 0 ? ts.name + " (" + Roster.Name(charOf[ts.frog]) + ")" : Roster.Name(charOf[ts.frog])) + "</color> - tap PLAY";
+            lobbyStatus.text = ts == null ? "Tap a character to pick it" : "You are <color=" + Roster.UiHex(charOf[ts.frog]) + ">" + (ts.name.Length > 0 ? ts.name + " (" + Roster.Name(charOf[ts.frog]) + ")" : Roster.Name(charOf[ts.frog])) + "</color> - tap START";
             if (err.Length > 0) lobbyStatus.text = err;
             return;
         }
-        lobbyHelp.text = "Gamepad: A join · D-pad pick · B leave · Start play · LB story     Keyboard: Enter join/play · arrows pick · S story · Esc leave     Mouse/touch: click a character";
+        lobbyHelp.text = LobbyHelpLine();   // ffu59 (Hints46.cs): A join as P1-P4 · LT start game, per device
         viewText.text = shared ? "VIEW   Split   <color=#ffd84a>[ SHARED ]</color>  <size=13>(Back / V)</size>"
                                : "VIEW   <color=#ffd84a>[ SPLIT ]</color>   Shared  <size=13>(Back / V)</size>";
-        if (slots.Count == 0) lobbyStatus.text = "Press A on a gamepad, Enter on the keyboard, or click a character to join";
-        else lobbyStatus.text = slots.Count + " player" + (slots.Count > 1 ? "s" : "") + " ready - Start / A again / Enter / PLAY to begin" + (autoStartT > 0f ? "  (auto in " + Mathf.CeilToInt(autoStartT) + ")" : "");
+        lobbyStatus.text = LobbyStatusLine() + (slots.Count > 0 && autoStartT > 0f ? "  <size=15><color=#b8c2c0>(auto in " + Mathf.CeilToInt(autoStartT) + ")</color></size>" : "");   // ffu59
         if (err.Length > 0) lobbyStatus.text = err;
     }
 
