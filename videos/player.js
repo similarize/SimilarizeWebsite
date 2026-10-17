@@ -12,7 +12,8 @@
     var v=(d.videos||[]).filter(function(x){return x.slug===slug;})[0];
     if(!v){placeholder('Video not found','Try the video list.');return;}
     T.textContent=v.title;document.title=v.title+' — Similarize';D.textContent=v.description||'';
-    M.textContent=[v.duration?'About '+Math.round(v.duration/60)+' min':'',v.audience||''].filter(Boolean).join(' · ');
+    function fmt(t){t=Math.round(t);var m=Math.floor(t/60),r=t%60;return m+':'+(r<10?'0':'')+r;}
+    M.textContent=[v.duration?'Runtime '+fmt(v.duration):'',v.audience||''].filter(Boolean).join(' · ');
     if(v.status!=='published'||!v.hls){placeholder('Coming soon','This movie is being finished. Check back shortly.');return;}
     var src=abs(d.media_base,v.hls);
     var video=document.createElement('video');

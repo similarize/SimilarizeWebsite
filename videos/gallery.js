@@ -13,7 +13,7 @@
       var b=el('div','body');
       b.appendChild(el('p','status',v.status==='published'?(v.audience||'Video'):'Coming soon'));
       b.appendChild(el('h2',null,v.title));
-      b.appendChild(el('p','meta',(v.duration?'About '+Math.round(v.duration/60)+' min':'')+(v.audience?' · '+v.audience:'')));
+      b.appendChild(el('p','meta',[v.duration?'Runtime '+fmt(v.duration):'',v.audience||''].filter(Boolean).join(' · ')));
       a.appendChild(th);a.appendChild(b);grid.appendChild(a);
     });
     if(!grid.children.length)grid.appendChild(el('p','meta','No videos yet.'));

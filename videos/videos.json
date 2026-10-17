@@ -4,14 +4,15 @@
     {
       "slug": "four-froggies-catch-jimmy",
       "title": "Four Froggies: Catch Jimmy All the Way to the Moon",
-      "description": "The four froggies set out to catch Jimmy, and the chase goes all the way to the Moon.\nA kid-friendly animated movie, made at home with the Four Froggies game crew.",
-      "duration": 810,
+      "description": "When Jimmy zooms off on his jetpack with a secret golden orb, James, Bubbles and Rexy blast off in the Starship to catch him, past Mars, King Germy's crystal caves and Jupiter's icy moon, all the way to a bouncy moon buggy chase on the Moon. A 14-minute animated adventure for kids about friendship, space and real moon physics.",
+      "duration": 841,
       "audience": "Kids & family",
-      "published": null,
-      "status": "coming-soon",
+      "published": "2026-10-17",
+      "status": "published",
       "hls": "four-froggies-catch-jimmy/master.m3u8",
       "poster": "four-froggies-catch-jimmy/poster.jpg",
-      "thumb": "four-froggies-catch-jimmy/thumb.jpg"
+      "thumb": "four-froggies-catch-jimmy/thumb.jpg",
+      "poster_at": 120
     }
   ]
 }

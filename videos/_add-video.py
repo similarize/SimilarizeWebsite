@@ -7,9 +7,11 @@ tpl = open(os.path.join(here, "_watch-template.html"), encoding="utf-8").read()
 data = json.load(open(os.path.join(here, "videos.json"), encoding="utf-8"))
 for v in data["videos"]:
     summary = v.get("description", "").split("\n")[0]
+    if len(summary) > 160: summary = summary[:157].rsplit(" ", 1)[0] + "…"
     out = (tpl.replace("{{TITLE}}", html.escape(v["title"]))
               .replace("{{SUMMARY}}", html.escape(summary))
-              .replace("{{SLUG}}", v["slug"]))
+              .replace("{{SLUG}}", v["slug"])
+              .replace("{{POSTER}}", html.escape(data["media_base"].rstrip("/") + "/" + v.get("poster", ""))))
     d = os.path.join(here, v["slug"]); os.makedirs(d, exist_ok=True)
     open(os.path.join(d, "index.html"), "w", encoding="utf-8").write(out)
     print("wrote", os.path.relpath(os.path.join(d, "index.html"), os.path.dirname(here)))
