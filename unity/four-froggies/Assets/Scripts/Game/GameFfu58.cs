@@ -134,10 +134,10 @@ public class Ffu58 : MonoBehaviour
                 break;
             case "lie":
                 if (tigy == null) { Next("lie skipped"); break; }
-                if (step == 0) { f.SendTo(WorldId.House, Beside(tigy, 2.5f) + Vector3.up * 0.2f, 0f); tigy.holdPosition = true; step = 1; stepT = w; }
+                if (step == 0) { f.SendTo(WorldId.House, Beside(tigy, 5.5f) + Vector3.up * 0.2f, 0f); tigy.holdPosition = true; tigy.skittish = false; step = 1; stepT = w; }   // 5.5 m: a pet trots aside from a froggy within 3.2 m
                 if (step == 1 && w - stepT > 1.5f) { tigy.DemoLie58(); step = 2; }
                 CamOn(tigy.transform, new Vector3(1.0f, 0.6f, 1.0f), 0.15f);
-                if (w > 22f) { tigy.holdPosition = false; Next("lie done"); }
+                if (w > 22f) { tigy.holdPosition = false; tigy.skittish = true; Next("lie done"); }
                 break;
             case "ride":
                 if (daisy == null || Animals57.I == null) { Next("ride skipped"); break; }
@@ -172,12 +172,12 @@ public class Ffu58 : MonoBehaviour
                 if (spotty == null || germy == null) { Next("swim skipped"); break; }
                 {
                     Vector2 pc = Layout.PondC;
-                    Vector3 water = new Vector3(pc.x + Layout.PondR.x * 0.55f, Layout.WaterY - 0.2f, pc.y);
-                    if (step == 0) { f.SendTo(WorldId.Ranch, water + new Vector3(Layout.PondR.x * 0.6f, 0f, 0f) + Vector3.up * 1.5f, 270f); step = 1; stepT = w; }
+                    Vector3 water = new Vector3(pc.x + Layout.PondR.x * 0.9f, Layout.WaterY - 0.2f, pc.y);   // ~10 m off the east shore
+                    if (step == 0) { f.SendTo(WorldId.Ranch, water + new Vector3(Layout.PondR.x * 0.2f, 0f, 0f) + Vector3.up * 1.5f, 270f); step = 1; stepT = w; }
                     if (step == 1 && w - stepT > 4f) { f.SendTo(WorldId.Ranch, water, 270f); step = 2; stepT = w; }
                     Cam(water + new Vector3(6f, 3.5f, -7f), water + new Vector3(3f, 0f, 0f));
                     if (logNow && step == 2) Debug.Log("FFDEMO behave58 swim James " + f.transform.position.ToString("0.0") + " Germy " + germy.transform.position.ToString("0.0") + " Spotty " + spotty.transform.position.ToString("0.0") + " " + Stats());
-                    if (w > 26f) { Animals57.I.Act(f, spotty, "come"); Animals57.I.Act(f, germy, "come"); f.SendTo(WorldId.Ranch, water + new Vector3(Layout.PondR.x * 0.7f, 0f, 0f) + Vector3.up * 1.5f, 270f); Next("swim done (pets told to stay)"); }
+                    if (w > 40f) { Animals57.I.Act(f, spotty, "come"); Animals57.I.Act(f, germy, "come"); f.SendTo(WorldId.Ranch, water + new Vector3(Layout.PondR.x * 0.7f, 0f, 0f) + Vector3.up * 1.5f, 270f); Next("swim done (pets told to stay)"); }
                     break;
                 }
             case "park":
