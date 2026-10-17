@@ -14,7 +14,7 @@ import {
   wheelPace,
   MISSILE_MAX,
   MISSILE_RELOAD
-} from "./engine-rally23.js";
+} from "./engine-rally23.js?v=sh2";
 var BEST_KEY = "rc-rally-jump-best";
 var RIG_KEY = "rc-rally-rig";
 var TUNE_KEY = "rc-rally-tune";
@@ -288,6 +288,7 @@ function boot() {
       reason.textContent = sim.crash === "flip" ? "UPSIDE DOWN" : sim.crash === "wreck" ? "BEAT UP" : "RUN OVER";
       overScore.textContent = score.toLocaleString();
       overMeta.textContent = `${sim.gatesCleared} gates \xB7 ${metersOf(sim)} m \xB7 best ${sim.best.toLocaleString()}`;
+      try { if (window.SimilarizeCTA) window.SimilarizeCTA.attach(overMeta.parentElement); } catch (_) {}
     }
   };
   const begin = (hold) => {

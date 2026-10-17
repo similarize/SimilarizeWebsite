@@ -1313,7 +1313,7 @@ function drawCar(ctx, sim, art) {
   { // rally23: contact shadow that shrinks/fades with height (sells the jump)
     const gx = sim.scroll + PLAYER_X + CAR_W / 2, gy = surfaceY(sim, gx), hgt = Math.max(0, gy - (sim.y + CAR_H));
     const k = Math.max(0.25, 1 - hgt / 260);
-    ctx.fillStyle = `rgba(30,14,6,${0.35 * k})`; ctx.beginPath(); ctx.ellipse(PLAYER_X + CAR_W / 2, gy + 1, CAR_W * 0.55 * k, 5 * k, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = `rgba(25,10,4,${0.75 * k})`; ctx.beginPath(); ctx.ellipse(PLAYER_X + CAR_W / 2, gy + 2, CAR_W * 0.62 * k, 8 * k, 0, 0, Math.PI * 2); ctx.fill();
   }
   const crawler = sim.rig === "crawler" && ready(art.crawler);
   const pixel = sim.rig === "pixel" && ready(art.pixel);
