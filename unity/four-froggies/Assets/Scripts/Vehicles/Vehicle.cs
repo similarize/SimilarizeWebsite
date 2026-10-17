@@ -300,6 +300,10 @@ public abstract class Vehicle : MonoBehaviour
         foreach (Vehicle v in All)
         {
             if (v == null || v.body == null || v.stowed) continue;
+            // ffu53 (audit C5): a disabled / hidden body is not there to board (the Tourer folded into the carrier's stern
+            // pod; ClosestPoint on a disabled collider returns the query point = distance 0 -> "ask Spotty to borrow the
+            // Tourer" on the whole carrier deck)
+            if (!v.body.enabled || !v.body.gameObject.activeInHierarchy) continue;
             Vector3 cp = v.body.ClosestPoint(p + Vector3.up * 0.6f);
             float d = (cp - (p + Vector3.up * 0.6f)).magnitude;
             if (v.bigLift > 0.05f)

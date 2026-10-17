@@ -855,6 +855,8 @@ public class Fig50 : MonoBehaviour
     }
 
     static bool NearFig(Frog f) { return fig != null && !fig.hidden && fig.mission == null && fig.world == WorldId.Ranch && RobotNav.Flat(fig.transform.position - f.transform.position) < 2.6f; }
+    // ffu53 (audit C5): food on the spit (anyone's) or this froggy eating = the campfire is in use, no light / put-out prompt
+    public static bool FireBusy(Frog f) { return cookT >= 0f || spitMeat != null || (f != null && f.GetComponent<Eat50>() != null); }
     public static bool UsesFire(Frog f) { return f != null && (HeldKind(f) == 4 || (cookFor == f && cookT >= 0f)); }
     static void FireAct(Frog f)
     {

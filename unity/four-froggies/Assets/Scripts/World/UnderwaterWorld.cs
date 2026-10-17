@@ -1,8 +1,13 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-// Underwater world under the pond. Board the submarine at the pond dock and it dives straight down into a
-// separate hidden root at Worlds.UnderO: coral reef, kelp forest, a shipwreck, a rock cave, fish schools,
+// ffu53 ONE SEA: the underwater world IS the ranch pond. Worlds.UnderO now sits at the pond centre on the water line
+// (was a separate hidden copy at (1400, 0, 0)), so the reef, kelp, wreck, cave, fish, turtles, rays, jellies, the whale,
+// the pearls and the submarine are built INTO the pond basin, on the ranch pond bed itself (SeaY = the ranch ground).
+// A truck that drives in, the Optimus mech, a mech wading, a swimming / scuba froggy and the sub all see the same things
+// in the same places. WorldId.Underwater is only the "under water" camera / controls mode now, not another place.
+// Underwater world under the pond. Board the submarine at the pond dock and it dives straight down into the
+// pond (ffu53; before: a separate hidden root): coral reef, kelp forest, a shipwreck, a rock cave, fish schools,
 // turtles, rays, jellies and a whale (the 3D version's sea life). Goal loop: find all the pearls.
 // A in the sub = swim out in scuba gear (3D swim: stick moves, RT / A rises, LT / B sinks, gentle buoyancy,
 // bubbles); A next to the sub = climb back in; surface the sub (or swim to the top) + keep rising = ranch.
@@ -17,14 +22,32 @@ public class UnderwaterWorld : MonoBehaviour
 
     class School { public Vector3 c, vel; public float t, seed; public readonly List<Transform> fish = new List<Transform>(); public readonly List<Vector3> off = new List<Vector3>(); }
     readonly List<School> schools = new List<School>();
-    class Swimmer { public Transform t; public float a, r, sp, y; public Vector3 c; public bool bob; }
+    class Swimmer { public Transform t; public float a, r, sp, y, zs = 1f; public Vector3 c; public bool bob; }
     readonly List<Swimmer> swimmers = new List<Swimmer>();
     readonly List<Transform> kelp = new List<Transform>();
 
     public static Vector3 L(float x, float y, float z) { return Worlds.UnderO + new Vector3(x, y, z); }
 
     // seabed height (local). ffu37: the shared pond-bed truth lives in Layout.SubSeaY (the ranch pond bed uses it too)
-    public static float SeaY(float x, float z) { return Layout.SubSeaY(x, z); }
+    // ffu53: the real ranch pond bed under this spot (the same ground every vehicle / mech / froggy stands on); Layout.SubSeaY
+    // before the terrain exists
+    public static float SeaY(float x, float z)
+    {
+        float g = Ranch.GY(Worlds.UnderO.x + x, Worlds.UnderO.z + z);
+        if (g == 0f) return Layout.SubSeaY(x, z);
+        return g - Worlds.UnderO.y;
+    }
+    // ffu53: squeeze a local (x, z) into the pond ellipse (q <= qMax) so swimmers never leave the water
+    public static Vector3 InPond(Vector3 local, float qMax)
+    {
+        Vector2 r = Layout.PondR;
+        float q = (local.x / r.x) * (local.x / r.x) + (local.z / r.y) * (local.z / r.y);
+        if (q <= qMax * qMax || q < 1e-6f) return local;
+        float k = qMax / Mathf.Sqrt(q);
+        return new Vector3(local.x * k, local.y, local.z * k);
+    }
+    Transform chestLid, motes; Vector3 chestPos; bool chestOpen; float chestShut;
+    public static Vector3 Mooring { get { return Ranch.SubMooring != Vector3.zero ? Ranch.SubMooring : L(-74f, -0.4f, -3.9f); } }
 
     public static void Create()
     {
@@ -39,6 +62,7 @@ public class UnderwaterWorld : MonoBehaviour
     public void Dive(Frog f)
     {
         if (!built) Build();
+        if (sub.driver == null && (sub.transform.position - Mooring).magnitude > 6f) { sub.rb.velocity = Vector3.zero; sub.rb.position = Mooring; sub.transform.SetPositionAndRotation(Mooring, Quaternion.Euler(0f, 90f, 0f)); }   // ffu53: the empty sub is fetched back to the dock
         if (sub.driver == null)
         {
             f.SendTo(WorldId.Underwater, sub.transform.position + Vector3.up * 2f, sub.transform.eulerAngles.y);
@@ -151,6 +175,7 @@ public class UnderwaterWorld : MonoBehaviour
     {
         built = true;
         root = new GameObject("Underwater").transform;
+        Debug.Log("Underwater: ONE SEA - built in the ranch pond at " + Worlds.UnderO + " (ffu53)");
         Seabed();
         Surface();
         var rnd = new System.Random(8);
@@ -174,65 +199,62 @@ public class UnderwaterWorld : MonoBehaviour
         Shafts();
         Life(rnd);
         Pearls(rnd);
-        sub = Submarine.Build(L(0f, -5f, -62f), 0f);
-        // yaw 180: reads the right way round from the sub's start (it was mirrored)
-        Ranch.Sign(L(0f, -2.5f, -55f), 180f, "UNDERWATER\n<size=22>find all the pearls - reef, kelp, shipwreck, cave</size>", new Color(0.05f, 0.3f, 0.55f), 11f, 2.6f);   // 7 m wrapped "UNDERWAT/ER"
+        sub = Submarine.Build(Mooring, 90f);   // ffu53: the real sub is moored at the pond dock (it was a separate copy at the reef)
+        Ranch.Sign(L(-58f, -3f, -14f), 270f, "UNDERWATER\n<size=22>find all the pearls - reef, kelp, shipwreck, cave</size>", new Color(0.05f, 0.3f, 0.55f), 11f, 2.6f);   // 7 m wrapped "UNDERWAT/ER"
     }
 
+    // ffu53: the sand lies ON the ranch pond bed (0.12 m up, no collider: the terrain is the floor), deep part of the pond only
     void Seabed()
     {
-        const int n = 96; const float size = 220f;
-        var v = new Vector3[(n + 1) * (n + 1)];
-        var uv = new Vector2[v.Length];
-        for (int z = 0; z <= n; z++)
-            for (int x = 0; x <= n; x++)
+        Vector2 R = Layout.PondR; const int nx = 80, nz = 56;
+        var v = new Vector3[(nx + 1) * (nz + 1)]; var uv = new Vector2[v.Length]; var ok = new bool[v.Length];
+        for (int z = 0; z <= nz; z++)
+            for (int x = 0; x <= nx; x++)
             {
-                float lx = -size * 0.5f + x * size / n, lz = -size * 0.5f + z * size / n;
-                v[z * (n + 1) + x] = L(lx, SeaY(lx, lz), lz);
-                uv[z * (n + 1) + x] = new Vector2(lx / 6f, lz / 6f);
+                float lx = -R.x + x * 2f * R.x / nx, lz = -R.y + z * 2f * R.y / nz;
+                float q = (lx / R.x) * (lx / R.x) + (lz / R.y) * (lz / R.y), y = SeaY(lx, lz);
+                int i = z * (nx + 1) + x;
+                ok[i] = q < 0.8f && y < -1.5f;
+                v[i] = L(lx, y + 0.12f, lz); uv[i] = new Vector2(lx / 6f, lz / 6f);
             }
-        var tri = new int[n * n * 6];
-        int k = 0;
-        for (int z = 0; z < n; z++)
-            for (int x = 0; x < n; x++)
+        var tri = new List<int>();
+        for (int z = 0; z < nz; z++)
+            for (int x = 0; x < nx; x++)
             {
-                int a = z * (n + 1) + x, b = a + 1, c = a + n + 1, d = c + 1;
-                tri[k++] = a; tri[k++] = c; tri[k++] = b; tri[k++] = b; tri[k++] = c; tri[k++] = d;
+                int a = z * (nx + 1) + x, b = a + 1, c = a + nx + 1, d = c + 1;
+                if (!(ok[a] && ok[b] && ok[c] && ok[d])) continue;
+                tri.Add(a); tri.Add(c); tri.Add(b); tri.Add(b); tri.Add(c); tri.Add(d);
             }
         var mesh = new Mesh { indexFormat = UnityEngine.Rendering.IndexFormat.UInt32 };
-        mesh.vertices = v; mesh.uv = uv; mesh.triangles = tri;
+        mesh.vertices = v; mesh.uv = uv; mesh.triangles = tri.ToArray();
         mesh.RecalculateNormals(); mesh.RecalculateBounds();
         var go = new GameObject("Seabed");
         go.AddComponent<MeshFilter>().sharedMesh = mesh;
-        // sandy texture: Poly Haven CC0 aerial sand (Resources/LB/seabed), generated noise if missing
         var sb = Resources.Load<Texture2D>("LB/seabed");
-        if (sb != null)
-        {
-            var sm = Mats.Tex(sb, 0.05f); sm.color = new Color(0.95f, 0.92f, 0.82f);
-            var smr = go.AddComponent<MeshRenderer>(); smr.sharedMaterial = sm;
-            smr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            go.AddComponent<MeshCollider>().sharedMesh = mesh;
-            go.transform.SetParent(root, true);
-            return;
-        }
-        var tex = new Texture2D(64, 64, TextureFormat.RGBA32, true) { wrapMode = TextureWrapMode.Repeat };
-        var px = new Color32[64 * 64];
-        var r = new System.Random(4);
-        for (int i = 0; i < px.Length; i++) { float q = 0.8f + (float)r.NextDouble() * 0.25f; px[i] = new Color(0.78f * q, 0.72f * q, 0.55f * q); }
-        tex.SetPixels32(px); tex.Apply(true);
-        var m = new Material(Mats.Lit(Color.white)) { mainTexture = tex };
-        var mr = go.AddComponent<MeshRenderer>(); mr.sharedMaterial = m;
-        mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-        go.AddComponent<MeshCollider>().sharedMesh = mesh;
+        Material sm;
+        if (sb != null) { sm = Mats.Tex(sb, 0.05f); sm.color = new Color(0.95f, 0.92f, 0.82f); }
+        else sm = Mats.Lit(new Color(0.78f, 0.72f, 0.55f));
+        var smr = go.AddComponent<MeshRenderer>(); smr.sharedMaterial = sm;
+        smr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         go.transform.SetParent(root, true);
+        Debug.Log("Underwater: sand on the ranch pond bed, " + tri.Count / 3 + " tris");
     }
 
+    // ffu53: the water surface seen from below = an ellipse the size of the pond, facing down, just under the ranch water
     void Surface()
     {
         var m = new Material(Mats.Water);
         m.color = new Color(0.55f, 0.85f, 0.95f, 0.55f);
-        var s = Mats.Prim(PrimitiveType.Cube, root, L(0f, 0.05f, 0f), new Vector3(240f, 0.1f, 240f), m, false);
-        s.name = "SurfaceFromBelow";
+        const int n = 48; Vector2 R = Layout.PondR * 0.99f;
+        var v = new Vector3[n + 1]; var tri = new int[n * 3];
+        v[0] = L(0f, -0.04f, 0f);
+        for (int i = 0; i < n; i++) { float a = i * Mathf.PI * 2f / n; v[i + 1] = L(Mathf.Cos(a) * R.x, -0.04f, Mathf.Sin(a) * R.y); }
+        for (int i = 0; i < n; i++) { tri[i * 3] = 0; tri[i * 3 + 1] = i + 1; tri[i * 3 + 2] = (i + 1) % n + 1; }
+        var mesh = new Mesh(); mesh.vertices = v; mesh.triangles = tri; mesh.RecalculateNormals(); mesh.RecalculateBounds();
+        var s = new GameObject("SurfaceFromBelow");
+        s.AddComponent<MeshFilter>().sharedMesh = mesh;
+        var mr = s.AddComponent<MeshRenderer>(); mr.sharedMaterial = m; mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        s.transform.SetParent(root, true);
     }
 
     void Reef(System.Random r)
@@ -264,7 +286,8 @@ public class UnderwaterWorld : MonoBehaviour
         // starfish + shells on the sand
         for (int i = 0; i < 40; i++)
         {
-            float x = ((float)r.NextDouble() - 0.5f) * 170f, z = ((float)r.NextDouble() - 0.5f) * 170f, y = SeaY(x, z);
+            float x = ((float)r.NextDouble() - 0.5f) * 150f, z = ((float)r.NextDouble() - 0.5f) * 105f, y = SeaY(x, z);
+            if (y > -2f) continue;   // ffu53: in the pond only
             Color c = i % 2 == 0 ? new Color(1f, 0.45f, 0.2f) : new Color(0.95f, 0.85f, 0.7f);
             for (int k = 0; k < 5; k++) P(PrimitiveType.Cube, new Vector3(x, y + 0.05f, z) + Quaternion.Euler(0f, k * 72f, 0f) * Vector3.forward * 0.18f, new Vector3(0.12f, 0.06f, 0.36f), c, false, new Vector3(0f, k * 72f, 0f));
         }
@@ -294,7 +317,7 @@ public class UnderwaterWorld : MonoBehaviour
 
     void Wreck()
     {
-        Vector3 c = new Vector3(55f, 0f, 40f);
+        Vector3 c = new Vector3(-30f, 0f, 30f);   // ffu53: inside the pond basin (was (55, 40) = under the ranch bank)
         float y = SeaY(c.x, c.z);
         Color wood = new Color(0.36f, 0.26f, 0.16f), dark = new Color(0.22f, 0.16f, 0.1f);
         Vector3 e = new Vector3(0f, 25f, 14f);   // tilted on its side a bit
@@ -315,7 +338,14 @@ public class UnderwaterWorld : MonoBehaviour
         Mats.Prim(PrimitiveType.Cylinder, hull, new Vector3(4f, -0.6f, 3f), new Vector3(0.35f, 3f, 0.35f), Vector3.zero + new Vector3(0f, 0f, 80f), Mats.Lit(dark), false);
         // treasure chest inside
         B(new Vector3(0f, -0.4f, 4f), new Vector3(1.4f, 0.9f, 0.9f), new Color(0.55f, 0.35f, 0.15f), true);
-        B(new Vector3(0f, 0.2f, 4f), new Vector3(1.45f, 0.3f, 0.95f), new Color(0.85f, 0.7f, 0.2f), false);
+        // ffu53 six-year-old idea: the treasure chest OPENS when anyone (scuba, sub, a sunk truck, a mech) comes close
+        chestPos = hull.TransformPoint(new Vector3(0f, -0.4f, 4f));
+        var hinge = new GameObject("ChestLid").transform; hinge.SetParent(transform, false);
+        hinge.position = hull.TransformPoint(new Vector3(0f, 0.05f, 3.55f)); hinge.rotation = hull.rotation;
+        Mats.Prim(PrimitiveType.Cube, hinge, new Vector3(0f, 0.15f, 0.45f), new Vector3(1.45f, 0.3f, 0.95f), Mats.Lit(new Color(0.85f, 0.7f, 0.2f)), false);
+        var gold = Mats.Unlit(new Color(1f, 0.82f, 0.25f));
+        for (int k = 0; k < 7; k++) { var coin = Mats.Prim(PrimitiveType.Cylinder, transform, hull.TransformPoint(new Vector3(-0.45f + k * 0.15f, 0.08f + (k % 2) * 0.06f, 4f + (k % 3 - 1) * 0.2f)), new Vector3(0.22f, 0.02f, 0.22f), gold); coin.transform.rotation = hull.rotation * Quaternion.Euler(10f * k, 0f, 8f); }
+        chestLid = hinge; baseLid = hinge.localRotation;
         Ranch.Sign(L(c.x - 8f, y + 6f, c.z - 12f), 220f, "SHIPWRECK", new Color(0.35f, 0.25f, 0.12f), 4f, 1f);
     }
 
@@ -323,10 +353,10 @@ public class UnderwaterWorld : MonoBehaviour
     {
         // rock tunnel along x at (-58, z 30): rings of boulders, open at both ends, glowing crystals inside
         Color rock = new Color(0.32f, 0.32f, 0.35f);
-        float cz = 30f;
+        float cz = -2f;   // ffu53: inside the pond (was x -72..-43, z 30 = under the bank), mouth towards the dock
         for (int k = 0; k <= 12; k++)
         {
-            float x = -72f + k * 2.4f;
+            float x = -64f + k * 2.4f;
             float y0 = SeaY(x, cz);
             for (int j = 0; j < 9; j++)
             {
@@ -341,7 +371,7 @@ public class UnderwaterWorld : MonoBehaviour
                 Mats.Prim(PrimitiveType.Cube, root, L(x + 0.4f, y0 + 0.4f, cz - 3.6f), new Vector3(0.3f, 0.8f, 0.3f), new Vector3(-12f, 10f, -18f), Mats.Unlit(glow), false);
             }
         }
-        Ranch.Sign(L(-74f, SeaY(-74f, cz) + 8.5f, cz), 270f, "CAVE", new Color(0.2f, 0.2f, 0.3f), 3f, 1f);
+        Ranch.Sign(L(-66f, SeaY(-66f, cz) + 8.5f, cz), 270f, "CAVE", new Color(0.2f, 0.2f, 0.3f), 3f, 1f);
     }
 
     void Rocks(System.Random r)
@@ -361,7 +391,7 @@ public class UnderwaterWorld : MonoBehaviour
     {
         var go = new GameObject("Motes");
         go.transform.SetParent(root, false);
-        go.transform.position = L(0f, -14f, 0f);
+        go.transform.position = L(0f, -12f, 0f); motes = go.transform;
         var ps = go.AddComponent<ParticleSystem>();
         ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
         var main = ps.main;
@@ -375,7 +405,7 @@ public class UnderwaterWorld : MonoBehaviour
         main.gravityModifier = -0.002f;
         main.prewarm = true;
         var em = ps.emission; em.rateOverTime = Look.Mobile ? 35f : 95f;
-        var sh = ps.shape; sh.shapeType = ParticleSystemShapeType.Box; sh.scale = new Vector3(170f, 26f, 170f);
+        var sh = ps.shape; sh.shapeType = ParticleSystemShapeType.Box; sh.scale = new Vector3(130f, 16f, 90f);
         var nz = ps.noise; nz.enabled = true; nz.strength = 0.15f; nz.frequency = 0.25f;
         var col = ps.colorOverLifetime; col.enabled = true;
         var g = new Gradient();
@@ -412,7 +442,7 @@ public class UnderwaterWorld : MonoBehaviour
         m.color = new Color(0.75f, 0.95f, 1f, 0.07f);
         for (int i = 0; i < 9; i++)
         {
-            var s = Mats.Prim(PrimitiveType.Cube, root, L((i - 4) * 18f, -12f, (i % 2 == 0 ? 14f : -12f)), new Vector3(2.2f, 26f, 2.2f), new Vector3(0f, i * 20f, (i - 4) * 2.5f), m, false);
+            var s = Mats.Prim(PrimitiveType.Cube, root, L((i - 4) * 14f, -9f, (i % 2 == 0 ? 14f : -12f)), new Vector3(2.2f, 16f, 2.2f), new Vector3(0f, i * 20f, (i - 4) * 2.5f), m, false);
             s.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         }
     }
@@ -422,7 +452,7 @@ public class UnderwaterWorld : MonoBehaviour
         Color[] fc = { new Color(1f, 0.8f, 0.1f), new Color(0.1f, 0.65f, 1f), new Color(1f, 0.45f, 0.1f), new Color(0.6f, 0.95f, 0.6f), new Color(1f, 0.5f, 0.6f), new Color(0.7f, 0.7f, 1f) };
         for (int s = 0; s < 6; s++)
         {
-            var sc = new School { seed = s * 13.7f, c = L(((float)r.NextDouble() - 0.5f) * 80f, -10f, ((float)r.NextDouble() - 0.5f) * 80f) };
+            var sc = new School { seed = s * 13.7f, c = L(((float)r.NextDouble() - 0.5f) * 80f, -10f, ((float)r.NextDouble() - 0.5f) * 50f) };
             Material m = Mats.Shiny(fc[s]);
             for (int i = 0; i < 16; i++)
             {
@@ -451,7 +481,7 @@ public class UnderwaterWorld : MonoBehaviour
             Mats.Prim(PrimitiveType.Sphere, t, Vector3.zero, new Vector3(3f, 0.25f, 2f), Mats.Lit(new Color(0.35f, 0.38f, 0.45f)));
             Mats.Prim(PrimitiveType.Cube, t, new Vector3(0f, 0f, -1.8f), new Vector3(0.08f, 0.08f, 2f), Mats.Lit(new Color(0.3f, 0.3f, 0.35f)));
             Mats.NoShadows(t.gameObject);
-            swimmers.Add(new Swimmer { t = t, a = i * 2.1f, r = 30f + i * 10f, sp = 0.16f, y = -7f - i * 2f, c = L(10f, 0f, -10f) });
+            swimmers.Add(new Swimmer { t = t, a = i * 2.1f, r = 18f + i * 8f, sp = 0.16f, y = -7f - i * 2f, c = L(10f, 0f, -10f) });
         }
         // jellies
         var jm = new Material(Mats.Glass); jm.color = new Color(1f, 0.6f, 0.85f, 0.45f);
@@ -470,7 +500,7 @@ public class UnderwaterWorld : MonoBehaviour
             Mats.Prim(PrimitiveType.Cube, t, new Vector3(0f, 0f, -7.4f), new Vector3(5f, 0.3f, 1.6f), Mats.Lit(new Color(0.25f, 0.32f, 0.45f)));
             for (int s = -1; s <= 1; s += 2) Mats.Prim(PrimitiveType.Cube, t, new Vector3(2.4f * s, -1f, 2f), new Vector3(2.8f, 0.2f, 1.2f), new Vector3(0f, 20f * s, -25f * s), Mats.Lit(new Color(0.25f, 0.32f, 0.45f)));
             Mats.NoShadows(t.gameObject);
-            swimmers.Add(new Swimmer { t = t, a = 0f, r = 75f, sp = 0.035f, y = -12f, c = L(0f, 0f, 0f) });
+            swimmers.Add(new Swimmer { t = t, a = 0f, r = 52f, zs = 0.62f, sp = 0.035f, y = -12f, c = L(0f, 0f, 0f) });
         }
     }
 
@@ -479,14 +509,15 @@ public class UnderwaterWorld : MonoBehaviour
         var spots = new List<Vector3>();
         for (int i = 0; i < 8; i++) { float a = i * 0.785f; float x = Mathf.Cos(a) * (12f + i * 3f), z = Mathf.Sin(a) * (12f + i * 3f); spots.Add(new Vector3(x, SeaY(x, z) + 1.5f, z)); }
         for (int i = 0; i < 5; i++) { float x = -40f + (i - 2) * 6f, z = -35f + (i % 2) * 8f; spots.Add(new Vector3(x, SeaY(x, z) + 3f + i, z)); }
-        spots.Add(new Vector3(55f, SeaY(55f, 44f) + 2.2f, 44f));
-        spots.Add(new Vector3(55f, SeaY(55f, 36f) + 4f, 36f));
-        spots.Add(new Vector3(50f, SeaY(50f, 30f) + 6f, 30f));
-        spots.Add(new Vector3(62f, SeaY(62f, 46f) + 3f, 46f));
-        for (int i = 0; i < 5; i++) { float x = -70f + i * 5f; spots.Add(new Vector3(x, SeaY(x, 30f) + 1.6f, 30f)); }
-        spots.Add(new Vector3(0f, SeaY(0f, -70f) + 2f, -70f));
-        spots.Add(new Vector3(30f, SeaY(30f, -70f) + 2f, -70f));
-        var holder = new GameObject("Pearls").transform;
+        // ffu53: wreck / cave / deep pearls moved with them into the pond basin
+        spots.Add(new Vector3(-30f, SeaY(-30f, 34f) + 2.2f, 34f));
+        spots.Add(new Vector3(-30f, SeaY(-30f, 26f) + 4f, 26f));
+        spots.Add(new Vector3(-35f, SeaY(-35f, 20f) + 6f, 20f));
+        spots.Add(new Vector3(-23f, SeaY(-23f, 36f) + 3f, 36f));
+        for (int i = 0; i < 5; i++) { float x = -62f + i * 5f; spots.Add(new Vector3(x, SeaY(x, -2f) + 1.6f, -2f)); }
+        spots.Add(new Vector3(0f, SeaY(0f, -40f) + 2f, -40f));
+        spots.Add(new Vector3(30f, SeaY(30f, -38f) + 2f, -38f));
+        var holder = new GameObject("Pearls").transform; holder.SetParent(transform, false);
         var pm = Mats.Shiny(new Color(0.97f, 0.95f, 1f));
         var gm = Mats.Unlit(new Color(1f, 0.85f, 0.3f));
         for (int i = 0; i < spots.Count; i++)
@@ -500,30 +531,43 @@ public class UnderwaterWorld : MonoBehaviour
     }
 
     // ---------------- update ----------------
+    // ffu53: under the pond surface, whatever the mode (scuba / sub = Underwater; truck, mech, swimmer = Ranch)
+    public static bool UnderPond(Frog f, out Vector3 p)
+    {
+        p = f.vehicle != null ? f.vehicle.transform.position : f.Center;
+        if (f.world == WorldId.Underwater) return true;
+        return f.world == WorldId.Ranch && p.y < Layout.WaterY - 0.4f && Layout.InPond(p.x, p.z);
+    }
+
     void Update()
     {
-        if (!built) return;
-        bool anyone = false;
-        if (Game.I != null) foreach (Frog f in Game.I.frogs) if (f != null && f.world == WorldId.Underwater) anyone = true;
-        if (root.gameObject.activeSelf != anyone)
+        if (!built)
         {
-            root.gameObject.SetActive(anyone);
-            for (int i = 0; i < transform.childCount; i++) transform.GetChild(i).gameObject.SetActive(anyone);
+            // ffu53: one sea - built once the ranch terrain exists (it is the pond bed), always there for every entry
+            if (Game.I != null && Time.timeSinceLevelLoad > 1.5f && Ranch.GY(Worlds.UnderO.x, Worlds.UnderO.z) < -3f) Build();
+            return;
         }
-        if (!anyone) return;
+        bool anyone = false;
+        Vector3 fp;
+        if (Game.I != null) foreach (Frog f in Game.I.frogs) if (f != null && UnderPond(f, out fp)) anyone = true;
+        if (motes != null && motes.gameObject.activeSelf != anyone) motes.gameObject.SetActive(anyone);
+        if (sub != null && sub.driver == null && (sub.transform.position - Mooring).magnitude < 4f) { sub.rb.velocity = Vector3.zero; sub.rb.position = Mooring; }   // moored: stays put at the dock
+        ChestTick();
         float dt = Mathf.Min(Time.deltaTime, 0.05f), t = Time.time;
         foreach (School s in schools)
         {
             s.t += dt;
-            Vector3 home = L(Mathf.Sin(s.t * 0.05f + s.seed) * 60f, -9f + Mathf.Sin(s.t * 0.13f + s.seed) * 4f, Mathf.Sin(s.t * 0.037f + s.seed * 2f) * 60f);
+            Vector3 home = L(Mathf.Sin(s.t * 0.05f + s.seed) * 55f, -9f + Mathf.Sin(s.t * 0.13f + s.seed) * 4f, Mathf.Sin(s.t * 0.037f + s.seed * 2f) * 35f);
             Vector3 want = (home - s.c).normalized * 3.2f;
             // scatter from frogs and the sub
             foreach (Frog f in Game.I.frogs)
-                if (f != null && f.world == WorldId.Underwater) { Vector3 d = s.c - f.FocusPoint; if (d.magnitude < 7f) want += d.normalized * 8f; }
+                if (f != null && UnderPond(f, out fp)) { Vector3 d = s.c - fp; if (d.magnitude < 7f) want += d.normalized * 8f; }
             s.vel = Vector3.MoveTowards(s.vel, want, dt * 4f);
             s.c += s.vel * dt;
             float floor = Worlds.UnderO.y + SeaY(s.c.x - Worlds.UnderO.x, s.c.z - Worlds.UnderO.z) + 2.5f;
             if (s.c.y < floor) s.c.y = floor;
+            if (s.c.y > Worlds.UnderO.y - 1.5f) s.c.y = Worlds.UnderO.y - 1.5f;
+            s.c = Worlds.UnderO + InPond(s.c - Worlds.UnderO, 0.85f);
             Quaternion rot = s.vel.sqrMagnitude > 0.01f ? Quaternion.LookRotation(s.vel) : Quaternion.identity;
             for (int i = 0; i < s.fish.Count; i++)
             {
@@ -535,7 +579,10 @@ public class UnderwaterWorld : MonoBehaviour
         foreach (Swimmer w in swimmers)
         {
             w.a += w.sp * dt;
-            Vector3 p = w.c + new Vector3(Mathf.Cos(w.a) * w.r, w.y + (w.bob ? Mathf.Sin(t * 0.8f + w.r) * 1.5f : Mathf.Sin(t * 0.3f + w.r) * 0.6f), Mathf.Sin(w.a) * w.r);
+            Vector3 p = w.c + new Vector3(Mathf.Cos(w.a) * w.r, w.y + (w.bob ? Mathf.Sin(t * 0.8f + w.r) * 1.5f : Mathf.Sin(t * 0.3f + w.r) * 0.6f), Mathf.Sin(w.a) * w.r * w.zs);
+            p = Worlds.UnderO + InPond(p - Worlds.UnderO, 0.85f);   // ffu53: stay in the pond
+            float fl = Worlds.UnderO.y + SeaY(p.x - Worlds.UnderO.x, p.z - Worlds.UnderO.z) + 1.5f;
+            p.y = Mathf.Min(Mathf.Max(p.y, fl), Worlds.UnderO.y - 1.2f);
             Vector3 d = p - w.t.position;
             w.t.position = p;
             if (!w.bob && d.sqrMagnitude > 1e-6f) w.t.rotation = Quaternion.LookRotation(d) * Quaternion.Euler(0f, 0f, Mathf.Sin(t * 1.5f + w.r) * 8f);
@@ -543,6 +590,34 @@ public class UnderwaterWorld : MonoBehaviour
         }
         for (int i = 0; i < kelp.Count; i++) kelp[i].rotation = Quaternion.Euler(Mathf.Sin(t * 0.7f + i) * 6f, i * 37f, Mathf.Cos(t * 0.5f + i) * 6f);
     }
+
+    public static int ChestOpens; public static string ChestBy = "";
+    public static Vector3 ChestPos { get { return I != null ? I.chestPos : Vector3.zero; } }
+    void ChestTick()
+    {
+        if (chestLid == null || Game.I == null) return;
+        Frog by = null;
+        foreach (Frog f in Game.I.frogs)
+        {
+            if (f == null) continue;
+            Vector3 p = f.vehicle != null ? f.vehicle.transform.position : f.Center;
+            float r = f.vehicle != null ? 6.5f : 4.5f;
+            if ((p - chestPos).sqrMagnitude < r * r) { by = f; break; }
+        }
+        if (by != null) chestShut = Time.time + 20f;
+        bool want = by != null || Time.time < chestShut;
+        if (want && !chestOpen)
+        {
+            chestOpen = true; ChestOpens++; ChestBy = by != null ? by.nick + (by.vehicle != null ? " (" + by.vehicle.Title + ")" : "") : "";
+            FX.Sparkle(chestPos + Vector3.up * 0.6f, new Color(1f, 0.85f, 0.3f), 24);
+            if (by != null && by.human) { by.Toast("TREASURE! The old chest in the shipwreck is full of gold coins!", 3.5f); Sfx.Play(Sfx.Pickup, 0.8f, 0.8f); }
+            Debug.Log("Underwater: the wreck's treasure chest opens for " + ChestBy + " (world " + (by != null ? by.world.ToString() : "-") + ")");
+        }
+        if (!want && chestOpen) chestOpen = false;
+        float ang = chestOpen ? -105f : 0f;
+        chestLid.localRotation = Quaternion.Slerp(chestLid.localRotation, baseLid * Quaternion.Euler(ang, 0f, 0f), 1f - Mathf.Exp(-Time.deltaTime * 3f));
+    }
+    Quaternion baseLid = Quaternion.identity;
 }
 
 // The submarine: hovers neutrally buoyant, left stick drives + turns, RT rises, LT sinks, A = swim out.
@@ -599,7 +674,11 @@ public partial class Submarine : Vehicle
         return Mathf.Abs(l.x) > 130f || Mathf.Abs(l.z) > 130f || l.y < -60f || l.y > 20f;
     }
 
-    public override void OnEnter() { base.OnEnter(); yaw = transform.eulerAngles.y; surfaceT = 0f; }
+    public override void OnEnter()
+    {
+        base.OnEnter(); yaw = transform.eulerAngles.y; surfaceT = 0f;
+        if (driver != null && driver.world == WorldId.Ranch) driver.world = WorldId.Underwater;   // ffu53: one sea - climbing in anywhere in the pond = dive mode
+    }
 
     protected override void FixedUpdate()
     {

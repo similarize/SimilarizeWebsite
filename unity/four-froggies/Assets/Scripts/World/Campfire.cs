@@ -104,7 +104,7 @@ public class Campfire : MonoBehaviour
         crackle = Sfx.Loop(gameObject, GardenAudio.Crackle);
         var h = Interact.Add(transform.position + Vector3.up * 0.2f, 2.5f, "light the campfire", f => Toggle(f));
         h.dynLabel = f => Lit ? "put out the campfire" : "light the campfire";
-        h.enabled = f => !Fig50.UsesFire(f);   // ffu50: holding a drumstick (or one is cooking for you) = cook / eat instead
+        h.enabled = f => !Fig50.UsesFire(f) && !Fig50.FireBusy(f);   // ffu50: holding a drumstick (or one is cooking for you) = cook / eat instead; ffu53: never "put out" while food is on the spit or you are eating
     }
 
     static Mesh Teardrop()

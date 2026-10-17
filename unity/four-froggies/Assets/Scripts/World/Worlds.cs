@@ -13,7 +13,9 @@ public static class Worlds
     public static bool UnderwaterOn = true, SpaceOn = true, StageEOn = true;
 
     public static readonly Vector3 HouseO = new Vector3(0f, 0f, 1400f);
-    public static readonly Vector3 UnderO = new Vector3(1400f, 0f, 0f);
+    // ffu53 ONE SEA: the underwater world is the ranch pond itself - its origin is the pond centre on the water line
+    // (Layout.PondC, Layout.WaterY). Before ffu53 it was a separate hidden copy at (1400, 0, 0) that only the sub / scuba saw.
+    public static readonly Vector3 UnderO = new Vector3(70f, -0.55f, -80f);
     public static readonly Vector3 SpaceO = new Vector3(0f, 0f, -30000f);
     public static readonly Vector3 MarsO = new Vector3(-1600f, 0f, 0f);
     public static readonly Vector3 CallistoO = new Vector3(-1600f, 0f, 1600f);

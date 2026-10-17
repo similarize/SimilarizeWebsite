@@ -394,6 +394,8 @@ public class Robot : MonoBehaviour
         cmd = "drive";
         drv = new RobotDriver(this, v, mode, from);
         extRouted = false;
+        string ask = Ownership.AskLine(robotName, v, from);   // ffu53: robots ask the owner too (one ownership table)
+        if (ask != null) { Debug.Log("Ownership53: " + ask); return robotName + ": on my way to the " + v.Title + " - " + ask; }
         return robotName + ": on my way to the " + v.Title;
     }
     float WalkSpeed { get { return Mathf.Min(maxSpeed * 0.32f, 2.8f); } }

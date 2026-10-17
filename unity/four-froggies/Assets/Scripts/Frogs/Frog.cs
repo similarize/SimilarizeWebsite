@@ -312,7 +312,7 @@ public partial class Frog : MonoBehaviour
             if (near.driver != null) prompt = near.Title + " - " + near.driver.nick + " is driving";
             else if (near.Wrecked && !(near is StoryMech)) prompt = near.WreckedLine;
             else if (!near.CanEnter(this)) prompt = near.DeniedLine;
-            else prompt = "A / E: " + (near.OwnedBy(this) ? near.EnterVerb : "ask " + near.ownerName + " to borrow the " + near.Title);   // ffu34 canon
+            else prompt = "A / E: " + Ownership.EnterPrompt(near, this);   // ffu34 canon, ffu53 one ownership table
         }
         int pals = CritterPals.Riders(this);   // ffu47: small animals riding on this froggy (CritterPals.cs)
         if (pals > 0 && prompt.Length == 0) prompt = "A / E: shake off " + CritterPals.RiderLabel(this);
@@ -671,7 +671,7 @@ public partial class Frog : MonoBehaviour
         CritterPals.ShakeOff(this, "vehicle");   // ffu47: riders hop off
         vehT = 0f; vehFirst = human && Game.FirstUse(v);   // ffu46 hints
         v.OnEnter();
-        if (human && !netPuppet && !v.OwnedBy(this)) Toast(nick + " asked " + v.ownerName + " to borrow it - \"Sure, it's free. Drive safe!\"", 3f);   // ffu34 canon
+        if (human && !netPuppet && !v.OwnedBy(this)) { string ask = Ownership.AskLine(nick, v, this); if (ask != null) Toast(ask, 3f); }   // ffu34 canon, ffu53 one table
         if (!netPuppet) Sfx.Play(Sfx.Door, 0.8f);
         if (human) Voice(true, transform.position, 0.45f);
     }
