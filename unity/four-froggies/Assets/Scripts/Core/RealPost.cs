@@ -28,7 +28,7 @@ public class RealPost : MonoBehaviour
         }
     }
 
-    bool AO { get { return !Realism.Lite; } }
+    bool AO { get { return !Realism.Lite && Perf60.AO; } }   // ffu60: SSAO only on the high tier, single view
 
     void OnEnable()
     {
@@ -43,8 +43,9 @@ public class RealPost : MonoBehaviour
         if (cam == null) cam = GetComponent<Camera>();
         bool hdr = src.format == RenderTextureFormat.ARGBHalf || src.format == RenderTextureFormat.DefaultHDR || src.format == RenderTextureFormat.ARGBFloat;
         float thr = hdr ? 1.05f : 0.86f;
-        int lv = Realism.Lite ? 3 : 5;
-        int div = Realism.Lite ? 4 : 2;
+        bool lite = Realism.Lite || Perf60.BloomLite;   // ffu60: low tier = the phone bloom chain
+        int lv = lite ? 3 : 5;
+        int div = lite ? 4 : 2;
         int w = Mathf.Max(8, src.width / div), h = Mathf.Max(8, src.height / div);
         m.SetVector("_Params", new Vector4(thr, 0.35f, bloom, vignette));
         m.SetVector("_Grade", new Vector4(saturation, exposure, hdr ? 1f : 0f, 0f));

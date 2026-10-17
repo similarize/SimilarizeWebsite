@@ -259,13 +259,16 @@ public class Behave58Runner : MonoBehaviour
 {
     public static Behave58Runner I;
     float t; readonly HashSet<Animal> watching = new HashSet<Animal>();
+    readonly List<Vehicle> fast60 = new List<Vehicle>(); bool half;
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Boot() { if (I != null || !Behave58.On) return; I = new GameObject("Behave58").AddComponent<Behave58Runner>(); DontDestroyOnLoad(I.gameObject); }
     void Update()
     {
-        t -= Time.unscaledDeltaTime; if (t > 0f || Game.I == null) return; t = 0.35f;
-        var fast = new List<Vehicle>();
+        t -= Time.unscaledDeltaTime; if (t > 0f || Game.I == null) return; t = 0.175f;
+        var fast = fast60; fast.Clear();   // ffu60: reused list; the robot half runs on the other tick (checks spread across frames)
+        half = !half;
         foreach (var v in Vehicle.All) if (v != null && v.isActiveAndEnabled && v.Speed > 2.5f && !(v is Horse)) fast.Add(v);
+        if (!half) { RobotsTick(fast); return; }
         foreach (var a in watching) if (a != null && a.lookAt57.HasValue && !a.pal) a.lookAt57 = null;
         watching.Clear();
         if (fast.Count == 0) return;
@@ -276,6 +279,11 @@ public class Behave58Runner : MonoBehaviour
             foreach (var v in fast)
                 if ((v.transform.position - p).sqrMagnitude < 16f * 16f) { if (!a.lookAt57.HasValue) { a.lookAt57 = v.transform.position + Vector3.up; watching.Add(a); Behave58.CarWatches++; } break; }
         }
+    }
+
+    void RobotsTick(List<Vehicle> fast)
+    {
+        if (fast.Count == 0) return;
         if (RanchLife.I != null)
             foreach (var r in RanchLife.I.robots)
             {

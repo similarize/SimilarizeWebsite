@@ -36,6 +36,7 @@ public class Animals57 : MonoBehaviour
         public float circle; public Vector3 seatLocal; public float riderScale = 1f;
     }
     readonly Dictionary<Animal, St> st = new Dictionary<Animal, St>();
+    readonly List<St> tickList = new List<St>();
     readonly Dictionary<Animal, Hotspot> hs = new Dictionary<Animal, Hotspot>();
     readonly HashSet<int> dressed = new HashSet<int>();
     readonly Dictionary<Frog, WorldId> lastWorld = new Dictionary<Frog, WorldId>();
@@ -219,8 +220,8 @@ public class Animals57 : MonoBehaviour
             lastWorld[f] = f.world;
             if (had && w != f.world) foreach (var s in st.Values) if (s.mode == Mode.Follow && s.f == f && s.a != null) Arrive(s, true);
         }
-        var list = new List<St>(st.Values);
-        foreach (var s in list)
+        tickList.Clear(); tickList.AddRange(st.Values);   // ffu60: reused (was a new list every frame)
+        foreach (var s in tickList)
         {
             if (s.a == null) { st.Remove(s.a); continue; }
             if (s.mode == Mode.None) continue;

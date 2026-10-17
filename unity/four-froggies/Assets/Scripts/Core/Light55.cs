@@ -286,7 +286,7 @@ public class Light55House : MonoBehaviour
         Vector3 c = o + new Vector3(r.center.x, H - 0.75f, r.center.y);
         var lg = new GameObject("Lamp " + name); lg.transform.SetParent(transform, false); lg.transform.position = c;
         rm.lamp = lg.AddComponent<Light>();
-        rm.lamp.type = LightType.Point; rm.lamp.shadows = LightShadows.None; rm.lamp.renderMode = LightRenderMode.ForcePixel;
+        rm.lamp.type = LightType.Point; rm.lamp.shadows = LightShadows.None; rm.lamp.renderMode = Perf60.On ? LightRenderMode.Auto : LightRenderMode.ForcePixel;   // ffu60: Auto (pixelLightCount per tier) - 6 forced pixel lamps = up to 6 extra passes per object
         rm.lamp.range = Mathf.Max(r.width, r.height) * 0.78f; rm.lamp.intensity = 1.7f; rm.lamp.color = new Color(1f, 0.88f, 0.72f);
         // flush ceiling light (disc) + its rim
         var b = Mats.Prim(PrimitiveType.Cylinder, transform, o + new Vector3(r.center.x, H - 0.05f, r.center.y), new Vector3(1.4f, 0.04f, 1.4f), bulbOn);

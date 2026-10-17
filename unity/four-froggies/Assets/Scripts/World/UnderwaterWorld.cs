@@ -16,6 +16,13 @@ public class UnderwaterWorld : MonoBehaviour
     public static UnderwaterWorld I;
     Transform root;
     bool built;
+    // ffu60: the sea (reef / wreck / cave / sand / light shafts) only renders for a camera near or under the pond, the
+    // fish / turtles / rays / jellies / whale / kelp only for one under (or right at) the water - per camera, so in
+    // split-screen a diver sees it while the player on the porch doesn't pay for it. Their animation pauses meanwhile.
+    Renderer[] gateSea, gateLife; bool seaShown = true, lifeShown = true; int lifeFrame = -100;
+    static readonly HashSet<int> owned = new HashSet<int>();
+    public static bool Owns(Renderer r) { return r != null && owned.Contains(r.GetInstanceID()); }
+    public static int GateSea, GateLife;   // probe counters: renderers per group
     public Submarine sub;
     float best = -1f, roundStart = -1f;
     const string Group = "pearls";
@@ -201,7 +208,41 @@ public class UnderwaterWorld : MonoBehaviour
         Life(rnd);
         Pearls(rnd);
         sub = Submarine.Build(Mooring, 90f);   // ffu53: the real sub is moored at the pond dock (it was a separate copy at the reef)
+        if (Perf60.On) GateInit();
         Ranch.Sign(L(-58f, -3f, -14f), 270f, "UNDERWATER\n<size=22>find all the pearls - reef, kelp, shipwreck, cave</size>", new Color(0.05f, 0.3f, 0.55f), 11f, 2.6f);   // 7 m wrapped "UNDERWAT/ER"
+    }
+
+    void GateInit()
+    {
+        var sea = new List<Renderer>(); var life = new List<Renderer>();
+        foreach (var r in root.GetComponentsInChildren<Renderer>(true)) if (!(r is ParticleSystemRenderer)) sea.Add(r);
+        foreach (var s in schools) foreach (var t in s.fish) if (t != null) life.AddRange(t.GetComponentsInChildren<Renderer>(true));
+        foreach (var w in swimmers) if (w.t != null) life.AddRange(w.t.GetComponentsInChildren<Renderer>(true));
+        foreach (var k in kelp) if (k != null) life.AddRange(k.GetComponentsInChildren<Renderer>(true));
+        gateSea = sea.ToArray(); gateLife = life.ToArray();
+        foreach (var r in gateSea) owned.Add(r.GetInstanceID());
+        foreach (var r in gateLife) owned.Add(r.GetInstanceID());
+        GateSea = gateSea.Length; GateLife = gateLife.Length;
+        Camera.onPreCull += Gate;
+        Debug.Log("PERF60 sea gate: " + gateSea.Length + " sea + " + gateLife.Length + " sea-life renderers draw only for cameras near / under the pond");
+    }
+
+    static void Gate(Camera c)
+    {
+        var u = I;
+        if (u == null || u.gateSea == null || c == null) return;
+        bool sea = false, life = false;
+        if (c.cameraType == CameraType.Game && (c.cullingMask & 1) != 0)
+        {
+            Vector3 p = c.transform.position;
+            float q = Layout.PondQ(p.x, p.z), h = p.y - Layout.WaterY;
+            bool under = h < 0.35f && q < 1.12f;
+            sea = under || (q < 1.5f && h < 24f);
+            life = under || (q < 1.2f && h < 9f);
+        }
+        if (life) u.lifeFrame = Time.frameCount;
+        if (sea != u.seaShown) { u.seaShown = sea; foreach (var r in u.gateSea) if (r != null) r.forceRenderingOff = !sea; }
+        if (life != u.lifeShown) { u.lifeShown = life; foreach (var r in u.gateLife) if (r != null) r.forceRenderingOff = !life; }
     }
 
     // ffu53: the sand lies ON the ranch pond bed (0.12 m up, no collider: the terrain is the floor), deep part of the pond only
@@ -565,6 +606,7 @@ public class UnderwaterWorld : MonoBehaviour
         if (sub != null && sub.driver == null && (sub.transform.position - Mooring).magnitude < 4f) { sub.rb.velocity = Vector3.zero; sub.rb.position = Mooring; }   // moored: stays put at the dock
         ChestTick();
         float dt = Mathf.Min(Time.deltaTime, 0.05f), t = Time.time;
+        if (gateLife != null && Time.frameCount - lifeFrame > 2) return;   // ffu60: no camera sees the sea life - its animation waits
         foreach (School s in schools)
         {
             s.t += dt;

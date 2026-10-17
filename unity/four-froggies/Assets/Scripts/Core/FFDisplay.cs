@@ -12,7 +12,11 @@ public static class FFDisplay
     [DllImport("__Internal")] static extern float FFSetDPR(int mode);
     [DllImport("__Internal")] static extern float FFScreenDPR();
     [DllImport("__Internal")] static extern int FFIsMobileUA();
+    [DllImport("__Internal")] static extern float FFSetDPRCap(float cap, int mode);
+    [DllImport("__Internal")] static extern float FFCurDPR();
 #else
+    static float FFSetDPRCap(float cap, int mode) { return 1f; }
+    static float FFCurDPR() { return 1f; }
     static float FFSetDPR(int mode) { return 1f; }
     static float FFScreenDPR() { return 1f; }
     static int FFIsMobileUA() { return 0; }
@@ -21,6 +25,18 @@ public static class FFDisplay
 
     public static bool MobileUA { get { try { return FFIsMobileUA() == 1; } catch { return false; } } }
     public static float ScreenDpr { get { try { return FFScreenDPR(); } catch { return 1f; } } }
+    public static float CurrentDpr { get { try { return FFCurDPR(); } catch { return 1f; } } }
+
+    // ffu60: Perf60 quality tier caps the pixel density (gameplay; the lobby only when below the high tier)
+    static float cap = -1f;
+    public static void Cap(float c)
+    {
+        if (Mathf.Abs(c - cap) < 0.01f) return;
+        cap = c;
+        int m = mode < 0 ? 0 : mode;
+        float use = (m == 1 && Perf60.Tier >= 2) ? 0f : c;
+        try { float v = FFSetDPRCap(use, m == 0 && lite ? 2 : m); Debug.Log("PERF60 dpr cap " + c.ToString("0.0#") + " -> " + v.ToString("0.0#")); } catch { }
+    }
 
     // true = lobby (full density), false = gameplay (lighter density)
     public static void Lobby(bool on)
@@ -28,7 +44,7 @@ public static class FFDisplay
         int m = on ? 1 : 0;
         if (m == mode) return;
         mode = m;
-        try { FFSetDPR(m == 0 && lite ? 2 : m); } catch { }
+        try { if (cap > 0f && Perf60.On) FFSetDPRCap((m == 1 && Perf60.Tier >= 2) ? 0f : cap, m == 0 && lite ? 2 : m); else FFSetDPR(m == 0 && lite ? 2 : m); } catch { }
         ApplyAA();
     }
 
@@ -39,7 +55,7 @@ public static class FFDisplay
     static void Hook() { FFPlatform.NativeDisplayInit(); var g = new GameObject("FFDisplayWatch"); Object.DontDestroyOnLoad(g); g.hideFlags = HideFlags.HideInHierarchy; g.AddComponent<FFDisplayWatch>(); }
     public static void PerfTick(float dt, ref float t, ref float acc, ref int n)
     {
-        if (mode != 0 || lite || !(Look.Mobile || MobileUA) || ScreenDpr <= 1.55f) { t = 0f; acc = 0f; n = 0; return; }
+        if (Perf60.On || mode != 0 || lite || !(Look.Mobile || MobileUA) || ScreenDpr <= 1.55f) { t = 0f; acc = 0f; n = 0; return; }   // ffu60: the Perf60 governor owns the density
         t += dt;
         if (t < 4f) return;                 // settle after the lobby -> game switch
         acc += dt; n++;

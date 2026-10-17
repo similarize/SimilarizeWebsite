@@ -502,6 +502,9 @@ public static class BuildScript
             sky.SetFloat("_Exposure", 1.3f);
         }
         EditorUtility.SetDirty(sky);
+        // ffu60: GPU instancing on the base Standard / Unlit materials (every runtime Mats.* clone inherits it): repeated
+        // primitives / LBPack parts with one material draw as one instanced call; a scene material keeps the variants in the build
+        lit.enableInstancing = true; unlit.enableInstancing = true; EditorUtility.SetDirty(unlit);
         EditorUtility.SetDirty(lit);
         // graphics overhaul shaders (Assets/Shaders): frog skin, foliage, animated pond water
         Material skin = ShaderMat("FF/Skin", "Skin.mat");
@@ -515,6 +518,9 @@ public static class BuildScript
         Material realWater = ShaderMat("FF/RealWater", "RealWater.mat");
         // ffu56: instanced ranch grass (FF/Grass56); enableInstancing on a scene material keeps the instancing variants in the build
         Material grass56 = ShaderMat("FF/Grass56", "Grass56.mat");
+        // ffu60: trees (leaves + scanned bark / rock) repeat one mesh + material many times: instanced
+        if (foliage != null) { foliage.enableInstancing = true; EditorUtility.SetDirty(foliage); }
+        if (realTri != null) { realTri.enableInstancing = true; EditorUtility.SetDirty(realTri); }
         if (grass56 != null) { grass56.enableInstancing = true; EditorUtility.SetDirty(grass56); }
         // ffu57: one skin shader for every animal + froggy (fur / wet skin); a scene material keeps it in the build
         Material skin57 = ShaderMat("FF/Skin57", "Skin57.mat");

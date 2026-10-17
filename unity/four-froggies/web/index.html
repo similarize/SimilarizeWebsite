@@ -66,6 +66,10 @@
   // game canvas. ?aa=0 turns it off.
   (function () {
     if (/[?&]aa=0/.test(location.search)) return;
+    // ffu60: ?quality=low, or this browser's frame-rate governor ended on the low tier last time -> no canvas MSAA
+    var q60 = /[?&]quality=([a-z]+)/.exec(location.search), ql = null;
+    try { ql = localStorage.getItem("ffq60"); } catch (e) { }
+    if (q60 ? q60[1] === "low" : ql === "0") { console.log("FF page: low quality tier - canvas antialias off"); return; }
     var orig = HTMLCanvasElement.prototype.getContext;
     HTMLCanvasElement.prototype.getContext = function (type, attrs) {
       if (this.id === "unity-canvas" && (type === "webgl2" || type === "webgl" || type === "experimental-webgl")) {

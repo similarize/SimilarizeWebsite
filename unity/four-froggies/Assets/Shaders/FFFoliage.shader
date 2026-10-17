@@ -16,6 +16,7 @@ Shader "FF/Foliage"
         Cull Off
         CGPROGRAM
         #pragma surface surf Folia vertex:vert alphatest:_Cutoff addshadow
+        #pragma multi_compile_instancing
         #pragma target 3.0
         sampler2D _MainTex;
         fixed4 _Color;

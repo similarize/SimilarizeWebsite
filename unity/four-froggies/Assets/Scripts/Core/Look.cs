@@ -71,7 +71,7 @@ public static class Look
     public static void RerenderProbe(int res)
     {
         if (ranch == null) return;
-        try { ranch.resolution = res; ranch.RenderProbe(); Debug.Log("Look: ranch probe re-rendered " + res); }
+        try { ranch.resolution = res; if (Perf60.On) ranch.timeSlicingMode = ReflectionProbeTimeSlicingMode.IndividualFaces; /* ffu60: one face per frame, no hitch */ ranch.RenderProbe(); Debug.Log("Look: ranch probe re-rendered " + res); }
         catch (System.Exception e) { Debug.LogWarning("Look: probe re-render failed " + e.Message); }
     }
 
@@ -106,5 +106,6 @@ public static class Look
             }
         if (Realism.On) Realism.ApplyQuality(views, cams);   // ?realism=1 test only
         Light55.Quality(views);   // ffu55
+        Perf60.AfterViews(views, cams);   // ffu60: quality tier (shadows / lights / density) on top
     }
 }

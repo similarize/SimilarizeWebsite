@@ -257,7 +257,7 @@ public static class Realism
         try { ApplyMaterials(); } catch (System.Exception e) { Debug.LogWarning("Realism: materials " + e); }
         try { BuildArea(); } catch (System.Exception e) { Debug.LogWarning("Realism: area " + e); }
         yield return null;
-        Look.RerenderProbe(Lite ? 64 : 256);
+        if (!(Perf60.On && Terrain56.On)) Look.RerenderProbe(Lite ? 64 : 256);   // ffu60: Terrain56 re-renders it once more anyway (one ~3,000-draw frame saved)
         Ready = true;
         if (Guard) host0.StartCoroutine(PerfGuard());
         Debug.Log("Realism: ready in " + (Time.realtimeSinceStartup - t0).ToString("0.0") + " s, " + tex.Count + " textures, " + (bytes / 1024) + " KB streamed");

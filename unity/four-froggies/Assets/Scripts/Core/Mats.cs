@@ -129,6 +129,8 @@ public static class Mats
         g.transform.localPosition = localPos;
         g.transform.localScale = scale;
         g.GetComponent<Renderer>().sharedMaterial = mat;
+        // ffu60: small spheres (eyes, fish, berries, balls, pearls ...) use a 396-triangle sphere instead of Unity's 768
+        if (t == PrimitiveType.Sphere && Perf60.On && Mathf.Max(Mathf.Abs(scale.x), Mathf.Max(Mathf.Abs(scale.y), Mathf.Abs(scale.z))) <= 0.8f) { var mf = g.GetComponent<MeshFilter>(); if (mf != null) mf.sharedMesh = SmallSphere; }
         if (t == PrimitiveType.Cube && mat != null && mat.HasProperty("_MainTex") && mat.mainTexture != null) BoxUV(g);
         if (!keepCollider)
         {
@@ -143,6 +145,36 @@ public static class Mats
         GameObject g = Prim(t, parent, localPos, scale, mat, keepCollider);
         g.transform.localRotation = Quaternion.Euler(euler);
         return g;
+    }
+
+    static Mesh smallSphere;
+    static Mesh SmallSphere
+    {
+        get
+        {
+            if (smallSphere != null) return smallSphere;
+            const int seg = 18, rings = 12; const float r = 0.5f;   // same 1 m diameter + UV layout idea as the built-in sphere
+            var v = new Vector3[(seg + 1) * (rings + 1)]; var n = new Vector3[v.Length]; var uv = new Vector2[v.Length];
+            for (int y = 0; y <= rings; y++)
+                for (int x = 0; x <= seg; x++)
+                {
+                    float th = Mathf.PI * y / rings, ph = 2f * Mathf.PI * x / seg;
+                    Vector3 d = new Vector3(Mathf.Sin(th) * Mathf.Cos(ph), Mathf.Cos(th), Mathf.Sin(th) * Mathf.Sin(ph));
+                    int i = y * (seg + 1) + x; v[i] = d * r; n[i] = d; uv[i] = new Vector2((float)x / seg, 1f - (float)y / rings);
+                }
+            var tri = new System.Collections.Generic.List<int>();
+            for (int y = 0; y < rings; y++)
+                for (int x = 0; x < seg; x++)
+                {
+                    int a = y * (seg + 1) + x, b = a + 1, c = a + seg + 1, d = c + 1;
+                    if (y > 0) { tri.Add(a); tri.Add(b); tri.Add(c); }
+                    if (y < rings - 1) { tri.Add(b); tri.Add(d); tri.Add(c); }
+                }
+            smallSphere = new Mesh { name = "Sphere60" };
+            smallSphere.vertices = v; smallSphere.normals = n; smallSphere.uv = uv; smallSphere.SetTriangles(tri, 0);
+            smallSphere.RecalculateBounds(); smallSphere.RecalculateTangents();
+            return smallSphere;
+        }
     }
 
     // replaces a cube's 0..1-per-face UVs with box-projected UVs in metres (by its scale), so textures tile instead of

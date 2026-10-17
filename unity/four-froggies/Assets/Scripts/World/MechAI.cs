@@ -28,6 +28,7 @@ public class MechAI : MonoBehaviour
     }
     public readonly List<Job> jobs = new List<Job>();
     readonly Dictionary<Frog, float> cool = new Dictionary<Frog, float>();
+    readonly List<Frog> coolKeys = new List<Frog>();
     float scanT = 3f, farT = 75f;
     public static readonly Rect Field = new Rect(-195f, -65f, 100f, 143f);
     public static void Ensure() { if (I == null) new GameObject("Mech AI").AddComponent<MechAI>(); }
@@ -105,7 +106,8 @@ public class MechAI : MonoBehaviour
         var g = Game.I;
         if (g == null || g.state != Game.State.Play) return;
         float dt = Mathf.Min(Time.deltaTime, Mathf.Max(0.05f, StoryMech.DtCap));   // the mechs' own clock (demos raise it)
-        foreach (var k in new List<Frog>(cool.Keys)) cool[k] -= dt;
+        coolKeys.Clear(); coolKeys.AddRange(cool.Keys);   // ffu60: reused key list (was a new list every frame)
+        foreach (var k in coolKeys) cool[k] -= dt;
         for (int i = jobs.Count - 1; i >= 0; i--)
         {
             var j = jobs[i];

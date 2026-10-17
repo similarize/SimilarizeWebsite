@@ -19,7 +19,9 @@ public class Grass56 : MonoBehaviour
     readonly Vector4[] bend = new Vector4[8];
     readonly List<Vector4> cand = new List<Vector4>();
     Frog[] frogs = new Frog[0]; float frogT;
-    int built, drawn;
+    int built, drawn, drawnInst;
+    float fadeR = -1f;   // ffu60: the radius the fade uniforms were set for (Perf60 scales radius / density per tier + views)
+    public string DrawnInfo { get { return drawn + "c/" + (drawnInst / 1000f).ToString("0.0") + "k r" + (radius * Perf60.GrassRadiusK).ToString("0"); } }
     Plane[] planes = new Plane[6];
     public static int Bends;
 
@@ -123,7 +125,9 @@ public class Grass56 : MonoBehaviour
         if (Game.I == null || Game.I.slots == null) return;
         if (Realism.Degraded) return;   // the lite frame-rate guard sheds the grass
         Camera first = null;
-        int buildBudget = 6; drawn = 0;
+        int buildBudget = 6; drawn = 0; drawnInst = 0;
+        float R = radius * Perf60.GrassRadiusK, dk = Perf60.GrassDensK;   // ffu60
+        if (Mathf.Abs(R - fadeR) > 0.5f) { fadeR = R; mat.SetFloat("_FadeNear", R * 0.7f); mat.SetFloat("_FadeFar", R); }
         foreach (var s in Game.I.slots)
         {
             if (s == null || s.cam == null || !s.cam.isActiveAndEnabled || s.frog < 0 || s.frog >= Game.I.frogs.Count) continue;
@@ -133,21 +137,26 @@ public class Grass56 : MonoBehaviour
             if (Terrain56.WorldAt(cp) != WorldId.Ranch) continue;
             if (first == null) first = s.cam;
             GeometryUtility.CalculateFrustumPlanes(s.cam, planes);
-            int c0x = Mathf.FloorToInt((cp.x - radius) / Cell), c1x = Mathf.FloorToInt((cp.x + radius) / Cell);
-            int c0z = Mathf.FloorToInt((cp.z - radius) / Cell), c1z = Mathf.FloorToInt((cp.z + radius) / Cell);
+            int c0x = Mathf.FloorToInt((cp.x - R) / Cell), c1x = Mathf.FloorToInt((cp.x + R) / Cell);
+            int c0z = Mathf.FloorToInt((cp.z - R) / Cell), c1z = Mathf.FloorToInt((cp.z + R) / Cell);
             float hgt = Mathf.Abs(cp.y - Ranch.GY(cp.x, cp.z));
-            if (hgt > radius) continue;   // high above the ranch: grass is sub-pixel
+            if (hgt > R) continue;   // high above the ranch: grass is sub-pixel
             for (int cx = c0x; cx <= c1x; cx++)
                 for (int cz = c0z; cz <= c1z; cz++)
                 {
                     float ccx = (cx + 0.5f) * Cell - cp.x, ccz = (cz + 0.5f) * Cell - cp.z;
-                    if (ccx * ccx + ccz * ccz > (radius + Cell * 0.71f) * (radius + Cell * 0.71f)) continue;
+                    float cd2 = ccx * ccx + ccz * ccz;
+                    if (cd2 > (R + Cell * 0.71f) * (R + Cell * 0.71f)) continue;
                     int key = (cx + 1000) * 4096 + (cz + 1000);
                     C c;
                     if (!cells.TryGetValue(key, out c)) { if (buildBudget-- <= 0) continue; c = Build(cx, cz); cells[key] = c; }
                     if (c.n == 0 || !GeometryUtility.TestPlanesAABB(planes, c.b)) continue;
-                    Graphics.DrawMeshInstanced(clump, 0, mat, c.m, c.n, null, ShadowCastingMode.Off, true, 0, s.cam);
-                    drawn++;
+                    // ffu60: density by tier, and the outer half of the radius thins out (it fades there anyway); the cell's
+                    // matrices are in random order, so the first n is an even subsample
+                    float far = Mathf.Clamp01((Mathf.Sqrt(cd2) - R * 0.5f) / (R * 0.5f));
+                    int cnt = Mathf.Clamp(Mathf.CeilToInt(c.n * dk * (Perf60.On ? 1f - 0.45f * far : 1f)), 1, c.n);
+                    Graphics.DrawMeshInstanced(clump, 0, mat, c.m, cnt, null, ShadowCastingMode.Off, true, 0, s.cam);
+                    drawn++; drawnInst += cnt;
                 }
         }
         UpdateBenders(first);

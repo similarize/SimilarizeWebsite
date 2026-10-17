@@ -21,6 +21,7 @@ Shader "FF/RealTri"
         LOD 300
         CGPROGRAM
         #pragma surface surf RealTri fullforwardshadows addshadow
+        #pragma multi_compile_instancing
         #pragma target 3.0
         #include "UnityPBSLighting.cginc"
         sampler2D _MainTex, _BumpMap;
