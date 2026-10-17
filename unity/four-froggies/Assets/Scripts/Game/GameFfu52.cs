@@ -13,7 +13,7 @@ public class Ffu52 : MonoBehaviour
     int ph = -1; float phW, phG, logT;
     Vector3 camPos, camLook; bool camOn;
     Frog f; Roadster49 rd; GroundVehicle ct;
-    static readonly Vector3 RdSpot = new Vector3(52f, 0f, 8.6f), CtSpot = new Vector3(32f, 0f, 22f);
+    static readonly Vector3 RdSpot = new Vector3(52f, 0f, 8.6f), CtSpot = new Vector3(40f, 0f, 12f);   // 52b: was (32, 22) = against the garage east wall behind hay bales, on a slope
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Boot()

@@ -126,6 +126,15 @@ public class CyberBoat : MonoBehaviour
         if (k > 0f && !built) Build();
         if (k <= 0f) { Wet = 0f; if (hullCol != null) hullCol.enabled = false; return; }
         if (hullCol != null) hullCol.enabled = k > 0.15f;   // the hull carries it until the wheels are back down
+        // ffu52b: while the hull rides up the shore (boat -> truck) a fast bank hit must not stand the truck on its tail
+        // (52a probe: 80 km/h into the bank at x 39 pitched it vertical, 8 m up). Cap the pitch / roll rate and the climb speed.
+        if (!boatTarget && !rb.isKinematic)
+        {
+            Vector3 la = transform.InverseTransformDirection(rb.angularVelocity);
+            la.x = Mathf.Clamp(la.x, -0.9f, 0.9f); la.z = Mathf.Clamp(la.z, -0.9f, 0.9f);
+            rb.angularVelocity = transform.TransformDirection(la);
+            Vector3 vv = rb.velocity; if (vv.y > 3.5f) { vv.y = 3.5f; rb.velocity = vv; }
+        }
 
         // buoyancy (fades in / out with the sequence), planing lift, banking
         float buoy = boatTarget ? Mathf.Clamp01(k / 0.06f) : Mathf.Clamp01(k / 0.3f);   // floats as soon as it starts
