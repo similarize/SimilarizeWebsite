@@ -20,9 +20,9 @@ import {
   createSkidMarks,
   RACE_COLORS,
   RACE_NAMES,
-} from "./race-mode.js?v=20261010-soccerrc3d16";
+} from "./race-mode.js?v=20261016-soccerrc3d17";
 
-const CACHE = "20261010-soccerrc3d16";
+const CACHE = "20261016-soccerrc3d17";
 const HALF_X = 22;
 const HALF_Z = 14;
 const WALL_H = 5.5;
@@ -2302,8 +2302,25 @@ function init() {
   renderer.setClearColor(0x0c1014);
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  // arcade-upgrade: filmic tone mapping + sRGB output for richer, more realistic colour
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.15;
 
   scene = new THREE.Scene();
+  // arcade-upgrade: cheap procedural environment so metal/paint pick up reflections (no assets)
+  try {
+    const pm = new THREE.PMREMGenerator(renderer);
+    const envScene = new THREE.Scene();
+    const envGeo = new THREE.SphereGeometry(50, 16, 8);
+    const envMat = new THREE.ShaderMaterial({ side: THREE.BackSide, uniforms: {},
+      vertexShader: "varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0);}",
+      fragmentShader: "varying vec3 vP; void main(){ float h = normalize(vP).y; vec3 sky = mix(vec3(0.55,0.62,0.7), vec3(1.6,1.7,1.9), smoothstep(0.0,0.9,h)); vec3 gnd = vec3(0.18,0.22,0.16); gl_FragColor = vec4(h>0.0?sky:gnd,1.0);}" });
+    envScene.add(new THREE.Mesh(envGeo, envMat));
+    scene.environment = pm.fromScene(envScene, 0.04).texture;
+    scene.environmentIntensity = 0.55;
+    envGeo.dispose(); envMat.dispose(); pm.dispose();
+  } catch (_) {}
   scene.fog = new THREE.Fog(0x0c1014, 40, 90);
 
   camera = new THREE.PerspectiveCamera(55, 1, 0.1, 200);
@@ -2314,7 +2331,8 @@ function init() {
   sunLight = new THREE.DirectionalLight(0xffe2b0, 1.15);
   sunLight.position.set(12, 28, 10);
   sunLight.castShadow = true;
-  sunLight.shadow.mapSize.set(1024, 1024);
+  sunLight.shadow.mapSize.set(window.innerWidth < 700 ? 1024 : 2048, window.innerWidth < 700 ? 1024 : 2048);
+  sunLight.shadow.radius = 3;
   sunLight.shadow.camera.left = -30;
   sunLight.shadow.camera.right = 30;
   sunLight.shadow.camera.top = 30;
@@ -2364,6 +2382,10 @@ function init() {
   showLobby();
   requestAnimationFrame(tick);
   console.info("[Soccer RC 3D]", CACHE, "lobby ready");
+  // arcade-upgrade: ?demo=soccer|race auto-starts (used for previews / screenshots)
+  const demo = new URLSearchParams(location.search).get("demo");
+  if (demo === "soccer") setTimeout(() => { try { startSoccerMode(); } catch (e) { console.warn(e); } }, 300);
+  if (demo === "race") setTimeout(() => { try { startRaceMode(2, 3); } catch (e) { console.warn(e); } }, 300);
 }
 
 init();
