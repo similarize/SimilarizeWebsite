@@ -1,5 +1,5 @@
 /*! Similarize Arcade chrome (ac1) — consistent "← Arcade" Exit + fullscreen toggle for every cabinet.
- * <script src="/games/shared/arcade-chrome.js?v=ac1" data-pos="top:8px;left:8px"></script>
+ * <script src="/games/shared/arcade-chrome.js?v=ac2" data-pos="top:8px;left:8px"></script>
  * Skips the Exit pill if the page already has a link back to /games/. Esc-free: B/Select on a pad is left to the game.
  */
 (function () {
@@ -19,12 +19,20 @@
     for (var i = 0; i < as.length; i++) { var h = as[i].getAttribute("href") || ""; if (/^(\/games\/?(index\.html)?(\?.*)?|\.\.\/(index\.html)?)$/.test(h) && as[i].offsetParent !== null) return true; }
     return false;
   }
+  function hasFs() {
+    var els = document.querySelectorAll("button,a,[role=button],[data-fullscreen],[id*=full i],[class*=full i]");
+    for (var i = 0; i < els.length; i++) { var e = els[i];
+      if (e.closest && e.closest(".ac1-bar")) continue;
+      var t = [e.id, e.className && e.className.baseVal === undefined ? e.className : "", e.title, e.getAttribute("aria-label"), e.textContent].join(" ");
+      if (/full ?screen|\u26F6|\u26f6|⛶/i.test(t)) return true; }
+    return false;
+  }
   function build() {
     css();
     var bar = document.createElement("div"); bar.className = "ac1-bar";
     if (!hasExit()) { var a = document.createElement("a"); a.href = "/games/"; a.textContent = "\u2190 Arcade"; a.setAttribute("aria-label", "Exit to the Similarize Arcade"); bar.appendChild(a); }
     var de = document.documentElement;
-    if (de.requestFullscreen || de.webkitRequestFullscreen) {
+    if ((de.requestFullscreen || de.webkitRequestFullscreen) && !hasFs()) {
       var b = document.createElement("button"); b.className = "ac1-fs"; b.type = "button"; b.textContent = "\u26F6"; b.title = "Fullscreen"; b.setAttribute("aria-label", "Toggle fullscreen");
       b.onclick = function () {
         var fs = document.fullscreenElement || document.webkitFullscreenElement;
