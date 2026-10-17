@@ -117,7 +117,7 @@ window.XFIG = (function () {
   const hemi = new BABYLON.HemisphericLight("hemi", new V3(0, 1, 0), scene); hemi.intensity = 0.35;
   const sun = new BABYLON.DirectionalLight("sun", new V3(-0.5, -1, -0.4), scene);
   sun.position = new V3(30, 50, 25); sun.intensity = 2.2;
-  const shadows = new BABYLON.ShadowGenerator(1024, sun);
+  const shadows = new BABYLON.ShadowGenerator(innerWidth < 700 ? 1024 : 2048, sun);
   shadows.useBlurExponentialShadowMap = true; shadows.blurKernel = 16;
 
   const camera = new BABYLON.UniversalCamera("cam", new V3(0, 3, -6), scene);
@@ -158,6 +158,11 @@ window.XFIG = (function () {
   pipe.imageProcessing.toneMappingEnabled = true; pipe.imageProcessing.contrast = 1.15; pipe.imageProcessing.exposure = 1.05;
   pipe.imageProcessing.vignetteEnabled = true; pipe.imageProcessing.vignetteWeight = 1.5;
   pipe.sharpenEnabled = true; pipe.sharpen.edgeAmount = 0.2;
+  // bbb2: depth of field off, but warmer grade + film grain + chromatic touch for a more photographic look
+  pipe.grainEnabled = true; pipe.grain.intensity = 6; pipe.grain.animated = true;
+  pipe.chromaticAberrationEnabled = true; pipe.chromaticAberration.aberrationAmount = 8;
+  pipe.imageProcessing.colorCurvesEnabled = true;
+  { const cc = new BABYLON.ColorCurves(); cc.globalSaturation = 18; cc.highlightsHue = 40; cc.highlightsDensity = 18; cc.shadowsHue = 220; cc.shadowsDensity = 12; pipe.imageProcessing.colorCurves = cc; }
 
   // Arena
   const ARENA = 36;
@@ -278,7 +283,10 @@ window.XFIG = (function () {
     b.dispose(); p.balloons[k] = null; sfx("pop");
     asfx("pop", p.id === 0 ? 1.2 : Math.max(0.35, 1 - BABYLON.Vector3.Distance(p.node.position, players[0].node.position) / 40));
     if (p.id === 0) asfx("hurt");
-    for (let i = 0; i < 12; i++) {
+    { const ring = BABYLON.MeshBuilder.CreateTorus("popRing", { diameter: 0.6, thickness: 0.04, tessellation: 24 }, scene);
+      ring.material = bMats[p.id]; ring.position.copyFrom(at); ring.rotation.x = Math.PI / 2 * Math.random();
+      fx.push({ m: ring, v: V3.Zero(), life: 0.35, grow: 9 }); }
+    for (let i = 0; i < 22; i++) {
       const s = BABYLON.MeshBuilder.CreateBox("frag", { size: 0.08 }, scene);
       s.material = bMats[p.id]; s.position.copyFrom(at);
       fx.push({ m: s, v: new V3(Math.random() - 0.5, Math.random() * 0.8, Math.random() - 0.5).scale(8), life: 0.7 });
@@ -413,19 +421,34 @@ window.XFIG = (function () {
     setAnim(p, s > 4.2 ? "run" : s > 0.3 ? "walk" : "idle");
   }
 
+  // bbb2 smarter AI: picks weakened/near targets, checks line of sight past rocks, dodges when aimed at,
+  // leads moving targets, has a human-like reaction delay, and flanks around cover instead of shooting rocks.
+  function losClear(a, b) { for (const r of rocks) if (segSphere(a, b, new V3(r.x, r.h * 0.5, r.z), r.r * 0.9)) return false; return true; }
   function aiUpdate(p, dt) {
     const foes = players.filter((q) => q !== p && q.alive);
     if (!foes.length) { setAnim(p, "idle"); return; }
-    let t = foes[0], best = 1e9;
-    for (const q of foes) { const d = V3.Distance(q.node.position, p.node.position); if (d < best) { best = d; t = q; } }
+    let t = foes[0], best = 1e9, bestScore = 1e9;
+    for (const q of foes) { const d = V3.Distance(q.node.position, p.node.position), left = q.balloons.filter(Boolean).length, sc = d + left * 5 + (q === p.lastT ? -4 : 0);
+      if (sc < bestScore) { bestScore = sc; best = d; t = q; } }
+    p.lastT = t;
+    const eye = p.node.position.add(new V3(0, 1.4, 0)), tEye = t.node.position.add(new V3(0, 1.6, 0));
+    const see = losClear(eye, tEye);
+    // threat: is anyone aiming at me?
+    let threat = false;
+    for (const q of foes) { const to = p.node.position.subtract(q.node.position), a = Math.atan2(to.x, to.z); let d = a - q.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); if (Math.abs(d) < 0.12 && to.length() < 26) threat = true; }
+    p.react = (p.react || 0) - dt;
+    if (threat && p.react <= 0) { p.strafe = -(p.strafe || 1); p.think = 0.6 + Math.random() * 0.6; p.react = 0.9; }
+    if (!see) { p.blocked = (p.blocked || 0) + dt; if (p.blocked > 0.8) { p.strafe = -(p.strafe || 1); p.blocked = 0; } } else p.blocked = 0;
+    p.seeT = see ? (p.seeT || 0) + dt : 0;
     const to = t.node.position.subtract(p.node.position);
     const want = Math.atan2(to.x, to.z);
     let dy = want - p.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); p.yaw += dy * Math.min(1, dt * 5);
     p.think -= dt; if (p.think <= 0) { p.think = 1 + Math.random() * 2; p.strafe = Math.random() < 0.5 ? -1 : 1; }
-    move(p, best > 14 ? 1 : best < 7 ? -0.6 : 0, p.strafe * 0.7, 4.6, dt);
-    if (best < 30 && Math.abs(dy) < 0.4) {
+    move(p, !see ? 0.6 : best > 14 ? 1 : best < 7 ? -0.6 : 0.15, p.strafe * (threat ? 1 : !see ? 0.9 : 0.7), threat ? 5.4 : 4.6, dt);
+    if (best < 30 && Math.abs(dy) < 0.4 && see && p.seeT > 0.35) {
       const targets = t.balloons.filter(Boolean); if (!targets.length) return;
-      const aim = targets[Math.floor(Math.random() * targets.length)].getAbsolutePosition();
+      const tv = t.lastPos ? t.node.position.subtract(t.lastPos).scale(1 / Math.max(dt, 1e-3)) : V3.Zero();
+      const aim = targets[Math.floor(Math.random() * targets.length)].getAbsolutePosition().add(tv.scale(best / 45 * 0.8));
       const origin = p.node.position.add(new V3(0, 1.4, 0)).add(new V3(Math.sin(p.yaw), 0, Math.cos(p.yaw)).scale(0.5));
       const spread = 0.05 + best * 0.006;
       const dir = aim.subtract(origin).normalize().add(new V3((Math.random() - 0.5) * spread * 2, (Math.random() - 0.5) * spread * 2, (Math.random() - 0.5) * spread * 2));
@@ -463,6 +486,7 @@ window.XFIG = (function () {
         move(me, fwd, side, sprint || Math.hypot(fwd, side) > 0.9 && (stick.id !== null || g) ? 6.5 : 4, dt);
       }
       players.forEach((p) => p.ai && p.alive && aiUpdate(p, dt));
+      players.forEach((p) => { p.lastPos = p.node.position.clone(); });
     }
     players.forEach((p) => (p.node.rotation.y = p.yaw));
 
@@ -517,6 +541,7 @@ window.XFIG = (function () {
     // Pop fragments
     for (let i = fx.length - 1; i >= 0; i--) {
       const f = fx[i]; f.v.y -= 12 * dt; f.m.position.addInPlace(f.v.scale(dt)); f.m.rotation.x += dt * 8; f.life -= dt;
+      if (f.grow) { f.m.scaling.setAll(1 + (0.35 - f.life) * f.grow); f.m.visibility = Math.max(0, f.life / 0.35); f.v.y = 0; } else
       f.m.scaling.setAll(Math.max(0.01, f.life / 0.7));
       if (f.life <= 0) { f.m.dispose(); fx.splice(i, 1); }
     }
@@ -639,6 +664,7 @@ window.XFIG = (function () {
 
   function start() { if (actx && actx.state === "suspended") actx.resume(); reset(); }
   go.addEventListener("click", () => { start(); if (!isTouch || matchMedia("(any-pointer: fine)").matches) lock(); });
+  if (new URLSearchParams(location.search).get("demo") === "play") setTimeout(() => { try { start(); } catch (e) { console.warn(e); } }, 2500);
 
   loadBots().then(() => {
     players.forEach((p, i) => { p.node.position.copyFrom(spawns[i]); p.yaw = Math.atan2(-spawns[i].x, -spawns[i].z); makeBalloons(p); setAnim(p, "idle"); });
