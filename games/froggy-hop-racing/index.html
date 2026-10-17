@@ -110,7 +110,8 @@
       .x-slot b { font-size: 20px; font-weight: 600; }
       #l-msg { min-height: 1.4em; margin: 0 0 8px; }
     </style>
-  <script src="/games/shared/arcade-chrome.js?v=ac2" data-pos="top:205px;right:10px" defer></script>
+  <script src="/games/shared/reword-cta.js?v=cta1"></script>
+<script src="/games/shared/arcade-chrome.js?v=ac2" data-pos="top:205px;right:10px" defer></script>
 </head>
   <body>
     <div class="page" id="top">
@@ -991,9 +992,15 @@ function animFrog(f, dt) {
 function aiThink(f, dt, leader) {
   const inp = f.input, la = 9 + Math.floor(Math.abs(f.v) * 0.25), j = (f.idx + la) % N;
   f.aiLineT -= dt; if (f.aiLineT < 0) { f.aiLineT = rnd(1.5, 4); f.aiLine = rnd(-HW + 2.5, HW - 2.5); }
-  const tx = P[j].x + R[j].x * f.aiLine, tz = P[j].z + R[j].z * f.aiLine;
+  // fhr6 smarter AI: hug the inside of the coming bend, step out to pass the frog in front, ease off in tight turns
+  const j2 = (f.idx + 34) % N, bend = wrapA(TH[j2] - TH[f.idx]);
+  const inside = Math.sign((P[j2].x - P[f.idx].x) * R[f.idx].x + (P[j2].z - P[f.idx].z) * R[f.idx].z);
+  let line = Math.abs(bend) > 0.22 ? inside * (HW - 2.8) * Math.min(1, Math.abs(bend) * 1.6) : f.aiLine;
+  for (const o of frogs) { if (o === f) continue; const dp = o.prog - f.prog; if (dp > 0 && dp < 6) { const lat = (o.x - P[o.idx].x) * R[o.idx].x + (o.z - P[o.idx].z) * R[o.idx].z; if (Math.abs(lat - line) < 1.8) line = lat + (lat > 0 ? -2.6 : 2.6); } }
+  f.aiLs = (f.aiLs === undefined ? line : f.aiLs + (line - f.aiLs) * Math.min(1, dt * 2.2));
+  const tx = P[j].x + R[j].x * f.aiLs, tz = P[j].z + R[j].z * f.aiLs;
   const diff = wrapA(Math.atan2(tx - f.x, tz - f.z) - f.h);
-  inp.steer = clamp(-diff * 2.6, -1, 1); inp.thr = 1; inp.brk = 0;
+  inp.steer = clamp(-diff * 2.6, -1, 1); inp.thr = Math.abs(diff) > 0.6 ? 0.75 : 1; inp.brk = 0;
   if (f.ai) f.band = 1 + clamp((leader.prog - f.prog) / 180, -1, 1) * 0.15;
   if (f.jcd <= 0 && !f.air && Math.abs(diff) < 0.1 && Math.abs(wrapA(TH[j] - TH[f.idx])) < 0.08 && Math.random() < dt * 0.3) inp.jump = true;
   if (f.item) {
@@ -1224,6 +1231,14 @@ function updHud(dt) {
 }
 function showFinish() {
   const order = racePlaces(), me = players[0].frog, multi = players.length > 1;
+  try { if (window.SimilarizeCTA) SimilarizeCTA.attach($("f-table").parentElement); } catch (_) {}
+  // fhr6 co-op: with 2+ players, everyone also races as one team — points 10/8/6/4/2/1 summed
+  const PTS = [10, 8, 6, 4, 2, 1];
+  if (multi) setTimeout(() => {
+    const team = players.reduce((n, p) => n + (PTS[p.frog.place - 1] || 0), 0), cpu = order.filter((o) => !humanOf(o)).reduce((n, o) => n + (PTS[o.place - 1] || 0), 0);
+    let el = $("f-team"); if (!el) { el = document.createElement("p"); el.id = "f-team"; el.className = "x-shadow"; el.style.cssText = "font:700 20px system-ui,sans-serif;margin:10px 0 0;text-align:center"; $("f-table").after(el); }
+    el.textContent = team > cpu ? `Team Froggies ${team} – CPU ${cpu} · Team win! 🎉` : `Team Froggies ${team} – CPU ${cpu} · So close, again?`;
+  }, 0);
   const best = players.slice().sort((a, b) => a.frog.place - b.frog.place)[0], bp = best.frog.place;
   $("f-title").textContent = multi ? (bp === 1 ? `${best.tag} wins! 🏆` : `${best.tag} best, ${bp}${ORD[bp - 1]}`) : me.place === 1 ? "You win! 🏆" : `You finished ${me.place}${ORD[me.place - 1]}`;
   $("f-table").innerHTML = order.map((o) => { const h = humanOf(o); return `<tr class="${h ? "is-you" : ""}"><td>${o.place}${ORD[o.place - 1]}</td><td>${h && multi ? `<i class="x-tag" style="background:${hexC(o.id)}">${h.tag}</i>` : ""}<span class="x-sw" style="background:${hexC(o.id)}"></span>${nm(o)}</td><td>${o.finished ? fmt(o.finishTime) : "racing…"}</td></tr>`; }).join("");
