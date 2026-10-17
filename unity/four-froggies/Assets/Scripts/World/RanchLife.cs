@@ -168,6 +168,7 @@ public class RanchLife : MonoBehaviour
     void Add(string id, string name, string owner, int hex, float h, float bulk, float maxSp, float x, float z)
     {
         Color c = new Color(((hex >> 16) & 255) / 255f, ((hex >> 8) & 255) / 255f, (hex & 255) / 255f);
+        h = Behave58.RobotH(id, h);   // ffu58 C8: real-world heights (Optimus 1.73, Figure 02 / 03 1.68, Atlas 1.5); ?behave=old = the old table
         var r = Robot.Build(id, name, owner, c, h, bulk, maxSp, new Vector3(x, Ranch.GY(x, z), z));
         // ffu12: mixed starting charge so a couple head straight for the jacks while the rest pick chores
         float[] start = { 0.2f, 0.85f, 0.62f, 0.95f, 0.22f, 0.74f, 0.5f };

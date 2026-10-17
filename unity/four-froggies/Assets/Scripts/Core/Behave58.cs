@@ -17,6 +17,27 @@ public static class Behave58
     public static bool On { get { if (on < 0) on = Ffu33.Url("behave") == "old" ? 0 : 1; return on == 1; } }
     public static int BedRides, BedHops, Swims, ShoreWaits, CarWatches, RobotWaves;
 
+    // ------------------------------------------------------------------ C8: real-size pets (the ffu58a scale table: cats 0.62-0.70 m to
+    // the ear tips vs ~0.38 real, Germy 1.08 vs 0.8, Daisy 0.50 vs 0.35, rabbits 0.51 vs 0.3; the froggy = a 6-year-old)
+    public static float FitK(Animal a)
+    {
+        if (!On || a == null) return 1f;
+        switch (a.kind)
+        {
+            case Animal.Kind.Cat: return 0.6f;
+            case Animal.Kind.Rabbit: return 0.6f;
+            case Animal.Kind.Dog: return a.petName == "Germy" ? 0.74f : a.petName == "Daisy" ? 0.7f : 1f;
+            default: return 1f;
+        }
+    }
+    public static void Fit(Animal a) { float k = FitK(a); if (k < 0.999f) a.transform.localScale = a.transform.localScale * k; }
+    // C8: real heights for the real-world humanoid robots (the fantasy 'Big Figure Two' stays a giant; Unitree H1 is already 1.72-1.8)
+    public static float RobotH(string id, float h)
+    {
+        if (!On) return h;
+        switch (id) { case "optimus": return 1.73f; case "figure03": return 1.68f; case "figure02": return 1.68f; case "atlas_hd": return 1.5f; case "atlas_el": return 1.5f; default: return h; }
+    }
+
     // ------------------------------------------------------------------ follow slots
     public static Vector3 FollowSlot(Frog f, Animal a, int idx, Vector3 fw)
     {
@@ -38,6 +59,7 @@ public static class Behave58
     static bool HasPetSeats(Vehicle v) { return v is GroundVehicle && v.Title.Contains("Cybertruck") && v.transform.Find("Sprung") != null; }
     static readonly Dictionary<Animal, Vector3> carScale = new Dictionary<Animal, Vector3>();
     static readonly HashSet<Animal> told = new HashSet<Animal>();
+    static readonly Dictionary<Animal, float> seatY = new Dictionary<Animal, float>();
 
     // returns true = handled this frame (Animals57 Follow tick)
     public static bool FollowTick(Animals57 m, Animals57.St s, Frog f, float dt)
@@ -55,13 +77,17 @@ public static class Behave58
                 FX.Dust(p, 0.3f);
                 a.transform.SetParent(sprung, true);
                 // fit under the roof: the rear headroom is ~0.42 m above the cushion (a froggy shrinks to its seat the same way)
+                // cats sit on the rear cushion (top 1.21); a big dog sits down in the rear footwell (0.85) with its head up
+                // under the roof (~1.62 inside); a froggy shrinks to its seat the same way when nothing else fits
                 float h = Mathf.Max(0.2f, TopH(a));
-                a.transform.localScale = carScale[a] * Mathf.Min(1f, 0.4f / h);
+                seatY[a] = Mathf.Clamp(1.62f - h, 0.85f, 1.2f);
+                a.transform.localScale = carScale[a] * Mathf.Min(1f, (1.62f - seatY[a]) / h);
                 BedRides++;
                 f.Toast(Nm(a) + " hops in the back seat - road trip!", 2f);
                 Debug.Log("BEHAVE58 pet in car " + Nm(a) + " seat " + idx + " in " + f.vehicle.Title + " h " + h.ToString("0.00"));
             }
-            a.transform.localPosition = CtSeats[idx];
+            Vector3 cs = CtSeats[idx]; float sy; if (seatY.TryGetValue(a, out sy)) cs.y = sy;
+            a.transform.localPosition = cs;
             a.transform.localRotation = Quaternion.identity;
             a.happy57 = Mathf.Max(a.happy57, f.vehicle.Speed > 3f ? 0.6f : 0f);   // tail wag at speed (head out of the window, in spirit)
             a.PalAnimate(0f, dt);
@@ -87,7 +113,6 @@ public static class Behave58
                 Vector3 tgt = lp - f.transform.forward * 1.6f; tgt.y = Layout.WaterY - 0.32f;
                 Vector3 d = tgt - p; d.y = 0f;
                 bool wet = Pond(p);
-                if (!wet && d.magnitude > 30f) { tgt = RobotDriver.ShoreNear(lp); }
                 float sp = wet ? 1.3f : a.runSpeed;
                 if (d.magnitude > 0.8f)
                 {
@@ -134,7 +159,7 @@ public static class Behave58
     static float TopH(Animal a)
     {
         float y0 = a.transform.position.y, top = y0 + 0.3f; bool any = false;
-        foreach (var r in a.GetComponentsInChildren<Renderer>()) { if (r.GetComponentInParent<Frog>() != null) continue; top = any ? Mathf.Max(top, r.bounds.max.y) : r.bounds.max.y; any = true; }
+        foreach (var r in a.GetComponentsInChildren<Renderer>()) { if (r.GetComponentInParent<Frog>() != null || r.GetComponent<TextMesh>() != null || r is ParticleSystemRenderer) continue; top = any ? Mathf.Max(top, r.bounds.max.y) : r.bounds.max.y; any = true; }
         return top - y0;
     }
 
@@ -169,7 +194,13 @@ public static class Behave58
             rows.Add("SCALE58 " + n + " h " + h.ToString("0.00") + " want " + want.ToString("0.00") + " (real " + real.ToString("0.00") + ") ratio " + r.ToString("0.00") + (o ? " OUTLIER" : " ok"));
         };
         if (Game.I != null) foreach (var f in Game.I.frogs) if (f != null && f != j && f.vehicle == null && f.rideAnimal == null) { float h = Height(f.gameObject, out sz); rows.Add("SCALE58 frog " + f.nick + " h " + h.ToString("0.00") + " vs James " + (h / fh).ToString("0.00")); }
-        if (RanchLife.I != null) foreach (var r in RanchLife.I.robots) if (r != null) row("robot " + r.robotName + " (height field " + r.height.ToString("0.00") + ")", Height(r.gameObject, out sz), r.height);   // humanoids at their real heights
+        if (RanchLife.I != null) foreach (var r in RanchLife.I.robots) if (r != null)
+            {   // real-world humanoids at their published heights (Big Figure Two = the fantasy giant, compared with its own field)
+                float real = r.id == "optimus" ? 1.73f : r.id == "unitree" ? 1.8f : r.id == "figure03" || r.id == "figure02" ? 1.68f : r.id == "atlas_hd" || r.id == "atlas_el" ? 1.5f : r.height;
+                float hh = Height(r.gameObject, out sz);
+                float want = real * k, rr = hh / want; bool o = rr < 0.7f || rr > 1.3f; if (o) outl++;
+                rows.Add("SCALE58 robot " + r.robotName + " h " + hh.ToString("0.00") + " (field " + r.height.ToString("0.00") + ") real " + real.ToString("0.00") + " ratio " + rr.ToString("0.00") + (o ? " OUTLIER" : " ok"));
+            }
         var seen = new HashSet<string>();
         foreach (var a in Resources.FindObjectsOfTypeAll<Animal>())
         {
@@ -179,10 +210,10 @@ public static class Behave58
             float real;
             switch (a.kind)
             {
-                case Animal.Kind.Cat: real = 0.30f; break;                                         // back ~0.25-0.3, ears ~0.33
-                case Animal.Kind.Dog: real = a.petName == "Daisy" ? 0.30f : a.petName == "Germy" ? 0.75f : 0.55f; break;   // dachshund / German shepherd (head)
+                case Animal.Kind.Cat: real = 0.38f; break;                                         // to the ear tips
+                case Animal.Kind.Dog: real = a.petName == "Daisy" ? 0.35f : a.petName == "Germy" ? 0.80f : 0.55f; break;   // dachshund / German shepherd (ear tips)
                 case Animal.Kind.Cow: real = 1.5f; break; case Animal.Kind.Horse: real = 1.75f; break;   // withers 1.4 / 1.6 + head
-                case Animal.Kind.Goat: real = a.voice == "pig" ? 0.9f : 0.95f; break; case Animal.Kind.Rabbit: real = 0.25f; break;
+                case Animal.Kind.Goat: real = a.voice == "pig" ? 0.9f : 0.95f; break; case Animal.Kind.Rabbit: real = 0.30f; break;
                 case Animal.Kind.Chicken: real = 0.45f; break; default: real = 0.15f; break;
             }
             bool act = a.gameObject.activeInHierarchy;

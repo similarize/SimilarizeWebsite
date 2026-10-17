@@ -366,6 +366,7 @@ public class Animals57 : MonoBehaviour
         float fh = 1.0f;   // a froggy is about a metre tall; small animals carry a shrunk froggy (fantasy: James rides the cat)
         s.riderScale = Mathf.Clamp(h * 1.25f / fh, 0.35f, 1f);
         s.seatLocal = new Vector3(0f, h - 0.04f, -BodyLen(s.a) * 0.05f);
+        if (Behave58.On) { float ks = Mathf.Max(0.05f, s.a.transform.lossyScale.y); s.seatLocal /= ks; s.riderScale /= ks; }   // ffu58: seat + rider size in the (scaled) animal's local space
         f.StartAnimalRide(s.a, s);
         Rides++;
         f.Toast("hold on! " + Nm(s.a) + " carries " + f.nick + " - stick steers, RT runs, " + (f.inputKind == InputKind.Touch || f.inputKind == InputKind.Gamepad ? "A" : "SPACE / E") + " hops off", 3f);
@@ -375,6 +376,7 @@ public class Animals57 : MonoBehaviour
     {
         Begin(s, null, r, Mode.Ridden); s.circle = Random.value * 6.28f;
         s.seatLocal = new Vector3(0f, TopY(s.a) - s.a.transform.position.y - 0.05f, 0f);
+        if (Behave58.On) s.seatLocal /= Mathf.Max(0.05f, s.a.transform.lossyScale.y);   // ffu58: TransformPoint of a scaled animal
         RobotRides++; Rides++;
         Debug.Log("ANIMALS57 robot ride " + r.robotName + " on " + Nm(s.a));
     }
@@ -592,6 +594,7 @@ public class Animals57 : MonoBehaviour
             if (a.head != null && r.transform.IsChildOf(a.head)) continue;
             if (a.tail != null && r.transform.IsChildOf(a.tail)) continue;
             if (r.GetComponentInParent<Frog>() != null) continue;
+            if (Behave58.On && (r.GetComponent<TextMesh>() != null || r is ParticleSystemRenderer)) continue;   // ffu58: not the floating name tag (ride seat was 1 m over Daisy)
             y = any ? Mathf.Max(y, r.bounds.max.y) : r.bounds.max.y; any = true;
         }
         return y;

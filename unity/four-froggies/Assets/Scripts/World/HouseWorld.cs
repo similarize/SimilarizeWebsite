@@ -482,6 +482,8 @@ public class HouseWorld : MonoBehaviour
         tm.anchor = TextAnchor.MiddleCenter;
         tm.color = Color.white;
         go.AddComponent<Billboard>();
+        float ks = a.transform.localScale.x;   // ffu58: a real-size (smaller) pet keeps a readable name tag just over its head
+        if (ks < 0.99f && ks > 0.05f) go.transform.localScale = go.transform.localScale / ks;
     }
 
     // ---------------- mini-games ----------------

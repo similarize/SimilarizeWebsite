@@ -225,6 +225,7 @@ public partial class Animal : MonoBehaviour
         a.tail = Mats.Node(a.body, "Tail", new Vector3(0f, 0.4f, -0.32f));
         P(PrimitiveType.Capsule, a.tail, new Vector3(0f, 0.18f, -0.05f), new Vector3(0.05f, 0.2f, 0.05f), patch, new Vector3(-20f, 0f, 0f));
         Mats.NoShadows(a.gameObject);
+        Behave58.Fit(a);   // ffu58 C8: real-size pets (scale table)
         return a;
     }
 
@@ -257,6 +258,7 @@ public partial class Animal : MonoBehaviour
         a.tail = Mats.Node(a.body, "Tail", new Vector3(0f, H + 0.25f, -L * 0.5f));
         P(PrimitiveType.Capsule, a.tail, new Vector3(0f, 0.12f, -0.12f), new Vector3(0.07f, 0.18f, 0.07f), shepherd ? dark : tan, new Vector3(-40f, 0f, 0f));
         Mats.NoShadows(a.gameObject);
+        Behave58.Fit(a);   // ffu58 C8: real-size pets (scale table)
         return a;
     }
 
@@ -270,6 +272,7 @@ public partial class Animal : MonoBehaviour
         for (int s = -1; s <= 1; s += 2) P(PrimitiveType.Capsule, a.head, new Vector3(0.04f * s, 0.15f, -0.02f), new Vector3(0.04f, 0.1f, 0.025f), c, new Vector3(-10f, 0f, 8f * s));
         P(PrimitiveType.Sphere, a.body, new Vector3(0f, 0.22f, -0.18f), Vector3.one * 0.08f, Color.white);
         Mats.NoShadows(a.gameObject);
+        Behave58.Fit(a);   // ffu58 C8: real-size pets (scale table)
         return a;
     }
 
@@ -283,6 +286,7 @@ public partial class Animal : MonoBehaviour
         a.tail = Mats.Node(a.body, "Tail", new Vector3(0f, 0.06f, -0.14f));
         P(PrimitiveType.Capsule, a.tail, new Vector3(0f, 0f, -0.1f), new Vector3(0.04f, 0.1f, 0.03f), c, new Vector3(90f, 0f, 0f));
         Mats.NoShadows(a.gameObject);
+        Behave58.Fit(a);   // ffu58 C8: real-size pets (scale table)
         return a;
     }
 
@@ -348,6 +352,7 @@ public partial class Animal : MonoBehaviour
         P(PrimitiveType.Cube, a.head, new Vector3(0f, 0.08f, 0f), new Vector3(0.03f, 0.06f, 0.08f), new Color(0.9f, 0.1f, 0.1f));
         P(PrimitiveType.Cube, a.head, new Vector3(0f, 0f, 0.08f), new Vector3(0.04f, 0.03f, 0.05f), new Color(1f, 0.7f, 0.2f));
         Mats.NoShadows(a.gameObject);
+        Behave58.Fit(a);   // ffu58 C8: real-size pets (scale table)
         return a;
     }
 
@@ -369,6 +374,7 @@ public partial class Animal : MonoBehaviour
         a.tail = Mats.Node(a.body, "Tail", new Vector3(0f, 0.85f, -0.45f));
         P(PrimitiveType.Cube, a.tail, new Vector3(0f, 0.06f, 0f), new Vector3(0.05f, 0.12f, 0.05f), c);
         Mats.NoShadows(a.gameObject);
+        Behave58.Fit(a);   // ffu58 C8: real-size pets (scale table)
         return a;
     }
 

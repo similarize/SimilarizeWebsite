@@ -137,7 +137,7 @@ public class Ffu58 : MonoBehaviour
                 if (step == 0) { f.SendTo(WorldId.House, Beside(tigy, 2.5f) + Vector3.up * 0.2f, 0f); tigy.holdPosition = true; step = 1; stepT = w; }
                 if (step == 1 && w - stepT > 1.5f) { tigy.DemoLie58(); step = 2; }
                 CamOn(tigy.transform, new Vector3(1.0f, 0.6f, 1.0f), 0.15f);
-                if (w > 12f) { tigy.holdPosition = false; Next("lie done"); }
+                if (w > 22f) { tigy.holdPosition = false; Next("lie done"); }
                 break;
             case "ride":
                 if (daisy == null || Animals57.I == null) { Next("ride skipped"); break; }
@@ -155,7 +155,7 @@ public class Ffu58 : MonoBehaviour
                 if (step == 3 && w - stepT > 8f) { Gap("ranch", spotty, germy); f.SendTo(WorldId.Mars, SurfaceWorlds.M(4f, SurfaceWorlds.MarsY(4f, 60f) + 0.3f, 60f), 0f); step = 4; stepT = w; }
                 if (step == 4 && w - stepT > 1.2f) { Gap("Mars arrival", spotty, germy); step = 5; }
                 if (step >= 3) Cam(f.transform.position + new Vector3(2.5f, 2.2f, -5f), f.transform.position);
-                if (step == 5 && w - stepT > 9f) { Gap("Mars after 9 s", spotty, germy); Vector2 hc = Layout.HouseC; float z1 = hc.y + Layout.HouseSize.y * 0.5f; f.SendTo(WorldId.Ranch, G(hc.x + 6f, z1 + 14f) + Vector3.up * 0.3f, 0f); Next("follow done"); }
+                if (step == 5 && w - stepT > 16f) { Gap("Mars after 16 s", spotty, germy); Vector2 hc = Layout.HouseC; float z1 = hc.y + Layout.HouseSize.y * 0.5f; f.SendTo(WorldId.Ranch, G(hc.x + 6f, z1 + 14f) + Vector3.up * 0.3f, 0f); Next("follow done"); }
                 break;
             case "truck":
                 if (ct == null || spotty == null || germy == null) { Next("truck skipped"); break; }
@@ -198,21 +198,31 @@ public class Ffu58 : MonoBehaviour
                 if (step == 1 && w - stepT > 1.5f) { f.EnterVehicle(ct); step = 2; stepT = w; }
                 if (step == 2 && w - stepT < 14f) { if (!ct.rb.isKinematic) { Vector3 vv = Quaternion.Euler(0f, (w - stepT) * 9f, 0f) * Vector3.forward * 6f; vv.y = ct.rb.velocity.y; ct.rb.velocity = vv; } }
                 if (step == 2 && w - stepT >= 14f) { ct.rb.velocity = Vector3.zero; f.ExitVehicle(); step = 3; stepT = w; }
-                if (step >= 2) Cam(ct.transform.position + new Vector3(-6f, 6f, -8f), ct.transform.position + new Vector3(0f, 0f, -4f));
+                if (step == 2) Cam(ct.transform.position + new Vector3(-6f, 6f, -8f), ct.transform.position + new Vector3(0f, 0f, -4f));
+                if (step == 3) Cam(ct.transform.position + new Vector3(-3f, 4.5f, -9f), ct.transform.position + new Vector3(0f, 0f, -6f));   // look back along the tyre marks
                 if (logNow) Debug.Log("FFDEMO behave58 tracks tyre " + Tracks56.TyreMarks + " truck " + ct.transform.position.ToString("0.0") + " v " + ct.Speed.ToString("0.0"));
-                if (step == 3 && w - stepT > 3f) Next("tracks done (tyre " + Tracks56.TyreMarks + ")");
+                if (step == 3 && w - stepT > 12f) Next("tracks done (tyre " + Tracks56.TyreMarks + ")");
                 break;
             case "robot":
                 if (RanchLife.I == null || RanchLife.I.robots.Count < 2 || RobotPhone.I == null) { Next("robot skipped (no robots)"); break; }
                 {
                     var r = RanchLife.I.robots[1];
-                    if (step == 0) { if (f.vehicle != null) f.ExitVehicle(); r.battery = 1f; robotSendT = w; RobotPhone.I.DemoOpen(f, 1, "play:pets"); RobotPhone.I.DemoSend(); RobotPhone.I.open = false; Debug.Log("FFDEMO behave58 phone play:pets -> '" + (f.toast ?? "") + "' robot at " + (r.transform.position - f.transform.position).magnitude.ToString("0") + " m"); step = 1; stepT = w; }
+                    if (step == 0)
+                    {
+                        if (f.vehicle != null) f.ExitVehicle();
+                        Animal cow = null; foreach (var a in Animal.All) if (a != null && a.kind == Animal.Kind.Cow) { cow = a; break; }
+                        if (cow != null) { Vector3 c = cow.transform.position; f.SendTo(WorldId.Ranch, G(c.x + 6f, c.z) + Vector3.up * 0.3f, 270f); }
+                        step = -1; stepT = w; break;
+                    }
+                    if (step == -1 && w - stepT > 2f) step = -2;
+                    if (step == -2) { r.battery = 1f; robotSendT = w; RobotPhone.I.DemoOpen(f, 1, "play:pets"); RobotPhone.I.DemoSend(); RobotPhone.I.open = false; Debug.Log("FFDEMO behave58 phone play:pets -> '" + (f.toast ?? "") + "' robot at " + (r.transform.position - f.transform.position).magnitude.ToString("0") + " m"); step = 1; stepT = w; }
+                    if (step < 0) break;
                     if (step == 1 && r.visit != null && r.visit.ph == 1) { Debug.Log("FFDEMO behave58 robot arrived after " + (w - robotSendT).ToString("0.0") + " s wall (" + r.visit.total.ToString("0.0") + " s game)"); step = 2; stepT = w; }
                     if (step == 1 && w - stepT > 70f) { step = 2; stepT = w; Debug.Log("FFDEMO behave58 robot NOT arrived in 70 s"); }
-                    if (step == 2 && (w - stepT > 25f || r.visit != null && r.visit.verb != "pets" && w - stepT > 8f)) { RobotPhone.I.DemoOpen(f, 1, "play:ridepet"); RobotPhone.I.DemoSend(); RobotPhone.I.open = false; Debug.Log("FFDEMO behave58 phone play:ridepet -> '" + (f.toast ?? "") + "'"); step = 3; stepT = w; }
+                    if (step == 2 && (w - stepT > 60f || r.visit != null && r.visit.verb != "pets" && w - stepT > 8f)) { RobotPhone.I.DemoOpen(f, 1, "play:ridepet"); RobotPhone.I.DemoSend(); RobotPhone.I.open = false; Debug.Log("FFDEMO behave58 phone play:ridepet -> '" + (f.toast ?? "") + "'"); step = 3; stepT = w; }
                     CamOn(r.transform, step >= 3 ? new Vector3(2.6f, 1.6f, 0.4f) : new Vector3(3.5f, 2.4f, -4f), step >= 3 ? 1.5f : 1f);
                     if (logNow) Debug.Log("FFDEMO behave58 robot " + r.robotName + " world " + r.world + " visit " + (r.visit == null ? "-" : r.visit.verb + "/" + r.visit.vs + "/" + r.visit.line) + " pos " + r.transform.position.ToString("0.0") + " " + Stats());
-                    if (step == 3 && w - stepT > 30f) Next("robot done");
+                    if (step == 3 && w - stepT > 45f) Next("robot done");
                 }
                 break;
             case "fort":
@@ -223,12 +233,13 @@ public class Ffu58 : MonoBehaviour
                     {
                         if (!Fort56.Done) Fort56.AddPlanks(Fort56.Total - Fort56.Built, r.robotName);
                         f.SendTo(WorldId.Ranch, Fort56.Ladder + new Vector3(2.5f, 0.4f, -2.5f), 0f);
+                        r.transform.position = Fort56.Ladder + new Vector3(-1.5f, 0f, -2f);   // demo: skip the long walk over (slow sandbox)
                         step = 1; stepT = w;
                     }
                     if (step == 1 && w - stepT > 2f) { RobotPhone.I.DemoOpen(f, 1, "play:fort"); RobotPhone.I.DemoSend(); RobotPhone.I.open = false; Debug.Log("FFDEMO behave58 phone play:fort -> '" + (f.toast ?? "") + "' fort " + Fort56.Built + " / " + Fort56.Total); step = 2; stepT = w; }
                     Cam(Fort56.Ladder + new Vector3(4.5f, 2.5f, -6f), Fort56.Ladder + Vector3.up * 2.5f);
                     if (logNow) Debug.Log("FFDEMO behave58 fort robot " + r.transform.position.ToString("0.0") + " visit " + (r.visit == null ? "-" : r.visit.verb + "/" + r.visit.vs) + " deck y " + Fort56.DeckY.ToString("0.0"));
-                    if (w > 75f) Next("fort done");
+                    if (w > 90f) Next("fort done");
                 }
                 break;
             case "mech":
@@ -239,21 +250,21 @@ public class Ffu58 : MonoBehaviour
                     if (step == 0) { f.SendTo(WorldId.Ranch, new Vector3(o.x - 6f, gy + 0.3f, o.z - 6f), 45f); step = 1; stepT = w; }
                     if (step >= 1 && step < 9 && w - stepT > 0.6f) { float x = o.x + step * 2.2f, z = o.z + (step % 2 == 0 ? 0.9f : -0.9f); MechStomp.Foot(new Vector3(x, Ranch.GY(x, z), z), 3.3f, 1f, false); step++; stepT = w; }
                     Cam(o + new Vector3(6f, gy + 4.5f, -5f), o + new Vector3(9f, gy, 0f));
-                    if (w > 14f) Next("mech done (" + Tracks56.MechPrints + " mech prints)");
+                    if (w > 22f) Next("mech done (" + Tracks56.MechPrints + " mech prints)");
                     break;
                 }
             case "boat":
                 if (ct == null) { Next("boat skipped"); break; }
                 {
                     Vector2 pc = Layout.PondC;
-                    Vector3 shore = new Vector3(pc.x - Layout.PondR.x * 1.15f, 0f, pc.y);
+                    Vector3 shore = new Vector3(pc.x - Layout.PondR.x * 0.72f, 0f, pc.y + Layout.PondR.y * 0.3f);   // already in deep water: floats up + transforms
                     if (step == 0) { if (f.vehicle != null) f.ExitVehicle(); Park(ct, shore, 90f); f.SendTo(WorldId.Ranch, G(shore.x - 3f, shore.z + 3f) + Vector3.up * 0.3f, 90f); step = 1; stepT = w; }
                     if (step == 1 && w - stepT > 1.5f) { f.EnterVehicle(ct); step = 2; stepT = w; }
-                    if (step == 2 && w - stepT < 12f && !ct.rb.isKinematic) { Vector3 vv = ct.transform.forward * 5f; vv.y = ct.rb.velocity.y; ct.rb.velocity = vv; }
-                    if (step == 2 && w - stepT >= 12f) { step = 3; stepT = w; }
+                    if (step == 2 && w - stepT > 6f && w - stepT < 16f && !ct.rb.isKinematic) { Vector3 vv = ct.transform.forward * 4f; vv.y = ct.rb.velocity.y; ct.rb.velocity = vv; }
+                    if (step == 2 && w - stepT >= 16f) { step = 3; stepT = w; }
                     if (step >= 2) CamOn(ct.transform, new Vector3(-5.5f, 1.6f, 2.5f), 0.4f);
                     if (logNow) Debug.Log("FFDEMO behave58 boat truck " + ct.transform.position.ToString("0.0") + " wet " + (ct.GetComponent<CyberBoat>() != null ? ct.GetComponent<CyberBoat>().Wet.ToString("0.00") : "-"));
-                    if (step == 3 && w - stepT > 10f) Next("boat done");
+                    if (step == 3 && w - stepT > 14f) Next("boat done");
                     break;
                 }
             default: Next("unknown phase"); break;
