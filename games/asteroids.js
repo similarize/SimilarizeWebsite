@@ -218,9 +218,12 @@
     return true;
   }
 
+  // ast3 co-op waves: the whole crew clears a wave together; each wave adds a rock (cap 12) and a team banner
+  let wave = 0, waveT = 0;
   function spawnField() {
     rocks = [];
-    const count = Math.max(4, Math.min(8, Math.round((w * h) / 140000)));
+    wave++; waveT = 2.2;
+    const count = Math.max(4, Math.min(8, Math.round((w * h) / 140000))) + Math.min(4, wave - 1);
     for (let i = 0; i < count; i++) {
       let x = 0;
       let y = 0;
@@ -233,10 +236,17 @@
     }
   }
 
+  function drawWave() {
+    if (waveT <= 0 || phase !== "play") return;
+    waveT -= 1 / 60;
+    ctx.save(); ctx.globalAlpha = Math.min(1, waveT); ctx.textAlign = "center"; ctx.fillStyle = "#9fe7ff";
+    ctx.font = "700 28px system-ui, sans-serif"; ctx.fillText(wave === 1 ? "WAVE 1 \u00b7 TEAM UP!" : "WAVE " + wave + " \u00b7 NICE TEAMWORK!", w / 2, h * 0.32);
+    ctx.restore();
+  }
   function start() {
     try { if (window.SimilarizeViewportFS) window.SimilarizeViewportFS.enter(); } catch (_) {}
     unlock();
-    score = 0;
+    score = 0; wave = 0;
     lives = 3;
     shots = [];
     particles = [];
@@ -331,7 +341,7 @@
     const joinHint = phase === "play" && !joinClosed
       ? "    Join " + Math.max(0, Math.ceil(JOIN_SECS - matchTime)) + "s"
       : "";
-    hud.textContent = "Score " + score + "    Lives " + lives + "    Best " + best + "    " + n + "P" + joinHint;
+    hud.textContent = "Team score " + score + "    Wave " + Math.max(1, wave) + "    Lives " + lives + "    Best " + best + "    " + n + "P" + joinHint;
   }
 
   function closeJoinWindow() {
@@ -535,6 +545,7 @@
     }
     for (const ship of ships) drawShip(ship);
     ctx.restore();
+    drawWave();
   }
 
   function frame(now) {
