@@ -1,0 +1,17 @@
+{
+  "media_base": "https://media.similarize.com",
+  "videos": [
+    {
+      "slug": "four-froggies-catch-jimmy",
+      "title": "Four Froggies: Catch Jimmy All the Way to the Moon",
+      "description": "The four froggies set out to catch Jimmy, and the chase goes all the way to the Moon.\nA kid-friendly animated movie, made at home with the Four Froggies game crew.",
+      "duration": 810,
+      "audience": "Kids & family",
+      "published": null,
+      "status": "coming-soon",
+      "hls": "four-froggies-catch-jimmy/master.m3u8",
+      "poster": "four-froggies-catch-jimmy/poster.jpg",
+      "thumb": "four-froggies-catch-jimmy/thumb.jpg"
+    }
+  ]
+}
