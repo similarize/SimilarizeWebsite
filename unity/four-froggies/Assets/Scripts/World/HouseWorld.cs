@@ -107,7 +107,8 @@ public class HouseWorld : MonoBehaviour
     // wall from a to b (axis aligned) with door gaps (centre positions along the wall, 3.4 m wide)
     void Wall(float x0, float z0, float x1, float z1, params float[] doors)
     {
-        const float H = 3.2f, T = 0.3f, D = 3.4f;
+        float H = Light55.On ? Light55.HouseH : 3.2f; const float T = 0.3f, D = 3.4f;   // ffu55: walls up to the ceiling (shell ground floor 4.5 m)
+        float lh = Light55.On ? H - 3.0f : 0.4f, ly = H - lh * 0.5f;
         bool alongX = Mathf.Abs(z1 - z0) < 0.01f;
         float a = alongX ? Mathf.Min(x0, x1) : Mathf.Min(z0, z1), b = alongX ? Mathf.Max(x0, x1) : Mathf.Max(z0, z1);
         var cuts = new List<float>(doors);
@@ -119,8 +120,8 @@ public class HouseWorld : MonoBehaviour
             if (e > cur) Seg(alongX, x0, z0, cur, e, H, T);
             // lintel trim over the door
             float mid = dc;
-            if (alongX) Box(new Vector3(mid, H - 0.2f, z0), new Vector3(D, 0.4f, T + 0.04f), Trim, true, WallLayer);
-            else Box(new Vector3(x0, H - 0.2f, mid), new Vector3(T + 0.04f, 0.4f, D), Trim, true, WallLayer);
+            if (alongX) Box(new Vector3(mid, ly, z0), new Vector3(D, lh, T + 0.04f), Trim, true, WallLayer);
+            else Box(new Vector3(x0, ly, mid), new Vector3(T + 0.04f, lh, D), Trim, true, WallLayer);
             cur = dc + D * 0.5f;
         }
         if (b > cur) Seg(alongX, x0, z0, cur, b, H, T);
@@ -186,10 +187,76 @@ public class HouseWorld : MonoBehaviour
         RoomSign(-18f, 4f, "PET PARLOR", true); RoomSign(0f, 4f, "FISH GALLERY", true); RoomSign(18f, 4f, "REPTILE ROOM", true);
         RoomSign(-6f, 10f, "LIVING ROOM", false); RoomSign(6f, 10f, "KITCHEN", false);
 
+        if (Light55.On) Windows55();
         foreach (var r in root.GetComponentsInChildren<Renderer>()) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         MeshMerge.Merge(root, false);
         foreach (var a in afterMerge) a();
+        if (Light55.On) Ceiling55();
         BuildLiving();
+    }
+
+    // ffu55 C4: the shell's ground-floor windows (RanchBreak.House: 9 columns on the long faces, 6 on the short ones,
+    // 2.2 x 1.7 m centred 2.4 m up; the front's middle 28 m = porch + front door is solid outside, so solid inside too)
+    void Windows55()
+    {
+        Material pane = Mats.Unlit(new Color(0.80f, 0.88f, 0.97f));
+        Vector2 s = Layout.HouseSize;
+        for (int face = 0; face < 4; face++)
+        {
+            bool alongX = face < 2; int cols = alongX ? 9 : 6;
+            float half = alongX ? 30f : 20f, w = 2f * half / cols;
+            for (int i = 0; i < cols; i++)
+            {
+                float a = -half + w * (i + 0.5f);
+                float aOut = -s.x * 0.5f + s.x / 9f * (i + 0.5f);
+                if (face == 0 && Mathf.Abs(aOut) < 14f) continue;
+                Vector3 n, p;
+                switch (face)
+                {
+                    case 0: n = Vector3.back; p = new Vector3(a, 2.4f, 20f - 0.15f); break;
+                    case 1: n = Vector3.forward; p = new Vector3(a, 2.4f, -20f + 0.15f); break;
+                    case 2: n = Vector3.right; p = new Vector3(-30f + 0.15f, 2.4f, a); break;
+                    default: n = Vector3.left; p = new Vector3(30f - 0.15f, 2.4f, a); break;
+                }
+                if (face == 2 && Mathf.Abs(a - 15.8f) < 2.6f) continue;   // the REAL ROOM door is on this wall here
+                Vector3 fr = alongX ? new Vector3(2.5f, 2.0f, 0.06f) : new Vector3(0.06f, 2.0f, 2.5f);
+                Vector3 pn = alongX ? new Vector3(2.2f, 1.7f, 0.04f) : new Vector3(0.04f, 1.7f, 2.2f);
+                Box(p + n * 0.03f, fr, Trim, false, WallLayer);
+                BoxM(p + n * 0.06f, pn, pane, false, WallLayer);
+                Box(p + n * 0.12f + Vector3.down * 0.95f, alongX ? new Vector3(2.6f, 0.08f, 0.22f) : new Vector3(0.22f, 0.08f, 2.6f), Trim, false, WallLayer);
+                if (alongX) Box(p + n * 0.07f, new Vector3(0.06f, 1.7f, 0.03f), Trim, false, WallLayer);   // mullion
+                else Box(p + n * 0.07f, new Vector3(0.03f, 1.7f, 0.06f), Trim, false, WallLayer);
+            }
+        }
+    }
+
+    // ffu55 C4: a real ceiling (only its underside is drawn, so a camera that ever gets above it still sees in), a
+    // collider so the camera stays under it, ceiling lamps + light switches per room, and a box reflection probe
+    void Ceiling55()
+    {
+        float H = Light55.HouseH;
+        var g = new GameObject("Ceiling55"); g.transform.SetParent(root, false);
+        var m = new Mesh();
+        Vector3 o = Worlds.HouseO;
+        m.vertices = new[] { o + new Vector3(-30.2f, H, -20.2f), o + new Vector3(30.2f, H, -20.2f), o + new Vector3(30.2f, H, 20.2f), o + new Vector3(-30.2f, H, 20.2f) };
+        m.uv = new[] { new Vector2(0f, 0f), new Vector2(20f, 0f), new Vector2(20f, 13f), new Vector2(0f, 13f) };
+        m.triangles = new[] { 0, 1, 2, 0, 2, 3 };   // wound so the face points down
+        m.RecalculateNormals(); m.RecalculateBounds();
+        g.AddComponent<MeshFilter>().sharedMesh = m;
+        var mr = g.AddComponent<MeshRenderer>();
+        mr.sharedMaterial = Mats.TexTint("LB/plaster", new Color(0.95f, 0.94f, 0.9f), 0.05f, 3f);
+        mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        g.layer = WallLayer;
+        var cg = new GameObject("Ceiling55Col"); cg.transform.SetParent(root, false); cg.layer = WallLayer;
+        cg.transform.position = L(0f, H + 0.15f, 0f);
+        cg.AddComponent<BoxCollider>().size = new Vector3(60.6f, 0.3f, 40.6f);
+        // cornice where the walls meet the ceiling
+        Box(new Vector3(0f, H - 0.06f, 19.8f), new Vector3(60f, 0.12f, 0.16f), Trim, false, WallLayer);
+        Box(new Vector3(0f, H - 0.06f, -19.8f), new Vector3(60f, 0.12f, 0.16f), Trim, false, WallLayer);
+        Box(new Vector3(-29.8f, H - 0.06f, 0f), new Vector3(0.16f, 0.12f, 40f), Trim, false, WallLayer);
+        Box(new Vector3(29.8f, H - 0.06f, 0f), new Vector3(0.16f, 0.12f, 40f), Trim, false, WallLayer);
+        Light55House.Build(root, o, H, Mats.Lit(Trim));
+        Light55.Probe("HouseProbe55", L(0f, 2.2f, 0f), new Vector3(60f, H + 0.2f, 40f), 2);
     }
 
     void FloorTile(Rect r, Color c)

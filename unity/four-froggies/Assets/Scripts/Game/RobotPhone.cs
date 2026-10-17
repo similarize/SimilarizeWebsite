@@ -155,8 +155,8 @@ public class RobotPhone : MonoBehaviour
         Add(3, "Stash", "stash");   // ffu50: shared materials / arrows count (label is live, see Refresh)
         Add(3, "Abort mission", "abort"); Add(3, "Watch feed", "feed"); Add(3, "Feed full screen", "feedfull"); Add(3, "Feed cam: drone/eye", "feedcam");
         // ffu54 PLAY: everything a froggy can do, in whatever world the phone's user is in (World/RobotVisit54.cs)
-        string[] pv = { "follow", "tag", "hop", "swim", "dive", "climb", "horse", "skate", "bike", "ridewith", "catch", "hunt", "cook", "swing", "hammock", "collect", "dance", "piggy", "build", "race", "wave", "stay", "home" };
-        string[] pl = { "Follow me", "Play tag", "Hop / bounce", "Swim with me", "Dive for pearls", "Climb a tree", "Ride a horse", "Skateboard", "Ride a bike", "Ride with me", "Play catch", "Hunt (bow)", "Cook + eat", "Push my swing", "Hammock nap", "Collect stuff", "Dance", "Piggyback!", "Build a castle", "Race me!", "Wave hi", "Stay here", "Go home (chores)" };
+        string[] pv = { "follow", "tag", "hop", "swim", "dive", "climb", "horse", "skate", "bike", "ridewith", "catch", "hunt", "cook", "swing", "hammock", "collect", "dance", "piggy", "build", "race", "wave", "lights", "stay", "home" };
+        string[] pl = { "Follow me", "Play tag", "Hop / bounce", "Swim with me", "Dive for pearls", "Climb a tree", "Ride a horse", "Skateboard", "Ride a bike", "Ride with me", "Play catch", "Hunt (bow)", "Cook + eat", "Push my swing", "Hammock nap", "Collect stuff", "Dance", "Piggyback!", "Build a castle", "Race me!", "Wave hi", "Lights on / off", "Stay here", "Go home (chores)" };
         for (int i = 0; i < pv.Length; i++) Add(6, pl[i], "play:" + pv[i]);
     }
 

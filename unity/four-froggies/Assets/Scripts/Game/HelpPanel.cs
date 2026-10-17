@@ -246,6 +246,7 @@ public partial class Game
         if (Worlds.StageEOn) ac.R("Mech yard", "every froggy has its own mech" + (pad ? "  ·  RT / " + G("X") + " omnigun" : "") + "  ·  AI froggies hop in theirs when you come over");
         ac.R("Animal pens", "lizards + bunnies climb onto you, cows + horses lick hello  ·  " + use + " shake off, sprint / hop and they hop down");   // ffu47 critter pals
         ac.R("House", "walk into the front door");
+        if (Light55.On) ac.R("Light switch", "by each room's door in the house: lights on / off (robots too: PLAY > Lights)");   // ffu55
         L.Add(ac);
         var pc = new HSec("PHONE + CAMERA");
         if (pad) pc.R("LB (on foot)", "robot phone: chores, drive, missions, call, wheels, play - in every world").R(G("Y") + " (phone)", "robot video feed").R("View", "shared / split screen").R("Start", "this menu").R(G("B") + " here", "leave your seat");

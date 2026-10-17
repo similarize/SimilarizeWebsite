@@ -38,6 +38,7 @@ public static class Worlds
         if (RenderSettings.sun != null) sunRot0 = RenderSettings.sun.transform.rotation;
         if (ranchSky != null && ranchSky.HasProperty("_Exposure")) exp0 = ranchSky.GetFloat("_Exposure");
         Camera.onPreCull += PreCull;
+        Light55.Capture();   // ffu55 one light model across worlds
     }
 
     public static void SetCamera(Camera c, WorldId w)
@@ -125,6 +126,7 @@ public static class Worlds
                 break;
         }
         if (Realism.On) Realism.PreCull(w);   // ?realism=1 test: HDRI SH ambient on the ranch
+        Light55.PreCull(c, w);   // ffu55: per-world sun + indoor ambient + exposure (no-op with ?light=old)
         if (StormK > 0f && w == WorldId.Ranch) StoryWeather(launchDark);   // ffu22 story storm (dark sky, heavy haze, flashes)
         if (StoryHook != null) StoryHook(c, w);   // ffu24 story episode 2: Mercury / Enceladus / the Mars chambers / orbit look
         if (w == WorldId.Ranch) PondUnder(c);    // ffu37: a camera under the ranch pond surface sees murky green-blue water

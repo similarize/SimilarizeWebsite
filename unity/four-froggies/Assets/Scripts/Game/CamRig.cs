@@ -124,7 +124,7 @@ public class CamRig
         Vector3 back = rot * Vector3.back;
         float allowed = dist;
         RaycastHit hit;
-        if (Physics.SphereCast(pivot, 0.35f, back, out hit, dist, (1 << 0) | (1 << 12) | (1 << 13), QueryTriggerInteraction.Ignore))
+        if (Physics.SphereCast(pivot, 0.35f, back, out hit, dist, (1 << 0) | (1 << 12) | (1 << 13) | (Light55.On && f.world == WorldId.House ? 1 << HouseWorld.WallLayer : 0), QueryTriggerInteraction.Ignore))
             allowed = Mathf.Max(1.2f, hit.distance - 0.1f);
         // pull in fast (no clipping), ease back out slowly (no popping)
         if (curDist < 0f) curDist = allowed;

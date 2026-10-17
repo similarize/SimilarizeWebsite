@@ -51,7 +51,7 @@ public partial class Robot
     public bool Visiting { get { return visit != null; } }
     bool Blk(float x, float z) { return visit != null ? RobotNav.WallBlocked(x, z) : RobotNav.Blocked(x, z); }
 
-    static readonly string[] PlayVerbs = { "follow", "tag", "hop", "swim", "dive", "climb", "horse", "skate", "bike", "ridewith", "catch", "hunt", "cook", "swing", "hammock", "collect", "dance", "piggy", "build", "race", "wave", "stay", "home" };
+    static readonly string[] PlayVerbs = { "follow", "tag", "hop", "swim", "dive", "climb", "horse", "skate", "bike", "ridewith", "catch", "hunt", "cook", "swing", "hammock", "collect", "dance", "piggy", "build", "race", "wave", "lights", "stay", "home" };
     public static bool IsPlay(string v) { return System.Array.IndexOf(PlayVerbs, v) >= 0; }
     public static WorldId TargetWorld(Frog f) { return f == null ? WorldId.Ranch : f.world == WorldId.Underwater ? WorldId.Ranch : f.world; }   // ffu53: the pond IS the ranch
     public static string WorldName(WorldId w) { switch (w) { case WorldId.Space: return "space"; case WorldId.RealRoom: return "the Real Room"; case WorldId.House: return "the house"; case WorldId.Ranch: return "the ranch"; default: return w.ToString(); } }
@@ -187,9 +187,11 @@ public partial class Robot
             case "bike": return "ride a bike"; case "ridewith": return "ride with you"; case "catch": return "play catch"; case "hunt": return "go hunting";
             case "cook": return "cook + eat"; case "swing": return "push your swing"; case "hammock": return "hammock nap"; case "collect": return "collect treasures";
             case "dance": return "dance"; case "piggy": return "piggyback"; case "build": return "build something"; case "race": return "race you";
-            case "wave": return "wave"; case "stay": return "stay"; default: return v;
+            case "wave": return "wave"; case "lights": return "flip the lights"; case "stay": return "stay"; default: return v;
         }
     }
+
+    Vector3 MyPos55() { return transform.position; }
 
     void EndVerb()
     {
@@ -296,6 +298,12 @@ public partial class Robot
             case "build": v.verb = verb; v.vs = 0; v.vt = 0f; return Say("building you " + BuildName() + "!");
             case "race": v.verb = verb; v.vs = 0; v.vt = 0f; return Say("race you to the flag - ready, set, GO!");
             case "wave": wave = 2.4f; return Say("hi " + f.nick + "!");
+            case "lights":   // ffu55: froggies flip the house / Real Room switches, so can robots
+                {
+                    Vector3 at;
+                    if (!Light55.SwitchNear(world, MyPos55(), out at)) return Say(world == WorldId.Mars || world == WorldId.Moon || world == WorldId.Callisto ? "no light switch here - the sun is our lamp!" : "no light switch here - try the house!");
+                    v.verb = verb; v.vp = at; v.vt = 0f; return Say("I'll get the lights!");
+                }
             case "stay": v.verb = verb; return Say("I'll stay right here");
         }
         return "";
@@ -432,7 +440,7 @@ public partial class Robot
             return;
         }
         Vector3 lp = LeadPos(f);
-        if (v.ph == 0) { ArriveTick(dt, lp); return; }
+        if (v.ph == 0) { status = v.line; ArriveTick(dt, lp); return; }   // ffu55: the tag shows the arrival, not the old chore
         // battery: visiting is gentle (Update drains at 1/4); nearly flat -> fly home to charge
         if (battery < flatAt + 0.02f && world != WorldId.Ranch) { f.Toast(robotName + ": low battery - flying home to charge. Call me again soon!", 3f); ComeHomeFor("battery"); return; }
         v.idleT += (v.verb == "with" || v.verb == "stay") ? dt : 0f;
@@ -754,6 +762,13 @@ public partial class Robot
             case "piggy": PiggyRobotTick(dt, lp, d); break;
             case "build": BuildTick(dt, lp); break;
             case "race": RaceTick(dt, lp); break;
+            case "lights":
+                {
+                    float dd = WalkTo(v.vp, RunSpeed, 0.5f, dt);
+                    if (dd < 1.0f) { Face(v.vp + (world == WorldId.House ? new Vector3(0f, 0f, v.vp.z > Worlds.HouseO.z + 4f ? -1f : 1f) : Vector3.zero)); pose = 8; if (v.vt > 0.8f) { string s = Light55.RobotFlip(world, transform.position); f.Toast(robotName + ": " + s, 2.2f); Debug.Log("ROBOTS55 lights " + robotName + " in " + world + ": " + s); EndVerb(); } }
+                    else v.vt = 0f;
+                    break;
+                }
             case "chore": ChoreTick(dt, lp, d); break;
             default: EndVerb(); break;
         }

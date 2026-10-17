@@ -105,5 +105,6 @@ public static class Look
                 if (p != null) p.enabled = post && c.enabled;
             }
         if (Realism.On) Realism.ApplyQuality(views, cams);   // ?realism=1 test only
+        Light55.Quality(views);   // ffu55
     }
 }

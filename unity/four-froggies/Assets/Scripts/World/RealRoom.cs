@@ -498,7 +498,9 @@ public partial class RealRoom : MonoBehaviour
     }
 
     // ---------------------------------------------------------------- interactions
-    void ToggleLights()
+    public bool LightsOn55 { get { return lightsOn; } }
+    public static Vector3 SwitchPos55 { get { return I != null ? I.switchPos : Vector3.zero; } }
+    public void ToggleLights()
     {
         lightsOn = !lightsOn;
         Sfx.Play(Sfx.Click != null ? Sfx.Click : Sfx.Toggle, 0.9f);
@@ -663,6 +665,7 @@ public partial class RealRoom : MonoBehaviour
         Shader.SetGlobalVector("_RRWaveCol", new Vector4(0.35f, 1.0f, 0.55f, 1f) * 0.6f);
         if (post != null) post.exposure = expo;
         if (globeMat != null) globeMat.SetColor("_Emis", new Color(1f, 0.86f, 0.68f, 2.2f * lampK));   // ffu18c: a touch cooler
+        Light55.RoomState(lampPos, lampK, post != null ? expo : 1f, tv);   // ffu55: robots / props lit like the room
         Hands.SetLights(lampPos, tvPos); FrogBody.SetLights(lampPos, tvPos);
         Hands.Tick(dt, st == St.Play);
         if (Hands.PokeContact) { if (demoShot == "realroom-reach") { Sfx.Play(Sfx.Click != null ? Sfx.Click : Sfx.Toggle, 0.9f); if (rocker != null) rocker.localRotation = Quaternion.Euler(9f, 0f, 0f); } else ToggleLights(); }
