@@ -138,7 +138,7 @@ public class RobotFeed : MonoBehaviour
     public PIn PadFilter(Slot s, Frog f, PIn i)
     {
         if (mode == 0 || s == null || s.pad == null || f == null) { if (s != null && viewPad == s.pad) viewPad = null; return i; }
-        if (viewer != null && f != viewer && ViewerSlot() != null) return i;   // ffu59b: only the feed's own player drives it
+        if (viewer != null && f != viewer && Game.I != null && Game.I.SlotOfSeat(Game.I.frogs.IndexOf(viewer)) != null) return i;   // ffu59b: only the feed's own player drives it (anyone once they left)
         if (RobotPhone.OpenFor(f) != null) return i;   // the phone drives the feed (Y / X)
         Gamepad p = s.pad;
         float now = Time.unscaledTime;

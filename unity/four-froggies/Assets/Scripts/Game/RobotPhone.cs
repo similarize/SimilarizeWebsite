@@ -81,7 +81,8 @@ public class RobotPhone : MonoBehaviour
     public static bool AnyCaptures(Vector2 mp) { foreach (var p in Seat) if (p != null && p.Captures(mp)) return true; return false; }
     public static void ShowAll(bool on) { foreach (var p in Seat) if (p != null && p.canvas != null) p.canvas.enabled = on; }
     public static void CloseAll() { foreach (var p in Seat) if (p != null) p.open = false; }
-    public static void SayAll(string s) { foreach (var p in Seat) if (p != null && (p.user != null || p == I)) p.Say(s); }
+    // robot news (mission aborted, can't do that): every OPEN phone shows it; seat 0's phone keeps the old single-player toast
+    public static void SayAll(string s) { foreach (var p in Seat) if (p != null && (p.open || (p == I && Game.I != null && Game.I.slots.Count <= 1))) p.Say(s); }
     public static void SayTo(Frog f, string s) { foreach (var p in Seat) if (p != null && p.user == f) p.Say(s); }
     static RobotPhone demoPh;
 
@@ -527,7 +528,16 @@ public class RobotPhone : MonoBehaviour
         else if (a == "stash") say = "Stash: " + Stash50.Line;
         else if (a == "abort") say = mm != null ? mm.Recall() : r.mission != null ? r.mission.Abort() : r.robotName + " isn't on a mission";
         else if (a == "feed") { if (RobotFeed.I != null) { bool on = RobotFeed.I.mode > 0 && RobotFeed.I.robot == r && RobotFeed.I.viewer == f; RobotFeed.I.ShowFor(r, on ? 0 : 1, f); say = on ? "Feed off" : "Watching " + r.robotName + "'s camera (O)"; } }
-        else if (a == "feedfull") { if (RobotFeed.I != null) { RobotFeed.I.ShowFor(r, RobotFeed.I.mode == 2 && RobotFeed.I.robot == r && RobotFeed.I.viewer == f ? 1 : 2, f); say = "Feed " + (RobotFeed.I.mode == 2 ? (RobotFeed.I.InSplit ? "fills your screen (Esc / tap to shrink)" : "full screen (Esc / tap to shrink)") : "picture-in-picture"); } }
+        else if (a == "feedfull")
+        {
+            if (RobotFeed.I != null)
+            {
+                RobotFeed.I.ShowFor(r, RobotFeed.I.mode == 2 && RobotFeed.I.robot == r && RobotFeed.I.viewer == f ? 1 : 2, f);
+                say = "Feed " + (RobotFeed.I.mode == 2 ? (RobotFeed.I.InSplit ? "fills your screen (Esc / tap to shrink)" : "full screen (Esc / tap to shrink)") : "picture-in-picture");
+                // ffu59c: in a split view the phone would cover most of the full feed - it closes (LB reopens)
+                if (RobotFeed.I.mode == 2 && RobotFeed.I.InSplit) { msg.text = say; f.Toast("Feed fills your view - LB reopens the phone", 2.2f); Close(f, "feed full in split view"); return; }
+            }
+        }
         else if (a == "feedcam") { if (RobotFeed.I != null) { if (RobotFeed.I.mode == 0) RobotFeed.I.ShowFor(r, 1, f); RobotFeed.I.ToggleCam(); say = "Feed camera: " + (RobotFeed.I.eye ? "robot's eye" : "drone"); } }
         else say = r.Order(a, f);
         msg.text = say;
@@ -629,8 +639,9 @@ public class RobotPhone : MonoBehaviour
         bool compact = !full && vh < 560f;
         float shift = compact ? CardH + 22f : 0f;
         float ph = PH - shift;
-        float sc = Mathf.Min(1f, (vh - (full ? 60f : 12f)) / ph, (vw - 16f) / PW);
-        int key = (compact ? 1 : 0) + Mathf.RoundToInt(sc * 1000f) * 2 + Mathf.RoundToInt(vw) * 4000 + Mathf.RoundToInt(vh) * 9000000;
+        bool toolbar = !full && vr.xMax > 0.99f && vr.yMax > 0.99f;   // ffu59c: top-right view - keep clear of the page's Arcade / fullscreen buttons
+        float sc = Mathf.Min(1f, (vh - (full ? 60f : toolbar ? 56f : 12f)) / ph, (vw - 16f) / PW);
+        int key = (toolbar ? 7 : 0) + (compact ? 1 : 0) + Mathf.RoundToInt(sc * 1000f) * 2 + Mathf.RoundToInt(vw) * 4000 + Mathf.RoundToInt(vh) * 9000000;
         if (key == layoutKey) return;
         layoutKey = key;
         card.gameObject.SetActive(!compact);
@@ -638,10 +649,10 @@ public class RobotPhone : MonoBehaviour
         for (int i = 0; i < shiftRT.Count; i++) shiftRT[i].anchoredPosition = shiftPos[i] + new Vector2(0f, shift);
         panel.rectTransform.sizeDelta = new Vector2(PW, ph);
         panel.rectTransform.localScale = Vector3.one * sc;
-        panel.rectTransform.anchoredPosition = new Vector2(-PW * sc * 0.5f - (full ? 12f : 6f), full ? -24f : 0f);
+        panel.rectTransform.anchoredPosition = new Vector2(-PW * sc * 0.5f - (full ? 12f : 6f), full ? -24f : toolbar ? -22f : 0f);
         float bsc = full ? 1f : Mathf.Clamp(sc * 1.1f, 0.6f, 1f);
         btn.rectTransform.localScale = Vector3.one * bsc;
-        btn.rectTransform.anchoredPosition = full ? new Vector2(98f, -76f) : new Vector2(75f * bsc + 8f, -(23f * bsc + 8f) - (vr.yMax > 0.99f ? 40f : 0f));
+        btn.rectTransform.anchoredPosition = full ? new Vector2(98f, -76f) : new Vector2(75f * bsc + 8f, -(23f * bsc + 8f) - 40f);   // ffu59c: below the view's name label in every split view
         Debug.Log("RobotPhone: seat " + (seat + 1) + " layout " + (full ? "full screen" : "viewport " + vr.ToString("0.00")) + (compact ? " compact" : "") + " scale " + sc.ToString("0.00") + " (" + vw.ToString("0") + "x" + vh.ToString("0") + " canvas units)");
     }
 
