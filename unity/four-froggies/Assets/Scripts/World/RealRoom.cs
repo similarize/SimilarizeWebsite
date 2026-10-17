@@ -762,8 +762,8 @@ public partial class RealRoom : MonoBehaviour
         hintT.text = st == St.Play ? hint : "";
         titleT.rectTransform.anchorMin = titleT.rectTransform.anchorMax = new Vector2(c.x, r.yMax);
         titleT.rectTransform.anchoredPosition = new Vector2(0f, portrait ? -190f : -112f);   // ffu51: below the "Help & controls" chip (they overlapped = garbled title)
-        titleT.rectTransform.sizeDelta = new Vector2(portrait ? 380f : 900f, portrait ? 120f : 80f);
-        titleT.text = st == St.Play && stT < 4f ? "<b>REAL ROOM</b>\n<size=18>look around: the duck, the plush frog, the chair,\nthe light switch and the door</size>" : "";
+        titleT.rectTransform.sizeDelta = new Vector2(portrait ? 420f : 900f, portrait ? 120f : 80f);   // ffu51b: portrait line break after "plush frog," (the 380 px box split "the chair," onto its own line)
+        titleT.text = st == St.Play && stT < 4f ? (portrait ? "<b>REAL ROOM</b>\n<size=18>look around: the duck, the plush frog,\nthe chair, the light switch and the door</size>" : "<b>REAL ROOM</b>\n<size=18>look around: the duck, the plush frog, the chair, the light switch and the door</size>") : "";
         titleT.color = new Color(1, 1, 1, Mathf.Clamp01(4f - stT) * 0.9f);
     }
 }
