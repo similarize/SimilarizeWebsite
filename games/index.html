@@ -208,6 +208,11 @@
     @media (prefers-reduced-motion: reduce) {
       .cab { transition: none; }
     }
+    /* live previews (Hark, 2026-10-16): desktop hover or keyboard focus plays the real game's ?demo= run */
+    .screen-wrap iframe.live { position:absolute; left:0; top:0; width:1280px; height:960px; border:0; transform-origin:0 0; pointer-events:none; opacity:0; transition:opacity .35s ease; background:#070605; }
+    .screen-wrap iframe.live.on { opacity:1; }
+    .screen-wrap .live-tag { position:absolute; right:6px; top:6px; z-index:2; padding:2px 7px; border-radius:999px; font:700 10px Outfit, sans-serif; letter-spacing:.08em; color:#fff; background:rgba(214,40,40,.85); opacity:0; transition:opacity .25s; pointer-events:none; }
+    .screen-wrap.is-live .live-tag { opacity:1; }
   </style>
 </head>
 <body>
@@ -1590,6 +1595,7 @@
 
     function frame() {
       for (const s of screens) {
+        if (s.canvas.dataset.live === "1") continue;
         if (!reduced) s.t += 0.016;
         draw[s.kind](fit(s));
       }
@@ -1597,6 +1603,55 @@
     }
     addEventListener("resize", () => { if (reduced) frame(); });
     frame();
+
+    // Live previews: on a desktop with a mouse, hovering (or tabbing to) a cabinet
+    // swaps its drawn demo for the real game running its ?demo= attract mode, scaled
+    // into the screen. One at a time, silent (the frame never gets a user gesture),
+    // and skipped on touch screens (phones, Quest, Tesla), low memory and Save-Data.
+    (function livePreviews() {
+      const DEMO = { rally: "run", dirtTrack: "race", froggyHop: "race", balloonBlastAirsoft: "play", rocks: "play", soccer3d: "coop" };
+      const mq = matchMedia("(hover: hover) and (pointer: fine)");
+      const lowMem = navigator.deviceMemory && navigator.deviceMemory < 4;
+      const saveData = navigator.connection && navigator.connection.saveData;
+      if (reduced || lowMem || saveData) return;
+      let cur = null, timer = 0;
+      function stop() {
+        clearTimeout(timer);
+        if (!cur) return;
+        const { wrap, frame: f, canvas } = cur; cur = null;
+        wrap.classList.remove("is-live"); canvas.dataset.live = "";
+        f.classList.remove("on"); setTimeout(() => f.remove(), 350);
+      }
+      function start(cab) {
+        const canvas = cab.querySelector("canvas[data-demo]"), mode = canvas && DEMO[canvas.dataset.demo];
+        if (!mode || !mq.matches || (cur && cur.cab === cab)) return;
+        stop();
+        const wrap = canvas.parentElement, url = new URL(cab.getAttribute("href"), location.href);
+        url.searchParams.set("demo", mode); url.searchParams.set("preview", "1");
+        const f = document.createElement("iframe");
+        f.className = "live"; f.src = url.pathname + url.search; f.tabIndex = -1;
+        f.setAttribute("aria-hidden", "true"); f.setAttribute("sandbox", "allow-scripts allow-same-origin");
+        f.style.transform = "scale(" + (wrap.clientWidth / 1280) + ")";
+        let tag = wrap.querySelector(".live-tag");
+        if (!tag) { tag = document.createElement("span"); tag.className = "live-tag"; tag.textContent = "LIVE"; wrap.appendChild(tag); }
+        wrap.insertBefore(f, wrap.querySelector(".glass"));
+        cur = { cab, wrap, frame: f, canvas };
+        // keep the drawn demo up until the game has had time to boot into its run
+        f.addEventListener("load", () => setTimeout(() => {
+          if (!cur || cur.frame !== f) return;
+          f.classList.add("on"); wrap.classList.add("is-live"); canvas.dataset.live = "1";
+        }, 1800));
+      }
+      document.querySelectorAll("a.cab").forEach(cab => {
+        cab.addEventListener("mouseenter", () => { clearTimeout(timer); timer = setTimeout(() => start(cab), 450); });
+        cab.addEventListener("mouseleave", () => { if (!cur || cur.cab === cab) stop(); else clearTimeout(timer); });
+        cab.addEventListener("focus", () => { if (cab.matches(":focus-visible")) start(cab); });
+        cab.addEventListener("blur", () => { if (cur && cur.cab === cab) stop(); });
+      });
+      addEventListener("resize", () => { if (cur) cur.frame.style.transform = "scale(" + (cur.wrap.clientWidth / 1280) + ")"; });
+      document.addEventListener("visibilitychange", () => { if (document.hidden) stop(); });
+      addEventListener("pagehide", stop);
+    })();
   </script>
 </body>
 </html>
