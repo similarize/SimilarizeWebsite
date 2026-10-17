@@ -238,3 +238,12 @@ CC0 1.0 Universal: https://creativecommons.org/publicdomain/zero/1.0/legalcode
    (realroom/frog.bin) were modelled for this game from code (signed-distance shapes, work/rr/frog in the build
    pipeline) - no third-party model. The window view is the same Poly Haven kloppenheim_02 crop (CC0), colour-graded
    to night.
+
+14. RANCH GROUND / TREES / BUILDINGS (ffu56, streamed from real/ after load, not in the build)
+   ambientCG textures (https://ambientcg.com), CC0 1.0 Universal (public domain dedication):
+   Ground037 (worn footpaths), Ground048 (forest leaf litter), Bark014 (tree bark), Leaf001 (leaves - cut out and
+   arranged into a leafy sprig card for the tree canopies), WoodSiding008 (house / garage siding, greyed for paint),
+   Planks023A (porch / tree fort planks), RoofingTiles013A (roof shingles).
+   Instanced grass, footprints / tyre tracks, the tree fort, fireflies and bugs: made for this game from code.
+
+CC0 1.0 Universal: https://creativecommons.org/publicdomain/zero/1.0/legalcode
