@@ -35192,13 +35192,14 @@ function frame(now) {
   const tNow = now / 1e3;
   for (let i2 = actors.length - 1; i2 >= 0; i2--) {
     const actor = actors[i2];
-    if (AUD) {
+    {
       const v2 = actor.body.linvel(), pv = actor._pv;
       if (pv && !(drag && drag.actor === actor)) {
         const dv = Math.hypot(v2.x - pv.x, v2.y - pv.y, v2.z - pv.z);
         if (dv > 2.2 && tNow - (actor._snd || 0) > 0.12) {
           actor._snd = tNow;
           sfx(actor.kind === "sphere" ? "bounce" : "thud", Math.min(1.2, dv / 9));
+          dlImpact(actor, dv);
         }
       }
       actor._pv = { x: v2.x, y: v2.y, z: v2.z };
@@ -35207,9 +35208,65 @@ function frame(now) {
     if (y2 < -16) removeActor(actor);
     else syncActor(actor);
   }
+  dlTick(dt, tNow);
   controls.update();
   renderer.render(scene, camera);
   requestAnimationFrame(frame);
+}
+
+/* dl2 arcade-upgrade: env reflections, impact dust + squash, tower challenge (co-op), shake */
+try {
+  const pm = new PMREMGenerator(renderer);
+  const es = new Scene();
+  const em = new ShaderMaterial({ side: BackSide,
+    vertexShader: "varying vec3 vP; void main(){ vP=position; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}",
+    fragmentShader: "varying vec3 vP; void main(){ vec3 d=normalize(vP); float h=d.y; vec3 c=mix(vec3(0.06,0.06,0.07), vec3(1.0,0.9,0.75), smoothstep(0.2,1.0,h)); c+=vec3(2.5,2.2,1.8)*smoothstep(0.96,1.0,dot(d,normalize(vec3(0.5,0.8,0.3)))); c+=vec3(0.5,0.6,0.8)*smoothstep(0.9,1.0,dot(d,normalize(vec3(-0.7,0.4,-0.4)))); gl_FragColor=vec4(c,1.0);}" });
+  es.add(new Mesh(new SphereGeometry(20, 24, 12), em));
+  scene.environment = pm.fromScene(es, 0.03).texture;
+  scene.environmentIntensity = 0.7;
+  pm.dispose();
+} catch (e) { console.warn("env", e); }
+var dlDust = [];
+var dlDustMat = new MeshBasicMaterial({ color: "#e8dcc6", transparent: true, opacity: 0.6, depthWrite: false });
+var dlDustGeo = new SphereGeometry(1, 8, 6);
+for (let i = 0; i < 40; i++) { const m = new Mesh(dlDustGeo, dlDustMat.clone()); m.visible = false; scene.add(m); dlDust.push({ m, life: 0, v: new Vector3() }); }
+var dlDi = 0, dlShake = 0;
+function dlImpact(actor, dv) {
+  const p = actor.mesh.position, n = Math.min(8, 2 + Math.floor(dv / 2));
+  const floorY = p.y - minCenterY(actor);
+  for (let k = 0; k < n; k++) {
+    const d = dlDust[dlDi++ % dlDust.length], a = Math.random() * Math.PI * 2, sp = 0.6 + Math.random() * dv * 0.18;
+    d.m.position.set(p.x + Math.cos(a) * 0.2, Math.max(0.03, floorY + 0.05), p.z + Math.sin(a) * 0.2);
+    d.v.set(Math.cos(a) * sp, 0.4 + Math.random() * 0.8, Math.sin(a) * sp);
+    d.life = 0.55 + Math.random() * 0.3; d.m.visible = true; d.m.scale.setScalar(0.05);
+  }
+  actor._sq = Math.min(0.35, dv / 30);
+  if (dv > 7) dlShake = Math.min(0.12, dv / 120);
+}
+var dlHud = document.createElement("div");
+dlHud.id = "dl-tower";
+dlHud.style.cssText = "position:fixed;left:50%;top:calc(14px + env(safe-area-inset-top));transform:translateX(-50%);padding:6px 14px;border-radius:999px;background:rgba(16,17,20,.72);border:1px solid #e4a23a;color:#f3e2c4;font:600 14px Outfit,system-ui,sans-serif;pointer-events:none;z-index:5;text-align:center";
+document.body.appendChild(dlHud);
+var dlBest = Number(localStorage.getItem("droplab-best-tower") || 0), dlCheer = 0;
+var dlRing = new Mesh(new CylinderGeometry(0.5, 0.5, 0.02, 40, 1, true), new MeshBasicMaterial({ color: "#e4a23a", transparent: true, opacity: 0.5, side: DoubleSide, depthWrite: false }));
+scene.add(dlRing);
+function dlTick(dt, t) {
+  for (const d of dlDust) if (d.life > 0) {
+    d.life -= dt; d.v.y -= 1.2 * dt; d.m.position.addScaledVector(d.v, dt);
+    d.m.scale.setScalar(0.05 + (0.9 - d.life) * 0.22); d.m.material.opacity = Math.max(0, d.life) * 0.7;
+    if (d.life <= 0) d.m.visible = false;
+  }
+  let top = 0;
+  for (const a of actors) {
+    if (a._sq) { a._sq = Math.max(0, a._sq - dt * 2.5); const s = a._sq; a.mesh.scale.set(1 + s * 0.6, 1 - s, 1 + s * 0.6); } else a.mesh.scale.set(1, 1, 1);
+    if (drag && drag.actor === a) continue;
+    const v = a.body.linvel();
+    if (Math.hypot(v.x, v.y, v.z) < 0.25) { const ext = a.kind === "box" ? Math.hypot(a.half[0], a.half[1], a.half[2]) * 0.8 : a.kind === "sphere" ? a.radius : Math.max(a.radius, a.halfHeight); top = Math.max(top, a.mesh.position.y + ext * 0.85); }
+  }
+  if (top > dlBest + 0.05 && top > 0.8) { dlBest = top; localStorage.setItem("droplab-best-tower", dlBest.toFixed(2)); if (t - dlCheer > 2) { dlCheer = t; sfx("win", 0.6); } }
+  dlHud.textContent = "Team tower: " + top.toFixed(2) + " m  \u00b7  Best: " + dlBest.toFixed(2) + " m";
+  dlRing.position.set(controls.target.x, dlBest, controls.target.z); dlRing.scale.setScalar(1 + Math.sin(t * 3) * 0.04); dlRing.visible = dlBest > 0.8;
+  if (dlShake > 0) { dlShake = Math.max(0, dlShake - dt * 0.6); camera.position.x += (Math.random() - 0.5) * dlShake; camera.position.y += (Math.random() - 0.5) * dlShake; }
 }
 requestAnimationFrame(frame);
 /*! Bundled license information:
