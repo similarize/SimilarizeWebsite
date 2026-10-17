@@ -637,8 +637,25 @@ public partial class Robot
                         break;
                     }
                     bool inW = InWater(p);
+                    if (v.vs == 5)
+                    {
+                        // CANNONBALL: a jet-assisted jump into the pond (the water within ~45 m)
+                        float T = Mathf.Max(0.8f, RobotNav.Flat(v.vp2 - v.vp) / 9f), k = Mathf.Clamp01(v.vt / T);
+                        Vector3 a5 = Vector3.Lerp(v.vp, v.vp2, k);
+                        a5.y = Mathf.Lerp(v.vp.y, Layout.WaterY - 0.3f, k) + Mathf.Sin(k * Mathf.PI) * 4.5f;
+                        transform.position = a5; yOver = a5.y; jetsOn = k < 0.7f; pose = 21; Face(v.vp2 + (v.vp2 - v.vp));
+                        if (k >= 1f) { jetsOn = false; v.vs = 1; FX.Splash(a5, 3f); Sfx.PlayAt(Sfx.SplashBig != null ? Sfx.SplashBig : Sfx.Splash, a5, 0.8f, 70f); Debug.Log("ROBOTS54 cannonball splash " + robotName); }
+                        break;
+                    }
                     if (!inW && v.vs == 0)
                     {
+                        Vector3 e0 = InWater(lp) ? lp : PondEdge(lp, 0.82f);
+                        if (RobotNav.Flat(e0 - p) < 45f && v.vt > 0.6f)
+                        {
+                            v.vs = 5; v.vt = 0f; v.vp = p; v.vp2 = new Vector3(e0.x, Layout.WaterY - 0.3f, e0.z);
+                            f.Toast(robotName + ": CANNONBALL!", 1.8f); Sfx.PlayAt(Sfx.Pick(Sfx.Servo), p, 0.5f, 40f, 1.3f);
+                            break;
+                        }
                         // walk to the shore nearest the caller (or into the pond where the caller is)
                         Vector3 goal = InWater(lp) ? lp : PondEdge(lp, 0.85f);
                         WalkTo(goal, RunSpeed, 0.3f, dt);
