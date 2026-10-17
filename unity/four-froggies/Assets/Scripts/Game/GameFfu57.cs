@@ -14,7 +14,7 @@ using UnityEngine;
 public class Ffu57 : MonoBehaviour
 {
     public static Ffu57 I;
-    bool started, allDone; int ph = -1, step; float phW, logT, stepT;
+    bool started, allDone, houseKick; int ph = -1, step; float phW, logT, stepT;
     Vector3 camPos, camLook; bool camOn; Transform camFollow; Vector3 camOff;
     Frog f;
     string[] order = { "house", "pets", "petfeed", "fetch", "ride", "follow", "herd", "robot", "frog", "mech" };
@@ -60,7 +60,12 @@ public class Ffu57 : MonoBehaviour
         {
             if (Realism.On && !Realism.Ready) return;
             if (Terrain56.On && !Terrain56.Ready) return;
-            if (Pet("Spotty") == null) return;
+            if (Pet("Spotty") == null)
+            {
+                // the house (and its pets) is only built the first time someone walks in: walk James in once
+                if (!houseKick && HouseWorld.I != null) { houseKick = true; var f0 = Game.I.frogs[Game.I.slots[0].frog]; HouseWorld.I.Enter(f0); Debug.Log("FFDEMO animals57 entering the house to build it"); }
+                return;
+            }
             started = true;
             f = Game.I.frogs[Game.I.slots[0].frog];
             if (RanchLife.I != null) { Robot.DtCap = 0.25f; Robot.IdleChoreAfter = 9999f; }
