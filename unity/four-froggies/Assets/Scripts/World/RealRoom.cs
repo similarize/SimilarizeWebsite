@@ -23,8 +23,9 @@ public partial class RealRoom : MonoBehaviour
     public static RealRoom I;
     public static readonly Vector3 RoomO = new Vector3(0f, -2000f, 1400f);   // under the house world, never in view
     public const int Layer = 21;
-    const string V = "?v=rr6";   // ffu23: frog.bin (hands + body + plush), rr.txt mats, night window; rr5 = ffu23b closed forearm
-    const float EyeH = 1.47f;
+    const string V = "?v=rr7";   // ffu51: real-frog body + front feet in frog.bin (rr6 = ffu25 arms)   // ffu23: frog.bin (hands + body + plush), rr.txt mats, night window; rr5 = ffu23b closed forearm
+    const float EyeH = 0.84f;   // ffu51: a crouching real frog (eyes on top of the head), was 1.47 (standing human-style frog)
+    float seatEye = 1.22f, seatTop;
 
     // the door in the house (living room west wall), HouseWorld local coordinates
     static readonly Vector3 HDoor = new Vector3(-29.84f, 0f, 15.8f);
@@ -337,6 +338,7 @@ public partial class RealRoom : MonoBehaviour
     void Play(float dt)
     {
         PIn i = inp; inp = new PIn();
+        if (demoShot == "realroom-hop" && demoPhase == 2) { i.move = new Vector2(0f, 1f); i.look = new Vector2(dt * 50f, 0f); }   // ffu51 demo: hop in a circle
         bool act = i.use || i.hop;
         intakeCool -= dt;
         // first / third person
@@ -364,10 +366,11 @@ public partial class RealRoom : MonoBehaviour
                 {
                     bool ok = pending == "switch" ? Hands.Poke(pendingP) : Hands.Grab(pendingP, pending == "plush" ? 0.11f : 0.075f);
                     if (ok && pending != "switch") grabRb = pending == "plush" ? plush : duck;
-                    if (ok) { if (pending != "switch") crouchT = Mathf.Clamp(1.05f - (pendingP.y - RoomO.y), 0f, 0.8f); pending = ""; }
+                    if (ok) { if (pending != "switch") crouchT = Mathf.Clamp(EyeH - 0.50f - (pendingP.y - RoomO.y) * 0.9f, 0f, 0.40f); pending = ""; }   // ffu51: frog eye height
                 }
             }
             moveK = new Vector2(mv.x, mv.z).magnitude / 1.45f;
+            mv *= FrogBody.Surge;   // ffu51: hop surges (slow push-off / landing, fast in the air)
             mv.y = -4f;
             body.Move(mv * dt);
             bobT += moveK * dt * 8.5f;
@@ -379,6 +382,9 @@ public partial class RealRoom : MonoBehaviour
             if (i.move.sqrMagnitude > 0.5f || i.downHeld) StandUp();
         }
         FrogBody.speed = Mathf.MoveTowards(FrogBody.speed, Mathf.Clamp01(moveK), dt * 4f);
+        FrogBody.Locomotion(dt, sitting ? 0f : Mathf.Clamp01(moveK), sitting);
+        if (pending == "switch") crouchT = -0.30f;   // ffu51: stretch up tall to reach the switch
+        FrogBody.rise = Mathf.Clamp01(-crouch / 0.30f);
         // crouch back up once the hand has the thing (or gave up)
         if (!Hands.Busy && pending == "") crouchT = 0f;
         crouch = Mathf.MoveTowards(crouch, crouchT, dt * 2.2f);
@@ -458,10 +464,10 @@ public partial class RealRoom : MonoBehaviour
 
     void ApplyView()
     {
-        float bob = (st == St.Play && !sitting) ? Mathf.Sin(bobT) * 0.012f : 0f;
+        float bob = (st == St.Play && !sitting) ? FrogBody.HopY * 0.75f : 0f;   // ffu51: the hop arc (was a walk bob)
         yawT.rotation = Quaternion.Euler(0f, yaw, 0f);
         if (sitting) yawT.position = Vector3.Lerp(yawT.position, seatPos, Time.deltaTime * 5f);
-        float eye = sitting ? 1.08f : EyeH - crouch;
+        float eye = sitting ? seatEye : EyeH - crouch;
         pitchT.localPosition = new Vector3(0f, eye + bob, 0f);
         pitchT.localRotation = Quaternion.Euler(pitch + crouch * 25f, 0f, 0f);
         Hands.walk = bobT;
@@ -554,6 +560,8 @@ public partial class RealRoom : MonoBehaviour
         body.enabled = false;
         yaw = seatYaw; pitch = 8f;
         FindArmrests();
+        // ffu51: a frog sits ON the cushion (its crouch): find the seat top under the seat point
+        { RaycastHit sh; seatTop = seatPos.y + 0.42f; if (Physics.Raycast(seatPos + Vector3.up * 1.4f, Vector3.down, out sh, 1.6f, 1 << ChairLayer, QueryTriggerInteraction.Ignore)) seatTop = sh.point.y - 0.02f; seatEye = seatTop - seatPos.y + EyeH * 0.95f; Debug.Log("RealRoom: frog sits, seat top " + (seatTop - RoomO.y).ToString("0.00") + " eye " + seatEye.ToString("0.00")); }
         Hands.sitting = true; FrogBody.sitting = true;
         Sfx.Play(Sfx.BumpSoft != null ? Sfx.BumpSoft : Sfx.Thud, 0.6f, 0.8f);
     }
@@ -671,8 +679,9 @@ public partial class RealRoom : MonoBehaviour
             FrogBody.lookPitch = pitch;
             if (FrogBody.Root != null)
             {
-                FrogBody.Root.position = sitting ? new Vector3(yawT.position.x, RoomO.y + 0.0f, yawT.position.z) : yawT.position;
-                FrogBody.Root.rotation = Quaternion.Euler(0f, sitting ? seatYaw : yaw, 0f);
+                Quaternion rq = Quaternion.Euler(0f, sitting ? seatYaw : yaw, 0f);   // ffu51: eyes over the controller / camera
+                FrogBody.Root.position = (sitting ? new Vector3(yawT.position.x, seatTop, yawT.position.z) : yawT.position) - rq * Vector3.forward * FrogBody.EyeZ;
+                FrogBody.Root.rotation = rq;
             }
             FrogBody.Tick(dt, bobT);
         }
@@ -752,8 +761,9 @@ public partial class RealRoom : MonoBehaviour
         hintT.rectTransform.anchoredPosition = new Vector2(0f, portrait ? 330f : 110f);
         hintT.text = st == St.Play ? hint : "";
         titleT.rectTransform.anchorMin = titleT.rectTransform.anchorMax = new Vector2(c.x, r.yMax);
-        titleT.rectTransform.anchoredPosition = new Vector2(0f, portrait ? -170f : -60f);
-        titleT.text = st == St.Play && stT < 4f ? "<b>REAL ROOM</b>\n<size=18>look around - the duck, the plush frog, the chair, the light switch, the door</size>" : "";
+        titleT.rectTransform.anchoredPosition = new Vector2(0f, portrait ? -190f : -112f);   // ffu51: below the "Help & controls" chip (they overlapped = garbled title)
+        titleT.rectTransform.sizeDelta = new Vector2(portrait ? 380f : 900f, portrait ? 120f : 80f);
+        titleT.text = st == St.Play && stT < 4f ? "<b>REAL ROOM</b>\n<size=18>look around: the duck, the plush frog, the chair,\nthe light switch and the door</size>" : "";
         titleT.color = new Color(1, 1, 1, Mathf.Clamp01(4f - stT) * 0.9f);
     }
 }

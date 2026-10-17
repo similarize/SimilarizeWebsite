@@ -386,7 +386,7 @@ public partial class RealRoom
         p.transform.SetParent(root, false);
         yawT = p.transform;
         body = p.AddComponent<CharacterController>();
-        body.height = 1.55f; body.radius = 0.24f; body.center = new Vector3(0f, 0.8f, 0f); body.stepOffset = 0.2f; body.skinWidth = 0.02f;
+        body.height = 0.95f; body.radius = 0.30f; body.center = new Vector3(0f, 0.49f, 0f);   // ffu51: crouching frog (was 1.55 / 0.24 / 0.8) body.stepOffset = 0.2f; body.skinWidth = 0.02f;
         pitchT = new GameObject("Eye").transform; pitchT.SetParent(yawT, false); pitchT.localPosition = new Vector3(0f, EyeH, 0f);
         var cg = new GameObject("RealRoomCam"); cg.transform.SetParent(pitchT, false);
         cam = cg.AddComponent<Camera>();
@@ -513,6 +513,8 @@ public partial class RealRoom
                 case "realroom-reach": Pose(new Vector3(0.74f, 0f, -2.02f), 180f, 26f); Hands.demoHold = true; pending = "switch"; pendingP = SwitchFace(); pendingT = 0f; break;
                 case "realroom-grab": Pose(new Vector3(0.62f, 0f, -1.02f), 320f, 30f); pending = "plush"; pendingP = plush.worldCenterOfMass; pendingT = 0f; break;
                 case "realroom-body": Pose(new Vector3(1.2f, 0f, -0.1f), 180f, 12f); camDistT = camDist = 2.2f; camOrbit = 160f; break;
+                case "realroom-side": Pose(new Vector3(1.2f, 0f, -0.1f), 180f, 14f); camDistT = camDist = 2.0f; camOrbit = 95f; break;   // ffu51 profile
+                case "realroom-hop": Pose(new Vector3(0.9f, 0f, -0.4f), 180f, 14f); camDistT = camDist = 2.3f; camOrbit = 100f; break;   // ffu51 hopping (Play injects the move)
             }
         }
         if (demoPhase == 2)
@@ -520,7 +522,7 @@ public partial class RealRoom
             if (demoShot == "realroom-dark") { lightsOn = false; }
             if (demoShot == "realroom-tv") { yaw = seatYaw - 8f; pitch = 5f; }
             if (demoShot == "realroom-grab" && holding) { pitch = Mathf.Lerp(pitch, 16f, dt * 2f); }
-            if (demoShot == "realroom-body") { FrogBody.speed = 0f; }
+            if (demoShot == "realroom-body" || demoShot == "realroom-side") { FrogBody.speed = 0f; }
             if (demoShot == "realroom-throw")
             {
                 if (demoT > 3f && holding && !Hands.Busy) { throwK = 0.6f; Hands.Throw(); }

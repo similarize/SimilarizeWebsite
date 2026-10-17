@@ -705,13 +705,15 @@ public static class Ranch
 
     public static void Sign(Vector3 pos, float yaw, string text, Color bg, float width, float height)
     {
+        text = Signs51.Plain(text);   // ffu51: plain kid-friendly wording
+        float dppu = Signs51.Dppu(Mathf.RoundToInt(Mathf.Min(height * 50f * 0.55f, 54f)));   // ffu51: was 6 = font atlas overflow (scrambled letters)
         var go = new GameObject("Sign");
         go.transform.position = pos;
         go.transform.rotation = Quaternion.Euler(0f, yaw + 180f, 0f);
         var cv = go.AddComponent<Canvas>();
         cv.renderMode = RenderMode.WorldSpace;
         var cs = go.AddComponent<CanvasScaler>();
-        cs.dynamicPixelsPerUnit = 6f;
+        cs.dynamicPixelsPerUnit = dppu;
         var rt = (RectTransform)go.transform;
         rt.sizeDelta = new Vector2(width * 50f, height * 50f);
         go.transform.localScale = Vector3.one * 0.02f;
@@ -731,7 +733,7 @@ public static class Ranch
         var bcv = bgo.AddComponent<Canvas>();
         bcv.renderMode = RenderMode.WorldSpace;
         var bcs = bgo.AddComponent<CanvasScaler>();
-        bcs.dynamicPixelsPerUnit = 6f;
+        bcs.dynamicPixelsPerUnit = dppu;
         var backFace = (RectTransform)bgo.transform;
         backFace.sizeDelta = rt.sizeDelta;
         bgo.transform.localScale = Vector3.one * 0.02f;

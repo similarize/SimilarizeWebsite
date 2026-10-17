@@ -181,6 +181,8 @@ public class JetBase : MonoBehaviour
 
     static TextMesh WorldLabel(Vector3 p, Quaternion q, string text, Color c, float size)
     {
+        text = Signs51.Plain(text);   // ffu51
+        text = Signs51.Plain(text);   // ffu51
         var g = new GameObject("Label " + text);
         g.transform.position = p; g.transform.rotation = q;
         var tm = g.AddComponent<TextMesh>();

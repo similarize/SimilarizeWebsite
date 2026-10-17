@@ -22,7 +22,7 @@ public static class UIK
         Font f = WorldFont;
         tm.font = f;
         tm.fontStyle = FontStyle.Normal;
-        tm.fontSize = Mathf.Min(256, tm.fontSize * k);
+        tm.fontSize = Mathf.Min(Signs51.TmCap, tm.fontSize * k);   // ffu51: 160 px cap (was 256) keeps the shared atlas < 4096
         tm.characterSize /= k;
         var mr = tm.GetComponent<MeshRenderer>();
         if (mr != null && (mr.sharedMaterial == null || mr.sharedMaterial.shader == null || mr.sharedMaterial.shader.name.Contains("GUI/Text") || mr.sharedMaterial.name.Contains("Font"))) mr.sharedMaterial = f.material;

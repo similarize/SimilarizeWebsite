@@ -30,7 +30,7 @@ Shader "FF/RREye"
                 float front = step(0.0, p.z);
                 float ang = atan2(p.y, p.x);
                 float vein = H(float2(floor(ang * 22.0), 1.0)) * 0.5 + H(float2(floor(ang * 57.0), 2.0)) * 0.5;
-                float3 iris = lerp(float3(0.55, 0.36, 0.07), float3(0.85, 0.66, 0.22), smoothstep(0.75, 0.25, r)) * (0.55 + 0.6 * vein);
+                float3 iris = lerp(float3(0.55, 0.36, 0.07), float3(0.85, 0.66, 0.22), smoothstep(0.75, 0.25, r)) * (0.75 + 0.6 * vein);   // ffu51: brighter gold (the bigger real-frog eyes)
                 iris = lerp(iris, float3(0.06, 0.05, 0.02), smoothstep(0.62, 0.8, r));
                 float pupil = length(float2(p.x / 0.44, p.y / 0.2));
                 float3 alb = lerp(float3(0.01, 0.01, 0.008), iris, front * smoothstep(1.02, 0.96, pupil) * smoothstep(0.95, 0.8, r));

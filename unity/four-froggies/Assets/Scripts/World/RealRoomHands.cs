@@ -74,6 +74,7 @@ public static class Hands
             if (skin != null) m.SetTexture("_SkinTex", skin);
             m.SetColor("_Toon", new Color(toon.r, toon.g, toon.b, 1f));
             m.SetFloat("_TexScale", 15f);
+            FrogSkin.Apply(m, false);   // ffu51 tree-frog colours
             var rig = FrogAsset.Build(hand, eyeT, m.name, m, k == 1, RealRoom.Layer);
             fb[k] = new int[12];
             for (int i = 0; i < 4; i++) for (int j = 0; j < 3; j++) fb[k][i * 3 + j] = rig.Find("f" + i + "_" + j);

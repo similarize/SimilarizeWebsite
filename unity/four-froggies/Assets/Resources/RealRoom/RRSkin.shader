@@ -15,6 +15,8 @@ Shader "FF/RRSkin"
         _Toon ("Cartoon colour (linear)", Color) = (0.2, 0.7, 0.15, 1)
         _Morph ("Real", Range(0,1)) = 1
         _TexScale ("Detail scale", Float) = 18
+        _Spots ("Spot strength (ffu51)", Float) = 1
+        _RoughK ("Roughness scale (ffu51)", Float) = 1
         _LampPos ("Lamp position", Vector) = (0,2,0,0)
         _TvPos ("TV position", Vector) = (0,1,2,0)
     }
@@ -32,7 +34,7 @@ Shader "FF/RRSkin"
             #include "RRCommon.cginc"
             sampler2D _SkinTex;
             float4 _Dorsal, _Ventral, _Toon, _LampPos, _TvPos;
-            float _Morph, _TexScale, _Body;
+            float _Morph, _TexScale, _Body, _Spots, _RoughK;
             struct a2v { float4 vertex : POSITION; float3 normal : NORMAL; float4 color : COLOR; float3 rest : TEXCOORD2; float3 restN : TEXCOORD3; };
             struct v2f { float4 pos : SV_POSITION; float3 wpos : TEXCOORD0; float3 nrm : TEXCOORD1; float3 rest : TEXCOORD2; float3 restN : TEXCOORD3; float4 col : TEXCOORD4; };
             v2f vert (a2v v)
@@ -74,7 +76,7 @@ Shader "FF/RRSkin"
                 N = normalize(N - grad * 0.0006 * (1.0 - pad * 0.7));
                 float dorsal = smoothstep(0.15, 0.85, i.col.r);
                 // olive back: large soft blotches (dark) + fine mottle, a little yellow-green variation
-                float blot = smoothstep(0.52, 0.70, d.g) * dorsal;
+                float blot = smoothstep(0.52, 0.70, d.g) * dorsal * _Spots;
                 float3 back = _Dorsal.rgb * (0.78 + 0.45 * d.r) * float3(1.0 + 0.25 * d2.g, 1.0, 0.85 + 0.3 * d2.r);
                 back = lerp(back, back * float3(0.30, 0.34, 0.26), blot);
                 float3 belly = _Ventral.rgb * (0.85 + 0.3 * d2.r);
@@ -91,7 +93,7 @@ Shader "FF/RRSkin"
                 float3 irrSoft = (SHIrrD(N) * 0.6 + SHIrrD(normalize(N + float3(0, 0.6, 0))) * 0.4) * 1.5;
                 float3 diff = alb * lerp(irr, irrSoft, 0.35) + alb * float3(0.9, 0.3, 0.2) * 0.12 * irrSoft;
                 // wet highlights: lamp + TV as point lights (their brightness comes from the light group weights)
-                float rough = lerp(0.24, 0.42, d2.r) + pad * 0.15;
+                float rough = (lerp(0.24, 0.42, d2.r) + pad * 0.15) * _RoughK;
                 float3 Ll = _LampPos.xyz - i.wpos, Lt = _TvPos.xyz - i.wpos;
                 float il = 1.0 / max(dot(Ll, Ll), 0.3), it = 1.0 / max(dot(Lt, Lt), 0.3);
                 float fres = 0.035 + 0.965 * pow(1.0 - saturate(dot(N, V)), 5.0);
