@@ -218,6 +218,7 @@
           return true;
         }
         window.xBootNow = boot;
+        if (new URLSearchParams(location.search).get("demo") === "race") setTimeout(function () { boot(); var p = document.getElementById("b-play"); if (p) p.click(); }, 1500);
         var play = document.getElementById("b-play");
         play.addEventListener("click", function (e) { if (boot() && play.onclick) { e.stopImmediatePropagation(); play.onclick(e); } });
         addEventListener("keydown", function (e) { if (!window.xBooted && e.code === "Enter" && !(document.activeElement && document.activeElement.tagName === "BUTTON")) { boot(); if (play.onclick) play.onclick(e); } });
@@ -391,6 +392,21 @@ if (TT.grass != null) {
 const water = new THREE.Mesh(new THREE.PlaneGeometry(4000, 4000), new THREE.MeshPhongMaterial({ color: TT.water, specular: 0x88bbcc, shininess: 90 }));
 const waterHSL = water.material.color.getHSL({});
 water.rotation.x = -Math.PI / 2; water.position.y = -0.35; water.receiveShadow = true; scene.add(water);
+// fhr5: living water — sun glints + caustic shimmer + gentle colour swell (shader patch, no textures)
+const waterU = { uT: { value: 0 } };
+if (!TT.lava) water.material.onBeforeCompile = (sh) => {
+  sh.uniforms.uT = waterU.uT;
+  sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying vec3 vWP;").replace("#include <worldpos_vertex>", "#include <worldpos_vertex>\nvWP = (modelMatrix * vec4(transformed,1.0)).xyz;");
+  sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nuniform float uT; varying vec3 vWP;").replace("#include <dithering_fragment>",
+    "float w1 = sin(vWP.x*0.55 + uT*1.3) * cos(vWP.z*0.47 - uT*1.1);\nfloat w2 = sin((vWP.x+vWP.z)*1.3 - uT*2.1);\nfloat c = pow(abs(sin(vWP.x*0.9 + w1*1.6 + uT*0.7) * sin(vWP.z*0.9 - w2*1.2 - uT*0.6)), 6.0);\ngl_FragColor.rgb += vec3(0.85,0.95,1.0) * (c*0.22 + max(w1*w2,0.0)*0.07);\n#include <dithering_fragment>");
+};
+// fhr5: expanding splash rings
+const ringGeo = new THREE.RingGeometry(0.55, 0.75, 28); ringGeo.rotateX(-Math.PI / 2);
+const rings = [];
+for (let i = 0; i < 16; i++) { const m = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false })); m.visible = false; scene.add(m); rings.push({ m, life: 0 }); }
+let ringI = 0;
+function splashRing(x, z, big) { for (let k = 0; k < (big ? 2 : 1); k++) { const r = rings[ringI++ % rings.length]; r.m.position.set(x, 0.12 + groundXZ(x, z) * 0, z); r.life = 1 + k * 0.35; r.big = big ? 1.6 : 1; r.m.visible = true; } }
+function updRings(dt) { waterU.uT.value += dt; for (const r of rings) if (r.life > 0) { r.life -= dt * 1.4; const k = Math.max(0, Math.min(1, 1 - r.life)); r.m.scale.setScalar((0.6 + k * 3.2) * r.big); r.m.material.opacity = Math.max(0, Math.min(1, r.life)) * 0.75; if (r.life <= 0) r.m.visible = false; } }
 // lagoons beside bridge and shallows (lava under the bridge on the volcano)
 const lagMat = new THREE.MeshPhongMaterial({ color: TT.lagoon, specular: 0x88bbcc, shininess: 90, emissive: TT.lagEm || 0, emissiveIntensity: TT.lava ? 0.9 : 0 });
 const lagGeo = new THREE.CircleGeometry(13, 18);
@@ -492,6 +508,7 @@ function puff(x, y, z, color, n, sp, up) {
   }
 }
 function updParts(dt) {
+  updRings(dt);
   for (const p of parts) if (p.life > 0) {
     p.life -= dt * 1.8; p.vy -= 6 * dt;
     p.m.position.x += p.vx * dt; p.m.position.y = Math.max(p.fl || 0.05, p.m.position.y + p.vy * dt); p.m.position.z += p.vz * dt;
@@ -895,7 +912,7 @@ function updFrog(f, dt) {
         const pad = lilies.some((l) => (l.x - f.x) ** 2 + (l.z - f.z) ** 2 < 2.4);
         const mine = !!humanOf(f);
         if (pad) { f.bounce = true; puff(f.x, 0.3, f.z, 0x5fd06a, 5, 2, 3); if (mine) SFX.bloop(); }
-        else { if (!isFrog) { f.m = Math.min(f.m, 0.5); f.groundT += 0.08; } puff(f.x, 0.3, f.z, 0xe8fbff, isFrog ? 4 : 9, 2.5, 5); if (mine) SFX.splash(); }
+        else { if (!isFrog) { f.m = Math.min(f.m, 0.5); f.groundT += 0.08; } puff(f.x, 0.3, f.z, 0xe8fbff, isFrog ? 4 : 9, 2.5, 5); splashRing(f.x, f.z, !isFrog); if (mine) SFX.splash(); }
       } else puff(f.x, 0.2, f.z, seg === "bridge" ? 0xc9a27a : 0xf3dfb0, f.kind === "cat" ? 1 : 6, 2.2, 2);
     }
   }
@@ -1245,6 +1262,7 @@ function resize() {
 addEventListener("resize", resize); resize();
 resetRace(); state = "menu"; $("s-start").classList.add("is-on"); $("hud").style.display = "none";
 booted = true;
+if (new URLSearchParams(location.search).get("demo") === "race") setTimeout(() => { try { $("b-play").click(); } catch (e) { console.warn(e); } }, 300);
 let last = performance.now(), t0 = 0;
 function loop(now) {
   requestAnimationFrame(loop);
