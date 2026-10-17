@@ -34,9 +34,9 @@ public class Ffu61 : MonoBehaviour
     string shot = "", mode = "";
     float t0 = -1f, phT, logT;
     int ph; bool doneLogged, camOn;
-    Frog f, f2; Animal cow; Gamepad pad;
+    Frog f, f2; Animal cow; Gamepad pad, pad1;
     Vector3 camPos, camLook, walkTo, meatAt, arrowAt; bool walking, press, hAim, hFire, passRaw;
-    int shots0, hits0, picked0, tries, pass, total;
+    int shots0, hits0, picked0, tries, pass, total, k61;   // k61: per-phase step (frame-rate proof, ffu61b)
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Boot()
@@ -84,7 +84,7 @@ public class Ffu61 : MonoBehaviour
         }
     }
 
-    void Next(int p, string name) { ph = p; phT = 0f; Debug.Log("FFDEMO hunt61 ph " + p + " " + name + " t " + (Time.time - t0).ToString("0.0") + " | " + Bow61.Line); }
+    void Next(int p, string name) { ph = p; phT = 0f; k61 = 0; Debug.Log("FFDEMO hunt61 ph " + p + " " + name + " t " + (Time.time - t0).ToString("0.0") + " | " + Bow61.Line); }
     void Done()
     {
         if (doneLogged) return; doneLogged = true; hAim = false; camOn = false;
@@ -243,9 +243,9 @@ public class Ffu61 : MonoBehaviour
             case 12:
                 // keyboard + mouse: real InputSystem events on the page's mouse / keyboard
                 if (Game.I.slots[0].kind != InputKind.Keyboard || Mouse.current == null) { Check("keyboard test (P1 is keyboard + a mouse exists)", false, Game.I.slots[0].kind + " mouse " + (Mouse.current != null)); Done(); return; }
-                if (phT < 0.1f) { cow = Fig50.NearestCow(f.transform.position, 500f); if (cow != null) { Vector3 sp = Stand(cow, 13f, 25f); f.SendTo(WorldId.Ranch, sp, YawTo(sp, cow.Pos)); } passRaw = true; break; }
+                if (k61 == 0) { k61 = 1; phT = 0f; cow = Fig50.NearestCow(f.transform.position, 500f); if (cow != null) { Vector3 sp = Stand(cow, 13f, 25f); f.SendTo(WorldId.Ranch, sp, YawTo(sp, cow.Pos)); } passRaw = true; break; }
                 if (cow != null && cow.enabled) Face(f, cow.Pos);
-                if (phT > 1.5f && phT < 2f) { var ms = new MouseState().WithButton(MouseButton.Right); InputSystem.QueueStateEvent(Mouse.current, ms); }
+                if (phT > 1.5f && k61 == 1) { k61 = 2; var ms = new MouseState().WithButton(MouseButton.Right); InputSystem.QueueStateEvent(Mouse.current, ms); }
                 if (phT > 4f && tries < 10) { Check("keyboard: hold right mouse = aim", Bow61.AimK(f) > 0.5f, "aimK " + Bow61.AimK(f).ToString("0.00")); shots0 = Bow61.Shots; tries = 10; InputSystem.QueueStateEvent(Mouse.current, new MouseState().WithButton(MouseButton.Right).WithButton(MouseButton.Left)); }
                 if (phT > 4.3f && tries == 10) { tries = 11; InputSystem.QueueStateEvent(Mouse.current, new MouseState().WithButton(MouseButton.Right)); }
                 if (phT > 6f && tries == 11) { Check("keyboard: left click while aiming = shoot", Bow61.Shots > shots0, "shots " + Bow61.Shots); tries = 12; InputSystem.QueueStateEvent(Mouse.current, new MouseState()); }
@@ -269,13 +269,18 @@ public class Ffu61 : MonoBehaviour
                 if (t < 4f) break;
                 if (Stash50.arrows < 8) { Stash50.arrows = 8; Stash50.Save(); }
                 Bow61.DemoTake(f);
+                // ffu61b: a lone keyboard P1 is TAKEN OVER by the first pad that presses A (GameSeats, by design), so pad 1 = P1
+                // first, then pad 2 presses A = P2 (split screen)
+                pad1 = InputSystem.AddDevice<Gamepad>("FFTestPad61a");
                 pad = InputSystem.AddDevice<Gamepad>("FFTestPad61");
                 Next(1, "join");
                 break;
             case 1:
-                if (phT > 1.5f && phT < 1.8f) InputSystem.QueueStateEvent(pad, new GamepadState().WithButton(GamepadButton.South));
-                if (phT > 2.0f && phT < 2.3f) InputSystem.QueueStateEvent(pad, new GamepadState());
-                if (phT > 5f)
+                if (phT > 1.5f && k61 == 0) { k61 = 1; InputSystem.QueueStateEvent(pad1, new GamepadState().WithButton(GamepadButton.South)); }
+                else if (phT > 2.2f && k61 == 1) { k61 = 2; InputSystem.QueueStateEvent(pad1, new GamepadState()); }
+                else if (phT > 4.0f && k61 == 2) { k61 = 3; InputSystem.QueueStateEvent(pad, new GamepadState().WithButton(GamepadButton.South)); }
+                else if (phT > 4.7f && k61 == 3) { k61 = 4; InputSystem.QueueStateEvent(pad, new GamepadState()); }
+                if (phT > 7.5f)
                 {
                     Slot s2 = Game.I.SlotOfPad61(pad);
                     Check("the 2nd pad joins as P2 mid-game (split screen)", s2 != null && Game.I.slots.Count >= 2, "slots " + Game.I.slots.Count);
@@ -305,7 +310,7 @@ public class Ffu61 : MonoBehaviour
                 if (cow.enabled) Face(f2, cow.Pos);
                 {
                     var st = new GamepadState(); st.leftTrigger = 1f;
-                    if (phT > 1f && phT < 1.3f) st.rightTrigger = 1f;
+                    if (phT > 1f && k61 < 2) { k61++; st.rightTrigger = 1f; }
                     InputSystem.QueueStateEvent(pad, st);
                 }
                 if (phT > 6f)

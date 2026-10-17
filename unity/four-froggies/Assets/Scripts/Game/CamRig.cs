@@ -123,10 +123,11 @@ public class CamRig
         {
             // ffu61: froggy bow - over the right shoulder, close, a little zoom (same idea as the mech arm cannon)
             Vector3 rightV = Quaternion.Euler(0f, yaw, 0f) * Vector3.right;
-            Vector3 sh = f.transform.position + Vector3.up * 1.15f + rightV * 0.55f;
+            // ffu61b: higher + further right + back (the 1.2 m froggy filled the middle of the view at 1.15 / 0.55 / 2.6 m)
+            Vector3 sh = f.transform.position + Vector3.up * 1.5f + rightV * 0.9f;
             float e = Mathf.SmoothStep(0f, 1f, bk);
             pivot = Vector3.Lerp(pivot, sh, e);
-            dist = Mathf.Lerp(dist, 2.6f, e);
+            dist = Mathf.Lerp(dist, 3.3f, e);
             if (baseFov < 0f) baseFov = cam.fieldOfView;
             cam.fieldOfView = Mathf.Lerp(baseFov, baseFov * 0.82f, e);
         }

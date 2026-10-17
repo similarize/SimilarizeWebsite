@@ -24,7 +24,7 @@ public static class Bow61
     class St
     {
         public Transform vis, nock; public int slot; public float aimK, cool, lastShotT = -10f; public bool lockOn;
-        public Transform[] dots; public Animal lockCow; public int shots, hits;
+        public Camera cam61; public Transform[] dots; public Animal lockCow; public int shots, hits;
     }
     static readonly Dictionary<Frog, St> st = new Dictionary<Frog, St>();
     static readonly Frog[] rackUser = new Frog[4];
@@ -94,11 +94,11 @@ public static class Bow61
             if (k == 0) continue;
             float y = k * 0.12f, z = 0.09f * (1f - (k / 3.2f) * (k / 3.2f));
             float slope = -2f * 0.09f * k / (3.2f * 3.2f) / 0.12f;
-            var seg = Mats.Prim(PrimitiveType.Cube, b, new Vector3(0f, y, z), new Vector3(0.035f, 0.135f, 0.04f), limb);
+            var seg = Mats.Prim(PrimitiveType.Cube, b, new Vector3(0f, y, z), new Vector3(0.05f, 0.135f, 0.055f), limb);
             seg.transform.localRotation = Quaternion.Euler(-Mathf.Atan(slope) * Mathf.Rad2Deg, 0f, 0f);
         }
-        Mats.Prim(PrimitiveType.Cube, b, new Vector3(0f, 0f, 0.09f), new Vector3(0.05f, 0.14f, 0.05f), grip);
-        Mats.Prim(PrimitiveType.Cube, b, new Vector3(0f, 0f, -0.01f), new Vector3(0.008f, 0.74f, 0.008f), str).name = "String";
+        Mats.Prim(PrimitiveType.Cube, b, new Vector3(0f, 0f, 0.09f), new Vector3(0.065f, 0.15f, 0.065f), grip);
+        Mats.Prim(PrimitiveType.Cube, b, new Vector3(0f, 0f, -0.01f), new Vector3(0.012f, 0.74f, 0.012f), str).name = "String";
         Mats.NoShadows(b.gameObject);
         return b;
     }
@@ -118,7 +118,7 @@ public static class Bow61
         st[f] = s;
         s.vis = MakeBow(null, Tints[slot]);
         s.nock = Mats.Prim(PrimitiveType.Cylinder, s.vis, new Vector3(0.02f, 0f, 0.12f), new Vector3(0.016f, 0.27f, 0.016f), new Vector3(90f, 0f, 0f), Mats.Lit(new Color(0.62f, 0.45f, 0.26f))).transform;
-        s.dots = new Transform[18];
+        s.dots = new Transform[34];
         Material dm = Mats.Unlit(new Color(1f, 1f, 1f));
         for (int i = 0; i < s.dots.Length; i++)
         {
@@ -173,8 +173,9 @@ public static class Bow61
         Transform at = f.model.bob != null ? f.model.bob : f.model.transform;
         if (s.vis.parent != at) s.vis.SetParent(at, false);
         bool hand = InHand(f);
-        if (hand) { s.vis.localPosition = new Vector3(-0.3f, 0.55f + 0.05f * s.aimK, 0.28f + 0.1f * s.aimK); s.vis.localRotation = Quaternion.Euler(0f, 0f, -12f * (1f - s.aimK)); }
-        else { s.vis.localPosition = new Vector3(0.05f, 0.62f, -0.3f); s.vis.localRotation = Quaternion.Euler(0f, 180f, 38f); }
+        // ffu61b: the froggy mesh body is ~+-0.53 m wide / +-0.55 m deep - the bow sits OUTSIDE it (left hand / out in front / on the back)
+        if (hand) { s.vis.localPosition = new Vector3(Mathf.Lerp(-0.66f, -0.34f, s.aimK), Mathf.Lerp(0.62f, 0.86f, s.aimK), Mathf.Lerp(0.36f, 0.78f, s.aimK)); s.vis.localRotation = Quaternion.Euler(0f, 0f, -12f * (1f - s.aimK)); }
+        else { s.vis.localPosition = new Vector3(0.05f, 0.78f, -0.62f); s.vis.localRotation = Quaternion.Euler(0f, 180f, 38f); }
         if (s.nock != null) s.nock.gameObject.SetActive(hand && Stash50.arrows > 0 && Time.time - s.lastShotT > 0.45f);
         bool show = f.vehicle == null && f.passengerOf == null && f.model.gameObject.activeInHierarchy;
         if (s.vis.gameObject.activeSelf != show) s.vis.gameObject.SetActive(show);
@@ -194,6 +195,7 @@ public static class Bow61
         Vector3 from = BowTip(f, s);
         Vector3 v; Animal lockCow;
         Solve(f, cam, from, s.aimK > 0.5f, out v, out lockCow);
+        s.cam61 = cam;
         s.lockOn = lockCow != null && s.aimK > 0.5f; s.lockCow = lockCow;
         Arc(s, from, v, s.aimK > 0.5f);
         if (ready && i.bowFire)
@@ -270,7 +272,8 @@ public static class Bow61
     {
         if (s.dots == null) return;
         Color c = s.lockOn ? new Color(1f, 0.85f, 0.25f) : new Color(1f, 1f, 1f);
-        float tStep = 0.075f;
+        float tStep = 0.028f;   // ffu61b: ~1 m between dots (was 2.7 m: sub-pixel, the arc never showed)
+        Camera cam = s.cam61;
         Vector3 p = from, vv = v; bool stop = !on;
         for (int i = 0; i < s.dots.Length; i++)
         {
@@ -282,7 +285,7 @@ public static class Bow61
             }
             bool show = !stop && i > 0;
             if (d.gameObject.activeSelf != show) d.gameObject.SetActive(show);
-            if (show) { d.position = p; d.localScale = Vector3.one * Mathf.Lerp(0.09f, 0.05f, i / (float)s.dots.Length); var r = d.GetComponent<Renderer>(); if (r.sharedMaterial.color != c) r.sharedMaterial = Mats.Unlit(c); }
+            if (show) { d.position = p; float cd = cam != null ? Vector3.Distance(cam.transform.position, p) : 8f; d.localScale = Vector3.one * Mathf.Clamp(cd * 0.009f, 0.07f, 0.4f); var r = d.GetComponent<Renderer>(); if (r.sharedMaterial.color != c) r.sharedMaterial = Mats.Unlit(c); }
         }
     }
 
