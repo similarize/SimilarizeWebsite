@@ -66,6 +66,10 @@
   // game canvas. ?aa=0 turns it off.
   (function () {
     if (/[?&]aa=0/.test(location.search)) return;
+    // ffu60: ?quality=low, or this browser's frame-rate governor ended on the low tier last time -> no canvas MSAA
+    var q60 = /[?&]quality=([a-z]+)/.exec(location.search), ql = null;
+    try { ql = localStorage.getItem("ffq60"); } catch (e) { }
+    if (q60 ? q60[1] === "low" : ql === "0") { console.log("FF page: low quality tier - canvas antialias off"); return; }
     var orig = HTMLCanvasElement.prototype.getContext;
     HTMLCanvasElement.prototype.getContext = function (type, attrs) {
       if (this.id === "unity-canvas" && (type === "webgl2" || type === "webgl" || type === "experimental-webgl")) {
@@ -75,19 +79,19 @@
     };
   })();
   var config = {
-    dataUrl: buildUrl + "/" + name + ".data?v=202610171712-258e05a",
-    frameworkUrl: buildUrl + "/" + name + ".framework.js?v=202610171712-258e05a",
-    codeUrl: buildUrl + "/" + name + ".wasm?v=202610171712-258e05a",
+    dataUrl: buildUrl + "/" + name + ".data?v=202610171806-2b68827",
+    frameworkUrl: buildUrl + "/" + name + ".framework.js?v=202610171806-2b68827",
+    codeUrl: buildUrl + "/" + name + ".wasm?v=202610171806-2b68827",
     streamingAssetsUrl: "StreamingAssets",
     companyName: "Similarize",
     productName: "Four Froggies",
-    productVersion: "202610171712-258e05a",
+    productVersion: "202610171806-2b68827",
     devicePixelRatio: window.FFDPR.lobby,
     showBanner: function (msg, type) { if (type === "error") { var e = document.getElementById("err"); e.style.display = "block"; e.textContent = msg; } else console.log(msg); }
   };
   var fill = document.getElementById("fill"), pct = document.getElementById("pct"), loader = document.getElementById("loader");
   var script = document.createElement("script");
-  script.src = buildUrl + "/" + name + ".loader.js?v=202610171712-258e05a";
+  script.src = buildUrl + "/" + name + ".loader.js?v=202610171806-2b68827";
   script.onload = function () {
     createUnityInstance(canvas, config, function (p) {
       fill.style.width = Math.round(p * 100) + "%";
