@@ -1,4 +1,4 @@
-run 39060337451 attempt 1 event push sha f5fafb9509d5e303915cf0c1b54db6c048f57578 started 2026-10-17T18:57:23Z
+run 39064664190 attempt 1 event push sha 6ac17acf675d668a3448ed908cd16a7a12f35b03 started 2026-10-17T19:57:36Z
 secrets present
 Filesystem      Size  Used Avail Use% Mounted on
 /dev/root       145G   41G  104G  29% /
@@ -10,164 +10,164 @@ editor: /home/runner/Unity/Hub/Editor/2022.3.62f3/Editor/Unity
 unity exit code: 0
 src/unity/four-froggies/build/WebGL:
 total 24
-drwxr-xr-x 4 runner runner 4096 Oct 17 19:01 .
-drwxr-xr-x 3 runner runner 4096 Oct 17 19:01 ..
-drwxr-xr-x 2 runner runner 4096 Oct 17 19:03 Build
-drwxr-xr-x 2 runner runner 4096 Oct 17 19:01 TemplateData
--rw-r--r-- 1 runner runner 5387 Oct 17 19:01 index.html
+drwxr-xr-x 4 runner runner 4096 Oct 17 20:02 .
+drwxr-xr-x 3 runner runner 4096 Oct 17 20:02 ..
+drwxr-xr-x 2 runner runner 4096 Oct 17 20:05 Build
+drwxr-xr-x 2 runner runner 4096 Oct 17 20:02 TemplateData
+-rw-r--r-- 1 runner runner 5387 Oct 17 20:02 index.html
 
 src/unity/four-froggies/build/WebGL/Build:
-total 52216
-drwxr-xr-x 2 runner runner     4096 Oct 17 19:03 .
-drwxr-xr-x 4 runner runner     4096 Oct 17 19:01 ..
--rw-r--r-- 1 runner runner 17384212 Oct 17 19:01 WebGL.data
--rw-r--r-- 1 runner runner   446713 Oct 17 19:03 WebGL.framework.js
--rw-r--r-- 1 runner runner    20680 Oct 17 19:01 WebGL.loader.js
--rwxr-xr-x 1 runner runner 35596900 Oct 17 19:03 WebGL.wasm
+total 52344
+drwxr-xr-x 2 runner runner     4096 Oct 17 20:05 .
+drwxr-xr-x 4 runner runner     4096 Oct 17 20:02 ..
+-rw-r--r-- 1 runner runner 17397814 Oct 17 20:03 WebGL.data
+-rw-r--r-- 1 runner runner   447092 Oct 17 20:05 WebGL.framework.js
+-rw-r--r-- 1 runner runner    20680 Oct 17 20:02 WebGL.loader.js
+-rwxr-xr-x 1 runner runner 35713976 Oct 17 20:05 WebGL.wasm
 published
 === step outcomes: secrets=success setup=success activate=success build=success publish=success
 === /home/runner/.config/unity3d/upm.log (tail 60)
-[2026-10-17T19:00:36.264Z][INFO] Command-line: /home/runner/Unity/Hub/Editor/2022.3.62f3/Editor/Data/Resources/PackageManager/Server/UnityPackageManager -s 5397 -ipc -ipc-path /tmp/Unity-Upm-5397.sock -l 2
-[2026-10-17T19:00:36.283Z][INFO] IPC server started (IPC path=/tmp/Unity-Upm-5397.sock).
-[2026-10-17T19:00:36.283Z][INFO] Hint: To connect to this UPM instance, launch Unity with the command-line parameter -upmIpcPath Upm-5397.
-[2026-10-17T19:00:36.425Z][INFO] project:resolve-packages <-- Request received
+[2026-10-17T20:01:38.004Z][INFO] Command-line: /home/runner/Unity/Hub/Editor/2022.3.62f3/Editor/Data/Resources/PackageManager/Server/UnityPackageManager -s 5445 -ipc -ipc-path /tmp/Unity-Upm-5445.sock -l 2
+[2026-10-17T20:01:38.024Z][INFO] IPC server started (IPC path=/tmp/Unity-Upm-5445.sock).
+[2026-10-17T20:01:38.024Z][INFO] Hint: To connect to this UPM instance, launch Unity with the command-line parameter -upmIpcPath Upm-5445.
+[2026-10-17T20:01:38.177Z][INFO] project:resolve-packages <-- Request received
 params: {}
-[2026-10-17T19:00:36.685Z][INFO] Downloading package [com.unity.package-manager.metadata-2022.3@0.0.223] from registry 'https://packages.unity.com'
-[2026-10-17T19:00:37.127Z][INFO] Finished downloading package [com.unity.package-manager.metadata-2022.3@0.0.223] from registry 'https://packages.unity.com' (11075 bytes in 442 ms)
-[2026-10-17T19:00:37.485Z][INFO] Downloading package [com.unity.inputsystem@1.11.2] from registry 'https://packages.unity.com'
-[2026-10-17T19:00:37.908Z][INFO] Finished downloading package [com.unity.inputsystem@1.11.2] from registry 'https://packages.unity.com' (9207415 bytes in 423 ms)
-[2026-10-17T19:00:39.002Z][INFO] project:resolve-packages --> 200 (2577 ms)
-[2026-10-17T19:03:35.191Z][INFO] Received shutdown request (SIGINT), shutting down Unity Package Manager
+[2026-10-17T20:01:38.439Z][INFO] Downloading package [com.unity.package-manager.metadata-2022.3@0.0.223] from registry 'https://packages.unity.com'
+[2026-10-17T20:01:38.781Z][INFO] Finished downloading package [com.unity.package-manager.metadata-2022.3@0.0.223] from registry 'https://packages.unity.com' (11075 bytes in 342 ms)
+[2026-10-17T20:01:39.223Z][INFO] Downloading package [com.unity.inputsystem@1.11.2] from registry 'https://packages.unity.com'
+[2026-10-17T20:01:39.595Z][INFO] Finished downloading package [com.unity.inputsystem@1.11.2] from registry 'https://packages.unity.com' (9207415 bytes in 372 ms)
+[2026-10-17T20:01:40.642Z][INFO] project:resolve-packages --> 200 (2465 ms)
+[2026-10-17T20:05:36.782Z][INFO] Received shutdown request (SIGINT), shutting down Unity Package Manager
 === /home/runner/.config/unity3d/Unity/Unity.Entitlements.Audit.log (tail 60)
-2026-10-17 18:59:32.746 User Agent: [Hub 3.22.3], Protocol version: [1.18.3], Session Id: [50ecd002cc6c4009aa812496fa665091], Licensed Package: False, Entitlement requested: [com.unity.editor.access.xlts], Result: [granted: False, group: (null)]
-2026-10-17 18:59:32.746 User Agent: [Hub 3.22.3], Protocol version: [1.18.3], Session Id: [50ecd002cc6c4009aa812496fa665091], Licensed Package: False, Entitlement requested: [com.unity.editor.access.u7-alpha], Result: [granted: False, group: (null)]
-2026-10-17 18:59:32.755 User Agent: [Hub 3.22.3], Protocol version: [1.18.3], Session Id: [50ecd002cc6c4009aa812496fa665091], Licensed Package: False, Entitlement requested: [com.unity.editor.ui], Result: [granted: False, group: (null)]
-2026-10-17 18:59:32.795 User Agent: [Hub 3.22.3], Protocol version: [1.18.3], Session Id: [50ecd002cc6c4009aa812496fa665091], Licensed Package: False, Entitlement requested: [com.unity.editor.ui], Result: [granted: False, group: (null)]
-2026-10-17 18:59:32.811 User Agent: [Hub 3.22.3], Protocol version: [1.18.3], Session Id: [50ecd002cc6c4009aa812496fa665091], Licensed Package: False, Entitlement requested: [com.unity.editor.access.xlts], Result: [granted: False, group: (null)]
-2026-10-17 18:59:32.811 User Agent: [Hub 3.22.3], Protocol version: [1.18.3], Session Id: [50ecd002cc6c4009aa812496fa665091], Licensed Package: False, Entitlement requested: [com.unity.editor.access.u7-alpha], Result: [granted: False, group: (null)]
-2026-10-17 18:59:32.814 User Agent: [Hub 3.22.3], Protocol version: [1.18.3], Session Id: [50ecd002cc6c4009aa812496fa665091], Licensed Package: False, Entitlement requested: [com.unity.editor.access.xlts], Result: [granted: False, group: (null)]
-2026-10-17 18:59:32.814 User Agent: [Hub 3.22.3], Protocol version: [1.18.3], Session Id: [50ecd002cc6c4009aa812496fa665091], Licensed Package: False, Entitlement requested: [com.unity.editor.access.u7-alpha], Result: [granted: False, group: (null)]
-2026-10-17 19:00:22.940 User Agent: [Hub 3.22.3], Protocol version: [1.18.3], Session Id: [8b4283a2096c4f8da9d2c46802c224ca], Licensed Package: False, Entitlement requested: [com.unity.editor.access.xlts], Result: [granted: False, group: (null)]
-2026-10-17 19:00:22.940 User Agent: [Hub 3.22.3], Protocol version: [1.18.3], Session Id: [8b4283a2096c4f8da9d2c46802c224ca], Licensed Package: False, Entitlement requested: [com.unity.editor.access.u7-alpha], Result: [granted: False, group: (null)]
-2026-10-17 19:00:22.972 User Agent: [Hub 3.22.3], Protocol version: [1.18.3], Session Id: [8b4283a2096c4f8da9d2c46802c224ca], Licensed Package: False, Entitlement requested: [com.unity.editor.ui], Result: [granted: False, group: (null)]
-2026-10-17 19:00:22.999 User Agent: [Hub 3.22.3], Protocol version: [1.18.3], Session Id: [8b4283a2096c4f8da9d2c46802c224ca], Licensed Package: False, Entitlement requested: [com.unity.editor.access.xlts], Result: [granted: False, group: (null)]
-2026-10-17 19:00:22.999 User Agent: [Hub 3.22.3], Protocol version: [1.18.3], Session Id: [8b4283a2096c4f8da9d2c46802c224ca], Licensed Package: False, Entitlement requested: [com.unity.editor.access.u7-alpha], Result: [granted: False, group: (null)]
-2026-10-17 19:00:23.023 User Agent: [Hub 3.22.3], Protocol version: [1.18.3], Session Id: [8b4283a2096c4f8da9d2c46802c224ca], Licensed Package: False, Entitlement requested: [com.unity.editor.ui], Result: [granted: False, group: (null)]
-2026-10-17 19:00:23.084 User Agent: [Hub 3.22.3], Protocol version: [1.18.3], Session Id: [8b4283a2096c4f8da9d2c46802c224ca], Licensed Package: False, Entitlement requested: [com.unity.editor.access.xlts], Result: [granted: False, group: (null)]
-2026-10-17 19:00:23.084 User Agent: [Hub 3.22.3], Protocol version: [1.18.3], Session Id: [8b4283a2096c4f8da9d2c46802c224ca], Licensed Package: False, Entitlement requested: [com.unity.editor.access.u7-alpha], Result: [granted: False, group: (null)]
-2026-10-17 19:00:26.554 User Agent: [Hub 3.22.3], Protocol version: [1.18.3], Session Id: [254576d2bed9435db7d22dbed7719d0e], Licensed Package: False, Entitlement requested: [com.unity.editor.access.xlts], Result: [granted: False, group: (null)]
-2026-10-17 19:00:26.554 User Agent: [Hub 3.22.3], Protocol version: [1.18.3], Session Id: [254576d2bed9435db7d22dbed7719d0e], Licensed Package: False, Entitlement requested: [com.unity.editor.access.u7-alpha], Result: [granted: False, group: (null)]
-2026-10-17 19:00:26.626 User Agent: [Hub 3.22.3], Protocol version: [1.18.3], Session Id: [254576d2bed9435db7d22dbed7719d0e], Licensed Package: False, Entitlement requested: [com.unity.editor.ui], Result: [granted: False, group: (null)]
-2026-10-17 19:00:26.640 User Agent: [Hub 3.22.3], Protocol version: [1.18.3], Session Id: [254576d2bed9435db7d22dbed7719d0e], Licensed Package: False, Entitlement requested: [com.unity.editor.access.xlts], Result: [granted: False, group: (null)]
-2026-10-17 19:00:26.640 User Agent: [Hub 3.22.3], Protocol version: [1.18.3], Session Id: [254576d2bed9435db7d22dbed7719d0e], Licensed Package: False, Entitlement requested: [com.unity.editor.access.u7-alpha], Result: [granted: False, group: (null)]
-2026-10-17 19:00:26.643 User Agent: [Hub 3.22.3], Protocol version: [1.18.3], Session Id: [254576d2bed9435db7d22dbed7719d0e], Licensed Package: False, Entitlement requested: [com.unity.editor.ui], Result: [granted: False, group: (null)]
-2026-10-17 19:00:26.709 User Agent: [Hub 3.22.3], Protocol version: [1.18.3], Session Id: [254576d2bed9435db7d22dbed7719d0e], Licensed Package: False, Entitlement requested: [com.unity.editor.access.xlts], Result: [granted: False, group: (null)]
-2026-10-17 19:00:26.709 User Agent: [Hub 3.22.3], Protocol version: [1.18.3], Session Id: [254576d2bed9435db7d22dbed7719d0e], Licensed Package: False, Entitlement requested: [com.unity.editor.access.u7-alpha], Result: [granted: False, group: (null)]
-2026-10-17 19:00:35.869 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [ec4d3254261748ddbd9764b994ddde13], Licensed Package: False, Entitlement requested: [com.unity.editor.legacy.pro], Result: [granted: False, group: (null)]
-2026-10-17 19:00:35.869 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [ec4d3254261748ddbd9764b994ddde13], Licensed Package: False, Entitlement requested: [com.unity.editor.headless], Result: [granted: True, group: F4-8ZSX-9GVU-UVYS-4UAG-XXXX]
-2026-10-17 19:00:35.888 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [ec4d3254261748ddbd9764b994ddde13], Licensed Package: False, Entitlement requested: [com.unity.editor.headless], Result: [granted: True, group: F4-8ZSX-9GVU-UVYS-4UAG-XXXX]
-2026-10-17 19:00:35.888 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [ec4d3254261748ddbd9764b994ddde13], Licensed Package: False, Entitlement requested: [com.unity.editor.ui], Result: [granted: True, group: F4-8ZSX-9GVU-UVYS-4UAG-XXXX]
-2026-10-17 19:00:36.315 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [ec4d3254261748ddbd9764b994ddde13], Licensed Package: False, Entitlement requested: [com.unity.inputsystem], Result: [granted: True, group: (null)]
-2026-10-17 19:00:36.315 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [ec4d3254261748ddbd9764b994ddde13], Licensed Package: False, Entitlement requested: [com.unity.ugui], Result: [granted: True, group: (null)]
-2026-10-17 19:00:36.315 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [ec4d3254261748ddbd9764b994ddde13], Licensed Package: False, Entitlement requested: [com.unity.modules.animation], Result: [granted: True, group: (null)]
-2026-10-17 19:00:36.315 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [ec4d3254261748ddbd9764b994ddde13], Licensed Package: False, Entitlement requested: [com.unity.modules.audio], Result: [granted: True, group: (null)]
-2026-10-17 19:00:36.315 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [ec4d3254261748ddbd9764b994ddde13], Licensed Package: False, Entitlement requested: [com.unity.modules.imageconversion], Result: [granted: True, group: (null)]
-2026-10-17 19:00:36.315 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [ec4d3254261748ddbd9764b994ddde13], Licensed Package: False, Entitlement requested: [com.unity.modules.imgui], Result: [granted: True, group: (null)]
-2026-10-17 19:00:36.316 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [ec4d3254261748ddbd9764b994ddde13], Licensed Package: False, Entitlement requested: [com.unity.modules.jsonserialize], Result: [granted: True, group: (null)]
-2026-10-17 19:00:36.316 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [ec4d3254261748ddbd9764b994ddde13], Licensed Package: False, Entitlement requested: [com.unity.modules.particlesystem], Result: [granted: True, group: (null)]
-2026-10-17 19:00:36.316 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [ec4d3254261748ddbd9764b994ddde13], Licensed Package: False, Entitlement requested: [com.unity.modules.physics], Result: [granted: True, group: (null)]
-2026-10-17 19:00:36.316 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [ec4d3254261748ddbd9764b994ddde13], Licensed Package: False, Entitlement requested: [com.unity.modules.terrain], Result: [granted: True, group: (null)]
-2026-10-17 19:00:36.316 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [ec4d3254261748ddbd9764b994ddde13], Licensed Package: False, Entitlement requested: [com.unity.modules.terrainphysics], Result: [granted: True, group: (null)]
-2026-10-17 19:00:36.316 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [ec4d3254261748ddbd9764b994ddde13], Licensed Package: False, Entitlement requested: [com.unity.modules.ui], Result: [granted: True, group: (null)]
-2026-10-17 19:00:36.316 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [ec4d3254261748ddbd9764b994ddde13], Licensed Package: False, Entitlement requested: [com.unity.modules.uielements], Result: [granted: True, group: (null)]
-2026-10-17 19:00:36.316 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [ec4d3254261748ddbd9764b994ddde13], Licensed Package: False, Entitlement requested: [com.unity.modules.umbra], Result: [granted: True, group: (null)]
-2026-10-17 19:00:36.316 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [ec4d3254261748ddbd9764b994ddde13], Licensed Package: False, Entitlement requested: [com.unity.modules.unitywebrequest], Result: [granted: True, group: (null)]
-2026-10-17 19:00:39.109 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [ec4d3254261748ddbd9764b994ddde13], Licensed Package: False, Entitlement requested: [com.unity.editor.cluster], Result: [granted: False, group: (null)]
-2026-10-17 19:00:39.109 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [ec4d3254261748ddbd9764b994ddde13], Licensed Package: False, Entitlement requested: [com.unity.editor.headless], Result: [granted: True, group: F4-8ZSX-9GVU-UVYS-4UAG-XXXX]
-2026-10-17 19:00:39.790 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [ec4d3254261748ddbd9764b994ddde13], Licensed Package: False, Entitlement requested: [com.unity.editor.legacy.pro], Result: [granted: False, group: (null)]
-2026-10-17 19:00:39.790 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [ec4d3254261748ddbd9764b994ddde13], Licensed Package: False, Entitlement requested: [com.unity.editor.watermarks.disable], Result: [granted: False, group: (null)]
-2026-10-17 19:00:39.790 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [ec4d3254261748ddbd9764b994ddde13], Licensed Package: False, Entitlement requested: [com.unity.editor.watermarks.prototyping], Result: [granted: False, group: (null)]
-2026-10-17 19:00:39.790 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [ec4d3254261748ddbd9764b994ddde13], Licensed Package: False, Entitlement requested: [com.unity.editor.watermarks.edu], Result: [granted: False, group: (null)]
-2026-10-17 19:00:39.790 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [ec4d3254261748ddbd9764b994ddde13], Licensed Package: False, Entitlement requested: [com.unity.editor.watermarks.trial], Result: [granted: False, group: (null)]
-2026-10-17 19:00:39.790 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [ec4d3254261748ddbd9764b994ddde13], Licensed Package: False, Entitlement requested: [com.unity.editor.time-limited-license], Result: [granted: False, group: (null)]
-2026-10-17 19:00:39.790 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [ec4d3254261748ddbd9764b994ddde13], Licensed Package: False, Entitlement requested: [com.unity.editor.cluster], Result: [granted: False, group: (null)]
-2026-10-17 19:00:39.790 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [ec4d3254261748ddbd9764b994ddde13], Licensed Package: False, Entitlement requested: [com.unity.editor.headless], Result: [granted: True, group: F4-8ZSX-9GVU-UVYS-4UAG-XXXX]
-2026-10-17 19:00:51.789 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [ec4d3254261748ddbd9764b994ddde13], Licensed Package: False, Entitlement requested: [com.unity.editor.legacy.pro], Result: [granted: False, group: (null)]
-2026-10-17 19:00:51.789 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [ec4d3254261748ddbd9764b994ddde13], Licensed Package: False, Entitlement requested: [com.unity.editor.watermarks.edu], Result: [granted: False, group: (null)]
-2026-10-17 19:00:51.789 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [ec4d3254261748ddbd9764b994ddde13], Licensed Package: False, Entitlement requested: [com.unity.editor.ui], Result: [granted: True, group: F4-8ZSX-9GVU-UVYS-4UAG-XXXX]
-2026-10-17 19:00:51.789 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [ec4d3254261748ddbd9764b994ddde13], Licensed Package: False, Entitlement requested: [com.unity.editor.disable-splash-screen], Result: [granted: False, group: (null)]
-2026-10-17 19:00:51.789 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [ec4d3254261748ddbd9764b994ddde13], Licensed Package: False, Entitlement requested: [com.unity.editor.watermarks.trial], Result: [granted: False, group: (null)]
-2026-10-17 19:00:51.789 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [ec4d3254261748ddbd9764b994ddde13], Licensed Package: False, Entitlement requested: [com.unity.editor.headless], Result: [granted: True, group: F4-8ZSX-9GVU-UVYS-4UAG-XXXX]
+2026-10-17 20:00:34.250 User Agent: [Hub 3.22.3], Protocol version: [1.18.3], Session Id: [930a7ab15d9a4529b1f8991c1cdb7120], Licensed Package: False, Entitlement requested: [com.unity.editor.access.xlts], Result: [granted: False, group: (null)]
+2026-10-17 20:00:34.250 User Agent: [Hub 3.22.3], Protocol version: [1.18.3], Session Id: [930a7ab15d9a4529b1f8991c1cdb7120], Licensed Package: False, Entitlement requested: [com.unity.editor.access.u7-alpha], Result: [granted: False, group: (null)]
+2026-10-17 20:00:34.263 User Agent: [Hub 3.22.3], Protocol version: [1.18.3], Session Id: [930a7ab15d9a4529b1f8991c1cdb7120], Licensed Package: False, Entitlement requested: [com.unity.editor.ui], Result: [granted: False, group: (null)]
+2026-10-17 20:00:34.306 User Agent: [Hub 3.22.3], Protocol version: [1.18.3], Session Id: [930a7ab15d9a4529b1f8991c1cdb7120], Licensed Package: False, Entitlement requested: [com.unity.editor.access.xlts], Result: [granted: False, group: (null)]
+2026-10-17 20:00:34.306 User Agent: [Hub 3.22.3], Protocol version: [1.18.3], Session Id: [930a7ab15d9a4529b1f8991c1cdb7120], Licensed Package: False, Entitlement requested: [com.unity.editor.access.u7-alpha], Result: [granted: False, group: (null)]
+2026-10-17 20:00:34.309 User Agent: [Hub 3.22.3], Protocol version: [1.18.3], Session Id: [930a7ab15d9a4529b1f8991c1cdb7120], Licensed Package: False, Entitlement requested: [com.unity.editor.access.xlts], Result: [granted: False, group: (null)]
+2026-10-17 20:00:34.309 User Agent: [Hub 3.22.3], Protocol version: [1.18.3], Session Id: [930a7ab15d9a4529b1f8991c1cdb7120], Licensed Package: False, Entitlement requested: [com.unity.editor.access.u7-alpha], Result: [granted: False, group: (null)]
+2026-10-17 20:00:34.318 User Agent: [Hub 3.22.3], Protocol version: [1.18.3], Session Id: [930a7ab15d9a4529b1f8991c1cdb7120], Licensed Package: False, Entitlement requested: [com.unity.editor.ui], Result: [granted: False, group: (null)]
+2026-10-17 20:01:24.184 User Agent: [Hub 3.22.3], Protocol version: [1.18.3], Session Id: [b6ed5178f55943459e53ae1745ab3647], Licensed Package: False, Entitlement requested: [com.unity.editor.access.xlts], Result: [granted: False, group: (null)]
+2026-10-17 20:01:24.185 User Agent: [Hub 3.22.3], Protocol version: [1.18.3], Session Id: [b6ed5178f55943459e53ae1745ab3647], Licensed Package: False, Entitlement requested: [com.unity.editor.access.u7-alpha], Result: [granted: False, group: (null)]
+2026-10-17 20:01:24.211 User Agent: [Hub 3.22.3], Protocol version: [1.18.3], Session Id: [b6ed5178f55943459e53ae1745ab3647], Licensed Package: False, Entitlement requested: [com.unity.editor.ui], Result: [granted: False, group: (null)]
+2026-10-17 20:01:24.234 User Agent: [Hub 3.22.3], Protocol version: [1.18.3], Session Id: [b6ed5178f55943459e53ae1745ab3647], Licensed Package: False, Entitlement requested: [com.unity.editor.access.xlts], Result: [granted: False, group: (null)]
+2026-10-17 20:01:24.235 User Agent: [Hub 3.22.3], Protocol version: [1.18.3], Session Id: [b6ed5178f55943459e53ae1745ab3647], Licensed Package: False, Entitlement requested: [com.unity.editor.access.u7-alpha], Result: [granted: False, group: (null)]
+2026-10-17 20:01:24.258 User Agent: [Hub 3.22.3], Protocol version: [1.18.3], Session Id: [b6ed5178f55943459e53ae1745ab3647], Licensed Package: False, Entitlement requested: [com.unity.editor.ui], Result: [granted: False, group: (null)]
+2026-10-17 20:01:24.310 User Agent: [Hub 3.22.3], Protocol version: [1.18.3], Session Id: [b6ed5178f55943459e53ae1745ab3647], Licensed Package: False, Entitlement requested: [com.unity.editor.access.xlts], Result: [granted: False, group: (null)]
+2026-10-17 20:01:24.310 User Agent: [Hub 3.22.3], Protocol version: [1.18.3], Session Id: [b6ed5178f55943459e53ae1745ab3647], Licensed Package: False, Entitlement requested: [com.unity.editor.access.u7-alpha], Result: [granted: False, group: (null)]
+2026-10-17 20:01:27.982 User Agent: [Hub 3.22.3], Protocol version: [1.18.3], Session Id: [220ff00fdff3406f836cb2c8543811cb], Licensed Package: False, Entitlement requested: [com.unity.editor.access.xlts], Result: [granted: False, group: (null)]
+2026-10-17 20:01:27.983 User Agent: [Hub 3.22.3], Protocol version: [1.18.3], Session Id: [220ff00fdff3406f836cb2c8543811cb], Licensed Package: False, Entitlement requested: [com.unity.editor.access.u7-alpha], Result: [granted: False, group: (null)]
+2026-10-17 20:01:27.998 User Agent: [Hub 3.22.3], Protocol version: [1.18.3], Session Id: [220ff00fdff3406f836cb2c8543811cb], Licensed Package: False, Entitlement requested: [com.unity.editor.ui], Result: [granted: False, group: (null)]
+2026-10-17 20:01:28.004 User Agent: [Hub 3.22.3], Protocol version: [1.18.3], Session Id: [220ff00fdff3406f836cb2c8543811cb], Licensed Package: False, Entitlement requested: [com.unity.editor.access.xlts], Result: [granted: False, group: (null)]
+2026-10-17 20:01:28.004 User Agent: [Hub 3.22.3], Protocol version: [1.18.3], Session Id: [220ff00fdff3406f836cb2c8543811cb], Licensed Package: False, Entitlement requested: [com.unity.editor.access.u7-alpha], Result: [granted: False, group: (null)]
+2026-10-17 20:01:28.016 User Agent: [Hub 3.22.3], Protocol version: [1.18.3], Session Id: [220ff00fdff3406f836cb2c8543811cb], Licensed Package: False, Entitlement requested: [com.unity.editor.ui], Result: [granted: False, group: (null)]
+2026-10-17 20:01:28.148 User Agent: [Hub 3.22.3], Protocol version: [1.18.3], Session Id: [220ff00fdff3406f836cb2c8543811cb], Licensed Package: False, Entitlement requested: [com.unity.editor.access.xlts], Result: [granted: False, group: (null)]
+2026-10-17 20:01:28.148 User Agent: [Hub 3.22.3], Protocol version: [1.18.3], Session Id: [220ff00fdff3406f836cb2c8543811cb], Licensed Package: False, Entitlement requested: [com.unity.editor.access.u7-alpha], Result: [granted: False, group: (null)]
+2026-10-17 20:01:37.621 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [be427a1a08284090a30efef97494d784], Licensed Package: False, Entitlement requested: [com.unity.editor.legacy.pro], Result: [granted: False, group: (null)]
+2026-10-17 20:01:37.621 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [be427a1a08284090a30efef97494d784], Licensed Package: False, Entitlement requested: [com.unity.editor.headless], Result: [granted: True, group: F4-8ZSX-9GVU-UVYS-4UAG-XXXX]
+2026-10-17 20:01:37.640 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [be427a1a08284090a30efef97494d784], Licensed Package: False, Entitlement requested: [com.unity.editor.headless], Result: [granted: True, group: F4-8ZSX-9GVU-UVYS-4UAG-XXXX]
+2026-10-17 20:01:37.640 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [be427a1a08284090a30efef97494d784], Licensed Package: False, Entitlement requested: [com.unity.editor.ui], Result: [granted: True, group: F4-8ZSX-9GVU-UVYS-4UAG-XXXX]
+2026-10-17 20:01:38.057 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [be427a1a08284090a30efef97494d784], Licensed Package: False, Entitlement requested: [com.unity.inputsystem], Result: [granted: True, group: (null)]
+2026-10-17 20:01:38.057 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [be427a1a08284090a30efef97494d784], Licensed Package: False, Entitlement requested: [com.unity.ugui], Result: [granted: True, group: (null)]
+2026-10-17 20:01:38.057 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [be427a1a08284090a30efef97494d784], Licensed Package: False, Entitlement requested: [com.unity.modules.animation], Result: [granted: True, group: (null)]
+2026-10-17 20:01:38.058 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [be427a1a08284090a30efef97494d784], Licensed Package: False, Entitlement requested: [com.unity.modules.audio], Result: [granted: True, group: (null)]
+2026-10-17 20:01:38.058 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [be427a1a08284090a30efef97494d784], Licensed Package: False, Entitlement requested: [com.unity.modules.imageconversion], Result: [granted: True, group: (null)]
+2026-10-17 20:01:38.058 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [be427a1a08284090a30efef97494d784], Licensed Package: False, Entitlement requested: [com.unity.modules.imgui], Result: [granted: True, group: (null)]
+2026-10-17 20:01:38.058 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [be427a1a08284090a30efef97494d784], Licensed Package: False, Entitlement requested: [com.unity.modules.jsonserialize], Result: [granted: True, group: (null)]
+2026-10-17 20:01:38.058 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [be427a1a08284090a30efef97494d784], Licensed Package: False, Entitlement requested: [com.unity.modules.particlesystem], Result: [granted: True, group: (null)]
+2026-10-17 20:01:38.058 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [be427a1a08284090a30efef97494d784], Licensed Package: False, Entitlement requested: [com.unity.modules.physics], Result: [granted: True, group: (null)]
+2026-10-17 20:01:38.058 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [be427a1a08284090a30efef97494d784], Licensed Package: False, Entitlement requested: [com.unity.modules.terrain], Result: [granted: True, group: (null)]
+2026-10-17 20:01:38.058 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [be427a1a08284090a30efef97494d784], Licensed Package: False, Entitlement requested: [com.unity.modules.terrainphysics], Result: [granted: True, group: (null)]
+2026-10-17 20:01:38.058 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [be427a1a08284090a30efef97494d784], Licensed Package: False, Entitlement requested: [com.unity.modules.ui], Result: [granted: True, group: (null)]
+2026-10-17 20:01:38.058 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [be427a1a08284090a30efef97494d784], Licensed Package: False, Entitlement requested: [com.unity.modules.uielements], Result: [granted: True, group: (null)]
+2026-10-17 20:01:38.058 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [be427a1a08284090a30efef97494d784], Licensed Package: False, Entitlement requested: [com.unity.modules.umbra], Result: [granted: True, group: (null)]
+2026-10-17 20:01:38.058 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [be427a1a08284090a30efef97494d784], Licensed Package: False, Entitlement requested: [com.unity.modules.unitywebrequest], Result: [granted: True, group: (null)]
+2026-10-17 20:01:40.748 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [be427a1a08284090a30efef97494d784], Licensed Package: False, Entitlement requested: [com.unity.editor.cluster], Result: [granted: False, group: (null)]
+2026-10-17 20:01:40.748 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [be427a1a08284090a30efef97494d784], Licensed Package: False, Entitlement requested: [com.unity.editor.headless], Result: [granted: True, group: F4-8ZSX-9GVU-UVYS-4UAG-XXXX]
+2026-10-17 20:01:41.388 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [be427a1a08284090a30efef97494d784], Licensed Package: False, Entitlement requested: [com.unity.editor.legacy.pro], Result: [granted: False, group: (null)]
+2026-10-17 20:01:41.388 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [be427a1a08284090a30efef97494d784], Licensed Package: False, Entitlement requested: [com.unity.editor.watermarks.disable], Result: [granted: False, group: (null)]
+2026-10-17 20:01:41.388 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [be427a1a08284090a30efef97494d784], Licensed Package: False, Entitlement requested: [com.unity.editor.watermarks.prototyping], Result: [granted: False, group: (null)]
+2026-10-17 20:01:41.388 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [be427a1a08284090a30efef97494d784], Licensed Package: False, Entitlement requested: [com.unity.editor.watermarks.edu], Result: [granted: False, group: (null)]
+2026-10-17 20:01:41.388 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [be427a1a08284090a30efef97494d784], Licensed Package: False, Entitlement requested: [com.unity.editor.watermarks.trial], Result: [granted: False, group: (null)]
+2026-10-17 20:01:41.388 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [be427a1a08284090a30efef97494d784], Licensed Package: False, Entitlement requested: [com.unity.editor.time-limited-license], Result: [granted: False, group: (null)]
+2026-10-17 20:01:41.388 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [be427a1a08284090a30efef97494d784], Licensed Package: False, Entitlement requested: [com.unity.editor.cluster], Result: [granted: False, group: (null)]
+2026-10-17 20:01:41.388 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [be427a1a08284090a30efef97494d784], Licensed Package: False, Entitlement requested: [com.unity.editor.headless], Result: [granted: True, group: F4-8ZSX-9GVU-UVYS-4UAG-XXXX]
+2026-10-17 20:01:55.997 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [be427a1a08284090a30efef97494d784], Licensed Package: False, Entitlement requested: [com.unity.editor.legacy.pro], Result: [granted: False, group: (null)]
+2026-10-17 20:01:55.997 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [be427a1a08284090a30efef97494d784], Licensed Package: False, Entitlement requested: [com.unity.editor.watermarks.edu], Result: [granted: False, group: (null)]
+2026-10-17 20:01:55.997 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [be427a1a08284090a30efef97494d784], Licensed Package: False, Entitlement requested: [com.unity.editor.ui], Result: [granted: True, group: F4-8ZSX-9GVU-UVYS-4UAG-XXXX]
+2026-10-17 20:01:55.997 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [be427a1a08284090a30efef97494d784], Licensed Package: False, Entitlement requested: [com.unity.editor.disable-splash-screen], Result: [granted: False, group: (null)]
+2026-10-17 20:01:55.997 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [be427a1a08284090a30efef97494d784], Licensed Package: False, Entitlement requested: [com.unity.editor.watermarks.trial], Result: [granted: False, group: (null)]
+2026-10-17 20:01:55.997 User Agent: [UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF)], Protocol version: [1.16.2], Session Id: [be427a1a08284090a30efef97494d784], Licensed Package: False, Entitlement requested: [com.unity.editor.headless], Result: [granted: True, group: F4-8ZSX-9GVU-UVYS-4UAG-XXXX]
 === /home/runner/.config/unity3d/Unity/Unity.Licensing.Client.log (tail 60)
-2026-10-17 19:00:34.712 - [  5403] - [    13] - INFO  - [Unity.Licensing.Client.MultiClientPipeServer] Named pipe server started
-2026-10-17 19:00:34.712 - [  5403] - [.NET Long Running Task] - INFO  - [Unity.Licensing.Client.MultiClientPipeServer] Waiting for a connection (pipe #1)
-2026-10-17 19:00:34.712 - [  5403] - [    13] - INFO  - [Unity.Licensing.Client.Communication.Notifications.NotificationsPipeServer] Starting named pipe server (on thread: 13)
-2026-10-17 19:00:34.712 - [  5403] - [.NET Long Running Task] - INFO  - [Unity.Licensing.Client.Communication.Notifications.NotificationsPipeServer] Waiting for a connection (pipe #1)
-2026-10-17 19:00:34.713 - [  5403] - [    13] - INFO  - [Unity.Licensing.Client.Communication.Notifications.NotificationsPipeServer] Named pipe server started
-2026-10-17 19:00:34.713 - [  5403] - [    11] - INFO  - [Unity.Licensing.Client.Services.Package.PackageService] Getting PACL from remote uri: "https://license.unity3d.com/licenses/v1/packages/acl" ...
-2026-10-17 19:00:34.720 - [  5403] - [    11] - INFO  - [Unity.Licensing.Client.Services.Package.PackageService] Local PACL revision: 53
-2026-10-17 19:00:34.753 - [  5403] - [.NET Long Running Task] - INFO  - [Unity.Licensing.Client.MultiClientPipeServer] Waiting for a connection (pipe #2)
-2026-10-17 19:00:34.757 - [  5403] - [    20] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] new pipe session: ec4d3254261748ddbd9764b994ddde13
-2026-10-17 19:00:34.758 - [  5403] - [    20] - INFO  - [Unity.Licensing.Client.MultiClientPipeServer] A new client is connecting (pipe #1)
-2026-10-17 19:00:34.759 - [  5403] - [    20] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] Start accepting requests
-2026-10-17 19:00:34.797 - [  5403] - [    20] - INFO  - [Unity.Licensing.Client.Communication.Controllers.HandshakeController] Received handshake from: UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF) (LocalIPC/1.16.2)
-2026-10-17 19:00:34.809 - [  5403] - [    20] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] REQ-1 | Sending HandshakeResponse for request HandshakeRequest from UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF) (LocalIPC/1.16.2) [200]:  Handshake successful
-2026-10-17 19:00:34.810 - [  5403] - [.NET Long Running Task] - INFO  - [Unity.Licensing.Client.Communication.Notifications.NotificationsPipeServer] Waiting for a connection (pipe #2)
-2026-10-17 19:00:34.810 - [  5403] - [    11] - INFO  - [Unity.Licensing.Client.Communication.Notifications.NotificationsPipeServer] A new client is connecting (pipe #1)
-2026-10-17 19:00:34.828 - [  5403] - [    20] - INFO  - [Unity.Licensing.Client.Services.Licensing.GenesisLicensingService] [ce2b331d0ac6489db9384ce35113705c] Starting Ulf transaction for UPDATE operation
-2026-10-17 19:00:34.851 - [  5403] - [    11] - WARN  - [PackageService.HttpRequests] Handled response: [304 | Not Modified | ] from request: [GET | https://license.unity3d.com/licenses/v1/packages/acl | ]
-2026-10-17 19:00:34.855 - [  5403] - [    11] - INFO  - [Unity.Licensing.Client.Services.Package.PackageService] Skipping download. No difference between local and remote ETag (uri: "https://license.unity3d.com/licenses/v1/packages/acl", ETag: "59dd73d01930d363b853e88a531ae9c5")
-2026-10-17 19:00:34.856 - [  5403] - [    11] - INFO  - [Unity.Licensing.Client.Services.Package.PackageEnforcer] Successfully updated PACL file after 1 attempt(s). Next update in 24.00 hours.
-2026-10-17 19:00:34.856 - [  5403] - [    11] - INFO  - [Unity.Licensing.Client.Services.Package.PackageEnforcer] Loading remote PACL, revision: 53, version: 1.0
-2026-10-17 19:00:34.858 - [  5403] - [    20] - INFO  - [Unity.Licensing.Client.Services.Licensing.GenesisLicensingService] Attempting to contact genesis update license api
-2026-10-17 19:00:34.861 - [  5403] - [    20] - WARN  - [Unity.Licensing.Client.Services.Licensing.GenesisLicensingService] Failed to update license file. [Code: 401] Token not found in cache
-2026-10-17 19:00:35.822 - [  5403] - [     8] - INFO  - [Unity.Licensing.Platform.Permissions.PermissionService] Ensuring path with permissions: /home/runner/.local/share/unity3d/Unity/Unity_lic.ulf
-2026-10-17 19:00:35.831 - [  5403] - [    11] - INFO  - [Unity.Licensing.Client.Services.Licensing.GenesisLicensingService] [ce2b331d0ac6489db9384ce35113705c] ULF license updated successfully
-2026-10-17 19:00:35.833 - [  5403] - [     6] - INFO  - [Unity.Licensing.Client.Services.EntitlementResolverProvider] OnLicenseDirUpdate
-2026-10-17 19:00:35.834 - [  5403] - [     6] - INFO  - [Unity.Licensing.Client.Services.EntitlementResolverProvider] License file change detected. Reloading the resolver
-2026-10-17 19:00:35.839 - [  5403] - [    20] - INFO  - [Unity.Licensing.Client.Services.Helpers.LicenseFilesMapper] Successfully parsed (ULF) license /home/runner/.local/share/unity3d/Unity/Unity_lic.ulf
-2026-10-17 19:00:35.839 - [  5403] - [    20] - INFO  - [Unity.Licensing.Client.Services.EntitlementResolverProvider] Rebuilding resolvers from local files:  /home/runner/.local/share/unity3d/Unity/Unity_lic.ulf
-2026-10-17 19:00:35.840 - [  5403] - [    20] - INFO  - [Unity.Licensing.Client.Services.EntitlementResolverProvider] Processing ULF license /home/runner/.local/share/unity3d/Unity/Unity_lic.ulf
-2026-10-17 19:00:35.840 - [  5403] - [    20] - INFO  - [Unity.Licensing.Client.Services.EntitlementResolverProvider] Processed 1 license files in 00:00:00.0000598
-2026-10-17 19:00:35.846 - [  5403] - [    20] - INFO  - [Unity.Licensing.Client.Services.LicenseOfflineValidityEndingPeriodicNotifierService] OnEntitlementResolverUpdated, will restart timer
-2026-10-17 19:00:35.847 - [  5403] - [    20] - ERROR - [Unity.Licensing.Client.Communication.Controllers.UpdateLicenseController] assigned update failed. Details: Token not found in cache
-2026-10-17 19:00:35.848 - [  5403] - [    20] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] REQ-2 | Sending UpdateLicenseResponse for request UpdateLicenseRequest from UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF) (LocalIPC/1.16.2) [200]:  Licenses updated.
-2026-10-17 19:00:35.851 - [  5403] - [    11] - INFO  - [Unity.Licensing.Client.Services.LicenseOfflineValidityEndingPeriodicNotifierService] Will execute periodic notification again in 00:30:00
-2026-10-17 19:00:35.870 - [  5403] - [    20] - INFO  - [Unity.Licensing.Client.Communication.Controllers.EntitlementDetailsController] Finished handling EntitlementDetails request
-2026-10-17 19:00:35.877 - [  5403] - [    20] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] REQ-3 | Sending EntitlementDetailsResponse for request EntitlementDetailsRequest from UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF) (LocalIPC/1.16.2) [200]:  Found 1 entitlement groups and 0 free entitlements matching requested entitlement ids
-2026-10-17 19:00:35.888 - [  5403] - [    20] - INFO  - [Unity.Licensing.Client.Communication.Controllers.EntitlementDetailsController] Finished handling EntitlementDetails request
-2026-10-17 19:00:35.889 - [  5403] - [    20] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] REQ-4 | Sending EntitlementDetailsResponse for request EntitlementDetailsRequest from UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF) (LocalIPC/1.16.2) [200]:  Found 1 entitlement groups and 0 free entitlements matching requested entitlement ids
-2026-10-17 19:00:36.316 - [  5403] - [    20] - INFO  - [Unity.Licensing.Client.Communication.Controllers.EntitlementDetailsController] Finished handling EntitlementDetails request
-2026-10-17 19:00:36.317 - [  5403] - [    20] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] REQ-5 | Sending EntitlementDetailsResponse for request EntitlementDetailsRequest from UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF) (LocalIPC/1.16.2) [200]:  Found 0 entitlement groups and 15 free entitlements matching requested entitlement ids
-2026-10-17 19:00:39.109 - [  5403] - [    20] - INFO  - [Unity.Licensing.Client.Communication.Controllers.EntitlementDetailsController] Finished handling EntitlementDetails request
-2026-10-17 19:00:39.109 - [  5403] - [    20] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] REQ-6 | Sending EntitlementDetailsResponse for request EntitlementDetailsRequest from UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF) (LocalIPC/1.16.2) [200]:  Found 1 entitlement groups and 0 free entitlements matching requested entitlement ids
-2026-10-17 19:00:39.790 - [  5403] - [    20] - INFO  - [Unity.Licensing.Client.Communication.Controllers.EntitlementDetailsController] Finished handling EntitlementDetails request
-2026-10-17 19:00:39.790 - [  5403] - [    20] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] REQ-7 | Sending EntitlementDetailsResponse for request EntitlementDetailsRequest from UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF) (LocalIPC/1.16.2) [200]:  Found 1 entitlement groups and 0 free entitlements matching requested entitlement ids
-2026-10-17 19:00:51.789 - [  5403] - [    20] - INFO  - [Unity.Licensing.Client.Communication.Controllers.EntitlementDetailsController] Finished handling EntitlementDetails request
-2026-10-17 19:00:51.790 - [  5403] - [    20] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] REQ-8 | Sending EntitlementDetailsResponse for request EntitlementDetailsRequest from UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF) (LocalIPC/1.16.2) [200]:  Found 1 entitlement groups and 0 free entitlements matching requested entitlement ids
-2026-10-17 19:03:35.199 - [  5403] - [    27] - INFO  - [Unity.Licensing.Client.Communication.Notifications.NotificationsPipeHandler#1] Notification channel with sessionId: 348747af3cc7480481e3753517c77847 is shutting down
-2026-10-17 19:03:35.200 - [  5403] - [    27] - INFO  - [Unity.Licensing.Client.Communication.Notifications.NotificationsPipeServer] Connection closed (pipe #1)
-2026-10-17 19:03:35.200 - [  5403] - [    20] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] Detected client disconnect
-2026-10-17 19:03:35.200 - [  5403] - [    20] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] End accepting requests
-2026-10-17 19:03:35.200 - [  5403] - [    20] - INFO  - [Unity.Licensing.Client.MultiClientPipeServer] Connection closed (pipe #1)
-2026-10-17 19:03:35.201 - [  5403] - [    20] - INFO  - [Unity.Licensing.Client.Services.LicensingOrchestrator] Last active session ended.
-2026-10-17 19:03:35.201 - [  5403] - [    20] - INFO  - [Unity.Licensing.Client.PipeServerExecutor] Starting licensing client's exit timer
-2026-10-17 19:03:35.201 - [  5403] - [    20] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] Disposing named pipe
-2026-10-17 19:03:35.201 - [  5403] - [    13] - INFO  - [Unity.Licensing.Client.MultiClientPipeServer] Named pipe server is shutting down (thread: 13)
-2026-10-17 19:03:35.201 - [  5403] - [    20] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] Disposing named pipe
-2026-10-17 19:03:35.203 - [  5403] - [    13] - INFO  - [Unity.Licensing.Client.MultiClientPipeServer] Named pipe server has shutdown
-2026-10-17 19:03:35.203 - [  5403] - [    13] - INFO  - [Unity.Licensing.Client.Communication.Notifications.NotificationsPipeServer] Named pipe server is shutting down (thread: 13)
-2026-10-17 19:03:35.204 - [  5403] - [    13] - INFO  - [Unity.Licensing.Client.Communication.Notifications.NotificationsPipeServer] Named pipe server has shutdown
-2026-10-17 19:03:35.205 - [  5403] - [    10] - INFO  - [Unity.Licensing.Client.PipeServerExecutor] Releasing mutex Unity-LicenseClient-runner (thread: 10)
+2026-10-17 20:01:36.349 - [  5451] - [     8] - INFO  - [Unity.Licensing.Client.MultiClientPipeServer] Named pipe server started
+2026-10-17 20:01:36.349 - [  5451] - [.NET Long Running Task] - INFO  - [Unity.Licensing.Client.MultiClientPipeServer] Waiting for a connection (pipe #1)
+2026-10-17 20:01:36.350 - [  5451] - [     8] - INFO  - [Unity.Licensing.Client.Communication.Notifications.NotificationsPipeServer] Starting named pipe server (on thread: 8)
+2026-10-17 20:01:36.350 - [  5451] - [.NET Long Running Task] - INFO  - [Unity.Licensing.Client.Communication.Notifications.NotificationsPipeServer] Waiting for a connection (pipe #1)
+2026-10-17 20:01:36.350 - [  5451] - [     8] - INFO  - [Unity.Licensing.Client.Communication.Notifications.NotificationsPipeServer] Named pipe server started
+2026-10-17 20:01:36.354 - [  5451] - [    13] - INFO  - [Unity.Licensing.Client.Services.Package.PackageService] Getting PACL from remote uri: "https://license.unity3d.com/licenses/v1/packages/acl" ...
+2026-10-17 20:01:36.363 - [  5451] - [    13] - INFO  - [Unity.Licensing.Client.Services.Package.PackageService] Local PACL revision: 53
+2026-10-17 20:01:36.387 - [  5451] - [.NET Long Running Task] - INFO  - [Unity.Licensing.Client.MultiClientPipeServer] Waiting for a connection (pipe #2)
+2026-10-17 20:01:36.390 - [  5451] - [    17] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] new pipe session: be427a1a08284090a30efef97494d784
+2026-10-17 20:01:36.392 - [  5451] - [    17] - INFO  - [Unity.Licensing.Client.MultiClientPipeServer] A new client is connecting (pipe #1)
+2026-10-17 20:01:36.392 - [  5451] - [    17] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] Start accepting requests
+2026-10-17 20:01:36.429 - [  5451] - [    17] - INFO  - [Unity.Licensing.Client.Communication.Controllers.HandshakeController] Received handshake from: UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF) (LocalIPC/1.16.2)
+2026-10-17 20:01:36.442 - [  5451] - [    17] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] REQ-1 | Sending HandshakeResponse for request HandshakeRequest from UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF) (LocalIPC/1.16.2) [200]:  Handshake successful
+2026-10-17 20:01:36.443 - [  5451] - [.NET Long Running Task] - INFO  - [Unity.Licensing.Client.Communication.Notifications.NotificationsPipeServer] Waiting for a connection (pipe #2)
+2026-10-17 20:01:36.444 - [  5451] - [    20] - INFO  - [Unity.Licensing.Client.Communication.Notifications.NotificationsPipeServer] A new client is connecting (pipe #1)
+2026-10-17 20:01:36.459 - [  5451] - [    17] - INFO  - [Unity.Licensing.Client.Services.Licensing.GenesisLicensingService] [5fa930af26a84064983098071eb5cc1b] Starting Ulf transaction for UPDATE operation
+2026-10-17 20:01:36.485 - [  5451] - [    17] - INFO  - [Unity.Licensing.Client.Services.Licensing.GenesisLicensingService] Attempting to contact genesis update license api
+2026-10-17 20:01:36.487 - [  5451] - [    17] - WARN  - [Unity.Licensing.Client.Services.Licensing.GenesisLicensingService] Failed to update license file. [Code: 401] Token not found in cache
+2026-10-17 20:01:36.531 - [  5451] - [    21] - WARN  - [PackageService.HttpRequests] Handled response: [304 | Not Modified | ] from request: [GET | https://license.unity3d.com/licenses/v1/packages/acl | ]
+2026-10-17 20:01:36.534 - [  5451] - [    21] - INFO  - [Unity.Licensing.Client.Services.Package.PackageService] Skipping download. No difference between local and remote ETag (uri: "https://license.unity3d.com/licenses/v1/packages/acl", ETag: "59dd73d01930d363b853e88a531ae9c5")
+2026-10-17 20:01:36.535 - [  5451] - [    21] - INFO  - [Unity.Licensing.Client.Services.Package.PackageEnforcer] Successfully updated PACL file after 1 attempt(s). Next update in 24.00 hours.
+2026-10-17 20:01:36.535 - [  5451] - [    21] - INFO  - [Unity.Licensing.Client.Services.Package.PackageEnforcer] Loading remote PACL, revision: 53, version: 1.0
+2026-10-17 20:01:37.575 - [  5451] - [     6] - INFO  - [Unity.Licensing.Platform.Permissions.PermissionService] Ensuring path with permissions: /home/runner/.local/share/unity3d/Unity/Unity_lic.ulf
+2026-10-17 20:01:37.584 - [  5451] - [    21] - INFO  - [Unity.Licensing.Client.Services.EntitlementResolverProvider] OnLicenseDirUpdate
+2026-10-17 20:01:37.584 - [  5451] - [    11] - INFO  - [Unity.Licensing.Client.Services.Licensing.GenesisLicensingService] [5fa930af26a84064983098071eb5cc1b] ULF license updated successfully
+2026-10-17 20:01:37.585 - [  5451] - [    21] - INFO  - [Unity.Licensing.Client.Services.EntitlementResolverProvider] License file change detected. Reloading the resolver
+2026-10-17 20:01:37.591 - [  5451] - [    17] - INFO  - [Unity.Licensing.Client.Services.Helpers.LicenseFilesMapper] Successfully parsed (ULF) license /home/runner/.local/share/unity3d/Unity/Unity_lic.ulf
+2026-10-17 20:01:37.591 - [  5451] - [    17] - INFO  - [Unity.Licensing.Client.Services.EntitlementResolverProvider] Rebuilding resolvers from local files:  /home/runner/.local/share/unity3d/Unity/Unity_lic.ulf
+2026-10-17 20:01:37.591 - [  5451] - [    17] - INFO  - [Unity.Licensing.Client.Services.EntitlementResolverProvider] Processing ULF license /home/runner/.local/share/unity3d/Unity/Unity_lic.ulf
+2026-10-17 20:01:37.591 - [  5451] - [    17] - INFO  - [Unity.Licensing.Client.Services.EntitlementResolverProvider] Processed 1 license files in 00:00:00.0000720
+2026-10-17 20:01:37.598 - [  5451] - [    17] - INFO  - [Unity.Licensing.Client.Services.LicenseOfflineValidityEndingPeriodicNotifierService] OnEntitlementResolverUpdated, will restart timer
+2026-10-17 20:01:37.598 - [  5451] - [    17] - ERROR - [Unity.Licensing.Client.Communication.Controllers.UpdateLicenseController] assigned update failed. Details: Token not found in cache
+2026-10-17 20:01:37.600 - [  5451] - [    17] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] REQ-2 | Sending UpdateLicenseResponse for request UpdateLicenseRequest from UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF) (LocalIPC/1.16.2) [200]:  Licenses updated.
+2026-10-17 20:01:37.603 - [  5451] - [    21] - INFO  - [Unity.Licensing.Client.Services.LicenseOfflineValidityEndingPeriodicNotifierService] Will execute periodic notification again in 00:30:00
+2026-10-17 20:01:37.621 - [  5451] - [    17] - INFO  - [Unity.Licensing.Client.Communication.Controllers.EntitlementDetailsController] Finished handling EntitlementDetails request
+2026-10-17 20:01:37.628 - [  5451] - [    17] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] REQ-3 | Sending EntitlementDetailsResponse for request EntitlementDetailsRequest from UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF) (LocalIPC/1.16.2) [200]:  Found 1 entitlement groups and 0 free entitlements matching requested entitlement ids
+2026-10-17 20:01:37.640 - [  5451] - [    17] - INFO  - [Unity.Licensing.Client.Communication.Controllers.EntitlementDetailsController] Finished handling EntitlementDetails request
+2026-10-17 20:01:37.640 - [  5451] - [    17] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] REQ-4 | Sending EntitlementDetailsResponse for request EntitlementDetailsRequest from UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF) (LocalIPC/1.16.2) [200]:  Found 1 entitlement groups and 0 free entitlements matching requested entitlement ids
+2026-10-17 20:01:38.058 - [  5451] - [    17] - INFO  - [Unity.Licensing.Client.Communication.Controllers.EntitlementDetailsController] Finished handling EntitlementDetails request
+2026-10-17 20:01:38.059 - [  5451] - [    17] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] REQ-5 | Sending EntitlementDetailsResponse for request EntitlementDetailsRequest from UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF) (LocalIPC/1.16.2) [200]:  Found 0 entitlement groups and 15 free entitlements matching requested entitlement ids
+2026-10-17 20:01:40.748 - [  5451] - [    17] - INFO  - [Unity.Licensing.Client.Communication.Controllers.EntitlementDetailsController] Finished handling EntitlementDetails request
+2026-10-17 20:01:40.748 - [  5451] - [    17] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] REQ-6 | Sending EntitlementDetailsResponse for request EntitlementDetailsRequest from UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF) (LocalIPC/1.16.2) [200]:  Found 1 entitlement groups and 0 free entitlements matching requested entitlement ids
+2026-10-17 20:01:41.388 - [  5451] - [    17] - INFO  - [Unity.Licensing.Client.Communication.Controllers.EntitlementDetailsController] Finished handling EntitlementDetails request
+2026-10-17 20:01:41.388 - [  5451] - [    17] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] REQ-7 | Sending EntitlementDetailsResponse for request EntitlementDetailsRequest from UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF) (LocalIPC/1.16.2) [200]:  Found 1 entitlement groups and 0 free entitlements matching requested entitlement ids
+2026-10-17 20:01:55.997 - [  5451] - [    17] - INFO  - [Unity.Licensing.Client.Communication.Controllers.EntitlementDetailsController] Finished handling EntitlementDetails request
+2026-10-17 20:01:55.998 - [  5451] - [    17] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] REQ-8 | Sending EntitlementDetailsResponse for request EntitlementDetailsRequest from UnityEditor/2022.3.62f3 (Linux; U; Linux 6.1; C.UTF) (LocalIPC/1.16.2) [200]:  Found 1 entitlement groups and 0 free entitlements matching requested entitlement ids
+2026-10-17 20:05:36.790 - [  5451] - [    21] - INFO  - [Unity.Licensing.Client.Communication.Notifications.NotificationsPipeHandler#1] Notification channel with sessionId: 09b87b2186d54e5f9ceb3666f4442ef3 is shutting down
+2026-10-17 20:05:36.791 - [  5451] - [    21] - INFO  - [Unity.Licensing.Client.Communication.Notifications.NotificationsPipeServer] Connection closed (pipe #1)
+2026-10-17 20:05:36.791 - [  5451] - [    17] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] Detected client disconnect
+2026-10-17 20:05:36.791 - [  5451] - [    17] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] End accepting requests
+2026-10-17 20:05:36.792 - [  5451] - [    17] - INFO  - [Unity.Licensing.Client.MultiClientPipeServer] Connection closed (pipe #1)
+2026-10-17 20:05:36.793 - [  5451] - [    17] - INFO  - [Unity.Licensing.Client.Services.LicensingOrchestrator] Last active session ended.
+2026-10-17 20:05:36.793 - [  5451] - [    17] - INFO  - [Unity.Licensing.Client.PipeServerExecutor] Starting licensing client's exit timer
+2026-10-17 20:05:36.793 - [  5451] - [     8] - INFO  - [Unity.Licensing.Client.MultiClientPipeServer] Named pipe server is shutting down (thread: 8)
+2026-10-17 20:05:36.793 - [  5451] - [    17] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] Disposing named pipe
+2026-10-17 20:05:36.793 - [  5451] - [    17] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] Disposing named pipe
+2026-10-17 20:05:36.794 - [  5451] - [     8] - INFO  - [Unity.Licensing.Client.MultiClientPipeServer] Named pipe server has shutdown
+2026-10-17 20:05:36.794 - [  5451] - [     8] - INFO  - [Unity.Licensing.Client.Communication.Notifications.NotificationsPipeServer] Named pipe server is shutting down (thread: 8)
+2026-10-17 20:05:36.795 - [  5451] - [     8] - INFO  - [Unity.Licensing.Client.Communication.Notifications.NotificationsPipeServer] Named pipe server has shutdown
+2026-10-17 20:05:36.796 - [  5451] - [    10] - INFO  - [Unity.Licensing.Client.PipeServerExecutor] Releasing mutex Unity-LicenseClient-runner (thread: 10)
 === error lines
 10:[Licensing::Module] Trying to connect to existing licensing client channel...
 11:[Licensing::IpcConnector] Channel LicenseClient-runner doesn't exist
-12:[Licensing::Module] Successfully launched the LicensingClient (PId: 5403)
-13:[Licensing::IpcConnector] Successfully connected to: "LicenseClient-runner" at "2026-10-17T19:00:34.751971Z"
+12:[Licensing::Module] Successfully launched the LicensingClient (PId: 5451)
+13:[Licensing::IpcConnector] Successfully connected to: "LicenseClient-runner" at "2026-10-17T20:01:36.385879Z"
 15:[Licensing::Client] Handshaking with LicensingClient:
 21:[Licensing::Module] Successfully connected to LicensingClient on channel: "LicenseClient-runner" (connect: 0.57s, validation: 0.06s, handshake: 0.00s)
-22:[Licensing::IpcConnector] Successfully connected to: "LicenseClient-runner-notifications" at "2026-10-17T19:00:34.80992Z"
-23:[Licensing::Module] Connected to LicensingClient (PId: 5403, launch time: 0.00, total connection time: 0.63s)
+22:[Licensing::IpcConnector] Successfully connected to: "LicenseClient-runner-notifications" at "2026-10-17T20:01:36.443203Z"
+23:[Licensing::Module] Connected to LicensingClient (PId: 5451, launch time: 0.00, total connection time: 0.63s)
 24:[Licensing::Module] Error: Access token is unavailable; failed to update
 25:[Licensing::Client] Successfully updated license
 26:[Licensing::Client] Successfully resolved entitlement details
@@ -188,211 +188,211 @@ params: {}
 127:FMOD failed to initialize the output device.: "Error initializing output device. " (60)
 168:[Licensing::Client] Successfully resolved entitlement details
 220:[Licensing::Client] Successfully resolved entitlement details
-549:Start importing Assets/Editor/BuildScript.cs using Guid(096ec0670aa3976b5af4df9043046ea4) Importer(-1,00000000000000000000000000000000) [PhysX] Initialized MultithreadedTaskDispatcher with 4 workers.
-719:BuildScript:SetInputHandler () (at Assets/Editor/BuildScript.cs:349)
-720:InputHandlerSetter:.cctor () (at Assets/Editor/BuildScript.cs:16)
-724:(Filename: Assets/Editor/BuildScript.cs Line: 349)
-1099:[Licensing::Client] Successfully resolved entitlement details
-1111:BuildScript: start, Unity 2022.3.62f3
-1116:BuildScript:Run () (at Assets/Editor/BuildScript.cs:45)
-1117:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:32)
-1119:(Filename: Assets/Editor/BuildScript.cs Line: 45)
-1128:BuildScript:SetStatic (System.Type,string,object) (at Assets/Editor/BuildScript.cs:358)
-1129:BuildScript:ConfigurePlayer () (at Assets/Editor/BuildScript.cs:382)
-1130:BuildScript:Run () (at Assets/Editor/BuildScript.cs:50)
-1131:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:32)
-1133:(Filename: Assets/Editor/BuildScript.cs Line: 358)
-1140:BuildScript:SetStatic (System.Type,string,object) (at Assets/Editor/BuildScript.cs:358)
-1141:BuildScript:ConfigurePlayer () (at Assets/Editor/BuildScript.cs:383)
-1142:BuildScript:Run () (at Assets/Editor/BuildScript.cs:50)
-1143:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:32)
-1145:(Filename: Assets/Editor/BuildScript.cs Line: 358)
-1152:BuildScript:ConfigurePlayer () (at Assets/Editor/BuildScript.cs:396)
-1153:BuildScript:Run () (at Assets/Editor/BuildScript.cs:50)
-1154:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:32)
-1156:(Filename: Assets/Editor/BuildScript.cs Line: 396)
-1205:BuildScript: HDRI sky
-1210:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:491)
-1211:BuildScript:Run () (at Assets/Editor/BuildScript.cs:54)
-1212:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:32)
-1214:(Filename: Assets/Editor/BuildScript.cs Line: 491)
-1216:BuildScript: FF/Skin shader
-1221:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
-1222:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:509)
-1223:BuildScript:Run () (at Assets/Editor/BuildScript.cs:54)
-1224:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:32)
-1226:(Filename: Assets/Editor/BuildScript.cs Line: 453)
-1231:BuildScript: FF/Foliage shader
-1236:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
-1237:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:510)
-1238:BuildScript:Run () (at Assets/Editor/BuildScript.cs:54)
-1239:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:32)
-1241:(Filename: Assets/Editor/BuildScript.cs Line: 453)
-1248:BuildScript: LB/Water shader
-1253:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
-1254:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:511)
-1255:BuildScript:Run () (at Assets/Editor/BuildScript.cs:54)
-1256:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:32)
-1258:(Filename: Assets/Editor/BuildScript.cs Line: 453)
-1263:BuildScript: FF/Underwater shader
-1268:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
-1269:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:513)
-1270:BuildScript:Run () (at Assets/Editor/BuildScript.cs:54)
-1271:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:32)
-1273:(Filename: Assets/Editor/BuildScript.cs Line: 453)
-1278:BuildScript: Unlit/Texture shader
-1283:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
-1284:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:514)
-1285:BuildScript:Run () (at Assets/Editor/BuildScript.cs:54)
-1286:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:32)
-1288:(Filename: Assets/Editor/BuildScript.cs Line: 453)
-1293:BuildScript: FF/RealTri shader
-1298:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
-1299:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:516)
-1300:BuildScript:Run () (at Assets/Editor/BuildScript.cs:54)
-1301:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:32)
-1303:(Filename: Assets/Editor/BuildScript.cs Line: 453)
-1310:BuildScript: FF/RealWater shader
-1315:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
-1316:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:517)
-1317:BuildScript:Run () (at Assets/Editor/BuildScript.cs:54)
-1318:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:32)
-1320:(Filename: Assets/Editor/BuildScript.cs Line: 453)
-1325:BuildScript: FF/Grass56 shader
-1330:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
-1331:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:519)
-1332:BuildScript:Run () (at Assets/Editor/BuildScript.cs:54)
-1333:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:32)
-1335:(Filename: Assets/Editor/BuildScript.cs Line: 453)
-1342:BuildScript: FF/Skin57 shader
-1347:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
-1348:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:525)
-1349:BuildScript:Run () (at Assets/Editor/BuildScript.cs:54)
-1350:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:32)
-1352:(Filename: Assets/Editor/BuildScript.cs Line: 453)
-1375:BuildScript: terrain textures True True True
-1380:BuildScript:CreateTerrain () (at Assets/Editor/BuildScript.cs:658)
-1381:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:561)
-1382:BuildScript:Run () (at Assets/Editor/BuildScript.cs:54)
-1383:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:32)
-1385:(Filename: Assets/Editor/BuildScript.cs Line: 658)
-1407:BuildScript: terrain NM material
-1412:BuildScript:CreateTerrain () (at Assets/Editor/BuildScript.cs:704)
-1413:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:561)
-1414:BuildScript:Run () (at Assets/Editor/BuildScript.cs:54)
-1415:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:32)
-1417:(Filename: Assets/Editor/BuildScript.cs Line: 704)
-1447:BuildScript: scene saved Assets/Scenes/Main.unity
-1452:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:586)
-1453:BuildScript:Run () (at Assets/Editor/BuildScript.cs:54)
-1454:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:32)
-1456:(Filename: Assets/Editor/BuildScript.cs Line: 586)
-1572:BuildScript:Run () (at Assets/Editor/BuildScript.cs:66)
-1573:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:32)
-4315: 0.1 kb	 0.0% Packages/com.unity.inputsystem/InputSystem/Utilities/ExceptionHelpers.cs
-4697:BUILD_RESULT: Succeeded errors=0 warnings=21 size=53469564 time=00:02:18.1964746
-4702:BuildScript:Run () (at Assets/Editor/BuildScript.cs:68)
-4703:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:32)
-4705:(Filename: Assets/Editor/BuildScript.cs Line: 68)
-4707:BUILD_SCRIPT_EXIT: 0
-4712:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
-4714:(Filename: Assets/Editor/BuildScript.cs Line: 39)
-4722:[Licensing::IpcConnector] LicenseClient-runner-notifications channel disconnected successfully.
-4723:[Licensing::IpcConnector] LicenseClient-runner channel disconnected successfully.
-4802:[Performance] Application.ReadLicenseInfo                                                                                    :        1 samples, Peak.  11.7 ms (1.0x), Avg.  11.7 ms, Total. 11.70 ms (0.0%)
-5222:##utp:{"type":"MemoryLeaks","version":2,"phase":"Immediate","time":1792263815216,"processId":5397,"allocatedMemory":8189993,"memoryLabels":[{"Default":20071},{"Permanent":16353},{"Thread":1083236},{"Manager":19908},{"VertexData":12},{"Geometry":280},{"Texture":328},{"Shader":79063},{"Material":24},{"GfxDevice":36336},{"Animation":360},{"Audio":3976},{"Font":104211},{"FontEngine":336},{"Physics":513},{"Serialization":732},{"Input":26816},{"JobScheduler":53192},{"Mono":40},{"ScriptingNativeRuntime":191920},{"BaseObject":1620020},{"Resource":1064},{"Renderer":2352},{"Transform":48},{"File":3717},{"WebCam":40},{"Culling":40},{"Terrain":1025},{"Wind":24},{"String":24717},{"DynamicArray":63767},{"HashMap":73034},{"Utility":2659526},{"Curl":1112},{"PoolAlloc":1496},{"AI":72},{"TypeTree":5061},{"ScriptManager":640},{"RuntimeInitializeOnLoadManager":80},{"SpriteAtlas":128},{"GI":3632},{"Director":7928},{"CloudService":3704},{"WebRequest":720},{"VR":45769},{"SceneManager":600},{"Video":72},{"LazyScriptCache":40},{"NativeArray":12},{"Camera":25},{"Secure":5337},{"SerializationCache":1576},{"APIUpdating":11856},{"Subsystems":392},{"VirtualTexturing":57560},{"StaticSafetyDebugInfo":327680},{"EditorGui":56},{"EditorUtility":10367},{"VersionControl":4},{"Undo":736},{"AssetDatabase":1567805},{"RestService":1518},{"EditorGi":376},{"License":3584},{"UnityConnect":25496},{"Collab":641},{"Upm":1856},{"DrivenProperties":96},{"LocalIPC":216},{"ProfilerEditor":10951},{"CoreBusinessMetrics":3638},{"AssetReference":40},{"IPCStream":40}]}
+563:Start importing Assets/Editor/BuildScript.cs using Guid(096ec0670aa3976b5af4df9043046ea4) Importer(-1,00000000000000000000000000000000) [PhysX] Initialized MultithreadedTaskDispatcher with 4 workers.
+737:BuildScript:SetInputHandler () (at Assets/Editor/BuildScript.cs:349)
+738:InputHandlerSetter:.cctor () (at Assets/Editor/BuildScript.cs:16)
+742:(Filename: Assets/Editor/BuildScript.cs Line: 349)
+1117:[Licensing::Client] Successfully resolved entitlement details
+1129:BuildScript: start, Unity 2022.3.62f3
+1134:BuildScript:Run () (at Assets/Editor/BuildScript.cs:45)
+1135:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:32)
+1137:(Filename: Assets/Editor/BuildScript.cs Line: 45)
+1146:BuildScript:SetStatic (System.Type,string,object) (at Assets/Editor/BuildScript.cs:358)
+1147:BuildScript:ConfigurePlayer () (at Assets/Editor/BuildScript.cs:382)
+1148:BuildScript:Run () (at Assets/Editor/BuildScript.cs:50)
+1149:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:32)
+1151:(Filename: Assets/Editor/BuildScript.cs Line: 358)
+1158:BuildScript:SetStatic (System.Type,string,object) (at Assets/Editor/BuildScript.cs:358)
+1159:BuildScript:ConfigurePlayer () (at Assets/Editor/BuildScript.cs:383)
+1160:BuildScript:Run () (at Assets/Editor/BuildScript.cs:50)
+1161:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:32)
+1163:(Filename: Assets/Editor/BuildScript.cs Line: 358)
+1170:BuildScript:ConfigurePlayer () (at Assets/Editor/BuildScript.cs:396)
+1171:BuildScript:Run () (at Assets/Editor/BuildScript.cs:50)
+1172:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:32)
+1174:(Filename: Assets/Editor/BuildScript.cs Line: 396)
+1223:BuildScript: HDRI sky
+1228:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:491)
+1229:BuildScript:Run () (at Assets/Editor/BuildScript.cs:54)
+1230:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:32)
+1232:(Filename: Assets/Editor/BuildScript.cs Line: 491)
+1234:BuildScript: FF/Skin shader
+1239:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
+1240:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:509)
+1241:BuildScript:Run () (at Assets/Editor/BuildScript.cs:54)
+1242:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:32)
+1244:(Filename: Assets/Editor/BuildScript.cs Line: 453)
+1249:BuildScript: FF/Foliage shader
+1254:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
+1255:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:510)
+1256:BuildScript:Run () (at Assets/Editor/BuildScript.cs:54)
+1257:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:32)
+1259:(Filename: Assets/Editor/BuildScript.cs Line: 453)
+1266:BuildScript: LB/Water shader
+1271:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
+1272:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:511)
+1273:BuildScript:Run () (at Assets/Editor/BuildScript.cs:54)
+1274:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:32)
+1276:(Filename: Assets/Editor/BuildScript.cs Line: 453)
+1281:BuildScript: FF/Underwater shader
+1286:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
+1287:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:513)
+1288:BuildScript:Run () (at Assets/Editor/BuildScript.cs:54)
+1289:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:32)
+1291:(Filename: Assets/Editor/BuildScript.cs Line: 453)
+1296:BuildScript: Unlit/Texture shader
+1301:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
+1302:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:514)
+1303:BuildScript:Run () (at Assets/Editor/BuildScript.cs:54)
+1304:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:32)
+1306:(Filename: Assets/Editor/BuildScript.cs Line: 453)
+1311:BuildScript: FF/RealTri shader
+1316:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
+1317:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:516)
+1318:BuildScript:Run () (at Assets/Editor/BuildScript.cs:54)
+1319:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:32)
+1321:(Filename: Assets/Editor/BuildScript.cs Line: 453)
+1328:BuildScript: FF/RealWater shader
+1333:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
+1334:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:517)
+1335:BuildScript:Run () (at Assets/Editor/BuildScript.cs:54)
+1336:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:32)
+1338:(Filename: Assets/Editor/BuildScript.cs Line: 453)
+1343:BuildScript: FF/Grass56 shader
+1348:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
+1349:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:519)
+1350:BuildScript:Run () (at Assets/Editor/BuildScript.cs:54)
+1351:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:32)
+1353:(Filename: Assets/Editor/BuildScript.cs Line: 453)
+1360:BuildScript: FF/Skin57 shader
+1365:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
+1366:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:525)
+1367:BuildScript:Run () (at Assets/Editor/BuildScript.cs:54)
+1368:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:32)
+1370:(Filename: Assets/Editor/BuildScript.cs Line: 453)
+1393:BuildScript: terrain textures True True True
+1398:BuildScript:CreateTerrain () (at Assets/Editor/BuildScript.cs:658)
+1399:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:561)
+1400:BuildScript:Run () (at Assets/Editor/BuildScript.cs:54)
+1401:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:32)
+1403:(Filename: Assets/Editor/BuildScript.cs Line: 658)
+1425:BuildScript: terrain NM material
+1430:BuildScript:CreateTerrain () (at Assets/Editor/BuildScript.cs:704)
+1431:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:561)
+1432:BuildScript:Run () (at Assets/Editor/BuildScript.cs:54)
+1433:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:32)
+1435:(Filename: Assets/Editor/BuildScript.cs Line: 704)
+1465:BuildScript: scene saved Assets/Scenes/Main.unity
+1470:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:586)
+1471:BuildScript:Run () (at Assets/Editor/BuildScript.cs:54)
+1472:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:32)
+1474:(Filename: Assets/Editor/BuildScript.cs Line: 586)
+1600:BuildScript:Run () (at Assets/Editor/BuildScript.cs:66)
+1601:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:32)
+4444: 0.1 kb	 0.0% Packages/com.unity.inputsystem/InputSystem/Utilities/ExceptionHelpers.cs
+4828:BUILD_RESULT: Succeeded errors=0 warnings=21 size=53600621 time=00:03:17.3480150
+4833:BuildScript:Run () (at Assets/Editor/BuildScript.cs:68)
+4834:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:32)
+4836:(Filename: Assets/Editor/BuildScript.cs Line: 68)
+4838:BUILD_SCRIPT_EXIT: 0
+4843:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
+4845:(Filename: Assets/Editor/BuildScript.cs Line: 39)
+4853:[Licensing::IpcConnector] LicenseClient-runner-notifications channel disconnected successfully.
+4854:[Licensing::IpcConnector] LicenseClient-runner channel disconnected successfully.
+4933:[Performance] Application.ReadLicenseInfo                                                                                    :        1 samples, Peak.  11.8 ms (1.0x), Avg.  11.8 ms, Total. 11.81 ms (0.0%)
+5353:##utp:{"type":"MemoryLeaks","version":2,"phase":"Immediate","time":1792267536806,"processId":5445,"allocatedMemory":8185674,"memoryLabels":[{"Default":20071},{"Permanent":16353},{"Thread":1083236},{"Manager":19908},{"VertexData":12},{"Geometry":280},{"Texture":328},{"Shader":79063},{"Material":24},{"GfxDevice":36336},{"Animation":360},{"Audio":3976},{"Font":104211},{"FontEngine":336},{"Physics":513},{"Serialization":732},{"Input":26816},{"JobScheduler":48624},{"Mono":40},{"ScriptingNativeRuntime":191920},{"BaseObject":1620020},{"Resource":1064},{"Renderer":2352},{"Transform":48},{"File":3717},{"WebCam":40},{"Culling":40},{"Terrain":1025},{"Wind":24},{"String":24718},{"DynamicArray":63767},{"HashMap":73034},{"Utility":2659526},{"Curl":1112},{"PoolAlloc":1496},{"AI":72},{"TypeTree":5061},{"ScriptManager":640},{"RuntimeInitializeOnLoadManager":80},{"SpriteAtlas":128},{"GI":3632},{"Director":7928},{"CloudService":3704},{"WebRequest":720},{"VR":45769},{"SceneManager":600},{"Video":72},{"LazyScriptCache":40},{"NativeArray":12},{"Camera":25},{"Secure":5337},{"SerializationCache":1576},{"APIUpdating":11856},{"Subsystems":392},{"VirtualTexturing":57560},{"StaticSafetyDebugInfo":327680},{"EditorGui":56},{"EditorUtility":10367},{"VersionControl":4},{"Undo":736},{"AssetDatabase":1568053},{"RestService":1518},{"EditorGi":376},{"License":3584},{"UnityConnect":25496},{"Collab":641},{"Upm":1856},{"DrivenProperties":96},{"LocalIPC":216},{"ProfilerEditor":10951},{"CoreBusinessMetrics":3638},{"AssetReference":40},{"IPCStream":40}]}
 === editor log tail (400)
-[Performance] TextureImporter.Import                                                                                         :       39 samples, Peak.  66.0 ms (4.4x), Avg.  14.9 ms, Total. 580.1 ms (0.3%)
-[Performance] ShaderImporter.Import                                                                                          :       25 samples, Peak.   237 ms (5.0x), Avg.  47.2 ms, Total. 1.181 s (0.7%)
-[Performance] EditorApplication.projectChanged: UnityEditor.Audio.MixerEffectDefinitionReloader.OnProjectChanged             :       32 samples, Peak.  3.39 ms (7.2x), Avg.   469 us, Total. 14.99 ms (0.0%)
-[Performance] EditorApplication.projectChanged: UnityEngine.InputSystem.LowLevel.NativeInputRuntime.OnProjectChanged         :       32 samples, Peak.   233 us (27.2x), Avg.  8.57 us, Total. 274.4 us (0.0%)
-[Performance] BuilderAssetPostprocessor.OnPostprocessAllAssets                                                               :       66 samples, Peak.  8.51 ms (30.4x), Avg.   280 us, Total. 18.48 ms (0.0%)
-[Performance] ArtifactBrowserPostProcessor.OnPostprocessAllAssets                                                            :       66 samples, Peak.   610 us (26.5x), Avg.  23.0 us, Total. 1.521 ms (0.0%)
-[Performance] AssetEvents.OnPostprocessAllAssets                                                                             :      132 samples, Peak.   211 us (24.9x), Avg.  8.47 us, Total. 1.118 ms (0.0%)
-[Performance] AudioMixerPostprocessor.OnPostprocessAllAssets                                                                 :       66 samples, Peak.   379 us (25.6x), Avg.  14.8 us, Total. 977.7 us (0.0%)
-[Performance] StyleCatalogPostProcessor.OnPostprocessAllAssets                                                               :       66 samples, Peak.  20.7 ms (32.6x), Avg.   636 us, Total. 41.97 ms (0.0%)
-[Performance] BuildCatalog                                                                                                   :        1 samples, Peak.  19.4 ms (1.0x), Avg.  19.4 ms, Total. 19.43 ms (0.0%)
-[Performance] ModelImporterPostProcessor.OnPostprocessAllAssets                                                              :       66 samples, Peak.  1.92 ms (8.4x), Avg.   228 us, Total. 15.05 ms (0.0%)
-[Performance] RetainedModeAssetPostprocessor.OnPostprocessAllAssets                                                          :       66 samples, Peak.  2.23 ms (28.2x), Avg.  79.2 us, Total. 5.227 ms (0.0%)
-[Performance] AssetChangedListener.OnPostprocessAllAssets                                                                    :       66 samples, Peak.  3.26 ms (27.3x), Avg.   119 us, Total. 7.887 ms (0.0%)
-[Performance] SpeedTreePostProcessor.OnPostprocessAllAssets                                                                  :       66 samples, Peak.  1.56 ms (27.6x), Avg.  56.7 us, Total. 3.740 ms (0.0%)
-[Performance] TextAssetPostProcessor.OnPostprocessAllAssets                                                                  :       66 samples, Peak.  3.42 ms (30.3x), Avg.   113 us, Total. 7.454 ms (0.0%)
-[Performance] InputActionAssetPostprocessor.OnPostprocessAllAssets                                                           :       66 samples, Peak.  1.74 ms (28.1x), Avg.  61.8 us, Total. 4.079 ms (0.0%)
-[Performance] InputActionJsonNameModifierAssetProcessor.OnPostprocessAllAssets                                               :       66 samples, Peak.  1.21 ms (27.0x), Avg.  44.7 us, Total. 2.949 ms (0.0%)
-[Performance] ProjectSettingsPostprocessor.OnPostprocessAllAssets                                                            :       66 samples, Peak.   225 us (18.9x), Avg.  11.9 us, Total. 786.4 us (0.0%)
-[Performance] SyncVS.PostprocessSyncProject                                                                                  :       33 samples, Peak.  1.54 ms (31.4x), Avg.  49.1 us, Total. 1.620 ms (0.0%)
-[Performance] Application.ImportPackagesAndSetTemplateWhenCreatingProject                                                    :        1 samples, Peak.  13.3 ms (1.0x), Avg.  13.3 ms, Total. 13.29 ms (0.0%)
-[Performance] Application.SyncCurrentColorSpace                                                                              :        1 samples, Peak.   320 ns (1.0x), Avg.   320 ns, Total. 320.0 ns (0.0%)
-[Performance] Application.OnUsbDevicesChanged                                                                                :        1 samples, Peak.   111 us (1.0x), Avg.   111 us, Total. 110.7 us (0.0%)
-[Performance] Application.AssetInstanceCacheUpdate                                                                           :        1 samples, Peak.   240 ns (1.0x), Avg.   240 ns, Total. 240.0 ns (0.0%)
-[Performance] Application.UnityExtensions.Initialize                                                                         :        1 samples, Peak.  1.14 ms (1.0x), Avg.  1.14 ms, Total. 1.138 ms (0.0%)
-[Performance] CodeEditorProjectSync.SyncEditorProject                                                                        :        1 samples, Peak.  62.0 us (1.0x), Avg.  62.0 us, Total. 61.98 us (0.0%)
-[Performance] Application.ExecuteStartups                                                                                    :        1 samples, Peak.  34.8 ms (1.0x), Avg.  34.8 ms, Total. 34.78 ms (0.0%)
-[Performance] Menu.RegisterMenuInterface                                                                                     :       26 samples, Peak.   832 ns (4.7x), Avg.   178 ns, Total. 4.640 us (0.0%)
-[Performance] Gizmo.RebuildRenderers                                                                                         :        2 samples, Peak.  34.0 ms (1.5x), Avg.  23.3 ms, Total. 46.56 ms (0.0%)
-[Performance] Gizmo.AddGizmoRenderers                                                                                        :       50 samples, Peak.  1.95 ms (31.4x), Avg.  62.1 us, Total. 3.103 ms (0.0%)
-[Performance] Application.editorInitializingProject                                                                          :        1 samples, Peak.  13.7 ms (1.0x), Avg.  13.7 ms, Total. 13.75 ms (0.0%)
-[Performance] Application.InitializeMenu                                                                                     :        1 samples, Peak.  75.1 ms (1.0x), Avg.  75.1 ms, Total. 75.08 ms (0.0%)
-[Performance] Menu.RebuildAll                                                                                                :        1 samples, Peak.  75.1 ms (1.0x), Avg.  75.1 ms, Total. 75.07 ms (0.0%)
-[Performance] Menu.BuildRegisteredMenuInterfaces                                                                             :        1 samples, Peak.  74.4 ms (1.0x), Avg.  74.4 ms, Total. 74.44 ms (0.0%)
-[Performance] Menu.FilterMenuItem                                                                                            :      542 samples, Peak.  23.9 ms (536.7x), Avg.  44.5 us, Total. 24.11 ms (0.0%)
-[Performance] UpdateAllMenus                                                                                                 :        1 samples, Peak.   564 us (1.0x), Avg.   564 us, Total. 564.3 us (0.0%)
-[Performance] EditorSceneManager.sceneClosing: UnityEditor.SceneVisibilityManager.EditorSceneManagerOnSceneClosing           :        6 samples, Peak.   273 us (5.6x), Avg.  49.2 us, Total. 295.2 us (0.0%)
-[Performance] GUIView.RepaintAll.PlayerLoopController                                                                        :        5 samples, Peak.  2.31 us (2.7x), Avg.   864 ns, Total. 4.318 us (0.0%)
-[Performance] EditorSceneManager.newSceneCreated: UnityEditor.SceneTemplate.SceneTemplateService.OnNewSceneCreated           :        4 samples, Peak.   290 us (3.9x), Avg.  73.6 us, Total. 294.4 us (0.0%)
-[Performance] EditorSceneManager.newSceneCreated: UnityEditor.SceneVisibilityManager.EditorSceneManagerOnNewSceneCreated     :        4 samples, Peak.   172 us (3.4x), Avg.  50.1 us, Total. 200.5 us (0.0%)
-[Performance] EditorSceneManager.newSceneCreated: UnityEditor.SceneManagement.StageNavigationManager.OnNewSceneCreated       :        4 samples, Peak.  60.9 us (3.8x), Avg.  16.1 us, Total. 64.47 us (0.0%)
-[Performance] Application.InvokeFinishedLoadingProject                                                                       :        1 samples, Peak.  2.16 ms (1.0x), Avg.  2.16 ms, Total. 2.157 ms (0.0%)
-[Performance] ProcessService.OnProjectLoaded                                                                                 :        1 samples, Peak.  48.6 us (1.0x), Avg.  48.6 us, Total. 48.62 us (0.0%)
-[Performance] AssetDatabase.ImportAsset                                                                                      :        7 samples, Peak.  51.8 ms (3.0x), Avg.  17.5 ms, Total. 122.2 ms (0.1%)
-[Performance] EditorSceneManager.sceneSaving: UnityEditor.SceneTemplate.SceneTemplateService.OnSceneSaving                   :        1 samples, Peak.   273 us (1.0x), Avg.   273 us, Total. 272.8 us (0.0%)
-[Performance] EditorSceneManager.sceneSaving: UnityEditor.SceneVisibilityManager.EditorSceneManagerOnSceneSaving             :        1 samples, Peak.   119 us (1.0x), Avg.   119 us, Total. 118.8 us (0.0%)
-[Performance] EditorSceneManager.sceneSaved: UnityEditor.SceneTemplate.SceneTemplateService.OnSceneSaved                     :        1 samples, Peak.  18.9 ms (1.0x), Avg.  18.9 ms, Total. 18.95 ms (0.0%)
-[Performance] EditorSceneManager.sceneSaved: UnityEditor.SceneVisibilityManager.EditorSceneManagerOnSceneSaved               :        1 samples, Peak.   126 us (1.0x), Avg.   126 us, Total. 125.6 us (0.0%)
-[Performance] Inspector.InitOrRebuild                                                                                        :        3 samples, Peak.   302 us (1.2x), Avg.   249 us, Total. 746.3 us (0.0%)
-[Performance] GenerateAssemblyTypeInfos                                                                                      :        2 samples, Peak.  13.5 ms (1.2x), Avg.  11.4 ms, Total. 22.85 ms (0.0%)
-[Performance] AssetDatabase.Refresh                                                                                          :        1 samples, Peak.  13.1 ms (1.0x), Avg.  13.1 ms, Total. 13.12 ms (0.0%)
-[Performance] EditorSceneManager.sceneOpened: UnityEditor.SceneTemplate.SceneTemplateService.OnSceneOpened                   :        1 samples, Peak.   246 us (1.0x), Avg.   246 us, Total. 246.0 us (0.0%)
-[Performance] EditorSceneManager.sceneOpened: UnityEditor.SceneVisibilityManager.EditorSceneManagerOnSceneOpened             :        1 samples, Peak.   163 us (1.0x), Avg.   163 us, Total. 163.4 us (0.0%)
-[Performance] EditorSceneManager.sceneOpened: UnityEditor.SceneManagement.StageNavigationManager.OnSceneOpened               :        1 samples, Peak.  59.9 us (1.0x), Avg.  59.9 us, Total. 59.85 us (0.0%)
-[Performance] UnityBuildPostprocessor.OnProcessScene                                                                         :        1 samples, Peak.   436 us (1.0x), Avg.   436 us, Total. 435.8 us (0.0%)
-[Performance] Application.Shutdown.SaveDefaultWindowPreferences                                                              :        1 samples, Peak.  60.8 us (1.0x), Avg.  60.8 us, Total. 60.75 us (0.0%)
-[Performance] Application.Shutdown.SaveSceneManagerSetup                                                                     :        1 samples, Peak.   209 us (1.0x), Avg.   209 us, Total. 209.2 us (0.0%)
-[Performance] Application.Shutdown.CleanupAllContainerWindows                                                                :        1 samples, Peak.   550 ns (1.0x), Avg.   550 ns, Total. 550.0 ns (0.0%)
-[Performance] EditorApplication.quitting: callback in UnityEditor.TextCore.Text.EditorEventCallbacks                         :        1 samples, Peak.  10.1 ms (1.0x), Avg.  10.1 ms, Total. 10.09 ms (0.0%)
-[Performance] EditorApplication.quitting: UnityEditor.WebGL.WebsockifyEditorWrapper.Kill                                     :        1 samples, Peak.  1.34 ms (1.0x), Avg.  1.34 ms, Total. 1.340 ms (0.0%)
-[Performance] Application.Shutdown.PauseProfilerSession                                                                      :        1 samples, Peak.  45.2 us (1.0x), Avg.  45.2 us, Total. 45.21 us (0.0%)
-[Performance] Application.Shutdown.PauseAssetImportWorkers                                                                   :        1 samples, Peak.   187 us (1.0x), Avg.   187 us, Total. 186.9 us (0.0%)
-[Performance] Application.Shutdown.SaveAssets                                                                                :        1 samples, Peak.  1.70 ms (1.0x), Avg.  1.70 ms, Total. 1.705 ms (0.0%)
-[Performance] Application.Shutdown.CleanupRenderPipeline                                                                     :        1 samples, Peak.  3.49 us (1.0x), Avg.  3.49 us, Total. 3.486 us (0.0%)
-[Performance] Application.Shutdown.StopPreloadManager                                                                        :        1 samples, Peak.  10.1 ms (1.0x), Avg.  10.1 ms, Total. 10.09 ms (0.0%)
-[Performance] Application.Shutdown.DestroyWorld                                                                              :        1 samples, Peak.   493 us (1.0x), Avg.   493 us, Total. 493.4 us (0.0%)
-[Performance] Application.Shutdown.CleanupAfterLoad                                                                          :        1 samples, Peak.  4.99 ms (1.0x), Avg.  4.99 ms, Total. 4.985 ms (0.0%)
-[Performance] Application.Shutdown.Progress                                                                                  :        1 samples, Peak.  17.9 us (1.0x), Avg.  17.9 us, Total. 17.87 us (0.0%)
-[Performance] Application.Shutdown.GICleanupManagers                                                                         :        1 samples, Peak.  2.76 ms (1.0x), Avg.  2.76 ms, Total. 2.759 ms (0.0%)
-[Performance] Application.Shutdown.MenuCleanupClass                                                                          :        1 samples, Peak.   190 us (1.0x), Avg.   190 us, Total. 190.3 us (0.0%)
-[Performance] Application.Shutdown.ADBSaveStateBeforeShutdown                                                                :        1 samples, Peak.  6.38 us (1.0x), Avg.  6.38 us, Total. 6.382 us (0.0%)
-[Performance] Application.Shutdown.RemoteShutdown                                                                            :        1 samples, Peak.  1.66 us (1.0x), Avg.  1.66 us, Total. 1.663 us (0.0%)
-[Performance] Application.Shutdown.CleanupVCProvider                                                                         :        1 samples, Peak.  16.0 us (1.0x), Avg.  16.0 us, Total. 15.98 us (0.0%)
-[Performance] Application.Shutdown.InputShutdown                                                                             :        1 samples, Peak.  2.04 us (1.0x), Avg.  2.04 us, Total. 2.044 us (0.0%)
-[Performance] Application.Shutdown.GizmoManagerDestroy                                                                       :        1 samples, Peak.   286 us (1.0x), Avg.   286 us, Total. 286.2 us (0.0%)
-[Performance] Application.Shutdown.ProfilerSession                                                                           :        1 samples, Peak.   105 us (1.0x), Avg.   105 us, Total. 104.9 us (0.0%)
-[Performance] Application.Shutdown.ReleaseGfxWindowOnAllGUIViews                                                             :        1 samples, Peak.  1.36 us (1.0x), Avg.  1.36 us, Total. 1.362 us (0.0%)
-[Performance] Application.Shutdown.CleanupEngine                                                                             :        1 samples, Peak.   127 ms (1.0x), Avg.   127 ms, Total. 126.6 ms (0.1%)
-[Performance] Application.Shutdown.CleanupAssetDatabase                                                                      :        1 samples, Peak.  2.11 ms (1.0x), Avg.  2.11 ms, Total. 2.110 ms (0.0%)
-[Performance] Application.Shutdown.ScriptCompilationCleanUp                                                                  :        1 samples, Peak.  4.73 s (1.0x), Avg.  4.73 s, Total. 4.735 s (2.6%)
-[Performance] Application.Shutdown.DestroyJobSystem                                                                          :        1 samples, Peak.   132 us (1.0x), Avg.   132 us, Total. 132.1 us (0.0%)
-[Performance] Application.Shutdown.CleanupPersistentManager                                                                  :        1 samples, Peak.  1.33 ms (1.0x), Avg.  1.33 ms, Total. 1.334 ms (0.0%)
-[Performance] Application.Shutdown.CleanupAsyncReadManager                                                                   :        1 samples, Peak.   145 us (1.0x), Avg.   145 us, Total. 145.0 us (0.0%)
-[Performance] Application.Shutdown.CleanupMono                                                                               :        1 samples, Peak.  58.4 ms (1.0x), Avg.  58.4 ms, Total. 58.36 ms (0.0%)
-[Performance] Application.Shutdown.CleanupStdConverters                                                                      :        1 samples, Peak.  13.8 us (1.0x), Avg.  13.8 us, Total. 13.77 us (0.0%)
-[Performance] Application.Shutdown.UnloadAllPlatformSupportModuleNativeDlls                                                  :        1 samples, Peak.   611 ns (1.0x), Avg.   611 ns, Total. 611.0 ns (0.0%)
-[Performance] Application.Shutdown.UnloadAllPlatformSupportNativeLibraries                                                   :        1 samples, Peak.   300 ns (1.0x), Avg.   300 ns, Total. 300.0 ns (0.0%)
-[Performance] Application.Shutdown.CleanupAutoDocumentation                                                                  :        1 samples, Peak.   286 us (1.0x), Avg.   286 us, Total. 285.6 us (0.0%)
-[Performance] Application.Shutdown.ShaderNameManagerDestroy                                                                  :        1 samples, Peak.  63.6 us (1.0x), Avg.  63.6 us, Total. 63.62 us (0.0%)
-[Performance] Application.Shutdown.CleanupCacheServer                                                                        :        1 samples, Peak.   331 ns (1.0x), Avg.   331 ns, Total. 331.0 ns (0.0%)
-[Performance] Application.Shutdown.Virtualization_Shutdown                                                                   :        1 samples, Peak.   441 ns (1.0x), Avg.   441 ns, Total. 441.0 ns (0.0%)
-[Performance] Application.Shutdown.DevConnections                                                                            :        1 samples, Peak.  68.6 us (1.0x), Avg.  68.6 us, Total. 68.61 us (0.0%)
+[Performance] TextureImporter.Import                                                                                         :       39 samples, Peak.  63.1 ms (4.4x), Avg.  14.4 ms, Total. 560.5 ms (0.2%)
+[Performance] ShaderImporter.Import                                                                                          :       25 samples, Peak.   353 ms (6.1x), Avg.  57.5 ms, Total. 1.438 s (0.6%)
+[Performance] EditorApplication.projectChanged: UnityEditor.Audio.MixerEffectDefinitionReloader.OnProjectChanged             :       32 samples, Peak.   434 us (1.2x), Avg.   355 us, Total. 11.36 ms (0.0%)
+[Performance] EditorApplication.projectChanged: UnityEngine.InputSystem.LowLevel.NativeInputRuntime.OnProjectChanged         :       32 samples, Peak.   224 us (26.9x), Avg.  8.33 us, Total. 266.5 us (0.0%)
+[Performance] BuilderAssetPostprocessor.OnPostprocessAllAssets                                                               :       66 samples, Peak.  6.58 ms (29.9x), Avg.   220 us, Total. 14.52 ms (0.0%)
+[Performance] ArtifactBrowserPostProcessor.OnPostprocessAllAssets                                                            :       66 samples, Peak.   627 us (25.9x), Avg.  24.2 us, Total. 1.599 ms (0.0%)
+[Performance] AssetEvents.OnPostprocessAllAssets                                                                             :      132 samples, Peak.   203 us (24.5x), Avg.  8.29 us, Total. 1.095 ms (0.0%)
+[Performance] AudioMixerPostprocessor.OnPostprocessAllAssets                                                                 :       66 samples, Peak.   341 us (25.1x), Avg.  13.6 us, Total. 895.8 us (0.0%)
+[Performance] StyleCatalogPostProcessor.OnPostprocessAllAssets                                                               :       66 samples, Peak.  19.8 ms (32.6x), Avg.   606 us, Total. 39.98 ms (0.0%)
+[Performance] BuildCatalog                                                                                                   :        1 samples, Peak.  18.5 ms (1.0x), Avg.  18.5 ms, Total. 18.54 ms (0.0%)
+[Performance] ModelImporterPostProcessor.OnPostprocessAllAssets                                                              :       66 samples, Peak.  1.93 ms (8.7x), Avg.   223 us, Total. 14.70 ms (0.0%)
+[Performance] RetainedModeAssetPostprocessor.OnPostprocessAllAssets                                                          :       66 samples, Peak.  2.22 ms (28.3x), Avg.  78.6 us, Total. 5.185 ms (0.0%)
+[Performance] AssetChangedListener.OnPostprocessAllAssets                                                                    :       66 samples, Peak.  3.04 ms (27.5x), Avg.   110 us, Total. 7.290 ms (0.0%)
+[Performance] SpeedTreePostProcessor.OnPostprocessAllAssets                                                                  :       66 samples, Peak.  1.32 ms (27.2x), Avg.  48.7 us, Total. 3.213 ms (0.0%)
+[Performance] TextAssetPostProcessor.OnPostprocessAllAssets                                                                  :       66 samples, Peak.  3.39 ms (30.3x), Avg.   112 us, Total. 7.374 ms (0.0%)
+[Performance] InputActionAssetPostprocessor.OnPostprocessAllAssets                                                           :       66 samples, Peak.  2.00 ms (23.3x), Avg.  85.9 us, Total. 5.671 ms (0.0%)
+[Performance] InputActionJsonNameModifierAssetProcessor.OnPostprocessAllAssets                                               :       66 samples, Peak.  1.20 ms (27.7x), Avg.  43.5 us, Total. 2.870 ms (0.0%)
+[Performance] ProjectSettingsPostprocessor.OnPostprocessAllAssets                                                            :       66 samples, Peak.   196 us (17.6x), Avg.  11.2 us, Total. 736.4 us (0.0%)
+[Performance] SyncVS.PostprocessSyncProject                                                                                  :       33 samples, Peak.  1.61 ms (31.2x), Avg.  51.7 us, Total. 1.705 ms (0.0%)
+[Performance] Application.ImportPackagesAndSetTemplateWhenCreatingProject                                                    :        1 samples, Peak.  17.7 ms (1.0x), Avg.  17.7 ms, Total. 17.71 ms (0.0%)
+[Performance] Application.SyncCurrentColorSpace                                                                              :        1 samples, Peak.   340 ns (1.0x), Avg.   340 ns, Total. 340.0 ns (0.0%)
+[Performance] Application.OnUsbDevicesChanged                                                                                :        1 samples, Peak.   139 us (1.0x), Avg.   139 us, Total. 138.8 us (0.0%)
+[Performance] Application.AssetInstanceCacheUpdate                                                                           :        1 samples, Peak.   271 ns (1.0x), Avg.   271 ns, Total. 271.0 ns (0.0%)
+[Performance] Application.UnityExtensions.Initialize                                                                         :        1 samples, Peak.  1.90 ms (1.0x), Avg.  1.90 ms, Total. 1.896 ms (0.0%)
+[Performance] CodeEditorProjectSync.SyncEditorProject                                                                        :        1 samples, Peak.   106 us (1.0x), Avg.   106 us, Total. 106.2 us (0.0%)
+[Performance] Application.ExecuteStartups                                                                                    :        1 samples, Peak.  46.2 ms (1.0x), Avg.  46.2 ms, Total. 46.20 ms (0.0%)
+[Performance] Menu.RegisterMenuInterface                                                                                     :       26 samples, Peak.  1.14 us (4.8x), Avg.   237 ns, Total. 6.163 us (0.0%)
+[Performance] Gizmo.RebuildRenderers                                                                                         :        2 samples, Peak.  45.5 ms (1.6x), Avg.  28.7 ms, Total. 57.44 ms (0.0%)
+[Performance] Gizmo.AddGizmoRenderers                                                                                        :       50 samples, Peak.  2.58 ms (33.7x), Avg.  76.6 us, Total. 3.828 ms (0.0%)
+[Performance] Application.editorInitializingProject                                                                          :        1 samples, Peak.  13.8 ms (1.0x), Avg.  13.8 ms, Total. 13.77 ms (0.0%)
+[Performance] Application.InitializeMenu                                                                                     :        1 samples, Peak.  70.8 ms (1.0x), Avg.  70.8 ms, Total. 70.77 ms (0.0%)
+[Performance] Menu.RebuildAll                                                                                                :        1 samples, Peak.  70.8 ms (1.0x), Avg.  70.8 ms, Total. 70.76 ms (0.0%)
+[Performance] Menu.BuildRegisteredMenuInterfaces                                                                             :        1 samples, Peak.  70.2 ms (1.0x), Avg.  70.2 ms, Total. 70.17 ms (0.0%)
+[Performance] Menu.FilterMenuItem                                                                                            :      542 samples, Peak.  23.3 ms (535.3x), Avg.  43.5 us, Total. 23.60 ms (0.0%)
+[Performance] UpdateAllMenus                                                                                                 :        1 samples, Peak.   517 us (1.0x), Avg.   517 us, Total. 517.1 us (0.0%)
+[Performance] EditorSceneManager.sceneClosing: UnityEditor.SceneVisibilityManager.EditorSceneManagerOnSceneClosing           :        6 samples, Peak.   271 us (5.6x), Avg.  48.2 us, Total. 289.3 us (0.0%)
+[Performance] GUIView.RepaintAll.PlayerLoopController                                                                        :        5 samples, Peak.  2.25 us (2.5x), Avg.   894 ns, Total. 4.468 us (0.0%)
+[Performance] EditorSceneManager.newSceneCreated: UnityEditor.SceneTemplate.SceneTemplateService.OnNewSceneCreated           :        4 samples, Peak.   248 us (4.0x), Avg.  62.8 us, Total. 251.2 us (0.0%)
+[Performance] EditorSceneManager.newSceneCreated: UnityEditor.SceneVisibilityManager.EditorSceneManagerOnNewSceneCreated     :        4 samples, Peak.   176 us (3.6x), Avg.  48.9 us, Total. 195.8 us (0.0%)
+[Performance] EditorSceneManager.newSceneCreated: UnityEditor.SceneManagement.StageNavigationManager.OnNewSceneCreated       :        4 samples, Peak.  63.6 us (3.8x), Avg.  16.5 us, Total. 66.16 us (0.0%)
+[Performance] Application.InvokeFinishedLoadingProject                                                                       :        1 samples, Peak.  2.03 ms (1.0x), Avg.  2.03 ms, Total. 2.035 ms (0.0%)
+[Performance] ProcessService.OnProjectLoaded                                                                                 :        1 samples, Peak.  49.6 us (1.0x), Avg.  49.6 us, Total. 49.57 us (0.0%)
+[Performance] AssetDatabase.ImportAsset                                                                                      :        7 samples, Peak.  48.8 ms (2.9x), Avg.  16.8 ms, Total. 117.7 ms (0.0%)
+[Performance] EditorSceneManager.sceneSaving: UnityEditor.SceneTemplate.SceneTemplateService.OnSceneSaving                   :        1 samples, Peak.   273 us (1.0x), Avg.   273 us, Total. 273.1 us (0.0%)
+[Performance] EditorSceneManager.sceneSaving: UnityEditor.SceneVisibilityManager.EditorSceneManagerOnSceneSaving             :        1 samples, Peak.   127 us (1.0x), Avg.   127 us, Total. 126.8 us (0.0%)
+[Performance] EditorSceneManager.sceneSaved: UnityEditor.SceneTemplate.SceneTemplateService.OnSceneSaved                     :        1 samples, Peak.  18.0 ms (1.0x), Avg.  18.0 ms, Total. 17.96 ms (0.0%)
+[Performance] EditorSceneManager.sceneSaved: UnityEditor.SceneVisibilityManager.EditorSceneManagerOnSceneSaved               :        1 samples, Peak.   120 us (1.0x), Avg.   120 us, Total. 120.3 us (0.0%)
+[Performance] Inspector.InitOrRebuild                                                                                        :        3 samples, Peak.   279 us (1.3x), Avg.   215 us, Total. 644.1 us (0.0%)
+[Performance] GenerateAssemblyTypeInfos                                                                                      :        2 samples, Peak.  13.6 ms (1.2x), Avg.  11.8 ms, Total. 23.66 ms (0.0%)
+[Performance] AssetDatabase.Refresh                                                                                          :        1 samples, Peak.  11.4 ms (1.0x), Avg.  11.4 ms, Total. 11.41 ms (0.0%)
+[Performance] EditorSceneManager.sceneOpened: UnityEditor.SceneTemplate.SceneTemplateService.OnSceneOpened                   :        1 samples, Peak.   273 us (1.0x), Avg.   273 us, Total. 273.2 us (0.0%)
+[Performance] EditorSceneManager.sceneOpened: UnityEditor.SceneVisibilityManager.EditorSceneManagerOnSceneOpened             :        1 samples, Peak.   162 us (1.0x), Avg.   162 us, Total. 161.6 us (0.0%)
+[Performance] EditorSceneManager.sceneOpened: UnityEditor.SceneManagement.StageNavigationManager.OnSceneOpened               :        1 samples, Peak.  56.3 us (1.0x), Avg.  56.3 us, Total. 56.35 us (0.0%)
+[Performance] UnityBuildPostprocessor.OnProcessScene                                                                         :        1 samples, Peak.   430 us (1.0x), Avg.   430 us, Total. 430.3 us (0.0%)
+[Performance] Application.Shutdown.SaveDefaultWindowPreferences                                                              :        1 samples, Peak.  65.9 us (1.0x), Avg.  65.9 us, Total. 65.85 us (0.0%)
+[Performance] Application.Shutdown.SaveSceneManagerSetup                                                                     :        1 samples, Peak.   285 us (1.0x), Avg.   285 us, Total. 285.1 us (0.0%)
+[Performance] Application.Shutdown.CleanupAllContainerWindows                                                                :        1 samples, Peak.   471 ns (1.0x), Avg.   471 ns, Total. 471.0 ns (0.0%)
+[Performance] EditorApplication.quitting: callback in UnityEditor.TextCore.Text.EditorEventCallbacks                         :        1 samples, Peak.  8.96 ms (1.0x), Avg.  8.96 ms, Total. 8.964 ms (0.0%)
+[Performance] EditorApplication.quitting: UnityEditor.WebGL.WebsockifyEditorWrapper.Kill                                     :        1 samples, Peak.   826 us (1.0x), Avg.   826 us, Total. 826.2 us (0.0%)
+[Performance] Application.Shutdown.PauseProfilerSession                                                                      :        1 samples, Peak.  62.7 us (1.0x), Avg.  62.7 us, Total. 62.75 us (0.0%)
+[Performance] Application.Shutdown.PauseAssetImportWorkers                                                                   :        1 samples, Peak.   120 us (1.0x), Avg.   120 us, Total. 120.4 us (0.0%)
+[Performance] Application.Shutdown.SaveAssets                                                                                :        1 samples, Peak.  1.63 ms (1.0x), Avg.  1.63 ms, Total. 1.634 ms (0.0%)
+[Performance] Application.Shutdown.CleanupRenderPipeline                                                                     :        1 samples, Peak.  4.07 us (1.0x), Avg.  4.07 us, Total. 4.068 us (0.0%)
+[Performance] Application.Shutdown.StopPreloadManager                                                                        :        1 samples, Peak.  10.1 ms (1.0x), Avg.  10.1 ms, Total. 10.08 ms (0.0%)
+[Performance] Application.Shutdown.DestroyWorld                                                                              :        1 samples, Peak.   376 us (1.0x), Avg.   376 us, Total. 376.4 us (0.0%)
+[Performance] Application.Shutdown.CleanupAfterLoad                                                                          :        1 samples, Peak.  3.79 ms (1.0x), Avg.  3.79 ms, Total. 3.795 ms (0.0%)
+[Performance] Application.Shutdown.Progress                                                                                  :        1 samples, Peak.  18.4 us (1.0x), Avg.  18.4 us, Total. 18.45 us (0.0%)
+[Performance] Application.Shutdown.GICleanupManagers                                                                         :        1 samples, Peak.   644 us (1.0x), Avg.   644 us, Total. 643.7 us (0.0%)
+[Performance] Application.Shutdown.MenuCleanupClass                                                                          :        1 samples, Peak.   176 us (1.0x), Avg.   176 us, Total. 176.5 us (0.0%)
+[Performance] Application.Shutdown.ADBSaveStateBeforeShutdown                                                                :        1 samples, Peak.  5.68 us (1.0x), Avg.  5.68 us, Total. 5.681 us (0.0%)
+[Performance] Application.Shutdown.RemoteShutdown                                                                            :        1 samples, Peak.  1.96 us (1.0x), Avg.  1.96 us, Total. 1.963 us (0.0%)
+[Performance] Application.Shutdown.CleanupVCProvider                                                                         :        1 samples, Peak.  13.2 us (1.0x), Avg.  13.2 us, Total. 13.16 us (0.0%)
+[Performance] Application.Shutdown.InputShutdown                                                                             :        1 samples, Peak.  1.35 us (1.0x), Avg.  1.35 us, Total. 1.352 us (0.0%)
+[Performance] Application.Shutdown.GizmoManagerDestroy                                                                       :        1 samples, Peak.   351 us (1.0x), Avg.   351 us, Total. 351.5 us (0.0%)
+[Performance] Application.Shutdown.ProfilerSession                                                                           :        1 samples, Peak.  97.7 us (1.0x), Avg.  97.7 us, Total. 97.72 us (0.0%)
+[Performance] Application.Shutdown.ReleaseGfxWindowOnAllGUIViews                                                             :        1 samples, Peak.  1.38 us (1.0x), Avg.  1.38 us, Total. 1.383 us (0.0%)
+[Performance] Application.Shutdown.CleanupEngine                                                                             :        1 samples, Peak.   124 ms (1.0x), Avg.   124 ms, Total. 124.4 ms (0.1%)
+[Performance] Application.Shutdown.CleanupAssetDatabase                                                                      :        1 samples, Peak.  1.91 ms (1.0x), Avg.  1.91 ms, Total. 1.906 ms (0.0%)
+[Performance] Application.Shutdown.ScriptCompilationCleanUp                                                                  :        1 samples, Peak.  3.26 s (1.0x), Avg.  3.26 s, Total. 3.262 s (1.4%)
+[Performance] Application.Shutdown.DestroyJobSystem                                                                          :        1 samples, Peak.   166 us (1.0x), Avg.   166 us, Total. 166.4 us (0.0%)
+[Performance] Application.Shutdown.CleanupPersistentManager                                                                  :        1 samples, Peak.  1.17 ms (1.0x), Avg.  1.17 ms, Total. 1.174 ms (0.0%)
+[Performance] Application.Shutdown.CleanupAsyncReadManager                                                                   :        1 samples, Peak.   128 us (1.0x), Avg.   128 us, Total. 127.9 us (0.0%)
+[Performance] Application.Shutdown.CleanupMono                                                                               :        1 samples, Peak.  49.4 ms (1.0x), Avg.  49.4 ms, Total. 49.42 ms (0.0%)
+[Performance] Application.Shutdown.CleanupStdConverters                                                                      :        1 samples, Peak.  10.6 us (1.0x), Avg.  10.6 us, Total. 10.58 us (0.0%)
+[Performance] Application.Shutdown.UnloadAllPlatformSupportModuleNativeDlls                                                  :        1 samples, Peak.   631 ns (1.0x), Avg.   631 ns, Total. 631.0 ns (0.0%)
+[Performance] Application.Shutdown.UnloadAllPlatformSupportNativeLibraries                                                   :        1 samples, Peak.   331 ns (1.0x), Avg.   331 ns, Total. 331.0 ns (0.0%)
+[Performance] Application.Shutdown.CleanupAutoDocumentation                                                                  :        1 samples, Peak.   225 us (1.0x), Avg.   225 us, Total. 224.9 us (0.0%)
+[Performance] Application.Shutdown.ShaderNameManagerDestroy                                                                  :        1 samples, Peak.  44.9 us (1.0x), Avg.  44.9 us, Total. 44.89 us (0.0%)
+[Performance] Application.Shutdown.CleanupCacheServer                                                                        :        1 samples, Peak.   291 ns (1.0x), Avg.   291 ns, Total. 291.0 ns (0.0%)
+[Performance] Application.Shutdown.Virtualization_Shutdown                                                                   :        1 samples, Peak.   391 ns (1.0x), Avg.   391 ns, Total. 391.0 ns (0.0%)
+[Performance] Application.Shutdown.DevConnections                                                                            :        1 samples, Peak.  85.1 us (1.0x), Avg.  85.1 us, Total. 85.10 us (0.0%)
 [Package Manager] Server::Kill -- Server was shutdown
 Checking for leaked weakptr:
   Found no leaked weakptrs.
@@ -686,12 +686,12 @@ Memory Statistics:
 [ALLOC_PROFILER]
   Requested Block Size 16.0 MB
   Peak Block count 1
-  Peak Allocated memory 429.9 KB
+  Peak Allocated memory 464.2 KB
   Peak Large allocation bytes 0 B
     [ALLOC_PROFILER_BUCKET]
       Large Block size 32.0 MB
       Used Block count 1
-      Peak Allocated bytes 4.1 KB
+      Peak Allocated bytes 4.2 KB
 [ALLOC_PROFILER_EDITOR]
   Requested Block Size 1.0 MB
   Peak Block count 0
@@ -700,5 +700,5 @@ Memory Statistics:
     [ALLOC_PROFILER_BUCKET]
       Large Block size 32.0 MB
       Used Block count 1
-      Peak Allocated bytes 4.1 KB
-##utp:{"type":"MemoryLeaks","version":2,"phase":"Immediate","time":1792263815216,"processId":5397,"allocatedMemory":8189993,"memoryLabels":[{"Default":20071},{"Permanent":16353},{"Thread":1083236},{"Manager":19908},{"VertexData":12},{"Geometry":280},{"Texture":328},{"Shader":79063},{"Material":24},{"GfxDevice":36336},{"Animation":360},{"Audio":3976},{"Font":104211},{"FontEngine":336},{"Physics":513},{"Serialization":732},{"Input":26816},{"JobScheduler":53192},{"Mono":40},{"ScriptingNativeRuntime":191920},{"BaseObject":1620020},{"Resource":1064},{"Renderer":2352},{"Transform":48},{"File":3717},{"WebCam":40},{"Culling":40},{"Terrain":1025},{"Wind":24},{"String":24717},{"DynamicArray":63767},{"HashMap":73034},{"Utility":2659526},{"Curl":1112},{"PoolAlloc":1496},{"AI":72},{"TypeTree":5061},{"ScriptManager":640},{"RuntimeInitializeOnLoadManager":80},{"SpriteAtlas":128},{"GI":3632},{"Director":7928},{"CloudService":3704},{"WebRequest":720},{"VR":45769},{"SceneManager":600},{"Video":72},{"LazyScriptCache":40},{"NativeArray":12},{"Camera":25},{"Secure":5337},{"SerializationCache":1576},{"APIUpdating":11856},{"Subsystems":392},{"VirtualTexturing":57560},{"StaticSafetyDebugInfo":327680},{"EditorGui":56},{"EditorUtility":10367},{"VersionControl":4},{"Undo":736},{"AssetDatabase":1567805},{"RestService":1518},{"EditorGi":376},{"License":3584},{"UnityConnect":25496},{"Collab":641},{"Upm":1856},{"DrivenProperties":96},{"LocalIPC":216},{"ProfilerEditor":10951},{"CoreBusinessMetrics":3638},{"AssetReference":40},{"IPCStream":40}]}
+      Peak Allocated bytes 4.2 KB
+##utp:{"type":"MemoryLeaks","version":2,"phase":"Immediate","time":1792267536806,"processId":5445,"allocatedMemory":8185674,"memoryLabels":[{"Default":20071},{"Permanent":16353},{"Thread":1083236},{"Manager":19908},{"VertexData":12},{"Geometry":280},{"Texture":328},{"Shader":79063},{"Material":24},{"GfxDevice":36336},{"Animation":360},{"Audio":3976},{"Font":104211},{"FontEngine":336},{"Physics":513},{"Serialization":732},{"Input":26816},{"JobScheduler":48624},{"Mono":40},{"ScriptingNativeRuntime":191920},{"BaseObject":1620020},{"Resource":1064},{"Renderer":2352},{"Transform":48},{"File":3717},{"WebCam":40},{"Culling":40},{"Terrain":1025},{"Wind":24},{"String":24718},{"DynamicArray":63767},{"HashMap":73034},{"Utility":2659526},{"Curl":1112},{"PoolAlloc":1496},{"AI":72},{"TypeTree":5061},{"ScriptManager":640},{"RuntimeInitializeOnLoadManager":80},{"SpriteAtlas":128},{"GI":3632},{"Director":7928},{"CloudService":3704},{"WebRequest":720},{"VR":45769},{"SceneManager":600},{"Video":72},{"LazyScriptCache":40},{"NativeArray":12},{"Camera":25},{"Secure":5337},{"SerializationCache":1576},{"APIUpdating":11856},{"Subsystems":392},{"VirtualTexturing":57560},{"StaticSafetyDebugInfo":327680},{"EditorGui":56},{"EditorUtility":10367},{"VersionControl":4},{"Undo":736},{"AssetDatabase":1568053},{"RestService":1518},{"EditorGi":376},{"License":3584},{"UnityConnect":25496},{"Collab":641},{"Upm":1856},{"DrivenProperties":96},{"LocalIPC":216},{"ProfilerEditor":10951},{"CoreBusinessMetrics":3638},{"AssetReference":40},{"IPCStream":40}]}
