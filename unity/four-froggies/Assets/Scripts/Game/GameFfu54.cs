@@ -75,8 +75,8 @@ public class Ffu54 : MonoBehaviour
                 if (step == 0 && w > 2f) { SurfaceWorlds.LandMars(f, 0); step = 1; }
                 if (step == 1 && w > 5f) { Phone("rcall:sel"); step = 2; }
                 if (step >= 1) { Vector3 fw = Robot.LeadFwd(f); Vector3 lp = f.transform.position; Vector3 spot = v != null && v.ph == 0 && v.how == "pod" ? v.vp : r.transform.position; Behind(lp, fw, 6f, 2.4f, Vector3.Lerp(lp, spot, 0.6f) + Vector3.up * (v != null && v.ph == 0 && v.pod != null ? Mathf.Min(20f, (v.pod.transform.position.y - spot.y) * 0.5f) + 1.5f : 1.5f)); }
-                if (step == 2 && v != null && v.ph == 1 && w > 25f) { step = 3; phW = Time.realtimeSinceStartup - 40f; }
-                if (w > 62f) Next("mars done (arrivals " + Robot.Arrivals + " greets " + Robot.Greets + ")");
+                if (step == 2 && v != null && v.ph == 1) { step = 3; phW = Time.realtimeSinceStartup; Debug.Log("FFDEMO robots54 mars greeted"); }
+                if ((step == 3 && w > 25f) || w > 200f) Next("mars done (arrivals " + Robot.Arrivals + " greets " + Robot.Greets + ")");
                 break;
             case "pond":
                 if (step == 0)
@@ -87,7 +87,8 @@ public class Ffu54 : MonoBehaviour
                 }
                 if (step == 1 && w > 3f) { RobotPhone.I.DemoOpen(f, 1, "play:swim"); RobotPhone.I.DemoSend(); RobotPhone.I.open = false; step = 2; }
                 if (step >= 1) { Vector3 rp = r.transform.position; Vector3 lp = f.transform.position; Behind(lp, (rp - lp).sqrMagnitude > 1f ? (rp - lp).normalized : Vector3.right, 7f, 4f, rp + Vector3.up * 0.5f); }
-                if (w > 70f) Next("pond done (swimming " + (v != null && v.swimming) + ")");
+                if (step == 2 && v != null && v.swimming) { step = 3; phW = Time.realtimeSinceStartup; Debug.Log("FFDEMO robots54 swimming"); }
+                if ((step == 3 && w > 22f) || w > 160f) Next("pond done (swimming " + (v != null && v.swimming) + ")");
                 break;
             case "horse":
                 if (step == 0)
@@ -123,10 +124,10 @@ public class Ffu54 : MonoBehaviour
                 break;
             case "room":
                 if (step == 0) { RobotPhone.I.Close(f, "demo"); RealRoom.DemoStart(f, "realroom-body"); step = 1; }
-                if (step == 1 && RealRoom.Captures(f) && w > 8f) { Checks(); step = 2; phW = Time.realtimeSinceStartup - 8f; }
-                if (step == 2 && w > 12f) { RobotPhone.I.DemoOpen(f, 1, "rcall:sel"); RobotPhone.I.DemoSend(); step = 3; }
-                if (step == 3 && v != null && v.ph == 1 && w > 30f) { RobotPhone.I.DemoOpen(f, 1, "play:catch"); RobotPhone.I.DemoSend(); step = 4; }
-                if (w > (step >= 4 ? 75f : 120f)) { Next("room done"); Debug.Log("FFDEMO robots54 done arrivals " + Robot.Arrivals + " greets " + Robot.Greets); }
+                if (step == 1 && RealRoom.Captures(f) && w > 8f) { Checks(); step = 2; phW = Time.realtimeSinceStartup; }
+                if (step == 2 && w > 10f) { RobotPhone.I.DemoOpen(f, 1, "rcall:sel"); RobotPhone.I.DemoSend(); step = 3; phW = Time.realtimeSinceStartup; }
+                if (step == 3 && v != null && v.ph == 1 && v.w == WorldId.RealRoom && w > 12f) { RobotPhone.I.DemoOpen(f, 1, "play:catch"); RobotPhone.I.DemoSend(); step = 4; phW = Time.realtimeSinceStartup; }
+                if ((step == 1 && w > 240f) || (step == 3 && w > 120f) || (step == 4 && w > 50f)) { Next("room done"); Debug.Log("FFDEMO robots54 done arrivals " + Robot.Arrivals + " greets " + Robot.Greets); }
                 break;
         }
         if (Time.unscaledTime > logT)

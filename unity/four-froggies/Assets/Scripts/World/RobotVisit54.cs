@@ -373,7 +373,7 @@ public partial class Robot
     {
         var go = new GameObject("RobotPod " + robotName);
         go.transform.position = at;
-        Material hull = Mats.PBR(new Color(0.86f, 0.87f, 0.9f), 0.7f, 0.55f), dark = Mats.Paint(new Color(0.12f, 0.13f, 0.15f), 0.6f), win = Mats.Unlit(new Color(0.45f, 0.8f, 1f));
+        Material hull = Mats.Shiny(new Color(0.86f, 0.87f, 0.9f)), dark = Mats.Paint(new Color(0.12f, 0.13f, 0.15f), 0.6f), win = Mats.Unlit(new Color(0.45f, 0.8f, 1f));
         Mats.Prim(PrimitiveType.Cylinder, go.transform, new Vector3(0f, 1.3f, 0f), new Vector3(1.9f, 1.3f, 1.9f), hull);
         Mats.Prim(PrimitiveType.Sphere, go.transform, new Vector3(0f, 2.65f, 0f), new Vector3(1.9f, 1.3f, 1.9f), hull);
         Mats.Prim(PrimitiveType.Cylinder, go.transform, new Vector3(0f, 0.12f, 0f), new Vector3(2.2f, 0.12f, 2.2f), dark);
@@ -425,9 +425,9 @@ public partial class Robot
             v.w = tw; v.ph = 0; v.t = 0f;
             if (v.pod != null) Object.Destroy(v.pod);
             jetsOn = false; yOver = float.NaN; SetHidden(false);
-            if (tw == WorldId.Mars || tw == WorldId.Callisto || tw == WorldId.Moon) { v.how = "pod"; StartPod(); }
-            else if (tw == WorldId.House || tw == WorldId.RealRoom) { v.how = "door"; StartDoor(); }
-            else { v.how = "jet"; StartJet(); }
+            if (tw == WorldId.Mars || tw == WorldId.Callisto || tw == WorldId.Moon) { v.how = "pod"; v.line = "dropping in by rocket pod"; StartPod(); }
+            else if (tw == WorldId.House || tw == WorldId.RealRoom) { v.how = "door"; v.line = "coming in the door"; StartDoor(); }
+            else { v.how = "jet"; v.line = "flying in on my jets"; StartJet(); }
             Debug.Log("ROBOTS54 follow-world " + robotName + " -> " + tw + " how " + v.how);
             return;
         }
