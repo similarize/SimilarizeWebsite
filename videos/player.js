@@ -14,6 +14,10 @@
     T.textContent=v.title;document.title=v.title+' — Similarize';D.textContent=v.description||'';
     function fmt(t){t=Math.round(t);var m=Math.floor(t/60),r=t%60;return m+':'+(r<10?'0':'')+r;}
     M.textContent=[v.duration?'Runtime '+fmt(v.duration):'',v.audience||''].filter(Boolean).join(' · ');
+    if(v.badge){var bd=document.createElement('span');bd.className='badge';bd.textContent=v.badge;M.insertBefore(bd,M.firstChild);}
+    (v.related||[]).forEach(function(r){var o=(d.videos||[]).filter(function(x){return x.slug===r.slug;})[0];if(!o)return;
+      var p=document.createElement('p');p.className='also';var a=document.createElement('a');a.href='/videos/'+o.slug+'/';
+      a.textContent=(r.label||'Also watch')+' \u2192';a.title=o.title;p.appendChild(a);D.parentNode.insertBefore(p,D.nextSibling);});
     if(v.status!=='published'||!v.hls){placeholder('Coming soon','This movie is being finished. Check back shortly.');return;}
     var src=abs(d.media_base,v.hls);
     var video=document.createElement('video');

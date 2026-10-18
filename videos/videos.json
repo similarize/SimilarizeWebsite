@@ -12,7 +12,33 @@
       "hls": "four-froggies-catch-jimmy/master.m3u8",
       "poster": "four-froggies-catch-jimmy/poster.jpg",
       "thumb": "four-froggies-catch-jimmy/thumb.jpg",
-      "poster_at": 120
+      "poster_at": 120,
+      "related": [
+        {
+          "slug": "four-froggies-catch-jimmy-v2",
+          "label": "Also watch Version 2"
+        }
+      ]
+    },
+    {
+      "slug": "four-froggies-catch-jimmy-v2",
+      "title": "Four Froggies: Catch Jimmy All the Way to the Moon (Version 2)",
+      "badge": "Version 2",
+      "description": "Version 2: a shorter, tighter retelling. Jimmy's new jetpack sends him zooming off across the solar system, and James, Bubbles and Rexy chase him from Mars to Callisto to the Moon, with Purple Bear guiding them by phone, until all four froggies fly home together.",
+      "duration": 468,
+      "audience": "Kids & family",
+      "published": "2026-10-17",
+      "status": "published",
+      "hls": "four-froggies-catch-jimmy-v2/master.m3u8",
+      "poster": "four-froggies-catch-jimmy-v2/poster.jpg",
+      "thumb": "four-froggies-catch-jimmy-v2/thumb.jpg",
+      "poster_at": 64,
+      "related": [
+        {
+          "slug": "four-froggies-catch-jimmy",
+          "label": "Also watch Version 1"
+        }
+      ]
     }
   ]
 }

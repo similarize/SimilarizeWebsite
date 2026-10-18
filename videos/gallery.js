@@ -10,6 +10,7 @@
       var th=el('div','thumb');
       if(v.status==='published'&&v.thumb){th.style.backgroundImage='url("'+abs(d.media_base,v.thumb)+'")';th.appendChild(el('span','dur',fmt(v.duration)));}
       else th.appendChild(el('span','soon','Coming soon'));
+      if(v.badge)th.appendChild(el('span','badge',v.badge));
       var b=el('div','body');
       b.appendChild(el('p','status',v.status==='published'?(v.audience||'Video'):'Coming soon'));
       b.appendChild(el('h2',null,v.title));
