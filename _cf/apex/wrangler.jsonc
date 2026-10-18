@@ -1,11 +1,11 @@
 {
   // similarize-apex: similarize.com (bare) -> https://www.similarize.com, 301, path + query kept.
   // Replaces the redirect GitHub Pages does today. Deploy from this folder: `npx wrangler deploy`.
-  // Phase 1 (staging): workers.dev only. Cutover adds:
-  // "routes": [ { "pattern": "similarize.com", "custom_domain": true } ]
+  // Phase 2 (live, Ben approved 2026-10-18): the bare similarize.com is a Custom Domain of this Worker.
   "name": "similarize-apex",
   "main": "index.js",
   "compatibility_date": "2026-10-01",
   "workers_dev": true,
-  "preview_urls": false
+  "preview_urls": false,
+  "routes": [{ "pattern": "similarize.com", "custom_domain": true }]
 }

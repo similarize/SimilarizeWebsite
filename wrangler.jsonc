@@ -2,7 +2,7 @@
   // similarize.com on Cloudflare Workers static assets (replaces GitHub Pages; mirrors Still-Has-Value/StillHasValue).
   // Workers Builds: build command `node _cf/build.mjs`, deploy command `npx wrangler deploy`, branch gh-pages.
   // _cf/build.mjs strips Jekyll front matter (index.html) and splits files > 25 MiB into cf-parts/ (served by _cf/worker.js).
-  // Phase 1 (staging): workers.dev only. Do NOT add routes/custom domains here until the cutover is approved.
+  // Phase 2 (live, Ben approved 2026-10-18): www.similarize.com is a Custom Domain of this Worker.
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "similarize-site",
   "main": "_cf/worker.js",
@@ -17,8 +17,8 @@
     "run_worker_first": false,
     "html_handling": "auto-trailing-slash",
     "not_found_handling": "none"
-  }
-  // Cutover (phase 2) adds:
-  // "routes": [ { "pattern": "www.similarize.com", "custom_domain": true } ]
+  },
+  // Custom Domain (not a www/* route): similarize-arcade fetches www from the same zone, which only reaches a Custom Domain.
   // www.similarize.com/p and /p/* stay on similarize-private (routes run before a Custom Domain).
+  "routes": [{ "pattern": "www.similarize.com", "custom_domain": true }]
 }
