@@ -277,6 +277,7 @@ public static class U6Layers
         if (l == null) return;
         var d = l.GetUniversalAdditionalLightData();
         if (d != null) { d.renderingLayers = bits; d.shadowRenderingLayers = bits; }
+        l.renderingLayerMask = (int)bits;   // ffu6g: URP 17 reads the light layer from Light.renderingLayerMask too
     }
     public static void Renderers(GameObject g, int layer)
     {

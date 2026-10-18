@@ -157,6 +157,7 @@ public static class Worlds
         float a = Mathf.Lerp(0.9f, 0.45f, dk);
         if (Realism.On) RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;   // Realism.PreCull sets it back per camera
         RenderSettings.ambientSkyColor = new Color(0.35f, 0.6f, 0.65f) * a; RenderSettings.ambientEquatorColor = new Color(0.2f, 0.4f, 0.42f) * a; RenderSettings.ambientGroundColor = new Color(0.1f, 0.18f, 0.2f) * a;
+        Light55.UnderGrade(c);   // ffu6g: same deep-blue grade as the Underwater world
     }
     public static System.Action<Camera, WorldId> StoryHook;
     public static System.Func<WorldId, Vector3, string> PlaceNameHook;   // ffu24: Mercury / Enceladus / Under Mars on the HUD

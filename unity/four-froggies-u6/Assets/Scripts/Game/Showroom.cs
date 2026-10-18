@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Rendering.Universal;
 
 // ffu14 lobby showroom (after Lambo Blast's Game/Showroom.cs): one turntable "stand" per seat card (own camera ->
 // RenderTexture shown in the card) with the seat's character slowly turning on a glowing disc, idling (head looks
@@ -35,10 +36,46 @@ public static class Showroom
         RenderSettings.ambientGroundColor = new Color(0.035f, 0.035f, 0.04f);
         RenderSettings.reflectionIntensity = 0.5f;   // ffu29b: 0.32 lost the pedestal's sheen
         RenderSettings.fog = false;
+        // ffu6g: the 6.6 lobby portraits / turntables came out as black silhouettes (only ambient + highlights). URP picks the main
+        // light from RenderSettings.sun and may keep the world sun visible to a layer-20 camera (Light.cullingMask is not a
+        // reliable per-camera filter in Forward+), so the studio key is made THE main light for studio cameras and every world
+        // directional light is switched off just for them (before URP culls; put back in StudioPostRender). u6studio=keep = old way.
+        if (StudioSwap && key != null)
+        {
+            sunSaved = RenderSettings.sun; swapped = true;
+            RenderSettings.sun = key;
+            hidden.Clear();
+            for (int i = 0; i < worldDirs.Count; i++) { var l = worldDirs[i]; if (l != null && l.enabled) { l.enabled = false; hidden.Add(l); } }
+            if (sunSaved != null && sunSaved != key && sunSaved.enabled && !studioLights.Contains(sunSaved)) { sunSaved.enabled = false; hidden.Add(sunSaved); }
+        }
+        if (!diagLogged) { diagLogged = true; Diag(c); }
+    }
+    static bool swapRead, swapOn; static bool diagLogged, swapped;
+    static bool StudioSwap { get { if (!swapRead) { swapRead = true; swapOn = !FFPlatform.PageUrl.Contains("u6studio=keep"); } return swapOn; } }
+    static Light key, sunSaved; static readonly System.Collections.Generic.List<Light> worldDirs = new System.Collections.Generic.List<Light>(), hidden = new System.Collections.Generic.List<Light>(), studioLights = new System.Collections.Generic.List<Light>();
+    static Renderer sample;
+    static void Diag(Camera c)
+    {
+        var sb = new System.Text.StringBuilder("Showroom diag (" + c.name + "): sun " + (RenderSettings.sun != null ? RenderSettings.sun.name : "none") + " swap " + StudioSwap + " hid " + hidden.Count + " |");
+        foreach (var l in studioLights)
+        {
+            var d = l.GetUniversalAdditionalLightData();
+            uint rl = d != null ? (uint)d.renderingLayers : 0u;
+            sb.Append(" " + l.name + " I" + l.intensity.ToString("0.00") + " rlm " + l.renderingLayerMask + "/" + rl + " cm " + l.cullingMask);
+        }
+        if (sample != null) sb.Append(" | model " + sample.name + " layer " + sample.gameObject.layer + " rlm " + sample.renderingLayerMask + " shader " + (sample.sharedMaterial != null ? sample.sharedMaterial.shader.name : "-"));
+        Debug.Log(sb.ToString());
     }
     static void StudioPostRender(Camera c)
     {
-        if (c == null || c.cullingMask != Mask || reflSaved < 0f) return;
+        if (c == null || c.cullingMask != Mask) return;
+        if (swapped)
+        {
+            swapped = false; RenderSettings.sun = sunSaved; sunSaved = null;
+            for (int i = 0; i < hidden.Count; i++) if (hidden[i] != null) hidden[i].enabled = true;
+            hidden.Clear();
+        }
+        if (reflSaved < 0f) return;
         RenderSettings.reflectionIntensity = reflSaved; reflSaved = -1f;   // the next world camera's PreCull resets ambient / fog itself
     }
     static MaterialPropertyBlock skinBlock;
@@ -75,7 +112,7 @@ public static class Showroom
     {
         if (inited) return;
         inited = true;
-        foreach (Light l in Object.FindObjectsByType<Light>()) { l.cullingMask &= ~Mask; U6Layers.World(l); }   // ffu6: + rendering layers
+        foreach (Light l in Object.FindObjectsByType<Light>()) { l.cullingMask &= ~Mask; U6Layers.World(l); if (l.type == LightType.Directional) worldDirs.Add(l); }   // ffu6: + rendering layers
         if (OldLook)
         {
         // ffu14a probe: 1.15 / 0.9 / 0.35 washed the light coats out (Kitty read white, Tigy yellow) -> softer
@@ -89,14 +126,14 @@ public static class Showroom
         // ffu29 studio: dark ambient for layer-20 cameras + a real three-point rig (key ~4:1 over fill, rims carve the silhouette)
         U6Cam.PreCull += StudioPreCull;
         U6Cam.PostRender += StudioPostRender;
-        MakeLight("ShowroomKey", new Vector3(0.5f, -0.6f, -0.62f), 0.92f, new Color(1f, 0.95f, 0.88f));
+        key = MakeLight("ShowroomKey", new Vector3(0.5f, -0.6f, -0.62f), 0.92f, new Color(1f, 0.95f, 0.88f));
         MakeLight("ShowroomRim", new Vector3(-0.55f, -0.3f, 0.78f), 1.05f, new Color(0.66f, 0.84f, 1f));
         MakeLight("ShowroomRim2", new Vector3(0.62f, -0.18f, 0.76f), 0.55f, new Color(1f, 0.84f, 0.68f));
         MakeLight("ShowroomFill", new Vector3(-0.7f, -0.15f, -0.7f), 0.16f, new Color(0.85f, 0.9f, 1f));
         Debug.Log("Showroom: ffu29 studio lighting (ACES grade, " + (!Look.Mobile && SystemInfo.SupportsRenderTextureFormat(RenderTextureFormat.DefaultHDR) ? "HDR" : "LDR") + ")");
     }
 
-    static void MakeLight(string name, Vector3 dir, float intensity, Color c)
+    static Light MakeLight(string name, Vector3 dir, float intensity, Color c)
     {
         var l = new GameObject(name).AddComponent<Light>();
         l.type = LightType.Directional;
@@ -107,6 +144,8 @@ public static class Showroom
         l.shadows = LightShadows.None;
         l.renderMode = LightRenderMode.ForcePixel;
         l.transform.rotation = Quaternion.LookRotation(dir.normalized);
+        studioLights.Add(l);
+        return l;
     }
 
     public static RenderTexture NewRT(int w, int h)
@@ -251,6 +290,7 @@ public static class Showroom
         var m = g.AddComponent<FrogModel>();
         m.BuildChar(ch);
         Mats.SetLayer(g, Layer);
+        if (sample == null) sample = g.GetComponentInChildren<Renderer>();
         foreach (var r in g.GetComponentsInChildren<Renderer>()) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         StudioSkin(g);
         return m;
@@ -264,13 +304,17 @@ public static class Showroom
         return false;
     }
 
+    static RenderTexture thumbTmp; static Material thumbSpotMat;
     public static void RenderThumbs()
     {
         Init();
         if (thumbCam == null) { thumbCam = NewCam("ThumbCam", null); Grade(thumbCam, true); }
         Vector3 p = Base + new Vector3(-300f, 0f, 0f);
-        var tmp = NewRT(ThumbSize, ThumbSize);   // 4x MSAA, resolved into the mip-mapped thumb below
-        var spotMat = SoftMat(Color.white, 2990);
+        // ffu6g: the MSAA scratch target + spot material are kept (were released / destroyed right after the last Blit:
+        // on WebGPU the 10th thumbnail (Daisy) came out empty - its queued resolve lost its source)
+        if (thumbTmp == null || !thumbTmp.IsCreated()) thumbTmp = NewRT(ThumbSize, ThumbSize);   // 4x MSAA, resolved into the mip-mapped thumb below
+        if (thumbSpotMat == null) thumbSpotMat = SoftMat(Color.white, 2990);
+        var tmp = thumbTmp; var spotMat = thumbSpotMat;
         for (int i = 0; i < Thumbs.Length; i++)
         {
             if (Thumbs[i] == null) Thumbs[i] = NewMipRT(ThumbSize);
@@ -301,8 +345,6 @@ public static class Showroom
             Object.DestroyImmediate(root.gameObject);
         }
         thumbCam.targetTexture = null;
-        tmp.Release(); Object.Destroy(tmp);
-        Object.Destroy(spotMat);
         ThumbsReady = true;
         Debug.Log("Showroom: thumbnails rendered (" + Thumbs.Length + " characters, " + ThumbSize + " px 4x MSAA + mips)");
     }

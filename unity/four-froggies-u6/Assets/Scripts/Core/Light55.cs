@@ -68,7 +68,20 @@ public static class Light55
             default: return baseC;
         }
     }
-    static float ExpK(WorldId w) { return w == WorldId.House ? 2.1f : w == WorldId.Mars ? 1.04f : w == WorldId.Callisto ? 1.1f : 1f; }
+    // ffu6g: under water (the Underwater world and a ranch camera under the pond surface) read milky teal after the ffu6e +0.9 EV
+    // lift (mean 34,85,96 vs 2022.3 28,66,82) -> -0.7 EV there and a cooler white balance (deep blue, not warm teal)
+    public const float UnderExpK = 0.62f, UnderWarm = -8f;
+    static float ExpK(WorldId w) { return w == WorldId.House ? 2.1f : w == WorldId.Mars ? 1.04f : w == WorldId.Callisto ? 1.1f : w == WorldId.Underwater ? UnderExpK : 1f; }
+    // Worlds.PondUnder: a ranch camera under the pond gets the underwater grade too (Light55.PreCull ran first with the ranch values)
+    public static void UnderGrade(Camera c)
+    {
+        if (!On || c == null) return;
+        U6.WorldWarm = UnderWarm;
+        RealPost rp;
+        if (!posts.TryGetValue(c, out rp)) { rp = c.GetComponent<RealPost>(); posts[c] = rp; }
+        float e0;
+        if (rp != null && postExp0.TryGetValue(rp, out e0)) rp.exposure = e0 * UnderExpK;
+    }
 
     // Worlds.PreCull, after the world's fog / ambient (and Realism's ranch SH) are set - every camera sets the sun
     // for its own world, so split views in different worlds never leak each other's light
@@ -99,7 +112,7 @@ public static class Light55
         }
         // ffu6d: indoors ACES read red-saturated (-12); ffu6e: house brighter (EV 2.1 + the global lift) and warm-golden instead of red-brown
         U6.WorldSat = w == WorldId.House ? -2f : 0f;
-        U6.WorldWarm = w == WorldId.House ? 9f : 0f;
+        U6.WorldWarm = w == WorldId.House ? 9f : w == WorldId.Underwater ? UnderWarm : 0f;
         RealPost rp;
         if (!posts.TryGetValue(c, out rp)) { rp = c.GetComponent<RealPost>(); posts[c] = rp; }
         if (rp != null)
