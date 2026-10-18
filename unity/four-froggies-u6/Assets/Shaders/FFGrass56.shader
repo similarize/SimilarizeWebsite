@@ -61,7 +61,7 @@ Shader "FF/Grass56"
             pos = TransformWorldToObject(wp);
             float n = frac(sin(dot(root.xz, float2(12.9898, 78.233))) * 43758.5453);
             // gamma-authored tint x root darkening -> linear multiplier
-            extra = float4(LB_F(lerp(float3(0.92, 0.95, 0.82), float3(1.08, 1.04, 0.9), n) * lerp(0.55, 1.0, h)), 1);
+            extra = float4(LB_F(lerp(float3(0.92, 0.95, 0.82), float3(1.08, 1.04, 0.9), n) * lerp(0.68, 1.0, h)), 1);   // ffu6i: 0.55 base read too dark in Linear
             nrm = TransformWorldToObjectDir(float3(0, 1, 0), true);
         }
         #include "Assets/Shaders/FFPasses.hlsl"
@@ -129,7 +129,8 @@ Shader "FF/Grass56"
                 InputData d = LBInputData(i, float3(0, 1, 0));
                 Light L = FFMain(d);
                 half3 col = alb * L.color * (abs(L.direction.y) * 0.5 + 0.5) * L.shadowAttenuation;
-                col += alb * d.bakedGI * FFAO(d);
+                col += alb * L.color * L.shadowAttenuation * 0.3 * pow(saturate(dot(d.viewDirectionWS, -L.direction)), 3);   // ffu6i: sun shining through the blades
+                col += alb * d.bakedGI * lerp(1.0, FFAO(d), 0.35) * 1.15;   // ffu6i: SSAO on dense clumps blackened the lawn; only a third of it
                 col = LBFog(col, i.positionWS, d.fogCoord);
                 return half4(col, 1);
             }

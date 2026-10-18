@@ -125,7 +125,7 @@ public static class U6
 
     static readonly Camera[] camBuf = new Camera[32];
     static int lastRes = -1, lastMsaa = -1; static float lastDist = -1f; static UnityEngine.ShadowQuality lastQ = (UnityEngine.ShadowQuality)(-1);
-    static string lastTag = "";
+    static string lastTag = ""; static int lastCasc = -1; static float lastSplit = -1f;
 
     // the LateUpdate mirror (U6Runner)
     public static void Mirror()
@@ -137,6 +137,10 @@ public static class U6
         if (res != lastRes) { lastRes = res; a.mainLightShadowmapResolution = res; }
         float dist = Mathf.Max(5f, QualitySettings.shadowDistance);
         if (Mathf.Abs(dist - lastDist) > 0.01f) { lastDist = dist; a.shadowDistance = dist; }
+        // ffu6i: mirror the per-tier cascade count too (Perf60: 1 cascade on phones / tier med-low / split views, 2 on desktop high);
+        // the asset was fixed at 2 cascades -> phones and split views paid for a second shadow pass the 2022.3 build never drew
+        int casc = QualitySettings.shadowCascades >= 2 ? 2 : 1; float split = Mathf.Clamp(QualitySettings.shadowCascade2Split, 0.05f, 0.6f);
+        if (casc != lastCasc || Mathf.Abs(split - lastSplit) > 0.001f) { lastCasc = casc; lastSplit = split; a.shadowCascadeCount = casc; a.cascade2Split = split; }
         Light sun = RenderSettings.sun;
         if (q != lastQ)
         {
@@ -169,7 +173,7 @@ public static class U6
             if (post && !d.dithering) d.dithering = true;
         }
         SsaoOn(Perf60.AO && views <= 1 && !FFDisplay.InLobby);
-        string tag = "views " + views + " msaa " + msaa + " shadows " + q + " " + res + "/" + dist.ToString("0") + " tier " + Perf60.TierName;
+        string tag = "views " + views + " msaa " + msaa + " shadows " + q + " " + res + "/" + dist.ToString("0") + " x" + lastCasc + " tier " + Perf60.TierName;
         if (tag != lastTag) { lastTag = tag; Debug.Log("U6: " + tag); }
     }
 

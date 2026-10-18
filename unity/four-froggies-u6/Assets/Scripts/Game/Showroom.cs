@@ -315,8 +315,11 @@ public static class Showroom
         if (thumbTmp == null || !thumbTmp.IsCreated()) thumbTmp = NewRT(ThumbSize, ThumbSize);   // 4x MSAA, resolved into the mip-mapped thumb below
         if (thumbSpotMat == null) thumbSpotMat = SoftMat(Color.white, 2990);
         var tmp = thumbTmp; var spotMat = thumbSpotMat;
-        for (int i = 0; i < Thumbs.Length; i++)
+        // ffu6i: WebGPU still dropped the batch's LAST render+Blit (Daisy empty even with an extra empty render + GL.Flush) ->
+        // the loop ends with a second render of thumbnail 0, so a lost final write only skips a repeat
+        for (int k = 0; k <= Thumbs.Length; k++)
         {
+            int i = k < Thumbs.Length ? k : 0;
             if (Thumbs[i] == null) Thumbs[i] = NewMipRT(ThumbSize);
             else if (!Thumbs[i].IsCreated()) Thumbs[i].Create();
             var root = new GameObject("Thumb").transform;
@@ -344,9 +347,6 @@ public static class Showroom
             Object.DestroyImmediate(spot.gameObject);
             Object.DestroyImmediate(root.gameObject);
         }
-        // ffu6h: WebGPU left the LAST thumbnail (Daisy) empty - one more (empty) studio render + GL.Flush submits its resolve
-        thumbCam.targetTexture = tmp; thumbCam.Render();
-        thumbCam.targetTexture = null;
         GL.Flush();
         ThumbsReady = true;
         Debug.Log("Showroom: thumbnails rendered (" + Thumbs.Length + " characters, " + ThumbSize + " px 4x MSAA + mips)");
