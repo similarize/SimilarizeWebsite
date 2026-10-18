@@ -160,6 +160,7 @@ public class Animals57 : MonoBehaviour
             n++;
         }
         Dressed++;
+        Blob6.Attach(a.gameObject, a.gameObject.layer);   // ffu6k contact shadow
         if (Named(a)) Debug.Log("ANIMALS57 dressed " + a.petName + " (" + a.kind + ") parts " + n);
     }
 

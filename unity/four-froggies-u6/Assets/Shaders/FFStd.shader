@@ -64,6 +64,16 @@ Shader "FF/Std"
             #pragma shader_feature_local _NORMALMAP
             #pragma shader_feature_local_fragment _DETAIL_MULX2
             #pragma shader_feature_local_fragment _ _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
+            // ffu6k: world-space macro + micro variation (kills flat tiling / flat-colour boxes: walls, wood, brick, roads, props).
+            // Planar projection by the dominant normal axis, two value-noise scales; colour +-amp, gloss +-15 %. Skipped on car paint
+            // (_Coat) and dimmed on metals. _FFMacro.x = amplitude (U6.MacroGlobals; 0 = off on the lowest Perf60 tier / u6macro=0).
+            float4 _FFMacro;
+            float StdHash(float2 p) { return frac(sin(dot(p, float2(127.1, 311.7))) * 43758.5453); }
+            float StdNoise(float2 p)
+            {
+                float2 q = floor(p), f = frac(p); f = f * f * (3.0 - 2.0 * f);
+                return lerp(lerp(StdHash(q), StdHash(q + float2(1, 0)), f.x), lerp(StdHash(q + float2(0, 1)), StdHash(q + float2(1, 1)), f.x), f.y);
+            }
             half4 StdFrag(LBVary i) : SV_Target
             {
                 float2 uv = i.uv.xy * _MainTex_ST.xy + _MainTex_ST.zw;
@@ -76,6 +86,18 @@ Shader "FF/Std"
             #endif
                 float3 T, B, N; bool hasT;
                 LBFrame(i, T, B, N, hasT);
+                half gl = _Glossiness;
+                float mamp = _FFMacro.x * (1.0 - saturate(_Coat * 4.0)) * (1.0 - _Metallic * 0.6);
+                if (mamp > 0.001)
+                {
+                    float3 an = abs(N), wp = i.positionWS;
+                    float2 p2 = an.y > 0.6 ? wp.xz : (an.x > an.z ? wp.zy : wp.xy);
+                    float mac = StdNoise(p2 * 0.33) * 0.7 + StdNoise(p2 * 0.9 + 5.2) * 0.3;
+                    float mic = StdNoise(p2 * 2.7 + 1.3);
+                    float v = (mac - 0.5) * 2.0 * 0.75 + (mic - 0.5) * 2.0 * 0.25;
+                    alb *= 1.0 + v * mamp * half3(1.0, 0.96, 0.88);
+                    gl = saturate(gl * (1.0 + (mic - 0.5) * 0.3 * saturate(mamp * 6.0)));
+                }
                 float3 nw = N;
             #if defined(_NORMALMAP)
                 half3 nt = UnpackNormalScale(SAMPLE_TEXTURE2D(_BumpMap, sampler_BumpMap, uv), _BumpScale);
@@ -84,7 +106,7 @@ Shader "FF/Std"
             #if !defined(_SURFACE_TYPE_TRANSPARENT)
                 a = 1.0;
             #endif
-                half4 c = LBShade(i, alb, _Metallic, _Glossiness, nw, _EmissionColor.rgb, a, 0, 0);
+                half4 c = LBShade(i, alb, _Metallic, gl, nw, _EmissionColor.rgb, a, 0, 0);
             #if !defined(_SURFACE_TYPE_TRANSPARENT)
                 if (_Coat > 0.001)
                 {

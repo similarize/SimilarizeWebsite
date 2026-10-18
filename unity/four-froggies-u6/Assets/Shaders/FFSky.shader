@@ -67,14 +67,14 @@ Shader "FF/Sky"
             }
             half4 SkyFrag(SkyV i) : SV_Target
             {
-                float4 k = _FFSky.x > 0.0 ? _FFSky : float4(0.66, 2.0, 0.0, 1.0);
+                float4 k = _FFSky.x > 0.0 ? _FFSky : float4(0.66, 2.6, 0.0, 1.0);
                 float3 td = normalize(i.texDir), wd = normalize(i.worldDir);
                 float2 uv = float2(0.5, 1.0) - float2(atan2(td.z, td.x) * (0.5 / 3.14159265), acos(clamp(td.y, -1.0, 1.0)) * (1.0 / 3.14159265));
                 half3 c = SAMPLE_TEXTURE2D_LOD(_MainTex, sampler_MainTex, uv, 0).rgb * _Tint.rgb * LB_X2 * _Exposure;
                 float el = wd.y, up = saturate(el * 2.5);
                 // chroma lift towards the zenith (clouds have little chroma, so they stay white)
                 half lum = dot(c, half3(0.2126, 0.7152, 0.0722));
-                c = max(0, lum + (c - lum) * lerp(1.2, k.y, up));
+                c = max(0, lum + (c - lum) * lerp(1.45, k.y, saturate(el * 4.0)));   // ffu6k: more blue lower down too (houseout sky still pale)
                 half blue = saturate((c.b - c.r) / max(c.b, 1e-3) * 2.5);
                 c *= lerp(1.0, 0.86, blue * up);
                 c *= k.x;
@@ -97,7 +97,7 @@ Shader "FF/Sky"
                 }
                 // horizon haze to the fog colour
                 float hz = pow(1.0 - saturate(abs(el)), 6.0);
-                c = lerp(c, unity_FogColor.rgb * 1.05, hz * 0.45);
+                c = lerp(c, unity_FogColor.rgb * 1.05, hz * 0.3);
                 return half4(c, 1);
             }
             ENDHLSL

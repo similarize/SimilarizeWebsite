@@ -26,7 +26,7 @@ public static class U6
     static string url = "";
     public static float WorldSat = 0f, SatBase = 4f, ExpBias = 1.25f, BloomScale = 1f, SatAdd = 0f, ConAdd = 0f;
     // ffu6e: brighter + warmer (6.6 read ~0.6x as bright as 2022.3 everywhere): +0.9 EV, sat -6 -> +4, white balance 4 -> 9 (+ per world)
-    public static float WorldWarm = 0f, WarmBase = 9f, WarmAdd = 0f;
+    public static float WorldWarm = 0f, WarmBase = 9f, WarmAdd = 0f, WorldCon = 0f;   // ffu6k WorldCon: per-world contrast (Light55)
     const float ExpBias0 = 1.25f;
     public static TonemappingMode Tm = TonemappingMode.ACES;
     public static int MsaaForce = 0, SsaoForce = -1;
@@ -48,6 +48,7 @@ public static class U6
         if (F("u6skysat", out f)) SkySat = f;
         if (F("u6wisp", out f)) SkyWisp = f;
         if (Q("u6sun") == "0") SkySun = 0f;
+        if (F("u6macro", out f)) MacroAmp = f;
         s = Q("u6ssao"); if (s == "0") SsaoForce = 0; else if (s == "1") SsaoForce = 1;
         s = Q("u6msaa"); int mi; if (s != null && int.TryParse(s, out mi)) MsaaForce = Mathf.Clamp(mi, 1, 8);
         var a = Asset;
@@ -102,17 +103,17 @@ public static class U6
     // gamma -> linear in a Linear project, so hand it the gamma encoding (Lambo u6f lesson)
     public static Color Lin(Color c) { return Linear ? c.gamma : c; }
 
-    static float lastExp = -99f, lastSat = -99f, lastWarm = -99f;
+    static float lastExp = -99f, lastSat = -99f, lastWarm = -99f, lastCon = -99f;
     // game grade: RealPost's / LBPost's exposure (Light55 moves it per world) -> URP post exposure; ACES; light bloom; vignette
     public static void Grade(float exposure)
     {
         var p = GameProfile; if (p == null) return;
         float ev = ExpBias + Mathf.Log(Mathf.Max(0.05f, exposure) / 0.84f, 2f);
-        if (Mathf.Abs(ev - lastExp) < 0.002f && Mathf.Abs(WorldSat - lastSat) < 0.01f && Mathf.Abs(WorldWarm - lastWarm) < 0.01f) return;
-        lastExp = ev; lastSat = WorldSat; lastWarm = WorldWarm;
+        if (Mathf.Abs(ev - lastExp) < 0.002f && Mathf.Abs(WorldSat - lastSat) < 0.01f && Mathf.Abs(WorldWarm - lastWarm) < 0.01f && Mathf.Abs(WorldCon - lastCon) < 0.01f) return;
+        lastExp = ev; lastSat = WorldSat; lastWarm = WorldWarm; lastCon = WorldCon;
         Tonemapping tm; if (p.TryGet(out tm)) { tm.active = Tm != TonemappingMode.None; tm.mode.Override(Tm); }
         ColorAdjustments ca;
-        if (p.TryGet(out ca)) { ca.active = true; ca.postExposure.Override(ev); ca.saturation.Override(SatBase + SatAdd + WorldSat); ca.contrast.Override(12f + ConAdd);   /* ffu6f: 8 -> 12 with the brighter grade */ }
+        if (p.TryGet(out ca)) { ca.active = true; ca.postExposure.Override(ev); ca.saturation.Override(SatBase + SatAdd + WorldSat); ca.contrast.Override(12f + ConAdd + WorldCon);   /* ffu6f: 8 -> 12 with the brighter grade */ }
         Bloom b; if (p.TryGet(out b)) { b.active = BloomScale > 0f; b.intensity.Override(0.32f * BloomScale); b.threshold.Override(1.05f); b.scatter.Override(0.6f); b.highQualityFiltering.Override(!Look.Mobile); }
         WhiteBalance wb; if (p.TryGet(out wb)) { wb.active = true; wb.temperature.Override(Mathf.Clamp(WarmBase + WarmAdd + WorldWarm, -100f, 100f)); }
         Vignette v; if (p.TryGet(out v)) { v.active = true; v.intensity.Override(0.18f); v.smoothness.Override(0.5f); }
@@ -228,8 +229,9 @@ public static class U6
     // ffu6j FF/Sky globals (x exposure mult, y zenith chroma, z high wisps, w sun disc). The sky gets its own -0.6 EV trim (the
     // game grade's +EV lift washed the HDRI to white); wisps only on the full tier (phones / Tesla: 0 = no noise maths).
     // Knobs u6skyev=<EV> u6skysat=<x> u6wisp=<0..1> u6sun=0.
-    public static float SkyEv = -0.6f, SkySat = 2.0f, SkyWisp = -1f, SkySun = 1f;
-    static readonly int idSky = Shader.PropertyToID("_FFSky");
+    public static float SkyEv = -0.6f, SkySat = 2.6f, SkyWisp = -1f, SkySun = 1f;
+    static readonly int idSky = Shader.PropertyToID("_FFSky"), idMacro = Shader.PropertyToID("_FFMacro");
+    public static float MacroAmp = -1f;   // ffu6k FF/Std macro variation amplitude (-1 = by tier); knob u6macro=<x>
     static bool skyLogged;
     static void SkyGlobals()
     {
@@ -248,6 +250,7 @@ public static class U6
         Fog(c);
         Atmos(c);
         SkyGlobals();
+        Shader.SetGlobalVector(idMacro, new Vector4(MacroAmp >= 0f ? MacroAmp : (Perf60.On && Perf60.Tier < 1 ? 0f : 0.14f), 0f, 0f, 0f));
         var rp = c.GetComponent<RealPost>();
         if (rp != null && rp.enabled) { Grade(rp.exposure); return; }
         var lp = c.GetComponent<LBPost>();

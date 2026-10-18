@@ -71,6 +71,20 @@ public static class Light55
     // ffu6g: under water (the Underwater world and a ranch camera under the pond surface) read milky teal after the ffu6e +0.9 EV
     // lift (mean 34,85,96 vs 2022.3 28,66,82) -> -0.7 EV there and a cooler white balance (deep blue, not warm teal)
     public const float UnderExpK = 0.52f, UnderWarm = -8f;   // ffu6h: 0.62 -> 0.52 (G-under 43,83,95 vs 2022.3 28,66,82)
+    // ffu6k: the house EV 2.1 is for the lamp-lit rooms; the yard / porch (same world) is in full sun and read ~1.7x brighter than
+    // 2022.3 (milky walls, white sky). Indoors = a ray straight up from the camera meets the ceiling collider (Ceiling55Col) within
+    // 12 m; eased per camera over ~0.4 s so walking through the door adapts like an eye. Outdoor house EV 1.25 (2022.3 1.18 + the lift).
+    public const float HouseOutK = 1.25f;
+    static readonly Dictionary<Camera, float> houseIn = new Dictionary<Camera, float>();
+    static float HouseK(Camera c)
+    {
+        bool inside = Physics.Raycast(c.transform.position, Vector3.up, 12f, ~0, QueryTriggerInteraction.Ignore);
+        float k; if (!houseIn.TryGetValue(c, out k)) k = inside ? 1f : 0f;
+        k = Mathf.MoveTowards(k, inside ? 1f : 0f, Time.unscaledDeltaTime * 2.5f);
+        houseIn[c] = k;
+        U6.WorldWarm = Mathf.Lerp(3f, 9f, k);
+        return Mathf.Lerp(HouseOutK, ExpK(WorldId.House), k);
+    }
     static float ExpK(WorldId w) { return w == WorldId.House ? 2.1f : w == WorldId.Mars ? 1.04f : w == WorldId.Callisto ? 1.1f : w == WorldId.Underwater ? UnderExpK : 1f; }
     // Worlds.PondUnder: a ranch camera under the pond gets the underwater grade too (Light55.PreCull ran first with the ranch values)
     public static void UnderGrade(Camera c)
@@ -113,13 +127,14 @@ public static class Light55
         // ffu6d: indoors ACES read red-saturated (-12); ffu6e: house brighter (EV 2.1 + the global lift) and warm-golden instead of red-brown
         U6.WorldSat = w == WorldId.House ? -2f : 0f;
         U6.WorldWarm = w == WorldId.House ? 9f : w == WorldId.Underwater ? UnderWarm : 0f;
+        U6.WorldCon = w == WorldId.Moon ? 16f : w == WorldId.Mars ? 6f : 0f;   // ffu6k: airless Moon = hard, high-contrast light; Mars a little
         RealPost rp;
         if (!posts.TryGetValue(c, out rp)) { rp = c.GetComponent<RealPost>(); posts[c] = rp; }
         if (rp != null)
         {
             float e0;
             if (!postExp0.TryGetValue(rp, out e0)) { e0 = rp.exposure; postExp0[rp] = e0; }
-            rp.exposure = e0 * ExpK(w);
+            rp.exposure = e0 * (w == WorldId.House ? HouseK(c) : ExpK(w));
         }
     }
 

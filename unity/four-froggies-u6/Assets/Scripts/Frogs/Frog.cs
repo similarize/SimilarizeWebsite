@@ -116,6 +116,7 @@ public partial class Frog : MonoBehaviour
         color = Roster.Color(index);
         gameObject.name = "Frog " + nick;
         gameObject.layer = 9;
+        Blob6.Attach(gameObject, 9);   // ffu6k contact shadow
         transform.position = pos;
         yaw = yawDeg;
         transform.rotation = Quaternion.Euler(0f, yaw, 0f);
