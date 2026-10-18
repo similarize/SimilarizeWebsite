@@ -39,7 +39,7 @@ public static class Mats
         else if (kind == 1) { m.SetFloat("_Glossiness", 0.72f); m.SetFloat("_Metallic", 0.55f); }
         else if (kind == 3) { m.SetFloat("_Glossiness", 0.82f); m.SetFloat("_Metallic", 0.85f); }
         else if (kind >= 1000) { int q = kind - 1000; m.SetFloat("_Glossiness", (q / 21) / 20f); m.SetFloat("_Metallic", (q % 21) / 20f); }   // PBR
-        else if (kind >= 10) { m.SetFloat("_Glossiness", (kind - 10) / 20f); m.SetFloat("_Metallic", 0.12f); }   // Paint
+        else if (kind >= 10) { m.SetFloat("_Glossiness", (kind - 10) / 20f); m.SetFloat("_Metallic", 0.12f); if (kind - 10 >= 15 && m.HasProperty("_Coat")) m.SetFloat("_Coat", 1f); }   // Paint (ffu6f: gloss >= 0.75 = clear coat)
         cache[k] = m;
         return m;
     }

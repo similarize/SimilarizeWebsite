@@ -1,5 +1,7 @@
 // ffu6 (from Lambo Blast u6 LB/Std): URP stand-in for Built-in 'Standard' with the same property names (_Color, _MainTex, _Glossiness, _Metallic, _BumpMap,
 // _DetailAlbedoMap + _UVSec, _SrcBlend/_DstBlend/_ZWrite) and keywords (_NORMALMAP, _DETAIL_MULX2, _ALPHABLEND_ON, _ALPHAPREMULTIPLY_ON),
+// ffu6f: _Coat = clear-coat lobe (car / robot gloss paint, Mats.Paint gloss >= 0.75): a second, sharp fresnel reflection + sun glint
+// over the base paint, like the lacquer on real car paint.
 // so the game's material code (Mats.cs, BuildScript MakeTransparent) works unchanged. Transparent materials disable ShadowCaster.
 Shader "FF/Std"
 {
@@ -14,6 +16,7 @@ Shader "FF/Std"
         _DetailAlbedoMap ("Detail x2", 2D) = "grey" {}
         _UVSec ("Detail UV set", Float) = 0
         _EmissionColor ("Emission", Color) = (0,0,0,0)
+        _Coat ("Clear coat (ffu6f)", Range(0,1)) = 0
         [HideInInspector] _Mode ("Mode", Float) = 0
         [HideInInspector] _SrcBlend ("Src", Float) = 1
         [HideInInspector] _DstBlend ("Dst", Float) = 0
@@ -32,7 +35,7 @@ Shader "FF/Std"
         CBUFFER_START(UnityPerMaterial)
             float4 _MainTex_ST, _DetailAlbedoMap_ST, _BumpMap_ST;
             half4 _Color, _EmissionColor;
-            half _Glossiness, _Metallic, _BumpScale, _UVSec, _Mode, _SrcBlend, _DstBlend, _ZWrite, _Cull;
+            half _Glossiness, _Metallic, _BumpScale, _UVSec, _Mode, _SrcBlend, _DstBlend, _ZWrite, _Cull, _Coat;
         CBUFFER_END
         TEXTURE2D(_MainTex); SAMPLER(sampler_MainTex);
         TEXTURE2D(_BumpMap); SAMPLER(sampler_BumpMap);
@@ -81,7 +84,21 @@ Shader "FF/Std"
             #if !defined(_SURFACE_TYPE_TRANSPARENT)
                 a = 1.0;
             #endif
-                return LBShade(i, alb, _Metallic, _Glossiness, nw, _EmissionColor.rgb, a, 0, 0);
+                half4 c = LBShade(i, alb, _Metallic, _Glossiness, nw, _EmissionColor.rgb, a, 0, 0);
+            #if !defined(_SURFACE_TYPE_TRANSPARENT)
+                if (_Coat > 0.001)
+                {
+                    // ffu6f clear coat: smooth lacquer on the geometric normal (no orange peel from the base normal map)
+                    float3 Vv = GetWorldSpaceNormalizeViewDir(i.positionWS);
+                    half ndv = saturate(dot(N, Vv));
+                    half Fc = (0.04 + 0.96 * pow(1.0 - ndv, 5.0)) * _Coat;
+                    half3 env = FFEnv(reflect(-Vv, N), 0.2, i.positionWS, i.positionCS);
+                    float3 Ld = FFLightDir(); float3 Hh = normalize(Ld + Vv);
+                    half sp = pow(saturate(dot(N, Hh)), 900.0) * 28.0 * saturate(dot(N, Ld)) * FFShadow(i.positionWS);
+                    c.rgb = c.rgb * (1.0 - Fc) + (env + FFLightCol() * sp) * Fc;
+                }
+            #endif
+                return c;
             }
             ENDHLSL
         }

@@ -215,7 +215,7 @@ public class UnderwaterWorld : MonoBehaviour
     void GateInit()
     {
         var sea = new List<Renderer>(); var life = new List<Renderer>();
-        foreach (var r in root.GetComponentsInChildren<Renderer>(true)) if (!(r is ParticleSystemRenderer)) sea.Add(r);
+        foreach (var r in root.GetComponentsInChildren<Renderer>(true)) if (!(r is ParticleSystemRenderer) && !shafts.Contains(r)) sea.Add(r);
         foreach (var s in schools) foreach (var t in s.fish) if (t != null) life.AddRange(t.GetComponentsInChildren<Renderer>(true));
         foreach (var w in swimmers) if (w.t != null) life.AddRange(w.t.GetComponentsInChildren<Renderer>(true));
         foreach (var k in kelp) if (k != null) life.AddRange(k.GetComponentsInChildren<Renderer>(true));
@@ -495,8 +495,23 @@ public class UnderwaterWorld : MonoBehaviour
         for (int i = 0; i < 9; i++)
         {
             var s = Mats.Prim(PrimitiveType.Cube, root, L((i - 4) * 14f, -9f, (i % 2 == 0 ? 14f : -12f)), new Vector3(2.2f, 16f, 2.2f), new Vector3(0f, i * 20f, (i - 4) * 2.5f), m, false);
-            s.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            var sr = s.GetComponent<Renderer>();
+            sr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            shafts.Add(sr);
         }
+        U6Cam.PreCull += ShaftGate;
+    }
+
+    // ffu6e: the light shafts are only for a diver - seen from above the surface (shore, boats, the pond race) they were pale
+    // glass slabs standing in the water (2022.3 too). Per camera, like the sea gate.
+    readonly List<Renderer> shafts = new List<Renderer>(); bool shaftsShown = true;
+    static void ShaftGate(Camera c)
+    {
+        var u = I;
+        if (u == null || u.shafts.Count == 0 || c == null || c.cameraType != CameraType.Game || (c.cullingMask & 1) == 0) return;
+        Vector3 p = c.transform.position;
+        bool under = p.y - Layout.WaterY < 0.0f && Layout.PondQ(p.x, p.z) < 1.12f;
+        if (under != u.shaftsShown) { u.shaftsShown = under; foreach (var r in u.shafts) if (r != null) r.forceRenderingOff = !under; }
     }
 
     void Life(System.Random r)

@@ -4,6 +4,9 @@
 // alpha so reflections are not dimmed by the transparency.
 // ffu39: real pond look - no contact / wake foam (only ~1 s spray), muddy silt plumes, darker glassier water whose moving
 // ripples show as distorted reflections, meniscus round legs, floating leaves, masked to the shoreline ellipse.
+// ffu6f: livelier: slow broad swell in the normals, full Schlick fresnel (mirror sky at grazing angles), brighter reflection,
+// a hint of sky in the water body, deeper water more opaque (the seabed clutter only shows in the shallows), gentle lapping line
+// at the shore.
 // ffu6: URP 17.6 port (UniversalForward; main light / SH / probe via URP; ripple sim via FFRipple.hlsl; gamma colour constants -> linear).
 Shader "FF/RealWater"
 {
@@ -104,15 +107,16 @@ Shader "FF/RealWater"
                         + Rip(w * 0.13 + float2(-t * 0.011, t * 0.015)) * 0.35
                         + Rip(w * 0.41 + float2(t * 0.027, -t * 0.019)) * 0.2 * near * _Detail;
                 s *= _Strength * lerp(0.4, 0.8, near);
+                s += Rip(w * 0.011 + float2(t * 0.0021, -t * 0.0016)).yx * (0.16 * _Strength);   // ffu6f: broad, slow swell
                 float3 N = normalize(float3(s.x - rip.x, 1.0, s.y - rip.y));
                 float3 V = normalize(_WorldSpaceCameraPos - i.wp);
                 half ndv = saturate(dot(N, V));
-                half F = 0.02 + 0.6 * pow(1.0 - ndv, 5.0);   // ffu39: Schlick for water, a bit more mirror at grazing angles
+                half F = 0.02 + 0.86 * pow(1.0 - ndv, 5.0);   // ffu6f: 0.6 -> 0.86 (real water is a mirror at grazing angles)   // ffu39: Schlick for water, a bit more mirror at grazing angles
 
                 float3 R = reflect(-V, N);
                 R.y = max(R.y, 0.05);
                 R = normalize(R);
-                half3 refl = FFEnv(R, 0.35, i.wp, i.pos) * 0.85 * LB_TOLIN(half3(0.88, 0.94, 0.97));   // sharper: trees + sky read in the ripples
+                half3 refl = FFEnv(R, 0.35, i.wp, i.pos) * 1.0 * LB_TOLIN(half3(0.9, 0.95, 0.98));   // sharper: trees + sky read in the ripples
 
                 float2 suv = (i.wp.xz - _SeaRect.xy) * _SeaRect.zw;
                 // refraction: the bed / depth tint is looked up through the moving surface
@@ -123,10 +127,11 @@ Shader "FF/RealWater"
                 half dk = saturate(depth * 1.7);
                 // ffu39: dark, peaty pond water; suspended silt turns it murky brown-green and opaque
                 half3 body = lerp(_Shallow.rgb * 0.85, _Deep.rgb * 0.7, dk) * light;
+                body += refl * (0.07 * (1.0 - dk * 0.5));   // ffu6f: a little sky scattered in the water body (not flat brown)
                 half sl = saturate(silt * 1.6);
                 half3 siltC = LB_TOLIN(half3(0.25, 0.21, 0.12)) * (amb * 0.9 + _LightColor0 * saturate(L.y) * 0.45);
                 body = lerp(body, siltC, sl * 0.85);
-                half aBody = lerp(0.2, 0.95, saturate(depth * 2.4));
+                half aBody = lerp(0.24, 0.97, saturate(depth * 2.9));   // ffu6f: deep water reads as water, not glass over the seabed
                 aBody = lerp(aBody, 0.97, sl * 0.8);
 
                 float3 H = normalize(L + V);
@@ -154,6 +159,9 @@ Shader "FF/RealWater"
                 half3 foamC = LB_TOLIN(half3(0.82, 0.86, 0.86)) * (amb * 0.85 + _LightColor0 * saturate(L.y) * 0.6);
                 col = lerp(col, foamC, fm);
                 a = max(a, fm);
+                // ffu6f: gentle lapping line just off the shore (thin, slow, broken by the ripple normals)
+                half lap = saturate(1.0 - abs(depth * 22.0 - 1.1) * 1.4) * (0.55 + 0.45 * sin(t * 1.1 - depth * 90.0 + fn * 3.0));
+                col = lerp(col, foamC, lap * 0.22 * near); a = max(a, lap * 0.22 * near);
                 half edge = saturate(depth * 16.0) * pmask;    // soft shoreline
                 col *= edge; a *= edge;
                 col = MixFogColor(col, unity_FogColor.rgb * a, InitializeInputDataFog(float4(i.wp, 1.0), i.fogCoord));

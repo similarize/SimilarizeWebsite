@@ -108,7 +108,7 @@ public static class U6
         lastExp = ev; lastSat = WorldSat; lastWarm = WorldWarm;
         Tonemapping tm; if (p.TryGet(out tm)) { tm.active = Tm != TonemappingMode.None; tm.mode.Override(Tm); }
         ColorAdjustments ca;
-        if (p.TryGet(out ca)) { ca.active = true; ca.postExposure.Override(ev); ca.saturation.Override(SatBase + SatAdd + WorldSat); ca.contrast.Override(8f + ConAdd); }
+        if (p.TryGet(out ca)) { ca.active = true; ca.postExposure.Override(ev); ca.saturation.Override(SatBase + SatAdd + WorldSat); ca.contrast.Override(12f + ConAdd);   /* ffu6f: 8 -> 12 with the brighter grade */ }
         Bloom b; if (p.TryGet(out b)) { b.active = BloomScale > 0f; b.intensity.Override(0.32f * BloomScale); b.threshold.Override(1.05f); b.scatter.Override(0.6f); b.highQualityFiltering.Override(!Look.Mobile); }
         WhiteBalance wb; if (p.TryGet(out wb)) { wb.active = true; wb.temperature.Override(Mathf.Clamp(WarmBase + WarmAdd + WorldWarm, -100f, 100f)); }
         Vignette v; if (p.TryGet(out v)) { v.active = true; v.intensity.Override(0.18f); v.smoothness.Override(0.5f); }
@@ -211,7 +211,7 @@ public static class U6
                   c.GetComponent<ShowroomGrade>() == null;
         if (!on) { Shader.SetGlobalVector(idAtm, Vector4.zero); return; }
         Color fc = RenderSettings.fogColor; if (Linear) fc = fc.linear;
-        Shader.SetGlobalVector(idAtm, new Vector4(1f, RenderSettings.fogDensity * 0.6f, 0.011f, 0f));
+        Shader.SetGlobalVector(idAtm, new Vector4(1f, RenderSettings.fogDensity * 0.45f, 0.011f, 0f));   // ffu6f: 0.6 -> 0.45 (the ffu6e +0.9 EV lift made the haze milky)
         Shader.SetGlobalVector(idAtmC, new Vector4(fc.r, fc.g, fc.b, 0.95f));
         Shader.SetGlobalVector(idAtmS, new Vector4(0.34f, 0.26f, 0.16f, 0.62f));
         if (!atmLogged) { atmLogged = true; Debug.Log("U6: height fog + sun glow on (density " + RenderSettings.fogDensity.ToString("0.0000") + ")"); }

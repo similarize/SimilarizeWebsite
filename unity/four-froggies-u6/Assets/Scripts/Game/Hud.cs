@@ -131,6 +131,13 @@ public class ViewHud
         inset = units; layW = width;
         bool narrow = width < 900f;   // ffu6d: split views: smaller toast / prompt text so it wraps inside the view
         toast.fontSize = narrow ? 22 : 26; prompt.fontSize = narrow ? 19 : 22;
+        // ffu6f: quarter / half views - a long toast or prompt shrinks to fit its box (down to 14 / 13 pt) instead of
+        // spilling over the view's other HUD or the split line
+        foreach (var tx in new[] { toast, prompt })
+        {
+            tx.resizeTextForBestFit = narrow; tx.resizeTextMaxSize = tx.fontSize; tx.resizeTextMinSize = tx == toast ? 14 : 13;
+            tx.verticalOverflow = narrow ? VerticalWrapMode.Truncate : VerticalWrapMode.Overflow;
+        }
         prompt.rectTransform.anchoredPosition = new Vector2(0f, 64f + units);
         // ffu14e: on a full-width landscape view keep the (long, mech) prompt clear of the status corner (x 10..330)
         prompt.rectTransform.sizeDelta = new Vector2(width >= 1100f ? Mathf.Min(760f, width - 680f) : Mathf.Min(760f, width - 20f), 70f);
