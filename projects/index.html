@@ -73,6 +73,8 @@
       place-items: center;
     }
     .mark svg { width: 4.4rem; height: 4.4rem; }
+    .mark img { width: 100%; height: 100%; object-fit: cover; border-radius: 15px; display: block; }
+    .mark.photo { background: #0d2419; overflow: hidden; }
     .status {
       display: inline-block;
       font-size: 0.72rem;
@@ -190,8 +192,23 @@
         <p class="quiet">The research bot is still working. Nothing public to open yet.</p>
       </div>
     </article>
+    <article>
+      <div class="mark photo" aria-hidden="true">
+        <img src="/projects/bookofmormon-thumb.jpg" alt="" width="240" height="240" loading="lazy" decoding="async">
+      </div>
+      <div>
+        <p class="status">Documentary series</p>
+        <h2>The Pasión River Model</h2>
+        <p>A documentary series on Book of Mormon geography. On the Pasión River Model, the evidence points to the Maya lowlands of Guatemala and Belize, with the Pasión River as the River Sidon and the ruins of Ceibal as Zarahemla. It's offered as a case to weigh, not as proof.</p>
+        <ul>
+          <li>Series 1: twelve episodes, about 1 hour 9 minutes in all.</li>
+          <li>Streams in 1080p, 720p, 480p or 360p, picking whatever your connection can handle.</li>
+        </ul>
+        <a class="go" href="https://bookofmormon.similarize.com/">Watch the series</a>
+      </div>
+    </article>
   </main>
-  <footer><a href="/">Similarize</a> · <a href="/videos/">Videos</a> · <a href="/games/">Games</a></footer>
+  <footer><a href="/">Similarize</a> · <a href="/videos/">Videos</a> · <a href="/games/">Games</a><span id="signin"> · <a href="/p/login" rel="nofollow">Sign in</a></span></footer>
   <script>
   (function () {
     // Ben-only cards. /p/* sits behind Cloudflare Access (Google login). Signed out,
@@ -201,6 +218,7 @@
       .then(function (r) { return r && r.ok && r.type !== "opaqueredirect" ? r.json() : null; })
       .then(function (d) {
         if (!d || d.ben !== true || !Array.isArray(d.cards)) return;
+        var si = document.getElementById("signin"); if (si) si.textContent = " · Signed in";
         var list = document.querySelector("main.list");
         if (!list) return;
         d.cards.forEach(function (html) { if (typeof html === "string") list.insertAdjacentHTML("beforeend", html); });
