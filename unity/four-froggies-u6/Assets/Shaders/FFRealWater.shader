@@ -48,7 +48,9 @@ Shader "FF/RealWater"
             float4 _SeaRect, _Shallow, _Deep;
             float _Strength, _Speed, _Detail, _Patch;
             CBUFFER_END
-            float4 _FFDbgW;   // ffu6p diag (U6Dbg u6pw=2|3)
+            float4 _FFDbgW;   // ffu6p diag (U6Dbg u6pw=2|3|4)
+            float4 _FFEnvFb;  // ffu6p: x = probe-black fallback on, y = _FFRanchCube bound (U6Dbg.BindRanchCube)
+            TEXTURECUBE(_FFRanchCube); SAMPLER(sampler_FFRanchCube);
 
             struct appdata_base { float4 vertex : POSITION; };
             struct v2f { float4 pos : SV_POSITION; float3 wp : TEXCOORD0; float fogCoord : TEXCOORD1; };
@@ -119,7 +121,16 @@ Shader "FF/RealWater"
                 float3 R = reflect(-V, N);
                 R.y = max(R.y, 0.05);
                 R = normalize(R);
-                half3 refl = FFEnv(R, 0.35, i.wp, i.pos) * 1.0 * LB_TOLIN(half3(0.9, 0.95, 0.98));   // sharper: trees + sky read in the ripples
+                half3 refl = FFEnv(R, 0.35, i.wp, i.pos);
+                // ffu6p: on 6.6 URP's probe lookup came back black here (dark basin, no sky mirror) -> the ranch probe's own cubemap,
+                // then the SH sky, so the pond always mirrors the sky
+                if (_FFEnvFb.x > 0.5 && max(refl.r, max(refl.g, refl.b)) < 0.004)
+                {
+                    half3 cube = _FFEnvFb.y > 0.5 ? SAMPLE_TEXTURECUBE_LOD(_FFRanchCube, sampler_FFRanchCube, R, 0.35).rgb : half3(0, 0, 0);
+                    refl = max(cube.r, max(cube.g, cube.b)) > 0.004 ? cube : FFSH(R) * 1.15;
+                }
+                refl *= LB_TOLIN(half3(0.9, 0.95, 0.98));   // sharper: trees + sky read in the ripples
+                if (_FFDbgW.x > 2.5) return half4(refl, 1);   // ffu6p u6pw=4
 
                 float2 suv = (i.wp.xz - _SeaRect.xy) * _SeaRect.zw;
                 // refraction: the bed / depth tint is looked up through the moving surface
@@ -166,7 +177,7 @@ Shader "FF/RealWater"
                 half lap = saturate(1.0 - abs(depth * 22.0 - 1.1) * 1.4) * (0.55 + 0.45 * sin(t * 1.1 - depth * 90.0 + fn * 3.0));
                 col = lerp(col, foamC, lap * 0.22 * near); a = max(a, lap * 0.22 * near);
                 half edge = saturate(depth * 16.0) * pmask;    // soft shoreline
-                if (_FFDbgW.x > 1.5) return half4(edge, pmask, depth, 1);   // ffu6p u6pw=3
+                if (_FFDbgW.x > 1.5 && _FFDbgW.x < 2.5) return half4(edge, pmask, depth, 1);   // ffu6p u6pw=3
                 col *= edge; a *= edge;
                 col = MixFogColor(col, unity_FogColor.rgb * a, InitializeInputDataFog(float4(i.wp, 1.0), i.fogCoord));
                 return half4(col, a);
