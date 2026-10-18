@@ -117,16 +117,16 @@ public static class U6
     }
 
     static readonly Camera[] camBuf = new Camera[32];
-    static int lastRes = -1, lastMsaa = -1; static float lastDist = -1f; static ShadowQuality lastQ = (ShadowQuality)(-1);
+    static int lastRes = -1, lastMsaa = -1; static float lastDist = -1f; static UnityEngine.ShadowQuality lastQ = (UnityEngine.ShadowQuality)(-1);
     static string lastTag = "";
 
     // the LateUpdate mirror (U6Runner)
     public static void Mirror()
     {
         var a = Asset; if (a == null) return;
-        ShadowQuality q = QualitySettings.shadows;
-        int res = QualitySettings.shadowResolution == ShadowResolution.VeryHigh ? 4096 : QualitySettings.shadowResolution == ShadowResolution.High ? 2048 :
-                  QualitySettings.shadowResolution == ShadowResolution.Medium ? 1024 : 512;
+        UnityEngine.ShadowQuality q = QualitySettings.shadows;
+        int res = QualitySettings.shadowResolution == UnityEngine.ShadowResolution.VeryHigh ? 4096 : QualitySettings.shadowResolution == UnityEngine.ShadowResolution.High ? 2048 :
+                  QualitySettings.shadowResolution == UnityEngine.ShadowResolution.Medium ? 1024 : 512;
         if (res != lastRes) { lastRes = res; a.mainLightShadowmapResolution = res; }
         float dist = Mathf.Max(5f, QualitySettings.shadowDistance);
         if (Mathf.Abs(dist - lastDist) > 0.01f) { lastDist = dist; a.shadowDistance = dist; }
@@ -134,7 +134,7 @@ public static class U6
         if (q != lastQ)
         {
             lastQ = q;
-            if (sun != null && sun.shadows != LightShadows.None) sun.shadows = q == ShadowQuality.HardOnly ? LightShadows.Hard : LightShadows.Soft;
+            if (sun != null && sun.shadows != LightShadows.None) sun.shadows = q == UnityEngine.ShadowQuality.HardOnly ? LightShadows.Hard : LightShadows.Soft;
         }
         int n = Camera.GetAllCameras(camBuf);
         int views = 0;
@@ -146,7 +146,7 @@ public static class U6
         if (MsaaForce > 0) msaa = MsaaForce;
         msaa = msaa >= 4 ? 4 : msaa >= 2 ? 2 : 1;
         if (msaa != lastMsaa) { lastMsaa = msaa; a.msaaSampleCount = msaa; }
-        bool shadowsOn = q != ShadowQuality.Disable;
+        bool shadowsOn = q != UnityEngine.ShadowQuality.Disable;
         for (int i = 0; i < n; i++)
         {
             Camera c = camBuf[i]; if (c == null) continue;
