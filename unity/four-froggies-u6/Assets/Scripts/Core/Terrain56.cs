@@ -164,6 +164,8 @@ public static class Terrain56
         td.terrainLayers = six ? new[] { old[0], old[1], old[2], old[3], pl, ll } : old;
         // ffu6j: the Grass004 scan reads olive-dark under Linear + ACES next to the 2022.3 lawn: lift + freshen layer 0 (URP Terrain/Lit diffuse remap)
         if (old[0] != null) { old[0].diffuseRemapMin = Vector4.zero; old[0].diffuseRemapMax = new Vector4(1.28f, 1.34f, 1.12f, 1f); }
+        // ffu6l: the dirt scan read dark olive next to the 2022.3 yard: lift + warm it (brown earth, not green-grey)
+        if (old[1] != null) { old[1].diffuseRemapMin = Vector4.zero; old[1].diffuseRemapMax = new Vector4(1.38f, 1.22f, 1.0f, 1f); }
         Layers = six ? 6 : 4;
         int ar = td.alphamapResolution, nl = Layers;
         float size = Layout.Half * 2f;

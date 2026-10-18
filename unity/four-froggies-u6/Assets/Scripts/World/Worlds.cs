@@ -114,14 +114,14 @@ public static class Worlds
                 break;
             case WorldId.Moon:   // ffu41: no air - no haze, a dim fill so the shadows stay stark
                 RenderSettings.fog = false;
-                RenderSettings.ambientSkyColor = new Color(0.2f, 0.2f, 0.23f); RenderSettings.ambientEquatorColor = new Color(0.16f, 0.16f, 0.17f); RenderSettings.ambientGroundColor = new Color(0.1f, 0.1f, 0.1f);
+                RenderSettings.ambientSkyColor = new Color(0.1f, 0.1f, 0.12f); RenderSettings.ambientEquatorColor = new Color(0.08f, 0.08f, 0.085f); RenderSettings.ambientGroundColor = new Color(0.06f, 0.06f, 0.06f);   // ffu6l: half the fill (deeper crater / lander shade)
                 break;
             case WorldId.House:
                 RenderSettings.fog = false;
                 RenderSettings.ambientSkyColor = new Color(0.78f, 0.74f, 0.68f); RenderSettings.ambientEquatorColor = new Color(0.62f, 0.56f, 0.5f); RenderSettings.ambientGroundColor = new Color(0.35f, 0.3f, 0.25f);
                 break;
             default:
-                RenderSettings.fog = true; RenderSettings.fogColor = Color.Lerp(fog0, new Color(0.02f, 0.03f, 0.08f), launchDark); RenderSettings.fogDensity = fogD0 * (1f - 0.7f * launchDark) * altFog;
+                RenderSettings.fog = true; RenderSettings.fogColor = Color.Lerp(Color.Lerp(fog0, U6.RanchFogTint, U6.RanchFogBlue), new Color(0.02f, 0.03f, 0.08f), launchDark); RenderSettings.fogDensity = fogD0 * (1f - 0.7f * launchDark) * altFog;   // ffu6l: bluer ranch haze (pale grey horizon)
                 RenderSettings.ambientSkyColor = amb0; RenderSettings.ambientEquatorColor = amb1; RenderSettings.ambientGroundColor = amb2;
                 break;
         }

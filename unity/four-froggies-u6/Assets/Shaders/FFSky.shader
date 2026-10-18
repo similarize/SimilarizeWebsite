@@ -74,7 +74,7 @@ Shader "FF/Sky"
                 float el = wd.y, up = saturate(el * 2.5);
                 // chroma lift towards the zenith (clouds have little chroma, so they stay white)
                 half lum = dot(c, half3(0.2126, 0.7152, 0.0722));
-                c = max(0, lum + (c - lum) * lerp(1.45, k.y, saturate(el * 4.0)));   // ffu6k: more blue lower down too (houseout sky still pale)
+                c = max(0, lum + (c - lum) * lerp(1.8, k.y, saturate(el * 4.0)));   // ffu6l: 1.45 -> 1.8 (lower band still grey)   // ffu6k: more blue lower down too (houseout sky still pale)
                 half blue = saturate((c.b - c.r) / max(c.b, 1e-3) * 2.5);
                 c *= lerp(1.0, 0.86, blue * up);
                 c *= k.x;
@@ -97,7 +97,7 @@ Shader "FF/Sky"
                 }
                 // horizon haze to the fog colour
                 float hz = pow(1.0 - saturate(abs(el)), 6.0);
-                c = lerp(c, unity_FogColor.rgb * 1.05, hz * 0.3);
+                c = lerp(c, unity_FogColor.rgb * half3(0.94, 1.0, 1.08), hz * 0.18);   // ffu6l: thinner, bluer haze band (0.3 grey)
                 return half4(c, 1);
             }
             ENDHLSL

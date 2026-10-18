@@ -50,7 +50,7 @@ public static class Light55
         {
             case WorldId.Mars: return 0.62f;
             case WorldId.Callisto: return 0.45f;
-            case WorldId.Moon: return 1.12f;
+            case WorldId.Moon: return 1.3f;   // ffu6l: harder airless sun (1.12 -> 1.3) with a darker fill + -0.32 EV
             case WorldId.Underwater: return 0.55f;
             case WorldId.House: return 0.18f;
             default: return 1f;
@@ -85,7 +85,8 @@ public static class Light55
         U6.WorldWarm = Mathf.Lerp(3f, 9f, k);
         return Mathf.Lerp(HouseOutK, ExpK(WorldId.House), k);
     }
-    static float ExpK(WorldId w) { return w == WorldId.House ? 2.1f : w == WorldId.Mars ? 1.04f : w == WorldId.Callisto ? 1.1f : w == WorldId.Underwater ? UnderExpK : 1f; }
+    static float ExpK(WorldId w) { return w == WorldId.House ? 2.1f : w == WorldId.Mars ? 1.04f : w == WorldId.Callisto ? 1.1f : w == WorldId.Underwater ? UnderExpK : w == WorldId.Moon ? MoonExpK : 1f; }
+    public const float MoonExpK = 0.8f;   // ffu6l: the +0.9 EV grade lift washed the regolith flat-white (2022.3 reads darker + harder)
     // Worlds.PondUnder: a ranch camera under the pond gets the underwater grade too (Light55.PreCull ran first with the ranch values)
     public static void UnderGrade(Camera c)
     {
@@ -104,11 +105,19 @@ public static class Light55
         if (!On || sun == null || sunI0 < 0f) return;
         // the sun as the game left it (story storm dimming, garden demo dusk ...) is this camera's reference; PostRender
         // puts it back after the camera, so scripts between frames always see and change the reference value
-        if (!applied) { baseI = sun.intensity; baseC = sun.color; baseS = sun.shadowStrength; applied = true; }
+        if (!applied) { baseI = sun.intensity; baseC = sun.color; baseS = sun.shadowStrength; baseSh = sun.shadows; applied = true; }
         if (c.cullingMask == (1 << RealRoom.Layer)) { RoomPreCull(); return; }
         sun.intensity = baseI * SunK(w);
         sun.color = w == WorldId.Ranch || w == WorldId.Space ? baseC : SunCol(w);
-        sun.shadowStrength = w == WorldId.Moon ? 0.97f : w == WorldId.Mars ? 0.8f : baseS;
+        sun.shadowStrength = w == WorldId.Moon ? 1f : w == WorldId.Mars ? 0.8f : baseS;
+        // ffu6l: no air = no penumbra blur from scattering: hard sun shadows on the Moon (soft elsewhere), one diag line
+        sun.shadows = w == WorldId.Moon && baseSh != LightShadows.None ? LightShadows.Hard : baseSh;
+        if (w == WorldId.Moon && !moonLogged)
+        {
+            moonLogged = true;
+            Debug.Log("LIGHT55 moon: sun " + sun.name + " main " + (RenderSettings.sun == sun) + " shadows " + baseSh + "->" + sun.shadows + " str " + sun.shadowStrength.ToString("0.00") +
+                      " dist " + QualitySettings.shadowDistance.ToString("0") + " I " + sun.intensity.ToString("0.00") + " fwd " + sun.transform.forward.ToString("0.00"));
+        }
         if (w == WorldId.House)
         {
             // indoors: the ranch sky's light (same time of day) through the windows + the room lamps (Light55House)
@@ -127,7 +136,7 @@ public static class Light55
         // ffu6d: indoors ACES read red-saturated (-12); ffu6e: house brighter (EV 2.1 + the global lift) and warm-golden instead of red-brown
         U6.WorldSat = w == WorldId.House ? -2f : 0f;
         U6.WorldWarm = w == WorldId.House ? 9f : w == WorldId.Underwater ? UnderWarm : 0f;
-        U6.WorldCon = w == WorldId.Moon ? 16f : w == WorldId.Mars ? 6f : 0f;   // ffu6k: airless Moon = hard, high-contrast light; Mars a little
+        U6.WorldCon = w == WorldId.Moon ? 24f : w == WorldId.Mars ? 6f : 0f;   // ffu6k: airless Moon = hard, high-contrast light; Mars a little
         RealPost rp;
         if (!posts.TryGetValue(c, out rp)) { rp = c.GetComponent<RealPost>(); posts[c] = rp; }
         if (rp != null)
@@ -138,11 +147,11 @@ public static class Light55
         }
     }
 
-    static bool applied; static float baseI, baseS; static Color baseC;
+    static bool applied, moonLogged; static float baseI, baseS; static Color baseC; static LightShadows baseSh = LightShadows.Soft;
     static void PostRender(Camera c)
     {
         if (!applied || sun == null) return;
-        sun.intensity = baseI; sun.color = baseC; sun.shadowStrength = baseS; applied = false;
+        sun.intensity = baseI; sun.color = baseC; sun.shadowStrength = baseS; sun.shadows = baseSh; applied = false;
     }
 
     // ---- the Real Room camera: Standard-shader guests (robots, their props) see the room's lamp, not the ranch sun

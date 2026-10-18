@@ -14,7 +14,7 @@ public class Ffu60 : MonoBehaviour
     Vector3 camPos, camLook; bool camOn;
     Frog f;
     string[] order = { "ranch", "lawn", "pond", "under", "yard" };
-    const float PhaseS = 28f;
+    float PhaseS = 28f;   // ffu6l: &p60s=<seconds> (probe: long pond phase so a slow SwiftShader shot lands in it)
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Boot()
@@ -24,6 +24,7 @@ public class Ffu60 : MonoBehaviour
         I = new GameObject("ffu60").AddComponent<Ffu60>();
         string o = Ffu33.Url("p60");
         if (!string.IsNullOrEmpty(o)) I.order = o.Split(',');
+        float ps; if (float.TryParse(Ffu33.Url("p60s") ?? "", System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out ps) && ps > 5f) I.PhaseS = ps;
         DontDestroyOnLoad(I.gameObject);
     }
 

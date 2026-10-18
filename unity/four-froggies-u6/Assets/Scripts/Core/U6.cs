@@ -222,7 +222,7 @@ public static class U6
         Color fc = RenderSettings.fogColor; if (Linear) fc = fc.linear;
         Shader.SetGlobalVector(idAtm, new Vector4(1f, RenderSettings.fogDensity * 0.45f, 0.011f, 0f));   // ffu6f: 0.6 -> 0.45 (the ffu6e +0.9 EV lift made the haze milky)
         Shader.SetGlobalVector(idAtmC, new Vector4(fc.r, fc.g, fc.b, 0.95f));
-        Shader.SetGlobalVector(idAtmS, new Vector4(0.34f, 0.26f, 0.16f, 0.62f));
+        Shader.SetGlobalVector(idAtmS, new Vector4(0.34f, 0.26f, 0.16f, 0.62f * SunTierK));   // ffu6l: sun in-scatter glow by tier (off on tier 0)
         if (!atmLogged) { atmLogged = true; Debug.Log("U6: height fog + sun glow on (density " + RenderSettings.fogDensity.ToString("0.0000") + ")"); }
     }
 
@@ -230,13 +230,16 @@ public static class U6
     // game grade's +EV lift washed the HDRI to white); wisps only on the full tier (phones / Tesla: 0 = no noise maths).
     // Knobs u6skyev=<EV> u6skysat=<x> u6wisp=<0..1> u6sun=0.
     public static float SkyEv = -0.6f, SkySat = 2.6f, SkyWisp = -1f, SkySun = 1f;
+    // ffu6l: ranch haze tint (Worlds.PreCull lerps the HDRI fog colour towards it) and the sun glow by Perf60 tier
+    public static Color RanchFogTint = new Color(0.56f, 0.69f, 0.86f); public static float RanchFogBlue = 0.25f;
+    public static float SunTierK { get { return !Perf60.On ? 1f : Perf60.Tier >= 2 ? 1f : Perf60.Tier == 1 ? 0.6f : 0f; } }
     static readonly int idSky = Shader.PropertyToID("_FFSky"), idMacro = Shader.PropertyToID("_FFMacro");
     public static float MacroAmp = -1f;   // ffu6k FF/Std macro variation amplitude (-1 = by tier); knob u6macro=<x>
     static bool skyLogged;
     static void SkyGlobals()
     {
         float w = SkyWisp >= 0f ? SkyWisp : (Realism.Lite || Look.Mobile || Perf60Low() ? 0f : 0.5f);
-        Shader.SetGlobalVector(idSky, new Vector4(Mathf.Pow(2f, SkyEv), SkySat, w, SkySun));
+        Shader.SetGlobalVector(idSky, new Vector4(Mathf.Pow(2f, SkyEv), SkySat, w, SkySun * SunTierK));   // ffu6l: sun disc glow off on tier 0
         if (!skyLogged) { skyLogged = true; Debug.Log("U6: FF/Sky ev " + SkyEv + " chroma " + SkySat + " wisps " + w + " sun " + SkySun + " (sky shader " + (RenderSettings.skybox != null && RenderSettings.skybox.shader != null ? RenderSettings.skybox.shader.name : "none") + ")"); }
     }
     static bool Perf60Low() { return Perf60.On && Perf60.Tier < 2; }

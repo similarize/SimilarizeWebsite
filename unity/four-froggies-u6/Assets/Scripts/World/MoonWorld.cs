@@ -158,7 +158,7 @@ public class MoonWorld : MonoBehaviour
         go.AddComponent<MeshFilter>().sharedMesh = mesh;
         var gt = Resources.Load<Texture2D>("LB/moonground");
         Material gm;
-        if (gt != null) { gt.wrapMode = TextureWrapMode.Repeat; gm = Mats.Tex(gt, 0.04f); gm.color = new Color(1.25f, 1.23f, 1.2f); }
+        if (gt != null) { gt.wrapMode = TextureWrapMode.Repeat; gm = Mats.Tex(gt, 0.04f); gm.color = new Color(0.98f, 0.97f, 0.95f); }   // ffu6l (6.6): darker regolith albedo (1.25 read flat-white under Linear + ACES)
         else gm = Mats.Lit(new Color(0.5f, 0.5f, 0.5f));
         go.AddComponent<MeshRenderer>().sharedMaterial = gm;
         go.AddComponent<MeshCollider>().sharedMesh = mesh;
