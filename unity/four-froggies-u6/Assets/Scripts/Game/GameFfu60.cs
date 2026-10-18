@@ -98,7 +98,8 @@ public class Ffu60 : MonoBehaviour
         {
             var ld = sun.GetComponent<UnityEngine.Rendering.Universal.UniversalAdditionalLightData>();
             s += " sun " + sun.name + " " + sun.shadows + " str " + sun.shadowStrength.ToString("0.00") + " en " + sun.isActiveAndEnabled + " cm " + sun.cullingMask + " rlm " + sun.renderingLayerMask +
-                 (ld != null ? " srl " + ld.shadowRenderingLayers : " noLData") + " bias " + sun.shadowBias.ToString("0.00") + "/" + sun.shadowNormalBias.ToString("0.00");
+                 (ld != null ? " srl " + ld.shadowRenderingLayers.value + " csl " + ld.customShadowLayers + " usePipe " + ld.usePipelineSettings : " noLData") + " bias " + sun.shadowBias.ToString("0.00") + "/" + sun.shadowNormalBias.ToString("0.00") +
+                 " near " + sun.shadowNearPlane.ToString("0.00") + (a != null ? " abias " + a.shadowDepthBias.ToString("0.00") + "/" + a.shadowNormalBias.ToString("0.00") + " soft " + a.supportsSoftShadows + " mls " + a.supportsMainLightShadows : "");   // ffu6n
         }
         var cam = Game.I.slots[0].cam;
         var cd = cam != null ? cam.GetComponent<UnityEngine.Rendering.Universal.UniversalAdditionalCameraData>() : null;

@@ -34,7 +34,7 @@ public static class U6
 
     public static void Init(VolumeProfile game, VolumeProfile studio, ScriptableRendererFeature ssao)
     {
-        url = Application.absoluteURL ?? "";
+        url = Application.absoluteURL ?? ""; string s0;
         GameProfile = game; StudioProfile = studio; Ssao = ssao;
         float f;
         if (F("u6exp", out f)) ExpBias = f;
@@ -49,6 +49,8 @@ public static class U6
         if (F("u6wisp", out f)) SkyWisp = f;
         if (Q("u6sun") == "0") SkySun = 0f;
         if (F("u6macro", out f)) MacroAmp = f;
+        s0 = Q("u6sb"); if (s0 != null) { var pr = s0.Split(','); float d0, n0; if (pr.Length == 2 && float.TryParse(pr[0], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out d0) && float.TryParse(pr[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out n0)) ShadowBiasForce = new Vector2(d0, n0); }   // ffu6n diag knob u6sb=<depth>,<normal> (asset + sun, pipeline settings)
+        if (Q("u6pc") == "0") NoSmallShadowCull = true;   // ffu6n diag knob: Cull60 never turns small props' shadows off
         s = Q("u6ssao"); if (s == "0") SsaoForce = 0; else if (s == "1") SsaoForce = 1;
         s = Q("u6msaa"); int mi; if (s != null && int.TryParse(s, out mi)) MsaaForce = Mathf.Clamp(mi, 1, 8);
         var a = Asset;
@@ -137,6 +139,11 @@ public static class U6
     {
         var a = Asset; if (a == null) return;
         UnityEngine.ShadowQuality q = QualitySettings.shadows;
+        if (ShadowBiasForce.x >= 0f)   // ffu6n diag knob u6sb
+        {
+            a.shadowDepthBias = ShadowBiasForce.x; a.shadowNormalBias = ShadowBiasForce.y;
+            var sl = RenderSettings.sun; var sd = sl != null ? sl.GetUniversalAdditionalLightData() : null; if (sd != null && !sd.usePipelineSettings) sd.usePipelineSettings = true;
+        }
         int res = QualitySettings.shadowResolution == UnityEngine.ShadowResolution.VeryHigh ? 4096 : QualitySettings.shadowResolution == UnityEngine.ShadowResolution.High ? 2048 :
                   QualitySettings.shadowResolution == UnityEngine.ShadowResolution.Medium ? 1024 : 512;
         if (res != lastRes) { lastRes = res; a.mainLightShadowmapResolution = res; }
@@ -234,6 +241,7 @@ public static class U6
     public static Color RanchFogTint = new Color(0.56f, 0.69f, 0.86f); public static float RanchFogBlue = 0.25f;
     public static float SunTierK { get { return !Perf60.On ? 1f : Perf60.Tier >= 2 ? 1f : Perf60.Tier == 1 ? 0.6f : 0f; } }
     static readonly int idSky = Shader.PropertyToID("_FFSky"), idMacro = Shader.PropertyToID("_FFMacro");
+    public static Vector2 ShadowBiasForce = new Vector2(-1f, -1f); public static bool NoSmallShadowCull;   // ffu6n diag knobs u6sb / u6pc
     public static float MacroAmp = -1f;   // ffu6k FF/Std macro variation amplitude (-1 = by tier); knob u6macro=<x>
     static bool skyLogged;
     static void SkyGlobals()

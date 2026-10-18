@@ -36,6 +36,7 @@ Shader "FF/RealWater"
             #pragma fragment frag
             #pragma multi_compile_fog
             #pragma multi_compile_fragment _ _REFLECTION_PROBE_BLENDING
+            #pragma multi_compile_fragment _ _REFLECTION_PROBE_ATLAS   // ffu6n: URP 17.6 Forward+ probe atlas (undeclared = shader assumes the atlas -> black reflections)
             #pragma multi_compile _ _CLUSTER_LIGHT_LOOP
             #pragma target 3.5
             #include "Assets/Shaders/FFURP.hlsl"

@@ -284,7 +284,7 @@ public class Cull60 : MonoBehaviour
             bool off = d2 > lim * lim * hyst * hyst;
             if (off != e.off) { e.off = off; e.r.forceRenderingOff = off; }
             // small props (< 1.6 m) stop casting sun shadows past a short distance (a few texels of shadow there)
-            if (e.caster)
+            if (e.caster && !U6.NoSmallShadowCull)
             {
                 float sl = Perf60.SmallShadowDist; bool sh = e.size < 1.6f && d2 > sl * sl;
                 if (sh != e.shOff) { e.shOff = sh; e.r.shadowCastingMode = sh ? ShadowCastingMode.Off : ShadowCastingMode.On; }
