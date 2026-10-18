@@ -43,9 +43,9 @@ Folder (anyone with the link can view): **https://drive.google.com/drive/folders
 | 7 | [hark-pasion-river-07-bountiful.zip](https://drive.google.com/file/d/1Qd5m37NDH7NQhoXzv_fgC1gXbo7mw5X6/view?usp=drivesdk) | 337 MB | `hark-pasion-river-07-bountiful/` (master.m3u8, 720p/, 480p/, 360p/, poster.jpg, thumb.jpg) + `Ep07_Bountiful_v1.mp4` |
 | 8 | [hark-pasion-river-08-kings-of-the-war-years.zip](https://drive.google.com/file/d/1XBK0n740GdIGM75JQv77lYPy8H2PBfzW/view?usp=drivesdk) | 654 MB | `hark-pasion-river-08-kings-of-the-war-years/` (master.m3u8, 720p/, 480p/, 360p/, poster.jpg, thumb.jpg) + `Ep08_Kings_of_the_War_Years_v1.mp4` |
 | 9 | [hark-pasion-river-09-the-final-nephite-wars.zip](https://drive.google.com/file/d/1I2egjBw51JjTpXGcnKWj1RJ7FgIrYZqR/view?usp=drivesdk) | 645 MB | `hark-pasion-river-09-the-final-nephite-wars/` (master.m3u8, 720p/, 480p/, 360p/, poster.jpg, thumb.jpg) + `Ep09_The_Final_Nephite_Wars_v2.mp4` |
-| 10 | hark-pasion-river-10-cumorah.zip (still encoding/uploading; Hark Bot will update this table) | | |
-| 11 | hark-pasion-river-11-the-jaredites-barges-to-belize.zip (still encoding/uploading; Hark Bot will update this table) | | |
-| 12 | hark-pasion-river-12-shiz-and-coriantumr.zip (still encoding/uploading; Hark Bot will update this table) | | |
+| 10 | [hark-pasion-river-10-cumorah.zip](https://drive.google.com/file/d/1f851VYimjs14053V5v3scuVonaX3fjjd/view?usp=drivesdk) | 441 MB | `hark-pasion-river-10-cumorah/` (master.m3u8, 720p/, 480p/, 360p/, poster.jpg, thumb.jpg) + `Ep10_Cumorah_v1.mp4` |
+| 11 | [hark-pasion-river-11-the-jaredites-barges-to-belize.zip](https://drive.google.com/file/d/19LJ4bc4ozDChaqQjTN3zflR1hu6ypseG/view?usp=drivesdk) | 397 MB | `hark-pasion-river-11-the-jaredites-barges-to-belize/` (master.m3u8, 720p/, 480p/, 360p/, poster.jpg, thumb.jpg) + `Ep11_The_Jaredites_Barges_to_Belize_v1.mp4` |
+| 12 | [hark-pasion-river-12-shiz-and-coriantumr.zip](https://drive.google.com/file/d/1whq7hNKlpS606O_g2C8SEe-LuJ9GpzDc/view?usp=drivesdk) | 482 MB | `hark-pasion-river-12-shiz-and-coriantumr/` (master.m3u8, 720p/, 480p/, 360p/, poster.jpg, thumb.jpg) + `Ep12_Shiz_and_Coriantumr_v1.mp4` |
 
 ## HLS ladder (matches four-froggies-come-home-v4)
 
