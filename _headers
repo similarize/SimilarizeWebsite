@@ -1,0 +1,10 @@
+# Workers Static Assets response headers (Jekyll ignores this file).
+# GitHub Pages sent Access-Control-Allow-Origin: * on every file; keep that.
+/*
+  Access-Control-Allow-Origin: *
+
+# Pages typed these as application/octet-stream; Workers leaves them untyped.
+/*.data
+  Content-Type: application/octet-stream
+/*.py
+  Content-Type: application/octet-stream
