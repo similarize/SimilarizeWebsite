@@ -1,0 +1,338 @@
+{
+  "series": "Pasión River Model (Hark's Version)",
+  "series_note": "Hark's Version: a separate 12-part series made by Hark (narration by Grok voice 'orion'), alongside the Grok-made episodes.",
+  "media_base": "https://media.similarize.com",
+  "videos": [
+    {
+      "slug": "hark-pasion-river-01-the-river-sidon",
+      "title": "Pasión River Model, Episode 1: The River Sidon (Hark's Version)",
+      "badge": "Hark's Version",
+      "description": "In the Pasión River Model of Robert C. Roylance and Dr. Richard E. Terry, the River Sidon is Guatemala's Pasión River, with Ceibal as Zarahemla and Cancuén as Manti. We walk through why they think the river fits, and where their case is still an inference, not Church doctrine.",
+      "duration": 419,
+      "audience": "Adults & families",
+      "published": "2026-10-18",
+      "status": "published",
+      "hls": "hark-pasion-river-01-the-river-sidon/master.m3u8",
+      "poster": "hark-pasion-river-01-the-river-sidon/poster.jpg",
+      "thumb": "hark-pasion-river-01-the-river-sidon/thumb.jpg",
+      "poster_at": 27,
+      "related": [
+        {
+          "slug": "hark-pasion-river-02-zarahemla-rising",
+          "label": "Next: Episode 2, Zarahemla Rising"
+        }
+      ],
+      "episode": 1,
+      "page_path": "/series-2/episode-01-the-river-sidon/",
+      "media_path": "/media/series-2/episode-01-the-river-sidon/",
+      "media_folder": "hark-pasion-river-01-the-river-sidon"
+    },
+    {
+      "slug": "hark-pasion-river-02-zarahemla-rising",
+      "title": "Pasión River Model, Episode 2: Zarahemla Rising (Hark's Version)",
+      "badge": "Hark's Version",
+      "description": "The Pasión River Model of Robert C. Roylance and Dr. Richard E. Terry proposes that Ceibal, on a bluff above the Pasión, was Zarahemla. Here's how the Mulekites, Mosiah and the city's rise fit their reading, and why the city's decline date is still an open question.",
+      "duration": 459,
+      "audience": "Adults & families",
+      "published": "2026-10-18",
+      "status": "published",
+      "hls": "hark-pasion-river-02-zarahemla-rising/master.m3u8",
+      "poster": "hark-pasion-river-02-zarahemla-rising/poster.jpg",
+      "thumb": "hark-pasion-river-02-zarahemla-rising/thumb.jpg",
+      "poster_at": 27,
+      "related": [
+        {
+          "slug": "hark-pasion-river-01-the-river-sidon",
+          "label": "Previous: Episode 1, The River Sidon"
+        },
+        {
+          "slug": "hark-pasion-river-03-manti-and-the-hill-riplah-ambush",
+          "label": "Next: Episode 3, Manti and the Hill Riplah Ambush"
+        }
+      ],
+      "episode": 2,
+      "page_path": "/series-2/episode-02-zarahemla-rising/",
+      "media_path": "/media/series-2/episode-02-zarahemla-rising/",
+      "media_folder": "hark-pasion-river-02-zarahemla-rising"
+    },
+    {
+      "slug": "hark-pasion-river-03-manti-and-the-hill-riplah-ambush",
+      "title": "Pasión River Model, Episode 3: Manti and the Hill Riplah Ambush (Hark's Version)",
+      "badge": "Hark's Version",
+      "description": "Roylance and Terry propose Cancuén as the city of Manti and a hill called Chabilchoch as Hill Riplah, where Moroni sets his ambush in Alma 43. It's a geography-first case for the Pasión River Model, offered as a proposal rather than Church doctrine.",
+      "duration": 384,
+      "audience": "Adults & families",
+      "published": "2026-10-18",
+      "status": "published",
+      "hls": "hark-pasion-river-03-manti-and-the-hill-riplah-ambush/master.m3u8",
+      "poster": "hark-pasion-river-03-manti-and-the-hill-riplah-ambush/poster.jpg",
+      "thumb": "hark-pasion-river-03-manti-and-the-hill-riplah-ambush/thumb.jpg",
+      "poster_at": 25,
+      "related": [
+        {
+          "slug": "hark-pasion-river-02-zarahemla-rising",
+          "label": "Previous: Episode 2, Zarahemla Rising"
+        },
+        {
+          "slug": "hark-pasion-river-04-the-land-of-nephi",
+          "label": "Next: Episode 4, The Land of Nephi"
+        }
+      ],
+      "episode": 3,
+      "page_path": "/series-2/episode-03-manti-and-the-hill-riplah-ambush/",
+      "media_path": "/media/series-2/episode-03-manti-and-the-hill-riplah-ambush/",
+      "media_folder": "hark-pasion-river-03-manti-and-the-hill-riplah-ambush"
+    },
+    {
+      "slug": "hark-pasion-river-04-the-land-of-nephi",
+      "title": "Pasión River Model, Episode 4: The Land of Nephi (Hark's Version)",
+      "badge": "Hark's Version",
+      "description": "The Pasión River Model, by Robert C. Roylance and Dr. Richard E. Terry, places the Land of Nephi in Guatemala's Salamá Valley and Lehi's landing near Izapa. We follow those proposed places on the map and note where the book's own drafts disagree.",
+      "duration": 428,
+      "audience": "Adults & families",
+      "published": "2026-10-18",
+      "status": "published",
+      "hls": "hark-pasion-river-04-the-land-of-nephi/master.m3u8",
+      "poster": "hark-pasion-river-04-the-land-of-nephi/poster.jpg",
+      "thumb": "hark-pasion-river-04-the-land-of-nephi/thumb.jpg",
+      "poster_at": 24,
+      "related": [
+        {
+          "slug": "hark-pasion-river-03-manti-and-the-hill-riplah-ambush",
+          "label": "Previous: Episode 3, Manti and the Hill Riplah Ambush"
+        },
+        {
+          "slug": "hark-pasion-river-05-the-wall-in-the-jungle",
+          "label": "Next: Episode 5, The Wall in the Jungle"
+        }
+      ],
+      "episode": 4,
+      "page_path": "/series-2/episode-04-the-land-of-nephi/",
+      "media_path": "/media/series-2/episode-04-the-land-of-nephi/",
+      "media_folder": "hark-pasion-river-04-the-land-of-nephi"
+    },
+    {
+      "slug": "hark-pasion-river-05-the-wall-in-the-jungle",
+      "title": "Pasión River Model, Episode 5: The Wall in the Jungle (Hark's Version)",
+      "badge": "Hark's Version",
+      "description": "For the narrow neck of land, the Pasión River Model of Robert C. Roylance and Dr. Richard E. Terry points to the great earthwork between Tikal and Uaxactún. We look at that idea honestly, including a 2007 study that dates the wall to around A.D. 400 to 550 and doubts it was ever defensive.",
+      "duration": 447,
+      "audience": "Adults & families",
+      "published": "2026-10-18",
+      "status": "published",
+      "hls": "hark-pasion-river-05-the-wall-in-the-jungle/master.m3u8",
+      "poster": "hark-pasion-river-05-the-wall-in-the-jungle/poster.jpg",
+      "thumb": "hark-pasion-river-05-the-wall-in-the-jungle/thumb.jpg",
+      "poster_at": 27,
+      "related": [
+        {
+          "slug": "hark-pasion-river-04-the-land-of-nephi",
+          "label": "Previous: Episode 4, The Land of Nephi"
+        },
+        {
+          "slug": "hark-pasion-river-06-three-days-of-darkness",
+          "label": "Next: Episode 6, Three Days of Darkness"
+        }
+      ],
+      "episode": 5,
+      "page_path": "/series-2/episode-05-the-wall-in-the-jungle/",
+      "media_path": "/media/series-2/episode-05-the-wall-in-the-jungle/",
+      "media_folder": "hark-pasion-river-05-the-wall-in-the-jungle"
+    },
+    {
+      "slug": "hark-pasion-river-06-three-days-of-darkness",
+      "title": "Pasión River Model, Episode 6: Three Days of Darkness (Hark's Version)",
+      "badge": "Hark's Version",
+      "description": "Volcanoes, landslide-dammed rivers and a split in the rock at Aguateca: the Pasión River Model of Robert C. Roylance and Dr. Richard E. Terry reads these as the kind of landscape behind the destruction in 3 Nephi. It's the right kind of country, but nothing here has been dated to the time of Christ.",
+      "duration": 387,
+      "audience": "Adults & families",
+      "published": "2026-10-18",
+      "status": "published",
+      "hls": "hark-pasion-river-06-three-days-of-darkness/master.m3u8",
+      "poster": "hark-pasion-river-06-three-days-of-darkness/poster.jpg",
+      "thumb": "hark-pasion-river-06-three-days-of-darkness/thumb.jpg",
+      "poster_at": 25,
+      "related": [
+        {
+          "slug": "hark-pasion-river-05-the-wall-in-the-jungle",
+          "label": "Previous: Episode 5, The Wall in the Jungle"
+        },
+        {
+          "slug": "hark-pasion-river-07-bountiful",
+          "label": "Next: Episode 7, Bountiful"
+        }
+      ],
+      "episode": 6,
+      "page_path": "/series-2/episode-06-three-days-of-darkness/",
+      "media_path": "/media/series-2/episode-06-three-days-of-darkness/",
+      "media_folder": "hark-pasion-river-06-three-days-of-darkness"
+    },
+    {
+      "slug": "hark-pasion-river-07-bountiful",
+      "title": "Pasión River Model, Episode 7: Bountiful (Hark's Version)",
+      "badge": "Hark's Version",
+      "description": "The Pasión River Model's latest answer for Bountiful, from Robert C. Roylance and Dr. Richard E. Terry, is Altun Ha in Belize, with Yaxhá, Nixtun-Ch'ich' and Xunantunich weighed for the temple. We're upfront that their drafts have moved over the years.",
+      "duration": 324,
+      "audience": "Adults & families",
+      "published": "2026-10-18",
+      "status": "published",
+      "hls": "hark-pasion-river-07-bountiful/master.m3u8",
+      "poster": "hark-pasion-river-07-bountiful/poster.jpg",
+      "thumb": "hark-pasion-river-07-bountiful/thumb.jpg",
+      "poster_at": 23,
+      "related": [
+        {
+          "slug": "hark-pasion-river-06-three-days-of-darkness",
+          "label": "Previous: Episode 6, Three Days of Darkness"
+        },
+        {
+          "slug": "hark-pasion-river-08-kings-of-the-war-years",
+          "label": "Next: Episode 8, Kings of the War Years"
+        }
+      ],
+      "episode": 7,
+      "page_path": "/series-2/episode-07-bountiful/",
+      "media_path": "/media/series-2/episode-07-bountiful/",
+      "media_folder": "hark-pasion-river-07-bountiful"
+    },
+    {
+      "slug": "hark-pasion-river-08-kings-of-the-war-years",
+      "title": "Pasión River Model, Episode 8: Kings of the War Years (Hark's Version)",
+      "badge": "Hark's Version",
+      "description": "Maya kings were fighting and making treaties between A.D. 327 and 385, right when Mormon's wars unfold. Following the Pasión River Model of Robert C. Roylance and Dr. Richard E. Terry and a report on the Nephite wars, we set Tikal, Caracol and the Entrada of 378 beside the text, as a proposal and not as proof.",
+      "duration": 568,
+      "audience": "Adults & families",
+      "published": "2026-10-18",
+      "status": "published",
+      "hls": "hark-pasion-river-08-kings-of-the-war-years/master.m3u8",
+      "poster": "hark-pasion-river-08-kings-of-the-war-years/poster.jpg",
+      "thumb": "hark-pasion-river-08-kings-of-the-war-years/thumb.jpg",
+      "poster_at": 31,
+      "related": [
+        {
+          "slug": "hark-pasion-river-07-bountiful",
+          "label": "Previous: Episode 7, Bountiful"
+        },
+        {
+          "slug": "hark-pasion-river-09-the-final-nephite-wars",
+          "label": "Next: Episode 9, The Final Nephite Wars"
+        }
+      ],
+      "episode": 8,
+      "page_path": "/series-2/episode-08-kings-of-the-war-years/",
+      "media_path": "/media/series-2/episode-08-kings-of-the-war-years/",
+      "media_folder": "hark-pasion-river-08-kings-of-the-war-years"
+    },
+    {
+      "slug": "hark-pasion-river-09-the-final-nephite-wars",
+      "title": "Pasión River Model, Episode 9: The Final Nephite Wars (Hark's Version)",
+      "badge": "Hark's Version",
+      "description": "The Pasión River Model of Robert C. Roylance and Dr. Richard E. Terry proposes Uaxactún as the city of Desolation and traces Mormon's campaigns up to A.D. 384. We map those proposed places and flag the dates that don't line up, because this is a model, not Church doctrine.",
+      "duration": 578,
+      "audience": "Adults & families",
+      "published": "2026-10-18",
+      "status": "published",
+      "hls": "hark-pasion-river-09-the-final-nephite-wars/master.m3u8",
+      "poster": "hark-pasion-river-09-the-final-nephite-wars/poster.jpg",
+      "thumb": "hark-pasion-river-09-the-final-nephite-wars/thumb.jpg",
+      "poster_at": 29,
+      "related": [
+        {
+          "slug": "hark-pasion-river-08-kings-of-the-war-years",
+          "label": "Previous: Episode 8, Kings of the War Years"
+        },
+        {
+          "slug": "hark-pasion-river-10-cumorah",
+          "label": "Next: Episode 10, Cumorah"
+        }
+      ],
+      "episode": 9,
+      "page_path": "/series-2/episode-09-the-final-nephite-wars/",
+      "media_path": "/media/series-2/episode-09-the-final-nephite-wars/",
+      "media_folder": "hark-pasion-river-09-the-final-nephite-wars"
+    },
+    {
+      "slug": "hark-pasion-river-10-cumorah",
+      "title": "Pasión River Model, Episode 10: Cumorah (Hark's Version)",
+      "badge": "Hark's Version",
+      "description": "Roylance and Terry propose Hill Achotal, just across the Río Hondo from Belize, as both Cumorah and Ramah. We look at why the Pasión River Model picks it, what's still unexcavated, and how it handles the hill in New York; the Church itself takes no position on these locations.",
+      "duration": 430,
+      "audience": "Adults & families",
+      "published": "2026-10-18",
+      "status": "published",
+      "hls": "hark-pasion-river-10-cumorah/master.m3u8",
+      "poster": "hark-pasion-river-10-cumorah/poster.jpg",
+      "thumb": "hark-pasion-river-10-cumorah/thumb.jpg",
+      "poster_at": 27,
+      "related": [
+        {
+          "slug": "hark-pasion-river-09-the-final-nephite-wars",
+          "label": "Previous: Episode 9, The Final Nephite Wars"
+        },
+        {
+          "slug": "hark-pasion-river-11-the-jaredites-barges-to-belize",
+          "label": "Next: Episode 11, The Jaredites: Barges to Belize"
+        }
+      ],
+      "episode": 10,
+      "page_path": "/series-2/episode-10-cumorah/",
+      "media_path": "/media/series-2/episode-10-cumorah/",
+      "media_folder": "hark-pasion-river-10-cumorah"
+    },
+    {
+      "slug": "hark-pasion-river-11-the-jaredites-barges-to-belize",
+      "title": "Pasión River Model, Episode 11: The Jaredites: Barges to Belize (Hark's Version)",
+      "badge": "Hark's Version",
+      "description": "The Pasión River Model of Robert C. Roylance and Dr. Richard E. Terry sketches Jaredite barges landing in northern Belize near Chetumal Bay, and makes its boldest claim: the Jaredites as early Maya. We weigh that against what archaeologists have found.",
+      "duration": 398,
+      "audience": "Adults & families",
+      "published": "2026-10-18",
+      "status": "published",
+      "hls": "hark-pasion-river-11-the-jaredites-barges-to-belize/master.m3u8",
+      "poster": "hark-pasion-river-11-the-jaredites-barges-to-belize/poster.jpg",
+      "thumb": "hark-pasion-river-11-the-jaredites-barges-to-belize/thumb.jpg",
+      "poster_at": 25,
+      "related": [
+        {
+          "slug": "hark-pasion-river-10-cumorah",
+          "label": "Previous: Episode 10, Cumorah"
+        },
+        {
+          "slug": "hark-pasion-river-12-shiz-and-coriantumr",
+          "label": "Next: Episode 12, Shiz and Coriantumr"
+        }
+      ],
+      "episode": 11,
+      "page_path": "/series-2/episode-11-the-jaredites-barges-to-belize/",
+      "media_path": "/media/series-2/episode-11-the-jaredites-barges-to-belize/",
+      "media_folder": "hark-pasion-river-11-the-jaredites-barges-to-belize"
+    },
+    {
+      "slug": "hark-pasion-river-12-shiz-and-coriantumr",
+      "title": "Pasión River Model, Episode 12: Shiz and Coriantumr (Hark's Version)",
+      "badge": "Hark's Version",
+      "description": "The series finale: the last Jaredite war, from the Mirador Basin to the hill Ramah, and the Pasión River Model's question of whether Shiz's people were Olmec. Robert C. Roylance and Dr. Richard E. Terry treat that as inquiry, not a conclusion, and so do we, before a look back at the whole series.",
+      "duration": 455,
+      "audience": "Adults & families",
+      "published": "2026-10-18",
+      "status": "published",
+      "hls": "hark-pasion-river-12-shiz-and-coriantumr/master.m3u8",
+      "poster": "hark-pasion-river-12-shiz-and-coriantumr/poster.jpg",
+      "thumb": "hark-pasion-river-12-shiz-and-coriantumr/thumb.jpg",
+      "poster_at": 25,
+      "related": [
+        {
+          "slug": "hark-pasion-river-11-the-jaredites-barges-to-belize",
+          "label": "Previous: Episode 11, The Jaredites: Barges to Belize"
+        }
+      ],
+      "episode": 12,
+      "page_path": "/series-2/episode-12-shiz-and-coriantumr/",
+      "media_path": "/media/series-2/episode-12-shiz-and-coriantumr/",
+      "media_folder": "hark-pasion-river-12-shiz-and-coriantumr"
+    }
+  ],
+  "series_id": "series-2",
+  "series_title": "The Pasión River Model — Hark's Version",
+  "path_note": "Proposed site paths: page /series-2/episode-NN-<slug>/, media /media/series-2/episode-NN-<slug>/ (poster.jpg, thumb.jpg, master.m3u8, 720p/, 480p/, 360p/). media_folder is the folder name inside each Drive zip; copy its contents to media_path."
+}
