@@ -7,7 +7,7 @@ public class ViewHud
 {
     public RectTransform panel;
     readonly Text title, prompt, status, center, toast;
-    float inset = -1f;
+    float inset = -1f, layW = -1f;
     readonly Text[] tags = new Text[4];
     readonly Image frame, fadeImg;
     // ffu15: mech aim reticle + space radar
@@ -127,8 +127,10 @@ public class ViewHud
     // bottom band reserved for touch controls (canvas units); 0 = none
     public void SetBottomInset(float units, float width)
     {
-        if (Mathf.Abs(units - inset) < 0.5f) return;
-        inset = units;
+        if (Mathf.Abs(units - inset) < 0.5f && Mathf.Abs(width - layW) < 0.5f) return;
+        inset = units; layW = width;
+        bool narrow = width < 900f;   // ffu6d: split views: smaller toast / prompt text so it wraps inside the view
+        toast.fontSize = narrow ? 22 : 26; prompt.fontSize = narrow ? 19 : 22;
         prompt.rectTransform.anchoredPosition = new Vector2(0f, 64f + units);
         // ffu14e: on a full-width landscape view keep the (long, mech) prompt clear of the status corner (x 10..330)
         prompt.rectTransform.sizeDelta = new Vector2(width >= 1100f ? Mathf.Min(760f, width - 680f) : Mathf.Min(760f, width - 20f), 70f);

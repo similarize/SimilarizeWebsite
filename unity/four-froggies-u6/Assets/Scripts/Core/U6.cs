@@ -24,7 +24,7 @@ public static class U6
     public static VolumeProfile GameProfile, StudioProfile;
     public static ScriptableRendererFeature Ssao;
     static string url = "";
-    public static float SatBase = -6f, ExpBias = 0.35f, BloomScale = 1f, SatAdd = 0f, ConAdd = 0f;
+    public static float WorldSat = 0f, SatBase = -6f, ExpBias = 0.35f, BloomScale = 1f, SatAdd = 0f, ConAdd = 0f;
     public static TonemappingMode Tm = TonemappingMode.ACES;
     public static int MsaaForce = 0, SsaoForce = -1;
     public static bool Ready;
@@ -94,17 +94,17 @@ public static class U6
     // gamma -> linear in a Linear project, so hand it the gamma encoding (Lambo u6f lesson)
     public static Color Lin(Color c) { return Linear ? c.gamma : c; }
 
-    static float lastExp = -99f;
+    static float lastExp = -99f, lastSat = -99f;
     // game grade: RealPost's / LBPost's exposure (Light55 moves it per world) -> URP post exposure; ACES; light bloom; vignette
     public static void Grade(float exposure)
     {
         var p = GameProfile; if (p == null) return;
         float ev = ExpBias + Mathf.Log(Mathf.Max(0.05f, exposure) / 0.84f, 2f);
-        if (Mathf.Abs(ev - lastExp) < 0.002f) return;
-        lastExp = ev;
+        if (Mathf.Abs(ev - lastExp) < 0.002f && Mathf.Abs(WorldSat - lastSat) < 0.01f) return;
+        lastExp = ev; lastSat = WorldSat;
         Tonemapping tm; if (p.TryGet(out tm)) { tm.active = Tm != TonemappingMode.None; tm.mode.Override(Tm); }
         ColorAdjustments ca;
-        if (p.TryGet(out ca)) { ca.active = true; ca.postExposure.Override(ev); ca.saturation.Override(SatBase + SatAdd); ca.contrast.Override(8f + ConAdd); }
+        if (p.TryGet(out ca)) { ca.active = true; ca.postExposure.Override(ev); ca.saturation.Override(SatBase + SatAdd + WorldSat); ca.contrast.Override(8f + ConAdd); }
         Bloom b; if (p.TryGet(out b)) { b.active = BloomScale > 0f; b.intensity.Override(0.32f * BloomScale); b.threshold.Override(1.05f); b.scatter.Override(0.6f); b.highQualityFiltering.Override(!Look.Mobile); }
         Vignette v; if (p.TryGet(out v)) { v.active = true; v.intensity.Override(0.18f); v.smoothness.Override(0.5f); }
     }
@@ -170,6 +170,28 @@ public static class U6
 
     static bool On<T>(Camera c) where T : Behaviour { var b = c.GetComponent<T>(); return b != null && b.enabled; }
 
+    // ffu6d: URP reads RenderSettings fog (unity_FogParams / unity_FogColor / FOG_* keywords) ONCE per frame, before any camera's
+    // beginCameraRendering, but Worlds.PreCull sets fog PER CAMERA (underwater murk, Mars dust, house / Moon / space none) -> every
+    // camera rendered with whatever fog the previous frame ended on (underwater came out clear and bright). Re-publish per camera.
+    static readonly int idFogP = Shader.PropertyToID("unity_FogParams"), idFogC = Shader.PropertyToID("unity_FogColor");
+    static void Fog(Camera c)
+    {
+        bool on = RenderSettings.fog;
+        float d = on ? RenderSettings.fogDensity : 0f;
+        float st = RenderSettings.fogStartDistance, en = RenderSettings.fogEndDistance;
+        float lz = on && RenderSettings.fogMode == FogMode.Linear ? -1f / Mathf.Max(0.01f, en - st) : 0f;
+        float lw = on && RenderSettings.fogMode == FogMode.Linear ? en / Mathf.Max(0.01f, en - st) : 1f;
+        Shader.SetGlobalVector(idFogP, new Vector4(d * 1.2011224f, d * 1.4426950f, lz, lw));
+        Shader.SetGlobalColor(idFogC, RenderSettings.fogColor);
+        if (on)
+        {
+            FogMode m = RenderSettings.fogMode;
+            if (m == FogMode.ExponentialSquared) Shader.EnableKeyword("FOG_EXP2"); else Shader.DisableKeyword("FOG_EXP2");
+            if (m == FogMode.Exponential) Shader.EnableKeyword("FOG_EXP"); else Shader.DisableKeyword("FOG_EXP");
+            if (m == FogMode.Linear) Shader.EnableKeyword("FOG_LINEAR"); else Shader.DisableKeyword("FOG_LINEAR");
+        }
+    }
+
     // ffu6c visual pass: outdoors (the ranch haze: exp2 fog 0.001..0.0055 / m, below 300 m, not the Real Room) the FF shaders'
     // LBFog switches from Unity's flat exp2 fog to exponential HEIGHT fog integrated along the view ray + Henyey-Greenstein
     // sun glow (Lambo u6d _LBAtmos globals; FFURP.hlsl LBFogAmount). Same colour and roughly the same distance as before at
@@ -196,6 +218,7 @@ public static class U6
     {
         if (RenderSettings.ambientMode == AmbientMode.Trilight)
             RenderSettings.ambientProbe = U6Layers.TrilightSH(RenderSettings.ambientSkyColor, RenderSettings.ambientEquatorColor, RenderSettings.ambientGroundColor);
+        Fog(c);
         Atmos(c);
         var rp = c.GetComponent<RealPost>();
         if (rp != null && rp.enabled) { Grade(rp.exposure); return; }

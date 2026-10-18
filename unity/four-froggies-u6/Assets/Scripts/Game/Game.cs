@@ -138,7 +138,7 @@ public partial class Game : MonoBehaviour
     System.Func<PIn, PIn> demoHook;
     bool demoWaved;       // demo mode: rewrites P1's input (robot driving moment)
     string demoShot = "", demoCur = "";
-    bool demoCharsDone, demoKeepChars;
+    bool demoCharsDone, demoKeepChars, demoWaitLogged, demoWaitDone;
     float demoSceneT0 = -1f;
     bool DemoLobby()
     {
@@ -169,6 +169,15 @@ public partial class Game : MonoBehaviour
             return false;
         }
         if (demoT > 5f && slots.Count == 0) { Join(InputKind.Keyboard, null); return false; }
+        // ffu6d: the 6.6 build streams / builds Realism + Terrain56 2-4x slower on SwiftShader WebGPU, so demo shots fired before the
+        // ranch was dressed (no grass, pre-Realism pond). Demo play waits for both (cap 360 s; &ffwait=0 = old behaviour).
+        if (demoT > 6f && slots.Count > 0 && UrlParam("ffwait") != "0" && Time.realtimeSinceStartup < 360f &&
+            ((Realism.On && !Realism.Ready) || (Terrain56.On && !Terrain56.Ready)))
+        {
+            if (!demoWaitLogged) { demoWaitLogged = true; Debug.Log("FFDEMO waiting for the world (Realism " + Realism.Ready + ", Terrain56 " + Terrain56.Ready + ")"); }
+            return false;
+        }
+        if (demoWaitLogged && !demoWaitDone) { demoWaitDone = true; Debug.Log("FFDEMO world ready t=" + Time.realtimeSinceStartup.ToString("0.0")); }
         if (demoT > 6f && slots.Count > 0 && !(Net.I != null && Net.I.IsGuest)) { demoT = 0.01f; if (!StoryDemoStart()) StartPlay(); demoPlayT = 0f; return true; }
         return false;
     }
@@ -649,7 +658,9 @@ public partial class Game : MonoBehaviour
         }
         float inset = touchUi ? (portrait ? 290f : 120f) : 0f;
         float width = portrait ? 720f : 1280f;
-        foreach (var s in slots) if (s.hud != null) s.hud.SetBottomInset(s.kind == InputKind.Touch ? inset : 0f, width);
+        // ffu6d: each split view lays its prompt / toast out for its OWN width (was the full canvas width -> 760-unit toasts ran
+        // across the split line and off the screen edge in 2-way split)
+        foreach (var s in slots) if (s.hud != null) s.hud.SetBottomInset(s.kind == InputKind.Touch ? inset : 0f, s.cam != null ? width * Mathf.Clamp01(s.cam.rect.width) : width);
         sharedHud.SetBottomInset(inset, width);
     }
 
