@@ -48,6 +48,7 @@ Shader "FF/RealWater"
             float4 _SeaRect, _Shallow, _Deep;
             float _Strength, _Speed, _Detail, _Patch;
             CBUFFER_END
+            float4 _FFDbgW;   // ffu6p diag (U6Dbg u6pw=2|3)
 
             struct appdata_base { float4 vertex : POSITION; };
             struct v2f { float4 pos : SV_POSITION; float3 wp : TEXCOORD0; float fogCoord : TEXCOORD1; };
@@ -86,6 +87,7 @@ Shader "FF/RealWater"
 
             half4 frag(v2f i) : SV_Target
             {
+                if (_FFDbgW.x > 0.5 && _FFDbgW.x < 1.5) return half4(1, 0, 1, 1);   // ffu6p u6pw=2
                 // ffu38: the big flat plane leaves the window to the displaced patch mesh (no double layer)
                 if (_Patch < 0.5 && _FFRipP.z > 0.5)
                 {
@@ -164,6 +166,7 @@ Shader "FF/RealWater"
                 half lap = saturate(1.0 - abs(depth * 22.0 - 1.1) * 1.4) * (0.55 + 0.45 * sin(t * 1.1 - depth * 90.0 + fn * 3.0));
                 col = lerp(col, foamC, lap * 0.22 * near); a = max(a, lap * 0.22 * near);
                 half edge = saturate(depth * 16.0) * pmask;    // soft shoreline
+                if (_FFDbgW.x > 1.5) return half4(edge, pmask, depth, 1);   // ffu6p u6pw=3
                 col *= edge; a *= edge;
                 col = MixFogColor(col, unity_FogColor.rgb * a, InitializeInputDataFog(float4(i.wp, 1.0), i.fogCoord));
                 return half4(col, a);

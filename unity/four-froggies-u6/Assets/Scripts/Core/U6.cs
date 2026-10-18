@@ -71,6 +71,7 @@ public static class U6
         Object.DontDestroyOnLoad(go);
         go.AddComponent<U6Runner>();
         U6Lights.Init();
+        U6Dbg.Init();   // ffu6p diag knobs u6srpb / u6tc / u6pw
         Ready = true;
     }
 
@@ -318,7 +319,7 @@ public static class U6Cam
 
 public class U6Runner : MonoBehaviour
 {
-    void LateUpdate() { U6.Mirror(); U6FarCast.Tick(); }
+    void LateUpdate() { U6.Mirror(); U6FarCast.Tick(); U6Dbg.Tick(); }
 }
 
 // ffu6o: 6.6 small / medium casters (frogs, cubes, posts, the Moon lander) lost their sun shadows while big walls kept theirs.
