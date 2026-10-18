@@ -13,7 +13,7 @@ using UnityEngine.Rendering.Universal;
 //                 shadows; post on/off per camera from the old post components; SSAO feature on the high tier, one view
 //  * U6         = graphics API log, global post Volumes (game grade on layer 0, studio grade on layer 20), URL knobs
 //  * U6Layers   = rendering layers for the lobby studio lights (Built-in used Light.cullingMask)
-// URL knobs (no rebuild): u6exp=<EV bias> u6tm=aces|neutral|none u6ssao=0|1 u6bloom=<scale> u6msaa=1|2|4 u6sat=<+-> u6con=<+->
+// URL knobs (no rebuild): u6fog=0 (flat fog) u6pl=0 (no Built-in point light match) u6plk=<x> u6exp=<EV bias> u6tm=aces|neutral|none u6ssao=0|1 u6bloom=<scale> u6msaa=1|2|4 u6sat=<+-> u6con=<+->
 public static class U6
 {
     public const int StudioVolumeLayer = 20;
@@ -24,7 +24,7 @@ public static class U6
     public static VolumeProfile GameProfile, StudioProfile;
     public static ScriptableRendererFeature Ssao;
     static string url = "";
-    public static float ExpBias = 0.35f, BloomScale = 1f, SatAdd = 0f, ConAdd = 0f;
+    public static float SatBase = -6f, ExpBias = 0.35f, BloomScale = 1f, SatAdd = 0f, ConAdd = 0f;
     public static TonemappingMode Tm = TonemappingMode.ACES;
     public static int MsaaForce = 0, SsaoForce = -1;
     public static bool Ready;
@@ -39,6 +39,7 @@ public static class U6
         if (F("u6sat", out f)) SatAdd = f;
         if (F("u6con", out f)) ConAdd = f;
         string s = Q("u6tm"); if (s == "neutral") Tm = TonemappingMode.Neutral; else if (s == "none") Tm = TonemappingMode.None;
+        if (Q("u6fog") == "0") FogOn = false;
         s = Q("u6ssao"); if (s == "0") SsaoForce = 0; else if (s == "1") SsaoForce = 1;
         s = Q("u6msaa"); int mi; if (s != null && int.TryParse(s, out mi)) MsaaForce = Mathf.Clamp(mi, 1, 8);
         var a = Asset;
@@ -58,6 +59,7 @@ public static class U6
         var go = new GameObject("U6Runner");
         Object.DontDestroyOnLoad(go);
         go.AddComponent<U6Runner>();
+        U6Lights.Init();
         Ready = true;
     }
 
@@ -102,7 +104,7 @@ public static class U6
         lastExp = ev;
         Tonemapping tm; if (p.TryGet(out tm)) { tm.active = Tm != TonemappingMode.None; tm.mode.Override(Tm); }
         ColorAdjustments ca;
-        if (p.TryGet(out ca)) { ca.active = true; ca.postExposure.Override(ev); ca.saturation.Override(10f + SatAdd); ca.contrast.Override(8f + ConAdd); }
+        if (p.TryGet(out ca)) { ca.active = true; ca.postExposure.Override(ev); ca.saturation.Override(SatBase + SatAdd); ca.contrast.Override(8f + ConAdd); }
         Bloom b; if (p.TryGet(out b)) { b.active = BloomScale > 0f; b.intensity.Override(0.32f * BloomScale); b.threshold.Override(1.05f); b.scatter.Override(0.6f); b.highQualityFiltering.Override(!Look.Mobile); }
         Vignette v; if (p.TryGet(out v)) { v.active = true; v.intensity.Override(0.18f); v.smoothness.Override(0.5f); }
     }
@@ -168,12 +170,33 @@ public static class U6
 
     static bool On<T>(Camera c) where T : Behaviour { var b = c.GetComponent<T>(); return b != null && b.enabled; }
 
+    // ffu6c visual pass: outdoors (the ranch haze: exp2 fog 0.001..0.0055 / m, below 300 m, not the Real Room) the FF shaders'
+    // LBFog switches from Unity's flat exp2 fog to exponential HEIGHT fog integrated along the view ray + Henyey-Greenstein
+    // sun glow (Lambo u6d _LBAtmos globals; FFURP.hlsl LBFogAmount). Same colour and roughly the same distance as before at
+    // ground level, thinner up the hills / in the sky, warm in-scatter towards the sun. u6fog=0 = old flat fog.
+    public static bool FogOn = true;
+    static readonly int idAtm = Shader.PropertyToID("_LBAtmos"), idAtmC = Shader.PropertyToID("_LBAtmosCol"), idAtmS = Shader.PropertyToID("_LBAtmosSun");
+    static bool atmLogged;
+    static void Atmos(Camera c)
+    {
+        bool on = FogOn && RenderSettings.fog && RenderSettings.fogMode == FogMode.ExponentialSquared && RenderSettings.fogDensity > 0.001f &&
+                  RenderSettings.fogDensity < 0.0055f && c.transform.position.y < 300f && c.cullingMask != (1 << RealRoom.Layer) &&
+                  c.GetComponent<ShowroomGrade>() == null;
+        if (!on) { Shader.SetGlobalVector(idAtm, Vector4.zero); return; }
+        Color fc = RenderSettings.fogColor; if (Linear) fc = fc.linear;
+        Shader.SetGlobalVector(idAtm, new Vector4(1f, RenderSettings.fogDensity * 0.6f, 0.011f, 0f));
+        Shader.SetGlobalVector(idAtmC, new Vector4(fc.r, fc.g, fc.b, 0.95f));
+        Shader.SetGlobalVector(idAtmS, new Vector4(0.34f, 0.26f, 0.16f, 0.62f));
+        if (!atmLogged) { atmLogged = true; Debug.Log("U6: height fog + sun glow on (density " + RenderSettings.fogDensity.ToString("0.0000") + ")"); }
+    }
+
     // per camera, just before it renders (after the game's own pre-cull hooks): the trilight ambient as SH and the camera's
     // post exposure
     public static void BeforeCamera(Camera c)
     {
         if (RenderSettings.ambientMode == AmbientMode.Trilight)
             RenderSettings.ambientProbe = U6Layers.TrilightSH(RenderSettings.ambientSkyColor, RenderSettings.ambientEquatorColor, RenderSettings.ambientGroundColor);
+        Atmos(c);
         var rp = c.GetComponent<RealPost>();
         if (rp != null && rp.enabled) { Grade(rp.exposure); return; }
         var lp = c.GetComponent<LBPost>();
@@ -246,5 +269,65 @@ public static class U6Layers
         sh.AddDirectionalLight(Vector3.up, (s - e) * 0.9f, 1f);
         sh.AddDirectionalLight(Vector3.down, (g - e) * 0.9f, 1f);
         return sh;
+    }
+}
+
+// ffu6c: Built-in -> URP point / spot light match. Built-in (Gamma) lit with its falloff texture ~ 1 / (1 + 25 (d/r)^2) on gamma
+// values; URP (Linear) uses inverse square (1/d^2 x a range window) on linear values, so every lamp authored for the 2022.3 build
+// (house rooms 1.7 / r 18.7, campfire, rocket glows ...) came out ~3x too dark at mid range. Per frame, just before URP culls,
+// each point / spot light gets k = (0.2 I)^2.2 x 0.168 r^2 / I (matches the two at d = 0.4 r), clamped 1..8; restored after the
+// frame so game scripts always read / animate their own values. u6pl=0 disables, u6plk= scales k.
+public static class U6Lights
+{
+    static readonly List<Light> lights = new List<Light>();
+    static readonly List<float> saved = new List<float>();
+    static int nextScan = -1; static bool on = true; static float kScale = 1f; static bool logged;
+    public static void Init()
+    {
+        string s = U6.Q("u6pl"); if (s == "0") on = false;
+        s = U6.Q("u6plk"); float f; if (s != null && float.TryParse(s, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out f)) kScale = f;
+        if (!on) { Debug.Log("U6: point light match off"); return; }
+        RenderPipelineManager.beginContextRendering += Begin;
+        RenderPipelineManager.endContextRendering += End;
+    }
+    public static float K(float I, float r)
+    {
+        if (I <= 0f) return 1f;
+        float k = Mathf.Pow(0.2f * I, 2.2f) * 0.168f * r * r / I * kScale;
+        return Mathf.Clamp(k, 1f, 8f);
+    }
+    static void Begin(ScriptableRenderContext ctx, List<Camera> cams)
+    {
+        try
+        {
+            if (Time.frameCount >= nextScan)
+            {
+                nextScan = Time.frameCount + 90;
+                lights.Clear();
+                foreach (var l in Object.FindObjectsByType<Light>(FindObjectsSortMode.None))
+                    if (l.type == LightType.Point || l.type == LightType.Spot) lights.Add(l);
+                if (!logged && lights.Count > 0)
+                {
+                    logged = true; string ex = "";
+                    for (int i = 0; i < lights.Count && i < 4; i++) ex += " " + lights[i].name + " " + lights[i].intensity.ToString("0.0") + "/" + lights[i].range.ToString("0") + " x" + K(lights[i].intensity, lights[i].range).ToString("0.0");
+                    Debug.Log("U6: point light match " + lights.Count + " lights:" + ex);
+                }
+            }
+            saved.Clear();
+            for (int i = 0; i < lights.Count; i++)
+            {
+                var l = lights[i];
+                if (l == null || !l.isActiveAndEnabled) { saved.Add(-1f); continue; }
+                float I = l.intensity; saved.Add(I);
+                l.intensity = I * K(I, l.range);
+            }
+        }
+        catch (System.Exception e) { Debug.LogException(e); }
+    }
+    static void End(ScriptableRenderContext ctx, List<Camera> cams)
+    {
+        for (int i = 0; i < saved.Count && i < lights.Count; i++)
+            if (saved[i] >= 0f && lights[i] != null) lights[i].intensity = saved[i];
+        saved.Clear();
     }
 }

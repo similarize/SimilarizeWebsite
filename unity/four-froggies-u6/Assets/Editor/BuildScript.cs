@@ -218,7 +218,7 @@ public static class BuildScript
         SetProp(sso, "m_Settings.BlurQuality", p => p.intValue = 1);      // Gaussian
         SetProp(sso, "m_Settings.Falloff", p => p.floatValue = 60f);
         sso.ApplyModifiedPropertiesWithoutUndo();
-        ssao.SetActive(false);
+        // ffu6c: keep the feature ACTIVE in the asset (an inactive one gets its shader resources stripped -> "Couldn't find the required resources"); U6.SsaoOn toggles it at runtime
         long lid = 0; string guid;
         AssetDatabase.TryGetGUIDAndLocalFileIdentifier(ssao, out guid, out lid);
         sod = new SerializedObject(data);
@@ -296,7 +296,7 @@ public static class BuildScript
         var ca = p.Add<ColorAdjustments>(true);
         ca.postExposure.Override(studio ? 0.6f : 0.35f);
         ca.contrast.Override(studio ? 6f : 8f);
-        ca.saturation.Override(studio ? 4f : 10f);
+        ca.saturation.Override(studio ? 4f : -6f);
         var bl = p.Add<Bloom>(true); bl.intensity.Override(studio ? 0.3f : 0.32f); bl.threshold.Override(1.05f); bl.scatter.Override(0.6f);
         var vg = p.Add<Vignette>(true); vg.intensity.Override(studio ? 0.28f : 0.18f); vg.smoothness.Override(0.5f);
         if (!studio) { var wb = p.Add<WhiteBalance>(true); wb.temperature.Override(4f); }

@@ -68,7 +68,7 @@ public static class Light55
             default: return baseC;
         }
     }
-    static float ExpK(WorldId w) { return w == WorldId.House ? 1.18f : w == WorldId.Mars ? 1.04f : w == WorldId.Callisto ? 1.1f : 1f; }
+    static float ExpK(WorldId w) { return w == WorldId.House ? 1.3f : w == WorldId.Mars ? 1.04f : w == WorldId.Callisto ? 1.1f : 1f; }
 
     // Worlds.PreCull, after the world's fog / ambient (and Realism's ranch SH) are set - every camera sets the sun
     // for its own world, so split views in different worlds never leak each other's light
