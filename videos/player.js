@@ -8,7 +8,13 @@
   function placeholder(h,t){box.innerHTML='';var p=document.createElement('div');p.className='placeholder';
     var s=document.createElement('strong');s.textContent=h;p.appendChild(s);var x=document.createElement('span');x.textContent=t;p.appendChild(x);box.appendChild(p);}
   function load(src,cb){var s=document.createElement('script');s.src=src;s.onload=function(){cb();};s.onerror=function(){cb(new Error('load'));};document.head.appendChild(s);}
-  fetch('/videos/videos.json',{cache:'no-cache'}).then(function(r){return r.json();}).then(function(d){
+  function getj(u){return fetch(u,{cache:'no-cache'}).then(function(r){return r.json();});}
+  // Unlisted videos live in /videos/unlisted.json (not in the gallery); merged in only when the slug is not in videos.json.
+  getj('/videos/videos.json').then(function(d){
+    d.videos=d.videos||[];
+    if(d.videos.some(function(x){return x.slug===slug;}))return d;
+    return getj('/videos/unlisted.json').then(function(u){d.videos=d.videos.concat(u.videos||[]);return d;},function(){return d;});
+  }).then(function(d){
     var v=(d.videos||[]).filter(function(x){return x.slug===slug;})[0];
     if(!v){placeholder('Video not found','Try the video list.');return;}
     T.textContent=v.title;document.title=v.title+' — Similarize';D.textContent=v.description||'';
