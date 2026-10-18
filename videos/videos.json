@@ -65,6 +65,38 @@
         {
           "slug": "four-froggies-catch-jimmy-v2",
           "label": "Also watch Version 2"
+        },
+        {
+          "slug": "four-froggies-come-home-v4",
+          "label": "Also watch Version 4"
+        }
+      ]
+    },
+    {
+      "slug": "four-froggies-come-home-v4",
+      "title": "Four Froggies – Come Home! (Version 4)",
+      "badge": "Version 4",
+      "description": "Version 4: Jimmy jetpacks into space, and James, Bubbles and Rexy chase him with Commander Spotty — waving to astronauts Alex and Fred, playing with King Germy and Daisy on Mars, then icy Callisto and a moon buggy rescue on the Moon, before racing home for hammocks.",
+      "duration": 418,
+      "audience": "Kids & family",
+      "published": "2026-10-18",
+      "status": "published",
+      "hls": "four-froggies-come-home-v4/master.m3u8",
+      "poster": "four-froggies-come-home-v4/poster.jpg",
+      "thumb": "four-froggies-come-home-v4/thumb.jpg",
+      "poster_at": 370,
+      "related": [
+        {
+          "slug": "four-froggies-catch-jimmy",
+          "label": "Also watch Version 1"
+        },
+        {
+          "slug": "four-froggies-catch-jimmy-v2",
+          "label": "Also watch Version 2"
+        },
+        {
+          "slug": "four-froggies-come-home-v3",
+          "label": "Also watch Version 3"
         }
       ]
     }
