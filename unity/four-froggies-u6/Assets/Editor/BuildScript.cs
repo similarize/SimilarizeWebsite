@@ -413,7 +413,8 @@ public static class BuildScript
         EditorUtility.SetDirty(glass);
         Material sky = null;
         Texture2D skyTex = LoadTex("Assets/Textures/sky_pano.jpg", false, TextureWrapMode.Repeat, TextureWrapMode.Clamp, 2048);
-        Shader pano = Shader.Find("Skybox/Panoramic");
+        Shader pano = Shader.Find("FF/Sky");   // ffu6j: Panoramic drop-in with zenith chroma, sun disc, horizon haze, wisps
+        if (pano == null) { Debug.LogWarning("BuildScript: FF/Sky missing - Skybox/Panoramic"); pano = Shader.Find("Skybox/Panoramic"); }
         if (skyTex != null && pano != null)
         {
             sky = SaveAsset(new Material(pano), "Sky.mat");
@@ -426,7 +427,7 @@ public static class BuildScript
             sky.SetFloat("_Rotation", 18f);      // puts the HDRI sun where our sun light comes from (az ~142 deg, elev 48)
             sky.EnableKeyword("_MAPPING_LATITUDE_LONGITUDE_LAYOUT");
             sky.DisableKeyword("_MAPPING_6_FRAMES_LAYOUT");
-            Debug.Log("BuildScript: HDRI sky");
+            Debug.Log("BuildScript: HDRI sky (" + pano.name + ")");
         }
         else
         {

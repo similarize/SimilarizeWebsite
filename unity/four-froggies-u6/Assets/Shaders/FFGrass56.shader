@@ -61,7 +61,14 @@ Shader "FF/Grass56"
             pos = TransformWorldToObject(wp);
             float n = frac(sin(dot(root.xz, float2(12.9898, 78.233))) * 43758.5453);
             // gamma-authored tint x root darkening -> linear multiplier
-            extra = float4(LB_F(lerp(float3(0.92, 0.95, 0.82), float3(1.08, 1.04, 0.9), n) * lerp(0.68, 1.0, h)), 1);   // ffu6i: 0.55 base read too dark in Linear
+            // ffu6j: macro patches (lush / sun-dried, ~25 m blobs) so the lawn is not one flat colour, + lighter base (0.68 -> 0.8)
+            float2 mp = root.xz * 0.04;
+            float2 mi = floor(mp), mf = frac(mp); mf = mf * mf * (3.0 - 2.0 * mf);
+            float h00 = frac(sin(dot(mi, float2(12.9898, 78.233))) * 43758.5453), h10 = frac(sin(dot(mi + float2(1, 0), float2(12.9898, 78.233))) * 43758.5453);
+            float h01 = frac(sin(dot(mi + float2(0, 1), float2(12.9898, 78.233))) * 43758.5453), h11 = frac(sin(dot(mi + float2(1, 1), float2(12.9898, 78.233))) * 43758.5453);
+            float mac = lerp(lerp(h00, h10, mf.x), lerp(h01, h11, mf.x), mf.y);
+            float3 patchTint = lerp(float3(0.9, 1.04, 0.86), float3(1.12, 1.06, 0.74), smoothstep(0.35, 0.85, mac));
+            extra = float4(LB_F(lerp(float3(0.92, 0.95, 0.82), float3(1.08, 1.04, 0.9), n) * patchTint * lerp(0.8, 1.0, h)), 1);   // ffu6i 0.55 -> 0.68, ffu6j -> 0.8
             nrm = TransformWorldToObjectDir(float3(0, 1, 0), true);
         }
         #include "Assets/Shaders/FFPasses.hlsl"
@@ -130,7 +137,8 @@ Shader "FF/Grass56"
                 Light L = FFMain(d);
                 half3 col = alb * L.color * (abs(L.direction.y) * 0.5 + 0.5) * L.shadowAttenuation;
                 col += alb * L.color * L.shadowAttenuation * 0.3 * pow(saturate(dot(d.viewDirectionWS, -L.direction)), 3);   // ffu6i: sun shining through the blades
-                col += alb * d.bakedGI * lerp(1.0, FFAO(d), 0.35) * 1.15;   // ffu6i: SSAO on dense clumps blackened the lawn; only a third of it
+                col += alb * d.bakedGI * lerp(1.0, FFAO(d), 0.35) * 1.35;   // ffu6i: SSAO on dense clumps blackened the lawn; only a third of it. ffu6j ambient 1.15 -> 1.35
+                col += L.color * L.shadowAttenuation * pow(saturate(dot(normalize(d.viewDirectionWS + L.direction), float3(0, 1, 0))), 24.0) * 0.06 * i.extra.g;   // ffu6j: soft waxy sheen on the blade tips facing the sun
                 col = LBFog(col, i.positionWS, d.fogCoord);
                 return half4(col, 1);
             }

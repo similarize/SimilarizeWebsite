@@ -44,6 +44,10 @@ public static class U6
         if (F("u6warm", out f)) WarmAdd = f;
         string s = Q("u6tm"); if (s == "neutral") Tm = TonemappingMode.Neutral; else if (s == "none") Tm = TonemappingMode.None;
         if (Q("u6fog") == "0") FogOn = false;
+        if (F("u6skyev", out f)) SkyEv = f;
+        if (F("u6skysat", out f)) SkySat = f;
+        if (F("u6wisp", out f)) SkyWisp = f;
+        if (Q("u6sun") == "0") SkySun = 0f;
         s = Q("u6ssao"); if (s == "0") SsaoForce = 0; else if (s == "1") SsaoForce = 1;
         s = Q("u6msaa"); int mi; if (s != null && int.TryParse(s, out mi)) MsaaForce = Mathf.Clamp(mi, 1, 8);
         var a = Asset;
@@ -221,6 +225,20 @@ public static class U6
         if (!atmLogged) { atmLogged = true; Debug.Log("U6: height fog + sun glow on (density " + RenderSettings.fogDensity.ToString("0.0000") + ")"); }
     }
 
+    // ffu6j FF/Sky globals (x exposure mult, y zenith chroma, z high wisps, w sun disc). The sky gets its own -0.6 EV trim (the
+    // game grade's +EV lift washed the HDRI to white); wisps only on the full tier (phones / Tesla: 0 = no noise maths).
+    // Knobs u6skyev=<EV> u6skysat=<x> u6wisp=<0..1> u6sun=0.
+    public static float SkyEv = -0.6f, SkySat = 2.0f, SkyWisp = -1f, SkySun = 1f;
+    static readonly int idSky = Shader.PropertyToID("_FFSky");
+    static bool skyLogged;
+    static void SkyGlobals()
+    {
+        float w = SkyWisp >= 0f ? SkyWisp : (Realism.Lite || Look.Mobile || Perf60Low() ? 0f : 0.5f);
+        Shader.SetGlobalVector(idSky, new Vector4(Mathf.Pow(2f, SkyEv), SkySat, w, SkySun));
+        if (!skyLogged) { skyLogged = true; Debug.Log("U6: FF/Sky ev " + SkyEv + " chroma " + SkySat + " wisps " + w + " sun " + SkySun + " (sky shader " + (RenderSettings.skybox != null && RenderSettings.skybox.shader != null ? RenderSettings.skybox.shader.name : "none") + ")"); }
+    }
+    static bool Perf60Low() { return Perf60.On && Perf60.Tier < 2; }
+
     // per camera, just before it renders (after the game's own pre-cull hooks): the trilight ambient as SH and the camera's
     // post exposure
     public static void BeforeCamera(Camera c)
@@ -229,6 +247,7 @@ public static class U6
             RenderSettings.ambientProbe = U6Layers.TrilightSH(RenderSettings.ambientSkyColor, RenderSettings.ambientEquatorColor, RenderSettings.ambientGroundColor);
         Fog(c);
         Atmos(c);
+        SkyGlobals();
         var rp = c.GetComponent<RealPost>();
         if (rp != null && rp.enabled) { Grade(rp.exposure); return; }
         var lp = c.GetComponent<LBPost>();
