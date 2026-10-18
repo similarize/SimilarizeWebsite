@@ -117,6 +117,7 @@ public static class Light55
             moonLogged = true;
             Debug.Log("LIGHT55 moon: sun " + sun.name + " main " + (RenderSettings.sun == sun) + " shadows " + baseSh + "->" + sun.shadows + " str " + sun.shadowStrength.ToString("0.00") +
                       " dist " + QualitySettings.shadowDistance.ToString("0") + " I " + sun.intensity.ToString("0.00") + " fwd " + sun.transform.forward.ToString("0.00"));
+            Debug.Log("LIGHT55 moon casters: " + U6.CasterReport(c.transform.position));   // ffu6o
         }
         if (w == WorldId.House)
         {

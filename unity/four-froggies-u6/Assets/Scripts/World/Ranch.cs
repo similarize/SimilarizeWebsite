@@ -372,6 +372,19 @@ public static class Ranch
                 float shore = Mathf.Clamp01(1f - (Layout.WaterY - gy) / 0.9f) * (gy < Layout.WaterY + 0.3f ? 1f : 0f);
                 px[y * n + x] = new Color(depth, shore, 0f, 1f);
             }
+        // ffu6o: the 6.6 pond surface drew nothing (depth 0 -> the shader's soft shoreline edge = 0 everywhere). If the terrain gave no
+        // basin here, fall back to the shoreline ellipse (deepest in the middle) so the water always shows; logged either way.
+        float dmax = 0f; for (int i = 0; i < px.Length; i++) if (px[i].r > dmax) dmax = px[i].r;
+        bool fb = dmax < 0.05f;
+        if (fb)
+            for (int y = 0; y < n; y++)
+                for (int x = 0; x < n; x++)
+                {
+                    float wx = x0 + (x + 0.5f) * w / n, wz = z0 + (y + 0.5f) * h / n;
+                    float q = new Vector2((wx - c.x) / r.x, (wz - c.y) / r.y).magnitude;
+                    px[y * n + x] = new Color(Mathf.Clamp01((1f - q) * 1.4f), q < 1f ? Mathf.Clamp01(1f - (1f - q) * 6f) : 0f, 0f, 1f);
+                }
+        Debug.Log("Ranch: pond depth map max " + dmax.ToString("0.000") + (fb ? " -> FALLBACK ellipse depth" : "") + " terrain " + (terrain != null) + " gy(c) " + GY(c.x, c.y).ToString("0.00") + " waterY " + Layout.WaterY.ToString("0.00"));
         map.SetPixels(px); map.Apply(false);
         m.SetTexture("_SeaMap", map);
         m.SetTexture("_Noise", NoiseTex(128));

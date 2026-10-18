@@ -76,6 +76,13 @@ public class Ffu60 : MonoBehaviour
 
     // ffu6m diag (6.6 probe findings): the pond surface draws nothing from the shore cam (R-pond) and frogs / the lander cast no
     // sun shadows (Q-moon, O-light). One line with the water renderer + material state, the pond globals and the shadow chain.
+    static string SeaMax(Material m)   // ffu6o: max depth texel of the material's _SeaMap (readable runtime texture)
+    {
+        var t = m != null ? m.GetTexture("_SeaMap") as Texture2D : null;
+        if (t == null) return "none"; if (!t.isReadable) return "unreadable " + t.width;
+        float mx = 0f; foreach (var c in t.GetPixels()) if (c.r > mx) mx = c.r;
+        return t.width + "px " + mx.ToString("0.000");
+    }
     void Diag()
     {
         string s = "FF6 diag pond: ";
@@ -87,7 +94,7 @@ public class Ffu60 : MonoBehaviour
             s += "active " + go.activeInHierarchy + " en " + (r != null && r.enabled) + " forceOff " + (r != null && r.forceRenderingOff) + " vis " + (r != null && r.isVisible) +
                  " layer " + go.layer + " rlm " + (r != null ? r.renderingLayerMask : 0u) + " bounds " + (r != null ? r.bounds.center.ToString("0.0") + "/" + r.bounds.size.ToString("0") : "-") +
                  " shader " + (m != null && m.shader != null ? m.shader.name + " sup " + m.shader.isSupported + " passes " + m.passCount + " q " + m.renderQueue : "none") +
-                 " seamap " + (m != null && m.HasProperty("_SeaMap") && m.GetTexture("_SeaMap") != null) + " patch " + (m != null && m.HasProperty("_Patch") ? m.GetFloat("_Patch") : -1f);
+                 " seamap " + (m != null && m.HasProperty("_SeaMap") && m.GetTexture("_SeaMap") != null) + " rect " + (m != null ? m.GetVector("_SeaRect").ToString("0.0000") : "-") + " sh " + (m != null ? m.GetColor("_Shallow").ToString("0.00") : "-") + " smax " + SeaMax(m) + " patch " + (m != null && m.HasProperty("_Patch") ? m.GetFloat("_Patch") : -1f);
         }
         s += " | FFPond " + Shader.GetGlobalVector("_FFPond") + " Q " + Shader.GetGlobalVector("_FFPondQ") + " RipP " + Shader.GetGlobalVector("_FFRipP") + " RipRect " + Shader.GetGlobalVector("_FFRipRect");
         // shadow chain: URP asset, the main light, the slot camera, the player's frog renderers
@@ -116,6 +123,7 @@ public class Ffu60 : MonoBehaviour
             s += " | frog rend " + n + " casting " + on + " withSCpass " + sc + " (" + sh + ")";
         }
         Debug.Log(s);
+        if (cam != null) Debug.Log("FF6 diag casters: " + U6.CasterReport(cam.transform.position));   // ffu6o
     }
 
     void LateUpdate()

@@ -241,6 +241,25 @@ public static class U6
     public static Color RanchFogTint = new Color(0.56f, 0.69f, 0.86f); public static float RanchFogBlue = 0.25f;
     public static float SunTierK { get { return !Perf60.On ? 1f : Perf60.Tier >= 2 ? 1f : Perf60.Tier == 1 ? 0.6f : 0f; } }
     static readonly int idSky = Shader.PropertyToID("_FFSky"), idMacro = Shader.PropertyToID("_FFMacro");
+    // ffu6o diag: every active shadow caster -> union bounds (the directional shadow depth range follows the casters; URP shadow maps
+    // are 16-bit, so km-wide caster bounds quantise away small objects' shadows), plus the biggest / farthest casters by name
+    public static string CasterReport(Vector3 cam)
+    {
+        int n = 0; Bounds u = new Bounds(cam, Vector3.zero); string big = "", far = ""; float b1 = 0f, f1 = 0f;
+        var top = new List<KeyValuePair<float, string>>(); var topF = new List<KeyValuePair<float, string>>();
+        foreach (var r in Object.FindObjectsByType<Renderer>())
+        {
+            if (r == null || !r.enabled || !r.gameObject.activeInHierarchy || r.forceRenderingOff || r.shadowCastingMode == UnityEngine.Rendering.ShadowCastingMode.Off) continue;
+            if (r is ParticleSystemRenderer || r is LineRenderer || r is TrailRenderer) continue;
+            n++; var b = r.bounds; u.Encapsulate(b);
+            float sz = b.size.magnitude, d = Vector3.Distance(cam, b.center);
+            top.Add(new KeyValuePair<float, string>(sz, r.name)); topF.Add(new KeyValuePair<float, string>(d, r.name));
+        }
+        top.Sort((x, y) => y.Key.CompareTo(x.Key)); topF.Sort((x, y) => y.Key.CompareTo(x.Key));
+        for (int i = 0; i < Mathf.Min(4, top.Count); i++) big += top[i].Value + ":" + top[i].Key.ToString("0") + " ";
+        for (int i = 0; i < Mathf.Min(4, topF.Count); i++) far += topF[i].Value + ":" + topF[i].Key.ToString("0") + " ";
+        return "casters " + n + " union " + u.center.ToString("0") + "/" + u.size.ToString("0") + " | biggest " + big + "| farthest " + far;
+    }
     public static Vector2 ShadowBiasForce = new Vector2(-1f, -1f); public static bool NoSmallShadowCull;   // ffu6n diag knobs u6sb / u6pc
     public static float MacroAmp = -1f;   // ffu6k FF/Std macro variation amplitude (-1 = by tier); knob u6macro=<x>
     static bool skyLogged;
@@ -299,7 +318,59 @@ public static class U6Cam
 
 public class U6Runner : MonoBehaviour
 {
-    void LateUpdate() { U6.Mirror(); }
+    void LateUpdate() { U6.Mirror(); U6FarCast.Tick(); }
+}
+
+// ffu6o: 6.6 small / medium casters (frogs, cubes, posts, the Moon lander) lost their sun shadows while big walls kept theirs.
+// URP's directional shadow map is 16-bit and its depth range follows the shadow casters, so casters kilometres away (other worlds,
+// story sets, sky props) or km-wide ground shells stretch it until small height differences quantise away. Casters farther than
+// 600 m from every view (bounds distance) or wider than 800 m stop casting (restored when they come back). Knob u6fc=0 = off.
+public static class U6FarCast
+{
+    struct E { public Renderer r; public bool off; }
+    static readonly List<E> list = new List<E>(); static readonly HashSet<int> known = new HashSet<int>();
+    static readonly List<Vector3> cams = new List<Vector3>();
+    static float scanT = 3f; static int idx, lastOff = -1; static bool? enabled;
+    public static int Off;
+    public static void Tick()
+    {
+        if (enabled == null) enabled = U6.Q("u6fc") != "0";
+        if (enabled == false) return;
+        scanT -= Time.unscaledDeltaTime;
+        if (scanT <= 0f)
+        {
+            scanT = 6f;
+            foreach (var r in Object.FindObjectsByType<Renderer>())
+            {
+                if (r == null || r is ParticleSystemRenderer || r is LineRenderer || r is TrailRenderer || r is SpriteRenderer) continue;
+                int id = r.GetHashCode(); if (known.Contains(id)) continue; known.Add(id);
+                if (r.shadowCastingMode == UnityEngine.Rendering.ShadowCastingMode.Off) continue;
+                list.Add(new E { r = r });
+            }
+        }
+        if (list.Count == 0) return;
+        cams.Clear();
+        foreach (var c in Camera.allCameras) if (c != null && c.isActiveAndEnabled && c.targetTexture == null) cams.Add(c.transform.position);
+        if (cams.Count == 0) return;
+        int budget = Mathf.Min(list.Count, 500);
+        for (int i = 0; i < budget; i++)
+        {
+            if (idx >= list.Count) idx = 0;
+            var e = list[idx];
+            if (e.r == null) { if (e.off) Off--; list.RemoveAt(idx); continue; }
+            Bounds b = e.r.bounds; float d2 = 1e18f;
+            for (int c = 0; c < cams.Count; c++) { float q = b.SqrDistance(cams[c]); if (q < d2) d2 = q; }
+            bool off = d2 > 600f * 600f || b.size.magnitude > 800f;
+            if (off != e.off)
+            {
+                if (off) { if (e.r.shadowCastingMode == UnityEngine.Rendering.ShadowCastingMode.Off) { list.RemoveAt(idx); continue; } e.r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; Off++; }
+                else { e.r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On; Off--; }
+                e.off = off; list[idx] = e;
+            }
+            idx++;
+        }
+        if (Off != lastOff && (lastOff < 0 || Mathf.Abs(Off - lastOff) > 20)) { lastOff = Off; Debug.Log("U6 farcast: " + Off + " far / huge casters off of " + list.Count); }
+    }
 }
 
 // lobby studio vs world lights with URP rendering layers (Built-in used Light.cullingMask): studio lights only light layer-20
