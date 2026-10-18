@@ -37,6 +37,34 @@
         {
           "slug": "four-froggies-catch-jimmy",
           "label": "Also watch Version 1"
+        },
+        {
+          "slug": "four-froggies-come-home-v3",
+          "label": "Also watch Version 3"
+        }
+      ]
+    },
+    {
+      "slug": "four-froggies-come-home-v3",
+      "title": "Four Froggies – Come Home! (Version 3)",
+      "badge": "Version 3",
+      "description": "Version 3: Jimmy grabs the golden orb and his new jetpack rockets him into space, so James, Bubbles and Rexy blast off with Spotty to bring him home. From Mars and King Germy's crystal caves to icy Callisto and a moon buggy rescue on the Moon, they keep calling \"Jimmy! Come home!\" until all four froggies fly home together.",
+      "duration": 430,
+      "audience": "Kids & family",
+      "published": "2026-10-18",
+      "status": "published",
+      "hls": "four-froggies-come-home-v3/master.m3u8",
+      "poster": "four-froggies-come-home-v3/poster.jpg",
+      "thumb": "four-froggies-come-home-v3/thumb.jpg",
+      "poster_at": 390,
+      "related": [
+        {
+          "slug": "four-froggies-catch-jimmy",
+          "label": "Also watch Version 1"
+        },
+        {
+          "slug": "four-froggies-catch-jimmy-v2",
+          "label": "Also watch Version 2"
         }
       ]
     }
