@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Projects — Similarize</title>
-  <meta name="description" content="Work on the bench: IOTransition, a small bathroom vacuum, and two queued personal projects — a home-server mesh and an off-grid solar depot.">
+  <meta name="description" content="Work on the bench: the Four Froggies movie, IOTransition, and a small bathroom vacuum.">
   <link rel="canonical" href="https://www.similarize.com/projects/">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -190,51 +190,23 @@
         <p class="quiet">The research bot is still working. Nothing public to open yet.</p>
       </div>
     </article>
-    <article>
-      <div class="mark" aria-hidden="true">
-        <svg viewBox="0 0 64 64" fill="none">
-          <rect x="16" y="10" width="32" height="44" rx="3" stroke="#14532d" stroke-width="2.4"/>
-          <path d="M22 20h20M22 28h20M22 36h14" stroke="#15803d" stroke-width="2" stroke-linecap="round"/>
-          <circle cx="24" cy="46" r="2" fill="#14532d"/>
-          <circle cx="32" cy="46" r="2" fill="#86efac"/>
-          <circle cx="40" cy="46" r="2" fill="#a8a29e"/>
-        </svg>
-      </div>
-      <div>
-        <p class="status">Queued</p>
-        <h2>Home server</h2>
-        <p>A personal mesh, not a Similarize product, and not started. Three separated machines — Murray, Magna, and a remote site — each on its own Starlink, so one site can keep working if the others go dark.</p>
-        <ul>
-          <li>Local inference, files, a password vault, and an offline shelf. Nothing of it opened to the public internet.</li>
-          <li>Three PCs already on hand, about 32 GB each. No new cluster to buy on day one.</li>
-          <li>Tailscale between sites, because Starlink will not take inbound ports.</li>
-        </ul>
-        <p class="quiet">Researcher brief, 23 Sep 2026. Queued until Phase 1 is actually scheduled. Nothing to log into.</p>
-      </div>
-    </article>
-    <article>
-      <div class="mark" aria-hidden="true">
-        <svg viewBox="0 0 64 64" fill="none">
-          <circle cx="22" cy="18" r="7" stroke="#15803d" stroke-width="2.2"/>
-          <path d="M22 7v3M22 26v3M11 18h3M30 18h3" stroke="#15803d" stroke-width="2" stroke-linecap="round"/>
-          <path d="M10 40h44l-6 14H16L10 40z" stroke="#14532d" stroke-width="2.4" stroke-linejoin="round"/>
-          <path d="M18 40V32h10l4 8M36 40V34h12l4 6" stroke="#14532d" stroke-width="2"/>
-          <path d="M20 46h8M34 46h10" stroke="#86efac" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-      </div>
-      <div>
-        <p class="status">Queued</p>
-        <h2>Solar depot</h2>
-        <p>Two 30-foot trailers, unused batteries, and panels, waiting on land. Then they become mobile off-grid depots — tools, lights, and later the home-server nodes — without a utility hookup. This one owns power. The server project owns compute.</p>
-        <ul>
-          <li>Stated storage is about 50 kWh: three ~10 kWh banks and one ~20 kWh. Nameplates still need a photograph before that is treated as fact.</li>
-          <li>Two depots first. The 20 kWh bank on one trailer, a 10 kWh bank on the other, one bank held spare.</li>
-          <li>Panel wattage is still unknown. Harvest before inverters.</li>
-        </ul>
-        <p class="quiet">Researcher brief, 23 Sep 2026. Queued until there is land. No storefront and no install.</p>
-      </div>
-    </article>
   </main>
   <footer><a href="/">Similarize</a> · <a href="/videos/">Videos</a> · <a href="/games/">Games</a></footer>
+  <script>
+  (function () {
+    // Ben-only cards. /p/* sits behind Cloudflare Access (Google login). Signed out,
+    // Access answers with a redirect; redirect:"manual" makes that a non-ok opaque
+    // response, so nothing is added and the public page stays as is.
+    fetch("/p/me", { credentials: "same-origin", redirect: "manual", headers: { "Accept": "application/json" } })
+      .then(function (r) { return r && r.ok && r.type !== "opaqueredirect" ? r.json() : null; })
+      .then(function (d) {
+        if (!d || d.ben !== true || !Array.isArray(d.cards)) return;
+        var list = document.querySelector("main.list");
+        if (!list) return;
+        d.cards.forEach(function (html) { if (typeof html === "string") list.insertAdjacentHTML("beforeend", html); });
+      })
+      .catch(function () {});
+  })();
+  </script>
 </body>
 </html>
