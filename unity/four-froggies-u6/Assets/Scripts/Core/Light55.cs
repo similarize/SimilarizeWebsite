@@ -68,7 +68,7 @@ public static class Light55
             default: return baseC;
         }
     }
-    static float ExpK(WorldId w) { return w == WorldId.House ? 1.6f : w == WorldId.Mars ? 1.04f : w == WorldId.Callisto ? 1.1f : 1f; }
+    static float ExpK(WorldId w) { return w == WorldId.House ? 2.1f : w == WorldId.Mars ? 1.04f : w == WorldId.Callisto ? 1.1f : 1f; }
 
     // Worlds.PreCull, after the world's fog / ambient (and Realism's ranch SH) are set - every camera sets the sun
     // for its own world, so split views in different worlds never leak each other's light
@@ -97,7 +97,9 @@ public static class Light55
         {
             RenderSettings.ambientSkyColor = new Color(0.62f, 0.45f, 0.34f); RenderSettings.ambientEquatorColor = new Color(0.46f, 0.32f, 0.24f); RenderSettings.ambientGroundColor = new Color(0.24f, 0.15f, 0.1f);
         }
-        U6.WorldSat = w == WorldId.House ? -12f : 0f;   // ffu6d: indoors (lamp-lit wood / rugs) ACES reads too red-saturated
+        // ffu6d: indoors ACES read red-saturated (-12); ffu6e: house brighter (EV 2.1 + the global lift) and warm-golden instead of red-brown
+        U6.WorldSat = w == WorldId.House ? -2f : 0f;
+        U6.WorldWarm = w == WorldId.House ? 9f : 0f;
         RealPost rp;
         if (!posts.TryGetValue(c, out rp)) { rp = c.GetComponent<RealPost>(); posts[c] = rp; }
         if (rp != null)

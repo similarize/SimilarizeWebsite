@@ -24,7 +24,10 @@ public static class U6
     public static VolumeProfile GameProfile, StudioProfile;
     public static ScriptableRendererFeature Ssao;
     static string url = "";
-    public static float WorldSat = 0f, SatBase = -6f, ExpBias = 0.35f, BloomScale = 1f, SatAdd = 0f, ConAdd = 0f;
+    public static float WorldSat = 0f, SatBase = 4f, ExpBias = 1.25f, BloomScale = 1f, SatAdd = 0f, ConAdd = 0f;
+    // ffu6e: brighter + warmer (6.6 read ~0.6x as bright as 2022.3 everywhere): +0.9 EV, sat -6 -> +4, white balance 4 -> 9 (+ per world)
+    public static float WorldWarm = 0f, WarmBase = 9f, WarmAdd = 0f;
+    const float ExpBias0 = 1.25f;
     public static TonemappingMode Tm = TonemappingMode.ACES;
     public static int MsaaForce = 0, SsaoForce = -1;
     public static bool Ready;
@@ -38,6 +41,7 @@ public static class U6
         if (F("u6bloom", out f)) BloomScale = f;
         if (F("u6sat", out f)) SatAdd = f;
         if (F("u6con", out f)) ConAdd = f;
+        if (F("u6warm", out f)) WarmAdd = f;
         string s = Q("u6tm"); if (s == "neutral") Tm = TonemappingMode.Neutral; else if (s == "none") Tm = TonemappingMode.None;
         if (Q("u6fog") == "0") FogOn = false;
         s = Q("u6ssao"); if (s == "0") SsaoForce = 0; else if (s == "1") SsaoForce = 1;
@@ -52,7 +56,7 @@ public static class U6
         Grade(0.84f);
         if (studio != null)
         {
-            ColorAdjustments ca; if (studio.TryGet(out ca)) { ca.active = true; ca.postExposure.Override(0.5f + ExpBias * 0.5f); }
+            ColorAdjustments ca; if (studio.TryGet(out ca)) { ca.active = true; ca.postExposure.Override(0.675f + (ExpBias - ExpBias0) * 0.5f); }   // studio (phone / showroom) unchanged by the ffu6e lift
             Tonemapping tm; if (studio.TryGet(out tm)) { tm.active = Tm != TonemappingMode.None; tm.mode.Override(Tm); }
         }
         if (a != null) { a.shadowCascadeCount = 2; a.cascade2Split = 0.25f; }
@@ -94,18 +98,19 @@ public static class U6
     // gamma -> linear in a Linear project, so hand it the gamma encoding (Lambo u6f lesson)
     public static Color Lin(Color c) { return Linear ? c.gamma : c; }
 
-    static float lastExp = -99f, lastSat = -99f;
+    static float lastExp = -99f, lastSat = -99f, lastWarm = -99f;
     // game grade: RealPost's / LBPost's exposure (Light55 moves it per world) -> URP post exposure; ACES; light bloom; vignette
     public static void Grade(float exposure)
     {
         var p = GameProfile; if (p == null) return;
         float ev = ExpBias + Mathf.Log(Mathf.Max(0.05f, exposure) / 0.84f, 2f);
-        if (Mathf.Abs(ev - lastExp) < 0.002f && Mathf.Abs(WorldSat - lastSat) < 0.01f) return;
-        lastExp = ev; lastSat = WorldSat;
+        if (Mathf.Abs(ev - lastExp) < 0.002f && Mathf.Abs(WorldSat - lastSat) < 0.01f && Mathf.Abs(WorldWarm - lastWarm) < 0.01f) return;
+        lastExp = ev; lastSat = WorldSat; lastWarm = WorldWarm;
         Tonemapping tm; if (p.TryGet(out tm)) { tm.active = Tm != TonemappingMode.None; tm.mode.Override(Tm); }
         ColorAdjustments ca;
         if (p.TryGet(out ca)) { ca.active = true; ca.postExposure.Override(ev); ca.saturation.Override(SatBase + SatAdd + WorldSat); ca.contrast.Override(8f + ConAdd); }
         Bloom b; if (p.TryGet(out b)) { b.active = BloomScale > 0f; b.intensity.Override(0.32f * BloomScale); b.threshold.Override(1.05f); b.scatter.Override(0.6f); b.highQualityFiltering.Override(!Look.Mobile); }
+        WhiteBalance wb; if (p.TryGet(out wb)) { wb.active = true; wb.temperature.Override(Mathf.Clamp(WarmBase + WarmAdd + WorldWarm, -100f, 100f)); }
         Vignette v; if (p.TryGet(out v)) { v.active = true; v.intensity.Override(0.18f); v.smoothness.Override(0.5f); }
     }
 

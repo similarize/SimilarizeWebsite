@@ -110,7 +110,7 @@ public partial class Game
         if (chip)
         {
             ChipTick(ChipKind);
-            PlaceInSafe(hpMenuChip, new Vector2(0f, -12f));
+            PlaceInSafe(hpMenuChip, new Vector2(ChipSplitX(), -12f));
             foreach (Vector2 tp in Kb.TouchesBegan()) if (Hit(hpMenuChip, tp, 10f)) { help = true; helpBy = FindSlot(InputKind.Touch) ?? slots[0]; Sfx.Play(Sfx.Click, 0.7f); hpScroll = 0f; break; }
             var cm = Mouse.current;
             if (!help && cm != null && Kb.MouseLeftDown() && Cursor.lockState != CursorLockMode.Locked && Hit(hpMenuChip, cm.position.ReadValue(), 4f))
@@ -143,6 +143,24 @@ public partial class Game
         var mouse = Mouse.current;
         if (mouse != null && Kb.MouseLeftDown() && Hit(hpClose, mouse.position.ReadValue(), 4f)) closeHit = true;
         if (closeHit) { help = false; Sfx.Play(Sfx.Click, 0.7f); hpRoot.gameObject.SetActive(false); }
+    }
+
+    // ffu6e: side-by-side split views - the screen's top centre is the divider, where the right view's "P2 name" header starts
+    // (the chip sat on it). Put the chip at the top centre of the right-most top view instead (canvas units from the screen centre).
+    float ChipSplitX()
+    {
+        int top = 0; float best = -1f, cx = 0.5f;
+        foreach (var s in slots)
+        {
+            if (s == null || s.cam == null || !s.cam.enabled) continue;
+            Rect r = s.cam.rect;
+            if (r.yMax < 0.99f || r.width > 0.99f) continue;
+            top++;
+            if (r.x > best) { best = r.x; cx = r.center.x; }
+        }
+        if (top < 2) return 0f;
+        Vector2 cs = ((RectTransform)hudCanvas.transform).rect.size;
+        return (cx - 0.5f) * cs.x;
     }
 
     void PlaceInSafe(RectTransform rt, Vector2 ofs)
