@@ -59,7 +59,7 @@ public class Ffu60 : MonoBehaviour
         switch (order[ph])
         {
             case "ranch": if (step == 0) step = 1; Cam(new Vector3(45f, 26f, 95f), new Vector3(-20f, 0f, 0f)); break;
-            case "pond": if (step == 0) step = 1; Cam(new Vector3(10f, 9f, -40f), new Vector3(70f, -1f, -80f)); break;
+            case "pond": if (step == 0) { step = 1; Diag(); } Cam(new Vector3(10f, 9f, -40f), new Vector3(70f, -1f, -80f)); break;
             case "lawn":
                 if (step == 0) { f.SendTo(WorldId.Ranch, G(22f, -18f) + Vector3.up * 0.3f, 90f); step = 1; }
                 Cam(G(14f, -24f) + Vector3.up * 1.6f, G(30f, -12f) + Vector3.up * 0.6f);
@@ -72,6 +72,49 @@ public class Ffu60 : MonoBehaviour
                 break;   // the normal follow camera
         }
         if (w > PhaseS) Next();
+    }
+
+    // ffu6m diag (6.6 probe findings): the pond surface draws nothing from the shore cam (R-pond) and frogs / the lander cast no
+    // sun shadows (Q-moon, O-light). One line with the water renderer + material state, the pond globals and the shadow chain.
+    void Diag()
+    {
+        string s = "FF6 diag pond: ";
+        var go = GameObject.Find("PondWater");
+        if (go == null) s += "PondWater MISSING";
+        else
+        {
+            var r = go.GetComponent<Renderer>(); var m = r != null ? r.sharedMaterial : null;
+            s += "active " + go.activeInHierarchy + " en " + (r != null && r.enabled) + " forceOff " + (r != null && r.forceRenderingOff) + " vis " + (r != null && r.isVisible) +
+                 " layer " + go.layer + " rlm " + (r != null ? r.renderingLayerMask : 0u) + " bounds " + (r != null ? r.bounds.center.ToString("0.0") + "/" + r.bounds.size.ToString("0") : "-") +
+                 " shader " + (m != null && m.shader != null ? m.shader.name + " sup " + m.shader.isSupported + " passes " + m.passCount + " q " + m.renderQueue : "none") +
+                 " seamap " + (m != null && m.HasProperty("_SeaMap") && m.GetTexture("_SeaMap") != null) + " patch " + (m != null && m.HasProperty("_Patch") ? m.GetFloat("_Patch") : -1f);
+        }
+        s += " | FFPond " + Shader.GetGlobalVector("_FFPond") + " Q " + Shader.GetGlobalVector("_FFPondQ") + " RipP " + Shader.GetGlobalVector("_FFRipP") + " RipRect " + Shader.GetGlobalVector("_FFRipRect");
+        // shadow chain: URP asset, the main light, the slot camera, the player's frog renderers
+        var a = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline as UnityEngine.Rendering.Universal.UniversalRenderPipelineAsset;
+        s += " | shadows asset " + (a != null ? "dist " + a.shadowDistance.ToString("0") + " casc " + a.shadowCascadeCount + " res " + a.mainLightShadowmapResolution : "none");
+        var sun = RenderSettings.sun;
+        if (sun != null)
+        {
+            var ld = sun.GetComponent<UnityEngine.Rendering.Universal.UniversalAdditionalLightData>();
+            s += " sun " + sun.name + " " + sun.shadows + " str " + sun.shadowStrength.ToString("0.00") + " en " + sun.isActiveAndEnabled + " cm " + sun.cullingMask + " rlm " + sun.renderingLayerMask +
+                 (ld != null ? " srl " + ld.shadowRenderingLayers : " noLData") + " bias " + sun.shadowBias.ToString("0.00") + "/" + sun.shadowNormalBias.ToString("0.00");
+        }
+        var cam = Game.I.slots[0].cam;
+        var cd = cam != null ? cam.GetComponent<UnityEngine.Rendering.Universal.UniversalAdditionalCameraData>() : null;
+        s += " cam " + (cd != null ? "renderShadows " + cd.renderShadows : "noCData") + " qs " + QualitySettings.shadows + " " + QualitySettings.shadowDistance.ToString("0");
+        if (f != null)
+        {
+            int n = 0, on = 0, sc = 0; string sh = "";
+            foreach (var r in f.GetComponentsInChildren<Renderer>())
+            {
+                n++; if (r.shadowCastingMode != UnityEngine.Rendering.ShadowCastingMode.Off) on++;
+                var m = r.sharedMaterial; if (m != null && m.FindPass("ShadowCaster") >= 0) sc++;
+                if (sh.Length == 0 && m != null && m.shader != null) sh = m.shader.name + " rlm " + r.renderingLayerMask + " fro " + r.forceRenderingOff;
+            }
+            s += " | frog rend " + n + " casting " + on + " withSCpass " + sc + " (" + sh + ")";
+        }
+        Debug.Log(s);
     }
 
     void LateUpdate()
