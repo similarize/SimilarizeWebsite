@@ -1,0 +1,323 @@
+using System.Collections.Generic;
+using UnityEngine;
+
+// Base for everything a froggy can climb into. Physics runs in FixedUpdate from the latest PIn.
+public abstract class Vehicle : MonoBehaviour
+{
+    public static readonly List<Vehicle> All = new List<Vehicle>();
+
+    public string Title = "Ride";
+    public string EnterVerb = "get in";
+    public Frog driver;
+    public Transform seat;
+    public float seatScale = 0.75f;
+    public bool showDriver = true;
+    public Rigidbody rb;
+    public BoxCollider body;
+    public float camDistance = 11f, camHeight = 2.5f;
+    public bool flyer;
+    public int engineKind;   // 0 car, 1 tracks, 2 rotor, 3 drone, 4 boat, 5 mech (footsteps)
+    float stepT;
+    public bool syncedSteps;   // ffu28: footfalls come from the walk cycle (MechStomp), not the engineKind-5 step timer
+    // ffu37: pond water state (PondPhysics) - submerged fraction, seconds under, seconds stuck, toast shown
+    public float pondSub, pondUnderT, pondStuckT;
+    public bool pondToasted;
+    public bool stowed;        // ffu31: locked in a toy hauler's bay (kinematic cargo) - nobody can board it until it rides out
+    // ffu34 canon (CANON.md): James and Dad each own a Cybertruck and may borrow the other's by asking first when it isn't
+    // in use (the in-use check is the usual driver check). ownerName != null = an owned ordinary vehicle; ownerChar = the
+    // owner's roster id when the owner is a playable froggy (-1 = not playable, e.g. Dad). Mechs keep their hard lock.
+    public string ownerName;
+    public int ownerChar = -1;
+    // ffu42 big wheels (BigWheels.cs): how far the body rides above its stock height, how far the tyres stick out past the
+    // body sideways, and how much further back the rear tyres reach (the hitch drops / extends by these)
+    [System.NonSerialized] public float bigLift, bigPad, bigBack;
+    public void RetuneEngine(float p)
+    {
+        if (Mathf.Abs(p - enginePitch) < 0.005f) return;
+        enginePitch = p;
+        if (voice != null) { voice.Kill(); voice = null; }
+    }
+    public bool OwnedBy(Frog f) { return ownerName == null || (ownerChar >= 0 && f != null && f.charId == ownerChar); }
+
+    protected PIn inp;
+    protected float camYawIn;
+    protected Vector3 spawnPos;
+    protected Quaternion spawnRot;
+    float flipT;
+
+    // layers: 0 world, 8 vehicles, 9 frogs, 10 projectiles, 11 loose props
+    public const int VehicleLayer = 8, FrogLayer = 9, ProjectileLayer = 10, PropLayer = 11;
+    public static int GroundMask { get { return ~((1 << 2) | (1 << VehicleLayer) | (1 << FrogLayer) | (1 << ProjectileLayer) | (1 << PropLayer)); } }
+
+    protected Vector3 kinVel;      // kinematic vehicles (the space Starship) report their own velocity
+    public void NetVel(Vector3 v) { kinVel = v; }   // ffu13: a net-posed (kinematic) vehicle reports the owner's velocity
+    public Vector3 Velocity { get { return rb != null && !rb.isKinematic ? rb.velocity : kinVel; } }
+    public float Speed { get { Vector3 v = Velocity; v.y = 0f; return v.magnitude; } }
+    public float ForwardSpeed { get { return Vector3.Dot(Velocity, transform.forward); } }
+
+    // ffu14 touch buttons in this vehicle: labels for A, FIRE, MSL, UP, DOWN (null = hidden)
+    public virtual string[] TouchSet { get { return new[] { "A", null, null, null, null }; } }
+
+    public virtual string HudStatus { get { return null; } }   // ffu32: replaces the HUD's "Title NN km/h" line when set (hammock, swing, horse)
+    public virtual string HelpLine { get { return "L-stick steer | RT gas | LT brake/reverse | A get out"; } }
+    // ffu46: device-specific control rows "binding::what it does|..." for the help screen + hints (null = derive from HelpLine)
+    public virtual string HelpFor(InputKind k) { return null; }
+    // world yaw the camera should hold (tank turret), or NaN to follow the body
+    public virtual float AimYaw { get { return float.NaN; } }
+    // ffu49: true while the vehicle holds itself in an odd attitude on purpose (Roadster suction fans / thrusters): no flip rescue
+    public virtual bool HoldsOn { get { return false; } }
+
+    protected void SetupBody(float mass, Vector3 center, Vector3 size, Vector3 com)
+    {
+        gameObject.layer = VehicleLayer;
+        rb = gameObject.AddComponent<Rigidbody>();
+        rb.mass = mass;
+        rb.drag = 0.05f;
+        rb.angularDrag = 0.8f;
+        rb.interpolation = RigidbodyInterpolation.Interpolate;
+        rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
+        body = gameObject.AddComponent<BoxCollider>();
+        body.center = center;
+        body.size = size;
+        var pm = new PhysicsMaterial("VehicleBody");
+        pm.dynamicFriction = 0.25f;
+        pm.staticFriction = 0.3f;
+        pm.bounciness = 0.05f;
+        pm.frictionCombine = PhysicsMaterialCombine.Minimum;
+        body.sharedMaterial = pm;
+        rb.centerOfMass = com;
+        spawnPos = transform.position;
+        spawnRot = transform.rotation;
+        All.Add(this);
+    }
+
+    public void SetupBodyPublic(float mass, Vector3 center, Vector3 size, Vector3 com) { SetupBody(mass, center, size, com); }
+    public BoxCollider ExtraBoxPublic(Vector3 center, Vector3 size) { return ExtraBox(center, size); }
+
+    protected BoxCollider ExtraBox(Vector3 center, Vector3 size)
+    {
+        var b = gameObject.AddComponent<BoxCollider>();
+        b.center = center;
+        b.size = size;
+        b.sharedMaterial = body.sharedMaterial;
+        return b;
+    }
+
+    protected void OnDestroy() { All.Remove(this); }
+
+    // called by the driver's Frog.Update every frame
+    public System.Func<PIn, PIn> inputHook;   // demo autopilot (ffshot=cyberboat)
+    public virtual void Drive(PIn i, float camYaw, float dt)
+    {
+        inp = inputHook != null ? inputHook(i) : i;
+        camYawIn = camYaw;
+    }
+
+    public virtual void OnEnter() { if (rb != null) rb.WakeUp(); }
+    public virtual void OnExit() { inp = new PIn(); }
+
+    public float enginePitch = 1f;     // per-vehicle engine pitch (the Ripsaw M5 runs its diesel lower than the EV2)
+    Sfx.EngineVoice voice;
+    float crashCool;
+    // GroundVehicle fills these for the skid layer
+    [System.NonSerialized] public float slipSpeed, groundFrac = 1f;
+
+    // ffu11: switch the engine voice (the Cybertruck becomes a jet boat); the next tick rebuilds it
+    public void SetEngineKind(int k)
+    {
+        if (k == engineKind) return;
+        engineKind = k;
+        if (voice != null) { voice.Kill(); voice = null; }
+    }
+
+    protected void EngineSound(float dt)
+    {
+        bool heard = driver != null && (driver.human || driver.robotPilot != null);   // ffu20: robot-driven vehicles are heard too
+        Flyer fl = this as Flyer;
+        if (fl != null && fl.returning) heard = true;
+        float spd = Speed;
+        crashCool -= dt;
+        if (engineKind == 6) return;   // story mechs make their own footsteps
+        if (engineKind == 5 && heard && spd > 0.8f && !syncedSteps)
+        {
+            stepT -= dt;
+            if (stepT <= 0f) { stepT = Mathf.Clamp(1.4f / spd, 0.3f, 0.7f); Sfx.Play(Sfx.StepMetal != null ? Sfx.StepMetal : Sfx.Step, 0.5f, Random.Range(0.85f, 1.05f)); if (Random.value < 0.35f) Sfx.Play(Sfx.Pick(Sfx.Servo), 0.18f, Random.Range(0.9f, 1.2f)); }
+        }
+        if (voice == null)
+        {
+            if (!heard) return;
+            voice = new Sfx.EngineVoice(gameObject, engineKind, enginePitch);
+        }
+        float load = Mathf.Clamp01(Mathf.Abs(inp.gas - inp.brake) + Mathf.Abs(inp.move.y) + Mathf.Abs(inp.climb));
+        if (engineKind == 12 && voice.syn != null) voice.syn.surface = CtSurface();   // ffu39 Cybertruck tyre grit by surface
+        bool on = heard && !(fl != null && fl.returning && driver == null && false);
+        voice.Tick(on, spd, load, slipSpeed, groundFrac, transform.position, dt);
+        if (fl != null && fl.returning && driver == null && voice.main != null) voice.main.volume = Mathf.Min(voice.main.volume, 0.12f);
+        if (driver != null && driver.robotPilot != null)
+        {
+            // ffu20: a robot driving it - fade with distance from the nearest player (engine voices are 2D)
+            float k = Mathf.Clamp01(1f - Sfx.Near(transform.position) / 70f); k *= k;
+            foreach (var src in new[] { voice.main, voice.layer, voice.skid, voice.extra }) if (src != null) src.volume = Mathf.Min(src.volume, 0.45f * k);
+            if (voice.syn != null) voice.syn.extCap = 0.45f * k;
+        }
+    }
+
+    // ffu39: what the Cybertruck's tyres roll on, 0 pavement / concrete .. 0.6 grass .. 1 gravel / dirt road. Anything that
+    // is not the ranch terrain under the wheels (garage floor, bridges, the loop, decks, ramps) counts as pavement.
+    float ctSurfT, ctSurfV = 0.6f;
+    float CtSurface()
+    {
+        if (Time.time < ctSurfT) return ctSurfV;
+        ctSurfT = Time.time + 0.3f;
+        Vector3 p = transform.position;
+        WorldId w = driver != null ? driver.world : WorldId.Ranch;
+        float v;
+        if (w == WorldId.Mars || w == WorldId.Callisto || w == WorldId.Moon) v = 1f;
+        else if (w != WorldId.Ranch) v = 0f;
+        else
+        {
+            RaycastHit h;
+            bool terrain = true;
+            if (Physics.Raycast(p + Vector3.up * 1.5f, Vector3.down, out h, 4f, ~0, QueryTriggerInteraction.Ignore))
+            {
+                var c = h.collider;
+                if (rb != null && c.attachedRigidbody == rb) { if (Physics.Raycast(h.point - Vector3.up * 0.05f, Vector3.down, out h, 3f, ~0, QueryTriggerInteraction.Ignore)) c = h.collider; else c = null; }
+                terrain = c == null || c is TerrainCollider;
+            }
+            bool road = Layout.RoadDist(p.x, p.z) < Layout.TrackW * 0.5f + 0.5f;
+            if (!terrain && road && p.y < Ranch.GY(p.x, p.z) + 1.5f) v = 1f;   // ffu39c: the dirt figure-8 / spur has its own collider surface - still dirt
+            else if (!terrain) v = 0f;
+            else if (Mathf.Abs(p.x - Layout.GarageC.x) < Layout.GarageSize.x * 0.5f + 4f && Mathf.Abs(p.z - Layout.GarageC.y) < Layout.GarageSize.y * 0.5f + 10f) v = 0.15f;   // garage apron
+            else if (Layout.RoadDist(p.x, p.z) < Layout.TrackW * 0.5f + 0.5f) v = 1f;   // dirt / gravel roads
+            else v = 0.6f;   // grass
+        }
+        ctSurfV = v;
+        return v;
+    }
+
+    // ffu10: impact sounds (metal crunch for hard hits, soft bump for small ones)
+    protected virtual void OnCollisionEnter(Collision c)
+    {
+        if (rb == null || rb.isKinematic || crashCool > 0f) return;
+        float v = c.relativeVelocity.magnitude;
+        if (v < 3.5f) return;
+        crashCool = 0.25f;
+        Vector3 p = c.contactCount > 0 ? c.GetContact(0).point : transform.position;
+        if (v > 8f) Sfx.PlayAt(Sfx.Pick(Sfx.Crash), p, Mathf.Clamp01(v / 22f) * 0.9f, 60f, Random.Range(0.85f, 1.05f));
+        else Sfx.PlayAt(Sfx.BumpSoft != null ? Sfx.BumpSoft : Sfx.Thud, p, Mathf.Clamp01(v / 10f) * 0.6f, 40f, Random.Range(0.9f, 1.1f));
+    }
+
+    protected virtual void FixedUpdate()
+    {
+        EngineSound(Time.fixedDeltaTime);
+        if (driver == null) inp = new PIn();
+        // self-righting when flipped and slow
+        if (!flyer && !HoldsOn)   // ffu49: the Roadster's fans / thrusters hold it (upside down on purpose)
+        {
+            bool loop = false;
+            foreach (Bounds b in RallyTrack.LoopZones) if (b.Contains(rb.position)) loop = true;
+            if (!loop && MonsterPark.OnWall(rb.position)) loop = true;   // ffu43: riding the wall of death / half-pipe
+            if (!loop && Vector3.Dot(transform.up, Vector3.up) < 0.35f && rb.velocity.magnitude < 3f) flipT += Time.fixedDeltaTime;
+            else flipT = 0f;
+            if (flipT > 1.6f)
+            {
+                flipT = 0f;
+                rb.velocity = Vector3.zero;
+                rb.angularVelocity = Vector3.zero;
+                rb.position = rb.position + Vector3.up * 2f;
+                rb.rotation = Quaternion.Euler(0f, transform.eulerAngles.y, 0f);
+            }
+        }
+        PondPhysics.Step(this, Time.fixedDeltaTime);   // ffu37: sink to the real pond bed (buoyancy + drag)
+        if (OutOfWorld(rb.position))
+        {
+            rb.velocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+            rb.position = spawnPos + Vector3.up;
+            rb.rotation = spawnRot;
+        }
+    }
+
+    public Vector3 HomePos { get { return spawnPos; } }
+    // ffu45: stable id for per-vehicle settings (wheel size): title @ spawn x, z (spawns are deterministic)
+    public string WheelId { get { return Title + "@" + Mathf.RoundToInt(spawnPos.x) + "," + Mathf.RoundToInt(spawnPos.z); } }
+
+    // ffu14: wreck state for ordinary vehicles (Combat.cs)
+    VehicleWreck wreck;
+    public VehicleWreck Wreck { get { if (wreck == null) { wreck = gameObject.AddComponent<VehicleWreck>(); wreck.v = this; } return wreck; } }
+    public bool Wrecked { get { StoryMech sm = this as StoryMech; if (sm != null) return sm.wrecked; return wreck != null && wreck.Down; } }
+    public string WreckedLine { get { return Title + " - wrecked, back at its spot in " + Mathf.CeilToInt(wreck != null ? wreck.TimeLeft : 0f) + " s"; } }
+    public void ResetHome()
+    {
+        if (rb == null) return;
+        bool k = rb.isKinematic;
+        if (!k) { rb.velocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
+        rb.position = spawnPos + Vector3.up * 0.5f; rb.rotation = spawnRot;
+        transform.position = spawnPos + Vector3.up * 0.5f; transform.rotation = spawnRot;
+    }
+
+    // vehicles that live in another world (Curiosity on Mars...) set a centre + radius
+    public bool hasWorldBounds;
+    public Vector3 worldCenter;
+    public float worldRadius = 100f;
+    public virtual bool CanExit(Frog f) { return true; }
+    public virtual bool CanEnter(Frog f) { return true; }
+    public virtual string DeniedLine { get { return Title; } }
+
+    protected virtual bool OutOfWorld(Vector3 p)
+    {
+        if (hasWorldBounds) { Vector3 l = p - worldCenter; return l.y < -60f || new Vector2(l.x, l.z).magnitude > worldRadius; }
+        return p.y < -40f || Mathf.Abs(p.x) > Layout.Half + 20f || Mathf.Abs(p.z) > Layout.Half + 20f;
+    }
+
+    public Vector3 ExitPoint()
+    {
+        Vector3 c = transform.position;
+        float hw = body.size.x * 0.5f + 1.3f + bigPad, hl = body.size.z * 0.5f + 1.6f + bigBack;   // ffu42: clear of big tyres
+        Vector3 right = transform.right; right.y = 0f; right.Normalize();
+        Vector3 fwd = transform.forward; fwd.y = 0f; fwd.Normalize();
+        Vector3[] cands = { c - right * hw, c + right * hw, c - fwd * hl, c + fwd * hl, c - right * (hw + 2f), c + right * (hw + 2f) };
+        int frogMask = ~((1 << 2) | (1 << FrogLayer) | (1 << ProjectileLayer));
+        foreach (Vector3 q in cands)
+        {
+            RaycastHit hit;
+            Vector3 from = q + Vector3.up * 4f;
+            if (!Physics.Raycast(from, Vector3.down, out hit, 60f, GroundMask)) continue;
+            Vector3 p = hit.point + Vector3.up * 0.1f;
+            if (p.y > c.y + 2.5f + bigLift) continue;
+            // ffu11: out on the pond (Cyberboat) the froggy hops out into the water beside the hull, not onto the bottom
+            if (Layout.InPond(p.x, p.z) && p.y < Layout.WaterY - 0.6f) p.y = Layout.WaterY - 0.6f;
+            if (Physics.CheckCapsule(p + Vector3.up * 0.5f, p + Vector3.up * 1.0f, 0.42f, frogMask, QueryTriggerInteraction.Ignore)) continue;
+            return p;
+        }
+        return c + Vector3.up * (body.center.y + body.size.y * 0.5f + 0.6f);
+    }
+
+    public static Vehicle Nearest(Vector3 p, Frog asker)
+    {
+        Vehicle best = null;
+        float bd = 2.6f;
+        foreach (Vehicle v in All)
+        {
+            if (v == null || v.body == null || v.stowed) continue;
+            // ffu53 (audit C5): a disabled / hidden body is not there to board (the Tourer folded into the carrier's stern
+            // pod; ClosestPoint on a disabled collider returns the query point = distance 0 -> "ask Spotty to borrow the
+            // Tourer" on the whole carrier deck)
+            if (!v.body.enabled || !v.body.gameObject.activeInHierarchy) continue;
+            Vector3 cp = v.body.ClosestPoint(p + Vector3.up * 0.6f);
+            float d = (cp - (p + Vector3.up * 0.6f)).magnitude;
+            if (v.bigLift > 0.05f)
+            {
+                // ffu42: a body riding high on big tyres - reach it from the ground beside / under it
+                Vector3 q = p + Vector3.up * (0.6f + Mathf.Min(v.bigLift, 4.5f));
+                Vector3 cq = v.body.ClosestPoint(q);
+                Vector3 dq = cq - q; dq.y *= 0.5f;
+                d = Mathf.Min(d, dq.magnitude - Mathf.Min(1.2f, v.bigPad));
+            }
+            if (d < bd) { bd = d; best = v; }
+        }
+        return best;
+    }
+
+    protected static float YawRate(Rigidbody rb, Transform t) { return Vector3.Dot(rb.angularVelocity, t.up); }
+}

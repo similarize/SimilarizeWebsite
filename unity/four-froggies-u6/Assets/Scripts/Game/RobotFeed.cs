@@ -1,0 +1,352 @@
+using UnityEngine;
+using UnityEngine.UI;
+using UnityEngine.InputSystem;
+
+// ffu20: live video feed from a robot (Bill: "we should be able to watch their video feed as they're doing that").
+// A render-texture camera (sized to the panel's real on-screen pixels, capped lower on phones) shows the robot's own
+// world - the ranch, space, the Mars or Callisto surface - with that world's sky / fog / light (Worlds.SetCamera), as a
+// picture-in-picture panel top-left or full screen, with the mission status (phase, battery, distance) overlaid.
+// DRONE cam = chase camera (ship hull / chase cam during the flight), EYE cam = the robot's head / cockpit window.
+// Keys: O = feed off / PiP / full screen, I = drone / eye cam, Esc = back to PiP. Gamepad: in the phone, Y watch,
+// X full screen. Touch / mouse: CAM, FULL, X on the panel; tap the picture = full screen / back.
+// ffu35 pad controls on the panel itself, for ANY player's pad: View (Back) tap = close, RB = bigger / smaller (on foot /
+// full screen; in a vehicle RB keeps its vehicle job, so hold View 0.5 s = bigger / smaller there), full screen: B = back
+// to the small panel, X = drone / eye camera. The hint under the panel shows pad glyphs when a pad player is in.
+public class RobotFeed : MonoBehaviour
+{
+    public static RobotFeed I;
+    public Robot robot;
+    public int mode;          // 0 off, 1 picture-in-picture, 2 full screen
+    public Frog viewer;       // ffu59b: the player who opened it - in split-screen PiP / FULL live inside THEIR viewport only
+    public bool eye;
+    Camera cam;
+    RenderTexture rt;
+    Canvas canvas;
+    RectTransform box;
+    RawImage img;
+    Image frameImg, band, dot;
+    Text title, status, camLbl, fullLbl;
+    Image camBtn, fullBtn, closeBtn;
+    WorldId camWorldSet = (WorldId)(-1);
+    Vector3 cpos; Quaternion crot; bool snap = true;
+    Robot lastRobot;
+    string lastLayout = "";
+    Text hintT; Image hintBg;
+    Gamepad viewPad; float viewDownT; int viewDownF; bool viewHoldDone;
+    public static int PadCloses, PadSizes;
+    public string HintText { get { return hintT != null ? hintT.text : ""; } }
+
+    public static bool Watching(Robot r) { return I != null && I.mode > 0 && I.robot == r; }
+    public static bool WatchingWorld(WorldId w) { return I != null && I.mode > 0 && I.robot != null && I.robot.world == w; }
+
+    void Awake()
+    {
+        I = this;
+        canvas = UIK.MakeCanvas("RobotFeed", null, 66, true);
+        Transform r = canvas.transform;
+        box = UIK.Rect(r, "FeedBox", new Vector2(0f, 1f), Vector2.zero, new Vector2(400f, 260f));
+        box.pivot = new Vector2(0f, 1f);
+        frameImg = UIK.Img(box, UIK.Round, new Color(0.03f, 0.04f, 0.06f, 0.92f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+        frameImg.type = Image.Type.Sliced;
+        UIK.Stretch(frameImg.rectTransform);
+        frameImg.rectTransform.offsetMin = new Vector2(-4f, -4f); frameImg.rectTransform.offsetMax = new Vector2(4f, 4f);
+        img = new GameObject("Feed", typeof(RectTransform)).AddComponent<RawImage>();
+        img.rectTransform.SetParent(box, false);
+        UIK.Anchor(img.rectTransform, Vector2.zero, Vector2.one, new Vector2(0f, 0f), new Vector2(0f, -34f));
+        img.raycastTarget = false;
+        band = UIK.Img(box, null, new Color(0f, 0f, 0f, 0.55f), new Vector2(0.5f, 0f), Vector2.zero, Vector2.zero);
+        UIK.Anchor(band.rectTransform, Vector2.zero, new Vector2(1f, 0f), Vector2.zero, new Vector2(0f, 46f));
+        status = UIK.Label(band.transform, "", 16, TextAnchor.MiddleLeft, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, Color.white);
+        UIK.Anchor(status.rectTransform, Vector2.zero, Vector2.one, new Vector2(10f, 0f), new Vector2(-8f, 0f));
+        status.supportRichText = true; status.verticalOverflow = VerticalWrapMode.Truncate;
+        status.resizeTextForBestFit = true; status.resizeTextMinSize = 9; status.resizeTextMaxSize = 16;
+        dot = UIK.Img(box, UIK.Circle, new Color(1f, 0.25f, 0.2f), new Vector2(0f, 1f), new Vector2(14f, -17f), new Vector2(11f, 11f));
+        title = UIK.Label(box, "", 16, TextAnchor.MiddleLeft, new Vector2(0f, 1f), Vector2.zero, Vector2.zero, Color.white);
+        UIK.Anchor(title.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(26f, -34f), new Vector2(-170f, 0f));
+        title.supportRichText = true; title.horizontalOverflow = HorizontalWrapMode.Wrap; title.verticalOverflow = VerticalWrapMode.Truncate;
+        title.resizeTextForBestFit = true; title.resizeTextMinSize = 9; title.resizeTextMaxSize = 16;
+        camBtn = Btn("CAM", -132f, out camLbl);
+        fullBtn = Btn("FULL", -74f, out fullLbl);
+        Text x; closeBtn = Btn("X", -22f, out x);
+        closeBtn.rectTransform.sizeDelta = new Vector2(34f, 26f);
+        hintBg = UIK.Img(box, UIK.Round, new Color(0f, 0f, 0f, 0.6f), new Vector2(0f, 0f), new Vector2(0f, -18f), new Vector2(400f, 26f));
+        hintBg.type = Image.Type.Sliced;
+        hintBg.rectTransform.anchorMin = new Vector2(0f, 0f); hintBg.rectTransform.anchorMax = new Vector2(1f, 0f);
+        hintBg.rectTransform.pivot = new Vector2(0.5f, 1f);
+        hintBg.rectTransform.offsetMin = new Vector2(0f, -32f); hintBg.rectTransform.offsetMax = new Vector2(0f, -6f);
+        hintT = UIK.Label(hintBg.transform, "", 14, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, Color.white);
+        UIK.Stretch(hintT.rectTransform);
+        hintT.supportRichText = true; hintT.resizeTextForBestFit = true; hintT.resizeTextMinSize = 9; hintT.resizeTextMaxSize = 14;
+        box.gameObject.SetActive(false);
+        var cg = new GameObject("Robot feed cam");
+        cam = cg.AddComponent<Camera>();
+        cam.enabled = false;
+        cam.depth = -50;
+        cam.fieldOfView = 62f;
+        cam.cullingMask = ~((1 << Showroom.Layer) | (1 << 5));
+        cam.allowHDR = false;
+        cam.allowMSAA = true;
+    }
+
+    Image Btn(string label, float x, out Text t)
+    {
+        var b = UIK.Img(box, UIK.Round, new Color(1f, 1f, 1f, 0.14f), new Vector2(1f, 1f), new Vector2(x, -17f), new Vector2(54f, 26f));
+        b.type = Image.Type.Sliced;
+        t = UIK.Label(b.transform, label, 13, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(54f, 26f), new Color(1f, 0.93f, 0.6f));
+        return b;
+    }
+
+    public void ShowFor(Robot r, int m, Frog who)
+    {
+        if (who != null && who != viewer) { viewer = who; snap = true; Debug.Log("RobotFeed: now " + who.nick + "'s feed"); }
+        Show(r, m);
+    }
+    Slot ViewerSlot()
+    {
+        if (Game.I == null) return null;
+        if (viewer != null) { int k = Game.I.frogs.IndexOf(viewer); var s = k >= 0 ? Game.I.SlotOfSeat(k) : null; if (s != null) return s; }
+        return Game.I.slots.Count > 0 ? Game.I.slots[0] : null;
+    }
+    public Rect BoxAnchors { get { return new Rect(box.anchorMin, box.anchorMax - box.anchorMin); } }
+    public bool InSplit { get { return Game.I != null && Game.I.slots.Count > 1; } }
+    public Rect ViewRect { get { var s = ViewerSlot(); var ph = s != null ? RobotPhone.Of(Game.I.frogs[s.frog]) : RobotPhone.I; return ph != null ? ph.ViewRect(s) : new Rect(0f, 0f, 1f, 1f); } }
+
+    public void Show(Robot r, int m)
+    {
+        if (r != null) { if (r != robot) snap = true; robot = r; }
+        mode = robot == null ? 0 : m;
+        Sfx.Play(Sfx.Click, 0.5f);
+    }
+
+    Robot DefaultRobot()
+    {
+        if (robot != null) return robot;
+        if (RobotMission.Active != null) return RobotMission.Active.r;
+        if (RobotMission.FigActive != null) return RobotMission.FigActive.r;   // ffu50 Figure 03's rocket
+        if (RobotMechMission.Active != null) return RobotMechMission.Active.r;
+        var vph = viewer != null ? RobotPhone.Of(viewer) : RobotPhone.I;
+        if (vph != null && vph.Selected != null) return vph.Selected;
+        return RanchLife.I != null && RanchLife.I.robots.Count > 1 ? RanchLife.I.robots[1] : null;
+    }
+
+    public void Cycle() { Show(DefaultRobot(), (mode + 1) % 3); }
+    public void ToggleFull() { Show(DefaultRobot(), mode == 2 ? 1 : 2); }
+    public void ToggleCam() { eye = !eye; snap = true; Sfx.Play(Sfx.Click, 0.5f); }
+
+    // ffu35: a pad player's buttons on the open feed (called by Game for every gamepad slot, before the phone / vehicles
+    // see the input). Returns the input with the buttons it used taken out.
+    public PIn PadFilter(Slot s, Frog f, PIn i)
+    {
+        if (mode == 0 || s == null || s.pad == null || f == null) { if (s != null && viewPad == s.pad) viewPad = null; return i; }
+        if (viewer != null && f != viewer && Game.I != null && Game.I.SlotOfSeat(Game.I.frogs.IndexOf(viewer)) != null) return i;   // ffu59b: only the feed's own player drives it (anyone once they left)
+        if (RobotPhone.OpenFor(f) != null) return i;   // the phone drives the feed (Y / X)
+        Gamepad p = s.pad;
+        float now = Time.unscaledTime;
+        if (p.selectButton.wasPressedThisFrame) { viewPad = p; viewDownT = now; viewDownF = Time.frameCount; viewHoldDone = false; }
+        if (viewPad == p)
+        {
+            if (p.selectButton.isPressed && !viewHoldDone && now - viewDownT > 0.5f && Time.frameCount - viewDownF >= 4) { viewHoldDone = true; ToggleFull(); PadSizes++; Debug.Log("RobotFeed: pad hold View -> " + ModeName); }
+            if (!p.selectButton.isPressed) { if (!viewHoldDone) { Show(null, 0); PadCloses++; Debug.Log("RobotFeed: closed by pad View (" + f.nick + ")"); } viewPad = null; }
+        }
+        i.view = false;   // View belongs to the feed while it is up (no split / shared toggle)
+        bool full = mode == 2;
+        if ((full || f.vehicle == null) && p.rightShoulder.wasPressedThisFrame)
+        {
+            ToggleFull(); PadSizes++; Debug.Log("RobotFeed: pad RB -> " + ModeName);
+            i.warpUp = false; i.alt = false; i.mslFire = false;
+        }
+        if (full)
+        {
+            if (p.buttonEast.wasPressedThisFrame) { Show(null, 1); i.cargo = false; i.downHeld = false; Debug.Log("RobotFeed: pad B -> small"); }
+            if (p.buttonWest.wasPressedThisFrame) { ToggleCam(); i.auto = false; i.fire = false; i.gunFire = false; }
+        }
+        return i;
+    }
+    public string ModeName { get { return mode == 0 ? "closed" : mode == 1 ? "small" : "full screen"; } }
+
+    void Hint()
+    {
+        bool pad = false, touch = false;
+        Slot vs = ViewerSlot();   // ffu59b: the feed's own player's device
+        if (vs != null) { pad = vs.kind == InputKind.Gamepad; touch = vs.kind == InputKind.Touch; }
+        const string G = "<color=#ffe27a>", E = "</color>";
+        string h;
+        if (pad) h = mode == 2 ? G + "VIEW" + E + " close   " + G + "RB" + E + " / " + G + "B" + E + " smaller   " + G + "X" + E + " camera"
+                               : G + "VIEW" + E + " close   " + G + "RB" + E + " bigger  (in a vehicle: hold " + G + "VIEW" + E + ")";
+        else if (touch) h = "tap " + G + "X" + E + " close   tap the picture: " + (mode == 2 ? "smaller" : "bigger");
+        else h = mode == 2 ? G + "O" + E + " close   " + G + "Esc" + E + " smaller   " + G + "I" + E + " camera   click " + G + "X" + E + " close"
+                           : G + "O" + E + " bigger   " + G + "I" + E + " camera   click " + G + "X" + E + " close";
+        if (hintT.text != h) hintT.text = h;
+        // full screen: the hint sits on the bottom band (inside the box)
+        float hx = InSplit && mode == 2 ? 10f : 160f;   // ffu59b: a split viewport is narrow
+        hintBg.rectTransform.offsetMin = mode == 2 ? new Vector2(hx, 52f) : new Vector2(0f, -32f);
+        hintBg.rectTransform.offsetMax = mode == 2 ? new Vector2(-hx, 78f) : new Vector2(0f, -6f);
+    }
+
+    public bool Captures(Vector2 mp)
+    {
+        return mode > 0 && box.gameObject.activeInHierarchy && RectTransformUtility.RectangleContainsScreenPoint(box, mp, null);
+    }
+
+    bool Hit(Image b, Vector2 p) { return RectTransformUtility.RectangleContainsScreenPoint(b.rectTransform, p, null); }
+
+    void Click(Vector2 p)
+    {
+        if (Hit(closeBtn, p)) Show(null, 0);
+        else if (Hit(camBtn, p)) ToggleCam();
+        else if (Hit(fullBtn, p)) ToggleFull();
+        else if (RectTransformUtility.RectangleContainsScreenPoint(img.rectTransform, p, null)) ToggleFull();
+    }
+
+    void Update()
+    {
+        bool playing = Game.I != null && Game.I.state == Game.State.Play;
+        if (playing && !Kb.typing)
+        {
+            if (Kb.ODown()) { if (Game.I != null) { var ks = Game.I.KeyboardSlot(); if (ks != null && Game.I.frogs[ks.frog] != viewer) { viewer = Game.I.frogs[ks.frog]; snap = true; } } Cycle(); }
+            if (Kb.IDown() && mode > 0) ToggleCam();
+            if (mode == 2 && Kb.EscDown()) Show(null, 1);
+        }
+        if (robot == null || !playing) mode = 0;
+        bool on = mode > 0;
+        if (box.gameObject.activeSelf != on) box.gameObject.SetActive(on);
+        cam.enabled = on;
+        if (!on) return;
+        // clicks / taps on the panel
+        if (UnityEngine.InputSystem.Mouse.current != null && Kb.MouseLeftDown() && Cursor.lockState != CursorLockMode.Locked)
+            Click(UnityEngine.InputSystem.Mouse.current.position.ReadValue());
+        foreach (Vector2 tp in Kb.TouchesBegan()) if (Captures(tp)) Click(tp);
+        DoLayout();
+        Hint();
+        PoseCamera();
+        Status();
+    }
+
+    void DoLayout()
+    {
+        var cr = (RectTransform)canvas.transform;
+        // ffu59b: in split-screen the feed lives in its player's viewport - FULL fills only that viewport
+        Rect vr = ViewRect;
+        bool whole = vr.width > 0.99f && vr.height > 0.99f;
+        float cw = cr.rect.width * vr.width, ch = cr.rect.height * vr.height;
+        bool portrait = ch > cw;
+        if (mode == 2)
+        {
+            box.anchorMin = vr.min; box.anchorMax = vr.max; box.pivot = new Vector2(0.5f, 0.5f);
+            box.offsetMin = new Vector2(0f, 0f); box.offsetMax = new Vector2(0f, 0f);
+            frameImg.color = new Color(0f, 0f, 0f, 1f);
+        }
+        else
+        {
+            float w = whole ? (portrait ? Mathf.Min(330f, cw - 24f) : 420f) : Mathf.Min(420f, cw * 0.5f);
+            float h = w * 9f / 16f + 34f;
+            box.anchorMin = box.anchorMax = new Vector2(vr.xMin, vr.yMax); box.pivot = new Vector2(0f, 1f);
+            box.sizeDelta = new Vector2(w, h);
+            box.anchoredPosition = whole ? new Vector2(14f, portrait ? -112f : -110f) : new Vector2(8f, -Mathf.Min(110f, ch * 0.2f));
+            frameImg.color = new Color(0.03f, 0.04f, 0.06f, 0.92f);
+        }
+        bool topRight = vr.xMax > 0.99f && vr.yMax > 0.99f;
+        float bx = mode == 2 && topRight ? -170f : 0f, by = mode == 2 && topRight ? -6f : 0f;   // full screen: clear of the page toolbar (top-right)
+        camBtn.rectTransform.anchoredPosition = new Vector2(-132f + bx, -17f + by);
+        fullBtn.rectTransform.anchoredPosition = new Vector2(-74f + bx, -17f + by);
+        closeBtn.rectTransform.anchoredPosition = new Vector2(-22f + bx, -17f + by);
+        title.rectTransform.offsetMax = new Vector2(-170f + bx, 0f);
+        fullLbl.text = mode == 2 ? "PIP" : "FULL";
+        string lk = mode + "|" + vr;
+        if (lk != lastLayout) { lastLayout = lk; Debug.Log("RobotFeed: " + ModeName + " in " + (whole ? "the whole screen" : (viewer != null ? viewer.nick : "?") + "'s viewport " + vr.ToString("0.00"))); }
+        camLbl.text = eye ? "EYE" : "DRONE";
+        // render target = the picture's real on-screen pixels (phones capped at 960 wide)
+        Vector3[] c = new Vector3[4];
+        img.rectTransform.GetWorldCorners(c);
+        int pw = Mathf.RoundToInt(Mathf.Abs(c[2].x - c[0].x)), ph = Mathf.RoundToInt(Mathf.Abs(c[2].y - c[0].y));
+        int cap = Look.Mobile ? 960 : 1600;
+        if (pw > cap) { ph = ph * cap / pw; pw = cap; }
+        pw = Mathf.Max(160, pw); ph = Mathf.Max(90, ph);
+        if (rt == null || Mathf.Abs(rt.width - pw) > 6 || Mathf.Abs(rt.height - ph) > 6 || !rt.IsCreated())
+        {
+            if (rt != null) { cam.targetTexture = null; rt.Release(); Destroy(rt); }
+            rt = new RenderTexture(pw, ph, 24, RenderTextureFormat.ARGB32);
+            rt.antiAliasing = Look.Mobile ? 2 : 4;
+            rt.filterMode = FilterMode.Bilinear;
+            rt.Create();
+            cam.targetTexture = rt;
+            cam.ResetAspect();
+            img.texture = rt;
+        }
+        dot.color = new Color(1f, 0.25f, 0.2f, 0.55f + 0.45f * Mathf.Sin(Time.unscaledTime * 5f));
+    }
+
+    void PoseCamera()
+    {
+        Robot r = robot;
+        if (r != lastRobot) { lastRobot = r; snap = true; }
+        if (r.world != camWorldSet) { Worlds.SetCamera(cam, r.world); camWorldSet = r.world; snap = true; }
+        Vector3 pos; Quaternion rot;
+        var m = r.mission;
+        var mm = RobotMechMission.For(r);
+        if (m != null && m.Cam(eye, out pos, out rot)) { cpos = pos; crot = rot; snap = true; }
+        else if (mm != null && mm.Cam(eye, out pos, out rot)) { cpos = pos; crot = rot; snap = true; }   // ffu26 mech missions
+        else if (eye && r.eye != null && !r.hidden)
+        {
+            pos = r.eye.position + r.eye.forward * 0.05f;
+            rot = Quaternion.LookRotation(r.transform.forward + Vector3.down * 0.12f, Vector3.up);
+            cpos = pos; crot = rot; snap = true;
+        }
+        else
+        {
+            Vector3 fw, at; float back, up;
+            if (r.seatedIn != null)
+            {
+                Vehicle v = r.seatedIn;
+                fw = v.transform.forward; fw.y = 0f;
+                at = v.transform.position + Vector3.up * v.camHeight * 0.5f;
+                back = v.camDistance * 0.95f; up = v.camHeight * 1.1f;
+            }
+            else
+            {
+                fw = r.transform.forward; fw.y = 0f;
+                at = r.transform.position + Vector3.up * r.height * 0.55f;
+                back = 2.6f + r.height * 1.3f; up = 1.0f + r.height * 0.6f;
+            }
+            if (fw.sqrMagnitude < 0.001f) fw = Vector3.forward;
+            fw.Normalize();
+            Vector3 side = new Vector3(fw.z, 0f, -fw.x);
+            pos = at - fw * back + side * back * 0.28f + Vector3.up * up;
+            float gy = r.GroundAt(pos.x, pos.z) + 0.6f;
+            if (r.world == WorldId.Ranch && Layout.InPond(pos.x, pos.z)) gy = Mathf.Max(gy, Layout.WaterY + 0.8f);
+            if (pos.y < gy) pos.y = gy;
+            rot = Quaternion.LookRotation(at - pos, Vector3.up);
+            float dt = Mathf.Min(Time.unscaledDeltaTime, 0.1f);
+            if (snap || (cpos - pos).sqrMagnitude > 900f) { cpos = pos; crot = rot; snap = false; }
+            else { cpos = Vector3.Lerp(cpos, pos, dt * 4f); crot = Quaternion.Slerp(crot, rot, dt * 5f); }
+        }
+        cam.transform.SetPositionAndRotation(cpos, crot);
+        cam.fieldOfView = eye ? 70f : 60f;
+    }
+
+    void Status()
+    {
+        Robot r = robot;
+        var m = r.mission;
+        var mm = RobotMechMission.For(r);
+        string head = "<color=#ff6b5e>LIVE</color>  " + r.robotName + "  <color=#9fb4c8>" + (m != null ? m.Name : mm != null ? mm.Name + " · " + mm.m.Title : r.drv != null && r.drv.v != null ? r.drv.v.Title : Worlds.Name(r.world)) + "</color>";
+        if (mm != null)
+        {
+            // ffu26: mech mission band - phase, battery, rocket fuel, distance, samples
+            string bc2 = r.battery < r.lowAt ? "#ffb030" : "#ffffff";
+            string fc = mm.fuel < 0.25f ? "#ffb030" : "#8fe3ff";
+            string s2 = "<color=#ffe27a>" + mm.PhaseLine.ToUpper() + "</color>   battery <color=" + bc2 + ">" + r.Pct + "</color>   fuel <color=" + fc + ">" + Mathf.RoundToInt(mm.fuel * 100f) + "%</color>";
+            if (mm.DistLine.Length > 0) s2 += "   " + mm.DistLine + " " + mm.DistWhat;
+            if (mm.kind < 2 && mm.phase >= RobotMechMission.Collect) s2 += "   " + (mm.kind == 0 ? "rocks " : "ice ") + mm.got + "/" + mm.want;
+            if (title.text != head) title.text = head;
+            if (status.text != s2) status.text = s2;
+            return;
+        }
+        if (title.text != head) title.text = head;
+        string bc = r.Charging ? "#8cff8c" : r.battery < r.lowAt ? "#ffb030" : "#ffffff";
+        string s = "<color=#ffe27a>" + (m != null ? m.PhaseLine.ToUpper() : r.StatusLine) + "</color>   battery <color=" + bc + ">" + r.Pct + "</color>";
+        if (m != null && m.DistLine.Length > 0) s += "   " + m.DistLine + " " + m.DistWhat;
+        if (m != null && (m.phase >= 7)) s += "   " + (m.kind == 0 ? "rocks " : "ice ") + m.got + "/" + m.want;
+        if (status.text != s) status.text = s;
+    }
+}

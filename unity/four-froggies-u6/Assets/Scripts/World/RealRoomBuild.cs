@@ -1,0 +1,535 @@
+using System.Collections;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using UnityEngine;
+using UnityEngine.Networking;
+
+// REAL ROOM part 2: streaming the assets (web/realroom/), building the room + colliders + player + camera, the demo
+// shots and the ?realroom=1 test spawn. Formats are written by work/rr/pack.py (rr.txt) and the Blender exporters
+// (/tmp/rr/bl/export.py -> room.bin "RRM1", hands.py -> hands.bin "RRS1").
+public partial class RealRoom
+{
+    static string BaseUrl() { return FFPlatform.AssetBase("realroom/"); }   // ffu34: StreamingAssets in a native player
+
+    static string Param(string key)
+    {
+        string u = FFPlatform.PageUrl;
+        int q = u.IndexOf('?'); if (q < 0) return null;
+        foreach (var kv in u.Substring(q + 1).Split('&', '#'))
+        {
+            int e = kv.IndexOf('=');
+            string k = e >= 0 ? kv.Substring(0, e) : kv;
+            if (k == key) return e >= 0 ? kv.Substring(e + 1).ToLowerInvariant() : "1";
+        }
+        return null;
+    }
+
+    static float F(string s) { return float.Parse(s, CultureInfo.InvariantCulture); }
+
+    public void BeginLoad()
+    {
+        if (loadStarted) return;
+        loadStarted = true;
+        string p = Param("realroom");
+        Lite = p == "lite" || (p != "full" && Look.Mobile);
+        tierDir = Lite ? "lo/" : "hi/";
+        StartCoroutine(LoadAll());
+    }
+
+    IEnumerator Fetch(string file, System.Action<byte[]> done)
+    {
+        using (var rq = UnityWebRequest.Get(BaseUrl() + file + FFPlatform.Bust(V)))
+        {
+            var op = rq.SendWebRequest();
+            long last = 0;
+            while (!op.isDone) { long b = (long)rq.downloadedBytes; bytesDone += b - last; last = b; progress = Mathf.Clamp01((float)bytesDone / bytesTotal); yield return null; }
+            bytesDone += (long)rq.downloadedBytes - last;
+            if (rq.result != UnityWebRequest.Result.Success) { Debug.LogWarning("RealRoom: " + file + " " + rq.error); loadFailed = true; yield break; }
+            done(rq.downloadHandler.data);
+        }
+    }
+
+    IEnumerator LoadTex(string file, string key, bool mips, bool compress, bool clamp = false)
+    {
+        if (tex.ContainsKey(key)) yield break;
+        tex[key] = null;
+        byte[] data = null;
+        yield return Fetch(file, d => data = d);
+        if (data == null) yield break;
+        var t = new Texture2D(2, 2, TextureFormat.RGB24, mips, true);
+        if (!ImageConversion.LoadImage(t, data, false)) { Debug.LogWarning("RealRoom: decode failed " + file); yield break; }
+        t.name = key;
+        t.wrapMode = clamp ? TextureWrapMode.Clamp : TextureWrapMode.Repeat;
+        t.filterMode = mips ? FilterMode.Trilinear : FilterMode.Bilinear;
+        t.anisoLevel = mips ? (Lite ? 2 : 8) : 1;
+        if (mips) t.Apply(true, false);
+        if (compress && !Lite && SystemInfo.SupportsTextureFormat(TextureFormat.DXT1))
+        {
+            try { t.Compress(false); } catch (System.Exception e) { Debug.LogWarning("RealRoom: compress " + file + " " + e.Message); }
+        }
+        t.Apply(false, true);   // free the CPU copy
+        tex[key] = t;
+    }
+
+    IEnumerator LoadAll()
+    {
+        float t0 = Time.realtimeSinceStartup;
+        Debug.Log("RealRoom: loading (" + (Lite ? "lite" : "full") + ")");
+        byte[] txt = null;
+        yield return Fetch("rr.txt", d => txt = d);
+        if (txt == null) { loadFailed = true; yield break; }
+        foreach (var raw in System.Text.Encoding.UTF8.GetString(txt).Split('\n'))
+        {
+            var p = raw.Trim().Split(' ');
+            if (p.Length < 2) continue;
+            switch (p[0])
+            {
+                case "mat": matLines.Add(p); break;
+                case "obj": objLines.Add(p); break;
+                case "pt": cfg["pt " + p[1]] = p; break;
+                case "sh": cfg["sh " + p[1]] = p; break;
+                case "size": cfg["size " + p[1]] = p; break;
+                case "tvlight":
+                    {
+                        int n = int.Parse(p[1]);
+                        tvLight = new float[n * 3];
+                        for (int i = 0; i < n && i + 2 < p.Length; i++)
+                        {
+                            var c = p[i + 2].Split(',');
+                            tvLight[i * 3] = F(c[0]); tvLight[i * 3 + 1] = F(c[1]); tvLight[i * 3 + 2] = F(c[2]);
+                        }
+                    }
+                    break;
+                default: cfg[p[0]] = p; break;
+            }
+        }
+        string[] sz;
+        if (cfg.TryGetValue("size " + tierDir.TrimEnd('/'), out sz)) bytesTotal = long.Parse(sz[2]);
+        // geometry + lighting first, then the materials' textures (4 at a time)
+        var jobs = new List<IEnumerator>();
+        jobs.Add(Fetch("room.bin", d => roomBin = d));
+        jobs.Add(Fetch("frog.bin", d => frogBin = d));   // ffu23: hands + body + eyes + plush (work/rr/frog)
+        foreach (var g in new[] { "env", "lamp", "tv" })
+        {
+            jobs.Add(LoadTex("lm_" + g + ".jpg", "lm_" + g, false, false, true));
+            jobs.Add(LoadTex("pano_" + g + ".jpg", "pano_" + g, true, false));
+        }
+        jobs.Add(LoadTex(tierDir + "window.jpg", "window", false, false, true));
+        jobs.Add(LoadTex("skin.jpg", "skin", true, false));
+        foreach (var m in matLines)
+            for (int k = 3; k <= 5; k++)
+                if (m[k] != "-" && !Queued(jobs, m[k])) { queued.Add(m[k]); jobs.Add(LoadTex(tierDir + m[k], m[k], true, k == 3)); }
+        int running = 0;
+        foreach (var j in jobs)
+        {
+            while (running >= 4) yield return null;
+            running++;
+            StartCoroutine(Run(j, () => running--));
+        }
+        while (running > 0) yield return null;
+        if (loadFailed || roomBin == null || frogBin == null) { loadFailed = true; yield break; }
+        progress = 1f;
+        Build();
+        loaded = true;
+        Debug.Log("RealRoom: loaded " + (bytesDone / 1048576f).ToString("0.0") + " MB in " + (Time.realtimeSinceStartup - t0).ToString("0.0") + " s, " + tex.Count + " textures");
+    }
+    readonly HashSet<string> queued = new HashSet<string>();
+    bool Queued(List<IEnumerator> j, string f) { return queued.Contains(f); }
+    IEnumerator Run(IEnumerator e, System.Action done) { yield return StartCoroutine(e); done(); }
+
+    Texture2D T(string key) { Texture2D t; return key != null && key != "-" && tex.TryGetValue(key, out t) && t != null ? t : null; }
+
+    Vector3 Pt(string n, int i = 0) { var p = cfg["pt " + n]; return new Vector3(F(p[2 + i]), F(p[3 + i]), F(p[4 + i])); }
+    float PtF(string n, int i) { var p = cfg["pt " + n]; return F(p[2 + i]); }
+    Vector4[] SH(string g)
+    {
+        var p = cfg["sh " + g]; var o = new Vector4[9];
+        for (int i = 0; i < 9; i++) o[i] = new Vector4(F(p[2 + i * 3]), F(p[3 + i * 3]), F(p[4 + i * 3]), 0f);
+        return o;
+    }
+
+    // ---------------------------------------------------------------- build
+    readonly Dictionary<string, Material> mats = new Dictionary<string, Material>();
+    Material MatFor(string name, bool dynamic)
+    {
+        string key = name + (dynamic ? "#d" : "");
+        Material m;
+        if (mats.TryGetValue(key, out m)) return m;
+        string[] p = null;
+        foreach (var l in matLines) if (l[1] == name) { p = l; break; }
+        string sh = p != null ? p[2] : "lit";
+        switch (sh)
+        {
+            case "glass": m = new Material(Shader.Find("FF/RRGlass")); break;
+            case "screen": m = new Material(Shader.Find("FF/RRScreen")); screenMat = m; break;
+            case "window":
+                m = new Material(Shader.Find("FF/RRWindow")); m.mainTexture = T("window");
+                var c = cfg["crop"]; m.SetVector("_Crop", new Vector4(F(c[1]), F(c[2]), F(c[3]), F(c[4]))); m.SetFloat("_K", F(c[5]));
+                break;
+            case "portal": m = new Material(Shader.Find("FF/RRPortal")); portalMat = m; break;
+            default:
+                m = new Material(Shader.Find("FF/RRLit"));
+                if (p != null)
+                {
+                    var d = T(p[3]); var n = T(p[4]); var a = T(p[5]);
+                    if (d != null) m.SetTexture("_MainTex", d);
+                    if (n != null) { m.SetTexture("_BumpMap", n); m.SetFloat("_HasNrm", 1f); }
+                    if (a != null) { m.SetTexture("_ArmTex", a); m.SetFloat("_HasArm", float.Parse(p[6])); }
+                    m.SetFloat("_UVScale", F(p[7]));
+                    m.SetColor("_Tint", U6.Lin(new Color(F(p[8]), F(p[9]), F(p[10]))));
+                    m.SetFloat("_Rough", F(p[11])); m.SetFloat("_Metal", F(p[12])); m.SetFloat("_SpecK", F(p[13])); m.SetFloat("_NrmK", F(p[14]));
+                    if (p.Length > 15) m.SetFloat("_TexK", F(p[15]));   // ffu18c albedo/AO contrast
+                }
+                m.SetFloat("_Dynamic", dynamic ? 1f : 0f);
+                if (sh == "globe") { m.SetFloat("_EmisTex", 0f); globeMat = m; }
+                break;
+        }
+        m.name = "RR " + key;
+        mats[key] = m;
+        return m;
+    }
+
+    void Build()
+    {
+        if (root != null) return;
+        root = new GameObject("RealRoomRoot").transform;
+        root.position = RoomO;
+        root.gameObject.SetActive(false);
+        // globals that never change
+        var k = cfg["k"]; Shader.SetGlobalVector("_RRK", new Vector4(F(k[1]), F(k[2]), F(k[3]), 0));
+        var pk = cfg["pk"]; Shader.SetGlobalVector("_RRPK", new Vector4(F(pk[1]), F(pk[2]), F(pk[3]), 0));
+        Shader.SetGlobalTexture("_RRLMEnv", T("lm_env")); Shader.SetGlobalTexture("_RRLMLamp", T("lm_lamp")); Shader.SetGlobalTexture("_RRLMTv", T("lm_tv"));
+        Shader.SetGlobalTexture("_RRPanoEnv", T("pano_env")); Shader.SetGlobalTexture("_RRPanoLamp", T("pano_lamp")); Shader.SetGlobalTexture("_RRPanoTv", T("pano_tv"));
+        var b = cfg["box"];
+        Shader.SetGlobalVector("_RRBoxMin", RoomO + new Vector3(F(b[1]), F(b[2]), F(b[3])));
+        Shader.SetGlobalVector("_RRBoxMax", RoomO + new Vector3(F(b[4]), F(b[5]), F(b[6])));
+        var pr = cfg["probe"]; Shader.SetGlobalVector("_RRProbe", RoomO + new Vector3(F(pr[1]), F(pr[2]), F(pr[3])));
+        shEnv = SH("env"); shLamp = SH("lamp"); shTv = SH("tv");
+        lampPos = RoomO + Pt("lamp"); tvPos = RoomO + Pt("tv");
+        spawnPos = RoomO + Pt("spawn"); doorPos = RoomO + Pt("door"); switchPos = RoomO + Pt("switch"); duckSpawn = RoomO + Pt("duck");
+        seatPos = RoomO + Pt("seat"); { float th = PtF("seat", 3) * Mathf.Deg2Rad; seatYaw = Mathf.Atan2(Mathf.Sin(th), -Mathf.Cos(th)) * Mathf.Rad2Deg; }
+        spawnPos = RoomO + new Vector3(1.15f, 0f, -1.55f);   // 0.9 m inside the door (the leaf starts half open)
+        BuildMeshes();
+        BuildColliders();
+        // where the froggy's own body waits while the player is inside (out of sight, no kill plane in this world)
+        var park = new GameObject("RealRoomPark"); park.transform.SetParent(root.parent, false);
+        park.transform.position = RoomO + new Vector3(0f, -29f, 0f);
+        park.AddComponent<BoxCollider>().size = new Vector3(12f, 1f, 12f);
+        BuildPlayer();
+        var frog = FrogAsset.Parse(frogBin);
+        Hands.Build(frog["hand"], pitchT, T("skin"), owner != null ? owner.color : new Color(0.3f, 0.75f, 0.2f));
+        FrogBody.Build(frog["body"], frog["eye"], root, T("skin"), Layer);
+        BuildPlush(frog["plush"]);
+        frogBin = null; roomBin = null;
+        Debug.Log("RealRoom: built");
+    }
+
+    void BuildMeshes()
+    {
+        var r = new BinaryReader(new MemoryStream(roomBin));
+        r.ReadBytes(4);
+        int n = r.ReadInt32();
+        var duckGo = new GameObject("RubberDuck"); duckGo.layer = Layer;
+        duckGo.transform.SetParent(root, false);
+        var doorPivot = new GameObject("DoorHinge").transform; doorPivot.SetParent(root, false);
+        var dp = Pt("door", 0);
+        float dx1 = PtF("door", 4);
+        doorPivot.localPosition = new Vector3(dx1 - 0.003f, 0f, dp.z - 0.04f);
+        door = doorPivot;
+        Transform rockPivot = null;
+        for (int e = 0; e < n; e++)
+        {
+            string oname = Str(r), mname = Str(r);
+            int flags = r.ReadByte(), nv = r.ReadInt32(), nt = r.ReadInt32();
+            Vector3 mn = new Vector3(r.ReadSingle(), r.ReadSingle(), r.ReadSingle()), ext = new Vector3(r.ReadSingle(), r.ReadSingle(), r.ReadSingle());
+            var pos = new Vector3[nv]; var nrm = new Vector3[nv]; var uv0 = new Vector2[nv]; Vector2[] uv1 = (flags & 1) != 0 ? new Vector2[nv] : null;
+            for (int i = 0; i < nv; i++) pos[i] = mn + Vector3.Scale(ext, new Vector3(r.ReadUInt16(), r.ReadUInt16(), r.ReadUInt16()) / 65535f);
+            for (int i = 0; i < nv; i++) { nrm[i] = new Vector3(r.ReadSByte(), r.ReadSByte(), r.ReadSByte()) / 127f; r.ReadSByte(); }
+            for (int i = 0; i < nv; i++) uv0[i] = new Vector2(Mathf.HalfToFloat(r.ReadUInt16()), Mathf.HalfToFloat(r.ReadUInt16()));
+            if (uv1 != null) for (int i = 0; i < nv; i++) uv1[i] = new Vector2(r.ReadUInt16() / 65535f, r.ReadUInt16() / 65535f);
+            var tri = new int[nt * 3];
+            if (nv < 65536) for (int i = 0; i < tri.Length; i++) tri[i] = r.ReadUInt16(); else for (int i = 0; i < tri.Length; i++) tri[i] = (int)r.ReadUInt32();
+            bool duckPart = (flags & 2) != 0, doorPart = (flags & 4) != 0, rockPart = (flags & 8) != 0;
+            Transform parent = duckPart ? duckGo.transform : doorPart ? doorPivot : root;
+            if (rockPart)
+            {
+                Vector3 c = mn + ext * 0.5f;
+                rockPivot = new GameObject("Rocker").transform; rockPivot.SetParent(root, false); rockPivot.localPosition = c;
+                for (int i = 0; i < nv; i++) pos[i] -= c;
+                parent = rockPivot;
+            }
+            else if (doorPart) for (int i = 0; i < nv; i++) pos[i] -= doorPivot.localPosition;
+            if (mname == "rr_windowview")
+            {
+                // ffu18c: the view plane sits 0.6 m behind the wall and was too small for grazing looks through the window
+                // (the cartoon world showed past its edge). It is mapped by view direction, so just make it 4x larger.
+                Vector3 c = mn + ext * 0.5f;
+                for (int i = 0; i < nv; i++) { Vector3 d = pos[i] - c; pos[i] = c + new Vector3(d.x, d.y * 4f, d.z * 4f); }
+            }
+            var mesh = new Mesh { name = oname };
+            if (nv >= 65536) mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+            mesh.vertices = pos; mesh.normals = nrm; mesh.uv = uv0;
+            if (uv1 != null) mesh.uv2 = uv1;
+            mesh.triangles = tri;
+            mesh.RecalculateTangents();
+            mesh.RecalculateBounds();
+            if (oname == "ArmChair_01")
+            {
+                // ffu23: exact collider for the armrest raycasts (sitting hands) + the toys bouncing off it
+                var cm = new Mesh { name = "ArmChairCol" }; cm.vertices = pos; cm.triangles = tri;
+                var cg = new GameObject("col ArmChair mesh"); cg.layer = ChairLayer; cg.transform.SetParent(parent, false);
+                chairMeshCol = cg.AddComponent<MeshCollider>(); ((MeshCollider)chairMeshCol).sharedMesh = cm;
+            }
+            mesh.UploadMeshData(true);
+            var go = new GameObject(oname + "|" + mname); go.layer = Layer;
+            go.transform.SetParent(parent, false);
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            var mr = go.AddComponent<MeshRenderer>();
+            mr.sharedMaterial = MatFor(mname, uv1 == null);
+            mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; mr.receiveShadows = false;
+            mr.lightProbeUsage = UnityEngine.Rendering.LightProbeUsage.Off; mr.reflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Off;
+        }
+        rocker = rockPivot;
+        if (rocker != null) rocker.localRotation = Quaternion.Euler(-9f, 0f, 0f);
+        // the duck: rigidbody with a two-sphere body (body + head)
+        duck = duckGo.AddComponent<Rigidbody>();
+        duck.mass = 0.25f; duck.drag = 0.15f; duck.angularDrag = 0.4f;
+        duck.interpolation = RigidbodyInterpolation.Interpolate;
+        duck.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+        var pm = new PhysicsMaterial("duck") { bounciness = 0.45f, dynamicFriction = 0.5f, staticFriction = 0.6f, bounceCombine = PhysicsMaterialCombine.Maximum };
+        var s1 = duckGo.AddComponent<SphereCollider>(); s1.center = new Vector3(0f, 0.062f, 0.01f); s1.radius = 0.062f; s1.material = pm;
+        var s2 = duckGo.AddComponent<SphereCollider>(); s2.center = new Vector3(0f, 0.125f, -0.045f); s2.radius = 0.042f; s2.material = pm;
+        duckCols.Add(s1); duckCols.Add(s2);
+        duckGo.AddComponent<RRDuck>();
+        duckGo.transform.localScale = Vector3.one * 0.72f;   // ffu23: a real bath duck is ~12 cm (the scan is 17 cm)
+        // soft contact shadow
+        var blob = GameObject.CreatePrimitive(PrimitiveType.Quad);
+        Destroy(blob.GetComponent<Collider>());
+        blob.layer = Layer; blob.transform.SetParent(root, false);
+        blob.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+        blob.GetComponent<MeshRenderer>().sharedMaterial = new Material(Shader.Find("FF/RRBlob"));
+        duckBlob = blob.transform;
+    }
+
+    // ffu23: the plush frog toy on the rug (FF/RRPlush fleece, vertex colours), a physics toy like the duck
+    void BuildPlush(FrogAsset.Set s)
+    {
+        var go = new GameObject("PlushFrog"); go.layer = Layer; go.transform.SetParent(root, false);
+        go.AddComponent<MeshFilter>().sharedMesh = FrogAsset.StaticMesh(s);
+        var mr = go.AddComponent<MeshRenderer>();
+        var m = new Material(Shader.Find("FF/RRPlush")) { name = "RR plush" };
+        if (T("skin") != null) m.SetTexture("_FuzzTex", T("skin"));
+        mr.sharedMaterial = m;
+        mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; mr.receiveShadows = false;
+        plush = go.AddComponent<Rigidbody>();
+        plush.mass = 0.18f; plush.drag = 0.6f; plush.angularDrag = 1.2f;
+        plush.interpolation = RigidbodyInterpolation.Interpolate;
+        plush.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+        var pm = new PhysicsMaterial("plush") { bounciness = 0.08f, dynamicFriction = 0.9f, staticFriction = 1f, bounceCombine = PhysicsMaterialCombine.Minimum, frictionCombine = PhysicsMaterialCombine.Maximum };
+        var a = go.AddComponent<SphereCollider>(); a.center = new Vector3(0f, 0.08f, 0.01f); a.radius = 0.082f; a.material = pm;
+        var b = go.AddComponent<SphereCollider>(); b.center = new Vector3(0f, 0.17f, 0.012f); b.radius = 0.085f; b.material = pm;
+        var c = go.AddComponent<BoxCollider>(); c.center = new Vector3(0f, 0.03f, 0.07f); c.size = new Vector3(0.22f, 0.05f, 0.14f); c.material = pm;
+        plushCols.Add(a); plushCols.Add(b); plushCols.Add(c);
+        go.AddComponent<RRDuck>();
+        plushSpawn = RoomO + new Vector3(0.30f, 0f, -0.62f); plushYaw = 150f;
+        var blob = GameObject.CreatePrimitive(PrimitiveType.Quad);
+        Destroy(blob.GetComponent<Collider>());
+        blob.layer = Layer; blob.transform.SetParent(root, false);
+        blob.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+        blob.GetComponent<MeshRenderer>().sharedMaterial = new Material(Shader.Find("FF/RRBlob"));
+        plushBlob = blob.transform;
+    }
+
+    static string Str(BinaryReader r) { int n = r.ReadByte(); return System.Text.Encoding.UTF8.GetString(r.ReadBytes(n)); }
+
+    BoxCollider Box(Vector3 mn, Vector3 mx, string name)
+    {
+        var go = new GameObject("col " + name); go.layer = Layer; go.transform.SetParent(root, false);
+        go.transform.localPosition = (mn + mx) * 0.5f;
+        var b = go.AddComponent<BoxCollider>(); b.size = mx - mn;
+        return b;
+    }
+
+    void BuildColliders()
+    {
+        var bx = cfg["box"];
+        Vector3 a = new Vector3(F(bx[1]), F(bx[2]), F(bx[3])), z = new Vector3(F(bx[4]), F(bx[5]), F(bx[6]));
+        const float T = 0.5f;
+        Box(new Vector3(a.x - T, a.y - T, a.z - T), new Vector3(z.x + T, a.y, z.z + T), "floor");
+        Box(new Vector3(a.x - T, z.y, a.z - T), new Vector3(z.x + T, z.y + T, z.z + T), "ceiling");
+        Box(new Vector3(a.x - T, a.y, a.z - T), new Vector3(a.x, z.y, z.z + T), "west");
+        Box(new Vector3(z.x, a.y, a.z - T), new Vector3(z.x + T, z.y, z.z + T), "east");
+        Box(new Vector3(a.x, a.y, z.z), new Vector3(z.x, z.y, z.z + T), "north");
+        Box(new Vector3(a.x, a.y, a.z - T), new Vector3(z.x, z.y, a.z), "south");
+        foreach (var o in objLines)
+        {
+            string n = o[1];
+            if (n == "rubber_duck_toy" || n == "modern_ceiling_lamp_01" || n == "hanging_picture_frame_02") continue;
+            Vector3 mn = new Vector3(F(o[2]), F(o[3]), F(o[4])), mx = new Vector3(F(o[5]), F(o[6]), F(o[7]));
+            if (n == "ArmChair_01") { var c = Box(mn + new Vector3(0.12f, 0f, 0.12f), mx - new Vector3(0.12f, 0.2f, 0.12f), n); chairCol = c; continue; }
+            Box(mn, mx, n);
+        }
+        // TV panel (wall mounted) + the interactive switch / door
+        Vector3 tvc = Pt("tv");
+        Box(tvc + new Vector3(-0.62f, -0.36f, -0.01f), tvc + new Vector3(0.62f, 0.36f, 0.05f), "tv");
+        var sw = Box(Pt("switch") + new Vector3(-0.07f, -0.09f, -0.04f), Pt("switch") + new Vector3(0.07f, 0.09f, 0.03f), "switch");
+        sw.isTrigger = true; switchCol = sw;
+        Vector3 dpos = Pt("door");
+        var dc = Box(new Vector3(PtF("door", 3), 0f, dpos.z - 0.05f), new Vector3(PtF("door", 4), PtF("door", 5), dpos.z + 0.02f), "door");
+        doorCol = dc;
+    }
+
+    void BuildPlayer()
+    {
+        var p = new GameObject("RealRoomPlayer"); p.layer = Layer;
+        p.transform.SetParent(root, false);
+        yawT = p.transform;
+        body = p.AddComponent<CharacterController>();
+        body.height = 0.95f; body.radius = 0.30f; body.center = new Vector3(0f, 0.49f, 0f);   // ffu51: crouching frog (was 1.55 / 0.24 / 0.8) body.stepOffset = 0.2f; body.skinWidth = 0.02f;
+        pitchT = new GameObject("Eye").transform; pitchT.SetParent(yawT, false); pitchT.localPosition = new Vector3(0f, EyeH, 0f);
+        var cg = new GameObject("RealRoomCam"); cg.transform.SetParent(pitchT, false);
+        cam = cg.AddComponent<Camera>();
+        cam.cullingMask = 1 << Layer;
+        cam.clearFlags = CameraClearFlags.SolidColor; cam.backgroundColor = Color.black;
+        cam.nearClipPlane = 0.03f; cam.farClipPlane = 40f;
+        cam.fieldOfView = Screen.height > Screen.width ? 78f : 68f;
+        cam.depth = 30;
+        cam.allowHDR = !Lite; cam.allowMSAA = true;
+        cam.useOcclusionCulling = false;
+        cam.enabled = false;
+        // ffu6 (URP): OnRenderImage never runs, so the room always tonemaps in its shaders (_RRDirect) into a linear target; no RRPostFx
+        cam.allowHDR = false;
+        Debug.Log("RealRoom: u6 shader-side tonemap (URP post off for this camera)");
+    }
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+    [System.Runtime.InteropServices.DllImport("__Internal")] static extern int FFVideoOpen(string url, float vol);
+    [System.Runtime.InteropServices.DllImport("__Internal")] static extern int FFVideoUpdate(int tex);
+    [System.Runtime.InteropServices.DllImport("__Internal")] static extern float FFVideoTime();
+    [System.Runtime.InteropServices.DllImport("__Internal")] static extern void FFVideoPlay(int on);
+    [System.Runtime.InteropServices.DllImport("__Internal")] static extern void FFVideoVolume(float v);
+#else
+    static int FFVideoOpen(string url, float vol) { return 0; }
+    static int FFVideoUpdate(int tex) { return 0; }
+    static float FFVideoTime() { return -1f; }
+    static void FFVideoPlay(int on) { }
+    static void FFVideoVolume(float v) { }
+#endif
+    // TV: an HTML <video> uploaded into vidTex every other frame (Plugins/WebGL/FFVideo.jslib); test pattern until the
+    // first frame arrives / if it never does
+    void PlayVideo()
+    {
+        if (screenMat == null) return;
+        float vol = Sfx.Level == 0 ? 0.32f : Sfx.Level == 1 ? 0.12f : 0f;
+        if (vidTex == null)
+        {
+            vidTex = new Texture2D(640, 360, TextureFormat.RGBA32, false, true);   // ffu6: raw (RRScreen linearises itself)
+            var px = new Color32[640 * 360]; vidTex.SetPixels32(px); vidTex.Apply(false, false);
+            vidTex.wrapMode = TextureWrapMode.Clamp; vidTex.filterMode = FilterMode.Bilinear; vidTex.name = "RR TV";
+            screenMat.SetTexture("_MainTex", vidTex);
+            vidT0 = Time.time;
+            int ok = 0;
+            try { ok = FFVideoOpen(BaseUrl() + "tv.mp4" + V, vol); } catch (System.Exception e) { Debug.LogWarning("RealRoom: video " + e.Message); }
+            vidFallback = ok == 0;
+        }
+        else { try { FFVideoPlay(1); FFVideoVolume(vol); } catch { } }
+        screenMat.SetFloat("_Fallback", 1f);   // pattern until a frame arrives
+        vidOk = false;
+    }
+
+    void VideoFrame()
+    {
+        if (vidTex == null || vidFallback) return;
+        if ((Time.frameCount & 1) == 1 && vidOk) return;
+        int ok = 0;
+        try { ok = FFVideoUpdate((int)vidTex.GetNativeTexturePtr()); } catch { ok = 0; }
+        if (ok == 1 && !vidOk) { vidOk = true; screenMat.SetFloat("_Fallback", 0f); Debug.Log("RealRoom: video playing"); }
+        if (!vidOk && Time.time - vidT0 > 12f) { vidFallback = true; Debug.Log("RealRoom: video not playing - test pattern"); }
+    }
+
+    void StopVideo() { try { FFVideoPlay(0); } catch { } }
+    float VideoTime() { float t = -1f; try { t = FFVideoTime(); } catch { } return t; }
+
+    // ---------------------------------------------------------------- ?realroom=1 test spawn + demo shots
+    bool urlDone;
+    void UrlTest()
+    {
+        if (urlDone || Game.I == null || Game.I.state != Game.State.Play || Game.I.slots.Count == 0) return;
+        urlDone = true;
+        if (Param("realroom") == null || demoShot != null) return;
+        Frog f = Game.I.frogs[Game.I.slots[0].frog];
+        if (HouseWorld.I == null) return;
+        HouseWorld.I.Enter(f);
+        f.SendTo(WorldId.House, HouseDoorFront, 270f);
+        f.Toast("REAL ROOM test: the white door is right in front of you", 4f);
+        BeginLoad();
+    }
+
+    string demoShot;
+    float demoT = -1f, demoExpo = -1f;
+    int demoPhase;
+    public static void DemoStart(Frog f, string shot)
+    {
+        if (I == null) return;
+        I.demoShot = shot; I.demoT = 0f; I.demoPhase = 0;
+        if (HouseWorld.I != null) { HouseWorld.I.Enter(f); f.SendTo(WorldId.House, HouseDoorFront, 270f); }
+        I.BeginLoad();
+        Debug.Log("FFDEMO realroom " + shot);
+    }
+
+    void Demo(float dt)
+    {
+        if (demoShot == null || Game.I == null || Game.I.slots.Count == 0) return;
+        demoT += dt;
+        Frog f = Game.I.frogs[Game.I.slots[0].frog];
+        if (demoPhase == 0)
+        {
+            if (!loaded) return;
+            demoPhase = 1;
+            Request(f);
+            if (st == St.Opening || st == St.Loading) { }
+            return;
+        }
+        if (st == St.Intro && demoShot != "realroom-enter") { stT = Mathf.Max(stT, 6.6f); skipPressed = true; }
+        if (st != St.Play && st != St.Intro) return;
+        if (demoPhase == 1 && st == St.Play)
+        {
+            demoPhase = 2; demoT = 0f;
+            Debug.Log("FFDEMO realroom play " + demoShot);
+            switch (demoShot)
+            {
+                case "realroom": Pose(new Vector3(1.55f, 0f, -1.85f), -25f, 9f); break;
+                case "realroom-dark": Pose(new Vector3(1.55f, 0f, -1.85f), -25f, 9f); lightsOn = false; if (rocker != null) rocker.localRotation = Quaternion.Euler(9f, 0f, 0f); break;
+                case "realroom-tv": SitDown(); yaw = seatYaw; pitch = 6f; break;
+                case "realroom-throw": Pose(new Vector3(0.9f, 0f, -0.75f), 15f, 25f); Attach(duck); break;
+                case "realroom-hands": Pose(new Vector3(1.55f, 0f, -1.85f), -25f, 14f); break;
+                case "realroom-reach": Pose(new Vector3(0.74f, 0f, -2.02f), 180f, 26f); Hands.demoHold = true; pending = "switch"; pendingP = SwitchFace(); pendingT = 0f; break;
+                case "realroom-grab": Pose(new Vector3(0.62f, 0f, -1.02f), 320f, 30f); pending = "plush"; pendingP = plush.worldCenterOfMass; pendingT = 0f; break;
+                case "realroom-body": Pose(new Vector3(1.2f, 0f, -0.1f), 180f, 12f); camDistT = camDist = 2.2f; camOrbit = 160f; break;
+                case "realroom-side": Pose(new Vector3(1.2f, 0f, -0.1f), 180f, 14f); camDistT = camDist = 2.0f; camOrbit = 95f; break;   // ffu51 profile
+                case "realroom-hop": Pose(new Vector3(0.9f, 0f, -0.4f), 180f, 14f); camDistT = camDist = 2.3f; camOrbit = 100f; break;   // ffu51 hopping (Play injects the move)
+            }
+        }
+        if (demoPhase == 2)
+        {
+            if (demoShot == "realroom-dark") { lightsOn = false; }
+            if (demoShot == "realroom-tv") { yaw = seatYaw - 8f; pitch = 5f; }
+            if (demoShot == "realroom-grab" && holding) { pitch = Mathf.Lerp(pitch, 16f, dt * 2f); }
+            if (demoShot == "realroom-body" || demoShot == "realroom-side") { FrogBody.speed = 0f; }
+            if (demoShot == "realroom-throw")
+            {
+                if (demoT > 3f && holding && !Hands.Busy) { throwK = 0.6f; Hands.Throw(); }
+                if (demoT > 3f) { yaw = Mathf.Lerp(yaw, 15f, dt); pitch = Mathf.Lerp(pitch, 10f, dt); }
+                if (demoT > 9f && !holding && demoT < 9.2f) { ResetDuck(); duck.transform.position = Hands.HoldPoint; Attach(duck); demoT = 0.5f; }
+            }
+            ApplyView();
+        }
+    }
+
+    void Pose(Vector3 local, float y, float p)
+    {
+        body.enabled = false; yawT.position = RoomO + local; body.enabled = true;
+        yaw = y; pitch = p; ApplyView();
+    }
+}

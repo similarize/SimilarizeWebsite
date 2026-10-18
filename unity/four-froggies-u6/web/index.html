@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0b1a10">
+<title>Four Froggies 6.6 (Unity 6 &middot; WebGPU)</title>
+<style>
+  html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #0b1a10; color: #fff;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; touch-action: none; -webkit-user-select: none; user-select: none; overscroll-behavior: none; }
+  #unity-canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100dvh; display: block; background: #0b1a10; outline: none; }
+  #loader { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+    background: radial-gradient(ellipse at center, #1d3a26 0%, #0b1a10 70%); z-index: 5; transition: opacity .4s; }
+  #loader h1 { margin: 0; font-size: clamp(26px, 6vw, 54px); letter-spacing: 2px; color: #8cff70; text-shadow: 0 3px 0 #1f6b2a; text-align: center; }
+  #loader .balloons { font-size: clamp(30px, 8vw, 60px); }
+  #bar { width: min(80vw, 520px); height: 18px; border-radius: 10px; background: rgba(255,255,255,.12); overflow: hidden; border: 2px solid rgba(255,255,255,.25); }
+  #fill { height: 100%; width: 0%; background: linear-gradient(90deg, #3fbf3f, #a6d832, #2fb3c4, #f2582a); transition: width .2s; }
+  #pct { font-size: 15px; opacity: .8; }
+  #err { color: #ff8a80; max-width: 80vw; text-align: center; display: none; }
+  .tb { position: fixed; top: 8px; right: 8px; z-index: 10; display: flex; gap: 6px; }
+  .tb a, .tb button { font: 600 13px system-ui, sans-serif; color: #fff; background: rgba(0,0,0,.45); border: 1px solid rgba(255,255,255,.3);
+    border-radius: 8px; padding: 6px 10px; text-decoration: none; cursor: pointer; }
+</style>
+</head>
+<body>
+<canvas id="unity-canvas" tabindex="-1"></canvas>
+<div id="loader">
+  <div class="balloons">🐸🐸🐸🐸</div>
+  <h1>FOUR FROGGIES <span style="font-size:0.55em;opacity:0.75;letter-spacing:0.08em">6.6</span></h1>
+  <div id="bar"><div id="fill"></div></div>
+  <div id="pct">Loading 0%</div>
+  <div id="err"></div>
+</div>
+<div class="tb">
+  <button id="fs" title="Fullscreen" aria-label="Fullscreen"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="display:block"><path d="M1.5 5.5v-4h4M10.5 1.5h4v4M14.5 10.5v4h-4M5.5 14.5h-4v-4"/></svg></button>
+  <a href="../" title="Back to the arcade">✕ Arcade</a>
+</div>
+<script>
+  // ffu13 online Host / Join: PeerJS (pinned version on jsDelivr) is loaded only when a player hosts or joins (FFNet.jslib)
+  window.FFNetLoadPeer = function (cb) {
+    if (window.Peer) { cb(null); return; }
+    var ex = document.querySelector("script[data-ffpeer]");
+    if (ex) { ex.addEventListener("load", function () { cb(null); }); ex.addEventListener("error", function () { cb("load"); }); return; }
+    var s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js";
+    s.async = true; s.setAttribute("data-ffpeer", "1");
+    s.onload = function () { cb(null); }; s.onerror = function () { cb("load"); };
+    document.head.appendChild(s);
+  };
+  var buildUrl = "Build";
+  var name = "__BUILD_NAME__";
+  var canvas = document.getElementById("unity-canvas");
+  var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));
+  // ffu17: render at the screen's real pixel density. Lobby (menus, character turntables): up to 2.5x on phones and
+  // desktops (Pixel 9 is 2.625x) so text and models are 1:1 crisp; gameplay keeps the old caps (phones 1.5x, desktop 2x)
+  // for frame rate. The game switches between them through FFSetDPR (FFDisplay.jslib). ?dpr=N forces one value.
+  (function () {
+    var raw = window.devicePixelRatio || 1, q = /[?&]dpr=([0-9.]+)/.exec(location.search), f = q ? parseFloat(q[1]) : 0;
+    window.FFDPR = { raw: raw, lobby: Math.min(raw, 2.5), game: Math.min(raw, 2), gameLite: Math.min(raw, 1.5), force: f > 0.4 && f < 4.1 ? f : 0 };
+    if (window.FFDPR.force) window.FFDPR.lobby = window.FFDPR.game = window.FFDPR.force;
+  })();
+  // ffu6: Unity 6.6 build - WebGPU first, WebGL 2 fallback (the engine picks). ?webgpu=0 hides navigator.gpu to force WebGL 2.
+  (function () {
+    if (/[?&]webgpu=0/.test(location.search)) { try { Object.defineProperty(navigator, "gpu", { value: undefined, configurable: true }); } catch (e) { } }
+    console.log("FFU6 page: navigator.gpu " + (navigator.gpu ? "present" : "absent"));
+  })();
+  // ffu17c: Unity 2022 decides the WebGL context's antialias flag itself and the probe showed it false (no MSAA on the
+  // canvas, jagged 3D edges behind the lobby and in game). Ask the browser for an antialiased (MSAA) backbuffer on the
+  // game canvas. ?aa=0 turns it off.
+  (function () {
+    if (/[?&]aa=0/.test(location.search)) return;
+    // ffu60: ?quality=low, or this browser's frame-rate governor ended on the low tier last time -> no canvas MSAA
+    var q60 = /[?&]quality=([a-z]+)/.exec(location.search), ql = null;
+    try { ql = localStorage.getItem("ffq60"); } catch (e) { }
+    if (q60 ? q60[1] === "low" : ql === "0") { console.log("FF page: low quality tier - canvas antialias off"); return; }
+    var orig = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (type, attrs) {
+      if (this.id === "unity-canvas" && (type === "webgl2" || type === "webgl" || type === "experimental-webgl")) {
+        var a = {}; if (attrs) for (var k in attrs) a[k] = attrs[k]; a.antialias = true; attrs = a;
+      }
+      return orig.call(this, type, attrs);
+    };
+  })();
+  var config = {
+    dataUrl: buildUrl + "/" + name + ".data?v=__BUILD_VERSION__",
+    frameworkUrl: buildUrl + "/" + name + ".framework.js?v=__BUILD_VERSION__",
+    codeUrl: buildUrl + "/" + name + ".wasm?v=__BUILD_VERSION__",
+    streamingAssetsUrl: "StreamingAssets",
+    companyName: "Similarize",
+    productName: "Four Froggies 6.6",
+    productVersion: "__BUILD_VERSION__",
+    devicePixelRatio: window.FFDPR.lobby,
+    showBanner: function (msg, type) { if (type === "error") { var e = document.getElementById("err"); e.style.display = "block"; e.textContent = msg; } else console.log(msg); }
+  };
+  var fill = document.getElementById("fill"), pct = document.getElementById("pct"), loader = document.getElementById("loader");
+  var script = document.createElement("script");
+  script.src = buildUrl + "/" + name + ".loader.js?v=__BUILD_VERSION__";
+  script.onload = function () {
+    createUnityInstance(canvas, config, function (p) {
+      fill.style.width = Math.round(p * 100) + "%";
+      pct.textContent = "Loading " + Math.round(p * 100) + "%";
+    }).then(function (inst) {
+      window.unityInstance = inst;
+      loader.style.opacity = "0";
+      setTimeout(function () { loader.style.display = "none"; }, 450);
+      canvas.focus();
+      document.getElementById("fs").onclick = function () { inst.SetFullscreen(1); };
+    }).catch(function (m) {
+      var e = document.getElementById("err"); e.style.display = "block"; e.textContent = "Could not start the game: " + m;
+    });
+  };
+  script.onerror = function () { var e = document.getElementById("err"); e.style.display = "block"; e.textContent = "Could not load the game files."; };
+  document.body.appendChild(script);
+  canvas.addEventListener("pointerdown", function () { canvas.focus(); });
+  document.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+  document.addEventListener("touchmove", function (e) { e.preventDefault(); }, { passive: false });
+</script>
+</body>
+</html>

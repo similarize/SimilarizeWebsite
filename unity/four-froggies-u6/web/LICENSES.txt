@@ -1,0 +1,249 @@
+Four Froggies (Unity) - third-party assets and licences
+=======================================================
+
+1. "Unitree" robot = Unitree H1 robot model
+   Source: https://github.com/unitreerobotics/unitree_mujoco (unitree_robots/h1), converted, posed standing, split into limbs and decimated
+   for this game; the logo plate was left out.
+
+BSD 3-Clause License
+
+Copyright (c) 2016-2024 HangZhou YuShu TECHNOLOGY CO.,LTD. ("Unitree Robotics")
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this
+  list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice,
+  this list of conditions and the following disclaimer in the documentation
+  and/or other materials provided with the distribution.
+
+* Neither the name of the copyright holder nor the names of its
+  contributors may be used to endorse or promote products derived from
+  this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+2. "Atlas HD" robot = MIT DRC Atlas robot model
+   Source: https://github.com/RobotLocomotion/models (atlas/), converted, posed standing, split into limbs and decimated for this game;
+   team / sponsor logos were painted out of the textures.
+
+Copyright 2012-2022 Robot Locomotion Group @ CSAIL
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+Redistributions of source code must retain the above copyright notice,
+this list of conditions and the following disclaimer.  Redistributions
+in binary form must reproduce the above copyright notice, this list of
+conditions and the following disclaimer in the documentation and/or
+other materials provided with the distribution.  Neither the name of
+the Massachusetts Institute of Technology nor the names of its
+contributors may be used to endorse or promote products derived from
+this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+3. Sky + textures - Poly Haven (https://polyhaven.com), CC0 1.0 (public domain):
+   - HDRI "Kloofendal 48d Partly Cloudy (Pure Sky)" by Greg Zaal and Jarod Guest (sky).
+   - Textures sparse_grass + leafy_grass (recoloured ranch grass), park_dirt, coast_sand_01, weathered_planks (fences),
+     weathered_plank_siding (barn, painted red), box_profile_metal_sheet (barn roof), plastered_wall_02 (house walls),
+     wood_floor + laminate_floor (house floors), aerial_sand (seabed), red_sand (Mars ground), moon_01 (Callisto ground).
+   https://polyhaven.com/license - "All assets on Poly Haven are licensed as CC0 ... You can use them for any purpose,
+   including commercial work, without attribution." Credited anyway with thanks.
+
+4. Trees, pines, bushes, rocks, flowers - "Stylized Nature MegaKit" by Quaternius (https://quaternius.com),
+   via https://opengameart.org/content/stylized-nature-megakit. CC0 1.0 Universal (public domain dedication).
+   Decimated and converted for WebGL; leaf / bark textures resized.
+
+5. Cows, horses, sheep, pig - "Farm Animals" pack by Quaternius (https://quaternius.com),
+   via https://opengameart.org/content/lowpoly-animated-farm-animal-pack. CC0 1.0 Universal.
+   Split into leg / head parts for the walk animation.
+
+6. Planet and star maps - NASA, public domain ("free and without copyright"; NASA media usage guidelines:
+   https://www.nasa.gov/nasa-brand-center/images-and-media). Earth (A), Mars, Jupiter, Jupiter - Callisto and the
+   Hipparcos Star Map from https://github.com/nasa/NASA-3D-Resources; Moon colour map from the NASA SVS CGI Moon Kit
+   (https://svs.gsfc.nasa.gov/4720, LRO LROC). Resized for WebGL. No NASA endorsement implied.
+
+7. Modelled for this game (no third-party mesh): the four froggies, Optimus, Figure 02 / Big Figure Two, Figure 03,
+   Atlas electric (from public photos, no logos), the Cybertruck-style pickup and everything else.
+   Robot and vehicle names describe the real machines only; this fan game is not affiliated with their makers.
+
+8. Sound effects and ambience recordings - BigSoundBank.com by Joseph Sardin (https://bigsoundbank.com),
+   "Royalty-Free Sound License (CC0-like)": free for any use, no attribution required. Credited anyway with thanks.
+   Recordings used (BigSoundBank IDs): 0115 0150 0264 0279 0283 0284 0359 0377 0453 0494 0500 0534 0546 0691 0908
+   0966 1023 1145 1157 1519 1522 1529 1658 1808 1911 2343 2458 2655 2921 2931 2942 2955 3552.
+   Trimmed, looped, pitched and mixed for the game (engines, animals, splashes, servos, ambience beds).
+
+9. Sound effects - Kenney (https://kenney.nl): "Interface Sounds", "Impact Sounds" and "Sci-fi Sounds" packs.
+   CC0 1.0 Universal.
+
+10. Music (all from OpenGameArt.org, all CC0 1.0 Universal; looped / trimmed for the game):
+   - Ranch: "Flowerbed Fields (Loop)" by Zane Little Music - https://opengameart.org/content/flowerbed-fields-loop
+   - Lobby: "Children's Game Music 1 - Picnic" by heartade - https://opengameart.org/content/childrens-game-music-1-picnic
+   - House: "Children's Game Music 3 - Home" by heartade - https://opengameart.org/content/childrens-game-music-3-home
+   - Underwater: "Underwater Theme II" - Music by Cleyton Kauffman - https://opengameart.org/content/underwater-theme-ii
+   - Space: "Space Adventure" by MintoDog - https://opengameart.org/content/space-adventure
+   - Mars: "Puppy Playing in The Garden" by Spring Spring - https://opengameart.org/content/puppy-playing-in-the-garden
+   - Callisto: "Outer Space Loop" by wipics - https://opengameart.org/content/outer-space-loop
+   Everything else (synth engines, rocket roar layers, UI pings) is synthesised for this game.
+   Cybertruck EV voice (ffu39): fully synthesised in code (Core/SfxSynth.cs) - motor whine, low-speed pedestrian-warning
+   tone, tyre roll, gravel grit, wind, regen whine. No recording is used. Reference only (not included): Tesla's
+   Cybertruck "Normal Operating Sounds" page (https://service.tesla.com/docs/Public/diy/cybertruck/en_us/GUID-AA58ED67-9C93-4EE6-8B19-9FDABE018787.html).
+   No CC0 Cybertruck recording was found; the one free drive-by video on Wikimedia Commons is CC BY-SA 4.0 and was not used.
+
+11. Realism test (only with ?realism=1 in the URL; streamed from real/, not part of the normal game) - all CC0 1.0:
+   - Sky: "Sunflowers (Pure Sky)" HDRI by Poly Haven - https://polyhaven.com/a/sunflowers_puresky
+     (tonemapped to an LDR panorama; sun direction + ambient lighting derived from it).
+   - Textures by Poly Haven (https://polyhaven.com, CC0): "Dry Ground 01" (dry_ground_01), "Brown Mud Rocks 01"
+     (brown_mud_rocks_01), "Brown Mud 02" (brown_mud_02), "Rock Boulder Dry" (rock_boulder_dry), "Bark Brown 02"
+     (bark_brown_02) - diffuse x ambient occlusion, OpenGL normal maps, resized to 1024 / 512 px.
+   - "Grass 004" by ambientCG (https://ambientcg.com/view?id=Grass004, CC0 1.0) - colour x AO + normal map.
+   - Water ripple normal map and grass clump card: generated for this game.
+
+
+12. Fonts (lobby / menus, ffu17) - SIL Open Font License 1.1 (embedded as Latin subsets, renamed FFDisplay / FFBody):
+   - Montserrat ExtraBold - Copyright 2011 The Montserrat Project Authors (https://github.com/JulietaUla/Montserrat)
+   - Inter SemiBold - Copyright 2016 The Inter Project Authors (https://github.com/rsms/inter)
+
+   This Font Software is licensed under the SIL Open Font License, Version 1.1.
+   This license is copied below, and is also available with a FAQ at:
+   https://openfontlicense.org
+   
+   
+   -----------------------------------------------------------
+   SIL OPEN FONT LICENSE Version 1.1 - 26 February 2007
+   -----------------------------------------------------------
+   
+   PREAMBLE
+   The goals of the Open Font License (OFL) are to stimulate worldwide
+   development of collaborative font projects, to support the font creation
+   efforts of academic and linguistic communities, and to provide a free and
+   open framework in which fonts may be shared and improved in partnership
+   with others.
+   
+   The OFL allows the licensed fonts to be used, studied, modified and
+   redistributed freely as long as they are not sold by themselves. The
+   fonts, including any derivative works, can be bundled, embedded, 
+   redistributed and/or sold with any software provided that any reserved
+   names are not used by derivative works. The fonts and derivatives,
+   however, cannot be released under any other type of license. The
+   requirement for fonts to remain under this license does not apply
+   to any document created using the fonts or their derivatives.
+   
+   DEFINITIONS
+   "Font Software" refers to the set of files released by the Copyright
+   Holder(s) under this license and clearly marked as such. This may
+   include source files, build scripts and documentation.
+   
+   "Reserved Font Name" refers to any names specified as such after the
+   copyright statement(s).
+   
+   "Original Version" refers to the collection of Font Software components as
+   distributed by the Copyright Holder(s).
+   
+   "Modified Version" refers to any derivative made by adding to, deleting,
+   or substituting -- in part or in whole -- any of the components of the
+   Original Version, by changing formats or by porting the Font Software to a
+   new environment.
+   
+   "Author" refers to any designer, engineer, programmer, technical
+   writer or other person who contributed to the Font Software.
+   
+   PERMISSION & CONDITIONS
+   Permission is hereby granted, free of charge, to any person obtaining
+   a copy of the Font Software, to use, study, copy, merge, embed, modify,
+   redistribute, and sell modified and unmodified copies of the Font
+   Software, subject to the following conditions:
+   
+   1) Neither the Font Software nor any of its individual components,
+   in Original or Modified Versions, may be sold by itself.
+   
+   2) Original or Modified Versions of the Font Software may be bundled,
+   redistributed and/or sold with any software, provided that each copy
+   contains the above copyright notice and this license. These can be
+   included either as stand-alone text files, human-readable headers or
+   in the appropriate machine-readable metadata fields within text or
+   binary files as long as those fields can be easily viewed by the user.
+   
+   3) No Modified Version of the Font Software may use the Reserved Font
+   Name(s) unless explicit written permission is granted by the corresponding
+   Copyright Holder. This restriction only applies to the primary font name as
+   presented to the users.
+   
+   4) The name(s) of the Copyright Holder(s) or the Author(s) of the Font
+   Software shall not be used to promote, endorse or advertise any
+   Modified Version, except to acknowledge the contribution(s) of the
+   Copyright Holder(s) and the Author(s) or with their explicit written
+   permission.
+   
+   5) The Font Software, modified or unmodified, in part or in whole,
+   must be distributed entirely under this license, and must not be
+   distributed under any other license. The requirement for fonts to
+   remain under this license does not apply to any document created
+   using the Font Software.
+   
+   TERMINATION
+   This license becomes null and void if any of the above conditions are
+   not met.
+   
+   DISCLAIMER
+   THE FONT SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+   EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTIES OF
+   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT
+   OF COPYRIGHT, PATENT, TRADEMARK, OR OTHER RIGHT. IN NO EVENT SHALL THE
+   COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+   INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL
+   DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+   FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
+   OTHER DEALINGS IN THE FONT SOFTWARE.
+
+CC0 1.0 Universal: https://creativecommons.org/publicdomain/zero/1.0/legalcode
+
+
+13. REAL ROOM (ffu18, streamed from realroom/ only when you enter it)
+   Poly Haven assets (https://polyhaven.com), CC0 1.0 Universal (public domain dedication):
+   models ArmChair_01, sofa_02, modern_coffee_table_01, modern_wooden_cabinet, potted_plant_04, rubber_duck_toy,
+   modern_ceiling_lamp_01, hanging_picture_frame_02, side_table_01, ceramic_vase_01; textures herringbone_parquet,
+   white_plaster_02, poly_wool_herringbone; HDRI kloppenheim_02 (window view + night light).
+   TV picture and sound: excerpt (0:46-1:16) of "Big Buck Bunny" (c) copyright 2008, Blender Foundation,
+   www.bigbuckbunny.org / peach.blender.org, licensed under the Creative Commons Attribution 3.0 licence
+   (https://creativecommons.org/licenses/by/3.0/). Re-encoded to 640x360 with a fade in / out; no other changes.
+   Room shell, TV, door, light switch, frog hands, lighting bake and shaders: made for this game.
+
+   ffu23 additions to the REAL ROOM: the realistic frog body, first-person frog hands, eyes and the plush frog toy
+   (realroom/frog.bin) were modelled for this game from code (signed-distance shapes, work/rr/frog in the build
+   pipeline) - no third-party model. The window view is the same Poly Haven kloppenheim_02 crop (CC0), colour-graded
+   to night.
+
+14. RANCH GROUND / TREES / BUILDINGS (ffu56, streamed from real/ after load, not in the build)
+   ambientCG textures (https://ambientcg.com), CC0 1.0 Universal (public domain dedication):
+   Ground037 (worn footpaths), Ground048 (forest leaf litter), Bark014 (tree bark), Leaf001 (leaves - cut out and
+   arranged into a leafy sprig card for the tree canopies), WoodSiding008 (house / garage siding, greyed for paint),
+   Planks023A (porch / tree fort planks), RoofingTiles013A (roof shingles).
+   Instanced grass, footprints / tyre tracks, the tree fort, fireflies and bugs: made for this game from code.
+
+CC0 1.0 Universal: https://creativecommons.org/publicdomain/zero/1.0/legalcode
