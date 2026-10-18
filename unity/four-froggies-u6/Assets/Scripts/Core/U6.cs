@@ -269,7 +269,24 @@ public class U6Runner : MonoBehaviour
 // renderers (renderingLayerMask = StudioBit, set by Mats.SetLayer), every other light only the default bit
 public static class U6Layers
 {
-    public const uint WorldBit = 1u, StudioBit = 1u << 2;
+    public const uint WorldBit = 1u;
+    // ffu6h: Unity 6 drops undefined rendering layers from lights (BuildScript.DefineRenderingLayers defines bit 2). If bit 2 is
+    // still undefined in this player, studio + world share bit 0 and the split relies on Light.cullingMask + Showroom's
+    // per-camera world-sun switch-off (logged once).
+    static uint studioBit;
+    public static uint StudioBit
+    {
+        get
+        {
+            if (studioBit == 0u)
+            {
+                uint def = RenderingLayerMask.GetDefinedRenderingLayersCombinedMaskValue();
+                studioBit = (def & 4u) != 0u ? 4u : 1u;
+                Debug.Log("U6: rendering layers defined mask " + def + " -> studio bit " + studioBit + (studioBit == 1u ? " (FALLBACK: shared with world)" : ""));
+            }
+            return studioBit;
+        }
+    }
     public static void World(Light l) { Set(l, WorldBit); }
     public static void Studio(Light l) { Set(l, StudioBit); }
     static void Set(Light l, uint bits)
@@ -284,7 +301,7 @@ public static class U6Layers
         var r = g.GetComponent<Renderer>();
         if (r == null) return;
         if (layer == U6.StudioVolumeLayer) r.renderingLayerMask = StudioBit;
-        else if (r.renderingLayerMask == StudioBit) r.renderingLayerMask = WorldBit;
+        else if (r.renderingLayerMask == (1u << 2)) r.renderingLayerMask = WorldBit;
     }
 
     // Unity's trilight ambient as SH: equator everywhere + sky lobe up + ground lobe down (colours in the active space)

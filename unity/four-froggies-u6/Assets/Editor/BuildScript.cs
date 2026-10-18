@@ -64,6 +64,7 @@ public static class BuildScript
         }
         Debug.Log("BuildScript: pipeline " + GraphicsSettings.defaultRenderPipeline.name + " colour " + PlayerSettings.colorSpace + " apis " + string.Join(",", PlayerSettings.GetGraphicsAPIs(BuildTarget.WebGL)));
 
+        DefineRenderingLayers();
         string scene = CreateScene();
         EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(scene, true) };
         AssetDatabase.SaveAssets();
@@ -161,6 +162,7 @@ public static class BuildScript
             ConfigurePlayer();
             EnsureFolder("Assets", "Generated");
             UniversalRenderPipelineAsset a = MakeURP();
+            DefineRenderingLayers();
             AssetDatabase.SaveAssets();
             Debug.Log("URPSETUP: ok asset " + AssetDatabase.GetAssetPath(a) + " default " + (GraphicsSettings.defaultRenderPipeline != null ? GraphicsSettings.defaultRenderPipeline.name : "null") +
                 " colour " + PlayerSettings.colorSpace + " apis " + string.Join(",", PlayerSettings.GetGraphicsAPIs(BuildTarget.WebGL)));
@@ -171,6 +173,33 @@ public static class BuildScript
             code = 2;
         }
         EditorApplication.Exit(code);
+    }
+
+    // ffu6h: Unity 6 masks every light / shadow rendering layer with the layers DEFINED in Tags and Layers (only "Default" in a
+    // fresh project) -> the lobby studio lights on rendering layer 2 came out as layer 0 = matched nothing: black portraits.
+    // Define layers 1 and 2 (names only; U6Layers uses bit 0 world, bit 2 studio).
+    static void DefineRenderingLayers()
+    {
+        try
+        {
+            var objs = AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset");
+            if (objs == null || objs.Length == 0) { Debug.LogWarning("URPSETUP: TagManager.asset not found"); return; }
+            var so = new SerializedObject(objs[0]);
+            var p = so.FindProperty("m_RenderingLayers");
+            if (p == null || !p.isArray) { Debug.LogWarning("URPSETUP: TagManager.m_RenderingLayers missing"); return; }
+            string[] want = { "Default", "World Extra", "Studio" };
+            int old = p.arraySize;
+            while (p.arraySize < want.Length) p.InsertArrayElementAtIndex(p.arraySize);
+            for (int i = 1; i < want.Length; i++)
+            {
+                var e = p.GetArrayElementAtIndex(i);
+                if (i >= old || string.IsNullOrEmpty(e.stringValue)) e.stringValue = want[i];
+            }
+            so.ApplyModifiedPropertiesWithoutUndo();
+            AssetDatabase.SaveAssets();
+            Debug.Log("URPSETUP: rendering layers defined " + p.arraySize + " (was " + old + "), mask " + RenderingLayerMask.GetDefinedRenderingLayersCombinedMaskValue());
+        }
+        catch (Exception e) { Debug.LogWarning("URPSETUP: rendering layers failed " + e.Message); }
     }
 
     const string UrpPath = Gen + "/FF_URP.asset", UrpRendererPath = Gen + "/FF_URP_Renderer.asset";

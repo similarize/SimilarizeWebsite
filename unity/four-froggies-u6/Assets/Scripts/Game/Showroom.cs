@@ -56,7 +56,7 @@ public static class Showroom
     static Renderer sample;
     static void Diag(Camera c)
     {
-        var sb = new System.Text.StringBuilder("Showroom diag (" + c.name + "): sun " + (RenderSettings.sun != null ? RenderSettings.sun.name : "none") + " swap " + StudioSwap + " hid " + hidden.Count + " |");
+        var sb = new System.Text.StringBuilder("Showroom diag (" + c.name + "): defined layers " + RenderingLayerMask.GetDefinedRenderingLayersCombinedMaskValue() + " studio bit " + U6Layers.StudioBit + " sun " + (RenderSettings.sun != null ? RenderSettings.sun.name : "none") + " swap " + StudioSwap + " hid " + hidden.Count + " |");
         foreach (var l in studioLights)
         {
             var d = l.GetUniversalAdditionalLightData();
@@ -344,7 +344,10 @@ public static class Showroom
             Object.DestroyImmediate(spot.gameObject);
             Object.DestroyImmediate(root.gameObject);
         }
+        // ffu6h: WebGPU left the LAST thumbnail (Daisy) empty - one more (empty) studio render + GL.Flush submits its resolve
+        thumbCam.targetTexture = tmp; thumbCam.Render();
         thumbCam.targetTexture = null;
+        GL.Flush();
         ThumbsReady = true;
         Debug.Log("Showroom: thumbnails rendered (" + Thumbs.Length + " characters, " + ThumbSize + " px 4x MSAA + mips)");
     }

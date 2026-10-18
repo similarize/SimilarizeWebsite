@@ -70,7 +70,7 @@ public static class Light55
     }
     // ffu6g: under water (the Underwater world and a ranch camera under the pond surface) read milky teal after the ffu6e +0.9 EV
     // lift (mean 34,85,96 vs 2022.3 28,66,82) -> -0.7 EV there and a cooler white balance (deep blue, not warm teal)
-    public const float UnderExpK = 0.62f, UnderWarm = -8f;
+    public const float UnderExpK = 0.52f, UnderWarm = -8f;   // ffu6h: 0.62 -> 0.52 (G-under 43,83,95 vs 2022.3 28,66,82)
     static float ExpK(WorldId w) { return w == WorldId.House ? 2.1f : w == WorldId.Mars ? 1.04f : w == WorldId.Callisto ? 1.1f : w == WorldId.Underwater ? UnderExpK : 1f; }
     // Worlds.PondUnder: a ranch camera under the pond gets the underwater grade too (Light55.PreCull ran first with the ranch values)
     public static void UnderGrade(Camera c)
