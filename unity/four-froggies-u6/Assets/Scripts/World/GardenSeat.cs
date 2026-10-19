@@ -18,6 +18,9 @@ public class GardenSeat : Vehicle
     public float aiPush;               // AI riders: a gentle self-push amount (0..1)
     public float occupiedT;            // seconds the current rider has been in
     public void Push(float k) { amp = Mathf.Min(maxAmp, amp + k * 6f); }   // ffu54: a robot pushes the swing
+    // ffu6r: a robot on the next swing / hammock swings in step with its froggy (World/RobotSit66.cs)
+    public void SyncTo(GardenSeat o, float dt) { if (o == null) return; amp = Mathf.MoveTowards(amp, Mathf.Min(maxAmp, o.amp), 6f * dt); float dp = Mathf.DeltaAngle(phase * Mathf.Rad2Deg, o.phase * Mathf.Rad2Deg) * Mathf.Deg2Rad; phase += dp * Mathf.Min(1f, 3f * dt); }
+    public float SwingAngle { get { return amp * Mathf.Sin(phase); } }
 
     public override string HelpLine
     {

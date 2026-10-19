@@ -107,6 +107,7 @@ public static class VoiceBrain
         new K("battery", "", "battery", "how much power", "your power", "how much juice", "are you tired", "energy"),
         new K("howare", "", "how are you", "are you ok", "are you okay", "how do you feel", "you ok"),
         new K("hello", "", "hello", "hi", "hey", "howdy", "good morning", "good afternoon", "yo", "hiya", "greetings"),
+        new K("yes", "", "yes", "yeah", "yep", "okay", "ok", "sure", "yes please", "lets do it", "lets go", "uh huh"),
         new K("love", "", "i love you", "love you", "best friend", "youre my best friend", "i like you", "love"),
         new K("praise", "", "good job", "great job", "well done", "good robot", "thank you", "thanks", "awesome", "youre awesome", "nice work", "good boy", "good girl", "amazing", "cool"),
         new K("joke", "", "tell me a joke", "joke", "funny", "make me laugh", "something funny"),
@@ -162,6 +163,8 @@ public static class VoiceBrain
         new K("act", "play:hunt", "hunt", "hunting", "bow", "arrow", "arrows", "bow and arrow", "archery"),
         new K("act", "play:cook", "cook", "cooking", "eat", "hungry", "food", "dinner", "lunch", "snack", "campfire"),
         new K("act", "play:swing", "push my swing", "push me", "swing", "swings"),
+        new K("act", "play:swingsit", "sit with me on the swing", "sit on the swing with me", "sit by me on the swing", "sit next to me on the swing", "come sit by me", "come sit with me", "sit with me", "sit by me", "swing with me", "swing together", "come to the swing", "come to the swings"),   // ffu6r
+        new K("act", "play:hamwith", "swing on the hammock", "swing in the hammock", "come to the hammock", "come to the hammocks", "hammock with me", "hammocks with me", "rock in the hammock", "lie in the hammock with me", "hammocks", "rock with me"),
         new K("act", "play:hammock", "hammock", "nap", "take a nap", "sleep", "rest"),
         new K("act", "play:collect", "collect", "collect stuff", "gather", "samples", "crystals", "treasure"),
         new K("act", "play:dance", "dance", "dancing", "boogie", "disco", "party", "dance party"),
@@ -175,7 +178,7 @@ public static class VoiceBrain
         new K("act", "play:pets", "pet the animals", "feed the animals", "animals", "feed", "pet", "pets", "kitty", "puppy"),
         new K("act", "play:ridepet", "ride a cow", "cow", "moo", "ride the cow"),
         new K("act", "play:fetch", "fetch", "dogs", "doggy", "doggies", "throw the stick", "stick", "play with the dogs"),
-        new K("act", "play:stay", "stay here", "stay", "sit", "dont move", "wait here"),
+        new K("act", "play:stay", "stay here", "stay", "sit down", "dont move", "wait here"),
         new K("act", "play:home", "go home", "go back home", "home"),
     };
 
@@ -259,7 +262,7 @@ public static class VoiceBrain
 
     // ---------- personalities ----------
     public static int Ix(Robot r) { return r == null ? 0 : Mathf.Max(0, System.Array.IndexOf(Ids, r.id)); }
-    static readonly string[] Catch = { "Affirmative!", "Beep boop, okay!", "You got it!", "Roger that!", "BIG okay!", "On it!", "Zip zap, on it!" };
+    static readonly string[] Catch = { "Affirmative!", "Beep boop, okay!", "Ribbit! Let's go!", "Roger that!", "BIG okay!", "On it!", "Zip zap, on it!" };
     static readonly float[] Pitch = { 0.75f, 1.6f, 1.15f, 1.0f, 0.45f, 0.85f, 1.35f };
     static readonly float[] Rate = { 0.92f, 1.15f, 1.0f, 0.95f, 0.8f, 1.0f, 1.12f };
     public static float PitchOf(Robot r) { return Pitch[Ix(r)]; }
@@ -374,8 +377,9 @@ public static class VoiceBrain
             case "see": return SeeLine(r, f);
             case "battery": return "My battery is " + r.Pct + (r.Charging ? " and I'm charging. Yum, electrons!" : r.battery < r.lowAt ? ". Getting low - say go charge!" : ". Plenty of zip!");
             case "howare": return r.battery < r.lowAt ? "A little sleepy - battery " + r.Pct + ". I should charge soon!" : "I feel super! Battery " + r.Pct + ", and I'm " + r.StatusLine + ".";
-            case "hello": return "Hi " + nick + "! It's me, " + r.robotName + ". What should we do?";
+            case "hello": return Fig03Free.Is(r) ? "Hiii " + nick + "! Ribbit! It's me, Figure 03! Wanna play?" : "Hi " + nick + "! It's me, " + r.robotName + ". What should we do?";
             case "love": return "Aww! I love you too, " + nick + "! My circuits are all warm and fuzzy!";
+            case "yes": return Fig03Free.Is(r) ? "Ribbit! Yay! What do you wanna play?" : "Okay! What should I do?";
             case "praise": return "Thank you, " + nick + "! You're the best froggy ever!";
             case "joke": return Jokes[(jokeI++) % Jokes.Length];
             case "name": return "I'm " + r.robotName + (r.owner.Length > 0 ? ", " + r.owner + "'s robot" : ", a ranch robot") + ". I'm " + r.height.ToString("0.0") + " meters tall!";
@@ -531,6 +535,8 @@ public partial class RobotPhone
         lastHeard = said; lastKind = it.kind; heardCount++;
         youT.text = "You: " + (said.Length > 0 ? said : "...");
         string act = it.act, reply;
+        Fig03Free.AskedNicely = VoiceBrain.Norm(said).Contains(" please ");   // ffu6r: Figure 03 may skip chores, less so when asked nicely
+        if (it.kind == "yes") { string off = Fig03Free.TakeOffer(r); if (off != null) { it.kind = "act"; act = off; } }
         if (it.kind == "comehome") act = r.mission != null || RobotMechMission.For(r) != null || r.hunt != null ? "abort" : r.world != Robot.TargetWorld(f) ? "rcall:sel" : "come";
         if (it.kind == "goworld" && VoiceBrain.WorldFrom(it.act) == Robot.TargetWorld(f)) { it.kind = "act"; act = "rcall:sel"; }
         if (it.kind == "act" || it.kind == "comehome")
@@ -543,7 +549,7 @@ public partial class RobotPhone
                 sel = it.robot >= 0 ? it.robot : 1 % robots.Count; r = robots[sel];
                 reply = n > 0 ? "We're all on it - " + n + " robots! " + VoiceBrain.Clean(robots[sel], first) : "Everyone's busy on missions!";
             }
-            else { Do(f, act); reply = VoiceBrain.CatchOf(r) + " " + VoiceBrain.Clean(r, msg.text); }
+            else { Do(f, act); reply = Fig03Free.LastDeclined ? VoiceBrain.Clean(r, msg.text) : VoiceBrain.CatchOf(r) + " " + VoiceBrain.Clean(r, msg.text); Fig03Free.LastDeclined = false; }
         }
         else if (it.kind == "helpfrog")
         {
@@ -627,7 +633,7 @@ public class RobotChatter : MonoBehaviour
                 s.mech = mk;
             }
             int vp = r.visit != null ? r.visit.ph : -1;
-            if (vp != s.visitPh) { if (vp == 1 && s.visitPh == 0) { var c = r.visit.lead; line = "I'm here" + (c != null ? ", " + c.nick : "") + "! What should we play?"; } s.visitPh = vp; }
+            if (vp != s.visitPh) { if (vp == 1 && s.visitPh == 0 && !Fig03Free.FreeVisit(r)) { var c = r.visit.lead; line = "I'm here" + (c != null ? ", " + c.nick : "") + "! What should we play?"; } s.visitPh = vp; }
             // stuck: on the way somewhere but not moving for 20 s
             bool going = m == null && mm == null && r.manual == null && (vp == 0 || r.StatusLine.StartsWith("walking") || r.StatusLine.StartsWith("to "));
             if (going && (r.transform.position - s.pos).sqrMagnitude < 0.16f) s.stillT += 0.5f; else { s.stillT = 0f; s.pos = r.transform.position; }
@@ -665,6 +671,9 @@ public class Ffu6q : MonoBehaviour
         new T("I love you", "love", "", "Optimus", "love"),
         new T("figure three lets dance", "act", "play:dance", "Figure 03", "dance"),
         new T("flibber jabber zoo", "unknown", "", "Figure 03", "unknown"),
+        new T("figure three mow the lawn", "act", "mow:ride", "Figure 03", "nah"),            // ffu6r: fig03roll=0.05 -> declines + offers fun
+        new T("okay", "act", "", "Figure 03", "yesoffer"),                                   // takes his offer
+        new T("figure three please mow the lawn", "act", "mow:ride", "Figure 03", "please"),  // fig03roll 0.95 -> accepts
         new T("unit tree follow me", "act", "play:follow", "Unitree", "follow"),
         new T("optimus how's the mission going", "mission", "", "Optimus", "status"),
         new T("optimus come home", "comehome", "abort", "Optimus", "abort"),
@@ -674,6 +683,7 @@ public class Ffu6q : MonoBehaviour
     static void Boot()
     {
         if (I != null || Ffu33.Url("ffdemo") == null || Ffu33.Url("ffshot") != "voice66") return;
+        if (Ffu33.Url("v66") == "sit") { Ffu6r.Boot(); return; }
         I = new GameObject("ffu6q").AddComponent<Ffu6q>(); DontDestroyOnLoad(I.gameObject);
     }
 
@@ -699,7 +709,7 @@ public class Ffu6q : MonoBehaviour
         float now = Time.realtimeSinceStartup;
         if (waiting)
         {
-            if (ph.heardCount <= step && now - sentT < 14f) return;
+            if (ph.lastHeard != tests[step].say && now - sentT < 45f) return;   // SwiftShader stalls 20+ s on the first TTS / recogniser frame
             Check(tests[step], ph); Ph(tests[step].tag);
             waiting = false; stepT = now + 7f;   // screenshot time for the phase
             return;
@@ -737,7 +747,83 @@ public class Ffu6q : MonoBehaviour
     {
         if (step == 999) return;
         step = 999;
-        Debug.Log("VOICE66 RESULT " + pass + "/" + (pass + fail) + " PASS, chatter lines " + RobotChatter.Said + " (mission " + RobotChatter.MissionSaid + ")");
+        Debug.Log("VOICE66 RESULT " + pass + "/" + (pass + fail) + " PASS, chatter lines " + RobotChatter.Said + " (mission " + RobotChatter.MissionSaid + "), FIG03 declined " + Fig03Free.Declined + " accepted " + Fig03Free.Accepted);
         Debug.Log("FFDEMO voice66 done");
     }
+}
+
+// ---------------- probe: ?ffdemo=1&ffshot=voice66&v66=sit&voicetest=1 (ffu6r swing / hammock with me) ----------------
+// James sits on the porch swing nearest the campfire, says "unitree sit with me on the swing" -> Unitree comes, takes the
+// next swing, swings in step ("SIT66 ... angle"); then James moves to a hammock and says "come to the hammock".
+public class Ffu6r : MonoBehaviour
+{
+    static Ffu6r I;
+    int ph = -1; float t0, phT; Frog f; Robot r; GardenSeat mySeat; int pass, fail;
+    public static void Boot() { if (I == null) { I = new GameObject("ffu6r").AddComponent<Ffu6r>(); DontDestroyOnLoad(I.gameObject); } }
+    void Log(string tag) { Debug.Log("FFDEMO voice66 ph " + ph + " " + tag); }
+    GardenSeat Nearest(GardenSeat.Kind k, Vector3 p) { GardenSeat b = null; float bd = 1e9f; foreach (var s in GardenSeat.Seats) { if (s == null || s.kind != k || s.driver != null) continue; float d = (s.transform.position - p).sqrMagnitude; if (d < bd) { bd = d; b = s; } } return b; }
+    void Update()
+    {
+        if (Game.I == null || Game.I.state != Game.State.Play || Game.I.slots.Count == 0 || RanchLife.I == null || RanchLife.I.robots.Count < 2 || RobotPhone.I == null || GardenSeat.Seats.Count == 0) return;
+        float now = Time.realtimeSinceStartup;
+        if (ph < 0)
+        {
+            ph = 0; t0 = now; f = Game.I.frogs[Game.I.slots[0].frog]; r = RanchLife.I.robots[1];
+            Robot.DtCap = 0.25f; Robot.IdleChoreAfter = 9999f; r.battery = 1f;
+            Debug.Log("FFDEMO voice66 sit start, seats " + GardenSeat.Seats.Count + " recognition " + FFVoice.Supported);
+            phT = now + 3f; return;
+        }
+        if (now < phT) return;
+        var ph1 = RobotPhone.Of(f);
+        var rs = RobotSit66.SeatOf(r);
+        switch (ph)
+        {
+            case 0:   // James onto a swing, phone open, say it
+                mySeat = Nearest(GardenSeat.Kind.Swing, Campfire.I != null ? Campfire.I.transform.position : f.transform.position);
+                if (mySeat == null) { Debug.Log("SIT66 FAIL no swing"); Done(); return; }
+                f.transform.position = mySeat.transform.position + mySeat.transform.forward * 1.2f;
+                f.EnterVehicle(mySeat);
+                RobotPhone.I.DemoOpen(f, 1, "ORDERS");
+                ph1 = RobotPhone.Of(f);
+                ph1.VoiceDemo(f, "unitree sit with me on the swing");
+                ph = 1; phT = now + 6f; return;
+            case 1:
+                Check("swing", ph1.lastAct == "play:swingsit");
+                ph = 2; phT = now + 2f; return;
+            case 2:   // wait for Unitree to sit on the next swing
+                if (rs != null && rs.driver != null && rs != mySeat)
+                {
+                    Check("swing seated next to James on " + rs.name + " (" + (rs.transform.position - mySeat.transform.position).magnitude.ToString("0.0") + " m away)", true);
+                    ph = 3; Log("sitswing"); phT = now + 14f; return;
+                }
+                if (now - t0 > 300f) { Check("swing seated (timeout: " + r.StatusLine + ")", false); ph = 3; }
+                phT = now + 2f; return;
+            case 3:   // in step?
+                if (rs != null) Check("swing in step: James " + mySeat.SwingAngle.ToString("0.0") + " Unitree " + rs.SwingAngle.ToString("0.0"), Mathf.Abs(mySeat.SwingAngle - rs.SwingAngle) < 6f);
+                // hammock: James hops out, into the hammock nearest him, says it
+                f.ExitVehicle();
+                mySeat = Nearest(GardenSeat.Kind.Hammock, f.transform.position);
+                if (mySeat == null) { Debug.Log("SIT66 FAIL no hammock"); Done(); return; }
+                f.transform.position = mySeat.transform.position + mySeat.transform.forward * 1.2f;
+                f.EnterVehicle(mySeat);
+                ph1.VoiceDemo(f, "unitree come to the hammock");
+                t0 = now; ph = 4; phT = now + 6f; return;
+            case 4:
+                Check("hammock", ph1.lastAct == "play:hamwith");
+                ph = 5; phT = now + 2f; return;
+            case 5:
+                if (rs != null && rs.driver != null && rs != mySeat && rs.kind == GardenSeat.Kind.Hammock)
+                {
+                    Check("hammock seated next to James on " + rs.name + " (" + (rs.transform.position - mySeat.transform.position).magnitude.ToString("0.0") + " m away)", true);
+                    ph = 6; Log("sitham"); phT = now + 14f; return;
+                }
+                if (now - t0 > 240f) { Check("hammock seated (timeout: " + r.StatusLine + ")", false); ph = 6; }
+                phT = now + 2f; return;
+            case 6:
+                if (rs != null) Check("hammock in step: James " + mySeat.SwingAngle.ToString("0.0") + " Unitree " + rs.SwingAngle.ToString("0.0"), Mathf.Abs(mySeat.SwingAngle - rs.SwingAngle) < 6f);
+                Done(); return;
+        }
+    }
+    void Check(string what, bool ok) { if (ok) pass++; else fail++; Debug.Log("SIT66 TEST " + (ok ? "PASS" : "FAIL") + " " + what); }
+    void Done() { if (ph == 99) return; ph = 99; Debug.Log("SIT66 RESULT " + pass + "/" + (pass + fail) + " PASS"); Debug.Log("FFDEMO voice66 done"); }
 }

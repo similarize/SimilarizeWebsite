@@ -192,7 +192,8 @@ public partial class RobotPhone : MonoBehaviour   // ffu6q: + Game/RobotVoice66.
         string[] oc = { "come", "go", "stop", "wave", "roofHeli", "roofDrone", "follow", "dance" };
         string[] ol = { "Come here", "Go (8 m)", "Stop", "Wave", "Roof helipad", "Drone pad", "Follow me", "Dance" };
         for (int i = 0; i < oc.Length; i++) Add(1, ol[i], oc[i]);
-        Add(1, "Fly your rocket", "rocket"); Add(1, "Hunt (bow)", "hunt");   // ffu50: Figure 03 only (Fig03Rocket50.cs)
+        Add(1, "Fly your rocket", "rocket"); Add(1, "Hunt (bow)", "hunt");
+        Add(1, "Swing with me", "play:swingsit"); Add(1, "Hammock with me", "play:hamwith");   // ffu6r   // ffu50: Figure 03 only (Fig03Rocket50.cs)
         vehicles = RobotDriver.List();
         for (int i = 0; i < vehicles.Count && i < 12; i++) Add(2, vehicles[i].Title, "veh:" + i);
         string[] bands = { "10-story mech", "100-story mech", "1000-story mech", "Trillion mech" };
@@ -463,6 +464,7 @@ public partial class RobotPhone : MonoBehaviour   // ffu6q: + Game/RobotVoice66.
         }
         var r = Selected;
         if (r == null) return;
+        if (Fig03Free.Declines(r, a, f, ref say)) { msg.text = say; f.Toast(say, 2.8f); Sfx.Play(Sfx.Click, 0.5f, 0.8f); return; }   // ffu6r: Figure 03 may skip chores (World/Fig03Free66.cs)
         if (a == "rcall:sel") { say = r.Call(f, null); msg.text = say; if (say.Length > 0) f.Toast(say, 2.5f); Sfx.Play(Sfx.Pickup, 0.5f, 1.3f); return; }
         if (a.StartsWith("play:")) { say = r.Play(a.Substring(5), f); msg.text = say; if (say.Length > 0) f.Toast(say, 2.5f); Sfx.Play(Sfx.Pickup, 0.5f, 1.3f); return; }
         bool userAway = Robot.TargetWorld(f) != WorldId.Ranch;

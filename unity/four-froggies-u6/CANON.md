@@ -81,6 +81,17 @@ Dad (James's dad) is a non-playable character: he lives in the house (kitchen) a
 - **Robots everywhere** (ffu54, Bill 2026-10-16): James's robots come when called from the phone in every world (ranch,
   house, Real Room, Mars, Callisto, Moon, space, the pond, the forest), say hi, and do whatever James asks there; left
   alone they keep doing chores. James's request always wins. Vehicle ownership rules apply to robots too.
+- **Figure 03 is a free-willed playmate, not just a helper** (Bill 2026-10-19 16:41-16:43: "Figure 03 is the only robot that, if he
+  doesn't wanna do chores, he doesn't have to when we tell him to." / "He can play and do everything that the froggies can do,
+  and not just do chores." / "He can drive cars, get on a Starship and go, and do everything a froggy can."): told to do a chore
+  he sometimes says no (mood; more likely right after one, less likely when asked nicely - "please") with a cheeky line and a fun
+  idea instead; "yes" takes his idea. Left to himself he picks his own fun with the froggies - tag, catch, races, swings,
+  hammocks, swimming, hopping, building, bug hunts, pets, cookouts - takes cars out (ownership / ask-to-share rules apply), tags
+  along to other worlds and flies his own rocket. He talks like a froggy ("Ribbit! Let's go!"). Every other robot still does
+  what it is told, and James's orders still override their chores.
+- **Robots sit with you on the porch swing / hammock** (Bill 2026-10-19 16:31): "Swing with me" / "Hammock with me" (phone ORDERS,
+  or say "sit with me on the swing", "come to the hammock", "swing on the hammock"): the robot takes the swing / hammock next to
+  yours and swings or rocks in step with you; if you are not in one yet, it sits and you can join on the next one.
 - **Talk to the robots by voice** (ffu6q, Four Froggies 6.6 only, Bill 2026-10-19: "We wanna be able to talk to the robots
   when they're on missions. And have them talk back."): every player's robot phone has push-to-talk (TALK button, pad RT
   held, key T held), walkie-talkie style, and works wherever the robot is - even on Mars mid-mission. A spoken order does

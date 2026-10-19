@@ -51,7 +51,7 @@ public partial class Robot
     public bool Visiting { get { return visit != null; } }
     bool Blk(float x, float z) { return visit != null ? RobotNav.WallBlocked(x, z) : RobotNav.Blocked(x, z); }
 
-    static readonly string[] PlayVerbs = { "follow", "tag", "hop", "swim", "dive", "climb", "horse", "skate", "bike", "ridewith", "catch", "hunt", "cook", "swing", "hammock", "collect", "dance", "piggy", "build", "race", "wave", "lights", "fort", "bugs", "pets", "ridepet", "fetch", "stay", "home" };
+    static readonly string[] PlayVerbs = { "follow", "tag", "hop", "swim", "dive", "climb", "horse", "skate", "bike", "ridewith", "catch", "hunt", "cook", "swing", "hammock", "collect", "dance", "piggy", "build", "race", "wave", "lights", "fort", "bugs", "pets", "ridepet", "fetch", "stay", "home", "swingsit", "hamwith" };   // ffu6r
     public static bool IsPlay(string v) { return System.Array.IndexOf(PlayVerbs, v) >= 0; }
     public static WorldId TargetWorld(Frog f) { return f == null ? WorldId.Ranch : f.world == WorldId.Underwater ? WorldId.Ranch : f.world; }   // ffu53: the pond IS the ranch
     public static string WorldName(WorldId w) { switch (w) { case WorldId.Space: return "space"; case WorldId.RealRoom: return "the Real Room"; case WorldId.House: return "the house"; case WorldId.Ranch: return "the ranch"; default: return w.ToString(); } }
@@ -187,7 +187,7 @@ public partial class Robot
             case "bike": return "ride a bike"; case "ridewith": return "ride with you"; case "catch": return "play catch"; case "hunt": return "go hunting";
             case "cook": return "cook + eat"; case "swing": return "push your swing"; case "hammock": return "hammock nap"; case "collect": return "collect treasures";
             case "dance": return "dance"; case "piggy": return "piggyback"; case "build": return "build something"; case "race": return "race you";
-            case "wave": return "wave"; case "lights": return "flip the lights"; case "fort": return "build the tree fort"; case "bugs": return "go on a bug hunt"; case "pets": return "pet + feed the animals"; case "ridepet": return "ride a cow"; case "fetch": return "play fetch"; case "stay": return "stay"; default: return v;
+            case "wave": return "wave"; case "lights": return "flip the lights"; case "fort": return "build the tree fort"; case "bugs": return "go on a bug hunt"; case "pets": return "pet + feed the animals"; case "ridepet": return "ride a cow"; case "fetch": return "play fetch"; case "stay": return "stay"; case "swingsit": return "swing with you"; case "hamwith": return "rock in the hammocks with you"; default: return v;
         }
     }
 
@@ -291,6 +291,8 @@ public partial class Robot
                     if (free == null) return Say("all the hammocks are taken");
                     return DriveOrder(free, "hold", f).Replace("on my way to the Hammock", "going for a hammock nap");
                 }
+            case "swingsit": return SitWith66(GardenSeat.Kind.Swing, f, ranch);      // ffu6r (World/RobotSit66.cs)
+            case "hamwith": return SitWith66(GardenSeat.Kind.Hammock, f, ranch);
             case "collect": v.verb = verb; v.vs = 0; v.count = 0; return Say(world == WorldId.Mars ? "collecting Mars crystals for you!" : world == WorldId.Callisto ? "collecting ice shards for you!" : world == WorldId.Moon ? "collecting moon samples!" : "collecting treasures for you!");
             case "dance": v.verb = verb; v.vt = 0f; cmd = "dance"; return Say("dance party!");
             case "piggy":
