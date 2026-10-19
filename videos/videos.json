@@ -97,6 +97,42 @@
         {
           "slug": "four-froggies-come-home-v3",
           "label": "Also watch Version 3"
+        },
+        {
+          "slug": "four-froggies-come-home-v5",
+          "label": "Also watch Version 5"
+        }
+      ]
+    },
+    {
+      "slug": "four-froggies-come-home-v5",
+      "title": "Four Froggies Come Home (Version 5)",
+      "badge": "Version 5",
+      "description": "James, Jimmy, Bubbles and Rexy blast off to Mars, meet King Germy, say hi to Alex and Fred, and race home to the ranch.",
+      "duration": 459,
+      "audience": "Kids & family",
+      "published": "2026-10-18",
+      "status": "published",
+      "hls": "four-froggies-come-home-v5/master.m3u8",
+      "poster": "four-froggies-come-home-v5/poster.jpg",
+      "thumb": "four-froggies-come-home-v5/thumb.jpg",
+      "poster_at": 420,
+      "related": [
+        {
+          "slug": "four-froggies-catch-jimmy",
+          "label": "Also watch Version 1"
+        },
+        {
+          "slug": "four-froggies-catch-jimmy-v2",
+          "label": "Also watch Version 2"
+        },
+        {
+          "slug": "four-froggies-come-home-v3",
+          "label": "Also watch Version 3"
+        },
+        {
+          "slug": "four-froggies-come-home-v4",
+          "label": "Also watch Version 4"
         }
       ]
     }
