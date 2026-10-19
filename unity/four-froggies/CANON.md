@@ -85,6 +85,11 @@ Dad (James's dad) is a non-playable character: he lives in the house (kitchen) a
   the most surprised of all. In episode 3 Spotty is played by the story itself (a player who picked Spotty plays another
   free roster character for the episode).
 
+- **Figure 03 is not like the other robots** (Bill 2026-10-19 16:41-16:43): he is the ONLY robot who can **refuse chores**
+  when told (if he doesn't want to, he doesn't have to; asking nicely helps) - every other robot always obeys, and James's
+  orders override chores for them. Figure 03 can **play and do everything a froggy can**, on his own in free play too:
+  play, hop, swing, swim, race, catch, join games, ride along, **drive cars** and **take a Starship** (vehicle
+  ask-to-share rules still apply). Chores are optional for him. (Behaviour: 6.6 by ff-u6-voice; 2022.3 in the backlog.)
 ## Places
 - **Apollo 11 landing site** (ffu61, Bill 2026-10-17): on the Moon world, what the real July 1969 mission left behind - the
   Lunar Module descent stage (gold foil, four legs, ladder + the plaque "Here men from the planet Earth first set foot upon
@@ -96,3 +101,7 @@ Dad (James's dad) is a non-playable character: he lives in the house (kitchen) a
 - Froggies can **jump rails** (and obstacles) to reach the roof or other rooms.
 - **Everyone boards the Starship together**: it has a blast-off sequence and everyone aboard goes as one.
 - **No pillars in the middle of the garage door openings.**
+- **Starship flight** (ffu62, Bill 2026-10-19): the nose always points where the ship is going (auto-transfer, free flight,
+  warp, orbit). RB / C = warp toward the selected target along the nose (also from orbit), LB / Z = slower, the brake drops warp;
+  any body with an orbit (Earth, Moon, Mars, Jupiter, Callisto, ...) can be entered by hand: fly close and brake (LT / S / BRAKE).
+- **Esc** never resets the game from Help: it only closes Help (ffu62).

@@ -233,6 +233,13 @@ public class Tracks56 : MonoBehaviour
             if (gv == null) { OtherWheels(veh); continue; }
             if (!gv.isActiveAndEnabled || gv.stowed || gv.rb == null || gv.rb.isKinematic) continue;
             if (gv.rb.velocity.sqrMagnitude < 0.25f) continue;
+            if (gv.Title != null && gv.Title.StartsWith("Optimus"))
+            {   // ffu62d: the 3.3 m suit walks - big robot boot prints, left / right per stride (its wheels are only the physics)
+                RaycastHit hs;
+                if (Physics.Raycast(gv.transform.position + Vector3.up * 1f, Vector3.down, out hs, 3.5f, Vehicle.GroundMask, QueryTriggerInteraction.Ignore))
+                    Step(gv.GetInstanceID() * 31 + 7, new Vector3(gv.transform.position.x, hs.point.y, gv.transform.position.z), gv.transform.forward, 1.25f, 0.34f, 0.36f, 0.62f, 1, 0.6f, ref RobotPrints);
+                continue;
+            }
             for (int k = 0; k < gv.wheels.Count; k++)
             {
                 var w = gv.wheels[k];

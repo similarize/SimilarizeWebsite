@@ -1130,11 +1130,11 @@ public partial class Robot : MonoBehaviour   // ffu54: partial - visits / PLAY v
         }
         p.x = np.x; p.z = np.z;
         // ffu10: metal footsteps while walking, servo whirs when moving / waving / dancing (positional)
-        if (!flying && speed > 0.3f) { sndStep += speed * dt; if (sndStep > height * 0.38f) { sndStep = 0f; Sfx.PlayAt(Sfx.StepMetal, p, 0.32f, 28f, Random.Range(0.9f, 1.15f) * Mathf.Clamp(1.8f / height, 0.6f, 1.4f)); } }
+        if (!flying && speed > 0.3f) { sndStep += speed * dt; if (sndStep > height * 0.38f) { sndStep = 0f; RobotSound62.Step(p, speed, height); } }   // ffu62: motor whirr + clunk, not footsteps
         sndServo -= dt;
         if (sndServo <= 0f && (speed > 0.3f || wave > 0f || cmd == "dance" || (pose >= 5 && pose != 11)))
         {
-            sndServo = Random.Range(1.2f, 3.2f);
+            sndServo = speed > 0.3f ? Random.Range(0.7f, 1.6f) : Random.Range(1.2f, 3.2f);   // ffu62: more servo whine while moving
             Sfx.PlayAt(Sfx.Pick(Sfx.Servo), p + Vector3.up * height * 0.7f, 0.24f, 24f, Random.Range(0.85f, 1.2f));
         }
         // flying to / from a roof pad: jets on, climb over the house, settle on the pad
