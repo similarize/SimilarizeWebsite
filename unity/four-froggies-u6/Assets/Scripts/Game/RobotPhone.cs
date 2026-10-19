@@ -15,7 +15,7 @@ using UnityEngine.UI;
 // index; I = seat 0, the one the demos drive), each with its own robot pick / tab / orders / calls acting for that seat's
 // froggy, opened from that player's own controller / keys / touch. Each phone (and its PHONE button) lives inside its
 // player's split viewport and scales to fit; small viewports (quarter screen) use a compact layout (no turntable card).
-public class RobotPhone : MonoBehaviour
+public partial class RobotPhone : MonoBehaviour   // ffu6q: + Game/RobotVoice66.cs (VOICE TALK)
 {
     public static RobotPhone I;
     public static readonly RobotPhone[] Seat = new RobotPhone[4];
@@ -38,7 +38,7 @@ public class RobotPhone : MonoBehaviour
     readonly List<Text> itemLbls = new List<Text>();
     Image arrowL, arrowR;
     float stickCool;
-    const float PW = 440f, PH = 664f, CardH = 196f;
+    const float PW = 440f, PH = 764f, CardH = 196f;   // ffu6q: +100 for the voice strip (TALK, captions, quick replies, settings)
     List<Vehicle> vehicles = new List<Vehicle>();
     Vehicle pickVeh; int pickBand = -1;
     // carousel turntable
@@ -163,6 +163,8 @@ public class RobotPhone : MonoBehaviour
         badge.rectTransform.anchorMin = badge.rectTransform.anchorMax = new Vector2(1f, 0.5f);
         badge.rectTransform.anchoredPosition = new Vector2(-26f, 0f);
         btnKey = UIK.Label(badge.transform, "P", 15, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(40f, 26f), new Color(1f, 0.92f, 0.55f));
+        BuildVoice(p);   // ffu6q
+        RobotChatter.Ensure();
         panel.gameObject.SetActive(false);
         btn.gameObject.SetActive(false);
         BuildStand();
@@ -392,6 +394,7 @@ public class RobotPhone : MonoBehaviour
             else if (x < -0.6f) { Move(-1); stickCool = 0.16f; }
         }
         if (Mathf.Abs(x) < 0.3f && Mathf.Abs(y) < 0.3f) stickCool = 0f;
+        VoicePtt(f, i);   // ffu6q: pad RT / key T held = talk
         if (i.use || i.hop || (f.inputKind == InputKind.Keyboard && Kb.EnterDown())) Activate(f);
         if (f.inputKind == InputKind.Gamepad)
         {
@@ -426,6 +429,7 @@ public class RobotPhone : MonoBehaviour
     void Do(Frog f, string a)
     {
         string say = "";
+        Note(f, Selected);   // ffu6q: who to radio back to
         // ffu27 CALL tab: works in every world
         if (a.StartsWith("call:"))
         {
@@ -563,6 +567,7 @@ public class RobotPhone : MonoBehaviour
     // a click / tap on the open phone
     void Press(Vector2 p)
     {
+        if (VoicePress(p)) return;   // ffu6q TALK / quick replies / voice settings
         if (In(arrowL, p)) { Pick(sel - 1); return; }
         if (In(arrowR, p)) { Pick(sel + 1); return; }
         for (int i = 0; i < dots.Count; i++) if (RectTransformUtility.RectangleContainsScreenPoint(dots[i].rectTransform, p, null)) { Pick(i); return; }
@@ -615,6 +620,7 @@ public class RobotPhone : MonoBehaviour
         TickStand(Mathf.Min(Time.unscaledDeltaTime, 0.1f));
         if (!open) return;
         Refresh();
+        TickVoice();
     }
 
     // ffu59b: the phone + PHONE button sit inside this player's viewport: the camera rect in split-screen, a column of
@@ -700,9 +706,9 @@ public class RobotPhone : MonoBehaviour
         }
         if (tab == 5) { Vehicle uv = user != null ? user.vehicle : null; string wl = BigWheels.Resizable(uv) ? "WHEEL SIZE " + BigWheels.LabelFor(uv) + " - " + uv.Title + " only (1x - 4x)" : "Get in a vehicle to resize its wheels"; if (msg.text != wl && !msg.text.StartsWith("Wheel size")) msg.text = wl; }
         InputKind ik = user != null ? user.inputKind : InputKind.Keyboard;
-        string h = ik == InputKind.Gamepad ? "Up/Down robot · Left/Right order · A send · RB tab · Y feed · X full · LB / B close"
-                 : ik == InputKind.Touch ? "Swipe the robot · tap a tab, then an order · PHONE closes"
-                 : "W/S robot · A/D order · E/Enter/click send · O feed · I cam · P close";
+        string h = ik == InputKind.Gamepad ? "Up/Down robot · Left/Right order · A send · RB tab · Y feed · X full · RT talk · LB / B close"
+                 : ik == InputKind.Touch ? "Swipe the robot · tap a tab, then an order · TALK to speak · PHONE closes"
+                 : "W/S robot · A/D order · E/Enter/click send · hold T talk · O feed · P close";
         if (hint.text != h) hint.text = h;
     }
 }
