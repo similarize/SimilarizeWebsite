@@ -911,9 +911,11 @@ public partial class Starship : Vehicle
                         // ffu62 WARP CRUISE: travel straight along the nose (toward the target), no gravity bending, drop out of warp
                         // automatically when the target's capture zone (or a new body's zone) is reached
                         float spd = Mathf.Max(Flat(vel - fv).magnitude, 22f);
+                        Apply();   // ffu62c: turn the visible nose first (RotateTowards), then fly along it
                         for (int k = 0; k < steps && warpIdx > 0; k++)
                         {
-                            vel = fv + fwd * spd;
+                            Vector3 nose = Flat(transform.forward).sqrMagnitude > 0.5f ? Flat(transform.forward).normalized : fwd;   // ffu62c: the visible nose
+                            vel = fv + nose * spd;
                             pos += vel * h;
                             int nb = target >= 0 ? target : Nearest();
                             if (nb >= 0 && nb != warpFrom)

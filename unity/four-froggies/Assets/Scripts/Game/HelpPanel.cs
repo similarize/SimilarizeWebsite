@@ -253,7 +253,7 @@ public partial class Game
         L.Add(ac);
         var pc = new HSec("PHONE + CAMERA");
         if (pad) pc.R("LB (on foot)", "robot phone: chores, drive, missions, call, wheels, play - in every world").R(G("Y") + " (phone)", "robot video feed").R("View", "shared / split screen").R("Start", "this menu").R(G("B") + " here", "leave your seat");
-        else if (keys) pc.R("P", "robot phone: chores, drive, missions, call, wheels, play - in every world").R("O  ·  I", "robot video feed  ·  feed camera").R("V", "shared / split screen").R("H", "this menu").R("M", "sound on / low / off").R("Esc here", "leave your seat");
+        else if (keys) pc.R("P", "robot phone: chores, drive, missions, call, wheels, play - in every world").R("O  ·  I", "robot video feed  ·  feed camera").R("V", "shared / split screen").R("H", "this menu").R("M", "sound on / low / off");   // ffu62: no Esc line (Esc only closes this menu)
         else pc.R("PHONE", "robot phone: chores, drive, missions, call, wheels, play - in every world").R("SND", "sound on / low / off").R("MENU", "this menu");
         // ffu59: who joins / who starts (lobby + mid-game)
         if (pad) pc.R(G("A") + " (lobby / new pad)", "join as P1-P4: each controller pressing " + G("A") + " is the next player  ·  " + G("A") + " again does nothing").R("LT (lobby)", "start the game, from any joined controller");
@@ -336,7 +336,7 @@ public partial class Game
         hpSettings.anchorMin = hpSettings.anchorMax = new Vector2(0f, 0f); hpSettings.pivot = new Vector2(0f, 0f);
         hpSettings.anchoredPosition = new Vector2(pad, pad + footH); hpSettings.sizeDelta = new Vector2(W - pad * 2f, setH);
         Place(hpFoot.rectTransform, new Vector2(0f, 0f), new Vector2(pad, pad), new Vector2(W - pad * 2f, 20f), new Vector2(0f, 0f));
-        hpFoot.text = kind == InputKind.Gamepad ? "Start closes  ·  " + G("B") + " leaves your seat  ·  " + G("Y") + " sound" : kind == InputKind.Touch ? "Tap CLOSE to play  ·  drag to scroll" : "H closes  ·  Esc leaves your seat  ·  M sound";
+        hpFoot.text = kind == InputKind.Gamepad ? "Start closes  ·  " + G("B") + " leaves your seat  ·  " + G("Y") + " sound" : kind == InputKind.Touch ? "Tap CLOSE to play  ·  drag to scroll" : "H closes  ·  M sound";
         // viewport
         float viewH = H - headH - setH - footH - pad - 10f;
         hpView.anchorMin = hpView.anchorMax = new Vector2(0f, 1f); hpView.pivot = new Vector2(0f, 1f);
