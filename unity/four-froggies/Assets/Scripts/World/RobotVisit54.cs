@@ -340,7 +340,7 @@ public partial class Robot
         Frog f = visit.lead;
         Vector3 lp = LeadPos(f), fw = LeadFwd(f), rt = new Vector3(fw.z, 0f, -fw.x);
         Vector3 c = lp + fw * r + rt * side;
-        return c;
+        return C63Spot(c, lp);   // ffu63: arrivals inside the perimeter, never inside a wall
     }
 
     void StartPod()
@@ -569,7 +569,7 @@ public partial class Robot
         float d = RobotNav.Flat(goal - p);
         bool wet = world == WorldId.Ranch && (InWater(p) || InWater(goal));
         if (world == WorldId.Ranch && d > 14f && !wet) { ExtWalk(goal, spd, stop, dt); }
-        else if (d > stop) { Vector3 to = goal - p; to.y = 0f; goalDir = to.normalized; goalSpeed = Mathf.Min(spd, (d - stop) * 1.8f + 0.4f); }
+        else if (d > stop) { c63Goal = goal; Vector3 to = goal - p; to.y = 0f; goalDir = to.normalized; goalSpeed = Mathf.Min(spd, (d - stop) * 1.8f + 0.4f); }
         SwimFloat(dt, float.NaN);
         return d;
     }
