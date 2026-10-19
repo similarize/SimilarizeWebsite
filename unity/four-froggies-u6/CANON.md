@@ -81,6 +81,12 @@ Dad (James's dad) is a non-playable character: he lives in the house (kitchen) a
 - **Robots everywhere** (ffu54, Bill 2026-10-16): James's robots come when called from the phone in every world (ranch,
   house, Real Room, Mars, Callisto, Moon, space, the pond, the forest), say hi, and do whatever James asks there; left
   alone they keep doing chores. James's request always wins. Vehicle ownership rules apply to robots too.
+- **Talk to the robots by voice** (ffu6q, Four Froggies 6.6 only, Bill 2026-10-19: "We wanna be able to talk to the robots
+  when they're on missions. And have them talk back."): every player's robot phone has push-to-talk (TALK button, pad RT
+  held, key T held), walkie-talkie style, and works wherever the robot is - even on Mars mid-mission. A spoken order does
+  exactly what the same phone button does; the robot answers out loud in its own voice with what it is really doing
+  (mission progress, where it is, what it sees, battery) and radios in by itself at mission milestones. Kid-friendly
+  replies, no online AI. Browsers without speech recognition get tap-to-say quick replies instead.
 - **Story episode 3 "Spotty's Surprise"** (ffu48): Spotty surprises the froggies with the carrier at the pond; James is
   the most surprised of all. In episode 3 Spotty is played by the story itself (a player who picked Spotty plays another
   free roster character for the episode).

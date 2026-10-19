@@ -509,7 +509,8 @@ public partial class RobotPhone
 
     void TickVoice()
     {
-        if (listening) { listenT += Time.unscaledDeltaTime; if (listenT > 12f) { FFVoice.Stop(); if (listenT > 15f) VoiceEvent("X:"); } }
+        if (listening) { listenT += Mathf.Min(Time.unscaledDeltaTime, 0.1f);   // a long frame stall must not time the mic out before its words are polled
+                          if (listenT > 12f) { FFVoice.Stop(); if (listenT > 15f) VoiceEvent("X:"); } }
         micBtn.color = listening ? new Color(0.9f, 0.2f + 0.15f * Mathf.Sin(Time.unscaledTime * 10f), 0.2f, 0.98f) : FFVoice.Supported ? new Color(0.12f, 0.55f, 0.5f, 0.95f) : new Color(0.3f, 0.32f, 0.36f, 0.9f);
         micT.text = listening ? "LIVE" : "TALK";
         InputKind ik = user != null ? user.inputKind : InputKind.Keyboard;
@@ -585,7 +586,7 @@ public class RobotChatter : MonoBehaviour
     class St { public string stage = ""; public int got; public bool had; public int haveGot; public string mech = ""; public int visitPh = -1; public Vector3 pos; public float stillT, stuckSaid = -999f, lastSaid = -999f; }
     readonly Dictionary<Robot, St> st = new Dictionary<Robot, St>();
     float lastAny = -999f, tick;
-    public static int Said;
+    public static int Said, MissionSaid;
 
     public static void Ensure() { if (I == null) { I = new GameObject("RobotChatter").AddComponent<RobotChatter>(); DontDestroyOnLoad(I.gameObject); } }
 
@@ -614,7 +615,7 @@ public class RobotChatter : MonoBehaviour
                 else if (m.got > s.got && m.phase == 7) line = m.got >= m.want ? "That's all " + m.want + "! Heading back to the ship." : "Found one! That's " + m.got + " of " + m.want + ".";
                 s.got = m.got; s.had = true; s.haveGot = m.got;
             }
-            else if (s.had) { s.had = false; s.stage = ""; s.got = 0; line = "Mission done! I'm back at the ranch with " + s.haveGot + " goodies!"; must = true; }
+            else if (s.had) { line = s.stage == "prep" ? "Okay, mission cancelled! I'm staying at the ranch." : s.haveGot > 0 ? "Mission done! I'm back at the ranch with " + s.haveGot + " goodies!" : "I'm back at the ranch! No goodies this time."; s.had = false; s.stage = ""; s.got = 0; must = true; }
             var mm = RobotMechMission.For(r);
             string mk = mm == null ? "" : mm.PhaseLine.StartsWith("mech landing on") ? "land" : mm.PhaseLine.StartsWith("mech collecting") ? "collect" : mm.PhaseLine.StartsWith("mech flying home") ? "home" : mm.PhaseLine.StartsWith("mech flying to") ? "out" : s.mech == "" ? "prep" : s.mech;
             if (mk != s.mech)
@@ -634,7 +635,7 @@ public class RobotChatter : MonoBehaviour
             if (line == null || !FFVoice.ChatterOn) continue;
             if (!must && (now - lastAny < 8f || now - s.lastSaid < 15f)) continue;
             if (must && now - lastAny < 3f) continue;
-            lastAny = now; s.lastSaid = now; Said++;
+            lastAny = now; s.lastSaid = now; Said++; if (m != null || mm != null) MissionSaid++;
             Frog to = RobotPhone.CallerOf(r);
             if (to == null && Game.I.slots.Count > 0) to = Game.I.frogs[Game.I.slots[0].frog];
             var ph = RobotPhone.Of(to);
@@ -712,7 +713,7 @@ public class Ffu6q : MonoBehaviour
             Finish(); return;
         }
         int next = step + 1;
-        if (next == tests.Length - 1 && RobotChatter.Said == 0 && now - t0 < 260f && RanchLife.I.robots[0].mission != null)
+        if (next == tests.Length - 1 && RobotChatter.MissionSaid == 0 && now - t0 < 480f && RanchLife.I.robots[0].mission != null)
         {
             // before "come home": give the Mars mission time to radio in on its own (chatter)
             stepT = now + 3f;
@@ -736,7 +737,7 @@ public class Ffu6q : MonoBehaviour
     {
         if (step == 999) return;
         step = 999;
-        Debug.Log("VOICE66 RESULT " + pass + "/" + (pass + fail) + " PASS, chatter lines " + RobotChatter.Said);
+        Debug.Log("VOICE66 RESULT " + pass + "/" + (pass + fail) + " PASS, chatter lines " + RobotChatter.Said + " (mission " + RobotChatter.MissionSaid + ")");
         Debug.Log("FFDEMO voice66 done");
     }
 }
