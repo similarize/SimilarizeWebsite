@@ -494,6 +494,13 @@ public partial class Starship : Vehicle
     float heading;
     int warpIdx;
     static readonly float[] Warps = { 1f, 4f, 16f, 64f };
+    // ffu62: orbit direction (+1 ccw / -1 cw) so a capture keeps the way you were flying; nose smoothing; warp bookkeeping
+    float orbitDir = 1f, noseDt = 0.016f, hintT, logT62;
+    bool noseSnap = true;
+    int warpFrom = -1;
+    public static bool Log62;   // ffu62 demo / probe: STAR62 lines
+    public bool Warping { get { return mode == Mode.Free && warpIdx > 0; } }
+    public int CaptureBody { get { return Nearest(); } }
     // transfer
     Vector3 tS, tC1, tC2, tE;
     float tDur, tEl, tWarp = 8f, tEndR, tEndAng;
@@ -517,9 +524,9 @@ public partial class Starship : Vehicle
             bool pad = ik == InputKind.Gamepad, touch = ik == InputKind.Touch;
             bool canLand = mode == Mode.Orbit && W.bodies[orbitBody].landable;
             string land = canLand ? "  |  " + (pad ? "Y" : touch ? "LAND" : "F") + " LAND" : "";
-            string ctl = pad ? "D-pad < > target  X auto  LB RB warp  L3 warp home  L-stick turn + thrust  RT boost  LT brake" + (mechForm != null ? "  B cargo bay" : "")
+            string ctl = pad ? "D-pad < > target  X auto  RB warp to target  LB slower  L3 warp home  L-stick turn + thrust  RT boost  LT brake" + (mechForm != null ? "  B cargo bay" : "")
                        : touch ? "TGT target  AUTO fly there  BURN / BRAKE  tap radar = warp home" + (mechForm != null ? "  BAY cargo bay" : "")
-                       : "T target  G auto  Z C warp  R warp home  A/D turn  W thrust  S brake" + (mechForm != null ? "  SHIFT afterburner  B cargo bay" : "");
+                       : "T target  G auto  C warp to target  Z slower  R warp home  A/D turn  W thrust  S brake" + (mechForm != null ? "  SHIFT afterburner  B cargo bay" : "");
             return m + "  |  target " + t + " " + Mathf.RoundToInt(dist) + " m  |  warp x" + Mathf.RoundToInt(SimRate) +
                    "\n<size=17>" + ctl + land + "</size>";
         }
@@ -606,6 +613,49 @@ public partial class Starship : Vehicle
 
     int Nearest()
     {
+        // ffu62: 1) the selected target when inside its (big) capture zone, 2) any moon inside its zone, 3) closest by
+        // distance / zone size. Before ffu62 Jupiter (zone 400 m) beat Callisto (240 m from Jupiter) everywhere near Callisto,
+        // so the brake + capture worked against Jupiter and you could never get into Callisto orbit by hand.
+        if (target >= 0 && target < W.bodies.Count)
+        {
+            var tb = W.bodies[target];
+            if (tb.kind != "station" && tb.cap > 0f && Flat(tb.pos - pos).magnitude < Zone(tb, true)) return target;
+        }
+        for (int i = 1; i < W.bodies.Count; i++)
+        {
+            var b = W.bodies[i];
+            if (b.kind == "moon" && Flat(b.pos - pos).magnitude < Zone(b, false)) return i;
+        }
+        int best0 = -1; float bd0 = 1e9f;
+        for (int i = 1; i < W.bodies.Count; i++)
+        {
+            var b = W.bodies[i];
+            if (b.kind == "station" || b.soft <= 0f) continue;
+            float d = Flat(b.pos - pos).magnitude / b.soft;
+            if (d < bd0) { bd0 = d; best0 = i; }
+        }
+        return best0;
+    }
+
+    static Vector3 Flat(Vector3 v) { v.y = 0f; return v; }
+    static float Zone(SpaceWorld.Body b, bool isTarget) { return b.soft * (isTarget ? 3.5f : 2.5f); }   // kid-forgiving capture zones
+    static float Yaw(Vector3 v) { return Mathf.Atan2(v.x, v.z) * Mathf.Rad2Deg; }
+    Vector3 Fwd { get { return Quaternion.Euler(0f, heading, 0f) * Vector3.forward; } }
+    // the frame "travel direction" is measured in: the body you orbit / are near, else the Sun
+    Vector3 FrameVel()
+    {
+        if (mode == Mode.Orbit) return W.bodies[orbitBody].vel;
+        if (mode == Mode.Transfer) return Vector3.zero;
+        int n = Nearest();
+        if (n >= 0 && Flat(W.bodies[n].pos - pos).magnitude < W.bodies[n].soft * 3.5f) return W.bodies[n].vel;
+        return Vector3.zero;
+    }
+    public float NoseDot { get { Vector3 r = Flat(vel - FrameVel()); return r.sqrMagnitude > 0.25f ? Vector3.Dot(transform.forward, r.normalized) : 1f; } }
+    public float NoseDotWorld { get { Vector3 r = Flat(vel); return r.sqrMagnitude > 0.25f ? Vector3.Dot(transform.forward, r.normalized) : 1f; } }
+    string Key(string pad, string kb, string touch) { InputKind ik = driver != null ? driver.inputKind : InputKind.Keyboard; return ik == InputKind.Gamepad ? pad : ik == InputKind.Touch ? touch : kb; }
+
+    int NearestOld()
+    {
         int best = -1; float bd = 1e9f;
         for (int i = 1; i < W.bodies.Count; i++)
         {
@@ -619,8 +669,10 @@ public partial class Starship : Vehicle
 
     public void SetTarget(int i) { target = i; }
 
-    public void EnterOrbit(int body, float r, float ang)
+    public void EnterOrbit(int body, float r, float ang) { EnterOrbit(body, r, ang, 1f); }
+    public void EnterOrbit(int body, float r, float ang, float dir)
     {
+        orbitDir = dir < 0f ? -1f : 1f;
         mode = Mode.Orbit; orbitBody = body; orbitR = Mathf.Max(r, W.bodies[body].r + 8f); orbitAng = ang;
         orbitW = W.bodies[body].id == "earth" ? 0.55f : 0.42f;
         warpIdx = 0;
@@ -633,6 +685,7 @@ public partial class Starship : Vehicle
         Vector3 c = W.bodies[orbitBody].pos;
         pos = c + new Vector3(Mathf.Cos(orbitAng), 0f, Mathf.Sin(orbitAng)) * orbitR;
         Vector3 tangent = new Vector3(-Mathf.Sin(orbitAng), 0f, Mathf.Cos(orbitAng));
+        tangent *= orbitDir;   // ffu62: nose along the way the orbit goes (cw orbits used to fly tail-first)
         vel = W.bodies[orbitBody].vel + tangent * orbitW * orbitR;
         heading = Mathf.Atan2(tangent.x, tangent.z) * Mathf.Rad2Deg;
         Apply();
@@ -641,7 +694,37 @@ public partial class Starship : Vehicle
     void Apply()
     {
         transform.position = pos;
-        transform.rotation = Quaternion.Euler(0f, heading, 0f);
+        // ffu62: the nose turns smoothly (no instant 180 flips) toward the heading, which every mode keeps on the travel direction
+        Quaternion want = Quaternion.Euler(0f, heading, 0f);
+        transform.rotation = noseSnap ? want : Quaternion.RotateTowards(transform.rotation, want, 260f * noseDt);
+        noseSnap = false;
+    }
+
+    public void DemoFree(Vector3 p, Vector3 v, float hdg)   // ffu62 demo / probe
+    {
+        mode = Mode.Free; pos = p; pos.y = SpaceWorld.O.y; vel = v; heading = hdg; warpIdx = 0; noseSnap = true; Apply();
+    }
+
+    // ffu62: leave orbit / free flight into a warp cruise along the nose toward the target (or the current heading)
+    void WarpGo()
+    {
+        if (mode == Mode.Transfer) return;
+        if (mode == Mode.Orbit)
+        {
+            var ob = W.bodies[orbitBody];
+            Vector3 dirOut = target >= 0 ? Flat(W.bodies[target].pos - pos).normalized : Fwd;
+            if (dirOut.sqrMagnitude < 0.5f) dirOut = Fwd;
+            warpFrom = orbitBody;
+            mode = Mode.Free;
+            vel = ob.vel + dirOut * 25f;
+            heading = Yaw(dirOut);
+            warpIdx = 1;
+            if (driver != null) driver.Toast("Warp x4" + (target >= 0 ? " toward " + W.bodies[target].name : "") + " - " + Key("LB", "Z", "BRAKE") + " slows down", 2.5f);
+            return;
+        }
+        if (warpIdx == 0) warpFrom = Nearest();
+        warpIdx = Mathf.Min(3, warpIdx + 1);
+        if (driver != null) driver.Toast("Warp x" + Mathf.RoundToInt(Warps[warpIdx]) + (target >= 0 ? " toward " + W.bodies[target].name : ""), 1.5f);
     }
 
     // edge-triggered controls arrive here once per frame from the driver's Frog.Update
@@ -653,12 +736,9 @@ public partial class Starship : Vehicle
         if (i.auto) StartTransfer();
         if (i.warpHome) WarpHome();
         if (i.cargo) ToggleBay();
-        if (i.land) { if (mode == Mode.Orbit) W.Land(orbitBody); else if (driver != null) driver.Toast("Get into orbit first (auto-transfer or slow down near a planet), then land", 2.5f); }
-        if (mode == Mode.Free)
-        {
-            if (i.warpUp) warpIdx = Mathf.Min(3, warpIdx + 1);
-            if (i.warpDown) warpIdx = Mathf.Max(0, warpIdx - 1);
-        }
+        if (i.land) { if (mode == Mode.Orbit) W.Land(orbitBody); else if (driver != null) driver.Toast("Get into orbit first: auto-transfer, or fly close and brake (" + Key("LT", "S", "BRAKE") + "), then land", 2.5f); }
+        if (i.warpUp) WarpGo();   // ffu62: works from orbit too (leaves toward the target)
+        if (i.warpDown && mode == Mode.Free && warpIdx > 0) { warpIdx--; if (driver != null) driver.Toast(warpIdx == 0 ? "Warp off" : "Warp x" + Mathf.RoundToInt(Warps[warpIdx]), 1.2f); }
     }
 
     void Cycle(int d)
@@ -702,6 +782,10 @@ public partial class Starship : Vehicle
         tS = pos;
         Vector3 v0 = vel - RefVelAt(pos);
         Vector3 dirS = v0.sqrMagnitude > 1f ? v0.normalized : transform.forward;
+        Vector3 toE = Flat(tE - tS).normalized;
+        // ffu62: the arc used to leave along the orbit tangent even when that pointed AWAY from the target -> the ship flew
+        // backwards first. Now the start direction always leans toward the target.
+        if (Vector3.Dot(dirS, toE) < 0.5f) dirS = Vector3.Slerp(dirS, toE, Vector3.Dot(dirS, toE) < -0.2f ? 0.85f : 0.6f).normalized;
         float span = (tE - tS).magnitude;
         Vector3 side = Vector3.Cross(Vector3.up, (tE - tS).normalized);
         tC1 = tS + dirS * span * 0.35f;
@@ -748,6 +832,7 @@ public partial class Starship : Vehicle
     {
         if (W == null) return;
         bool on = driver != null;
+        noseDt = dt;
         float thrustIn = on ? Mathf.Clamp01(inp.move.y) + (on ? inp.gas : 0f) : 0f;
         bool flameOn = false;
         switch (mode)
@@ -760,12 +845,12 @@ public partial class Starship : Vehicle
                         if (inp.move.y > 0.5f || inp.gas > 0.5f) burnT += dt; else burnT = 0f;
                         flameOn = burnT > 0f;
                     }
-                    orbitAng += orbitW * dt * Warps[warpIdx];
+                    orbitAng += orbitDir * orbitW * dt * Warps[warpIdx];
                     Place();
                     if (burnT > 0.6f)
                     {
                         burnT = 0f;
-                        Vector3 tangent = new Vector3(-Mathf.Sin(orbitAng), 0f, Mathf.Cos(orbitAng));
+                        Vector3 tangent = new Vector3(-Mathf.Sin(orbitAng), 0f, Mathf.Cos(orbitAng)) * orbitDir;
                         vel = W.bodies[orbitBody].vel + tangent * (orbitW * orbitR + 25f);
                         pos += tangent * 2f;
                         mode = Mode.Free;
@@ -780,13 +865,20 @@ public partial class Starship : Vehicle
                     float s = u * u * (3f - 2f * u);
                     Vector3 np = Bez(tS, tC1, tC2, tE, s);
                     Vector3 d = np - pos;
-                    if (d.sqrMagnitude > 0.0001f) heading = Mathf.Atan2(d.x, d.z) * Mathf.Rad2Deg;
+                    // ffu62: nose = the arc's tangent (analytic, so it never jitters or flips at low frame rates)
+                    float su = Mathf.Clamp(s, 0.001f, 0.999f), uu = 1f - su;
+                    Vector3 tan = 3f * uu * uu * (tC1 - tS) + 6f * uu * su * (tC2 - tC1) + 3f * su * su * (tE - tC2);
+                    if (Flat(tan).sqrMagnitude > 0.0001f) heading = Yaw(tan);
                     vel = dt > 0f ? d / Mathf.Max(dt * tWarp, 1e-4f) : vel;
                     pos = np;
+                    Apply();
                     flameOn = u < 0.15f || u > 0.85f;
                     if (u >= 1f)
                     {
-                        EnterOrbit(tBody, tEndR, tEndAng + W.bodies[tBody].w * 0f);
+                        // ffu62: orbit the way the arc arrives (no tail-first flip on arrival); the Station's orbit stays ccw
+                        Vector3 endTan = Flat(tE - tC2), radial = Flat(tE - W.bodies[tBody].pos);
+                        float adir = W.bodies[target].kind == "station" ? 1f : (Vector3.Cross(radial, endTan).y <= 0f ? 1f : -1f);
+                        EnterOrbit(tBody, tEndR, tEndAng, adir);
                         // re-align to the body's actual position
                         Vector3 rel = pos - W.bodies[tBody].pos;
                         if (driver != null) { driver.Toast("Arrived: " + W.bodies[target].name + " orbit" + (W.bodies[tBody].landable ? " - Y / F to land" : ""), 3f); Sfx.Play(Sfx.Pickup, 0.7f); }
@@ -795,41 +887,90 @@ public partial class Starship : Vehicle
                 }
             default:
                 {
+                    bool steer = on && Mathf.Abs(inp.move.x) > 0.2f;
                     if (on)
                     {
                         heading += inp.move.x * 80f * dt;
-                        if (thrustIn > 0.05f || inp.brake > 0.05f) warpIdx = 0;
+                        if (inp.brake > 0.05f && warpIdx > 0) { warpIdx = 0; driver.Toast("Warp off", 1.2f); }   // ffu62: only the brake drops warp (stick up no longer cancels it)
                     }
+                    int cb = Nearest();
+                    Vector3 fv = FrameVel();
+                    Vector3 toT = target >= 0 ? Flat(W.bodies[target].pos - pos) : Vector3.zero;
+                    // ffu62 nose assists: with a target and no steering, swing to face it while thrusting / warping;
+                    // coasting with no steering, the nose eases onto the travel direction
+                    if (!steer && target >= 0 && toT.sqrMagnitude > 1f && (thrustIn > 0.05f || warpIdx > 0))
+                        heading = Mathf.MoveTowardsAngle(heading, Yaw(toT), (warpIdx > 0 ? 120f : 60f) * dt);
+                    else if (!steer && thrustIn < 0.05f && Flat(vel - fv).magnitude > 2f)
+                        heading = Mathf.MoveTowardsAngle(heading, Yaw(vel - fv), 45f * dt);
                     float sim = dt * Warps[warpIdx];
                     int steps = Mathf.Clamp(Mathf.CeilToInt(sim / 0.05f), 1, 64);
                     float h = sim / steps;
-                    Vector3 fwd = Quaternion.Euler(0f, heading, 0f) * Vector3.forward;
-                    for (int k = 0; k < steps; k++)
+                    Vector3 fwd = Fwd;
+                    if (warpIdx > 0)
                     {
-                        Vector3 a = Accel(pos, true);
-                        if (on && thrustIn > 0.02f) a += fwd * (8f * Mathf.Clamp01(inp.move.y) + 22f * inp.gas);
-                        if (on && mechForm != null && inp.boostHeld && driver.inputKind != InputKind.Gamepad) a += fwd * 30f;   // pad: LB is warp in space, RT boosts   // ffu15: the mech's afterburner
-                        vel += a * h;
-                        pos += vel * h;
-                    }
-                    flameOn = on && (thrustIn > 0.05f || (mechForm != null && inp.boostHeld));
-                    int n = Nearest();
-                    if (n >= 0)
-                    {
-                        var b = W.bodies[n];
-                        Vector3 rel = vel - b.vel;
-                        Vector3 d = pos - b.pos; d.y = 0f;
-                        if (on && inp.brake > 0.05f) vel = Vector3.MoveTowards(vel, b.vel, 20f * inp.brake * dt);
-                        // approach assist: damp + pull inside a body's zone, capture when slow and close
-                        if (b.cap > 0f && d.magnitude < b.soft * 2f)
+                        // ffu62 WARP CRUISE: travel straight along the nose (toward the target), no gravity bending, drop out of warp
+                        // automatically when the target's capture zone (or a new body's zone) is reached
+                        float spd = Mathf.Max(Flat(vel - fv).magnitude, 22f);
+                        for (int k = 0; k < steps && warpIdx > 0; k++)
                         {
-                            vel = Vector3.MoveTowards(vel, b.vel, rel.magnitude * 0.3f * dt);
-                            if (d.magnitude > b.cap * 1.2f) vel -= d.normalized * 6f * dt;
-                            if (d.magnitude < b.cap * 1.8f && rel.magnitude < 32f)
+                            vel = fv + fwd * spd;
+                            pos += vel * h;
+                            int nb = target >= 0 ? target : Nearest();
+                            if (nb >= 0 && nb != warpFrom)
                             {
-                                EnterOrbit(n, b.cap, Mathf.Atan2(d.z, d.x));
-                                if (on) { driver.Toast("Captured into " + b.name + " orbit" + (b.landable ? " - Y / F to land" : ""), 2.5f); Sfx.Play(Sfx.Pickup, 0.6f); }
+                                var bb = W.bodies[nb];
+                                if (bb.cap > 0f && Flat(bb.pos - pos).magnitude < Zone(bb, nb == target) * 0.9f)
+                                {
+                                    warpIdx = 0;
+                                    Vector3 bf = bb.vel;
+                                    vel = bf + fwd * Mathf.Min(spd, 30f);
+                                    if (on) driver.Toast("Warp off - " + bb.name + " ahead. " + Key("LT", "S", "BRAKE") + " brake to enter orbit", 3f);
+                                    if (Log62) Debug.Log("STAR62 warp-drop at " + bb.name + " d " + Flat(bb.pos - pos).magnitude.ToString("0") + " dot " + NoseDot.ToString("0.00"));
+                                }
                             }
+                        }
+                    }
+                    else
+                    {
+                        for (int k = 0; k < steps; k++)
+                        {
+                            Vector3 a = Accel(pos, true);
+                            if (on && thrustIn > 0.02f) a += fwd * (8f * Mathf.Clamp01(inp.move.y) + 22f * inp.gas);
+                            if (on && mechForm != null && inp.boostHeld && driver.inputKind != InputKind.Gamepad) a += fwd * 30f;   // pad: LB is warp in space, RT boosts   // ffu15: the mech's afterburner
+                            vel += a * h;
+                            pos += vel * h;
+                        }
+                        // ffu62: the ship goes where the nose points - the travel direction (in the local frame) turns onto the nose
+                        Vector3 rv = Flat(vel - fv);
+                        if (rv.magnitude > 1f) vel = fv + Vector3.RotateTowards(rv, fwd * rv.magnitude, (thrustIn > 0.05f ? 2.2f : 1.4f) * dt, 0f);
+                    }
+                    flameOn = on && (thrustIn > 0.05f || warpIdx > 0 || (mechForm != null && inp.boostHeld));
+                    if (cb >= 0 && warpIdx == 0)
+                    {
+                        var b = W.bodies[cb];
+                        Vector3 rel = Flat(vel - b.vel);
+                        Vector3 d = Flat(pos - b.pos);
+                        float zone = Zone(b, cb == target);
+                        bool inZone = b.cap > 0f && d.magnitude < zone;
+                        if (on && inp.brake > 0.05f) vel = Vector3.MoveTowards(vel, b.vel, (inZone ? 40f : 20f) * inp.brake * dt);
+                        // approach assist (kid-forgiving): damp + pull inside the zone, capture when slow-ish or braking
+                        if (inZone)
+                        {
+                            vel = Vector3.MoveTowards(vel, b.vel, rel.magnitude * 0.35f * dt);
+                            if (d.magnitude > b.cap * 1.5f) vel -= d.normalized * 8f * dt;
+                            rel = Flat(vel - b.vel);
+                            bool slow = rel.magnitude < 40f && d.magnitude < b.cap * 3f;
+                            bool braking = on && inp.brake > 0.3f && rel.magnitude < 90f;
+                            if (slow || braking)
+                            {
+                                float dir = Vector3.Cross(d, rel).y <= 0f ? 1f : -1f;
+                                float r = Mathf.Clamp(d.magnitude, b.cap, b.cap * 2f);
+                                EnterOrbit(cb, r, Mathf.Atan2(d.z, d.x), dir);
+                                if (Log62) Debug.Log("STAR62 capture " + b.name + " d " + d.magnitude.ToString("0") + " rel " + rel.magnitude.ToString("0.0") + " brake " + (on ? inp.brake : 0f).ToString("0.0") + " dir " + dir);
+                                if (on) { driver.Toast("In orbit around " + b.name + (b.landable ? " - " + Key("Y", "F", "LAND") + " to land" : ""), 3f); Sfx.Play(Sfx.Pickup, 0.6f); }
+                                break;
+                            }
+                            if (on && Time.time > hintT) { hintT = Time.time + 3f; driver.Toast("Brake (" + Key("LT", "S", "BRAKE") + ") to enter orbit around " + b.name, 2.5f); }
                         }
                     }
                     // the Sun's heat shield
@@ -847,6 +988,11 @@ public partial class Starship : Vehicle
                 }
         }
         kinVel = vel - RefVel;
+        if (Log62 && Time.unscaledTime > logT62)
+        {
+            logT62 = Time.unscaledTime + 1f; int nb = Nearest();
+            Debug.Log("STAR62 nose mode " + mode + " dot " + NoseDot.ToString("0.00") + " dotW " + NoseDotWorld.ToString("0.00") + " warp x" + Mathf.RoundToInt(SimRate) + " tgt " + (target >= 0 ? W.bodies[target].name : "-") + " near " + (nb >= 0 ? W.bodies[nb].name : "-") + (nb >= 0 ? " d " + Flat(W.bodies[nb].pos - pos).magnitude.ToString("0") + " rel " + Flat(vel - W.bodies[nb].vel).magnitude.ToString("0.0") : "") + (mode == Mode.Orbit ? " orbit " + W.bodies[orbitBody].name : ""));
+        }
         if (flame != null) { bool fo = flameOn && mechForm == null; flame.gameObject.SetActive(fo); if (fo) flame.localScale = new Vector3(1f, 1f, 0.8f + Random.value * 0.5f); }
         if (engineGlow != null) { float g = mechForm != null ? 0f : flameOn ? 1f : 0.25f; engineGlowK = Mathf.MoveTowards(engineGlowK, g, dt * 4f); foreach (var e in engineGlow) if (e != null) e.localScale = new Vector3(1f, 1f, 1f) * (0.6f + 0.4f * engineGlowK); if (engineLight != null) { engineLight.enabled = engineGlowK > 0.3f && !Look.Mobile; engineLight.intensity = engineGlowK * 2f; } }
     }
