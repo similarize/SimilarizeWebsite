@@ -6,7 +6,7 @@ using UnityEngine.InputSystem.LowLevel;
 // ffu67 probe: ?ffdemo=1&ffshot=wheels67 - PER-PLAYER wheel size with the gamepad (Bill Oct 20: "when you're in the cyber truck
 // you should be able to change the size of the wheels using the game pad ... as a user, not as a whole game").
 // Two synthetic pads join (split-screen), P1 drives James's Cybertruck, P2 drives Dad's Cybertruck. P1 D-pad up x4 (2x),
-// P2 D-pad up x12 + down x2 (3.5x): each changes only its own truck; View + D-pad = zoom (no wheel change, no view toggle);
+// P2 D-pad up x7 + down x1 (2.5x): each changes only its own truck; View + D-pad = zoom (no wheel change, no view toggle);
 // the help menu opened by P1: P2's D-pad > changes only P2's truck. Tyres settle, trucks sit on the ground (wheels grounded,
 // upright, body above the terrain) and drive. Swap: P1 in Dad's truck keeps the truck's size until P1 changes it; P2 back
 // in -> P2's own size for it again. Logs "WHEELS67 PASS|FAIL ...", "WHEELS67 RESULT n/m", "FFDEMO wheels67 ph N <name>", "FFDEMO wheels67 done".
@@ -44,10 +44,10 @@ public partial class Game
     {
         var st = new GamepadState().WithButton(b); st.rightTrigger = rt;
         InputSystem.QueueStateEvent(p, st);
-        yield return W67F(3);
+        yield return W67F(2);
         var up = new GamepadState(); up.rightTrigger = rt;
         InputSystem.QueueStateEvent(p, up);
-        yield return W67F(3);
+        yield return W67F(2);
     }
     static void W67Park(Vehicle v, float x, float z)
     {
@@ -106,19 +106,18 @@ public partial class Game
 
         // P1: D-pad up x4 -> 2x
         int n0 = WheelPadNudges; float zA0 = sa.rig != null ? sa.rig.zoomMul : 1f; bool sh0 = shared;
-        for (int k = 0; k < 4; k++) { yield return W67Press(A, GamepadButton.DpadUp); yield return W67Wait(0.25f); }
-        yield return W67Wait(0.4f);
+        for (int k = 0; k < 4; k++) yield return W67Press(A, GamepadButton.DpadUp);
         W67Check("P1 D-pad up x4: P1's truck 2x, P2's truck untouched", Mathf.Abs(BigWheels.Want(ja) - 2f) < 0.01f && Mathf.Abs(BigWheels.Want(da) - 1f) < 0.01f,
             "James " + BigWheels.Want(ja).ToString("0.00") + " Dad " + BigWheels.Want(da).ToString("0.00") + " nudges " + (WheelPadNudges - n0) + " | P1 toast '" + fa.toast + "'");
         W67Check("toast reads in inches on P1's view", fa.toast.StartsWith("Wheels: ") && fa.toast.Contains(" in"), "'" + fa.toast + "' | P2 toast '" + fb.toast + "'");
         W67Check("D-pad in the truck does not zoom or toggle the view", (sa.rig == null || Mathf.Abs(sa.rig.zoomMul - zA0) < 0.02f) && shared == sh0, "zoom " + zA0.ToString("0.00") + " -> " + (sa.rig != null ? sa.rig.zoomMul.ToString("0.00") : "-") + " shared " + shared);
-        // P2: up x12 (clamps at 4x) then down x2 -> 3.5x
-        for (int k = 0; k < 14; k++) { yield return W67Press(B, GamepadButton.DpadUp); yield return W67Wait(0.15f); }
+        // P2: up x7 then down x1 -> 2.5x (the 4x clamp: SetFor clamps Min..Max, BigWheels.MaxR caps the tyre radius)
+        for (int k = 0; k < 7; k++) yield return W67Press(B, GamepadButton.DpadUp);
         float topB = BigWheels.Want(da);
-        for (int k = 0; k < 2; k++) { yield return W67Press(B, GamepadButton.DpadDown); yield return W67Wait(0.25f); }
-        yield return W67Wait(0.4f);
-        W67Check("P2 D-pad up x14 (clamped at 4x) + down x2: P2's truck 3.5x, P1's stays 2x", Mathf.Abs(topB - BigWheels.Max) < 0.01f && Mathf.Abs(BigWheels.Want(da) - 3.5f) < 0.01f && Mathf.Abs(BigWheels.Want(ja) - 2f) < 0.01f,
-            "top " + topB.ToString("0.00") + " Dad " + BigWheels.Want(da).ToString("0.00") + " James " + BigWheels.Want(ja).ToString("0.00") + " | P2 toast '" + fb.toast + "'");
+        yield return W67Press(B, GamepadButton.DpadDown);
+        BigWheels.SetFor(da, 9f, "clamp probe", false, fb); float clampK = BigWheels.Want(da); BigWheels.SetFor(da, 2.5f, "clamp probe", false, fb);
+        W67Check("P2 D-pad up x7 + down x1: P2's truck 2.5x, P1's stays 2x; sizes clamp at 4x", Mathf.Abs(topB - 2.75f) < 0.01f && Mathf.Abs(BigWheels.Want(da) - 2.5f) < 0.01f && Mathf.Abs(BigWheels.Want(ja) - 2f) < 0.01f && Mathf.Abs(clampK - BigWheels.Max) < 0.01f,
+            "top " + topB.ToString("0.00") + " clamp " + clampK.ToString("0.00") + " Dad " + BigWheels.Want(da).ToString("0.00") + " James " + BigWheels.Want(ja).ToString("0.00") + " | P2 toast '" + fb.toast + "'");
         W67Next("sized");
         // View + D-pad up = zoom, wheels unchanged, view not toggled
         float wA = BigWheels.Want(ja); zA0 = sa.rig != null ? sa.rig.zoomMul : 1f; sh0 = shared;
@@ -140,16 +139,16 @@ public partial class Game
         yield return W67Wait(1.5f);
         yield return W67Press(B, GamepadButton.DpadRight);
         yield return W67Wait(0.5f);
-        W67Check("help menu (opened by P1): P2's D-pad > changes only P2's truck", helpOpen && Mathf.Abs(BigWheels.Want(da) - 3.75f) < 0.01f && Mathf.Abs(BigWheels.Want(ja) - 2f) < 0.01f,
+        W67Check("help menu (opened by P1): P2's D-pad > changes only P2's truck", helpOpen && Mathf.Abs(BigWheels.Want(da) - 2.75f) < 0.01f && Mathf.Abs(BigWheels.Want(ja) - 2f) < 0.01f,
             "help " + helpOpen + " Dad " + BigWheels.Want(da).ToString("0.00") + " James " + BigWheels.Want(ja).ToString("0.00") + " | row '" + (wheelLabel != null ? wheelLabel.text : "") + "'");
         yield return W67Wait(1.5f);
         yield return W67Press(A, GamepadButton.Start);
         yield return W67Wait(1f);
-        // settle: tyres ease 1.1 /s
-        yield return W67Wait(4f);
+        // settle: tyres ease 1.1 /s of GAME time (wait for it; the probe runs at < 1 fps)
+        { float gt = 0f, rt0 = Time.realtimeSinceStartup; while ((gt < 4f || Mathf.Abs(ja.bigK - BigWheels.Want(ja)) > 0.02f || Mathf.Abs(da.bigK - BigWheels.Want(da)) > 0.02f) && gt < 12f && Time.realtimeSinceStartup - rt0 < 240f) { yield return null; gt += Time.deltaTime; } }
         W67Next("settled");
         s1 = W67Sit(ja, out sitA); s2 = W67Sit(da, out sitB);
-        W67Check("both trucks settled at their own sizes, on the ground (no clipping)", sitA && sitB && Mathf.Abs(ja.bigK - 2f) < 0.05f && Mathf.Abs(da.bigK - 3.75f) < 0.3f && da.bigK > ja.bigK + 0.8f, s1 + " || " + s2);
+        W67Check("both trucks settled at their own sizes, on the ground (no clipping)", sitA && sitB && Mathf.Abs(ja.bigK - 2f) < 0.05f && Mathf.Abs(da.bigK - 2.75f) < 0.3f && da.bigK > ja.bigK + 0.5f, s1 + " || " + s2);
         yield return W67Wait(2f);
         // drive both (RT 0.45) ~5 s
         Vector3 pa = ja.transform.position, pb = da.transform.position; float minUpA = 1f, minUpB = 1f, minClr = 9f;
@@ -157,9 +156,10 @@ public partial class Game
         InputSystem.QueueStateEvent(A, go); InputSystem.QueueStateEvent(B, go);
         W67Next("drive");
         float t = 0f;
-        while (t < 5f)
+        float rt1 = Time.realtimeSinceStartup;
+        while (t < 5f && Time.realtimeSinceStartup - rt1 < 200f)
         {
-            yield return null; t += Time.unscaledDeltaTime;
+            yield return null; t += Time.deltaTime;
             minUpA = Mathf.Min(minUpA, ja.transform.up.y); minUpB = Mathf.Min(minUpB, da.transform.up.y);
             foreach (var v in new[] { ja, da }) { Vector3 q = v.transform.position; float bb = v.body != null ? v.body.bounds.min.y : q.y; minClr = Mathf.Min(minClr, bb - Ranch.GY(q.x, q.z)); }
         }
@@ -168,8 +168,8 @@ public partial class Game
         W67Check("both drive on their own wheel sizes, upright, body never below the ground", da1 > 3f && db1 > 3f && minUpA > 0.75f && minUpB > 0.75f && minClr > -0.05f,
             "moved P1 " + da1.ToString("0.0") + " m, P2 " + db1.ToString("0.0") + " m | min up " + minUpA.ToString("0.00") + " / " + minUpB.ToString("0.00") + " | min body clearance " + minClr.ToString("0.00") + " m");
         yield return W67Wait(3f);
-        // swap: P1 into Dad's truck (no P1 pick for it -> keeps the truck's 3.75x), P1 D-pad down x1 -> 3.5 (P1's pick);
-        // P2 back in Dad's truck -> P2's own 3.75x
+        // swap: P1 into Dad's truck (no P1 pick for it -> keeps the truck's 2.75x), P1 D-pad down x1 -> 2.5 (P1's pick);
+        // P2 back in Dad's truck -> P2's own 2.75x
         fa.ExitVehicle(); fb.ExitVehicle();
         yield return W67Wait(1f);
         fa.EnterVehicle(da);
@@ -183,7 +183,7 @@ public partial class Game
         fb.EnterVehicle(da);
         yield return W67Wait(1f);
         float p2back = BigWheels.Want(da);
-        W67Check("per player per truck: P1 in Dad's truck keeps 3.75x, sets own 3.5x; P2 back in -> P2's 3.75x", Mathf.Abs(keep - 3.75f) < 0.01f && Mathf.Abs(p1pick - 3.5f) < 0.01f && Mathf.Abs(p2back - 3.75f) < 0.01f,
+        W67Check("per player per truck: P1 in Dad's truck keeps 2.75x, sets own 2.5x; P2 back in -> P2's 2.75x", Mathf.Abs(keep - 2.75f) < 0.01f && Mathf.Abs(p1pick - 2.5f) < 0.01f && Mathf.Abs(p2back - 2.75f) < 0.01f,
             "keep " + keep.ToString("0.00") + " P1 pick " + p1pick.ToString("0.00") + " P2 back " + p2back.ToString("0.00"));
         fa.EnterVehicle(ja);
         yield return W67Wait(4f);

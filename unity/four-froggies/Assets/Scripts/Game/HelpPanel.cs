@@ -556,6 +556,7 @@ public partial class Game
     // player's own vehicle. Camera zoom moves to View + D-pad up / down while driving one (on foot / in other vehicles the
     // D-pad still zooms, and View + D-pad is zoom too). View alone still toggles shared / split on release. Keys: [ / ].
     readonly Dictionary<Slot, float> wheelRep = new Dictionary<Slot, float>();
+    readonly Dictionary<Slot, int> wheelRepF = new Dictionary<Slot, int>();
     public static int WheelPadNudges;   // probe counter
     PIn WheelShortcut(Slot s, PIn i)
     {
@@ -572,10 +573,12 @@ public partial class Game
             {
                 i.zoom = 0f;                                    // D-pad up / down = this vehicle's wheels, not zoom
                 float rt; wheelRep.TryGetValue(s, out rt);
-                if (s.pad.dpad.up.wasPressedThisFrame) { d = 1; rt = 0.45f; }
-                else if (s.pad.dpad.down.wasPressedThisFrame) { d = -1; rt = 0.45f; }
-                else if (up || dn) { rt -= Time.unscaledDeltaTime; if (rt <= 0f) { d = up ? 1 : -1; rt = 0.22f; } }
-                wheelRep[s] = rt;
+                int hf; wheelRepF.TryGetValue(s, out hf);
+                // hold repeats after 0.45 s AND 12 frames held (a slow frame never turns one tap into several)
+                if (s.pad.dpad.up.wasPressedThisFrame) { d = 1; rt = 0.45f; hf = 0; }
+                else if (s.pad.dpad.down.wasPressedThisFrame) { d = -1; rt = 0.45f; hf = 0; }
+                else if (up || dn) { hf++; rt -= Mathf.Min(Time.unscaledDeltaTime, 0.05f); if (rt <= 0f && hf >= 12) { d = up ? 1 : -1; rt = 0.22f; hf = 6; } }
+                wheelRep[s] = rt; wheelRepF[s] = hf;
                 if (d != 0) WheelPadNudges++;
             }
             i.view = false;
