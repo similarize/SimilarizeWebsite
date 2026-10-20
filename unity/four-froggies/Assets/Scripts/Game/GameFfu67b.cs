@@ -43,7 +43,7 @@ public class Ffu67b : MonoBehaviour
     }
     Vector3 HL(float x, float y, float z) { return HouseWorld.L(x, y, z); }
     Vector3 LP { get { return f.transform.position - Worlds.HouseO; } }
-    void Walk(Vector3 dir, float speed = 2.6f) { if (f.cc != null && f.cc.enabled) f.cc.Move((dir.normalized * speed + Vector3.down * 2f) * Mathf.Min(Time.deltaTime, 0.1f)); }
+    void Walk(Vector3 dir, float speed = 2.6f) { if (f.cc != null && f.cc.enabled) f.cc.Move((dir.normalized * speed + Vector3.down * 2f) * Mathf.Min(Time.deltaTime, 0.34f)); }   // fix 1: the window is game time, so the step must follow it at 0.3 fps too (0.1 cap walked 2.6 of 5 m)
     void PutR(Vector3 p, float yaw) { if (f.vehicle != null) f.ExitVehicle(); f.SendTo(WorldId.Ranch, new Vector3(p.x, Ranch.GY(p.x, p.z) + 0.3f, p.z), yaw); }
     static float OZ { get { return Layout.GarageC.y - Layout.GarageSize.y * 0.5f; } }   // garage back wall (outer face)
     bool InMud { get { Vector3 l = LP; return f.world == WorldId.House && l.x > HouseUp64.MLx0 && l.x < HouseUp64.MLx1 && l.z > HouseUp64.MLz0 && l.z < HouseUp64.MLz1; } }
