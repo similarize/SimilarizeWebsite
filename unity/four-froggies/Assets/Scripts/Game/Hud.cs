@@ -195,6 +195,8 @@ public class ViewHud
             Vector3 wp = f.FocusPoint + Vector3.up * (f.vehicle != null ? 2.2f : 1.0f);
             Vector3 sp = cam.WorldToScreenPoint(wp);
             if (sp.z < 0.5f || sp.z > 500f || !cam.pixelRect.Contains(new Vector2(sp.x, sp.y)) || (f == me && f.vehicle == null) || (me != null && f.world != me.world) || f.launching || f.passengerOf != null) { t.enabled = false; continue; }   // ffu27: no tags for froggies hidden inside the Starship
+            float topBand = Mathf.Max(64f, cam.pixelRect.height * 0.1f);   // ffu63: keep name tags under the top-centre Help chip
+            if (sp.y > cam.pixelRect.yMax - topBand) sp.y = cam.pixelRect.yMax - topBand;
             Vector2 lp;
             RectTransformUtility.ScreenPointToLocalPointInRectangle(panel, sp, null, out lp);
             t.enabled = true;

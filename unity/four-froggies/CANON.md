@@ -89,7 +89,7 @@ Dad (James's dad) is a non-playable character: he lives in the house (kitchen) a
   when told (if he doesn't want to, he doesn't have to; asking nicely helps) - every other robot always obeys, and James's
   orders override chores for them. Figure 03 can **play and do everything a froggy can**, on his own in free play too:
   play, hop, swing, swim, race, catch, join games, ride along, **drive cars** and **take a Starship** (vehicle
-  ask-to-share rules still apply). Chores are optional for him. (Behaviour: 6.6 by ff-u6-voice; 2022.3 in the backlog.)
+  ask-to-share rules still apply). Chores are optional for him. (Behaviour built in both games: 6.6 ffu6r, 2022.3 ffu63b - World/Fig03Free66.cs.)
 ## Places
 - **Apollo 11 landing site** (ffu61, Bill 2026-10-17): on the Moon world, what the real July 1969 mission left behind - the
   Lunar Module descent stage (gold foil, four legs, ladder + the plaque "Here men from the planet Earth first set foot upon
@@ -105,3 +105,15 @@ Dad (James's dad) is a non-playable character: he lives in the house (kitchen) a
   warp, orbit). RB / C = warp toward the selected target along the nose (also from orbit), LB / Z = slower, the brake drops warp;
   any body with an orbit (Earth, Moon, Mars, Jupiter, Callisto, ...) can be entered by hand: fly close and brake (LT / S / BRAKE).
 - **Esc** never resets the game from Help: it only closes Help (ffu62).
+- **Robots sit with you on the porch swing / hammock** (Bill 2026-10-19 16:31): "Swing with me" / "Hammock with me" (phone ORDERS,
+  or say "sit with me on the swing", "come to the hammock", "swing on the hammock"): the robot takes the swing / hammock next to
+  yours and swings or rocks in step with you; if you are not in one yet, it sits and you can join on the next one.
+- **Talk to the robots by voice** (6.6 ffu6q, 2022.3 ffu63b; Bill 2026-10-19: "We wanna be able to talk to the robots
+  when they're on missions. And have them talk back."): every player's robot phone has push-to-talk (TALK button, pad RT
+  held, key T held), walkie-talkie style, and works wherever the robot is - even on Mars mid-mission. A spoken order does
+  exactly what the same phone button does; the robot answers out loud in its own voice with what it is really doing
+  (mission progress, where it is, what it sees, battery) and radios in by itself at mission milestones. Kid-friendly
+  replies, no online AI. Browsers without speech recognition get tap-to-say quick replies instead.
+- **Robots are solid** (ffu63a, Bill 2026-10-19 16:14): robots never walk through walls, fences, buildings, furniture, vehicles
+  or trees - they go around (or through a door) - and stay inside the same perimeter as the froggies in every world;
+  a robot that arrives by jet pack / pod / door lands inside it, never inside a wall.
