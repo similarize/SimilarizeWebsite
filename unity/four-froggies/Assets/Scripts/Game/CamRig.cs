@@ -45,6 +45,12 @@ public class CamRig
     public void Kick(float deg) { kick = Mathf.Min(kick + deg, 9f); }
 
     public void Snap() { init = false; }
+    // ffu65 (Bill 2026-10-20 Pixel 9: "inside it doesn't let you look up"): indoors (James's house, 2nd floor, camper rooms) the
+    // pitch goes up to -65 (65 deg above horizontal) with touch drag / right stick / mouse; as the view tilts up the camera slides in
+    // close behind + under the froggy's head and the pivot rises over it, so it looks at the ceiling / lamps instead of clamping.
+    public static float DemoLookY;   // probe only: added to the look input (same path as the stick / drag)
+    public static bool Indoor(Frog f) { return f != null && f.world == WorldId.House; }
+    public float UpK { get; private set; }
 
     public void SetYaw(float y) { yaw = yawT = y; }
     public void SetPitch(float p) { pitch = pitchT = p; }
@@ -65,6 +71,7 @@ public class CamRig
         float ak = sm != null ? sm.aimK : 0f;
         float bk = sm == null && v == null ? Bow61.AimK(f) : 0f;   // ffu61 froggy bow aim
         if (!tank) yawT += i.look.x * (ak > 0.5f ? 0.7f : 1f);
+        if (DemoLookY != 0f) { pitchT -= DemoLookY; manualT = 0f; }
         pitchT = Mathf.Clamp(pitchT - i.look.y * (tank ? 0.3f : 1f) * (bk > 0.5f ? 0.7f : 1f), Mathf.Lerp(minPitch, -38f, Mathf.Max(ak, bk * 0.6f)), maxPitch);
         bool touching = i.lookHeld || i.look.sqrMagnitude > 0.0001f;
         if (touching || ak > 0.05f || bk > 0.05f) { manualT = 0f; followW = 0f; } else manualT += dt;
@@ -100,6 +107,7 @@ public class CamRig
         dist = (dist + extraDistance) * zoomMul;
         bool camper64 = v == null && Camper64.In(f);   // ffu64: tight camper interior - close, low, never through the walls
         if (camper64) { dist = Mathf.Min(dist, 2.2f); height = Mathf.Min(height, 1.0f); }
+        bool indoor = v == null && Indoor(f);
 
         // smooth the player's own input so a finger landing / lifting never jumps the view
         yaw = Mathf.SmoothDampAngle(yaw, yawT, ref yawVel, tank ? 0.05f : 0.09f, Mathf.Infinity, dt);
@@ -109,6 +117,14 @@ public class CamRig
         focus = Vector3.Lerp(focus, target, Mathf.Min(1f, dt * 10f));
         Quaternion rot = Quaternion.Euler(pitch, yaw, 0f);
         Vector3 pivot = focus + Vector3.up * height * 0.5f;
+        UpK = indoor ? Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(8f, -50f, pitch)) : 0f;
+        if (UpK > 0.001f)
+        {
+            dist = Mathf.Lerp(dist, 1.25f, UpK); pivot += Vector3.up * Mathf.Lerp(0f, 0.85f, UpK);
+            // never lift the pivot through a low ceiling (camper rooms are 1.65 .. 2.15 m tall)
+            RaycastHit up; Vector3 fo = focus + Vector3.up * 0.3f;
+            if (Physics.Raycast(fo, Vector3.up, out up, 6f, (1 << 0) | (1 << HouseWorld.WallLayer), QueryTriggerInteraction.Ignore) && pivot.y > up.point.y - 0.3f) pivot.y = Mathf.Max(fo.y, up.point.y - 0.3f);
+        }
         if (ak > 0.001f)
         {
             // over the right shoulder, tight, aiming where the screen centre points
@@ -147,12 +163,14 @@ public class CamRig
         Vector3 want = pivot + back * curDist;
         float gy = Worlds.FloorUnder(want) + 0.5f;
         if (want.y < gy) want.y = gy;
+        if (UpK > 0.001f) { float fy = f.transform.position.y + 0.35f; if (want.y < fy) want.y = Mathf.Lerp(want.y, fy, UpK); }
 
         trauma = Mathf.MoveTowards(trauma, 0f, dt * 1.6f);
         Vector3 shake = trauma > 0f ? Random.insideUnitSphere * trauma * trauma * 0.6f : Vector3.zero;
         TickQuake(dt);
         cam.transform.position = want + shake + QuakePos(curDist);
         cam.transform.rotation = Quaternion.LookRotation((pivot - want).normalized + shake * 0.02f) * QuakeRot();
+        if (UpK > 0.001f) cam.transform.rotation = Quaternion.Slerp(cam.transform.rotation, rot, UpK);   // indoors looking up: the view follows the pitch, not the (floor-clamped) pivot
         if (kick > 0.01f) cam.transform.rotation = cam.transform.rotation * Quaternion.Euler(-kick * 0.6f, 0f, 0f);
         // the pilot's aim point: what the screen centre looks at (skipping the mech itself)
         if (sm != null && ak > 0.2f && sm.driver == f)

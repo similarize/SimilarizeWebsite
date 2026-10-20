@@ -31,6 +31,11 @@ Only these ten, each always the same animal. Never invent new names or swap spec
 | 9 | Daisy | dog (dachshund) |
 
 Dad (James's dad) is a non-playable character: he lives in the house (kitchen) and owns a Cybertruck.
+**Dad is a FROGGY DADDY** (Bill 2026-10-20): a bigger adult frog in the same style as the froggies - never a human. He has a
+daily life: cooking at the stove, washing dishes, wiping the counter, the fridge, walking round the house, sometimes out on the
+ranch. He can do everything froggies do (hop, swim, play, swing, ride, drive his own Cybertruck).
+**Robot voices are male + monotone/robotic** (Bill 2026-10-20): every robot (Figure 03 too, who keeps his playful words) speaks with a
+male, flat, even voice (a short beep before each line) so a robot is never mistaken for a human or a froggy; froggies sound distinct.
 
 ## Vehicles and ownership
 - **Cybertrucks:** James and Dad each have their own Cybertruck ("James's Cybertruck" is simply its name). Either can
@@ -128,3 +133,6 @@ Dad (James's dad) is a non-playable character: he lives in the house (kitchen) a
 - **James's house has a real upstairs** (ffu64, Bill 2026-10-19 16:47 / 17:02 / 17:06): stairs in the living room to a 2nd
   floor (James's room, guest room, bathroom, landing, bunk room, craft room); froggies can climb onto the porch roof and in
   through an upstairs window (never kicked back outside); the garage's back door leads into the house hallway.
+- **Stairs are easy to find + you can look up indoors** (ffu65, Bill 2026-10-20 Pixel 9): signs, yellow floor arrows and a first-visit
+  hint lead from the front door to the stairs; the robot phone PLAY tab has "Me: go upstairs (house)"; inside the house, the 2nd
+  floor and the campers the view tilts up to 65 deg (touch drag, right stick, mouse) to see the ceiling and lamps.

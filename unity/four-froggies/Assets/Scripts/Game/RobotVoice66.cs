@@ -263,8 +263,10 @@ public static class VoiceBrain
     // ---------- personalities ----------
     public static int Ix(Robot r) { return r == null ? 0 : Mathf.Max(0, System.Array.IndexOf(Ids, r.id)); }
     static readonly string[] Catch = { "Affirmative!", "Beep boop, okay!", "Ribbit! Let's go!", "Roger that!", "BIG okay!", "On it!", "Zip zap, on it!" };
-    static readonly float[] Pitch = { 0.75f, 1.6f, 1.15f, 1.0f, 0.45f, 0.85f, 1.35f };
-    static readonly float[] Rate = { 0.92f, 1.15f, 1.0f, 0.95f, 0.8f, 1.0f, 1.12f };
+    // ffu65 (Bill 2026-10-20): every robot voice is MALE + MONOTONE (flat 0.1..0.4 pitch, even rate) so a robot never sounds like a
+    // human or a froggy; only small per-robot differences. The jslib picks a male voice and plays a short beep before each line.
+    static readonly float[] Pitch = { 0.25f, 0.35f, 0.3f, 0.2f, 0.1f, 0.28f, 0.4f };
+    static readonly float[] Rate = { 0.9f, 0.95f, 0.92f, 0.9f, 0.86f, 0.92f, 0.95f };
     public static float PitchOf(Robot r) { return Pitch[Ix(r)]; }
     public static float RateOf(Robot r) { return Rate[Ix(r)]; }
     public static string CatchOf(Robot r) { return Catch[Ix(r)]; }

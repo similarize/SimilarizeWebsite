@@ -1382,9 +1382,9 @@ public partial class Game : MonoBehaviour
                 s.rig.Snap();
                 s.rig.SetYaw(f.transform.eulerAngles.y);
                 bool house = f.world == WorldId.House, under = f.world == WorldId.Underwater, space = f.world == WorldId.Space;
-                s.rig.minPitch = house ? 26f : under ? -40f : space ? -70f : -5f;
+                s.rig.minPitch = house ? -65f : under ? -40f : space ? -70f : -5f;
                 s.rig.maxPitch = house ? 80f : space ? 85f : 70f;
-                s.rig.pitch = house ? 38f : under ? 10f : space ? 25f : 16f;
+                s.rig.pitch = house ? 30f : under ? 10f : space ? 25f : 16f;
                 s.rig.ResetView(f.transform.eulerAngles.y);
             }
         }

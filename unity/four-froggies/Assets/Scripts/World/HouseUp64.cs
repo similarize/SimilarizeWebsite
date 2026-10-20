@@ -60,8 +60,11 @@ public static class HouseUp64
         foreach (var r in Pieces())
         {
             var cg = new GameObject("Ceiling64Col"); cg.transform.SetParent(root, false); cg.layer = HouseWorld.WallLayer;
-            cg.transform.position = L(r.center.x, H + 0.15f, r.center.y);
-            cg.AddComponent<BoxCollider>().size = new Vector3(r.width + (r.xMin < -30f || r.xMax > 30f ? 0.2f : 0f), 0.3f, r.height + (r.yMin < -20f || r.yMax > 20f ? 0.2f : 0f));
+            // pad only the OUTER edges by 0.1 m (ffu64 C3 / B3: padding every edge pushed 0.1 m slivers into the stairwell -> a froggy
+            // hugging the open side of the stairs bumped its head at step 11)
+            float x0 = r.xMin - (r.xMin < -30f ? 0.1f : 0f), x1 = r.xMax + (r.xMax > 30f ? 0.1f : 0f), z0 = r.yMin - (r.yMin < -20f ? 0.1f : 0f), z1 = r.yMax + (r.yMax > 20f ? 0.1f : 0f);
+            cg.transform.position = L((x0 + x1) * 0.5f, H + 0.15f, (z0 + z1) * 0.5f);
+            cg.AddComponent<BoxCollider>().size = new Vector3(x1 - x0, 0.3f, z1 - z0);
         }
     }
 
@@ -86,6 +89,7 @@ public static class HouseUp64
         var rail = Mats.Prim(PrimitiveType.Cube, up, L((HX0 + HX1) * 0.5f, 2.4f + 1.05f, HZ1 - 0.04f), new Vector3(railLen, 0.08f, 0.08f), new Vector3(0f, 0f, -Mathf.Atan2(4.8f, 7.2f) * Mathf.Rad2Deg), trimM, false);
         rail.layer = HouseWorld.WallLayer;
         Ranch.Sign(L(-24.8f, 3.6f, 6.75f), 0f, "UPSTAIRS", new Color(0.25f, 0.35f, 0.5f), 3.2f, 0.8f);
+        Findable();   // ffu65: big signs, floor arrows, lit + contrasting stairs
         // 2nd-floor floor boards around the hole (the ground-floor ceiling colliders carry them)
         foreach (var r in Pieces())
         {
@@ -235,6 +239,58 @@ public static class HouseUp64
                 hs.enabled = f => f.world == WorldId.House && f.transform.position.y > Worlds.HouseO.y + F2 - 0.6f;
             }
         }
+    }
+
+    // ---------------- ffu65 (Bill 2026-10-20: "I don't see the stairs"): make the stairs easy to find from the front door ----------------
+    // a bright orange sign over the foyer -> living room door ("STAIRS TO 2ND FLOOR ->"), a big sign + an arrow board at the foot of
+    // the stairs, glowing yellow floor arrows from the foyer to the bottom step, cream step nosings, two warm lights over the stair run,
+    // and a "STAIRS DOWN" sign upstairs. The first time each froggy comes in, a hint toast points the way; the robot phone's PLAY tab
+    // has "Me: go upstairs (house)".
+    public static int Hints, Shortcuts;
+    static readonly bool[] hinted = new bool[8];
+    static void Findable()
+    {
+        Color orange = new Color(0.9f, 0.42f, 0.08f);
+        Ranch.Sign(L(-6.25f, 3.05f, 10f), 270f, "STAIRS TO 2ND FLOOR  >", orange, 3.6f, 0.75f);    // foyer side of the living-room door (reads from the foyer)
+        Ranch.Sign(L(-24.8f, 2.55f, 6.85f), 0f, "STAIRS TO 2ND FLOOR", orange, 4.6f, 0.85f);
+        Ranch.Sign(L(-20.75f, 1.55f, 5.4f), 90f, "STAIRS UP  ^", orange, 2.2f, 0.6f);
+        Ranch.Sign(L(-24.8f, F2 + 2.6f, 6.62f), 0f, "STAIRS DOWN", new Color(0.25f, 0.35f, 0.5f), 2.6f, 0.6f);
+        var glow = Mats.Unlit(new Color(1f, 0.85f, 0.15f)); var cream = Mats.Unlit(new Color(0.98f, 0.93f, 0.78f));
+        for (int i = 0; i < 16; i++) { float xe = HX1 - i * 0.45f; Bx(new Vector3(xe - 0.03f, (i + 1) * 0.3f + 0.006f, (HZ0 + HZ1 - 0.05f) * 0.5f), new Vector3(0.06f, 0.012f, HZ1 - HZ0 - 0.1f), cream, false); }
+        // floor arrows: foyer (spawn) -> living-room door -> foot of the stairs
+        Vector2[] path = { new Vector2(-3f, 13.5f), new Vector2(-4.6f, 10.4f), new Vector2(-8.5f, 10f), new Vector2(-12.5f, 8.6f), new Vector2(-16.5f, 6.9f), new Vector2(-19.6f, 5.6f) };
+        for (int k = 0; k + 1 < path.Length; k++)
+        {
+            Vector2 a = path[k], b = path[k + 1], d = (b - a).normalized; float yaw = Mathf.Atan2(d.x, d.y) * Mathf.Rad2Deg;
+            for (int s = -1; s <= 1; s += 2)
+            {
+                var g = Mats.Prim(PrimitiveType.Cube, up, L(a.x + d.x * 0.6f - d.y * 0.18f * s, 0.03f, a.y + d.y * 0.6f + d.x * 0.18f * s), new Vector3(0.12f, 0.02f, 0.55f), new Vector3(0f, yaw - 35f * s, 0f), glow, false);
+                g.layer = HouseWorld.WallLayer;
+            }
+        }
+        foreach (var lp in new[] { L(-22.5f, 3.6f, 5.4f), L(-27f, F2 + 2.8f, 5.4f) })
+        {
+            var g = new GameObject("StairLamp65"); g.transform.SetParent(up, false); g.transform.position = lp;
+            var l = g.AddComponent<Light>(); l.type = LightType.Point; l.range = 8f; l.intensity = 1.5f; l.color = new Color(1f, 0.9f, 0.72f); l.shadows = LightShadows.None;
+        }
+    }
+    public static void EnterHint(Frog f)
+    {
+        if (f == null || f.id < 0 || f.id >= hinted.Length || hinted[f.id]) return;
+        hinted[f.id] = true; Hints++;
+        f.Toast("Stairs to 2nd floor \u2192  through the door on your right, follow the yellow arrows", 6f);
+        Debug.Log("HOUSE65 stairs hint " + f.nick);
+    }
+    // robot phone PLAY tab "Me: go upstairs (house)": straight to the 2nd-floor landing at the top of the stairs, from any world
+    public static string GoUpstairs(Frog f)
+    {
+        if (f == null || HouseWorld.I == null) return "";
+        if (f.vehicle != null) f.ExitVehicle();
+        HouseWorld.I.EnsureBuilt();
+        if (!Built) return "James's house upstairs isn't built in this mode";
+        f.SendTo(WorldId.House, L(-29.0f, F2 + 0.15f, 5.4f), 0f);
+        Shortcuts++; Debug.Log("HOUSE65 go upstairs " + f.nick);
+        return "Upstairs at James's house! The stairs back down are right here by the railing.";
     }
 
     static void Lamps()

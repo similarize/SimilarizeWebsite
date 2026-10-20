@@ -72,6 +72,7 @@ public class HouseWorld : MonoBehaviour
         if (!built) Build();
         f.SendTo(WorldId.House, Spawn(f.id), 180f);
         f.Toast("James's house: feed the fish, play fetch, find the cats", 3.5f);
+        if (HouseUp64.Built) HouseUp64.EnterHint(f);   // ffu65: first time in -> "Stairs to 2nd floor ->" 
         Sfx.Play(Sfx.Door, 0.9f);
     }
 
@@ -293,6 +294,12 @@ public class HouseWorld : MonoBehaviour
         Box(new Vector3(18f, 0.5f, 19f), new Vector3(20f, 1f, 1.4f), new Color(0.95f, 0.95f, 0.94f));
         Box(new Vector3(18f, 1.03f, 19f), new Vector3(20.1f, 0.06f, 1.5f), new Color(0.25f, 0.25f, 0.28f), false);
         Box(new Vector3(29f, 1.2f, 10f), new Vector3(1.4f, 2.4f, 1.8f), new Color(0.8f, 0.82f, 0.85f));   // fridge
+        // ffu65: Dad's stove (4 burners + a pan) and sink (basin + tap) on the back counter
+        Box(new Vector3(13f, 1.075f, 19f), new Vector3(2.4f, 0.03f, 1.3f), new Color(0.08f, 0.08f, 0.09f), false);
+        for (int k = 0; k < 4; k++) Prim(PrimitiveType.Cylinder, new Vector3(12.45f + (k % 2) * 1.1f, 1.1f, 18.7f + (k / 2) * 0.6f), new Vector3(0.36f, 0.01f, 0.36f), new Color(0.75f, 0.18f, 0.08f));
+        Prim(PrimitiveType.Cylinder, new Vector3(12.45f, 1.16f, 18.7f), new Vector3(0.5f, 0.05f, 0.5f), new Color(0.2f, 0.2f, 0.22f));
+        Box(new Vector3(22f, 1.07f, 19f), new Vector3(1.6f, 0.03f, 0.9f), new Color(0.55f, 0.58f, 0.62f), false);
+        Box(new Vector3(22f, 1.35f, 19.55f), new Vector3(0.08f, 0.55f, 0.08f), new Color(0.75f, 0.77f, 0.8f), false);
         Box(new Vector3(18f, 0.5f, 12f), new Vector3(6f, 1f, 2.4f), new Color(0.95f, 0.95f, 0.94f));   // island
         Box(new Vector3(18f, 1.03f, 12f), new Vector3(6.1f, 0.06f, 2.5f), new Color(0.25f, 0.25f, 0.28f), false);
         Box(new Vector3(12f, 0.4f, 7f), new Vector3(3f, 0.8f, 2f), Wood);   // table
@@ -455,7 +462,7 @@ public class HouseWorld : MonoBehaviour
         }
         dad = Dad.Create(root, L(18f, 0f, 9f));
         var dh = Interact.Add(dad.transform.position, 2.6f, "talk to Dad", f => dad.Talk(f));
-        dh.enabled = f => f.world == WorldId.House;
+        dh.enabled = f => dad != null && dad.InWorld(f.world);
         dad.hotspot = dh;
         var tb = Interact.Add(L(toyBox.x, 0f, toyBox.z), 2.2f, "throw the ball for Germy and Daisy", f => Throw(f));
         tb.enabled = f => f.world == WorldId.House;
@@ -723,19 +730,39 @@ public class HouseWorld : MonoBehaviour
     }
 }
 
-// James's dad (named "Dad" in the three.js house). Stands in the kitchen, turns to whoever comes close.
+// ffu65 (Bill 2026-10-20): Dad is a FROGGY DADDY - a bigger adult frog in the same style as the froggies (the froggy mesh at 1.5x,
+// darker green, an apron), never a human. He has a life loop instead of standing still: cooks at the stove, washes dishes at the
+// sink, wipes the island, gets things from the fridge, walks round the house (kitchen -> foyer -> living room) and sometimes goes out
+// the front door onto the ranch for a stroll by the porch, then back in. Turns to whoever is close and chats ("talk to Dad").
 public class Dad : MonoBehaviour
 {
     public Hotspot hotspot;
-    Transform armR, head;
-    int line;
-    float wave;
+    public FrogModel model;
+    public string act = "idle";
+    public bool outside;
+    public static Dad I;
+    public static int Activities, Outings;
+    Transform houseRoot, carry;
+    int line, plan = -1, step;
+    float wave, doT, speed;
+    Vector3 lastP;
     static readonly string[] Lines = {
         "Dad: Good to see you, James.",
         "Dad: The fish are hungry - give every tank a sprinkle.",
         "Dad: Germy and Daisy want to play fetch. The toy box is in the pet parlor.",
         "Dad: The cats love hide-and-seek. Start it at the cat bed.",
-        "James's dad waves.",
+        "Dad: Stairs to the 2nd floor are in the living room - follow the yellow arrows.",
+        "James's dad gives a big froggy wave.",
+    };
+    struct Wp { public Vector2 p; public string act; public float secs, yaw; public Wp(float x, float z, string a = null, float s = 0f, float y = 0f) { p = new Vector2(x, z); act = a; secs = s; yaw = y; } }
+    // house-local waypoints; act at a waypoint = do that for secs facing yaw. "out" = step out the front door onto the ranch.
+    static readonly Wp[][] Plans = {
+        new[] { new Wp(13f, 17.6f, "cook", 14f, 0f) },
+        new[] { new Wp(22f, 17.6f, "dishes", 11f, 0f) },
+        new[] { new Wp(27.3f, 10f, "fridge", 4f, 90f), new Wp(18f, 10.2f, "wipe", 9f, 0f) },
+        new[] { new Wp(13f, 17.6f, "cook", 10f, 0f), new Wp(18f, 9f, "idle", 3f, 180f) },
+        new[] { new Wp(7.5f, 10f), new Wp(0f, 11f), new Wp(-5f, 10f), new Wp(-12f, 12f, "look", 4f, 270f), new Wp(-5f, 10f), new Wp(0f, 11f), new Wp(7.5f, 10f), new Wp(18f, 9f, "idle", 2f, 180f) },
+        new[] { new Wp(7.5f, 10f), new Wp(0f, 15f), new Wp(0f, 19.2f, "out", 22f, 0f), new Wp(0f, 15f), new Wp(7.5f, 10f), new Wp(22f, 17.6f, "dishes", 6f, 0f) },
     };
 
     public static Dad Create(Transform parent, Vector3 pos)
@@ -743,53 +770,126 @@ public class Dad : MonoBehaviour
         var go = new GameObject("Dad");
         go.transform.SetParent(parent, true);
         go.transform.position = pos;
-        var d = go.AddComponent<Dad>();
-        Color skin = new Color(0.93f, 0.76f, 0.6f), shirt = new Color(0.25f, 0.4f, 0.65f), jeans = new Color(0.2f, 0.25f, 0.38f);
+        var d = go.AddComponent<Dad>(); I = d; d.houseRoot = parent;
         Transform t = go.transform;
-        for (int s = -1; s <= 1; s += 2) Mats.Prim(PrimitiveType.Cube, t, new Vector3(0.14f * s, 0.45f, 0f), new Vector3(0.2f, 0.9f, 0.24f), Mats.Lit(jeans));
-        Mats.Prim(PrimitiveType.Cube, t, new Vector3(0f, 1.25f, 0f), new Vector3(0.55f, 0.75f, 0.3f), Mats.Lit(shirt));
-        d.head = Mats.Node(t, "Head", new Vector3(0f, 1.82f, 0f));
-        Mats.Prim(PrimitiveType.Sphere, d.head, Vector3.zero, new Vector3(0.32f, 0.36f, 0.32f), Mats.Lit(skin));
-        Mats.Prim(PrimitiveType.Sphere, d.head, new Vector3(0f, 0.12f, -0.02f), new Vector3(0.34f, 0.2f, 0.34f), Mats.Lit(new Color(0.35f, 0.25f, 0.15f)));
-        for (int s = -1; s <= 1; s += 2) Mats.Prim(PrimitiveType.Sphere, d.head, new Vector3(0.07f * s, 0.02f, 0.15f), Vector3.one * 0.04f, Mats.Lit(Color.black));
-        Mats.Prim(PrimitiveType.Cube, t, new Vector3(-0.36f, 1.2f, 0f), new Vector3(0.14f, 0.7f, 0.14f), Mats.Lit(shirt));
-        d.armR = Mats.Node(t, "ArmR", new Vector3(0.36f, 1.55f, 0f));
-        Mats.Prim(PrimitiveType.Cube, d.armR, new Vector3(0f, -0.35f, 0f), new Vector3(0.14f, 0.7f, 0.14f), Mats.Lit(shirt));
-        Mats.Prim(PrimitiveType.Sphere, d.armR, new Vector3(0f, -0.74f, 0f), Vector3.one * 0.13f, Mats.Lit(skin));
-        var col = go.AddComponent<CapsuleCollider>();
-        col.center = new Vector3(0f, 0.95f, 0f); col.height = 1.9f; col.radius = 0.35f;
+        var mg = new GameObject("FroggyDaddy"); mg.transform.SetParent(t, false); mg.transform.localScale = Vector3.one * 1.5f;
+        d.model = mg.AddComponent<FrogModel>();
+        d.model.Build(new Color(0.22f, 0.48f, 0.2f));
+        // apron + a little chef-ish tie, sized for the froggy body (decorative, no colliders)
+        var body = d.model.bob != null ? d.model.bob : mg.transform;
+        Mats.Prim(PrimitiveType.Cube, body, new Vector3(0f, 0.42f, 0.36f), new Vector3(0.5f, 0.42f, 0.04f), Vector3.zero, Mats.Lit(new Color(0.92f, 0.9f, 0.85f)), false);
+        Mats.Prim(PrimitiveType.Cube, body, new Vector3(0f, 0.66f, 0.34f), new Vector3(0.36f, 0.05f, 0.03f), Vector3.zero, Mats.Lit(new Color(0.75f, 0.2f, 0.18f)), false);
+        Mats.SetLayer(go, 9);
         var tag = new GameObject("Tag");
         tag.transform.SetParent(t, false);
-        tag.transform.localPosition = Vector3.up * 2.35f;
+        tag.transform.localPosition = Vector3.up * 2.3f;
         var tm = tag.AddComponent<TextMesh>();
         tm.text = "Dad"; UIK.WorldText(tm, 48, 0.04f); tm.anchor = TextAnchor.MiddleCenter;
         tag.AddComponent<Billboard>();
+        d.lastP = pos;
+        Debug.Log("DAD65 froggy daddy built at " + (pos - Worlds.HouseO).ToString("0.0"));
         return d;
     }
+
+    public bool InWorld(WorldId w) { return outside ? w == WorldId.Ranch : w == WorldId.House; }
 
     public void Talk(Frog f)
     {
         string s = Lines[line % Lines.Length];
         if (line % Lines.Length == 0 && f.nick != "James") s = "Dad: Hi " + f.nick + "! Is James with you?";
+        if (act == "cook" && line % 3 == 1) s = "Dad: Pancakes in five minutes! Froggy-shaped ones.";
         line++;
-        wave = 1.8f;
+        wave = 1.8f; doT = Mathf.Max(doT, 2f);
         f.Toast(s, 3.5f);
         Sfx.Play(Sfx.Click, 0.5f, 0.7f);
     }
 
+    // probe: start a given plan now (0 cook, 1 dishes, 2 fridge + wipe, 4 walk round the house, 5 go outside)
+    public void DemoPlan(int p) { if (outside) GoIn(); plan = p; step = 0; doT = 0f; act = "walk"; }
+
+    Vector3 HL(Vector2 p) { return HouseWorld.L(p.x, 0f, p.y); }
+    Vector3 PorchSpot(float k)
+    {
+        Vector2 c = Layout.HouseC; float z1 = c.y + Layout.HouseSize.y * 0.5f;
+        float x = c.x + Mathf.Sin(k * 0.6f) * 4f, z = z1 + 3.2f + Mathf.Cos(k * 0.4f) * 0.8f;
+        return new Vector3(x, Ranch.GY(x, z), z);
+    }
+    void GoOut()
+    {
+        outside = true; Outings++;
+        transform.SetParent(null, true);
+        transform.position = PorchSpot(0f);
+        Debug.Log("DAD65 out the front door onto the ranch " + transform.position.ToString("0.0"));
+    }
+    void GoIn()
+    {
+        outside = false;
+        transform.SetParent(houseRoot, true);
+        transform.position = HouseWorld.L(0f, 0f, 19.2f);
+        if (carry != null) { Destroy(carry.gameObject); carry = null; }
+    }
+
     void Update()
     {
-        float dt = Time.deltaTime;
+        float dt = Mathf.Min(Time.deltaTime, 0.1f);
         wave = Mathf.Max(0f, wave - dt);
-        Frog near = null; float nd = 6f;
-        if (Game.I != null) foreach (Frog f in Game.I.frogs) if (f != null && f.world == WorldId.House) { float d = (f.transform.position - transform.position).magnitude; if (d < nd) { nd = d; near = f; } }
-        if (near != null)
+        if (plan < 0) { plan = Random.Range(0, Plans.Length); step = 0; }
+        Wp w = Plans[plan][step];
+        Frog near = null; float nd = 4.5f;
+        if (Game.I != null) foreach (Frog f in Game.I.frogs) if (f != null && InWorld(f.world)) { float d = (f.transform.position - transform.position).magnitude; if (d < nd) { nd = d; near = f; } }
+        Vector3 pos = transform.position, face = transform.forward;
+        speed = 0f;
+        if (act == "out")
         {
-            Vector3 to = near.transform.position - transform.position; to.y = 0f;
-            if (to.sqrMagnitude > 0.01f) transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(to), dt * 3f);
+            // stroll back and forth in front of the porch, then come back in
+            doT -= dt;
+            Vector3 tgt = PorchSpot(Time.time * 0.25f); Vector3 to = tgt - pos; to.y = 0f;
+            if (to.magnitude > 0.05f) { Vector3 mv = Vector3.ClampMagnitude(to, 1.1f * dt); pos += mv; speed = mv.magnitude / Mathf.Max(dt, 1e-4f); face = to; }
+            pos.y = Ranch.GY(pos.x, pos.z);
+            if (doT <= 0f) { GoIn(); pos = transform.position; NextStep(); }
         }
-        armR.localRotation = Quaternion.Euler(0f, 0f, wave > 0f ? 150f + Mathf.Sin(Time.time * 12f) * 20f : Mathf.Sin(Time.time) * 3f);
-        head.localRotation = Quaternion.Euler(Mathf.Sin(Time.time * 0.8f) * 3f, 0f, 0f);
+        else if (doT > 0f)
+        {
+            doT -= dt;
+            face = Quaternion.Euler(0f, w.yaw, 0f) * Vector3.forward;
+            if (doT <= 0f) NextStep();
+        }
+        else
+        {
+            Vector3 tgt = HL(w.p); tgt.y = pos.y; Vector3 to = tgt - pos;
+            if (to.magnitude < 0.12f)
+            {
+                if (w.act == "out") { act = "out"; doT = w.secs; GoOut(); pos = transform.position; }
+                else if (w.act != null) { act = w.act; doT = w.secs; Activities++; Debug.Log("DAD65 " + act + " at " + w.p.ToString("0.0")); if (act == "fridge") Carry(); }
+                else NextStep();
+            }
+            else { act = "walk"; Vector3 mv = Vector3.ClampMagnitude(to, 1.3f * dt); pos += mv; speed = 1.3f; face = to; }
+        }
+        if (near != null && (act == "idle" || act == "look" || act == "out" || wave > 0f)) { face = near.transform.position - pos; }
+        face.y = 0f;
+        transform.position = pos;
+        if (face.sqrMagnitude > 0.001f) transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(face), dt * 5f);
+        if (hotspot != null) hotspot.pos = transform.position;
+        if (model == null) return;
+        model.Animate(speed, false, false, false, dt);
+        float t = Time.time;
+        Transform aR = model.armR, aL = model.armL;
+        if (wave > 0f && aR != null) aR.localRotation *= Quaternion.Euler(-20f, 0f, 120f + Mathf.Sin(t * 12f) * 20f);
+        else if (act == "cook" && aR != null) aR.localRotation *= Quaternion.Euler(-55f + Mathf.Sin(t * 5f) * 12f, Mathf.Cos(t * 5f) * 18f, 0f);   // stirring the pan
+        else if (act == "dishes") { if (aR != null) aR.localRotation *= Quaternion.Euler(-50f + Mathf.Sin(t * 9f) * 10f, 0f, 0f); if (aL != null) aL.localRotation *= Quaternion.Euler(-50f + Mathf.Cos(t * 9f) * 10f, 0f, 0f); }
+        else if (act == "wipe" && aR != null) aR.localRotation *= Quaternion.Euler(-60f, Mathf.Sin(t * 4f) * 35f, 0f);   // wiping the counter
+        else if (act == "fridge" && aR != null) aR.localRotation *= Quaternion.Euler(-75f, 0f, 0f);
+        lastP = pos;
+    }
+    void NextStep()
+    {
+        step++; act = "walk";
+        if (step >= Plans[plan].Length) { int p = plan; while (p == plan) p = Random.Range(0, Plans.Length); plan = p; step = 0; if (carry != null && plan != 3) { Destroy(carry.gameObject); carry = null; } }
+    }
+    void Carry()
+    {
+        if (carry != null || model == null || model.armR == null) return;
+        carry = Mats.Prim(PrimitiveType.Cube, model.armR, new Vector3(0f, -0.35f, 0.1f), new Vector3(0.14f, 0.24f, 0.14f), Vector3.zero, Mats.Lit(new Color(0.95f, 0.95f, 0.98f)), false).transform;   // a milk carton
     }
 }
 
