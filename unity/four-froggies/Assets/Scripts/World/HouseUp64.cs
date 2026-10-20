@@ -10,6 +10,14 @@ using UnityEngine;
 //     upstairs window height (6.8 m) - "climb out the window" puts you outside that window on the ranch (onto the porch
 //     roof over the porch, else down on the ground);
 //   * a hallway off the kitchen's east wall (door gap at z 13.3) ending at the GARAGE door -> James's garage on the ranch.
+//   ffu67b (Bill Oct 20: "the garage back door, entered from outside, must lead INTO THE GARAGE ... garage and house stay
+//   separate spaces, joined by an inside hallway / mudroom with two doors"): the hallway is now the MUDROOM, the same footprint
+//   inside and out - ranch x -19 .. -14.5, z 4 .. 13 (a wing on the house's east wall that meets the garage's back wall) =
+//   house-local x 30 .. 36, z 10.67 .. 22.67 (local = (ranch - HouseC) x 60/46, 40/30). Door 1: kitchen east wall (z 13.3).
+//   Door 2: north end (local x 33) = the garage's back wall at ranch x -16.7 (inside the garage, sign "MUDROOM - HOUSE").
+//   The OUTSIDE back door is a real opening in the garage's back wall at ranch x -9 (Ranch.Garage splits the wall), facing
+//   the open lawn; walk through it (auto door) or E / A -> straight INTO the garage; from inside, E / A -> back outside.
+//   The old (-27.2, 13.25) portal door into the hallway is gone (it would sit in a dead-end nook behind the wing).
 // Ranch side: the porch cover gets a top collider (walkable), a ladder at its west end (E / A climb up / down), "climb in the
 // upstairs window" spots on the porch roof, a back door in the garage's south wall (-27.2, 13.25) into the house hallway, and
 // a watcher: a froggy that hops into the hollow shell through an upstairs window (4.3 .. 8.7 m up, walls intact) is taken
@@ -19,7 +27,13 @@ public static class HouseUp64
     public const float F2 = 4.8f, WH = 4.0f;                                   // 2nd floor top, its wall height
     public const float HX0 = -28.4f, HX1 = -21.2f, HZ0 = 4.15f, HZ1 = 6.6f;    // stairwell hole (house-local)
     public const float HallZ = 13.3f;                                          // kitchen east wall door -> hallway
-    public static readonly Vector3 GarageDoor = new Vector3(-27.2f, 0f, 13.25f);
+    public static readonly Vector3 GarageDoor = new Vector3(-16.7f, 0f, 13.25f);   // ffu67b: the garage's door into the MUDROOM (inside the garage)
+    public static readonly Vector3 BackDoor = new Vector3(-9f, 0f, 13.25f);        // ffu67b: the garage's OUTSIDE back door (real opening)
+    public const float BackDoorW = 1.6f, BackDoorH = 2.5f;
+    // mudroom: ranch footprint + the matching house-local box
+    public const float MRx0 = -19f, MRx1 = -14.5f, MRz0 = 4f, MRz1 = 13f, MRH = 4.2f;
+    public const float MLx0 = 30.15f, MLx1 = 36f, MLz0 = 10.67f, MLz1 = 22.67f, MLdoorX = 33f;
+    public static int BackDoorIn, BackDoorOut, MudTrips;
     public static bool Built;
     public static int UpEntries, WindowExits, GarageTrips, LadderClimbs;
     static Transform up;
@@ -303,26 +317,33 @@ public static class HouseUp64
         }
     }
 
+    // ffu67b: the MUDROOM (was the ffu64 hallway): kitchen east-wall door (z HallZ) + the garage door at the north end
     static void Hallway(Transform root)
     {
-        float x0 = 30.15f, x1 = 44.3f, zc = HallZ, zs = 11.45f, zn = 15.15f, H = Light55.HouseH;
+        float x0 = MLx0, x1 = MLx1, zs = MLz0, zn = MLz1, zc = (zs + zn) * 0.5f, H = Light55.HouseH;
         Bx(new Vector3((x0 + x1) * 0.5f, -0.3f, zc), new Vector3(x1 - x0 + 0.3f, 0.6f, zn - zs + 0.6f), floorM);
-        Bx(new Vector3((x0 + x1) * 0.5f, 0.006f, zc), new Vector3(x1 - x0 - 0.6f, 0.012f, 1.6f), C(new Color(0.6f, 0.32f, 0.25f)), false);
-        Bx(new Vector3((x0 + x1) * 0.5f, H * 0.5f, zs), new Vector3(x1 - x0, H, 0.3f), wallM);
-        Bx(new Vector3((x0 + x1) * 0.5f, H * 0.5f, zn), new Vector3(x1 - x0, H, 0.3f), wallM);
-        Bx(new Vector3(x1 + 0.15f, H * 0.5f, zc), new Vector3(0.3f, H, zn - zs + 0.3f), wallM);
-        Bx(new Vector3((x0 + x1) * 0.5f, H + 0.15f, zc), new Vector3(x1 - x0 + 0.3f, 0.3f, zn - zs + 0.6f), Mats.TexTint("LB/plaster", new Color(0.95f, 0.94f, 0.9f), 0.05f, 3f));
-        // the garage door at the end + frame + sign; bench, coat hooks, shoe rack
-        Bx(new Vector3(x1 - 0.04f, 1.6f, zc), new Vector3(0.06f, 3.2f, 1.9f), C(new Color(0.42f, 0.27f, 0.15f)), false);
-        Bx(new Vector3(x1 - 0.09f, 1.5f, zc - 0.65f), new Vector3(0.06f, 0.1f, 0.18f), Mats.Steel(new Color(0.75f, 0.7f, 0.5f)), false);
-        Bx(new Vector3(x1 - 0.06f, 3.3f, zc), new Vector3(0.1f, 0.2f, 2.2f), trimM, false);
-        Ranch.Sign(L(x1 - 0.12f, 3.75f, zc), 270f, "GARAGE", new Color(0.35f, 0.35f, 0.4f), 2.6f, 0.6f);
-        Bx(new Vector3(37f, 0.3f, zn - 0.5f), new Vector3(3f, 0.6f, 0.7f), woodM);
-        for (int i = 0; i < 5; i++) Bx(new Vector3(34.5f + i * 1.2f, 2.2f, zn - 0.2f), new Vector3(0.1f, 0.1f, 0.25f), Mats.Steel(new Color(0.6f, 0.6f, 0.62f)), false);
-        Bx(new Vector3(40.5f, 0.25f, zs + 0.45f), new Vector3(2.4f, 0.5f, 0.6f), woodM);
-        var g = new GameObject("HallLamp64"); g.transform.SetParent(up, false); g.transform.position = L(37f, H - 0.4f, zc);
+        Bx(new Vector3((x0 + x1) * 0.5f, 0.006f, zc), new Vector3(1.4f, 0.012f, zn - zs - 1.2f), C(new Color(0.6f, 0.32f, 0.25f)), false);   // runner
+        Bx(new Vector3((x0 + x1) * 0.5f, H * 0.5f, zs), new Vector3(x1 - x0 + 0.3f, H, 0.3f), wallM);              // south wall
+        Bx(new Vector3(x1 + 0.15f, H * 0.5f, zc), new Vector3(0.3f, H, zn - zs + 0.3f), wallM);                     // east wall
+        Bx(new Vector3(30f, H * 0.5f, (20f + zn) * 0.5f), new Vector3(0.3f, H, zn - 20f + 0.3f), wallM);           // west wall past the house corner
+        // north wall with the garage door gap (1.8 m) at MLdoorX
+        float dg0 = MLdoorX - 0.9f, dg1 = MLdoorX + 0.9f;
+        Bx(new Vector3((x0 - 0.15f + dg0) * 0.5f, H * 0.5f, zn), new Vector3(dg0 - x0 + 0.15f, H, 0.3f), wallM);
+        Bx(new Vector3((dg1 + x1 + 0.3f) * 0.5f, H * 0.5f, zn), new Vector3(x1 + 0.3f - dg1, H, 0.3f), wallM);
+        Bx(new Vector3(MLdoorX, (3.2f + H) * 0.5f, zn), new Vector3(1.8f, H - 3.2f, 0.3f), wallM);
+        Bx(new Vector3(MLdoorX, 1.6f, zn + 0.1f), new Vector3(1.7f, 3.2f, 0.06f), C(new Color(0.42f, 0.27f, 0.15f)));   // the garage door (closed panel, solid)
+        Bx(new Vector3(MLdoorX + 0.6f, 1.5f, zn - 0.02f), new Vector3(0.12f, 0.1f, 0.08f), Mats.Steel(new Color(0.75f, 0.7f, 0.5f)), false);
+        Bx(new Vector3(MLdoorX, 3.3f, zn - 0.08f), new Vector3(2.1f, 0.2f, 0.1f), trimM, false);
+        Bx(new Vector3((x0 + x1) * 0.5f, H + 0.15f, zc), new Vector3(x1 - x0 + 0.6f, 0.3f, zn - zs + 0.6f), Mats.TexTint("LB/plaster", new Color(0.95f, 0.94f, 0.9f), 0.05f, 3f));
+        Ranch.Sign(L(MLdoorX, 3.85f, zn - 0.2f), 180f, "GARAGE", new Color(0.35f, 0.35f, 0.4f), 2.6f, 0.6f);
+        Ranch.Sign(L(x0 + 0.25f, 3.6f, HallZ), 90f, "MUDROOM", new Color(0.3f, 0.25f, 0.2f), 2.6f, 0.55f);
+        // bench, coat hooks, shoe rack, boots
+        Bx(new Vector3(x1 - 0.5f, 0.3f, 17.5f), new Vector3(0.7f, 0.6f, 3f), woodM);
+        for (int i = 0; i < 4; i++) Bx(new Vector3(x1 - 0.12f, 2.2f, 16.3f + i * 0.8f), new Vector3(0.25f, 0.1f, 0.1f), Mats.Steel(new Color(0.6f, 0.6f, 0.62f)), false);
+        Bx(new Vector3(x1 - 0.45f, 0.25f, 12.2f), new Vector3(0.6f, 0.5f, 2.2f), woodM);
+        var g = new GameObject("HallLamp64"); g.transform.SetParent(up, false); g.transform.position = L((x0 + x1) * 0.5f, H - 0.4f, zc);
         var l = g.AddComponent<Light>(); l.type = LightType.Point; l.range = 12f; l.intensity = 1f; l.color = new Color(1f, 0.92f, 0.8f); l.shadows = LightShadows.None;
-        var hs = Interact.Add(L(x1 - 0.9f, 0f, zc), 1.3f, "go into the garage", f => ToGarage(f));
+        var hs = Interact.Add(L(MLdoorX, 0f, zn - 0.9f), 1.3f, "go into the garage", f => ToGarage(f));
         hs.enabled = f => f.world == WorldId.House;
     }
 
@@ -369,11 +390,11 @@ public static class HouseUp64
         if (HouseWorld.I == null) return;
         HouseWorld.I.EnsureBuilt();
         if (!Built) { HouseWorld.I.Enter(f); return; }
-        f.SendTo(WorldId.House, L(41.6f, 0.15f, HallZ), 270f);
-        f.Toast("The hallway to James's kitchen", 2.2f);
+        f.SendTo(WorldId.House, L(MLdoorX, 0.15f, MLz1 - 1.4f), 180f);
+        f.Toast("The mudroom - the kitchen door is on your right", 2.4f);
         Sfx.Play(Sfx.Door, 0.9f);
-        GarageTrips++;
-        Debug.Log("HOUSE64 garage -> hallway " + f.nick);
+        GarageTrips++; MudTrips++;
+        Debug.Log("HOUSE64 garage -> mudroom " + f.nick + " local " + (f.transform.position - Worlds.HouseO).ToString("0.0"));
     }
     static void ToGarage(Frog f)
     {
@@ -381,8 +402,25 @@ public static class HouseUp64
         f.SendTo(WorldId.Ranch, p, 0f);
         f.Toast("James's garage", 1.8f);
         Sfx.Play(Sfx.Door, 0.9f);
-        GarageTrips++;
-        Debug.Log("HOUSE64 hallway -> garage " + f.nick + " at " + p.ToString("0.0"));
+        GarageTrips++; MudTrips++;
+        Debug.Log("HOUSE64 mudroom -> garage " + f.nick + " at " + p.ToString("0.0"));
+    }
+    // ffu67b: the outside back door (a real opening): E / A takes you across it
+    public static void BackIn(Frog f)
+    {
+        Vector3 p = new Vector3(BackDoor.x, 0f, BackDoor.z + 1.5f); p.y = Ranch.GY(p.x, p.z) + 0.3f;
+        f.SendTo(WorldId.Ranch, p, 0f);
+        f.Toast("In the back door - James's garage", 2f);
+        Sfx.Play(Sfx.Door, 0.9f); BackDoorIn++;
+        Debug.Log("HOUSE67 back door in -> garage " + f.nick + " at " + p.ToString("0.0") + " inGarage " + RobotNav.InGarage(p));
+    }
+    public static void BackOut(Frog f)
+    {
+        Vector3 p = new Vector3(BackDoor.x, 0f, BackDoor.z - 1.6f); p.y = Ranch.GY(p.x, p.z) + 0.3f;
+        f.SendTo(WorldId.Ranch, p, 180f);
+        f.Toast("Out the garage back door", 1.8f);
+        Sfx.Play(Sfx.Door, 0.9f); BackDoorOut++;
+        Debug.Log("HOUSE67 back door out " + f.nick + " at " + p.ToString("0.0"));
     }
 
     // ---------------- ranch side ----------------
@@ -414,23 +452,47 @@ public static class HouseUp64
             var hw = Interact.Add(new Vector3(x, 3.95f, z1 + 0.9f), 1.5f, "climb in the upstairs window", f => EnterUpstairs(f, wp));
             hw.enabled = f => f.world == WorldId.Ranch && f.vehicle == null && Light55.On;
         }
-        // garage back door (south wall), both faces + sign
+        // ffu67b: the MUDROOM wing (closed shell, its inside is the house world's mudroom) between the house's east wall and
+        // the garage's back wall, and the garage's door into it (inside the garage only)
+        Material wm = Mats.Lit(new Color(0.9f, 0.87f, 0.8f)), rm = Mats.Lit(new Color(0.36f, 0.36f, 0.4f));
+        Vector3 wc = new Vector3((MRx0 + MRx1) * 0.5f, MRH * 0.5f, (MRz0 + MRz1) * 0.5f);
+        Mats.Prim(PrimitiveType.Cube, root, wc, new Vector3(MRx1 - MRx0, MRH, MRz1 - MRz0 - 0.02f), wm, true).name = "Mudroom67";
+        Mats.Prim(PrimitiveType.Cube, root, new Vector3(wc.x + 0.1f, MRH + 0.12f, wc.z - 0.1f), new Vector3(MRx1 - MRx0 + 0.4f, 0.24f, MRz1 - MRz0 + 0.2f), rm, true);
+        for (int i = 0; i < 2; i++)   // two small windows on the east face (lit), like the mudroom inside
+            Mats.Prim(PrimitiveType.Cube, root, new Vector3(MRx1 + 0.02f, 2.2f, 6.5f + i * 3.2f), new Vector3(0.04f, 1.1f, 1.2f), Mats.Unlit(new Color(0.95f, 0.85f, 0.6f)), false);
+        Ranch.Sign(new Vector3(MRx1 + 0.06f, 3.5f, (MRz0 + MRz1) * 0.5f), 90f, "MUDROOM", new Color(0.3f, 0.25f, 0.2f), 2.6f, 0.5f);
         Material dm = Mats.Lit(new Color(0.42f, 0.27f, 0.15f)), tr = Mats.Lit(new Color(0.86f, 0.84f, 0.8f));
         Vector3 g = GarageDoor;
-        foreach (float side in new[] { 1f, -1f })
+        float gz = Layout.GarageC.y - Layout.GarageSize.y * 0.5f + 0.52f;   // inner face of the back wall
+        Mats.Prim(PrimitiveType.Cube, root, new Vector3(g.x, 1.2f, gz), new Vector3(1.6f, 2.4f, 0.05f), dm, false);
+        Mats.Prim(PrimitiveType.Cube, root, new Vector3(g.x, 2.45f, gz + 0.01f), new Vector3(1.9f, 0.12f, 0.06f), tr, false);
+        Mats.Prim(PrimitiveType.Cube, root, new Vector3(g.x - 0.85f, 1.2f, gz + 0.01f), new Vector3(0.12f, 2.5f, 0.06f), tr, false);
+        Mats.Prim(PrimitiveType.Cube, root, new Vector3(g.x + 0.85f, 1.2f, gz + 0.01f), new Vector3(0.12f, 2.5f, 0.06f), tr, false);
+        Mats.Prim(PrimitiveType.Sphere, root, new Vector3(g.x + 0.55f, 1.1f, gz + 0.05f), Vector3.one * 0.1f, Mats.Steel(new Color(0.75f, 0.7f, 0.5f)), false);
+        Ranch.Sign(new Vector3(g.x, 2.95f, gz + 0.06f), 180f, "MUDROOM - HOUSE", new Color(0.3f, 0.25f, 0.2f), 2.6f, 0.5f);
+        var gi = Interact.Add(new Vector3(g.x, 0.3f, g.z + 1.25f), 1.3f, "go through the mudroom door into the house", f => FromGarage(f));
+        gi.enabled = f => f.world == WorldId.Ranch && f.vehicle == null && RobotNav.InGarage(f.transform.position);
+        // the OUTSIDE back door: frame + auto door in the opening Ranch.Garage leaves at BackDoor.x
+        Vector3 b = BackDoor; float oz = Layout.GarageC.y - Layout.GarageSize.y * 0.5f;
+        foreach (float side in new[] { -0.03f, 0.53f })
         {
-            float z = g.z + side * 0.27f;
-            Mats.Prim(PrimitiveType.Cube, root, new Vector3(g.x, 1.2f, z), new Vector3(1.6f, 2.4f, 0.05f), dm, false);
-            Mats.Prim(PrimitiveType.Cube, root, new Vector3(g.x, 2.45f, z + side * 0.01f), new Vector3(1.9f, 0.12f, 0.06f), tr, false);
-            Mats.Prim(PrimitiveType.Cube, root, new Vector3(g.x - 0.85f, 1.2f, z + side * 0.01f), new Vector3(0.12f, 2.5f, 0.06f), tr, false);
-            Mats.Prim(PrimitiveType.Cube, root, new Vector3(g.x + 0.85f, 1.2f, z + side * 0.01f), new Vector3(0.12f, 2.5f, 0.06f), tr, false);
-            Mats.Prim(PrimitiveType.Sphere, root, new Vector3(g.x + 0.55f, 1.1f, z + side * 0.05f), Vector3.one * 0.1f, Mats.Steel(new Color(0.75f, 0.7f, 0.5f)), false);
+            Mats.Prim(PrimitiveType.Cube, root, new Vector3(b.x, BackDoorH + 0.06f, oz + side), new Vector3(BackDoorW + 0.3f, 0.12f, 0.06f), tr, false);
+            Mats.Prim(PrimitiveType.Cube, root, new Vector3(b.x - BackDoorW * 0.5f - 0.06f, BackDoorH * 0.5f, oz + side), new Vector3(0.12f, BackDoorH, 0.06f), tr, false);
+            Mats.Prim(PrimitiveType.Cube, root, new Vector3(b.x + BackDoorW * 0.5f + 0.06f, BackDoorH * 0.5f, oz + side), new Vector3(0.12f, BackDoorH, 0.06f), tr, false);
         }
-        Ranch.Sign(new Vector3(g.x, 2.95f, g.z + 0.31f), 0f, "HOUSE HALLWAY", new Color(0.3f, 0.25f, 0.2f), 2.4f, 0.5f);
-        var gi = Interact.Add(new Vector3(g.x, 0.3f, g.z + 1.25f), 1.3f, "go through the back door into the house hallway", f => FromGarage(f));
-        gi.enabled = f => f.world == WorldId.Ranch && f.vehicle == null;
-        var go2 = Interact.Add(new Vector3(g.x, 0.3f, g.z - 0.9f), 1.0f, "go through the back door into the house hallway", f => FromGarage(f));
-        go2.enabled = f => f.world == WorldId.Ranch && f.vehicle == null;
+        var hinge = new GameObject("BackDoor67"); hinge.transform.SetParent(root, false); hinge.transform.position = new Vector3(b.x - BackDoorW * 0.5f, 0f, oz + 0.25f);
+        var panel = Mats.Prim(PrimitiveType.Cube, hinge.transform, new Vector3(BackDoorW * 0.5f, BackDoorH * 0.5f - 0.02f, 0f), new Vector3(BackDoorW - 0.04f, BackDoorH - 0.06f, 0.06f), dm, true);
+        foreach (float kz in new[] { -0.06f, 0.06f }) Mats.Prim(PrimitiveType.Sphere, hinge.transform, new Vector3(BackDoorW - 0.3f, 1.1f, kz), Vector3.one * 0.1f, Mats.Steel(new Color(0.75f, 0.7f, 0.5f)), false);
+        hinge.AddComponent<BackDoor67>().panel = panel.GetComponent<Collider>();
+        Ranch.Sign(new Vector3(b.x, BackDoorH + 0.55f, oz - 0.08f), 0f, "GARAGE - BACK DOOR", new Color(0.3f, 0.25f, 0.2f), 2.6f, 0.5f);
+        var bi = Interact.Add(new Vector3(b.x, 0.3f, oz - 0.9f), 1.3f, "go in the back door into the garage", f => BackIn(f));
+        bi.enabled = f => f.world == WorldId.Ranch && f.vehicle == null && !RobotNav.InGarage(f.transform.position);
+        var bo = Interact.Add(new Vector3(b.x, 0.3f, oz + 1.4f), 1.2f, "go out the back door", f => BackOut(f));
+        bo.enabled = f => f.world == WorldId.Ranch && f.vehicle == null && RobotNav.InGarage(f.transform.position);
+        // anything else sitting where the mudroom wing now stands (for the probe)
+        var hits = Physics.OverlapBox(wc, new Vector3((MRx1 - MRx0) * 0.5f - 0.3f, MRH * 0.5f - 0.2f, (MRz1 - MRz0) * 0.5f - 0.3f), Quaternion.identity, ~0, QueryTriggerInteraction.Ignore);
+        var names = new List<string>(); foreach (var h in hits) if (h != null && h.gameObject.name != "Mudroom67") names.Add(h.gameObject.name);
+        Debug.Log("HOUSE67 mudroom wing x " + MRx0 + ".." + MRx1 + " z " + MRz0 + ".." + MRz1 + " (house-local x " + MLx0 + ".." + MLx1 + " z " + MLz0 + ".." + MLz1 + "), garage mudroom door x " + g.x + ", outside back door x " + b.x + " | other colliders in the footprint: " + (names.Count == 0 ? "none" : string.Join(", ", names.ToArray())));
         root.gameObject.AddComponent<HouseUp64Watch>();
         Debug.Log("HOUSE64 ranch side: porch roof collider, ladder, " + "upstairs window spots, garage back door at " + g.ToString("0.0"));
     }
@@ -457,5 +519,26 @@ public class HouseUp64Watch : MonoBehaviour
             Vector3 p = f.transform.position;
             if (p.y > Layout.HouseH * 0.5f - 0.2f && p.y < Layout.HouseH - 0.3f && r.Contains(new Vector2(p.x, p.z))) HouseUp64.EnterUpstairs(f, p);
         }
+    }
+}
+
+// ffu67b: the garage's outside back door swings open (inward) when a froggy is near and closes behind them; closed = solid
+public class BackDoor67 : MonoBehaviour
+{
+    public Collider panel;
+    float a;
+    public static bool Open;
+    void Update()
+    {
+        bool near = false;
+        Vector3 c = transform.position + new Vector3(HouseUp64.BackDoorW * 0.5f, 0f, 0f);
+        if (Game.I != null) foreach (var f in Game.I.frogs) if (f != null && f.world == WorldId.Ranch && f.vehicle == null && (f.transform.position - c).sqrMagnitude < 6.5f) { near = true; break; }
+        var d = DadFroggy.F; if (!near && d != null && d.world == WorldId.Ranch && d.vehicle == null && (d.transform.position - c).sqrMagnitude < 6.5f) near = true;
+        float t = near ? 95f : 0f;
+        a = Mathf.MoveTowards(a, t, 240f * Time.deltaTime);
+        transform.localRotation = Quaternion.Euler(0f, -a, 0f);   // swings into the garage (+z)
+        bool open = a > 60f;
+        if (panel != null && panel.enabled == open) panel.enabled = !open;
+        if (open != Open) { Open = open; if (open) Sfx.Play(Sfx.Door, 0.5f); }
     }
 }
