@@ -131,8 +131,9 @@ public static class BuildScript
         // ffu6: Linear + HDR (URP tonemapping); the Built-in project was Gamma
         PlayerSettings.colorSpace = ColorSpace.Linear;
         PlayerSettings.runInBackground = true;
-        PlayerSettings.stripEngineCode = false;
-        PlayerSettings.SetManagedStrippingLevel(NamedBuildTarget.WebGL, ManagedStrippingLevel.Low);
+        // ffxweb (Oct 20, 2026, Games SME Xbox Edge low-memory ask): strip engine code + managed stripping Medium (Assets/link.xml)
+        PlayerSettings.stripEngineCode = true;
+        PlayerSettings.SetManagedStrippingLevel(NamedBuildTarget.WebGL, ManagedStrippingLevel.Medium);
         // ffu6: WebGPU first, WebGL 2 as the automatic fallback (Unity 6.6 production WebGPU)
         PlayerSettings.SetUseDefaultGraphicsAPIs(BuildTarget.WebGL, false);
         PlayerSettings.SetGraphicsAPIs(BuildTarget.WebGL, new[] { GraphicsDeviceType.WebGPU, GraphicsDeviceType.OpenGLES3 });
@@ -143,8 +144,10 @@ public static class BuildScript
         PlayerSettings.WebGL.dataCaching = true;
         PlayerSettings.WebGL.nameFilesAsHashes = false;
         // Moderate memory (property names differ between Unity versions, so set them by reflection)
-        SetStatic(typeof(PlayerSettings.WebGL), "initialMemorySize", 128);
-        SetStatic(typeof(PlayerSettings.WebGL), "maximumMemorySize", 1024);
+        // ffxweb: Xbox Edge shares ~1 GB across its processes -> heap 64 / 512 MB (was 128 / 1024); compression stays Disabled
+        // (Cloudflare serves wasm / js compressed natively; Brotli + decompressionFallback would decompress in JS)
+        SetStatic(typeof(PlayerSettings.WebGL), "initialMemorySize", 64);
+        SetStatic(typeof(PlayerSettings.WebGL), "maximumMemorySize", 512);
         Debug.Log("BuildScript: WebGL graphics APIs " + string.Join(",", PlayerSettings.GetGraphicsAPIs(BuildTarget.WebGL)) + " colour " + PlayerSettings.colorSpace);
     }
 
