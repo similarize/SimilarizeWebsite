@@ -39,6 +39,7 @@
   <button id="fs" title="Fullscreen">⛶</button>
   <a href="../" title="Back to the arcade">✕ Arcade</a>
 </div>
+<script src="../shared/xbox-compat.js?v=xbp2"></script>
 <script>
   var buildUrl = "Build";
   var name = "__BUILD_NAME__";
@@ -51,10 +52,13 @@
     var raw = window.devicePixelRatio || 1, q = /[?&]dpr=([0-9.]+)/.exec(location.search), f = q ? parseFloat(q[1]) : 0;
     window.LBDPR = { raw: raw, lobby: Math.min(raw, 2.5), game: Math.min(raw, 2), gameLite: Math.min(raw, 1.5), gameLow: Math.min(raw, 1.0), force: f > 0.4 && f < 4.1 ? f : 0 };
     if (window.LBDPR.force) window.LBDPR.lobby = window.LBDPR.game = window.LBDPR.force;
+    // xbm1: Xbox / ?lowmem=1 (../shared/xbox-compat.js): cap every DPR tier so the backbuffer stays <= 1280x720
+    if (window.SimXbox && window.SimXbox.lowmem) ["lobby", "game", "gameLite", "gameLow"].forEach(function (k) { window.LBDPR[k] = window.SimXbox.capDpr(window.LBDPR[k]); });
   })();
   // lambo7: ask the browser for an antialiased (MSAA) backbuffer on the game canvas (Unity 2022 leaves it off). ?aa=0 = off.
   (function () {
     if (/[?&]aa=0/.test(location.search)) return;
+    if (window.SimXbox && window.SimXbox.lowmem) return; // xbm1: no forced MSAA in low-memory mode
     var orig = HTMLCanvasElement.prototype.getContext;
     HTMLCanvasElement.prototype.getContext = function (type, attrs) {
       if (this.id === "unity-canvas" && (type === "webgl2" || type === "webgl" || type === "experimental-webgl")) {
@@ -76,6 +80,7 @@
     devicePixelRatio: window.LBDPR.lobby,
     showBanner: function (msg, type) { if (type === "error") { var e = document.getElementById("err"); e.style.display = "block"; e.textContent = msg; } else console.log(msg); }
   };
+  if (window.SimXbox) window.SimXbox.applyConfig(config); // xbm1
   var fill = document.getElementById("fill"), pct = document.getElementById("pct"), loader = document.getElementById("loader");
   var script = document.createElement("script");
   script.src = buildUrl + "/" + name + ".loader.js?v=__BUILD_VERSION__";
