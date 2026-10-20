@@ -1,4 +1,6 @@
+<!-- ffxweb (Oct 20, 2026): managed stripping Medium keeps these assemblies whole (reflection). glTFast is not in this project. -->
 <linker>
   <assembly fullname="Assembly-CSharp" preserve="all" ignoreIfMissing="1"/>
   <assembly fullname="Unity.InputSystem" preserve="all" ignoreIfMissing="1"/>
+  <assembly fullname="UnityEngine.UI" preserve="all" ignoreIfMissing="1"/>
 </linker>
