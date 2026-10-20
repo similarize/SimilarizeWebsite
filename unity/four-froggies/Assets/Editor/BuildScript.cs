@@ -367,8 +367,10 @@ public static class BuildScript
         PlayerSettings.productName = "Four Froggies";
         PlayerSettings.colorSpace = ColorSpace.Gamma;
         PlayerSettings.runInBackground = true;
-        PlayerSettings.stripEngineCode = false;
-        PlayerSettings.SetManagedStrippingLevel(BuildTargetGroup.WebGL, ManagedStrippingLevel.Low);
+        // ffxweb (Oct 20, 2026, Games SME Xbox Edge low-memory ask): strip unused engine code + managed stripping Medium
+        // (Assets/link.xml keeps Assembly-CSharp / Input System / UI whole for reflection) -> smaller wasm to compile
+        PlayerSettings.stripEngineCode = true;
+        PlayerSettings.SetManagedStrippingLevel(BuildTargetGroup.WebGL, ManagedStrippingLevel.Medium);
         PlayerSettings.SetUseDefaultGraphicsAPIs(BuildTarget.WebGL, false);
         PlayerSettings.SetGraphicsAPIs(BuildTarget.WebGL, new[] { GraphicsDeviceType.OpenGLES3 });
 
@@ -379,8 +381,12 @@ public static class BuildScript
         PlayerSettings.WebGL.nameFilesAsHashes = false;
         PlayerSettings.WebGL.linkerTarget = WebGLLinkerTarget.Wasm;
         // Moderate memory (property names differ between Unity versions, so set them by reflection)
-        SetStatic(typeof(PlayerSettings.WebGL), "initialMemorySize", 128);
-        SetStatic(typeof(PlayerSettings.WebGL), "maximumMemorySize", 1024);
+        // ffxweb: Xbox Edge shares ~1 GB across all its processes -> heap 64 MB initial, 512 MB max (was 128 / 1024; the
+        // desktop Xbox-UA probe peaked at a 382 MB heap). Compression stays Disabled: Cloudflare already serves wasm / js
+        // compressed (zstd) and the browser decompresses natively; a Brotli build with decompressionFallback would
+        // decompress in JS when the host does not send Content-Encoding: br (compressed + raw copies in memory).
+        SetStatic(typeof(PlayerSettings.WebGL), "initialMemorySize", 64);
+        SetStatic(typeof(PlayerSettings.WebGL), "maximumMemorySize", 512);
 
         QualitySettings.shadows = ShadowQuality.All;
         QualitySettings.shadowDistance = 45f;
