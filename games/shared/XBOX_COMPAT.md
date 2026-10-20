@@ -5,7 +5,7 @@ One shared, dependency-free script for Unity WebGL/WebGPU pages that run on Xbox
 ## Include (before the Unity loader script)
 
 ```html
-<script src="../shared/xbox-compat.js?v=xb1"></script>
+<script src="../shared/xbox-compat.js?v=xbp1"></script>
 ```
 
 Optional, before the include: `window.SimXboxOptions = { canvas: "#unity-canvas" }` (the default is `#unity-canvas`, then the first `<canvas>`).

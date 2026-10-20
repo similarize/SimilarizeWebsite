@@ -1,6 +1,6 @@
 /*! SimXbox: Xbox / console Edge compatibility for Unity WebGL/WebGPU pages (xb1, 2026-10-20). No dependencies.
- * Include BEFORE the Unity loader script:  <script src="../shared/xbox-compat.js?v=xb1"></script>
- * See XBOX_COMPAT.md. Query flags: ?lowmem=1|0  ?webgpu=0  ?padlog=1  ?padgate=1|0
+ * Include BEFORE the Unity loader script:  <script src="../shared/xbox-compat.js?v=xbp1"></script>
+ * See XBOX_COMPAT.md. Query flags: ?lowmem=1|0  ?webgpu=0  ?padlog=1  ?padgate=1|0  ?ctxmenu=1|0
  */
 (function () {
   "use strict";
@@ -20,6 +20,14 @@
   //    switches with HOLD Menu -> "Use game controls"); harmless everywhere else.
   function emuOptOut() { try { if ("gamepadInputEmulation" in navigator && navigator.gamepadInputEmulation !== "gamepad") navigator.gamepadInputEmulation = "gamepad"; } catch (e) { } }
   emuOptOut();
+
+  // 2b) xbp1: on Xbox Edge, HOLD Menu in browsing (cursor) mode opens Edge's context menu, whose first item is "Use game
+  //     controls". Our pages (and many web games) call preventDefault() on "contextmenu", which hides that menu over
+  //     the page, so the toggle can't be reached (matches reports that it only works with the cursor outside the game
+  //     frame). Window capture runs before any document/canvas listener: stop the event there so nothing can cancel
+  //     it. Xbox only by default; ?ctxmenu=1 forces it on (testing), ?ctxmenu=0 off.
+  var cf = flag("ctxmenu"), keepCtx = cf === null ? isXbox : cf;
+  if (keepCtx) window.addEventListener("contextmenu", function (e) { e.stopImmediatePropagation(); }, true);
 
   function canvas() { return document.querySelector(canvasSel) || document.querySelector("canvas"); }
   function refocus() { emuOptOut(); setTimeout(function () { try { window.focus(); var c = canvas(); if (c) { if (!c.hasAttribute("tabindex")) c.setAttribute("tabindex", "-1"); c.focus(); } } catch (e) { } }, 50); }
@@ -96,7 +104,7 @@
       var a = document.activeElement;
       var line = "t=" + ((Date.now() - t0) / 1000).toFixed(0) + "s emu=" + ("gamepadInputEmulation" in navigator ? navigator.gamepadInputEmulation : "n/a") +
         " focus=" + document.hasFocus() + " active=" + (a && (a.id || a.tagName)) + " fs=" + !!(document.fullscreenElement || document.webkitFullscreenElement) +
-        " lock=" + !!document.pointerLockElement + " gate=" + !!gate + " padSeen=" + SX.padSeen + " webgpu=" + (navigator.gpu ? "on" : "off");
+        " lock=" + !!document.pointerLockElement + " gate=" + !!gate + " ctx=" + keepCtx + " padSeen=" + SX.padSeen + " webgpu=" + (navigator.gpu ? "on" : "off");
       console.log("SimXbox padlog: " + line + " pads=" + (out.length ? out.join(" | ") : "none"));
       if (!box && document.body) { box = document.createElement("pre"); box.id = "simxbox-padlog";
         box.style.cssText = "position:fixed;left:6px;bottom:6px;z-index:60;margin:0;max-width:96vw;white-space:pre-wrap;font:12px/1.35 monospace;color:#9f9;background:rgba(0,0,0,.7);padding:6px 8px;border-radius:6px;pointer-events:none";
