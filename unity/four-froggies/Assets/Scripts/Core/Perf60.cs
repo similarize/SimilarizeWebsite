@@ -314,6 +314,7 @@ public class Cull60 : MonoBehaviour
             float size = b0.size.magnitude;
             if (!leaf && (size > 14f || size <= 0f)) continue;   // big things (merged cells, buildings, terrain pieces) always draw
             if (r.GetComponentInParent<Canvas>() != null) continue;
+            if (r.GetComponentInParent<Frog>() != null) continue;   // ffu67c: froggies + what they carry (the paraglider wing) always draw - a far shared camera culled the glider
             list.Add(new R { r = r, size = size, leaf = leaf, caster = r.shadowCastingMode == ShadowCastingMode.On });
             added++;
         }

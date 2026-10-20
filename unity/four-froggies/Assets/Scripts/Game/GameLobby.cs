@@ -514,13 +514,14 @@ public partial class Game
         joinB.SetBadge(touchOnly ? "" : "Y · J");
         joinBtn.gameObject.SetActive(!online);
         bool waitHost = online && net.IsGuest;
-        playText.text = waitHost ? "WAITING FOR HOST" : "START";
-        playB.SetBadge(touchOnly || waitHost ? "" : "LT · ENTER");   // ffu59: LT starts on a pad (A only joins)
-        playB.SetTint(waitHost ? new Color(0.25f, 0.35f, 0.28f, 0.95f) : new Color(0.18f, 0.72f, 0.32f, 1f));
+        bool fpSel = lobbyMode == 0 || online;   // ffu67c: FREE PLAY / STORY mode options, the highlighted one starts
+        playText.text = waitHost ? "WAITING FOR HOST" : fpSel ? "> FREE PLAY <" : "FREE PLAY";
+        playB.SetBadge(waitHost ? "" : touchOnly ? (fpSel ? "tap to start" : "") : fpSel ? "LT · ENTER start" : "LB · F");   // ffu59: LT starts on a pad (A only joins)
+        playB.SetTint(waitHost ? new Color(0.25f, 0.35f, 0.28f, 0.95f) : fpSel ? new Color(0.18f, 0.72f, 0.32f, 1f) : new Color(0.2f, 0.4f, 0.26f, 0.85f));
         // gamepad focus: START glows once someone has joined (and brighter while LT is held); X / Y held highlight HOST / JOIN
         bool xHeld = false, yHeld = false, ltHeld = false;
         foreach (var gp in UnityEngine.InputSystem.Gamepad.all) if (gp != null && gp.added) { xHeld |= gp.buttonWest.isPressed; yHeld |= gp.buttonNorth.isPressed; ltHeld |= gp.leftTrigger.isPressed; }
-        playB.focus = (slots.Count > 0 || ltHeld) && !waitHost; hostB.focus = xHeld; joinB.focus = yHeld;
+        playB.focus = fpSel && (slots.Count > 0 || ltHeld) && !waitHost; hostB.focus = xHeld; joinB.focus = yHeld;
         bool mouseOk = !touchOnly && Kb.TouchCount() == 0;
         playB.Tick(mouseOk); hostB.Tick(mouseOk); joinB.Tick(mouseOk);
         TickStoryButton(mouseOk, touchOnly, online);   // ffu22
@@ -551,9 +552,9 @@ public partial class Game
         }
         if (touchOnly)
         {
-            lobbyHelp.text = "Tap a character to join, then START - or STORY for The Big Launch. Empty seats are AI froggies.\nWith friends: HOST shows a room code, they tap JOIN and type it.";
+            lobbyHelp.text = "Tap a character to join, then tap FREE PLAY or STORY to pick a mode - tap it again to start. Empty seats are AI froggies.\nWith friends: HOST shows a room code, they tap JOIN and type it.";
             Slot ts = FindSlot(InputKind.Touch);
-            lobbyStatus.text = ts == null ? "Tap a character to pick it" : "You are <color=" + Roster.UiHex(charOf[ts.frog]) + ">" + (ts.name.Length > 0 ? ts.name + " (" + Roster.Name(charOf[ts.frog]) + ")" : Roster.Name(charOf[ts.frog])) + "</color> - tap START";
+            lobbyStatus.text = ts == null ? "Tap a character to pick it" : "You are <color=" + Roster.UiHex(charOf[ts.frog]) + ">" + (ts.name.Length > 0 ? ts.name + " (" + Roster.Name(charOf[ts.frog]) + ")" : Roster.Name(charOf[ts.frog])) + "</color> - tap " + ModeName(lobbyMode) + (lobbyMode == 1 ? "" : "") + " again to start";
             if (err.Length > 0) lobbyStatus.text = err;
             return;
         }

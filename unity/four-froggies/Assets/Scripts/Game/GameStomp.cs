@@ -5,8 +5,9 @@ public partial class Game
 {
     // quake every player view within `range` of p (falls off with distance squared); nothing in the lobby, the help
     // menu or a story cutscene. Split views each get their own amount; the shared view uses its trauma.
-    public void Quake(Vector3 p, float power, float range)
+    public void Quake(Vector3 p, float power, float range, Frog pilot = null, float size = 0f, Vehicle mech = null)
     {
+        FootRumble(p, power, pilot, size, mech);   // ffu67c: one short pulse per footstep impact, per player
         if (state != State.Play || help) return;
         if (Story.Active && Story.I != null && Story.I.BlocksInput) return;
         foreach (var s in slots)
@@ -19,10 +20,7 @@ public partial class Game
             if (k < 0.01f) continue;
             s.rig.AddQuake(power * k);
             // a short low thump on the pad's heavy motor
-            if (s.kind == InputKind.Gamepad && s.pad != null && s.pad.added && power * k > 0.12f)
-            {
-                try { s.pad.SetMotorSpeeds(Mathf.Clamp01(power * k * 0.9f), Mathf.Clamp01(power * k * 0.25f)); rumblePad = s.pad; rumbleEnd = Time.unscaledTime + 0.12f; } catch { }
-            }
+
         }
         if (sharedCam != null && sharedCam.enabled)
         {
@@ -30,6 +28,44 @@ public partial class Game
             float k = Mathf.Clamp01(1f - sd / (range * 1.3f)); k *= k;
             sharedTrauma = Mathf.Min(1f, sharedTrauma + power * k * 0.45f);
         }
+    }
+
+    // ffu67c (Bill Oct 20 13:55): a mech footfall = ONE short pulse (0.12 s) on the pads of the players who feel it, then zero.
+    //   * the pilot (driver of `mech`): own pad only, scaled by seat height (the neck / head cockpit of a big mech is strongest);
+    //   * every OTHER player standing on the ground (not in a vehicle, not gliding / swimming / airborne) near the foot: falls off with
+    //     distance - full within ~10 m, zero by ~60 m, both scaled by mech size (sqrt(size / 10), >= 1: the trillion-story reaches further);
+    //   * nothing between steps (only footfalls call this), nothing for flying / airborne players.
+    public static int Footfalls;
+    void FootRumble(Vector3 p, float power, Frog pilot, float size, Vehicle mech)
+    {
+        if (state != State.Play || help) return;
+        Footfalls++;
+        float sk = Mathf.Max(1f, Mathf.Sqrt(Mathf.Max(size, 1f) / 10f));
+        float near = 10f * sk, far = 60f * sk;
+        string log = "";
+        foreach (var s in slots)
+        {
+            Frog f = frogs[s.frog]; if (f == null) continue;
+            float amt = 0f; string why;
+            if (pilot != null && f == pilot)
+            {
+                float seat = 0.5f;
+                if (mech != null && mech.seat != null && size > 0.5f) seat = Mathf.Clamp01((mech.seat.position.y - p.y) / size);
+                amt = Mathf.Clamp(power, 0.4f, 2f) * Mathf.Lerp(0.35f, 0.9f, seat);   // neck / head cockpit ~ top of the mech = strongest
+                why = "pilot seat " + seat.ToString("0.00");
+            }
+            else
+            {
+                bool onGround = f.vehicle == null && f.passengerOf == null && !f.GlideOn && !f.Swimming && f.world == WorldId.Ranch && f.cc != null && f.cc.enabled && f.cc.isGrounded;
+                float d = Vector3.Distance(new Vector3(f.transform.position.x, p.y, f.transform.position.z), p);
+                float k = d <= near ? 1f : Mathf.Clamp01(1f - (d - near) / (far - near));
+                if (onGround) amt = Mathf.Clamp(power, 0.4f, 2f) * 0.75f * k * k;
+                why = (onGround ? "ground" : "not on the ground") + " d " + d.ToString("0") + " m";
+            }
+            if (amt > 0.04f) Pulse(s, amt * 0.9f, amt * 0.3f, 0.12f, "footfall #" + Footfalls + " " + why);
+            log += " P" + (slots.IndexOf(s) + 1) + " " + amt.ToString("0.00") + " (" + why + ")";
+        }
+        if (Footfalls <= 60 || Footfalls % 25 == 0) Debug.Log("RUMBLE67 footfall #" + Footfalls + " t " + Time.unscaledTime.ToString("0.00") + " at " + p.ToString("0") + " size " + size.ToString("0") + " pilot " + (pilot != null ? pilot.nick : "-") + " |" + log);
     }
 
     // ---------------- demo shots ----------------

@@ -574,7 +574,7 @@ public partial class StoryMech : Vehicle
             // touchdown: a big thud, dust ring, shake
             p.y = ground; grounded = true; landCool = 0.25f;
             float hard = Mathf.Clamp01(-vy / (20f + H * 0.4f));
-            MechStomp.Foot(p, H, 1.3f + hard * 1.2f, false);   // ffu28: both feet slam down - bigger boom + quake
+            MechStomp.Foot(p, H, 1.3f + hard * 1.2f, false, driver, this);   // ffu28: both feet slam down - bigger boom + quake
             if (Sfx.Land != null) Sfx.PlayAt(Sfx.Land, p, 0.5f, 120f + H * 3f, Mathf.Lerp(0.9f, 0.4f, band / 3f));
             for (int i = 0; i < 16 + band * 6; i++) { Vector2 r = Random.insideUnitCircle.normalized * H * Random.Range(0.15f, 0.4f); FX.Dust(p + new Vector3(r.x, 0.5f, r.y), 1f); }
             foreach (Collider c in Physics.OverlapSphere(p, H * 0.3f + 2f, 1 << PropLayer))
@@ -688,7 +688,7 @@ public partial class StoryMech : Vehicle
                 foot.y = MechGround(foot, transform.position.y);
                 bool onRoof = foot.y > Ranch.GY(foot.x, foot.z) + 0.3f;
                 if (onRoof) RoofBreak.Impact(this, foot, H, band, 0f, 1f);   // ffu39: a step on a roof cracks it
-                MechStomp.Foot(foot, H, 1f, false);   // boom + crunch, ground quake, dust cloud (Core/MechStomp.cs)
+                MechStomp.Foot(foot, H, 1f, false, driver, this);   // boom + crunch, ground quake, dust cloud (Core/MechStomp.cs)
                 foreach (Collider c in Physics.OverlapSphere(foot, H * 0.12f + 1f, 1 << PropLayer))
                     if (c.attachedRigidbody != null) c.attachedRigidbody.AddExplosionForce(400f + band * 600f, foot, H * 0.2f + 2f, 1f);
                 // ffw: every mech crushes (the 10-story too), radius scales with size; pond steps ripple + splash

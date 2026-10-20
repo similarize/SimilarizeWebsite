@@ -160,7 +160,11 @@ public static class Ranch
         Vector2 c = Layout.GarageC, s = Layout.GarageSize;
         float H = Layout.GarageH;
         float x0 = c.x - s.x * 0.5f, x1 = c.x + s.x * 0.5f, z0 = c.y - s.y * 0.5f, z1 = c.y + s.y * 0.5f;
-        B(new Vector3(c.x, H * 0.5f, z0 + 0.25f), new Vector3(s.x, H, 0.5f), Cream);
+        // ffu67b: the back wall leaves a real opening for the outside back door (HouseUp64.BackDoor: x -9, 1.6 x 2.5 m)
+        float bdx = HouseUp64.BackDoor.x, bdw = HouseUp64.BackDoorW * 0.5f, bdh = HouseUp64.BackDoorH;
+        B(new Vector3((x0 + bdx - bdw) * 0.5f, H * 0.5f, z0 + 0.25f), new Vector3(bdx - bdw - x0, H, 0.5f), Cream);
+        B(new Vector3((bdx + bdw + x1) * 0.5f, H * 0.5f, z0 + 0.25f), new Vector3(x1 - bdx - bdw, H, 0.5f), Cream);
+        B(new Vector3(bdx, (bdh + H) * 0.5f, z0 + 0.25f), new Vector3(bdw * 2f, H - bdh, 0.5f), Cream);
         B(new Vector3(x0 + 0.25f, H * 0.5f, c.y), new Vector3(0.5f, H, s.y), Cream);
         B(new Vector3(x1 - 0.25f, H * 0.5f, c.y), new Vector3(0.5f, H, s.y), Cream);
         RoofBreak.Add(B(new Vector3(c.x, H + 0.2f, c.y), new Vector3(s.x + 0.6f, 0.4f, s.y + 0.6f), RoofC), 6, 2);   // ffu39: breakable roof panels

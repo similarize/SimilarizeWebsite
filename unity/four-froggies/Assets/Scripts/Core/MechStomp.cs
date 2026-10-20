@@ -66,7 +66,7 @@ public static class MechStomp
     static float Tanh(float x) { float e = Mathf.Exp(2f * Mathf.Clamp(x, -9f, 9f)); return (e - 1f) / (e + 1f); }
 
     // p = the planted foot on the ground; size = mech height in metres; power 1 = a walking step, ~1.5-2.6 = a landing
-    public static void Foot(Vector3 p, float size, float power = 1f, bool props = true)
+    public static void Foot(Vector3 p, float size, float power = 1f, bool props = true, Frog pilot = null, Vehicle mech = null)
     {
         if (clips == null) Build();
         Count++;
@@ -87,7 +87,7 @@ public static class MechStomp
         float q = (size < 6f ? 0.16f : Mathf.Lerp(0.55f, 0.95f, (k - 0.37f) / 0.63f)) * Mathf.Clamp(power, 0.5f, 2f);
         float qRange = 28f + size * 2.6f;                           // Optimus 37 m, 10-story 59 m, trillion 444 m
         LastShake = q;
-        if (Game.I != null) Game.I.Quake(p, q, qRange);
+        if (Game.I != null) Game.I.Quake(p, q, qRange, pilot, size, mech);   // ffu67c: pad rumble only for this mech's pilot
         // --- dust cloud at the foot + loose props jump
         if (budget-- > 0)
         {

@@ -178,6 +178,7 @@ public partial class Frog : MonoBehaviour
     public void SendTo(WorldId w, Vector3 p, float yawDeg)
     {
         if (remote != null) remote.ReleaseManual(false);
+        if (human && Game.I != null && w != world) Game.I.RumbleStop(this, "world change " + world + " -> " + w);   // ffu67c
         if (vehicle != null) ExitVehicle();
         LeavePassenger();
         if (jetOf != null) { jetOf = null; transform.localScale = Vector3.one; }
@@ -686,6 +687,7 @@ public partial class Frog : MonoBehaviour
     {
         Vehicle v = vehicle;
         if (v == null) return;
+        if (human && Game.I != null) Game.I.RumbleStop(this, "exit / deploy " + v.Title);   // ffu67c
         if (netPuppet && Net.I != null) Net.I.ReleaseVeh(v);   // ffu13: back to local physics first
         vehicle = null;
         v.driver = null;

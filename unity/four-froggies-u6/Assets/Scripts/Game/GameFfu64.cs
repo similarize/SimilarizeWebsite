@@ -307,21 +307,22 @@ public class Ffu64 : MonoBehaviour
                 }
                 break;
             case 0:
-                if (phT > 3f) { Use("back door"); Next(1, "hallway"); camOn = false; }
+                if (phT > 3f) { Use("mudroom door"); Next(1, "hallway"); camOn = false; }   // ffu67b: garage -> mudroom (was "back door")
                 break;
             case 1:
                 if (phT > 1f && phT - Time.deltaTime <= 1f)
                 {
                     Vector3 lp = f.transform.position - Worlds.HouseO;
-                    Check("garage back door -> house hallway", f.world == WorldId.House && lp.x > 30f && lp.x < 44.5f && Mathf.Abs(lp.z - HouseUp64.HallZ) < 2f, "world " + f.world + " local " + lp.ToString("0.0"));
+                    Check("garage mudroom door -> house mudroom", f.world == WorldId.House && lp.x > HouseUp64.MLx0 && lp.x < HouseUp64.MLx1 && lp.z > HouseUp64.MLz0 && lp.z < HouseUp64.MLz1, "world " + f.world + " local " + lp.ToString("0.0"));
                 }
                 if (phT > 4f)
                 {
                     // walk west through the hallway door into the kitchen (cc moves), then come back and take the garage door
+                    f.SendTo(WorldId.House, HL(33f, 0.15f, HouseUp64.HallZ), 270f);   // ffu67b: mudroom, level with the kitchen door
                     if (f.cc != null && f.cc.enabled) for (int i = 0; i < 30; i++) f.cc.Move(Vector3.left * 0.5f);
                     Vector3 lp = f.transform.position - Worlds.HouseO;
                     Check("hallway opens into the kitchen", lp.x < 29.5f, "after 15 m west local " + lp.ToString("0.0"));
-                    f.SendTo(WorldId.House, HL(43.2f, 0.15f, HouseUp64.HallZ), 90f);
+                    f.SendTo(WorldId.House, HL(HouseUp64.MLdoorX, 0.15f, HouseUp64.MLz1 - 1.2f), 0f);
                     Use("garage");
                     Next(2, "backgarage");
                 }

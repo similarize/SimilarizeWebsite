@@ -114,6 +114,15 @@ male, flat, even voice (a short beep before each line) so a robot is never mista
   free roster character for the episode).
 
 ## Places
+- **House + garage layout** (ffu67b, Bill 2026-10-20 13:19: "garage and house stay separate spaces, joined by an inside hallway /
+  mudroom with two doors"). The same layout inside and out. James's house (front door + porch on its north side, facing the garage
+  side of the ranch) and James's 6-bay garage (big doors open north to the drive / track; back wall on the south) are separate
+  buildings. A **mudroom** wing joins them: on the ranch it stands against the house's east wall and meets the garage's back wall;
+  inside it has exactly two doors - one into the **kitchen** (kitchen east wall) and one into the **garage** (garage back wall, inside
+  the garage by Dad's bay, sign "MUDROOM - HOUSE"). The garage's **outside back door** is a real door in the back wall facing the open
+  lawn east of the mudroom: from outside it leads **into the garage** (never into the house); from inside it leads back out. Ways in:
+  house front door -> foyer; garage big bay doors -> garage; garage back door -> garage; garage mudroom door <-> mudroom <-> kitchen;
+  upstairs windows from the porch roof -> 2nd floor; phone "Me: go upstairs" -> 2nd-floor landing.
 - **Apollo 11 landing site** (ffu61, Bill 2026-10-17): on the Moon world, what the real July 1969 mission left behind - the
   Lunar Module descent stage (gold foil, four legs, ladder + the plaque "Here men from the planet Earth first set foot upon
   the Moon, July 1969 A.D. We came in peace for all mankind"), the American flag on its crossbar, the laser reflector,
@@ -141,7 +150,7 @@ male, flat, even voice (a short beep before each line) so a robot is never mista
   robots instead of flying through them, can land on a shoulder or the head, and ride along while the mech walks.
 - **James's house has a real upstairs** (ffu64, Bill 2026-10-19 16:47 / 17:02 / 17:06): stairs in the living room to a 2nd
   floor (James's room, guest room, bathroom, landing, bunk room, craft room); froggies can climb onto the porch roof and in
-  through an upstairs window (never kicked back outside); the garage's back door leads into the house hallway.
+  through an upstairs window (never kicked back outside). (ffu64's "garage back door -> house hallway" was replaced in ffu67b: see House + garage layout.)
 - **Stairs are easy to find + you can look up indoors** (ffu65, Bill 2026-10-20 Pixel 9): signs, yellow floor arrows and a first-visit
   hint lead from the front door to the stairs; the robot phone PLAY tab has "Me: go upstairs (house)"; inside the house, the 2nd
   floor and the campers the view tilts up to 65 deg (touch drag, right stick, mouse) to see the ceiling and lamps.

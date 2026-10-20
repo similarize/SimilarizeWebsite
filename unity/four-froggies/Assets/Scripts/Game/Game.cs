@@ -160,6 +160,7 @@ public partial class Game : MonoBehaviour
         demoT += Time.unscaledDeltaTime;
         if (demoShot == "seattest") { SeatTestLobby(); return false; }
         if (demoShot == "lobby59") { Lobby59TestLobby(); return false; }
+        if (demoShot == "mode67") { Mode67Lobby(); return false; }   // ffu67c: mode pick + rumble + shared glider + back to lobby (GameFfu67c.cs)
         if (demoShot == "phone59") { Phone59TestLobby(); return false; }   // ffu59b: 4-player split, own phones, FULL in one viewport   // ffu59: A joins only, LT starts (GameFfu59.cs)   // ffu39: pad select + touch tap on PLAY (GameSeats.cs)
         if (demoShot == "lobby")
         {
@@ -811,6 +812,7 @@ public partial class Game : MonoBehaviour
         PadGuard.GraceOn = state == State.Play;
         PadGuard.Tick();
         PadTick();
+        TickRumble();   // ffu67c: every frame in every state (safety timeout)
         SeatTick();   // ffu39
         touch.active = state == State.Play && FindSlot(InputKind.Touch) != null && !help && !StoryBlocksTouch;
         if (state == State.Play) ApplyNames();
@@ -853,7 +855,7 @@ public partial class Game : MonoBehaviour
         if (Kb.EnterDown())
         {
             if (slots.Count == 0) Join(InputKind.Keyboard, null);
-            if (slots.Count > 0) { Lobby59Log("Enter -> START (" + slots.Count + " seated)"); StartPlay(); return; }
+            if (slots.Count > 0) { Lobby59Log("Enter -> START (" + slots.Count + " seated)"); StartLobbyMode(InputKind.Keyboard, null, "Enter"); return; }
         }
         if (Kb.EscDown()) Leave(ks);
         if (Kb.VDown()) ToggleView();
@@ -885,7 +887,7 @@ public partial class Game : MonoBehaviour
             // only ever join (through PadGuard below) - pressed again by a seated pad they do nothing but a nudge
             if (pad.leftTrigger.wasPressedThisFrame)
             {
-                if (ps != null && !g && now - ps.joinTime > 0.25f) { Lobby59Log("LT on P" + (slots.IndexOf(ps) + 1) + " " + PadGuard.Describe(pad) + " -> START (" + slots.Count + " seated)"); StartPlay(); return; }
+                if (ps != null && !g && now - ps.joinTime > 0.25f) { Lobby59Log("LT on P" + (slots.IndexOf(ps) + 1) + " " + PadGuard.Describe(pad) + " -> START (" + slots.Count + " seated)"); StartLobbyMode(InputKind.Gamepad, pad, "LT"); return; }
                 if (ps == null && !g) Lobby59Log("LT on an unseated controller " + PadGuard.Describe(pad) + " ignored - press A to join first");
             }
             if (!pad.buttonSouth.wasPressedThisFrame && !pad.startButton.wasPressedThisFrame) continue;
@@ -909,8 +911,8 @@ public partial class Game : MonoBehaviour
             if (Hit(viewBar, pos)) { ToggleView(); Sfx.Play(Sfx.Click, 0.6f); continue; }
             if (Hit(playBtn, pos))
             {
-                if (FindSlot(InputKind.Touch) == null) Join(InputKind.Touch, null);
-                StartPlay(); return;
+                if (FreePlayTap(InputKind.Touch)) return;   // ffu67c: highlight first, tap again to start
+                continue;
             }
             if (LobbyTilePick(InputKind.Touch, pos)) continue;
             for (int i = 0; i < 4; i++)
@@ -923,7 +925,7 @@ public partial class Game : MonoBehaviour
             if (Hit(creditsBtn, mp)) CreditsToggle(true);
             else if (Hit(soundBtn, mp)) Sfx.CycleVolume();
             else if (Hit(viewBar, mp)) ToggleView();
-            else if (Hit(playBtn, mp)) { if (FindSlot(InputKind.Keyboard) == null) Join(InputKind.Keyboard, null); StartPlay(); return; }
+            else if (Hit(playBtn, mp)) { if (FreePlayTap(InputKind.Keyboard)) return; }   // ffu67c
             else if (!LobbyTilePick(InputKind.Keyboard, mp))
                 for (int i = 0; i < 4; i++)
                     if (Hit(cards[i], mp) && FindSlot(InputKind.Keyboard) == null && !HumanSeat(i)) Join(InputKind.Keyboard, null, i);
@@ -932,7 +934,7 @@ public partial class Game : MonoBehaviour
         if (slots.Count > 0 && autoStartT > 0f && !(Net.I != null && Net.I.Online))
         {
             autoStartT -= dt;
-            if (autoStartT <= 0f) { StartPlay(); return; }
+            if (autoStartT <= 0f) { StartLobbyMode(slots[0].kind, slots[0].pad, "auto start"); return; }
         }
         OrbitLobby(dt);
         RefreshLobby();
@@ -1283,8 +1285,8 @@ public partial class Game : MonoBehaviour
             if (RealRoom.Captures(f)) { RealRoom.Feed(f, i); i = new PIn(); }   // ffu18: first person inside the REAL ROOM
             f.SetInput(i, camYaw);
         }
-        if (viewPressed) ToggleView();
-        if (helpPressed) { help = !help; if (help) Cursor.lockState = CursorLockMode.None; Sfx.Play(Sfx.Click, 0.7f); }
+        if (viewPressed) { if (help) LobbyAsk("pad View"); else ToggleView(); }   // ffu67c: View in the pause menu = BACK TO LOBBY?
+        if (helpPressed) { help = !help; if (help) { Cursor.lockState = CursorLockMode.None; RumbleStopAll("pause"); } Sfx.Play(Sfx.Click, 0.7f); }
         if (help)
         {
             // sound level from the help / pause menu: Y on any joined pad (M works everywhere)
@@ -1461,10 +1463,10 @@ public partial class Game : MonoBehaviour
             LaunchSeq.View(sharedCam, sharedHud, any);
         }
         AscentViews();
-        TickRumble();
         StoryLate();   // ffu22: story camera + objective markers
     }
 
+    public static float SharedFrameR;   // ffu67c probe
     void UpdateShared(float dt)
     {
         Vector3 sum = Vector3.zero;
@@ -1479,13 +1481,29 @@ public partial class Game : MonoBehaviour
         Vector3 c = sum / n;
         float spread = 0f;
         foreach (var s in slots) spread = Mathf.Max(spread, (frogs[s.frog].FocusPoint - c).magnitude);
+        // ffu67c (Bill: 3 froggies sharing one screen, one jumps out of the trillion-story mech -> "their paraglider is invisible"):
+        // the mean + 120 m cap + 20 deg minimum down-pitch left a froggy 100+ m up (gliding down from a 160 m mech head) above the
+        // top of the frame. Frame the bounding sphere of everybody instead (centre of the box, radius -> distance from the FOV).
+        Vector3 bmin = frogs[slots[0].frog].FocusPoint, bmax = bmin;
+        foreach (var s in slots) { Vector3 q = frogs[s.frog].FocusPoint; bmin = Vector3.Min(bmin, q); bmax = Vector3.Max(bmax, q); }
+        float vert = bmax.y - bmin.y;
+        if (vert > 12f) { c = (bmin + bmax) * 0.5f; spread = Mathf.Max(spread, (bmax - bmin).magnitude * 0.5f); }
+        SharedFrameR = spread;
         sharedYaw += look;
         sharedPitch = Mathf.Clamp(sharedPitch - pitchIn * 0.5f, 20f, 80f);
         sharedZoom = Mathf.Clamp(sharedZoom * (1f + zoom * 1.2f * dt), 0.5f, 2.5f);
         float dist = Mathf.Clamp(spread * 1.5f + 14f, 14f, 120f) * sharedZoom;
+        float pitchUse = sharedPitch;
+        if (vert > 12f)
+        {
+            // fit the sphere in the vertical FOV (55 deg): r / sin(27.5) + margin; look more level so up AND down both fit
+            dist = Mathf.Max(dist, Mathf.Min(spread / Mathf.Sin(27.5f * Mathf.Deg2Rad) * 1.08f + 10f, 900f) * Mathf.Max(1f, sharedZoom));
+            pitchUse = Mathf.Lerp(sharedPitch, 12f, Mathf.Clamp01((vert - 12f) / 40f));
+        }
+        if (sharedCam.farClipPlane < dist + spread * 2f + 200f) sharedCam.farClipPlane = dist + spread * 2f + 200f;
         if (!sharedInit) { sharedFocus = c; sharedInit = true; }
         sharedFocus = Vector3.Lerp(sharedFocus, c, Mathf.Min(1f, dt * 4f));
-        Quaternion rot = Quaternion.Euler(sharedPitch, sharedYaw, 0f);
+        Quaternion rot = Quaternion.Euler(pitchUse, sharedYaw, 0f);
         sharedTrauma = Mathf.MoveTowards(sharedTrauma, 0f, dt * 1.5f);
         Vector3 shake = Random.insideUnitSphere * sharedTrauma * sharedTrauma * 0.8f;
         sharedCam.transform.position = sharedFocus + rot * new Vector3(0f, 0f, -dist) + shake;

@@ -157,3 +157,12 @@ male, flat, even voice (a short beep before each line) so a robot is never mista
   robot phone WHEELS tab (touch / mouse), help menu WHEEL SIZE row = YOUR vehicle (each pad's D-pad < > its own). 1x stock .. 4x,
   tyre radius capped at 2.4 m; stock size inside buildings. Each player's pick is remembered per vehicle; the vehicle keeps the last
   size it was driven at for robots / AI / Dad. Applies to every wheeled vehicle (both Cybertrucks, Monster Truck, bikes, RC cars ...).
+- **Rumble is per player** (ffu67c, Bill 2026-10-20): only the pad of the player who caused it rumbles (a mech pilot feels each
+  footfall; players on the ground feel a giant mech's steps by distance), short pulses with a 0.4 s cap, and every pad goes to
+  zero on exit / bail-out / death / world change / pause / focus loss. Never all pads, never Gamepad.current.
+- **The paraglider always shows**, in shared view (the shared camera frames everyone even when one froggy glides from a
+  trillion-story mech's head) and in split-screen. Froggies and their gear are never distance-culled.
+- **Lobby picks the mode explicitly** (ffu67c): STORY and FREE PLAY are both visible options; LB / RB, D-pad / stick, keys S / F
+  or a tap move the highlight, LT / Enter (or a second tap) starts the highlighted mode. No bumper starts a mode.
+- **BACK TO LOBBY** is in the pause (Start / Help) menu for pad, touch and mouse, with a confirm (View asks, A confirms;
+  Backspace + Enter; tap twice). It cleanly resets rumble, phones, vehicles, gliders, cameras and split-screen; seated players stay seated.
