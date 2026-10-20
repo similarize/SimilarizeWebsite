@@ -189,7 +189,7 @@ public class Ffu64 : MonoBehaviour
                     for (int k = 0; k < 24; k++)
                     {
                         float a = k * 15f * Mathf.Deg2Rad; Vector3 q = new Vector3(Mathf.Cos(a) * 110f, 0f, Mathf.Sin(a) * 110f - 20f);
-                        if (BigWheels.Building(q) != null) continue;
+                        if (BigWheels.Building(q) != null || Ranch.GY(q.x, q.z) < -0.5f || Layout.InPond(q.x, q.z)) continue;   // round 2: not in the pond
                         float dmin = 1e9f; foreach (var o2 in StoryMech.AllMechs) if (o2 != null && o2 != mech) dmin = Mathf.Min(dmin, Flat(o2.transform.position - q));
                         foreach (var v2 in Vehicle.All) if (v2 != null && v2 != mech && v2 != fly && v2 != heli) dmin = Mathf.Min(dmin, Flat(v2.transform.position - q) + 20f);
                         if (dmin > bestD) { bestD = dmin; spot = q; }
@@ -198,10 +198,18 @@ public class Ffu64 : MonoBehaviour
                     mStart = mech.transform.position; mYaw = mech.transform.eulerAngles.y;
                     Debug.Log("MECH64T moved the mech to open ground " + spot.ToString("0") + " clear " + bestD.ToString("0") + " m");
                     Debug.Log("MECH64T mech " + mech.Title + " H " + mech.height + " at " + mStart.ToString("0") + " drone " + fly.Title + " heli " + (heli != null ? heli.Title : "none") + " pads " + l.Count);
-                    Next(0, "collide");
-                    Vector3 c = torsoP != null ? torsoP.col.transform.position : mech.transform.position + Vector3.up * mech.height * 0.66f;
-                    Drop(fly, c + mech.transform.forward * (mech.height * 0.5f + 6f), -mech.transform.forward * 16f + Vector3.up * 6f);
+                    Next(-2, "settle");
+                }
+                break;
+            case -2:
+                if (phT > 1.5f)
+                {
+                    // the torso centre straight from the bone (the pad follows it in FixedUpdate)
+                    Vector3 c0 = torsoP != null ? torsoP.follow.TransformPoint(torsoP.c) : mech.transform.position + Vector3.up * mech.height * 0.66f;
+                    Debug.Log("MECH64T torso centre " + c0.ToString("0.0") + " pad at " + (torsoP != null ? torsoP.col.transform.position.ToString("0.0") : "-"));
+                    Drop(fly, c0 + mech.transform.forward * (mech.height * 0.5f + 6f), -mech.transform.forward * 16f + Vector3.up * 6f);
                     minIn = 1e9f; wasInside = false;
+                    Next(0, "collide");
                 }
                 break;
             case 0:
