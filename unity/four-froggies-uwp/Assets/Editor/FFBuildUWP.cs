@@ -100,8 +100,8 @@ public static class FFBuildUWP
             st.loadType = AudioClipLoadType.CompressedInMemory;
             st.compressionFormat = AudioCompressionFormat.Vorbis;
             st.quality = 0.6f;
+            st.preloadAudioData = true;
             imp.defaultSampleSettings = st;
-            imp.preloadAudioData = true;
             imp.loadInBackground = false;
             imp.SaveAndReimport();
             n++;
