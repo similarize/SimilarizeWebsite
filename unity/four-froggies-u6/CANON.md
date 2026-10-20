@@ -34,6 +34,12 @@ Dad (James's dad) is a non-playable character: he lives in the house (kitchen) a
 **Dad is a FROGGY DADDY** (Bill 2026-10-20): a bigger adult frog in the same style as the froggies - never a human. He has a
 daily life: cooking at the stove, washing dishes, wiping the counter, the fridge, walking round the house, sometimes out on the
 ranch. He can do everything froggies do (hop, swim, play, swing, ride, drive his own Cybertruck).
+- In game (ffu66, Bill 2026-10-20 "he should be doing stuff that all the froggies can do"): Dad is a FULL FROGGY. Indoors he keeps his
+  house life loop; out of the front door he is an AI-driven froggy agent (same froggy AI / verbs / vehicle code as the AI froggies)
+  who picks his own fun: hops about the lawn, swims in the pond, swings / naps in a garden hammock, plays with the kids, and drives
+  HIS OWN Cybertruck (garage bay 1) round the ranch and parks it back in his bay, then goes back inside. Robot phone PLAY tab + voice:
+  "Dad, come play", "Dad, go for a drive", "Dad, swim with me". He is a canon character, NOT a roster seat and not joinable - the
+  fixed roster (four froggies, four cats, two dogs) is unchanged. Dad stays on the ranch (he does not tag along to other worlds).
 **Robot voices are male + monotone/robotic** (Bill 2026-10-20): every robot (Figure 03 too, who keeps his playful words) speaks with a
 male, flat, even voice (a short beep before each line) so a robot is never mistaken for a human or a froggy; froggies sound distinct.
 

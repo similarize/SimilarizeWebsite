@@ -573,6 +573,7 @@ public class HouseWorld : MonoBehaviour
         bool anyone = false;
         if (Game.I != null) foreach (Frog f in Game.I.frogs) if (f != null && f.world == WorldId.House) anyone = true;
         if (root.gameObject.activeSelf != anyone) { root.gameObject.SetActive(anyone); foreach (var t in tanks) foreach (var fi in t.fish) fi.t.gameObject.SetActive(anyone); }
+        DadFroggy.Tick(anyone, Time.deltaTime);   // ffu66: Dad heads outdoors on his own now and then
         if (!anyone) return;
         HidePlayedPets();
         float dt = Mathf.Min(Time.deltaTime, 0.05f);
@@ -792,11 +793,37 @@ public class Dad : MonoBehaviour
     }
 
     public bool InWorld(WorldId w) { return outside ? w == WorldId.Ranch : w == WorldId.House; }
+    // ffu66: outdoors Dad is a full froggy agent (Frogs/FrogDad66.cs); the house Dad hides until he comes back in
+    bool away;
+    public static Vector3 PorchPoint()
+    {
+        Vector2 c = Layout.HouseC; float z1 = c.y + Layout.HouseSize.y * 0.5f;
+        float x = c.x, z = z1 + 4f;
+        return new Vector3(x, Ranch.GY(x, z), z);
+    }
+    void HandOut(string first, Frog with)
+    {
+        if (away) return;
+        away = true; outside = true; Outings++;
+        if (carry != null) { Destroy(carry.gameObject); carry = null; }
+        foreach (Transform ch in transform) ch.gameObject.SetActive(false);
+        DadFroggy.GoOut(PorchPoint(), first, with);
+    }
+    public void OutNow(string first, Frog with) { HandOut(first, with); }
+    public void BackIn()
+    {
+        away = false; outside = false;
+        foreach (Transform ch in transform) ch.gameObject.SetActive(true);
+        transform.position = HouseWorld.L(0f, 0f, 18.4f);
+        Debug.Log("DAD66 house Dad back inside");
+        act = "walk"; doT = 0f; plan = 0; step = 0;
+    }
 
     public void Talk(Frog f)
     {
         string s = Lines[line % Lines.Length];
         if (line % Lines.Length == 0 && f.nick != "James") s = "Dad: Hi " + f.nick + "! Is James with you?";
+        if (away) { string a = DadFroggy.Act; s = a == "drive" || a == "park" ? "Dad: Just taking my Cybertruck round the ranch!" : a == "swim" ? "Dad: The pond is lovely today - jump in!" : a == "swing" ? "Dad: Ahh, a little rest in the garden." : a == "play" ? "Dad: You're it! Catch me if you can!" : "Dad: Boing! Even daddies love a good hop."; }
         if (act == "cook" && line % 3 == 1) s = "Dad: Pancakes in five minutes! Froggy-shaped ones.";
         line++;
         wave = 1.8f; doT = Mathf.Max(doT, 2f);
@@ -805,7 +832,7 @@ public class Dad : MonoBehaviour
     }
 
     // probe: start a given plan now (0 cook, 1 dishes, 2 fridge + wipe, 4 walk round the house, 5 go outside)
-    public void DemoPlan(int p) { if (outside) GoIn(); plan = p; step = 0; doT = 0f; act = "walk"; }
+    public void DemoPlan(int p) { if (away) DadFroggy.ComeIn(); if (outside) GoIn(); plan = p; step = 0; doT = 0f; act = "walk"; }
 
     Vector3 HL(Vector2 p) { return HouseWorld.L(p.x, 0f, p.y); }
     Vector3 PorchSpot(float k)
@@ -833,6 +860,12 @@ public class Dad : MonoBehaviour
     {
         float dt = Mathf.Min(Time.deltaTime, 0.1f);
         wave = Mathf.Max(0f, wave - dt);
+        if (away)
+        {
+            // ffu66: the froggy agent is outside; "talk to Dad" follows him (and his truck)
+            if (hotspot != null && DadFroggy.F != null) hotspot.pos = DadFroggy.F.vehicle != null ? DadFroggy.F.vehicle.transform.position : DadFroggy.F.transform.position;
+            return;
+        }
         if (plan < 0) { plan = Random.Range(0, Plans.Length); step = 0; }
         Wp w = Plans[plan][step];
         Frog near = null; float nd = 4.5f;
@@ -859,6 +892,7 @@ public class Dad : MonoBehaviour
             Vector3 tgt = HL(w.p); tgt.y = pos.y; Vector3 to = tgt - pos;
             if (to.magnitude < 0.12f)
             {
+                if (w.act == "out" && DadFroggy.On) { HandOut(null, null); return; }   // ffu66: a full froggy outdoors
                 if (w.act == "out") { act = "out"; doT = w.secs; GoOut(); pos = transform.position; }
                 else if (w.act != null) { act = w.act; doT = w.secs; Activities++; Debug.Log("DAD65 " + act + " at " + w.p.ToString("0.0")); if (act == "fridge") Carry(); }
                 else NextStep();

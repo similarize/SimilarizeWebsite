@@ -56,7 +56,7 @@ public partial class Frog
 
     Frog TagLead()
     {
-        if (!TagOn || Story.Active || Game.I == null || Game.I.state != Game.State.Play) return null;
+        if (isDad || !TagOn || Story.Active || Game.I == null || Game.I.state != Game.State.Play) return null;   // ffu66: Dad stays on the ranch
         Frog p = P1();
         if (p == null || p == this || !p.human) return null;
         if (p.world == WorldId.Ranch && world == WorldId.Ranch) return null;   // both home: normal ranch life
