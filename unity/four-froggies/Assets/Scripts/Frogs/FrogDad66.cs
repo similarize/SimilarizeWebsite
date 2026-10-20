@@ -73,10 +73,22 @@ public static class DadFroggy
         if (Dad.I != null) Dad.I.BackIn();
     }
 
+    // nobody in the house: now and then Dad goes out for some fun on his own (inside, his life loop's front-door plan does it)
+    static float outT = -1f;
+    public static void Tick(bool anyoneInside, float dt)
+    {
+        if (!On || Dad.I == null || Active || Story.Active || Ffu33.Url("ffdemo") != null) return;
+        if (outT < 0f) outT = Random.Range(120f, 240f);
+        if (anyoneInside) return;
+        outT -= Mathf.Min(dt, 0.1f);
+        if (outT <= 0f) { outT = -1f; Dad.I.OutNow(null, null); }
+    }
+
     // robot phone / voice: "Dad, come play" (play), "Dad, go for a drive" (drive), "Dad, swim with me" (swim)
     public static string Order(Frog from, string what)
     {
         Orders++;
+        if (Dad.I == null && HouseWorld.I != null) HouseWorld.I.EnsureBuilt();   // Dad lives in the house (built on first use)
         if (Dad.I == null && F == null) return "Dad isn't home in this mode";
         string line = what == "drive" ? "Dad: Road trip round the ranch! I'll take my Cybertruck."
                     : what == "swim" ? "Dad: Last one in the pond is a tadpole!"
@@ -163,6 +175,7 @@ public partial class Frog
     // true = Dad set his own input this frame; false = the shared froggy AI below runs (garden seats)
     bool DadThink(float dt)
     {
+        if (Dad.I != null && Dad.I.hotspot != null) Dad.I.hotspot.pos = vehicle != null ? vehicle.transform.position : transform.position;   // "talk to Dad" follows him outdoors
         gardenCool = 999f; horseCool = 999f;   // he picks his own activities (the shared seat AI only runs when he chose a seat)
         callT = 0f; callTo = null;
         if (world != WorldId.Ranch) { SendTo(WorldId.Ranch, Dad.PorchPoint(), 0f); }

@@ -573,6 +573,7 @@ public class HouseWorld : MonoBehaviour
         bool anyone = false;
         if (Game.I != null) foreach (Frog f in Game.I.frogs) if (f != null && f.world == WorldId.House) anyone = true;
         if (root.gameObject.activeSelf != anyone) { root.gameObject.SetActive(anyone); foreach (var t in tanks) foreach (var fi in t.fish) fi.t.gameObject.SetActive(anyone); }
+        DadFroggy.Tick(anyone, Time.deltaTime);   // ffu66: Dad heads outdoors on his own now and then
         if (!anyone) return;
         HidePlayedPets();
         float dt = Mathf.Min(Time.deltaTime, 0.05f);

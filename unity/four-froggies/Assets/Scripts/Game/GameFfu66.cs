@@ -40,6 +40,7 @@ public class Ffu66 : MonoBehaviour
         switch (ph)
         {
             case -1:
+                if (Dad.I == null && HouseWorld.I != null && phT > 3f) HouseWorld.I.EnsureBuilt();   // fix round 1: Dad is built with the house (lazy)
                 if (phT > 4f && Dad.I != null)
                 {
                     FrogTo(Dad.PorchPoint() + new Vector3(4f, 0f, 3f));
