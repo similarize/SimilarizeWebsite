@@ -229,6 +229,11 @@ public static class VoiceBrain
         var it = new Intent { kind = "unknown", act = "", robot = selRobot, n = -1 };
         string t = Norm(said);
         if (t.Trim().Length == 0) { it.kind = "empty"; return it; }
+        if (t.Contains(" dad ") || t.Contains(" daddy ") || t.Contains(" papa "))   // ffu66: "Dad, come play" / "Dad, go for a drive" / "Dad, swim with me"
+        {
+            string da = t.Contains(" drive ") || t.Contains(" truck ") || t.Contains(" cybertruck ") || t.Contains(" ride ") ? "drive" : t.Contains(" swim ") || t.Contains(" pond ") ? "swim" : t.Contains(" play ") || t.Contains(" come ") ? "play" : null;
+            if (da != null) { it.kind = "dad"; it.act = "dad:" + da; it.key = "dad " + da; return it; }
+        }
         // which robot (longest name wins; the words are removed so "unit tree" is not "climb a tree")
         int best = -1; string bestKey = null;
         for (int r = 0; r < NameKeys.Length; r++) foreach (var k in NameKeys[r]) { string h; if (Has(t, k, out h) && (bestKey == null || h.Length > bestKey.Length)) { best = r; bestKey = h; } }
@@ -532,6 +537,14 @@ public partial class RobotPhone
         var robots = RanchLife.I != null ? RanchLife.I.robots : null;
         if (robots == null || robots.Count == 0) return;
         var it = VoiceBrain.Parse(said, sel, f);
+        if (it.kind == "dad")
+        {
+            string ds = DadFroggy.Order(f, it.act.Substring(4));
+            lastHeard = said; lastKind = it.kind; lastAct = it.act; lastReply = ds; heardCount++;
+            youT.text = "You: " + said; botT.text = ds; msg.text = ds; f.Toast(ds, 3f);
+            Debug.Log("VOICE66 heard '" + said + "' (" + how + ") -> dad " + it.act + " -> reply '" + ds + "'");
+            return;
+        }
         if (it.robot >= 0 && it.robot < robots.Count && it.robot != sel) sel = it.robot;
         Robot r = robots[sel];
         lastHeard = said; lastKind = it.kind; heardCount++;

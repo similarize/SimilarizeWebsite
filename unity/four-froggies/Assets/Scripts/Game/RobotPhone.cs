@@ -210,7 +210,8 @@ public partial class RobotPhone : MonoBehaviour   // ffu6q: + Game/RobotVoice66.
         string[] pv = { "follow", "tag", "hop", "swim", "dive", "climb", "horse", "skate", "bike", "ridewith", "catch", "hunt", "cook", "swing", "hammock", "collect", "dance", "piggy", "build", "race", "wave", "lights", "fort", "bugs", "pets", "ridepet", "fetch", "stay", "home" };
         string[] pl = { "Follow me", "Play tag", "Hop / bounce", "Swim with me", "Dive for pearls", "Climb a tree", "Ride a horse", "Skateboard", "Ride a bike", "Ride with me", "Play catch", "Hunt (bow)", "Cook + eat", "Push my swing", "Hammock nap", "Collect stuff", "Dance", "Piggyback!", "Build a castle", "Race me!", "Wave hi", "Lights on / off", "Build the tree fort", "Bug hunt (jar)", "Pet + feed animals", "Ride a cow", "Fetch with the dogs", "Stay here", "Go home (chores)" };
         for (int i = 0; i < pv.Length; i++) Add(6, pl[i], "play:" + pv[i]);
-        Add(6, "Me: go upstairs (house)", "me:upstairs");   // ffu65: shortcut to the 2nd floor of James's house (World/HouseUp64.cs)
+        Add(6, "Me: go upstairs (house)", "me:upstairs");
+        Add(6, "Dad, come play", "dad:play"); Add(6, "Dad, go for a drive", "dad:drive"); Add(6, "Dad, swim with me", "dad:swim");   // ffu66: Dad = a full froggy (Frogs/FrogDad66.cs)   // ffu65: shortcut to the 2nd floor of James's house (World/HouseUp64.cs)
     }
 
     // ffu54: DRIVE lists the vehicles next to the user first when off the ranch (Mars rover, moon buggy...), then the ranch ones
@@ -456,6 +457,7 @@ public partial class RobotPhone : MonoBehaviour   // ffu6q: + Game/RobotVoice66.
         // ffu54 ROBOTS EVERYWHERE (C2): no more "that order works on the ranch" - every order works from every world.
         // Orders about the user (CALL, PLAY, come / follow / wave / dance, DRIVE IT!, vehicles next to the user) bring the
         // robot to the user's world first; ranch-place orders (chores, charging, roof pads, ranch vehicles, missions) fly it home.
+        if (a.StartsWith("dad:")) { say = DadFroggy.Order(f, a.Substring(4)); msg.text = say; f.Toast(say, 3f); Sfx.Play(Sfx.Pickup, 0.5f, 0.9f); return; }   // ffu66
         if (a == "me:upstairs") { say = HouseUp64.GoUpstairs(f); msg.text = say; if (say.Length > 0) f.Toast(say, 2.8f); Sfx.Play(Sfx.Door, 0.7f); return; }
         if (a == "rcall:all")
         {
