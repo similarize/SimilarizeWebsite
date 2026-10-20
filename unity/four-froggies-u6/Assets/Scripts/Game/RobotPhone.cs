@@ -448,10 +448,11 @@ public partial class RobotPhone : MonoBehaviour   // ffu6q: + Game/RobotVoice66.
             string w = a.Substring(7);
             Vehicle wv = f.vehicle;
             if (!BigWheels.Resizable(wv)) { say = "Wheel size: get in a vehicle to resize its wheels"; msg.text = say; f.Toast(say, 1.8f); Sfx.Play(Sfx.Click, 0.4f, 0.7f); return; }
-            if (w == "-") BigWheels.NudgeFor(wv, -1, "phone"); else if (w == "+") BigWheels.NudgeFor(wv, 1, "phone");
-            else { float fv; if (float.TryParse(w, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out fv)) BigWheels.SetFor(wv, fv, "phone"); }
-            say = "Wheel size " + BigWheels.Readout(wv) + " (this vehicle only)";
-            msg.text = say; f.Toast(BigWheels.Readout(wv), 1.6f); Sfx.Play(Sfx.Pickup, 0.45f, 0.8f + BigWheels.FracOf(BigWheels.Want(wv)) * 0.6f);
+            if (wv.driver != f) { say = "Wheel size: only the driver changes the wheels"; msg.text = say; f.Toast(say, 1.8f); Sfx.Play(Sfx.Click, 0.4f, 0.7f); return; }   // ffu67: per player
+            if (w == "-") BigWheels.NudgeFor(wv, -1, "phone", f); else if (w == "+") BigWheels.NudgeFor(wv, 1, "phone", f);
+            else { float fv; if (float.TryParse(w, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out fv)) BigWheels.SetFor(wv, fv, "phone", true, f); }
+            say = "Wheel size " + BigWheels.Readout(wv) + " (your " + wv.Title + " only)";
+            msg.text = say; f.Toast(BigWheels.InchLabel(wv), 1.6f); Sfx.Play(Sfx.Pickup, 0.45f, 0.8f + BigWheels.FracOf(BigWheels.Want(wv)) * 0.6f);
             return;
         }
         // ffu54 ROBOTS EVERYWHERE (C2): no more "that order works on the ranch" - every order works from every world.
@@ -710,7 +711,7 @@ public partial class RobotPhone : MonoBehaviour   // ffu6q: + Game/RobotVoice66.
             if (cur == NT + i) c = new Color(1f, 0.75f, 0.2f, 0.95f);
             itemBtns[i].color = c;
         }
-        if (tab == 5) { Vehicle uv = user != null ? user.vehicle : null; string wl = BigWheels.Resizable(uv) ? "WHEEL SIZE " + BigWheels.LabelFor(uv) + " - " + uv.Title + " only (1x - 4x)" : "Get in a vehicle to resize its wheels"; if (msg.text != wl && !msg.text.StartsWith("Wheel size")) msg.text = wl; }
+        if (tab == 5) { Vehicle uv = user != null ? user.vehicle : null; string wl = BigWheels.Resizable(uv) ? "WHEEL SIZE " + BigWheels.Short(uv) + " - your " + uv.Title + " only (1x - 4x)" : "Get in a vehicle to resize its wheels"; if (msg.text != wl && !msg.text.StartsWith("Wheel size")) msg.text = wl; }
         InputKind ik = user != null ? user.inputKind : InputKind.Keyboard;
         string h = ik == InputKind.Gamepad ? "Up/Down robot · Left/Right order · A send · RB tab · Y feed · X full · RT talk · LB / B close"
                  : ik == InputKind.Touch ? "Swipe the robot · tap a tab, then an order · TALK to speak · PHONE closes"

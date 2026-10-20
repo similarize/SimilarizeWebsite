@@ -145,3 +145,9 @@ male, flat, even voice (a short beep before each line) so a robot is never mista
 - **Stairs are easy to find + you can look up indoors** (ffu65, Bill 2026-10-20 Pixel 9): signs, yellow floor arrows and a first-visit
   hint lead from the front door to the stairs; the robot phone PLAY tab has "Me: go upstairs (house)"; inside the house, the 2nd
   floor and the campers the view tilts up to 65 deg (touch drag, right stick, mouse) to see the ceiling and lamps.
+- **Wheel size is per player, per vehicle** (ffu67, Bill 2026-10-20: "as a user, not as a whole game"): each player changes only
+  the vehicle they are DRIVING (pads in split-screen never change another player's truck). Pad while driving: D-pad UP = bigger
+  wheels, D-pad DOWN = smaller (hold repeats; toast "Wheels: 37 in"), View + D-pad up / down = camera zoom while driving. Keys [ / ],
+  robot phone WHEELS tab (touch / mouse), help menu WHEEL SIZE row = YOUR vehicle (each pad's D-pad < > its own). 1x stock .. 4x,
+  tyre radius capped at 2.4 m; stock size inside buildings. Each player's pick is remembered per vehicle; the vehicle keeps the last
+  size it was driven at for robots / AI / Dad. Applies to every wheeled vehicle (both Cybertrucks, Monster Truck, bikes, RC cars ...).

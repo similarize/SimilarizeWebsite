@@ -1310,18 +1310,31 @@ public partial class Game : MonoBehaviour
 
     // ffu42: the WHEEL SIZE slider - every joined pad (D-pad < > / LB RB), keys, mouse, touch. ffu45: it resizes the
     // vehicle the player who opened the menu is IN (HelpVehicle); greyed out on foot.
+    // ffu67 (Bill: "the help menu just applies to the whole game instead of each individual player"): each pad now
+    // resizes ITS OWN player's vehicle (never another player's), with a toast in that player's view; keys -> the keyboard
+    // player's vehicle; the drawn bar (mouse / touch) = the player who opened the menu.
+    static Vehicle OwnBig(Frog f) { return f != null && f.vehicle != null && f.vehicle.driver == f && BigWheels.Resizable(f.vehicle) ? f.vehicle : null; }
     void WheelSliderTick()
     {
         Vehicle hv = HelpVehicle;
-        if (hv == null) { wheelDrag = false; return; }
         foreach (var s in slots)
         {
             if (s.kind != InputKind.Gamepad || s.pad == null || !s.pad.added || IsGhostDev(s.pad)) continue;
-            if (s.pad.dpad.left.wasPressedThisFrame || s.pad.leftShoulder.wasPressedThisFrame) { BigWheels.NudgeFor(hv, -1, "pad"); Sfx.Play(Sfx.Click, 0.5f, 0.9f); break; }
-            if (s.pad.dpad.right.wasPressedThisFrame || s.pad.rightShoulder.wasPressedThisFrame) { BigWheels.NudgeFor(hv, 1, "pad"); Sfx.Play(Sfx.Click, 0.5f, 1.1f); break; }
+            int d = s.pad.dpad.left.wasPressedThisFrame || s.pad.leftShoulder.wasPressedThisFrame ? -1 : s.pad.dpad.right.wasPressedThisFrame || s.pad.rightShoulder.wasPressedThisFrame ? 1 : 0;
+            if (d == 0) continue;
+            Frog pf = s.frog >= 0 && s.frog < frogs.Count ? frogs[s.frog] : null;
+            Vehicle ov = OwnBig(pf);
+            if (ov == null) { if (pf != null) pf.Toast("Get in (and drive) a vehicle to resize its wheels", 1.4f); continue; }
+            BigWheels.NudgeFor(ov, d, "help menu pad", pf); pf.Toast(BigWheels.InchLabel(ov), 1.6f);
+            Sfx.Play(Sfx.Click, 0.5f, d > 0 ? 1.1f : 0.9f);
         }
+        if (hv == null) { wheelDrag = false; }
+        Slot kbs = null; foreach (var s in slots) if (s.kind == InputKind.Keyboard) kbs = s;
+        Frog kf = kbs != null && kbs.frog >= 0 && kbs.frog < frogs.Count ? frogs[kbs.frog] : null;
+        Vehicle kv = OwnBig(kf) ?? hv;
         int kn = Kb.WheelNudge();
-        if (kn != 0) { BigWheels.NudgeFor(hv, kn, "keys"); Sfx.Play(Sfx.Click, 0.5f, kn > 0 ? 1.1f : 0.9f); }
+        if (kn != 0 && kv != null) { BigWheels.NudgeFor(kv, kn, "keys", kf != null && kf.vehicle == kv ? kf : null); Sfx.Play(Sfx.Click, 0.5f, kn > 0 ? 1.1f : 0.9f); }
+        if (hv == null) return;
         var mouse = UnityEngine.InputSystem.Mouse.current;
         bool held = false; Vector2 hp = Vector2.zero;
         if (mouse != null && Cursor.lockState != CursorLockMode.Locked)
@@ -1339,7 +1352,7 @@ public partial class Game : MonoBehaviour
             if (RectTransformUtility.ScreenPointToLocalPointInRectangle(rt, hp, null, out lp))
             {
                 float w = rt.rect.width, before = BigWheels.Want(hv);
-                BigWheels.SetFracFor(hv, (lp.x - rt.rect.xMin) / w, "drag");
+                BigWheels.SetFracFor(hv, (lp.x - rt.rect.xMin) / w, "drag", helpBy != null && helpBy.frog >= 0 && helpBy.frog < frogs.Count ? frogs[helpBy.frog] : null);
                 if (BigWheels.Want(hv) != before) Sfx.Play(Sfx.Click, 0.35f, 0.8f + BigWheels.FracOf(BigWheels.Want(hv)) * 0.5f);
             }
         }

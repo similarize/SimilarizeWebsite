@@ -60,38 +60,72 @@ public static class BigWheels
         if (gv != null) return gv.BigOk;
         return v is Bike || v is RcCar;
     }
-    // the size this vehicle's owner picked (1x unless changed)
+    // ---------------- ffu67: PER PLAYER, per vehicle (Bill Oct 20: "as a user, not as a whole game") ----------------
+    // A human player's own pick for a vehicle is saved under "ff.whp<charId>.<vehicle id>" (that froggy's seat), and the
+    // vehicle's own key keeps the size it was last driven at (robots / AI / Dad / parked use that). When a player gets in,
+    // the tyres ease to THAT player's size for this vehicle (or stay as the vehicle is, if they never set one). Each
+    // split-screen player only ever changes the vehicle they are driving.
+    static readonly System.Collections.Generic.Dictionary<string, float> pwant = new System.Collections.Generic.Dictionary<string, float>();
+    public static bool Human(Frog f) { return f != null && f.human && !f.isDad; }
+    static string PKey(Frog f, Vehicle v) { return "ff.whp" + f.charId + "." + Key(v).Substring(6); }
+    // the size this vehicle should be at: its human driver's own pick, else the vehicle's (1x unless changed)
     public static float Want(Vehicle v)
     {
         if (v == null) return 1f;
         Migrate();
+        Frog d = v.driver;
+        if (Human(d))
+        {
+            string pk = PKey(d, v); float ps;
+            if (!pwant.TryGetValue(pk, out ps)) { int raw = SaveStore.GetInt(pk, -1); ps = raw < 0 ? -1f : Mathf.Clamp(raw / 4f, Min, Max); pwant[pk] = ps; }
+            if (ps > 0f) return ps;
+        }
+        return VehicleWant(v);
+    }
+    static float VehicleWant(Vehicle v)
+    {
         string k = Key(v); float s;
         if (!want.TryGetValue(k, out s)) { s = Mathf.Clamp(SaveStore.GetInt(k, 4) / 4f, Min, Max); want[k] = s; }
         return s;
     }
-    public static void SetFor(Vehicle v, float val, string why, bool save = true)
+    // by = the player changing it (default: the vehicle's human driver); robots / demos without a human write the vehicle only
+    public static void SetFor(Vehicle v, float val, string why, bool save = true, Frog by = null)
     {
         if (v == null) return;
         val = Mathf.Clamp(Mathf.Round(val / Step) * Step, Min, Max);
-        if (Mathf.Abs(val - Want(v)) < 0.001f) return;
+        if (by == null && Human(v.driver)) by = v.driver;
+        if (Mathf.Abs(val - Want(v)) < 0.001f && Mathf.Abs(val - VehicleWant(v)) < 0.001f) return;
         string k = Key(v);
         want[k] = val; Changes++;
-        if (save) { SaveStore.SetInt(k, Mathf.RoundToInt(val * 4f)); SaveStore.Flush(); }
-        Debug.Log("BigWheels: " + v.Title + " wheel size " + LabelOf(val) + " (" + why + ")" + (Capped(v) ? " - held at stock inside " + Building(v.transform.position) : ""));
+        if (save) SaveStore.SetInt(k, Mathf.RoundToInt(val * 4f));
+        if (by != null) { string pk = PKey(by, v); pwant[pk] = val; if (save) SaveStore.SetInt(pk, Mathf.RoundToInt(val * 4f)); }
+        if (save) SaveStore.Flush();
+        Debug.Log("BigWheels: " + v.Title + " wheel size " + LabelOf(val) + " = " + InchesOf(v, val) + " in (" + why + (by != null ? ", player " + by.charId + " " + by.name : ", vehicle") + ")" + (Capped(v) ? " - held at stock inside " + Building(v.transform.position) : ""));
     }
-    public static void NudgeFor(Vehicle v, int d, string why) { SetFor(v, Want(v) + d * Step, why); }
-    public static void SetFracFor(Vehicle v, float f, string why) { SetFor(v, Min + Mathf.Clamp01(f) * (Max - Min), why); }
+    // stock tyre radius per vehicle (recorded by Target, which every resizable vehicle calls each tick)
+    static readonly System.Collections.Generic.Dictionary<int, float> stockR = new System.Collections.Generic.Dictionary<int, float>();
+    public static int InchesOf(Vehicle v, float k)
+    {
+        float r0; if (v == null || !stockR.TryGetValue(v.GetHashCode(), out r0) || r0 < 0.01f) return 0;
+        return Mathf.RoundToInt(2f * RFor(r0, k) / 0.0254f);
+    }
+    public static string Short(Vehicle v) { float k = Want(v); int ins = InchesOf(v, k); return (ins > 0 ? ins + " in  ·  " : "") + (k < 1.001f ? "stock" : k.ToString("0.##") + "x" + (k >= 2.5f ? " MONSTER" : "")); }
+    // "Wheels: 37 in (1.25x)" - what the player sees when they change it
+    public static string InchLabel(Vehicle v)
+    {
+        float k = Want(v); int ins = InchesOf(v, k);
+        string l = (ins > 0 ? "Wheels: " + ins + " in" : "Wheels") + "  (" + LabelOf(k) + ")";
+        if (Capped(v) && k > 1.001f) l += " - stock size inside the " + Building(v.transform.position) + ", grows outside";
+        else if (Blocked(v) && k > 1.001f) l += " - no room to grow here";
+        return l;
+    }
+    public static void NudgeFor(Vehicle v, int d, string why, Frog by = null) { SetFor(v, Want(v) + d * Step, why, true, by); }
+    public static void SetFracFor(Vehicle v, float f, string why, Frog by = null) { SetFor(v, Min + Mathf.Clamp01(f) * (Max - Min), why, true, by); }
     public static float FracOf(float k) { return (k - Min) / (Max - Min); }
     public static string LabelOf(float k) { return k < 1.001f ? "1x (stock)" : k.ToString("0.##") + "x" + (k >= 2.5f ? " MONSTER" : ""); }
     public static string LabelFor(Vehicle v) { return LabelOf(Want(v)); }
     // the wheel size readout for a vehicle: "2.5x MONSTER" + why it isn't there yet
-    public static string Readout(Vehicle v)
-    {
-        string s = v.Title + " wheels " + LabelFor(v);
-        if (Capped(v) && Want(v) > 1.001f) s += " - stock size inside the " + Building(v.transform.position) + ", grows outside";
-        else if (Blocked(v) && Want(v) > 1.001f) s += " - no room to grow here";
-        return s;
-    }
+    public static string Readout(Vehicle v) { return v.Title + " - " + InchLabel(v); }   // ffu67: inches + size
 
     // enclosed buildings a vehicle drives in and out of (+ 5 m in front of / around them)
     public static string Building(Vector3 p)
@@ -114,6 +148,7 @@ public static class BigWheels
     public static float Target(Vehicle v, float cur, float r0)
     {
         if (v == null || v.stowed) return 1f;
+        stockR[v.GetHashCode()] = r0;   // ffu67: for the inch readout
         float w = Want(v);
         if (w <= 1.001f && cur <= 1.001f) return 1f;
         if (Building(v.transform.position) != null) return 1f;
