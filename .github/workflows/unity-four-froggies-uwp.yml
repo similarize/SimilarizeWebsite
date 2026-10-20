@@ -6,7 +6,7 @@ name: Unity UWP (Xbox Dev Mode) - Four Froggies
 #  - windows-2022 runner (Unity Windows editor + UWP module, Visual Studio 2022 for the IL2CPP C++ / appx packaging).
 #  - Unity setup + personal-license activation = the proven RageAgainstThePixel actions (same as WebGL / Windows / Android).
 #  - UWP-only sources live in unity/four-froggies-uwp/ and are copied into the project on the runner
-#    (Assets/Editor/FFBuildUWP.cs = build entry, Assets/Scripts/Platform/FFXboxUWP.cs = low Perf60 tier + B/back guard),
+#    (Assets/Editor/FFBuildUWP.cs = build entry, Assets/Scripts/Platform/FFXboxUWP.cs = One S profile, audio re-open + sound check, FPS counter, B/back guard),
 #    so this workflow never changes what the WebGL / Windows / Android builds compile, and pushing them never starts WebGL.
 #  - shares the Four Froggies concurrency group with cancel-in-progress off (queues behind a running WebGL build). Only
 #    dispatch / push when no Four Froggies run is queued (a queued one would be cancelled - same caveat as Windows).
@@ -15,9 +15,9 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release tag (e.g. ff-uwp-ffu66)'
+        description: 'Release tag (e.g. ff-uwp-ffu67x)'
         required: false
-        default: 'ff-uwp-ffu66'
+        default: 'ff-uwp-ffu67x'
       smoke:
         description: 'Best-effort install + launch on the runner (true/false)'
         required: false
@@ -39,7 +39,7 @@ concurrency:
 env:
   PROJECT_DIR: src/unity/four-froggies
   OVERLAY_DIR: src/unity/four-froggies-uwp
-  TAG: ${{ github.event.inputs.tag || 'ff-uwp-ffu66' }}
+  TAG: ${{ github.event.inputs.tag || 'ff-uwp-ffu67x' }}
   SMOKE: ${{ github.event.inputs.smoke || 'true' }}
   PFX_PASS: fourfroggies
   CERT_SUBJECT: CN=Similarize
@@ -310,13 +310,13 @@ jobs:
             $aumid = "$($p.PackageFamilyName)!$appId"
             L "SMOKE launch $aumid"
             Start-Process "shell:AppsFolder\$aumid"
-            Start-Sleep -Seconds 75
+            Start-Sleep -Seconds 100
             Add-Type -AssemblyName System.Windows.Forms, System.Drawing
             try {
               $bd = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
               $bmp = New-Object System.Drawing.Bitmap $bd.Width, $bd.Height
               $g = [System.Drawing.Graphics]::FromImage($bmp); $g.CopyFromScreen($bd.Location, [System.Drawing.Point]::Empty, $bd.Size)
-              $bmp.Save((Join-Path $S 'screen-t75.png')); L "SMOKE screenshot $($bd.Width)x$($bd.Height)"
+              $bmp.Save((Join-Path $S 'screen-t100.png')); L "SMOKE screenshot $($bd.Width)x$($bd.Height)"
             } catch { L "SMOKE screenshot failed: $($_.Exception.Message)" }
             $proc = Get-Process | Where-Object { $_.Path -and $_.Path -like "$($p.InstallLocation)*" }
             L "SMOKE running processes: $(($proc | ForEach-Object { $_.ProcessName + ' ' + [int]($_.WorkingSet64/1MB) + ' MB' }) -join ', ')"
@@ -324,7 +324,7 @@ jobs:
             if (Test-Path $pl) {
               Copy-Item $pl (Join-Path $S 'UnityPlayer.log')
               L "=== SMOKE UnityPlayer.log (grep)"
-              Select-String -Path $pl -Pattern 'FFXBOX|FFPlatform|PERF60|FFLocalMusic|Realism|PADS|Exception|ERROR|Direct3D|Renderer|Version:' | Select-Object -First 80 | ForEach-Object { L $_.Line }
+              Select-String -Path $pl -Pattern 'FFXBOX|FFPlatform|PERF60|FFLocalMusic|Sfx:|FMOD|Realism|TERRAIN56|PADS|Exception|ERROR|Direct3D|Renderer|Version:' | Select-Object -First 140 | ForEach-Object { L $_.Line }
             } else { L "SMOKE no UnityPlayer.log at $pl (app not activated on this runner?)" }
             $proc | Stop-Process -Force -ErrorAction SilentlyContinue
           } catch { L "SMOKE error: $($_.Exception.Message)" }

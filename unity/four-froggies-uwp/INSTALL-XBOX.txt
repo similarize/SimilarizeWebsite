@@ -23,7 +23,13 @@ The Xbox must already be in Developer Mode (Dev Home is the home screen).
    - Dependencies: click "Choose file" and add __DEPS__ (add each one if there's more than one), click Next.
    - Click Install (Start). Wait for "Package successfully registered".
    If the Xbox says the dependency is already installed / a newer one is present, that's fine - just install the game.
-   To update later: install the newer bundle the same way (it replaces the old one; your save stays).
+
+   UPDATING from an older Four Froggies build (e.g. ff-uwp-ffu66): either
+     a) just install this bundle over it the same way (Device Portal -> Add); it replaces the old one and your save stays, or
+     b) if Device Portal refuses (e.g. "a higher version is already installed" / package conflict): first uninstall the old
+        one - in Dev Home highlight Four Froggies, press the View button (two squares) -> Uninstall (or Device Portal ->
+        My games & apps -> the "..." / Remove) - then install this one. Uninstalling clears the save.
+   After installing, check the app type is still "Game" (step 4).
 
 4) Back on the Xbox, in Dev Home, find "Four Froggies" in the list of games and apps.
    Before the first launch: highlight it, press the View button (two squares) -> "View details",
@@ -32,7 +38,22 @@ The Xbox must already be in Developer Mode (Dev Home is the home screen).
 
 Playing: each Xbox controller is one froggy. A = join / start, D-pad = pick a character, B = leave / back.
 Online rooms are only in the web version (similarize.com/games) for now; on Xbox it is local couch play.
-Graphics start on the LOW quality tier for the Xbox One S; it may step up on its own if it holds 60 fps.
+Xbox One S profile (this build): 1280x720 render scaled to the TV, 30 fps cap, low quality tier locked (no stepping up),
+lite grass / scans, no anti-aliasing, no post-processing, one short shadow range, half-resolution textures.
+
+On-screen checks (hold the buttons; a reminder shows for a few seconds after launch):
+  * hold View 2 s        -> FPS counter (fps, frame ms, worst ms, render size, quality). Hold View 2 s again -> tries an
+                            uncapped 60 fps mode; once more -> counter off (back to 30). Letting go of View may also switch
+                            split / shared screen like a normal View press - tap View again to switch back.
+  * hold View + Menu 2 s -> SOUND CHECK panel: re-opens the audio output, plays a short two-note test tone and shows what the
+                            mixer is doing. While it is open, D-pad Right tries the next output mode (stereo 48 kHz, 7.1,
+                            5.1, stereo 44.1 kHz, bigger buffer) with a test tone each time; the last one tried is kept for the
+                            next launch. Hold View + Menu 2 s again to close (Menu may also open the help screen - press Menu
+                            to close it).
+  Please send back: the FPS numbers in the ranch and in a vehicle, and whether you hear the test tone / music, plus a phone photo
+  of the SOUND CHECK panel if it stays silent.
+  The full log is on the Xbox: Device Portal -> File explorer -> LocalAppData -> SimilarizeFourFroggies_... -> TempState ->
+  UnityPlayer.log (lines starting with FFXBOX).
 
 If something goes wrong: in Device Portal open "Apps" or "Performance" to see whether it is running, and
 "Diagnostics > Crash data" if it closes. Uninstall from Dev Home (View button -> Uninstall) or from Device Portal.

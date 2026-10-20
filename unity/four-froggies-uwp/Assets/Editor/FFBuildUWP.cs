@@ -61,6 +61,30 @@ public static class FFBuildUWP
         catch (Exception e) { Debug.LogWarning("FFUWP tile " + type + ": " + e.Message); }
     }
 
+    // ffu67x: audio project settings for the console - Unity audio on, 48 kHz (the Xbox mix rate), stereo, 1024-sample
+    // DSP buffer (the runtime FFXboxAudio re-opens the output with the same values, and can try others from its panel)
+    static void AudioProject()
+    {
+        try
+        {
+            UnityEngine.Object[] objs = AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/AudioManager.asset");
+            if (objs == null || objs.Length == 0) { Debug.LogWarning("FFUWP audio: AudioManager.asset not found"); return; }
+            var so = new SerializedObject(objs[0]);
+            string log = "";
+            SerializedProperty p;
+            p = so.FindProperty("m_DisableAudio"); if (p != null) { log += " disableAudio " + p.boolValue + "->false"; p.boolValue = false; }
+            p = so.FindProperty("m_SampleRate"); if (p != null) { log += " sampleRate " + p.intValue + "->48000"; p.intValue = 48000; }
+            p = so.FindProperty("m_DSPBufferSize"); if (p != null) { log += " dsp " + p.intValue + "->1024"; p.intValue = 1024; }
+            p = so.FindProperty("m_RequestedDSPBufferSize"); if (p != null) { log += " requestedDsp " + p.intValue + "->1024"; p.intValue = 1024; }
+            p = so.FindProperty("Default Speaker Mode"); if (p != null) { log += " speakerMode " + p.intValue + "->2"; p.intValue = 2; }
+            p = so.FindProperty("m_Volume"); if (p != null) { log += " volume " + p.floatValue; if (p.floatValue <= 0.01f) p.floatValue = 1f; }
+            so.ApplyModifiedPropertiesWithoutUndo();
+            AssetDatabase.SaveAssets();
+            Debug.Log("FFUWP audio:" + log);
+        }
+        catch (Exception e) { Debug.LogWarning("FFUWP audio settings: " + e.Message); }
+    }
+
     static int Run()
     {
         Debug.Log("BuildScript: UWP start, Unity " + Application.unityVersion);
@@ -73,6 +97,7 @@ public static class FFBuildUWP
         Call("EnsureFolder", "Assets", "Generated");
         Call("EnsureFolder", "Assets", "Scenes");
         Call("ImportNativeMusic");
+        AudioProject();
 
         // ---- UWP player settings ----
         PlayerSettings.SetScriptingBackend(BuildTargetGroup.WSA, ScriptingImplementation.IL2CPP);   // UWP is IL2CPP only
