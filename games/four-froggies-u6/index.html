@@ -37,6 +37,7 @@
   <button id="fs" title="Fullscreen" aria-label="Fullscreen"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="display:block"><path d="M1.5 5.5v-4h4M10.5 1.5h4v4M14.5 10.5v4h-4M5.5 14.5h-4v-4"/></svg></button>
   <a href="../" title="Back to the arcade">✕ Arcade</a>
 </div>
+<script src="../shared/xbox-compat.js?v=xb1"></script>
 <script>
   // ffu13 online Host / Join: PeerJS (pinned version on jsDelivr) is loaded only when a player hosts or joins (FFNet.jslib)
   window.FFNetLoadPeer = function (cb) {
@@ -53,6 +54,9 @@
   var name = "WebGL";
   var canvas = document.getElementById("unity-canvas");
   var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));
+  // ffxb1: Xbox / console Edge (or ?lowmem=1): ../shared/xbox-compat.js already hid navigator.gpu (WebGL 2) before the
+  // loader; here the page caps the render size (<=1280x720, DPR<=1) and drops canvas MSAA. ?lowmem=0 turns it off.
+  window.FFLowMem = !!(window.SimXbox && window.SimXbox.lowmem);
   // ffu17: render at the screen's real pixel density. Lobby (menus, character turntables): up to 2.5x on phones and
   // desktops (Pixel 9 is 2.625x) so text and models are 1:1 crisp; gameplay keeps the old caps (phones 1.5x, desktop 2x)
   // for frame rate. The game switches between them through FFSetDPR (FFDisplay.jslib). ?dpr=N forces one value.
@@ -60,6 +64,11 @@
     var raw = window.devicePixelRatio || 1, q = /[?&]dpr=([0-9.]+)/.exec(location.search), f = q ? parseFloat(q[1]) : 0;
     window.FFDPR = { raw: raw, lobby: Math.min(raw, 2.5), game: Math.min(raw, 2), gameLite: Math.min(raw, 1.5), force: f > 0.4 && f < 4.1 ? f : 0 };
     if (window.FFDPR.force) window.FFDPR.lobby = window.FFDPR.game = window.FFDPR.force;
+    if (window.FFLowMem && !window.FFDPR.force) {
+      var lm = window.SimXbox.capDpr(raw), w = window.innerWidth, h = window.innerHeight;
+      window.FFDPR.force = lm; window.FFDPR.lobby = window.FFDPR.game = window.FFDPR.gameLite = lm;
+      console.log("FF page: low-memory DPR " + lm.toFixed(3) + " for " + w + "x" + h + " -> " + Math.round(w * lm) + "x" + Math.round(h * lm));
+    }
   })();
   // ffu6: Unity 6.6 build - WebGPU first, WebGL 2 fallback (the engine picks). ?webgpu=0 hides navigator.gpu to force WebGL 2.
   (function () {
@@ -70,7 +79,7 @@
   // canvas, jagged 3D edges behind the lobby and in game). Ask the browser for an antialiased (MSAA) backbuffer on the
   // game canvas. ?aa=0 turns it off.
   (function () {
-    if (/[?&]aa=0/.test(location.search)) return;
+    if (/[?&]aa=0/.test(location.search) || window.FFLowMem) return;
     // ffu60: ?quality=low, or this browser's frame-rate governor ended on the low tier last time -> no canvas MSAA
     var q60 = /[?&]quality=([a-z]+)/.exec(location.search), ql = null;
     try { ql = localStorage.getItem("ffq60"); } catch (e) { }
@@ -94,6 +103,8 @@
     devicePixelRatio: window.FFDPR.lobby,
     showBanner: function (msg, type) { if (type === "error") { var e = document.getElementById("err"); e.style.display = "block"; e.textContent = msg; } else console.log(msg); }
   };
+  // ffxb1: low-memory mode streams the data file without keeping a second copy in the IndexedDB cache (and caps DPR)
+  if (window.SimXbox) window.SimXbox.applyConfig(config);
   var fill = document.getElementById("fill"), pct = document.getElementById("pct"), loader = document.getElementById("loader");
   var script = document.createElement("script");
   script.src = buildUrl + "/" + name + ".loader.js?v=202610201440-196a390";
