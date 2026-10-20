@@ -45,7 +45,7 @@ public class Ffu65 : MonoBehaviour
     bool LookUp(string where, float ceilY)
     {
         CamRig.DemoLookY = UpDeg < 62f ? 2.5f : 0f;
-        if (phT < 8f && UpDeg < 62f) return false;
+        if (phT < 25f && UpDeg < 62f) return false;   // 65a: 8 s ran out at probe fps (pitch only -20 in the living room)
         CamRig.DemoLookY = 0f;
         Vector3 cp = Cam.transform.position;
         bool inWall = Physics.CheckSphere(cp, 0.05f, 1 << HouseWorld.WallLayer, QueryTriggerInteraction.Ignore);
@@ -81,7 +81,7 @@ public class Ffu65 : MonoBehaviour
             case 4:
                 Walk(Vector3.left); hiY = Mathf.Max(hiY, LY);
                 camOn = true; camPos = HL(-17f, 3.2f, 13f); camLook = f.transform.position + Vector3.up * 0.6f;
-                if (phT > 40f || hiY > 4.75f)
+                if (phT > 70f || hiY > 4.75f)
                 {
                     Check("walk up the stairs (" + (ph == 2 ? "middle" : "open side") + ") to the 2nd floor", hiY > 4.6f, "highest local y " + hiY.ToString("0.00") + " at x " + (f.transform.position.x - Worlds.HouseO.x).ToString("0.0") + " z " + (f.transform.position.z - Worlds.HouseO.z).ToString("0.00"));
                     if (hiY < 4.6f) f.SendTo(WorldId.House, HL(-29f, 4.95f, ph == 2 ? 5.4f : 6.1f), 90f);
@@ -92,7 +92,7 @@ public class Ffu65 : MonoBehaviour
             case 5:
                 Walk(Vector3.right); loY = Mathf.Min(loY, LY);
                 camOn = true; camPos = HL(-17f, 3.2f, 13f); camLook = f.transform.position + Vector3.up * 0.6f;
-                if (phT > 40f || (loY < 0.3f && phT > 2f))
+                if (phT > 70f || (loY < 0.3f && phT > 2f))
                 {
                     Check("walk back down the stairs (" + (ph == 3 ? "middle" : "side") + ")", loY < 0.4f, "lowest local y " + loY.ToString("0.00"));
                     if (ph == 3) { f.SendTo(WorldId.House, HL(-21.0f, 0.2f, 6.1f), 270f); hiY = 0f; Next(4, "upside"); }
@@ -148,7 +148,7 @@ public class Ffu65 : MonoBehaviour
                 }
                 break;
             case 1:
-                camOn = true; camPos = HL(16.5f, 2.4f, 13.8f); camLook = d.transform.position + Vector3.up * 1.1f;
+                camOn = true; camPos = d.transform.position + new Vector3(-1.9f, 2.1f, -2.3f); camLook = d.transform.position + Vector3.up * 1.0f;   // 65a: fixed spots were behind a wall
                 if (d.act == "cook" && phT > 2f || phT > 30f)
                 {
                     Check("Dad cooks at the stove", d.act == "cook" && Vector3.Distance(d.transform.position, HL(13f, 0f, 17.6f)) < 0.6f, "act " + d.act + " at " + (d.transform.position - Worlds.HouseO).ToString("0.0"));
@@ -156,12 +156,12 @@ public class Ffu65 : MonoBehaviour
                 }
                 break;
             case 2:
-                camOn = true; camPos = HL(15.5f, 2.2f, 15.3f); camLook = d.transform.position + Vector3.up * 1.0f;
+                camOn = true; camPos = d.transform.position + new Vector3(-1.9f, 2.1f, -2.3f); camLook = d.transform.position + Vector3.up * 1.0f;   // 65a: fixed spots were behind a wall
                 if (phT > 3f) { d.DemoPlan(4); dadP0 = d.transform.position; dadMoved = 0f; Next(3, "dadwalk"); }
                 break;
             case 3:
                 dadMoved = Mathf.Max(dadMoved, Vector3.Distance(d.transform.position, dadP0));
-                camOn = true; camPos = HL(3f, 3.4f, 17f); camLook = d.transform.position + Vector3.up * 1.0f;
+                camOn = true; camPos = d.transform.position - d.transform.forward * 3.2f + Vector3.up * 2.2f; camLook = d.transform.position + Vector3.up * 1.0f;   // follow Dad
                 if (phT > 12f)
                 {
                     Check("Dad walks round the house", dadMoved > 4f && d.model != null, "moved " + dadMoved.ToString("0.0") + " m, act " + d.act + " at " + (d.transform.position - Worlds.HouseO).ToString("0.0"));

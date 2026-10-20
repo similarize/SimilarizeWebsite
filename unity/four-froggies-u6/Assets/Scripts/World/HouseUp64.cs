@@ -251,7 +251,7 @@ public static class HouseUp64
     static void Findable()
     {
         Color orange = new Color(0.9f, 0.42f, 0.08f);
-        Ranch.Sign(L(-6.25f, 3.05f, 10f), 270f, "STAIRS TO 2ND FLOOR  >", orange, 3.6f, 0.75f);    // foyer side of the living-room door (reads from the foyer)
+        Ranch.Sign(L(-5.75f, 3.05f, 10f), 90f, "STAIRS TO 2ND FLOOR  >", orange, 3.6f, 0.75f);    // foyer side of the living-room door (yaw 90 = reads from the foyer; 65a had it backwards)
         Ranch.Sign(L(-24.8f, 2.55f, 6.85f), 0f, "STAIRS TO 2ND FLOOR", orange, 4.6f, 0.85f);
         Ranch.Sign(L(-20.75f, 1.55f, 5.4f), 90f, "STAIRS UP  ^", orange, 2.2f, 0.6f);
         Ranch.Sign(L(-24.8f, F2 + 2.6f, 6.62f), 0f, "STAIRS DOWN", new Color(0.25f, 0.35f, 0.5f), 2.6f, 0.6f);
