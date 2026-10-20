@@ -225,6 +225,13 @@ public class FFXboxAudio : MonoBehaviour
     static readonly List<AudioSource> snap = new List<AudioSource>();
     static readonly float[] buf = new float[512];
     AudioSource tone; AudioClip toneClip;
+    // music watchdog (ffu67x): FFLocalMusic only calls Play when the track CHANGES; a source Unity stopped (device change,
+    // AudioSettings.Reset, resume) or a clip that failed to load stays silent until the next world -> restart / reload here
+    static float musT;
+    static int musRestarts, musReloads, musRequests;
+    static string musLast = "-";
+    static readonly Dictionary<string, int> reqN = new Dictionary<string, int>();
+    static FieldInfo fSrc, fGoal, fPlaying, fSide, fClips;
 
     public static void Boot(GameObject host)
     {
@@ -311,7 +318,9 @@ public class FFXboxAudio : MonoBehaviour
         // a periodic list of the looping sounds, so a device change (which stops every source) can restart them
         snapT -= dt;
         if (snapT <= 0f) { snapT = 2f; Snapshot(snap); }
-        if (pendingDevice) { pendingDevice = false; Apply(opt, "device change", true); }
+        if (pendingDevice) { pendingDevice = false; Apply(opt, "device change", true); musT = 0f; }
+        musT -= dt;
+        if (musT <= 0f) { musT = 1f; MusicWatch(); }
         // once the window is active: open the output again (the console's audio endpoint may not exist at engine start)
         if (!rearmed && since > 4f && Application.isFocused && Look.Views > 0)
         {
@@ -336,6 +345,71 @@ public class FFXboxAudio : MonoBehaviour
                     break;
                 }
         }
+    }
+
+    void OnApplicationFocus(bool f) { if (f) { musT = 0.3f; Debug.Log("FFXBOX AUDIO focus regained - music check"); } }
+    void OnApplicationPause(bool p) { if (!p) { musT = 0.3f; Debug.Log("FFXBOX AUDIO resumed - music check"); } }
+
+    static void MusicWatch()
+    {
+        try
+        {
+            var lm = Object.FindObjectOfType<FFLocalMusic>();
+            if (lm == null) return;
+            System.Type t = typeof(FFLocalMusic);
+            const BindingFlags B = BindingFlags.NonPublic | BindingFlags.Instance;
+            if (fSrc == null) { fSrc = t.GetField("src", B); fGoal = t.GetField("goal", B); fPlaying = t.GetField("playing", B); fSide = t.GetField("side", B); fClips = t.GetField("clips", B); }
+            if (fSrc == null || fGoal == null || fPlaying == null || fSide == null) { musLast = "watchdog: FFLocalMusic fields not found"; return; }
+            var src = (AudioSource[])fSrc.GetValue(lm); var goal = (float[])fGoal.GetValue(lm);
+            var playing = (string[])fPlaying.GetValue(lm); var side = (int[])fSide.GetValue(lm);
+            for (int ch = 0; ch < 2; ch++)
+            {
+                string want = playing[ch];
+                if (string.IsNullOrEmpty(want)) continue;
+                int i = ch * 2 + side[ch];
+                AudioSource s = src[i];
+                if (s == null) continue;
+                if (s.clip == null || s.clip.name != want)
+                {
+                    // the clip never loaded (cached null) -> forget it and ask FFLocalMusic again (3 tries per track)
+                    int rq; reqN.TryGetValue(want, out rq); if (rq >= 3) continue; reqN[want] = rq + 1;
+                    var clips = fClips != null ? fClips.GetValue(lm) as Dictionary<string, AudioClip> : null;
+                    if (clips != null) clips.Remove(want);
+                    playing[ch] = "";
+                    FFLocalMusic.Play(ch, "audio/" + want + ".ogg", ch == 0 ? 0.4f : 0.3f, 0.5f);
+                    musRequests++;
+                    musLast = "re-requested " + want + " (clip " + (s.clip != null ? s.clip.name : "missing") + ")";
+                    Debug.Log("FFXBOX AUDIO music " + musLast);
+                    continue;
+                }
+                if (goal[i] > 0.001f && !s.isPlaying)
+                {
+                    AudioClip c = s.clip;
+                    if (c.loadState == AudioDataLoadState.Failed || c.loadState == AudioDataLoadState.Unloaded)
+                    {
+                        string st0 = c.loadState.ToString();
+                        c.UnloadAudioData(); bool ok = c.LoadAudioData(); musReloads++;
+                        musLast = "reload " + c.name + " (" + st0 + ") -> " + ok;
+                        Debug.Log("FFXBOX AUDIO music " + musLast);
+                        if (c.loadState == AudioDataLoadState.Loading) continue;   // play next tick, when it is in
+                    }
+                    s.Play(); musRestarts++;
+                    musLast = "restarted " + c.name + " (was stopped, goal " + goal[i].ToString("0.00") + ", " + c.loadState + ")";
+                    Debug.Log("FFXBOX AUDIO music " + musLast);
+                }
+            }
+        }
+        catch (System.Exception e) { musLast = "watchdog error " + e.Message; }
+    }
+
+    static string MusicLine()
+    {
+        string r = "";
+        var lm = Object.FindObjectOfType<FFLocalMusic>();
+        if (lm == null) return "FFLocalMusic missing";
+        foreach (AudioSource s in lm.GetComponents<AudioSource>())
+            if (s.clip != null) r += s.clip.name + (s.isPlaying ? " playing " : " stopped ") + s.volume.ToString("0.00") + " " + s.clip.loadState + "; ";
+        return (r.Length == 0 ? "no track yet; " : r) + "restarts " + musRestarts + " reloads " + musReloads + " re-requests " + musRequests + " | last " + musLast;
     }
 
     void Tone()
@@ -368,7 +442,7 @@ public class FFXboxAudio : MonoBehaviour
         foreach (AudioSource s in Object.FindObjectsOfType<AudioSource>()) { total++; if (s.isPlaying) playing++; }
         return "out " + Describe() + " | driver " + AudioSettings.driverCapabilities + " | mixer clock " + (dspRate < 0 ? "-" : dspRate.ToString("0.00") + "x")
              + " | listeners " + listeners + " vol " + AudioListener.volume.ToString("0.00") + (AudioListener.pause ? " PAUSED" : "") + " | game SOUND " + Sfx.LevelName
-             + " | sources playing " + playing + "/" + total + " | focus " + Application.isFocused + " | resets " + resets + " device changes " + cfgChanges + " | FMOD: " + fmod;
+             + " | sources playing " + playing + "/" + total + " | focus " + Application.isFocused + " | resets " + resets + " device changes " + cfgChanges + " | FMOD: " + fmod + " | music: " + MusicLine();
     }
 
     public static void DrawPanel(GUIStyle style, float k, float m)
@@ -381,9 +455,10 @@ public class FFXboxAudio : MonoBehaviour
                  + "last reset: " + lastReset + "\n"
                  + "resets " + resets + "   device changes " + cfgChanges + "   loops restarted " + restartedTotal + "\n"
                  + "FMOD: " + fmod + "\n"
+                 + "music: " + MusicLine() + "\n"
                  + "D-pad Right = try next output mode (" + Opts[(opt + 1) % Opts.Length].name + ") - kept for next launch\n"
                  + "hold View + Menu 2 s = close";
-        float w = Screen.width - 2f * m, h = 250f * k;
+        float w = Screen.width - 2f * m, h = 290f * k;
         GUI.Box(new Rect(m, Screen.height - m - h, w, h), s, style);
     }
 }

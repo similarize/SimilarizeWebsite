@@ -85,6 +85,30 @@ public static class FFBuildUWP
         catch (Exception e) { Debug.LogWarning("FFUWP audio settings: " + e.Message); }
     }
 
+    // ffu67x: on the console the music clips are kept compressed in memory (~11 MB of Vorbis) and preloaded, instead of
+    // being streamed from the package file at play time (one stream per track change - the music was intermittent)
+    static void MusicInMemory()
+    {
+        const string dir = "Assets/Resources/FFMusic";
+        if (!AssetDatabase.IsValidFolder(dir)) return;
+        int n = 0;
+        foreach (string guid in AssetDatabase.FindAssets("t:AudioClip", new[] { dir }))
+        {
+            var imp = AssetImporter.GetAtPath(AssetDatabase.GUIDToAssetPath(guid)) as AudioImporter;
+            if (imp == null) continue;
+            AudioImporterSampleSettings st = imp.defaultSampleSettings;
+            st.loadType = AudioClipLoadType.CompressedInMemory;
+            st.compressionFormat = AudioCompressionFormat.Vorbis;
+            st.quality = 0.6f;
+            imp.defaultSampleSettings = st;
+            imp.preloadAudioData = true;
+            imp.loadInBackground = false;
+            imp.SaveAndReimport();
+            n++;
+        }
+        Debug.Log("FFUWP audio: music clips " + n + " compressed in memory + preloaded (not streamed)");
+    }
+
     static int Run()
     {
         Debug.Log("BuildScript: UWP start, Unity " + Application.unityVersion);
@@ -98,6 +122,7 @@ public static class FFBuildUWP
         Call("EnsureFolder", "Assets", "Scenes");
         Call("ImportNativeMusic");
         AudioProject();
+        MusicInMemory();
 
         // ---- UWP player settings ----
         PlayerSettings.SetScriptingBackend(BuildTargetGroup.WSA, ScriptingImplementation.IL2CPP);   // UWP is IL2CPP only
