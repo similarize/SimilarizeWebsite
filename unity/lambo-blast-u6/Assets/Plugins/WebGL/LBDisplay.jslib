@@ -17,6 +17,10 @@ mergeInto(LibraryManager.library, {
     var ua = (typeof navigator !== "undefined" && navigator.userAgent) ? navigator.userAgent : "";
     return (/iPhone|iPad|iPod|Android/i.test(ua) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(ua))) ? 1 : 0;
   },
+  // ffxweb3: Xbox / ?lowmem=1 (games/shared/xbox-compat.js SimXbox.lowmem) -> the game's lite tier
+  LBIsLowMem: function () {
+    try { return (typeof window !== "undefined" && window.SimXbox && window.SimXbox.lowmem) ? 1 : 0; } catch (e) { return 0; }
+  },
   LBIsTeslaUA: function () {
     var ua = (typeof navigator !== "undefined" && navigator.userAgent) ? navigator.userAgent : "";
     return /Tesla|QtCarBrowser/i.test(ua) ? 1 : 0;

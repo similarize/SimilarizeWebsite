@@ -27,7 +27,7 @@ public static class Gfx
     public static void Init()
     {
         string u = Application.absoluteURL ?? "";
-        Low = u.Contains("gfx=low");
+        Low = u.Contains("gfx=low") || LBDisplay.LowMem;     // ffxweb3: Xbox lite tier
         triS = Load("LBTri"); terrS = Load("LBTerrain"); roadS = Load("LBRoad"); grassS = Load("LBGrass");
         macro = MacroNoise(128);
         Debug.Log("Gfx8: " + (Low ? "LOW (gfx=low)" : "full") + " tri " + (triS != null) + " terrain " + (terrS != null) + " road " + (roadS != null) + " grass " + (grassS != null));

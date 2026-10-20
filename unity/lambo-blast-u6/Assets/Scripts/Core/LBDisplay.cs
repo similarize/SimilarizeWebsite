@@ -15,6 +15,7 @@ public static class LBDisplay
     [DllImport("__Internal")] static extern float LBScreenDPR();
     [DllImport("__Internal")] static extern int LBIsMobileUA();
     [DllImport("__Internal")] static extern int LBIsTeslaUA();
+    [DllImport("__Internal")] static extern int LBIsLowMem();
     [DllImport("__Internal")] static extern int LBContextAA();
     [DllImport("__Internal")] static extern float LBSafeInset(int side);
 #else
@@ -22,6 +23,7 @@ public static class LBDisplay
     static float LBScreenDPR() { return 1f; }
     static int LBIsMobileUA() { return 0; }
     static int LBIsTeslaUA() { return 0; }
+    static int LBIsLowMem() { return 0; }
     static int LBContextAA() { return 0; }
     static float LBSafeInset(int side) { return 0f; }
 #endif
@@ -31,6 +33,11 @@ public static class LBDisplay
     public static bool InLobby { get { return mode == 1; } }
 
     public static bool MobileUA { get { try { return LBIsMobileUA() == 1; } catch { return false; } } }
+    // ffxweb3: Xbox Edge (~1 GB shared by every browser process) / ?lowmem=1: lightest level (forced), Gfx.Low (lambo7 look,
+    // 512 maps, no grass / CC0 surfaces / u6d extras), Look.Mobile (no mirror floor, small probes, hard 512 shadows), no HDR,
+    // no MSAA anywhere, texture mip limit 1 (half-res textures). ?lowmem=0 on the page turns it off.
+    static int lowMem = -1;
+    public static bool LowMem { get { if (lowMem < 0) { try { lowMem = LBIsLowMem() == 1 ? 1 : 0; } catch { lowMem = 0; } } return lowMem == 1; } }
     public static bool TeslaUA { get { try { return LBIsTeslaUA() == 1; } catch { return false; } } }
     public static float ScreenDpr { get { try { return LBScreenDPR(); } catch { return 1f; } } }
     public static int ContextSamples { get { try { return LBContextAA(); } catch { return -1; } } }
@@ -70,6 +77,13 @@ public static class LBDisplay
         int i = u.IndexOf("lbq=");
         if (i >= 0 && i + 4 < u.Length && char.IsDigit(u[i + 4])) { Level = Mathf.Clamp(u[i + 4] - '0', 0, 2); Forced = true; }
         if (u.Contains("gfx=low")) { Level = 2; Forced = true; }     // lambo8: ?gfx=low = lambo7 look at the lightest level
+        if (LowMem)
+        {
+            Level = 2; Forced = true;                                    // ffxweb3: Xbox lite tier
+            QualitySettings.globalTextureMipmapLimit = 1;                // half-resolution textures
+            QualitySettings.anisotropicFiltering = AnisotropicFiltering.Disable;
+            Debug.Log("LBQ: Xbox lowmem lite tier (level 2, gfx low, mip limit 1, no HDR / mirror / MSAA)");
+        }
         var g = new GameObject("LBDisplayWatch");
         Object.DontDestroyOnLoad(g);
         g.hideFlags = HideFlags.HideInHierarchy;
@@ -97,7 +111,7 @@ public static class LBDisplay
     {
         // lambo8b: race stays 2x MSAA in level 0 (at 1.5-2x density that is 6-8 samples per CSS pixel; 4x cost too much fill rate)
         // lambou6: URP asset MSAA (lobby 4x, race 2x at level 0); WebGPU + desktop + one view at level 0 races with STP instead
-        U6.AntiAlias(mode == 1 ? 4 : Level == 0 ? 2 : 1, mode == 0, Level == 0 && !Look.Mobile && Look.Views == 1, Look.Cams);
+        U6.AntiAlias(LowMem ? 1 : mode == 1 ? 4 : Level == 0 ? 2 : 1, mode == 0, Level == 0 && !Look.Mobile && Look.Views == 1, Look.Cams);
     }
 
     static void Downgrade(float fps)

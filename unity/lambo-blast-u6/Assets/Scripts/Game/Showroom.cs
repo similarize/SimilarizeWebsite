@@ -52,7 +52,7 @@ public static class Showroom
         Debug.Log("Showroom: lambo7 studio (ACES grade, " + (Hdr ? "HDR" : "LDR") + ", mirror floor " + Mirror + ")");
     }
 
-    static bool Hdr { get { return SystemInfo.SupportsRenderTextureFormat(RenderTextureFormat.DefaultHDR); } }   // u6d: phones too (LDR + ACES crushed the blacks)
+    static bool Hdr { get { return !LBDisplay.LowMem && SystemInfo.SupportsRenderTextureFormat(RenderTextureFormat.DefaultHDR); } }   // u6d: phones too (LDR + ACES crushed the blacks)
     // u6d: studio light scale (?u6slight=) for tuning without a rebuild
     static float SK { get { string s = U6.Q("u6slight"); float f; return s != null && float.TryParse(s, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out f) ? f : 1f; } }
 

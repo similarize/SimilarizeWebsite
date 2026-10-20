@@ -36,6 +36,7 @@ public static class U6
         s = Q("u6aa"); if (s != null) AaForce = s;
         s = Q("u6ssao"); if (s == "0") ssaoForce = 0; else if (s == "1") ssaoForce = 1;
         var a = Asset;
+        if (a != null && LBDisplay.LowMem) { a.supportsHDR = false; a.msaaSampleCount = 1; }     // ffxweb3: Xbox lite tier
         Debug.Log("U6: graphics API " + Api + " | device " + SystemInfo.graphicsDeviceName + " | " + SystemInfo.graphicsDeviceVersion +
             " | compute " + SystemInfo.supportsComputeShaders + " | Unity " + Application.unityVersion + " | pipeline " + (a != null ? a.name : "NONE (Built-in!)") +
             " | colour space " + QualitySettings.activeColorSpace + " | HDR " + (a != null && a.supportsHDR) + " | ssao " + (ssao != null) +
@@ -87,7 +88,7 @@ public static class U6
     public static void RaceCam(Camera c, bool post)
     {
         var d = Data(c); if (d == null) return;
-        c.allowHDR = true;
+        c.allowHDR = !LBDisplay.LowMem;     // ffxweb3: Xbox lite tier = LDR
         d.renderPostProcessing = post;
         d.volumeLayerMask = 1;
         d.stopNaN = false;

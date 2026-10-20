@@ -15,11 +15,12 @@ public static class Look
     public static void Init(Light s)
     {
         sun = s;
-        Mobile = Application.isMobilePlatform || LBDisplay.MobileUA || (Input.touchSupported && Mathf.Min(Screen.width, Screen.height) < 900 && Screen.dpi > 200f);
+        Mobile = Application.isMobilePlatform || LBDisplay.MobileUA || (Input.touchSupported && Mathf.Min(Screen.width, Screen.height) < 900 && Screen.dpi > 200f)
+            || LBDisplay.LowMem;     // ffxweb3: Xbox lite tier = the phone tier
         QualitySettings.realtimeReflectionProbes = true;
         QualitySettings.softParticles = false;
         // lambo8: anisotropic filtering everywhere (road / ground at grazing angles were the worst blur + shimmer); phones per texture
-        QualitySettings.anisotropicFiltering = Mobile ? AnisotropicFiltering.Enable : AnisotropicFiltering.ForceEnable;
+        QualitySettings.anisotropicFiltering = LBDisplay.LowMem ? AnisotropicFiltering.Disable : Mobile ? AnisotropicFiltering.Enable : AnisotropicFiltering.ForceEnable;
         Texture.SetGlobalAnisotropicFilteringLimits(Mobile ? 4 : 8, 16);
         // warm late-morning sun, saturated sky / sea bounce
         if (sun != null)
@@ -35,7 +36,7 @@ public static class Look
         RenderSettings.ambientGroundColor = new Color(0.42f, 0.36f, 0.28f);
         RenderSettings.fogColor = new Color(0.66f, 0.75f, 0.86f);
         RenderSettings.reflectionIntensity = 1f;
-        Debug.Log("Look: tier " + (Mobile ? "mobile" : "desktop") + " " + Screen.width + "x" + Screen.height + " dpi " + Screen.dpi);
+        Debug.Log("Look: tier " + (LBDisplay.LowMem ? "xbox-lite" : Mobile ? "mobile" : "desktop") + " " + Screen.width + "x" + Screen.height + " dpi " + Screen.dpi);
     }
 
     static ReflectionProbe MakeProbe(string name, Vector3 pos, Vector3 size, int mask, int res)
@@ -65,14 +66,14 @@ public static class Look
         yield return null;
         try
         {
-            island = MakeProbe("IslandProbe", islandCentre + Vector3.up * 14f, new Vector3(2400f, 900f, 2400f), ~excludeMask, Mobile ? 256 : 512);   // lambo9: sharper clear-coat reflections
+            island = MakeProbe("IslandProbe", islandCentre + Vector3.up * 14f, new Vector3(2400f, 900f, 2400f), ~excludeMask, LBDisplay.LowMem ? 128 : Mobile ? 256 : 512);   // lambo9: sharper clear-coat reflections
             island.hdr = Gfx6.On && !Mobile;                                             // u6d: HDR sky / sun in the paint
             island.RenderProbe();
             // lambo7: the showroom probe sees the studio (softbox panels + dark set on layer 20) so the paint reflects it
-            showroom = MakeProbe("ShowroomProbe", Showroom.EnvPos + new Vector3(0f, 1.6f, 0f), new Vector3(1200f, 600f, 1200f), excludeMask, Mobile ? 128 : 256);
+            showroom = MakeProbe("ShowroomProbe", Showroom.EnvPos + new Vector3(0f, 1.6f, 0f), new Vector3(1200f, 600f, 1200f), excludeMask, LBDisplay.LowMem ? 64 : Mobile ? 128 : 256);
             showroom.clearFlags = ReflectionProbeClearFlags.SolidColor;
             showroom.backgroundColor = new Color(0.08f, 0.09f, 0.1f);     // u6d: brighter studio (was 0.035)
-            showroom.hdr = true;                                             // u6d: HDR softboxes -> real highlights in the clear coat
+            showroom.hdr = !LBDisplay.LowMem;                                             // u6d: HDR softboxes -> real highlights in the clear coat
             showroom.nearClipPlane = 0.3f;
             showroom.farClipPlane = 60f;
             showroom.RenderProbe();
@@ -161,7 +162,7 @@ public static class Look
         if (playerCams != null) lastCams = playerCams;
         bool shadows = views < 3 && !(Mobile && views > 1);
         bool soft; int res; float dist;
-        if (Mobile) { soft = false; res = views == 1 && LBDisplay.Level == 0 ? 1024 : 512; dist = views == 1 && LBDisplay.Level == 0 ? 40f : 32f; }
+        if (Mobile) { soft = false; res = !LBDisplay.LowMem && views == 1 && LBDisplay.Level == 0 ? 1024 : 512; dist = views == 1 && LBDisplay.Level == 0 ? 40f : 32f; }
         else
         {
             soft = views <= 1 && LBDisplay.Level < 2;
