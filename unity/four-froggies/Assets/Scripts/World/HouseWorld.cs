@@ -62,7 +62,10 @@ public class HouseWorld : MonoBehaviour
         Vector2 c = Layout.HouseC;
         float z1 = c.y + Layout.HouseSize.y * 0.5f;
         Interact.Add(new Vector3(c.x, 0.45f, z1 + 0.7f), 1.4f, "go inside", f => I.Enter(f), true);
+        HouseUp64.RanchSide();   // ffu64: porch roof, ladder, upstairs window spots, garage back door
     }
+
+    public void EnsureBuilt() { if (!built) Build(); }   // ffu64: portals into the house (garage hallway, upstairs window)
 
     public void Enter(Frog f)
     {
@@ -161,7 +164,7 @@ public class HouseWorld : MonoBehaviour
         Wall(-30f, 20f, 30f, 20f, 0f);
         Wall(-30f, -20f, 30f, -20f);
         Wall(-30f, -20f, -30f, 20f);
-        Wall(30f, -20f, 30f, 20f);
+        Wall(30f, -20f, 30f, 20f, HouseUp64.HallZ);   // ffu64: door to the garage hallway
         Wall(-30f, 4f, 30f, 4f, -18f, 0f, 18f);
         Wall(-6f, 4f, -6f, 20f, 10f);
         Wall(6f, 4f, 6f, 20f, 10f);
@@ -192,6 +195,7 @@ public class HouseWorld : MonoBehaviour
         MeshMerge.Merge(root, false);
         foreach (var a in afterMerge) a();
         if (Light55.On) Ceiling55();
+        if (Light55.On) HouseUp64.Build(root);   // ffu64: stairs + 2nd floor + garage hallway
         BuildLiving();
     }
 
@@ -238,18 +242,13 @@ public class HouseWorld : MonoBehaviour
         var g = new GameObject("Ceiling55"); g.transform.SetParent(root, false);
         var m = new Mesh();
         Vector3 o = Worlds.HouseO;
-        m.vertices = new[] { o + new Vector3(-30.2f, H, -20.2f), o + new Vector3(30.2f, H, -20.2f), o + new Vector3(30.2f, H, 20.2f), o + new Vector3(-30.2f, H, 20.2f) };
-        m.uv = new[] { new Vector2(0f, 0f), new Vector2(20f, 0f), new Vector2(20f, 13f), new Vector2(0f, 13f) };
-        m.triangles = new[] { 0, 1, 2, 0, 2, 3 };   // wound so the face points down
-        m.RecalculateNormals(); m.RecalculateBounds();
+        m = HouseUp64.CeilingMesh(o, H);   // ffu64: 4 pieces round the stairwell hole (was one quad, wound to face down)
         g.AddComponent<MeshFilter>().sharedMesh = m;
         var mr = g.AddComponent<MeshRenderer>();
         mr.sharedMaterial = Mats.TexTint("LB/plaster", new Color(0.95f, 0.94f, 0.9f), 0.05f, 3f);
         mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         g.layer = WallLayer;
-        var cg = new GameObject("Ceiling55Col"); cg.transform.SetParent(root, false); cg.layer = WallLayer;
-        cg.transform.position = L(0f, H + 0.15f, 0f);
-        cg.AddComponent<BoxCollider>().size = new Vector3(60.6f, 0.3f, 40.6f);
+        HouseUp64.CeilingCols(root, H);   // ffu64: same slab, with the stairwell hole
         // cornice where the walls meet the ceiling
         Box(new Vector3(0f, H - 0.06f, 19.8f), new Vector3(60f, 0.12f, 0.16f), Trim, false, WallLayer);
         Box(new Vector3(0f, H - 0.06f, -19.8f), new Vector3(60f, 0.12f, 0.16f), Trim, false, WallLayer);

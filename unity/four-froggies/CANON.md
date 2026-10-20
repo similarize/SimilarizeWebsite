@@ -117,3 +117,14 @@ Dad (James's dad) is a non-playable character: he lives in the house (kitchen) a
 - **Robots are solid** (ffu63a, Bill 2026-10-19 16:14): robots never walk through walls, fences, buildings, furniture, vehicles
   or trees - they go around (or through a door) - and stay inside the same perimeter as the froggies in every world;
   a robot that arrives by jet pack / pod / door lands inside it, never inside a wall.
+- **Play catch with the robots** (ffu63b, Bill 2026-10-19 16:27): a robot's plushie throw can be caught by the froggy (it lands
+  within reach, or walk onto it / E / A); while held an arc preview aims at the robot (LT / right mouse aims), RT / click / F
+  throws it back; the robot runs under it, catches it and throws again (a miss = it fetches it). Kid-friendly, a soft plushie.
+- **Camper trailers are walk-in** (ffu64, Bill 2026-10-19 15:58): every camper trailer's door opens (E / A) into its own
+  furnished inside - bed, table + lamp, tiny kitchen - true to the trailer's size; you come back out next to the trailer
+  wherever it has been towed.
+- **Aircraft land on giant mechs** (ffu64, Bill 2026-10-19 17:08): drones and helicopters bump into the big mechs / giant
+  robots instead of flying through them, can land on a shoulder or the head, and ride along while the mech walks.
+- **James's house has a real upstairs** (ffu64, Bill 2026-10-19 16:47 / 17:02 / 17:06): stairs in the living room to a 2nd
+  floor (James's room, guest room, bathroom, landing, bunk room, craft room); froggies can climb onto the porch roof and in
+  through an upstairs window (never kicked back outside); the garage's back door leads into the house hallway.

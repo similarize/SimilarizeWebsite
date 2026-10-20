@@ -100,7 +100,7 @@ public class Ffu63 : MonoBehaviour
                 if (phT > 60f)
                 {
                     Check("perimeter", maxX <= Layout.Half - 4f + 0.15f && clips == 0, "max x " + maxX.ToString("0.00") + " limit " + (Layout.Half - 4f) + " clips " + clips + " " + clipWhat);
-                    Next(2, "house"); houseSet = false; f.SendTo(WorldId.House, HouseWorld.Spawn(2), 0f);
+                    Next(2, "house"); houseSet = false; HouseWorld.I.Enter(f);   // ffu64: Enter builds the house world (SendTo did not)
                 }
                 break;
             case 2:
@@ -126,19 +126,16 @@ public class Ffu63 : MonoBehaviour
 
     void StartHouse()
     {
-        Vector3 s = HouseWorld.Spawn(0);
-        Vector3 best = Vector3.zero; float bd = 0f;
-        for (int i = 0; i < 16; i++)
-        {
-            Vector3 d = Quaternion.Euler(0f, i * 22.5f, 0f) * Vector3.forward; RaycastHit h;
-            if (Physics.Raycast(s + Vector3.up * 1f, d, out h, 20f, Robot.C63Mask, QueryTriggerInteraction.Ignore) && Mathf.Abs(h.normal.y) < 0.3f && h.distance > 1.5f && h.distance > bd)
-            { bd = h.distance; best = h.point + d * 2.5f; best.y = s.y; }
-        }
-        if (bd <= 0f) { Check("house wall found", false, "no wall within 12 m of spawn"); Done(); return; }
+        // ffu64: a KNOWN wall - the foyer / fish-gallery wall (z 4, solid at x -3; door gaps at x -18, 0, 18)
+        Vector3 s = HouseWorld.L(-3f, 0.15f, 8f), best = HouseWorld.L(-3f, 0.15f, 0f);
+        RaycastHit h;
+        bool wall = Physics.Linecast(s + Vector3.up, best + Vector3.up, out h, Robot.C63Mask, QueryTriggerInteraction.Ignore);
+        Debug.Log("WALL63 house known wall between " + wall + (wall ? " (" + h.collider.name + " at " + (h.point - Worlds.HouseO).ToString("F1") + ")" : ""));
+        if (!wall) { Check("house wall found", false, "no collider on the foyer / fish-gallery wall line"); Done(); return; }
         r.Demo63Go(WorldId.House, s, best);
-        f.SendTo(WorldId.House, HouseWorld.Spawn(2), Mathf.Atan2(best.x - s.x, best.z - s.z) * Mathf.Rad2Deg);
+        f.SendTo(WorldId.House, HouseWorld.L(-6.5f, 0.15f, 12f), 160f);
         prev = r.transform.position;
-        Debug.Log("WALL63 house robot " + s.ToString("F1") + " -> behind the wall " + best.ToString("F1") + " wall at " + bd.ToString("0.0") + " m");
+        Debug.Log("WALL63 house robot " + (s - Worlds.HouseO).ToString("F1") + " -> behind the wall " + (best - Worlds.HouseO).ToString("F1"));
     }
 }
 

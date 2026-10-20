@@ -290,7 +290,7 @@ public class Camper64 : MonoBehaviour
         if (!On) return;
         for (int i = doors.Count - 1; i >= 0; i--) if (doors[i].tr == null) { Interact.All.Remove(doors[i].hs); doors.RemoveAt(i); }
         foreach (var t in Trailer.All) if (t != null && t.spec != null && t.spec.style >= 0 && t.spec.style <= 3 && DoorOf(t) == null) Register(t);
-        float dt = Mathf.Min(Time.deltaTime, 0.05f);
+        float dt = Mathf.Min(Time.deltaTime, 0.1f);   // low-fps devices still swing the door in time
         foreach (var d in doors)
         {
             d.hs.pos = DoorFront(d, 0.85f);
