@@ -45,6 +45,20 @@ mergeInto(LibraryManager.library, {
       }
     } catch (e) { console.warn('FFVOICE fake install failed ' + e); }
     V.load = function () { try { V.voices = (window.speechSynthesis.getVoices() || []).filter(function (v) { return /^en/i.test(v.lang || ''); }); } catch (e) { V.voices = []; } };
+    // ffu65: robots speak with MALE voices only (by name; none found -> the en list, with the lowest pitch doing the work)
+    V.male = function () {
+      var re = /\bmale\b|google uk english male|david|daniel|alex\b|fred|george|james|mark|ryan|guy|arthur|aaron|tom\b|rishi|lee\b/i, fe = /female|woman|girl|samantha|zira|susan|karen|moira|tessa|victoria|fiona|hazel|serena|kate|libby|sonia|aria|jenny/i;
+      var m = V.voices.filter(function (v) { return re.test(v.name || '') && !fe.test(v.name || ''); });
+      return m;
+    };
+    V.beep = function (vol) {
+      try {
+        var C = V.ac || (V.ac = new (window.AudioContext || window.webkitAudioContext)()); if (C.state === 'suspended') C.resume();
+        var t = C.currentTime, o = C.createOscillator(), g = C.createGain(); o.type = 'square'; o.frequency.setValueAtTime(880, t); o.frequency.setValueAtTime(660, t + 0.06);
+        g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.06 * vol, t + 0.01); g.gain.linearRampToValueAtTime(0.0001, t + 0.13);
+        o.connect(g); g.connect(C.destination); o.start(t); o.stop(t + 0.14);
+      } catch (e) {}
+    };
     if (V.tts) { V.load(); try { window.speechSynthesis.onvoiceschanged = V.load; } catch (e) {} }
     window.__ffTts = window.__ffTts || [];
     console.log('FFVOICE init: recognition ' + (!!(window.SpeechRecognition || window.webkitSpeechRecognition)) + ', tts ' + V.tts);
@@ -85,8 +99,12 @@ mergeInto(LibraryManager.library, {
     try {
       var u = new SpeechSynthesisUtterance(s);
       if (V && !V.voices.length) V.load();
-      if (V && V.voices.length) u.voice = V.voices[((vidx % V.voices.length) + V.voices.length) % V.voices.length];
-      u.lang = 'en-US'; u.pitch = Math.max(0, Math.min(2, pitch)); u.rate = Math.max(0.5, Math.min(2, rate)); u.volume = Math.max(0, Math.min(1, vol));
+      var ml = V ? V.male() : [], vl = ml.length ? ml : (V ? V.voices : []);
+      if (vl.length) u.voice = vl[((vidx % vl.length) + vl.length) % vl.length];
+      rec.voiceName = u.voice ? u.voice.name : ''; rec.male = ml.length > 0;
+      console.log('FFVOICE robot voice ' + (rec.voiceName || 'default') + (rec.male ? ' (male)' : ' (no male voice found, low pitch)'));
+      if (V) V.beep(vol);
+      u.lang = 'en-US'; u.pitch = Math.max(0, Math.min(0.45, pitch)); u.rate = Math.max(0.5, Math.min(2, rate)); u.volume = Math.max(0, Math.min(1, vol));
       window.speechSynthesis.speak(u);
       return 1;
     } catch (e) { console.warn('FFVOICE tts failed ' + e); return 0; }

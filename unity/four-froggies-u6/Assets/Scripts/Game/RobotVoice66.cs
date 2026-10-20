@@ -263,8 +263,10 @@ public static class VoiceBrain
     // ---------- personalities ----------
     public static int Ix(Robot r) { return r == null ? 0 : Mathf.Max(0, System.Array.IndexOf(Ids, r.id)); }
     static readonly string[] Catch = { "Affirmative!", "Beep boop, okay!", "Ribbit! Let's go!", "Roger that!", "BIG okay!", "On it!", "Zip zap, on it!" };
-    static readonly float[] Pitch = { 0.75f, 1.6f, 1.15f, 1.0f, 0.45f, 0.85f, 1.35f };
-    static readonly float[] Rate = { 0.92f, 1.15f, 1.0f, 0.95f, 0.8f, 1.0f, 1.12f };
+    // ffu65 (Bill 2026-10-20): every robot voice is MALE + MONOTONE (flat 0.1..0.4 pitch, even rate) so a robot never sounds like a
+    // human or a froggy; only small per-robot differences. The jslib picks a male voice and plays a short beep before each line.
+    static readonly float[] Pitch = { 0.25f, 0.35f, 0.3f, 0.2f, 0.1f, 0.28f, 0.4f };
+    static readonly float[] Rate = { 0.9f, 0.95f, 0.92f, 0.9f, 0.86f, 0.92f, 0.95f };
     public static float PitchOf(Robot r) { return Pitch[Ix(r)]; }
     public static float RateOf(Robot r) { return Rate[Ix(r)]; }
     public static string CatchOf(Robot r) { return Catch[Ix(r)]; }
@@ -536,7 +538,7 @@ public partial class RobotPhone
         youT.text = "You: " + (said.Length > 0 ? said : "...");
         string act = it.act, reply;
         Fig03Free.AskedNicely = VoiceBrain.Norm(said).Contains(" please ");   // ffu6r: Figure 03 may skip chores, less so when asked nicely
-        if (it.kind == "yes") { string off = Fig03Free.TakeOffer(r); if (off != null) { it.kind = "act"; act = off; } }
+        if (it.kind == "yes") { string off = Fig03Free.TakeOffer(r); if (off != null) { it.kind = "act"; act = off; lastKind = it.kind; } }
         if (it.kind == "comehome") act = r.mission != null || RobotMechMission.For(r) != null || r.hunt != null ? "abort" : r.world != Robot.TargetWorld(f) ? "rcall:sel" : "come";
         if (it.kind == "goworld" && VoiceBrain.WorldFrom(it.act) == Robot.TargetWorld(f)) { it.kind = "act"; act = "rcall:sel"; }
         if (it.kind == "act" || it.kind == "comehome")
@@ -786,8 +788,9 @@ public class Ffu6r : MonoBehaviour
                 RobotPhone.I.DemoOpen(f, 1, "ORDERS");
                 ph1 = RobotPhone.Of(f);
                 ph1.VoiceDemo(f, "unitree sit with me on the swing");
-                ph = 1; phT = now + 6f; return;
-            case 1:
+                ph = 1; phT = now + 6f; sayT = now; return;
+            case 1:   // ffu6r+: wait (<= 45 s) for the phrase to be heard - SwiftShader frame stalls delay recognition
+                if (ph1.lastAct != "play:swingsit" && now - sayT < 45f) { phT = now + 1f; return; }
                 Check("swing", ph1.lastAct == "play:swingsit");
                 ph = 2; phT = now + 2f; return;
             case 2:   // wait for Unitree to sit on the next swing
@@ -807,8 +810,9 @@ public class Ffu6r : MonoBehaviour
                 f.transform.position = mySeat.transform.position + mySeat.transform.forward * 1.2f;
                 f.EnterVehicle(mySeat);
                 ph1.VoiceDemo(f, "unitree come to the hammock");
-                t0 = now; ph = 4; phT = now + 6f; return;
+                t0 = now; ph = 4; phT = now + 6f; sayT = now; return;
             case 4:
+                if (ph1.lastAct != "play:hamwith" && now - sayT < 45f) { phT = now + 1f; return; }
                 Check("hammock", ph1.lastAct == "play:hamwith");
                 ph = 5; phT = now + 2f; return;
             case 5:
@@ -824,6 +828,7 @@ public class Ffu6r : MonoBehaviour
                 Done(); return;
         }
     }
+    float sayT;
     void Check(string what, bool ok) { if (ok) pass++; else fail++; Debug.Log("SIT66 TEST " + (ok ? "PASS" : "FAIL") + " " + what); }
     void Done() { if (ph == 99) return; ph = 99; Debug.Log("SIT66 RESULT " + pass + "/" + (pass + fail) + " PASS"); Debug.Log("FFDEMO voice66 done"); }
 }

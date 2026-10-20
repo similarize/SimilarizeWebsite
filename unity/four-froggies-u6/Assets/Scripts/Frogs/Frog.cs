@@ -382,6 +382,7 @@ public partial class Frog : MonoBehaviour
         diveHoldT = 0f;
 
         float bowK = Bow61.Tick(this, input, dt);   // ffu61 froggy bow (World/Bow61.cs)
+        Catch63.Tick(this, input, dt);   // ffu63: catch + throw back the robot's plushie
         Vector3 wish = Vector3.zero;
         if (input.move.sqrMagnitude > 0.0001f)
         {

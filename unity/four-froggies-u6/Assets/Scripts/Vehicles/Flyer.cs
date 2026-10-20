@@ -16,6 +16,8 @@ public class Flyer : Vehicle
     // return-to-home: abandoned in the air -> fly back to the original roof pad and land there
     public bool returning;
     float homeYaw;
+    Collider groundCol64; public string ride64;   // ffu64: what is under us / the mech pad we ride on
+    public Collider GroundCol64 { get { return groundCol64; } }
 
 
     public void InitFlyer(float mass, Vector3 center, Vector3 size)
@@ -61,7 +63,12 @@ public class Flyer : Vehicle
     {
         RaycastHit hit;
         Vector3 o = transform.position + Vector3.up * 0.5f;
-        if (Physics.Raycast(o, Vector3.down, out hit, 50f, GroundMask, QueryTriggerInteraction.Ignore)) { h = hit.distance - 0.5f; return true; }
+        bool g = Physics.Raycast(o, Vector3.down, out hit, 50f, GroundMask, QueryTriggerInteraction.Ignore);
+        // ffu64: giant mech / robot shoulders + heads (Mech64 pads, vehicle layer) count as ground too
+        RaycastHit ph;
+        if (Mech64.PadBelow(o, g ? hit.distance : 50f, out ph)) { hit = ph; g = true; }
+        groundCol64 = g ? hit.collider : null;
+        if (g) { h = hit.distance - 0.5f; return true; }
         h = 50f;
         return false;
     }
@@ -150,6 +157,7 @@ public class Flyer : Vehicle
             rb.velocity = v;
         }
 
+        Mech64.Ride(this, groundCol64, h, driver != null ? inp.climb : 0f, ref yaw);   // ffu64: landed on a mech -> ride along
         // visual tilt from velocity
         Vector3 local = Quaternion.Euler(0f, -yaw, 0f) * rb.velocity;
         float airborne = Mathf.Clamp01(h / 1.5f);

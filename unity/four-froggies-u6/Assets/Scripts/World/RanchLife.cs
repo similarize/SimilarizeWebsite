@@ -297,7 +297,7 @@ public partial class Robot : MonoBehaviour   // ffu54: partial - visits / PLAY v
             foreach (var w in route) { len += RobotNav.Flat(w - a); a = w; }
             extTimeout = len / Mathf.Max(0.5f, spd) * 2.5f + 8f;
         }
-        extT += dt;
+        extT += dt; c63Goal = goal;   // ffu63
         if (routeIdx >= route.Count) return true;
         Vector3 wp = route[routeIdx];
         bool last = routeIdx == route.Count - 1;
@@ -311,7 +311,7 @@ public partial class Robot : MonoBehaviour   // ffu54: partial - visits / PLAY v
         Vector3 to = wp - p; to.y = 0f;
         goalDir = to.normalized;
         goalSpeed = last ? Mathf.Min(spd, d * 1.6f + 0.25f) : spd;
-        if (extT > extTimeout) { transform.position = new Vector3(goal.x, GroundAt(goal.x, goal.z), goal.z); extRouted = false; return true; }
+        if (extT > extTimeout) { extRouted = false; return C63Timeout(goal); }   // ffu63: no clip-through teleport
         return false;
     }
     // phone carousel turntable copy: no brain, no tag / battery bar / sounds, just the idle animation
@@ -904,7 +904,7 @@ public partial class Robot : MonoBehaviour   // ffu54: partial - visits / PLAY v
     void NextStep()
     {
         var s = steps[stepIdx];
-        stepIdx++; stepT = 0f; routed = false;
+        stepIdx++; stepT = 0f; routed = false; c63Tries = 0;   // ffu63
         if (s.done != null) s.done();
     }
 
@@ -938,7 +938,7 @@ public partial class Robot : MonoBehaviour   // ffu54: partial - visits / PLAY v
                         foreach (var w in route) { len += RobotNav.Flat(w - a); a = w; }
                         st.timeout = len / WalkSpeed * 2.2f + 6f;
                     }
-                    pose = carryPose;
+                    pose = carryPose; c63Goal = st.p;   // ffu63
                     Vector3 wp = route[routeIdx];
                     bool last = routeIdx == route.Count - 1;
                     float d = RobotNav.Flat(wp - p);
@@ -947,12 +947,12 @@ public partial class Robot : MonoBehaviour   // ffu54: partial - visits / PLAY v
                     goalDir = to.normalized;
                     goalSpeed = WalkSpeed * (carryPose == 2 ? 0.8f : 1f);
                     if (last) goalSpeed = Mathf.Min(goalSpeed, d * 1.6f + 0.25f);
-                    if (stepT > st.timeout) { transform.position = RobotNav.G(st.p.x, st.p.z); NextStep(); }
+                    if (stepT > st.timeout) { if (C63Timeout(st.p)) NextStep(); else { routed = false; stepT = 0f; } }   // ffu63: no clip-through teleport
                     break;
                 }
             case 1:
                 {
-                    pose = st.pose;
+                    pose = st.pose; c63Goal = st.p;   // ffu63
                     Vector3 to = st.p - p; to.y = 0f;
                     float d = to.magnitude;
                     if (d < 0.25f || stepT > d / Mathf.Max(0.3f, st.spd) * 3f + 8f) { NextStep(); return; }
@@ -1015,6 +1015,7 @@ public partial class Robot : MonoBehaviour   // ffu54: partial - visits / PLAY v
         if (cmd == "follow" && follow != null) target = follow.position;
         if (cmd == "come" || cmd == "go" || cmd == "roof" || cmd == "follow")
         {
+            c63Goal = target;   // ffu63
             Vector3 to = target - p; to.y = 0f;
             float stopAt = cmd == "follow" ? 2.5f : cmd == "come" ? 2f : 0.3f;
             if (to.magnitude > stopAt) { goalDir = to.normalized; goalSpeed = Mathf.Min(maxSpeed, to.magnitude * 1.5f); }
@@ -1117,6 +1118,8 @@ public partial class Robot : MonoBehaviour   // ffu54: partial - visits / PLAY v
 
         Vector3 dir = goalDir;
         if (spd > 0.05f && manual == null && !flying && world == WorldId.Ranch) dir = Avoid(p, dir, ref spd);
+        bool c63 = C63Solid(p);   // ffu63: swept walls / vehicles + perimeter in every world
+        if (c63 && spd > 0.05f && manual == null) dir = C63Steer(p, dir, spd, dt);
         speed = Mathf.MoveTowards(speed, spd, (manual != null ? 14f : 8f) * dt);
         if (dir.sqrMagnitude > 0.01f && spd > 0.05f) yaw = Mathf.MoveTowardsAngle(yaw, Mathf.Atan2(dir.x, dir.z) * Mathf.Rad2Deg, (manual != null ? 480f : riding ? 120f : 240f) * dt);
         else if (!float.IsNaN(faceYaw)) yaw = Mathf.MoveTowardsAngle(yaw, faceYaw, 200f * dt);
@@ -1128,13 +1131,14 @@ public partial class Robot : MonoBehaviour   // ffu54: partial - visits / PLAY v
             else if (!Blk(p.x, np.z)) np.x = p.x;
             else { np.x = p.x; np.z = p.z; }
         }
+        if (c63) np = C63Move(p, np);
         p.x = np.x; p.z = np.z;
         // ffu10: metal footsteps while walking, servo whirs when moving / waving / dancing (positional)
-        if (!flying && speed > 0.3f) { sndStep += speed * dt; if (sndStep > height * 0.38f) { sndStep = 0f; Sfx.PlayAt(Sfx.StepMetal, p, 0.32f, 28f, Random.Range(0.9f, 1.15f) * Mathf.Clamp(1.8f / height, 0.6f, 1.4f)); } }
+        if (!flying && speed > 0.3f) { sndStep += speed * dt; if (sndStep > height * 0.38f) { sndStep = 0f; RobotSound62.Step(p, speed, height); } }   // ffu62: motor whirr + clunk, not footsteps
         sndServo -= dt;
         if (sndServo <= 0f && (speed > 0.3f || wave > 0f || cmd == "dance" || (pose >= 5 && pose != 11)))
         {
-            sndServo = Random.Range(1.2f, 3.2f);
+            sndServo = speed > 0.3f ? Random.Range(0.7f, 1.6f) : Random.Range(1.2f, 3.2f);   // ffu62: more servo whine while moving
             Sfx.PlayAt(Sfx.Pick(Sfx.Servo), p + Vector3.up * height * 0.7f, 0.24f, 24f, Random.Range(0.85f, 1.2f));
         }
         // flying to / from a roof pad: jets on, climb over the house, settle on the pad

@@ -638,7 +638,7 @@ public partial class Game : MonoBehaviour
             "Stock trailer (by the pasture fence): A at its gate opens it, then loads the nearest cow or horse; A next to a cow = lead it; ride a horse to the gate + A. Tow it anywhere, open the gate - they graze there.\n" +
             "House: walk into the front door. Inside, A at a fish tank feeds it, the toy box starts fetch with Germy + Daisy, the cat bed starts hide-and-seek, A near Dad to chat.\n" +
             "<b>Online</b> (lobby): HOST (X / H / tap) shows a room code, friends press JOIN (Y / J / tap) and type it. Each device plays one froggy; names over the froggies; stage changes follow the host.\n" +
-            "Back / V switches Shared and Split view.  Start / H closes this.  B / Esc here leaves your seat (online: leaves the room)."; } }
+            "Back / V switches Shared and Split view.  Start / H closes this.  Pad B here leaves your seat (online: leaves the room)."; } }
 
     // a phone / tablet with no gamepads: local multiplayer makes no sense, so the lobby is a 1-player picker
     public static bool TouchOnly { get { return Kb.Mobile && Gamepad.all.Count == 0; } }
@@ -1250,7 +1250,7 @@ public partial class Game : MonoBehaviour
                     // ffu15: right mouse (mech aim) locks too; clicks on the robot phone / space radar keep the cursor free
                     if ((Kb.MouseLeftDown() || Kb.MouseRightDown()) && Cursor.lockState != CursorLockMode.Locked && !help && !UiUnderMouse()) Cursor.lockState = CursorLockMode.Locked;
                     i = Pads.ReadKeyboard(dt);
-                    if (help && Kb.EscDown()) { help = false; Leave(s); continue; }
+                    if (help && Kb.EscDown()) { help = false; Sfx.Play(Sfx.Click, 0.7f); Debug.Log("HELP: Esc closed help (ffu62: no longer leaves the seat)"); i = new PIn(); break; }   // ffu62 Bill: Esc after help reset the game
                     break;
                 default:
                     {
@@ -1393,9 +1393,9 @@ public partial class Game : MonoBehaviour
                 s.rig.Snap();
                 s.rig.SetYaw(f.transform.eulerAngles.y);
                 bool house = f.world == WorldId.House, under = f.world == WorldId.Underwater, space = f.world == WorldId.Space;
-                s.rig.minPitch = house ? 26f : under ? -40f : space ? -70f : -5f;
+                s.rig.minPitch = house ? -65f : under ? -40f : space ? -70f : -5f;
                 s.rig.maxPitch = house ? 80f : space ? 85f : 70f;
-                s.rig.pitch = house ? 38f : under ? 10f : space ? 25f : 16f;
+                s.rig.pitch = house ? 30f : under ? 10f : space ? 25f : 16f;
                 s.rig.ResetView(f.transform.eulerAngles.y);
             }
         }

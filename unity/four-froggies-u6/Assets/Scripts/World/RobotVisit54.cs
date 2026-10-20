@@ -342,7 +342,7 @@ public partial class Robot
         Frog f = visit.lead;
         Vector3 lp = LeadPos(f), fw = LeadFwd(f), rt = new Vector3(fw.z, 0f, -fw.x);
         Vector3 c = lp + fw * r + rt * side;
-        return c;
+        return C63Spot(c, lp);   // ffu63: arrivals inside the perimeter, never inside a wall
     }
 
     void StartPod()
@@ -571,7 +571,7 @@ public partial class Robot
         float d = RobotNav.Flat(goal - p);
         bool wet = world == WorldId.Ranch && (InWater(p) || InWater(goal));
         if (world == WorldId.Ranch && d > 14f && !wet) { ExtWalk(goal, spd, stop, dt); }
-        else if (d > stop) { Vector3 to = goal - p; to.y = 0f; goalDir = to.normalized; goalSpeed = Mathf.Min(spd, (d - stop) * 1.8f + 0.4f); }
+        else if (d > stop) { c63Goal = goal; Vector3 to = goal - p; to.y = 0f; goalDir = to.normalized; goalSpeed = Mathf.Min(spd, (d - stop) * 1.8f + 0.4f); }
         SwimFloat(dt, float.NaN);
         return d;
     }
@@ -840,6 +840,7 @@ public partial class Robot
         var v = visit; Frog f = v.lead;
         Transform pl = v.rrPlush != null ? v.rrPlush.transform : v.plush != null ? v.plush.transform : null;
         if (pl == null) { EndVerb(); return; }
+        if (CatchTurn63(dt, lp, d, pl)) return;   // ffu63: the froggy throws it back (World/Catch63.cs)
         switch (v.vs)
         {
             case 0:   // go pick it up (the RR plush lies on the rug; ours starts in the hands)
@@ -884,7 +885,7 @@ public partial class Robot
                     float k = Mathf.Clamp01(v.vt / 0.9f);
                     Vector3 a = Vector3.Lerp(v.vp, v.vp2, k) + Vector3.up * Mathf.Sin(k * Mathf.PI) * 2.2f;
                     pl.position = a; pl.Rotate(400f * dt, 300f * dt, 0f, Space.Self);
-                    if (k >= 1f) { FX.Sparkle(a, new Color(0.6f, 1f, 0.6f), 6); Sfx.PlayAt(Sfx.BumpSoft != null ? Sfx.BumpSoft : Sfx.Thud, a, 0.4f, 25f, 1.4f); Vector3 g = a; g.y = Ground(a) + 0.12f; pl.position = g; pl.rotation = Quaternion.identity; v.vs = 4; v.vt = 0f; }
+                    if (k >= 1f) { FX.Sparkle(a, new Color(0.6f, 1f, 0.6f), 6); Sfx.PlayAt(Sfx.BumpSoft != null ? Sfx.BumpSoft : Sfx.Thud, a, 0.4f, 25f, 1.4f); Vector3 g = a; g.y = Ground(a) + 0.12f; pl.position = g; pl.rotation = Quaternion.identity; v.vs = 4; v.vt = 0f; if (world != WorldId.RealRoom && RobotNav.Flat(f.transform.position - g) < 1.9f) { Catch63.Give(f, this, pl); v.vs = 5; } }
                     break;
                 }
             case 3:   // Real Room plush: physics flight

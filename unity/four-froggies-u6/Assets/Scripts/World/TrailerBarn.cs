@@ -250,7 +250,8 @@ public static class TrailerBarn
         go.AddComponent<MeshRenderer>().sharedMaterial = m;
     }
 
-    static void Receiver(Vehicle v)
+    static void Receiver(Vehicle v) { HitchRig62.Add(v); }   // ffu62: live hitch (follows big wheels / lift, chains + cable)
+    static void ReceiverOld(Vehicle v)
     {
         Vector3 h = Trailer.HitchLocal(v);
         BoxCollider b = v.body;

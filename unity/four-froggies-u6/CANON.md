@@ -31,6 +31,11 @@ Only these ten, each always the same animal. Never invent new names or swap spec
 | 9 | Daisy | dog (dachshund) |
 
 Dad (James's dad) is a non-playable character: he lives in the house (kitchen) and owns a Cybertruck.
+**Dad is a FROGGY DADDY** (Bill 2026-10-20): a bigger adult frog in the same style as the froggies - never a human. He has a
+daily life: cooking at the stove, washing dishes, wiping the counter, the fridge, walking round the house, sometimes out on the
+ranch. He can do everything froggies do (hop, swim, play, swing, ride, drive his own Cybertruck).
+**Robot voices are male + monotone/robotic** (Bill 2026-10-20): every robot (Figure 03 too, who keeps his playful words) speaks with a
+male, flat, even voice (a short beep before each line) so a robot is never mistaken for a human or a froggy; froggies sound distinct.
 
 ## Vehicles and ownership
 - **Cybertrucks:** James and Dad each have their own Cybertruck ("James's Cybertruck" is simply its name). Either can
@@ -87,7 +92,7 @@ Dad (James's dad) is a non-playable character: he lives in the house (kitchen) a
   he sometimes says no (mood; more likely right after one, less likely when asked nicely - "please") with a cheeky line and a fun
   idea instead; "yes" takes his idea. Left to himself he picks his own fun with the froggies - tag, catch, races, swings,
   hammocks, swimming, hopping, building, bug hunts, pets, cookouts - takes cars out (ownership / ask-to-share rules apply), tags
-  along to other worlds and flies his own rocket. He talks like a froggy ("Ribbit! Let's go!"). Every other robot still does
+  along to other worlds and flies his own rocket. He keeps his playful froggy words ("Ribbit! Let's go!") but, like every robot, in a male monotone robot voice (ffu65). Every other robot still does
   what it is told, and James's orders still override their chores.
 - **Robots sit with you on the porch swing / hammock** (Bill 2026-10-19 16:31): "Swing with me" / "Hammock with me" (phone ORDERS,
   or say "sit with me on the swing", "come to the hammock", "swing on the hammock"): the robot takes the swing / hammock next to
@@ -113,3 +118,24 @@ Dad (James's dad) is a non-playable character: he lives in the house (kitchen) a
 - Froggies can **jump rails** (and obstacles) to reach the roof or other rooms.
 - **Everyone boards the Starship together**: it has a blast-off sequence and everyone aboard goes as one.
 - **No pillars in the middle of the garage door openings.**
+- **Starship flight** (ffu62, Bill 2026-10-19): the nose always points where the ship is going (auto-transfer, free flight,
+  warp, orbit). RB / C = warp toward the selected target along the nose (also from orbit), LB / Z = slower, the brake drops warp;
+  any body with an orbit (Earth, Moon, Mars, Jupiter, Callisto, ...) can be entered by hand: fly close and brake (LT / S / BRAKE).
+- **Esc** never resets the game from Help: it only closes Help (ffu62).
+- **Robots are solid** (ffu63a, Bill 2026-10-19 16:14): robots never walk through walls, fences, buildings, furniture, vehicles
+  or trees - they go around (or through a door) - and stay inside the same perimeter as the froggies in every world;
+  a robot that arrives by jet pack / pod / door lands inside it, never inside a wall.
+- **Play catch with the robots** (ffu63b, Bill 2026-10-19 16:27): a robot's plushie throw can be caught by the froggy (it lands
+  within reach, or walk onto it / E / A); while held an arc preview aims at the robot (LT / right mouse aims), RT / click / F
+  throws it back; the robot runs under it, catches it and throws again (a miss = it fetches it). Kid-friendly, a soft plushie.
+- **Camper trailers are walk-in** (ffu64, Bill 2026-10-19 15:58): every camper trailer's door opens (E / A) into its own
+  furnished inside - bed, table + lamp, tiny kitchen - true to the trailer's size; you come back out next to the trailer
+  wherever it has been towed.
+- **Aircraft land on giant mechs** (ffu64, Bill 2026-10-19 17:08): drones and helicopters bump into the big mechs / giant
+  robots instead of flying through them, can land on a shoulder or the head, and ride along while the mech walks.
+- **James's house has a real upstairs** (ffu64, Bill 2026-10-19 16:47 / 17:02 / 17:06): stairs in the living room to a 2nd
+  floor (James's room, guest room, bathroom, landing, bunk room, craft room); froggies can climb onto the porch roof and in
+  through an upstairs window (never kicked back outside); the garage's back door leads into the house hallway.
+- **Stairs are easy to find + you can look up indoors** (ffu65, Bill 2026-10-20 Pixel 9): signs, yellow floor arrows and a first-visit
+  hint lead from the front door to the stairs; the robot phone PLAY tab has "Me: go upstairs (house)"; inside the house, the 2nd
+  floor and the campers the view tilts up to 65 deg (touch drag, right stick, mouse) to see the ceiling and lamps.
