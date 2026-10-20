@@ -211,7 +211,7 @@ public partial class Game
                 if (k.Length == 0 && p.StartsWith(v.Title + ":")) { string q = p.Substring(v.Title.Length + 1).Trim(); SplitBinding(q, out k, out d); }
                 s.R(pad ? Pk(k.IndexOf(" | ") >= 0 ? k.Substring(0, k.IndexOf(" | ")) : k) : MapKey(k, kind), d);
             }
-            if (BigWheels.Resizable(v)) s.R(pad ? "View + D-pad up / down" : keys ? "[  /  ]" : "WHEELS tab", "this vehicle's wheel size (now " + BigWheels.LabelFor(v) + ")");
+            if (BigWheels.Resizable(v)) { s.R(pad ? "D-pad up / down" : keys ? "[  /  ]" : "PHONE > WHEELS", "bigger / smaller wheels, your " + v.Title + " only (now " + BigWheels.Short(v) + ")"); if (pad) s.R("View + D-pad up / down", "zoom while driving"); }   // ffu67
             L.Add(s);
         }
         var mv = new HSec("MOVE");
@@ -220,7 +220,7 @@ public partial class Game
         else mv.R("Left stick", "walk / steer").R("Drag", "look around (double-tap resets)").R("A", "hop  ·  swim up").R("DIVE", "dive when swimming").R("-  /  +", "zoom");
         L.Add(mv);
         var vh = new HSec("VEHICLES");
-        if (pad) vh.R(G("A"), "get in / out").R("RT  /  LT", "gas  /  brake + reverse").R("RT  /  LT (flying)", "up  /  down; bail out = parachute").R("R-stick  ·  RT  ·  RB / " + G("Y"), "tank: aim  ·  shell  ·  missile").R("View + D-pad", "wheel size of the vehicle you're in");
+        if (pad) vh.R(G("A"), "get in / out").R("RT  /  LT", "gas  /  brake + reverse").R("RT  /  LT (flying)", "up  /  down; bail out = parachute").R("R-stick  ·  RT  ·  RB / " + G("Y"), "tank: aim  ·  shell  ·  missile").R("D-pad up / down (driving)", "your own vehicle's wheel size  ·  View + D-pad = zoom");
         else if (keys) vh.R("E", "get in / out").R("W  /  S", "gas  /  brake + reverse").R("Space  /  Shift", "fly up  /  down").R("Click  /  Right-click", "tank shell  /  missile").R("[  /  ]", "wheel size of the vehicle you're in");
         else vh.R("A", "get in / out").R("GAS  /  BRAKE", "drive").R("UP  /  DOWN", "fly").R("FIRE  /  MSL", "weapons");
         vh.R("Back up to a hitch", "trucks tow the barn trailers (" + (pad ? G("A") + " / " + G("Y") : keys ? "E" : "tap") + ")");
@@ -495,11 +495,11 @@ public partial class Game
         wheelTrack.color = on ? new Color(1f, 1f, 1f, 0.16f) : new Color(1f, 1f, 1f, 0.07f);
         wheelFill.color = on ? new Color(0.55f, 1f, 0.44f, 0.95f) : new Color(0.6f, 0.6f, 0.6f, 0.35f);
         wheelKnob.color = !on ? new Color(0.6f, 0.6f, 0.6f, 0.6f) : wheelDrag ? new Color(1f, 0.85f, 0.3f) : Color.white;
-        string l = on ? "WHEEL SIZE  " + BigWheels.LabelOf(k) : "WHEEL SIZE";
+        string l = on ? "WHEEL SIZE  ·  YOUR " + hv.Title.ToUpperInvariant() + "  " + BigWheels.Short(hv) : "WHEEL SIZE  ·  YOUR VEHICLE";   // ffu67: per player, not the whole game
         if (wheelLabel.text != l) wheelLabel.text = l;
         wheelLabel.color = on ? new Color(1f, 0.9f, 0.5f) : new Color(0.65f, 0.67f, 0.7f);
-        string how = kind == InputKind.Gamepad ? "D-pad < > or LB / RB" : kind == InputKind.Touch ? "drag the bar" : "arrow keys / - = or drag the bar";
-        string hint = !on ? (v is Skateboard ? "Skateboards keep their stock wheels" : "Get in a vehicle to resize its wheels") : hv.Title + " only  ·  1x - 4x  ·  " + how + (BigWheels.Capped(hv) && k > 1.001f ? "  ·  stock size indoors, grows outside" : "");
+        string how = kind == InputKind.Gamepad ? "your pad's D-pad < > or LB / RB (each player: own vehicle)" : kind == InputKind.Touch ? "drag the bar" : "arrow keys / - = or drag the bar";
+        string hint = !on ? (v is Skateboard ? "Skateboards keep their stock wheels" : "Get in a vehicle to resize its wheels") : "only the vehicle YOU drive  ·  1x - 4x  ·  " + how + (BigWheels.Capped(hv) && k > 1.001f ? "  ·  stock size indoors, grows outside" : "");
         if (hpWheelHint.text != hint) hpWheelHint.text = hint;
         hpWheelHint.color = on ? new Color(0.8f, 0.84f, 0.9f) : new Color(1f, 0.8f, 0.45f);
         string snd = "SOUND  <color=#8cff70>" + Sfx.LevelName + "</color>   " + (kind == InputKind.Gamepad ? G("Y") + " cycles" : kind == InputKind.Touch ? "SND button cycles" : "M cycles") + " on / low / off";
@@ -551,20 +551,32 @@ public partial class Game
     }
 
     // ---------------- in-vehicle wheel-size shortcut ----------------
-    // pad: hold View + D-pad up / down (View alone still toggles shared / split, on release); keys: [ / ]
+    // ffu67 (Bill Oct 20: "in the Cybertruck you should be able to change the size of the wheels using the game pad"):
+    // pad, DRIVING a resizable vehicle: D-pad UP = bigger wheels, D-pad DOWN = smaller (tap; hold repeats), only that
+    // player's own vehicle. Camera zoom moves to View + D-pad up / down while driving one (on foot / in other vehicles the
+    // D-pad still zooms, and View + D-pad is zoom too). View alone still toggles shared / split on release. Keys: [ / ].
+    readonly Dictionary<Slot, float> wheelRep = new Dictionary<Slot, float>();
+    public static int WheelPadNudges;   // probe counter
     PIn WheelShortcut(Slot s, PIn i)
     {
         Frog f = frogs[s.frog];
         int d = 0;
+        bool drivingBig = f != null && f.vehicle != null && f.vehicle.driver == f && BigWheels.Resizable(f.vehicle) && f.remote == null;
         if (s.kind == InputKind.Gamepad && s.pad != null && s.pad.added)
         {
             bool held = s.pad.selectButton.isPressed, was; viewHeld.TryGetValue(s, out was);
             bool combo; viewCombo.TryGetValue(s, out combo);
-            if (held)
+            bool up = s.pad.dpad.up.isPressed, dn = s.pad.dpad.down.isPressed;
+            if (held && (up || dn)) combo = true;               // View + D-pad = camera zoom (keeps i.zoom)
+            else if (drivingBig && !help)
             {
-                if (s.pad.dpad.up.wasPressedThisFrame) { d = 1; combo = true; }
-                if (s.pad.dpad.down.wasPressedThisFrame) { d = -1; combo = true; }
-                i.zoom = 0f;
+                i.zoom = 0f;                                    // D-pad up / down = this vehicle's wheels, not zoom
+                float rt; wheelRep.TryGetValue(s, out rt);
+                if (s.pad.dpad.up.wasPressedThisFrame) { d = 1; rt = 0.45f; }
+                else if (s.pad.dpad.down.wasPressedThisFrame) { d = -1; rt = 0.45f; }
+                else if (up || dn) { rt -= Time.unscaledDeltaTime; if (rt <= 0f) { d = up ? 1 : -1; rt = 0.22f; } }
+                wheelRep[s] = rt;
+                if (d != 0) WheelPadNudges++;
             }
             i.view = false;
             if (was && !held) { if (!combo) i.view = true; combo = false; }
@@ -573,16 +585,19 @@ public partial class Game
         else if (s.kind == InputKind.Keyboard)
         {
             var kb = Keyboard.current;
-            if (kb != null && !Kb.typing) { if (kb.rightBracketKey.wasPressedThisFrame) d = 1; else if (kb.leftBracketKey.wasPressedThisFrame) d = -1; }
+            if (kb != null && !Kb.typing && !help) { if (kb.rightBracketKey.wasPressedThisFrame) d = 1; else if (kb.leftBracketKey.wasPressedThisFrame) d = -1; }
         }
         if (d != 0 && f != null)
         {
-            if (BigWheels.Resizable(f.vehicle))
+            if (drivingBig)
             {
-                BigWheels.NudgeFor(f.vehicle, d, s.kind == InputKind.Gamepad ? "View + D-pad" : "[ ]");
-                f.Toast(BigWheels.Readout(f.vehicle), 1.5f);
-                Sfx.Play(Sfx.Click, 0.5f, d > 0 ? 1.1f : 0.9f);
+                float before = BigWheels.Want(f.vehicle);
+                BigWheels.NudgeFor(f.vehicle, d, s.kind == InputKind.Gamepad ? "D-pad" : "[ ]", f);
+                bool moved = Mathf.Abs(BigWheels.Want(f.vehicle) - before) > 0.001f;
+                f.Toast(BigWheels.InchLabel(f.vehicle) + (moved ? "" : d > 0 ? "  - biggest" : "  - stock size"), 1.6f);
+                Sfx.Play(Sfx.Click, 0.5f, moved ? (d > 0 ? 1.1f : 0.9f) : 0.6f);
             }
+            else if (f.vehicle != null && f.vehicle.driver != f) f.Toast("Only the driver changes the wheels", 1.4f);
             else f.Toast("Get in a vehicle to resize its wheels", 1.4f);
         }
         return i;
