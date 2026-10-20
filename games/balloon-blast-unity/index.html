@@ -37,6 +37,7 @@
   <button id="fs" title="Fullscreen" aria-label="Fullscreen"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="display:block"><path d="M1.5 5.5v-4h4M10.5 1.5h4v4M14.5 10.5v4h-4M5.5 14.5h-4v-4"/></svg></button>
   <a href="../" title="Back to the arcade">✕ Arcade</a>
 </div>
+<script src="../shared/xbox-compat.js?v=xb1"></script>
 <script>
   var buildUrl = "Build";
   var name = "WebGL";
@@ -53,6 +54,7 @@
     devicePixelRatio: Math.min(window.devicePixelRatio || 1, isMobile ? 1.5 : 2),
     showBanner: function (msg, type) { if (type === "error") { var e = document.getElementById("err"); e.style.display = "block"; e.textContent = msg; } else console.log(msg); }
   };
+  if (window.SimXbox) window.SimXbox.applyConfig(config); // xbm1
   var fill = document.getElementById("fill"), pct = document.getElementById("pct"), loader = document.getElementById("loader");
   var script = document.createElement("script");
   script.src = buildUrl + "/" + name + ".loader.js?v=202610091403-8b4c817";
