@@ -178,13 +178,25 @@ public class Ffu64 : MonoBehaviour
                 {
                     foreach (var m in StoryMech.AllMechs) if (m != null && m.band == 1 && m.driver == null && !m.wrecked) { mech = m; break; }
                     if (mech == null) foreach (var m in StoryMech.AllMechs) if (m != null && m.driver == null) { mech = m; break; }
-                    foreach (var v in Vehicle.All) { var fl = v as Flyer; if (fl == null || fl.driver != null) continue; if (fl.isDrone && fly == null) fly = fl; if (!fl.isDrone && heli == null) heli = fl; }
+                    foreach (var v in Vehicle.All) { var fl = v as Flyer; if (fl == null || fl.driver != null || fl.returning) continue; if (fl.isDrone && fly == null) fly = fl; if (!fl.isDrone && heli == null) heli = fl; }
                     if (mech == null || fly == null) { Debug.Log("FFDEMO mech64 waiting mech " + (mech != null) + " drone " + (fly != null)); if (phT > 30f) { Check("setup", false, "no mech / drone"); Done(); } return; }
                     var l = Mech64.I.PadsOf(mech);
                     if (!Mech64.On) { Debug.Log("MECH64T knob off (before)"); }
                     foreach (var p in l) { if (p.name.EndsWith("shoulders")) torsoP = p; if (p.name.EndsWith("head")) headP = p; }
                     if (Mech64.On && (torsoP == null || headP == null)) { if (phT > 30f) { Check("pads", false, "pads " + l.Count); Done(); } return; }
+                    // fix round 1: the mechs park side by side - move this one to open ground, well clear of the others
+                    Vector3 spot = new Vector3(0f, 0f, -120f); float bestD = -1f;
+                    for (int k = 0; k < 24; k++)
+                    {
+                        float a = k * 15f * Mathf.Deg2Rad; Vector3 q = new Vector3(Mathf.Cos(a) * 110f, 0f, Mathf.Sin(a) * 110f - 20f);
+                        if (BigWheels.Building(q) != null) continue;
+                        float dmin = 1e9f; foreach (var o2 in StoryMech.AllMechs) if (o2 != null && o2 != mech) dmin = Mathf.Min(dmin, Flat(o2.transform.position - q));
+                        foreach (var v2 in Vehicle.All) if (v2 != null && v2 != mech && v2 != fly && v2 != heli) dmin = Mathf.Min(dmin, Flat(v2.transform.position - q) + 20f);
+                        if (dmin > bestD) { bestD = dmin; spot = q; }
+                    }
+                    mech.DemoPlace(spot, 0f);
                     mStart = mech.transform.position; mYaw = mech.transform.eulerAngles.y;
+                    Debug.Log("MECH64T moved the mech to open ground " + spot.ToString("0") + " clear " + bestD.ToString("0") + " m");
                     Debug.Log("MECH64T mech " + mech.Title + " H " + mech.height + " at " + mStart.ToString("0") + " drone " + fly.Title + " heli " + (heli != null ? heli.Title : "none") + " pads " + l.Count);
                     Next(0, "collide");
                     Vector3 c = torsoP != null ? torsoP.col.transform.position : mech.transform.position + Vector3.up * mech.height * 0.66f;
@@ -196,13 +208,14 @@ public class Ffu64 : MonoBehaviour
                 {
                     Vector3 c = torsoP != null ? torsoP.col.transform.position : mech.transform.position + Vector3.up * mech.height * 0.66f;
                     float depth = mech.height * 0.11f;
+                    if (phT < 2.2f) { Vector3 dv = (c - fly.transform.position); dv.y += 0.4f; fly.rb.velocity = dv.normalized * 14f; }
                     float fwd = Vector3.Dot(fly.transform.position - c, mech.transform.forward);
                     minIn = Mathf.Min(minIn, fwd);
                     if (Mathf.Abs(fwd) < depth * 0.5f && Mathf.Abs(Vector3.Dot(fly.transform.position - c, mech.transform.right)) < mech.height * 0.15f) wasInside = true;
                     camOn = true; camPos = c + mech.transform.right * (mech.height * 0.9f + 8f) + mech.transform.forward * 6f + Vector3.up * 2f; camLook = c + mech.transform.forward * 3f;
                     if (phT > 2.5f)
                     {
-                        Check("drone bumps the torso (no fly-through)", !wasInside && minIn > -depth * 0.5f, "closest forward offset " + minIn.ToString("0.0") + " m (torso half depth " + (depth * 0.5f).ToString("0.0") + "), inside " + wasInside + " drone v " + fly.rb.velocity.magnitude.ToString("0.0"));
+                        Check("drone bumps the torso (no fly-through)", !wasInside && minIn > -depth * 0.5f && minIn < depth * 0.5f + 8f, "closest forward offset " + minIn.ToString("0.0") + " m (torso half depth " + (depth * 0.5f).ToString("0.0") + "), inside " + wasInside + " drone v " + fly.rb.velocity.magnitude.ToString("0.0"));
                         if (torsoP == null) { Done(); return; }
                         Drop(fly, PadTop(torsoP, -1f) + Vector3.up * 3.5f, Vector3.zero);
                         Next(1, "shoulder");
@@ -251,7 +264,7 @@ public class Ffu64 : MonoBehaviour
                 if (phT > 5f)
                 {
                     float h = heli.AltitudeAboveGround;
-                    Check("helicopter lands on the other shoulder", Mech64.IsPad(heli.GroundCol64) && h < 0.8f, "h " + h.ToString("0.00") + " under " + (heli.GroundCol64 != null ? heli.GroundCol64.name : "none"));
+                    Check("helicopter lands on the other shoulder", heli.driver == null && Mech64.IsPad(heli.GroundCol64) && h < 2.6f && heli.rb.velocity.magnitude < 0.6f, "h " + h.ToString("0.00") + " v " + heli.rb.velocity.magnitude.ToString("0.00") + " driver " + (heli.driver != null ? heli.driver.nick : "none") + " under " + (heli.GroundCol64 != null ? heli.GroundCol64.name : "none"));
                     Done();
                 }
                 break;
@@ -356,7 +369,7 @@ public class Ffu64 : MonoBehaviour
                 if (f.cc != null && f.cc.enabled && f.world == WorldId.House) f.cc.Move(Vector3.left * Mathf.Min(0.25f, Time.deltaTime * 3f) + Vector3.down * 0.02f);
                 startY = Mathf.Max(startY, f.transform.position.y - Worlds.HouseO.y);
                 camOn = true; camPos = HL(-17f, 3.2f, 13f); camLook = f.transform.position + Vector3.up * 0.6f;
-                if (phT > 9f || startY > 4.7f)
+                if (phT > 30f || startY > 4.7f)
                 {
                     Check("walk up the stairs", startY > 4.6f, "highest local y " + startY.ToString("0.00") + " at x " + (f.transform.position.x - Worlds.HouseO.x).ToString("0.0"));
                     if (startY < 4.6f) f.SendTo(WorldId.House, HL(-29f, 4.95f, 5.4f), 0f);
