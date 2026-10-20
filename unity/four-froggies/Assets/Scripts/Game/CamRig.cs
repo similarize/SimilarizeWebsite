@@ -98,6 +98,8 @@ public class CamRig
             if (f.GlideFlying && manualT > 1.5f) yawT = Mathf.LerpAngle(yawT, f.glideYaw, Mathf.Min(1f, dt * 1.4f));
         }
         dist = (dist + extraDistance) * zoomMul;
+        bool camper64 = v == null && Camper64.In(f);   // ffu64: tight camper interior - close, low, never through the walls
+        if (camper64) { dist = Mathf.Min(dist, 2.2f); height = Mathf.Min(height, 1.0f); }
 
         // smooth the player's own input so a finger landing / lifting never jumps the view
         yaw = Mathf.SmoothDampAngle(yaw, yawT, ref yawVel, tank ? 0.05f : 0.09f, Mathf.Infinity, dt);
@@ -137,8 +139,8 @@ public class CamRig
         Vector3 back = rot * Vector3.back;
         float allowed = dist;
         RaycastHit hit;
-        if (Physics.SphereCast(pivot, 0.35f, back, out hit, dist, (1 << 0) | (1 << 12) | (1 << 13) | (Light55.On && f.world == WorldId.House ? 1 << HouseWorld.WallLayer : 0), QueryTriggerInteraction.Ignore))
-            allowed = Mathf.Max(1.2f, hit.distance - 0.1f);
+        if (Physics.SphereCast(pivot, 0.35f, back, out hit, dist, (1 << 0) | (1 << 12) | (1 << 13) | ((Light55.On && f.world == WorldId.House) || camper64 ? 1 << HouseWorld.WallLayer : 0), QueryTriggerInteraction.Ignore))
+            allowed = Mathf.Max(camper64 ? 0.35f : 1.2f, hit.distance - 0.1f);
         // pull in fast (no clipping), ease back out slowly (no popping)
         if (curDist < 0f) curDist = allowed;
         curDist = allowed < curDist ? Mathf.Lerp(curDist, allowed, Mathf.Min(1f, dt * 18f)) : Mathf.MoveTowards(curDist, allowed, dt * Mathf.Max(2f, dist * 0.35f));
