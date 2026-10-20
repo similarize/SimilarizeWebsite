@@ -1,6 +1,6 @@
 /*! SimXbox: Xbox / console Edge compatibility for Unity WebGL/WebGPU pages (xb1, 2026-10-20). No dependencies.
- * Include BEFORE the Unity loader script:  <script src="../shared/xbox-compat.js?v=xbp1"></script>
- * See XBOX_COMPAT.md. Query flags: ?lowmem=1|0  ?webgpu=0  ?padlog=1  ?padgate=1|0  ?ctxmenu=1|0
+ * Include BEFORE the Unity loader script:  <script src="../shared/xbox-compat.js?v=xbp2"></script>
+ * See XBOX_COMPAT.md. Query flags: ?lowmem=1|0  ?webgpu=0  ?padlog=1  ?padgate=1|0  ?ctxmenu=1|0  ?fs=1|0
  */
 (function () {
   "use strict";
@@ -28,6 +28,23 @@
   //     it. Xbox only by default; ?ctxmenu=1 forces it on (testing), ?ctxmenu=0 off.
   var cf = flag("ctxmenu"), keepCtx = cf === null ? isXbox : cf;
   if (keepCtx) window.addEventListener("contextmenu", function (e) { e.stopImmediatePropagation(); }, true);
+
+  // 2c) xbp2: on Xbox, element fullscreen of the Unity canvas (the page's fullscreen button calls Unity SetFullscreen)
+  //     turns the screen black with only the cursor left, and with the canvas filling the whole viewport the cursor
+  //     can't get "outside the game" for HOLD Menu -> "Use game controls". So on Xbox: no fullscreen requests from
+  //     the page at all (Edge's own View-button full screen still works), hide #fs, and keep a 56px non-canvas strip
+  //     at the top. ?fs=1 = old behavior; ?fs=0 = this behavior on any browser (testing).
+  var VER = "xbp2", ff = flag("fs"), noFs = ff === null ? isXbox : !ff;
+  if (noFs) {
+    var fsNoop = function () { console.log("SimXbox: fullscreen request blocked (Xbox; ?fs=1 to allow)"); return Promise.resolve(); };
+    ["requestFullscreen", "webkitRequestFullscreen", "webkitRequestFullScreen", "mozRequestFullScreen", "msRequestFullscreen"].forEach(function (k) {
+      if (Element.prototype[k]) try { Element.prototype[k] = fsNoop; } catch (e) { } });
+    var st = document.createElement("style"); st.id = "simxbox-nofs";
+    st.textContent = "#fs{display:none!important}" + canvasSel + "{inset:auto 0 0 0!important;top:56px!important;height:calc(100% - 56px)!important}" +
+      "html::before{content:'Controller: put the cursor up here, HOLD the Menu button, choose Use game controls';position:fixed;left:0;right:0;top:0;height:56px;" +
+      "display:flex;align-items:center;justify-content:center;font:600 18px system-ui,sans-serif;color:#cfe;background:#0b0f16;border-bottom:1px solid #345;z-index:1}";
+    (document.head || document.documentElement).appendChild(st);
+  }
 
   function canvas() { return document.querySelector(canvasSel) || document.querySelector("canvas"); }
   function refocus() { emuOptOut(); setTimeout(function () { try { window.focus(); var c = canvas(); if (c) { if (!c.hasAttribute("tabindex")) c.setAttribute("tabindex", "-1"); c.focus(); } } catch (e) { } }, 50); }
@@ -74,14 +91,11 @@
   function showGate() {
     if (gate || SX.padSeen || !document.body) return;
     gate = document.createElement("div"); gate.id = "simxbox-gate";
-    gate.style.cssText = "position:fixed;left:0;right:0;top:0;min-height:96px;z-index:9;display:flex;align-items:center;justify-content:center;" +
-      "background:rgba(0,0,0,.82);border-bottom:2px solid rgba(255,255,255,.35);cursor:pointer;font:600 22px system-ui,sans-serif;color:#fff;text-align:center;padding:10px 120px;box-sizing:border-box;line-height:1.45";
+    gate.style.cssText = "position:fixed;left:0;right:0;top:0;min-height:56px;z-index:9;display:block;" +
+      "background:#000;border-bottom:2px solid rgba(255,255,255,.35);cursor:pointer;font:600 20px system-ui,sans-serif;color:#fff;text-align:center;padding:6px 120px;box-sizing:border-box;line-height:1.3";
     gate.innerHTML = 'Move the cursor here, <b>hold</b> the &#8801; Menu button, choose <b>Use game controls</b>, then press <b>A</b>.' +
       '<br><span style="font-size:15px;opacity:.8">Still no controller? Open and close the Xbox Guide, then press A.</span>';
-    gate.addEventListener("click", function () {
-      refocus();
-      try { var d = document.documentElement, rq = d.requestFullscreen || d.webkitRequestFullscreen; if (rq && !document.fullscreenElement && !document.webkitFullscreenElement) { var p = rq.call(d); if (p && p.catch) p.catch(function () { }); } } catch (e) { }
-    });
+    gate.addEventListener("click", function () { refocus(); }); // xbp2: no fullscreen request from the gate
     document.body.appendChild(gate);
   }
   var t0 = Date.now(), readySeen = false;
@@ -102,14 +116,14 @@
         out.push("#" + i + " " + x.id.slice(0, 48) + " mapping=" + (x.mapping || "(none: Unity sees a Joystick, not a Gamepad)") +
           " btn[" + b.join(",") + "] axes[" + Array.prototype.map.call(x.axes, function (a) { return a.toFixed(2); }).join(",") + "]"); }
       var a = document.activeElement;
-      var line = "t=" + ((Date.now() - t0) / 1000).toFixed(0) + "s emu=" + ("gamepadInputEmulation" in navigator ? navigator.gamepadInputEmulation : "n/a") +
+      var line = "SimXbox " + VER + " xbox=" + isXbox + " lowmem=" + lowmem + " t=" + ((Date.now() - t0) / 1000).toFixed(0) + "s emu=" + ("gamepadInputEmulation" in navigator ? navigator.gamepadInputEmulation : "n/a") +
         " focus=" + document.hasFocus() + " active=" + (a && (a.id || a.tagName)) + " fs=" + !!(document.fullscreenElement || document.webkitFullscreenElement) +
-        " lock=" + !!document.pointerLockElement + " gate=" + !!gate + " ctx=" + keepCtx + " padSeen=" + SX.padSeen + " webgpu=" + (navigator.gpu ? "on" : "off");
+        " lock=" + !!document.pointerLockElement + " gate=" + !!gate + " ctx=" + keepCtx + " nofs=" + noFs + " padSeen=" + SX.padSeen + " webgpu=" + (navigator.gpu ? "on" : "off");
       console.log("SimXbox padlog: " + line + " pads=" + (out.length ? out.join(" | ") : "none"));
       if (!box && document.body) { box = document.createElement("pre"); box.id = "simxbox-padlog";
-        box.style.cssText = "position:fixed;left:6px;bottom:6px;z-index:60;margin:0;max-width:96vw;white-space:pre-wrap;font:12px/1.35 monospace;color:#9f9;background:rgba(0,0,0,.7);padding:6px 8px;border-radius:6px;pointer-events:none";
+        box.style.cssText = "position:fixed;left:2vw;right:2vw;bottom:2vh;z-index:2147483647;margin:0;white-space:pre-wrap;font:bold 24px/1.35 monospace;color:#ff0;background:rgba(0,0,0,.88);border:4px solid #ff0;padding:12px 16px;border-radius:10px;pointer-events:none";
         document.body.appendChild(box); }
-      if (box) box.textContent = "padlog " + line + "\n" + (out.length ? out.join("\n") : "pads: none (press a button)");
+      if (box) box.textContent = "PADLOG " + line + "\n" + (out.length ? out.join("\n") : "pads: none (press a button)");
     }, 1000);
   }
 })();
