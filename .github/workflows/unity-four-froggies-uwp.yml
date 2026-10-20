@@ -187,6 +187,17 @@ jobs:
           $x.Package.Dependencies.TargetDeviceFamily | ForEach-Object { "device family: $($_.Name) min $($_.MinVersion) max $($_.MaxVersionTested)" } | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
           $x.Package.Capabilities.ChildNodes | ForEach-Object { "capability: $($_.LocalName) $($_.Name)" } | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
           "MANIFEST=$($m.FullName)" >> $env:GITHUB_ENV
+          # Unity references the "WindowsMobile" extension SDK for the newest Windows SDK, but SDK 10.0.26100 no longer
+          # ships it (MSB3774 "Could not find SDK WindowsMobile, Version=10.0.26100.0", run 39473140441). Phone-only APIs,
+          # nothing the player needs on Xbox -> drop the reference from the generated projects.
+          Get-ChildItem $root -Recurse -Filter *.vcxproj | ForEach-Object {
+            $fn = $_.Name
+            [xml]$p = Get-Content $_.FullName -Raw
+            $refs = @($p.SelectNodes("//*[local-name()='SDKReference' and starts-with(@Include,'WindowsMobile')]"))
+            foreach ($r in $refs) { "drop $($r.Include) from $($_.Name)" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"; [void]$r.ParentNode.RemoveChild($r) }
+            if ($refs.Count) { $p.Save($_.FullName) }
+            @($p.SelectNodes("//*[local-name()='SDKReference']")) | ForEach-Object { "sdk ref left in ${fn}: $($_.Include)" } | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+          }
 
       - name: MSBuild (Master | x64, AppxBundle, sideload)
         id: msbuild
