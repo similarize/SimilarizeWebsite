@@ -75,7 +75,7 @@ public partial class Game
         if (Layout.PondQ(x, z) < 1.1f) return 99;
         float y = Ranch.GY(x, z);
         if (y < Layout.WaterY + 0.6f) return 99;
-        if (Mathf.Abs(y - y0) > 3f) { if (why) fwWhy += " slope"; return 1; }
+        if (Mathf.Abs(y - y0) > 3f) { if (why) fwWhy += " slope"; return 10; }   // fix 4: slope weighs 10, an obstacle 1 (obstacles get cleared)
         int n = Physics.OverlapBoxNonAlloc(new Vector3(x, y + 1.3f, z), new Vector3(1.5f, 1f, 1.5f), fwBuf, Quaternion.identity, ~0, QueryTriggerInteraction.Ignore);
         for (int i = 0; i < n; i++)
         {
@@ -124,6 +124,7 @@ public partial class Game
             if (fwWhy.Length > 160) fwWhy = fwWhy.Substring(0, 160);
             // start on the circle of radius ~22 m (12 m/s, steer 0.35) round the centre: heading +x, the centre on the right (-z)
             fwHead = 90f; fwStart = fwC + new Vector3(0f, 0f, 22f); fwStart.y = Ranch.GY(fwStart.x, fwStart.z);
+            FwClearArena(v, R + 10f);
             Debug.Log("FOURWS67 SPOT best dry lawn centre (" + fwC.x.ToString("0") + ", " + fwC.z.ToString("0") + ") y " + fwC.y.ToString("0.0") + " r " + R + " m: " + best + " blocked samples [" + fwWhy.Trim() + "], start (" + fwStart.x.ToString("0") + ", " + fwStart.z.ToString("0") + ") heading " + fwHead + " | PondQ " + Layout.PondQ(fwC.x, fwC.z).ToString("0.00") + " | " + tried + " candidates");
         }
         else
@@ -132,6 +133,36 @@ public partial class Game
             Debug.Log("FOURWS67 SPOT none found in " + tried + " candidates - falling back to (0,-14)");
         }
     }
+    // fix 4 (probe only): try 3 picked the best disk at (-110, 0) but it still held trees / rocks / parked mechs, and the 12 m/s circle
+    // wedged the truck on one (speed 0.0 at (-141, 1)). The test arena is now CLEARED for the run: every non-terrain, non-trigger
+    // collider within R + 10 m (not the truck, not froggies' CharacterControllers) is switched off - a dynamic body is made kinematic
+    // first so it cannot fall - and all of it is restored when the probe ends.
+    readonly System.Collections.Generic.List<Collider> fwOff = new System.Collections.Generic.List<Collider>();
+    readonly System.Collections.Generic.List<Rigidbody> fwKin = new System.Collections.Generic.List<Rigidbody>();
+    void FwClearArena(GroundVehicle v, float r)
+    {
+        var hits = Physics.OverlapSphere(new Vector3(fwC.x, fwC.y + 2f, fwC.z), r, ~0, QueryTriggerInteraction.Ignore);
+        var names = new System.Collections.Generic.Dictionary<string, int>();
+        foreach (var c in hits)
+        {
+            if (c == null || !c.enabled || c is TerrainCollider || c is CharacterController) continue;
+            if (v != null && c.transform.IsChildOf(v.transform)) continue;
+            var rb = c.attachedRigidbody;
+            if (rb != null && !rb.isKinematic && !fwKin.Contains(rb)) { rb.isKinematic = true; fwKin.Add(rb); }
+            c.enabled = false; fwOff.Add(c);
+            string n = c.name.Length > 24 ? c.name.Substring(0, 24) : c.name; names[n] = names.TryGetValue(n, out int k) ? k + 1 : 1;
+        }
+        string list = ""; foreach (var kv in names) list += kv.Key + " x" + kv.Value + ", ";
+        if (list.Length > 220) list = list.Substring(0, 220);
+        Debug.Log("FOURWS67 ARENA cleared " + fwOff.Count + " colliders (" + fwKin.Count + " bodies held) within " + r.ToString("0") + " m of (" + fwC.x.ToString("0") + ", " + fwC.z.ToString("0") + "): " + list);
+    }
+    void FwRestoreArena()
+    {
+        foreach (var c in fwOff) if (c != null) c.enabled = true;
+        foreach (var rb in fwKin) if (rb != null) rb.isKinematic = false;
+        if (fwOff.Count > 0) Debug.Log("FOURWS67 ARENA restored " + fwOff.Count + " colliders");
+        fwOff.Clear(); fwKin.Clear();
+    }
     float fwR, fwDia, fwRear, fwFront, fwYaw, fwLat, fwSpd;
     // circle at (speed, steer): settle, then measure 4 s of game time (yaw-rate radius, path diameter, rear wheel angle)
     IEnumerator FwCircle(GroundVehicle v, float speed, float steer, string tag)
@@ -139,6 +170,7 @@ public partial class Game
         FwPark(v, fwStart.x, fwStart.z, fwHead); yield return FwF(3);
         // fix 3: the fast run-up is on the circle itself (steer held), so it never needs a long straight lane
         fwSpeed = speed; fwSteer = speed > 6f ? steer : 0f; yield return FwGame(speed > 6f ? 5f : 2.5f);   // run-up to speed
+        if (speed > 6f) Debug.Log("FOURWS67 RUNUP " + tag + " at (" + v.transform.position.x.ToString("0") + ", " + v.transform.position.z.ToString("0") + ") speed " + v.ForwardSpeed.ToString("0.0") + " m/s kinematic " + v.rb.isKinematic + " up " + v.transform.up.y.ToString("0.00"));
         fwSteer = steer; yield return FwGame(3f);
         float sv = 0f, sy = 0f, sl = 0f; int n = 0; float t = 0f, r0 = Time.realtimeSinceStartup; float subMax = v.pondSub, vMax = 0f;
         Vector3 c0 = v.transform.position; float dmax = 0f; float rearSum = 0f, frontSum = 0f; float h0 = v.transform.eulerAngles.y, hTurn = 0f, hPrev = h0;
@@ -226,5 +258,5 @@ public partial class Game
         ja.inputHook = null; cam.camOn = false;
         FwDone();
     }
-    void FwDone() { Debug.Log("FOURWS67 RESULT " + fwPass + "/" + fwTotal); Debug.Log("FFDEMO fourws67 done"); }
+    void FwDone() { FwRestoreArena(); Debug.Log("FOURWS67 RESULT " + fwPass + "/" + fwTotal); Debug.Log("FFDEMO fourws67 done"); }
 }
