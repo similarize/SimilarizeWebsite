@@ -38,21 +38,11 @@
   <a href="../" title="Back to the arcade">✕ Arcade</a>
 </div>
 <script>
-  /* bbx1 (Xbox Edge): the game sets Cursor.lockState, so in cursor mode the first A press (a click) asks for pointer lock,
-     which captures Edge's cursor and stops HOLD Menu from opening the "Use game controls" menu. Unity also calls
-     preventDefault on keys it sees, which can swallow the Menu/View/ContextMenu keys Edge needs. On Xbox: no pointer
-     lock, and those keys never reach Unity. ?xbox=1 forces this anywhere, ?lock=1 allows pointer lock again. */
-  (function () {
-    var q = location.search;
-    if (!(/Xbox/i.test(navigator.userAgent) || /[?&]xbox=1/.test(q)) || /[?&]lock=1/.test(q)) return;
-    window.__bbxLockBlocked = 0;
-    Element.prototype.requestPointerLock = function () { window.__bbxLockBlocked++; console.log("bbx1: pointer lock blocked (Xbox; ?lock=1 to allow)"); };
-    var edgeKeys = { ContextMenu: 1, GamepadMenu: 1, GamepadView: 1 }, edgeCodes = { 93: 1, 207: 1, 208: 1 };
-    function pass(e) { if (edgeKeys[e.key] || edgeCodes[e.keyCode]) e.stopImmediatePropagation(); }
-    window.addEventListener("keydown", pass, true); window.addEventListener("keyup", pass, true); window.addEventListener("keypress", pass, true);
-  })();
+  /* bbu11: bbx1's page-level pointer-lock no-op and Menu/View/ContextMenu key swallow are gone: xbox-compat xbp3+ blocks
+     pointer lock itself, and the swallow was the only page difference from Lambo Blast (where HOLD Menu works). */
+  window.SimXboxOptions = { build: "bbu11 202610091403-8b4c817" };
 </script>
-<script src="../shared/xbox-compat.js?v=xbp3"></script>
+<script src="../shared/xbox-compat.js?v=xbp4"></script>
 <script>
   var buildUrl = "Build";
   var name = "WebGL";
@@ -90,7 +80,7 @@
   script.onerror = function () { var e = document.getElementById("err"); e.style.display = "block"; e.textContent = "Could not load the game files."; };
   document.body.appendChild(script);
   canvas.addEventListener("pointerdown", function () { canvas.focus(); });
-  document.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+  if (!(window.SimXbox && window.SimXbox.isXbox)) document.addEventListener("contextmenu", function (e) { e.preventDefault(); }); // bbu11: never on Xbox
   document.addEventListener("touchmove", function (e) { e.preventDefault(); }, { passive: false });
 </script>
 </body>
