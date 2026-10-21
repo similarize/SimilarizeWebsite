@@ -1,7 +1,8 @@
-name: Unity WebGL - Balloon Blast U6 PRIVATE PREVIEW (bb-unity6 -> games/preview/balloon-blast-u6 only)
+name: Unity WebGL - Balloon Blast 6.6 (bb-unity6 -> games/balloon-blast-u6)
 
-# Private, unlisted preview of the bb-unity6 branch. Publishes ONLY to games/preview/balloon-blast-u6 on gh-pages
-# (not linked from any index page, noindex). Never touches games/balloon-blast-unity or unity-src.
+# Balloon Blast 6.6 (Unity 6000.6.5f1, branch bb-unity6). Public since 2026-10-20 (Bill approved going public; was the private
+# preview at games/preview/balloon-blast-u6). Publishes ONLY games/balloon-blast-u6 on gh-pages (its own "Balloon Blast 6.6"
+# arcade cabinet). Never touches games/balloon-blast-unity (2022.3), games/balloon-blast-babylon or unity-src.
 on:
   push:
     branches: [bb-unity6]
@@ -127,12 +128,12 @@ jobs:
           if [ "$code" != "0" ]; then exit 1; fi
           ls "$PROJECT_DIR"/build/WebGL/Build/*.loader.js > /dev/null
 
-      - name: Publish PRIVATE preview (unlisted path only)
+      - name: Publish games/balloon-blast-u6
         id: publish
         if: success() && github.ref == 'refs/heads/bb-unity6'
         env:
           GH_TOKEN: ${{ github.token }}
-          GAME_DIR: games/preview/balloon-blast-u6
+          GAME_DIR: games/balloon-blast-u6
         run: |
           set -e
           OUT="$GITHUB_WORKSPACE/$PROJECT_DIR/build/WebGL"
@@ -150,12 +151,12 @@ jobs:
           cp -r "$OUT/Build" "$GAME_DIR/Build"
           if [ -d "$OUT/StreamingAssets" ]; then cp -r "$OUT/StreamingAssets" "$GAME_DIR/"; fi
           cp "$GITHUB_WORKSPACE/$PROJECT_DIR/web/LICENSES.txt" "$GAME_DIR/LICENSES.txt" || true
-          sed -e "s/__BUILD_NAME__/$NAME/g" -e "s/__BUILD_VERSION__/$VERSION/g" -e 's#href="../"#href="/games/"#' -e 's#<head>#<head><meta name="robots" content="noindex,nofollow">#' "$GITHUB_WORKSPACE/src/unity/web/index.html" > "$GAME_DIR/index.html"
+          sed -e "s/__BUILD_NAME__/$NAME/g" -e "s/__BUILD_VERSION__/$VERSION/g" "$GITHUB_WORKSPACE/$PROJECT_DIR/web/index.html" > "$GAME_DIR/index.html"
           git add -A "$GAME_DIR"
           if git diff --cached --quiet; then echo "nothing to publish"; exit 0; fi
-          git commit -m "Private preview: Balloon Blast U6 (bb-unity6) $VERSION"
+          git commit -m "Publish Balloon Blast 6.6 (Unity WebGL) build $VERSION"
           for i in 1 2 3 4 5; do
-            if git push origin HEAD:gh-pages; then echo "published preview" | tee -a "$LOG_DIR/status.txt"; exit 0; fi
+            if git push origin HEAD:gh-pages; then echo "published games/balloon-blast-u6" | tee -a "$LOG_DIR/status.txt"; exit 0; fi
             sleep $((i*3))
             git pull --rebase origin gh-pages
           done

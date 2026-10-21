@@ -1,6 +1,10 @@
 // Page helpers for the Unity side: CSS safe-area insets and the size of the page's own top-right toolbar
 // (fullscreen + "Arcade" buttons), both converted to canvas pixels so the game UI can stay clear of them.
 mergeInto(LibraryManager.library, {
+  // bbu6-pub: Xbox / ?lowmem=1 (games/shared/xbox-compat.js SimXbox.lowmem) -> the game's lite tier
+  BBPage_LowMem: function () {
+    try { return (typeof window !== "undefined" && window.SimXbox && window.SimXbox.lowmem) ? 1 : 0; } catch (e) { return 0; }
+  },
   BBPage_Metric: function (which) {
     try {
       var c = (typeof Module !== "undefined" && Module.canvas) ? Module.canvas : document.getElementById("unity-canvas");
