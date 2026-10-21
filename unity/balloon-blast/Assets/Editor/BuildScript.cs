@@ -117,20 +117,23 @@ public static class BuildScript
         PlayerSettings.productName = "Balloon Blast Airsoft";
         PlayerSettings.colorSpace = ColorSpace.Gamma;
         PlayerSettings.runInBackground = true;
-        PlayerSettings.stripEngineCode = false;
-        PlayerSettings.SetManagedStrippingLevel(BuildTargetGroup.WebGL, ManagedStrippingLevel.Low);
+        PlayerSettings.stripEngineCode = true;   // xbm1: smaller wasm = less memory to compile (Xbox Edge)
+        PlayerSettings.SetManagedStrippingLevel(BuildTargetGroup.WebGL, ManagedStrippingLevel.Medium);   // xbm1 (Assets/link.xml keeps reflected assemblies)
         PlayerSettings.SetUseDefaultGraphicsAPIs(BuildTarget.WebGL, false);
         PlayerSettings.SetGraphicsAPIs(BuildTarget.WebGL, new[] { GraphicsDeviceType.OpenGLES3 });
 
-        PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Disabled;
-        PlayerSettings.WebGL.decompressionFallback = false;
+        // xbm1: Brotli (~4x smaller download). decompressionFallback = true names the files *.unityweb and lets the loader
+        // decompress in JS when the host doesn't send Content-Encoding: br, so it works on any host (GitHub Pages / Cloudflare).
+        PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Brotli;
+        PlayerSettings.WebGL.decompressionFallback = true;
         PlayerSettings.WebGL.exceptionSupport = WebGLExceptionSupport.ExplicitlyThrownExceptionsOnly;
         PlayerSettings.WebGL.dataCaching = true;
         PlayerSettings.WebGL.nameFilesAsHashes = false;
         PlayerSettings.WebGL.linkerTarget = WebGLLinkerTarget.Wasm;
         // Moderate memory (property names differ between Unity versions, so set them by reflection)
-        SetStatic(typeof(PlayerSettings.WebGL), "initialMemorySize", 128);
-        SetStatic(typeof(PlayerSettings.WebGL), "maximumMemorySize", 1024);
+        // xbm1: Xbox Edge shares ~1 GB across all its processes; 1024 MB max crashed it ("fatal memory exceeded")
+        SetStatic(typeof(PlayerSettings.WebGL), "initialMemorySize", 64);
+        SetStatic(typeof(PlayerSettings.WebGL), "maximumMemorySize", 512);
 
         QualitySettings.shadows = ShadowQuality.All;
         QualitySettings.shadowDistance = 70f;
