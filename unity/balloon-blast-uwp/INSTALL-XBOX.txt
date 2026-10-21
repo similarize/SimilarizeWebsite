@@ -1,0 +1,57 @@
+Balloon Blast for Xbox (Dev Mode sideload)  -  build __TAG__ (__SHA__)
+=====================================================================
+
+What to download from this release (all on your PC):
+  * __BUNDLE__                      <- the game
+  * __DEPS__   <- dependency file(s) (x64)
+  * BalloonBlast-__TAG__.cer        <- only needed if you ever install on a Windows PC (not needed for the Xbox)
+  (BalloonBlast-UWP-__TAG__-package.zip has all of the above in one zip, if that's easier.)
+
+The Xbox must already be in Developer Mode (Dev Home is the home screen).
+
+1) On the Xbox, in Dev Home, open Remote Access settings (under "Remote Access" / "Remote Access Settings"):
+   - turn on "Enable Xbox Device Portal"
+   - turn on authentication and set a username and password (you'll type these on the PC).
+   Dev Home then shows an address like  https://192.168.1.50:11443  - write it down.
+
+2) On the PC (same home network), open that https://<xbox-ip>:11443 address in a browser.
+   The browser warns about the certificate - that's expected for the Xbox's own self-made certificate:
+   choose "Advanced" -> "Continue / Proceed". Sign in with the username and password from step 1.
+
+3) In Device Portal, on the Home page under "My games & apps": click Add.
+   - Choose the game file: __BUNDLE__ , click Next.
+   - Dependencies: click "Choose file" and add __DEPS__ (add each one if there's more than one), click Next.
+   - Click Install (Start). Wait for "Package successfully registered".
+   If the Xbox says the dependency is already installed / a newer one is present, that's fine - just install the game.
+
+   This is the first Balloon Blast Xbox build. A later build installs over it the same way (Device Portal -> Add); if
+   Device Portal refuses ("a higher version is already installed" / package conflict), uninstall the old one first (Dev Home:
+   highlight it, View button -> Uninstall), then install the new one.
+   You can have Balloon Blast and Four Froggies installed side by side; they are separate apps.
+
+4) Back on the Xbox, in Dev Home, find "Balloon Blast" in the list of games and apps.
+   Before the first launch: highlight it, press the View button (two squares) -> "View details",
+   and change the app type from "App" to "Game" (games get much more memory - leave it on App and it may close itself).
+   Then press A to launch.
+
+Playing: each Xbox controller is one player (split screen). In the lobby A or Menu = join / start, B = leave / back.
+B never closes the app. The soldier model is downloaded at launch (assets.babylonjs.com), so keep the Xbox online.
+Online play is only in the web version (similarize.com/games) for now; on Xbox it is local couch play.
+Xbox One S profile (this build): 1280x720 render scaled to the TV, 30 fps cap, no anti-aliasing, no post-processing,
+one short hard shadow range, half-resolution textures, lower detail distance.
+
+On-screen checks (hold the buttons; a reminder shows for a few seconds after launch):
+  * hold View 2 s        -> FPS counter (fps, frame ms, worst ms, render size, quality). Hold View 2 s again -> tries an
+                            uncapped 60 fps mode; once more -> counter off (back to 30). 
+  * hold View + Menu 2 s -> SOUND CHECK panel: re-opens the audio output, plays a short two-note test tone and shows what the
+                            mixer is doing. While it is open, D-pad Right tries the next output mode (stereo 48 kHz, 7.1,
+                            5.1, stereo 44.1 kHz, bigger buffer) with a test tone each time; the last one tried is kept for the
+                            next launch. Hold View + Menu 2 s again to close (Menu may also pause the game - press
+                            Menu again to resume).
+  Please send back: the FPS numbers in the lobby and in a match (1 player and split screen), and whether you hear the test tone / music, plus a phone photo
+  of the SOUND CHECK panel if it stays silent.
+  The full log is on the Xbox: Device Portal -> File explorer -> LocalAppData -> SimilarizeBalloonBlast_... -> TempState ->
+  UnityPlayer.log (lines starting with BBXBOX).
+
+If something goes wrong: in Device Portal open "Apps" or "Performance" to see whether it is running, and
+"Diagnostics > Crash data" if it closes. Uninstall from Dev Home (View button -> Uninstall) or from Device Portal.

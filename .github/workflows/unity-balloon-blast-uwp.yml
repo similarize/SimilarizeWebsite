@@ -1,0 +1,370 @@
+name: Unity UWP (Xbox Dev Mode) - Balloon Blast
+
+# lbuwp (Oct 20, 2026): Universal Windows Platform package of unity/balloon-blast (Unity 2022.3) for an Xbox One S in
+# Developer Mode, sideloaded through Xbox Device Portal - a copy of unity-four-froggies-uwp.yml (ff-uwp-ffu67x) for this game.
+# Published as a GitHub Release (bundle + x64 dependencies + test .cer + package zip + INSTALL-XBOX.txt). Never touches gh-pages.
+#  - UWP-only sources live in unity/balloon-blast-uwp/ and are copied into the project on the runner
+#    (Assets/Editor/BBBuildUWP.cs = build entry, Assets/Scripts/Platform/BBXboxUWP.cs = One S 720p/30 profile, audio
+#    re-open + loop/music watchdog + sound check, FPS counter on hold View, B = back), so the WebGL build never compiles them
+#    and pushing them never starts WebGL.
+#  - own concurrency group (unity-uwp-balloon-blast), so a Balloon Blast WebGL push can't cancel it and it can't cancel WebGL.
+#  - started by hand (workflow_dispatch) or by a push that changes only this file / unity/balloon-blast-uwp/**.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g. bb-uwp-1)'
+        required: false
+        default: 'bb-uwp-1'
+      smoke:
+        description: 'Best-effort install + launch on the runner (true/false)'
+        required: false
+        default: 'true'
+  push:
+    branches: [unity-src]
+    paths:
+      - '.github/workflows/unity-balloon-blast-uwp.yml'
+      - 'unity/balloon-blast-uwp/**'
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: unity-uwp-balloon-blast
+  cancel-in-progress: false
+
+env:
+  PROJECT_DIR: src/unity/balloon-blast
+  OVERLAY_DIR: src/unity/balloon-blast-uwp
+  TAG: ${{ github.event.inputs.tag || 'bb-uwp-1' }}
+  SMOKE: ${{ github.event.inputs.smoke || 'true' }}
+  PFX_PASS: balloonblast
+  CERT_SUBJECT: CN=Similarize
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  uwp:
+    runs-on: windows-2022
+    timeout-minutes: 240
+    steps:
+      - name: Checkout unity-src
+        uses: actions/checkout@v4
+        with:
+          ref: unity-src
+          path: src
+
+      - name: Prepare log dir
+        run: |
+          mkdir -p "$RUNNER_TEMP/logs"
+          echo "LOG_DIR=$RUNNER_TEMP/logs" >> "$GITHUB_ENV"
+          echo "UWP run ${{ github.run_id }} attempt ${{ github.run_attempt }} event ${{ github.event_name }} sha ${{ github.sha }} tag $TAG started $(date -u +%FT%TZ)" > "$RUNNER_TEMP/logs/status.txt"
+
+      - name: Check Unity secrets
+        id: secrets
+        env:
+          UE: ${{ secrets.UNITY_EMAIL }}
+          UP: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          if [ -z "$UE" ] || [ -z "$UP" ]; then echo "MISSING_SECRETS" | tee -a "$LOG_DIR/status.txt"; exit 1; fi
+          echo "secrets present" | tee -a "$LOG_DIR/status.txt"
+
+      - name: UWP overlay
+        run: |
+          set -e
+          cp -r "$OVERLAY_DIR/Assets/." "$PROJECT_DIR/Assets/"
+          mkdir -p "$PROJECT_DIR/UWPTiles" && cp "$OVERLAY_DIR"/tiles/*.png "$PROJECT_DIR/UWPTiles/"
+          ls -la "$PROJECT_DIR/Assets/Editor" "$PROJECT_DIR/Assets/Scripts/Platform" "$PROJECT_DIR/UWPTiles" 2>&1 | tee -a "$LOG_DIR/status.txt"
+
+      - name: Test certificate (self-signed, CN=Similarize)
+        id: cert
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $proj = Join-Path $env:GITHUB_WORKSPACE 'src\unity\balloon-blast'
+          $cert = New-SelfSignedCertificate -Type Custom -Subject $env:CERT_SUBJECT -KeyUsage DigitalSignature `
+            -FriendlyName 'Balloon Blast sideload test' -CertStoreLocation 'Cert:\CurrentUser\My' `
+            -TextExtension @('2.5.29.37={text}1.3.6.1.5.5.7.3.3', '2.5.29.19={text}') -NotAfter (Get-Date).AddYears(5)
+          $sec = ConvertTo-SecureString -String $env:PFX_PASS -Force -AsPlainText
+          $pfx = Join-Path $proj 'BalloonBlastTest.pfx'
+          Export-PfxCertificate -Cert $cert -FilePath $pfx -Password $sec | Out-Null
+          $out = Join-Path $env:RUNNER_TEMP 'rel'; New-Item -ItemType Directory -Force $out | Out-Null
+          $cer = Join-Path $out "BalloonBlast-$env:TAG.cer"
+          Export-Certificate -Cert $cert -FilePath $cer | Out-Null
+          "UWP_PFX=BalloonBlastTest.pfx" >> $env:GITHUB_ENV
+          "UWP_PFX_PASS=$env:PFX_PASS" >> $env:GITHUB_ENV
+          "UWP_PFX_ABS=$pfx" >> $env:GITHUB_ENV
+          "UWP_CERT_THUMB=$($cert.Thumbprint)" >> $env:GITHUB_ENV
+          "UWP_CER=$cer" >> $env:GITHUB_ENV
+          "UWP_TILES=$(Join-Path $proj 'UWPTiles')" >> $env:GITHUB_ENV
+          "REL_DIR=$out" >> $env:GITHUB_ENV
+          "cert: subject $($cert.Subject) thumb $($cert.Thumbprint) notAfter $($cert.NotAfter)" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+
+      - name: Visual Studio UWP C++ tools (v143)
+        id: vs
+        shell: pwsh
+        timeout-minutes: 30
+        run: |
+          $vw = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vs = & $vw -latest -products * -property installationPath
+          "vs: $vs" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+          $has = & $vw -latest -products * -requires Microsoft.VisualStudio.ComponentGroup.UWP.VC -property installationPath
+          if (-not $has) {
+            "UWP.VC (v143) missing -> installing" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+            $p = Start-Process -FilePath "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vs_installer.exe" `
+              -ArgumentList "modify --installPath `"$vs`" --add Microsoft.VisualStudio.ComponentGroup.UWP.VC --add Microsoft.VisualStudio.Component.UWP.VC.ARM64 --quiet --norestart --nocache" `
+              -Wait -PassThru
+            "vs_installer exit $($p.ExitCode)" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+            $has = & $vw -latest -products * -requires Microsoft.VisualStudio.ComponentGroup.UWP.VC -property installationPath
+          }
+          if ($has) { "UWP.VC v143 present" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt" }
+          else { "UWP.VC v143 still missing -> MSBuild will use PlatformToolset v142" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"; "TOOLSET_OVERRIDE=v142" >> $env:GITHUB_ENV }
+          Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\Include" -ErrorAction SilentlyContinue | ForEach-Object { "sdk: $($_.Name)" } | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+
+      - name: Set up Unity + UWP module
+        id: unity-setup
+        uses: RageAgainstThePixel/unity-setup@v2
+        with:
+          version-file: src/unity/balloon-blast/ProjectSettings/ProjectVersion.txt
+          modules: universal-windows-platform
+          cache-installation: false
+
+      - name: Activate Unity license
+        id: activate
+        uses: RageAgainstThePixel/activate-unity-license@v2
+        with:
+          license: personal
+          username: ${{ secrets.UNITY_EMAIL }}
+          password: ${{ secrets.UNITY_PASSWORD }}
+
+      - name: Build UWP (Unity -> Visual Studio solution)
+        id: build
+        shell: pwsh
+        run: |
+          $ed = $env:UNITY_EDITOR_PATH
+          if (-not $ed) { $ed = '${{ steps.unity-setup.outputs.unity-editor-path }}' }
+          "editor: $ed" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+          Get-ChildItem (Join-Path (Split-Path $ed) 'Data\PlaybackEngines') -ErrorAction SilentlyContinue | ForEach-Object { "playback engine: $($_.Name)" } | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+          $proj = Join-Path $env:GITHUB_WORKSPACE 'src\unity\balloon-blast'
+          $log = Join-Path $env:LOG_DIR 'editor.log'
+          $a = "-batchmode -nographics -quit -projectPath `"$proj`" -buildTarget WSAPlayer -executeMethod BBBuildUWP.Build -logFile `"$log`""
+          $p = Start-Process -FilePath $ed -ArgumentList $a -Wait -PassThru -NoNewWindow
+          "unity exit code: $($p.ExitCode)" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+          Select-String -Path $log -Pattern 'BUILD_RESULT|BUILD_SCRIPT_EXIT|BBUWP' -ErrorAction SilentlyContinue | ForEach-Object { $_.Line } | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+          Get-ChildItem (Join-Path $proj 'build\UWP') -ErrorAction SilentlyContinue | ForEach-Object { "out: $($_.Name)" } | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+          if ($p.ExitCode -ne 0) { exit 1 }
+          $sln = Get-ChildItem (Join-Path $proj 'build\UWP') -Filter *.sln | Select-Object -First 1
+          if (-not $sln) { "NO_SOLUTION" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"; exit 1 }
+          "SLN=$($sln.FullName)" >> $env:GITHUB_ENV
+          "solution: $($sln.Name)" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+
+      - name: Check Package.appxmanifest (publisher = certificate)
+        id: manifest
+        shell: pwsh
+        run: |
+          $root = Split-Path $env:SLN
+          $m = Get-ChildItem $root -Recurse -Filter Package.appxmanifest | Select-Object -First 1
+          if (-not $m) { "NO_MANIFEST" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"; exit 1 }
+          [xml]$x = Get-Content $m.FullName -Raw
+          $id = $x.Package.Identity
+          "manifest: $($m.FullName)" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+          "identity: name=$($id.Name) publisher=$($id.Publisher) version=$($id.Version)" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+          if ($id.Publisher -ne $env:CERT_SUBJECT) {
+            "publisher mismatch -> set to $env:CERT_SUBJECT" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+            $id.SetAttribute('Publisher', $env:CERT_SUBJECT); $x.Save($m.FullName)
+          }
+          $x.Package.Dependencies.TargetDeviceFamily | ForEach-Object { "device family: $($_.Name) min $($_.MinVersion) max $($_.MaxVersionTested)" } | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+          $x.Package.Capabilities.ChildNodes | ForEach-Object { "capability: $($_.LocalName) $($_.Name)" } | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+          "MANIFEST=$($m.FullName)" >> $env:GITHUB_ENV
+          # Unity references the "WindowsMobile" extension SDK for the newest Windows SDK, but SDK 10.0.26100 no longer
+          # ships it (MSB3774 "Could not find SDK WindowsMobile, Version=10.0.26100.0", run 39473140441). Phone-only APIs,
+          # nothing the player needs on Xbox -> drop the reference from the generated projects.
+          Get-ChildItem $root -Recurse -Filter *.vcxproj | ForEach-Object {
+            $fn = $_.Name
+            [xml]$p = Get-Content $_.FullName -Raw
+            $refs = @($p.SelectNodes("//*[local-name()='SDKReference' and starts-with(@Include,'WindowsMobile')]"))
+            foreach ($r in $refs) { "drop $($r.Include) from $($_.Name)" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"; [void]$r.ParentNode.RemoveChild($r) }
+            if ($refs.Count) { $p.Save($_.FullName) }
+            @($p.SelectNodes("//*[local-name()='SDKReference']")) | ForEach-Object { "sdk ref left in ${fn}: $($_.Include)" } | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+          }
+
+      - name: MSBuild (Master | x64, AppxBundle, sideload)
+        id: msbuild
+        shell: pwsh
+        run: |
+          $vw = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $msb = & $vw -latest -products * -requires Microsoft.Component.MSBuild -find 'MSBuild\**\Bin\MSBuild.exe' | Select-Object -First 1
+          "msbuild: $msb" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+          $pkg = (Join-Path $env:RUNNER_TEMP 'AppPackages').Replace('\', '/') + '/'
+          "PKG_DIR=$pkg" >> $env:GITHUB_ENV
+          $props = @('/p:Configuration=Master', '/p:Platform=x64', '/p:AppxBundle=Always', '/p:AppxBundlePlatforms=x64',
+                     '/p:UapAppxPackageBuildMode=SideloadOnly', "/p:AppxPackageDir=$pkg", '/p:AppxPackageSigningEnabled=true',
+                     "/p:PackageCertificateKeyFile=$env:UWP_PFX_ABS", "/p:PackageCertificatePassword=$env:PFX_PASS",
+                     "/p:PackageCertificateThumbprint=$env:UWP_CERT_THUMB", '/p:GenerateAppInstallerFile=false')
+          if ($env:TOOLSET_OVERRIDE) { $props += "/p:PlatformToolset=$env:TOOLSET_OVERRIDE" }
+          $t0 = Get-Date
+          & $msb $env:SLN /m /restore /nologo /v:m "/flp1:LogFile=$env:LOG_DIR\msbuild-errors.log;errorsonly" "/flp2:LogFile=$env:LOG_DIR\msbuild-warnings.log;warningsonly" @props
+          $code = $LASTEXITCODE
+          "msbuild exit $code after $([int]((Get-Date) - $t0).TotalMinutes) min" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+          Get-ChildItem $pkg -Recurse -File -ErrorAction SilentlyContinue | ForEach-Object { "pkg: $($_.FullName.Substring($pkg.Length - 1)) $($_.Length)" } | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+          if ($code -ne 0) { exit 1 }
+
+      - name: Collect + verify package
+        id: collect
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $pkg = $env:PKG_DIR
+          $b = Get-ChildItem $pkg -Recurse -File -Include *.msixbundle, *.appxbundle | Select-Object -First 1
+          if (-not $b) { "NO_BUNDLE" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"; exit 1 }
+          $test = $b.Directory
+          $rel = $env:REL_DIR
+          $bn = "BalloonBlast-$env:TAG" + "_x64" + $b.Extension
+          Copy-Item $b.FullName (Join-Path $rel $bn)
+          $deps = @(Get-ChildItem (Join-Path $test.FullName 'Dependencies\x64') -File -ErrorAction SilentlyContinue)
+          foreach ($d in $deps) { Copy-Item $d.FullName (Join-Path $rel $d.Name) }
+          "bundle: $($b.Name) -> $bn $($b.Length) B; deps: $(($deps | ForEach-Object { $_.Name + ' ' + $_.Length }) -join ', ')" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+          # signature + the manifest inside the bundle
+          $sig = Get-AuthenticodeSignature (Join-Path $rel $bn)
+          "bundle signer: $($sig.SignerCertificate.Subject) thumb $($sig.SignerCertificate.Thumbprint) status $($sig.Status)" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+          $z = [System.IO.Compression.ZipFile]::OpenRead($b.FullName)
+          $inner = $z.Entries | Where-Object { $_.Name -match '_x64.*\.(msix|appx)$' } | Select-Object -First 1
+          if (-not $inner) { $inner = $z.Entries | Where-Object { $_.Name -match '\.(msix|appx)$' } | Select-Object -First 1 }
+          "bundle entries: $(($z.Entries | Where-Object { $_.FullName -notmatch '/' } | ForEach-Object { $_.FullName }) -join ', ')" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+          $tmp = Join-Path $env:RUNNER_TEMP 'inner.pkg'
+          [System.IO.Compression.ZipFileExtensions]::ExtractToFile($inner, $tmp, $true); $z.Dispose()
+          $z2 = [System.IO.Compression.ZipFile]::OpenRead($tmp)
+          $me = $z2.Entries | Where-Object { $_.FullName -eq 'AppxManifest.xml' }
+          $sr = New-Object System.IO.StreamReader($me.Open()); [xml]$mx = $sr.ReadToEnd(); $sr.Close()
+          $sa = @($z2.Entries | Where-Object { $_.FullName -like 'Data/StreamingAssets/*' }).Count
+          $z2.Dispose()
+          $id = $mx.Package.Identity
+          "package: $($inner.Name) name=$($id.Name) publisher=$($id.Publisher) arch=$($id.ProcessorArchitecture) version=$($id.Version) streamingAssets files=$sa" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+          $mx.Package.Dependencies.ChildNodes | ForEach-Object { "dep: $($_.LocalName) $($_.Name) $($_.MinVersion)" } | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+          $mx.Package.Capabilities.ChildNodes | ForEach-Object { "cap: $($_.LocalName) $($_.Name)" } | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+          if ($id.Publisher -ne $env:CERT_SUBJECT) { "PUBLISHER_MISMATCH $($id.Publisher)"; exit 1 }
+          # INSTALL-XBOX.txt
+          $t = Get-Content (Join-Path $env:GITHUB_WORKSPACE "$env:OVERLAY_DIR\INSTALL-XBOX.txt") -Raw
+          $dn = if ($deps.Count) { ($deps | ForEach-Object { $_.Name }) -join ' + ' } else { '(none needed)' }
+          $t = $t.Replace('__TAG__', $env:TAG).Replace('__SHA__', $env:GITHUB_SHA.Substring(0, 7)).Replace('__BUNDLE__', $bn).Replace('__DEPS__', $dn)
+          Set-Content -Path (Join-Path $rel 'INSTALL-XBOX.txt') -Value ($t -replace "`r?`n", "`r`n") -NoNewline -Encoding utf8
+          # everything in one zip too (VS _Test folder: bundle, Dependencies, .cer, Add-AppDevPackage.ps1)
+          Copy-Item (Join-Path $rel 'INSTALL-XBOX.txt') $test.FullName
+          Copy-Item $env:UWP_CER $test.FullName
+          $zip = Join-Path $rel "BalloonBlast-UWP-$env:TAG-package.zip"
+          Compress-Archive -Path (Join-Path $test.FullName '*') -DestinationPath $zip -CompressionLevel Optimal
+          Get-ChildItem $rel -File | ForEach-Object { "REL_ASSET: $($_.Name) $($_.Length)" } | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+          "BUNDLE_NAME=$bn" >> $env:GITHUB_ENV
+
+      - name: Publish GitHub Release
+        id: release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $files = Get-ChildItem $env:REL_DIR -File | ForEach-Object { $_.FullName }
+          $notes = "Balloon Blast UWP package for Xbox One (Developer Mode sideload via Device Portal) - $env:TAG, unity-src $($env:GITHUB_SHA.Substring(0,7)), built by run ${{ github.run_id }}. Read INSTALL-XBOX.txt first: upload $env:BUNDLE_NAME plus the Microsoft.VCLibs x64 dependency in Device Portal, then set the app type to Game in Dev Home. Self-signed test certificate (CN=Similarize) - not a Store build."
+          gh release view $env:TAG --repo "${{ github.repository }}" *> $null
+          if ($LASTEXITCODE -eq 0) { gh release upload $env:TAG @files --clobber --repo "${{ github.repository }}" }
+          else { gh release create $env:TAG @files --repo "${{ github.repository }}" --target "${{ github.sha }}" --title "Balloon Blast for Xbox (UWP, $env:TAG)" --notes $notes }
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          $url = gh release view $env:TAG --repo "${{ github.repository }}" --json url -q .url
+          "RELEASE_URL: $url" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+
+      # Best-effort: sideload the bundle on the runner itself (Windows Server 2022, WARP) and launch it, to catch a
+      # package that won't register or a player that dies at boot. A runner may refuse to activate UWP apps - that is
+      # logged, not a failure. Not an Xbox test.
+      - name: Smoke test (install + launch on the runner)
+        id: smoke
+        if: success() && env.SMOKE == 'true'
+        continue-on-error: true
+        timeout-minutes: 12
+        shell: powershell
+        run: |
+          # Windows PowerShell 5.1 (the Appx cmdlets don't load in pwsh 7); UTF-8 appends so status.txt stays one encoding
+          $S = Join-Path $env:RUNNER_TEMP 'smoke'; New-Item -ItemType Directory -Force $S | Out-Null
+          function L($m) { Write-Host $m; Add-Content -Path "$env:LOG_DIR\status.txt" -Value $m -Encoding UTF8 }
+          try {
+            reg add 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock' /t REG_DWORD /f /v AllowAllTrustedApps /d 1 | Out-Null
+            reg add 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock' /t REG_DWORD /f /v AllowDevelopmentWithoutDevLicense /d 1 | Out-Null
+            Import-Certificate -FilePath $env:UWP_CER -CertStoreLocation 'Cert:\LocalMachine\TrustedPeople' | Out-Null
+            $deps = @(Get-ChildItem $env:REL_DIR -Filter '*.appx' | ForEach-Object { $_.FullName })
+            $bundle = Join-Path $env:REL_DIR $env:BUNDLE_NAME
+            if ($deps.Count) { Add-AppxPackage -Path $bundle -DependencyPath $deps -ForceApplicationShutdown } else { Add-AppxPackage -Path $bundle }
+            $p = Get-AppxPackage -Name 'SimilarizeBalloonBlast*' | Select-Object -First 1
+            if (-not $p) { $p = Get-AppxPackage | Where-Object { $_.Publisher -eq $env:CERT_SUBJECT } | Select-Object -First 1 }
+            L "SMOKE installed: $($p.PackageFullName) at $($p.InstallLocation)"
+            $appId = (Get-AppxPackageManifest $p).Package.Applications.Application.Id
+            $aumid = "$($p.PackageFamilyName)!$appId"
+            L "SMOKE launch $aumid"
+            Start-Process "shell:AppsFolder\$aumid"
+            Start-Sleep -Seconds 100
+            Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+            try {
+              $bd = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+              $bmp = New-Object System.Drawing.Bitmap $bd.Width, $bd.Height
+              $g = [System.Drawing.Graphics]::FromImage($bmp); $g.CopyFromScreen($bd.Location, [System.Drawing.Point]::Empty, $bd.Size)
+              $bmp.Save((Join-Path $S 'screen-t100.png')); L "SMOKE screenshot $($bd.Width)x$($bd.Height)"
+            } catch { L "SMOKE screenshot failed: $($_.Exception.Message)" }
+            $proc = Get-Process | Where-Object { $_.Path -and $_.Path -like "$($p.InstallLocation)*" }
+            L "SMOKE running processes: $(($proc | ForEach-Object { $_.ProcessName + ' ' + [int]($_.WorkingSet64/1MB) + ' MB' }) -join ', ')"
+            $pl = Join-Path $env:LOCALAPPDATA "Packages\$($p.PackageFamilyName)\TempState\UnityPlayer.log"
+            if (Test-Path $pl) {
+              Copy-Item $pl (Join-Path $S 'UnityPlayer.log')
+              L "=== SMOKE UnityPlayer.log (grep)"
+              Select-String -Path $pl -Pattern 'BBXBOX|BBUWP|Balloon Blast|Look:|ModelLoader|glTF|Exception|ERROR|Direct3D|Renderer|Version:' | Select-Object -First 140 | ForEach-Object { L $_.Line }
+            } else { L "SMOKE no UnityPlayer.log at $pl (app not activated on this runner?)" }
+            $proc | Stop-Process -Force -ErrorAction SilentlyContinue
+          } catch { L "SMOKE error: $($_.Exception.Message)" }
+          L "SMOKE_DONE"
+
+      - name: Upload smoke artifacts
+        if: always() && steps.smoke.outcome != 'skipped'
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: bb-uwp-smoke
+          path: ${{ runner.temp }}/smoke
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Commit build log to unity-src
+        if: always()
+        env:
+          UE: ${{ secrets.UNITY_EMAIL }}
+          UP: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          cd src
+          mkdir -p unity/logs
+          L=unity/logs/balloon-blast-uwp-last-build.log
+          {
+            cat "$LOG_DIR/status.txt" 2>/dev/null
+            echo "=== step outcomes: secrets=${{ steps.secrets.outcome }} cert=${{ steps.cert.outcome }} vs=${{ steps.vs.outcome }} setup=${{ steps.unity-setup.outcome }} activate=${{ steps.activate.outcome }} build=${{ steps.build.outcome }} manifest=${{ steps.manifest.outcome }} msbuild=${{ steps.msbuild.outcome }} collect=${{ steps.collect.outcome }} release=${{ steps.release.outcome }} smoke=${{ steps.smoke.outcome }}"
+            if [ -f "$LOG_DIR/msbuild-errors.log" ]; then echo "=== msbuild errors (first 150)"; head -n 150 "$LOG_DIR/msbuild-errors.log"; fi
+            if [ -f "$LOG_DIR/msbuild-warnings.log" ]; then echo "=== msbuild warnings: $(wc -l < "$LOG_DIR/msbuild-warnings.log") lines (first 40)"; head -n 40 "$LOG_DIR/msbuild-warnings.log"; fi
+            if [ -f "$LOG_DIR/editor.log" ]; then
+              echo "=== error lines"
+              grep -nE "error CS|[Ee]rror:|Exception|BUILD_|BuildScript|BBUWP|Scripts have compiler errors|[Ll]icens|Failed|failed" "$LOG_DIR/editor.log" | grep -vE "Shader.*warning|0 errors" | head -n 250
+              echo "=== editor log tail (300)"
+              tail -n 300 "$LOG_DIR/editor.log"
+            else
+              echo "=== no editor log"
+            fi
+          } > "$L" 2>&1
+          if [ -n "$UE" ]; then perl -pi -e 's/\Q$ENV{UE}\E/[UNITY_EMAIL]/g' "$L"; fi
+          if [ -n "$UP" ]; then perl -pi -e 's/\Q$ENV{UP}\E/[UNITY_PASSWORD]/g' "$L"; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
+          git add "$L"
+          git commit -m "Balloon Blast UWP build log for run ${{ github.run_id }} [skip ci]" || exit 0
+          for i in 1 2 3 4 5; do
+            git push origin HEAD:unity-src && exit 0
+            sleep $((i*2))
+            git pull --rebase origin unity-src || true
+          done
+          exit 0
