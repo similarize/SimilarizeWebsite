@@ -45,8 +45,8 @@
     </style>
     <script src="https://cdn.babylonjs.com/babylon.js"></script>
     <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
-  <script>window.SimXboxOptions = { canvas: "#x-canvas", ready: true };</script>
-  <script src="../shared/xbox-compat.js?v=xbp3"></script>
+  <script>window.SimXboxOptions = { canvas: "#x-canvas", ready: true, build: "bbp2" };</script>
+  <script src="../shared/xbox-compat.js?v=xbp4"></script>
   <script>/* bbp1: on Xbox keep the arcade bar and HUD below the 56px cursor strip; fullscreen is blocked there, so hide its button */
     if (window.SimXbox && SimXbox.isXbox) { const st = document.createElement("style"); st.textContent = ".ac1-fs{display:none!important}.ac1-bar{top:66px!important}.x-hud{top:68px!important}.x-cross{top:calc(50% + 28px)!important}"; document.head.appendChild(st); }</script>
   <script src="/games/shared/arcade-chrome.js?v=ac3" data-pos="top:10px;left:50%;transform:translateX(-50%)" defer></script>
@@ -363,7 +363,7 @@ window.XFIG = (function () {
   addEventListener("pointerup", (e) => { if (e.pointerType === "mouse") mouseUpAt(e); });
   addEventListener("mousedown", (e) => { if (e.target === canvas || document.pointerLockElement === canvas) mouseDownAt(e); });
   addEventListener("mouseup", mouseUpAt);
-  canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+  if (!(window.SimXbox && SimXbox.isXbox)) canvas.addEventListener("contextmenu", (e) => e.preventDefault()); // bbp2: never on Xbox
   addEventListener("mousemove", (e) => {
     // Pointer lock look, or drag-to-look with the left button when lock is unavailable
     if (document.pointerLockElement !== canvas && !(mouseDown && (e.buttons & 1))) return;

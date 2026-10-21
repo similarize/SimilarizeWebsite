@@ -1,6 +1,6 @@
 /*! SimXbox: Xbox / console Edge compatibility for Unity WebGL/WebGPU pages (xb1, 2026-10-20). No dependencies.
- * Include BEFORE the Unity loader script:  <script src="../shared/xbox-compat.js?v=xbp3"></script>
- * See XBOX_COMPAT.md. Query flags: ?lowmem=1|0  ?webgpu=0  ?padlog=1  ?padgate=1|0  ?ctxmenu=1|0  ?fs=1|0  ?lock=1|0
+ * Include BEFORE the Unity loader script:  <script src="../shared/xbox-compat.js?v=xbp4"></script>
+ * See XBOX_COMPAT.md. Query flags: ?lowmem=1|0  ?webgpu=0  ?padlog=1  ?padgate=1|0  ?ctxmenu=1|0  ?fs=1|0  ?lock=1|0  ?hud=1|0
  */
 (function () {
   "use strict";
@@ -34,7 +34,7 @@
   //     can't get "outside the game" for HOLD Menu -> "Use game controls". So on Xbox: no fullscreen requests from
   //     the page at all (Edge's own View-button full screen still works), hide #fs, and keep a 56px non-canvas strip
   //     at the top. ?fs=1 = old behavior; ?fs=0 = this behavior on any browser (testing).
-  var VER = "xbp3", ff = flag("fs"), noFs = ff === null ? isXbox : !ff;
+  var VER = "xbp4", ff = flag("fs"), noFs = ff === null ? isXbox : !ff;
   if (noFs) {
     var fsNoop = function () { console.log("SimXbox: fullscreen request blocked (Xbox; ?fs=1 to allow)"); return Promise.resolve(); };
     ["requestFullscreen", "webkitRequestFullscreen", "webkitRequestFullScreen", "mozRequestFullScreen", "msRequestFullscreen"].forEach(function (k) {
@@ -45,6 +45,7 @@
       "display:flex;align-items:center;justify-content:center;font:600 18px system-ui,sans-serif;color:#cfe;background:#0b0f16;border-bottom:1px solid #345;z-index:1}";
     (document.head || document.documentElement).appendChild(st);
   }
+  var hf = flag("hud"), hudOn = hf === null ? isXbox : hf;
 
   // 2d) xbp3: Unity Cursor.lockState = Locked calls requestPointerLock. On Xbox, A is a click in cursor mode, so the page
   //     grabs pointer lock and HOLD Menu -> "Use game controls" never opens. Xbox only by default; ?lock=1 allows it.
@@ -99,7 +100,8 @@
     gate = document.createElement("div"); gate.id = "simxbox-gate";
     gate.style.cssText = "position:fixed;left:0;right:0;top:0;min-height:56px;z-index:9;display:block;" +
       "background:#000;border-bottom:2px solid rgba(255,255,255,.35);cursor:pointer;font:600 20px system-ui,sans-serif;color:#fff;text-align:center;padding:6px 120px;box-sizing:border-box;line-height:1.3";
-    gate.innerHTML = 'Move the cursor here, <b>hold</b> the &#8801; Menu button, choose <b>Use game controls</b>, then press <b>A</b>.' +
+    if (hudOn) gate.style.background = "transparent", gate.style.borderBottom = "0", gate.style.minHeight = "56px";
+    else gate.innerHTML = 'Move the cursor here, <b>hold</b> the &#8801; Menu button, choose <b>Use game controls</b>, then press <b>A</b>.' +
       '<br><span style="font-size:15px;opacity:.8">Still no controller? Open and close the Xbox Guide, then press A.</span>';
     gate.addEventListener("click", function () { refocus(); }); // xbp2: no fullscreen request from the gate
     document.body.appendChild(gate);
@@ -110,6 +112,35 @@
     if (p && !SX.padSeen) { SX.padSeen = true; console.log("SimXbox: pad live #" + p.index + " " + p.id); hideGate(); refocus(); }
     if (!readySeen && (window.unityInstance || opts.ready)) { readySeen = true; if (gateOn) showGate(); }
   }, 250);
+
+  // 5b) xbp4: always-on 2-line readout in the 56px strip on Xbox (?hud=0 hides, ?hud=1 shows anywhere). Updated every
+  //     frame from navigator.getGamepads(); "mode" is a GUESS: pad data changing = game controls; mousemove with no pad
+  //     data = the stick is driving Edge's cursor (browsing controls). Pages can set SimXboxOptions.build = "tag".
+  if (hudOn) {
+    var hud = null, hudTxt = "", lastPadT = -1e9, lastMoveT = -1e9, prevSig = "";
+    window.addEventListener("mousemove", function () { lastMoveT = performance.now(); }, true);
+    var hudTick = function () {
+      requestAnimationFrame(hudTick);
+      if (!hud) { if (!document.body) return; hud = document.createElement("div"); hud.id = "simxbox-hud";
+        hud.style.cssText = "position:fixed;left:0;right:0;top:0;height:56px;z-index:2147483646;pointer-events:none;box-sizing:border-box;padding:3px 10px;" +
+          "background:#0b0f16;border-bottom:1px solid #345;color:#cfe;font:600 17px/25px ui-monospace,Consolas,monospace;white-space:pre;overflow:hidden";
+        document.body.appendChild(hud); }
+      var now = performance.now(), g = pads(), list = [];
+      for (var i = 0; i < g.length; i++) if (g[i] && g[i].connected) list.push(g[i]);
+      var p = list[0], sig = "", vals = "pad: none (press a button)";
+      if (p) { var b = [];
+        for (var j = 0; j < p.buttons.length; j++) if (p.buttons[j].pressed || p.buttons[j].value > 0.5) b.push(j);
+        var ax = Array.prototype.map.call(p.axes, function (a) { return (a >= 0 ? "+" : "") + a.toFixed(2); }).join(" ");
+        sig = b.join(",") + "|" + ax; vals = "axes " + ax + "  btn [" + b.join(",") + "]  " + p.id.slice(0, 34) + " map=" + (p.mapping || "NONE"); }
+      if (sig !== prevSig) { if (prevSig) lastPadT = now; prevSig = sig; }
+      var mode = now - lastPadT < 2000 ? "GAME (pad data arriving)" : now - lastMoveT < 2000 ? "CURSOR? (stick moves mouse)" :
+        list.length ? "idle, move a stick" : "CURSOR? (no pad seen)";
+      var t = "HOLD \u2261 here: Use game controls | " + (opts.build || VER) + " | pads " + list.length + " | focus " + (document.hasFocus() ? "Y" : "N") +
+        " " + document.visibilityState + " | lock " + (document.pointerLockElement ? "ON" : "off") + " | guess: " + mode + "\n" + vals;
+      if (t !== hudTxt) { hudTxt = t; hud.textContent = t; }
+    };
+    requestAnimationFrame(hudTick);
+  }
 
   // 6) ?padlog=1 diagnostics every second: console + an on-screen box (consoles have no devtools). Unity's Input
   //    System only lists mapping "standard" pads in Gamepad.all; anything else arrives as a Joystick.
