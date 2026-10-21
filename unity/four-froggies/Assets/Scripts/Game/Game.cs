@@ -1496,8 +1496,11 @@ public partial class Game : MonoBehaviour
         float pitchUse = sharedPitch;
         if (vert > 12f)
         {
-            // fit the sphere in the vertical FOV (55 deg): r / sin(27.5) + margin; look more level so up AND down both fit
-            dist = Mathf.Max(dist, Mathf.Min(spread / Mathf.Sin(27.5f * Mathf.Deg2Rad) * 1.08f + 10f, 900f) * Mathf.Max(1f, sharedZoom));
+            // fit the sphere in the NARROWER of the vertical FOV (55 deg) and the horizontal FOV (portrait phones: ~27 deg):
+            // r / sin(half) + margin; look more level so up AND down both fit (ffu67c fix 1: Pixel portrait had the glider off the side)
+            float halfV = 27.5f * Mathf.Deg2Rad, halfH = Mathf.Atan(Mathf.Tan(halfV) * Mathf.Max(0.2f, sharedCam.aspect));
+            float half = Mathf.Min(halfV, halfH);
+            dist = Mathf.Max(dist, Mathf.Min(spread / Mathf.Sin(half) * 1.08f + 10f, 1400f) * Mathf.Max(1f, sharedZoom));
             pitchUse = Mathf.Lerp(sharedPitch, 12f, Mathf.Clamp01((vert - 12f) / 40f));
         }
         if (sharedCam.farClipPlane < dist + spread * 2f + 200f) sharedCam.farClipPlane = dist + spread * 2f + 200f;

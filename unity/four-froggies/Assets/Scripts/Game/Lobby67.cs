@@ -11,9 +11,11 @@ using UnityEngine.UI;
 public partial class Game
 {
     RectTransform hpLobby; Text hpLobbyT; Image hpLobbyImg;
-    float lobbyAskT = -1f;
+    float lobbyAskT = -1f; int lobbyAskF;
     public static int LobbyReturns;
-    bool LobbyAsking { get { return lobbyAskT > 0f && Time.unscaledTime < lobbyAskT; } }
+    // ffu67c fix 1: the confirm stays up 12 s AND at least 40 frames (a 5 s real-time window expired in 2 frames on slow
+    // devices before A could land); B / Esc / closing the menu cancel it.
+    bool LobbyAsking { get { return lobbyAskT > 0f && (Time.unscaledTime < lobbyAskT || Time.frameCount < lobbyAskF); } }
 
     void LobbyButtonBuild()
     {
@@ -35,7 +37,7 @@ public partial class Game
         bool online = Net.I != null && Net.I.Online;
         if (online) { if (helpBy != null) frogs[helpBy.frog].Toast("Online room: close help, then use LEAVE / CLOSE ROOM in the lobby", 2.5f); return; }
         if (LobbyAsking) return;
-        lobbyAskT = Time.unscaledTime + 5f; lobbyAskBy = why; Sfx.Play(Sfx.Select, 0.6f, 0.9f);
+        lobbyAskT = Time.unscaledTime + 12f; lobbyAskF = Time.frameCount + 40; lobbyAskBy = why; Sfx.Play(Sfx.Select, 0.6f, 0.9f);
         Debug.Log("LOBBY67 ask: back to the lobby? (" + why + ")");
     }
     string lobbyAskBy = "";
@@ -61,11 +63,13 @@ public partial class Game
         {
             if (k.backspaceKey.wasPressedThisFrame && !ask) { LobbyAsk("Backspace"); return; }
             if (ask && (k.enterKey.wasPressedThisFrame || k.numpadEnterKey.wasPressedThisFrame)) { ReturnToLobby("Enter confirmed"); return; }
+            if (ask && k.escapeKey.wasPressedThisFrame) { LobbyAskCancel("Esc"); return; }
         }
         // pads: A confirms while asking (any seated pad)
         if (ask)
             foreach (var s in slots)
                 if (s.kind == InputKind.Gamepad && s.pad != null && s.pad.added && !IsGhostDev(s.pad) && s.pad.buttonSouth.wasPressedThisFrame) { ReturnToLobby("pad A confirmed (P" + (slots.IndexOf(s) + 1) + ")"); return; }
+                else if (s.kind == InputKind.Gamepad && s.pad != null && s.pad.added && !IsGhostDev(s.pad) && s.pad.buttonEast.wasPressedThisFrame) { LobbyAskCancel("pad B"); return; }
     }
     void LobbyAskCancel(string why) { if (lobbyAskT > 0f) { lobbyAskT = -1f; Debug.Log("LOBBY67 ask cancelled (" + why + ")"); } }
 
