@@ -9,7 +9,8 @@ using UnityEngine.UI;
 //  * orders in four tabs: CHORES (auto, charge, DRIVE IT!, 8 chores), ORDERS (the 3D orders), DRIVE (pick any ranch
 //    vehicle or a story-mech band, then wander / follow me / race / go to my spot / get out) and MISSION (Mars rock run,
 //    Callisto ice run, abort, and the live video feed: watch / full screen / camera).
-// Controls: Up/Down (stick, D-pad, W/S, arrows) robot, Left/Right move along the tabs + orders, A / E / Enter / click /
+// Controls (ffu68 pad): Left/Right tabs, A picks (green), Down = the options grid (stick moves, A sends = green), Up from the
+// top row = tabs, Up from the tabs = robot card (Left/Right swap robots). Keys: W/S robot, A/D tabs + orders. A / E / Enter / click /
 // tap sends; pad RB = next tab, Y feed on/off, X feed full screen, B feed camera; LB / P / PHONE closes.
 // ffu59b (Bill): in split-screen every player has their OWN phone - one RobotPhone per seat (Seat[0..3], seat = frog
 // index; I = seat 0, the one the demos drive), each with its own robot pick / tab / orders / calls acting for that seat's
@@ -25,6 +26,10 @@ public partial class RobotPhone : MonoBehaviour   // ffu6q: + Game/RobotVoice66.
     public Frog user;
     int sel = 1;              // Unitree is the default link, like the 3D phone
     int tab, cur;             // cur: 0..NT-1 = the tabs, NT.. = items of the tab
+    // ffu68 pad nav (Ben 2026-10-21, bot-notes 30cb037): onCard = the cursor is on the robot card (Left/Right swap robots); else
+    // the tab row (cur < NT) or the option grid (cur >= NT, 3 columns). pickTab / pickAct = the last option sent (shown green).
+    bool onCard; int pickTab = -1; string pickAct;
+    static readonly Color PickGreen = new Color(0.2f, 0.72f, 0.32f, 0.95f);
     const int NT = 7;         // ffu27: + CALL; ffu42: + WHEELS (the wheel-size setting); ffu54: + PLAY (robots everywhere)
     struct Item { public string label, act; }
     readonly List<Item>[] tabs = new List<Item>[NT];
@@ -320,9 +325,9 @@ public partial class RobotPhone : MonoBehaviour   // ffu6q: + Game/RobotVoice66.
         if (open) Opens++;
         Debug.Log("RobotPhone: " + (open ? "open" : "closed") + " for " + f.nick + " (" + f.inputKind + ", seat " + (seat + 1) + " phone)");
         user = f;
-        if (open) { BuildCalls(f); BuildDrive(f); if (f.world != WorldId.Ranch) { tab = 4; cur = NT; msg.text = "CALL a robot or a froggy to " + Robot.WorldName(Robot.TargetWorld(f)) + " - every order works here"; } }
+        if (open) { onCard = false; BuildCalls(f); BuildDrive(f); if (f.world != WorldId.Ranch) { tab = 4; cur = NT; msg.text = "CALL a robot or a froggy to " + Robot.WorldName(Robot.TargetWorld(f)) + " - every order works here"; } }
         Sfx.Play(Sfx.Click, 0.7f);
-        if (open) f.Toast(f.inputKind == InputKind.Gamepad ? "Robot phone: stick picks, A sends - LB or B closes" : f.inputKind == InputKind.Touch ? "Robot phone: tap PHONE to close" : "Robot phone: W/S robot, A/D order, E send - P closes", 3f);
+        if (open) f.Toast(f.inputKind == InputKind.Gamepad ? "Robot phone: Left/Right tabs, A picks, Down = options, Up = robots - LB or B closes" : f.inputKind == InputKind.Touch ? "Robot phone: tap PHONE to close" : "Robot phone: W/S robot, A/D order, E send - P closes", 3f);
     }
 
     // ffu35: always closes for its user, whatever world / vehicle / split screen (LB, B, P, the PHONE button)
@@ -390,7 +395,15 @@ public partial class RobotPhone : MonoBehaviour   // ffu6q: + Game/RobotVoice66.
         stickCool -= Time.unscaledDeltaTime;
         var robots = RanchLife.I.robots;
         float y = i.move.y, x = i.move.x;
-        if (stickCool <= 0f)
+        if (f.inputKind == InputKind.Gamepad)
+        {
+            if (stickCool <= 0f)
+            {
+                int dx = x > 0.6f ? 1 : x < -0.6f ? -1 : 0, dy = y > 0.6f ? 1 : y < -0.6f ? -1 : 0;
+                if (dx != 0 || dy != 0) { PadNav(dx, dy); stickCool = dx != 0 ? 0.16f : 0.22f; }
+            }
+        }
+        else if (stickCool <= 0f)
         {
             if (y > 0.6f) { Pick(sel - 1); stickCool = 0.24f; }
             else if (y < -0.6f) { Pick(sel + 1); stickCool = 0.24f; }
@@ -402,7 +415,7 @@ public partial class RobotPhone : MonoBehaviour   // ffu6q: + Game/RobotVoice66.
         if (i.use || i.hop || (f.inputKind == InputKind.Keyboard && Kb.EnterDown())) Activate(f);
         if (f.inputKind == InputKind.Gamepad)
         {
-            if (i.warpUp) { tab = (tab + 1) % NT; cur = tab; Sfx.Play(Sfx.Click, 0.4f); }          // RB next tab
+            if (i.warpUp) { tab = (tab + 1) % NT; cur = tab; onCard = false; Sfx.Play(Sfx.Click, 0.4f); }          // RB next tab
             if (i.land) Do(f, "feed");                                                          // Y
             if (i.auto) Do(f, "feedfull");                                                      // X
             if (i.cargo) { Close(f, "B"); return true; }                                        // ffu35: B closes (was feed camera)
@@ -417,6 +430,34 @@ public partial class RobotPhone : MonoBehaviour   // ffu6q: + Game/RobotVoice66.
         Sfx.Play(Sfx.Select != null ? Sfx.Select : Sfx.Click, 0.45f, 1.1f);
     }
 
+    // ffu68 pad: one stick step (dx -1/0/1 left/right, dy +1 up / -1 down) through robot card -> tab row -> option grid
+    void PadNav(int dx, int dy)
+    {
+        int n = tabs[tab].Count;
+        if (onCard)
+        {
+            if (dx != 0) Pick(sel + dx);
+            else if (dy < 0) { onCard = false; Sfx.Play(Sfx.Click, 0.4f); }
+            return;
+        }
+        if (cur < NT)
+        {
+            if (dx != 0) { cur = ((cur + dx) % NT + NT) % NT; Sfx.Play(Sfx.Click, 0.4f); }
+            else if (dy > 0) { onCard = true; Sfx.Play(Sfx.Click, 0.4f); }
+            else if (dy < 0) { tab = cur; if (tabs[tab].Count > 0) cur = NT; Sfx.Play(Sfx.Click, 0.4f); }
+            return;
+        }
+        int j = Mathf.Clamp(cur - NT, 0, Mathf.Max(0, n - 1)), col = j % 3, row = j / 3, last = Mathf.Max(0, n - 1) / 3;
+        if (n == 0 || (dy > 0 && row == 0)) { cur = tab; Sfx.Play(Sfx.Click, 0.4f); return; }   // up from the top row = back to the tabs
+        if (dx > 0 && col < 2 && j + 1 < n) j++;
+        else if (dx < 0 && col > 0) j--;
+        else if (dy > 0) j -= 3;
+        else if (dy < 0 && row < last) j = Mathf.Min(j + 3, n - 1);
+        else return;
+        cur = NT + j;
+        Sfx.Play(Sfx.Click, 0.4f);
+    }
+
     void Move(int d)
     {
         cur = ((cur + d) % Count + Count) % Count;
@@ -425,9 +466,10 @@ public partial class RobotPhone : MonoBehaviour   // ffu6q: + Game/RobotVoice66.
 
     void Activate(Frog f)
     {
+        if (onCard) { onCard = false; Sfx.Play(Sfx.Click, 0.5f); return; }   // ffu68: A on the robot card = back to the tabs
         if (cur < NT) { tab = cur; Sfx.Play(Sfx.Click, 0.5f); return; }
         int j = cur - NT;
-        if (j < tabs[tab].Count) Do(f, tabs[tab][j].act);
+        if (j < tabs[tab].Count) { pickTab = tab; pickAct = tabs[tab][j].act; Do(f, pickAct); }   // ffu68: the sent option turns green
     }
 
     void Do(Frog f, string a)
@@ -587,8 +629,8 @@ public partial class RobotPhone : MonoBehaviour   // ffu6q: + Game/RobotVoice66.
         if (In(arrowL, p)) { Pick(sel - 1); return; }
         if (In(arrowR, p)) { Pick(sel + 1); return; }
         for (int i = 0; i < dots.Count; i++) if (RectTransformUtility.RectangleContainsScreenPoint(dots[i].rectTransform, p, null)) { Pick(i); return; }
-        for (int i = 0; i < NT; i++) if (In(tabBtns[i], p)) { tab = i; cur = i; Sfx.Play(Sfx.Click, 0.5f); return; }
-        for (int i = 0; i < itemBtns.Count; i++) if (In(itemBtns[i], p) && i < tabs[tab].Count) { cur = NT + i; if (user != null) Do(user, tabs[tab][i].act); return; }
+        for (int i = 0; i < NT; i++) if (In(tabBtns[i], p)) { tab = i; cur = i; onCard = false; Sfx.Play(Sfx.Click, 0.5f); return; }
+        for (int i = 0; i < itemBtns.Count; i++) if (In(itemBtns[i], p) && i < tabs[tab].Count) { cur = NT + i; onCard = false; pickTab = tab; pickAct = tabs[tab][i].act; if (user != null) Do(user, pickAct); return; }
         if (In(card, p)) { dragOn = true; dragX0 = p.x; }
     }
 
@@ -697,8 +739,11 @@ public partial class RobotPhone : MonoBehaviour   // ffu6q: + Game/RobotVoice66.
         batT.text = (r.Charging ? "+" : "") + r.Pct;
         jobT.text = r.StatusLine;
         for (int i = 0; i < dots.Count; i++) { dots[i].color = i == sel ? new Color(0.5f, 1f, 0.6f) : new Color(1f, 1f, 1f, 0.3f); dots[i].rectTransform.sizeDelta = Vector2.one * (i == sel ? 10f : 7f); }
+        int cc = onCard ? -1 : cur;   // ffu68: no tab / option cursor while the robot card has it
+        Color arC = onCard ? new Color(1f, 0.75f, 0.2f, 0.9f) : new Color(0f, 0f, 0f, 0.45f);
+        if (arrowL.color != arC) { arrowL.color = arC; arrowR.color = arC; }
         for (int i = 0; i < NT; i++)
-            tabBtns[i].color = i == tab ? (cur == i ? new Color(1f, 0.75f, 0.2f, 0.95f) : new Color(0.2f, 0.6f, 0.4f, 0.9f)) : (cur == i ? new Color(1f, 0.75f, 0.2f, 0.6f) : new Color(1f, 1f, 1f, 0.1f));
+            tabBtns[i].color = i == tab ? (cc == i ? new Color(1f, 0.75f, 0.2f, 0.95f) : new Color(0.2f, 0.6f, 0.4f, 0.9f)) : (cc == i ? new Color(1f, 0.75f, 0.2f, 0.6f) : new Color(1f, 1f, 1f, 0.1f));
         var items = tabs[tab];
         for (int i = 0; i < itemBtns.Count; i++)
         {
@@ -717,12 +762,13 @@ public partial class RobotPhone : MonoBehaviour   // ffu6q: + Game/RobotVoice66.
             if (tab == 4) c = act == "call:all" ? new Color(0.15f, 0.6f, 0.3f, 0.85f) : act.StartsWith("rcall") ? new Color(0.55f, 0.32f, 0.7f, 0.88f) : new Color(0.18f, 0.42f, 0.32f, 0.78f);
             if (tab == 6) c = act == "play:home" ? new Color(0.2f, 0.32f, 0.5f, 0.75f) : act == "play:piggy" || act == "play:build" || act == "play:race" ? new Color(0.75f, 0.3f, 0.55f, 0.88f) : new Color(0.55f, 0.25f, 0.6f, 0.78f);
             if (tab == 5) { float wv; bool now = act.Length == 8 && float.TryParse(act.Substring(7), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out wv) && user != null && BigWheels.Resizable(user.vehicle) && Mathf.Abs(wv - BigWheels.Want(user.vehicle)) < 0.01f; c = now ? new Color(0.1f, 0.75f, 0.85f, 0.95f) : new Color(0.5f, 0.38f, 0.12f, 0.8f); }
-            if (cur == NT + i) c = new Color(1f, 0.75f, 0.2f, 0.95f);
+            if (tab == pickTab && act == pickAct) c = PickGreen;   // ffu68: the last option sent
+            if (cc == NT + i) c = new Color(1f, 0.75f, 0.2f, 0.95f);
             itemBtns[i].color = c;
         }
         if (tab == 5) { Vehicle uv = user != null ? user.vehicle : null; string wl = BigWheels.Resizable(uv) ? "WHEEL SIZE " + BigWheels.Short(uv) + " - your " + uv.Title + " only (1x - 4x)" : "Get in a vehicle to resize its wheels"; if (msg.text != wl && !msg.text.StartsWith("Wheel size")) msg.text = wl; }
         InputKind ik = user != null ? user.inputKind : InputKind.Keyboard;
-        string h = ik == InputKind.Gamepad ? "Up/Down robot · Left/Right order · A send · RB tab · Y feed · X full · RT talk · LB / B close"
+        string h = ik == InputKind.Gamepad ? "Left/Right tab · A pick · Down options · Up robots · RB tab · Y feed · X full · RT talk · LB / B close"
                  : ik == InputKind.Touch ? "Swipe the robot · tap a tab, then an order · TALK to speak · PHONE closes"
                  : "W/S robot · A/D order · E/Enter/click send · hold T talk · O feed · P close";
         if (hint.text != h) hint.text = h;
