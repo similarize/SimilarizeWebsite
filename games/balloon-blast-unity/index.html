@@ -38,31 +38,31 @@
   <a href="../" title="Back to the arcade">✕ Arcade</a>
 </div>
 <script>
-  /* bbu11: bbx1's page-level pointer-lock no-op and Menu/View/ContextMenu key swallow are gone: xbox-compat xbp3+ blocks
-     pointer lock itself, and the swallow was the only page difference from Lambo Blast (where HOLD Menu works). */
-  window.SimXboxOptions = { build: "bbu11 202610091403-8b4c817" };
+  /* bbu12 (xbm2): low-memory rebuild (64/512 MB, Brotli + decompression fallback, stripping) + JoyPad.cs (non-standard pads
+     -> virtual Gamepad, ?paddebug=1). Keeps bbu11's page: xbox-compat xbp5 strip/readout, no pointer lock, no key swallow. */
+  window.SimXboxOptions = { build: "bbu12 202610210624-ab2a919" };
 </script>
-<script src="../shared/xbox-compat.js?v=xbp5"></script>
+<script src="/games/shared/xbox-compat.js?v=xbp5"></script>
 <script>
   var buildUrl = "Build";
   var name = "WebGL";
   var canvas = document.getElementById("unity-canvas");
   var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));
   var config = {
-    dataUrl: buildUrl + "/" + name + ".data?v=202610091403-8b4c817",
-    frameworkUrl: buildUrl + "/" + name + ".framework.js?v=202610091403-8b4c817",
-    codeUrl: buildUrl + "/" + name + ".wasm?v=202610091403-8b4c817",
+    dataUrl: buildUrl + "/" + name + ".data.unityweb?v=202610210624-ab2a919",
+    frameworkUrl: buildUrl + "/" + name + ".framework.js.unityweb?v=202610210624-ab2a919",
+    codeUrl: buildUrl + "/" + name + ".wasm.unityweb?v=202610210624-ab2a919",
     streamingAssetsUrl: "StreamingAssets",
     companyName: "Similarize",
     productName: "Balloon Blast Airsoft",
-    productVersion: "202610091403-8b4c817",
+    productVersion: "202610210624-ab2a919",
     devicePixelRatio: Math.min(window.devicePixelRatio || 1, isMobile ? 1.5 : 2),
     showBanner: function (msg, type) { if (type === "error") { var e = document.getElementById("err"); e.style.display = "block"; e.textContent = msg; } else console.log(msg); }
   };
   if (window.SimXbox) window.SimXbox.applyConfig(config); // xbm1
   var fill = document.getElementById("fill"), pct = document.getElementById("pct"), loader = document.getElementById("loader");
   var script = document.createElement("script");
-  script.src = buildUrl + "/" + name + ".loader.js?v=202610091403-8b4c817";
+  script.src = buildUrl + "/" + name + ".loader.js?v=202610210624-ab2a919";
   script.onload = function () {
     createUnityInstance(canvas, config, function (p) {
       fill.style.width = Math.round(p * 100) + "%";
