@@ -322,7 +322,8 @@ public class RcTrack : MonoBehaviour
                 go.AddComponent<MeshFilter>().sharedMesh = mesh;
                 go.AddComponent<MeshRenderer>().sharedMaterial = col == 0 ? red : white;
             }
-            Fence(side);
+            // ffu67h FREE ROAM (Bill Oct 20 16:45): no invisible fence any more - the pipes stay visual and jumpable
+            // Fence(side);
         }
     }
 

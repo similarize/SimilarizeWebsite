@@ -129,6 +129,7 @@ public static class VehicleFactory
         {
             v.SetupBodyPublic(3010f, new Vector3(0f, 1.18f, -0.02f), new Vector3(2.03f, 1.12f, 5.66f), new Vector3(0f, 0.6f, 0.08f));
             v.maxSpeed = 30f; v.accel = 13f; v.turnRate = 1.7f; v.grip = 7.5f;   // 52b: turn rate as before (1.65 changed the tuned boat line)
+            v.rearSteer = 1f;   // ffu67d four-wheel steering
             Transform t52 = v.transform;
             Transform sprung = Mats.Node(t52, "Sprung", Vector3.zero);
             p52.Spawn("body", sprung, Vector3.zero, 1f, accent);
@@ -151,6 +152,7 @@ public static class VehicleFactory
         }
         v.SetupBodyPublic(2300f, new Vector3(0f, 1.2f, 0f), new Vector3(2.15f, 1.1f, 5.7f), new Vector3(0f, 0.55f, 0f));
         v.maxSpeed = 30f; v.accel = 13f; v.turnRate = 1.7f; v.grip = 7.5f;
+        v.rearSteer = 1f;   // ffu67d four-wheel steering
         Transform t = v.transform;
         float r = 0.48f;
         // graphics overhaul: faceted stainless body + glass greenhouse + aero wheels (Resources/LB/cybertruck.bytes)

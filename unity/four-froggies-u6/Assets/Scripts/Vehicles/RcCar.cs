@@ -18,6 +18,7 @@ public class RcCar : Vehicle
     float rest = 0.14f, spring, damper;
     public float vmax = 13.5f, accel = 15f, latCap = 13f, turnMax = 3.4f;
     float steer, throttle, flipT, roostT, stuckT, revT, skill = 1f, laneSeed;
+    public float Throttle { get { return throttle; } }   // ffu67h probe: what the input asked the motor for
     int ground, aiIdx = -1, lastIdx = -1;
     Transform shell, antenna;
     Vector3 lastVel, accLocal;
@@ -137,7 +138,7 @@ public class RcCar : Vehicle
         get
         {
             string lap = laps > 0 ? "  |  lap " + laps + (bestLap > 0f ? "  best " + bestLap.ToString("0.0") + " s" : "") : "";
-            return "RC " + Froggies.Names[index] + ": L-stick steer | RT throttle | LT brake / reverse | in the air RT nose up, LT nose down | A hand back the remote" + lap;
+            return "RC " + Froggies.Names[index] + ": L-stick steer | RT throttle | LT brake / reverse | in the air RT nose up, LT nose down | A hand back the remote | hold B: bring it back | Y stand / chase view" + lap;
         }
     }
     public override bool CanEnter(Frog f) { return f.world == WorldId.Ranch && base.CanEnter(f); }
@@ -158,6 +159,34 @@ public class RcCar : Vehicle
         aiIdx = i; recovers++;
         FX.Puff(p, Vector3.up, 0.5f, 0.6f, new Color(0.65f, 0.55f, 0.4f, 0.6f));
         if (driver != null && driver.human) driver.Toast("Back on the track!", 1.2f);
+    }
+
+    float bringT; public int righted, bringBacks;
+    // ffu67h: flipped / high-centred off the track -> back on its wheels right here, same heading
+    public void RightInPlace()
+    {
+        Vector3 p = rb.position + Vector3.up * 0.35f;
+        rb.velocity = Vector3.zero; rb.angularVelocity = Vector3.zero;
+        rb.position = p; rb.rotation = Quaternion.Euler(0f, transform.eulerAngles.y, 0f);
+        transform.position = p; transform.rotation = rb.rotation;
+        righted++;
+        FX.Puff(p, Vector3.up, 0.5f, 0.6f, new Color(0.65f, 0.55f, 0.4f, 0.6f));
+        if (driver != null && driver.human) driver.Toast("Back on its wheels!", 1.2f);
+    }
+    void LiftInPlace(float y)
+    {
+        Vector3 p = rb.position; p.y = y;
+        rb.velocity = Vector3.zero; rb.angularVelocity = Vector3.zero;
+        rb.position = p; rb.rotation = Quaternion.Euler(0f, transform.eulerAngles.y, 0f);
+        transform.position = p; transform.rotation = rb.rotation; righted++;
+    }
+    // ffu67h 'bring it back': the car returns to its grid slot by the driver's stand
+    public void BringBack()
+    {
+        if (track == null) return;
+        Park(track.Grid[index], 90f); bringBacks++;
+        FX.Puff(transform.position, Vector3.up, 0.5f, 0.6f, new Color(0.65f, 0.55f, 0.4f, 0.6f));
+        if (driver != null && driver.human) driver.Toast("Brought it back to the stand", 1.4f);
     }
 
     public void Park(Vector3 p, float yaw)
@@ -184,7 +213,9 @@ public class RcCar : Vehicle
         bool auto = track != null && (track.AutoFor(this) || demoAuto);
         PIn ip = auto ? AiInput(dt) : (driver != null ? inp : new PIn());
         steer = Mathf.Clamp(ip.move.x, -1f, 1f);
-        throttle = Mathf.Clamp(ip.move.y + ip.gas - ip.brake, -1f, 1f);
+        // ffu67h (Bill): the stick STEERS ONLY - stick up / down never drives. Throttle = RT (go) / LT (brake, then reverse).
+        // Keys keep W / S + arrows (ReadKeyboard maps them to gas / brake), touch keeps GAS / BRAKE, AI sets gas / brake.
+        throttle = Mathf.Clamp(ip.gas - ip.brake, -1f, 1f);
         if (ip.gas > 0.1f) throttle = Mathf.Max(throttle, ip.gas);
         bool driven = driver != null || auto;
         if (driven && rb.velocity.sqrMagnitude > 0.3f) Parked = false;
@@ -286,14 +317,24 @@ public class RcCar : Vehicle
         }
         // ffu30b beached (on its side against the fence, high-centred, wheels in the air) and not moving: back onto the
         // track at the nearest point, facing the way round
+        // ffu67h FREE ROAM (Bill Oct 20 16:45): a player's car is righted WHERE IT IS (no snap back to the track); AI racers still
+        // go back onto the racing line
         bool beached = (ground == 0 || transform.up.y < 0.6f) && rb.velocity.magnitude < 0.6f && !Parked;
         beachT = beached ? beachT + dt : 0f;
-        if (beachT > 1.2f) { beachT = 0f; Recover(); }
+        if (beachT > 1.2f) { beachT = 0f; if (auto) Recover(); else RightInPlace(); }
+        // ffu67h 'bring it back': hold B (pad) / Shift (keys) ~1 s while driving (not while braking) -> back on the grid by the stand
+        bool bring = driver != null && !auto && ip.downHeld && ip.brake < 0.05f && ip.gas < 0.05f;
+        bringT = bring ? bringT + dt : 0f;
+        if (bringT > 1f) { bringT = 0f; BringBack(); }
         if (driven) autoT += dt; else autoT = 0f;
         // fell off the world / far off the pad: back to the grid
         Vector3 rp = rb.position;
-        if (track != null && (rp.y < track.BaseY - 8f || new Vector2(rp.x - RcTrack.C.x, rp.z - RcTrack.C.y).magnitude > 70f))
-            Park(track.Grid[index], 90f);
+        // ffu67h: no range leash for a player's car (drive anywhere on the ranch); AI cars keep the 70 m leash. Below the ground
+        // (a glitch through terrain) = lifted back up in place, never teleported to the track.
+        float farD = track != null ? new Vector2(rp.x - RcTrack.C.x, rp.z - RcTrack.C.y).magnitude : 0f;
+        if (track != null && auto && (rp.y < track.BaseY - 8f || farD > 70f)) Park(track.Grid[index], 90f);
+        else if (track != null && !auto && farD > 30f && rp.y < Ranch.GY(rp.x, rp.z) - 1.5f) LiftInPlace(Ranch.GY(rp.x, rp.z) + 0.5f);
+        else if (track != null && !auto && rp.y < track.BaseY - 8f) Recover();
         Laps();
         // voice
         if (voice == null) voice = new SynthVoice(gameObject, 13, enginePitch);

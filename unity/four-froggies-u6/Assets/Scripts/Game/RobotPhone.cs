@@ -204,6 +204,7 @@ public partial class RobotPhone : MonoBehaviour   // ffu6q: + Game/RobotVoice66.
         // ffu42 WHEELS tab; ffu45: resizes the wheels of the vehicle the phone's user is IN (per vehicle), works in every world
         Add(5, "Smaller  -", "wheels:-"); Add(5, "Stock 1x", "wheels:1"); Add(5, "Bigger  +", "wheels:+");
         Add(5, "2x", "wheels:2"); Add(5, "3x", "wheels:3"); Add(5, "4x MONSTER", "wheels:4");
+        Add(5, "Crab steer on / off", "steer:crab");   // ffu67d: 4-wheel-steer trucks only, per truck
         Add(3, "Stash", "stash");   // ffu50: shared materials / arrows count (label is live, see Refresh)
         Add(3, "Abort mission", "abort"); Add(3, "Watch feed", "feed"); Add(3, "Feed full screen", "feedfull"); Add(3, "Feed cam: drone/eye", "feedcam");
         // ffu54 PLAY: everything a froggy can do, in whatever world the phone's user is in (World/RobotVisit54.cs)
@@ -454,6 +455,14 @@ public partial class RobotPhone : MonoBehaviour   // ffu6q: + Game/RobotVoice66.
             say = "Wheel size " + BigWheels.Readout(wv) + " (your " + wv.Title + " only)";
             msg.text = say; f.Toast(BigWheels.InchLabel(wv), 1.6f); Sfx.Play(Sfx.Pickup, 0.45f, 0.8f + BigWheels.FracOf(BigWheels.Want(wv)) * 0.6f);
             return;
+        }
+        if (a == "steer:crab")
+        {
+            var gv = f.vehicle as GroundVehicle;
+            if (gv == null || gv.rearSteer <= 0f) { say = "Crab steer: only trucks with four-wheel steering (the Cybertrucks)"; }
+            else if (gv.driver != f) { say = "Crab steer: only the driver switches it"; }
+            else { gv.crab = !gv.crab; say = gv.crab ? "CRAB STEER on - " + gv.Title + "'s rear wheels turn WITH the fronts (slides sideways)" : "Crab steer off - " + gv.Title + "'s rear wheels turn opposite (tight turns)"; Debug.Log("4WS67 " + gv.Title + " crab " + gv.crab + " (phone, " + f.nick + ")"); }
+            msg.text = say; f.Toast(say, 2.2f); Sfx.Play(Sfx.Click, 0.45f, 1.1f); return;
         }
         // ffu54 ROBOTS EVERYWHERE (C2): no more "that order works on the ranch" - every order works from every world.
         // Orders about the user (CALL, PLAY, come / follow / wave / dance, DRIVE IT!, vehicles next to the user) bring the
