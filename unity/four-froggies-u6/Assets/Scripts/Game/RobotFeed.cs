@@ -157,7 +157,7 @@ public class RobotFeed : MonoBehaviour
         }
         if (full)
         {
-            if (p.buttonEast.wasPressedThisFrame) { Show(null, 1); i.cargo = false; i.downHeld = false; Debug.Log("RobotFeed: pad B -> small"); }
+            if (p.buttonEast.wasPressedThisFrame) { Show(null, 1); i.cargo = false; i.downHeld = false; i.handbrake = false; Debug.Log("RobotFeed: pad B -> small"); }
             if (p.buttonWest.wasPressedThisFrame) { ToggleCam(); i.auto = false; i.fire = false; i.gunFire = false; }
         }
         return i;

@@ -36,6 +36,7 @@ public struct PIn
     public bool aimHeld, mslFire, cargo, warpHome;
     // ffu61 froggy bow: shoot = pad RT / X, left click (locked, or while aiming with right mouse) / F, touch SHOOT; aim = aimHeld
     public bool bowFire;
+    public bool handbrake;    // ffu68: B held / Space or B key (wheeled ground vehicles: drift + burnout)
 }
 
 public static class Kb
@@ -113,6 +114,7 @@ public static class Kb
     }
 
     public static bool BDown() { return Key(k => k.bKey.wasPressedThisFrame, KeyCode.B, true); }
+    public static bool BHeld() { return Key(k => k.bKey.isPressed, KeyCode.B, false); }   // ffu68 handbrake
     public static bool RDown() { return Key(k => k.rKey.wasPressedThisFrame, KeyCode.R, true); }
     public static bool FKeyDown() { return Key(k => k.fKey.wasPressedThisFrame, KeyCode.F, true); }
 
@@ -218,6 +220,7 @@ public static class Pads
         i.cargo = p.buttonEast.wasPressedThisFrame;
         i.warpHome = p.leftStickButton.wasPressedThisFrame;
         i.bowFire = i.fire;   // ffu61: RT / X
+        i.handbrake = p.buttonEast.isPressed;   // ffu68: B = handbrake (drift / burnout) in wheeled ground vehicles
         return i;
     }
 
@@ -265,6 +268,7 @@ public static class Pads
         i.cargo = Kb.BDown();
         i.warpHome = Kb.RDown();
         i.bowFire = (Kb.MouseLeftDown() && (locked || i.aimHeld)) || Kb.FKeyDown();   // ffu61
+        i.handbrake = !Kb.typing && (Kb.Space() || Kb.BHeld());   // ffu68: Space / B = handbrake (moon buggy: Space hops off, so B)
         return i;
     }
 

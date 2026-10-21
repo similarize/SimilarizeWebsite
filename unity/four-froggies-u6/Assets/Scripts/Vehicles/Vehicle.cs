@@ -165,7 +165,7 @@ public abstract class Vehicle : MonoBehaviour
     // ffu39: what the Cybertruck's tyres roll on, 0 pavement / concrete .. 0.6 grass .. 1 gravel / dirt road. Anything that
     // is not the ranch terrain under the wheels (garage floor, bridges, the loop, decks, ramps) counts as pavement.
     float ctSurfT, ctSurfV = 0.6f;
-    float CtSurface()
+    protected float CtSurface()
     {
         if (Time.time < ctSurfT) return ctSurfV;
         ctSurfT = Time.time + 0.3f;

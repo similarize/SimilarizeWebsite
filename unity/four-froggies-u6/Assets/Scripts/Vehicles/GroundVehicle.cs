@@ -62,6 +62,86 @@ public class GroundVehicle : Vehicle
         get { return amph != null && amph.Boat ? "CYBERBOAT! L-stick steer | RT jet | LT reverse | Y / F truck mode | A hop out (swim)" : amph != null ? base.HelpLine + " | Y / F Cyberboat mode" : base.HelpLine; }
     }   // (forwardSpeed, dt) for custom visuals like mech legs
 
+    // ffu68 DRIFT + BURNOUT (Ben 2026-10-21, bot-notes c830b3c): wheeled ground vehicles only (Cybertruck, Monster Truck, moon buggy,
+    // mower, Curiosity), human drivers only. Burnout: LT + RT (or handbrake + RT) while slow = held on the fronts, rear wheels spin,
+    // smoke + squeal, let go of the brake = launch. Drift: at speed turn hard + B handbrake (keyboard Space / B) or an LT tap -> rear
+    // grip drops, the tail slides (slip angle capped ~35 deg, never past 90), countersteer holds it, grip comes back over ~0.5 s.
+    public bool DriftOk { get { return !tracked && !walker && usesTriggers && wheels.Count > 0 && !(amph != null && amph.Boat); } }
+    [System.NonSerialized] public float driftK, burnK, slipAng;
+    [System.NonSerialized] public bool drifting, burning;
+    float launchT; int fxTick; AudioSource squeal;
+    static bool toldBurn, toldDrift;
+    static readonly Color SmokeCol = new Color(0.86f, 0.86f, 0.86f, 0.6f);
+    public override string HelpFor(InputKind k)
+    {
+        if (GetType() != typeof(GroundVehicle) || !DriftOk) return base.HelpFor(k);   // subclasses (tank, mower, moon buggy) + boat mode keep their lines
+        if (k == InputKind.Gamepad) return "RT  /  LT::gas / brake + reverse|L-stick::steer|B::drift (turn hard at speed - an LT tap works too)|LT + RT::burnout when stopped (let go of LT = launch!)" + (amph != null ? "|Y::Cyberboat mode" : "") + "|A::get out";
+        if (k == InputKind.Keyboard) return "W  /  S::gas / brake + reverse|A  /  D::steer|Space::drift (turn hard at speed - B works too)|W + Space::burnout when stopped (let go of Space = launch!)" + (amph != null ? "|F::Cyberboat mode" : "") + "|E::get out";
+        return null;   // touch: the HelpLine (GAS + BRAKE together = burnout)
+    }
+
+    void DriftStep(bool driven, bool stunt, float dt)
+    {
+        Vector3 v = rb.velocity;
+        float fs = Vector3.Dot(v, transform.forward), ls = Vector3.Dot(v, transform.right), sl = Mathf.Abs(ls);
+        bool ok = DriftOk && driven && driver.human && groundedCount > 0 && pondSub <= 0f && !stunt && !rb.isKinematic;
+        bool brakeHeld = inp.brake > 0.4f || inp.handbrake;
+        bool burnNow = ok && inp.gas > 0.4f && brakeHeld && Mathf.Abs(fs) < 3f;
+        if (burning && !burnNow && ok && inp.gas > 0.4f) launchT = 0.6f;   // let go of the brake = launch
+        burning = burnNow;
+        if (launchT > 0f) launchT -= dt;
+        burnK = Mathf.MoveTowards(burnK, burning ? 1f : 0f, dt * 4f);
+        slipAng = Mathf.Atan2(sl, Mathf.Max(0.5f, Mathf.Abs(fs))) * Mathf.Rad2Deg;
+        bool want = ok && !burning && fs > 8f && Mathf.Abs(steer) > 0.6f && (inp.handbrake || inp.brake > 0.3f);
+        if (want && !drifting)
+        {
+            drifting = true;
+            rb.AddTorque(transform.up * steer * 0.5f, ForceMode.VelocityChange);   // kick the tail out
+            if (!toldDrift) { toldDrift = true; driver.Toast("DRIFT!", 1.5f); }
+        }
+        if (drifting && (!ok || fs < 6f || (!inp.handbrake && inp.brake < 0.3f && Mathf.Abs(steer) < 0.3f))) drifting = false;
+        driftK = Mathf.MoveTowards(driftK, drifting ? 1f : 0f, dt * (drifting ? 6.7f : 2f));
+        if (burning && !toldBurn) { toldBurn = true; driver.Toast("BURNOUT! Let go of the brake to launch", 2f); }
+
+        // effects: smoke (pavement) / dust (grass, dirt, moon) at the rear tyres + a tyre squeal scaled by the slip
+        bool fx = burnK > 0.3f || (driftK > 0.3f && sl > 4f);
+        float surf = fx ? CtSurface() : 0f;
+        if (fx && (++fxTick % 3) == 0)
+            foreach (Wheel w in wheels)
+                if (w.grounded && w.mount.z < 0f)
+                {
+                    Vector3 cp = transform.TransformPoint(w.mount) - transform.up * w.dist;
+                    if (surf >= 0.5f) FX.Dust(cp, 1f);
+                    else FX.Smoke(cp + Vector3.up * 0.25f, Random.Range(0.8f, 1.4f), SmokeCol);
+                }
+        float sq = Mathf.Max(0.45f * burnK, 0.45f * driftK * Mathf.Clamp01((sl - 2f) / 6f));
+        if (surf >= 0.5f) sq *= 0.5f;
+        if (!(driven && driver.human)) sq = 0f;
+        SquealTick(sq, burnK > driftK ? 1.05f + 0.05f * Mathf.Sin(Time.time * 9f) : 0.9f + sl / 30f, dt);
+    }
+
+    float DriftGrip()
+    {
+        if (driftK <= 0f) return 1f;
+        float gk = Mathf.Lerp(1f, 0.25f, driftK);
+        if (slipAng > 50f) gk = 1.5f;                                       // never spin out: strong restoring grip
+        else if (slipAng > 35f) gk = Mathf.Lerp(gk, 1f, (slipAng - 35f) / 15f);   // ~35 deg cap
+        return gk;
+    }
+
+    void SquealTick(float vol, float pitch, float dt)
+    {
+        if (squeal == null)
+        {
+            if (vol <= 0.001f || Sfx.Skid == null) return;
+            squeal = Sfx.Loop(gameObject, Sfx.Skid); squeal.Play(); squeal.Pause();
+        }
+        squeal.volume = Mathf.MoveTowards(squeal.volume, vol, dt * 3f);
+        squeal.pitch = Mathf.Lerp(squeal.pitch, Mathf.Max(0.05f, pitch), Mathf.Min(1f, dt * 4f));
+        if (squeal.volume <= 0.001f) { if (squeal.isPlaying) squeal.Pause(); }
+        else if (!squeal.isPlaying) squeal.UnPause();
+    }
+
     public void AddWheel(Vector3 center, float radius, Transform visual, bool steers)
     {
         wheels.Add(new Wheel { mount = center + Vector3.up * rest, radius = radius, visual = visual, steers = steers, dist = rest + radius, r0 = radius, vs0 = visual != null ? visual.localScale : Vector3.one });
@@ -212,6 +292,7 @@ public class GroundVehicle : Vehicle
             if (ub > 0f) rb.AddForce(-rb.velocity.normalized * ub, ForceMode.Acceleration);
         }
 
+        DriftStep(driven, inLoop || onStunt, dt);   // ffu68
         if (groundedCount > 0 && ws > 0f)
         {
             Vector3 fwd = Vector3.ProjectOnPlane(transform.forward, groundNormal).normalized;
@@ -235,11 +316,13 @@ public class GroundVehicle : Vehicle
             else if (throttle > 0.02f) force = fs < maxSpeed ? accel * throttle * Mathf.Clamp01(1.15f - fs / maxSpeed) : 0f;
             else if (throttle < -0.02f) force = fs > 1f ? -accel * 1.6f * -throttle : (fs > -maxSpeed * reverseFrac ? accel * 0.7f * throttle : 0f);
             else force = -fs * 0.8f;
+            if (burning) force = -fs * 8f;                          // ffu68 burnout: the fronts hold it
+            else if (launchT > 0f && force > 0f) force *= 1.6f;     // ffu68 launch
             if (pondSub > 0f) { force *= 1f - 0.5f * pondSub; if (driven && throttle > 0.02f) { float lim = maxSpeed * Mathf.Lerp(1f, 0.22f, pondSub); if (fs > lim) force = Mathf.Min(force, 0f); } }   // ffu37: crawling on the pond bed
             rb.AddForce(fwd * force * rb.mass * gf, ForceMode.Force);
             float lsT = 0f;   // ffu67d crab: the grip holds the slide the 4 parallel wheels point at instead of zero
             if (crab && driven && !(amph != null && amph.Boat)) { float rk2 = RearK(fs); if (rk2 > 0f) lsT = fs * Mathf.Tan(steer * SteerDeg * Mathf.Deg2Rad) * Mathf.Min(1f, rk2); }
-            rb.AddForce(-right * (ls - lsT) * grip * rb.mass * gf, ForceMode.Force);
+            rb.AddForce(-right * (ls - lsT) * grip * DriftGrip() * rb.mass * gf, ForceMode.Force);   // ffu68: drift drops the grip
 
             float yr = YawRate(rb, transform);
             float target;
@@ -250,6 +333,8 @@ public class GroundVehicle : Vehicle
                 float rk = (amph != null && amph.Boat) ? 0f : RearK(fs);   // ffu67d 4WS: bicycle model, yaw ~ tan(front) - tan(rear)
                 if (crab) { if (rk > 0f) target *= Mathf.Max(0f, 1f - rk); } else if (rk != 0f) target *= 1f + rk;
             }
+            if (driftK > 0f) target *= 1f + 0.8f * driftK * Mathf.Clamp01((45f - slipAng) / 10f);   // ffu68 drift: more yaw, fading near the cap
+            if (burning) target = steer * 0.9f;                     // ffu68 burnout donut
             if (!driven) target = 0f;
             target += guideYaw;
             rb.AddTorque(transform.up * (target - yr) * Mathf.Min(1f, 8f * dt) * gf, ForceMode.VelocityChange);
@@ -376,6 +461,7 @@ public class GroundVehicle : Vehicle
             Vector3 p = w.mount - Vector3.up * (w.dist - w.radius);
             w.visual.localPosition = p;
             w.spin += fs / Mathf.Max(0.1f, w.radius) * Mathf.Rad2Deg * dt;
+            if (burnK > 0f && w.mount.z < 0f) w.spin += burnK * 25f * Mathf.Rad2Deg * dt;   // ffu68 burnout: rears spin in place
             float st = w.steers ? steer * SteerDeg : 0f;
             if (!w.steers && rearSteer > 0f && w.mount.z < 0f) st = RearAngle;   // ffu67d: rear wheels visibly steer
             Quaternion rot = Quaternion.Euler(0f, st, 0f) * Quaternion.Euler(w.spin, 0f, 0f);
