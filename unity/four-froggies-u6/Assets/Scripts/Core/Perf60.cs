@@ -57,6 +57,7 @@ public static class Perf60
         Demo = Ffu33.Url("ffdemo") != null;
         string q = Ffu33.Url("quality");
         int t = q == "low" ? 0 : q == "med" || q == "medium" ? 1 : q == "high" ? 2 : -1;
+        if (t < 0 && XboxLite.LowMem) t = 0;   // ffxweb4: Xbox lite path locks the low tier
         if (t >= 0) { Tier = t; Forced = true; }
         else
         {

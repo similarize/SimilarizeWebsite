@@ -36,7 +36,8 @@ public static class Look
         RenderSettings.fogColor = new Color(0.68f, 0.76f, 0.86f);
         RenderSettings.fogDensity = 0.0032f;
         RenderSettings.reflectionIntensity = 0.9f;
-        Debug.Log("Look: tier " + (Mobile ? "mobile" : "desktop") + " " + Screen.width + "x" + Screen.height + " dpi " + Screen.dpi);
+        XboxLite.Apply();   // ffxweb4: no-op unless lowmem
+        Debug.Log("Look: tier " + (XboxLite.LowMem ? "xbox-lite " : "") + (Mobile ? "mobile" : "desktop") + " " + Screen.width + "x" + Screen.height + " dpi " + Screen.dpi);
     }
 
     // ranch probe: sky + ranch seen from above the yard (pond, Cybertruck stainless and glass reflect it)

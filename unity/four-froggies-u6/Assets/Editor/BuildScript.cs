@@ -144,10 +144,11 @@ public static class BuildScript
         PlayerSettings.WebGL.dataCaching = true;
         PlayerSettings.WebGL.nameFilesAsHashes = false;
         // Moderate memory (property names differ between Unity versions, so set them by reflection)
-        // ffxweb: Xbox Edge shares ~1 GB across its processes -> heap 64 / 512 MB (was 128 / 1024); compression stays Disabled
+        // ffxweb: heap 64 MB initial, grows on demand; max back to 1024 MB (ffxweb4) - the 512 MB cap OOM'd the desktop WebGPU
+        // path at 34-41 s. Xbox stays low through the game's XboxLite path, not the cap. Compression stays Disabled
         // (Cloudflare serves wasm / js compressed natively; Brotli + decompressionFallback would decompress in JS)
         SetStatic(typeof(PlayerSettings.WebGL), "initialMemorySize", 64);
-        SetStatic(typeof(PlayerSettings.WebGL), "maximumMemorySize", 512);
+        SetStatic(typeof(PlayerSettings.WebGL), "maximumMemorySize", 1024);
         Debug.Log("BuildScript: WebGL graphics APIs " + string.Join(",", PlayerSettings.GetGraphicsAPIs(BuildTarget.WebGL)) + " colour " + PlayerSettings.colorSpace);
     }
 
