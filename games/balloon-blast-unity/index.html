@@ -37,6 +37,21 @@
   <button id="fs" title="Fullscreen" aria-label="Fullscreen"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="display:block"><path d="M1.5 5.5v-4h4M10.5 1.5h4v4M14.5 10.5v4h-4M5.5 14.5h-4v-4"/></svg></button>
   <a href="../" title="Back to the arcade">✕ Arcade</a>
 </div>
+<script>
+  /* bbx1 (Xbox Edge): the game sets Cursor.lockState, so in cursor mode the first A press (a click) asks for pointer lock,
+     which captures Edge's cursor and stops HOLD Menu from opening the "Use game controls" menu. Unity also calls
+     preventDefault on keys it sees, which can swallow the Menu/View/ContextMenu keys Edge needs. On Xbox: no pointer
+     lock, and those keys never reach Unity. ?xbox=1 forces this anywhere, ?lock=1 allows pointer lock again. */
+  (function () {
+    var q = location.search;
+    if (!(/Xbox/i.test(navigator.userAgent) || /[?&]xbox=1/.test(q)) || /[?&]lock=1/.test(q)) return;
+    window.__bbxLockBlocked = 0;
+    Element.prototype.requestPointerLock = function () { window.__bbxLockBlocked++; console.log("bbx1: pointer lock blocked (Xbox; ?lock=1 to allow)"); };
+    var edgeKeys = { ContextMenu: 1, GamepadMenu: 1, GamepadView: 1 }, edgeCodes = { 93: 1, 207: 1, 208: 1 };
+    function pass(e) { if (edgeKeys[e.key] || edgeCodes[e.keyCode]) e.stopImmediatePropagation(); }
+    window.addEventListener("keydown", pass, true); window.addEventListener("keyup", pass, true); window.addEventListener("keypress", pass, true);
+  })();
+</script>
 <script src="../shared/xbox-compat.js?v=xbp2"></script>
 <script>
   var buildUrl = "Build";
