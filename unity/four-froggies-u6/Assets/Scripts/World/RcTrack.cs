@@ -322,8 +322,9 @@ public class RcTrack : MonoBehaviour
                 go.AddComponent<MeshFilter>().sharedMesh = mesh;
                 go.AddComponent<MeshRenderer>().sharedMaterial = col == 0 ? red : white;
             }
-            // ffu67h FREE ROAM (Bill Oct 20 16:45): no invisible fence any more - the pipes stay visual and jumpable
-            // Fence(side);
+            // ffu69 (Ben Oct 21): fence back on so cars slide along the pipes instead of hopping off; Gaps[] leave
+            // openings (pipes + fence both break there) so you can still drive off and roam (ffu67h free roam)
+            Fence(side);
         }
     }
 
@@ -355,12 +356,16 @@ public class RcTrack : MonoBehaviour
         Physics.IgnoreLayerCollision(FenceLayer, Vehicle.PropLayer, true);
         Physics.IgnoreLayerCollision(FenceLayer, Destruct.DebrisLayer, true);
     }
+    // ffu69 exits in the outer border (local): west toward the house, north, east, south-east (clear of the jumps / stand)
+    static readonly Vector2[] Gaps = { new Vector2(-16.4f, 5f), new Vector2(-8f, 10.4f), new Vector2(21.8f, 0f), new Vector2(11f, -13f) };
+    const float GapR = 2f;
     bool EdgePt(int i, int side, out Vector3 w)
     {
         Samp q = path[i];
         Vector2 nrm = new Vector2(-q.t.y, q.t.x) * side;
         Vector2 l = q.p + nrm * (W * 0.5f + 0.16f);
         w = Vector3.zero;
+        foreach (Vector2 g in Gaps) if ((l - g).sqrMagnitude < GapR * GapR) return false;   // ffu69 exit opening
         float d; int j = NearestFast(l, out d);
         if (d < W * 0.5f + 0.05f) return false;                    // on top of another bit of track
         w = new Vector3(C.x + l.x, Height(l.x, l.y) + 0.1f, C.y + l.y);
