@@ -19,10 +19,21 @@ public class GroundVehicle : Vehicle
         public Vector3 axle0, vs0 = Vector3.one;
         public float r0, extra, sr, wrest;
         public bool front;
+        public float yawDeg;   // ffu67d: the steer angle the visual got this frame (probe)
     }
 
     public readonly List<Wheel> wheels = new List<Wheel>();
     public float rest = 0.35f, maxSpeed = 24f, accel = 12f, turnRate = 1.6f, grip = 7f, reverseFrac = 0.45f;
+    // ffu67d FOUR-WHEEL STEERING (Bill Oct 20 16:20, Cybertruck, monster-truck style): rearSteer = how far the rear wheels follow the
+    // fronts (1 = same angle). Normal: rears turn OPPOSITE (full at <= 4 m/s, blending to 10% by 20 m/s) -> yaw x (1 + k), radius / (1 + k).
+    // crab (per truck, phone WHEELS tab): rears turn the SAME way -> little yaw, the truck slides diagonally. 0 = 2WS (every other vehicle).
+    public float rearSteer = 0f;
+    public bool crab;
+    public const float SteerDeg = 28f;
+    public float RearK(float fs) { return rearSteer <= 0f || tracked || walker ? 0f : rearSteer * Mathf.Lerp(1f, 0.1f, Mathf.Clamp01((Mathf.Abs(fs) - 4f) / 16f)); }
+    // rear wheel angle in degrees (+ = same side as the fronts) for the current steer + speed
+    public float RearAngle { get { float k = RearK(ForwardSpeed); return (crab ? 1f : -1f) * steer * SteerDeg * k; } }
+    public float SteerInput { get { return steer; } }
     public bool tracked;
     public override string[] TouchSet { get { return usesTriggers ? new[] { "A", null, amph != null ? (amph.Boat ? "TRUCK" : "BOAT") : null, "GAS", "BRAKE" } : new[] { "A", null, null, null, null }; } }
     public bool usesTriggers = true;     // tank uses RT to fire, so it drives with the stick only
@@ -224,12 +235,19 @@ public class GroundVehicle : Vehicle
             else force = -fs * 0.8f;
             if (pondSub > 0f) { force *= 1f - 0.5f * pondSub; if (driven && throttle > 0.02f) { float lim = maxSpeed * Mathf.Lerp(1f, 0.22f, pondSub); if (fs > lim) force = Mathf.Min(force, 0f); } }   // ffu37: crawling on the pond bed
             rb.AddForce(fwd * force * rb.mass * gf, ForceMode.Force);
-            rb.AddForce(-right * ls * grip * rb.mass * gf, ForceMode.Force);
+            float lsT = 0f;   // ffu67d crab: the grip holds the slide the 4 parallel wheels point at instead of zero
+            if (crab && driven && !(amph != null && amph.Boat)) { float rk2 = RearK(fs); if (rk2 > 0f) lsT = fs * Mathf.Tan(steer * SteerDeg * Mathf.Deg2Rad) * Mathf.Min(1f, rk2); }
+            rb.AddForce(-right * (ls - lsT) * grip * rb.mass * gf, ForceMode.Force);
 
             float yr = YawRate(rb, transform);
             float target;
             if (tracked) target = steer * turnRate * (fs < -0.5f ? -1f : 1f);
-            else target = steer * turnRate * Mathf.Clamp(fs / 6f, -1f, 1f);
+            else
+            {
+                target = steer * turnRate * Mathf.Clamp(fs / 6f, -1f, 1f);
+                float rk = (amph != null && amph.Boat) ? 0f : RearK(fs);   // ffu67d 4WS: bicycle model, yaw ~ tan(front) - tan(rear)
+                if (rk > 0f) target *= crab ? Mathf.Max(0f, 1f - rk) : 1f + rk;
+            }
             if (!driven) target = 0f;
             target += guideYaw;
             rb.AddTorque(transform.up * (target - yr) * Mathf.Min(1f, 8f * dt) * gf, ForceMode.VelocityChange);
@@ -356,11 +374,13 @@ public class GroundVehicle : Vehicle
             Vector3 p = w.mount - Vector3.up * (w.dist - w.radius);
             w.visual.localPosition = p;
             w.spin += fs / Mathf.Max(0.1f, w.radius) * Mathf.Rad2Deg * dt;
-            float st = w.steers ? steer * 28f : 0f;
+            float st = w.steers ? steer * SteerDeg : 0f;
+            if (!w.steers && rearSteer > 0f && w.mount.z < 0f) st = RearAngle;   // ffu67d: rear wheels visibly steer
             Quaternion rot = Quaternion.Euler(0f, st, 0f) * Quaternion.Euler(w.spin, 0f, 0f);
             if (amph != null) amph.WheelPose(w.mount, ref p, ref rot);
             w.visual.localPosition = p;
             w.visual.localRotation = rot;
+            w.yawDeg = st;
         }
         if (treadMarks != null)
         {
