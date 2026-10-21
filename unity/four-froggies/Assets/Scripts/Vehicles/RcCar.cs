@@ -18,6 +18,7 @@ public class RcCar : Vehicle
     float rest = 0.14f, spring, damper;
     public float vmax = 13.5f, accel = 15f, latCap = 13f, turnMax = 3.4f;
     float steer, throttle, flipT, roostT, stuckT, revT, skill = 1f, laneSeed;
+    public float Throttle { get { return throttle; } }   // ffu67h probe: what the input asked the motor for
     int ground, aiIdx = -1, lastIdx = -1;
     Transform shell, antenna;
     Vector3 lastVel, accLocal;

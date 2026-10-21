@@ -62,9 +62,14 @@ public partial class Game
         yield return RsGame(1.5f);
         RsNext("stickup");
         Vector3 p0 = c.transform.position;
-        RsSet(new Vector2(0f, 1f), 0f, 0f); yield return RsGame(3f);
+        // fix 1: H1 saw the car roll 3.5 m at ~1 m/s on the grid's slope with no brake (stick up or not) -> judge the MOTOR: throttle
+        // must stay 0 the whole time and the car must not pick up speed (vs a neutral baseline)
+        RsSet(Vector2.zero, 0f, 0f); float mx0 = 0f; { float tt = 0f, rr = Time.realtimeSinceStartup; while (tt < 2f && Time.realtimeSinceStartup - rr < 60f) { yield return null; tt += Time.deltaTime; mx0 = Mathf.Max(mx0, Mathf.Abs(c.ForwardSpeed)); } }
+        RsSet(Vector2.zero, 0f, 1f); yield return RsGame(1f);
+        p0 = c.transform.position;
+        RsSet(new Vector2(0f, 1f), 0f, 0f); float mxT = 0f, mxS = 0f; { float tt = 0f, rr = Time.realtimeSinceStartup; while (tt < 3f && Time.realtimeSinceStartup - rr < 60f) { yield return null; tt += Time.deltaTime; mxT = Mathf.Max(mxT, Mathf.Abs(c.Throttle)); mxS = Mathf.Max(mxS, Mathf.Abs(c.ForwardSpeed)); } }
         float s1 = c.ForwardSpeed, d1 = Vector3.Distance(c.transform.position, p0);
-        RsCheck("stick UP alone (no RT) does not drive", Mathf.Abs(s1) < 0.4f && d1 < 0.6f, "speed " + s1.ToString("0.00") + " m/s, moved " + d1.ToString("0.00") + " m in 3 s");
+        RsCheck("stick UP alone (no RT) does not drive", mxT < 0.01f && mxS < Mathf.Max(1.5f, mx0 + 0.5f), "max throttle " + mxT.ToString("0.00") + ", max speed " + mxS.ToString("0.00") + " m/s (neutral roll " + mx0.ToString("0.00") + "), moved " + d1.ToString("0.00") + " m in 3 s");
         RsSet(new Vector2(0f, -1f), 0f, 0f); yield return RsGame(2f);
         float s1b = c.ForwardSpeed;
         RsCheck("stick DOWN alone does not reverse", Mathf.Abs(s1b) < 0.4f, "speed " + s1b.ToString("0.00") + " m/s");

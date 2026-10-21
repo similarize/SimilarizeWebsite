@@ -60,20 +60,77 @@ public partial class Game
         v.rb.velocity = Vector3.zero; v.rb.angularVelocity = Vector3.zero;
         v.rb.position = p; v.rb.rotation = q; v.transform.SetPositionAndRotation(p, q);
     }
+    // ffu67d fix 2 (probe only): the old test spot (0,-14) heading east ran the 12 m/s circle into the pond (pondSub crawl cap
+    // ~3.6 m/s). FwSpot searches the ranch for DRY, FLAT, EMPTY lawn: a 55 m disk clear of the pond (PondQ > 1.12), every
+    // sample above the water line and within 3 m of the centre height, no non-terrain collider in a 3x2x3 m box at any sample;
+    // the truck starts 40 m back from the centre facing it (run-up ~40 m reaches 15 m/s, the circle stays inside the disk).
+    bool fwSpotDone; Vector3 fwStart; float fwHead = 90f; Vector3 fwC;
+    static readonly Collider[] fwBuf = new Collider[16];
+    bool FwClear(float x, float z, float y0, GroundVehicle v)
+    {
+        if (Mathf.Abs(x) > Layout.Half - 10f || Mathf.Abs(z) > Layout.Half - 10f) return false;
+        if (Layout.PondQ(x, z) < 1.12f) return false;
+        float y = Ranch.GY(x, z);
+        if (y < Layout.WaterY + 0.6f || Mathf.Abs(y - y0) > 3f) return false;
+        int n = Physics.OverlapBoxNonAlloc(new Vector3(x, y + 1.3f, z), new Vector3(3f, 1f, 3f), fwBuf, Quaternion.identity, ~0, QueryTriggerInteraction.Ignore);
+        for (int i = 0; i < n; i++)
+        {
+            var c = fwBuf[i];
+            if (c == null || c is TerrainCollider) continue;
+            if (v != null && c.transform.IsChildOf(v.transform)) continue;
+            return false;
+        }
+        return true;
+    }
+    IEnumerator FwFindSpot(GroundVehicle v)
+    {
+        if (fwSpotDone) yield break;
+        fwSpotDone = true;
+        float R = 55f; bool found = false; int tried = 0; float bestD = 1e9f;
+        // nearest qualifying spot to the house/garage lawn (so the scene stays on the ranch proper)
+        for (float cx = -170f; cx <= 170f && !found; cx += 15f)
+        {
+            for (float cz = -170f; cz <= 170f; cz += 15f)
+            {
+                tried++;
+                if (Layout.PondQ(cx, cz) < 1.12f + R / 56f * 0.6f) continue;
+                float y0 = Ranch.GY(cx, cz); bool ok = FwClear(cx, cz, y0, v);
+                for (float r = 6f; r <= R && ok; r += 7f)
+                    for (int a = 0, na = Mathf.Max(6, (int)(r * 6.283f / 7f)); a < na && ok; a++)
+                    { float t = a * 6.2832f / na; ok = FwClear(cx + r * Mathf.Cos(t), cz + r * Mathf.Sin(t), y0, v); }
+                if (!ok) continue;
+                float d = new Vector2(cx, cz).magnitude;
+                if (d < bestD) { bestD = d; fwC = new Vector3(cx, y0, cz); }
+            }
+            yield return null;   // spread the search over frames
+        }
+        if (bestD < 1e8f)
+        {
+            // head along whichever axis direction keeps the start 40 m back inside the disk's flattest line (start = centre - dir*40)
+            fwHead = 90f; Vector3 dir = Vector3.right; fwStart = fwC - dir * 40f; fwStart.y = Ranch.GY(fwStart.x, fwStart.z);
+            Debug.Log("FOURWS67 SPOT dry flat lawn centre (" + fwC.x.ToString("0") + ", " + fwC.z.ToString("0") + ") y " + fwC.y.ToString("0.0") + " clear radius " + R + " m, start (" + fwStart.x.ToString("0") + ", " + fwStart.z.ToString("0") + ") heading " + fwHead + " | PondQ " + Layout.PondQ(fwC.x, fwC.z).ToString("0.00") + " | " + tried + " candidates");
+        }
+        else
+        {
+            fwStart = new Vector3(0f, Ranch.GY(0f, -14f), -14f); fwHead = 90f;
+            Debug.Log("FOURWS67 SPOT none found in " + tried + " candidates - falling back to (0,-14)");
+        }
+    }
     float fwR, fwDia, fwRear, fwFront, fwYaw, fwLat, fwSpd;
     // circle at (speed, steer): settle, then measure 4 s of game time (yaw-rate radius, path diameter, rear wheel angle)
     IEnumerator FwCircle(GroundVehicle v, float speed, float steer, string tag)
     {
-        FwPark(v, 0f, -14f, 90f); yield return FwF(3);
+        FwPark(v, fwStart.x, fwStart.z, fwHead); yield return FwF(3);
         fwSpeed = speed; fwSteer = 0f; yield return FwGame(speed > 6f ? 4.5f : 2.5f);   // straight run-up to speed
         fwSteer = steer; yield return FwGame(3f);
-        float sv = 0f, sy = 0f, sl = 0f; int n = 0; float t = 0f, r0 = Time.realtimeSinceStartup;
+        float sv = 0f, sy = 0f, sl = 0f; int n = 0; float t = 0f, r0 = Time.realtimeSinceStartup; float subMax = v.pondSub, vMax = 0f;
         Vector3 c0 = v.transform.position; float dmax = 0f; float rearSum = 0f, frontSum = 0f; float h0 = v.transform.eulerAngles.y, hTurn = 0f, hPrev = h0;
         var pts = new System.Collections.Generic.List<Vector3>();
         while (t < 4f && Time.realtimeSinceStartup - r0 < 150f)
         {
             yield return null; t += Time.deltaTime;
             Vector3 vel = v.rb.velocity; vel.y = 0f;
+            subMax = Mathf.Max(subMax, v.pondSub); vMax = Mathf.Max(vMax, vel.magnitude);
             sv += vel.magnitude; sy += Mathf.Abs(v.rb.angularVelocity.y); sl += Mathf.Abs(Vector3.Dot(vel, v.transform.right)); n++;
             Vector3 p = v.transform.position; p.y = 0f; pts.Add(p);
             float h = v.transform.eulerAngles.y; hTurn += Mathf.Abs(Mathf.DeltaAngle(hPrev, h)); hPrev = h;
@@ -83,7 +140,7 @@ public partial class Game
         fwR = n > 0 && sy > 1e-4f ? sv / sy : 999f; fwDia = hTurn >= 300f ? dmax : -1f;
         fwRear = n > 0 ? rearSum / (n * 2f) : 0f; fwFront = n > 0 ? frontSum / (n * 2f) : 0f; fwYaw = n > 0 ? sy / n : 0f; fwLat = n > 0 ? sl / n : 0f;
         fwSpd = n > 0 ? sv / n : 0f;
-        Debug.Log("FOURWS67 R " + tag + " speed " + (n > 0 ? sv / n : 0f).ToString("0.0") + " m/s yaw " + (fwYaw * Mathf.Rad2Deg).ToString("0") + " deg/s -> radius " + fwR.ToString("0.00") + " m | path diameter " + (fwDia > 0f ? fwDia.ToString("0.0") + " m" : "n/a (turned " + hTurn.ToString("0") + " deg)") + " | wheel yaw front " + fwFront.ToString("0.0") + " rear " + fwRear.ToString("0.0") + " | lateral " + fwLat.ToString("0.00") + " m/s | k " + v.bigK.ToString("0.00") + " rearSteer " + v.rearSteer + " crab " + v.crab);
+        Debug.Log("FOURWS67 R " + tag + " speed " + (n > 0 ? sv / n : 0f).ToString("0.0") + " m/s yaw " + (fwYaw * Mathf.Rad2Deg).ToString("0") + " deg/s -> radius " + fwR.ToString("0.00") + " m | path diameter " + (fwDia > 0f ? fwDia.ToString("0.0") + " m" : "n/a (turned " + hTurn.ToString("0") + " deg)") + " | wheel yaw front " + fwFront.ToString("0.0") + " rear " + fwRear.ToString("0.0") + " | lateral " + fwLat.ToString("0.00") + " m/s | k " + v.bigK.ToString("0.00") + " rearSteer " + v.rearSteer + " crab " + v.crab + " | max " + vMax.ToString("0.0") + " m/s pondSub max " + subMax.ToString("0.00") + " at (" + v.transform.position.x.ToString("0") + ", " + v.transform.position.z.ToString("0") + ") " + (Layout.InPond(v.transform.position.x, v.transform.position.z) ? "IN POND" : "dry"));
     }
 
     public IEnumerator Fws67Run()
@@ -98,7 +155,8 @@ public partial class Game
         if (ja == null) { FwDone(); yield break; }
         BigWheels.SetFor(ja, 1f, "demo", true, f);
         if (f.vehicle != null) f.ExitVehicle();
-        FwPark(ja, 0f, -14f, 90f); yield return FwF(2);
+        yield return FwFindSpot(ja);
+        FwPark(ja, fwStart.x, fwStart.z, fwHead); yield return FwF(2);
         f.EnterVehicle(ja); yield return FwF(4);
         FwCheck("P1 drives James's Cybertruck", f.vehicle == ja, f.vehicle != null ? f.vehicle.Title : "-");
         ja.inputHook = i => FwHook(ja, i);
