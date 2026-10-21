@@ -269,6 +269,12 @@
       <span class="screen-wrap"><canvas data-demo="balloonBlastUnity"></canvas><span class="glass"></span></span>
       <span class="panel"><span class="plate">3D FPS · Unity WebGL</span><span class="buttons" aria-hidden="true"><i></i><i class="alt"></i></span></span>
     </a>
+    <a class="cab" href="/games/balloon-blast-u6/?v=20261021-818e4e2">
+      <span class="marquee">Balloon Blast 6.6</span>
+      <span class="upd">Oct 21, 12:30 AM · <span>4e2</span></span>
+      <span class="screen-wrap"><canvas data-demo="balloonBlastU6"></canvas><span class="glass"></span></span>
+      <span class="panel"><span class="plate">Froggies + pets · 1-4P · Unity 6.6</span><span class="buttons" aria-hidden="true"><i></i><i class="alt"></i></span></span>
+    </a>
     <a class="cab" href="/games/RCRallyJump/index.html?release=rally23b">
       <span class="marquee">RC Rally Jump</span>
       <span class="upd">Oct 16, 8:00 PM · <span>261</span></span>
@@ -1568,7 +1574,24 @@
       const sx = (img.naturalWidth - sw) * (0.5 + 0.35 * Math.sin(t * 0.18)), sy = (img.naturalHeight - sh) * 0.5;
       ctx.drawImage(img, sx, sy, sw, sh, 0, 0, w, h);
     }
-    const draw = { balloonBlast, balloonBlastAirsoft, balloonBlastUnity, fourFroggiesUnity, lamboBlast, rally, dirtTrack, duneBuggy, rocks, ball, soccer3d, froggies, froggies3d, map, drop, ffversions, froggyHop };
+    // Balloon Blast 6.6 card (bbu6c1): real in-game shot of the live Unity 6.6 build (Farm Field, 1280x960 capture),
+    // slow pan like the Lambo card. Shot: /games/cards/balloon-blast-u6.jpg
+    const bbu6Img = new Image();
+    bbu6Img.onload = () => { if (reduced) frame(); };
+    bbu6Img.src = "/games/cards/balloon-blast-u6.jpg?v=20261021-bbu6c1";
+    function balloonBlastU6(v) {
+      const { ctx, w, h, t } = v;
+      ctx.fillStyle = "#0d1620"; ctx.fillRect(0, 0, w, h);
+      const img = bbu6Img;
+      if (!(img.complete && img.naturalWidth)) return;
+      const z = 1.06 + 0.04 * Math.sin(t * 0.25);
+      const ir = img.naturalWidth / img.naturalHeight, pr = w / h;
+      let sw = img.naturalWidth / z, sh = img.naturalHeight / z;
+      if (ir > pr) sw = sh * pr; else sh = sw / pr;
+      const sx = (img.naturalWidth - sw) * (0.5 + 0.35 * Math.sin(t * 0.18)), sy = (img.naturalHeight - sh) * 0.5;
+      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, w, h);
+    }
+    const draw = { balloonBlast, balloonBlastU6, balloonBlastAirsoft, balloonBlastUnity, fourFroggiesUnity, lamboBlast, rally, dirtTrack, duneBuggy, rocks, ball, soccer3d, froggies, froggies3d, map, drop, ffversions, froggyHop };
 
     const ffShots = [
       { label: "2.5D", src: "/games/four-froggies/assets/play-25d.jpg?v=20261007-card25d1r1" },
