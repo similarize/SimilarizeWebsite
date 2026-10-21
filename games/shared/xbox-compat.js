@@ -1,6 +1,6 @@
 /*! SimXbox: Xbox / console Edge compatibility for Unity WebGL/WebGPU pages (xb1, 2026-10-20). No dependencies.
- * Include BEFORE the Unity loader script:  <script src="../shared/xbox-compat.js?v=xbp2"></script>
- * See XBOX_COMPAT.md. Query flags: ?lowmem=1|0  ?webgpu=0  ?padlog=1  ?padgate=1|0  ?ctxmenu=1|0  ?fs=1|0
+ * Include BEFORE the Unity loader script:  <script src="../shared/xbox-compat.js?v=xbp3"></script>
+ * See XBOX_COMPAT.md. Query flags: ?lowmem=1|0  ?webgpu=0  ?padlog=1  ?padgate=1|0  ?ctxmenu=1|0  ?fs=1|0  ?lock=1|0
  */
 (function () {
   "use strict";
@@ -34,7 +34,7 @@
   //     can't get "outside the game" for HOLD Menu -> "Use game controls". So on Xbox: no fullscreen requests from
   //     the page at all (Edge's own View-button full screen still works), hide #fs, and keep a 56px non-canvas strip
   //     at the top. ?fs=1 = old behavior; ?fs=0 = this behavior on any browser (testing).
-  var VER = "xbp2", ff = flag("fs"), noFs = ff === null ? isXbox : !ff;
+  var VER = "xbp3", ff = flag("fs"), noFs = ff === null ? isXbox : !ff;
   if (noFs) {
     var fsNoop = function () { console.log("SimXbox: fullscreen request blocked (Xbox; ?fs=1 to allow)"); return Promise.resolve(); };
     ["requestFullscreen", "webkitRequestFullscreen", "webkitRequestFullScreen", "mozRequestFullScreen", "msRequestFullscreen"].forEach(function (k) {
@@ -45,6 +45,12 @@
       "display:flex;align-items:center;justify-content:center;font:600 18px system-ui,sans-serif;color:#cfe;background:#0b0f16;border-bottom:1px solid #345;z-index:1}";
     (document.head || document.documentElement).appendChild(st);
   }
+
+  // 2d) xbp3: Unity Cursor.lockState = Locked calls requestPointerLock. On Xbox, A is a click in cursor mode, so the page
+  //     grabs pointer lock and HOLD Menu -> "Use game controls" never opens. Xbox only by default; ?lock=1 allows it.
+  var lk = flag("lock"), noLock = lk === null ? isXbox : !lk;
+  if (noLock) ["requestPointerLock", "webkitRequestPointerLock", "mozRequestPointerLock"].forEach(function (k) {
+    if (Element.prototype[k]) try { Element.prototype[k] = function () { console.log("SimXbox: pointer lock blocked (Xbox; ?lock=1 to allow)"); return Promise.resolve(); }; } catch (e) { } });
 
   function canvas() { return document.querySelector(canvasSel) || document.querySelector("canvas"); }
   function refocus() { emuOptOut(); setTimeout(function () { try { window.focus(); var c = canvas(); if (c) { if (!c.hasAttribute("tabindex")) c.setAttribute("tabindex", "-1"); c.focus(); } } catch (e) { } }, 50); }
@@ -118,7 +124,7 @@
       var a = document.activeElement;
       var line = "SimXbox " + VER + " xbox=" + isXbox + " lowmem=" + lowmem + " t=" + ((Date.now() - t0) / 1000).toFixed(0) + "s emu=" + ("gamepadInputEmulation" in navigator ? navigator.gamepadInputEmulation : "n/a") +
         " focus=" + document.hasFocus() + " active=" + (a && (a.id || a.tagName)) + " fs=" + !!(document.fullscreenElement || document.webkitFullscreenElement) +
-        " lock=" + !!document.pointerLockElement + " gate=" + !!gate + " ctx=" + keepCtx + " nofs=" + noFs + " padSeen=" + SX.padSeen + " webgpu=" + (navigator.gpu ? "on" : "off");
+        " lock=" + !!document.pointerLockElement + " gate=" + !!gate + " ctx=" + keepCtx + " nofs=" + noFs + " nolock=" + noLock + " padSeen=" + SX.padSeen + " webgpu=" + (navigator.gpu ? "on" : "off");
       console.log("SimXbox padlog: " + line + " pads=" + (out.length ? out.join(" | ") : "none"));
       if (!box && document.body) { box = document.createElement("pre"); box.id = "simxbox-padlog";
         box.style.cssText = "position:fixed;left:2vw;right:2vw;bottom:2vh;z-index:2147483647;margin:0;white-space:pre-wrap;font:bold 24px/1.35 monospace;color:#ff0;background:rgba(0,0,0,.88);border:4px solid #ff0;padding:12px 16px;border-radius:10px;pointer-events:none";

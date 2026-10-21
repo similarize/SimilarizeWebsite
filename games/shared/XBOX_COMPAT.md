@@ -5,7 +5,7 @@ One shared, dependency-free script for Unity WebGL/WebGPU pages that run on Xbox
 ## Include (before the Unity loader script)
 
 ```html
-<script src="../shared/xbox-compat.js?v=xbp2"></script>
+<script src="../shared/xbox-compat.js?v=xbp3"></script>
 ```
 
 Optional, before the include: `window.SimXboxOptions = { canvas: "#unity-canvas" }` (the default is `#unity-canvas`, then the first `<canvas>`).
@@ -68,3 +68,8 @@ Status of current builds (checked 2026-10-20 from `Build/*` on gh-pages):
 | four-froggies-unity | no (WebGL 2 only) | yes | 35 MB | 128 / 1024 MB |
 | balloon-blast-unity | no | yes | 31 MB | 128 / 1024 MB |
 | lambo-blast | no | yes | 30 MB | 128 / 1024 MB |
+
+## xbp3 (2026-10-20, Four Froggies World)
+- Pointer lock is blocked on Xbox (`Element.prototype.requestPointerLock` becomes a no-op). Unity `Cursor.lockState = Locked` grabbed the cursor when A acted as a click, which kept HOLD Menu -> "Use game controls" from opening. `?lock=1` allows it, and `?lock=0` blocks it on any browser. Padlog shows `nolock=`.
+- Don't map gamepad Menu (button 9) or View (button 8) in games. Edge on Xbox reserves them: holding Menu goes back to cursor mode, and View takes focus.
+- Unity WebGL templates must reference the current `?v=`. A Unity publish that ships an older template resets the bump; FF u6 and FF unity had gone back to `xb1`.
