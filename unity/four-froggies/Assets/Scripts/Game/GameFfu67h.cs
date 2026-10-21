@@ -64,10 +64,12 @@ public partial class Game
         Vector3 p0 = c.transform.position;
         // fix 1: H1 saw the car roll 3.5 m at ~1 m/s on the grid's slope with no brake (stick up or not) -> judge the MOTOR: throttle
         // must stay 0 the whole time and the car must not pick up speed (vs a neutral baseline)
+        // fix 2: H1 on 4922b131 read |throttle| 1.00 = the previous phase's BRAKE (-1) still in the first frames' input -> judge
+        // FORWARD throttle (signed, > 0 = drive) and skip the first 2 frames after the switch
         RsSet(Vector2.zero, 0f, 0f); float mx0 = 0f; { float tt = 0f, rr = Time.realtimeSinceStartup; while (tt < 2f && Time.realtimeSinceStartup - rr < 60f) { yield return null; tt += Time.deltaTime; mx0 = Mathf.Max(mx0, Mathf.Abs(c.ForwardSpeed)); } }
         RsSet(Vector2.zero, 0f, 1f); yield return RsGame(1f);
         p0 = c.transform.position;
-        RsSet(new Vector2(0f, 1f), 0f, 0f); float mxT = 0f, mxS = 0f; { float tt = 0f, rr = Time.realtimeSinceStartup; while (tt < 3f && Time.realtimeSinceStartup - rr < 60f) { yield return null; tt += Time.deltaTime; mxT = Mathf.Max(mxT, Mathf.Abs(c.Throttle)); mxS = Mathf.Max(mxS, Mathf.Abs(c.ForwardSpeed)); } }
+        RsSet(new Vector2(0f, 1f), 0f, 0f); float mxT = 0f, mxS = 0f; int fz = 0; { float tt = 0f, rr = Time.realtimeSinceStartup; while (tt < 3f && Time.realtimeSinceStartup - rr < 60f) { yield return null; tt += Time.deltaTime; if (++fz <= 2) continue; mxT = Mathf.Max(mxT, c.Throttle); mxS = Mathf.Max(mxS, Mathf.Abs(c.ForwardSpeed)); } }
         float s1 = c.ForwardSpeed, d1 = Vector3.Distance(c.transform.position, p0);
         RsCheck("stick UP alone (no RT) does not drive", mxT < 0.01f && mxS < Mathf.Max(1.5f, mx0 + 0.5f), "max throttle " + mxT.ToString("0.00") + ", max speed " + mxS.ToString("0.00") + " m/s (neutral roll " + mx0.ToString("0.00") + "), moved " + d1.ToString("0.00") + " m in 3 s");
         RsSet(new Vector2(0f, -1f), 0f, 0f); yield return RsGame(2f);
@@ -134,13 +136,14 @@ public partial class Game
         RsNext("stand");
         c.demoAuto = true;
         Camera cm = slots[0].cam; Vector3 fp = f.transform.position;
-        int fr = 0, inView = 0; float maxCamMove = 0f, fovMin = 999f, fovMax = 0f, t2 = 0f, r2 = Time.realtimeSinceStartup; Vector3 cp0 = cm.transform.position;
+        int fr = 0, inView = 0, blocked = 0; float maxCamMove = 0f, fovMin = 999f, fovMax = 0f, t2 = 0f, r2 = Time.realtimeSinceStartup; Vector3 cp0 = cm.transform.position;
         while (t2 < 22f && Time.realtimeSinceStartup - r2 < 240f)
         {
             yield return null; t2 += Time.deltaTime; if (t2 < 1f) continue;
             fr++;
             Vector3 vp = cm.WorldToViewportPoint(c.transform.position);
             if (vp.z > 0f && vp.x > -0.02f && vp.x < 1.02f && vp.y > -0.02f && vp.y < 1.02f) inView++;
+            if (rig.StandBlockedNow) blocked++;
             maxCamMove = Mathf.Max(maxCamMove, Vector3.Distance(cm.transform.position, fp));
             fovMin = Mathf.Min(fovMin, cm.fieldOfView); fovMax = Mathf.Max(fovMax, cm.fieldOfView);
             if (fr == 200 || fr == 400) RsNext("standlap");
@@ -148,6 +151,7 @@ public partial class Game
         float vk = fr > 0 ? inView / (float)fr : 0f;
         RsCheck("stand view: camera stays at the froggy's spot (no follow-move)", fr > 20 && maxCamMove < 2.5f, "max " + maxCamMove.ToString("0.00") + " m from the froggy over " + fr + " frames");
         RsCheck("stand view: the car stays in frame round the lap (>= 85% of frames)", vk >= 0.85f, (vk * 100f).ToString("0") + "% of " + fr + " frames");
+        RsCheck("stand view: the froggy's own head never blocks the car (eye->car line clear of the froggy, <= 5% of frames)", fr > 20 && blocked <= fr * 0.05f, blocked + " blocked of " + fr + " frames");
         RsCheck("stand view: FOV auto-zooms with distance", fovMax - fovMin > 3f, "FOV " + fovMin.ToString("0") + " .. " + fovMax.ToString("0"));
         c.demoAuto = false;
         rig.ToggleRcStand(f); yield return RsGame(0.6f);

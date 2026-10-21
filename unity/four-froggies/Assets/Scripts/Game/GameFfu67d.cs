@@ -60,55 +60,71 @@ public partial class Game
         v.rb.velocity = Vector3.zero; v.rb.angularVelocity = Vector3.zero;
         v.rb.position = p; v.rb.rotation = q; v.transform.SetPositionAndRotation(p, q);
     }
-    // ffu67d fix 2 (probe only): the old test spot (0,-14) heading east ran the 12 m/s circle into the pond (pondSub crawl cap
-    // ~3.6 m/s). FwSpot searches the ranch for DRY, FLAT, EMPTY lawn: a 55 m disk clear of the pond (PondQ > 1.12), every
-    // sample above the water line and within 3 m of the centre height, no non-terrain collider in a 3x2x3 m box at any sample;
-    // the truck starts 40 m back from the centre facing it (run-up ~40 m reaches 15 m/s, the circle stays inside the disk).
+    // ffu67d probe fix 2/3 (probe only): the old test spot (0,-14) ran the 12 m/s circle into the pond (pondSub crawl cap ~3.6 m/s).
+    // fix 3: a strict 55 m empty disk found nothing on the ranch (fix-2 log 'SPOT none found'), so the fast run-up is now ON the
+    // circle (steer held from the start, no straight) and FwFindSpot picks the BEST 34 m disk: every sample must be dry (PondQ > 1.1,
+    // above the water line); score = samples with a non-terrain collider in a 3x2x3 m box or > 3 m off the centre height (lowest
+    // wins, ties -> nearer the house). The truck starts on the disk's edge with the centre on its right (steer > 0 turns right).
     bool fwSpotDone; Vector3 fwStart; float fwHead = 90f; Vector3 fwC;
     static readonly Collider[] fwBuf = new Collider[16];
-    bool FwClear(float x, float z, float y0, GroundVehicle v)
+    string fwWhy = "";
+    // 0 = clear, 1 = obstacle / slope, 99 = water / off the map
+    int FwSample(float x, float z, float y0, GroundVehicle v, bool why)
     {
-        if (Mathf.Abs(x) > Layout.Half - 10f || Mathf.Abs(z) > Layout.Half - 10f) return false;
-        if (Layout.PondQ(x, z) < 1.12f) return false;
+        if (Mathf.Abs(x) > Layout.Half - 10f || Mathf.Abs(z) > Layout.Half - 10f) return 99;
+        if (Layout.PondQ(x, z) < 1.1f) return 99;
         float y = Ranch.GY(x, z);
-        if (y < Layout.WaterY + 0.6f || Mathf.Abs(y - y0) > 3f) return false;
-        int n = Physics.OverlapBoxNonAlloc(new Vector3(x, y + 1.3f, z), new Vector3(3f, 1f, 3f), fwBuf, Quaternion.identity, ~0, QueryTriggerInteraction.Ignore);
+        if (y < Layout.WaterY + 0.6f) return 99;
+        if (Mathf.Abs(y - y0) > 3f) { if (why) fwWhy += " slope"; return 1; }
+        int n = Physics.OverlapBoxNonAlloc(new Vector3(x, y + 1.3f, z), new Vector3(1.5f, 1f, 1.5f), fwBuf, Quaternion.identity, ~0, QueryTriggerInteraction.Ignore);
         for (int i = 0; i < n; i++)
         {
             var c = fwBuf[i];
             if (c == null || c is TerrainCollider) continue;
             if (v != null && c.transform.IsChildOf(v.transform)) continue;
-            return false;
+            if (why) fwWhy += " " + c.name;
+            return 1;
         }
-        return true;
+        return 0;
+    }
+    int FwScore(float cx, float cz, float R, int cap, GroundVehicle v, bool why)
+    {
+        float y0 = Ranch.GY(cx, cz); int sc = FwSample(cx, cz, y0, v, why); if (sc >= 99) return 999;
+        for (float r = 5f; r <= R; r += 5.8f)
+        {
+            int na = Mathf.Max(6, (int)(r * 6.283f / 6f));
+            for (int a = 0; a < na; a++)
+            {
+                float t = a * 6.2832f / na; int k = FwSample(cx + r * Mathf.Cos(t), cz + r * Mathf.Sin(t), y0, v, why);
+                if (k >= 99) return 999; sc += k; if (sc > cap) return sc;
+            }
+        }
+        return sc;
     }
     IEnumerator FwFindSpot(GroundVehicle v)
     {
         if (fwSpotDone) yield break;
         fwSpotDone = true;
-        float R = 55f; bool found = false; int tried = 0; float bestD = 1e9f;
-        // nearest qualifying spot to the house/garage lawn (so the scene stays on the ranch proper)
-        for (float cx = -170f; cx <= 170f && !found; cx += 15f)
+        const float R = 34f; int tried = 0, best = 998; float bestD = 1e9f;
+        for (float cx = -160f; cx <= 160f; cx += 10f)
         {
-            for (float cz = -170f; cz <= 170f; cz += 15f)
+            for (float cz = -160f; cz <= 160f; cz += 10f)
             {
                 tried++;
-                if (Layout.PondQ(cx, cz) < 1.12f + R / 56f * 0.6f) continue;
-                float y0 = Ranch.GY(cx, cz); bool ok = FwClear(cx, cz, y0, v);
-                for (float r = 6f; r <= R && ok; r += 7f)
-                    for (int a = 0, na = Mathf.Max(6, (int)(r * 6.283f / 7f)); a < na && ok; a++)
-                    { float t = a * 6.2832f / na; ok = FwClear(cx + r * Mathf.Cos(t), cz + r * Mathf.Sin(t), y0, v); }
-                if (!ok) continue;
-                float d = new Vector2(cx, cz).magnitude;
-                if (d < bestD) { bestD = d; fwC = new Vector3(cx, y0, cz); }
+                if (Layout.PondQ(cx, cz) < 1.1f + R / 56f) continue;
+                int sc = FwScore(cx, cz, R, best, v, false); if (sc >= 999) continue;
+                float d = new Vector2(cx - Layout.HouseC.x, cz - Layout.HouseC.y).magnitude;
+                if (sc < best || (sc == best && d < bestD)) { best = sc; bestD = d; fwC = new Vector3(cx, Ranch.GY(cx, cz), cz); }
             }
             yield return null;   // spread the search over frames
         }
-        if (bestD < 1e8f)
+        if (best < 998)
         {
-            // head along whichever axis direction keeps the start 40 m back inside the disk's flattest line (start = centre - dir*40)
-            fwHead = 90f; Vector3 dir = Vector3.right; fwStart = fwC - dir * 40f; fwStart.y = Ranch.GY(fwStart.x, fwStart.z);
-            Debug.Log("FOURWS67 SPOT dry flat lawn centre (" + fwC.x.ToString("0") + ", " + fwC.z.ToString("0") + ") y " + fwC.y.ToString("0.0") + " clear radius " + R + " m, start (" + fwStart.x.ToString("0") + ", " + fwStart.z.ToString("0") + ") heading " + fwHead + " | PondQ " + Layout.PondQ(fwC.x, fwC.z).ToString("0.00") + " | " + tried + " candidates");
+            fwWhy = ""; FwScore(fwC.x, fwC.z, R, 9999, v, true);
+            if (fwWhy.Length > 160) fwWhy = fwWhy.Substring(0, 160);
+            // start on the circle of radius ~22 m (12 m/s, steer 0.35) round the centre: heading +x, the centre on the right (-z)
+            fwHead = 90f; fwStart = fwC + new Vector3(0f, 0f, 22f); fwStart.y = Ranch.GY(fwStart.x, fwStart.z);
+            Debug.Log("FOURWS67 SPOT best dry lawn centre (" + fwC.x.ToString("0") + ", " + fwC.z.ToString("0") + ") y " + fwC.y.ToString("0.0") + " r " + R + " m: " + best + " blocked samples [" + fwWhy.Trim() + "], start (" + fwStart.x.ToString("0") + ", " + fwStart.z.ToString("0") + ") heading " + fwHead + " | PondQ " + Layout.PondQ(fwC.x, fwC.z).ToString("0.00") + " | " + tried + " candidates");
         }
         else
         {
@@ -121,7 +137,8 @@ public partial class Game
     IEnumerator FwCircle(GroundVehicle v, float speed, float steer, string tag)
     {
         FwPark(v, fwStart.x, fwStart.z, fwHead); yield return FwF(3);
-        fwSpeed = speed; fwSteer = 0f; yield return FwGame(speed > 6f ? 4.5f : 2.5f);   // straight run-up to speed
+        // fix 3: the fast run-up is on the circle itself (steer held), so it never needs a long straight lane
+        fwSpeed = speed; fwSteer = speed > 6f ? steer : 0f; yield return FwGame(speed > 6f ? 5f : 2.5f);   // run-up to speed
         fwSteer = steer; yield return FwGame(3f);
         float sv = 0f, sy = 0f, sl = 0f; int n = 0; float t = 0f, r0 = Time.realtimeSinceStartup; float subMax = v.pondSub, vMax = 0f;
         Vector3 c0 = v.transform.position; float dmax = 0f; float rearSum = 0f, frontSum = 0f; float h0 = v.transform.eulerAngles.y, hTurn = 0f, hPrev = h0;

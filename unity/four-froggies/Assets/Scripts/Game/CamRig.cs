@@ -65,7 +65,18 @@ public class CamRig
     // height, behind + over the right shoulder), pans / tilts smoothly to keep the car in view and zooms the FOV gently; it never moves
     // with the car. Far away (> 55 m, free roam) it falls back to the chase view until the car comes back. Controls stay car-relative.
     public bool rcStand; public bool RcStandActive { get; private set; }
-    Vector3 standLook; float standFov = -1f, standBase = -1f; bool standInit;
+    Vector3 standLook; float standFov = -1f, standBase = -1f; bool standInit; Renderer[] standR;
+    public bool StandBlockedNow { get; private set; }
+    // true when the eye->car segment passes through the froggy's bounds (sphere of the horizontal half-size, +5 cm)
+    static bool StandBlocked(Vector3 eye, Vector3 car, Bounds hb)
+    {
+        Vector3 d = car - eye; float L = d.magnitude; if (L < 0.01f) return false; d /= L;
+        float r = Mathf.Max(hb.extents.x, hb.extents.z) * 0.85f + 0.05f;
+        // the head part only: centre at the upper third of the bounds
+        Vector3 c = new Vector3(hb.center.x, hb.max.y - Mathf.Min(r, hb.extents.y), hb.center.z);
+        float t = Mathf.Clamp(Vector3.Dot(c - eye, d), 0f, L);
+        return (eye + d * t - c).sqrMagnitude < r * r;
+    }
     public void ToggleRcStand(Frog f) { rcStand = !rcStand; standInit = false; if (f != null && f.human) f.Toast(rcStand ? "Stand view (Y: chase view)" : "Chase view (Y: stand view)", 1.4f); }
     void RcStand(Frog f, PIn i, float dt)
     {
@@ -84,12 +95,25 @@ public class CamRig
         Vector3 car = rc.transform.position + Vector3.up * 0.12f;
         Vector3 dir = car - me; dir.y = 0f; dir = dir.sqrMagnitude > 0.01f ? dir.normalized : f.transform.forward;
         Vector3 right = Vector3.Cross(Vector3.up, dir);
-        Vector3 eye = me + Vector3.up * 1.35f - dir * 0.9f + right * 0.45f;   // over the right shoulder, the froggy just in frame
+        // ffu67h fix 2: the froggy's own head sat on the eye->car line (H1 stand shot: the head filled the middle of the frame
+        // and hid the car, worse as the FOV zooms in). Now the eye is over the right shoulder ABOVE the head top (renderer bounds),
+        // and if the eye->car ray still passes through the froggy's bounds sphere it climbs/steps right until it clears.
+        if (!standInit || standR == null || standR.Length == 0) standR = f.GetComponentsInChildren<Renderer>();
+        Bounds hb = new Bounds(me + Vector3.up * 0.8f, Vector3.one * 0.6f); bool hbOk = false;
+        foreach (var r in standR) if (r != null && r.enabled && r.gameObject.activeInHierarchy && !(r is ParticleSystemRenderer)) { if (!hbOk) { hb = r.bounds; hbOk = true; } else hb.Encapsulate(r.bounds); }
+        float top = Mathf.Clamp(hb.max.y - me.y, 0.6f, 2.4f);
+        Vector3 eye = me + Vector3.up * (top + 0.32f) - dir * 0.95f + right * 0.7f;
+        for (int k = 0; k < 6; k++) { if (!StandBlocked(eye, car, hb)) break; eye += Vector3.up * 0.18f + right * 0.12f; }
+        StandBlockedNow = StandBlocked(eye, car, hb);
         if (!standInit) { standLook = car; standInit = true; }
-        standLook = Vector3.Lerp(standLook, car, Mathf.Min(1f, dt * 4.5f));   // smooth pan / tilt
+        standLook = Vector3.Lerp(standLook, car, Mathf.Min(1f, dt * 6f));   // smooth pan / tilt
         cam.transform.position = eye;
         cam.transform.rotation = Quaternion.LookRotation((standLook - eye).normalized);
-        float fw = Mathf.Clamp(2f * Mathf.Atan(3.2f / Mathf.Max(1f, d)) * Mathf.Rad2Deg, 22f, standBase);   // gentle auto-zoom
+        // fix 2: portrait screens (Pixel H2: car in frame only 78%) - the zoom framed 3.2 m VERTICALLY, so a tall narrow view lost
+        // the car off the sides. Frame 3.2 m across the NARROWER axis (vertical FOV from aspect), and the 22 deg floor applies to it too.
+        float asp = Mathf.Min(1f, cam.aspect > 0.05f ? cam.aspect : 1f);
+        float vMin = Mathf.Min(standBase, 2f * Mathf.Atan(Mathf.Tan(11f * Mathf.Deg2Rad) / asp) * Mathf.Rad2Deg);
+        float fw = Mathf.Clamp(2f * Mathf.Atan(3.2f / (Mathf.Max(1f, d) * asp)) * Mathf.Rad2Deg, vMin, standBase);   // gentle auto-zoom
         standFov = Mathf.Lerp(standFov, fw, Mathf.Min(1f, dt * 1.5f));
         cam.fieldOfView = standFov;
     }
