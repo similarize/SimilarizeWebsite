@@ -162,6 +162,14 @@ male, flat, even voice (a short beep before each line) so a robot is never mista
   (full at <= 4 m/s -> about half the turning circle), blending smoothly to about zero by 15 m/s (a hair same-direction above that) so it stays stable. The rear wheels visibly
   turn, at every wheel size. CRAB STEER per truck (phone WHEELS tab, driver only, not saved): rears turn WITH the fronts and the
   truck slides diagonally. Only the Cybertrucks have it; no global setting.
+- **RC car stick steers only** (ffu67h, Bill 2026-10-20 16:39): on a pad the left stick only steers an RC car (stick up / down never
+  drives); RT = go, LT = brake then reverse. Keyboard keeps W / S + arrows for throttle, touch keeps GAS / BRAKE, AI drives by gas / brake.
+- **RC cars roam free** (ffu67h, Bill 2026-10-20 16:45): no invisible fence, no range leash and no snap back to the track for a
+  player's car - drive it anywhere on the ranch; it bumps off buildings and trees. Flipped or high-centred, it is put back on its
+  wheels where it is. Hold B (pad) / Shift (keys) about 1 s to bring it back to the stand. AI racers still keep to the track.
+- **RC driver's-stand view** (ffu67h, Bill 2026-10-20 16:37): Y on the remote (F on keys) toggles the chase view and a view from the
+  froggy's own spot under the stand canopy (eye height, over the right shoulder) that pans / tilts to keep the car in frame and zooms
+  gently with distance; it never moves with the car. Per player (split screen = own choice). Past 55 m it uses the chase view.
 - **Rumble is per player** (ffu67c, Bill 2026-10-20): only the pad of the player who caused it rumbles (a mech pilot feels each
   footfall; players on the ground feel a giant mech's steps by distance), short pulses with a 0.4 s cap, and every pad goes to
   zero on exit / bail-out / death / world change / pause / focus loss. Never all pads, never Gamepad.current.

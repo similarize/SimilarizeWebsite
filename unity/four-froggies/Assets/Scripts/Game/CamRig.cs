@@ -60,6 +60,39 @@ public class CamRig
         yawT = behindYaw; pitchT = Mathf.Clamp(16f, minPitch, maxPitch); zoomMul = 1f; manualT = 10f;
     }
 
+    // ffu67h RC DRIVER'S-STAND VIEW (Bill Oct 20 16:37): per player (each slot has its own rig, so split = own choice, remembered while
+    // the game runs). Y on the remote / F toggles chase <-> stand: the camera stays at the froggy's own spot under the stand canopy (eye
+    // height, behind + over the right shoulder), pans / tilts smoothly to keep the car in view and zooms the FOV gently; it never moves
+    // with the car. Far away (> 55 m, free roam) it falls back to the chase view until the car comes back. Controls stay car-relative.
+    public bool rcStand; public bool RcStandActive { get; private set; }
+    Vector3 standLook; float standFov = -1f, standBase = -1f; bool standInit;
+    public void ToggleRcStand(Frog f) { rcStand = !rcStand; standInit = false; if (f != null && f.human) f.Toast(rcStand ? "Stand view (Y: chase view)" : "Chase view (Y: stand view)", 1.4f); }
+    void RcStand(Frog f, PIn i, float dt)
+    {
+        RcCar rc = f.vehicle as RcCar;
+        if (rc != null && i.land) ToggleRcStand(f);
+        Vector3 me = f.transform.position;
+        float d = rc != null ? Vector2.Distance(new Vector2(me.x, me.z), new Vector2(rc.transform.position.x, rc.transform.position.z)) : 0f;
+        bool on = rc != null && rcStand && d < 55f;
+        if (!on)
+        {
+            if (RcStandActive) { if (standBase > 0f) cam.fieldOfView = standBase; standBase = -1f; standInit = false; }
+            RcStandActive = false; return;
+        }
+        if (!RcStandActive) { standBase = cam.fieldOfView; standFov = cam.fieldOfView; }
+        RcStandActive = true;
+        Vector3 car = rc.transform.position + Vector3.up * 0.12f;
+        Vector3 dir = car - me; dir.y = 0f; dir = dir.sqrMagnitude > 0.01f ? dir.normalized : f.transform.forward;
+        Vector3 right = Vector3.Cross(Vector3.up, dir);
+        Vector3 eye = me + Vector3.up * 1.35f - dir * 0.9f + right * 0.45f;   // over the right shoulder, the froggy just in frame
+        if (!standInit) { standLook = car; standInit = true; }
+        standLook = Vector3.Lerp(standLook, car, Mathf.Min(1f, dt * 4.5f));   // smooth pan / tilt
+        cam.transform.position = eye;
+        cam.transform.rotation = Quaternion.LookRotation((standLook - eye).normalized);
+        float fw = Mathf.Clamp(2f * Mathf.Atan(3.2f / Mathf.Max(1f, d)) * Mathf.Rad2Deg, 22f, standBase);   // gentle auto-zoom
+        standFov = Mathf.Lerp(standFov, fw, Mathf.Min(1f, dt * 1.5f));
+        cam.fieldOfView = standFov;
+    }
     public void Update(Frog f, PIn i, float dt)
     {
         if (f == null) return;
@@ -172,6 +205,7 @@ public class CamRig
         cam.transform.rotation = Quaternion.LookRotation((pivot - want).normalized + shake * 0.02f) * QuakeRot();
         if (UpK > 0.001f) cam.transform.rotation = Quaternion.Slerp(cam.transform.rotation, rot, UpK);   // indoors looking up: the view follows the pitch, not the (floor-clamped) pivot
         if (kick > 0.01f) cam.transform.rotation = cam.transform.rotation * Quaternion.Euler(-kick * 0.6f, 0f, 0f);
+        RcStand(f, i, dt);
         // the pilot's aim point: what the screen centre looks at (skipping the mech itself)
         if (sm != null && ak > 0.2f && sm.driver == f)
         {
