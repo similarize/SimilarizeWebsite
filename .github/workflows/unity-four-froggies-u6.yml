@@ -162,6 +162,9 @@ jobs:
           cp -r "$OUT/Build" "$GAME_DIR/Build"
           if [ -d "$OUT/StreamingAssets" ]; then cp -r "$OUT/StreamingAssets" "$GAME_DIR/"; fi
           sed -e "s/__BUILD_NAME__/$NAME/g" -e "s/__BUILD_VERSION__/$VERSION/g" "$GITHUB_WORKSPACE/src/unity/four-froggies-u6/web/index.html" > "$GAME_DIR/index.html"
+          # Keep the Xbox shim tag in step with the live games/shared/xbox-compat.js (its VER), so a template can never revert it.
+          XBV=$(git show HEAD:games/shared/xbox-compat.js 2>/dev/null | grep -o 'VER = "[A-Za-z0-9_]*"' | head -n1 | cut -d'"' -f2 || true)
+          if [ -n "$XBV" ]; then sed -i "s#xbox-compat\.js?v=[A-Za-z0-9_]*#xbox-compat.js?v=$XBV#g" "$GAME_DIR/index.html"; echo "xbox-compat tag -> $XBV"; fi
           if [ -f "$GITHUB_WORKSPACE/src/unity/four-froggies-u6/web/LICENSES.txt" ]; then cp "$GITHUB_WORKSPACE/src/unity/four-froggies-u6/web/LICENSES.txt" "$GAME_DIR/LICENSES.txt"; fi
           # ffu10: streamed music + ambience (Ogg Vorbis, loaded per stage by Plugins/FFAudio.jslib)
           if [ -d "$GITHUB_WORKSPACE/src/unity/four-froggies-u6/web/audio" ]; then rm -rf "$GAME_DIR/audio"; cp -r "$GITHUB_WORKSPACE/src/unity/four-froggies-u6/web/audio" "$GAME_DIR/audio"; fi
