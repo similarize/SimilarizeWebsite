@@ -1,5 +1,5 @@
 /*! SimXbox: Xbox / console Edge compatibility for Unity WebGL/WebGPU pages (xb1, 2026-10-20). No dependencies.
- * Include BEFORE the Unity loader script:  <script src="../shared/xbox-compat.js?v=xbp4"></script>
+ * Include BEFORE the Unity loader script:  <script src="../shared/xbox-compat.js?v=xbp5"></script>
  * See XBOX_COMPAT.md. Query flags: ?lowmem=1|0  ?webgpu=0  ?padlog=1  ?padgate=1|0  ?ctxmenu=1|0  ?fs=1|0  ?lock=1|0  ?hud=1|0
  */
 (function () {
@@ -34,7 +34,7 @@
   //     can't get "outside the game" for HOLD Menu -> "Use game controls". So on Xbox: no fullscreen requests from
   //     the page at all (Edge's own View-button full screen still works), hide #fs, and keep a 56px non-canvas strip
   //     at the top. ?fs=1 = old behavior; ?fs=0 = this behavior on any browser (testing).
-  var VER = "xbp4", ff = flag("fs"), noFs = ff === null ? isXbox : !ff;
+  var VER = "xbp5", ff = flag("fs"), noFs = ff === null ? isXbox : !ff;
   if (noFs) {
     var fsNoop = function () { console.log("SimXbox: fullscreen request blocked (Xbox; ?fs=1 to allow)"); return Promise.resolve(); };
     ["requestFullscreen", "webkitRequestFullscreen", "webkitRequestFullScreen", "mozRequestFullScreen", "msRequestFullscreen"].forEach(function (k) {
@@ -124,20 +124,27 @@
       if (!hud) { if (!document.body) return; hud = document.createElement("div"); hud.id = "simxbox-hud";
         hud.style.cssText = "position:fixed;left:0;right:0;top:0;height:56px;z-index:2147483646;pointer-events:none;box-sizing:border-box;padding:3px 10px;" +
           "background:#0b0f16;border-bottom:1px solid #345;color:#cfe;font:600 17px/25px ui-monospace,Consolas,monospace;white-space:pre;overflow:hidden";
+        // xbp5: two lines as separate boxes; line 2 = fixed facts + pad id (only the id truncates, with ellipsis)
+        var L = "display:block;overflow:hidden;white-space:pre;height:25px";
+        hud.innerHTML = '<div id="simxbox-hud1" style="' + L + '"></div><div id="simxbox-hud2" style="' + L + ';display:flex">' +
+          '<span id="simxbox-hud2a" style="flex:none;white-space:pre"></span><span id="simxbox-hud2b" style="flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:pre"></span></div>';
         document.body.appendChild(hud); }
       var now = performance.now(), g = pads(), list = [];
       for (var i = 0; i < g.length; i++) if (g[i] && g[i].connected) list.push(g[i]);
-      var p = list[0], sig = "", vals = "pad: none (press a button)";
+      var p = list[0], sig = "", va = "pad:none (press a button)", vb = "";
       if (p) { var b = [];
         for (var j = 0; j < p.buttons.length; j++) if (p.buttons[j].pressed || p.buttons[j].value > 0.5) b.push(j);
         var ax = Array.prototype.map.call(p.axes, function (a) { return (a >= 0 ? "+" : "") + a.toFixed(2); }).join(" ");
-        sig = b.join(",") + "|" + ax; vals = "axes " + ax + "  btn [" + b.join(",") + "]  " + p.id.slice(0, 34) + " map=" + (p.mapping || "NONE"); }
+        sig = b.join(",") + "|" + ax; va = "ax " + ax + " | btn[" + b.join(",") + "] | map:" + (p.mapping || "NONE") + " | "; vb = p.id; }
       if (sig !== prevSig) { if (prevSig) lastPadT = now; prevSig = sig; }
-      var mode = now - lastPadT < 2000 ? "GAME (pad data arriving)" : now - lastMoveT < 2000 ? "CURSOR? (stick moves mouse)" :
-        list.length ? "idle, move a stick" : "CURSOR? (no pad seen)";
-      var t = "HOLD \u2261 here: Use game controls | " + (opts.build || VER) + " | pads " + list.length + " | focus " + (document.hasFocus() ? "Y" : "N") +
-        " " + document.visibilityState + " | lock " + (document.pointerLockElement ? "ON" : "off") + " | guess: " + mode + "\n" + vals;
-      if (t !== hudTxt) { hudTxt = t; hud.textContent = t; }
+      var mode = now - lastPadT < 2000 ? "GAME" : now - lastMoveT < 2000 ? "CURSOR?(stick=mouse)" :
+        list.length ? "idle" : "CURSOR?(no pad)";
+      var t1 = "HOLD Menu>Use game controls | " + (opts.build || VER) + " | pads:" + list.length + " | foc:" + (document.hasFocus() ? "Y" : "N") +
+        " vis:" + (document.visibilityState === "visible" ? "Y" : "N") + " | lock:" + (document.pointerLockElement ? "Y" : "N") + " | " + mode;
+      var t = t1 + "\n" + va + vb;
+      if (t !== hudTxt) { hudTxt = t; // xbp5: update the 3 boxes
+        document.getElementById("simxbox-hud1").textContent = t1; document.getElementById("simxbox-hud2a").textContent = va;
+        document.getElementById("simxbox-hud2b").textContent = vb; }
     };
     requestAnimationFrame(hudTick);
   }
