@@ -110,6 +110,15 @@
       .x-slot b { font-size: 20px; font-weight: 600; }
       #l-msg { min-height: 1.4em; margin: 0 0 8px; }
     </style>
+  <script>
+      // fhr8 Xbox: Edge on Xbox reserves Menu (hold = back to cursor mode) and View (focus-loss defect), so on Xbox the game
+      // never uses those two buttons, never asks for fullscreen, and never rewrites the URL. ?xbox=1 forces it (testing).
+      window.FHR_XBOX = /Xbox/i.test(navigator.userAgent) || /[?&]xbox=1/.test(location.search);
+      window.SimXboxOptions = { canvas: "#game", ready: true };
+      if (window.FHR_XBOX) document.documentElement.classList.add("fhr-xbox");
+    </script>
+    <script src="/games/shared/xbox-compat.js?v=xbp2"></script>
+    <style>html.fhr-xbox .ac1-fs, html.fhr-xbox .fhr-nx, html:not(.fhr-xbox) .fhr-x { display: none !important; }</style>
   <script src="/games/shared/reword-cta.js?v=cta1"></script>
 <script src="/games/shared/arcade-chrome.js?v=ac3" data-pos="top:205px;right:10px" defer></script>
 </head>
@@ -157,7 +166,7 @@
             <p class="x-sub" id="x-msg" role="alert" hidden></p>
             <div class="x-help x-shadow">
               <b>Keyboard</b> ↑/W hop · ↓/S back · ←→/AD steer · Space item · E/Shift super jump · Esc pause · M mute<br />
-              <b>Gamepad</b> RT or A hop · LT back · stick steer · X or RB item · Y super jump (lobby: ↑↓ or Y character) · Start pause<br />
+              <b>Gamepad</b> RT or A hop · LT back · stick steer · X or RB item · Y super jump (lobby: ↑↓ or Y character) · <span class="fhr-nx">Start</span><span class="fhr-x">B</span> pause<br />
               <b>Touch</b> left thumb steer · HOP hold · ITEM · JUMP · BACK<br />
               <b>Up to 4 players</b> press A on each controller to join split-screen
             </div>
@@ -167,7 +176,7 @@
           <div class="x-panel x-panel--wide">
             <h2 class="x-title x-shadow">Who's racing?</h2>
             <p class="x-sub x-shadow" id="l-track"></p>
-            <p class="x-sub x-shadow">A join · ◀ ▶ or LB RB colour · B leave · Start or Enter to race</p>
+            <p class="x-sub x-shadow">A join · ◀ ▶ or LB RB colour · B leave · X<span class="fhr-nx">, Start</span> or Enter to race</p>
             <div class="x-slots" id="l-slots"></div>
             <p class="x-sub x-shadow" id="l-msg" role="status"></p>
             <button class="x-btn x-btn--ghost" id="b-join">Join</button>
@@ -208,7 +217,7 @@
           window.xTrack = i;
           document.getElementById("x-subt").textContent = "Six racers. Three laps. " + label.replace(/^\S+\s/, "") + ".";
           document.getElementById("l-track").textContent = "Track: " + label;
-          if (!quiet) try { history.replaceState(null, "", "?track=" + i); } catch (err) {}
+          if (!quiet && !window.FHR_XBOX) try { history.replaceState(null, "", "?track=" + i); } catch (err) {}
         };
         // the scene is built once, from the chosen track, when the player first commits (Play, a gamepad, or Enter)
         window.xBooted = false;
@@ -1161,7 +1170,7 @@ function padActions() {
       if (!s) { if (has(0)) { join(p.index); ch = true; } return; }
       if (has(14) || has(4)) cycle(s, -1); if (has(15) || has(5)) cycle(s, 1);
       if (has(12) || has(3)) cycleChar(s, 1); if (has(13)) cycleChar(s, -1);
-      if (has(1)) seats.splice(seats.indexOf(s), 1); else if (has(9)) go = true; ch = true;
+      if (has(1)) seats.splice(seats.indexOf(s), 1); else if (has(2) || (!window.FHR_XBOX && has(9))) go = true; ch = true;
     });
     if (ch) drawLobby(); if (go) startRace();
   } else if (finishShown && anyA) resetRace();
@@ -1185,8 +1194,8 @@ function readInput() {
       if (Math.abs(ax) > 0.15) steer += (ax - Math.sign(ax) * 0.15) / 0.85;
       if (pr(2) || pr(5)) inp.item = state === "race";
       if (pr(3) && state === "race") inp.jump = true;
-      if (pr(9)) togglePause();
-      if (pr(8)) toggleMute();
+      if (window.FHR_XBOX) { if (pr(1) || (paused && pr(0))) togglePause(); } // fhr8: Menu/View belong to Edge on Xbox
+      else { if (pr(9)) togglePause(); if (pr(8)) toggleMute(); }
     }
     if (!f.auto) { inp.thr = thr > 0.05 ? thr : 0; inp.brk = brk; inp.steer = clamp(steer, -1, 1); }
   });
@@ -1450,7 +1459,7 @@ requestAnimationFrame(loop);
     Array.from(navigator.getGamepads()).forEach((p) => {
       if (!p || !p.connected) return;
       const b = (i) => !!(p.buttons[i] && p.buttons[i].pressed), ax = p.axes[0] || 0, ay = p.axes[1] || 0;
-      const dir = b(14) || ax < -0.5 ? "L" : b(15) || ax > 0.5 ? "R" : b(12) || ay < -0.5 ? "U" : b(13) || ay > 0.5 ? "D" : "", a = b(0) || b(9), pv = prev[p.index] || {};
+      const dir = b(14) || ax < -0.5 ? "L" : b(15) || ax > 0.5 ? "R" : b(12) || ay < -0.5 ? "U" : b(13) || ay > 0.5 ? "D" : "", a = b(0) || (!window.FHR_XBOX && b(9)), pv = prev[p.index] || {};
       if (dir && dir !== pv.dir) { if (dir === "L" || dir === "R") cars[F].go(dir === "L" ? -1 : 1); else focus(dir === "U" ? 0 : 1); }
       if (a && !pv.a && !window.xBooted && window.xBootNow) window.xBootNow(); // after boot the game's own pad loop opens the lobby on A
       prev[p.index] = { dir, a };
