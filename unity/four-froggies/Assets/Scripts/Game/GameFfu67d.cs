@@ -60,7 +60,7 @@ public partial class Game
         v.rb.velocity = Vector3.zero; v.rb.angularVelocity = Vector3.zero;
         v.rb.position = p; v.rb.rotation = q; v.transform.SetPositionAndRotation(p, q);
     }
-    float fwR, fwDia, fwRear, fwFront, fwYaw, fwLat;
+    float fwR, fwDia, fwRear, fwFront, fwYaw, fwLat, fwSpd;
     // circle at (speed, steer): settle, then measure 4 s of game time (yaw-rate radius, path diameter, rear wheel angle)
     IEnumerator FwCircle(GroundVehicle v, float speed, float steer, string tag)
     {
@@ -82,6 +82,7 @@ public partial class Game
         foreach (var a in pts) foreach (var b in pts) dmax = Mathf.Max(dmax, (a - b).magnitude);
         fwR = n > 0 && sy > 1e-4f ? sv / sy : 999f; fwDia = hTurn >= 300f ? dmax : -1f;
         fwRear = n > 0 ? rearSum / (n * 2f) : 0f; fwFront = n > 0 ? frontSum / (n * 2f) : 0f; fwYaw = n > 0 ? sy / n : 0f; fwLat = n > 0 ? sl / n : 0f;
+        fwSpd = n > 0 ? sv / n : 0f;
         Debug.Log("FOURWS67 R " + tag + " speed " + (n > 0 ? sv / n : 0f).ToString("0.0") + " m/s yaw " + (fwYaw * Mathf.Rad2Deg).ToString("0") + " deg/s -> radius " + fwR.ToString("0.00") + " m | path diameter " + (fwDia > 0f ? fwDia.ToString("0.0") + " m" : "n/a (turned " + hTurn.ToString("0") + " deg)") + " | wheel yaw front " + fwFront.ToString("0.0") + " rear " + fwRear.ToString("0.0") + " | lateral " + fwLat.ToString("0.00") + " m/s | k " + v.bigK.ToString("0.00") + " rearSteer " + v.rearSteer + " crab " + v.crab);
     }
 
@@ -109,7 +110,7 @@ public partial class Game
         Vector3 rp = ja.transform.TransformPoint(new Vector3(0f, 0.5f, -1.7f));
         cam.camPos = rp - ja.transform.forward * 4.5f + ja.transform.right * 3.2f + Vector3.up * 2.4f; cam.camLook = rp;
         FwNext("before"); yield return FwF(3);
-        yield return FwCircle(ja, 12f, 1f, "BEFORE high"); float bH = fwR;
+        yield return FwCircle(ja, 12f, 0.35f, "BEFORE high"); float bH = fwR;
 
         // AFTER = four-wheel steering
         ja.rearSteer = 1f;
@@ -120,8 +121,10 @@ public partial class Game
         FwCheck("BEFORE (2WS): rear wheels straight", Mathf.Abs(bRear) < 1f, "rear " + bRear.ToString("0.0") + " deg");
         FwCheck("AFTER low speed: rear wheel meshes turn OPPOSITE the fronts (visibly, > 15 deg)", aRear * aFront < 0f && Mathf.Abs(aRear) > 15f, "front " + aFront.ToString("0.0") + " rear " + aRear.ToString("0.0"));
         FwCheck("AFTER low speed (3 m/s): turning circle much tighter (radius <= 65% of 2WS)", aL < bL * 0.65f, "radius " + bL.ToString("0.00") + " -> " + aL.ToString("0.00") + " m, path diameter " + bLd.ToString("0.0") + " -> " + aLd.ToString("0.0") + " m");
-        yield return FwCircle(ja, 12f, 1f, "AFTER high"); float aH = fwR, aHRear = fwRear, aHFront = fwFront;
-        FwCheck("AFTER 12 m/s: blended (less opposite steer than at 3 m/s, radius between 60% and 100% of 2WS), upright", aH > bH * 0.6f && aH <= bH * 1.001f && Mathf.Abs(aHRear) < Mathf.Abs(aRear) && ja.transform.up.y > 0.8f, "radius " + bH.ToString("0.00") + " -> " + aH.ToString("0.00") + " m, rear " + aHRear.ToString("0.0") + " vs low " + aRear.ToString("0.0") + " deg, up " + ja.transform.up.y.ToString("0.00"));
+        yield return FwCircle(ja, 12f, 0.35f, "AFTER high"); float aH = fwR, aHRear = fwRear, aHFront = fwFront;
+        // fix 1: steer 0.35 at 12 m/s (full lock scrubbed the truck down to ~4 m/s, so the blend never kicked in); compare rear/front RATIO
+        float rLow = Mathf.Abs(aRear) / Mathf.Max(1f, Mathf.Abs(aFront)), rHigh = Mathf.Abs(aHRear) / Mathf.Max(1f, Mathf.Abs(aHFront));
+        FwCheck("AFTER 12 m/s: blended (held >= 9 m/s, rear/front ratio < half the 3 m/s one, radius between 60% and 100% of 2WS), upright", fwSpd >= 9f && rHigh < rLow * 0.5f && aH > bH * 0.6f && aH <= bH * 1.001f && ja.transform.up.y > 0.8f, "speed " + fwSpd.ToString("0.0") + " m/s, radius " + bH.ToString("0.00") + " -> " + aH.ToString("0.00") + " m, rear " + aHRear.ToString("0.0") + " / front " + aHFront.ToString("0.0") + " (ratio " + rHigh.ToString("0.00") + " vs low " + rLow.ToString("0.00") + "), RearK(4/8/12/15) " + ja.RearK(4f).ToString("0.00") + "/" + ja.RearK(8f).ToString("0.00") + "/" + ja.RearK(12f).ToString("0.00") + "/" + ja.RearK(15f).ToString("0.00") + ", up " + ja.transform.up.y.ToString("0.00"));
 
         // every 67a wheel size: 3x
         fwSpeed = 0f; fwSteer = 0f; yield return FwGame(1.5f);

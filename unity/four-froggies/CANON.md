@@ -159,7 +159,7 @@ male, flat, even voice (a short beep before each line) so a robot is never mista
   size it was driven at for robots / AI / Dad. Applies to every wheeled vehicle (both Cybertrucks, Monster Truck, bikes, RC cars ...).
 - **Cybertrucks have four-wheel steering** (ffu67d, Bill 2026-10-20 16:20, monster-truck style): all three Cybertrucks (James's,
   Dad's, the shared one), for every driver (players, robots, Dad, AI). At low speed the rear wheels turn OPPOSITE the fronts
-  (full at <= 4 m/s -> about half the turning circle), blending to 10% by 20 m/s so it stays stable. The rear wheels visibly
+  (full at <= 4 m/s -> about half the turning circle), blending smoothly to about zero by 15 m/s (a hair same-direction above that) so it stays stable. The rear wheels visibly
   turn, at every wheel size. CRAB STEER per truck (phone WHEELS tab, driver only, not saved): rears turn WITH the fronts and the
   truck slides diagonally. Only the Cybertrucks have it; no global setting.
 - **Rumble is per player** (ffu67c, Bill 2026-10-20): only the pad of the player who caused it rumbles (a mech pilot feels each

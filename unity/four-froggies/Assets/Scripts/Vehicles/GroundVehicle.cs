@@ -30,9 +30,11 @@ public class GroundVehicle : Vehicle
     public float rearSteer = 0f;
     public bool crab;
     public const float SteerDeg = 28f;
-    public float RearK(float fs) { return rearSteer <= 0f || tracked || walker ? 0f : rearSteer * Mathf.Lerp(1f, 0.1f, Mathf.Clamp01((Mathf.Abs(fs) - 4f) / 16f)); }
+    // ffu67d fix 1 (Bill Oct 20 21:15): fully opposite up to 4 m/s, smoothstep down to ~0 by 15 m/s (a hair same-direction, -0.08, above that
+    // for highway stability). fs = ForwardSpeed in m/s. Negative = rears follow the fronts slightly (never in crab, which clamps to >= 0).
+    public float RearK(float fs) { if (rearSteer <= 0f || tracked || walker) return 0f; float u = Mathf.Clamp01((Mathf.Abs(fs) - 4f) / 11f); u = u * u * (3f - 2f * u); return rearSteer * Mathf.Lerp(1f, -0.08f, u); }
     // rear wheel angle in degrees (+ = same side as the fronts) for the current steer + speed
-    public float RearAngle { get { float k = RearK(ForwardSpeed); return (crab ? 1f : -1f) * steer * SteerDeg * k; } }
+    public float RearAngle { get { float k = RearK(ForwardSpeed); if (crab) k = Mathf.Max(0f, k); return (crab ? 1f : -1f) * steer * SteerDeg * k; } }
     public float SteerInput { get { return steer; } }
     public bool tracked;
     public override string[] TouchSet { get { return usesTriggers ? new[] { "A", null, amph != null ? (amph.Boat ? "TRUCK" : "BOAT") : null, "GAS", "BRAKE" } : new[] { "A", null, null, null, null }; } }
@@ -246,7 +248,7 @@ public class GroundVehicle : Vehicle
             {
                 target = steer * turnRate * Mathf.Clamp(fs / 6f, -1f, 1f);
                 float rk = (amph != null && amph.Boat) ? 0f : RearK(fs);   // ffu67d 4WS: bicycle model, yaw ~ tan(front) - tan(rear)
-                if (rk > 0f) target *= crab ? Mathf.Max(0f, 1f - rk) : 1f + rk;
+                if (crab) { if (rk > 0f) target *= Mathf.Max(0f, 1f - rk); } else if (rk != 0f) target *= 1f + rk;
             }
             if (!driven) target = 0f;
             target += guideYaw;
