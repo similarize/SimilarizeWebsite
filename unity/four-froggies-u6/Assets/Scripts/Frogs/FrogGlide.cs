@@ -27,6 +27,7 @@ public partial class Frog
     public float HVy() { return vel.y; }
     public bool GlideOn { get { return glidePh > 0; } }
     public bool GlideFlying { get { return glidePh == 2 || glidePh == 3; } }
+    public GameObject GliderGo { get { return chuteGo; } }   // ffu67c probe
     public static float GlideDtCap = 0.05f;
     public static bool ChuteOld;  // &chuteold=1
     public int glideFlares, glideLands; public float glideLandVy, glideLandFwd, glideMinVy = -99f; public bool glideSoft; public string glideFrom = "";

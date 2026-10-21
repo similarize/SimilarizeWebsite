@@ -467,7 +467,7 @@ public static class VehicleFactory
                         Vector3 foot = lg[leg].TransformPoint(new Vector3(0f, footLocal, 0f));
                         RaycastHit h;
                         if (Physics.Raycast(foot + Vector3.up * 1.4f, Vector3.down, out h, 2.8f, Vehicle.GroundMask, QueryTriggerInteraction.Ignore)) foot = h.point;
-                        MechStomp.Foot(foot, hh, 0.6f + asp * 0.4f);
+                        MechStomp.Foot(foot, hh, 0.6f + asp * 0.4f, true, v.driver, v);
                         if (Sfx.StepMetal != null) Sfx.PlayAt(Sfx.StepMetal, foot, 0.3f, 40f, Random.Range(0.8f, 0.95f));
                         if (Random.value < 0.3f) Sfx.PlayAt(Sfx.Pick(Sfx.Servo), foot, 0.15f, 40f, Random.Range(0.9f, 1.2f));
                     }
@@ -477,7 +477,7 @@ public static class VehicleFactory
                 if (gcount == 0) { airT += dt; minVy = Mathf.Min(minVy, vy); }
                 else
                 {
-                    if (airT > 0.25f && minVy < -3f) MechStomp.Foot(v.transform.position, hh, Mathf.Clamp(1f + (-minVy - 3f) * 0.12f, 1f, 2.2f));
+                    if (airT > 0.25f && minVy < -3f) MechStomp.Foot(v.transform.position, hh, Mathf.Clamp(1f + (-minVy - 3f) * 0.12f, 1f, 2.2f), true, v.driver, v);
                     airT = 0f; minVy = 0f;
                 }
             };

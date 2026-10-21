@@ -59,6 +59,7 @@ public partial class Game
         hpClose = cb.rectTransform; hpClose.anchorMin = hpClose.anchorMax = new Vector2(1f, 1f); hpClose.pivot = new Vector2(1f, 1f);
         hpCloseT = UIK.Label(hpClose, "CLOSE", 18, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(150f, 44f), Color.white);
         UIK.Stretch(hpCloseT.rectTransform); UIK.Modernize(hpCloseT, true, 0.3f);
+        LobbyButtonBuild();   // ffu67c BACK TO LOBBY (Game/Lobby67.cs)
         // scrolling viewport (clips its rows)
         hpView = UIK.Rect(hpCard, "View", new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
         hpView.gameObject.AddComponent<RectMask2D>();
@@ -118,7 +119,7 @@ public partial class Game
         }
         TipsTick(dt);
         if (hpRoot.gameObject.activeSelf != help) { hpRoot.gameObject.SetActive(help); if (help) { hpSig = ""; hpScroll = 0f; } }
-        if (!help) { hpDragging = false; return; }
+        if (!help) { hpDragging = false; if (lobbyAskT > 0f) LobbyAskCancel("menu closed"); return; }
         if (helpBy == null || !slots.Contains(helpBy)) helpBy = slots.Count > 0 ? slots[0] : null;
         // safe area -> anchors
         Rect sa = Screen.safeArea;
@@ -142,7 +143,8 @@ public partial class Game
         foreach (Vector2 tp in Kb.TouchesBegan()) if (Hit(hpClose, tp, 12f)) closeHit = true;
         var mouse = Mouse.current;
         if (mouse != null && Kb.MouseLeftDown() && Hit(hpClose, mouse.position.ReadValue(), 4f)) closeHit = true;
-        if (closeHit) { help = false; Sfx.Play(Sfx.Click, 0.7f); hpRoot.gameObject.SetActive(false); }
+        if (closeHit) { help = false; Sfx.Play(Sfx.Click, 0.7f); hpRoot.gameObject.SetActive(false); LobbyAskCancel("closed"); return; }
+        LobbyButtonTick(kind);   // ffu67c
     }
 
     // ffu6e: side-by-side split views - the screen's top centre is the divider, where the right view's "P2 name" header starts
@@ -339,15 +341,16 @@ public partial class Game
         // header
         float tsz = Mathf.Round((narrow ? 26f : 30f));
         hpTitle.fontSize = (int)tsz;
-        Place(hpTitle.rectTransform, new Vector2(0f, 1f), new Vector2(pad, -pad), new Vector2(W - pad * 2f - 170f, tsz + 10f));
+        Place(hpTitle.rectTransform, new Vector2(0f, 1f), new Vector2(pad, -pad), new Vector2(W - pad * 2f - (narrow ? 320f : 440f), tsz + 10f));   // ffu67c: + BACK TO LOBBY
         hpTitle.text = narrow ? "CONTROLS" : "PAUSED  ·  CONTROLS";
         hpSub.fontSize = narrow ? 15 : 16;
-        Place(hpSub.rectTransform, new Vector2(0f, 1f), new Vector2(pad, -pad - tsz - 8f), new Vector2(W - pad * 2f - 170f, 22f));
+        Place(hpSub.rectTransform, new Vector2(0f, 1f), new Vector2(pad, -pad - tsz - 8f), new Vector2(W - pad * 2f - (narrow ? 320f : 440f), 22f));
         hpSub.text = "Showing " + (kind == InputKind.Gamepad ? "gamepad" : kind == InputKind.Touch ? "touch" : "keyboard + mouse") + " controls" + (narrow ? "" : "  ·  game paused for you");
         hpClose.sizeDelta = new Vector2(narrow ? 132f : 168f, narrow ? 44f : 46f);
         hpClose.anchoredPosition = new Vector2(-pad + 6f, -pad + 6f);
         hpCloseT.fontSize = narrow ? 16 : 17;
         hpCloseT.text = kind == InputKind.Gamepad ? "CLOSE  ·  Start" : kind == InputKind.Touch ? "CLOSE" : "CLOSE  ·  H";
+        LobbyButtonLayout(narrow, pad, kind, hpClose.sizeDelta.x);
         float headH = pad + tsz + 8f + 26f + 10f;
         // settings block (pinned at the bottom) + footer
         float setH = narrow ? 198f : 118f, footH = 24f;   // ffu46: + the HINTS row

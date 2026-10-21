@@ -18,8 +18,6 @@ public partial class Game
     }
 
     // ffu15: a mech shot's recoil on the pilot's own view: camera kick + shake + pad rumble
-    float rumbleEnd = -1f;
-    Gamepad rumblePad;
     public void PilotKick(Frog pilot, float power, bool missile)
     {
         foreach (var s in slots)
@@ -27,18 +25,7 @@ public partial class Game
             if (frogs[s.frog] != pilot) continue;
             if (s.rig != null) { s.rig.Kick(missile ? 3.2f * power : 2.2f * power); s.rig.AddShake(missile ? 0.5f * power : 0.32f * power); }
             if (sharedCam != null && sharedCam.enabled) sharedTrauma = Mathf.Min(1f, sharedTrauma + 0.25f * power);
-            if (s.kind == InputKind.Gamepad && s.pad != null && s.pad.added)
-            {
-                try { s.pad.SetMotorSpeeds(missile ? 0.9f : 0.6f, missile ? 0.6f : 0.85f); rumblePad = s.pad; rumbleEnd = Time.unscaledTime + (missile ? 0.28f : 0.14f); } catch { }
-            }
-        }
-    }
-    void TickRumble()
-    {
-        if (rumblePad != null && rumbleEnd > 0f && Time.unscaledTime > rumbleEnd)
-        {
-            try { rumblePad.SetMotorSpeeds(0f, 0f); } catch { }
-            rumbleEnd = -1f; rumblePad = null;
+            Pulse(s, missile ? 0.9f : 0.6f, missile ? 0.6f : 0.85f, missile ? 0.28f : 0.14f, missile ? "missile" : "shot");   // ffu67c: the pilot's own pad only (Rumble67.cs)
         }
     }
 

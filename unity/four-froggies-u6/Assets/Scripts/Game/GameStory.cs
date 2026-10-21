@@ -59,25 +59,57 @@ public partial class Game
     {
         if (storyB == null) return;
         storyBtn.gameObject.SetActive(!online);
-        storyB.SetBadge(touchOnly ? "" : "LB · S");
-        bool lbHeld = false;
-        foreach (var gp in Gamepad.all) if (gp != null && gp.added) lbHeld |= gp.leftShoulder.isPressed;
-        storyB.focus = lbHeld;
+        bool sel = lobbyMode == 1 && !online;
+        storyText.text = sel ? "> STORY <" : "STORY";
+        storyB.SetBadge(touchOnly ? (sel ? "tap to start" : "") : sel ? "LT · ENTER start" : "LB · S");
+        storyB.SetTint(sel ? new Color(0.95f, 0.5f, 0.15f, 1f) : new Color(0.45f, 0.32f, 0.22f, 0.85f));
+        storyB.focus = sel;
         storyB.Tick(mouseOk);
     }
 
     // lobby: LB (pad), S (keyboard), tap / click on STORY. True = handled (the game started).
+    // ffu67c LOBBY MODE PICK (Bill Oct 20: "pressing LB in the lobby jumps straight into STORY mode, and he can't choose FREE PLAY").
+    // FREE PLAY and STORY are two visible mode options (the two big lobby buttons); the highlighted one is what starts.
+    //   pad: LB switches the highlight (never starts), LT starts the highlighted mode (ffu59);
+    //   keys: F = free play, S = story (select only), Enter starts; touch / mouse: tap a mode to highlight it, tap the highlighted
+    //   one again to start. STORY starting opens the episode picker (A / Enter / tap a card). Logs "LOBBY67 ...".
+    public int lobbyMode;   // 0 = FREE PLAY, 1 = STORY
+    public static string ModeName(int m) { return m == 1 ? "STORY" : "FREE PLAY"; }
+    public void SelectMode(int m, string why)
+    {
+        if (Net.I != null && Net.I.Online) m = 0;
+        if (m == lobbyMode) return;
+        lobbyMode = m; Sfx.Play(Sfx.Select, 0.45f, m == 1 ? 1.1f : 0.95f);
+        Debug.Log("LOBBY67 mode -> " + ModeName(m) + " (" + why + ", no start)");
+    }
+    public void StartLobbyMode(InputKind kind, Gamepad pad, string why)
+    {
+        if (slots.Count == 0) return;
+        Debug.Log("LOBBY67 start " + ModeName(lobbyMode) + " (" + why + ", " + slots.Count + " seated)");
+        if (lobbyMode == 1 && !(Net.I != null && Net.I.Online)) PressStory(kind, pad);
+        else StartPlay();
+    }
     bool StoryLobbyInput()
     {
         if (storyBtn == null || !storyBtn.gameObject.activeInHierarchy) return false;
         if (Net.I != null && Net.I.Online) return false;
         foreach (Gamepad pad in Gamepad.all)
-            if (pad != null && !IsGhostDev(pad) && pad.leftShoulder.wasPressedThisFrame) { PressStory(InputKind.Gamepad, pad); return true; }
+            if (pad != null && !IsGhostDev(pad) && pad.leftShoulder.wasPressedThisFrame && FindPad(pad) != null) { SelectMode(1 - lobbyMode, "LB"); return true; }
         var k = Keyboard.current;
-        if (k != null && !Kb.typing && k.sKey.wasPressedThisFrame) { PressStory(InputKind.Keyboard, null); return true; }
-        foreach (Vector2 pos in Kb.TouchesBegan()) if (Hit(storyBtn, pos)) { lastTouchTime = Time.unscaledTime; PressStory(InputKind.Touch, null); return true; }
-        if (Kb.MouseLeftDown() && Kb.TouchCount() == 0 && Time.unscaledTime - lastTouchTime > 1f && Mouse.current != null && Hit(storyBtn, Mouse.current.position.ReadValue())) { PressStory(InputKind.Keyboard, null); return true; }
+        if (k != null && !Kb.typing && k.sKey.wasPressedThisFrame) { SelectMode(1, "S key"); return true; }
+        if (k != null && !Kb.typing && k.fKey.wasPressedThisFrame) { SelectMode(0, "F key"); return true; }
+        foreach (Vector2 pos in Kb.TouchesBegan()) if (Hit(storyBtn, pos)) { lastTouchTime = Time.unscaledTime; if (FindSlot(InputKind.Touch) == null && slots.Count == 0) Join(InputKind.Touch, null); if (lobbyMode == 1) StartLobbyMode(InputKind.Touch, null, "tap STORY again"); else SelectMode(1, "tap STORY"); return true; }
+        if (Kb.MouseLeftDown() && Kb.TouchCount() == 0 && Time.unscaledTime - lastTouchTime > 1f && Mouse.current != null && Hit(storyBtn, Mouse.current.position.ReadValue()))
+        { if (FindSlot(InputKind.Keyboard) == null && slots.Count == 0) Join(InputKind.Keyboard, null); if (lobbyMode == 1) StartLobbyMode(InputKind.Keyboard, null, "click STORY again"); else SelectMode(1, "click STORY"); return true; }
         return false;
+    }
+    // the touch / mouse FREE PLAY button: highlight first, start when already highlighted
+    bool FreePlayTap(InputKind kind)
+    {
+        if (lobbyMode != 0) { SelectMode(0, kind == InputKind.Touch ? "tap FREE PLAY" : "click FREE PLAY"); return false; }
+        if (FindSlot(kind) == null && slots.Count == 0) Join(kind, null);
+        StartLobbyMode(kind, null, kind == InputKind.Touch ? "tap FREE PLAY again" : "click FREE PLAY again");
+        return true;
     }
 
     void PressStory(InputKind kind, Gamepad pad)
