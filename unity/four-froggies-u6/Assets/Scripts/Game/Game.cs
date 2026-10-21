@@ -1245,8 +1245,8 @@ public partial class Game : MonoBehaviour
                     if (s.pad.buttonSouth.wasPressedThisFrame || s.pad.startButton.wasPressedThisFrame) IsGhostPress(s.pad);
                     i = Pads.Read(s.pad, dt);
                     if (s.ltHold) i = LtLatch(s, i);   // ffu59
-                    if (help && s.pad.buttonEast.wasPressedThisFrame) { help = false; Leave(s); continue; }
-                    if (RobotFeed.I != null && !help) i = RobotFeed.I.PadFilter(s, frogs[s.frog], i);   // ffu35: live feed on the pad (View / RB / B)
+                    if (HelpFor(s) && s.pad.buttonEast.wasPressedThisFrame) { help = false; Leave(s); continue; }
+                    if (RobotFeed.I != null && !HelpFor(s)) i = RobotFeed.I.PadFilter(s, frogs[s.frog], i);   // ffu35: live feed on the pad (View / RB / B)
                     break;
                 case InputKind.Keyboard:
                     // ffu15: right mouse (mech aim) locks too; clicks on the robot phone / space radar keep the cursor free
@@ -1277,7 +1277,7 @@ public partial class Game : MonoBehaviour
                 }
                 if (myPh != null && myPh.Handle(pf, i)) { Vector2 lk = i.look; bool v = i.view, h = i.help; i = new PIn(); i.look = lk; i.view = v; i.help = h; }
                 if (k == 0 && demoHook != null) i = demoHook(i);
-                if (pf.remote != null && !help)
+                if (pf.remote != null && !HelpFor(s))
                 {
                     // ffu12: this froggy drives a robot from the phone - move / run / wave go to the robot, camera input stays
                     pf.remote.Manual(i, sharedCam.enabled ? sharedYaw : (s.rig != null ? s.rig.yaw : 0f));
@@ -1287,9 +1287,9 @@ public partial class Game : MonoBehaviour
                 }
             }
             i = StoryFilter(s, frogs[s.frog], i);   // ffu22: cutscenes / repair meter take the input
-            if (i.view) viewPressed = true;
-            if (i.help) { helpPressed = true; helpBy = s; }
-            if (help) i = new PIn();
+            if (i.view && (!help || HelpFor(s))) viewPressed = true;
+            if (i.help) { if (HelpSplit && s != helpBy) { helpBy = s; hpSig = ""; hpScroll = 0f; Sfx.Play(Sfx.Click, 0.7f); } else { helpPressed = true; helpBy = s; } }   // ffu69b: Start from another split view moves the menu to that player
+            if (HelpFor(s)) i = new PIn();
             s.last = i;
             Frog f = frogs[s.frog];
             float camYaw = sharedCam.enabled ? sharedYaw : (s.rig != null ? s.rig.yaw : 0f);
@@ -1301,7 +1301,7 @@ public partial class Game : MonoBehaviour
         if (help)
         {
             // sound level from the help / pause menu: Y on any joined pad (M works everywhere)
-            foreach (var s in slots) if (s.kind == InputKind.Gamepad && s.pad != null && s.pad.added && s.pad.buttonNorth.wasPressedThisFrame) { Sfx.CycleVolume(); break; }
+            foreach (var s in slots) if (s.kind == InputKind.Gamepad && s.pad != null && s.pad.added && HelpFor(s) && s.pad.buttonNorth.wasPressedThisFrame) { Sfx.CycleVolume(); break; }
             WheelSliderTick();
         }
         else wheelDrag = false;
@@ -1321,7 +1321,7 @@ public partial class Game : MonoBehaviour
         Vehicle hv = HelpVehicle;
         foreach (var s in slots)
         {
-            if (s.kind != InputKind.Gamepad || s.pad == null || !s.pad.added || IsGhostDev(s.pad)) continue;
+            if (s.kind != InputKind.Gamepad || s.pad == null || !s.pad.added || IsGhostDev(s.pad) || !HelpFor(s)) continue;   // ffu69b
             int d = s.pad.dpad.left.wasPressedThisFrame || s.pad.leftShoulder.wasPressedThisFrame ? -1 : s.pad.dpad.right.wasPressedThisFrame || s.pad.rightShoulder.wasPressedThisFrame ? 1 : 0;
             if (d == 0) continue;
             Frog pf = s.frog >= 0 && s.frog < frogs.Count ? frogs[s.frog] : null;

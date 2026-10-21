@@ -638,7 +638,7 @@ public partial class RobotPhone : MonoBehaviour   // ffu6q: + Game/RobotVoice66.
     {
         Slot bs = BtnSlot();
         Frog bf = bs != null ? Game.I.frogs[bs.frog] : null;
-        bool showBtn = Game.I != null && Game.I.state == Game.State.Play && bf != null && (Ok(bf) || bf.remote != null) && !Game.I.HelpOpen;   // ffu27: every world
+        bool showBtn = Game.I != null && Game.I.state == Game.State.Play && bf != null && (Ok(bf) || bf.remote != null) && !Game.I.HelpFor(bs);   // ffu69b: only hidden in the view whose player has help open   // ffu27: every world
         if (btn.gameObject.activeSelf != showBtn) btn.gameObject.SetActive(showBtn);
         if (showBtn) { string k = bs.kind == InputKind.Gamepad ? "LB" : bs.kind == InputKind.Touch ? "TAP" : "P"; if (btnKey.text != k) btnKey.text = k; }
         var mouse = UnityEngine.InputSystem.Mouse.current;

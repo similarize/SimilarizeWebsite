@@ -35,6 +35,11 @@ public partial class Game
     // the web page draws its own fullscreen / Arcade buttons over the top-right corner (~55 css px): keep the card under them
     static float HpTopGap { get { return Application.platform == RuntimePlatform.WebGLPlayer ? 40f : 0f; } }
     public static string HelpLayoutInfo = "";
+    // ffu69b (Ben Oct 21): split screen = the help menu lives in the opener's own view and only pauses / reads that player;
+    // everyone else keeps playing. One shared view (or one player) = the old full-screen pause menu, unchanged.
+    bool HelpSplit { get { return help && slots.Count > 1 && LastViews > 1 && helpBy != null && slots.Contains(helpBy) && helpBy.cam != null && helpBy.cam.enabled; } }
+    public bool HelpFor(Slot s) { return help && (!HelpSplit || s == helpBy); }
+    Rect HelpVR { get { return HelpSplit ? helpBy.cam.rect : new Rect(0f, 0f, 1f, 1f); } }
 
     static readonly Color HpAccent = new Color(0.55f, 1f, 0.44f), HpCardC = new Color(0.07f, 0.09f, 0.12f, 0.93f), HpSecC = new Color(1f, 1f, 1f, 0.055f);
 
@@ -124,7 +129,10 @@ public partial class Game
         // safe area -> anchors
         Rect sa = Screen.safeArea;
         float sw = Mathf.Max(1, Screen.width), shh = Mathf.Max(1, Screen.height);
-        hpSafe.anchorMin = new Vector2(sa.xMin / sw, sa.yMin / shh); hpSafe.anchorMax = new Vector2(sa.xMax / sw, sa.yMax / shh);
+        Rect hv = HelpVR; bool hFull = hv.width > 0.99f && hv.height > 0.99f;   // ffu69b
+        hpRoot.anchorMin = hv.min; hpRoot.anchorMax = hv.max; hpRoot.offsetMin = hpRoot.offsetMax = Vector2.zero;
+        if (hFull) { hpSafe.anchorMin = new Vector2(sa.xMin / sw, sa.yMin / shh); hpSafe.anchorMax = new Vector2(sa.xMax / sw, sa.yMax / shh); }
+        else { hpSafe.anchorMin = Vector2.zero; hpSafe.anchorMax = Vector2.one; }
         Vector2 cs = ((RectTransform)hudCanvas.transform).rect.size;
         bool portrait = cs.y > cs.x;
         float mg = portrait ? 12f : 22f;
@@ -133,7 +141,7 @@ public partial class Game
         InputKind kind = helpBy != null ? helpBy.kind : InputKind.Keyboard;
         if (hpForce >= 0) kind = (InputKind)hpForce;   // demo / probe: &helpdev=pad|keys|touch
         Vehicle v = f != null ? (f.vehicle != null ? f.vehicle : null) : null;
-        string sig = kind + "|" + (v != null ? v.Title : "-") + "|" + Screen.width + "x" + Screen.height + "|" + sa + "|" + Worlds.SpaceOn + Worlds.StageEOn;
+        string sig = kind + "|" + (v != null ? v.Title : "-") + "|" + Screen.width + "x" + Screen.height + "|" + sa + "|" + hv + "|" + Worlds.SpaceOn + Worlds.StageEOn;
         if (sig != hpSig) { hpSig = sig; HelpRebuild(kind, v, f); }
         HelpSettingsDraw(kind, v);
         HintsSettingsInput();
@@ -334,7 +342,8 @@ public partial class Game
         Rect sa = Screen.safeArea;
         float kx = cs.x / Mathf.Max(1, Screen.width), ky = cs.y / Mathf.Max(1, Screen.height);
         float mg = cs.y > cs.x ? 12f : 22f;
-        float W = sa.width * kx - mg * 2f, H = sa.height * ky - mg * 2f - HpTopGap;
+        Rect hv = HelpVR; bool hFull = hv.width > 0.99f && hv.height > 0.99f;   // ffu69b: the opener's split view
+        float W = (hFull ? sa.width * kx : cs.x * hv.width) - mg * 2f, H = (hFull ? sa.height * ky : cs.y * hv.height) - mg * 2f - HpTopGap;
         bool narrow = W < 700f;
         float pad = narrow ? 16f : 24f;
         float base0 = narrow ? 1.12f : 1f;
@@ -534,14 +543,14 @@ public partial class Game
         float d = 0f;
         foreach (var s in slots)
         {
-            if (s.kind != InputKind.Gamepad || s.pad == null || !s.pad.added) continue;
+            if (s.kind != InputKind.Gamepad || s.pad == null || !s.pad.added || !HelpFor(s)) continue;   // ffu69b
             float y = s.pad.leftStick.ReadValue().y + s.pad.rightStick.ReadValue().y;
             if (Mathf.Abs(y) > 0.25f) d -= y * 900f * dt;
             if (s.pad.dpad.up.wasPressedThisFrame) d -= 120f;
             if (s.pad.dpad.down.wasPressedThisFrame) d += 120f;
         }
         var kb = Keyboard.current;
-        if (kb != null)
+        if (kb != null && (!HelpSplit || helpBy.kind == InputKind.Keyboard))
         {
             if (kb.upArrowKey.isPressed || kb.pageUpKey.wasPressedThisFrame) d -= kb.pageUpKey.wasPressedThisFrame ? 400f : 700f * dt;
             if (kb.downArrowKey.isPressed || kb.pageDownKey.wasPressedThisFrame) d += kb.pageDownKey.wasPressedThisFrame ? 400f : 700f * dt;
