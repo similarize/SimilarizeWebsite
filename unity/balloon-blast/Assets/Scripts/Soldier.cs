@@ -18,6 +18,32 @@ public class Soldier : MonoBehaviour
     public bool alive = true;
     public float yaw, pitch;
     public int pops;
+    // bb6: pop combos + on-screen callouts
+    public int comboN; public float lastPopTime = -99f;
+    public string callout = ""; public float calloutT;
+    // bb6: power-ups (seconds left)
+    public float shieldT, speedT, magnetT;
+    public GameObject shieldBubble;
+    public bool Regrow()
+    {
+        foreach (var b in balloons)
+            if (b.popped)
+            {
+                b.popped = false; b.gameObject.SetActive(true);
+                if (b.stringObj != null) b.stringObj.SetActive(true);
+                return true;
+            }
+        return false;
+    }
+    public string PowerLine()
+    {
+        string l = "";
+        if (shieldT > 0f) l += "  <color=#7fd4ff>SHIELD " + Mathf.CeilToInt(shieldT) + "</color>";
+        if (speedT > 0f) l += "  <color=#8dff7a>SPEED " + Mathf.CeilToInt(speedT) + "</color>";
+        if (magnetT > 0f) l += "  <color=#d79bff>MAGNET " + Mathf.CeilToInt(magnetT) + "</color>";
+        return l;
+    }
+    public void Callout(string t, float secs) { callout = t; calloutT = secs; }
 
     // inputs
     public Vector2 inMove, inLook;
@@ -100,20 +126,23 @@ public class Soldier : MonoBehaviour
 
         // Three balloons above the shoulders
         Vector3[] pos = { new Vector3(-0.36f, 2.2f, -0.08f), new Vector3(0f, 2.42f, -0.12f), new Vector3(0.36f, 2.2f, -0.08f) };
-        Color bc = Color.Lerp(color, Color.white, 0.12f);
+        Color bc = color;
         for (int k = 0; k < 3; k++)
         {
             // glossy translucent latex balloon (lathed mesh + BB/Balloon); same transform + collider as the old sphere
             var bg = new GameObject("Balloon" + k);
             bg.transform.SetParent(transform, false);
             bg.transform.localPosition = pos[k];
-            bg.transform.localScale = new Vector3(0.42f, 0.5f, 0.42f);
+            bg.transform.localScale = new Vector3(0.48f, 0.57f, 0.48f);
             bg.AddComponent<MeshFilter>().sharedMesh = Gear.BalloonMesh;
             var br = bg.AddComponent<MeshRenderer>();
             br.sharedMaterial = Mats.Balloon(bc);
             br.receiveShadows = false;
             if (Look.Mobile) br.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             bg.AddComponent<SphereCollider>().radius = 0.62f;
+            // bb6: cartoon shine highlight so balloons read glossy from far away
+            var shine = Mats.Prim(PrimitiveType.Sphere, bg.transform, new Vector3(-0.17f, 0.2f, -0.2f), new Vector3(0.12f, 0.17f, 0.06f), Mats.Unlit(new Color(1f, 1f, 1f)), false);
+            shine.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             var b = bg.AddComponent<Balloon>();
             b.owner = this; b.index = k; b.basePos = pos[k];
             Vector3 anchor = new Vector3(pos[k].x * 0.45f, 1.45f, -0.05f);
@@ -133,6 +162,7 @@ public class Soldier : MonoBehaviour
 
     public void ResetForRound(Vector3 pos, float yawDeg)
     {
+        comboN = 0; calloutT = 0f; lastPopTime = -99f; shieldT = speedT = magnetT = 0f;
         cc.enabled = false;
         transform.position = pos + Vector3.up * 0.15f;
         cc.enabled = true;
@@ -160,13 +190,30 @@ public class Soldier : MonoBehaviour
     }
 
     // ---------- model ----------
-    public void AttachModel(GameObject holder)
+    public void AttachModel(GameObject holder, bool kenney = false, Texture2D tex = null)
     {
-        StartCoroutine(FitModel(holder));
+        StartCoroutine(FitModel(holder, kenney, tex));
     }
 
-    IEnumerator FitModel(GameObject holder)
+    IEnumerator FitModel(GameObject holder, bool kenney, Texture2D tex)
     {
+        if (kenney)
+        {
+            // Kenney Mini Characters: keep their own palette texture on our URP Lit base (soft satin), add a team-colour cap
+            Material km = tex != null ? Mats.Tex(tex, 0.25f) : Mats.Paint(color, 0.4f);
+            if (tex != null) tex.filterMode = FilterMode.Bilinear;
+            foreach (var r in holder.GetComponentsInChildren<Renderer>(true))
+            {
+                var ms = r.sharedMaterials;
+                for (int i = 0; i < ms.Length; i++) ms[i] = km;
+                r.sharedMaterials = ms;
+                var smr = r as SkinnedMeshRenderer;
+                if (smr != null) smr.updateWhenOffscreen = true;
+                if (Look.Mobile) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            }
+        }
+        else
+        {
         // graphics overhaul: glossy team-colour shell + satin dark-metal joints (was flat Lit)
         Color body = Color.Lerp(color, Color.white, 0.1f);
         Color joints = new Color(0.17f, 0.18f, 0.2f);
@@ -183,6 +230,21 @@ public class Soldier : MonoBehaviour
             if (smr != null) smr.updateWhenOffscreen = true;
             if (Look.Mobile) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         }
+        }
+        // bb6: toy-soldier helmet with a dark visor on the X-Bot head (reads as a team figure from far away)
+        foreach (var tr in holder.GetComponentsInChildren<Transform>(true))
+            if (!kenney && tr.name.EndsWith("Head") && !tr.name.Contains("Top"))
+            {
+                var piv = new GameObject("Helmet").transform;
+                piv.SetParent(tr, false);
+                float ls = Mathf.Max(0.0001f, tr.lossyScale.x);
+                piv.localScale = Vector3.one / ls;
+                piv.localPosition = Vector3.zero;
+                Mats.Prim(PrimitiveType.Sphere, piv, new Vector3(0f, 0.11f, 0.005f), new Vector3(0.26f, 0.2f, 0.28f), Mats.Paint(color, 0.9f), false);
+                Mats.Prim(PrimitiveType.Cylinder, piv, new Vector3(0f, 0.07f, 0.02f), new Vector3(0.29f, 0.012f, 0.31f), Mats.Paint(Color.Lerp(color, Color.black, 0.35f), 0.7f), false);
+                Mats.Prim(PrimitiveType.Sphere, piv, new Vector3(0f, 0.08f, 0.11f), new Vector3(0.2f, 0.07f, 0.08f), Mats.PBR(new Color(0.08f, 0.1f, 0.14f), 0.95f, 0.6f), false);
+                break;
+            }
         Mats.SetLayer(holder, layer);
         anim = holder.GetComponentInChildren<Animation>();
         if (anim != null)
@@ -190,6 +252,14 @@ public class Soldier : MonoBehaviour
             foreach (AnimationState st in anim)
             {
                 string n = st.name.ToLowerInvariant();
+                if (kenney)
+                {
+                    if (n == "holding-both") clipIdle = st.name;
+                    else if (n == "walk") clipWalk = st.name;
+                    else if (n == "sprint") clipRun = st.name;
+                    else if (n == "die") clipSad = st.name;
+                    continue;
+                }
                 if (clipIdle == null && n.Contains("idle")) clipIdle = st.name;
                 else if (clipWalk == null && n.Contains("walk")) clipWalk = st.name;
                 else if (clipRun == null && n.Contains("run")) clipRun = st.name;
@@ -206,7 +276,7 @@ public class Soldier : MonoBehaviour
         Bounds b; bool has = Measure(holder, out b);
         if (has && b.size.y > 0.05f)
         {
-            float k = 1.78f / b.size.y;
+            float k = (kenney ? 1.7f : 1.78f) / b.size.y;
             holder.transform.localScale = holder.transform.localScale * k;
             yield return null;
             has = Measure(holder, out b);
@@ -214,7 +284,28 @@ public class Soldier : MonoBehaviour
         }
         modelRoot = holder.transform;
         capsuleBody.SetActive(false);
-        Debug.Log("Soldier " + nick + ": X-Bot attached, clips idle=" + clipIdle + " walk=" + clipWalk + " run=" + clipRun);
+        if (kenney)
+        {
+            // team-colour cap on the (big chibi) head, sized from the head mesh after scaling
+            Renderer hr = null; Transform hb = null;
+            foreach (var r in holder.GetComponentsInChildren<Renderer>(true)) if (r.name == "head-mesh") hr = r;
+            foreach (var t in holder.GetComponentsInChildren<Transform>(true)) if (t.name == "head") hb = t;
+            if (hr != null && hb != null)
+            {
+                Bounds hbnd = hr.bounds;
+                var cap = Mats.Prim(PrimitiveType.Sphere, null, Vector3.zero, Vector3.one, Mats.Paint(color, 0.85f), false);
+                cap.transform.position = new Vector3(hbnd.center.x, hbnd.max.y - hbnd.size.y * 0.18f, hbnd.center.z);
+                cap.transform.localScale = new Vector3(hbnd.size.x * 1.08f, hbnd.size.y * 0.5f, hbnd.size.z * 1.08f);
+                cap.transform.SetParent(hb, true);
+                var brim = Mats.Prim(PrimitiveType.Cylinder, null, Vector3.zero, Vector3.one, Mats.Paint(Color.Lerp(color, Color.black, 0.3f), 0.7f), false);
+                brim.transform.position = new Vector3(hbnd.center.x, hbnd.max.y - hbnd.size.y * 0.3f, hbnd.center.z) + transform.forward * hbnd.size.z * 0.3f;
+                brim.transform.rotation = transform.rotation;
+                brim.transform.localScale = new Vector3(hbnd.size.x * 0.9f, hbnd.size.y * 0.02f, hbnd.size.z * 0.9f);
+                brim.transform.SetParent(hb, true);
+                Mats.SetLayer(cap, layer); Mats.SetLayer(brim, layer);
+            }
+        }
+        Debug.Log("Soldier " + nick + ": " + (kenney ? "Kenney character" : "X-Bot") + " attached, clips idle=" + clipIdle + " walk=" + clipWalk + " run=" + clipRun);
     }
 
     static bool Measure(GameObject g, out Bounds b)
@@ -239,6 +330,12 @@ public class Soldier : MonoBehaviour
     public void PopBalloon(Balloon b, Soldier by)
     {
         if (!alive || b.popped) return;
+        if (shieldT > 0f)
+        {
+            FX.Puff(b.transform.position, Vector3.up);
+            if (by != null && by.slot != null) by.Callout("<color=#7fd4ff>SHIELDED!</color>", 0.8f);
+            return;
+        }
         b.popped = true;
         FX.Pop(b.transform.position, color);
         Sfx.OnPop(b.transform.position, this, by);
@@ -247,10 +344,20 @@ public class Soldier : MonoBehaviour
         if (by != null)
         {
             by.pops++;
+            by.comboN = (Time.time - by.lastPopTime < 4f) ? by.comboN + 1 : 1;
+            by.lastPopTime = Time.time;
+            if (by.comboN >= 2)
+            {
+                string[] names = { "", "", "DOUBLE POP!", "TRIPLE POP!", "MEGA POP!", "ULTRA POP!" };
+                by.Callout(by.comboN < names.Length ? names[by.comboN] : "POP-TASTIC x" + by.comboN + "!", 1.6f);
+                FX.Combo(b.transform.position, by.comboN);
+            }
             if (by.slot != null && by.slot.hud != null) by.slot.hud.ShowPop();
         }
         if (slot != null && slot.hud != null) slot.hud.ShowHit();
         if (Game.I != null) Game.I.OnPop(by, this);
+        if (BalloonsLeft == 1 && !Game.Demo) Callout("<color=#ff6a5a>LAST BALLOON!</color>", 2f);
+        if (BalloonsLeft == 0 && !Game.Demo) FX.Celebrate(transform.position + Vector3.up * 1.2f, color, 0.6f);
         if (BalloonsLeft == 0)
         {
             if (Game.Demo) StartCoroutine(DemoRefill());   // screenshot mode: nobody goes out
@@ -313,7 +420,7 @@ public class Soldier : MonoBehaviour
                 wish = transform.right * inMove.x + transform.forward * inMove.y;
                 wish = Vector3.ClampMagnitude(wish, 1f);
             }
-            float spd = Mathf.Lerp(5.4f, 2.6f, adsBlend);
+            float spd = Mathf.Lerp(5.4f, 2.6f, adsBlend) * (speedT > 0f ? 1.5f : 1f);
             Vector3 hv = new Vector3(vel.x, 0f, vel.z);
             hv = Vector3.MoveTowards(hv, wish * spd, (cc.isGrounded ? 45f : 10f) * dt);
             float vy = vel.y;

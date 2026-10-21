@@ -16,21 +16,30 @@ public static class Look
     public static void Init(Light s)
     {
         sun = s;
-        Mobile = Application.isMobilePlatform || (Input.touchSupported && Mathf.Min(Screen.width, Screen.height) < 900 && Screen.dpi > 200f);
+        Mobile = Application.isMobilePlatform || (Input.touchSupported && Mathf.Min(Screen.width, Screen.height) < 900 && Screen.dpi > 200f)
+            || Page.LowMem;     // bbu6-pub: Xbox lite tier = the phone tier
+        if (Page.LowMem)
+        {
+            QualitySettings.globalTextureMipmapLimit = 1;     // half-resolution textures
+            var lu = GraphicsSettings.currentRenderPipeline as UnityEngine.Rendering.Universal.UniversalRenderPipelineAsset;
+            if (lu != null) { lu.supportsHDR = false; lu.msaaSampleCount = 1; }
+        }
         QualitySettings.realtimeReflectionProbes = true;
         QualitySettings.softParticles = false;
         QualitySettings.anisotropicFiltering = Mobile ? AnisotropicFiltering.Disable : AnisotropicFiltering.Enable;
         QualitySettings.antiAliasing = Mobile ? 0 : 2;
         QualitySettings.shadowCascades = Mobile ? 1 : 2;
         QualitySettings.shadowProjection = ShadowProjection.StableFit;
-        QualitySettings.pixelLightCount = 1;
+        QualitySettings.pixelLightCount = Mobile ? 1 : 2;
+        QualitySettings.shadowResolution = Mobile ? ShadowResolution.Medium : ShadowResolution.VeryHigh;
         if (sun != null)
         {
             sun.color = new Color(1f, 0.94f, 0.82f);
-            sun.intensity = 1.08f;
-            sun.shadowStrength = 0.7f;
+            sun.intensity = 1.55f;
+            sun.shadowStrength = 0.88f;
             sun.shadowBias = 0.05f;
             sun.shadowNormalBias = 0.4f;
+            sun.shadows = LightShadows.Soft;   // bb6: soft PCF shadows (WebGL2-safe)
             sun.transform.rotation = Quaternion.Euler(46f, -38f, 0f);
         }
         RenderSettings.ambientMode = AmbientMode.Trilight;
@@ -42,7 +51,7 @@ public static class Look
         RenderSettings.fogColor = new Color(0.70f, 0.78f, 0.87f);
         RenderSettings.fogDensity = 0.0045f;
         RenderSettings.reflectionIntensity = 0.9f;
-        Debug.Log("Look: tier " + (Mobile ? "mobile" : "desktop") + " " + Screen.width + "x" + Screen.height + " dpi " + Screen.dpi);
+        Debug.Log("Look: tier " + (Page.LowMem ? "xbox-lite" : Mobile ? "mobile" : "desktop") + " " + Screen.width + "x" + Screen.height + " dpi " + Screen.dpi);
     }
 
     // field probe: sky + field seen from above the middle (glossy balloons, rifles, barrels reflect it)
@@ -89,17 +98,22 @@ public static class Look
         else
         {
             QualitySettings.shadows = views <= 1 ? ShadowQuality.All : ShadowQuality.HardOnly;
-            QualitySettings.shadowResolution = views <= 1 ? ShadowResolution.High : ShadowResolution.Medium;
+            QualitySettings.shadowResolution = views <= 1 ? ShadowResolution.VeryHigh : ShadowResolution.Medium;
             QualitySettings.shadowDistance = views <= 1 ? 60f : 32f;
         }
         QualitySettings.lodBias = Mobile || views >= 2 ? 0.7f : 1f;
+        var urp = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline as UnityEngine.Rendering.Universal.UniversalRenderPipelineAsset;
+        if (urp != null) urp.shadowDistance = Mobile ? 34f : views <= 1 ? 70f : 36f;
         bool post = PostAllowed(views);
         if (cams != null)
             foreach (var c in cams)
             {
                 if (c == null) continue;
+                // bb6 URP: post comes from the global Volume (bloom, ACES, grade, vignette); LBPost stays off
+                var ucd = UnityEngine.Rendering.Universal.CameraExtensions.GetUniversalAdditionalCameraData(c);
+                if (ucd != null) { ucd.renderPostProcessing = post; ucd.antialiasing = post ? UnityEngine.Rendering.Universal.AntialiasingMode.FastApproximateAntialiasing : UnityEngine.Rendering.Universal.AntialiasingMode.None; }
+                c.allowHDR = !Page.LowMem;     // bbu6-pub: Xbox lite tier = LDR
                 var p = c.GetComponent<LBPost>();
-                if (p == null && post) p = LBPost.Add(c);
                 if (p != null) p.enabled = post && c.enabled;
             }
         Debug.Log("Look: " + views + " view(s), shadows " + QualitySettings.shadows + ", post " + post);

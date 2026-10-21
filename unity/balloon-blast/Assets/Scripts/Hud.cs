@@ -7,7 +7,7 @@ public class Hud
     public Canvas canvas;
     readonly Image[] balloonIcons = new Image[3];
     readonly Image[] crossBars = new Image[4];
-    readonly Image dot;
+    readonly Image dot, scope, scopeIn;
     readonly Text ammo, top, center, pop, label, feed, hit;
     float popT, hitT;
     readonly Color col;
@@ -46,6 +46,11 @@ public class Hud
             ol.effectColor = new Color(0f, 0f, 0f, 0.65f); ol.effectDistance = new Vector2(1.5f, -1.5f);
         }
         dot = UIK.Img(r, UIK.Circle, new Color(1f, 0.3f, 0.2f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(7, 7));
+        // bb6: aim scope overlay (sharp ring + fine cross) replaces the near-eye rifle sight while aiming
+        scope = UIK.Img(r, UIK.Ring, new Color(0.05f, 0.05f, 0.08f, 0.85f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(300, 300));
+        scopeIn = UIK.Img(r, UIK.Ring, new Color(1f, 1f, 1f, 0.55f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(40, 40));
+        scope.raycastTarget = false; scopeIn.raycastTarget = false;
+        dot.transform.SetAsLastSibling();
 
         pop = UIK.Label(r, "POP!", 54, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, 70), new Vector2(400, 80), new Color(1f, 0.85f, 0.1f));
         hit = UIK.Label(r, "", 30, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, -90), new Vector2(600, 50), new Color(1f, 0.5f, 0.4f));
@@ -145,6 +150,9 @@ public class Hud
         crossBars[3].rectTransform.anchoredPosition = new Vector2(-spread, 0);
         for (int i = 0; i < 4; i++) crossBars[i].enabled = cross && (s.adsBlend < 0.8f);
         dot.enabled = cross && s.adsBlend >= 0.5f;
+        bool sc = cross && s.adsBlend >= 0.8f;
+        scope.enabled = sc; scopeIn.enabled = sc;
+        if (sc) { float k = 0.9f + s.adsBlend * 0.1f; scope.rectTransform.localScale = Vector3.one * k; }
 
         popT -= dt;
         pop.enabled = popT > 0f;

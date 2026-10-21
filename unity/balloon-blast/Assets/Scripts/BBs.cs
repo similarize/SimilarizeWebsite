@@ -53,6 +53,7 @@ public class BBs : MonoBehaviour
             B b = live[i];
             Vector3 np = b.p + b.v * dt;
             b.v += Vector3.down * Drop * dt;
+            if (b.owner != null && b.owner.magnetT > 0f) b.v = PowerUps.Home(b.p, b.v, b.owner, dt);
             Vector3 seg = np - b.p;
             float dist = seg.magnitude;
             bool done = false;
@@ -70,7 +71,9 @@ public class BBs : MonoBehaviour
                 {
                     RaycastHit h = hits[best];
                     Balloon bal = h.collider.GetComponent<Balloon>();
-                    if (bal != null && bal.owner != null) bal.owner.PopBalloon(bal, b.owner);
+                    PowerBalloon pw = h.collider.GetComponent<PowerBalloon>();
+                    if (pw != null) pw.Claim(b.owner);
+                    else if (bal != null && bal.owner != null) bal.owner.PopBalloon(bal, b.owner);
                     else { FX.Puff(h.point, h.normal); Sfx.OnImpact(h.point, h.collider); }
                     done = true;
                 }

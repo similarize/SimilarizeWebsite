@@ -18,7 +18,7 @@ public static class World
     public static float BarnYaw;
 
     static readonly List<Vector3> placed = new List<Vector3>(); // x, z, radius in y
-    static System.Random rnd;
+    internal static System.Random rnd;
     static Transform root, decor;
 
     static readonly Color Hay = new Color(1f, 0.93f, 0.8f);
@@ -38,10 +38,26 @@ public static class World
 
     public static Vector3 OnGround(Vector3 p) { return new Vector3(p.x, Ground(p.x, p.z), p.z); }
 
+    // bb6: arenas. 0 Farm Field (original), 1 Candy Carnival, 2 Snowy Fort
+    public static int arena;
+    public static readonly string[] ArenaNames = { "FARM FIELD", "CANDY CARNIVAL", "SNOWY FORT" };
+    public static string ArenaName { get { return ArenaNames[arena]; } }
+
+    public static void Rebuild(int a)
+    {
+        if (root != null) Object.Destroy(root.gameObject);
+        if (decor != null) Object.Destroy(decor.gameObject);
+        arena = ((a % ArenaNames.Length) + ArenaNames.Length) % ArenaNames.Length;
+        Build(terrain, System.Environment.TickCount);
+    }
+
     public static void Build(Terrain t, int seed)
     {
         terrain = t;
         rnd = new System.Random(seed);
+        placed.Clear();
+        cover.Clear();
+        Arenas.ApplyLook(arena, terrain);
         if (terrain != null)
         {
             Vector3 s = terrain.terrainData.size;
@@ -66,7 +82,7 @@ public static class World
         float ba = a0 + 22.5f + 45f * rnd.Next(8);
         BarnPos = OnGround(center + Polar(ba, Rand(42f, 52f)));
         BarnYaw = ba + 90f;
-        Barn(BarnPos, BarnYaw);
+        if (arena == 0) Barn(BarnPos, BarnYaw);
         for (int k = 0; k < 2; k++)
         {
             Vector3 p;
@@ -74,19 +90,24 @@ public static class World
         }
 
         Vector3 q;
-        for (int i = 0; i < 24; i++) if (TryPlace(2.5f, 0f, 100f, out q)) HayGroup(q);
-        for (int i = 0; i < 12; i++) if (TryPlace(2.6f, 0f, 100f, out q)) PalletWall(q);
-        for (int i = 0; i < 12; i++) if (TryPlace(2.2f, 0f, 100f, out q)) Tyres(q);
-        for (int i = 0; i < 18; i++) if (TryPlace(1.6f, 0f, 105f, out q)) Barrels(q);
-        for (int i = 0; i < 16; i++) if (TryPlace(1.4f, 0f, 100f, out q)) Crates(q);
-        for (int i = 0; i < 14; i++) if (TryPlace(2.0f, 0f, 100f, out q)) Logs(q);
-        for (int i = 0; i < 14; i++) if (TryPlace(2.2f, 0f, 105f, out q)) Rock(q, Rand(1.1f, 2.2f));
-        for (int i = 0; i < 16; i++) if (TryPlace(2.5f, 15f, 95f, out q)) Tree(q, false);
-        for (int i = 0; i < 14; i++) if (TryPlace(1.4f, 0f, 100f, out q)) Bush(q);
-        int outer = mob ? 42 : 64;
-        for (int i = 0; i < outer; i++) if (TryPlace(2.5f, 100f, 132f, out q)) Tree(q, true);
-        for (int i = 0; i < 10; i++) if (TryPlace(3f, 104f, 130f, out q)) Rock(q, Rand(2f, 3.4f));
-        Decor(mob ? 160 : 380, mob ? 30 : 60, mob ? 40 : 90);
+        if (arena == 1) Arenas.Candy(mob);
+        else if (arena == 2) Arenas.Snow(mob);
+        else
+        {
+            for (int i = 0; i < 24; i++) if (TryPlace(2.5f, 0f, 100f, out q)) HayGroup(q);
+            for (int i = 0; i < 12; i++) if (TryPlace(2.6f, 0f, 100f, out q)) PalletWall(q);
+            for (int i = 0; i < 12; i++) if (TryPlace(2.2f, 0f, 100f, out q)) Tyres(q);
+            for (int i = 0; i < 18; i++) if (TryPlace(1.6f, 0f, 105f, out q)) Barrels(q);
+            for (int i = 0; i < 16; i++) if (TryPlace(1.4f, 0f, 100f, out q)) Crates(q);
+            for (int i = 0; i < 14; i++) if (TryPlace(2.0f, 0f, 100f, out q)) Logs(q);
+            for (int i = 0; i < 14; i++) if (TryPlace(2.2f, 0f, 105f, out q)) Rock(q, Rand(1.1f, 2.2f));
+            for (int i = 0; i < 16; i++) if (TryPlace(2.5f, 15f, 95f, out q)) Tree(q, false);
+            for (int i = 0; i < 14; i++) if (TryPlace(1.4f, 0f, 100f, out q)) Bush(q);
+            int outer = mob ? 42 : 64;
+            for (int i = 0; i < outer; i++) if (TryPlace(2.5f, 100f, 132f, out q)) Tree(q, true);
+            for (int i = 0; i < 10; i++) if (TryPlace(3f, 104f, 130f, out q)) Rock(q, Rand(2f, 3.4f));
+        }
+        if (arena != 2) Decor(mob ? 160 : 380, mob ? 30 : 60, mob ? 40 : 90);
 
         MeshMerge.Merge(root, true);
         MeshMerge.Merge(decor, false);
@@ -98,7 +119,7 @@ public static class World
         return new Vector3(Mathf.Sin(a) * r, 0f, Mathf.Cos(a) * r);
     }
 
-    static bool TryPlace(float radius, float minC, float maxC, out Vector3 pos)
+    internal static bool TryPlace(float radius, float minC, float maxC, out Vector3 pos)
     {
         for (int tries = 0; tries < 30; tries++)
         {
@@ -123,7 +144,7 @@ public static class World
         return true;
     }
 
-    static Transform Group(string name, Vector3 p, float yaw)
+    internal static Transform Group(string name, Vector3 p, float yaw)
     {
         var g = new GameObject(name).transform;
         g.SetParent(root, false);
@@ -131,9 +152,9 @@ public static class World
         g.rotation = Quaternion.Euler(0f, yaw, 0f);
         return g;
     }
-    static Transform Group(string name, Vector3 p) { return Group(name, p, Rand(0f, 360f)); }
+    internal static Transform Group(string name, Vector3 p) { return Group(name, p, Rand(0f, 360f)); }
 
-    static void AddCover(Transform g, float r)
+    internal static void AddCover(Transform g, float r)
     {
         for (int i = 0; i < 4; i++)
         {
@@ -144,7 +165,7 @@ public static class World
     }
 
     // primitive with a material; collider kept unless col = false
-    static GameObject P(PrimitiveType t, Transform g, Vector3 lp, Vector3 s, Material m, Vector3 euler, bool col = true)
+    internal static GameObject P(PrimitiveType t, Transform g, Vector3 lp, Vector3 s, Material m, Vector3 euler, bool col = true)
     {
         GameObject o = GameObject.CreatePrimitive(t);
         o.transform.SetParent(g, false);
@@ -524,7 +545,7 @@ public static class World
         }
     }
 
-    static void Crates(Vector3 p)
+    internal static void Crates(Vector3 p)
     {
         Transform g = Group("Crates", p);
         Crate(g, Vector3.zero, 1.2f, 0f);
@@ -534,7 +555,7 @@ public static class World
         AddCover(g, 1.2f);
     }
 
-    static void Logs(Vector3 p)
+    internal static void Logs(Vector3 p)
     {
         Transform g = Group("Logs", p);
         if (LBPack.Get("log0") == null) return;
@@ -556,7 +577,7 @@ public static class World
         AddCover(g, 1.6f);
     }
 
-    static void Rock(Vector3 p, float s)
+    internal static void Rock(Vector3 p, float s)
     {
         string[] packs = { "qrock0", "qrock1", "qrock2" };
         string pk = packs[rnd.Next(packs.Length)];
@@ -569,7 +590,7 @@ public static class World
         AddCover(g, 1.2f * s);
     }
 
-    static void Tree(Vector3 p, bool outer)
+    internal static void Tree(Vector3 p, bool outer)
     {
         string[] packs = outer ? new[] { "tree0", "tree1", "tree2", "pine0", "pine1", "pine0" } : new[] { "tree0", "tree1", "tree2" };
         string pk = packs[rnd.Next(packs.Length)];
@@ -591,7 +612,7 @@ public static class World
         }
     }
 
-    static void Bush(Vector3 p)
+    internal static void Bush(Vector3 p)
     {
         Transform g = Group("Bush", p);
         Mesh(rnd.NextDouble() < 0.5 ? "fbush0" : "bush0", g, p, Rand(1.1f, 1.6f), Rand(0f, 360f), decor);

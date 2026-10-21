@@ -164,6 +164,51 @@ public static class FX
         }
     }
 
+    // bb6: golden starburst for pop combos (bigger with the streak)
+    public static void Combo(Vector3 p, int n)
+    {
+        if (glow == null) return;
+        var ep = new ParticleSystem.EmitParams();
+        ep.position = p; ep.velocity = Vector3.zero;
+        ep.startSize = 1.6f + 0.4f * Mathf.Min(n, 5); ep.startLifetime = 0.35f;
+        ep.startColor = new Color32(255, 214, 80, 210);
+        glow.Emit(ep, 1);
+        int k = Mathf.Min(10 + n * 8, 50);
+        for (int i = 0; i < k; i++)
+        {
+            Vector3 d = Random.onUnitSphere;
+            ep.position = p + d * 0.25f;
+            ep.velocity = d * Random.Range(5f, 9f) + Vector3.up;
+            ep.startSize = Random.Range(0.1f, 0.2f);
+            ep.startLifetime = Random.Range(0.3f, 0.55f);
+            ep.startColor = (i % 2 == 0) ? new Color32(255, 230, 120, 255) : new Color32(255, 255, 255, 255);
+            ps.Emit(ep, 1);
+        }
+    }
+
+    // bb6: confetti fountain (player out = small, round win = big)
+    public static void Celebrate(Vector3 p, Color c, float scale = 1f)
+    {
+        if (confetti == null) return;
+        var ep = new ParticleSystem.EmitParams();
+        int n = Mathf.RoundToInt((Look.Mobile ? 70 : 140) * scale);
+        for (int i = 0; i < n; i++)
+        {
+            ep.position = p + Random.insideUnitSphere * 0.3f;
+            Vector2 r = Random.insideUnitCircle * 2.2f;
+            ep.velocity = new Vector3(r.x, Random.Range(6f, 10f) * Mathf.Sqrt(scale), r.y);
+            float s = Random.Range(0.06f, 0.11f);
+            ep.startSize3D = new Vector3(s, s * Random.Range(0.45f, 0.75f), 1f);
+            ep.startLifetime = Random.Range(2.4f, 3.6f);
+            ep.startColor = (i % 5 == 0) ? (Color32)c : Rainbow[Random.Range(0, Rainbow.Length)];
+            ep.rotation3D = new Vector3(Random.Range(0f, 360f), Random.Range(0f, 360f), Random.Range(0f, 360f));
+            confetti.Emit(ep, 1);
+        }
+        ep = new ParticleSystem.EmitParams();
+        ep.position = p; ep.startSize = 2.4f * scale; ep.startLifetime = 0.4f; ep.startColor = new Color32(255, 255, 255, 200);
+        glow.Emit(ep, 1);
+    }
+
     public static void Muzzle(Vector3 p, Vector3 dir)
     {
         if (ps == null) return;

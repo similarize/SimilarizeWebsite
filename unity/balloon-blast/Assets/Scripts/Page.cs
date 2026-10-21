@@ -12,7 +12,10 @@ public static class Page
 #if UNITY_WEBGL && !UNITY_EDITOR
     [DllImport("__Internal")] static extern int BBPage_Metric(int which);
     static int Metric(int w) { try { return BBPage_Metric(w); } catch { return 0; } }
+    [DllImport("__Internal")] static extern int BBPage_LowMem();
+    static int ReadLowMem() { try { return BBPage_LowMem(); } catch { return 0; } }
 #else
+    static int ReadLowMem() { return 0; }
     static int Metric(int w) { return 0; }
 #endif
 
@@ -37,6 +40,11 @@ public static class Page
             T = Mathf.Max(T, Mathf.RoundToInt(Screen.height - sa.yMax));
         }
     }
+
+    // bbu6-pub: Xbox Edge (~1 GB shared by every browser process) / ?lowmem=1 -> lite tier (phone look, no HDR / MSAA,
+    // half-res textures). ?lowmem=0 on the page turns it off. Same pattern as Lambo Blast 6.6 (ffxweb3).
+    static int lowMem = -1;
+    public static bool LowMem { get { if (lowMem < 0) lowMem = ReadLowMem() == 1 ? 1 : 0; return lowMem == 1; } }
 
     public static bool Portrait { get { return Screen.height > Screen.width * 1.05f; } }
 

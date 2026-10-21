@@ -5,6 +5,7 @@ using UnityEditor.Build.Reporting;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
 
 // Sets the player to use both the old Input Manager and the new Input System as early as possible.
@@ -115,10 +116,10 @@ public static class BuildScript
     {
         PlayerSettings.companyName = "Similarize";
         PlayerSettings.productName = "Balloon Blast Airsoft";
-        PlayerSettings.colorSpace = ColorSpace.Gamma;
+        PlayerSettings.colorSpace = ColorSpace.Linear;   // bb6: URP + linear lighting
         PlayerSettings.runInBackground = true;
         PlayerSettings.stripEngineCode = false;
-        PlayerSettings.SetManagedStrippingLevel(BuildTargetGroup.WebGL, ManagedStrippingLevel.Low);
+        PlayerSettings.SetManagedStrippingLevel(UnityEditor.Build.NamedBuildTarget.WebGL, ManagedStrippingLevel.Low);
         PlayerSettings.SetUseDefaultGraphicsAPIs(BuildTarget.WebGL, false);
         PlayerSettings.SetGraphicsAPIs(BuildTarget.WebGL, new[] { GraphicsDeviceType.OpenGLES3 });
 
@@ -127,12 +128,11 @@ public static class BuildScript
         PlayerSettings.WebGL.exceptionSupport = WebGLExceptionSupport.ExplicitlyThrownExceptionsOnly;
         PlayerSettings.WebGL.dataCaching = true;
         PlayerSettings.WebGL.nameFilesAsHashes = false;
-        PlayerSettings.WebGL.linkerTarget = WebGLLinkerTarget.Wasm;
         // Moderate memory (property names differ between Unity versions, so set them by reflection)
         SetStatic(typeof(PlayerSettings.WebGL), "initialMemorySize", 128);
         SetStatic(typeof(PlayerSettings.WebGL), "maximumMemorySize", 1024);
 
-        QualitySettings.shadows = ShadowQuality.All;
+        QualitySettings.shadows = UnityEngine.ShadowQuality.All;
         QualitySettings.shadowDistance = 70f;
     }
 
@@ -182,9 +182,10 @@ public static class BuildScript
     {
         Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
-        Material lit = MakeMat("Standard", "Diffuse", "Lit.mat");
-        lit.SetFloat("_Glossiness", 0.15f);
-        Material unlit = MakeMat("Unlit/Color", "Standard", "Unlit.mat");
+        SetupURP();
+        Material lit = MakeMat("Universal Render Pipeline/Lit", "Standard", "Lit.mat");
+        lit.SetFloat("_Smoothness", 0.15f);
+        Material unlit = MakeMat("Universal Render Pipeline/Unlit", "Unlit/Color", "Unlit.mat");
         Material fx = MakeMat("Sprites/Default", "Unlit/Color", "Fx.mat");
         // Poly Haven CC0 HDRI (Kloofendal 48d partly cloudy, tonemapped) on Skybox/Panoramic; procedural fallback
         Material sky = null;
@@ -216,9 +217,21 @@ public static class BuildScript
             sky.SetFloat("_Exposure", 1.3f);
         }
         // graphics overhaul shaders (Assets/Shaders): critter skin, foliage, balloons
-        Material skin = ShaderMat("FF/Skin", "Skin.mat");
-        Material foliage = ShaderMat("FF/Foliage", "Foliage.mat");
-        Material balloon = ShaderMat("BB/Balloon", "Balloon.mat");
+        // bb6 URP: the built-in surface shaders don't run under URP, so the bases are URP Lit variants
+        Material skin = MakeMat("Universal Render Pipeline/Lit", "Standard", "Skin.mat");
+        skin.SetFloat("_Smoothness", 0.45f);
+        Material foliage = MakeMat("Universal Render Pipeline/Lit", "Standard", "Foliage.mat");
+        foliage.SetFloat("_AlphaClip", 1f); foliage.SetFloat("_Cutoff", 0.45f); foliage.SetFloat("_Cull", 0f);
+        foliage.EnableKeyword("_ALPHATEST_ON"); foliage.SetFloat("_Smoothness", 0.05f);
+        foliage.renderQueue = (int)RenderQueue.AlphaTest;
+        Material balloon = MakeMat("Universal Render Pipeline/Lit", "Standard", "Balloon.mat");
+        balloon.SetFloat("_Surface", 1f); balloon.SetFloat("_Blend", 0f);
+        balloon.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha); balloon.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
+        balloon.SetFloat("_ZWrite", 0f); balloon.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+        balloon.SetFloat("_Smoothness", 0.92f); balloon.SetFloat("_Metallic", 0.05f);
+        balloon.renderQueue = (int)RenderQueue.Transparent;
+        foreach (var mm in new[] { skin, foliage, balloon }) EditorUtility.SetDirty(mm);
+        CreatePostVolume();
         EditorUtility.SetDirty(sky);
         EditorUtility.SetDirty(lit);
 
@@ -274,6 +287,83 @@ public static class BuildScript
         AssetDatabase.SaveAssets();
         Debug.Log("BuildScript: scene saved " + ScenePath);
         return ScenePath;
+    }
+
+    // ---------- bb6: URP ----------
+    static void SetSer(UnityEngine.Object o, string prop, object v)
+    {
+        var so = new SerializedObject(o);
+        var p = so.FindProperty(prop);
+        if (p == null) { Debug.Log("URP: no property " + prop); return; }
+        if (v is bool) p.boolValue = (bool)v; else if (v is int) p.intValue = (int)v; else if (v is float) p.floatValue = (float)v;
+        so.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    static void SetupURP()
+    {
+        var rd = ScriptableObject.CreateInstance<UniversalRendererData>();
+        SaveAsset(rd, "URP_Renderer.asset");
+        try
+        {
+            var ao = ScriptableObject.CreateInstance<ScreenSpaceAmbientOcclusion>();
+            ao.name = "SSAO";
+            AssetDatabase.AddObjectToAsset(ao, rd);
+            rd.rendererFeatures.Add(ao);
+            var so = new SerializedObject(rd);
+            var maps = so.FindProperty("m_RendererFeatureMap");
+            if (maps != null)
+            {
+                long id; string guid;
+                AssetDatabase.TryGetGUIDAndLocalFileIdentifier(ao, out guid, out id);
+                maps.arraySize = 1; maps.GetArrayElementAtIndex(0).longValue = id;
+                so.ApplyModifiedPropertiesWithoutUndo();
+            }
+            SetSer(ao, "m_Settings.Downsample", true);
+            SetSer(ao, "m_Settings.Intensity", 2.2f);
+            SetSer(ao, "m_Settings.Radius", 0.6f);
+            EditorUtility.SetDirty(rd);
+            Debug.Log("URP: SSAO feature added");
+        }
+        catch (Exception e) { Debug.LogWarning("URP SSAO: " + e.Message); }
+        var urp = UniversalRenderPipelineAsset.Create(rd);
+        SaveAsset(urp, "URP.asset");
+        urp.shadowDistance = 70f;
+        urp.shadowCascadeCount = 2;
+        urp.supportsHDR = true;
+        urp.msaaSampleCount = 2;
+        urp.renderScale = 1f;
+        SetSer(urp, "m_SoftShadowsSupported", true);
+        SetSer(urp, "m_MainLightShadowmapResolution", 2048);
+        SetSer(urp, "m_AdditionalLightsRenderingMode", 1);
+        EditorUtility.SetDirty(urp);
+        GraphicsSettings.defaultRenderPipeline = urp;
+        int cur = QualitySettings.GetQualityLevel();
+        for (int i = 0; i < QualitySettings.names.Length; i++) { QualitySettings.SetQualityLevel(i, false); QualitySettings.renderPipeline = urp; }
+        QualitySettings.SetQualityLevel(cur, false);
+        AssetDatabase.SaveAssets();
+        Debug.Log("URP: pipeline asset assigned");
+    }
+
+    static void CreatePostVolume()
+    {
+        var prof = ScriptableObject.CreateInstance<VolumeProfile>();
+        SaveAsset(prof, "PostProfile.asset");
+        var bloom = prof.Add<Bloom>(true);
+        bloom.intensity.Override(0.45f); bloom.threshold.Override(1.1f); bloom.scatter.Override(0.5f);
+        var tm = prof.Add<Tonemapping>(true);
+        tm.mode.Override(TonemappingMode.ACES);
+        var ca = prof.Add<ColorAdjustments>(true);
+        ca.postExposure.Override(0.15f); ca.saturation.Override(28f); ca.contrast.Override(22f);
+        var wb = prof.Add<WhiteBalance>(true);
+        wb.temperature.Override(6f);
+        var vg = prof.Add<Vignette>(true);
+        vg.intensity.Override(0.22f); vg.smoothness.Override(0.45f);
+        foreach (var c in prof.components) AssetDatabase.AddObjectToAsset(c, prof);
+        EditorUtility.SetDirty(prof);
+        var go = new GameObject("Post Volume");
+        var v = go.AddComponent<Volume>();
+        v.isGlobal = true; v.priority = 1f; v.sharedProfile = prof;
+        Debug.Log("URP: post volume (bloom, ACES, grade, vignette)");
     }
 
     // ---------- terrain ----------
@@ -370,7 +460,8 @@ public static class BuildScript
         GameObject go = Terrain.CreateTerrainGameObject(td);
         go.name = "Field";
         Terrain t = go.GetComponent<Terrain>();
-        Shader ts = Shader.Find("Nature/Terrain/Standard");
+        Shader ts = Shader.Find("Universal Render Pipeline/Terrain/Lit");
+        if (ts == null) ts = Shader.Find("Nature/Terrain/Standard");
         if (ts != null)
         {
             var tm = new Material(ts);

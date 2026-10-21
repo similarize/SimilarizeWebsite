@@ -14,7 +14,7 @@ public static class Mats
 
     public static void Init(Material litMat, Material unlitMat, Material fxMat)
     {
-        lit = litMat != null ? litMat : new Material(Shader.Find("Standard"));
+        lit = litMat != null ? litMat : new Material(Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard"));
         unlit = unlitMat != null ? unlitMat : lit;
         fx = fxMat != null ? fxMat : unlit;
     }
@@ -32,13 +32,16 @@ public static class Mats
         if (cache.TryGetValue(k, out m)) return m;
         m = new Material(kind == 2 ? unlit : lit);
         m.color = c;
-        if (kind == 0) m.SetFloat("_Glossiness", 0.12f);
-        else if (kind == 1) m.SetFloat("_Glossiness", 0.75f);
-        else if (kind >= 1000) { int q = kind - 1000; m.SetFloat("_Glossiness", (q / 21) / 20f); m.SetFloat("_Metallic", (q % 21) / 20f); }   // PBR
-        else if (kind >= 10) { m.SetFloat("_Glossiness", (kind - 10) / 20f); m.SetFloat("_Metallic", 0.08f); }   // Paint
+        if (kind == 0) SetGloss(m, 0.12f);
+        else if (kind == 1) SetGloss(m, 0.75f);
+        else if (kind >= 1000) { int q = kind - 1000; SetGloss(m, (q / 21) / 20f); m.SetFloat("_Metallic", (q % 21) / 20f); }   // PBR
+        else if (kind >= 10) { SetGloss(m, (kind - 10) / 20f); m.SetFloat("_Metallic", 0.08f); }   // Paint
         cache[k] = m;
         return m;
     }
+
+    // Standard (_Glossiness) and URP Lit (_Smoothness)
+    static void SetGloss(Material m, float g) { m.SetFloat("_Glossiness", g); m.SetFloat("_Smoothness", g); }
 
     public static Material Lit(Color c) { return Get(c, 0); }
     public static Material Shiny(Color c) { return Get(c, 1); }
@@ -59,7 +62,7 @@ public static class Mats
         var m = new Material(lit);
         m.color = Color.white;
         m.mainTexture = t;
-        m.SetFloat("_Glossiness", gloss);
+        SetGloss(m, gloss);
         return m;
     }
 
@@ -106,7 +109,7 @@ public static class Mats
         Material m;
         if (skinCache.TryGetValue(k, out m)) return m;
         if (SkinBase == null) m = Paint(c, gloss * 0.9f);
-        else { m = new Material(SkinBase); m.color = c; m.SetFloat("_Gloss", gloss); }
+        else { m = new Material(SkinBase); m.color = c; m.SetFloat("_Gloss", gloss); SetGloss(m, gloss); }
         skinCache[k] = m;
         return m;
     }
@@ -130,7 +133,7 @@ public static class Mats
         Material m;
         if (balloonCache.TryGetValue(k, out m)) return m;
         if (BalloonBase == null) m = Shiny(c);
-        else { m = new Material(BalloonBase); m.color = c; }
+        else { m = new Material(BalloonBase); m.color = new Color(c.r, c.g, c.b, Mathf.Min(c.a, 0.86f)); }
         balloonCache[k] = m;
         return m;
     }
@@ -142,7 +145,7 @@ public static class Mats
         g.transform.localPosition = localPos;
         g.transform.localScale = scale;
         g.GetComponent<Renderer>().sharedMaterial = mat;
-        if (t == PrimitiveType.Cube && mat != null && mat.HasProperty("_MainTex") && mat.mainTexture != null) BoxUV(g);
+        if (t == PrimitiveType.Cube && mat != null && (mat.HasProperty("_MainTex") || mat.HasProperty("_BaseMap")) && mat.mainTexture != null) BoxUV(g);
         if (!keepCollider)
         {
             Collider c = g.GetComponent<Collider>();

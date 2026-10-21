@@ -126,7 +126,7 @@ public class BotBrain : MonoBehaviour
                 if (pauseT <= 0f) burstT = Random.Range(0.4f, 1.1f);
             }
         }
-        s.inAds = dist > 30f;
+        s.inAds = dist > 30f || (Game.Demo && Game.demoAds && s.human);
 
         Vector3 to = target.transform.position - s.transform.position; to.y = 0f;
         Vector3 flat = to.sqrMagnitude > 0.01f ? to.normalized : s.transform.forward;
