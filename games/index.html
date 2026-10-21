@@ -215,6 +215,18 @@
     .screen-wrap iframe.live.on { opacity:1; }
     .screen-wrap .live-tag { position:absolute; right:6px; top:6px; z-index:2; padding:2px 7px; border-radius:999px; font:700 10px Outfit, sans-serif; letter-spacing:.08em; color:#fff; background:rgba(214,40,40,.85); opacity:0; transition:opacity .25s; pointer-events:none; }
     .screen-wrap.is-live .live-tag { opacity:1; }
+    /* arch1 (Oct 21): older versions live behind the Archive toggle; pages unchanged */
+    .archive { width: min(1100px, calc(100% - 24px)); margin: 4px auto 0; }
+    .archive > summary { list-style: none; cursor: pointer; display: flex; justify-content: center; }
+    .archive > summary::-webkit-details-marker { display: none; }
+    .archive > summary span { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 10px 22px; border-radius: 999px;
+      font: 700 15px Outfit, sans-serif; letter-spacing: .06em; color: var(--cream); background: rgba(255,255,255,.06); border: 2px solid rgba(240,180,41,.45); }
+    .archive > summary:hover span, .archive > summary:focus-visible span { border-color: var(--amber); background: rgba(240,180,41,.14); }
+    .archive > summary:focus-visible { outline: none; }
+    .archive > summary span::after { content: "\25BE"; transition: transform .2s; }
+    .archive[open] > summary span::after { transform: rotate(180deg); }
+    .archive .note { text-align: center; color: var(--mute); font-size: 13px; margin: 10px 0 0; }
+    .archive .floor { width: 100%; }
   </style>
 </head>
 <body>
@@ -227,29 +239,11 @@
     <!-- card "date, time · sha3" lines (America/Denver): generated from git (last game-folder commit time, America/Denver; Unity cards use the build productVersion UTC time + last 3 of its hash; others the last 3 of that commit sha); update at each publish -->
     <!-- lobby253d1 20261006: one shared onelobby cab (2.5D · 3D). Flat 2D not offered.
          Undo of hide2d1 split + cab25d1 dual cabinets. Game files kept. -->
-    <a class="cab" href="/games/four-froggies/?v=20261016-ffup1">
-      <span class="marquee">Four Froggies</span>
-      <span class="upd">Oct 16, 7:46 PM · <span>74e</span></span>
-      <span class="screen-wrap"><canvas data-demo="ffversions"></canvas><span class="glass"></span></span>
-      <span class="panel"><span class="plate">2.5D · 3D</span><span class="buttons" aria-hidden="true"><i></i><i class="alt"></i></span></span>
-    </a>
-    <a class="cab" href="/games/four-froggies-unity/?v=20261020-ffu67h">
-      <span class="marquee">Four Froggies Unity</span>
-      <span class="upd">Oct 21, 8:03 AM · <span>cdd</span></span>
-      <span class="screen-wrap"><canvas data-demo="fourFroggiesUnity"></canvas><span class="glass"></span></span>
-      <span class="panel"><span class="plate">Ranch · 1-4P split · Unity WebGL</span><span class="buttons" aria-hidden="true"><i></i><i class="alt"></i></span></span>
-    </a>
     <a class="cab" href="/games/four-froggies-u6/?v=20261020-ffu67c">
       <span class="marquee">Four Froggies 6.6</span>
       <span class="upd">Oct 21, 8:27 AM · <span>cdd</span></span>
       <span class="screen-wrap"><canvas data-demo="fourFroggiesUnity"></canvas><span class="glass"></span></span>
       <span class="panel"><span class="plate">Ranch · 1-4P split · WebGPU · Unity 6.6</span><span class="buttons" aria-hidden="true"><i></i><i class="alt"></i></span></span>
-    </a>
-    <a class="cab" href="/games/lambo-blast/?v=20261014-lambo9">
-      <span class="marquee">Lambo Blast</span>
-      <span class="upd">Oct 21, 8:09 AM · <span>cdd</span></span>
-      <span class="screen-wrap"><canvas data-demo="lamboBlast"></canvas><span class="glass"></span></span>
-      <span class="panel"><span class="plate">Robot racers · 1-4P · Unity WebGL</span><span class="buttons" aria-hidden="true"><i></i><i class="alt"></i></span></span>
     </a>
     <a class="cab" href="/games/lambo-blast-u6/?v=20261016-u6i">
       <span class="marquee">Lambo Blast 6.6</span>
@@ -262,12 +256,6 @@
       <span class="upd">Oct 20, 11:29 PM · <span>ba0</span></span>
       <span class="screen-wrap"><canvas data-demo="balloonBlastAirsoft"></canvas><span class="glass"></span></span>
       <span class="panel"><span class="plate">3D shooter · Pop 3 balloons</span><span class="buttons" aria-hidden="true"><i></i><i class="alt"></i></span></span>
-    </a>
-    <a class="cab" href="/games/balloon-blast-unity/?v=20261020-bbu11">
-      <span class="marquee">Balloon Blast Unity</span>
-      <span class="upd">Oct 21, 12:24 AM · <span>919</span></span>
-      <span class="screen-wrap"><canvas data-demo="balloonBlastUnity"></canvas><span class="glass"></span></span>
-      <span class="panel"><span class="plate">3D FPS · Unity WebGL</span><span class="buttons" aria-hidden="true"><i></i><i class="alt"></i></span></span>
     </a>
     <a class="cab" href="/games/balloon-blast-u6/?v=20261021-818e4e2">
       <span class="marquee">Balloon Blast 6.6</span>
@@ -324,8 +312,40 @@
       <span class="panel"><span class="plate">3D arena · RC cars + ball</span><span class="buttons" aria-hidden="true"><i></i><i class="alt"></i></span></span>
     </a>
   </main>
+  <details class="archive" id="archive">
+    <summary><span>Archive · older versions (4)</span></summary>
+    <p class="note">Earlier builds of the games above. They still work; the newest versions are on the main floor.</p>
+    <div class="floor">
+    <a class="cab" href="/games/four-froggies/?v=20261016-ffup1">
+      <span class="marquee">Four Froggies</span>
+      <span class="upd">Oct 16, 7:46 PM · <span>74e</span></span>
+      <span class="screen-wrap"><canvas data-demo="ffversions"></canvas><span class="glass"></span></span>
+      <span class="panel"><span class="plate">2.5D · 3D</span><span class="buttons" aria-hidden="true"><i></i><i class="alt"></i></span></span>
+    </a>
+    <a class="cab" href="/games/four-froggies-unity/?v=20261020-ffu67h">
+      <span class="marquee">Four Froggies Unity</span>
+      <span class="upd">Oct 21, 8:03 AM · <span>cdd</span></span>
+      <span class="screen-wrap"><canvas data-demo="fourFroggiesUnity"></canvas><span class="glass"></span></span>
+      <span class="panel"><span class="plate">Ranch · 1-4P split · Unity WebGL</span><span class="buttons" aria-hidden="true"><i></i><i class="alt"></i></span></span>
+    </a>
+    <a class="cab" href="/games/lambo-blast/?v=20261014-lambo9">
+      <span class="marquee">Lambo Blast</span>
+      <span class="upd">Oct 21, 8:09 AM · <span>cdd</span></span>
+      <span class="screen-wrap"><canvas data-demo="lamboBlast"></canvas><span class="glass"></span></span>
+      <span class="panel"><span class="plate">Robot racers · 1-4P · Unity WebGL</span><span class="buttons" aria-hidden="true"><i></i><i class="alt"></i></span></span>
+    </a>
+    <a class="cab" href="/games/balloon-blast-unity/?v=20261020-bbu11">
+      <span class="marquee">Balloon Blast Unity</span>
+      <span class="upd">Oct 21, 12:24 AM · <span>919</span></span>
+      <span class="screen-wrap"><canvas data-demo="balloonBlastUnity"></canvas><span class="glass"></span></span>
+      <span class="panel"><span class="plate">3D FPS · Unity WebGL</span><span class="buttons" aria-hidden="true"><i></i><i class="alt"></i></span></span>
+    </a>
+    </div>
+  </details>
   <footer><a href="/">Back to Similarize</a></footer>
   <script>
+    // arch1: open the Archive when linked as #archive
+    if (location.hash === "#archive") document.getElementById("archive").open = true;
     const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
     const screens = [...document.querySelectorAll("canvas")].map((canvas) => {
       const ctx = canvas.getContext("2d");
