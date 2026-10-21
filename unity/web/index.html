@@ -38,14 +38,20 @@
   <a href="../" title="Back to the arcade">✕ Arcade</a>
 </div>
 <script>
+  /* bbu12 (xbm2): low-memory rebuild (64/512 MB, Brotli + decompression fallback, stripping) + JoyPad.cs (non-standard pads
+     -> virtual Gamepad, ?paddebug=1). Keeps bbu11's page: xbox-compat xbp5 strip/readout, no pointer lock, no key swallow. */
+  window.SimXboxOptions = { build: "bbu12 __BUILD_VERSION__" };
+</script>
+<script src="/games/shared/xbox-compat.js?v=xbp5"></script>
+<script>
   var buildUrl = "Build";
   var name = "__BUILD_NAME__";
   var canvas = document.getElementById("unity-canvas");
   var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));
   var config = {
-    dataUrl: buildUrl + "/" + name + ".data?v=__BUILD_VERSION__",
-    frameworkUrl: buildUrl + "/" + name + ".framework.js?v=__BUILD_VERSION__",
-    codeUrl: buildUrl + "/" + name + ".wasm?v=__BUILD_VERSION__",
+    dataUrl: buildUrl + "/" + name + ".data__BUILD_EXT__?v=__BUILD_VERSION__",
+    frameworkUrl: buildUrl + "/" + name + ".framework.js__BUILD_EXT__?v=__BUILD_VERSION__",
+    codeUrl: buildUrl + "/" + name + ".wasm__BUILD_EXT__?v=__BUILD_VERSION__",
     streamingAssetsUrl: "StreamingAssets",
     companyName: "Similarize",
     productName: "Balloon Blast Airsoft",
@@ -53,6 +59,7 @@
     devicePixelRatio: Math.min(window.devicePixelRatio || 1, isMobile ? 1.5 : 2),
     showBanner: function (msg, type) { if (type === "error") { var e = document.getElementById("err"); e.style.display = "block"; e.textContent = msg; } else console.log(msg); }
   };
+  if (window.SimXbox) window.SimXbox.applyConfig(config); // xbm1
   var fill = document.getElementById("fill"), pct = document.getElementById("pct"), loader = document.getElementById("loader");
   var script = document.createElement("script");
   script.src = buildUrl + "/" + name + ".loader.js?v=__BUILD_VERSION__";
@@ -73,7 +80,7 @@
   script.onerror = function () { var e = document.getElementById("err"); e.style.display = "block"; e.textContent = "Could not load the game files."; };
   document.body.appendChild(script);
   canvas.addEventListener("pointerdown", function () { canvas.focus(); });
-  document.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+  if (!(window.SimXbox && window.SimXbox.isXbox)) document.addEventListener("contextmenu", function (e) { e.preventDefault(); }); // bbu11: never on Xbox
   document.addEventListener("touchmove", function (e) { e.preventDefault(); }, { passive: false });
 </script>
 </body>
