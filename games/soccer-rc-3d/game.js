@@ -20,9 +20,9 @@ import {
   createSkidMarks,
   RACE_COLORS,
   RACE_NAMES,
-} from "./race-mode.js?v=20261016-soccerrc3d18";
+} from "./race-mode.js?v=20261020-soccerrc3d19";
 
-const CACHE = "20261016-soccerrc3d18";
+const CACHE = "20261020-soccerrc3d19";
 const HALF_X = 22;
 const HALF_Z = 14;
 const WALL_H = 5.5;
@@ -2025,7 +2025,17 @@ function tickRace(dt) {
       cars[i].tag.scale.set(0.075 * zs, 0.0375 * zs, 1);
     }
   }
-  if (raceMeta.sky) raceMeta.sky.position.copy(camera.position);
+  // Overview pulled far back (portrait / opposite ends of the outer loop): push fog out so cars stay crisp
+  if (scene.fog) {
+    const fd = mode === "overview" ? raceCam.dist : 0;
+    scene.fog.near = Math.max(110, fd + 40);
+    scene.fog.far = Math.max(230, fd * 1.6 + 160);
+  }
+  if (raceMeta.sky) {
+    raceMeta.sky.position.copy(camera.position);
+    // dome (r=290) draws after opaque with depth test: grow it with camera.far so a pulled-back overview never hides far cars
+    raceMeta.sky.scale.setScalar(Math.max(1, (camera.far * 0.9) / 290));
+  }
   updateRaceShadow(look, mode === "chase" ? 34 : mode === "stand" ? Math.max(30, raceCam.dist) : raceCam.dist);
 }
 
@@ -2430,18 +2440,39 @@ function init() {
   window.__s3dDebug = () => ({ mode: gameMode, soccerAi, score: score.slice(), ball: ball && [ball.pos.x, ball.pos.z].map((v) => +v.toFixed(2)), cars: cars.map((c) => ({ ai: !!c.ai, team: c.team, x: +c.pos.x.toFixed(2), z: +c.pos.z.toFixed(2) })) });
   if (demo === "coop") setTimeout(() => { try { startSoccerMode("coop"); } catch (e) { console.warn(e); } }, 300);
   if (demo === "soccer") setTimeout(() => { try { startSoccerMode(); } catch (e) { console.warn(e); } }, 300);
-  if (demo === "race") setTimeout(() => { try { startRaceMode(2, 3); } catch (e) { console.warn(e); } }, 300);
+  if (demo === "race") setTimeout(() => { try { startRaceMode(Math.max(1, Math.min(4, +new URLSearchParams(location.search).get("n") || 2)), 3); } catch (e) { console.warn(e); } }, 300);
 }
 
 init();
 
 // Test hook (headless QA only): ?racedebug=1 → deterministic stepping + state dump.
 if (/[?&]racedebug=1/.test(location.search)) {
+  const _pins = {};
+  // QA: pin car i at track sample ti, `lat` m off the centre line (+ = left of travel)
+  var applyDbgPins = () => {
+    const S = raceMeta && raceMeta.samples;
+    if (!S) return;
+    for (const k in _pins) {
+      const c = cars[k], p = _pins[k];
+      if (!c) continue;
+      const t = ((p.ti % S.N) + S.N) % S.N;
+      c.pos.set(S.px[t] - S.tz[t] * p.lat, S.py[t] + 0.35, S.pz[t] + S.tx[t] * p.lat);
+      c.vx = 0; c.vz = 0; c._ti = t;
+    }
+  };
   window.__raceDebug = {
+    pin(i, ti, lat) { if (ti == null) delete _pins[i]; else _pins[i] = { ti, lat: lat || 0 }; },
+    samples() { const S = raceMeta.samples; return { N: S.N, px: Array.from(S.px), pz: Array.from(S.pz), py: Array.from(S.py) }; },
+    project() {
+      camera.updateMatrixWorld();
+      return { aspect: camera.aspect, fov: camera.fov, near: camera.near, far: camera.far, dist: raceCam.dist, cam: raceCamMode(),
+        cars: cars.map((c) => { const v = c.pos.clone().project(camera); return { x: +v.x.toFixed(3), y: +v.y.toFixed(3), z: +v.z.toFixed(4), wx: +c.pos.x.toFixed(1), wz: +c.pos.z.toFixed(1) }; }) };
+    },
     step(sec) {
       const n = Math.round(sec * 60);
       for (let k = 0; k < n; k++) {
         refreshGamepads();
+        applyDbgPins();
         if (gameMode === "race") { tickRace(1 / 60); updateTracks(1 / 60); }
         if (bannerT > 0) { bannerT -= 1 / 60; if (bannerT <= 0) bannerEl.className = ""; }
       }

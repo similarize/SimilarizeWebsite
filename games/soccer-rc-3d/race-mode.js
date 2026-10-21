@@ -1170,6 +1170,7 @@ export function createRaceCamRig() {
 const _v = new THREE.Vector3(), _v2 = new THREE.Vector3(), _v3 = new THREE.Vector3(), _v4 = new THREE.Vector3(), _v5 = new THREE.Vector3();
 export function updateRaceCam(rig, camera, cars, focusIdx, chaseIdx, meta, dt) {
   const k = (rate) => 1 - Math.exp(-rate * dt);
+  if (rig.mode !== "overview" && (camera.near !== 0.3 || camera.far !== 320)) { camera.near = 0.3; camera.far = 320; camera.updateProjectionMatrix(); }
   if (rig.mode === "chase" && cars[chaseIdx]) {
     const c = cars[chaseIdx];
     const S = meta.samples;
@@ -1250,38 +1251,76 @@ export function updateRaceCam(rig, camera, cars, focusIdx, chaseIdx, meta, dt) {
     return rig.look;
   }
 
-  // Overview: frame focus cars (+ velocity lead), fixed azimuth, tilt ~52°
-  let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity, sy = 0, n = 0;
-  for (const i of focusIdx) {
-    const c = cars[i];
-    if (!c) continue;
-    const lx = c.pos.x + c.vx * 0.45, lz = c.pos.z + c.vz * 0.45;
-    minX = Math.min(minX, c.pos.x, lx); maxX = Math.max(maxX, c.pos.x, lx);
-    minZ = Math.min(minZ, c.pos.z, lz); maxZ = Math.max(maxZ, c.pos.z, lz);
-    sy += c.pos.y; n++;
-  }
-  if (!n) { minX = -20; maxX = 20; minZ = -20; maxZ = 20; n = 1; }
-  const pad = 9;
-  const cx = (minX + maxX) / 2, cz = (minZ + maxZ) / 2;
-  const spanX = maxX - minX + pad * 2, spanZ = maxZ - minZ + pad * 2;
+  // Overview (soccerrc3d19 cam-fit): fixed azimuth, tilt ~53°. Fit EVERY focus car
+  // (humans hard; AI too when it costs little extra zoom) to the real H+V frustum
+  // at the current aspect, so the farthest car stays inside ~85% of the frame on
+  // 16:9 TVs and 9:16 phones alike. Zoom-out is fast, zoom-in slow, and a final
+  // hard clamp guarantees no human car can leave the screen while smoothing.
   const pitch = 0.92; // ~53° down
-  const vfov = THREE.MathUtils.degToRad(camera.fov);
-  const hfov = 2 * Math.atan(Math.tan(vfov / 2) * camera.aspect);
-  // distance needed to fit: x across, z foreshortened by sin(pitch)
-  const needX = spanX / 2 / Math.tan(hfov / 2);
-  const needZ = (spanZ * Math.sin(pitch)) / 2 / Math.tan(vfov / 2);
-  const MIN_D = 24, MAX_D = 62; // MAX_D = cars never shrink below ~readable size
+  const sp_ = Math.sin(pitch), cp_ = Math.cos(pitch);
+  camera.fov += (50 - camera.fov) * k(4);
+  camera.updateProjectionMatrix();
+  const aspect = camera.aspect || 1.6;
+  const tV = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2), tH = tV * aspect;
+  const hard = [], soft = [];
+  const humanSet = new Set(focusIdx);
+  for (let i = 0; i < cars.length; i++) {
+    const c = cars[i];
+    if (!c || !c.pos) continue;
+    (humanSet.has(i) ? hard : soft).push(c);
+  }
+  if (!hard.length) for (const c of soft.splice(0)) hard.push(c);
+  const R = 2.2; // car half-extent + tag allowance (m)
+  const bounds = (list) => {
+    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity, sy = 0;
+    for (const c of list) {
+      const lx = c.pos.x + c.vx * 0.35, lz = c.pos.z + c.vz * 0.35;
+      minX = Math.min(minX, c.pos.x, lx); maxX = Math.max(maxX, c.pos.x, lx);
+      minZ = Math.min(minZ, c.pos.z, lz); maxZ = Math.max(maxZ, c.pos.z, lz);
+      sy += c.pos.y;
+    }
+    return { cx: (minX + maxX) / 2, cz: (minZ + maxZ) / 2, y: list.length ? Math.max(0, sy / list.length) * 0.6 : 0 };
+  };
+  // distance needed so every point of `list` (pos ± R, plus a short velocity lead)
+  // sits within `frac` of the half-frame, looking at (lx, ly, lz)
+  const need = (list, lx, ly, lz, frac, lead) => {
+    let d = 0;
+    for (const c of list) {
+      for (let s = 0; s < (lead ? 2 : 1); s++) {
+        const px = c.pos.x + (s ? c.vx * 0.35 : 0) - lx;
+        const py = c.pos.y + 0.5 - ly;
+        const pz = c.pos.z + (s ? c.vz * 0.35 : 0) - lz;
+        // camera basis: right=(1,0,0) up=(0,cp,-sp) fwd=(0,-sp,-cp); z = dist + P·fwd
+        const pf = -py * sp_ - pz * cp_;
+        const pu = py * cp_ - pz * sp_;
+        d = Math.max(d, (Math.abs(px) + R) / (tH * frac) - pf + R, (Math.abs(pu) + R) / (tV * frac) - pf + R);
+      }
+    }
+    return d;
+  };
+  const bh = bounds(hard), ba = bounds(hard.concat(soft));
+  const dHard = need(hard, bh.cx, bh.y, bh.cz, 0.85, true);
+  const dAll = soft.length ? need(hard.concat(soft), ba.cx, ba.y, ba.cz, 0.85, true) : dHard;
+  // AI joins the shot unless it would more than ~1.4x the zoom-out
+  const useAll = soft.length && dAll <= Math.max(dHard * 1.4, dHard + 18);
+  const tgt = useAll ? ba : bh;
+  const MIN_D = 24, MAX_D = 420;
   const zmO = Math.max(0.5, Math.min(3.2, rig.zoom || 1));
-  const want = Math.max(MIN_D, Math.min(MAX_D, Math.max(needX, needZ))) * zmO;
-  if (!rig.init) { rig.dist = want; rig.look.set(cx, sy / n, cz); }
-  rig.dist += (want - rig.dist) * k(want > rig.dist ? 2.5 : 1.2);
-  _v.set(cx, Math.max(0, sy / n) * 0.6, cz);
-  rig.look.lerp(_v, k(3));
-  rig.pos.set(rig.look.x, rig.look.y + Math.sin(pitch) * rig.dist, rig.look.z + Math.cos(pitch) * rig.dist);
+  const want = Math.max(MIN_D, Math.min(MAX_D, Math.max(useAll ? dAll : dHard, MIN_D) * zmO));
+  if (!rig.init) { rig.dist = want; rig.look.set(tgt.cx, tgt.y, tgt.cz); }
+  rig.look.lerp(_v.set(tgt.cx, tgt.y, tgt.cz), k(4));
+  rig.dist += (want - rig.dist) * k(want > rig.dist ? 5 : 1.1);
+  // Hard guarantee: from the smoothed look point, humans stay inside 95% of the frame
+  const dMust = need(hard, rig.look.x, rig.look.y, rig.look.z, 0.95, false);
+  if (rig.dist < dMust) rig.dist = Math.min(MAX_D * 1.2, dMust);
+  rig.pos.set(rig.look.x, rig.look.y + sp_ * rig.dist, rig.look.z + cp_ * rig.dist);
   rig.init = true;
   camera.position.copy(rig.pos);
   camera.lookAt(rig.look);
-  camera.fov += (50 - camera.fov) * k(4);
+  // Clip planes: keep the whole yard (incl. outer loop) inside near/far at any zoom
+  const nearW = Math.max(0.3, Math.min(1.5, rig.dist * 0.006));
+  const farW = Math.max(320, rig.dist * 2.2 + 220);
+  if (camera.near !== nearW || camera.far !== farW) { camera.near = nearW; camera.far = farW; }
   camera.updateProjectionMatrix();
   return rig.look;
 }
