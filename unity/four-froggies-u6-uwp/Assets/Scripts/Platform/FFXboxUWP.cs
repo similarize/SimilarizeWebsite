@@ -20,7 +20,7 @@ using UnityEngine.InputSystem;
 //     it handled so B stays a game button (Input System still sees it as gamepad buttonEast).
 public static class FFXboxUWP
 {
-    public const string BuildTag = "ff-u6-uwp-ffu73";
+    public const string BuildTag = "ff-u6-uwp-ffu73b";
     public const int TargetW = 1280, TargetH = 720;
 #if UNITY_WSA && !UNITY_EDITOR
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]

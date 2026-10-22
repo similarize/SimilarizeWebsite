@@ -18,7 +18,7 @@ on:
       tag:
         description: 'Release tag (e.g. ff-u6-uwp-ffu73)'
         required: false
-        default: 'ff-u6-uwp-ffu73'
+        default: 'ff-u6-uwp-ffu73b'
       smoke:
         description: 'Best-effort install + launch on the runner (true/false)'
         required: false
@@ -40,7 +40,7 @@ concurrency:
 env:
   PROJECT_DIR: src/unity/four-froggies-u6
   OVERLAY_DIR: src/unity/four-froggies-u6-uwp
-  TAG: ${{ github.event.inputs.tag || 'ff-u6-uwp-ffu73' }}
+  TAG: ${{ github.event.inputs.tag || 'ff-u6-uwp-ffu73b' }}
   SMOKE: ${{ github.event.inputs.smoke || 'true' }}
   PFX_PASS: fourfroggies
   CERT_SUBJECT: CN=Similarize

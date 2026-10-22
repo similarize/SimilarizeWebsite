@@ -143,6 +143,11 @@ public static class FFBuildUWP
                     {
                         var fo = fl.GetArrayElementAtIndex(j).objectReferenceValue;
                         if (fo == null) continue;
+                        // fix 1 (run 39825512350): an inactive SSAO feature makes the build strip URP's SSAO persistent resources ->
+                        // player: "Couldn't find the required resources for the ScreenSpaceAmbientOcclusion render feature", NullRef in
+                        // ScriptableRenderer..ctor, then "Blitter is already initialized" every frame. Keep SSAO active in the asset;
+                        // U6.SsaoOn turns it off at runtime (Perf60.AO is false on the low tier the console boots in).
+                        if (fo.GetType().Name.Contains("ScreenSpaceAmbientOcclusion")) { log += " feature " + fo.name + " kept active (runtime off)"; continue; }
                         var fso = new SerializedObject(fo); var act = fso.FindProperty("m_Active");
                         if (act != null && act.boolValue) { act.boolValue = false; fso.ApplyModifiedPropertiesWithoutUndo(); EditorUtility.SetDirty(fo); log += " feature " + fo.name + " off"; }
                     }
