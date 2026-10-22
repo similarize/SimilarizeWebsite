@@ -262,3 +262,138 @@ public partial class Game
         F72Result(T);
     }
 }
+
+// Extra (Bill Oct 22 07:55) - one help chip per split view: ?ffdemo=1&ffshot=chip72 - 2-way split: two chips (P1 / P2, pad
+//   glyph), each inside the top of its own view, clear of the view title and PHONE button, the single chip hidden; a TAP on
+//   P2's chip opens help in P2's view for P2 (P2's chip hides, P1's stays); a mouse CLICK on P1's chip opens P1's help; P1's
+//   phone open hides P1's chip. 4-way: four chips, each in its own view, no overlaps (chips / titles / PHONE buttons / name
+//   tags). Shared view: the single chip is back, no per-view chips.
+public partial class Game
+{
+    bool c72On;
+    void Chip72TestLobby() { if (c72On) return; c72On = true; StartCoroutine(C72()); }
+
+    string ChipLine72()
+    {
+        var sb = new System.Text.StringBuilder("main " + MainChipShown + " help " + help + " by " + (helpBy != null ? "P" + (slots.IndexOf(helpBy) + 1) : "-") + " split " + HelpSplit + " band " + ViewHud.TopBand72.ToString("0") + " |");
+        for (int k = 0; k < slots.Count; k++) sb.Append(" P" + (k + 1) + (Chip72Shown(k) ? " chip " + Chip72Rect(k).ToString("0") + " '" + Chip72Label(k) + "'" : " no chip") + " view " + (slots[k].cam != null ? slots[k].cam.pixelRect.ToString("0") : "-") + ";");
+        return sb.ToString();
+    }
+
+    // every per-view chip: shown, inside the top band of its own view, clear of its title, PHONE button, other chips, name tags
+    void C72Layout(string tag, int n)
+    {
+        bool ok = !MainChipShown; var sb = new System.Text.StringBuilder();
+        var rs = new System.Collections.Generic.List<Rect>();
+        for (int k = 0; k < n && k < slots.Count; k++)
+        {
+            Slot s = slots[k];
+            if (!Chip72Shown(k) || s.cam == null) { ok = false; sb.Append("P" + (k + 1) + " NO CHIP; "); continue; }
+            Rect c = Chip72Rect(k), v = s.cam.pixelRect;
+            bool inside = c.xMin >= v.xMin - 1f && c.xMax <= v.xMax + 1f && c.yMin >= v.yMin - 1f && c.yMax <= v.yMax + 1f;
+            bool topb = v.yMax - c.yMax < 120f;
+            float tr = s.hud != null ? s.hud.TitleRight72 : 0f;
+            float k2 = Screen.width / Mathf.Max(1f, ((RectTransform)hudCanvas.transform).rect.size.x);
+            Rect title = new Rect(v.xMin + 10f * k2, v.yMax - 46f * k2, (tr - 10f) * k2, 40f * k2);
+            bool clearT = tr <= 0f || !title.Overlaps(c);
+            var ph = s.frog >= 0 && s.frog < 4 ? RobotPhone.Seat[s.frog] : null;
+            bool clearP = ph == null || !ph.ButtonShown || !ph.ButtonScreenRect.Overlaps(c);
+            bool pad = s.kind != InputKind.Gamepad || Chip72PadGlyph(k);
+            bool tagsOk = true;
+            for (int j = 0; j < n && j < slots.Count; j++) if (slots[j].hud != null) foreach (var tr2 in slots[j].hud.TagRects72()) if (tr2.Overlaps(c)) tagsOk = false;
+            foreach (var o in rs) if (o.Overlaps(c)) ok = false;
+            rs.Add(c);
+            if (!inside || !topb || !clearT || !clearP || !pad || !tagsOk) ok = false;
+            sb.Append("P" + (k + 1) + " chip " + c.ToString("0") + " view " + v.ToString("0") + (inside ? "" : " OUTSIDE") + (topb ? "" : " NOT-TOP") + (clearT ? "" : " ON-TITLE") + (clearP ? "" : " ON-PHONE-BTN") + (pad ? "" : " NO-PAD-GLYPH") + (tagsOk ? "" : " UNDER-NAME-TAG") + "; ");
+        }
+        F72Check(tag + ": one chip per view (" + n + "), each in the top of its own view, nothing overlapping, single chip hidden", ok && rs.Count == n, sb.ToString());
+    }
+
+    static Vector2 Mid72(Rect r) { return new Vector2(r.center.x, r.center.y); }
+
+    IEnumerator C72()
+    {
+        const string T = "chip72";
+        Debug.Log("FFU72 start chip72 (per-view help chips) old=" + F72.Old);
+        var pads = new Gamepad[4];
+        yield return F72Join(pads, 2, "FFTestPad72");
+        F72Check("2 pads + LT: a 2-way split", state == State.Play && slots.Count == 2 && LastViews == 2, "views " + LastViews + " | " + SeatList());
+        if (slots.Count < 2) { F72Result(T); yield break; }
+        // froggies close together so name tags show in both views
+        Frog f1 = frogs[slots[0].frog], f2 = frogs[slots[1].frog];
+        Vector3 c0 = Ranch.FrogSpawn(0);
+        f2.SendTo(WorldId.Ranch, c0 + new Vector3(0f, 0f, 6f), 180f); f1.SendTo(WorldId.Ranch, c0, 0f);
+        yield return L59Settle(2f);
+        Debug.Log("FFU72 chips 2-way: " + ChipLine72());
+        if (F72.Old) F72Info("2-way (old)", "single chip shown " + MainChipShown + " at " + (hpMenuChip != null ? ScreenRect72(hpMenuChip).ToString("0") : "-") + " - only one view has a help button");
+        C72Layout("2-way", 2);
+        F72Ph(T, 1, "two");
+        yield return L59Settle(8f);
+        // TAP P2's chip -> P2's help in P2's view
+        if (Chip72Shown(1))
+        {
+            Kb.FakeTap(Mid72(Chip72Rect(1)));
+            yield return L59Frames(4);
+            yield return L59Settle(1f);
+            F72Check("TAP on P2's chip opens help for P2 in P2's view (P2's chip hides, P1's stays)", help && helpBy == slots[1] && HelpSplit && !Chip72Shown(1) && Chip72Shown(0), ChipLine72());
+            F72Ph(T, 2, "tap2");
+            yield return L59Settle(8f);
+            help = false; yield return L59Settle(1f);
+        }
+        else F72Check("TAP on P2's chip opens help for P2", false, "P2 has no chip | " + ChipLine72());
+        // mouse CLICK on P1's chip -> P1's help
+        Mouse ms = Mouse.current; if (ms == null) ms = InputSystem.AddDevice<Mouse>("FFTestMouse72");
+        if (Chip72Shown(0) && ms != null)
+        {
+            Cursor.lockState = CursorLockMode.None;
+            Vector2 mp = Mid72(Chip72Rect(0));
+            InputSystem.QueueStateEvent(ms, new MouseState { position = mp });
+            yield return L59Frames(3);
+            InputSystem.QueueStateEvent(ms, new MouseState { position = mp, buttons = 1 });
+            yield return L59Frames(3);
+            InputSystem.QueueStateEvent(ms, new MouseState { position = mp, buttons = 0 });
+            yield return L59Settle(1f);
+            F72Check("mouse CLICK on P1's chip opens help for P1 in P1's view", help && helpBy == slots[0] && HelpSplit && !Chip72Shown(0) && Chip72Shown(1), ChipLine72() + " | mouse " + ms.position.ReadValue().ToString("0"));
+            help = false; yield return L59Settle(1f);
+        }
+        else F72Check("mouse CLICK on P1's chip opens help for P1", false, "no chip / mouse | " + ChipLine72());
+        // P1's phone open hides P1's chip only
+        yield return L59Press(pads[0], GamepadButton.LeftShoulder);
+        yield return L59Settle(1.2f);
+        var p1 = RobotPhone.Of(f1);
+        F72Check("P1's Robot Phone open: P1's chip hides, P2's stays", p1 != null && p1.open && !Chip72Shown(0) && Chip72Shown(1), ChipLine72());
+        if (p1 != null && p1.open) p1.Close(f1, "probe");
+        yield return L59Settle(1f);
+        // 4-way
+        for (int k = 2; k < 4; k++)
+        {
+            pads[k] = InputSystem.AddDevice<Gamepad>("FFTestPad72");
+            yield return L59Settle(1f);
+            yield return L59Press(pads[k], GamepadButton.South);
+            yield return L59Settle(1.5f);
+        }
+        yield return L59Settle(2f);
+        F72Check("2 more pads join: a 4-way split", slots.Count == 4 && LastViews == 4, "views " + LastViews + " | " + SeatList());
+        for (int k = 0; k < slots.Count; k++) frogs[slots[k].frog].SendTo(WorldId.Ranch, c0 + new Vector3((k % 2) * 5f, 0f, (k / 2) * 6f), k / 2 == 0 ? 0f : 180f);
+        yield return L59Settle(2.5f);
+        Debug.Log("FFU72 chips 4-way: " + ChipLine72());
+        C72Layout("4-way", 4);
+        if (slots.Count == 4 && Chip72Shown(2))
+        {
+            Kb.FakeTap(Mid72(Chip72Rect(2)));
+            yield return L59Frames(4); yield return L59Settle(1f);
+            F72Check("4-way: TAP on P3's chip opens P3's help in P3's view only", help && helpBy == slots[2] && HelpSplit && Chip72Shown(0) && Chip72Shown(1) && !Chip72Shown(2) && Chip72Shown(3), ChipLine72());
+            F72Ph(T, 3, "four3");
+            yield return L59Settle(8f);
+            help = false; yield return L59Settle(1f);
+        }
+        F72Ph(T, 4, "four");
+        yield return L59Settle(8f);
+        // one shared view: the single chip is back
+        if (!shared) { ToggleView(); yield return L59Settle(1.5f); }
+        F72Check("shared view: the single chip is back, no per-view chips", LastViews == 1 && MainChipShown && !Chip72Shown(0) && !Chip72Shown(1) && !Chip72Shown(2) && !Chip72Shown(3), ChipLine72());
+        F72Ph(T, 5, "shared");
+        yield return L59Settle(6f);
+        F72Result(T);
+    }
+}

@@ -111,8 +111,9 @@ public partial class Game
     void HelpTick(float dt)
     {
         // ffu46: help chip for every device (play, help closed): tap (touch) / click (desktop) opens the help screen
-        bool chip = state == State.Play && slots.Count > 0 && !help;
+        bool chip = state == State.Play && slots.Count > 0 && !help && !Chips72On;   // ffu72: split screen = one chip per view (HelpChips72.cs)
         if (hpMenuChip.gameObject.activeSelf != chip) hpMenuChip.gameObject.SetActive(chip);
+        Chips72Tick();
         if (chip)
         {
             ChipTick(ChipKind);

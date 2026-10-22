@@ -50,6 +50,15 @@ public class ViewHud
     }
 
     public void SetActive(bool on) { panel.gameObject.SetActive(on); }
+    public static float TopBand72;   // ffu72: px from a view's top to under its help chip (0 = no per-view chips)
+    public float TitleRight72 { get { return title.text.Length > 0 ? 10f + title.preferredWidth : 0f; } }   // canvas units from the view's left
+    // ffu72 probe: screen rects of the name tags drawn in this view
+    public List<Rect> TagRects72()
+    {
+        var l = new List<Rect>(); var c = new Vector3[4];
+        foreach (var t in tags) if (t != null && t.enabled && t.text.Length > 0) { var rt = t.rectTransform; float sc = rt.lossyScale.x; Vector2 pw = new Vector2(t.preferredWidth, t.preferredHeight) * sc; Vector3 p = rt.position; l.Add(new Rect(p.x - pw.x * 0.5f, p.y - pw.y * 0.5f, pw.x, pw.y)); }
+        return l;
+    }
 
     // ffu21: TV static over a mech pilot's view while the mech's head (cockpit cameras) is blown off, and the small
     // "hold toward the tree" climb progress ring
@@ -204,7 +213,7 @@ public class ViewHud
             Vector3 wp = f.FocusPoint + Vector3.up * (f.vehicle != null ? 2.2f : 1.0f);
             Vector3 sp = cam.WorldToScreenPoint(wp);
             if (sp.z < 0.5f || sp.z > 500f || !cam.pixelRect.Contains(new Vector2(sp.x, sp.y)) || (f == me && f.vehicle == null) || (me != null && f.world != me.world) || f.launching || f.passengerOf != null) { t.enabled = false; continue; }   // ffu27: no tags for froggies hidden inside the Starship
-            float topBand = Mathf.Max(64f, cam.pixelRect.height * 0.1f);   // ffu63: keep name tags under the top-centre Help chip
+            float topBand = Mathf.Max(64f, cam.pixelRect.height * 0.1f, TopBand72);   // ffu63: keep name tags under the top-centre Help chip (ffu72: under each view's own chip)
             if (sp.y > cam.pixelRect.yMax - topBand) sp.y = cam.pixelRect.yMax - topBand;
             Vector2 lp;
             RectTransformUtility.ScreenPointToLocalPointInRectangle(panel, sp, null, out lp);
