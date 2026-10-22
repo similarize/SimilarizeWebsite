@@ -70,6 +70,7 @@ public partial class Game
         demoHook = F7Hook;
         Debug.Log("FFU70 start: P1 " + f.nick + " old=" + F70.Old + " parts " + (Ffu33.Url("f70") ?? "all"));
         if (F70.Has("lake")) yield return F7Lake(f);
+        if (F70.Has("skate")) yield return F7Skate(f);
         F7Done();
     }
 
@@ -140,5 +141,41 @@ public partial class Game
         Debug.Log("FFU70 lake " + tag + ": vehicle v " + V3(vehVel) + " | exit spot " + V3(e0) + " into water " + intoW + " | vel right after exit " + v0.magnitude.ToString("0.00") + " m/s | swimming " + swam + " | drift " + drift.ToString("0.0") + " m in 6 s (total " + total.ToString("0.0") + " m from the exit spot) | vel at end " + vEnd.magnitude.ToString("0.00") + " | max vel after 2 s " + maxV.ToString("0.00"));
         F7Check("lake " + tag + ": no push across the lake after getting out in deep water", swam && drift < 2.5f && total < 6f && vEnd.magnitude < 0.3f,
             "swimming " + swam + ", drift " + drift.ToString("0.0") + " m / 6 s, " + total.ToString("0.0") + " m from the exit spot, end vel " + vEnd.magnitude.ToString("0.00") + " m/s, vehicle was at " + new Vector2(vehVel.x, vehVel.z).magnitude.ToString("0.0") + " m/s");
+    }
+
+    // ---------------- item 10: skateboards = rolling wheels + clacks, no motor sound ----------------
+    IEnumerator F7Skate(Frog f)
+    {
+        if (f.vehicle != null) f.ExitVehicle();
+        Skateboard b = null;
+        foreach (var x in Skateboard.Boards) if (x != null && x.rack && x.driver == null) { b = x; break; }
+        if (b == null) { F7Check("skate: a rack board to ride", false, "none free"); yield break; }
+        f.SendTo(WorldId.Ranch, Skateboard.RackC + new Vector3(0.5f, 0f, 3f), 180f);
+        yield return F7Game(1.5f);
+        int c0 = b.clacks, p0 = b.pops, o0 = b.ollies, l0 = b.landings;
+        f.EnterVehicle(b);
+        b.aiRider = f; b.aiPhase = 0; b.aiT = 0f; b.aiSpinGoal = 180f; b.aiOllie = true; b.aiOllied = false; b.aiRunSecs = 999f;
+        F7Next("skate");
+        float t = 0f, r0 = Time.realtimeSinceStartup, maxRoll = 0f, maxHiss = 0f, maxSpd = 0f; string lv = "-"; bool hum = false, pipeShot = false; float hardT = 0f; Vector3 lp = b.transform.position;
+        while (t < 26f && Time.realtimeSinceStartup - r0 < 240f)
+        {
+            yield return null; t += Time.deltaTime;
+            if (f.vehicle != b) break;
+            hum |= b.HasHum;
+            Vector3 bp = b.transform.position; if (Time.deltaTime > 0f) maxSpd = Mathf.Max(maxSpd, (bp - lp).magnitude / Time.deltaTime); lp = bp;
+            if (b.hardSurface && b.mode == Skateboard.Mode.Ground) hardT += Time.deltaTime;
+            var sv = b.VoiceRaw; if (sv != null) { maxRoll = Mathf.Max(maxRoll, sv.vol[0]); maxHiss = Mathf.Max(maxHiss, sv.vol[1]); }
+            if (t > 6f && lv == "-") lv = b.VoiceLevels;
+            if (t > 9f && !pipeShot) { pipeShot = true; F7Next("skatepipe"); }
+        }
+        int clacks = b.clacks - c0, pops = b.pops - p0, ollies = b.ollies - o0, lands = b.landings - l0;
+        Debug.Log("FFU70 skate: " + b.name + " rode " + t.ToString("0") + " s, max speed " + maxSpd.ToString("0.0") + " m/s, " + hardT.ToString("0.0") + " s on a hard surface (" + b.lastSurface + ") | clacks " + clacks + " pops " + pops + " (ollies " + ollies + ", landings " + lands + ") | voice " + lv + "| max roll " + maxRoll.ToString("0.00") + " hiss " + maxHiss.ToString("0.00") + " | hum source " + hum);
+        F7Check("skate: no motor / bearing hum layer on the board", !hum, "hum source " + hum + ", voice " + lv);
+        F7Check("skate: rolling-wheel sound while it rolls", maxRoll > 0.05f && maxHiss > 0.02f, "max roll " + maxRoll.ToString("0.00") + ", hiss " + maxHiss.ToString("0.00"));
+        F7Check("skate: clacks over the seams at speed", clacks >= 4, clacks + " clacks in " + hardT.ToString("0.0") + " s on concrete, max " + maxSpd.ToString("0.0") + " m/s");
+        F7Check("skate: ollie pop / landing clack", ollies + lands == 0 || pops >= 1, pops + " pops for " + ollies + " ollies + " + lands + " landings");
+        b.aiRider = null;
+        if (f.vehicle != null) f.ExitVehicle();
+        yield return F7Game(1f);
     }
 }

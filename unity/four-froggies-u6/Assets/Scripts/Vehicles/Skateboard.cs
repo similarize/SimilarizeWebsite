@@ -14,7 +14,8 @@ using UnityEngine;
 // "vert air" (it stays over the coping line, up and back down into the pipe); stick spins it in the air; land straight
 // or fakie, else BAIL. Bails also on a too-hard landing, a landing far off level, or hitting a wall: the froggy tumbles
 // off, the board rolls away on its own and stops; walk up to it to get back on. No wheel size (BigWheels.Resizable is false
-// for boards - they keep stock wheels). Voice: SynthVoice kind 17 (urethane roll + bearing hum, its own pitch).
+// for boards - they keep stock wheels). Voice: SynthVoice kind 17 (urethane roll + hiss; ffu70: no bearing hum / motor tone) plus
+// ffu70 one-shots: SkateClack per concrete seam / deck joint under each truck at the real wheel speed, SkatePop on the ollie + landings.
 // AI froggies now and then walk to the park rack, grab a board and ride the half-pipe for a while (SkateAI).
 public class Skateboard : Vehicle
 {
@@ -31,6 +32,9 @@ public class Skateboard : Vehicle
     public float maxAirH, maxSpeed, airT, lastAirT, rideT;
     public string lastSurface = "-", lastBail = "";
     public float kickT, crouchT, ollieCool, bailCool;
+    // ffu70 (Ben item 10): seam clacks - distance rolled since the last joint, the rear truck's clack still to come, counters for the probe
+    float seamD, seamRearD = -1f; public bool hardSurface; public int clacks, pops;
+    const float SeamGap = 1.5f, Wheelbase = 0.43f;
     public bool onPipe;               // last ground contact was the half-pipe
     public Frog lastRider;
     Transform deckT, seatT; readonly Transform[] wheelT = new Transform[4]; float wheelSpin;
@@ -291,7 +295,8 @@ public class Skateboard : Vehicle
             ollieCool = 0.45f; ollies++; crouchT = 0.35f;
             vel = head * s + n * 4.3f;
             mode = Mode.Air; airUp = n; airT = 0f;
-            Sfx.PlayAt(Sfx.Thud, pos, 0.35f, 30f, 1.9f);
+            if (F70.Old) Sfx.PlayAt(Sfx.Thud, pos, 0.35f, 30f, 1.9f);
+            else Pop(0.6f, 1f);   // ffu70: tail pop
             return;
         }
         vel = head * s;
@@ -331,7 +336,7 @@ public class Skateboard : Vehicle
             }
             pos = h.point;
             onPipe = h.collider.name == "Half-pipe";
-            lastSurface = h.collider.name;
+            lastSurface = h.collider.name; hardSurface = !(h.collider is TerrainCollider);
             n = Vector3.Slerp(n, n2, 0.85f).normalized;
             Vector3 nh = Vector3.ProjectOnPlane(head, n);
             if (nh.sqrMagnitude > 1e-6f) head = nh.normalized;
@@ -375,6 +380,7 @@ public class Skateboard : Vehicle
             head = hh; s = Vector3.Dot(vel, head); mode = Mode.Ground; onPipe = true; landings++;
             if (ridden && driver != null && driver.human) driver.Toast((Mathf.Abs(Mathf.DeltaAngle(spin, 0f)) > 120f ? "180 AIR! " : "AIR! ") + Mathf.Max(0.1f, maxAirRun).ToString("0.0") + " m over the coping", 1.3f);
             Sfx.PlayAt(Sfx.Thud, pos, 0.45f, 35f, 1.5f);
+            if (!F70.Old) Pop(0.5f, 0.85f);   // ffu70 landing clack
             maxAirRun = 0f;
         }
         else maxAirRun = Mathf.Max(maxAirRun, pos.y - CopingY);
@@ -411,8 +417,8 @@ public class Skateboard : Vehicle
             pos = h.point; n = n2; head = hh; mode = Mode.Ground;
             s = Vector3.Dot(vt, hh) * 0.95f;
             if (!ridden && Mathf.Abs(s) < 0.2f && vt.magnitude > 0.5f) { head = vt.normalized; s = vt.magnitude * 0.9f; }
-            onPipe = h.collider.name == "Half-pipe"; lastSurface = h.collider.name;
-            if (airT > 0.25f) { airs++; landings++; Sfx.PlayAt(Sfx.Thud, pos, Mathf.Clamp01(vn / 8f) * 0.5f + 0.15f, 35f, 1.6f); }
+            onPipe = h.collider.name == "Half-pipe"; lastSurface = h.collider.name; hardSurface = !(h.collider is TerrainCollider);
+            if (airT > 0.25f) { airs++; landings++; Sfx.PlayAt(Sfx.Thud, pos, Mathf.Clamp01(vn / 8f) * 0.5f + 0.15f, 35f, 1.6f); if (!F70.Old) Pop(0.35f + Mathf.Clamp01(vn / 8f) * 0.4f, 0.85f); }
             vel = head * s;
             return;
         }
@@ -465,7 +471,37 @@ public class Skateboard : Vehicle
         voice.gain = gk;
         bool on = ridden || rolling || mode != Mode.Ground;
         voice.Tick(on, Mathf.Abs(mode == Mode.Ground ? s : vel.magnitude), kickT > 0f ? 1f : 0f, onPipe ? 0f : 1f, mode == Mode.Ground ? 1f : 0f, dt);
+        if (!F70.Old) Seams(dt, gk);
     }
+
+    // ffu70 (Ben item 10): clack-clack over concrete seams / deck joints - the front truck, then the rear one a wheelbase later, at the
+    // real rolling speed (none on grass / dirt, none in the air). Seams are ~1.5 m apart (slightly jittered so it never sounds metronomic).
+    void Seams(float dt, float gk)
+    {
+        float v = Mathf.Abs(s);
+        if (mode != Mode.Ground || !hardSurface || v < 0.6f) { seamRearD = -1f; return; }
+        float d = v * dt;
+        if (seamRearD >= 0f) { seamRearD -= d; if (seamRearD < 0f) { Clack(v, gk, 0.8f); seamRearD = -1f; } }
+        seamD += d;
+        if (seamD >= SeamGap) { seamD = Random.Range(-0.25f, 0.2f); Clack(v, gk, 1f); seamRearD = Wheelbase; }
+    }
+    void Clack(float v, float gk, float k)
+    {
+        if (SfxSynth.SkateClack == null) return;
+        clacks++;
+        float vol = k * gk * Mathf.Clamp01(0.2f + v / 9f) * (onPipe ? 0.45f : 0.6f);
+        if (driver != null && driver.human) Sfx.Play(SfxSynth.SkateClack, vol, Random.Range(0.92f, 1.08f) * (onPipe ? 1.12f : 1f));
+        else Sfx.PlayAt(SfxSynth.SkateClack, pos, vol, 30f, Random.Range(0.92f, 1.08f));
+    }
+    void Pop(float vol, float pitch)
+    {
+        SfxSynth.Build();
+        pops++;
+        if (driver != null && driver.human) Sfx.Play(SfxSynth.SkatePop, vol, pitch * Random.Range(0.95f, 1.05f));
+        else Sfx.PlayAt(SfxSynth.SkatePop, pos, vol, 35f, pitch);
+    }
+    public bool HasHum { get { return voice != null && voice.b != null && voice.b.clip == SfxSynth.SkateHum && SfxSynth.SkateHum != null; } }   // ffu70 probe
+    public SynthVoice VoiceRaw { get { return voice; } }   // ffu70 probe
     public string VoiceLevels { get { return voice != null ? voice.Levels() : "-"; } }
 
     // ---------------- visuals: wheels + rider pose ----------------
