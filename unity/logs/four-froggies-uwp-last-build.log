@@ -1,33 +1,33 @@
-UWP run 39496533170 attempt 1 event push sha 882077453d6233855d34a39db6770085931bb634 tag ff-uwp-ffu67x started 2026-10-20T20:58:50Z
+UWP run 39706264105 attempt 1 event workflow_dispatch sha 9dcd37057cb27421fb2cb9aac16fb6ea8f00ee39 tag ff-uwp-ffu67d started 2026-10-22T01:32:44Z
 secrets present
 src/unity/four-froggies/Assets/Editor:
 total 52
-drwxr-xr-x 1 runneradmin 197121     0 Oct 20 20:58 .
-drwxr-xr-x 1 runneradmin 197121     0 Oct 20 20:58 ..
--rw-r--r-- 1 runneradmin 197121 35988 Oct 20 20:58 BuildScript.cs
--rw-r--r-- 1 runneradmin 197121 11465 Oct 20 20:58 FFBuildUWP.cs
+drwxr-xr-x 1 runneradmin 197121     0 Oct 22 01:32 .
+drwxr-xr-x 1 runneradmin 197121     0 Oct 22 01:32 ..
+-rw-r--r-- 1 runneradmin 197121 36710 Oct 22 01:32 BuildScript.cs
+-rw-r--r-- 1 runneradmin 197121 11465 Oct 22 01:32 FFBuildUWP.cs
 
 src/unity/four-froggies/Assets/Scripts/Platform:
 total 28
-drwxr-xr-x 1 runneradmin 197121     0 Oct 20 20:58 .
-drwxr-xr-x 1 runneradmin 197121     0 Oct 20 20:58 ..
--rw-r--r-- 1 runneradmin 197121 25316 Oct 20 20:58 FFXboxUWP.cs
+drwxr-xr-x 1 runneradmin 197121     0 Oct 22 01:32 .
+drwxr-xr-x 1 runneradmin 197121     0 Oct 22 01:32 ..
+-rw-r--r-- 1 runneradmin 197121 25316 Oct 22 01:32 FFXboxUWP.cs
 
 src/unity/four-froggies/UWPTiles:
 total 388
-drwxr-xr-x 1 runneradmin 197121      0 Oct 20 20:58 .
-drwxr-xr-x 1 runneradmin 197121      0 Oct 20 20:58 ..
--rw-r--r-- 1 runneradmin 197121 137296 Oct 20 20:58 splash620x300.png
--rw-r--r-- 1 runneradmin 197121  35939 Oct 20 20:58 sq150.png
--rw-r--r-- 1 runneradmin 197121 140688 Oct 20 20:58 sq310.png
--rw-r--r-- 1 runneradmin 197121   4300 Oct 20 20:58 sq44.png
--rw-r--r-- 1 runneradmin 197121   5309 Oct 20 20:58 sq50.png
--rw-r--r-- 1 runneradmin 197121   9636 Oct 20 20:58 sq71.png
--rw-r--r-- 1 runneradmin 197121  37454 Oct 20 20:58 wide310x150.png
+drwxr-xr-x 1 runneradmin 197121      0 Oct 22 01:32 .
+drwxr-xr-x 1 runneradmin 197121      0 Oct 22 01:32 ..
+-rw-r--r-- 1 runneradmin 197121 137296 Oct 22 01:32 splash620x300.png
+-rw-r--r-- 1 runneradmin 197121  35939 Oct 22 01:32 sq150.png
+-rw-r--r-- 1 runneradmin 197121 140688 Oct 22 01:32 sq310.png
+-rw-r--r-- 1 runneradmin 197121   4300 Oct 22 01:32 sq44.png
+-rw-r--r-- 1 runneradmin 197121   5309 Oct 22 01:32 sq50.png
+-rw-r--r-- 1 runneradmin 197121   9636 Oct 22 01:32 sq71.png
+-rw-r--r-- 1 runneradmin 197121  37454 Oct 22 01:32 wide310x150.png
 11M	src/unity/four-froggies/Assets/StreamingAssets/real
 23M	src/unity/four-froggies/Assets/StreamingAssets/realroom
 11M	src/unity/four-froggies/Assets/Resources/FFMusic
-cert: subject CN=Similarize thumb 29F8AD00CE833EF302FAC2D7249170C19150218A notAfter 10/20/2031 20:58:51
+cert: subject CN=Similarize thumb FA6E57DB0CE54EDE857D7EB21FA72B10D8401B3A notAfter 10/22/2031 01:32:45
 vs: C:\Program Files\Microsoft Visual Studio\2022\Enterprise
 UWP.VC (v143) missing -> installing
 vs_installer exit 0
@@ -57,7 +57,7 @@ FFUWP: EditorUserBuildSettings.wsaUWPBuildType = D3D
 FFUWP: EditorUserBuildSettings.wsaSubtarget = AnyDevice
 FFUWP: EditorUserBuildSettings.wsaArchitecture = x64
 FFUWP: EditorUserBuildSettings.wsaBuildAndRunDeployTarget = LocalMachine
-BUILD_RESULT: Succeeded target=UWP errors=0 warnings=23 size=557976372 time=00:03:07.7465998
+BUILD_RESULT: Succeeded target=UWP errors=0 warnings=24 size=560539488 time=00:03:07.8311026
 BUILD_SCRIPT_EXIT: 0
 out: Four Froggies
 out: Il2CppOutputProject
@@ -65,60 +65,60 @@ out: Four Froggies.sln
 out: UnityCommon.props
 solution: Four Froggies.sln
 manifest: D:\a\SimilarizeWebsite\SimilarizeWebsite\src\unity\four-froggies\build\UWP\Four Froggies\Package.appxmanifest
-identity: name=SimilarizeFourFroggies publisher=CN=Similarize version=1.0.5.0
+identity: name=SimilarizeFourFroggies publisher=CN=Similarize version=1.0.6.0
 device family: Windows.Universal min 10.0.10240.0 max 10.0.26100.0
 capability: Capability internetClient
 drop WindowsMobile, Version=10.0.26100.0 from Four Froggies.vcxproj
 msbuild: C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\MSBuild.exe
 msbuild exit 0 after 7 min
-pkg: \Four Froggies_1.0.5.0_Master_Test\Add-AppDevPackage.ps1 42415
-pkg: \Four Froggies_1.0.5.0_Master_Test\Four Froggies_1.0.5.0_x64_Master.appxbundle 79084127
-pkg: \Four Froggies_1.0.5.0_Master_Test\Four Froggies_1.0.5.0_x64_Master.appxsym 101862954
-pkg: \Four Froggies_1.0.5.0_Master_Test\Four Froggies_1.0.5.0_x64_Master.cer 780
-pkg: \Four Froggies_1.0.5.0_Master_Test\Install.ps1 16554
-pkg: \Four Froggies_1.0.5.0_Master_Test\Add-AppDevPackage.resources\Add-AppDevPackage.psd1 10150
-pkg: \Four Froggies_1.0.5.0_Master_Test\Add-AppDevPackage.resources\cs-CZ\Add-AppDevPackage.psd1 10278
-pkg: \Four Froggies_1.0.5.0_Master_Test\Add-AppDevPackage.resources\de-DE\Add-AppDevPackage.psd1 11628
-pkg: \Four Froggies_1.0.5.0_Master_Test\Add-AppDevPackage.resources\en-US\Add-AppDevPackage.psd1 10150
-pkg: \Four Froggies_1.0.5.0_Master_Test\Add-AppDevPackage.resources\es-ES\Add-AppDevPackage.psd1 10834
-pkg: \Four Froggies_1.0.5.0_Master_Test\Add-AppDevPackage.resources\fr-FR\Add-AppDevPackage.psd1 11344
-pkg: \Four Froggies_1.0.5.0_Master_Test\Add-AppDevPackage.resources\it-IT\Add-AppDevPackage.psd1 10738
-pkg: \Four Froggies_1.0.5.0_Master_Test\Add-AppDevPackage.resources\ja-JP\Add-AppDevPackage.psd1 6698
-pkg: \Four Froggies_1.0.5.0_Master_Test\Add-AppDevPackage.resources\ko-KR\Add-AppDevPackage.psd1 6348
-pkg: \Four Froggies_1.0.5.0_Master_Test\Add-AppDevPackage.resources\pl-PL\Add-AppDevPackage.psd1 10106
-pkg: \Four Froggies_1.0.5.0_Master_Test\Add-AppDevPackage.resources\pt-BR\Add-AppDevPackage.psd1 10580
-pkg: \Four Froggies_1.0.5.0_Master_Test\Add-AppDevPackage.resources\ru-RU\Add-AppDevPackage.psd1 10342
-pkg: \Four Froggies_1.0.5.0_Master_Test\Add-AppDevPackage.resources\tr-TR\Add-AppDevPackage.psd1 9608
-pkg: \Four Froggies_1.0.5.0_Master_Test\Add-AppDevPackage.resources\zh-CN\Add-AppDevPackage.psd1 4998
-pkg: \Four Froggies_1.0.5.0_Master_Test\Add-AppDevPackage.resources\zh-TW\Add-AppDevPackage.psd1 5180
-pkg: \Four Froggies_1.0.5.0_Master_Test\Dependencies\ARM\Microsoft.VCLibs.ARM.14.00.appx 835614
-pkg: \Four Froggies_1.0.5.0_Master_Test\Dependencies\ARM64\Microsoft.VCLibs.ARM64.14.00.appx 1570406
-pkg: \Four Froggies_1.0.5.0_Master_Test\Dependencies\x64\Microsoft.VCLibs.x64.14.00.appx 896581
-pkg: \Four Froggies_1.0.5.0_Master_Test\Dependencies\x86\Microsoft.VCLibs.x86.14.00.appx 758544
-pkg: \Four Froggies_1.0.5.0_Master_Test\TelemetryDependencies\LogSideloadingTelemetry.ps1 17415
-pkg: \Four Froggies_1.0.5.0_Master_Test\TelemetryDependencies\Microsoft.Diagnostics.Tracing.EventSource.dll 170288
-pkg: \Four Froggies_1.0.5.0_Master_Test\TelemetryDependencies\Microsoft.VisualStudio.RemoteControl.dll 47536
-pkg: \Four Froggies_1.0.5.0_Master_Test\TelemetryDependencies\Microsoft.VisualStudio.Telemetry.dll 1026088
-pkg: \Four Froggies_1.0.5.0_Master_Test\TelemetryDependencies\Microsoft.VisualStudio.Utilities.Internal.dll 62480
-pkg: \Four Froggies_1.0.5.0_Master_Test\TelemetryDependencies\Newtonsoft.Json.dll 711952
-pkg: \Four Froggies_1.0.5.0_Master_Test\TelemetryDependencies\System.Runtime.CompilerServices.Unsafe.dll 19224
-bundle: Four Froggies_1.0.5.0_x64_Master.appxbundle -> FourFroggies-ff-uwp-ffu67x_x64.appxbundle 79084127 B; deps: Microsoft.VCLibs.x64.14.00.appx 896581
-bundle signer: CN=Similarize thumb 29F8AD00CE833EF302FAC2D7249170C19150218A status UnknownError
-bundle entries: Four%20Froggies_1.0.5.0_x64_Master.appx, AppxBlockMap.xml, [Content_Types].xml, AppxSignature.p7x
-package: Four%20Froggies_1.0.5.0_x64_Master.appx name=SimilarizeFourFroggies publisher=CN=Similarize arch=x64 version=1.0.5.0 streamingAssets files=151
+pkg: \Four Froggies_1.0.6.0_Master_Test\Add-AppDevPackage.ps1 42415
+pkg: \Four Froggies_1.0.6.0_Master_Test\Four Froggies_1.0.6.0_x64_Master.appxbundle 79166273
+pkg: \Four Froggies_1.0.6.0_Master_Test\Four Froggies_1.0.6.0_x64_Master.appxsym 102334744
+pkg: \Four Froggies_1.0.6.0_Master_Test\Four Froggies_1.0.6.0_x64_Master.cer 780
+pkg: \Four Froggies_1.0.6.0_Master_Test\Install.ps1 16554
+pkg: \Four Froggies_1.0.6.0_Master_Test\Add-AppDevPackage.resources\Add-AppDevPackage.psd1 10150
+pkg: \Four Froggies_1.0.6.0_Master_Test\Add-AppDevPackage.resources\cs-CZ\Add-AppDevPackage.psd1 10278
+pkg: \Four Froggies_1.0.6.0_Master_Test\Add-AppDevPackage.resources\de-DE\Add-AppDevPackage.psd1 11628
+pkg: \Four Froggies_1.0.6.0_Master_Test\Add-AppDevPackage.resources\en-US\Add-AppDevPackage.psd1 10150
+pkg: \Four Froggies_1.0.6.0_Master_Test\Add-AppDevPackage.resources\es-ES\Add-AppDevPackage.psd1 10834
+pkg: \Four Froggies_1.0.6.0_Master_Test\Add-AppDevPackage.resources\fr-FR\Add-AppDevPackage.psd1 11344
+pkg: \Four Froggies_1.0.6.0_Master_Test\Add-AppDevPackage.resources\it-IT\Add-AppDevPackage.psd1 10738
+pkg: \Four Froggies_1.0.6.0_Master_Test\Add-AppDevPackage.resources\ja-JP\Add-AppDevPackage.psd1 6698
+pkg: \Four Froggies_1.0.6.0_Master_Test\Add-AppDevPackage.resources\ko-KR\Add-AppDevPackage.psd1 6348
+pkg: \Four Froggies_1.0.6.0_Master_Test\Add-AppDevPackage.resources\pl-PL\Add-AppDevPackage.psd1 10106
+pkg: \Four Froggies_1.0.6.0_Master_Test\Add-AppDevPackage.resources\pt-BR\Add-AppDevPackage.psd1 10580
+pkg: \Four Froggies_1.0.6.0_Master_Test\Add-AppDevPackage.resources\ru-RU\Add-AppDevPackage.psd1 10342
+pkg: \Four Froggies_1.0.6.0_Master_Test\Add-AppDevPackage.resources\tr-TR\Add-AppDevPackage.psd1 9608
+pkg: \Four Froggies_1.0.6.0_Master_Test\Add-AppDevPackage.resources\zh-CN\Add-AppDevPackage.psd1 4998
+pkg: \Four Froggies_1.0.6.0_Master_Test\Add-AppDevPackage.resources\zh-TW\Add-AppDevPackage.psd1 5180
+pkg: \Four Froggies_1.0.6.0_Master_Test\Dependencies\ARM\Microsoft.VCLibs.ARM.14.00.appx 835614
+pkg: \Four Froggies_1.0.6.0_Master_Test\Dependencies\ARM64\Microsoft.VCLibs.ARM64.14.00.appx 1570406
+pkg: \Four Froggies_1.0.6.0_Master_Test\Dependencies\x64\Microsoft.VCLibs.x64.14.00.appx 896581
+pkg: \Four Froggies_1.0.6.0_Master_Test\Dependencies\x86\Microsoft.VCLibs.x86.14.00.appx 758544
+pkg: \Four Froggies_1.0.6.0_Master_Test\TelemetryDependencies\LogSideloadingTelemetry.ps1 17415
+pkg: \Four Froggies_1.0.6.0_Master_Test\TelemetryDependencies\Microsoft.Diagnostics.Tracing.EventSource.dll 170288
+pkg: \Four Froggies_1.0.6.0_Master_Test\TelemetryDependencies\Microsoft.VisualStudio.RemoteControl.dll 47536
+pkg: \Four Froggies_1.0.6.0_Master_Test\TelemetryDependencies\Microsoft.VisualStudio.Telemetry.dll 1026088
+pkg: \Four Froggies_1.0.6.0_Master_Test\TelemetryDependencies\Microsoft.VisualStudio.Utilities.Internal.dll 62480
+pkg: \Four Froggies_1.0.6.0_Master_Test\TelemetryDependencies\Newtonsoft.Json.dll 711952
+pkg: \Four Froggies_1.0.6.0_Master_Test\TelemetryDependencies\System.Runtime.CompilerServices.Unsafe.dll 19224
+bundle: Four Froggies_1.0.6.0_x64_Master.appxbundle -> FourFroggies-ff-uwp-ffu67d_x64.appxbundle 79166273 B; deps: Microsoft.VCLibs.x64.14.00.appx 896581
+bundle signer: CN=Similarize thumb FA6E57DB0CE54EDE857D7EB21FA72B10D8401B3A status UnknownError
+bundle entries: Four%20Froggies_1.0.6.0_x64_Master.appx, AppxBlockMap.xml, [Content_Types].xml, AppxSignature.p7x
+package: Four%20Froggies_1.0.6.0_x64_Master.appx name=SimilarizeFourFroggies publisher=CN=Similarize arch=x64 version=1.0.6.0 streamingAssets files=151
 dep: TargetDeviceFamily Windows.Universal 10.0.10240.0
 dep: PackageDependency Microsoft.VCLibs.140.00 14.0.33519.0
 cap: Capability internetClient
-REL_ASSET: FourFroggies-ff-uwp-ffu67x_x64.appxbundle 79084127
-REL_ASSET: FourFroggies-ff-uwp-ffu67x.cer 780
-REL_ASSET: FourFroggies-UWP-ff-uwp-ffu67x-package.zip 183990237
+REL_ASSET: FourFroggies-ff-uwp-ffu67d_x64.appxbundle 79166273
+REL_ASSET: FourFroggies-ff-uwp-ffu67d.cer 780
+REL_ASSET: FourFroggies-UWP-ff-uwp-ffu67d-package.zip 184541561
 REL_ASSET: INSTALL-XBOX.txt 4738
 REL_ASSET: Microsoft.VCLibs.x64.14.00.appx 896581
-RELEASE_URL: https://github.com/similarize/SimilarizeWebsite/releases/tag/ff-uwp-ffu67x
-SMOKE installed: SimilarizeFourFroggies_1.0.5.0_x64__340vxgwa52sse at C:\Program Files\WindowsApps\SimilarizeFourFroggies_1.0.5.0_x64__340vxgwa52sse
+RELEASE_URL: https://github.com/similarize/SimilarizeWebsite/releases/tag/ff-uwp-ffu67d
+SMOKE installed: SimilarizeFourFroggies_1.0.6.0_x64__340vxgwa52sse at C:\Program Files\WindowsApps\SimilarizeFourFroggies_1.0.6.0_x64__340vxgwa52sse
 SMOKE launch SimilarizeFourFroggies_340vxgwa52sse!App
 SMOKE screenshot 1024x768
-SMOKE running processes: Four Froggies 930 MB
+SMOKE running processes: Four Froggies 928 MB
 === SMOKE UnityPlayer.log (grep)
 Direct3D:
     Version:  Direct3D 11.0 [level 11.1]
@@ -176,12 +176,12 @@ FFXboxAudio:Apply(Int32, String, Boolean)
 FFXboxAudio:Update()
 FFXBOX AUDIO status: out 48000 Hz Stereo dsp 1024 voices 32/512 out 48000 Hz | driver Stereo | mixer clock - | listeners 1 vol 1.00 | game SOUND ON | sources playing 2/90 | focus True | resets 2 device changes 2 | FMOD: no FMOD complaint since launch | music: mus_lobby playing 0.00 Loaded; amb_ranch playing 0.00 Loaded; restarts 0 reloads 0 re-requests 0 | last -
 FFXboxAudio:Update()
-FFXBOX: profile on - res 1024x768 vsync 2 tier low (locked) views 1 aa 0 shadows HardOnly 15m x1 culled 0/0 realism lite mem 13 MB managed
+FFXBOX: profile on - res 1024x768 vsync 2 tier low (locked) views 1 aa 0 shadows HardOnly 15m x1 culled 0/0 realism lite mem 14 MB managed
 FFXboxUWPRunner:Enforce()
 FFXboxUWPRunner:Update()
-PERF60 sea gate: 777 sea + 271 sea-life renderers draw only for cameras near / under the pond
-FFXBOX perf: 3.2 fps 312.5 ms (worst 328 ms) res 1024x768 vsync 2 tier low (locked) views 1 aa 0 shadows HardOnly 15m x1 culled 0/0 realism lite mem 15 MB managed
+FFXBOX perf: 1.9 fps 531.3 ms (worst 1178 ms) res 1024x768 vsync 2 tier low (locked) views 1 aa 0 shadows HardOnly 15m x1 culled 0/0 realism lite mem 13 MB managed
 FFXboxUWPRunner:Update()
+PERF60 sea gate: 777 sea + 271 sea-life renderers draw only for cameras near / under the pond
 Realism: terrain layers (grass / dirt / shore / mud with normal maps, NM material)
 Realism:ApplyTerrain(Terrain)
 Realism: lily pads re-skinned 9
@@ -199,24 +199,24 @@ TERRAIN56 buildings: house 242, garage 16, trailer barn 3 renderers -> siding / 
 Terrain56:Buildings()
 TERRAIN56 grass: instanced clumps, lite r 26 m, 0.9 /m2, shader FF/Grass56 supported True
 TERRAIN56 tracks: 900 print slots, atlas frog / boot / tyre / hoof
-TERRAIN56 ready in 6.0 s: layers 4, leaf cards 5000, building swaps 261, grass lite r 26 m, 0.9 /m2
-FFXBOX perf: 2.0 fps 504.3 ms (worst 572 ms) res 1024x768 vsync 2 tier low (locked) views 1 aa 0 shadows HardOnly 15m x1 grass 0c/0.0k r13 culled 0/0 realism lite mem 15 MB managed
+TERRAIN56 ready in 5.9 s: layers 4, leaf cards 5000, building swaps 261, grass lite r 26 m, 0.9 /m2
+FFXBOX perf: 1.8 fps 547.0 ms (worst 1078 ms) res 1024x768 vsync 2 tier low (locked) views 1 aa 0 shadows HardOnly 15m x1 grass 0c/0.0k r13 culled 0/0 realism lite mem 16 MB managed
 FFXboxUWPRunner:Update()
-FFXBOX perf: 2.3 fps 427.1 ms (worst 438 ms) res 1024x768 vsync 2 tier low (locked) views 1 aa 0 shadows HardOnly 15m x1 grass 0c/0.0k r13 culled 0/0 realism lite mem 14 MB managed
+FFXBOX perf: 2.4 fps 409.3 ms (worst 415 ms) res 1024x768 vsync 2 tier low (locked) views 1 aa 0 shadows HardOnly 15m x1 grass 0c/0.0k r13 culled 0/0 realism lite mem 14 MB managed
 FFXboxUWPRunner:Update()
-FFXBOX perf: 2.5 fps 406.3 ms (worst 438 ms) res 1024x768 vsync 2 tier low (locked) views 1 aa 0 shadows HardOnly 15m x1 grass 0c/0.0k r13 culled 0/0 realism lite mem 14 MB managed
+FFXBOX perf: 2.4 fps 410.1 ms (worst 415 ms) res 1024x768 vsync 2 tier low (locked) views 1 aa 0 shadows HardOnly 15m x1 grass 0c/0.0k r13 culled 0/0 realism lite mem 14 MB managed
 FFXboxUWPRunner:Update()
-FFXBOX perf: 2.4 fps 411.5 ms (worst 415 ms) res 1024x768 vsync 2 tier low (locked) views 1 aa 0 shadows HardOnly 15m x1 grass 0c/0.0k r13 culled 0/0 realism lite mem 15 MB managed
+FFXBOX perf: 2.5 fps 406.6 ms (worst 407 ms) res 1024x768 vsync 2 tier low (locked) views 1 aa 0 shadows HardOnly 15m x1 grass 0c/0.0k r13 culled 0/0 realism lite mem 14 MB managed
 FFXboxUWPRunner:Update()
-FFXBOX perf: 1.7 fps 593.8 ms (worst 607 ms) res 1024x768 vsync 2 tier low (locked) views 1 aa 0 shadows HardOnly 15m x1 grass 0c/0.0k r13 culled 0/0 realism lite mem 14 MB managed
+FFXBOX perf: 1.7 fps 583.2 ms (worst 591 ms) res 1024x768 vsync 2 tier low (locked) views 1 aa 0 shadows HardOnly 15m x1 grass 0c/0.0k r13 culled 0/0 realism lite mem 15 MB managed
 FFXboxUWPRunner:Update()
-FFXBOX perf: 1.1 fps 906.3 ms (worst 1203 ms) res 1024x768 vsync 2 tier low (locked) views 1 aa 0 shadows HardOnly 15m x1 grass 0c/0.0k r13 culled 0/0 realism lite mem 14 MB managed
+FFXBOX perf: 1.7 fps 602.0 ms (worst 609 ms) res 1024x768 vsync 2 tier low (locked) views 1 aa 0 shadows HardOnly 15m x1 grass 0c/0.0k r13 culled 0/0 realism lite mem 15 MB managed
 FFXboxUWPRunner:Update()
-FFXBOX perf: 1.6 fps 631.3 ms (worst 633 ms) res 1024x768 vsync 2 tier low (locked) views 1 aa 0 shadows HardOnly 15m x1 grass 0c/0.0k r13 culled 0/0 realism lite mem 14 MB managed
+FFXBOX perf: 1.6 fps 612.2 ms (worst 614 ms) res 1024x768 vsync 2 tier low (locked) views 1 aa 0 shadows HardOnly 15m x1 grass 0c/0.0k r13 culled 0/0 realism lite mem 14 MB managed
 FFXboxUWPRunner:Update()
-FFXBOX perf: 1.7 fps 595.9 ms (worst 600 ms) res 1024x768 vsync 2 tier low (locked) views 1 aa 0 shadows HardOnly 15m x1 grass 0c/0.0k r13 culled 0/0 realism lite mem 15 MB managed
+FFXBOX perf: 1.6 fps 608.3 ms (worst 609 ms) res 1024x768 vsync 2 tier low (locked) views 1 aa 0 shadows HardOnly 15m x1 grass 0c/0.0k r13 culled 0/0 realism lite mem 14 MB managed
 FFXboxUWPRunner:Update()
-FFXBOX perf: 2.2 fps 464.5 ms (worst 484 ms) res 1024x768 vsync 2 tier low (locked) views 1 aa 0 shadows HardOnly 15m x1 grass 0c/0.0k r13 culled 0/0 realism lite mem 14 MB managed
+FFXBOX perf: 2.2 fps 444.9 ms (worst 460 ms) res 1024x768 vsync 2 tier low (locked) views 1 aa 0 shadows HardOnly 15m x1 grass 0c/0.0k r13 culled 0/0 realism lite mem 14 MB managed
 FFXboxUWPRunner:Update()
 SMOKE_DONE
 === step outcomes: secrets=success cert=success vs=success setup=success activate=success build=success manifest=success msbuild=success collect=success release=success smoke=success
@@ -265,14 +265,14 @@ SMOKE_DONE
 === error lines
 1:[Licensing::Module] Trying to connect to existing licensing client channel...
 2:[Licensing::IpcConnector] Channel LicenseClient-runneradmin doesn't exist
-3:[Licensing::Module] Successfully launched the LicensingClient (PId: 5088)
-4:[Licensing::IpcConnector] Successfully connected to: "LicenseClient-runneradmin" at "2026-10-20T21:12:57.3533333Z"
-5:[Licensing::Client] Code 10 while verifying Licensing Client signature (process Id: 5088, path: "C:/Program Files/Unity/Hub/Editor/2022.3.62f3/Editor/Data/Resources/Licensing/Client/Unity.Licensing.Client.exe")
+3:[Licensing::Module] Successfully launched the LicensingClient (PId: 5396)
+4:[Licensing::IpcConnector] Successfully connected to: "LicenseClient-runneradmin" at "2026-10-22T01:47:08.1004709Z"
+5:[Licensing::Client] Code 10 while verifying Licensing Client signature (process Id: 5396, path: "C:/Program Files/Unity/Hub/Editor/2022.3.62f3/Editor/Data/Resources/Licensing/Client/Unity.Licensing.Client.exe")
 6:[Licensing::Module] LicensingClient has failed validation; ignoring
 7:[Licensing::Client] Handshaking with LicensingClient:
-13:[Licensing::Module] Successfully connected to LicensingClient on channel: "LicenseClient-runneradmin" (connect: 0.85s, validation: 0.06s, handshake: 0.18s)
-14:[Licensing::IpcConnector] Successfully connected to: "LicenseClient-runneradmin-notifications" at "2026-10-20T21:12:57.5978859Z"
-15:[Licensing::Module] Connected to LicensingClient (PId: 5088, launch time: 0.00, total connection time: 1.10s)
+13:[Licensing::Module] Successfully connected to LicensingClient on channel: "LicenseClient-runneradmin" (connect: 0.85s, validation: 0.06s, handshake: 0.25s)
+14:[Licensing::IpcConnector] Successfully connected to: "LicenseClient-runneradmin-notifications" at "2026-10-22T01:47:08.4156511Z"
+15:[Licensing::Module] Connected to LicensingClient (PId: 5396, launch time: 0.00, total connection time: 1.17s)
 16:[Licensing::Module] Error: Access token is unavailable; failed to update
 17:[Licensing::Client] Successfully updated license
 20:[Licensing::Client] Successfully resolved entitlement details
@@ -283,119 +283,119 @@ SMOKE_DONE
 121:[Licensing::Client] Successfully resolved entitlement details
 173:[Licensing::Client] Successfully resolved entitlement details
 174:[Licensing::Client] Successfully resolved entitlement details
-897:Start importing Assets/Editor/BuildScript.cs using Guid(d013f3907a38f3f4ea4a563981c29a62) Importer(-1,00000000000000000000000000000000) [PhysX] Initialized MultithreadedTaskDispatcher with 4 workers.
-1639:Start importing Packages/com.unity.inputsystem/InputSystem/Utilities/ExceptionHelpers.cs using Guid(d717b0e790ee146dd93d1be641984b6a) Importer(-1,00000000000000000000000000000000) [PhysX] Initialized MultithreadedTaskDispatcher with 4 workers.
-1967:Start importing Packages/com.unity.ugui/Tests/Runtime/Util/ExceptionUtils.cs using Guid(0b2706df6fdff50448f84a3f6629b40f) Importer(-1,00000000000000000000000000000000) [PhysX] Initialized MultithreadedTaskDispatcher with 4 workers.
-2489:BuildScript:SetInputHandler () (at Assets/Editor/BuildScript.cs:349)
-2490:InputHandlerSetter:.cctor () (at Assets/Editor/BuildScript.cs:16)
-2494:(Filename: Assets/Editor/BuildScript.cs Line: 349)
-3400:Start importing Packages/com.unity.inputsystem/ValidationExceptions.json using Guid(d9fe79419851eee4e8c90f7d0f934859) Importer(-1,00000000000000000000000000000000) [PhysX] Initialized MultithreadedTaskDispatcher with 4 workers.
-3596:[Licensing::Client] Successfully resolved entitlement details
-3607:BuildScript: UWP start, Unity 2022.3.62f3
-3624:BuildScript:SetStatic (System.Type,string,object) (at Assets/Editor/BuildScript.cs:358)
-3625:BuildScript:ConfigurePlayer () (at Assets/Editor/BuildScript.cs:382)
-3632:(Filename: Assets/Editor/BuildScript.cs Line: 358)
+808:Start importing Assets/Editor/BuildScript.cs using Guid(109c39cfba49f504290fca54a20526f9) Importer(-1,00000000000000000000000000000000) [PhysX] Initialized MultithreadedTaskDispatcher with 4 workers.
+1632:Start importing Packages/com.unity.inputsystem/InputSystem/Utilities/ExceptionHelpers.cs using Guid(d717b0e790ee146dd93d1be641984b6a) Importer(-1,00000000000000000000000000000000) [PhysX] Initialized MultithreadedTaskDispatcher with 4 workers.
+1986:Start importing Packages/com.unity.ugui/Tests/Runtime/Util/ExceptionUtils.cs using Guid(0b2706df6fdff50448f84a3f6629b40f) Importer(-1,00000000000000000000000000000000) [PhysX] Initialized MultithreadedTaskDispatcher with 4 workers.
+2504:BuildScript:SetInputHandler () (at Assets/Editor/BuildScript.cs:349)
+2505:InputHandlerSetter:.cctor () (at Assets/Editor/BuildScript.cs:16)
+2509:(Filename: Assets/Editor/BuildScript.cs Line: 349)
+3423:Start importing Packages/com.unity.inputsystem/ValidationExceptions.json using Guid(d9fe79419851eee4e8c90f7d0f934859) Importer(-1,00000000000000000000000000000000) [PhysX] Initialized MultithreadedTaskDispatcher with 4 workers.
+3611:[Licensing::Client] Successfully resolved entitlement details
+3622:BuildScript: UWP start, Unity 2022.3.62f3
 3639:BuildScript:SetStatic (System.Type,string,object) (at Assets/Editor/BuildScript.cs:358)
-3640:BuildScript:ConfigurePlayer () (at Assets/Editor/BuildScript.cs:383)
+3640:BuildScript:ConfigurePlayer () (at Assets/Editor/BuildScript.cs:388)
 3647:(Filename: Assets/Editor/BuildScript.cs Line: 358)
-3654:BuildScript:ConfigurePlayer () (at Assets/Editor/BuildScript.cs:396)
-3661:(Filename: Assets/Editor/BuildScript.cs Line: 396)
-3673:BuildScript:ApplyIcons (bool) (at Assets/Editor/BuildScript.cs:286)
-3680:(Filename: Assets/Editor/BuildScript.cs Line: 286)
-4395:BuildScript: native music clips 19 (streaming)
-4400:BuildScript:ImportNativeMusic () (at Assets/Editor/BuildScript.cs:327)
-4407:(Filename: Assets/Editor/BuildScript.cs Line: 327)
-4419:FFUWP audio: disableAudio False->false sampleRate 0->48000 dsp 1024->1024 requestedDsp 0->1024 speakerMode 2->2 volume 1
-5133:FFUWP audio: music clips 19 compressed in memory + preloaded (not streamed)
-5157:[Licensing::Client] Successfully resolved entitlement details
-5158:[Licensing::Client] Successfully resolved entitlement details
-5159:FFUWP: capabilities internetClient=True microphone=False
-5169:FFUWP: certificate FourFroggiesTest.pfx set=True subject=Similarize issuer=Similarize
-5179:FFUWP tile PackageLogo <- sq50.png
-5190:FFUWP tile SplashScreenImage <- splash620x300.png
-5201:FFUWP tile UWPSquare44x44Logo <- sq44.png
-5212:FFUWP tile UWPSquare71x71Logo <- sq71.png
-5223:FFUWP tile UWPSquare150x150Logo <- sq150.png
-5234:FFUWP tile UWPSquare310x310Logo <- sq310.png
-5245:FFUWP tile UWPWide310x150Logo <- wide310x150.png
-5256:FFUWP: EditorUserBuildSettings.wsaUWPBuildType = D3D
-5267:FFUWP: EditorUserBuildSettings.wsaSubtarget = AnyDevice
-5278:FFUWP: EditorUserBuildSettings.wsaArchitecture = x64
-5289:FFUWP: EditorUserBuildSettings.wsaBuildAndRunDeployTarget = LocalMachine
-5341:BuildScript: HDRI sky
-5346:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:491)
-5353:(Filename: Assets/Editor/BuildScript.cs Line: 491)
-5355:BuildScript: FF/Skin shader
-5360:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
-5361:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:509)
-5368:(Filename: Assets/Editor/BuildScript.cs Line: 453)
-5375:BuildScript: FF/Foliage shader
-5380:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
-5381:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:510)
-5388:(Filename: Assets/Editor/BuildScript.cs Line: 453)
-5395:BuildScript: LB/Water shader
-5400:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
-5401:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:511)
-5408:(Filename: Assets/Editor/BuildScript.cs Line: 453)
-5415:BuildScript: FF/Underwater shader
-5420:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
-5421:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:513)
-5428:(Filename: Assets/Editor/BuildScript.cs Line: 453)
-5435:BuildScript: Unlit/Texture shader
-5440:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
-5441:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:514)
-5448:(Filename: Assets/Editor/BuildScript.cs Line: 453)
-5455:BuildScript: FF/RealTri shader
-5460:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
-5461:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:516)
-5468:(Filename: Assets/Editor/BuildScript.cs Line: 453)
-5475:BuildScript: FF/RealWater shader
-5480:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
-5481:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:517)
-5488:(Filename: Assets/Editor/BuildScript.cs Line: 453)
-5495:BuildScript: FF/Grass56 shader
-5500:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
-5501:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:519)
-5508:(Filename: Assets/Editor/BuildScript.cs Line: 453)
-5515:BuildScript: FF/Skin57 shader
-5520:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:453)
-5521:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:525)
-5528:(Filename: Assets/Editor/BuildScript.cs Line: 453)
-5555:BuildScript: terrain textures True True True
-5560:BuildScript:CreateTerrain () (at Assets/Editor/BuildScript.cs:658)
-5561:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:561)
-5568:(Filename: Assets/Editor/BuildScript.cs Line: 658)
-5600:BuildScript: terrain NM material
-5605:BuildScript:CreateTerrain () (at Assets/Editor/BuildScript.cs:704)
-5606:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:561)
-5613:(Filename: Assets/Editor/BuildScript.cs Line: 704)
-5641:BuildScript: scene saved Assets/Scenes/Main.unity
-5646:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:586)
-5653:(Filename: Assets/Editor/BuildScript.cs Line: 586)
-5665:[Licensing::Client] Successfully resolved entitlement details
-5666:Failed to determine expiration date for "FourFroggiesTest.pfx". In case it is expired, you might not be able to package or deploy the resulting build.
-10314:[  97/2281  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/vm/Exception.h
-10315:[  98/2281  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/vm/Exception.cpp
-10420:[ 201/2281  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/utils/ExceptionSupportStack.h
-10421:[ 202/2281  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/utils/Exception.h
-10422:[ 203/2281  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/utils/Exception.cpp
-10850:[ 631/2281  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/icalls/System/System.Net.Sockets/SocketException.h
-10851:[ 632/2281  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/icalls/System/System.Net.Sockets/SocketException.cpp
-10899:[ 680/2281  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/icalls/mscorlib/System/Exception.h
-10900:[ 681/2281  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/icalls/mscorlib/System/Exception.cpp
-12651:[W] FindFirstFile() failed: D:\a\SimilarizeWebsite\SimilarizeWebsite\src\unity\four-froggies\Library\Bee\artifacts\UWPPlayerBuildProgram\il2cppOutput\cpp\Symbols
-13517: 0.1 kb	 0.0% Packages/com.unity.inputsystem/InputSystem/Utilities/ExceptionHelpers.cs
-13917:BUILD_RESULT: Succeeded target=UWP errors=0 warnings=23 size=557976372 time=00:03:07.7465998
-13927:BUILD_SCRIPT_EXIT: 0
-13940:[Licensing::IpcConnector] LicenseClient-runneradmin-notifications channel disconnected successfully.
-13941:[Licensing::IpcConnector] LicenseClient-runneradmin channel disconnected successfully.
-13943:abort_threads: Failed aborting id: 00000000000010E8, mono_thread_manage will ignore it
-13945:abort_threads: Failed aborting id: 0000000000000238, mono_thread_manage will ignore it
-13947:abort_threads: Failed aborting id: 0000000000000238, mono_thread_manage will ignore it
-13949:abort_threads: Failed aborting id: 00000000000010E8, mono_thread_manage will ignore it
-13957:[Performance] WinEditorMain.Licensing                                                                                        :        1 samples, Peak.  2.16 s (1.0x), Avg.  2.16 s, Total. 2.158 s (0.7%)
-14033:[Performance] Application.ReadLicenseInfo                                                                                    :        1 samples, Peak.  26.3 ms (1.0x), Avg.  26.3 ms, Total. 26.30 ms (0.0%)
-14451:##utp:{"type":"MemoryLeaks","version":2,"phase":"Immediate","time":1792531085354,"processId":6100,"allocatedMemory":12552207,"memoryLabels":[{"Default":20335},{"Permanent":15615},{"NewDelete":86128},{"Thread":4228964},{"Manager":20718},{"VertexData":12},{"Geometry":560},{"Texture":328},{"Shader":78650},{"Material":24},{"GfxDevice":57048},{"Animation":296},{"Audio":3928},{"Font":102507},{"FontEngine":272},{"Physics":513},{"Serialization":948},{"Input":14744},{"JobScheduler":74512},{"Mono":40},{"ScriptingNativeRuntime":191848},{"BaseObject":1617476},{"Resource":1360},{"Renderer":2304},{"Transform":16},{"File":3797},{"WebCam":96},{"Culling":40},{"Terrain":1137},{"Wind":24},{"STL":48},{"String":39768},{"DynamicArray":62194},{"HashMap":67919},{"Utility":2660546},{"Curl":1424},{"PoolAlloc":1728},{"AI":104},{"TypeTree":5077},{"ScriptManager":640},{"RuntimeInitializeOnLoadManager":80},{"SpriteAtlas":128},{"GI":4072},{"Director":7960},{"CloudService":9928},{"WebRequest":688},{"VR":46081},{"SceneManager":568},{"Video":72},{"LazyScriptCache":40},{"NativeArray":12},{"Camera":25},{"Secure":1},{"Image":40960},{"SerializationCache":1584},{"APIUpdating":11872},{"Subsystems":392},{"VirtualTexturing":57896},{"StaticSafetyDebugInfo":327680},{"EditorGui":56},{"EditorUtility":20344},{"VersionControl":4},{"Undo":704},{"AssetDatabase":2560029},{"RestService":1414},{"EditorGi":376},{"License":3584},{"UnityConnect":25320},{"Collab":593},{"Upm":50787},{"DrivenProperties":96},{"LocalIPC":288},{"ProfilerEditor":10943},{"CoreBusinessMetrics":3862},{"AssetReference":40},{"IPCStream":40}]}
+3654:BuildScript:SetStatic (System.Type,string,object) (at Assets/Editor/BuildScript.cs:358)
+3655:BuildScript:ConfigurePlayer () (at Assets/Editor/BuildScript.cs:389)
+3662:(Filename: Assets/Editor/BuildScript.cs Line: 358)
+3669:BuildScript:ConfigurePlayer () (at Assets/Editor/BuildScript.cs:402)
+3676:(Filename: Assets/Editor/BuildScript.cs Line: 402)
+3688:BuildScript:ApplyIcons (bool) (at Assets/Editor/BuildScript.cs:286)
+3695:(Filename: Assets/Editor/BuildScript.cs Line: 286)
+4410:BuildScript: native music clips 19 (streaming)
+4415:BuildScript:ImportNativeMusic () (at Assets/Editor/BuildScript.cs:327)
+4422:(Filename: Assets/Editor/BuildScript.cs Line: 327)
+4434:FFUWP audio: disableAudio False->false sampleRate 0->48000 dsp 1024->1024 requestedDsp 0->1024 speakerMode 2->2 volume 1
+5148:FFUWP audio: music clips 19 compressed in memory + preloaded (not streamed)
+5172:[Licensing::Client] Successfully resolved entitlement details
+5173:[Licensing::Client] Successfully resolved entitlement details
+5174:FFUWP: capabilities internetClient=True microphone=False
+5184:FFUWP: certificate FourFroggiesTest.pfx set=True subject=Similarize issuer=Similarize
+5194:FFUWP tile PackageLogo <- sq50.png
+5205:FFUWP tile SplashScreenImage <- splash620x300.png
+5216:FFUWP tile UWPSquare44x44Logo <- sq44.png
+5227:FFUWP tile UWPSquare71x71Logo <- sq71.png
+5238:FFUWP tile UWPSquare150x150Logo <- sq150.png
+5249:FFUWP tile UWPSquare310x310Logo <- sq310.png
+5260:FFUWP tile UWPWide310x150Logo <- wide310x150.png
+5271:FFUWP: EditorUserBuildSettings.wsaUWPBuildType = D3D
+5282:FFUWP: EditorUserBuildSettings.wsaSubtarget = AnyDevice
+5293:FFUWP: EditorUserBuildSettings.wsaArchitecture = x64
+5304:FFUWP: EditorUserBuildSettings.wsaBuildAndRunDeployTarget = LocalMachine
+5356:BuildScript: HDRI sky
+5361:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:497)
+5368:(Filename: Assets/Editor/BuildScript.cs Line: 497)
+5370:BuildScript: FF/Skin shader
+5375:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:459)
+5376:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:515)
+5383:(Filename: Assets/Editor/BuildScript.cs Line: 459)
+5390:BuildScript: FF/Foliage shader
+5395:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:459)
+5396:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:516)
+5403:(Filename: Assets/Editor/BuildScript.cs Line: 459)
+5410:BuildScript: LB/Water shader
+5415:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:459)
+5416:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:517)
+5423:(Filename: Assets/Editor/BuildScript.cs Line: 459)
+5430:BuildScript: FF/Underwater shader
+5435:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:459)
+5436:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:519)
+5443:(Filename: Assets/Editor/BuildScript.cs Line: 459)
+5450:BuildScript: Unlit/Texture shader
+5455:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:459)
+5456:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:520)
+5463:(Filename: Assets/Editor/BuildScript.cs Line: 459)
+5470:BuildScript: FF/RealTri shader
+5475:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:459)
+5476:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:522)
+5483:(Filename: Assets/Editor/BuildScript.cs Line: 459)
+5490:BuildScript: FF/RealWater shader
+5495:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:459)
+5496:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:523)
+5503:(Filename: Assets/Editor/BuildScript.cs Line: 459)
+5510:BuildScript: FF/Grass56 shader
+5515:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:459)
+5516:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:525)
+5523:(Filename: Assets/Editor/BuildScript.cs Line: 459)
+5530:BuildScript: FF/Skin57 shader
+5535:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:459)
+5536:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:531)
+5543:(Filename: Assets/Editor/BuildScript.cs Line: 459)
+5570:BuildScript: terrain textures True True True
+5575:BuildScript:CreateTerrain () (at Assets/Editor/BuildScript.cs:664)
+5576:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:567)
+5583:(Filename: Assets/Editor/BuildScript.cs Line: 664)
+5615:BuildScript: terrain NM material
+5620:BuildScript:CreateTerrain () (at Assets/Editor/BuildScript.cs:710)
+5621:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:567)
+5628:(Filename: Assets/Editor/BuildScript.cs Line: 710)
+5656:BuildScript: scene saved Assets/Scenes/Main.unity
+5661:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:592)
+5668:(Filename: Assets/Editor/BuildScript.cs Line: 592)
+5680:[Licensing::Client] Successfully resolved entitlement details
+5681:Failed to determine expiration date for "FourFroggiesTest.pfx". In case it is expired, you might not be able to package or deploy the resulting build.
+10332:[  97/2281  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/vm/Exception.h
+10333:[  98/2281  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/vm/Exception.cpp
+10437:[ 200/2281  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/utils/ExceptionSupportStack.h
+10439:[ 202/2281  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/utils/Exception.h
+10442:[ 205/2281  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/utils/Exception.cpp
+10868:[ 631/2281  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/icalls/System/System.Net.Sockets/SocketException.cpp
+10869:[ 632/2281  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/icalls/System/System.Net.Sockets/SocketException.h
+10917:[ 680/2281  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/icalls/mscorlib/System/Exception.h
+10918:[ 681/2281  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/icalls/mscorlib/System/Exception.cpp
+12669:[W] FindFirstFile() failed: D:\a\SimilarizeWebsite\SimilarizeWebsite\src\unity\four-froggies\Library\Bee\artifacts\UWPPlayerBuildProgram\il2cppOutput\cpp\Symbols
+13537: 0.1 kb	 0.0% Packages/com.unity.inputsystem/InputSystem/Utilities/ExceptionHelpers.cs
+13940:BUILD_RESULT: Succeeded target=UWP errors=0 warnings=24 size=560539488 time=00:03:07.8311026
+13950:BUILD_SCRIPT_EXIT: 0
+13963:[Licensing::IpcConnector] LicenseClient-runneradmin-notifications channel disconnected successfully.
+13964:[Licensing::IpcConnector] LicenseClient-runneradmin channel disconnected successfully.
+13966:abort_threads: Failed aborting id: 0000000000001730, mono_thread_manage will ignore it
+13968:abort_threads: Failed aborting id: 0000000000001FA4, mono_thread_manage will ignore it
+13970:abort_threads: Failed aborting id: 0000000000001730, mono_thread_manage will ignore it
+13972:abort_threads: Failed aborting id: 0000000000001FA4, mono_thread_manage will ignore it
+13980:[Performance] WinEditorMain.Licensing                                                                                        :        1 samples, Peak.  2.10 s (1.0x), Avg.  2.10 s, Total. 2.102 s (0.7%)
+14056:[Performance] Application.ReadLicenseInfo                                                                                    :        1 samples, Peak.  25.9 ms (1.0x), Avg.  25.9 ms, Total. 25.87 ms (0.0%)
+14474:##utp:{"type":"MemoryLeaks","version":2,"phase":"Immediate","time":1792633938848,"processId":7912,"allocatedMemory":12553032,"memoryLabels":[{"Default":20335},{"Permanent":15615},{"NewDelete":86128},{"Thread":4228964},{"Manager":20718},{"VertexData":12},{"Geometry":560},{"Texture":328},{"Shader":78650},{"Material":24},{"GfxDevice":57048},{"Animation":296},{"Audio":3928},{"Font":102507},{"FontEngine":272},{"Physics":513},{"Serialization":948},{"Input":14744},{"JobScheduler":74736},{"Mono":40},{"ScriptingNativeRuntime":191848},{"BaseObject":1617476},{"Resource":1360},{"Renderer":2304},{"Transform":16},{"File":3797},{"WebCam":96},{"Culling":40},{"Terrain":1137},{"Wind":24},{"STL":48},{"String":39758},{"DynamicArray":62287},{"HashMap":67919},{"Utility":2660546},{"Curl":1424},{"PoolAlloc":1728},{"AI":104},{"TypeTree":5077},{"ScriptManager":640},{"RuntimeInitializeOnLoadManager":80},{"SpriteAtlas":128},{"GI":4072},{"Director":7960},{"CloudService":9928},{"WebRequest":688},{"VR":46081},{"SceneManager":568},{"Video":72},{"LazyScriptCache":40},{"NativeArray":12},{"Camera":25},{"Secure":1},{"Image":40960},{"SerializationCache":1584},{"APIUpdating":11872},{"Subsystems":392},{"VirtualTexturing":57896},{"StaticSafetyDebugInfo":327680},{"EditorGui":56},{"EditorUtility":20344},{"VersionControl":4},{"Undo":704},{"AssetDatabase":2560547},{"RestService":1414},{"EditorGi":376},{"License":3584},{"UnityConnect":25320},{"Collab":593},{"Upm":50787},{"DrivenProperties":96},{"LocalIPC":288},{"ProfilerEditor":10943},{"CoreBusinessMetrics":3862},{"AssetReference":40},{"IPCStream":40}]}
 === editor log tail (300)
 [ALLOC_TEMP_TLS] TLS Allocator
   StackAllocators : 
@@ -406,7 +406,7 @@ SMOKE_DONE
       Overflow Count 0
     [ALLOC_TEMP_MAIN]
       Initial Block Size 16.0 MB
-      Current Block Size 46.1 MB
+      Current Block Size 45.7 MB
       Peak Allocated Bytes 43.3 MB
       Overflow Count 0
     [ALLOC_TEMP_Background Job.Worker 8]
@@ -474,12 +474,12 @@ SMOKE_DONE
       Current Block Size 32.0 KB
       Peak Allocated Bytes 1.4 KB
       Overflow Count 0
-    [ALLOC_TEMP_Background Job.Worker 7]
+    [ALLOC_TEMP_Background Job.Worker 15]
       Initial Block Size 32.0 KB
       Current Block Size 32.0 KB
       Peak Allocated Bytes 54 B
       Overflow Count 0
-    [ALLOC_TEMP_Background Job.Worker 15]
+    [ALLOC_TEMP_Background Job.Worker 7]
       Initial Block Size 32.0 KB
       Current Block Size 32.0 KB
       Peak Allocated Bytes 54 B
@@ -488,7 +488,7 @@ SMOKE_DONE
       Initial Block Size 256.0 KB
       Current Block Size 1.0 MB
       Peak Allocated Bytes 1.0 MB
-      Overflow Count 0
+      Overflow Count 1
     [ALLOC_TEMP_BakingJobs.Worker 0]
       Initial Block Size 256.0 KB
       Current Block Size 256.0 KB
@@ -538,7 +538,7 @@ SMOKE_DONE
       Initial Block Size 256.0 KB
       Current Block Size 1.0 MB
       Peak Allocated Bytes 1.0 MB
-      Overflow Count 1
+      Overflow Count 0
     [ALLOC_TEMP_Background Job.Worker 0]
       Initial Block Size 32.0 KB
       Current Block Size 32.0 KB
@@ -554,12 +554,12 @@ SMOKE_DONE
       Current Block Size 1.0 MB
       Peak Allocated Bytes 1.0 MB
       Overflow Count 0
-    [ALLOC_TEMP_Background Job.Worker 9]
+    [ALLOC_TEMP_Background Job.Worker 14]
       Initial Block Size 32.0 KB
       Current Block Size 32.0 KB
       Peak Allocated Bytes 54 B
       Overflow Count 0
-    [ALLOC_TEMP_Background Job.Worker 14]
+    [ALLOC_TEMP_Background Job.Worker 9]
       Initial Block Size 32.0 KB
       Current Block Size 32.0 KB
       Peak Allocated Bytes 54 B
@@ -572,7 +572,7 @@ SMOKE_DONE
     [ALLOC_TEMP_DirMonitor]
       Initial Block Size 64.0 KB
       Current Block Size 64.0 KB
-      Peak Allocated Bytes 23.8 KB
+      Peak Allocated Bytes 23.9 KB
       Overflow Count 0
     [ALLOC_TEMP_BakingJobs.Worker 1]
       Initial Block Size 256.0 KB
@@ -592,7 +592,7 @@ SMOKE_DONE
 [ALLOC_MEMORYPROFILER]
   Requested Block Size 1.0 MB
   Peak Block count 1
-  Peak Allocated memory 171.4 KB
+  Peak Allocated memory 171.8 KB
   Peak Large allocation bytes 0 B
 [ALLOC_DEFAULT] Dual Thread Allocator
   Peak main deferred allocation count 1301
@@ -603,7 +603,7 @@ SMOKE_DONE
     [ALLOC_DEFAULT_MAIN]
       Requested Block Size 16.0 MB
       Peak Block count 7
-      Peak Allocated memory 174.5 MB
+      Peak Allocated memory 174.4 MB
       Peak Large allocation bytes 72.2 MB
     [ALLOC_DEFAULT_THREAD]
       Requested Block Size 16.0 MB
@@ -655,8 +655,8 @@ SMOKE_DONE
     [ALLOC_CACHEOBJECTS_MAIN]
       Requested Block Size 4.0 MB
       Peak Block count 8
-      Peak Allocated memory 43.6 MB
-      Peak Large allocation bytes 23.0 MB
+      Peak Allocated memory 43.3 MB
+      Peak Large allocation bytes 22.7 MB
     [ALLOC_CACHEOBJECTS_THREAD]
       Requested Block Size 4.0 MB
       Peak Block count 1
@@ -681,12 +681,12 @@ SMOKE_DONE
 [ALLOC_PROFILER]
   Requested Block Size 16.0 MB
   Peak Block count 1
-  Peak Allocated memory 0.7 MB
+  Peak Allocated memory 399.9 KB
   Peak Large allocation bytes 0 B
     [ALLOC_PROFILER_BUCKET]
       Large Block size 32.0 MB
       Used Block count 1
-      Peak Allocated bytes 4.6 KB
+      Peak Allocated bytes 4.0 KB
 [ALLOC_PROFILER_EDITOR]
   Requested Block Size 1.0 MB
   Peak Block count 0
@@ -695,5 +695,5 @@ SMOKE_DONE
     [ALLOC_PROFILER_BUCKET]
       Large Block size 32.0 MB
       Used Block count 1
-      Peak Allocated bytes 4.6 KB
-##utp:{"type":"MemoryLeaks","version":2,"phase":"Immediate","time":1792531085354,"processId":6100,"allocatedMemory":12552207,"memoryLabels":[{"Default":20335},{"Permanent":15615},{"NewDelete":86128},{"Thread":4228964},{"Manager":20718},{"VertexData":12},{"Geometry":560},{"Texture":328},{"Shader":78650},{"Material":24},{"GfxDevice":57048},{"Animation":296},{"Audio":3928},{"Font":102507},{"FontEngine":272},{"Physics":513},{"Serialization":948},{"Input":14744},{"JobScheduler":74512},{"Mono":40},{"ScriptingNativeRuntime":191848},{"BaseObject":1617476},{"Resource":1360},{"Renderer":2304},{"Transform":16},{"File":3797},{"WebCam":96},{"Culling":40},{"Terrain":1137},{"Wind":24},{"STL":48},{"String":39768},{"DynamicArray":62194},{"HashMap":67919},{"Utility":2660546},{"Curl":1424},{"PoolAlloc":1728},{"AI":104},{"TypeTree":5077},{"ScriptManager":640},{"RuntimeInitializeOnLoadManager":80},{"SpriteAtlas":128},{"GI":4072},{"Director":7960},{"CloudService":9928},{"WebRequest":688},{"VR":46081},{"SceneManager":568},{"Video":72},{"LazyScriptCache":40},{"NativeArray":12},{"Camera":25},{"Secure":1},{"Image":40960},{"SerializationCache":1584},{"APIUpdating":11872},{"Subsystems":392},{"VirtualTexturing":57896},{"StaticSafetyDebugInfo":327680},{"EditorGui":56},{"EditorUtility":20344},{"VersionControl":4},{"Undo":704},{"AssetDatabase":2560029},{"RestService":1414},{"EditorGi":376},{"License":3584},{"UnityConnect":25320},{"Collab":593},{"Upm":50787},{"DrivenProperties":96},{"LocalIPC":288},{"ProfilerEditor":10943},{"CoreBusinessMetrics":3862},{"AssetReference":40},{"IPCStream":40}]}
+      Peak Allocated bytes 4.0 KB
+##utp:{"type":"MemoryLeaks","version":2,"phase":"Immediate","time":1792633938848,"processId":7912,"allocatedMemory":12553032,"memoryLabels":[{"Default":20335},{"Permanent":15615},{"NewDelete":86128},{"Thread":4228964},{"Manager":20718},{"VertexData":12},{"Geometry":560},{"Texture":328},{"Shader":78650},{"Material":24},{"GfxDevice":57048},{"Animation":296},{"Audio":3928},{"Font":102507},{"FontEngine":272},{"Physics":513},{"Serialization":948},{"Input":14744},{"JobScheduler":74736},{"Mono":40},{"ScriptingNativeRuntime":191848},{"BaseObject":1617476},{"Resource":1360},{"Renderer":2304},{"Transform":16},{"File":3797},{"WebCam":96},{"Culling":40},{"Terrain":1137},{"Wind":24},{"STL":48},{"String":39758},{"DynamicArray":62287},{"HashMap":67919},{"Utility":2660546},{"Curl":1424},{"PoolAlloc":1728},{"AI":104},{"TypeTree":5077},{"ScriptManager":640},{"RuntimeInitializeOnLoadManager":80},{"SpriteAtlas":128},{"GI":4072},{"Director":7960},{"CloudService":9928},{"WebRequest":688},{"VR":46081},{"SceneManager":568},{"Video":72},{"LazyScriptCache":40},{"NativeArray":12},{"Camera":25},{"Secure":1},{"Image":40960},{"SerializationCache":1584},{"APIUpdating":11872},{"Subsystems":392},{"VirtualTexturing":57896},{"StaticSafetyDebugInfo":327680},{"EditorGui":56},{"EditorUtility":20344},{"VersionControl":4},{"Undo":704},{"AssetDatabase":2560547},{"RestService":1414},{"EditorGi":376},{"License":3584},{"UnityConnect":25320},{"Collab":593},{"Upm":50787},{"DrivenProperties":96},{"LocalIPC":288},{"ProfilerEditor":10943},{"CoreBusinessMetrics":3862},{"AssetReference":40},{"IPCStream":40}]}
