@@ -17,9 +17,15 @@ using UnityEngine.UI;
 //    progress on the HUD).
 //  * Crashes: boom + the jet (pilot still inside) is back on its pad 1.5 s later. Wrecks (ffu21 VehicleWreck) are handled the
 //    same way. Only James flies it (if nobody plays James, any human player can); other froggies hop in as a passenger.
+// ffu71 (Ben 2026-10-21 item 5): a SECOND jet in a different style, parked in the same hangar next to James's jet
+// (style 1: a slim white delta with canards and one tall fin; same flight model, VTOL included, same who-can-fly rule).
+// It is UNNAMED (no name painted on it, called "the second jet") until Four Froggies World names it. Jet.I stays James's jet.
 public class Jet : Vehicle
 {
     public static Jet I;
+    public static readonly List<Jet> Jets = new List<Jet>();   // ffu71: James's jet + the second jet
+    public int style;                 // 0 = James's VTOL jet, 1 = the second jet (ffu71)
+    public Vector3 homeApproach;      // ffu71: where the jet flies itself home to before it parks (the second jet: the VTOL pad)
     public enum Mode { Parked, Hover, Jet, Hyper }
     // ---- state ----
     public Mode mode = Mode.Parked;
@@ -57,25 +63,35 @@ public class Jet : Vehicle
 
     public override string[] TouchSet { get { return new[] { "OUT", "BURN", "VTOL", "UP", "DOWN" }; } }
 
-    public static Jet Spawn(Vector3 p, float yaw)
+    public static Jet Spawn(Vector3 p, float yaw, int style = 0)
     {
-        var go = new GameObject("James's jet");
+        var go = new GameObject(style == 0 ? "James's jet" : "Second jet");
         go.transform.position = p;
         go.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
         var j = go.AddComponent<Jet>();
-        j.Title = "James's jet";
-        j.EnterVerb = "fly James's VTOL jet";
+        j.style = style;
+        j.Title = style == 0 ? "James's jet" : "the second jet";
+        j.EnterVerb = style == 0 ? "fly James's VTOL jet" : "fly the second jet";
         j.flyer = true;
         j.engineKind = 6;   // own audio (Vehicle.EngineSound skips kind 6)
         j.camDistance = 19f; j.camHeight = 4.5f;
         j.seatScale = 0.62f; j.showDriver = true;
         j.BuildModel();
-        j.SetupBody(6000f, new Vector3(0f, 2f, -0.2f), new Vector3(2.3f, 2.3f, 12.8f), new Vector3(0f, 2f, 0f));
-        j.ExtraBox(new Vector3(0f, 1.95f, -1.5f), new Vector3(9.2f, 0.4f, 3.6f));
+        if (style == 0)
+        {
+            j.SetupBody(6000f, new Vector3(0f, 2f, -0.2f), new Vector3(2.3f, 2.3f, 12.8f), new Vector3(0f, 2f, 0f));
+            j.ExtraBox(new Vector3(0f, 1.95f, -1.5f), new Vector3(9.2f, 0.4f, 3.6f));
+        }
+        else
+        {
+            j.SetupBody(5000f, new Vector3(0f, 2f, 0.4f), new Vector3(2f, 2.1f, 11.6f), new Vector3(0f, 2f, 0f));
+            j.ExtraBox(new Vector3(0f, 1.95f, -2.4f), new Vector3(Span1 * 2f, 0.4f, 4f));
+        }
         j.rb.isKinematic = true; j.rb.useGravity = false;
-        j.homePos = p; j.homeYaw = yaw;
+        j.homePos = p; j.homeYaw = yaw; j.homeApproach = p;
         j.pos = p; j.rot = go.transform.rotation; j.heading = yaw;
-        I = j;
+        if (style == 0) I = j;
+        Jets.Add(j);
         if (!fogHooked) { fogHooked = true; U6Cam.PreCull += HyperFog; }
         return j;
     }
@@ -84,9 +100,10 @@ public class Jet : Vehicle
     static bool fogHooked;
     static void HyperFog(Camera c)
     {
-        Jet j = I;
-        if (j == null || c == null || j.mode != Mode.Hyper || !RenderSettings.fog) return;
-        if ((c.transform.position - j.transform.position).sqrMagnitude > 600f * 600f) return;
+        if (c == null || !RenderSettings.fog) return;
+        Jet j = null;
+        foreach (Jet q in Jets) if (q != null && q.mode == Mode.Hyper && (c.transform.position - q.transform.position).sqrMagnitude < 600f * 600f) { j = q; break; }
+        if (j == null) return;
         RenderSettings.fogDensity = Mathf.Max(RenderSettings.fogDensity, 1.7e-4f);
         RenderSettings.fogColor = Color.Lerp(RenderSettings.fogColor, new Color(0.42f, 0.5f, 0.66f), 0.5f);
     }
@@ -115,7 +132,7 @@ public class Jet : Vehicle
         get
         {
             if (crashT >= 0f) return Title + " - getting fixed up...";
-            return "James's jet - only James can fly it" + (HumanJamesPlaying() ? " (when he's flying, A / E next to it rides along)" : "");
+            return (style == 0 ? "James's jet" : "The second jet") + " - only James can fly it" + (HumanJamesPlaying() ? " (when he's flying, A / E next to it rides along)" : "");
         }
     }
     public override bool CanExit(Frog f)
@@ -156,16 +173,16 @@ public class Jet : Vehicle
     {
         homeT += dt;
         vtol = true; nz = Mathf.MoveTowards(nz, 1f, dt * 1.5f); throttle = 0f; afterburner = false; mode = Mode.Hover;
-        Vector3 to = homePos - pos; to.y = 0f;
+        Vector3 to = homeApproach - pos; to.y = 0f;   // ffu71: the second jet comes down on the VTOL pad (its bay is under the fixed roof)
         float d = to.magnitude;
-        float cruise = Mathf.Max(groundY + 40f, homePos.y + 30f);
+        float cruise = Mathf.Max(groundY + 40f, homeApproach.y + 30f);
         Vector3 want;
         if (d > 8f) want = to.normalized * Mathf.Min(32f, d * 0.6f + 4f) + Vector3.up * Mathf.Clamp((cruise - pos.y) * 0.5f, -6f, 10f);
-        else want = to * 0.8f + Vector3.up * (pos.y - homePos.y > 3f ? -5f : -1.5f);
+        else want = to * 0.8f + Vector3.up * (pos.y - homeApproach.y > 3f ? -5f : -1.5f);
         vel = Vector3.MoveTowards(vel, want, 14f * dt);
         if (to.sqrMagnitude > 1f) heading = Mathf.MoveTowardsAngle(heading, Mathf.Atan2(to.x, to.z) * Mathf.Rad2Deg, 50f * dt);
         rot = Quaternion.Slerp(rot, Quaternion.Euler(Mathf.Clamp(vel.magnitude * 0.25f, 0f, 8f), heading, 0f), Mathf.Min(1f, dt * 3f));
-        if ((d < 2.5f && pos.y - homePos.y < 2.5f) || homeT > 90f) { homing = false; ResetToPad(); Debug.Log("FFDEMO jet home on its pad after " + homeT.ToString("0") + " s"); }
+        if ((d < 2.5f && pos.y - homeApproach.y < 2.5f) || homeT > 90f) { homing = false; ResetToPad(); Debug.Log("FFDEMO jet home on its pad after " + homeT.ToString("0") + " s"); }
     }
 
     public List<Frog> Passengers()
@@ -474,10 +491,12 @@ public class Jet : Vehicle
         if (onGround) pos += CarrierRig.Carry(pos, dt);   // ffu48: parked on Spotty's carrier deck - ride along
         // inside the hangar with the roof (still) shut: stay under the ceiling (the roof slides open for a VTOL lift-off)
         Vector2 hc = JetLayout.HangarC;
-        if (JetBase.I != null && Mathf.Abs(pos.x - hc.x) < JetLayout.HangarW * 0.5f && Mathf.Abs(pos.z - hc.y) < JetLayout.HangarD * 0.5f && pos.y < JetBase.FloorY + JetLayout.HangarH + 1f && JetBase.I.RoofK < 0.97f)
+        if (JetBase.I != null && Mathf.Abs(pos.x - hc.x) < JetLayout.HangarW * 0.5f && Mathf.Abs(pos.z - hc.y) < JetLayout.HangarD * 0.5f && pos.y < JetBase.FloorY + JetLayout.HangarH + 1f && (JetBase.I.RoofK < 0.97f || Mathf.Abs(pos.z - hc.y) > JetBase.RoofGap))
         {
+            // ffu71: only the middle of the roof slides open - a jet parked off to the side (the second jet) taxis out of the doors first
             float ceil = JetBase.FloorY + JetLayout.HangarH - 3.4f;
-            if (pos.y > ceil) { pos.y = ceil; if (vel.y > 0f) vel.y = 0f; if (Time.time - autoMsgT > 3f && driver != null) AutoMsg("Roof opening..."); }
+            bool side = Mathf.Abs(pos.z - hc.y) > JetBase.RoofGap;
+            if (pos.y > ceil) { pos.y = ceil; if (vel.y > 0f) vel.y = 0f; if (Time.time - autoMsgT > 3f && driver != null) AutoMsg(side ? "Under the roof - hover out through the hangar doors to lift off" : "Roof opening..."); }
         }
         Vector3 n;
         groundY = GroundAt(pos, out n);
@@ -795,39 +814,44 @@ public class Jet : Vehicle
         Material dark = Mats.Paint(new Color(0.12f, 0.13f, 0.15f), 0.6f);
         Material green = Mats.Paint(james, 0.85f);
         Material metal = Mats.Steel(new Color(0.55f, 0.55f, 0.58f));
-        Material glass = Mats.GlassTint(new Color(0.85f, 0.65f, 0.25f, 0.45f));
+        Material glass = style == 0 ? Mats.GlassTint(new Color(0.85f, 0.65f, 0.25f, 0.45f)) : null;
         Material tyre = Mats.Lit(new Color(0.08f, 0.08f, 0.08f));
         const float Y = 2f;
-        // fuselage (lathe, slightly flattened)
-        float[] zs = { -5.9f, -5.3f, -4.2f, -2f, 0.5f, 2.8f, 4.6f, 5.9f, 6.9f, 7.25f };
-        float[] rs = { 0.62f, 0.85f, 1.0f, 1.08f, 1.08f, 0.98f, 0.74f, 0.42f, 0.12f, 0.02f };
-        MeshGo(model, "Fuselage", Lathe(zs, rs, 18, 0.82f), body, new Vector3(0f, Y, 0f), Vector3.zero, Vector3.one);
-        // canopy + seat
-        P(PrimitiveType.Sphere, model, new Vector3(0f, Y + 0.72f, 2.6f), new Vector3(1.05f, 0.95f, 3.2f), Vector3.zero, glass);
-        P(PrimitiveType.Cube, model, new Vector3(0f, Y + 0.25f, 2.4f), new Vector3(0.8f, 0.3f, 1.6f), Vector3.zero, dark);
-        seat = Mats.Node(model, "Seat", new Vector3(0f, Y + 0.32f, 2.55f));
-        // intakes
-        for (int s = -1; s <= 1; s += 2)
+        if (style == 0)
         {
-            P(PrimitiveType.Cube, model, new Vector3(s * 1.08f, Y + 0.05f, 0.9f), new Vector3(0.62f, 1.05f, 2.8f), new Vector3(0f, -s * 4f, 0f), body);
-            P(PrimitiveType.Cube, model, new Vector3(s * 1.12f, Y + 0.05f, 2.31f), new Vector3(0.5f, 0.85f, 0.04f), new Vector3(0f, -s * 4f, 0f), dark);
+            // fuselage (lathe, slightly flattened)
+            float[] zs = { -5.9f, -5.3f, -4.2f, -2f, 0.5f, 2.8f, 4.6f, 5.9f, 6.9f, 7.25f };
+            float[] rs = { 0.62f, 0.85f, 1.0f, 1.08f, 1.08f, 0.98f, 0.74f, 0.42f, 0.12f, 0.02f };
+            MeshGo(model, "Fuselage", Lathe(zs, rs, 18, 0.82f), body, new Vector3(0f, Y, 0f), Vector3.zero, Vector3.one);
+            // canopy + seat
+            P(PrimitiveType.Sphere, model, new Vector3(0f, Y + 0.72f, 2.6f), new Vector3(1.05f, 0.95f, 3.2f), Vector3.zero, glass);
+            P(PrimitiveType.Cube, model, new Vector3(0f, Y + 0.25f, 2.4f), new Vector3(0.8f, 0.3f, 1.6f), Vector3.zero, dark);
+            seat = Mats.Node(model, "Seat", new Vector3(0f, Y + 0.32f, 2.55f));
+            // intakes
+            for (int s = -1; s <= 1; s += 2)
+            {
+                P(PrimitiveType.Cube, model, new Vector3(s * 1.08f, Y + 0.05f, 0.9f), new Vector3(0.62f, 1.05f, 2.8f), new Vector3(0f, -s * 4f, 0f), body);
+                P(PrimitiveType.Cube, model, new Vector3(s * 1.12f, Y + 0.05f, 2.31f), new Vector3(0.5f, 0.85f, 0.04f), new Vector3(0f, -s * 4f, 0f), dark);
+            }
+            // swept wings + tails (green tips)
+            var wing = new[] { new Vector2(0.9f, 1.5f), new Vector2(4.7f, -2.5f), new Vector2(4.7f, -3.5f), new Vector2(0.9f, -4.0f) };
+            var wingL = new Vector2[4]; for (int i = 0; i < 4; i++) wingL[i] = new Vector2(-wing[i].x, wing[i].y);
+            MeshGo(model, "Wing R", Plate(wing, 0.2f), body, new Vector3(0f, Y - 0.1f, 0f), new Vector3(0f, 0f, -3f), Vector3.one);
+            MeshGo(model, "Wing L", Plate(wingL, 0.2f), body, new Vector3(0f, Y - 0.1f, 0f), new Vector3(0f, 0f, 3f), Vector3.one);
+            for (int s = -1; s <= 1; s += 2)
+            {
+                P(PrimitiveType.Cube, model, new Vector3(s * 4.62f, Y + 0.07f, -3.0f), new Vector3(0.16f, 0.24f, 1.05f), Vector3.zero, green);
+                var ht = new[] { new Vector2(0.7f * s, -4.4f), new Vector2(2.7f * s, -5.6f), new Vector2(2.7f * s, -6.2f), new Vector2(0.7f * s, -6.0f) };
+                MeshGo(model, "Tailplane", Plate(ht, 0.14f), body, new Vector3(0f, Y - 0.05f, 0f), Vector3.zero, Vector3.one);
+                // canted fins
+                var fin = new[] { new Vector2(0f, -3.6f), new Vector2(2.3f, -5.2f), new Vector2(2.3f, -6.0f), new Vector2(0f, -5.9f) };
+                var fg = MeshGo(model, "Fin", Plate(fin, 0.14f), green, new Vector3(s * 0.85f, Y + 0.55f, 0f), new Vector3(0f, 0f, s > 0 ? 70f : 110f), Vector3.one);
+            }
         }
-        // swept wings + tails (green tips)
-        var wing = new[] { new Vector2(0.9f, 1.5f), new Vector2(4.7f, -2.5f), new Vector2(4.7f, -3.5f), new Vector2(0.9f, -4.0f) };
-        var wingL = new Vector2[4]; for (int i = 0; i < 4; i++) wingL[i] = new Vector2(-wing[i].x, wing[i].y);
-        MeshGo(model, "Wing R", Plate(wing, 0.2f), body, new Vector3(0f, Y - 0.1f, 0f), new Vector3(0f, 0f, -3f), Vector3.one);
-        MeshGo(model, "Wing L", Plate(wingL, 0.2f), body, new Vector3(0f, Y - 0.1f, 0f), new Vector3(0f, 0f, 3f), Vector3.one);
-        for (int s = -1; s <= 1; s += 2)
-        {
-            P(PrimitiveType.Cube, model, new Vector3(s * 4.62f, Y + 0.07f, -3.0f), new Vector3(0.16f, 0.24f, 1.05f), Vector3.zero, green);
-            var ht = new[] { new Vector2(0.7f * s, -4.4f), new Vector2(2.7f * s, -5.6f), new Vector2(2.7f * s, -6.2f), new Vector2(0.7f * s, -6.0f) };
-            MeshGo(model, "Tailplane", Plate(ht, 0.14f), body, new Vector3(0f, Y - 0.05f, 0f), Vector3.zero, Vector3.one);
-            // canted fins
-            var fin = new[] { new Vector2(0f, -3.6f), new Vector2(2.3f, -5.2f), new Vector2(2.3f, -6.0f), new Vector2(0f, -5.9f) };
-            var fg = MeshGo(model, "Fin", Plate(fin, 0.14f), green, new Vector3(s * 0.85f, Y + 0.55f, 0f), new Vector3(0f, 0f, s > 0 ? 70f : 110f), Vector3.one);
-        }
+        else Airframe1(Y, out glass);   // ffu71: the second jet
+        float noz = style == 0 ? -5.7f : -4.8f;
         // swivelling rear nozzle (pivot at the tail; the nozzle extends aft and rotates down for hover)
-        nozzle = Mats.Node(model, "Nozzle pivot", new Vector3(0f, Y - 0.05f, -5.7f));
+        nozzle = Mats.Node(model, "Nozzle pivot", new Vector3(0f, Y - 0.05f, noz));
         P(PrimitiveType.Cylinder, nozzle, new Vector3(0f, 0f, -0.55f), new Vector3(1.05f, 0.55f, 1.05f), new Vector3(90f, 0f, 0f), metal);
         P(PrimitiveType.Cylinder, nozzle, new Vector3(0f, 0f, -1.12f), new Vector3(0.82f, 0.04f, 0.82f), new Vector3(90f, 0f, 0f), dark);
         flame = Mats.Node(nozzle, "Flame", new Vector3(0f, 0f, -1.15f));
@@ -836,30 +860,36 @@ public class Jet : Vehicle
         var fgo = MeshGo(flame, "Flame mesh", Lathe(fz, fr, 12, 1f), flameMat, Vector3.zero, Vector3.zero, Vector3.one);
         flameR = fgo.GetComponent<Renderer>(); flameR.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; flameR.enabled = false;
         // lift fan behind the cockpit: fan disc + two doors that hinge open on top
-        fan = P(PrimitiveType.Cylinder, model, new Vector3(0f, Y + 0.55f, 0.75f), new Vector3(1.1f, 0.03f, 1.1f), Vector3.zero, dark).transform;
+        float fz0 = style == 0 ? 0.75f : 0.9f, fy0 = style == 0 ? 0f : 0.04f;
+        fan = P(PrimitiveType.Cylinder, model, new Vector3(0f, Y + 0.55f + fy0, fz0), new Vector3(1.1f, 0.03f, 1.1f), Vector3.zero, dark).transform;
         P(PrimitiveType.Cube, fan, Vector3.zero, new Vector3(1f, 1.5f, 0.12f), Vector3.zero, metal);
         P(PrimitiveType.Cube, fan, Vector3.zero, new Vector3(0.12f, 1.5f, 1f), Vector3.zero, metal);
-        fanDoorL = Mats.Node(model, "Fan door L", new Vector3(-0.55f, Y + 0.86f, 0.75f));
+        fanDoorL = Mats.Node(model, "Fan door L", new Vector3(-0.55f, Y + 0.86f + fy0, fz0));
         P(PrimitiveType.Cube, fanDoorL, new Vector3(0.28f, 0f, 0f), new Vector3(0.56f, 0.05f, 1.2f), Vector3.zero, body);
-        fanDoorR = Mats.Node(model, "Fan door R", new Vector3(0.55f, Y + 0.86f, 0.75f));
+        fanDoorR = Mats.Node(model, "Fan door R", new Vector3(0.55f, Y + 0.86f + fy0, fz0));
         P(PrimitiveType.Cube, fanDoorR, new Vector3(-0.28f, 0f, 0f), new Vector3(0.56f, 0.05f, 1.2f), Vector3.zero, body);
         // roll posts under the wings (puff blue in hover)
         Material post = new Material(Mats.Unlit(Color.white)) { name = "Roll post" }; post.color = new Color(0.5f, 0.7f, 1f) * 1.8f;
-        rollL = P(PrimitiveType.Cylinder, model, new Vector3(-3.9f, Y - 0.6f, -3.0f), new Vector3(0.22f, 0.45f, 0.22f), Vector3.zero, post).transform;
-        rollR = P(PrimitiveType.Cylinder, model, new Vector3(3.9f, Y - 0.6f, -3.0f), new Vector3(0.22f, 0.45f, 0.22f), Vector3.zero, post).transform;
-        // green spine stripe + nose tip
-        P(PrimitiveType.Cube, model, new Vector3(0f, Y + 0.86f, -2.2f), new Vector3(0.28f, 0.06f, 5.2f), Vector3.zero, green);
-        P(PrimitiveType.Sphere, model, new Vector3(0f, Y, 6.95f), new Vector3(0.22f, 0.2f, 0.6f), Vector3.zero, green);
+        float rpx = style == 0 ? 3.9f : Span1 - 0.5f, rpz = style == 0 ? -3.0f : -3.6f;
+        rollL = P(PrimitiveType.Cylinder, model, new Vector3(-rpx, Y - 0.6f, rpz), new Vector3(0.22f, 0.45f, 0.22f), Vector3.zero, post).transform;
+        rollR = P(PrimitiveType.Cylinder, model, new Vector3(rpx, Y - 0.6f, rpz), new Vector3(0.22f, 0.45f, 0.22f), Vector3.zero, post).transform;
+        if (style == 0)
+        {
+            // green spine stripe + nose tip
+            P(PrimitiveType.Cube, model, new Vector3(0f, Y + 0.86f, -2.2f), new Vector3(0.28f, 0.06f, 5.2f), Vector3.zero, green);
+            P(PrimitiveType.Sphere, model, new Vector3(0f, Y, 6.95f), new Vector3(0.22f, 0.2f, 0.6f), Vector3.zero, green);
+        }
         // landing gear (scaled flat when retracted)
         gear = Mats.Node(model, "Gear", Vector3.zero);
-        Vector3[] wp = { new Vector3(0f, 0f, 4.6f), new Vector3(-1.9f, 0f, -1.6f), new Vector3(1.9f, 0f, -1.6f) };
+        Vector3[] wp = style == 0 ? new[] { new Vector3(0f, 0f, 4.6f), new Vector3(-1.9f, 0f, -1.6f), new Vector3(1.9f, 0f, -1.6f) }
+                                  : new[] { new Vector3(0f, 0f, 4.0f), new Vector3(-1.6f, 0f, -2.0f), new Vector3(1.6f, 0f, -2.0f) };
         foreach (Vector3 w in wp)
         {
             P(PrimitiveType.Cylinder, gear, w + new Vector3(0f, 0.95f, 0f), new Vector3(0.14f, 0.6f, 0.14f), Vector3.zero, metal);
             P(PrimitiveType.Cylinder, gear, w + new Vector3(0f, 0.36f, 0f), new Vector3(0.72f, 0.14f, 0.72f), new Vector3(0f, 0f, 90f), tyre);
         }
-        // name on both sides + tail number
-        for (int s = -1; s <= 1; s += 2)
+        // name on both sides + tail number (ffu71: the second jet is unnamed - no lettering)
+        for (int s = -1; s <= (style == 0 ? 1 : -2); s += 2)
         {
             var tg = new GameObject("Name");
             tg.transform.SetParent(model, false);
@@ -875,7 +905,7 @@ public class Jet : Vehicle
         vapourMat = new Material(FX.SoftMat()) { name = "Vapour cone" };
         vapourMat.mainTexture = null;
         float[] vz = { 2.5f, 0.5f, -2f, -3.5f }; float[] vr = { 0.6f, 2.6f, 4.4f, 5.2f };
-        var vg = MeshGo(model, "Vapour", Lathe(vz, vr, 20, 0.8f), vapourMat, new Vector3(0f, Y, 0f), Vector3.zero, Vector3.one);
+        var vg = MeshGo(model, "Vapour", Lathe(vz, vr, 20, 0.8f), vapourMat, new Vector3(0f, Y, 0f), Vector3.zero, Vector3.one * (style == 0 ? 1f : 0.82f));
         vapour = vg.transform; vapourR = vg.GetComponent<Renderer>(); vapourR.enabled = false; vapourR.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         // heat shimmer under the hover nozzles: a faint rippling column of translucent rings
         shimmer = new GameObject("Shimmer").transform;
@@ -891,9 +921,10 @@ public class Jet : Vehicle
         }
         shimmer.gameObject.SetActive(false);
         // trails: wingtips (contrails) + engine
-        trailL = Trail(new Vector3(-4.7f, Y + 0.07f, -3.3f), 0.25f, 1.6f, 2.2f, new Color(1f, 1f, 1f, 0.55f));
-        trailR = Trail(new Vector3(4.7f, Y + 0.07f, -3.3f), 0.25f, 1.6f, 2.2f, new Color(1f, 1f, 1f, 0.55f));
-        trailE = Trail(new Vector3(0f, Y, -7f), 1.0f, 4.5f, 3f, new Color(0.92f, 0.92f, 0.95f, 0.45f));
+        float tx = style == 0 ? 4.7f : Span1, tz = style == 0 ? -3.3f : -4.2f;
+        trailL = Trail(new Vector3(-tx, Y + 0.07f, tz), 0.25f, 1.6f, 2.2f, new Color(1f, 1f, 1f, 0.55f));
+        trailR = Trail(new Vector3(tx, Y + 0.07f, tz), 0.25f, 1.6f, 2.2f, new Color(1f, 1f, 1f, 0.55f));
+        trailE = Trail(new Vector3(0f, Y, noz - 1.3f), 1.0f, 4.5f, 3f, new Color(0.92f, 0.92f, 0.95f, 0.45f));
         // speed lines: streaks in a tube around the jet, moving aft fast (local space)
         speedLines = new GameObject("Speed lines").AddComponent<ParticleSystem>();
         speedLines.transform.SetParent(transform, false);
@@ -909,6 +940,46 @@ public class Jet : Vehicle
         pr.sharedMaterial = FX.SoftMat();
         speedLines.Play();
         foreach (var r in model.GetComponentsInChildren<Renderer>()) if (r != flameR && r != vapourR && r.sharedMaterial != glass) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+    }
+
+    // ffu71: the second jet's airframe - a slim white delta: chin intake, canards, one tall fin, blue-grey trim, smoked canopy.
+    // Same parts list as James's jet for the shared bits (seat, nozzle, lift fan, roll posts, gear), so one flight model drives both.
+    public const float Span1 = 3.3f;   // half wingspan (m): fits beside James's jet in the hangar and through the door posts
+    void Airframe1(float Y, out Material glass)
+    {
+        Material body = Mats.Paint(new Color(0.88f, 0.9f, 0.92f), 0.86f);
+        Material trim = Mats.Paint(new Color(0.16f, 0.22f, 0.32f), 0.75f);
+        Material dark = Mats.Paint(new Color(0.12f, 0.13f, 0.15f), 0.6f);
+        glass = Mats.GlassTint(new Color(0.35f, 0.5f, 0.72f, 0.45f));
+        float[] zs = { -4.9f, -4.4f, -3.4f, -1.5f, 0.8f, 2.8f, 4.4f, 5.6f, 6.4f, 6.7f };
+        float[] rs = { 0.55f, 0.75f, 0.9f, 0.98f, 0.98f, 0.88f, 0.66f, 0.38f, 0.12f, 0.02f };
+        MeshGo(model, "Fuselage", Lathe(zs, rs, 18, 0.85f), body, new Vector3(0f, Y, 0f), Vector3.zero, Vector3.one);
+        P(PrimitiveType.Sphere, model, new Vector3(0f, Y + 0.64f, 3.0f), new Vector3(0.9f, 0.85f, 2.6f), Vector3.zero, glass);
+        P(PrimitiveType.Cube, model, new Vector3(0f, Y + 0.25f, 2.8f), new Vector3(0.72f, 0.3f, 1.5f), Vector3.zero, dark);
+        seat = Mats.Node(model, "Seat", new Vector3(0f, Y + 0.32f, 2.95f));
+        // chin intake
+        P(PrimitiveType.Cube, model, new Vector3(0f, Y - 0.72f, 1.5f), new Vector3(1.1f, 0.55f, 2.6f), Vector3.zero, body);
+        P(PrimitiveType.Cube, model, new Vector3(0f, Y - 0.72f, 2.81f), new Vector3(0.95f, 0.42f, 0.04f), Vector3.zero, dark);
+        // delta wings (blue-grey tips) + canards
+        var wing = new[] { new Vector2(0.85f, 1.6f), new Vector2(Span1, -3.9f), new Vector2(Span1, -4.5f), new Vector2(0.85f, -4.6f) };
+        var wingL = new Vector2[4]; for (int i = 0; i < 4; i++) wingL[i] = new Vector2(-wing[i].x, wing[i].y);
+        MeshGo(model, "Wing R", Plate(wing, 0.18f), body, new Vector3(0f, Y - 0.15f, 0f), new Vector3(0f, 0f, -2f), Vector3.one);
+        MeshGo(model, "Wing L", Plate(wingL, 0.18f), body, new Vector3(0f, Y - 0.15f, 0f), new Vector3(0f, 0f, 2f), Vector3.one);
+        for (int s = -1; s <= 1; s += 2)
+        {
+            P(PrimitiveType.Cube, model, new Vector3(s * (Span1 - 0.06f), Y - 0.04f, -4.2f), new Vector3(0.14f, 0.2f, 0.75f), Vector3.zero, trim);
+            var cn = new[] { new Vector2(0.8f * s, 3.9f), new Vector2(1.9f * s, 3.3f), new Vector2(1.9f * s, 3.0f), new Vector2(0.8f * s, 3.1f) };
+            MeshGo(model, "Canard", Plate(cn, 0.1f), body, new Vector3(0f, Y + 0.2f, 0f), Vector3.zero, Vector3.one);
+            // trim stripe along each side
+            P(PrimitiveType.Cube, model, new Vector3(s * 0.84f, Y + 0.12f, -0.4f), new Vector3(0.04f, 0.12f, 6.4f), Vector3.zero, trim);
+        }
+        // one tall fin (plate rotated upright) with a blue-grey tip
+        var fin = new[] { new Vector2(0f, -1.8f), new Vector2(2.4f, -4.2f), new Vector2(2.4f, -4.8f), new Vector2(0f, -4.7f) };
+        MeshGo(model, "Fin", Plate(fin, 0.14f), body, new Vector3(0f, Y + 0.7f, 0f), new Vector3(0f, 0f, 90f), Vector3.one);
+        P(PrimitiveType.Cube, model, new Vector3(0f, Y + 3.07f, -4.5f), new Vector3(0.16f, 0.12f, 0.62f), Vector3.zero, trim);
+        // spine + nose tip
+        P(PrimitiveType.Cube, model, new Vector3(0f, Y + 0.84f, -2.0f), new Vector3(0.22f, 0.05f, 4.2f), Vector3.zero, trim);
+        P(PrimitiveType.Sphere, model, new Vector3(0f, Y, 6.62f), new Vector3(0.2f, 0.18f, 0.5f), Vector3.zero, trim);
     }
 
     TrailRenderer Trail(Vector3 lp, float w0, float w1, float time, Color c)

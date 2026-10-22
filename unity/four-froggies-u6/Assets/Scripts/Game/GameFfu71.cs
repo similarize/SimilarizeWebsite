@@ -155,3 +155,116 @@ public partial class Game
     }
 }
 
+// Item 5 - the second jet: ?ffdemo=1&ffshot=jet71 (play probe, P1 = James): two jets in the hangar (clearances), James's jet
+// unchanged, the second jet unnamed + same who-can-fly rule; James hovers it under the shut side roof (held under the ceiling),
+// taxis out of the doors, climbs clear, goes to jet mode, then it is parked back in its bay.
+// Logs "FFU71 PASS|FAIL ...", "FFU71 RESULT n/m (jet71)", "FFDEMO jet71 ph N <phase>", "FFDEMO jet71 done".
+public class Ffu71 : MonoBehaviour
+{
+    public static Ffu71 I;
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    static void Boot()
+    {
+        if (I != null) return;
+        I = new GameObject("ffu71").AddComponent<Ffu71>();
+        DontDestroyOnLoad(I.gameObject);
+    }
+    bool started;
+    void Update()
+    {
+        if (started) return;
+        string s = Ffu33.Url("ffdemo") != null ? Ffu33.Url("ffshot") : null;
+        if (s != "jet71") { enabled = false; return; }
+        if (Game.I == null || Game.I.state != Game.State.Play || Game.I.slots.Count == 0 || JetBase.I == null) return;
+        started = true;
+        Game.I.StartCoroutine(Game.I.J71Run());
+    }
+}
+
+public partial class Game
+{
+    Jet.JetIn j71In;
+    IEnumerator J71Fly(Jet j, float secs, System.Func<bool> until)
+    {
+        float r0 = Time.realtimeSinceStartup;
+        while (Time.realtimeSinceStartup - r0 < secs && (until == null || !until())) yield return null;
+    }
+
+    public IEnumerator J71Run()
+    {
+        yield return new WaitForSecondsRealtime(3f);
+        Frog f = frogs[slots[0].frog];
+        Jet j1 = Jet.I, j2 = JetBase.I.jet2;
+        Vector2 hc = JetLayout.HangarC;
+        Debug.Log("FFU71 start jet71: P1 " + f.nick + " jets " + Jet.Jets.Count + " old=" + F71.Old);
+        if (F71.Old)
+        {
+            // before shot only: the hangar with James's jet alone
+            Vector3 ap0 = new Vector3(JetLayout.DoorX - 15f, 0f, hc.y + 4f); ap0.y = Ranch.GY(ap0.x, ap0.z) + 0.3f;
+            f.Teleport(ap0); f.transform.rotation = Quaternion.Euler(0f, 90f, 0f);
+            if (slots[0].rig != null) slots[0].rig.SetYaw(90f);
+            yield return new WaitForSecondsRealtime(4f);
+            F71Ph("jet71", 1, "hangar");
+            yield return new WaitForSecondsRealtime(7f);
+            F71Result("jet71");
+            yield break;
+        }
+        F71Check("two jets in the hangar (James's jet + the second jet)", Jet.Jets.Count == 2 && j1 != null && j2 != null && j1 != j2 && j1.style == 0 && j2.style == 1,
+            "jets " + Jet.Jets.Count + " j1 " + (j1 != null ? j1.Title + " @" + j1.transform.position.ToString("0.0") : "-") + " j2 " + (j2 != null ? j2.Title + " @" + j2.transform.position.ToString("0.0") : "-"));
+        if (j1 == null || j2 == null) { F71Result("jet71"); yield break; }
+        float dz = Mathf.Abs(j2.homePos.z - j1.homePos.z), wingGap = dz - 4.7f - Jet.Span1, wallGap = (JetLayout.HangarD * 0.5f - 0.3f) - (Mathf.Abs(j2.homePos.z - hc.y) + Jet.Span1), postGap = (JetLayout.HangarD * 0.5f - 1f) - (Mathf.Abs(j2.homePos.z - hc.y) + Jet.Span1);
+        bool inHangar = Mathf.Abs(j2.homePos.x - hc.x) < JetLayout.HangarW * 0.5f - 6.5f && Mathf.Abs(j2.homePos.z - hc.y) < JetLayout.HangarD * 0.5f;
+        F71Check("second jet parks in the same hangar, clear of James's jet, the side wall and the door posts", inHangar && wingGap > 0.1f && wallGap > 0.3f && postGap > 0.1f,
+            "wingtip gap " + wingGap.ToString("0.00") + " m, wall gap " + wallGap.ToString("0.00") + " m, door-post gap " + postGap.ToString("0.00") + " m");
+        F71Check("James's jet unchanged (Jet.I, centre bay, name)", Jet.I == j1 && Mathf.Abs(j1.homePos.z - hc.y) < 0.01f && j1.Title == "James's jet", "home " + j1.homePos.ToString("0.0"));
+        F71Check("the second jet is unnamed (no lettering, title 'the second jet')", j2.Title == "the second jet" && j2.GetComponentsInChildren<TextMesh>(true).Length == 0, "texts " + j2.GetComponentsInChildren<TextMesh>(true).Length);
+        Frog ai = null; foreach (Frog o in frogs) if (o != null && !o.human && o.gameObject.activeInHierarchy) { ai = o; break; }
+        F71Check("same who-can-fly rule as James's jet (James yes, AI froggies no)", j2.CanEnter(f) == j1.CanEnter(f) && j2.CanEnter(f) && (ai == null || !j2.CanEnter(ai)), "James " + j2.CanEnter(f) + " AI " + (ai != null ? ai.nick + " " + j2.CanEnter(ai) : "-"));
+        // hangar shot from the apron
+        Vector3 ap = new Vector3(JetLayout.DoorX - 15f, 0f, hc.y + 4f);
+        ap.y = Ranch.GY(ap.x, ap.z) + 0.3f;
+        f.Teleport(ap); f.transform.rotation = Quaternion.Euler(0f, 90f, 0f);
+        if (slots[0].rig != null) slots[0].rig.SetYaw(90f);
+        yield return new WaitForSecondsRealtime(4f);
+        F71Ph("jet71", 1, "hangar");
+        yield return new WaitForSecondsRealtime(7f);
+        // fly the second jet: hover up in the side bay (roof stays shut there), taxi out of the doors, climb, jet mode
+        f.Teleport(j2.transform.position + Vector3.right * 2f + Vector3.forward * -4f);
+        yield return null;
+        f.EnterVehicle(j2);
+        yield return new WaitForSecondsRealtime(1f);
+        F71Check("James gets in the second jet", f.vehicle == j2 && j2.driver == f, "vehicle " + (f.vehicle != null ? f.vehicle.Title : "-"));
+        j2.autopilot = q => j71In;
+        float ceil = JetBase.FloorY + JetLayout.HangarH - 3.4f;
+        j71In = new Jet.JetIn { climb = 1f };
+        yield return J71Fly(j2, 6f, null);
+        float yUp = j2.transform.position.y;
+        F71Check("hovering up in the side bay: held under the shut roof", yUp <= ceil + 0.1f && yUp > JetBase.FloorY + 2f && JetBase.I.RoofK < 0.5f, "y " + yUp.ToString("0.0") + " ceiling " + ceil.ToString("0.0") + " roofK " + JetBase.I.RoofK.ToString("0.00"));
+        j71In = new Jet.JetIn { climb = -1f };
+        yield return J71Fly(j2, 6f, () => j2.agl < 2.6f);
+        j71In = new Jet.JetIn { fwd = 0.6f };
+        yield return J71Fly(j2, 45f, () => j2.transform.position.x < JetLayout.DoorX - 14f);
+        F71Check("taxis out through the hangar doors", j2.transform.position.x < JetLayout.DoorX - 10f, "x " + j2.transform.position.x.ToString("0.0") + " (doors at " + JetLayout.DoorX.ToString("0.0") + ") door k " + JetBase.I.DoorK.ToString("0.00"));
+        j71In = new Jet.JetIn { climb = 1f };
+        yield return J71Fly(j2, 20f, () => j2.transform.position.y > JetBase.FloorY + JetLayout.HangarH + 12f);
+        F71Check("climbs clear of the hangar", j2.transform.position.y > JetBase.FloorY + JetLayout.HangarH + 8f, "y " + j2.transform.position.y.ToString("0.0") + " mode " + j2.mode);
+        if (slots[0].rig != null) slots[0].rig.SetYaw(j2.transform.eulerAngles.y + 160f);
+        F71Ph("jet71", 2, "jet2hover");
+        yield return new WaitForSecondsRealtime(6f);
+        j71In = new Jet.JetIn { fwd = 1f, climb = 0.3f };
+        yield return J71Fly(j2, 25f, () => !j2.vtol && j2.nz < 0.3f);
+        j71In = new Jet.JetIn { thr = 0.6f, pitch = 0.05f };   // pitch > 0 = gentle pull up
+        yield return J71Fly(j2, 4f, null);
+        F71Check("same flight model: transition to jet mode", !j2.vtol && j2.mode == Jet.Mode.Jet, "mode " + j2.mode + " vtol " + j2.vtol + " nz " + j2.nz.ToString("0.00") + " speed " + j2.vel.magnitude.ToString("0") + " m/s");
+        if (slots[0].rig != null) slots[0].rig.SetYaw(j2.transform.eulerAngles.y + 150f);
+        F71Ph("jet71", 3, "jet2fly");
+        yield return new WaitForSecondsRealtime(6f);
+        j2.autopilot = null;
+        j2.ResetToPad();
+        yield return new WaitForSecondsRealtime(1f);
+        if (f.vehicle == j2) f.ExitVehicle();
+        yield return new WaitForSecondsRealtime(1.5f);
+        F71Check("parked back in its bay beside James's jet", f.vehicle == null && (j2.transform.position - j2.homePos).magnitude < 0.5f && (j1.transform.position - j1.homePos).magnitude < 0.5f, "j2 " + j2.transform.position.ToString("0.0") + " home " + j2.homePos.ToString("0.0"));
+        F71Result("jet71");
+    }
+}

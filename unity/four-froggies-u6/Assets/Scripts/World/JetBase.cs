@@ -7,14 +7,20 @@ using UnityEngine.UI;
 // and a short runway (piano keys, centre line, 18 / 36, edge lights, windsock). The terrain under it is flat (Layout.GroundY
 // x JetLayout.Flat). Also runs: door / roof motors, passenger boarding (A / E next to the jet while James flies it; gamepad Y
 // boards too), and the jet's HUD readout for its riders.
+// ffu71 (Ben item 5): the hangar also houses the SECOND jet (Jet style 1, unnamed), parked beside James's jet on the +z side.
+// Only the middle of the roof slides open, so the second jet hovers / taxis out of the doors before it climbs; flown home it
+// comes down on the VTOL pad and rolls back into its bay (ResetToPad). Riders / Y boarding / the jet HUD work for both jets.
 public class JetBase : MonoBehaviour
 {
     public static JetBase I;
+    public const float Jet2Z = 8.2f;      // ffu71: second jet bay, metres +z of the hangar centre line (wingtips clear James's jet + the door posts)
+    public const float RoofGap = 4.5f;    // ffu71: |z - centre| under the sliding roof opening a jet may lift through
     Transform root, hroot, doorA, doorB, roofA, roofB;
     float doorK, roofK;
     Vector3 doorA0, doorB0, roofA0, roofB0;   // local (hangar frame)
-    public Jet jet;
-    Hotspot rideSpot;
+    public Jet jet, jet2;   // ffu71: jet2 = the second jet
+    readonly List<Jet> jets = new List<Jet>();
+    readonly Dictionary<Jet, Hotspot> rideSpots = new Dictionary<Jet, Hotspot>();
     readonly Dictionary<Frog, float> leftAt = new Dictionary<Frog, float>();
     readonly Dictionary<Slot, JetHud> huds = new Dictionary<Slot, JetHud>();
     public float DoorK { get { return doorK; } }
@@ -165,17 +171,33 @@ public class JetBase : MonoBehaviour
         // ---- the jet, parked inside facing the doors ----
         Vector3 home = new Vector3(hcW.x - 1.5f, fy, hcW.y);
         jet = Jet.Spawn(home, 270f);
+        jets.Add(jet);
+        // ffu71: the second jet in the bay beside it (same facing); flown home it lands on the VTOL pad, then parks in its bay
+        Vector3 home2 = new Vector3(hcW.x - 0.5f, fy, hcW.y + Jet2Z);
+        if (!F71.Old)   // &ff71old=1: before shots without it
+        {
+            jet2 = Jet.Spawn(home2, 270f, 1);
+            jet2.homeApproach = new Vector3(pc.x, ay, pc.y);
+            jets.Add(jet2);
+        }
         // passengers: A / E next to the jet while James is flying it (it has to be on the ground or hovering low)
-        rideSpot = Interact.Add(home, 7f, "ride along in James's jet", f => Board(f));
-        rideSpot.enabled = f => jet != null && jet.driver != null && jet.driver != f && f.vehicle == null && f.passengerOf == null && jet.agl < 3f && jet.Passengers().Count < 1 && (!leftAt.ContainsKey(f) || Time.time - leftAt[f] > 1.2f);
+        foreach (Jet jj in jets) AddRide(jj);
         Debug.Log("JetBase: hangar floor y " + fy.ToString("0.00") + " runway y " + rY.ToString("0.00") + " jet at " + home.ToString("0.0"));
+        Debug.Log("JetBase: second jet (unnamed) " + (jet2 != null ? "parked at " + home2.ToString("0.0") + " beside James's jet" : "off (&ff71old=1)"));
     }
 
-    void Board(Frog f)
+    void AddRide(Jet j)
     {
-        if (jet == null || jet.driver == null) return;
-        f.BoardAsPassenger(jet);
-        f.Toast("Riding along with " + jet.driver.nick + "! (A / E to hop out when it's landed)", 3f);
+        var h = Interact.Add(j.homePos, 7f, "ride along in " + j.Title, f => Board(f, j));
+        h.enabled = f => j != null && j.driver != null && j.driver != f && f.vehicle == null && f.passengerOf == null && j.agl < 3f && j.Passengers().Count < 1 && (!leftAt.ContainsKey(f) || Time.time - leftAt[f] > 1.2f);
+        rideSpots[j] = h;
+    }
+
+    void Board(Frog f, Jet j)
+    {
+        if (j == null || j.driver == null) return;
+        f.BoardAsPassenger(j);
+        f.Toast("Riding along with " + j.driver.nick + "! (A / E to hop out when it's landed)", 3f);
         Sfx.Play(Sfx.Door, 0.6f);
     }
 
@@ -198,8 +220,18 @@ public class JetBase : MonoBehaviour
         float dt = Time.deltaTime;
         Vector2 hc = JetLayout.HangarC;
         Vector3 doorC = new Vector3(JetLayout.DoorX, 0f, hc.y);
-        Vector3 jp = jet.transform.position;
-        bool near = (new Vector2(jp.x - doorC.x, jp.z - doorC.z)).magnitude < 34f && jp.y < 30f;
+        bool near = false, roofOpen = false;
+        foreach (Jet j in jets)
+        {
+            if (j == null) continue;
+            Vector3 jp = j.transform.position;
+            if ((new Vector2(jp.x - doorC.x, jp.z - doorC.z)).magnitude < 34f && jp.y < 30f) near = true;
+            // the roof slides open for a jet lifting off from under the opening (James's jet's bay) or coming down into it
+            bool inside = Mathf.Abs(jp.x - hc.x) < JetLayout.HangarW * 0.5f && Mathf.Abs(jp.z - hc.y) < JetLayout.HangarD * 0.5f;
+            bool hov = j.driver != null && (j.vtol || j.nz > 0.5f);
+            if (inside && hov && Mathf.Abs(jp.z - hc.y) < RoofGap) roofOpen = true;
+            if (!inside && hov && (new Vector2(jp.x - hc.x, jp.z - hc.y)).magnitude < 30f && jp.y > JetLayout.HangarH + 2f) roofOpen = true;   // coming down to land inside
+        }
         foreach (Frog f in Game.I.frogs) if (f != null && f.world == WorldId.Ranch && (new Vector2(f.transform.position.x - doorC.x, f.transform.position.z - doorC.z)).magnitude < 22f) near = true;
         doorK = Mathf.MoveTowards(doorK, near ? 1f : 0f, dt * 0.35f);
         float e = doorK * doorK * (3f - 2f * doorK);
@@ -207,48 +239,55 @@ public class JetBase : MonoBehaviour
         // (hangar frame: doors on local +x, panels slide along local z)
         doorA.localPosition = doorA0 + new Vector3(0.4f * Mathf.Clamp01(e * 6f), 0f, -slide * e);
         doorB.localPosition = doorB0 + new Vector3(0.4f * Mathf.Clamp01(e * 6f), 0f, slide * e);
-        bool inside = Mathf.Abs(jp.x - hc.x) < JetLayout.HangarW * 0.5f && Mathf.Abs(jp.z - hc.y) < JetLayout.HangarD * 0.5f;
-        bool roofOpen = inside && jet.driver != null && (jet.vtol || jet.nz > 0.5f);
-        if (!inside && jet.driver != null && (new Vector2(jp.x - hc.x, jp.z - hc.y)).magnitude < 30f && jp.y > JetLayout.HangarH + 2f && (jet.vtol || jet.nz > 0.5f)) roofOpen = true;   // coming down to land inside
         roofK = Mathf.MoveTowards(roofK, roofOpen ? 1f : 0f, dt * 0.45f);
         float re = roofK * roofK * (3f - 2f * roofK);
         roofA.localPosition = roofA0 + new Vector3(0f, 0f, -5.4f * re);
         roofB.localPosition = roofB0 + new Vector3(0f, 0f, 5.4f * re);
-        // passenger hotspot follows the jet; gamepad Y next to it boards (pilot or passenger)
-        rideSpot.pos = jp;
+        // passenger hotspots follow their jets; gamepad Y next to a jet boards it (pilot or passenger) - the nearest jet wins
+        foreach (Jet j in jets) { Hotspot h; if (j != null && rideSpots.TryGetValue(j, out h)) h.pos = j.transform.position; }
         foreach (Slot s in Game.I.slots)
         {
             if (s == null || s.frog < 0 || s.frog >= Game.I.frogs.Count) continue;
             Frog f = Game.I.frogs[s.frog];
             if (f == null) continue;
-            if (f.passengerOf == jet)
+            Jet rode = f.passengerOf as Jet;
+            if (rode != null && jets.Contains(rode))
             {
-                if (s.last.use && jet.agl < 2.6f && jet.vel.magnitude < 7f)
+                if (s.last.use && rode.agl < 2.6f && rode.vel.magnitude < 7f)
                 {
-                    f.LeavePassenger(); f.Teleport(jet.ExitPoint()); leftAt[f] = Time.time;
-                    f.Toast("Hopped out of James's jet", 2f);
+                    f.LeavePassenger(); f.Teleport(rode.ExitPoint()); leftAt[f] = Time.time;
+                    f.Toast("Hopped out of " + rode.Title, 2f);
                 }
                 continue;
             }
             if (s.kind == InputKind.Gamepad && s.pad != null && s.pad.buttonNorth.wasPressedThisFrame && f.vehicle == null && f.passengerOf == null && f.remote == null && f.world == WorldId.Ranch)
             {
-                Vector3 cp = jet.body != null ? jet.body.ClosestPoint(f.transform.position + Vector3.up * 0.6f) : jp;
-                if ((cp - (f.transform.position + Vector3.up * 0.6f)).magnitude < 2.8f)
+                Vector3 fp = f.transform.position + Vector3.up * 0.6f;
+                Jet best = null; float bd = 2.8f;
+                foreach (Jet j in jets)
                 {
-                    if (jet.driver == null && jet.CanEnter(f)) f.EnterVehicle(jet);
-                    else if (rideSpot.enabled(f)) Board(f);
+                    if (j == null) continue;
+                    Vector3 cp = j.body != null ? j.body.ClosestPoint(fp) : j.transform.position;
+                    float d = (cp - fp).magnitude;
+                    if (d < bd) { bd = d; best = j; }
+                }
+                if (best != null)
+                {
+                    if (best.driver == null && best.CanEnter(f)) f.EnterVehicle(best);
+                    else if (rideSpots[best].enabled(f)) Board(f, best);
                 }
             }
         }
-        // the jet HUD for every rider's view
+        // the jet HUD for every rider's view (whichever jet they are in)
         foreach (Slot s in Game.I.slots)
         {
             if (s == null || s.hud == null) continue;
             JetHud h;
             if (!huds.TryGetValue(s, out h)) { h = new JetHud(s.hud.panel); huds[s] = h; }
             Frog f = s.frog >= 0 && s.frog < Game.I.frogs.Count ? Game.I.frogs[s.frog] : null;
-            bool riding = f != null && (f.vehicle == jet || f.passengerOf == jet) && Game.I.state == Game.State.Play;
-            h.Tick(riding ? jet : null, dt);
+            Jet in_ = null;
+            if (f != null && Game.I.state == Game.State.Play) foreach (Jet j in jets) if (j != null && (f.vehicle == j || f.passengerOf == j)) in_ = j;
+            h.Tick(in_, dt);
         }
     }
 
