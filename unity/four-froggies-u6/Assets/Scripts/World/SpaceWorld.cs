@@ -11,7 +11,7 @@ using UnityEngine;
 // captures you into orbit when slow near a body; the Sun's heat shield bounces you back.
 // Keys: T / Shift+T target, G auto, Z / C warp, F / Enter land, WASD fly, Shift brake, Space boost.
 // Touch: A = next target, FIRE = auto, MSL = land, UP = burn / boost, DOWN = brake.
-public class SpaceWorld : MonoBehaviour
+public partial class SpaceWorld : MonoBehaviour
 {
     public static SpaceWorld I;
     public const float K = 10f;                 // metres per three.js unit
@@ -65,6 +65,7 @@ public class SpaceWorld : MonoBehaviour
     public void Launch(Frog f)
     {
         if (!built) Build();
+        if (!F72.Old) { Launch72(f); return; }   // ffu72 (Ben items 6 + 7): SpaceWorld72.cs
         Sfx.Play(Sfx.Boom, 0.9f, 0.6f);
         if (ship.driver == null)
         {
@@ -85,11 +86,12 @@ public class SpaceWorld : MonoBehaviour
     }
 
     // ffu15: a story mech rocketed past 2.4 km: it flies on in space as itself (same flight model as the Starship)
-    public void LaunchMech(Frog f, StoryMech m)
+    public bool LaunchMech(Frog f, StoryMech m)   // ffu72: true = the mech itself flew to space (it hides on the ranch until it lands back)
     {
         if (!built) Build();
+        if (!F72.Old) return LaunchMech72(f, m);
         Sfx.Play(Sfx.Boom, 0.9f, 0.5f);
-        if (ship.driver != null) { Launch(f); return; }   // someone (split-screen) is already flying: ride along
+        if (ship.driver != null) { Launch(f); return false; }   // someone (split-screen) is already flying: ride along
         int earth = Find("earth"), st = Find("station");
         float sAng = Mathf.Atan2((PosAt(st, simT) - PosAt(earth, simT)).z, (PosAt(st, simT) - PosAt(earth, simT)).x);
         ship.EnterOrbit(earth, bodies[st].a, sAng - 0.18f);
@@ -97,12 +99,14 @@ public class SpaceWorld : MonoBehaviour
         ship.SetMechForm(m);
         f.SendTo(WorldId.Space, ship.transform.position, 0f);
         f.EnterVehicle(ship);
+        return true;
     }
 
     // back to orbit from a surface (Mars / Callisto) via the Starship standing there
     public void ToOrbit(Frog f, string bodyId)
     {
         if (!built) Build();
+        if (!F72.Old) { ToOrbit72(f, bodyId); return; }
         int b = Find(bodyId);
         if (ship.driver == null)
         {
@@ -122,8 +126,10 @@ public class SpaceWorld : MonoBehaviour
         Sfx.Play(Sfx.Boom, 0.7f, 0.7f);
     }
 
-    public void Land(int bodyIdx)
+    public void Land(int bodyIdx) { Land(ship, bodyIdx); }
+    public void Land(Starship s, int bodyIdx)
     {
+        if (!F72.Old && s != null) { Land72(s, bodyIdx); return; }
         Body b = bodies[bodyIdx];
         if (b.landable) ship.ReboardAll();   // ffu15: jetpacking froggies come back in before touchdown
         StoryMech mech = ship.mechForm;
@@ -213,6 +219,7 @@ public class SpaceWorld : MonoBehaviour
         targetRing = Line(new Color(1f, 0.85f, 0.3f, 0.6f), 0.5f, 64, true);
         ship = Starship.Build(this);
         ship.EnterOrbit(Find("earth"), bodies[Find("earth")].cap, 0f);
+        ships.Add(ship);   // ffu72
         foreach (var r in root.GetComponentsInChildren<Renderer>()) { r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; r.receiveShadows = false; }
         Tick(0f);
     }
@@ -423,6 +430,7 @@ public class SpaceWorld : MonoBehaviour
     void Update()
     {
         if (!built) return;
+        if (!F72.Old) Watch72(Mathf.Min(Time.deltaTime, 0.25f));   // ffu72: world-state (SpaceWorld72.cs)
         bool anyone = false;
         if (Game.I != null) foreach (Frog f in Game.I.frogs) if (f != null && f.world == WorldId.Space) anyone = true;
         if (RobotFeed.WatchingWorld(WorldId.Space)) anyone = true;   // ffu20: a robot's video feed is looking at space
@@ -433,7 +441,7 @@ public class SpaceWorld : MonoBehaviour
 
     void Tick(float dt)
     {
-        float warp = ship != null ? ship.SimRate : 1f;
+        float warp = F72.Old ? (ship != null ? ship.SimRate : 1f) : Warp72();
         simT += dt * warp;
         for (int i = 0; i < bodies.Count; i++)
         {
@@ -456,6 +464,7 @@ public class SpaceWorld : MonoBehaviour
             Vector3 c = b.parent >= 0 ? bodies[b.parent].pos : O;
             for (int k = 0; k < lr.positionCount; k++) { float a = k * Mathf.PI * 2f / lr.positionCount; lr.SetPosition(k, c + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * b.a); }
         }
+        if (!F72.Old) { Sim72(dt); return; }
         if (ship != null) ship.Sim(dt);
         DrawGuides();
     }
@@ -736,7 +745,7 @@ public partial class Starship : Vehicle
         if (i.auto) StartTransfer();
         if (i.warpHome) WarpHome();
         if (i.cargo) ToggleBay();
-        if (i.land) { if (mode == Mode.Orbit) W.Land(orbitBody); else if (driver != null) driver.Toast("Get into orbit first: auto-transfer, or fly close and brake (" + Key("LT", "S", "BRAKE") + "), then land", 2.5f); }
+        if (i.land) { if (mode == Mode.Orbit) W.Land(this, orbitBody); else if (driver != null) driver.Toast("Get into orbit first: auto-transfer, or fly close and brake (" + Key("LT", "S", "BRAKE") + "), then land", 2.5f); }
         if (i.warpUp) WarpGo();   // ffu62: works from orbit too (leaves toward the target)
         if (i.warpDown && mode == Mode.Free && warpIdx > 0) { warpIdx--; if (driver != null) driver.Toast(warpIdx == 0 ? "Warp off" : "Warp x" + Mathf.RoundToInt(Warps[warpIdx]), 1.2f); }
     }

@@ -17,6 +17,7 @@ public class LaunchSeq : MonoBehaviour
     const float GatherR = 45f;
 
     public readonly List<Frog> crew = new List<Frog>();
+    public static bool Busy { get { return I != null && (I.phase == 1 || I.phase == 3); } }   // ffu72: the stack is visible while it climbs / drops in
     int phase;                 // 0 idle, 1 countdown + climb, 2 fading in (in space), 3 ffu27 landing back on the pad
     const float LandT = 8f, LandH = 260f, LandHold = 1.4f;
     readonly List<Vector3> landSpots = new List<Vector3>();
@@ -41,6 +42,13 @@ public class LaunchSeq : MonoBehaviour
     {
         if (SpaceWorld.I == null || f == null) return;
         if (Ranch.ShipStack == null) { SpaceWorld.I.Launch(f); return; }
+        // ffu72 (Ben item 6): one Starship - while it is away (in space / on Mars ...) the pad is empty
+        if (!SpaceWorld.StarHome && !(I != null && I.phase == 1))
+        {
+            f.Toast("The Starship is " + SpaceWorld.StarWhere + " right now - it's back on this pad when its crew lands at the ranch", 3.5f);
+            Debug.Log("FF72 pad: " + f.nick + " can't board - the Starship is " + SpaceWorld.StarWhere);
+            return;
+        }
         Ensure();
         I.Start1(f);
     }

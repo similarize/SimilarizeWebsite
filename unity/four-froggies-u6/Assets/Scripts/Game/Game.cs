@@ -161,7 +161,8 @@ public partial class Game : MonoBehaviour
         if (demoShot == "seattest") { SeatTestLobby(); return false; }
         if (demoShot == "lobby59") { Lobby59TestLobby(); return false; }
         if (demoShot == "mode67") { Mode67Lobby(); return false; }   // ffu67c: mode pick + rumble + shared glider + back to lobby (GameFfu67c.cs)
-        if (demoShot == "phone71") { Phone71TestLobby(); return false; }   // ffu71: Ben item 1 - 2- / 4-way split phones, own viewport + own pad (GameFfu71.cs)
+        if (demoShot == "phone71") { Phone71TestLobby(); return false; }
+        if (demoShot == "world72") { World72TestLobby(); return false; }   // ffu72: Ben item 6 - world-state (one Starship, mechs hidden while in space) (GameFfu72.cs)   // ffu71: Ben item 1 - 2- / 4-way split phones, own viewport + own pad (GameFfu71.cs)
         if (demoShot == "phone59") { Phone59TestLobby(); return false; }   // ffu59b: 4-player split, own phones, FULL in one viewport   // ffu59: A joins only, LT starts (GameFfu59.cs)   // ffu39: pad select + touch tap on PLAY (GameSeats.cs)
         if (demoShot == "lobby")
         {

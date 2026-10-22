@@ -71,7 +71,7 @@ public partial class StoryMech : Vehicle
     float raiseK, armLen, muzzleFlashT;
     Vector3 lastShotDir = Vector3.forward;
 
-    public override bool CanEnter(Frog f) { return !wrecked && !PartsBusy && (f.IsPet || f.charId == owner); }
+    public override bool CanEnter(Frog f) { return !wrecked && !PartsBusy && !Away72 && (f.IsPet || f.charId == owner); }   // ffu72: not while it is in space
     public override string DeniedLine
     {
         get
@@ -914,7 +914,7 @@ public partial class StoryMech : Vehicle
         bool takeAll = Game.I != null && Game.I.SharedScreen;
         string who = pilot.nick;
         pilot.SendTo(WorldId.Ranch, pilot.transform.position, 0f);   // out of the ranch mech first
-        SpaceWorld.I.LaunchMech(pilot, this);
+        bool flew = SpaceWorld.I.LaunchMech(pilot, this);
         pilot.Toast(Title + " broke into SPACE!  Stick steer + thrust, RT / W boost, " + (pilot.inputKind == InputKind.Gamepad ? "B" : pilot.inputKind == InputKind.Touch ? "BAY" : "B") + " cargo bay", 5f);
         if (takeAll)
             foreach (Frog f in Game.I.frogs)
@@ -928,11 +928,13 @@ public partial class StoryMech : Vehicle
         transform.position = spawnPos; transform.rotation = spawnRot; yaw = spawnRot.eulerAngles.y;
         rb.position = spawnPos; rb.rotation = spawnRot;
         vy = 0f; grounded = true; Altitude = 0f; speed = 0f; flameK = 0f; aimK = 0f;
+        if (flew) GoAway72();   // ffu72 (Ben item 6): it is in space now - not also standing on the ranch
     }
 
     // back from space (landed on Earth): park beside the Starship pad and climb back in
     public void ReturnFromSpace(Frog pilot)
     {
+        Back72();   // ffu72: visible on the ranch again
         if (wrecked || pilot == null) return;
         Vector2 pc = Layout.PadC;
         Vector3 p = new Vector3(pc.x + 30f + height * 0.3f, 0f, pc.y + 10f);

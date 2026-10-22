@@ -389,7 +389,7 @@ public class RobotDriver
         StoryMech best = null; float bd = 1e18f;
         foreach (var m in StoryMech.AllMechs)
         {
-            if (m == null || m.band != band || m.driver != null || m.wrecked) continue;
+            if (m == null || m.band != band || m.driver != null || m.wrecked || m.Away72) continue;   // ffu72: not while it is in space
             float d = (m.transform.position - near).sqrMagnitude;
             if (d < bd) { bd = d; best = m; }
         }

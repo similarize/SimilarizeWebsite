@@ -350,7 +350,7 @@ public partial class Frog : MonoBehaviour
         }
 
         if (world == WorldId.Underwater) { Scuba(dt); return; }
-        if (world == WorldId.Space && SpaceWorld.I != null && SpaceWorld.I.ship != null) { SpaceWorld.I.ship.AdoptStray(this); return; }
+        if (world == WorldId.Space && SpaceWorld.I != null && SpaceWorld.I.ship != null) { var ss72 = SpaceWorld.I.StrayShip(); if (ss72 != null) ss72.AdoptStray(this); return; }   // ffu72: never a mech waiting for its crew
         spaceGravity = world == WorldId.Mars ? 0.45f : world == WorldId.Callisto ? 0.22f : world == WorldId.Moon ? MoonWorld.G : 1f;   // ffu41: Moon 1.62 m/s2 = 1/6 g
         Vector3 p = transform.position;
         // ffw: float higher (body above the line) and dive in the pond itself. Swimming = deep enough water under us and
