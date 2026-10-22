@@ -90,6 +90,7 @@ public partial class Frog
             }
             return true;
         }
+        if (Bridge73.FollowBoard(this, lead)) return true;                      // ffu73: crew seat on the trillion-story mech's bridge
         if (passengerOf != null && passengerOf == lead.vehicle) return true;   // riding along in P1's vehicle
         if (vehicle != null) ExitVehicle();
         if (passengerOf != null) LeavePassenger();

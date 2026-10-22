@@ -53,6 +53,7 @@ public partial class StoryMech : Vehicle
         {
             InputKind ik = driver != null ? driver.inputKind : InputKind.Keyboard;
             string top = aimK > 0.5f ? "<color=#ff8a7a>AIMING</color>  " : "";
+            if (bridge73 != null && driver != null) top += K(Bridge73.Key(driver)) + " bridge view  ·  ";   // ffu73
             if (ik == InputKind.Gamepad)
                 return top + K("RT") + " tap jump / hold ROCKETS  ·  " + K("LB") + " afterburner  ·  " + K("LT") + " hold AIM (" + K("RT") + " fires)  ·  " + K("X") + " fire  ·  " + K("RB") + "/" + K("Y") + " missiles  ·  " + K("A") + " climb out";
             if (ik == InputKind.Touch)
@@ -198,6 +199,7 @@ public partial class StoryMech : Vehicle
         }
         m.seat = Mats.Node(m.head, "Seat", Vector3.zero);
         m.seatScale = 0.5f;
+        m.Bridge73Build();   // ffu73: the trillion-story mech's pilot sits in the captain's chair of its bridge (MechBridge73.cs)
         Mats.SetLayer(go, VehicleLayer);
         // name plate on the chest
         var tag = new GameObject("Plate");
@@ -353,7 +355,7 @@ public partial class StoryMech : Vehicle
         if (driver != null)
         {
             InputKind ik = driver.inputKind;
-            driver.Toast(Title + "!  " + (ik == InputKind.Gamepad ? "Hold LT to aim the arm cannon, RT fires" : ik == InputKind.Touch ? "Tap AIM to aim the arm cannon, FIRE shoots" : "Hold the RIGHT mouse button to aim the arm cannon, LEFT fires"), 4f);
+            driver.Toast(Title + "!  " + (bridge73 != null ? "You're on the BRIDGE (" + Bridge73.Key(driver) + ": bridge view).  " : "") + (ik == InputKind.Gamepad ? "Hold LT to aim the arm cannon, RT fires" : ik == InputKind.Touch ? "Tap AIM to aim the arm cannon, FIRE shoots" : "Hold the RIGHT mouse button to aim the arm cannon, LEFT fires"), 4f);
         }
     }
     bool hpWasRespawned;
@@ -361,6 +363,7 @@ public partial class StoryMech : Vehicle
     public override void OnExit()
     {
         base.OnExit();
+        if (bridge73 != null) Bridge73.Unload(this);   // ffu73: bridge riders beam down when the pilot climbs out
         if (jetLoop != null) jetLoop.volume = 0f;
         if (jetRumble != null) jetRumble.volume = 0f;
         jetLit = false;
@@ -480,6 +483,7 @@ public partial class StoryMech : Vehicle
         float H = height;
         TickBar(dt);
         CanopyTick();   // ffu26: robot pilot's glass cockpit (StoryMechRobot.cs)
+        Bridge73Tick();  // ffu73: riders in the trillion-story bridge's crew seats
         if (wrecked)
         {
             wreckT -= dt;
@@ -915,6 +919,7 @@ public partial class StoryMech : Vehicle
         string who = pilot.nick;
         pilot.SendTo(WorldId.Ranch, pilot.transform.position, 0f);   // out of the ranch mech first
         bool flew = SpaceWorld.I.LaunchMech(pilot, this);
+        if (bridge73 != null) Bridge73.ToSpace(this, pilot);   // ffu73: bridge riders fly along inside the space copy
         pilot.Toast(Title + " broke into SPACE!  Stick steer + thrust, RT / W boost, " + (pilot.inputKind == InputKind.Gamepad ? "B" : pilot.inputKind == InputKind.Touch ? "BAY" : "B") + " cargo bay", 5f);
         if (takeAll)
             foreach (Frog f in Game.I.frogs)
@@ -923,7 +928,7 @@ public partial class StoryMech : Vehicle
                     StoryMech om = f.vehicle as StoryMech;   // ffu72 item 7: their own mech stays on the ranch (parked at its spot)
                     SpaceWorld.I.Launch(f);
                     if (om != null && om != this) om.ParkHome72();
-                    f.Toast(who + " is flying everyone to space - hold on to the shoulders!", 4f);
+                    f.Toast(who + " is flying everyone to space - " + (bridge73 != null ? "take a seat on the bridge!" : "hold on to the shoulders!"), 4f);
                 }
         Debug.Log("Mech reached space: " + Title + (takeAll ? " (shared screen: everyone along)" : ""));
         // the ranch mech waits at its spot; landing back on Earth puts the pilot back in it

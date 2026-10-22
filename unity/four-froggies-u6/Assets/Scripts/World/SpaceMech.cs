@@ -10,6 +10,7 @@ using UnityEngine.UI;
 public partial class Starship
 {
     public StoryMech mechForm;
+    public Bridge73 bridge73;   // ffu73: the trillion-story copy's bridge (riders inside, not on the shoulders)
     public const float MechVisH = 16f;          // the space copy is drawn 16 m tall whatever its band (planets are 10x scaled)
     public const float RiderScale = 2.2f;       // froggies are drawn bigger next to it so they read
     Transform shipVis, mechVis, mechTorso, mechArmL, mechArmR, mechLegL, mechLegR, mechPose;
@@ -32,6 +33,7 @@ public partial class Starship
         {
             if (mechForm == null) return;
             CloseBayNow();
+            if (bridge73 != null && driver != null) { driver.transform.localPosition = Vector3.zero; driver.transform.localRotation = Quaternion.identity; driver.transform.localScale = Vector3.one * seatScale; driver.model.gameObject.SetActive(showDriver); }   // ffu73
             mechForm = null;
             Title = shipTitle;
             if (mechVis != null) mechVis.gameObject.SetActive(false);
@@ -57,6 +59,7 @@ public partial class Starship
     void BuildMechVis(StoryMech m)
     {
         float H = MechVisH;
+        bridge73 = null;
         mechVis = Mats.Node(transform, "MechVis", Vector3.zero);
         // Superman pose: standing +y -> forward (+z), chest faces down, back (with the rockets + bay) faces up
         mechPose = Mats.Node(mechVis, "Pose", new Vector3(0f, 0f, -H * 0.5f));
@@ -112,6 +115,7 @@ public partial class Starship
             seatT.SetParent(mechVis, true);
             riderSeats.Add(seatT);
         }
+        if (!F73.Old && m.band == 3 && parts.Length > 6 && parts[6] != null) bridge73 = Bridge73.ForSpaceCopy(mechVis, parts[6], H, m.owner, null);   // ffu73
         Mats.SetLayer(mechVis.gameObject, VehicleLayer);
         Mats.NoShadows(mechVis.gameObject);
     }
@@ -221,7 +225,8 @@ public partial class Starship
         if (bayGlow != null && bayGlow.activeSelf != bayK > 0.05f) bayGlow.SetActive(bayK > 0.05f);
         // riders on the shoulders
         int ri = 0;
-        if (Game.I != null)
+        if (bridge73 != null) { bridge73.SeatRiders(this, driver); if (driver != null) Bridge73.Place(driver, bridge73.captain); }   // ffu73: inside the bridge, no spacesuits outside
+        else if (Game.I != null)
             foreach (Frog f in Game.I.frogs)
                 if (f != null && f.passengerOf == this && riderSeats.Count > 0) f.RideShoulder(riderSeats[Mathf.Min(ri++, riderSeats.Count - 1)], RiderScale);
         // doors close by themselves once everyone who jumped out is back aboard

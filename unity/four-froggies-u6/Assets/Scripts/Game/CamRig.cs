@@ -123,6 +123,7 @@ public class CamRig
         Vehicle v = f.vehicle != null ? f.vehicle : f.passengerOf;
         bool tank = v != null && !float.IsNaN(v.AimYaw);
         if (!init) { yawT = yaw; pitchT = pitch; }
+        if (i.camReset && Bridge73.Toggle(this, f)) i.camReset = false;   // ffu73: R3 / 0 / double-tap = bridge view aboard the trillion-story mech
         if (i.camReset) ResetView(v != null ? v.transform.eulerAngles.y : f.transform.eulerAngles.y);
         StoryMech sm = f.vehicle as StoryMech;
         float ak = sm != null ? sm.aimK : 0f;
@@ -230,6 +231,7 @@ public class CamRig
         if (UpK > 0.001f) cam.transform.rotation = Quaternion.Slerp(cam.transform.rotation, rot, UpK);   // indoors looking up: the view follows the pitch, not the (floor-clamped) pivot
         if (kick > 0.01f) cam.transform.rotation = cam.transform.rotation * Quaternion.Euler(-kick * 0.6f, 0f, 0f);
         RcStand(f, i, dt);
+        Bridge73.Apply(this, f, i);   // ffu73: bridge view (behind the captain's chair, through the viewscreen)
         // the pilot's aim point: what the screen centre looks at (skipping the mech itself)
         if (sm != null && ak > 0.2f && sm.driver == f)
         {

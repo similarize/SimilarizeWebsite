@@ -14,12 +14,12 @@ public partial class StoryMech
     float canopyR;
 
     public bool RobotAboard { get { return driver != null && driver.robotPilot != null; } }
-    public float CanopyRobotH { get { BuildCanopy(); return canopyR * 1.55f; } }
+    public float CanopyRobotH { get { if (bridge73 != null) return bridge73.RobotWorldH; BuildCanopy(); return canopyR * 1.55f; } }   // ffu73: trillion-story = the bridge chair
     public Vector3 SpawnPoint { get { return spawnPos; } }
 
     // the cockpit seat (robot origin goes a little below it so its hips sit on the seat)
-    public Transform CanopySeat { get { BuildCanopy(); return canopySeat; } }
-    public Vector3 CockpitEye { get { BuildCanopy(); return canopySeat.TransformPoint(new Vector3(0f, canopyR * 0.75f, canopyR * 0.55f)); } }
+    public Transform CanopySeat { get { if (bridge73 != null) return bridge73.robotSeat; BuildCanopy(); return canopySeat; } }
+    public Vector3 CockpitEye { get { if (bridge73 != null) return bridge73.eye.position; BuildCanopy(); return canopySeat.TransformPoint(new Vector3(0f, canopyR * 0.75f, canopyR * 0.55f)); } }
 
     void BuildCanopy()
     {
@@ -73,7 +73,7 @@ public partial class StoryMech
 
     void CanopyTick()
     {
-        bool want = RobotAboard && !wrecked;
+        bool want = RobotAboard && !wrecked && bridge73 == null;   // ffu73: no glass bubble on the trillion-story (robot sits on the bridge)
         if (!want && canopy == null) return;
         BuildCanopy();
         if (canopy != null && canopy.gameObject.activeSelf != want) canopy.gameObject.SetActive(want);
