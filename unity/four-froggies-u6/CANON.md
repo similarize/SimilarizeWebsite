@@ -190,3 +190,6 @@ male, flat, even voice (a short beep before each line) so a robot is never mista
 - **Ripsaw M5 tank + Ripsaw EV2 drive on RT** (ffu70, Ben 2026-10-21): RT = drive forward, LT = brake / reverse like every other vehicle
   (stick up / down still drives); the tank's shell moves to B (hold = repeat; X too; keys Space / B / click), missiles stay RB / Y. Both are
   tracked, so drift / burnout stay off.
+- **Swim boost** (ffu70, Ben 2026-10-21): swimming at the pond surface, hold RT (keys: hold R - Shift is already dive; touch: hold SWIM)
+  and the froggy goes flat on the water and does breaststroke kicks: about 2x swim speed, with a surge on every kick. No stick = straight
+  ahead. Let go = the normal upright swim. Arrows / catch throws don't fire while boosting.

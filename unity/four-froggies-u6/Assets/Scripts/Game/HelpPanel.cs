@@ -243,9 +243,9 @@ public partial class Game
             L.Add(s);
         }
         var mv = new HSec("MOVE");
-        if (pad) mv.R("L-stick", "walk / steer").R("R-stick", "look around (R3 resets)").R(G("A"), "hop  ·  swim up").R("Hold " + G("B"), "sprint  ·  dive when swimming").R("D-pad up / down", "zoom");
-        else if (keys) mv.R("W A S D", "walk / steer").R("Mouse", "look around (click to lock)").R("Space", "hop  ·  swim up").R("Shift", "sprint  ·  dive when swimming").R("Wheel  /  Q  /  X", "zoom").R("0", "reset the camera");
-        else mv.R("Left stick", "walk / steer").R("Drag", "look around (double-tap resets)").R("A", "hop  ·  swim up").R("DIVE", "dive when swimming").R("-  /  +", "zoom");
+        if (pad) mv.R("L-stick", "walk / steer").R("R-stick", "look around (R3 resets)").R(G("A"), "hop  ·  swim up").R("Hold " + G("B"), "sprint  ·  dive when swimming").R("Hold RT (swimming)", "swim boost: breaststroke, about 2x speed").R("D-pad up / down", "zoom");
+        else if (keys) mv.R("W A S D", "walk / steer").R("Mouse", "look around (click to lock)").R("Space", "hop  ·  swim up").R("Shift", "sprint  ·  dive when swimming").R("Hold R (swimming)", "swim boost: breaststroke, about 2x speed").R("Wheel  /  Q  /  X", "zoom").R("0", "reset the camera");
+        else mv.R("Left stick", "walk / steer").R("Drag", "look around (double-tap resets)").R("A", "hop  ·  swim up").R("DIVE", "dive when swimming").R("Hold SWIM", "swim boost: breaststroke, about 2x speed").R("-  /  +", "zoom");
         L.Add(mv);
         var vh = new HSec("VEHICLES");
         if (pad) vh.R(G("A"), "get in / out").R("RT  /  LT", "gas  /  brake + reverse").R("RT  /  LT (flying)", "up  /  down; bail out = parachute").R("R-stick  ·  " + G("B") + "  ·  RB / " + G("Y"), "Ripsaw M5 tank: aim  ·  shell  ·  missile (RT drives)").R("D-pad up / down (driving)", "your own vehicle's wheel size  ·  View + D-pad = zoom");

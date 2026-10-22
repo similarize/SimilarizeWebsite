@@ -37,6 +37,7 @@ public struct PIn
     // ffu61 froggy bow: shoot = pad RT / X, left click (locked, or while aiming with right mouse) / F, touch SHOOT; aim = aimHeld
     public bool bowFire;
     public bool handbrake;    // ffu68: B held / Space or B key (wheeled ground vehicles: drift + burnout)
+    public bool swimBoost;    // ffu70: RT held / R key held / touch SWIM (the UP button) = breaststroke swim boost in the pond
 }
 
 public static class Kb
@@ -116,6 +117,7 @@ public static class Kb
     public static bool BDown() { return Key(k => k.bKey.wasPressedThisFrame, KeyCode.B, true); }
     public static bool BHeld() { return Key(k => k.bKey.isPressed, KeyCode.B, false); }   // ffu68 handbrake
     public static bool RDown() { return Key(k => k.rKey.wasPressedThisFrame, KeyCode.R, true); }
+    public static bool RHeld() { return Key(k => k.rKey.isPressed, KeyCode.R, false); }   // ffu70 swim boost
     public static bool FKeyDown() { return Key(k => k.fKey.wasPressedThisFrame, KeyCode.F, true); }
 
     public static bool MouseRightDown()
@@ -221,6 +223,7 @@ public static class Pads
         i.warpHome = p.leftStickButton.wasPressedThisFrame;
         i.bowFire = i.fire;   // ffu61: RT / X
         i.handbrake = p.buttonEast.isPressed;   // ffu68: B = handbrake (drift / burnout) in wheeled ground vehicles
+        i.swimBoost = i.gas > 0.35f;   // ffu70: hold RT while swimming = swim boost
         return i;
     }
 
@@ -269,6 +272,7 @@ public static class Pads
         i.warpHome = Kb.RDown();
         i.bowFire = (Kb.MouseLeftDown() && (locked || i.aimHeld)) || Kb.FKeyDown();   // ffu61
         i.handbrake = !Kb.typing && (Kb.Space() || Kb.BHeld());   // ffu68: Space / B = handbrake (moon buggy: Space hops off, so B)
+        i.swimBoost = !Kb.typing && Kb.RHeld();   // ffu70: hold R while swimming = swim boost (Shift is already dive in the pond)
         return i;
     }
 

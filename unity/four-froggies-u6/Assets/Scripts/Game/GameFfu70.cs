@@ -74,6 +74,7 @@ public partial class Game
         if (F70.Has("lake")) yield return F7Lake(f);
         if (F70.Has("skate")) yield return F7Skate(f);
         if (F70.Has("tank")) yield return F7Tank(f);
+        if (F70.Has("swim")) yield return F7Swim(f);
         F7Done();
     }
 
@@ -257,5 +258,61 @@ public partial class Game
     {
         Vector3 p = new Vector3(at.x, Ranch.GY(at.x, at.z) + 0.8f + v.bigLift, at.z); Quaternion q = Quaternion.Euler(0f, yaw, 0f);
         v.rb.velocity = Vector3.zero; v.rb.angularVelocity = Vector3.zero; v.rb.position = p; v.rb.rotation = q; v.transform.SetPositionAndRotation(p, q);
+    }
+
+    // ---------------- item 2: swim boost (hold RT in the water): flat breaststroke, ~2x speed, a surge on each kick ----------------
+    IEnumerator F7Swim(Frog f)
+    {
+        if (f.vehicle != null) f.ExitVehicle();
+        f7Pad = true;
+        Vector3 deep = F7DeepSpot(2.5f) + new Vector3(-20f, 0f, 0f);
+        if (Ranch.GY(deep.x, deep.z) > Layout.WaterY - 1.5f) deep = F7DeepSpot(2.5f);
+        f.Teleport(new Vector3(deep.x, Layout.WaterY - 0.3f, deep.z));
+        var none = new PIn(); f7In = none; f7Hook = true;
+        { float t = 0f, r0 = Time.realtimeSinceStartup; while (!f.Swimming && t < 5f && Time.realtimeSinceStartup - r0 < 60f) { yield return null; t += Time.deltaTime; } }
+        yield return F7Game(1.5f);
+        F7Check("swim: P1 floating in deep pond water", f.Swimming, "swimming " + f.Swimming + " at " + V3(f.transform.position));
+        // baseline: stick forward, no boost, 4 s
+        F7Next("swimbase");
+        var fwd = new PIn(); fwd.move = new Vector2(0f, 1f); f7In = fwd;
+        yield return F7Game(1.2f);
+        float vBase = 0f; float pitchBase = 0f;
+        yield return F7Measure(f, 4f, r => { vBase = r.x; pitchBase = r.w; });
+        // boost: stick forward + RT held, 6 s
+        F7Next("swimboost");
+        var bst = fwd; bst.gas = 1f; bst.swimBoost = true; bst.fire = true; f7In = bst;
+        yield return null; bst.fire = false; f7In = bst;
+        yield return F7Game(0.6f);
+        int k0 = f.Kicks; float vB = 0f, vMin = 0f, vMax = 0f, pitchB = 0f;
+        yield return F7Measure(f, 6f, r => { vB = r.x; vMin = r.y; vMax = r.z; pitchB = r.w; });
+        int kicks = f.Kicks - k0;
+        // RT alone (no stick) still swims straight ahead
+        F7Next("swimrt");
+        var rtOnly = new PIn(); rtOnly.gas = 1f; rtOnly.swimBoost = true; f7In = rtOnly;
+        float vRt = 0f; yield return F7Measure(f, 3f, r => { vRt = r.x; });
+        f7In = none; yield return F7Game(2f);
+        float ratio = vBase > 0.01f ? vB / vBase : 0f;
+        Debug.Log("FFU70 swim: base " + vBase.ToString("0.00") + " m/s (pitch " + pitchBase.ToString("0") + ") | boost " + vB.ToString("0.00") + " m/s = " + ratio.ToString("0.00") + "x, per-frame speed " + vMin.ToString("0.0") + ".." + vMax.ToString("0.0") + ", " + kicks + " kicks in 6 s, body pitch " + pitchB.ToString("0") + " | RT only " + vRt.ToString("0.00") + " m/s | arrows / catch suppressed while boosting");
+        F7Check("swim boost: about 2x swim speed", ratio > 1.7f && ratio < 2.4f, ratio.ToString("0.00") + "x (" + vB.ToString("0.00") + " vs " + vBase.ToString("0.00") + " m/s)");
+        F7Check("swim boost: breaststroke kick cycle", kicks >= 6 && kicks <= 9, kicks + " kicks in 6 s (one per " + Frog.StrokeT + " s)");
+        F7Check("swim boost: surge on each kick", vMax > vMin * 1.35f && vMax > 0.1f, "speed " + vMin.ToString("0.0") + ".." + vMax.ToString("0.0") + " m/s within the strokes");
+        F7Check("swim boost: froggy goes flat", pitchB > 55f && pitchBase < 20f, "body pitch " + pitchB.ToString("0") + " deg boosting vs " + pitchBase.ToString("0") + " deg normal swim");
+        F7Check("swim boost: RT alone swims straight ahead", vRt > vBase * 1.4f, vRt.ToString("0.00") + " m/s");
+        f7Pad = false; f7Hook = false;
+    }
+    // average horizontal speed, per-frame min / max speed (after the first 0.5 s) and the model's body pitch (x = avg, y = min, z = max, w = pitch)
+    IEnumerator F7Measure(Frog f, float secs, System.Action<Vector4> done)
+    {
+        Vector3 p0 = f.transform.position, lp = p0; float t = 0f, r0 = Time.realtimeSinceStartup, mn = 1e9f, mx = 0f, pitch = 0f; int n = 0;
+        FrogModel m = f.GetComponentInChildren<FrogModel>();
+        while (t < secs && Time.realtimeSinceStartup - r0 < 200f)
+        {
+            yield return null; float dt = F7Dt; t += dt;
+            Vector3 p = f.transform.position; float v = dt > 0f ? new Vector2(p.x - lp.x, p.z - lp.z).magnitude / dt : 0f; lp = p;
+            if (t > 0.5f && dt > 0f) { mn = Mathf.Min(mn, v); mx = Mathf.Max(mx, v); }
+            if (m != null && m.bob != null) { float px = m.bob.localEulerAngles.x; if (px > 180f) px -= 360f; pitch += px; n++; }
+        }
+        Vector3 p1 = f.transform.position;
+        done(new Vector4(t > 0f ? new Vector2(p1.x - p0.x, p1.z - p0.z).magnitude / t : 0f, mn > 1e8f ? 0f : mn, mx, n > 0 ? pitch / n : 0f));
     }
 }

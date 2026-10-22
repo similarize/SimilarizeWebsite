@@ -255,6 +255,7 @@ public class TouchControls : MonoBehaviour
         i.zoom = zoom;
         i.camReset = resetQ;
         i.downHeld = downId >= 0;
+        i.swimBoost = upId >= 0;   // ffu70: SWIM (the UP button) while swimming
         if (mechMode) { i.upHeld = upId >= 0; i.boostHeld = downId >= 0; i.gunFire = fireQ; i.gunHeld = fireId >= 0; i.gas = i.brake = 0f; i.climb = i.upHeld ? 1f : 0f; i.aimHeld = aimLatched; i.mslFire = altQ; i.downHeld = false; }
         if (bowMode) { i.aimHeld = aimLatched; i.bowFire = fireQ; }   // ffu61
         if (spaceMode) i.cargo = sixQ;

@@ -99,6 +99,13 @@ public partial class Frog : MonoBehaviour
     bool swimming, wasSwim;
     Vector3 wakeP; float wakeT;   // ffw pond wakes
     bool diving; float bottomT;   // ffw pond dive
+    // ffu70 (Ben item 2) swim boost: hold RT / R / SWIM at the surface = flat breaststroke, one kick every StrokeT s, a surge on each
+    // kick that decays over the stroke; averages ~2x SwimSpeed. strokePh 0..1 (0 = the kick), boostK eases the pose in / out.
+    float strokePh = 0.999f, boostK; bool boosting; [System.NonSerialized] public int Kicks;
+    public const float StrokeT = 0.8f;
+    public bool Boosting { get { return boosting; } }
+    static readonly string[] SwimPrompt70 = { "Hold RT: swim boost   |   Hold B: dive   |   swim to shore to climb out", "Hold R: swim boost   |   Hold SHIFT: dive   |   swim to shore to climb out", "Hold SWIM: swim boost   |   Hold DIVE: dive   |   swim to shore to climb out" };   // by InputKind (Gamepad, Keyboard, Touch)
+    public float BoostK { get { return boostK; } }
     float exitCool;
 
     // AI
@@ -378,13 +385,17 @@ public partial class Frog : MonoBehaviour
                 string dv = inputKind == InputKind.Gamepad ? "Hold B" : inputKind == InputKind.Touch ? "Hold DIVE" : "Hold SHIFT";
                 string up = inputKind == InputKind.Gamepad ? "A" : inputKind == InputKind.Touch ? "A" : "SPACE";
                 prompt = diving ? dv + ": swim down (hold on the floor for the reef)   |   " + up + ": swim up   |   let go: float up"
-                                : dv + ": dive   |   swim to shore to climb out";
+                                : F70.Old ? dv + ": dive   |   swim to shore to climb out" : SwimPrompt70[(int)inputKind];   // ffu70: cached (no per-frame string)
             }
             bool onFloor = diving && cc.isGrounded;
             bottomT = onFloor && input.downHeld ? bottomT + dt : 0f;
             if (bottomT > 1.2f && human && UnderwaterWorld.I != null) { bottomT = 0f; diving = false; scubaSurface = false; UnderwaterWorld.I.DiveFromPond(this); return; }
         }
         diveHoldT = 0f;
+        // ffu70 swim boost (RT is otherwise the bow / catch throw on foot: not while boosting in the water)
+        boosting = swimming && !diving && input.swimBoost && !F70.Old;
+        if (boosting) { input.bowFire = false; input.fire = false; }
+        boostK = Mathf.MoveTowards(boostK, boosting ? 1f : 0f, dt * 4f);
 
         float bowK = Bow61.Tick(this, input, dt);   // ffu61 froggy bow (World/Bow61.cs)
         Catch63.Tick(this, input, dt);   // ffu63: catch + throw back the robot's plushie
@@ -396,6 +407,15 @@ public partial class Frog : MonoBehaviour
             if (wish.sqrMagnitude > 1f) wish.Normalize();
         }
         float spd = swimming ? SwimSpeed : Roster.RunSpeed(charId);
+        if (boosting)
+        {
+            // no stick = straight ahead; each kick: surge, splash at the feet, a soft splash sound
+            if (wish.sqrMagnitude < 0.04f) wish = Quaternion.Euler(0f, yaw, 0f) * Vector3.forward; else wish.Normalize();
+            strokePh += dt / StrokeT;
+            if (strokePh >= 1f) { strokePh -= 1f; Kick70(); }
+            spd = SwimSpeed * (1.7024f + 1.4976f * Mathf.Exp(-5f * strokePh));   // mean over a stroke = 2.0 x SwimSpeed, peak 3.2 x
+        }
+        else strokePh = 0.999f;   // the next boost starts with a kick
         Sprinting = !swimming && cc.isGrounded && input.downHeld && wish.sqrMagnitude > 0.25f && world != WorldId.Underwater;   // ffu47 sprint (SHIFT / pad B)
         if (Sprinting) spd *= 1.45f;
         if (bowK > 0.01f) { Sprinting = false; spd *= Mathf.Lerp(1f, 0.45f, bowK); }   // ffu61: aiming = slow strafe
@@ -462,6 +482,16 @@ public partial class Frog : MonoBehaviour
         cc.Move((planar + vel) * dt + dbgPush + dbgCarry);   // ffu48: ride along on Spotty's carrier deck
         if (transform.position.y < Worlds.KillY(world)) Worlds.Respawn(this);
         model.Animate(new Vector2(planar.x, planar.z).magnitude, !cc.isGrounded && !swimming, false, swimming, dt);
+        if (boostK > 0.001f && swimming && !IsPet) model.AnimateBreast(strokePh, boostK, Time.time);   // pets (cats / dogs) keep their paddle, just faster
+    }
+
+    void Kick70()
+    {
+        Kicks++;
+        Vector3 back = transform.position - transform.forward * 0.4f + Vector3.up * 0.35f;
+        FX.Splash(back, 4);
+        Ripples.Ring(transform.position, 1.4f, 0.45f);
+        if (human) Sfx.Play(Sfx.Splash, 0.32f, Random.Range(1.2f, 1.4f)); else Sfx.PlayAt(Sfx.Splash, back, 0.25f, 25f, 1.3f);
     }
 
     // ---------- scuba (underwater world) ----------

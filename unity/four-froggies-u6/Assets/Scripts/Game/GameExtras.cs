@@ -209,7 +209,7 @@ public partial class Game
             TouchControls.mechMode = f.vehicle is StoryMech;
         }
         else if (f.world == WorldId.Underwater) w = new[] { "A", null, null, "UP", "DOWN" };
-        else if (f.Swimming && f.world == WorldId.Ranch) w = new[] { "A", null, null, null, "DIVE" };
+        else if (f.Swimming && f.world == WorldId.Ranch) w = new[] { "A", null, null, F70.Old ? null : "SWIM", "DIVE" };   // ffu70: hold SWIM = swim boost
         else if (Bow61.Has(f) && f.world == WorldId.Ranch && Fig50.HeldKind(f) == 0 && !f.Climbing) { w = new[] { "A", "SHOOT", null, null, null }; TouchControls.bowMode = true; }   // ffu61 froggy bow
         else w = new[] { "A", null, null, null, null };
         for (int i = 0; i < 6; i++) TouchControls.want[i] = i < w.Length ? w[i] : null;
