@@ -248,8 +248,8 @@ public partial class Game
         else mv.R("Left stick", "walk / steer").R("Drag", "look around (double-tap resets)").R("A", "hop  ·  swim up").R("DIVE", "dive when swimming").R("-  /  +", "zoom");
         L.Add(mv);
         var vh = new HSec("VEHICLES");
-        if (pad) vh.R(G("A"), "get in / out").R("RT  /  LT", "gas  /  brake + reverse").R("RT  /  LT (flying)", "up  /  down; bail out = parachute").R("R-stick  ·  RT  ·  RB / " + G("Y"), "tank: aim  ·  shell  ·  missile").R("D-pad up / down (driving)", "your own vehicle's wheel size  ·  View + D-pad = zoom");
-        else if (keys) vh.R("E", "get in / out").R("W  /  S", "gas  /  brake + reverse").R("Space  /  Shift", "fly up  /  down").R("Click  /  Right-click", "tank shell  /  missile").R("[  /  ]", "wheel size of the vehicle you're in");
+        if (pad) vh.R(G("A"), "get in / out").R("RT  /  LT", "gas  /  brake + reverse").R("RT  /  LT (flying)", "up  /  down; bail out = parachute").R("R-stick  ·  " + G("B") + "  ·  RB / " + G("Y"), "Ripsaw M5 tank: aim  ·  shell  ·  missile (RT drives)").R("D-pad up / down (driving)", "your own vehicle's wheel size  ·  View + D-pad = zoom");
+        else if (keys) vh.R("E", "get in / out").R("W  /  S", "gas  /  brake + reverse").R("Space  /  Shift", "fly up  /  down").R("Space or B or click  /  Right-click", "Ripsaw M5 tank: shell  /  missile").R("[  /  ]", "wheel size of the vehicle you're in");
         else vh.R("A", "get in / out").R("GAS  /  BRAKE", "drive").R("UP  /  DOWN", "fly").R("FIRE  /  MSL", "weapons");
         vh.R("Back up to a hitch", "trucks tow the barn trailers (" + (pad ? G("A") + " / " + G("Y") : keys ? "E" : "tap") + ")");
         vh.R("Bikes", "garage + trailer barn; ride into a toy hauler to stow");

@@ -42,7 +42,9 @@ public partial class Game
     void F7Check(string what, bool ok, string d) { f7Total++; if (ok) f7Pass++; Debug.Log("FFU70 " + (ok ? "PASS" : "FAIL") + " " + what + " | " + d); }
     void F7Next(string n) { Debug.Log("FFDEMO ffu70 ph " + (f7Ph++) + " " + n + " t " + Time.time.ToString("0.0")); }
     IEnumerator F7Game(float s) { float t = 0f, r0 = Time.realtimeSinceStartup; while (t < s && Time.realtimeSinceStartup - r0 < 150f) { yield return null; t += Time.deltaTime; } }
-    PIn F7Hook(PIn i) { return f7Hook ? f7In : i; }
+    bool f7Pad;   // the tank test plays P1 as a gamepad (Tank reads driver.inputKind)
+    PIn F7Hook(PIn i) { if (f7Pad && slots.Count > 0) frogs[slots[0].frog].inputKind = InputKind.Gamepad; return f7Hook ? f7In : i; }
+    PIn F7Set(Vector2 move, float gas, float brake, bool b, bool rtPress) { var o = new PIn(); o.move = move; o.gas = gas; o.brake = brake; o.handbrake = b; o.downHeld = b; o.fire = rtPress; o.fireHeld = gas > 0.5f; o.climb = gas - brake; f7In = o; f7Hook = true; return o; }
     static float F7Dt { get { return Mathf.Min(Time.deltaTime, Frog.DtCap); } }   // the froggy's own (capped) step: SwiftShader frames are slow
     static string V3(Vector3 v) { return "(" + v.x.ToString("0.0") + ", " + v.y.ToString("0.0") + ", " + v.z.ToString("0.0") + ")"; }
 
@@ -71,6 +73,7 @@ public partial class Game
         Debug.Log("FFU70 start: P1 " + f.nick + " old=" + F70.Old + " parts " + (Ffu33.Url("f70") ?? "all"));
         if (F70.Has("lake")) yield return F7Lake(f);
         if (F70.Has("skate")) yield return F7Skate(f);
+        if (F70.Has("tank")) yield return F7Tank(f);
         F7Done();
     }
 
@@ -177,5 +180,82 @@ public partial class Game
         b.aiRider = null;
         if (f.vehicle != null) f.ExitVehicle();
         yield return F7Game(1f);
+    }
+
+    // ---------------- item 11: Ripsaw M5 tank + Ripsaw EV2: RT drives, B fires (tank), tracked = no drift ----------------
+    IEnumerator F7Tank(Frog f)
+    {
+        if (f.vehicle != null) f.ExitVehicle();
+        Tank tank = null; GroundVehicle rip = null;
+        foreach (Vehicle v in Vehicle.All)
+        {
+            if (v == null || v.driver != null || v.stowed) continue;
+            if (tank == null && v is Tank) tank = (Tank)v;
+            else if (rip == null && v is GroundVehicle && !(v is Tank) && ((GroundVehicle)v).tracked) rip = (GroundVehicle)v;
+        }
+        f7Pad = true;
+        Vector3 lawn = Ranch.FrogSpawn(0) + new Vector3(-6f, 0f, 14f);
+        if (tank == null) F7Check("tank: the Ripsaw M5 to test with", false, "none free");
+        else
+        {
+            F7Place(tank, lawn, 90f); f.Teleport(lawn + Vector3.up * 3f); f.EnterVehicle(tank);
+            F7Set(Vector2.zero, 0f, 1f, false, false); yield return F7Game(1.5f);
+            F7Next("tankrt");
+            int s0 = tank.shells;
+            // pad RT: gas 1, the press frame also sets i.fire (as Pads.Read does) - must drive, must not fire
+            F7Set(Vector2.zero, 1f, 0f, false, true); yield return null;
+            F7Set(Vector2.zero, 1f, 0f, false, false); yield return F7Game(2.5f);
+            float fs = tank.ForwardSpeed; int shRT = tank.shells - s0;
+            F7Check("tank: RT drives forward", fs > 3f, "forward speed " + fs.ToString("0.0") + " m/s after 2.5 s of RT");
+            F7Check("tank: RT no longer fires", shRT == 0, shRT + " shells while holding RT");
+            // B held at speed with full steer: tracked -> no drift
+            F7Set(new Vector2(1f, 0f), 1f, 0f, true, false); float dk = 0f; bool dr = false;
+            { float t = 0f, r0 = Time.realtimeSinceStartup; while (t < 1.2f && Time.realtimeSinceStartup - r0 < 60f) { yield return null; t += Time.deltaTime; dk = Mathf.Max(dk, tank.driftK); dr |= tank.drifting; } }
+            F7Check("tank: tracked = no drift (B + full steer at speed)", dk < 0.01f && !dr, "driftK max " + dk.ToString("0.00") + ", drifting " + dr);
+            F7Next("tankb");
+            F7Set(Vector2.zero, 0f, 1f, false, false); yield return F7Game(2f);
+            s0 = tank.shells;
+            F7Set(Vector2.zero, 0f, 0f, true, false); yield return null; yield return null;
+            F7Set(Vector2.zero, 0f, 0f, false, false); yield return F7Game(1.2f);
+            int shTap = tank.shells - s0;
+            F7Check("tank: B fires a shell", shTap == 1, shTap + " shell(s) for one B tap");
+            s0 = tank.shells;
+            F7Set(Vector2.zero, 0f, 0f, true, false); yield return F7Game(3.2f);
+            int shHold = tank.shells - s0;
+            F7Check("tank: holding B repeats", shHold >= 2, shHold + " shells in 3.2 s of B held");
+            F7Set(Vector2.zero, 0f, 1f, false, false); yield return F7Game(3f);
+            float rv = tank.ForwardSpeed;
+            F7Check("tank: LT brakes then reverses", rv < -1f, "forward speed " + rv.ToString("0.0") + " m/s after 3 s of LT");
+            string hl = tank.HelpLine, hp = tank.HelpFor(InputKind.Gamepad) ?? "";
+            F7Check("tank: hint line says RT drive / B fire", hl.Contains("RT drive") && hl.Contains("B fire") && hp.Contains("B::fire"), hl);
+            F7Set(Vector2.zero, 0f, 1f, false, false); yield return F7Game(1f);
+            if (f.vehicle != null) f.ExitVehicle();
+            yield return F7Game(1f);
+        }
+        if (rip == null) Debug.Log("FFU70 tank: no free Ripsaw EV2 - EV2 not tested");
+        else
+        {
+            Vector3 l2 = lawn + new Vector3(0f, 0f, 12f);
+            F7Place(rip, l2, 90f); f.Teleport(l2 + Vector3.up * 3f); f.EnterVehicle(rip);
+            F7Set(Vector2.zero, 0f, 1f, false, false); yield return F7Game(1.5f);
+            F7Next("ripsaw");
+            F7Set(Vector2.zero, 1f, 0f, false, true); yield return null;
+            F7Set(Vector2.zero, 1f, 0f, false, false); yield return F7Game(2.5f);
+            float fs = rip.ForwardSpeed;
+            F7Check("Ripsaw EV2: RT drives forward", fs > 3f, rip.Title + " forward speed " + fs.ToString("0.0") + " m/s");
+            F7Set(new Vector2(1f, 0f), 1f, 0f, true, false); float dk = 0f; bool dr = false;
+            { float t = 0f, r0 = Time.realtimeSinceStartup; while (t < 1.2f && Time.realtimeSinceStartup - r0 < 60f) { yield return null; t += Time.deltaTime; dk = Mathf.Max(dk, rip.driftK); dr |= rip.drifting; } }
+            F7Check("Ripsaw EV2: tracked = no drift", dk < 0.01f && !dr, "driftK max " + dk.ToString("0.00") + ", drifting " + dr);
+            F7Check("Ripsaw EV2: hint line", rip.HelpLine.Contains("RT drive"), rip.HelpLine);
+            F7Set(Vector2.zero, 0f, 1f, false, false); yield return F7Game(1.5f);
+            if (f.vehicle != null) f.ExitVehicle();
+        }
+        f7Pad = false; f7Hook = false;
+        yield return F7Game(1f);
+    }
+    static void F7Place(GroundVehicle v, Vector3 at, float yaw)
+    {
+        Vector3 p = new Vector3(at.x, Ranch.GY(at.x, at.z) + 0.8f + v.bigLift, at.z); Quaternion q = Quaternion.Euler(0f, yaw, 0f);
+        v.rb.velocity = Vector3.zero; v.rb.angularVelocity = Vector3.zero; v.rb.position = p; v.rb.rotation = q; v.transform.SetPositionAndRotation(p, q);
     }
 }

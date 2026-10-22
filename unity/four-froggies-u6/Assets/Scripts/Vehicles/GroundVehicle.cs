@@ -59,7 +59,7 @@ public class GroundVehicle : Vehicle
     public float Throttle01 { get { return driver != null ? Mathf.Clamp01(throttle) : 0f; } }
     public override string HelpLine
     {
-        get { return amph != null && amph.Boat ? "CYBERBOAT! L-stick steer | RT jet | LT reverse | Y / F truck mode | A hop out (swim)" : amph != null ? base.HelpLine + " | Y / F Cyberboat mode" : base.HelpLine; }
+        get { return amph != null && amph.Boat ? "CYBERBOAT! L-stick steer | RT jet | LT reverse | Y / F truck mode | A hop out (swim)" : amph != null ? base.HelpLine + " | Y / F Cyberboat mode" : tracked && !F70.Old ? "L-stick steer (tracks turn on the spot) | RT drive | LT brake/reverse | A get out" : base.HelpLine; }   // ffu70: tracked Ripsaw EV2
     }   // (forwardSpeed, dt) for custom visuals like mech legs
 
     // ffu68 DRIFT + BURNOUT (Ben 2026-10-21, bot-notes c830b3c): wheeled ground vehicles only (Cybertruck, Monster Truck, moon buggy,

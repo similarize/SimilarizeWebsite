@@ -187,3 +187,6 @@ male, flat, even voice (a short beep before each line) so a robot is never mista
   floats where it climbed out - no leftover speed, no shove from the hull / legs it left; water drag bleeds off any bump. Never pushed across the lake.
 - **Skateboards sound like skateboards** (ffu70, Ben 2026-10-21): rolling urethane wheels (rumble + hiss that rise with speed) and
   clack-clack over concrete seams / deck joints (front truck then rear), a pop on the ollie and a clack on landing. No motor or hum sound.
+- **Ripsaw M5 tank + Ripsaw EV2 drive on RT** (ffu70, Ben 2026-10-21): RT = drive forward, LT = brake / reverse like every other vehicle
+  (stick up / down still drives); the tank's shell moves to B (hold = repeat; X too; keys Space / B / click), missiles stay RB / Y. Both are
+  tracked, so drift / burnout stay off.

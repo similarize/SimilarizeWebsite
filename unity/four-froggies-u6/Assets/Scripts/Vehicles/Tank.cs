@@ -1,7 +1,9 @@
 using UnityEngine;
 
-// Tracked tank: left stick drives, right stick / mouse aims the turret, RT / click fires a shell,
-// RB / LT / right-click launches a missile.
+// Tracked tank (the Ripsaw M5): ffu70 (Ben item 11) RT drives forward / LT brakes + reverses like every other vehicle (stick up /
+// down still drives too), right stick / mouse aims the turret, B fires a shell (hold = repeat; X too), RB / Y missile.
+// Keyboard: W / S drive, Space or B or click = shell, right-click = missile. Touch: GAS / BRAKE, FIRE, MSL. Tracked = no drift.
+// &ff70old=1 = the old mapping (stick drive, RT / X fire).
 public class Tank : GroundVehicle
 {
     public Transform turret, barrel, muzzle;
@@ -11,7 +13,15 @@ public class Tank : GroundVehicle
     bool aimInit;
 
     public override string[] TouchSet { get { return new[] { "A", "FIRE", "MSL", usesTriggers ? "GAS" : null, usesTriggers ? "BRAKE" : null }; } }
-    public override string HelpLine { get { return "L-stick drive | R-stick aim turret | RT fire shell | RB/LT missile | A get out"; } }
+    public override string HelpLine { get { return F70.Old ? "L-stick drive | R-stick aim turret | RT fire shell | RB/LT missile | A get out" : "L-stick steer | RT drive | LT brake/reverse | R-stick aim turret | B fire shell | RB/Y missile | A get out"; } }
+    public override string HelpFor(InputKind k)
+    {
+        if (F70.Old) return null;
+        if (k == InputKind.Gamepad) return "RT  /  LT::drive / brake + reverse|L-stick::steer (tracks turn on the spot)|R-stick::aim the turret|B::fire a shell (hold = repeat)|RB  /  Y::missile|A::get out";
+        if (k == InputKind.Keyboard) return "W  /  S::drive / brake + reverse|A  /  D::steer|Mouse::aim the turret|Space  /  B  /  click::fire a shell|Right-click::missile|E::get out";
+        return null;
+    }
+    bool fireWas; [System.NonSerialized] public int shells;   // ffu70: B / Space edge + probe counter
     public override float AimYaw { get { return turret != null ? turret.eulerAngles.y : float.NaN; } }
 
     public override void OnEnter()
@@ -28,7 +38,18 @@ public class Tank : GroundVehicle
         aimPitch = Mathf.Clamp(aimPitch + i.look.y * 0.6f, -6f, 24f);
         shellCool -= dt;
         missileCool -= dt;
-        if ((i.fire || (i.fireHeld && shellCool < -0.3f)) && shellCool <= 0f) { FireShell(); shellCool = 0.85f; }
+        bool fire, held;
+        if (F70.Old) { fire = i.fire; held = i.fireHeld; }
+        else
+        {
+            // ffu70: RT is the throttle now -> the shell is on B (pad) / Space or B (keys) = PIn.handbrake (held); pad X and mouse / touch
+            // FIRE still shoot. Pad RT also sets i.fire, so i.fire only counts off the pad.
+            InputKind ik = driver != null ? driver.inputKind : InputKind.Keyboard;
+            bool bNow = i.handbrake && !fireWas; fireWas = i.handbrake;
+            fire = bNow || (ik == InputKind.Gamepad ? i.auto : i.fire);
+            held = i.handbrake || (ik != InputKind.Gamepad && i.fireHeld);
+        }
+        if ((fire || (held && shellCool < -0.3f)) && shellCool <= 0f) { FireShell(); shellCool = 0.85f; shells++; }
         if (i.alt && missileCool <= 0f) { FireMissile(); missileCool = 1.6f; }
     }
 

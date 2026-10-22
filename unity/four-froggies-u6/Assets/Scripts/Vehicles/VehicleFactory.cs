@@ -331,7 +331,7 @@ public static class VehicleFactory
         v.EnterVerb = "command the Tank";
         v.tracked = true;
         v.engineKind = 1;
-        v.usesTriggers = false;
+        v.usesTriggers = !F70.Old;   // ffu70 (Ben item 11): RT / LT drive + brake like every other vehicle (was false: stick only, RT fired)
         v.SetupBodyPublic(11000f, new Vector3(0f, 1.35f, 0f), new Vector3(4.5f, 1.2f, 6.5f), new Vector3(0f, 0.6f, 0f));
         v.maxSpeed = 13f; v.accel = 7f; v.turnRate = 1.1f; v.grip = 10f;
         v.camDistance = 14f; v.camHeight = 3.5f;

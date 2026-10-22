@@ -628,9 +628,9 @@ public partial class Game : MonoBehaviour
             "<size=34><color=#8cff70>FOUR FROGGIES - CONTROLS</color></size>\n\n" +
             "<b>Gamepad</b>  L-stick move / steer  |  R-stick camera (R3 resets it)  |  A hop, get in / out  |  D-pad up/down zoom\n" +
             "Cars, Ripsaw EV2, boat: RT gas, LT brake / reverse.   Helicopter + drone: RT up, LT down. Bail out in the air = parachute, it flies home.\n" +
-            "Ripsaw M5 (tank): L-stick drive, R-stick aims the turret, RT fires shells, RB / Y missiles.   Beached boat: RB / Y pushes off.\n\n" +
+            "Ripsaw M5 (tank): RT drive, LT brake / reverse, L-stick steer, R-stick aims the turret, B fires shells, RB / Y missiles.   Beached boat: RB / Y pushes off.\n\n" +
             "<b>Keyboard + mouse (P1)</b>  WASD move  |  mouse camera (click to lock)  |  Space hop  |  E get in / out  |  0 camera reset\n" +
-            "Fly: Space up, Shift down.  Ripsaw M5: click shell, right-click missile.  Wheel / Q / X zoom.  V view.  H help.  M sound.\n\n" +
+            "Fly: Space up, Shift down.  Ripsaw M5: W / S drive, Space / B / click shell, right-click missile.  Wheel / Q / X zoom.  V view.  H help.  M sound.\n\n" +
             "<b>Touch (P1)</b>  left stick  |  drag the free area for camera (double-tap = reset)  |  A  |  FIRE  |  MSL  |  UP / DOWN  |  - / +  |  SND\n\n" +
             "Rally: figure-8 with a bridge, jumps, and a loop lane west of the garage (keep the throttle on).  Pond: boat gate course - start at gate 1.  Swim: B / SHIFT / DIVE hold to dive, A / SPACE swim up, let go to float up.\n" +
             (Worlds.UnderwaterOn ? "Pond dock: A at the submarine dives. Underwater: L-stick drive, RT up, LT down, A swim out in scuba (A / RT up, B / LT down), A by the sub climbs back in, surface + keep rising = ranch.\n" : "") +
