@@ -76,9 +76,10 @@ public partial class Game
         fb.SendTo(WorldId.Ranch, pb, -90f);
         yield return L59Settle(1f);
         LaunchSeq.Begin(fa);
-        yield return L59Settle(1.5f);
-        LaunchSeq.Skip(fa);
-        yield return F72Until(() => fa.world == WorldId.Space && !LaunchSeq.Busy, 90f);
+        // fix round 1: on SwiftShader the sequence clock (dt capped 0.05 s) runs ~10x slower than real time and Skip is ignored
+        // in its first 0.3 s - keep pressing skip every frame until P1 is in space (up to 5 min real)
+        { float r0 = Time.realtimeSinceStartup; while (fa.world != WorldId.Space && Time.realtimeSinceStartup - r0 < 300f) { LaunchSeq.Skip(fa); yield return null; } }
+        yield return F72Until(() => fa.world == WorldId.Space && !LaunchSeq.Busy, 60f);
         yield return L59Settle(1.5f);
         Starship sa = fa.vehicle as Starship;
         if (slots[1].rig != null) { slots[1].rig.SetYaw(-82f); slots[1].rig.SetPitch(8f); }
@@ -103,9 +104,8 @@ public partial class Game
         int earth = sw.Find("earth"), moon = sw.Find("moon");
         sa.EnterOrbit(earth, sw.bodies[earth].cap, 0f);
         sw.Land(sa, earth);
-        yield return L59Settle(1f);
-        LaunchSeq.Skip(fa);
-        yield return F72Until(() => fa.world == WorldId.Ranch && !LaunchSeq.Busy && !fa.launching, 60f);
+        { float r0 = Time.realtimeSinceStartup; while ((LaunchSeq.Busy || fa.launching || fa.world != WorldId.Ranch) && Time.realtimeSinceStartup - r0 < 300f) { LaunchSeq.Skip(fa); yield return null; } }
+        yield return F72Until(() => fa.world == WorldId.Ranch && !LaunchSeq.Busy && !fa.launching, 30f);
         yield return L59Settle(2f);
         F72Check("P1 landed: the Starship is back on the pad, nothing left in Earth orbit", fa.world == WorldId.Ranch && SpaceWorld.PadShown && (F72.Old || (SpaceWorld.StarAt == StarLoc.Pad && sw.ShipsShown == 0)), Ships72());
         F72Ph(T, 2, "padback");
