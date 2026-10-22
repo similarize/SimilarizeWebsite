@@ -183,3 +183,5 @@ male, flat, even voice (a short beep before each line) so a robot is never mista
   or a tap move the highlight, LT / Enter (or a second tap) starts the highlighted mode. No bumper starts a mode.
 - **BACK TO LOBBY** is in the pause (Start / Help) menu for pad, touch and mouse, with a confirm (View asks, A confirms;
   Backspace + Enter; tap twice). It cleanly resets rumble, phones, vehicles, gliders, cameras and split-screen; seated players stay seated.
+- **Getting out into the lake** (ffu70, Ben 2026-10-21): out of any vehicle or mech into deep pond water the froggy starts still and
+  floats where it climbed out - no leftover speed, no shove from the hull / legs it left; water drag bleeds off any bump. Never pushed across the lake.

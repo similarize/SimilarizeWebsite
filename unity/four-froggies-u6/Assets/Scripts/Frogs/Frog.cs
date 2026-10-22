@@ -86,6 +86,9 @@ public partial class Frog : MonoBehaviour
     public void Toast(string s, float secs = 2.5f) { toast = s; toastT = secs; }
     [System.NonSerialized] public Vector3 dbgPush, dbgCarry;   // ffu50 probe: last frame's vehicle shove + deck carry
     [System.NonSerialized] public float exitT; [System.NonSerialized] public Vehicle exitFrom;
+    // ffu70 (Ben item 3): seconds after getting out INTO pond water in which the vehicle / mech we left can't shove us (VehiclePush)
+    [System.NonSerialized] public float exitWaterT; [System.NonSerialized] public bool exitIntoWater;
+    public Vector3 DbgVel { get { return vel; } }   // ffu70 probe
 
     PIn input;
     float camYaw;
@@ -238,6 +241,7 @@ public partial class Frog : MonoBehaviour
         }
         if (!human) Think(dt);
         exitCool -= dt;
+        if (exitWaterT > 0f) exitWaterT -= dt;   // ffu70
         if (passengerOf != null)
         {
             if (passengerOf is MoonBuggy)
@@ -410,6 +414,7 @@ public partial class Frog : MonoBehaviour
             if (diving)
             {
                 // underwater: B down, A up, released = gentle rise; the CharacterController stops us on the pond floor
+                if (!F70.Old) { vel.x = Mathf.MoveTowards(vel.x, 0f, 9f * dt); vel.z = Mathf.MoveTowards(vel.z, 0f, 9f * dt); }   // ffu70 water drag
                 float vy = input.downHeld ? -2.6f : 1.8f;
                 if (input.hopHeld || input.hop) vy = 3.2f;
                 vel.y = Mathf.Lerp(vel.y, vy, dt * 4f);
@@ -417,6 +422,10 @@ public partial class Frog : MonoBehaviour
             }
             else
             {
+                // ffu70 (Ben item 3) ROOT CAUSE: the horizontal part of vel (exit velocity = vehicle velocity x 0.5, a bonk from
+                // a coasting vehicle / mech) was only ever damped on land (the grounded / airborne branches below), so out in the
+                // pond it never decayed and the froggy slid across the lake. Water drag: bleed it off here (and while diving).
+                if (!F70.Old) { vel.x = Mathf.MoveTowards(vel.x, 0f, 9f * dt); vel.z = Mathf.MoveTowards(vel.z, 0f, 9f * dt); }
                 // ffw: float with head + body above the line (was -0.55 = only the eyes showed), gentle bob, rides the surge
                 float wantY = Layout.WaterY + Ripples.Rise - 0.3f + Mathf.Sin(Time.time * 2.2f + id) * 0.05f;
                 vel.y = Mathf.Lerp(vel.y, (wantY - p.y) * 4f, dt * 5f);
@@ -639,6 +648,7 @@ public partial class Frog : MonoBehaviour
         foreach (Vehicle v in Vehicle.All)
         {
             if (v == null || v.body == null || v.driver == this || v.stowed || v.body.isTrigger) continue;   // ffu50: trigger-only bodies (the carrier helm) never shove a froggy
+            if (exitWaterT > 0f && v == exitFrom && !F70.Old) continue;   // ffu70: just climbed out of it into the pond - no depenetration shove / bonk
             // ffu50 ROOT CAUSE of Bill's carrier bug: in carrier mode Spotty's Tourer has its colliders DISABLED (it is the stern
             // drive pod) and a disabled BoxCollider's ClosestPoint returns the query point itself -> dist 0 -> every froggy on the
             // ranch got a 0.33 m-per-frame shove away from the bike (towards the bow on the deck). Disabled / inactive bodies never push.
@@ -739,11 +749,18 @@ public partial class Frog : MonoBehaviour
         Teleport(spot);
         vel = v.Velocity * 0.5f;
         if (CarrierRig.OnDeck(spot) || v is CarrierHelm) { vel = Vector3.zero; planar = Vector3.zero; }   // ffu50: off the helm onto the deck = stand still (the deck carry moves you with the ship)
+        // ffu70 (Ben item 3): out of a vehicle / mech INTO the lake = start still (no leftover exit velocity), and the hull / legs
+        // we just left don't push us for 1.5 s (VehiclePush depenetration + bonk from a still-coasting vehicle)
+        exitIntoWater = !bail && DeepWaterAt(spot);
+        if (exitIntoWater && !F70.Old) { vel = Vector3.zero; planar = Vector3.zero; exitWaterT = 1.5f; }
         exitT = 1.0f; exitFrom = v;
         if (bail) BeginBail(v.Title, spot, v.Velocity * 0.5f + (eject ? Vector3.up * 9f : Vector3.zero), eject);   // ffu47 paraglider
         exitCool = 0.4f;
         if (!netPuppet) Sfx.Play(Sfx.Door, 0.8f);
     }
+
+    // ffu70: deep enough ranch pond water to swim in at p (same test Walk uses for swimming)
+    public bool DeepWaterAt(Vector3 p) { return world == WorldId.Ranch && Layout.InPond(p.x, p.z) && Ranch.GY(p.x, p.z) < Layout.WaterY - 0.6f && p.y < Layout.WaterY + 1.5f; }
 
     float aiRibbitT = 5f;
     // ---------- AI wander ----------
