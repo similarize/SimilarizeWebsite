@@ -142,14 +142,25 @@ public partial class SpaceWorld
         Debug.Log("FF72 " + f.nick + " rides " + s.gameObject.name + " with " + (s.driver != null ? s.driver.nick : "-") + " - " + why);
     }
 
+    public static bool Shared72 { get { return Game.I != null && Game.I.SharedScreen; } }
+    // the flying Starship (not a mech) - its countdown crew rides inside it
+    public Starship StarDriven() { foreach (var s in ships) if (s != null && s.driver != null && s.mechForm == null) return s; return null; }
+    public int Driven72 { get { int n = 0; foreach (var s in ships) if (s != null && s.driver != null) n++; return n; } }
+    // ffu72 item 7: humans riding a mech's shoulders (only AI / uncontrolled froggies may, except the shared-screen group trip)
+    public int HumanShoulderRiders { get { int n = 0; if (Game.I != null) foreach (Frog f in Game.I.frogs) { var s = f != null ? f.passengerOf as Starship : null; if (s != null && s.mechForm != null && f.human) n++; } return n; } }
+
     // the Starship from the ranch pad (launch sequence, shared-screen ride-alongs)
+    // ffu72 item 7: ONE shared view = one group trip (everyone rides whoever is flying, mech or Starship, as before).
+    // Split screen = every human is independent: they only ever ride INSIDE the Starship they joined at the countdown,
+    // never on another player's mech; otherwise they fly their own ship.
     void Launch72(Frog f)
     {
-        Starship g = DrivenShip();
-        if (g != null)
+        Starship g = DrivenShip(), star = StarDriven();
+        Starship ride = Shared72 ? g : star != null ? star : (!f.human ? g : null);
+        if (ride != null)
         {
-            Ride72(f, g, "launch: someone is already flying");
-            f.Toast("Liftoff! You're riding with " + g.driver.nick, 3f);
+            Ride72(f, ride, Shared72 ? "shared screen: the group trip" : ride.mechForm == null ? "Starship crew" : "AI rides the mech's shoulders");
+            f.Toast("Liftoff! You're riding with " + ride.driver.nick, 3f);
             return;
         }
         Starship s = FreeShip();
@@ -166,11 +177,14 @@ public partial class SpaceWorld
     bool LaunchMech72(Frog f, StoryMech m)
     {
         Starship g = DrivenShip();
-        if (g != null) { Launch72(f); return false; }   // ride along (ffu72 item 7 decides split vs shared)
+        // ffu72 item 7: one shared view = one group trip (whoever is already flying takes this player along; their mech parks
+        // at its spot). Split screen: this pilot's mech flies as its OWN ship (never merged onto another mech).
+        if (g != null && (Shared72 || !f.human || f.netPuppet)) { Launch72(f); return false; }
+        int others = Driven72;
         Starship s = FreeShip();
         int earth = Find("earth"), st = Find("station");
         float sAng = Mathf.Atan2((PosAt(st, simT) - PosAt(earth, simT)).z, (PosAt(st, simT) - PosAt(earth, simT)).x);
-        s.EnterOrbit(earth, bodies[st].a, sAng - 0.18f);
+        s.EnterOrbit(earth, bodies[st].a, sAng - 0.18f - 0.6f * others);   // its own spot in the parking orbit, ~30 m from the next
         s.SetTarget(Find("moon"));
         s.SetMechForm(m);
         Fly72(f, s, "mech reached space");

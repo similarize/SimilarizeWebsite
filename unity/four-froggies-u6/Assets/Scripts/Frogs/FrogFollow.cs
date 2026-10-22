@@ -79,7 +79,7 @@ public partial class Frog
         if (lead.world == WorldId.Space)
         {
             var sw = SpaceWorld.I;
-            var ship = sw != null ? sw.ship : null;
+            var ship = sw != null ? (F72.Old ? sw.ship : sw.ShipOf(lead)) : null;   // ffu72: the ship the lead is in (split screen: several)
             if (ship == null) return true;
             if (passengerOf == ship || vehicle == ship) return true;
             if (lead.vehicle == ship || lead.passengerOf == ship || lead.jetOf != null)

@@ -920,7 +920,9 @@ public partial class StoryMech : Vehicle
             foreach (Frog f in Game.I.frogs)
                 if (f != null && f != pilot && f.human && !f.netPuppet && f.world != WorldId.Space)
                 {
+                    StoryMech om = f.vehicle as StoryMech;   // ffu72 item 7: their own mech stays on the ranch (parked at its spot)
                     SpaceWorld.I.Launch(f);
+                    if (om != null && om != this) om.ParkHome72();
                     f.Toast(who + " is flying everyone to space - hold on to the shoulders!", 4f);
                 }
         Debug.Log("Mech reached space: " + Title + (takeAll ? " (shared screen: everyone along)" : ""));

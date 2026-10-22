@@ -154,3 +154,111 @@ public partial class Game
         F72Result(T);
     }
 }
+
+// Item 7 - mechs in space: ?ffdemo=1&ffshot=mechs72 - SPLIT (2 views): P1 and P2 each fly their own mech to space -> two
+//   independent space mechs (own ship, own spot, no human on anyone's shoulders, both ranch mechs hidden), AI froggies ride
+//   P1's shoulders only, P2's X auto-transfer moves only P2's mech; P2 lands home alone (P1 stays in space). SHARED VIEW
+//   (one camera): P1's mech flies -> ONE group trip: P2 rides P1's mech, P2's own mech stays parked on the ranch (visible, at
+//   its spot, nobody in it), only one mech in space. Then everyone lands back.
+public partial class Game
+{
+    bool m72On;
+    void Mechs72TestLobby() { if (m72On) return; m72On = true; StartCoroutine(M72()); }
+
+    IEnumerator M72()
+    {
+        const string T = "mechs72";
+        Debug.Log("FFU72 start mechs72 (item 7 mechs in space) old=" + F72.Old);
+        var pads = new Gamepad[2];
+        yield return F72Join(pads, 2, "FFTestPad72");
+        F72Check("2 pads + LT: a 2-way split", state == State.Play && slots.Count == 2 && LastViews == 2 && !shared, "views " + LastViews + " shared " + shared + " | " + SeatList());
+        var sw = SpaceWorld.I;
+        if (slots.Count < 2 || sw == null) { F72Result(T); yield break; }
+        sw.EnsureBuilt();
+        Frog fa = frogs[slots[0].frog], fb = frogs[slots[1].frog];
+        StoryMech ma = FindMech(fa.charId, 0), mb = FindMech(fb.charId, 0);
+        F72Check("each player's own 10-story mech found", ma != null && mb != null && ma != mb, (ma != null ? ma.Title : "none") + " / " + (mb != null ? mb.Title : "none"));
+        if (ma == null || mb == null) { F72Result(T); yield break; }
+        fa.SendTo(WorldId.Ranch, ma.transform.position + ma.transform.right * 5f, 0f); fb.SendTo(WorldId.Ranch, mb.transform.position + mb.transform.right * 5f, 0f);
+        yield return L59Frames(2);
+        fa.EnterVehicle(ma); fb.EnterVehicle(mb);
+        yield return L59Settle(1.5f);
+        // ---------------- SPLIT ----------------
+        ma.GoToSpace();
+        yield return F72Until(() => fa.world == WorldId.Space, 20f);
+        yield return L59Settle(2f);
+        mb.GoToSpace();
+        yield return F72Until(() => fb.world == WorldId.Space, 20f);
+        yield return L59Settle(2f);
+        Starship sa = fa.vehicle as Starship, sb = fb.vehicle as Starship;
+        F72Check("SPLIT: both pilots fly their OWN space mech (two ships, each driven by its pilot)", sa != null && sb != null && sa != sb && sa.mechForm == ma && sb.mechForm == mb && fa.passengerOf == null && fb.passengerOf == null,
+            Ships72() + " | P1 veh " + (fa.vehicle != null ? fa.vehicle.gameObject.name : "-") + " pass " + (fa.passengerOf != null) + " | P2 veh " + (fb.vehicle != null ? fb.vehicle.gameObject.name : "-") + " pass " + (fb.passengerOf != null ? fb.passengerOf.gameObject.name : "-"));
+        float gap = sa != null && sb != null ? (sa.transform.position - sb.transform.position).magnitude : 0f;
+        F72Check("SPLIT: the two space mechs are apart (no merge / tangle)", sa != null && sb != null && sa != sb && gap > 20f, "gap " + gap.ToString("0.0") + " m");
+        F72Check("SPLIT: no human rides a mech's shoulders", sw.HumanShoulderRiders == 0, "human shoulder riders " + sw.HumanShoulderRiders);
+        F72Check("SPLIT: both ranch mechs hidden while in space", ma.Away72 && mb.Away72 && !ma.gameObject.activeInHierarchy && !mb.gameObject.activeInHierarchy, "away " + ma.Away72 + "/" + mb.Away72);
+        // AI froggies (seats 3 / 4) hop on P1's shoulders only
+        if (sa != null)
+        {
+            var ai = new System.Collections.Generic.List<Frog>();
+            for (int k = 0; k < frogs.Count; k++) if (frogs[k] != null && !frogs[k].human && frogs[k] != fa && frogs[k] != fb) ai.Add(frogs[k]);
+            foreach (var g in ai) { if (g.vehicle != null) g.ExitVehicle(); g.LeavePassenger(); }
+            sa.DemoRiders(ai.ToArray());
+            yield return L59Settle(1.5f);
+            int onA = SpaceWorld.Riders(sa), onB = sb != null ? SpaceWorld.Riders(sb) : -1, aiOnA = 0;
+            foreach (var g in ai) if (g.passengerOf == sa) aiOnA++;
+            F72Check("SPLIT: AI froggies ride P1's mech's shoulders (and only P1's)", aiOnA >= 1 && onB == 0 && sw.HumanShoulderRiders == 0, "AI " + ai.Count + " on P1's mech " + aiOnA + " | riders A " + onA + " B " + onB);
+        }
+        F72Ph(T, 1, "split2");
+        yield return L59Settle(12f);
+        // independent control: P2's X (auto-transfer) moves only P2's mech
+        if (sa != null && sb != null)
+        {
+            var ma0 = sa.mode; Vector3 pa0 = sa.transform.position;
+            yield return L59Press(pads[1], GamepadButton.West);
+            yield return L59Settle(1.5f);
+            F72Check("SPLIT: P2's X auto-transfer flies only P2's mech", sb.mode == Starship.Mode.Transfer && sa.mode == ma0 && fa.vehicle == sa, "P1 mode " + ma0 + " -> " + sa.mode + " | P2 mode " + sb.mode);
+            if (sb.mode == Starship.Mode.Transfer) { yield return L59Press(pads[1], GamepadButton.West); yield return L59Settle(0.8f); }
+        }
+        // P2 lands home alone
+        int earth = sw.Find("earth");
+        if (sb != null)
+        {
+            sb.EnterOrbit(earth, sw.bodies[earth].cap, 1f);
+            yield return L59Frames(3);
+            sw.Land(sb, earth);
+            yield return L59Settle(3f);
+        }
+        F72Check("SPLIT: P2 lands home in its own mech; P1 still flies in space", fb.world == WorldId.Ranch && fb.vehicle == mb && !mb.Away72 && fa.world == WorldId.Space && fa.vehicle == sa && ma.Away72,
+            Ships72() + " | P2 world " + fb.world + " veh " + (fb.vehicle != null ? fb.vehicle.Title : "-"));
+        F72Ph(T, 2, "p2home");
+        yield return L59Settle(10f);
+        if (sa != null && fa.vehicle == sa) { sa.EnterOrbit(earth, sw.bodies[earth].cap, 2f); yield return L59Frames(3); sw.Land(sa, earth); yield return L59Settle(3f); }
+        foreach (var g in frogs) if (g != null && !g.human && g.world == WorldId.Space) g.SendTo(WorldId.Ranch, Ranch.FrogSpawn(g.id), 0f);
+        yield return L59Settle(2f);
+        F72Check("SPLIT: both mechs back on the ranch, no ship in use", fa.vehicle == ma && fb.vehicle == mb && !ma.Away72 && !mb.Away72 && sw.ShipsInUse == 0, Ships72());
+        // ---------------- SHARED VIEW ----------------
+        if (!shared) { ToggleView(); yield return L59Settle(1.5f); }
+        F72Check("SHARED: one camera for both players", shared && SharedScreen && LastViews == 1, "shared " + shared + " views " + LastViews);
+        if (fa.vehicle != ma) { fa.SendTo(WorldId.Ranch, ma.transform.position + ma.transform.right * 5f, 0f); yield return L59Frames(2); fa.EnterVehicle(ma); }
+        if (fb.vehicle != mb) { fb.SendTo(WorldId.Ranch, mb.transform.position + mb.transform.right * 5f, 0f); yield return L59Frames(2); fb.EnterVehicle(mb); }
+        yield return L59Settle(1.5f);
+        ma.GoToSpace();
+        yield return F72Until(() => fa.world == WorldId.Space && fb.world == WorldId.Space, 20f);
+        yield return L59Settle(2f);
+        sa = fa.vehicle as Starship;
+        int mechShips = 0; foreach (var s in sw.ships) if (s != null && s.mechForm != null && SpaceWorld.InUse(s)) mechShips++;
+        F72Check("SHARED: ONE group trip - P1 flies the mech, P2 rides along on it", sa != null && sa.mechForm == ma && fb.passengerOf == sa && fb.vehicle == null && fb.world == WorldId.Space,
+            Ships72() + " | P2 pass " + (fb.passengerOf != null ? fb.passengerOf.gameObject.name : "-") + " veh " + (fb.vehicle != null ? fb.vehicle.Title : "-"));
+        F72Check("SHARED: only one mech in space (no duplicate / tangle)", mechShips == 1 && (F72.Old || sw.ShipsInUse == 1), "mech ships in use " + mechShips + " ships in use " + sw.ShipsInUse);
+        F72Check("SHARED: P2's own mech stays parked on the ranch (visible, at its spot, empty)", mb.driver == null && !mb.Away72 && mb.gameObject.activeInHierarchy && mb.SpawnDist72 < 6f && ma.Away72,
+            "P2 mech driver " + (mb.driver != null ? mb.driver.nick : "-") + " away " + mb.Away72 + " from spot " + mb.SpawnDist72.ToString("0.0") + " m | P1 mech away " + ma.Away72);
+        F72Ph(T, 3, "shared");
+        yield return L59Settle(12f);
+        if (sa != null) { sa.EnterOrbit(earth, sw.bodies[earth].cap, 0.5f); yield return L59Frames(3); sw.Land(sa, earth); yield return L59Settle(3f); }
+        F72Check("SHARED: landing brings the group home together", fa.world == WorldId.Ranch && fb.world == WorldId.Ranch && fa.vehicle == ma && !ma.Away72, Ships72() + " | P2 world " + fb.world);
+        F72Ph(T, 4, "sharedhome");
+        yield return L59Settle(6f);
+        F72Result(T);
+    }
+}

@@ -326,7 +326,7 @@ public class SpaceRadar
         if (root.gameObject.activeSelf != show) root.gameObject.SetActive(show);
         if (!show) return;
         root.localScale = Vector3.one * (narrow ? 0.85f : 1f);
-        Starship ship = sw.ship;
+        Starship ship = F72.Old ? sw.ship : sw.ShipOf(f);   // ffu72: this player's own ship (split screen: one each)
         Vector3 c = ship.transform.position;
         float yaw = cam != null ? cam.transform.eulerAngles.y : 0f;
         Quaternion toRadar = Quaternion.Euler(0f, -yaw, 0f);
