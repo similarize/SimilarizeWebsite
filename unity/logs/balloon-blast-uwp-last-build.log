@@ -1,30 +1,30 @@
-UWP run 39546938415 attempt 1 event push sha 153c8edf3d558f23177ae194b26e5cc18d2dba12 tag bb-uwp-1 started 2026-10-21T04:58:39Z
+UWP run 39711975210 attempt 1 event push sha 2e9a5cf548c63f791bf6ee4d7d42b809f4ffde58 tag bb-uwp-1 started 2026-10-22T02:33:10Z
 secrets present
 src/unity/balloon-blast/Assets/Editor:
 total 36
-drwxr-xr-x 1 runneradmin 197121     0 Oct 21 04:58 .
-drwxr-xr-x 1 runneradmin 197121     0 Oct 21 04:58 ..
--rw-r--r-- 1 runneradmin 197121 10169 Oct 21 04:58 BBBuildUWP.cs
--rw-r--r-- 1 runneradmin 197121 16998 Oct 21 04:58 BuildScript.cs
+drwxr-xr-x 1 runneradmin 197121     0 Oct 22 02:33 .
+drwxr-xr-x 1 runneradmin 197121     0 Oct 22 02:33 ..
+-rw-r--r-- 1 runneradmin 197121 10169 Oct 22 02:33 BBBuildUWP.cs
+-rw-r--r-- 1 runneradmin 197121 17483 Oct 22 02:33 BuildScript.cs
 
 src/unity/balloon-blast/Assets/Scripts/Platform:
 total 28
-drwxr-xr-x 1 runneradmin 197121     0 Oct 21 04:58 .
-drwxr-xr-x 1 runneradmin 197121     0 Oct 21 04:58 ..
--rw-r--r-- 1 runneradmin 197121 22502 Oct 21 04:58 BBXboxUWP.cs
+drwxr-xr-x 1 runneradmin 197121     0 Oct 22 02:33 .
+drwxr-xr-x 1 runneradmin 197121     0 Oct 22 02:33 ..
+-rw-r--r-- 1 runneradmin 197121 23225 Oct 22 02:33 BBXboxUWP.cs
 
 src/unity/balloon-blast/UWPTiles:
 total 132
-drwxr-xr-x 1 runneradmin 197121     0 Oct 21 04:58 .
-drwxr-xr-x 1 runneradmin 197121     0 Oct 21 04:58 ..
--rw-r--r-- 1 runneradmin 197121 42265 Oct 21 04:58 splash620x300.png
--rw-r--r-- 1 runneradmin 197121  9719 Oct 21 04:58 sq150.png
--rw-r--r-- 1 runneradmin 197121 26077 Oct 21 04:58 sq310.png
--rw-r--r-- 1 runneradmin 197121  2691 Oct 21 04:58 sq44.png
--rw-r--r-- 1 runneradmin 197121  2994 Oct 21 04:58 sq50.png
--rw-r--r-- 1 runneradmin 197121  4576 Oct 21 04:58 sq71.png
--rw-r--r-- 1 runneradmin 197121 20643 Oct 21 04:58 wide310x150.png
-cert: subject CN=Similarize thumb 725307E6B62B6673FF5E2DD02E2B3902D4BEC8D7 notAfter 10/21/2031 04:58:41
+drwxr-xr-x 1 runneradmin 197121     0 Oct 22 02:33 .
+drwxr-xr-x 1 runneradmin 197121     0 Oct 22 02:33 ..
+-rw-r--r-- 1 runneradmin 197121 42265 Oct 22 02:33 splash620x300.png
+-rw-r--r-- 1 runneradmin 197121  9719 Oct 22 02:33 sq150.png
+-rw-r--r-- 1 runneradmin 197121 26077 Oct 22 02:33 sq310.png
+-rw-r--r-- 1 runneradmin 197121  2691 Oct 22 02:33 sq44.png
+-rw-r--r-- 1 runneradmin 197121  2994 Oct 22 02:33 sq50.png
+-rw-r--r-- 1 runneradmin 197121  4576 Oct 22 02:33 sq71.png
+-rw-r--r-- 1 runneradmin 197121 20643 Oct 22 02:33 wide310x150.png
+cert: subject CN=Similarize thumb C32153C68CE333789A78184588BAF2B6871A6638 notAfter 10/22/2031 02:33:12
 vs: C:\Program Files\Microsoft Visual Studio\2022\Enterprise
 UWP.VC (v143) missing -> installing
 vs_installer exit 0
@@ -53,7 +53,7 @@ BBUWP: EditorUserBuildSettings.wsaUWPBuildType = D3D
 BBUWP: EditorUserBuildSettings.wsaSubtarget = AnyDevice
 BBUWP: EditorUserBuildSettings.wsaArchitecture = x64
 BBUWP: EditorUserBuildSettings.wsaBuildAndRunDeployTarget = LocalMachine
-BUILD_RESULT: Succeeded target=UWP errors=0 warnings=2 size=462536844 time=00:02:55.5058512
+BUILD_RESULT: Succeeded target=UWP errors=0 warnings=2 size=463487251 time=00:02:15.6931812
 BUILD_SCRIPT_EXIT: 0
 out: Balloon Blast Airsoft
 out: Balloon Blast Airsoft_BurstDebugInformation_DoNotShip
@@ -62,60 +62,60 @@ out: Balloon Blast Airsoft.sln
 out: UnityCommon.props
 solution: Balloon Blast Airsoft.sln
 manifest: D:\a\SimilarizeWebsite\SimilarizeWebsite\src\unity\balloon-blast\build\UWP\Balloon Blast Airsoft\Package.appxmanifest
-identity: name=SimilarizeBalloonBlast publisher=CN=Similarize version=1.0.1.0
+identity: name=SimilarizeBalloonBlast publisher=CN=Similarize version=1.0.2.0
 device family: Windows.Universal min 10.0.10240.0 max 10.0.26100.0
 capability: Capability internetClient
 drop WindowsMobile, Version=10.0.26100.0 from Balloon Blast Airsoft.vcxproj
 msbuild: C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\MSBuild.exe
 msbuild exit 0 after 6 min
-pkg: \Balloon Blast Airsoft_1.0.1.0_Master_Test\Add-AppDevPackage.ps1 42415
-pkg: \Balloon Blast Airsoft_1.0.1.0_Master_Test\Balloon Blast Airsoft_1.0.1.0_x64_Master.appxbundle 28864230
-pkg: \Balloon Blast Airsoft_1.0.1.0_Master_Test\Balloon Blast Airsoft_1.0.1.0_x64_Master.appxsym 94479685
-pkg: \Balloon Blast Airsoft_1.0.1.0_Master_Test\Balloon Blast Airsoft_1.0.1.0_x64_Master.cer 780
-pkg: \Balloon Blast Airsoft_1.0.1.0_Master_Test\Install.ps1 16554
-pkg: \Balloon Blast Airsoft_1.0.1.0_Master_Test\Add-AppDevPackage.resources\Add-AppDevPackage.psd1 10150
-pkg: \Balloon Blast Airsoft_1.0.1.0_Master_Test\Add-AppDevPackage.resources\cs-CZ\Add-AppDevPackage.psd1 10278
-pkg: \Balloon Blast Airsoft_1.0.1.0_Master_Test\Add-AppDevPackage.resources\de-DE\Add-AppDevPackage.psd1 11628
-pkg: \Balloon Blast Airsoft_1.0.1.0_Master_Test\Add-AppDevPackage.resources\en-US\Add-AppDevPackage.psd1 10150
-pkg: \Balloon Blast Airsoft_1.0.1.0_Master_Test\Add-AppDevPackage.resources\es-ES\Add-AppDevPackage.psd1 10834
-pkg: \Balloon Blast Airsoft_1.0.1.0_Master_Test\Add-AppDevPackage.resources\fr-FR\Add-AppDevPackage.psd1 11344
-pkg: \Balloon Blast Airsoft_1.0.1.0_Master_Test\Add-AppDevPackage.resources\it-IT\Add-AppDevPackage.psd1 10738
-pkg: \Balloon Blast Airsoft_1.0.1.0_Master_Test\Add-AppDevPackage.resources\ja-JP\Add-AppDevPackage.psd1 6698
-pkg: \Balloon Blast Airsoft_1.0.1.0_Master_Test\Add-AppDevPackage.resources\ko-KR\Add-AppDevPackage.psd1 6348
-pkg: \Balloon Blast Airsoft_1.0.1.0_Master_Test\Add-AppDevPackage.resources\pl-PL\Add-AppDevPackage.psd1 10106
-pkg: \Balloon Blast Airsoft_1.0.1.0_Master_Test\Add-AppDevPackage.resources\pt-BR\Add-AppDevPackage.psd1 10580
-pkg: \Balloon Blast Airsoft_1.0.1.0_Master_Test\Add-AppDevPackage.resources\ru-RU\Add-AppDevPackage.psd1 10342
-pkg: \Balloon Blast Airsoft_1.0.1.0_Master_Test\Add-AppDevPackage.resources\tr-TR\Add-AppDevPackage.psd1 9608
-pkg: \Balloon Blast Airsoft_1.0.1.0_Master_Test\Add-AppDevPackage.resources\zh-CN\Add-AppDevPackage.psd1 4998
-pkg: \Balloon Blast Airsoft_1.0.1.0_Master_Test\Add-AppDevPackage.resources\zh-TW\Add-AppDevPackage.psd1 5180
-pkg: \Balloon Blast Airsoft_1.0.1.0_Master_Test\Dependencies\ARM\Microsoft.VCLibs.ARM.14.00.appx 835614
-pkg: \Balloon Blast Airsoft_1.0.1.0_Master_Test\Dependencies\ARM64\Microsoft.VCLibs.ARM64.14.00.appx 1570406
-pkg: \Balloon Blast Airsoft_1.0.1.0_Master_Test\Dependencies\x64\Microsoft.VCLibs.x64.14.00.appx 896581
-pkg: \Balloon Blast Airsoft_1.0.1.0_Master_Test\Dependencies\x86\Microsoft.VCLibs.x86.14.00.appx 758544
-pkg: \Balloon Blast Airsoft_1.0.1.0_Master_Test\TelemetryDependencies\LogSideloadingTelemetry.ps1 17415
-pkg: \Balloon Blast Airsoft_1.0.1.0_Master_Test\TelemetryDependencies\Microsoft.Diagnostics.Tracing.EventSource.dll 170288
-pkg: \Balloon Blast Airsoft_1.0.1.0_Master_Test\TelemetryDependencies\Microsoft.VisualStudio.RemoteControl.dll 47536
-pkg: \Balloon Blast Airsoft_1.0.1.0_Master_Test\TelemetryDependencies\Microsoft.VisualStudio.Telemetry.dll 1026088
-pkg: \Balloon Blast Airsoft_1.0.1.0_Master_Test\TelemetryDependencies\Microsoft.VisualStudio.Utilities.Internal.dll 62480
-pkg: \Balloon Blast Airsoft_1.0.1.0_Master_Test\TelemetryDependencies\Newtonsoft.Json.dll 711952
-pkg: \Balloon Blast Airsoft_1.0.1.0_Master_Test\TelemetryDependencies\System.Runtime.CompilerServices.Unsafe.dll 19224
-bundle: Balloon Blast Airsoft_1.0.1.0_x64_Master.appxbundle -> BalloonBlast-bb-uwp-1_x64.appxbundle 28864230 B; deps: Microsoft.VCLibs.x64.14.00.appx 896581
-bundle signer: CN=Similarize thumb 725307E6B62B6673FF5E2DD02E2B3902D4BEC8D7 status UnknownError
-bundle entries: Balloon%20Blast%20Airsoft_1.0.1.0_x64_Master.appx, AppxBlockMap.xml, [Content_Types].xml, AppxSignature.p7x
-package: Balloon%20Blast%20Airsoft_1.0.1.0_x64_Master.appx name=SimilarizeBalloonBlast publisher=CN=Similarize arch=x64 version=1.0.1.0 streamingAssets files=0
+pkg: \Balloon Blast Airsoft_1.0.2.0_Master_Test\Add-AppDevPackage.ps1 42415
+pkg: \Balloon Blast Airsoft_1.0.2.0_Master_Test\Balloon Blast Airsoft_1.0.2.0_x64_Master.appxbundle 28874730
+pkg: \Balloon Blast Airsoft_1.0.2.0_Master_Test\Balloon Blast Airsoft_1.0.2.0_x64_Master.appxsym 94845424
+pkg: \Balloon Blast Airsoft_1.0.2.0_Master_Test\Balloon Blast Airsoft_1.0.2.0_x64_Master.cer 780
+pkg: \Balloon Blast Airsoft_1.0.2.0_Master_Test\Install.ps1 16554
+pkg: \Balloon Blast Airsoft_1.0.2.0_Master_Test\Add-AppDevPackage.resources\Add-AppDevPackage.psd1 10150
+pkg: \Balloon Blast Airsoft_1.0.2.0_Master_Test\Add-AppDevPackage.resources\cs-CZ\Add-AppDevPackage.psd1 10278
+pkg: \Balloon Blast Airsoft_1.0.2.0_Master_Test\Add-AppDevPackage.resources\de-DE\Add-AppDevPackage.psd1 11628
+pkg: \Balloon Blast Airsoft_1.0.2.0_Master_Test\Add-AppDevPackage.resources\en-US\Add-AppDevPackage.psd1 10150
+pkg: \Balloon Blast Airsoft_1.0.2.0_Master_Test\Add-AppDevPackage.resources\es-ES\Add-AppDevPackage.psd1 10834
+pkg: \Balloon Blast Airsoft_1.0.2.0_Master_Test\Add-AppDevPackage.resources\fr-FR\Add-AppDevPackage.psd1 11344
+pkg: \Balloon Blast Airsoft_1.0.2.0_Master_Test\Add-AppDevPackage.resources\it-IT\Add-AppDevPackage.psd1 10738
+pkg: \Balloon Blast Airsoft_1.0.2.0_Master_Test\Add-AppDevPackage.resources\ja-JP\Add-AppDevPackage.psd1 6698
+pkg: \Balloon Blast Airsoft_1.0.2.0_Master_Test\Add-AppDevPackage.resources\ko-KR\Add-AppDevPackage.psd1 6348
+pkg: \Balloon Blast Airsoft_1.0.2.0_Master_Test\Add-AppDevPackage.resources\pl-PL\Add-AppDevPackage.psd1 10106
+pkg: \Balloon Blast Airsoft_1.0.2.0_Master_Test\Add-AppDevPackage.resources\pt-BR\Add-AppDevPackage.psd1 10580
+pkg: \Balloon Blast Airsoft_1.0.2.0_Master_Test\Add-AppDevPackage.resources\ru-RU\Add-AppDevPackage.psd1 10342
+pkg: \Balloon Blast Airsoft_1.0.2.0_Master_Test\Add-AppDevPackage.resources\tr-TR\Add-AppDevPackage.psd1 9608
+pkg: \Balloon Blast Airsoft_1.0.2.0_Master_Test\Add-AppDevPackage.resources\zh-CN\Add-AppDevPackage.psd1 4998
+pkg: \Balloon Blast Airsoft_1.0.2.0_Master_Test\Add-AppDevPackage.resources\zh-TW\Add-AppDevPackage.psd1 5180
+pkg: \Balloon Blast Airsoft_1.0.2.0_Master_Test\Dependencies\ARM\Microsoft.VCLibs.ARM.14.00.appx 835614
+pkg: \Balloon Blast Airsoft_1.0.2.0_Master_Test\Dependencies\ARM64\Microsoft.VCLibs.ARM64.14.00.appx 1570406
+pkg: \Balloon Blast Airsoft_1.0.2.0_Master_Test\Dependencies\x64\Microsoft.VCLibs.x64.14.00.appx 896581
+pkg: \Balloon Blast Airsoft_1.0.2.0_Master_Test\Dependencies\x86\Microsoft.VCLibs.x86.14.00.appx 758544
+pkg: \Balloon Blast Airsoft_1.0.2.0_Master_Test\TelemetryDependencies\LogSideloadingTelemetry.ps1 17415
+pkg: \Balloon Blast Airsoft_1.0.2.0_Master_Test\TelemetryDependencies\Microsoft.Diagnostics.Tracing.EventSource.dll 170288
+pkg: \Balloon Blast Airsoft_1.0.2.0_Master_Test\TelemetryDependencies\Microsoft.VisualStudio.RemoteControl.dll 47536
+pkg: \Balloon Blast Airsoft_1.0.2.0_Master_Test\TelemetryDependencies\Microsoft.VisualStudio.Telemetry.dll 1026088
+pkg: \Balloon Blast Airsoft_1.0.2.0_Master_Test\TelemetryDependencies\Microsoft.VisualStudio.Utilities.Internal.dll 62480
+pkg: \Balloon Blast Airsoft_1.0.2.0_Master_Test\TelemetryDependencies\Newtonsoft.Json.dll 711952
+pkg: \Balloon Blast Airsoft_1.0.2.0_Master_Test\TelemetryDependencies\System.Runtime.CompilerServices.Unsafe.dll 19224
+bundle: Balloon Blast Airsoft_1.0.2.0_x64_Master.appxbundle -> BalloonBlast-bb-uwp-1_x64.appxbundle 28874730 B; deps: Microsoft.VCLibs.x64.14.00.appx 896581
+bundle signer: CN=Similarize thumb C32153C68CE333789A78184588BAF2B6871A6638 status UnknownError
+bundle entries: Balloon%20Blast%20Airsoft_1.0.2.0_x64_Master.appx, AppxBlockMap.xml, [Content_Types].xml, AppxSignature.p7x
+package: Balloon%20Blast%20Airsoft_1.0.2.0_x64_Master.appx name=SimilarizeBalloonBlast publisher=CN=Similarize arch=x64 version=1.0.2.0 streamingAssets files=0
 dep: TargetDeviceFamily Windows.Universal 10.0.10240.0
 dep: PackageDependency Microsoft.VCLibs.140.00 14.0.33519.0
 cap: Capability internetClient
-REL_ASSET: BalloonBlast-bb-uwp-1_x64.appxbundle 28864230
+REL_ASSET: BalloonBlast-bb-uwp-1_x64.appxbundle 28874730
 REL_ASSET: BalloonBlast-bb-uwp-1.cer 780
-REL_ASSET: BalloonBlast-UWP-bb-uwp-1-package.zip 126817779
+REL_ASSET: BalloonBlast-UWP-bb-uwp-1-package.zip 127201952
 REL_ASSET: INSTALL-XBOX.txt 4479
 REL_ASSET: Microsoft.VCLibs.x64.14.00.appx 896581
 RELEASE_URL: https://github.com/similarize/SimilarizeWebsite/releases/tag/bb-uwp-1
-SMOKE installed: SimilarizeBalloonBlast_1.0.1.0_x64__340vxgwa52sse at C:\Program Files\WindowsApps\SimilarizeBalloonBlast_1.0.1.0_x64__340vxgwa52sse
+SMOKE installed: SimilarizeBalloonBlast_1.0.2.0_x64__340vxgwa52sse at C:\Program Files\WindowsApps\SimilarizeBalloonBlast_1.0.2.0_x64__340vxgwa52sse
 SMOKE launch SimilarizeBalloonBlast_340vxgwa52sse!App
 SMOKE screenshot 1024x768
-SMOKE running processes: Balloon Blast Airsoft 345 MB
+SMOKE running processes: Balloon Blast Airsoft 346 MB
 === SMOKE UnityPlayer.log (grep)
 Direct3D:
     Version:  Direct3D 11.0 [level 11.1]
@@ -137,20 +137,23 @@ Look: tier desktop 1024x768 dpi 0
 Look:Init(Light)
 Look: 1 view(s), shadows All, post True
 Look:ApplyViews(Int32, IEnumerable`1)
-Balloon Blast: field built in 139 ms
+Balloon Blast: field built in 99 ms
 Look: 1 view(s), shadows All, post True
 Look:ApplyViews(Int32, IEnumerable`1)
 Balloon Blast: ENABLE_INPUT_SYSTEM defined
 Balloon Blast: ENABLE_LEGACY_INPUT_MANAGER defined
 BBXBOX AUDIO resumed - music check
 BBXBOX AUDIO focus regained - music check
-BBXBOX AUDIO unlocked at launch (2.9 s)
+BBXBOX AUDIO unlocked at launch (2.8 s)
 BBXboxAudio:Update()
 Look: field reflection probe rendered
+BBXBOX: profile on - res 1024x768 vsync 2 fpsTarget -1 look desktop views 1 aa 0 shadows HardOnly 20m x1 lod 0.6 mem 6 MB managed
+BBXboxUWPRunner:Enforce()
+BBXboxUWPRunner:Update()
 BBXBOX AUDIO reset re-arm after window active: stereo 48 kHz ok, restarted 3 loops wind/Loaded(stopped) amb_birds/Loaded(stopped) mus_lobby/Loaded(stopped) -> 48000 Hz Stereo dsp 1024 voices 32/512 out 48000 Hz
 BBXboxAudio:Apply(Int32, String, Boolean)
 BBXboxAudio:Update()
-BBXBOX AUDIO status: out 48000 Hz Stereo dsp 1024 voices 32/512 out 48000 Hz | driver Stereo | mixer clock 1.02x | listeners 1 vol 1.00 | game SOUND ON | unlocked at launch (2.9 s) | sources playing 0/24 | focus True | resets 2 device changes 2 | FMOD: no FMOD complaint since launch | music: musA mus_lobby stopped 0.30 Loaded; ambSrc amb_birds stopped 0.12 Loaded; windSrc wind stopped 0.07 Loaded; restarts 0 | last -
+BBXBOX AUDIO status: out 48000 Hz Stereo dsp 1024 voices 32/512 out 48000 Hz | driver Stereo | mixer clock 1.00x | listeners 1 vol 1.00 | game SOUND ON | unlocked at launch (2.8 s) | sources playing 0/24 | focus True | resets 2 device changes 2 | FMOD: no FMOD complaint since launch | music: musA mus_lobby stopped 0.30 Loaded; ambSrc amb_birds stopped 0.12 Loaded; windSrc wind stopped 0.07 Loaded; restarts 0 | last -
 BBXboxAudio:Update()
 ModelLoader: Xbot load ok
 GLTFast.<Load>d__58:MoveNext()
@@ -159,104 +162,62 @@ GLTFast.<LoadFromUri>d__118:MoveNext()
 GLTFast.<Prepare>d__143:MoveNext()
 GLTFast.<GenerateMaterials>d__150:MoveNext()
 GLTFast.<BreakPoint>d__12:MoveNext()
-BBXBOX AUDIO music restarted music mus_lobby (Loaded, vol 0.30)
-BBXboxAudio:Revive(AudioSource, String)
-BBXboxAudio:MusicWatch()
-BBXboxAudio:Update()
-BBXBOX AUDIO music restarted ambience amb_birds (Loaded, vol 0.12)
-BBXboxAudio:Revive(AudioSource, String)
-BBXboxAudio:MusicWatch()
-BBXboxAudio:Update()
-BBXBOX AUDIO music restarted wind wind (Loaded, vol 0.07)
-BBXboxAudio:Revive(AudioSource, String)
-BBXboxAudio:MusicWatch()
-BBXboxAudio:Update()
-BBXBOX AUDIO music restarted music mus_lobby (Loaded, vol 0.30)
-BBXboxAudio:Revive(AudioSource, String)
-BBXboxAudio:MusicWatch()
-BBXboxAudio:Update()
-BBXBOX AUDIO music restarted ambience amb_birds (Loaded, vol 0.12)
-BBXboxAudio:Revive(AudioSource, String)
-BBXboxAudio:MusicWatch()
-BBXboxAudio:Update()
-BBXBOX AUDIO music restarted wind wind (Loaded, vol 0.07)
-BBXboxAudio:Revive(AudioSource, String)
-BBXboxAudio:MusicWatch()
-BBXboxAudio:Update()
-BBXBOX: profile on - res 1024x768 vsync 2 fpsTarget -1 look desktop views 1 aa 0 shadows HardOnly 20m x1 lod 0.6 mem 5 MB managed
-BBXboxUWPRunner:Enforce()
+BBXBOX perf: 0.4 fps 2346.8 ms (worst 6938 ms) res 1024x768 vsync 2 fpsTarget -1 look desktop views 1 aa 0 shadows HardOnly 20m x1 lod 0.6 mem 5 MB managed
 BBXboxUWPRunner:Update()
-BBXBOX AUDIO music restarted music mus_lobby (Loaded, vol 0.30)
+BBXBOX AUDIO music restarted music mus_lobby (Loaded, vol 0.30, try 1)
 BBXboxAudio:Revive(AudioSource, String)
 BBXboxAudio:MusicWatch()
 BBXboxAudio:Update()
-BBXBOX AUDIO music restarted ambience amb_birds (Loaded, vol 0.12)
+BBXBOX AUDIO music restarted ambience amb_birds (Loaded, vol 0.12, try 1)
 BBXboxAudio:Revive(AudioSource, String)
 BBXboxAudio:MusicWatch()
 BBXboxAudio:Update()
-BBXBOX AUDIO music restarted wind wind (Loaded, vol 0.07)
+BBXBOX AUDIO music restarted wind wind (Loaded, vol 0.07, try 1)
 BBXboxAudio:Revive(AudioSource, String)
 BBXboxAudio:MusicWatch()
 BBXboxAudio:Update()
-BBXBOX AUDIO music restarted music mus_lobby (Loaded, vol 0.30)
+BBXBOX AUDIO music restarted music mus_lobby (Loaded, vol 0.30, try 2)
 BBXboxAudio:Revive(AudioSource, String)
 BBXboxAudio:MusicWatch()
 BBXboxAudio:Update()
-BBXBOX AUDIO music restarted ambience amb_birds (Loaded, vol 0.12)
+BBXBOX AUDIO music restarted ambience amb_birds (Loaded, vol 0.12, try 2)
 BBXboxAudio:Revive(AudioSource, String)
 BBXboxAudio:MusicWatch()
 BBXboxAudio:Update()
-BBXBOX AUDIO music restarted wind wind (Loaded, vol 0.07)
+BBXBOX AUDIO music restarted wind wind (Loaded, vol 0.07, try 2)
 BBXboxAudio:Revive(AudioSource, String)
 BBXboxAudio:MusicWatch()
 BBXboxAudio:Update()
-BBXBOX perf: 7.3 fps 136.7 ms (worst 155 ms) res 1024x768 vsync 2 fpsTarget -1 look desktop views 1 aa 0 shadows HardOnly 20m x1 lod 0.6 mem 5 MB managed
+BBXBOX AUDIO music restarted music mus_lobby (Loaded, vol 0.30, try 3, backing off 15 s)
+BBXboxAudio:Revive(AudioSource, String)
+BBXboxAudio:MusicWatch()
+BBXboxAudio:Update()
+BBXBOX AUDIO music restarted ambience amb_birds (Loaded, vol 0.12, try 3, backing off 15 s)
+BBXboxAudio:Revive(AudioSource, String)
+BBXboxAudio:MusicWatch()
+BBXboxAudio:Update()
+BBXBOX AUDIO music restarted wind wind (Loaded, vol 0.07, try 3, backing off 15 s)
+BBXboxAudio:Revive(AudioSource, String)
+BBXboxAudio:MusicWatch()
+BBXboxAudio:Update()
+BBXBOX perf: 9.4 fps 106.5 ms (worst 120 ms) res 1024x768 vsync 2 fpsTarget -1 look desktop views 1 aa 0 shadows HardOnly 20m x1 lod 0.6 mem 5 MB managed
 BBXboxUWPRunner:Update()
-BBXBOX AUDIO music restarted music mus_lobby (Loaded, vol 0.30)
-BBXboxAudio:Revive(AudioSource, String)
-BBXboxAudio:MusicWatch()
-BBXboxAudio:Update()
-BBXBOX AUDIO music restarted ambience amb_birds (Loaded, vol 0.12)
-BBXboxAudio:Revive(AudioSource, String)
-BBXboxAudio:MusicWatch()
-BBXboxAudio:Update()
-BBXBOX AUDIO music restarted wind wind (Loaded, vol 0.07)
-BBXboxAudio:Revive(AudioSource, String)
-BBXboxAudio:MusicWatch()
-BBXboxAudio:Update()
-BBXBOX AUDIO music restarted music mus_lobby (Loaded, vol 0.30)
-BBXboxAudio:Revive(AudioSource, String)
-BBXboxAudio:MusicWatch()
-BBXboxAudio:Update()
-BBXBOX AUDIO music restarted ambience amb_birds (Loaded, vol 0.12)
-BBXboxAudio:Revive(AudioSource, String)
-BBXboxAudio:MusicWatch()
-BBXboxAudio:Update()
-BBXBOX AUDIO music restarted wind wind (Loaded, vol 0.07)
-BBXboxAudio:Revive(AudioSource, String)
-BBXboxAudio:MusicWatch()
-BBXboxAudio:Update()
-BBXBOX AUDIO music restarted music mus_lobby (Loaded, vol 0.30)
-BBXboxAudio:Revive(AudioSource, String)
-BBXboxAudio:MusicWatch()
-BBXboxAudio:Update()
-BBXBOX AUDIO music restarted ambience amb_birds (Loaded, vol 0.12)
-BBXboxAudio:Revive(AudioSource, String)
-BBXboxAudio:MusicWatch()
-BBXboxAudio:Update()
-BBXBOX AUDIO music restarted wind wind (Loaded, vol 0.07)
-BBXboxAudio:Revive(AudioSource, String)
-BBXboxAudio:MusicWatch()
-BBXboxAudio:Update()
-BBXBOX AUDIO music restarted music mus_lobby (Loaded, vol 0.30)
-BBXboxAudio:Revive(AudioSource, String)
-BBXboxAudio:MusicWatch()
-BBXboxAudio:Update()
-BBXBOX AUDIO music restarted ambience amb_birds (Loaded, vol 0.12)
-BBXboxAudio:Revive(AudioSource, String)
-BBXboxAudio:MusicWatch()
-BBXboxAudio:Update()
-BBXBOX AUDIO music restarted wind wind (Loaded, vol 0.07)
+BBXBOX perf: 9.3 fps 107.8 ms (worst 109 ms) res 1024x768 vsync 2 fpsTarget -1 look desktop views 1 aa 0 shadows HardOnly 20m x1 lod 0.6 mem 5 MB managed
+BBXboxUWPRunner:Update()
+BBXBOX perf: 9.1 fps 109.3 ms (worst 138 ms) res 1024x768 vsync 2 fpsTarget -1 look desktop views 1 aa 0 shadows HardOnly 20m x1 lod 0.6 mem 5 MB managed
+BBXboxUWPRunner:Update()
+BBXBOX perf: 9.0 fps 111.1 ms (worst 125 ms) res 1024x768 vsync 2 fpsTarget -1 look desktop views 1 aa 0 shadows HardOnly 20m x1 lod 0.6 mem 5 MB managed
+BBXboxUWPRunner:Update()
+BBXBOX perf: 8.9 fps 112.1 ms (worst 132 ms) res 1024x768 vsync 2 fpsTarget -1 look desktop views 1 aa 0 shadows HardOnly 20m x1 lod 0.6 mem 5 MB managed
+BBXboxUWPRunner:Update()
+BBXBOX perf: 9.3 fps 107.8 ms (worst 125 ms) res 1024x768 vsync 2 fpsTarget -1 look desktop views 1 aa 0 shadows HardOnly 20m x1 lod 0.6 mem 5 MB managed
+BBXboxUWPRunner:Update()
+BBXBOX perf: 9.1 fps 110.0 ms (worst 115 ms) res 1024x768 vsync 2 fpsTarget -1 look desktop views 1 aa 0 shadows HardOnly 20m x1 lod 0.6 mem 5 MB managed
+BBXboxUWPRunner:Update()
+BBXBOX perf: 9.3 fps 107.8 ms (worst 123 ms) res 1024x768 vsync 2 fpsTarget -1 look desktop views 1 aa 0 shadows HardOnly 20m x1 lod 0.6 mem 5 MB managed
+BBXboxUWPRunner:Update()
+BBXBOX perf: 9.1 fps 110.1 ms (worst 131 ms) res 1024x768 vsync 2 fpsTarget -1 look desktop views 1 aa 0 shadows HardOnly 20m x1 lod 0.6 mem 5 MB managed
+BBXboxUWPRunner:Update()
 SMOKE_DONE
 === step outcomes: secrets=success cert=success vs=success setup=success activate=success build=success manifest=success msbuild=success collect=success release=success smoke=success
 === msbuild errors (first 150)
@@ -266,14 +227,14 @@ SMOKE_DONE
 === error lines
 1:[Licensing::Module] Trying to connect to existing licensing client channel...
 2:[Licensing::IpcConnector] Channel LicenseClient-runneradmin doesn't exist
-3:[Licensing::Module] Successfully launched the LicensingClient (PId: 960)
-4:[Licensing::IpcConnector] Successfully connected to: "LicenseClient-runneradmin" at "2026-10-21T05:13:12.7507313Z"
-5:[Licensing::Client] Code 10 while verifying Licensing Client signature (process Id: 960, path: "C:/Program Files/Unity/Hub/Editor/2022.3.62f3/Editor/Data/Resources/Licensing/Client/Unity.Licensing.Client.exe")
+3:[Licensing::Module] Successfully launched the LicensingClient (PId: 6600)
+4:[Licensing::IpcConnector] Successfully connected to: "LicenseClient-runneradmin" at "2026-10-22T02:49:01.0162014Z"
+5:[Licensing::Client] Code 10 while verifying Licensing Client signature (process Id: 6600, path: "C:/Program Files/Unity/Hub/Editor/2022.3.62f3/Editor/Data/Resources/Licensing/Client/Unity.Licensing.Client.exe")
 6:[Licensing::Module] LicensingClient has failed validation; ignoring
 7:[Licensing::Client] Handshaking with LicensingClient:
-13:[Licensing::Module] Successfully connected to LicensingClient on channel: "LicenseClient-runneradmin" (connect: 0.85s, validation: 0.06s, handshake: 0.11s)
-14:[Licensing::IpcConnector] Successfully connected to: "LicenseClient-runneradmin-notifications" at "2026-10-21T05:13:12.9205844Z"
-15:[Licensing::Module] Connected to LicensingClient (PId: 960, launch time: 0.00, total connection time: 1.03s)
+13:[Licensing::Module] Successfully connected to LicensingClient on channel: "LicenseClient-runneradmin" (connect: 0.56s, validation: 0.06s, handshake: 0.16s)
+14:[Licensing::IpcConnector] Successfully connected to: "LicenseClient-runneradmin-notifications" at "2026-10-22T02:49:01.2253965Z"
+15:[Licensing::Module] Connected to LicensingClient (PId: 6600, launch time: 0.00, total connection time: 0.78s)
 16:[Licensing::Module] Error: Access token is unavailable; failed to update
 17:[Licensing::Client] Successfully updated license
 20:[Licensing::Client] Successfully resolved entitlement details
@@ -284,98 +245,98 @@ SMOKE_DONE
 133:[Licensing::Client] Successfully resolved entitlement details
 185:[Licensing::Client] Successfully resolved entitlement details
 186:[Licensing::Client] Successfully resolved entitlement details
-2258:Start importing Packages/com.unity.test-framework/UnityEditor.TestRunner/CommandLineTest/SetupException.cs using Guid(63572993f2104574099a48392460b211) Importer(-1,00000000000000000000000000000000) [PhysX] Initialized MultithreadedTaskDispatcher with 4 workers.
-2366:Start importing Assets/Editor/BuildScript.cs using Guid(f3d831b5b4adb5d44a6735f1dec66ea9) Importer(-1,00000000000000000000000000000000) [PhysX] Initialized MultithreadedTaskDispatcher with 4 workers.
-2848:Start importing Packages/com.unity.test-framework/UnityEngine.TestRunner/Assertions/InvalidSignatureException.cs using Guid(9650d910fcaefb34cb45f121c1993892) Importer(-1,00000000000000000000000000000000) [PhysX] Initialized MultithreadedTaskDispatcher with 4 workers.
-3074:Start importing Packages/com.unity.inputsystem/InputSystem/Utilities/ExceptionHelpers.cs using Guid(d717b0e790ee146dd93d1be641984b6a) Importer(-1,00000000000000000000000000000000) [PhysX] Initialized MultithreadedTaskDispatcher with 4 workers.
-3220:Start importing Packages/com.unity.test-framework/UnityEngine.TestRunner/Assertions/UnhandledLogMessageException.cs using Guid(a8ed4063f2beecd41a234a582202f3c4) Importer(-1,00000000000000000000000000000000) [PhysX] Initialized MultithreadedTaskDispatcher with 4 workers.
-3706:Start importing Packages/com.unity.ugui/Tests/Runtime/Util/ExceptionUtils.cs using Guid(0b2706df6fdff50448f84a3f6629b40f) Importer(-1,00000000000000000000000000000000) [PhysX] Initialized MultithreadedTaskDispatcher with 4 workers.
-3762:Start importing Packages/com.unity.test-framework/UnityEngine.TestRunner/Assertions/UnexpectedLogMessageException.cs using Guid(5b2eeca598284bd4abb4a15c30df1576) Importer(-1,00000000000000000000000000000000) [PhysX] Initialized MultithreadedTaskDispatcher with 4 workers.
-4148:Start importing Packages/com.unity.test-framework/UnityEditor.TestRunner/TestRun/TestRunCanceledException.cs using Guid(1d45b9d3cf85bee4f99c1492fca8438a) Importer(-1,00000000000000000000000000000000) [PhysX] Initialized MultithreadedTaskDispatcher with 4 workers.
-4548:Start importing Packages/com.unity.test-framework/UnityEngine.TestRunner/Assertions/OutOfOrderExpectedLogMessageException.cs using Guid(2fcdb9402e0a4427bd5bd01f71ecf6d5) Importer(-1,00000000000000000000000000000000) [PhysX] Initialized MultithreadedTaskDispatcher with 4 workers.
-4692:Start importing Packages/com.unity.test-framework/UnityEngine.TestRunner/Assertions/UnityTestTimeoutException.cs using Guid(ffb335140c799c4408411d81789fb05c) Importer(-1,00000000000000000000000000000000) [PhysX] Initialized MultithreadedTaskDispatcher with 4 workers.
-4752:BuildScript:SetInputHandler () (at Assets/Editor/BuildScript.cs:99)
-4753:InputHandlerSetter:.cctor () (at Assets/Editor/BuildScript.cs:16)
-4757:(Filename: Assets/Editor/BuildScript.cs Line: 99)
-5345:Start importing Packages/com.unity.burst/ValidationExceptions.json using Guid(f383c015504b380698ba4a8681b1223e) Importer(-1,00000000000000000000000000000000) [PhysX] Initialized MultithreadedTaskDispatcher with 4 workers.
-5425:Start importing Packages/com.unity.inputsystem/ValidationExceptions.json using Guid(d9fe79419851eee4e8c90f7d0f934859) Importer(-1,00000000000000000000000000000000) [PhysX] Initialized MultithreadedTaskDispatcher with 4 workers.
-5483:Start importing Packages/com.unity.cloud.gltfast/ValidationExceptions.json using Guid(9d424dc8891c2489d965ab9e46bdbbe7) Importer(-1,00000000000000000000000000000000) [PhysX] Initialized MultithreadedTaskDispatcher with 4 workers.
-5495:Start importing Packages/com.unity.mathematics/ValidationExceptions.json using Guid(5ed727127196a4ecc90e24e2cd7af338) Importer(-1,00000000000000000000000000000000) [PhysX] Initialized MultithreadedTaskDispatcher with 4 workers.
-5505:Start importing Packages/com.unity.collections/ValidationExceptions.json using Guid(fee59c2b2318a7e4fa7a2c2af28d9553) Importer(-1,00000000000000000000000000000000) [PhysX] Initialized MultithreadedTaskDispatcher with 4 workers.
-5627:[Licensing::Client] Successfully resolved entitlement details
-5638:BuildScript: UWP start, Unity 2022.3.62f3
-5655:BuildScript:SetStatic (System.Type,string,object) (at Assets/Editor/BuildScript.cs:108)
-5656:BuildScript:ConfigurePlayer () (at Assets/Editor/BuildScript.cs:132)
-5663:(Filename: Assets/Editor/BuildScript.cs Line: 108)
-5670:BuildScript:SetStatic (System.Type,string,object) (at Assets/Editor/BuildScript.cs:108)
-5671:BuildScript:ConfigurePlayer () (at Assets/Editor/BuildScript.cs:133)
-5678:(Filename: Assets/Editor/BuildScript.cs Line: 108)
-5700:BBUWP audio: disableAudio False->false sampleRate 0->48000 dsp 1024->1024 requestedDsp 0->1024 speakerMode 2->2 volume 1
-5724:BBUWP: capabilities internetClient=True microphone=False
-5734:BBUWP: certificate BalloonBlastTest.pfx set=True subject=Similarize issuer=Similarize
-5744:BBUWP tile PackageLogo <- sq50.png
-5755:BBUWP tile SplashScreenImage <- splash620x300.png
-5766:BBUWP tile UWPSquare44x44Logo <- sq44.png
-5777:BBUWP tile UWPSquare71x71Logo <- sq71.png
-5788:BBUWP tile UWPSquare150x150Logo <- sq150.png
-5799:BBUWP tile UWPSquare310x310Logo <- sq310.png
-5810:BBUWP tile UWPWide310x150Logo <- wide310x150.png
-5821:BBUWP: EditorUserBuildSettings.wsaUWPBuildType = D3D
-5832:BBUWP: EditorUserBuildSettings.wsaSubtarget = AnyDevice
-5843:BBUWP: EditorUserBuildSettings.wsaArchitecture = x64
-5854:BBUWP: EditorUserBuildSettings.wsaBuildAndRunDeployTarget = LocalMachine
-5896:BuildScript: HDRI sky
-5901:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:205)
-5908:(Filename: Assets/Editor/BuildScript.cs Line: 205)
-5910:BuildScript: FF/Skin shader
-5915:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:177)
-5916:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:219)
-5923:(Filename: Assets/Editor/BuildScript.cs Line: 177)
-5930:BuildScript: FF/Foliage shader
-5935:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:177)
-5936:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:220)
-5943:(Filename: Assets/Editor/BuildScript.cs Line: 177)
-5950:BuildScript: BB/Balloon shader
-5955:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:177)
-5956:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:221)
-5963:(Filename: Assets/Editor/BuildScript.cs Line: 177)
-5985:BuildScript: terrain textures True True
-5990:BuildScript:CreateTerrain () (at Assets/Editor/BuildScript.cs:349)
-5991:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:259)
-5998:(Filename: Assets/Editor/BuildScript.cs Line: 349)
-6036:BuildScript: scene saved Assets/Scenes/Main.unity
-6041:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:275)
-6048:(Filename: Assets/Editor/BuildScript.cs Line: 275)
-6060:Failed to determine expiration date for "BalloonBlastTest.pfx". In case it is expired, you might not be able to package or deploy the resulting build.
-10264:[Licensing::Client] Successfully resolved entitlement details
-10265:[Licensing::Client] Successfully resolved entitlement details
-10373:[  97/2132  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/balloon-blast/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/vm/Exception.h
-10374:[  98/2132  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/balloon-blast/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/vm/Exception.cpp
-10476:[ 200/2132  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/balloon-blast/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/utils/ExceptionSupportStack.h
-10477:[ 201/2132  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/balloon-blast/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/utils/Exception.h
-10478:[ 202/2132  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/balloon-blast/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/utils/Exception.cpp
-10907:[ 629/2132  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/balloon-blast/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/icalls/System/System.Net.Sockets/SocketException.h
-10908:[ 630/2132  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/balloon-blast/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/icalls/System/System.Net.Sockets/SocketException.cpp
-10956:[ 678/2132  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/balloon-blast/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/icalls/mscorlib/System/Exception.h
-10957:[ 679/2132  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/balloon-blast/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/icalls/mscorlib/System/Exception.cpp
-12566:[W] FindFirstFile() failed: D:\a\SimilarizeWebsite\SimilarizeWebsite\src\unity\balloon-blast\Library\Bee\artifacts\UWPPlayerBuildProgram\il2cppOutput\cpp\Symbols
-13120: 0.2 kb	 0.0% Packages/com.unity.test-framework/UnityEngine.TestRunner/Assertions/OutOfOrderExpectedLogMessageException.cs
-13147: 0.2 kb	 0.0% Packages/com.unity.test-framework/UnityEngine.TestRunner/Assertions/UnexpectedLogMessageException.cs
-13181: 0.1 kb	 0.0% Packages/com.unity.test-framework/UnityEngine.TestRunner/Assertions/UnityTestTimeoutException.cs
-13182: 0.1 kb	 0.0% Packages/com.unity.test-framework/UnityEngine.TestRunner/Assertions/UnhandledLogMessageException.cs
-13183: 0.1 kb	 0.0% Packages/com.unity.test-framework/UnityEngine.TestRunner/Assertions/InvalidSignatureException.cs
-13433: 0.1 kb	 0.0% Packages/com.unity.inputsystem/InputSystem/Utilities/ExceptionHelpers.cs
-14062:BUILD_RESULT: Succeeded target=UWP errors=0 warnings=2 size=462536844 time=00:02:55.5058512
-14072:BUILD_SCRIPT_EXIT: 0
-14085:[Licensing::IpcConnector] LicenseClient-runneradmin-notifications channel disconnected successfully.
-14086:[Licensing::IpcConnector] LicenseClient-runneradmin channel disconnected successfully.
-14088:abort_threads: Failed aborting id: 000000000000118C, mono_thread_manage will ignore it
-14090:abort_threads: Failed aborting id: 0000000000000244, mono_thread_manage will ignore it
-14092:abort_threads: Failed aborting id: 000000000000118C, mono_thread_manage will ignore it
-14094:abort_threads: Failed aborting id: 0000000000000244, mono_thread_manage will ignore it
-14102:[Performance] WinEditorMain.Licensing                                                                                        :        1 samples, Peak.  2.00 s (1.0x), Avg.  2.00 s, Total. 2.001 s (0.7%)
-14178:[Performance] Application.ReadLicenseInfo                                                                                    :        1 samples, Peak.  26.9 ms (1.0x), Avg.  26.9 ms, Total. 26.89 ms (0.0%)
-14609:##utp:{"type":"MemoryLeaks","version":2,"phase":"Immediate","time":1792559859074,"processId":2696,"allocatedMemory":12748913,"memoryLabels":[{"Default":20335},{"Permanent":15615},{"NewDelete":83376},{"Thread":4228964},{"Manager":20718},{"VertexData":12},{"Geometry":560},{"Texture":328},{"Shader":73946},{"Material":24},{"GfxDevice":57048},{"Animation":296},{"Audio":3928},{"FontEngine":272},{"Physics":513},{"Serialization":948},{"Input":14744},{"JobScheduler":99600},{"Mono":40},{"ScriptingNativeRuntime":191848},{"BaseObject":1622180},{"Resource":1360},{"Renderer":2304},{"Transform":16},{"File":3797},{"WebCam":96},{"Culling":40},{"Terrain":1137},{"Wind":24},{"STL":48},{"String":26538},{"DynamicArray":70216},{"HashMap":100987},{"Utility":2660546},{"Curl":1424},{"PoolAlloc":1728},{"AI":104},{"TypeTree":5077},{"ScriptManager":640},{"RuntimeInitializeOnLoadManager":80},{"SpriteAtlas":128},{"GI":4072},{"Director":7960},{"CloudService":3544},{"WebRequest":688},{"VR":46081},{"SceneManager":568},{"Video":72},{"LazyScriptCache":40},{"NativeArray":12},{"Camera":25},{"Secure":1},{"Image":32768},{"SerializationCache":1584},{"APIUpdating":11872},{"Subsystems":392},{"VirtualTexturing":57896},{"StaticSafetyDebugInfo":327680},{"EditorGui":56},{"EditorUtility":20344},{"VersionControl":4},{"Undo":704},{"AssetDatabase":2763873},{"RestService":1414},{"EditorGi":376},{"License":3584},{"UnityConnect":25320},{"Collab":593},{"Upm":110536},{"DrivenProperties":96},{"LocalIPC":288},{"ProfilerEditor":10943},{"CoreBusinessMetrics":3862},{"AssetReference":40},{"IPCStream":40}]}
+2260:Start importing Packages/com.unity.test-framework/UnityEditor.TestRunner/CommandLineTest/SetupException.cs using Guid(63572993f2104574099a48392460b211) Importer(-1,00000000000000000000000000000000) [PhysX] Initialized MultithreadedTaskDispatcher with 4 workers.
+2844:Start importing Packages/com.unity.test-framework/UnityEngine.TestRunner/Assertions/InvalidSignatureException.cs using Guid(9650d910fcaefb34cb45f121c1993892) Importer(-1,00000000000000000000000000000000) [PhysX] Initialized MultithreadedTaskDispatcher with 4 workers.
+3066:Start importing Packages/com.unity.inputsystem/InputSystem/Utilities/ExceptionHelpers.cs using Guid(d717b0e790ee146dd93d1be641984b6a) Importer(-1,00000000000000000000000000000000) [PhysX] Initialized MultithreadedTaskDispatcher with 4 workers.
+3212:Start importing Packages/com.unity.test-framework/UnityEngine.TestRunner/Assertions/UnhandledLogMessageException.cs using Guid(a8ed4063f2beecd41a234a582202f3c4) Importer(-1,00000000000000000000000000000000) [PhysX] Initialized MultithreadedTaskDispatcher with 4 workers.
+3696:Start importing Packages/com.unity.ugui/Tests/Runtime/Util/ExceptionUtils.cs using Guid(0b2706df6fdff50448f84a3f6629b40f) Importer(-1,00000000000000000000000000000000) [PhysX] Initialized MultithreadedTaskDispatcher with 4 workers.
+3756:Start importing Packages/com.unity.test-framework/UnityEngine.TestRunner/Assertions/UnexpectedLogMessageException.cs using Guid(5b2eeca598284bd4abb4a15c30df1576) Importer(-1,00000000000000000000000000000000) [PhysX] Initialized MultithreadedTaskDispatcher with 4 workers.
+4144:Start importing Packages/com.unity.test-framework/UnityEditor.TestRunner/TestRun/TestRunCanceledException.cs using Guid(1d45b9d3cf85bee4f99c1492fca8438a) Importer(-1,00000000000000000000000000000000) [PhysX] Initialized MultithreadedTaskDispatcher with 4 workers.
+4546:Start importing Packages/com.unity.test-framework/UnityEngine.TestRunner/Assertions/OutOfOrderExpectedLogMessageException.cs using Guid(2fcdb9402e0a4427bd5bd01f71ecf6d5) Importer(-1,00000000000000000000000000000000) [PhysX] Initialized MultithreadedTaskDispatcher with 4 workers.
+4582:Start importing Assets/Editor/BuildScript.cs using Guid(4f0c842c58b2a354782059a2d44326bd) Importer(-1,00000000000000000000000000000000) [PhysX] Initialized MultithreadedTaskDispatcher with 4 workers.
+4694:Start importing Packages/com.unity.test-framework/UnityEngine.TestRunner/Assertions/UnityTestTimeoutException.cs using Guid(ffb335140c799c4408411d81789fb05c) Importer(-1,00000000000000000000000000000000) [PhysX] Initialized MultithreadedTaskDispatcher with 4 workers.
+4754:BuildScript:SetInputHandler () (at Assets/Editor/BuildScript.cs:99)
+4755:InputHandlerSetter:.cctor () (at Assets/Editor/BuildScript.cs:16)
+4759:(Filename: Assets/Editor/BuildScript.cs Line: 99)
+5365:Start importing Packages/com.unity.burst/ValidationExceptions.json using Guid(f383c015504b380698ba4a8681b1223e) Importer(-1,00000000000000000000000000000000) [PhysX] Initialized MultithreadedTaskDispatcher with 4 workers.
+5445:Start importing Packages/com.unity.inputsystem/ValidationExceptions.json using Guid(d9fe79419851eee4e8c90f7d0f934859) Importer(-1,00000000000000000000000000000000) [PhysX] Initialized MultithreadedTaskDispatcher with 4 workers.
+5495:Start importing Packages/com.unity.cloud.gltfast/ValidationExceptions.json using Guid(9d424dc8891c2489d965ab9e46bdbbe7) Importer(-1,00000000000000000000000000000000) [PhysX] Initialized MultithreadedTaskDispatcher with 4 workers.
+5511:Start importing Packages/com.unity.mathematics/ValidationExceptions.json using Guid(5ed727127196a4ecc90e24e2cd7af338) Importer(-1,00000000000000000000000000000000) [PhysX] Initialized MultithreadedTaskDispatcher with 4 workers.
+5515:Start importing Packages/com.unity.collections/ValidationExceptions.json using Guid(fee59c2b2318a7e4fa7a2c2af28d9553) Importer(-1,00000000000000000000000000000000) [PhysX] Initialized MultithreadedTaskDispatcher with 4 workers.
+5629:[Licensing::Client] Successfully resolved entitlement details
+5640:BuildScript: UWP start, Unity 2022.3.62f3
+5657:BuildScript:SetStatic (System.Type,string,object) (at Assets/Editor/BuildScript.cs:108)
+5658:BuildScript:ConfigurePlayer () (at Assets/Editor/BuildScript.cs:135)
+5665:(Filename: Assets/Editor/BuildScript.cs Line: 108)
+5672:BuildScript:SetStatic (System.Type,string,object) (at Assets/Editor/BuildScript.cs:108)
+5673:BuildScript:ConfigurePlayer () (at Assets/Editor/BuildScript.cs:136)
+5680:(Filename: Assets/Editor/BuildScript.cs Line: 108)
+5702:BBUWP audio: disableAudio False->false sampleRate 0->48000 dsp 1024->1024 requestedDsp 0->1024 speakerMode 2->2 volume 1
+5726:BBUWP: capabilities internetClient=True microphone=False
+5736:BBUWP: certificate BalloonBlastTest.pfx set=True subject=Similarize issuer=Similarize
+5746:BBUWP tile PackageLogo <- sq50.png
+5757:BBUWP tile SplashScreenImage <- splash620x300.png
+5768:BBUWP tile UWPSquare44x44Logo <- sq44.png
+5779:BBUWP tile UWPSquare71x71Logo <- sq71.png
+5790:BBUWP tile UWPSquare150x150Logo <- sq150.png
+5801:BBUWP tile UWPSquare310x310Logo <- sq310.png
+5812:BBUWP tile UWPWide310x150Logo <- wide310x150.png
+5823:BBUWP: EditorUserBuildSettings.wsaUWPBuildType = D3D
+5834:BBUWP: EditorUserBuildSettings.wsaSubtarget = AnyDevice
+5845:BBUWP: EditorUserBuildSettings.wsaArchitecture = x64
+5856:BBUWP: EditorUserBuildSettings.wsaBuildAndRunDeployTarget = LocalMachine
+5898:BuildScript: HDRI sky
+5903:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:208)
+5910:(Filename: Assets/Editor/BuildScript.cs Line: 208)
+5912:BuildScript: FF/Skin shader
+5917:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:180)
+5918:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:222)
+5925:(Filename: Assets/Editor/BuildScript.cs Line: 180)
+5932:BuildScript: FF/Foliage shader
+5937:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:180)
+5938:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:223)
+5945:(Filename: Assets/Editor/BuildScript.cs Line: 180)
+5952:BuildScript: BB/Balloon shader
+5957:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:180)
+5958:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:224)
+5965:(Filename: Assets/Editor/BuildScript.cs Line: 180)
+5987:BuildScript: terrain textures True True
+5992:BuildScript:CreateTerrain () (at Assets/Editor/BuildScript.cs:352)
+5993:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:262)
+6000:(Filename: Assets/Editor/BuildScript.cs Line: 352)
+6038:BuildScript: scene saved Assets/Scenes/Main.unity
+6043:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:278)
+6050:(Filename: Assets/Editor/BuildScript.cs Line: 278)
+6062:Failed to determine expiration date for "BalloonBlastTest.pfx". In case it is expired, you might not be able to package or deploy the resulting build.
+10266:[Licensing::Client] Successfully resolved entitlement details
+10267:[Licensing::Client] Successfully resolved entitlement details
+10375:[  97/2132  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/balloon-blast/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/vm/Exception.h
+10376:[  98/2132  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/balloon-blast/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/vm/Exception.cpp
+10478:[ 200/2132  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/balloon-blast/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/utils/ExceptionSupportStack.h
+10479:[ 201/2132  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/balloon-blast/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/utils/Exception.h
+10480:[ 202/2132  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/balloon-blast/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/utils/Exception.cpp
+10909:[ 629/2132  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/balloon-blast/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/icalls/System/System.Net.Sockets/SocketException.h
+10910:[ 630/2132  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/balloon-blast/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/icalls/System/System.Net.Sockets/SocketException.cpp
+10958:[ 678/2132  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/balloon-blast/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/icalls/mscorlib/System/Exception.h
+10960:[ 680/2132  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/balloon-blast/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/icalls/mscorlib/System/Exception.cpp
+12568:[W] FindFirstFile() failed: D:\a\SimilarizeWebsite\SimilarizeWebsite\src\unity\balloon-blast\Library\Bee\artifacts\UWPPlayerBuildProgram\il2cppOutput\cpp\Symbols
+13124: 0.2 kb	 0.0% Packages/com.unity.test-framework/UnityEngine.TestRunner/Assertions/OutOfOrderExpectedLogMessageException.cs
+13151: 0.2 kb	 0.0% Packages/com.unity.test-framework/UnityEngine.TestRunner/Assertions/UnexpectedLogMessageException.cs
+13185: 0.1 kb	 0.0% Packages/com.unity.test-framework/UnityEngine.TestRunner/Assertions/UnityTestTimeoutException.cs
+13186: 0.1 kb	 0.0% Packages/com.unity.test-framework/UnityEngine.TestRunner/Assertions/UnhandledLogMessageException.cs
+13187: 0.1 kb	 0.0% Packages/com.unity.test-framework/UnityEngine.TestRunner/Assertions/InvalidSignatureException.cs
+13437: 0.1 kb	 0.0% Packages/com.unity.inputsystem/InputSystem/Utilities/ExceptionHelpers.cs
+14067:BUILD_RESULT: Succeeded target=UWP errors=0 warnings=2 size=463487251 time=00:02:15.6931812
+14077:BUILD_SCRIPT_EXIT: 0
+14090:[Licensing::IpcConnector] LicenseClient-runneradmin-notifications channel disconnected successfully.
+14091:[Licensing::IpcConnector] LicenseClient-runneradmin channel disconnected successfully.
+14093:abort_threads: Failed aborting id: 0000000000000E1C, mono_thread_manage will ignore it
+14095:abort_threads: Failed aborting id: 0000000000001D98, mono_thread_manage will ignore it
+14097:abort_threads: Failed aborting id: 0000000000000E1C, mono_thread_manage will ignore it
+14099:abort_threads: Failed aborting id: 0000000000001D98, mono_thread_manage will ignore it
+14107:[Performance] WinEditorMain.Licensing                                                                                        :        1 samples, Peak.  1.84 s (1.0x), Avg.  1.84 s, Total. 1.835 s (0.7%)
+14183:[Performance] Application.ReadLicenseInfo                                                                                    :        1 samples, Peak.  25.9 ms (1.0x), Avg.  25.9 ms, Total. 25.86 ms (0.0%)
+14614:##utp:{"type":"MemoryLeaks","version":2,"phase":"Immediate","time":1792637595025,"processId":6964,"allocatedMemory":12749016,"memoryLabels":[{"Default":20335},{"Permanent":15615},{"NewDelete":83376},{"Thread":4228964},{"Manager":20718},{"VertexData":12},{"Geometry":560},{"Texture":328},{"Shader":73946},{"Material":24},{"GfxDevice":57048},{"Animation":296},{"Audio":3928},{"FontEngine":272},{"Physics":513},{"Serialization":948},{"Input":14744},{"JobScheduler":99600},{"Mono":40},{"ScriptingNativeRuntime":191848},{"BaseObject":1622180},{"Resource":1360},{"Renderer":2304},{"Transform":16},{"File":3797},{"WebCam":96},{"Culling":40},{"Terrain":1137},{"Wind":24},{"STL":48},{"String":26561},{"DynamicArray":70216},{"HashMap":100987},{"Utility":2660546},{"Curl":1424},{"PoolAlloc":1728},{"AI":104},{"TypeTree":5077},{"ScriptManager":640},{"RuntimeInitializeOnLoadManager":80},{"SpriteAtlas":128},{"GI":4072},{"Director":7960},{"CloudService":3544},{"WebRequest":688},{"VR":46081},{"SceneManager":568},{"Video":72},{"LazyScriptCache":40},{"NativeArray":12},{"Camera":25},{"Secure":1},{"Image":32768},{"SerializationCache":1584},{"APIUpdating":11872},{"Subsystems":392},{"VirtualTexturing":57896},{"StaticSafetyDebugInfo":327680},{"EditorGui":56},{"EditorUtility":20344},{"VersionControl":4},{"Undo":704},{"AssetDatabase":2763953},{"RestService":1414},{"EditorGi":376},{"License":3584},{"UnityConnect":25320},{"Collab":593},{"Upm":110536},{"DrivenProperties":96},{"LocalIPC":288},{"ProfilerEditor":10943},{"CoreBusinessMetrics":3862},{"AssetReference":40},{"IPCStream":40}]}
 === editor log tail (300)
 [ALLOC_TEMP_TLS] TLS Allocator
   StackAllocators : 
@@ -452,7 +413,7 @@ SMOKE_DONE
     [ALLOC_TEMP_Background Job.Worker 2]
       Initial Block Size 32.0 KB
       Current Block Size 32.0 KB
-      Peak Allocated Bytes 1.4 KB
+      Peak Allocated Bytes 1.5 KB
       Overflow Count 0
     [ALLOC_TEMP_Background Job.Worker 7]
       Initial Block Size 32.0 KB
@@ -468,7 +429,7 @@ SMOKE_DONE
       Initial Block Size 256.0 KB
       Current Block Size 1.0 MB
       Peak Allocated Bytes 1.0 MB
-      Overflow Count 1
+      Overflow Count 0
     [ALLOC_TEMP_BakingJobs.Worker 0]
       Initial Block Size 256.0 KB
       Current Block Size 256.0 KB
@@ -518,7 +479,7 @@ SMOKE_DONE
       Initial Block Size 256.0 KB
       Current Block Size 1.0 MB
       Peak Allocated Bytes 1.0 MB
-      Overflow Count 0
+      Overflow Count 1
     [ALLOC_TEMP_Background Job.Worker 0]
       Initial Block Size 32.0 KB
       Current Block Size 32.0 KB
@@ -561,8 +522,8 @@ SMOKE_DONE
       Overflow Count 0
     [ALLOC_TEMP_CloudJob.Worker 0]
       Initial Block Size 32.0 KB
-      Current Block Size 32.0 KB
-      Peak Allocated Bytes 3.4 KB
+      Current Block Size 72.0 KB
+      Peak Allocated Bytes 52.2 KB
       Overflow Count 0
     [ALLOC_TEMP_Loading.AsyncRead]
       Initial Block Size 64.0 KB
@@ -572,7 +533,7 @@ SMOKE_DONE
 [ALLOC_MEMORYPROFILER]
   Requested Block Size 1.0 MB
   Peak Block count 1
-  Peak Allocated memory 277.5 KB
+  Peak Allocated memory 277.6 KB
   Peak Large allocation bytes 0 B
 [ALLOC_DEFAULT] Dual Thread Allocator
   Peak main deferred allocation count 1301
@@ -588,7 +549,7 @@ SMOKE_DONE
     [ALLOC_DEFAULT_THREAD]
       Requested Block Size 16.0 MB
       Peak Block count 1
-      Peak Allocated memory 7.4 MB
+      Peak Allocated memory 7.1 MB
       Peak Large allocation bytes 0 B
 [ALLOC_TEMP_JOB_1_FRAME]
   Initial Block Size 2.0 MB
@@ -635,12 +596,12 @@ SMOKE_DONE
     [ALLOC_CACHEOBJECTS_MAIN]
       Requested Block Size 4.0 MB
       Peak Block count 8
-      Peak Allocated memory 31.0 MB
-      Peak Large allocation bytes 14.7 MB
+      Peak Allocated memory 32.4 MB
+      Peak Large allocation bytes 15.6 MB
     [ALLOC_CACHEOBJECTS_THREAD]
       Requested Block Size 4.0 MB
       Peak Block count 1
-      Peak Allocated memory 130.4 KB
+      Peak Allocated memory 130.0 KB
       Peak Large allocation bytes 0 B
 [ALLOC_TYPETREE] Dual Thread Allocator
   Peak main deferred allocation count 747
@@ -656,17 +617,17 @@ SMOKE_DONE
     [ALLOC_TYPETREE_THREAD]
       Requested Block Size 2.0 MB
       Peak Block count 1
-      Peak Allocated memory 57.6 KB
+      Peak Allocated memory 56.5 KB
       Peak Large allocation bytes 0 B
 [ALLOC_PROFILER]
   Requested Block Size 16.0 MB
   Peak Block count 1
-  Peak Allocated memory 502.2 KB
+  Peak Allocated memory 0.5 MB
   Peak Large allocation bytes 0 B
     [ALLOC_PROFILER_BUCKET]
       Large Block size 32.0 MB
       Used Block count 1
-      Peak Allocated bytes 4.2 KB
+      Peak Allocated bytes 4.3 KB
 [ALLOC_PROFILER_EDITOR]
   Requested Block Size 1.0 MB
   Peak Block count 0
@@ -675,5 +636,5 @@ SMOKE_DONE
     [ALLOC_PROFILER_BUCKET]
       Large Block size 32.0 MB
       Used Block count 1
-      Peak Allocated bytes 4.2 KB
-##utp:{"type":"MemoryLeaks","version":2,"phase":"Immediate","time":1792559859074,"processId":2696,"allocatedMemory":12748913,"memoryLabels":[{"Default":20335},{"Permanent":15615},{"NewDelete":83376},{"Thread":4228964},{"Manager":20718},{"VertexData":12},{"Geometry":560},{"Texture":328},{"Shader":73946},{"Material":24},{"GfxDevice":57048},{"Animation":296},{"Audio":3928},{"FontEngine":272},{"Physics":513},{"Serialization":948},{"Input":14744},{"JobScheduler":99600},{"Mono":40},{"ScriptingNativeRuntime":191848},{"BaseObject":1622180},{"Resource":1360},{"Renderer":2304},{"Transform":16},{"File":3797},{"WebCam":96},{"Culling":40},{"Terrain":1137},{"Wind":24},{"STL":48},{"String":26538},{"DynamicArray":70216},{"HashMap":100987},{"Utility":2660546},{"Curl":1424},{"PoolAlloc":1728},{"AI":104},{"TypeTree":5077},{"ScriptManager":640},{"RuntimeInitializeOnLoadManager":80},{"SpriteAtlas":128},{"GI":4072},{"Director":7960},{"CloudService":3544},{"WebRequest":688},{"VR":46081},{"SceneManager":568},{"Video":72},{"LazyScriptCache":40},{"NativeArray":12},{"Camera":25},{"Secure":1},{"Image":32768},{"SerializationCache":1584},{"APIUpdating":11872},{"Subsystems":392},{"VirtualTexturing":57896},{"StaticSafetyDebugInfo":327680},{"EditorGui":56},{"EditorUtility":20344},{"VersionControl":4},{"Undo":704},{"AssetDatabase":2763873},{"RestService":1414},{"EditorGi":376},{"License":3584},{"UnityConnect":25320},{"Collab":593},{"Upm":110536},{"DrivenProperties":96},{"LocalIPC":288},{"ProfilerEditor":10943},{"CoreBusinessMetrics":3862},{"AssetReference":40},{"IPCStream":40}]}
+      Peak Allocated bytes 4.3 KB
+##utp:{"type":"MemoryLeaks","version":2,"phase":"Immediate","time":1792637595025,"processId":6964,"allocatedMemory":12749016,"memoryLabels":[{"Default":20335},{"Permanent":15615},{"NewDelete":83376},{"Thread":4228964},{"Manager":20718},{"VertexData":12},{"Geometry":560},{"Texture":328},{"Shader":73946},{"Material":24},{"GfxDevice":57048},{"Animation":296},{"Audio":3928},{"FontEngine":272},{"Physics":513},{"Serialization":948},{"Input":14744},{"JobScheduler":99600},{"Mono":40},{"ScriptingNativeRuntime":191848},{"BaseObject":1622180},{"Resource":1360},{"Renderer":2304},{"Transform":16},{"File":3797},{"WebCam":96},{"Culling":40},{"Terrain":1137},{"Wind":24},{"STL":48},{"String":26561},{"DynamicArray":70216},{"HashMap":100987},{"Utility":2660546},{"Curl":1424},{"PoolAlloc":1728},{"AI":104},{"TypeTree":5077},{"ScriptManager":640},{"RuntimeInitializeOnLoadManager":80},{"SpriteAtlas":128},{"GI":4072},{"Director":7960},{"CloudService":3544},{"WebRequest":688},{"VR":46081},{"SceneManager":568},{"Video":72},{"LazyScriptCache":40},{"NativeArray":12},{"Camera":25},{"Secure":1},{"Image":32768},{"SerializationCache":1584},{"APIUpdating":11872},{"Subsystems":392},{"VirtualTexturing":57896},{"StaticSafetyDebugInfo":327680},{"EditorGui":56},{"EditorUtility":20344},{"VersionControl":4},{"Undo":704},{"AssetDatabase":2763953},{"RestService":1414},{"EditorGi":376},{"License":3584},{"UnityConnect":25320},{"Collab":593},{"Upm":110536},{"DrivenProperties":96},{"LocalIPC":288},{"ProfilerEditor":10943},{"CoreBusinessMetrics":3862},{"AssetReference":40},{"IPCStream":40}]}
