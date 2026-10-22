@@ -67,6 +67,16 @@ public partial class RobotPhone : MonoBehaviour   // ffu6q: + Game/RobotVoice66.
     public int Tab { get { return tab; } }
     public float PanelScale { get { return panel.rectTransform.localScale.x; } }
     public bool Compact { get { return !card.gameObject.activeSelf; } }
+    // ffu71 probe accessors (split-screen phones): cursor, robot-card focus, last option sent, header, the panel / PHONE button rects
+    public int CursorIdx { get { return cur; } }
+    public bool OnCard { get { return onCard; } }
+    public string LastSent { get { return pickAct; } }
+    public string HeadText { get { return head != null ? head.text : ""; } }
+    public Rect PanelScreenRect { get { return ScreenRect(panel.rectTransform); } }
+    public Rect ButtonScreenRect { get { return btn.gameObject.activeInHierarchy ? ScreenRect(btn.rectTransform) : new Rect(); } }
+    public bool ButtonShown { get { return btn.gameObject.activeInHierarchy; } }
+    static readonly Vector3[] corners = new Vector3[4];
+    static Rect ScreenRect(RectTransform t) { t.GetWorldCorners(corners); return Rect.MinMaxRect(corners[0].x, corners[0].y, corners[2].x, corners[2].y); }
 
     // the phone of the seat this froggy sits in (made on first use)
     public static RobotPhone Of(Frog f)
@@ -729,7 +739,11 @@ public partial class RobotPhone : MonoBehaviour   // ffu6q: + Game/RobotVoice66.
         // ffu59b: whose phone it is (split) + the picked robot in the header when the card is hidden (compact)
         bool many = Game.I != null && Game.I.slots.Count > 1;
         int pn = Game.I != null && user != null ? Game.I.slots.IndexOf(Game.I.SlotOfSeat(seat)) : -1;
-        string hd = (many && pn >= 0 ? "<color=" + Game.PlayerHex(pn) + ">P" + (pn + 1) + "</color>  " : "") + "ROBOT PHONE" + (!card.gameObject.activeSelf ? "  <color=#ffffff>·  " + nm + "</color>" : "");
+        // ffu71 (Ben item 1): in the compact split layout the robot card is hidden, so pad Up-to-the-card (ffu68) had no visible
+        // cursor - the header's robot name now takes the card's highlight (amber, < name >) while the card has the cursor
+        bool cmp = !card.gameObject.activeSelf;
+        string hd = (many && pn >= 0 ? "<color=" + Game.PlayerHex(pn) + ">P" + (pn + 1) + "</color>  " : "") + "ROBOT PHONE"
+                  + (cmp ? (onCard && !F71.Old ? "  <color=#ffbf33>< " + nm + " ></color>" : "  <color=#ffffff>·  " + nm + "</color>") : "");
         if (head.text != hd) { head.supportRichText = true; head.text = hd; }
         string ow = (r.owner.Length > 0 ? r.owner + "'s robot" : "Ranch robot") + "  ·  " + r.height.ToString("0.0") + " m";
         if (ownerT.text != ow) ownerT.text = ow;
@@ -768,7 +782,7 @@ public partial class RobotPhone : MonoBehaviour   // ffu6q: + Game/RobotVoice66.
         }
         if (tab == 5) { Vehicle uv = user != null ? user.vehicle : null; string wl = BigWheels.Resizable(uv) ? "WHEEL SIZE " + BigWheels.Short(uv) + " - your " + uv.Title + " only (1x - 4x)" : "Get in a vehicle to resize its wheels"; if (msg.text != wl && !msg.text.StartsWith("Wheel size")) msg.text = wl; }
         InputKind ik = user != null ? user.inputKind : InputKind.Keyboard;
-        string h = ik == InputKind.Gamepad ? "Left/Right tab · A pick · Down options · Up robots · RB tab · Y feed · X full · RT talk · LB / B close"
+        string h = ik == InputKind.Gamepad ? (onCard && !F71.Old ? "Left/Right swap robot · Down back to the tabs · LB / B close" : "Left/Right tab · A pick · Down options · Up robots · RB tab · Y feed · X full · RT talk · LB / B close")
                  : ik == InputKind.Touch ? "Swipe the robot · tap a tab, then an order · TALK to speak · PHONE closes"
                  : "W/S robot · A/D order · E/Enter/click send · hold T talk · O feed · P close";
         if (hint.text != h) hint.text = h;
