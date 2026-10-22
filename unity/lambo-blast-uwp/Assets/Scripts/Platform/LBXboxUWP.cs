@@ -113,7 +113,7 @@ public class LBXboxUWPRunner : MonoBehaviour
 
     void Enforce()
     {
-        if (Look.Views <= 0 && t < 60f) return;   // wait for the game's first camera setup
+        if (Look.Views <= 0 && t < 6f) return;   // wait for the game's first camera setup (Lambo's lobby never sets Views)
         if (QualitySettings.antiAliasing != 0) QualitySettings.antiAliasing = 0;
         if (QualitySettings.shadows != ShadowQuality.Disable)
         {
@@ -323,7 +323,7 @@ public class LBXboxAudio : MonoBehaviour
         musT -= dt;
         if (musT <= 0f) { musT = 1f; MusicWatch(); }
         // once the window is active: open the output again (the console's audio endpoint may not exist at engine start)
-        if (!rearmed && since > 4f && Application.isFocused && Look.Views > 0)
+        if (!rearmed && since > 4f && Application.isFocused && (Look.Views > 0 || since > 6f))
         {
             rearmed = true;
             Apply(opt, "re-arm after window active");
@@ -350,14 +350,23 @@ public class LBXboxAudio : MonoBehaviour
     void OnApplicationFocus(bool f) { if (f) { musT = 0.3f; Debug.Log("LBXBOX AUDIO focus regained - music check"); } }
     void OnApplicationPause(bool p) { if (!p) { musT = 0.3f; Debug.Log("LBXBOX AUDIO resumed - music check"); } }
 
+    // per source: restarts in a row that did not take (still stopped at the next check) -> back off to one try per 15 s
+    // after 3, and log only every 10th (a box with no audio output never reports isPlaying)
+    static readonly Dictionary<AudioSource, int> miss = new Dictionary<AudioSource, int>();
+    static readonly Dictionary<AudioSource, float> nextTry = new Dictionary<AudioSource, float>();
     static void Revive(AudioSource s, string what)
     {
-        if (s == null || s.clip == null || s.isPlaying || !s.enabled || !s.gameObject.activeInHierarchy) return;
+        if (s == null || s.clip == null || !s.enabled || !s.gameObject.activeInHierarchy) return;
+        if (s.isPlaying) { miss[s] = 0; return; }
+        int m; miss.TryGetValue(s, out m);
+        float nt; if (nextTry.TryGetValue(s, out nt) && since < nt) return;
         AudioClip c = s.clip;
         if (c.loadState == AudioDataLoadState.Unloaded || c.loadState == AudioDataLoadState.Failed) c.LoadAudioData();
         s.Play(); musRestarts++;
-        musLast = "restarted " + what + " " + c.name + " (" + c.loadState + ", vol " + s.volume.ToString("0.00") + ")";
-        Debug.Log("LBXBOX AUDIO music " + musLast);
+        m++; miss[s] = m;
+        nextTry[s] = m >= 3 ? since + 15f : 0f;
+        musLast = "restarted " + what + " " + c.name + " (" + c.loadState + ", vol " + s.volume.ToString("0.00") + ", try " + m + (m >= 3 ? ", backing off 15 s" : "") + ")";
+        if (m <= 3 || m % 10 == 0) Debug.Log("LBXBOX AUDIO music " + musLast);
     }
 
     // the game's own music / ambience loops: they only call Play when the track changes, so a source Unity stopped
