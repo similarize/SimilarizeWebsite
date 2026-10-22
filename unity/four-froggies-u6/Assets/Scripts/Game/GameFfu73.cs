@@ -59,7 +59,10 @@ public partial class Game
         F73Check("a robot pilot would sit in the captain's chair (no glass canopy on the trillion-story head)", b != null && big.CanopySeat != null && big.CanopySeat.IsChildOf(b.captain) && big.Bone64(1).Find("RobotCanopy") == null,
             "robot seat " + (big.CanopySeat != null ? big.CanopySeat.name + " under " + big.CanopySeat.parent.name : "-"));
         int helm = Helmets73(ai);
-        F73Check("outside: no bubble (no canopy, no glass helmets on the riders), flush visor on the face", helm == 0 && big.Bone64(1).Find("RobotCanopy") == null && b != null, "helmets " + helm);
+        int glass = 0; foreach (var r in big.Bone64(1).GetComponentsInChildren<Renderer>(true)) if (r.gameObject.name == "glass") glass++;
+        int smallGlass = 0; if (small != null) foreach (var r in small.Bone64(1).GetComponentsInChildren<Renderer>(true)) if (r.gameObject.name == "glass") smallGlass++;
+        F73Check("outside: no bubble (no glass cockpit dome on the head, no canopy, no rider helmets), flush visor", helm == 0 && glass == 0 && big.Bone64(1).Find("RobotCanopy") == null && b != null, "head glass " + glass + " helmets " + helm);
+        F73Check("the 10-story mech keeps its glass cockpit dome", smallGlass > 0, "10-story head glass " + smallGlass);
         // P2 out in front looking up at the face; P1 presses R3 = bridge view
         Vector3 fw = big.transform.forward; fw.y = 0f; fw.Normalize();
         Vector3 p2 = big.transform.position + fw * (big.height * 1.05f); p2.y = Ranch.GY(p2.x, p2.z) + 0.5f;
@@ -92,8 +95,11 @@ public partial class Game
             F73Check("space: P1 sits in the copy's captain's chair", s.bridge73 != null && s.bridge73.Inside(fa.transform.position + Vector3.up * 0.03f) && fa.model.gameObject.activeInHierarchy, "P1 at " + fa.transform.position.ToString("0.0"));
         }
         else if (s != null) { s.DemoRiders(ai.ToArray()); yield return L59Settle(1f); F73Info("space (old)", "riders on the shoulders, helmets " + Helmets73(ai)); }
-        ca = slots[0].rig != null ? slots[0].rig.cam : null;
-        F73Check("space: bridge view puts P1's camera inside the copy's bridge", s != null && s.bridge73 != null && ca != null && s.bridge73.Inside(ca.transform.position), "cam " + (ca != null ? ca.transform.position.ToString("0.0") : "-"));
+        // fix 1: judged by frames RENDERED from inside a bridge (the camera is re-posed right before it renders; between frames a
+        // fast ship has already moved on)
+        int ci1 = Bridge73.CamsInside;
+        yield return L59Settle(1f);
+        F73Check("space: bridge view puts P1's camera inside the copy's bridge", s != null && s.bridge73 != null && Bridge73.ViewOn(slots[0].rig) && Bridge73.CamsInside > ci1, "view " + Bridge73.ViewOn(slots[0].rig) + " inside-frames " + (Bridge73.CamsInside - ci1));
         Debug.Log("FFDEMO " + T + " ph 2 spacein t " + Time.time.ToString("0.0"));
         yield return L59Settle(10f);
         yield return L59Press(pads[0], GamepadButton.RightStick);

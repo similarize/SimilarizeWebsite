@@ -31,7 +31,7 @@ public class Bridge73 : MonoBehaviour
     public float RobotWorldH { get { return RobotH * k; } }
     // room box (bridge metres): x +-6, y 0..4.2, z -6..3 (the viewscreen wall at +3)
     const float HW = 6f, HT = 4.2f, ZB = -6f, ZF = 3f;
-    static readonly Vector3 EyeL = new Vector3(0f, 2.2f, -4.6f), ScreenL = new Vector3(0f, 1.75f, 3f);
+    static readonly Vector3 EyeL = new Vector3(1.35f, 2.45f, -4.1f), ScreenL = new Vector3(-0.35f, 1.65f, 3f);   // fix 1: over the captain's right shoulder (the chair back hid the view)
 
     public bool Inside(Vector3 world)
     {
@@ -172,7 +172,7 @@ public class Bridge73 : MonoBehaviour
         Mats.Prim(PrimitiveType.Cylinder, c, new Vector3(0f, seatH * 0.35f, 0f), new Vector3(0.16f, seatH * 0.35f, 0.16f), frame);        // pedestal
         Mats.Prim(PrimitiveType.Cylinder, c, new Vector3(0f, 0.03f, 0f), new Vector3(0.6f, 0.03f, 0.6f), frame);                         // foot
         Mats.Prim(PrimitiveType.Cube, c, new Vector3(0f, seatH - 0.08f, 0f), new Vector3(w, 0.16f, 0.72f), cushion);                    // cushion
-        Mats.Prim(PrimitiveType.Cube, c, new Vector3(0f, seatH + (captain ? 0.55f : 0.4f), -0.36f), new Vector3(w, captain ? 1.0f : 0.72f, 0.14f), new Vector3(-8f, 0f, 0f), cushion);   // back
+        Mats.Prim(PrimitiveType.Cube, c, new Vector3(0f, seatH + (captain ? 0.48f : 0.4f), -0.36f), new Vector3(w, captain ? 0.85f : 0.72f, 0.14f), new Vector3(-8f, 0f, 0f), cushion);   // back
         if (captain)
         {
             for (int s = -1; s <= 1; s += 2)
@@ -202,15 +202,46 @@ public class Bridge73 : MonoBehaviour
         return any;
     }
 
-    // inside the head: the viewscreen wall flush with the face (head +z), centred on the head
+    // fix 1: the head mesh's own "froggy cockpit dome" (pack material "glass") IS the outside bubble - the trillion-story head
+    // has none (the other bands keep theirs). DestroyImmediate, before the mech collects its renderers.
+    public static int NoDome(Transform head)
+    {
+        var dead = new List<GameObject>();
+        foreach (var r in head.GetComponentsInChildren<Renderer>(true))
+            if (r.GetComponentInParent<Bridge73>() == null && (r.gameObject.name == "glass" || (r.sharedMaterial != null && r.sharedMaterial.name.StartsWith("Glass")))) dead.Add(r.gameObject);
+        foreach (var g in dead) Object.DestroyImmediate(g);
+        if (dead.Count > 0) Debug.Log("FF73 cockpit dome removed from " + head.name + " (" + dead.Count + ")");
+        return dead.Count;
+    }
+
+    // the head "body" shell only (not the eye bulbs / dome) - where the viewscreen goes
+    static bool BodyBounds(Transform space, Transform head, out Vector3 mn, out Vector3 mx)
+    {
+        mn = new Vector3(1e9f, 1e9f, 1e9f); mx = -mn; bool any = false;
+        foreach (var mf in head.GetComponentsInChildren<MeshFilter>(true))
+        {
+            if (mf.sharedMesh == null || mf.gameObject.name != "body") continue;
+            Bounds bb = mf.sharedMesh.bounds;
+            for (int i = 0; i < 8; i++)
+            {
+                Vector3 c = bb.center + Vector3.Scale(bb.extents, new Vector3((i & 1) == 0 ? -1 : 1, (i & 2) == 0 ? -1 : 1, (i & 4) == 0 ? -1 : 1));
+                Vector3 l = space.InverseTransformPoint(mf.transform.TransformPoint(c));
+                mn = Vector3.Min(mn, l); mx = Vector3.Max(mx, l); any = true;
+            }
+        }
+        return any || LocalBounds(space, head, out mn, out mx);
+    }
+
+    // inside the head: the viewscreen wall flush with the face (head +z) just above its glow band, centred on the head
     public static Bridge73 ForHead(Transform head, float H, int owner, string plate)
     {
         float k = H / StoryMech.BandH[3];
+        NoDome(head);
         Vector3 mn, mx;
         float hs = head.lossyScale.x > 1e-4f ? head.lossyScale.x : 1f;
-        if (!LocalBounds(head, head, out mn, out mx)) { mn = new Vector3(-0.08f, 0f, -0.07f) * H / hs; mx = new Vector3(0.08f, 0.12f, 0.07f) * H / hs; }
+        if (!BodyBounds(head, head, out mn, out mx)) { mn = new Vector3(-0.08f, 0f, -0.07f) * H / hs; mx = new Vector3(0.08f, 0.12f, 0.07f) * H / hs; }
         float cy = (mn.y + mx.y) * 0.5f;
-        Vector3 p = new Vector3((mn.x + mx.x) * 0.5f, cy - 2.3f * k / hs, mx.z - (ZF + 0.12f) * k / hs);
+        Vector3 p = new Vector3((mn.x + mx.x) * 0.5f, cy - 1.3f * k / hs, mx.z - (ZF + 0.12f) * k / hs);   // window centre 1 m (k) above the body centre
         return Build(head, p, Quaternion.identity, k, owner, head, plate);
     }
 
@@ -218,8 +249,9 @@ public class Bridge73 : MonoBehaviour
     public static Bridge73 ForSpaceCopy(Transform vis, Transform head, float H, int owner, string plate)
     {
         float k = H / StoryMech.BandH[3];
+        NoDome(head);
         Vector3 mn, mx;
-        if (!LocalBounds(vis, head, out mn, out mx)) return null;
+        if (!BodyBounds(vis, head, out mn, out mx)) return null;
         Vector3 p = new Vector3((mn.x + mx.x) * 0.5f, (mn.y + mx.y) * 0.5f - 2.3f * k, mx.z - (ZF + 0.12f) * k);
         return Build(vis, p, Quaternion.identity, k, owner, head, plate);
     }
@@ -240,6 +272,12 @@ public class Bridge73 : MonoBehaviour
     {
         Restore();
         if (c == null) return;
+        Pose p;
+        if (poses.TryGetValue(c, out p))
+        {
+            if (p.b != null && p.b.eye != null && p.f == Time.frameCount) c.transform.SetPositionAndRotation(p.b.eye.position, p.b.eye.rotation * Quaternion.Euler(0f, p.yaw, 0f) * Quaternion.Euler(p.pitch, 0f, 0f));
+            else poses.Remove(c);
+        }
         Vector3 cp = c.transform.position;
         foreach (var b in All)
         {
@@ -274,6 +312,8 @@ public class Bridge73 : MonoBehaviour
         return null;
     }
 
+    struct Pose { public Bridge73 b; public float yaw, pitch; public int f; }
+    static readonly Dictionary<Camera, Pose> poses = new Dictionary<Camera, Pose>();
     // bridge view per camera rig (chase <-> bridge), look offsets
     class View { public bool on; public float yaw, pitch; }
     static readonly Dictionary<CamRig, View> views = new Dictionary<CamRig, View>();
@@ -303,6 +343,7 @@ public class Bridge73 : MonoBehaviour
         v.yaw = Mathf.Clamp(v.yaw + i.look.x, -80f, 80f);
         v.pitch = Mathf.Clamp(v.pitch - i.look.y, -30f, 35f);
         rig.cam.transform.SetPositionAndRotation(b.eye.position, b.eye.rotation * Quaternion.Euler(0f, v.yaw, 0f) * Quaternion.Euler(v.pitch, 0f, 0f));
+        poses[rig.cam] = new Pose { b = b, yaw = v.yaw, pitch = v.pitch, f = Time.frameCount };   // re-posed right before it renders
         return true;
     }
 
