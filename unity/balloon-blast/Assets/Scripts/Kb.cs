@@ -57,6 +57,21 @@ public static class Kb
         try { return Input.GetKeyDown(KeyCode.R); } catch { return false; }
     }
 
+    // crouch: C held (Ctrl is not used: Ctrl+W while walking would close the browser tab)
+    public static bool Crouch()
+    {
+        Keyboard k = Keyboard.current;
+        if (k != null) return k.cKey.isPressed;
+        try { return Input.GetKey(KeyCode.C); } catch { return false; }
+    }
+
+    public static bool BDown()
+    {
+        Keyboard k = Keyboard.current;
+        if (k != null) return k.bKey.wasPressedThisFrame;
+        try { return Input.GetKeyDown(KeyCode.B); } catch { return false; }
+    }
+
     public static bool MDown()
     {
         Keyboard k = Keyboard.current;

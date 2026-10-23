@@ -29,7 +29,14 @@ public class Game : MonoBehaviour
 
     public readonly List<Slot> slots = new List<Slot>();
     public readonly List<Soldier> soldiers = new List<Soldier>();
-    public const int TotalPlayers = 8;
+    public const int TotalPlayers = 8;   // most players in one match (humans + bots): 8 colours, 8 spawn points, 8 bot names
+    public const int MaxLocal = 4;       // local humans: 4 seats / 2x2 split-screen / camera layers 20-23 + 24-27
+    // Bots picker (Bill, Oct 23): -1 = AUTO (empty seats are bots, fill to 8 - the old behaviour), else 0..7 bots.
+    // Never 0 bots with one human (always at least one opponent). Saved in PlayerPrefs bb.bots.
+    public static int BotSetting = -1;
+    float lastBotsCycle = -10f;
+    Image botsImg;
+    Text botsText;
     public const int WinsNeeded = 2;
     public const float RoundLength = 150f;
 
@@ -81,6 +88,7 @@ public class Game : MonoBehaviour
         string url = "";
         try { url = Application.absoluteURL ?? ""; } catch { }
         Critters.Roster = Mathf.Clamp(PlayerPrefs.GetInt("bb.roster", 0), 0, Critters.RosterNames.Length - 1);
+        BotSetting = Mathf.Clamp(PlayerPrefs.GetInt("bb.bots", -1), -1, TotalPlayers - 1);
         Demo = url.Contains("bbdemo");
         if (Demo)
         {
@@ -89,6 +97,10 @@ public class Game : MonoBehaviour
             int rk = url.IndexOf("bbroster=");
             if (rk >= 0 && rk + 9 < url.Length && char.IsDigit(url[rk + 9])) Critters.Roster = (url[rk + 9] - '0') % Critters.RosterNames.Length;
             demoTouch = url.Contains("bbtouch=1");
+            int bk = url.IndexOf("bbbots=");
+            if (bk >= 0 && bk + 7 < url.Length && char.IsDigit(url[bk + 7])) BotSetting = url[bk + 7] - '0';
+            Soldier.DemoCrouch = url.Contains("bbcrouch=1");
+            TouchControls.DemoCrouchBtn = Soldier.DemoCrouch;
             demoDogs = url.Contains("bbdogs=1");
             demoAds = url.Contains("bbads=1");
             TouchControls.DemoPress = url.Contains("bbpress=1");
@@ -114,9 +126,12 @@ public class Game : MonoBehaviour
         lobbyBg = UIK.Img(r, null, new Color(0.05f, 0.08f, 0.12f, 0.55f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1180, 640));
         lobbyBg.raycastTarget = false;
         lobbyTitle = UIK.Label(r, "BALLOON BLAST AIRSOFT", 64, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, 250), new Vector2(1100, 90), new Color(1f, 0.85f, 0.2f));
-        lobbyDesc = UIK.Label(r, "Pop everyone else's balloons! 3 balloons each - lose them all and you're out.\nLast one standing wins the round. Best of 3. 8 players: empty seats are bots.", 24, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, 182), new Vector2(1100, 70), Color.white);
+        lobbyDesc = UIK.Label(r, "", 24, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, 182), new Vector2(1100, 70), Color.white);
         figImg = UIK.Img(r, null, new Color(0f, 0f, 0f, 0.45f), new Vector2(0.5f, 0.5f), new Vector2(0, 126), new Vector2(640, 46));
         figText = UIK.Label(figImg.transform, "", 24, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(630, 44), Color.white);
+        botsImg = UIK.Img(r, null, new Color(0f, 0f, 0f, 0.45f), new Vector2(0.5f, 0.5f), new Vector2(300, 126), new Vector2(400, 46));
+        botsText = UIK.Label(botsImg.transform, "", 24, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(390, 44), Color.white);
+        botsText.supportRichText = true;
         for (int i = 0; i < 4; i++)
         {
             Vector2 p = new Vector2(-405 + i * 270, 22);
@@ -132,7 +147,7 @@ public class Game : MonoBehaviour
         creditsBtn = UIK.Img(r, null, new Color(0f, 0f, 0f, 0.5f), new Vector2(0f, 1f), new Vector2(84, -26), new Vector2(150, 34));
         var cl = UIK.Label(creditsBtn.transform, "CREDITS (C)", 17, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(150, 34), new Color(0.8f, 0.95f, 1f));
         UIK.Stretch(cl.rectTransform);
-        lobbyHint = UIK.Label(r, "Gamepad: L-stick move | R-stick look | RT fire | LT aim | A jump | X reload\nKeyboard: WASD | mouse look | click fire | right-click aim | Space jump | R reload\nTouch: left stick | drag right side to look | FIRE / AIM / JUMP / RELOAD\nBots roster: Y / F / tap the BOTS bar.  Pick your character: D-pad / Left-Right arrows / tap < >.  Sound: M / SOUND button", 20, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, -208), new Vector2(1150, 130), new Color(1, 1, 1, 0.85f));
+        lobbyHint = UIK.Label(r, "Gamepad: L-stick move | R-stick look | RT fire | LT aim | A jump | X reload | B hold crouch\nKeys: WASD | mouse look | click fire | right-click aim | Space jump | R reload | C hold crouch\nTouch: left stick | drag to look | FIRE / AIM / JUMP / RELOAD / CROUCH (toggle)\nLobby: roster Y / F / tap  |  bots count X, LB / RB, B key, tap  |  character D-pad / arrows / < >  |  sound M", 20, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0, -208), new Vector2(1150, 130), new Color(1, 1, 1, 0.85f));
     }
 
     void BuildCredits()
@@ -171,11 +186,12 @@ public class Game : MonoBehaviour
         {
             Pos(lobbyBg, new Vector2(0, -10), new Vector2(700, 1190));
             Pos(lobbyTitle, new Vector2(0, 470), new Vector2(680, 150)); lobbyTitle.fontSize = 56; lobbyTitle.text = "BALLOON BLAST\nAIRSOFT";
-            Pos(lobbyDesc, new Vector2(0, 350), new Vector2(660, 120)); lobbyDesc.fontSize = 22;
-            Pos(figImg, new Vector2(0, 262), new Vector2(660, 50)); Pos(figText, Vector2.zero, new Vector2(650, 48)); figText.fontSize = 22;
+            Pos(lobbyDesc, new Vector2(0, 362), new Vector2(660, 100)); lobbyDesc.fontSize = 21;
+            Pos(figImg, new Vector2(0, 288), new Vector2(660, 44)); Pos(figText, Vector2.zero, new Vector2(650, 42)); figText.fontSize = 21;
+            Pos(botsImg, new Vector2(0, 238), new Vector2(660, 42)); Pos(botsText, Vector2.zero, new Vector2(650, 40)); botsText.fontSize = 21;
             for (int i = 0; i < 4; i++)
             {
-                Vector2 c = new Vector2(i % 2 == 0 ? -168 : 168, i < 2 ? 140 : -36);
+                Vector2 c = new Vector2(i % 2 == 0 ? -168 : 168, i < 2 ? 126 : -46);
                 SeatPos(i, c, new Vector2(320, 160), 140);
             }
             Pos(lobbyStatus, new Vector2(0, -175), new Vector2(660, 100)); lobbyStatus.fontSize = 28;
@@ -186,7 +202,8 @@ public class Game : MonoBehaviour
             Pos(lobbyBg, Vector2.zero, new Vector2(1180, 640));
             Pos(lobbyTitle, new Vector2(0, 250), new Vector2(1100, 90)); lobbyTitle.fontSize = 64; lobbyTitle.text = "BALLOON BLAST AIRSOFT";
             Pos(lobbyDesc, new Vector2(0, 182), new Vector2(1100, 70)); lobbyDesc.fontSize = 24;
-            Pos(figImg, new Vector2(0, 126), new Vector2(640, 46)); Pos(figText, Vector2.zero, new Vector2(630, 44)); figText.fontSize = 24;
+            Pos(figImg, new Vector2(-200, 126), new Vector2(700, 46)); Pos(figText, Vector2.zero, new Vector2(690, 44)); figText.fontSize = 22;
+            Pos(botsImg, new Vector2(370, 126), new Vector2(420, 46)); Pos(botsText, Vector2.zero, new Vector2(410, 44)); botsText.fontSize = 22;
             for (int i = 0; i < 4; i++) SeatPos(i, new Vector2(-405 + i * 270, 22), new Vector2(250, 150), 104);
             Pos(lobbyStatus, new Vector2(0, -90), new Vector2(1100, 60)); lobbyStatus.fontSize = 30;
             Pos(lobbyHint, new Vector2(0, -208), new Vector2(1150, 130)); lobbyHint.fontSize = 20;
@@ -260,7 +277,10 @@ public class Game : MonoBehaviour
             arrowL[i].gameObject.SetActive(pick);
             arrowR[i].gameObject.SetActive(pick);
         }
-        figText.text = "BOTS:  <color=#ffd84a>" + Critters.RosterNames[Critters.Roster].ToUpper() + "</color>   <size=18>(Y / F / tap to change)</size>";
+        figText.text = "BOTS ROSTER:  <color=#ffd84a>" + Critters.RosterNames[Critters.Roster].ToUpper() + "</color>   <size=17>(Y / F / tap)</size>";
+        int hum = Mathf.Max(1, slots.Count), nb = EffectiveBots(hum);
+        botsText.text = "BOTS:  <color=#ffd84a>" + (BotSetting < 0 ? "AUTO " + nb : nb.ToString()) + "</color>  <size=17>" + (hum + nb) + " players  (X / B / tap)</size>";
+        lobbyDesc.text = "Pop everyone else's balloons! 3 balloons each - lose them all and you're out.\nLast one standing wins the round. Best of 3. Up to " + MaxLocal + " players on this screen + up to " + (TotalPlayers - 1) + " bots (" + TotalPlayers + " max).";
         string model = "\nArena: " + World.ArenaName + "  (N / Select to change)";
         if (slots.Count == 0) lobbyStatus.text = "Press A on a gamepad or Enter on the keyboard to join" + model;
         else
@@ -363,6 +383,7 @@ public class Game : MonoBehaviour
         }
         if (Kb.EscDown()) Leave(FindSlot(InputKind.Keyboard));
         if (Kb.FDown()) ToggleFigures();
+        if (Kb.BDown()) CycleBots(1);
         if (critterMode)
         {
             Slot kslot = FindSlot(InputKind.Keyboard);
@@ -379,6 +400,11 @@ public class Game : MonoBehaviour
         {
             if (pad.buttonEast.wasPressedThisFrame && !ghosts.Contains(pad.deviceId)) Leave(FindPad(pad));
             if (pad.buttonNorth.wasPressedThisFrame && !ghosts.Contains(pad.deviceId)) ToggleFigures();
+            if (!ghosts.Contains(pad.deviceId))
+            {
+                if (pad.buttonWest.wasPressedThisFrame || pad.rightShoulder.wasPressedThisFrame) CycleBots(1);
+                if (pad.leftShoulder.wasPressedThisFrame) CycleBots(-1);
+            }
             if (critterMode)
             {
                 Slot ps = FindPad(pad);
@@ -440,6 +466,7 @@ public class Game : MonoBehaviour
             if (Sfx.ButtonHit(pos)) continue;   // SOUND button
             if (Hit(creditsBtn, pos)) { CreditsToggle(true); continue; }
             if (Hit(figImg, pos)) { ToggleFigures(); continue; }
+            if (Hit(botsImg, pos)) { CycleBots(1); continue; }
             bool used = false;
             if (critterMode)
                 for (int i = 0; i < slots.Count && i < 4; i++)
@@ -467,6 +494,33 @@ public class Game : MonoBehaviour
         Sfx.UiSwitch();
         BumpAutoStart();
         Debug.Log("Bots roster: " + Critters.RosterNames[Critters.Roster]);
+    }
+
+    // bots for a match with `humans` human players
+    public static int EffectiveBots(int humans)
+    {
+        int max = Mathf.Max(0, TotalPlayers - humans), min = humans <= 1 ? 1 : 0;
+        if (BotSetting < 0) return Mathf.Max(min, max);
+        return Mathf.Clamp(BotSetting, min, Mathf.Max(min, max));
+    }
+
+    // AUTO -> min .. (8 - humans) -> AUTO
+    void CycleBots(int dir)
+    {
+        float now = Time.unscaledTime;
+        if (now - lastBotsCycle < 0.2f) return;   // ghost pads
+        lastBotsCycle = now;
+        int hum = Mathf.Max(1, slots.Count);
+        var opts = new List<int> { -1 };
+        for (int b = hum <= 1 ? 1 : 0; b <= TotalPlayers - hum; b++) opts.Add(b);
+        int cur = BotSetting < 0 ? 0 : opts.IndexOf(EffectiveBots(hum));
+        if (cur < 0) cur = 0;
+        BotSetting = opts[((cur + dir) % opts.Count + opts.Count) % opts.Count];
+        PlayerPrefs.SetInt("bb.bots", BotSetting);
+        PlayerPrefs.Save();
+        Sfx.UiSwitch();
+        BumpAutoStart();
+        Debug.Log("Bots count: " + (BotSetting < 0 ? "AUTO" : BotSetting.ToString()) + " -> " + EffectiveBots(hum) + " bots, " + hum + " humans");
     }
 
     void BumpAutoStart()
@@ -512,7 +566,7 @@ public class Game : MonoBehaviour
 
     void Join(InputKind kind, Gamepad pad)
     {
-        if (slots.Count >= 4) return;
+        if (slots.Count >= MaxLocal) return;
         var s = new Slot { kind = kind, pad = pad, index = slots.Count, joinTime = Time.unscaledTime };
         s.critter = FirstFreeCritter(null);
         slots.Add(s);
@@ -597,7 +651,9 @@ public class Game : MonoBehaviour
         }
 
         int bot = 0;
-        for (int i = 0; i < TotalPlayers; i++)
+        int total = Mathf.Min(TotalPlayers, slots.Count + EffectiveBots(slots.Count));
+        Debug.Log("Match: " + slots.Count + " humans + " + (total - slots.Count) + " bots (setting " + (BotSetting < 0 ? "AUTO" : BotSetting.ToString()) + ")");
+        for (int i = 0; i < total; i++)
         {
             bool human = i < slots.Count;
             var go = new GameObject("Soldier" + i);
@@ -712,6 +768,7 @@ public class Game : MonoBehaviour
             }
             sl.spectate = 0;
         }
+        if (touch != null) touch.ResetCrouch();
         roundClock = RoundLength;
         roundWinner = null;
         state = State.Countdown;
@@ -777,7 +834,7 @@ public class Game : MonoBehaviour
         Soldier s = sl.soldier;
         if (s == null) return;
         Vector2 mv = Vector2.zero, lk = Vector2.zero;
-        bool fire = false, ads = false, jump = false, reload = false, next = false;
+        bool fire = false, ads = false, jump = false, reload = false, next = false, crouch = false;
 
         switch (sl.kind)
         {
@@ -793,6 +850,7 @@ public class Game : MonoBehaviour
                     ads = p.leftTrigger.ReadValue() > 0.35f || p.leftShoulder.isPressed;
                     jump = p.buttonSouth.wasPressedThisFrame;
                     reload = p.buttonWest.wasPressedThisFrame;
+                    crouch = p.buttonEast.isPressed || p.leftStickButton.isPressed;   // B held (or L-stick click held)
                     next = jump || p.rightShoulder.wasPressedThisFrame;
                     break;
                 }
@@ -806,11 +864,13 @@ public class Game : MonoBehaviour
                     ads = Kb.MouseRight();
                     jump = Kb.JumpDown();
                     reload = Kb.ReloadDown();
+                    crouch = Kb.Crouch();
                     next = jump;
                     break;
                 }
             case InputKind.Touch:
                 touch.Read(out mv, out lk, out fire, out ads, out jump, out reload);
+                crouch = touch.CrouchOn;
                 next = jump || Kb.AnyTouchBegan();
                 break;
         }
@@ -819,6 +879,7 @@ public class Game : MonoBehaviour
         s.inMove = mv;
         s.inLook = lk;
         s.inFire = fire;
+        s.inCrouch = crouch;
         s.inAds = ads || (Demo && demoAds);
         if (jump) s.inJump = true;
         if (reload) s.inReload = true;

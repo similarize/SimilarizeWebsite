@@ -48,6 +48,13 @@ public class Soldier : MonoBehaviour
     // inputs
     public Vector2 inMove, inLook;
     public bool inFire, inAds, inJump, inReload;
+    // crouch (Bill, Oct 23): held input; crouchK 0 = standing .. 1 = crouched. Lowers eye, balloons and the hit capsule, slows you.
+    public bool inCrouch;
+    public float crouchK;
+    public const float StandH = 1.8f, CrouchH = 1.12f, StandEye = 1.6f, CrouchEye = 0.98f, CrouchDrop = 0.64f;
+    public static bool DemoCrouch;   // &bbcrouch=1: everyone crouches (screenshots)
+    readonly List<Transform> strings = new List<Transform>();
+    readonly List<Vector3> stringBase = new List<Vector3>();
 
     // weapon
     public const int Mag = 30;
@@ -152,6 +159,7 @@ public class Soldier : MonoBehaviour
             str.transform.localRotation = Quaternion.FromToRotation(Vector3.up, d.normalized);
             str.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             b.stringObj = str;
+            strings.Add(str.transform); stringBase.Add(str.transform.localPosition);
             balloons.Add(b);
         }
 
@@ -171,7 +179,8 @@ public class Soldier : MonoBehaviour
         vel = Vector3.zero;
         alive = true;
         ammo = Mag; reloadLeft = 0f; cooldown = 0f; adsBlend = 0f; kick = 0f;
-        inMove = Vector2.zero; inLook = Vector2.zero; inFire = inAds = inJump = inReload = false;
+        inMove = Vector2.zero; inLook = Vector2.zero; inFire = inAds = inJump = inReload = inCrouch = false;
+        crouchK = 0f; ApplyCrouch();
         foreach (var b in balloons)
         {
             b.popped = false;
@@ -411,6 +420,12 @@ public class Soldier : MonoBehaviour
         adsBlend = Mathf.MoveTowards(adsBlend, ads ? 1f : 0f, dt * 6f);
         kick = Mathf.MoveTowards(kick, 0f, dt * 8f);
 
+        // crouch: stand back up only when there is head room
+        bool wantCrouch = alive && (playing || frozen) && (inCrouch || DemoCrouch);
+        if (!wantCrouch && crouchK > 0f && alive && !HeadRoom()) wantCrouch = true;
+        float ck = Mathf.MoveTowards(crouchK, wantCrouch ? 1f : 0f, dt * 7f);
+        if (ck != crouchK) { crouchK = ck; ApplyCrouch(); }
+
         // movement
         if (cc.enabled)
         {
@@ -420,14 +435,14 @@ public class Soldier : MonoBehaviour
                 wish = transform.right * inMove.x + transform.forward * inMove.y;
                 wish = Vector3.ClampMagnitude(wish, 1f);
             }
-            float spd = Mathf.Lerp(5.4f, 2.6f, adsBlend) * (speedT > 0f ? 1.5f : 1f);
+            float spd = Mathf.Lerp(5.4f, 2.6f, adsBlend) * (speedT > 0f ? 1.5f : 1f) * Mathf.Lerp(1f, 0.5f, crouchK);
             Vector3 hv = new Vector3(vel.x, 0f, vel.z);
             hv = Vector3.MoveTowards(hv, wish * spd, (cc.isGrounded ? 45f : 10f) * dt);
             float vy = vel.y;
             if (cc.isGrounded)
             {
                 if (vy < 0f) vy = -2f;
-                if (inJump && alive && playing) { vy = 6.4f; Sfx.OnJump(this); }
+                if (inJump && alive && playing && crouchK < 0.5f) { vy = 6.4f; Sfx.OnJump(this); }
             }
             vy -= 20f * dt;
             vel = new Vector3(hv.x, vy, hv.z);
@@ -480,8 +495,31 @@ public class Soldier : MonoBehaviour
         foreach (var b in balloons)
         {
             if (b.popped) continue;
-            b.transform.localPosition = b.basePos + new Vector3(Mathf.Sin(t * 1.7f + b.index * 2f) * 0.03f, Mathf.Sin(t * 2.1f + b.index) * 0.04f, 0f);
+            b.transform.localPosition = b.basePos + Vector3.down * (CrouchDrop * crouchK) + new Vector3(Mathf.Sin(t * 1.7f + b.index * 2f) * 0.03f, Mathf.Sin(t * 2.1f + b.index) * 0.04f, 0f);
         }
+    }
+
+    void ApplyCrouch()
+    {
+        float k = crouchK;
+        float h = Mathf.Lerp(StandH, CrouchH, k);
+        if (cc != null) { cc.height = h; cc.center = new Vector3(0f, h * 0.5f, 0f); }
+        if (eye != null) eye.localPosition = new Vector3(0f, Mathf.Lerp(StandEye, CrouchEye, k), 0f);
+        for (int i = 0; i < strings.Count; i++) if (strings[i] != null) strings[i].localPosition = stringBase[i] + Vector3.down * (CrouchDrop * k);
+        if (capsuleBody != null && alive) capsuleBody.transform.localScale = new Vector3(1f, 1f - 0.36f * k, 1f);
+    }
+
+    // anything solid (not us, not a balloon, not another player) where the standing head would be?
+    bool HeadRoom()
+    {
+        Vector3 c = transform.position + Vector3.up * (StandH - cc.radius + 0.02f);
+        foreach (var col in Physics.OverlapSphere(c, cc.radius * 0.9f, ~0, QueryTriggerInteraction.Ignore))
+        {
+            if (col == null || col.transform.IsChildOf(transform)) continue;
+            if (col is CharacterController || col.GetComponent<Balloon>() != null) continue;
+            return false;
+        }
+        return true;
     }
 
     // footsteps every ~0.75 m on the ground (faster when running), a heavier step on landing; surface from what is underfoot

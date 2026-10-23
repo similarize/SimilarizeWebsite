@@ -19,12 +19,13 @@ public class TouchControls : MonoBehaviour
     Canvas canvas;
     RectTransform stickBase, stickKnob, hintRt;
     Text hint;
-    Btn fire, ads, jump, reload;
+    Btn fire, ads, jump, reload, crouch;
     Btn[] btns;
     int stickId = -1, lookId = -1, fireId = -1;
     Vector2 stickOrigin, stickVec, lookAcc, stickHome;
     float stickR, u;
-    bool adsOn, jumpQ, reloadQ;
+    bool adsOn, jumpQ, reloadQ, crouchOn;
+    public static bool DemoCrouchBtn;   // demo: draw CROUCH as on
     Rect laidOut = new Rect(-1, -1, -1, -1);
     float shownT;
     public bool Portrait { get; private set; }
@@ -41,7 +42,8 @@ public class TouchControls : MonoBehaviour
         ads = MakeBtn(r, "ads", "AIM", new Color(1f, 1f, 1f, 0.42f));
         jump = MakeBtn(r, "jump", "JUMP", new Color(0.4f, 0.8f, 1f, 0.5f));
         reload = MakeBtn(r, "reload", "RELOAD", new Color(1f, 0.85f, 0.3f, 0.5f));
-        btns = new[] { fire, ads, jump, reload };
+        crouch = MakeBtn(r, "crouch", "CROUCH", new Color(0.65f, 0.55f, 1f, 0.5f));
+        btns = new[] { fire, ads, jump, reload, crouch };
         hint = UIK.Label(r, "drag here to look", 20, TextAnchor.MiddleCenter, Vector2.zero, Vector2.zero, new Vector2(300, 40), new Color(1, 1, 1, 0.75f));
         hintRt = hint.rectTransform;
         canvas.enabled = false;
@@ -75,12 +77,14 @@ public class TouchControls : MonoBehaviour
         float fr = (Portrait ? 44f : 48f) * u;               // FIRE radius
         float sr = (Portrait ? 27f : 30f) * u;               // small button radius
         float gap = 13f * u;
-        fire.r = fr; ads.r = sr; jump.r = sr; reload.r = sr;
+        fire.r = fr; ads.r = sr; jump.r = sr; reload.r = sr; crouch.r = sr;
         fire.c = new Vector2(a.xMax - m - fr - 8f * u, a.yMin + m + fr + (Portrait ? 30f : 20f) * u);
         float d = fr + sr + gap;
         jump.c = fire.c + Polar(Portrait ? 86f : 80f, d);
         reload.c = fire.c + Polar(Portrait ? 136f : 130f, d);
         ads.c = fire.c + Polar(Portrait ? 188f : 194f, d);
+        // CROUCH: outer ring, up-left between JUMP and RELOAD (toggle)
+        crouch.c = fire.c + Polar(Portrait ? 108f : 104f, d + 2f * sr + gap);
         // keep the arc inside the area (very short split-screen views)
         foreach (var b in btns)
         {
@@ -140,7 +144,7 @@ public class TouchControls : MonoBehaviour
     {
         if (!active)
         {
-            if (canvas.enabled) { canvas.enabled = false; ResetState(); adsOn = false; }
+            if (canvas.enabled) { canvas.enabled = false; ResetState(); adsOn = false; crouchOn = false; }
             shownT = 0f;
             return;
         }
@@ -166,6 +170,7 @@ public class TouchControls : MonoBehaviour
                         else if (b == ads) { adsOn = !adsOn; Sfx.UiTap(); }
                         else if (b == jump) jumpQ = true;
                         else if (b == reload) reloadQ = true;
+                        else if (b == crouch) { crouchOn = !crouchOn; Sfx.UiTap(); }
                         else if (stickId < 0 && InStickZone(t.position))
                         {
                             stickId = t.fingerId;
@@ -205,11 +210,15 @@ public class TouchControls : MonoBehaviour
         fire.img.color = fireDown ? new Color(1f, 0.3f, 0.2f, 0.92f) : fire.col;
         fire.img.rectTransform.localScale = Vector3.one * (fireDown ? 0.94f : 1f);
         ads.img.color = adsOn ? new Color(0.5f, 1f, 0.5f, 0.78f) : ads.col;
+        crouch.img.color = (crouchOn || DemoCrouchBtn) ? new Color(0.75f, 0.6f, 1f, 0.88f) : crouch.col;
         // "drag here to look" for the first ~10 s of a match
         float ha = Mathf.Clamp01(10f - shownT) * 0.85f;
         hint.enabled = ha > 0.01f;
         hint.color = new Color(1, 1, 1, ha);
     }
+
+    public bool CrouchOn { get { return crouchOn; } }
+    public void ResetCrouch() { crouchOn = false; }
 
     public void Read(out Vector2 move, out Vector2 lookDeg, out bool fireOut, out bool adsOut, out bool jumpOut, out bool reloadOut)
     {

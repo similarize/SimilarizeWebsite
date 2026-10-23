@@ -509,7 +509,10 @@ public class Critter : MonoBehaviour
         float idle = 1f - moveBlend;
         roll += Mathf.Sin(t * 1.6f) * 2.5f * idle;
         tilt += Mathf.Sin(t * 1.1f) * 1.2f * idle;
-        bob.localScale = new Vector3(1f, 1f + Mathf.Sin(t * 2.4f) * 0.015f * idle, 1f);
+        // crouch: squat (squash the body, bend the legs)
+        float ck = s.crouchK;
+        bob.localScale = new Vector3(1f + 0.08f * ck, (1f + Mathf.Sin(t * 2.4f) * 0.015f * idle) * (1f - 0.38f * ck), 1f + 0.08f * ck);
+        legA -= 38f * ck; legB -= 38f * ck;
 
         // flop over backwards when out
         float e = flop * flop * (3f - 2f * flop);
