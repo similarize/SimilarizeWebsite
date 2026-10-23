@@ -183,8 +183,22 @@ jobs:
           auto-update-hub: false
           cache-installation: false
 
+      - name: Unity license already on this PC
+        id: lic
+        shell: pwsh
+        run: |
+          $client = Join-Path (Split-Path $env:UNITY_HUB_PATH) 'UnityLicensingClient_V1\Unity.Licensing.Client.exe'
+          if (-not (Test-Path $client)) { "no licensing client at $client" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"; exit 0 }
+          & $client --showEntitlements | Tee-Object -FilePath "$env:LOG_DIR\license.txt"
+          $t = Get-Content "$env:LOG_DIR\license.txt" -Raw
+          if ($t -match 'Product Name: Unity Personal' -and $t -match 'com\.unity\.editor\.headless' -and $t -match 'com\.unity\.editor\.platforms\.uwp') {
+            "license already assigned (Personal + headless + UWP). Not calling activate-unity-license: it fails on the Asset Store entitlement Hub installed next to it, and its cleanup would try to deactivate this license." | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+            "SKIP_LICENSE_ACTIVATE=1" >> $env:GITHUB_ENV
+          } else { "no usable personal license, will activate" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt" }
+
       - name: Activate Unity license
         id: activate
+        if: env.SKIP_LICENSE_ACTIVATE != '1'
         uses: RageAgainstThePixel/activate-unity-license@v2
         with:
           license: personal
