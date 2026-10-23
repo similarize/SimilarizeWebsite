@@ -1,0 +1,650 @@
+UWP run 39930962362 attempt 1 event push sha 2d3ac73a86844e5c78fe8122e31f9d9961a1303b tag bb-u6-uwp-1 started 2026-10-23T09:19:23Z
+game source bb-unity6 ebc4271785e3e720ae6cbc8ddeb2bafe5b2b6ba3: Balloon Blast 6.6: template xbox-compat.js ?v=xbp3 -> xbp5 + publish step rewrites ?v= to the live games/shared/xbox-compat.js VER (same as unity-src 3f0c65a/1d3dcdd) (Games SME)
+secrets present
+bbsrc/unity/balloon-blast/Assets/Editor:
+total 44
+drwxr-xr-x 1 runneradmin 197121     0 Oct 23 09:19 .
+drwxr-xr-x 1 runneradmin 197121     0 Oct 23 09:19 ..
+-rw-r--r-- 1 runneradmin 197121 14060 Oct 23 09:19 BBBuildUWP.cs
+-rw-r--r-- 1 runneradmin 197121 21907 Oct 23 09:19 BuildScript.cs
+
+bbsrc/unity/balloon-blast/Assets/Scripts/Platform:
+total 32
+drwxr-xr-x 1 runneradmin 197121     0 Oct 23 09:19 .
+drwxr-xr-x 1 runneradmin 197121     0 Oct 23 09:19 ..
+-rw-r--r-- 1 runneradmin 197121 26068 Oct 23 09:19 BBXboxUWP.cs
+
+bbsrc/unity/balloon-blast/UWPTiles:
+total 176
+drwxr-xr-x 1 runneradmin 197121     0 Oct 23 09:19 .
+drwxr-xr-x 1 runneradmin 197121     0 Oct 23 09:19 ..
+-rw-r--r-- 1 runneradmin 197121 63932 Oct 23 09:19 splash620x300.png
+-rw-r--r-- 1 runneradmin 197121 13419 Oct 23 09:19 sq150.png
+-rw-r--r-- 1 runneradmin 197121 39831 Oct 23 09:19 sq310.png
+-rw-r--r-- 1 runneradmin 197121  3238 Oct 23 09:19 sq44.png
+-rw-r--r-- 1 runneradmin 197121  3848 Oct 23 09:19 sq50.png
+-rw-r--r-- 1 runneradmin 197121  5988 Oct 23 09:19 sq71.png
+-rw-r--r-- 1 runneradmin 197121 30341 Oct 23 09:19 wide310x150.png
+cert: subject CN=Similarize thumb DB2AC0D1BEF18CD9A708D2BAD058EDF73AD3AEFB notAfter 10/23/2031 09:19:24
+vs: C:\Program Files\Microsoft Visual Studio\2022\Enterprise
+UWP.VC (v143) missing -> installing
+vs_installer exit 0
+UWP.VC v143 present
+sdk: 10.0.10240.0
+sdk: 10.0.17763.0
+sdk: 10.0.19041.0
+sdk: 10.0.22621.0
+sdk: 10.0.26100.0
+sdk: wdf
+editor: C:\Program Files\Unity\Hub\Editor\6000.6.5f1\Editor\Unity.exe
+playback engine: MetroSupport
+playback engine: windowsstandalonesupport
+unity exit code: 0
+BBUWP audio: disableAudio False->false sampleRate 0->48000 dsp 1024->1024 requestedDsp 0->1024 speakerMode 2->2 volume 1
+BBUWP: graphics APIs Direct3D11 colour Linear
+BBUWP: capabilities internetClient=True microphone=False
+BBUWP: certificate BalloonBlast66Test.pfx set=True subject=Similarize issuer=Similarize
+BBUWP tile PackageLogo <- sq50.png
+BBUWP tile SplashScreenImage <- splash620x300.png
+BBUWP tile UWPSquare44x44Logo <- sq44.png
+BBUWP tile UWPSquare71x71Logo <- sq71.png
+BBUWP tile UWPSquare150x150Logo <- sq150.png
+BBUWP tile UWPSquare310x310Logo <- sq310.png
+BBUWP tile UWPWide310x150Logo <- wide310x150.png
+BBUWP: EditorUserBuildSettings.wsaUWPBuildType = D3D
+BBUWP: EditorUserBuildSettings.wsaSubtarget = AnyDevice
+BBUWP: EditorUserBuildSettings.wsaArchitecture = x64
+BBUWP: EditorUserBuildSettings.wsaBuildAndRunDeployTarget = LocalMachine
+URP: SSAO feature added
+URP: pipeline asset assigned
+URP: post volume (bloom, ACES, grade, vignette)
+BBUWP urp: asset Assets/Generated/URP.asset msaa 2->1 hdr True->false shadowmap 2048->1024 cascades 2->1 shadowDist 70->30 soft True->false | renderer URP_Renderer mode 0->0 (Forward) feature SSAO (ScreenSpaceAmbientOcclusion) active=True kept
+BUILD_RESULT: Succeeded target=UWP-BB-6.6 errors=0 warnings=6 size=842266115 time=00:02:17.0353833
+BUILD_SCRIPT_EXIT: 0
+out: Balloon Blast 6.6
+out: Il2CppOutputProject
+out: Balloon Blast 6.6.sln
+out: UnityCommon.props
+solution: Balloon Blast 6.6.sln
+manifest: D:\a\SimilarizeWebsite\SimilarizeWebsite\bbsrc\unity\balloon-blast\build\UWP\Balloon Blast 6.6\Package.appxmanifest
+identity: name=SimilarizeBalloonBlast66 publisher=CN=Similarize version=1.0.1.0
+device family: Windows.Universal min 10.0.19041.0 max 10.0.26100.0
+capability: Capability internetClient
+msbuild: C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\MSBuild.exe
+msbuild exit 0 after 11 min
+pkg: \Balloon Blast 6.6_1.0.1.0_Master_Test\Add-AppDevPackage.ps1 42415
+pkg: \Balloon Blast 6.6_1.0.1.0_Master_Test\Balloon Blast 6.6_1.0.1.0_x64_Master.appxsym 156768078
+pkg: \Balloon Blast 6.6_1.0.1.0_Master_Test\Balloon Blast 6.6_1.0.1.0_x64_Master.cer 780
+pkg: \Balloon Blast 6.6_1.0.1.0_Master_Test\Balloon Blast 6.6_1.0.1.0_x64_Master.msixbundle 41862919
+pkg: \Balloon Blast 6.6_1.0.1.0_Master_Test\Install.ps1 16554
+pkg: \Balloon Blast 6.6_1.0.1.0_Master_Test\Add-AppDevPackage.resources\Add-AppDevPackage.psd1 10150
+pkg: \Balloon Blast 6.6_1.0.1.0_Master_Test\Add-AppDevPackage.resources\cs-CZ\Add-AppDevPackage.psd1 10278
+pkg: \Balloon Blast 6.6_1.0.1.0_Master_Test\Add-AppDevPackage.resources\de-DE\Add-AppDevPackage.psd1 11628
+pkg: \Balloon Blast 6.6_1.0.1.0_Master_Test\Add-AppDevPackage.resources\en-US\Add-AppDevPackage.psd1 10150
+pkg: \Balloon Blast 6.6_1.0.1.0_Master_Test\Add-AppDevPackage.resources\es-ES\Add-AppDevPackage.psd1 10834
+pkg: \Balloon Blast 6.6_1.0.1.0_Master_Test\Add-AppDevPackage.resources\fr-FR\Add-AppDevPackage.psd1 11344
+pkg: \Balloon Blast 6.6_1.0.1.0_Master_Test\Add-AppDevPackage.resources\it-IT\Add-AppDevPackage.psd1 10738
+pkg: \Balloon Blast 6.6_1.0.1.0_Master_Test\Add-AppDevPackage.resources\ja-JP\Add-AppDevPackage.psd1 6698
+pkg: \Balloon Blast 6.6_1.0.1.0_Master_Test\Add-AppDevPackage.resources\ko-KR\Add-AppDevPackage.psd1 6348
+pkg: \Balloon Blast 6.6_1.0.1.0_Master_Test\Add-AppDevPackage.resources\pl-PL\Add-AppDevPackage.psd1 10106
+pkg: \Balloon Blast 6.6_1.0.1.0_Master_Test\Add-AppDevPackage.resources\pt-BR\Add-AppDevPackage.psd1 10580
+pkg: \Balloon Blast 6.6_1.0.1.0_Master_Test\Add-AppDevPackage.resources\ru-RU\Add-AppDevPackage.psd1 10342
+pkg: \Balloon Blast 6.6_1.0.1.0_Master_Test\Add-AppDevPackage.resources\tr-TR\Add-AppDevPackage.psd1 9608
+pkg: \Balloon Blast 6.6_1.0.1.0_Master_Test\Add-AppDevPackage.resources\zh-CN\Add-AppDevPackage.psd1 4998
+pkg: \Balloon Blast 6.6_1.0.1.0_Master_Test\Add-AppDevPackage.resources\zh-TW\Add-AppDevPackage.psd1 5180
+pkg: \Balloon Blast 6.6_1.0.1.0_Master_Test\Dependencies\ARM\Microsoft.VCLibs.ARM.14.00.appx 835614
+pkg: \Balloon Blast 6.6_1.0.1.0_Master_Test\Dependencies\ARM64\Microsoft.VCLibs.ARM64.14.00.appx 1570406
+pkg: \Balloon Blast 6.6_1.0.1.0_Master_Test\Dependencies\x64\Microsoft.VCLibs.x64.14.00.appx 896581
+pkg: \Balloon Blast 6.6_1.0.1.0_Master_Test\Dependencies\x86\Microsoft.VCLibs.x86.14.00.appx 758544
+pkg: \Balloon Blast 6.6_1.0.1.0_Master_Test\TelemetryDependencies\LogSideloadingTelemetry.ps1 17415
+pkg: \Balloon Blast 6.6_1.0.1.0_Master_Test\TelemetryDependencies\Microsoft.Diagnostics.Tracing.EventSource.dll 170288
+pkg: \Balloon Blast 6.6_1.0.1.0_Master_Test\TelemetryDependencies\Microsoft.VisualStudio.RemoteControl.dll 47536
+pkg: \Balloon Blast 6.6_1.0.1.0_Master_Test\TelemetryDependencies\Microsoft.VisualStudio.Telemetry.dll 1026088
+pkg: \Balloon Blast 6.6_1.0.1.0_Master_Test\TelemetryDependencies\Microsoft.VisualStudio.Utilities.Internal.dll 62480
+pkg: \Balloon Blast 6.6_1.0.1.0_Master_Test\TelemetryDependencies\Newtonsoft.Json.dll 711952
+pkg: \Balloon Blast 6.6_1.0.1.0_Master_Test\TelemetryDependencies\System.Runtime.CompilerServices.Unsafe.dll 19224
+bundle: Balloon Blast 6.6_1.0.1.0_x64_Master.msixbundle -> BalloonBlast66-bb-u6-uwp-1_x64.msixbundle 41862919 B; deps: Microsoft.VCLibs.x64.14.00.appx 896581
+bundle signer: CN=Similarize thumb DB2AC0D1BEF18CD9A708D2BAD058EDF73AD3AEFB status UnknownError
+bundle entries: Balloon%20Blast%206.6_1.0.1.0_x64_Master.msix, AppxBlockMap.xml, [Content_Types].xml, AppxSignature.p7x
+package: Balloon%20Blast%206.6_1.0.1.0_x64_Master.msix name=SimilarizeBalloonBlast66 publisher=CN=Similarize arch=x64 version=1.0.1.0 streamingAssets files=0
+dep: TargetDeviceFamily Windows.Universal 10.0.19041.0
+dep: PackageDependency Microsoft.VCLibs.140.00 14.0.33519.0
+cap: Capability internetClient
+REL_ASSET: BalloonBlast66-bb-u6-uwp-1_x64.msixbundle 41862919
+REL_ASSET: BalloonBlast66-bb-u6-uwp-1.cer 780
+REL_ASSET: BalloonBlast66-UWP-bb-u6-uwp-1-package.zip 200790359
+REL_ASSET: INSTALL-XBOX.txt 5313
+REL_ASSET: Microsoft.VCLibs.x64.14.00.appx 896581
+RELEASE_URL: https://github.com/similarize/SimilarizeWebsite/releases/tag/bb-u6-uwp-1
+SMOKE installed: SimilarizeBalloonBlast66_1.0.1.0_x64__340vxgwa52sse at C:\Program Files\WindowsApps\SimilarizeBalloonBlast66_1.0.1.0_x64__340vxgwa52sse
+SMOKE launch SimilarizeBalloonBlast66_340vxgwa52sse!App
+SMOKE screenshot 1024x768
+SMOKE running processes: Balloon Blast 6.6 379 MB
+=== SMOKE UnityPlayer.log (grep)
+kGfxThreadingModeSplitJobs is not supported on Direct3D 11. Reverting to kGfxThreadingModeClientWorkerJobs instead.
+Direct3D:
+    Version:  Direct3D 11.0 [level 11.1]
+    Renderer: Microsoft Basic Render Driver (ID=0x8c)
+Initialize engine version: 6000.6.5f1 (3ff58d469c8a)
+FMOD failed to initialize any audio devices, running on emulated software output with no sound. Please check your audio drivers and/or hardware for malfunction.
+[Physics::Module] SDK Version: 4.1.2
+[Physics::Module] Integration Version: 1.0.0
+Dedicated video D3D11 device creation failed (error: 0x887a0004). This device is used specifically for video decoding, we will use software video decoding instead.
+BBXBOX AUDIO boot: 48000 Hz Stereo dsp 1024 voices 32/512 out 48000 Hz driver caps Stereo saved mode stereo 48 kHz
+BBXboxAudio:Boot(GameObject)
+BBXboxUWP:Boot()
+FMOD failed to initialize any audio devices, running on emulated software output with no sound. Please check your audio drivers and/or hardware for malfunction.
+BBXBOX AUDIO reset boot: stereo 48 kHz ok, restarted 0 loops -> 48000 Hz Stereo dsp 1024 voices 32/512 out 48000 Hz
+BBXboxAudio:Apply(Int32, String, Boolean)
+BBXboxAudio:Boot(GameObject)
+BBXboxUWP:Boot()
+BBXBOX: UWP player bb-u6-uwp-1 Virtual Machine (Microsoft Corporation) / Windows 10 (10.0.20348) 64bit / Microsoft Basic Render Driver Direct3D 11.0 [level 11.1] mem 16378 MB gfx mem 8189 MB screen 1024x768 cpu 4 | profile xbox-lite lowmem True
+BBXboxUWP:Boot()
+BBXBOX: Back request handled in-game (B stays the game's back button)
+Balloon Blast: graphics overhaul (skin True, foliage True, balloon True)
+Look: tier xbox-lite 1024x768 dpi 0
+Look:Init(Light)
+Look: 1 view(s), shadows HardOnly, post True
+Look:ApplyViews(Int32, IEnumerable`1)
+Balloon Blast: field built in 124 ms
+Look: 1 view(s), shadows HardOnly, post True
+Look:ApplyViews(Int32, IEnumerable`1)
+Balloon Blast: ENABLE_INPUT_SYSTEM defined
+Balloon Blast: ENABLE_LEGACY_INPUT_MANAGER defined
+BBXBOX AUDIO resumed - music check
+BBXBOX AUDIO focus regained - music check
+BBXBOX AUDIO unlocked at launch (2.8 s)
+BBXboxAudio:Update()
+Look: field reflection probe rendered
+FMOD failed to initialize any audio devices, running on emulated software output with no sound. Please check your audio drivers and/or hardware for malfunction.
+BBXBOX AUDIO reset re-arm after window active: stereo 48 kHz ok, restarted 3 loops mus_lobby/Loaded(stopped) amb_birds/Loaded(stopped) wind/Loaded(stopped) -> 48000 Hz Stereo dsp 1024 voices 32/512 out 48000 Hz
+BBXboxAudio:Apply(Int32, String, Boolean)
+BBXboxAudio:Update()
+BBXBOX AUDIO status: out 48000 Hz Stereo dsp 1024 voices 32/512 out 48000 Hz | driver Stereo | mixer clock 1.00x | listeners 1 vol 1.00 | game SOUND ON | unlocked at launch (2.8 s) | sources playing 0/24 | focus True | resets 2 device changes 2 | FMOD: no FMOD complaint since launch | music: musA mus_lobby stopped 0.30 Loaded; ambSrc amb_birds stopped 0.12 Loaded; windSrc wind stopped 0.07 Loaded; restarts 0 | last -
+BBXboxAudio:Update()
+BBXBOX AUDIO music restarted music mus_lobby (Loaded, vol 0.30, try 1)
+BBXboxAudio:Revive(AudioSource, String)
+BBXboxAudio:MusicWatch()
+BBXboxAudio:Update()
+BBXBOX AUDIO music restarted ambience amb_birds (Loaded, vol 0.12, try 1)
+BBXboxAudio:Revive(AudioSource, String)
+BBXboxAudio:MusicWatch()
+BBXboxAudio:Update()
+BBXBOX AUDIO music restarted wind wind (Loaded, vol 0.07, try 1)
+BBXboxAudio:Revive(AudioSource, String)
+BBXboxAudio:MusicWatch()
+BBXboxAudio:Update()
+BBXBOX AUDIO music restarted music mus_lobby (Loaded, vol 0.30, try 2)
+BBXboxAudio:Revive(AudioSource, String)
+BBXboxAudio:MusicWatch()
+BBXboxAudio:Update()
+BBXBOX AUDIO music restarted ambience amb_birds (Loaded, vol 0.12, try 2)
+BBXboxAudio:Revive(AudioSource, String)
+BBXboxAudio:MusicWatch()
+BBXboxAudio:Update()
+BBXBOX AUDIO music restarted wind wind (Loaded, vol 0.07, try 2)
+BBXboxAudio:Revive(AudioSource, String)
+BBXboxAudio:MusicWatch()
+BBXboxAudio:Update()
+BBXBOX AUDIO music restarted music mus_lobby (Loaded, vol 0.30, try 3, backing off 15 s)
+BBXboxAudio:Revive(AudioSource, String)
+BBXboxAudio:MusicWatch()
+BBXboxAudio:Update()
+BBXBOX AUDIO music restarted ambience amb_birds (Loaded, vol 0.12, try 3, backing off 15 s)
+BBXboxAudio:Revive(AudioSource, String)
+BBXboxAudio:MusicWatch()
+BBXboxAudio:Update()
+BBXBOX AUDIO music restarted wind wind (Loaded, vol 0.07, try 3, backing off 15 s)
+BBXboxAudio:Revive(AudioSource, String)
+BBXboxAudio:MusicWatch()
+BBXboxAudio:Update()
+BBXBOX: profile on - res 1024x768 vsync 2 fpsTarget -1 look mobile views 1 aa 0 shadows HardOnly 20m x1 lod 0.6 lowmem True urp UniversalRenderPipelineAsset msaa 1 hdr False shadow 20m x1 @1024 scale 1 gfx Direct3D11 mem 6 MB managed
+BBXboxUWPRunner:Enforce()
+BBXboxUWPRunner:Update()
+BBXBOX perf: 6.4 fps 155.7 ms (worst 156 ms) res 1024x768 vsync 2 fpsTarget -1 look mobile views 1 aa 0 shadows HardOnly 20m x1 lod 0.6 lowmem True urp UniversalRenderPipelineAsset msaa 1 hdr False shadow 20m x1 @1024 scale 1 gfx Direct3D11 mem 6 MB managed
+BBXboxUWPRunner:Update()
+BBXBOX perf: 6.3 fps 159.0 ms (worst 179 ms) res 1024x768 vsync 2 fpsTarget -1 look mobile views 1 aa 0 shadows HardOnly 20m x1 lod 0.6 lowmem True urp UniversalRenderPipelineAsset msaa 1 hdr False shadow 20m x1 @1024 scale 1 gfx Direct3D11 mem 6 MB managed
+BBXboxUWPRunner:Update()
+BBXBOX perf: 6.0 fps 167.0 ms (worst 172 ms) res 1024x768 vsync 2 fpsTarget -1 look mobile views 1 aa 0 shadows HardOnly 20m x1 lod 0.6 lowmem True urp UniversalRenderPipelineAsset msaa 1 hdr False shadow 20m x1 @1024 scale 1 gfx Direct3D11 mem 6 MB managed
+BBXboxUWPRunner:Update()
+BBXBOX perf: 6.1 fps 164.6 ms (worst 179 ms) res 1024x768 vsync 2 fpsTarget -1 look mobile views 1 aa 0 shadows HardOnly 20m x1 lod 0.6 lowmem True urp UniversalRenderPipelineAsset msaa 1 hdr False shadow 20m x1 @1024 scale 1 gfx Direct3D11 mem 6 MB managed
+BBXboxUWPRunner:Update()
+BBXBOX perf: 5.9 fps 168.1 ms (worst 181 ms) res 1024x768 vsync 2 fpsTarget -1 look mobile views 1 aa 0 shadows HardOnly 20m x1 lod 0.6 lowmem True urp UniversalRenderPipelineAsset msaa 1 hdr False shadow 20m x1 @1024 scale 1 gfx Direct3D11 mem 6 MB managed
+BBXboxUWPRunner:Update()
+BBXBOX perf: 6.2 fps 160.7 ms (worst 172 ms) res 1024x768 vsync 2 fpsTarget -1 look mobile views 1 aa 0 shadows HardOnly 20m x1 lod 0.6 lowmem True urp UniversalRenderPipelineAsset msaa 1 hdr False shadow 20m x1 @1024 scale 1 gfx Direct3D11 mem 6 MB managed
+BBXboxUWPRunner:Update()
+BBXBOX perf: 6.1 fps 165.2 ms (worst 184 ms) res 1024x768 vsync 2 fpsTarget -1 look mobile views 1 aa 0 shadows HardOnly 20m x1 lod 0.6 lowmem True urp UniversalRenderPipelineAsset msaa 1 hdr False shadow 20m x1 @1024 scale 1 gfx Direct3D11 mem 6 MB managed
+BBXboxUWPRunner:Update()
+BBXBOX perf: 6.4 fps 156.5 ms (worst 159 ms) res 1024x768 vsync 2 fpsTarget -1 look mobile views 1 aa 0 shadows HardOnly 20m x1 lod 0.6 lowmem True urp UniversalRenderPipelineAsset msaa 1 hdr False shadow 20m x1 @1024 scale 1 gfx Direct3D11 mem 6 MB managed
+BBXboxUWPRunner:Update()
+BBXBOX perf: 6.3 fps 157.6 ms (worst 172 ms) res 1024x768 vsync 2 fpsTarget -1 look mobile views 1 aa 0 shadows HardOnly 20m x1 lod 0.6 lowmem True urp UniversalRenderPipelineAsset msaa 1 hdr False shadow 20m x1 @1024 scale 1 gfx Direct3D11 mem 6 MB managed
+BBXboxUWPRunner:Update()
+BBXBOX perf: 6.5 fps 153.9 ms (worst 156 ms) res 1024x768 vsync 2 fpsTarget -1 look mobile views 1 aa 0 shadows HardOnly 20m x1 lod 0.6 lowmem True urp UniversalRenderPipelineAsset msaa 1 hdr False shadow 20m x1 @1024 scale 1 gfx Direct3D11 mem 6 MB managed
+BBXboxUWPRunner:Update()
+SMOKE_ERRCOUNT NullReference=0 Blitter=0 missingResources=0 exceptionLines=0
+SMOKE_DONE
+=== step outcomes: secrets=success cert=success vs=success setup=success activate=success build=success manifest=success msbuild=success collect=success release=success smoke=success
+=== msbuild errors (first 150)
+=== msbuild warnings: 2 lines (first 40)
+   2:6>D:\a\SimilarizeWebsite\SimilarizeWebsite\bbsrc\unity\balloon-blast\build\UWP\Balloon Blast 6.6\App.cpp(26,41): warning C4973: 'Windows::UI::ViewManagement::IApplicationView2::SuppressSystemOverlays::set': marked as deprecated [D:\a\SimilarizeWebsite\SimilarizeWebsite\bbsrc\unity\balloon-blast\build\UWP\Balloon Blast 6.6\Balloon Blast 6.6.vcxproj]
+   2:6>GENERATEPROJECTPRIFILE : warning : PRI249: 0xdef00520 - Invalid qualifier: DLL-RESOURCES [D:\a\SimilarizeWebsite\SimilarizeWebsite\bbsrc\unity\balloon-blast\build\UWP\Balloon Blast 6.6\Balloon Blast 6.6.vcxproj]
+=== error lines
+5:[Licensing::Module] Trying to connect to existing licensing client channel...
+8:[Licensing::IpcConnector] Channel LicenseClient-runneradmin doesn't exist
+12:[Licensing::Module] Successfully launched the LicensingClient (PId: 1824)
+79:[Licensing::Module] Licensing is not yet initialized.
+81:Waiting for clients to connect on \\.\pipe\Unity-LicenseClient-runneradmin, press Ctrl-C to exit.
+83:[Licensing::IpcConnector] Successfully connected to: "LicenseClient-runneradmin" at "2026-10-23T09:33:53.2411181Z"
+84:[Licensing::Client] Code 10 while verifying Licensing Client signature (process Id: 1824, path: "C:/Program Files/Unity/Hub/Editor/6000.6.5f1/Editor/Data/Resources/Licensing/Client/Unity.Licensing.Client.exe")
+85:[Licensing::Module] LicensingClient has failed validation; ignoring
+86:[Licensing::Client] Handshaking with LicensingClient:
+92:[Licensing::Module] Successfully connected to LicensingClient on channel: "LicenseClient-runneradmin" (connect: 1.93s, validation: 0.11s, handshake: 0.25s)
+93:[Licensing::IpcConnector] Successfully connected to: "LicenseClient-runneradmin-notifications" at "2026-10-23T09:33:53.5994539Z"
+94:[Licensing::Module] Connected to LicensingClient (PId: 1824, launch time: 0.01, total connection time: 2.29s)
+95:[Licensing::Module] Error: Access token is unavailable; failed to update
+96:[Licensing::Client] Successfully resolved entitlement details
+97:[Licensing::Module] License group:
+102:[Licensing::Client] Successfully updated license, isAsync: True, time: 0.01
+103:[Licensing::Client] Successfully resolved entitlement details
+104:[Licensing::Module] Licensing Background thread has ended after 2.35s
+105:[Licensing::Module] Licensing is initialized (took 1.80s).
+106:[Licensing::Client] Successfully resolved entitlement details
+120:[Licensing::Client] Successfully resolved entitlement details
+176:[Licensing::Client] Successfully resolved entitlement details
+177:[Licensing::Client] Successfully resolved entitlement details
+180:[Licensing::Client] Successfully resolved entitlement details
+1222:Assets\Editor\BuildScript.cs(244,13): warning CS0618: 'LightingSettings.autoGenerate' is obsolete: 'LightingSettings.autoGenerate is obsolete.'
+1608:Assets\Editor\BuildScript.cs(244,13): warning CS0618: 'LightingSettings.autoGenerate' is obsolete: 'LightingSettings.autoGenerate is obsolete.'
+1610:[Licensing::Client] Successfully resolved entitlement details
+1611:[Licensing::Client] Successfully resolved entitlement details
+3453:BuildScript:SetInputHandler () (at Assets/Editor/BuildScript.cs:100)
+3454:InputHandlerSetter:.cctor () (at Assets/Editor/BuildScript.cs:17)
+3458:(Filename: Assets/Editor/BuildScript.cs Line: 100)
+3475:			BuildScriptInfoCaches (94ms)
+6467:Importing 'GUID: a23a55c69f9544b56a85639e7258ea1d - Path: Packages/com.unity.test-framework.performance/ValidationExceptions.json' with importer (TextScriptImporter)
+6655:Importing 'GUID: d9fe79419851eee4e8c90f7d0f934859 - Path: Packages/com.unity.inputsystem/ValidationExceptions.json' with importer (TextScriptImporter)
+6669:Importing 'GUID: 3afe581e949e3cc489c978bd8e000c4b - Path: Packages/com.unity.render-pipelines.universal/ValidationExceptions.json' with importer (TextScriptImporter)
+6681:Importing 'GUID: 8a0fd4a8e3885488e9afc7e5e7ead9c6 - Path: Packages/com.unity.searcher/ValidationExceptions.json' with importer (TextScriptImporter)
+6759:Importing 'GUID: 9d424dc8891c2489d965ab9e46bdbbe7 - Path: Packages/com.unity.cloud.gltfast/ValidationExceptions.json' with importer (TextScriptImporter)
+6807:Importing 'GUID: fee59c2b2318a7e4fa7a2c2af28d9553 - Path: Packages/com.unity.collections/pvpExceptions.json' with importer (TextScriptImporter)
+6835:Importing 'GUID: 6fe576033d6a2424c888d599967457a2 - Path: Packages/com.unity.collections/ValidationExceptions.json' with importer (TextScriptImporter)
+7147:UnityEngine.Rendering.RenderPipelineGlobalSettingsUtils:TryEnsure<UnityEngine.Rendering.Universal.UniversalRenderPipelineGlobalSettings, UnityEngine.Rendering.Universal.UniversalRenderPipeline> (UnityEngine.Rendering.Universal.UniversalRenderPipelineGlobalSettings&,string,bool,System.Exception&) (at ./Library/PackageCache/com.unity.render-pipelines.core@285af6b8c83f/Runtime/RenderPipeline/RenderPipelineGlobalSettingsUtils.cs:126)
+7226:BuildScript: Balloon Blast 6.6 UWP start, Unity 6000.6.5f1
+7277:[Licensing::Client] Successfully resolved entitlement details
+7278:[Licensing::Client] Successfully resolved entitlement details
+7287:BuildScript:SetStatic (System.Type,string,object) (at Assets/Editor/BuildScript.cs:109)
+7288:BuildScript:ConfigurePlayer () (at Assets/Editor/BuildScript.cs:132)
+7295:(Filename: Assets/Editor/BuildScript.cs Line: 109)
+7304:BuildScript:SetStatic (System.Type,string,object) (at Assets/Editor/BuildScript.cs:109)
+7305:BuildScript:ConfigurePlayer () (at Assets/Editor/BuildScript.cs:133)
+7312:(Filename: Assets/Editor/BuildScript.cs Line: 109)
+7329:BBUWP audio: disableAudio False->false sampleRate 0->48000 dsp 1024->1024 requestedDsp 0->1024 speakerMode 2->2 volume 1
+7937:BBUWP: graphics APIs Direct3D11 colour Linear
+7949:BBUWP: capabilities internetClient=True microphone=False
+7961:BBUWP: certificate BalloonBlast66Test.pfx set=True subject=Similarize issuer=Similarize
+7973:BBUWP tile PackageLogo <- sq50.png
+7986:BBUWP tile SplashScreenImage <- splash620x300.png
+7999:BBUWP tile UWPSquare44x44Logo <- sq44.png
+8012:BBUWP tile UWPSquare71x71Logo <- sq71.png
+8025:BBUWP tile UWPSquare150x150Logo <- sq150.png
+8038:BBUWP tile UWPSquare310x310Logo <- sq310.png
+8051:BBUWP tile UWPWide310x150Logo <- wide310x150.png
+8064:BBUWP: EditorUserBuildSettings.wsaUWPBuildType = D3D
+8077:BBUWP: EditorUserBuildSettings.wsaSubtarget = AnyDevice
+8090:BBUWP: EditorUserBuildSettings.wsaArchitecture = x64
+8103:BBUWP: EditorUserBuildSettings.wsaBuildAndRunDeployTarget = LocalMachine
+8116:[Licensing::Client] Successfully resolved entitlement details
+8125:URP: SSAO feature added
+8132:BuildScript:SetupURP () (at Assets/Editor/BuildScript.cs:325)
+8133:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:185)
+8140:(Filename: Assets/Editor/BuildScript.cs Line: 325)
+8462:URP: pipeline asset assigned
+8469:BuildScript:SetupURP () (at Assets/Editor/BuildScript.cs:344)
+8470:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:185)
+8477:(Filename: Assets/Editor/BuildScript.cs Line: 344)
+8494:BuildScript: HDRI sky
+8501:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:206)
+8508:(Filename: Assets/Editor/BuildScript.cs Line: 206)
+8522:URP: post volume (bloom, ACES, grade, vignette)
+8529:BuildScript:CreatePostVolume () (at Assets/Editor/BuildScript.cs:366)
+8530:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:234)
+8537:(Filename: Assets/Editor/BuildScript.cs Line: 366)
+8548:BuildScript: terrain textures True True
+8555:BuildScript:CreateTerrain () (at Assets/Editor/BuildScript.cs:439)
+8556:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:272)
+8563:(Filename: Assets/Editor/BuildScript.cs Line: 439)
+8599:BuildScript: scene saved Assets/Scenes/Main.unity
+8606:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:288)
+8613:(Filename: Assets/Editor/BuildScript.cs Line: 288)
+8620:BBUWP urp: asset Assets/Generated/URP.asset msaa 2->1 hdr True->false shadowmap 2048->1024 cascades 2->1 shadowDist 70->30 soft True->false | renderer URP_Renderer mode 0->0 (Forward) feature SSAO (ScreenSpaceAmbientOcclusion) active=True kept
+8730:[Licensing::Client] Successfully resolved entitlement details
+9560:[Licensing::Client] Successfully resolved entitlement details
+9561:[Licensing::Client] Successfully resolved entitlement details
+14291:[Licensing::Client] Successfully resolved entitlement details
+14406:[ 104/3842  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/bbsrc/unity/balloon-blast/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/vm/Exception.h
+14407:[ 105/3842  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/bbsrc/unity/balloon-blast/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/vm/Exception.cpp
+14504:[ 200/3842  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/bbsrc/unity/balloon-blast/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/utils/ExceptionSupportStack.h
+14505:[ 201/3842  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/bbsrc/unity/balloon-blast/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/utils/Exception.h
+14506:[ 202/3842  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/bbsrc/unity/balloon-blast/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/utils/Exception.cpp
+15214:[ 910/3842  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/bbsrc/unity/balloon-blast/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/icalls/System/System.Net.Sockets/SocketException.h
+15215:[ 911/3842  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/bbsrc/unity/balloon-blast/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/icalls/System/System.Net.Sockets/SocketException.cpp
+15267:[ 963/3842  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/bbsrc/unity/balloon-blast/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/icalls/mscorlib/System/Exception.h
+15268:[ 964/3842  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/bbsrc/unity/balloon-blast/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/icalls/mscorlib/System/Exception.cpp
+18434:[4071/4077  0s] PreventOverwrite D:/a/SimilarizeWebsite/SimilarizeWebsite/bbsrc/unity/balloon-blast/build/UWP/Balloon Blas[W] FindFirstFile() failed: D:\a\SimilarizeWebsite\SimilarizeWebsite\bbsrc\unity\balloon-blast\Library\Bee\artifacts\UWPPlayerBuildProgram\il2cppOutput\cpp\Symbols
+19653: 0.2 kb	 0.0% Packages/com.unity.render-pipelines.core/Runtime/UnifiedRayTracing/UnifiedRayTracingException.cs
+19732: 0.2 kb	 0.0% Packages/com.unity.render-pipelines.core/Runtime/RenderGraph/RenderGraph.ExceptionMessages.cs
+20348: 0.1 kb	 0.0% Packages/com.unity.inputsystem/InputSystem/Runtime/Utilities/ExceptionHelpers.cs
+20947:[Licensing::Client] Successfully resolved entitlement details
+20948:[Licensing::Client] Successfully resolved entitlement details
+20951:BUILD_RESULT: Succeeded target=UWP-BB-6.6 errors=0 warnings=6 size=842266115 time=00:02:17.0353833
+20963:BUILD_SCRIPT_EXIT: 0
+20981:[Licensing::IpcConnector] LicenseClient-runneradmin-notifications channel disconnected successfully.
+20982:[Licensing::IpcConnector] LicenseClient-runneradmin channel disconnected successfully.
+20991:abort_threads: Failed aborting id: 0000000000001E18, mono_thread_manage will ignore it
+20993:abort_threads: Failed aborting id: 0000000000001DA8, mono_thread_manage will ignore it
+20995:abort_threads: Failed aborting id: 0000000000001454, mono_thread_manage will ignore it
+20997:abort_threads: Failed aborting id: 0000000000001E18, mono_thread_manage will ignore it
+20999:abort_threads: Failed aborting id: 0000000000001DA8, mono_thread_manage will ignore it
+21001:abort_threads: Failed aborting id: 0000000000001454, mono_thread_manage will ignore it
+21008:##utp:{"type":"MemoryLeaks","version":2,"phase":"Immediate","time":1792748339815,"processId":3032,"allocatedMemory":18305048,"memoryLabels":[{"Default":226321},{"Permanent":15516},{"NewDelete":73047},{"Thread":4188664},{"Manager":19696},{"VertexData":8},{"Geometry":816},{"Texture":24},{"Shader":1419201},{"Material":32070},{"GfxDevice":55968},{"Animation":952},{"Audio":696},{"Font":1701279},{"FreeType":46932},{"FontEngine":736},{"Physics":1970},{"Physics2D":16},{"Serialization":33824},{"Input":42840},{"JobScheduler":256},{"TextLib":336},{"Mono":48},{"MonoCode":832},{"ScriptingNativeRuntime":1298872},{"Resource":1444},{"Renderer":2504},{"Transform":4685},{"File":22246},{"WebCam":616},{"Culling":32},{"Terrain":11442},{"Wind":24},{"STL":40},{"String":3056321},{"StaticString":3808},{"Utility":2673174},{"Curl":2478},{"PoolAlloc":2360},{"AI":80},{"TypeTree":19053},{"ScriptManager":12656},{"CodeReload":448},{"RuntimeInitializeOnLoadManager":64},{"Sprites":102},{"SpriteAtlas":120},{"GI":7816},{"Director":8296},{"CloudService":138768},{"WebRequest":552},{"VR":49650},{"SceneManager":608},{"Video":64},{"LazyScriptCache":32},{"Camera":729},{"Secure":2377},{"Image":65536},{"SerializationCache":9256},{"APIUpdating":10320},{"Subsystems":336},{"VirtualTexturing":57888},{"StaticSafetyDebugInfo":278528},{"Analytics":592},{"Hierarchy":1188},{"UIElements":40},{"CoreStats":14456},{"Identifiers":7152},{"Gui":128},{"EditorUtility":115679},{"VersionControl":8},{"Undo":931},{"AssetDatabase":2544031},{"AssetImporter":40},{"EditorGi":328},{"UnityConnect":40441},{"Upm":1912},{"UpmDiagnostics":8},{"AssetCompliance":96},{"DrivenProperties":72},{"LocalIPC":217},{"ProfilerEditor":9746},{"CoreBusinessMetrics":3626},{"Windowing":456},{"Licensing":1264},{"AssetReference":32},{"IPCStream":32}]}
+=== editor log tail (300)
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/MorphTargetsGenerator.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/MaterialsVariants/MaterialsVariantsControl.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/MaterialsVariants/IMaterialsVariantsSlot.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Loading/IDownloadProvider.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/LightPunctualExtension.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/InstantiationSettings.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/ImportAddons/ImportAddonRegistry.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/ImportAddons/ImportAddonInstance.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/GltfJsonUtilityParser.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/GameObjectSceneInstance.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/GameObjectInstantiator.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Export/TextureComparer.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Export/OrmImageExport.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Export/MaterialExport.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Export/ImageExportBase.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Export/IMaterialExport.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Export/IGltfWritable.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Export/GameObjectExport.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Export/ExportSettings.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/TMP/TextMeshProUGUI.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/TMP/TextContainer.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/TMP/TMP_TextElement.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/TMP/TMP_SubMeshUI.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/TMP/TMP_StyleSheet.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/TMP/TMP_SpriteGlyph.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/TMP/TMP_SpriteAsset.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/TMP/TMP_InputField.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/TMP/TMP_FontAsset.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/TMP/TMP_CoroutineTween.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/TMP/TMP_Character.cs
+ 0.1 kb	 0.0% Packages/com.unity.render-pipelines.universal/Shaders/Shaders.cs
+ 0.1 kb	 0.0% Packages/com.unity.inputsystem/InputSystem/Runtime/Plugins/XR/Devices/GoogleVR.cs
+ 0.1 kb	 0.0% Packages/com.unity.inputsystem/InputSystem/Runtime/Devices/Sensor.cs
+ 0.1 kb	 0.0% Packages/com.unity.inputsystem/InputSystem/Runtime/Devices/Pointer.cs
+ 0.1 kb	 0.0% Packages/com.unity.inputsystem/InputSystem/Runtime/Devices/Mouse.cs
+ 0.1 kb	 0.0% Packages/com.unity.inputsystem/InputSystem/Runtime/Devices/Keyboard.cs
+ 0.1 kb	 0.0% Packages/com.unity.inputsystem/InputSystem/Runtime/Devices/Joystick.cs
+ 0.1 kb	 0.0% Packages/com.unity.inputsystem/InputSystem/Runtime/Devices/Gamepad.cs
+ 0.1 kb	 0.0% Packages/com.unity.inputsystem/InputSystem/Editor/DownloadableSample.cs
+ 0.1 kb	 0.0% Packages/com.unity.collections/Unity.Collections/xxHash3.AVX2.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/TextureDownload.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Schema/FakeSchema/MeshPrimitive.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Material/MaterialProperty.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/Utility/VertexHelper.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/ToggleGroup.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/SpriteState.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/Selectable.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/Scrollbar.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/ScrollRect.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/RectMask2D.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/Navigation.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/Layout/LayoutGroup.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/Layout/CanvasScaler.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/InputField.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/IMaskable.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/ColorBlock.cs
+ 0.1 kb	 0.0% Packages/com.unity.inputsystem/InputSystem/Runtime/Plugins/XR/Devices/OpenVR.cs
+ 0.1 kb	 0.0% Packages/com.unity.inputsystem/InputSystem/Runtime/Plugins/HID/HID.cs
+ 0.1 kb	 0.0% Packages/com.unity.collections/Unity.Collections/xxHash3.cs
+ 0.1 kb	 0.0% Packages/com.unity.collections/Unity.Collections/Unicode.cs
+ 0.1 kb	 0.0% Packages/com.unity.collections/Unity.Collections/Memory.cs
+ 0.1 kb	 0.0% Packages/com.unity.collections/Unity.Collections/Jobs/IJobFilter.cs
+ 0.1 kb	 0.0% Packages/com.unity.collections/Unity.Collections/BitField.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/VertexBufferColors.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/VertexBufferBones.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/SubMeshAssignment.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Schema/TextureTransform.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Schema/RootExtensions.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Schema/MeshPrimitive.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Schema/MaterialUnlit.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Schema/MaterialTransmission.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Schema/MaterialSpecular.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Schema/MaterialClearCoat.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Schema/LightsPunctual.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Schema/LightPunctual.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Schema/AnimationSampler.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Schema/AnimationChannel.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Schema/AccessorSparse.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/RenderPipelineUtils.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/PrimitivesComparer.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/PrimitiveComparer.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/MeshGeneratorBase.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Logging/ConsoleLogger.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Logging/CollectingLogger.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Loading/ITextureDownload.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Loading/INativeDownload.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/ImageCreateContext.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/IMaterialProvider.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Export/ImageExport.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Export/IMeshData.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Export/GltfWriter.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Export/ExportJobs.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Export/Constants.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/DontDestroyOnLoad.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/DefaultDeferAgent.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/Culling/IClipRegion.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/TMP/TextMeshPro.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/TMP/TMP_TextInfo.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/TMP/TMP_SubMesh.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/TMP/TMP_Style.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/TMP/TMP_Sprite.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/TMP/TMP_Settings.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/TMP/TMP_MeshInfo.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/TMP/TMP_LineInfo.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/TMP/TMP_Dropdown.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/TMP/TMP_Asset.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/TMP/FastAction.cs
+ 0.1 kb	 0.0% Packages/com.unity.inputsystem/InputSystem/Runtime/Devices/Pen.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/VertexStructs.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Schema/GltfAnimation.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Schema/FakeSchema/NamedObject.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Material/Constants.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/VertexModifiers/Shadow.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/VertexModifiers/Outline.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/Toggle.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/Slider.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/SafeArea.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/RawImage.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/Image.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/Graphic.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/FontData.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/Dropdown.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/Culling/Clipping.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/Button.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/StreamExtension.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Schema/TextureInfo.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Schema/SpotLight.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Schema/NamedObject.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Schema/MaterialSheen.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Schema/MaterialIor.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Schema/JsonWriter.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Schema/IBufferView.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Schema/Constants.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Schema/BufferView.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/RootExtension.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/NodeExtension.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/MeshGenerator.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/MeshAssignment.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Logging/LogMessages.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Logging/ICodeLogger.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Loading/IDownload.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/ImportSettings.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/ImportAddons/ImportAddon.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/IInstantiator.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/IGltfReadable.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/GltfBoundsAsset.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/GltfAssetBase.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/AnimationUtils.cs
+ 0.1 kb	 0.0% Assets/Scripts/TouchControls.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/TMP/TMP_Text.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Schema/GltfCamera.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Schema/FakeSchema/Material.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Extensions.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/Text.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/Misc.cs
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/Mask.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/UvTransform.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/UriHelper.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Schema/Texture.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Schema/Scene.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Schema/Sampler.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Schema/Material.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Schema/Image.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Schema/Buffer.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Schema/Asset.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Schema/Accessor.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/SamplerKey.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/PrimitiveSet.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/MeshSubset.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/MeshResult.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/MeshOrder.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/MeshComparer.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Mathematics.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Jobs.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/IGltfBuffers.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/IDeferAgent.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/GltfImport.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/GltfGlobals.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/GltfAsset.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/GlbBinChunk.cs
+ 0.1 kb	 0.0% Assets/Scripts/Platform/BBXboxUWP.cs
+ 0.1 kb	 0.0% Assets/Scripts/ModelLoader.cs
+ 0.1 kb	 0.0% Assets/Scripts/MeshMerge.cs
+ 0.1 kb	 0.0% Assets/Scripts/Bootstrap.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Schema/FakeSchema/Root.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Schema/FakeSchema/Mesh.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/ushort3.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/short4.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/short3.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/sbyte4.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/sbyte3.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/byte3.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Schema/Skin.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Schema/Root.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Schema/Node.cs
+ 0.1 kb	 0.0% Packages/com.unity.cloud.gltfast/Runtime/Scripts/Schema/Mesh.cs
+ 0.1 kb	 0.0% Assets/Scripts/World.cs
+ 0.1 kb	 0.0% Assets/Scripts/Soldier.cs
+ 0.1 kb	 0.0% Assets/Scripts/PowerUps.cs
+ 0.1 kb	 0.0% Assets/Scripts/LBPost.cs
+ 0.1 kb	 0.0% Assets/Scripts/LBMesh.cs
+ 0.1 kb	 0.0% Assets/Scripts/Critters.cs
+ 0.1 kb	 0.0% Assets/Scripts/BotBrain.cs
+ 0.1 kb	 0.0% Assets/Scripts/Balloon.cs
+ 0.1 kb	 0.0% Assets/Scripts/Arenas.cs
+ 0.1 kb	 0.0% Assets/Scripts/UIK.cs
+ 0.1 kb	 0.0% Assets/Scripts/Snd.cs
+ 0.1 kb	 0.0% Assets/Scripts/Sfx.cs
+ 0.1 kb	 0.0% Assets/Scripts/Page.cs
+ 0.1 kb	 0.0% Assets/Scripts/Mats.cs
+ 0.1 kb	 0.0% Assets/Scripts/Look.cs
+ 0.1 kb	 0.0% Assets/Scripts/Kb.cs
+ 0.1 kb	 0.0% Assets/Scripts/Hud.cs
+ 0.1 kb	 0.0% Assets/Scripts/Gear.cs
+ 0.1 kb	 0.0% Assets/Scripts/Game.cs
+ 0.1 kb	 0.0% Assets/Scripts/FX.cs
+ 0.1 kb	 0.0% Assets/Scripts/BBs.cs
+ 0.1 kb	 0.0% Assets/Resources/PerformanceTestRunSettings.json
+ 0.0 kb	 0.0% Assets/Generated/Lighting.lighting
+-------------------------------------------------------------------------------
+Unloading 131 Unused Serialized files (Serialized files now loaded: 0)
+Unloading 123 unused Assets / (283.0 KB). Loaded Objects now: 5138.
+Memory consumption went from 463.5 MB to 463.2 MB.
+Total: 50.497600 ms (FindLiveObjects: 0.472100 ms CreateObjectMapping: 0.096200 ms MarkObjects: 49.426100 ms  DeleteObjects: 0.213400 ms)
+
+DisplayProgressNotification: Build Successful
+Build Finished, Result: Success.
+Unloading 6 Unused Serialized files (Serialized files now loaded: 0)
+Loaded scene 'Temp/__Backupscenes/0.backup'
+	Deserialize:            2.363 ms
+	Integration:            31.589 ms
+	Integration of assets:  0.043 ms
+	Thread Wait Time:       0.031 ms
+	Total Operation Time:   34.027 ms
+Unloading 2 unused Assets / (49.2 KB). Loaded Objects now: 5161.
+Memory consumption went from 456.9 MB to 456.8 MB.
+Total: 48.219900 ms (FindLiveObjects: 0.436600 ms CreateObjectMapping: 0.102200 ms MarkObjects: 47.261600 ms  DeleteObjects: 0.131100 ms)
+
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Client] Successfully resolved entitlement details
+Asset Pipeline Refresh (id=19e37815ffefcb14aab96ff159b745fe): Total: 0.062 seconds - Initiated by RefreshV2(NoUpdateAssetOptions)
+##utp:{"success":true,"type":"PlayerBuildInfo","version":2,"phase":"Immediate","time":1792748336761,"processId":3032,"steps":[{"description":"Call PrepareForBuild callbacks","duration":4},{"description":"Call internal build started callbacks","duration":3},{"description":"Preprocess Player","duration":157},{"description":"Save scenes before build","duration":1},{"description":"Prepare For Build","duration":146},{"description":"ProducePlayerScriptAssemblies","duration":27223},{"description":"Verify Build setup","duration":59},{"description":"Prepare assets for target platform","duration":14},{"description":"Prepare splash screen","duration":34},{"description":"Build scripts DLLs","duration":43},{"description":"Building scenes","duration":167},{"description":"Build GlobalGameManagers file","duration":293},{"description":"Writing asset files","duration":34629},{"description":"Building Resources/unity_builtin_extra","duration":5168},{"description":"Write data build dirty tracking information","duration":107},{"description":"Postprocess built player","duration":66812},{"description":"Call Post-Process callbacks","duration":403}],"duration":135263}
+BUILD_RESULT: Succeeded target=UWP-BB-6.6 errors=0 warnings=6 size=842266115 time=00:02:17.0353833
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BBBuildUWP:Run () (at Assets/Editor/BBBuildUWP.cs:209)
+BBBuildUWP:Build () (at Assets/Editor/BBBuildUWP.cs:26)
+
+(Filename: Assets/Editor/BBBuildUWP.cs Line: 209)
+
+BUILD_SCRIPT_EXIT: 0
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace ()
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+UnityEngine.Logger:Log (UnityEngine.LogType,object)
+UnityEngine.Debug:Log (object)
+BBBuildUWP:Build () (at Assets/Editor/BBBuildUWP.cs:28)
+
+(Filename: Assets/Editor/BBBuildUWP.cs Line: 28)
+
+MonoPathRemapper: Attempts to remap: 42622; Successful remaps: 4858
+Serialized file version minimum: 22, current 23
+[Physics::Module] Cleanup current backend.
+[Physics::Module] Id: 0xf2b8ea05
+Input System module state changed to: ShutdownInProgress.
+Input Polling Thread exited.
+Input System module state changed to: Shutdown.
+[Licensing::IpcConnector] LicenseClient-runneradmin-notifications channel disconnected successfully.
+[Licensing::IpcConnector] LicenseClient-runneradmin channel disconnected successfully.
+Shut down.
+Lingering sessions upon destruction of worker manager
+Unity Data Store service was successfully shut down
+UDS shutting down local client system
+Shut down UDS service system complete
+AcceleratorClientConnectionCallback - disconnected - :0
+Cleanup mono
+CodeReloadManager destroyed
+abort_threads: Failed aborting id: 0000000000001E18, mono_thread_manage will ignore it
+
+abort_threads: Failed aborting id: 0000000000001DA8, mono_thread_manage will ignore it
+
+abort_threads: Failed aborting id: 0000000000001454, mono_thread_manage will ignore it
+
+abort_threads: Failed aborting id: 0000000000001E18, mono_thread_manage will ignore it
+
+abort_threads: Failed aborting id: 0000000000001DA8, mono_thread_manage will ignore it
+
+abort_threads: Failed aborting id: 0000000000001454, mono_thread_manage will ignore it
+
+debugger-agent: Unable to listen on 3104
+VBCSCompilerPreWarmer: requested VBCSCompiler shutdown
+Checking for leaked weakptr:
+  Found no leaked weakptrs.
+[Package Manager] Server process was shutdown
+##utp:{"type":"MemoryLeaks","version":2,"phase":"Immediate","time":1792748339815,"processId":3032,"allocatedMemory":18305048,"memoryLabels":[{"Default":226321},{"Permanent":15516},{"NewDelete":73047},{"Thread":4188664},{"Manager":19696},{"VertexData":8},{"Geometry":816},{"Texture":24},{"Shader":1419201},{"Material":32070},{"GfxDevice":55968},{"Animation":952},{"Audio":696},{"Font":1701279},{"FreeType":46932},{"FontEngine":736},{"Physics":1970},{"Physics2D":16},{"Serialization":33824},{"Input":42840},{"JobScheduler":256},{"TextLib":336},{"Mono":48},{"MonoCode":832},{"ScriptingNativeRuntime":1298872},{"Resource":1444},{"Renderer":2504},{"Transform":4685},{"File":22246},{"WebCam":616},{"Culling":32},{"Terrain":11442},{"Wind":24},{"STL":40},{"String":3056321},{"StaticString":3808},{"Utility":2673174},{"Curl":2478},{"PoolAlloc":2360},{"AI":80},{"TypeTree":19053},{"ScriptManager":12656},{"CodeReload":448},{"RuntimeInitializeOnLoadManager":64},{"Sprites":102},{"SpriteAtlas":120},{"GI":7816},{"Director":8296},{"CloudService":138768},{"WebRequest":552},{"VR":49650},{"SceneManager":608},{"Video":64},{"LazyScriptCache":32},{"Camera":729},{"Secure":2377},{"Image":65536},{"SerializationCache":9256},{"APIUpdating":10320},{"Subsystems":336},{"VirtualTexturing":57888},{"StaticSafetyDebugInfo":278528},{"Analytics":592},{"Hierarchy":1188},{"UIElements":40},{"CoreStats":14456},{"Identifiers":7152},{"Gui":128},{"EditorUtility":115679},{"VersionControl":8},{"Undo":931},{"AssetDatabase":2544031},{"AssetImporter":40},{"EditorGi":328},{"UnityConnect":40441},{"Upm":1912},{"UpmDiagnostics":8},{"AssetCompliance":96},{"DrivenProperties":72},{"LocalIPC":217},{"ProfilerEditor":9746},{"CoreBusinessMetrics":3626},{"Windowing":456},{"Licensing":1264},{"AssetReference":32},{"IPCStream":32}]}
