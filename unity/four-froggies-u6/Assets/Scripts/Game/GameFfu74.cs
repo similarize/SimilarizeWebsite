@@ -91,7 +91,9 @@ public partial class Game
             Rect vr = s.cam.rect;
             float x0 = vr.xMin * cs.x, x1 = vr.xMax * cs.x, top = vr.yMax * cs.y;
             if (vr.yMax > 0.99f) top -= (Screen.height - sa.yMax) * ky;
-            float right = x1 - 8f - (vr.xMax > 0.99f && vr.yMax > 0.99f ? 64f : 0f);
+            // ffu74b: the page's own top-right toolbar (fullscreen + "X Arcade", ~150 x 46 CSS px) sits over a view that
+            // touches the screen's top-right corner; Unity can't see it, so keep the button out of that box
+            float right = x1 - 8f - (vr.xMax > 0.99f && vr.yMax > 0.99f ? Mathf.Max(64f, Tb74W * Tb74Dpr() * kx) : 0f);
             float cx, y;
             if (anchor.width > 1f)
             {
@@ -108,6 +110,12 @@ public partial class Game
             for (int k = 0; k < 4 && k < slots.Count; k++)
                 if (bchips74[k] != null && bchips74[k].shown && Hit(bchips74[k].rt, tp, 10f)) { Bridge74Press(k, "touch"); return; }
     }
+
+    public const float Tb74W = 150f, Tb74H = 46f;   // page toolbar box (CSS px, from the right / top edge)
+    float tb74Dpr = 1f, tb74T = -9f;
+    public float Tb74Dpr() { if (Time.unscaledTime - tb74T > 1f) { tb74T = Time.unscaledTime; tb74Dpr = Mathf.Max(0.5f, FFDisplay.CurrentDpr); } return tb74Dpr; }
+    // probe: does a screen rect (pixels, y up) stay out of the page toolbar box?
+    public bool ClearOfToolbar74(Rect r) { float d = Tb74Dpr(); return !(r.xMax > Screen.width - Tb74W * d && r.yMax > Screen.height - Tb74H * d); }
 
     void Bridge74Press(int k, string how)
     {
@@ -243,6 +251,17 @@ public partial class Game
             fb.SendTo(WorldId.Ranch, p2, face);
             if (slots[1].rig != null) { slots[1].rig.SetYaw(face); slots[1].rig.SetPitch(-22f); }
         }
+        // ffu74b: the pad line must not sit on the view's status block (split views are narrow)
+        yield return L59Settle(0.5f);
+        { string pd = "no hud"; bool ok = slots[0].hud != null && slots[0].hud.PromptClear74(out pd);
+          F74Check("pad line sits clear of the status block (P1 view)", F74.Old || ok, pd); }
+        if (n > 1)
+        {
+            // a touch seat can't sit next to a controller player (SEATS COLLAPSE), so the touch part runs on the one-view probe (&f74n=1)
+            F74Info("touch part skipped on " + n + " views", "seat rule: touch + pad players can't share; see the &f74n=1 run");
+            fa.ExitVehicle(); yield return L59Settle(1f);
+            StoryMech.DtCap = dtWas; F74Result(T); yield break;
+        }
         // ---- P1 becomes a touch player (the phone) ----
         Kb.TestMobile = true; slots[0].kind = InputKind.Touch;
         yield return L59Settle(1.5f);
@@ -251,6 +270,8 @@ public partial class Game
         Rect br = Bridge74Rect(0), vr0 = slots[0].cam != null ? slots[0].cam.pixelRect : new Rect();
         F74Check("touch: the BRIDGE button sits beside the " + (n > 1 ? "view's own Help/MENU chip" : "MENU chip") + ", inside P1's view, no overlap", menu.width > 1f && br.width > 1f && !menu.Overlaps(br) && vr0.Contains(br.center) && Mathf.Abs(br.center.y - menu.center.y) < 60f,
             "menu " + menu.ToString("0") + " bridge " + br.ToString("0") + " view " + vr0.ToString("0"));
+        F74Check("touch: the BRIDGE button stays clear of the page's fullscreen / Arcade buttons (top right)", br.width > 1f && ClearOfToolbar74(br),
+            "bridge " + br.ToString("0") + " screen " + Screen.width + "x" + Screen.height + " dpr " + Tb74Dpr().ToString("0.0#") + " toolbar box x > " + (Screen.width - Tb74W * Tb74Dpr()).ToString("0") + ", y > " + (Screen.height - Tb74H * Tb74Dpr()).ToString("0"));
         if (fb != null) F74Check("touch: no BRIDGE button in P2's view (pad, on foot)", !Bridge74Shown(1), "shown " + Bridge74Shown(1));
         string tl = HintPrompt(fa);
         F74Check("touch: no R3 / 0 line for the touch player (the button instead)", !tl.Contains("Bridge view"), "'" + tl + "'");

@@ -155,6 +155,16 @@ public class ViewHud
         status.rectTransform.anchoredPosition = new Vector2(170f, 26f + units);
     }
 
+    // ffu74b probe: prompt text box bottom vs status text top (panel units); clear = no vertical overlap on a narrow view
+    public bool PromptClear74(out string d)
+    {
+        float pb = prompt.rectTransform.anchoredPosition.y - prompt.rectTransform.sizeDelta.y * 0.5f;
+        float st = status.rectTransform.anchoredPosition.y - status.rectTransform.sizeDelta.y * 0.5f + (status.text.Length > 0 ? status.preferredHeight : 0f);
+        bool wide = layW >= 1100f;
+        d = "prompt '" + prompt.text + "' bottom " + pb.ToString("0") + " | status top " + st.ToString("0") + " | view width " + layW.ToString("0");
+        return prompt.text.Length == 0 || status.text.Length == 0 || wide || pb >= st;
+    }
+
     // me == null: shared view (list every player in the status corner)
     public void Tick(Camera cam, Frog me, string playerTag, List<Frog> frogs, string sharedStatus, string sharedPrompt = null, Frog sharedSpace = null)
     {
@@ -203,7 +213,12 @@ public class ViewHud
         // ffu9: keep the toast clear of a tall (multi-line) prompt, e.g. the space controls line
         float ins = Mathf.Max(0f, inset);
         float ph = prompt.text.Length > 0 ? prompt.preferredHeight : 0f;
-        float ty = Mathf.Max(120f, 64f + ph + 10f) + ins;
+        // ffu74b: on a narrow view (split / portrait) the centred prompt spans the status corner, so a prompt that is up
+        // together with a status line (e.g. "R3: Bridge view" while piloting) sits just above the status block, not on it
+        float py = 64f;
+        if (layW > 0f && layW < 1100f && ph > 0f && status.text.Length > 0) py = Mathf.Max(64f, 6f + status.preferredHeight + 6f + 35f);
+        if (Mathf.Abs(prompt.rectTransform.anchoredPosition.y - (py + ins)) > 0.5f) prompt.rectTransform.anchoredPosition = new Vector2(0f, py + ins);
+        float ty = Mathf.Max(120f, py + ph + 10f) + ins;
         if (Mathf.Abs(toast.rectTransform.anchoredPosition.y - ty) > 0.5f) toast.rectTransform.anchoredPosition = new Vector2(0f, ty);
         for (int i = 0; i < tags.Length; i++)
         {
