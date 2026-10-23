@@ -143,7 +143,8 @@ jobs:
           else { "UWP.VC v143 still missing -> MSBuild will use PlatformToolset v142" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"; "TOOLSET_OVERRIDE=v142" >> $env:GITHUB_ENV }
           Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\Include" -ErrorAction SilentlyContinue | ForEach-Object { "sdk: $($_.Name)" } | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
 
-      - name: Find Unity Hub on this PC (self-hosted, installed on G:)
+      - name: Find Unity Hub + editor on this PC (self-hosted, installed on G:)
+        id: findunity
         shell: pwsh
         run: |
           $c = @('G:\Program Files\Unity Hub\Unity Hub.exe','G:\Unity Hub\Unity Hub.exe','G:\SimilarizeBuild\Unity Hub\Unity Hub.exe',"$env:ProgramFiles\Unity Hub\Unity Hub.exe","$env:LOCALAPPDATA\Programs\Unity Hub\Unity Hub.exe")
@@ -151,10 +152,29 @@ jobs:
           if (-not $hub) { $hub = Get-ChildItem G:\ -Filter 'Unity Hub.exe' -Recurse -Depth 4 -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName }
           if ($hub) { "hub: $hub" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"; "UNITY_HUB_PATH=$hub" >> $env:GITHUB_ENV }
           else { "hub: NOT FOUND on G:" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt" }
-          Get-ChildItem 'G:\SimilarizeBuild\Unity' -ErrorAction SilentlyContinue | ForEach-Object { "editor dir: $($_.Name)" } | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+          $ver = ((Get-Content 'src/unity/lambo-blast-u6/ProjectSettings/ProjectVersion.txt' | Select-String 'm_EditorVersion:').ToString() -split ':')[1].Trim()
+          "need editor: $ver" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+          $roots = @('G:\SimilarizeBuild\Unity','G:\Unity','G:\Unity\Hub\Editor','G:\Program Files\Unity\Hub\Editor',"$env:ProgramFiles\Unity\Hub\Editor",'C:\Program Files\Unity\Hub\Editor')
+          $ed = $roots | ForEach-Object { Join-Path $_ "$ver\Editor\Unity.exe" } | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $ed) { $ed = Get-ChildItem G:\ -Filter 'Unity.exe' -Recurse -Depth 6 -ErrorAction SilentlyContinue | Where-Object { $_.FullName -like "*$ver*\Editor\Unity.exe" } | Select-Object -First 1 -ExpandProperty FullName }
+          Get-ChildItem G:\ -Filter 'Unity.exe' -Recurse -Depth 6 -ErrorAction SilentlyContinue | Where-Object { $_.FullName -like '*\Editor\Unity.exe' } | ForEach-Object { "editor found: $($_.FullName)" } | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+          if (-not $ed) {
+            $mm = ($ver -split '\.')[0..1] -join '.'
+            $ed = Get-ChildItem G:\,"$env:ProgramFiles\Unity\Hub\Editor" -Filter 'Unity.exe' -Recurse -Depth 6 -ErrorAction SilentlyContinue | Where-Object { $_.FullName -like "*\$mm.*\Editor\Unity.exe" -and (Test-Path (Join-Path $_.DirectoryName 'Data\PlaybackEngines\MetroSupport')) } | Sort-Object FullName -Descending | Select-Object -First 1 -ExpandProperty FullName
+            if ($ed) { "using same-minor editor instead of $ver (patch upgrade): $ed" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt" }
+          }
+          if ($ed) {
+            $wsa = Join-Path (Split-Path $ed) 'Data\PlaybackEngines\MetroSupport'
+            "editor: $ed  uwp module: $(Test-Path $wsa)" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+            if (-not (Test-Path $wsa)) { "NO_UWP_MODULE: add Universal Windows Platform Build Support to $ver in Unity Hub" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"; exit 1 }
+            "UNITY_EDITOR_PATH=$ed" >> $env:GITHUB_ENV
+          } else {
+            "NO_EDITOR: install Unity $ver + Universal Windows Platform Build Support in Unity Hub on this PC (the runner is not admin, so it cannot install it itself)" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"; exit 1
+          }
 
       - name: Set up Unity + UWP module
         id: unity-setup
+        if: env.UNITY_EDITOR_PATH == ''
         uses: RageAgainstThePixel/unity-setup@v2
         with:
           version-file: src/unity/lambo-blast-u6/ProjectSettings/ProjectVersion.txt
