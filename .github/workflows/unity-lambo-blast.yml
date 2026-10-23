@@ -142,8 +142,9 @@ jobs:
           git sparse-checkout set "$GAME_DIR"
           git config user.name "github-actions[bot]"
           git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
-          rm -rf "$GAME_DIR"
+          # keep hand-added files in the game dir (cab/ cabinet shots, thumbs, cards): remove only the build outputs re-copied below
           mkdir -p "$GAME_DIR"
+          rm -rf "$GAME_DIR/Build" "$GAME_DIR/StreamingAssets"
           cp -r "$OUT/Build" "$GAME_DIR/Build"
           if [ -d "$OUT/StreamingAssets" ]; then cp -r "$OUT/StreamingAssets" "$GAME_DIR/"; fi
           sed -e "s/__BUILD_NAME__/$NAME/g" -e "s/__BUILD_VERSION__/$VERSION/g" "$GITHUB_WORKSPACE/src/unity/lambo-blast/web/index.html" > "$GAME_DIR/index.html"
