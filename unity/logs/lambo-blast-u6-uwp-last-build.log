@@ -1,33 +1,34 @@
-UWP run 39998391773 attempt 1 event workflow_dispatch sha b63bc0ab0565772270fe98fdbbbfc2405ca77c55 tag lb-u6-uwp-2 started 2026-10-23T17:51:14Z
+UWP run 40000088922 attempt 1 event workflow_dispatch sha 04d63bbb897537a962ded929ab74dedd03559d48 tag lb-u6-uwp-2 started 2026-10-23T18:05:25Z
 secrets present
 absoluteURL -> LBXboxUWP.Url in 13 files
 src/unity/lambo-blast-u6/Assets/Editor:
 total 60
-drwxr-xr-x 1 Ben 197611     0 Oct 23 11:51 .
+drwxr-xr-x 1 Ben 197611     0 Oct 23 12:05 .
 drwxr-xr-x 1 Ben 197611     0 Oct 23 10:58 ..
 -rw-r--r-- 1 Ben 197611 37445 Oct 23 10:58 BuildScript.cs
--rw-r--r-- 1 Ben 197611 14325 Oct 23 11:51 LBBuildUWP.cs
+-rw-r--r-- 1 Ben 197611 14325 Oct 23 12:05 LBBuildUWP.cs
 
 src/unity/lambo-blast-u6/Assets/Scripts/Platform:
 total 28
-drwxr-xr-x 1 Ben 197611     0 Oct 23 11:51 .
-drwxr-xr-x 1 Ben 197611     0 Oct 23 11:51 ..
--rw-r--r-- 1 Ben 197611 27287 Oct 23 11:51 LBXboxUWP.cs
+drwxr-xr-x 1 Ben 197611     0 Oct 23 12:05 .
+drwxr-xr-x 1 Ben 197611     0 Oct 23 12:05 ..
+-rw-r--r-- 1 Ben 197611 27287 Oct 23 12:05 LBXboxUWP.cs
 
 src/unity/lambo-blast-u6/UWPTiles:
-total 576
-drwxr-xr-x 1 Ben 197611      0 Oct 23 11:51 .
-drwxr-xr-x 1 Ben 197611      0 Oct 23 11:51 ..
--rw-r--r-- 1 Ben 197611 277958 Oct 23 11:51 splash620x300.png
--rw-r--r-- 1 Ben 197611  40311 Oct 23 11:51 sq150.png
--rw-r--r-- 1 Ben 197611 148695 Oct 23 11:51 sq310.png
--rw-r--r-- 1 Ben 197611   4413 Oct 23 11:51 sq44.png
--rw-r--r-- 1 Ben 197611   5639 Oct 23 11:51 sq50.png
--rw-r--r-- 1 Ben 197611  10530 Oct 23 11:51 sq71.png
--rw-r--r-- 1 Ben 197611  82279 Oct 23 11:51 wide310x150.png
-cert: subject CN=Similarize thumb F56BCC9429101CDBC91FACDA2888C742684B1DF9 notAfter 10/23/2031 11:51:17
+total 580
+drwxr-xr-x 1 Ben 197611      0 Oct 23 12:05 .
+drwxr-xr-x 1 Ben 197611      0 Oct 23 12:05 ..
+-rw-r--r-- 1 Ben 197611 277958 Oct 23 12:05 splash620x300.png
+-rw-r--r-- 1 Ben 197611  40311 Oct 23 12:05 sq150.png
+-rw-r--r-- 1 Ben 197611 148695 Oct 23 12:05 sq310.png
+-rw-r--r-- 1 Ben 197611   4413 Oct 23 12:05 sq44.png
+-rw-r--r-- 1 Ben 197611   5639 Oct 23 12:05 sq50.png
+-rw-r--r-- 1 Ben 197611  10530 Oct 23 12:05 sq71.png
+-rw-r--r-- 1 Ben 197611  82279 Oct 23 12:05 wide310x150.png
+cert: subject CN=Similarize thumb B69AB3AF1694F63242825DADB50D97D4CB6881CE notAfter 10/23/2031 12:05:27
 vs: C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools
 UWP.VC v143 present
 sdk: 10.0.26100.0
+hub: G:\Unity\Unity Hub\Unity Hub.exe
 === step outcomes: secrets=success cert=success vs=success setup=failure activate=skipped urpsetup=skipped build=skipped manifest=skipped msbuild=skipped collect=skipped release=skipped smoke=skipped
 === no editor log
