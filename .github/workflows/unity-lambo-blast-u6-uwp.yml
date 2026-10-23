@@ -143,12 +143,24 @@ jobs:
           else { "UWP.VC v143 still missing -> MSBuild will use PlatformToolset v142" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"; "TOOLSET_OVERRIDE=v142" >> $env:GITHUB_ENV }
           Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\Include" -ErrorAction SilentlyContinue | ForEach-Object { "sdk: $($_.Name)" } | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
 
+      - name: Find Unity Hub on this PC (self-hosted, installed on G:)
+        shell: pwsh
+        run: |
+          $c = @('G:\Program Files\Unity Hub\Unity Hub.exe','G:\Unity Hub\Unity Hub.exe','G:\SimilarizeBuild\Unity Hub\Unity Hub.exe',"$env:ProgramFiles\Unity Hub\Unity Hub.exe","$env:LOCALAPPDATA\Programs\Unity Hub\Unity Hub.exe")
+          $hub = $c | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $hub) { $hub = Get-ChildItem G:\ -Filter 'Unity Hub.exe' -Recurse -Depth 4 -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName }
+          if ($hub) { "hub: $hub" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"; "UNITY_HUB_PATH=$hub" >> $env:GITHUB_ENV }
+          else { "hub: NOT FOUND on G:" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt" }
+          Get-ChildItem 'G:\SimilarizeBuild\Unity' -ErrorAction SilentlyContinue | ForEach-Object { "editor dir: $($_.Name)" } | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+
       - name: Set up Unity + UWP module
         id: unity-setup
         uses: RageAgainstThePixel/unity-setup@v2
         with:
           version-file: src/unity/lambo-blast-u6/ProjectSettings/ProjectVersion.txt
           modules: universal-windows-platform
+          install-path: 'G:\SimilarizeBuild\Unity'
+          auto-update-hub: false
           cache-installation: false
 
       - name: Activate Unity license
