@@ -1,4 +1,4 @@
-run 39985441574 attempt 1 event push sha b95279d3caac9dae8179793fda5e5fc6e41ad5ae started 2026-10-23T16:16:53Z
+run 39993318820 attempt 1 event push sha 50b4005f179612d36b4082e61f1e5635fb3f1e39 started 2026-10-23T17:13:47Z
 secrets present
 Filesystem      Size  Used Avail Use% Mounted on
 /dev/root       145G   41G  104G  29% /
@@ -9,21 +9,18 @@ ls: cannot access '/opt/unityhub': No such file or directory
 urp setup exit code: 0
 [Licensing::Module] Trying to connect to existing licensing client channel...
 [Licensing::IpcConnector] Channel LicenseClient-runner doesn't exist
-[Licensing::Module] Successfully launched the LicensingClient (PId: 5974)
-[Licensing::IpcConnector] Successfully connected to: "LicenseClient-runner" at "2026-10-23T16:26:19.095024Z"
+[Licensing::Module] Successfully launched the LicensingClient (PId: 5739)
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-runner" at "2026-10-23T17:22:33.265676Z"
 [Licensing::Client] Handshaking with LicensingClient:
-[Licensing::Module] Successfully connected to LicensingClient on channel: "LicenseClient-runner" (connect: 0.57s, validation: 0.24s, handshake: 0.00s)
-[Licensing::IpcConnector] Successfully connected to: "LicenseClient-runner-notifications" at "2026-10-23T16:26:19.332713Z"
-[Licensing::Module] Connected to LicensingClient (PId: 5974, launch time: 0.00, total connection time: 0.81s)
+[Licensing::Module] Successfully connected to LicensingClient on channel: "LicenseClient-runner" (connect: 0.38s, validation: 0.15s, handshake: 0.00s)
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-runner-notifications" at "2026-10-23T17:22:33.410787Z"
+[Licensing::Module] Connected to LicensingClient (PId: 5739, launch time: 0.00, total connection time: 0.52s)
 [Licensing::Module] Error: Access token is unavailable; failed to update
 [Licensing::Client] Successfully resolved entitlement details
-[Licensing::Module] Licensing is not yet initialized.
 [Licensing::Module] License group:
 [Licensing::Client] Successfully updated license, isAsync: True, time: 0.04
 [Licensing::Client] Successfully resolved entitlement details
-[Licensing::Module] Licensing Background thread has ended after 0.97s
-[Licensing::Module] Licensing is initialized (took 0.04s).
-[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Module] Licensing Background thread has ended after 0.70s
 [Licensing::Client] Successfully resolved entitlement details
 [Licensing::Client] Successfully resolved entitlement details
 [Licensing::Client] Successfully resolved entitlement details
@@ -34,218 +31,215 @@ URPSETUP: start, Unity 6000.6.5f1
 [Licensing::Client] Successfully resolved entitlement details
 URPSETUP: renderer via CreateRendererAsset True
 URPSETUP: global settings Assets/UniversalRenderPipelineGlobalSettings.asset
-URPSETUP: URP asset Forward+ HDR MSAA2 shadows 2048/60m 2 cascades soft, rendering layers, SSAO feature lid 1445375640948857198
+URPSETUP: URP asset Forward+ HDR MSAA2 shadows 2048/60m 2 cascades soft, rendering layers, SSAO feature lid -4125920173829116660
 URPSETUP: rendering layers defined 3 (was 1), mask 7
 URPSETUP: ok asset Assets/Generated/FF_URP.asset default FF_URP colour Linear apis WebGPU,OpenGLES3
 [Licensing::Client] Successfully resolved entitlement details
 [Licensing::IpcConnector] LicenseClient-runner-notifications channel disconnected successfully.
 [Licensing::IpcConnector] LicenseClient-runner channel disconnected successfully.
-##utp:{"type":"MemoryLeaks","version":2,"phase":"Immediate","time":1792772899291,"processId":5963,"allocatedMemory":9845839,"memoryLabels":[{"Default":235881},{"Permanent":16152},{"Thread":1052776},{"Manager":17613},{"VertexData":8},{"Geometry":408},{"Texture":24},{"Shader":858049},{"Material":12174},{"GfxDevice":36104},{"Animation":1016},{"Audio":1280},{"Font":93487},{"FreeType":10732},{"FontEngine":736},{"Physics":1970},{"Physics2D":16},{"Serialization":17976},{"Input":60256},{"JobScheduler":256},{"TextLib":336},{"Mono":80},{"MonoCode":96},{"ScriptingNativeRuntime":155088},{"BaseObject":42568},{"Resource":1268},{"Renderer":2496},{"Transform":4717},{"File":4232},{"WebCam":80},{"Culling":32},{"Terrain":11346},{"Wind":24},{"String":1365662},{"StaticString":3808},{"Utility":2672752},{"Curl":2511},{"PoolAlloc":1960},{"AI":80},{"TypeTree":18285},{"ScriptManager":12656},{"CodeReload":448},{"RuntimeInitializeOnLoadManager":64},{"Sprites":102},{"SpriteAtlas":120},{"GI":7408},{"Director":8280},{"CloudService":7712},{"WebRequest":5267},{"VR":49554},{"SceneManager":640},{"Video":64},{"LazyScriptCache":32},{"Camera":729},{"Secure":10337},{"SerializationCache":9256},{"APIUpdating":10320},{"Subsystems":336},{"VirtualTexturing":57552},{"StaticSafetyDebugInfo":278528},{"Analytics":592},{"Hierarchy":1436},{"UIElements":40},{"CoreStats":14456},{"Identifiers":7152},{"Gui":160},{"EditorUtility":66577},{"VersionControl":8},{"Undo":963},{"AssetDatabase":2533865},{"AssetImporter":40},{"EditorGi":328},{"UnityConnect":40449},{"Upm":1760},{"UpmDiagnostics":8},{"AssetCompliance":96},{"DrivenProperties":72},{"LocalIPC":149},{"ProfilerEditor":9746},{"CoreBusinessMetrics":2530},{"Windowing":480},{"Licensing":1128},{"AssetReference":32},{"IPCStream":32}]}
+##utp:{"type":"MemoryLeaks","version":2,"phase":"Immediate","time":1792776233324,"processId":5728,"allocatedMemory":9716672,"memoryLabels":[{"Default":235881},{"Permanent":16152},{"Thread":1052816},{"Manager":17613},{"VertexData":8},{"Geometry":408},{"Texture":24},{"Shader":858049},{"Material":12174},{"GfxDevice":36104},{"Animation":1016},{"Audio":1280},{"Font":93487},{"FreeType":10732},{"FontEngine":736},{"Physics":1970},{"Physics2D":16},{"Serialization":17976},{"Input":60256},{"JobScheduler":256},{"TextLib":336},{"Mono":80},{"MonoCode":96},{"ScriptingNativeRuntime":155088},{"BaseObject":42568},{"Resource":1268},{"Renderer":2496},{"Transform":4717},{"File":4232},{"WebCam":80},{"Culling":32},{"Terrain":11346},{"Wind":24},{"String":1236497},{"StaticString":3808},{"Utility":2672752},{"Curl":2430},{"PoolAlloc":1960},{"AI":80},{"TypeTree":18285},{"ScriptManager":12656},{"CodeReload":448},{"RuntimeInitializeOnLoadManager":64},{"Sprites":102},{"SpriteAtlas":120},{"GI":7408},{"Director":8280},{"CloudService":7712},{"WebRequest":5306},{"VR":49554},{"SceneManager":640},{"Video":64},{"LazyScriptCache":32},{"Camera":729},{"Secure":10337},{"SerializationCache":9256},{"APIUpdating":10320},{"Subsystems":336},{"VirtualTexturing":57552},{"StaticSafetyDebugInfo":278528},{"Analytics":592},{"Hierarchy":1436},{"UIElements":40},{"CoreStats":14456},{"Identifiers":7152},{"Gui":160},{"EditorUtility":66577},{"VersionControl":8},{"Undo":963},{"AssetDatabase":2533865},{"AssetImporter":40},{"EditorGi":328},{"UnityConnect":40449},{"Upm":1760},{"UpmDiagnostics":8},{"AssetCompliance":96},{"DrivenProperties":72},{"LocalIPC":149},{"ProfilerEditor":9746},{"CoreBusinessMetrics":2530},{"Windowing":480},{"Licensing":1128},{"AssetReference":32},{"IPCStream":32}]}
 editor: /home/runner/Unity/Hub/Editor/6000.6.5f1/Editor/Unity
 unity exit code: 0
 src/unity/four-froggies-u6/build/WebGL:
 total 24
-drwxr-xr-x 4 runner runner 4096 Oct 23 16:40 .
-drwxr-xr-x 3 runner runner 4096 Oct 23 16:38 ..
-drwxr-xr-x 2 runner runner 4096 Oct 23 16:40 Build
-drwxr-xr-x 2 runner runner 4096 Oct 23 16:40 TemplateData
--rw-r--r-- 1 runner runner 6387 Oct 23 16:40 index.html
+drwxr-xr-x 4 runner runner 4096 Oct 23 17:31 .
+drwxr-xr-x 3 runner runner 4096 Oct 23 17:29 ..
+drwxr-xr-x 2 runner runner 4096 Oct 23 17:31 Build
+drwxr-xr-x 2 runner runner 4096 Oct 23 17:31 TemplateData
+-rw-r--r-- 1 runner runner 6387 Oct 23 17:31 index.html
 
 src/unity/four-froggies-u6/build/WebGL/Build:
-total 70032
-drwxr-xr-x 2 runner runner     4096 Oct 23 16:40 .
-drwxr-xr-x 4 runner runner     4096 Oct 23 16:40 ..
--rw-r--r-- 1 runner runner 28776243 Oct 23 16:38 WebGL.data
--rw-r--r-- 1 runner runner   354635 Oct 23 16:40 WebGL.framework.js
--rw-r--r-- 1 runner runner    28051 Oct 23 16:40 WebGL.loader.js
--rwxr-xr-x 1 runner runner 42540784 Oct 23 16:40 WebGL.wasm
+total 70036
+drwxr-xr-x 2 runner runner     4096 Oct 23 17:31 .
+drwxr-xr-x 4 runner runner     4096 Oct 23 17:31 ..
+-rw-r--r-- 1 runner runner 28776570 Oct 23 17:29 WebGL.data
+-rw-r--r-- 1 runner runner   354635 Oct 23 17:31 WebGL.framework.js
+-rw-r--r-- 1 runner runner    28051 Oct 23 17:31 WebGL.loader.js
+-rwxr-xr-x 1 runner runner 42541600 Oct 23 17:31 WebGL.wasm
 published
 === step outcomes: secrets=success setup=success activate=success urpsetup=success build=success publish=success
 === /home/runner/.config/unity3d/Unity/Unity.Entitlements.Audit.log (tail 60)
-2026-10-23 16:28:23.111 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.editor.time-limited-license], Result: [granted: False, group: (null)]
-2026-10-23 16:28:23.111 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.editor.cluster], Result: [granted: False, group: (null)]
-2026-10-23 16:28:23.111 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.editor.headless], Result: [granted: True, group: F4-8ZSX-9GVU-UVYS-4UAG-XXXX]
-2026-10-23 16:28:23.118 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.inputsystem], Result: [granted: True, group: (null)]
-2026-10-23 16:28:23.118 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.modules.animation], Result: [granted: True, group: (null)]
-2026-10-23 16:28:23.118 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.modules.audio], Result: [granted: True, group: (null)]
-2026-10-23 16:28:23.118 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.modules.imageconversion], Result: [granted: True, group: (null)]
-2026-10-23 16:28:23.118 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.modules.imgui], Result: [granted: True, group: (null)]
-2026-10-23 16:28:23.118 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.modules.jsonserialize], Result: [granted: True, group: (null)]
-2026-10-23 16:28:23.118 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.modules.particlesystem], Result: [granted: True, group: (null)]
-2026-10-23 16:28:23.118 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.modules.physics], Result: [granted: True, group: (null)]
-2026-10-23 16:28:23.118 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.modules.terrain], Result: [granted: True, group: (null)]
-2026-10-23 16:28:23.118 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.modules.terrainphysics], Result: [granted: True, group: (null)]
-2026-10-23 16:28:23.118 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.modules.ui], Result: [granted: True, group: (null)]
-2026-10-23 16:28:23.118 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.modules.uielements], Result: [granted: True, group: (null)]
-2026-10-23 16:28:23.118 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.modules.umbra], Result: [granted: True, group: (null)]
-2026-10-23 16:28:23.118 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.modules.unitywebrequest], Result: [granted: True, group: (null)]
-2026-10-23 16:28:23.118 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.render-pipelines.universal], Result: [granted: True, group: (null)]
-2026-10-23 16:28:23.119 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.ugui], Result: [granted: True, group: (null)]
-2026-10-23 16:28:23.119 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.modules.physics2d], Result: [granted: True, group: (null)]
-2026-10-23 16:28:23.119 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.render-pipelines.core], Result: [granted: True, group: (null)]
-2026-10-23 16:28:23.119 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.shadergraph], Result: [granted: True, group: (null)]
-2026-10-23 16:28:23.119 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.render-pipelines.universal-config], Result: [granted: True, group: (null)]
-2026-10-23 16:28:23.119 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.modules.hierarchycore], Result: [granted: True, group: (null)]
-2026-10-23 16:28:23.119 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.modules.physicscore2d], Result: [granted: True, group: (null)]
-2026-10-23 16:28:23.119 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.searcher], Result: [granted: True, group: (null)]
-2026-10-23 16:28:23.119 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.graph-authoring], Result: [granted: True, group: (null)]
-2026-10-23 16:28:23.119 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.burst], Result: [granted: True, group: (null)]
-2026-10-23 16:28:23.119 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.collections], Result: [granted: True, group: (null)]
-2026-10-23 16:28:23.119 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.profiling.core], Result: [granted: True, group: (null)]
-2026-10-23 16:28:23.119 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.nuget.mono-cecil], Result: [granted: True, group: (null)]
-2026-10-23 16:28:23.119 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.test-framework], Result: [granted: True, group: (null)]
-2026-10-23 16:28:23.119 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.test-framework.performance], Result: [granted: True, group: (null)]
-2026-10-23 16:28:23.119 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.ext.nunit], Result: [granted: True, group: (null)]
-2026-10-23 16:29:43.293 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.editor.legacy.pro], Result: [granted: False, group: (null)]
-2026-10-23 16:29:43.293 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.editor.headless], Result: [granted: True, group: F4-8ZSX-9GVU-UVYS-4UAG-XXXX]
-2026-10-23 16:29:48.872 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [047b9b9766964f6bbae6a67a49a55bdd], Licensed Package: False, Entitlement requested: [com.unity.editor.legacy.pro], Result: [granted: False, group: (null)]
-2026-10-23 16:29:48.872 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [047b9b9766964f6bbae6a67a49a55bdd], Licensed Package: False, Entitlement requested: [com.unity.editor.watermarks.edu], Result: [granted: False, group: (null)]
-2026-10-23 16:29:48.872 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [047b9b9766964f6bbae6a67a49a55bdd], Licensed Package: False, Entitlement requested: [com.unity.editor.ui], Result: [granted: True, group: F4-8ZSX-9GVU-UVYS-4UAG-XXXX]
-2026-10-23 16:29:48.872 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [047b9b9766964f6bbae6a67a49a55bdd], Licensed Package: False, Entitlement requested: [com.unity.editor.disable-splash-screen], Result: [granted: False, group: (null)]
-2026-10-23 16:29:48.872 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [047b9b9766964f6bbae6a67a49a55bdd], Licensed Package: False, Entitlement requested: [com.unity.editor.watermarks.trial], Result: [granted: False, group: (null)]
-2026-10-23 16:29:48.872 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [047b9b9766964f6bbae6a67a49a55bdd], Licensed Package: False, Entitlement requested: [com.unity.editor.headless], Result: [granted: True, group: F4-8ZSX-9GVU-UVYS-4UAG-XXXX]
-2026-10-23 16:29:52.971 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.editor.legacy.pro], Result: [granted: False, group: (null)]
-2026-10-23 16:29:52.971 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.editor.watermarks.disable], Result: [granted: False, group: (null)]
-2026-10-23 16:29:52.972 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.editor.watermarks.prototyping], Result: [granted: False, group: (null)]
-2026-10-23 16:29:52.972 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.editor.watermarks.edu], Result: [granted: False, group: (null)]
-2026-10-23 16:29:52.972 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.editor.watermarks.trial], Result: [granted: False, group: (null)]
-2026-10-23 16:29:52.972 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.editor.time-limited-license], Result: [granted: False, group: (null)]
-2026-10-23 16:29:52.972 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.editor.cluster], Result: [granted: False, group: (null)]
-2026-10-23 16:29:52.972 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.editor.headless], Result: [granted: True, group: F4-8ZSX-9GVU-UVYS-4UAG-XXXX]
-2026-10-23 16:29:53.540 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.editor.legacy.pro], Result: [granted: False, group: (null)]
-2026-10-23 16:29:53.540 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.editor.watermarks.edu], Result: [granted: False, group: (null)]
-2026-10-23 16:29:53.540 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.editor.ui], Result: [granted: True, group: F4-8ZSX-9GVU-UVYS-4UAG-XXXX]
-2026-10-23 16:29:53.540 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.editor.disable-splash-screen], Result: [granted: False, group: (null)]
-2026-10-23 16:29:53.540 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.editor.watermarks.trial], Result: [granted: False, group: (null)]
-2026-10-23 16:29:53.540 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.editor.headless], Result: [granted: True, group: F4-8ZSX-9GVU-UVYS-4UAG-XXXX]
-2026-10-23 16:30:57.587 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.editor.legacy.pro], Result: [granted: False, group: (null)]
-2026-10-23 16:30:57.588 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.editor.headless], Result: [granted: True, group: F4-8ZSX-9GVU-UVYS-4UAG-XXXX]
-2026-10-23 16:40:47.859 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.editor.legacy.pro], Result: [granted: False, group: (null)]
-2026-10-23 16:40:47.859 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [07a57d9f64fc4e0ba0c717bed4c4fbf5], Licensed Package: False, Entitlement requested: [com.unity.editor.headless], Result: [granted: True, group: F4-8ZSX-9GVU-UVYS-4UAG-XXXX]
+2026-10-23 17:23:56.206 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.test-framework], Result: [granted: True, group: (null)]
+2026-10-23 17:23:56.206 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.test-framework.performance], Result: [granted: True, group: (null)]
+2026-10-23 17:23:56.206 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.ext.nunit], Result: [granted: True, group: (null)]
+2026-10-23 17:23:56.361 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.editor.legacy.pro], Result: [granted: False, group: (null)]
+2026-10-23 17:23:56.361 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.editor.watermarks.disable], Result: [granted: False, group: (null)]
+2026-10-23 17:23:56.361 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.editor.watermarks.prototyping], Result: [granted: False, group: (null)]
+2026-10-23 17:23:56.361 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.editor.watermarks.edu], Result: [granted: False, group: (null)]
+2026-10-23 17:23:56.361 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.editor.watermarks.trial], Result: [granted: False, group: (null)]
+2026-10-23 17:23:56.361 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.editor.time-limited-license], Result: [granted: False, group: (null)]
+2026-10-23 17:23:56.361 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.editor.cluster], Result: [granted: False, group: (null)]
+2026-10-23 17:23:56.361 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.editor.headless], Result: [granted: True, group: F4-8ZSX-9GVU-UVYS-4UAG-XXXX]
+2026-10-23 17:23:56.364 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.inputsystem], Result: [granted: True, group: (null)]
+2026-10-23 17:23:56.364 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.modules.animation], Result: [granted: True, group: (null)]
+2026-10-23 17:23:56.364 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.modules.audio], Result: [granted: True, group: (null)]
+2026-10-23 17:23:56.364 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.modules.imageconversion], Result: [granted: True, group: (null)]
+2026-10-23 17:23:56.364 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.modules.imgui], Result: [granted: True, group: (null)]
+2026-10-23 17:23:56.364 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.modules.jsonserialize], Result: [granted: True, group: (null)]
+2026-10-23 17:23:56.364 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.modules.particlesystem], Result: [granted: True, group: (null)]
+2026-10-23 17:23:56.364 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.modules.physics], Result: [granted: True, group: (null)]
+2026-10-23 17:23:56.364 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.modules.terrain], Result: [granted: True, group: (null)]
+2026-10-23 17:23:56.364 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.modules.terrainphysics], Result: [granted: True, group: (null)]
+2026-10-23 17:23:56.364 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.modules.ui], Result: [granted: True, group: (null)]
+2026-10-23 17:23:56.364 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.modules.uielements], Result: [granted: True, group: (null)]
+2026-10-23 17:23:56.364 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.modules.umbra], Result: [granted: True, group: (null)]
+2026-10-23 17:23:56.364 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.modules.unitywebrequest], Result: [granted: True, group: (null)]
+2026-10-23 17:23:56.364 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.render-pipelines.universal], Result: [granted: True, group: (null)]
+2026-10-23 17:23:56.364 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.ugui], Result: [granted: True, group: (null)]
+2026-10-23 17:23:56.364 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.modules.physics2d], Result: [granted: True, group: (null)]
+2026-10-23 17:23:56.364 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.render-pipelines.core], Result: [granted: True, group: (null)]
+2026-10-23 17:23:56.364 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.shadergraph], Result: [granted: True, group: (null)]
+2026-10-23 17:23:56.364 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.render-pipelines.universal-config], Result: [granted: True, group: (null)]
+2026-10-23 17:23:56.364 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.modules.hierarchycore], Result: [granted: True, group: (null)]
+2026-10-23 17:23:56.364 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.modules.physicscore2d], Result: [granted: True, group: (null)]
+2026-10-23 17:23:56.364 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.searcher], Result: [granted: True, group: (null)]
+2026-10-23 17:23:56.364 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.graph-authoring], Result: [granted: True, group: (null)]
+2026-10-23 17:23:56.364 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.burst], Result: [granted: True, group: (null)]
+2026-10-23 17:23:56.364 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.collections], Result: [granted: True, group: (null)]
+2026-10-23 17:23:56.364 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.profiling.core], Result: [granted: True, group: (null)]
+2026-10-23 17:23:56.364 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.nuget.mono-cecil], Result: [granted: True, group: (null)]
+2026-10-23 17:23:56.364 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.test-framework], Result: [granted: True, group: (null)]
+2026-10-23 17:23:56.364 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.test-framework.performance], Result: [granted: True, group: (null)]
+2026-10-23 17:23:56.364 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.ext.nunit], Result: [granted: True, group: (null)]
+2026-10-23 17:24:50.557 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [5fd72338643040aab07e43603b88dd29], Licensed Package: False, Entitlement requested: [com.unity.editor.legacy.pro], Result: [granted: False, group: (null)]
+2026-10-23 17:24:50.557 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [5fd72338643040aab07e43603b88dd29], Licensed Package: False, Entitlement requested: [com.unity.editor.watermarks.edu], Result: [granted: False, group: (null)]
+2026-10-23 17:24:50.557 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [5fd72338643040aab07e43603b88dd29], Licensed Package: False, Entitlement requested: [com.unity.editor.ui], Result: [granted: True, group: F4-8ZSX-9GVU-UVYS-4UAG-XXXX]
+2026-10-23 17:24:50.557 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [5fd72338643040aab07e43603b88dd29], Licensed Package: False, Entitlement requested: [com.unity.editor.disable-splash-screen], Result: [granted: False, group: (null)]
+2026-10-23 17:24:50.557 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [5fd72338643040aab07e43603b88dd29], Licensed Package: False, Entitlement requested: [com.unity.editor.watermarks.trial], Result: [granted: False, group: (null)]
+2026-10-23 17:24:50.557 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [5fd72338643040aab07e43603b88dd29], Licensed Package: False, Entitlement requested: [com.unity.editor.headless], Result: [granted: True, group: F4-8ZSX-9GVU-UVYS-4UAG-XXXX]
+2026-10-23 17:25:07.609 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.editor.legacy.pro], Result: [granted: False, group: (null)]
+2026-10-23 17:25:07.609 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.editor.headless], Result: [granted: True, group: F4-8ZSX-9GVU-UVYS-4UAG-XXXX]
+2026-10-23 17:25:24.103 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.editor.legacy.pro], Result: [granted: False, group: (null)]
+2026-10-23 17:25:24.103 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.editor.watermarks.disable], Result: [granted: False, group: (null)]
+2026-10-23 17:25:24.103 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.editor.watermarks.prototyping], Result: [granted: False, group: (null)]
+2026-10-23 17:25:24.103 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.editor.watermarks.edu], Result: [granted: False, group: (null)]
+2026-10-23 17:25:24.103 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.editor.watermarks.trial], Result: [granted: False, group: (null)]
+2026-10-23 17:25:24.103 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.editor.time-limited-license], Result: [granted: False, group: (null)]
+2026-10-23 17:25:24.103 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.editor.cluster], Result: [granted: False, group: (null)]
+2026-10-23 17:25:24.103 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.editor.headless], Result: [granted: True, group: F4-8ZSX-9GVU-UVYS-4UAG-XXXX]
+2026-10-23 17:31:10.220 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.editor.legacy.pro], Result: [granted: False, group: (null)]
+2026-10-23 17:31:10.220 User Agent: [UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C)], Protocol version: [1.18.3], Session Id: [1f179e4967614489b26a0c62970b4a5d], Licensed Package: False, Entitlement requested: [com.unity.editor.headless], Result: [granted: True, group: F4-8ZSX-9GVU-UVYS-4UAG-XXXX]
 === /home/runner/.config/unity3d/Unity/Unity.Licensing.Client.log (tail 60)
-2026-10-23 16:28:21.566 - [  8360] - [     6] - INFO  - [Unity.Licensing.Platform.Permissions.PermissionService] Ensuring path with permissions: /home/runner/.local/share/unity3d/Unity/Unity_lic.ulf
-2026-10-23 16:28:21.576 - [  8360] - [    18] - INFO  - [Unity.Licensing.Client.Services.Licensing.GenesisLicensingService] [fe67f6009551457cb7a566b1ac6035df] ULF license updated successfully
-2026-10-23 16:28:21.577 - [  8360] - [    25] - INFO  - [Unity.Licensing.Client.Services.EntitlementResolverProvider] OnLicenseDirUpdate
-2026-10-23 16:28:21.578 - [  8360] - [    25] - INFO  - [Unity.Licensing.Client.Services.EntitlementResolverProvider] File watcher is locked (count = 1). Skipping resolver reload
-2026-10-23 16:28:21.580 - [  8360] - [    18] - ERROR - [Unity.Licensing.Client.Communication.Controllers.UpdateLicenseControllerV2] assigned update failed. Details: Token not found in cache
-2026-10-23 16:28:21.580 - [  8360] - [    18] - ERROR - [Unity.Licensing.Client.Communication.Controllers.UpdateLicenseControllerV2] floating update failed. Details: Unable to update floating licenses because the floating licensing is not enabled
-2026-10-23 16:28:21.580 - [  8360] - [    25] - INFO  - [Unity.Licensing.Client.Services.EntitlementResolverProvider] Updating entitlement resolver (source = UpdateLicenseOperation, task id = 2)
-2026-10-23 16:28:21.586 - [  8360] - [    25] - INFO  - [Unity.Licensing.Client.Services.Helpers.LicenseFilesMapper] Successfully parsed (ULF) license /home/runner/.local/share/unity3d/Unity/Unity_lic.ulf
-2026-10-23 16:28:21.586 - [  8360] - [    25] - INFO  - [Unity.Licensing.Client.Services.EntitlementResolverProvider] Rebuilding resolvers from local files:  /home/runner/.local/share/unity3d/Unity/Unity_lic.ulf (task id = 2, ct ref = 17497334)
-2026-10-23 16:28:21.586 - [  8360] - [    25] - INFO  - [Unity.Licensing.Client.Services.EntitlementResolverProvider] Processing ULF license /home/runner/.local/share/unity3d/Unity/Unity_lic.ulf
-2026-10-23 16:28:21.586 - [  8360] - [    25] - INFO  - [Unity.Licensing.Client.Services.EntitlementResolverProvider] Processed 1 license files in 00:00:00.0000670 (task id = 2, ct ref = 17497334)
-2026-10-23 16:28:21.601 - [  8360] - [    25] - INFO  - [Unity.Licensing.Client.Services.LicenseOfflineValidityEndingPeriodicNotifierService] OnEntitlementResolverUpdated, will restart timer
-2026-10-23 16:28:21.606 - [  8360] - [    13] - INFO  - [Unity.Licensing.Client.Services.LicenseOfflineValidityEndingPeriodicNotifierService] Will execute periodic notification again in 00:30:00
-2026-10-23 16:28:22.849 - [  8360] - [    15] - INFO  - [Unity.Licensing.Client.Communication.Controllers.EntitlementDetailsController] Finished handling EntitlementDetails request
-2026-10-23 16:28:22.850 - [  8360] - [    15] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] REQ-6 | Sending EntitlementDetailsResponse for request EntitlementDetailsRequest from UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C) (LocalIPC/1.18.3) [200]:  Found 0 entitlement groups and 31 free entitlements matching requested entitlement ids
-2026-10-23 16:28:23.111 - [  8360] - [    15] - INFO  - [Unity.Licensing.Client.Communication.Controllers.EntitlementDetailsController] Finished handling EntitlementDetails request
-2026-10-23 16:28:23.111 - [  8360] - [    15] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] REQ-7 | Sending EntitlementDetailsResponse for request EntitlementDetailsRequest from UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C) (LocalIPC/1.18.3) [200]:  Found 1 entitlement groups and 0 free entitlements matching requested entitlement ids
-2026-10-23 16:28:23.119 - [  8360] - [    15] - INFO  - [Unity.Licensing.Client.Communication.Controllers.EntitlementDetailsController] Finished handling EntitlementDetails request
-2026-10-23 16:28:23.119 - [  8360] - [    15] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] REQ-8 | Sending EntitlementDetailsResponse for request EntitlementDetailsRequest from UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C) (LocalIPC/1.18.3) [200]:  Found 0 entitlement groups and 31 free entitlements matching requested entitlement ids
-2026-10-23 16:29:43.293 - [  8360] - [    15] - INFO  - [Unity.Licensing.Client.Communication.Controllers.EntitlementDetailsController] Finished handling EntitlementDetails request
-2026-10-23 16:29:43.293 - [  8360] - [    15] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] REQ-9 | Sending EntitlementDetailsResponse for request EntitlementDetailsRequest from UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C) (LocalIPC/1.18.3) [200]:  Found 1 entitlement groups and 0 free entitlements matching requested entitlement ids
-2026-10-23 16:29:46.222 - [  8360] - [    28] - INFO  - [Unity.Licensing.Client.MultiClientPipeServer] Waiting for a connection (pipe #3)
-2026-10-23 16:29:46.230 - [  8360] - [    27] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#2] new pipe session: 047b9b9766964f6bbae6a67a49a55bdd
-2026-10-23 16:29:46.230 - [  8360] - [    27] - INFO  - [Unity.Licensing.Client.MultiClientPipeServer] A new client is connecting (pipe #2)
-2026-10-23 16:29:46.230 - [  8360] - [    27] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#2] Start accepting requests
-2026-10-23 16:29:46.232 - [  8360] - [    27] - INFO  - [Unity.Licensing.Client.Communication.Controllers.HandshakeController] Received handshake from: UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C) (LocalIPC/1.18.3)
-2026-10-23 16:29:46.232 - [  8360] - [    27] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#2] REQ-1 | Sending HandshakeResponse for request HandshakeRequest from UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C) (LocalIPC/1.18.3) [200]:  Handshake successful
-2026-10-23 16:29:46.236 - [  8360] - [    31] - INFO  - [Unity.Licensing.Client.Communication.Notifications.NotificationsPipeServer] Waiting for a connection (pipe #3)
-2026-10-23 16:29:46.237 - [  8360] - [    13] - INFO  - [Unity.Licensing.Client.Communication.Notifications.NotificationsPipeServer] A new client is connecting (pipe #2)
-2026-10-23 16:29:48.872 - [  8360] - [    27] - INFO  - [Unity.Licensing.Client.Communication.Controllers.EntitlementDetailsController] Finished handling EntitlementDetails request
-2026-10-23 16:29:48.872 - [  8360] - [    27] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#2] REQ-2 | Sending EntitlementDetailsResponse for request EntitlementDetailsRequest from UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C) (LocalIPC/1.18.3) [200]:  Found 1 entitlement groups and 0 free entitlements matching requested entitlement ids
-2026-10-23 16:29:52.972 - [  8360] - [    15] - INFO  - [Unity.Licensing.Client.Communication.Controllers.EntitlementDetailsController] Finished handling EntitlementDetails request
-2026-10-23 16:29:52.973 - [  8360] - [    15] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] REQ-10 | Sending EntitlementDetailsResponse for request EntitlementDetailsRequest from UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C) (LocalIPC/1.18.3) [200]:  Found 1 entitlement groups and 0 free entitlements matching requested entitlement ids
-2026-10-23 16:29:53.540 - [  8360] - [    15] - INFO  - [Unity.Licensing.Client.Communication.Controllers.EntitlementDetailsController] Finished handling EntitlementDetails request
-2026-10-23 16:29:53.541 - [  8360] - [    15] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] REQ-11 | Sending EntitlementDetailsResponse for request EntitlementDetailsRequest from UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C) (LocalIPC/1.18.3) [200]:  Found 1 entitlement groups and 0 free entitlements matching requested entitlement ids
-2026-10-23 16:30:57.588 - [  8360] - [    15] - INFO  - [Unity.Licensing.Client.Communication.Controllers.EntitlementDetailsController] Finished handling EntitlementDetails request
-2026-10-23 16:30:57.588 - [  8360] - [    15] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] REQ-12 | Sending EntitlementDetailsResponse for request EntitlementDetailsRequest from UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C) (LocalIPC/1.18.3) [200]:  Found 1 entitlement groups and 0 free entitlements matching requested entitlement ids
-2026-10-23 16:40:47.859 - [  8360] - [    15] - INFO  - [Unity.Licensing.Client.Communication.Controllers.EntitlementDetailsController] Finished handling EntitlementDetails request
-2026-10-23 16:40:47.859 - [  8360] - [    15] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] REQ-13 | Sending EntitlementDetailsResponse for request EntitlementDetailsRequest from UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C) (LocalIPC/1.18.3) [200]:  Found 1 entitlement groups and 0 free entitlements matching requested entitlement ids
-2026-10-23 16:40:49.066 - [  8360] - [    34] - INFO  - [Unity.Licensing.Client.Communication.Notifications.NotificationsPipeHandler#1] Notification channel with sessionId: dfc209fe7e4d465fb1206b266315e55d is shutting down
-2026-10-23 16:40:49.066 - [  8360] - [    15] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] Detected client disconnect
-2026-10-23 16:40:49.067 - [  8360] - [    15] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] End accepting requests
-2026-10-23 16:40:49.067 - [  8360] - [    34] - INFO  - [Unity.Licensing.Client.Communication.Notifications.NotificationsPipeServer] Connection closed (pipe #1)
-2026-10-23 16:40:49.067 - [  8360] - [    15] - INFO  - [Unity.Licensing.Client.MultiClientPipeServer] Connection closed (pipe #1)
-2026-10-23 16:40:49.068 - [  8360] - [    15] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] Disposing named pipe
-2026-10-23 16:40:49.068 - [  8360] - [    15] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] Disposing named pipe
-2026-10-23 16:40:49.244 - [  8360] - [    15] - INFO  - [Unity.Licensing.Client.Communication.Notifications.NotificationsPipeHandler#2] Notification channel with sessionId: 75ac9e54e2ef456ba39ab026f2d3f60e is shutting down
-2026-10-23 16:40:49.244 - [  8360] - [    15] - INFO  - [Unity.Licensing.Client.Communication.Notifications.NotificationsPipeServer] Connection closed (pipe #2)
-2026-10-23 16:40:49.244 - [  8360] - [    27] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#2] Detected client disconnect
-2026-10-23 16:40:49.244 - [  8360] - [    27] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#2] End accepting requests
-2026-10-23 16:40:49.244 - [  8360] - [    27] - INFO  - [Unity.Licensing.Client.MultiClientPipeServer] Connection closed (pipe #2)
-2026-10-23 16:40:49.245 - [  8360] - [    27] - INFO  - [Unity.Licensing.Client.Services.LicensingOrchestrator] Last active session ended.
-2026-10-23 16:40:49.245 - [  8360] - [    27] - INFO  - [Unity.Licensing.Client.PipeServerExecutor] Starting licensing client's exit timer
-2026-10-23 16:40:49.245 - [  8360] - [    27] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#2] Disposing named pipe
-2026-10-23 16:40:49.245 - [  8360] - [     8] - INFO  - [Unity.Licensing.Client.MultiClientPipeServer] Named pipe server is shutting down (thread: 8)
-2026-10-23 16:40:49.245 - [  8360] - [    27] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#2] Disposing named pipe
-2026-10-23 16:40:49.246 - [  8360] - [     8] - INFO  - [Unity.Licensing.Client.MultiClientPipeServer] Named pipe server has shutdown
-2026-10-23 16:40:49.247 - [  8360] - [     8] - INFO  - [Unity.Licensing.Client.Communication.Notifications.NotificationsPipeServer] Named pipe server is shutting down (thread: 8)
-2026-10-23 16:40:49.249 - [  8360] - [     8] - INFO  - [Unity.Licensing.Client.Communication.Notifications.NotificationsPipeServer] Named pipe server has shutdown
-2026-10-23 16:40:49.249 - [  8360] - [    10] - INFO  - [Unity.Licensing.Client.PipeServerExecutor] Releasing mutex Unity-LicenseClient-runner (thread: 10)
+2026-10-23 17:23:54.258 - [  8105] - [    13] - WARN  - [PackageService.HttpRequests] Handled response: [304 | Not Modified | ] from request: [GET | https://license.unity3d.com/licenses/v1/packages/acl | ]
+2026-10-23 17:23:54.261 - [  8105] - [    13] - INFO  - [Unity.Licensing.Client.Services.Package.PackageService] Skipping download. No difference between local and remote ETag (uri: "https://license.unity3d.com/licenses/v1/packages/acl", ETag: "59dd73d01930d363b853e88a531ae9c5")
+2026-10-23 17:23:54.262 - [  8105] - [    13] - INFO  - [Unity.Licensing.Client.Services.Package.PackageEnforcer] Successfully updated PACL file after 1 attempt(s). Next update in 24.00 hours.
+2026-10-23 17:23:54.262 - [  8105] - [    13] - INFO  - [Unity.Licensing.Client.Services.Package.PackageEnforcer] Loading remote PACL, revision: 53, version: 1.0
+2026-10-23 17:23:55.069 - [  8105] - [    25] - INFO  - [Unity.Licensing.Platform.Permissions.PermissionService] Ensuring path with permissions: /home/runner/.local/share/unity3d/Unity/Unity_lic.ulf
+2026-10-23 17:23:55.076 - [  8105] - [    13] - INFO  - [Unity.Licensing.Client.Services.Licensing.GenesisLicensingService] [7a1d964384ea4ed3ac541e7df064920f] ULF license updated successfully
+2026-10-23 17:23:55.079 - [  8105] - [    13] - ERROR - [Unity.Licensing.Client.Communication.Controllers.UpdateLicenseControllerV2] assigned update failed. Details: Token not found in cache
+2026-10-23 17:23:55.079 - [  8105] - [    13] - ERROR - [Unity.Licensing.Client.Communication.Controllers.UpdateLicenseControllerV2] floating update failed. Details: Unable to update floating licenses because the floating licensing is not enabled
+2026-10-23 17:23:55.079 - [  8105] - [    25] - INFO  - [Unity.Licensing.Client.Services.EntitlementResolverProvider] Updating entitlement resolver (source = UpdateLicenseOperation, task id = 2)
+2026-10-23 17:23:55.080 - [  8105] - [    21] - INFO  - [Unity.Licensing.Client.Services.EntitlementResolverProvider] OnLicenseDirUpdate
+2026-10-23 17:23:55.080 - [  8105] - [    21] - INFO  - [Unity.Licensing.Client.Services.EntitlementResolverProvider] File watcher is locked (count = 1). Skipping resolver reload
+2026-10-23 17:23:55.085 - [  8105] - [    25] - INFO  - [Unity.Licensing.Client.Services.Helpers.LicenseFilesMapper] Successfully parsed (ULF) license /home/runner/.local/share/unity3d/Unity/Unity_lic.ulf
+2026-10-23 17:23:55.086 - [  8105] - [    25] - INFO  - [Unity.Licensing.Client.Services.EntitlementResolverProvider] Rebuilding resolvers from local files:  /home/runner/.local/share/unity3d/Unity/Unity_lic.ulf (task id = 2, ct ref = 12314717)
+2026-10-23 17:23:55.086 - [  8105] - [    25] - INFO  - [Unity.Licensing.Client.Services.EntitlementResolverProvider] Processing ULF license /home/runner/.local/share/unity3d/Unity/Unity_lic.ulf
+2026-10-23 17:23:55.086 - [  8105] - [    25] - INFO  - [Unity.Licensing.Client.Services.EntitlementResolverProvider] Processed 1 license files in 00:00:00.0000532 (task id = 2, ct ref = 12314717)
+2026-10-23 17:23:55.099 - [  8105] - [    25] - INFO  - [Unity.Licensing.Client.Services.LicenseOfflineValidityEndingPeriodicNotifierService] OnEntitlementResolverUpdated, will restart timer
+2026-10-23 17:23:55.103 - [  8105] - [    25] - INFO  - [Unity.Licensing.Client.Services.LicenseOfflineValidityEndingPeriodicNotifierService] Will execute periodic notification again in 00:30:00
+2026-10-23 17:23:56.206 - [  8105] - [     8] - INFO  - [Unity.Licensing.Client.Communication.Controllers.EntitlementDetailsController] Finished handling EntitlementDetails request
+2026-10-23 17:23:56.207 - [  8105] - [     8] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] REQ-6 | Sending EntitlementDetailsResponse for request EntitlementDetailsRequest from UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C) (LocalIPC/1.18.3) [200]:  Found 0 entitlement groups and 31 free entitlements matching requested entitlement ids
+2026-10-23 17:23:56.361 - [  8105] - [     8] - INFO  - [Unity.Licensing.Client.Communication.Controllers.EntitlementDetailsController] Finished handling EntitlementDetails request
+2026-10-23 17:23:56.361 - [  8105] - [     8] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] REQ-7 | Sending EntitlementDetailsResponse for request EntitlementDetailsRequest from UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C) (LocalIPC/1.18.3) [200]:  Found 1 entitlement groups and 0 free entitlements matching requested entitlement ids
+2026-10-23 17:23:56.364 - [  8105] - [     8] - INFO  - [Unity.Licensing.Client.Communication.Controllers.EntitlementDetailsController] Finished handling EntitlementDetails request
+2026-10-23 17:23:56.364 - [  8105] - [     8] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] REQ-8 | Sending EntitlementDetailsResponse for request EntitlementDetailsRequest from UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C) (LocalIPC/1.18.3) [200]:  Found 0 entitlement groups and 31 free entitlements matching requested entitlement ids
+2026-10-23 17:24:49.356 - [  8105] - [    28] - INFO  - [Unity.Licensing.Client.MultiClientPipeServer] Waiting for a connection (pipe #3)
+2026-10-23 17:24:49.359 - [  8105] - [    21] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#2] new pipe session: 5fd72338643040aab07e43603b88dd29
+2026-10-23 17:24:49.359 - [  8105] - [    21] - INFO  - [Unity.Licensing.Client.MultiClientPipeServer] A new client is connecting (pipe #2)
+2026-10-23 17:24:49.359 - [  8105] - [    21] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#2] Start accepting requests
+2026-10-23 17:24:49.359 - [  8105] - [    21] - INFO  - [Unity.Licensing.Client.Communication.Controllers.HandshakeController] Received handshake from: UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C) (LocalIPC/1.18.3)
+2026-10-23 17:24:49.360 - [  8105] - [    21] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#2] REQ-1 | Sending HandshakeResponse for request HandshakeRequest from UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C) (LocalIPC/1.18.3) [200]:  Handshake successful
+2026-10-23 17:24:49.365 - [  8105] - [    30] - INFO  - [Unity.Licensing.Client.Communication.Notifications.NotificationsPipeServer] Waiting for a connection (pipe #3)
+2026-10-23 17:24:49.365 - [  8105] - [    25] - INFO  - [Unity.Licensing.Client.Communication.Notifications.NotificationsPipeServer] A new client is connecting (pipe #2)
+2026-10-23 17:24:50.557 - [  8105] - [    21] - INFO  - [Unity.Licensing.Client.Communication.Controllers.EntitlementDetailsController] Finished handling EntitlementDetails request
+2026-10-23 17:24:50.557 - [  8105] - [    21] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#2] REQ-2 | Sending EntitlementDetailsResponse for request EntitlementDetailsRequest from UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C) (LocalIPC/1.18.3) [200]:  Found 1 entitlement groups and 0 free entitlements matching requested entitlement ids
+2026-10-23 17:25:07.609 - [  8105] - [     8] - INFO  - [Unity.Licensing.Client.Communication.Controllers.EntitlementDetailsController] Finished handling EntitlementDetails request
+2026-10-23 17:25:07.609 - [  8105] - [     8] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] REQ-9 | Sending EntitlementDetailsResponse for request EntitlementDetailsRequest from UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C) (LocalIPC/1.18.3) [200]:  Found 1 entitlement groups and 0 free entitlements matching requested entitlement ids
+2026-10-23 17:25:24.103 - [  8105] - [     8] - INFO  - [Unity.Licensing.Client.Communication.Controllers.EntitlementDetailsController] Finished handling EntitlementDetails request
+2026-10-23 17:25:24.103 - [  8105] - [     8] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] REQ-10 | Sending EntitlementDetailsResponse for request EntitlementDetailsRequest from UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C) (LocalIPC/1.18.3) [200]:  Found 1 entitlement groups and 0 free entitlements matching requested entitlement ids
+2026-10-23 17:31:10.220 - [  8105] - [     8] - INFO  - [Unity.Licensing.Client.Communication.Controllers.EntitlementDetailsController] Finished handling EntitlementDetails request
+2026-10-23 17:31:10.220 - [  8105] - [     8] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] REQ-11 | Sending EntitlementDetailsResponse for request EntitlementDetailsRequest from UnityEditor/6000.6.5f1 (Linux; U; Linux 6.1; C) (LocalIPC/1.18.3) [200]:  Found 1 entitlement groups and 0 free entitlements matching requested entitlement ids
+2026-10-23 17:31:11.272 - [  8105] - [    31] - INFO  - [Unity.Licensing.Client.Communication.Notifications.NotificationsPipeHandler#1] Notification channel with sessionId: 9cc848bfd20a49828faad2075ae6e200 is shutting down
+2026-10-23 17:31:11.272 - [  8105] - [    31] - INFO  - [Unity.Licensing.Client.Communication.Notifications.NotificationsPipeServer] Connection closed (pipe #1)
+2026-10-23 17:31:11.273 - [  8105] - [     8] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] Detected client disconnect
+2026-10-23 17:31:11.273 - [  8105] - [     8] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] End accepting requests
+2026-10-23 17:31:11.273 - [  8105] - [     8] - INFO  - [Unity.Licensing.Client.MultiClientPipeServer] Connection closed (pipe #1)
+2026-10-23 17:31:11.274 - [  8105] - [     8] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] Disposing named pipe
+2026-10-23 17:31:11.274 - [  8105] - [     8] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] Disposing named pipe
+2026-10-23 17:31:11.510 - [  8105] - [     8] - INFO  - [Unity.Licensing.Client.Communication.Notifications.NotificationsPipeHandler#2] Notification channel with sessionId: ce6a5671b0bc4bb381940b7d9bc69121 is shutting down
+2026-10-23 17:31:11.510 - [  8105] - [     8] - INFO  - [Unity.Licensing.Client.Communication.Notifications.NotificationsPipeServer] Connection closed (pipe #2)
+2026-10-23 17:31:11.510 - [  8105] - [    21] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#2] Detected client disconnect
+2026-10-23 17:31:11.510 - [  8105] - [    21] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#2] End accepting requests
+2026-10-23 17:31:11.510 - [  8105] - [    21] - INFO  - [Unity.Licensing.Client.MultiClientPipeServer] Connection closed (pipe #2)
+2026-10-23 17:31:11.510 - [  8105] - [    21] - INFO  - [Unity.Licensing.Client.Services.LicensingOrchestrator] Last active session ended.
+2026-10-23 17:31:11.510 - [  8105] - [    21] - INFO  - [Unity.Licensing.Client.PipeServerExecutor] Starting licensing client's exit timer
+2026-10-23 17:31:11.510 - [  8105] - [    21] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#2] Disposing named pipe
+2026-10-23 17:31:11.510 - [  8105] - [    21] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#2] Disposing named pipe
+2026-10-23 17:31:11.510 - [  8105] - [    12] - INFO  - [Unity.Licensing.Client.MultiClientPipeServer] Named pipe server is shutting down (thread: 12)
+2026-10-23 17:31:11.512 - [  8105] - [    12] - INFO  - [Unity.Licensing.Client.MultiClientPipeServer] Named pipe server has shutdown
+2026-10-23 17:31:11.512 - [  8105] - [    12] - INFO  - [Unity.Licensing.Client.Communication.Notifications.NotificationsPipeServer] Named pipe server is shutting down (thread: 12)
+2026-10-23 17:31:11.513 - [  8105] - [    12] - INFO  - [Unity.Licensing.Client.Communication.Notifications.NotificationsPipeServer] Named pipe server has shutdown
+2026-10-23 17:31:11.514 - [  8105] - [    10] - INFO  - [Unity.Licensing.Client.PipeServerExecutor] Releasing mutex Unity-LicenseClient-runner (thread: 10)
 === URP setup log: key lines
 15:[Licensing::Module] Trying to connect to existing licensing client channel...
 16:[Licensing::IpcConnector] Channel LicenseClient-runner doesn't exist
-17:[Licensing::Module] Successfully launched the LicensingClient (PId: 5974)
-83:[Licensing::IpcConnector] Successfully connected to: "LicenseClient-runner" at "2026-10-23T16:26:19.095024Z"
+17:[Licensing::Module] Successfully launched the LicensingClient (PId: 5739)
+83:[Licensing::IpcConnector] Successfully connected to: "LicenseClient-runner" at "2026-10-23T17:22:33.265676Z"
 85:[Licensing::Client] Handshaking with LicensingClient:
-91:[Licensing::Module] Successfully connected to LicensingClient on channel: "LicenseClient-runner" (connect: 0.57s, validation: 0.24s, handshake: 0.00s)
-92:[Licensing::IpcConnector] Successfully connected to: "LicenseClient-runner-notifications" at "2026-10-23T16:26:19.332713Z"
-93:[Licensing::Module] Connected to LicensingClient (PId: 5974, launch time: 0.00, total connection time: 0.81s)
+91:[Licensing::Module] Successfully connected to LicensingClient on channel: "LicenseClient-runner" (connect: 0.38s, validation: 0.15s, handshake: 0.00s)
+92:[Licensing::IpcConnector] Successfully connected to: "LicenseClient-runner-notifications" at "2026-10-23T17:22:33.410787Z"
+93:[Licensing::Module] Connected to LicensingClient (PId: 5739, launch time: 0.00, total connection time: 0.52s)
 94:[Licensing::Module] Error: Access token is unavailable; failed to update
 95:[Licensing::Client] Successfully resolved entitlement details
-97:[Licensing::Module] Licensing is not yet initialized.
-98:[Licensing::Module] License group:
-103:[Licensing::Client] Successfully updated license, isAsync: True, time: 0.04
-104:[Licensing::Client] Successfully resolved entitlement details
-105:[Licensing::Module] Licensing Background thread has ended after 0.97s
-106:[Licensing::Module] Licensing is initialized (took 0.04s).
-107:[Licensing::Client] Successfully resolved entitlement details
-119:ALSA lib conf.c:5208:(_snd_config_evaluate) function snd_func_card_inum returned error: No such file or directory
-121:ALSA lib conf.c:5208:(_snd_config_evaluate) function snd_func_concat returned error: No such file or directory
-123:ALSA lib conf.c:5208:(_snd_config_evaluate) function snd_func_refer returned error: No such file or directory
-124:ALSA lib conf.c:5731:(snd_config_expand) Evaluate error: No such file or directory
-129:ALSA lib conf.c:5208:(_snd_config_evaluate) function snd_func_card_inum returned error: No such file or directory
-131:ALSA lib conf.c:5208:(_snd_config_evaluate) function snd_func_concat returned error: No such file or directory
-133:ALSA lib conf.c:5208:(_snd_config_evaluate) function snd_func_refer returned error: No such file or directory
-134:ALSA lib conf.c:5731:(snd_config_expand) Evaluate error: No such file or directory
-174:[Licensing::Client] Successfully resolved entitlement details
+96:[Licensing::Module] License group:
+101:[Licensing::Client] Successfully updated license, isAsync: True, time: 0.04
+102:[Licensing::Client] Successfully resolved entitlement details
+103:[Licensing::Module] Licensing Background thread has ended after 0.70s
+105:[Licensing::Client] Successfully resolved entitlement details
+117:ALSA lib conf.c:5208:(_snd_config_evaluate) function snd_func_card_inum returned error: No such file or directory
+119:ALSA lib conf.c:5208:(_snd_config_evaluate) function snd_func_concat returned error: No such file or directory
+121:ALSA lib conf.c:5208:(_snd_config_evaluate) function snd_func_refer returned error: No such file or directory
+122:ALSA lib conf.c:5731:(snd_config_expand) Evaluate error: No such file or directory
+127:ALSA lib conf.c:5208:(_snd_config_evaluate) function snd_func_card_inum returned error: No such file or directory
+129:ALSA lib conf.c:5208:(_snd_config_evaluate) function snd_func_concat returned error: No such file or directory
+131:ALSA lib conf.c:5208:(_snd_config_evaluate) function snd_func_refer returned error: No such file or directory
+132:ALSA lib conf.c:5731:(snd_config_expand) Evaluate error: No such file or directory
+172:[Licensing::Client] Successfully resolved entitlement details
+192:[Licensing::Client] Successfully resolved entitlement details
 195:[Licensing::Client] Successfully resolved entitlement details
-198:[Licensing::Client] Successfully resolved entitlement details
-236:[Licensing::Client] Successfully resolved entitlement details
-1467:[Licensing::Client] Successfully resolved entitlement details
-2018:UnityEngine.Rendering.RenderPipelineGlobalSettingsUtils:TryEnsure<UnityEngine.Rendering.Universal.UniversalRenderPipelineGlobalSettings, UnityEngine.Rendering.Universal.UniversalRenderPipeline> (UnityEngine.Rendering.Universal.UniversalRenderPipelineGlobalSettings&,string,bool,System.Exception&) (at ./Library/PackageCache/com.unity.render-pipelines.core@514690c4e8b0/Runtime/RenderPipeline/RenderPipelineGlobalSettingsUtils.cs:126)
-2095:URPSETUP: start, Unity 6000.6.5f1
-2108:[Licensing::Client] Successfully resolved entitlement details
-2325:URPSETUP: renderer via CreateRendererAsset True
-2478:URPSETUP: global settings Assets/UniversalRenderPipelineGlobalSettings.asset
-2490:URPSETUP: URP asset Forward+ HDR MSAA2 shadows 2048/60m 2 cascades soft, rendering layers, SSAO feature lid 1445375640948857198
-2506:URPSETUP: rendering layers defined 3 (was 1), mask 7
-2518:URPSETUP: ok asset Assets/Generated/FF_URP.asset default FF_URP colour Linear apis WebGPU,OpenGLES3
-2530:[Licensing::Client] Successfully resolved entitlement details
-2537:[Licensing::IpcConnector] LicenseClient-runner-notifications channel disconnected successfully.
-2538:[Licensing::IpcConnector] LicenseClient-runner channel disconnected successfully.
-2551:##utp:{"type":"MemoryLeaks","version":2,"phase":"Immediate","time":1792772899291,"processId":5963,"allocatedMemory":9845839,"memoryLabels":[{"Default":235881},{"Permanent":16152},{"Thread":1052776},{"Manager":17613},{"VertexData":8},{"Geometry":408},{"Texture":24},{"Shader":858049},{"Material":12174},{"GfxDevice":36104},{"Animation":1016},{"Audio":1280},{"Font":93487},{"FreeType":10732},{"FontEngine":736},{"Physics":1970},{"Physics2D":16},{"Serialization":17976},{"Input":60256},{"JobScheduler":256},{"TextLib":336},{"Mono":80},{"MonoCode":96},{"ScriptingNativeRuntime":155088},{"BaseObject":42568},{"Resource":1268},{"Renderer":2496},{"Transform":4717},{"File":4232},{"WebCam":80},{"Culling":32},{"Terrain":11346},{"Wind":24},{"String":1365662},{"StaticString":3808},{"Utility":2672752},{"Curl":2511},{"PoolAlloc":1960},{"AI":80},{"TypeTree":18285},{"ScriptManager":12656},{"CodeReload":448},{"RuntimeInitializeOnLoadManager":64},{"Sprites":102},{"SpriteAtlas":120},{"GI":7408},{"Director":8280},{"CloudService":7712},{"WebRequest":5267},{"VR":49554},{"SceneManager":640},{"Video":64},{"LazyScriptCache":32},{"Camera":729},{"Secure":10337},{"SerializationCache":9256},{"APIUpdating":10320},{"Subsystems":336},{"VirtualTexturing":57552},{"StaticSafetyDebugInfo":278528},{"Analytics":592},{"Hierarchy":1436},{"UIElements":40},{"CoreStats":14456},{"Identifiers":7152},{"Gui":160},{"EditorUtility":66577},{"VersionControl":8},{"Undo":963},{"AssetDatabase":2533865},{"AssetImporter":40},{"EditorGi":328},{"UnityConnect":40449},{"Upm":1760},{"UpmDiagnostics":8},{"AssetCompliance":96},{"DrivenProperties":72},{"LocalIPC":149},{"ProfilerEditor":9746},{"CoreBusinessMetrics":2530},{"Windowing":480},{"Licensing":1128},{"AssetReference":32},{"IPCStream":32}]}
+233:[Licensing::Client] Successfully resolved entitlement details
+2010:UnityEngine.Rendering.RenderPipelineGlobalSettingsUtils:TryEnsure<UnityEngine.Rendering.Universal.UniversalRenderPipelineGlobalSettings, UnityEngine.Rendering.Universal.UniversalRenderPipeline> (UnityEngine.Rendering.Universal.UniversalRenderPipelineGlobalSettings&,string,bool,System.Exception&) (at ./Library/PackageCache/com.unity.render-pipelines.core@514690c4e8b0/Runtime/RenderPipeline/RenderPipelineGlobalSettingsUtils.cs:126)
+2087:URPSETUP: start, Unity 6000.6.5f1
+2270:[Licensing::Client] Successfully resolved entitlement details
+2316:URPSETUP: renderer via CreateRendererAsset True
+2466:URPSETUP: global settings Assets/UniversalRenderPipelineGlobalSettings.asset
+2478:URPSETUP: URP asset Forward+ HDR MSAA2 shadows 2048/60m 2 cascades soft, rendering layers, SSAO feature lid -4125920173829116660
+2494:URPSETUP: rendering layers defined 3 (was 1), mask 7
+2506:URPSETUP: ok asset Assets/Generated/FF_URP.asset default FF_URP colour Linear apis WebGPU,OpenGLES3
+2518:[Licensing::Client] Successfully resolved entitlement details
+2525:[Licensing::IpcConnector] LicenseClient-runner-notifications channel disconnected successfully.
+2526:[Licensing::IpcConnector] LicenseClient-runner channel disconnected successfully.
+2539:##utp:{"type":"MemoryLeaks","version":2,"phase":"Immediate","time":1792776233324,"processId":5728,"allocatedMemory":9716672,"memoryLabels":[{"Default":235881},{"Permanent":16152},{"Thread":1052816},{"Manager":17613},{"VertexData":8},{"Geometry":408},{"Texture":24},{"Shader":858049},{"Material":12174},{"GfxDevice":36104},{"Animation":1016},{"Audio":1280},{"Font":93487},{"FreeType":10732},{"FontEngine":736},{"Physics":1970},{"Physics2D":16},{"Serialization":17976},{"Input":60256},{"JobScheduler":256},{"TextLib":336},{"Mono":80},{"MonoCode":96},{"ScriptingNativeRuntime":155088},{"BaseObject":42568},{"Resource":1268},{"Renderer":2496},{"Transform":4717},{"File":4232},{"WebCam":80},{"Culling":32},{"Terrain":11346},{"Wind":24},{"String":1236497},{"StaticString":3808},{"Utility":2672752},{"Curl":2430},{"PoolAlloc":1960},{"AI":80},{"TypeTree":18285},{"ScriptManager":12656},{"CodeReload":448},{"RuntimeInitializeOnLoadManager":64},{"Sprites":102},{"SpriteAtlas":120},{"GI":7408},{"Director":8280},{"CloudService":7712},{"WebRequest":5306},{"VR":49554},{"SceneManager":640},{"Video":64},{"LazyScriptCache":32},{"Camera":729},{"Secure":10337},{"SerializationCache":9256},{"APIUpdating":10320},{"Subsystems":336},{"VirtualTexturing":57552},{"StaticSafetyDebugInfo":278528},{"Analytics":592},{"Hierarchy":1436},{"UIElements":40},{"CoreStats":14456},{"Identifiers":7152},{"Gui":160},{"EditorUtility":66577},{"VersionControl":8},{"Undo":963},{"AssetDatabase":2533865},{"AssetImporter":40},{"EditorGi":328},{"UnityConnect":40449},{"Upm":1760},{"UpmDiagnostics":8},{"AssetCompliance":96},{"DrivenProperties":72},{"LocalIPC":149},{"ProfilerEditor":9746},{"CoreBusinessMetrics":2530},{"Windowing":480},{"Licensing":1128},{"AssetReference":32},{"IPCStream":32}]}
 === shader errors
 === error lines
-14:[Licensing::Module] Trying to connect to existing licensing client channel...
-15:[Licensing::IpcConnector] Channel LicenseClient-runner doesn't exist
-16:[Licensing::Module] Successfully launched the LicensingClient (PId: 8360)
+15:[Licensing::Module] Trying to connect to existing licensing client channel...
+16:[Licensing::IpcConnector] Channel LicenseClient-runner doesn't exist
+17:[Licensing::Module] Successfully launched the LicensingClient (PId: 8105)
 29:BuildScript.BuildWebGL
 84:[Licensing::Module] Licensing is not yet initialized.
-85:[Licensing::IpcConnector] Successfully connected to: "LicenseClient-runner" at "2026-10-23T16:28:20.346043Z"
-95:[Licensing::Client] Handshaking with LicensingClient:
-101:[Licensing::Module] Successfully connected to LicensingClient on channel: "LicenseClient-runner" (connect: 0.86s, validation: 0.18s, handshake: 0.00s)
-102:[Licensing::IpcConnector] Successfully connected to: "LicenseClient-runner-notifications" at "2026-10-23T16:28:20.523685Z"
-103:[Licensing::Module] Connected to LicensingClient (PId: 8360, launch time: 0.00, total connection time: 1.04s)
-104:[Licensing::Module] Error: Access token is unavailable; failed to update
-105:[Licensing::Client] Successfully resolved entitlement details
-106:[Licensing::Module] License group:
-111:[Licensing::Client] Successfully updated license, isAsync: True, time: 0.01
-112:[Licensing::Client] Successfully resolved entitlement details
-113:[Licensing::Module] Licensing Background thread has ended after 1.09s
-114:[Licensing::Module] Licensing is initialized (took 0.56s).
-115:[Licensing::Client] Successfully resolved entitlement details
+85:[Licensing::IpcConnector] Successfully connected to: "LicenseClient-runner" at "2026-10-23T17:23:54.013544Z"
+87:[Licensing::Client] Handshaking with LicensingClient:
+93:[Licensing::Module] Successfully connected to LicensingClient on channel: "LicenseClient-runner" (connect: 0.57s, validation: 0.06s, handshake: 0.00s)
+94:[Licensing::IpcConnector] Successfully connected to: "LicenseClient-runner-notifications" at "2026-10-23T17:23:54.073495Z"
+95:[Licensing::Module] Connected to LicensingClient (PId: 8105, launch time: 0.00, total connection time: 0.63s)
+96:[Licensing::Module] Error: Access token is unavailable; failed to update
+97:[Licensing::Client] Successfully resolved entitlement details
+98:[Licensing::Module] License group:
+103:[Licensing::Client] Successfully updated license, isAsync: True, time: 0.01
+104:[Licensing::Client] Successfully resolved entitlement details
+105:[Licensing::Module] Licensing Background thread has ended after 0.66s
+106:[Licensing::Module] Licensing is initialized (took 0.33s).
+107:[Licensing::Client] Successfully resolved entitlement details
 119:ALSA lib conf.c:5208:(_snd_config_evaluate) function snd_func_card_inum returned error: No such file or directory
 121:ALSA lib conf.c:5208:(_snd_config_evaluate) function snd_func_concat returned error: No such file or directory
 123:ALSA lib conf.c:5208:(_snd_config_evaluate) function snd_func_refer returned error: No such file or directory
@@ -257,145 +251,144 @@ published
 134:ALSA lib conf.c:5731:(snd_config_expand) Evaluate error: No such file or directory
 136:FMOD failed to initialize the output device.: "Error initializing output device. " (60)
 176:[Licensing::Client] Successfully resolved entitlement details
-197:[Licensing::Client] Successfully resolved entitlement details
-200:[Licensing::Client] Successfully resolved entitlement details
-1123:Assets/Editor/BuildScript.cs(476,13): warning CS0618: 'LightingSettings.autoGenerate' is obsolete: 'LightingSettings.autoGenerate is obsolete.'
-1431:Assets/Editor/BuildScript.cs(476,13): warning CS0618: 'LightingSettings.autoGenerate' is obsolete: 'LightingSettings.autoGenerate is obsolete.'
-1433:[Licensing::Client] Successfully resolved entitlement details
-1473:			BuildScriptInfoCaches (64ms)
-1603:BuildScript: start, Unity 6000.6.5f1
-1610:BuildScript:Run () (at Assets/Editor/BuildScript.cs:52)
-1611:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
-1613:(Filename: Assets/Editor/BuildScript.cs Line: 52)
-1640:[Licensing::Client] Successfully resolved entitlement details
-1673:BuildScript:SetStatic (System.Type,string,object) (at Assets/Editor/BuildScript.cs:121)
-1674:BuildScript:ConfigurePlayer () (at Assets/Editor/BuildScript.cs:150)
-1675:BuildScript:Run () (at Assets/Editor/BuildScript.cs:57)
-1676:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
-1678:(Filename: Assets/Editor/BuildScript.cs Line: 121)
-1687:BuildScript:SetStatic (System.Type,string,object) (at Assets/Editor/BuildScript.cs:121)
-1688:BuildScript:ConfigurePlayer () (at Assets/Editor/BuildScript.cs:151)
-1689:BuildScript:Run () (at Assets/Editor/BuildScript.cs:57)
-1690:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
-1692:(Filename: Assets/Editor/BuildScript.cs Line: 121)
-1694:BuildScript: WebGL graphics APIs WebGPU,OpenGLES3 colour Linear
-1701:BuildScript:ConfigurePlayer () (at Assets/Editor/BuildScript.cs:152)
-1702:BuildScript:Run () (at Assets/Editor/BuildScript.cs:57)
-1703:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
-1705:(Filename: Assets/Editor/BuildScript.cs Line: 152)
-1710:BuildScript: pipeline FF_URP colour Linear apis WebGPU,OpenGLES3
-1717:BuildScript:Run () (at Assets/Editor/BuildScript.cs:65)
-1718:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
-1720:(Filename: Assets/Editor/BuildScript.cs Line: 65)
-1732:BuildScript:DefineRenderingLayers () (at Assets/Editor/BuildScript.cs:204)
-1733:BuildScript:Run () (at Assets/Editor/BuildScript.cs:67)
-1734:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
-1736:(Filename: Assets/Editor/BuildScript.cs Line: 204)
-1738:[Licensing::Client] Successfully resolved entitlement details
-1765:BuildScript: HDRI sky (FF/Sky)
-1772:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:434)
-1773:BuildScript:Run () (at Assets/Editor/BuildScript.cs:68)
-1774:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
-1776:(Filename: Assets/Editor/BuildScript.cs Line: 434)
-1778:BuildScript: FF/Skin shader
-1785:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:395)
-1786:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:452)
-1787:BuildScript:Run () (at Assets/Editor/BuildScript.cs:68)
-1788:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
-1790:(Filename: Assets/Editor/BuildScript.cs Line: 395)
-1795:BuildScript: FF/Foliage shader
-1802:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:395)
-1803:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:453)
-1804:BuildScript:Run () (at Assets/Editor/BuildScript.cs:68)
-1805:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
-1807:(Filename: Assets/Editor/BuildScript.cs Line: 395)
-1812:BuildScript: LB/Water shader
-1819:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:395)
-1820:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:454)
-1821:BuildScript:Run () (at Assets/Editor/BuildScript.cs:68)
-1822:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
-1824:(Filename: Assets/Editor/BuildScript.cs Line: 395)
-1829:BuildScript: FF/Underwater shader
-1836:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:395)
-1837:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:456)
-1838:BuildScript:Run () (at Assets/Editor/BuildScript.cs:68)
-1839:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
-1841:(Filename: Assets/Editor/BuildScript.cs Line: 395)
-1846:BuildScript: Unlit/Texture shader
-1853:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:395)
-1854:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:457)
-1855:BuildScript:Run () (at Assets/Editor/BuildScript.cs:68)
-1856:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
-1858:(Filename: Assets/Editor/BuildScript.cs Line: 395)
-1863:BuildScript: FF/RealTri shader
-1870:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:395)
-1871:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:459)
-1872:BuildScript:Run () (at Assets/Editor/BuildScript.cs:68)
-1873:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
-1875:(Filename: Assets/Editor/BuildScript.cs Line: 395)
-1880:BuildScript: FF/RealWater shader
-1887:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:395)
-1888:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:460)
-1889:BuildScript:Run () (at Assets/Editor/BuildScript.cs:68)
-1890:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
-1892:(Filename: Assets/Editor/BuildScript.cs Line: 395)
-1897:BuildScript: FF/Grass56 shader
-1904:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:395)
-1905:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:462)
-1906:BuildScript:Run () (at Assets/Editor/BuildScript.cs:68)
-1907:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
-1909:(Filename: Assets/Editor/BuildScript.cs Line: 395)
-1914:BuildScript: FF/Skin57 shader
-1921:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:395)
-1922:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:468)
-1923:BuildScript:Run () (at Assets/Editor/BuildScript.cs:68)
-1924:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
-1926:(Filename: Assets/Editor/BuildScript.cs Line: 395)
-1943:BuildScript: terrain textures True True True
-1950:BuildScript:CreateTerrain () (at Assets/Editor/BuildScript.cs:608)
-1951:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:504)
-1952:BuildScript:Run () (at Assets/Editor/BuildScript.cs:68)
-1953:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
-1955:(Filename: Assets/Editor/BuildScript.cs Line: 608)
-1975:BuildScript: terrain NM material
-1982:BuildScript:CreateTerrain () (at Assets/Editor/BuildScript.cs:654)
-1983:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:504)
-1984:BuildScript:Run () (at Assets/Editor/BuildScript.cs:68)
-1985:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
-1987:(Filename: Assets/Editor/BuildScript.cs Line: 654)
-2021:BuildScript: ffu6 volumes game True studio True ssao True shaders FF/Std True FF/Unlit True FF/Skin57 True FF/Grass56 True URP terrain True
-2028:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:529)
-2029:BuildScript:Run () (at Assets/Editor/BuildScript.cs:68)
-2030:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
-2032:(Filename: Assets/Editor/BuildScript.cs Line: 529)
-2037:BuildScript: scene saved Assets/Scenes/Main.unity
-2044:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:536)
-2045:BuildScript:Run () (at Assets/Editor/BuildScript.cs:68)
-2046:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
-2048:(Filename: Assets/Editor/BuildScript.cs Line: 536)
-2071:BuildScript:Run () (at Assets/Editor/BuildScript.cs:79)
-2072:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
-2092:BuildScript:Run () (at Assets/Editor/BuildScript.cs:79)
-2093:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
-2111:BuildScript:Run () (at Assets/Editor/BuildScript.cs:79)
-2112:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
-2130:BuildScript:Run () (at Assets/Editor/BuildScript.cs:79)
-2131:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
-8949:[Licensing::Client] Successfully resolved entitlement details
-9921: 0.2 kb	 0.0% Packages/com.unity.render-pipelines.core/Runtime/RenderGraph/RenderGraph.ExceptionMessages.cs
-10492: 0.1 kb	 0.0% Packages/com.unity.inputsystem/InputSystem/Utilities/ExceptionHelpers.cs
-11053:[Licensing::Client] Successfully resolved entitlement details
-11056:BUILD_RESULT: Succeeded errors=0 warnings=286 size=71720214 time=00:10:38.7270370
-11063:BuildScript:Run () (at Assets/Editor/BuildScript.cs:81)
-11064:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
-11066:(Filename: Assets/Editor/BuildScript.cs Line: 81)
-11068:BUILD_SCRIPT_EXIT: 0
-11075:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:46)
-11077:(Filename: Assets/Editor/BuildScript.cs Line: 46)
-11088:[Licensing::IpcConnector] LicenseClient-runner-notifications channel disconnected successfully.
-11089:[Licensing::IpcConnector] LicenseClient-runner channel disconnected successfully.
-11103:##utp:{"type":"MemoryLeaks","version":2,"phase":"Immediate","time":1792773658909,"processId":8348,"allocatedMemory":10432962,"memoryLabels":[{"Default":228803},{"Permanent":16152},{"Thread":1052336},{"Manager":18221},{"VertexData":8},{"Geometry":408},{"Texture":24},{"Shader":841449},{"Material":132},{"GfxDevice":36104},{"Animation":1016},{"Audio":720},{"FreeType":8},{"FontEngine":736},{"Physics":1970},{"Physics2D":16},{"Serialization":15696},{"Input":60256},{"JobScheduler":256},{"TextLib":336},{"Mono":80},{"MonoCode":1248},{"ScriptingNativeRuntime":155088},{"BaseObject":52088},{"Resource":1268},{"Renderer":2496},{"Transform":4717},{"File":16104},{"WebCam":80},{"Culling":32},{"Terrain":11346},{"Wind":24},{"String":2062347},{"StaticString":3808},{"Utility":2672752},{"Curl":2511},{"PoolAlloc":2056},{"AI":80},{"TypeTree":18285},{"ScriptManager":12656},{"CodeReload":448},{"RuntimeInitializeOnLoadManager":64},{"Sprites":102},{"SpriteAtlas":120},{"GI":7408},{"Director":8280},{"CloudService":7712},{"WebRequest":20968},{"VR":49554},{"SceneManager":640},{"Video":64},{"LazyScriptCache":32},{"Camera":729},{"Secure":10337},{"SerializationCache":9256},{"APIUpdating":10320},{"Subsystems":336},{"VirtualTexturing":57552},{"StaticSafetyDebugInfo":278528},{"Analytics":592},{"Hierarchy":1436},{"UIElements":40},{"CoreStats":14456},{"Identifiers":7152},{"Gui":160},{"EditorUtility":71945},{"VersionControl":8},{"Undo":963},{"AssetDatabase":2523197},{"AssetImporter":40},{"EditorGi":328},{"UnityConnect":40449},{"Upm":1760},{"UpmDiagnostics":8},{"AssetCompliance":96},{"DrivenProperties":72},{"LocalIPC":149},{"ProfilerEditor":9746},{"CoreBusinessMetrics":2530},{"Windowing":480},{"Licensing":1128},{"AssetReference":32},{"IPCStream":32}]}
+195:[Licensing::Client] Successfully resolved entitlement details
+198:[Licensing::Client] Successfully resolved entitlement details
+1120:Assets/Editor/BuildScript.cs(476,13): warning CS0618: 'LightingSettings.autoGenerate' is obsolete: 'LightingSettings.autoGenerate is obsolete.'
+1428:Assets/Editor/BuildScript.cs(476,13): warning CS0618: 'LightingSettings.autoGenerate' is obsolete: 'LightingSettings.autoGenerate is obsolete.'
+1469:			BuildScriptInfoCaches (26ms)
+1595:BuildScript: start, Unity 6000.6.5f1
+1602:BuildScript:Run () (at Assets/Editor/BuildScript.cs:52)
+1603:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
+1605:(Filename: Assets/Editor/BuildScript.cs Line: 52)
+1616:BuildScript:SetStatic (System.Type,string,object) (at Assets/Editor/BuildScript.cs:121)
+1617:BuildScript:ConfigurePlayer () (at Assets/Editor/BuildScript.cs:150)
+1618:BuildScript:Run () (at Assets/Editor/BuildScript.cs:57)
+1619:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
+1621:(Filename: Assets/Editor/BuildScript.cs Line: 121)
+1630:BuildScript:SetStatic (System.Type,string,object) (at Assets/Editor/BuildScript.cs:121)
+1631:BuildScript:ConfigurePlayer () (at Assets/Editor/BuildScript.cs:151)
+1632:BuildScript:Run () (at Assets/Editor/BuildScript.cs:57)
+1633:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
+1635:(Filename: Assets/Editor/BuildScript.cs Line: 121)
+1637:BuildScript: WebGL graphics APIs WebGPU,OpenGLES3 colour Linear
+1644:BuildScript:ConfigurePlayer () (at Assets/Editor/BuildScript.cs:152)
+1645:BuildScript:Run () (at Assets/Editor/BuildScript.cs:57)
+1646:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
+1648:(Filename: Assets/Editor/BuildScript.cs Line: 152)
+1653:BuildScript: pipeline FF_URP colour Linear apis WebGPU,OpenGLES3
+1660:BuildScript:Run () (at Assets/Editor/BuildScript.cs:65)
+1661:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
+1663:(Filename: Assets/Editor/BuildScript.cs Line: 65)
+1675:BuildScript:DefineRenderingLayers () (at Assets/Editor/BuildScript.cs:204)
+1676:BuildScript:Run () (at Assets/Editor/BuildScript.cs:67)
+1677:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
+1679:(Filename: Assets/Editor/BuildScript.cs Line: 204)
+1707:BuildScript: HDRI sky (FF/Sky)
+1714:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:434)
+1715:BuildScript:Run () (at Assets/Editor/BuildScript.cs:68)
+1716:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
+1718:(Filename: Assets/Editor/BuildScript.cs Line: 434)
+1720:BuildScript: FF/Skin shader
+1727:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:395)
+1728:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:452)
+1729:BuildScript:Run () (at Assets/Editor/BuildScript.cs:68)
+1730:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
+1732:(Filename: Assets/Editor/BuildScript.cs Line: 395)
+1737:BuildScript: FF/Foliage shader
+1744:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:395)
+1745:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:453)
+1746:BuildScript:Run () (at Assets/Editor/BuildScript.cs:68)
+1747:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
+1749:(Filename: Assets/Editor/BuildScript.cs Line: 395)
+1754:BuildScript: LB/Water shader
+1761:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:395)
+1762:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:454)
+1763:BuildScript:Run () (at Assets/Editor/BuildScript.cs:68)
+1764:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
+1766:(Filename: Assets/Editor/BuildScript.cs Line: 395)
+1771:BuildScript: FF/Underwater shader
+1778:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:395)
+1779:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:456)
+1780:BuildScript:Run () (at Assets/Editor/BuildScript.cs:68)
+1781:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
+1783:(Filename: Assets/Editor/BuildScript.cs Line: 395)
+1788:BuildScript: Unlit/Texture shader
+1795:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:395)
+1796:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:457)
+1797:BuildScript:Run () (at Assets/Editor/BuildScript.cs:68)
+1798:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
+1800:(Filename: Assets/Editor/BuildScript.cs Line: 395)
+1805:BuildScript: FF/RealTri shader
+1812:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:395)
+1813:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:459)
+1814:BuildScript:Run () (at Assets/Editor/BuildScript.cs:68)
+1815:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
+1817:(Filename: Assets/Editor/BuildScript.cs Line: 395)
+1822:BuildScript: FF/RealWater shader
+1829:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:395)
+1830:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:460)
+1831:BuildScript:Run () (at Assets/Editor/BuildScript.cs:68)
+1832:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
+1834:(Filename: Assets/Editor/BuildScript.cs Line: 395)
+1839:BuildScript: FF/Grass56 shader
+1846:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:395)
+1847:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:462)
+1848:BuildScript:Run () (at Assets/Editor/BuildScript.cs:68)
+1849:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
+1851:(Filename: Assets/Editor/BuildScript.cs Line: 395)
+1856:BuildScript: FF/Skin57 shader
+1863:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:395)
+1864:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:468)
+1865:BuildScript:Run () (at Assets/Editor/BuildScript.cs:68)
+1866:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
+1868:(Filename: Assets/Editor/BuildScript.cs Line: 395)
+1885:BuildScript: terrain textures True True True
+1892:BuildScript:CreateTerrain () (at Assets/Editor/BuildScript.cs:608)
+1893:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:504)
+1894:BuildScript:Run () (at Assets/Editor/BuildScript.cs:68)
+1895:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
+1897:(Filename: Assets/Editor/BuildScript.cs Line: 608)
+1917:BuildScript: terrain NM material
+1924:BuildScript:CreateTerrain () (at Assets/Editor/BuildScript.cs:654)
+1925:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:504)
+1926:BuildScript:Run () (at Assets/Editor/BuildScript.cs:68)
+1927:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
+1929:(Filename: Assets/Editor/BuildScript.cs Line: 654)
+1963:BuildScript: ffu6 volumes game True studio True ssao True shaders FF/Std True FF/Unlit True FF/Skin57 True FF/Grass56 True URP terrain True
+1970:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:529)
+1971:BuildScript:Run () (at Assets/Editor/BuildScript.cs:68)
+1972:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
+1974:(Filename: Assets/Editor/BuildScript.cs Line: 529)
+1979:BuildScript: scene saved Assets/Scenes/Main.unity
+1986:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:536)
+1987:BuildScript:Run () (at Assets/Editor/BuildScript.cs:68)
+1988:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
+1990:(Filename: Assets/Editor/BuildScript.cs Line: 536)
+2013:BuildScript:Run () (at Assets/Editor/BuildScript.cs:79)
+2014:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
+2034:BuildScript:Run () (at Assets/Editor/BuildScript.cs:79)
+2035:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
+2053:BuildScript:Run () (at Assets/Editor/BuildScript.cs:79)
+2054:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
+2072:BuildScript:Run () (at Assets/Editor/BuildScript.cs:79)
+2073:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
+2087:[Licensing::Client] Successfully resolved entitlement details
+2883:[Licensing::Client] Successfully resolved entitlement details
+9852: 0.2 kb	 0.0% Packages/com.unity.render-pipelines.core/Runtime/RenderGraph/RenderGraph.ExceptionMessages.cs
+10423: 0.1 kb	 0.0% Packages/com.unity.inputsystem/InputSystem/Utilities/ExceptionHelpers.cs
+10983:[Licensing::Client] Successfully resolved entitlement details
+10986:BUILD_RESULT: Succeeded errors=0 warnings=286 size=71721357 time=00:06:02.9745220
+10993:BuildScript:Run () (at Assets/Editor/BuildScript.cs:81)
+10994:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:39)
+10996:(Filename: Assets/Editor/BuildScript.cs Line: 81)
+10998:BUILD_SCRIPT_EXIT: 0
+11005:BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:46)
+11007:(Filename: Assets/Editor/BuildScript.cs Line: 46)
+11018:[Licensing::IpcConnector] LicenseClient-runner-notifications channel disconnected successfully.
+11019:[Licensing::IpcConnector] LicenseClient-runner channel disconnected successfully.
+11033:##utp:{"type":"MemoryLeaks","version":2,"phase":"Immediate","time":1792776681874,"processId":8093,"allocatedMemory":10434390,"memoryLabels":[{"Default":228803},{"Permanent":16152},{"Thread":1052336},{"Manager":18221},{"VertexData":8},{"Geometry":408},{"Texture":24},{"Shader":841449},{"Material":132},{"GfxDevice":36104},{"Animation":1016},{"Audio":720},{"FreeType":8},{"FontEngine":736},{"Physics":1970},{"Physics2D":16},{"Serialization":15696},{"Input":60256},{"JobScheduler":256},{"TextLib":336},{"Mono":80},{"MonoCode":1248},{"ScriptingNativeRuntime":155088},{"BaseObject":52088},{"Resource":1268},{"Renderer":2496},{"Transform":4717},{"File":16104},{"WebCam":80},{"Culling":32},{"Terrain":11346},{"Wind":24},{"String":2063813},{"StaticString":3808},{"Utility":2672752},{"Curl":2511},{"PoolAlloc":2056},{"AI":80},{"TypeTree":18285},{"ScriptManager":12656},{"CodeReload":448},{"RuntimeInitializeOnLoadManager":64},{"Sprites":102},{"SpriteAtlas":120},{"GI":7408},{"Director":8280},{"CloudService":7712},{"WebRequest":20930},{"VR":49554},{"SceneManager":640},{"Video":64},{"LazyScriptCache":32},{"Camera":729},{"Secure":10337},{"SerializationCache":9256},{"APIUpdating":10320},{"Subsystems":336},{"VirtualTexturing":57552},{"StaticSafetyDebugInfo":278528},{"Analytics":592},{"Hierarchy":1436},{"UIElements":40},{"CoreStats":14456},{"Identifiers":7152},{"Gui":160},{"EditorUtility":71945},{"VersionControl":8},{"Undo":963},{"AssetDatabase":2523197},{"AssetImporter":40},{"EditorGi":328},{"UnityConnect":40449},{"Upm":1760},{"UpmDiagnostics":8},{"AssetCompliance":96},{"DrivenProperties":72},{"LocalIPC":149},{"ProfilerEditor":9746},{"CoreBusinessMetrics":2530},{"Windowing":480},{"Licensing":1128},{"AssetReference":32},{"IPCStream":32}]}
 === editor log tail (400)
+ 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/EventSystem/ExecuteEvents.cs
  0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/EventSystem/EventData/PointerEventData.cs
  0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/EventSystem/EventData/BaseEventData.cs
  0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/EventSystem/EventData/AxisEventData.cs
@@ -726,29 +719,28 @@ published
  0.1 kb	 0.0% Assets/Resources/PerformanceTestRunSettings.json
  0.0 kb	 0.0% Assets/Generated/Lighting.lighting
 -------------------------------------------------------------------------------
+[websockify wrapper] Proxying from :35020 to localhost:34999
 Unloading 173 Unused Serialized files (Serialized files now loaded: 0)
-ExitCode: 0 Duration: 9m:26s
-Unloading 131 unused Assets / (191.4 KB). Loaded Objects now: 4947.
-Memory consumption went from 205.2 MB to 205.0 MB.
-Total: 26.409926 ms (FindLiveObjects: 0.401639 ms CreateObjectMapping: 0.157374 ms MarkObjects: 24.983783 ms  DeleteObjects: 0.557431 ms)
+Unloading 131 unused Assets / (282.0 KB). Loaded Objects now: 4947.
+Memory consumption went from 205.2 MB to 204.9 MB.
+Total: 16.180161 ms (FindLiveObjects: 0.400020 ms CreateObjectMapping: 0.115778 ms MarkObjects: 15.022540 ms  DeleteObjects: 0.295008 ms)
 
 Build Finished, Result: Success.
-[websockify wrapper] Proxying from :35020 to localhost:34999
 Unloading 14 Unused Serialized files (Serialized files now loaded: 0)
 Loaded scene 'Temp/__Backupscenes/0.backup'
-	Deserialize:            2.773 ms
-	Integration:            22.359 ms
-	Integration of assets:  0.041 ms
-	Thread Wait Time:       0.017 ms
-	Total Operation Time:   25.191 ms
+	Deserialize:            1.488 ms
+	Integration:            15.688 ms
+	Integration of assets:  0.040 ms
+	Thread Wait Time:       0.013 ms
+	Total Operation Time:   17.229 ms
 Unloading 2 unused Assets / (40.8 KB). Loaded Objects now: 4978.
-Memory consumption went from 196.3 MB to 196.3 MB.
-Total: 19.345489 ms (FindLiveObjects: 0.352427 ms CreateObjectMapping: 0.134481 ms MarkObjects: 18.401968 ms  DeleteObjects: 0.139130 ms)
+Memory consumption went from 196.2 MB to 196.2 MB.
+Total: 11.733112 ms (FindLiveObjects: 0.387711 ms CreateObjectMapping: 0.096723 ms MarkObjects: 10.800455 ms  DeleteObjects: 0.113782 ms)
 
 [Licensing::Client] Successfully resolved entitlement details
-Asset Pipeline Refresh (id=3d60336f70a5df481ba9a47b029abdec): Total: 0.134 seconds - Initiated by RefreshV2(NoUpdateAssetOptions)
-##utp:{"success":true,"type":"PlayerBuildInfo","version":2,"phase":"Immediate","time":1792773648123,"processId":8348,"steps":[{"description":"Call PrepareForBuild callbacks","duration":3},{"description":"Call internal build started callbacks","duration":0},{"description":"Preprocess Player","duration":134},{"description":"Save scenes before build","duration":1},{"description":"Prepare For Build","duration":1},{"description":"ProducePlayerScriptAssemblies","duration":42220},{"description":"Verify Build setup","duration":45},{"description":"Prepare assets for target platform","duration":0},{"description":"Prepare splash screen","duration":0},{"description":"Build scripts DLLs","duration":20},{"description":"Building scenes","duration":78},{"description":"Build GlobalGameManagers file","duration":181},{"description":"Writing asset files","duration":3087},{"description":"Building Resources/unity_builtin_extra","duration":173},{"description":"Creating compressed player package","duration":1827},{"description":"Write data build dirty tracking information","duration":84},{"description":"Postprocess built player","duration":590135},{"description":"Call Post-Process callbacks","duration":264}],"duration":638253}
-BUILD_RESULT: Succeeded errors=0 warnings=286 size=71720214 time=00:10:38.7270370
+Asset Pipeline Refresh (id=3f262a8ff516fef07b7559afc8f7cc3b): Total: 0.091 seconds - Initiated by RefreshV2(NoUpdateAssetOptions)
+##utp:{"success":true,"type":"PlayerBuildInfo","version":2,"phase":"Immediate","time":1792776670387,"processId":8093,"steps":[{"description":"Call PrepareForBuild callbacks","duration":2},{"description":"Call internal build started callbacks","duration":0},{"description":"Preprocess Player","duration":91},{"description":"Save scenes before build","duration":0},{"description":"Prepare For Build","duration":0},{"description":"ProducePlayerScriptAssemblies","duration":16476},{"description":"Verify Build setup","duration":29},{"description":"Prepare assets for target platform","duration":2},{"description":"Prepare splash screen","duration":0},{"description":"Build scripts DLLs","duration":8},{"description":"Building scenes","duration":63},{"description":"Build GlobalGameManagers file","duration":284},{"description":"Writing asset files","duration":2197},{"description":"Building Resources/unity_builtin_extra","duration":141},{"description":"Creating compressed player package","duration":1555},{"description":"Write data build dirty tracking information","duration":62},{"description":"Postprocess built player","duration":341564},{"description":"Call Post-Process callbacks","duration":168}],"duration":362642}
+BUILD_RESULT: Succeeded errors=0 warnings=286 size=71721357 time=00:06:02.9745220
 UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
 UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:23)
 UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
@@ -771,7 +763,7 @@ BuildScript:BuildWebGL () (at Assets/Editor/BuildScript.cs:46)
 
 (Filename: Assets/Editor/BuildScript.cs Line: 46)
 
-MonoPathRemapper: Attempts to remap: 14493; Successful remaps: 2592
+MonoPathRemapper: Attempts to remap: 14459; Successful remaps: 2592
 Serialized file version minimum: 22, current 23
 [websockify wrapper] Kill
 [websockify wrapper] Process killed
@@ -783,16 +775,16 @@ Input System module state changed to: Shutdown.
 [Licensing::IpcConnector] LicenseClient-runner-notifications channel disconnected successfully.
 [Licensing::IpcConnector] LicenseClient-runner channel disconnected successfully.
 Lingering sessions upon destruction of worker manager
-Shut down UDS service system complete
 Unity Data Store service was successfully shut down
 UDS shutting down local client system
+Shut down UDS service system complete
 AcceleratorClientConnectionCallback - disconnected - :0
+debugger-agent: Unable to listen on 45
 Cleanup mono
 CodeReloadManager destroyed
 [websockify wrapper] Kill
-debugger-agent: Unable to listen on 35
 VBCSCompilerPreWarmer: requested VBCSCompiler shutdown
 Checking for leaked weakptr:
   Found no leaked weakptrs.
 [Package Manager] Server process was shutdown
-##utp:{"type":"MemoryLeaks","version":2,"phase":"Immediate","time":1792773658909,"processId":8348,"allocatedMemory":10432962,"memoryLabels":[{"Default":228803},{"Permanent":16152},{"Thread":1052336},{"Manager":18221},{"VertexData":8},{"Geometry":408},{"Texture":24},{"Shader":841449},{"Material":132},{"GfxDevice":36104},{"Animation":1016},{"Audio":720},{"FreeType":8},{"FontEngine":736},{"Physics":1970},{"Physics2D":16},{"Serialization":15696},{"Input":60256},{"JobScheduler":256},{"TextLib":336},{"Mono":80},{"MonoCode":1248},{"ScriptingNativeRuntime":155088},{"BaseObject":52088},{"Resource":1268},{"Renderer":2496},{"Transform":4717},{"File":16104},{"WebCam":80},{"Culling":32},{"Terrain":11346},{"Wind":24},{"String":2062347},{"StaticString":3808},{"Utility":2672752},{"Curl":2511},{"PoolAlloc":2056},{"AI":80},{"TypeTree":18285},{"ScriptManager":12656},{"CodeReload":448},{"RuntimeInitializeOnLoadManager":64},{"Sprites":102},{"SpriteAtlas":120},{"GI":7408},{"Director":8280},{"CloudService":7712},{"WebRequest":20968},{"VR":49554},{"SceneManager":640},{"Video":64},{"LazyScriptCache":32},{"Camera":729},{"Secure":10337},{"SerializationCache":9256},{"APIUpdating":10320},{"Subsystems":336},{"VirtualTexturing":57552},{"StaticSafetyDebugInfo":278528},{"Analytics":592},{"Hierarchy":1436},{"UIElements":40},{"CoreStats":14456},{"Identifiers":7152},{"Gui":160},{"EditorUtility":71945},{"VersionControl":8},{"Undo":963},{"AssetDatabase":2523197},{"AssetImporter":40},{"EditorGi":328},{"UnityConnect":40449},{"Upm":1760},{"UpmDiagnostics":8},{"AssetCompliance":96},{"DrivenProperties":72},{"LocalIPC":149},{"ProfilerEditor":9746},{"CoreBusinessMetrics":2530},{"Windowing":480},{"Licensing":1128},{"AssetReference":32},{"IPCStream":32}]}
+##utp:{"type":"MemoryLeaks","version":2,"phase":"Immediate","time":1792776681874,"processId":8093,"allocatedMemory":10434390,"memoryLabels":[{"Default":228803},{"Permanent":16152},{"Thread":1052336},{"Manager":18221},{"VertexData":8},{"Geometry":408},{"Texture":24},{"Shader":841449},{"Material":132},{"GfxDevice":36104},{"Animation":1016},{"Audio":720},{"FreeType":8},{"FontEngine":736},{"Physics":1970},{"Physics2D":16},{"Serialization":15696},{"Input":60256},{"JobScheduler":256},{"TextLib":336},{"Mono":80},{"MonoCode":1248},{"ScriptingNativeRuntime":155088},{"BaseObject":52088},{"Resource":1268},{"Renderer":2496},{"Transform":4717},{"File":16104},{"WebCam":80},{"Culling":32},{"Terrain":11346},{"Wind":24},{"String":2063813},{"StaticString":3808},{"Utility":2672752},{"Curl":2511},{"PoolAlloc":2056},{"AI":80},{"TypeTree":18285},{"ScriptManager":12656},{"CodeReload":448},{"RuntimeInitializeOnLoadManager":64},{"Sprites":102},{"SpriteAtlas":120},{"GI":7408},{"Director":8280},{"CloudService":7712},{"WebRequest":20930},{"VR":49554},{"SceneManager":640},{"Video":64},{"LazyScriptCache":32},{"Camera":729},{"Secure":10337},{"SerializationCache":9256},{"APIUpdating":10320},{"Subsystems":336},{"VirtualTexturing":57552},{"StaticSafetyDebugInfo":278528},{"Analytics":592},{"Hierarchy":1436},{"UIElements":40},{"CoreStats":14456},{"Identifiers":7152},{"Gui":160},{"EditorUtility":71945},{"VersionControl":8},{"Undo":963},{"AssetDatabase":2523197},{"AssetImporter":40},{"EditorGi":328},{"UnityConnect":40449},{"Upm":1760},{"UpmDiagnostics":8},{"AssetCompliance":96},{"DrivenProperties":72},{"LocalIPC":149},{"ProfilerEditor":9746},{"CoreBusinessMetrics":2530},{"Windowing":480},{"Licensing":1128},{"AssetReference":32},{"IPCStream":32}]}
