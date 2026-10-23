@@ -182,6 +182,7 @@ public class TouchControls : MonoBehaviour
                         else if (b == 5 || b == 6) { }
                         else if (b == 7) Sfx.CycleVolume();
                         else if (b == 8) { sixQ = true; if (mechMode || bowMode) { aimLatched = !aimLatched; Sfx.Play(Sfx.Click, 0.5f); } }
+                        else if (UiHit != null && UiHit(t.position)) { }   // ffu74: a HUD chip (BRIDGE) took this tap - not a look / double-tap
                         else if (InStickZone(t.position) && stickId < 0) { stickId = t.fingerId; stickOrigin = t.position; stickVec = Vector2.zero; stickSeen = true; }
                         else if (lookId < 0 && !InStickZone(t.position))
                         {
@@ -236,6 +237,8 @@ public class TouchControls : MonoBehaviour
     }
 
     public static bool TestAim, TestFire;   // ffu61 probe: a tap on AIM / SHOOT
+    public static bool TestUp, TestBoost;   // ffu74 probe: JUMP / BOOST held (mech mode)
+    public static System.Func<Vector2, bool> UiHit;   // ffu74: HUD chips that own a touch (Game.Bridge74Hit)
     public PIn Read()
     {
         if (TestAim) { TestAim = false; if (mechMode || bowMode) aimLatched = !aimLatched; }
@@ -256,7 +259,7 @@ public class TouchControls : MonoBehaviour
         i.camReset = resetQ;
         i.downHeld = downId >= 0;
         i.swimBoost = upId >= 0;   // ffu70: SWIM (the UP button) while swimming
-        if (mechMode) { i.upHeld = upId >= 0; i.boostHeld = downId >= 0; i.gunFire = fireQ; i.gunHeld = fireId >= 0; i.gas = i.brake = 0f; i.climb = i.upHeld ? 1f : 0f; i.aimHeld = aimLatched; i.mslFire = altQ; i.downHeld = false; }
+        if (mechMode) { i.upHeld = upId >= 0 || TestUp; i.boostHeld = downId >= 0 || TestBoost; i.gunFire = fireQ; i.gunHeld = fireId >= 0; i.gas = i.brake = 0f; i.climb = i.upHeld ? 1f : 0f; i.aimHeld = aimLatched; i.mslFire = altQ; i.downHeld = false; }
         if (bowMode) { i.aimHeld = aimLatched; i.bowFire = fireQ; }   // ffu61
         if (spaceMode) i.cargo = sixQ;
         if (spaceMode) { i.target = aQ; i.auto = fireQ; i.land = altQ; i.hop = i.use = false; }

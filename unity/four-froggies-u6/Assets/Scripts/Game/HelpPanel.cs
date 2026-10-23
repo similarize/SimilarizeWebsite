@@ -114,6 +114,7 @@ public partial class Game
         bool chip = state == State.Play && slots.Count > 0 && !help && !Chips72On;   // ffu72: split screen = one chip per view (HelpChips72.cs)
         if (hpMenuChip.gameObject.activeSelf != chip) hpMenuChip.gameObject.SetActive(chip);
         Chips72Tick();
+        Bridge74Tick();   // ffu74: on-screen BRIDGE button for touch players aboard the trillion-story mech (GameFfu74.cs)
         if (chip)
         {
             ChipTick(ChipKind);

@@ -55,10 +55,10 @@ public partial class StoryMech : Vehicle
             string top = aimK > 0.5f ? "<color=#ff8a7a>AIMING</color>  " : "";
             if (bridge73 != null && driver != null) top += K(Bridge73.Key(driver)) + " bridge view  ·  ";   // ffu73
             if (ik == InputKind.Gamepad)
-                return top + K("RT") + " tap jump / hold ROCKETS  ·  " + K("LB") + " afterburner  ·  " + K("LT") + " hold AIM (" + K("RT") + " fires)  ·  " + K("X") + " fire  ·  " + K("RB") + "/" + K("Y") + " missiles  ·  " + K("A") + " climb out";
+                return top + K("RT") + " tap jump / hold ROCKETS  ·  " + K("LB") + (F74.Old ? " afterburner" : " hold: afterburner LIFT-OFF") + "  ·  " + K("LT") + " hold AIM (" + K("RT") + " fires)  ·  " + K("X") + " fire  ·  " + K("RB") + "/" + K("Y") + " missiles  ·  " + K("A") + " climb out";
             if (ik == InputKind.Touch)
-                return top + K("JUMP") + " hold: rockets  ·  " + K("BOOST") + "  ·  " + K("AIM") + "  ·  " + K("FIRE") + "  ·  " + K("MSL");
-            return top + K("WASD") + " walk  ·  " + K("SPACE") + " tap jump / hold ROCKETS  ·  " + K("SHIFT") + " afterburner  ·  " + K("RMB") + " hold AIM  ·  " + K("LMB") + " fire  ·  " + K("F") + " missiles  ·  " + K("E") + " climb out";
+                return top + K("JUMP") + " hold: rockets  ·  " + K("BOOST") + (F74.Old ? "" : " hold: lift-off") + "  ·  " + K("AIM") + "  ·  " + K("FIRE") + "  ·  " + K("MSL");
+            return top + K("WASD") + " walk  ·  " + K("SPACE") + " tap jump / hold ROCKETS  ·  " + K("SHIFT") + (F74.Old ? " afterburner" : " hold: afterburner LIFT-OFF") + "  ·  " + K("RMB") + " hold AIM  ·  " + K("LMB") + " fire  ·  " + K("F") + " missiles  ·  " + K("E") + " climb out";
         }
     }
     public override string[] TouchSet { get { return new[] { "A", "FIRE", "MSL", "JUMP", "BOOST" }; } }
@@ -508,6 +508,12 @@ public partial class StoryMech : Vehicle
         maxSp *= Mathf.Lerp(1f, 0.4f, wd);
         float stick = on ? Mathf.Clamp(inp.move.y, -0.6f, 1f) : 0f;
         bool boost = on && inp.boostHeld;
+        // ffu74 (Bill, Oct 23 Pixel): BOOST alone never lifted a mech (since ffu15 it only sped up walking and slowed a fall:
+        // rockets were JUMP / RT / Space held). Holding BOOST now lights the afterburner and LIFTS the mech: after a short
+        // hold (a quick tap is still a stride burst) it leaves the ground and climbs at the afterburner rate, with or without
+        // JUMP. Human pilots only (AI followers that set boostHeld to keep up stay on the ground). &ff74old=1 = before.
+        boostHeldT = boost ? boostHeldT + dt : 0f;
+        bool boostLift = boost && !F74.Old && driver.human && boostHeldT >= LiftDelay74;
         boostK = Mathf.MoveTowards(boostK, boost ? 1f : 0f, dt * 4f);
         float wantSp = stick * maxSp * (1f + boostK * (grounded ? 0.6f : 1.6f));
         float acc = (Mathf.Abs(wantSp) > Mathf.Abs(speed) ? 2.2f : 3.2f) * maxSp;
@@ -542,7 +548,16 @@ public partial class StoryMech : Vehicle
             Sfx.PlayAt(Sfx.Pick(Sfx.Servo), pos, 0.6f, 120f, 0.6f);
             for (int i = 0; i < 8 + band * 4; i++) FX.Dust(pos + Random.insideUnitSphere * H * 0.2f, 1f);
         }
-        rocketing = !grounded && up && (upHeldT > 0.18f || vy < 0f);
+        if (grounded && boostLift && landCool <= 0f)
+        {
+            vy = Mathf.Max(vy, Mathf.Sqrt(2f * g * H * 0.12f));
+            grounded = false;
+            Sfx.PlayAt(Sfx.Pick(Sfx.Servo), pos, 0.6f, 120f, 0.6f);
+            for (int i = 0; i < 8 + band * 4; i++) FX.Dust(pos + Random.insideUnitSphere * H * 0.2f, 1f);
+            Lift74++;
+            Debug.Log("FF74 lift-off on BOOST: " + Title + " (band " + band + ")");
+        }
+        rocketing = !grounded && ((up && (upHeldT > 0.18f || vy < 0f)) || boostLift);
         // ffu15: faster climb so every mech (10-story to trillion-story) reaches space in ~15-25 s of holding UP
         float climbMax = (24f + H * 0.25f) * (1f + boostK) * (1f + Mathf.Max(0f, Altitude - 200f) / 180f) * DemoClimb;
         if (rocketing) vy = Mathf.MoveTowards(vy, climbMax, Mathf.Max(g * 2.2f, climbMax * 0.8f) * dt);

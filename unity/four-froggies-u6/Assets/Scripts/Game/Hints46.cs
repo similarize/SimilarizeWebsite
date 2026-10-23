@@ -52,7 +52,7 @@ public partial class Game
     static string Short(string d) { int i = d.IndexOf(" ("); if (i > 0) d = d.Substring(0, i); i = d.IndexOf(" - "); if (i > 0) d = d.Substring(0, i); return d.Trim(); }
 
     // what the HUD prompt line shows for this froggy (ViewHud)
-    public static string HintPrompt(Frog f)
+    static string HintPrompt46(Frog f)   // ffu74: wrapped by HintPrompt (GameFfu74.cs) for the bridge-view line
     {
         if (f == null) return "";
         string p = f.prompt ?? "";

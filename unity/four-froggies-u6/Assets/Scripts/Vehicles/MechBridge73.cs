@@ -329,7 +329,7 @@ public class Bridge73 : MonoBehaviour
         return true;
     }
     public static void SetView(CamRig rig, bool on) { View v; if (!views.TryGetValue(rig, out v)) { v = new View(); views[rig] = v; } v.on = on; v.yaw = 0f; v.pitch = 0f; }
-    public static string Key(Frog f) { return f.inputKind == InputKind.Gamepad ? "R3" : f.inputKind == InputKind.Touch ? "double-tap the look side" : "0"; }
+    public static string Key(Frog f) { return f.inputKind == InputKind.Gamepad ? "R3" : f.inputKind == InputKind.Touch ? (F74.Old ? "double-tap the look side" : "the BRIDGE button") : "0"; }   // ffu74: on-screen BRIDGE button (GameFfu74.cs)
 
     // after the chase camera: put the camera behind the captain's chair, looking at the viewscreen
     public static bool Apply(CamRig rig, Frog f, PIn i)
