@@ -143,6 +143,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
           # keep hand-added files in the game dir (cab/ cabinet shots, thumbs, cards): remove only the build outputs re-copied below
+          case "$GAME_DIR" in games/?*) ;; *) echo "refusing: GAME_DIR='$GAME_DIR' is not under games/"; exit 1;; esac
           mkdir -p "$GAME_DIR"
           rm -rf "$GAME_DIR/Build" "$GAME_DIR/StreamingAssets"
           cp -r "$OUT/Build" "$GAME_DIR/Build"
