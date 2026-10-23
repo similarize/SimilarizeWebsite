@@ -246,7 +246,10 @@ public partial class MechLand75
 
     // ---------------- steering (Descend) ----------------
     public void SteerIn76(Frog f, Vector2 mv) { if (f == pilot && steer76) { steerIn = mv; steerAge = 0f; } }
-    public void Cam76(Camera cam) { if (cam != null) { camF76 = cam.transform.forward; camHave76 = true; } }
+    public void Cam76(Camera cam) { if (cam != null) { camF76 = cam.transform.forward; camHave76 = true; camDist76 = (cam.transform.position - C).magnitude; } }
+    float camDist76;
+    // ffu76b: the descent camera frames the ground marker too while a pilot can steer
+    bool Steer76Cam { get { return !F76.Old && steer76 && (phase == Ph.Descend || phase == Ph.Touch); } }
     float SteerSpeed { get { return Mathf.Clamp(10f + H * 0.3f, 12f, 60f); } }
     float MaxSteerR { get { return world == WorldId.Ranch ? 400f : 60f + H; } }
 
@@ -389,7 +392,7 @@ public partial class MechLand75
             foreach (var s in foot76) s.GetComponent<Renderer>().sharedMaterial = m;
             foreach (var s in dash76) s.GetComponent<Renderer>().sharedMaterial = m;
         }
-        float w = Mathf.Clamp(H * 0.012f, 0.35f, 2.2f);
+        float w = Mathf.Max(Mathf.Clamp(H * 0.012f, 0.35f, 2.2f), camDist76 * 0.0045f);   // ffu76b: thick enough to read from the pulled-back camera
         Ring76(ring76, C, FootR + 1.5f, w);
         Ring76(foot76, F, Mathf.Max(2.5f, H * 0.03f), w * 0.8f);
         Vector3 a = C + fwd * (FootR + 1.5f), b = F - fwd * Mathf.Max(2.5f, H * 0.03f);

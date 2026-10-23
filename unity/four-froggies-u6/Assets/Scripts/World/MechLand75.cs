@@ -747,9 +747,21 @@ public partial class MechLand75 : MonoBehaviour
         {
             float d = H * 1.7f + 34f;
             if (!F76.Old && descSide.sqrMagnitude > 0.5f && (phase == Ph.Descend || phase == Ph.Touch)) side = descSide;   // ffu76: holds still while the pilot steers
+            if (Steer76Cam)
+            {
+                // ffu76b: the steering pilot sees the ground marker AND the mech: higher, looking down, pulled back with altitude
+                float d2 = Mathf.Max(d, alt + H * 1.7f + 20f);
+                look = C + Vector3.up * (alt * 0.45f + H * 0.3f);
+                pos = C + side * (d2 * 0.9f);
+                pos.y = look.y + d2 * 0.45f;
+                float gy2 = Ground(world, pos.x, pos.z) + 3f; if (pos.y < gy2) pos.y = gy2;
+            }
+            else
+            {
             pos = C + side * d;
             pos.y = Ground(world, pos.x, pos.z) + H * 0.12f + 3f;
             look = C + Vector3.up * (alt + H * 0.42f);
+            }
         }
         float shake = (phase == Ph.Touch && t < 0.5f ? 0.25f : 0f) + (burnK > 0.1f && alt < H + 30f ? 0.08f * burnK : 0f);
         pos += Random.insideUnitSphere * shake;

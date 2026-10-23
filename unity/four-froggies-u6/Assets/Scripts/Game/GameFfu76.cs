@@ -88,8 +88,9 @@ public partial class Game
         Frog fa = frogs[slots[0].frog];
         Frog fb = n > 1 ? frogs[slots[1].frog] : null;
         StoryMech big = FindMech(fa.charId, 3);
-        StoryMech mid = fb != null ? FindMech(fb.charId, 2) : null;
-        F76Check("James's trillion-story mech found" + (n > 1 ? " + P2's 1000-story mech" : ""), big != null && sw != null && (n == 1 || mid != null), (big != null ? big.Title : "-") + " / " + (mid != null ? mid.Title : "-"));
+        StoryMech mid = null;
+        if (fb != null) foreach (int bd in new[] { 2, 1, 0 }) { mid = FindMech(fb.charId, bd); if (mid != null) break; }   // ffu76b: P2 may not own a 1000-story mech
+        F76Check("James's trillion-story mech found" + (n > 1 ? " + P2's mech" : ""), big != null && sw != null && (n == 1 || mid != null), (big != null ? big.Title : "-") + " / " + (mid != null ? mid.Title : "-"));
         if (big == null || sw == null) { F76Result(T); yield break; }
         float dtWas = StoryMech.DtCap; StoryMech.DtCap = 0.3f;
 
@@ -178,7 +179,7 @@ public partial class Game
             Stick75(pads[0], new Vector2(Vector3.Dot(d, cr), Vector3.Dot(d, cf)).normalized);
             maxMove = Mathf.Max(maxMove, D76(ma.C, c0));
             if (ma.MarkerRed76 && !sawRed) { sawRed = true; redSince = Time.realtimeSinceStartup; F76Ph(4, "sred"); }
-            if (sawRed && redPrompt == "") redPrompt = fa.prompt ?? "";
+            if (sawRed && ma.MarkerRed76 && !redPrompt.Contains("water")) redPrompt = fa.prompt ?? "";   // ffu76b: the prompt follows one frame later
             if (sawRed && Time.realtimeSinceStartup - redSince > 3f && MechLand75.Wet(WorldId.Ranch, ma.C)) break;
             yield return null;
         }
