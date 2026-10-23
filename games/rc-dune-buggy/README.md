@@ -1,6 +1,7 @@
 # RC Dune Buggy (working title)
 
 Browser-playable **Three.js / WebGL** arcade prototype for similarize.com.
+Spline circuit (dune5, Oct 23): sweepers, hairpin, infield whoops, cliff jump + two kickers, banked turns with berms and rumble strips, checkpoint hoops and a lap-validity rule (a lap only counts after ~88% of the course). Spectator camera follows the pack.
 Overhead RC spectator camera, **elevated** dunes (hills/drops/ramps/banked turns),
 four Froggie seats (**James, Jimmy, Bubbles, Rexy** only) with overhead name labels,
 up to 4 local players

@@ -7,13 +7,13 @@
 import * as THREE from "three";
 import { createNet, fillQr } from "./net.js?v=20261007-dune2";
 
-const CACHE = "20261016-dune4";
+const CACHE = "20261023-dune5";
 const LAPS = 3;
 const N_CARS = 4;
 const COLORS = [0xe85d2a, 0x3b82f6, 0xf2c21b, 0x2fa84f];
 /** Exactly the four Froggies — never invent other names. */
 const NAMES = ["James", "Jimmy", "Bubbles", "Rexy"];
-const WORLD = 72;
+const WORLD = 116;
 const HALF = WORLD * 0.5;
 const GRAVITY = 32;
 const ACCEL = 42;
@@ -38,7 +38,7 @@ const resetBtn = document.getElementById("resetBtn");
 const xrBtn = document.getElementById("xrBtn");
 
 let renderer, scene, camera, clock;
-let terrainMesh, heightData, heightSeg = 128;
+let terrainMesh, heightData, heightSeg = 176;
 let trackCenter = []; // xz loop samples for AI + progress
 let cars = [];
 let dust;
@@ -71,55 +71,95 @@ function noise2(x, z) {
   return n;
 }
 
-/** Track elevation profile: hills, valleys, ramps, drops, banked turns (not flat). */
-function trackElevation(ang, er) {
-  // Rolling hills / downs along the lap
-  let h = Math.sin(ang * 2.0) * 2.8 + Math.sin(ang * 3.0 + 0.6) * 1.6;
-  // Long climb then drop (quarter-lap)
-  const climb = Math.sin(ang + 0.3);
-  if (climb > 0.2) h += (climb - 0.2) * 5.5;
-  if (climb < -0.35) h += (climb + 0.35) * 3.2; // valley floor
-  // Ramp jumps (steep front, drop off back)
-  const rampA = Math.max(0, Math.sin(ang * 2 + 0.5));
-  h += Math.pow(rampA, 5) * 4.2;
-  const rampB = Math.max(0, Math.sin(ang * 2 + 2.9));
-  h += Math.pow(rampB, 7) * 5.0;
-  // Sharp drop after second ramp peak
-  const drop = Math.max(0, Math.sin(ang * 2 + 3.35));
-  h -= Math.pow(drop, 4) * 2.2;
-  // Banked turns: raise outer edge more in tight oval ends (high curvature)
-  const turnBank = 0.55 + 0.45 * Math.abs(Math.sin(ang * 2)); // stronger at ends
-  if (er > 0.88) h += (er - 0.88) * 14 * turnBank;
-  if (er < 0.78 && er > 0.55) h -= (0.78 - er) * 2.5; // mild inner dip
+/* dune5: spline circuit - sweepers, a hairpin, an infield whoops section, a cliff jump and kickers.
+   Track = closed Catmull-Rom loop; terrain height/banking/berms/sand are all derived from distance-to-track. */
+const TRACK_WP = [[-36,-32],[-8,-36],[22,-34],[42,-24],[46,-4],[36,10],[18,6],[2,-4],[-12,-12],[-26,-8],[-24,8],[-6,16],[12,26],[26,38],[4,46],[-24,42],[-44,28],[-48,2],[-46,-20]];
+const TRACK_SUB = 14;
+const TRACK_HW = 4.2;           // half width of the hardpack ribbon
+let trackLen = 1, trackSWP = [], trackFeatures = [];
+let distGrid = null, sGrid = null, offGrid = null;
+const smooth01 = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+
+function buildTrackCenter() {
+  const W = TRACK_WP, n = W.length, pts = [];
+  const cr = (a, b, c, d, t) => {
+    const t2 = t * t, t3 = t2 * t;
+    const f = (k) => 0.5 * ((2 * b[k]) + (-a[k] + c[k]) * t + (2 * a[k] - 5 * b[k] + 4 * c[k] - d[k]) * t2 + (-a[k] + 3 * b[k] - 3 * c[k] + d[k]) * t3);
+    return [f(0), f(1)];
+  };
+  for (let i = 0; i < n; i++) for (let k = 0; k < TRACK_SUB; k++) {
+    const q = cr(W[(i - 1 + n) % n], W[i], W[(i + 1) % n], W[(i + 2) % n], k / TRACK_SUB);
+    pts.push({ x: q[0], z: q[1], wp: i });
+  }
+  const N = pts.length; let s = 0;
+  for (let i = 0; i < N; i++) {
+    const a = pts[i], b = pts[(i + 1) % N], c = pts[(i - 1 + N) % N];
+    a.yaw = Math.atan2(b.x - c.x, b.z - c.z);
+    a.s = s; a.len = Math.hypot(b.x - a.x, b.z - a.z); s += a.len;
+  }
+  trackLen = s;
+  // curvature (dyaw/ds, + = turning right), smoothed
+  const raw = pts.map((p, i) => { const b = pts[(i + 1) % N], c = pts[(i - 1 + N) % N]; let d = b.yaw - c.yaw; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return d / (b.len + c.len); });
+  pts.forEach((p, i) => { let a = 0; for (let k = -3; k <= 3; k++) a += raw[(i + k + N) % N]; p.curv = a / 7; });
+  trackSWP = []; for (let i = 0; i < n; i++) trackSWP.push(pts[i * TRACK_SUB].s);
+  trackCenter = pts;
+}
+
+const kicker = (s, s0, rise, H, flat, fall) => {
+  if (s < s0) return 0;
+  if (s < s0 + rise) return H * Math.pow((s - s0) / rise, 1.25);
+  if (s < s0 + rise + flat) return H;
+  return H * (1 - smooth01(0, fall, s - s0 - rise - flat));
+};
+/** Elevation along the lap at arc length s (units). */
+function trackH(s) {
+  const sw = (i, o = 0) => trackSWP[i % trackSWP.length] + o;
+  let h = Math.sin(s * 0.062 + 0.5) * 0.7 + Math.sin(s * 0.17 + 1.3) * 0.28;
+  h += kicker(s, sw(0, 34), 7, 2.7, 4, 2.2);                    // kicker A on the start straight
+  h += 1.9 * smooth01(sw(15), sw(17), s) * (1 - smooth01(sw(17), sw(18, 8), s)); // west dune hump
+  // infield whoops (WP7 -> WP9)
+  const w0 = sw(7, 3), w1 = w0 + 40;
+  if (s > w0 && s < w1) h += Math.sin((s - w0) * 2 * Math.PI / 6.6) * 0.5 * smooth01(w0, w0 + 5, s) * (1 - smooth01(w1 - 5, w1, s));
+  // big climb (WP10 -> WP12) and cliff jump off the crest
+  h += kicker(s, sw(10, 2), sw(11, 12) - sw(10, 2), 3.8, 5, 5.5);
+  h += kicker(s, sw(14, 5), 6, 2.3, 3, 2.2);                    // kicker B on the bottom straight
   return h;
 }
 
 function buildHeightData() {
-  const n = heightSeg + 1;
-  const data = new Float32Array(n * n);
-  for (let iz = 0; iz < n; iz++) {
-    for (let ix = 0; ix < n; ix++) {
-      const u = ix / heightSeg, v = iz / heightSeg;
-      const x = (u - 0.5) * WORLD;
-      const z = (v - 0.5) * WORLD;
-      const ang = Math.atan2(z, x);
-      const rx = 26 + Math.cos(ang * 2) * 3;
-      const rz = 18 + Math.sin(ang * 3) * 2;
-      const er = Math.hypot(x / rx, z / rz);
-      let h = 0;
-      if (er > 0.52 && er < 1.28) {
-        h = trackElevation(ang, er) + noise2(x * 0.07, z * 0.07) * 0.55;
-      } else {
-        // Off-track dunes — taller hills around the arena
-        h = 2.2 + noise2(x * 0.045, z * 0.045) * 4.5 + Math.max(0, er - 1.25) * 5;
-        h += Math.sin(x * 0.12) * Math.cos(z * 0.1) * 1.8;
-      }
-      // Center bowl / mesa
-      if (er < 0.48) {
-        h = 0.6 + (0.48 - er) * 5.5 + noise2(x * 0.1, z * 0.1) * 0.8;
-      }
-      data[iz * n + ix] = h;
+  if (!trackCenter.length) buildTrackCenter();
+  const n = heightSeg + 1, data = new Float32Array(n * n);
+  distGrid = new Float32Array(n * n); sGrid = new Float32Array(n * n); offGrid = new Float32Array(n * n);
+  const P = trackCenter, N = P.length, cell = WORLD / heightSeg;
+  const hs = TRACK_HW, edge = hs + 3.2, far = hs + 13;
+  const profile = new Float32Array(N); for (let i = 0; i < N; i++) profile[i] = trackH(P[i].s);
+  for (let iz = 0; iz < n; iz++) for (let ix = 0; ix < n; ix++) {
+    const x = ix * cell - WORLD / 2, z = iz * cell - WORLD / 2;
+    let bd = 1e9, bi = 0, bt = 0;
+    for (let i = 0; i < N; i++) {
+      const a = P[i], b = P[(i + 1) % N], dx = b.x - a.x, dz = b.z - a.z;
+      let t = ((x - a.x) * dx + (z - a.z) * dz) / (dx * dx + dz * dz); t = t < 0 ? 0 : t > 1 ? 1 : t;
+      const ex = a.x + dx * t - x, ez = a.z + dz * t - z, d = ex * ex + ez * ez;
+      if (d < bd) { bd = d; bi = i; bt = t; }
     }
+    bd = Math.sqrt(bd);
+    const a = P[bi], b = P[(bi + 1) % N];
+    const cxp = a.x + (b.x - a.x) * bt, czp = a.z + (b.z - a.z) * bt;
+    const yaw = a.yaw + (((b.yaw - a.yaw + 3 * Math.PI) % (2 * Math.PI)) - Math.PI) * bt;
+    const off = (x - cxp) * Math.cos(yaw) + (z - czp) * -Math.sin(yaw); // + = right of travel
+    const s = a.s + a.len * bt, curv = a.curv + (b.curv - a.curv) * bt;
+    const idx = iz * n + ix; distGrid[idx] = bd; sGrid[idx] = s; offGrid[idx] = off;
+    const th = profile[bi] + (profile[(bi + 1) % N] - profile[bi]) * bt;
+    // wind-blown dunes everywhere; rising rim around the arena
+    const m = Math.max(Math.abs(x), Math.abs(z)) / (WORLD / 2);
+    let dune = 2.4 + noise2(x * 0.045, z * 0.045) * 3.6 + Math.sin(x * 0.12) * Math.cos(z * 0.1) * 1.6 + smooth01(0.78, 1, m) * 14;
+    // banking: the outside of a turn is raised (clamped), fading out at the ribbon edge
+    const bank = Math.max(-0.42, Math.min(0.42, -3.4 * curv)) * off * (1 - smooth01(hs, edge, bd));
+    let ribbon = th + bank + noise2(x * 0.3, z * 0.3) * 0.05;
+    // berm ridge just outside the ribbon keeps cars on track
+    const berm = 1.25 * Math.exp(-Math.pow((bd - (hs + 1.4)) / 1.1, 2));
+    const w = 1 - smooth01(edge, far, bd);
+    data[idx] = bd < edge ? ribbon + berm * smooth01(hs - 0.4, hs + 0.6, bd) : th * w + dune * (1 - w) + berm;
   }
   return data;
 }
@@ -150,50 +190,45 @@ function sampleNormal(x, z) {
 }
 
 /** 0 = hardpack track, 1 = deep sand */
+function gridAt(arr, x, z) {
+  const n = heightSeg + 1;
+  const ix = Math.max(0, Math.min(heightSeg, Math.round((x / WORLD + 0.5) * heightSeg)));
+  const iz = Math.max(0, Math.min(heightSeg, Math.round((z / WORLD + 0.5) * heightSeg)));
+  return arr[iz * n + ix];
+}
 function surfaceSand(x, z) {
-  const ang = Math.atan2(z, x);
-  const rx = 26 + Math.cos(ang * 2) * 3;
-  const rz = 18 + Math.sin(ang * 3) * 2;
-  const er = Math.hypot(x / rx, z / rz);
-  if (er > 0.72 && er < 1.05) return 0.15; // hardpack ribbon
-  if (er > 0.65 && er < 1.15) return 0.45;
+  const d = gridAt(distGrid, x, z);
+  if (d < TRACK_HW) return 0.12;
+  if (d < TRACK_HW + 2.2) return 0.4;
+  if (d < TRACK_HW + 6) return 0.7;
   return 0.95;
 }
 
-function buildTrackCenter() {
-  const pts = [];
-  const steps = 96;
-  for (let i = 0; i < steps; i++) {
-    const a = (i / steps) * Math.PI * 2;
-    const rx = 26 + Math.cos(a * 2) * 3;
-    const rz = 18 + Math.sin(a * 3) * 2;
-    const x = Math.cos(a) * rx * 0.88;
-    const z = Math.sin(a) * rz * 0.88;
-    pts.push({ x, z, a });
-  }
-  trackCenter = pts;
-}
-
-function nearestProgress(x, z) {
+/** progress 0..1 along the lap; hint (previous progress) limits the search so parallel legs never swap places */
+function nearestProgress(x, z, hint) {
+  const N = trackCenter.length;
   let best = 0, bestD = 1e9;
-  for (let i = 0; i < trackCenter.length; i++) {
-    const p = trackCenter[i];
-    const d = (p.x - x) ** 2 + (p.z - z) ** 2;
-    if (d < bestD) { bestD = d; best = i; }
+  const test = (i) => { const p = trackCenter[i]; const d = (p.x - x) ** 2 + (p.z - z) ** 2; if (d < bestD) { bestD = d; best = i; } };
+  if (hint != null) {
+    const h = Math.round(hint * N);
+    for (let k = -14; k <= 14; k++) test(((h + k) % N + N) % N);
+    if (bestD < 14 * 14) return best / N;
+    bestD = 1e9;
   }
-  return best / trackCenter.length;
+  for (let i = 0; i < N; i++) test(i);
+  return best / N;
 }
 
 function buildTerrain() {
-  heightData = buildHeightData();
   buildTrackCenter();
+  heightData = buildHeightData();
   const geo = new THREE.PlaneGeometry(WORLD, WORLD, heightSeg, heightSeg);
   geo.rotateX(-Math.PI / 2);
   const pos = geo.attributes.position;
   const colors = new Float32Array(pos.count * 3);
-  const cSand = new THREE.Color(0xc4a574);
-  const cHard = new THREE.Color(0x8b7355);
-  const cDune = new THREE.Color(0xd4b896);
+  const cSand = new THREE.Color(0xdcbd86);
+  const cHard = new THREE.Color(0x8e5f3e);
+  const cDune = new THREE.Color(0xe6cf9f);
   const tmp = new THREE.Color();
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i), z = pos.getZ(i);
@@ -203,6 +238,13 @@ function buildTerrain() {
     pos.setY(i, h);
     const sand = surfaceSand(x, z);
     tmp.copy(cHard).lerp(cSand, sand);
+    // dune5: rumble stripes on the ribbon edge, darker packed racing line, painted start line
+    {
+      const gi = iz * (heightSeg + 1) + ix, d = distGrid[gi], sg = sGrid[gi];
+      if (d > TRACK_HW - 0.55 && d < TRACK_HW + 0.15) tmp.set(Math.floor(sg / 2.2) % 2 ? 0xd8362a : 0xf3ece0);
+      else if (d < TRACK_HW - 0.55) { tmp.multiplyScalar(0.92); if (Math.abs(offGrid[gi]) < 0.18 && Math.floor(sg / 3) % 2) tmp.multiplyScalar(1.12); }
+      const sl = sg > trackLen - 1.4 || sg < 0.9; if (sl && d < TRACK_HW - 0.55) tmp.set((Math.floor(offGrid[gi] / 0.9) + (sg < 0.9 ? 1 : 0)) % 2 ? 0x1a1a1a : 0xf5f5f5);
+    }
     if (sand > 0.7) tmp.lerp(cDune, 0.4);
     // dune3: wind ripples + low-frequency tone variation for realistic sand
     const rip = Math.sin(x * 1.9 + z * 0.7 + Math.sin(z * 0.35) * 2.2) * 0.5 + 0.5;
@@ -219,49 +261,73 @@ function buildTerrain() {
   terrainMesh.receiveShadow = true;
   scene.add(terrainMesh);
 
-  // track edge markers + obstacles
-  const rockMat = new THREE.MeshStandardMaterial({ color: 0x6b5a4a, roughness: 0.9 });
-  for (let i = 0; i < 18; i++) {
-    const a = (i / 18) * Math.PI * 2 + 0.2;
-    const rx = 26 + Math.cos(a * 2) * 3;
-    const rz = 18 + Math.sin(a * 3) * 2;
-    // outer rocks
-    placeRock(Math.cos(a) * rx * 1.18, Math.sin(a) * rz * 1.18, rockMat, 0.6 + (i % 3) * 0.25);
-    if (i % 3 === 0) {
-      placeRock(Math.cos(a + 0.15) * rx * 0.62, Math.sin(a + 0.15) * rz * 0.62, rockMat, 0.5);
+  // dune5 scenery: boulders on the dune side of the berm, mesas, start arch, checkpoint hoops, jump warning signs
+  const rockMat = new THREE.MeshStandardMaterial({ color: 0x6b5a4a, roughness: 0.9, flatShading: true });
+  let seed0 = 11; const r0 = () => ((seed0 = (seed0 * 16807) % 2147483647) / 2147483647);
+  const dTrack = (x, z) => gridAt(distGrid, x, z);
+  for (let k = 0, made = 0; k < 900 && made < 46; k++) {
+    const x = (r0() - 0.5) * WORLD * 0.9, z = (r0() - 0.5) * WORLD * 0.9, d = dTrack(x, z);
+    if (d < TRACK_HW + 3 || d > TRACK_HW + 16) continue;
+    made++; placeRock(x, z, rockMat, 0.5 + r0() * 0.9);
+  }
+  const mesaMat = [0xb5764a, 0xc58a5a, 0xa9683f].map((c) => new THREE.MeshStandardMaterial({ color: c, roughness: 1, flatShading: true }));
+  for (let k = 0, made = 0; k < 900 && made < 12; k++) {
+    const x = (r0() - 0.5) * WORLD * 0.96, z = (r0() - 0.5) * WORLD * 0.96, d = dTrack(x, z);
+    if (d < 14) continue;
+    made++;
+    const r = 3.2 + r0() * 3.8, h = 5 + r0() * 7, y = sampleHeight(x, z), mg = new THREE.Group();
+    for (let l = 0; l < 3; l++) { const seg = new THREE.Mesh(new THREE.CylinderGeometry(r * (0.8 - l * 0.12), r * (0.95 - l * 0.12), h / 3, 8), mesaMat[(l + made) % 3]); seg.position.y = (l + 0.5) * h / 3 - 0.4; seg.castShadow = seg.receiveShadow = true; mg.add(seg); }
+    mg.position.set(x, y, z); mg.rotation.y = r0() * 6; scene.add(mg);
+  }
+  // start/finish arch with banner
+  {
+    const p = trackCenter[0], y = sampleHeight(p.x, p.z), g = new THREE.Group();
+    g.position.set(p.x, y, p.z); g.rotation.y = p.yaw;
+    const gateMat = new THREE.MeshStandardMaterial({ color: 0xf5e6d0, roughness: 0.6 });
+    const bcv = document.createElement("canvas"); bcv.width = 512; bcv.height = 96; const bg = bcv.getContext("2d");
+    bg.fillStyle = "#e85d2a"; bg.fillRect(0, 0, 512, 96); bg.fillStyle = "#fff"; bg.font = "900 52px sans-serif"; bg.textAlign = "center"; bg.textBaseline = "middle"; bg.fillText("RC DUNE BUGGY", 256, 52);
+    for (let i = 0; i < 32; i++) { bg.fillStyle = i % 2 ? "#111" : "#fff"; bg.fillRect(i * 16, 0, 16, 8); bg.fillRect((i + 1) * 16 - 16, 88, 16, 8); }
+    const bannerTex = new THREE.CanvasTexture(bcv);
+    for (const side of [-1, 1]) { const post = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.28, 5, 8), gateMat); post.position.set(side * (TRACK_HW + 0.8), 2.5, 0); post.castShadow = true; g.add(post); }
+    const bm = new THREE.MeshStandardMaterial({ map: bannerTex, roughness: 0.7 }), dm = new THREE.MeshStandardMaterial({ color: 0x333333 });
+    const banner = new THREE.Mesh(new THREE.BoxGeometry((TRACK_HW + 0.8) * 2, 1.5, 0.12), [dm, dm, dm, dm, bm, bm]); banner.position.set(0, 4.9, 0); banner.castShadow = true; g.add(banner);
+    scene.add(g);
+  }
+  // checkpoint hoops (glowing, drive-through): purely visual landmarks for the lap
+  const hoopMat = new THREE.MeshStandardMaterial({ color: 0x59e0ff, emissive: 0x1aa6d8, emissiveIntensity: 0.9, roughness: 0.4 });
+  for (let k = 1; k <= 5; k++) {
+    const p = trackCenter[Math.floor(trackCenter.length * k / 6)], y = sampleHeight(p.x, p.z), g = new THREE.Group();
+    g.position.set(p.x, y, p.z); g.rotation.y = p.yaw;
+    const hoop = new THREE.Mesh(new THREE.TorusGeometry(TRACK_HW - 0.2, 0.12, 6, 20, Math.PI), hoopMat); hoop.position.y = 0.3; g.add(hoop); scene.add(g);
+  }
+  // kicker / cliff warning signs (yellow chevron boards just before each launch)
+  const signMat = new THREE.MeshStandardMaterial({ color: 0xf5c518, roughness: 0.6 }), postMat = new THREE.MeshStandardMaterial({ color: 0x555555 });
+  for (const [wi, o] of [[0, 28], [10, -4], [14, -1]]) {
+    const sIdx = Math.floor(((trackSWP[wi] + o + trackLen) % trackLen) / trackLen * trackCenter.length), p = trackCenter[sIdx];
+    for (const sd of [-1, 1]) {
+      const x = p.x + Math.cos(p.yaw) * sd * (TRACK_HW + 2.2), z = p.z - Math.sin(p.yaw) * sd * (TRACK_HW + 2.2), y = sampleHeight(x, z);
+      const pl = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.5, 0.12), postMat); pl.position.set(x, y + 0.75, z);
+      const bd = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.9, 0.08), signMat); bd.position.set(x, y + 1.6, z); bd.rotation.y = p.yaw; bd.castShadow = true;
+      scene.add(pl, bd);
     }
   }
-
-  // finish gate
-  const gateMat = new THREE.MeshStandardMaterial({ color: 0xf5e6d0, roughness: 0.6 });
-  const p = trackCenter[0];
-  const y = sampleHeight(p.x, p.z);
-  for (const side of [-1, 1]) {
-    const post = new THREE.Mesh(new THREE.BoxGeometry(0.35, 3.2, 0.35), gateMat);
-    post.position.set(p.x + side * 3.2, y + 1.6, p.z);
-    post.castShadow = true;
-    scene.add(post);
-  }
-  const bar = new THREE.Mesh(new THREE.BoxGeometry(6.8, 0.25, 0.25), new THREE.MeshStandardMaterial({ color: 0xe85d2a }));
-  bar.position.set(p.x, y + 3.1, p.z);
-  scene.add(bar);
 
   // dune3: desert sky dome (gradient + sun glow) instead of a flat tan backdrop
   const skyMat = new THREE.ShaderMaterial({ side: THREE.BackSide, depthWrite: false, fog: false,
     vertexShader: "varying vec3 vD; void main(){ vD = normalize(position); gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0);}",
     fragmentShader: "varying vec3 vD; void main(){ float h=clamp(vD.y,0.0,1.0); vec3 c=mix(vec3(0.93,0.78,0.6), vec3(0.36,0.6,0.86), pow(h,0.55)); float s=max(dot(vD,normalize(vec3(0.5,0.6,0.35))),0.0); c+=vec3(1.0,0.85,0.6)*pow(s,24.0)*0.8; gl_FragColor=vec4(c,1.0);}" });
-  const sky = new THREE.Mesh(new THREE.SphereGeometry(150, 32, 16), skyMat);
+  const sky = new THREE.Mesh(new THREE.SphereGeometry(330, 32, 16), skyMat);
   sky.renderOrder = -1; scene.add(sky);
   scene.background = new THREE.Color(0xedc79a);
-  scene.fog = new THREE.Fog(0xedc79a, 60, 140);
+  scene.fog = new THREE.Fog(0xedc79a, 110, 270);
   // dune3: saguaro cacti + dry shrubs off the racing line (instanced, cheap)
   const cacMat = new THREE.MeshStandardMaterial({ color: 0x5c7a3a, roughness: 0.8 });
   const shrubMat = new THREE.MeshStandardMaterial({ color: 0x8a7a4a, roughness: 1, flatShading: true });
   let seed = 7; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
-  const far = (x, z) => { let d = 1e9; for (const q of trackCenter) d = Math.min(d, Math.hypot(q.x - x, q.z - z)); return d; };
-  for (let k = 0, made = 0; k < 400 && made < 22; k++) {
+  const far = (x, z) => gridAt(distGrid, x, z);
+  for (let k = 0, made = 0; k < 900 && made < 34; k++) {
     const x = (rnd() - 0.5) * WORLD * 0.95, z = (rnd() - 0.5) * WORLD * 0.95;
-    if (far(x, z) < 9) continue;
+    if (far(x, z) < TRACK_HW + 6) continue;
     made++;
     const y = sampleHeight(x, z), hgt = 1.6 + rnd() * 1.6, cg = new THREE.Group();
     const trunk = new THREE.Mesh(new THREE.CapsuleGeometry(0.28, hgt, 4, 8), cacMat); trunk.position.y = hgt / 2 + 0.2; trunk.castShadow = true; cg.add(trunk);
@@ -273,9 +339,9 @@ function buildTerrain() {
     }
     cg.position.set(x, y, z); cg.rotation.y = rnd() * 6; cg.scale.setScalar(1.7); scene.add(cg);
   }
-  for (let k = 0, made = 0; k < 400 && made < 40; k++) {
+  for (let k = 0, made = 0; k < 900 && made < 60; k++) {
     const x = (rnd() - 0.5) * WORLD * 0.95, z = (rnd() - 0.5) * WORLD * 0.95;
-    if (far(x, z) < 5.5) continue; made++;
+    if (far(x, z) < TRACK_HW + 3.5) continue; made++;
     const m = new THREE.Mesh(new THREE.IcosahedronGeometry(0.35 + rnd() * 0.35, 0), shrubMat);
     m.position.set(x, sampleHeight(x, z) + 0.2, z); m.scale.y = 0.6; m.castShadow = true; scene.add(m);
   }
@@ -411,12 +477,10 @@ function makeCar(i, spawn) {
 }
 
 function spawnPos(i) {
-  const p0 = trackCenter[0];
-  const p1 = trackCenter[2];
-  const dx = p1.x - p0.x, dz = p1.z - p0.z;
-  const yaw = Math.atan2(dx, dz);
-  const side = (i % 2 === 0 ? -1 : 1) * (0.9 + (i >> 1) * 0.15);
-  const back = -i * 2.2;
+  const p0 = trackCenter[0], p1 = trackCenter[2];
+  const yaw = Math.atan2(p1.x - p0.x, p1.z - p0.z);
+  const side = (i % 2 === 0 ? -1 : 1) * 1.5;
+  const back = -3.5 - (i >> 1) * 3.4 - (i % 2) * 1.6;
   const fx = Math.sin(yaw), fz = Math.cos(yaw);
   const rx = Math.cos(yaw), rz = -Math.sin(yaw);
   const x = p0.x + fx * back + rx * side;
@@ -439,14 +503,14 @@ function syncMesh(c) {
 
 // --- dust particles ---
 function makeDust() {
-  const N = 400;
+  const N = 700;
   const geo = new THREE.BufferGeometry();
   const pos = new Float32Array(N * 3);
   const life = new Float32Array(N);
   for (let i = 0; i < N; i++) { pos[i * 3 + 1] = -99; life[i] = 0; }
   geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
   const mat = new THREE.PointsMaterial({
-    color: 0xd9c09a, size: 0.9, transparent: true, opacity: 0.5, map: (() => { const cv = document.createElement("canvas"); cv.width = cv.height = 32; const g = cv.getContext("2d"), r = g.createRadialGradient(16, 16, 0, 16, 16, 16); r.addColorStop(0, "#fff"); r.addColorStop(1, "rgba(255,255,255,0)"); g.fillStyle = r; g.fillRect(0, 0, 32, 32); return new THREE.CanvasTexture(cv); })(),
+    color: 0xd9c09a, size: 1.4, transparent: true, opacity: 0.5, map: (() => { const cv = document.createElement("canvas"); cv.width = cv.height = 32; const g = cv.getContext("2d"), r = g.createRadialGradient(16, 16, 0, 16, 16, 16); r.addColorStop(0, "#fff"); r.addColorStop(1, "rgba(255,255,255,0)"); g.fillStyle = r; g.fillRect(0, 0, 32, 32); return new THREE.CanvasTexture(cv); })(),
     depthWrite: false, sizeAttenuation: true,
   });
   const pts = new THREE.Points(geo, mat);
@@ -457,7 +521,7 @@ function makeDust() {
 
 function emitDust(x, y, z, n, speed) {
   if (!dust) return;
-  const count = Math.min(n, 8);
+  const count = Math.min(n, 10);
   for (let k = 0; k < count; k++) {
     const i = dust.cursor++ % dust.N;
     dust.pos[i * 3] = x + (Math.random() - 0.5) * 0.8;
@@ -568,7 +632,9 @@ function readHumanInput(carIndex) {
   };
 }
 
+const DEMO = new URLSearchParams(location.search).get("demo") === "race"; // all-AI attract mode (arcade live preview)
 function assignSeats() {
+  if (DEMO) { for (const c of cars) { c.human = false; c.padSlot = -1; } return; }
   const GP = window.SimilarizeGamepad;
   let pads = [];
   if (GP && typeof GP.connectedIndices === "function") {
@@ -622,23 +688,30 @@ function assignSeats() {
   }
 }
 
-function aiInput(c) {
-  const look = (c.aiTarget || 0) % trackCenter.length;
-  // aim a few waypoints ahead
-  const ahead = trackCenter[(look + 4) % trackCenter.length];
-  const tx = ahead.x - c.x, tz = ahead.z - c.z;
+function aiInput(c, dt = 1 / 60) {
+  const N = trackCenter.length;
+  const look = (c.aiTarget || 0) % N;
+  const sp = Math.hypot(c.vx, c.vz);
+  const lead = 4 + Math.round(sp / 7);
+  const ahead = trackCenter[(look + lead) % N];
+  // lane offset per car so the pack spreads out; a little extra when a car is right in front
+  const off = (c.i - 1.5) * 0.9;
+  const tx = ahead.x + Math.cos(ahead.yaw) * off - c.x, tz = ahead.z - Math.sin(ahead.yaw) * off - c.z;
   const want = Math.atan2(tx, tz);
   let diff = want - c.yaw;
   while (diff > Math.PI) diff -= Math.PI * 2;
   while (diff < -Math.PI) diff += Math.PI * 2;
-  const steer = Math.max(-1, Math.min(1, diff * 1.8));
-  // slow for sharp turns
-  const throttle = Math.abs(diff) > 0.9 ? 0.45 : 0.95;
-  // update waypoint when close
+  const steer = Math.max(-1, Math.min(1, diff * 2.0));
+  // brake for the sharpest bend in the next ~25 units
+  let curv = 0; for (let k = 3; k < 18; k += 3) curv = Math.max(curv, Math.abs(trackCenter[(look + k) % N].curv));
+  const vmax = Math.max(9, 24 - curv * 150) * (0.93 + c.i * 0.025);
+  let throttle = sp > vmax ? (sp > vmax + 4 ? -0.35 : 0) : (Math.abs(diff) > 1.0 ? 0.5 : 1);
+  // unstick: back out when pinned
+  c._stuck = sp < 1.2 && c.grounded ? (c._stuck || 0) + dt : Math.max(0, (c._stuck || 0) - dt);
+  if (c._stuck > 1.4) { c._rev = 0.9; c._stuck = 0; }
+  if (c._rev > 0) { c._rev -= dt; return { steer: -Math.sign(diff || 1), throttle: -0.9 }; }
   const near = trackCenter[look];
-  if ((near.x - c.x) ** 2 + (near.z - c.z) ** 2 < 36) {
-    c.aiTarget = (look + 1) % trackCenter.length;
-  }
+  if ((near.x - c.x) ** 2 + (near.z - c.z) ** 2 < 49) c.aiTarget = (look + 1) % N;
   return { steer, throttle };
 }
 
@@ -663,7 +736,7 @@ function updateCar(c, dt) {
   } else if (net && net.connected && net.role === "host" && c.i !== 0 && c.human && c.padSlot < 0) {
     inp = netRemote[c.i] || { steer: 0, throttle: 0 };
   } else {
-    inp = c.human ? readHumanInput(c.i) : aiInput(c);
+    inp = c.human ? readHumanInput(c.i) : aiInput(c, dt);
   }
   c._thr = inp.throttle || 0;
   const speed = Math.hypot(c.vx, c.vz);
@@ -741,9 +814,14 @@ function updateCar(c, dt) {
   }
 
   // race progress
-  const prog = nearestProgress(c.x, c.z);
+  const prog = nearestProgress(c.x, c.z, c.lastProg);
   let delta = prog - c.lastProg;
-  if (delta < -0.5) { // crossed finish forward
+  // dune5 lap logic: furthest point reached this lap (no skipping ahead more than ~12% at once); a lap counts only past 88%
+  if (c.maxP == null) c.maxP = 0;
+  if (delta > -0.5 && prog > c.maxP && prog - c.maxP < 0.12) c.maxP = prog;
+  if (delta < -0.5 && c.maxP < 0.88) delta = 0; // crossed the line without driving the lap: ignore
+  else if (delta < -0.5) { // crossed finish forward
+    c.maxP = 0;
     c.lap += 1;
     if (c.lap >= LAPS && !c.finished) {
       c.finished = true;
@@ -820,23 +898,19 @@ function carCollisions() {
 }
 
 function updateCamera() {
-  // overhead / elevated spectator framing whole track
-  const focus = new THREE.Vector3(0, 2, 0);
-  let minX = 1e9, maxX = -1e9, minZ = 1e9, maxZ = -1e9;
+  // spectator framing: follow the pack's centre, pull back as it spreads out
+  let minX = 1e9, maxX = -1e9, minZ = 1e9, maxZ = -1e9, fx = 0, fz = 0;
   for (const c of cars) {
     minX = Math.min(minX, c.x); maxX = Math.max(maxX, c.x);
     minZ = Math.min(minZ, c.z); maxZ = Math.max(maxZ, c.z);
-    focus.x += c.x; focus.z += c.z;
+    fx += c.x; fz += c.z;
   }
-  focus.x /= cars.length; focus.z /= cars.length;
-  // prefer arena center slightly so whole track stays framed
-  focus.x *= 0.35;
-  focus.z *= 0.35;
-  const span = Math.max(maxX - minX, maxZ - minZ, 40);
-  const height = 52 + span * 0.18;
-  const desired = new THREE.Vector3(focus.x, height, focus.z + 28);
-  camera.position.lerp(desired, 0.08);
-  camera.lookAt(focus.x, 1.5, focus.z);
+  fx /= cars.length; fz /= cars.length;
+  const span = Math.max(maxX - minX, (maxZ - minZ) * 1.5, 16);
+  const height = Math.min(118, 34 + span * 0.8);
+  const desired = new THREE.Vector3(fx * 0.9, height, fz * 0.9 + height * 0.55);
+  camera.position.lerp(desired, 0.06);
+  camera.lookAt(fx * 0.9, 0.5, fz * 0.9);
   camera.fov = 42;
   camera.updateProjectionMatrix();
 }
@@ -882,9 +956,9 @@ function resetRace() {
     c.x = s.x; c.y = s.y; c.z = s.z; c.yaw = s.yaw;
     c.vx = c.vz = c.vy = 0;
     c.pitch = c.roll = c.susPitch = c.susRoll = 0;
-    c.lap = 0; c.progress = 0; c.lastProg = 0;
+    c.lap = 0; c.progress = 0; c.lastProg = 0; c.maxP = 0; c._rev = 0; c._stuck = 0;
     c.finished = false; c.finishTime = 0;
-    c.aiTarget = 2;
+    c.aiTarget = 3;
     c.grounded = true;
     syncMesh(c);
   }
@@ -1092,21 +1166,19 @@ function init() {
   renderer.xr.enabled = true;
 
   scene = new THREE.Scene();
-  camera = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.5, 200);
-  camera.position.set(0, 52, 30);
+  camera = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.5, 520);
+  camera.position.set(0, 80, 40);
   clock = new THREE.Clock();
 
-  const hemi = new THREE.HemisphereLight(0xffe2bd, 0x6b4e32, 0.85);
+  const hemi = new THREE.HemisphereLight(0xffe9c8, 0x7d5a38, 1.0);
   scene.add(hemi);
   const sun = new THREE.DirectionalLight(0xfff0d8, 1.15);
-  sun.position.set(30, 50, 20);
+  sun.position.set(48, 90, 32);
   sun.castShadow = true;
   sun.shadow.mapSize.set(innerWidth < 700 ? 1024 : 2048, innerWidth < 700 ? 1024 : 2048);
   sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.03;
-  sun.shadow.camera.left = -40;
-  sun.shadow.camera.right = 40;
-  sun.shadow.camera.top = 40;
-  sun.shadow.camera.bottom = -40;
+  sun.shadow.camera.left = -62; sun.shadow.camera.right = 62; sun.shadow.camera.top = 62; sun.shadow.camera.bottom = -62;
+  sun.shadow.camera.near = 5; sun.shadow.camera.far = 220;
   scene.add(sun);
 
   buildTerrain();
@@ -1126,6 +1198,7 @@ function init() {
     renderer.setSize(w, h, false);
   });
 
+  window.__dune = { get cars() { return cars; }, get len() { return trackLen; }, get pts() { return trackCenter; } }; // test hook
   boot.classList.add("hide");
   showBanner("Dune heat · 3 laps");
   renderer.setAnimationLoop(frame);

@@ -115,7 +115,7 @@
     <div class="x-over" id="title">
       <div class="x-panel">
         <h1>Dirt Track RC Rally</h1>
-        <p>3 laps, 4 cars. Mud slows you, rocks bounce you, the ramp sends you flying.</p>
+        <p>3 laps, 4 cars. Hairpins, mud, oil and a creek; hit the three ramps fast to fly, and grab the yellow boost chevrons.</p>
         <p><b>Local Race.</b> Join with A on a controller, Enter on the keyboard, or Join (touch). Empty slots race as AI.</p>
         <ul class="x-pads" id="pads" aria-live="polite"></ul>
         <ul class="x-slots" id="slots"></ul>
@@ -167,8 +167,8 @@
       const angNorm = (a) => { while (a > Math.PI) a -= 2 * Math.PI; while (a < -Math.PI) a += 2 * Math.PI; return a; };
 
       // ---------- track ----------
-      const WP = [[0,0],[600,0],[1000,-80],[1300,100],[1350,450],[1150,700],[800,720],[600,950],[700,1250],
-        [1000,1400],[900,1700],[400,1750],[0,1600],[-300,1300],[-250,950],[-500,700],[-550,300],[-350,50]];
+      // dirt4: 28-point course - fast sweepers, a tight left hairpin, an S-bend, a long bottom straight and a twisty infield
+      const WP = [[0,0],[600,0],[1100,-70],[1600,0],[1900,260],[1950,620],[1800,880],[1400,880],[1000,930],[900,1230],[1200,1330],[1700,1280],[2100,1480],[2150,1850],[1750,2100],[1200,2100],[760,1900],[700,1540],[330,1320],[-100,1440],[-350,1750],[-750,1700],[-900,1300],[-700,950],[-300,800],[-250,450],[-600,250],[-500,-100]];
       const N = WP.length, SUB = 8;
       function cr(a, b, c, d, t) {
         const t2 = t * t, t3 = t2 * t, f = (i) => 0.5 * (2 * b[i] + (-a[i] + c[i]) * t +
@@ -200,13 +200,15 @@
       }
 
       // ---------- obstacles ----------
-      const muds = [[30, 30, 46], [75, -35, 50], [130, 20, 44]].map(([k, o, r]) => ({ ...placeOn(k, o), r }));
-      const rocks = [[50, 55, 16], [53, -50, 18], [100, 52, 17], [121, -55, 15], [140, 50, 14]]
+      const muds = [[36, 30, 46], [70, -35, 50], [104, 30, 44], [168, 20, 46], [205, -30, 44]].map(([k, o, r]) => ({ ...placeOn(k, o), r }));
+      const rocks = [[26, 60, 16], [52, -62, 18], [78, 58, 17], [96, -60, 15], [126, 60, 14], [150, -58, 16], [182, 60, 17], [212, 56, 15]]
         .map(([k, o, r]) => ({ ...placeOn(k, o), r }));
-      const ramp = { ...placeOn(92, 0), l: 50, w: 96 };
-      const creek = { ...placeOn(96, 0), l: 44, w: TW + 34 };
-      const oils = [[20, 28, 24], [60, -30, 26], [112, 22, 24]].map(([k, o, r]) => ({ ...placeOn(k, o), r }));
-      const boosts = [[12, 0], [68, 30], [117, -25]].map(([k, o]) => ({ ...placeOn(k, o), l: 46, w: 40 }));
+      // three jumps (long straights) - each launches a car that hits it fast
+      const ramps = [18, 58, 118].map((k) => ({ ...placeOn(k, 0), l: 56, w: 100 }));
+      const ramp = ramps[0];
+      const creek = { ...placeOn(84, 0), l: 44, w: TW + 34 };
+      const oils = [[48, 28, 24], [100, -30, 26], [134, 22, 24], [190, -25, 24], [216, 20, 24]].map(([k, o, r]) => ({ ...placeOn(k, o), r }));
+      const boosts = [[8, 0], [40, 30], [76, -25], [132, 0], [160, 25], [196, -20]].map(([k, o]) => ({ ...placeOn(k, o), l: 46, w: 40 }));
       const inBox = (o, x, y, pad = 0) => {
         const dx = x - o.x, dy = y - o.y, c = Math.cos(o.a), s = Math.sin(o.a);
         return Math.abs(dx * c + dy * s) < o.l / 2 + pad && Math.abs(-dx * s + dy * c) < o.w / 2 + pad;
@@ -323,9 +325,12 @@
             this.a += i.steer * TURN * Math.min(1, Math.abs(fwd) / 120) * Math.sign(fwd) * dt;
             this.vx = fx * fwd - fy * lat; this.vy = fy * fwd + fx * lat;
             // ramp
-            const dx = this.x - ramp.x, dy = this.y - ramp.y, c = Math.cos(ramp.a), s = Math.sin(ramp.a);
-            if (Math.abs(dx * c + dy * s) < ramp.l / 2 && Math.abs(-dx * s + dy * c) < ramp.w / 2 && fwd > 120) {
-              this.air = this.airT = 0.35 + fwd / 900;
+            for (const rp of ramps) {
+              const dx = this.x - rp.x, dy = this.y - rp.y, c = Math.cos(rp.a), s = Math.sin(rp.a);
+              if (Math.abs(dx * c + dy * s) < rp.l / 2 && Math.abs(-dx * s + dy * c) < rp.w / 2 && fwd > 120) {
+                this.air = this.airT = 0.35 + fwd / 900;
+                for (let k = 0; k < 6; k++) addDust(this.x, this.y, (Math.random() - 0.5) * 120, (Math.random() - 0.5) * 120, "#d9c19a");
+              }
             }
             // rocks
             for (const r of rocks) {
@@ -896,12 +901,13 @@
           for (const k of [-12, 4]) { X.beginPath(); X.moveTo(k - 6, -13); X.lineTo(k + 8, 0); X.lineTo(k - 6, 13); X.stroke(); }
           X.restore();
         }
+        for (const ramp of ramps) {
         X.save(); X.translate(ramp.x, ramp.y); X.rotate(ramp.a);
         X.fillStyle = "#7b5a3a"; X.fillRect(-ramp.l / 2, -ramp.w / 2, ramp.l, ramp.w);
         X.fillStyle = "#d9b26a"; X.fillRect(ramp.l / 2 - 10, -ramp.w / 2, 10, ramp.w);
         X.strokeStyle = "#f4e3b5"; X.lineWidth = 4;
         for (let k = -1; k <= 1; k++) { X.beginPath(); X.moveTo(-12, k * 28 - 10); X.lineTo(4, k * 28); X.lineTo(-12, k * 28 + 10); X.stroke(); }
-        X.restore();
+        X.restore(); }
         for (const r of rocks) {
           X.fillStyle = "rgba(0,0,0,0.25)"; X.beginPath(); X.arc(r.x + 3, r.y + 4, r.r, 0, 7); X.fill();
           X.fillStyle = "#8a8a8a"; X.beginPath(); X.arc(r.x, r.y, r.r, 0, 7); X.fill();
@@ -1186,7 +1192,7 @@
         R.domElement.id = "c3"; document.body.insertBefore(R.domElement, C);
         R.shadowMap.enabled = true; R.shadowMap.type = T.PCFSoftShadowMap;
         document.body.classList.add("x-3d");
-        const SKY = 0xbfe0f5, scene = new T.Scene();
+        const SKY = 0xcfe6f4, scene = new T.Scene();
         const cam = new T.PerspectiveCamera(30, 1, 10, 20000);
         const cx = (BB[0] + BB[2]) / 2, cz = (BB[1] + BB[3]) / 2;
         const wid = BB[2] - BB[0], dep = BB[3] - BB[1], longX = wid >= dep, SPAN = Math.max(wid, dep) + TW;
@@ -1323,26 +1329,91 @@
           for (const k of [22, 52]) { g.beginPath(); g.moveTo(k, 14); g.lineTo(k + 22, 40); g.lineTo(k, 66); g.stroke(); }
         });
         for (const b of boosts) flat(new T.PlaneGeometry(b.l, b.w), lam(0xffffff, { map: chev }), b, 3.5);
-        const sh = new T.Shape([new T.Vector2(-ramp.l / 2, 0), new T.Vector2(ramp.l / 2, 0), new T.Vector2(ramp.l / 2, 14)]);
-        const rg = new T.ExtrudeGeometry(sh, { depth: ramp.w, bevelEnabled: false }); rg.translate(0, 0, -ramp.w / 2);
-        const rampM = new T.Mesh(rg, lam(0x9a7048)); rampM.position.set(ramp.x, 1.4, ramp.y); rampM.rotation.y = -ramp.a;
-        rampM.castShadow = rampM.receiveShadow = true; scene.add(rampM);
+        // dirt4: three kicker ramps - timber wedge with hazard stripes, side rails and a lip flag
+        const stripeTex = canvasTex(64, 64, (g) => { g.fillStyle = "#f5c518"; g.fillRect(0, 0, 64, 64); g.fillStyle = "#222";
+          for (let k = -1; k < 4; k++) { g.beginPath(); g.moveTo(k * 24, 64); g.lineTo(k * 24 + 12, 64); g.lineTo(k * 24 + 44, 0); g.lineTo(k * 24 + 32, 0); g.fill(); } });
+        for (const ramp of ramps) {
+          const rH = 24, sh = new T.Shape([new T.Vector2(-ramp.l / 2, 0), new T.Vector2(ramp.l / 2, 0), new T.Vector2(ramp.l / 2, rH)]);
+          const rg = new T.ExtrudeGeometry(sh, { depth: ramp.w, bevelEnabled: false }); rg.translate(0, 0, -ramp.w / 2);
+          const rg2 = new T.Group(); rg2.position.set(ramp.x, 1.4, ramp.y); rg2.rotation.y = -ramp.a;
+          const wedge = new T.Mesh(rg, lam(0x9a7048)); wedge.castShadow = wedge.receiveShadow = true; rg2.add(wedge);
+          const slope = Math.atan2(rH, ramp.l), top = new T.Mesh(new T.BoxGeometry(Math.hypot(ramp.l, rH), 1.2, ramp.w - 6), lam(0xffffff, { map: stripeTex }));
+          top.position.set(0, rH / 2 + 0.8, 0); top.rotation.z = slope; rg2.add(top);
+          const lip = new T.Mesh(new T.BoxGeometry(3, 5, ramp.w), lam(0xe8e2d0)); lip.position.set(ramp.l / 2, rH - 1, 0); rg2.add(lip);
+          for (const sd of [-1, 1]) { const pole = new T.Mesh(new T.CylinderGeometry(1.6, 1.6, 40, 6), lam(0xdddddd)); pole.position.set(ramp.l / 2 - 4, rH + 18, sd * (ramp.w / 2 + 6));
+            const flag = new T.Mesh(new T.PlaneGeometry(18, 11), lam(sd > 0 ? 0xe0302f : 0xf5c518, { side: T.DoubleSide })); flag.position.set(-9, 14, 0); pole.add(flag); rg2.add(pole); }
+          scene.add(rg2);
+        }
         for (const r of rocks) {
           const m = new T.Mesh(new T.DodecahedronGeometry(r.r, 0), new T.MeshStandardMaterial({ color: 0x8a8a8a, roughness: 0.9, flatShading: true }));
           m.position.set(r.x, r.r * 0.55, r.y); m.rotation.set(r.x % 3, r.y % 3, 0); m.castShadow = true; scene.add(m);
         }
 
+        // dirt4 scenery: start arch + grandstand + sponsor banners + corner flags + distant ridges
+        {
+          const st0 = placeOn(0, 0), grp = new T.Group(); grp.position.set(WP[0][0], 0, WP[0][1]); grp.rotation.y = -st0.a; scene.add(grp);
+          const banner = canvasTex(512, 64, (g) => { g.fillStyle = "#c8281e"; g.fillRect(0, 0, 512, 64); g.fillStyle = "#fff"; g.font = "900 40px sans-serif"; g.textAlign = "center"; g.textBaseline = "middle";
+            g.fillText("DIRT TRACK RC RALLY", 256, 34); g.fillStyle = "#f5c518"; g.fillRect(0, 0, 512, 6); g.fillRect(0, 58, 512, 6); });
+          for (const sd of [-1, 1]) { const post = new T.Mesh(new T.CylinderGeometry(7, 7, 110, 8), lam(0xdddddd)); post.position.set(0, 55, sd * (TW / 2 + 16)); post.castShadow = true; grp.add(post); }
+          const bmat = lam(0xffffff, { map: banner }), dk = lam(0x333333);
+          const bar = new T.Mesh(new T.BoxGeometry(6, 34, TW + 40), [bmat, bmat, dk, dk, dk, dk]); bar.position.set(0, 100, 0); grp.add(bar);
+          // grandstand on the outside of the start straight, crowd dots
+          const gs = new T.Group(); gs.position.set(40, 0, -(TW / 2 + 110)); gs.rotation.y = Math.PI; grp.add(gs);
+          for (let r = 0; r < 5; r++) { const step = new T.Mesh(new T.BoxGeometry(260, 14, 22), lam(0xb8b4a8)); step.position.set(0, 7 + r * 14, r * 22 + 4); step.castShadow = step.receiveShadow = true; gs.add(step); }
+          const roof = new T.Mesh(new T.BoxGeometry(280, 4, 130), lam(0xd23a2a)); roof.position.set(0, 112, 50); gs.add(roof);
+          for (const sx of [-130, 130]) { const pl = new T.Mesh(new T.BoxGeometry(5, 106, 5), lam(0x555555)); pl.position.set(sx, 56, 108); gs.add(pl); }
+          const crowd = new T.InstancedMesh(new T.BoxGeometry(7, 11, 7), lam(0xffffff), 140), cm = new T.Object3D();
+          for (let i = 0; i < 140; i++) { const r = Math.floor(i / 28), c = i % 28; cm.position.set(-124 + c * 9.2 + rnd() * 3, 20 + r * 14, r * 22 + 8 + rnd() * 6); cm.updateMatrix(); crowd.setMatrixAt(i, cm.matrix); crowd.setColorAt(i, col.setHSL(rnd(), 0.65, 0.55)); }
+          gs.add(crowd);
+          // sponsor banners along the tire wall of straights (every ~6th sample on mild curvature)
+          const sponsors = ["JIMMY'S TIRES", "FROG FUEL", "BUBBLES BREWS", "REXY RACING", "JAMES MOTORS", "SIMILARIZE"];
+          sponsors.forEach((t, i) => { const tx = canvasTex(256, 48, (g) => { g.fillStyle = ["#1f6fe0", "#2fa84f", "#f07f1a", "#8a4fd8", "#e0302f", "#111"][i]; g.fillRect(0, 0, 256, 48); g.fillStyle = "#fff"; g.font = "800 26px sans-serif"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(t, 128, 26); });
+            for (const k of [3 + i * 36, 3 + i * 36 + 14]) { if (k % SN < 6) continue; const pl = placeOn(k % SN, TW / 2 + 52 * (k % 2 ? 1 : -1)); if (trackDist(pl.x, pl.y) < TW / 2 + 30) continue;
+              const bn = new T.Mesh(new T.PlaneGeometry(70, 13), lam(0xffffff, { map: tx, side: T.DoubleSide })); bn.position.set(pl.x, 13, pl.y); bn.rotation.y = -pl.a; scene.add(bn);
+              for (const e of [-33, 33]) { const lg = new T.Mesh(new T.CylinderGeometry(1.2, 1.2, 13, 5), lam(0x777777)); lg.position.set(pl.x + Math.cos(pl.a) * e, 6.5, pl.y + Math.sin(pl.a) * e); scene.add(lg); } } });
+          // hairpin hay-bale barriers: instanced bales on the outside of the sharpest turns
+          const bal = [], turnK = [];
+          for (let k = 0; k < SN; k += 2) { const a = sAt(k - 4), b = sAt(k), c2 = sAt(k + 4); const cv = Math.abs(angNorm(Math.atan2(c2[1] - b[1], c2[0] - b[0]) - Math.atan2(b[1] - a[1], b[0] - a[0]))); if (cv > 0.55) turnK.push([k, cv]); }
+          for (const [k] of turnK) for (const sd of [-1, 1]) { const o = placeOn(k, sd * (TW / 2 + 38)); if (trackDist(o.x, o.y) > TW / 2 + 20) bal.push([o.x, o.y, o.a]); }
+          const hb = new T.InstancedMesh(new T.BoxGeometry(26, 15, 15), lam(0xe0b95a), bal.length), hm = new T.Object3D();
+          bal.forEach(([x, z, a], i) => { hm.position.set(x, 8, z); hm.rotation.set(0, -a, 0); hm.updateMatrix(); hb.setMatrixAt(i, hm.matrix); }); hb.castShadow = true; scene.add(hb);
+          // corner flag poles at the biggest turns
+          const fl = new T.InstancedMesh(new T.ConeGeometry(7, 22, 3), lam(0xffffff), 18), fm = new T.Object3D(); let nf = 0;
+          for (let i = 0; i < turnK.length && nf < 18; i += 3) { const o = placeOn(turnK[i][0], (i % 2 ? 1 : -1) * (TW / 2 + 70)); if (trackDist(o.x, o.y) < TW / 2 + 40) continue;
+            const pole = new T.Mesh(new T.CylinderGeometry(1.4, 1.4, 52, 5), lam(0xdddddd)); pole.position.set(o.x, 26, o.y); scene.add(pole);
+            fm.position.set(o.x + 7, 46, o.y); fm.rotation.set(0, 0, -Math.PI / 2); fm.updateMatrix(); fl.setMatrixAt(nf, fm.matrix); fl.setColorAt(nf, col.set(nf % 2 ? 0xf5c518 : 0xe0302f)); nf++; }
+          fl.count = nf; scene.add(fl);
+          // far ridges: low-poly cones ringed outside the playfield (inside fog, never between camera and track)
+          const rid = new T.InstancedMesh(new T.ConeGeometry(260, 300, 5), new T.MeshPhongMaterial({ color: 0x6f8f86, flatShading: true }), 26), rm = new T.Object3D();
+          for (let i = 0; i < 26; i++) { const a = (i / 26) * Math.PI * 2 + rnd() * 0.2, rr = SPAN * (1.05 + rnd() * 0.15);
+            rm.position.set(cx + Math.cos(a) * rr, 90 + rnd() * 40, cz + Math.sin(a) * rr); rm.scale.set(1 + rnd(), 0.8 + rnd(), 1 + rnd()); rm.rotation.y = rnd() * 3; rm.updateMatrix(); rid.setMatrixAt(i, rm.matrix); }
+          scene.add(rid);
+        }
+
         // RC buggies, forward along +x
         const box = (w, h, d, mat, x, y, z) => { const m = new T.Mesh(new T.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); m.castShadow = true; return m; };
         const black = lam(0x161616), dark = lam(0x2a3440), hub = lam(0xb8b8b8);
-        const wg = new T.CylinderGeometry(5, 5, 4, 14); wg.rotateX(Math.PI / 2);
-        const spokeG = new T.BoxGeometry(7.4, 1.6, 4.3);
+        const wg = new T.CylinderGeometry(5.6, 5.6, 5.4, 12); wg.rotateX(Math.PI / 2);
+        const spokeG = new T.BoxGeometry(8.4, 1.8, 5.8);
         const models = COLORS.map(([, c]) => {
           const g = new T.Group(), sc = new T.Group(), bd = new T.Group(), body = new T.MeshStandardMaterial({ color: c, roughness: 0.45 });
           sc.scale.setScalar(CAR_VIS); g.add(sc); sc.add(bd);
-          bd.add(box(26, 6, 13, body, 0, 9, 0), box(10, 5, 9, dark, 1, 14, 0), box(8, 3, 10, body, 11, 7, 0));
-          bd.add(box(4, 1.2, 18, body, -13, 18, 0), box(1.5, 6, 1.5, black, -12, 14.5, -4), box(1.5, 6, 1.5, black, -12, 14.5, 4));
-          const ant = new T.Mesh(new T.CylinderGeometry(0.4, 0.4, 18, 4), black); ant.position.set(-6, 21, 5); bd.add(ant);
+          // dirt4 buggy: chassis tray, sloped hood + nose, glass canopy with driver, roll cage, shocks, headlights, rear wing
+          const glass = lam(0x1d3140, { transparent: true, opacity: 0.85 }), steel = lam(0x9aa3ad), lamp = new T.MeshBasicMaterial({ color: 0xfff3b0 });
+          bd.add(box(30, 2, 11, dark, 0, 5, 0), box(20, 5, 14, body, -2, 8.5, 0));
+          const hood = box(12, 3, 12, body, 10, 8.5, 0); hood.rotation.z = -0.28; bd.add(hood);
+          bd.add(box(4, 4, 13, body, 16, 6, 0), box(3, 2, 14, dark, 17.5, 3.6, 0), box(7, 5.5, 9, glass, 1.5, 13.4, 0), box(2.2, 2.4, 2.2, lam(0xffd2a0), 0.8, 14.6, 0));
+          for (const sd of [-1, 1]) {
+            bd.add(box(1.4, 1.4, 1.4, lamp, 17.6, 7.2, sd * 4.6));
+            for (const [a, b2] of [[5.5, 12.5], [-4.5, 12.5]]) { const rod = box(1, 8, 1, steel, a, 14, sd * 4.8); rod.rotation.z = a > 0 ? 0.35 : -0.3; bd.add(rod); }
+            bd.add(box(1, 1, 9.6, steel, 0.5, 17.8, sd * 0));
+            const arm = box(1, 1.2, 4.5, steel, 9, 6, sd * 8.8); bd.add(arm); const arm2 = box(1, 1.2, 4.5, steel, -9, 6, sd * 8.8); bd.add(arm2);
+            const shock = new T.Mesh(new T.CylinderGeometry(0.9, 0.9, 7, 6), lam(0xf5c518)); shock.position.set(-9, 9.5, sd * 7.4); shock.rotation.x = sd * 0.35; bd.add(shock);
+            const shock2 = shock.clone(); shock2.position.x = 9; bd.add(shock2);
+          }
+          bd.add(box(6, 1.2, 20, body, -15.5, 18, 0), box(1.5, 7, 1.5, black, -14, 14.5, -5.5), box(1.5, 7, 1.5, black, -14, 14.5, 5.5), box(3, 1, 20, black, -12, 5.4, 0));
+          const ant = new T.Mesh(new T.CylinderGeometry(0.35, 0.35, 20, 4), black); ant.position.set(-8, 23, 5.5); bd.add(ant);
+          const tip = new T.Mesh(new T.SphereGeometry(1.2, 6, 6), new T.MeshBasicMaterial({ color: 0xffee33 })); tip.position.set(-8, 33, 5.5); bd.add(tip);
           const wheels = [], fronts = [];
           for (const [wx, wz] of [[-9, -8.5], [-9, 8.5], [9, -8.5], [9, 8.5]]) {
             const w = new T.Mesh(wg, black); w.castShadow = true; w.add(new T.Mesh(spokeG, hub)); wheels.push(w);
