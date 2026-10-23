@@ -1,36 +1,38 @@
-UWP run 40010246372 attempt 1 event workflow_dispatch sha 1f8a58cf9a20d78ab899546a6ef56b526ce49e52 tag lb-u6-uwp-2 started 2026-10-23T19:18:31Z
+UWP run 40022137635 attempt 1 event workflow_dispatch sha 1b71e33f78a46322896b396d68b3d3457ad4a071 tag lb-u6-uwp-2 started 2026-10-23T20:59:26Z
 secrets present
 absoluteURL -> LBXboxUWP.Url in 13 files
 src/unity/lambo-blast-u6/Assets/Editor:
 total 60
-drwxr-xr-x 1 Ben 197611     0 Oct 23 13:18 .
+drwxr-xr-x 1 Ben 197611     0 Oct 23 14:59 .
 drwxr-xr-x 1 Ben 197611     0 Oct 23 10:58 ..
 -rw-r--r-- 1 Ben 197611 37445 Oct 23 10:58 BuildScript.cs
--rw-r--r-- 1 Ben 197611 14325 Oct 23 13:18 LBBuildUWP.cs
+-rw-r--r-- 1 Ben 197611 14325 Oct 23 14:59 LBBuildUWP.cs
 
 src/unity/lambo-blast-u6/Assets/Scripts/Platform:
 total 28
-drwxr-xr-x 1 Ben 197611     0 Oct 23 13:18 .
-drwxr-xr-x 1 Ben 197611     0 Oct 23 13:18 ..
--rw-r--r-- 1 Ben 197611 27287 Oct 23 13:18 LBXboxUWP.cs
+drwxr-xr-x 1 Ben 197611     0 Oct 23 14:59 .
+drwxr-xr-x 1 Ben 197611     0 Oct 23 14:59 ..
+-rw-r--r-- 1 Ben 197611 27287 Oct 23 14:59 LBXboxUWP.cs
 
 src/unity/lambo-blast-u6/UWPTiles:
 total 580
-drwxr-xr-x 1 Ben 197611      0 Oct 23 13:18 .
-drwxr-xr-x 1 Ben 197611      0 Oct 23 13:18 ..
--rw-r--r-- 1 Ben 197611 277958 Oct 23 13:18 splash620x300.png
--rw-r--r-- 1 Ben 197611  40311 Oct 23 13:18 sq150.png
--rw-r--r-- 1 Ben 197611 148695 Oct 23 13:18 sq310.png
--rw-r--r-- 1 Ben 197611   4413 Oct 23 13:18 sq44.png
--rw-r--r-- 1 Ben 197611   5639 Oct 23 13:18 sq50.png
--rw-r--r-- 1 Ben 197611  10530 Oct 23 13:18 sq71.png
--rw-r--r-- 1 Ben 197611  82279 Oct 23 13:18 wide310x150.png
-cert: subject CN=Similarize thumb F1577732660C2B7DF9BEE96B5868B590D2E9A599 notAfter 10/23/2031 13:18:33
-vs: C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools
+drwxr-xr-x 1 Ben 197611      0 Oct 23 14:59 .
+drwxr-xr-x 1 Ben 197611      0 Oct 23 14:59 ..
+-rw-r--r-- 1 Ben 197611 277958 Oct 23 14:59 splash620x300.png
+-rw-r--r-- 1 Ben 197611  40311 Oct 23 14:59 sq150.png
+-rw-r--r-- 1 Ben 197611 148695 Oct 23 14:59 sq310.png
+-rw-r--r-- 1 Ben 197611   4413 Oct 23 14:59 sq44.png
+-rw-r--r-- 1 Ben 197611   5639 Oct 23 14:59 sq50.png
+-rw-r--r-- 1 Ben 197611  10530 Oct 23 14:59 sq71.png
+-rw-r--r-- 1 Ben 197611  82279 Oct 23 14:59 wide310x150.png
+cert: subject CN=Similarize thumb F234B6125A4A935BFD8CBEC8842DAA45A1B56B13 notAfter 10/23/2031 14:59:28
+vs: C:\Program Files\Microsoft Visual Studio\18\Community
 UWP.VC v143 present
 sdk: 10.0.26100.0
 hub: G:\Unity\Unity Hub\Unity Hub.exe
 need editor: 6000.6.5f1
-NO_EDITOR: install Unity 6000.6.5f1 + Universal Windows Platform Build Support in Unity Hub on this PC (the runner is not admin, so it cannot install it itself)
-=== step outcomes: secrets=success cert=success vs=success setup=skipped activate=skipped urpsetup=skipped build=skipped manifest=skipped msbuild=skipped collect=skipped release=skipped smoke=skipped
+editor found: G:\SimilarizeBuild\Unity\6000.6.7f1\Editor\Unity.exe
+using same-minor editor instead of 6000.6.5f1 (patch upgrade): G:\SimilarizeBuild\Unity\6000.6.7f1\Editor\Unity.exe
+editor: G:\SimilarizeBuild\Unity\6000.6.7f1\Editor\Unity.exe  uwp module: True
+=== step outcomes: secrets=success cert=success vs=success setup=skipped activate=cancelled urpsetup=skipped build=skipped manifest=skipped msbuild=skipped collect=skipped release=skipped smoke=skipped
 === no editor log
