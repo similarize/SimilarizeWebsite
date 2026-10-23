@@ -59,11 +59,11 @@ jobs:
     steps:
       # Self-hosted PC: plain 'bash' would resolve to the WSL stub in System32; put Git Bash first on PATH for every later step.
       - name: Use Git Bash
-        shell: powershell
+        shell: cmd
         run: |
-          Add-Content -Path $env:GITHUB_PATH -Value "C:\Program Files\Git\bin" -Encoding ascii
-          Add-Content -Path $env:GITHUB_PATH -Value "C:\Program Files\Git\usr\bin" -Encoding ascii
-          if (Get-Command pwsh -ErrorAction SilentlyContinue) { "pwsh ok" } else { Write-Host "::warning::pwsh (PowerShell 7) not found on this runner" }
+          echo C:\Program Files\Git\bin>>"%GITHUB_PATH%"
+          echo C:\Program Files\Git\usr\bin>>"%GITHUB_PATH%"
+          where pwsh || echo ::warning::pwsh (PowerShell 7) not found on this runner
       - name: Checkout unity-src
         uses: actions/checkout@v4
         with:
