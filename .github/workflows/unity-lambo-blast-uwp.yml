@@ -45,8 +45,7 @@ env:
 
 defaults:
   run:
-    # Git Bash explicitly: on the self-hosted PC plain 'bash' resolves to the WSL stub (C:\WINDOWS\system32\bash.exe)
-    shell: 'C:\Program Files\Git\bin\bash.exe --noprofile --norc -e -o pipefail {0}'
+    shell: bash
 
 jobs:
   uwp:
@@ -55,6 +54,13 @@ jobs:
     runs-on: [self-hosted, xbox-uwp]
     timeout-minutes: 240
     steps:
+      # Self-hosted PC: plain 'bash' would resolve to the WSL stub in System32; put Git Bash first on PATH for every later step.
+      - name: Use Git Bash
+        shell: powershell
+        run: |
+          Add-Content -Path $env:GITHUB_PATH -Value "C:\Program Files\Git\bin" -Encoding ascii
+          Add-Content -Path $env:GITHUB_PATH -Value "C:\Program Files\Git\usr\bin" -Encoding ascii
+          if (Get-Command pwsh -ErrorAction SilentlyContinue) { "pwsh ok" } else { Write-Host "::warning::pwsh (PowerShell 7) not found on this runner" }
       - name: Checkout unity-src
         uses: actions/checkout@v4
         with:
