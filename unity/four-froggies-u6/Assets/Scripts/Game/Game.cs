@@ -165,6 +165,7 @@ public partial class Game : MonoBehaviour
         if (demoShot == "world72") { World72TestLobby(); return false; }   // ffu72: Ben item 6 - world-state (one Starship, mechs hidden while in space) (GameFfu72.cs)
         if (demoShot == "mechs72") { Mechs72TestLobby(); return false; }   // ffu72: Ben item 7 - split: independent space mechs; shared view: one group trip (GameFfu72.cs)
         if (demoShot == "ffu73") { Bridge73TestLobby(); return false; }   
+        if (demoShot == "ffu75") { Fix75TestLobby(); return false; }   // ffu75: the mech lands itself + ramp; B7 bridge view steady (GameFfu75.cs)
         if (demoShot == "ffu74") { Fix74TestLobby(); return false; }   // ffu74: BOOST lifts the mech + BRIDGE button / hint (GameFfu74.cs)   // ffu73: the trillion-story mech's bridge (MechBridge73.cs, GameFfu73.cs)
         if (demoShot == "chip72") { Chip72TestLobby(); return false; }   // ffu72: Bill - one help chip per split view (HelpChips72.cs, GameFfu72.cs)   // ffu71: Ben item 1 - 2- / 4-way split phones, own viewport + own pad (GameFfu71.cs)
         if (demoShot == "phone59") { Phone59TestLobby(); return false; }   // ffu59b: 4-player split, own phones, FULL in one viewport   // ffu59: A joins only, LT starts (GameFfu59.cs)   // ffu39: pad select + touch tap on PLAY (GameSeats.cs)
@@ -1479,6 +1480,7 @@ public partial class Game : MonoBehaviour
             foreach (var s in slots) if (LaunchSeq.I != null && LaunchSeq.I.crew.Contains(frogs[s.frog])) { any = frogs[s.frog]; break; }
             LaunchSeq.View(sharedCam, sharedHud, any);
         }
+        Land75Views();   // ffu75: a mech landing / taking off by itself (World/MechLand75.cs)
         AscentViews();
         StoryLate();   // ffu22: story camera + objective markers
     }

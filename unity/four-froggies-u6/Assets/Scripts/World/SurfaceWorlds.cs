@@ -158,9 +158,10 @@ public class SurfaceWorlds : MonoBehaviour
         marsRoot = new GameObject("Mars").transform;
         var g = Ground("Mars ground", MarsY, Worlds.MarsO, 190f, 110, new Color(0.72f, 0.36f, 0.2f), new Color(0.55f, 0.27f, 0.15f), 21);
         g.transform.SetParent(marsRoot, true);
-        Rocket(marsRoot, M(0f, MarsY(0f, -30f), -30f));
+        Transform prop75 = MechLand75.PropGroup(marsRoot, WorldId.Mars);   // ffu75: hidden while a mech stands here and the Starship isn't
+        Rocket(prop75, M(0f, MarsY(0f, -30f), -30f));
         var ret = Interact.Add(M(0f, MarsY(0f, -30f), -27f), 5f, "board the Starship (back to Mars orbit)", f => SpaceWorld.I.ToOrbit(f, "mars"));
-        ret.enabled = f => f.world == WorldId.Mars && !Quiet;
+        ret.enabled = f => f.world == WorldId.Mars && !Quiet && MechLand75.StarPropShown(WorldId.Mars);
         // dog pen
         penC = M(10f, MarsY(10f, -30f), -30f);
         for (int k = 0; k < 14; k++)
@@ -210,7 +211,9 @@ public class SurfaceWorlds : MonoBehaviour
             var r = Mats.Prim(PrimitiveType.Cube, marsRoot, M(x, MarsY(x, z) + 0.6f, z), new Vector3(5f, 0.4f, 7f), new Vector3(-15f, x < 0 ? 270f : 90f, 0f), Mats.Lit(new Color(0.85f, 0.65f, 0.25f)), true);
         }
         foreach (var rr in marsRoot.GetComponentsInChildren<Renderer>()) rr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        MechLand75.BeforeMerge(prop75, false);
         MeshMerge.Merge(marsRoot, false);
+        MechLand75.BeforeMerge(prop75, true);
 
         // cave dogs (unnamed) + King Germy
         for (int k = 0; k < 16; k++)
@@ -315,9 +318,10 @@ public class SurfaceWorlds : MonoBehaviour
         calRoot = new GameObject("Callisto").transform;
         var g = Ground("Callisto ground", CalY, Worlds.CallistoO, 170f, 100, new Color(0.62f, 0.62f, 0.68f), new Color(0.42f, 0.4f, 0.42f), 31);
         g.transform.SetParent(calRoot, true);
-        Rocket(calRoot, C(0f, CalY(0f, 0f), 0f));
+        Transform prop75 = MechLand75.PropGroup(calRoot, WorldId.Callisto);   // ffu75
+        Rocket(prop75, C(0f, CalY(0f, 0f), 0f));
         var ret = Interact.Add(C(0f, CalY(0f, 3f), 3f), 5f, "board the Starship (back to Callisto orbit)", f => SpaceWorld.I.ToOrbit(f, "callisto"));
-        ret.enabled = f => f.world == WorldId.Callisto && !Quiet;
+        ret.enabled = f => f.world == WorldId.Callisto && !Quiet && MechLand75.StarPropShown(WorldId.Callisto);
         // Jupiter fills the sky
         var jtex = Resources.Load<Texture2D>("LB/space_jupiter");   // NASA map (stage B)
         Material jm;
@@ -342,7 +346,9 @@ public class SurfaceWorlds : MonoBehaviour
             Mats.Prim(PrimitiveType.Cube, calRoot, C(x, CalY(x, z) + s * 0.6f, z), new Vector3(s * 0.6f, s * 1.6f, s * 0.6f), new Vector3((float)r.NextDouble() * 20f, (float)r.NextDouble() * 90f, (float)r.NextDouble() * 20f), Mats.Shiny(new Color(0.75f, 0.88f, 0.95f)), true);
         }
         foreach (var rr in calRoot.GetComponentsInChildren<Renderer>()) rr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        MechLand75.BeforeMerge(prop75, false);
         MeshMerge.Merge(calRoot, false);
+        MechLand75.BeforeMerge(prop75, true);
         // beacons
         beaconOff = Mats.Unlit(new Color(0.4f, 0.12f, 0.1f));
         beaconGreen = Mats.Unlit(new Color(0.3f, 1f, 0.4f));

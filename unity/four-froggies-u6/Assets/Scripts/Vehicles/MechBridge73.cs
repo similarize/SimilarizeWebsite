@@ -275,7 +275,7 @@ public class Bridge73 : MonoBehaviour
         Pose p;
         if (poses.TryGetValue(c, out p))
         {
-            if (p.b != null && p.b.eye != null && p.f == Time.frameCount) c.transform.SetPositionAndRotation(p.b.eye.position, p.b.eye.rotation * Quaternion.Euler(0f, p.yaw, 0f) * Quaternion.Euler(p.pitch, 0f, 0f));
+            if (p.b != null && p.b.eye != null && p.f == Time.frameCount) c.transform.SetPositionAndRotation(p.b.eye.position, EyeRot75(p.b, p.yaw, p.pitch));
             else poses.Remove(c);
         }
         Vector3 cp = c.transform.position;
@@ -287,7 +287,12 @@ public class Bridge73 : MonoBehaviour
                     if (r.enabled && r.GetComponentInParent<Bridge73>() == null && r.GetComponentInParent<Frog>() == null) { r.enabled = false; hidden.Add(r); }
             if (b.visorR != null && b.visorR.enabled) { b.visorR.enabled = false; hidden.Add(b.visorR); }
             nearCam = c; nearWas = c.nearClipPlane;
-            c.nearClipPlane = Mathf.Min(c.nearClipPlane, 0.12f * b.k);
+            // ffu75 B7: 0.12 m (0.012 m in the space copy) against a 2-12 km far plane left the depth buffer ~17 000:1 .. 1 000 000:1,
+            // so the ground, grass, roads and SSAO seen through the viewscreen z-fought and flashed. The nearest thing the bridge eye
+            // ever sees (chair back, ceiling, side walls, at any look angle) is > 1.7 bridge metres away: 0.4 m keeps the ratio
+            // no worse than the chase camera at that altitude.
+            c.nearClipPlane = Mathf.Min(c.nearClipPlane, (F75.Old ? 0.12f : NearIn75) * b.k);
+            InNear75 = c.nearClipPlane; InFar75 = c.farClipPlane;
             CamsInside++;
             break;
         }
@@ -342,9 +347,32 @@ public class Bridge73 : MonoBehaviour
         if (sm != null && sm.aimK > 0.05f) return false;                                     // the arm-cannon aim camera
         v.yaw = Mathf.Clamp(v.yaw + i.look.x, -80f, 80f);
         v.pitch = Mathf.Clamp(v.pitch - i.look.y, -30f, 35f);
-        rig.cam.transform.SetPositionAndRotation(b.eye.position, b.eye.rotation * Quaternion.Euler(0f, v.yaw, 0f) * Quaternion.Euler(v.pitch, 0f, 0f));
+        rig.cam.transform.SetPositionAndRotation(b.eye.position, EyeRot75(b, v.yaw, v.pitch));
         poses[rig.cam] = new Pose { b = b, yaw = v.yaw, pitch = v.pitch, f = Time.frameCount };   // re-posed right before it renders
         return true;
+    }
+
+    // ffu75 B7: the bridge view was bolted to the eye inside the head, so every walk-cycle torso roll (+-3 deg at 160 m = metres
+    // at the far scenery), hip bob, flight lean and (in space) the copy's wobble / bank swung the whole view ("very shifty").
+    // Now the eye keeps its exact position in the room, but its rotation comes from a steady frame: the mech's heading plus the
+    // head's own turn (ranch), or the space ship itself (the copy's wobble / bank left out). Knob &ff75old=1 = the old pose.
+    public const float NearIn75 = 0.4f;
+    public static float InNear75, InFar75;   // probe: the near / far plane of the last camera rendered inside a bridge
+    public static Quaternion EyeRot75(Bridge73 b, float yaw, float pitch)
+    {
+        Quaternion look = Quaternion.Euler(0f, yaw, 0f) * Quaternion.Euler(pitch, 0f, 0f);
+        Transform basis = b.room != null ? b.room.parent : null;
+        if (F75.Old || basis == null) return b.eye.rotation * look;
+        Quaternion rel = Quaternion.Inverse(basis.rotation) * b.eye.rotation;   // fixed: the room never moves inside its head / copy
+        Quaternion frame;
+        var sm = basis.GetComponentInParent<StoryMech>();
+        if (sm != null) frame = Quaternion.Euler(0f, sm.transform.eulerAngles.y + Mathf.DeltaAngle(0f, basis.localEulerAngles.y), 0f);
+        else
+        {
+            var s = basis.GetComponentInParent<Starship>();
+            frame = s != null ? s.transform.rotation : Quaternion.Euler(0f, basis.eulerAngles.y, 0f);
+        }
+        return frame * rel * look;
     }
 
     // ---------- riders ----------

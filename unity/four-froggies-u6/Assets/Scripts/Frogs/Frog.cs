@@ -246,6 +246,13 @@ public partial class Frog : MonoBehaviour
             input = new PIn();
             return;
         }
+        if (land75 != null)   // ffu75: held by a mech landing / taking off by itself (World/MechLand75.cs)
+        {
+            prompt = land75.Prompt(this);
+            if (human && (input.use || input.fire || input.hop)) land75.Skip(this);
+            input = new PIn();
+            return;
+        }
         if (!human) Think(dt);
         exitCool -= dt;
         if (exitWaterT > 0f) exitWaterT -= dt;   // ffu70

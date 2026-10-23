@@ -87,9 +87,10 @@ public class MoonWorld : MonoBehaviour
         Transform st = new GameObject("Static").transform; st.SetParent(root, false);
         BuildGround();
         // Starship standing on its pad (A = back to Moon orbit)
-        Rocket(st, L(PadP.x, Y(PadP.x, PadP.y), PadP.y));
+        Transform prop75 = MechLand75.PropGroup(st, WorldId.Moon);   // ffu75: hidden while a mech stands here and the Starship isn't
+        Rocket(prop75, L(PadP.x, Y(PadP.x, PadP.y), PadP.y));
         var ret = Interact.Add(L(PadP.x, Y(PadP.x, PadP.y + 3f), PadP.y + 3f), 5f, "board the Starship (back to Moon orbit)", f => ToOrbitAll(f, null));
-        ret.enabled = f => f.world == WorldId.Moon && f.vehicle == null && f.passengerOf == null;
+        ret.enabled = f => f.world == WorldId.Moon && f.vehicle == null && f.passengerOf == null && MechLand75.StarPropShown(WorldId.Moon);
         // buggy bay pad (yellow ring + sign)
         Vector3 bp = L(BayP.x, Y(BayP.x, BayP.y), BayP.y);
         Mats.Prim(PrimitiveType.Cylinder, st, bp + Vector3.up * 0.03f, new Vector3(7f, 0.03f, 7f), Mats.Unlit(new Color(1f, 0.82f, 0.2f)));
@@ -100,7 +101,9 @@ public class MoonWorld : MonoBehaviour
         Rocks(st);
         Sky();
         foreach (var rr in root.GetComponentsInChildren<Renderer>()) rr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        MechLand75.BeforeMerge(prop75, false);
         MeshMerge.Merge(st, false);
+        MechLand75.BeforeMerge(prop75, true);
         // dust: own particle system, 1/6 g, no air drag
         var dgo = new GameObject("Moon dust"); dgo.transform.SetParent(root, false);
         dust = dgo.AddComponent<ParticleSystem>();

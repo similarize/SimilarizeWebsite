@@ -202,6 +202,13 @@ public partial class SpaceWorld
     {
         int b = Find(bodyId);
         Starship pk = ParkedFor(f, b);
+        // ffu75: the mech stands on this world - walk up its ramp and fly it (never beamed up past it)
+        MechLand75 ml75 = pk != null && !F75.Old ? MechLand75.For(pk) : null;
+        if (ml75 != null)
+        {
+            if (!ml75.Board(f)) f.Toast(pk.mechForm != null ? pk.mechForm.Title + " is right here - A at the foot of its ramp" : "Your mech is right here", 3f);
+            return;
+        }
         if (pk != null)
         {
             pk.parkedFor = null; pk.parkedBody = -1;
@@ -250,6 +257,8 @@ public partial class SpaceWorld
         if (Game.I != null) foreach (Frog f in Game.I.frogs) if (f != null && f.passengerOf == s) crew.Add(f);
         bool earth = b.id == "earth";
         if (mech == null) SetStar(earth ? StarLoc.Pad : LocOf(b.id), "landed on " + b.name);
+        // ffu75 (Bill): a mech lands ITSELF (on its flames, then a ramp) - no Starship stand-in, it parks on the surface (MechLand75.cs)
+        if (!F75.Old && mech != null && crew.Count > 0) { Land75(s, bodyIdx, crew, pilot); Sfx.Play(Sfx.Boom, 0.8f, 0.5f); return; }
         if (earth && mech == null && crew.Count > 0)
         {
             var spots = new List<Vector3>();
@@ -293,10 +302,10 @@ public partial class SpaceWorld
         foreach (var s in ships)
         {
             if (s == null) continue;
-            if (s.parkedFor != null && !OffEarth(s.parkedFor.world)) { Debug.Log("FF72 " + s.gameObject.name + ": " + s.parkedFor.nick + " left the off-Earth worlds - the waiting mech flies home"); s.parkedFor = null; s.parkedBody = -1; }
+            if (s.parkedFor != null && !OffEarth(s.parkedFor.world) && MechLand75.For(s) == null) { Debug.Log("FF72 " + s.gameObject.name + ": " + s.parkedFor.nick + " left the off-Earth worlds - the waiting mech flies home"); s.parkedFor = null; s.parkedBody = -1; }
             bool use = InUse(s);
             if (!use && s.mechForm != null) { Debug.Log("FF72 " + s.gameObject.name + ": nobody aboard " + s.mechForm.Title + " - it flies home"); s.SetMechForm(null); }
-            s.Show72(use);
+            s.Show72(use && !MechLand75.Hides(s));   // ffu75: not drawn in orbit while its mech stands on a world
         }
         foreach (var m in StoryMech.AllMechs)
         {
@@ -321,6 +330,7 @@ public partial class SpaceWorld
         }
         else starIdleT = 0f;
         ApplyPad72();
+        MechLand75.StaticTick();
     }
 }
 
