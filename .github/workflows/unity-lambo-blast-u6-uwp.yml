@@ -48,7 +48,8 @@ env:
 
 defaults:
   run:
-    shell: bash
+    # Git Bash explicitly: on the self-hosted PC plain 'bash' resolves to the WSL stub (C:\WINDOWS\system32\bash.exe)
+    shell: 'C:\Program Files\Git\bin\bash.exe --noprofile --norc -e -o pipefail {0}'
 
 jobs:
   uwp:
