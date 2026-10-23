@@ -7,7 +7,7 @@
 import * as THREE from "three";
 import { createNet, fillQr } from "./net.js?v=20261007-dune2";
 
-const CACHE = "20261023-dune5";
+const CACHE = "20261023-dune6";
 const LAPS = 3;
 const N_CARS = 4;
 const COLORS = [0xe85d2a, 0x3b82f6, 0xf2c21b, 0x2fa84f];
@@ -219,6 +219,53 @@ function nearestProgress(x, z, hint) {
   return best / N;
 }
 
+/** dune6: crisp track markings as thin geometry draped on the heightfield (replaces the blurry per-vertex colour stripes). */
+function buildTrackMarkings() {
+  const P = trackCenter, N = P.length, L = trackLen, HW = TRACK_HW;
+  const R = P.map((p) => [Math.cos(p.yaw), -Math.sin(p.yaw)]);
+  const at = (s0) => {
+    const s = ((s0 % L) + L) % L;
+    let lo = 0, hi = N - 1;
+    while (lo < hi) { const m = (lo + hi + 1) >> 1; if (P[m].s <= s) lo = m; else hi = m - 1; }
+    const a = P[lo], b = P[(lo + 1) % N], t = a.len > 0 ? (s - a.s) / a.len : 0, r0 = R[lo], r1 = R[(lo + 1) % N];
+    let rx = r0[0] + (r1[0] - r0[0]) * t, rz = r0[1] + (r1[1] - r0[1]) * t; const l = Math.hypot(rx, rz) || 1; rx /= l; rz /= l;
+    return { x: a.x + (b.x - a.x) * t, z: a.z + (b.z - a.z) * t, rx, rz };
+  };
+  const pos = [], col = [], tc = new THREE.Color();
+  const quad = (s0, s1, o0, o1, hex, lift) => {
+    const p0 = at(s0), p1 = at(s1); tc.set(hex);
+    const V = [[p0, o0], [p0, o1], [p1, o1], [p1, o0]].map(([p, o]) => { const x = p.x + p.rx * o, z = p.z + p.rz * o; return [x, sampleHeight(x, z) + lift, z]; });
+    for (const tri of [[0, 1, 2], [0, 2, 3]]) {
+      let [a, b, c] = tri.map((i) => V[i]);
+      if ((b[2] - a[2]) * (c[0] - a[0]) - (b[0] - a[0]) * (c[2] - a[2]) < 0) { const t = b; b = c; c = t; }
+      pos.push(...a, ...b, ...c); for (let k = 0; k < 3; k++) col.push(tc.r, tc.g, tc.b);
+    }
+  };
+  const STEP = 0.275, RED = 0xd8261c, WHITE = 0xf7f3ea;
+  for (let s = 0; s < L; s += STEP) {
+    const s1 = Math.min(L, s + STEP), blk = Math.floor(s / 1.1) % 2;
+    for (const sd of [-1, 1]) {
+      quad(s, s1, sd * (HW - 0.8), sd * (HW - 0.08), blk ? RED : WHITE, 0.07);          // rumble strip, 1.1-long red/white blocks
+      quad(s, s1, sd * (HW - 1.06), sd * (HW - 0.92), WHITE, 0.065);                     // solid white edge line
+    }
+    if (Math.floor(s / 1.65) % 2 === 0) quad(s, s1, -0.08, 0.08, 0xf3e7c6, 0.06);        // dashed centre line
+  }
+  // chequered start/finish line: 2 rows of 0.55 x 0.53 squares across the ribbon
+  const cw = (HW - 1.2) * 2 / 12;
+  for (let row = 0; row < 2; row++) for (let c = 0; c < 12; c++) {
+    const o0 = -(HW - 1.2) + c * cw;
+    quad(-0.55 + row * 0.55, -0.55 + (row + 1) * 0.55, o0, o0 + cw, (c + row) % 2 ? 0x161616 : 0xfafafa, 0.1);
+  }
+  // checkpoint lines under the hoops
+  for (let k = 1; k <= 5; k++) { const sc = P[Math.floor(N * k / 6)].s; quad(sc - 0.16, sc + 0.16, -(HW - 1.0), HW - 1.0, 0x7fe9ff, 0.085); }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
+  geo.computeVertexNormals();
+  const mat = new THREE.MeshLambertMaterial({ vertexColors: true, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 });
+  const mesh = new THREE.Mesh(geo, mat); mesh.receiveShadow = true; mesh.renderOrder = 1; scene.add(mesh);
+}
+
 function buildTerrain() {
   buildTrackCenter();
   heightData = buildHeightData();
@@ -238,13 +285,8 @@ function buildTerrain() {
     pos.setY(i, h);
     const sand = surfaceSand(x, z);
     tmp.copy(cHard).lerp(cSand, sand);
-    // dune5: rumble stripes on the ribbon edge, darker packed racing line, painted start line
-    {
-      const gi = iz * (heightSeg + 1) + ix, d = distGrid[gi], sg = sGrid[gi];
-      if (d > TRACK_HW - 0.55 && d < TRACK_HW + 0.15) tmp.set(Math.floor(sg / 2.2) % 2 ? 0xd8362a : 0xf3ece0);
-      else if (d < TRACK_HW - 0.55) { tmp.multiplyScalar(0.92); if (Math.abs(offGrid[gi]) < 0.18 && Math.floor(sg / 3) % 2) tmp.multiplyScalar(1.12); }
-      const sl = sg > trackLen - 1.4 || sg < 0.9; if (sl && d < TRACK_HW - 0.55) tmp.set((Math.floor(offGrid[gi] / 0.9) + (sg < 0.9 ? 1 : 0)) % 2 ? 0x1a1a1a : 0xf5f5f5);
-    }
+    // dune6: hardpack tint only - all painted markings are real geometry now (buildTrackMarkings), never vertex colours
+    { const gi = iz * (heightSeg + 1) + ix; if (distGrid[gi] < TRACK_HW - 0.8) tmp.multiplyScalar(0.92); }
     if (sand > 0.7) tmp.lerp(cDune, 0.4);
     // dune3: wind ripples + low-frequency tone variation for realistic sand
     const rip = Math.sin(x * 1.9 + z * 0.7 + Math.sin(z * 0.35) * 2.2) * 0.5 + 0.5;
@@ -261,6 +303,7 @@ function buildTerrain() {
   terrainMesh.receiveShadow = true;
   scene.add(terrainMesh);
 
+  buildTrackMarkings();
   // dune5 scenery: boulders on the dune side of the berm, mesas, start arch, checkpoint hoops, jump warning signs
   const rockMat = new THREE.MeshStandardMaterial({ color: 0x6b5a4a, roughness: 0.9, flatShading: true });
   let seed0 = 11; const r0 = () => ((seed0 = (seed0 * 16807) % 2147483647) / 2147483647);
@@ -284,10 +327,11 @@ function buildTerrain() {
     const p = trackCenter[0], y = sampleHeight(p.x, p.z), g = new THREE.Group();
     g.position.set(p.x, y, p.z); g.rotation.y = p.yaw;
     const gateMat = new THREE.MeshStandardMaterial({ color: 0xf5e6d0, roughness: 0.6 });
-    const bcv = document.createElement("canvas"); bcv.width = 512; bcv.height = 96; const bg = bcv.getContext("2d");
-    bg.fillStyle = "#e85d2a"; bg.fillRect(0, 0, 512, 96); bg.fillStyle = "#fff"; bg.font = "900 52px sans-serif"; bg.textAlign = "center"; bg.textBaseline = "middle"; bg.fillText("RC DUNE BUGGY", 256, 52);
-    for (let i = 0; i < 32; i++) { bg.fillStyle = i % 2 ? "#111" : "#fff"; bg.fillRect(i * 16, 0, 16, 8); bg.fillRect((i + 1) * 16 - 16, 88, 16, 8); }
+    const bcv = document.createElement("canvas"); bcv.width = 2048; bcv.height = 308; const bg = bcv.getContext("2d");
+    bg.fillStyle = "#e85d2a"; bg.fillRect(0, 0, 2048, 308); bg.fillStyle = "#fff"; bg.font = "900 190px sans-serif"; bg.textAlign = "center"; bg.textBaseline = "middle"; bg.fillText("RC DUNE BUGGY", 1024, 166);
+    for (let i = 0; i < 64; i++) for (let r = 0; r < 2; r++) { bg.fillStyle = (i + r) % 2 ? "#111" : "#fff"; bg.fillRect(i * 32, r * 16, 32, 16); bg.fillRect(i * 32, 276 + r * 16, 32, 16); }
     const bannerTex = new THREE.CanvasTexture(bcv);
+    bannerTex.colorSpace = THREE.SRGBColorSpace; bannerTex.anisotropy = renderer.capabilities.getMaxAnisotropy(); bannerTex.generateMipmaps = true; bannerTex.minFilter = THREE.LinearMipmapLinearFilter;
     for (const side of [-1, 1]) { const post = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.28, 5, 8), gateMat); post.position.set(side * (TRACK_HW + 0.8), 2.5, 0); post.castShadow = true; g.add(post); }
     const bm = new THREE.MeshStandardMaterial({ map: bannerTex, roughness: 0.7 }), dm = new THREE.MeshStandardMaterial({ color: 0x333333 });
     const banner = new THREE.Mesh(new THREE.BoxGeometry((TRACK_HW + 0.8) * 2, 1.5, 0.12), [dm, dm, dm, dm, bm, bm]); banner.position.set(0, 4.9, 0); banner.castShadow = true; g.add(banner);
@@ -298,7 +342,9 @@ function buildTerrain() {
   for (let k = 1; k <= 5; k++) {
     const p = trackCenter[Math.floor(trackCenter.length * k / 6)], y = sampleHeight(p.x, p.z), g = new THREE.Group();
     g.position.set(p.x, y, p.z); g.rotation.y = p.yaw;
-    const hoop = new THREE.Mesh(new THREE.TorusGeometry(TRACK_HW - 0.2, 0.12, 6, 20, Math.PI), hoopMat); hoop.position.y = 0.3; g.add(hoop); scene.add(g);
+    const hoop = new THREE.Mesh(new THREE.TorusGeometry(TRACK_HW - 0.2, 0.14, 14, 64, Math.PI), hoopMat); hoop.position.y = 0.02; g.add(hoop);
+    for (const sd of [-1, 1]) { const foot = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.34, 0.16, 16), hoopMat); foot.position.set(sd * (TRACK_HW - 0.2), 0.06, 0); g.add(foot); }
+    scene.add(g);
   }
   // kicker / cliff warning signs (yellow chevron boards just before each launch)
   const signMat = new THREE.MeshStandardMaterial({ color: 0xf5c518, roughness: 0.6 }), postMat = new THREE.MeshStandardMaterial({ color: 0x555555 });
