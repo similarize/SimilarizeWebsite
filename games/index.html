@@ -242,7 +242,7 @@
     <a class="cab" href="/games/four-froggies-u6/?v=20261023-ffu75b">
       <span class="marquee">Four Froggies 6.6</span>
       <span class="upd">Oct 21, 8:27 AM · <span>cdd</span></span>
-      <span class="screen-wrap"><canvas data-demo="fourFroggiesUnity"></canvas><span class="glass"></span></span>
+      <span class="screen-wrap"><canvas data-demo="fourFroggiesU6" aria-label="Four Froggies 6.6 gameplay"></canvas><span class="glass"></span></span>
       <span class="panel"><span class="plate">Ranch · 1-4P split · WebGPU · Unity 6.6</span><span class="buttons" aria-hidden="true"><i></i><i class="alt"></i></span></span>
     </a>
     <a class="cab" href="/games/lambo-blast-u6/?v=20261016-u6i">
@@ -1611,7 +1611,24 @@
       const sx = (img.naturalWidth - sw) * (0.5 + 0.35 * Math.sin(t * 0.18)), sy = (img.naturalHeight - sh) * 0.5;
       ctx.drawImage(img, sx, sy, sw, sh, 0, 0, w, h);
     }
-    const draw = { balloonBlast, balloonBlastU6, balloonBlastAirsoft, balloonBlastUnity, fourFroggiesUnity, lamboBlast, rally, dirtTrack, duneBuggy, rocks, ball, soccer3d, froggies, froggies3d, map, drop, ffversions, froggyHop };
+    // cab66 (Oct 23): the 6.6 cabinet shows real 6.6 gameplay (4 headless shots of the live build), gentle crossfade ~3 s each
+    const ffu6Cab = [1, 2, 3].map((n) => { const img = new Image(); img.onload = () => { if (reduced) frame(); }; img.src = "/games/four-froggies-u6/cab/cab" + n + ".jpg?v=20261023-cab66"; return img; });
+    function fourFroggiesU6(v) {
+      const { ctx, w, h } = v;
+      ctx.fillStyle = "#0b1a10"; ctx.fillRect(0, 0, w, h);
+      const HOLD = 3, FADE = 0.9, n = ffu6Cab.length, T = reduced ? 0 : performance.now() / 1000;
+      const i = Math.floor(T / HOLD) % n, f = reduced ? 0 : Math.max(0, (T % HOLD - (HOLD - FADE)) / FADE);
+      const paint = (img, a) => {
+        if (!(img.complete && img.naturalWidth) || a <= 0) return;
+        const ir = img.naturalWidth / img.naturalHeight, pr = w / h;
+        let sw = img.naturalWidth, sh = img.naturalHeight;
+        if (ir > pr) sw = sh * pr; else sh = sw / pr;
+        ctx.globalAlpha = a; ctx.drawImage(img, (img.naturalWidth - sw) / 2, (img.naturalHeight - sh) / 2, sw, sh, 0, 0, w, h); ctx.globalAlpha = 1;
+      };
+      paint(ffu6Cab[i], 1);
+      if (f > 0) paint(ffu6Cab[(i + 1) % n], f * f * (3 - 2 * f));
+    }
+    const draw = { balloonBlast, balloonBlastU6, balloonBlastAirsoft, balloonBlastUnity, fourFroggiesUnity, fourFroggiesU6, lamboBlast, rally, dirtTrack, duneBuggy, rocks, ball, soccer3d, froggies, froggies3d, map, drop, ffversions, froggyHop };
 
     const ffShots = [
       { label: "2.5D", src: "/games/four-froggies/assets/play-25d.jpg?v=20261007-card25d1r1" },
