@@ -349,6 +349,7 @@ public class Bridge73 : MonoBehaviour
         v.pitch = Mathf.Clamp(v.pitch - i.look.y, -30f, 35f);
         rig.cam.transform.SetPositionAndRotation(b.eye.position, EyeRot75(b, v.yaw, v.pitch));
         poses[rig.cam] = new Pose { b = b, yaw = v.yaw, pitch = v.pitch, f = Time.frameCount };   // re-posed right before it renders
+        viewF75[f] = Time.frameCount;
         return true;
     }
 
@@ -357,6 +358,9 @@ public class Bridge73 : MonoBehaviour
     // Now the eye keeps its exact position in the room, but its rotation comes from a steady frame: the mech's heading plus the
     // head's own turn (ranch), or the space ship itself (the copy's wobble / bank left out). Knob &ff75old=1 = the old pose.
     public const float NearIn75 = 0.4f;
+    // ffu75b: frogs whose camera showed the bridge view this frame or the last (StoryMech keeps the head facing forward for them)
+    static readonly Dictionary<Frog, int> viewF75 = new Dictionary<Frog, int>();
+    public static bool InView75(Frog f) { int fr; return !F75.Old && f != null && viewF75.TryGetValue(f, out fr) && Time.frameCount - fr <= 1; }
     public static float InNear75, InFar75;   // probe: the near / far plane of the last camera rendered inside a bridge
     public static Quaternion EyeRot75(Bridge73 b, float yaw, float pitch)
     {

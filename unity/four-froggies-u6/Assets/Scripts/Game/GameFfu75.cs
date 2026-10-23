@@ -160,6 +160,9 @@ public partial class Game
         yield return F72Until(() => fa.world == WorldId.Space, 40f);
         yield return L59Settle(2f);
         Starship sm = sw.ShipOf(fa);
+        // ffu75b: space is built on first use - before GoToSpace these Finds were -1 (bodies[-1] threw, as in ffu41c)
+        moon = sw.Find("moon"); earth = sw.Find("earth"); mars = sw.Find("mars"); cal = sw.Find("callisto");
+        if (moon < 0 || earth < 0) { F75Check("space bodies found (moon / earth)", false, "moon " + moon + " earth " + earth); StoryMech.DtCap = dtWas; F75Result(T); yield break; }
         F75Check("P1 flies the trillion-story mech in space (AI froggy aboard)", sm != null && fa.vehicle == sm && sm.mechForm == big && (ai == null || ai.passengerOf == sm), Ships72() + " | ai " + (ai != null ? ai.nick + " on " + (ai.passengerOf != null ? ai.passengerOf.Title : "-") : "-"));
         if (sm == null || sm.mechForm != big) { StoryMech.DtCap = dtWas; F75Result(T); yield break; }
         sm.EnterOrbit(moon, sw.bodies[moon].cap, 0f);

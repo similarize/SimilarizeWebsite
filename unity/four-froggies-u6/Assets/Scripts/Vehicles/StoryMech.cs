@@ -726,7 +726,9 @@ public partial class StoryMech : Vehicle
             torso.localRotation = Quaternion.Slerp(torso.localRotation, Quaternion.Euler(Mathf.Clamp(speed / Mathf.Max(1f, maxSp), -1f, 1.5f) * 14f, 0f, -turnVel * 0.12f), dt * 4f);
             hips.localPosition = new Vector3(0f, HipY, hips.localPosition.z);
         }
-        if (head != null) head.localRotation = Quaternion.Euler(0f, Mathf.Clamp(Mathf.DeltaAngle(yaw, camYawIn), -40f, 40f) * (driver != null ? 0.5f : 0f), 0f);
+        // ffu75b B7: in the bridge view the head no longer turns after the chase camera (mouse look / its heading follow swung the whole
+        // bridge view, 0.9 deg per frame walking straight); the bridge view looks around on its own yaw instead.
+        if (head != null) head.localRotation = Quaternion.Euler(0f, Mathf.Clamp(Mathf.DeltaAngle(yaw, camYawIn), -40f, 40f) * (driver != null && !Bridge73.InView75(driver) ? 0.5f : 0f), 0f);
     }
     // ffu28: how far the body must rise so neither planted foot sinks into a slope (ranch terrain is Ranch.GY; the
     // mech's root sits on the terrain under its centre). Each foot's ground height is sampled where the walk cycle puts
