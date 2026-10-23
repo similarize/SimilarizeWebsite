@@ -21,7 +21,7 @@ on:
       smoke:
         description: 'Best-effort install + launch on the runner (true/false)'
         required: false
-        default: 'true'
+        default: 'false'
   push:
     branches: [unity-src]
     paths:
@@ -40,7 +40,7 @@ env:
   PROJECT_DIR: bbsrc/unity/balloon-blast
   OVERLAY_DIR: src/unity/balloon-blast-u6-uwp
   TAG: ${{ github.event.inputs.tag || 'bb-u6-uwp-1' }}
-  SMOKE: ${{ github.event.inputs.smoke || 'true' }}
+  SMOKE: ${{ github.event.inputs.smoke || 'false' }}
   PFX_PASS: balloonblast
   CERT_SUBJECT: CN=Similarize
 
@@ -50,7 +50,9 @@ defaults:
 
 jobs:
   uwp:
-    runs-on: windows-2022
+    # Self-hosted build PC (Bill's). Public repo: trusted events only - never pull_request / pull_request_target.
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: [self-hosted, xbox-uwp]
     timeout-minutes: 240
     steps:
       - name: Checkout unity-src
