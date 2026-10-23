@@ -265,25 +265,25 @@
     </a>
     <a class="cab" href="/games/RCRallyJump/index.html?release=rally23b">
       <span class="marquee">RC Rally Jump</span>
-      <span class="upd">Oct 16, 8:00 PM · <span>261</span></span>
+      <span class="upd">Oct 23, 12:57 PM · <span>7df</span></span>
       <span class="screen-wrap"><canvas data-demo="rally"></canvas><span class="glass"></span></span>
       <span class="panel"><span class="plate">Hold to boost</span><span class="buttons" aria-hidden="true"><i></i><i class="alt"></i></span></span>
     </a>
-    <a class="cab" href="/games/dirt-track-rc-rally/?v=20261016-dirt3">
+    <a class="cab" href="/games/dirt-track-rc-rally/?v=20261023-dirt4">
       <span class="marquee">Dirt Track RC Rally</span>
-      <span class="upd">Oct 16, 7:50 PM · <span>f9a</span></span>
+      <span class="upd">Oct 23, 12:57 PM · <span>7df</span></span>
       <span class="screen-wrap"><canvas data-demo="dirtTrack"></canvas><span class="glass"></span></span>
-      <span class="panel"><span class="plate">3D · Up to 4 players</span><span class="buttons" aria-hidden="true"><i></i><i class="alt"></i></span></span>
+      <span class="panel"><span class="plate">Hairpins · jumps · 1-4P</span><span class="buttons" aria-hidden="true"><i></i><i class="alt"></i></span></span>
     </a>
-    <a class="cab" href="/games/rc-dune-buggy/?v=20261016-dune4">
+    <a class="cab" href="/games/rc-dune-buggy/?v=20261023-dune5">
       <span class="marquee">RC Dune Buggy</span>
-      <span class="upd">Oct 16, 7:46 PM · <span>45d</span></span>
+      <span class="upd">Oct 23, 12:57 PM · <span>7df</span></span>
       <span class="screen-wrap"><canvas data-demo="duneBuggy"></canvas><span class="glass"></span></span>
-      <span class="panel"><span class="plate">Overhead RC · Up to 4 players</span><span class="buttons" aria-hidden="true"><i></i><i class="alt"></i></span></span>
+      <span class="panel"><span class="plate">Dunes · jumps · 1-4P · Host/Join</span><span class="buttons" aria-hidden="true"><i></i><i class="alt"></i></span></span>
     </a>
     <a class="cab" href="/games/froggy-hop-racing/?v=20261020-fhr8">
       <span class="marquee">Froggy Hop Racing</span>
-      <span class="upd">Oct 20, 11:29 PM · <span>ba0</span></span>
+      <span class="upd">Oct 23, 12:57 PM · <span>7df</span></span>
       <span class="screen-wrap"><canvas data-demo="froggyHop"></canvas><span class="glass"></span></span>
       <span class="panel"><span class="plate">3D beach race · Hop to win</span><span class="buttons" aria-hidden="true"><i></i><i class="alt"></i></span></span>
     </a>
@@ -1628,7 +1628,31 @@
       paint(ffu6Cab[i], 1);
       if (f > 0) paint(ffu6Cab[(i + 1) % n], f * f * (3 - 2 * f));
     }
-    const draw = { balloonBlast, balloonBlastU6, balloonBlastAirsoft, balloonBlastUnity, fourFroggiesUnity, fourFroggiesU6, lamboBlast, rally, dirtTrack, duneBuggy, rocks, ball, soccer3d, froggies, froggies3d, map, drop, ffversions, froggyHop };
+    // rcup (Oct 23): the RC / Froggy Hop cabinets show real gameplay (4 headless shots of the current builds, crossfade ~2.6 s,
+    // each cab offset so they never flip together; reduced motion = first shot). Drawn demos stay as the fallback until the shots load.
+    function cabFade(name, n, ver, fallback, offset) {
+      const imgs = Array.from({ length: n }, (_, i) => { const img = new Image(); img.onload = () => { if (reduced) frame(); }; img.src = "/games/cards/" + name + "-" + (i + 1) + ".jpg?v=" + ver; return img; });
+      return function (v) {
+        const { ctx, w, h } = v;
+        if (!imgs.every((im) => im.complete && im.naturalWidth)) { fallback(v); return; }
+        const HOLD = 2.6, FADE = 0.8, T = reduced ? 0 : performance.now() / 1000 + offset;
+        const i = Math.floor(T / HOLD) % n, f = reduced ? 0 : Math.max(0, (T % HOLD - (HOLD - FADE)) / FADE);
+        const paint = (img, a) => {
+          if (a <= 0) return;
+          const ir = img.naturalWidth / img.naturalHeight, pr = w / h;
+          let sw = img.naturalWidth, sh = img.naturalHeight;
+          if (ir > pr) sw = sh * pr; else sh = sw / pr;
+          ctx.globalAlpha = a; ctx.drawImage(img, (img.naturalWidth - sw) / 2, (img.naturalHeight - sh) / 2, sw, sh, 0, 0, w, h); ctx.globalAlpha = 1;
+        };
+        paint(imgs[i], 1);
+        if (f > 0) paint(imgs[(i + 1) % n], f * f * (3 - 2 * f));
+      };
+    }
+    const rallyCab = cabFade("rc-rally-jump", 4, "20261023-rcup1", rally, 0.0);
+    const dirtCab = cabFade("dirt-track-rc-rally", 4, "20261023-rcup1", dirtTrack, 0.7);
+    const duneCab = cabFade("rc-dune-buggy", 4, "20261023-rcup1", duneBuggy, 1.4);
+    const froggyHopCab = cabFade("froggy-hop-racing", 4, "20261023-rcup1", froggyHop, 2.1);
+    const draw = { balloonBlast, balloonBlastU6, balloonBlastAirsoft, balloonBlastUnity, fourFroggiesUnity, fourFroggiesU6, lamboBlast, rally: rallyCab, dirtTrack: dirtCab, duneBuggy: duneCab, rocks, ball, soccer3d, froggies, froggies3d, map, drop, ffversions, froggyHop: froggyHopCab };
 
     const ffShots = [
       { label: "2.5D", src: "/games/four-froggies/assets/play-25d.jpg?v=20261007-card25d1r1" },
@@ -1685,7 +1709,7 @@
     // into the screen. One at a time, silent (the frame never gets a user gesture),
     // and skipped on touch screens (phones, Quest, Tesla), low memory and Save-Data.
     (function livePreviews() {
-      const DEMO = { rally: "run", dirtTrack: "race", froggyHop: "race", balloonBlastAirsoft: "play", rocks: "play", soccer3d: "coop" };
+      const DEMO = { rally: "run", dirtTrack: "race", duneBuggy: "race", froggyHop: "race", balloonBlastAirsoft: "play", rocks: "play", soccer3d: "coop" };
       const mq = matchMedia("(hover: hover) and (pointer: fine)");
       const lowMem = navigator.deviceMemory && navigator.deviceMemory < 4;
       const saveData = navigator.connection && navigator.connection.saveData;
