@@ -250,6 +250,7 @@ public partial class Frog : MonoBehaviour
         {
             prompt = land75.Prompt(this);
             if (human && (input.use || input.fire || input.hop)) land75.Skip(this);
+            Steer76();   // ffu76: the pilot's stick moves the touchdown point (MechSpot76.cs)
             input = new PIn();
             return;
         }

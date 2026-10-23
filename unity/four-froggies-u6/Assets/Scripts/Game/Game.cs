@@ -165,6 +165,7 @@ public partial class Game : MonoBehaviour
         if (demoShot == "world72") { World72TestLobby(); return false; }   // ffu72: Ben item 6 - world-state (one Starship, mechs hidden while in space) (GameFfu72.cs)
         if (demoShot == "mechs72") { Mechs72TestLobby(); return false; }   // ffu72: Ben item 7 - split: independent space mechs; shared view: one group trip (GameFfu72.cs)
         if (demoShot == "ffu73") { Bridge73TestLobby(); return false; }   
+        if (demoShot == "ffu76") { Fix76TestLobby(); return false; }   // ffu76: dry landing spot + pilot steering (GameFfu76.cs)
         if (demoShot == "ffu75") { Fix75TestLobby(); return false; }   // ffu75: the mech lands itself + ramp; B7 bridge view steady (GameFfu75.cs)
         if (demoShot == "ffu74") { Fix74TestLobby(); return false; }   // ffu74: BOOST lifts the mech + BRIDGE button / hint (GameFfu74.cs)   // ffu73: the trillion-story mech's bridge (MechBridge73.cs, GameFfu73.cs)
         if (demoShot == "chip72") { Chip72TestLobby(); return false; }   // ffu72: Bill - one help chip per split view (HelpChips72.cs, GameFfu72.cs)   // ffu71: Ben item 1 - 2- / 4-way split phones, own viewport + own pad (GameFfu71.cs)

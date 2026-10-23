@@ -30,7 +30,7 @@ public partial class Frog
     public MechLand75 land75;   // ffu75: held by a landing / taking-off mech (scripted: inside it, or walking its ramp)
 }
 
-public class MechLand75 : MonoBehaviour
+public partial class MechLand75 : MonoBehaviour
 {
     public static readonly List<MechLand75> All = new List<MechLand75>();
     public const float DtCap75 = 0.2f;                       // SwiftShader / slow phones: the cinematic runs on game time, capped
@@ -180,6 +180,7 @@ public class MechLand75 : MonoBehaviour
         C.y = gy;
         F.y = Ground(w, F.x, F.z);
         root.position = C; root.rotation = Quaternion.Euler(0f, yawDeg, 0f);
+        Spot76(reach);   // ffu76: a spot whose whole ramp + foot are on dry, clear ground (MechSpot76.cs); the pilot may steer it
         h0 = Mathf.Max(220f, H * 2.6f);
         alt = h0; bodyT.localPosition = new Vector3(0f, alt, 0f);
         AimRamp();
@@ -348,7 +349,7 @@ public class MechLand75 : MonoBehaviour
     {
         switch (phase)
         {
-            case Ph.Descend: return mech.Title + " is landing - A / FIRE skips";
+            case Ph.Descend: { string p76 = Prompt76(f); return p76 ?? mech.Title + " is landing - A / FIRE skips"; }
             case Ph.WalkDown: return "Walking down the ramp - A / FIRE skips";
             case Ph.WalkUp: case Ph.RampUp: return f == pilot || walkers.Count > 0 ? "Boarding - A / FIRE skips" : "Aboard " + mech.Title + " - waiting for " + (pilot != null ? pilot.nick : "the pilot") + " to fly";
             case Ph.Ignite: case Ph.Climb: return "Liftoff! - A / FIRE skips";
@@ -419,6 +420,7 @@ public class MechLand75 : MonoBehaviour
             case Ph.Descend:
                 {
                     if (skip) t = DescentT;
+                    bool wait76 = Descend76(dt, skip);   // ffu76: pilot steering + no touchdown on a wet / blocked spot
                     float u = Mathf.Clamp01(t / DescentT);
                     alt = h0 * Mathf.Pow(1f - u, 2.4f);
                     bodyT.localPosition = new Vector3(0f, alt, 0f);
@@ -428,7 +430,7 @@ public class MechLand75 : MonoBehaviour
                     bodyT.localRotation = Quaternion.Euler(Mathf.Sin(t * 0.9f) * 1.5f * (1f - u), 0f, Mathf.Sin(t * 0.7f) * 1.2f * (1f - u));
                     burnK = 1f;
                     Dust(dt, alt);
-                    if (t >= DescentT) Touchdown();
+                    if (t >= DescentT && !wait76) Touchdown();
                     break;
                 }
             case Ph.Touch:
@@ -589,6 +591,7 @@ public class MechLand75 : MonoBehaviour
 
     void Touchdown()
     {
+        Finalize76();
         phase = Ph.Touch; t = 0f; alt = 0f; bodyT.localPosition = Vector3.zero;
         float sc = Mathf.Clamp(H / 25f, 0.6f, 6f);
         foreach (float sx in new[] { -1f, 1f }) { Vector3 fp = root.TransformPoint(new Vector3(sx * 0.1f * H, 0f, 0f)); FX.Dust(fp, 2f + sc); }
@@ -697,6 +700,7 @@ public class MechLand75 : MonoBehaviour
         MechLand75 m = Of(f);
         if (m == null || !m.WantsCam) return false;
         m.PoseCam(cam);
+        if (f == m.pilot) m.Cam76(cam);
         if (hud != null)
         {
             string s = "";
@@ -742,6 +746,7 @@ public class MechLand75 : MonoBehaviour
         else
         {
             float d = H * 1.7f + 34f;
+            if (!F76.Old && descSide.sqrMagnitude > 0.5f && (phase == Ph.Descend || phase == Ph.Touch)) side = descSide;   // ffu76: holds still while the pilot steers
             pos = C + side * d;
             pos.y = Ground(world, pos.x, pos.z) + H * 0.12f + 3f;
             look = C + Vector3.up * (alt + H * 0.42f);
