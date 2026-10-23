@@ -70,20 +70,20 @@
   // lambou6: say which path the browser offers (Unity picks WebGPU first, WebGL2 as the fallback)
   try { console.log("LBU6 page: navigator.gpu " + (navigator.gpu ? "present" : "absent") + ", isSecureContext " + window.isSecureContext); } catch (e) {}
   var config = {
-    dataUrl: buildUrl + "/" + name + ".data?v=202610211432-1d3dcdd",
-    frameworkUrl: buildUrl + "/" + name + ".framework.js?v=202610211432-1d3dcdd",
-    codeUrl: buildUrl + "/" + name + ".wasm?v=202610211432-1d3dcdd",
+    dataUrl: buildUrl + "/" + name + ".data?v=202610232042-de76f41",
+    frameworkUrl: buildUrl + "/" + name + ".framework.js?v=202610232042-de76f41",
+    codeUrl: buildUrl + "/" + name + ".wasm?v=202610232042-de76f41",
     streamingAssetsUrl: "StreamingAssets",
     companyName: "Similarize",
     productName: "Lambo Blast",
-    productVersion: "202610211432-1d3dcdd",
+    productVersion: "202610232042-de76f41",
     devicePixelRatio: window.LBDPR.lobby,
     showBanner: function (msg, type) { if (type === "error") { var e = document.getElementById("err"); e.style.display = "block"; e.textContent = msg; } else console.log(msg); }
   };
   if (window.SimXbox) window.SimXbox.applyConfig(config); // xbm1
   var fill = document.getElementById("fill"), pct = document.getElementById("pct"), loader = document.getElementById("loader");
   var script = document.createElement("script");
-  script.src = buildUrl + "/" + name + ".loader.js?v=202610211432-1d3dcdd";
+  script.src = buildUrl + "/" + name + ".loader.js?v=202610232042-de76f41";
   script.onload = function () {
     createUnityInstance(canvas, config, function (p) {
       fill.style.width = Math.round(p * 100) + "%";
