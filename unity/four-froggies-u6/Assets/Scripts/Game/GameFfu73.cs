@@ -36,7 +36,7 @@ public partial class Game
         StoryMech small = FindMech(fa.charId, 0), mid = FindMech(fa.charId, 2);
         F73Check("P1's trillion-story mech found (James)", big != null && fa.charId == 0, big != null ? big.Title + " H " + big.height : "none (char " + fa.charId + ")");
         if (big == null) { F73Result(T); yield break; }
-        F73Check("10 / 100 / 1000-story mechs have NO bridge (bubbles unchanged)", small != null && small.bridge73 == null && (mid == null || mid.bridge73 == null) && FindMech(1, 1) != null && FindMech(1, 1).bridge73 == null,
+        F73Check("10 / 100-story mechs have NO bridge (bubbles unchanged); 1000-story has one (ffbr66)", small != null && small.bridge73 == null && (mid == null || (mid.bridge73 != null) != F73.Old66) && FindMech(1, 1) != null && FindMech(1, 1).bridge73 == null,
             (small != null ? small.Title : "-") + " / " + (mid != null ? mid.Title : "-"));
         fa.SendTo(WorldId.Ranch, big.transform.position + big.transform.right * (big.height * 0.3f + 4f), 0f);
         yield return L59Frames(2);

@@ -96,7 +96,7 @@ public class MechCraft : MonoBehaviour
         c.bayPoint = Mats.Node(c.torso, "BayPoint", bc + new Vector3(0f, -0.02f * H, -0.01f * H));
         // the robot's glass cockpit on the head
         float R;
-        if (!F73.Old && c.band == 3) { var br = Bridge73.ForHead(c.head, H, c.owner, null); c.seat = br.robotSeat; c.robotH = br.RobotWorldH; }   // ffu73: trillion-story copy = bridge, no bubble
+        if (F73.Has(c.band)) { var br = Bridge73.ForHead(c.head, H, c.owner, null); c.seat = br.robotSeat; c.robotH = br.RobotWorldH; }   // ffu73: trillion-story copy = bridge, no bubble
         else { StoryMech.AddCanopy(c.head, H, out c.seat, out R); c.robotH = R * 1.55f; }
         Mats.SetLayer(go, Vehicle.VehicleLayer);
         Mats.NoShadows(go);

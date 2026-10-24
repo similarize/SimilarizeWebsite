@@ -122,7 +122,7 @@ public partial class MechLand75 : MonoBehaviour
         legL = parts[1]; legR = parts[2]; torso = parts[3]; armL = parts[4]; armR = parts[5];
         if (armL != null) armL.localRotation = Quaternion.Euler(-10f, 0f, -22f);
         if (armR != null) armR.localRotation = Quaternion.Euler(-10f, 0f, 22f);
-        if (m.band == 3 && !F73.Old && parts.Length > 6 && parts[6] != null)
+        if (F73.Has(m.band) && parts.Length > 6 && parts[6] != null)
         {
             bridge = Bridge73.ForHead(parts[6], H, m.owner, Froggies.Names[m.owner].ToUpper() + "'S BRIDGE");
             if (bridge != null) Mats.SetLayer(bridge.gameObject, Vehicle.VehicleLayer);

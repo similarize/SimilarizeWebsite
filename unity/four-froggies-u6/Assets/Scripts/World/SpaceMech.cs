@@ -115,7 +115,7 @@ public partial class Starship
             seatT.SetParent(mechVis, true);
             riderSeats.Add(seatT);
         }
-        if (!F73.Old && m.band == 3 && parts.Length > 6 && parts[6] != null) bridge73 = Bridge73.ForSpaceCopy(mechVis, parts[6], H, m.owner, null);   // ffu73
+        if (F73.Has(m.band) && parts.Length > 6 && parts[6] != null) bridge73 = Bridge73.ForSpaceCopy(mechVis, parts[6], H, m.owner, null);   // ffu73
         Mats.SetLayer(mechVis.gameObject, VehicleLayer);
         Mats.NoShadows(mechVis.gameObject);
     }

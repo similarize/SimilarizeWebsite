@@ -17,6 +17,12 @@ public static class F73
 {
     static int old = -1;
     public static bool Old { get { if (old < 0) old = Ffu33.Url("ff73old") == "1" ? 1 : 0; return old == 1; } }
+    // ffbr66 (Ben 2026-10-24): the 1000-story mechs (James's + Bubbles's) get the same bridge, scaled to their 60 m head
+    // (k = 60 / 160), plus the Superman-flight bridge view fix. &ffbr0=1 / &ff77old=1 = trillion-story only + old view.
+    static int old66 = -1;
+    public static bool Old66 { get { if (old66 < 0) old66 = (Ffu33.Url("ffbr0") == "1" || Ffu33.Url("ff77old") == "1") ? 1 : 0; return old66 == 1; } }
+    public static bool Has(int band) { return !Old && (band == 3 || band == 2 && !Old66); }
+    public const float SuperTilt66 = 12f;   // degrees the bridge looks down in Superman flight (the planet below in view)
 }
 
 public class Bridge73 : MonoBehaviour
@@ -370,6 +376,7 @@ public class Bridge73 : MonoBehaviour
         Quaternion rel = Quaternion.Inverse(basis.rotation) * b.eye.rotation;   // fixed: the room never moves inside its head / copy
         Quaternion frame;
         var sm = basis.GetComponentInParent<StoryMech>();
+        if (sm != null && sm.SuperOn77 && !F73.Old66) return b.eye.rotation * look;   // ffbr66: Superman flight - the head (and bridge) is held level facing the flight
         if (sm != null) frame = Quaternion.Euler(0f, sm.transform.eulerAngles.y + Mathf.DeltaAngle(0f, basis.localEulerAngles.y), 0f);
         else
         {
@@ -472,7 +479,7 @@ public partial class StoryMech
     // Build(): the trillion-story mech gets the bridge; the pilot's seat is the captain's chair (froggy shown, real size)
     void Bridge73Build()
     {
-        if (F73.Old || band != 3 || head == null || bridge73 != null) return;
+        if (!F73.Has(band) || head == null || bridge73 != null) return;   // ffbr66: 1000-story too
         bridge73 = Bridge73.ForHead(head, height, owner, Froggies.Names[owner].ToUpper() + "'S BRIDGE");
         Mats.SetLayer(bridge73.gameObject, VehicleLayer);
         seat = bridge73.captain; seatScale = 1f; showDriver = true;

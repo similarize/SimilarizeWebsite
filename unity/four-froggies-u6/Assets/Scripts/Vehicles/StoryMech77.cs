@@ -94,6 +94,9 @@ public partial class StoryMech
         Vector3 root = nc - r * (Vector3.up * SuperHalf);
         rb.MovePosition(root); rb.MoveRotation(r);
         transform.position = root; transform.rotation = r;
+        // ffbr66: a mech with a bridge lifts its head to look where it flies (level, tilted a little down), so the bridge, its
+        // seated crew and the bridge camera face the flight instead of the ground; eases back with superK when it lands
+        if (bridge73 != null && head != null && !F73.Old66) head.rotation = Quaternion.Euler(0f, yaw, 0f) * Quaternion.Euler(F73.SuperTilt66 * superK, 0f, 0f);
 
         if (settle && superK <= 0.001f) { SuperEnd77(true); return true; }
         if (Altitude >= SpaceAlt && SpaceWorld.I != null) { SuperEnd77(false); ReachSpace(); }
