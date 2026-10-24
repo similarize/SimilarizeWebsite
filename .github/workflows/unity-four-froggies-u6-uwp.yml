@@ -279,7 +279,10 @@ jobs:
         shell: pwsh
         run: |
           $vw = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
-          $msb = & $vw -latest -products * -requires Microsoft.Component.MSBuild -find 'MSBuild\**\Bin\MSBuild.exe' | Select-Object -First 1
+          # VS 2026 MSBuild plus toolset v143 imports WindowsXaml\\v18.0, which is not installed (MSB4019, run 40073716901).
+          # VS 2022 MSBuild matches the v143 Xbox tools.
+          $msb = & $vw -version '[17.0,18.0)' -products * -requires Microsoft.Component.MSBuild -find 'MSBuild\**\Bin\MSBuild.exe' | Select-Object -First 1
+          if (-not $msb) { $msb = & $vw -latest -products * -requires Microsoft.Component.MSBuild -find 'MSBuild\**\Bin\MSBuild.exe' | Select-Object -First 1 }
           "msbuild: $msb" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
           $il2 = Join-Path (Split-Path $env:UNITY_EDITOR_PATH) 'Data\PlaybackEngines\MetroSupport\Players\UAP\il2cpp'
           foreach ($cfg in 'Master','Release','Debug') {
@@ -299,7 +302,8 @@ jobs:
           $vsInst = & $vw -latest -products * -property installationPath
           if ($vsInst -match '\\Microsoft Visual Studio\\18\\') {
             $props += '/p:PlatformToolset=v143'
-            "toolset v143. VS 2026 has no UWP/Windows Store v145 tools (MSB8020). Unity leaves the name blank unless it is passed." | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+            $props += '/p:VisualStudioVersion=17.0'
+            "toolset v143 via Visual Studio 2022 MSBuild. VS 2026 is missing WindowsXaml v18.0." | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
           } elseif ($env:TOOLSET_OVERRIDE) { $props += "/p:PlatformToolset=$env:TOOLSET_OVERRIDE" }
           $t0 = Get-Date
           & $msb $env:SLN /m /restore /nologo /v:m "/flp1:LogFile=$env:LOG_DIR\msbuild-errors.log;errorsonly" "/flp2:LogFile=$env:LOG_DIR\msbuild-warnings.log;warningsonly" @props
