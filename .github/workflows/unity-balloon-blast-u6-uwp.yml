@@ -266,9 +266,21 @@ jobs:
           $vw = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
           $msb = & $vw -latest -products * -requires Microsoft.Component.MSBuild -find 'MSBuild\**\Bin\MSBuild.exe' | Select-Object -First 1
           "msbuild: $msb" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+          # Unity expands il2cpp\$(PlatformTarget)\Master\baselib.dll.lib. Platform=x64 does not
+          # set PlatformTarget, so it looked in il2cpp\Master (run 40048083932). The file is in il2cpp\x64\Master.
+          $il2 = Join-Path (Split-Path $env:UNITY_EDITOR_PATH) 'Data\PlaybackEngines\MetroSupport\Players\UAP\il2cpp'
+          Get-ChildItem $il2 -Recurse -Filter baselib.dll.lib -ErrorAction SilentlyContinue | ForEach-Object { "baselib: $($_.FullName)" } | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+          foreach ($cfg in 'Master','Release','Debug') {
+            $flat = Join-Path $il2 "$cfg\baselib.dll.lib"
+            $arch = Join-Path $il2 "x64\$cfg"
+            if (-not (Test-Path $flat) -and (Test-Path (Join-Path $arch 'baselib.dll.lib'))) {
+              Copy-Item $arch (Join-Path $il2 $cfg) -Recurse
+              "copied $arch -> $(Join-Path $il2 $cfg)" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+            }
+          }
           $pkg = (Join-Path $env:RUNNER_TEMP 'AppPackages').Replace('\', '/') + '/'
           "PKG_DIR=$pkg" >> $env:GITHUB_ENV
-          $props = @('/p:Configuration=Master', '/p:Platform=x64', '/p:AppxBundle=Always', '/p:AppxBundlePlatforms=x64',
+          $props = @('/p:Configuration=Master', '/p:Platform=x64', '/p:PlatformTarget=x64', '/p:AppxBundle=Always', '/p:AppxBundlePlatforms=x64',
                      '/p:UapAppxPackageBuildMode=SideloadOnly', "/p:AppxPackageDir=$pkg", '/p:AppxPackageSigningEnabled=true',
                      "/p:PackageCertificateKeyFile=$env:UWP_PFX_ABS", "/p:PackageCertificatePassword=$env:PFX_PASS",
                      "/p:PackageCertificateThumbprint=$env:UWP_CERT_THUMB", '/p:GenerateAppInstallerFile=false')
