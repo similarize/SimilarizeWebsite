@@ -38,7 +38,7 @@ permissions:
   actions: read
 
 concurrency:
-  group: unity-uwp-four-froggies-u6
+  group: unity-uwp-four-froggies-u6-${{ github.event.inputs.runner || 'push' }}
   cancel-in-progress: false
 
 env:
@@ -296,7 +296,11 @@ jobs:
                      '/p:UapAppxPackageBuildMode=SideloadOnly', "/p:AppxPackageDir=$pkg", '/p:AppxPackageSigningEnabled=true',
                      "/p:PackageCertificateKeyFile=$env:FF_PFX_ABS", "/p:PackageCertificatePassword=$env:PFX_PASS",
                      "/p:PackageCertificateThumbprint=$env:FF_CERT_THUMB", '/p:GenerateAppInstallerFile=false')
-          if ($env:TOOLSET_OVERRIDE) { $props += "/p:PlatformToolset=$env:TOOLSET_OVERRIDE" }
+          $vsInst = & $vw -latest -products * -property installationPath
+          if ($vsInst -match '\\Microsoft Visual Studio\\18\\') {
+            $props += '/p:PlatformToolset=v145'
+            "toolset v145 (Visual Studio 2026). Unity writes v143, which is the VS 2022 name." | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+          } elseif ($env:TOOLSET_OVERRIDE) { $props += "/p:PlatformToolset=$env:TOOLSET_OVERRIDE" }
           $t0 = Get-Date
           & $msb $env:SLN /m /restore /nologo /v:m "/flp1:LogFile=$env:LOG_DIR\msbuild-errors.log;errorsonly" "/flp2:LogFile=$env:LOG_DIR\msbuild-warnings.log;warningsonly" @props
           $code = $LASTEXITCODE

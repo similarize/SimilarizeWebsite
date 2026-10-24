@@ -37,7 +37,7 @@ permissions:
   actions: read
 
 concurrency:
-  group: unity-uwp-balloon-blast-u6
+  group: unity-uwp-balloon-blast-u6-${{ github.event.inputs.runner || 'push' }}
   cancel-in-progress: false
 
 env:
@@ -55,7 +55,7 @@ defaults:
 jobs:
   uwp:
     # Self-hosted build PC (Bill's). Public repo: trusted events only - never pull_request / pull_request_target.
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && !contains(github.event.head_commit.message, '[no run]'))
     # runner input: 'cloud' (default, GitHub windows-2022) or 'pc' (Bill's self-hosted xbox-uwp box)
     runs-on: ${{ github.event.inputs.runner == 'pc' && fromJSON('["self-hosted","xbox-uwp"]') || 'windows-2022' }}
     timeout-minutes: 240
@@ -289,7 +289,11 @@ jobs:
                      '/p:UapAppxPackageBuildMode=SideloadOnly', "/p:AppxPackageDir=$pkg", '/p:AppxPackageSigningEnabled=true',
                      "/p:PackageCertificateKeyFile=$env:UWP_PFX_ABS", "/p:PackageCertificatePassword=$env:PFX_PASS",
                      "/p:PackageCertificateThumbprint=$env:UWP_CERT_THUMB", '/p:GenerateAppInstallerFile=false')
-          if ($env:TOOLSET_OVERRIDE) { $props += "/p:PlatformToolset=$env:TOOLSET_OVERRIDE" }
+          $vsInst = & $vw -latest -products * -property installationPath
+          if ($vsInst -match '\\Microsoft Visual Studio\\18\\') {
+            $props += '/p:PlatformToolset=v145'
+            "toolset v145 (Visual Studio 2026). Unity writes v143, which is the VS 2022 name." | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+          } elseif ($env:TOOLSET_OVERRIDE) { $props += "/p:PlatformToolset=$env:TOOLSET_OVERRIDE" }
           $t0 = Get-Date
           & $msb $env:SLN /m /restore /nologo /v:m "/flp1:LogFile=$env:LOG_DIR\msbuild-errors.log;errorsonly" "/flp2:LogFile=$env:LOG_DIR\msbuild-warnings.log;warningsonly" @props
           $code = $LASTEXITCODE
