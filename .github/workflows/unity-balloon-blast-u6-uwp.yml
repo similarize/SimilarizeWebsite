@@ -153,6 +153,7 @@ jobs:
 
       - name: Find Unity Hub + editor on this PC (self-hosted, installed on G:)
         id: findunity
+        if: github.event.inputs.runner == 'pc'
         shell: pwsh
         run: |
           $c = @('G:\Program Files\Unity Hub\Unity Hub.exe','G:\Unity Hub\Unity Hub.exe','G:\Unity\Unity Hub\Unity Hub.exe','G:\SimilarizeBuild\Unity Hub\Unity Hub.exe',"$env:ProgramFiles\Unity Hub\Unity Hub.exe","$env:LOCALAPPDATA\Programs\Unity Hub\Unity Hub.exe")
@@ -187,12 +188,12 @@ jobs:
         with:
           version-file: bbsrc/unity/balloon-blast/ProjectSettings/ProjectVersion.txt
           modules: universal-windows-platform
-          install-path: 'G:\SimilarizeBuild\Unity'
           auto-update-hub: false
           cache-installation: false
 
       - name: Unity license already on this PC
         id: lic
+        if: github.event.inputs.runner == 'pc'
         shell: pwsh
         run: |
           $client = Join-Path (Split-Path $env:UNITY_HUB_PATH) 'UnityLicensingClient_V1\Unity.Licensing.Client.exe'
