@@ -132,15 +132,22 @@ public static class VehicleFactory
             v.rearSteer = 1f;   // ffu67d four-wheel steering
             Transform t52 = v.transform;
             Transform sprung = Mats.Node(t52, "Sprung", Vector3.zero);
-            p52.Spawn("body", sprung, Vector3.zero, 1f, accent);
+            // ffct66 (Ben 2026-10-24): solid double-sided body, raked nose + light bar, 37" tyres in snug arches that open up
+            // (and the tyres camber out) as the wheels grow (CyberArch66.cs). &ffct0=1 / &ff77old=1 = the ffu52 truck.
+            LBPack p66 = CyberArch66.Old ? null : LBPack.Get("cybertruck66");
+            bool ct66 = p66 != null && p66.Has("body") && p66.Has("wheel");
+            if (ct66) p52 = p66;
+            Transform body52 = p52.Spawn("body", sprung, Vector3.zero, 1f, accent);
             const float r52 = 0.439f;
+            float rw = ct66 ? CyberArch66.TyreR : r52;
             float wy = r52 - v.rest * 0.45f;    // mount so the static spring sag puts the tyres exactly in the arches
             foreach (var w in new[] { new Vector3(-0.886f, wy, 1.963f), new Vector3(0.886f, wy, 1.963f), new Vector3(-0.886f, wy, -1.672f), new Vector3(0.886f, wy, -1.672f) })
             {
                 Transform wn = Mats.Node(t52, "Wheel", w);
-                p52.Spawn("wheel", wn, Vector3.zero, 1f, accent, w.x < 0f);
-                v.AddWheel(w, r52, wn, w.z > 0f);
+                p52.Spawn("wheel", wn, Vector3.zero, ct66 ? CyberArch66.TyreR / 0.446f : 1f, accent, w.x < 0f);
+                v.AddWheel(w, rw, wn, w.z > 0f);
             }
+            if (ct66) { v.camberDeg = 8f; CyberArch66.Attach(v, body52, r52, new[] { 1.963f, -1.672f }); }
             // cabin: left front cushion top y ~1.22 (z -0.28..0.24), roof glass ~1.7 above it: a 0.4 frog sits clear of both
             v.seat = Mats.Node(sprung, "Seat", new Vector3(-0.45f, 1.21f, -0.02f));
             v.seatScale = 0.4f;

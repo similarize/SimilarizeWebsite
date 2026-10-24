@@ -28,6 +28,8 @@ public class GroundVehicle : Vehicle
     // fronts (1 = same angle). Normal: rears turn OPPOSITE (full at <= 4 m/s, blending to 10% by 20 m/s) -> yaw x (1 + k), radius / (1 + k).
     // crab (per truck, phone WHEELS tab): rears turn the SAME way -> little yaw, the truck slides diagonally. 0 = 2WS (every other vehicle).
     public float rearSteer = 0f;
+    // ffct66: wheels tilt their tops out (degrees at 2x size and up) as BigWheels grows them (Cybertruck66); 0 = never
+    public float camberDeg = 0f;
     public bool crab;
     public const float SteerDeg = 28f;
     // ffu67d fix 1 (Bill Oct 20 21:15): fully opposite up to 4 m/s, smoothstep down to ~0 by 15 m/s (a hair same-direction, -0.08, above that
@@ -465,6 +467,7 @@ public class GroundVehicle : Vehicle
             float st = w.steers ? steer * SteerDeg : 0f;
             if (!w.steers && rearSteer > 0f && w.mount.z < 0f) st = RearAngle;   // ffu67d: rear wheels visibly steer
             Quaternion rot = Quaternion.Euler(0f, st, 0f) * Quaternion.Euler(w.spin, 0f, 0f);
+            if (camberDeg > 0f && bigK > 1.001f) rot = Quaternion.Euler(0f, st, -Mathf.Sign(w.mount.x) * camberDeg * Mathf.Clamp01(bigK - 1f)) * Quaternion.Euler(w.spin, 0f, 0f);
             if (amph != null) amph.WheelPose(w.mount, ref p, ref rot);
             w.visual.localPosition = p;
             w.visual.localRotation = rot;
