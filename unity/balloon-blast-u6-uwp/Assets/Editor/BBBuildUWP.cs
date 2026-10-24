@@ -129,7 +129,24 @@ public static class BBBuildUWP
         Debug.Log("BBUWP urp: " + log);
     }
 
+
+    // This PC has the x64 UWP tools but not Hostx64\\arm64\\link.exe. Burst AOT still tries to link ARM64 and fails the
+    // whole x64 package (run 40029662558). Xbox One is x64, so turn Burst off. The --burst-disable-compilation flag does the same.
+    static void DisableBurst()
+    {
+        try
+        {
+            System.Type t = System.Type.GetType("Unity.Burst.BurstCompiler, Unity.Burst");
+            if (t == null) { Debug.LogWarning("BBUWP: BurstCompiler type not found"); return; }
+            object opt = t.GetProperty("Options", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static).GetValue(null, null);
+            opt.GetType().GetProperty("EnableBurstCompilation").SetValue(opt, false, null);
+            Debug.Log("BBUWP: Burst compilation disabled");
+        }
+        catch (System.Exception e) { Debug.LogWarning("BBUWP: disable Burst failed: " + e.Message); }
+    }
+
     static int Run()
+
     {
         Debug.Log("BuildScript: Balloon Blast 6.6 UWP start, Unity " + Application.unityVersion);
         if (EditorUserBuildSettings.activeBuildTarget != BuildTarget.WSAPlayer)
@@ -195,6 +212,7 @@ public static class BBBuildUWP
         UrpConsole();
         EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(scene, true) };
         AssetDatabase.SaveAssets();
+        DisableBurst();
 
         var opts = new BuildPlayerOptions
         {

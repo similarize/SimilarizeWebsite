@@ -143,16 +143,7 @@ jobs:
           else { "UWP.VC v143 still missing -> MSBuild will use PlatformToolset v142" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"; "TOOLSET_OVERRIDE=v142" >> $env:GITHUB_ENV }
           $link = Get-ChildItem (Join-Path $vs 'VC\Tools\MSVC') -Filter link.exe -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.FullName -like '*\bin\Hostx64\arm64\link.exe' } | Select-Object -First 1
           if ($link) { "arm64 link: $($link.FullName)" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt" }
-          else {
-            "arm64 link.exe missing (Burst needs it) -> installing MSVC ARM + ARM64 and UWP ARM64" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
-            $p = Start-Process -FilePath "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vs_installer.exe" `
-              -ArgumentList "modify --installPath `"$vs`" --add Microsoft.VisualStudio.Component.VC.Tools.ARM64 --add Microsoft.VisualStudio.Component.VC.Tools.ARM --add Microsoft.VisualStudio.Component.UWP.VC.ARM64 --quiet --norestart --nocache" `
-              -Wait -PassThru
-            "vs_installer arm64 exit $($p.ExitCode)" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
-            $link = Get-ChildItem (Join-Path $vs 'VC\Tools\MSVC') -Filter link.exe -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.FullName -like '*\bin\Hostx64\arm64\link.exe' } | Select-Object -First 1
-            if ($link) { "arm64 link: $($link.FullName)" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt" }
-            else { "ARM64_LINK_STILL_MISSING" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"; exit 1 }
-          }
+          else { "arm64 link.exe missing. Burst AOT wants it even for an x64 package, so this build turns Burst off and continues." | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt" }
           Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\Include" -ErrorAction SilentlyContinue | ForEach-Object { "sdk: $($_.Name)" } | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
 
       - name: Find Unity Hub + editor on this PC (self-hosted, installed on G:)
@@ -227,7 +218,7 @@ jobs:
           Get-ChildItem (Join-Path (Split-Path $ed) 'Data\PlaybackEngines') -ErrorAction SilentlyContinue | ForEach-Object { "playback engine: $($_.Name)" } | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
           $proj = Join-Path $env:GITHUB_WORKSPACE 'bbsrc\unity\balloon-blast'
           $log = Join-Path $env:LOG_DIR 'editor.log'
-          $a = "-batchmode -nographics -quit -projectPath `"$proj`" -buildTarget WSAPlayer -executeMethod BBBuildUWP.Build -logFile `"$log`""
+          $a = "-batchmode -nographics -quit -projectPath `"$proj`" -buildTarget WSAPlayer --burst-disable-compilation -executeMethod BBBuildUWP.Build -logFile `"$log`""
           $p = Start-Process -FilePath $ed -ArgumentList $a -Wait -PassThru -NoNewWindow
           "unity exit code: $($p.ExitCode)" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
           Select-String -Path $log -Pattern 'BUILD_RESULT|BUILD_SCRIPT_EXIT|BBUWP|URP:' -ErrorAction SilentlyContinue | ForEach-Object { $_.Line } | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
