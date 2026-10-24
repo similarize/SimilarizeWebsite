@@ -1,96 +1,11 @@
-run 40059188249 attempt 1 event push sha 746718797971b32155811ca45886f2f7a44be079 started 2026-10-24T03:39:36Z
+run 40059680294 attempt 1 event push sha 9f89e6196045cb87d38208b059a34b2d754e0412 started 2026-10-24T03:46:58Z
 secrets present
 Filesystem      Size  Used Avail Use% Mounted on
-/dev/root       145G   42G  103G  29% /
+/dev/root       145G   41G  104G  29% /
 hub pass1: failure
+ls: cannot access '/usr/lib/unityhub/unityhub': No such file or directory
 ls: cannot access '/opt/unityhub': No such file or directory
--rwxrwxrwx 1 root root 1272 Oct 21 18:00 /usr/lib/unityhub/unityhub
--rwxrwxrwx 1 root root 1272 Oct 21 18:00 /opt/unityhub/unityhub
-=== step outcomes: secrets=success setup=cancelled activate=skipped urpsetup=skipped build=skipped publish=skipped
-=== /home/runner/.config/unity3d/Unity/Unity.Entitlements.Audit.log (tail 60)
-2026-10-24 03:41:43.986 User Agent: [Hub 3.22.4], Protocol version: [1.18.3], Session Id: [2457c26b55334a039ef81b5c6e1c9796], Licensed Package: False, Entitlement requested: [com.unity.editor.access.xlts], Result: [granted: False, group: (null)]
-2026-10-24 03:41:43.986 User Agent: [Hub 3.22.4], Protocol version: [1.18.3], Session Id: [2457c26b55334a039ef81b5c6e1c9796], Licensed Package: False, Entitlement requested: [com.unity.editor.access.u7-alpha], Result: [granted: False, group: (null)]
-2026-10-24 03:41:43.990 User Agent: [Hub 3.22.4], Protocol version: [1.18.3], Session Id: [2457c26b55334a039ef81b5c6e1c9796], Licensed Package: False, Entitlement requested: [com.unity.editor.ui], Result: [granted: False, group: (null)]
-2026-10-24 03:41:44.024 User Agent: [Hub 3.22.4], Protocol version: [1.18.3], Session Id: [2457c26b55334a039ef81b5c6e1c9796], Licensed Package: False, Entitlement requested: [com.unity.editor.ui], Result: [granted: False, group: (null)]
-2026-10-24 03:41:44.034 User Agent: [Hub 3.22.4], Protocol version: [1.18.3], Session Id: [2457c26b55334a039ef81b5c6e1c9796], Licensed Package: False, Entitlement requested: [com.unity.editor.access.xlts], Result: [granted: False, group: (null)]
-2026-10-24 03:41:44.034 User Agent: [Hub 3.22.4], Protocol version: [1.18.3], Session Id: [2457c26b55334a039ef81b5c6e1c9796], Licensed Package: False, Entitlement requested: [com.unity.editor.access.u7-alpha], Result: [granted: False, group: (null)]
-2026-10-24 03:41:44.035 User Agent: [Hub 3.22.4], Protocol version: [1.18.3], Session Id: [2457c26b55334a039ef81b5c6e1c9796], Licensed Package: False, Entitlement requested: [com.unity.editor.access.xlts], Result: [granted: False, group: (null)]
-2026-10-24 03:41:44.035 User Agent: [Hub 3.22.4], Protocol version: [1.18.3], Session Id: [2457c26b55334a039ef81b5c6e1c9796], Licensed Package: False, Entitlement requested: [com.unity.editor.access.u7-alpha], Result: [granted: False, group: (null)]
-2026-10-24 03:41:47.276 User Agent: [Hub 3.22.4], Protocol version: [1.18.3], Session Id: [d90ef990b4f5449c97e1647b70d38f7f], Licensed Package: False, Entitlement requested: [com.unity.editor.access.xlts], Result: [granted: False, group: (null)]
-2026-10-24 03:41:47.276 User Agent: [Hub 3.22.4], Protocol version: [1.18.3], Session Id: [d90ef990b4f5449c97e1647b70d38f7f], Licensed Package: False, Entitlement requested: [com.unity.editor.access.u7-alpha], Result: [granted: False, group: (null)]
-2026-10-24 03:41:47.295 User Agent: [Hub 3.22.4], Protocol version: [1.18.3], Session Id: [d90ef990b4f5449c97e1647b70d38f7f], Licensed Package: False, Entitlement requested: [com.unity.editor.ui], Result: [granted: False, group: (null)]
-2026-10-24 03:41:47.314 User Agent: [Hub 3.22.4], Protocol version: [1.18.3], Session Id: [d90ef990b4f5449c97e1647b70d38f7f], Licensed Package: False, Entitlement requested: [com.unity.editor.access.xlts], Result: [granted: False, group: (null)]
-2026-10-24 03:41:47.314 User Agent: [Hub 3.22.4], Protocol version: [1.18.3], Session Id: [d90ef990b4f5449c97e1647b70d38f7f], Licensed Package: False, Entitlement requested: [com.unity.editor.access.u7-alpha], Result: [granted: False, group: (null)]
-2026-10-24 03:41:47.327 User Agent: [Hub 3.22.4], Protocol version: [1.18.3], Session Id: [d90ef990b4f5449c97e1647b70d38f7f], Licensed Package: False, Entitlement requested: [com.unity.editor.ui], Result: [granted: False, group: (null)]
-2026-10-24 03:41:47.366 User Agent: [Hub 3.22.4], Protocol version: [1.18.3], Session Id: [d90ef990b4f5449c97e1647b70d38f7f], Licensed Package: False, Entitlement requested: [com.unity.editor.access.xlts], Result: [granted: False, group: (null)]
-2026-10-24 03:41:47.366 User Agent: [Hub 3.22.4], Protocol version: [1.18.3], Session Id: [d90ef990b4f5449c97e1647b70d38f7f], Licensed Package: False, Entitlement requested: [com.unity.editor.access.u7-alpha], Result: [granted: False, group: (null)]
-2026-10-24 03:41:50.152 User Agent: [Hub 3.22.4], Protocol version: [1.18.3], Session Id: [34fb52477c3446dc8dbd0a50138a8da7], Licensed Package: False, Entitlement requested: [com.unity.editor.access.xlts], Result: [granted: False, group: (null)]
-2026-10-24 03:41:50.152 User Agent: [Hub 3.22.4], Protocol version: [1.18.3], Session Id: [34fb52477c3446dc8dbd0a50138a8da7], Licensed Package: False, Entitlement requested: [com.unity.editor.access.u7-alpha], Result: [granted: False, group: (null)]
-2026-10-24 03:41:50.173 User Agent: [Hub 3.22.4], Protocol version: [1.18.3], Session Id: [34fb52477c3446dc8dbd0a50138a8da7], Licensed Package: False, Entitlement requested: [com.unity.editor.ui], Result: [granted: False, group: (null)]
-2026-10-24 03:41:50.195 User Agent: [Hub 3.22.4], Protocol version: [1.18.3], Session Id: [34fb52477c3446dc8dbd0a50138a8da7], Licensed Package: False, Entitlement requested: [com.unity.editor.access.xlts], Result: [granted: False, group: (null)]
-2026-10-24 03:41:50.195 User Agent: [Hub 3.22.4], Protocol version: [1.18.3], Session Id: [34fb52477c3446dc8dbd0a50138a8da7], Licensed Package: False, Entitlement requested: [com.unity.editor.access.u7-alpha], Result: [granted: False, group: (null)]
-2026-10-24 03:41:50.206 User Agent: [Hub 3.22.4], Protocol version: [1.18.3], Session Id: [34fb52477c3446dc8dbd0a50138a8da7], Licensed Package: False, Entitlement requested: [com.unity.editor.ui], Result: [granted: False, group: (null)]
-2026-10-24 03:41:50.253 User Agent: [Hub 3.22.4], Protocol version: [1.18.3], Session Id: [34fb52477c3446dc8dbd0a50138a8da7], Licensed Package: False, Entitlement requested: [com.unity.editor.access.xlts], Result: [granted: False, group: (null)]
-2026-10-24 03:41:50.253 User Agent: [Hub 3.22.4], Protocol version: [1.18.3], Session Id: [34fb52477c3446dc8dbd0a50138a8da7], Licensed Package: False, Entitlement requested: [com.unity.editor.access.u7-alpha], Result: [granted: False, group: (null)]
-=== /home/runner/.config/unity3d/Unity/Unity.Licensing.Client.log (tail 60)
-2026-10-24 03:41:49.901 - [  5203] - [     1] - INFO  - [Unity.Licensing.Client.Program] Analytics CorrelationId: b9d5a5962295a411be926b5406124bc0
-2026-10-24 03:41:49.903 - [  5203] - [    10] - INFO  - [Unity.Licensing.Client.PipeServerExecutor] GlobalMutex Unity-LicenseClient-runner created (on thread: 10)
-2026-10-24 03:41:49.905 - [  5203] - [    11] - WARN  - [Unity.Licensing.Client.Services.Licensing.LicensingServiceConfiguration] Floating license server is not configured
-2026-10-24 03:41:49.908 - [  5203] - [     8] - INFO  - [Unity.Licensing.Client.Services.EntitlementResolverProvider] Updating entitlement resolver (source = Unknown, task id = 1)
-2026-10-24 03:41:49.909 - [  5203] - [     6] - INFO  - [Unity.Licensing.Client.MultiClientPipeServer] Starting named pipe server (on thread: 6)
-2026-10-24 03:41:49.912 - [  5203] - [     8] - INFO  - [Unity.Licensing.Client.Services.EntitlementResolverProvider] Rebuilding resolvers from local files:   (task id = 1, ct ref = 36181605)
-2026-10-24 03:41:49.912 - [  5203] - [     8] - INFO  - [Unity.Licensing.Client.Services.EntitlementResolverProvider] Processed 0 license files in 00:00:00.0004233 (task id = 1, ct ref = 36181605)
-2026-10-24 03:41:49.914 - [  5203] - [    13] - INFO  - [Unity.Licensing.Client.MultiClientPipeServer] Waiting for a connection (pipe #1)
-2026-10-24 03:41:49.915 - [  5203] - [     6] - INFO  - [Unity.Licensing.Client.MultiClientPipeServer] Named pipe server started
-2026-10-24 03:41:49.916 - [  5203] - [     6] - INFO  - [Unity.Licensing.Client.Communication.Notifications.NotificationsPipeServer] Starting named pipe server (on thread: 6)
-2026-10-24 03:41:49.917 - [  5203] - [    16] - INFO  - [Unity.Licensing.Client.Communication.Notifications.NotificationsPipeServer] Waiting for a connection (pipe #1)
-2026-10-24 03:41:49.917 - [  5203] - [     6] - INFO  - [Unity.Licensing.Client.Communication.Notifications.NotificationsPipeServer] Named pipe server started
-2026-10-24 03:41:49.922 - [  5203] - [    18] - INFO  - [Unity.Licensing.Client.MultiClientPipeServer] Waiting for a connection (pipe #2)
-2026-10-24 03:41:49.927 - [  5203] - [    12] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] new pipe session: 34fb52477c3446dc8dbd0a50138a8da7
-2026-10-24 03:41:49.929 - [  5203] - [    12] - INFO  - [Unity.Licensing.Client.MultiClientPipeServer] A new client is connecting (pipe #1)
-2026-10-24 03:41:49.929 - [  5203] - [    12] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] Start accepting requests
-2026-10-24 03:41:49.931 - [  5203] - [    11] - INFO  - [Unity.Licensing.Client.Services.Replication.InactiveLicenseFileCleaner] Start cleaning expired and inactive license file(s): 
-
-2026-10-24 03:41:49.932 - [  5203] - [    11] - INFO  - [Unity.Licensing.Client.Services.Replication.InactiveLicenseFileCleaner] Cleanup finished successfully, deleted 0 expired license file(s)
-2026-10-24 03:41:49.932 - [  5203] - [    11] - WARN  - [Unity.Licensing.Client.Services.LicensingOrchestrator] Unable to find valid licenses and remote licensing service is not configured
-2026-10-24 03:41:49.980 - [  5203] - [    12] - INFO  - [Unity.Licensing.Client.Communication.Controllers.HandshakeController] Received handshake from: Hub 3.22.4 (LocalIPC/1.18.3)
-2026-10-24 03:41:49.998 - [  5203] - [    12] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] REQ-1 | Sending HandshakeResponse for request HandshakeRequest from Hub 3.22.4 (LocalIPC/1.18.3) [200]:  Handshake successful
-2026-10-24 03:41:50.006 - [  5203] - [    23] - INFO  - [Unity.Licensing.Client.Communication.Notifications.NotificationsPipeServer] Waiting for a connection (pipe #2)
-2026-10-24 03:41:50.007 - [  5203] - [    17] - INFO  - [Unity.Licensing.Client.Communication.Notifications.NotificationsPipeServer] A new client is connecting (pipe #1)
-2026-10-24 03:41:50.026 - [  5203] - [    17] - INFO  - [Unity.Licensing.Client.Services.Package.PackageEnforcer] Trying to update PACL ...
-2026-10-24 03:41:50.031 - [  5203] - [    17] - INFO  - [Unity.Licensing.Client.Services.Package.PackageService] Getting PACL from remote uri: "https://license.unity3d.com/licenses/v1/packages/acl" ...
-2026-10-24 03:41:50.032 - [  5203] - [    12] - INFO  - [Unity.Licensing.Client.Services.EntitlementResolverProvider] Updating entitlement resolver (source = Unknown, task id = 2)
-2026-10-24 03:41:50.033 - [  5203] - [    12] - INFO  - [Unity.Licensing.Client.Services.EntitlementResolverProvider] Rebuilding resolvers from local files:   (task id = 2, ct ref = 1177678)
-2026-10-24 03:41:50.033 - [  5203] - [    12] - INFO  - [Unity.Licensing.Client.Services.EntitlementResolverProvider] Processed 0 license files in 00:00:00.0000131 (task id = 2, ct ref = 1177678)
-2026-10-24 03:41:50.039 - [  5203] - [    17] - INFO  - [Unity.Licensing.Client.Services.Package.PackageService] Local PACL revision: 53
-2026-10-24 03:41:50.048 - [  5203] - [    12] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] REQ-2 | Sending EntitlementGroupsDetailsResponse for request EntitlementGroupsDetailsRequest from Hub 3.22.4 (LocalIPC/1.18.3) [200]:  Success, found: 0 groups
-2026-10-24 03:41:50.077 - [  5203] - [    19] - INFO  - [Unity.Licensing.Client.Services.EntitlementResolverProvider] Updating entitlement resolver (source = Unknown, task id = 3)
-2026-10-24 03:41:50.077 - [  5203] - [    19] - INFO  - [Unity.Licensing.Client.Services.EntitlementResolverProvider] Rebuilding resolvers from local files:   (task id = 3, ct ref = 34837044)
-2026-10-24 03:41:50.077 - [  5203] - [    19] - INFO  - [Unity.Licensing.Client.Services.EntitlementResolverProvider] Processed 0 license files in 00:00:00.0000110 (task id = 3, ct ref = 34837044)
-2026-10-24 03:41:50.078 - [  5203] - [    12] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] REQ-3 | Sending EntitlementGroupsDetailsResponse for request EntitlementGroupsDetailsRequest from Hub 3.22.4 (LocalIPC/1.18.3) [200]:  Success, found: 0 groups
-2026-10-24 03:41:50.093 - [  5203] - [    19] - INFO  - [Unity.Licensing.Client.Services.EntitlementResolverProvider] Updating entitlement resolver (source = Unknown, task id = 4)
-2026-10-24 03:41:50.093 - [  5203] - [    19] - INFO  - [Unity.Licensing.Client.Services.EntitlementResolverProvider] Rebuilding resolvers from local files:   (task id = 4, ct ref = 34424014)
-2026-10-24 03:41:50.093 - [  5203] - [    19] - INFO  - [Unity.Licensing.Client.Services.EntitlementResolverProvider] Processed 0 license files in 00:00:00.0000070 (task id = 4, ct ref = 34424014)
-2026-10-24 03:41:50.093 - [  5203] - [    12] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] REQ-4 | Sending EntitlementGroupsDetailsResponse for request EntitlementGroupsDetailsRequest from Hub 3.22.4 (LocalIPC/1.18.3) [200]:  Success, found: 0 groups
-2026-10-24 03:41:50.140 - [  5203] - [    14] - INFO  - [Unity.Licensing.Client.Services.EntitlementResolverProvider] Updating entitlement resolver (source = Unknown, task id = 5)
-2026-10-24 03:41:50.140 - [  5203] - [    14] - INFO  - [Unity.Licensing.Client.Services.EntitlementResolverProvider] Rebuilding resolvers from local files:   (task id = 5, ct ref = 12533455)
-2026-10-24 03:41:50.140 - [  5203] - [    14] - INFO  - [Unity.Licensing.Client.Services.EntitlementResolverProvider] Processed 0 license files in 00:00:00.0000149 (task id = 5, ct ref = 12533455)
-2026-10-24 03:41:50.141 - [  5203] - [    12] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] REQ-5 | Sending EntitlementGroupsDetailsResponse for request EntitlementGroupsDetailsRequest from Hub 3.22.4 (LocalIPC/1.18.3) [200]:  Success, found: 0 groups
-2026-10-24 03:41:50.153 - [  5203] - [    12] - INFO  - [Unity.Licensing.Client.Communication.Controllers.EntitlementDetailsController] Finished handling EntitlementDetails request
-2026-10-24 03:41:50.155 - [  5203] - [    12] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] REQ-6 | Sending EntitlementDetailsResponse for request EntitlementDetailsRequest from Hub 3.22.4 (LocalIPC/1.18.3) [404]:  Found 0 entitlement groups and 0 free entitlements matching requested entitlement ids
-2026-10-24 03:41:50.176 - [  5203] - [    12] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] REQ-7 | Sending EntitlementsResponse for request EntitlementsRequest from Hub 3.22.4 (LocalIPC/1.18.3) [200]:  Found 0 entitlements
-2026-10-24 03:41:50.195 - [  5203] - [    12] - INFO  - [Unity.Licensing.Client.Communication.Controllers.EntitlementDetailsController] Finished handling EntitlementDetails request
-2026-10-24 03:41:50.195 - [  5203] - [    12] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] REQ-8 | Sending EntitlementDetailsResponse for request EntitlementDetailsRequest from Hub 3.22.4 (LocalIPC/1.18.3) [404]:  Found 0 entitlement groups and 0 free entitlements matching requested entitlement ids
-2026-10-24 03:41:50.206 - [  5203] - [    12] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] REQ-9 | Sending EntitlementsResponse for request EntitlementsRequest from Hub 3.22.4 (LocalIPC/1.18.3) [200]:  Found 0 entitlements
-2026-10-24 03:41:50.253 - [  5203] - [    12] - INFO  - [Unity.Licensing.Client.Communication.Controllers.EntitlementDetailsController] Finished handling EntitlementDetails request
-2026-10-24 03:41:50.253 - [  5203] - [    12] - INFO  - [Unity.Licensing.Client.Communication.ApiPipeHandler#1] REQ-10 | Sending EntitlementDetailsResponse for request EntitlementDetailsRequest from Hub 3.22.4 (LocalIPC/1.18.3) [404]:  Found 0 entitlement groups and 0 free entitlements matching requested entitlement ids
-2026-10-24 03:41:50.310 - [  5203] - [     9] - INFO  - [Unity.Licensing.Client.CommandExecutors.Startup.ProgramInitializer] Running in production mode
-2026-10-24 03:41:50.310 - [  5203] - [     9] - INFO  - [Unity.Licensing.Client.CommandExecutors.Startup.ProgramInitializer] Client product version: 1.18.3+d7ffd15
-2026-10-24 03:41:50.310 - [  5203] - [     9] - INFO  - [Unity.Licensing.Client.CommandExecutors.Startup.ProgramInitializer] Client assembly version: 1.18.3.0
-2026-10-24 03:41:50.311 - [  5203] - [     9] - INFO  - [Unity.Licensing.Client.CommandExecutors.Startup.ProgramInitializer] File version: 1.18.3 (/usr/lib/unityhub/UnityLicensingClient_V1/Unity.Licensing.Client.dll)
-2026-10-24 03:41:50.312 - [  5203] - [     9] - INFO  - [Unity.Licensing.Client.CommandExecutors.Startup.ProgramInitializer] Current OS: Linux 6.17.0-1022-azure #22-Ubuntu SMP Mon Jul 27 17:24:03 UTC 2026
-2026-10-24 03:41:50.381 - [  5203] - [     8] - WARN  - [PackageService.HttpRequests] Handled response: [304 | Not Modified | ] from request: [GET | https://license.unity3d.com/licenses/v1/packages/acl | ]
-2026-10-24 03:41:50.382 - [  5203] - [     8] - INFO  - [Unity.Licensing.Client.Services.Package.PackageService] Skipping download. No difference between local and remote ETag (uri: "https://license.unity3d.com/licenses/v1/packages/acl", ETag: "59dd73d01930d363b853e88a531ae9c5")
-2026-10-24 03:41:50.383 - [  5203] - [     8] - INFO  - [Unity.Licensing.Client.Services.Package.PackageEnforcer] Successfully updated PACL file after 1 attempt(s). Next update in 24.00 hours.
-2026-10-24 03:41:50.383 - [  5203] - [     8] - INFO  - [Unity.Licensing.Client.Services.Package.PackageEnforcer] Loading remote PACL, revision: 53, version: 1.0
+unityhub resolves to: 
+ls: cannot access '/opt/unityhub/unityhub': No such file or directory
+=== step outcomes: secrets=success setup=failure activate=skipped urpsetup=skipped build=skipped publish=skipped
 === no editor log
