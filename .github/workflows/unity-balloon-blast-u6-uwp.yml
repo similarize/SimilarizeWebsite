@@ -125,7 +125,7 @@ jobs:
       - name: Visual Studio UWP C++ tools (v143)
         id: vs
         shell: pwsh
-        timeout-minutes: 30
+        timeout-minutes: 90
         run: |
           $vw = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
           $vs = & $vw -latest -products * -property installationPath
@@ -141,6 +141,18 @@ jobs:
           }
           if ($has) { "UWP.VC v143 present" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt" }
           else { "UWP.VC v143 still missing -> MSBuild will use PlatformToolset v142" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"; "TOOLSET_OVERRIDE=v142" >> $env:GITHUB_ENV }
+          $link = Get-ChildItem (Join-Path $vs 'VC\Tools\MSVC') -Filter link.exe -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.FullName -like '*\bin\Hostx64\arm64\link.exe' } | Select-Object -First 1
+          if ($link) { "arm64 link: $($link.FullName)" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt" }
+          else {
+            "arm64 link.exe missing (Burst needs it) -> installing MSVC ARM + ARM64 and UWP ARM64" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+            $p = Start-Process -FilePath "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vs_installer.exe" `
+              -ArgumentList "modify --installPath `"$vs`" --add Microsoft.VisualStudio.Component.VC.Tools.ARM64 --add Microsoft.VisualStudio.Component.VC.Tools.ARM --add Microsoft.VisualStudio.Component.UWP.VC.ARM64 --quiet --norestart --nocache" `
+              -Wait -PassThru
+            "vs_installer arm64 exit $($p.ExitCode)" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+            $link = Get-ChildItem (Join-Path $vs 'VC\Tools\MSVC') -Filter link.exe -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.FullName -like '*\bin\Hostx64\arm64\link.exe' } | Select-Object -First 1
+            if ($link) { "arm64 link: $($link.FullName)" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt" }
+            else { "ARM64_LINK_STILL_MISSING" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"; exit 1 }
+          }
           Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\Include" -ErrorAction SilentlyContinue | ForEach-Object { "sdk: $($_.Name)" } | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
 
       - name: Find Unity Hub + editor on this PC (self-hosted, installed on G:)
