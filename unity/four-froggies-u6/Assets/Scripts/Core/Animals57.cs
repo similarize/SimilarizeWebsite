@@ -28,7 +28,7 @@ public class Animals57 : MonoBehaviour
     public static bool On { get { if (onState < 0) onState = Ffu33.Url("animals") == "old" ? 0 : 1; return onState == 1; } }
     public static int Dressed, FrogsDressed, Pets, Feeds, Rides, Fetches, Follows, Arrivals, RobotPets, RobotRides, RobotFetches;
 
-    public enum Mode { None, Pet, Eat, Ridden, Fetch, Return, Follow }
+    public enum Mode { None, Pet, Eat, Ridden, Fetch, Return, Follow, Leash }   // ffdog66: Leash
     public class St
     {
         public Animal a; public Mode mode; public float t; public Frog f; public Robot r; public int step;
@@ -235,7 +235,7 @@ public class Animals57 : MonoBehaviour
     {
         float r = a.kind == Animal.Kind.Horse && a.GetComponent<Horse>() != null ? 1.3f : a.kind == Animal.Kind.Cow || a.kind == Animal.Kind.Horse ? 2.6f : a.kind == Animal.Kind.Dog || a.kind == Animal.Kind.Goat ? 1.9f : 1.5f;
         var h = Interact.Add(a.transform.position, r, "pet", f => Act(f, a));
-        h.enabled = f => a != null && a.isActiveAndEnabled && !Busy(a) && !a.frozen && f.rideAnimal == null && !(CritterPals.I != null && CritterPals.I.pals.Exists(p => p.a == a));
+        h.enabled = f => a != null && a.isActiveAndEnabled && (!Busy(a) || Of(a).mode == Mode.Leash) && !a.frozen && f.rideAnimal == null && !(CritterPals.I != null && CritterPals.I.pals.Exists(p => p.a == a));
         h.dynLabel = f => Label(f, a);
         hs[a] = h;
     }
@@ -258,6 +258,7 @@ public class Animals57 : MonoBehaviour
     string[] Steps(Animal a)
     {
         var l = new List<string> { "pet", "feed" };
+        if (LeashOk(a)) l.Insert(0, "leash");   // ffdog66: first A on a dog clips the leash on
         if (CanRide(a)) l.Add("ride");
         if (a.kind == Animal.Kind.Dog) l.Add("fetch");
         if (Named(a)) l.Add("come");
@@ -266,8 +267,10 @@ public class Animals57 : MonoBehaviour
     string Label(Frog f, Animal a)
     {
         var s = Of(a); var k = Steps(a); string v = k[s.step % k.Length]; string n = Nm(a);
+        if (s.mode == Mode.Leash) return s.f == f ? "unclip " + n + "'s leash" : n + " is on " + (s.f != null ? s.f.nick : "a") + "'s leash";
         switch (v)
         {
+            case "leash": return "clip a leash on " + n;
             case "pet": return "pet " + n;
             case "feed": return "feed " + n + " " + Treat(a);
             case "ride": return "ride " + n + "!";
@@ -277,7 +280,9 @@ public class Animals57 : MonoBehaviour
     }
     void Act(Frog f, Animal a)
     {
-        var s = Of(a); var k = Steps(a); string v = k[s.step % k.Length]; s.step++;
+        var s = Of(a);
+        if (s.mode == Mode.Leash) { if (s.f == f) Unleash(s, n => n + " stays right here"); else f.Toast(Nm(a) + " is on " + (s.f != null ? s.f.nick : "someone") + "'s leash", 1.6f); return; }   // ffdog66
+        var k = Steps(a); string v = k[s.step % k.Length]; s.step++;
         Act(f, a, v);
     }
     public void Act(Frog f, Animal a, string v)
@@ -290,6 +295,7 @@ public class Animals57 : MonoBehaviour
             case "feed": StartFeed(s, f, null); break;
             case "ride": StartRide(s, f); break;
             case "fetch": StartFetch(s, f, null); break;
+            case "leash": StartLeash(s, f); break;
             default: StartFollow(s, f); break;
         }
     }
@@ -445,6 +451,7 @@ public class Animals57 : MonoBehaviour
                     break;
                 }
             case Mode.Fetch: FetchTick(s, dt, me); break;
+            case Mode.Leash: LeashTick(s, dt); break;
             case Mode.Ridden: RideTick(s, dt); break;
             case Mode.Return:
                 {
@@ -573,6 +580,109 @@ public class Animals57 : MonoBehaviour
     }
     public List<St> Followers(Frog f) { var l = new List<St>(); foreach (var s in st.Values) if (s.a != null && s.f == f && s.mode == Mode.Follow) l.Add(s); return l; }
     public void ArrivePublic(St s, bool newWorld) { Arrive(s, newWorld); }
+
+    // ------------------------------------------------------------------ ffdog66 LEASH WALK (Ben 2026-10-24)
+    // A next to a dog (the yard dog run dogs, Germy, Daisy) clips on a leash: a rope from the froggy's hand to the collar and
+    // the dog trots along ~1.5-2 m behind, stepping round obstacles. A again unclips it and the dog stays where it is.
+    // Per froggy (split screen / touch A all use the same Interact path). Never into the house: no leash indoors, and walking
+    // into the house (another world), getting in a vehicle or riding unclips it outside. &ffdog0=1 / &ff77old=1 = off.
+    static int dogOld = -1;
+    public static bool DogOld { get { if (dogOld < 0) dogOld = (Ffu33.Url("ffdog0") == "1" || Ffu33.Url("ff77old") == "1") ? 1 : 0; return dogOld == 1; } }
+    public static int Leashes, Unleashes;
+    readonly Dictionary<St, LineRenderer> ropes = new Dictionary<St, LineRenderer>();
+    readonly Dictionary<St, WorldId> leashWorld = new Dictionary<St, WorldId>();
+    static bool LeashOk(Animal a) { return !DogOld && a != null && a.kind == Animal.Kind.Dog; }
+    static bool InHouse(Vector3 p, float pad)
+    {
+        return Mathf.Abs(p.x - Layout.HouseC.x) < Layout.HouseSize.x * 0.5f + pad && Mathf.Abs(p.z - Layout.HouseC.y) < Layout.HouseSize.y * 0.5f + pad;
+    }
+    void StartLeash(St s, Frog f)
+    {
+        if (f.world == WorldId.House) { f.Toast("No leash walks in the house - take " + Nm(s.a) + " outside", 2f); return; }
+        s.f = f; s.r = null; s.mode = Mode.Leash; s.t = 0f; s.a.pal = true; s.a.happy57 = 1f;
+        leashWorld[s] = f.world;
+        LineRenderer lr;
+        if (!ropes.TryGetValue(s, out lr) || lr == null)
+        {
+            var go = new GameObject("Leash66");
+            lr = go.AddComponent<LineRenderer>();
+            lr.positionCount = 8; lr.widthMultiplier = 0.025f; lr.useWorldSpace = true;
+            lr.sharedMaterial = Mats.Lit(new Color(0.85f, 0.15f, 0.12f));
+            lr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            ropes[s] = lr;
+        }
+        lr.gameObject.SetActive(true);
+        Leashes++;
+        f.Toast(Nm(s.a) + " is on the leash - let's go for a walk!  (A = unclip)", 2.4f);
+        Sfx.Play(Sfx.Click, 0.5f);
+        Debug.Log("ANIMALS57 ffdog66 leash " + Nm(s.a) + " -> " + f.nick + " in " + f.world);
+    }
+    void Unleash(St s, System.Func<string, string> why)
+    {
+        LineRenderer lr;
+        if (ropes.TryGetValue(s, out lr) && lr != null) lr.gameObject.SetActive(false);
+        Frog f = s.f;
+        Unleashes++;
+        if (f != null && why != null) f.Toast(why(Nm(s.a)), 2f);
+        Debug.Log("ANIMALS57 ffdog66 unleash " + Nm(s.a));
+        Stay(s);
+    }
+    void LeashTick(St s, float dt)
+    {
+        Frog f = s.f; Animal a = s.a;
+        WorldId w0; leashWorld.TryGetValue(s, out w0);
+        if (f == null || !f.isActiveAndEnabled) { Unleash(s, null); return; }
+        if (f.world != w0 || f.world == WorldId.House) { Unleash(s, n => n + " waits outside"); return; }
+        if (f.vehicle != null || f.rideAnimal != null || f.jetOf != null) { Unleash(s, n => n + " sits and waits here"); return; }
+        Vector3 lp = f.transform.position, p = a.transform.position;
+        float d = Flat(lp - p);
+        if (d > 14f || Mathf.Abs(lp.y - p.y) > 6f) { Unleash(s, n => "The leash slipped - " + n + " waits here"); return; }
+        const float want = 1.75f;
+        if (d > want)
+        {
+            Vector3 to = LeashStep(a, lp, d);
+            float sp = Mathf.Min(a.runSpeed * 1.3f, (d - want) * 2.2f + a.speed);
+            Vector3 before = a.transform.position;
+            Move(a, to, sp, dt, d - want > 0.5f ? 0.05f : want);
+            if (InHouse(a.transform.position, 0.6f)) a.transform.position = before;   // never into the house
+            if (d > want + 2.5f) { Vector3 q = a.transform.position; Vector3 pull = (lp - q); pull.y = 0f; q += pull.normalized * (d - want - 2.5f); q.y = G57(q.x, q.z, q.y); if (!InHouse(q, 0.6f)) a.transform.position = q; }   // the leash tugs
+        }
+        else { a.PalAnimate(0f, dt); a.lookAt57 = lp + Vector3.up * 0.5f; }
+        DrawRope(s, f, a);
+    }
+    // simple obstacle stepping: straight at the froggy, or the first of +-35 / 70 / 105 deg that is clear for ~1.2 m
+    static readonly float[] Fan = { 0f, 35f, -35f, 70f, -70f, 105f, -105f };
+    Vector3 LeashStep(Animal a, Vector3 goal, float d)
+    {
+        Vector3 p = a.transform.position, dir = goal - p; dir.y = 0f;
+        if (dir.sqrMagnitude < 1e-4f) return goal;
+        dir.Normalize();
+        Vector3 o = p + Vector3.up * 0.35f;
+        float look = Mathf.Min(1.2f, d);
+        foreach (float ang in Fan)
+        {
+            Vector3 dd = Quaternion.Euler(0f, ang, 0f) * dir;
+            if (InHouse(p + dd * look, 0.6f)) continue;
+            RaycastHit h;
+            if (Physics.SphereCast(o, 0.2f, dd, out h, look, ~0, QueryTriggerInteraction.Ignore))
+            {
+                if (h.collider.attachedRigidbody != null || h.collider.GetComponentInParent<Frog>() != null || h.collider.transform.IsChildOf(a.transform)) { if (ang == 0f) return goal; }
+                else continue;
+            }
+            return ang == 0f ? goal : p + dd * 2f;
+        }
+        return goal;
+    }
+    void DrawRope(St s, Frog f, Animal a)
+    {
+        LineRenderer lr;
+        if (!ropes.TryGetValue(s, out lr) || lr == null) return;
+        Vector3 h = f.transform.TransformPoint(new Vector3(0.28f, 0.42f, 0.12f));
+        Vector3 c = a.head != null ? Vector3.Lerp(a.head.position, a.transform.position + Vector3.up * (a.head.position.y - a.transform.position.y) * 0.8f, 0.35f) : a.transform.position + Vector3.up * 0.5f;
+        float len = (h - c).magnitude, sag = Mathf.Clamp(2.2f - len, 0f, 1.2f) * 0.35f;
+        int n = lr.positionCount;
+        for (int i = 0; i < n; i++) { float t = i / (float)(n - 1); lr.SetPosition(i, Vector3.Lerp(h, c, t) + Vector3.down * sag * 4f * t * (1f - t)); }
+    }
 
     // ------------------------------------------------------------------ helpers
     static float Sq(float x) { return x * x; }
