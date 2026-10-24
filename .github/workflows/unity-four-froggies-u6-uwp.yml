@@ -22,7 +22,7 @@ on:
       tag:
         description: 'Release tag (e.g. ff-u6-uwp-ffu73)'
         required: false
-        default: 'ff-u6-uwp-ffu73b'
+        default: 'ff-u6-uwp-ffu77c'
       smoke:
         description: 'Best-effort install + launch on the runner (true/false)'
         required: false
@@ -44,7 +44,7 @@ concurrency:
 env:
   PROJECT_DIR: src/unity/four-froggies-u6
   OVERLAY_DIR: src/unity/four-froggies-u6-uwp
-  TAG: ${{ github.event.inputs.tag || 'ff-u6-uwp-ffu73b' }}
+  TAG: ${{ github.event.inputs.tag || 'ff-u6-uwp-ffu77c' }}
   SMOKE: ${{ github.event.inputs.smoke || 'false' }}
   PFX_PASS: fourfroggies
   CERT_SUBJECT: CN=Similarize
@@ -56,7 +56,7 @@ defaults:
 jobs:
   uwp:
     # Self-hosted build PC (Bill's). Public repo: trusted events only - never pull_request / pull_request_target.
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && !contains(github.event.head_commit.message, '[no run]'))
     # runner input: 'cloud' (default, GitHub windows-2022) or 'pc' (Bill's self-hosted xbox-uwp box)
     runs-on: ${{ github.event.inputs.runner == 'pc' && fromJSON('["self-hosted","xbox-uwp"]') || 'windows-2022' }}
     timeout-minutes: 240
@@ -79,6 +79,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/logs"
           echo "LOG_DIR=$RUNNER_TEMP/logs" >> "$GITHUB_ENV"
           echo "UWP run ${{ github.run_id }} attempt ${{ github.run_attempt }} event ${{ github.event_name }} sha ${{ github.sha }} tag $TAG started $(date -u +%FT%TZ)" > "$RUNNER_TEMP/logs/status.txt"
+          git -C src log -8 --oneline | tee -a "$RUNNER_TEMP/logs/status.txt"
 
       - name: Check Unity secrets
         id: secrets
@@ -147,16 +148,61 @@ jobs:
           else { "UWP.VC v143 still missing -> MSBuild will use PlatformToolset v142" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"; "TOOLSET_OVERRIDE=v142" >> $env:GITHUB_ENV }
           Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\Include" -ErrorAction SilentlyContinue | ForEach-Object { "sdk: $($_.Name)" } | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
 
+      - name: Find Unity Hub + editor on this PC (self-hosted, installed on G:)
+        id: findunity
+        if: github.event.inputs.runner == 'pc'
+        shell: pwsh
+        run: |
+          $c = @('G:\Program Files\Unity Hub\Unity Hub.exe','G:\Unity Hub\Unity Hub.exe','G:\Unity\Unity Hub\Unity Hub.exe','G:\SimilarizeBuild\Unity Hub\Unity Hub.exe',"$env:ProgramFiles\Unity Hub\Unity Hub.exe","$env:LOCALAPPDATA\Programs\Unity Hub\Unity Hub.exe")
+          $hub = $c | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $hub) { $hub = Get-ChildItem G:\ -Filter 'Unity Hub.exe' -Recurse -Depth 4 -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName }
+          if ($hub) { "hub: $hub" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"; "UNITY_HUB_PATH=$hub" >> $env:GITHUB_ENV }
+          else { "hub: NOT FOUND on G:" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt" }
+          $ver = ((Get-Content 'src/unity/four-froggies-u6/ProjectSettings/ProjectVersion.txt' | Select-String 'm_EditorVersion:').ToString() -split ':')[1].Trim()
+          "need editor: $ver" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+          $roots = @('G:\SimilarizeBuild\Unity','G:\Unity','G:\Unity\Hub\Editor','G:\Program Files\Unity\Hub\Editor',"$env:ProgramFiles\Unity\Hub\Editor",'C:\Program Files\Unity\Hub\Editor')
+          $ed = $roots | ForEach-Object { Join-Path $_ "$ver\Editor\Unity.exe" } | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $ed) { $ed = Get-ChildItem G:\ -Filter 'Unity.exe' -Recurse -Depth 6 -ErrorAction SilentlyContinue | Where-Object { $_.FullName -like "*$ver*\Editor\Unity.exe" } | Select-Object -First 1 -ExpandProperty FullName }
+          Get-ChildItem G:\ -Filter 'Unity.exe' -Recurse -Depth 6 -ErrorAction SilentlyContinue | Where-Object { $_.FullName -like '*\Editor\Unity.exe' } | ForEach-Object { "editor found: $($_.FullName)" } | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+          if (-not $ed) {
+            $mm = ($ver -split '\.')[0..1] -join '.'
+            $ed = Get-ChildItem G:\,"$env:ProgramFiles\Unity\Hub\Editor" -Filter 'Unity.exe' -Recurse -Depth 6 -ErrorAction SilentlyContinue | Where-Object { $_.FullName -like "*\$mm.*\Editor\Unity.exe" -and (Test-Path (Join-Path $_.DirectoryName 'Data\PlaybackEngines\MetroSupport')) } | Sort-Object FullName -Descending | Select-Object -First 1 -ExpandProperty FullName
+            if ($ed) { "using same-minor editor instead of $ver (patch upgrade): $ed" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt" }
+          }
+          if ($ed) {
+            $wsa = Join-Path (Split-Path $ed) 'Data\PlaybackEngines\MetroSupport'
+            "editor: $ed  uwp module: $(Test-Path $wsa)" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+            if (-not (Test-Path $wsa)) { "NO_UWP_MODULE" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"; exit 1 }
+            "UNITY_EDITOR_PATH=$ed" >> $env:GITHUB_ENV
+            "BURST_ARG=--burst-disable-compilation" >> $env:GITHUB_ENV
+          } else { "NO_EDITOR" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"; exit 1 }
+
       - name: Set up Unity + UWP module
         id: unity-setup
+        if: env.UNITY_EDITOR_PATH == ''
         uses: RageAgainstThePixel/unity-setup@v2
         with:
           version-file: src/unity/four-froggies-u6/ProjectSettings/ProjectVersion.txt
           modules: universal-windows-platform
           cache-installation: false
 
+      - name: Unity license already on this PC
+        id: lic
+        if: github.event.inputs.runner == 'pc'
+        shell: pwsh
+        run: |
+          $client = Join-Path (Split-Path $env:UNITY_HUB_PATH) 'UnityLicensingClient_V1\Unity.Licensing.Client.exe'
+          if (-not (Test-Path $client)) { "no licensing client at $client" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"; exit 0 }
+          & $client --showEntitlements | Tee-Object -FilePath "$env:LOG_DIR\license.txt"
+          $lic = Get-Content "$env:LOG_DIR\license.txt" -Raw
+          if ($lic -match 'Product Name: Unity Personal' -and $lic -match 'com\.unity\.editor\.headless' -and $lic -match 'com\.unity\.editor\.platforms\.uwp') {
+            "license already assigned (Personal + headless + UWP). Skipping activate-unity-license." | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+            "SKIP_LICENSE_ACTIVATE=1" >> $env:GITHUB_ENV
+          } else { "no usable personal license, will activate" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt" }
+
       - name: Activate Unity license
         id: activate
+        if: env.SKIP_LICENSE_ACTIVATE != '1'
         uses: RageAgainstThePixel/activate-unity-license@v2
         with:
           license: personal
@@ -171,7 +217,7 @@ jobs:
           if (-not $ed) { $ed = '${{ steps.unity-setup.outputs.unity-editor-path }}' }
           $proj = Join-Path $env:GITHUB_WORKSPACE 'src\unity\four-froggies-u6'
           $log = Join-Path $env:LOG_DIR 'setup.log'
-          $a = "-batchmode -nographics -quit -projectPath `"$proj`" -buildTarget WSAPlayer -executeMethod BuildScript.SetupURP -logFile `"$log`""
+          $a = "-batchmode -nographics -quit -projectPath `"$proj`" -buildTarget WSAPlayer $env:BURST_ARG -executeMethod BuildScript.SetupURP -logFile `"$log`""
           $p = Start-Process -FilePath $ed -ArgumentList $a -Wait -PassThru -NoNewWindow
           "urp setup exit code: $($p.ExitCode)" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
           Select-String -Path $log -Pattern 'URPSETUP|error CS|Exception|[Ll]icens' -ErrorAction SilentlyContinue | Select-Object -First 80 | ForEach-Object { $_.Line } | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
@@ -187,7 +233,7 @@ jobs:
           Get-ChildItem (Join-Path (Split-Path $ed) 'Data\PlaybackEngines') -ErrorAction SilentlyContinue | ForEach-Object { "playback engine: $($_.Name)" } | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
           $proj = Join-Path $env:GITHUB_WORKSPACE 'src\unity\four-froggies-u6'
           $log = Join-Path $env:LOG_DIR 'editor.log'
-          $a = "-batchmode -nographics -quit -projectPath `"$proj`" -buildTarget WSAPlayer -executeMethod FFBuildUWP.Build -logFile `"$log`""
+          $a = "-batchmode -nographics -quit -projectPath `"$proj`" -buildTarget WSAPlayer $env:BURST_ARG -executeMethod FFBuildUWP.Build -logFile `"$log`""
           $p = Start-Process -FilePath $ed -ArgumentList $a -Wait -PassThru -NoNewWindow
           "unity exit code: $($p.ExitCode)" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
           Select-String -Path $log -Pattern 'BUILD_RESULT|BUILD_SCRIPT_EXIT|FFUWP' -ErrorAction SilentlyContinue | ForEach-Object { $_.Line } | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
@@ -235,9 +281,18 @@ jobs:
           $vw = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
           $msb = & $vw -latest -products * -requires Microsoft.Component.MSBuild -find 'MSBuild\**\Bin\MSBuild.exe' | Select-Object -First 1
           "msbuild: $msb" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+          $il2 = Join-Path (Split-Path $env:UNITY_EDITOR_PATH) 'Data\PlaybackEngines\MetroSupport\Players\UAP\il2cpp'
+          foreach ($cfg in 'Master','Release','Debug') {
+            $flat = Join-Path $il2 "$cfg\baselib.dll.lib"
+            $arch = Join-Path $il2 "x64\$cfg"
+            if (-not (Test-Path $flat) -and (Test-Path (Join-Path $arch 'baselib.dll.lib'))) {
+              Copy-Item $arch (Join-Path $il2 $cfg) -Recurse
+              "copied $arch -> $(Join-Path $il2 $cfg)" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+            }
+          }
           $pkg = (Join-Path $env:RUNNER_TEMP 'AppPackages').Replace('\', '/') + '/'
           "PKG_DIR=$pkg" >> $env:GITHUB_ENV
-          $props = @('/p:Configuration=Master', '/p:Platform=x64', '/p:AppxBundle=Always', '/p:AppxBundlePlatforms=x64',
+          $props = @('/p:Configuration=Master', '/p:Platform=x64', '/p:PlatformTarget=x64', '/p:AppxBundle=Always', '/p:AppxBundlePlatforms=x64',
                      '/p:UapAppxPackageBuildMode=SideloadOnly', "/p:AppxPackageDir=$pkg", '/p:AppxPackageSigningEnabled=true',
                      "/p:PackageCertificateKeyFile=$env:FF_PFX_ABS", "/p:PackageCertificatePassword=$env:PFX_PASS",
                      "/p:PackageCertificateThumbprint=$env:FF_CERT_THUMB", '/p:GenerateAppInstallerFile=false')
