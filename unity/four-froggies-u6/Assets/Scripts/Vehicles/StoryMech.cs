@@ -54,11 +54,15 @@ public partial class StoryMech : Vehicle
             InputKind ik = driver != null ? driver.inputKind : InputKind.Keyboard;
             string top = aimK > 0.5f ? "<color=#ff8a7a>AIMING</color>  " : "";
             if (bridge73 != null && driver != null) top += K(Bridge73.Key(driver)) + " bridge view  ·  ";   // ffu73
+            if (SuperOn77)   // ffu77 Superman flight
+                return ik == InputKind.Gamepad ? K("L-stick") + " fly / speed  ·  " + K("RT") + " up  ·  " + K("LT") + " down  ·  " + K("LB") + " faster  ·  " + K("B") + " land"
+                    : K("WASD") + " fly / speed  ·  " + K("SPACE") + " up  ·  " + K("SHIFT") + " down + faster  ·  " + K("B") + " land";
+            string sup = F77.Old ? "" : "  ·  " + K("B") + " Superman fly";
             if (ik == InputKind.Gamepad)
-                return top + K("RT") + " tap jump / hold ROCKETS  ·  " + K("LB") + (F74.Old ? " afterburner" : " hold: afterburner LIFT-OFF") + "  ·  " + K("LT") + " hold AIM (" + K("RT") + " fires)  ·  " + K("X") + " fire  ·  " + K("RB") + "/" + K("Y") + " missiles  ·  " + K("A") + " climb out";
+                return top + K("RT") + " tap jump / hold ROCKETS  ·  " + K("LB") + (F74.Old ? " afterburner" : " hold: afterburner LIFT-OFF") + "  ·  " + K("LT") + " hold AIM (" + K("RT") + " fires)  ·  " + K("X") + " fire  ·  " + K("RB") + "/" + K("Y") + " missiles  ·  " + K("A") + " climb out" + sup;
             if (ik == InputKind.Touch)
                 return top + K("JUMP") + " hold: rockets  ·  " + K("BOOST") + (F74.Old ? "" : " hold: lift-off") + "  ·  " + K("AIM") + "  ·  " + K("FIRE") + "  ·  " + K("MSL");
-            return top + K("WASD") + " walk  ·  " + K("SPACE") + " tap jump / hold ROCKETS  ·  " + K("SHIFT") + (F74.Old ? " afterburner" : " hold: afterburner LIFT-OFF") + "  ·  " + K("RMB") + " hold AIM  ·  " + K("LMB") + " fire  ·  " + K("F") + " missiles  ·  " + K("E") + " climb out";
+            return top + K("WASD") + " walk  ·  " + K("SPACE") + " tap jump / hold ROCKETS  ·  " + K("SHIFT") + (F74.Old ? " afterburner" : " hold: afterburner LIFT-OFF") + "  ·  " + K("RMB") + " hold AIM  ·  " + K("LMB") + " fire  ·  " + K("F") + " missiles  ·  " + K("E") + " climb out" + sup;
         }
     }
     public override string[] TouchSet { get { return new[] { "A", "FIRE", "MSL", "JUMP", "BOOST" }; } }
@@ -484,6 +488,7 @@ public partial class StoryMech : Vehicle
         TickBar(dt);
         CanopyTick();   // ffu26: robot pilot's glass cockpit (StoryMechRobot.cs)
         Bridge73Tick();  // ffu73: riders in the trillion-story bridge's crew seats
+        if (SuperOn77 && (wrecked || scripted || PartsBusy)) SuperEnd77(false);   // ffu77
         if (wrecked)
         {
             wreckT -= dt;
@@ -496,6 +501,7 @@ public partial class StoryMech : Vehicle
         if (scripted) { ScriptTick(dt); return; }   // ffu26: a robot mech mission is flying it (StoryMechRobot.cs)
         if (shieldT > 0f) { shieldT -= dt; if (shieldT <= 0f) { shieldT = 0f; if (driver != null) driver.Toast("Spawn shield off - you can be hit now!", 2.5f); } }
         SendNet(false);
+        if (SuperTick77(dt)) return;   // ffu77: Superman flight on Earth (StoryMech77.cs)
 
         bool on = driver != null;
         Vector3 pos = transform.position;
@@ -761,9 +767,9 @@ public partial class StoryMech : Vehicle
             flames[i].localScale = new Vector3(wid, len, wid);
             if (k > 0.05f && Random.value < k * dt * 30f)
             {
-                Vector3 fp = flames[i].position - Vector3.up * len * 0.8f;
-                FX.Flame(fp, Vector3.down);
-                if (Random.value < 0.4f) FX.Smoke(fp - Vector3.up * len * 0.3f, H * 0.05f + 1f, new Color(0.75f, 0.75f, 0.75f, 0.45f));
+                Vector3 fp = flames[i].position - transform.up * len * 0.8f;   // ffu77: along the body (level in Superman flight)
+                FX.Flame(fp, -transform.up);
+                if (Random.value < 0.4f) FX.Smoke(fp - transform.up * len * 0.3f, H * 0.05f + 1f, new Color(0.75f, 0.75f, 0.75f, 0.45f));
             }
         }
         if (jetLight != null)
