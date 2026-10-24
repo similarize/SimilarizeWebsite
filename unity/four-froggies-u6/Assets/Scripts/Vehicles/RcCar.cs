@@ -16,6 +16,11 @@ public class RcCar : Vehicle
     class W { public Vector3 mount; public float r, dist; public bool grounded, front; public Transform vis, shock, arm; public float spin; public Vector3 tower; public Vector3 axle0, vs0; public float r0, extra, sr, wrest; }
     readonly W[] wh = new W[4];
     float rest = 0.14f, spring, damper;
+    // ffu77f (Ben 10-23): cars 0.6x (they were too big for the 3.2 m raceway: whole car scaled, the wheel rays / springs work
+    // in world units x S), top speed 13.5 -> 22 m/s with a motor that keeps pulling (falloff ~ (v/vmax)^2, throttle eases in)
+    // instead of fading flat at ~13; softer, quieter motor voice. &ff77old=1 = before.
+    public const float Scale77 = 0.6f;
+    float S = 1f, drive77;
     public float vmax = 13.5f, accel = 15f, latCap = 13f, turnMax = 3.4f;
     float steer, throttle, flipT, roostT, stuckT, revT, skill = 1f, laneSeed;
     public float Throttle { get { return throttle; } }   // ffu67h probe: what the input asked the motor for
@@ -48,8 +53,14 @@ public class RcCar : Vehicle
         c.skill = new float[] { 1f, 0.94f, 0.97f, 0.91f }[i];
         c.laneSeed = i * 1.7f;
         c.Build(Froggies.Color(i), truggy);
+        if (!F77.Old)
+        {
+            c.S = Scale77; go.transform.localScale = Vector3.one * Scale77;
+            c.vmax = 22f; c.accel = 14f; c.latCap = 15f;
+            c.camDistance = 3.1f * 0.75f; c.camHeight = 1.15f * 0.7f;
+        }
         int n = 4; float perWheel = c.rb.mass * 9.81f / n;
-        c.spring = perWheel / (c.rest * 0.42f);
+        c.spring = perWheel / (c.rest * c.S * 0.42f);
         c.damper = 2f * Mathf.Sqrt(c.spring * c.rb.mass / n) * 0.42f;
         Mats.SetLayer(go, VehicleLayer);
         c.Parked = true;
@@ -227,23 +238,23 @@ public class RcCar : Vehicle
             Vector3 o = transform.TransformPoint(w.mount);
             bool big = bigK > 1.0001f;
             float wr = big ? w.wrest : rest;
-            float len = wr + w.r + (big ? w.extra : 0f);
+            float len = (wr + w.r + (big ? w.extra : 0f)) * S;   // ffu77f: world units
             RaycastHit h; float hd; bool hitOk;
-            if (big) hitOk = BigWheels.Cast(o, up, len, w.sr, GroundMask, out h, out hd);   // ffu42: sphere-cast tyre
+            if (big) hitOk = BigWheels.Cast(o, up, len, w.sr * S, GroundMask, out h, out hd);   // ffu42: sphere-cast tyre
             else { hitOk = Physics.Raycast(o, -up, out h, len, GroundMask, QueryTriggerInteraction.Ignore); hd = hitOk ? h.distance : len; }
             if (hitOk)
             {
-                w.grounded = true; w.dist = hd;
+                w.grounded = true; w.dist = hd / S;   // local units (the visuals)
                 float comp = len - hd;
-                if (big) comp = Mathf.Min(comp, wr * 1.35f);
+                if (big) comp = Mathf.Min(comp, wr * S * 1.35f);
                 float vUp = Vector3.Dot(rb.GetPointVelocity(o), up);
                 float f = spring * comp - damper * vUp;
-                if (comp > wr * 0.9f) f += spring * 6f * (comp - wr * 0.9f);   // bump stop
+                if (comp > wr * S * 0.9f) f += spring * 6f * (comp - wr * S * 0.9f);   // bump stop
                 if (f > 0f) rb.AddForceAtPosition(up * f, o);
                 ground++; nsum += h.normal;
                 if (w.front) frontDown = true; else rearDown = true;
             }
-            else { w.grounded = false; w.dist = Mathf.MoveTowards(w.dist, len, dt * 2f); }
+            else { w.grounded = false; w.dist = Mathf.MoveTowards(w.dist, len / S, dt * 2f / S); }
         }
         float gf = ground / 4f;
         Vector3 n = ground > 0 ? nsum.normalized : Vector3.up;
@@ -259,9 +270,17 @@ public class RcCar : Vehicle
             float force;
             float rearK = rearDown ? 1f : 0.25f;                     // 4WD, but most of the shove is from the rear
             if (!driven) force = -fs * 4f;
+            else if (throttle > 0.02f && !F77.Old)
+            {
+                // ffu77f: the motor keeps pulling up the speed range ((v/vmax)^2 falloff), throttle eases in over ~0.3 s
+                drive77 = Mathf.MoveTowards(drive77, throttle, dt * 3.5f);
+                float vk = Mathf.Max(0f, fs) / vmax;
+                force = fs < -0.5f ? 22f * throttle : accel * drive77 * Mathf.Clamp01(1.08f - vk * vk) * rearK;
+            }
             else if (throttle > 0.02f) force = fs < -0.5f ? 22f * throttle : accel * throttle * Mathf.Clamp01(1.12f - fs / vmax) * rearK;
             else if (throttle < -0.02f) force = fs > 0.5f ? -22f * -throttle : (fs > -5.5f ? accel * 0.6f * throttle : 0f);
             else force = -fs * 1.1f;
+            if (throttle <= 0.02f) drive77 = 0f;
             rb.AddForce(fwd * force * rb.mass * gf, ForceMode.Force);
             float cap = latCap * (driven && throttle > 0.6f && Mathf.Abs(steer) > 0.4f && fs > 5f ? 0.6f : 1f);
             float lat = Mathf.Clamp(-ls * 10f, -cap, cap);
@@ -340,7 +359,7 @@ public class RcCar : Vehicle
         if (voice == null) voice = new SynthVoice(gameObject, 13, enginePitch);
         float near = Sfx.Near(transform.position);
         float gk = Mathf.Clamp01(1f - near / 38f); gk *= gk;
-        voice.gain = gk * 0.9f;
+        voice.gain = gk * (F77.Old ? 0.9f : 0.6f);
         voice.Tick(driven || rb.velocity.sqrMagnitude > 0.5f, Mathf.Abs(Vector3.Dot(v, transform.forward)), driven ? Mathf.Abs(throttle) : 0f, ls, gf, dt);
     }
 
@@ -454,7 +473,7 @@ public class RcCar : Vehicle
         foreach (W w in wh)
         {
             Vector3 hub = w.mount - Vector3.up * (w.dist - w.r);
-            w.spin += (w.grounded || driver != null ? fs + (w.grounded ? 0f : throttle * 12f) : fs) / w.r * Mathf.Rad2Deg * dt;
+            w.spin += (w.grounded || driver != null ? fs + (w.grounded ? 0f : throttle * 12f) : fs) / (w.r * S) * Mathf.Rad2Deg * dt;
             float sa = w.front ? steer * 26f : 0f;
             w.vis.localPosition = hub;
             w.vis.localRotation = Quaternion.Euler(0f, sa, 0f) * Quaternion.Euler(w.spin, 0f, 0f);

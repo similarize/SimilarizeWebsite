@@ -88,7 +88,9 @@ public static class SfxSynth
         for (int i = 0; i < n; i++)
         {
             float t = i / (float)R;
-            d[i] = S(900f, t) * 0.36f + S(1800f, t) * 0.12f + S(2700f, t) * 0.16f + S(4500f, t) * 0.05f + S(2250f, t) * 0.14f + N() * 0.03f;
+            // ffu77f (Ben 10-23: less annoying): a softer, lower hum - 600 Hz + a few gentle partials, no 2.7 / 4.5 kHz buzz
+            if (!F77.Old) d[i] = S(600f, t) * 0.42f + S(300f, t) * 0.2f + S(1200f, t) * 0.1f + S(1500f, t) * 0.04f + N() * 0.012f;
+            else d[i] = S(900f, t) * 0.36f + S(1800f, t) * 0.12f + S(2700f, t) * 0.16f + S(4500f, t) * 0.05f + S(2250f, t) * 0.14f + N() * 0.03f;
         }
         Norm(d, 0.75f); RcWhine = Mk("syn_rc_whine", d);
         {
@@ -291,6 +293,13 @@ public class SynthVoice
         {
             case 13:   // RC car
             {
+                if (!F77.Old)
+                {   // ffu77f: quieter, much less pitch rise over the faster speed range
+                    float sp7 = Mathf.Clamp01(spd / 22f);
+                    Set(0, a, k * (0.03f + sp7 * 0.15f + load * 0.05f), (0.55f + sp7 * 0.55f + load * 0.06f) * pm, dt, 2f);
+                    Set(1, b, k * Mathf.Clamp01(spd / 8f) * 0.12f * ground, 0.85f + spd / 40f, dt, 2.5f);
+                    break;
+                }
                 float sp = Mathf.Clamp01(spd / 13f);
                 Set(0, a, k * (0.05f + sp * 0.3f + load * 0.12f), (0.42f + spd / 8.5f + load * 0.15f) * pm, dt, 2.5f);
                 Set(1, b, k * Mathf.Clamp01(spd / 8f) * 0.16f * ground, 0.9f + spd / 25f, dt, 2.5f);
