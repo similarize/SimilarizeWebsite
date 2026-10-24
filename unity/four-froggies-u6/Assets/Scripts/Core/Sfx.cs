@@ -30,6 +30,12 @@ public static class Sfx
     public static string LevelName { get { return Level == 0 ? "ON" : Level == 1 ? "LOW" : "OFF"; } }
     public const string AudioV = "a1";                // cache-buster for web/audio/*.ogg
     public static Vector3 ListenerPos;                 // P1's frog (set by Game) - picks the pond ambience
+    // ffu77 (Ben item 9): P1 is on an airless body (the Moon, Callisto; set by Game). No air = no airborne sound: only what
+    // reaches the spacesuit by conduction. AirK eases 0..1; effects play quieter + lower (thumps), engines turn into a low
+    // rumble that only comes through the wheels on the ground, tyre squeal is gone; native players also low-pass them.
+    public static bool Airless;
+    public static float AirK;
+    public const float AirLP = 420f;
     static int loaded, fallback;
 
     static System.Random rnd = new System.Random(3);
@@ -80,8 +86,8 @@ public static class Sfx
         if (c == null || pool == null) return;
         AudioSource s = pool[next];
         next = (next + 1) % pool.Length;
-        s.pitch = pitch;
-        s.PlayOneShot(c, vol);
+        s.pitch = pitch * (1f - 0.35f * AirK);
+        s.PlayOneShot(c, vol * (1f - 0.6f * AirK));
     }
 
     public static AudioClip Pick(AudioClip[] set) { return set == null || set.Length == 0 ? null : set[rnd.Next(set.Length)]; }
@@ -187,6 +193,9 @@ public static class Sfx
         public EngineVoice(GameObject owner, int kind, float pitchMul)
         {
             this.kind = kind; this.pitchMul = pitchMul;
+#if !UNITY_WEBGL || UNITY_EDITOR
+            if (kind < 12) { lpf = owner.AddComponent<AudioLowPassFilter>(); lpf.cutoffFrequency = 22000f; lpf.enabled = false; }   // ffu77
+#endif
             if (kind >= 12) { syn = new SynthVoice(owner, kind, pitchMul); main = syn.a; layer = syn.b; skid = syn.c; extra = syn.d; return; }   // ffu30 synthesised EV / bike voices (SfxSynth.cs)
             AudioClip c = ClipFor(kind);
             if (c != null) { main = Loop(owner, c); main.Play(); main.Pause(); }
@@ -201,6 +210,7 @@ public static class Sfx
                 if (ex != null) { extra = Loop(owner, ex); extra.Play(); extra.Pause(); }
             }
         }
+        AudioLowPassFilter lpf;   // ffu77: native players only (WebGL has no audio filters)
         public void Kill()
         {
             foreach (var s in new[] { main, layer, skid, extra }) if (s != null) Object.Destroy(s);
@@ -234,7 +244,7 @@ public static class Sfx
         // on: someone aboard (or an autopilot); spd m/s; load 0..1 throttle / climb; slip m/s sideways; ground 0..1
         public void Tick(bool on, float spd, float load, float slip, float ground, Vector3 pos, float dt)
         {
-            if (syn != null) { syn.Tick(on, spd, load, slip, ground, dt); return; }   // ffu30
+            if (syn != null) { syn.Tick(on, spd, load, slip, ground, dt); return; }   // ffu30 (ffu77 vacuum muffle: SynthVoice.Set)
             float v = 0f, p = 1f, lv = 0f, lp = 1f;
             switch (kind)
             {
@@ -251,11 +261,21 @@ public static class Sfx
                 default: v = 0.28f + load * 0.1f; p = 0.8f + spd / 28f + load * 0.2f; break;
             }
             if (!on) { v = 0f; lv = 0f; }
-            Set(main, v, p * pitchMul, dt);
+            float ak = AirK, pm = pitchMul;
+            if (ak > 0.001f)
+            {
+                // ffu77: vacuum - the motor itself is silent; a low thumpy rumble comes up through the wheels / tracks only while
+                // they touch the ground, rising a little with speed and bumps (slip)
+                float rum = on ? (0.05f + Mathf.Clamp01(spd / 10f) * 0.2f + Mathf.Clamp01(Mathf.Abs(slip) / 8f) * 0.08f) * Mathf.Clamp01(ground) : 0f;
+                v = Mathf.Lerp(v, rum, ak); p = Mathf.Lerp(p * pm, 0.32f + spd / 60f, ak); pm = 1f;
+                lv *= Mathf.Clamp01(ground) * (1f - 0.6f * ak); lp *= 1f - 0.4f * ak;
+            }
+            Set(main, v, p * pm, dt);
             Set(layer, lv, lp, dt);
-            float sk = on ? Mathf.Clamp01((Mathf.Abs(slip) - 3.5f) / 6f) * ground * Mathf.Clamp01(spd / 5f) * 0.35f : 0f;
+            float sk = on ? Mathf.Clamp01((Mathf.Abs(slip) - 3.5f) / 6f) * ground * Mathf.Clamp01(spd / 5f) * 0.35f * (1f - ak) : 0f;
             Set(skid, sk, 0.9f + Mathf.Abs(slip) / 30f, dt * 2f);
-            if (extra != null) Set(extra, on ? 0.1f + load * 0.14f : 0f, 0.95f + spd / 18f + load * 0.15f, dt);
+            if (extra != null) Set(extra, on ? (0.1f + load * 0.14f) * (1f - 0.8f * ak) : 0f, (0.95f + spd / 18f + load * 0.15f) * (1f - 0.4f * ak), dt);
+            if (lpf != null) { float hz = Mathf.Lerp(22000f, AirLP, ak); if (Mathf.Abs(lpf.cutoffFrequency - hz) > 1f) lpf.cutoffFrequency = hz; lpf.enabled = ak > 0.001f; }
             // tracked: metal clanks from the links, faster with speed
             if (kind == 1 && on && spd > 1.2f && ground > 0.3f && Clank != null)
             {
@@ -439,5 +459,6 @@ public class SfxDriver : MonoBehaviour
     void Update()
     {
         if (Kb.MDown() && !Kb.typing) Sfx.CycleVolume();   // ffu13: not while typing a name / room code
+        Sfx.AirK = Mathf.MoveTowards(Sfx.AirK, Sfx.Airless ? 1f : 0f, Time.unscaledDeltaTime * 0.8f);   // ffu77
     }
 }

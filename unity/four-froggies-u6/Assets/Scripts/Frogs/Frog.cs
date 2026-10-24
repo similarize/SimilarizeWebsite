@@ -230,6 +230,7 @@ public partial class Frog : MonoBehaviour
     {
         float dt = Mathf.Min(Time.deltaTime, DtCap);
         if (toastT > 0f) { toastT -= dt; if (toastT <= 0f) toast = ""; }
+        Suit77();   // ffu77: spacesuit on the Moon / Callisto (no air)
         if (netPuppet) { GlidePuppetTick(); input = new PIn(); return; }   // ffu13: posed by Net from the owner's device
         if (robotPilot != null)
         {
@@ -593,6 +594,17 @@ public partial class Frog : MonoBehaviour
         if (surfaceT > 1.0f && UnderwaterWorld.I != null) { surfaceT = 0f; scubaSurface = true; UnderwaterWorld.I.SurfaceSwim(this); return; }
         prompt = prompt.Length > 0 ? prompt : (inputKind == InputKind.Gamepad ? "A / RT up   B / LT down" : inputKind == InputKind.Touch ? "UP / DOWN to swim up and down" : "SPACE up   SHIFT down") + "   |   swim to the top to surface";
         model.Animate(planar.magnitude, false, false, true, dt);
+    }
+
+    // ffu77 (Ben item 9): on an airless body (the Moon, Callisto) every froggy wears the ffu15 spacesuit, on foot or riding;
+    // off again back on Earth. The jetpack (space) keeps its own suit logic.
+    bool suit77;
+    void Suit77()
+    {
+        bool air = !F77.Old && jetOf == null && (world == WorldId.Moon || world == WorldId.Callisto);
+        if (air) SetSuit(true);
+        else if (suit77) SetSuit(false);
+        suit77 = air;
     }
 
     // ---------- ffu15 spacesuit + jetpack (outside a mech flying in space) ----------

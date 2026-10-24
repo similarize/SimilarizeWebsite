@@ -268,6 +268,7 @@ public class SynthVoice
 
     void Set(int i, AudioSource s, float v, float p, float dt, float rate = 1.2f)
     {
+        if (Sfx.AirK > 0.001f) { v *= 1f - 0.7f * Sfx.AirK; p *= 1f - 0.45f * Sfx.AirK; }   // ffu77: vacuum (Moon / Callisto) - muffled, low
         vol[i] = v * gain; pit[i] = p;
         if (s == null) return;
         s.volume = Mathf.MoveTowards(s.volume, v * gain, dt * rate);

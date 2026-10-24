@@ -1423,7 +1423,7 @@ public partial class Game : MonoBehaviour
             }
         }
         if (relayout) ApplyLayout();
-        if (slots.Count > 0) { Frog mf = frogs[slots[0].frog]; Sfx.ListenerPos = mf.FocusPoint; Sfx.Music(Worlds.Mood(mf.world)); }
+        if (slots.Count > 0) { Frog mf = frogs[slots[0].frog]; Sfx.ListenerPos = mf.FocusPoint; Sfx.Music(Worlds.Mood(mf.world)); Sfx.Airless = !F77.Old && (mf.world == WorldId.Moon || mf.world == WorldId.Callisto); }
     }
 
     void LateUpdate()
