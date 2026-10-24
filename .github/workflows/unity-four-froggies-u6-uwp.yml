@@ -352,6 +352,16 @@ jobs:
           Get-ChildItem $rel -File | ForEach-Object { "REL_ASSET: $($_.Name) $($_.Length)" } | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
           "BUNDLE_NAME=$bn" >> $env:GITHUB_ENV
 
+      - name: Keep the package as a run artifact (survives a failed release publish)
+        if: always() && env.REL_DIR != ''
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: ff-u6-uwp-package
+          path: ${{ env.REL_DIR }}
+          retention-days: 14
+          if-no-files-found: ignore
+
       - name: Publish GitHub Release
         id: release
         shell: pwsh
