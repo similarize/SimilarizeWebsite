@@ -108,6 +108,7 @@ public class Bootstrap : MonoBehaviour
         VehicleFactory.BoatAt(new Vector3(pc.x - pr.x + 16f, Layout.WaterY - 0.3f, pc.y + 9f), 70f, new Color(0.85f, 0.22f, 0.2f));
         RcTrack.Build();   // ffu30 FROGGY RC RACEWAY + its 4 RC cars (east of the ranch)
         try { MonsterPark.Build(); } catch (System.Exception e) { Debug.LogWarning("MonsterPark: build failed " + e); }   // ffu43 monster-truck park (south-west)
+        try { ArcadeSigns66.Build(); } catch (System.Exception e) { Debug.LogWarning("ArcadeSigns66: build failed " + e); }   // ffarc66 arcade signs
         try { Bike.SpawnAll(); } catch (System.Exception e) { Debug.LogWarning("Bike: spawn failed " + e); }   // ffu30 garage motorbikes + MX jump line
         try { Skateboard.SpawnAll(); } catch (System.Exception e) { Debug.LogWarning("Skateboard: spawn failed " + e); }   // ffu46 skateboards (half-pipe rack + garage)
     }
