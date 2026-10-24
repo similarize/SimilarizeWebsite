@@ -6,7 +6,7 @@ using UnityEngine;
 // Walk up to one: the prompt says "play <game>" (A on a pad / the touch A button / E); pressing it opens that game on
 // similarize.com in the same tab (FFNav.jslib; Application.OpenURL off the web). The list is baked from the live cabinets
 // on gh-pages games/index.html (2026-10-24; Four Froggies itself and the Archive shelf left out) - re-bake when cabinets
-// change. &ffarc0=1 / &ff77old=1 = no signs.
+// change. Resume66 saves the players' spots first (back within 2 h = resume). &ffarc0=1 / &ff77old=1 = no signs.
 public static class ArcadeSigns66
 {
     static int old = -1;
@@ -80,7 +80,7 @@ public static class ArcadeSigns66
         Color bg = Color.HSVToRGB((i * 0.13f) % 1f, 0.65f, 0.55f);
         Mats.Prim(PrimitiveType.Cube, root, new Vector3(0f, 1.62f, 0f), new Vector3(4.1f, 0.06f, 0.08f), Mats.Unlit(Color.Lerp(bg, Color.white, 0.55f)));   // small glow strip
         Ranch.Sign(p + q * new Vector3(0f, 2.55f, 0f), yaw, title + "\n<size=22>Play here</size>", bg, 4.2f, 1.7f);
-        var h = Interact.Add(p + q * new Vector3(0f, 0f, 1.2f), 3.5f, "play " + title + "!", f => Go(f, title, url));
+        var h = Interact.Add(p + q * new Vector3(0f, 0f, 1.2f), 3.5f, "play " + title + "!", f => { Resume66.Save(p, yaw); Go(f, title, url); });
         h.enabled = f => f != null && f.world == WorldId.Ranch && f.vehicle == null;
     }
 
