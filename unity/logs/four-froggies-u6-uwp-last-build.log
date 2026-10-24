@@ -1,33 +1,34 @@
-UWP run 40047887160 attempt 1 event workflow_dispatch sha ba3003f649827f611a52a10132aa99d07ccfd269 tag ff-u6-uwp-ffu76 started 2026-10-24T01:02:23Z
+UWP run 40071314608 attempt 1 event workflow_dispatch sha 8248c0547286dc854e91a1a82b56fd86cc93cb18 tag ff-u6-uwp-ffu77f started 2026-10-24T06:43:39Z
+8248c05 bb-u6 UWP: keep package as artifact before publish, runner input default cloud (Bill: build on GitHub cloud) [skip ci]
 secrets present
 src/unity/four-froggies-u6/Assets/Editor:
 total 56
-drwxr-xr-x 1 runneradmin 197121     0 Oct 24 01:02 .
-drwxr-xr-x 1 runneradmin 197121     0 Oct 24 01:02 ..
--rw-r--r-- 1 runneradmin 197121 36019 Oct 24 01:02 BuildScript.cs
--rw-r--r-- 1 runneradmin 197121 16341 Oct 24 01:02 FFBuildUWP.cs
+drwxr-xr-x 1 runneradmin 197121     0 Oct 24 06:43 .
+drwxr-xr-x 1 runneradmin 197121     0 Oct 24 06:43 ..
+-rw-r--r-- 1 runneradmin 197121 36019 Oct 24 06:43 BuildScript.cs
+-rw-r--r-- 1 runneradmin 197121 16341 Oct 24 06:43 FFBuildUWP.cs
 
 src/unity/four-froggies-u6/Assets/Scripts/Platform:
 total 32
-drwxr-xr-x 1 runneradmin 197121     0 Oct 24 01:02 .
-drwxr-xr-x 1 runneradmin 197121     0 Oct 24 01:02 ..
--rw-r--r-- 1 runneradmin 197121 28909 Oct 24 01:02 FFXboxUWP.cs
+drwxr-xr-x 1 runneradmin 197121     0 Oct 24 06:43 .
+drwxr-xr-x 1 runneradmin 197121     0 Oct 24 06:43 ..
+-rw-r--r-- 1 runneradmin 197121 28909 Oct 24 06:43 FFXboxUWP.cs
 
 src/unity/four-froggies-u6/UWPTiles:
 total 388
-drwxr-xr-x 1 runneradmin 197121      0 Oct 24 01:02 .
-drwxr-xr-x 1 runneradmin 197121      0 Oct 24 01:02 ..
--rw-r--r-- 1 runneradmin 197121 141959 Oct 24 01:02 splash620x300.png
--rw-r--r-- 1 runneradmin 197121  35958 Oct 24 01:02 sq150.png
--rw-r--r-- 1 runneradmin 197121 138546 Oct 24 01:02 sq310.png
--rw-r--r-- 1 runneradmin 197121   4300 Oct 24 01:02 sq44.png
--rw-r--r-- 1 runneradmin 197121   5309 Oct 24 01:02 sq50.png
--rw-r--r-- 1 runneradmin 197121   9920 Oct 24 01:02 sq71.png
--rw-r--r-- 1 runneradmin 197121  39134 Oct 24 01:02 wide310x150.png
+drwxr-xr-x 1 runneradmin 197121      0 Oct 24 06:43 .
+drwxr-xr-x 1 runneradmin 197121      0 Oct 24 06:43 ..
+-rw-r--r-- 1 runneradmin 197121 141959 Oct 24 06:43 splash620x300.png
+-rw-r--r-- 1 runneradmin 197121  35958 Oct 24 06:43 sq150.png
+-rw-r--r-- 1 runneradmin 197121 138546 Oct 24 06:43 sq310.png
+-rw-r--r-- 1 runneradmin 197121   4300 Oct 24 06:43 sq44.png
+-rw-r--r-- 1 runneradmin 197121   5309 Oct 24 06:43 sq50.png
+-rw-r--r-- 1 runneradmin 197121   9920 Oct 24 06:43 sq71.png
+-rw-r--r-- 1 runneradmin 197121  39134 Oct 24 06:43 wide310x150.png
 11M	src/unity/four-froggies-u6/Assets/StreamingAssets/real
 23M	src/unity/four-froggies-u6/Assets/StreamingAssets/realroom
 11M	src/unity/four-froggies-u6/Assets/Resources/FFMusic
-cert: subject CN=Similarize thumb 72B653EDA2A0B719D0C335594267828F007DB254 notAfter 10/24/2031 01:02:24
+cert: subject CN=Similarize thumb 32DA0E6C49B0EAFBBB14C5EDC21E555E487A0D52 notAfter 10/24/2031 06:43:41
 vs: C:\Program Files\Microsoft Visual Studio\2022\Enterprise
 UWP.VC (v143) missing -> installing
 vs_installer exit 0
@@ -41,23 +42,24 @@ sdk: wdf
 urp setup exit code: 0
 [Licensing::Module] Trying to connect to existing licensing client channel...
 [Licensing::IpcConnector] Channel LicenseClient-runneradmin doesn't exist
-[Licensing::Module] Successfully launched the LicensingClient (PId: 7604)
-[Licensing::Module] Licensing is not yet initialized.
+[Licensing::Module] Successfully launched the LicensingClient (PId: 6932)
 Waiting for clients to connect on \\.\pipe\Unity-LicenseClient-runneradmin, press Ctrl-C to exit.
-[Licensing::IpcConnector] Successfully connected to: "LicenseClient-runneradmin" at "2026-10-24T01:27:11.8806328Z"
-[Licensing::Client] Code 10 while verifying Licensing Client signature (process Id: 7604, path: "C:/Program Files/Unity/Hub/Editor/6000.6.5f1/Editor/Data/Resources/Licensing/Client/Unity.Licensing.Client.exe")
+[Licensing::Module] Licensing is not yet initialized.
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-runneradmin" at "2026-10-24T07:02:16.5229181Z"
+[Licensing::Client] Code 10 while verifying Licensing Client signature (process Id: 6932, path: "C:/Program Files/Unity/Hub/Editor/6000.6.5f1/Editor/Data/Resources/Licensing/Client/Unity.Licensing.Client.exe")
 [Licensing::Module] LicensingClient has failed validation; ignoring
 [Licensing::Client] Handshaking with LicensingClient:
-[Licensing::Module] Successfully connected to LicensingClient on channel: "LicenseClient-runneradmin" (connect: 2.91s, validation: 0.23s, handshake: 0.15s)
-[Licensing::IpcConnector] Successfully connected to: "LicenseClient-runneradmin-notifications" at "2026-10-24T01:27:12.2640818Z"
-[Licensing::Module] Connected to LicensingClient (PId: 7604, launch time: 0.01, total connection time: 3.29s)
+[Licensing::Module] Successfully connected to LicensingClient on channel: "LicenseClient-runneradmin" (connect: 0.59s, validation: 0.09s, handshake: 0.21s)
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-runneradmin-notifications" at "2026-10-24T07:02:16.8212479Z"
+[Licensing::Module] Connected to LicensingClient (PId: 6932, launch time: 0.00, total connection time: 0.89s)
 [Licensing::Module] Error: Access token is unavailable; failed to update
 [Licensing::Client] Successfully resolved entitlement details
 [Licensing::Module] License group:
 [Licensing::Client] Successfully updated license, isAsync: True, time: 0.01
 [Licensing::Client] Successfully resolved entitlement details
-[Licensing::Module] Licensing Background thread has ended after 3.32s
-[Licensing::Module] Licensing is initialized (took 2.71s).
+[Licensing::Module] Licensing Background thread has ended after 0.94s
+[Licensing::Module] Licensing is initialized (took 0.39s).
+[Licensing::Client] Successfully resolved entitlement details
 [Licensing::Client] Successfully resolved entitlement details
 [Licensing::Client] Successfully resolved entitlement details
 [Licensing::Client] Successfully resolved entitlement details
@@ -84,590 +86,464 @@ Importing 'GUID: fee59c2b2318a7e4fa7a2c2af28d9553 - Path: Packages/com.unity.col
 Importing 'GUID: 6fe576033d6a2424c888d599967457a2 - Path: Packages/com.unity.collections/ValidationExceptions.json' with importer (TextScriptImporter)
 Importing 'GUID: 9fc87c3ee46f3b34e97e18e4fcac8151 - Path: Packages/com.unity.nuget.mono-cecil/LICENSE.md' with importer (TextScriptImporter)
 UnityEngine.Rendering.RenderPipelineGlobalSettingsUtils:TryEnsure<UnityEngine.Rendering.Universal.UniversalRenderPipelineGlobalSettings, UnityEngine.Rendering.Universal.UniversalRenderPipeline> (UnityEngine.Rendering.Universal.UniversalRenderPipelineGlobalSettings&,string,bool,System.Exception&) (at ./Library/PackageCache/com.unity.render-pipelines.core@285af6b8c83f/Runtime/RenderPipeline/RenderPipelineGlobalSettingsUtils.cs:126)
+[Licensing::Client] Successfully resolved entitlement details
 URPSETUP: start, Unity 6000.6.5f1
 [Licensing::Client] Successfully resolved entitlement details
 [Licensing::Client] Successfully resolved entitlement details
 URPSETUP: renderer via CreateRendererAsset True
 URPSETUP: global settings Assets/UniversalRenderPipelineGlobalSettings.asset
-URPSETUP: URP asset Forward+ HDR MSAA2 shadows 2048/60m 2 cascades soft, rendering layers, SSAO feature lid -6911745121939293105
+URPSETUP: URP asset Forward+ HDR MSAA2 shadows 2048/60m 2 cascades soft, rendering layers, SSAO feature lid -1231888362555228951
 URPSETUP: rendering layers defined 3 (was 1), mask 7
 URPSETUP: ok asset Assets/Generated/FF_URP.asset default FF_URP colour Linear apis WebGPU,OpenGLES3
 [Licensing::Client] Successfully resolved entitlement details
 [Licensing::IpcConnector] LicenseClient-runneradmin-notifications channel disconnected successfully.
 [Licensing::IpcConnector] LicenseClient-runneradmin channel disconnected successfully.
-##utp:{"type":"MemoryLeaks","version":2,"phase":"Immediate","time":1792805355528,"processId":6536,"allocatedMemory":18336046,"memoryLabels":[{"Default":215155},{"Permanent":15516},{"NewDelete":70647},{"Thread":4190696},{"Manager":18992},{"VertexData":8},{"Geometry":816},{"Texture":24},{"Shader":926837},{"Material":12174},{"GfxDevice":55968},{"Animation":952},{"Audio":1272},{"Font":1794766},{"FreeType":54120},{"FontEngine":736},{"Physics":1970},{"Physics2D":16},{"Serialization":34216},{"Input":42840},{"JobScheduler":256},{"TextLib":336},{"Mono":48},{"MonoCode":64},{"ScriptingNativeRuntime":1276640},{"Resource":1444},{"Renderer":2504},{"Transform":4685},{"File":19281},{"WebCam":616},{"Culling":32},{"Terrain":11442},{"Wind":24},{"STL":40},{"String":1556776},{"StaticString":3808},{"Utility":2673174},{"Curl":2559},{"PoolAlloc":2264},{"AI":80},{"TypeTree":19053},{"ScriptManager":12656},{"CodeReload":448},{"RuntimeInitializeOnLoadManager":64},{"Sprites":102},{"SpriteAtlas":120},{"GI":7816},{"Director":8296},{"CloudService":128976},{"WebRequest":1189},{"VR":49650},{"SceneManager":608},{"Video":64},{"LazyScriptCache":32},{"Camera":729},{"Secure":2377},{"Image":65536},{"SerializationCache":9256},{"APIUpdating":10320},{"Subsystems":336},{"VirtualTexturing":57888},{"StaticSafetyDebugInfo":278528},{"Analytics":592},{"Hierarchy":1188},{"UIElements":40},{"CoreStats":14456},{"Identifiers":7152},{"Gui":128},{"EditorUtility":111370},{"VersionControl":8},{"Undo":931},{"AssetDatabase":4507481},{"AssetImporter":40},{"EditorGi":328},{"UnityConnect":40441},{"Upm":1912},{"UpmDiagnostics":8},{"AssetCompliance":96},{"DrivenProperties":72},{"LocalIPC":217},{"ProfilerEditor":9746},{"CoreBusinessMetrics":3626},{"Windowing":456},{"Licensing":1264},{"AssetReference":32},{"IPCStream":32}]}
+##utp:{"type":"MemoryLeaks","version":2,"phase":"Immediate","time":1792825523429,"processId":6748,"allocatedMemory":18205960,"memoryLabels":[{"Default":215155},{"Permanent":15516},{"NewDelete":70647},{"Thread":4190736},{"Manager":19024},{"VertexData":8},{"Geometry":816},{"Texture":24},{"Shader":926837},{"Material":12174},{"GfxDevice":55968},{"Animation":952},{"Audio":1272},{"Font":1794766},{"FreeType":54120},{"FontEngine":736},{"Physics":1970},{"Physics2D":16},{"Serialization":34216},{"Input":42840},{"JobScheduler":256},{"TextLib":336},{"Mono":48},{"MonoCode":64},{"ScriptingNativeRuntime":1276640},{"Resource":1444},{"Renderer":2504},{"Transform":4685},{"File":19281},{"WebCam":616},{"Culling":32},{"Terrain":11442},{"Wind":24},{"STL":40},{"String":1426578},{"StaticString":3808},{"Utility":2673174},{"Curl":2559},{"PoolAlloc":2264},{"AI":80},{"TypeTree":19053},{"ScriptManager":12656},{"CodeReload":448},{"RuntimeInitializeOnLoadManager":64},{"Sprites":102},{"SpriteAtlas":120},{"GI":7816},{"Director":8296},{"CloudService":128976},{"WebRequest":1229},{"VR":49650},{"SceneManager":608},{"Video":64},{"LazyScriptCache":32},{"Camera":729},{"Secure":2377},{"Image":65536},{"SerializationCache":9256},{"APIUpdating":10320},{"Subsystems":336},{"VirtualTexturing":57888},{"StaticSafetyDebugInfo":278528},{"Analytics":592},{"Hierarchy":1188},{"UIElements":40},{"CoreStats":14456},{"Identifiers":7152},{"Gui":128},{"EditorUtility":111370},{"VersionControl":8},{"Undo":931},{"AssetDatabase":4507481},{"AssetImporter":40},{"EditorGi":328},{"UnityConnect":40441},{"Upm":1912},{"UpmDiagnostics":8},{"AssetCompliance":96},{"DrivenProperties":72},{"LocalIPC":217},{"ProfilerEditor":9746},{"CoreBusinessMetrics":3626},{"Windowing":456},{"Licensing":1264},{"AssetReference":32},{"IPCStream":32}]}
 editor: C:\Program Files\Unity\Hub\Editor\6000.6.5f1\Editor\Unity.exe
 playback engine: MetroSupport
 playback engine: windowsstandalonesupport
-unity exit code: 0
-FFUWP urp: asset Assets/Generated/FF_URP.asset msaa 2->1 hdr True->false shadowmap 2048->1024 cascades 2->1 shadowDist 60->30 soft True->false | renderer FF_URP_Renderer mode 2->0 (Forward) feature FF SSAO kept active (runtime off)
-FFUWP audio: disableAudio False->false sampleRate 0->48000 dsp 1024->1024 requestedDsp 0->1024 speakerMode 2->2 volume 1
-FFUWP audio: music clips 19 compressed in memory + preloaded (not streamed)
-FFUWP: graphics APIs Direct3D11 colour Linear
-FFUWP: capabilities internetClient=True microphone=False
-FFUWP: certificate FourFroggies66Test.pfx set=True subject=Similarize issuer=Similarize
-FFUWP tile PackageLogo <- sq50.png
-FFUWP tile SplashScreenImage <- splash620x300.png
-FFUWP tile UWPSquare44x44Logo <- sq44.png
-FFUWP tile UWPSquare71x71Logo <- sq71.png
-FFUWP tile UWPSquare150x150Logo <- sq150.png
-FFUWP tile UWPSquare310x310Logo <- sq310.png
-FFUWP tile UWPWide310x150Logo <- wide310x150.png
-FFUWP: EditorUserBuildSettings.wsaUWPBuildType = D3D
-FFUWP: EditorUserBuildSettings.wsaSubtarget = AnyDevice
-FFUWP: EditorUserBuildSettings.wsaArchitecture = x64
-FFUWP: EditorUserBuildSettings.wsaBuildAndRunDeployTarget = LocalMachine
-BUILD_RESULT: Succeeded target=UWP-6.6 errors=0 warnings=291 size=960380780 time=00:02:08.7428058
-BUILD_SCRIPT_EXIT: 0
-out: Four Froggies 6.6
-out: Il2CppOutputProject
-out: Four Froggies 6.6.sln
-out: UnityCommon.props
-solution: Four Froggies 6.6.sln
-manifest: D:\a\SimilarizeWebsite\SimilarizeWebsite\src\unity\four-froggies-u6\build\UWP\Four Froggies 6.6\Package.appxmanifest
-identity: name=SimilarizeFourFroggies66 publisher=CN=Similarize version=1.0.3.0
-device family: Windows.Universal min 10.0.19041.0 max 10.0.26100.0
-capability: Capability internetClient
-msbuild: C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\MSBuild.exe
-msbuild exit 0 after 9 min
-pkg: \Four Froggies 6.6_1.0.3.0_Master_Test\Add-AppDevPackage.ps1 42415
-pkg: \Four Froggies 6.6_1.0.3.0_Master_Test\Four Froggies 6.6_1.0.3.0_x64_Master.appxsym 171561806
-pkg: \Four Froggies 6.6_1.0.3.0_Master_Test\Four Froggies 6.6_1.0.3.0_x64_Master.cer 780
-pkg: \Four Froggies 6.6_1.0.3.0_Master_Test\Four Froggies 6.6_1.0.3.0_x64_Master.msixbundle 91258128
-pkg: \Four Froggies 6.6_1.0.3.0_Master_Test\Install.ps1 16554
-pkg: \Four Froggies 6.6_1.0.3.0_Master_Test\Add-AppDevPackage.resources\Add-AppDevPackage.psd1 10150
-pkg: \Four Froggies 6.6_1.0.3.0_Master_Test\Add-AppDevPackage.resources\cs-CZ\Add-AppDevPackage.psd1 10278
-pkg: \Four Froggies 6.6_1.0.3.0_Master_Test\Add-AppDevPackage.resources\de-DE\Add-AppDevPackage.psd1 11628
-pkg: \Four Froggies 6.6_1.0.3.0_Master_Test\Add-AppDevPackage.resources\en-US\Add-AppDevPackage.psd1 10150
-pkg: \Four Froggies 6.6_1.0.3.0_Master_Test\Add-AppDevPackage.resources\es-ES\Add-AppDevPackage.psd1 10834
-pkg: \Four Froggies 6.6_1.0.3.0_Master_Test\Add-AppDevPackage.resources\fr-FR\Add-AppDevPackage.psd1 11344
-pkg: \Four Froggies 6.6_1.0.3.0_Master_Test\Add-AppDevPackage.resources\it-IT\Add-AppDevPackage.psd1 10738
-pkg: \Four Froggies 6.6_1.0.3.0_Master_Test\Add-AppDevPackage.resources\ja-JP\Add-AppDevPackage.psd1 6698
-pkg: \Four Froggies 6.6_1.0.3.0_Master_Test\Add-AppDevPackage.resources\ko-KR\Add-AppDevPackage.psd1 6348
-pkg: \Four Froggies 6.6_1.0.3.0_Master_Test\Add-AppDevPackage.resources\pl-PL\Add-AppDevPackage.psd1 10106
-pkg: \Four Froggies 6.6_1.0.3.0_Master_Test\Add-AppDevPackage.resources\pt-BR\Add-AppDevPackage.psd1 10580
-pkg: \Four Froggies 6.6_1.0.3.0_Master_Test\Add-AppDevPackage.resources\ru-RU\Add-AppDevPackage.psd1 10342
-pkg: \Four Froggies 6.6_1.0.3.0_Master_Test\Add-AppDevPackage.resources\tr-TR\Add-AppDevPackage.psd1 9608
-pkg: \Four Froggies 6.6_1.0.3.0_Master_Test\Add-AppDevPackage.resources\zh-CN\Add-AppDevPackage.psd1 4998
-pkg: \Four Froggies 6.6_1.0.3.0_Master_Test\Add-AppDevPackage.resources\zh-TW\Add-AppDevPackage.psd1 5180
-pkg: \Four Froggies 6.6_1.0.3.0_Master_Test\Dependencies\ARM\Microsoft.VCLibs.ARM.14.00.appx 835614
-pkg: \Four Froggies 6.6_1.0.3.0_Master_Test\Dependencies\ARM64\Microsoft.VCLibs.ARM64.14.00.appx 1570406
-pkg: \Four Froggies 6.6_1.0.3.0_Master_Test\Dependencies\x64\Microsoft.VCLibs.x64.14.00.appx 896581
-pkg: \Four Froggies 6.6_1.0.3.0_Master_Test\Dependencies\x86\Microsoft.VCLibs.x86.14.00.appx 758544
-pkg: \Four Froggies 6.6_1.0.3.0_Master_Test\TelemetryDependencies\LogSideloadingTelemetry.ps1 17415
-pkg: \Four Froggies 6.6_1.0.3.0_Master_Test\TelemetryDependencies\Microsoft.Diagnostics.Tracing.EventSource.dll 170288
-pkg: \Four Froggies 6.6_1.0.3.0_Master_Test\TelemetryDependencies\Microsoft.VisualStudio.RemoteControl.dll 47536
-pkg: \Four Froggies 6.6_1.0.3.0_Master_Test\TelemetryDependencies\Microsoft.VisualStudio.Telemetry.dll 1026088
-pkg: \Four Froggies 6.6_1.0.3.0_Master_Test\TelemetryDependencies\Microsoft.VisualStudio.Utilities.Internal.dll 62480
-pkg: \Four Froggies 6.6_1.0.3.0_Master_Test\TelemetryDependencies\Newtonsoft.Json.dll 711952
-pkg: \Four Froggies 6.6_1.0.3.0_Master_Test\TelemetryDependencies\System.Runtime.CompilerServices.Unsafe.dll 19224
-bundle: Four Froggies 6.6_1.0.3.0_x64_Master.msixbundle -> FourFroggies66-ff-u6-uwp-ffu76_x64.msixbundle 91258128 B; deps: Microsoft.VCLibs.x64.14.00.appx 896581
-bundle signer: CN=Similarize thumb 72B653EDA2A0B719D0C335594267828F007DB254 status UnknownError
-bundle entries: Four%20Froggies%206.6_1.0.3.0_x64_Master.msix, AppxBlockMap.xml, [Content_Types].xml, AppxSignature.p7x
-package: Four%20Froggies%206.6_1.0.3.0_x64_Master.msix name=SimilarizeFourFroggies66 publisher=CN=Similarize arch=x64 version=1.0.3.0 streamingAssets files=151
-dep: TargetDeviceFamily Windows.Universal 10.0.19041.0
-dep: PackageDependency Microsoft.VCLibs.140.00 14.0.33519.0
-cap: Capability internetClient
-REL_ASSET: FourFroggies66-ff-u6-uwp-ffu76_x64.msixbundle 91258128
-REL_ASSET: FourFroggies66-ff-u6-uwp-ffu76.cer 780
-REL_ASSET: FourFroggies66-UWP-ff-u6-uwp-ffu76-package.zip 264439566
-REL_ASSET: INSTALL-XBOX.txt 5467
-REL_ASSET: Microsoft.VCLibs.x64.14.00.appx 896581
-=== step outcomes: secrets=success cert=success vs=success setup=success activate=success urpsetup=success build=success manifest=success msbuild=success collect=success release=failure smoke=skipped
-=== msbuild errors (first 150)
-=== msbuild warnings: 45 lines (first 40)
-   2:6>D:\a\SimilarizeWebsite\SimilarizeWebsite\src\unity\four-froggies-u6\build\UWP\Four Froggies 6.6\App.cpp(26,41): warning C4973: 'Windows::UI::ViewManagement::IApplicationView2::SuppressSystemOverlays::set': marked as deprecated [D:\a\SimilarizeWebsite\SimilarizeWebsite\src\unity\four-froggies-u6\build\UWP\Four Froggies 6.6\Four Froggies 6.6.vcxproj]
-   2:6>GENERATEPROJECTPRIFILE : warning : PRI249: 0xdef00520 - Invalid qualifier: DLL-RESOURCES [D:\a\SimilarizeWebsite\SimilarizeWebsite\src\unity\four-froggies-u6\build\UWP\Four Froggies 6.6\Four Froggies 6.6.vcxproj]
-   2:6>GENERATEPROJECTPRIFILE : warning : PRI263: 0xdef01051 - No default or neutral resource given for 'Files/Data/StreamingAssets/realroom/Armchair_01_arm.jpg'. The application may throw an exception for certain user configurations when retrieving the resources. [D:\a\SimilarizeWebsite\SimilarizeWebsite\src\unity\four-froggies-u6\build\UWP\Four Froggies 6.6\Four Froggies 6.6.vcxproj]
-   2:6>GENERATEPROJECTPRIFILE : warning : PRI263: 0xdef01051 - No default or neutral resource given for 'Files/Data/StreamingAssets/realroom/Armchair_01_diff.jpg'. The application may throw an exception for certain user configurations when retrieving the resources. [D:\a\SimilarizeWebsite\SimilarizeWebsite\src\unity\four-froggies-u6\build\UWP\Four Froggies 6.6\Four Froggies 6.6.vcxproj]
-   2:6>GENERATEPROJECTPRIFILE : warning : PRI263: 0xdef01051 - No default or neutral resource given for 'Files/Data/StreamingAssets/realroom/Armchair_01_nor_gl.jpg'. The application may throw an exception for certain user configurations when retrieving the resources. [D:\a\SimilarizeWebsite\SimilarizeWebsite\src\unity\four-froggies-u6\build\UWP\Four Froggies 6.6\Four Froggies 6.6.vcxproj]
-   2:6>GENERATEPROJECTPRIFILE : warning : PRI263: 0xdef01051 - No default or neutral resource given for 'Files/Data/StreamingAssets/realroom/ceramic_vase_01_arm.jpg'. The application may throw an exception for certain user configurations when retrieving the resources. [D:\a\SimilarizeWebsite\SimilarizeWebsite\src\unity\four-froggies-u6\build\UWP\Four Froggies 6.6\Four Froggies 6.6.vcxproj]
-   2:6>GENERATEPROJECTPRIFILE : warning : PRI263: 0xdef01051 - No default or neutral resource given for 'Files/Data/StreamingAssets/realroom/ceramic_vase_01_diff.jpg'. The application may throw an exception for certain user configurations when retrieving the resources. [D:\a\SimilarizeWebsite\SimilarizeWebsite\src\unity\four-froggies-u6\build\UWP\Four Froggies 6.6\Four Froggies 6.6.vcxproj]
-   2:6>GENERATEPROJECTPRIFILE : warning : PRI263: 0xdef01051 - No default or neutral resource given for 'Files/Data/StreamingAssets/realroom/ceramic_vase_01_nor_gl.jpg'. The application may throw an exception for certain user configurations when retrieving the resources. [D:\a\SimilarizeWebsite\SimilarizeWebsite\src\unity\four-froggies-u6\build\UWP\Four Froggies 6.6\Four Froggies 6.6.vcxproj]
-   2:6>GENERATEPROJECTPRIFILE : warning : PRI263: 0xdef01051 - No default or neutral resource given for 'Files/Data/StreamingAssets/realroom/hanging_picture_frame_02_arm.jpg'. The application may throw an exception for certain user configurations when retrieving the resources. [D:\a\SimilarizeWebsite\SimilarizeWebsite\src\unity\four-froggies-u6\build\UWP\Four Froggies 6.6\Four Froggies 6.6.vcxproj]
-   2:6>GENERATEPROJECTPRIFILE : warning : PRI263: 0xdef01051 - No default or neutral resource given for 'Files/Data/StreamingAssets/realroom/hanging_picture_frame_02_artwork_diff.jpg'. The application may throw an exception for certain user configurations when retrieving the resources. [D:\a\SimilarizeWebsite\SimilarizeWebsite\src\unity\four-froggies-u6\build\UWP\Four Froggies 6.6\Four Froggies 6.6.vcxproj]
-   2:6>GENERATEPROJECTPRIFILE : warning : PRI263: 0xdef01051 - No default or neutral resource given for 'Files/Data/StreamingAssets/realroom/hanging_picture_frame_02_artwork_nor_gl.jpg'. The application may throw an exception for certain user configurations when retrieving the resources. [D:\a\SimilarizeWebsite\SimilarizeWebsite\src\unity\four-froggies-u6\build\UWP\Four Froggies 6.6\Four Froggies 6.6.vcxproj]
-   2:6>GENERATEPROJECTPRIFILE : warning : PRI263: 0xdef01051 - No default or neutral resource given for 'Files/Data/StreamingAssets/realroom/hanging_picture_frame_02_artwork_roughness.jpg'. The application may throw an exception for certain user configurations when retrieving the resources. [D:\a\SimilarizeWebsite\SimilarizeWebsite\src\unity\four-froggies-u6\build\UWP\Four Froggies 6.6\Four Froggies 6.6.vcxproj]
-   2:6>GENERATEPROJECTPRIFILE : warning : PRI263: 0xdef01051 - No default or neutral resource given for 'Files/Data/StreamingAssets/realroom/hanging_picture_frame_02_diff.jpg'. The application may throw an exception for certain user configurations when retrieving the resources. [D:\a\SimilarizeWebsite\SimilarizeWebsite\src\unity\four-froggies-u6\build\UWP\Four Froggies 6.6\Four Froggies 6.6.vcxproj]
-   2:6>GENERATEPROJECTPRIFILE : warning : PRI263: 0xdef01051 - No default or neutral resource given for 'Files/Data/StreamingAssets/realroom/hanging_picture_frame_02_nor_gl.jpg'. The application may throw an exception for certain user configurations when retrieving the resources. [D:\a\SimilarizeWebsite\SimilarizeWebsite\src\unity\four-froggies-u6\build\UWP\Four Froggies 6.6\Four Froggies 6.6.vcxproj]
-   2:6>GENERATEPROJECTPRIFILE : warning : PRI263: 0xdef01051 - No default or neutral resource given for 'Files/Data/StreamingAssets/realroom/herringbone_parquet_arm.jpg'. The application may throw an exception for certain user configurations when retrieving the resources. [D:\a\SimilarizeWebsite\SimilarizeWebsite\src\unity\four-froggies-u6\build\UWP\Four Froggies 6.6\Four Froggies 6.6.vcxproj]
-   2:6>GENERATEPROJECTPRIFILE : warning : PRI263: 0xdef01051 - No default or neutral resource given for 'Files/Data/StreamingAssets/realroom/herringbone_parquet_diff.jpg'. The application may throw an exception for certain user configurations when retrieving the resources. [D:\a\SimilarizeWebsite\SimilarizeWebsite\src\unity\four-froggies-u6\build\UWP\Four Froggies 6.6\Four Froggies 6.6.vcxproj]
-   2:6>GENERATEPROJECTPRIFILE : warning : PRI263: 0xdef01051 - No default or neutral resource given for 'Files/Data/StreamingAssets/realroom/herringbone_parquet_nor_gl.jpg'. The application may throw an exception for certain user configurations when retrieving the resources. [D:\a\SimilarizeWebsite\SimilarizeWebsite\src\unity\four-froggies-u6\build\UWP\Four Froggies 6.6\Four Froggies 6.6.vcxproj]
-   2:6>GENERATEPROJECTPRIFILE : warning : PRI263: 0xdef01051 - No default or neutral resource given for 'Files/Data/StreamingAssets/realroom/modern_ceiling_lamp_01_arm.jpg'. The application may throw an exception for certain user configurations when retrieving the resources. [D:\a\SimilarizeWebsite\SimilarizeWebsite\src\unity\four-froggies-u6\build\UWP\Four Froggies 6.6\Four Froggies 6.6.vcxproj]
-   2:6>GENERATEPROJECTPRIFILE : warning : PRI263: 0xdef01051 - No default or neutral resource given for 'Files/Data/StreamingAssets/realroom/modern_ceiling_lamp_01_diff.jpg'. The application may throw an exception for certain user configurations when retrieving the resources. [D:\a\SimilarizeWebsite\SimilarizeWebsite\src\unity\four-froggies-u6\build\UWP\Four Froggies 6.6\Four Froggies 6.6.vcxproj]
-   2:6>GENERATEPROJECTPRIFILE : warning : PRI263: 0xdef01051 - No default or neutral resource given for 'Files/Data/StreamingAssets/realroom/modern_ceiling_lamp_01_nor_gl.jpg'. The application may throw an exception for certain user configurations when retrieving the resources. [D:\a\SimilarizeWebsite\SimilarizeWebsite\src\unity\four-froggies-u6\build\UWP\Four Froggies 6.6\Four Froggies 6.6.vcxproj]
-   2:6>GENERATEPROJECTPRIFILE : warning : PRI263: 0xdef01051 - No default or neutral resource given for 'Files/Data/StreamingAssets/realroom/modern_coffee_table_01_diff.jpg'. The application may throw an exception for certain user configurations when retrieving the resources. [D:\a\SimilarizeWebsite\SimilarizeWebsite\src\unity\four-froggies-u6\build\UWP\Four Froggies 6.6\Four Froggies 6.6.vcxproj]
-   2:6>GENERATEPROJECTPRIFILE : warning : PRI263: 0xdef01051 - No default or neutral resource given for 'Files/Data/StreamingAssets/realroom/modern_coffee_table_01_nor_gl.jpg'. The application may throw an exception for certain user configurations when retrieving the resources. [D:\a\SimilarizeWebsite\SimilarizeWebsite\src\unity\four-froggies-u6\build\UWP\Four Froggies 6.6\Four Froggies 6.6.vcxproj]
-   2:6>GENERATEPROJECTPRIFILE : warning : PRI263: 0xdef01051 - No default or neutral resource given for 'Files/Data/StreamingAssets/realroom/modern_coffee_table_01_rough.jpg'. The application may throw an exception for certain user configurations when retrieving the resources. [D:\a\SimilarizeWebsite\SimilarizeWebsite\src\unity\four-froggies-u6\build\UWP\Four Froggies 6.6\Four Froggies 6.6.vcxproj]
-   2:6>GENERATEPROJECTPRIFILE : warning : PRI263: 0xdef01051 - No default or neutral resource given for 'Files/Data/StreamingAssets/realroom/modern_wooden_cabinet_arm.jpg'. The application may throw an exception for certain user configurations when retrieving the resources. [D:\a\SimilarizeWebsite\SimilarizeWebsite\src\unity\four-froggies-u6\build\UWP\Four Froggies 6.6\Four Froggies 6.6.vcxproj]
-   2:6>GENERATEPROJECTPRIFILE : warning : PRI263: 0xdef01051 - No default or neutral resource given for 'Files/Data/StreamingAssets/realroom/modern_wooden_cabinet_diff.jpg'. The application may throw an exception for certain user configurations when retrieving the resources. [D:\a\SimilarizeWebsite\SimilarizeWebsite\src\unity\four-froggies-u6\build\UWP\Four Froggies 6.6\Four Froggies 6.6.vcxproj]
-   2:6>GENERATEPROJECTPRIFILE : warning : PRI263: 0xdef01051 - No default or neutral resource given for 'Files/Data/StreamingAssets/realroom/modern_wooden_cabinet_nor_gl.jpg'. The application may throw an exception for certain user configurations when retrieving the resources. [D:\a\SimilarizeWebsite\SimilarizeWebsite\src\unity\four-froggies-u6\build\UWP\Four Froggies 6.6\Four Froggies 6.6.vcxproj]
-   2:6>GENERATEPROJECTPRIFILE : warning : PRI263: 0xdef01051 - No default or neutral resource given for 'Files/Data/StreamingAssets/realroom/poly_wool_herringbone_arm.jpg'. The application may throw an exception for certain user configurations when retrieving the resources. [D:\a\SimilarizeWebsite\SimilarizeWebsite\src\unity\four-froggies-u6\build\UWP\Four Froggies 6.6\Four Froggies 6.6.vcxproj]
-   2:6>GENERATEPROJECTPRIFILE : warning : PRI263: 0xdef01051 - No default or neutral resource given for 'Files/Data/StreamingAssets/realroom/poly_wool_herringbone_diff.jpg'. The application may throw an exception for certain user configurations when retrieving the resources. [D:\a\SimilarizeWebsite\SimilarizeWebsite\src\unity\four-froggies-u6\build\UWP\Four Froggies 6.6\Four Froggies 6.6.vcxproj]
-   2:6>GENERATEPROJECTPRIFILE : warning : PRI263: 0xdef01051 - No default or neutral resource given for 'Files/Data/StreamingAssets/realroom/poly_wool_herringbone_nor_gl.jpg'. The application may throw an exception for certain user configurations when retrieving the resources. [D:\a\SimilarizeWebsite\SimilarizeWebsite\src\unity\four-froggies-u6\build\UWP\Four Froggies 6.6\Four Froggies 6.6.vcxproj]
-   2:6>GENERATEPROJECTPRIFILE : warning : PRI263: 0xdef01051 - No default or neutral resource given for 'Files/Data/StreamingAssets/realroom/potted_plant_04_arm.jpg'. The application may throw an exception for certain user configurations when retrieving the resources. [D:\a\SimilarizeWebsite\SimilarizeWebsite\src\unity\four-froggies-u6\build\UWP\Four Froggies 6.6\Four Froggies 6.6.vcxproj]
-   2:6>GENERATEPROJECTPRIFILE : warning : PRI263: 0xdef01051 - No default or neutral resource given for 'Files/Data/StreamingAssets/realroom/potted_plant_04_diff.jpg'. The application may throw an exception for certain user configurations when retrieving the resources. [D:\a\SimilarizeWebsite\SimilarizeWebsite\src\unity\four-froggies-u6\build\UWP\Four Froggies 6.6\Four Froggies 6.6.vcxproj]
-   2:6>GENERATEPROJECTPRIFILE : warning : PRI263: 0xdef01051 - No default or neutral resource given for 'Files/Data/StreamingAssets/realroom/potted_plant_04_nor_gl.jpg'. The application may throw an exception for certain user configurations when retrieving the resources. [D:\a\SimilarizeWebsite\SimilarizeWebsite\src\unity\four-froggies-u6\build\UWP\Four Froggies 6.6\Four Froggies 6.6.vcxproj]
-   2:6>GENERATEPROJECTPRIFILE : warning : PRI263: 0xdef01051 - No default or neutral resource given for 'Files/Data/StreamingAssets/realroom/rubber_duck_toy_arm.jpg'. The application may throw an exception for certain user configurations when retrieving the resources. [D:\a\SimilarizeWebsite\SimilarizeWebsite\src\unity\four-froggies-u6\build\UWP\Four Froggies 6.6\Four Froggies 6.6.vcxproj]
-   2:6>GENERATEPROJECTPRIFILE : warning : PRI263: 0xdef01051 - No default or neutral resource given for 'Files/Data/StreamingAssets/realroom/rubber_duck_toy_diff.jpg'. The application may throw an exception for certain user configurations when retrieving the resources. [D:\a\SimilarizeWebsite\SimilarizeWebsite\src\unity\four-froggies-u6\build\UWP\Four Froggies 6.6\Four Froggies 6.6.vcxproj]
-   2:6>GENERATEPROJECTPRIFILE : warning : PRI263: 0xdef01051 - No default or neutral resource given for 'Files/Data/StreamingAssets/realroom/rubber_duck_toy_nor_gl.jpg'. The application may throw an exception for certain user configurations when retrieving the resources. [D:\a\SimilarizeWebsite\SimilarizeWebsite\src\unity\four-froggies-u6\build\UWP\Four Froggies 6.6\Four Froggies 6.6.vcxproj]
-   2:6>GENERATEPROJECTPRIFILE : warning : PRI263: 0xdef01051 - No default or neutral resource given for 'Files/Data/StreamingAssets/realroom/side_table_01_arm.jpg'. The application may throw an exception for certain user configurations when retrieving the resources. [D:\a\SimilarizeWebsite\SimilarizeWebsite\src\unity\four-froggies-u6\build\UWP\Four Froggies 6.6\Four Froggies 6.6.vcxproj]
-   2:6>GENERATEPROJECTPRIFILE : warning : PRI263: 0xdef01051 - No default or neutral resource given for 'Files/Data/StreamingAssets/realroom/side_table_01_diff.jpg'. The application may throw an exception for certain user configurations when retrieving the resources. [D:\a\SimilarizeWebsite\SimilarizeWebsite\src\unity\four-froggies-u6\build\UWP\Four Froggies 6.6\Four Froggies 6.6.vcxproj]
-   2:6>GENERATEPROJECTPRIFILE : warning : PRI263: 0xdef01051 - No default or neutral resource given for 'Files/Data/StreamingAssets/realroom/side_table_01_nor_gl.jpg'. The application may throw an exception for certain user configurations when retrieving the resources. [D:\a\SimilarizeWebsite\SimilarizeWebsite\src\unity\four-froggies-u6\build\UWP\Four Froggies 6.6\Four Froggies 6.6.vcxproj]
-   2:6>GENERATEPROJECTPRIFILE : warning : PRI263: 0xdef01051 - No default or neutral resource given for 'Files/Data/StreamingAssets/realroom/sofa_02_arm.jpg'. The application may throw an exception for certain user configurations when retrieving the resources. [D:\a\SimilarizeWebsite\SimilarizeWebsite\src\unity\four-froggies-u6\build\UWP\Four Froggies 6.6\Four Froggies 6.6.vcxproj]
-   2:6>GENERATEPROJECTPRIFILE : warning : PRI263: 0xdef01051 - No default or neutral resource given for 'Files/Data/StreamingAssets/realroom/sofa_02_diff.jpg'. The application may throw an exception for certain user configurations when retrieving the resources. [D:\a\SimilarizeWebsite\SimilarizeWebsite\src\unity\four-froggies-u6\build\UWP\Four Froggies 6.6\Four Froggies 6.6.vcxproj]
+=== step outcomes: secrets=success cert=success vs=success setup=success activate=success urpsetup=success build=cancelled manifest=skipped msbuild=skipped collect=skipped release=skipped smoke=skipped
 === error lines
 === URP setup log: key lines
-7325:Importing 'GUID: a23a55c69f9544b56a85639e7258ea1d - Path: Packages/com.unity.test-framework.performance/ValidationExceptions.json' with importer (TextScriptImporter)
-7487:Importing 'GUID: d9fe79419851eee4e8c90f7d0f934859 - Path: Packages/com.unity.inputsystem/ValidationExceptions.json' with importer (TextScriptImporter)
-7503:Importing 'GUID: 3afe581e949e3cc489c978bd8e000c4b - Path: Packages/com.unity.render-pipelines.universal/ValidationExceptions.json' with importer (TextScriptImporter)
-7517:Importing 'GUID: 8a0fd4a8e3885488e9afc7e5e7ead9c6 - Path: Packages/com.unity.searcher/ValidationExceptions.json' with importer (TextScriptImporter)
-7631:Importing 'GUID: fee59c2b2318a7e4fa7a2c2af28d9553 - Path: Packages/com.unity.collections/pvpExceptions.json' with importer (TextScriptImporter)
-7653:Importing 'GUID: 6fe576033d6a2424c888d599967457a2 - Path: Packages/com.unity.collections/ValidationExceptions.json' with importer (TextScriptImporter)
-7981:UnityEngine.Rendering.RenderPipelineGlobalSettingsUtils:TryEnsure<UnityEngine.Rendering.Universal.UniversalRenderPipelineGlobalSettings, UnityEngine.Rendering.Universal.UniversalRenderPipeline> (UnityEngine.Rendering.Universal.UniversalRenderPipelineGlobalSettings&,string,bool,System.Exception&) (at ./Library/PackageCache/com.unity.render-pipelines.core@285af6b8c83f/Runtime/RenderPipeline/RenderPipelineGlobalSettingsUtils.cs:126)
-8061:URPSETUP: start, Unity 6000.6.5f1
-8161:URPSETUP: renderer via CreateRendererAsset True
-8480:URPSETUP: global settings Assets/UniversalRenderPipelineGlobalSettings.asset
-8492:URPSETUP: URP asset Forward+ HDR MSAA2 shadows 2048/60m 2 cascades soft, rendering layers, SSAO feature lid -6911745121939293105
-8508:URPSETUP: rendering layers defined 3 (was 1), mask 7
-8520:URPSETUP: ok asset Assets/Generated/FF_URP.asset default FF_URP colour Linear apis WebGPU,OpenGLES3
+7320:Importing 'GUID: a23a55c69f9544b56a85639e7258ea1d - Path: Packages/com.unity.test-framework.performance/ValidationExceptions.json' with importer (TextScriptImporter)
+7492:Importing 'GUID: d9fe79419851eee4e8c90f7d0f934859 - Path: Packages/com.unity.inputsystem/ValidationExceptions.json' with importer (TextScriptImporter)
+7504:Importing 'GUID: 3afe581e949e3cc489c978bd8e000c4b - Path: Packages/com.unity.render-pipelines.universal/ValidationExceptions.json' with importer (TextScriptImporter)
+7518:Importing 'GUID: 8a0fd4a8e3885488e9afc7e5e7ead9c6 - Path: Packages/com.unity.searcher/ValidationExceptions.json' with importer (TextScriptImporter)
+7636:Importing 'GUID: fee59c2b2318a7e4fa7a2c2af28d9553 - Path: Packages/com.unity.collections/pvpExceptions.json' with importer (TextScriptImporter)
+7656:Importing 'GUID: 6fe576033d6a2424c888d599967457a2 - Path: Packages/com.unity.collections/ValidationExceptions.json' with importer (TextScriptImporter)
+7984:UnityEngine.Rendering.RenderPipelineGlobalSettingsUtils:TryEnsure<UnityEngine.Rendering.Universal.UniversalRenderPipelineGlobalSettings, UnityEngine.Rendering.Universal.UniversalRenderPipeline> (UnityEngine.Rendering.Universal.UniversalRenderPipelineGlobalSettings&,string,bool,System.Exception&) (at ./Library/PackageCache/com.unity.render-pipelines.core@285af6b8c83f/Runtime/RenderPipeline/RenderPipelineGlobalSettingsUtils.cs:126)
+8065:URPSETUP: start, Unity 6000.6.5f1
+8167:URPSETUP: renderer via CreateRendererAsset True
+8487:URPSETUP: global settings Assets/UniversalRenderPipelineGlobalSettings.asset
+8499:URPSETUP: URP asset Forward+ HDR MSAA2 shadows 2048/60m 2 cascades soft, rendering layers, SSAO feature lid -1231888362555228951
+8515:URPSETUP: rendering layers defined 3 (was 1), mask 7
+8527:URPSETUP: ok asset Assets/Generated/FF_URP.asset default FF_URP colour Linear apis WebGPU,OpenGLES3
 10:[Licensing::Module] Trying to connect to existing licensing client channel...
 11:[Licensing::IpcConnector] Channel LicenseClient-runneradmin doesn't exist
-12:[Licensing::Module] Successfully launched the LicensingClient (PId: 1856)
-79:[Licensing::IpcConnector] Successfully connected to: "LicenseClient-runneradmin" at "2026-10-24T01:29:16.4862033Z"
-80:Waiting for clients to connect on \\.\pipe\Unity-LicenseClient-runneradmin, press Ctrl-C to exit.
-81:[Licensing::Client] Code 10 while verifying Licensing Client signature (process Id: 1856, path: "C:/Program Files/Unity/Hub/Editor/6000.6.5f1/Editor/Data/Resources/Licensing/Client/Unity.Licensing.Client.exe")
-82:[Licensing::Module] LicensingClient has failed validation; ignoring
-84:[Licensing::Module] Licensing is not yet initialized.
-85:[Licensing::Client] Handshaking with LicensingClient:
-91:[Licensing::Module] Successfully connected to LicensingClient on channel: "LicenseClient-runneradmin" (connect: 0.25s, validation: 0.26s, handshake: 0.16s)
-92:[Licensing::IpcConnector] Successfully connected to: "LicenseClient-runneradmin-notifications" at "2026-10-24T01:29:16.9036889Z"
-93:[Licensing::Module] Connected to LicensingClient (PId: 1856, launch time: 0.00, total connection time: 0.67s)
-94:[Licensing::Module] Error: Access token is unavailable; failed to update
-95:[Licensing::Client] Successfully resolved entitlement details
-96:[Licensing::Module] License group:
-101:[Licensing::Client] Successfully updated license, isAsync: True, time: 0.03
-102:[Licensing::Client] Successfully resolved entitlement details
-103:[Licensing::Module] Licensing Background thread has ended after 0.74s
-104:[Licensing::Module] Licensing is initialized (took 0.21s).
-105:[Licensing::Client] Successfully resolved entitlement details
-118:[Licensing::Client] Successfully resolved entitlement details
-172:[Licensing::Client] Successfully resolved entitlement details
+12:[Licensing::Module] Successfully launched the LicensingClient (PId: 6856)
+79:Waiting for clients to connect on \\.\pipe\Unity-LicenseClient-runneradmin, press Ctrl-C to exit.
+80:[Licensing::IpcConnector] Successfully connected to: "LicenseClient-runneradmin" at "2026-10-24T07:05:24.9982271Z"
+82:[Licensing::Client] Code 10 while verifying Licensing Client signature (process Id: 6856, path: "C:/Program Files/Unity/Hub/Editor/6000.6.5f1/Editor/Data/Resources/Licensing/Client/Unity.Licensing.Client.exe")
+83:[Licensing::Module] LicensingClient has failed validation; ignoring
+85:[Licensing::Module] Licensing is not yet initialized.
+86:[Licensing::Client] Handshaking with LicensingClient:
+92:[Licensing::Module] Successfully connected to LicensingClient on channel: "LicenseClient-runneradmin" (connect: 0.64s, validation: 0.21s, handshake: 0.07s)
+93:[Licensing::IpcConnector] Successfully connected to: "LicenseClient-runneradmin-notifications" at "2026-10-24T07:05:25.2799647Z"
+94:[Licensing::Module] Connected to LicensingClient (PId: 6856, launch time: 0.00, total connection time: 0.92s)
+95:[Licensing::Module] Error: Access token is unavailable; failed to update
+96:[Licensing::Client] Successfully resolved entitlement details
+97:[Licensing::Module] License group:
+102:[Licensing::Client] Successfully updated license, isAsync: True, time: 0.02
+103:[Licensing::Client] Successfully resolved entitlement details
+104:[Licensing::Module] Licensing Background thread has ended after 1.00s
+105:[Licensing::Module] Licensing is initialized (took 0.10s).
+106:[Licensing::Client] Successfully resolved entitlement details
+119:[Licensing::Client] Successfully resolved entitlement details
 173:[Licensing::Client] Successfully resolved entitlement details
-176:[Licensing::Client] Successfully resolved entitlement details
-1588:Assets\Editor\BuildScript.cs(476,13): warning CS0618: 'LightingSettings.autoGenerate' is obsolete: 'LightingSettings.autoGenerate is obsolete.'
-1907:Assets\Editor\BuildScript.cs(476,13): warning CS0618: 'LightingSettings.autoGenerate' is obsolete: 'LightingSettings.autoGenerate is obsolete.'
-1948:			BuildScriptInfoCaches (44ms)
-2072:BuildScript: UWP 6.6 start, Unity 6000.6.5f1
-2093:BuildScript:SetStatic (System.Type,string,object) (at Assets/Editor/BuildScript.cs:121)
-2094:BuildScript:ConfigurePlayer () (at Assets/Editor/BuildScript.cs:150)
-2101:(Filename: Assets/Editor/BuildScript.cs Line: 121)
-2110:BuildScript:SetStatic (System.Type,string,object) (at Assets/Editor/BuildScript.cs:121)
-2111:BuildScript:ConfigurePlayer () (at Assets/Editor/BuildScript.cs:151)
-2118:(Filename: Assets/Editor/BuildScript.cs Line: 121)
-2120:BuildScript: WebGL graphics APIs WebGPU,OpenGLES3 colour Linear
-2127:BuildScript:ConfigurePlayer () (at Assets/Editor/BuildScript.cs:152)
-2134:(Filename: Assets/Editor/BuildScript.cs Line: 152)
-2146:FFUWP urp: asset Assets/Generated/FF_URP.asset msaa 2->1 hdr True->false shadowmap 2048->1024 cascades 2->1 shadowDist 60->30 soft True->false | renderer FF_URP_Renderer mode 2->0 (Forward) feature FF SSAO kept active (runtime off)
-2166:BuildScript:DefineRenderingLayers () (at Assets/Editor/BuildScript.cs:204)
-2173:(Filename: Assets/Editor/BuildScript.cs Line: 204)
-2180:FFUWP audio: disableAudio False->false sampleRate 0->48000 dsp 1024->1024 requestedDsp 0->1024 speakerMode 2->2 volume 1
-2813:FFUWP audio: music clips 19 compressed in memory + preloaded (not streamed)
-3414:[Licensing::Client] Successfully resolved entitlement details
-3415:[Licensing::Client] Successfully resolved entitlement details
-3416:FFUWP: graphics APIs Direct3D11 colour Linear
-3428:FFUWP: capabilities internetClient=True microphone=False
-3440:FFUWP: certificate FourFroggies66Test.pfx set=True subject=Similarize issuer=Similarize
-3452:FFUWP tile PackageLogo <- sq50.png
-3465:FFUWP tile SplashScreenImage <- splash620x300.png
-3478:FFUWP tile UWPSquare44x44Logo <- sq44.png
-3491:FFUWP tile UWPSquare71x71Logo <- sq71.png
-3504:FFUWP tile UWPSquare150x150Logo <- sq150.png
-3517:FFUWP tile UWPSquare310x310Logo <- sq310.png
-3530:FFUWP tile UWPWide310x150Logo <- wide310x150.png
-3543:FFUWP: EditorUserBuildSettings.wsaUWPBuildType = D3D
-3556:FFUWP: EditorUserBuildSettings.wsaSubtarget = AnyDevice
-3569:FFUWP: EditorUserBuildSettings.wsaArchitecture = x64
-3582:FFUWP: EditorUserBuildSettings.wsaBuildAndRunDeployTarget = LocalMachine
-3600:[Licensing::Client] Successfully resolved entitlement details
-3616:[Licensing::Client] Successfully resolved entitlement details
-3623:BuildScript: HDRI sky (FF/Sky)
-3630:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:434)
-3637:(Filename: Assets/Editor/BuildScript.cs Line: 434)
-3639:BuildScript: FF/Skin shader
-3646:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:395)
-3647:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:452)
-3654:(Filename: Assets/Editor/BuildScript.cs Line: 395)
-3659:BuildScript: FF/Foliage shader
-3666:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:395)
-3667:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:453)
-3674:(Filename: Assets/Editor/BuildScript.cs Line: 395)
-3679:BuildScript: LB/Water shader
-3686:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:395)
-3687:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:454)
-3694:(Filename: Assets/Editor/BuildScript.cs Line: 395)
-3699:BuildScript: FF/Underwater shader
-3706:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:395)
-3707:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:456)
-3714:(Filename: Assets/Editor/BuildScript.cs Line: 395)
-3719:BuildScript: Unlit/Texture shader
-3726:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:395)
-3727:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:457)
-3734:(Filename: Assets/Editor/BuildScript.cs Line: 395)
-3739:BuildScript: FF/RealTri shader
-3746:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:395)
-3747:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:459)
-3754:(Filename: Assets/Editor/BuildScript.cs Line: 395)
-3759:BuildScript: FF/RealWater shader
-3766:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:395)
-3767:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:460)
-3774:(Filename: Assets/Editor/BuildScript.cs Line: 395)
-3779:BuildScript: FF/Grass56 shader
-3786:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:395)
-3787:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:462)
-3794:(Filename: Assets/Editor/BuildScript.cs Line: 395)
-3799:BuildScript: FF/Skin57 shader
-3806:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:395)
-3807:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:468)
-3814:(Filename: Assets/Editor/BuildScript.cs Line: 395)
-3831:BuildScript: terrain textures True True True
-3838:BuildScript:CreateTerrain () (at Assets/Editor/BuildScript.cs:608)
-3839:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:504)
-3846:(Filename: Assets/Editor/BuildScript.cs Line: 608)
-3866:BuildScript: terrain NM material
-3873:BuildScript:CreateTerrain () (at Assets/Editor/BuildScript.cs:654)
-3874:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:504)
-3881:(Filename: Assets/Editor/BuildScript.cs Line: 654)
-3918:BuildScript: ffu6 volumes game True studio True ssao True shaders FF/Std True FF/Unlit True FF/Skin57 True FF/Grass56 True URP terrain True
-3925:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:529)
-3932:(Filename: Assets/Editor/BuildScript.cs Line: 529)
-3937:BuildScript: scene saved Assets/Scenes/Main.unity
-3944:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:536)
-3951:(Filename: Assets/Editor/BuildScript.cs Line: 536)
-12351:[Licensing::Client] Successfully resolved entitlement details
-12352:[Licensing::Client] Successfully resolved entitlement details
-12467:[ 104/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/vm/Exception.h
-12468:[ 105/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/vm/Exception.cpp
-12562:[ 199/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/utils/ExceptionSupportStack.h
-12563:[ 200/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/utils/Exception.h
-12564:[ 201/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/utils/Exception.cpp
-13274:[ 909/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/icalls/System/System.Net.Sockets/SocketException.h
-13276:[ 911/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/icalls/System/System.Net.Sockets/SocketException.cpp
-13328:[ 963/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/icalls/mscorlib/System/Exception.h
-13329:[ 964/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/icalls/mscorlib/System/Exception.cpp
-16646:[W] FindFirstFile() failed: D:\a\SimilarizeWebsite\SimilarizeWebsite\src\unity\four-froggies-u6\Library\Bee\artifacts\UWPPlayerBuildProgram\il2cppOutput\cpp\Symbols
-18068: 0.2 kb	 0.0% Packages/com.unity.render-pipelines.core/Runtime/UnifiedRayTracing/UnifiedRayTracingException.cs
-18145: 0.2 kb	 0.0% Packages/com.unity.render-pipelines.core/Runtime/RenderGraph/RenderGraph.ExceptionMessages.cs
-18736: 0.1 kb	 0.0% Packages/com.unity.inputsystem/InputSystem/Utilities/ExceptionHelpers.cs
-19304:BUILD_RESULT: Succeeded target=UWP-6.6 errors=0 warnings=291 size=960380780 time=00:02:08.7428058
-19316:BUILD_SCRIPT_EXIT: 0
-19334:[Licensing::IpcConnector] LicenseClient-runneradmin-notifications channel disconnected successfully.
-19335:[Licensing::IpcConnector] LicenseClient-runneradmin channel disconnected successfully.
-19344:abort_threads: Failed aborting id: 0000000000000AFC, mono_thread_manage will ignore it
-19346:abort_threads: Failed aborting id: 0000000000000968, mono_thread_manage will ignore it
-19348:abort_threads: Failed aborting id: 0000000000000A20, mono_thread_manage will ignore it
-19350:abort_threads: Failed aborting id: 0000000000000AFC, mono_thread_manage will ignore it
-19352:abort_threads: Failed aborting id: 0000000000000968, mono_thread_manage will ignore it
-19354:abort_threads: Failed aborting id: 0000000000000A20, mono_thread_manage will ignore it
-19361:##utp:{"type":"MemoryLeaks","version":2,"phase":"Immediate","time":1792805570197,"processId":5056,"allocatedMemory":18510150,"memoryLabels":[{"Default":218091},{"Permanent":15516},{"NewDelete":71895},{"Thread":4197880},{"Manager":19184},{"VertexData":8},{"Geometry":816},{"Texture":24},{"Shader":2010317},{"Material":132},{"GfxDevice":55968},{"Animation":952},{"Audio":696},{"FreeType":8},{"FontEngine":736},{"Physics":1970},{"Physics2D":16},{"Serialization":16688},{"Input":42840},{"JobScheduler":256},{"TextLib":336},{"Mono":48},{"MonoCode":832},{"ScriptingNativeRuntime":1259880},{"BaseObject":5024},{"Resource":1444},{"Renderer":2504},{"Transform":4685},{"File":16288},{"WebCam":616},{"Culling":32},{"Terrain":11442},{"Wind":24},{"STL":40},{"String":2693203},{"StaticString":3808},{"Utility":2673174},{"Curl":2559},{"PoolAlloc":2264},{"AI":80},{"TypeTree":19053},{"ScriptManager":12656},{"CodeReload":448},{"RuntimeInitializeOnLoadManager":64},{"Sprites":102},{"SpriteAtlas":120},{"GI":7816},{"Director":8296},{"CloudService":7296},{"WebRequest":24962},{"VR":49650},{"SceneManager":608},{"Video":64},{"LazyScriptCache":32},{"Camera":729},{"Secure":2377},{"SerializationCache":9256},{"APIUpdating":10320},{"Subsystems":336},{"VirtualTexturing":57888},{"StaticSafetyDebugInfo":278528},{"Analytics":592},{"Hierarchy":1188},{"UIElements":40},{"CoreStats":14456},{"Identifiers":7152},{"Gui":128},{"EditorUtility":115714},{"VersionControl":8},{"Undo":931},{"AssetDatabase":4488794},{"AssetImporter":40},{"EditorGi":328},{"UnityConnect":40441},{"Upm":1912},{"UpmDiagnostics":8},{"AssetCompliance":96},{"DrivenProperties":72},{"LocalIPC":217},{"ProfilerEditor":9746},{"CoreBusinessMetrics":3626},{"Windowing":456},{"Licensing":1264},{"AssetReference":32},{"IPCStream":32}]}
+174:[Licensing::Client] Successfully resolved entitlement details
+177:[Licensing::Client] Successfully resolved entitlement details
+1590:Assets\Editor\BuildScript.cs(476,13): warning CS0618: 'LightingSettings.autoGenerate' is obsolete: 'LightingSettings.autoGenerate is obsolete.'
+1909:Assets\Editor\BuildScript.cs(476,13): warning CS0618: 'LightingSettings.autoGenerate' is obsolete: 'LightingSettings.autoGenerate is obsolete.'
+1911:[Licensing::Client] Successfully resolved entitlement details
+1912:[Licensing::Client] Successfully resolved entitlement details
+1952:			BuildScriptInfoCaches (64ms)
+2079:BuildScript: UWP 6.6 start, Unity 6000.6.5f1
+2092:[Licensing::Client] Successfully resolved entitlement details
+2093:[Licensing::Client] Successfully resolved entitlement details
+2102:BuildScript:SetStatic (System.Type,string,object) (at Assets/Editor/BuildScript.cs:121)
+2103:BuildScript:ConfigurePlayer () (at Assets/Editor/BuildScript.cs:150)
+2110:(Filename: Assets/Editor/BuildScript.cs Line: 121)
+2119:BuildScript:SetStatic (System.Type,string,object) (at Assets/Editor/BuildScript.cs:121)
+2120:BuildScript:ConfigurePlayer () (at Assets/Editor/BuildScript.cs:151)
+2127:(Filename: Assets/Editor/BuildScript.cs Line: 121)
+2129:BuildScript: WebGL graphics APIs WebGPU,OpenGLES3 colour Linear
+2136:BuildScript:ConfigurePlayer () (at Assets/Editor/BuildScript.cs:152)
+2143:(Filename: Assets/Editor/BuildScript.cs Line: 152)
+2155:FFUWP urp: asset Assets/Generated/FF_URP.asset msaa 2->1 hdr True->false shadowmap 2048->1024 cascades 2->1 shadowDist 60->30 soft True->false | renderer FF_URP_Renderer mode 2->0 (Forward) feature FF SSAO kept active (runtime off)
+2175:BuildScript:DefineRenderingLayers () (at Assets/Editor/BuildScript.cs:204)
+2182:(Filename: Assets/Editor/BuildScript.cs Line: 204)
+2189:FFUWP audio: disableAudio False->false sampleRate 0->48000 dsp 1024->1024 requestedDsp 0->1024 speakerMode 2->2 volume 1
+2858:FFUWP audio: music clips 19 compressed in memory + preloaded (not streamed)
+3464:FFUWP: graphics APIs Direct3D11 colour Linear
+3476:FFUWP: capabilities internetClient=True microphone=False
+3488:FFUWP: certificate FourFroggies66Test.pfx set=True subject=Similarize issuer=Similarize
+3500:FFUWP tile PackageLogo <- sq50.png
+3513:FFUWP tile SplashScreenImage <- splash620x300.png
+3526:FFUWP tile UWPSquare44x44Logo <- sq44.png
+3539:FFUWP tile UWPSquare71x71Logo <- sq71.png
+3552:FFUWP tile UWPSquare150x150Logo <- sq150.png
+3565:FFUWP tile UWPSquare310x310Logo <- sq310.png
+3578:FFUWP tile UWPWide310x150Logo <- wide310x150.png
+3591:FFUWP: EditorUserBuildSettings.wsaUWPBuildType = D3D
+3604:FFUWP: EditorUserBuildSettings.wsaSubtarget = AnyDevice
+3617:FFUWP: EditorUserBuildSettings.wsaArchitecture = x64
+3630:FFUWP: EditorUserBuildSettings.wsaBuildAndRunDeployTarget = LocalMachine
+3648:[Licensing::Client] Successfully resolved entitlement details
+3670:BuildScript: HDRI sky (FF/Sky)
+3677:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:434)
+3684:(Filename: Assets/Editor/BuildScript.cs Line: 434)
+3686:BuildScript: FF/Skin shader
+3693:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:395)
+3694:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:452)
+3701:(Filename: Assets/Editor/BuildScript.cs Line: 395)
+3706:BuildScript: FF/Foliage shader
+3713:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:395)
+3714:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:453)
+3721:(Filename: Assets/Editor/BuildScript.cs Line: 395)
+3726:BuildScript: LB/Water shader
+3733:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:395)
+3734:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:454)
+3741:(Filename: Assets/Editor/BuildScript.cs Line: 395)
+3746:BuildScript: FF/Underwater shader
+3753:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:395)
+3754:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:456)
+3761:(Filename: Assets/Editor/BuildScript.cs Line: 395)
+3766:BuildScript: Unlit/Texture shader
+3773:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:395)
+3774:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:457)
+3781:(Filename: Assets/Editor/BuildScript.cs Line: 395)
+3786:BuildScript: FF/RealTri shader
+3793:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:395)
+3794:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:459)
+3801:(Filename: Assets/Editor/BuildScript.cs Line: 395)
+3806:BuildScript: FF/RealWater shader
+3813:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:395)
+3814:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:460)
+3821:(Filename: Assets/Editor/BuildScript.cs Line: 395)
+3826:BuildScript: FF/Grass56 shader
+3833:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:395)
+3834:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:462)
+3841:(Filename: Assets/Editor/BuildScript.cs Line: 395)
+3846:BuildScript: FF/Skin57 shader
+3853:BuildScript:ShaderMat (string,string) (at Assets/Editor/BuildScript.cs:395)
+3854:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:468)
+3861:(Filename: Assets/Editor/BuildScript.cs Line: 395)
+3878:BuildScript: terrain textures True True True
+3885:BuildScript:CreateTerrain () (at Assets/Editor/BuildScript.cs:608)
+3886:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:504)
+3893:(Filename: Assets/Editor/BuildScript.cs Line: 608)
+3913:BuildScript: terrain NM material
+3920:BuildScript:CreateTerrain () (at Assets/Editor/BuildScript.cs:654)
+3921:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:504)
+3928:(Filename: Assets/Editor/BuildScript.cs Line: 654)
+3965:BuildScript: ffu6 volumes game True studio True ssao True shaders FF/Std True FF/Unlit True FF/Skin57 True FF/Grass56 True URP terrain True
+3972:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:529)
+3979:(Filename: Assets/Editor/BuildScript.cs Line: 529)
+3984:BuildScript: scene saved Assets/Scenes/Main.unity
+3991:BuildScript:CreateScene () (at Assets/Editor/BuildScript.cs:536)
+3998:(Filename: Assets/Editor/BuildScript.cs Line: 536)
+4095:[Licensing::Client] Successfully resolved entitlement details
+5653:[Licensing::Client] Successfully resolved entitlement details
+5654:[Licensing::Client] Successfully resolved entitlement details
+12401:[Licensing::Client] Successfully resolved entitlement details
+12402:[Licensing::Client] Successfully resolved entitlement details
+12517:[ 104/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/vm/Exception.h
+12518:[ 105/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/vm/Exception.cpp
+12612:[ 199/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/utils/ExceptionSupportStack.h
+12613:[ 200/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/utils/Exception.h
+12614:[ 201/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/utils/Exception.cpp
+13325:[ 910/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/icalls/System/System.Net.Sockets/SocketException.h
+13326:[ 911/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/icalls/System/System.Net.Sockets/SocketException.cpp
+13378:[ 963/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/icalls/mscorlib/System/Exception.h
+13379:[ 964/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/libil2cpp/icalls/mscorlib/System/Exception.cpp
 === editor log tail (300)
- 0.1 kb	 0.0% Packages/com.unity.inputsystem/InputSystem/Devices/Sensor.cs
- 0.1 kb	 0.0% Packages/com.unity.inputsystem/InputSystem/Devices/Pointer.cs
- 0.1 kb	 0.0% Packages/com.unity.inputsystem/InputSystem/Devices/Mouse.cs
- 0.1 kb	 0.0% Packages/com.unity.inputsystem/InputSystem/Devices/Keyboard.cs
- 0.1 kb	 0.0% Packages/com.unity.inputsystem/InputSystem/Devices/Joystick.cs
- 0.1 kb	 0.0% Packages/com.unity.inputsystem/InputSystem/Devices/Gamepad.cs
- 0.1 kb	 0.0% Packages/com.unity.collections/Unity.Collections/xxHash3.AVX2.cs
- 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/Utility/VertexHelper.cs
- 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/ToggleGroup.cs
- 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/SpriteState.cs
- 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/Selectable.cs
- 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/Scrollbar.cs
- 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/ScrollRect.cs
- 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/RectMask2D.cs
- 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/Navigation.cs
- 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/Layout/LayoutGroup.cs
- 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/Layout/CanvasScaler.cs
- 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/InputField.cs
- 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/IMaskable.cs
- 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/ColorBlock.cs
- 0.1 kb	 0.0% Packages/com.unity.inputsystem/InputSystem/Plugins/XR/Devices/OpenVR.cs
- 0.1 kb	 0.0% Packages/com.unity.inputsystem/InputSystem/Plugins/HID/HID.cs
- 0.1 kb	 0.0% Packages/com.unity.collections/Unity.Collections/xxHash3.cs
- 0.1 kb	 0.0% Packages/com.unity.collections/Unity.Collections/Unicode.cs
- 0.1 kb	 0.0% Packages/com.unity.collections/Unity.Collections/Memory.cs
- 0.1 kb	 0.0% Packages/com.unity.collections/Unity.Collections/Jobs/IJobFilter.cs
- 0.1 kb	 0.0% Packages/com.unity.collections/Unity.Collections/BitField.cs
- 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/Culling/IClipRegion.cs
- 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/TMP/TextMeshPro.cs
- 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/TMP/TMP_TextInfo.cs
- 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/TMP/TMP_SubMesh.cs
- 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/TMP/TMP_Style.cs
- 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/TMP/TMP_Sprite.cs
- 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/TMP/TMP_Settings.cs
- 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/TMP/TMP_MeshInfo.cs
- 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/TMP/TMP_LineInfo.cs
- 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/TMP/TMP_Dropdown.cs
- 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/TMP/TMP_Asset.cs
- 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/TMP/FastAction.cs
- 0.1 kb	 0.0% Packages/com.unity.inputsystem/InputSystem/Devices/Pen.cs
- 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/VertexModifiers/Shadow.cs
- 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/VertexModifiers/Outline.cs
- 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/Toggle.cs
- 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/Slider.cs
- 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/SafeArea.cs
- 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/RawImage.cs
- 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/Image.cs
- 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/Graphic.cs
- 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/FontData.cs
- 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/Dropdown.cs
- 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/Culling/Clipping.cs
- 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/Button.cs
- 0.1 kb	 0.0% Assets/Scripts/World/UnderwaterWorld.cs
- 0.1 kb	 0.0% Assets/Scripts/World/SurfaceWorlds.cs
- 0.1 kb	 0.0% Assets/Scripts/World/RobotMechMission.cs
- 0.1 kb	 0.0% Assets/Scripts/Vehicles/VehicleFactory.cs
- 0.1 kb	 0.0% Assets/Scripts/Vehicles/TrailerModels.cs
- 0.1 kb	 0.0% Assets/Scripts/Vehicles/LivestockTrailer.cs
- 0.1 kb	 0.0% Assets/Scripts/Vehicles/GroundVehicle.cs
- 0.1 kb	 0.0% Assets/Scripts/Game/TouchControls.cs
- 0.1 kb	 0.0% Assets/Scripts/Core/ShowroomGrade.cs
- 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/TMP/TMP_Text.cs
- 0.1 kb	 0.0% Packages/com.unity.inputsystem/InputSystem/Plugins/UI/UISupport.cs
- 0.1 kb	 0.0% Assets/Scripts/Vehicles/Carrier48.cs
- 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/Text.cs
- 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/Misc.cs
- 0.1 kb	 0.0% Packages/com.unity.ugui/Runtime/UGUI/UI/Core/Mask.cs
- 0.1 kb	 0.0% Assets/Scripts/World/Treehouse.cs
- 0.1 kb	 0.0% Assets/Scripts/World/TrailerBarn.cs
- 0.1 kb	 0.0% Assets/Scripts/World/StoryEp2Set.cs
- 0.1 kb	 0.0% Assets/Scripts/World/SpaceWorld.cs
- 0.1 kb	 0.0% Assets/Scripts/World/RoofBreak.cs
- 0.1 kb	 0.0% Assets/Scripts/World/RobotVisit54.cs
- 0.1 kb	 0.0% Assets/Scripts/World/RobotSit66.cs
- 0.1 kb	 0.0% Assets/Scripts/World/RobotDrive.cs
- 0.1 kb	 0.0% Assets/Scripts/World/RidingMower.cs
- 0.1 kb	 0.0% Assets/Scripts/World/RealRoomHands.cs
- 0.1 kb	 0.0% Assets/Scripts/World/RealRoomFrog.cs
- 0.1 kb	 0.0% Assets/Scripts/World/RanchLife.cs
- 0.1 kb	 0.0% Assets/Scripts/World/RanchBreak.cs
- 0.1 kb	 0.0% Assets/Scripts/World/RallyTrack.cs
- 0.1 kb	 0.0% Assets/Scripts/World/PondCourse.cs
- 0.1 kb	 0.0% Assets/Scripts/World/MoonWorld.cs
- 0.1 kb	 0.0% Assets/Scripts/World/MonsterPark.cs
- 0.1 kb	 0.0% Assets/Scripts/World/MechLand75.cs
- 0.1 kb	 0.0% Assets/Scripts/World/LaunchSeq.cs
- 0.1 kb	 0.0% Assets/Scripts/World/JetLayout.cs
- 0.1 kb	 0.0% Assets/Scripts/World/HouseWorld.cs
- 0.1 kb	 0.0% Assets/Scripts/World/HouseUp64.cs
- 0.1 kb	 0.0% Assets/Scripts/World/GardenSeat.cs
- 0.1 kb	 0.0% Assets/Scripts/World/GardenAudio.cs
- 0.1 kb	 0.0% Assets/Scripts/World/ForestOuter.cs
- 0.1 kb	 0.0% Assets/Scripts/World/Fig03Free66.cs
- 0.1 kb	 0.0% Assets/Scripts/World/DestructDemo.cs
- 0.1 kb	 0.0% Assets/Scripts/World/CritterPals.cs
- 0.1 kb	 0.0% Assets/Scripts/World/Countryside.cs
- 0.1 kb	 0.0% Assets/Scripts/Vehicles/StoryMech.cs
- 0.1 kb	 0.0% Assets/Scripts/Vehicles/Skateboard.cs
- 0.1 kb	 0.0% Assets/Scripts/Vehicles/Roadster49.cs
- 0.1 kb	 0.0% Assets/Scripts/Vehicles/Projectile.cs
- 0.1 kb	 0.0% Assets/Scripts/Vehicles/PondPhysics.cs
- 0.1 kb	 0.0% Assets/Scripts/Vehicles/Ownership53.cs
- 0.1 kb	 0.0% Assets/Scripts/Vehicles/HitchRig62.cs
- 0.1 kb	 0.0% Assets/Scripts/Vehicles/HeroCars52.cs
- 0.1 kb	 0.0% Assets/Scripts/Vehicles/CyberBoat.cs
- 0.1 kb	 0.0% Assets/Scripts/Platform/FFXboxUWP.cs
- 0.1 kb	 0.0% Assets/Scripts/Game/TrailerTow.cs
- 0.1 kb	 0.0% Assets/Scripts/Game/StoryPicker.cs
- 0.1 kb	 0.0% Assets/Scripts/Game/RobotPhone.cs
- 0.1 kb	 0.0% Assets/Scripts/Game/RobotFeed.cs
- 0.1 kb	 0.0% Assets/Scripts/Game/ModernButton.cs
- 0.1 kb	 0.0% Assets/Scripts/Frogs/FrogModel.cs
- 0.1 kb	 0.0% Assets/Scripts/Frogs/FrogDad66.cs
- 0.1 kb	 0.0% Assets/Scripts/Frogs/FrogClimb.cs
- 0.1 kb	 0.0% Assets/Scripts/Core/Terrain56.cs
- 0.1 kb	 0.0% Assets/Scripts/Core/SaveStore.cs
- 0.1 kb	 0.0% Assets/Scripts/Core/RobotSound62.cs
- 0.1 kb	 0.0% Assets/Scripts/Core/MeshMerge.cs
- 0.1 kb	 0.0% Assets/Scripts/Core/MechStomp.cs
- 0.1 kb	 0.0% Assets/Scripts/Core/FFPlatform.cs
- 0.1 kb	 0.0% Assets/Scripts/Core/FFDisplay.cs
- 0.1 kb	 0.0% Assets/Scripts/Core/Bootstrap.cs
- 0.1 kb	 0.0% Assets/Scripts/Core/BigWheels.cs
- 0.1 kb	 0.0% Assets/Scripts/Core/Animals57.cs
- 0.1 kb	 0.0% Assets/Scripts/World/RobotChores.cs
- 0.1 kb	 0.0% Assets/Scripts/Game/RobotVoice66.cs
- 0.1 kb	 0.0% Assets/Scripts/Game/GameFfu67h.cs
- 0.1 kb	 0.0% Assets/Scripts/Game/GameFfu67d.cs
- 0.1 kb	 0.0% Assets/Scripts/Game/GameFfu67b.cs
- 0.1 kb	 0.0% Assets/Scripts/Game/GameFfu67.cs
- 0.1 kb	 0.0% Assets/Scripts/Game/GameFfu66.cs
- 0.1 kb	 0.0% Assets/Scripts/Game/GameFfu65.cs
- 0.1 kb	 0.0% Assets/Scripts/Game/GameFfu64.cs
- 0.1 kb	 0.0% Assets/Scripts/Game/GameFfu63.cs
- 0.1 kb	 0.0% Assets/Scripts/Game/GameFfu62.cs
- 0.1 kb	 0.0% Assets/Scripts/Game/GameFfu60.cs
- 0.1 kb	 0.0% Assets/Scripts/Game/GameFfu58.cs
- 0.1 kb	 0.0% Assets/Scripts/Game/GameFfu57.cs
- 0.1 kb	 0.0% Assets/Scripts/Game/GameFfu56.cs
- 0.1 kb	 0.0% Assets/Scripts/Game/GameFfu55.cs
- 0.1 kb	 0.0% Assets/Scripts/Game/GameFfu54.cs
- 0.1 kb	 0.0% Assets/Scripts/Game/GameFfu53.cs
- 0.1 kb	 0.0% Assets/Scripts/Game/GameFfu52.cs
- 0.1 kb	 0.0% Assets/Scripts/Game/GameFfu50.cs
- 0.1 kb	 0.0% Assets/Scripts/Game/GameFfu49.cs
- 0.1 kb	 0.0% Assets/Scripts/Game/GameFfu48.cs
- 0.1 kb	 0.0% Assets/Scripts/World/Worlds.cs
- 0.1 kb	 0.0% Assets/Scripts/World/StorySet.cs
- 0.1 kb	 0.0% Assets/Scripts/World/RealRoom.cs
- 0.1 kb	 0.0% Assets/Scripts/World/RcTrack.cs
- 0.1 kb	 0.0% Assets/Scripts/World/Ranch.cs
- 0.1 kb	 0.0% Assets/Scripts/World/Pickups.cs
- 0.1 kb	 0.0% Assets/Scripts/World/MechSpot76.cs
- 0.1 kb	 0.0% Assets/Scripts/World/MechAI.cs
- 0.1 kb	 0.0% Assets/Scripts/World/Layout.cs
- 0.1 kb	 0.0% Assets/Scripts/World/JetBase.cs
- 0.1 kb	 0.0% Assets/Scripts/World/Interact.cs
- 0.1 kb	 0.0% Assets/Scripts/World/Horse.cs
- 0.1 kb	 0.0% Assets/Scripts/World/Garden.cs
- 0.1 kb	 0.0% Assets/Scripts/World/Forest56.cs
- 0.1 kb	 0.0% Assets/Scripts/World/Forest.cs
- 0.1 kb	 0.0% Assets/Scripts/World/Destruct.cs
- 0.1 kb	 0.0% Assets/Scripts/World/Catch63.cs
- 0.1 kb	 0.0% Assets/Scripts/World/Campfire.cs
- 0.1 kb	 0.0% Assets/Scripts/World/Bow61.cs
- 0.1 kb	 0.0% Assets/Scripts/World/Apollo61.cs
- 0.1 kb	 0.0% Assets/Scripts/Vehicles/Vehicle.cs
- 0.1 kb	 0.0% Assets/Scripts/Vehicles/Trailer.cs
- 0.1 kb	 0.0% Assets/Scripts/Vehicles/RcCar.cs
- 0.1 kb	 0.0% Assets/Scripts/Vehicles/MechBridge73.cs
- 0.1 kb	 0.0% Assets/Scripts/Vehicles/Mech64.cs
- 0.1 kb	 0.0% Assets/Scripts/Vehicles/Flyer.cs
- 0.1 kb	 0.0% Assets/Scripts/Vehicles/Combat.cs
- 0.1 kb	 0.0% Assets/Scripts/Vehicles/Camper64.cs
- 0.1 kb	 0.0% Assets/Scripts/Game/StoryUI.cs
- 0.1 kb	 0.0% Assets/Scripts/Game/Story.cs
- 0.1 kb	 0.0% Assets/Scripts/Game/Signs51.cs
- 0.1 kb	 0.0% Assets/Scripts/Game/Showroom.cs
- 0.1 kb	 0.0% Assets/Scripts/Game/PlayerInput.cs
- 0.1 kb	 0.0% Assets/Scripts/Game/PadGuard.cs
- 0.1 kb	 0.0% Assets/Scripts/Game/Keypad.cs
- 0.1 kb	 0.0% Assets/Scripts/Game/GameFfu74.cs
- 0.1 kb	 0.0% Assets/Scripts/Game/GameFfu72.cs
- 0.1 kb	 0.0% Assets/Scripts/Game/GameFfu71.cs
- 0.1 kb	 0.0% Assets/Scripts/Game/GameFfu70.cs
- 0.1 kb	 0.0% Assets/Scripts/Game/Ffu33.cs
- 0.1 kb	 0.0% Assets/Scripts/Game/CamRig.cs
- 0.1 kb	 0.0% Assets/Scripts/Frogs/Roster.cs
- 0.1 kb	 0.0% Assets/Scripts/Core/XboxLite.cs
- 0.1 kb	 0.0% Assets/Scripts/Core/WaveSim.cs
- 0.1 kb	 0.0% Assets/Scripts/Core/U6Dbg.cs
- 0.1 kb	 0.0% Assets/Scripts/Core/Tracks56.cs
- 0.1 kb	 0.0% Assets/Scripts/Core/Synth33.cs
- 0.1 kb	 0.0% Assets/Scripts/Core/SfxSynth.cs
- 0.1 kb	 0.0% Assets/Scripts/Core/Ripples.cs
- 0.1 kb	 0.0% Assets/Scripts/Core/Realism.cs
- 0.1 kb	 0.0% Assets/Scripts/Core/RealPost.cs
- 0.1 kb	 0.0% Assets/Scripts/Core/Perf60.cs
- 0.1 kb	 0.0% Assets/Scripts/Core/Light55.cs
- 0.1 kb	 0.0% Assets/Scripts/Core/LBPost.cs
- 0.1 kb	 0.0% Assets/Scripts/Core/LBMesh.cs
- 0.1 kb	 0.0% Assets/Scripts/Core/Grass56.cs
- 0.1 kb	 0.0% Assets/Scripts/Core/Blob6.cs
- 0.1 kb	 0.0% Assets/Scripts/Core/Behave58.cs
- 0.1 kb	 0.0% Assets/Scripts/Game/Hud.cs
- 0.1 kb	 0.0% Assets/Scripts/World/Orbs.cs
- 0.1 kb	 0.0% Assets/Scripts/Vehicles/Tank.cs
- 0.1 kb	 0.0% Assets/Scripts/Vehicles/Jet.cs
- 0.1 kb	 0.0% Assets/Scripts/Vehicles/Boat.cs
- 0.1 kb	 0.0% Assets/Scripts/Vehicles/Bike.cs
- 0.1 kb	 0.0% Assets/Scripts/Game/Net.cs
- 0.1 kb	 0.0% Assets/Scripts/Game/Game.cs
- 0.1 kb	 0.0% Assets/Scripts/Frogs/Frog.cs
- 0.1 kb	 0.0% Assets/Scripts/Core/UIK.cs
- 0.1 kb	 0.0% Assets/Scripts/Core/U6.cs
- 0.1 kb	 0.0% Assets/Scripts/Core/Sfx.cs
- 0.1 kb	 0.0% Assets/Scripts/Core/Mats.cs
- 0.1 kb	 0.0% Assets/Scripts/Core/Look.cs
- 0.1 kb	 0.0% Assets/Scripts/Core/FX.cs
- 0.1 kb	 0.0% Assets/Resources/PerformanceTestRunSettings.json
- 0.0 kb	 0.0% Assets/Generated/Lighting.lighting
--------------------------------------------------------------------------------
-Unloading 164 Unused Serialized files (Serialized files now loaded: 0)
-Unloading 134 unused Assets / (263.0 KB). Loaded Objects now: 4893.
-Memory consumption went from 434.4 MB to 434.2 MB.
-Total: 17.872000 ms (FindLiveObjects: 0.374400 ms CreateObjectMapping: 0.074600 ms MarkObjects: 17.000700 ms  DeleteObjects: 0.259800 ms)
-
-DisplayProgressNotification: Build Successful
-Build Finished, Result: Success.
-Unloading 14 Unused Serialized files (Serialized files now loaded: 0)
-Loaded scene 'Temp/__Backupscenes/0.backup'
-	Deserialize:            2.379 ms
-	Integration:            67.788 ms
-	Integration of assets:  0.030 ms
-	Thread Wait Time:       0.018 ms
-	Total Operation Time:   70.215 ms
-Unloading 2 unused Assets / (49.2 KB). Loaded Objects now: 4924.
-Memory consumption went from 425.4 MB to 425.4 MB.
-Total: 16.798100 ms (FindLiveObjects: 0.341200 ms CreateObjectMapping: 0.084900 ms MarkObjects: 16.020400 ms  DeleteObjects: 0.209400 ms)
-
-Asset Pipeline Refresh (id=847ffc5bf0ea0d647946c0b6394a68c5): Total: 0.062 seconds - Initiated by RefreshV2(NoUpdateAssetOptions)
-##utp:{"success":true,"type":"PlayerBuildInfo","version":2,"phase":"Immediate","time":1792805567328,"processId":5056,"steps":[{"description":"Call PrepareForBuild callbacks","duration":3},{"description":"Call internal build started callbacks","duration":1},{"description":"Preprocess Player","duration":104},{"description":"Save scenes before build","duration":1},{"description":"Prepare For Build","duration":109},{"description":"ProducePlayerScriptAssemblies","duration":23154},{"description":"Verify Build setup","duration":24},{"description":"Prepare assets for target platform","duration":0},{"description":"Prepare splash screen","duration":62},{"description":"Build scripts DLLs","duration":13},{"description":"Building scenes","duration":114},{"description":"Build GlobalGameManagers file","duration":631},{"description":"Writing asset files","duration":47585},{"description":"Building Resources/unity_builtin_extra","duration":3200},{"description":"Write data build dirty tracking information","duration":65},{"description":"Postprocess built player","duration":51990},{"description":"Call Post-Process callbacks","duration":258}],"duration":127314}
-BUILD_RESULT: Succeeded target=UWP-6.6 errors=0 warnings=291 size=960380780 time=00:02:08.7428058
-UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
-UnityEngine.StackTraceUtility:ExtractStackTrace ()
-UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
-UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
-UnityEngine.Logger:Log (UnityEngine.LogType,object)
-UnityEngine.Debug:Log (object)
-FFBuildUWP:Run () (at Assets/Editor/FFBuildUWP.cs:245)
-FFBuildUWP:Build () (at Assets/Editor/FFBuildUWP.cs:26)
-
-(Filename: Assets/Editor/FFBuildUWP.cs Line: 245)
-
-BUILD_SCRIPT_EXIT: 0
-UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
-UnityEngine.StackTraceUtility:ExtractStackTrace ()
-UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
-UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
-UnityEngine.Logger:Log (UnityEngine.LogType,object)
-UnityEngine.Debug:Log (object)
-FFBuildUWP:Build () (at Assets/Editor/FFBuildUWP.cs:28)
-
-(Filename: Assets/Editor/FFBuildUWP.cs Line: 28)
-
-MonoPathRemapper: Attempts to remap: 32891; Successful remaps: 3190
-Serialized file version minimum: 22, current 23
-[Physics::Module] Cleanup current backend.
-[Physics::Module] Id: 0xf2b8ea05
-Input System module state changed to: ShutdownInProgress.
-Input Polling Thread exited.
-Input System module state changed to: Shutdown.
-[Licensing::IpcConnector] LicenseClient-runneradmin-notifications channel disconnected successfully.
-[Licensing::IpcConnector] LicenseClient-runneradmin channel disconnected successfully.
-Shut down.
-Lingering sessions upon destruction of worker manager
-Unity Data Store service was successfully shut down
-UDS shutting down local client system
-Shut down UDS service system complete
-AcceleratorClientConnectionCallback - disconnected - :0
-Cleanup mono
-CodeReloadManager destroyed
-abort_threads: Failed aborting id: 0000000000000AFC, mono_thread_manage will ignore it
-
-abort_threads: Failed aborting id: 0000000000000968, mono_thread_manage will ignore it
-
-abort_threads: Failed aborting id: 0000000000000A20, mono_thread_manage will ignore it
-
-abort_threads: Failed aborting id: 0000000000000AFC, mono_thread_manage will ignore it
-
-abort_threads: Failed aborting id: 0000000000000968, mono_thread_manage will ignore it
-
-abort_threads: Failed aborting id: 0000000000000A20, mono_thread_manage will ignore it
-
-debugger-agent: Unable to listen on 2960
-VBCSCompilerPreWarmer: requested VBCSCompiler shutdown
-Checking for leaked weakptr:
-  Found no leaked weakptrs.
-[Package Manager] Server process was shutdown
-##utp:{"type":"MemoryLeaks","version":2,"phase":"Immediate","time":1792805570197,"processId":5056,"allocatedMemory":18510150,"memoryLabels":[{"Default":218091},{"Permanent":15516},{"NewDelete":71895},{"Thread":4197880},{"Manager":19184},{"VertexData":8},{"Geometry":816},{"Texture":24},{"Shader":2010317},{"Material":132},{"GfxDevice":55968},{"Animation":952},{"Audio":696},{"FreeType":8},{"FontEngine":736},{"Physics":1970},{"Physics2D":16},{"Serialization":16688},{"Input":42840},{"JobScheduler":256},{"TextLib":336},{"Mono":48},{"MonoCode":832},{"ScriptingNativeRuntime":1259880},{"BaseObject":5024},{"Resource":1444},{"Renderer":2504},{"Transform":4685},{"File":16288},{"WebCam":616},{"Culling":32},{"Terrain":11442},{"Wind":24},{"STL":40},{"String":2693203},{"StaticString":3808},{"Utility":2673174},{"Curl":2559},{"PoolAlloc":2264},{"AI":80},{"TypeTree":19053},{"ScriptManager":12656},{"CodeReload":448},{"RuntimeInitializeOnLoadManager":64},{"Sprites":102},{"SpriteAtlas":120},{"GI":7816},{"Director":8296},{"CloudService":7296},{"WebRequest":24962},{"VR":49650},{"SceneManager":608},{"Video":64},{"LazyScriptCache":32},{"Camera":729},{"Secure":2377},{"SerializationCache":9256},{"APIUpdating":10320},{"Subsystems":336},{"VirtualTexturing":57888},{"StaticSafetyDebugInfo":278528},{"Analytics":592},{"Hierarchy":1188},{"UIElements":40},{"CoreStats":14456},{"Identifiers":7152},{"Gui":128},{"EditorUtility":115714},{"VersionControl":8},{"Undo":931},{"AssetDatabase":4488794},{"AssetImporter":40},{"EditorGi":328},{"UnityConnect":40441},{"Upm":1912},{"UpmDiagnostics":8},{"AssetCompliance":96},{"DrivenProperties":72},{"LocalIPC":217},{"ProfilerEditor":9746},{"CoreBusinessMetrics":3626},{"Windowing":456},{"Licensing":1264},{"AssetReference":32},{"IPCStream":32}]}
+[3699/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/System.Diagnostics.Process.dll
+[3700/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/System.Diagnostics.FileVersionInfo.dll
+[3701/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/System.Diagnostics.Debug.dll
+[3702/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/System.Diagnostics.DiagnosticSource.dll
+[3703/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/System.Diagnostics.Contracts.dll
+[3704/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/System.Data.dll
+[3705/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/System.Data.DataSetExtensions.dll
+[3706/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/System.Core.dll
+[3707/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/System.Configuration.dll
+[3708/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/System.Console.dll
+[3709/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/System.ComponentModel.Primitives.dll
+[3710/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/System.ComponentModel.EventBasedAsync.dll
+[3711/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/System.ComponentModel.TypeConverter.dll
+[3712/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/System.Data.Common.dll
+[3713/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/System.ComponentModel.dll
+[3714/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/System.ComponentModel.DataAnnotations.dll
+[3715/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/System.ComponentModel.Annotations.dll
+[3716/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/System.Collections.Specialized.dll
+[3717/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/System.Collections.NonGeneric.dll
+[3718/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/System.Collections.dll
+[3719/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/System.Collections.Immutable.dll
+[3720/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/System.Collections.Concurrent.dll
+[3721/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/System.Buffers.dll
+[3722/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/System.AppContext.dll
+[3723/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/SharpYaml.dll
+[3724/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/NiceIO.dll
+[3725/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/netstandard.dll
+[3726/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/mscorrc.dll
+[3727/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/mscorlib.dll
+[3728/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/msquic.dll
+[3729/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/mscordbi.dll
+[3730/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/mscordaccore_amd64_amd64_10.0.826.23019.dll
+[3731/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/mscordaccore.dll
+[3732/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/monolinkerold.dll
+[3733/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/Mono.Cecil.Rocks.dll
+[3734/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/Mono.Cecil.Pdb.dll
+[3735/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/Mono.Cecil.Mdb.dll
+[3736/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/Mono.Cecil.dll
+[3737/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/Microsoft.Win32.Registry.dll
+[3738/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/Microsoft.Win32.Primitives.dll
+[3739/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/Microsoft.VisualBasic.dll
+[3740/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/Microsoft.CSharp.dll
+[3741/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/Microsoft.VisualBasic.Core.dll
+[3742/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/Microsoft.Bcl.HashCode.dll
+[3743/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/Microsoft.DiaSymReader.Native.amd64.dll
+[3744/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/MemoryPack.Core.dll
+[3745/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/il2cpp.dll.config
+[3746/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/illink.dll
+[3747/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/il2cpp-compile.runtimeconfig.json
+[3748/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/il2cpp-compile.exe
+[3749/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/il2cpp-compile.dll
+[3750/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/il2cpp-compile.deps.json
+[3751/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/hostpolicy.dll
+[3752/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/createdump.exe
+[3753/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/hostfxr.dll
+[3754/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/clrjit.dll
+[3755/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/clrgcexp.dll
+[3756/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/coreclr.dll
+[3757/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/clrgc.dll
+[3758/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/clretwrc.dll
+[3759/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/bee_backend/win-x64/bee_backend.exe
+[3760/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/Bee.VisualStudioSolution.dll
+[3761/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/Bee.TundraBackend.dll
+[3762/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/Bee.Tools.dll
+[3763/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/Bee.Toolchain.Xcode.dll
+[3764/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/il2cpp.exe
+[3765/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/Bee.Toolchain.Windows.dll
+[3766/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/Bee.Toolchain.VisualStudio.dll
+[3767/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/Bee.Toolchain.VisionOS.dll
+[3768/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/Bee.Toolchain.UWP.dll
+[3769/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/Bee.Toolchain.MacOS.dll
+[3770/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/Bee.Toolchain.LLVM.dll
+[3771/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/Bee.Toolchain.TvOS.dll
+[3772/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/Bee.Toolchain.Linux.dll
+[3773/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/Bee.Toolchain.IOS.dll
+[3774/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/Bee.Toolchain.Emscripten.dll
+[3775/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/Bee.Toolchain.GNU.dll
+[3776/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/Bee.Toolchain.EmbeddedLinux.dll
+[3777/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/Bee.Toolchain.Android.dll
+[3778/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/Bee.TinyProfiler2.dll
+[3779/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/Bee.Telemetry.dll
+[3780/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/Bee.Stevedore.Program.dll
+[3781/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/Bee.NativeProgramSupport.dll
+[3782/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/Bee.Core.dll
+[3783/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/Bee.BuildGraph.dll
+[3784/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/Bee.BinLog.dll
+[3785/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/Bee.BinLog.xml
+[3786/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/Analytics.runtimeconfig.json
+[3787/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/Bee.BeeDriver2.dll
+[3788/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/Analytics.dll
+[3789/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/Analytics.exe
+[3790/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/bee_backend/win-x64/bee_backend.pdb
+[3791/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/Analytics.deps.json
+[3792/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/Analytics.Api.Output.xml
+[3793/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/FourFroggies66Test.pfx
+[3794/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/IL2CPP/build/deploy/Analytics.Api.Output.dll
+[3795/3994  0s] WriteFile D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/pch.h
+[3796/3994  0s] WriteFile D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/pch.cpp
+[3797/3994  0s] WriteFile D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Main.cpp
+[3798/3994  0s] WriteFile D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/App.h
+[3799/3994  0s] WriteFile D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/UnityGenerated.cpp
+[3800/3994  0s] WriteFile D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/App.cpp
+[3801/3994  0s] WriteFile D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/UnityGenerated.h
+[3802/3994  0s] WriteFile D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/UnityCommon.props
+[3803/3994  0s] WriteFile D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Unity Data.vcxitems.filters
+[3804/3994  0s] WriteFile D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Unity Data.vcxitems
+[3805/3994  0s] WriteFile D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/nativePlugins.txt
+[3806/3994  0s] WriteFile D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Package.appxmanifest
+[3807/3994  0s] WriteFile D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/StoreManifest.xml
+[3808/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Assets/Wide310x150Logo.scale-200.png
+[3809/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Assets/Wide310x150Logo.scale-100.png
+[3810/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Assets/Square310x310Logo.scale-100.png
+[3811/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Assets/Square150x150Logo.scale-200.png
+[3812/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Assets/Square150x150Logo.scale-100.png
+[3813/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Assets/Square71x71Logo.scale-100.png
+[3814/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Assets/Square44x44Logo.targetsize-24_altform-unplated.png
+[3815/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Assets/Square44x44Logo.scale-200.png
+[3816/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Assets/Square44x44Logo.targetsize-24.png
+[3817/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Assets/Square44x44Logo.scale-100.png
+[3818/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Assets/StoreLogo.png
+[3819/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Assets/SplashScreen.scale-200.png
+[3820/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Assets/SplashScreen.scale-100.png
+[3821/3994  0s] WriteFile D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Four Froggies 6.6.vcxproj.filters
+[3822/3994  0s] WriteFile D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Four Froggies 6.6.vcxproj
+[3823/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/Resources/unity default resources
+[3824/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/skin.jpg
+[3825/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/rr.txt
+[3826/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/tv.mp4
+[3827/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/pano_tv.jpg
+[3828/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/pano_lamp.jpg
+[3829/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/lo/window.jpg
+[3830/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/pano_env.jpg
+[3831/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/lo/white_plaster_02_nor_gl.jpg
+[3832/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/lo/white_plaster_02_diff.jpg
+[3833/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/lo/white_plaster_02_arm.jpg
+[3834/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/room.bin
+[3835/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/lo/sofa_02_nor_gl.jpg
+[3836/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/lo/sofa_02_diff.jpg
+[3837/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/lo/side_table_01_nor_gl.jpg
+[3838/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/lo/sofa_02_arm.jpg
+[3839/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/lo/side_table_01_diff.jpg
+[3840/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/lo/side_table_01_arm.jpg
+[3841/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/lo/rubber_duck_toy_nor_gl.jpg
+[3842/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/lo/rubber_duck_toy_diff.jpg
+[3843/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/lo/rubber_duck_toy_arm.jpg
+[3844/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/lo/potted_plant_04_diff.jpg
+[3845/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/lo/potted_plant_04_arm.jpg
+[3846/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/lo/potted_plant_04_nor_gl.jpg
+[3847/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/lo/poly_wool_herringbone_diff.jpg
+[3848/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/lo/poly_wool_herringbone_nor_gl.jpg
+[3849/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/lo/poly_wool_herringbone_arm.jpg
+[3850/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/lo/modern_wooden_cabinet_nor_gl.jpg
+[3851/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/lo/modern_wooden_cabinet_diff.jpg
+[3852/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/lo/modern_wooden_cabinet_arm.jpg
+[3853/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/lo/modern_coffee_table_01_rough.jpg
+[3854/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/lo/modern_coffee_table_01_diff.jpg
+[3855/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/lo/modern_ceiling_lamp_01_nor_gl.jpg
+[3856/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/lo/modern_coffee_table_01_nor_gl.jpg
+[3857/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/lo/modern_ceiling_lamp_01_arm.jpg
+[3858/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/lo/modern_ceiling_lamp_01_diff.jpg
+[3859/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/lo/herringbone_parquet_nor_gl.jpg
+[3860/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/lo/herringbone_parquet_arm.jpg
+[3861/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/lo/hanging_picture_frame_02_nor_gl.jpg
+[3862/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/lo/herringbone_parquet_diff.jpg
+[3863/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/lo/hanging_picture_frame_02_artwork_nor_gl.jpg
+[3864/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/lo/hanging_picture_frame_02_diff.jpg
+[3865/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/lo/hanging_picture_frame_02_artwork_roughness.jpg
+[3866/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/lo/hanging_picture_frame_02_arm.jpg
+[3867/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/lo/hanging_picture_frame_02_artwork_diff.jpg
+[3868/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/lo/ceramic_vase_01_nor_gl.jpg
+[3869/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/lo/ceramic_vase_01_diff.jpg
+[3870/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/lo/ceramic_vase_01_arm.jpg
+[3871/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/lo/Armchair_01_arm.jpg
+[3872/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/lo/Armchair_01_diff.jpg
+[3873/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/lo/Armchair_01_nor_gl.jpg
+[3874/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/lm_tv.jpg
+[3875/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/lm_lamp.jpg
+[3876/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/lm_env.jpg
+[3877/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/hi/window.jpg
+[3878/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/hi/white_plaster_02_nor_gl.jpg
+[3879/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/hi/white_plaster_02_arm.jpg
+[3880/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/hi/white_plaster_02_diff.jpg
+[3881/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/hi/sofa_02_nor_gl.jpg
+[3882/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/hi/sofa_02_diff.jpg
+[3883/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/hi/sofa_02_arm.jpg
+[3884/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/hi/side_table_01_nor_gl.jpg
+[3885/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/hi/side_table_01_diff.jpg
+[3886/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/hi/rubber_duck_toy_nor_gl.jpg
+[3887/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/hi/side_table_01_arm.jpg
+[3888/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/hi/rubber_duck_toy_diff.jpg
+[3889/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/hi/rubber_duck_toy_arm.jpg
+[3890/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/hi/potted_plant_04_diff.jpg
+[3891/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/hi/potted_plant_04_nor_gl.jpg
+[3892/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/hi/potted_plant_04_arm.jpg
+[3893/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/hi/poly_wool_herringbone_nor_gl.jpg
+[3894/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/hi/poly_wool_herringbone_arm.jpg
+[3895/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/hi/poly_wool_herringbone_diff.jpg
+[3896/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/hi/modern_wooden_cabinet_nor_gl.jpg
+[3897/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/hi/modern_wooden_cabinet_arm.jpg
+[3898/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/hi/modern_wooden_cabinet_diff.jpg
+[3899/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/hi/modern_coffee_table_01_rough.jpg
+[3900/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/hi/modern_coffee_table_01_nor_gl.jpg
+[3901/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/hi/modern_coffee_table_01_diff.jpg
+[3902/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/hi/modern_ceiling_lamp_01_diff.jpg
+[3903/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/hi/modern_ceiling_lamp_01_nor_gl.jpg
+[3904/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/hi/modern_ceiling_lamp_01_arm.jpg
+[3905/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/hi/herringbone_parquet_nor_gl.jpg
+[3906/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/hi/herringbone_parquet_arm.jpg
+[3907/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/hi/herringbone_parquet_diff.jpg
+[3908/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/hi/hanging_picture_frame_02_nor_gl.jpg
+[3909/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/hi/hanging_picture_frame_02_diff.jpg
+[3910/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/hi/hanging_picture_frame_02_artwork_roughness.jpg
+[3911/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/hi/hanging_picture_frame_02_artwork_nor_gl.jpg
+[3912/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/hi/hanging_picture_frame_02_artwork_diff.jpg
+[3913/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/hi/hanging_picture_frame_02_arm.jpg
+[3914/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/hi/ceramic_vase_01_nor_gl.jpg
+[3915/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/hi/ceramic_vase_01_diff.jpg
+[3916/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/hi/ceramic_vase_01_arm.jpg
+[3917/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/hi/Armchair_01_nor_gl.jpg
+[3918/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/hi/Armchair_01_diff.jpg
+[3919/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/hi/Armchair_01_arm.jpg
+[3920/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/water_n.png
+[3921/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/hands.bin
+[3922/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/sky_2k.jpg
+[3923/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/sky_1k.jpg
+[3924/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/siding_n_512.jpg
+[3925/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/siding_a_512.jpg
+[3926/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/siding_n.jpg
+[3927/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/siding_a.jpg
+[3928/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/realroom/frog.bin
+[3929/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/shore_n_512.jpg
+[3930/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/shore_a_512.jpg
+[3931/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/shore_n.jpg
+[3932/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/shore_a.jpg
+[3933/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/shingle_n_512.jpg
+[3934/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/shingle_a_512.jpg
+[3935/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/shingle_n.jpg
+[3936/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/shingle_a.jpg
+[3937/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/rock_n_512.jpg
+[3938/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/rock_n.jpg
+[3939/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/rock_a_512.jpg
+[3940/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/planks_n_512.jpg
+[3941/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/rock_a.jpg
+[3942/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/planks_n.jpg
+[3943/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/planks_a_512.jpg
+[3944/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/path_n_512.jpg
+[3945/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/planks_a.jpg
+[3946/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/path_n.jpg
+[3947/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/path_a_512.jpg
+[3948/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/mud_n_512.jpg
+[3949/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/path_a.jpg
+[3950/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/mud_n.jpg
+[3951/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/mud_a_512.jpg
+[3952/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/litter_n_512.jpg
+[3953/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/mud_a.jpg
+[3954/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/litter_a_512.jpg
+[3955/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/litter_n.jpg
+[3956/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/litter_a.jpg
+[3957/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/leafcard.png
+[3958/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/grass_n_512.jpg
+[3959/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/grass_a_512.jpg
+[3960/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/grass_n.jpg
+[3961/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/grass_a.jpg
+[3962/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/dirt_n_512.jpg
+[3963/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/dirt_n.jpg
+[3964/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/dirt_a_512.jpg
+[3965/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/dirt_a.jpg
+[3966/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/clump.png
+[3967/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/bark_n_512.jpg
+[3968/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/bark_n.jpg
+[3969/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/bark_a_512.jpg
+[3970/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/bark_a.jpg
+[3971/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/bark2_n_512.jpg
+[3972/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/bark2_n.jpg
+[3973/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/bark2_a_512.jpg
+[3974/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/StreamingAssets/real/bark2_a.jpg
+[3975/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/sharedassets0.assets.resS
+[3976/3994  0s] WriteFile D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Il2CppOutputProject/Il2CppOutputProject.vcxproj.filters
+[3977/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/sharedassets0.assets
+[3978/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/ScriptingAssemblies.json
+[3979/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/RuntimeInitializeOnLoads.json
+[3980/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/Resources/unity_builtin_extra
+[3981/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/resources.assets.resS
+[3982/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/level0
+[3983/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/resources.resource
+[3984/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/globalgamemanagers.assets
+[3985/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/globalgamemanagers
+[3986/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/globalgamemanagers.assets.resS
+[3987/3994  0s] CopyFiles D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Data/resources.assets
+[BUSY       6s] UnityLinker D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/Library/Bee/artifacts/unitylinker_7dsk.traceevents
+[3988/3994  8s] UnityLinker D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/Library/Bee/artifacts/unitylinker_7dsk.traceevents
+C:\Program Files\Unity\Hub\Editor\6000.6.5f1\Editor\Data\il2cpp\build\deploy\UnityLinker.exe @Library\Bee\artifacts\rsp\6005076923038360417.rsp
+*** Tundra requires additional run (10.98 seconds), 3988 items updated, 3994 evaluated
+*** Additional run caused by: timestamp change of D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6/build/UWP/Four Froggies 6.6/Four Froggies 6.6.vcxproj.filters
+Starting: C:\Program Files\Unity\Hub\Editor\6000.6.5f1\Editor\Data\DotNetSdk\dotnet.exe "C:\Program Files\Unity\Hub\Editor\6000.6.5f1\Editor\Data\PlaybackEngines\MetroSupport\UWPPlayerBuildProgram.exe" "C:/Program Files/Unity/Hub/Editor/6000.6.5f1/Editor/Data/PlaybackEngines/MetroSupport/Bee;C:/Program Files/Unity/Hub/Editor/6000.6.5f1/Editor/Data/Tools/BuildPipeline" "Library/Bee/Playere618f3d3.dag.json" "Library/Bee/Playere618f3d3-inputdata.json" "Library\Bee\buildprogram1.traceevents"
+WorkingDir: D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6
+ExitCode: 4 Duration: 11s
+ExitCode: 0 Duration: 0s945ms
+Starting: C:\Program Files\Unity\Hub\Editor\6000.6.5f1\Editor\Data\Tools\BuildPipeline\bee_backend.exe --ipc --dagfile="Library/Bee/Playere618f3d3.dag" --dagfilejson="Library\Bee\Playere618f3d3.dag.json" --profile="Library/Bee/backend3.traceevents" Player
+WorkingDir: D:/a/SimilarizeWebsite/SimilarizeWebsite/src/unity/four-froggies-u6
