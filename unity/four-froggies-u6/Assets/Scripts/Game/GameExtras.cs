@@ -225,6 +225,7 @@ public partial class Game
             if (!F77.Old) { TouchControls.superWant = sm.SuperOn77 ? "LAND" : "SUPER"; if (sm.SuperOn77) { TouchControls.superDive = true; TouchControls.want[5] = "DOWN"; } }
         }
         else if (f.vehicle is Starship && ((Starship)f.vehicle).mechForm != null) TouchControls.want[5] = "BAY";
+        if (f.vehicle is Roadster49 && !Roadster49.Old66) TouchControls.superWant = "BOOST";   // ffrd66
         string key = TouchControls.ModeKey;
         if (key != lastTouchKey) { lastTouchKey = key; Debug.Log("Touch set: " + key.Replace("|", " ")); }
     }

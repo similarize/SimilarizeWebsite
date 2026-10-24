@@ -279,6 +279,7 @@ public class TouchControls : MonoBehaviour
         if (mechMode) { i.upHeld = upId >= 0 || TestUp; i.boostHeld = downId >= 0 || TestBoost; i.gunFire = fireQ; i.gunHeld = fireId >= 0; i.gas = i.brake = 0f; i.climb = i.upHeld ? 1f : 0f; i.aimHeld = aimLatched; i.mslFire = altQ; i.downHeld = false; }
         if (mechMode && superDive) { aimLatched = false; i.aimHeld = false; i.climb = (i.upHeld ? 1f : 0f) - (sixId >= 0 ? 1f : 0f); }   // ffu77c: held DOWN
         if (mechMode && superQ) i.cargo = true;   // ffu77c: SUPER / LAND = pad B
+        if (!mechMode && superQ && superWant == "BOOST") i.boostHeld = true;   // ffrd66: Roadster BOOST
         if (bowMode) { i.aimHeld = aimLatched; i.bowFire = fireQ; }   // ffu61
         if (spaceMode) i.cargo = sixQ;
         if (spaceMode) { i.target = aQ; i.auto = fireQ; i.land = altQ; i.hop = i.use = false; }

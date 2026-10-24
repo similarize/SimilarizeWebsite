@@ -40,14 +40,37 @@ public class Roadster49 : Vehicle
     readonly List<Vector3> nozP = new List<Vector3>();   // local nozzle positions (10)
     AudioSource hissSrc, fanSrc;
     static AudioClip hissClip, puffClip, fanClip;
+    // ffrd66 (Ben 2026-10-24): roadster66 look (solid rear, tail bar, smoked targa glass, 10-spoke low-profile wheels) +
+    // SpaceX-package BOOST: a cold-gas nozzle behind the rear plate. LB / Shift / touch BOOST = a 2 s burst (grounded only,
+    // extra push on top of the launch), bright plume + hiss-roar + camera kick, 4 s cooldown. &ffrd0=1 / &ff77old=1 = before.
+    static int old66 = -1;
+    public static bool Old66 { get { if (old66 < 0) old66 = (Ffu33.Url("ffrd0") == "1" || Ffu33.Url("ff77old") == "1") ? 1 : 0; return old66 == 1; } }
+    public static int Boosts66;
+    [System.NonSerialized] public float boostT = -1f, boostCool;
+    public bool Boosting66 { get { return boostT >= 0f; } }
+    static readonly Vector3 BoostNoz = new Vector3(0f, 0.40f, -2.22f);
+    void Tick66(bool driven, float dt)
+    {
+        if (Old66) return;
+        if (boostCool > 0f) boostCool -= dt;
+        if (boostT >= 0f) { boostT += dt; if (boostT >= 2f) { boostT = -1f; boostCool = 4f; } return; }
+        if (!driven || !inp.boostHeld || boostCool > 0f || grounded == 0) return;
+        boostT = 0f; Boosts66++;
+        float k = driver != null && driver.human ? 1f : Mathf.Clamp01(1f - Sfx.Near(transform.position) / 60f);
+        if (puffClip != null) Sfx.Play(puffClip, 1f * k, 0.6f);
+        if (Sfx.JetRoar != null) Sfx.Play(Sfx.JetRoar, 0.85f * k, 1.35f);
+        Game.Shake(transform.position, 0.3f);
+        if (driver != null && driver.human) driver.Toast("BOOST!  cold-gas thruster", 1.2f);
+        Debug.Log("Roadster49: ffrd66 BOOST fired (#" + Boosts66 + ")");
+    }
 
     public override string[] TouchSet { get { return new[] { "A", "JETS", grounded > 0 ? (fansOn ? "FANS ON" : "FANS") : "ROLL", "GAS", "BRAKE" }; } }
     public override string HelpLine { get { return "Roadster: RT gas (launch!) | LT brake | X hold = thrusters | Y suction fans | RB barrel roll | A get out"; } }
     public override string HelpFor(InputKind k)
     {
-        if (k == InputKind.Gamepad) return "RT  /  LT::gas (full = launch!) / brake + reverse|L-stick::steer (in the air: pitch + roll)|X::hold = thrusters (hop / fly)|Y::suction fans on / off (drive on walls + ceilings)|RB::barrel roll|On a wall / ceiling::RT / LT = crawl faster / slower, let go = hold|A::get out";
-        if (k == InputKind.Touch) return "GAS  /  BRAKE::gas (launch!) / brake + reverse|Stick::steer (in the air: pitch + roll)|JETS::hold = thrusters (hop / fly)|FANS::suction fans on / off|ROLL::barrel roll (in the air)|On a wall / ceiling::GAS / BRAKE = crawl faster / slower|A::get out";
-        return "W  /  S::gas (hold W = launch!) / brake + reverse|A  /  D::steer (in the air: W S pitch, A D roll)|Space::hold = thrusters (hop / fly)|F::suction fans on / off (drive on walls + ceilings)|R::barrel roll|On a wall / ceiling::W / S = crawl faster / slower, let go = hold|E::get out";
+        if (k == InputKind.Gamepad) return "RT  /  LT::gas (full = launch!) / brake + reverse|L-stick::steer (in the air: pitch + roll)|X::hold = thrusters (hop / fly)|Y::suction fans on / off (drive on walls + ceilings)|RB::barrel roll|LB::BOOST (2 s cold-gas burst)|On a wall / ceiling::RT / LT = crawl faster / slower, let go = hold|A::get out";
+        if (k == InputKind.Touch) return "GAS  /  BRAKE::gas (launch!) / brake + reverse|Stick::steer (in the air: pitch + roll)|JETS::hold = thrusters (hop / fly)|FANS::suction fans on / off|ROLL::barrel roll (in the air)|BOOST::2 s cold-gas burst|On a wall / ceiling::GAS / BRAKE = crawl faster / slower|A::get out";
+        return "W  /  S::gas (hold W = launch!) / brake + reverse|A  /  D::steer (in the air: W S pitch, A D roll)|Space::hold = thrusters (hop / fly)|F::suction fans on / off (drive on walls + ceilings)|R::barrel roll|Shift::BOOST (2 s cold-gas burst)|On a wall / ceiling::W / S = crawl faster / slower, let go = hold|E::get out";
     }
     // ffu49: the live context line (Hints46): in the air / crawling / out of air
     public string ContextHint(InputKind k, System.Func<string, string> cap)
@@ -229,6 +252,7 @@ public class Roadster49 : Vehicle
                 nozP.Add(p);
                 Mats.Prim(PrimitiveType.Cylinder, sprung52, p, new Vector3(0.05f, 0.012f, 0.05f), new Vector3(0f, 0f, 90f * s), blk);
             }
+        if (!Old66) Mats.Prim(PrimitiveType.Cylinder, sprung52, BoostNoz, new Vector3(0.09f, 0.03f, 0.09f), new Vector3(90f, 0f, 0f), blk);   // ffrd66 plate nozzle
         foreach (var r in GetComponentsInChildren<Renderer>())
         {
             if (r.shadowCastingMode == UnityEngine.Rendering.ShadowCastingMode.Off) continue;   // glass / lamps (LBPack)
@@ -243,6 +267,8 @@ public class Roadster49 : Vehicle
     void Build()
     {
         LBPack pk52 = HeroCars52.Pack("roadster52");
+        LBPack pk66 = Old66 || pk52 == null ? null : LBPack.Get("roadster66");   // ffrd66
+        if (pk66 != null && pk66.Has("body") && pk66.Has("wheel")) pk52 = pk66;
         if (pk52 != null && pk52.Has("body") && pk52.Has("wheel")) { BuildPack52(pk52); return; }
         Transform t = transform;
         Material white = Mats.Paint(new Color(0.95f, 0.955f, 0.95f), 0.9f);
@@ -366,6 +392,7 @@ public class Roadster49 : Vehicle
         throttle = Mathf.Clamp(inp.move.y + inp.gas - inp.brake, -1f, 1f);
         if (inp.gas > 0.1f) throttle = Mathf.Max(throttle, inp.gas);
         bool jets = driven && JetsHeld() && air > 0.5f;
+        Tick66(driven, dt);
 
         // --- suspension (springs scale with the suction load)
         float sk = 1f + SucG / 9.81f * sucK;
@@ -432,6 +459,11 @@ public class Roadster49 : Vehicle
                 else if (throttle < -0.02f) a = fs > 1f ? -16f * -throttle : (fs > -9f ? 7f * throttle : 0f);
                 else a = -fs * 0.6f - (sucK > 0.5f && Mathf.Abs(fs) < 1.5f ? gAlong : 0f);
                 if (pondSub > 0f) a *= 1f - 0.6f * pondSub;
+            }
+            if (boostT >= 0f && gN.y > 0.5f)   // ffrd66 boost: strong push, held on the road (no flight)
+            {
+                a += 22f * Mathf.Clamp01((85f - fs) / 30f);
+                rb.AddForce(-gN * 6f * gf, ForceMode.Acceleration);
             }
             if (launchT >= 0f)
             {
@@ -609,6 +641,14 @@ public class Roadster49 : Vehicle
                 float s = Mathf.Clamp01(Mathf.Abs(wv));
                 FX.Puff(wp + d * 0.08f, d * (10f + 8f * s) + v * 0.85f + Random.insideUnitSphere * 0.8f, Random.Range(0.25f, 0.45f) * (0.6f + s), Random.Range(0.28f, 0.45f), new Color(0.93f, 0.96f, 1f, 0.55f));
             }
+        }
+        if (boostT >= 0f)   // ffrd66: bright cold-gas plume out of the plate nozzle
+        {
+            Vector3 np = transform.TransformPoint(BoostNoz), back = -transform.forward;
+            int n = Look.Mobile ? 2 : 4;
+            for (int i = 0; i < n; i++)
+                FX.Puff(np + back * 0.1f, back * Random.Range(14f, 22f) + Velocity * 0.6f + Random.insideUnitSphere * 1.2f, Random.Range(0.3f, 0.55f), Random.Range(0.25f, 0.4f),
+                        i == 0 ? new Color(1f, 0.92f, 0.75f, 0.9f) : new Color(0.95f, 0.97f, 1f, 0.6f));
         }
         if (rollV && Random.value < 0.5f) FX.Puff(transform.position + Random.insideUnitSphere * 0.5f, -Velocity * 0.1f, 0.6f, 0.6f, new Color(0.95f, 0.97f, 1f, 0.35f));
         // fans pull a little dust in from round the skirts on dirt / grass
