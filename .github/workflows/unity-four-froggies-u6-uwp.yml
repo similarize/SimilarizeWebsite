@@ -15,6 +15,10 @@ name: Unity UWP (Xbox Dev Mode) - Four Froggies 6.6
 on:
   workflow_dispatch:
     inputs:
+      runner:
+        description: 'cloud (GitHub windows-2022) or pc (self-hosted xbox-uwp)'
+        required: false
+        default: 'cloud'
       tag:
         description: 'Release tag (e.g. ff-u6-uwp-ffu73)'
         required: false
@@ -53,7 +57,8 @@ jobs:
   uwp:
     # Self-hosted build PC (Bill's). Public repo: trusted events only - never pull_request / pull_request_target.
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-    runs-on: [self-hosted, xbox-uwp]
+    # runner input: 'cloud' (default, GitHub windows-2022) or 'pc' (Bill's self-hosted xbox-uwp box)
+    runs-on: ${{ github.event.inputs.runner == 'pc' && fromJSON('["self-hosted","xbox-uwp"]') || 'windows-2022' }}
     timeout-minutes: 240
     steps:
       # Self-hosted PC: plain 'bash' would resolve to the WSL stub in System32; put Git Bash first on PATH for every later step.
