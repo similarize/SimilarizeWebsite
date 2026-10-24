@@ -35,11 +35,22 @@ public class RidingMower : GroundVehicle
         I = Spawn("Riding mower", RobotNav.G(ParkXZ.x, ParkXZ.y), ParkYaw, new Color(0.16f, 0.5f, 0.2f));
         // two more in the garage, either side of the Optimus suit bay
         float bx = Layout.BayX(5), bz = Layout.GarageC.y;
-        Spawn("Riding mower", RobotNav.G(bx - 3.0f, bz), 0f, new Color(0.85f, 0.18f, 0.14f));
+        // ffu77e (Ben 10-23): the red one is the BIG mower - a wide-area deck 5x as wide (players only; the robots' lawn mower stays
+        // as it was). Too wide for the garage bay, so it parks on open lawn beside the lawn mower. &ff77old=1 = before.
+        if (F77.Old) Spawn("Riding mower", RobotNav.G(bx - 3.0f, bz), 0f, new Color(0.85f, 0.18f, 0.14f));
+        else
+        {
+            Vector3 at = RobotNav.G(bx - 3.0f, bz);
+            Vector2[] offs = { new Vector2(10f, 0f), new Vector2(-10f, 0f), new Vector2(0f, -10f), new Vector2(10f, -10f), new Vector2(-10f, -10f), new Vector2(0f, 10f), new Vector2(10f, 10f) };
+            foreach (Vector2 o in offs) { Vector3 g = RobotNav.G(ParkXZ.x + o.x, ParkXZ.y + o.y); if (Grass(g)) { at = g; break; } }
+            Spawn("Riding mower", at, ParkYaw, new Color(0.85f, 0.18f, 0.14f), BigK);
+        }
         Spawn("Riding mower", RobotNav.G(bx + 3.0f, bz), 0f, new Color(0.16f, 0.5f, 0.2f));
     }
 
-    static RidingMower Spawn(string title, Vector3 ground, float yaw, Color paint)
+    public const float BigK = 5f;   // ffu77e
+    public float deckK = 1f;
+    static RidingMower Spawn(string title, Vector3 ground, float yaw, Color paint, float deckK = 1f)
     {
         var go = new GameObject(title);
         go.transform.position = ground + Vector3.up * 0.25f;
@@ -52,6 +63,8 @@ public class RidingMower : GroundVehicle
         m.rest = 0.12f;
         m.maxSpeed = 6.5f; m.accel = 5f; m.turnRate = 1.9f; m.grip = 9f; m.reverseFrac = 0.5f; m.dustAmount = 0.15f;
         m.camDistance = 5.2f; m.camHeight = 2.3f;
+        m.deckK = deckK;
+        if (deckK > 1f) { m.camDistance = 9f; m.camHeight = 3.6f; m.maxSpeed = 5.5f; }   // ffu77e: see the whole deck
         m.Build(paint);
         m.seat = Mats.Node(go.transform, "Seat", new Vector3(0f, SeatY + 0.02f, -0.06f));
         m.seatScale = 0.62f;
@@ -105,10 +118,24 @@ public class RidingMower : GroundVehicle
             wheelVis[i] = w;
             AddWheel(c, wr[i], w, i >= 2);
         }
-        Mats.Prim(PrimitiveType.Cube, v, new Vector3(0f, 0.17f, 0.5f), new Vector3(DeckW, 0.12f, 0.75f), deckM);
-        Mats.Prim(PrimitiveType.Cube, v, new Vector3(0f, 0.235f, 0.5f), new Vector3(DeckW - 0.08f, 0.02f, 0.68f), yellow);
-        for (int s = -1; s <= 1; s += 2) Mats.Prim(PrimitiveType.Cylinder, v, new Vector3(s * (DeckW * 0.5f - 0.04f), 0.08f, 0.85f), new Vector3(0.08f, 0.02f, 0.08f), new Vector3(0f, 0f, 90f), dark);
-        chute = Mats.Node(v, "Chute", new Vector3(DeckW * 0.5f + 0.12f, 0.17f, 0.5f));
+        float dw = DeckW * deckK, dd = deckK > 1f ? 0.95f : 0.75f;
+        Mats.Prim(PrimitiveType.Cube, v, new Vector3(0f, 0.17f, 0.5f), new Vector3(dw, 0.12f, dd), deckM);
+        Mats.Prim(PrimitiveType.Cube, v, new Vector3(0f, 0.235f, 0.5f), new Vector3(dw - 0.08f, 0.02f, dd - 0.07f), yellow);
+        for (int s = -1; s <= 1; s += 2) Mats.Prim(PrimitiveType.Cylinder, v, new Vector3(s * (dw * 0.5f - 0.04f), 0.08f, 0.85f), new Vector3(0.08f, 0.02f, 0.08f), new Vector3(0f, 0f, 90f), dark);
+        if (deckK > 1f)
+        {
+            // ffu77e wide-area deck: three cutter housings, wing hinges + lift arms, gauge wheels under the wing tips, rubber flaps
+            for (int s = -1; s <= 1; s++) Mats.Prim(PrimitiveType.Cylinder, v, new Vector3(s * dw / 3f, 0.25f, 0.5f), new Vector3(dw / 3f - 0.3f, 0.04f, dd - 0.15f), deckM);
+            for (int s = -1; s <= 1; s += 2)
+            {
+                Mats.Prim(PrimitiveType.Cylinder, v, new Vector3(s * dw / 6f, 0.27f, 0.5f), new Vector3(0.09f, dd * 0.5f, 0.09f), new Vector3(90f, 0f, 0f), steel);   // hinge
+                var arm = Mats.Prim(PrimitiveType.Cube, v, new Vector3(s * (dw / 6f + 0.6f), 0.55f, 0.45f), new Vector3(1.5f, 0.07f, 0.07f), steel);
+                arm.transform.localRotation = Quaternion.Euler(0f, 0f, s * 22f);
+                Mats.Prim(PrimitiveType.Cylinder, v, new Vector3(s * (dw * 0.5f - 0.25f), 0.1f, 0.5f + dd * 0.5f + 0.06f), new Vector3(0.2f, 0.05f, 0.2f), new Vector3(0f, 0f, 90f), tyre);
+            }
+            Mats.Prim(PrimitiveType.Cube, v, new Vector3(0f, 0.12f, 0.5f + dd * 0.5f + 0.01f), new Vector3(dw, 0.1f, 0.02f), dark);
+        }
+        chute = Mats.Node(v, "Chute", new Vector3(dw * 0.5f + 0.12f, 0.17f, 0.5f));
         var ch = Mats.Prim(PrimitiveType.Cube, chute, Vector3.zero, new Vector3(0.26f, 0.1f, 0.3f), deckM);
         ch.transform.localRotation = Quaternion.Euler(0f, 0f, -12f);
         Mats.Prim(PrimitiveType.Cylinder, v, new Vector3(-0.3f, 0.98f, 0.72f), new Vector3(0.05f, 0.12f, 0.05f), steel);
@@ -202,7 +229,7 @@ public class RidingMower : GroundVehicle
             if (cutting && Random.value < 0.5f) FX.Smoke(cp + transform.right * 0.3f * k, 0.35f * k, new Color(0.42f, 0.7f, 0.25f, 0.8f));
             if (Random.value < 0.25f) FX.Smoke(transform.TransformPoint(new Vector3(-0.3f, 1.12f, 0.72f)), 0.18f * k, new Color(0.5f, 0.5f, 0.52f, 0.4f));
         }
-        MowStripes.Track(this, transform.TransformPoint(new Vector3(0f, 0f, 0.5f)), transform.forward, DeckW * k, cutting);
+        MowStripes.Track(this, transform.TransformPoint(new Vector3(0f, 0f, 0.5f)), transform.forward, DeckW * deckK * k, cutting);   // ffu77e: the big deck cuts 5x
     }
 
     void EngineVol(float baseV, float pitch, float dt)
