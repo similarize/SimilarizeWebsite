@@ -376,14 +376,24 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $files = Get-ChildItem $env:REL_DIR -File | ForEach-Object { $_.FullName }
           $notes = "Four Froggies 6.6 (Unity 6) UWP package for Xbox One (Developer Mode sideload via Device Portal) - $env:TAG, unity-src $($env:GITHUB_SHA.Substring(0,7)), built by run ${{ github.run_id }}. Read INSTALL-XBOX.txt first: upload $env:BUNDLE_NAME plus the Microsoft.VCLibs x64 dependency in Device Portal, then set the app type to Game in Dev Home. Installs next to the 2022.3 Four Froggies app (own identity SimilarizeFourFroggies66). Self-signed test certificate (CN=Similarize) - not a Store build."
-          gh release view $env:TAG --repo "${{ github.repository }}" *> $null
-          if ($LASTEXITCODE -eq 0) { gh release upload $env:TAG @files --clobber --repo "${{ github.repository }}" }
-          else { gh release create $env:TAG @files --repo "${{ github.repository }}" --target "${{ github.sha }}" --title "Four Froggies 6.6 for Xbox (UWP, $env:TAG)" --notes $notes }
-          if ($LASTEXITCODE -ne 0) { exit 1 }
-          $url = gh release view $env:TAG --repo "${{ github.repository }}" --json url -q .url
-          "RELEASE_URL: $url" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+          # This PC has no gh.exe (Balloon run 40075439737). Use the API.
+          $repo = "${{ github.repository }}"
+          $h = @{ Authorization = "Bearer $env:GH_TOKEN"; Accept = "application/vnd.github+json"; "X-GitHub-Api-Version" = "2022-11-28" }
+          $rel = $null
+          try { $rel = Invoke-RestMethod -Headers $h -Uri "https://api.github.com/repos/$repo/releases/tags/$env:TAG" } catch { $rel = $null }
+          if (-not $rel) {
+            $body = @{ tag_name = $env:TAG; target_commitish = "${{ github.sha }}"; name = "Four Froggies 6.6 for Xbox (UWP, $env:TAG)"; body = $notes } | ConvertTo-Json
+            $rel = Invoke-RestMethod -Method Post -Headers $h -Uri "https://api.github.com/repos/$repo/releases" -Body $body -ContentType "application/json"
+          }
+          foreach ($f in Get-ChildItem $env:REL_DIR -File) {
+            $old = @($rel.assets) | Where-Object { $_.name -eq $f.Name }
+            foreach ($a in $old) { Invoke-RestMethod -Method Delete -Headers $h -Uri "https://api.github.com/repos/$repo/releases/assets/$($a.id)" | Out-Null }
+            $up = "https://uploads.github.com/repos/$repo/releases/$($rel.id)/assets?name=$([uri]::EscapeDataString($f.Name))"
+            Invoke-RestMethod -Method Post -Headers $h -Uri $up -InFile $f.FullName -ContentType "application/octet-stream" | Out-Null
+            "uploaded $($f.Name) $($f.Length)" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
+          }
+          "RELEASE_URL: $($rel.html_url)" | Tee-Object -Append -FilePath "$env:LOG_DIR\status.txt"
 
       # Best-effort: sideload the bundle on the runner itself (Windows Server 2022, WARP) and launch it, to catch a
       # package that won't register or a player that dies at boot. A runner may refuse to activate UWP apps - that is
