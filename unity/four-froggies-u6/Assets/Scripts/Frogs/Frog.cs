@@ -169,7 +169,7 @@ public partial class Frog : MonoBehaviour
     {
         AudioClip c = IsPet ? Sfx.AnimalVoice(Roster.KindOf(charId) == Roster.Kind.Cat ? "Cat" : "Dog") : Sfx.Pick(Sfx.Ribbit);
         if (c == null) return;
-        if (mine) Sfx.Play(c, vol, Random.Range(0.95f, 1.2f)); else Sfx.PlayAt(c, p, vol, 40f, Random.Range(0.9f, 1.15f));
+        if (mine) Sfx.PlayAir(Sfx.AirWorld(world), c, vol, Random.Range(0.95f, 1.2f)); else Sfx.PlayAt(c, p, vol, 40f, Random.Range(0.9f, 1.15f));
     }
 
     public void SetInput(PIn i, float cameraYaw)
@@ -367,7 +367,7 @@ public partial class Frog : MonoBehaviour
         bool deepHere = world == WorldId.Ranch && Layout.InPond(p.x, p.z) && Ranch.GY(p.x, p.z) < Layout.WaterY - 0.6f;
         swimming = deepHere && (p.y < Layout.WaterY - 0.35f || (wasSwim && p.y < Layout.WaterY + Ripples.Rise + 0.1f) || diving);
         if (!swimming) { diving = false; bottomT = 0f; }
-        if (swimming && !wasSwim) { FX.Splash(p + Vector3.up * 0.5f, 14); if (human) Sfx.Play(Sfx.Splash, 0.9f); }
+        if (swimming && !wasSwim) { FX.Splash(p + Vector3.up * 0.5f, 14); if (human) Sfx.PlayAir(Sfx.AirWorld(world), Sfx.Splash, 0.9f); }
         wasSwim = swimming;
         // ffw: gentle wakes while a froggy wades / swims through the pond
         if (world == WorldId.Ranch && !diving && p.y < Layout.WaterY + 0.15f && Layout.InPond(p.x, p.z))
@@ -387,7 +387,7 @@ public partial class Frog : MonoBehaviour
         // up; let go and you float back up. Keep holding on the pond floor ~1.2 s = the old trip down to the reef.
         if (swimming)
         {
-            if (input.downHeld && !diving) { diving = true; FX.Bubble(p + Vector3.up * 0.4f, 8); if (human) Sfx.Play(Sfx.Splash, 0.5f, 0.8f); }
+            if (input.downHeld && !diving) { diving = true; FX.Bubble(p + Vector3.up * 0.4f, 8); if (human) Sfx.PlayAir(Sfx.AirWorld(world), Sfx.Splash, 0.5f, 0.8f); }
             if (diving && !input.downHeld && p.y > Layout.WaterY + Ripples.Rise - 0.45f) diving = false;   // back at the top
             if (human && prompt.Length == 0)
             {
@@ -458,7 +458,7 @@ public partial class Frog : MonoBehaviour
                 // ffw: float with head + body above the line (was -0.55 = only the eyes showed), gentle bob, rides the surge
                 float wantY = Layout.WaterY + Ripples.Rise - 0.3f + Mathf.Sin(Time.time * 2.2f + id) * 0.05f;
                 vel.y = Mathf.Lerp(vel.y, (wantY - p.y) * 4f, dt * 5f);
-                if (input.hop) { vel.y = HopV * 0.8f; FX.Splash(p + Vector3.up * 0.5f, 10); if (human) Sfx.Play(Sfx.Splash, 0.8f); }
+                if (input.hop) { vel.y = HopV * 0.8f; FX.Splash(p + Vector3.up * 0.5f, 10); if (human) Sfx.PlayAir(Sfx.AirWorld(world), Sfx.Splash, 0.8f); }
                 if (Random.value < planar.magnitude * dt * 2f) FX.Splash(p + Vector3.up * 0.4f, 1);
             }
         }
@@ -466,11 +466,11 @@ public partial class Frog : MonoBehaviour
         {
             if (cc.isGrounded)
             {
-                if (vel.y < -7f && human) Sfx.Play(Sfx.Land, Mathf.Clamp01(-vel.y / 18f) * 0.6f, Random.Range(0.9f, 1.1f));   // ffu10 landing thump
+                if (vel.y < -7f && human) Sfx.PlayAir(Sfx.AirWorld(world), Sfx.Land, Mathf.Clamp01(-vel.y / 18f) * 0.6f, Random.Range(0.9f, 1.1f));   // ffu10 landing thump
                 if (vel.y < -2f) vel.y = -2f;
                 vel.x = Mathf.MoveTowards(vel.x, 0f, 30f * dt);
                 vel.z = Mathf.MoveTowards(vel.z, 0f, 30f * dt);
-                if (input.hop && hopCool <= 0f) { vel.y = Roster.JumpV(charId) * (world == WorldId.Moon ? MoonWorld.HopK : 1f); hopCool = 0.25f; float hp = IsPet ? 1.35f : 1f; if (human) { Sfx.Play(Sfx.Hop, IsPet ? 0.45f : 0.6f, Random.Range(0.92f, 1.1f) * hp); if (Random.value < 0.2f) Voice(true, transform.position, 0.5f); } else Sfx.PlayAt(Sfx.Hop, transform.position, 0.35f, 25f, Random.Range(1.0f, 1.2f) * hp); }
+                if (input.hop && hopCool <= 0f) { vel.y = Roster.JumpV(charId) * (world == WorldId.Moon ? MoonWorld.HopK : 1f); hopCool = 0.25f; float hp = IsPet ? 1.35f : 1f; if (human) { Sfx.PlayAir(Sfx.AirWorld(world), Sfx.Hop, IsPet ? 0.45f : 0.6f, Random.Range(0.92f, 1.1f) * hp); if (Random.value < 0.2f) Voice(true, transform.position, 0.5f); } else Sfx.PlayAt(Sfx.Hop, transform.position, 0.35f, 25f, Random.Range(1.0f, 1.2f) * hp); }
             }
             else
             {
@@ -500,7 +500,7 @@ public partial class Frog : MonoBehaviour
         Vector3 back = transform.position - transform.forward * 0.4f + Vector3.up * 0.35f;
         FX.Splash(back, 4);
         Ripples.Ring(transform.position, 1.4f, 0.45f);
-        if (human) Sfx.Play(Sfx.Splash, 0.32f, Random.Range(1.2f, 1.4f)); else Sfx.PlayAt(Sfx.Splash, back, 0.25f, 25f, 1.3f);
+        if (human) Sfx.PlayAir(Sfx.AirWorld(world), Sfx.Splash, 0.32f, Random.Range(1.2f, 1.4f)); else Sfx.PlayAt(Sfx.Splash, back, 0.25f, 25f, 1.3f);
     }
 
     // ---------- scuba (underwater world) ----------
@@ -740,7 +740,7 @@ public partial class Frog : MonoBehaviour
         vehT = 0f; vehFirst = human && Game.FirstUse(v);   // ffu46 hints
         v.OnEnter();
         if (human && !netPuppet && !v.OwnedBy(this)) { string ask = Ownership.AskLine(nick, v, this); if (ask != null) Toast(ask, 3f); }   // ffu34 canon, ffu53 one table
-        if (!netPuppet) Sfx.Play(Sfx.Door, 0.8f);
+        if (!netPuppet) Sfx.PlayAir(Sfx.AirWorld(world), Sfx.Door, 0.8f);
         if (human) Voice(true, transform.position, 0.45f);
     }
 
@@ -806,7 +806,7 @@ public partial class Frog : MonoBehaviour
         exitT = 1.0f; exitFrom = v;
         if (bail) BeginBail(v.Title, spot, v.Velocity * 0.5f + (eject ? Vector3.up * 9f : Vector3.zero), eject);   // ffu47 paraglider
         exitCool = 0.4f;
-        if (!netPuppet) Sfx.Play(Sfx.Door, 0.8f);
+        if (!netPuppet) Sfx.PlayAir(Sfx.AirWorld(world), Sfx.Door, 0.8f);
     }
 
     // ffu70: deep enough ranch pond water to swim in at p (same test Walk uses for swimming)

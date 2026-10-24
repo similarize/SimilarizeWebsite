@@ -1423,7 +1423,7 @@ public partial class Game : MonoBehaviour
             }
         }
         if (relayout) ApplyLayout();
-        if (slots.Count > 0) { Frog mf = frogs[slots[0].frog]; Sfx.ListenerPos = mf.FocusPoint; Sfx.Music(Worlds.Mood(mf.world)); Sfx.Airless = !F77.Old && (mf.world == WorldId.Moon || mf.world == WorldId.Callisto); }
+        if (slots.Count > 0) { Frog mf = frogs[slots[0].frog]; Sfx.ListenerPos = mf.FocusPoint; Sfx.Music(Worlds.Mood(mf.world)); bool allAir = true; foreach (Slot sl77 in slots) if (!Sfx.AirWorld(frogs[sl77.frog].world)) allAir = false; Sfx.Airless = allAir; }   // ffu77c: UI / music: only when every player is on an airless body
     }
 
     void LateUpdate()

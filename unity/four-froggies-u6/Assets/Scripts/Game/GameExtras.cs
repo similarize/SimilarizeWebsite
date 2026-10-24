@@ -199,6 +199,7 @@ public partial class Game
         string[] w;
         TouchControls.mechMode = false;
         TouchControls.bowMode = false;
+        TouchControls.superWant = null; TouchControls.superDive = false;   // ffu77c
         if (f.launching) w = new string[] { null, null, null, null, null };
         else if (f.passengerOf is Bike) w = new[] { "OUT", null, null, null, null };   // ffu45 sidecar
         else if (f.passengerOf != null) w = f.passengerOf is Starship && ((Starship)f.passengerOf).BayOpen ? new[] { "OUT", null, null, null, null } : new string[] { null, null, null, null, null };
@@ -216,7 +217,13 @@ public partial class Game
         for (int i = 0; i < 6; i++) TouchControls.want[i] = i < w.Length ? w[i] : null;
         if (TouchControls.bowMode) TouchControls.want[5] = "AIM";
         // ffu15: 6th button - AIM in a mech, BAY in a mech flying in space
-        if (f.vehicle is StoryMech) TouchControls.want[5] = "AIM";
+        if (f.vehicle is StoryMech)
+        {
+            TouchControls.want[5] = "AIM";
+            // ffu77c: SUPER / LAND for a ranch mech; while flying level the AIM slot is a held DOWN
+            StoryMech sm = (StoryMech)f.vehicle;
+            if (!F77.Old) { TouchControls.superWant = sm.SuperOn77 ? "LAND" : "SUPER"; if (sm.SuperOn77) { TouchControls.superDive = true; TouchControls.want[5] = "DOWN"; } }
+        }
         else if (f.vehicle is Starship && ((Starship)f.vehicle).mechForm != null) TouchControls.want[5] = "BAY";
         string key = TouchControls.ModeKey;
         if (key != lastTouchKey) { lastTouchKey = key; Debug.Log("Touch set: " + key.Replace("|", " ")); }

@@ -19,30 +19,34 @@ public class TouchControls : MonoBehaviour
     public static readonly string[] want = { "A", null, null, null, null, null };   // ffu15: [5] = 6th context button (AIM in a mech, BAY in a space mech)
     public static bool mechMode;
     public static bool bowMode;      // ffu61: holding a froggy bow on foot - AIM toggles, FIRE (SHOOT) shoots
-    readonly float[] alpha = { 1f, 0f, 0f, 0f, 0f, 1f, 1f, 1f, 0f };
+    readonly float[] alpha = { 1f, 0f, 0f, 0f, 0f, 1f, 1f, 1f, 0f, 0f };
     public static bool aimLatched;   // ffu15: touch AIM is a toggle
+    // ffu77c: a small 7th context button (index 9), only while piloting a mech on Earth: SUPER (start Superman flight) /
+    // LAND. During the flight the AIM slot turns into a held DOWN (superDive) - aiming does nothing while flying level.
+    public static string superWant;
+    public static bool superDive;
     public static string ModeKey { get { return string.Join("|", want); } }
     Canvas canvas;
     RectTransform stickBase, stickKnob;
-    int stickId = -1, lookId = -1, upId = -1, downId = -1, fireId = -1;
+    int stickId = -1, lookId = -1, upId = -1, downId = -1, fireId = -1, sixId = -1;
     Vector2 stickOrigin, stickVec, lookAcc, lookLast;
-    bool aQ, fireQ, altQ, resetQ, sixQ;
+    bool aQ, fireQ, altQ, resetQ, sixQ, superQ;
     float zoom, lastLookTap = -10f;
-    const int Count = 9;
+    const int Count = 10;
     readonly Image[] imgs = new Image[Count];
     readonly Text[] labels = new Text[Count];
     public static bool Portrait { get { return Screen.height > Screen.width; } }
 
-    static readonly string[] Names = { "A", "FIRE", "MSL", "UP", "DOWN", "-", "+", "SND", "AIM" };
-    static readonly string[] SpaceNames = { "TGT", "AUTO", "LAND", "BURN", "BRAKE", "-", "+", "SND", null };
+    static readonly string[] Names = { "A", "FIRE", "MSL", "UP", "DOWN", "-", "+", "SND", "AIM", "SUPER" };
+    static readonly string[] SpaceNames = { "TGT", "AUTO", "LAND", "BURN", "BRAKE", "-", "+", "SND", null, null };
     // anchor 0 = bottom-right, 1 = top-right, 2 = top-left of the safe area; offsets in canvas units
-    static readonly int[] Anchor = { 0, 0, 0, 0, 0, 1, 1, 2, 0 };
-    static readonly Vector2[] PosL = { new Vector2(-120, 150), new Vector2(-270, 90), new Vector2(-280, 220), new Vector2(-75, 300), new Vector2(-175, 300), new Vector2(-150, -92), new Vector2(-70, -92), new Vector2(60, -150), new Vector2(-400, 150) };   // ffu14e: - / + were touching the page toolbar
-    static readonly float[] RadL = { 80, 58, 44, 44, 44, 30, 30, 30, 44 };
+    static readonly int[] Anchor = { 0, 0, 0, 0, 0, 1, 1, 2, 0, 0 };
+    static readonly Vector2[] PosL = { new Vector2(-120, 150), new Vector2(-270, 90), new Vector2(-280, 220), new Vector2(-75, 300), new Vector2(-175, 300), new Vector2(-150, -92), new Vector2(-70, -92), new Vector2(60, -150), new Vector2(-400, 150), new Vector2(-400, 262) };   // ffu14e: - / + were touching the page toolbar
+    static readonly float[] RadL = { 80, 58, 44, 44, 44, 30, 30, 30, 44, 34 };
     // portrait: compact cluster, checked for overlap (A r50 / FIRE r38 / MSL r32 / UP r32 / DOWN r32)
-    static readonly Vector2[] PosP = { new Vector2(-82, 100), new Vector2(-190, 74), new Vector2(-190, 172), new Vector2(-82, 210), new Vector2(-290, 120), new Vector2(-130, -118), new Vector2(-60, -118), new Vector2(55, -150), new Vector2(-290, 214) };
-    static readonly float[] RadP = { 50, 38, 32, 32, 32, 26, 26, 26, 32 };
-    static readonly Color[] Cols = { new Color(0.3f, 0.85f, 0.35f, 0.6f), new Color(1f, 0.35f, 0.25f, 0.6f), new Color(1f, 0.7f, 0.2f, 0.55f), new Color(0.4f, 0.8f, 1f, 0.5f), new Color(0.4f, 0.8f, 1f, 0.5f), new Color(1f, 1f, 1f, 0.35f), new Color(1f, 1f, 1f, 0.35f), new Color(1f, 1f, 1f, 0.3f), new Color(0.75f, 0.45f, 1f, 0.55f) };
+    static readonly Vector2[] PosP = { new Vector2(-82, 100), new Vector2(-190, 74), new Vector2(-190, 172), new Vector2(-82, 210), new Vector2(-290, 120), new Vector2(-130, -118), new Vector2(-60, -118), new Vector2(55, -150), new Vector2(-290, 214), new Vector2(-290, 300) };
+    static readonly float[] RadP = { 50, 38, 32, 32, 32, 26, 26, 26, 32, 26 };
+    static readonly Color[] Cols = { new Color(0.3f, 0.85f, 0.35f, 0.6f), new Color(1f, 0.35f, 0.25f, 0.6f), new Color(1f, 0.7f, 0.2f, 0.55f), new Color(0.4f, 0.8f, 1f, 0.5f), new Color(0.4f, 0.8f, 1f, 0.5f), new Color(1f, 1f, 1f, 0.35f), new Color(1f, 1f, 1f, 0.35f), new Color(1f, 1f, 1f, 0.3f), new Color(0.75f, 0.45f, 1f, 0.55f), new Color(1f, 0.85f, 0.2f, 0.6f) };
     static readonly Vector2 StickHomeL = new Vector2(170, 170), StickHomeP = new Vector2(112, 118);
 
     Vector2[] Pos { get { return Portrait ? PosP : PosL; } }
@@ -121,6 +125,17 @@ public class TouchControls : MonoBehaviour
             bool show = alpha[8] > 0.01f;
             if (imgs[8].gameObject.activeSelf != show) imgs[8].gameObject.SetActive(show);
         }
+        {
+            // ffu77c: SUPER / LAND (index 9)
+            string w = spaceMode ? null : superWant;
+            if (w != null && labels[9].text != w) { labels[9].text = w; labels[9].fontSize = Mathf.RoundToInt(0.4f * Rad[9]); }
+            alpha[9] = Mathf.MoveTowards(alpha[9], w != null ? 1f : 0f, dt * 7f);
+            Color c = Cols[9]; c.a *= alpha[9];
+            imgs[9].color = c;
+            labels[9].color = new Color(1f, 1f, 1f, alpha[9]);
+            bool show = alpha[9] > 0.01f;
+            if (imgs[9].gameObject.activeSelf != show) imgs[9].gameObject.SetActive(show);
+        }
         labels[7].text = "SND\n<size=" + Mathf.RoundToInt(Rad[7] * 0.38f) + ">" + Sfx.LevelName + "</size>";
         float sr = StickR;
         stickBase.sizeDelta = Vector2.one * sr * 2.25f;
@@ -146,9 +161,9 @@ public class TouchControls : MonoBehaviour
 
     void ResetState()
     {
-        stickId = lookId = upId = downId = fireId = -1;
+        stickId = lookId = upId = downId = fireId = sixId = -1;
         stickVec = lookAcc = Vector2.zero;
-        aQ = fireQ = altQ = resetQ = sixQ = false;
+        aQ = fireQ = altQ = resetQ = sixQ = superQ = false;
         aimLatched = false;
         zoom = 0f;
     }
@@ -181,7 +196,8 @@ public class TouchControls : MonoBehaviour
                         else if (b == 4) downId = t.fingerId;
                         else if (b == 5 || b == 6) { }
                         else if (b == 7) Sfx.CycleVolume();
-                        else if (b == 8) { sixQ = true; if (mechMode || bowMode) { aimLatched = !aimLatched; Sfx.Play(Sfx.Click, 0.5f); } }
+                        else if (b == 8) { sixQ = true; sixId = t.fingerId; if ((mechMode && !superDive) || bowMode) { aimLatched = !aimLatched; Sfx.Play(Sfx.Click, 0.5f); } }
+                        else if (b == 9) { superQ = true; Sfx.Play(Sfx.Click, 0.5f); }   // ffu77c
                         else if (UiHit != null && UiHit(t.position)) { }   // ffu74: a HUD chip (BRIDGE) took this tap - not a look / double-tap
                         else if (InStickZone(t.position) && stickId < 0) { stickId = t.fingerId; stickOrigin = t.position; stickVec = Vector2.zero; stickSeen = true; }
                         else if (lookId < 0 && !InStickZone(t.position))
@@ -217,13 +233,14 @@ public class TouchControls : MonoBehaviour
                     if (t.fingerId == upId) upId = -1;
                     if (t.fingerId == downId) downId = -1;
                     if (t.fingerId == fireId) fireId = -1;
+                    if (t.fingerId == sixId) sixId = -1;
                     break;
             }
         }
         // a finger that vanished without an Ended event
         if (stickId >= 0 && !stickSeen && !FingerDown(stickId)) { stickId = -1; stickVec = Vector2.zero; }
         if (lookId >= 0 && !lookSeen && !FingerDown(lookId)) lookId = -1;
-        if (count == 0) { stickId = lookId = upId = downId = fireId = -1; stickVec = Vector2.zero; }
+        if (count == 0) { stickId = lookId = upId = downId = fireId = sixId = -1; stickVec = Vector2.zero; }
         Vector2 home = stickId >= 0 ? stickOrigin / s : StickHomeScreen / s;
         stickBase.anchoredPosition = home;
         stickKnob.anchoredPosition = home + stickVec * StickR;
@@ -260,11 +277,13 @@ public class TouchControls : MonoBehaviour
         i.downHeld = downId >= 0;
         i.swimBoost = upId >= 0;   // ffu70: SWIM (the UP button) while swimming
         if (mechMode) { i.upHeld = upId >= 0 || TestUp; i.boostHeld = downId >= 0 || TestBoost; i.gunFire = fireQ; i.gunHeld = fireId >= 0; i.gas = i.brake = 0f; i.climb = i.upHeld ? 1f : 0f; i.aimHeld = aimLatched; i.mslFire = altQ; i.downHeld = false; }
+        if (mechMode && superDive) { aimLatched = false; i.aimHeld = false; i.climb = (i.upHeld ? 1f : 0f) - (sixId >= 0 ? 1f : 0f); }   // ffu77c: held DOWN
+        if (mechMode && superQ) i.cargo = true;   // ffu77c: SUPER / LAND = pad B
         if (bowMode) { i.aimHeld = aimLatched; i.bowFire = fireQ; }   // ffu61
         if (spaceMode) i.cargo = sixQ;
         if (spaceMode) { i.target = aQ; i.auto = fireQ; i.land = altQ; i.hop = i.use = false; }
         if (spaceMode) { i.move.y = Mathf.Max(i.move.y, upId >= 0 ? 1f : 0f); }
-        aQ = fireQ = altQ = resetQ = sixQ = false;
+        aQ = fireQ = altQ = resetQ = sixQ = superQ = false;
         return i;
     }
 }

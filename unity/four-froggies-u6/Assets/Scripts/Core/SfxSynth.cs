@@ -232,6 +232,7 @@ public class SynthVoice
     readonly float pm;
     float lastSpd = -1f, dvS, rpm = 0.2f, gearLo, gearHi = 7f;
     public float gain = 1f;
+    public float air;   // ffu77c: set by Sfx.EngineVoice from where the vehicle is (0 = air, 1 = vacuum)
     public int gear;
     public readonly float[] vol = new float[6], pit = new float[6];
     public float surface = 0.6f;   // ffu39 Cybertruck: 0 pavement / concrete .. 0.6 grass .. 1 gravel / dirt (Vehicle sets it)
@@ -268,7 +269,7 @@ public class SynthVoice
 
     void Set(int i, AudioSource s, float v, float p, float dt, float rate = 1.2f)
     {
-        if (Sfx.AirK > 0.001f) { v *= 1f - 0.7f * Sfx.AirK; p *= 1f - 0.45f * Sfx.AirK; }   // ffu77: vacuum (Moon / Callisto) - muffled, low
+        if (air > 0.001f) { v *= 1f - 0.7f * air; p *= 1f - 0.45f * air; }   // ffu77: vacuum (Moon / Callisto) - muffled, low
         vol[i] = v * gain; pit[i] = p;
         if (s == null) return;
         s.volume = Mathf.MoveTowards(s.volume, v * gain, dt * rate);

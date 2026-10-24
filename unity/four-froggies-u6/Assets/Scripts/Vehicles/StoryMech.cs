@@ -55,13 +55,14 @@ public partial class StoryMech : Vehicle
             string top = aimK > 0.5f ? "<color=#ff8a7a>AIMING</color>  " : "";
             if (bridge73 != null && driver != null) top += K(Bridge73.Key(driver)) + " bridge view  ·  ";   // ffu73
             if (SuperOn77)   // ffu77 Superman flight
-                return ik == InputKind.Gamepad ? K("L-stick") + " fly / speed  ·  " + K("RT") + " up  ·  " + K("LT") + " down  ·  " + K("LB") + " faster  ·  " + K("B") + " land"
+                return ik == InputKind.Touch ? K("stick") + " fly / speed  ·  " + K("JUMP") + " up  ·  " + K("DOWN") + " down  ·  " + K("BOOST") + " faster  ·  " + K("LAND")
+                    : ik == InputKind.Gamepad ? K("L-stick") + " fly / speed  ·  " + K("RT") + " up  ·  " + K("LT") + " down  ·  " + K("LB") + " faster  ·  " + K("B") + " land"
                     : K("WASD") + " fly / speed  ·  " + K("SPACE") + " up  ·  " + K("SHIFT") + " down + faster  ·  " + K("B") + " land";
             string sup = F77.Old ? "" : "  ·  " + K("B") + " Superman fly";
             if (ik == InputKind.Gamepad)
                 return top + K("RT") + " tap jump / hold ROCKETS  ·  " + K("LB") + (F74.Old ? " afterburner" : " hold: afterburner LIFT-OFF") + "  ·  " + K("LT") + " hold AIM (" + K("RT") + " fires)  ·  " + K("X") + " fire  ·  " + K("RB") + "/" + K("Y") + " missiles  ·  " + K("A") + " climb out" + sup;
             if (ik == InputKind.Touch)
-                return top + K("JUMP") + " hold: rockets  ·  " + K("BOOST") + (F74.Old ? "" : " hold: lift-off") + "  ·  " + K("AIM") + "  ·  " + K("FIRE") + "  ·  " + K("MSL");
+                return top + K("JUMP") + " hold: rockets  ·  " + K("BOOST") + (F74.Old ? "" : " hold: lift-off") + "  ·  " + K("AIM") + "  ·  " + K("FIRE") + "  ·  " + K("MSL") + (F77.Old ? "" : "  ·  " + K("SUPER") + " fly");
             return top + K("WASD") + " walk  ·  " + K("SPACE") + " tap jump / hold ROCKETS  ·  " + K("SHIFT") + (F74.Old ? " afterburner" : " hold: afterburner LIFT-OFF") + "  ·  " + K("RMB") + " hold AIM  ·  " + K("LMB") + " fire  ·  " + K("F") + " missiles  ·  " + K("E") + " climb out" + sup;
         }
     }

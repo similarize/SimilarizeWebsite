@@ -30,12 +30,16 @@ public static class Sfx
     public static string LevelName { get { return Level == 0 ? "ON" : Level == 1 ? "LOW" : "OFF"; } }
     public const string AudioV = "a1";                // cache-buster for web/audio/*.ogg
     public static Vector3 ListenerPos;                 // P1's frog (set by Game) - picks the pond ambience
-    // ffu77 (Ben item 9): P1 is on an airless body (the Moon, Callisto; set by Game). No air = no airborne sound: only what
-    // reaches the spacesuit by conduction. AirK eases 0..1; effects play quieter + lower (thumps), engines turn into a low
-    // rumble that only comes through the wheels on the ground, tyre squeal is gone; native players also low-pass them.
+    // ffu77 (Ben item 9): no air = no airborne sound, only what reaches the spacesuit by conduction: effects play quieter +
+    // lower (thumps), engines turn into a low rumble that only comes through the wheels on the ground, no tyre squeal;
+    // native players also low-pass engines. ffu77c: it follows the EMITTER - a sound from something on the Moon / Callisto
+    // (AirAt its position, or the froggy's own world via PlayAir) is muffled whoever listens; Earth sounds stay normal.
+    // Sounds with no place (UI, music) use Airless = every human player is on an airless body (set by Game; AirK eases).
     public static bool Airless;
     public static float AirK;
     public const float AirLP = 420f;
+    public static bool AirWorld(WorldId w) { return !F77.Old && (w == WorldId.Moon || w == WorldId.Callisto); }
+    public static bool AirAt(Vector3 p) { return !F77.Old && p.y < 200f && AirWorld(Terrain56.WorldAt(p)); }
     static int loaded, fallback;
 
     static System.Random rnd = new System.Random(3);
@@ -81,13 +85,16 @@ public static class Sfx
         Play(Toggle != null ? Toggle : Click, 1f);
     }
 
-    public static void Play(AudioClip c, float vol, float pitch = 1f)
+    public static void Play(AudioClip c, float vol, float pitch = 1f) { PlayK(c, vol, pitch, AirK); }
+    // ffu77c: a froggy's own sound (hop, splash, door): muffled when that froggy is on an airless body
+    public static void PlayAir(bool air, AudioClip c, float vol, float pitch = 1f) { PlayK(c, vol, pitch, air ? 1f : 0f); }
+    static void PlayK(AudioClip c, float vol, float pitch, float ak)
     {
         if (c == null || pool == null) return;
         AudioSource s = pool[next];
         next = (next + 1) % pool.Length;
-        s.pitch = pitch * (1f - 0.35f * AirK);
-        s.PlayOneShot(c, vol * (1f - 0.6f * AirK));
+        s.pitch = pitch * (1f - 0.35f * ak);
+        s.PlayOneShot(c, vol * (1f - 0.6f * ak));
     }
 
     public static AudioClip Pick(AudioClip[] set) { return set == null || set.Length == 0 ? null : set[rnd.Next(set.Length)]; }
@@ -100,7 +107,7 @@ public static class Sfx
             foreach (var f in Game.I.frogs) if (f != null && f.human) d = Mathf.Min(d, (f.FocusPoint - p).magnitude);
         if (d > 1e8f) d = 30f;
         float k = Mathf.Clamp01(1f - d / range);
-        if (k > 0.02f) Play(c, vol * k * k, pitch);
+        if (k > 0.02f) PlayK(c, vol * k * k, pitch, AirAt(p) ? 1f : 0f);   // ffu77c: muffled where it happens
     }
 
     public static float Near(Vector3 p)
@@ -211,6 +218,7 @@ public static class Sfx
             }
         }
         AudioLowPassFilter lpf;   // ffu77: native players only (WebGL has no audio filters)
+        float air;                // ffu77c: 0..1 eased - this vehicle is on an airless body
         public void Kill()
         {
             foreach (var s in new[] { main, layer, skid, extra }) if (s != null) Object.Destroy(s);
@@ -244,7 +252,8 @@ public static class Sfx
         // on: someone aboard (or an autopilot); spd m/s; load 0..1 throttle / climb; slip m/s sideways; ground 0..1
         public void Tick(bool on, float spd, float load, float slip, float ground, Vector3 pos, float dt)
         {
-            if (syn != null) { syn.Tick(on, spd, load, slip, ground, dt); return; }   // ffu30 (ffu77 vacuum muffle: SynthVoice.Set)
+            air = Mathf.MoveTowards(air, AirAt(pos) ? 1f : 0f, dt * 0.8f);   // ffu77c: this vehicle's own place
+            if (syn != null) { syn.air = air; syn.Tick(on, spd, load, slip, ground, dt); return; }   // ffu30 (ffu77 vacuum muffle: SynthVoice.Set)
             float v = 0f, p = 1f, lv = 0f, lp = 1f;
             switch (kind)
             {
@@ -261,7 +270,7 @@ public static class Sfx
                 default: v = 0.28f + load * 0.1f; p = 0.8f + spd / 28f + load * 0.2f; break;
             }
             if (!on) { v = 0f; lv = 0f; }
-            float ak = AirK, pm = pitchMul;
+            float ak = air, pm = pitchMul;
             if (ak > 0.001f)
             {
                 // ffu77: vacuum - the motor itself is silent; a low thumpy rumble comes up through the wheels / tracks only while
