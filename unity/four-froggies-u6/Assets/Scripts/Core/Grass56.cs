@@ -24,6 +24,7 @@ public class Grass56 : MonoBehaviour
     public string DrawnInfo { get { return drawn + "c/" + (drawnInst / 1000f).ToString("0.0") + "k r" + (radius * Perf60.GrassRadiusK).ToString("0"); } }
     Plane[] planes = new Plane[6];
     public static int Bends;
+    public static int KeyAt(float x, float z) { return (Mathf.FloorToInt(x / Cell) + 1000) * 4096 + (Mathf.FloorToInt(z / Cell) + 1000); }   // ffu77d
 
     public static void Create()
     {
@@ -111,6 +112,7 @@ public class Grass56 : MonoBehaviour
             float bank = Mathf.Clamp01(1f - (Layout.PondQ(x, z) - 1.1f) / 0.25f);
             float h = (0.32f + (float)hroll * 0.34f) * (1f + bank * 0.7f);
             float wd = h * (0.9f + (float)hroll * 0.3f);
+            if (MowMask.Cut(x, z)) { h = 0.06f + (float)hroll * 0.04f; wd *= 0.8f; }   // ffu77d: mowed - stubble stays short
             list.Add(Matrix4x4.TRS(new Vector3(x, y - 0.02f, z), Quaternion.Euler(0f, (float)yaw * 360f, 0f), new Vector3(wd, h, wd)));
             ymin = Mathf.Min(ymin, y); ymax = Mathf.Max(ymax, y + h);
         }
@@ -126,6 +128,13 @@ public class Grass56 : MonoBehaviour
         if (Realism.Degraded) return;   // the lite frame-rate guard sheds the grass
         Camera first = null;
         int buildBudget = 6; drawn = 0; drawnInst = 0;
+        MowMask.Tick();
+        if (MowMask.Dirty.Count > 0)   // ffu77d: re-cut the cells a mower went over (the old clumps draw until replaced)
+        {
+            int n = 0; var done = new List<int>();
+            foreach (int k in MowMask.Dirty) { if (n++ >= 3) break; done.Add(k); C oc; if (cells.TryGetValue(k, out oc)) cells[k] = Build(k / 4096 - 1000, k % 4096 - 1000); }
+            foreach (int k in done) MowMask.Dirty.Remove(k);
+        }
         float R = radius * Perf60.GrassRadiusK, dk = Perf60.GrassDensK;   // ffu60
         if (Mathf.Abs(R - fadeR) > 0.5f) { fadeR = R; mat.SetFloat("_FadeNear", R * 0.7f); mat.SetFloat("_FadeFar", R); }
         foreach (var s in Game.I.slots)

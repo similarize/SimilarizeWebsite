@@ -242,7 +242,7 @@ public static class MowStripes
     static Material light, dark;
     const float Life = 240f;
 
-    public static void End(object key) { Ribbon r; if (live.TryGetValue(key, out r)) { r.open = false; live.Remove(key); } }
+    public static void End(object key) { MowMask.Lift(key); Ribbon r; if (live.TryGetValue(key, out r)) { r.open = false; live.Remove(key); } }
 
     public static void Track(object key, Vector3 at, Vector3 fwd, float width, bool cutting)
     {
@@ -252,7 +252,8 @@ public static class MowStripes
         fwd.Normalize();
         Ribbon r;
         live.TryGetValue(key, out r);
-        if (!cutting) { if (r != null) End(key); return; }
+        if (!cutting) { MowMask.Lift(key); if (r != null) End(key); return; }
+        MowMask.Deck(key, at, width);   // ffu77d: the cut stays (Core/MowMask77.cs)
         // a new ribbon when there is none or the heading turned more than ~20 degrees
         if (r != null && Vector3.Dot(r.dir, fwd) < 0.94f) { End(key); r = null; }
         if (r == null)
