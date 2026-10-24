@@ -11,6 +11,12 @@ using UnityEngine.UI;
 //            AsyncGPUReadback each frame acts as a GPU fence (WebGPU queues are in order: it returns only when the frames
 //            before it are done). Ready = >= 4 race frames, >= 0.6 s, fence round trip < 0.35 s and 2 calm frames (dt < 0.2 s),
 //            or 30 s at most. Then the overlay goes, the music starts and the 3-2-1 countdown runs as before.
+// u6g fix 3 (2026-10-24, Ben: desktop WebGPU sat on LOADING TRACK with a slow bar while the race audio ran): on current
+// desktop Chrome/Edge the WebGPU AsyncGPUReadback callback never comes back (console: "A valid external Instance reference
+// no longer exists" / "Instance dropped in popErrorScope"; headless repro: 1700 calm frames, fence rtt never set), so the
+// gate always waited for the 30 s cap. Now if the first fence has not returned within FenceGiveUp, the fence is dead for the
+// session (frame-time gate from then on), the hard cap is 12 s, and the finish path always switches the race cameras on and
+// the overlay / load camera off (also if the state leaves the countdown some other way).
 public partial class Game
 {
     bool warmWait;
@@ -24,14 +30,18 @@ public partial class Game
     Camera loadCam;
     // u6g fix 2: fence on WebGPU only. WebGL compiles on the main thread at first draw (frame time already shows the stall), and
     // the u6g desktop WebGL probe lost its context right after the readbacks started (A-D-gl) -> no AsyncGPUReadback there.
-    static bool FenceOk { get { return SystemInfo.supportsAsyncGPUReadback && U6.WebGPU; } }
+    static bool FenceOk { get { return SystemInfo.supportsAsyncGPUReadback && U6.WebGPU && !fenceDead; } }
+    static bool fenceDead;              // u6g fix 3: a readback never returned -> no fence for the rest of the session
+    static bool fenceEverOk;            // u6g fix 3: at least one readback came back (then slow ones are just a busy GPU)
+    const float FenceGiveUp = 2.0f;     // u6g fix 3: s the first fence may stay pending before the fence counts as dead
+    const float WarmCap = 12f;          // u6g fix 3: hard cap on the overlay (was 30 s)
     static bool warmedOnce;
     float lobbyDt = 0.033f;     // u6g: lobby frame time (EMA, unscaled), sampled in UpdateLobby
 
     void WarmBegin()
     {
         string u = Application.absoluteURL ?? "";
-        if (u.Contains("u6warm=0")) { warmWait = false; Sfx.Music("beach"); return; }
+        if (u.Contains("u6warm=0")) { warmWait = false; SetRaceCams(true); Sfx.Music("beach"); return; }
         warmWait = true; warmPhase = 0; warmFrames = 0; calmFrames = 0; fenceFrames = 0;
         warmT0 = phaseT0 = Time.realtimeSinceStartup; fencePending = false; fenceRtt = 99f;
         // u6g fix 2: "calm" = no slower than the lobby ran (a slow phone / software GPU never gets under a fixed 0.2 s)
@@ -58,7 +68,8 @@ public partial class Game
     void SetRaceCams(bool on)
     {
         foreach (var s in slots) if (s.cam != null) s.cam.enabled = on;
-        if (!on && overview != null) overview.enabled = false;
+        // u6g fix 3: switching back on restores the 3-player overview quarter too (ApplyLayout: overview only for 3 views)
+        if (overview != null) overview.enabled = on && slots.Count == 3;
     }
 
     // true = ready (countdown may run)
@@ -86,20 +97,41 @@ public partial class Game
         warmFrames++;
         calmFrames = calm ? calmFrames + 1 : 0;
         bool gpuDone = !FenceOk || (fenceFrames >= 2 && fenceRtt < Mathf.Max(0.35f, 1.5f * calmDt));
-        bool ready = (warmFrames >= 4 && pe >= 0.6f && gpuDone && calmFrames >= 2) || pe > 30f;
+        bool ready = (warmFrames >= 4 && pe >= 0.6f && gpuDone && calmFrames >= 2) || pe > WarmCap;
         float p = 0.12f + 0.83f * (1f - Mathf.Exp(-pe / 6f));
         SetLoad(ready ? 1f : p, Track.Name.ToUpper() + "   ·   preparing graphics " + Mathf.FloorToInt(pe) + " s");
         if (!ready) return false;
-        warmWait = false; warmedOnce = true;
-        loadCanvas.enabled = false;
+        WarmFinish();
         Sfx.Music("beach");
         Debug.Log("U6G: first race frame presented " + el.ToString("F2") + " s after RACE (warm " + pe.ToString("F2") + " s, " + warmFrames + " frames, calm < " + calmDt.ToString("F2") + " s, fence rtt " +
-            (FenceOk ? (fenceRtt * 1000f).ToString("F0") + " ms" : "n/a") + (pe > 30f ? ", TIMEOUT" : "") + ") -> countdown");
+            (FenceOk ? (fenceRtt * 1000f).ToString("F0") + " ms" : "n/a") + (pe > WarmCap ? ", TIMEOUT" : "") + ") -> countdown");
         return true;
+    }
+
+    // u6g fix 3: one place that ends the warm-up: race cameras on, overlay + load camera off
+    void WarmFinish()
+    {
+        warmWait = false; warmedOnce = true;
+        SetRaceCams(true);
+        if (loadCam != null) loadCam.enabled = false;
+        if (loadCanvas != null) loadCanvas.enabled = false;
+    }
+
+    // u6g fix 3: called by UpdateRace when the state is no longer Countdown; if the overlay is somehow still up, end it
+    void WarmGuard()
+    {
+        if (!warmWait) return;
+        Debug.LogWarning("U6G: state left the countdown with the loading overlay still up -> overlay off, race cameras on");
+        WarmFinish();
     }
 
     void Fence(float now)
     {
+        if (fencePending && !fenceDead && !fenceEverOk && now - fenceSentT > FenceGiveUp)
+        {
+            fenceDead = true; fencePending = false;
+            Debug.LogWarning("U6G: GPU fence (AsyncGPUReadback) did not return within " + FenceGiveUp.ToString("F1") + " s -> frame-time gate for this session");
+        }
         if (!FenceOk || fencePending) return;
         if (fenceRT == null) { fenceRT = new RenderTexture(1, 1, 0, RenderTextureFormat.ARGB32) { name = "U6G fence" }; fenceRT.Create(); }
         fencePending = true; fenceSentT = now;
@@ -107,6 +139,8 @@ public partial class Game
         {
             AsyncGPUReadback.Request(fenceRT, 0, r =>
             {
+                if (fenceDead) return;     // u6g fix 3: a late callback after the give-up changes nothing
+                fenceEverOk = true;
                 fencePending = false;
                 fenceRtt = Time.realtimeSinceStartup - fenceSentT;
                 fenceFrames++;

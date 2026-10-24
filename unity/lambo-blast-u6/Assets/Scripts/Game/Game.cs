@@ -851,6 +851,7 @@ public partial class Game : MonoBehaviour
         if (AnyPausePressed()) { SetPaused(true); return; }
         ReadInputs();
         bool countdown = state == State.Countdown;
+        if (!countdown) WarmGuard();     // u6g fix 3: never leave the LOADING TRACK overlay up once the race runs
         string centre = "";
         if (countdown && !WarmTick())
             centre = "";     // u6g: the LOADING TRACK overlay covers the view; the countdown waits
